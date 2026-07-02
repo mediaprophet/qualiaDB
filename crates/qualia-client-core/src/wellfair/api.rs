@@ -23,6 +23,7 @@ use ed25519_dalek::SigningKey;
 use qualia_core_db::key_vault::KeyVault;
 use sha2::{Digest, Sha256};
 use wellfare_core::companion_sync::CompanionHealthBundle;
+use wellfare_core::live_share::{LiveSectionRequest, UsageAgreement};
 use wellfare_core::conditions::{
     allergy_summary, build_allergy_envelope, build_condition_envelope, condition_summary,
     AllergyReport, ConditionReport,
@@ -31,6 +32,11 @@ use wellfare_core::personal_records::{
     build_disputed_diagnosis_envelope, build_housing_safety_envelope,
     disputed_diagnosis_summary, housing_safety_summary, DisputedDiagnosisReport,
     HousingSafetyReport,
+};
+use super::live_share::{
+    append_live_share_journal, live_share_decision_journal_entry,
+    live_share_request_journal_entry, sanctuary_allows_classified_projection, validate_live_share_decision,
+    LiveShareStore,
 };
 use super::med_reminders::{
     compute_due_reminders, load_prefs, save_prefs, DueMedReminder, MedReminderPrefs,
@@ -764,6 +770,78 @@ impl WebizenHostApi {
             .into_iter()
             .next()
             .ok_or_else(|| "record committed but not found in journal".to_string())
+    }
+
+    /// Companion requests a live section projection; owner must approve minimum kinds before data flows.
+    pub fn submit_live_share_request(
+        &self,
+        request: &LiveSectionRequest,
+    ) -> Result<JournalEntry, String> {
+        let now = Self::now_unix();
+        let store = LiveShareStore::open(&self.storage_root).map_err(|e| e.to_string())?;
+        let record = store
+            .enqueue_request(request.clone(), now)
+            .map_err(|e| e.to_string())?;
+        let committed_unix = now as u32;
+        let entry = live_share_request_journal_entry(&record, committed_unix);
+        append_live_share_journal(&self.storage_root, &entry)?;
+        Ok(entry)
+    }
+
+    /// Owner approves or denies a pending live share; sanctuary-classified kinds fail closed unless unlocked.
+    pub fn decide_live_share_request(
+        &self,
+        request_id: &str,
+        approved: bool,
+        projection_kinds: &[String],
+    ) -> Result<JournalEntry, String> {
+        let now = Self::now_unix();
+        let store = LiveShareStore::open(&self.storage_root).map_err(|e| e.to_string())?;
+        let pending = store
+            .get_request(request_id)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| format!("live share request '{request_id}' not found"))?;
+        if pending.status != super::live_share::LiveShareRequestStatus::Pending {
+            return Err(format!("live share request '{request_id}' already decided"));
+        }
+        let sanctuary_prefs = load_sanctuary_prefs(&self.storage_root);
+        let sanctuary_unlocked = sanctuary_allows_classified_projection(&sanctuary_prefs);
+        validate_live_share_decision(&pending, approved, projection_kinds, sanctuary_unlocked)?;
+        let deny_reason = if approved {
+            None
+        } else {
+            Some("owner denied live share request")
+        };
+        let updated = store
+            .decide(
+                request_id,
+                approved,
+                projection_kinds,
+                now,
+                deny_reason.as_deref(),
+            )
+            .map_err(|e| e.to_string())?;
+        let committed_unix = now as u32;
+        let entry = live_share_decision_journal_entry(&updated, committed_unix);
+        append_live_share_journal(&self.storage_root, &entry)?;
+        Ok(entry)
+    }
+
+    pub fn list_pending_live_shares(
+        &self,
+        limit: usize,
+    ) -> Result<Vec<LiveSectionRequest>, String> {
+        LiveShareStore::open(&self.storage_root)
+            .map_err(|e| e.to_string())?
+            .list_pending(limit)
+            .map_err(|e| e.to_string())
+    }
+
+    pub fn register_usage_agreement(&self, agreement: &UsageAgreement) -> Result<(), String> {
+        LiveShareStore::open(&self.storage_root)
+            .map_err(|e| e.to_string())?
+            .save_usage_agreement(agreement)
+            .map_err(|e| e.to_string())
     }
 }
 

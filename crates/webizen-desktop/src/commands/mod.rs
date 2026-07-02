@@ -724,6 +724,58 @@ pub fn wellfair_add_sanctuary_note(app: AppHandle, body: String) -> Result<Strin
     serde_json::to_string(&entry).map_err(|e| e.to_string())
 }
 
+#[derive(Debug, serde::Serialize)]
+struct LiveShareRequestDto {
+    id: String,
+    device_id: String,
+    purpose: String,
+    requested_kinds: Vec<String>,
+    ttl_seconds: u32,
+}
+
+#[command]
+pub fn wellfair_list_pending_live_shares(app: AppHandle, limit: usize) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let pending = host.list_pending_live_shares(limit)?;
+    let dtos: Vec<LiveShareRequestDto> = pending
+        .into_iter()
+        .map(|r| LiveShareRequestDto {
+            id: r.id,
+            device_id: r.device_id,
+            purpose: r.purpose,
+            requested_kinds: r.requested_kinds,
+            ttl_seconds: r.ttl_seconds,
+        })
+        .collect();
+    serde_json::to_string(&dtos).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_decide_live_share(
+    app: AppHandle,
+    request_id: String,
+    approved: bool,
+    projection_kinds: Vec<String>,
+    reason: Option<String>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let entry = host.decide_live_share_request(
+        &request_id,
+        approved,
+        if approved { &projection_kinds } else { &[] },
+    )?;
+    let _ = reason;
+    serde_json::to_string(&entry).map_err(|e| e.to_string())
+}
+
 fn parse_administration_status(s: &str) -> wellfare_core::medication::AdministrationStatus {
     match s.to_ascii_lowercase().as_str() {
         "skipped" => wellfare_core::medication::AdministrationStatus::Skipped,
@@ -3254,6 +3306,8 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_add_wellbeing_observation,
         wellfair_add_therapy_note,
         wellfair_add_sanctuary_note,
+        wellfair_list_pending_live_shares,
+        wellfair_decide_live_share,
         wellfair_add_medication,
         wellfair_record_administration,
         wellfair_add_diet_entry,

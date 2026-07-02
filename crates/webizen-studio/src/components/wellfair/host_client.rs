@@ -1117,3 +1117,94 @@ pub async fn unlock_sanctuary(pin: &str) -> Result<SanctuaryPrefsDto, String> {
 pub async fn unlock_sanctuary(_pin: &str) -> Result<SanctuaryPrefsDto, String> {
     Err("Sanctuary unlock requires the Tauri desktop host".into())
 }
+
+/// Pending companion live-section request — mirrors `wellfare_core::live_share::LiveSectionRequest`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct LiveShareRequestDto {
+    pub id: String,
+    pub device_id: String,
+    pub purpose: String,
+    pub requested_kinds: Vec<String>,
+    pub ttl_seconds: u32,
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_pending_live_shares(limit: usize) -> Result<Vec<LiveShareRequestDto>, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"limit".into(), &wasm_bindgen::JsValue::from(limit as u32))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_list_pending_live_shares", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "pending live shares response was not a JSON string".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn fetch_pending_live_shares(_limit: usize) -> Result<Vec<LiveShareRequestDto>, String> {
+    Ok(vec![])
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn decide_live_share(
+    request_id: &str,
+    approved: bool,
+    projection_kinds: &[String],
+    reason: Option<&str>,
+) -> Result<(), String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &args,
+        &"requestId".into(),
+        &wasm_bindgen::JsValue::from_str(request_id),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"approved".into(), &wasm_bindgen::JsValue::from(approved))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let kinds = js_sys::Array::new();
+    for kind in projection_kinds {
+        kinds.push(&wasm_bindgen::JsValue::from_str(kind));
+    }
+    js_sys::Reflect::set(&args, &"projectionKinds".into(), &kinds.into())
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    if let Some(r) = reason {
+        js_sys::Reflect::set(&args, &"reason".into(), &wasm_bindgen::JsValue::from_str(r))
+            .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_decide_live_share", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    if js.is_string() || js.is_null() || js.is_undefined() {
+        Ok(())
+    } else {
+        Err("decide live share returned unexpected response".into())
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn approve_live_share(
+    request_id: &str,
+    projection_kinds: &[String],
+) -> Result<(), String> {
+    decide_live_share(request_id, true, projection_kinds, None).await
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn approve_live_share(
+    _request_id: &str,
+    _projection_kinds: &[String],
+) -> Result<(), String> {
+    Err("Live share approval requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn deny_live_share(request_id: &str, reason: &str) -> Result<(), String> {
+    decide_live_share(request_id, false, &[], Some(reason)).await
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn deny_live_share(_request_id: &str, _reason: &str) -> Result<(), String> {
+    Err("Live share denial requires the Tauri desktop host".into())
+}

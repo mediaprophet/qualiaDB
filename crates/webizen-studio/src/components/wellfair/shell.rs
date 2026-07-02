@@ -11,6 +11,7 @@ use super::host_client::use_host_snapshot;
 use super::host_dto::{ProvenanceHop, SensitivityClassDto, VaultLifecycle};
 use super::shared::{OfflineState, ProvenanceTrail, SensitivityBadge, SyncState};
 use super::pairing_panel::CompanionPairingPanel;
+use super::communications_panel::WellfairCommunicationsPanel;
 use super::audit_panel::WellfairAuditPanel;
 use super::tools_panel::WellfairToolsPanel;
 use dioxus::prelude::*;
@@ -22,6 +23,7 @@ const AREAS: &[(&str, &str)] = &[
     ("Relationships", "Phase 2 — Social Book + consent"),
     ("Consent", "Phase 2 — access profiles"),
     ("Sanctuary", "Phase 3 — isolated domain"),
+    ("Communications", "Phase 4 — live share consent"),
     ("Projects", "Phase 5 — cooperative work"),
     ("Tools", "Phase 1 — diagnostics and packages"),
 ];
@@ -72,8 +74,11 @@ pub fn WellfairShell() -> Element {
             WellfairConsentPanel {}
         },
         "Consent" => rsx! { WellfairConsentPanel {} },
-        "Tools" => rsx! {
+        "Communications" => rsx! {
+            WellfairCommunicationsPanel {}
             CompanionPairingPanel {}
+        },
+        "Tools" => rsx! {
             WellfairToolsPanel {}
             WellfairAuditPanel {}
         },
@@ -137,7 +142,11 @@ pub fn WellfairShell() -> Element {
 
             {area_content}
 
-            if active_area() != "Tools" && active_area() != "Consent" && active_area() != "Relationships" {
+            if active_area() != "Tools"
+                && active_area() != "Consent"
+                && active_area() != "Relationships"
+                && active_area() != "Communications"
+            {
                 section {
                     h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Provenance" }
                     ProvenanceTrail { hops: sample_hops }

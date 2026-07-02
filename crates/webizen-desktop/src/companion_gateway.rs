@@ -17,6 +17,9 @@ use wellfare_core::companion_pairing::{
     CompanionAuthResult, CompanionChallenge, CompanionPairingResponse, COMPANION_PAIRING_CONTEXT,
     MSG_PAIRING_RESPONSE,
 };
+use wellfare_core::live_share::{
+    LiveSectionRequest, UsageAgreement, MSG_LIVE_SECTION_REQUEST, MSG_USAGE_AGREEMENT,
+};
 
 pub type HostApiHandle = Arc<Mutex<Option<WebizenHostApi>>>;
 
@@ -139,6 +142,26 @@ fn verify_pairing_response(
         .map_err(|_| "signature verification failed".to_string())
 }
 
+fn register_usage_agreement_json(host_api: &HostApiHandle, agreement: &UsageAgreement) -> Result<(), String> {
+    let guard = host_api.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    host.register_usage_agreement(agreement)
+}
+
+fn submit_live_share_request_json(
+    host_api: &HostApiHandle,
+    request: &LiveSectionRequest,
+) -> Result<String, String> {
+    let guard = host_api.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let entry = host.submit_live_share_request(request)?;
+    Ok(entry.id)
+}
+
 fn ingest_bundle_json(host_api: &HostApiHandle, bundle_json: &str) -> Result<IngestAck, String> {
     let bundle: wellfare_core::companion_sync::CompanionHealthBundle =
         serde_json::from_str(bundle_json).map_err(|e| format!("invalid bundle JSON: {e}"))?;
@@ -248,6 +271,51 @@ async fn companion_ws_session(mut socket: WebSocket, host_api: HostApiHandle) {
                     .await
                     .is_err()
                 {
+                    break;
+                }
+                continue;
+            }
+        }
+
+        if let Ok(agreement) = serde_json::from_str::<UsageAgreement>(&text) {
+            if agreement.msg_type == MSG_USAGE_AGREEMENT {
+                let ack = match register_usage_agreement_json(&host_api, &agreement) {
+                    Ok(()) => serde_json::json!({
+                        "type": "USAGE_AGREEMENT_ACK",
+                        "ok": true,
+                        "device_id": agreement.device_id,
+                    }),
+                    Err(e) => serde_json::json!({
+                        "type": "USAGE_AGREEMENT_ACK",
+                        "ok": false,
+                        "errors": [e],
+                    }),
+                };
+                if socket.send(Message::Text(ack.to_string().into())).await.is_err() {
+                    break;
+                }
+                continue;
+            }
+        }
+
+        if let Ok(request) = serde_json::from_str::<LiveSectionRequest>(&text) {
+            if request.msg_type == MSG_LIVE_SECTION_REQUEST {
+                let ack = match submit_live_share_request_json(&host_api, &request) {
+                    Ok(journal_id) => serde_json::json!({
+                        "type": "LIVE_SECTION_REQUEST_ACK",
+                        "ok": true,
+                        "request_id": request.id,
+                        "journal_id": journal_id,
+                        "status": "pending_owner_approval",
+                    }),
+                    Err(e) => serde_json::json!({
+                        "type": "LIVE_SECTION_REQUEST_ACK",
+                        "ok": false,
+                        "request_id": request.id,
+                        "errors": [e],
+                    }),
+                };
+                if socket.send(Message::Text(ack.to_string().into())).await.is_err() {
                     break;
                 }
             }

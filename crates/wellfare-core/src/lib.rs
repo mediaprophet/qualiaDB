@@ -1,5 +1,6 @@
 pub mod companion_pairing;
 pub mod companion_sync;
+pub mod live_share;
 pub mod conditions;
 pub mod life_records;
 pub mod mental_wellbeing;

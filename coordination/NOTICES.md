@@ -14,6 +14,8 @@ YYYY-MM-DD | INSTRUMENT | CLAIM|PROGRESS|BLOCKED|RELEASE | short description | p
 
 ## Active notices
 
+2026-07-02 | Grok | RELEASE | Phase 4 swarm: live share consent, Communications tab, companion WS, 3 phase4 + 4 live_share tests | live_share, communications_panel, companion_gateway, WELLFAIR_PHASE4_SPRINT.md
+2026-07-02 | Grok | CLAIM | Phase 4 swarm: live share + usage agreement + communications UI (orchestrator integrates commands) | wellfair/live_share, companion_gateway, communications_panel, phase4_tests
 2026-07-02 | Grok | RELEASE | Phase 3 closeout: case_task slice, 3 phase3 tests, PHASE3 doc; studio+desktop green | life_panel, host_client, commands, phase3_tests, WELLFAIR_PHASE3_CLOSEOUT.md
 2026-07-02 | Grok | CLAIM | Phase 3 closeout: case_task vertical slice + closeout doc | life_panel, host_client, commands/mod.rs, phase3_tests
 2026-07-02 | Grok | RELEASE | Phase 3: life/sanctuary/wellbeing panels + missing modules; 43 wellfair + 2 phase3 tests; studio+desktop check green | wellfair/, wellfare-core/, webizen-studio/wellfair/

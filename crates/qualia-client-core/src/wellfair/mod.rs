@@ -10,6 +10,7 @@ pub mod graph_store;
 pub mod host_state;
 pub mod import_samsung;
 pub mod journal;
+pub mod live_share;
 pub mod med_reminders;
 #[cfg(test)]
 mod medication_flow;
@@ -28,6 +29,9 @@ mod journey_tests;
 
 #[cfg(test)]
 mod phase3_tests;
+
+#[cfg(test)]
+mod phase4_tests;
 
 pub use host_state::{
     demo_host_snapshot, fixture_host_snapshot, WellfairHostSnapshot,
