@@ -7,7 +7,10 @@ mod tests {
     use ed25519_dalek::SigningKey;
     use wellfare_core::live_share::LiveSectionRequest;
 
+    use wellfare_core::live_share::MSG_LIVE_SECTION_DECISION;
+
     use crate::wellfair::api::WebizenHostApi;
+    use crate::wellfair::live_share::live_section_decision_from_record;
     use crate::wellfair::policy::PolicyDecisionService;
     use crate::wellfair::vault::VaultService;
 
@@ -59,7 +62,7 @@ mod tests {
         assert_eq!(enqueued.kind, "live_share_request");
 
         let decision = host
-            .decide_live_share_request("req-phase4-2", true, &["conditions".into()])
+            .decide_live_share_request("req-phase4-2", true, &["conditions".into()], None)
             .unwrap();
         assert_eq!(decision.kind, "live_share_decision");
         assert!(decision
@@ -85,7 +88,12 @@ mod tests {
 
         // Minimum projection without classified kind is allowed while sanctuary locked.
         let partial = host
-            .decide_live_share_request("req-phase4-3", true, &["wellbeing_observation".into()])
+            .decide_live_share_request(
+                "req-phase4-3",
+                true,
+                &["wellbeing_observation".into()],
+                None,
+            )
             .unwrap();
         assert_eq!(partial.kind, "live_share_decision");
         let partial_summary: serde_json::Value =
@@ -106,6 +114,7 @@ mod tests {
             "req-phase4-4",
             true,
             &["therapy_note".into()],
+            None,
         );
         assert!(blocked.is_err());
         assert!(blocked
@@ -119,7 +128,7 @@ mod tests {
         host2.unlock_sanctuary("real-pin-phase4").unwrap();
 
         let explicit = host2
-            .decide_live_share_request("req-phase4-4", true, &["therapy_note".into()])
+            .decide_live_share_request("req-phase4-4", true, &["therapy_note".into()], None)
             .unwrap();
         assert_eq!(explicit.kind, "live_share_decision");
         let explicit_summary: serde_json::Value =
@@ -128,5 +137,20 @@ mod tests {
             .as_array()
             .expect("projection_kinds array");
         assert!(explicit_projection.iter().any(|k| k == "therapy_note"));
+    }
+
+    #[test]
+    fn decision_wire_round_trips_for_companion_push() {
+        let dir = tempfile::tempdir().unwrap();
+        let host = test_host(&dir);
+        let request = sample_request("req-wire-1", vec!["conditions"]);
+        host.submit_live_share_request(&request).unwrap();
+        host.decide_live_share_request("req-wire-1", true, &["conditions".into()], None)
+            .unwrap();
+        let record = host.get_live_share_record("req-wire-1").unwrap().unwrap();
+        let wire = live_section_decision_from_record(&record);
+        assert_eq!(wire.msg_type, MSG_LIVE_SECTION_DECISION);
+        assert!(wire.approved);
+        assert_eq!(wire.projection_kinds, vec!["conditions"]);
     }
 }

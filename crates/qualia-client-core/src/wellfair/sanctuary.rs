@@ -5,11 +5,6 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use uuid::Uuid;
-
-use wellfare_core::record::{
-    EpistemicStatus, EvidenceType, RecordEnvelope, SensitivityClass,
-};
 
 use super::journal::JournalEntry;
 
@@ -46,25 +41,6 @@ impl Default for SanctuaryPrefs {
             armed_at_unix: None,
         }
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SanctuaryNote {
-    pub id: String,
-    pub body: String,
-}
-
-impl SanctuaryNote {
-    pub fn new(body: impl Into<String>) -> Self {
-        Self {
-            id: Uuid::new_v4().to_string(),
-            body: body.into(),
-        }
-    }
-}
-
-pub fn sanctuary_note_record_id(uuid: &str) -> String {
-    format!("urn:wellfair:sanctuary_note:{uuid}")
 }
 
 pub fn hash_pin(pin: &str) -> String {
@@ -162,34 +138,6 @@ pub fn apply_sanctuary_projection(prefs: &SanctuaryPrefs, entries: Vec<JournalEn
         .into_iter()
         .filter(|e| !is_sanctuary_protected_kind(&e.kind))
         .collect()
-}
-
-pub fn build_sanctuary_note_envelope(
-    note: &SanctuaryNote,
-    owner_did: &str,
-    author_did: &str,
-    asserted_unix: u32,
-    blob_hash: Option<String>,
-) -> RecordEnvelope {
-    RecordEnvelope {
-        id: sanctuary_note_record_id(&note.id),
-        owner_did: owner_did.to_string(),
-        author_did: author_did.to_string(),
-        proxy_did: None,
-        epistemic_status: EpistemicStatus::Asserted,
-        evidence_type: EvidenceType::SelfReported,
-        sensitivity: SensitivityClass::Classified,
-        asserted_time_unix: asserted_unix,
-        valid_time_start_unix: Some(asserted_unix),
-        valid_time_end_unix: None,
-        predecessor_id: None,
-        blob_hash,
-        tombstone: false,
-    }
-}
-
-pub fn sanctuary_note_summary(note: &SanctuaryNote) -> String {
-    serde_json::json!({ "body_len": note.body.len() }).to_string()
 }
 
 #[cfg(test)]

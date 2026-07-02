@@ -5,7 +5,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
-use wellfare_core::live_share::{LiveSectionRequest, UsageAgreement};
+use wellfare_core::live_share::{LiveSectionDecision, LiveSectionRequest, UsageAgreement};
 
 use super::journal::{JournalEntry, WellfairJournal};
 use super::sanctuary::is_sanctuary_protected_kind;
@@ -325,6 +325,27 @@ pub fn live_share_decision_journal_entry(
             })
             .to_string(),
         ),
+    }
+}
+
+/// Build the companion wire message after owner decision.
+pub fn live_section_decision_from_record(record: &LiveShareRequestRecord) -> LiveSectionDecision {
+    let decided_at = record.decided_at_unix.unwrap_or(0);
+    if record.approved.unwrap_or(false) {
+        LiveSectionDecision::approved(
+            &record.request.id,
+            record.projection_kinds.clone().unwrap_or_default(),
+            decided_at,
+        )
+    } else {
+        LiveSectionDecision::denied(
+            &record.request.id,
+            record
+                .deny_reason
+                .clone()
+                .unwrap_or_else(|| "owner denied live share request".into()),
+            decided_at,
+        )
     }
 }
 

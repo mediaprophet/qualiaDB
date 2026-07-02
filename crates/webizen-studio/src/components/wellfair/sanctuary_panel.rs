@@ -1,8 +1,9 @@
 //! Sanctuary — PIN setup, lock/unlock, classified notes (SAF-01..20).
 
 use super::host_client::{
-    add_sanctuary_note, fetch_health_records, fetch_sanctuary_prefs, lock_sanctuary,
-    setup_sanctuary, unlock_sanctuary, SanctuaryPrefsDto,
+    fetch_health_records, fetch_sanctuary_prefs, lock_sanctuary, sanctuary_vault_add_note,
+    sanctuary_vault_configured, sanctuary_vault_list_notes, setup_sanctuary, setup_sanctuary_vault,
+    unlock_sanctuary, SanctuaryPrefsDto, SanctuaryVaultNoteDto,
 };
 use super::host_dto::HealthRecordDto;
 use dioxus::prelude::*;
@@ -13,7 +14,6 @@ struct SanctuaryUi {
     real_pin: String,
     decoy_pin: String,
     unlock_pin: String,
-    note_body: String,
     prefs: SanctuaryPrefsDto,
     records: Vec<HealthRecordDto>,
 }
@@ -52,7 +52,7 @@ pub fn WellfairSanctuaryPanel() -> Element {
             h2 { style: "margin:0 0 0.35rem;font-size:1rem;", "Sanctuary" }
             p {
                 style: "margin:0 0 0.75rem;font-size:0.74rem;color:var(--qualia-text-muted,#666);",
-                "Isolated domain for classified notes. Decoy PIN shows a harmless session while keeping protected records hidden."
+                "Locking hides sanctuary-protected records (therapy notes, welfare cases) from ordinary views. Sensitive free-text notes live encrypted in the Encrypted vault below. Decoy PIN shows a harmless session."
             }
             p { style: "margin:0 0 0.5rem;font-size:0.76rem;", "{ui().status}" }
 
@@ -168,36 +168,6 @@ pub fn WellfairSanctuaryPanel() -> Element {
                         }
                     }
                 }
-                if !locked && !decoy {
-                    label {
-                        style: "display:flex;flex-direction:column;gap:0.2rem;font-size:0.75rem;margin-bottom:0.5rem;",
-                        "Sanctuary note (Classified)"
-                        textarea {
-                            rows: "3",
-                            value: "{ui().note_body}",
-                            oninput: move |e| ui.write().note_body = e.value(),
-                            style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
-                        }
-                    }
-                    button {
-                        style: "padding:0.4rem 0.75rem;border-radius:8px;border:1px solid #457b9d;background:#457b9d18;color:#457b9d;font-size:0.8rem;cursor:pointer;",
-                        onclick: move |_| {
-                            let body = ui().note_body.trim().to_string();
-                            if body.is_empty() { return; }
-                            spawn(async move {
-                                match add_sanctuary_note(&body).await {
-                                    Ok(_) => {
-                                        ui.write().status = "Sanctuary note saved.".into();
-                                        ui.write().note_body.clear();
-                                        reload();
-                                    }
-                                    Err(e) => ui.write().status = format!("Failed: {e}"),
-                                }
-                            });
-                        },
-                        "Save sanctuary note"
-                    }
-                }
             }
 
             if !ui().records.is_empty() {
@@ -209,6 +179,199 @@ pub fn WellfairSanctuaryPanel() -> Element {
                             key: "{r.id}",
                             style: "padding:0.35rem 0;border-bottom:1px solid var(--qualia-border,#eee);",
                             "{r.kind}"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+struct VaultUi {
+    status: String,
+    configured: bool,
+    setup_real: String,
+    setup_decoy: String,
+    pin: String,
+    lane: Option<String>,
+    note_body: String,
+    notes: Vec<SanctuaryVaultNoteDto>,
+    opened: bool,
+}
+
+/// Encrypted-at-rest Sanctuary notes (independent PBKDF2 key + AEAD; real vs decoy lane).
+/// This is the genuine boundary: notes exist only as ciphertext until opened with a PIN.
+#[component]
+pub fn WellfairSanctuaryVaultPanel() -> Element {
+    let mut ui = use_signal(VaultUi::default);
+
+    use_effect(move || {
+        spawn(async move {
+            if let Ok(c) = sanctuary_vault_configured().await {
+                ui.write().configured = c;
+            }
+        });
+    });
+
+    rsx! {
+        section {
+            aria_label: "WellFair encrypted sanctuary vault",
+            style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);margin-top:0.85rem;",
+            h2 { style: "margin:0 0 0.35rem;font-size:1rem;", "Encrypted vault" }
+            p {
+                style: "margin:0 0 0.75rem;font-size:0.74rem;color:var(--qualia-text-muted,#666);",
+                "Notes here are encrypted at rest with a key derived from your PIN — nothing is readable on disk without it. The decoy PIN opens a separate lane that never contains your real notes."
+            }
+            p { style: "margin:0 0 0.5rem;font-size:0.76rem;", "{ui().status}" }
+
+            if !ui().configured {
+                div {
+                    style: "display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;",
+                    label {
+                        style: "display:flex;flex-direction:column;gap:0.2rem;font-size:0.75rem;",
+                        "Real PIN"
+                        input {
+                            r#type: "password",
+                            value: "{ui().setup_real}",
+                            oninput: move |e| ui.write().setup_real = e.value(),
+                            style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);",
+                        }
+                    }
+                    label {
+                        style: "display:flex;flex-direction:column;gap:0.2rem;font-size:0.75rem;",
+                        "Decoy PIN"
+                        input {
+                            r#type: "password",
+                            value: "{ui().setup_decoy}",
+                            oninput: move |e| ui.write().setup_decoy = e.value(),
+                            style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);",
+                        }
+                    }
+                }
+                button {
+                    style: "padding:0.4rem 0.75rem;border-radius:8px;border:none;background:var(--qualia-accent,#2a6f97);color:#fff;font-size:0.8rem;cursor:pointer;",
+                    onclick: move |_| {
+                        let real = ui().setup_real.clone();
+                        let decoy = ui().setup_decoy.clone();
+                        spawn(async move {
+                            ui.write().status = "Creating encrypted vault…".into();
+                            match setup_sanctuary_vault(&real, &decoy).await {
+                                Ok(()) => {
+                                    ui.write().configured = true;
+                                    ui.write().setup_real.clear();
+                                    ui.write().setup_decoy.clear();
+                                    ui.write().status = "Encrypted vault created. Open it with your PIN.".into();
+                                }
+                                Err(e) => ui.write().status = format!("Setup failed: {e}"),
+                            }
+                        });
+                    },
+                    "Create encrypted vault"
+                }
+            } else if !ui().opened {
+                div {
+                    style: "display:flex;gap:0.5rem;align-items:flex-end;",
+                    label {
+                        style: "flex:1;display:flex;flex-direction:column;gap:0.2rem;font-size:0.75rem;",
+                        "PIN"
+                        input {
+                            r#type: "password",
+                            value: "{ui().pin}",
+                            oninput: move |e| ui.write().pin = e.value(),
+                            style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);",
+                        }
+                    }
+                    button {
+                        style: "padding:0.4rem 0.75rem;border-radius:8px;border:none;background:var(--qualia-accent,#2a6f97);color:#fff;font-size:0.8rem;cursor:pointer;",
+                        onclick: move |_| {
+                            let pin = ui().pin.clone();
+                            if pin.is_empty() { return; }
+                            spawn(async move {
+                                ui.write().status = "Opening…".into();
+                                match sanctuary_vault_list_notes(&pin).await {
+                                    Ok((lane, notes)) => {
+                                        ui.write().lane = Some(lane);
+                                        ui.write().notes = notes;
+                                        ui.write().opened = true;
+                                        ui.write().status = "Opened. Close to clear decrypted notes.".into();
+                                    }
+                                    Err(e) => ui.write().status = format!("{e}"),
+                                }
+                            });
+                        },
+                        "Open vault"
+                    }
+                }
+            } else {
+                div {
+                    style: "display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;margin-bottom:0.5rem;font-size:0.78rem;",
+                    span {
+                        style: if ui().lane.as_deref() == Some("decoy") {
+                            "padding:0.2rem 0.5rem;border-radius:6px;background:#e9c46a33;color:#8a6d1d;"
+                        } else {
+                            "padding:0.2rem 0.5rem;border-radius:6px;background:#2a9d8f22;color:#1d6f63;"
+                        },
+                        if ui().lane.as_deref() == Some("decoy") { "Decoy lane" } else { "Real lane" }
+                    }
+                    button {
+                        style: "padding:0.35rem 0.65rem;border-radius:8px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.78rem;cursor:pointer;",
+                        onclick: move |_| {
+                            ui.write().pin.clear();
+                            ui.write().notes.clear();
+                            ui.write().lane = None;
+                            ui.write().opened = false;
+                            ui.write().status = "Closed — decrypted notes cleared.".into();
+                        },
+                        "Close"
+                    }
+                }
+                label {
+                    style: "display:flex;flex-direction:column;gap:0.2rem;font-size:0.75rem;margin-bottom:0.5rem;",
+                    "New note"
+                    textarea {
+                        rows: "3",
+                        value: "{ui().note_body}",
+                        oninput: move |e| ui.write().note_body = e.value(),
+                        style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
+                    }
+                }
+                button {
+                    style: "padding:0.4rem 0.75rem;border-radius:8px;border:1px solid #457b9d;background:#457b9d18;color:#457b9d;font-size:0.8rem;cursor:pointer;",
+                    onclick: move |_| {
+                        let pin = ui().pin.clone();
+                        let body = ui().note_body.trim().to_string();
+                        if body.is_empty() { return; }
+                        spawn(async move {
+                            match sanctuary_vault_add_note(&pin, &body).await {
+                                Ok(_) => {
+                                    ui.write().note_body.clear();
+                                    match sanctuary_vault_list_notes(&pin).await {
+                                        Ok((lane, notes)) => {
+                                            ui.write().lane = Some(lane);
+                                            ui.write().notes = notes;
+                                        }
+                                        Err(e) => ui.write().status = format!("{e}"),
+                                    }
+                                    ui.write().status = "Encrypted note saved.".into();
+                                }
+                                Err(e) => ui.write().status = format!("Failed: {e}"),
+                            }
+                        });
+                    },
+                    "Save encrypted note"
+                }
+
+                if !ui().notes.is_empty() {
+                    h3 { style: "margin:0.85rem 0 0.35rem;font-size:0.88rem;", "Notes ({ui().notes.len()})" }
+                    ul {
+                        style: "margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:0.35rem;",
+                        for n in ui().notes.clone() {
+                            li {
+                                key: "{n.id}",
+                                style: "padding:0.4rem 0.5rem;border:1px solid var(--qualia-border,#eee);border-radius:6px;font-size:0.76rem;white-space:pre-wrap;",
+                                "{n.body}"
+                            }
                         }
                     }
                 }

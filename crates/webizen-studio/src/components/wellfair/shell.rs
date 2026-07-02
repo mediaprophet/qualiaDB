@@ -1,9 +1,15 @@
+use super::clinical_panel::WellfairClinicalPanel;
 use super::consent_panel::WellfairConsentPanel;
+use super::credentials_panel::WellfairCredentialsPanel;
+use super::finance_panel::WellfairFinancePanel;
 use super::health_panel::WellfairHealthPanel;
 use super::life_panel::WellfairLifePanel;
+use super::projects_panel::WellfairProjectsPanel;
+use super::sync_panel::WellfairSyncPanel;
+use super::welfare_panel::WellfairWelfarePanel;
 use super::medication_panel::WellfairMedicationPanel;
 use super::personal_panel::WellfairPersonalPanel;
-use super::sanctuary_panel::WellfairSanctuaryPanel;
+use super::sanctuary_panel::{WellfairSanctuaryPanel, WellfairSanctuaryVaultPanel};
 use super::sleep_panel::WellfairSleepPanel;
 use super::social_book_panel::WellfairSocialBookPanel;
 use super::wellbeing_panel::WellfairWellbeingPanel;
@@ -19,12 +25,15 @@ use dioxus::prelude::*;
 const AREAS: &[(&str, &str)] = &[
     ("Personal", "Phase 2 — profile and accessibility"),
     ("Health", "Phase 2 — observations and sleep"),
+    ("Clinical", "Phase 3 — documents and pathology"),
     ("Life", "Phase 3 — events and welfare"),
     ("Relationships", "Phase 2 — Social Book + consent"),
     ("Consent", "Phase 2 — access profiles"),
     ("Sanctuary", "Phase 3 — isolated domain"),
     ("Communications", "Phase 4 — live share consent"),
     ("Projects", "Phase 5 — cooperative work"),
+    ("Finance", "Phase 5 — ledger and balances"),
+    ("Credentials", "Phase 3 — held credentials"),
     ("Tools", "Phase 1 — diagnostics and packages"),
 ];
 
@@ -67,8 +76,15 @@ pub fn WellfairShell() -> Element {
             WellfairSleepPanel {}
             WellfairMedicationPanel {}
         },
-        "Life" => rsx! { WellfairLifePanel {} },
-        "Sanctuary" => rsx! { WellfairSanctuaryPanel {} },
+        "Life" => rsx! {
+            WellfairLifePanel {}
+            WellfairWelfarePanel {}
+        },
+        "Clinical" => rsx! { WellfairClinicalPanel {} },
+        "Sanctuary" => rsx! {
+            WellfairSanctuaryPanel {}
+            WellfairSanctuaryVaultPanel {}
+        },
         "Relationships" => rsx! {
             WellfairSocialBookPanel {}
             WellfairConsentPanel {}
@@ -78,8 +94,12 @@ pub fn WellfairShell() -> Element {
             WellfairCommunicationsPanel {}
             CompanionPairingPanel {}
         },
+        "Projects" => rsx! { WellfairProjectsPanel {} },
+        "Finance" => rsx! { WellfairFinancePanel {} },
+        "Credentials" => rsx! { WellfairCredentialsPanel {} },
         "Tools" => rsx! {
             WellfairToolsPanel {}
+            WellfairSyncPanel {}
             WellfairAuditPanel {}
         },
         name => rsx! {

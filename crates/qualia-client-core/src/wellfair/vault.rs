@@ -6,7 +6,7 @@ use qualia_core_db::crdt::SuspendedTransactionQueue;
 use qualia_core_db::git_bridge::DagStore;
 use qualia_core_db::wal::{commit_semantic_mutation, WalHandoffResult, WriteAheadLog};
 use qualia_core_db::NQuin;
-use wellfare_core::record::RecordEnvelope;
+use wellfare_core::record::{RecordEnvelope, SensitivityClass};
 
 use super::checkpoint_store::{self, load_dag, load_meta};
 use super::consent_store::ConsentStore;
@@ -210,8 +210,14 @@ impl VaultService {
             .unwrap_or(0);
         let entry = JournalEntry::from_envelope(envelope, source, committed_unix, summary);
         self.journal.append(&entry)?;
-        let outbox_entry = SyncOutboxEntry::from_envelope(envelope, committed_unix);
-        self.sync_outbox.enqueue(&outbox_entry)?;
+        // Sanctuary/Classified records are excluded from the ordinary sync outbox
+        // before an operation can enter it (master plan §5.2). Their existence,
+        // record id, and kind never leak onto the ordinary routing lane; a
+        // dedicated Sanctuary transport (future ADR) is the only permitted path.
+        if envelope.sensitivity != SensitivityClass::Classified {
+            let outbox_entry = SyncOutboxEntry::from_envelope(envelope, committed_unix);
+            self.sync_outbox.enqueue(&outbox_entry)?;
+        }
         Ok(committed)
     }
 
@@ -269,5 +275,61 @@ mod tests {
         assert_eq!(meta_after.last_hash_hex, meta_before.last_hash_hex);
         #[cfg(not(target_arch = "wasm32"))]
         assert!(dir.path().join(checkpoint_store::Q42_FILE).exists());
+    }
+
+    #[test]
+    fn classified_records_excluded_from_sync_outbox() {
+        let dir = tempfile::tempdir().unwrap();
+        let wal_path = dir.path().join("sanct.wal");
+        let mut vault = VaultService::open(&wal_path, dir.path(), 0xBEEF).unwrap();
+        let signing_key = SigningKey::from_bytes(&[3u8; 32]);
+
+        let restricted = RecordEnvelope {
+            id: "urn:wellfair:weight:r1".into(),
+            owner_did: "did:wf:owner".into(),
+            author_did: "did:wf:owner".into(),
+            proxy_did: None,
+            epistemic_status: EpistemicStatus::Asserted,
+            evidence_type: EvidenceType::DeviceMeasured,
+            sensitivity: SensitivityClass::Restricted,
+            asserted_time_unix: 1_700_000_000,
+            valid_time_start_unix: None,
+            valid_time_end_unix: None,
+            predecessor_id: None,
+            blob_hash: None,
+            tombstone: false,
+        };
+        let classified = RecordEnvelope {
+            id: "urn:wellfair:sanctuary_note:s1".into(),
+            owner_did: "did:wf:owner".into(),
+            author_did: "did:wf:owner".into(),
+            proxy_did: None,
+            epistemic_status: EpistemicStatus::Asserted,
+            evidence_type: EvidenceType::SelfReported,
+            sensitivity: SensitivityClass::Classified,
+            asserted_time_unix: 1_700_000_100,
+            valid_time_start_unix: None,
+            valid_time_end_unix: None,
+            predecessor_id: None,
+            blob_hash: None,
+            tombstone: false,
+        };
+
+        vault
+            .commit_envelope(&restricted, &signing_key, 1, "test", None)
+            .unwrap();
+        vault
+            .commit_envelope(&classified, &signing_key, 1, "test", None)
+            .unwrap();
+
+        // Both records are durably journaled...
+        assert_eq!(vault.journal_count().unwrap(), 2);
+        // ...but only the Restricted record reaches the ordinary sync outbox (§5.2).
+        let outbox = vault.list_outbox(16).unwrap();
+        assert_eq!(outbox.len(), 1);
+        assert_eq!(outbox[0].record_id, "urn:wellfair:weight:r1");
+        assert!(outbox
+            .iter()
+            .all(|e| e.record_id != "urn:wellfair:sanctuary_note:s1"));
     }
 }

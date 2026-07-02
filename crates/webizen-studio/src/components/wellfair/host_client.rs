@@ -1027,24 +1027,6 @@ pub async fn add_therapy_note(_notes: &str, _provider: Option<&str>) -> Result<H
     Err("Therapy notes require the Tauri desktop host".into())
 }
 
-#[cfg(target_arch = "wasm32")]
-pub async fn add_sanctuary_note(body: &str) -> Result<HealthRecordDto, String> {
-    let args = js_sys::Object::new();
-    js_sys::Reflect::set(&args, &"body".into(), &wasm_bindgen::JsValue::from_str(body))
-        .map_err(|_| "failed to build invoke args".to_string())?;
-    let js = tauri_invoke("wellfair_add_sanctuary_note", args.into())
-        .await
-        .map_err(|e| format!("{e:?}"))?;
-    let out = js
-        .as_string()
-        .ok_or_else(|| "sanctuary note response was not JSON".to_string())?;
-    serde_json::from_str(&out).map_err(|e| e.to_string())
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub async fn add_sanctuary_note(_body: &str) -> Result<HealthRecordDto, String> {
-    Err("Sanctuary notes require the Tauri desktop host".into())
-}
 
 #[cfg(target_arch = "wasm32")]
 pub async fn fetch_sanctuary_prefs() -> Result<SanctuaryPrefsDto, String> {
@@ -1207,4 +1189,449 @@ pub async fn deny_live_share(request_id: &str, reason: &str) -> Result<(), Strin
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn deny_live_share(_request_id: &str, _reason: &str) -> Result<(), String> {
     Err("Live share denial requires the Tauri desktop host".into())
+}
+
+// --- Finance / Cooperative Projects / Credentials (Phase 5 / Phase 3) ---
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct CurrencyBalanceDto {
+    pub currency: String,
+    pub net_cents: i64,
+    pub entry_count: usize,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct BalanceReportDto {
+    pub by_currency: Vec<CurrencyBalanceDto>,
+    pub total_entries: usize,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ObligationDto {
+    pub project_id: String,
+    pub contributor_did: String,
+    pub total_effort_minutes: u64,
+    pub contribution_count: usize,
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_ledger_entry(
+    description: &str,
+    amount_cents: i64,
+    currency: &str,
+    category: Option<&str>,
+) -> Result<HealthRecordDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"description".into(), &wasm_bindgen::JsValue::from_str(description))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"amountCents".into(), &wasm_bindgen::JsValue::from(amount_cents as f64))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"currency".into(), &wasm_bindgen::JsValue::from_str(currency))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    if let Some(c) = category {
+        js_sys::Reflect::set(&args, &"category".into(), &wasm_bindgen::JsValue::from_str(c))
+            .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_add_ledger_entry", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let out = js.as_string().ok_or_else(|| "ledger response was not JSON".to_string())?;
+    serde_json::from_str(&out).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_ledger_entry(
+    _description: &str,
+    _amount_cents: i64,
+    _currency: &str,
+    _category: Option<&str>,
+) -> Result<HealthRecordDto, String> {
+    Err("Ledger entries require the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_ledger_balance(limit: usize) -> Result<BalanceReportDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"limit".into(), &wasm_bindgen::JsValue::from(limit as u32))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_ledger_balance", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "balance response was not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn fetch_ledger_balance(_limit: usize) -> Result<BalanceReportDto, String> {
+    Ok(BalanceReportDto::default())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_project(name: &str, description: &str) -> Result<HealthRecordDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"name".into(), &wasm_bindgen::JsValue::from_str(name))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"description".into(), &wasm_bindgen::JsValue::from_str(description))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_add_project", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let out = js.as_string().ok_or_else(|| "project response was not JSON".to_string())?;
+    serde_json::from_str(&out).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_project(_name: &str, _description: &str) -> Result<HealthRecordDto, String> {
+    Err("Projects require the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_contribution(
+    project_id: &str,
+    contributor_did: &str,
+    description: &str,
+    effort_minutes: u32,
+) -> Result<HealthRecordDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"projectId".into(), &wasm_bindgen::JsValue::from_str(project_id))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"contributorDid".into(), &wasm_bindgen::JsValue::from_str(contributor_did))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"description".into(), &wasm_bindgen::JsValue::from_str(description))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"effortMinutes".into(), &wasm_bindgen::JsValue::from(effort_minutes))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_add_contribution", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let out = js.as_string().ok_or_else(|| "contribution response was not JSON".to_string())?;
+    serde_json::from_str(&out).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_contribution(
+    _project_id: &str,
+    _contributor_did: &str,
+    _description: &str,
+    _effort_minutes: u32,
+) -> Result<HealthRecordDto, String> {
+    Err("Contributions require the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_project_obligations(limit: usize) -> Result<Vec<ObligationDto>, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"limit".into(), &wasm_bindgen::JsValue::from(limit as u32))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_project_obligations", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "obligations response was not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn fetch_project_obligations(_limit: usize) -> Result<Vec<ObligationDto>, String> {
+    Ok(vec![])
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_credential(
+    issuer_did: &str,
+    subject_did: &str,
+    credential_type: &str,
+    claims: &[(String, String)],
+    expires_at_unix: Option<u32>,
+) -> Result<HealthRecordDto, String> {
+    let claims_json = serde_json::to_string(claims).map_err(|e| e.to_string())?;
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"issuerDid".into(), &wasm_bindgen::JsValue::from_str(issuer_did))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"subjectDid".into(), &wasm_bindgen::JsValue::from_str(subject_did))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"credentialType".into(), &wasm_bindgen::JsValue::from_str(credential_type))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"claimsJson".into(), &wasm_bindgen::JsValue::from_str(&claims_json))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    if let Some(exp) = expires_at_unix {
+        js_sys::Reflect::set(&args, &"expiresAtUnix".into(), &wasm_bindgen::JsValue::from(exp))
+            .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_add_credential", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let out = js.as_string().ok_or_else(|| "credential response was not JSON".to_string())?;
+    serde_json::from_str(&out).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_credential(
+    _issuer_did: &str,
+    _subject_did: &str,
+    _credential_type: &str,
+    _claims: &[(String, String)],
+    _expires_at_unix: Option<u32>,
+) -> Result<HealthRecordDto, String> {
+    Err("Credentials require the Tauri desktop host".into())
+}
+
+// --- Clinical documents / Welfare support / Sync inbox ---
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_clinical_report(
+    title: &str,
+    report_type: &str,
+    body: &str,
+    author_label: Option<&str>,
+) -> Result<HealthRecordDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"title".into(), &wasm_bindgen::JsValue::from_str(title))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"reportType".into(), &wasm_bindgen::JsValue::from_str(report_type))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    // 0 → the host stamps "now".
+    js_sys::Reflect::set(&args, &"observedAtUnix".into(), &wasm_bindgen::JsValue::from(0u32))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"body".into(), &wasm_bindgen::JsValue::from_str(body))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    if let Some(a) = author_label {
+        js_sys::Reflect::set(&args, &"authorLabel".into(), &wasm_bindgen::JsValue::from_str(a))
+            .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_add_clinical_report", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let out = js.as_string().ok_or_else(|| "clinical response was not JSON".to_string())?;
+    serde_json::from_str(&out).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_clinical_report(
+    _title: &str,
+    _report_type: &str,
+    _body: &str,
+    _author_label: Option<&str>,
+) -> Result<HealthRecordDto, String> {
+    Err("Clinical reports require the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_assistance_need(
+    category: &str,
+    description: &str,
+    urgency: &str,
+) -> Result<HealthRecordDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"category".into(), &wasm_bindgen::JsValue::from_str(category))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"description".into(), &wasm_bindgen::JsValue::from_str(description))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"urgency".into(), &wasm_bindgen::JsValue::from_str(urgency))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_add_assistance_need", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let out = js.as_string().ok_or_else(|| "assistance response was not JSON".to_string())?;
+    serde_json::from_str(&out).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_assistance_need(
+    _category: &str,
+    _description: &str,
+    _urgency: &str,
+) -> Result<HealthRecordDto, String> {
+    Err("Assistance needs require the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_welfare_stream(
+    program_name: &str,
+    reference: Option<&str>,
+    status: &str,
+) -> Result<HealthRecordDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"programName".into(), &wasm_bindgen::JsValue::from_str(program_name))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    if let Some(r) = reference {
+        js_sys::Reflect::set(&args, &"reference".into(), &wasm_bindgen::JsValue::from_str(r))
+            .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    js_sys::Reflect::set(&args, &"status".into(), &wasm_bindgen::JsValue::from_str(status))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_add_welfare_stream", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let out = js.as_string().ok_or_else(|| "welfare stream response was not JSON".to_string())?;
+    serde_json::from_str(&out).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_welfare_stream(
+    _program_name: &str,
+    _reference: Option<&str>,
+    _status: &str,
+) -> Result<HealthRecordDto, String> {
+    Err("Welfare streams require the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_government_letter(
+    sender: &str,
+    subject: &str,
+    action_required: bool,
+) -> Result<HealthRecordDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"sender".into(), &wasm_bindgen::JsValue::from_str(sender))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"subject".into(), &wasm_bindgen::JsValue::from_str(subject))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"actionRequired".into(), &wasm_bindgen::JsValue::from(action_required))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_add_government_letter", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let out = js.as_string().ok_or_else(|| "letter response was not JSON".to_string())?;
+    serde_json::from_str(&out).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_government_letter(
+    _sender: &str,
+    _subject: &str,
+    _action_required: bool,
+) -> Result<HealthRecordDto, String> {
+    Err("Government letters require the Tauri desktop host".into())
+}
+
+/// One quarantined-inbox row (subset of the host `InboxRecord`).
+#[derive(Debug, Clone, Deserialize)]
+pub struct SyncInboxOpDto {
+    pub operation_id: String,
+    pub kind: String,
+    pub lamport: u64,
+    pub sensitivity: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct SyncInboxOutcomeDto {
+    pub state: String,
+    #[serde(default)]
+    pub reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct SyncInboxRecordDto {
+    pub operation: SyncInboxOpDto,
+    pub outcome: SyncInboxOutcomeDto,
+    pub admitted_unix: u32,
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_sync_inbox(limit: usize) -> Result<Vec<SyncInboxRecordDto>, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"limit".into(), &wasm_bindgen::JsValue::from(limit as u32))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_list_sync_inbox", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "sync inbox response was not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn fetch_sync_inbox(_limit: usize) -> Result<Vec<SyncInboxRecordDto>, String> {
+    Ok(vec![])
+}
+
+/// A note held in the encrypted Sanctuary vault (never leaves the desktop unencrypted).
+#[derive(Debug, Clone, Deserialize)]
+pub struct SanctuaryVaultNoteDto {
+    pub id: String,
+    pub body: String,
+    pub created_at_unix: u32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct SanctuaryVaultListDto {
+    lane: String,
+    notes: Vec<SanctuaryVaultNoteDto>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct SanctuaryVaultConfiguredDto {
+    configured: bool,
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn sanctuary_vault_configured() -> Result<bool, String> {
+    let js = tauri_invoke("wellfair_sanctuary_vault_configured", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "vault status not JSON".to_string())?;
+    let dto: SanctuaryVaultConfiguredDto = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    Ok(dto.configured)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn sanctuary_vault_configured() -> Result<bool, String> {
+    Ok(false)
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn setup_sanctuary_vault(real_pin: &str, decoy_pin: &str) -> Result<(), String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"realPin".into(), &wasm_bindgen::JsValue::from_str(real_pin))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"decoyPin".into(), &wasm_bindgen::JsValue::from_str(decoy_pin))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    tauri_invoke("wellfair_setup_sanctuary_vault", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn setup_sanctuary_vault(_real_pin: &str, _decoy_pin: &str) -> Result<(), String> {
+    Err("Sanctuary vault requires the Tauri desktop host".into())
+}
+
+/// Returns the lane label ("real" | "decoy") the PIN opened.
+#[cfg(target_arch = "wasm32")]
+pub async fn sanctuary_vault_add_note(pin: &str, body: &str) -> Result<String, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"pin".into(), &wasm_bindgen::JsValue::from_str(pin))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"body".into(), &wasm_bindgen::JsValue::from_str(body))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_sanctuary_vault_add_note", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "add note response not JSON".to_string())?;
+    let v: serde_json::Value = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    Ok(v.get("lane").and_then(|l| l.as_str()).unwrap_or("real").to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn sanctuary_vault_add_note(_pin: &str, _body: &str) -> Result<String, String> {
+    Err("Sanctuary vault requires the Tauri desktop host".into())
+}
+
+/// Returns (lane label, notes) for whichever lane the PIN opens.
+#[cfg(target_arch = "wasm32")]
+pub async fn sanctuary_vault_list_notes(pin: &str) -> Result<(String, Vec<SanctuaryVaultNoteDto>), String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"pin".into(), &wasm_bindgen::JsValue::from_str(pin))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_sanctuary_vault_list_notes", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "list notes response not JSON".to_string())?;
+    let dto: SanctuaryVaultListDto = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    Ok((dto.lane, dto.notes))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn sanctuary_vault_list_notes(_pin: &str) -> Result<(String, Vec<SanctuaryVaultNoteDto>), String> {
+    Err("Sanctuary vault requires the Tauri desktop host".into())
 }

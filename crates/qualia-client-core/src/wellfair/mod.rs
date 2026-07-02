@@ -17,8 +17,11 @@ mod medication_flow;
 pub mod policy;
 pub mod receipt;
 pub mod sanctuary;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod sanctuary_vault;
 pub mod snapshot;
 pub mod sync_outbox;
+pub mod sync_protocol;
 pub mod vault;
 
 #[cfg(test)]

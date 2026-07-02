@@ -447,9 +447,11 @@ pub fn PhysicsSimulator() -> Element {
                             onclick: move |_| {
                                 #[cfg(target_arch = "wasm32")]
                                 {
+                                    let mut forge_running = forge_running;
+                                    let mut forge_status = forge_status;
+                                    let mut forge_result = forge_result;
                                     forge_running.set(true);
                                     forge_status.set("Dispatching the bounded Forge WGPU probe...".to_string());
-                                    let mut forge_result = forge_result;
                                     spawn_local(async move {
                                         match invoke_forge_physics().await {
                                             Ok(result) => {

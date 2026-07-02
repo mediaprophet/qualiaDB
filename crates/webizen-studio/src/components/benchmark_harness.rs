@@ -367,11 +367,11 @@ pub fn BenchmarkHarness() -> Element {
                 return;
             }
 
-            running.set(true);
-            status.set("Running local benchmark sweep...".to_string());
             let mut running = running;
             let mut status = status;
             let mut report = report;
+            running.set(true);
+            status.set("Running local benchmark sweep...".to_string());
 
             wasm_bindgen_futures::spawn_local(async move {
                 match run_benchmark_sweep().await {
@@ -408,13 +408,13 @@ pub fn BenchmarkHarness() -> Element {
                 return;
             }
 
+            let mut forge_running = forge_running;
+            let mut forge_status = forge_status;
+            let mut forge_report = forge_report;
             forge_running.set(true);
             forge_status.set(
                 "Initializing ForgeRuntime and dispatching Top-K, GEMM, and FFT...".to_string(),
             );
-            let mut forge_running = forge_running;
-            let mut forge_status = forge_status;
-            let mut forge_report = forge_report;
 
             wasm_bindgen_futures::spawn_local(async move {
                 match invoke_tauri_json::<ForgeComputeProbe>("run_forge_compute_probe", json!({}))

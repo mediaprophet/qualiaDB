@@ -108,6 +108,26 @@ pub fn journal_kind_for_record_id(record_id: &str) -> &'static str {
         "med_administration"
     } else if record_id.contains(":diet:") {
         "diet"
+    } else if record_id.contains(":ledger_entry:") {
+        "ledger_entry"
+    } else if record_id.contains(":credential:") {
+        "credential"
+    } else if record_id.contains(":project_membership:") {
+        "project_membership"
+    } else if record_id.contains(":project:") {
+        "project"
+    } else if record_id.contains(":contribution:") {
+        "contribution"
+    } else if record_id.contains(":clinical_report:") {
+        "clinical_report"
+    } else if record_id.contains(":clinical_attachment:") {
+        "clinical_attachment"
+    } else if record_id.contains(":assistance_need:") {
+        "assistance_need"
+    } else if record_id.contains(":welfare_stream:") {
+        "welfare_stream"
+    } else if record_id.contains(":government_letter:") {
+        "government_letter"
     } else if record_id.contains(":weight:") {
         "weight"
     } else if record_id.contains(":sleep:") {

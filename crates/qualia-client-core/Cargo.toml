@@ -10,7 +10,7 @@ serde_yaml = "0.9"
 sysinfo = "0.39.3"
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "stream", "blocking"] }
-qualia-core-db = { path = "../qualia-core-db" }
+qualia-core-db = { path = "../qualia-core-db", features = ["sanctuary-crypto"] }
 wellfare-core = { path = "../wellfare-core" }
 futures-util = "0.3"
 bip39 = { version = "2.2.2", features = ["rand"] }

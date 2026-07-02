@@ -54,6 +54,11 @@ impl PolicyDecisionService {
                 "wellfair-shell",
                 "wellfair-life",
                 "wellfair-wellbeing",
+                "wellfair-finance",
+                "wellfair-projects",
+                "wellfair-credentials",
+                "wellfair-clinical",
+                "wellfair-welfare",
                 "wellfair",
             ],
             classified_writers: &[

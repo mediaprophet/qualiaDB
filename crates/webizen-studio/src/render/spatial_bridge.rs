@@ -113,6 +113,10 @@ pub fn SpatialBridgeCanvas(page: Page) -> Element {
 
     #[cfg(target_arch = "wasm32")]
     {
+        // Clone into a shadow the move-closure can own, leaving the outer
+        // `page_for_effect` available for `toggle_live_portal` below (mirrors the
+        // non-wasm path above). Without this the wasm build fails borrow-after-move.
+        let page_for_effect = page_for_effect.clone();
         let started = use_signal(|| false);
         use_effect(move || {
             if !crate::endpoints::is_native_host() {
