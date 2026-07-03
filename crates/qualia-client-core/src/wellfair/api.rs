@@ -80,6 +80,14 @@ use qualia_cooperative_core::work_item::{
     parse_work_item_status_summary, parse_work_item_summary, work_item_status_summary,
     work_item_summary, BoardColumn, WorkItem, WorkItemStatusEvent,
 };
+use qualia_cooperative_core::agency_delegation::{
+    agency_delegation_full_json, build_agency_delegation_envelope, delegation_permits,
+    parse_agency_delegation, AccessDecision, AccessRequest, AgencyDelegation, ConsentState,
+    Precedence,
+};
+use qualia_cooperative_core::agency_domain::agency_domain_taxonomy;
+use qualia_cooperative_core::taxonomy::Sphere;
+use qualia_cooperative_core::trigger::TriggerContext;
 use wellfare_core::guardianship::{
     build_proposal_envelope, build_vote_envelope, derive_status, parse_proposal_summary,
     parse_vote_summary, proposal_summary, vote_summary, GuardianshipProposal, GuardianshipVote,
@@ -1624,6 +1632,180 @@ impl WebizenHostApi {
         Ok(derive_board(&items, &events))
     }
 
+    // --- Agency layer: supported-agency delegations (ADR §7–§10; cooperative-core agency_*) -------
+    //
+    // A delegation binds a principal to their agent(s) for a *domain of agency* under an authority
+    // profile + values anchor, gated by an optional trigger and fail-closed ABAC. Persisted through
+    // the same signed journal path as other Restricted records (self-authored → commits; a proxy
+    // write would suspend into guardianship, T1.5). The **lossless** delegation JSON is stored as the
+    // record summary so the full object reconstructs on read; updates append a superseding version of
+    // the same delegation id (latest-wins projection in `list_agency_delegations`).
+
+    /// Persist a delegation (create or supersede). Returns the committed journal entry.
+    pub fn add_agency_delegation(
+        &mut self,
+        delegation: &AgencyDelegation,
+    ) -> Result<JournalEntry, String> {
+        let asserted = Self::now_unix() as u32;
+        let envelope =
+            build_agency_delegation_envelope(delegation, &self.owner_did, &self.author_did, asserted);
+        let summary = agency_delegation_full_json(delegation);
+        self.submit_record_with_summary(
+            QAPP_COOPERATIVE,
+            envelope,
+            SOURCE_COOPERATIVE,
+            Some(summary),
+        )?;
+        self.finalize_batch().ok();
+        self.list_journal_by_kind("agency_delegation", 1)?
+            .into_iter()
+            .next()
+            .ok_or_else(|| "agency delegation committed but journal empty".into())
+    }
+
+    /// Build and persist a new delegation from primitive fields (so the Tauri layer needs no
+    /// cooperative-core types). Validates the domain against the seeded taxonomy; an empty
+    /// `values_anchor` defaults to the UN-HR anchor (`urn:un:hr:udhr`). Returns the created record.
+    #[allow(clippy::too_many_arguments)]
+    pub fn create_agency_delegation(
+        &mut self,
+        principal_did: &str,
+        domain: &str,
+        values_anchor: &str,
+        agent_dids: Vec<String>,
+        precedence: &str,
+        consent: &str,
+    ) -> Result<AgencyDelegation, String> {
+        if agency_domain_taxonomy().get(domain).is_none() {
+            return Err(format!("unknown domain of agency: {domain}"));
+        }
+        let anchor = if values_anchor.trim().is_empty() {
+            "urn:un:hr:udhr"
+        } else {
+            values_anchor
+        };
+        let mut d =
+            AgencyDelegation::new(principal_did, domain, anchor, Self::now_unix() as u32);
+        d.agent_dids = agent_dids
+            .into_iter()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+        d.precedence = match precedence {
+            "secondary" => Precedence::Secondary,
+            "local_temporary" => Precedence::LocalTemporary,
+            _ => Precedence::Primary,
+        };
+        d.consent = agency_consent_from_str(consent).unwrap_or(ConsentState::Pending);
+        self.add_agency_delegation(&d)?;
+        Ok(d)
+    }
+
+    /// List the current delegations — latest version per delegation id (updates supersede).
+    ///
+    /// The journal is append-only and lists **newest-first**, so the first record seen for a given
+    /// logical delegation id is its latest version (append order == version order). This is robust
+    /// even when several versions share the same `asserted_time_unix` second.
+    pub fn list_agency_delegations(&self, limit: usize) -> Result<Vec<AgencyDelegation>, String> {
+        use std::collections::HashSet;
+        let entries = self.list_journal_by_kind("agency_delegation", limit)?;
+        let mut seen: HashSet<String> = HashSet::new();
+        let mut out: Vec<AgencyDelegation> = Vec::new();
+        for e in entries {
+            let Some(summary) = e.summary.as_deref() else {
+                continue;
+            };
+            let Some(d) = parse_agency_delegation(summary) else {
+                continue;
+            };
+            if seen.insert(d.id.clone()) {
+                out.push(d); // first-seen (newest-first order) == the latest version
+            }
+        }
+        out.sort_by(|a, b| {
+            a.valid_from_unix
+                .cmp(&b.valid_from_unix)
+                .then_with(|| a.id.cmp(&b.id))
+        });
+        Ok(out)
+    }
+
+    /// Fetch a single current delegation by its logical id.
+    pub fn get_agency_delegation(&self, delegation_id: &str) -> Result<AgencyDelegation, String> {
+        self.list_agency_delegations(512)?
+            .into_iter()
+            .find(|d| d.id == delegation_id)
+            .ok_or_else(|| format!("agency delegation '{delegation_id}' not found"))
+    }
+
+    /// Update the principal's consent state (grant / withdraw) — appends a superseding version.
+    pub fn set_agency_delegation_consent(
+        &mut self,
+        delegation_id: &str,
+        consent: ConsentState,
+    ) -> Result<JournalEntry, String> {
+        let mut d = self.get_agency_delegation(delegation_id)?;
+        d.consent = consent;
+        self.add_agency_delegation(&d)
+    }
+
+    /// Revoke a delegation — appends a superseding, revoked version (revocation is monotonic).
+    pub fn revoke_agency_delegation(
+        &mut self,
+        delegation_id: &str,
+    ) -> Result<JournalEntry, String> {
+        let mut d = self.get_agency_delegation(delegation_id)?;
+        d.revoked = true;
+        self.add_agency_delegation(&d)
+    }
+
+    /// The seeded domains of agency (id + label + description + consequential/selfhood flags), for a
+    /// delegation-creation picker. Category terms are excluded — only the 17 leaf domains.
+    pub fn list_agency_domains(&self) -> Vec<AgencyDomainInfo> {
+        let tax = agency_domain_taxonomy();
+        tax.all()
+            .iter()
+            .filter(|t| t.category.is_some())
+            .map(|t| AgencyDomainInfo {
+                id: t.id.clone(),
+                label: t.label.clone(),
+                category: t.category.clone(),
+                description: t.description.clone(),
+                consequential: t.attr("consequential") == Some("true"),
+                selfhood: t.sphere() == Sphere::Selfhood,
+            })
+            .collect()
+    }
+
+    /// Evaluate the fail-closed ABAC for a delegation against an access request built from the
+    /// delegation's own domain. `action` is `"read" | "write" | "decide"`. Uses a bare trigger
+    /// context (now only) — trigger-gated delegations therefore read as inactive here; supplying a
+    /// richer context (events/attestations) is a follow-up. Demonstrates the safety invariants:
+    /// selfhood default-deny, and consequential judgements requiring declared provenance + horizon.
+    pub fn evaluate_agency_access(
+        &self,
+        delegation_id: &str,
+        action: &str,
+        data_class: &str,
+    ) -> Result<AccessDecision, String> {
+        let d = self.get_agency_delegation(delegation_id)?;
+        let tax = agency_domain_taxonomy();
+        let sphere = match tax.get(&d.domain).map(|t| t.sphere()) {
+            Some(Sphere::Selfhood) => Sphere::Selfhood,
+            _ => Sphere::Personhood,
+        };
+        let request = AccessRequest {
+            domain: d.domain.clone(),
+            data_class: data_class.to_string(),
+            action: action.to_string(),
+            sphere,
+            jurisdiction: None,
+            provenance: None,
+        };
+        let ctx = TriggerContext::at(Self::now_unix() as u32);
+        Ok(delegation_permits(&d, &tax, &request, &ctx))
+    }
+
     // --- Guardianship approval escrow (M-of-N co-signature for proxy actions; T1.5) -------------
     //
     // Supported agency, not warden control: a proxy writing a protected record on the principal's
@@ -1921,6 +2103,30 @@ impl WebizenHostApi {
     }
 }
 
+/// A domain of agency, flattened for a delegation-creation picker (host → Tauri → Studio).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct AgencyDomainInfo {
+    pub id: String,
+    pub label: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub category: Option<String>,
+    pub description: String,
+    pub consequential: bool,
+    pub selfhood: bool,
+}
+
+/// Parse the wire form of a consent state (`"granted" | "withdrawn" | "pending" | "not_required"`)
+/// into [`ConsentState`]. Used by the Tauri command layer.
+pub fn agency_consent_from_str(s: &str) -> Result<ConsentState, String> {
+    match s {
+        "granted" => Ok(ConsentState::Granted),
+        "withdrawn" => Ok(ConsentState::Withdrawn),
+        "pending" => Ok(ConsentState::Pending),
+        "not_required" => Ok(ConsentState::NotRequired),
+        other => Err(format!("unknown consent state: {other}")),
+    }
+}
+
 /// Parse the wire form of a decoy-audit retention mode (`"auto_archive"` | `"manual_triage"`) into
 /// the [`RetentionMode`](qualia_core_db::crypto::sanctuary_audit_dag::RetentionMode) enum. Used by
 /// the Tauri command layer so the desktop crate needs no direct `qualia-core-db` dependency.
@@ -1971,6 +2177,59 @@ mod api_tests {
         let listed = host.list_health_records(8).unwrap();
         assert_eq!(listed.len(), 1);
         assert_eq!(listed[0].kind, "condition");
+    }
+
+    #[test]
+    fn agency_delegation_create_list_evaluate_supersede() {
+        use qualia_cooperative_core::agency_delegation::AgencyDelegation;
+        use qualia_cooperative_core::agency_domain::ids as dom;
+
+        let dir = tempdir().unwrap();
+        let mut host = test_host(dir.path());
+
+        // 17 seeded domains available to the picker.
+        assert_eq!(host.list_agency_domains().len(), 17);
+
+        // Create a consented MEDICAL delegation to a carer.
+        let mut d = AgencyDelegation::new("did:wf:alice", dom::MEDICAL, "urn:un:hr:udhr", 100);
+        d.agent_dids = vec!["did:wf:carer".into()];
+        d.consent = ConsentState::Granted;
+        let entry = host.add_agency_delegation(&d).unwrap();
+        assert_eq!(entry.kind, "agency_delegation");
+        assert!(entry.id.contains(":agency-delegation:"));
+
+        // It lists back losslessly (agent + domain preserved).
+        let listed = host.list_agency_delegations(16).unwrap();
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].domain, dom::MEDICAL);
+        assert_eq!(listed[0].agent_dids, vec!["did:wf:carer".to_string()]);
+
+        // A read is permitted; a consequential (medical) *decide* is denied without provenance.
+        assert!(host
+            .evaluate_agency_access(&d.id, "read", "diagnosis")
+            .unwrap()
+            .is_permit());
+        assert!(!host
+            .evaluate_agency_access(&d.id, "decide", "diagnosis")
+            .unwrap()
+            .is_permit());
+
+        // Withdraw consent → supersedes; the projection shows one delegation, now non-permitting.
+        host.set_agency_delegation_consent(&d.id, ConsentState::Withdrawn)
+            .unwrap();
+        let listed = host.list_agency_delegations(16).unwrap();
+        assert_eq!(listed.len(), 1, "supersede must not create a second logical delegation");
+        assert_eq!(listed[0].consent, ConsentState::Withdrawn);
+        assert!(!host
+            .evaluate_agency_access(&d.id, "read", "diagnosis")
+            .unwrap()
+            .is_permit());
+
+        // Revoke → still one logical delegation, now revoked.
+        host.revoke_agency_delegation(&d.id).unwrap();
+        let listed = host.list_agency_delegations(16).unwrap();
+        assert_eq!(listed.len(), 1);
+        assert!(listed[0].revoked);
     }
 
     #[test]

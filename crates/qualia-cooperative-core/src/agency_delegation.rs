@@ -183,6 +183,18 @@ pub fn agency_delegation_summary(delegation: &AgencyDelegation) -> String {
     .to_string()
 }
 
+/// The **lossless** JSON of a delegation — every field. Stored as the journal record's summary so
+/// the full delegation (authority, trigger, scope, transfer schedule, …) reconstructs on read; the
+/// lossy [`agency_delegation_summary`] is for compact projections only.
+pub fn agency_delegation_full_json(delegation: &AgencyDelegation) -> String {
+    serde_json::to_string(delegation).unwrap_or_default()
+}
+
+/// Reconstruct a delegation from its lossless JSON (as stored by [`agency_delegation_full_json`]).
+pub fn parse_agency_delegation(json: &str) -> Option<AgencyDelegation> {
+    serde_json::from_str(json).ok()
+}
+
 // ---------------------------------------------------------------------------
 // ABAC evaluation
 // ---------------------------------------------------------------------------
@@ -437,6 +449,26 @@ mod tests {
         assert_eq!(env.sensitivity, SensitivityClass::Restricted);
         let summary = agency_delegation_summary(&d);
         assert!(summary.contains(dom::FINANCIAL));
+    }
+
+    #[test]
+    fn full_json_round_trips_losslessly() {
+        // The full-JSON form (stored as the journal summary) must reconstruct every field, not the
+        // lossy projection.
+        let mut d = granted(dom::MEDICAL);
+        d.agent_dids = vec!["did:wf:carer".into()];
+        d.scope = vec![("data_class".into(), "medication".into())];
+        d.trigger = Some(Trigger::TemporalWindow { from_unix: 10, to_unix: Some(20) });
+        d.transfer_schedule = vec![TransferStage {
+            domain: dom::MEDICAL.into(),
+            to_stage: ControlStage::CoSigned,
+            trigger: Trigger::TemporalWindow { from_unix: 1_000, to_unix: None },
+        }];
+        let json = agency_delegation_full_json(&d);
+        let back = parse_agency_delegation(&json).expect("reconstructs");
+        assert_eq!(d, back);
+        // The lossy summary, by contrast, drops fields like the trigger and scope.
+        assert!(!agency_delegation_summary(&d).contains("temporal_window"));
     }
 
     #[test]

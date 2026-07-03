@@ -134,6 +134,8 @@ pub fn journal_kind_for_record_id(record_id: &str) -> &'static str {
         "guardianship_proposal"
     } else if record_id.contains(":guardianship_vote:") {
         "guardianship_vote"
+    } else if record_id.contains(":agency-delegation:") {
+        "agency_delegation"
     } else if record_id.contains(":work_item_status:") {
         "work_item_status"
     } else if record_id.contains(":work_item:") {

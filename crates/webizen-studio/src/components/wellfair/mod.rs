@@ -1,3 +1,4 @@
+pub mod agency_panel;
 pub mod audit_panel;
 pub mod clinical_panel;
 pub mod communications_panel;
@@ -27,6 +28,7 @@ pub mod shared;
 pub mod shell;
 pub mod tools_panel;
 
+pub use agency_panel::WellfairAgencyPanel;
 pub use audit_panel::WellfairAuditPanel;
 pub use communications_panel::WellfairCommunicationsPanel;
 pub use clinical_panel::WellfairClinicalPanel;
