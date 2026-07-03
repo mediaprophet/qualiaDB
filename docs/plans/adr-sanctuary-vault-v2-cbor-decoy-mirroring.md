@@ -312,14 +312,18 @@ owns every contract below and every edit to the vault crypto.
 - **S5 · vault surgery** — **DONE** (see the Done list above): `VaultMeta`→container; `serde_json`
   removed (records *and* container CBOR — no JSON path); blind-append audit on decoy writes; real-lane
   DAG read; real→decoy key hierarchy; per-session-branch head anchor. No lazy migration (no legacy vaults).
-- **S6 · host API + Tauri + bridges + nav** — *next.* Expose the S5 vault surface through
-  `qualia-client-core/src/wellfair/api.rs` (session-aware decoy write / `real_curate_decoy_add_note` /
-  `review_decoy_activity`) → Tauri commands (`wellfair_{get,set}_decoy_retention_mode`, record-on-behalf,
-  audit review) → studio bridges + nav; wire panel B.
+- **S6 · host API + Tauri + bridges + nav** — **DONE** (`e5933a8f` host API, `00448f50` retention
+  persistence, `c4e29a5b` Tauri commands + studio bridges + UI). The S5 vault surface is reachable
+  end-to-end: `add_note_in_session` / `real_curate_decoy_add_note` / `review_decoy_activity` /
+  `get,set_retention_mode` → host API → Tauri commands (`wellfair_{review_decoy_activity,curate_decoy_note,
+  get_decoy_retention_mode,set_decoy_retention_mode,sanctuary_vault_add_note_in_session}`) → studio
+  bridges → a "Cover space activity" section in the vault's **real-lane** view (review + integrity verdict
+  + retention toggle + curate box). The retention panel takes the real PIN as a prop (was PIN-less); the
+  standalone PIN-less mount was removed. host + wasm + desktop checks clean.
 
-**Order:** A · B · C fanned out; S3 built; **S5 complete (S5a/b/c, local commits `ffc4dda3` /
-`940eeac6` / `ba415e80`)**; S6 next (wires B + api surface). Every slice: green build + tests before it
-counts. **Nothing pushed without Timothy's word.**
+**Order:** A · B · C fanned out; S3 built; **S5 complete (`ffc4dda3` / `940eeac6` / `ba415e80`)**;
+**S6 complete (`e5933a8f` / `00448f50` / `c4e29a5b`)** — the whole vault-v2 workstream is done. Every
+slice: green build + tests before it counted. **Nothing pushed without Timothy's word.**
 
 **Follow-up flagged (library-ization pass, §11):** `sanctuary_vault.rs` is now ~1050 lines. It is a
 pre-existing monolith grown mid-security-feature, so the split is deliberately deferred (per §11's
