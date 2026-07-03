@@ -65,3 +65,40 @@ qualia-client-core wellfair::` → **87 passed** (+1 host board round-trip). `ca
 least-privilege Qapps) — these unblock the standalone Cooperative Qapp (WP4). The **WP9 Development
 Cooperative** (bind this repo read-only, backlog/claims/changes) is the dogfood gate. My recommendation:
 tackle WP1 next (security foundation), then WP2, then stand up the Cooperative Qapp shell.
+
+---
+
+## 2026-07-03 — Supported-agency layer: domains, triggers, provenance DAG, delegation + ABAC (Claude / Opus 4.8, swarm-authored) — DONE (crate)
+
+**Phase / status:** The load-bearing semantic core (ADR §7–§10, "supported agency" reframe). Built the
+three leaf modules via a 3-agent workflow, integrated the delegation core myself. **60 crate tests green.**
+
+**What was built (all in `qualia-cooperative-core`):**
+- `agency_domain.rs` — the 17 domains of agency (welfare/socio-economic/technological/civic), extensible,
+  sphere-tagged (only reproductive/biometric/genetic is Selfhood), consequential flags on
+  medical/legal/financial/reproductive-biometric-genetic/civic.
+- `trigger.rs` — the `Trigger` algebra: `VerifiableEvent | TemporalWindow | DeadmanSwitch |
+  HumanConsensus{m-of-n, capacity} | All | Any | Not`, `evaluate(...)`. **Crypto + subjective human
+  consensus, composed** (2 doctors attesting incapacity = a trigger primitive).
+- `provenance.rs` — `AgentType` (natural/software/org/instrument/dataset), `AgentRef`, dual-timed
+  `InputVeracity`, `Reliance` + `JudgementProvenance` as a real **DAG** (`Option<Box<..>>`),
+  `RelianceDeclaration` (standing toolchain disclosure), epistemic-horizon field, `DisclosurePolicy`
+  (subject Full / others SelectiveField), and `has_undeclared_ai` (integrity-breach detector).
+- `agency_delegation.rs` (integrator) — `AgencyDelegation` (principal + agents + domain + authority
+  profile + trigger + **required values-anchor** + scope + jurisdiction + **precedence** + validity +
+  consent + evidence-ref + developmental transfer schedule) and `delegation_permits(...)` — fail-closed
+  ABAC with **selfhood default-deny**, consequential-domain **provenance+horizon required**, trigger
+  gating, and jurisdiction match (the backpacker case).
+
+**Bug caught by integration (not by agent inspection):** `trigger.rs` used internally-tagged serde
+(`#[serde(tag="type")]`) on a recursive enum with sequence-wrapping newtype variants — invalid for serde
+and caused an unbounded serializer trait-resolution overflow (compile hung at recursion_limit 2048).
+Fixed to the default externally-tagged representation; crate compiles instantly. Reinforces: agents
+verify by inspection, the integrator verifies by compiling.
+
+**Measured:** `cargo test -p qualia-cooperative-core` → **60 passed**. `cargo check -p qualia-client-core`
+→ green.
+
+**Next:** host API + Tauri commands + a Social Book / Agency Studio panel; wire guardianship `Suspend`;
+generalize `government_letter` → authority attestation; author predicate circuits so ZK property-proofs
+back the disclosure modality with the (now real) Groth16.

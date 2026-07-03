@@ -31,26 +31,28 @@
 - [x] **ZK review** — `crypto/zk_proofs.rs` is REAL Groth16 (arkworks, default `zk-culling`); 7/7 incl. soundness. CLAUDE.md note corrected.
 - [~] **T1.1** government-letter attachment bytes (host+cmd+bridge+panel) — code done, **pending commit** (folds into next commit)
 
-## B. Agency layer — build now (ADR §7–§10). New isolated files in `qualia-cooperative-core`.
+## B. Agency layer (ADR §7–§10). New isolated files in `qualia-cooperative-core`. **60 crate tests green.**
 
-- [ ] `agency_domain.rs` — the ~17 domains of agency (personhood), extensible, sphere-tagged; consequential flag
-- [ ] `agency_delegation.rs` — `AgencyDelegation` (principal + agent(s) + domain + `AuthorityProfile` +
+- [x] `agency_domain.rs` — the 17 domains of agency (personhood), extensible, sphere-tagged; consequential flag
+- [x] `agency_delegation.rs` — `AgencyDelegation` (principal + agent(s) + domain + `AuthorityProfile` +
       values-anchor + scope + jurisdiction + **precedence** [primary/secondary/local-temporary] + validity +
       consent + evidence-chain ref)
-- [ ] `Trigger` algebra — `VerifiableEvent | TemporalWindow | DeadmanSwitch | HumanConsensus{m_of_n, capacity}`
-      composed with And/Or/Not (ADR §7.1)
-- [ ] Developmental transfer schedule — monotonic `GuardianSole → CoSigned → PrincipalSole`, progressive
-      privacy, UNCRC-anchored, signed `TransferEvent`s (ADR §7.2)
-- [ ] `AgentType` (natural | software/AI | organization | instrument | dataset) + `RelianceDeclaration`
-      (standing) + `JudgementProvenance` (`informed_by` **DAG**) (ADR §8, §9)
-- [ ] Epistemic horizon — content-addressed Merkle/checkpoint ref pinning each agent's info-state (ADR §9)
-- [ ] Disclosure model — per-node, per-viewer (subject full / others proportionate) × per-modality
-      (full | selective field | **ZK property proof** via real Groth16) (ADR §9)
-- [ ] Veracity/characteristics substrate — dual-timed input veracity, instrument characteristics,
-      paraconsistent conflict-holding, root-cause over the DAG; **record only, humans adjudicate** (ADR §10)
-- [ ] ABAC evaluation — `delegation_permits(...)` with **selfhood default-deny** + non-asymmetry invariant
+- [x] `Trigger` algebra — `VerifiableEvent | TemporalWindow | DeadmanSwitch | HumanConsensus{m,n,capacity}`
+      composed with All/Any/Not (ADR §7.1) — externally-tagged serde
+- [x] Developmental transfer schedule — monotonic `GuardianSole → CoSigned → PrincipalSole`, trigger-gated
+      (ADR §7.2). *(Model done; the signed `TransferEvent` runtime flow is host-level, below.)*
+- [x] `AgentType` (natural | software/AI | organization | instrument | dataset) + `RelianceDeclaration`
+      (standing) + `JudgementProvenance` (`informed_by` **DAG**) + `has_undeclared_ai` (ADR §8, §9)
+- [x] Epistemic horizon — content-addressed Merkle/checkpoint ref field on `JudgementProvenance` (ADR §9)
+- [x] Disclosure model — `DisclosurePolicy` (subject Full / others SelectiveField default) × modality
+      (full | selective field | **ZK property proof**); real Groth16 available, predicate circuits TBD (ADR §9)
+- [x] Veracity/characteristics substrate — `InputVeracity` dual-timed (at-time vs determined), instrument
+      characteristics via `AgentRef` version/capacity (ADR §10). *(Paraconsistent adjudication = host/engine, humans decide.)*
+- [x] ABAC evaluation — `delegation_permits(...)` with **selfhood default-deny** + consequential-domain
+      provenance-required + trigger-gating + jurisdiction match
 - [ ] Host API + Tauri commands + Studio panel(s) — Social Book / Agency surface
-- [ ] Migration: keep `wellfair` project/finance/contribution ids traceable; wire guardianship `Suspend`
+- [ ] Migration: keep `wellfair` project/finance/contribution ids traceable; wire guardianship `Suspend`;
+      generalize `government_letter` → authority attestation; predicate circuits for ZK property-proofs
 
 ## C. WellFair finish-out
 
