@@ -29,6 +29,8 @@ use qualia_core_db::crypto::sanctuary_crypto::{
     decrypt_sanctuary_chunk, derive_sanctuary_key_material, encrypt_sanctuary_chunk,
     SanctuaryAeadAlgorithm, SanctuaryKeyMaterial, DEFAULT_PBKDF2_ITERATIONS, SANCTUARY_TAG_BYTES,
 };
+use qualia_core_db::crypto::sanctuary_keychain;
+use sha2::{Digest, Sha256};
 
 pub const SANCTUARY_VAULT_FILE: &str = "wellfair/sanctuary_vault.json";
 const ALGO: SanctuaryAeadAlgorithm = SanctuaryAeadAlgorithm::Aes256Gcm;
@@ -85,6 +87,13 @@ struct VaultMeta {
     iterations: u32,
     real: LaneState,
     decoy: LaneState,
+    /// T1.2: when true, the KDF input is peppered with an OS-keychain-held secret keyed by
+    /// `vault_id`. Defaults false so existing (unwrapped) vaults deserialize unchanged.
+    #[serde(default)]
+    keychain_wrapped: bool,
+    /// Stable, non-secret keychain lookup id (path-independent). `Some` only when wrapped.
+    #[serde(default)]
+    vault_id: Option<String>,
 }
 
 fn vault_path(root: &Path) -> PathBuf {
@@ -124,9 +133,32 @@ fn open(key: &SanctuaryKeyMaterial, blob: &EncBlob, aad: &[u8]) -> Result<Vec<u8
     Ok(pt)
 }
 
-fn lane_key(pin: &str, lane: &LaneState, iterations: u32) -> Result<SanctuaryKeyMaterial, String> {
+/// Fold an optional OS-keychain pepper into the PIN before the PBKDF2 stretch. When no pepper is
+/// present (the default, unwrapped vault) the PIN bytes are used verbatim — so unwrapped vaults
+/// derive exactly as before. A pepper domain-separates and binds the derivation to the keychain
+/// secret: disk + PIN alone cannot reproduce the key.
+fn effective_secret(pin: &str, pepper: Option<&[u8; 32]>) -> Vec<u8> {
+    match pepper {
+        None => pin.as_bytes().to_vec(),
+        Some(p) => {
+            let mut h = Sha256::new();
+            h.update(b"q42:sanctuary:pepper:v1");
+            h.update(p);
+            h.update(pin.as_bytes());
+            h.finalize().to_vec()
+        }
+    }
+}
+
+fn lane_key(
+    pin: &str,
+    lane: &LaneState,
+    iterations: u32,
+    pepper: Option<&[u8; 32]>,
+) -> Result<SanctuaryKeyMaterial, String> {
     let salt = hex::decode(&lane.salt_hex).map_err(|e| e.to_string())?;
-    Ok(derive_sanctuary_key_material(pin.as_bytes(), &salt, iterations))
+    let secret = effective_secret(pin, pepper);
+    Ok(derive_sanctuary_key_material(&secret, &salt, iterations))
 }
 
 /// Derive the key for `lane_id` and confirm the PIN opens it (verifier → magic constant).
@@ -135,8 +167,9 @@ fn try_lane(
     lane: &LaneState,
     lane_id: SanctuaryLane,
     iterations: u32,
+    pepper: Option<&[u8; 32]>,
 ) -> Option<SanctuaryKeyMaterial> {
-    let key = lane_key(pin, lane, iterations).ok()?;
+    let key = lane_key(pin, lane, iterations, pepper).ok()?;
     match open(&key, &lane.verifier, lane_id.aad()) {
         Ok(v) if v == VERIFIER_MAGIC => Some(key),
         _ => None,
@@ -145,19 +178,29 @@ fn try_lane(
 
 /// Resolve which lane a PIN opens, returning the (single-derivation) key alongside it.
 /// A real PIN costs one PBKDF2 derivation; a decoy PIN costs two (real is tried first).
-fn open_lane(meta: &VaultMeta, pin: &str) -> Result<(SanctuaryLane, SanctuaryKeyMaterial), String> {
-    if let Some(key) = try_lane(pin, &meta.real, SanctuaryLane::Real, meta.iterations) {
+fn open_lane(
+    meta: &VaultMeta,
+    pin: &str,
+    pepper: Option<&[u8; 32]>,
+) -> Result<(SanctuaryLane, SanctuaryKeyMaterial), String> {
+    if let Some(key) = try_lane(pin, &meta.real, SanctuaryLane::Real, meta.iterations, pepper) {
         return Ok((SanctuaryLane::Real, key));
     }
-    if let Some(key) = try_lane(pin, &meta.decoy, SanctuaryLane::Decoy, meta.iterations) {
+    if let Some(key) = try_lane(pin, &meta.decoy, SanctuaryLane::Decoy, meta.iterations, pepper) {
         return Ok((SanctuaryLane::Decoy, key));
     }
     Err("Incorrect PIN".into())
 }
 
-fn new_lane(pin: &str, lane_id: SanctuaryLane, iterations: u32) -> LaneState {
+fn new_lane(
+    pin: &str,
+    lane_id: SanctuaryLane,
+    iterations: u32,
+    pepper: Option<&[u8; 32]>,
+) -> LaneState {
     let salt = random_salt();
-    let key = derive_sanctuary_key_material(pin.as_bytes(), &salt, iterations);
+    let secret = effective_secret(pin, pepper);
+    let key = derive_sanctuary_key_material(&secret, &salt, iterations);
     let aad = lane_id.aad();
     let verifier = seal(&key, VERIFIER_CHUNK, VERIFIER_MAGIC, aad);
     let empty: Vec<SanctuaryVaultNote> = Vec::new();
@@ -209,6 +252,18 @@ pub(crate) fn setup_with_iterations(
     decoy_pin: &str,
     iterations: u32,
 ) -> Result<(), String> {
+    build_vault(root, real_pin, decoy_pin, iterations, None, None)
+}
+
+/// Shared vault constructor. `pepper`/`vault_id` are `Some` only for a keychain-wrapped vault.
+fn build_vault(
+    root: impl AsRef<Path>,
+    real_pin: &str,
+    decoy_pin: &str,
+    iterations: u32,
+    pepper: Option<&[u8; 32]>,
+    vault_id: Option<String>,
+) -> Result<(), String> {
     if real_pin.len() < MIN_PIN_LEN || decoy_pin.len() < MIN_PIN_LEN {
         return Err(format!("PIN must be at least {MIN_PIN_LEN} characters"));
     }
@@ -222,16 +277,109 @@ pub(crate) fn setup_with_iterations(
     let meta = VaultMeta {
         version: 1,
         iterations,
-        real: new_lane(real_pin, SanctuaryLane::Real, iterations),
-        decoy: new_lane(decoy_pin, SanctuaryLane::Decoy, iterations),
+        real: new_lane(real_pin, SanctuaryLane::Real, iterations, pepper),
+        decoy: new_lane(decoy_pin, SanctuaryLane::Decoy, iterations, pepper),
+        keychain_wrapped: pepper.is_some(),
+        vault_id,
     };
     save_meta(root, &meta)
+}
+
+/// Resolve the pepper needed to open `meta`. `override_pepper` (a recovery code) wins; otherwise a
+/// keychain-wrapped vault fetches its pepper from the OS keychain (erroring if the entry is gone).
+fn pepper_for(
+    meta: &VaultMeta,
+    override_pepper: Option<[u8; 32]>,
+) -> Result<Option<[u8; 32]>, String> {
+    if let Some(p) = override_pepper {
+        return Ok(Some(p));
+    }
+    if !meta.keychain_wrapped {
+        return Ok(None);
+    }
+    let vault_id = meta
+        .vault_id
+        .as_deref()
+        .ok_or("Keychain-wrapped vault is missing its vault_id")?;
+    sanctuary_keychain::get_pepper(vault_id)?
+        .map(Some)
+        .ok_or_else(|| {
+            "Sanctuary keychain secret not found on this device — supply the recovery code".into()
+        })
+}
+
+/// Is the on-disk vault keychain-wrapped (T1.2)?
+pub fn is_keychain_wrapped(root: impl AsRef<Path>) -> bool {
+    load_meta(root.as_ref())
+        .ok()
+        .flatten()
+        .map(|m| m.keychain_wrapped)
+        .unwrap_or(false)
+}
+
+/// **Opt-in (off by default).** Create the two encrypted lanes with an OS-keychain-held pepper mixed
+/// into the KDF, so disk + PIN alone cannot open the vault. Returns the pepper as a hex **recovery
+/// code**: the caller MUST have the user record it out-of-band — if the keychain entry is later lost
+/// (reinstall / new machine), this code is the only way back in (see [`unlock_with_recovery`]).
+///
+/// Enabling this is a deliberate, recovery-aware choice; the ordinary [`setup`] path stays unwrapped.
+pub fn setup_wrapped(
+    root: impl AsRef<Path>,
+    real_pin: &str,
+    decoy_pin: &str,
+) -> Result<String, String> {
+    let pepper = sanctuary_keychain::generate_pepper()?;
+    let vault_id = uuid::Uuid::new_v4().to_string();
+    // Store the pepper first; if vault construction then fails, roll the keychain entry back.
+    sanctuary_keychain::store_pepper(&vault_id, &pepper)?;
+    match build_vault(
+        root,
+        real_pin,
+        decoy_pin,
+        DEFAULT_PBKDF2_ITERATIONS,
+        Some(&pepper),
+        Some(vault_id.clone()),
+    ) {
+        Ok(()) => Ok(hex::encode(pepper)),
+        Err(e) => {
+            let _ = sanctuary_keychain::delete_pepper(&vault_id);
+            Err(e)
+        }
+    }
+}
+
+/// Recover access to a keychain-wrapped vault whose keychain entry is missing (new device, OS
+/// reinstall) by supplying the hex recovery code from [`setup_wrapped`]. On success the pepper is
+/// re-stored into this device's keychain so subsequent unlocks are seamless again.
+pub fn unlock_with_recovery(
+    root: impl AsRef<Path>,
+    pin: &str,
+    recovery_code_hex: &str,
+) -> Result<SanctuaryLane, String> {
+    let meta = load_meta(root.as_ref())?.ok_or("Sanctuary vault is not set up")?;
+    if !meta.keychain_wrapped {
+        return Err("This vault is not keychain-wrapped; unlock with the PIN alone".into());
+    }
+    let bytes = hex::decode(recovery_code_hex.trim())
+        .map_err(|_| "Recovery code is not valid hex".to_string())?;
+    if bytes.len() != 32 {
+        return Err("Recovery code must be 32 bytes (64 hex chars)".into());
+    }
+    let mut pepper = [0u8; 32];
+    pepper.copy_from_slice(&bytes);
+    let (lane, _key) = open_lane(&meta, pin, Some(&pepper))?;
+    if let Some(vault_id) = meta.vault_id.as_deref() {
+        // Re-seat the pepper for future unlocks on this device.
+        sanctuary_keychain::store_pepper(vault_id, &pepper)?;
+    }
+    Ok(lane)
 }
 
 /// Resolve which lane a PIN opens (or an error if it opens neither).
 pub fn resolve_lane(root: impl AsRef<Path>, pin: &str) -> Result<SanctuaryLane, String> {
     let meta = load_meta(root.as_ref())?.ok_or("Sanctuary vault is not set up")?;
-    Ok(open_lane(&meta, pin)?.0)
+    let pepper = pepper_for(&meta, None)?;
+    Ok(open_lane(&meta, pin, pepper.as_ref())?.0)
 }
 
 fn lane_ref<'a>(meta: &'a VaultMeta, lane: SanctuaryLane) -> &'a LaneState {
@@ -251,7 +399,8 @@ fn lane_mut(meta: &mut VaultMeta, lane: SanctuaryLane) -> &mut LaneState {
 /// Read the notes held in the lane the PIN opens. Nothing is readable without a valid PIN.
 pub fn list_notes(root: impl AsRef<Path>, pin: &str) -> Result<(SanctuaryLane, Vec<SanctuaryVaultNote>), String> {
     let meta = load_meta(root.as_ref())?.ok_or("Sanctuary vault is not set up")?;
-    let (lane, key) = open_lane(&meta, pin)?;
+    let pepper = pepper_for(&meta, None)?;
+    let (lane, key) = open_lane(&meta, pin, pepper.as_ref())?;
     let state = lane_ref(&meta, lane);
     let pt = open(&key, &state.records, lane.aad())?;
     let notes: Vec<SanctuaryVaultNote> = serde_json::from_slice(&pt).map_err(|e| e.to_string())?;
@@ -267,7 +416,8 @@ pub fn add_note(
 ) -> Result<SanctuaryLane, String> {
     let root = root.as_ref();
     let mut meta = load_meta(root)?.ok_or("Sanctuary vault is not set up")?;
-    let (lane, key) = open_lane(&meta, pin)?;
+    let pepper = pepper_for(&meta, None)?;
+    let (lane, key) = open_lane(&meta, pin, pepper.as_ref())?;
     let (mut notes, counter) = {
         let state = lane_ref(&meta, lane);
         let pt = open(&key, &state.records, lane.aad())?;
@@ -339,6 +489,58 @@ mod tests {
         add_note(dir.path(), "real-pin-1", "TERMINALLY-SENSITIVE-STRING", 10).unwrap();
         let raw = fs::read_to_string(vault_path(dir.path())).unwrap();
         assert!(!raw.contains("TERMINALLY-SENSITIVE-STRING"), "sanctuary body leaked to disk");
+    }
+
+    #[test]
+    fn effective_secret_folds_pepper_deterministically() {
+        // No pepper → PIN verbatim (unwrapped vaults derive exactly as before).
+        assert_eq!(effective_secret("pin", None), b"pin".to_vec());
+        // A pepper changes the derived secret, deterministically.
+        let peppered = effective_secret("pin", Some(&[1u8; 32]));
+        assert_ne!(peppered, b"pin".to_vec());
+        assert_eq!(peppered, effective_secret("pin", Some(&[1u8; 32])));
+        assert_ne!(peppered, effective_secret("pin", Some(&[2u8; 32])));
+    }
+
+    #[test]
+    fn keychain_pepper_binds_the_vault_key() {
+        // Hermetic: exercises the pepper-mixing directly via build_vault/open_lane, with NO real
+        // OS-keychain I/O (setup_wrapped/unlock_with_recovery own that thin wrapper).
+        let dir = tempfile::tempdir().unwrap();
+        let pepper = [7u8; 32];
+        build_vault(
+            dir.path(),
+            "real-pin-1",
+            "decoy-pin-2",
+            1_000,
+            Some(&pepper),
+            Some("test-vault".into()),
+        )
+        .unwrap();
+
+        let meta = load_meta(dir.path()).unwrap().unwrap();
+        assert!(meta.keychain_wrapped);
+        assert_eq!(meta.vault_id.as_deref(), Some("test-vault"));
+
+        // Correct pepper opens the real lane.
+        let (lane, _k) = open_lane(&meta, "real-pin-1", Some(&pepper)).unwrap();
+        assert_eq!(lane, SanctuaryLane::Real);
+
+        // The same PIN with NO pepper (i.e. disk + PIN, as an attacker would try) does NOT open it.
+        assert!(open_lane(&meta, "real-pin-1", None).is_err());
+        // A wrong pepper does not open it either.
+        assert!(open_lane(&meta, "real-pin-1", Some(&[9u8; 32])).is_err());
+    }
+
+    #[test]
+    fn unwrapped_vault_needs_no_pepper() {
+        // Regression: the default (unwrapped) path resolves a None pepper and opens on PIN alone.
+        let dir = tempfile::tempdir().unwrap();
+        setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
+        let meta = load_meta(dir.path()).unwrap().unwrap();
+        assert!(!meta.keychain_wrapped);
+        assert!(pepper_for(&meta, None).unwrap().is_none());
+        assert!(!is_keychain_wrapped(dir.path()));
     }
 
     #[test]

@@ -105,6 +105,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_dialog::init())
         .register_uri_scheme_protocol("qualia", move |_app, request| {
             let path = request.uri().path().trim_start_matches('/');
             let safe_path: PathBuf = PathBuf::from(path)

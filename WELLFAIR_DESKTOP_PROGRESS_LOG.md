@@ -420,3 +420,44 @@ currently "proxy + Restricted"; extending it to consequential-domain gating from
 **Next step:** T1.4 native file dialogs (Tauri dialog plugin) or T1.2 OS-keychain wrapping (recovery-gated,
 off by default) — both remaining §C finish-out items; then the ZK predicate circuits so property-proofs
 back the disclosure modality with the now-real Groth16.
+
+---
+
+## 2026-07-03 — T1.4 native file dialogs + T1.2 OS-keychain vault wrapping (Claude / Opus 4.8, 2 sub-agents) — DONE
+
+**Phase / status:** Two §C finish-out closers, done in parallel (one sub-agent for the isolated desktop
+dialog lane; I did the security-sensitive keychain lane myself) and integrated. All targets green.
+
+**T1.4 — native file dialogs (sub-agent, integrated):** added `tauri-plugin-dialog`, registered it,
+authored a `capabilities/default.json` (re-declaring the bootstrap defaults + `dialog:*`), added
+`wellfair_pick_file_path` / `wellfair_pick_save_path` commands (blocking `DialogExt`), host_client bridges,
+and **Browse…** buttons next to the clinical Attachments attach/export path inputs. Typed paths remain the
+fallback.
+
+**T1.2 — OS-keychain vault wrapping (opt-in, off by default; recovery-gated):**
+- `qualia-core-db::crypto::sanctuary_keychain` — thin OS-keychain I/O (Windows Credential Manager / macOS
+  Keychain / Secret Service) for a 32-byte pepper: generate / store / get / delete.
+- `wellfair::sanctuary_vault` — an optional pepper folds into the PBKDF2 input
+  (`effective_secret = SHA256(domain ‖ pepper ‖ pin)`), so a wrapped vault needs **disk + PIN + this
+  device's keychain**. `keychain_wrapped`/`vault_id` added to the vault meta with serde defaults, so
+  existing unwrapped vaults are byte-compatible and derive exactly as before. `setup_wrapped` returns a
+  one-time hex **recovery code**; `unlock_with_recovery` reopens a wrapped vault on a device whose keychain
+  entry was lost and re-seats the pepper. 3 hermetic tests (no real keychain I/O) prove the pepper binds
+  the key (PIN-alone and wrong-pepper both fail) and that the unwrapped path is unaffected.
+- Host API (`sanctuary_vault_is_keychain_wrapped`, `setup_sanctuary_vault_wrapped`,
+  `sanctuary_vault_unlock_with_recovery`) + 3 Tauri commands + host_client bridges + an **experimental**
+  "bind to this device's keychain" checkbox in the vault setup panel that surfaces the recovery code once,
+  with a blunt unrecoverable-if-lost warning.
+
+**Measured results:** `cargo test -p qualia-client-core wellfair::` → **97 passed** (+3 keychain-pepper).
+`cargo test -p wellfare-core` → 86. `cargo check` green: `qualia-core-db` (sanctuary-crypto),
+`webizen-desktop`, `webizen-studio` (host + `wasm32`). (Two pre-existing, unrelated client-core test
+failures — `qpu_oracle::commitment_text_verifies` and a `chat_session` parallelism flake — are in modules
+this work never touched; confirmed independent.)
+
+**⚑ Where I need the human:** T1.2's *mechanism* is done and off by default. Whether to make wrapping the
+default, and the exact recovery-code UX/backup guidance, is the recovery-model decision folded into the
+Sanctuary threat-model ADR (T2.1) — your call. The experimental toggle exists so it can be exercised now.
+
+**Next step:** the companion PWA workstream (now elevated — see the cooperative log + plan) and the ZK
+predicate circuits.

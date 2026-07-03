@@ -5,6 +5,7 @@
 
 use super::host_client::{
     add_clinical_attachment_from_path, add_clinical_report, export_attachment, fetch_health_records,
+    pick_file_path, pick_save_path,
 };
 use super::host_dto::HealthRecordDto;
 use dioxus::prelude::*;
@@ -163,13 +164,28 @@ pub fn WellfairClinicalPanel() -> Element {
                 "The file's bytes are stored encrypted-addressed in the local vault; only filename, size, and content hash appear here. Give a file path on this machine to attach."
             }
             div {
-                style: "display:grid;grid-template-columns:2fr 1fr;gap:0.5rem;margin-bottom:0.5rem;",
+                style: "display:grid;grid-template-columns:2fr auto 1fr;gap:0.5rem;margin-bottom:0.5rem;align-items:center;",
                 input {
                     r#type: "text",
                     placeholder: "File path (e.g. C:\\reports\\path.pdf)",
                     value: "{ui().attach_path}",
                     oninput: move |e| ui.write().attach_path = e.value(),
                     style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
+                }
+                button {
+                    r#type: "button",
+                    title: "Browse for a file to attach",
+                    style: "padding:0.35rem 0.6rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.75rem;cursor:pointer;white-space:nowrap;",
+                    onclick: move |_| {
+                        spawn(async move {
+                            match pick_file_path().await {
+                                Ok(Some(path)) => ui.write().attach_path = path,
+                                Ok(None) => {}
+                                Err(e) => ui.write().status = format!("File dialog failed: {e}"),
+                            }
+                        });
+                    },
+                    "Browse…"
                 }
                 input {
                     r#type: "text",
@@ -209,12 +225,30 @@ pub fn WellfairClinicalPanel() -> Element {
                 label {
                     style: "display:flex;flex-direction:column;gap:0.2rem;font-size:0.72rem;margin-bottom:0.4rem;",
                     "Export destination path"
-                    input {
-                        r#type: "text",
-                        placeholder: "Destination file path for export",
-                        value: "{ui().export_path}",
-                        oninput: move |e| ui.write().export_path = e.value(),
-                        style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
+                    div {
+                        style: "display:flex;gap:0.4rem;align-items:center;",
+                        input {
+                            r#type: "text",
+                            placeholder: "Destination file path for export",
+                            value: "{ui().export_path}",
+                            oninput: move |e| ui.write().export_path = e.value(),
+                            style: "flex:1;padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
+                        }
+                        button {
+                            r#type: "button",
+                            title: "Choose where to save the exported file",
+                            style: "padding:0.35rem 0.6rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.75rem;cursor:pointer;white-space:nowrap;",
+                            onclick: move |_| {
+                                spawn(async move {
+                                    match pick_save_path("attachment").await {
+                                        Ok(Some(path)) => ui.write().export_path = path,
+                                        Ok(None) => {}
+                                        Err(e) => ui.write().status = format!("Save dialog failed: {e}"),
+                                    }
+                                });
+                            },
+                            "Browse…"
+                        }
                     }
                 }
                 ul {

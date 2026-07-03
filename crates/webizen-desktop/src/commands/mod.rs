@@ -1088,6 +1088,46 @@ pub fn wellfair_export_attachment(
     Ok(serde_json::json!({ "written": bytes.len(), "path": dest_path }).to_string())
 }
 
+/// Convert a dialog `FilePath` into an absolute path string.
+///
+/// On desktop the picker yields `FilePath::Path`, so `into_path()` returns the `PathBuf`
+/// directly; `simplified()` first normalises Windows UNC prefixes. If the variant is a URL
+/// that cannot be resolved to a filesystem path, fall back to its `Display` form so the
+/// caller still receives a usable string rather than an error.
+fn dialog_file_path_to_string(fp: tauri_plugin_dialog::FilePath) -> String {
+    let display = fp.to_string();
+    match fp.simplified().into_path() {
+        Ok(path) => path.to_string_lossy().into_owned(),
+        Err(_) => display,
+    }
+}
+
+/// Open a native OS "open file" dialog (blocking). Returns the chosen absolute path,
+/// or `None` if the user cancelled. Lets the operator browse instead of typing a path.
+#[command]
+pub fn wellfair_pick_file_path(app: AppHandle) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let picked = app.dialog().file().blocking_pick_file();
+    Ok(picked.map(dialog_file_path_to_string))
+}
+
+/// Open a native OS "save file" dialog (blocking), seeded with `default_name`. Returns the
+/// chosen absolute path, or `None` if the user cancelled.
+#[command]
+pub fn wellfair_pick_save_path(
+    app: AppHandle,
+    default_name: String,
+) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let mut builder = app.dialog().file();
+    let trimmed = default_name.trim();
+    if !trimmed.is_empty() {
+        builder = builder.set_file_name(trimmed);
+    }
+    let picked = builder.blocking_save_file();
+    Ok(picked.map(dialog_file_path_to_string))
+}
+
 #[command]
 pub fn wellfair_add_government_letter_attachment_from_path(
     app: AppHandle,
@@ -1214,6 +1254,49 @@ pub fn wellfair_sanctuary_vault_list_notes(app: AppHandle, pin: String) -> Resul
         .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
     let (lane, notes) = host.list_sanctuary_vault_notes(&pin)?;
     Ok(serde_json::json!({ "lane": lane, "notes": notes }).to_string())
+}
+
+// --- T1.2: OS-keychain vault wrapping (opt-in, off by default; recovery-gated) ---
+
+#[command]
+pub fn wellfair_sanctuary_vault_is_keychain_wrapped(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    Ok(serde_json::json!({ "wrapped": host.sanctuary_vault_is_keychain_wrapped() }).to_string())
+}
+
+/// Create a keychain-wrapped vault; returns the one-time recovery code the user MUST record.
+#[command]
+pub fn wellfair_setup_sanctuary_vault_wrapped(
+    app: AppHandle,
+    real_pin: String,
+    decoy_pin: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let recovery_code = host.setup_sanctuary_vault_wrapped(&real_pin, &decoy_pin)?;
+    Ok(serde_json::json!({ "configured": true, "recovery_code": recovery_code }).to_string())
+}
+
+#[command]
+pub fn wellfair_sanctuary_vault_unlock_with_recovery(
+    app: AppHandle,
+    pin: String,
+    recovery_code: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let lane = host.sanctuary_vault_unlock_with_recovery(&pin, &recovery_code)?;
+    Ok(serde_json::json!({ "lane": lane }).to_string())
 }
 
 #[command]
@@ -3842,6 +3925,8 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_add_clinical_report,
         wellfair_add_clinical_attachment_from_path,
         wellfair_export_attachment,
+        wellfair_pick_file_path,
+        wellfair_pick_save_path,
         wellfair_add_government_letter_attachment_from_path,
         wellfair_add_assistance_need,
         wellfair_add_welfare_stream,
@@ -3851,6 +3936,9 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_setup_sanctuary_vault,
         wellfair_sanctuary_vault_add_note,
         wellfair_sanctuary_vault_list_notes,
+        wellfair_sanctuary_vault_is_keychain_wrapped,
+        wellfair_setup_sanctuary_vault_wrapped,
+        wellfair_sanctuary_vault_unlock_with_recovery,
         wellfair_add_wellbeing_observation,
         wellfair_add_therapy_note,
         wellfair_list_pending_live_shares,

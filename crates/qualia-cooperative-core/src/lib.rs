@@ -22,6 +22,7 @@ pub mod trigger;
 pub mod provenance;
 pub mod agency_delegation;
 pub mod work_item;
+pub mod qapp_package;
 
 /// Re-export the shared record envelope base so cooperative consumers can depend on this
 /// crate alone. (The types physically live in `wellfare-core` today.)

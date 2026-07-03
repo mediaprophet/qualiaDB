@@ -58,9 +58,15 @@
 
 ## C. WellFair finish-out
 
-- [ ] **T1.2** OS-keychain vault wrapping — **⚑ recovery-model gate** (keychain loss = vault loss); build
-      opt-in/off-by-default; enable only after Timothy's recovery-code decision
-- [ ] **T1.4** native file dialogs (`tauri-plugin-dialog`) for attach/export; typed paths remain fallback
+- [x] **T1.2** OS-keychain vault wrapping — **DONE (mechanism, opt-in, off by default)**: an OS-keychain-held
+      pepper folds into the Sanctuary KDF so disk + PIN alone can't open a wrapped vault; `setup_wrapped`
+      returns a one-time recovery code; `unlock_with_recovery` handles keychain loss. core-db
+      `sanctuary_keychain.rs` + `sanctuary_vault.rs` pepper-threading (3 hermetic tests) + host API + 3
+      Tauri cmds + host_client bridges + experimental toggle in the vault panel. Unwrapped stays the
+      default (unchanged). ⚑ *Turning it on by default / recovery-code UX copy = Timothy's call (T2.1).*
+- [x] **T1.4** native file dialogs (`tauri-plugin-dialog`) — **DONE**: `wellfair_pick_file_path` /
+      `wellfair_pick_save_path` commands + capability + host_client bridges + Browse buttons in the
+      clinical Attachments section; typed paths remain the fallback. Desktop + studio (host + wasm) green.
 - [x] **T1.5** guardianship M:N — **DONE**: proxy writes of protected (Restricted) records suspend into a
       persisted `GuardianshipProposal`; M-of-N guardians co-sign with immutable votes; status is a
       replay-safe *derived* projection (latest-vote-per-guardian, protective veto); on ratification the
@@ -79,7 +85,12 @@
 
 - [ ] **T3.1** real sync transport (libp2p / WSS) — drains outbox, feeds inbox; hostile-peer + convergence tests
       (shared with cooperative WP7)
-- [ ] **T3.2** companion PWA + secure-origin pairing (HTTPS/WSS or WebRTC) — replaces plain LAN-WS gateway
+- [~] **T3.2 → elevated to a first-class workstream: [companion-pwa-installable-qapps](companion-pwa-installable-qapps.md)**
+      "author a qapp → installable wasm app on your phone" (Timothy: key feature to build upon).
+      **P0 foundation DONE**: `qualia-cooperative-core::qapp_package` — `QappManifest` (extensible kinds +
+      least-privilege capabilities + content-addressed `WasmRef`) + `generate_pwa` (webmanifest + service
+      worker + loader), 21 tests. Remaining: P1 secure-origin delivery (**⚑ strategy fork**), P2 pairing/install,
+      P3 wasm build pipeline, P4 token-v2 isolation (WP1), P5 Studio Package&Publish (WP2), P6 Cooperative Qapp (WP4).
 - [ ] **T3.3** Phase-6 release hardening (reproducible builds, installers/signed updates, SBOM, backup/restore,
       accessibility audit, 42 MB Sentinel, diagnostics)
 - [ ] **T3.4** Phase-7 optional (anatomy, studies/rules, authenticated Solid Pod sync, model-assisted

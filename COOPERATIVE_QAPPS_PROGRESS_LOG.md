@@ -102,3 +102,34 @@ verify by inspection, the integrator verifies by compiling.
 **Next:** host API + Tauri commands + a Social Book / Agency Studio panel; wire guardianship `Suspend`;
 generalize `government_letter` → authority attestation; author predicate circuits so ZK property-proofs
 back the disclosure modality with the (now real) Groth16.
+
+---
+
+## 2026-07-03 — Companion PWA foundation: qapp manifest + installable-PWA generator (Claude / Opus 4.8, swarm-authored) — DONE (P0)
+
+**Phase / status:** Timothy elevated the companion PWA to an essential, build-upon-able feature: *"the means
+for people to define a qapp, of various kinds, then get an installable wasm app on their phone."* This is the
+P0 foundation of that platform — the authoring + packaging core. New plan:
+[companion-pwa-installable-qapps](docs/plans/companion-pwa-installable-qapps.md).
+
+**What was built (all in `qualia-cooperative-core::qapp_package`, transport-neutral, sub-agent-authored):**
+- `manifest.rs` — `QappManifest`: id, name, version, description, **extensible `QappKind`** (Cooperative /
+  Health / Journal / Directory / Custom), **least-privilege `Capability`** set (ReadRecords / WriteRecords /
+  Sync / BlobStore / Notifications / Camera / Custom), a content-addressed `WasmRef { path, sha256_hex,
+  size_bytes }`, icons, theme/background colour, display, offline. Builder + `validate()`.
+- `pwa.rs` — `generate_pwa(&QappManifest) -> PwaBundle` emitting a standards-compliant, installable-in-
+  principle scaffold: a W3C `manifest.webmanifest` (standalone display, `start_url`, icons), a cache-first
+  `sw.js` service worker (version-stamped cache, precache shell + wasm + icons, offline fetch), and an
+  `index.html` loader (viewport, manifest link, Apple touch tags, SW registration,
+  `WebAssembly.instantiateStreaming`). HTML/JS interpolation escaped.
+
+**Honest scope (in the module doc):** P0 is authoring + packaging only. Installability additionally needs a
+**secure origin** (HTTPS/localhost) — the delivery layer (P1) — and the wasm bundle is referenced by
+hash/path (this module does not compile wasm, P3). Those are genuine adjacent stages, not stubbed internals.
+
+**Measured:** `cargo test -p qualia-cooperative-core` → **81 passed** (+21 qapp_package). Downstream
+`qualia-client-core` / `webizen-desktop` / `webizen-studio` (host + wasm) all green with the new module.
+
+**Next (per the plan):** P1 secure-origin delivery is the load-bearing hard part and opens with a **strategy
+fork** (device-trusted HTTPS cert vs tunnelled TLS vs WebRTC) — a Timothy decision. Then P2 pairing/install,
+P3 wasm build, and P4/P5/P6 = cooperative WP1/WP2/WP4 sequenced behind the delivery they depend on.

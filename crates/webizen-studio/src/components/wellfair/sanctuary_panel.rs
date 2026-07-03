@@ -2,8 +2,9 @@
 
 use super::host_client::{
     fetch_health_records, fetch_sanctuary_prefs, lock_sanctuary, sanctuary_vault_add_note,
-    sanctuary_vault_configured, sanctuary_vault_list_notes, setup_sanctuary, setup_sanctuary_vault,
-    unlock_sanctuary, SanctuaryPrefsDto, SanctuaryVaultNoteDto,
+    sanctuary_vault_configured, sanctuary_vault_is_keychain_wrapped, sanctuary_vault_list_notes,
+    setup_sanctuary, setup_sanctuary_vault, setup_sanctuary_vault_wrapped, unlock_sanctuary,
+    SanctuaryPrefsDto, SanctuaryVaultNoteDto,
 };
 use super::host_dto::HealthRecordDto;
 use dioxus::prelude::*;
@@ -198,6 +199,12 @@ struct VaultUi {
     note_body: String,
     notes: Vec<SanctuaryVaultNoteDto>,
     opened: bool,
+    /// T1.2: bind the new vault to this device's OS keychain (experimental, recovery-gated).
+    wrap_keychain: bool,
+    /// Whether the on-disk vault is keychain-wrapped.
+    keychain_wrapped: bool,
+    /// One-time recovery code shown once after a wrapped setup — the user must record it.
+    recovery_code: Option<String>,
 }
 
 /// Encrypted-at-rest Sanctuary notes (independent PBKDF2 key + AEAD; real vs decoy lane).
@@ -210,6 +217,9 @@ pub fn WellfairSanctuaryVaultPanel() -> Element {
         spawn(async move {
             if let Ok(c) = sanctuary_vault_configured().await {
                 ui.write().configured = c;
+            }
+            if let Ok(w) = sanctuary_vault_is_keychain_wrapped().await {
+                ui.write().keychain_wrapped = w;
             }
         });
     });
@@ -224,6 +234,29 @@ pub fn WellfairSanctuaryVaultPanel() -> Element {
                 "Notes here are encrypted at rest with a key derived from your PIN — nothing is readable on disk without it. The decoy PIN opens a separate lane that never contains your real notes."
             }
             p { style: "margin:0 0 0.5rem;font-size:0.76rem;", "{ui().status}" }
+
+            if ui().keychain_wrapped {
+                p {
+                    style: "margin:0 0 0.5rem;font-size:0.72rem;color:#1d6a5f;",
+                    "🔑 This vault is bound to this device's keychain."
+                }
+            }
+
+            if let Some(code) = ui().recovery_code.clone() {
+                div {
+                    role: "alert",
+                    style: "margin:0 0 0.6rem;padding:0.6rem;border:1px solid #e6394655;background:#e6394611;border-radius:8px;",
+                    p { style: "margin:0 0 0.3rem;font-size:0.74rem;font-weight:600;color:#a52834;", "Save this recovery code now — it is shown only once" }
+                    code {
+                        style: "display:block;word-break:break-all;font-size:0.72rem;padding:0.4rem;background:var(--qualia-surface,#fff);border-radius:6px;border:1px solid var(--qualia-border,#ccc);",
+                        "{code}"
+                    }
+                    p {
+                        style: "margin:0.3rem 0 0;font-size:0.68rem;color:var(--qualia-text-muted,#777);",
+                        "If this device's keychain is ever lost, this code is the only way to reopen the vault. Store it somewhere safe and offline."
+                    }
+                }
+            }
 
             if !ui().configured {
                 div {
@@ -249,21 +282,50 @@ pub fn WellfairSanctuaryVaultPanel() -> Element {
                         }
                     }
                 }
+                label {
+                    style: "display:flex;gap:0.4rem;align-items:flex-start;margin-bottom:0.5rem;font-size:0.72rem;color:var(--qualia-text-muted,#666);",
+                    input {
+                        r#type: "checkbox",
+                        checked: ui().wrap_keychain,
+                        onchange: move |e| ui.write().wrap_keychain = e.value() == "true",
+                        style: "margin-top:0.15rem;",
+                    }
+                    span {
+                        strong { "Bind to this device's keychain (experimental). " }
+                        "Adds a hardware-held secret so disk + PIN alone can't open the vault. "
+                        "You'll get a one-time recovery code — if this device's keychain is lost and you don't have that code, the vault is unrecoverable."
+                    }
+                }
                 button {
                     style: "padding:0.4rem 0.75rem;border-radius:8px;border:none;background:var(--qualia-accent,#2a6f97);color:#fff;font-size:0.8rem;cursor:pointer;",
                     onclick: move |_| {
                         let real = ui().setup_real.clone();
                         let decoy = ui().setup_decoy.clone();
+                        let wrap = ui().wrap_keychain;
                         spawn(async move {
                             ui.write().status = "Creating encrypted vault…".into();
-                            match setup_sanctuary_vault(&real, &decoy).await {
-                                Ok(()) => {
-                                    ui.write().configured = true;
-                                    ui.write().setup_real.clear();
-                                    ui.write().setup_decoy.clear();
-                                    ui.write().status = "Encrypted vault created. Open it with your PIN.".into();
+                            if wrap {
+                                match setup_sanctuary_vault_wrapped(&real, &decoy).await {
+                                    Ok(code) => {
+                                        ui.write().configured = true;
+                                        ui.write().keychain_wrapped = true;
+                                        ui.write().recovery_code = Some(code);
+                                        ui.write().setup_real.clear();
+                                        ui.write().setup_decoy.clear();
+                                        ui.write().status = "Keychain-wrapped vault created. SAVE the recovery code below.".into();
+                                    }
+                                    Err(e) => ui.write().status = format!("Setup failed: {e}"),
                                 }
-                                Err(e) => ui.write().status = format!("Setup failed: {e}"),
+                            } else {
+                                match setup_sanctuary_vault(&real, &decoy).await {
+                                    Ok(()) => {
+                                        ui.write().configured = true;
+                                        ui.write().setup_real.clear();
+                                        ui.write().setup_decoy.clear();
+                                        ui.write().status = "Encrypted vault created. Open it with your PIN.".into();
+                                    }
+                                    Err(e) => ui.write().status = format!("Setup failed: {e}"),
+                                }
                             }
                         });
                     },

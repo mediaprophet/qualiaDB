@@ -1526,6 +1526,60 @@ pub async fn export_attachment(_record_id: &str, _dest_path: &str) -> Result<Str
     Err("Attachment export requires the Tauri desktop host".into())
 }
 
+/// Parse a host `Option<String>` command response (JSON `null` or a JSON string) into
+/// `Option<String>`. The dialog commands return the chosen path, or `null` on cancel.
+#[cfg(target_arch = "wasm32")]
+fn parse_optional_path(js: wasm_bindgen::JsValue) -> Result<Option<String>, String> {
+    if js.is_null() || js.is_undefined() {
+        return Ok(None);
+    }
+    if let Some(s) = js.as_string() {
+        // Serde may hand back either a bare JS string or a JSON-encoded string.
+        if let Ok(inner) = serde_json::from_str::<Option<String>>(&s) {
+            return Ok(inner);
+        }
+        return Ok(Some(s));
+    }
+    serde_wasm_bindgen::from_value(js).map_err(|e| e.to_string())
+}
+
+/// Open a native OS file-open dialog on the desktop host; returns the chosen absolute path
+/// (or `None` if the user cancelled).
+#[cfg(target_arch = "wasm32")]
+pub async fn pick_file_path() -> Result<Option<String>, String> {
+    let js = tauri_invoke("wellfair_pick_file_path", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    parse_optional_path(js)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn pick_file_path() -> Result<Option<String>, String> {
+    Ok(None)
+}
+
+/// Open a native OS file-save dialog on the desktop host, seeded with `default_name`;
+/// returns the chosen absolute path (or `None` if the user cancelled).
+#[cfg(target_arch = "wasm32")]
+pub async fn pick_save_path(default_name: &str) -> Result<Option<String>, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &args,
+        &"defaultName".into(),
+        &wasm_bindgen::JsValue::from_str(default_name),
+    )
+    .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_pick_save_path", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    parse_optional_path(js)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn pick_save_path(_default_name: &str) -> Result<Option<String>, String> {
+    Ok(None)
+}
+
 // --- Cooperative work items / Kanban board ---
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1918,6 +1972,73 @@ pub async fn setup_sanctuary_vault(real_pin: &str, decoy_pin: &str) -> Result<()
 
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn setup_sanctuary_vault(_real_pin: &str, _decoy_pin: &str) -> Result<(), String> {
+    Err("Sanctuary vault requires the Tauri desktop host".into())
+}
+
+// --- T1.2: OS-keychain vault wrapping (opt-in, off by default; recovery-gated) ---
+
+#[cfg(target_arch = "wasm32")]
+pub async fn sanctuary_vault_is_keychain_wrapped() -> Result<bool, String> {
+    let js = tauri_invoke("wellfair_sanctuary_vault_is_keychain_wrapped", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "response not JSON".to_string())?;
+    let v: serde_json::Value = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    Ok(v.get("wrapped").and_then(|b| b.as_bool()).unwrap_or(false))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn sanctuary_vault_is_keychain_wrapped() -> Result<bool, String> {
+    Ok(false)
+}
+
+/// Create a keychain-wrapped vault; returns the one-time recovery code to display to the user.
+#[cfg(target_arch = "wasm32")]
+pub async fn setup_sanctuary_vault_wrapped(
+    real_pin: &str,
+    decoy_pin: &str,
+) -> Result<String, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"realPin".into(), &wasm_bindgen::JsValue::from_str(real_pin))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"decoyPin".into(), &wasm_bindgen::JsValue::from_str(decoy_pin))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_setup_sanctuary_vault_wrapped", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "response not JSON".to_string())?;
+    let v: serde_json::Value = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    Ok(v.get("recovery_code")
+        .and_then(|c| c.as_str())
+        .unwrap_or_default()
+        .to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn setup_sanctuary_vault_wrapped(_real_pin: &str, _decoy_pin: &str) -> Result<String, String> {
+    Err("Sanctuary vault requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn sanctuary_vault_unlock_with_recovery(
+    pin: &str,
+    recovery_code: &str,
+) -> Result<String, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"pin".into(), &wasm_bindgen::JsValue::from_str(pin))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"recoveryCode".into(), &wasm_bindgen::JsValue::from_str(recovery_code))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_sanctuary_vault_unlock_with_recovery", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "response not JSON".to_string())?;
+    let v: serde_json::Value = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    Ok(v.get("lane").and_then(|l| l.as_str()).unwrap_or("real").to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn sanctuary_vault_unlock_with_recovery(_pin: &str, _recovery_code: &str) -> Result<String, String> {
     Err("Sanctuary vault requires the Tauri desktop host".into())
 }
 

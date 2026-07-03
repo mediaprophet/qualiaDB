@@ -831,6 +831,37 @@ impl WebizenHostApi {
         super::sanctuary_vault::list_notes(&self.storage_root, pin)
     }
 
+    // --- T1.2: OS-keychain vault wrapping (opt-in, off by default; recovery-gated) ---
+
+    /// Is the on-disk Sanctuary vault keychain-wrapped (bound to an OS-keychain pepper)?
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn sanctuary_vault_is_keychain_wrapped(&self) -> bool {
+        super::sanctuary_vault::is_keychain_wrapped(&self.storage_root)
+    }
+
+    /// Opt-in: create the Sanctuary vault with an OS-keychain-held pepper so disk + PIN alone can't
+    /// open it. Returns the hex **recovery code** the user MUST record — losing the keychain entry
+    /// otherwise loses the vault. The ordinary [`Self::setup_sanctuary_vault`] path stays unwrapped.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn setup_sanctuary_vault_wrapped(
+        &self,
+        real_pin: &str,
+        decoy_pin: &str,
+    ) -> Result<String, String> {
+        super::sanctuary_vault::setup_wrapped(&self.storage_root, real_pin, decoy_pin)
+    }
+
+    /// Recover a keychain-wrapped vault on a device whose keychain entry is missing, using the
+    /// recovery code from [`Self::setup_sanctuary_vault_wrapped`]. Re-seats the pepper on success.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn sanctuary_vault_unlock_with_recovery(
+        &self,
+        pin: &str,
+        recovery_code_hex: &str,
+    ) -> Result<super::sanctuary_vault::SanctuaryLane, String> {
+        super::sanctuary_vault::unlock_with_recovery(&self.storage_root, pin, recovery_code_hex)
+    }
+
     pub fn add_life_event(&mut self, report: &LifeEventReport) -> Result<JournalEntry, String> {
         let payload = serde_json::to_string(report).map_err(|e| e.to_string())?;
         let hash = Self::payload_hash_hex(&payload);
