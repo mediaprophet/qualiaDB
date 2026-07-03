@@ -22,6 +22,7 @@ pub mod receipt;
 pub mod sanctuary;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod sanctuary_vault;
+pub mod vault_container;
 pub mod snapshot;
 pub mod sync_outbox;
 pub mod sync_protocol;

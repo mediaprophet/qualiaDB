@@ -8701,6 +8701,7 @@ dependencies = [
  "bytemuck",
  "byteorder",
  "chrono",
+ "ciborium",
  "dhat",
  "ed25519-dalek",
  "futures-util",

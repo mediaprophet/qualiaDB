@@ -299,12 +299,14 @@ owns every contract below and every edit to the vault crypto.
   forge/malleability/cross-recipient/reorder attempts over S0. All must fail-closed.
 
 **Sequential — integrator only (coupled, security-critical; NOT swarmed)**
-- **S3 · n-layer container + CBOR-LD codec** — `Layer { id, salt, kdf, verifier, records, audit_pubkey,
-  wrapped_keys }`; constant-shape padded `Container { version, layers }`; ciborium encode/decode;
-  `from_legacy_json` migration reader. This *is* the on-disk crypto layout — I build it.
-- **S5 · vault surgery** — `VaultMeta`→container + CBOR-LD save/load; blind-append audit on decoy writes;
-  real-lane DAG read; real→decoy key hierarchy (wrap decoy key + audit secret under the real key);
-  Argon2id lazy migration in the new container.
+- **S3 · n-layer container + CBOR codec** — **DONE** (`wellfair/vault_container.rs`): `Layer { id, role,
+  salt, kdf, verifier, records, audit_pubkey, wrapped_keys }`, constant-shape padded `VaultContainerV2`,
+  ciborium encode/decode. 4 tests. **CBOR-native — no JSON, no migration** (there is no deployed vault to
+  migrate; Timothy, 2026-07-03).
+- **S5 · vault surgery** — `VaultMeta`→container; **remove `serde_json` entirely from the vault** (records
+  *and* container both CBOR — no JSON path remains); blind-append audit on decoy writes; real-lane DAG
+  read; real→decoy key hierarchy (wrap decoy key + audit secret under the real key); **anchor each
+  session-branch head** (§10 — C's finding). *No lazy migration needed* — no legacy vaults exist.
 - **S6 · host API + Tauri + bridges + nav** — record-on-behalf→decoy; real-lane audit review; retention
   set; curate-decoy; wire panel B.
 

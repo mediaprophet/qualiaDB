@@ -94,10 +94,16 @@ CBOR-LD, retention = both modes as a real-session toggle (default auto). **Nothi
 - [x] **C** (swarm) adversarial primitive suite — 14 tests, 360+ byte-flip assertions, all fail-closed.
       ⚑ **Finding:** the hash-chain is tamper-*evident*, not a MAC → **S5 must anchor each branch head**
       (ADR §10 integrity boundary).
-- [ ] **S3** (integrator) n-layer container + CBOR-LD codec + legacy-JSON migration reader
-- [ ] **S5** (integrator) vault surgery — container swap, blind-append audit, real→decoy key hierarchy,
-      Argon2id lazy migration
+- [x] **S3** (integrator) n-layer CBOR container `wellfair/vault_container.rs` — CBOR-native, constant-shape,
+      4 tests. **No JSON, no migration** (no deployed vault; Timothy 2026-07-03).
+- [ ] **S5** (integrator) vault surgery — `VaultMeta`→container; **remove `serde_json` entirely from the
+      vault** (records + container both CBOR — no JSON path); blind-append audit; real→decoy key hierarchy;
+      **anchor each session-branch head** (C's finding, ADR §10). No lazy migration (no legacy vaults).
 - [ ] **S6** (integrator) host API + Tauri + bridges + nav (record-on-behalf, audit review, retention set)
+
+**Standing rule (Timothy 2026-07-03):** vault serialization is **CBOR / CBOR-LD only — no JSON path** may
+exist; code depending on JSON gets refactored, not migrated. (Broader codebase-wide JSON→CBOR is a separate
+sweep — flag to Timothy before undertaking.)
 
 ## D. Human-gated (Timothy decides, then implementable)
 
