@@ -1,4 +1,5 @@
 use super::agency_panel::WellfairAgencyPanel;
+use super::anatomy_panel::WellfairAnatomyPanel;
 use super::assessment_panel::WellfairAssessmentPanel;
 use super::clinical_panel::WellfairClinicalPanel;
 use super::consent_panel::WellfairConsentPanel;
@@ -31,6 +32,7 @@ use dioxus::prelude::*;
 const AREAS: &[(&str, &str)] = &[
     ("Personal", "Phase 2 — profile and accessibility"),
     ("Health", "Phase 2 — observations and sleep"),
+    ("Anatomy", "Whole-person systemic view"),
     ("Clinical", "Phase 3 — documents and pathology"),
     ("Life", "Phase 3 — events and welfare"),
     ("Relationships", "Phase 2 — Social Book + consent"),
@@ -86,6 +88,7 @@ pub fn WellfairShell() -> Element {
             WellfairSleepPanel {}
             WellfairMedicationPanel {}
         },
+        "Anatomy" => rsx! { WellfairAnatomyPanel {} },
         "Life" => rsx! {
             WellfairLifePanel {}
             WellfairWelfarePanel {}

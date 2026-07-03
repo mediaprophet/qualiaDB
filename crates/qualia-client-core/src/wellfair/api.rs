@@ -704,6 +704,28 @@ impl WebizenHostApi {
             .collect())
     }
 
+    /// 3D Anatomy Qapp — compute the whole-person systemic view for a lens (`"person"` /
+    /// `"clinician"`). Reads the person's condition / medication / diet records, maps them onto body
+    /// systems via the anatomy knowledge base, and returns the lens narrative + per-system burden +
+    /// an honest account of what did not map. Read-only; a computed set of **hypotheses**, never a
+    /// diagnosis. `convergence_threshold` is how many distinct adverse factors flag a system.
+    pub fn compute_anatomy_view(
+        &self,
+        lens: &str,
+        convergence_threshold: usize,
+    ) -> Result<super::anatomy_view::AnatomyViewReport, String> {
+        let conditions = self.list_journal_by_kind("condition", 256)?;
+        let medications = self.list_journal_by_kind("medication", 256)?;
+        let diet = self.list_journal_by_kind("diet", 256)?;
+        Ok(super::anatomy_view::build_report_from_journal(
+            &conditions,
+            &medications,
+            &diet,
+            super::anatomy_view::parse_lens(lens),
+            convergence_threshold,
+        ))
+    }
+
     pub fn sleep_analytics(&self, target_min: f64) -> Result<(SleepDebtReport, SleepHeatmapReport), String> {
         let sleep_rows = self.list_journal_by_kind("sleep", 128)?;
         let mut samples = Vec::new();

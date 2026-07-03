@@ -1103,6 +1103,24 @@ pub fn wellfair_list_assessment_instruments(app: AppHandle) -> Result<String, St
     serde_json::to_string(&host.list_assessment_instruments()).map_err(|e| e.to_string())
 }
 
+/// 3D Anatomy Qapp — compute the whole-person systemic view for a lens (`"person"` / `"clinician"`).
+/// Read-only; returns the lens narrative + per-system burden + what did not map. Hypotheses, not a
+/// diagnosis. `threshold` (default 2) is how many distinct adverse factors flag a system.
+#[command]
+pub fn wellfair_compute_anatomy_view(
+    app: AppHandle,
+    lens: String,
+    threshold: Option<usize>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let report = host.compute_anatomy_view(&lens, threshold.unwrap_or(2))?;
+    serde_json::to_string(&report).map_err(|e| e.to_string())
+}
+
 /// Score + record a sitting. `responses` is a comma-separated list of ordinal values (one per item,
 /// in order). Returns the scored result (total, band, interpretation, any safety flags).
 #[command]
@@ -4278,6 +4296,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_list_assessment_instruments,
         wellfair_record_assessment,
         wellfair_list_assessments,
+        wellfair_compute_anatomy_view,
         wellfair_propose_proxy_condition,
         wellfair_list_guardianship_proposals,
         wellfair_vote_guardianship_proposal,

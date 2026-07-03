@@ -156,3 +156,45 @@ stone you may not want.
 **Next step.** S4b — the host method (`WebizenHostApi::compute_anatomy_view(lens, …)` reading records →
 `RecordRef`s → `build_view_from_records`) + Tauri command; then the Studio surface, pending the direction
 call above.
+
+---
+
+## 2026-07-03 — S4b: host method + Tauri command + Studio "Anatomy" panel — **done** (Timothy chose: visible text panel)
+
+**Direction call.** Timothy chose "host plumbing + text panel" — wire it so both lenses are visible and
+clickable this session on what maps today. Done end-to-end.
+
+**What was built.**
+- **`qualia-client-core/src/wellfair/anatomy_view.rs`** — the host bridge. Builds the host knowledge base
+  from the **bundled `condition-map.json` embedded via `include_str!`** (offline, layout-independent — real
+  conditions map regardless of runtime file location) **plus** the illustrative seed (food/herb/tea).
+  Normalizes condition/medication/diet journal entries → `RecordRef`s (extracts the label from each entry's
+  `summary` JSON — `label`/`name`/`description`; skips ceased meds) → `AnatomyViewReport { view, burdens,
+  unmapped, mapped_count, total_records, disclosure }`. The `disclosure` field states plainly that food/herb/
+  med mappings are illustrative-seed pending the curated corpus, so the UI never passes seed off as fact.
+- **`WebizenHostApi::compute_anatomy_view(lens, threshold)`** (api.rs) — read-only; lists the three kinds
+  and delegates. **Tauri command** `wellfair_compute_anatomy_view` + handler registration (desktop).
+- **Studio "Anatomy" area** — new nav area; `WellfairAnatomyPanel` with a **Simple view / Clinician view**
+  toggle. Simple view = plain-language one-liner per system (plain_label), a colour-coded level dot, the
+  hard boundary shown prominently, advanced detail behind a **"Show detail"** progressive-disclosure toggle
+  (accessibility-core). Unmapped items shown honestly in a `<details>`; mapped/total + disclosure at the
+  foot. host_client mirror DTOs + `fetch_anatomy_view` (wasm) with a non-wasm stub.
+
+**Measured results.** `anatomy_view` 5 tests passing (incl. proof the embedded condition-map maps
+Hypertension→circulatory, and that real conditions map + unknowns report + ceased meds skip + both lens
+boundaries). **Builds green:** `cargo check` on webizen-desktop, and webizen-studio on **both host and
+wasm32** targets. Not browser-previewable in isolation (the panel needs the Tauri host for `invoke`; without
+it `fetch_anatomy_view` returns "requires the Tauri desktop host") — verification is the end-to-end unit
+tests + compile-green across host+wasm, stated honestly rather than a faked screenshot.
+
+**What maps today, honestly.** Conditions map via the bundled reference (~20 conditions → primary systems).
+Medications, diet and herbs only light up from the illustrative seed until the corpus lands — the "major
+role" (diet / traditional medicine) is corpus-gated, and the panel says so.
+
+**⚑ Where I need the human.** The curated **food/herb/nutrient corpus + trusted sources** (S3 datum) is now
+the single highest-leverage thing — it's what turns the diet/traditional-medicine role from seed examples
+into substance. Also still open: GLB meshes (S5 native 3D), clinician-lens rule sign-off (past structural
+considerations).
+
+**Next step.** Either S5 (native 3D body — needs GLB meshes) or the real corpus import (needs a source).
+Both are Timothy-gated; the engine + a visible two-lens surface are in place to receive either.

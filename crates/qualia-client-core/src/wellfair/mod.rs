@@ -1,4 +1,5 @@
 pub mod accessibility_prefs;
+pub mod anatomy_view;
 pub mod api;
 pub mod backup;
 pub mod blob_store;

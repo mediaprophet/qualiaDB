@@ -1,4 +1,5 @@
 pub mod agency_panel;
+pub mod anatomy_panel;
 pub mod assessment_panel;
 pub mod audit_panel;
 pub mod clinical_panel;
