@@ -443,7 +443,9 @@ pub fn setup(root: impl AsRef<Path>, real_pin: &str, decoy_pin: &str) -> Result<
 }
 
 /// As [`setup`] but with an explicit PBKDF2 iteration count. Crate-internal so **tests** can use a
-/// fast work factor; production goes through [`setup`] (Argon2id).
+/// fast work factor; production goes through [`setup`] (Argon2id). Only referenced from tests, so a
+/// non-test build sees it unused.
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn setup_with_iterations(
     root: impl AsRef<Path>,
     real_pin: &str,

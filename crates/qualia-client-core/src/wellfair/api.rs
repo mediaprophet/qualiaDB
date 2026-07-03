@@ -835,6 +835,53 @@ impl WebizenHostApi {
         super::sanctuary_vault::list_notes(&self.storage_root, pin)
     }
 
+    // --- Vault v2 (S6): per-session decoy audit, real→decoy curation, real-lane audit review ---
+
+    /// Add a note, attributing a **decoy** (duress) write to `session_ref` — a fresh ref per duress
+    /// unlock yields the git-like per-session branch in the audit DAG (ADR §10). Real-lane writes
+    /// ignore `session_ref` (real activity is never audited). The host should mint one `session_ref`
+    /// per unlock (e.g. a UUID) and reuse it for every write in that session.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn add_sanctuary_vault_note_in_session(
+        &self,
+        pin: &str,
+        body: &str,
+        session_ref: &str,
+    ) -> Result<super::sanctuary_vault::SanctuaryLane, String> {
+        super::sanctuary_vault::add_note_in_session(
+            &self.storage_root,
+            pin,
+            body,
+            Self::now_unix() as u32,
+            session_ref,
+        )
+    }
+
+    /// **Curate the decoy from a real session (ADR §3.2).** Write a plausible note into the decoy
+    /// lane *without* the decoy PIN, so a coercer's re-unlock shows fresh, believable content.
+    /// Requires the **real** PIN; the decoy/wrong PIN is rejected.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn curate_sanctuary_decoy_note(&self, real_pin: &str, body: &str) -> Result<(), String> {
+        super::sanctuary_vault::real_curate_decoy_add_note(
+            &self.storage_root,
+            real_pin,
+            body,
+            Self::now_unix() as u32,
+        )
+    }
+
+    /// **Review decoy activity from the real lane (ADR §3.1 / §10).** Decrypts every sealed
+    /// decoy-session record, verifies chain integrity + each witnessed-prefix head anchor, advances
+    /// the anchors, and returns the decrypted actions with an integrity verdict. Requires the
+    /// **real** PIN. `session_count` is a proxy for "number of attackers", never a hard head-count.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn review_sanctuary_decoy_activity(
+        &self,
+        real_pin: &str,
+    ) -> Result<super::sanctuary_vault::DecoyActivityReport, String> {
+        super::sanctuary_vault::review_decoy_activity(&self.storage_root, real_pin)
+    }
+
     // --- T1.2: OS-keychain vault wrapping (opt-in, off by default; recovery-gated) ---
 
     /// Is the on-disk Sanctuary vault keychain-wrapped (bound to an OS-keychain pepper)?
