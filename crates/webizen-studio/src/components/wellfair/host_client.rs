@@ -1375,6 +1375,71 @@ pub async fn add_credential(
     Err("Credentials require the Tauri desktop host".into())
 }
 
+/// Full stored credential (from its content-addressed blob), including claim key/value pairs.
+#[derive(Debug, Clone, Deserialize)]
+pub struct CredentialFullDto {
+    pub id: String,
+    pub credential_type: String,
+    pub issuer_did: String,
+    pub claims: Vec<(String, String)>,
+    pub verification_state: String,
+}
+
+/// A field-selected presentation — the disclosed subset only (NOT cryptographic disclosure).
+#[derive(Debug, Clone, Deserialize)]
+pub struct PresentationDto {
+    pub credential_type: String,
+    pub issuer_did: String,
+    pub disclosed_claims: Vec<(String, String)>,
+    pub verification_state: String,
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn get_credential(record_id: &str) -> Result<Option<CredentialFullDto>, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"recordId".into(), &wasm_bindgen::JsValue::from_str(record_id))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_get_credential", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "credential response not JSON".to_string())?;
+    if json.trim() == "null" {
+        return Ok(None);
+    }
+    serde_json::from_str(&json).map(Some).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn get_credential(_record_id: &str) -> Result<Option<CredentialFullDto>, String> {
+    Ok(None)
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn present_credential(
+    record_id: &str,
+    selected_keys: &[String],
+) -> Result<PresentationDto, String> {
+    let keys_json = serde_json::to_string(selected_keys).map_err(|e| e.to_string())?;
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"recordId".into(), &wasm_bindgen::JsValue::from_str(record_id))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"selectedKeysJson".into(), &wasm_bindgen::JsValue::from_str(&keys_json))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_present_credential", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "presentation response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn present_credential(
+    _record_id: &str,
+    _selected_keys: &[String],
+) -> Result<PresentationDto, String> {
+    Err("Credential presentation requires the Tauri desktop host".into())
+}
+
 // --- Clinical documents / Welfare support / Sync inbox ---
 
 #[cfg(target_arch = "wasm32")]
@@ -1413,6 +1478,52 @@ pub async fn add_clinical_report(
     _author_label: Option<&str>,
 ) -> Result<HealthRecordDto, String> {
     Err("Clinical reports require the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn add_clinical_attachment_from_path(
+    path: &str,
+    media_type: Option<&str>,
+) -> Result<HealthRecordDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"path".into(), &wasm_bindgen::JsValue::from_str(path))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    if let Some(m) = media_type {
+        js_sys::Reflect::set(&args, &"mediaType".into(), &wasm_bindgen::JsValue::from_str(m))
+            .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_add_clinical_attachment_from_path", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let out = js.as_string().ok_or_else(|| "attachment response not JSON".to_string())?;
+    serde_json::from_str(&out).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn add_clinical_attachment_from_path(
+    _path: &str,
+    _media_type: Option<&str>,
+) -> Result<HealthRecordDto, String> {
+    Err("Clinical attachments require the Tauri desktop host".into())
+}
+
+/// Export an attachment's bytes to a destination path; returns the host's JSON summary.
+#[cfg(target_arch = "wasm32")]
+pub async fn export_attachment(record_id: &str, dest_path: &str) -> Result<String, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"recordId".into(), &wasm_bindgen::JsValue::from_str(record_id))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"destPath".into(), &wasm_bindgen::JsValue::from_str(dest_path))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_export_attachment", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    js.as_string().ok_or_else(|| "export response not JSON".to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn export_attachment(_record_id: &str, _dest_path: &str) -> Result<String, String> {
+    Err("Attachment export requires the Tauri desktop host".into())
 }
 
 #[cfg(target_arch = "wasm32")]

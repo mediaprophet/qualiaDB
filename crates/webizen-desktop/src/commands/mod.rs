@@ -805,6 +805,34 @@ pub fn wellfair_add_credential(
     serde_json::to_string(&committed).map_err(|e| e.to_string())
 }
 
+#[command]
+pub fn wellfair_get_credential(app: AppHandle, record_id: String) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let cred = host.get_credential(&record_id)?;
+    serde_json::to_string(&cred).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_present_credential(
+    app: AppHandle,
+    record_id: String,
+    selected_keys_json: String,
+) -> Result<String, String> {
+    let keys: Vec<String> = serde_json::from_str(&selected_keys_json)
+        .map_err(|e| format!("invalid selected keys JSON: {e}"))?;
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let presentation = host.present_credential(&record_id, &keys)?;
+    serde_json::to_string(&presentation).map_err(|e| e.to_string())
+}
+
 fn parse_clinical_report_type(s: &str) -> wellfare_core::clinical::ClinicalReportType {
     use wellfare_core::clinical::ClinicalReportType::*;
     match s.to_ascii_lowercase().as_str() {
@@ -864,6 +892,68 @@ pub fn wellfair_add_clinical_report(
         author_label,
     )?;
     serde_json::to_string(&entry).map_err(|e| e.to_string())
+}
+
+fn guess_media_type(filename: &str) -> String {
+    let ext = std::path::Path::new(filename)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    match ext.as_str() {
+        "pdf" => "application/pdf",
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "txt" => "text/plain",
+        "csv" => "text/csv",
+        "json" => "application/json",
+        "dcm" => "application/dicom",
+        _ => "application/octet-stream",
+    }
+    .to_string()
+}
+
+#[command]
+pub fn wellfair_add_clinical_attachment_from_path(
+    app: AppHandle,
+    path: String,
+    media_type: Option<String>,
+) -> Result<String, String> {
+    let bytes = std::fs::read(&path).map_err(|e| format!("cannot read {path}: {e}"))?;
+    let filename = std::path::Path::new(&path)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("attachment")
+        .to_string();
+    let media = media_type
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| guess_media_type(&filename));
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let entry = host.add_clinical_attachment(&filename, &media, &bytes)?;
+    serde_json::to_string(&entry).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_export_attachment(
+    app: AppHandle,
+    record_id: String,
+    dest_path: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let bytes = host
+        .attachment_bytes(&record_id)?
+        .ok_or_else(|| "attachment not found".to_string())?;
+    std::fs::write(&dest_path, &bytes).map_err(|e| format!("cannot write {dest_path}: {e}"))?;
+    Ok(serde_json::json!({ "written": bytes.len(), "path": dest_path }).to_string())
 }
 
 #[command]
@@ -3591,7 +3681,11 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_add_contribution,
         wellfair_project_obligations,
         wellfair_add_credential,
+        wellfair_get_credential,
+        wellfair_present_credential,
         wellfair_add_clinical_report,
+        wellfair_add_clinical_attachment_from_path,
+        wellfair_export_attachment,
         wellfair_add_assistance_need,
         wellfair_add_welfare_stream,
         wellfair_add_government_letter,

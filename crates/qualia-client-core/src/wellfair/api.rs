@@ -68,10 +68,13 @@ use wellfare_core::projects::{
     Obligation, Project, ProjectMembership,
 };
 use wellfare_core::credentials::{
-    build_credential_envelope, credential_summary, CredentialRecord,
+    build_credential_envelope, build_presentation, credential_summary, CredentialRecord,
+    FieldSelectedPresentation,
 };
+use super::blob_store::BlobStore;
 use wellfare_core::clinical::{
-    build_clinical_report_envelope, clinical_report_summary, ClinicalReport, ClinicalReportType,
+    build_clinical_attachment_envelope, build_clinical_report_envelope, clinical_attachment_summary,
+    clinical_report_summary, AttachmentMeta, ClinicalReport, ClinicalReportType,
 };
 use wellfare_core::welfare_support::{
     build_assistance_need_envelope, build_government_letter_envelope, build_welfare_stream_envelope,
@@ -1008,8 +1011,12 @@ impl WebizenHostApi {
 
     pub fn add_credential(&mut self, credential: &CredentialRecord) -> Result<JournalEntry, String> {
         let asserted = Self::now_unix() as u32;
-        let hash =
-            Self::payload_hash_hex(&serde_json::to_string(credential).map_err(|e| e.to_string())?);
+        let json = serde_json::to_string(credential).map_err(|e| e.to_string())?;
+        // Persist the full credential (incl. claims) as a content-addressed blob so a
+        // presentation can be built later; the envelope blob_hash is that content hash.
+        let hash = BlobStore::open(&self.storage_root)
+            .and_then(|store| store.put(json.as_bytes()))
+            .map_err(|e| e.to_string())?;
         let envelope = build_credential_envelope(
             credential,
             &self.owner_did,
@@ -1030,6 +1037,40 @@ impl WebizenHostApi {
 
     pub fn list_credentials(&self, limit: usize) -> Result<Vec<JournalEntry>, String> {
         self.list_journal_by_kind("credential", limit)
+    }
+
+    /// Load the full credential (including its claims) from its content-addressed blob.
+    /// Returns `None` if the record id is unknown or its blob is missing.
+    pub fn get_credential(&self, record_id: &str) -> Result<Option<CredentialRecord>, String> {
+        let Some(entry) = self
+            .list_credentials(256)?
+            .into_iter()
+            .find(|e| e.id == record_id)
+        else {
+            return Ok(None);
+        };
+        let Some(hash) = entry.blob_hash else {
+            return Ok(None);
+        };
+        let store = BlobStore::open(&self.storage_root).map_err(|e| e.to_string())?;
+        let Some(bytes) = store.get(&hash).map_err(|e| e.to_string())? else {
+            return Ok(None);
+        };
+        let cred: CredentialRecord = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+        Ok(Some(cred))
+    }
+
+    /// Build a field-selected presentation of a stored credential — plain field selection, NOT
+    /// cryptographic selective disclosure (the type name and the domain module say so).
+    pub fn present_credential(
+        &self,
+        record_id: &str,
+        selected_claim_keys: &[String],
+    ) -> Result<FieldSelectedPresentation, String> {
+        let cred = self
+            .get_credential(record_id)?
+            .ok_or_else(|| format!("credential '{record_id}' not found or blob missing"))?;
+        Ok(build_presentation(&cred, selected_claim_keys))
     }
 
     // --- Phase 5 sync-operation protocol (SyncService, §4.2 / §9.5 / §17) ---
@@ -1112,6 +1153,48 @@ impl WebizenHostApi {
 
     pub fn list_clinical_reports(&self, limit: usize) -> Result<Vec<JournalEntry>, String> {
         self.list_journal_by_kind("clinical_report", limit)
+    }
+
+    /// Store an attachment's bytes as a content-addressed blob and commit its metadata record.
+    /// The bytes live only in the blob store; the journal row holds filename/size/hash metadata.
+    pub fn add_clinical_attachment(
+        &mut self,
+        filename: &str,
+        media_type: &str,
+        bytes: &[u8],
+    ) -> Result<JournalEntry, String> {
+        let store = BlobStore::open(&self.storage_root).map_err(|e| e.to_string())?;
+        let content_hash = store.put(bytes).map_err(|e| e.to_string())?;
+        let meta = AttachmentMeta::new(filename, media_type, bytes.len() as u64, content_hash);
+        let asserted = Self::now_unix() as u32;
+        let envelope =
+            build_clinical_attachment_envelope(&meta, &self.owner_did, &self.author_did, asserted);
+        let summary = clinical_attachment_summary(&meta);
+        self.submit_record_with_summary(QAPP_CLINICAL, envelope, SOURCE_CLINICAL, Some(summary))?;
+        self.finalize_batch().ok();
+        self.latest_journal_entry()
+    }
+
+    pub fn list_clinical_attachments(&self, limit: usize) -> Result<Vec<JournalEntry>, String> {
+        self.list_journal_by_kind("clinical_attachment", limit)
+    }
+
+    /// Read an attachment's bytes back from the blob store (integrity-verified).
+    pub fn attachment_bytes(&self, record_id: &str) -> Result<Option<Vec<u8>>, String> {
+        let Some(entry) = self
+            .list_clinical_attachments(256)?
+            .into_iter()
+            .find(|e| e.id == record_id)
+        else {
+            return Ok(None);
+        };
+        let Some(hash) = entry.blob_hash else {
+            return Ok(None);
+        };
+        BlobStore::open(&self.storage_root)
+            .map_err(|e| e.to_string())?
+            .get(&hash)
+            .map_err(|e| e.to_string())
     }
 
     // --- Welfare support (Phase 3 / LIF-08..) ---
@@ -1418,6 +1501,36 @@ mod api_tests {
     }
 
     #[test]
+    fn credential_claims_persist_and_presentation_selects_fields() {
+        use wellfare_core::credentials::CredentialRecord;
+        let dir = tempdir().unwrap();
+        let mut host = test_host(dir.path());
+        let cred = CredentialRecord::new(
+            "did:wf:issuer",
+            "did:wf:owner",
+            "ProofOfAddress",
+            1_700_000_000,
+        )
+        .with_claim("full_name", "Jane Roe")
+        .with_claim("street", "1 Camper Lane")
+        .with_claim("postcode", "3000");
+        let entry = host.add_credential(&cred).unwrap();
+
+        // Full claims survive via the content-addressed blob (not just claim_count).
+        let loaded = host.get_credential(&entry.id).unwrap().unwrap();
+        assert_eq!(loaded.claims.len(), 3);
+        assert_eq!(loaded.issuer_did, "did:wf:issuer");
+
+        // Presentation discloses only the selected claim keys; the rest never appear.
+        let pres = host
+            .present_credential(&entry.id, &["full_name".into(), "postcode".into()])
+            .unwrap();
+        assert_eq!(pres.disclosed_claims.len(), 2);
+        assert!(pres.disclosed_claims.iter().any(|(k, _)| k == "full_name"));
+        assert!(pres.disclosed_claims.iter().all(|(k, _)| k != "street"));
+    }
+
+    #[test]
     fn outbound_sync_operation_signed_and_inbox_dedupes_replay() {
         use wellfare_core::finance::LedgerEntry;
         let dir = tempdir().unwrap();
@@ -1458,6 +1571,21 @@ mod api_tests {
             .unwrap();
         assert_eq!(entry.kind, "clinical_report");
         assert_eq!(host.list_clinical_reports(8).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn clinical_attachment_stores_and_retrieves_bytes() {
+        let dir = tempdir().unwrap();
+        let mut host = test_host(dir.path());
+        let bytes = b"%PDF-1.4 pretend pathology report bytes";
+        let entry = host
+            .add_clinical_attachment("path_report.pdf", "application/pdf", bytes)
+            .unwrap();
+        assert_eq!(entry.kind, "clinical_attachment");
+        assert_eq!(host.list_clinical_attachments(8).unwrap().len(), 1);
+        // The bytes round-trip out of the blob store, integrity-verified.
+        let got = host.attachment_bytes(&entry.id).unwrap().unwrap();
+        assert_eq!(got, bytes);
     }
 
     #[test]

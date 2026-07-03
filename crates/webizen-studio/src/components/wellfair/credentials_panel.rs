@@ -3,7 +3,10 @@
 //! Honesty boundary surfaced in the UI: presentation is plain field selection, NOT
 //! cryptographic selective disclosure, and the local status is a cache, not proof verification.
 
-use super::host_client::{add_credential, fetch_health_records};
+use super::host_client::{
+    add_credential, fetch_health_records, get_credential, present_credential, CredentialFullDto,
+    PresentationDto,
+};
 use super::host_dto::HealthRecordDto;
 use dioxus::prelude::*;
 
@@ -16,6 +19,11 @@ struct CredentialsUi {
     claim_key: String,
     claim_value: String,
     records: Vec<HealthRecordDto>,
+    /// The credential currently opened for presentation (full claims from its blob).
+    selected: Option<CredentialFullDto>,
+    /// Claim keys the owner has ticked to disclose.
+    selected_keys: Vec<String>,
+    presentation: Option<PresentationDto>,
 }
 
 #[component]
@@ -130,9 +138,99 @@ pub fn WellfairCredentialsPanel() -> Element {
                     for r in ui().records.clone() {
                         li {
                             key: "{r.id}",
-                            style: "padding:0.4rem 0.5rem;border:1px solid var(--qualia-border,#eee);border-radius:6px;font-size:0.74rem;",
+                            style: "display:flex;justify-content:space-between;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border:1px solid var(--qualia-border,#eee);border-radius:6px;font-size:0.74rem;",
                             span { style: "color:var(--qualia-text-muted,#888);",
                                 "{r.summary.as_deref().unwrap_or(\"—\")}"
+                            }
+                            button {
+                                style: "padding:0.25rem 0.55rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.72rem;cursor:pointer;white-space:nowrap;",
+                                onclick: {
+                                    let id = r.id.clone();
+                                    move |_| {
+                                        let id = id.clone();
+                                        spawn(async move {
+                                            ui.write().status = "Opening credential…".into();
+                                            match get_credential(&id).await {
+                                                Ok(Some(cred)) => {
+                                                    ui.write().selected_keys = Vec::new();
+                                                    ui.write().presentation = None;
+                                                    ui.write().selected = Some(cred);
+                                                    ui.write().status = "Select claims to disclose.".into();
+                                                }
+                                                Ok(None) => ui.write().status = "Credential blob not found.".into(),
+                                                Err(e) => ui.write().status = format!("Failed: {e}"),
+                                            }
+                                        });
+                                    }
+                                },
+                                "Present"
+                            }
+                        }
+                    }
+                }
+            }
+
+            if let Some(cred) = ui().selected.clone() {
+                div {
+                    style: "margin-top:0.85rem;padding:0.75rem;border:1px solid var(--qualia-border,#ddd);border-radius:8px;background:var(--qualia-surface,#fff);",
+                    h3 { style: "margin:0 0 0.35rem;font-size:0.88rem;", "Present: {cred.credential_type}" }
+                    p {
+                        style: "margin:0 0 0.5rem;font-size:0.72rem;color:var(--qualia-text-muted,#666);",
+                        "Tick the claims to disclose. This is field selection, not cryptographic selective disclosure."
+                    }
+                    for (key, _value) in cred.claims.clone() {
+                        label {
+                            style: "display:flex;align-items:center;gap:0.4rem;font-size:0.76rem;margin-bottom:0.25rem;",
+                            input {
+                                r#type: "checkbox",
+                                checked: ui().selected_keys.contains(&key),
+                                onchange: {
+                                    let key = key.clone();
+                                    move |e| {
+                                        let key = key.clone();
+                                        if e.checked() {
+                                            if !ui().selected_keys.contains(&key) {
+                                                ui.write().selected_keys.push(key);
+                                            }
+                                        } else {
+                                            ui.write().selected_keys.retain(|k| k != &key);
+                                        }
+                                    }
+                                },
+                            }
+                            "{key}"
+                        }
+                    }
+                    button {
+                        style: "margin-top:0.4rem;padding:0.4rem 0.75rem;border-radius:8px;border:none;background:var(--qualia-accent,#2a6f97);color:#fff;font-size:0.8rem;cursor:pointer;",
+                        onclick: move |_| {
+                            let Some(cred) = ui().selected.clone() else { return };
+                            let keys = ui().selected_keys.clone();
+                            spawn(async move {
+                                ui.write().status = "Building presentation…".into();
+                                match present_credential(&cred.id, &keys).await {
+                                    Ok(p) => {
+                                        ui.write().presentation = Some(p);
+                                        ui.write().status = "Presentation built.".into();
+                                    }
+                                    Err(e) => ui.write().status = format!("Failed: {e}"),
+                                }
+                            });
+                        },
+                        "Build presentation"
+                    }
+
+                    if let Some(pres) = ui().presentation.clone() {
+                        h3 { style: "margin:0.75rem 0 0.35rem;font-size:0.84rem;", "Disclosed ({pres.disclosed_claims.len()})" }
+                        ul {
+                            style: "margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:0.25rem;",
+                            for (k, v) in pres.disclosed_claims.clone() {
+                                li {
+                                    key: "{k}",
+                                    style: "padding:0.3rem 0.45rem;border:1px solid var(--qualia-border,#eee);border-radius:6px;font-size:0.74rem;",
+                                    strong { "{k}: " }
+                                    span { "{v}" }
+                                }
                             }
                         }
                     }

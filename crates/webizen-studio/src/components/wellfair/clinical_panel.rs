@@ -3,7 +3,9 @@
 //! Records-first: the body is stored exactly as typed. There is no parsing here, and an
 //! unconfirmed report is never presented as clinician-verified.
 
-use super::host_client::{add_clinical_report, fetch_health_records};
+use super::host_client::{
+    add_clinical_attachment_from_path, add_clinical_report, export_attachment, fetch_health_records,
+};
 use super::host_dto::HealthRecordDto;
 use dioxus::prelude::*;
 
@@ -15,6 +17,10 @@ struct ClinicalUi {
     author_label: String,
     body: String,
     records: Vec<HealthRecordDto>,
+    attach_path: String,
+    attach_media: String,
+    export_path: String,
+    attachments: Vec<HealthRecordDto>,
 }
 
 impl Default for ClinicalUi {
@@ -26,6 +32,10 @@ impl Default for ClinicalUi {
             author_label: String::new(),
             body: String::new(),
             records: Vec::new(),
+            attach_path: String::new(),
+            attach_media: String::new(),
+            export_path: String::new(),
+            attachments: Vec::new(),
         }
     }
 }
@@ -36,10 +46,15 @@ pub fn WellfairClinicalPanel() -> Element {
 
     let reload = move || {
         spawn(async move {
-            if let Ok(list) = fetch_health_records(64).await {
+            if let Ok(list) = fetch_health_records(96).await {
                 ui.write().records = list
-                    .into_iter()
+                    .iter()
                     .filter(|r| r.kind == "clinical_report")
+                    .cloned()
+                    .collect();
+                ui.write().attachments = list
+                    .into_iter()
+                    .filter(|r| r.kind == "clinical_attachment")
                     .collect();
             }
         });
@@ -136,6 +151,102 @@ pub fn WellfairClinicalPanel() -> Element {
                             style: "padding:0.4rem 0.5rem;border:1px solid var(--qualia-border,#eee);border-radius:6px;font-size:0.74rem;",
                             span { style: "color:var(--qualia-text-muted,#888);",
                                 "{r.summary.as_deref().unwrap_or(\"—\")}"
+                            }
+                        }
+                    }
+                }
+            }
+
+            h3 { style: "margin:0.85rem 0 0.35rem;font-size:0.88rem;", "Attachments" }
+            p {
+                style: "margin:0 0 0.5rem;font-size:0.72rem;color:var(--qualia-text-muted,#666);",
+                "The file's bytes are stored encrypted-addressed in the local vault; only filename, size, and content hash appear here. Give a file path on this machine to attach."
+            }
+            div {
+                style: "display:grid;grid-template-columns:2fr 1fr;gap:0.5rem;margin-bottom:0.5rem;",
+                input {
+                    r#type: "text",
+                    placeholder: "File path (e.g. C:\\reports\\path.pdf)",
+                    value: "{ui().attach_path}",
+                    oninput: move |e| ui.write().attach_path = e.value(),
+                    style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
+                }
+                input {
+                    r#type: "text",
+                    placeholder: "Media type (optional)",
+                    value: "{ui().attach_media}",
+                    oninput: move |e| ui.write().attach_media = e.value(),
+                    style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
+                }
+            }
+            button {
+                style: "margin-bottom:0.5rem;padding:0.4rem 0.75rem;border-radius:8px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.8rem;cursor:pointer;",
+                onclick: move |_| {
+                    let path = ui().attach_path.trim().to_string();
+                    if path.is_empty() {
+                        ui.write().status = "Enter a file path to attach.".into();
+                        return;
+                    }
+                    let media = ui().attach_media.trim().to_string();
+                    spawn(async move {
+                        ui.write().status = "Attaching file…".into();
+                        let m = if media.is_empty() { None } else { Some(media.as_str()) };
+                        match add_clinical_attachment_from_path(&path, m).await {
+                            Ok(_) => {
+                                ui.write().status = "Attachment stored.".into();
+                                ui.write().attach_path = String::new();
+                                ui.write().attach_media = String::new();
+                                reload();
+                            }
+                            Err(e) => ui.write().status = format!("Failed: {e}"),
+                        }
+                    });
+                },
+                "Attach file"
+            }
+
+            if !ui().attachments.is_empty() {
+                label {
+                    style: "display:flex;flex-direction:column;gap:0.2rem;font-size:0.72rem;margin-bottom:0.4rem;",
+                    "Export destination path"
+                    input {
+                        r#type: "text",
+                        placeholder: "Destination file path for export",
+                        value: "{ui().export_path}",
+                        oninput: move |e| ui.write().export_path = e.value(),
+                        style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
+                    }
+                }
+                ul {
+                    style: "margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:0.35rem;",
+                    for a in ui().attachments.clone() {
+                        li {
+                            key: "{a.id}",
+                            style: "display:flex;justify-content:space-between;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border:1px solid var(--qualia-border,#eee);border-radius:6px;font-size:0.74rem;",
+                            span { style: "color:var(--qualia-text-muted,#888);",
+                                "{a.summary.as_deref().unwrap_or(\"—\")}"
+                            }
+                            button {
+                                style: "padding:0.25rem 0.55rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.72rem;cursor:pointer;white-space:nowrap;",
+                                onclick: {
+                                    let id = a.id.clone();
+                                    move |_| {
+                                        let id = id.clone();
+                                        let dest = ui().export_path.trim().to_string();
+                                        if dest.is_empty() {
+                                            ui.write().status = "Enter an export destination path first.".into();
+                                            return;
+                                        }
+                                        spawn(async move {
+                                            ui.write().status = "Exporting…".into();
+                                            match export_attachment(&id, &dest).await {
+                                                Ok(_) => ui.write().status = format!("Exported to {dest}"),
+                                                Err(e) => ui.write().status = format!("Failed: {e}"),
+                                            }
+                                        });
+                                    }
+                                },
+                                "Export"
                             }
                         }
                     }

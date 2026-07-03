@@ -315,3 +315,64 @@ Classified journal kinds (therapy_note, welfare_case). Two tests that used the o
 fixture now use `add_therapy_note` (also Classified + protected). `wellfare-core` 76 + `wellfair` 78 tests
 pass; `webizen-desktop` + `webizen-studio` (host + wasm) all green. This closes the last plaintext-at-rest
 path for sanctuary notes.
+
+---
+
+## 2026-07-02 — Credential-claim blob persistence + real presentation flow (Claude / Opus 4.8) — DONE
+
+**Phase / status:** Closed the credential-blob gap flagged after the encrypted-vault work: credential
+claims are now durably stored and a field-selected presentation works end-to-end. All green.
+
+**What was built:**
+- New content-addressed [`wellfair/blob_store.rs`](crates/qualia-client-core/src/wellfair/blob_store.rs)
+  (plan §5): SHA-256-keyed blobs under `wellfair/blobs/`; idempotent `put`, integrity-verifying `get`
+  (rejects a content-hash mismatch), path-traversal-safe (only 64-char hex handles resolve), atomic
+  temp+rename writes. Reusable for clinical/letter attachments too.
+- `add_credential` now **persists the full credential (incl. claims) as a blob** — the envelope
+  `blob_hash` (previously a dangling hash) is that blob's content address.
+- Host API: `get_credential(record_id)` loads the credential back from its blob; `present_credential`
+  builds a `FieldSelectedPresentation` over stored claims — still honestly plain field selection, not ZK.
+- Tauri commands `wellfair_get_credential` / `wellfair_present_credential` + host_client bridges + DTOs.
+- Credentials panel: each held credential gets a **Present** button → loads its claims → checkbox list
+  of claim keys to disclose → **Build presentation** → shows the disclosed subset (with the
+  field-selection-not-ZK disclaimer in the UI).
+
+**Measured results:** `cargo test -p qualia-client-core wellfair::` → **85 passed** (+6 blob-store tests
+incl. tamper + path-traversal rejection, +1 credential persist/present round-trip). `cargo check` green
+for `webizen-desktop`, `webizen-studio` (host + wasm32).
+
+**⚑ Where I need the human:** none blocking. The blob store is now available to give clinical/government-letter
+attachments real byte storage (currently metadata-only) — a natural next use. Remaining flagged items:
+OS-keychain key-wrapping for the Sanctuary vault; `aead` API modernization in `qualia-core-db`.
+
+**Next step:** wire real attachment bytes for clinical reports / government letters through the blob
+store; or the OS-keychain vault hardening.
+
+---
+
+## 2026-07-02 — Clinical attachment bytes via the blob store (Claude / Opus 4.8) — DONE
+
+**Phase / status:** The next use of the blob store — clinical attachments now carry **real file bytes**,
+not just metadata. Byte handling stays native (desktop reads/writes files; the wasm UI passes paths),
+avoiding browser FileReader/base64 plumbing. All green.
+
+**What was built:**
+- Host API: `add_clinical_attachment(filename, media_type, bytes)` stores the bytes as a content-addressed
+  blob and commits the `clinical_attachment` metadata record (filename/size/hash); `list_clinical_attachments`;
+  `attachment_bytes(record_id)` reads them back (integrity-verified via the blob store).
+- Desktop commands: `wellfair_add_clinical_attachment_from_path` (native file read, media-type inferred from
+  extension when omitted) and `wellfair_export_attachment` (native write of the blob bytes to a chosen path).
+- host_client bridges + a clinical-panel **Attachments** section: attach a file by path, list attachments
+  (filename/size/hash), and export any attachment to a destination path.
+
+**Measured results:** `cargo test -p qualia-client-core wellfair::` → **86 passed** (+1
+`clinical_attachment_stores_and_retrieves_bytes` round-trip). `cargo check` green for `webizen-desktop`,
+`webizen-studio` (host + wasm32).
+
+**⚑ Where I need the human:** none blocking. Government-letter attachments can reuse the exact same path
+(the record already has an `attachment_blob_hash` field) — a small follow-up. Native file *dialogs* (vs
+typed paths) would need the Tauri dialog plugin — a UX nicety, not required for function. Remaining flagged:
+OS-keychain vault key-wrapping; `aead` API modernization in `qualia-core-db`.
+
+**Next step:** government-letter attachment bytes (same pattern); OS-keychain vault hardening; or a native
+file-dialog nicety.
