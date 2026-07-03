@@ -121,12 +121,61 @@ and a PIN-strength floor (min 6, blocks all-identical / sequential / common). **
 re-derivation was intentionally NOT finished on the JSON format** — it folds into the v2 re-serialization
 so we migrate the container **once**, not twice.
 
-## 6. Decisions for Timothy
+## 6. Decisions — RESOLVED (Timothy, 2026-07-03)
 
-- [ ] **D-fmt:** approve CBOR-LD for the vault (recommend yes).
-- [ ] **D-decoy-model:** approve the §3 asymmetric-audit + one-way-key-hierarchy design.
-- [ ] **D-fork (§4):** **A (functional decoy)** now vs **B (hidden volume)** vs **C (layered)**. *The one
-      that needs your judgement.*
-- [ ] **D-retention:** default handling of the decoy-activity audit log — keep / prompt / auto-archive; and
-      whether audit records are signed for evidentiary use (chain-of-custody).
-- [ ] Confirm sequencing: land Argon2id/PIN now, then build v2 (CBOR-LD + migration + decoy mirroring) as one.
+- [x] **D-fmt:** CBOR-LD for the vault — **yes**.
+- [x] **D-decoy-model:** the §3 asymmetric-audit + one-way-key-hierarchy design — **approved**.
+- [x] **D-fork (§4):** **Option A (functional decoy)** — chosen. B/C scoped as future options. The
+      byte-level two-tier visibility is accepted and must be stated plainly in the UI.
+- [x] **D-retention:** **both** — a real-session toggle (see §8). Default = auto-archive.
+- [x] Sequencing: Argon2id/PIN landed (`a60671a1`); v2 = CBOR-LD + lazy migration + decoy mirroring, one build.
+
+## 7. Two corrections to the design before build (precision, not agreement)
+
+The design is sound, but two claims in the review round need fixing or the "evidence" it produces is
+misleading:
+
+1. **Provenance axis (must fix).** The proposal tags coercer actions with the *software-agent DID* to
+   distinguish them from the user's. That is wrong: **the coercer is a natural person**, so labelling
+   their writes "software agent" mislabels the very evidence we want. The Q42 natural-person /
+   software-agent DID bifurcation encodes *agent type*, not *trust*. What we actually need is a separate,
+   orthogonal **session-context** field on each audit nquin — `authored_in: real_session` vs
+   `decoy_session (actor unauthenticated / under duress)`. We keep the true agent-type DID *and* add the
+   session-context axis; we do **not** overload the DID bifurcation to mean "coercer."
+2. **"Tamper-proof forensic record" → calibrate to "tamper-evident to the owner".** The sealed-box gives
+   confidentiality + integrity *to the real-lane holder* (the coercer can't read it or silently alter it
+   undetected). That is **not** court-admissible evidence, which additionally needs chain-of-custody,
+   trusted timestamping, and device attestation. Build and label it as **tamper-evident to you**;
+   external legal admissibility is a larger, separate effort and the UI must not over-promise it.
+
+**Crypto primitive (specificity):** the blind append is an **X25519 sealed box** (anonymous ECIES:
+ephemeral X25519 + AEAD to the audit public key) — the decoy session needs no identity of its own, just
+the public key. The real lane holds the X25519 *secret* wrapped under the real lane key; the decoy lane
+key is likewise wrapped under the real key (one-way hierarchy). Audit region is append-only.
+
+## 8. Retention toggle + UI copy (locked)
+
+Set **only in the real session** (invisible + unreachable from the decoy session, or it tips the coercer).
+Default = **auto-archive** (a user in crisis has no spare cognitive bandwidth).
+
+- **Auto-archive (default):** on real unlock, decrypted audit nquins are bound to an append-only holding
+  region automatically, carrying the `decoy_session` provenance (§7.1). Zero-touch.
+- **Manual triage:** on real unlock, the audit nquins appear as an unclassified inbox; the user explicitly
+  keeps / discards / classifies each. Nothing is retained until they act.
+
+Plain-language copy (no jargon; second-person; names the limit honestly):
+
+> **If you're ever forced to unlock**
+> Your cover space can quietly keep a record of anything someone changes when they make you open it — so
+> you stay in control of your real space.
+>
+> ◉ **Save a record for me automatically** *(recommended)* — You don't have to do anything in the moment.
+>   Next time you open your real space, you can look back at what happened.
+> ○ **Let me choose each time** — Next time you open your real space, you'll see what changed and decide
+>   what to keep or delete. Nothing is saved until you do.
+>
+> *This protects you from someone using the app. It can't hide your real space from an expert examining
+> the files on your device.*
+
+Term note: "cover space" for the decoy is placeholder — Timothy may recoin it. The feature and this
+setting must never render in the decoy session.
