@@ -285,6 +285,12 @@ owns every contract below and every edit to the vault crypto.
 **Done**
 - **S0 — audit primitives** `core-db/crypto/sanctuary_audit.rs`: X25519 sealed box + key-wrap +
   BLAKE3 hash-chain. 8 tests. (commit `2d69a21f`, local, not pushed.)
+- **S5 — vault surgery COMPLETE** (three local commits, not pushed): `ffc4dda3` (S5a: `VaultMeta`→
+  `VaultContainerV2`, CBOR-native, **serde_json / JSON path removed**, `.cbor` file, constant layer
+  shape), `940eeac6` (S5b: real→decoy one-way key hierarchy — audit keypair, wrapped decoy key +
+  audit secret; `real_curate_decoy_add_note`), `ba415e80` (S5c: blind sealed audit append on decoy
+  writes, `review_decoy_activity`, and the **real-lane head anchor** that flags a truncated or
+  forged-replacement witnessed prefix — C's finding). 33 vault tests green.
 
 **Parallel — swarm-safe (isolated NEW files, one registration file each, no cross-agent deps)**
 - **A · Audit DAG + retention domain** — NEW `core-db/crypto/sanctuary_audit_dag.rs`. Self-contained on
@@ -303,12 +309,19 @@ owns every contract below and every edit to the vault crypto.
   salt, kdf, verifier, records, audit_pubkey, wrapped_keys }`, constant-shape padded `VaultContainerV2`,
   ciborium encode/decode. 4 tests. **CBOR-native — no JSON, no migration** (there is no deployed vault to
   migrate; Timothy, 2026-07-03).
-- **S5 · vault surgery** — `VaultMeta`→container; **remove `serde_json` entirely from the vault** (records
-  *and* container both CBOR — no JSON path remains); blind-append audit on decoy writes; real-lane DAG
-  read; real→decoy key hierarchy (wrap decoy key + audit secret under the real key); **anchor each
-  session-branch head** (§10 — C's finding). *No lazy migration needed* — no legacy vaults exist.
-- **S6 · host API + Tauri + bridges + nav** — record-on-behalf→decoy; real-lane audit review; retention
-  set; curate-decoy; wire panel B.
+- **S5 · vault surgery** — **DONE** (see the Done list above): `VaultMeta`→container; `serde_json`
+  removed (records *and* container CBOR — no JSON path); blind-append audit on decoy writes; real-lane
+  DAG read; real→decoy key hierarchy; per-session-branch head anchor. No lazy migration (no legacy vaults).
+- **S6 · host API + Tauri + bridges + nav** — *next.* Expose the S5 vault surface through
+  `qualia-client-core/src/wellfair/api.rs` (session-aware decoy write / `real_curate_decoy_add_note` /
+  `review_decoy_activity`) → Tauri commands (`wellfair_{get,set}_decoy_retention_mode`, record-on-behalf,
+  audit review) → studio bridges + nav; wire panel B.
 
-**Order:** A · B · C fan out now. I build S3, then S5 (consumes S0/A/S3), then S6 (wires B). Every slice:
-green build + tests before it counts. **Nothing pushed without Timothy's word.**
+**Order:** A · B · C fanned out; S3 built; **S5 complete (S5a/b/c, local commits `ffc4dda3` /
+`940eeac6` / `ba415e80`)**; S6 next (wires B + api surface). Every slice: green build + tests before it
+counts. **Nothing pushed without Timothy's word.**
+
+**Follow-up flagged (library-ization pass, §11):** `sanctuary_vault.rs` is now ~1050 lines. It is a
+pre-existing monolith grown mid-security-feature, so the split is deliberately deferred (per §11's
+refinement) to the dedicated library-ization pass — suggested shape: `sanctuary_vault/{mod, kdf, keys,
+audit}.rs`. Not blocking.

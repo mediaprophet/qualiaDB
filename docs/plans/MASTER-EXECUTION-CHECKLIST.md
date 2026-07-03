@@ -96,10 +96,14 @@ CBOR-LD, retention = both modes as a real-session toggle (default auto). **Nothi
       (ADR §10 integrity boundary).
 - [x] **S3** (integrator) n-layer CBOR container `wellfair/vault_container.rs` — CBOR-native, constant-shape,
       4 tests. **No JSON, no migration** (no deployed vault; Timothy 2026-07-03).
-- [ ] **S5** (integrator) vault surgery — `VaultMeta`→container; **remove `serde_json` entirely from the
-      vault** (records + container both CBOR — no JSON path); blind-append audit; real→decoy key hierarchy;
-      **anchor each session-branch head** (C's finding, ADR §10). No lazy migration (no legacy vaults).
-- [ ] **S6** (integrator) host API + Tauri + bridges + nav (record-on-behalf, audit review, retention set)
+- [x] **S5** (integrator) vault surgery **COMPLETE** — 3 local commits (**not pushed**): `ffc4dda3` (S5a:
+      `VaultMeta`→`VaultContainerV2`, CBOR-native, **serde_json / JSON path removed**, `.cbor` file),
+      `940eeac6` (S5b: real→decoy one-way key hierarchy + `real_curate_decoy_add_note`), `ba415e80` (S5c:
+      blind sealed audit append on decoy writes, `review_decoy_activity`, **real-lane head anchor** flagging
+      truncated/forged witnessed prefix — C's finding). 33 vault tests green.
+- [ ] **S6** (integrator) host API + Tauri + bridges + nav (record-on-behalf, audit review, retention set) —
+      *next.* Wires the S5 surface (`add_note_in_session` / `real_curate_decoy_add_note` /
+      `review_decoy_activity`) through `wellfair/api.rs` → Tauri → studio panel B.
 
 **Standing rule (Timothy 2026-07-03):** vault serialization is **CBOR / CBOR-LD only — no JSON path** may
 exist; code depending on JSON gets refactored, not migrated. (Broader codebase-wide JSON→CBOR is a separate
