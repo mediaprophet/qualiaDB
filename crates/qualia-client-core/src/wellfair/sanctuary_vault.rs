@@ -37,7 +37,12 @@ use qualia_core_db::crypto::sanctuary_crypto::{
     encrypt_sanctuary_chunk, SanctuaryAeadAlgorithm, SanctuaryKeyMaterial, ARGON2_M_COST_KIB,
     ARGON2_P_COST, ARGON2_T_COST, SANCTUARY_TAG_BYTES,
 };
-use qualia_core_db::crypto::sanctuary_audit::{unwrap_key, wrap_key, AuditKeypair};
+use qualia_core_db::crypto::sanctuary_audit::{
+    open_sealed, seal_to, unwrap_key, wrap_key, AuditKeypair, GENESIS_PARENT,
+};
+use qualia_core_db::crypto::sanctuary_audit_dag::{
+    derive_sessions, verify_chain, AuditAction, AuditRecord, ChainStatus,
+};
 use qualia_core_db::crypto::sanctuary_keychain;
 use sha2::{Digest, Sha256};
 
@@ -71,6 +76,15 @@ const WRAP_AAD_DECOY: &[u8] = b"q42:sanctuary:wrap:decoy-lane-key:v1";
 const WRAP_AAD_AUDIT: &[u8] = b"q42:sanctuary:wrap:audit-secret:v1";
 /// Serialized length of `SanctuaryKeyMaterial` (32-byte cipher key ‖ 16-byte volume tweak).
 const KEY_MATERIAL_BYTES: usize = 48;
+
+// --- Blind audit channel (ADR §3.1 / §10) ---
+/// Asserted actor DID for a decoy (duress) session. Unauthenticated by design: a coercer operates
+/// as a natural person under the decoy-layer DID; the real lane treats it as "decoy session".
+const DECOY_ACTOR_DID: &str = "did:qualia:sanctuary:decoy-session";
+/// The branch a plain (non-session-aware) decoy write lands on. The session-aware
+/// [`add_note_in_session`] opens a fresh branch per duress unlock; the plain [`add_note`] fallback
+/// accumulates on this single branch (S6's host layer supplies real per-session refs).
+const DEFAULT_DECOY_BRANCH: &str = "decoy:default";
 
 /// Reject the weakest PINs a coercer or shoulder-surfer would try first (ADR D5). This is a floor,
 /// not a strength meter — it blocks trivially guessable values, it does not certify strong ones.
@@ -149,6 +163,27 @@ pub struct SanctuaryVaultNote {
     pub id: String,
     pub body: String,
     pub created_at_unix: u32,
+}
+
+/// A witnessed head anchor for one audit branch (ADR §10 — C's finding). Held **inside the real
+/// lane's encrypted records**, so the decoy session can neither read nor forge it. On each real
+/// review the anchor pins the branch's head + record count; a later review that finds the witnessed
+/// prefix truncated or rewritten flags forensic tampering the unkeyed hash chain alone can't prove.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+struct BranchAnchor {
+    branch_ref: String,
+    head_id_hex: String,
+    record_count: u64,
+}
+
+/// The decrypted per-lane records payload. Both lanes serialize this; only the **real** lane ever
+/// populates `anchors` (the decoy lane's stays empty).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+struct LaneData {
+    #[serde(default)]
+    notes: Vec<SanctuaryVaultNote>,
+    #[serde(default)]
+    anchors: Vec<BranchAnchor>,
 }
 
 // --- CBOR helpers (the vault serializes nothing as JSON) ---
@@ -362,8 +397,7 @@ fn new_lane(
     let key = derive_lane_material(&kdf, &secret, &salt)?;
     let aad = lane_id.aad();
     let verifier = seal(&key, VERIFIER_CHUNK, VERIFIER_MAGIC, aad);
-    let empty: Vec<SanctuaryVaultNote> = Vec::new();
-    let records_pt = cbor_encode(&empty)?;
+    let records_pt = cbor_encode(&LaneData::default())?;
     let records = seal(&key, 0, &records_pt, aad);
     let layer = Layer {
         id: lane_id.layer_id().to_string(),
@@ -519,18 +553,18 @@ pub fn real_curate_decoy_add_note(
     // Read → append → re-seal the decoy records under the unwrapped decoy key (same key + monotonic
     // counter the decoy-PIN path uses, so nonces never collide).
     let aad = SanctuaryLane::Decoy.aad();
-    let (mut notes, counter) = {
+    let (mut data, counter) = {
         let layer = layer_ref(&container, SanctuaryLane::Decoy)?;
         let pt = open(&decoy_key, &layer.records, aad)?;
-        let notes: Vec<SanctuaryVaultNote> = cbor_decode(&pt)?;
-        (notes, layer.next_counter)
+        let data: LaneData = cbor_decode(&pt)?;
+        (data, layer.next_counter)
     };
-    notes.push(SanctuaryVaultNote {
+    data.notes.push(SanctuaryVaultNote {
         id: uuid::Uuid::new_v4().to_string(),
         body: body.to_string(),
         created_at_unix: now_unix,
     });
-    let records_pt = cbor_encode(&notes)?;
+    let records_pt = cbor_encode(&data)?;
     let blob = seal(&decoy_key, counter, &records_pt, aad);
     {
         let layer = layer_mut(&mut container, SanctuaryLane::Decoy)?;
@@ -662,41 +696,356 @@ pub fn list_notes(
     let (lane, key) = open_lane(&container, pin, pepper.as_ref())?;
     let layer = layer_ref(&container, lane)?;
     let pt = open(&key, &layer.records, lane.aad())?;
-    let notes: Vec<SanctuaryVaultNote> = cbor_decode(&pt)?;
-    Ok((lane, notes))
+    let data: LaneData = cbor_decode(&pt)?;
+    Ok((lane, data.notes))
 }
 
 /// Append a note to the lane the PIN opens (real PIN → real lane; duress PIN → decoy only).
+///
+/// A **decoy** write also leaves a blind, sealed audit record on [`DEFAULT_DECOY_BRANCH`] that the
+/// coercer cannot read; the real lane reviews it via [`review_decoy_activity`]. For git-like
+/// per-session branches (one branch per duress unlock), use [`add_note_in_session`].
 pub fn add_note(
     root: impl AsRef<Path>,
     pin: &str,
     body: &str,
     now_unix: u32,
 ) -> Result<SanctuaryLane, String> {
+    add_note_in_session(root, pin, body, now_unix, DEFAULT_DECOY_BRANCH)
+}
+
+/// As [`add_note`], but a **decoy** write is attributed to `session_ref` — a fresh ref per duress
+/// unlock yields the git-like per-session branch (ADR §10). Ignored for real-lane writes (real
+/// activity is never audited).
+pub fn add_note_in_session(
+    root: impl AsRef<Path>,
+    pin: &str,
+    body: &str,
+    now_unix: u32,
+    session_ref: &str,
+) -> Result<SanctuaryLane, String> {
     let root = root.as_ref();
     let mut container = load_container(root)?.ok_or("Sanctuary vault is not set up")?;
     let pepper = pepper_for(&container, None)?;
     let (lane, key) = open_lane(&container, pin, pepper.as_ref())?;
-    let (mut notes, counter) = {
+
+    // Read → append → re-seal this lane's records.
+    let (mut data, counter) = {
         let layer = layer_ref(&container, lane)?;
         let pt = open(&key, &layer.records, lane.aad())?;
-        let notes: Vec<SanctuaryVaultNote> = cbor_decode(&pt)?;
-        (notes, layer.next_counter)
+        let data: LaneData = cbor_decode(&pt)?;
+        (data, layer.next_counter)
     };
-    notes.push(SanctuaryVaultNote {
+    data.notes.push(SanctuaryVaultNote {
         id: uuid::Uuid::new_v4().to_string(),
         body: body.to_string(),
         created_at_unix: now_unix,
     });
-    let records_pt = cbor_encode(&notes)?;
+    let records_pt = cbor_encode(&data)?;
     let blob = seal(&key, counter, &records_pt, lane.aad());
     {
         let layer = layer_mut(&mut container, lane)?;
         layer.records = blob;
         layer.next_counter = counter.saturating_add(1);
     }
+
+    // A decoy (duress) write leaves a blind, sealed trail the coercer can neither read nor forge.
+    if lane == SanctuaryLane::Decoy {
+        record_decoy_action(
+            &mut container,
+            session_ref,
+            AuditAction::AddNote,
+            body.as_bytes(),
+            now_unix,
+        )?;
+    }
+
     save_container(root, &container)?;
     Ok(lane)
+}
+
+// --- Blind audit append (decoy-session writes) ---
+
+/// The decoy layer's audit **public** key (a decoy session seals its records to it).
+fn decoy_audit_pubkey(container: &VaultContainerV2) -> Result<[u8; 32], String> {
+    let decoy = container
+        .layer_by_role(LayerRole::Decoy)
+        .ok_or("Sanctuary vault is missing its decoy layer")?;
+    let hex_s = decoy
+        .audit_pubkey_hex
+        .as_ref()
+        .ok_or("decoy layer has no audit public key")?;
+    let bytes = hex::decode(hex_s).map_err(|e| e.to_string())?;
+    if bytes.len() != 32 {
+        return Err("decoy audit public key has the wrong length".into());
+    }
+    let mut k = [0u8; 32];
+    k.copy_from_slice(&bytes);
+    Ok(k)
+}
+
+/// The id of the last record on `branch_ref` in append order (the branch head), if any.
+fn last_head_for_branch(log: &[AuditRecord], branch_ref: &str) -> Option<[u8; 32]> {
+    log.iter().rev().find(|r| r.branch_ref == branch_ref).map(|r| r.id)
+}
+
+/// Append one sealed audit record for a decoy action. On the first record of a branch, an
+/// `OpenSession` record is appended first so every branch has a genesis entry-point.
+fn record_decoy_action(
+    container: &mut VaultContainerV2,
+    branch_ref: &str,
+    action: AuditAction,
+    payload: &[u8],
+    now_unix: u32,
+) -> Result<(), String> {
+    let audit_pub = decoy_audit_pubkey(container)?;
+    if last_head_for_branch(&container.audit_log, branch_ref).is_none() {
+        append_sealed(
+            container,
+            &audit_pub,
+            branch_ref,
+            AuditAction::OpenSession,
+            b"session opened",
+            now_unix,
+        )?;
+    }
+    append_sealed(container, &audit_pub, branch_ref, action, payload, now_unix)
+}
+
+/// Seal `payload` to the audit public key and push a content-addressed record onto the branch. The
+/// chain link is `chain_hash(parent ‖ canonical_bytes)` inside [`AuditRecord::new`]; `parent` is the
+/// current branch head (or genesis).
+fn append_sealed(
+    container: &mut VaultContainerV2,
+    audit_pub: &[u8; 32],
+    branch_ref: &str,
+    action: AuditAction,
+    payload: &[u8],
+    now_unix: u32,
+) -> Result<(), String> {
+    let parent = last_head_for_branch(&container.audit_log, branch_ref).unwrap_or(GENESIS_PARENT);
+    let sealed = seal_to(audit_pub, payload, branch_ref.as_bytes())
+        .map_err(|e| format!("seal audit record: {e:?}"))?;
+    let rec = AuditRecord::new(
+        parent,
+        branch_ref,
+        DECOY_ACTOR_DID,
+        Some("decoy-session".into()),
+        None,
+        action,
+        now_unix,
+        sealed,
+    );
+    container.audit_log.push(rec);
+    Ok(())
+}
+
+fn action_label(a: &AuditAction) -> String {
+    match a {
+        AuditAction::OpenSession => "open_session".into(),
+        AuditAction::AddNote => "add_note".into(),
+        AuditAction::EditNote => "edit_note".into(),
+        AuditAction::DeleteNote => "delete_note".into(),
+        AuditAction::Other(s) => format!("other:{s}"),
+    }
+}
+
+// --- Real-lane audit review + head anchor (ADR §10 — C's finding) ---
+
+/// The integrity verdict of the decoy audit log at review time.
+///
+/// * `Ok` — every branch's hash chain verifies and every witnessed prefix is intact.
+/// * `ChainBroken` — a branch's on-disk chain is internally broken (rewrite/reorder/drop caught by
+///   the content-address chain itself).
+/// * `WitnessedPrefixAltered` — a prefix the real lane had **already witnessed** (anchored) is now
+///   truncated or replaced. This is the forensic-tamper case the unkeyed chain alone cannot prove
+///   (a coercer can forge a fresh consistent chain); the real-lane head anchor catches it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AuditIntegrity {
+    Ok,
+    ChainBroken { branch_ref: String },
+    WitnessedPrefixAltered { branch_ref: String },
+}
+
+fn integrity_rank(i: &AuditIntegrity) -> u8 {
+    match i {
+        AuditIntegrity::Ok => 0,
+        AuditIntegrity::ChainBroken { .. } => 1,
+        AuditIntegrity::WitnessedPrefixAltered { .. } => 2,
+    }
+}
+
+fn escalate(current: AuditIntegrity, candidate: AuditIntegrity) -> AuditIntegrity {
+    if integrity_rank(&candidate) > integrity_rank(&current) {
+        candidate
+    } else {
+        current
+    }
+}
+
+/// One decrypted decoy action surfaced to the real lane.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DecoyActionView {
+    pub branch_ref: String,
+    /// `open_session` / `add_note` / `edit_note` / `delete_note` / `other:<label>`.
+    pub action: String,
+    pub actor_did: String,
+    pub unix: u32,
+    /// The decrypted payload (the coercer's note body), lossy-UTF8; empty if it could not be opened.
+    pub payload: String,
+}
+
+/// The result of reviewing the decoy audit log from the real lane.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DecoyActivityReport {
+    pub integrity: AuditIntegrity,
+    /// Number of distinct entry-point sessions (branches). A **proxy / lower bound** for "number of
+    /// attackers", NOT a verified head-count — shared credentials or one persistent actor across
+    /// sessions both defeat a naive count (ADR §10, audit-DAG module docs). The UI must not claim a
+    /// hard attacker count.
+    pub session_count: usize,
+    pub actions: Vec<DecoyActionView>,
+}
+
+/// **Review decoy activity from the real lane (ADR §3.1 / §10).** Opens the real lane, unwraps the
+/// audit secret, decrypts every sealed decoy-session record, verifies chain integrity, and checks
+/// each previously-witnessed prefix against its head anchor (detecting forensic truncation/replace).
+/// Then advances the anchors for clean branches and persists them inside the real lane's encrypted
+/// records. Requires the **real** PIN; the decoy PIN is rejected.
+pub fn review_decoy_activity(
+    root: impl AsRef<Path>,
+    real_pin: &str,
+) -> Result<DecoyActivityReport, String> {
+    use std::collections::HashMap;
+
+    let root = root.as_ref();
+    let mut container = load_container(root)?.ok_or("Sanctuary vault is not set up")?;
+    let pepper = pepper_for(&container, None)?;
+    let (lane, real_key) = open_lane(&container, real_pin, pepper.as_ref())?;
+    if lane != SanctuaryLane::Real {
+        return Err("Reviewing decoy activity requires the real unlock PIN".into());
+    }
+
+    // Unwrap the audit secret + read the real lane's records (notes + prior anchors), then drop the
+    // immutable borrow before any mutation.
+    let (wrapped_audit_hex, real_records) = {
+        let real_layer = container
+            .layer_by_role(LayerRole::Real)
+            .ok_or("Sanctuary vault is missing its real layer")?;
+        let wrapped = real_layer
+            .wrapped_key(WK_AUDIT_SECRET)
+            .ok_or("Sanctuary vault has no wrapped audit secret")?;
+        (wrapped.blob_hex.clone(), real_layer.records.clone())
+    };
+    let real_wrap = wrapping_key_from(&real_key);
+    let secret_bytes = unwrap_key(
+        &real_wrap,
+        &hex::decode(&wrapped_audit_hex).map_err(|e| e.to_string())?,
+        WRAP_AAD_AUDIT,
+    )
+    .map_err(|_| "could not unwrap the audit secret (tampered vault?)".to_string())?;
+    if secret_bytes.len() != 32 {
+        return Err("audit secret has the wrong length".into());
+    }
+    let mut audit_secret = [0u8; 32];
+    audit_secret.copy_from_slice(&secret_bytes);
+
+    let mut data: LaneData = cbor_decode(&open(&real_key, &real_records, SanctuaryLane::Real.aad())?)?;
+    let prior: HashMap<String, BranchAnchor> = data
+        .anchors
+        .iter()
+        .cloned()
+        .map(|a| (a.branch_ref.clone(), a))
+        .collect();
+
+    let sessions = derive_sessions(&container.audit_log);
+    let session_count = sessions.len();
+
+    let mut integrity = AuditIntegrity::Ok;
+    let mut actions: Vec<DecoyActionView> = Vec::new();
+    let mut new_anchors = prior.clone();
+
+    for session in &sessions {
+        let branch = &session.branch_ref;
+        let chain_ok = verify_chain(&session.records) == ChainStatus::Ok;
+        let mut witnessed_altered = false;
+        if !chain_ok {
+            integrity = escalate(
+                integrity,
+                AuditIntegrity::ChainBroken {
+                    branch_ref: branch.clone(),
+                },
+            );
+        } else if let Some(anchor) = prior.get(branch) {
+            let n = anchor.record_count as usize;
+            if n > 0 {
+                witnessed_altered = session.records.len() < n
+                    || verify_chain(&session.records[..n]) != ChainStatus::Ok
+                    || hex::encode(session.records[n - 1].id) != anchor.head_id_hex;
+            }
+            if witnessed_altered {
+                integrity = escalate(
+                    integrity,
+                    AuditIntegrity::WitnessedPrefixAltered {
+                        branch_ref: branch.clone(),
+                    },
+                );
+            }
+        }
+
+        for rec in &session.records {
+            let payload = open_sealed(&audit_secret, &rec.sealed, branch.as_bytes())
+                .map(|p| String::from_utf8_lossy(&p).into_owned())
+                .unwrap_or_default();
+            actions.push(DecoyActionView {
+                branch_ref: branch.clone(),
+                action: action_label(&rec.action),
+                actor_did: rec.actor_did.clone(),
+                unix: rec.unix,
+                payload,
+            });
+        }
+
+        // Advance the anchor only for a clean branch; a tampered branch keeps its prior anchor as
+        // standing evidence of what the real lane last witnessed.
+        if chain_ok && !witnessed_altered {
+            if let Some(last) = session.records.last() {
+                new_anchors.insert(
+                    branch.clone(),
+                    BranchAnchor {
+                        branch_ref: branch.clone(),
+                        head_id_hex: hex::encode(last.id),
+                        record_count: session.records.len() as u64,
+                    },
+                );
+            }
+        }
+    }
+
+    // Persist updated anchors (inside the real lane's encrypted records) only if they changed.
+    let mut anchors_vec: Vec<BranchAnchor> = new_anchors.into_values().collect();
+    anchors_vec.sort_by(|a, b| a.branch_ref.cmp(&b.branch_ref));
+    let mut prior_vec: Vec<BranchAnchor> = prior.into_values().collect();
+    prior_vec.sort_by(|a, b| a.branch_ref.cmp(&b.branch_ref));
+    if anchors_vec != prior_vec {
+        data.anchors = anchors_vec;
+        let counter = layer_ref(&container, SanctuaryLane::Real)?.next_counter;
+        let records_pt = cbor_encode(&data)?;
+        let blob = seal(&real_key, counter, &records_pt, SanctuaryLane::Real.aad());
+        {
+            let layer = layer_mut(&mut container, SanctuaryLane::Real)?;
+            layer.records = blob;
+            layer.next_counter = counter.saturating_add(1);
+        }
+        save_container(root, &container)?;
+    }
+
+    Ok(DecoyActivityReport {
+        integrity,
+        session_count,
+        actions,
+    })
 }
 
 #[cfg(test)]
@@ -1001,5 +1350,152 @@ mod tests {
         // But not under the decoy key (the decoy cannot reach up).
         let (_l2, decoy_key) = open_lane(&container, "decoy-pin-2", None).unwrap();
         assert!(unwrap_decoy_material(&container, &decoy_key).is_err());
+    }
+
+    // --- S5c: blind audit append + real-lane review + head anchor ---
+
+    #[test]
+    fn decoy_writes_leave_readable_sealed_trail_for_real_lane() {
+        let dir = tempfile::tempdir().unwrap();
+        setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
+        add_note(dir.path(), "decoy-pin-2", "coercer wrote this", 10).unwrap();
+
+        // The coercer's plaintext note is NOT on disk (the audit payload is a sealed box).
+        let raw = fs::read(vault_path(dir.path())).unwrap();
+        let needle = b"coercer wrote this";
+        assert!(
+            !raw.windows(needle.len()).any(|w| w == needle),
+            "decoy body leaked to disk"
+        );
+
+        // The real lane decrypts the trail.
+        let report = review_decoy_activity(dir.path(), "real-pin-1").unwrap();
+        assert_eq!(report.integrity, AuditIntegrity::Ok);
+        assert_eq!(report.session_count, 1);
+        assert!(report
+            .actions
+            .iter()
+            .any(|a| a.action == "open_session"));
+        assert!(report
+            .actions
+            .iter()
+            .any(|a| a.action == "add_note" && a.payload == "coercer wrote this"));
+    }
+
+    #[test]
+    fn review_requires_the_real_pin() {
+        let dir = tempfile::tempdir().unwrap();
+        setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
+        add_note(dir.path(), "decoy-pin-2", "x", 10).unwrap();
+        assert!(review_decoy_activity(dir.path(), "decoy-pin-2").is_err());
+        assert!(review_decoy_activity(dir.path(), "wrong-pin-zz").is_err());
+    }
+
+    #[test]
+    fn distinct_sessions_become_distinct_branches() {
+        let dir = tempfile::tempdir().unwrap();
+        setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
+        add_note_in_session(dir.path(), "decoy-pin-2", "s1 note", 10, "unlock-1").unwrap();
+        add_note_in_session(dir.path(), "decoy-pin-2", "s2 note", 11, "unlock-2").unwrap();
+        let report = review_decoy_activity(dir.path(), "real-pin-1").unwrap();
+        assert_eq!(report.session_count, 2);
+        assert_eq!(report.integrity, AuditIntegrity::Ok);
+    }
+
+    #[test]
+    fn real_notes_and_decoy_notes_stay_isolated_under_audit() {
+        // Adding an audit trail must not leak into either lane's note list.
+        let dir = tempfile::tempdir().unwrap();
+        setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
+        add_note(dir.path(), "decoy-pin-2", "decoy body", 10).unwrap();
+        add_note(dir.path(), "real-pin-1", "real body", 11).unwrap();
+
+        let (_, real_notes) = list_notes(dir.path(), "real-pin-1").unwrap();
+        assert_eq!(real_notes.len(), 1);
+        assert_eq!(real_notes[0].body, "real body");
+        let (_, decoy_notes) = list_notes(dir.path(), "decoy-pin-2").unwrap();
+        assert_eq!(decoy_notes.len(), 1);
+        assert_eq!(decoy_notes[0].body, "decoy body");
+    }
+
+    #[test]
+    fn anchor_flags_truncation_of_witnessed_prefix() {
+        let dir = tempfile::tempdir().unwrap();
+        setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
+        add_note_in_session(dir.path(), "decoy-pin-2", "note A", 10, "s1").unwrap();
+        add_note_in_session(dir.path(), "decoy-pin-2", "note B", 11, "s1").unwrap();
+        // First review witnesses + anchors branch s1 (open_session + 2 add_note = 3 records).
+        assert_eq!(
+            review_decoy_activity(dir.path(), "real-pin-1").unwrap().integrity,
+            AuditIntegrity::Ok
+        );
+
+        // A coercer with file access drops the last audit record.
+        let mut container = load_container(dir.path()).unwrap().unwrap();
+        container.audit_log.pop();
+        save_container(dir.path(), &container).unwrap();
+
+        let report = review_decoy_activity(dir.path(), "real-pin-1").unwrap();
+        assert_eq!(
+            report.integrity,
+            AuditIntegrity::WitnessedPrefixAltered { branch_ref: "s1".into() }
+        );
+    }
+
+    #[test]
+    fn anchor_flags_forged_replacement_of_witnessed_branch() {
+        let dir = tempfile::tempdir().unwrap();
+        setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
+        add_note_in_session(dir.path(), "decoy-pin-2", "coercer note A", 10, "s1").unwrap();
+        add_note_in_session(dir.path(), "decoy-pin-2", "coercer note B", 11, "s1").unwrap();
+        assert_eq!(
+            review_decoy_activity(dir.path(), "real-pin-1").unwrap().integrity,
+            AuditIntegrity::Ok
+        );
+
+        // A coercer wholesale-replaces s1 with a fresh, internally-consistent chain of the same
+        // length (unkeyed BLAKE3 lets them forge a valid chain) — but the forged head no longer
+        // matches the real lane's anchor. This is exactly C's finding.
+        let mut container = load_container(dir.path()).unwrap().unwrap();
+        let orig_len = container.audit_log.len();
+        let mut forged = Vec::new();
+        let mut parent = GENESIS_PARENT;
+        for i in 0..orig_len {
+            let rec = AuditRecord::new(
+                parent,
+                "s1",
+                "did:forged",
+                None,
+                None,
+                AuditAction::AddNote,
+                100 + i as u32,
+                vec![i as u8],
+            );
+            parent = rec.id;
+            forged.push(rec);
+        }
+        container.audit_log = forged;
+        save_container(dir.path(), &container).unwrap();
+
+        let report = review_decoy_activity(dir.path(), "real-pin-1").unwrap();
+        assert_eq!(
+            report.integrity,
+            AuditIntegrity::WitnessedPrefixAltered { branch_ref: "s1".into() }
+        );
+    }
+
+    #[test]
+    fn clean_review_is_idempotent_and_stable() {
+        let dir = tempfile::tempdir().unwrap();
+        setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
+        add_note(dir.path(), "decoy-pin-2", "one", 10).unwrap();
+        let a = review_decoy_activity(dir.path(), "real-pin-1").unwrap();
+        let b = review_decoy_activity(dir.path(), "real-pin-1").unwrap();
+        assert_eq!(a.integrity, AuditIntegrity::Ok);
+        assert_eq!(b.integrity, AuditIntegrity::Ok);
+        assert_eq!(a.actions, b.actions);
+        // Real lane still opens and its notes are intact after anchor writes.
+        let (_, real_notes) = list_notes(dir.path(), "real-pin-1").unwrap();
+        assert!(real_notes.is_empty());
     }
 }
