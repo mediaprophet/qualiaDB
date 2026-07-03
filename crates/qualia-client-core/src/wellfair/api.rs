@@ -18,7 +18,8 @@ use super::export_package::{
     build_export_package, export_policy_receipt, ExportReceipt, HealthExportPackage,
 };
 use super::graph_query::GraphCoverageRow;
-use super::sync_outbox::SyncOutboxEntry;
+use super::sync_outbox::{SyncOutbox, SyncOutboxEntry, SyncOutboxState};
+use super::sync_transport::SyncTransport;
 use super::snapshot::build_host_snapshot;
 use super::vault::VaultService;
 use super::host_state::WellfairHostSnapshot;
@@ -1324,6 +1325,113 @@ impl WebizenHostApi {
             .map_err(|e| e.to_string())
     }
 
+    // --- Sync transport orchestration (T3.1: drain outbox → transport → peer inbox) ---
+
+    /// The next Lamport value to stamp on outbound operations: one past the greatest observed among
+    /// the locally-validated inbox operations. Keeps outbound clocks causally ahead of what we've seen.
+    fn next_sync_lamport(&self) -> Result<u64, String> {
+        let max = self
+            .validated_sync_operations()?
+            .iter()
+            .map(|o| o.lamport)
+            .max()
+            .unwrap_or(0);
+        Ok(max + 1)
+    }
+
+    /// **Drain the outbox through a transport.** For each `Queued` outbox entry, build a signed
+    /// [`SyncOperation`] from its committed journal entry and publish it; on success the entry is
+    /// marked `Sent`. Classified/Sanctuary records never enter the ordinary lane — they are marked
+    /// `Rejected` so they stop being retried. Returns the number of operations published.
+    ///
+    /// The transport is a dumb pipe; correctness (dedup, convergence) is enforced by the peer's
+    /// fail-closed inbox on the other side.
+    pub fn sync_push_via<T: SyncTransport>(
+        &self,
+        transport: &T,
+        limit: usize,
+    ) -> Result<usize, String> {
+        let outbox = SyncOutbox::open(&self.storage_root).map_err(|e| e.to_string())?;
+        let queued: Vec<SyncOutboxEntry> = outbox
+            .list_all()
+            .map_err(|e| e.to_string())?
+            .into_iter()
+            .filter(|e| e.state == SyncOutboxState::Queued)
+            .take(limit)
+            .collect();
+        if queued.is_empty() {
+            return Ok(0);
+        }
+        let journal = self.list_health_records(512)?;
+        let mut lamport = self.next_sync_lamport()?;
+        let mut ops = Vec::new();
+        let mut sent_ids = Vec::new();
+        for entry in &queued {
+            let Some(journal_entry) = journal.iter().find(|j| j.id == entry.record_id) else {
+                continue; // the record is outside the recent window; leave it queued for a later drain
+            };
+            match self.build_outbound_operation(journal_entry, lamport) {
+                Some(op) => {
+                    lamport += 1;
+                    ops.push(op);
+                    sent_ids.push(entry.operation_id.clone());
+                }
+                None => {
+                    // Classified/Sanctuary — never syncs; stop retrying it.
+                    let _ = outbox.update_state(&entry.operation_id, SyncOutboxState::Rejected);
+                }
+            }
+        }
+        if ops.is_empty() {
+            return Ok(0);
+        }
+        transport.publish(&ops)?;
+        for id in &sent_ids {
+            let _ = outbox.update_state(id, SyncOutboxState::Sent);
+        }
+        Ok(ops.len())
+    }
+
+    /// **Pull from a transport and admit into the quarantined inbox.** Every op is validated
+    /// fail-closed on admission (bad signature/hash/version/oversize/Classified → `Rejected`;
+    /// replays → `Duplicate`), so a hostile peer can only cause rejections. Returns the admission
+    /// tally.
+    pub fn sync_pull_via<T: SyncTransport>(
+        &self,
+        transport: &T,
+        since: u64,
+    ) -> Result<SyncPullReport, String> {
+        let ops = transport.pull(since)?;
+        let mut report = SyncPullReport {
+            pulled: ops.len(),
+            validated: 0,
+            duplicate: 0,
+            rejected: 0,
+        };
+        for op in &ops {
+            match self.admit_sync_operation(op)? {
+                AdmitOutcome::Validated => report.validated += 1,
+                AdmitOutcome::Duplicate => report.duplicate += 1,
+                AdmitOutcome::Rejected(_) => report.rejected += 1,
+            }
+        }
+        Ok(report)
+    }
+
+    /// One-shot sync against an HTTP relay (the production wire): drain the outbox to the relay,
+    /// then pull + admit from it. Returns `(pushed, pull_report)`. Native-only (`reqwest`).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn sync_with_http_relay(
+        &self,
+        base_url: &str,
+        since: u64,
+    ) -> Result<(usize, SyncPullReport), String> {
+        let transport = super::sync_transport::HttpRelayTransport::new(base_url);
+        let pushed = self.sync_push_via(&transport, 256)?;
+        let report = self.sync_pull_via(&transport, since)?;
+        Ok((pushed, report))
+    }
+
     // --- Clinical documents (Phase 3 / CLI-01..) ---
 
     pub fn add_clinical_report(
@@ -2151,6 +2259,19 @@ impl WebizenHostApi {
     }
 }
 
+/// The admission tally from a [`WebizenHostApi::sync_pull_via`] round.
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+pub struct SyncPullReport {
+    /// Operations received from the transport.
+    pub pulled: usize,
+    /// Newly admitted as valid.
+    pub validated: usize,
+    /// Already-seen operation ids (idempotent replays).
+    pub duplicate: usize,
+    /// Failed fail-closed validation (bad signature/hash/version/oversize/Classified lane).
+    pub rejected: usize,
+}
+
 /// A domain of agency, flattened for a delegation-creation picker (host → Tauri → Studio).
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct AgencyDomainInfo {
@@ -2308,6 +2429,43 @@ mod api_tests {
         assert!(host.record_assessment("bdi2", vec![0; 9]).is_err());
         assert!(host.record_assessment("gad7", vec![0; 3]).is_err());
         assert_eq!(host.list_assessments(16).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn sync_push_pull_round_trip_over_in_memory_relay() {
+        use crate::wellfair::sync_outbox::SyncOutbox;
+        use crate::wellfair::sync_transport::InMemoryRelay;
+
+        let relay = InMemoryRelay::new();
+        let dir_a = tempdir().unwrap();
+        let dir_b = tempdir().unwrap();
+        let mut host_a = test_host(dir_a.path());
+        let host_b = test_host(dir_b.path());
+
+        // Host A commits a (Restricted) record — the vault auto-enqueues it to A's outbox.
+        host_a.add_condition(&ConditionReport::new("Asthma")).unwrap();
+        let queued_before = SyncOutbox::open(dir_a.path()).unwrap().count_queued().unwrap();
+        assert!(queued_before >= 1);
+
+        // Push drains the outbox onto the relay and marks entries Sent.
+        let pushed = host_a.sync_push_via(&relay, 32).unwrap();
+        assert_eq!(pushed, queued_before);
+        assert_eq!(SyncOutbox::open(dir_a.path()).unwrap().count_queued().unwrap(), 0);
+        assert_eq!(relay.len(), pushed);
+
+        // Host B pulls + admits — the op lands in B's validated set.
+        let report = host_b.sync_pull_via(&relay, 0).unwrap();
+        assert_eq!(report.pulled, pushed);
+        assert_eq!(report.validated, pushed);
+        assert_eq!(report.rejected, 0);
+        let validated = host_b.validated_sync_operations().unwrap();
+        assert!(validated.iter().any(|o| o.kind == "condition"));
+
+        // Re-pull is idempotent: duplicates, never double-admitted.
+        let again = host_b.sync_pull_via(&relay, 0).unwrap();
+        assert_eq!(again.validated, 0);
+        assert_eq!(again.duplicate, pushed);
+        assert_eq!(host_b.validated_sync_operations().unwrap().len(), validated.len());
     }
 
     #[test]

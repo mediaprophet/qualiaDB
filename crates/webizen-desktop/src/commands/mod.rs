@@ -1026,6 +1026,33 @@ pub fn wellfair_evaluate_agency_access(
     Ok(serde_json::json!({ "permit": permit, "reason": reason }).to_string())
 }
 
+// --- Sync transport (T3.1): sync against an HTTP relay -----------------------------------------
+
+/// Drain the outbox to the relay at `base_url`, then pull + admit from it. Returns
+/// `{ "pushed": n, "pulled": n, "validated": n, "duplicate": n, "rejected": n }`. `since` is the
+/// pull cursor (0 = from the start; admission dedups so re-pulling is safe).
+#[command]
+pub fn wellfair_sync_with_relay(
+    app: AppHandle,
+    base_url: String,
+    since: u64,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let (pushed, report) = host.sync_with_http_relay(&base_url, since)?;
+    Ok(serde_json::json!({
+        "pushed": pushed,
+        "pulled": report.pulled,
+        "validated": report.validated,
+        "duplicate": report.duplicate,
+        "rejected": report.rejected,
+    })
+    .to_string())
+}
+
 // --- Wellbeing self-assessment instruments (T2.2; PHQ-9 / GAD-7) -----------------------------
 
 /// The instruments this build ships (items, options, bands, disclaimer).
@@ -4207,6 +4234,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_set_agency_delegation_consent,
         wellfair_revoke_agency_delegation,
         wellfair_evaluate_agency_access,
+        wellfair_sync_with_relay,
         wellfair_list_assessment_instruments,
         wellfair_record_assessment,
         wellfair_list_assessments,

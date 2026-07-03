@@ -29,6 +29,10 @@ pub mod vault_container;
 pub mod snapshot;
 pub mod sync_outbox;
 pub mod sync_protocol;
+pub mod sync_transport;
+// The HTTP relay server is native-only (tiny_http).
+#[cfg(not(target_arch = "wasm32"))]
+pub mod sync_relay_server;
 pub mod vault;
 
 #[cfg(test)]
