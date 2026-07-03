@@ -12,4 +12,6 @@ pub mod sanctuary_crypto;
 #[cfg(feature = "sanctuary-crypto")]
 pub mod sanctuary_keychain;
 pub mod verifiable_credential;
+#[cfg(feature = "zk-culling")]
+pub mod zk_predicates;
 pub mod zk_proofs;

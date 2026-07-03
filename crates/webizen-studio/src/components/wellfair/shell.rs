@@ -4,6 +4,7 @@ use super::credentials_panel::WellfairCredentialsPanel;
 use super::finance_panel::WellfairFinancePanel;
 use super::guardianship_panel::WellfairGuardianshipPanel;
 use super::health_panel::WellfairHealthPanel;
+use super::qapp_publish_panel::WellfairQappPublishPanel;
 use super::life_panel::WellfairLifePanel;
 use super::projects_panel::WellfairProjectsPanel;
 use super::sync_panel::WellfairSyncPanel;
@@ -37,6 +38,7 @@ const AREAS: &[(&str, &str)] = &[
     ("Projects", "Phase 5 — cooperative work"),
     ("Finance", "Phase 5 — ledger and balances"),
     ("Credentials", "Phase 3 — held credentials"),
+    ("Qapps", "Package & publish installable qapps"),
     ("Tools", "Phase 1 — diagnostics and packages"),
 ];
 
@@ -104,6 +106,7 @@ pub fn WellfairShell() -> Element {
         },
         "Finance" => rsx! { WellfairFinancePanel {} },
         "Credentials" => rsx! { WellfairCredentialsPanel {} },
+        "Qapps" => rsx! { WellfairQappPublishPanel {} },
         "Tools" => rsx! {
             WellfairToolsPanel {}
             WellfairSyncPanel {}

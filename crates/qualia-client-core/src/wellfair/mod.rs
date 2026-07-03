@@ -16,6 +16,8 @@ pub mod med_reminders;
 #[cfg(test)]
 mod medication_flow;
 pub mod policy;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod qapp_publish;
 pub mod receipt;
 pub mod sanctuary;
 #[cfg(not(target_arch = "wasm32"))]

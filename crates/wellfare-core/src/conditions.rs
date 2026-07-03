@@ -126,6 +126,8 @@ pub fn journal_kind_for_record_id(record_id: &str) -> &'static str {
         "assistance_need"
     } else if record_id.contains(":welfare_stream:") {
         "welfare_stream"
+    } else if record_id.contains(":authority_attestation:") {
+        "authority_attestation"
     } else if record_id.contains(":government_letter:") {
         "government_letter"
     } else if record_id.contains(":guardianship_proposal:") {

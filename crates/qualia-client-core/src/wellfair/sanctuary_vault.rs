@@ -176,17 +176,27 @@ fn try_lane(
     }
 }
 
-/// Resolve which lane a PIN opens, returning the (single-derivation) key alongside it.
-/// A real PIN costs one PBKDF2 derivation; a decoy PIN costs two (real is tried first).
+/// Resolve which lane a PIN opens, returning the key alongside it.
+///
+/// **Constant-work across the three outcomes** (real PIN / duress-decoy PIN / wrong PIN): ALWAYS
+/// derive BOTH lane keys — one full PBKDF2-310k stretch each — before branching on which verifier
+/// opened. Early-returning once the real lane matched would make a real unlock cost one KDF while a
+/// duress or wrong PIN costs two — a ~2x timing tell a coercer could use to single out the real PIN
+/// (i.e. to learn that a *hidden* primary vault exists behind the decoy). The residual difference
+/// (an AEAD tag verify that succeeds on one lane vs fails on the other, plus a short magic-constant
+/// compare) is microseconds beside two 310k-iteration PBKDF2 stretches. This is *equal KDF work*,
+/// not a proof of microarchitectural constant-time — see the Sanctuary threat-model ADR (D4).
 fn open_lane(
     meta: &VaultMeta,
     pin: &str,
     pepper: Option<&[u8; 32]>,
 ) -> Result<(SanctuaryLane, SanctuaryKeyMaterial), String> {
-    if let Some(key) = try_lane(pin, &meta.real, SanctuaryLane::Real, meta.iterations, pepper) {
+    let real_key = try_lane(pin, &meta.real, SanctuaryLane::Real, meta.iterations, pepper);
+    let decoy_key = try_lane(pin, &meta.decoy, SanctuaryLane::Decoy, meta.iterations, pepper);
+    if let Some(key) = real_key {
         return Ok((SanctuaryLane::Real, key));
     }
-    if let Some(key) = try_lane(pin, &meta.decoy, SanctuaryLane::Decoy, meta.iterations, pepper) {
+    if let Some(key) = decoy_key {
         return Ok((SanctuaryLane::Decoy, key));
     }
     Err("Incorrect PIN".into())

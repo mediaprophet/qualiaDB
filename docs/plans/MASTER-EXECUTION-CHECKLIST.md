@@ -51,10 +51,13 @@
 - [x] ABAC evaluation — `delegation_permits(...)` with **selfhood default-deny** + consequential-domain
       provenance-required + trigger-gating + jurisdiction match
 - [ ] Host API + Tauri commands + Studio panel(s) — Social Book / Agency surface
-- [~] Migration: **guardianship `Suspend` wired** (see §C T1.5 — `submit_record_guarded` + escrow +
-      M-of-N ratification). Remaining: keep `wellfair` project/finance/contribution ids traceable when the
-      dedicated cooperative service lands; generalize `government_letter` → authority attestation;
-      predicate circuits for ZK property-proofs.
+- [x] Migration: **guardianship `Suspend` wired** (§C T1.5); **`government_letter` → authority attestation
+      generalized** (wellfare-core `authority_attestation.rs` — extensible authority type + agent-in-capacity
+      + jurisdiction/department + PDF|credential|both; 8 tests; host `add_authority_attestation` + journal
+      kind; gov-letter is now a preset); **ZK predicate circuits landed** (core-db `zk_predicates.rs` — real
+      Groth16 threshold + range via 64-bit decomposition; false statements *unprovable*; soundness +
+      public-input-binding tests, incl. 2 integrator adversarial checks). Remaining: keep `wellfair` ids
+      traceable when the dedicated cooperative service lands (deferred to that service).
 
 ## C. WellFair finish-out
 
@@ -77,7 +80,11 @@
 
 ## D. Human-gated (Timothy decides, then implementable)
 
-- [ ] **T2.1** Sanctuary threat-model ADR — KDF/AEAD/decoy/keychain-recovery sign-off
+- [~] **T2.1** Sanctuary threat-model ADR — **DRAFTED, awaiting Timothy's sign-off**:
+      [adr-sanctuary-threat-model](adr-sanctuary-threat-model.md). 6 decisions surfaced (KDF PBKDF2→Argon2id?,
+      keychain-wrapping default, recovery-code UX, decoy semantics, PIN policy/lockout, at-rest for the
+      health journal) + 5 code-level findings incl. a timing side-channel in `open_lane` (real PIN = 1
+      PBKDF2 pass, decoy = 2 → observable) and the decoy lane being structurally visible on disk. **⚑ Your call on the 6 decisions.**
 - [ ] **T2.2** Mental-wellbeing assessment instruments (DASS-21/PHQ-9/GAD-7/K10/BDI-II) — per-instrument
       licence/scoring/interpretation/disclaimer
 
@@ -99,7 +106,10 @@
 ## F. Cooperative Qapp plan work packages (parallel initiative)
 
 - [ ] **WP1** Qapp token v2 + per-app isolation + CSP (release gate for restricted-data Qapps)
-- [ ] **WP2** Studio Package & Publish (create least-privilege Qapps without hand-editing JSON)
+- [x] **WP2** Studio Package & Publish — **DONE**: host `write_pwa_bundle` (reuses P0 `generate_pwa`,
+      path-traversal-safe, 4 tests) + `publish_qapp_pwa` + native folder-picker + a **Qapps** Studio area
+      (manifest fields → least-privilege capabilities → generate installable PWA scaffold to a folder). No
+      hand-edited JSON. (Serving over a secure origin so a phone installs = P1, needs Timothy's fork.)
 - [ ] **WP4** standalone Cooperative Qapp shell
 - [ ] **WP9** QualiaDB Development Cooperative (bind repo read-only; backlog/claims/changes/reviews)
 - [ ] **WP5/6/8/10/11** finance-receipts / agreements / advanced-economics / forge-CI / release-hardening

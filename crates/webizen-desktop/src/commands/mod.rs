@@ -1128,6 +1128,45 @@ pub fn wellfair_pick_save_path(
     Ok(picked.map(dialog_file_path_to_string))
 }
 
+/// Open a native OS folder-picker (blocking). Returns the chosen directory, or `None` if cancelled.
+#[command]
+pub fn wellfair_pick_directory(app: AppHandle) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let picked = app.dialog().file().blocking_pick_folder();
+    Ok(picked.map(dialog_file_path_to_string))
+}
+
+/// WP2: author a qapp and write its installable PWA bundle into `target_dir`. Returns the written
+/// file paths (JSON array).
+#[command]
+#[allow(clippy::too_many_arguments)]
+pub fn wellfair_publish_qapp_pwa(
+    app: AppHandle,
+    target_dir: String,
+    id: String,
+    name: String,
+    kind: String,
+    description: String,
+    capabilities: String,
+    wasm_filename: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let written = host.publish_qapp_pwa(
+        &target_dir,
+        &id,
+        &name,
+        &kind,
+        &description,
+        &capabilities,
+        &wasm_filename,
+    )?;
+    serde_json::to_string(&written).map_err(|e| e.to_string())
+}
+
 #[command]
 pub fn wellfair_add_government_letter_attachment_from_path(
     app: AppHandle,
@@ -3927,6 +3966,8 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_export_attachment,
         wellfair_pick_file_path,
         wellfair_pick_save_path,
+        wellfair_pick_directory,
+        wellfair_publish_qapp_pwa,
         wellfair_add_government_letter_attachment_from_path,
         wellfair_add_assistance_need,
         wellfair_add_welfare_stream,

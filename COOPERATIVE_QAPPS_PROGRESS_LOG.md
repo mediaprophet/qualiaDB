@@ -133,3 +133,44 @@ hash/path (this module does not compile wasm, P3). Those are genuine adjacent st
 **Next (per the plan):** P1 secure-origin delivery is the load-bearing hard part and opens with a **strategy
 fork** (device-trusted HTTPS cert vs tunnelled TLS vs WebRTC) — a Timothy decision. Then P2 pairing/install,
 P3 wasm build, and P4/P5/P6 = cooperative WP1/WP2/WP4 sequenced behind the delivery they depend on.
+
+---
+
+## 2026-07-03 — Swarm batch: ZK predicate circuits · WP2 Package & Publish · authority attestation · Sanctuary timing fix (Claude / Opus 4.8, 3-agent swarm + integrator) — DONE
+
+**Method:** the swarm pattern that works here — 3 background agents each authoring **isolated new files**
+(disjoint file sets, one registration file each), I integrate the shared wiring + verify by compiling, and
+human-gated items become drafts. All agent output compiled + tested by me before counting.
+
+**What landed:**
+- **ZK predicate circuits** (agent 1 → `qualia-core-db/src/crypto/zk_predicates.rs`): real Groth16 over
+  BLS12-381 (arkworks 0.6) **threshold** (`value ≥ threshold`) and **range** (`lo ≤ value ≤ hi`) proofs via
+  genuine 64-bit **bit-decomposition** R1CS. A false statement makes `diff = value − threshold` wrap to a
+  ~255-bit field element with no 64-bit decomposition ⇒ **no satisfying witness** ⇒ *unprovable* (an
+  `is_satisfied` pre-check refuses to prove, not just to verify). `value` is a hidden witness; `threshold`
+  is a bound public input. **17 tests** incl. soundness (false unprovable), public-input binding, and **3
+  integrator adversarial checks I added** (tampered-proof rejection, exact-threshold binding vs a merely-
+  satisfiable one, u64::MAX edge). Backs the disclosure model's `PropertyProof` modality.
+- **WP2 Studio Package & Publish** (integrator): host `qapp_publish.rs` (`write_pwa_bundle`, reuses P0
+  `generate_pwa`, path-traversal-safe, 4 tests) + `publish_qapp_pwa` host API + a native folder-picker
+  command + a new **Qapps** Studio area — fill manifest fields (id, kind, least-privilege capabilities,
+  wasm entry), choose a folder, generate the installable PWA scaffold. Integration caught a real mismatch:
+  the P0 `validate()` treats a missing icon as a hard error, so `build_manifest` now references a default
+  `icon-512.png` (dropped alongside the wasm). Serving over a secure origin = P1 (Timothy's fork).
+- **Authority attestation** (agent 2 → `wellfare-core/src/authority_attestation.rs`): the ontological
+  generalization of "government letter" — extensible authority type + agent-in-capacity + jurisdiction +
+  department + representation (PDF | credential | PDF-with-embedded-credential). 8 tests; host
+  `add_authority_attestation` + `:authority_attestation:` journal kind; `government_letter` is now a preset.
+- **Sanctuary timing fix** (integrator, prompted by Timothy): `open_lane` now **always derives both lane
+  keys** (equal PBKDF2 work) before branching, closing the ~2x timing tell that distinguished the real PIN
+  from the duress-decoy PIN. Honest bound: defeats a latency observer, not a file inspector (the decoy is
+  still structurally visible — that's a design decision in the ADR, D4).
+- **Sanctuary threat-model ADR** (agent 3 → `docs/plans/adr-sanctuary-threat-model.md`): DRAFT for
+  Timothy — 6 decisions + 5 code-level findings (incl. the timing tell above, now fixed).
+
+**Measured:** zk_predicates **17** · wellfair **101** · wellfare-core (authority attestation +8) · cooperative
+81. Desktop + studio (host + wasm32) checked. Two pre-existing unrelated client-core failures (qpu_oracle,
+chat_session flake) remain, confirmed independent.
+
+**⚑ Where I need the human:** ADR decisions D1–D6 (esp. Argon2id + PIN floor — the real weak link); the
+companion-PWA **P1 secure-origin fork**; whether to build a true hidden-volume decoy (a separate workstream).

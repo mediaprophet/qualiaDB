@@ -85,6 +85,10 @@ use wellfare_core::guardianship::{
     parse_vote_summary, proposal_summary, vote_summary, GuardianshipProposal, GuardianshipVote,
     ProposalState,
 };
+use wellfare_core::authority_attestation::{
+    authority_attestation_summary, build_authority_attestation_envelope, AgentInCapacity, Authority,
+    AuthorityAttestation, Representation,
+};
 use wellfare_core::clinical::{
     build_clinical_attachment_envelope, build_clinical_report_envelope, clinical_attachment_summary,
     clinical_report_summary, AttachmentMeta, ClinicalReport, ClinicalReportType,
@@ -862,6 +866,34 @@ impl WebizenHostApi {
         super::sanctuary_vault::unlock_with_recovery(&self.storage_root, pin, recovery_code_hex)
     }
 
+    // --- WP2: Package & Publish a qapp as an installable PWA bundle (companion-PWA P0/WP2) ---
+
+    /// Author a qapp from discrete fields and write its installable PWA bundle to `target_dir`.
+    /// Returns the written (bundle-relative) file paths. Serving the bundle over a secure origin so
+    /// a phone can install it is a later stage (P1); this produces the artifact.
+    #[cfg(not(target_arch = "wasm32"))]
+    #[allow(clippy::too_many_arguments)]
+    pub fn publish_qapp_pwa(
+        &self,
+        target_dir: &str,
+        id: &str,
+        name: &str,
+        kind: &str,
+        description: &str,
+        capabilities_csv: &str,
+        wasm_filename: &str,
+    ) -> Result<Vec<String>, String> {
+        let manifest = super::qapp_publish::build_manifest(
+            id,
+            name,
+            kind,
+            description,
+            capabilities_csv,
+            wasm_filename,
+        );
+        super::qapp_publish::write_pwa_bundle(std::path::Path::new(target_dir), &manifest)
+    }
+
     pub fn add_life_event(&mut self, report: &LifeEventReport) -> Result<JournalEntry, String> {
         let payload = serde_json::to_string(report).map_err(|e| e.to_string())?;
         let hash = Self::payload_hash_hex(&payload);
@@ -1352,6 +1384,55 @@ impl WebizenHostApi {
             asserted,
         );
         let summary = wellfare_core::welfare_support::government_letter_summary(&letter);
+        self.submit_record_with_summary(QAPP_WELFARE, envelope, SOURCE_WELFARE, Some(summary))?;
+        self.finalize_batch().ok();
+        self.latest_journal_entry()
+    }
+
+    /// Record a general **authority attestation** — the ontological generalization of a government
+    /// letter: an authorizing body (extensible type + jurisdiction + department) attested by an
+    /// agent-in-capacity, delivered as a PDF, a credential, or a PDF-with-embedded-credential.
+    /// `add_government_letter` remains a preset (`authority:government`, PDF) of this model.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_authority_attestation(
+        &mut self,
+        authority_type: &str,
+        authority_label: &str,
+        jurisdiction: Option<String>,
+        department: Option<String>,
+        agent_name: Option<String>,
+        agent_capacity: Option<String>,
+        representation: &str,
+        subject: &str,
+        statement: &str,
+        action_required: bool,
+    ) -> Result<JournalEntry, String> {
+        let issued = Self::now_unix() as u32;
+        let authority = Authority::new(authority_type, authority_label);
+        let representation = match representation.to_ascii_lowercase().as_str() {
+            "credential" => Representation::Credential,
+            "pdf_with_embedded_credential" | "both" => Representation::PdfWithEmbeddedCredential,
+            _ => Representation::Pdf,
+        };
+        let mut att = AuthorityAttestation::new(authority, subject, statement, issued)
+            .with_representation(representation)
+            .with_action_required(action_required);
+        if let Some(j) = jurisdiction {
+            att = att.with_jurisdiction(j);
+        }
+        if let Some(d) = department {
+            att = att.with_department(d);
+        }
+        if let (Some(n), Some(c)) = (agent_name, agent_capacity) {
+            att = att.with_agent(AgentInCapacity::new(n, c));
+        }
+        let envelope = build_authority_attestation_envelope(
+            &att,
+            &self.owner_did,
+            &self.author_did,
+            issued,
+        );
+        let summary = authority_attestation_summary(&att);
         self.submit_record_with_summary(QAPP_WELFARE, envelope, SOURCE_WELFARE, Some(summary))?;
         self.finalize_batch().ok();
         self.latest_journal_entry()
