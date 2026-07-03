@@ -25,6 +25,7 @@ use super::pairing_panel::CompanionPairingPanel;
 use super::communications_panel::WellfairCommunicationsPanel;
 use super::audit_panel::WellfairAuditPanel;
 use super::tools_panel::WellfairToolsPanel;
+use super::sync_backup_panel::WellfairSyncBackupPanel;
 use dioxus::prelude::*;
 
 const AREAS: &[(&str, &str)] = &[
@@ -114,6 +115,7 @@ pub fn WellfairShell() -> Element {
         "Qapps" => rsx! { WellfairQappPublishPanel {} },
         "Tools" => rsx! {
             WellfairToolsPanel {}
+            WellfairSyncBackupPanel {}
             WellfairSyncPanel {}
             WellfairAuditPanel {}
         },

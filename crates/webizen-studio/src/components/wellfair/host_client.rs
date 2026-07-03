@@ -2553,3 +2553,82 @@ pub async fn fetch_assessments() -> Result<Vec<AssessmentResultDto>, String> {
 pub async fn fetch_assessments() -> Result<Vec<AssessmentResultDto>, String> {
     Ok(vec![])
 }
+
+// --- Sync transport (T3.1) + backup/restore (T3.3) -------------------------------------------
+
+/// The admission tally from a sync round against a relay.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct SyncSummaryDto {
+    #[serde(default)]
+    pub pushed: usize,
+    #[serde(default)]
+    pub pulled: usize,
+    #[serde(default)]
+    pub validated: usize,
+    #[serde(default)]
+    pub duplicate: usize,
+    #[serde(default)]
+    pub rejected: usize,
+}
+
+/// The count moved by an export/import.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct BackupSummaryDto {
+    #[serde(default)]
+    pub files: usize,
+    #[serde(default)]
+    pub bytes: u64,
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn sync_with_relay(base_url: &str, since: u64) -> Result<SyncSummaryDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"baseUrl".into(), &wasm_bindgen::JsValue::from_str(base_url))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"since".into(), &wasm_bindgen::JsValue::from_f64(since as f64))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_sync_with_relay", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "sync response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn sync_with_relay(_base_url: &str, _since: u64) -> Result<SyncSummaryDto, String> {
+    Err("Sync requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn export_backup(path: &str) -> Result<BackupSummaryDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"path".into(), &wasm_bindgen::JsValue::from_str(path))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_export_backup", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "export response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn export_backup(_path: &str) -> Result<BackupSummaryDto, String> {
+    Err("Backup requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn import_backup(path: &str) -> Result<BackupSummaryDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"path".into(), &wasm_bindgen::JsValue::from_str(path))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_import_backup", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "import response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn import_backup(_path: &str) -> Result<BackupSummaryDto, String> {
+    Err("Restore requires the Tauri desktop host".into())
+}
