@@ -19,6 +19,12 @@ pub const SANCTUARY_GCM_NONCE_BYTES: usize = 12;
 pub const SANCTUARY_XCHACHA_NONCE_BYTES: usize = 24;
 pub const DEFAULT_PBKDF2_ITERATIONS: u32 = 310_000;
 
+/// Argon2id defaults (memory-hard KDF; ADR D1). 64 MiB, 3 passes, 1 lane. Memory-hardness is what
+/// PBKDF2 lacks — it blunts GPU/ASIC offline brute-force of a weak PIN, the vault's real weak link.
+pub const ARGON2_M_COST_KIB: u32 = 65_536;
+pub const ARGON2_T_COST: u32 = 3;
+pub const ARGON2_P_COST: u32 = 1;
+
 const AES_GCM_DOMAIN: [u8; 4] = *b"QGCM";
 const CHACHA20_DOMAIN: [u8; 4] = *b"QCHA";
 const XCHACHA20_HEAD_DOMAIN: [u8; 8] = *b"Q42XCH1!";
@@ -81,6 +87,38 @@ pub fn derive_sanctuary_key_material(
         cipher_key,
         volume_tweak,
     }
+}
+
+/// Derive the 48-byte sanctuary key material with **Argon2id** (memory-hard), same output layout as
+/// [`derive_sanctuary_key_material`]: `[0..32]` cipher key, `[32..48]` volume tweak.
+pub fn derive_sanctuary_key_material_argon2(
+    secret: &[u8],
+    salt: &[u8],
+    m_cost_kib: u32,
+    t_cost: u32,
+    p_cost: u32,
+) -> Result<SanctuaryKeyMaterial, String> {
+    use argon2::{Algorithm, Argon2, Params, Version};
+
+    let params = Params::new(m_cost_kib, t_cost, p_cost, Some(SANCTUARY_KEY_MATERIAL_BYTES))
+        .map_err(|e| format!("argon2 params: {e}"))?;
+    let argon = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+
+    let mut key_material = [0u8; SANCTUARY_KEY_MATERIAL_BYTES];
+    argon
+        .hash_password_into(secret, salt, &mut key_material)
+        .map_err(|e| format!("argon2 derive: {e}"))?;
+
+    let mut cipher_key = [0u8; SANCTUARY_CIPHER_KEY_BYTES];
+    let mut volume_tweak = [0u8; SANCTUARY_TWEAK_BYTES];
+    cipher_key.copy_from_slice(&key_material[..SANCTUARY_CIPHER_KEY_BYTES]);
+    volume_tweak.copy_from_slice(&key_material[SANCTUARY_CIPHER_KEY_BYTES..]);
+    key_material.zeroize();
+
+    Ok(SanctuaryKeyMaterial {
+        cipher_key,
+        volume_tweak,
+    })
 }
 
 /// Convenience wrapper for call sites that only need the 32-byte cipher key.

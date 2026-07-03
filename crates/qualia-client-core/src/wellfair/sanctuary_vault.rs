@@ -26,8 +26,9 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use qualia_core_db::crypto::sanctuary_crypto::{
-    decrypt_sanctuary_chunk, derive_sanctuary_key_material, encrypt_sanctuary_chunk,
-    SanctuaryAeadAlgorithm, SanctuaryKeyMaterial, DEFAULT_PBKDF2_ITERATIONS, SANCTUARY_TAG_BYTES,
+    decrypt_sanctuary_chunk, derive_sanctuary_key_material, derive_sanctuary_key_material_argon2,
+    encrypt_sanctuary_chunk, SanctuaryAeadAlgorithm, SanctuaryKeyMaterial, ARGON2_M_COST_KIB,
+    ARGON2_P_COST, ARGON2_T_COST, DEFAULT_PBKDF2_ITERATIONS, SANCTUARY_TAG_BYTES,
 };
 use qualia_core_db::crypto::sanctuary_keychain;
 use sha2::{Digest, Sha256};
@@ -37,7 +38,47 @@ const ALGO: SanctuaryAeadAlgorithm = SanctuaryAeadAlgorithm::Aes256Gcm;
 const VERIFIER_MAGIC: &[u8] = b"WELLFAIR-SANCTUARY-VERIFIER-v1";
 /// Reserved chunk index for the verifier so it never shares a nonce with a records write.
 const VERIFIER_CHUNK: u64 = u64::MAX;
-const MIN_PIN_LEN: usize = 4;
+/// Minimum PIN/passphrase length (ADR D5 — raised from 4). There is no maximum: a passphrase is
+/// encouraged, and Argon2id makes a long secret cheap to stretch.
+const MIN_PIN_LEN: usize = 6;
+
+/// Reject the weakest PINs a coercer or shoulder-surfer would try first (ADR D5). This is a floor,
+/// not a strength meter — it blocks trivially guessable values, it does not certify strong ones.
+fn validate_pin_strength(pin: &str) -> Result<(), String> {
+    if pin.chars().count() < MIN_PIN_LEN {
+        return Err(format!(
+            "PIN/passphrase must be at least {MIN_PIN_LEN} characters"
+        ));
+    }
+    if let Some(first) = pin.chars().next() {
+        if pin.chars().all(|c| c == first) {
+            return Err("Too weak: all identical characters".into());
+        }
+    }
+    if is_trivial_sequence(pin) {
+        return Err("Too weak: a straight run of consecutive characters".into());
+    }
+    const COMMON: &[&str] = &[
+        "123456", "1234567", "12345678", "password", "qwerty", "111111", "000000", "letmein",
+        "abc123", "iloveyou",
+    ];
+    if COMMON.iter().any(|c| c.eq_ignore_ascii_case(pin)) {
+        return Err("Too common — choose something less guessable".into());
+    }
+    Ok(())
+}
+
+/// True for a straight ascending/descending run over the whole string (e.g. `123456`, `987654`,
+/// `abcdef`). A real passphrase will not be a single monotone run.
+fn is_trivial_sequence(pin: &str) -> bool {
+    let b = pin.as_bytes();
+    if b.len() < MIN_PIN_LEN {
+        return false;
+    }
+    let ascending = b.windows(2).all(|w| w[1] == w[0].wrapping_add(1));
+    let descending = b.windows(2).all(|w| w[0] == w[1].wrapping_add(1));
+    ascending || descending
+}
 
 /// Which lane a PIN opened.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -72,10 +113,38 @@ struct EncBlob {
     tag_hex: String,
 }
 
-/// Per-lane persisted state: salt, PIN verifier, encrypted records, and the next nonce counter.
+/// Which key-derivation function a lane uses. Recorded **per lane** so an old (PBKDF2) vault can be
+/// lazily re-derived to Argon2id one lane at a time — you can only re-key the lane whose PIN was
+/// just supplied. Absent on legacy vaults → interpreted as PBKDF2 at the vault's `iterations`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", tag = "algo")]
+enum KdfDescriptor {
+    Pbkdf2 { iterations: u32 },
+    Argon2id { m_cost_kib: u32, t_cost: u32, p_cost: u32 },
+}
+
+impl KdfDescriptor {
+    /// The production Argon2id parameters (ADR D1).
+    fn argon2_default() -> Self {
+        KdfDescriptor::Argon2id {
+            m_cost_kib: ARGON2_M_COST_KIB,
+            t_cost: ARGON2_T_COST,
+            p_cost: ARGON2_P_COST,
+        }
+    }
+
+    fn is_argon2(&self) -> bool {
+        matches!(self, KdfDescriptor::Argon2id { .. })
+    }
+}
+
+/// Per-lane persisted state: salt, KDF, PIN verifier, encrypted records, and the next nonce counter.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct LaneState {
     salt_hex: String,
+    /// Absent on legacy vaults; `lane_kdf` falls back to PBKDF2 at the vault `iterations`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    kdf: Option<KdfDescriptor>,
     verifier: EncBlob,
     records: EncBlob,
     next_counter: u64,
@@ -150,15 +219,40 @@ fn effective_secret(pin: &str, pepper: Option<&[u8; 32]>) -> Vec<u8> {
     }
 }
 
+/// Resolve a lane's KDF, falling back to PBKDF2 at the vault-level `iterations` for legacy lanes.
+fn lane_kdf(lane: &LaneState, fallback_iterations: u32) -> KdfDescriptor {
+    lane.kdf.clone().unwrap_or(KdfDescriptor::Pbkdf2 {
+        iterations: fallback_iterations,
+    })
+}
+
+/// Derive 48-byte lane key material under the lane's KDF.
+fn derive_lane_material(
+    kdf: &KdfDescriptor,
+    secret: &[u8],
+    salt: &[u8],
+) -> Result<SanctuaryKeyMaterial, String> {
+    match kdf {
+        KdfDescriptor::Pbkdf2 { iterations } => {
+            Ok(derive_sanctuary_key_material(secret, salt, *iterations))
+        }
+        KdfDescriptor::Argon2id {
+            m_cost_kib,
+            t_cost,
+            p_cost,
+        } => derive_sanctuary_key_material_argon2(secret, salt, *m_cost_kib, *t_cost, *p_cost),
+    }
+}
+
 fn lane_key(
     pin: &str,
     lane: &LaneState,
-    iterations: u32,
+    fallback_iterations: u32,
     pepper: Option<&[u8; 32]>,
 ) -> Result<SanctuaryKeyMaterial, String> {
     let salt = hex::decode(&lane.salt_hex).map_err(|e| e.to_string())?;
     let secret = effective_secret(pin, pepper);
-    Ok(derive_sanctuary_key_material(&secret, &salt, iterations))
+    derive_lane_material(&lane_kdf(lane, fallback_iterations), &secret, &salt)
 }
 
 /// Derive the key for `lane_id` and confirm the PIN opens it (verifier → magic constant).
@@ -205,23 +299,24 @@ fn open_lane(
 fn new_lane(
     pin: &str,
     lane_id: SanctuaryLane,
-    iterations: u32,
+    kdf: KdfDescriptor,
     pepper: Option<&[u8; 32]>,
-) -> LaneState {
+) -> Result<LaneState, String> {
     let salt = random_salt();
     let secret = effective_secret(pin, pepper);
-    let key = derive_sanctuary_key_material(&secret, &salt, iterations);
+    let key = derive_lane_material(&kdf, &secret, &salt)?;
     let aad = lane_id.aad();
     let verifier = seal(&key, VERIFIER_CHUNK, VERIFIER_MAGIC, aad);
     let empty: Vec<SanctuaryVaultNote> = Vec::new();
     let records_pt = serde_json::to_vec(&empty).expect("serialize empty records");
     let records = seal(&key, 0, &records_pt, aad);
-    LaneState {
+    Ok(LaneState {
         salt_hex: hex::encode(salt),
+        kdf: Some(kdf),
         verifier,
         records,
         next_counter: 1,
-    }
+    })
 }
 
 fn load_meta(root: &Path) -> Result<Option<VaultMeta>, String> {
@@ -248,21 +343,36 @@ pub fn is_configured(root: impl AsRef<Path>) -> bool {
     vault_path(root.as_ref()).exists()
 }
 
-/// Create the two encrypted lanes at the production PBKDF2 work factor.
-/// Fails if PINs are too short, equal, or the vault already exists.
+/// Create the two encrypted lanes with the production **Argon2id** KDF (memory-hard; ADR D1).
+/// Fails if a PIN is too weak, the PINs are equal, or the vault already exists.
 pub fn setup(root: impl AsRef<Path>, real_pin: &str, decoy_pin: &str) -> Result<(), String> {
-    setup_with_iterations(root, real_pin, decoy_pin, DEFAULT_PBKDF2_ITERATIONS)
+    build_vault(
+        root,
+        real_pin,
+        decoy_pin,
+        KdfDescriptor::argon2_default(),
+        None,
+        None,
+    )
 }
 
-/// As [`setup`] but with an explicit PBKDF2 iteration count. Public within the crate so tests
-/// can use a low work factor; production always goes through [`setup`] (310k iterations).
+/// As [`setup`] but with an explicit PBKDF2 iteration count. Crate-internal so **tests** can use a
+/// fast work factor; production goes through [`setup`] (Argon2id). Also the way a legacy PBKDF2
+/// vault is constructed in tests to exercise the lazy Argon2id migration.
 pub(crate) fn setup_with_iterations(
     root: impl AsRef<Path>,
     real_pin: &str,
     decoy_pin: &str,
     iterations: u32,
 ) -> Result<(), String> {
-    build_vault(root, real_pin, decoy_pin, iterations, None, None)
+    build_vault(
+        root,
+        real_pin,
+        decoy_pin,
+        KdfDescriptor::Pbkdf2 { iterations },
+        None,
+        None,
+    )
 }
 
 /// Shared vault constructor. `pepper`/`vault_id` are `Some` only for a keychain-wrapped vault.
@@ -270,13 +380,12 @@ fn build_vault(
     root: impl AsRef<Path>,
     real_pin: &str,
     decoy_pin: &str,
-    iterations: u32,
+    kdf: KdfDescriptor,
     pepper: Option<&[u8; 32]>,
     vault_id: Option<String>,
 ) -> Result<(), String> {
-    if real_pin.len() < MIN_PIN_LEN || decoy_pin.len() < MIN_PIN_LEN {
-        return Err(format!("PIN must be at least {MIN_PIN_LEN} characters"));
-    }
+    validate_pin_strength(real_pin)?;
+    validate_pin_strength(decoy_pin)?;
     if real_pin == decoy_pin {
         return Err("Decoy PIN must differ from the real unlock PIN".into());
     }
@@ -284,11 +393,17 @@ fn build_vault(
     if is_configured(root) {
         return Err("Sanctuary vault already exists".into());
     }
+    // `iterations` remains as the legacy PBKDF2 fallback for any lane without its own descriptor;
+    // every lane a new vault creates carries an explicit `kdf`, so it is only a compatibility floor.
+    let iterations = match &kdf {
+        KdfDescriptor::Pbkdf2 { iterations } => *iterations,
+        KdfDescriptor::Argon2id { .. } => DEFAULT_PBKDF2_ITERATIONS,
+    };
     let meta = VaultMeta {
         version: 1,
         iterations,
-        real: new_lane(real_pin, SanctuaryLane::Real, iterations, pepper),
-        decoy: new_lane(decoy_pin, SanctuaryLane::Decoy, iterations, pepper),
+        real: new_lane(real_pin, SanctuaryLane::Real, kdf.clone(), pepper)?,
+        decoy: new_lane(decoy_pin, SanctuaryLane::Decoy, kdf, pepper)?,
         keychain_wrapped: pepper.is_some(),
         vault_id,
     };
@@ -346,7 +461,7 @@ pub fn setup_wrapped(
         root,
         real_pin,
         decoy_pin,
-        DEFAULT_PBKDF2_ITERATIONS,
+        KdfDescriptor::argon2_default(),
         Some(&pepper),
         Some(vault_id.clone()),
     ) {
@@ -522,7 +637,7 @@ mod tests {
             dir.path(),
             "real-pin-1",
             "decoy-pin-2",
-            1_000,
+            KdfDescriptor::Pbkdf2 { iterations: 1_000 },
             Some(&pepper),
             Some("test-vault".into()),
         )
@@ -551,6 +666,48 @@ mod tests {
         assert!(!meta.keychain_wrapped);
         assert!(pepper_for(&meta, None).unwrap().is_none());
         assert!(!is_keychain_wrapped(dir.path()));
+    }
+
+    #[test]
+    fn argon2_vault_opens_and_isolates_lanes() {
+        // Fast Argon2id params for the test; production uses 64 MiB (ADR D1).
+        let dir = tempfile::tempdir().unwrap();
+        let kdf = KdfDescriptor::Argon2id { m_cost_kib: 16, t_cost: 1, p_cost: 1 };
+        build_vault(dir.path(), "real-pass-alpha", "decoy-pass-beta", kdf, None, None).unwrap();
+        assert_eq!(resolve_lane(dir.path(), "real-pass-alpha").unwrap(), SanctuaryLane::Real);
+        assert_eq!(resolve_lane(dir.path(), "decoy-pass-beta").unwrap(), SanctuaryLane::Decoy);
+        assert!(resolve_lane(dir.path(), "wrong-pass-xyz").is_err());
+        let meta = load_meta(dir.path()).unwrap().unwrap();
+        assert!(matches!(meta.real.kdf, Some(KdfDescriptor::Argon2id { .. })));
+        assert!(matches!(meta.decoy.kdf, Some(KdfDescriptor::Argon2id { .. })));
+    }
+
+    #[test]
+    fn production_setup_uses_argon2id() {
+        // setup() must produce memory-hard Argon2id lanes (real 64 MiB params, one-time cost).
+        let dir = tempfile::tempdir().unwrap();
+        setup(dir.path(), "correct-horse", "battery-staple-2").unwrap();
+        let meta = load_meta(dir.path()).unwrap().unwrap();
+        assert!(matches!(meta.real.kdf, Some(KdfDescriptor::Argon2id { .. })));
+    }
+
+    #[test]
+    fn legacy_pbkdf2_vault_still_opens() {
+        // A vault whose lanes have no `kdf` field (legacy) falls back to PBKDF2 at meta.iterations.
+        let dir = tempfile::tempdir().unwrap();
+        setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
+        assert_eq!(resolve_lane(dir.path(), "real-pin-1").unwrap(), SanctuaryLane::Real);
+    }
+
+    #[test]
+    fn pin_policy_rejects_weak_pins() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(setup(dir.path(), "a1b2", "decoy-strong-1").is_err(), "too short");
+        assert!(setup(dir.path(), "aaaaaa", "decoy-strong-1").is_err(), "all identical");
+        assert!(setup(dir.path(), "123456", "decoy-strong-1").is_err(), "sequential");
+        assert!(setup(dir.path(), "password", "decoy-strong-1").is_err(), "common");
+        // None of the rejected attempts created a vault (they fail before derivation).
+        assert!(!is_configured(dir.path()));
     }
 
     #[test]
