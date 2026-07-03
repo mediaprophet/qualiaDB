@@ -152,7 +152,13 @@ sweep — flag to Timothy before undertaking.)
 
 ## F. Cooperative Qapp plan work packages (parallel initiative)
 
-- [ ] **WP1** Qapp token v2 + per-app isolation + CSP (release gate for restricted-data Qapps)
+- [~] **WP1** Qapp token v2 + per-app isolation + CSP — **CSP + isolation DONE** (`e9fdede7`, local): the
+      generated PWA now carries a strict **capability-derived CSP** (default-deny; own-origin scripts +
+      `wasm-unsafe-eval`, no `unsafe-inline`; `connect-src 'none'` unless the qapp requests `Sync`, then
+      same-origin only) and the bootstrap script is externalised to `loader.js` so nothing arbitrary can
+      inject. 27 qapp_package tests. **Remaining:** the capability *token v2* runtime-enforcement layer
+      (per-app grant tokens the host checks on each capability use) — belongs with the delivery/runtime
+      layer (companion-PWA P1, Timothy's strategy fork).
 - [x] **WP2** Studio Package & Publish — **DONE**: host `write_pwa_bundle` (reuses P0 `generate_pwa`,
       path-traversal-safe, 4 tests) + `publish_qapp_pwa` + native folder-picker + a **Qapps** Studio area
       (manifest fields → least-privilege capabilities → generate installable PWA scaffold to a folder). No
