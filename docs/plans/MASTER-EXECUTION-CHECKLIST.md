@@ -78,6 +78,27 @@
       + 3 Tauri cmds + host_client bridge + **Guardianship** Studio panel/area. 94 wellfair tests green.
 - [ ] Generalize `government_letter` → **authority attestation** record (ADR §2) once agency layer lands
 
+## C2. Sanctuary vault v2 — CBOR-LD + coercion-response decoy (active)
+
+Design + full task breakdown: [adr-sanctuary-vault-v2-cbor-decoy-mirroring](adr-sanctuary-vault-v2-cbor-decoy-mirroring.md)
+(§12 = slices + swarm curation). Decisions locked: Option A (functional decoy), §3 asymmetric crypto,
+CBOR-LD, retention = both modes as a real-session toggle (default auto). **Nothing pushed without Timothy.**
+
+- [x] **Argon2id + PIN policy + constant-work unlock** landed (`a60671a1`).
+- [x] **S0** audit primitives — `core-db/crypto/sanctuary_audit.rs` (X25519 sealed box + key-wrap +
+      hash-chain), 8 tests (`2d69a21f`, **local, not pushed**).
+- [x] **A** (swarm) audit DAG + retention domain — `sanctuary_audit_dag.rs` (AuditRecord content-address,
+      verify_chain, derive_sessions [entry-point sessions, not a headcount], route). 21 tests green.
+- [x] **B** (swarm) retention-toggle Studio panel (§8 copy, default auto) — with a hard gate that renders
+      nothing in a decoy session. Host + wasm green.
+- [x] **C** (swarm) adversarial primitive suite — 14 tests, 360+ byte-flip assertions, all fail-closed.
+      ⚑ **Finding:** the hash-chain is tamper-*evident*, not a MAC → **S5 must anchor each branch head**
+      (ADR §10 integrity boundary).
+- [ ] **S3** (integrator) n-layer container + CBOR-LD codec + legacy-JSON migration reader
+- [ ] **S5** (integrator) vault surgery — container swap, blind-append audit, real→decoy key hierarchy,
+      Argon2id lazy migration
+- [ ] **S6** (integrator) host API + Tauri + bridges + nav (record-on-behalf, audit review, retention set)
+
 ## D. Human-gated (Timothy decides, then implementable)
 
 - [~] **T2.1** Sanctuary threat-model ADR — **DRAFTED, awaiting Timothy's sign-off**:

@@ -179,3 +179,134 @@ Plain-language copy (no jargon; second-person; names the limit honestly):
 
 Term note: "cover space" for the decoy is placeholder — Timothy may recoin it. The feature and this
 setting must never render in the decoy session.
+
+## 9. Layer multiplicity & agent bifurcation — generalize the container, constrain the policy
+
+Timothy's framing (2026-07-03): bifurcation is between **two or more agents of any nature** (human, a
+natural person acting via software, a software agent, a weather-simulation model, …), and the real
+question is the **number of bifurcated layers**, not the agents' type.
+
+- **Bifurcation is n-way and agent-agnostic.** Not "human vs software", not "victim vs coercer" — it
+  separates *n* distinct agents/contexts, each with its own DID + independently-derived key, addressed by
+  a layer coordinate (the CBOR-LD/quin manifold index `w`). The same mechanism serves decoy lanes, N
+  climate models, delegated agents, multi-tenant data.
+- **No new opcodes** (answers Timothy's question directly). In this system opcodes (`0x10+`) are for logic
+  **modalities** — `mini_parser` owns `0x00–0x04`. Agent identity and layer count are **data** (DIDs,
+  manifold coordinates, quins), never opcodes. Minting an opcode per agent-type or per-layer would break
+  the extensibility model. Let the DIDs + `w` coordinate do the work.
+- **The crypto primitives are already n-agnostic.** X25519 sealed-box, key-wrap, per-layer AEAD operate
+  per-key/per-region — there is no "n" inside them. So "support arbitrary n" = make the **container** a
+  collection of independently-keyed layers (not a hardcoded `{real, decoy}` pair). Do this — it is nearly
+  free and generalizes; it also naturally expresses the one-way hierarchy (a superior layer wraps
+  subordinate layer keys).
+- **Provenance = per-layer DID, which supersedes the §7.1 `session-context` field.** Each layer/session
+  carries its own DID; a record's provenance is `(authoring DID, layer)`, from which "decoy/duress
+  session" is *inferred* (the record is bound to the decoy-layer DID). The natural/software agent-**type**
+  flag stays truthful and orthogonal (a coercer is a natural person operating under the decoy-layer DID).
+  This is cleaner than a bespoke session flag and generalizes to the weather-model case. **Adopt this;
+  drop the §7.1 session-context axis.**
+
+**Sanctuary policy constrains what the protocol permits — for safety, not just UX.** The container supports
+n; **Sanctuary must not expose n.** For the coercion threat, more decoys is *worse*:
+1. **Cognitive collapse** — remembering an escalating PIN sequence under acute stress is a failure point.
+2. **The coercion-loop trap** — under Option A the layer structure is byte-visible; an attacker who sees
+   (or is told about) many spaces simply keeps demanding PINs until one is "real". More layers = more rope.
+3. **Footprint growth is itself a side-channel** — an auto-growing container signals activity.
+
+Therefore, **against Timothy's "spawn a fresh untouched decoy on each use" instinct, do NOT auto-spawn.**
+The goal (always have a plausible, untouched-looking decoy) is met better by **wipe-and-reseed**: from the
+real lane's top-down access, reset + re-seed the single decoy and rotate its duress PIN. Recommended
+Sanctuary shape:
+- Default **real + exactly one decoy**; optionally a *small user-created* set (≤3), never auto-grown.
+- **Wipe-and-reseed** lifecycle, not auto-spawn — keeps PIN count minimal and the container shape stable.
+- **Constant-shape container** — allocate a fixed number of layer slots and pad, so the on-disk layer
+  *count* reveals nothing about how many are real / decoy / empty (a cheap hardening even under Option A).
+
+**Build scope decision:** build the primitives + container **n-general** (they're n-agnostic anyway), and
+enforce the small-fixed-shape **in the Sanctuary policy layer**, not the container. Wire `real` + one decoy
+for the UI now.
+
+## 10. The decoy history as a git-like DAG (Timothy's refinement — adopted over §9 wipe-and-reseed)
+
+Timothy: use a git-like method over the *existing* decoy — a new entry point per session — to track the
+number of attackers; and if attackers share credentials, other (behavioral) logs matter. This is better
+than both auto-spawn and my wipe-and-reseed; it also resolves the evidence-vs-plausibility tension. Adopt,
+with three precisions:
+
+1. **Working tree vs history — the load-bearing split.** The decoy's *visible content* is a **working
+   tree** the coercer sees and mutates — tamperable, and that's fine (it's cover). The **truth** is a
+   separate **append-only, hash-linked audit DAG** (git-like: content-addressed nodes via `q_hash`, parent
+   pointers, per-node author + timestamp), written as **X25519 sealed-box commits** the coercer can *append*
+   (encrypt-to-audit-pubkey) but cannot *read or rewrite*. Evidence integrity lives in the DAG, **never** in
+   the coercer-controlled working tree — otherwise the coercer, who owns the decoy, can `git reset` their
+   tracks away.
+2. **Branch per session, one PIN (not PIN-per-attacker).** A single decoy PIN, but each duress unlock opens
+   a **new ref/branch** in the audit DAG. Per-session attribution *without* making the user remember an
+   escalating PIN sequence (the §9 cognitive-collapse failure). "Number of attackers" ≈ **number of distinct
+   entry-point sessions** — a proxy / lower bound, not a verified headcount.
+3. **Collusion is a crypto blind spot — Timothy's caveat is exactly right.** Shared credentials → one entry
+   point → reads as one attacker; one attacker over many sessions → reads as several. Disambiguation needs
+   **behavioral "other logs"** (unlock timestamps, inter-action timing, device/sensor context, recurring
+   edits) layered *on top* of the structural branch count — and even then it is heuristic; a determined
+   colluding pair is indistinguishable from one persistent actor at the crypto layer. **The UI must not
+   claim a hard attacker count.**
+
+**This unifies evidence + plausibility.** History is append-only-preserved in the sealed DAG (evidence,
+even across resets); the *presented* decoy working tree can be reset/reseeded by the real user
+(plausibility) — curate the working tree, never lose the history. Supersedes §9 "wipe-and-reseed" as a
+*destructive* op.
+
+**Build it as git *concepts* in the quin/CBOR-LD model — not an embedded git repo.** Quins are already
+content-addressed (`q_hash`); the DAG is quins with parent-hash links + refs. No libgit2, no
+history-rewrite footguns.
+
+**Integrity boundary (from the slice-C adversarial pass — a real constraint, not a bug).** The chain
+link is *unkeyed* `BLAKE3(parent ‖ payload)` — **tamper-evident, not a MAC.** Anyone holding the audit
+*public* key can forge a fresh internally-consistent chain, and a coercer with full device access can
+destroy or wholesale-replace the (still unreadable) log. So **S5 MUST anchor each session-branch head**
+in something the decoy session cannot forge or reset — pin the head into the *real* lane on review,
+and/or a keychain-held monotonic anchor — so that *partial* tampering / dropped records are detectable.
+And the UI must say plainly (Option A): this defeats a coercer who *uses the app*, not one who does
+forensic surgery on the device's files. The sealed-box confidentiality is unconditional; the log's
+*completeness* is only as strong as the head anchor.
+
+**Does not change the first build slice:** the foundation is still **X25519 sealed-box + `q_hash`
+content-addressed hash-chaining** — the primitives already planned, now structured as an append-only commit
+DAG.
+
+## 12. Implementation slices — build order + honest swarm curation
+
+Vault v2 is **one coupled, security-critical container**. Most of it is sequential surgery on
+`sanctuary_vault.rs` and cannot be safely fanned out to parallel agents (they would collide on the same
+module and the crypto must not be built blind). The clever part is *what to parallelise*: only the
+genuinely isolated NEW-file pieces (self-contained domain logic, UI, adversarial tests). The integrator
+owns every contract below and every edit to the vault crypto.
+
+**Done**
+- **S0 — audit primitives** `core-db/crypto/sanctuary_audit.rs`: X25519 sealed box + key-wrap +
+  BLAKE3 hash-chain. 8 tests. (commit `2d69a21f`, local, not pushed.)
+
+**Parallel — swarm-safe (isolated NEW files, one registration file each, no cross-agent deps)**
+- **A · Audit DAG + retention domain** — NEW `core-db/crypto/sanctuary_audit_dag.rs`. Self-contained on
+  top of S0. `AuditRecord { id=chain_hash, parent, branch_ref, actor_did, role, stated_purpose, action,
+  unix, sealed }`; `verify_chain` (recompute → detect tamper/gap); `derive_sessions` (group by
+  `branch_ref` → **distinct entry-point sessions**, explicitly *not* a verified head-count);
+  `route(records, RetentionMode::{AutoArchive, ManualTriage}) -> Routing`. ≥12 tests incl. chain-tamper,
+  session grouping, both retention modes.
+- **B · Retention-toggle Studio panel** — NEW `webizen-studio/.../decoy_retention_panel.rs` + host_client
+  bridge stubs + nav. The §8 copy verbatim, default auto, real-session-only. Green host + wasm.
+- **C · Adversarial primitive suite** — NEW `core-db/tests/sanctuary_audit_adversarial.rs`: independent
+  forge/malleability/cross-recipient/reorder attempts over S0. All must fail-closed.
+
+**Sequential — integrator only (coupled, security-critical; NOT swarmed)**
+- **S3 · n-layer container + CBOR-LD codec** — `Layer { id, salt, kdf, verifier, records, audit_pubkey,
+  wrapped_keys }`; constant-shape padded `Container { version, layers }`; ciborium encode/decode;
+  `from_legacy_json` migration reader. This *is* the on-disk crypto layout — I build it.
+- **S5 · vault surgery** — `VaultMeta`→container + CBOR-LD save/load; blind-append audit on decoy writes;
+  real-lane DAG read; real→decoy key hierarchy (wrap decoy key + audit secret under the real key);
+  Argon2id lazy migration in the new container.
+- **S6 · host API + Tauri + bridges + nav** — record-on-behalf→decoy; real-lane audit review; retention
+  set; curate-decoy; wire panel B.
+
+**Order:** A · B · C fan out now. I build S3, then S5 (consumes S0/A/S3), then S6 (wires B). Every slice:
+green build + tests before it counts. **Nothing pushed without Timothy's word.**

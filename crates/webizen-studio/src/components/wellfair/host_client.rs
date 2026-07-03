@@ -2142,3 +2142,47 @@ pub async fn sanctuary_vault_list_notes(pin: &str) -> Result<(String, Vec<Sanctu
 pub async fn sanctuary_vault_list_notes(_pin: &str) -> Result<(String, Vec<SanctuaryVaultNoteDto>), String> {
     Err("Sanctuary vault requires the Tauri desktop host".into())
 }
+
+// --- Decoy-retention mode (real-session-only setting; vault v2 slice B) ---
+// Controls what happens to intercepted decoy-session activity:
+//   "auto_archive"  — a record is kept automatically (default)
+//   "manual_triage" — nothing is kept until the owner reviews it next time
+// The Tauri commands are wired by the orchestrator; this bridge only names them.
+
+/// Returns the current decoy-retention mode ("auto_archive" | "manual_triage").
+#[cfg(target_arch = "wasm32")]
+pub async fn get_decoy_retention_mode() -> Result<String, String> {
+    let js = tauri_invoke("wellfair_get_decoy_retention_mode", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "decoy retention response not JSON".to_string())?;
+    let v: serde_json::Value = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    Ok(v.get("mode")
+        .and_then(|m| m.as_str())
+        .unwrap_or("auto_archive")
+        .to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn get_decoy_retention_mode() -> Result<String, String> {
+    Ok("auto_archive".into())
+}
+
+/// Saves the decoy-retention mode ("auto_archive" | "manual_triage").
+#[cfg(target_arch = "wasm32")]
+pub async fn set_decoy_retention_mode(mode: &str) -> Result<(), String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"mode".into(), &wasm_bindgen::JsValue::from_str(mode))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    tauri_invoke("wellfair_set_decoy_retention_mode", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn set_decoy_retention_mode(_mode: &str) -> Result<(), String> {
+    Ok(())
+}
