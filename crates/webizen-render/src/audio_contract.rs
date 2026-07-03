@@ -1,12 +1,14 @@
 /// Dual-Mode Audio Data Contract for Webizen 10D Architecture
 ///
-/// Supports both generative spectral synthesis (Mode A) and legacy PCM passthrough (Mode B)
-/// while maintaining zero-heap compliance and zero-copy transport.
+/// Supports both generative spectral synthesis (Mode A) and legacy PCM passthrough (Mode B).
 ///
-/// Zero-Heap Considerations:
-/// - Stack-allocated enums and primitive types
-/// - References to byte buffers (no heap allocation in view)
-/// - Binary IPC optimization using TensorBufferView pattern
+/// **Honesty note (was overstated):** this contract is **not** zero-heap. `SpectralParams::sigma`
+/// and the tensor→spectral mapping use `Vec<f32>` (serde does not derive for `[f32; 64]`), so these
+/// types heap-allocate. What *is* true: the byte-buffer *views* (e.g. `TensorBufferView`) borrow
+/// without copying, and the enums/primitives are stack-allocated. The zero-copy transport claim
+/// applies to the views, not to the serialized spectral structs. Reconciling this with the core
+/// audio ABI (one authoritative spectral/event ABI, no `Vec` on the hot path) is tracked in
+/// `docs/plans/native-auditory-language-and-music-intelligence.md` (§3.1/§4.1).
 use serde::{Deserialize, Serialize};
 
 /// Audio rendering mode

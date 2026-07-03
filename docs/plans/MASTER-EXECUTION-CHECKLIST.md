@@ -6,6 +6,9 @@
 - Plans: [remaining-work-consolidated](remaining-work-consolidated-plan.md) ·
   [cooperative-qapps](cooperative-qapps-desktop-implementation-plan.md) ·
   [wellfair-webizen-desktop](wellfair-webizen-desktop/README.md)
+- **Future/parked initiatives register (so nothing is forgotten):**
+  [future-work-register](future-work-register.md) — ★ 3D anatomy prioritized; native visual, native
+  auditory, T3.4 Phase-7, and the cooperative WP series parked with pointers.
 - ADR: [authority-attestation-guardianship (supported agency)](adr-authority-attestation-guardianship-model.md)
 - Logs: [WELLFAIR_DESKTOP_PROGRESS_LOG](../../WELLFAIR_DESKTOP_PROGRESS_LOG.md) ·
   [COOPERATIVE_QAPPS_PROGRESS_LOG](../../COOPERATIVE_QAPPS_PROGRESS_LOG.md)

@@ -603,13 +603,17 @@ pub fn mesh_to_nquins(
 
 #[inline]
 fn make_quin(subject: u64, predicate: u64, object: u64) -> NQuin {
+    let context = GEOMETRY_CONTEXT;
+    let metadata = 0;
     NQuin {
         subject,
         predicate,
         object,
-        context: GEOMETRY_CONTEXT,
-        metadata: 0,
-        parity: 0,
+        context,
+        metadata,
+        // Was hardcoded `0` — emitted invalid-parity geometry NQuins. Use the canonical parity so
+        // the "every runtime NQuin has valid field parity" invariant holds (visual-plan §3.1 fix).
+        parity: NQuin::calculate_parity(subject, predicate, object, context, metadata),
     }
 }
 
@@ -730,6 +734,15 @@ mod tests {
         // bboxMaxX round-trips through the inline-float tag.
         let max_x = quins.iter().find(|q| q.predicate == P_BBOX_MAX_X).unwrap();
         assert_eq!(unpack_float_object(max_x.object), 1.0);
+        // Every emitted geometry NQuin has valid (non-zero, canonical) parity — regression guard for
+        // the former hardcoded `parity: 0`.
+        for q in &quins {
+            assert_eq!(
+                q.parity,
+                NQuin::calculate_parity(q.subject, q.predicate, q.object, q.context, q.metadata),
+                "geometry NQuin must carry canonical parity"
+            );
+        }
     }
 
     fn build_test_glb() -> Vec<u8> {
