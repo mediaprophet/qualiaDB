@@ -29,7 +29,8 @@
 - [x] `AuthorityType` **reframed for supported agency** (Modality × Trigger × Accountability + presets)
 - [x] **T1.3** `aead` API modernization in `sanctuary_crypto.rs` (7/7 tests, warnings gone)
 - [x] **ZK review** — `crypto/zk_proofs.rs` is REAL Groth16 (arkworks, default `zk-culling`); 7/7 incl. soundness. CLAUDE.md note corrected.
-- [~] **T1.1** government-letter attachment bytes (host+cmd+bridge+panel) — code done, **pending commit** (folds into next commit)
+- [x] **T1.1** government-letter attachment bytes (host+cmd+bridge+panel) — **DONE/committed** (`dd931a64`;
+      `add_government_letter_attachment_from_path` host + Tauri command + bridge wired).
 
 ## B. Agency layer (ADR §7–§10). New isolated files in `qualia-cooperative-core`. **60 crate tests green.**
 
@@ -126,8 +127,13 @@ sweep — flag to Timothy before undertaking.)
       keychain-wrapping default, recovery-code UX, decoy semantics, PIN policy/lockout, at-rest for the
       health journal) + 5 code-level findings incl. a timing side-channel in `open_lane` (real PIN = 1
       PBKDF2 pass, decoy = 2 → observable) and the decoy lane being structurally visible on disk. **⚑ Your call on the 6 decisions.**
-- [ ] **T2.2** Mental-wellbeing assessment instruments (DASS-21/PHQ-9/GAD-7/K10/BDI-II) — per-instrument
-      licence/scoring/interpretation/disclaimer
+- [~] **T2.2** Mental-wellbeing assessment instruments — **engine + PHQ-9 + GAD-7 DONE** (`75bc2334`,
+      local): data-driven scoring engine (fail-closed, exhaustive band coverage, safety flags) + the two
+      canonical free instruments end-to-end (wellfare-core `assessment.rs`, host API, 3 Tauri cmds, a
+      "Wellbeing check-in" Studio panel with disclaimer + flag alerts + history). 9+1 tests.
+      ⚑ **Timothy's call (the human-gated remainder):** which further instruments to ship + clinical
+      sign-off on interpretation copy; **BDI-II** is Pearson-licensed; **DASS-21 / K10** are free and drop
+      in as data once approved.
 
 ## E. Large efforts (staged; multi-session)
 
