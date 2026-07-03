@@ -11,6 +11,9 @@ pub mod sanctuary_crypto;
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(feature = "sanctuary-crypto")]
 pub mod sanctuary_keychain;
+#[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "sanctuary-crypto")]
+pub mod sanctuary_audit;
 pub mod verifiable_credential;
 #[cfg(feature = "zk-culling")]
 pub mod zk_predicates;
