@@ -1464,6 +1464,31 @@ impl WebizenHostApi {
         self.import_backup_bytes(&bytes)
     }
 
+    /// A node health/status snapshot (record counts, sync queue depths, data footprint, Sanctuary
+    /// state, build version). Native-only (reads the on-disk Sanctuary vault state).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn diagnostics_report(&self) -> Result<DiagnosticsReport, String> {
+        let journal_records = self.list_health_records(4096)?.len();
+        let outbox_queued = SyncOutbox::open(&self.storage_root)
+            .map_err(|e| e.to_string())?
+            .count_queued()
+            .map_err(|e| e.to_string())?;
+        let inbox_validated = self.validated_sync_operations()?.len();
+        let (data_files, data_bytes) = backup::wellfair_data_stats(&self.storage_root)?;
+        Ok(DiagnosticsReport {
+            crate_version: env!("CARGO_PKG_VERSION").to_string(),
+            sanctuary_configured: super::sanctuary_vault::is_configured(&self.storage_root),
+            sanctuary_keychain_wrapped: super::sanctuary_vault::is_keychain_wrapped(
+                &self.storage_root,
+            ),
+            journal_records,
+            outbox_queued,
+            inbox_validated,
+            data_files,
+            data_bytes,
+        })
+    }
+
     // --- Clinical documents (Phase 3 / CLI-01..) ---
 
     pub fn add_clinical_report(
@@ -2304,6 +2329,19 @@ pub struct SyncPullReport {
     pub rejected: usize,
 }
 
+/// A node health/status snapshot for support + the Sync & Backup panel.
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+pub struct DiagnosticsReport {
+    pub crate_version: String,
+    pub sanctuary_configured: bool,
+    pub sanctuary_keychain_wrapped: bool,
+    pub journal_records: usize,
+    pub outbox_queued: usize,
+    pub inbox_validated: usize,
+    pub data_files: usize,
+    pub data_bytes: u64,
+}
+
 /// A domain of agency, flattened for a delegation-creation picker (host → Tauri → Studio).
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct AgencyDomainInfo {
@@ -2524,6 +2562,22 @@ mod api_tests {
         assert_eq!(after.len(), before.len());
         assert!(after.iter().any(|e| e.kind == "condition"));
         assert!(after.iter().any(|e| e.kind == "allergy"));
+    }
+
+    #[test]
+    fn diagnostics_report_reflects_node_state() {
+        let dir = tempdir().unwrap();
+        let mut host = test_host(dir.path());
+        host.add_condition(&ConditionReport::new("Migraine")).unwrap();
+
+        let report = host.diagnostics_report().unwrap();
+        assert!(!report.crate_version.is_empty());
+        assert!(report.journal_records >= 1);
+        assert!(report.outbox_queued >= 1, "a committed record auto-enqueues to the outbox");
+        assert!(report.data_files >= 1);
+        assert!(report.data_bytes > 0);
+        // No Sanctuary vault set up in this test.
+        assert!(!report.sanctuary_configured);
     }
 
     #[test]

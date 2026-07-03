@@ -1079,6 +1079,17 @@ pub fn wellfair_import_backup(app: AppHandle, path: String) -> Result<String, St
     Ok(serde_json::json!({ "files": report.files, "bytes": report.bytes }).to_string())
 }
 
+/// A node health/status snapshot (records, sync queues, data footprint, Sanctuary state, version).
+#[command]
+pub fn wellfair_diagnostics(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    serde_json::to_string(&host.diagnostics_report()?).map_err(|e| e.to_string())
+}
+
 // --- Wellbeing self-assessment instruments (T2.2; PHQ-9 / GAD-7) -----------------------------
 
 /// The instruments this build ships (items, options, bands, disclaimer).
@@ -4263,6 +4274,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_sync_with_relay,
         wellfair_export_backup,
         wellfair_import_backup,
+        wellfair_diagnostics,
         wellfair_list_assessment_instruments,
         wellfair_record_assessment,
         wellfair_list_assessments,

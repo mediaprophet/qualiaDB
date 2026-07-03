@@ -135,6 +135,31 @@ pub fn restore_backup(storage_root: &Path, bytes: &[u8]) -> Result<BackupReport,
     restore_archive(storage_root, &decode_archive(bytes)?)
 }
 
+fn stat_dir(dir: &Path, files: &mut usize, bytes: &mut u64) -> Result<(), String> {
+    for entry in fs::read_dir(dir).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let file_type = entry.file_type().map_err(|e| e.to_string())?;
+        if file_type.is_dir() {
+            stat_dir(&entry.path(), files, bytes)?;
+        } else if file_type.is_file() {
+            *files += 1;
+            *bytes += entry.metadata().map_err(|e| e.to_string())?.len();
+        }
+    }
+    Ok(())
+}
+
+/// Cheap `(file count, total bytes)` of the `wellfair/` data subtree — metadata only, no file reads.
+pub fn wellfair_data_stats(storage_root: &Path) -> Result<(usize, u64), String> {
+    let base = storage_root.join(WELLFAIR_SUBDIR);
+    let mut files = 0;
+    let mut bytes = 0u64;
+    if base.exists() {
+        stat_dir(&base, &mut files, &mut bytes)?;
+    }
+    Ok((files, bytes))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -2632,3 +2632,38 @@ pub async fn import_backup(path: &str) -> Result<BackupSummaryDto, String> {
 pub async fn import_backup(_path: &str) -> Result<BackupSummaryDto, String> {
     Err("Restore requires the Tauri desktop host".into())
 }
+
+/// A node health/status snapshot.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct DiagnosticsDto {
+    #[serde(default)]
+    pub crate_version: String,
+    #[serde(default)]
+    pub sanctuary_configured: bool,
+    #[serde(default)]
+    pub sanctuary_keychain_wrapped: bool,
+    #[serde(default)]
+    pub journal_records: usize,
+    #[serde(default)]
+    pub outbox_queued: usize,
+    #[serde(default)]
+    pub inbox_validated: usize,
+    #[serde(default)]
+    pub data_files: usize,
+    #[serde(default)]
+    pub data_bytes: u64,
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_diagnostics() -> Result<DiagnosticsDto, String> {
+    let js = tauri_invoke("wellfair_diagnostics", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "diagnostics not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn fetch_diagnostics() -> Result<DiagnosticsDto, String> {
+    Ok(DiagnosticsDto::default())
+}

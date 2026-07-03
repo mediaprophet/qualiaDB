@@ -6,7 +6,8 @@
 //!   vault stays encrypted inside it), or restore one.
 
 use super::host_client::{
-    export_backup, import_backup, pick_file_path, pick_save_path, sync_with_relay,
+    export_backup, fetch_diagnostics, import_backup, pick_file_path, pick_save_path,
+    sync_with_relay, DiagnosticsDto,
 };
 use dioxus::prelude::*;
 
@@ -15,6 +16,7 @@ struct SyncBackupUi {
     relay_url: String,
     status: String,
     busy: bool,
+    diagnostics: Option<DiagnosticsDto>,
 }
 
 #[component]
@@ -87,6 +89,15 @@ pub fn WellfairSyncBackupPanel() -> Element {
         });
     };
 
+    let do_diagnostics = move |_| {
+        spawn(async move {
+            match fetch_diagnostics().await {
+                Ok(d) => ui.write().diagnostics = Some(d),
+                Err(e) => ui.write().status = format!("Diagnostics failed: {e}"),
+            }
+        });
+    };
+
     let btn = "padding:0.4rem 0.75rem;border-radius:8px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.8rem;cursor:pointer;";
 
     rsx! {
@@ -138,6 +149,27 @@ pub fn WellfairSyncBackupPanel() -> Element {
             p {
                 style: "margin:0.5rem 0 0;font-size:0.7rem;color:var(--qualia-text-muted,#888);",
                 "Restoring overwrites this device's data with the backup's contents."
+            }
+
+            // Diagnostics.
+            h3 { style: "margin:0.85rem 0 0.3rem;font-size:0.88rem;", "Diagnostics" }
+            button { style: "{btn}", onclick: do_diagnostics, "Check node status" }
+            if let Some(d) = ui().diagnostics.clone() {
+                ul {
+                    style: "margin:0.5rem 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:0.2rem;font-size:0.74rem;",
+                    li { "Build: {d.crate_version}" }
+                    li { "Records: {d.journal_records}" }
+                    li { "To sync (outbox queued): {d.outbox_queued}" }
+                    li { "Received (inbox validated): {d.inbox_validated}" }
+                    li { "Data: {d.data_files} files, {d.data_bytes} bytes" }
+                    li {
+                        if d.sanctuary_configured {
+                            if d.sanctuary_keychain_wrapped { "Sanctuary vault: set up (keychain-bound)" } else { "Sanctuary vault: set up" }
+                        } else {
+                            "Sanctuary vault: not set up"
+                        }
+                    }
+                }
             }
         }
     }
