@@ -198,3 +198,40 @@ considerations).
 
 **Next step.** Either S5 (native 3D body — needs GLB meshes) or the real corpus import (needs a source).
 Both are Timothy-gated; the engine + a visible two-lens surface are in place to receive either.
+
+---
+
+## 2026-07-03 — S5.0: native quantized mesh geometry format (prerequisite) — **done**
+
+**Why (Timothy's correction, verified).** Timothy noted the GLB→native conversion only produced a
+semantic summary, not renderable geometry, "likely because it was done before the renderer upgrades."
+Git history confirms it: `assets::mesh_to_nquins` landed in **Phase 1.3 (`65a14dd7`)**, *before* the Q42
+container / 10D-manifold format (**Phase 6 `903e8000`**, `c5d6e188`, `f9be78e4`). A grep confirms there is
+**no native triangle-mesh geometry format** in the render tree — the manifold is Tensor10D *points*, and
+the mesh path was transient (re-import the source GLB every time). So the geometry-into-native work is a
+real gap, and now buildable. Sources for the meshes: [`hubmapconsortium/ccf-3d-reference-object-library`]
+(CC-BY-4.0), both `VH_Male` and `VH_Female` (biological sex of the user) — pre-processed and shipped as
+**GitHub Release assets** (not repo blobs), decision by Timothy.
+
+**What was built.** `crates/qualia-core-db/src/render/mesh_asset.rs` — the native quantized mesh buffer,
+in the house container style (`tensor::buffer_export` convention: magic `"Q42M"`, `#[repr(C, align(4))]`
+bytemuck header, little-endian, zero-copy).
+- `MeshBufferHeader` (exactly 48 bytes): magic/version/flags, vertex+triangle counts, and the bbox
+  (`min`/`max`) as the **dequantization frame** — the same bbox the 13 semantic quins already carry.
+- `encode_mesh_q42(&Mesh)` / `decode_mesh_q42(&[u8])`: positions quantized to **u16 per axis within the
+  bbox** (6 B/vert vs 12), triangle indices **u16 when ≤65 536 verts** (6 B/tri vs 12), fail-closed on bad
+  magic / version / truncation.
+
+**Measured results.** 5 tests passing (`cargo test -p qualia-core-db render::mesh_asset::` → ok): round-trip
+within one quantization step (`extent/65535`) with exact indices, u32-index fallback past 65 k verts,
+truncation/magic rejection, 48-byte header. **Size (deterministic):** a 50 k-vert / 100 k-tri organ mesh =
+**1,800,000 B raw f32 geometry → 900,048 B native (exactly 2× smaller)**, visually lossless. Versus the
+*source GLB* the reduction is larger and variable (we also drop normals/UVs/materials) — to be measured on a
+real organ when the fetch/pre-process step lands.
+
+**⚑ Where I need the human.** None this step. (Standing: which HRA release to target — v1.2 male has the
+rich common-organ set; the food/herb corpus for the diet role; both remain open but don't block S5.0.)
+
+**Next step.** S5.1 — render-from-native path (decode Q42 mesh → `upload_mesh_colored`, colour-by-burden,
+pick→organ) + the GLB→Q42 pre-process tool that measures the real GLB→native ratio on an HRA organ, then
+publishes M/F organ assets. Decimation LOD (the budget-degradation tier) is a follow-up.
