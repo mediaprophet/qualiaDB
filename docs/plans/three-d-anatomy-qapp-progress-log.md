@@ -225,9 +225,21 @@ bytemuck header, little-endian, zero-copy).
 **Measured results.** 5 tests passing (`cargo test -p qualia-core-db render::mesh_asset::` → ok): round-trip
 within one quantization step (`extent/65535`) with exact indices, u32-index fallback past 65 k verts,
 truncation/magic rejection, 48-byte header. **Size (deterministic):** a 50 k-vert / 100 k-tri organ mesh =
-**1,800,000 B raw f32 geometry → 900,048 B native (exactly 2× smaller)**, visually lossless. Versus the
-*source GLB* the reduction is larger and variable (we also drop normals/UVs/materials) — to be measured on a
-real organ when the fetch/pre-process step lands.
+**1,800,000 B raw f32 geometry → 900,048 B native (exactly 2× smaller)**, visually lossless.
+
+**Real measurement (the `measure_real_glb` ignored harness) on an actual HRA organ** — `VH_M_Liver.glb`
+(CC-BY, VH_Male v1.2), imported via `assets::import_glb` (which handled the real production asset cleanly:
+31,264 verts / 60,369 tris):
+
+| | bytes |
+|---|---|
+| source GLB | 1,135,892 |
+| raw f32 geometry | 1,099,596 |
+| **native Q42 mesh** | **549,846** |
+
+→ **2.07× smaller than the source GLB** (48.4%), max round-trip error **1.6e-6 model units** on a ~0.2-unit
+bbox (~0.0008%, visually lossless). Before any decimation. (This GLB was geometry-dominated, so vs-GLB ≈
+vs-raw-geometry; organs carrying normals/materials shrink more against the GLB.)
 
 **⚑ Where I need the human.** None this step. (Standing: which HRA release to target — v1.2 male has the
 rich common-organ set; the food/herb corpus for the diet role; both remain open but don't block S5.0.)

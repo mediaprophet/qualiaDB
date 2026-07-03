@@ -293,4 +293,55 @@ mod tests {
     fn header_is_exactly_48_bytes() {
         assert_eq!(MESH_HEADER_BYTES, 48);
     }
+
+    /// Measurement utility (not run by default): point `QUALIA_GLB_MEASURE` at a real GLB to see the
+    /// actual source-GLB → native-Q42 reduction and round-trip error.
+    /// `QUALIA_GLB_MEASURE=/path/to/organ.glb cargo test -p qualia-core-db render::mesh_asset::measure_real_glb -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn measure_real_glb() {
+        let path = match std::env::var("QUALIA_GLB_MEASURE") {
+            Ok(p) => p,
+            Err(_) => {
+                eprintln!("set QUALIA_GLB_MEASURE to a .glb path");
+                return;
+            }
+        };
+        let bytes = std::fs::read(&path).expect("read GLB");
+        let mesh = super::super::assets::import_glb(&bytes).expect("import_glb");
+        let encoded = encode_mesh_q42(&mesh);
+        let raw = raw_geometry_len(mesh.vertex_count(), mesh.triangle_count());
+        let back = decode_mesh_q42(&encoded).unwrap();
+
+        // Max round-trip position error.
+        let mut max_err = 0.0f32;
+        for (a, b) in mesh.positions.iter().zip(&back.positions) {
+            for k in 0..3 {
+                max_err = max_err.max((a[k] - b[k]).abs());
+            }
+        }
+        let extent = [
+            mesh.max[0] - mesh.min[0],
+            mesh.max[1] - mesh.min[1],
+            mesh.max[2] - mesh.min[2],
+        ];
+        eprintln!("--- {} ---", path);
+        eprintln!("source GLB bytes : {}", bytes.len());
+        eprintln!("vertices         : {}", mesh.vertex_count());
+        eprintln!("triangles        : {}", mesh.triangle_count());
+        eprintln!("raw f32 geometry : {} bytes", raw);
+        eprintln!("native Q42 mesh  : {} bytes", encoded.len());
+        eprintln!(
+            "  vs raw geometry: {:.1}% ({:.2}x smaller)",
+            encoded.len() as f64 / raw as f64 * 100.0,
+            raw as f64 / encoded.len() as f64
+        );
+        eprintln!(
+            "  vs source GLB  : {:.1}% ({:.2}x smaller)",
+            encoded.len() as f64 / bytes.len() as f64 * 100.0,
+            bytes.len() as f64 / encoded.len() as f64
+        );
+        eprintln!("bbox extent      : {:?}", extent);
+        eprintln!("max round-trip err: {:e} (units of the model)", max_err);
+    }
 }
