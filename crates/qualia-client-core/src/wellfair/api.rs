@@ -1921,6 +1921,21 @@ impl WebizenHostApi {
     }
 }
 
+/// Parse the wire form of a decoy-audit retention mode (`"auto_archive"` | `"manual_triage"`) into
+/// the [`RetentionMode`](qualia_core_db::crypto::sanctuary_audit_dag::RetentionMode) enum. Used by
+/// the Tauri command layer so the desktop crate needs no direct `qualia-core-db` dependency.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn sanctuary_retention_mode_from_str(
+    mode: &str,
+) -> Result<qualia_core_db::crypto::sanctuary_audit_dag::RetentionMode, String> {
+    use qualia_core_db::crypto::sanctuary_audit_dag::RetentionMode;
+    match mode {
+        "auto_archive" => Ok(RetentionMode::AutoArchive),
+        "manual_triage" => Ok(RetentionMode::ManualTriage),
+        other => Err(format!("unknown retention mode: {other}")),
+    }
+}
+
 #[cfg(test)]
 mod api_tests {
     use super::*;

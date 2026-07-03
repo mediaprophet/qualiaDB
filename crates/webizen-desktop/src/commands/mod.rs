@@ -1338,6 +1338,88 @@ pub fn wellfair_sanctuary_vault_unlock_with_recovery(
     Ok(serde_json::json!({ "lane": lane }).to_string())
 }
 
+// --- Vault v2 (S6): per-session decoy audit, real→decoy curation, real-lane review, retention ---
+
+/// Add a note attributing a **decoy** (duress) write to a per-unlock `session_ref` (git-like branch
+/// in the audit DAG). Real-lane writes ignore `session_ref`.
+#[command]
+pub fn wellfair_sanctuary_vault_add_note_in_session(
+    app: AppHandle,
+    pin: String,
+    body: String,
+    session_ref: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let lane = host.add_sanctuary_vault_note_in_session(&pin, &body, &session_ref)?;
+    Ok(serde_json::json!({ "lane": lane }).to_string())
+}
+
+/// Curate the decoy from a real session — seed a plausible note into the decoy lane without the
+/// decoy PIN. Requires the **real** PIN.
+#[command]
+pub fn wellfair_curate_decoy_note(
+    app: AppHandle,
+    real_pin: String,
+    body: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    host.curate_sanctuary_decoy_note(&real_pin, &body)?;
+    Ok(serde_json::json!({ "curated": true }).to_string())
+}
+
+/// Review decoy activity from the real lane: decrypt + verify the sealed trail, advance head
+/// anchors, and return the integrity verdict + decrypted actions. Requires the **real** PIN.
+#[command]
+pub fn wellfair_review_decoy_activity(app: AppHandle, real_pin: String) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let report = host.review_sanctuary_decoy_activity(&real_pin)?;
+    serde_json::to_string(&report).map_err(|e| e.to_string())
+}
+
+/// Read the decoy-audit retention policy (real-session-only; ADR §8). Returns `{ "mode": "..." }`.
+/// Requires the **real** PIN.
+#[command]
+pub fn wellfair_get_decoy_retention_mode(app: AppHandle, real_pin: String) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let mode = host.get_sanctuary_decoy_retention_mode(&real_pin)?;
+    Ok(serde_json::json!({ "mode": mode }).to_string())
+}
+
+/// Set the decoy-audit retention policy (real-session-only; ADR §8). `mode` is `"auto_archive"` or
+/// `"manual_triage"`. Requires the **real** PIN.
+#[command]
+pub fn wellfair_set_decoy_retention_mode(
+    app: AppHandle,
+    real_pin: String,
+    mode: String,
+) -> Result<String, String> {
+    use qualia_client_core::wellfair::api::sanctuary_retention_mode_from_str;
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let parsed = sanctuary_retention_mode_from_str(&mode)?;
+    host.set_sanctuary_decoy_retention_mode(&real_pin, parsed)?;
+    Ok(serde_json::json!({ "mode": mode }).to_string())
+}
+
 #[command]
 pub fn wellfair_add_wellbeing_observation(
     app: AppHandle,
@@ -3980,6 +4062,11 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_sanctuary_vault_is_keychain_wrapped,
         wellfair_setup_sanctuary_vault_wrapped,
         wellfair_sanctuary_vault_unlock_with_recovery,
+        wellfair_sanctuary_vault_add_note_in_session,
+        wellfair_curate_decoy_note,
+        wellfair_review_decoy_activity,
+        wellfair_get_decoy_retention_mode,
+        wellfair_set_decoy_retention_mode,
         wellfair_add_wellbeing_observation,
         wellfair_add_therapy_note,
         wellfair_list_pending_live_shares,

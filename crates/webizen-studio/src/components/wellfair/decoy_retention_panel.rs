@@ -12,9 +12,7 @@
 //! The language is deliberately plain, second-person, and jargon-free — it must be legible to
 //! someone under duress. No "audit log", no "manifold", no "provenance".
 
-use super::host_client::{
-    fetch_sanctuary_prefs, get_decoy_retention_mode, set_decoy_retention_mode,
-};
+use super::host_client::{get_decoy_retention_mode, set_decoy_retention_mode};
 use dioxus::prelude::*;
 
 const MODE_AUTO: &str = "auto_archive";
@@ -26,23 +24,23 @@ struct DecoyRetentionUi {
     mode: String,
     /// Small status line under the intro.
     status: String,
-    /// Whether the current session is the decoy session — if so we render nothing.
-    decoy_session: bool,
     /// Whether the initial load has completed (avoids a flash of the wrong choice).
     loaded: bool,
 }
 
+/// Real-session-only decoy-retention toggle. The parent renders this **only** in the real-lane view
+/// of the vault (so it is never visible in the cover space, ADR §8) and passes the real PIN it holds
+/// — the setting lives in the real lane and requires that PIN to read/write.
 #[component]
-pub fn WellfairDecoyRetentionPanel() -> Element {
+pub fn WellfairDecoyRetentionPanel(real_pin: String) -> Element {
+    // Hold the prop in a Copy signal so the async load/save closures can share it.
+    let real_pin = use_signal(|| real_pin);
     let mut ui = use_signal(DecoyRetentionUi::default);
 
     use_effect(move || {
         spawn(async move {
-            // Learn the session kind first — never render this in a decoy session.
-            if let Ok(prefs) = fetch_sanctuary_prefs().await {
-                ui.write().decoy_session = prefs.decoy_session;
-            }
-            match get_decoy_retention_mode().await {
+            let pin = real_pin();
+            match get_decoy_retention_mode(&pin).await {
                 Ok(mode) => {
                     let mode = if mode == MODE_MANUAL {
                         MODE_MANUAL.to_string()
@@ -60,15 +58,11 @@ pub fn WellfairDecoyRetentionPanel() -> Element {
         });
     });
 
-    // Hard gate: this setting must never be visible in the cover space.
-    if ui().decoy_session {
-        return rsx! {};
-    }
-
     let choose = move |mode: &'static str| {
         spawn(async move {
+            let pin = real_pin();
             ui.write().mode = mode.to_string();
-            match set_decoy_retention_mode(mode).await {
+            match set_decoy_retention_mode(&pin, mode).await {
                 Ok(()) => {
                     let msg = if mode == MODE_AUTO {
                         "Saved. A record will be kept for you automatically."

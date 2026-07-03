@@ -1,7 +1,6 @@
 use super::clinical_panel::WellfairClinicalPanel;
 use super::consent_panel::WellfairConsentPanel;
 use super::credentials_panel::WellfairCredentialsPanel;
-use super::decoy_retention_panel::WellfairDecoyRetentionPanel;
 use super::finance_panel::WellfairFinancePanel;
 use super::guardianship_panel::WellfairGuardianshipPanel;
 use super::health_panel::WellfairHealthPanel;
@@ -90,7 +89,6 @@ pub fn WellfairShell() -> Element {
         "Sanctuary" => rsx! {
             WellfairSanctuaryPanel {}
             WellfairSanctuaryVaultPanel {}
-            WellfairDecoyRetentionPanel {}
         },
         "Relationships" => rsx! {
             WellfairSocialBookPanel {}
