@@ -101,9 +101,13 @@ CBOR-LD, retention = both modes as a real-session toggle (default auto). **Nothi
       `940eeac6` (S5b: real→decoy one-way key hierarchy + `real_curate_decoy_add_note`), `ba415e80` (S5c:
       blind sealed audit append on decoy writes, `review_decoy_activity`, **real-lane head anchor** flagging
       truncated/forged witnessed prefix — C's finding). 33 vault tests green.
-- [ ] **S6** (integrator) host API + Tauri + bridges + nav (record-on-behalf, audit review, retention set) —
-      *next.* Wires the S5 surface (`add_note_in_session` / `real_curate_decoy_add_note` /
-      `review_decoy_activity`) through `wellfair/api.rs` → Tauri → studio panel B.
+- [~] **S6** (integrator) host API + Tauri + bridges + nav — **host-API half DONE** (local, not pushed):
+      `e5933a8f` (S6a: `add_sanctuary_vault_note_in_session` / `curate_sanctuary_decoy_note` /
+      `review_sanctuary_decoy_activity` on `WellfairHostApi`), `00448f50` (S6b-vault: real-session-only
+      decoy **retention persistence** — `get/set_retention_mode` in the vault + `get/set_sanctuary_decoy_retention_mode`
+      host wrappers; 30 vault tests). **Remaining:** Tauri commands in `webizen-desktop` + studio
+      `host_client` bridges + wire retention **panel B** + a decoy-review UI. (This is the slower
+      desktop/studio build surface — next session.)
 
 **Standing rule (Timothy 2026-07-03):** vault serialization is **CBOR / CBOR-LD only — no JSON path** may
 exist; code depending on JSON gets refactored, not migrated. (Broader codebase-wide JSON→CBOR is a separate
