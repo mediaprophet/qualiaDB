@@ -159,6 +159,7 @@ fn build_service_worker(manifest: &QappManifest) -> String {
     let mut precache: Vec<String> = vec![
         "./".to_string(),
         "./index.html".to_string(),
+        "./loader.js".to_string(),
         "./manifest.webmanifest".to_string(),
         manifest.entry_wasm.path.clone(),
     ];
@@ -213,20 +214,98 @@ fn build_service_worker(manifest: &QappManifest) -> String {
     )
 }
 
-/// Build the minimal loader page (`index.html`).
+/// Build the **capability-derived Content-Security-Policy** for the qapp (WP1 per-app isolation).
+///
+/// Default-deny (`default-src 'none'`); scripts are own-origin only (**no `'unsafe-inline'`** — the
+/// loader is an external file, so nothing arbitrary can be injected) plus `'wasm-unsafe-eval'` so the
+/// WebAssembly bundle can instantiate without opening JS `eval`. Network egress (`connect-src`) is
+/// **denied unless the qapp requests the `Sync` capability**, and even then is same-origin only — a
+/// restricted-data qapp with no sync capability cannot exfiltrate anything at runtime. Framing,
+/// base-uri and form-action are locked down.
+///
+/// Honest limit: device permissions (camera, notifications) are governed by a Permissions-Policy at
+/// the delivery layer, not by CSP; `style-src` still allows `'unsafe-inline'` for the small inline
+/// bootstrap stylesheet (style injection is far lower risk than script injection).
+fn build_csp(manifest: &QappManifest) -> String {
+    let wants_sync = manifest
+        .capabilities
+        .iter()
+        .any(|c| matches!(c, super::manifest::Capability::Sync));
+    let connect = if wants_sync { "'self'" } else { "'none'" };
+    format!(
+        "default-src 'none'; \
+         script-src 'self' 'wasm-unsafe-eval'; \
+         style-src 'self' 'unsafe-inline'; \
+         img-src 'self' data:; \
+         font-src 'self'; \
+         manifest-src 'self'; \
+         worker-src 'self'; \
+         connect-src {connect}; \
+         base-uri 'none'; \
+         form-action 'none'; \
+         frame-ancestors 'none'"
+    )
+}
+
+/// Build the external loader script (`loader.js`) — registers the service worker and instantiates
+/// the qapp's wasm bundle. Externalised (rather than inline) so `index.html` can carry a strict
+/// `script-src 'self'` CSP with no `'unsafe-inline'`.
+fn build_loader_js(manifest: &QappManifest) -> String {
+    let wasm_path = js_string_escape(&manifest.entry_wasm.path);
+    format!(
+        "// Auto-generated external loader (kept out-of-line so a strict script-src CSP applies).\n\
+         (function () {{\n\
+         \x20 'use strict';\n\
+         \x20 var WASM_PATH = '{wasm_path}';\n\
+         \x20 if ('serviceWorker' in navigator) {{\n\
+         \x20\x20\x20 window.addEventListener('load', function () {{\n\
+         \x20\x20\x20\x20\x20 navigator.serviceWorker.register('./sw.js').catch(function (err) {{\n\
+         \x20\x20\x20\x20\x20\x20\x20 console.warn('service worker registration failed:', err);\n\
+         \x20\x20\x20\x20\x20 }});\n\
+         \x20\x20\x20 }});\n\
+         \x20 }}\n\
+         \x20 var importObject = {{ env: {{}} }};\n\
+         \x20 function fallbackInstantiate() {{\n\
+         \x20\x20\x20 return fetch(WASM_PATH)\n\
+         \x20\x20\x20\x20\x20 .then(function (resp) {{ return resp.arrayBuffer(); }})\n\
+         \x20\x20\x20\x20\x20 .then(function (bytes) {{ return WebAssembly.instantiate(bytes, importObject); }});\n\
+         \x20 }}\n\
+         \x20 var loader;\n\
+         \x20 if (WebAssembly.instantiateStreaming) {{\n\
+         \x20\x20\x20 loader = WebAssembly.instantiateStreaming(fetch(WASM_PATH), importObject)\n\
+         \x20\x20\x20\x20\x20 .catch(fallbackInstantiate);\n\
+         \x20 }} else {{\n\
+         \x20\x20\x20 loader = fallbackInstantiate();\n\
+         \x20 }}\n\
+         \x20 loader.then(function (result) {{\n\
+         \x20\x20\x20 var start = result.instance.exports.start || result.instance.exports.main;\n\
+         \x20\x20\x20 if (typeof start === 'function') {{ start(); }}\n\
+         \x20 }}).catch(function (err) {{\n\
+         \x20\x20\x20 console.error('failed to load qapp wasm:', err);\n\
+         \x20\x20\x20 var el = document.getElementById('app');\n\
+         \x20\x20\x20 if (el) {{ el.textContent = 'Failed to load. Check your connection and reload.'; }}\n\
+         \x20 }});\n\
+         }})();\n",
+        wasm_path = wasm_path,
+    )
+}
+
+/// Build the minimal loader page (`index.html`) — carries the strict CSP and pulls the external
+/// `loader.js`.
 fn build_index_html(manifest: &QappManifest) -> String {
     let title_html = html_escape(&manifest.name);
     let short_name_html = html_escape(&manifest.short_name);
     let theme_html = html_escape(&manifest.theme_color);
     let bg_html = html_escape(&manifest.background_color);
     let description_html = html_escape(&manifest.description);
-    let wasm_path_js = js_string_escape(&manifest.entry_wasm.path);
+    let csp_html = html_escape(&build_csp(manifest));
 
     format!(
         "<!DOCTYPE html>\n\
          <html lang=\"en\">\n\
          <head>\n\
          \x20 <meta charset=\"utf-8\">\n\
+         \x20 <meta http-equiv=\"Content-Security-Policy\" content=\"{csp}\">\n\
          \x20 <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n\
          \x20 <title>{title}</title>\n\
          \x20 <meta name=\"description\" content=\"{description}\">\n\
@@ -243,48 +322,15 @@ fn build_index_html(manifest: &QappManifest) -> String {
          </head>\n\
          <body>\n\
          \x20 <main id=\"app\">Loading {title}…</main>\n\
-         \x20 <script>\n\
-         \x20\x20\x20 (function () {{\n\
-         \x20\x20\x20\x20\x20 'use strict';\n\
-         \x20\x20\x20\x20\x20 var WASM_PATH = '{wasm_path}';\n\
-         \x20\x20\x20\x20\x20 if ('serviceWorker' in navigator) {{\n\
-         \x20\x20\x20\x20\x20\x20\x20 window.addEventListener('load', function () {{\n\
-         \x20\x20\x20\x20\x20\x20\x20\x20\x20 navigator.serviceWorker.register('./sw.js').catch(function (err) {{\n\
-         \x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20 console.warn('service worker registration failed:', err);\n\
-         \x20\x20\x20\x20\x20\x20\x20\x20\x20 }});\n\
-         \x20\x20\x20\x20\x20\x20\x20 }});\n\
-         \x20\x20\x20\x20\x20 }}\n\
-         \x20\x20\x20\x20\x20 var importObject = {{ env: {{}} }};\n\
-         \x20\x20\x20\x20\x20 function fallbackInstantiate() {{\n\
-         \x20\x20\x20\x20\x20\x20\x20 return fetch(WASM_PATH)\n\
-         \x20\x20\x20\x20\x20\x20\x20\x20\x20 .then(function (resp) {{ return resp.arrayBuffer(); }})\n\
-         \x20\x20\x20\x20\x20\x20\x20\x20\x20 .then(function (bytes) {{ return WebAssembly.instantiate(bytes, importObject); }});\n\
-         \x20\x20\x20\x20\x20 }}\n\
-         \x20\x20\x20\x20\x20 var loader;\n\
-         \x20\x20\x20\x20\x20 if (WebAssembly.instantiateStreaming) {{\n\
-         \x20\x20\x20\x20\x20\x20\x20 loader = WebAssembly.instantiateStreaming(fetch(WASM_PATH), importObject)\n\
-         \x20\x20\x20\x20\x20\x20\x20\x20\x20 .catch(fallbackInstantiate);\n\
-         \x20\x20\x20\x20\x20 }} else {{\n\
-         \x20\x20\x20\x20\x20\x20\x20 loader = fallbackInstantiate();\n\
-         \x20\x20\x20\x20\x20 }}\n\
-         \x20\x20\x20\x20\x20 loader.then(function (result) {{\n\
-         \x20\x20\x20\x20\x20\x20\x20 var start = result.instance.exports.start || result.instance.exports.main;\n\
-         \x20\x20\x20\x20\x20\x20\x20 if (typeof start === 'function') {{ start(); }}\n\
-         \x20\x20\x20\x20\x20 }}).catch(function (err) {{\n\
-         \x20\x20\x20\x20\x20\x20\x20 console.error('failed to load qapp wasm:', err);\n\
-         \x20\x20\x20\x20\x20\x20\x20 var el = document.getElementById('app');\n\
-         \x20\x20\x20\x20\x20\x20\x20 if (el) {{ el.textContent = 'Failed to load. Check your connection and reload.'; }}\n\
-         \x20\x20\x20\x20\x20 }});\n\
-         \x20\x20\x20 }})();\n\
-         \x20 </script>\n\
+         \x20 <script src=\"loader.js\" defer></script>\n\
          </body>\n\
          </html>\n",
+        csp = csp_html,
         title = title_html,
         description = description_html,
         theme = theme_html,
         short_name = short_name_html,
         bg = bg_html,
-        wasm_path = wasm_path_js,
     )
 }
 
@@ -303,6 +349,10 @@ pub fn generate_pwa(manifest: &QappManifest) -> PwaBundle {
         PwaFile {
             path: "sw.js".to_string(),
             content: PwaContent::Text(build_service_worker(manifest)),
+        },
+        PwaFile {
+            path: "loader.js".to_string(),
+            content: PwaContent::Text(build_loader_js(manifest)),
         },
         PwaFile {
             path: "index.html".to_string(),
@@ -334,12 +384,13 @@ mod tests {
     }
 
     #[test]
-    fn generates_the_three_expected_files() {
+    fn generates_the_expected_files() {
         let bundle = generate_pwa(&sample());
         assert!(bundle.get("manifest.webmanifest").is_some());
         assert!(bundle.get("sw.js").is_some());
+        assert!(bundle.get("loader.js").is_some());
         assert!(bundle.get("index.html").is_some());
-        assert_eq!(bundle.files.len(), 3);
+        assert_eq!(bundle.files.len(), 4);
     }
 
     #[test]
@@ -395,21 +446,54 @@ mod tests {
     }
 
     #[test]
-    fn index_html_references_manifest_sw_and_wasm() {
+    fn index_html_references_manifest_and_external_loader() {
         let bundle = generate_pwa(&sample());
         let html = bundle.text_of("index.html").expect("index present");
         assert!(html.contains("manifest.webmanifest"), "html: {html}");
-        assert!(html.contains("./sw.js"), "html: {html}");
-        assert!(html.contains("./journal.wasm"), "html: {html}");
+        // The loader is external now (strict CSP) — not inline.
+        assert!(html.contains("<script src=\"loader.js\" defer></script>"), "html: {html}");
+        assert!(!html.contains("(function ()"), "loader must not be inline: {html}");
         // iOS installability meta tags.
         assert!(html.contains("apple-mobile-web-app-capable"));
         assert!(html.contains("apple-mobile-web-app-title"));
-        // theme-color meta + manifest link.
         assert!(html.contains("name=\"theme-color\""));
         assert!(html.contains("rel=\"manifest\""));
-        // wasm loader.
-        assert!(html.contains("WebAssembly.instantiateStreaming"));
-        assert!(html.contains("serviceWorker"));
+
+        // The wasm loader + SW registration live in loader.js.
+        let loader = bundle.text_of("loader.js").expect("loader present");
+        assert!(loader.contains("./journal.wasm"), "loader: {loader}");
+        assert!(loader.contains("WebAssembly.instantiateStreaming"));
+        assert!(loader.contains("serviceWorker"));
+        assert!(loader.contains("./sw.js"));
+    }
+
+    #[test]
+    fn index_html_carries_strict_capability_derived_csp() {
+        // No sync capability → default-deny, no network egress, strict own-origin scripts.
+        let bundle = generate_pwa(&sample());
+        let html = bundle.text_of("index.html").expect("index present");
+        assert!(html.contains("http-equiv=\"Content-Security-Policy\""), "html: {html}");
+        assert!(html.contains("default-src &#39;none&#39;"), "html: {html}");
+        assert!(html.contains("script-src &#39;self&#39; &#39;wasm-unsafe-eval&#39;"), "html: {html}");
+        // No 'unsafe-inline' anywhere in script-src (scripts are external-only).
+        let csp = super::build_csp(&sample());
+        assert!(!csp.contains("script-src 'self' 'unsafe-inline'"));
+        // No sync → connect-src 'none' (cannot exfiltrate at runtime).
+        assert!(csp.contains("connect-src 'none'"), "csp: {csp}");
+
+        // With the Sync capability, connect-src widens to same-origin only.
+        let mut synced = sample();
+        synced.capabilities.push(crate::qapp_package::manifest::Capability::Sync);
+        let csp = super::build_csp(&synced);
+        assert!(csp.contains("connect-src 'self'"), "csp: {csp}");
+        assert!(!csp.contains("connect-src 'none'"));
+    }
+
+    #[test]
+    fn service_worker_precaches_the_external_loader() {
+        let bundle = generate_pwa(&sample());
+        let sw = bundle.text_of("sw.js").expect("sw present");
+        assert!(sw.contains("./loader.js"), "sw: {sw}");
     }
 
     #[test]
@@ -443,8 +527,9 @@ mod tests {
                 purpose: "any".to_string(),
             });
         let bundle = generate_pwa(&m);
-        let html = bundle.text_of("index.html").unwrap();
-        assert!(html.contains("./a\\'b.wasm"), "quote not escaped: {html}");
+        // The wasm path lives in the external loader now.
+        let loader = bundle.text_of("loader.js").unwrap();
+        assert!(loader.contains("./a\\'b.wasm"), "quote not escaped: {loader}");
     }
 
     #[test]
