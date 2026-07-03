@@ -137,8 +137,14 @@ sweep — flag to Timothy before undertaking.)
 
 ## E. Large efforts (staged; multi-session)
 
-- [ ] **T3.1** real sync transport (libp2p / WSS) — drains outbox, feeds inbox; hostile-peer + convergence tests
-      (shared with cooperative WP7)
+- [~] **T3.1** real sync transport — **transport + acceptance criteria DONE** (`a9a257b6`, local): a
+      `SyncTransport` trait (dumb pipe; all trust stays in the fail-closed inbox) with an in-memory relay
+      (reference) **and** a real `HttpRelayTransport` (reqwest) + a `tiny_http` **relay server**; host
+      orchestration `sync_push_via` (drain Queued outbox → signed ops → mark Sent) / `sync_pull_via`
+      (pull → admit) + `sync_with_http_relay` + a Tauri command. **Drains outbox, feeds inbox, with
+      hostile-peer + convergence + partition-rejoin + real-HTTP-round-trip tests** (26 sync tests).
+      **Remaining:** a true peer-to-peer **libp2p** (or WebSocket-streaming) backend behind the same trait,
+      and a Studio "Sync now" control — future backends, not blocking the acceptance criteria.
 - [~] **T3.2 → elevated to a first-class workstream: [companion-pwa-installable-qapps](companion-pwa-installable-qapps.md)**
       "author a qapp → installable wasm app on your phone" (Timothy: key feature to build upon).
       **P0 foundation DONE**: `qualia-cooperative-core::qapp_package` — `QappManifest` (extensible kinds +
