@@ -143,8 +143,9 @@ sweep — flag to Timothy before undertaking.)
       orchestration `sync_push_via` (drain Queued outbox → signed ops → mark Sent) / `sync_pull_via`
       (pull → admit) + `sync_with_http_relay` + a Tauri command. **Drains outbox, feeds inbox, with
       hostile-peer + convergence + partition-rejoin + real-HTTP-round-trip tests** (26 sync tests).
-      **Remaining:** a true peer-to-peer **libp2p** (or WebSocket-streaming) backend behind the same trait,
-      and a Studio "Sync now" control — future backends, not blocking the acceptance criteria.
+      A **Studio "Sync & Backup" panel** (`b57bb89f`) now exposes "Sync now" against a relay URL.
+      **Remaining:** a true peer-to-peer **libp2p** (or WebSocket-streaming) backend behind the same trait
+      — a future backend, not blocking the acceptance criteria.
 - [~] **T3.2 → elevated to a first-class workstream: [companion-pwa-installable-qapps](companion-pwa-installable-qapps.md)**
       "author a qapp → installable wasm app on your phone" (Timothy: key feature to build upon).
       **P0 foundation DONE**: `qualia-cooperative-core::qapp_package` — `QappManifest` (extensible kinds +
