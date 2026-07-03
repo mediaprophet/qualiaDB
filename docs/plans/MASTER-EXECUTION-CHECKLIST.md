@@ -151,8 +151,11 @@ sweep — flag to Timothy before undertaking.)
       least-privilege capabilities + content-addressed `WasmRef`) + `generate_pwa` (webmanifest + service
       worker + loader), 21 tests. Remaining: P1 secure-origin delivery (**⚑ strategy fork**), P2 pairing/install,
       P3 wasm build pipeline, P4 token-v2 isolation (WP1), P5 Studio Package&Publish (WP2), P6 Cooperative Qapp (WP4).
-- [ ] **T3.3** Phase-6 release hardening (reproducible builds, installers/signed updates, SBOM, backup/restore,
-      accessibility audit, 42 MB Sentinel, diagnostics)
+- [~] **T3.3** Phase-6 release hardening — **backup/restore DONE** (`e9f13c29`, local): portable, path-
+      traversal-safe `lz4(cbor)` archive of the `wellfair/` data subtree (vault stays encrypted); host API
+      + `wellfair_{export,import}_backup` Tauri commands; 6 tests incl. a host export→restore-into-a-fresh-
+      node round trip. **Remaining (needs infra/keys — Timothy):** reproducible builds, signed installers/
+      updates, SBOM, accessibility audit, 42 MB Sentinel check, diagnostics bundle.
 - [ ] **T3.4** Phase-7 optional (anatomy, studies/rules, authenticated Solid Pod sync, model-assisted
       extraction, wallet, distributed analytics, native mobile)
 
