@@ -50,7 +50,11 @@
       characteristics via `AgentRef` version/capacity (ADR §10). *(Paraconsistent adjudication = host/engine, humans decide.)*
 - [x] ABAC evaluation — `delegation_permits(...)` with **selfhood default-deny** + consequential-domain
       provenance-required + trigger-gating + jurisdiction match
-- [ ] Host API + Tauri commands + Studio panel(s) — Social Book / Agency surface
+- [x] Host API + Tauri commands + Studio panel(s) — **Agency surface DONE** (`59acdbf1`, local): host
+      API (create/list/get/consent/revoke/evaluate/domains) persisting delegations through the signed
+      journal (lossless summary, latest-version-per-id) + 6 Tauri commands + a Studio **Agency** area/panel
+      (domain picker flagging consequential ⚠, grant/withdraw/revoke, "Test read/write/decide" showing the
+      ABAC verdict + reason — surfaces selfhood default-deny & consequential-provenance). +2 tests.
 - [x] Migration: **guardianship `Suspend` wired** (§C T1.5); **`government_letter` → authority attestation
       generalized** (wellfare-core `authority_attestation.rs` — extensible authority type + agent-in-capacity
       + jurisdiction/department + PDF|credential|both; 8 tests; host `add_authority_attestation` + journal
@@ -76,7 +80,10 @@
       escrowed record commits through the signed vault path (idempotent). `wellfare-core/guardianship.rs`
       (10 tests) + policy `Suspend` production + `submit_record_guarded`/escrow/vote host API (3 host tests)
       + 3 Tauri cmds + host_client bridge + **Guardianship** Studio panel/area. 94 wellfair tests green.
-- [ ] Generalize `government_letter` → **authority attestation** record (ADR §2) once agency layer lands
+- [x] Generalize `government_letter` → **authority attestation** record (ADR §2) — **DONE**: wellfare-core
+      `authority_attestation.rs` is the general model (extensible authority type + agent-in-capacity +
+      jurisdiction/department + PDF|credential|both), `government_letter` is a preset over it, host
+      `add_authority_attestation` + journal kind wired. Agency layer has now landed too.
 
 ## C2. Sanctuary vault v2 — CBOR-LD + coercion-response decoy (active)
 
