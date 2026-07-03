@@ -108,3 +108,51 @@ for S5; clinician-lens rule sign-off for S4's clinician lens.)
 wellbeing gist; clinician-lens OSCE-Prac *considerations* on `comorbidity_eval`/`clinical_engine`). This
 crosses into `qualia-client-core/wellfair` (my established lane) — I'll re-check NOTICES before touching
 shared files.
+
+---
+
+## 2026-07-03 — S4a: two-lens view model + record→factor bridge (domain half) — **done**
+
+**What was built.** Grounded first with an Explore pass over the actual integration surface (host API
+`WebizenHostApi`, `list_journal_by_kind`, `JournalEntry` with its `summary` JSON projection, `record.rs`
+epistemic model, `anatomy_context.rs`, `comorbidity_eval`/`clinical_engine`, and the Tauri+Studio wiring
+pattern) — all three key assumptions verified (conditions carry a `label`, records carry
+`EpistemicStatus`, there's a clean derived-read-method pattern). Then built the pure, testable domain half
+of S4 in `wellfare-core/anatomy`:
+
+- **`lens.rs`** — `build_view(factors, Lens, threshold) -> AnatomyView`. **Person lens:** every loaded
+  system, plain-language headline built from a new accessibility-first `plain_label` on each `BodySystem`
+  ("digestion", "kidneys and fluid balance", …), coarse `WellbeingLevel` (Settled/WorthWatching/UnderStrain),
+  detail behind progressive disclosure, boundary "not medical advice … worth discussing with a clinician."
+  **Clinician lens:** only convergence-flagged systems, with converging factors + interactions + dominant
+  evidence tier as *structural considerations* ("Consider whether this pattern warrants review") and an
+  explicit "clinical specifics are the clinician's own judgement" — it does **not** invent tests/meds/referrals
+  (that's the sign-off datum). Both carry `EpistemicStatus::Hypothesis` and an uncertainty note.
+- **`bridge.rs`** — `RecordRef` (normalized id/kind/label/at_minute/dose) → factors via the knowledge base.
+  `records_to_factors`, `records_to_timeline`, and one-shot `build_view_from_records`; kind-appropriate key
+  candidates (a `diet` log fans out across `food:`/`whole-food:`/`herb:`/`tea:`/`supplement:`/`nutrient:`).
+  Unmapped records are **reported, not dropped**.
+- Hoisted `slugify` to the anatomy module root (shared by the importer + bridge).
+
+**Measured results.** 31 anatomy tests passing (`cargo test -p wellfare-core anatomy::` → ok); wellfare-core
+lib green, no anatomy warnings. Covers: person-lens plain/non-diagnostic/worst-first, clinician-lens
+structural-considerations + herb–drug surfacing + "no invented clinical specifics", gentle empty summary,
+record resolution + unmapped reporting, temporal bridge, end-to-end person view from records.
+
+**Known limitation (honest).** The bridge resolves a record by slugging **its own label** to a knowledge
+key (`"Beer"` → `food:beer`). A record labelled differently from the entry (`"Beer (alcohol)"` →
+`beer-alcohol`) is honestly reported as *unmapped* rather than fuzzy-matched — a documented test asserts
+exactly this. Real-world resolution (aliases / synonyms / a fuzzier match) is a **corpus-design concern**:
+Timothy's corpus should define keys that match how records are labelled, or carry aliases. Flagged as an
+S4/S3 follow-up, not papered over.
+
+**⚑ Where I need the human.** (a) The knowledge **corpus** (S3 datum) is what makes medications, diet, herbs
+actually map — today only conditions map cleanly (via bundled `condition-map.json`). (b) **Clinician-lens
+rule sign-off** if we want the clinician lens to go past structural considerations into named tests/meds.
+(c) A **direction call** for S4b: wire a text/list Studio panel now so the two lenses are visible, or hold
+the UI until the S5 native-3D body (the intended illustrative surface) — since a text panel is a stepping
+stone you may not want.
+
+**Next step.** S4b — the host method (`WebizenHostApi::compute_anatomy_view(lens, …)` reading records →
+`RecordRef`s → `build_view_from_records`) + Tauri command; then the Studio surface, pending the direction
+call above.

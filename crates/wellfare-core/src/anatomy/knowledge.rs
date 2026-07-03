@@ -284,7 +284,7 @@ pub fn import_condition_map(json: &str, provenance: Provenance) -> Result<Import
     for (name, entry) in file.conditions {
         match body_system_by_label(&entry.primary_system) {
             Some(sys) => {
-                let key = format!("cond:{}", slugify(&name));
+                let key = format!("cond:{}", super::slugify(&name));
                 entries.push(
                     FactorKnowledge::new(key, FactorKind::Condition, name, provenance.clone())
                         .targeting(
@@ -326,21 +326,6 @@ pub fn import_entries(json: &str) -> Result<ImportResult, String> {
         entries.push(e.sealed());
     }
     Ok(ImportResult { entries, warnings })
-}
-
-fn slugify(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    let mut prev_dash = false;
-    for c in s.chars() {
-        if c.is_ascii_alphanumeric() {
-            out.push(c.to_ascii_lowercase());
-            prev_dash = false;
-        } else if !prev_dash && !out.is_empty() {
-            out.push('-');
-            prev_dash = true;
-        }
-    }
-    out.trim_end_matches('-').to_string()
 }
 
 // ---- Honest seed set ------------------------------------------------------------------------------

@@ -19,8 +19,10 @@
 //! identity.
 
 mod accumulate;
+mod bridge;
 mod factor;
 mod knowledge;
+mod lens;
 mod systems;
 mod temporal;
 
@@ -28,7 +30,12 @@ pub use accumulate::{
     accumulate, interactions, systemic_implications, Interaction, InteractionKind, SystemBurden,
     SystemicImplication,
 };
+pub use bridge::{
+    build_view_from_records, knowledge_key_candidates, records_to_factors, records_to_timeline,
+    BridgeResult, RecordRef,
+};
 pub use factor::{Effect, EvidenceTier, Factor, FactorKind, FactorTarget};
+pub use lens::{build_view, AnatomyView, Lens, SystemView, WellbeingLevel};
 pub use knowledge::{
     import_condition_map, import_entries, seed_knowledge_base, FactorKnowledge, ImportResult,
     KnowledgeBase, KnowledgeSource, KnowledgeTarget, Provenance,
@@ -50,4 +57,21 @@ pub(crate) fn push_unique(v: &mut Vec<String>, id: &str) {
     if !v.iter().any(|x| x == id) {
         v.push(id.to_string());
     }
+}
+
+/// Lower-kebab a human label for use in a knowledge key (`"Type 2 Diabetes"` → `"type-2-diabetes"`).
+/// Shared by the knowledge importer and the record→factor bridge so keys line up.
+pub(crate) fn slugify(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut prev_dash = false;
+    for c in s.chars() {
+        if c.is_ascii_alphanumeric() {
+            out.push(c.to_ascii_lowercase());
+            prev_dash = false;
+        } else if !prev_dash && !out.is_empty() {
+            out.push('-');
+            prev_dash = true;
+        }
+    }
+    out.trim_end_matches('-').to_string()
 }
