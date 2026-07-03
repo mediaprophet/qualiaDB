@@ -41,7 +41,7 @@ use qualia_core_db::crypto::sanctuary_audit::{
     open_sealed, seal_to, unwrap_key, wrap_key, AuditKeypair, GENESIS_PARENT,
 };
 use qualia_core_db::crypto::sanctuary_audit_dag::{
-    derive_sessions, verify_chain, AuditAction, AuditRecord, ChainStatus,
+    derive_sessions, verify_chain, AuditAction, AuditRecord, ChainStatus, RetentionMode,
 };
 use qualia_core_db::crypto::sanctuary_keychain;
 use sha2::{Digest, Sha256};
@@ -177,13 +177,18 @@ struct BranchAnchor {
 }
 
 /// The decrypted per-lane records payload. Both lanes serialize this; only the **real** lane ever
-/// populates `anchors` (the decoy lane's stays empty).
+/// populates `anchors` / `retention` (the decoy lane's stay empty — the retention setting must be
+/// invisible and unreachable from a decoy session, ADR §8).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 struct LaneData {
     #[serde(default)]
     notes: Vec<SanctuaryVaultNote>,
     #[serde(default)]
     anchors: Vec<BranchAnchor>,
+    /// Decoy-audit retention policy, held in (and settable only from) the real lane. `None` → the
+    /// default ([`RetentionMode::AutoArchive`]).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    retention: Option<RetentionMode>,
 }
 
 // --- CBOR helpers (the vault serializes nothing as JSON) ---
@@ -908,6 +913,8 @@ pub struct DecoyActivityReport {
     /// hard attacker count.
     pub session_count: usize,
     pub actions: Vec<DecoyActionView>,
+    /// The current decoy-audit retention policy (real-lane setting; ADR §8).
+    pub retention_mode: RetentionMode,
 }
 
 /// **Review decoy activity from the real lane (ADR §3.1 / §10).** Opens the real lane, unwraps the
@@ -1043,11 +1050,62 @@ pub fn review_decoy_activity(
         save_container(root, &container)?;
     }
 
+    let retention_mode = data.retention.unwrap_or_default();
     Ok(DecoyActivityReport {
         integrity,
         session_count,
         actions,
+        retention_mode,
     })
+}
+
+/// Read the decoy-audit retention policy (real-lane setting). Requires the **real** PIN; defaults to
+/// [`RetentionMode::AutoArchive`] when never set.
+pub fn get_retention_mode(
+    root: impl AsRef<Path>,
+    real_pin: &str,
+) -> Result<RetentionMode, String> {
+    let container = load_container(root.as_ref())?.ok_or("Sanctuary vault is not set up")?;
+    let pepper = pepper_for(&container, None)?;
+    let (lane, real_key) = open_lane(&container, real_pin, pepper.as_ref())?;
+    if lane != SanctuaryLane::Real {
+        return Err("Reading the retention setting requires the real unlock PIN".into());
+    }
+    let layer = layer_ref(&container, SanctuaryLane::Real)?;
+    let data: LaneData = cbor_decode(&open(&real_key, &layer.records, SanctuaryLane::Real.aad())?)?;
+    Ok(data.retention.unwrap_or_default())
+}
+
+/// Set the decoy-audit retention policy (ADR §8). **Real-session only** — the setting is stored in
+/// the real lane's encrypted records so it is invisible and unreachable from a decoy session (which
+/// must never learn that auditing exists). Requires the **real** PIN.
+pub fn set_retention_mode(
+    root: impl AsRef<Path>,
+    real_pin: &str,
+    mode: RetentionMode,
+) -> Result<(), String> {
+    let root = root.as_ref();
+    let mut container = load_container(root)?.ok_or("Sanctuary vault is not set up")?;
+    let pepper = pepper_for(&container, None)?;
+    let (lane, real_key) = open_lane(&container, real_pin, pepper.as_ref())?;
+    if lane != SanctuaryLane::Real {
+        return Err("Changing the retention setting requires the real unlock PIN".into());
+    }
+    let (mut data, counter) = {
+        let layer = layer_ref(&container, SanctuaryLane::Real)?;
+        let pt = open(&real_key, &layer.records, SanctuaryLane::Real.aad())?;
+        let data: LaneData = cbor_decode(&pt)?;
+        (data, layer.next_counter)
+    };
+    data.retention = Some(mode);
+    let records_pt = cbor_encode(&data)?;
+    let blob = seal(&real_key, counter, &records_pt, SanctuaryLane::Real.aad());
+    {
+        let layer = layer_mut(&mut container, SanctuaryLane::Real)?;
+        layer.records = blob;
+        layer.next_counter = counter.saturating_add(1);
+    }
+    save_container(root, &container)
 }
 
 #[cfg(test)]
@@ -1483,6 +1541,54 @@ mod tests {
         assert_eq!(
             report.integrity,
             AuditIntegrity::WitnessedPrefixAltered { branch_ref: "s1".into() }
+        );
+    }
+
+    #[test]
+    fn retention_mode_defaults_to_auto_and_round_trips() {
+        let dir = tempfile::tempdir().unwrap();
+        setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
+        // Default is auto-archive.
+        assert_eq!(
+            get_retention_mode(dir.path(), "real-pin-1").unwrap(),
+            RetentionMode::AutoArchive
+        );
+        // Set → get round-trips, and survives across reopen (it's persisted in the real lane).
+        set_retention_mode(dir.path(), "real-pin-1", RetentionMode::ManualTriage).unwrap();
+        assert_eq!(
+            get_retention_mode(dir.path(), "real-pin-1").unwrap(),
+            RetentionMode::ManualTriage
+        );
+        // A review surfaces the current mode and does not clobber it.
+        let report = review_decoy_activity(dir.path(), "real-pin-1").unwrap();
+        assert_eq!(report.retention_mode, RetentionMode::ManualTriage);
+        assert_eq!(
+            get_retention_mode(dir.path(), "real-pin-1").unwrap(),
+            RetentionMode::ManualTriage
+        );
+    }
+
+    #[test]
+    fn retention_mode_is_real_session_only() {
+        let dir = tempfile::tempdir().unwrap();
+        setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
+        // The decoy session can neither read nor set the retention policy.
+        assert!(get_retention_mode(dir.path(), "decoy-pin-2").is_err());
+        assert!(set_retention_mode(dir.path(), "decoy-pin-2", RetentionMode::ManualTriage).is_err());
+    }
+
+    #[test]
+    fn retention_setting_survives_decoy_writes_and_reviews() {
+        let dir = tempfile::tempdir().unwrap();
+        setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
+        set_retention_mode(dir.path(), "real-pin-1", RetentionMode::ManualTriage).unwrap();
+        // Decoy activity + a real note must not disturb the real-lane retention setting.
+        add_note(dir.path(), "decoy-pin-2", "coercer note", 10).unwrap();
+        add_note(dir.path(), "real-pin-1", "real note", 11).unwrap();
+        review_decoy_activity(dir.path(), "real-pin-1").unwrap();
+        assert_eq!(
+            get_retention_mode(dir.path(), "real-pin-1").unwrap(),
+            RetentionMode::ManualTriage
         );
     }
 

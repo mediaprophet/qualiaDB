@@ -882,6 +882,26 @@ impl WebizenHostApi {
         super::sanctuary_vault::review_decoy_activity(&self.storage_root, real_pin)
     }
 
+    /// Read the decoy-audit retention policy (ADR §8). **Real-session only** — requires the real PIN;
+    /// the setting is invisible/unreachable from a decoy session. Defaults to auto-archive.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn get_sanctuary_decoy_retention_mode(
+        &self,
+        real_pin: &str,
+    ) -> Result<qualia_core_db::crypto::sanctuary_audit_dag::RetentionMode, String> {
+        super::sanctuary_vault::get_retention_mode(&self.storage_root, real_pin)
+    }
+
+    /// Set the decoy-audit retention policy (ADR §8). **Real-session only** — requires the real PIN.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn set_sanctuary_decoy_retention_mode(
+        &self,
+        real_pin: &str,
+        mode: qualia_core_db::crypto::sanctuary_audit_dag::RetentionMode,
+    ) -> Result<(), String> {
+        super::sanctuary_vault::set_retention_mode(&self.storage_root, real_pin, mode)
+    }
+
     // --- T1.2: OS-keychain vault wrapping (opt-in, off by default; recovery-gated) ---
 
     /// Is the on-disk Sanctuary vault keychain-wrapped (bound to an OS-keychain pepper)?
