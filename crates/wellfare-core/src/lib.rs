@@ -1,3 +1,4 @@
+pub mod assessment;
 pub mod authority_attestation;
 pub mod companion_pairing;
 pub mod companion_sync;

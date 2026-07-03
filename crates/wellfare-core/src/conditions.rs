@@ -96,6 +96,8 @@ pub fn journal_kind_for_record_id(record_id: &str) -> &'static str {
         "welfare_case"
     } else if record_id.contains(":case_task:") {
         "case_task"
+    } else if record_id.contains(":wellbeing_assessment:") {
+        "wellbeing_assessment"
     } else if record_id.contains(":wellbeing_observation:") {
         "wellbeing_observation"
     } else if record_id.contains(":therapy_note:") {

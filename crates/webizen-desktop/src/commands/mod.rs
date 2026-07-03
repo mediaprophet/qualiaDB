@@ -1026,6 +1026,53 @@ pub fn wellfair_evaluate_agency_access(
     Ok(serde_json::json!({ "permit": permit, "reason": reason }).to_string())
 }
 
+// --- Wellbeing self-assessment instruments (T2.2; PHQ-9 / GAD-7) -----------------------------
+
+/// The instruments this build ships (items, options, bands, disclaimer).
+#[command]
+pub fn wellfair_list_assessment_instruments(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    serde_json::to_string(&host.list_assessment_instruments()).map_err(|e| e.to_string())
+}
+
+/// Score + record a sitting. `responses` is a comma-separated list of ordinal values (one per item,
+/// in order). Returns the scored result (total, band, interpretation, any safety flags).
+#[command]
+pub fn wellfair_record_assessment(
+    app: AppHandle,
+    instrument_id: String,
+    responses: String,
+) -> Result<String, String> {
+    let parsed: Result<Vec<u8>, _> = responses
+        .split(',')
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| s.trim().parse::<u8>())
+        .collect();
+    let parsed = parsed.map_err(|e| format!("invalid responses: {e}"))?;
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let result = host.record_assessment(&instrument_id, parsed)?;
+    serde_json::to_string(&result).map_err(|e| e.to_string())
+}
+
+/// Past assessment results (newest-first).
+#[command]
+pub fn wellfair_list_assessments(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    serde_json::to_string(&host.list_assessments(64)?).map_err(|e| e.to_string())
+}
+
 // --- Guardianship approval escrow (M-of-N co-signature for proxy actions; T1.5) --------------
 
 /// A supporter records a condition on the principal's behalf. The write escrows for guardian
@@ -4160,6 +4207,9 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_set_agency_delegation_consent,
         wellfair_revoke_agency_delegation,
         wellfair_evaluate_agency_access,
+        wellfair_list_assessment_instruments,
+        wellfair_record_assessment,
+        wellfair_list_assessments,
         wellfair_propose_proxy_condition,
         wellfair_list_guardianship_proposals,
         wellfair_vote_guardianship_proposal,

@@ -105,6 +105,10 @@ use wellfare_core::welfare_support::{
     build_assistance_need_envelope, build_government_letter_envelope, build_welfare_stream_envelope,
     AssistanceNeed, GovernmentLetter, StreamStatus, Urgency, WelfareStream,
 };
+use wellfare_core::assessment::{
+    assessment_summary, build_assessment_envelope, instrument, instrument_dto, instruments,
+    parse_assessment, score, AssessmentResult, InstrumentDto,
+};
 use wellfare_core::record::RecordEnvelope;
 use wellfare_core::sleep_analytics::{
     self, SleepDebtReport, SleepHeatmapReport, SleepNightSample, DEFAULT_TARGET_SLEEP_MIN,
@@ -1806,6 +1810,50 @@ impl WebizenHostApi {
         Ok(delegation_permits(&d, &tax, &request, &ctx))
     }
 
+    // --- Wellbeing self-assessment instruments (T2.2; PHQ-9 / GAD-7) ---------------------------
+    //
+    // A self-monitoring aid, not a diagnosis. Scoring is fail-closed in the domain layer; results
+    // persist as Restricted records through the signed journal (lossless summary → reconstructs).
+
+    /// The instruments this build ships (definitions: items, options, bands, disclaimer).
+    pub fn list_assessment_instruments(&self) -> Vec<InstrumentDto> {
+        instruments().into_iter().map(instrument_dto).collect()
+    }
+
+    /// Score `responses` against the given instrument and persist the result. Returns the scored
+    /// outcome (total, band, interpretation, any safety flags). Errors if the instrument is unknown
+    /// or the responses are the wrong count / out of range (fail-closed in `score`).
+    pub fn record_assessment(
+        &mut self,
+        instrument_id: &str,
+        responses: Vec<u8>,
+    ) -> Result<AssessmentResult, String> {
+        let inst = instrument(instrument_id)
+            .ok_or_else(|| format!("unknown assessment instrument: {instrument_id}"))?;
+        let now = Self::now_unix() as u32;
+        let result = score(inst, &responses, now)?;
+        let envelope =
+            build_assessment_envelope(&result, &self.owner_did, &self.author_did, now);
+        let summary = assessment_summary(&result);
+        self.submit_record_with_summary(
+            QAPP_WELLBEING,
+            envelope,
+            SOURCE_WELLBEING,
+            Some(summary),
+        )?;
+        self.finalize_batch().ok();
+        Ok(result)
+    }
+
+    /// Past assessment results, newest-first, reconstructed from the journal.
+    pub fn list_assessments(&self, limit: usize) -> Result<Vec<AssessmentResult>, String> {
+        let entries = self.list_journal_by_kind("wellbeing_assessment", limit)?;
+        Ok(entries
+            .iter()
+            .filter_map(|e| e.summary.as_deref().and_then(parse_assessment))
+            .collect())
+    }
+
     // --- Guardianship approval escrow (M-of-N co-signature for proxy actions; T1.5) -------------
     //
     // Supported agency, not warden control: a proxy writing a protected record on the principal's
@@ -2230,6 +2278,36 @@ mod api_tests {
         let listed = host.list_agency_delegations(16).unwrap();
         assert_eq!(listed.len(), 1);
         assert!(listed[0].revoked);
+    }
+
+    #[test]
+    fn wellbeing_assessment_record_score_and_list() {
+        let dir = tempdir().unwrap();
+        let mut host = test_host(dir.path());
+
+        // Ships PHQ-9 and GAD-7.
+        let insts = host.list_assessment_instruments();
+        assert_eq!(insts.len(), 2);
+        assert!(insts.iter().any(|i| i.id == "phq9"));
+
+        // Record a PHQ-9 that trips the self-harm flag (item 9 endorsed).
+        let mut resp = vec![0u8; 9];
+        resp[8] = 2;
+        let result = host.record_assessment("phq9", resp).unwrap();
+        assert_eq!(result.total, 2);
+        assert_eq!(result.band_label, "Minimal");
+        assert_eq!(result.flags.len(), 1, "self-harm flag must surface");
+
+        // Persisted + reconstructed via the journal.
+        let listed = host.list_assessments(16).unwrap();
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].instrument_id, "phq9");
+        assert_eq!(listed[0].flags.len(), 1);
+
+        // Fail-closed: unknown instrument and bad response count are rejected (no record written).
+        assert!(host.record_assessment("bdi2", vec![0; 9]).is_err());
+        assert!(host.record_assessment("gad7", vec![0; 3]).is_err());
+        assert_eq!(host.list_assessments(16).unwrap().len(), 1);
     }
 
     #[test]
