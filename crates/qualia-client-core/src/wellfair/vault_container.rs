@@ -79,6 +79,11 @@ pub struct Layer {
 }
 
 impl Layer {
+    /// Find a wrapped subordinate key by its `purpose` (e.g. `"decoy_lane_key"`, `"audit_secret"`).
+    pub fn wrapped_key(&self, purpose: &str) -> Option<&WrappedKey> {
+        self.wrapped_keys.iter().find(|w| w.purpose == purpose)
+    }
+
     /// A reserved padding layer: fresh random salt, empty blobs. (S5 makes these byte-indistinguishable.)
     pub fn reserved(index: usize) -> Self {
         Layer {

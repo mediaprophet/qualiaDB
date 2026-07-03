@@ -37,10 +37,13 @@ use qualia_core_db::crypto::sanctuary_crypto::{
     encrypt_sanctuary_chunk, SanctuaryAeadAlgorithm, SanctuaryKeyMaterial, ARGON2_M_COST_KIB,
     ARGON2_P_COST, ARGON2_T_COST, SANCTUARY_TAG_BYTES,
 };
+use qualia_core_db::crypto::sanctuary_audit::{unwrap_key, wrap_key, AuditKeypair};
 use qualia_core_db::crypto::sanctuary_keychain;
 use sha2::{Digest, Sha256};
 
-use super::vault_container::{EncBlob, KdfDescriptor, Layer, LayerRole, VaultContainerV2};
+use super::vault_container::{
+    EncBlob, KdfDescriptor, Layer, LayerRole, VaultContainerV2, WrappedKey,
+};
 
 /// On-disk vault file. **CBOR**, not JSON (vault v2).
 pub const SANCTUARY_VAULT_FILE: &str = "wellfair/sanctuary_vault.cbor";
@@ -51,6 +54,23 @@ const VERIFIER_CHUNK: u64 = u64::MAX;
 /// Minimum PIN/passphrase length (ADR D5 — raised from 4). There is no maximum: a passphrase is
 /// encouraged, and Argon2id makes a long secret cheap to stretch.
 const MIN_PIN_LEN: usize = 6;
+
+// --- Real→decoy key hierarchy (ADR §3.2 / §7 crypto note) ---
+//
+// At setup the real lane's *wrapping key* wraps (a) the decoy lane's 48-byte key material and (b)
+// the audit secret. A real session can therefore reach *down* into the decoy (curate it) and read
+// the audit log, without re-entering the decoy PIN — but the decoy lane holds nothing that unwraps
+// toward real, so the hierarchy is strictly one-way.
+/// Purpose tag for the wrapped decoy lane key stored on the real layer.
+const WK_DECOY_LANE_KEY: &str = "decoy_lane_key";
+/// Purpose tag for the wrapped audit secret stored on the real layer.
+const WK_AUDIT_SECRET: &str = "audit_secret";
+/// AAD binding the decoy-lane-key wrap to its purpose.
+const WRAP_AAD_DECOY: &[u8] = b"q42:sanctuary:wrap:decoy-lane-key:v1";
+/// AAD binding the audit-secret wrap to its purpose.
+const WRAP_AAD_AUDIT: &[u8] = b"q42:sanctuary:wrap:audit-secret:v1";
+/// Serialized length of `SanctuaryKeyMaterial` (32-byte cipher key ‖ 16-byte volume tweak).
+const KEY_MATERIAL_BYTES: usize = 48;
 
 /// Reject the weakest PINs a coercer or shoulder-surfer would try first (ADR D5). This is a floor,
 /// not a strength meter — it blocks trivially guessable values, it does not certify strong ones.
@@ -189,6 +209,44 @@ fn open(key: &SanctuaryKeyMaterial, blob: &EncBlob, aad: &[u8]) -> Result<Vec<u8
     Ok(pt)
 }
 
+/// Derive the 32-byte **wrapping key** for a lane from its derived key material. Domain-separated
+/// with SHA-256 so it is never the same bytes as the lane's AEAD cipher key (which encrypts the
+/// records), even though both descend from the same PIN stretch. Used only for the one-way key
+/// hierarchy (`wrap_key`/`unwrap_key`, which is XChaCha20-Poly1305 internally).
+fn wrapping_key_from(material: &SanctuaryKeyMaterial) -> [u8; 32] {
+    let mut h = Sha256::new();
+    h.update(b"q42:sanctuary:wrap-key:v1");
+    h.update(material.cipher_key);
+    h.update(material.volume_tweak);
+    let out = h.finalize();
+    let mut k = [0u8; 32];
+    k.copy_from_slice(&out);
+    k
+}
+
+/// Serialize lane key material to its 48-byte form (`cipher_key(32) ‖ volume_tweak(16)`) for wrapping.
+fn material_to_bytes(m: &SanctuaryKeyMaterial) -> [u8; KEY_MATERIAL_BYTES] {
+    let mut b = [0u8; KEY_MATERIAL_BYTES];
+    b[..32].copy_from_slice(&m.cipher_key);
+    b[32..].copy_from_slice(&m.volume_tweak);
+    b
+}
+
+/// Reconstruct lane key material from its 48-byte form.
+fn material_from_bytes(b: &[u8]) -> Result<SanctuaryKeyMaterial, String> {
+    if b.len() != KEY_MATERIAL_BYTES {
+        return Err("wrapped decoy key material has the wrong length".into());
+    }
+    let mut cipher_key = [0u8; 32];
+    let mut volume_tweak = [0u8; 16];
+    cipher_key.copy_from_slice(&b[..32]);
+    volume_tweak.copy_from_slice(&b[32..48]);
+    Ok(SanctuaryKeyMaterial {
+        cipher_key,
+        volume_tweak,
+    })
+}
+
 /// Fold an optional OS-keychain pepper into the PIN before the KDF stretch. When no pepper is
 /// present (the default, unwrapped vault) the PIN bytes are used verbatim — so unwrapped vaults
 /// derive exactly as before. A pepper domain-separates and binds the derivation to the keychain
@@ -290,12 +348,15 @@ fn open_lane(
     Err("Incorrect PIN".into())
 }
 
+/// Build a fresh lane and return it alongside its derived key material (needed by [`build_vault`]
+/// to wire the real→decoy key hierarchy). The `audit_pubkey_hex` / `wrapped_keys` are filled in by
+/// the caller, since they depend on the *sibling* lane's key.
 fn new_lane(
     pin: &str,
     lane_id: SanctuaryLane,
     kdf: KdfDescriptor,
     pepper: Option<&[u8; 32]>,
-) -> Result<Layer, String> {
+) -> Result<(Layer, SanctuaryKeyMaterial), String> {
     let salt = random_salt();
     let secret = effective_secret(pin, pepper);
     let key = derive_lane_material(&kdf, &secret, &salt)?;
@@ -304,7 +365,7 @@ fn new_lane(
     let empty: Vec<SanctuaryVaultNote> = Vec::new();
     let records_pt = cbor_encode(&empty)?;
     let records = seal(&key, 0, &records_pt, aad);
-    Ok(Layer {
+    let layer = Layer {
         id: lane_id.layer_id().to_string(),
         role: lane_id.role(),
         salt_hex: hex::encode(salt),
@@ -314,7 +375,8 @@ fn new_lane(
         next_counter: 1,
         audit_pubkey_hex: None,
         wrapped_keys: Vec::new(),
-    })
+    };
+    Ok((layer, key))
 }
 
 fn load_container(root: &Path) -> Result<Option<VaultContainerV2>, String> {
@@ -382,10 +444,99 @@ fn build_vault(
     if is_configured(root) {
         return Err("Sanctuary vault already exists".into());
     }
-    let real = new_lane(real_pin, SanctuaryLane::Real, kdf.clone(), pepper)?;
-    let decoy = new_lane(decoy_pin, SanctuaryLane::Decoy, kdf, pepper)?;
+    let (mut real, real_key) = new_lane(real_pin, SanctuaryLane::Real, kdf.clone(), pepper)?;
+    let (mut decoy, decoy_key) = new_lane(decoy_pin, SanctuaryLane::Decoy, kdf, pepper)?;
+
+    // --- Wire the real→decoy key hierarchy + the blind audit channel (ADR §3.1/§3.2) ---
+    // 1. A fresh audit keypair. Its PUBLIC key lives (plaintext) on the decoy layer so a decoy
+    //    session can seal records to it; its SECRET is wrapped under the real key so only the real
+    //    lane can read them.
+    let audit = AuditKeypair::generate().map_err(|e| format!("audit keypair: {e:?}"))?;
+    decoy.audit_pubkey_hex = Some(hex::encode(audit.public));
+
+    // 2. The real lane's wrapping key wraps the decoy lane key + the audit secret (one-way: the
+    //    decoy holds nothing that unwraps toward real).
+    let real_wrap = wrapping_key_from(&real_key);
+    let wrapped_decoy = wrap_key(&real_wrap, &material_to_bytes(&decoy_key), WRAP_AAD_DECOY)
+        .map_err(|e| format!("wrap decoy key: {e:?}"))?;
+    let wrapped_audit = wrap_key(&real_wrap, audit.secret_bytes(), WRAP_AAD_AUDIT)
+        .map_err(|e| format!("wrap audit secret: {e:?}"))?;
+    real.wrapped_keys = vec![
+        WrappedKey {
+            purpose: WK_DECOY_LANE_KEY.into(),
+            blob_hex: hex::encode(&wrapped_decoy),
+        },
+        WrappedKey {
+            purpose: WK_AUDIT_SECRET.into(),
+            blob_hex: hex::encode(&wrapped_audit),
+        },
+    ];
+
     // `new` pads to the constant layer shape (reserved layers) and stamps the v2 version.
     let container = VaultContainerV2::new(vec![real, decoy], pepper.is_some(), vault_id)?;
+    save_container(root, &container)
+}
+
+/// Unwrap the decoy lane key material using the (already-unlocked) real lane key. Fails if the
+/// vault has no wrapped decoy key or the wrap is tampered — a decoy or wrong key never reaches here.
+fn unwrap_decoy_material(
+    container: &VaultContainerV2,
+    real_key: &SanctuaryKeyMaterial,
+) -> Result<SanctuaryKeyMaterial, String> {
+    let real_layer = container
+        .layer_by_role(LayerRole::Real)
+        .ok_or("Sanctuary vault is missing its real layer")?;
+    let wrapped = real_layer
+        .wrapped_key(WK_DECOY_LANE_KEY)
+        .ok_or("Sanctuary vault has no wrapped decoy key")?;
+    let blob = hex::decode(&wrapped.blob_hex).map_err(|e| e.to_string())?;
+    let real_wrap = wrapping_key_from(real_key);
+    let raw = unwrap_key(&real_wrap, &blob, WRAP_AAD_DECOY)
+        .map_err(|_| "could not unwrap the decoy lane key (tampered vault?)".to_string())?;
+    material_from_bytes(&raw)
+}
+
+/// **Real-session decoy curation (ADR §3.2).** From a real unlock, write a note into the decoy lane
+/// *without* the decoy PIN — the real lane unwraps the decoy key from its one-way hierarchy. This is
+/// how the victim keeps the decoy lived-in and plausible so a coercer's re-unlock shows believable
+/// content. Requires the **real** PIN; supplying the decoy PIN is rejected (the decoy cannot curate
+/// itself, and must not be able to detect that curation exists).
+pub fn real_curate_decoy_add_note(
+    root: impl AsRef<Path>,
+    real_pin: &str,
+    body: &str,
+    now_unix: u32,
+) -> Result<(), String> {
+    let root = root.as_ref();
+    let mut container = load_container(root)?.ok_or("Sanctuary vault is not set up")?;
+    let pepper = pepper_for(&container, None)?;
+    let (lane, real_key) = open_lane(&container, real_pin, pepper.as_ref())?;
+    if lane != SanctuaryLane::Real {
+        return Err("Curating the decoy requires the real unlock PIN".into());
+    }
+    let decoy_key = unwrap_decoy_material(&container, &real_key)?;
+
+    // Read → append → re-seal the decoy records under the unwrapped decoy key (same key + monotonic
+    // counter the decoy-PIN path uses, so nonces never collide).
+    let aad = SanctuaryLane::Decoy.aad();
+    let (mut notes, counter) = {
+        let layer = layer_ref(&container, SanctuaryLane::Decoy)?;
+        let pt = open(&decoy_key, &layer.records, aad)?;
+        let notes: Vec<SanctuaryVaultNote> = cbor_decode(&pt)?;
+        (notes, layer.next_counter)
+    };
+    notes.push(SanctuaryVaultNote {
+        id: uuid::Uuid::new_v4().to_string(),
+        body: body.to_string(),
+        created_at_unix: now_unix,
+    });
+    let records_pt = cbor_encode(&notes)?;
+    let blob = seal(&decoy_key, counter, &records_pt, aad);
+    {
+        let layer = layer_mut(&mut container, SanctuaryLane::Decoy)?;
+        layer.records = blob;
+        layer.next_counter = counter.saturating_add(1);
+    }
     save_container(root, &container)
 }
 
@@ -746,5 +897,109 @@ mod tests {
         let (_, notes) = list_notes(dir.path(), "real-pin-1").unwrap();
         assert_eq!(notes.len(), 1);
         assert_eq!(notes[0].body, "persisted secret");
+    }
+
+    // --- S5b: real→decoy key hierarchy + decoy curation ---
+
+    #[test]
+    fn setup_wires_audit_pubkey_and_wrapped_keys() {
+        let dir = tempfile::tempdir().unwrap();
+        setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
+        let container = load_container(dir.path()).unwrap().unwrap();
+        // Decoy layer carries the audit PUBLIC key (so a decoy session can seal to it).
+        let decoy = container.layer_by_role(LayerRole::Decoy).unwrap();
+        assert!(decoy.audit_pubkey_hex.is_some());
+        // The audit secret / pubkey are never both readable from the decoy: only the pubkey is here.
+        assert!(decoy.wrapped_keys.is_empty());
+        // Real layer wraps BOTH the decoy lane key and the audit secret.
+        let real = container.layer_by_role(LayerRole::Real).unwrap();
+        assert!(real.wrapped_key(WK_DECOY_LANE_KEY).is_some());
+        assert!(real.wrapped_key(WK_AUDIT_SECRET).is_some());
+    }
+
+    #[test]
+    fn real_session_curates_decoy_without_decoy_pin() {
+        let dir = tempfile::tempdir().unwrap();
+        setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
+        // The victim, in a safe real session, seeds the decoy — no decoy PIN entered.
+        real_curate_decoy_add_note(dir.path(), "real-pin-1", "plausible cover note", 20).unwrap();
+
+        // The coercer, later, opens the decoy with the duress PIN and sees the seeded note.
+        let (lane, decoy_notes) = list_notes(dir.path(), "decoy-pin-2").unwrap();
+        assert_eq!(lane, SanctuaryLane::Decoy);
+        assert_eq!(decoy_notes.len(), 1);
+        assert_eq!(decoy_notes[0].body, "plausible cover note");
+
+        // The real lane is untouched by curation.
+        let (_, real_notes) = list_notes(dir.path(), "real-pin-1").unwrap();
+        assert!(real_notes.is_empty());
+    }
+
+    #[test]
+    fn curation_and_decoy_pin_writes_coexist_without_nonce_collision() {
+        let dir = tempfile::tempdir().unwrap();
+        setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
+        real_curate_decoy_add_note(dir.path(), "real-pin-1", "seeded-by-real", 20).unwrap();
+        add_note(dir.path(), "decoy-pin-2", "written-by-coercer", 21).unwrap();
+        real_curate_decoy_add_note(dir.path(), "real-pin-1", "seeded-again", 22).unwrap();
+
+        let (_, notes) = list_notes(dir.path(), "decoy-pin-2").unwrap();
+        let bodies: Vec<&str> = notes.iter().map(|n| n.body.as_str()).collect();
+        assert_eq!(bodies, ["seeded-by-real", "written-by-coercer", "seeded-again"]);
+    }
+
+    #[test]
+    fn curation_requires_the_real_pin() {
+        let dir = tempfile::tempdir().unwrap();
+        setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
+        // The decoy PIN cannot curate the decoy (it must not even be able to detect curation).
+        assert!(real_curate_decoy_add_note(dir.path(), "decoy-pin-2", "x", 20).is_err());
+        // A wrong PIN cannot either.
+        assert!(real_curate_decoy_add_note(dir.path(), "nope-nope", "x", 20).is_err());
+    }
+
+    #[test]
+    fn audit_pubkey_on_decoy_and_secret_under_real_correspond() {
+        use qualia_core_db::crypto::sanctuary_audit::{open_sealed, seal_to};
+
+        let dir = tempfile::tempdir().unwrap();
+        setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
+        let container = load_container(dir.path()).unwrap().unwrap();
+
+        // A decoy session seals a record to the audit pubkey it can see on its own layer.
+        let decoy = container.layer_by_role(LayerRole::Decoy).unwrap();
+        let pub_hex = decoy.audit_pubkey_hex.as_ref().unwrap();
+        let mut audit_pub = [0u8; 32];
+        audit_pub.copy_from_slice(&hex::decode(pub_hex).unwrap());
+        let sealed = seal_to(&audit_pub, b"coercer wrote a note under duress", b"branch:test").unwrap();
+
+        // The real lane unwraps the audit secret and opens the record; the decoy never can.
+        let (_lane, real_key) = open_lane(&container, "real-pin-1", None).unwrap();
+        let real = container.layer_by_role(LayerRole::Real).unwrap();
+        let wrapped = real.wrapped_key(WK_AUDIT_SECRET).unwrap();
+        let real_wrap = wrapping_key_from(&real_key);
+        let secret_bytes =
+            unwrap_key(&real_wrap, &hex::decode(&wrapped.blob_hex).unwrap(), WRAP_AAD_AUDIT).unwrap();
+        let mut audit_secret = [0u8; 32];
+        audit_secret.copy_from_slice(&secret_bytes);
+
+        let opened = open_sealed(&audit_secret, &sealed, b"branch:test").unwrap();
+        assert_eq!(opened, b"coercer wrote a note under duress");
+    }
+
+    #[test]
+    fn decoy_key_wrap_is_one_way() {
+        // The wrapped decoy key must NOT unwrap under a wrapping key derived from the decoy lane.
+        let dir = tempfile::tempdir().unwrap();
+        setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
+        let container = load_container(dir.path()).unwrap().unwrap();
+
+        let (_l, real_key) = open_lane(&container, "real-pin-1", None).unwrap();
+        // Sanity: it unwraps under the real key.
+        assert!(unwrap_decoy_material(&container, &real_key).is_ok());
+
+        // But not under the decoy key (the decoy cannot reach up).
+        let (_l2, decoy_key) = open_lane(&container, "decoy-pin-2", None).unwrap();
+        assert!(unwrap_decoy_material(&container, &decoy_key).is_err());
     }
 }
