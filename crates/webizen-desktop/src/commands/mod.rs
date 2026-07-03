@@ -833,6 +833,85 @@ pub fn wellfair_present_credential(
     serde_json::to_string(&presentation).map_err(|e| e.to_string())
 }
 
+fn parse_work_item_type(s: &str) -> qualia_cooperative_core::work_item::WorkItemType {
+    use qualia_cooperative_core::work_item::WorkItemType::*;
+    match s.to_ascii_lowercase().as_str() {
+        "issue" => Issue,
+        "milestone" => Milestone,
+        _ => Task,
+    }
+}
+
+fn parse_work_item_status(s: &str) -> qualia_cooperative_core::work_item::WorkItemStatus {
+    use qualia_cooperative_core::work_item::WorkItemStatus::*;
+    match s.to_ascii_lowercase().as_str() {
+        "proposed" => Proposed,
+        "in_progress" => InProgress,
+        "blocked" => Blocked,
+        "in_review" => InReview,
+        "done" => Done,
+        "cancelled" => Cancelled,
+        _ => Todo,
+    }
+}
+
+#[command]
+pub fn wellfair_add_work_item(
+    app: AppHandle,
+    project_id: String,
+    item_type: String,
+    title: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let item = qualia_cooperative_core::work_item::WorkItem::new(
+        project_id,
+        parse_work_item_type(&item_type),
+        title,
+        wellfair_now_unix(),
+    );
+    let entry = host.add_work_item(&item)?;
+    serde_json::to_string(&entry).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_add_work_item_status(
+    app: AppHandle,
+    work_item_id: String,
+    status: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let event = qualia_cooperative_core::work_item::WorkItemStatusEvent::new(
+        work_item_id,
+        parse_work_item_status(&status),
+        wellfair_now_unix(),
+    );
+    let entry = host.add_work_item_status(&event)?;
+    serde_json::to_string(&entry).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn wellfair_work_item_board(
+    app: AppHandle,
+    project_id: String,
+    limit: usize,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let board = host.work_item_board(&project_id, limit)?;
+    serde_json::to_string(&board).map_err(|e| e.to_string())
+}
+
 fn parse_clinical_report_type(s: &str) -> wellfare_core::clinical::ClinicalReportType {
     use wellfare_core::clinical::ClinicalReportType::*;
     match s.to_ascii_lowercase().as_str() {
@@ -954,6 +1033,24 @@ pub fn wellfair_export_attachment(
         .ok_or_else(|| "attachment not found".to_string())?;
     std::fs::write(&dest_path, &bytes).map_err(|e| format!("cannot write {dest_path}: {e}"))?;
     Ok(serde_json::json!({ "written": bytes.len(), "path": dest_path }).to_string())
+}
+
+#[command]
+pub fn wellfair_add_government_letter_attachment_from_path(
+    app: AppHandle,
+    sender: String,
+    subject: String,
+    action_required: bool,
+    path: String,
+) -> Result<String, String> {
+    let bytes = std::fs::read(&path).map_err(|e| format!("cannot read {path}: {e}"))?;
+    let state = app.state::<HostApiState>();
+    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_mut()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let entry = host.add_government_letter_attachment(&sender, &subject, action_required, &bytes)?;
+    serde_json::to_string(&entry).map_err(|e| e.to_string())
 }
 
 #[command]
@@ -3683,9 +3780,13 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_add_credential,
         wellfair_get_credential,
         wellfair_present_credential,
+        wellfair_add_work_item,
+        wellfair_add_work_item_status,
+        wellfair_work_item_board,
         wellfair_add_clinical_report,
         wellfair_add_clinical_attachment_from_path,
         wellfair_export_attachment,
+        wellfair_add_government_letter_attachment_from_path,
         wellfair_add_assistance_need,
         wellfair_add_welfare_stream,
         wellfair_add_government_letter,

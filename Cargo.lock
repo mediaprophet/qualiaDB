@@ -8688,6 +8688,7 @@ dependencies = [
  "log",
  "lz4_flex",
  "pdf-extract",
+ "qualia-cooperative-core",
  "qualia-core-db",
  "rand 0.10.1",
  "reqwest 0.13.4",
@@ -8706,6 +8707,16 @@ dependencies = [
  "uuid",
  "wellfare-core",
  "winreg 0.56.0",
+]
+
+[[package]]
+name = "qualia-cooperative-core"
+version = "0.0.24"
+dependencies = [
+ "serde",
+ "serde_json",
+ "uuid",
+ "wellfare-core",
 ]
 
 [[package]]
@@ -12668,6 +12679,7 @@ dependencies = [
  "pdf-extract",
  "pollster",
  "qualia-client-core",
+ "qualia-cooperative-core",
  "qualia-core-db",
  "qualia-semantic-library",
  "rand 0.10.1",

@@ -1,0 +1,191 @@
+//! Cooperative work board — tasks/issues/milestones on a replay-safe Kanban (plan §11.2 "Work").
+//!
+//! The current status of each card is derived by the host (latest status event), never mutated
+//! in place — so moving a card appends an immutable transition.
+
+use super::host_client::{
+    add_work_item, add_work_item_status, fetch_work_item_board, BoardColumnDto,
+};
+use dioxus::prelude::*;
+
+const STATUSES: &[(&str, &str)] = &[
+    ("proposed", "Proposed"),
+    ("todo", "To do"),
+    ("in_progress", "In progress"),
+    ("blocked", "Blocked"),
+    ("in_review", "In review"),
+    ("done", "Done"),
+    ("cancelled", "Cancelled"),
+];
+
+#[derive(Clone, Debug)]
+struct BoardUi {
+    status: String,
+    project_id: String,
+    new_title: String,
+    new_type: String,
+    columns: Vec<BoardColumnDto>,
+}
+
+impl Default for BoardUi {
+    fn default() -> Self {
+        Self {
+            status: String::new(),
+            project_id: String::new(),
+            new_title: String::new(),
+            new_type: "task".into(),
+            columns: Vec::new(),
+        }
+    }
+}
+
+#[component]
+pub fn WellfairWorkBoardPanel() -> Element {
+    let mut ui = use_signal(BoardUi::default);
+
+    let load = move || {
+        spawn(async move {
+            let project = ui().project_id.trim().to_string();
+            if project.is_empty() {
+                ui.write().columns = Vec::new();
+                return;
+            }
+            match fetch_work_item_board(&project).await {
+                Ok(cols) => ui.write().columns = cols,
+                Err(e) => ui.write().status = format!("Board unavailable: {e}"),
+            }
+        });
+    };
+
+    let has_cards = ui().columns.iter().any(|c| !c.cards.is_empty());
+
+    rsx! {
+        section {
+            aria_label: "WellFair cooperative work board",
+            style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);margin-bottom:0.85rem;",
+            h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Work board" }
+            p {
+                style: "margin:0 0 0.75rem;font-size:0.74rem;color:var(--qualia-text-muted,#666);",
+                "Tasks, issues, and milestones. Card status is derived from immutable transitions — moving a card records a new event, never rewriting history."
+            }
+            p { style: "margin:0 0 0.5rem;font-size:0.76rem;", "{ui().status}" }
+
+            div {
+                style: "display:flex;gap:0.5rem;align-items:flex-end;margin-bottom:0.5rem;",
+                label {
+                    style: "flex:1;display:flex;flex-direction:column;gap:0.2rem;font-size:0.75rem;",
+                    "Project id"
+                    input {
+                        r#type: "text",
+                        placeholder: "Project id (uuid from Projects panel)",
+                        value: "{ui().project_id}",
+                        oninput: move |e| ui.write().project_id = e.value(),
+                        style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
+                    }
+                }
+                button {
+                    style: "padding:0.4rem 0.7rem;border-radius:8px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.78rem;cursor:pointer;",
+                    onclick: move |_| load(),
+                    "Load board"
+                }
+            }
+
+            div {
+                style: "display:grid;grid-template-columns:2fr 1fr auto;gap:0.5rem;margin-bottom:0.75rem;",
+                input {
+                    r#type: "text",
+                    placeholder: "New work item title",
+                    value: "{ui().new_title}",
+                    oninput: move |e| ui.write().new_title = e.value(),
+                    style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
+                }
+                select {
+                    value: "{ui().new_type}",
+                    onchange: move |e| ui.write().new_type = e.value(),
+                    style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
+                    option { value: "task", "Task" }
+                    option { value: "issue", "Issue" }
+                    option { value: "milestone", "Milestone" }
+                }
+                button {
+                    style: "padding:0.4rem 0.7rem;border-radius:8px;border:none;background:var(--qualia-accent,#2a6f97);color:#fff;font-size:0.8rem;cursor:pointer;",
+                    onclick: move |_| {
+                        let project = ui().project_id.trim().to_string();
+                        let title = ui().new_title.trim().to_string();
+                        if project.is_empty() || title.is_empty() {
+                            ui.write().status = "Enter a project id and a title.".into();
+                            return;
+                        }
+                        let item_type = ui().new_type.clone();
+                        spawn(async move {
+                            ui.write().status = "Adding work item…".into();
+                            match add_work_item(&project, &item_type, &title).await {
+                                Ok(_) => {
+                                    ui.write().status = "Work item added.".into();
+                                    ui.write().new_title = String::new();
+                                    load();
+                                }
+                                Err(e) => ui.write().status = format!("Failed: {e}"),
+                            }
+                        });
+                    },
+                    "Add"
+                }
+            }
+
+            if !has_cards {
+                p {
+                    style: "margin:0;font-size:0.74rem;color:var(--qualia-text-muted,#888);",
+                    "No work items for this project yet. Load a project and add one."
+                }
+            } else {
+                div {
+                    style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.6rem;",
+                    for col in ui().columns.clone() {
+                        if !col.cards.is_empty() {
+                            div {
+                                key: "{col.status}",
+                                style: "border:1px solid var(--qualia-border,#eee);border-radius:8px;padding:0.5rem;background:var(--qualia-surface,#fff);",
+                                h4 {
+                                    style: "margin:0 0 0.4rem;font-size:0.76rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--qualia-text-muted,#666);",
+                                    "{col.status} ({col.cards.len()})"
+                                }
+                                for card in col.cards.clone() {
+                                    div {
+                                        key: "{card.work_item_id}",
+                                        style: "border:1px solid var(--qualia-border,#eee);border-radius:6px;padding:0.4rem;margin-bottom:0.4rem;font-size:0.74rem;",
+                                        div { style: "font-weight:600;margin-bottom:0.25rem;", "{card.title}" }
+                                        div { style: "color:var(--qualia-text-muted,#888);margin-bottom:0.3rem;", "{card.item_type} · {card.priority}" }
+                                        select {
+                                            value: "{card.status}",
+                                            onchange: {
+                                                let id = card.work_item_id.clone();
+                                                move |e| {
+                                                    let id = id.clone();
+                                                    let next = e.value();
+                                                    spawn(async move {
+                                                        match add_work_item_status(&id, &next).await {
+                                                            Ok(_) => {
+                                                                ui.write().status = "Moved.".into();
+                                                                load();
+                                                            }
+                                                            Err(err) => ui.write().status = format!("Failed: {err}"),
+                                                        }
+                                                    });
+                                                }
+                                            },
+                                            style: "width:100%;padding:0.25rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.72rem;",
+                                            for (val, label) in STATUSES.iter() {
+                                                option { value: "{val}", "{label}" }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,7 +1,8 @@
 //! Welfare support — assistance needs, welfare streams, government letters (Phase 3 / LIF-08..14).
 
 use super::host_client::{
-    add_assistance_need, add_government_letter, add_welfare_stream, fetch_health_records,
+    add_assistance_need, add_government_letter, add_government_letter_attachment_from_path,
+    add_welfare_stream, export_attachment, fetch_health_records,
 };
 use super::host_dto::HealthRecordDto;
 use dioxus::prelude::*;
@@ -18,6 +19,8 @@ struct WelfareUi {
     letter_sender: String,
     letter_subject: String,
     letter_action: bool,
+    letter_path: String,
+    export_path: String,
     records: Vec<HealthRecordDto>,
 }
 
@@ -34,6 +37,8 @@ impl Default for WelfareUi {
             letter_sender: String::new(),
             letter_subject: String::new(),
             letter_action: false,
+            letter_path: String::new(),
+            export_path: String::new(),
             records: Vec::new(),
         }
     }
@@ -200,14 +205,24 @@ pub fn WellfairWelfarePanel() -> Element {
                     style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
                 }
             }
-            label {
-                style: "display:flex;align-items:center;gap:0.4rem;font-size:0.76rem;margin-bottom:0.5rem;",
-                input {
-                    r#type: "checkbox",
-                    checked: ui().letter_action,
-                    onchange: move |e| ui.write().letter_action = e.checked(),
+            div {
+                style: "display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.5rem;",
+                label {
+                    style: "display:flex;align-items:center;gap:0.4rem;font-size:0.76rem;",
+                    input {
+                        r#type: "checkbox",
+                        checked: ui().letter_action,
+                        onchange: move |e| ui.write().letter_action = e.checked(),
+                    }
+                    "Action required"
                 }
-                "Action required"
+                input {
+                    r#type: "text",
+                    placeholder: "Attach document file path (optional)",
+                    value: "{ui().letter_path}",
+                    oninput: move |e| ui.write().letter_path = e.value(),
+                    style: "flex:1;min-width:12rem;padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
+                }
             }
             button {
                 style: "margin-bottom:0.85rem;padding:0.4rem 0.75rem;border-radius:8px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.8rem;cursor:pointer;",
@@ -219,14 +234,21 @@ pub fn WellfairWelfarePanel() -> Element {
                         return;
                     }
                     let action = ui().letter_action;
+                    let path = ui().letter_path.trim().to_string();
                     spawn(async move {
                         ui.write().status = "Saving government letter…".into();
-                        match add_government_letter(&sender, &subject, action).await {
+                        let result = if path.is_empty() {
+                            add_government_letter(&sender, &subject, action).await
+                        } else {
+                            add_government_letter_attachment_from_path(&sender, &subject, action, &path).await
+                        };
+                        match result {
                             Ok(_) => {
                                 ui.write().status = "Government letter saved.".into();
                                 ui.write().letter_sender = String::new();
                                 ui.write().letter_subject = String::new();
                                 ui.write().letter_action = false;
+                                ui.write().letter_path = String::new();
                                 reload();
                             }
                             Err(e) => ui.write().status = format!("Failed: {e}"),
@@ -238,15 +260,48 @@ pub fn WellfairWelfarePanel() -> Element {
 
             if !ui().records.is_empty() {
                 h3 { style: "margin:0 0 0.35rem;font-size:0.88rem;", "Records ({ui().records.len()})" }
+                input {
+                    r#type: "text",
+                    placeholder: "Export destination path (for letters with an attachment)",
+                    value: "{ui().export_path}",
+                    oninput: move |e| ui.write().export_path = e.value(),
+                    style: "width:100%;box-sizing:border-box;padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.76rem;margin-bottom:0.4rem;",
+                }
                 ul {
                     style: "margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:0.35rem;",
                     for r in ui().records.clone() {
                         li {
                             key: "{r.id}",
-                            style: "padding:0.4rem 0.5rem;border:1px solid var(--qualia-border,#eee);border-radius:6px;font-size:0.74rem;",
-                            strong { "{r.kind}" }
-                            span { style: "margin-left:0.35rem;color:var(--qualia-text-muted,#888);",
-                                "{r.summary.as_deref().unwrap_or(\"—\")}"
+                            style: "display:flex;justify-content:space-between;align-items:center;gap:0.5rem;padding:0.4rem 0.5rem;border:1px solid var(--qualia-border,#eee);border-radius:6px;font-size:0.74rem;",
+                            span {
+                                strong { "{r.kind}" }
+                                span { style: "margin-left:0.35rem;color:var(--qualia-text-muted,#888);",
+                                    "{r.summary.as_deref().unwrap_or(\"—\")}"
+                                }
+                            }
+                            if r.kind == "government_letter" && r.blob_hash.is_some() {
+                                button {
+                                    style: "padding:0.25rem 0.55rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.72rem;cursor:pointer;white-space:nowrap;",
+                                    onclick: {
+                                        let id = r.id.clone();
+                                        move |_| {
+                                            let id = id.clone();
+                                            let dest = ui().export_path.trim().to_string();
+                                            if dest.is_empty() {
+                                                ui.write().status = "Enter an export destination path first.".into();
+                                                return;
+                                            }
+                                            spawn(async move {
+                                                ui.write().status = "Exporting…".into();
+                                                match export_attachment(&id, &dest).await {
+                                                    Ok(_) => ui.write().status = format!("Exported to {dest}"),
+                                                    Err(e) => ui.write().status = format!("Failed: {e}"),
+                                                }
+                                            });
+                                        }
+                                    },
+                                    "Export"
+                                }
                             }
                         }
                     }

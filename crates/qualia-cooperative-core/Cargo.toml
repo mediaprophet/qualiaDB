@@ -1,0 +1,12 @@
+[package]
+name = "qualia-cooperative-core"
+version = "0.0.24"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.8", features = ["v4", "serde", "js"] }
+# Shared record envelope / q_hash base (re-used, not duplicated). A later refactor may move
+# the record base + projects/finance down into this crate per the cooperative plan §8.1.
+wellfare-core = { path = "../wellfare-core" }

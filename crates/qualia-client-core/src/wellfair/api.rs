@@ -72,6 +72,11 @@ use wellfare_core::credentials::{
     FieldSelectedPresentation,
 };
 use super::blob_store::BlobStore;
+use qualia_cooperative_core::work_item::{
+    build_work_item_envelope, build_work_item_status_envelope, derive_board,
+    parse_work_item_status_summary, parse_work_item_summary, work_item_status_summary,
+    work_item_summary, BoardColumn, WorkItem, WorkItemStatusEvent,
+};
 use wellfare_core::clinical::{
     build_clinical_attachment_envelope, build_clinical_report_envelope, clinical_attachment_summary,
     clinical_report_summary, AttachmentMeta, ClinicalReport, ClinicalReportType,
@@ -103,6 +108,8 @@ const SOURCE_PROJECTS: &str = "wellfair:projects";
 const SOURCE_CREDENTIALS: &str = "wellfair:credentials";
 const SOURCE_CLINICAL: &str = "wellfair:clinical";
 const SOURCE_WELFARE: &str = "wellfair:welfare";
+const QAPP_COOPERATIVE: &str = "qualia-cooperative";
+const SOURCE_COOPERATIVE: &str = "qualia:cooperative";
 
 /// Reconstruct a `Contribution` from a stored/transmitted summary JSON. The record id (which
 /// is the dedup anchor for obligation derivation) is supplied by the caller — the journal row
@@ -1179,10 +1186,11 @@ impl WebizenHostApi {
         self.list_journal_by_kind("clinical_attachment", limit)
     }
 
-    /// Read an attachment's bytes back from the blob store (integrity-verified).
+    /// Read the blob bytes for any record that carries a `blob_hash` (clinical attachments,
+    /// government-letter documents, …), integrity-verified by the blob store.
     pub fn attachment_bytes(&self, record_id: &str) -> Result<Option<Vec<u8>>, String> {
         let Some(entry) = self
-            .list_clinical_attachments(256)?
+            .list_health_records(256)?
             .into_iter()
             .find(|e| e.id == record_id)
         else {
@@ -1267,6 +1275,34 @@ impl WebizenHostApi {
         self.latest_journal_entry()
     }
 
+    /// Record a government letter together with its document bytes (stored as a content-addressed
+    /// blob; the letter's `attachment_blob_hash` is that blob's hash, retrievable via `attachment_bytes`).
+    pub fn add_government_letter_attachment(
+        &mut self,
+        sender: &str,
+        subject: &str,
+        action_required: bool,
+        bytes: &[u8],
+    ) -> Result<JournalEntry, String> {
+        let hash = BlobStore::open(&self.storage_root)
+            .and_then(|store| store.put(bytes))
+            .map_err(|e| e.to_string())?;
+        let mut letter = GovernmentLetter::new(sender, subject, Self::now_unix() as u32);
+        letter.action_required = action_required;
+        letter.attachment_blob_hash = Some(hash);
+        let asserted = Self::now_unix() as u32;
+        let envelope = build_government_letter_envelope(
+            &letter,
+            &self.owner_did,
+            &self.author_did,
+            asserted,
+        );
+        let summary = wellfare_core::welfare_support::government_letter_summary(&letter);
+        self.submit_record_with_summary(QAPP_WELFARE, envelope, SOURCE_WELFARE, Some(summary))?;
+        self.finalize_batch().ok();
+        self.latest_journal_entry()
+    }
+
     /// All welfare-support journal rows (assistance needs, streams, government letters).
     pub fn list_welfare_records(&self, limit: usize) -> Result<Vec<JournalEntry>, String> {
         Ok(self
@@ -1279,6 +1315,83 @@ impl WebizenHostApi {
                 )
             })
             .collect())
+    }
+
+    // --- Cooperative work items (shared cooperative-core domain; plan §8, WP3) ---
+    //
+    // Work items persist through the same signed journal/policy path as WellFair records; a
+    // future dedicated cooperative service may take over persistence, but the domain types and
+    // derivations already live in `qualia-cooperative-core` so the Cooperative Qapp and the
+    // WellFair panels share one implementation.
+
+    pub fn add_work_item(&mut self, item: &WorkItem) -> Result<JournalEntry, String> {
+        let asserted = Self::now_unix() as u32;
+        let envelope =
+            build_work_item_envelope(item, &self.owner_did, &self.author_did, asserted);
+        let summary = work_item_summary(item);
+        self.submit_record_with_summary(
+            QAPP_COOPERATIVE,
+            envelope,
+            SOURCE_COOPERATIVE,
+            Some(summary),
+        )?;
+        self.finalize_batch().ok();
+        self.latest_journal_entry()
+    }
+
+    /// Append an immutable status transition. The current status is a derived projection
+    /// (latest event), never a mutated field — so replayed transitions can't corrupt the board.
+    pub fn add_work_item_status(
+        &mut self,
+        event: &WorkItemStatusEvent,
+    ) -> Result<JournalEntry, String> {
+        let asserted = Self::now_unix() as u32;
+        let envelope =
+            build_work_item_status_envelope(event, &self.owner_did, &self.author_did, asserted);
+        let summary = work_item_status_summary(event);
+        self.submit_record_with_summary(
+            QAPP_COOPERATIVE,
+            envelope,
+            SOURCE_COOPERATIVE,
+            Some(summary),
+        )?;
+        self.finalize_batch().ok();
+        self.latest_journal_entry()
+    }
+
+    pub fn list_work_items(&self, limit: usize) -> Result<Vec<JournalEntry>, String> {
+        self.list_journal_by_kind("work_item", limit)
+    }
+
+    /// Derive the Kanban board for a project from committed work items and their status events.
+    /// Pure over the unique-event-id set, so duplicate/replayed transitions never mis-place a card.
+    pub fn work_item_board(
+        &self,
+        project_id: &str,
+        limit: usize,
+    ) -> Result<Vec<BoardColumn>, String> {
+        let rows = self.list_health_records(limit)?;
+        let mut items = Vec::new();
+        let mut events = Vec::new();
+        for row in rows {
+            let Some(ref summary) = row.summary else { continue };
+            match row.kind.as_str() {
+                "work_item" => {
+                    if let Some(item) = parse_work_item_summary(summary) {
+                        if item.project_id == project_id {
+                            items.push(item);
+                        }
+                    }
+                }
+                "work_item_status" => {
+                    if let Some(ev) = parse_work_item_status_summary(summary) {
+                        events.push(ev);
+                    }
+                }
+                _ => {}
+            }
+        }
+        Ok(derive_board(&items, &events))
     }
 
     /// Companion requests a live section projection; owner must approve minimum kinds before data flows.
@@ -1574,6 +1687,41 @@ mod api_tests {
     }
 
     #[test]
+    fn work_items_commit_and_board_derives_replay_safe() {
+        use qualia_cooperative_core::work_item::{
+            WorkItem, WorkItemStatus, WorkItemStatusEvent, WorkItemType,
+        };
+        let dir = tempdir().unwrap();
+        let mut host = test_host(dir.path());
+        let wi = WorkItem::new("proj-A", WorkItemType::Task, "Write tests", 1_700_000_000);
+        host.add_work_item(&wi).unwrap();
+        host.add_work_item_status(&WorkItemStatusEvent::new(
+            &wi.id,
+            WorkItemStatus::InProgress,
+            1_700_000_100,
+        ))
+        .unwrap();
+
+        let board = host.work_item_board("proj-A", 64).unwrap();
+        let in_progress = board
+            .iter()
+            .find(|c| c.status == WorkItemStatus::InProgress)
+            .unwrap();
+        assert_eq!(in_progress.cards.len(), 1);
+        assert_eq!(in_progress.cards[0].title, "Write tests");
+        // No card left in the default Todo column.
+        let todo = board.iter().find(|c| c.status == WorkItemStatus::Todo).unwrap();
+        assert!(todo.cards.is_empty());
+
+        // A different project's board has no cards.
+        assert!(host
+            .work_item_board("proj-B", 64)
+            .unwrap()
+            .iter()
+            .all(|c| c.cards.is_empty()));
+    }
+
+    #[test]
     fn clinical_attachment_stores_and_retrieves_bytes() {
         let dir = tempdir().unwrap();
         let mut host = test_host(dir.path());
@@ -1584,6 +1732,20 @@ mod api_tests {
         assert_eq!(entry.kind, "clinical_attachment");
         assert_eq!(host.list_clinical_attachments(8).unwrap().len(), 1);
         // The bytes round-trip out of the blob store, integrity-verified.
+        let got = host.attachment_bytes(&entry.id).unwrap().unwrap();
+        assert_eq!(got, bytes);
+    }
+
+    #[test]
+    fn government_letter_attachment_stores_and_retrieves_bytes() {
+        let dir = tempdir().unwrap();
+        let mut host = test_host(dir.path());
+        let bytes = b"%PDF-1.4 letter from the agency";
+        let entry = host
+            .add_government_letter_attachment("Services Australia", "Payment review", true, bytes)
+            .unwrap();
+        assert_eq!(entry.kind, "government_letter");
+        // The generalized attachment_bytes reads any record's blob back.
         let got = host.attachment_bytes(&entry.id).unwrap().unwrap();
         assert_eq!(got, bytes);
     }

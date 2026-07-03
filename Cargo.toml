@@ -13,6 +13,7 @@ members = [
     "crates/webizen-web",
     "crates/qualia-mobile-harness",
     "crates/wellfare-core",
+    "crates/qualia-cooperative-core",
     "crates/qualia-semantic-library",
     "crates/webizen-lite-wasm",
     "crates/qualia-q-forge",

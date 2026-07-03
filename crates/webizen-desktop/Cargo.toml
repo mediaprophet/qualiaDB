@@ -27,6 +27,7 @@ open = "5"
 qualia-core-db = { path = "../qualia-core-db" }
 qualia-client-core = { path = "../qualia-client-core" }
 wellfare-core = { path = "../wellfare-core" }
+qualia-cooperative-core = { path = "../qualia-cooperative-core" }
 webizen-runtime = { path = "../webizen-runtime" }
 webizen-render = { path = "../webizen-render" }
 webizen-studio = { path = "../webizen-studio" }

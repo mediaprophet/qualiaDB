@@ -59,6 +59,7 @@ impl PolicyDecisionService {
                 "wellfair-credentials",
                 "wellfair-clinical",
                 "wellfair-welfare",
+                "qualia-cooperative",
                 "wellfair",
             ],
             classified_writers: &[

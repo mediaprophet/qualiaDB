@@ -6,6 +6,7 @@ use super::health_panel::WellfairHealthPanel;
 use super::life_panel::WellfairLifePanel;
 use super::projects_panel::WellfairProjectsPanel;
 use super::sync_panel::WellfairSyncPanel;
+use super::work_board_panel::WellfairWorkBoardPanel;
 use super::welfare_panel::WellfairWelfarePanel;
 use super::medication_panel::WellfairMedicationPanel;
 use super::personal_panel::WellfairPersonalPanel;
@@ -94,7 +95,10 @@ pub fn WellfairShell() -> Element {
             WellfairCommunicationsPanel {}
             CompanionPairingPanel {}
         },
-        "Projects" => rsx! { WellfairProjectsPanel {} },
+        "Projects" => rsx! {
+            WellfairProjectsPanel {}
+            WellfairWorkBoardPanel {}
+        },
         "Finance" => rsx! { WellfairFinancePanel {} },
         "Credentials" => rsx! { WellfairCredentialsPanel {} },
         "Tools" => rsx! {

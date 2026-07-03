@@ -6,7 +6,7 @@
 
 use core::fmt;
 
-use aes_gcm::aead::{AeadInPlace, KeyInit};
+use aes_gcm::aead::{AeadInOut, KeyInit};
 use pbkdf2::pbkdf2_hmac;
 use sha2::Sha256;
 use zeroize::{Zeroize, ZeroizeOnDrop};
@@ -125,40 +125,37 @@ pub fn encrypt_sanctuary_chunk_in_place(
     match algorithm {
         SanctuaryAeadAlgorithm::Aes256Gcm => {
             let nonce = derive_chunk_nonce(&key_material.volume_tweak, chunk_index);
-            let key = aes_gcm::Key::<aes_gcm::Aes256Gcm>::from_slice(&key_material.cipher_key);
+            let key = <&aes_gcm::Key<aes_gcm::Aes256Gcm>>::try_from(&key_material.cipher_key[..])
+                .map_err(|_| SanctuaryCryptoError::EncryptionFailed)?;
             let cipher = aes_gcm::Aes256Gcm::new(key);
+            let nonce = <&aes_gcm::aead::Nonce<aes_gcm::Aes256Gcm>>::try_from(&nonce[..])
+                .map_err(|_| SanctuaryCryptoError::EncryptionFailed)?;
             let tag = cipher
-                .encrypt_in_place_detached(
-                    aes_gcm::Nonce::from_slice(&nonce),
-                    additional_data,
-                    buffer,
-                )
+                .encrypt_inout_detached(nonce, additional_data, buffer.into())
                 .map_err(|_| SanctuaryCryptoError::EncryptionFailed)?;
             tag_out.copy_from_slice(tag.as_slice());
         }
         SanctuaryAeadAlgorithm::ChaCha20Poly1305 => {
             let nonce = derive_chacha_nonce(&key_material.volume_tweak, chunk_index);
-            let key = chacha20poly1305::Key::from_slice(&key_material.cipher_key);
+            let key = <&chacha20poly1305::Key>::try_from(&key_material.cipher_key[..])
+                .map_err(|_| SanctuaryCryptoError::EncryptionFailed)?;
             let cipher = chacha20poly1305::ChaCha20Poly1305::new(key);
+            let nonce = <&chacha20poly1305::Nonce>::try_from(&nonce[..])
+                .map_err(|_| SanctuaryCryptoError::EncryptionFailed)?;
             let tag = cipher
-                .encrypt_in_place_detached(
-                    chacha20poly1305::Nonce::from_slice(&nonce),
-                    additional_data,
-                    buffer,
-                )
+                .encrypt_inout_detached(nonce, additional_data, buffer.into())
                 .map_err(|_| SanctuaryCryptoError::EncryptionFailed)?;
             tag_out.copy_from_slice(tag.as_slice());
         }
         SanctuaryAeadAlgorithm::XChaCha20Poly1305 => {
             let nonce = derive_xchacha_nonce(&key_material.volume_tweak, chunk_index);
-            let key = chacha20poly1305::Key::from_slice(&key_material.cipher_key);
+            let key = <&chacha20poly1305::Key>::try_from(&key_material.cipher_key[..])
+                .map_err(|_| SanctuaryCryptoError::EncryptionFailed)?;
             let cipher = chacha20poly1305::XChaCha20Poly1305::new(key);
+            let nonce = <&chacha20poly1305::XNonce>::try_from(&nonce[..])
+                .map_err(|_| SanctuaryCryptoError::EncryptionFailed)?;
             let tag = cipher
-                .encrypt_in_place_detached(
-                    chacha20poly1305::XNonce::from_slice(&nonce),
-                    additional_data,
-                    buffer,
-                )
+                .encrypt_inout_detached(nonce, additional_data, buffer.into())
                 .map_err(|_| SanctuaryCryptoError::EncryptionFailed)?;
             tag_out.copy_from_slice(tag.as_slice());
         }
@@ -179,41 +176,41 @@ pub fn decrypt_sanctuary_chunk_in_place(
     match algorithm {
         SanctuaryAeadAlgorithm::Aes256Gcm => {
             let nonce = derive_chunk_nonce(&key_material.volume_tweak, chunk_index);
-            let key = aes_gcm::Key::<aes_gcm::Aes256Gcm>::from_slice(&key_material.cipher_key);
+            let key = <&aes_gcm::Key<aes_gcm::Aes256Gcm>>::try_from(&key_material.cipher_key[..])
+                .map_err(|_| SanctuaryCryptoError::DecryptionFailed)?;
             let cipher = aes_gcm::Aes256Gcm::new(key);
+            let nonce = <&aes_gcm::aead::Nonce<aes_gcm::Aes256Gcm>>::try_from(&nonce[..])
+                .map_err(|_| SanctuaryCryptoError::DecryptionFailed)?;
+            let tag = <&aes_gcm::aead::Tag<aes_gcm::Aes256Gcm>>::try_from(&tag[..])
+                .map_err(|_| SanctuaryCryptoError::DecryptionFailed)?;
             cipher
-                .decrypt_in_place_detached(
-                    aes_gcm::Nonce::from_slice(&nonce),
-                    additional_data,
-                    buffer,
-                    aes_gcm::Tag::from_slice(tag),
-                )
+                .decrypt_inout_detached(nonce, additional_data, buffer.into(), tag)
                 .map_err(|_| SanctuaryCryptoError::DecryptionFailed)?;
         }
         SanctuaryAeadAlgorithm::ChaCha20Poly1305 => {
             let nonce = derive_chacha_nonce(&key_material.volume_tweak, chunk_index);
-            let key = chacha20poly1305::Key::from_slice(&key_material.cipher_key);
+            let key = <&chacha20poly1305::Key>::try_from(&key_material.cipher_key[..])
+                .map_err(|_| SanctuaryCryptoError::DecryptionFailed)?;
             let cipher = chacha20poly1305::ChaCha20Poly1305::new(key);
+            let nonce = <&chacha20poly1305::Nonce>::try_from(&nonce[..])
+                .map_err(|_| SanctuaryCryptoError::DecryptionFailed)?;
+            let tag = <&chacha20poly1305::Tag>::try_from(&tag[..])
+                .map_err(|_| SanctuaryCryptoError::DecryptionFailed)?;
             cipher
-                .decrypt_in_place_detached(
-                    chacha20poly1305::Nonce::from_slice(&nonce),
-                    additional_data,
-                    buffer,
-                    chacha20poly1305::Tag::from_slice(tag),
-                )
+                .decrypt_inout_detached(nonce, additional_data, buffer.into(), tag)
                 .map_err(|_| SanctuaryCryptoError::DecryptionFailed)?;
         }
         SanctuaryAeadAlgorithm::XChaCha20Poly1305 => {
             let nonce = derive_xchacha_nonce(&key_material.volume_tweak, chunk_index);
-            let key = chacha20poly1305::Key::from_slice(&key_material.cipher_key);
+            let key = <&chacha20poly1305::Key>::try_from(&key_material.cipher_key[..])
+                .map_err(|_| SanctuaryCryptoError::DecryptionFailed)?;
             let cipher = chacha20poly1305::XChaCha20Poly1305::new(key);
+            let nonce = <&chacha20poly1305::XNonce>::try_from(&nonce[..])
+                .map_err(|_| SanctuaryCryptoError::DecryptionFailed)?;
+            let tag = <&chacha20poly1305::Tag>::try_from(&tag[..])
+                .map_err(|_| SanctuaryCryptoError::DecryptionFailed)?;
             cipher
-                .decrypt_in_place_detached(
-                    chacha20poly1305::XNonce::from_slice(&nonce),
-                    additional_data,
-                    buffer,
-                    chacha20poly1305::Tag::from_slice(tag),
-                )
+                .decrypt_inout_detached(nonce, additional_data, buffer.into(), tag)
                 .map_err(|_| SanctuaryCryptoError::DecryptionFailed)?;
         }
     }

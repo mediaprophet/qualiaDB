@@ -12,6 +12,7 @@ tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "stream", "blocking"] }
 qualia-core-db = { path = "../qualia-core-db", features = ["sanctuary-crypto"] }
 wellfare-core = { path = "../wellfare-core" }
+qualia-cooperative-core = { path = "../qualia-cooperative-core" }
 futures-util = "0.3"
 bip39 = { version = "2.2.2", features = ["rand"] }
 rand = "0.10.1"
