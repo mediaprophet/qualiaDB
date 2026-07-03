@@ -22,6 +22,9 @@ pub mod receipt;
 pub mod sanctuary;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod sanctuary_vault;
+// The v2 vault container is a native-only on-disk format (the desktop owns keys + the vault) and it
+// persists the native-only audit DAG; gate it to non-wasm like `sanctuary_vault`.
+#[cfg(not(target_arch = "wasm32"))]
 pub mod vault_container;
 pub mod snapshot;
 pub mod sync_outbox;

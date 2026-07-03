@@ -16,6 +16,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use qualia_core_db::crypto::sanctuary_audit_dag::AuditRecord;
+
 /// Number of layer slots every container carries, so the layer *count* is constant regardless of how
 /// many are actually in use (real + decoy(s) + reserved).
 pub const CONTAINER_SLOTS: usize = 4;
@@ -102,6 +104,12 @@ pub struct VaultContainerV2 {
     pub keychain_wrapped: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub vault_id: Option<String>,
+    /// **Append-only** audit DAG (ADR §10): the sealed records a decoy session writes but cannot
+    /// read. Only the real lane holds the audit secret that opens each record's `sealed` blob. The
+    /// vault code only ever *appends* here; the per-branch head anchor (held inside the real lane's
+    /// encrypted records) is what makes truncation / rewrite of the *witnessed* prefix detectable.
+    #[serde(default)]
+    pub audit_log: Vec<AuditRecord>,
 }
 
 impl VaultContainerV2 {
@@ -116,6 +124,7 @@ impl VaultContainerV2 {
             layers,
             keychain_wrapped,
             vault_id,
+            audit_log: Vec::new(),
         };
         container.pad_to_constant_shape();
         Ok(container)

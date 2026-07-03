@@ -1,20 +1,26 @@
 //! Encrypted-at-rest Sanctuary store with an independent decoy lane (master plan §6).
 //!
 //! Unlike the projection filter in [`super::sanctuary`] (which merely hides journal rows on
-//! read), this is a **real boundary**: sensitive notes live only inside AEAD-encrypted lane
-//! files, keyed by material derived from the owner's PIN with PBKDF2-HMAC-SHA256 (310k
-//! iterations) over a per-lane random salt. When the vault is not unlocked there is nothing
-//! readable on disk — not a filtered view, actual ciphertext.
+//! read), this is a **real boundary**: sensitive notes live only inside AEAD-encrypted lanes,
+//! keyed by material derived from the owner's PIN with **Argon2id** (memory-hard; ADR D1) — or
+//! PBKDF2-HMAC-SHA256 for a PBKDF2-configured vault — over a per-lane random salt. When the vault
+//! is not unlocked there is nothing readable on disk — not a filtered view, actual ciphertext.
 //!
-//! Two independent lanes exist:
+//! The on-disk format is the **CBOR-native, n-layer** [`VaultContainerV2`] (vault v2, ADR §2/§9).
+//! There is **no JSON path** anywhere in this module: the container and the per-lane records are
+//! both `ciborium`-encoded. The container carries a constant number of layer slots (padded with
+//! reserved layers) so the on-disk layer *count* reveals nothing about how many lanes are real /
+//! decoy / empty.
+//!
+//! Two independent lanes are in use:
 //! - **Real** — the true Sanctuary, opened by the real PIN.
-//! - **Decoy** — a separate encrypted store with its own salt/key, opened by the duress PIN.
-//!   It never aliases real data (different key, different ciphertext) and a duress unlock only
-//!   ever touches the decoy lane.
+//! - **Decoy** — a separate encrypted lane with its own salt/key, opened by the duress PIN. It
+//!   never aliases real data (different key, different ciphertext) and a duress unlock only ever
+//!   touches the decoy lane.
 //!
-//! The PIN is never stored, not even hashed. A per-lane *verifier* (a fixed magic string
-//! encrypted under the lane key) is used to recognise which lane a PIN belongs to. There is no
-//! destructive "nuke PIN" (plan §6).
+//! The PIN is never stored, not even hashed. A per-lane *verifier* (a fixed magic string encrypted
+//! under the lane key) is used to recognise which lane a PIN belongs to. There is no destructive
+//! "nuke PIN" (plan §6).
 //!
 //! Native-only: `qualia_core_db::crypto::sanctuary_crypto` is `not(wasm32)`; the desktop is the
 //! authoritative node that owns keys and the vault.
@@ -23,17 +29,21 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 use qualia_core_db::crypto::sanctuary_crypto::{
     decrypt_sanctuary_chunk, derive_sanctuary_key_material, derive_sanctuary_key_material_argon2,
     encrypt_sanctuary_chunk, SanctuaryAeadAlgorithm, SanctuaryKeyMaterial, ARGON2_M_COST_KIB,
-    ARGON2_P_COST, ARGON2_T_COST, DEFAULT_PBKDF2_ITERATIONS, SANCTUARY_TAG_BYTES,
+    ARGON2_P_COST, ARGON2_T_COST, SANCTUARY_TAG_BYTES,
 };
 use qualia_core_db::crypto::sanctuary_keychain;
 use sha2::{Digest, Sha256};
 
-pub const SANCTUARY_VAULT_FILE: &str = "wellfair/sanctuary_vault.json";
+use super::vault_container::{EncBlob, KdfDescriptor, Layer, LayerRole, VaultContainerV2};
+
+/// On-disk vault file. **CBOR**, not JSON (vault v2).
+pub const SANCTUARY_VAULT_FILE: &str = "wellfair/sanctuary_vault.cbor";
 const ALGO: SanctuaryAeadAlgorithm = SanctuaryAeadAlgorithm::Aes256Gcm;
 const VERIFIER_MAGIC: &[u8] = b"WELLFAIR-SANCTUARY-VERIFIER-v1";
 /// Reserved chunk index for the verifier so it never shares a nonce with a records write.
@@ -95,6 +105,22 @@ impl SanctuaryLane {
             SanctuaryLane::Decoy => b"wellfair:sanctuary:decoy",
         }
     }
+
+    /// The container layer role this lane maps to.
+    fn role(self) -> LayerRole {
+        match self {
+            SanctuaryLane::Real => LayerRole::Real,
+            SanctuaryLane::Decoy => LayerRole::Decoy,
+        }
+    }
+
+    /// Stable, non-secret layer id used when the lane is first created.
+    fn layer_id(self) -> &'static str {
+        match self {
+            SanctuaryLane::Real => "real",
+            SanctuaryLane::Decoy => "decoy:0",
+        }
+    }
 }
 
 /// A sensitive note held only inside the encrypted vault.
@@ -105,64 +131,16 @@ pub struct SanctuaryVaultNote {
     pub created_at_unix: u32,
 }
 
-/// An AEAD ciphertext blob (hex-encoded) plus the chunk index used to derive its nonce.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-struct EncBlob {
-    chunk_index: u64,
-    ct_hex: String,
-    tag_hex: String,
+// --- CBOR helpers (the vault serializes nothing as JSON) ---
+
+fn cbor_encode<T: Serialize>(value: &T) -> Result<Vec<u8>, String> {
+    let mut buf = Vec::new();
+    ciborium::into_writer(value, &mut buf).map_err(|e| e.to_string())?;
+    Ok(buf)
 }
 
-/// Which key-derivation function a lane uses. Recorded **per lane** so an old (PBKDF2) vault can be
-/// lazily re-derived to Argon2id one lane at a time — you can only re-key the lane whose PIN was
-/// just supplied. Absent on legacy vaults → interpreted as PBKDF2 at the vault's `iterations`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case", tag = "algo")]
-enum KdfDescriptor {
-    Pbkdf2 { iterations: u32 },
-    Argon2id { m_cost_kib: u32, t_cost: u32, p_cost: u32 },
-}
-
-impl KdfDescriptor {
-    /// The production Argon2id parameters (ADR D1).
-    fn argon2_default() -> Self {
-        KdfDescriptor::Argon2id {
-            m_cost_kib: ARGON2_M_COST_KIB,
-            t_cost: ARGON2_T_COST,
-            p_cost: ARGON2_P_COST,
-        }
-    }
-
-    fn is_argon2(&self) -> bool {
-        matches!(self, KdfDescriptor::Argon2id { .. })
-    }
-}
-
-/// Per-lane persisted state: salt, KDF, PIN verifier, encrypted records, and the next nonce counter.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-struct LaneState {
-    salt_hex: String,
-    /// Absent on legacy vaults; `lane_kdf` falls back to PBKDF2 at the vault `iterations`.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    kdf: Option<KdfDescriptor>,
-    verifier: EncBlob,
-    records: EncBlob,
-    next_counter: u64,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-struct VaultMeta {
-    version: u16,
-    iterations: u32,
-    real: LaneState,
-    decoy: LaneState,
-    /// T1.2: when true, the KDF input is peppered with an OS-keychain-held secret keyed by
-    /// `vault_id`. Defaults false so existing (unwrapped) vaults deserialize unchanged.
-    #[serde(default)]
-    keychain_wrapped: bool,
-    /// Stable, non-secret keychain lookup id (path-independent). `Some` only when wrapped.
-    #[serde(default)]
-    vault_id: Option<String>,
+fn cbor_decode<T: DeserializeOwned>(bytes: &[u8]) -> Result<T, String> {
+    ciborium::from_reader(bytes).map_err(|e| e.to_string())
 }
 
 fn vault_path(root: &Path) -> PathBuf {
@@ -172,6 +150,15 @@ fn vault_path(root: &Path) -> PathBuf {
 fn random_salt() -> [u8; 16] {
     // uuid v4 is CSPRNG-backed (getrandom); 16 bytes is ample salt entropy.
     uuid::Uuid::new_v4().into_bytes()
+}
+
+/// The production Argon2id KDF descriptor (ADR D1).
+fn argon2_default_kdf() -> KdfDescriptor {
+    KdfDescriptor::Argon2id {
+        m_cost_kib: ARGON2_M_COST_KIB,
+        t_cost: ARGON2_T_COST,
+        p_cost: ARGON2_P_COST,
+    }
 }
 
 fn seal(key: &SanctuaryKeyMaterial, chunk: u64, plaintext: &[u8], aad: &[u8]) -> EncBlob {
@@ -202,7 +189,7 @@ fn open(key: &SanctuaryKeyMaterial, blob: &EncBlob, aad: &[u8]) -> Result<Vec<u8
     Ok(pt)
 }
 
-/// Fold an optional OS-keychain pepper into the PIN before the PBKDF2 stretch. When no pepper is
+/// Fold an optional OS-keychain pepper into the PIN before the KDF stretch. When no pepper is
 /// present (the default, unwrapped vault) the PIN bytes are used verbatim — so unwrapped vaults
 /// derive exactly as before. A pepper domain-separates and binds the derivation to the keychain
 /// secret: disk + PIN alone cannot reproduce the key.
@@ -219,14 +206,17 @@ fn effective_secret(pin: &str, pepper: Option<&[u8; 32]>) -> Vec<u8> {
     }
 }
 
-/// Resolve a lane's KDF, falling back to PBKDF2 at the vault-level `iterations` for legacy lanes.
-fn lane_kdf(lane: &LaneState, fallback_iterations: u32) -> KdfDescriptor {
-    lane.kdf.clone().unwrap_or(KdfDescriptor::Pbkdf2 {
-        iterations: fallback_iterations,
-    })
+/// Resolve a layer's KDF. Every real/decoy layer a vault creates carries an explicit descriptor;
+/// only reserved padding layers have `None`, and those are never opened. There is no legacy
+/// vault-level `iterations` fallback (no JSON vaults ever existed).
+fn resolve_kdf(layer: &Layer) -> Result<KdfDescriptor, String> {
+    layer
+        .kdf
+        .clone()
+        .ok_or_else(|| "sanctuary layer has no KDF descriptor".to_string())
 }
 
-/// Derive 48-byte lane key material under the lane's KDF.
+/// Derive 48-byte lane key material under the layer's KDF.
 fn derive_lane_material(
     kdf: &KdfDescriptor,
     secret: &[u8],
@@ -246,25 +236,23 @@ fn derive_lane_material(
 
 fn lane_key(
     pin: &str,
-    lane: &LaneState,
-    fallback_iterations: u32,
+    layer: &Layer,
     pepper: Option<&[u8; 32]>,
 ) -> Result<SanctuaryKeyMaterial, String> {
-    let salt = hex::decode(&lane.salt_hex).map_err(|e| e.to_string())?;
+    let salt = hex::decode(&layer.salt_hex).map_err(|e| e.to_string())?;
     let secret = effective_secret(pin, pepper);
-    derive_lane_material(&lane_kdf(lane, fallback_iterations), &secret, &salt)
+    derive_lane_material(&resolve_kdf(layer)?, &secret, &salt)
 }
 
-/// Derive the key for `lane_id` and confirm the PIN opens it (verifier → magic constant).
+/// Derive the key for a layer and confirm the PIN opens it (verifier → magic constant).
 fn try_lane(
     pin: &str,
-    lane: &LaneState,
+    layer: &Layer,
     lane_id: SanctuaryLane,
-    iterations: u32,
     pepper: Option<&[u8; 32]>,
 ) -> Option<SanctuaryKeyMaterial> {
-    let key = lane_key(pin, lane, iterations, pepper).ok()?;
-    match open(&key, &lane.verifier, lane_id.aad()) {
+    let key = lane_key(pin, layer, pepper).ok()?;
+    match open(&key, &layer.verifier, lane_id.aad()) {
         Ok(v) if v == VERIFIER_MAGIC => Some(key),
         _ => None,
     }
@@ -273,20 +261,26 @@ fn try_lane(
 /// Resolve which lane a PIN opens, returning the key alongside it.
 ///
 /// **Constant-work across the three outcomes** (real PIN / duress-decoy PIN / wrong PIN): ALWAYS
-/// derive BOTH lane keys — one full PBKDF2-310k stretch each — before branching on which verifier
-/// opened. Early-returning once the real lane matched would make a real unlock cost one KDF while a
-/// duress or wrong PIN costs two — a ~2x timing tell a coercer could use to single out the real PIN
-/// (i.e. to learn that a *hidden* primary vault exists behind the decoy). The residual difference
-/// (an AEAD tag verify that succeeds on one lane vs fails on the other, plus a short magic-constant
-/// compare) is microseconds beside two 310k-iteration PBKDF2 stretches. This is *equal KDF work*,
-/// not a proof of microarchitectural constant-time — see the Sanctuary threat-model ADR (D4).
+/// derive BOTH lane keys — one full KDF stretch each — before branching on which verifier opened.
+/// Early-returning once the real lane matched would make a real unlock cost one KDF while a duress
+/// or wrong PIN costs two — a ~2x timing tell a coercer could use to single out the real PIN (i.e.
+/// to learn that a *hidden* primary vault exists behind the decoy). The residual difference (an
+/// AEAD tag verify that succeeds on one lane vs fails on the other, plus a short magic-constant
+/// compare) is microseconds beside two memory-hard KDF stretches. This is *equal KDF work*, not a
+/// proof of microarchitectural constant-time — see the Sanctuary threat-model ADR (D4).
 fn open_lane(
-    meta: &VaultMeta,
+    container: &VaultContainerV2,
     pin: &str,
     pepper: Option<&[u8; 32]>,
 ) -> Result<(SanctuaryLane, SanctuaryKeyMaterial), String> {
-    let real_key = try_lane(pin, &meta.real, SanctuaryLane::Real, meta.iterations, pepper);
-    let decoy_key = try_lane(pin, &meta.decoy, SanctuaryLane::Decoy, meta.iterations, pepper);
+    let real = container
+        .layer_by_role(LayerRole::Real)
+        .ok_or("Sanctuary vault is missing its real layer")?;
+    let decoy = container
+        .layer_by_role(LayerRole::Decoy)
+        .ok_or("Sanctuary vault is missing its decoy layer")?;
+    let real_key = try_lane(pin, real, SanctuaryLane::Real, pepper);
+    let decoy_key = try_lane(pin, decoy, SanctuaryLane::Decoy, pepper);
     if let Some(key) = real_key {
         return Ok((SanctuaryLane::Real, key));
     }
@@ -301,41 +295,44 @@ fn new_lane(
     lane_id: SanctuaryLane,
     kdf: KdfDescriptor,
     pepper: Option<&[u8; 32]>,
-) -> Result<LaneState, String> {
+) -> Result<Layer, String> {
     let salt = random_salt();
     let secret = effective_secret(pin, pepper);
     let key = derive_lane_material(&kdf, &secret, &salt)?;
     let aad = lane_id.aad();
     let verifier = seal(&key, VERIFIER_CHUNK, VERIFIER_MAGIC, aad);
     let empty: Vec<SanctuaryVaultNote> = Vec::new();
-    let records_pt = serde_json::to_vec(&empty).expect("serialize empty records");
+    let records_pt = cbor_encode(&empty)?;
     let records = seal(&key, 0, &records_pt, aad);
-    Ok(LaneState {
+    Ok(Layer {
+        id: lane_id.layer_id().to_string(),
+        role: lane_id.role(),
         salt_hex: hex::encode(salt),
         kdf: Some(kdf),
         verifier,
         records,
         next_counter: 1,
+        audit_pubkey_hex: None,
+        wrapped_keys: Vec::new(),
     })
 }
 
-fn load_meta(root: &Path) -> Result<Option<VaultMeta>, String> {
+fn load_container(root: &Path) -> Result<Option<VaultContainerV2>, String> {
     let path = vault_path(root);
     if !path.exists() {
         return Ok(None);
     }
-    let raw = fs::read_to_string(&path).map_err(|e| e.to_string())?;
-    let meta: VaultMeta = serde_json::from_str(&raw).map_err(|e| e.to_string())?;
-    Ok(Some(meta))
+    let raw = fs::read(&path).map_err(|e| e.to_string())?;
+    Ok(Some(VaultContainerV2::from_cbor(&raw)?))
 }
 
-fn save_meta(root: &Path, meta: &VaultMeta) -> Result<(), String> {
+fn save_container(root: &Path, container: &VaultContainerV2) -> Result<(), String> {
     let path = vault_path(root);
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
-    let json = serde_json::to_string_pretty(meta).map_err(|e| e.to_string())?;
-    fs::write(&path, json).map_err(|e| e.to_string())
+    let bytes = container.to_cbor()?;
+    fs::write(&path, bytes).map_err(|e| e.to_string())
 }
 
 /// Is the encrypted vault configured on disk?
@@ -346,19 +343,11 @@ pub fn is_configured(root: impl AsRef<Path>) -> bool {
 /// Create the two encrypted lanes with the production **Argon2id** KDF (memory-hard; ADR D1).
 /// Fails if a PIN is too weak, the PINs are equal, or the vault already exists.
 pub fn setup(root: impl AsRef<Path>, real_pin: &str, decoy_pin: &str) -> Result<(), String> {
-    build_vault(
-        root,
-        real_pin,
-        decoy_pin,
-        KdfDescriptor::argon2_default(),
-        None,
-        None,
-    )
+    build_vault(root, real_pin, decoy_pin, argon2_default_kdf(), None, None)
 }
 
 /// As [`setup`] but with an explicit PBKDF2 iteration count. Crate-internal so **tests** can use a
-/// fast work factor; production goes through [`setup`] (Argon2id). Also the way a legacy PBKDF2
-/// vault is constructed in tests to exercise the lazy Argon2id migration.
+/// fast work factor; production goes through [`setup`] (Argon2id).
 pub(crate) fn setup_with_iterations(
     root: impl AsRef<Path>,
     real_pin: &str,
@@ -393,36 +382,26 @@ fn build_vault(
     if is_configured(root) {
         return Err("Sanctuary vault already exists".into());
     }
-    // `iterations` remains as the legacy PBKDF2 fallback for any lane without its own descriptor;
-    // every lane a new vault creates carries an explicit `kdf`, so it is only a compatibility floor.
-    let iterations = match &kdf {
-        KdfDescriptor::Pbkdf2 { iterations } => *iterations,
-        KdfDescriptor::Argon2id { .. } => DEFAULT_PBKDF2_ITERATIONS,
-    };
-    let meta = VaultMeta {
-        version: 1,
-        iterations,
-        real: new_lane(real_pin, SanctuaryLane::Real, kdf.clone(), pepper)?,
-        decoy: new_lane(decoy_pin, SanctuaryLane::Decoy, kdf, pepper)?,
-        keychain_wrapped: pepper.is_some(),
-        vault_id,
-    };
-    save_meta(root, &meta)
+    let real = new_lane(real_pin, SanctuaryLane::Real, kdf.clone(), pepper)?;
+    let decoy = new_lane(decoy_pin, SanctuaryLane::Decoy, kdf, pepper)?;
+    // `new` pads to the constant layer shape (reserved layers) and stamps the v2 version.
+    let container = VaultContainerV2::new(vec![real, decoy], pepper.is_some(), vault_id)?;
+    save_container(root, &container)
 }
 
-/// Resolve the pepper needed to open `meta`. `override_pepper` (a recovery code) wins; otherwise a
-/// keychain-wrapped vault fetches its pepper from the OS keychain (erroring if the entry is gone).
+/// Resolve the pepper needed to open `container`. `override_pepper` (a recovery code) wins;
+/// otherwise a keychain-wrapped vault fetches its pepper from the OS keychain (erroring if gone).
 fn pepper_for(
-    meta: &VaultMeta,
+    container: &VaultContainerV2,
     override_pepper: Option<[u8; 32]>,
 ) -> Result<Option<[u8; 32]>, String> {
     if let Some(p) = override_pepper {
         return Ok(Some(p));
     }
-    if !meta.keychain_wrapped {
+    if !container.keychain_wrapped {
         return Ok(None);
     }
-    let vault_id = meta
+    let vault_id = container
         .vault_id
         .as_deref()
         .ok_or("Keychain-wrapped vault is missing its vault_id")?;
@@ -435,10 +414,10 @@ fn pepper_for(
 
 /// Is the on-disk vault keychain-wrapped (T1.2)?
 pub fn is_keychain_wrapped(root: impl AsRef<Path>) -> bool {
-    load_meta(root.as_ref())
+    load_container(root.as_ref())
         .ok()
         .flatten()
-        .map(|m| m.keychain_wrapped)
+        .map(|c| c.keychain_wrapped)
         .unwrap_or(false)
 }
 
@@ -461,7 +440,7 @@ pub fn setup_wrapped(
         root,
         real_pin,
         decoy_pin,
-        KdfDescriptor::argon2_default(),
+        argon2_default_kdf(),
         Some(&pepper),
         Some(vault_id.clone()),
     ) {
@@ -481,8 +460,8 @@ pub fn unlock_with_recovery(
     pin: &str,
     recovery_code_hex: &str,
 ) -> Result<SanctuaryLane, String> {
-    let meta = load_meta(root.as_ref())?.ok_or("Sanctuary vault is not set up")?;
-    if !meta.keychain_wrapped {
+    let container = load_container(root.as_ref())?.ok_or("Sanctuary vault is not set up")?;
+    if !container.keychain_wrapped {
         return Err("This vault is not keychain-wrapped; unlock with the PIN alone".into());
     }
     let bytes = hex::decode(recovery_code_hex.trim())
@@ -492,8 +471,8 @@ pub fn unlock_with_recovery(
     }
     let mut pepper = [0u8; 32];
     pepper.copy_from_slice(&bytes);
-    let (lane, _key) = open_lane(&meta, pin, Some(&pepper))?;
-    if let Some(vault_id) = meta.vault_id.as_deref() {
+    let (lane, _key) = open_lane(&container, pin, Some(&pepper))?;
+    if let Some(vault_id) = container.vault_id.as_deref() {
         // Re-seat the pepper for future unlocks on this device.
         sanctuary_keychain::store_pepper(vault_id, &pepper)?;
     }
@@ -502,33 +481,37 @@ pub fn unlock_with_recovery(
 
 /// Resolve which lane a PIN opens (or an error if it opens neither).
 pub fn resolve_lane(root: impl AsRef<Path>, pin: &str) -> Result<SanctuaryLane, String> {
-    let meta = load_meta(root.as_ref())?.ok_or("Sanctuary vault is not set up")?;
-    let pepper = pepper_for(&meta, None)?;
-    Ok(open_lane(&meta, pin, pepper.as_ref())?.0)
+    let container = load_container(root.as_ref())?.ok_or("Sanctuary vault is not set up")?;
+    let pepper = pepper_for(&container, None)?;
+    Ok(open_lane(&container, pin, pepper.as_ref())?.0)
 }
 
-fn lane_ref<'a>(meta: &'a VaultMeta, lane: SanctuaryLane) -> &'a LaneState {
-    match lane {
-        SanctuaryLane::Real => &meta.real,
-        SanctuaryLane::Decoy => &meta.decoy,
-    }
+fn layer_ref(container: &VaultContainerV2, lane: SanctuaryLane) -> Result<&Layer, String> {
+    container
+        .layer_by_role(lane.role())
+        .ok_or_else(|| "Sanctuary vault is missing a lane layer".to_string())
 }
 
-fn lane_mut(meta: &mut VaultMeta, lane: SanctuaryLane) -> &mut LaneState {
-    match lane {
-        SanctuaryLane::Real => &mut meta.real,
-        SanctuaryLane::Decoy => &mut meta.decoy,
-    }
+fn layer_mut(container: &mut VaultContainerV2, lane: SanctuaryLane) -> Result<&mut Layer, String> {
+    let role = lane.role();
+    container
+        .layers
+        .iter_mut()
+        .find(|l| l.role == role)
+        .ok_or_else(|| "Sanctuary vault is missing a lane layer".to_string())
 }
 
 /// Read the notes held in the lane the PIN opens. Nothing is readable without a valid PIN.
-pub fn list_notes(root: impl AsRef<Path>, pin: &str) -> Result<(SanctuaryLane, Vec<SanctuaryVaultNote>), String> {
-    let meta = load_meta(root.as_ref())?.ok_or("Sanctuary vault is not set up")?;
-    let pepper = pepper_for(&meta, None)?;
-    let (lane, key) = open_lane(&meta, pin, pepper.as_ref())?;
-    let state = lane_ref(&meta, lane);
-    let pt = open(&key, &state.records, lane.aad())?;
-    let notes: Vec<SanctuaryVaultNote> = serde_json::from_slice(&pt).map_err(|e| e.to_string())?;
+pub fn list_notes(
+    root: impl AsRef<Path>,
+    pin: &str,
+) -> Result<(SanctuaryLane, Vec<SanctuaryVaultNote>), String> {
+    let container = load_container(root.as_ref())?.ok_or("Sanctuary vault is not set up")?;
+    let pepper = pepper_for(&container, None)?;
+    let (lane, key) = open_lane(&container, pin, pepper.as_ref())?;
+    let layer = layer_ref(&container, lane)?;
+    let pt = open(&key, &layer.records, lane.aad())?;
+    let notes: Vec<SanctuaryVaultNote> = cbor_decode(&pt)?;
     Ok((lane, notes))
 }
 
@@ -540,35 +523,35 @@ pub fn add_note(
     now_unix: u32,
 ) -> Result<SanctuaryLane, String> {
     let root = root.as_ref();
-    let mut meta = load_meta(root)?.ok_or("Sanctuary vault is not set up")?;
-    let pepper = pepper_for(&meta, None)?;
-    let (lane, key) = open_lane(&meta, pin, pepper.as_ref())?;
+    let mut container = load_container(root)?.ok_or("Sanctuary vault is not set up")?;
+    let pepper = pepper_for(&container, None)?;
+    let (lane, key) = open_lane(&container, pin, pepper.as_ref())?;
     let (mut notes, counter) = {
-        let state = lane_ref(&meta, lane);
-        let pt = open(&key, &state.records, lane.aad())?;
-        let notes: Vec<SanctuaryVaultNote> =
-            serde_json::from_slice(&pt).map_err(|e| e.to_string())?;
-        (notes, state.next_counter)
+        let layer = layer_ref(&container, lane)?;
+        let pt = open(&key, &layer.records, lane.aad())?;
+        let notes: Vec<SanctuaryVaultNote> = cbor_decode(&pt)?;
+        (notes, layer.next_counter)
     };
     notes.push(SanctuaryVaultNote {
         id: uuid::Uuid::new_v4().to_string(),
         body: body.to_string(),
         created_at_unix: now_unix,
     });
-    let records_pt = serde_json::to_vec(&notes).map_err(|e| e.to_string())?;
+    let records_pt = cbor_encode(&notes)?;
     let blob = seal(&key, counter, &records_pt, lane.aad());
     {
-        let state = lane_mut(&mut meta, lane);
-        state.records = blob;
-        state.next_counter = counter.saturating_add(1);
+        let layer = layer_mut(&mut container, lane)?;
+        layer.records = blob;
+        layer.next_counter = counter.saturating_add(1);
     }
-    save_meta(root, &meta)?;
+    save_container(root, &container)?;
     Ok(lane)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::wellfair::vault_container::{CONTAINER_SLOTS, CONTAINER_VERSION};
 
     #[test]
     fn setup_rejects_short_or_equal_pins() {
@@ -612,8 +595,26 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
         add_note(dir.path(), "real-pin-1", "TERMINALLY-SENSITIVE-STRING", 10).unwrap();
-        let raw = fs::read_to_string(vault_path(dir.path())).unwrap();
-        assert!(!raw.contains("TERMINALLY-SENSITIVE-STRING"), "sanctuary body leaked to disk");
+        // CBOR is binary now; scan the raw bytes for the sensitive substring.
+        let raw = fs::read(vault_path(dir.path())).unwrap();
+        let needle = b"TERMINALLY-SENSITIVE-STRING";
+        assert!(
+            !raw.windows(needle.len()).any(|w| w == needle),
+            "sanctuary body leaked to disk"
+        );
+    }
+
+    #[test]
+    fn on_disk_container_has_constant_shape_and_v2_version() {
+        let dir = tempfile::tempdir().unwrap();
+        setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
+        let container = load_container(dir.path()).unwrap().unwrap();
+        assert_eq!(container.version, CONTAINER_VERSION);
+        assert_eq!(container.layers.len(), CONTAINER_SLOTS);
+        // The audit log starts empty (populated only by decoy-session writes in S5c).
+        assert!(container.audit_log.is_empty());
+        // Vault file is the .cbor path, and it is not valid UTF-8 JSON text.
+        assert!(vault_path(dir.path()).to_string_lossy().ends_with(".cbor"));
     }
 
     #[test]
@@ -643,18 +644,18 @@ mod tests {
         )
         .unwrap();
 
-        let meta = load_meta(dir.path()).unwrap().unwrap();
-        assert!(meta.keychain_wrapped);
-        assert_eq!(meta.vault_id.as_deref(), Some("test-vault"));
+        let container = load_container(dir.path()).unwrap().unwrap();
+        assert!(container.keychain_wrapped);
+        assert_eq!(container.vault_id.as_deref(), Some("test-vault"));
 
         // Correct pepper opens the real lane.
-        let (lane, _k) = open_lane(&meta, "real-pin-1", Some(&pepper)).unwrap();
+        let (lane, _k) = open_lane(&container, "real-pin-1", Some(&pepper)).unwrap();
         assert_eq!(lane, SanctuaryLane::Real);
 
         // The same PIN with NO pepper (i.e. disk + PIN, as an attacker would try) does NOT open it.
-        assert!(open_lane(&meta, "real-pin-1", None).is_err());
+        assert!(open_lane(&container, "real-pin-1", None).is_err());
         // A wrong pepper does not open it either.
-        assert!(open_lane(&meta, "real-pin-1", Some(&[9u8; 32])).is_err());
+        assert!(open_lane(&container, "real-pin-1", Some(&[9u8; 32])).is_err());
     }
 
     #[test]
@@ -662,9 +663,9 @@ mod tests {
         // Regression: the default (unwrapped) path resolves a None pepper and opens on PIN alone.
         let dir = tempfile::tempdir().unwrap();
         setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
-        let meta = load_meta(dir.path()).unwrap().unwrap();
-        assert!(!meta.keychain_wrapped);
-        assert!(pepper_for(&meta, None).unwrap().is_none());
+        let container = load_container(dir.path()).unwrap().unwrap();
+        assert!(!container.keychain_wrapped);
+        assert!(pepper_for(&container, None).unwrap().is_none());
         assert!(!is_keychain_wrapped(dir.path()));
     }
 
@@ -677,9 +678,15 @@ mod tests {
         assert_eq!(resolve_lane(dir.path(), "real-pass-alpha").unwrap(), SanctuaryLane::Real);
         assert_eq!(resolve_lane(dir.path(), "decoy-pass-beta").unwrap(), SanctuaryLane::Decoy);
         assert!(resolve_lane(dir.path(), "wrong-pass-xyz").is_err());
-        let meta = load_meta(dir.path()).unwrap().unwrap();
-        assert!(matches!(meta.real.kdf, Some(KdfDescriptor::Argon2id { .. })));
-        assert!(matches!(meta.decoy.kdf, Some(KdfDescriptor::Argon2id { .. })));
+        let container = load_container(dir.path()).unwrap().unwrap();
+        assert!(matches!(
+            container.layer_by_role(LayerRole::Real).unwrap().kdf,
+            Some(KdfDescriptor::Argon2id { .. })
+        ));
+        assert!(matches!(
+            container.layer_by_role(LayerRole::Decoy).unwrap().kdf,
+            Some(KdfDescriptor::Argon2id { .. })
+        ));
     }
 
     #[test]
@@ -687,13 +694,16 @@ mod tests {
         // setup() must produce memory-hard Argon2id lanes (real 64 MiB params, one-time cost).
         let dir = tempfile::tempdir().unwrap();
         setup(dir.path(), "correct-horse", "battery-staple-2").unwrap();
-        let meta = load_meta(dir.path()).unwrap().unwrap();
-        assert!(matches!(meta.real.kdf, Some(KdfDescriptor::Argon2id { .. })));
+        let container = load_container(dir.path()).unwrap().unwrap();
+        assert!(matches!(
+            container.layer_by_role(LayerRole::Real).unwrap().kdf,
+            Some(KdfDescriptor::Argon2id { .. })
+        ));
     }
 
     #[test]
-    fn legacy_pbkdf2_vault_still_opens() {
-        // A vault whose lanes have no `kdf` field (legacy) falls back to PBKDF2 at meta.iterations.
+    fn pbkdf2_vault_opens() {
+        // A PBKDF2-configured vault (fast test factor) opens on its PINs.
         let dir = tempfile::tempdir().unwrap();
         setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
         assert_eq!(resolve_lane(dir.path(), "real-pin-1").unwrap(), SanctuaryLane::Real);
@@ -715,12 +725,15 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         setup_with_iterations(dir.path(), "real-pin-1", "decoy-pin-2", 1_000).unwrap();
         add_note(dir.path(), "real-pin-1", "secret", 10).unwrap();
-        // Flip a byte in the stored ciphertext.
-        let mut meta = load_meta(dir.path()).unwrap().unwrap();
-        let mut ct = hex::decode(&meta.real.records.ct_hex).unwrap();
-        ct[0] ^= 0xFF;
-        meta.real.records.ct_hex = hex::encode(&ct);
-        save_meta(dir.path(), &meta).unwrap();
+        // Flip a byte in the stored real-layer ciphertext.
+        let mut container = load_container(dir.path()).unwrap().unwrap();
+        {
+            let layer = layer_mut(&mut container, SanctuaryLane::Real).unwrap();
+            let mut ct = hex::decode(&layer.records.ct_hex).unwrap();
+            ct[0] ^= 0xFF;
+            layer.records.ct_hex = hex::encode(&ct);
+        }
+        save_container(dir.path(), &container).unwrap();
         assert!(list_notes(dir.path(), "real-pin-1").is_err());
     }
 
