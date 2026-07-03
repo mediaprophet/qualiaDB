@@ -20,6 +20,7 @@
 
 mod accumulate;
 mod factor;
+mod knowledge;
 mod systems;
 mod temporal;
 
@@ -28,7 +29,11 @@ pub use accumulate::{
     SystemicImplication,
 };
 pub use factor::{Effect, EvidenceTier, Factor, FactorKind, FactorTarget};
-pub use systems::{body_system, BodySystem, BODY_SYSTEMS};
+pub use knowledge::{
+    import_condition_map, import_entries, seed_knowledge_base, FactorKnowledge, ImportResult,
+    KnowledgeBase, KnowledgeSource, KnowledgeTarget, Provenance,
+};
+pub use systems::{body_system, body_system_by_label, BodySystem, BODY_SYSTEMS};
 pub use temporal::{
     recovery_band, EnvironmentModulator, FactorEvent, Kinetics, RecoveryBand, Timeline,
     TrajectoryPoint,
