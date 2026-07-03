@@ -150,8 +150,12 @@ sweep — flag to Timothy before undertaking.)
       "author a qapp → installable wasm app on your phone" (Timothy: key feature to build upon).
       **P0 foundation DONE**: `qualia-cooperative-core::qapp_package` — `QappManifest` (extensible kinds +
       least-privilege capabilities + content-addressed `WasmRef`) + `generate_pwa` (webmanifest + service
-      worker + loader), 21 tests. Remaining: P1 secure-origin delivery (**⚑ strategy fork**), P2 pairing/install,
-      P3 wasm build pipeline, P4 token-v2 isolation (WP1), P5 Studio Package&Publish (WP2), P6 Cooperative Qapp (WP4).
+      worker + loader), 21 tests. **P1 secure-origin DECIDED (Timothy, 2026-07-03): WebRTC data channel to a
+      local origin, both devices on the same network** (LAN-only, no cloud relay; same-network + an out-of-band
+      pairing secret = the trust model; the loopback secure-context *bootstrap* on mobile is the remaining P1
+      design work). Remaining: P1 WebRTC delivery (supersedes the LAN-WS companion gateway — **Grok's lane,
+      coordinate**), P2 pairing/install, P3 wasm build pipeline, P4 token-v2 isolation (WP1), P5 Package&Publish
+      (WP2 done), P6 Cooperative Qapp (WP4).
 - [~] **T3.3** Phase-6 release hardening — **backup/restore + diagnostics DONE** (`e9f13c29`, `b57bb89f`,
       diagnostics commit; local): portable, path-traversal-safe `lz4(cbor)` archive of the `wellfair/` data
       subtree (vault stays encrypted) + a **node diagnostics** report (records, sync-queue depths, data
@@ -164,13 +168,16 @@ sweep — flag to Timothy before undertaking.)
 
 ## F. Cooperative Qapp plan work packages (parallel initiative)
 
-- [~] **WP1** Qapp token v2 + per-app isolation + CSP — **CSP + isolation DONE** (`e9fdede7`, local): the
-      generated PWA now carries a strict **capability-derived CSP** (default-deny; own-origin scripts +
-      `wasm-unsafe-eval`, no `unsafe-inline`; `connect-src 'none'` unless the qapp requests `Sync`, then
-      same-origin only) and the bootstrap script is externalised to `loader.js` so nothing arbitrary can
-      inject. 27 qapp_package tests. **Remaining:** the capability *token v2* runtime-enforcement layer
-      (per-app grant tokens the host checks on each capability use) — belongs with the delivery/runtime
-      layer (companion-PWA P1, Timothy's strategy fork).
+- [~] **WP1** Qapp token v2 + per-app isolation + CSP — **CORRECTION (honesty):** what landed (`e9fdede7`) is
+      only the **generated companion-PWA CSP** (capability-derived: default-deny; own-origin scripts +
+      `wasm-unsafe-eval`, no `unsafe-inline`; `connect-src 'none'` unless the qapp requests `Sync`; loader
+      externalised), i.e. a slice of companion-PWA **P4**. The plan's real **WP1 / §7 is much larger and NOT
+      done:** the **installed-Qapp token v2** (version, qapp_did, package hash, session_id, issued/expires,
+      audience, allowed shape+capability hashes, max sensitivity, nonce), verify-on-every-intent, one-time
+      bootstrap (scrub token from URL, memory-only), MCP/WS session binding, **per-app origin isolation +
+      CSP/security headers on the loopback asset server**, and offline/CSP package lint. This is the P0
+      **release gate** for restricted-data Qapps (plan §7). 27 qapp_package tests cover only the generated-PWA
+      CSP piece.
 - [x] **WP2** Studio Package & Publish — **DONE**: host `write_pwa_bundle` (reuses P0 `generate_pwa`,
       path-traversal-safe, 4 tests) + `publish_qapp_pwa` + native folder-picker + a **Qapps** Studio area
       (manifest fields → least-privilege capabilities → generate installable PWA scaffold to a folder). No

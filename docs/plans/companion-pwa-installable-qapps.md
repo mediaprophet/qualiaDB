@@ -64,12 +64,30 @@ not gaps in P0. The module doc says so plainly.
 
 Each stage is independently useful and testable; later stages assume earlier ones.
 
-- **P1 — Secure-origin delivery (the hard, load-bearing part).** Serve the generated PWA over a context the
-  phone will treat as installable: HTTPS with a real cert, `localhost`, or a WebRTC data channel to a
-  local origin. Options to evaluate: a loopback/HTTPS server with a device-trusted cert; a tunnelled TLS
-  origin; or pairing over WebRTC. This is where "installable on your phone" actually becomes true. Reuses
-  and generalises the existing companion gateway (currently plain LAN-WS — Grok's Phase-4 lane; coordinate,
-  do not duplicate).
+- **P1 — Secure-origin delivery (the hard, load-bearing part). DECISION (Timothy, 2026-07-03): WebRTC
+  data channel to a *local origin*, and both devices must be on the same network.** The fork below is
+  resolved in favour of WebRTC. The model:
+  - **Transport = WebRTC data channel, LAN-only.** Use host ICE candidates only — **no STUN/TURN relay,
+    no tunnel service** — so a connection can only form between peers that can route to each other on the
+    local network. Data never leaves the LAN and never touches a cloud relay. The channel is DTLS-encrypted
+    end-to-end via fingerprints exchanged at pairing, so **no CA-signed cert per device** is needed.
+  - **Same-network is a deliberate security property, not just a limitation.** It makes *physical/network
+    proximity a factor*: an attacker must already be on your LAN to even attempt a connection. It pairs
+    with an **out-of-band pairing secret** (QR / short code, P2) so that being on the same network is
+    *necessary but not sufficient* — a co-network attacker still cannot pair without the secret.
+  - **"Local origin" satisfies installability.** A PWA install / service-worker registration requires a
+    *secure context*; a plain `http://192.168.x.x` LAN origin is **not** one. `localhost`/loopback **is** a
+    potentially-trustworthy (secure) origin. So the phone runs/loads the app from a **local/loopback origin**
+    (the secure context that makes "Add to Home Screen" and the SW work) and uses the WebRTC channel purely
+    as the encrypted LAN transport to the desktop node.
+  - **⚑ The one genuinely-hard sub-problem that remains (not decided by choosing WebRTC):** how the phone
+    obtains that loopback secure context for the **very first** load/bootstrap of the bundle — trivial to
+    keep offline once cached (the SW serves it), but the initial secure-context bootstrap is constrained on
+    mobile (esp. iOS, which forbids in-browser loopback servers). Candidate mechanisms to spec in P1/P2:
+    deliver the bundle over the data channel into a SW-controlled cache seeded from a one-time secure
+    bootstrap, vs. a minimal platform-native loopback shim. This is the concrete P1 design work.
+  - Reuses/generalises the existing companion gateway (currently plain LAN-WS — **Grok's Phase-4 lane;
+    coordinate, do not duplicate** — the WebRTC transport supersedes the LAN-WS path).
 - **P2 — Pairing + install flow.** QR/short-code pairing from desktop to phone, the delivery of the PWA
   bundle, and the guided "Add to Home Screen" experience, with the qapp bound to the person's node.
 - **P3 — Wasm build pipeline.** Produce the qapp's wasm bundle from the shared engine (the full-wasm bundle
@@ -95,7 +113,8 @@ Each stage is independently useful and testable; later stages assume earlier one
 
 ## 6. ⚑ Where the human decides
 
-- **P1 secure-origin strategy is a real fork** (device-trusted HTTPS cert vs tunnelled TLS vs WebRTC),
-  each with different trust/UX trade-offs. This is the first decision to make before P1 code — I will bring
-  a concrete comparison when we reach it.
+- ~~**P1 secure-origin strategy is a real fork**~~ — **RESOLVED (Timothy, 2026-07-03): WebRTC data channel
+  to a local origin, both devices on the same network** (LAN-only, no cloud relay; same-network + an
+  out-of-band pairing secret is the trust model). See P1 above. Remaining P1 design work is the mobile
+  secure-context *bootstrap*, not the strategy choice.
 - **Which qapp kinds ship first** (journal? health companion? cooperative board?) — sequences P5/P6.
