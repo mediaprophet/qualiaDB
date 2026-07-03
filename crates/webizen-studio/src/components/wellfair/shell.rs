@@ -2,6 +2,7 @@ use super::clinical_panel::WellfairClinicalPanel;
 use super::consent_panel::WellfairConsentPanel;
 use super::credentials_panel::WellfairCredentialsPanel;
 use super::finance_panel::WellfairFinancePanel;
+use super::guardianship_panel::WellfairGuardianshipPanel;
 use super::health_panel::WellfairHealthPanel;
 use super::life_panel::WellfairLifePanel;
 use super::projects_panel::WellfairProjectsPanel;
@@ -30,6 +31,7 @@ const AREAS: &[(&str, &str)] = &[
     ("Life", "Phase 3 — events and welfare"),
     ("Relationships", "Phase 2 — Social Book + consent"),
     ("Consent", "Phase 2 — access profiles"),
+    ("Guardianship", "Supported agency — co-signature"),
     ("Sanctuary", "Phase 3 — isolated domain"),
     ("Communications", "Phase 4 — live share consent"),
     ("Projects", "Phase 5 — cooperative work"),
@@ -91,6 +93,7 @@ pub fn WellfairShell() -> Element {
             WellfairConsentPanel {}
         },
         "Consent" => rsx! { WellfairConsentPanel {} },
+        "Guardianship" => rsx! { WellfairGuardianshipPanel {} },
         "Communications" => rsx! {
             WellfairCommunicationsPanel {}
             CompanionPairingPanel {}

@@ -128,6 +128,10 @@ pub fn journal_kind_for_record_id(record_id: &str) -> &'static str {
         "welfare_stream"
     } else if record_id.contains(":government_letter:") {
         "government_letter"
+    } else if record_id.contains(":guardianship_proposal:") {
+        "guardianship_proposal"
+    } else if record_id.contains(":guardianship_vote:") {
+        "guardianship_vote"
     } else if record_id.contains(":work_item_status:") {
         "work_item_status"
     } else if record_id.contains(":work_item:") {

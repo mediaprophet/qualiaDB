@@ -60,6 +60,7 @@ impl PolicyDecisionService {
                 "wellfair-clinical",
                 "wellfair-welfare",
                 "qualia-cooperative",
+                "wellfair-guardianship",
                 "wellfair",
             ],
             classified_writers: &[
@@ -83,6 +84,12 @@ impl PolicyDecisionService {
     }
 
     /// Evaluates if a qApp capability is permitted to act on a record with a given sensitivity.
+    ///
+    /// `is_proxy_action` marks a write made by an agent acting *on behalf of* the principal
+    /// (the envelope carries a `proxy_did` distinct from the owner). Supported-agency
+    /// accountability holds such a write in escrow for M-of-N guardian co-signature rather than
+    /// committing it silently — see [`super::guardianship`]. Non-proxy writes (the principal
+    /// acting for themselves) are unaffected.
     pub fn evaluate_access(
         &self,
         qapp_id: &str,
@@ -91,6 +98,7 @@ impl PolicyDecisionService {
         epistemic: EpistemicStatus,
         active_grants: &[ConsentGrantRecord],
         now_unix: u64,
+        is_proxy_action: bool,
     ) -> DecisionResult {
         if sensitivity == SensitivityClass::Classified {
             if requested_scope == "write_record"
@@ -112,6 +120,16 @@ impl PolicyDecisionService {
             return DecisionResult::Deny {
                 reasons: vec!["Refuted claims cannot be written as active records".into()],
             };
+        }
+
+        // Supported-agency escrow: a proxy writing a protected record on the principal's behalf
+        // does not auto-commit — it suspends pending M-of-N guardian co-signature. (Classified is
+        // handled above by the fail-closed writer allowlist; Public needs no escrow.)
+        if is_proxy_action
+            && requested_scope == "write_record"
+            && sensitivity == SensitivityClass::Restricted
+        {
+            return DecisionResult::Suspend { required_approvals: 2 };
         }
 
         match requested_scope {
@@ -161,6 +179,7 @@ mod tests {
             EpistemicStatus::Asserted,
             &[],
             0,
+            false,
         );
         assert!(matches!(d, DecisionResult::Deny { .. }));
     }
@@ -175,6 +194,7 @@ mod tests {
             EpistemicStatus::Asserted,
             &[],
             0,
+            false,
         );
         assert!(matches!(d, DecisionResult::Permit { .. }));
     }
@@ -189,6 +209,7 @@ mod tests {
             EpistemicStatus::Asserted,
             &[],
             0,
+            false,
         );
         assert!(matches!(d, DecisionResult::Permit { .. }));
     }
@@ -214,6 +235,53 @@ mod tests {
             EpistemicStatus::Asserted,
             &[grant],
             100,
+            false,
+        );
+        assert!(matches!(d, DecisionResult::Permit { .. }));
+    }
+
+    #[test]
+    fn proxy_restricted_write_suspends_for_guardian_cosignature() {
+        let svc = PolicyDecisionService::new();
+        // Even a trusted health-writer qapp: a *proxy* write on protected data escrows.
+        let d = svc.evaluate_access(
+            "wellfair-health",
+            "write_record",
+            SensitivityClass::Restricted,
+            EpistemicStatus::Asserted,
+            &[],
+            0,
+            true,
+        );
+        assert!(matches!(d, DecisionResult::Suspend { required_approvals: 2 }));
+    }
+
+    #[test]
+    fn proxy_public_write_is_not_escrowed() {
+        let svc = PolicyDecisionService::new();
+        let d = svc.evaluate_access(
+            "wellfair-health",
+            "write_record",
+            SensitivityClass::Public,
+            EpistemicStatus::Asserted,
+            &[],
+            0,
+            true,
+        );
+        assert!(matches!(d, DecisionResult::Permit { .. }));
+    }
+
+    #[test]
+    fn non_proxy_restricted_write_still_permits() {
+        let svc = PolicyDecisionService::new();
+        let d = svc.evaluate_access(
+            "wellfair-health",
+            "write_record",
+            SensitivityClass::Restricted,
+            EpistemicStatus::Asserted,
+            &[],
+            0,
+            false,
         );
         assert!(matches!(d, DecisionResult::Permit { .. }));
     }

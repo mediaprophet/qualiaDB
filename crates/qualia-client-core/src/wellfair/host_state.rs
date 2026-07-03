@@ -83,6 +83,67 @@ pub enum PolicyDecisionDto {
     Suspend { required_approvals: u8 },
 }
 
+/// Outcome of a policy-gated write that may enter the guardianship escrow.
+///
+/// `Committed` — the record was written (quins materialized). `Suspended` — a proxy write of a
+/// protected record is held pending M-of-N guardian co-signature; the returned `proposal_id`
+/// identifies the pending [`crate::wellfair`] proposal in the approval tray.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", tag = "outcome")]
+pub enum SubmitOutcome {
+    Committed { quins: usize },
+    Suspended { proposal_id: String, threshold: u8 },
+}
+
+/// UI view of a guardianship proposal + its derived approval status.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GuardianshipProposalView {
+    pub proposal_id: String,
+    pub principal_did: String,
+    pub proxy_did: String,
+    pub escrowed_kind: String,
+    pub reason: String,
+    pub created_unix: u32,
+    /// "pending" | "ratified" | "denied".
+    pub state: String,
+    pub approvals: u8,
+    pub threshold: u8,
+    pub denied_by: Option<String>,
+    pub denial_reason: Option<String>,
+    /// Whether the escrowed record has been committed (true once ratified + written).
+    pub committed: bool,
+}
+
+impl GuardianshipProposalView {
+    pub fn from_status(
+        proposal: &wellfare_core::guardianship::GuardianshipProposal,
+        status: &wellfare_core::guardianship::ProposalStatus,
+        committed: bool,
+    ) -> Self {
+        use wellfare_core::guardianship::ProposalState;
+        let state = match status.state {
+            ProposalState::Pending => "pending",
+            ProposalState::Ratified => "ratified",
+            ProposalState::Denied => "denied",
+        }
+        .to_string();
+        Self {
+            proposal_id: proposal.id.clone(),
+            principal_did: proposal.principal_did.clone(),
+            proxy_did: proposal.proxy_did.clone(),
+            escrowed_kind: proposal.escrowed_kind.clone(),
+            reason: proposal.reason.clone(),
+            created_unix: proposal.created_unix,
+            state,
+            approvals: status.approvals,
+            threshold: status.threshold,
+            denied_by: status.denied_by.clone(),
+            denial_reason: status.denial_reason.clone(),
+            committed,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WellfairHostSnapshot {
     pub vault: VaultLifecycle,

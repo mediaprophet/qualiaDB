@@ -376,3 +376,47 @@ OS-keychain vault key-wrapping; `aead` API modernization in `qualia-core-db`.
 
 **Next step:** government-letter attachment bytes (same pattern); OS-keychain vault hardening; or a native
 file-dialog nicety.
+
+---
+
+## 2026-07-03 — T1.5 guardianship M:N: proxy-write approval escrow, wired end-to-end (Claude / Opus 4.8) — DONE
+
+**Phase / status:** WellFair finish-out §C T1.5 — the real Phase-3 guardianship gap. The `Suspend`
+policy variant and `SuspendedTransactionQueue` existed but were **never wired**: policy never emitted
+`Suspend`, and the submit path lumped it with `Prompt` and returned a flat error. Now it is a real
+approval escrow, proven end-to-end. All green.
+
+**What was built (supported agency, not warden control):**
+- `wellfare-core/guardianship.rs` — `GuardianshipProposal` (escrows the serialized `RecordEnvelope` +
+  threshold + reason) and immutable `GuardianshipVote`; `derive_status` is a **replay-safe projection**
+  (latest-vote-per-guardian; duplicated/reordered co-signatures converge; a standing objection halts the
+  escrow as a protective veto). 10 tests.
+- `wellfair/policy.rs` — `evaluate_access` gains `is_proxy_action`; a **proxy** write of a **Restricted**
+  record now returns `Suspend { required_approvals: 2 }` instead of silently committing. Non-proxy writes
+  are unchanged (every existing test still green); Classified retains its fail-closed allowlist. +3 tests.
+- `wellfair/api.rs` — refactored the submit path into `submit_record_guarded → SubmitOutcome`
+  (`Committed`/`Suspended`); `submit_record_with_summary` is now a thin back-compat wrapper. On `Suspend`
+  the write is escrowed as a proposal record; `list_guardianship_proposals` (derived status + committed
+  flag), `vote_guardianship_proposal` (append vote → re-derive → **on ratification commit the escrowed
+  record through the signed vault path, idempotently**), and a supporter entry point
+  `propose_proxy_condition`. +3 host tests (suspend→2 approvals→commit→replay-safe; objection denies+blocks;
+  non-proxy unaffected).
+- Desktop: 3 Tauri commands (`wellfair_propose_proxy_condition`, `_list_guardianship_proposals`,
+  `_vote_guardianship_proposal`) registered; host_client bridge (+ `GuardianshipProposalDto`); a new
+  **Guardianship** Studio area/panel — record-on-behalf form + approval tray with Approve / Object.
+
+**Measured results:** `cargo test -p wellfare-core` → **86 passed** (+10). `cargo test -p
+qualia-client-core wellfair::` → **94 passed** (+7). `cargo test -p qualia-cooperative-core` → 60.
+`cargo check` green: `webizen-desktop`, `webizen-studio` (host **and** `wasm32-unknown-unknown`).
+
+**⚑ Where I need the human (one values call):** the escrow's veto semantics — I implemented **"any
+guardian objection halts the request"** (fail-safe / protective of the principal against an erring proxy).
+The alternative is "advisory objection; ratify once approvals ≥ threshold regardless." I chose the
+protective default; if you want threshold-wins-over-objection (or a configurable per-delegation policy),
+that's a one-line change in `derive_status` + a flag on the delegation. Also: the suspension trigger is
+currently "proxy + Restricted"; extending it to consequential-domain gating from the agency layer
+(`agency_domain::is_consequential`) is the tracked Migration follow-up, not a gap in this mechanism.
+
+**Next step:** T1.4 native file dialogs (Tauri dialog plugin) or T1.2 OS-keychain wrapping (recovery-gated,
+off by default) — both remaining §C finish-out items; then the ZK predicate circuits so property-proofs
+back the disclosure modality with the now-real Groth16.

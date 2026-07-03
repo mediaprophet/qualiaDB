@@ -51,15 +51,22 @@
 - [x] ABAC evaluation — `delegation_permits(...)` with **selfhood default-deny** + consequential-domain
       provenance-required + trigger-gating + jurisdiction match
 - [ ] Host API + Tauri commands + Studio panel(s) — Social Book / Agency surface
-- [ ] Migration: keep `wellfair` project/finance/contribution ids traceable; wire guardianship `Suspend`;
-      generalize `government_letter` → authority attestation; predicate circuits for ZK property-proofs
+- [~] Migration: **guardianship `Suspend` wired** (see §C T1.5 — `submit_record_guarded` + escrow +
+      M-of-N ratification). Remaining: keep `wellfair` project/finance/contribution ids traceable when the
+      dedicated cooperative service lands; generalize `government_letter` → authority attestation;
+      predicate circuits for ZK property-proofs.
 
 ## C. WellFair finish-out
 
 - [ ] **T1.2** OS-keychain vault wrapping — **⚑ recovery-model gate** (keychain loss = vault loss); build
       opt-in/off-by-default; enable only after Timothy's recovery-code decision
 - [ ] **T1.4** native file dialogs (`tauri-plugin-dialog`) for attach/export; typed paths remain fallback
-- [ ] **T1.5** guardianship M:N — folded into the agency layer (§B); wire `PolicyService::Suspend`
+- [x] **T1.5** guardianship M:N — **DONE**: proxy writes of protected (Restricted) records suspend into a
+      persisted `GuardianshipProposal`; M-of-N guardians co-sign with immutable votes; status is a
+      replay-safe *derived* projection (latest-vote-per-guardian, protective veto); on ratification the
+      escrowed record commits through the signed vault path (idempotent). `wellfare-core/guardianship.rs`
+      (10 tests) + policy `Suspend` production + `submit_record_guarded`/escrow/vote host API (3 host tests)
+      + 3 Tauri cmds + host_client bridge + **Guardianship** Studio panel/area. 94 wellfair tests green.
 - [ ] Generalize `government_letter` → **authority attestation** record (ADR §2) once agency layer lands
 
 ## D. Human-gated (Timothy decides, then implementable)

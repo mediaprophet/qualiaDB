@@ -1610,6 +1610,103 @@ pub async fn fetch_work_item_board(_project_id: &str) -> Result<Vec<BoardColumnD
     Ok(vec![])
 }
 
+// --- Guardianship approval escrow (M-of-N co-signature for proxy actions; T1.5) ---
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct GuardianshipProposalDto {
+    pub proposal_id: String,
+    pub principal_did: String,
+    pub proxy_did: String,
+    pub escrowed_kind: String,
+    pub reason: String,
+    pub created_unix: u32,
+    /// "pending" | "ratified" | "denied".
+    pub state: String,
+    pub approvals: u8,
+    pub threshold: u8,
+    pub denied_by: Option<String>,
+    pub denial_reason: Option<String>,
+    pub committed: bool,
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn propose_proxy_condition(proxy_did: &str, label: &str) -> Result<String, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"proxyDid".into(), &wasm_bindgen::JsValue::from_str(proxy_did))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"label".into(), &wasm_bindgen::JsValue::from_str(label))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_propose_proxy_condition", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    js.as_string().ok_or_else(|| "proxy proposal response not JSON".to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn propose_proxy_condition(_proxy_did: &str, _label: &str) -> Result<String, String> {
+    Err("Guardianship requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_guardianship_proposals(
+    limit: usize,
+) -> Result<Vec<GuardianshipProposalDto>, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"limit".into(), &wasm_bindgen::JsValue::from(limit as u32))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_list_guardianship_proposals", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "proposals response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn fetch_guardianship_proposals(
+    _limit: usize,
+) -> Result<Vec<GuardianshipProposalDto>, String> {
+    Ok(vec![])
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn vote_guardianship_proposal(
+    proposal_id: &str,
+    guardian_did: &str,
+    approve: bool,
+    reason: Option<&str>,
+) -> Result<GuardianshipProposalDto, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"proposalId".into(), &wasm_bindgen::JsValue::from_str(proposal_id))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"guardianDid".into(), &wasm_bindgen::JsValue::from_str(guardian_did))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"approve".into(), &wasm_bindgen::JsValue::from_bool(approve))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    if let Some(r) = reason {
+        js_sys::Reflect::set(&args, &"reason".into(), &wasm_bindgen::JsValue::from_str(r))
+            .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_vote_guardianship_proposal", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "vote response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn vote_guardianship_proposal(
+    _proposal_id: &str,
+    _guardian_did: &str,
+    _approve: bool,
+    _reason: Option<&str>,
+) -> Result<GuardianshipProposalDto, String> {
+    Err("Guardianship requires the Tauri desktop host".into())
+}
+
 #[cfg(target_arch = "wasm32")]
 pub async fn add_assistance_need(
     category: &str,

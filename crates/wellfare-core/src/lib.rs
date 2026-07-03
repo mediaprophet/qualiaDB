@@ -5,6 +5,7 @@ pub mod credentials;
 pub mod live_share;
 pub mod conditions;
 pub mod finance;
+pub mod guardianship;
 pub mod life_records;
 pub mod projects;
 pub mod mental_wellbeing;
