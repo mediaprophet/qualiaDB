@@ -1053,6 +1053,32 @@ pub fn wellfair_sync_with_relay(
     .to_string())
 }
 
+// --- Backup / restore (T3.3) -----------------------------------------------------------------
+
+/// Write a portable backup of this node's WellFair data to `path`. Returns `{ "files": n, "bytes": n }`.
+#[command]
+pub fn wellfair_export_backup(app: AppHandle, path: String) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let report = host.export_backup_to_path(&path)?;
+    Ok(serde_json::json!({ "files": report.files, "bytes": report.bytes }).to_string())
+}
+
+/// Restore a backup archive from `path` into this node's storage. Returns `{ "files": n, "bytes": n }`.
+#[command]
+pub fn wellfair_import_backup(app: AppHandle, path: String) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let report = host.import_backup_from_path(&path)?;
+    Ok(serde_json::json!({ "files": report.files, "bytes": report.bytes }).to_string())
+}
+
 // --- Wellbeing self-assessment instruments (T2.2; PHQ-9 / GAD-7) -----------------------------
 
 /// The instruments this build ships (items, options, bands, disclaimer).
@@ -4235,6 +4261,8 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_revoke_agency_delegation,
         wellfair_evaluate_agency_access,
         wellfair_sync_with_relay,
+        wellfair_export_backup,
+        wellfair_import_backup,
         wellfair_list_assessment_instruments,
         wellfair_record_assessment,
         wellfair_list_assessments,

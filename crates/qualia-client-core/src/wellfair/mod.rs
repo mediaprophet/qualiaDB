@@ -1,5 +1,6 @@
 pub mod accessibility_prefs;
 pub mod api;
+pub mod backup;
 pub mod blob_store;
 pub mod companion_tests;
 pub mod consent_store;

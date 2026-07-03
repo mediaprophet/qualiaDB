@@ -18,6 +18,7 @@ use super::export_package::{
     build_export_package, export_policy_receipt, ExportReceipt, HealthExportPackage,
 };
 use super::graph_query::GraphCoverageRow;
+use super::backup::{self, BackupReport};
 use super::sync_outbox::{SyncOutbox, SyncOutboxEntry, SyncOutboxState};
 use super::sync_transport::SyncTransport;
 use super::snapshot::build_host_snapshot;
@@ -1432,6 +1433,37 @@ impl WebizenHostApi {
         Ok((pushed, report))
     }
 
+    // --- Backup / restore of the WellFair data subtree (T3.3) ---
+
+    /// Build a portable backup of this node's WellFair data (the `wellfair/` subtree) as archive
+    /// bytes. The Sanctuary vault stays encrypted inside it.
+    pub fn export_backup_bytes(&self) -> Result<Vec<u8>, String> {
+        backup::create_backup(&self.storage_root, Self::now_unix() as u32)
+    }
+
+    /// Restore a backup (archive bytes) into this node's storage. Path-traversal-safe.
+    pub fn import_backup_bytes(&self, bytes: &[u8]) -> Result<BackupReport, String> {
+        backup::restore_backup(&self.storage_root, bytes)
+    }
+
+    /// Write a backup archive to `path`; returns the file count + archive size.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn export_backup_to_path(&self, path: &str) -> Result<BackupReport, String> {
+        let archive = backup::build_archive(&self.storage_root, Self::now_unix() as u32)?;
+        let files = archive.files.len();
+        let bytes = backup::encode_archive(&archive)?;
+        let size = bytes.len() as u64;
+        std::fs::write(path, &bytes).map_err(|e| e.to_string())?;
+        Ok(BackupReport { files, bytes: size })
+    }
+
+    /// Restore a backup archive from `path` into this node's storage.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn import_backup_from_path(&self, path: &str) -> Result<BackupReport, String> {
+        let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+        self.import_backup_bytes(&bytes)
+    }
+
     // --- Clinical documents (Phase 3 / CLI-01..) ---
 
     pub fn add_clinical_report(
@@ -2466,6 +2498,32 @@ mod api_tests {
         assert_eq!(again.validated, 0);
         assert_eq!(again.duplicate, pushed);
         assert_eq!(host_b.validated_sync_operations().unwrap().len(), validated.len());
+    }
+
+    #[test]
+    fn backup_export_restore_reconstructs_a_working_node() {
+        let src = tempdir().unwrap();
+        let mut host = test_host(src.path());
+        host.add_condition(&ConditionReport::new("Eczema")).unwrap();
+        host.add_allergy(&AllergyReport::new("Penicillin")).unwrap();
+        let before = host.list_health_records(16).unwrap();
+        assert!(before.len() >= 2);
+
+        // Export, then restore into a brand-new, empty node.
+        let archive = host.export_backup_bytes().unwrap();
+        let dst = tempdir().unwrap();
+        let restored_host = test_host(dst.path());
+        assert!(restored_host.list_health_records(16).unwrap().is_empty());
+
+        let report = restored_host.import_backup_bytes(&archive).unwrap();
+        assert!(report.files >= 1);
+
+        // A fresh host over the restored storage reads the same records back.
+        let reopened = test_host(dst.path());
+        let after = reopened.list_health_records(16).unwrap();
+        assert_eq!(after.len(), before.len());
+        assert!(after.iter().any(|e| e.kind == "condition"));
+        assert!(after.iter().any(|e| e.kind == "allergy"));
     }
 
     #[test]
