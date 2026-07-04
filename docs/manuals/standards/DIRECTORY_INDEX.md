@@ -1,6 +1,6 @@
 ---
 created: 2026-06-30
-updated: 2026-07-02
+updated: 2026-07-03
 update_scope: Comprehensive
 ---
 
@@ -25,7 +25,8 @@ Comprehensive index of functionality for `standards`. This document serves as th
 - 📄 `p64-weight-container-standard.md` — P64 v3 byte layout, roles, manifold records, tokenizer, alignment, and validation
 - 📄 `q42-10d-tensor-standard.md`
 - 📄 `q42-acoustic-plane-draft.md`
-- 📄 `q42-format-internal-draft.md`
+- 📄 `q42-format-internal-draft.md` — Q42 v3 volume/SuperBlock layout, including the
+  currently reserved and unwired FEA mesh attachment boundary
 - 📄 `q42-symbolic-algebra-encoding.md`
 - 📄 `qualia-qapp-loopback-protocol.md`
 - 📄 `qualia-sync-protocol.md`
@@ -36,5 +37,7 @@ Comprehensive index of functionality for `standards`. This document serves as th
 - 📄 `yaml-ld-q42-specification.md`
 
 ## Changelog
+- **2026-07-03**: Clarified that current asset ingest writes semantic Q42 mesh facts while the
+  SuperBlock FEA mesh link remains unwired.
 - **2026-07-02**: Added the standalone P64 v3 weight-container standard.
 - **2026-06-30**: Automated full index generation, extracting code definitions.

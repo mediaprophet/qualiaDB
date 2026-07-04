@@ -287,6 +287,11 @@ fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             input_schema: r#"{"type":"object","properties":{"analysis":{"type":"string","enum":["structural","thermal","dynamic"]},"model":{"type":"object"},"dimensions":{"type":"array"},"youngs_modulus":{"type":"number"}}}"#,
         },
         McpToolDescriptor {
+            name: "computational_geometry",
+            description: "Native Rust/WASM computational geometry over caller data: robust orientation, 2D convex hull, triangle half-edge topology, and CGAL port inventory.",
+            input_schema: r#"{"type":"object","required":["op"],"properties":{"op":{"type":"string","enum":["orientation_2","convex_hull_2","triangle_topology","package_inventory"]},"points":{"type":"array","items":{"type":"array","items":{"type":"number"}}},"vertex_count":{"type":"integer"},"triangles":{"type":"array","items":{"type":"array","items":{"type":"integer"}}}}}"#,
+        },
+        McpToolDescriptor {
             name: "bioinformatics_align",
             description: "Pairwise nucleotide or protein alignment on caller query/target sequences.",
             input_schema: r#"{"type":"object","required":["query","target"],"properties":{"query":{"type":"string"},"target":{"type":"string"},"mode":{"type":"string","enum":["dna","protein"]}}}"#,
@@ -474,6 +479,9 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
 
         b"engineering_analysis_op" => {
             execute_engineering_analysis(payload.arguments_raw, intent_frame)
+        }
+        b"computational_geometry" => {
+            mcp_tool_impls::computational_geometry(payload.arguments_raw)
         }
 
         // ── Identifiers & Wallet Tools ─────────────────────────────────────────
@@ -1491,7 +1499,29 @@ mod tests {
         assert!(tools.iter().any(|tool| tool["name"] == "parse_rdf"));
         assert!(tools.iter().any(|tool| tool["name"] == "list_qapps"));
         assert!(tools.iter().any(|tool| tool["name"] == "list_capabilities"));
+        assert!(
+            tools
+                .iter()
+                .any(|tool| tool["name"] == "computational_geometry")
+        );
         assert_eq!(tools.len(), stable_mcp_tools().len());
+    }
+
+    #[test]
+    fn computational_geometry_tool_routes_hull() {
+        let reply = handle_jsonrpc_message(
+            r#"{"jsonrpc":"2.0","id":"geometry","method":"tools/call","params":{"name":"computational_geometry","arguments":{"op":"convex_hull_2","points":[[0,0],[1,0],[0.5,0.5],[1,1],[0,1]]}}}"#,
+            false,
+            false,
+        )
+        .expect("reply");
+        let json: Value = serde_json::from_str(&reply).expect("valid json");
+        let text = json["result"]["content"][0]["text"]
+            .as_str()
+            .expect("text payload");
+        let payload: Value = serde_json::from_str(text).expect("embedded json");
+        assert_eq!(payload["vertex_count"], 4);
+        assert_eq!(payload["indices"], json!([0, 1, 3, 4]));
     }
 
     #[test]

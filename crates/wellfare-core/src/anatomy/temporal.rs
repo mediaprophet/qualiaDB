@@ -21,7 +21,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::factor::{Effect, Factor, FactorKind, FactorTarget};
+use super::factor::{Effect, Factor, FactorTarget};
 use super::system_key;
 use super::{accumulate::accumulate, accumulate::SystemBurden};
 
@@ -332,7 +332,7 @@ pub fn recovery_band(points: &[TrajectoryPoint]) -> Option<RecoveryBand> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::anatomy::EvidenceTier;
+    use crate::anatomy::{EvidenceTier, FactorKind};
 
     fn minutes_over(hours_end: i64, step_min: i64) -> Vec<i64> {
         (0..=(hours_end * 60 / step_min)).map(|i| i * step_min).collect()

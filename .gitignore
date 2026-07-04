@@ -141,6 +141,8 @@ private/
 # Local development files (completed planning, temporary docs, etc.)
 local/
 legacy/
+# Docs describing fully-implemented work, kept for reference but out of the tracked doc tree
+legacy-docs/
 ingest_raw.wal.tmp
 yago-tests/ 
 reports/

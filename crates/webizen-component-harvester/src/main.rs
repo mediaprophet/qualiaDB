@@ -32,7 +32,6 @@ struct Member {
     name: String,
     #[serde(rename = "type")]
     member_type: Option<TypeDef>,
-    default: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

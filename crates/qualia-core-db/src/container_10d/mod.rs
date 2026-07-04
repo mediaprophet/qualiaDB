@@ -50,6 +50,8 @@ pub mod mesh_section;
 pub mod metric_check;
 pub mod node_section;
 pub mod section;
+pub mod topology_section;
+pub mod spatial_index_section;
 
 pub use axis_role::{
     AxisRole, AXIS_ORDER, COORDINATE_AXES, MU_AXIS, PROPOSED_AXIS_ROLES, SELECTOR_AXES,
@@ -80,6 +82,14 @@ pub use node_section::{
 pub use section::{
     encode_container, parse_section_table, AlignmentTier, SectionDescriptor, SectionInput,
     SectionTableError, SectionType, SECTION_DESCRIPTOR_SIZE,
+};
+pub use topology_section::{
+    decode_topology_section, encode_topology_section, TopologyMiniHeader, TopologySectionData,
+    TopologySectionError, TOPOLOGY_MINI_HEADER_SIZE,
+};
+pub use spatial_index_section::{
+    decode_spatial_index_section, encode_spatial_index_section, DecodedSpatialIndex,
+    SpatialIndexMiniHeader, SpatialIndexSectionError, SPATIAL_INDEX_MINI_HEADER_SIZE,
 };
 
 /// Versioned `.10d` container ABI. Increment only when public POD layouts or

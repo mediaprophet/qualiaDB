@@ -68,6 +68,14 @@ pub enum SectionType {
     SpecReservedProvenanceSidecar = 7,
     SpecReservedFieldSidecar = 8,
     SpecReservedCorrespondenceMap = 9,
+    /// Topology section — half-edge graph + CSR adjacency + connectivity
+    /// summary (P2.8). Contains a TopologyMiniHeader followed by the
+    /// half-edge array, vertex-adjacency CSR (offsets + neighbours), and
+    /// face-adjacency CSR (offsets + neighbours).
+    Topology = 10,
+    /// Spatial-index section — BVH + kd-tree node arrays for scan-free
+    /// spatial queries (P3.7).
+    SpatialIndex = 11,
 }
 
 impl SectionType {
@@ -84,6 +92,8 @@ impl SectionType {
             7 => Some(SectionType::SpecReservedProvenanceSidecar),
             8 => Some(SectionType::SpecReservedFieldSidecar),
             9 => Some(SectionType::SpecReservedCorrespondenceMap),
+            10 => Some(SectionType::Topology),
+            11 => Some(SectionType::SpatialIndex),
             _ => None,
         }
     }
@@ -97,6 +107,8 @@ impl SectionType {
             SectionType::QuantizedMesh
                 | SectionType::Tensor10DNodes
                 | SectionType::Reconstruction
+                | SectionType::Topology
+                | SectionType::SpatialIndex
         )
     }
 }

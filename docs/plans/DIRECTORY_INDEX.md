@@ -1,26 +1,50 @@
 ---
 created: 2026-06-30
-updated: 2026-06-30
+updated: 2026-07-03
 update_scope: Comprehensive
 ---
 
 # plans Index
 
 ## Functionality Overview
-Comprehensive index of functionality for `plans`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+Architecture, implementation, optimisation, migration, and release plans for QualiaDB,
+Webizen, inference, rendering, desktop/QApps, and supporting compute infrastructure.
 
 ## File & Subdirectory Manifest
-### Files & Exported Functionality
-- 📄 `0.0.17-docs-kit.md`
-- 📄 `0.0.22-llm-gguf-optimization.md`
-- 📄 `AUDIO_PROJECT_STATUS.md`
-- 📄 `acceleration-integration-map.md`
-- 📄 `dag-ir-forge.md`
-- 📄 `deterministic-wgsl-forge.md`
-- 📄 `llm-on-forge-q42-p64.md`
-- 📄 `phone-console.md`
-- 📄 `sprint-inference-handover-native-viewport.md`
-- 📄 `wasm-viewport-migration-plan.md`
+
+- `0.0.17-docs-kit.md`: Documentation-kit plan for the 0.0.17 development line.
+- `0.0.22-llm-gguf-optimization.md`: GGUF and local-LLM optimisation plan and measurements.
+- `acceleration-integration-map.md`: Map of solver and inference operations to accelerated
+  backends and kernels.
+- `AUDIO_PROJECT_STATUS.md`: Audio subsystem capability and implementation status.
+- `cooperative-qapps-desktop-implementation-plan.md`: Cooperative desktop/QApps architecture,
+  workflows, governance, and staged implementation plan.
+- `dag-ir-forge.md`: Typed compute-DAG design and staged multi-backend WGSL Forge implementation.
+- `deterministic-wgsl-forge.md`: Deterministic kernel generation, validation, certification,
+  tuning, and caching plan.
+- `inference_optimisation.md`: Current inference performance analysis and optimisation backlog.
+- `llm-on-forge-q42-p64.md`: Plan for running the local LLM through Forge using Q42 graph
+  semantics and P64 weights.
+- `native-auditory-language-and-music-intelligence.md`: Capability-aware plan for acoustic
+  understanding, community-governed language resources, speech, music analysis/production,
+  generative audio, and cross-modal perception.
+- `native-visual-intelligence-and-generative-3d.md`: Capability-aware plan for native image
+  classification, object detection, video understanding, synthetic datasets, image generation,
+  image-to-3D, canonical GLB-to-Q42 asset compilation, and tiered engineering/biological
+  digital twins.
+- `phone-console.md`: Mobile/phone console, linking, storage, and interaction plan.
+- `sprint-inference-handover-native-viewport.md`: Inference and native viewport sprint handover.
+- `wasm-viewport-migration-plan.md`: Detailed migration plan for the WASM/native 10D viewport.
+- `wellfair-webizen-desktop/`: Multi-document WellFair/Webizen desktop implementation plan.
 
 ## Changelog
+
+- **2026-07-03**: Expanded the visual/3D plan after a repository capability audit with the
+  existing GLB-to-Q42 path, compiled geometry and analysis sidecars, fidelity/assurance tiers,
+  and engineering/biological digital-twin phases.
+- **2026-07-03**: Added the native auditory, language, and music intelligence companion plan and
+  linked the visual plan into the shared eyes-and-ears architecture.
+- **2026-07-03**: Added the native visual intelligence and generative 3D plan and refreshed the
+  manifest to include all current plans.
 - **2026-06-30**: Automated full index generation, extracting code definitions.

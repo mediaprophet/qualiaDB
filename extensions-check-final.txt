@@ -1,0 +1,409 @@
+﻿cargo : warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+At line:1 char:230
++ ... nal.txt -Encoding utf8; cargo check -p qualia-extensions 2>&1 | Out-F ...
++                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: profil...workspace root::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+package:   C:\Projects\qualia-27062026\crates\qualia-mobile-harness\Cargo.toml
+workspace: C:\Projects\qualia-27062026\Cargo.toml
+    Checking tracing v0.1.44
+    Checking multistream-select v0.13.0
+    Checking naga v29.0.3
+    Checking wgpu-types v29.0.3
+    Checking if-watch v3.2.2
+    Checking raw-cpuid v11.6.0
+    Checking tungstenite v0.29.0
+    Checking tokio-rustls v0.24.1
+    Checking libp2p-identity v0.2.14
+    Checking h2 v0.4.15
+    Checking hickory-proto v0.25.2
+    Checking ark-relations v0.6.0
+    Checking tower v0.5.3
+    Checking multiaddr v0.18.2
+    Checking ark-snark v0.6.0
+    Checking yamux v0.13.10
+    Checking libp2p-core v0.43.2
+    Checking yamux v0.12.1
+    Checking pulp v0.22.3
+    Checking hickory-resolver v0.25.2
+    Checking anstyle-wincon v3.0.11
+    Checking ark-crypto-primitives v0.6.0
+    Checking tower-http v0.6.11
+   Compiling pest_generator v2.8.6
+    Checking hyper v1.10.1
+    Checking libp2p-swarm v0.47.1
+    Checking libp2p-tcp v0.44.1
+    Checking libp2p-noise v0.46.1
+    Checking libp2p-dns v0.44.0
+    Checking libp2p-yamux v0.47.0
+    Checking tokio-tungstenite v0.29.0
+    Checking trust-dns-proto v0.23.2
+    Checking axum-core v0.5.6
+    Checking hyper-util v0.1.20
+    Checking libp2p-request-response v0.29.0
+    Checking libp2p-allow-block-list v0.6.0
+    Checking libp2p-kad v0.48.0
+    Checking libp2p-mdns v0.48.0
+    Checking libp2p-connection-limits v0.6.0
+    Checking rustls-platform-verifier v0.7.0
+    Checking fhe-math v0.1.1
+    Checking wgpu-naga-bridge v29.0.3
+    Checking anstyle-query v1.1.5
+warning: qualia-core-db@0.0.23: Qualia-DB: DirectML 1.15 linked from 
+C:\Projects\qualia-27062026\crates\qualia-core-db\..\..\vendor\directml\bin\x64-win.
+    Checking tower-http v0.7.0
+    Checking hyper-rustls v0.27.9
+    Checking libp2p v0.56.0
+    Checking anstream v1.0.0
+    Checking wgpu-hal v29.0.3
+    Checking trust-dns-resolver v0.23.2
+    Checking axum v0.8.9
+    Checking reqwest v0.13.4
+   Compiling pest_derive v2.8.6
+    Checking ark-groth16 v0.6.0
+    Checking fhe v0.1.1
+    Checking boringtun v0.7.1
+    Checking clap_builder v4.6.0
+    Checking simba v0.10.0
+    Checking json5 v0.4.1
+    Checking ron v0.12.2
+    Checking nu-ansi-term v0.50.3
+    Checking winit v0.30.13
+    Checking clap v4.6.1
+    Checking wgpu-core-deps-windows-linux-android v29.0.3
+    Checking config v0.15.25
+    Checking wgpu-core v29.0.3
+    Checking tracing-subscriber v0.3.23
+    Checking nalgebra v0.35.0
+    Checking wgpu v29.0.3
+    Checking qualia-core-db v0.0.23 (C:\Projects\qualia-27062026\crates\qualia-core-db)
+warning: unused import: `std::io::Write`
+    --> crates\qualia-core-db\src\q42\p64_weight.rs:1096:9
+     |
+1096 |     use std::io::Write;
+     |         ^^^^^^^^^^^^^^
+     |
+     = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `super::privacy`
+ --> crates\qualia-core-db\src\specialized_libs\linear_algebra\optimization.rs:6:5
+  |
+6 | use super::privacy::*;
+  |     ^^^^^^^^^^^^^^
+
+warning: unused import: `Serialize`
+ --> crates\qualia-core-db\src\specialized_libs\linear_algebra\optimization.rs:1:26
+  |
+1 | use serde::{Deserialize, Serialize};
+  |                          ^^^^^^^^^
+
+warning: unused import: `std::io::Read`
+   --> crates\qualia-core-db\src\sparql_library\parsers\cbor_parser.rs:233:9
+    |
+233 |     use std::io::Read;
+    |         ^^^^^^^^^^^^^
+
+warning: unused import: `Deserialize`
+ --> crates\qualia-core-db\src\specialized_libs\linear_algebra\optimization.rs:1:13
+  |
+1 | use serde::{Deserialize, Serialize};
+  |             ^^^^^^^^^^^
+
+warning: unused import: `super::privacy`
+ --> crates\qualia-core-db\src\specialized_libs\linear_algebra\computation.rs:6:5
+  |
+6 | use super::privacy::*;
+  |     ^^^^^^^^^^^^^^
+
+warning: unused variable: `tokenizer_size`
+   --> crates\qualia-core-db\src\q42\p64_weight.rs:581:9
+    |
+581 |     let tokenizer_size = tok_bytes.len() as u32;
+    |         ^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_tokenizer_size`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: value assigned to `stats` is never read
+   --> crates\qualia-core-db\src\governance\webizen_bytecode.rs:185:21
+    |
+185 |                     stats.vm_cycles += 1;
+    |                     ^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `left_expr`
+   --> crates\qualia-core-db\src\crypto\zk_proofs.rs:769:13
+    |
+769 |         let left_expr = CircuitExpression::Variable("left".to_string());
+    |             ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_left_expr`
+
+warning: unused variable: `right_expr`
+   --> crates\qualia-core-db\src\crypto\zk_proofs.rs:770:13
+    |
+770 |         let right_expr = CircuitExpression::Variable("right".to_string());
+    |             ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_right_expr`
+
+warning: unused variable: `output_expr`
+   --> crates\qualia-core-db\src\crypto\zk_proofs.rs:771:13
+    |
+771 |         let output_expr = CircuitExpression::Variable("result".to_string());
+    |             ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_output_expr`
+
+warning: methods `get_inactive_buffer_mut` and `get_inactive_buffer` are never used
+   --> crates\qualia-core-db\src\platform\host.rs:202:8
+    |
+170 | impl IocpGridManager {
+    | -------------------- methods in this implementation
+...
+202 |     fn get_inactive_buffer_mut(&mut self) -> &mut [u8] {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^
+...
+209 |     fn get_inactive_buffer(&self) -> &[u8] {
+    |        ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: fields `job_receiver` and `wal_path` are never read
+   --> crates\qualia-core-db\src\platform\local_scheduler.rs:221:5
+    |
+218 | pub struct ProductionQueue {
+    |            --------------- fields in this struct
+...
+221 |     job_receiver: Receiver<Job>,
+    |     ^^^^^^^^^^^^
+...
+228 |     wal_path: String,
+    |     ^^^^^^^^
+
+warning: function `cpu_embedding_forward` is never used
+   --> crates\qualia-core-db\src\inference\inference_agent.rs:312:4
+    |
+312 | fn cpu_embedding_forward(
+    |    ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `lora_embedding_forward` is never used
+   --> crates\qualia-core-db\src\inference\inference_agent.rs:335:4
+    |
+335 | fn lora_embedding_forward(
+    |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: fields `buffer` and `cursor` are never read
+  --> crates\qualia-core-db\src\q42\yaml_ld_q42.rs:21:5
+   |
+20 | pub struct YamlStreamingLexer<'a> {
+   |            ------------------ fields in this struct
+21 |     buffer: &'a [u8],
+   |     ^^^^^^
+22 |     cursor: usize,
+   |     ^^^^^^
+
+warning: constant `LANE_KEY_LENGTH` is never used
+ --> crates\qualia-core-db\src\identity\agency.rs:5:7
+  |
+5 | const LANE_KEY_LENGTH: usize = 32;
+  |       ^^^^^^^^^^^^^^^
+
+warning: field `cbor_ld_parser` is never read
+  --> crates\qualia-core-db\src\identity\vault_manifest.rs:97:5
+   |
+95 | pub struct VaultManifestProcessor {
+   |            ---------------------- field in this struct
+96 |     q42_context: Arc<Q42Context>,
+97 |     cbor_ld_parser: Arc<Q42CborLdParser>,
+   |     ^^^^^^^^^^^^^^
+
+warning: associated constant `XPC_SERVICE` is never used
+   --> crates\qualia-core-db\src\net\ebpf_filter.rs:395:11
+    |
+394 | impl MacNetworkExtFilter {
+    | ------------------------ associated constant in this implementation
+395 |     const XPC_SERVICE: &'static str = "com.qualiadb.netfilter";
+    |           ^^^^^^^^^^^
+
+warning: field `max_nodes` is never read
+  --> crates\qualia-core-db\src\tensor\volume_gpu.rs:29:5
+   |
+20 | pub struct TensorVolumeGpu {
+   |            --------------- field in this struct
+...
+29 |     max_nodes: u32,
+   |     ^^^^^^^^^
+
+warning: field `rule_type` is never read
+   --> crates\qualia-core-db\src\sparql_library\parsers\n3_star.rs:243:9
+    |
+242 |     Rule {
+    |     ---- field in this variant
+243 |         rule_type: RuleType,
+    |         ^^^^^^^^^
+
+warning: fields `subject_str`, `predicate_str`, `object_str`, and `graph_str` are never read
+   --> crates\qualia-core-db\src\sparql_library\parsers\nquads_star.rs:275:9
+    |
+270 |     RegularQuad {
+    |     ----------- fields in this variant
+...
+275 |         subject_str: String,
+    |         ^^^^^^^^^^^
+276 |         predicate_str: String,
+    |         ^^^^^^^^^^^^^
+277 |         object_str: String,
+    |         ^^^^^^^^^^
+278 |         graph_str: String,
+    |         ^^^^^^^^^
+
+warning: fields `outer_predicate_str`, `outer_object_str`, and `outer_graph_str` are never read
+   --> crates\qualia-core-db\src\sparql_library\parsers\nquads_star.rs:286:9
+    |
+280 |     EmbeddedQuad {
+    |     ------------ fields in this variant
+...
+286 |         outer_predicate_str: String,
+    |         ^^^^^^^^^^^^^^^^^^^
+287 |         outer_object_str: String,
+    |         ^^^^^^^^^^^^^^^^
+288 |         outer_graph_str: String,
+    |         ^^^^^^^^^^^^^^^
+
+warning: fields `subject_str`, `predicate_str`, and `object_str` are never read
+   --> crates\qualia-core-db\src\sparql_library\parsers\ntriples_star.rs:223:9
+    |
+219 |     RegularTriple {
+    |     ------------- fields in this variant
+...
+223 |         subject_str: String,
+    |         ^^^^^^^^^^^
+224 |         predicate_str: String,
+    |         ^^^^^^^^^^^^^
+225 |         object_str: String,
+    |         ^^^^^^^^^^
+
+warning: fields `outer_predicate_str` and `outer_object_str` are never read
+   --> crates\qualia-core-db\src\sparql_library\parsers\ntriples_star.rs:232:9
+    |
+227 |     EmbeddedTriple {
+    |     -------------- fields in this variant
+...
+232 |         outer_predicate_str: String,
+    |         ^^^^^^^^^^^^^^^^^^^
+233 |         outer_object_str: String,
+    |         ^^^^^^^^^^^^^^^^
+
+warning: field `context_hash` is never read
+  --> crates\qualia-core-db\src\sparql_library\parsers\trig_star.rs:13:5
+   |
+11 | pub struct TrigStarParser {
+   |            -------------- field in this struct
+12 |     /// Context hash for the current parsing session
+13 |     context_hash: u64,
+   |     ^^^^^^^^^^^^
+
+warning: constant `LEX_TAG_WEBIZEN` is never used
+  --> crates\qualia-core-db\src\q42_lex.rs:19:7
+   |
+19 | const LEX_TAG_WEBIZEN: u8 = 0x03; // Authoritative Webizen identity
+   |       ^^^^^^^^^^^^^^^
+
+warning: function `approx_eq3` is never used
+   --> crates\qualia-core-db\src\render\pga.rs:365:4
+    |
+365 | fn approx_eq3(a: [f32; 3], b: [f32; 3], eps: f32) -> bool {
+    |    ^^^^^^^^^^
+
+warning: field `allocation_strategy` is never read
+  --> crates\qualia-core-db\src\zns_storage.rs:69:5
+   |
+66 | pub struct ZoneAllocator {
+   |            ------------- field in this struct
+...
+69 |     allocation_strategy: AllocationStrategy,
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: fields `completion_queue` and `scheduler_policy` are never read
+  --> crates\qualia-core-db\src\zns_storage.rs:95:5
+   |
+93 | pub struct ZnsIoScheduler {
+   |            -------------- fields in this struct
+94 |     pending_operations: Vec<ZnsOperation>,
+95 |     completion_queue: Vec<ZnsCompletion>,
+   |     ^^^^^^^^^^^^^^^^
+96 |     scheduler_policy: SchedulerPolicy,
+   |     ^^^^^^^^^^^^^^^^
+
+warning: fields `running_operations`, `completion_queue`, and `scheduling_policy` are never read
+   --> crates\qualia-core-db\src\csd_storage.rs:129:5
+    |
+127 | pub struct CsdScheduler {
+    |            ------------ fields in this struct
+128 |     pending_operations: Vec<CsdOperationRequest>,
+129 |     running_operations: HashMap<u64, CsdRunningOperation>,
+    |     ^^^^^^^^^^^^^^^^^^
+130 |     completion_queue: Vec<CsdCompletion>,
+    |     ^^^^^^^^^^^^^^^^
+131 |     scheduling_policy: SchedulingPolicy,
+    |     ^^^^^^^^^^^^^^^^^
+
+warning: fields `device_metrics` and `function_metrics` are never read
+   --> crates\qualia-core-db\src\csd_storage.rs:224:5
+    |
+223 | pub struct CsdPerformanceMonitor {
+    |            --------------------- fields in this struct
+224 |     device_metrics: HashMap<String, CsdDeviceMetrics>,
+    |     ^^^^^^^^^^^^^^
+225 |     function_metrics: HashMap<String, CsdFunctionMetrics>,
+    |     ^^^^^^^^^^^^^^^^
+
+warning: method `serialize_convolution_dimensions` is never used
+   --> crates\qualia-core-db\src\csd_storage.rs:798:8
+    |
+295 | impl CsdManager {
+    | --------------- method in this implementation
+...
+798 |     fn serialize_convolution_dimensions(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: fields `mock_pipeline`, `elem_rms_norm_pipeline`, and `elem_add_residual_pipeline` are never read
+    --> crates\qualia-core-db\src\gguf_bridge\mod.rs:987:5
+     |
+ 968 | pub struct QTensorEngine {
+     |            ------------- fields in this struct
+...
+ 987 |     mock_pipeline: wgpu::ComputePipeline,
+     |     ^^^^^^^^^^^^^
+...
+1070 |     elem_rms_norm_pipeline: wgpu::ComputePipeline,
+     |     ^^^^^^^^^^^^^^^^^^^^^^
+...
+1074 |     elem_add_residual_pipeline: wgpu::ComputePipeline,
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: field `noise_var` is never read
+  --> crates\qualia-core-db\src\solvers\learning\gaussian_process\mod.rs:24:5
+   |
+18 | pub struct GpRegressor {
+   |            ----------- field in this struct
+...
+24 |     noise_var: f64,
+   |     ^^^^^^^^^
+   |
+   = note: `GpRegressor` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored 
+during dead code analysis
+
+warning: `qualia-core-db` (lib) generated 35 warnings (run `cargo fix --lib -p qualia-core-db` to apply 4 suggestions)
+    Checking qualia-q-forge v0.1.0 (C:\Projects\qualia-27062026\crates\qualia-q-forge)
+    Checking qualia-extensions v0.0.23 (C:\Projects\qualia-27062026\crates\qualia-extensions)
+error[E0609]: no field `final_loss` on type `&PinnExecutionResult`
+   --> crates\qualia-extensions\src\pinn_extension.rs:456:35
+    |
+456 |         let error_floor = (result.final_loss * 0.01).max(0.001);
+    |                                   ^^^^^^^^^^ unknown field
+    |
+help: one of the expressions' fields has a field of the same name
+    |
+456 |         let error_floor = (result.convergence_metrics.final_loss * 0.01).max(0.001);
+    |                                   ++++++++++++++++++++
+
+For more information about this error, try `rustc --explain E0609`.
+error: could not compile `qualia-extensions` (lib) due to 1 previous error

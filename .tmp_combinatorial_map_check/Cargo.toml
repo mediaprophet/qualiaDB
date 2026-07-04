@@ -1,0 +1,11 @@
+[package]
+name = "tmp_combinatorial_map_check"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+bytemuck = { version = "1.14", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }

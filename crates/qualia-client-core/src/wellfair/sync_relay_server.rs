@@ -13,7 +13,6 @@
 //! Native-only (`tiny_http`). Runs a background accept loop with graceful shutdown on drop.
 #![cfg(not(target_arch = "wasm32"))]
 
-use std::io::Read;
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};

@@ -2340,6 +2340,23 @@ pub fn compute_context_hash(url: String) -> serde_json::Value {
     })
 }
 
+/// Native computational-geometry host route for qapps.
+///
+/// This shares the exact JSON contract used by the MCP tool, so a qapp can use
+/// `invoke("run_computational_geometry", { request })` in the desktop shell
+/// and the same operation through MCP in agent/development workflows.
+#[command]
+pub fn run_computational_geometry(
+    request: serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    let output =
+        qualia_core_db::specialized_libs::computational_geometry::execute_geometry_tool_json(
+            &request.to_string(),
+        )
+        .map_err(|error| error.to_string())?;
+    serde_json::from_str(&output).map_err(|error| error.to_string())
+}
+
 // ── QApp ↔ QualiaDB analysis contract ───────────────────────────────────────────
 // Mirrors `webizen-studio/src/components/qapp_engine.rs`. The discipline QApps call
 // this via `invoke("qapp_analyze", { request })` when running in the desktop webview;
@@ -4398,6 +4415,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         apply_semantic_handshake,
         save_qlink,
         compute_context_hash,
+        run_computational_geometry,
         get_qualia_compute_profile,
         certify_forge_physics,
         run_forge_compute_probe,

@@ -1,7 +1,7 @@
 //! OS-native medication reminder delivery (Q6 MED-01..13 closeout).
 
 use std::collections::HashSet;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use std::time::Duration;
 
 use chrono::Local;

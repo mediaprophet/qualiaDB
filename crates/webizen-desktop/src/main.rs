@@ -11,7 +11,6 @@ use tauri_plugin_updater::UpdaterExt;
 
 use webizen_desktop::{
     commands::{self, PreviewState, RenderLoopState},
-    generate_qapp_credential,
     med_reminder_notifier::{self, MedReminderNotifierState},
     runtime::{spawn_runtime, RuntimeHandle},
     settings_server,

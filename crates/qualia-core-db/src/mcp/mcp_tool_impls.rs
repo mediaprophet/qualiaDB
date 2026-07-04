@@ -11,6 +11,23 @@ pub fn parse_tool_args(args: &[u8]) -> Result<Value, McpSystemError> {
     serde_json::from_slice(args).map_err(|_| McpSystemError::ParseError)
 }
 
+pub fn computational_geometry(args: &[u8]) -> Result<String, McpSystemError> {
+    let text = core::str::from_utf8(args).map_err(|_| McpSystemError::ParseError)?;
+    crate::specialized_libs::computational_geometry::execute_geometry_tool_json(text)
+        .map_err(|error| match error {
+            crate::specialized_libs::computational_geometry::GeometryToolError::InvalidJson => {
+                McpSystemError::ParseError
+            }
+            crate::specialized_libs::computational_geometry::GeometryToolError::InvalidOperation => {
+                McpSystemError::ToolNotFound
+            }
+            crate::specialized_libs::computational_geometry::GeometryToolError::InvalidParameters
+            | crate::specialized_libs::computational_geometry::GeometryToolError::Geometry(_) => {
+                McpSystemError::InvalidParameters
+            }
+        })
+}
+
 /// Return the canonical capability catalogue used by chat, CLI, and MCP.
 ///
 /// Internal/library-only operations remain visible with no MCP route, while

@@ -260,6 +260,11 @@ Properties:
 
 - `size == 40960`, `QUINS_PER_BLOCK == 850`
 - remaining ledger slots are zero-filled
+- `fea_mesh_index_id` is a reserved attachment point, not proof that dense geometry is stored
+  inside Q42. As of 2026-07-03, `q42_volume::encode_superblock()` leaves this field zero and the
+  OBJ/STL/GLB ingest path writes semantic mesh facts only. The planned computational-asset
+  compiler will either wire this field to a versioned analysis-mesh sidecar or supersede it with
+  an explicit Q42 relationship that can address multiple meshes and fidelity tiers.
 
 ### Unified v3 volume layout
 

@@ -884,6 +884,7 @@ pub struct SanctuaryPrefsDto {
     pub armed_at_unix: Option<u32>,
 }
 
+#[cfg(target_arch = "wasm32")]
 #[derive(Debug, Clone, Serialize)]
 struct LifeEventWire {
     id: String,
@@ -892,6 +893,7 @@ struct LifeEventWire {
     notes: Option<String>,
 }
 
+#[cfg(target_arch = "wasm32")]
 #[derive(Debug, Clone, Serialize)]
 struct WelfareCaseWire {
     id: String,
@@ -900,6 +902,7 @@ struct WelfareCaseWire {
     summary: Option<String>,
 }
 
+#[cfg(target_arch = "wasm32")]
 #[derive(Debug, Clone, Serialize)]
 struct CaseTaskWire {
     id: String,
@@ -907,6 +910,7 @@ struct CaseTaskWire {
     title: String,
 }
 
+#[cfg(target_arch = "wasm32")]
 #[derive(Debug, Clone, Serialize)]
 struct WellbeingObservationWire {
     id: String,
@@ -915,6 +919,7 @@ struct WellbeingObservationWire {
     intensity_1_10: Option<u8>,
 }
 
+#[cfg(target_arch = "wasm32")]
 #[derive(Debug, Clone, Serialize)]
 struct TherapyNoteWire {
     id: String,
@@ -1992,12 +1997,14 @@ pub struct SanctuaryVaultNoteDto {
     pub created_at_unix: u32,
 }
 
+#[cfg(target_arch = "wasm32")]
 #[derive(Debug, Clone, Deserialize)]
 struct SanctuaryVaultListDto {
     lane: String,
     notes: Vec<SanctuaryVaultNoteDto>,
 }
 
+#[cfg(target_arch = "wasm32")]
 #[derive(Debug, Clone, Deserialize)]
 struct SanctuaryVaultConfiguredDto {
     configured: bool,

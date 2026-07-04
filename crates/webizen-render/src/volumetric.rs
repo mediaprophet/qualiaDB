@@ -31,6 +31,22 @@ impl VolumetricRenderer {
         self.inner.upload_mesh(positions, indices)
     }
 
+    /// Upload a `.10d` QuantizedMesh section (QualiaDB's compact native
+    /// geometry format — u16-quantized vertices within the mesh's bounding
+    /// box, u16/u32 triangle indices).
+    ///
+    /// Decode/allocation occurs once at this explicit asset boundary; the
+    /// resulting vertex/index buffers use the normal zero-copy GPU draw path.
+    pub fn upload_10d_mesh(&mut self, bytes: &[u8]) -> Result<u32, String> {
+        let mesh = qualia_core_db::container_10d::decode_mesh_section(bytes)
+            .map_err(|e| e.to_string())?;
+        let mut indices = Vec::with_capacity(mesh.triangles.len() * 3);
+        for triangle in &mesh.triangles {
+            indices.extend_from_slice(triangle);
+        }
+        Ok(self.inner.upload_mesh(&mesh.positions, &indices))
+    }
+
     pub fn upload_mesh_colored(
         &mut self,
         positions: &[[f32; 3]],
