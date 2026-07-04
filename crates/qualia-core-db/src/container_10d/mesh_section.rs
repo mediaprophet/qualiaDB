@@ -179,7 +179,11 @@ pub fn parse_mesh_header(bytes: &[u8]) -> Result<(MeshMiniHeader, usize), MeshSe
     if bytes.len() < MESH_MINI_HEADER_SIZE {
         return Err(MeshSectionError::PayloadTooShort { got: bytes.len(), need: MESH_MINI_HEADER_SIZE });
     }
-    let header: MeshMiniHeader = *from_bytes(&bytes[..MESH_MINI_HEADER_SIZE]);
+    let header: MeshMiniHeader = {
+        let mut buf = [0u8; MESH_MINI_HEADER_SIZE];
+        buf.copy_from_slice(&bytes[..MESH_MINI_HEADER_SIZE]);
+        *from_bytes(&buf)
+    };
     if header.reserved_u16 != 0 {
         return Err(MeshSectionError::NonZeroReserved { field: "reserved_u16" });
     }

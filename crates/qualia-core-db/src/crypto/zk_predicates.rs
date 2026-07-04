@@ -54,7 +54,7 @@
 
 use ark_bls12_381::{Bls12_381, Fr};
 use ark_ff::{BigInteger, One, PrimeField, Zero};
-use ark_groth16::{Groth16, Proof, ProvingKey, VerifyingKey};
+use ark_groth16::{Groth16, Proof, VerifyingKey};
 use ark_relations::gr1cs::{
     ConstraintSynthesizer, ConstraintSystem, ConstraintSystemRef, LinearCombination,
     SynthesisError, Variable,

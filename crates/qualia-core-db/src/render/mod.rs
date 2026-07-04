@@ -59,6 +59,17 @@ pub mod spectral;
 pub mod standpoint;
 pub mod telemetry;
 
+/// LOD chain (P5.8): author mesh → decimate N LODs → serialize to `.10d` →
+/// renderer parses each level → `plan_view` selects the expected LOD. Gated
+/// like `authoring` (needs `crate::modalities` for deontic gates).
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+pub mod lod_chain;
+
 /// WebGPU renderer (`PortalGpu`) — depth, bloom, tensor-node projection, mesh surfaces.
 #[cfg(feature = "gpu-runtime")]
 pub mod gpu;

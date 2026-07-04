@@ -7,29 +7,44 @@
 //! query, reasoning, simulation, and 10D manifold layers.
 
 mod bvh;
+mod boolean_2;
 mod box_join;
 mod combinatorial_map;
 mod connectivity;
+mod constrained_delaunay;
+mod corpus_4;
 mod csr_adjacency;
+mod delaunay_2;
 mod determinism_corpus;
 mod distance;
 mod exact_kernel;
 mod expansion;
 mod features;
 mod gpu;
+mod gpu_3d;
 mod hull;
+mod hull_3;
+mod decimate_3;
+mod delaunay_3;
+mod exact_construct_3;
+mod remesh_3;
+mod tri_tri_3;
+mod boolean_3;
 mod incircle;
 mod insphere;
 mod kd_tree;
 mod kernel;
+mod minkowski_2;
 mod orient3d;
 pub mod query_frontend;
 mod polygon_soup;
 mod primitives;
 mod spatial_order;
 mod surface_mesh;
+mod surface_mesh_processing;
 mod tool;
 mod topology;
+mod voronoi_2;
 
 pub mod generated;
 
@@ -67,6 +82,12 @@ pub use topology::{
 pub use surface_mesh::{
     build_surface_mesh_maps, BoundaryLoopWalker, FaceLoopCirculator, OneRingCirculator,
     SurfaceMeshError, SurfaceMeshView,
+};
+pub use surface_mesh_processing::{signed_volume, surface_area, MeshMeasureError};
+pub use gpu_3d::{
+    evaluate_point_in_tetra_batch_f32, gpu_filter_point_in_tetra_f32, point_in_tetra_wgsl,
+    Gpu3dError, POINT_IN_TETRA_BOUNDARY, POINT_IN_TETRA_INSIDE, POINT_IN_TETRA_OUTSIDE,
+    POINT_IN_TETRA_STRIDE, POINT_IN_TETRA_UNCERTAIN,
 };
 pub use polygon_soup::{
     build_face_adjacency, count_flipped, filter_degenerate_faces, merge_vertices,
@@ -109,6 +130,56 @@ pub use gpu::{
     GPU_OVERLAP_NO, GPU_OVERLAP_UNCERTAIN, GPU_OVERLAP_YES,
 };
 pub use query_frontend::{QueryFrontendError, QueryStats, SpatialIndexQuery};
+pub use delaunay_2::{
+    delaunay_triangulation_2, triangulation_hash, verify_delaunay, DelaunayError,
+};
+pub use voronoi_2::{
+    circumcenter, nearest_site_brute_force, nearest_site_via_delaunay, voronoi_diagram_2,
+    voronoi_hash, verify_voronoi_vertices, VoronoiEdge, VoronoiError, VoronoiVertex,
+};
+pub use corpus_4::{
+    run_full_corpus, corpus_hash, run_orientation_corpus, run_incircle_corpus,
+    run_delaunay_corpus,
+};
+pub use constrained_delaunay::{
+    conforming_delaunay_2, constraint_edge_present, ConstrainedDelaunayError,
+};
+pub use boolean_2::{
+    boolean_union_area, boolean_intersection_area, boolean_difference_area,
+    polygon_area, polygon_signed_area, point_in_polygon, verify_area_conservation,
+    BooleanOp, BooleanError,
+};
+pub use minkowski_2::{
+    minkowski_sum_2, minkowski_difference_2, minkowski_sum_brute_force, MinkowskiError,
+};
+pub use hull_3::{convex_hull_3, convex_hull_3_with_kernel, required_hull_3_faces, Hull3Error};
+pub use delaunay_3::{
+    delaunay_tetrahedralization_3, delaunay_tetrahedralization_3_with_kernel,
+    required_tetrahedra_3, tetrahedralization_hash, verify_delaunay_3,
+    verify_delaunay_3_with_kernel, Delaunay3Error,
+};
+pub use tri_tri_3::{
+    required_self_intersection_pairs, self_intersecting_pairs,
+    self_intersecting_pairs_with_kernel, tri_tri_intersect_3, tri_tri_intersect_3_with_kernel,
+    TriPair, TriTriError, TriTriSegment,
+};
+pub use boolean_3::{
+    boolean_3, boolean_3_with_kernel, required_triangles_3, required_vertices_3,
+    Boolean3Error, Boolean3Op,
+};
+pub use decimate_3::{
+    decimate_qem, decimate_qem_with_kernel, required_triangles, required_vertices,
+    DecimateError, DecimateOptions, DecimateReport,
+};
+pub use exact_construct_3::{
+    construct_segment_plane_intersection_3, construct_segment_triangle_intersection_3,
+    orient_3d_exact_3, segment_plane_parameter_sign, Exact3Error, ExactPoint3,
+    ParameterSpan, TriangleContainment,
+};
+pub use remesh_3::{
+    isotropic_remesh, isotropic_remesh_with_kernel, required_output_capacity,
+    RemeshError, RemeshOptions, RemeshReport,
+};
 
 /// Versioned native geometry ABI. Increment only when public POD layouts or
 /// caller-buffer contracts change.

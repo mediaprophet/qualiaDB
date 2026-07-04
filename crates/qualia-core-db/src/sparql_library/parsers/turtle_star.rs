@@ -215,9 +215,18 @@ impl TurtleStarParser {
             let frame = self.stack.current();
             Self::expect_state(frame, ParsingState::ExpectSubject, ParsingState::ExpectPredicate)?;
         }
-        match self.parse_token(input, pos)? {
-            Some(hash) => self.stack.current().subject = Some(hash),
-            None => return Err(RdfStarParseError::MalformedEmbeddedTriple),
+        while *pos < input.len() && input[*pos].is_ascii_whitespace() {
+            *pos += 1;
+        }
+        if *pos + 1 < input.len() && input[*pos] == b'<' && input[*pos + 1] == b'<' {
+            *pos += 2; // skip <<
+            let (hash, _) = self.parse_embedded_triple_internal(input, pos)?;
+            self.stack.current().subject = Some(hash);
+        } else {
+            match self.parse_token(input, pos)? {
+                Some(hash) => self.stack.current().subject = Some(hash),
+                None => return Err(RdfStarParseError::MalformedEmbeddedTriple),
+            }
         }
 
         // Parse predicate
@@ -235,10 +244,19 @@ impl TurtleStarParser {
             let frame = self.stack.current();
             Self::expect_state(frame, ParsingState::ExpectObject, ParsingState::ExpectEmbeddedEnd)?;
         }
-        match self.parse_token(input, pos)? {
-            Some(hash) => self.stack.current().object = Some(hash),
-            None => {
-                return Err(RdfStarParseError::MalformedEmbeddedTriple);
+        while *pos < input.len() && input[*pos].is_ascii_whitespace() {
+            *pos += 1;
+        }
+        if *pos + 1 < input.len() && input[*pos] == b'<' && input[*pos + 1] == b'<' {
+            *pos += 2; // skip <<
+            let (hash, _) = self.parse_embedded_triple_internal(input, pos)?;
+            self.stack.current().object = Some(hash);
+        } else {
+            match self.parse_token(input, pos)? {
+                Some(hash) => self.stack.current().object = Some(hash),
+                None => {
+                    return Err(RdfStarParseError::MalformedEmbeddedTriple);
+                }
             }
         }
 
@@ -287,6 +305,12 @@ impl RdfStarParser for TurtleStarParser {
         input: &[u8],
     ) -> Result<(u64, [u64; 3]), RdfStarParseError> {
         let mut pos = 0;
+        while pos < input.len() && input[pos].is_ascii_whitespace() {
+            pos += 1;
+        }
+        if pos + 1 < input.len() && input[pos] == b'<' && input[pos + 1] == b'<' {
+            pos += 2;
+        }
         self.parse_embedded_triple_internal(input, &mut pos)
     }
 
@@ -490,7 +514,7 @@ mod tests {
     #[test]
     fn test_parse_embedded_triple() {
         let mut parser = TurtleStarParser::new(0);
-        let input = b"Alice knows Bob"; // Simplified for testing
+        let input = b"<< Alice knows Bob >>"; // Simplified for testing
         let result = parser.parse_embedded_triple(input);
         assert!(result.is_ok());
         let (virtual_id, components) = result.unwrap();
@@ -514,7 +538,7 @@ mod tests {
         let mut parser1 = TurtleStarParser::new(context1);
         let mut parser2 = TurtleStarParser::new(context2);
 
-        let input = b"Alice knows Bob";
+        let input = b"<< Alice knows Bob >>";
         let (vid1, _) = parser1.parse_embedded_triple(input).unwrap();
         let (vid2, _) = parser2.parse_embedded_triple(input).unwrap();
 

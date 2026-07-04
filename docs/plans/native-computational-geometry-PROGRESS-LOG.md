@@ -356,3 +356,31 @@ circumstances):
 4. **⚑ Where I need the human.** None blocking. The P2.2 surface-mesh view is implemented and tested. The CC0 Surface_mesh golden vectors can be added later when Timothy provides the source (they would update the test count but not the implementation). The one-ring circulator's boundary handling is the design decision: yielding `origin(prev(start))` as the final neighbor for boundary vertices is the standard half-edge convention (matches CGAL Surface_mesh `CGAL::Vertex_around_target_circulator` behavior). If Timothy wants a different boundary convention, that's a design call.
 
 5. **Next step.** P2.2 is implemented. The remaining P2 tasks in dependency order: **P2.3** (polygon-soup ingestion + repair), **P2.4** (CSR adjacency views), **P2.6** (combinatorial map minimal core) — all depend only on P2.1 (done) and are disjoint isolated-file swarm units, fully parallel. **P2.5** (connectivity invariants) waits on P2.4. **P2.7** (GPU-stageability + Tensor10D enrichment) and **P2.8** (`.10d` topology sections + MCP) are serial integrator-lane at the end. No file flagged for the deferred §11 library-ization pass — surface_mesh.rs is ~750 lines including tests and cohesive.
+
+---
+
+### 2026-07-04 — P5.3 (surface-mesh measures) — implemented + verified
+
+1. **Step + status.** P5 (3-D algorithms) claimed — Timothy allocation: Devin→P4 (2-D), Claude→P5 (3-D).
+   First slice landed: **P5.3 surface-mesh processing core — measures** (area + signed volume). Status:
+   *implemented + verified* against first-principles oracles (own tests green); CC0 Polygon_mesh_processing
+   corpus integration not yet done (deferred, consistent with Devin's P1 CC0 approach).
+2. **What was built.** NEW isolated file `computational_geometry/surface_mesh_processing.rs`: `surface_area`
+   (Σ ½‖(b−a)×(c−a)‖) and `signed_volume` (Σ ⅙ a·(b×c), divergence theorem) over caller-owned slices —
+   zero-heap, single streaming pass, deterministic. `MeshMeasureError` (index-OOB / non-finite). Wired into
+   `mod.rs` additively (`mod surface_mesh_processing;` + one `pub use`). Component/boundary/genus reuse the
+   existing `connectivity` (P2.5); manifold/closure via `topology` (P2.1) — NOT duplicated. **Self-intersection
+   is deliberately absent** (a real follow-up needing tri-tri intersection over the P3 BVH broad phase) — not
+   stubbed with a plausible-but-wrong placeholder.
+3. **Measured results.** `cargo test -p qualia-core-db --lib surface_mesh_processing` → **10 passed; 0 failed**.
+   Unit-cube area=6.0 and volume=+1.0 (outward, per-face hand-verified); reversed winding → −1.0; closed-mesh
+   volume origin-independent under a large translation; unit-tetra area = 1.5+√3/2 and volume = 1/6; degenerate
+   (collinear) triangle → 0 area (no NaN); empty mesh → 0/0; out-of-bounds index and non-finite coordinate both
+   error; two calls bit-identical (`to_bits()`). Not measured: CC0 vectors (deferred), self-intersection (not
+   built).
+4. **⚑ Where I need the human.** None this step. Standing P5 ⚑s: a CC0 source for the 3-D golden corpus, and
+   the anatomy GLB meshes for the end-to-end path.
+5. **Next step.** Continue P5 in dependency order. P5.1 (`hull_3`) and P5.2 (`delaunay_3`) are the barrier-free
+   fan-out units (orient3d/insphere from P1 done) — the error-prone reference algorithms I'll implement +
+   adversarially verify before swarming the rest; P5.7 (decimation/LOD) is the other anatomy-critical unit.
+   Shared surface (`mod.rs`, `GeometryKernel` trait, `gpu.rs`) coordinated with Devin's P4.

@@ -407,7 +407,7 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::commands::generate_qapp_credential;
 
     #[test]
     fn test_generate_qapp_credential() {

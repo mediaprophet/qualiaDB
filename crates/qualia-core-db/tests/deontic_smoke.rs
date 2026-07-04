@@ -60,7 +60,7 @@ const CONTRACT: &str = "did:webizen:agency:G1"; // the guard's contract graph
 const FORBID_PRED: &str = "q42:forbidsHoldingDignityRight";
 
 /// Run the real line-based N3 parser over a fixture, collecting logic rules.
-fn parse_rules(fixture: &str) -> Vec<Rule> {
+fn parse_rules(fixture: &str) -> Vec<Rule<'_>> {
     let mut parser = N3Parser::new(fixture);
     let mut rules = Vec::new();
     parser

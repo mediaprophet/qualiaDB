@@ -3,7 +3,8 @@
 use serde_json::{json, Value};
 
 use super::{
-    build_triangle_half_edges, convex_hull_indices_2, orientation_2, required_edge_slots,
+    build_triangle_half_edges, convex_hull_indices_2, delaunay_triangulation_2,
+    nearest_site_brute_force, orientation_2, required_edge_slots, voronoi_diagram_2,
     EdgeSlot, HalfEdge, Point2, INVALID_INDEX,
 };
 use crate::container_10d::topology_section::{
@@ -226,6 +227,73 @@ pub fn execute_geometry_tool_json(args: &str) -> Result<String, GeometryToolErro
             })
             .to_string())
         }
+        "delaunay_2" => {
+            let input = points(&value, "points")?;
+            let n = input.len();
+            if n < 3 {
+                return Err(GeometryToolError::InvalidParameters);
+            }
+            let mut scratch = vec![0u32; n];
+            let mut tris = vec![[0u32; 3]; 2 * n + 1];
+            let count = delaunay_triangulation_2(&input, &mut scratch, &mut tris)
+                .map_err(|error| GeometryToolError::Geometry(format!("{error:?}")))?;
+            tris.truncate(count);
+            Ok(json!({
+                "op": op,
+                "triangle_count": count,
+                "triangles": tris,
+            })
+            .to_string())
+        }
+        "voronoi_2" => {
+            let input = points(&value, "points")?;
+            let n = input.len();
+            if n < 3 {
+                return Err(GeometryToolError::InvalidParameters);
+            }
+            let mut tri_scratch = vec![0u32; n];
+            let mut tri_out = vec![[0u32; 3]; 2 * n + 1];
+            let mut verts = vec![super::VoronoiVertex { triangle_index: 0, center: Point2::new(0.0, 0.0) }; 2 * n + 1];
+            let mut edges = vec![super::VoronoiEdge { site_a: 0, site_b: 0, triangle: 0, neighbor_triangle: None }; 3 * n];
+            let (vc, ec) = voronoi_diagram_2(&input, &mut tri_scratch, &mut tri_out, &mut verts, &mut edges)
+                .map_err(|error| GeometryToolError::Geometry(format!("{error:?}")))?;
+            let vert_json: Vec<Value> = verts[..vc].iter().map(|v| json!({
+                "triangle": v.triangle_index,
+                "center": [v.center.x, v.center.y],
+            })).collect();
+            let edge_json: Vec<Value> = edges[..ec].iter().map(|e| json!({
+                "sites": [e.site_a, e.site_b],
+                "triangle": e.triangle,
+                "neighbor": e.neighbor_triangle,
+            })).collect();
+            Ok(json!({
+                "op": op,
+                "vertex_count": vc,
+                "edge_count": ec,
+                "vertices": vert_json,
+                "edges": edge_json,
+            })
+            .to_string())
+        }
+        "nearest_site" => {
+            let input = points(&value, "points")?;
+            let query_arr = value.get("query")
+                .and_then(Value::as_array)
+                .ok_or(GeometryToolError::InvalidParameters)?;
+            if query_arr.len() < 2 {
+                return Err(GeometryToolError::InvalidParameters);
+            }
+            let qx = query_arr[0].as_f64().ok_or(GeometryToolError::InvalidParameters)?;
+            let qy = query_arr[1].as_f64().ok_or(GeometryToolError::InvalidParameters)?;
+            let idx = nearest_site_brute_force(&input, Point2::new(qx, qy))
+                .ok_or(GeometryToolError::InvalidParameters)?;
+            Ok(json!({
+                "op": op,
+                "nearest_index": idx,
+                "nearest_point": [input[idx as usize].x, input[idx as usize].y],
+            })
+            .to_string())
+        }
         _ => Err(GeometryToolError::InvalidOperation),
     }
 }
@@ -251,6 +319,42 @@ mod tests {
         let value: Value = serde_json::from_str(&result).unwrap();
         assert!(value["package_count"].as_u64().unwrap() >= 100);
         assert_eq!(value["upstream_ref"], "v6.2");
+    }
+
+    #[test]
+    fn json_delaunay_returns_triangles() {
+        let result = execute_geometry_tool_json(
+            r#"{"op":"delaunay_2","points":[[0,0],[1,0],[1,1],[0,1]]}"#,
+        )
+        .unwrap();
+        let value: Value = serde_json::from_str(&result).unwrap();
+        assert_eq!(value["op"], "delaunay_2");
+        assert_eq!(value["triangle_count"], 2);
+        let tris = value["triangles"].as_array().unwrap();
+        assert_eq!(tris.len(), 2);
+    }
+
+    #[test]
+    fn json_voronoi_returns_vertices_and_edges() {
+        let result = execute_geometry_tool_json(
+            r#"{"op":"voronoi_2","points":[[0,0],[2,0],[2,2],[0,2]]}"#,
+        )
+        .unwrap();
+        let value: Value = serde_json::from_str(&result).unwrap();
+        assert_eq!(value["op"], "voronoi_2");
+        assert!(value["vertex_count"].as_u64().unwrap() > 0);
+        assert!(value["edge_count"].as_u64().unwrap() > 0);
+    }
+
+    #[test]
+    fn json_nearest_site_returns_index() {
+        let result = execute_geometry_tool_json(
+            r#"{"op":"nearest_site","points":[[0,0],[3,0],[2,3]],"query":[0.1,0.1]}"#,
+        )
+        .unwrap();
+        let value: Value = serde_json::from_str(&result).unwrap();
+        assert_eq!(value["op"], "nearest_site");
+        assert_eq!(value["nearest_index"], 0);
     }
 
     #[test]

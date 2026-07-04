@@ -72,7 +72,7 @@ pub const P64_LAYER_GLOBAL: u16 = 0xFFFF;
 // `container_10d::crc32c` module (P0.3 consolidation). The algorithm is
 // byte-identical to the previous in-line implementation; the p64 round-trip
 // tests verify the checksums are unchanged after delegation.
-use crate::container_10d::crc32c::{crc32c, crc32c_update};
+use crate::container_10d::crc32c::crc32c;
 
 #[repr(C, align(64))]
 #[derive(Clone, Copy, Debug)]
