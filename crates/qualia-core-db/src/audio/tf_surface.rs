@@ -18,7 +18,6 @@
 //! All operations are deterministic: the raster is a fixed f32 matrix,
 //! and sampling/gradient/ridge are pure functions.
 
-use crate::audio::audio_spectral_sheet::SPECTRAL_PREVIEW_BINS;
 
 // ───────────────────────────────────────────────────────────────────────────
 //  Types
@@ -226,6 +225,7 @@ impl<'a> TfSurface<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::audio::audio_spectral_sheet::SPECTRAL_PREVIEW_BINS;
 
     fn make_test_surface() -> (Vec<f32>, usize, usize) {
         let frames = 4;

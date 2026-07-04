@@ -135,10 +135,6 @@ pub fn alpha_filtration_2d(
 
     // Edges: birth radius = half the edge length.
     // Collect unique edges from triangles.
-    let mut edge_count = 0usize;
-    let mut edges_buf = [(0u32, 0u32, 0.0f64); 0]; // placeholder
-    let _ = edges_buf;
-
     // Use out_simplices as temporary edge storage (after vertex entries).
     let edge_start = count;
     for t in 0..tri_count {
@@ -165,7 +161,6 @@ pub fn alpha_filtration_2d(
                     birth: half_len.to_bits(),
                 };
                 count += 1;
-                edge_count += 1;
             }
         }
     }

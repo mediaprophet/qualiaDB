@@ -147,7 +147,7 @@ fn line_segment_intersection(
 }
 
 /// Find all intersection points between edges of polygon A and polygon B.
-fn find_intersections(a: &[Point2], b: &[Point2]) -> Vec<Point2> {
+pub fn find_intersections(a: &[Point2], b: &[Point2]) -> Vec<Point2> {
     let mut intersections = Vec::new();
     for i in 0..a.len() {
         let a1 = a[i];

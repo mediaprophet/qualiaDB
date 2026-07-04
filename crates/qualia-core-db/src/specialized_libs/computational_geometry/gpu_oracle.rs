@@ -13,7 +13,7 @@
 //! output within tolerance of the CPU oracle.
 
 use crate::tensor::Tensor10D;
-use super::vr_filtration::{spatial_distance, full_coordinate_distance};
+use super::vr_filtration::spatial_distance;
 use super::cknn_laplacian::local_density;
 use super::nn_query::axis_honest_distance;
 

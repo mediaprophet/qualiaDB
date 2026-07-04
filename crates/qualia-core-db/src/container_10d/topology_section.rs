@@ -320,6 +320,8 @@ mod tests {
         let mut slots = vec![EdgeSlot::default(); required_edge_slots(triangles.len())];
         let summary = build_triangle_half_edges(vertex_count, triangles, &mut edges, &mut slots)
             .unwrap();
+        assert_eq!(summary.vertex_count, vertex_count);
+        assert_eq!(summary.face_count, triangles.len() as u32);
         (edges, vertex_count, triangles.len() as u32)
     }
 

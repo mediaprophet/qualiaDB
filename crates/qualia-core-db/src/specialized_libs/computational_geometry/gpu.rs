@@ -621,7 +621,7 @@ fn sign_to_i8(s: Sign) -> i8 {
 /// This is the CPU-side simulation of the GPU filtered stage — used by the
 /// differential test to verify that GPU-certain lanes match the CPU exact
 /// ladder and GPU-uncertain lanes are flagged.
-fn gpu_filter_orient3d_f32(quad: &[f32]) -> i32 {
+pub fn gpu_filter_orient3d_f32(quad: &[f32]) -> i32 {
     let ax = quad[0] as f64; let ay = quad[1] as f64; let az = quad[2] as f64;
     let bx = quad[3] as f64; let by = quad[4] as f64; let bz = quad[5] as f64;
     let cx = quad[6] as f64; let cy = quad[7] as f64; let cz = quad[8] as f64;
@@ -652,7 +652,7 @@ fn gpu_filter_orient3d_f32(quad: &[f32]) -> i32 {
 }
 
 /// GPU filter result for a single incircle quadruple (f32).
-fn gpu_filter_incircle_f32(quad: &[f32]) -> i32 {
+pub fn gpu_filter_incircle_f32(quad: &[f32]) -> i32 {
     let ax = quad[0] as f64; let ay = quad[1] as f64;
     let bx = quad[2] as f64; let by = quad[3] as f64;
     let cx = quad[4] as f64; let cy = quad[5] as f64;

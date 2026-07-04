@@ -559,8 +559,8 @@ mod tests {
         for i in 0..=10 {
             let sigma = i as f32 / 10.0;
             let rgb = emf_to_linear_rgb(1.0, 0.0, sigma);
-            let (r, g, b) = linear_rgb_to_display(&rgb);
-            assert!(r <= 255 && g <= 255 && b <= 255, "display RGB must be ≤ 255");
+            let (_r, _g, _b) = linear_rgb_to_display(&rgb);
+            // Display RGB returns u8, so it is always <= 255.
         }
     }
 }

@@ -22,8 +22,8 @@
 //! matrix entries computed in canonical order. Identical input →
 //! bit-identical output.
 
-use super::distance::distance_sq_3d;
-use super::point_set_3d::{knn_all_brute_force_3d, KnnEntry, MAX_K};
+
+use super::point_set_3d::{knn_all_brute_force_3d, KnnEntry};
 use super::primitives::Point3;
 
 // ───────────────────────────────────────────────────────────────────────────

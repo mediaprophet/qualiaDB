@@ -25,9 +25,7 @@
 //! f32 rounding tolerance).
 
 use crate::render::spectral_kernel::{
-    emf_to_spd, spd_to_xyz, xyz_to_linear_srgb, Spd, Xyz,
-    CIE_1931_CMF_X, CIE_1931_CMF_Y, CIE_1931_CMF_Z,
-    LAMBDA_MIN, LAMBDA_STEP, SPD_SAMPLES,
+    emf_to_spd, spd_to_xyz, xyz_to_linear_srgb,
 };
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -313,9 +311,7 @@ mod tests {
         let mut out = [0u8; 9];
         let n = cpu_batch_emf_to_display_gamut_mapped(&emf, &mut out);
         assert_eq!(n, 3);
-        for v in &out {
-            assert!(*v <= 255, "RGB values must be ≤ 255");
-        }
+        // RGB is u8, so it's always in [0, 255] by type limits.
     }
 
     #[test]

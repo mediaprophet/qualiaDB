@@ -67,7 +67,7 @@ impl std::error::Error for DelaunayError {}
 /// The sort key (min, mid, max) is computed separately for deterministic
 /// output ordering without breaking the winding.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-struct Tri {
+pub struct Tri {
     v: [u32; 3], // CCW order
 }
 
@@ -86,7 +86,7 @@ impl Tri {
     }
 
     #[inline]
-    fn contains(&self, idx: u32) -> bool {
+    pub fn contains(&self, idx: u32) -> bool {
         self.v[0] == idx || self.v[1] == idx || self.v[2] == idx
     }
 }

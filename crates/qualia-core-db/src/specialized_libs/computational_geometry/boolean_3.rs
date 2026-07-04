@@ -703,7 +703,7 @@ fn classify_point(point: Point3, triangles: &[[Point3; 3]]) -> MeshSide {
 
 /// Convenience wrapper: true if inside or on surface.
 #[inline]
-fn point_in_mesh(point: Point3, triangles: &[[Point3; 3]]) -> bool {
+pub fn point_in_mesh(point: Point3, triangles: &[[Point3; 3]]) -> bool {
     classify_point(point, triangles) != MeshSide::Outside
 }
 

@@ -80,7 +80,7 @@ fn edge_exists_in_triangulation(triangles: &[[u32; 3]], a: u32, b: u32) -> bool 
 }
 
 /// Collect all edges from a triangulation.
-fn collect_edges(triangles: &[[u32; 3]]) -> Vec<(u32, u32)> {
+pub fn collect_edges(triangles: &[[u32; 3]]) -> Vec<(u32, u32)> {
     let mut edges = Vec::with_capacity(triangles.len() * 3);
     for tri in triangles {
         for i in 0..3 {

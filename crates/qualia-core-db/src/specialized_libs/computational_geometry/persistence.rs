@@ -168,8 +168,6 @@ pub fn compute_persistence(
                 } else {
                     // Components merged: the younger component dies.
                     // Find the two roots and their births.
-                    let root = find(&mut parent, s.v0);
-                    // Find the dead component (the one that's no longer a root).
                     // We need to find which component_births entry died.
                     // The dead component is the one whose root changed.
                     // Since union by rank may change either root, we check both.
@@ -215,12 +213,18 @@ pub fn compute_persistence(
                 ];
 
                 // Find the latest active H1 that is killed by this triangle.
-                // A triangle kills the H1 born at the latest edge that
-                // completes the cycle. We use the triangle's birth as death.
+                // A triangle kills the H1 born at the edge that completes the cycle.
+                // We look for an active H1 whose creating edge is one of our triangle's edges.
                 if let Some(pos) = active_h1
                     .iter()
                     .enumerate()
-                    .filter(|(_, &(hb, _))| hb <= birth)
+                    .filter(|(_, &(hb, edge_idx))| {
+                        hb <= birth && {
+                            let se = simplices[edge_idx];
+                            let e = (se.v0.min(se.v1), se.v0.max(se.v1));
+                            edges.contains(&e)
+                        }
+                    })
                     .max_by(|(_, &(a, _)), (_, &(b, _))| {
                         a.partial_cmp(&b).unwrap_or(core::cmp::Ordering::Equal)
                     })
@@ -434,6 +438,7 @@ mod tests {
 
         let (np1, pairs1) = run_persistence(&pts);
         let (np2, pairs2) = run_persistence(&pts);
+        assert_eq!(np1, np2, "pair count must match");
 
         for i in 0..np1 {
             assert_eq!(pairs1[i].dim, pairs2[i].dim, "dim mismatch at {}", i);

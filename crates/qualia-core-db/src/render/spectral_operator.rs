@@ -334,10 +334,7 @@ mod tests {
         let mut out = [0u8; 9];
         let n = SpectralOperator::batch_emf_to_display(&emf, &mut out);
         assert_eq!(n, 3);
-        // Each triple should be valid.
-        for i in 0..3 {
-            assert!(out[i * 3] <= 255 && out[i * 3 + 1] <= 255 && out[i * 3 + 2] <= 255);
-        }
+        // Each triple is valid u8, so it's guaranteed to be <= 255.
     }
 
     #[test]
@@ -384,8 +381,8 @@ mod tests {
         // EMF → SPD → XYZ → linear sRGB → display sRGB
         for i in 0..=10 {
             let sigma = i as f32 / 10.0;
-            let (r, g, b) = SpectralOperator::emf_to_display_rgb(1.0, 0.2, sigma);
-            assert!(r <= 255 && g <= 255 && b <= 255, "display RGB must be valid at σ={}", sigma);
+            let (_r, _g, _b) = SpectralOperator::emf_to_display_rgb(1.0, 0.2, sigma);
+            // Display RGB returns u8, so it's always <= 255.
         }
     }
 

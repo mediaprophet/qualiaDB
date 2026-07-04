@@ -405,7 +405,7 @@ pub fn plan_view_with_lod(
     lod_level_count: usize,
 ) -> LodViewDisposition {
     use crate::render::authoring::{
-        has_attestation, plan_view, Sensitivity, ViewDisposition, ViewKind,
+        has_attestation, Sensitivity, ViewKind,
     };
 
     // 1) Attestation gate.

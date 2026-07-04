@@ -21,10 +21,9 @@
 //! would require manual updates on any pipeline change.
 
 use crate::render::gpu_colour_kernel::{
-    cpu_batch_emf_to_display_gamut_mapped, cpu_batch_emf_to_xyz, diff_cpu_gpu,
-    DIFF_TOLERANCE_U8,
+    cpu_batch_emf_to_display_gamut_mapped, diff_cpu_gpu,
 };
-use crate::render::spectral_kernel::{emf_to_linear_rgb, emf_to_spd, spd_to_xyz, Xyz};
+use crate::render::spectral_kernel::{emf_to_spd, spd_to_xyz, Xyz};
 
 // ───────────────────────────────────────────────────────────────────────────
 //  Golden vectors
@@ -267,10 +266,8 @@ mod tests {
     #[test]
     fn cpu_gpu_differential_valid_output() {
         let emf = [1.0, 0.3, 0.5, 0.8, 0.2, 0.7, 1.0, 0.0, 0.0];
-        let (out, _) = cpu_gpu_differential(&emf);
-        for v in &out {
-            assert!(*v <= 255, "output must be valid u8");
-        }
+        let (_out, _) = cpu_gpu_differential(&emf);
+        // RGB is u8, so it's always in [0, 255] by type limits.
     }
 
     #[test]

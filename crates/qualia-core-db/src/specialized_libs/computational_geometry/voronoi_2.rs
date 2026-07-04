@@ -19,7 +19,7 @@
 //! which is deterministic (P4.4). Circumcenters are computed in f64 with
 //! a stable formula. Output is sorted canonically.
 
-use super::delaunay_2::{delaunay_triangulation_2, triangulation_hash};
+use super::delaunay_2::delaunay_triangulation_2;
 use super::primitives::Point2;
 
 /// Voronoi diagram error.
@@ -451,7 +451,7 @@ mod tests {
 
 // Default values for test initialization.
 impl VoronoiVertex {
-    fn default_for(idx: u32) -> Self {
+    pub fn default_for(idx: u32) -> Self {
         VoronoiVertex {
             triangle_index: idx,
             center: Point2::new(0.0, 0.0),

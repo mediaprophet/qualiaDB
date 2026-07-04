@@ -206,32 +206,18 @@ pub fn alpha_shape_2d(
     // Sort edges by (i, j) and deduplicate, counting triangle membership.
     out_edges[..edge_count].sort_unstable();
 
-    // For each unique edge, count how many alpha-triangles contain it.
+    // Count how many of these edges come from interior triangles.
+    // For each interior triangle, check if it contains this edge.
     let mut write = 0usize;
     let mut i = 0usize;
     while i < edge_count {
         let cur = out_edges[i];
-        let mut count = 0usize;
         let mut j = i;
         while j < edge_count && out_edges[j].i == cur.i && out_edges[j].j == cur.j {
-            // Check if the triangle that produced this edge is interior.
-            // We need to find which triangle(s) contain this edge.
-            // Since edges are sorted by (i,j), all same edges are consecutive.
-            count += 1;
             j += 1;
         }
 
-        // Count how many of these edges come from interior triangles.
-        // We need to re-check: for each edge occurrence, was its triangle interior?
         let mut alpha_tri_count = 0usize;
-        for k in i..j {
-            // Find the triangle index for this edge occurrence.
-            // Edge k at position k in the sorted list came from some triangle.
-            // We need to map back. Actually, let's just count from the triangle side.
-            // This is complex with the current approach. Let's use a simpler method.
-        }
-        // Simpler: count from triangle side.
-        // For each interior triangle, check if it contains this edge.
         let ei = cur.i;
         let ej = cur.j;
         for t in 0..tri_count {
@@ -461,19 +447,13 @@ fn circumsphere_radius_sq(a: Point3, b: Point3, c: Point3, d: Point3) -> f64 {
     let ac_sq = dot_3d(ac, ac);
     let ad_sq = dot_3d(ad, ad);
 
-    let abxac = cross_3d(ab, ac);
-    let abxad = cross_3d(ab, ad);
-    let acxad = cross_3d(ac, ad);
-
     let det = dot_3d(ab, cross_3d(ac, ad));
     if det.abs() < 1e-20 {
         return f64::INFINITY; // Degenerate
     }
 
-    let inv_det = 1.0 / det;
     // Circumcenter relative to a.
-    let cx = (ac_sq * dot_3d(abxad, acxad) - ab_sq * dot_3d(acxad, acxad)) * inv_det * 0.5;
-    // Actually, let's use a simpler approach: compute the circumcenter directly.
+    // We compute the circumcenter directly.
     // For a tetrahedron, the circumcenter is equidistant from all 4 vertices.
     // We solve the linear system: 2*(b-a)·x = |b|²-|a|², etc.
     // With a as origin: 2*ab·x = |ab|², 2*ac·x = |ac|², 2*ad·x = |ad|².
