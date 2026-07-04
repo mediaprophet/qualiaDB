@@ -68,21 +68,11 @@ pub const P64_LAYER_GLOBAL: u16 = 0xFFFF;
 
 // Metadata bitfields are handled by the q42 layer, no longer embedded in weights.
 
-/// CRC-32C (Castagnoli, reflected) — table-less. Used for in-band `.p64` integrity.
-#[inline]
-fn crc32c_update(mut crc: u32, data: &[u8]) -> u32 {
-    for &byte in data {
-        crc ^= byte as u32;
-        for _ in 0..8 {
-            crc = (crc >> 1) ^ (0x82F6_3B78 & 0u32.wrapping_sub(crc & 1));
-        }
-    }
-    crc
-}
-#[inline]
-fn crc32c(data: &[u8]) -> u32 {
-    !crc32c_update(0xFFFF_FFFF, data)
-}
+// CRC-32C (Castagnoli, reflected) — delegated to the shared
+// `container_10d::crc32c` module (P0.3 consolidation). The algorithm is
+// byte-identical to the previous in-line implementation; the p64 round-trip
+// tests verify the checksums are unchanged after delegation.
+use crate::container_10d::crc32c::{crc32c, crc32c_update};
 
 #[repr(C, align(64))]
 #[derive(Clone, Copy, Debug)]

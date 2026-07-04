@@ -254,6 +254,11 @@ pub use net::nym_adapter;
 pub use net::sonic_token;
 pub mod audio;
 pub mod tensor;
+/// `.10d` living-container v1 — normative header, axis-role taxonomy, and
+/// metric-completeness descriptor for the 10-D tensor substrate. P0.1 barrier
+/// task. Available to browser/WASM builds (P0.8 parity target). See
+/// `docs/plans/native-computational-geometry-EXECUTION.md` P0.1.
+pub mod container_10d;
 // geometric_algebra moved into solvers/ (it is a math solver, not a logic modality);
 // re-exported here so `crate::geometric_algebra::*` paths keep resolving. Gated to match the
 // `solvers` module below — on wasm32 it only exists under the `wasm-scientific` feature.
@@ -650,6 +655,21 @@ pub const CAPABILITY_DESCRIPTORS: &[CapabilityDescriptor] = &[
         mcp_tools: &["geometric_algebra_op"],
         maturity: "partial",
         surfaces: &["native", "mcp", "webizen"],
+    },
+    CapabilityDescriptor {
+        name: "ComputationalGeometry",
+        domain: "geometry",
+        operations: &[
+            "robust geometric predicates",
+            "convex hulls",
+            "half-edge topology graphs",
+            "10D geometry feature encoding",
+            "CGAL package port inventory",
+            ".10d quantized mesh geometry",
+        ],
+        mcp_tools: &["computational_geometry"],
+        maturity: "partial",
+        surfaces: &["native", "wasm-scientific", "mcp", "webizen", "renderer"],
     },
     CapabilityDescriptor {
         name: "NumberTheory",

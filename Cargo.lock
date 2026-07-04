@@ -8804,6 +8804,7 @@ dependencies = [
  "memmap2",
  "minicbor",
  "naga",
+ "num-bigint",
  "num_cpus",
  "pbkdf2",
  "pollster",

@@ -243,6 +243,7 @@ dhat = "0.3.3"
 proptest = "1.11.0"
 serial_test = "3"
 pollster = "0.4.0"
+num-bigint = "0.4"
 
 [package.metadata.wasm-pack.profile.release]
 # wasm-opt -Oz was rewriting large `vec![0; n]` fills into bulk-memory ops that

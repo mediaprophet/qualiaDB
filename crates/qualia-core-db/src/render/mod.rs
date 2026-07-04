@@ -9,9 +9,6 @@
 pub mod acoustic;
 /// Asset import: OBJ / STL / GLB → `Mesh` + semantic NQuins (Phase 1.3).
 pub mod assets;
-/// Native quantized mesh geometry buffer (the geometry half of a Q42 mesh asset; fills the
-/// Phase-1.3-vs-Phase-6 gap where GLB→native emitted only semantic metadata).
-pub mod mesh_asset;
 /// Authoring vocabulary + render planner (Phase 5): a qapp declares 3D + 2D views over one
 /// manifold; the planner enforces attestation gates, rights-bounded contexts, and budget-driven
 /// 3D→2D degradation before drawing. Gated like `place_time` (needs `crate::modalities`).
