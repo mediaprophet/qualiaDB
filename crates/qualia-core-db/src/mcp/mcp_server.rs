@@ -288,8 +288,13 @@ fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
         },
         McpToolDescriptor {
             name: "computational_geometry",
-            description: "Native Rust/WASM computational geometry over caller data: robust orientation, 2D convex hull, triangle half-edge topology, and CGAL port inventory.",
-            input_schema: r#"{"type":"object","required":["op"],"properties":{"op":{"type":"string","enum":["orientation_2","convex_hull_2","triangle_topology","package_inventory"]},"points":{"type":"array","items":{"type":"array","items":{"type":"number"}}},"vertex_count":{"type":"integer"},"triangles":{"type":"array","items":{"type":"array","items":{"type":"integer"}}}}}"#,
+            description: "Native Rust/WASM computational geometry over caller data: robust orientation, 2D convex hull, triangle half-edge topology, CGAL port inventory, Delaunay, Voronoi, nearest site, and primitive generation (box, sphere, cylinder, plane).",
+            input_schema: r#"{"type":"object","required":["op"],"properties":{"op":{"type":"string","enum":["orientation_2","convex_hull_2","triangle_topology","package_inventory","delaunay_2","voronoi_2","nearest_site","mesh_topology","create_box","create_sphere","create_cylinder","create_plane"]},"points":{"type":"array","items":{"type":"array","items":{"type":"number"}}},"vertex_count":{"type":"integer"},"triangles":{"type":"array","items":{"type":"array","items":{"type":"integer"}}},"width":{"type":"number"},"height":{"type":"number"},"depth":{"type":"number"},"radius":{"type":"number"},"size":{"type":"number"},"lat_segments":{"type":"integer"},"lon_segments":{"type":"integer"},"segments":{"type":"integer"},"query":{"type":"array","items":{"type":"number"}}}}"#,
+        },
+        McpToolDescriptor {
+            name: "geometry_manifests",
+            description: "List per-op capability manifests (backends, determinism class, resource limits) and run Reserve-mode budget queries for computational-geometry ops.",
+            input_schema: r#"{"type":"object","properties":{"op":{"type":"string","description":"Op name for a Reserve-mode budget query (omit to list all manifests)"},"device":{"type":"object","properties":{"cpu":{"type":"boolean"},"simd":{"type":"boolean"},"wgpu":{"type":"boolean"},"cuda":{"type":"boolean"},"wasm":{"type":"boolean"},"exact":{"type":"boolean"}}}}}"#,
         },
         McpToolDescriptor {
             name: "bioinformatics_align",
@@ -482,6 +487,9 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
         }
         b"computational_geometry" => {
             mcp_tool_impls::computational_geometry(payload.arguments_raw)
+        }
+        b"geometry_manifests" => {
+            mcp_tool_impls::geometry_manifests(payload.arguments_raw)
         }
 
         // ── Identifiers & Wallet Tools ─────────────────────────────────────────
@@ -1609,5 +1617,46 @@ mod tests {
         let payload: Value = serde_json::from_str(text).expect("embedded json");
         assert_eq!(payload["server"], "qualia-core-db-mcp");
         assert_eq!(payload["qpuEnabled"], false);
+    }
+
+    #[test]
+    fn geometry_manifests_tool_list_round_trips() {
+        let reply = handle_jsonrpc_message(
+            r#"{"jsonrpc":"2.0","id":"gm","method":"tools/call","params":{"name":"geometry_manifests","arguments":{}}}"#,
+            false,
+            false,
+        )
+        .expect("reply");
+        let json: Value = serde_json::from_str(&reply).expect("valid json");
+        let text = json["result"]["content"][0]["text"]
+            .as_str()
+            .expect("text payload");
+        let payload: Value = serde_json::from_str(text).expect("embedded json");
+        assert!(payload["op_count"].as_u64().unwrap() > 0);
+        let ops = payload["ops"].as_array().unwrap();
+        for op in ops {
+            assert!(op["backends"].as_array().unwrap().len() > 0,
+                "every op must have non-empty backends");
+        }
+    }
+
+    #[test]
+    fn geometry_manifests_budget_query_no_gpu() {
+        let reply = handle_jsonrpc_message(
+            r#"{"jsonrpc":"2.0","id":"bq","method":"tools/call","params":{"name":"geometry_manifests","arguments":{"op":"vr_filtration","device":{"cpu":true,"simd":true,"wgpu":false,"cuda":false,"wasm":true,"exact":true}}}}"#,
+            false,
+            false,
+        )
+        .expect("reply");
+        let json: Value = serde_json::from_str(&reply).expect("valid json");
+        let text = json["result"]["content"][0]["text"]
+            .as_str()
+            .expect("text payload");
+        let payload: Value = serde_json::from_str(text).expect("embedded json");
+        assert_eq!(payload["op"], "vr_filtration");
+        assert!(payload["backend_count"].as_u64().unwrap() > 0);
+        let backends = payload["runnable_backends"].as_array().unwrap();
+        assert!(!backends.iter().any(|b| b == "wgpu"),
+            "wgpu should not be runnable when device.wgpu=false");
     }
 }

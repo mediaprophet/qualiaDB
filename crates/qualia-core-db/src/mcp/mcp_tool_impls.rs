@@ -28,6 +28,34 @@ pub fn computational_geometry(args: &[u8]) -> Result<String, McpSystemError> {
         })
 }
 
+/// List per-op capability manifests or run a Reserve-mode budget query.
+///
+/// With no `op` field: returns all manifests as JSON.
+/// With `op` + `device`: returns the runnable backends for that device.
+pub fn geometry_manifests(args: &[u8]) -> Result<String, McpSystemError> {
+    use crate::specialized_libs::computational_geometry::capability_manifests;
+
+    let v = parse_tool_args(args)?;
+    let op = v.get("op").and_then(Value::as_str);
+
+    if let Some(op_name) = op {
+        // Reserve-mode budget query.
+        let device = v.get("device");
+        let avail = capability_manifests::DeviceAvailability {
+            cpu: device.and_then(|d| d.get("cpu")).and_then(Value::as_bool).unwrap_or(true),
+            simd: device.and_then(|d| d.get("simd")).and_then(Value::as_bool).unwrap_or(true),
+            wgpu: device.and_then(|d| d.get("wgpu")).and_then(Value::as_bool).unwrap_or(false),
+            cuda: device.and_then(|d| d.get("cuda")).and_then(Value::as_bool).unwrap_or(false),
+            wasm: device.and_then(|d| d.get("wasm")).and_then(Value::as_bool).unwrap_or(false),
+            exact: device.and_then(|d| d.get("exact")).and_then(Value::as_bool).unwrap_or(true),
+        };
+        Ok(capability_manifests::budget_query_to_json(op_name, &avail).to_string())
+    } else {
+        // List all manifests.
+        Ok(capability_manifests::manifests_to_json().to_string())
+    }
+}
+
 /// Return the canonical capability catalogue used by chat, CLI, and MCP.
 ///
 /// Internal/library-only operations remain visible with no MCP route, while

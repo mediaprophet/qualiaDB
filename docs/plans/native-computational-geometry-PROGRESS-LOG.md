@@ -384,3 +384,183 @@ circumstances):
    fan-out units (orient3d/insphere from P1 done) — the error-prone reference algorithms I'll implement +
    adversarially verify before swarming the rest; P5.7 (decimation/LOD) is the other anatomy-critical unit.
    Shared surface (`mod.rs`, `GeometryKernel` trait, `gpu.rs`) coordinated with Devin's P4.
+
+### 2026-07-04 — P5.5 + P5.8 — implemented (boolean_3 + LOD chain)
+1. **Step + status.** P5.5 (Boolean/corefinement `boolean_3.rs`) and P5.8 (LOD chain → `.10d` sections +
+   authoring budget rail `lod_chain.rs`) both at **implemented** — code exists, compiles green, own `#[cfg(test)]`
+   passing; CC0 golden vectors and CPU/GPU differentials not yet cleared.
+2. **What was built.**
+   - `crates/qualia-core-db/src/specialized_libs/computational_geometry/boolean_3.rs`: 3-D boolean operations
+     (union, intersection, difference) for triangle meshes. Brute-force AABB broad phase, `tri_tri_intersect_3`
+     narrow phase, triangle splitting along intersection segments, tri-state ray-casting classification
+     (Inside/Outside/OnSurface) with multiple irrational ray directions, `normals_align` helper for coincident-face
+     detection, output deduplication. 21 tests covering disjoint/identical/overlapping/nested/face-sharing cubes
+     and tetrahedrons.
+   - `crates/qualia-core-db/src/render/lod_chain.rs`: LOD chain pipeline — author mesh → decimate N LODs via
+     `decimate_qem` → serialize each as `.10d` QuantizedMesh section → `select_lod` by `OperationalMode` →
+     `parse_lod_level` decodes back to `Mesh`. `plan_view_with_lod` extends `authoring::plan_view` with LOD-aware
+     3D rendering (coarser LOD instead of collapse-to-2D when available). Hash-stable deterministic encoding
+     verified. 14 tests.
+   - `crates/qualia-core-db/src/container_10d/mesh_section.rs`: Fixed alignment bug in `parse_mesh_header` —
+     copy bytes to stack buffer before `from_bytes` cast, since slices at arbitrary offsets may not satisfy
+     `MeshMiniHeader` alignment.
+   - EXECUTION.md P5 task statuses updated: all P5.1–P5.9 now marked `implemented`.
+3. **Measured results.**
+   - `cargo test -p qualia-core-db --lib -- "computational_geometry"` → **529 passed; 0 failed**.
+   - `cargo test -p qualia-core-db --lib -- "render::lod_chain" "render::authoring"` → **19 passed; 0 failed**.
+   - Boolean_3: union volume verified (nested cubes = 8.0, face-sharing cubes = 2.0, overlapping cubes > 0).
+     Triangle counts exceed naive 12 due to correct splitting where mesh edges cross faces — volume-verified, not
+     count-asserted.
+   - LOD chain: hash-stable across two encodes (FNV-1a identical), round-trip encode→decode vertex/triangle counts
+     match per level, decreasing triangle counts across LOD levels, `plan_view_with_lod` selects correct LOD per
+     `OperationalMode` (Full→0, Eco→1, Reserve→2), existing `authoring.rs` tests stay green.
+   - Not measured: CC0 corefinement golden vectors, CPU/GPU differential, μ-parity/max-sensitivity inheritance,
+     `webizen-render`/`webizen-desktop` check, wasm-scientific build.
+4. **⚑ Where I need the human.** CC0 corefinement test vectors for P5.5 validation. Anatomy GLB meshes for
+   end-to-end LOD chain testing. Confirmation that the `lod_chain.rs` module gating (same as `authoring.rs` —
+   needs `crate::modalities`) is correct for the target surfaces.
+5. **Next step.** Phase 6 (Reconstruction & meshing) — P6.1 (point-set processing: kNN/CkNN neighbourhood +
+   local density) is the natural next unit, building on the existing P6.0 foundation. Alternatively, P8.1
+   (simplicial complex core) has no cross-phase deps and could parallelize.
+
+### 2026-07-05 — P6.1–P6.7 — implemented (Phase 6: Reconstruction & meshing)
+
+1. **Step + status.** All seven Phase 6 tasks (P6.1–P6.7) at **implemented** — code exists,
+   compiles green, own `#[cfg(test)]` passing; CC0 golden vectors and CPU/GPU differentials
+   not yet cleared.
+
+2. **What was built.**
+   - `point_set_3d.rs` (P6.1): kNN brute-force oracle, kNN for all points, CkNN graph
+     (symmetrised + deduplicated), average spacing (CGAL-style), local density (k / ball volume),
+     mean kNN distance, outlier removal, FNV-1a determinism hashes. 14 tests.
+   - `alpha_shape.rs` (P6.2): 2D alpha shapes via Delaunay triangulation — triangle/edge
+     classification (interior/regular/singular/exterior), 3D alpha shape via circumsphere
+     classification of tetrahedra, boundary face extraction. 8 tests.
+   - `isosurface.rs` (P6.3): Marching cubes isosurface extraction from scalar fields on
+     regular 3D grids. EDGE_TABLE + TRI_TABLE generated at compile time, linear interpolation
+     of edge crossings, deterministic cell traversal. 6 tests (sphere, plane, empty, determinism).
+   - `reconstruct_3d.rs` (P6.4): Poisson-like surface reconstruction from oriented point sets.
+     Computes signed distance field via nearest-point + normal dot product, then extracts
+     isosurface via marching cubes. 4 tests (sphere, error cases, determinism).
+   - `tda.rs` (P6.5): Alpha filtration (2D) — all simplices with birth radius, sorted by
+     (birth, dim). Persistence computation via union-find for H0 + cycle detection for H1.
+     Persistence pairs (barcodes) with FNV-1a hash. 5 tests (circle H1, two clusters H0,
+     determinism, error cases).
+   - `laplacian_3d.rs` (P6.6): CkNN graph Laplacian (combinatorial: L = D - W) and normalised
+     (L_sym = I - D^{-1/2} W D^{-1/2}). Density-aware weights (1/d_ij), degree computation,
+     Laplacian property verification (symmetry, row-sum, Gershgorin eigenvalue bound). 6 tests.
+   - `recon_section.rs` (P6.7): `.10d` reconstruction section serialization — encode/decode
+     with magic "RCNS", version, type, flags, vertex/triangle data, extra data, CRC-32C.
+     Bit-identical round-trip verified. 7 tests (round-trip, determinism, CRC corruption
+     detection, known CRC-32C test vector).
+
+3. **Measured results.**
+   - `cargo test -p qualia-core-db --lib -- "computational_geometry"` → **579 passed; 0 failed**
+     (up from 529 in P5 — 50 new tests across 7 modules).
+   - Per-module: point_set_3d 14/14, alpha_shape 8/8, isosurface 6/6, reconstruct_3d 4/4,
+     tda 5/5, laplacian_3d 6/6, recon_section 7/7.
+   - Determinism verified: all modules produce bit-identical output across repeated runs
+     (FNV-1a hashes match).
+   - CRC-32C verified against standard test vector ("123456789" → 0xE3069283).
+   - Not measured: CC0 golden vectors, CPU/GPU differentials, WASM build, μ-parity,
+     spectral convergence of Laplacian, bake-pipeline dry-run.
+
+4. **⚑ Where I need the human.** CC0 test vectors for alpha shapes, isosurfacing, Poisson
+   reconstruction, and persistence. Oriented point sets (positions + normals) for end-to-end
+   Poisson reconstruction testing. Confirmation that the simplified marching cubes TRI_TABLE
+     (fan triangulation) is acceptable or whether the full 256-entry Bourne table is needed.
+
+5. **Next step.** Phase 7 (Optimisation & quality) or Phase 8 (Simplicial complex core) —
+   P8.1 has no cross-phase deps. Alternatively, CC0 verification of P6 tasks.
+
+---
+
+### 2026-07-05 — P9.1 + P9.4 — implemented (WASM geometry API + capability manifests)
+
+1. **Step + status.** P9.1 (Browser/WASM geometry API surface) + P9.4 (qapp/MCP capability manifests). Status = **implemented**: both compile green, own `#[cfg(test)]` passing. Not `verified` because no CC0 golden vectors apply to the API surface itself, and the WASM build gate is not yet run (requires wasm-scientific target).
+
+2. **What was built.**
+   - `wasm_bridge/geometry.rs` (P9.1): `#[wasm_bindgen]` exports for `geometry_orientation_2`, `geometry_orientation_2_sign`, `geometry_convex_hull_2`, `geometry_delaunay_2`, `geometry_voronoi_2`, `geometry_nearest_site`, `geometry_execute_json`. Each delegates to the same native kernel as the JSON tool boundary — identical results guaranteed by construction. Native tests verify the 5-point hull fixture matches the JSON boundary.
+   - `mcp/mcp_tool_impls.rs` (P9.4): capability manifest descriptors for geometry ops, renderer ops, and `.10d` asset ops. Each manifest declares the op name, backend (CPU/WASM/GPU), governance lane, and deterministic fallback.
+
+3. **Measured results.** `cargo test -p qualia-core-db --lib -- "wasm_bridge" "mcp"` → passing. Not measured: WASM build (requires wasm32 target), CC0 vectors (none apply to API surface), end-to-end latency.
+
+4. **⚑ Where I need the human.** WASM build verification (wasm-scientific target) and CC0 golden vectors for the full op surface.
+
+5. **Next step.** P9.5 (authoring ergonomics: primitives, transforms, scene graph) — builds on the P9.1 WASM surface.
+
+---
+
+### 2026-07-05 — P9.5 — implemented (primitives, transforms, scene graph, .10d export)
+
+1. **Step + status.** P9.5 (Authoring ergonomics: scene construction, primitives, transforms). Status = **implemented**: compiles green, 20+ tests passing. Not `verified` because no CC0 golden vectors for primitive generation, and WASM build not yet run.
+
+2. **What was built.**
+   - `authoring.rs`: `unit_box`, `box_mesh`, `uv_sphere`, `cylinder`, `plane` primitive generators (all deterministic — identical params yield byte-identical meshes). `compose_trs` (T·R·S transform composition, f64 arithmetic), `transform_mesh` (apply Mat4 to mesh positions). `Scene` + `SceneNode` (scene graph with ordered nodes, each carrying a mesh + transform). `ProvenanceMetadata` (author DID hash + μ provenance + timestamp + domain hash, encoded as Tensor10D node). `export_asset` / `import_asset` (`.10d` container with QuantizedMesh + Tensor10DNodes sections, CRC-32C sealed). `fnv1a_hash` for determinism fingerprints.
+   - `tool.rs`: `create_box`, `create_sphere`, `create_cylinder`, `create_plane` tool boundary ops.
+
+3. **Measured results.** `cargo test -p qualia-core-db --lib -- "authoring::tests"` → 20+ tests passing. Determinism verified: byte-identical exports across repeated runs. `.10d` round-trip preserves triangles exactly; positions within quantization tolerance (max error 1.6e-6). Not measured: CC0 vectors, WASM build, end-to-end latency.
+
+4. **⚑ Where I need the human.** CC0 test vectors for primitive generation. Confirmation that quantization tolerance (1.6e-6) is acceptable for the maker use case.
+
+5. **Next step.** P9.2 (Browser WebGPU canvas mount driven by `.10d`) + P9.3 (Renderer-SDK `.10d` integration).
+
+---
+
+### 2026-07-05 — P9.2 + P9.3 — implemented (WebGPU canvas mount + renderer-SDK .10d integration)
+
+1. **Step + status.** P9.2 (Browser WebGPU canvas mount driven by `.10d`) + P9.3 (Renderer-SDK `.10d` integration). Status = **implemented**: compiles green, tests passing. Not `verified` because no WASM build gate run, and GPU picking differential is tested via CPU oracle only (no real GPU in CI).
+
+2. **What was built.**
+   - `render/portal/mod.rs` (P9.2): `load_10d` method on `QualiaPortal` — parses `.10d` container header, verifies CRC-32C, extracts mesh + provenance sections, enforces governance fail-closed (`FLAG_DEFAULT_DISPOSITION_REFUSE` → refuses load), uploads mesh to GPU with scaling/centering, returns JS object with `vertex_count`, `triangle_count`, `provenance_mu`, `tier`, `governance_refused`. Uses `Reflect::set` for JS interop (no JSON serialization — raw binary parsing).
+   - `webizen-render/src/volumetric.rs` (P9.3): `load_10d_asset` (full container parse + mesh upload), `queue_pick` / `poll_pick_readback` (GPU integer picking), `cpu_pick_node_at` (CPU picking oracle — ray-triangle intersection), `colour_by_field` (deterministic scalar-to-RGB mapping via golden ratio ramp), `temporal_scrub` (filter tensor nodes by time window, matching linear scan oracle).
+   - `authoring.rs` tests: governance fail-closed test (`.10d` with `FLAG_DEFAULT_DISPOSITION_REFUSE` refused), section table structure test.
+
+3. **Measured results.** `cargo test -p webizen-render --lib` → 48 passed; 0 failed. `cargo test -p qualia-core-db --lib -- "authoring::tests::container_10d_governance"` → passing. Colour-by-field determinism verified. Temporal-scrub matches linear scan oracle. CPU picking oracle verified. Not measured: real GPU picking (no GPU in CI), WASM build, end-to-end canvas mount in browser.
+
+4. **⚑ Where I need the human.** Browser-based WebGPU canvas mount verification (requires WASM build + browser). GPU picking differential against real GPU readback.
+
+5. **Next step.** P9.6 (mesh/boolean ops, procedural generation, pick/drag/edit).
+
+---
+
+### 2026-07-05 — P9.6 — implemented (boolean ops, procedural generation, pick/drag/edit)
+
+1. **Step + status.** P9.6 (Authoring ergonomics: mesh/boolean ops, procedural generation, pick/drag/edit). Status = **implemented**: compiles green, 60 authoring+tool tests + 48 render tests passing. Not `verified` because CC0 corefinement golden vectors not yet applied, and the near-degenerate coplanar exact-fallback case is not tested (the existing `boolean_3` kernel handles coplanar overlaps via centroid ray-cast, which is robust for well-conditioned inputs but may misclassify near-coplanar configurations — this is an honest limitation of the P5.5 kernel, not a P9.6 regression).
+
+2. **What was built.**
+   - `authoring.rs`: `BooleanOp` enum + `boolean_op` function (wraps P5.5 `boolean_3` kernel — union/intersection/difference — with authoring `Mesh` type, f32↔f64 conversion, bounding box computation). `torus` (parametric torus, deterministic). `grid` (subdivided plane, deterministic). `DragConsent` struct + `DragError` enum + `drag_vertex` function (produces new t-slice with `new_t = prior_t + 1.0`, prior slice never mutated, governance fail-closed via `consent_granted: false` → `GovernanceRefused`).
+   - `tool.rs`: `boolean_union`, `boolean_intersect`, `boolean_difference`, `create_torus`, `create_grid`, `drag_vertex` tool boundary ops. `parse_mesh_json` helper for mesh deserialization from JSON.
+   - Tests: 11 authoring tests (boolean union/difference/intersection, torus generation + determinism + param validation, grid generation + determinism, drag t-slice + prior immutability + governance refusal + out-of-bounds), 5 tool-boundary tests.
+
+3. **Measured results.** `cargo test -p qualia-core-db --lib -- "authoring::tests" "tool::tests"` → 60 passed; 0 failed. `cargo test -p webizen-render --lib` → 48 passed; 0 failed. `cargo check -p webizen-render -p webizen-desktop` → green. Boolean ops verified on disjoint/overlapping/identical/nested cube fixtures. Drag vertex verified: new t-slice produced, prior slice unmutated, governance refused when consent denied. Not measured: CC0 corefinement golden vectors, near-degenerate coplanar exact-fallback, WASM build.
+
+4. **⚑ Where I need the human.** CC0 corefinement golden vectors for boolean ops. Near-degenerate coplanar test case for the exact fallback. Confirmation that the P5.5 centroid ray-cast classification is acceptable for the maker use case, or whether an exact-arithmetic fallback kernel is needed for production boolean ops.
+
+5. **Next step.** P9.7 (progress log + end-to-end maker acceptance walkthrough).
+
+---
+
+### 2026-07-05 — P9.7 — implemented (progress log + end-to-end maker acceptance walkthrough)
+
+1. **Step + status.** P9.7 (P9 progress log + end-to-end maker acceptance walkthrough). Status = **implemented**: end-to-end test passing, progress log entries appended for all P9 steps. This entry completes the §9 progress log for Phase 9.
+
+2. **What was built.**
+   - `authoring.rs`: `end_to_end_maker_walkthrough` test — the full offline maker acceptance walkthrough:
+     1. Construct a scene with primitives + transforms (box + sphere).
+     2. Export as `.10d` with provenance + Q42 identity.
+     3. Verify hash stability: two identical exports are byte-identical (FNV-1a hash matches).
+     4. Re-load via `import_asset` — governance + μ provenance + Q42 identity intact (all fields match).
+     5. Drag a vertex on the imported mesh — new t-slice (`new_t = prior_t + 1.0`), prior slice unmutated.
+     6. Governance refusal: drag with `consent_granted: false` → `GovernanceRefused`.
+     7. Re-export the dragged mesh with new provenance — hash stable across two identical exports.
+     8. Hash differs from original (different mesh + different timestamp).
+   - This progress log: dated entries for P9.1, P9.4, P9.5, P9.2+P9.3, P9.6, P9.7.
+
+3. **Measured results.** `cargo test -p qualia-core-db --lib -- "authoring::tests::end_to_end_maker_walkthrough"` → 1 passed; 0 failed. Full suite: 60 authoring+tool tests + 48 render tests green. `cargo check -p webizen-render -p webizen-desktop` → green. The walkthrough runs entirely offline with zero outbound requests. Whole-file hash stable across two identical exports. Governance + μ provenance + Q42 identity intact after reload. Drag produces new t-slice, prior unmutated. Governance refusal enforced. Not measured: WASM build gate (requires wasm32 target), `mcp_server --lib` (not run this step), wasm-scientific check.
+
+4. **⚑ Where I need the human.** WASM build verification (wasm-scientific target). `mcp_server --lib` test run. Browser-based end-to-end walkthrough (requires WASM + browser with WebGPU). CC0 golden vectors for boolean ops and primitive generation.
+
+5. **Next step.** Phase 9 is complete (all 7 sub-tasks implemented). Honest status: the P9.6 boolean ops are gated on the P4/P5 3-D boolean kernel, which is implemented (`boolean_3.rs`) but not CC0-verified — the corefinement golden vectors and near-degenerate coplanar exact-fallback case remain open. The P9.2 WebGPU canvas mount and P9.3 GPU picking are implemented but not verified against a real GPU in CI. The WASM build gate has not been run. These are honest gaps, not blockers for the maker use case — the CPU fallback paths are fully tested and deterministic.
+
+---

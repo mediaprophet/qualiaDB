@@ -56,6 +56,20 @@ pub mod projection;
 ))]
 pub mod sense;
 pub mod spectral;
+/// P7.0 — Spectral-space kernel: SPD/CMF POD types + CIE linear-projection.
+pub mod spectral_kernel;
+/// P7.1 — Metamers as the affine fibre of the colour-matching projection.
+pub mod metamer;
+/// P7.2 — Gamut / object-colour solid + closest-point gamut mapping.
+pub mod gamut;
+/// P7.3 — σ spectral blend as interpolation on the spectral manifold.
+pub mod spectral_blend;
+/// P7.7 — Unified spectral-operator API surface.
+pub mod spectral_operator;
+/// P7.4 — GPU colour-projection / gamut batch kernel + CPU oracle.
+pub mod gpu_colour_kernel;
+/// P7.8 — CC0 golden-oracle + CPU/GPU differential + determinism harness.
+pub mod spectral_oracle;
 pub mod standpoint;
 pub mod telemetry;
 

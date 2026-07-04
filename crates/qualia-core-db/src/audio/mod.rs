@@ -9,6 +9,10 @@ pub mod dsp_kernel;
 pub mod hrtf;
 pub mod stft;
 pub mod stft_bake;
+/// P7.5 — Time-frequency surface view over STFT/CQT rasters.
+pub mod tf_surface;
+/// P7.6 — Audio edits as geometric surface operations.
+pub mod tf_surface_edit;
 
 pub use acoustic_plane::{
     acoustic_enabled_for_mode, acoustic_params_from_tensor, drain_sonic_tokens, pop_sonic_token,

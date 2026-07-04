@@ -38,8 +38,33 @@ mod minkowski_2;
 mod orient3d;
 pub mod query_frontend;
 mod polygon_soup;
+mod point_set_3d;
 mod primitives;
+mod alpha_shape;
+mod isosurface;
+mod reconstruct_3d;
+mod tda;
+mod laplacian_3d;
+mod recon_section;
 mod spatial_order;
+/// P8.1 — VR / alpha filtration over Tensor10D point cloud.
+pub mod vr_filtration;
+/// P8.3 — Statistical manifold: Fisher metric + KL as Bregman divergence.
+pub mod statistical_manifold;
+/// P8.2 — Persistent homology: deterministic reduction → barcode.
+pub mod persistence;
+/// P8.4 — CkNN density → graph Laplacian → Laplace-Beltrami.
+pub mod cknn_laplacian;
+/// P8.6 — Nearest-neighbour inference query (radius + kNN).
+pub mod nn_query;
+/// P8.7 — GPU acceleration + CPU oracle for P8 batches.
+pub mod gpu_oracle;
+/// P8.5 — Natural-neighbour interpolation (Sibson / Laplace weights).
+pub mod natural_neighbour;
+/// P9.4 — qapp/MCP capability manifests (per-op resource limits; backends).
+pub mod capability_manifests;
+/// P9.5 — Authoring ergonomics: primitives, transforms, scene graph, .10d export.
+pub mod authoring;
 mod surface_mesh;
 mod surface_mesh_processing;
 mod tool;
@@ -179,6 +204,37 @@ pub use exact_construct_3::{
 pub use remesh_3::{
     isotropic_remesh, isotropic_remesh_with_kernel, required_output_capacity,
     RemeshError, RemeshOptions, RemeshReport,
+};
+pub use point_set_3d::{
+    average_spacing_3d, cknn_graph_3d, cknn_hash, knn_all_brute_force_3d,
+    knn_brute_force_3d, knn_hash, knn_search_3d, local_density_3d,
+    mean_knn_distance_3d, remove_outliers_3d, CknnEdge, KnnEntry, MAX_K,
+    PointSetError,
+};
+pub use alpha_shape::{
+    alpha_shape_2d, alpha_shape_3d, alpha_shape_hash, max_triangles,
+    AlphaEdge, AlphaShapeError, AlphaShapeReport, EdgeClass, TriangleClass,
+};
+pub use isosurface::{
+    marching_cubes, isosurface_hash, IsosurfaceError,
+};
+pub use reconstruct_3d::{
+    poisson_reconstruct_3d, ReconstructionError,
+};
+pub use tda::{
+    alpha_filtration_2d, compute_persistence, persistence_hash,
+    PersistencePair, Simplex, TdaError,
+};
+pub use laplacian_3d::{
+    cknn_laplacian_3d, cknn_laplacian_normalised_3d,
+    verify_laplacian_properties, LaplacianError,
+};
+pub use recon_section::{
+    crc32c, decode_recon_section, encode_recon_section, recon_hash,
+    DecodedRecon, ReconSectionError, RECON_HEADER_SIZE, RECON_MAGIC,
+    RECON_TYPE_ALPHA_SHAPE_2D, RECON_TYPE_ALPHA_SHAPE_3D,
+    RECON_TYPE_ISOSURFACE, RECON_TYPE_LAPLACIAN, RECON_TYPE_PERSISTENCE,
+    RECON_VERSION,
 };
 
 /// Versioned native geometry ABI. Increment only when public POD layouts or

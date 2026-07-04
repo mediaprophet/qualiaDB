@@ -71,7 +71,10 @@ impl CompiledTerm {
 
 pub fn compile_term(term: &Term<'_>) -> CompiledTerm {
     let hash = crate::modalities::logic::n3_parser::term_uri_hash(term)
-        .unwrap_or_else(|| q_hash("?"));
+        .unwrap_or_else(|| match term {
+            Term::Variable(name) => q_hash(name),
+            _ => q_hash("?"),
+        });
     match term {
         Term::Variable(_) => CompiledTerm::Variable(hash),
         Term::Literal(_) => CompiledTerm::Literal(hash),

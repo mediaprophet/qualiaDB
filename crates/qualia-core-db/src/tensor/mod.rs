@@ -296,4 +296,115 @@ mod tests {
         let bytes: &[u8] = bytemuck::bytes_of(&t1);
         assert_eq!(bytes.len(), std::mem::size_of::<Tensor10D>());
     }
+
+    // ───────────────────────────────────────────────────────────────────
+    //  P7.9 — Axis-completeness regression guards
+    //
+    //  Decision: documented-limit path (option b). The `.10d` header's
+    //  metric-completeness descriptor declares which axes each v-branch
+    //  folds, and `metric_check::verify_descriptor_against_reality`
+    //  enforces that the declaration matches `full_distance`'s actual
+    //  behaviour. These tests guard the decision: the Euclidean branch
+    //  (v=0) is axis-complete (folds all 7 COORDINATE axes), while the
+    //  non-Euclidean branches (v=1,2,3+) are documented as NOT folding
+    //  α/μ/σ/t. If a future change makes a non-Euclidean branch
+    //  axis-complete, these tests must be updated AND the descriptor
+    //  in `metric_check::proposed_metric_descriptor` must be updated.
+    // ───────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn p7_9_v0_euclidean_alpha_changes_distance() {
+        let base = Tensor10D::default();
+        let mut perturbed = base;
+        perturbed.alpha += 0.25;
+        assert!(base.full_distance(&perturbed) > 1e-6,
+            "v=0: changing α must change distance (axis-complete)");
+    }
+
+    #[test]
+    fn p7_9_v0_euclidean_mu_changes_distance() {
+        let base = Tensor10D::default();
+        let mut perturbed = base;
+        perturbed.mu += 0.25;
+        assert!(base.full_distance(&perturbed) > 1e-6,
+            "v=0: changing μ must change distance (axis-complete)");
+    }
+
+    #[test]
+    fn p7_9_v0_euclidean_sigma_changes_distance() {
+        let base = Tensor10D::default();
+        let mut perturbed = base;
+        perturbed.sigma += 0.25;
+        assert!(base.full_distance(&perturbed) > 1e-6,
+            "v=0: changing σ must change distance (axis-complete)");
+    }
+
+    #[test]
+    fn p7_9_v0_euclidean_t_changes_distance() {
+        let base = Tensor10D::default();
+        let mut perturbed = base;
+        perturbed.t += 0.25;
+        assert!(base.full_distance(&perturbed) > 1e-6,
+            "v=0: changing t must change distance (axis-complete)");
+    }
+
+    #[test]
+    fn p7_9_v1_cyclic_alpha_does_not_change_distance() {
+        let mut base = Tensor10D::default();
+        base.v = 1.0;
+        let mut perturbed = base;
+        perturbed.alpha += 0.25;
+        assert!(base.full_distance(&perturbed) < 1e-6,
+            "v=1: changing α must NOT change distance (documented limit)");
+    }
+
+    #[test]
+    fn p7_9_v1_cyclic_sigma_does_not_change_distance() {
+        let mut base = Tensor10D::default();
+        base.v = 1.0;
+        let mut perturbed = base;
+        perturbed.sigma += 0.25;
+        assert!(base.full_distance(&perturbed) < 1e-6,
+            "v=1: changing σ must NOT change distance (documented limit)");
+    }
+
+    #[test]
+    fn p7_9_v2_hyperbolic_t_does_not_change_distance() {
+        let mut base = Tensor10D::default();
+        base.v = 2.0;
+        let mut perturbed = base;
+        perturbed.t += 0.25;
+        let d_base = base.full_distance(&base);
+        let d_perturbed = base.full_distance(&perturbed);
+        assert!((d_perturbed - d_base).abs() < 1e-6,
+            "v=2: changing t must NOT change distance (documented limit): {} vs {}", d_base, d_perturbed);
+    }
+
+    #[test]
+    fn p7_9_v3_boundary_alpha_does_not_change_distance() {
+        let mut base = Tensor10D::default();
+        base.v = 3.0;
+        let mut perturbed = base;
+        perturbed.alpha += 0.25;
+        assert!(base.full_distance(&perturbed) < 1e-6,
+            "v>=3: changing α must NOT change distance (documented limit)");
+    }
+
+    #[test]
+    fn p7_9_v0_euclidean_q_does_not_change_distance() {
+        let base = Tensor10D::default();
+        let mut perturbed = base;
+        perturbed.q += 0.25;
+        assert!(base.full_distance(&perturbed) < 1e-6,
+            "v=0: q is a SELECTOR, must NOT change distance");
+    }
+
+    #[test]
+    fn p7_9_v0_euclidean_w_does_not_change_distance() {
+        let base = Tensor10D::default();
+        let mut perturbed = base;
+        perturbed.w += 0.25;
+        assert!(base.full_distance(&perturbed) < 1e-6,
+            "v=0: w is a SELECTOR, must NOT change distance");
+    }
 }
