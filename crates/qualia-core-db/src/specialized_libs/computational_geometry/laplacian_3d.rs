@@ -249,6 +249,7 @@ pub fn verify_laplacian_properties(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::specialized_libs::computational_geometry::MAX_K;
 
     fn grid_points(n: usize) -> Vec<Point3> {
         let side = (n as f64).cbrt().ceil() as usize;

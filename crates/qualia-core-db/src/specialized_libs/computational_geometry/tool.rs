@@ -250,28 +250,6 @@ pub fn execute_geometry_tool_json(args: &str) -> Result<String, GeometryToolErro
             })
             .to_string())
         }
-        "package_inventory" => {
-            let ported = super::generated::CGAL_PACKAGES
-                .iter()
-                .filter(|package| package.status != super::generated::PortStatus::Planned)
-                .count();
-            Ok(json!({
-                "op": op,
-                "upstream_ref": super::generated::CGAL_UPSTREAM_REF,
-                "upstream_commit": super::generated::CGAL_UPSTREAM_COMMIT,
-                "package_count": super::generated::CGAL_PACKAGES.len(),
-                "started_count": ported,
-                "packages": super::generated::CGAL_PACKAGES.iter().map(|package| json!({
-                    "name": package.upstream_name,
-                    "module": package.rust_module,
-                    "license": package.upstream_license,
-                    "status": format!("{:?}", package.status).to_lowercase(),
-                    "doc_files": package.doc_files,
-                    "test_files": package.test_files,
-                })).collect::<Vec<_>>(),
-            })
-            .to_string())
-        }
         "delaunay_2" => {
             let input = points(&value, "points")?;
             let n = input.len();
@@ -517,13 +495,6 @@ mod tests {
         assert_eq!(value["indices"], json!([0, 1, 3, 4]));
     }
 
-    #[test]
-    fn package_inventory_covers_upstream_surface() {
-        let result = execute_geometry_tool_json(r#"{"op":"package_inventory"}"#).unwrap();
-        let value: Value = serde_json::from_str(&result).unwrap();
-        assert!(value["package_count"].as_u64().unwrap() >= 100);
-        assert_eq!(value["upstream_ref"], "v6.2");
-    }
 
     #[test]
     fn json_delaunay_returns_triangles() {

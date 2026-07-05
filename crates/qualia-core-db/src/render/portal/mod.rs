@@ -693,6 +693,129 @@ impl QualiaPortal {
         Ok(result.into())
     }
 
+    /// S5.1 colour-by-load — like [`load_10d`] but paints the whole organ mesh a single uniform linear
+    /// RGBA. The host resolves each organ's body-system percept
+    /// (`qualia-client-core … AnatomyViewReport::paint_organs`) and passes that system's σ-derived colour
+    /// (`OrganPercept.percept.rgba`) here, so the 3D body is coloured by accumulated burden. Same
+    /// governance fail-closed as `load_10d`. (Deliberately parallels `load_10d` rather than sharing a
+    /// refactored helper: the portal path is wasm+GPU-only and not runtime-testable here, so the proven
+    /// `load_10d` is left untouched — unify them in the browser-test pass when the anatomy GLBs land.)
+    pub fn load_10d_colored(
+        &mut self,
+        bytes: &[u8],
+        r: f32,
+        g: f32,
+        b: f32,
+        a: f32,
+    ) -> Result<JsValue, JsValue> {
+        use crate::container_10d::{
+            self,
+            header::{Container10dHeader, FLAG_DEFAULT_DISPOSITION_REFUSE},
+        };
+
+        let mut bytes_mut = bytes.to_vec();
+        let header = Container10dHeader::parse(&bytes_mut)
+            .map_err(|e| JsValue::from_str(&format!("10d header: {e}")))?;
+        container_10d::verify_whole_file_crc32c(&mut bytes_mut)
+            .map_err(|e| JsValue::from_str(&format!("10d CRC: {e}")))?;
+        let descs = container_10d::parse_section_table(&bytes_mut, &header)
+            .map_err(|e| JsValue::from_str(&format!("10d section table: {e}")))?;
+
+        let mut mesh = None;
+        let mut provenance_mu: f32 = 0.0;
+        let mut has_attestation = false;
+        for desc in descs.iter() {
+            let st = container_10d::SectionType::from_u8(desc.section_type)
+                .ok_or_else(|| JsValue::from_str("10d: unknown section type"))?;
+            let off = desc.byte_offset as usize;
+            let len = desc.byte_length as usize;
+            let payload = &bytes_mut[off..off + len];
+            match st {
+                container_10d::SectionType::QuantizedMesh => {
+                    mesh = Some(
+                        container_10d::decode_mesh_section(payload)
+                            .map_err(|e| JsValue::from_str(&format!("10d mesh decode: {e}")))?,
+                    );
+                }
+                container_10d::SectionType::Tensor10DNodes => {
+                    if let Ok(t) = container_10d::read_node(payload, 0) {
+                        provenance_mu = t.mu;
+                    }
+                }
+                container_10d::SectionType::SpecReservedProvenanceSidecar => {
+                    has_attestation = true;
+                }
+                _ => {}
+            }
+        }
+
+        let mesh = mesh.ok_or_else(|| JsValue::from_str("10d: no mesh section"))?;
+        let governance_refused =
+            (header.flags & FLAG_DEFAULT_DISPOSITION_REFUSE) != 0 && !has_attestation;
+
+        let c = mesh.centroid();
+        let ext = [
+            mesh.max[0] - mesh.min[0],
+            mesh.max[1] - mesh.min[1],
+            mesh.max[2] - mesh.min[2],
+        ];
+        let span = ext[0].max(ext[1]).max(ext[2]).max(1e-6);
+        let s = 1.6 / span;
+        let positions: Vec<[f32; 3]> = mesh
+            .positions
+            .iter()
+            .map(|p| [(p[0] - c[0]) * s, (p[1] - c[1]) * s, (p[2] - c[2]) * s])
+            .collect();
+        let indices: Vec<u32> = mesh
+            .triangles
+            .iter()
+            .flat_map(|t| [t[0], t[1], t[2]])
+            .collect();
+
+        let tri_count = mesh.triangles.len() as u32;
+        let vert_count = mesh.positions.len() as u32;
+
+        if let Some(ref mut gpu) = self.gpu {
+            let colors = vec![[r, g, b, a]; positions.len()];
+            gpu.upload_mesh_colored(&positions, &colors, &indices);
+            self.tier = 2;
+        }
+
+        if governance_refused {
+            self.description = format!(
+                "{tri_count} triangles · governance REFUSED (no attestation) · μ={provenance_mu:.3}"
+            );
+        } else {
+            self.description = format!(
+                "{tri_count} triangles · {vert_count} vertices · μ={provenance_mu:.3} · coloured · T2"
+            );
+        }
+
+        let result = js_sys::Object::new();
+        Reflect::set(
+            &result,
+            &JsValue::from_str("vertex_count"),
+            &JsValue::from_f64(vert_count as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("triangle_count"),
+            &JsValue::from_f64(tri_count as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("provenance_mu"),
+            &JsValue::from_f64(provenance_mu as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("governance_refused"),
+            &JsValue::from_bool(governance_refused),
+        )?;
+
+        Ok(result.into())
+    }
+
     /// Phase 2 — drive the loaded mesh artefact with a kinematic joint (visible physics). `kind` is
     /// `"prismatic"` (slide) or anything else = `"revolute"` (spin); `(ax,ay,az)` is the axis
     /// (normalised here; defaults to +Y if zero); `rate` is rad/s (revolute) or units/s (prismatic).

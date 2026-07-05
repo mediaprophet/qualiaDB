@@ -695,7 +695,7 @@ fn eval_edge(mesh: &Mesh, lo: u32, hi: u32) -> Option<Pending> {
         0.5 * (pl.z + ph.z),
     );
     let mut best: Option<(f64, f64, f64, f64)> = None;
-    let mut consider = |best: &mut Option<(f64, f64, f64, f64)>, x: f64, y: f64, z: f64| {
+    let consider = |best: &mut Option<(f64, f64, f64, f64)>, x: f64, y: f64, z: f64| {
         let e = q.error_at(x, y, z);
         let take = match *best {
             Some((be, ..)) => e < be,

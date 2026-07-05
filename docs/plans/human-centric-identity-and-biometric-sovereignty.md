@@ -4,19 +4,20 @@
 informs three plans rather than being owned by one. Nothing here is built; it records the principles,
 use-cases, requirements, and honest limits that the computer-vision, computational-geometry, and
 capability-dispatch work must absorb.
-**Owner / lane:** Claude (Opus 4.8). Records implications *for* the CV and CGAL lanes; does not edit their docs
+**Owner / lane:** Claude (Opus 4.8). Records implications *for* the CV and computational-geometry lanes; does not edit their docs
 (reciprocal cross-references into those are a coordinated follow-up, not a barge).
 **Informs:**
 - **CV** — [`native-visual-intelligence-and-generative-3d.md`](native-visual-intelligence-and-generative-3d.md)
   (§11.2 there already says face/biometric recognition "require separate plans, policies, consent, threat
   models" — this is that consideration-set).
-- **CGAL / geometry** — [`native-computational-geometry.md`](native-computational-geometry.md) (the geometric +
+- **Computational geometry** — [`native-computational-geometry.md`](native-computational-geometry.md) (the geometric +
   spectral substrate biometrics actually run on).
 - **Dispatch** — [`native-capability-ontology-and-dispatch.md`](native-capability-ontology-and-dispatch.md) (the
   rights-gated capability routing; the five improvements in §10 below weave into its D-tasks).
 
-This is the QualiaDB / Webizen architecture and Timothy's long W3C work in this space. W3C VC/DID, CGAL, and
-biometric prior art are instruments this work directs — never parents of it.
+This is the QualiaDB / Webizen architecture and Timothy's long W3C work in this space. W3C VC/DID, the
+computational-geometry literature (de Berg, Cheong, van Kreveld & Overmars, *Computational Geometry: Algorithms
+and Applications*, 3rd ed.), and biometric prior art are instruments this work directs — never parents of it.
 
 ---
 
@@ -254,12 +255,12 @@ discipline — a principled delay, not a slip.
   plus the Sanctuary duress-PIN / decoy posture are the mitigations (they can compel your face but not a secret
   you refuse), and anti-spoofing is an ongoing arms race, not a solved problem.
 
-## 9. Implications for the CV and CGAL work (the reason this was raised)
+## 9. Implications for the CV and computational-geometry work (the reason this was raised)
 
 These are requirements and implications the two build lanes should absorb — recorded here, not edited into their
 docs (that's a coordinated follow-up).
 
-**For CGAL / computational geometry (`native-computational-geometry.md`):**
+**For computational geometry (`native-computational-geometry.md`):**
 
 - Biometric matching is *(geometry + spectral) capabilities*, not a silo — point-set / kNN (P6.1), registration,
   `full_distance` in a feature manifold, the `σ` spectral lane, alpha-complex / TDA are the biometric primitives.

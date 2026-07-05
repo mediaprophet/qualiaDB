@@ -51,13 +51,34 @@ pub enum WellbeingLevel {
 }
 
 impl WellbeingLevel {
-    fn from_net(net_milli: u32) -> Self {
+    /// The canonical coarse classifier — the only person-facing readout of `net_milli`.
+    pub fn from_net(net_milli: u32) -> Self {
         match net_milli {
             0..=99 => WellbeingLevel::Settled,
             100..=299 => WellbeingLevel::WorthWatching,
             _ => WellbeingLevel::UnderStrain,
         }
     }
+}
+
+/// Encode an accumulated system burden (`net_milli`, 0..=1000) as **σ** — a position on the shared
+/// EMF spectrum (400–700 nm) that the engine's parity oracles render to *both* the visual spectrum
+/// (`qualia_core_db::render::spectral::sigma_to_linear_rgb`) and the sonic spectrum
+/// (`render::acoustic::sigma_to_center_frequency_hz`). σ is the one truth; colour and pitch are two
+/// encodings of it — an organ under strain both *looks* and *sounds* it. σ is also the tenth axis of
+/// `Tensor10D`, so an organ's `.10d` node can carry this value directly.
+///
+/// Mapping: settled → green (~550 nm, σ≈0.50), through amber, to under-strain → red (~680 nm, σ≈0.93)
+/// — the same green→amber→red "heat" hue arc as the coarse [`WellbeingLevel`] bands, but as a
+/// continuous physical quantity. Honest by construction: σ derives from the transparent bounded-integer
+/// `net_milli` accumulation (no float health arithmetic), and the person still sees only the coarse band
+/// — the continuous spectrum is the *substrate*, not a false-precision clinical readout.
+#[inline]
+pub fn burden_to_sigma(net_milli: u32) -> f32 {
+    const GREEN: f32 = 0.50; // ~550 nm — settled
+    const RED: f32 = 0.93; // ~680 nm — under strain
+    let t = (net_milli.min(1000) as f32) / 1000.0;
+    GREEN + t * (RED - GREEN)
 }
 
 /// One system's entry in a view.
@@ -324,6 +345,23 @@ fn interaction_note(k: InteractionKind) -> &'static str {
 mod tests {
     use super::*;
     use crate::anatomy::{Effect, FactorKind};
+
+    #[test]
+    fn burden_sigma_walks_green_to_red_within_the_emf_band() {
+        let settled = burden_to_sigma(0);
+        let strained = burden_to_sigma(1000);
+        // Settled sits at green (~550 nm), strain at red (~680 nm).
+        assert!((settled - 0.50).abs() < 1e-6, "settled σ={settled}");
+        assert!((strained - 0.93).abs() < 1e-6, "strained σ={strained}");
+        // More burden → longer wavelength (redder). The whole point of the encoding.
+        assert!(strained > settled);
+        // Monotonic through the band, and clamped past the ceiling (no runaway σ).
+        assert!(burden_to_sigma(150) > settled && burden_to_sigma(150) < strained);
+        assert!(burden_to_sigma(5000) <= 0.93 + 1e-6, "σ clamps at the red end");
+        // The coarse band and the continuous σ agree at the extremes.
+        assert_eq!(WellbeingLevel::from_net(0), WellbeingLevel::Settled);
+        assert_eq!(WellbeingLevel::from_net(1000), WellbeingLevel::UnderStrain);
+    }
 
     fn med(id: &str, system: &str, w: u32) -> Factor {
         Factor::new(id, FactorKind::Medication, id).targeting(

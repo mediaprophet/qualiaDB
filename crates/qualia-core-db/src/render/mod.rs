@@ -9,6 +9,9 @@
 pub mod acoustic;
 /// Asset import: OBJ / STL / GLB → `Mesh` + semantic NQuins (Phase 1.3).
 pub mod assets;
+/// Compile a `Mesh` into a sealed `.10d` container (the dense compiled-geometry sidecar)
+/// and read it back — the "mesh → `.10d`" step of the 3-D-anatomy asset pipeline.
+pub mod compile_10d;
 /// Authoring vocabulary + render planner (Phase 5): a qapp declares 3D + 2D views over one
 /// manifold; the planner enforces attestation gates, rights-bounded contexts, and budget-driven
 /// 3D→2D degradation before drawing. Gated like `place_time` (needs `crate::modalities`).
@@ -68,8 +71,10 @@ pub mod spectral_blend;
 pub mod spectral_operator;
 /// P7.4 — GPU colour-projection / gamut batch kernel + CPU oracle.
 pub mod gpu_colour_kernel;
-/// P7.8 — CC0 golden-oracle + CPU/GPU differential + determinism harness.
+/// P7.8 — golden-oracle + CPU/GPU differential + determinism harness.
 pub mod spectral_oracle;
+#[cfg(test)]
+pub mod spectral_harness;
 pub mod standpoint;
 pub mod telemetry;
 

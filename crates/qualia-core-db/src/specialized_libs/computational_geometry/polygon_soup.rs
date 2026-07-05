@@ -804,6 +804,7 @@ mod tests {
 
     // -- full pipeline -------------------------------------------------------
 
+    #[allow(dead_code)]
     fn run_pipeline(
         positions: &[f64],
         vertex_count: u32,
@@ -850,6 +851,7 @@ mod tests {
         static LAST_MERGED: std::cell::RefCell<Vec<f64>> = std::cell::RefCell::new(Vec::new());
     }
 
+    #[allow(dead_code)]
     fn report_only(
         repaired: Vec<[u32; 3]>,
         merged_positions: Vec<f64>,

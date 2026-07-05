@@ -499,7 +499,7 @@ impl ProvenanceMetadata {
 // ───────────────────────────────────────────────────────────────────────────
 
 /// Compute the total encoded size for a mesh + provenance `.10d` asset.
-pub fn asset_encoded_len(mesh: &Mesh, provenance: &ProvenanceMetadata) -> usize {
+pub fn asset_encoded_len(mesh: &Mesh, _provenance: &ProvenanceMetadata) -> usize {
     let mesh_len = mesh_encoded_len(mesh.positions.len(), mesh.triangles.len());
     let node_len = NODE_MINI_HEADER_SIZE + 40; // 1 tensor = 40 bytes
     // Header (64) + 2 section descriptors (48) + aligned payloads

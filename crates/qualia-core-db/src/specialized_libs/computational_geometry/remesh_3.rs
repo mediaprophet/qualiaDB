@@ -14,12 +14,12 @@
 //! Reference: M. Botsch and L. Kobbelt, "A Remeshing Approach to Multiresolution
 //! Modeling" (SGP 2004) and the isotropic-remeshing chapter of *Polygon Mesh
 //! Processing* (Botsch et al., 2010). The implementation is original Rust over this
-//! crate's own predicates ([`GeometryKernel::orient_3d`]) and measures; no CGAL or
-//! other third-party source is used.
+//! crate's own predicates ([`GeometryKernel::orient_3d`]) and measures; no
+//! third-party source is used.
 //!
 //! ## Honesty / scope
 //!
-//! This is a **correct, manifold-preserving** implementation, not a CGAL-grade one.
+//! This is a **correct, manifold-preserving** implementation, not a research-grade one.
 //! What is guaranteed:
 //! - Every accepted operation preserves 2-manifoldness and consistent orientation.
 //!   Illegal splits/collapses/flips are *rejected* (never applied), so the output

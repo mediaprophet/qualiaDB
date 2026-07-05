@@ -128,129 +128,121 @@ pub fn laplace_coordinates(
         }
     }
 
-    // Find natural neighbours by brute force.
-    // Site i is a natural neighbour of query x iff the Voronoi cell of x
-    // (in the augmented diagram) shares an edge with site i's cell.
-    // This happens iff there exists a point on the bisector of x and site_i
-    // that is closer to both x and site_i than to any other site.
-    // Equivalently: the circle with diameter (x, site_i) is empty.
+    // Correct Laplace (non-Sibson) coordinates via exact Voronoi-facet lengths.
     //
-    // We use the second Delaunay criterion: site i is a natural neighbour
-    // iff there exists a circle through x and site_i with no other site
-    // inside. We test this by checking if the midpoint of (x, site_i)
-    // is closer to x and site_i than to any other site (empty circle test).
+    // In the augmented Voronoi diagram of {sites ∪ query}, the Voronoi cell of
+    // `query` shares a facet (a 2-D line segment) with each natural neighbour i.
+    // That facet lies on the perpendicular bisector of (query, site_i); its
+    // length `lᵢ` is the length of the interval of that bisector that stays
+    // closer to {query, site_i} than to every other site. The Laplace
+    // coordinate is λᵢ = (lᵢ/dᵢ) / Σⱼ (lⱼ/dⱼ) with dᵢ = |query − site_i|; this
+    // has EXACT linear precision (Belikov et al. 1997).
+    //
+    // We compute each facet interval by clipping the bisector — parametrised
+    // `p(t) = mid + t·û`, with `û ⟂ (site_i − query)`, `|û| = 1` — by the
+    // half-line constraint "closer to query than to site_j" for every other
+    // site j:  |p−q|² ≤ |p−sⱼ|²  ⇔  A·t + B ≤ 0, where
+    //     A = 2·û·(sⱼ − q),   B = 2·mid·(sⱼ − q) + |q|² − |sⱼ|².
+    // A site whose feasible interval is empty is not a natural neighbour
+    // (lᵢ = 0); an unbounded feasible interval means `query`'s cell is
+    // unbounded, i.e. `query` is outside the convex hull. O(n²), deterministic,
+    // no Delaunay dependency.
 
-    let mut neighbours: Vec<u32> = Vec::new();
+    // Interval-emptiness / A≈0 tolerances (coordinates here are O(1)–O(10³)).
+    const EPS_A: f64 = 1e-12;
+    const EPS_L: f64 = 1e-9;
+
+    let mut nbr_site: Vec<u32> = Vec::new();
+    let mut nbr_raw: Vec<f64> = Vec::new();
+    let mut outside_hull = false;
 
     for i in 0..n {
-        let si = sites[i];
-        let d_xi = ((si.x - query.x).powi(2) + (si.y - query.y).powi(2)).sqrt();
-
-        if d_xi < 1e-15 {
+        let s = sites[i];
+        let dx = s.x - query.x;
+        let dy = s.y - query.y;
+        let d = (dx * dx + dy * dy).sqrt();
+        if d < 1e-15 {
             return Err(NniError::QueryAtDataSite);
         }
+        let mid_x = (query.x + s.x) * 0.5;
+        let mid_y = (query.y + s.y) * 0.5;
+        // Unit perpendicular to (s − query).
+        let ux = -dy / d;
+        let uy = dx / d;
 
-        // Midpoint of (query, site_i).
-        let mid_x = (query.x + si.x) * 0.5;
-        let mid_y = (query.y + si.y) * 0.5;
-        let r = d_xi * 0.5; // radius of the empty circle
+        let mut t_lo = f64::NEG_INFINITY;
+        let mut t_hi = f64::INFINITY;
+        let mut feasible = true;
 
-        // Check if any other site is inside the circle.
-        let mut is_natural = true;
         for j in 0..n {
             if j == i {
                 continue;
             }
             let sj = sites[j];
-            let d_mj = ((sj.x - mid_x).powi(2) + (sj.y - mid_y).powi(2)).sqrt();
-            if d_mj < r - 1e-10 {
-                // Site j is inside the circle — site i is not a natural neighbour.
-                is_natural = false;
+            let jx = sj.x - query.x;
+            let jy = sj.y - query.y;
+            let a = 2.0 * (ux * jx + uy * jy);
+            let b = 2.0 * (mid_x * jx + mid_y * jy)
+                + (query.x * query.x + query.y * query.y)
+                - (sj.x * sj.x + sj.y * sj.y);
+            if a > EPS_A {
+                // t ≤ −B/A.
+                let t = -b / a;
+                if t < t_hi {
+                    t_hi = t;
+                }
+            } else if a < -EPS_A {
+                // t ≥ −B/A.
+                let t = -b / a;
+                if t > t_lo {
+                    t_lo = t;
+                }
+            } else if b > EPS_A {
+                // A ≈ 0 and B > 0: constraint unsatisfiable ⇒ empty facet.
+                feasible = false;
+                break;
+            }
+            if t_lo > t_hi {
+                feasible = false;
                 break;
             }
         }
 
-        if is_natural {
-            neighbours.push(i as u32);
+        if !feasible {
+            continue;
         }
+        if t_hi - t_lo <= EPS_L {
+            // Empty (or degenerate) facet ⇒ not a natural neighbour.
+            continue;
+        }
+        if t_lo == f64::NEG_INFINITY || t_hi == f64::INFINITY {
+            // Unbounded facet ⇒ query's cell is unbounded ⇒ outside the hull.
+            outside_hull = true;
+            break;
+        }
+
+        let l_i = t_hi - t_lo;
+        nbr_site.push(i as u32);
+        nbr_raw.push(l_i / d);
     }
 
-    if neighbours.is_empty() {
+    if outside_hull {
+        return Err(NniError::QueryOutsideHull);
+    }
+    if nbr_site.is_empty() {
         return Err(NniError::QueryOutsideHull);
     }
 
-    // Compute Laplace weights: λᵢ = (lᵢ/dᵢ) / Σⱼ(lⱼ/dⱼ)
-    // For the Laplace coordinate, lᵢ is the length of the shared Voronoi
-    // edge between the query's cell and site i's cell.
-    //
-    // We compute lᵢ as follows: for each pair of consecutive natural
-    // neighbours (i, j) around the query, the shared Voronoi edge length
-    // for site i is the sum of half-edges from the circumcenters of the
-    // triangles (query, i, j_prev) and (query, i, j_next).
-    //
-    // For simplicity, we use a distance-based approximation:
-    // lᵢ ≈ 1 / dᵢ (inverse distance weighting), which gives the
-    // Laplace estimator. This preserves partition-of-unity and linear
-    // precision.
-
-    let mut raw_weights = vec![0.0f64; neighbours.len()];
-
-    for (idx, &site_idx) in neighbours.iter().enumerate() {
-        let site = sites[site_idx as usize];
-        let d = ((site.x - query.x).powi(2) + (site.y - query.y).powi(2)).sqrt();
-
-        if d < 1e-15 {
-            return Err(NniError::QueryAtDataSite);
-        }
-
-        // Laplace weight: lᵢ / dᵢ.
-        // For the brute-force approach, we estimate lᵢ using the
-        // angles between consecutive natural neighbours.
-        // lᵢ = (tan(αᵢ/2) + tan(αᵢ₊₁/2)) / 2
-        // where αᵢ is the angle at the query between sites i and i+1.
-        //
-        // For simplicity, we use the solid angle approach:
-        // lᵢ ∝ angle subtended by the Voronoi edge at the query.
-        // This is equivalent to the Laplace coordinate.
-
-        // Compute angles to all other natural neighbours.
-        let mut angles: Vec<f64> = Vec::new();
-        for &other_idx in &neighbours {
-            if other_idx == site_idx {
-                continue;
-            }
-            let other = sites[other_idx as usize];
-            let angle = ((other.x - query.x) * (site.x - query.x)
-                + (other.y - query.y) * (site.y - query.y))
-                / (((other.x - query.x).powi(2) + (other.y - query.y).powi(2)).sqrt()
-                    * ((site.x - query.x).powi(2) + (site.y - query.y).powi(2)).sqrt());
-            angles.push(angle.clamp(-1.0, 1.0).acos());
-        }
-        angles.sort_by(|a, b| a.partial_cmp(b).unwrap());
-
-        // lᵢ = sum of half-angles to the two nearest neighbours.
-        let l_i = if angles.len() >= 2 {
-            (angles[0] / 2.0).tan() + (angles[1] / 2.0).tan()
-        } else if angles.len() == 1 {
-            (angles[0] / 2.0).tan()
-        } else {
-            1.0 // only one neighbour
-        };
-
-        raw_weights[idx] = l_i / d;
-    }
-
-    // Normalise: λᵢ = (lᵢ/dᵢ) / Σⱼ(lⱼ/dⱼ)
-    let total: f64 = raw_weights.iter().sum();
+    let total: f64 = nbr_raw.iter().sum();
     if total < 1e-15 {
         return Err(NniError::QueryOutsideHull);
     }
 
     let mut count = 0usize;
-    for (idx, &site_idx) in neighbours.iter().enumerate() {
+    for (idx, &site_idx) in nbr_site.iter().enumerate() {
         out_weights[count] = NnWeight {
             site: site_idx,
-            weight: raw_weights[idx] / total,
+            weight: nbr_raw[idx] / total,
         };
         count += 1;
     }
@@ -503,6 +495,53 @@ mod tests {
         for i in 1..count {
             assert!(weights[i - 1].site <= weights[i].site,
                 "weights must be sorted by site index");
+        }
+    }
+
+    #[test]
+    fn laplace_linear_precision_random_queries() {
+        // The defining correctness property: correct Laplace coordinates
+        // reproduce ANY linear field EXACTLY at every interior query. A heuristic
+        // weight scheme fails this; the exact Voronoi-facet computation passes it
+        // to ~machine precision. f(x, y) = -1.7x + 4.3y - 0.9.
+        let sites = grid_sites(6, 6, 1.0);
+        let (a, b, c) = (-1.7f64, 4.3f64, -0.9f64);
+        let values: Vec<f64> = sites.iter().map(|p| a * p.x + b * p.y + c).collect();
+        let queries = [
+            Point2::new(1.5, 1.5),
+            Point2::new(2.3, 3.7),
+            Point2::new(3.9, 2.1),
+            Point2::new(2.5, 2.5),
+            Point2::new(1.1, 4.2),
+            Point2::new(4.4, 4.4),
+        ];
+        for q in queries {
+            let got = interpolate_scalar(&sites, &values, q).unwrap();
+            let want = a * q.x + b * q.y + c;
+            assert!(
+                (got - want).abs() < 1e-9,
+                "linear precision at {q:?}: want {want}, got {got}"
+            );
+        }
+    }
+
+    #[test]
+    fn laplace_weights_partition_and_nonneg_over_grid() {
+        // Partition of unity + non-negativity must hold at a spread of interior
+        // queries, not just one — the weights are a convex combination.
+        let sites = grid_sites(6, 6, 1.0);
+        let queries = [
+            Point2::new(1.5, 1.5),
+            Point2::new(2.3, 3.7),
+            Point2::new(3.9, 2.1),
+            Point2::new(1.1, 4.2),
+        ];
+        for q in queries {
+            let mut w = vec![NnWeight { site: 0, weight: 0.0 }; sites.len()];
+            let c = laplace_coordinates(&sites, q, &mut w).unwrap();
+            assert!(c >= 3, "interior query {q:?} should have >= 3 neighbours");
+            assert!(verify_partition_of_unity(&w[..c]), "partition of unity at {q:?}");
+            assert!(verify_non_negative(&w[..c]), "non-negative at {q:?}");
         }
     }
 }

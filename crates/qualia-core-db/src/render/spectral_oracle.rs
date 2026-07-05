@@ -1,4 +1,4 @@
-//! P7.8 — CC0 golden-oracle + CPU/GPU differential + determinism harness.
+//! P7.8 — golden-oracle + CPU/GPU differential + determinism harness.
 //!
 //! This module provides:
 //!
@@ -170,6 +170,7 @@ pub fn cpu_gpu_differential(emf: &[f32]) -> (Vec<u8>, usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::render::spectral_kernel::emf_to_linear_rgb;
 
     #[test]
     fn golden_vectors_all_pass() {

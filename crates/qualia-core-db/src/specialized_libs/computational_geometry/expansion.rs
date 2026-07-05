@@ -43,8 +43,8 @@
 //! The algorithms are from Jonathan Richard Shewchuk, "Adaptive Precision
 //! Floating-Point Arithmetic and Fast Robust Geometric Predicates" (1996,
 //! Discrete & Computational Geometry). The implementation is original Rust,
-//! adapted for the zero-heap caller-buffered contract. No CGAL or other
-//! third-party source code is used — the algorithms are public-knowledge
+//! adapted for the zero-heap caller-buffered contract. No third-party
+//! source code is used — the algorithms are public-knowledge
 //! numerical methods.
 
 // ──────────────────────────────────────────────────────────────────────────

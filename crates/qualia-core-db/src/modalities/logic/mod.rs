@@ -95,6 +95,11 @@ pub use shacl_extensions::{
     feature = "wasm-full"
 ))]
 pub mod specialized_libs_shacl;
+pub mod geometry_asset_shacl;
+pub use geometry_asset_shacl::{
+    validate_geometry_manifest, GeometryAssetConfiguration, GeometryConstraintViolation,
+    GeometryManifestFacts, MAX_GEOMETRY_COUNT,
+};
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-scientific",

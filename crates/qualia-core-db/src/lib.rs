@@ -665,7 +665,6 @@ pub const CAPABILITY_DESCRIPTORS: &[CapabilityDescriptor] = &[
             "convex hulls",
             "half-edge topology graphs",
             "10D geometry feature encoding",
-            "CGAL package port inventory",
             ".10d quantized mesh geometry",
             "Delaunay triangulation",
             "Voronoi diagrams",

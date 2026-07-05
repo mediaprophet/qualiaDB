@@ -38,6 +38,10 @@ const P_BBOX_MAX_Z: u64 = q_hash("urn:qualia:geometry:bboxMaxZ");
 const P_CENTROID_X: u64 = q_hash("urn:qualia:geometry:centroidX");
 const P_CENTROID_Y: u64 = q_hash("urn:qualia:geometry:centroidY");
 const P_CENTROID_Z: u64 = q_hash("urn:qualia:geometry:centroidZ");
+const P_SOURCE_DIGEST: u64 = q_hash("urn:qualia:geometry:sourceDigest");
+const P_COMPILED_DIGEST: u64 = q_hash("urn:qualia:geometry:compiledDigest");
+const P_BODY_SYSTEM: u64 = q_hash("urn:qualia:geometry:bodySystem");
+const P_ANATOMY_MODEL: u64 = q_hash("urn:qualia:geometry:anatomyModel");
 
 /// Error type for asset import.
 #[derive(Debug, PartialEq, Eq)]
@@ -598,6 +602,55 @@ pub fn mesh_to_nquins(
     quins.push(make_quin(subject, P_CENTROID_Y, pack_float_object(c[1])));
     quins.push(make_quin(subject, P_CENTROID_Z, pack_float_object(c[2])));
 
+    (quins, lexicon)
+}
+
+/// Like [`mesh_to_nquins`] but also asserts the immutable `sourceDigest` and the `.10d`
+/// `compiledDigest` — the manifest→container join (geometry-asset-ontology §4). Both are CRC-32C
+/// `u32` content hashes stored as `u64` objects: `sourceDigest` over the immutable source asset
+/// bytes, `compiledDigest` the whole-file CRC of the `.10d` container this manifest describes.
+pub fn mesh_to_nquins_with_digests(
+    mesh: &Mesh,
+    asset_uri: &str,
+    source_format: &str,
+    source_digest: u32,
+    compiled_digest: u32,
+) -> (Vec<NQuin>, HashMap<u64, String>) {
+    let (mut quins, lexicon) = mesh_to_nquins(mesh, asset_uri, source_format);
+    let subject = fnv_hash(asset_uri.as_bytes());
+    quins.push(make_quin(subject, P_SOURCE_DIGEST, source_digest as u64));
+    quins.push(make_quin(subject, P_COMPILED_DIGEST, compiled_digest as u64));
+    (quins, lexicon)
+}
+
+/// Like [`mesh_to_nquins_with_digests`] but also asserts the anatomy binding for a 3D-body organ:
+/// `bodySystem` (which of the 17 body systems this organ belongs to — which system's burden colours
+/// it) and `anatomyModel` (`"male"` / `"female"` — the reference model whose set it is part of, chosen
+/// from the user's declared XY/XX chromosomal basis). Both are string facts carried in the lexicon,
+/// like `sourceFormat`; a `None` field is simply not asserted.
+#[allow(clippy::too_many_arguments)]
+pub fn mesh_to_nquins_with_meta(
+    mesh: &Mesh,
+    asset_uri: &str,
+    source_format: &str,
+    source_digest: u32,
+    compiled_digest: u32,
+    body_system: Option<&str>,
+    anatomy_model: Option<&str>,
+) -> (Vec<NQuin>, HashMap<u64, String>) {
+    let (mut quins, mut lexicon) =
+        mesh_to_nquins_with_digests(mesh, asset_uri, source_format, source_digest, compiled_digest);
+    let subject = fnv_hash(asset_uri.as_bytes());
+    if let Some(sys) = body_system {
+        let h = fnv_hash(sys.as_bytes());
+        lexicon.insert(h, sys.to_owned());
+        quins.push(make_quin(subject, P_BODY_SYSTEM, h));
+    }
+    if let Some(model) = anatomy_model {
+        let h = fnv_hash(model.as_bytes());
+        lexicon.insert(h, model.to_owned());
+        quins.push(make_quin(subject, P_ANATOMY_MODEL, h));
+    }
     (quins, lexicon)
 }
 

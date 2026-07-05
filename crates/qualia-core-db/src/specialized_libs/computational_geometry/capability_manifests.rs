@@ -204,19 +204,6 @@ pub const GEOMETRY_OP_MANIFESTS: &[OpManifest] = &[
         },
         topology_critical: false,
     },
-    OpManifest {
-        op: "package_inventory",
-        description: "List CGAL package port inventory.",
-        backends: &[Backend::Scalar],
-        determinism: DeterminismClass::BitExact,
-        limits: ResourceLimits {
-            max_input_points: 0,
-            max_output_bytes: 1024 * 1024,
-            max_memory_bytes: 1024 * 1024,
-            max_time_us: 1000,
-        },
-        topology_critical: false,
-    },
     // P8 ops — GPU-accelerated with CPU fallback.
     OpManifest {
         op: "vr_filtration",
@@ -371,10 +358,6 @@ pub fn validate_manifests(manifests: &[OpManifest]) -> Result<(), String> {
                 "{}: advertises GPU backend without deterministic CPU/WASM fallback",
                 m.op
             ));
-        }
-
-        if m.limits.max_input_points == 0 && m.op != "package_inventory" {
-            // 0 max_input_points is only valid for metadata ops.
         }
 
         if m.limits.max_output_bytes == 0 {

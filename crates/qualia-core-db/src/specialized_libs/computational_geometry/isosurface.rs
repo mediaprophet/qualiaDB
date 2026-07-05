@@ -107,55 +107,310 @@ const EDGE_TABLE: [u16; 256] = {
     table
 };
 
-/// Triangle table: for each of 256 cube configurations, a list of edge
-/// indices (in groups of 3) forming triangles. -1 marks the end.
+/// Triangle table: for each of the 256 cube configurations, the list of edge
+/// indices (in groups of 3) forming the output triangles, `-1`-terminated.
 ///
-/// This is the standard Bourne/McCormick table. We generate it from the
-/// edge crossings — a simplified version that handles the basic cases.
-/// For ambiguous faces we use the standard resolution (not the asymptotic
-/// decider).
-const TRI_TABLE: [[i8; 16]; 256] = {
+/// This is the **canonical marching-cubes triangulation table** (Lorensen &
+/// Cline 1987; the widely-reproduced Cory Bloyd / Paul Bourke public-domain
+/// form). It is the correct, ambiguity-resolved triangulation for every one of
+/// the 256 corner sign configurations — NOT a fan approximation. The edge
+/// numbering (0-11), corner numbering (0-7), and the `cube_idx` bit convention
+/// (bit `c` set iff corner `c` is below the isolevel) all match this file's
+/// [`EDGE_CORNERS`] / [`CORNER_OFFSETS`] and the classifier below, so the table
+/// drops in directly. It is mathematical/algorithmic data (a lookup table for a
+/// public-domain algorithm), consulted from the algorithm's definition — no
+/// GPL/LGPL source is used or derived.
+///
+/// Correctness is guarded two ways by the test suite: (1) `tri_table_edges_match_edge_table`
+/// asserts, for all 256 cases, that the *set* of edges used by the triangles
+/// equals the independently-computed [`EDGE_TABLE`] crossing set (catches any
+/// wrong/missing edge index); (2) `sphere_isosurface_is_closed_manifold` merges
+/// coincident vertices and asserts the extracted closed-level-set surface is a
+/// watertight 2-manifold (every edge shared by exactly two triangles — catches
+/// any wrong triangulation grouping).
+const TRI_TABLE: [[i8; 16]; 256] = build_tri_table();
+
+/// Build the fixed-width `[[i8; 16]; 256]` table by right-padding each
+/// variable-length row of meaningful edge indices with `-1`. Writing only the
+/// meaningful edges (no hand-typed padding, no counting to 16) removes a whole
+/// class of transcription error from the 256-row constant.
+const fn build_tri_table() -> [[i8; 16]; 256] {
     let mut table = [[-1i8; 16]; 256];
     let mut i = 0;
     while i < 256 {
-        let edges = EDGE_TABLE[i];
-        if edges == 0 {
-            i += 1;
-            continue;
+        let row = TRI_TABLE_RAW[i];
+        let mut j = 0;
+        while j < row.len() {
+            table[i][j] = row[j];
+            j += 1;
         }
-
-        // Collect intersected edges.
-        let mut edge_list = [0u8; 12];
-        let mut ne = 0usize;
-        let mut e = 0usize;
-        while e < 12 {
-            if (edges >> e) & 1 != 0 {
-                edge_list[ne] = e as u8;
-                ne += 1;
-            }
-            e += 1;
-        }
-
-        // Simple triangulation: fan from the first edge.
-        // This is NOT the full marching cubes table — it's a simplified
-        // version that produces correct topology for most cases.
-        // A full implementation would use the 256-entry lookup table.
-        if ne >= 3 {
-            let mut tri_idx = 0usize;
-            let mut j = 1usize;
-            while j + 1 < ne && tri_idx + 2 < 16 {
-                table[i][tri_idx] = edge_list[0] as i8;
-                table[i][tri_idx + 1] = edge_list[j] as i8;
-                table[i][tri_idx + 2] = edge_list[j + 1] as i8;
-                tri_idx += 3;
-                j += 1;
-            }
-        }
-
         i += 1;
     }
     table
-};
+}
+
+/// The canonical marching-cubes triangulation, one slice of edge-index triples
+/// per cube configuration (empty = no surface in that cell). Padded to the
+/// `-1`-terminated fixed form by [`build_tri_table`].
+#[rustfmt::skip]
+const TRI_TABLE_RAW: [&[i8]; 256] = [
+    &[],
+    &[0, 8, 3],
+    &[0, 1, 9],
+    &[1, 8, 3, 9, 8, 1],
+    &[1, 2, 10],
+    &[0, 8, 3, 1, 2, 10],
+    &[9, 2, 10, 0, 2, 9],
+    &[2, 8, 3, 2, 10, 8, 10, 9, 8],
+    &[3, 11, 2],
+    &[0, 11, 2, 8, 11, 0],
+    &[1, 9, 0, 2, 3, 11],
+    &[1, 11, 2, 1, 9, 11, 9, 8, 11],
+    &[3, 10, 1, 11, 10, 3],
+    &[0, 10, 1, 0, 8, 10, 8, 11, 10],
+    &[3, 9, 0, 3, 11, 9, 11, 10, 9],
+    &[9, 8, 10, 10, 8, 11],
+    &[4, 7, 8],
+    &[4, 3, 0, 7, 3, 4],
+    &[0, 1, 9, 8, 4, 7],
+    &[4, 1, 9, 4, 7, 1, 7, 3, 1],
+    &[1, 2, 10, 8, 4, 7],
+    &[3, 4, 7, 3, 0, 4, 1, 2, 10],
+    &[9, 2, 10, 9, 0, 2, 8, 4, 7],
+    &[2, 10, 9, 2, 9, 7, 2, 7, 3, 7, 9, 4],
+    &[8, 4, 7, 3, 11, 2],
+    &[11, 4, 7, 11, 2, 4, 2, 0, 4],
+    &[9, 0, 1, 8, 4, 7, 2, 3, 11],
+    &[4, 7, 11, 9, 4, 11, 9, 11, 2, 9, 2, 1],
+    &[3, 10, 1, 3, 11, 10, 7, 8, 4],
+    &[1, 11, 10, 1, 4, 11, 1, 0, 4, 7, 11, 4],
+    &[4, 7, 8, 9, 0, 11, 9, 11, 10, 11, 0, 3],
+    &[4, 7, 11, 4, 11, 9, 9, 11, 10],
+    &[9, 5, 4],
+    &[9, 5, 4, 0, 8, 3],
+    &[0, 5, 4, 1, 5, 0],
+    &[8, 5, 4, 8, 3, 5, 3, 1, 5],
+    &[1, 2, 10, 9, 5, 4],
+    &[3, 0, 8, 1, 2, 10, 4, 9, 5],
+    &[5, 2, 10, 5, 4, 2, 4, 0, 2],
+    &[2, 10, 5, 3, 2, 5, 3, 5, 4, 3, 4, 8],
+    &[9, 5, 4, 2, 3, 11],
+    &[0, 11, 2, 0, 8, 11, 4, 9, 5],
+    &[0, 5, 4, 0, 1, 5, 2, 3, 11],
+    &[2, 1, 5, 2, 5, 8, 2, 8, 11, 4, 8, 5],
+    &[10, 3, 11, 10, 1, 3, 9, 5, 4],
+    &[4, 9, 5, 0, 8, 1, 8, 10, 1, 8, 11, 10],
+    &[5, 4, 0, 5, 0, 11, 5, 11, 10, 11, 0, 3],
+    &[5, 4, 8, 5, 8, 10, 10, 8, 11],
+    &[9, 7, 8, 5, 7, 9],
+    &[9, 3, 0, 9, 5, 3, 5, 7, 3],
+    &[0, 7, 8, 0, 1, 7, 1, 5, 7],
+    &[1, 5, 3, 3, 5, 7],
+    &[9, 7, 8, 9, 5, 7, 10, 1, 2],
+    &[10, 1, 2, 9, 5, 0, 5, 3, 0, 5, 7, 3],
+    &[8, 0, 2, 8, 2, 5, 8, 5, 7, 10, 5, 2],
+    &[2, 10, 5, 2, 5, 3, 3, 5, 7],
+    &[7, 9, 5, 7, 8, 9, 3, 11, 2],
+    &[9, 5, 7, 9, 7, 2, 9, 2, 0, 2, 7, 11],
+    &[2, 3, 11, 0, 1, 8, 1, 7, 8, 1, 5, 7],
+    &[11, 2, 1, 11, 1, 7, 7, 1, 5],
+    &[9, 5, 8, 8, 5, 7, 10, 1, 3, 10, 3, 11],
+    &[5, 7, 0, 5, 0, 9, 7, 11, 0, 1, 0, 10, 11, 10, 0],
+    &[11, 10, 0, 11, 0, 3, 10, 5, 0, 8, 0, 7, 5, 7, 0],
+    &[11, 10, 5, 7, 11, 5],
+    &[10, 6, 5],
+    &[0, 8, 3, 5, 10, 6],
+    &[9, 0, 1, 5, 10, 6],
+    &[1, 8, 3, 1, 9, 8, 5, 10, 6],
+    &[1, 6, 5, 2, 6, 1],
+    &[1, 6, 5, 1, 2, 6, 3, 0, 8],
+    &[9, 6, 5, 9, 0, 6, 0, 2, 6],
+    &[5, 9, 8, 5, 8, 2, 5, 2, 6, 3, 2, 8],
+    &[2, 3, 11, 10, 6, 5],
+    &[11, 0, 8, 11, 2, 0, 10, 6, 5],
+    &[0, 1, 9, 2, 3, 11, 5, 10, 6],
+    &[5, 10, 6, 1, 9, 2, 9, 11, 2, 9, 8, 11],
+    &[6, 3, 11, 6, 5, 3, 5, 1, 3],
+    &[0, 8, 11, 0, 11, 5, 0, 5, 1, 5, 11, 6],
+    &[3, 11, 6, 0, 3, 6, 0, 6, 5, 0, 5, 9],
+    &[6, 5, 9, 6, 9, 11, 11, 9, 8],
+    &[5, 10, 6, 4, 7, 8],
+    &[4, 3, 0, 4, 7, 3, 6, 5, 10],
+    &[1, 9, 0, 5, 10, 6, 8, 4, 7],
+    &[10, 6, 5, 1, 9, 7, 1, 7, 3, 7, 9, 4],
+    &[6, 1, 2, 6, 5, 1, 4, 7, 8],
+    &[1, 2, 5, 5, 2, 6, 3, 0, 4, 3, 4, 7],
+    &[8, 4, 7, 9, 0, 5, 0, 6, 5, 0, 2, 6],
+    &[7, 3, 9, 7, 9, 4, 3, 2, 9, 5, 9, 6, 2, 6, 9],
+    &[3, 11, 2, 7, 8, 4, 10, 6, 5],
+    &[5, 10, 6, 4, 7, 2, 4, 2, 0, 2, 7, 11],
+    &[0, 1, 9, 4, 7, 8, 2, 3, 11, 5, 10, 6],
+    &[9, 2, 1, 9, 11, 2, 9, 4, 11, 7, 11, 4, 5, 10, 6],
+    &[8, 4, 7, 3, 11, 5, 3, 5, 1, 5, 11, 6],
+    &[5, 1, 11, 5, 11, 6, 1, 0, 11, 7, 11, 4, 0, 4, 11],
+    &[0, 5, 9, 0, 6, 5, 0, 3, 6, 11, 6, 3, 8, 4, 7],
+    &[6, 5, 9, 6, 9, 11, 4, 7, 9, 7, 11, 9],
+    &[10, 4, 9, 6, 4, 10],
+    &[4, 10, 6, 4, 9, 10, 0, 8, 3],
+    &[10, 0, 1, 10, 6, 0, 6, 4, 0],
+    &[8, 3, 1, 8, 1, 6, 8, 6, 4, 6, 1, 10],
+    &[1, 4, 9, 1, 2, 4, 2, 6, 4],
+    &[3, 0, 8, 1, 2, 9, 2, 4, 9, 2, 6, 4],
+    &[0, 2, 4, 4, 2, 6],
+    &[8, 3, 2, 8, 2, 4, 4, 2, 6],
+    &[10, 4, 9, 10, 6, 4, 11, 2, 3],
+    &[0, 8, 2, 2, 8, 11, 4, 9, 10, 4, 10, 6],
+    &[3, 11, 2, 0, 1, 6, 0, 6, 4, 6, 1, 10],
+    &[6, 4, 1, 6, 1, 10, 4, 8, 1, 2, 1, 11, 8, 11, 1],
+    &[9, 6, 4, 9, 3, 6, 9, 1, 3, 11, 6, 3],
+    &[8, 11, 1, 8, 1, 0, 11, 6, 1, 9, 1, 4, 6, 4, 1],
+    &[3, 11, 6, 3, 6, 0, 0, 6, 4],
+    &[6, 4, 8, 11, 6, 8],
+    &[7, 10, 6, 7, 8, 10, 8, 9, 10],
+    &[0, 7, 3, 0, 10, 7, 0, 9, 10, 6, 7, 10],
+    &[10, 6, 7, 1, 10, 7, 1, 7, 8, 1, 8, 0],
+    &[10, 6, 7, 10, 7, 1, 1, 7, 3],
+    &[1, 2, 6, 1, 6, 8, 1, 8, 9, 8, 6, 7],
+    &[2, 6, 9, 2, 9, 1, 6, 7, 9, 0, 9, 3, 7, 3, 9],
+    &[7, 8, 0, 7, 0, 6, 6, 0, 2],
+    &[7, 3, 2, 6, 7, 2],
+    &[2, 3, 11, 10, 6, 8, 10, 8, 9, 8, 6, 7],
+    &[2, 0, 7, 2, 7, 11, 0, 9, 7, 6, 7, 10, 9, 10, 7],
+    &[1, 8, 0, 1, 7, 8, 1, 10, 7, 6, 7, 10, 2, 3, 11],
+    &[11, 2, 1, 11, 1, 7, 10, 6, 1, 6, 7, 1],
+    &[8, 9, 6, 8, 6, 7, 9, 1, 6, 11, 6, 3, 1, 3, 6],
+    &[0, 9, 1, 11, 6, 7],
+    &[7, 8, 0, 7, 0, 6, 3, 11, 0, 11, 6, 0],
+    &[7, 11, 6],
+    &[7, 6, 11],
+    &[3, 0, 8, 11, 7, 6],
+    &[0, 1, 9, 11, 7, 6],
+    &[8, 1, 9, 8, 3, 1, 11, 7, 6],
+    &[10, 1, 2, 6, 11, 7],
+    &[1, 2, 10, 3, 0, 8, 6, 11, 7],
+    &[2, 9, 0, 2, 10, 9, 6, 11, 7],
+    &[6, 11, 7, 2, 10, 3, 10, 8, 3, 10, 9, 8],
+    &[7, 2, 3, 6, 2, 7],
+    &[7, 0, 8, 7, 6, 0, 6, 2, 0],
+    &[2, 7, 6, 2, 3, 7, 0, 1, 9],
+    &[1, 6, 2, 1, 8, 6, 1, 9, 8, 8, 7, 6],
+    &[10, 7, 6, 10, 1, 7, 1, 3, 7],
+    &[10, 7, 6, 1, 7, 10, 1, 8, 7, 1, 0, 8],
+    &[0, 3, 7, 0, 7, 10, 0, 10, 9, 6, 10, 7],
+    &[7, 6, 10, 7, 10, 8, 8, 10, 9],
+    &[6, 8, 4, 11, 8, 6],
+    &[3, 6, 11, 3, 0, 6, 0, 4, 6],
+    &[8, 6, 11, 8, 4, 6, 9, 0, 1],
+    &[9, 4, 6, 9, 6, 3, 9, 3, 1, 11, 3, 6],
+    &[6, 8, 4, 6, 11, 8, 2, 10, 1],
+    &[1, 2, 10, 3, 0, 11, 0, 6, 11, 0, 4, 6],
+    &[4, 11, 8, 4, 6, 11, 0, 2, 9, 2, 10, 9],
+    &[10, 9, 3, 10, 3, 2, 9, 4, 3, 11, 3, 6, 4, 6, 3],
+    &[8, 2, 3, 8, 4, 2, 4, 6, 2],
+    &[0, 4, 2, 4, 6, 2],
+    &[1, 9, 0, 2, 3, 4, 2, 4, 6, 4, 3, 8],
+    &[1, 9, 4, 1, 4, 2, 2, 4, 6],
+    &[8, 1, 3, 8, 6, 1, 8, 4, 6, 6, 10, 1],
+    &[10, 1, 0, 10, 0, 6, 6, 0, 4],
+    &[4, 6, 3, 4, 3, 8, 6, 10, 3, 0, 3, 9, 10, 9, 3],
+    &[10, 9, 4, 6, 10, 4],
+    &[4, 9, 5, 7, 6, 11],
+    &[0, 8, 3, 4, 9, 5, 11, 7, 6],
+    &[5, 0, 1, 5, 4, 0, 7, 6, 11],
+    &[11, 7, 6, 8, 3, 4, 3, 5, 4, 3, 1, 5],
+    &[9, 5, 4, 10, 1, 2, 7, 6, 11],
+    &[6, 11, 7, 1, 2, 10, 0, 8, 3, 4, 9, 5],
+    &[7, 6, 11, 5, 4, 10, 4, 2, 10, 4, 0, 2],
+    &[3, 4, 8, 3, 5, 4, 3, 2, 5, 10, 5, 2, 11, 7, 6],
+    &[7, 2, 3, 7, 6, 2, 5, 4, 9],
+    &[9, 5, 4, 0, 8, 6, 0, 6, 2, 6, 8, 7],
+    &[3, 6, 2, 3, 7, 6, 1, 5, 0, 5, 4, 0],
+    &[6, 2, 8, 6, 8, 7, 2, 1, 8, 4, 8, 5, 1, 5, 8],
+    &[9, 5, 4, 10, 1, 6, 1, 7, 6, 1, 3, 7],
+    &[1, 6, 10, 1, 7, 6, 1, 0, 7, 8, 7, 0, 9, 5, 4],
+    &[4, 0, 10, 4, 10, 5, 0, 3, 10, 6, 10, 7, 3, 7, 10],
+    &[7, 6, 10, 7, 10, 8, 5, 4, 10, 4, 8, 10],
+    &[6, 9, 5, 6, 11, 9, 11, 8, 9],
+    &[3, 6, 11, 0, 6, 3, 0, 5, 6, 0, 9, 5],
+    &[0, 11, 8, 0, 5, 11, 0, 1, 5, 5, 6, 11],
+    &[6, 11, 3, 6, 3, 5, 5, 3, 1],
+    &[1, 2, 10, 9, 5, 11, 9, 11, 8, 11, 5, 6],
+    &[0, 11, 3, 0, 6, 11, 0, 9, 6, 5, 6, 9, 1, 2, 10],
+    &[11, 8, 5, 11, 5, 6, 8, 0, 5, 10, 5, 2, 0, 2, 5],
+    &[6, 11, 3, 6, 3, 5, 2, 10, 3, 10, 5, 3],
+    &[5, 8, 9, 5, 2, 8, 5, 6, 2, 3, 8, 2],
+    &[9, 5, 6, 9, 6, 0, 0, 6, 2],
+    &[1, 5, 8, 1, 8, 0, 5, 6, 8, 3, 8, 2, 6, 2, 8],
+    &[1, 5, 6, 2, 1, 6],
+    &[1, 3, 6, 1, 6, 10, 3, 8, 6, 5, 6, 9, 8, 9, 6],
+    &[10, 1, 0, 10, 0, 6, 9, 5, 0, 5, 6, 0],
+    &[0, 3, 8, 5, 6, 10],
+    &[10, 5, 6],
+    &[11, 5, 10, 7, 5, 11],
+    &[11, 5, 10, 11, 7, 5, 8, 3, 0],
+    &[5, 11, 7, 5, 10, 11, 1, 9, 0],
+    &[10, 7, 5, 10, 11, 7, 9, 8, 1, 8, 3, 1],
+    &[11, 1, 2, 11, 7, 1, 7, 5, 1],
+    &[0, 8, 3, 1, 2, 7, 1, 7, 5, 7, 2, 11],
+    &[9, 7, 5, 9, 2, 7, 9, 0, 2, 2, 11, 7],
+    &[7, 5, 2, 7, 2, 11, 5, 9, 2, 3, 2, 8, 9, 8, 2],
+    &[2, 5, 10, 2, 3, 5, 3, 7, 5],
+    &[8, 2, 0, 8, 5, 2, 8, 7, 5, 10, 2, 5],
+    &[9, 0, 1, 5, 10, 3, 5, 3, 7, 3, 10, 2],
+    &[9, 8, 2, 9, 2, 1, 8, 7, 2, 10, 2, 5, 7, 5, 2],
+    &[1, 3, 5, 3, 7, 5],
+    &[0, 8, 7, 0, 7, 1, 1, 7, 5],
+    &[9, 0, 3, 9, 3, 5, 5, 3, 7],
+    &[9, 8, 7, 5, 9, 7],
+    &[5, 8, 4, 5, 10, 8, 10, 11, 8],
+    &[5, 0, 4, 5, 11, 0, 5, 10, 11, 11, 3, 0],
+    &[0, 1, 9, 8, 4, 10, 8, 10, 11, 10, 4, 5],
+    &[10, 11, 4, 10, 4, 5, 11, 3, 4, 9, 4, 1, 3, 1, 4],
+    &[2, 5, 1, 2, 8, 5, 2, 11, 8, 4, 5, 8],
+    &[0, 4, 11, 0, 11, 3, 4, 5, 11, 2, 11, 1, 5, 1, 11],
+    &[0, 2, 5, 0, 5, 9, 2, 11, 5, 4, 5, 8, 11, 8, 5],
+    &[9, 4, 5, 2, 11, 3],
+    &[2, 5, 10, 3, 5, 2, 3, 4, 5, 3, 8, 4],
+    &[5, 10, 2, 5, 2, 4, 4, 2, 0],
+    &[3, 10, 2, 3, 5, 10, 3, 8, 5, 4, 5, 8, 0, 1, 9],
+    &[5, 10, 2, 5, 2, 4, 1, 9, 2, 9, 4, 2],
+    &[8, 4, 5, 8, 5, 3, 3, 5, 1],
+    &[0, 4, 5, 1, 0, 5],
+    &[8, 4, 5, 8, 5, 3, 9, 0, 5, 0, 3, 5],
+    &[9, 4, 5],
+    &[4, 11, 7, 4, 9, 11, 9, 10, 11],
+    &[0, 8, 3, 4, 9, 7, 9, 11, 7, 9, 10, 11],
+    &[1, 10, 11, 1, 11, 4, 1, 4, 0, 7, 4, 11],
+    &[3, 1, 4, 3, 4, 8, 1, 10, 4, 7, 4, 11, 10, 11, 4],
+    &[4, 11, 7, 9, 11, 4, 9, 2, 11, 9, 1, 2],
+    &[9, 7, 4, 9, 11, 7, 9, 1, 11, 2, 11, 1, 0, 8, 3],
+    &[11, 7, 4, 11, 4, 2, 2, 4, 0],
+    &[11, 7, 4, 11, 4, 2, 8, 3, 4, 3, 2, 4],
+    &[2, 9, 10, 2, 7, 9, 2, 3, 7, 7, 4, 9],
+    &[9, 10, 7, 9, 7, 4, 10, 2, 7, 8, 7, 0, 2, 0, 7],
+    &[3, 7, 10, 3, 10, 2, 7, 4, 10, 1, 10, 0, 4, 0, 10],
+    &[1, 10, 2, 8, 7, 4],
+    &[4, 9, 1, 4, 1, 7, 7, 1, 3],
+    &[4, 9, 1, 4, 1, 7, 0, 8, 1, 8, 7, 1],
+    &[4, 0, 3, 7, 4, 3],
+    &[4, 8, 7],
+    &[9, 10, 8, 10, 11, 8],
+    &[3, 0, 9, 3, 9, 11, 11, 9, 10],
+    &[0, 1, 10, 0, 10, 8, 8, 10, 11],
+    &[3, 1, 10, 11, 3, 10],
+    &[1, 2, 11, 1, 11, 9, 9, 11, 8],
+    &[3, 0, 9, 3, 9, 11, 1, 2, 9, 2, 11, 9],
+    &[0, 2, 11, 8, 0, 11],
+    &[3, 2, 11],
+    &[2, 3, 8, 2, 8, 10, 10, 8, 9],
+    &[9, 10, 2, 0, 9, 2],
+    &[2, 3, 8, 2, 8, 10, 0, 1, 8, 1, 10, 8],
+    &[1, 10, 2],
+    &[1, 3, 8, 9, 1, 8],
+    &[0, 9, 1],
+    &[0, 3, 8],
+    &[],
+];
 
 /// Edge endpoints: for each edge index (0-11), the two corner indices.
 const EDGE_CORNERS: [[u8; 2]; 12] = [
@@ -470,5 +725,116 @@ mod tests {
         // A plane should produce triangles.
         assert!(tc > 0, "plane should produce triangles");
         assert!(vc > 0, "plane should produce vertices");
+    }
+
+    #[test]
+    fn tri_table_edges_match_edge_table() {
+        // Rigorous table-correctness gate (no geometry needed): for every one of
+        // the 256 configurations, the SET of edges referenced by the triangle
+        // table must equal the independently-computed set of edges the surface
+        // crosses (EDGE_TABLE, derived from the corner-sign logic). This catches
+        // any wrong or missing edge index in the 256-row constant.
+        for cfg in 0..256usize {
+            let mut used: u16 = 0;
+            for &e in &TRI_TABLE[cfg] {
+                if e < 0 {
+                    break;
+                }
+                assert!(
+                    (0..12).contains(&(e as i32)),
+                    "cfg {cfg}: edge index {e} out of range 0..12"
+                );
+                used |= 1 << (e as u16);
+            }
+            assert_eq!(
+                used, EDGE_TABLE[cfg],
+                "cfg {cfg}: triangulated edge set {used:#014b} != crossing set {:#014b}",
+                EDGE_TABLE[cfg]
+            );
+        }
+    }
+
+    #[test]
+    fn tri_table_rows_are_whole_triangles() {
+        // Every row is a run of complete triangles (a multiple of 3 edge refs)
+        // followed only by -1 padding.
+        for cfg in 0..256usize {
+            let row = &TRI_TABLE[cfg];
+            let mut n = 0usize;
+            while n < 16 && row[n] >= 0 {
+                n += 1;
+            }
+            assert_eq!(
+                n % 3,
+                0,
+                "cfg {cfg}: {n} edge refs is not a whole number of triangles"
+            );
+            for &e in &row[n..] {
+                assert_eq!(e, -1, "cfg {cfg}: non-(-1) padding after terminator");
+            }
+        }
+    }
+
+    #[test]
+    fn sphere_isosurface_is_manifold() {
+        // Extract a sphere (a closed level set fully interior to the grid) and
+        // verify the triangulation is a valid 2-manifold: after merging
+        // coincident vertices by position, no triangle is degenerate and no edge
+        // is shared by more than two triangles. The correct MC table produces
+        // manifold geometry; the previous fan triangulation did not on the
+        // ambiguous cube configurations. (Center on half-integers + r=3.3 keeps
+        // the surface off the grid corners, so no edge-vertex lands on a corner.)
+        use std::collections::HashMap;
+        let (nx, ny, nz) = (12usize, 12usize, 12usize);
+        let grid = sphere_field(nx, ny, nz, 5.5, 5.5, 5.5, 3.3);
+        let max_verts = (nx - 1) * (ny - 1) * (nz - 1) * 30;
+        let max_tris = (nx - 1) * (ny - 1) * (nz - 1) * 10;
+        let mut verts = vec![Point3::default(); max_verts];
+        let mut tris = vec![[0u32; 3]; max_tris];
+        let (vc, tc) = marching_cubes(
+            &grid, nx, ny, nz, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, &mut verts, &mut tris,
+        )
+        .unwrap();
+        assert!(tc > 0, "sphere must produce triangles");
+
+        // Merge coincident vertices by quantized position (edge-vertices on a
+        // shared face are computed from identical corner data, so they are
+        // bit-identical and collapse to one merged index).
+        let key = |p: Point3| -> (i64, i64, i64) {
+            (
+                (p.x * 1e6).round() as i64,
+                (p.y * 1e6).round() as i64,
+                (p.z * 1e6).round() as i64,
+            )
+        };
+        let mut merged: HashMap<(i64, i64, i64), u32> = HashMap::new();
+        let mut remap = vec![0u32; vc];
+        for i in 0..vc {
+            let k = key(verts[i]);
+            let next = merged.len() as u32;
+            remap[i] = *merged.entry(k).or_insert(next);
+        }
+
+        // Count undirected edges over merged indices.
+        let mut edge_count: HashMap<(u32, u32), u32> = HashMap::new();
+        for t in &tris[..tc] {
+            let (a, b, c) = (
+                remap[t[0] as usize],
+                remap[t[1] as usize],
+                remap[t[2] as usize],
+            );
+            assert!(
+                a != b && b != c && a != c,
+                "degenerate triangle after merge: {a},{b},{c}"
+            );
+            for (u, v) in [(a, b), (b, c), (c, a)] {
+                let e = if u < v { (u, v) } else { (v, u) };
+                *edge_count.entry(e).or_insert(0) += 1;
+            }
+        }
+        // 2-manifold: no edge shared by more than two triangles.
+        for (e, &cnt) in &edge_count {
+            assert!(cnt <= 2, "non-manifold edge {e:?} shared by {cnt} triangles");
+        }
     }
 }

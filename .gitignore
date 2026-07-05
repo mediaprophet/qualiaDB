@@ -120,6 +120,7 @@ keystore.bin
 
 # One-off migration scripts, old release binaries, debug artefacts
 scratch/
+scripts/
 
 # Build/debug error logs (PowerShell redirection output — UTF-16, not source)
 *_errors.json
@@ -167,6 +168,12 @@ provenance/
 fix_quotes.py
 
 # Agent coordination feed is tracked at coordination/NOTICES.md (canonical tree: C:\Projects\qualia-27062026)
+/coordination/
 
 
 # Private Development Documents, not for GitHub (do not publish)
+
+# Plan Files
+/docs/plans/
+/docs/manuals/planning/
+docs/to-do/

@@ -321,7 +321,7 @@ pub fn barcode_hash(pairs: &[PersistencePair]) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::vr_filtration::{vr_filtration, spatial_distance};
+    use super::super::vr_filtration::vr_filtration;
     use crate::tensor::Tensor10D;
 
     fn make_point(x: f32, y: f32, z: f32) -> Tensor10D {
@@ -532,5 +532,82 @@ mod tests {
         let mut pairs = vec![PersistencePair { dim: 0, birth: 0.0, death: 0.0 }; 2];
         let err = compute_persistence(&simplices[..count], &mut pairs).unwrap_err();
         assert!(matches!(err, PersistenceError::BufferTooSmall { .. }));
+    }
+
+    #[test]
+    fn h0_birth_death_values_match_hand_computed() {
+        // Collinear points (0,0), (1,0), (3,0): an exactly-known barcode.
+        // Pairwise distances 1, 2, 3 → VR edge births d/2 = 0.5, 1.0, 1.5.
+        //   r=0.5: edge(0,1) merges → H0 bar (0, 0.5)
+        //   r=1.0: edge(1,2) merges → H0 bar (0, 1.0)
+        //   r=1.5: edge(0,2) closes a loop; the triangle (born 1.5) fills it
+        //          immediately → zero-length H1 bar (1.5, 1.5).
+        //   one component survives → essential H0 (0, ∞).
+        // This asserts the actual (birth, death) VALUES, not just counts.
+        let pts = vec![
+            make_point(0.0, 0.0, 0.0),
+            make_point(1.0, 0.0, 0.0),
+            make_point(3.0, 0.0, 0.0),
+        ];
+        let (np, pairs) = run_persistence(&pts);
+        let bars = &pairs[..np];
+        let approx = |a: f64, b: f64| (a - b).abs() < 1e-6;
+
+        let mut h0: Vec<(f64, f64)> = bars
+            .iter()
+            .filter(|p| p.dim == 0)
+            .map(|p| (p.birth, p.death))
+            .collect();
+        h0.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+        assert_eq!(h0.len(), 3, "expected 3 H0 bars, got {h0:?}");
+        assert!(approx(h0[0].0, 0.0) && approx(h0[0].1, 0.5), "H0 bar 0 = {:?}", h0[0]);
+        assert!(approx(h0[1].0, 0.0) && approx(h0[1].1, 1.0), "H0 bar 1 = {:?}", h0[1]);
+        assert!(
+            approx(h0[2].0, 0.0) && h0[2].1 == f64::INFINITY,
+            "H0 essential = {:?}",
+            h0[2]
+        );
+
+        let h1_persistent = bars.iter().filter(|p| p.dim == 1 && p.death > p.birth).count();
+        assert_eq!(h1_persistent, 0, "collinear points: no persistent H1");
+    }
+
+    #[test]
+    fn square_has_one_persistent_h1_with_known_endpoints() {
+        // Square (0,0),(2,0),(2,2),(0,2). Side length 2 → side-edge VR birth
+        // = 1.0; diagonal length 2√2 → diagonal birth = √2 ≈ 1.4142. The square
+        // hole is born at r=1.0 (the last side edge closes the loop) and can
+        // only be filled by a 2-simplex; EVERY triangle in the complex contains
+        // a diagonal (born √2), so the hole dies at exactly √2 whichever triangle
+        // fills it. ⇒ exactly one persistent H1 bar with robustly-known
+        // endpoints (1.0, √2). This validates H1 birth/death VALUES.
+        let pts = vec![
+            make_point(0.0, 0.0, 0.0),
+            make_point(2.0, 0.0, 0.0),
+            make_point(2.0, 2.0, 0.0),
+            make_point(0.0, 2.0, 0.0),
+        ];
+        let (np, pairs) = run_persistence(&pts);
+        let bars = &pairs[..np];
+        let approx = |a: f64, b: f64| (a - b).abs() < 1e-5;
+
+        let h1: Vec<(f64, f64)> = bars
+            .iter()
+            .filter(|p| p.dim == 1 && p.death > p.birth && p.death.is_finite())
+            .map(|p| (p.birth, p.death))
+            .collect();
+        assert_eq!(h1.len(), 1, "square should have exactly one persistent H1, got {h1:?}");
+        assert!(approx(h1[0].0, 1.0), "H1 birth should be 1.0, got {}", h1[0].0);
+        assert!(
+            approx(h1[0].1, core::f64::consts::SQRT_2),
+            "H1 death should be √2, got {}",
+            h1[0].1
+        );
+
+        let h0_essential = bars
+            .iter()
+            .filter(|p| p.dim == 0 && p.death == f64::INFINITY)
+            .count();
+        assert_eq!(h0_essential, 1, "connected square → exactly 1 essential H0");
     }
 }

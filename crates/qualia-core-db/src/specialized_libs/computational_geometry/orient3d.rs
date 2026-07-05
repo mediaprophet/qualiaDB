@@ -28,7 +28,7 @@
 //! The adaptive-precision ladder follows Jonathan Richard Shewchuk, "Adaptive
 //! Precision Floating-Point Arithmetic and Fast Robust Geometric Predicates"
 //! (1996, Discrete & Computational Geometry). The implementation is original
-//! Rust over the P1.3 expansion primitives. No CGAL or other third-party
+//! Rust over the P1.3 expansion primitives. No third-party
 //! source code is used.
 
 use super::expansion::{

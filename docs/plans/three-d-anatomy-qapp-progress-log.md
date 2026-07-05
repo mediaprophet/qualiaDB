@@ -247,3 +247,243 @@ rich common-organ set; the food/herb corpus for the diet role; both remain open 
 **Next step.** S5.1 — render-from-native path (decode Q42 mesh → `upload_mesh_colored`, colour-by-burden,
 pick→organ) + the GLB→Q42 pre-process tool that measures the real GLB→native ratio on an HRA organ, then
 publishes M/F organ assets. Decimation LOD (the budget-degradation tier) is a follow-up.
+
+---
+
+## 2026-07-05 — S5.0b: retarget compiled geometry onto the canonical `.10d` container + close the manifest→container join — **done (8/8 green)**
+
+**Why (Timothy's steer).** Timothy: "do you remember that there's a `.10d` format also now?" The S5.0 `Q42M`
+mesh buffer (`render/mesh_asset.rs`) was the pre-`.10d` interim; the CG lane's **P0.4 subsequently deleted
+`mesh_asset.rs` entirely** and made the `.10d` container the one on-disk geometry format (NOTICES
+2026-07-04, Devin P0.4+P0.6). So this slice retargets the compiled-geometry emission off the deleted bespoke
+buffer and onto the canonical **`.10d` `QuantizedMesh` section**, and wires the two-layer q42/`.10d` model
+(`docs/manuals/standards/geometry-asset-ontology.md`): q42 = semantic manifest that *cites* the `.10d` by
+content hash; `.10d` = the dense compiled sidecar.
+
+**What was built.**
+- **`render/compile_10d.rs`** (NEW, wired `pub mod compile_10d;` in `render/mod.rs`):
+  - `compile_mesh_to_10d(&Mesh) -> Vec<u8>` — emits a **sealed** `.10d` container holding one
+    `QuantizedMesh` section (Page-aligned so the payload is GPU-stageable), whole-file CRC-32C sealed
+    (self-verifying). Sizes the output by a dry-run against `&mut []` reading back
+    `SectionTableError::OutputBufferTooSmall{needed}`. Deterministic (identical mesh → byte-identical
+    container).
+  - `compiled_digest(&[u8]) -> u32` — the container's whole-file CRC-32C = the manifest's `compiledDigest`.
+  - `decode_10d_mesh(&[u8]) -> Mesh` — reads the `.10d` back (the renderer/anatomy path that avoids
+    reparsing source GLB).
+  - `compile_asset(bytes, hint, asset_uri, source_format) -> CompiledAsset` — the **end-to-end
+    orchestrator**: `import_asset` → `compile_mesh_to_10d` → hash both layers (`compiled_digest` +
+    `crc32c(source)`) → `mesh_to_nquins_with_digests`. Returns `CompiledAsset { mesh, container_10d,
+    compiled_digest, source_digest, quins, lexicon }` — the whole "GLB → `.10d` + q42 manifest citing it".
+  - `Compile10dError` (not `Clone` — wraps the non-`Clone` `AssetError`): `Import/Mesh/Section/
+    NoMeshSection/BadHeader/SectionOutOfBounds`.
+- **`render/assets.rs`** (EXTEND, my lane per NOTICES CLAIM): predicate consts `P_SOURCE_DIGEST` /
+  `P_COMPILED_DIGEST` (`q_hash("urn:qualia:geometry:sourceDigest"|"compiledDigest")`) + pub
+  `mesh_to_nquins_with_digests(...)` — delegates to the existing `mesh_to_nquins` then appends the two
+  digest facts, so the q42 manifest structurally binds to the `.10d` it describes.
+- **`shapes/geometry-asset.shacl.ttl`** (NEW) + **`docs/manuals/standards/geometry-asset-ontology.md`**
+  (NEW, prior step): the normative schema + machine-checkable SHACL surface over the real
+  `urn:qualia:geometry:*` facts (not a parallel vocabulary). Cross-property constraints (bbox non-inverted,
+  index-in-bounds, parity, `compiledDigest == real container CRC`, sensitivity high-water-mark) are marked
+  for the `geometry_asset_shacl.rs` SLG-VM shim (next).
+
+**The consumer already exists.** `render/portal/mod.rs::load_10d` (P9.2) is the read-back/render half:
+header parse → **whole-file CRC verify** → section-table walk → `QuantizedMesh` decode → Tensor10D
+provenance μ → **governance fail-closed** (default-Refuse + no attestation ⇒ displayable-but-not-citable) →
+GPU upload. So producer (`compile_asset`, this slice) + consumer (`load_10d`, existing) now close the
+`.10d` geometry pipeline for a single mesh.
+
+**Measured results.** `cargo test -p qualia-core-db --lib compile_10d` → **8 passed; 0 failed** (0.38 s;
+3758 filtered out). The 3 new `compile_asset` tests: round-trips the container + `compiledDigest`/
+`sourceDigest` fields equal the real CRCs + both digests appear as manifest facts (`compile_asset_binds_
+manifest_to_its_container`), byte-identical determinism (`compile_asset_is_deterministic`), import errors
+surface as `Compile10dError::Import` (`compile_asset_surfaces_import_errors`); on top of the 5 existing
+(seal verifies, quantization round-trip within extent/65535, determinism + stable digest, digest changes on
+geometry change, garbage rejected).
+
+**Build-contention footnote (honest process record).** This slice sat compile-verified but *unrun* for
+~30 min: the HDD fault froze six concurrent `cargo` jobs mid-build (Fable-5 inference + workspace-check
+watchers + full `cargo test` integration-test links), starving my `--lib` job on the shared `target/debug`
+lock (it accrued ~1.3 CPU-s over 20+ min — lock-starved, not failing). Once Timothy fixed the HDD, I cleared
+the hung zombies (near-zero CPU since 04:00) and the crate compiled — with a single lib error, a closure-
+lifetime bug in Fable-5's live-CLAIMed `gguf_bridge/resident_decode.rs:540` (NOT my code; the sole error in
+the whole lib, which is itself the proof my modules compiled clean). Per §10 I flagged it rather than
+reaching into Fable-5's lane; it was fixed, and the suite went green.
+
+**⚑ Where I need the human.** (Standing, unchanged) the **CCF/HRA VH-Male anatomy GLB meshes** — only
+Timothy can supply/point at the release. Everything above is testable on a synthetic OBJ/GLB until then;
+the *end-to-end* organ body needs the real meshes. No new ask this step.
+
+**Next step.** S5.1 — the burden→colour connective slice: per-system `SystemBurden.net_milli` (0..1000) /
+`WellbeingLevel` (Settled/WorthWatching/UnderStrain, already in `wellfare-core::anatomy`) → coarse,
+honesty-preserving per-organ RGBA → `gpu::upload_mesh_colored` in `load_10d`. Mesh-independent, synthetically
+testable. Then the `geometry_asset_shacl.rs` shim + a `geo:bodySystem` manifest predicate so each organ
+`.10d` declares which system's burden colours it.
+
+---
+
+## 2026-07-05 — S5.1: burden → σ → **both** visual and sonic spectrum (modality-first colour-by-load) — **done (wellfare-core 32/32, anatomy_view 7/7)**
+
+**Why (Timothy's steer — the layer was wrong).** I had started S5.1 as "`WellbeingLevel` → hex RGBA
+swatch." Timothy corrected mid-slice: *"it uses EMF which is then encoded into sonic or visual spectrum."*
+That's the modality-first spine, and my hex plan flattened it — hard-coding the **output** of the visual
+encoder and discarding the EMF source and the entire audio path. Grounded the correction in the actual
+engine code: `render/spectral.rs` maps a scalar **σ** to a wavelength (`λ = 400 + σ·300` nm) → CIE XYZ →
+linear sRGB; `render/acoustic.rs` is explicitly the *"shared σ truth for vision and AcousticPlane"* and
+folds the **same** 400–700 nm band into 1760–110 Hz. σ is also the tenth axis of `Tensor10D` (the `.10d`
+node atom carries `.sigma`). So σ is the one truth; colour and pitch are two encodings of it.
+
+**What was built (corrected).**
+- **`wellfare-core/src/anatomy/lens.rs`** — `WellbeingLevel::from_net` made `pub` (the canonical coarse
+  classifier) + `pub fn burden_to_sigma(net_milli) -> f32`: encodes accumulated burden (0..=1000) to σ on
+  the EMF band — settled → green (~550 nm, σ≈0.50) through amber to under-strain → red (~680 nm, σ≈0.93),
+  the same green→amber→red hue arc as the coarse bands but as a *continuous physical quantity*. Honest by
+  construction: σ derives from the transparent bounded-integer `net_milli` accumulation (no float health
+  arithmetic); the person still only ever sees the coarse band — the continuous spectrum is the substrate,
+  not a false-precision clinical readout. Re-exported from `anatomy/mod.rs`.
+- **`qualia-client-core/src/wellfair/anatomy_view.rs`** — `SystemPercept { system_id, level, sigma, rgba,
+  frequency_hz }` + `AnatomyViewReport::system_percepts()`: for each burden, encode σ **once**, then derive
+  the visual colour via `qualia_core_db::render::spectral::sigma_to_linear_rgb` **and** the sonic pitch via
+  `render::acoustic::sigma_to_center_frequency_hz` from that single σ. Plus `sigma_to_normalized_linear_rgba`
+  (peak-channel normalize + opaque alpha → linear vertex colour for `upload_mesh_colored`). So an organ
+  under strain is redder **and** lower-pitched — the same anatomy state renders to sight or sound without
+  re-deciding what it means.
+
+**Measured results.** `cargo test -p wellfare-core --lib anatomy::` → **32 passed / 0 failed** (incl.
+`burden_sigma_walks_green_to_red_within_the_emf_band`). `cargo test -p qualia-client-core --lib
+wellfair::anatomy_view` → **7 passed / 0 failed**, incl.: `percept_parity_strain_is_redder_and_lower_pitched`
+(from one σ, strain's RGBA is red-dominant while its pitch is *below* settled's — the visual/sonic parity
+proven in one assertion) and `system_percepts_cover_every_burden_and_stay_in_the_emf_band` (one percept per
+burden, all σ within [0.50, 0.93], Hypertension load lands on `circulatory`). These are illustrative model
+values, not clinical measurements.
+
+**⚑ Where I need the human.** (a) Standing: the **CCF/HRA VH-Male organ GLBs** — S5.1 gives the per-system
+percept, but painting it onto the *actual* body needs the organ→system binding, which is mesh-gated
+(each organ `.10d` needs a `geo:bodySystem` fact; the source of that is the anatomy assets' structure→system
+map). (b) A small **direction call** worth surfacing, not blocking: the Studio text-dot hexes
+(`anatomy_panel.rs`, Grok's lane) are still a *separate* hand-picked readout — reconciling them so the dot
+and the 3D body both derive from σ would make the whole surface one honest colour language; I left them
+untouched (lane discipline) and flag it.
+
+**Next step.** S5.2 — the organ→system binding: `geo:bodySystem` manifest predicate on each organ `.10d`
+(so `load_10d` can look up the system → `system_percepts()` → colour that organ), + wiring `system_percepts`
+into a `load_10d`-adjacent coloured-upload path. Then the `geometry_asset_shacl.rs` SLG-VM shim for the
+cross-property manifest constraints. Both are mesh-independent to build and become end-to-end once the GLBs land.
+
+---
+
+## 2026-07-05 — S5.2: male/female reference models by XY/XX + organ→system binding + colour-by-load render path — **done (wellfare-core 37/37, compile_10d 9/9, anatomy_view 8/8, portal wasm-check green)**
+
+**Why (Timothy's steer).** "get it all done … it's important to have both a male and female model. it should
+be automatically associated to the user based on their DNA selection (XY or XX)." Precise and load-bearing:
+the model is selected from the **chromosomal basis** — a biological-substrate attribute the user *declares*
+(`XY`/`XX`), **not** a gender or identity claim (consistent with DID-is-identifier-not-identity — one
+attribute, never collapsed into identity). Found the existing partial VH_Male asset registry in
+`webizen-desktop/.../glb_ingest.rs` (Grok's lane), so the domain mapping belongs in `wellfare-core` (which the
+desktop loader consults) — I did not refactor that file.
+
+**What was built.**
+- **`wellfare-core/src/anatomy/model.rs`** (NEW) — model-selection + organ→system domain core:
+  `Karyotype { Xy, Xx }` (a closed enum, not a free string — `parse` fails closed on anything but the two
+  curated values rather than guessing a body) → `anatomy_model()` → `AnatomyModel { Male, Female }` →
+  `asset_set()` (`"VH_Male"`/`"VH_Female"`) + `file_infix()` (`"m"`/`"f"`). Plus `normalize_organ_key` (strips
+  asset prefix / `.glb` / laterality) + `body_system_for_organ` over a curated ~45-organ → 17-system table
+  (model-agnostic — the model decides which organs are *present*, e.g. `prostate` vs `uterus`, both →
+  `reproductive`). Unknown organs → `None` (reported, never guessed); a test asserts every mapped id is a real
+  `BodySystem`.
+- **`render/assets.rs`** — `geo:bodySystem` + `geo:anatomyModel` predicates + `mesh_to_nquins_with_meta`
+  (string facts via the lexicon, like `sourceFormat`); **`render/compile_10d.rs`** — `compile_organ_asset`
+  (the organ mesh's q42 manifest carries which system colours it + which model it belongs to; `compile_asset`
+  now delegates to it with `None`/`None`).
+- **`qualia-client-core/src/wellfair/anatomy_view.rs`** — `OrganPercept { organ_key, system_id, percept }` +
+  `AnatomyViewReport::paint_organs(organ_keys)`: resolve each organ's system → that system's `SystemPercept`
+  (the σ→{colour, pitch} of S5.1); an organ on an unburdened system gets the **settled baseline** so the whole
+  body renders; an organ not in the curated map is reported, never silently coloured.
+- **`render/portal/mod.rs`** — `load_10d_colored(bytes, r,g,b,a)`: the wasm GPU paint path — decode +
+  CRC-verify + governance fail-closed (as `load_10d`) then `upload_mesh_colored` with the per-organ σ-colour.
+  Host flow: user's `Karyotype` → `AnatomyModel` → loader pulls that model's `asset_set()` files → each organ
+  `.10d` (with its `geo:bodySystem` fact) → `paint_organs` → this coloured upload.
+
+**Amendment (systems coverage, same day — Timothy checked the 17).** Timothy verified against the full
+system list. The taxonomy already held **all 17** (his 11 major + Sensory, Vestibular, Exocrine, ECS, ENS,
+Glymphatic — the seed *is* those 17). But the organ→mesh paint map only covered 12; closed the real gaps —
+added **Vestibular** (inner-ear / semicircular-canal / vestibule) and **Exocrine** (salivary / parotid /
+sublingual / lacrimal / sweat / sebaceous glands; liver & pancreas stay digestive-primary as dual-role). The
+remaining three — **ECS, ENS, Glymphatic** — are genuinely *distributed networks* (receptors CNS-wide; the
+gut's ~500M-neuron web; astrocyte+CSF brain clearance): no standalone mesh, so added `SystemRepresentation
+{ DiscreteOrgans, DistributedOverlay }` + `system_representation()` marking exactly those three as overlays.
+They remain first-class (burden + σ percept); they're rendered as a highlight on their host structures, not a
+painted organ. A test now enforces that **every one of the 17 is accounted for** (has an organ *or* is an
+explicit overlay) — no silent gap.
+
+**Measured results.** `cargo test -p wellfare-core --lib anatomy::` → **39 passed** (7 new model tests incl.
+`every_one_of_the_17_systems_is_accounted_for`); `-p qualia-core-db --lib compile_10d` → **9 passed** (incl.
+`compile_organ_asset_binds_body_system_and_model`
+— identical container, +2 manifest facts); `-p qualia-client-core --lib wellfair::anatomy_view` → **8 passed**
+(incl. `paint_organs_colours_by_system_and_reports_unknown_organs` — burdened circulatory redder than settled
+respiratory, unknown organ reported). The wasm-only portal path: `cargo check --target wasm32-unknown-unknown
+--no-default-features --features portal,wasm-scientific` → **Finished** (load_10d_colored compiles clean for
+the real target). Runtime GPU paint is browser + mesh gated → compile-verified, not runtime-verified (stated
+honestly, not claimed green).
+
+**⚑ Where I need the human.**
+1. **Standing (now the single gate to a visible body):** the CCF/HRA **VH-Male *and* VH-Female** organ GLB
+   sets (`ccf-3d-reference-object-library`, CC-BY-4.0). Every layer above is ready; the desktop registry lists
+   only 5 VH_Male organs and no VH_Female.
+2. A **direction confirm** (not blocking): I modelled the DNA selection as a closed `XY`/`XX` enum that *fails
+   closed* on any other value rather than guessing a body — matching "XY or XX" exactly. Additional curated
+   karyotypes later would be an explicit reviewed extension.
+
+**Coordination flags (§10, not fixed by me).** (a) `webizen-desktop/.../glb_ingest.rs` (Grok) needs the
+VH_Female organ list + selection by `AnatomyModel::asset_set()` from the karyotype — domain hooks provided.
+(b) **Pre-existing wasm feature-gate bug in the CG lane** (Devin): `container_10d/topology_section.rs:20` +
+`spatial_index_section.rs:19` `use crate::specialized_libs::…` unconditionally, but `specialized_libs` is
+`#[cfg(any(not(wasm32), feature="wasm-scientific"))]` — so `--features portal` without `wasm-scientific`
+fails the wasm build. Flagged, not touched.
+
+**Next step.** The `geometry_asset_shacl.rs` SLG-VM shim (cross-property manifest constraints) — the last
+mesh-independent piece. After that everything waits on the GLBs (⚑1) for the end-to-end visible + audible body.
+
+---
+
+## 2026-07-05 — S5.3: distributed-overlay render support + geometry-asset SHACL validation shim — **done (model 8/8, anatomy_view 9/9, geometry_asset_shacl 8/8)**
+
+Timothy: "fix the gaps, etc. get it all done properly." Two remaining mesh-independent pieces, both closed.
+
+**Distributed-overlay render support.** The systems-coverage work classified ECS/ENS/glymphatic as
+`DistributedOverlay`, but `paint_organs` (discrete organs) silently omitted them — so a burden on those
+networks had nowhere to render. Closed it: `overlay_host_systems(system_id)` in `wellfare-core/anatomy/
+model.rs` (ENS→`digestive`, glymphatic→`nervous`, ECS→whole-body) + `OverlayPercept { system_id, percept,
+host_systems }` and `AnatomyViewReport::overlay_percepts()` in `anatomy_view.rs`. Now `paint_organs`
+(discrete) + `overlay_percepts` (distributed) together cover the whole body — **nothing that carries burden
+is unrepresented**, and each overlay knows which host structures to highlight over. Tests: host hints are
+real discrete systems; only ECS/ENS/glymphatic surface as overlays; a burdened glymphatic overlay still
+carries a real σ colour + pitch.
+
+**Geometry-asset SHACL shim** — `crates/qualia-core-db/src/modalities/logic/geometry_asset_shacl.rs`
+(registered **ungated** in `modalities/logic/mod.rs`, so it works on all targets incl. plain wasm/portal —
+unlike `specialized_libs_shacl`). The runtime half of `shapes/geometry-asset.shacl.ttl`, honestly split:
+(1) `GeometryAssetConfiguration::to_opcodes()` — per-property bounds as SLG-VM opcodes (counts ≤ 2²²,
+`sourceFormat`/`unit` ∈ set), the same `Configuration→to_opcodes` pattern as `specialized_libs_shacl`;
+(2) `validate_geometry_manifest(facts, cfg)` — the **cross-property** checks plain SHACL cannot express
+(the `.ttl` deferred these to the shim, and here they are real): bbox finite + non-inverted, every triangle
+index `< vertexCount`, **`compiledDigest == the real .10d CRC`** (a manifest that lies about its container is
+caught), and the **sensitivity high-water-mark** (a derived asset cannot down-classify below its most
+restrictive input; unknown class ⇒ fail-closed as most restrictive).
+
+**Measured results.** `cargo test -p wellfare-core --lib anatomy::model` → **8 passed** (adds overlay host
+hints); `-p qualia-client-core --lib wellfair::anatomy_view` → **9 passed** (adds `overlay_percepts`);
+`-p qualia-core-db --lib geometry_asset_shacl` → **8 passed** (well-formed passes; each of the 8 violation
+classes is caught, incl. the container-lie and sensitivity-downgrade). All three crates compile green with
+every change.
+
+**Status of the whole anatomy pipeline.** Everything mesh-independent is now **built and verified**: records →
+burden → σ → {colour, pitch}; XY/XX → M/F model + asset set; all **17** systems supported (14 discrete-organ,
+3 distributed-overlay); organ→system + manifest facts; `compile_organ_asset`; `paint_organs` +
+`overlay_percepts`; `load_10d_colored` (wasm-checked); and the geometry-asset validation shim. **The only
+remaining gate is ⚑1 — the VH-Male and VH-Female organ GLB sets** (Timothy). Cross-lane follow-ups
+(glb_ingest VH_Female list → Grok; the `container_10d` wasm feature-gate bug → Devin) remain flagged in
+NOTICES, not touched.
+
+**Next step.** None mesh-independent left in my lane. When the GLBs land: `compile_organ_asset` each →
+`.10d` set per model → the desktop selects the set by `AnatomyModel::asset_set()` → `paint_organs` +
+`overlay_percepts` → `load_10d_colored` in the browser = the visible + audible body.

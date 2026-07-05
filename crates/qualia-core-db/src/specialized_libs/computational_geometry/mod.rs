@@ -1,10 +1,16 @@
 //! Native computational geometry for QualiaDB.
 //!
-//! This is the shared landing zone for the package-by-package CGAL capability
-//! port. Algorithms are expressed in Rust over caller-owned slices so the same
-//! implementation runs in the native engine and browser/WASM builds. Geometry
-//! is not renderer-only: the topology types are graph structures usable by the
-//! query, reasoning, simulation, and 10D manifold layers.
+//! A clean-room Rust implementation of the core computational-geometry algorithm
+//! families, built directly on the QualiaDB engine (10-D tensor, `.10d`
+//! container, `wgpu`/Forge, WASM, renderer). The functionality-specification
+//! reference is de Berg, Cheong, van Kreveld & Overmars, *Computational
+//! Geometry: Algorithms and Applications* (3rd ed.) — used as a public,
+//! textbook description of the algorithms and their correctness properties, not
+//! a source of code. Algorithms are expressed in Rust over caller-owned slices
+//! so the same implementation runs in the native engine and browser/WASM
+//! builds. Geometry is not renderer-only: the topology types are graph
+//! structures usable by the query, reasoning, simulation, and 10-D manifold
+//! layers.
 
 mod bvh;
 pub mod boolean_2;
@@ -70,8 +76,6 @@ mod surface_mesh_processing;
 mod tool;
 mod topology;
 mod voronoi_2;
-
-pub mod generated;
 
 #[cfg(test)]
 mod exact_test_helper;

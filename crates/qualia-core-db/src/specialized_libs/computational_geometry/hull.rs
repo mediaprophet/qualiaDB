@@ -372,7 +372,7 @@ mod tests {
         // produces identical output. The default (FilteredF64Kernel) and the
         // explicit kernel-generic call must agree byte-for-byte on the hull
         // indices.
-        use super::{FilteredF64Kernel, GeometryKernel};
+        use super::FilteredF64Kernel;
 
         let points = [
             Point2::new(0.0, 0.0),
@@ -398,7 +398,7 @@ mod tests {
 
     #[test]
     fn strongly_convex_check_matches_through_kernel() {
-        use super::{FilteredF64Kernel, GeometryKernel};
+        use super::FilteredF64Kernel;
 
         let hull = [
             Point2::new(0.0, 0.0),

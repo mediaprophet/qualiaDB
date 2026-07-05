@@ -354,7 +354,7 @@ pub fn vr_filtration_full(
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-//  Alpha filtration (4 co-circular points — CC0 golden test)
+//  Alpha filtration (4 co-circular points — golden test)
 // ───────────────────────────────────────────────────────────────────────────
 
 /// Compute the alpha filtration for 4 co-circular points.
@@ -365,7 +365,7 @@ pub fn vr_filtration_full(
 /// - 2 diagonal edges (birth = half diagonal length)
 /// - 4 triangles (birth = circumradius, since all are co-circular)
 ///
-/// The CC0 golden values are the circumradius of the 4 points (which is
+/// The golden values are the circumradius of the 4 points (which is
 /// the same for all triangles since they share the same circumcircle).
 ///
 /// `points` must be exactly 4 points. `out_simplices` must have room for

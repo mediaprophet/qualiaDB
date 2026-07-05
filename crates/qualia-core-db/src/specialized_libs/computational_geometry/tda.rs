@@ -261,6 +261,7 @@ pub fn compute_persistence(
 
     let mut pair_count = 0usize;
     let mut component_births: Vec<(u32, f64)> = Vec::new(); // (root, birth)
+    let mut active_h1: Vec<(f64, usize)> = Vec::new();
 
     for i in 0..n {
         let s = simplices[i];
@@ -276,14 +277,7 @@ pub fn compute_persistence(
                 let (ra, rb) = union(&mut parent, s.v0, s.v1);
                 if ra == rb {
                     // Cycle created → H1 feature born.
-                    // For a full implementation, we'd track this.
-                    // For now, record as an H1 pair with infinite death.
-                    out_pairs[pair_count] = PersistencePair {
-                        dim: 1,
-                        birth,
-                        death: f64::INFINITY,
-                    };
-                    pair_count += 1;
+                    active_h1.push((birth, i));
                 } else {
                     // Components merged: the younger component dies.
                     // Find the birth of the dead component (old_root).
@@ -308,8 +302,39 @@ pub fn compute_persistence(
             }
             2 => {
                 // Triangle: may kill an H1 feature.
-                // For a full implementation, we'd track which cycle it fills.
-                // For now, we skip this.
+                let (va, vb, vc) = (s.v0, s.v1, s.v2);
+                let edges = [
+                    (va.min(vb), va.max(vb)),
+                    (vb.min(vc), vb.max(vc)),
+                    (va.min(vc), va.max(vc)),
+                ];
+                
+                // Find the most recently born active H1 whose creating edge
+                // is a subset of this triangle's edges.
+                if let Some(pos) = active_h1
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, &(hb, edge_idx))| {
+                        hb <= birth && {
+                            let se = simplices[edge_idx];
+                            let e = (se.v0.min(se.v1), se.v0.max(se.v1));
+                            edges.contains(&e)
+                        }
+                    })
+                    .max_by(|(_, &(a, _)), (_, &(b, _))| {
+                        a.partial_cmp(&b).unwrap_or(core::cmp::Ordering::Equal)
+                    })
+                    .map(|(pos, _)| pos)
+                {
+                    let (h1_birth, _) = active_h1[pos];
+                    out_pairs[pair_count] = PersistencePair {
+                        dim: 1,
+                        birth: h1_birth,
+                        death: birth,
+                    };
+                    pair_count += 1;
+                    active_h1.remove(pos);
+                }
             }
             _ => {}
         }
@@ -324,6 +349,24 @@ pub fn compute_persistence(
         };
         pair_count += 1;
     }
+
+    // Remaining active H1 features are essential (infinite death).
+    for &(birth, _) in &active_h1 {
+        out_pairs[pair_count] = PersistencePair {
+            dim: 1,
+            birth,
+            death: f64::INFINITY,
+        };
+        pair_count += 1;
+    }
+
+    // Sort pairs by (dim, birth, death) for canonical output.
+    out_pairs[..pair_count].sort_by(|a, b| {
+        a.dim
+            .cmp(&b.dim)
+            .then(a.birth.partial_cmp(&b.birth).unwrap_or(core::cmp::Ordering::Equal))
+            .then(a.death.partial_cmp(&b.death).unwrap_or(core::cmp::Ordering::Equal))
+    });
 
     Ok(pair_count)
 }

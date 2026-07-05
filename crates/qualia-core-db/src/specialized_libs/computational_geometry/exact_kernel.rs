@@ -33,13 +33,12 @@
 //!
 //! ## References
 //!
-//! The cascaded-construction problem is the motivation for CGAL's
-//! `Cartesian<Exact_kernel>` and the "lazy exact" approach (Pion & Fabri,
-//! 2009). This is a zero-heap Rust analogue.
+//! The cascaded-construction problem is the motivation for the lazy-exact
+//! evaluation approach (Pion & Fabri, 2009). This is a zero-heap Rust analogue.
 
 use super::expansion::{
     compress_expansion, expansion_sum, negate_expansion, scale_expansion, sign_of_expansion,
-    two_diff, two_product, two_sum, Sign,
+    two_diff, two_product, Sign,
 };
 use super::primitives::Point2;
 
@@ -486,7 +485,7 @@ mod tests {
         let rounded = p.to_point2();
 
         // Check orientation of (a, c, p) against BigInt reference.
-        let cx_num = Exact::from_f64(rounded.x); // This is the rounded value, not exact
+        let _cx_num = Exact::from_f64(rounded.x); // This is the rounded value, not exact
         // Actually, we need the EXACT value for the BigInt reference.
         // Let's compute the exact intersection using BigInt.
         let ax = Exact::from_f64(a.x);
@@ -716,7 +715,7 @@ mod tests {
 
             // Also check the value is close (for non-cancellation cases)
             if exact_val.mantissa != 0.into() {
-                let big_val = exact_val;
+                let _big_val = exact_val;
                 // Compare signs (value comparison is harder with BigInt)
                 assert_eq!(val.is_sign_positive(), exact_sign != Sign::Negative || val == 0.0);
             }

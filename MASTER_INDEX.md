@@ -363,7 +363,5 @@ This document provides a comprehensive list of all directory indexes across the 
 - [ontologies](ontologies/DIRECTORY_INDEX.md)
 - [reports](reports/DIRECTORY_INDEX.md)
 - [resources](resources/DIRECTORY_INDEX.md)
-- [resources\cgal-port](resources/cgal-port/DIRECTORY_INDEX.md)
 - [scripts](scripts/DIRECTORY_INDEX.md)
-- [scripts\cgal-port](scripts/cgal-port/DIRECTORY_INDEX.md)
 - [scripts\cross-linux](scripts/cross-linux/DIRECTORY_INDEX.md)

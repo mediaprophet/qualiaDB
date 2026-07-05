@@ -64,9 +64,9 @@
 //! each cavity is star-shaped from the inserted point — which holds when the
 //! point lies inside the current triangulation (guaranteed by the enclosing
 //! super-tetra) and the exact predicates are used. This implementation does not
-//! add the extra "sliver-cavity" repair some CC0-scale robust libraries carry
+//! add the extra "sliver-cavity" repair some reference-grade robust libraries carry
 //! for pathological cospherical clouds; on such inputs the cavity is still
-//! extracted from the exact bad-set, but full CC0-scale robustness across
+//! extracted from the exact bad-set, but full reference-grade robustness across
 //! adversarial degenerate clouds is **not** independently proven here. See the
 //! `status = implemented` caveat. The empty-ball property is *verified* by test
 //! (exhaustive `verify_delaunay_3`) on the covered inputs.

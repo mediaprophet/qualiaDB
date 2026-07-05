@@ -383,7 +383,7 @@ mod tests {
         // The geodesic distance is:
         // d = 2 * arccos(√(p·q)) where p·q = √(t_p*t_q) + √((1-t_p)*(1-t_q))
         let p = [0.5f32, 0.5];
-        let q = [0.3f32, 0.7];
+        let _q = [0.3f32, 0.7];
 
         // Fisher inner product of tangent vector u = (1, -1) with itself at p.
         let u = [1.0f32, -1.0];

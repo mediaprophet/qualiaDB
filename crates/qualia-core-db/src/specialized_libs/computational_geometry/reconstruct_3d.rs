@@ -171,7 +171,7 @@ mod tests {
         let golden = (1.0 + 5.0f64.sqrt()) / 2.0;
         for i in 0..n {
             let t = i as f64 / n as f64;
-            let phi = (2.0 * core::f64::consts::PI * i as f64 / golden).cos().acos() * 0.0; // placeholder
+            let _phi = (2.0 * core::f64::consts::PI * i as f64 / golden).cos().acos() * 0.0; // placeholder
             let inclination = (1.0 - 2.0 * t).acos();
             let azimuth = 2.0 * core::f64::consts::PI * i as f64 / golden;
             let x = r * inclination.sin() * azimuth.cos();

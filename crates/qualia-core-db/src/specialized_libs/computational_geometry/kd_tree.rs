@@ -12,7 +12,6 @@
 
 use bytemuck::{Pod, Zeroable};
 
-use super::primitives::Point3;
 use super::spatial_order::sort_by_morton_3d;
 
 // ---------------------------------------------------------------------------
@@ -178,7 +177,7 @@ fn build_kd_recursive(
     // which is a reasonable proxy for spatial ordering).
     let mid = start + count / 2;
     let p_idx = point_indices[mid] as usize;
-    let split_val = points[p_idx][axis as usize];
+    let _split_val = points[p_idx][axis as usize];
 
     // Compute bbox min for this subtree.
     let mut bbox_min = [f32::INFINITY; 3];

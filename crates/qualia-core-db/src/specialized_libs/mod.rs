@@ -35,7 +35,7 @@ pub mod quantum_biology;
 pub mod statistical_computing;
 pub mod symbolic_algebra;
 /// Native computational geometry: robust predicates, topology/graph structures,
-/// Q42/10D adapters, and the staged CGAL capability port. Unlike the older
+/// Q42/10D adapters, and the computational-geometry algorithm families. Unlike the older
 /// specialized libraries this module is available to browser/WASM builds.
 pub mod computational_geometry;
 #[cfg(not(target_arch = "wasm32"))]

@@ -337,7 +337,7 @@ them, and I do not edit another instrument's live tracker.**
 | Physics-of-time / QPU-elastic notes | `advanced-stuff.md` (raw capture) | Raw notes, previously no home | — | **Homed here:** QPU scaler → §5 / D3.2; time-physics → §6 / D6.1 (+ `.10d` `t`-axis input, CG-lane coordinated). |
 | WellFair / 3D Anatomy Qapp | MASTER-EXECUTION-CHECKLIST + `wellfare-core/anatomy/` | S1–S5.0 done | Claude (Opus 4.8) | The first real end-to-end *consumer* of the whole path (records → geometry → `.10d` → renderer, rights-bounded). |
 | **Capability ontology + dispatch (this plan)** | `native-capability-ontology-and-dispatch.md` | **NEW — D0–D6 planned/deferred** | Claude (Opus 4.8) | The ecosystem-optimization layer *above* the capability substrate. |
-| Human-centric identity & biometric sovereignty | `human-centric-identity-and-biometric-sovereignty.md` | Considerations doc; nothing built | Claude (Opus 4.8) | Cross-cutting rights/identity concern informing CV, CGAL, **and** this layer; injects the D0.2/D2.2/D4/D5 improvements (see §12). |
+| Human-centric identity & biometric sovereignty | `human-centric-identity-and-biometric-sovereignty.md` | Considerations doc; nothing built | Claude (Opus 4.8) | Cross-cutting rights/identity concern informing CV, computational geometry, **and** this layer; injects the D0.2/D2.2/D4/D5 improvements (see §12). |
 
 **Dependency ordering across workstreams.** This layer is deliberately **late**: it optimizes a capability
 surface, so it is most valuable once several capabilities exist and have a stable ABI. The honest sequence:
@@ -393,7 +393,7 @@ triggered, this document + the CG progress log carry the record; a dedicated
 
 The rights-gated capability routing in this plan was developed against a concrete, high-stakes use-case —
 human-centric identity and biometric sovereignty — which grew into a first-class, cross-cutting concern informing
-the CV, CGAL, and this dispatch layer. It now lives in its own document:
+the CV, computational-geometry, and this dispatch layer. It now lives in its own document:
 [`human-centric-identity-and-biometric-sovereignty.md`](human-centric-identity-and-biometric-sovereignty.md).
 
 **In one paragraph:** a DID is an *identifier*, not an identity; identity is a never-collapsing probabilistic

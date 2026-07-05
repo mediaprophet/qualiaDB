@@ -23,6 +23,7 @@ mod bridge;
 mod factor;
 mod knowledge;
 mod lens;
+mod model;
 mod systems;
 mod temporal;
 
@@ -35,7 +36,11 @@ pub use bridge::{
     BridgeResult, RecordRef,
 };
 pub use factor::{Effect, EvidenceTier, Factor, FactorKind, FactorTarget};
-pub use lens::{build_view, AnatomyView, Lens, SystemView, WellbeingLevel};
+pub use lens::{build_view, burden_to_sigma, AnatomyView, Lens, SystemView, WellbeingLevel};
+pub use model::{
+    body_system_for_organ, normalize_organ_key, overlay_host_systems, system_representation,
+    AnatomyModel, Karyotype, SystemRepresentation,
+};
 pub use knowledge::{
     import_condition_map, import_entries, seed_knowledge_base, FactorKnowledge, ImportResult,
     KnowledgeBase, KnowledgeSource, KnowledgeTarget, Provenance,

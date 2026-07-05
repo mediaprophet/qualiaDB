@@ -25,7 +25,7 @@
 //! over the caller buffer" gate.
 
 use crate::container_10d::crc32c::crc32c;
-use crate::container_10d::header::{Container10dHeader, HEADER_BYTE_SIZE};
+use crate::container_10d::header::HEADER_BYTE_SIZE;
 
 /// Offset of the `header_crc32c` field within the header (and thus within
 /// the file, since the header is at offset 0).

@@ -60,10 +60,10 @@
 //!
 //! ## References
 //!
-//! The cascaded-construction problem motivates CGAL's `Cartesian<Exact_kernel>`
-//! and the lazy-exact approach (Pion & Fabri, 2009); the expansion arithmetic is
+//! The cascaded-construction problem motivates the lazy-exact evaluation
+//! approach (Pion & Fabri, 2009); the expansion arithmetic is
 //! Shewchuk (1996). This is an original zero-heap Rust analogue over the P1.3
-//! [`super::expansion`] primitives — no CGAL or other third-party source is used.
+//! [`super::expansion`] primitives — no third-party source is used.
 
 use super::expansion::{
     compress_expansion, expansion_sum, negate_expansion, scale_expansion, sign_of_expansion,

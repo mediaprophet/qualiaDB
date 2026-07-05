@@ -304,7 +304,7 @@ pub fn geometry_nearest_site(
 /// Execute any geometry tool via the JSON boundary — same function as
 /// `execute_geometry_tool_json` on native. This is the full op surface
 /// (`orientation_2`, `convex_hull_2`, `triangle_topology`, `mesh_topology`,
-/// `package_inventory`, `delaunay_2`, `voronoi_2`, `nearest_site`).
+/// `delaunay_2`, `voronoi_2`, `nearest_site`).
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn geometry_execute_json(args: &str) -> Result<String, JsValue> {

@@ -538,6 +538,7 @@ mod tests {
         ]
     }
 
+    #[allow(dead_code)]
     fn circle_points(n: usize, r: f64) -> Vec<Point2> {
         let mut pts = Vec::with_capacity(n);
         for i in 0..n {
@@ -558,7 +559,7 @@ mod tests {
         let mut edges = vec![AlphaEdge::default(); max_tris * 3];
 
         // Very large alpha → all triangles are interior → convex hull.
-        let (tc, ec, report) = alpha_shape_2d(
+        let (tc, _ec, report) = alpha_shape_2d(
             &pts, 100.0, &mut scratch, &mut tris, &mut tri_classes, &mut edges,
         ).unwrap();
 

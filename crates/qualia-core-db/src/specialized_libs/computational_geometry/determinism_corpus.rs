@@ -54,6 +54,7 @@ use super::primitives::{orientation_2, Orientation, Point2, Point3};
 ///
 /// When adding new vectors to the corpus, recompute this value by running
 /// `compute_corpus_hash()` and update the constant.
+#[allow(dead_code)]
 pub const PINNED_CORPUS_HASH: u64 = 0xa184a57fea2f6024;
 
 // ──────────────────────────────────────────────────────────────────────────

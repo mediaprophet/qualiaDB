@@ -11,7 +11,6 @@
 //! zero-heap in the hot path (caller-supplied output buffer).
 
 use super::distance::Aabb;
-use super::spatial_order::sort_by_morton_3d;
 
 /// Error type for box-intersection join.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

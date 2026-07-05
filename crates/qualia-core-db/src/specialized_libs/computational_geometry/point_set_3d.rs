@@ -12,8 +12,8 @@
 //! - [`knn_search_3d`] — kNN using the existing kd-tree (P3.4) for production.
 //! - [`cknn_graph_3d`] — Continuum-kNN graph: for each point i, connect to
 //!   its k nearest neighbours. The graph is symmetrised (i→j implies j→i).
-//! - [`average_spacing_3d`] — CGAL-style average spacing: mean distance to
-//!   k nearest neighbours, averaged over all points.
+//! - [`average_spacing_3d`] — average spacing (mean distance to k nearest
+//!   neighbours), averaged over all points.
 //! - [`local_density_3d`] — density estimate at each point: k / volume of
 //!   kNN ball (or 1/mean_knn_distance as a simpler proxy).
 //! - [`remove_outliers_3d`] — points whose average kNN distance exceeds
@@ -316,12 +316,11 @@ pub fn cknn_graph_3d(
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-//  Average spacing (CGAL-style)
+//  Average spacing (mean distance to k nearest neighbours)
 // ───────────────────────────────────────────────────────────────────────────
 
 /// Compute the average spacing: mean distance to k nearest neighbours,
-/// averaged over all points. This is the CGAL `compute_average_spacing`
-/// analogue.
+/// averaged over all points.
 ///
 /// `knn_buffer` needs `n * k` entries. `scratch_knn` needs `MAX_K + 1` entries.
 pub fn average_spacing_3d(

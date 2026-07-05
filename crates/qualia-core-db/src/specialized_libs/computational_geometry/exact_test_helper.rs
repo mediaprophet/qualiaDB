@@ -103,6 +103,7 @@ impl Exact {
     }
 
     /// Compare two exact values for equality (after normalization).
+    #[allow(dead_code)]
     pub fn equals(&self, other: &Self) -> bool {
         let a = self.clone().normalize();
         let b = other.clone().normalize();
@@ -110,6 +111,7 @@ impl Exact {
     }
 
     /// Normalize: remove trailing zero bits from the mantissa.
+    #[allow(dead_code)]
     fn normalize(mut self) -> Self {
         if self.mantissa == 0.into() {
             return Exact { mantissa: BigInt::from(0), exponent: 0 };
@@ -125,6 +127,7 @@ impl Exact {
 }
 
 /// Convert an expansion (sum of `f64`s) to its exact value.
+#[allow(dead_code)]
 pub fn expansion_to_exact(e: &[f64]) -> Exact {
     let mut acc = Exact { mantissa: BigInt::from(0), exponent: 0 };
     for &x in e {

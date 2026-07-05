@@ -1,9 +1,9 @@
-//! CC0 golden-vector corpus + differential/determinism harness (P4.2).
+//! Golden-vector corpus + differential/determinism harness (P4.2).
 //!
 //! This module provides a test harness that runs the landed geometry
 //! primitives (`orientation_2`, `convex_hull_2`, `incircle`, `delaunay_2`)
-//! against golden vectors derived from first-principles (the CC0 CGAL
-//! test corpus is referenced as the spec; the golden vectors here are
+//! against golden vectors derived from first-principles (the de Berg et al.
+//! textbook is referenced as the algorithm spec; the golden vectors here are
 //! independently constructed to match known-correct geometric results).
 //!
 //! ## Falsifiability
@@ -22,18 +22,18 @@
 //!
 //! ## Licence
 //!
-//! No CGAL source code is consulted or derived. The golden vectors are
+//! No third-party source code is consulted or derived. The golden vectors are
 //! independently constructed from first principles of computational
-//! geometry. The CC0 CGAL documentation is referenced as the spec only.
+//! geometry. The de Berg et al. textbook is referenced as the algorithm spec only.
 
-use super::delaunay_2::{delaunay_triangulation_2, triangulation_hash, verify_delaunay, DelaunayError};
-use super::hull::{convex_hull_indices_2, HullError};
+use super::delaunay_2::{delaunay_triangulation_2, triangulation_hash, verify_delaunay};
 use super::incircle::incircle;
 use super::primitives::{orientation_2, Point2, Orientation};
 use super::expansion::Sign;
 
 /// Corpus entry for orientation tests.
 #[derive(Clone, Copy)]
+#[allow(dead_code)]
 pub struct OrientationVector {
     pub a: Point2,
     pub b: Point2,
@@ -44,6 +44,7 @@ pub struct OrientationVector {
 
 /// Corpus entry for convex hull tests.
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct HullVector {
     pub points: &'static [Point2],
     pub expected_hull_indices: &'static [u32],
@@ -52,6 +53,7 @@ pub struct HullVector {
 
 /// Corpus entry for incircle tests.
 #[derive(Clone, Copy)]
+#[allow(dead_code)]
 pub struct IncircleVector {
     pub a: Point2,
     pub b: Point2,
@@ -63,6 +65,7 @@ pub struct IncircleVector {
 
 /// Corpus entry for Delaunay tests.
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct DelaunayVector {
     pub points: &'static [Point2],
     pub expected_triangle_count: usize,

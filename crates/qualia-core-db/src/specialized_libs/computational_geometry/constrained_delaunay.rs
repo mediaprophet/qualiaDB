@@ -24,7 +24,7 @@
 //! Midpoint insertion is deterministic. The Delaunay triangulation is
 //! deterministic (P4.4). Output is sorted canonically.
 
-use super::delaunay_2::{delaunay_triangulation_2, verify_delaunay};
+use super::delaunay_2::delaunay_triangulation_2;
 use super::primitives::{orientation_2, Point2, Orientation};
 
 /// Constrained Delaunay error.

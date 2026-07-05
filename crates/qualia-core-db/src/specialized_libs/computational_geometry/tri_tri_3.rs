@@ -910,7 +910,7 @@ mod tests {
         let mut hits = 0u64;
         let mut coplanar = 0u64;
         for _ in 0..120_000 {
-            let mut g = |rng: &mut Lcg| p(rng.coord(-3, 3), rng.coord(-3, 3), rng.coord(-3, 3));
+            let g = |rng: &mut Lcg| p(rng.coord(-3, 3), rng.coord(-3, 3), rng.coord(-3, 3));
             let (p1, q1, r1) = (g(&mut rng), g(&mut rng), g(&mut rng));
             let (p2, q2, r2) = (g(&mut rng), g(&mut rng), g(&mut rng));
             if is_degenerate(p1, q1, r1) || is_degenerate(p2, q2, r2) {

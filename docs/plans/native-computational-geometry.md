@@ -1,8 +1,7 @@
 # Native computational geometry & 3D creation for the QualiaDB / Webizen 10D ecosystem
 
 **Status:** full-implementation plan (2026-07-04).
-**Supersedes the framing of** [`computational-geometry-cgal-port.md`](computational-geometry-cgal-port.md)
-(kept as the capability-reference workbench doc) and the naming in
+**Supersedes the naming in**
 [`../reports/qualia-computational-geometry-gpu-review.md`](../reports/qualia-computational-geometry-gpu-review.md).
 **Harmonized with** [`native-visual-intelligence-and-generative-3d.md`](native-visual-intelligence-and-generative-3d.md),
 [`../manuals/computational-3d-assets-and-digital-twins.md`](../manuals/computational-3d-assets-and-digital-twins.md),
@@ -25,17 +24,22 @@ geometric — in the browser and in qapps**, on a sovereign, human-centric, offl
 3-D creation (the three.js-class maker surface) is one prominent face of it, not the whole.
 
 It is deliberately positioned as **a native alternative to a whole category of tools at once**: the 3D-web
-creation layer (three.js and friends), the geometry-processing/kernel layer (CGAL-class capability), and the
-CAD/mesh-authoring layer — none of which are sovereign, zero-heap, provenance-bearing, rights-aware, or fused
+creation layer (three.js and friends), the geometry-processing/kernel layer (research-grade
+computational-geometry capability), and the CAD/mesh-authoring layer — none of which are sovereign, zero-heap,
+provenance-bearing, rights-aware, or fused
 with a semantic/epistemic engine. This is the union those tools never form.
 
-**It is NOT a port of CGAL.** CGAL is a **public-domain capability reference** — its CC0 documentation is a
-specification and its CC0 test suites are golden-output oracles (see §8). The GPL/LGPL algorithm *source* is
-never copied or derived from. The output in `computational_geometry/` is **substantially different from CGAL**:
-different number model, different data structures, different memory discipline, GPU-and-WASM execution, 10-D
-projection, `.10d`/Q42/P64 integration, and a browser creation API. CGAL's 133-package inventory
-([`computational-geometry-cgal-port.md`](computational-geometry-cgal-port.md)) is a **coverage checklist**, not
-a transliteration map. Modules are organized around this ecosystem's needs, not CGAL's package taxonomy.
+**The functionality-specification reference is a textbook, not a codebase.** The algorithm families, their
+correctness properties, and their degeneracy behaviours are specified against **de Berg, Cheong, van Kreveld &
+Overmars, *Computational Geometry: Algorithms and Applications* (3rd ed.)** — a public, authoritative
+description of the algorithms, used as the spec and the source of correctness invariants, **never** as a source
+of code. No third-party library source is copied or derived from. The output in `computational_geometry/` is an
+independent, clean-room implementation on a **substantially different** foundation: a different number model,
+array/index (not pointer-chasing) data structures, a zero-heap memory discipline, GPU-and-WASM execution, 10-D
+projection, `.10d`/Q42/P64 integration, and a browser creation API. The textbook's chapter structure (convex
+hulls, line-segment intersection & the doubly-connected edge list, polygon triangulation, orthogonal range
+searching, Voronoi diagrams, Delaunay triangulations, arrangements, 3-D convex hulls, Minkowski sums, …) is a
+**coverage checklist**, not a transliteration map; modules are organized around this ecosystem's needs.
 
 ## 1. Geometry across the whole manifold (why this reaches every dimension)
 
@@ -73,20 +77,20 @@ The practical consequence for this plan: the kernel, spatial indexes, and simpli
 7 are **shared across the spatial, spectral, and probabilistic faces** — a spectral-operator family and a
 TDA / information-geometry family are first-class alongside mesh operations, not follow-ons.
 
-## 2. Why not just use three.js / CGAL / an existing kernel
+## 2. Why not just use three.js / an existing geometry kernel
 
 | Existing tool | What it gives | Why it is not enough here |
 |---|---|---|
 | **three.js** | Browser scene-graph + rendering (JS, WebGL/WebGPU) | Not sovereign; JS/heap; not a geometry kernel (no robust predicates, triangulation, boolean, meshing); no semantic identity, provenance, rights, or offline-first attestation; not integrated with a knowledge engine. |
-| **CGAL** | The reference geometry-processing kernel | C++ template metaprogramming; copyleft source; allocation-heavy exact arithmetic; GPU-hostile; no browser path; no semantic/provenance/rights integration; not a creation surface. |
+| **Research C++ geometry kernels** | Mature geometry-processing algorithms | C++ template metaprogramming; copyleft source; allocation-heavy exact arithmetic; GPU-hostile; no browser path; no semantic/provenance/rights integration; not a creation surface. |
 | **CAD / mesh libs** (OpenCASCADE, libigl, …) | Specific geometry pipelines | Same gaps: not browser-native, not sovereign, not fused with the 10-D/Q42/P64/rights engine, not an authoring platform for ordinary people. |
 
-The native library is the **intersection none of them occupy**: a geometry kernel with CGAL-class robustness,
+The native library is the **intersection none of them occupy**: a geometry kernel with research-grade robustness,
 three.js-class in-browser creation ergonomics, and the 10-D/Q42/P64/renderer/rights engine underneath — so a
 person can build spatial and computational things through a qapp, offline, on hardware they own, and keep the
 result as their own provenance-bearing asset.
 
-## 3. The native data plane (substantially different from CGAL by construction)
+## 3. The native data plane (substantially different from existing kernels by construction)
 
 - **Kernel / number model.** A `GeometryKernel` trait with an associated field type. Default: **filtered
   `f64` predicates** (a static error filter on the common path; a compensated / bounded-expansion exact path
@@ -95,12 +99,12 @@ result as their own provenance-bearing asset.
   behind the same trait for the few operations (polyhedral boolean/corefinement) that require exact cascaded
   constructions. **Determinism is a contract**, not an option: identical input → bit-identical combinatorial
   output on every platform, so a geometry result is hashable, WAL-able, and attestable. This is the opposite of
-  CGAL's platform-and-instantiation-dependent behaviour, and it is *required* by this ecosystem's provenance
-  model.
+  the platform-and-instantiation-dependent behaviour of template-based kernels, and it is *required* by this
+  ecosystem's provenance model.
 - **Primitives.** `Point2`/`Point3` are POD (`repr(C)`, bytemuck) `f64` values; predicates return a
   three-valued sign. Already implemented: the filtered/compensated `orientation_2` and its Tensor10D `(x,y)`
   projection. To add: `orient3d`, `incircle`, `insphere`, and the general-`f64` exact fallback.
-- **Data structures — array/index, not pointer-chasing.** CGAL's handle/circulator combinatorial maps are
+- **Data structures — array/index, not pointer-chasing.** Traditional handle/circulator combinatorial maps are
   heap-resident and cache-hostile. Ours are **caller-buffered, array/index-based, GPU-uploadable**: the 16-byte
   POD `HalfEdge` with a caller-owned open-addressing edge table (implemented, with full degeneracy / manifold /
   non-manifold / duplicate detection); surface-mesh, polygon-soup, and adjacency views built the same way.
@@ -409,7 +413,7 @@ handling. Every accelerated op requires a scalar/caller-buffered oracle, a typed
 validation, CPU/GPU differential vectors including degeneracies, adapter-keyed tuning, and a deterministic
 CPU/WASM fallback. Robust topology never accepts silent `f32` disagreement.
 
-## 7. Implementation phases (dependency-ordered, native — not CGAL-package order)
+## 7. Implementation phases (dependency-ordered, native — not textbook-chapter order)
 
 - **P0 — Kernel & primitives.** `GeometryKernel` trait; filtered `f64` + exact fallback; `orient2d`
   (done), `orient3d`, `incircle`, `insphere`; POD primitives. *Foundation exists; extend.*
@@ -428,14 +432,16 @@ CPU/WASM fallback. Robust topology never accepts silent `f32` disagreement.
 - **P6 — API & creation layer.** The browser/WASM API, the WebGPU canvas mount, the renderer-SDK integration,
   the qapp/MCP surface, and the authoring ergonomics — the three.js-alternative maker surface (§5).
 
-Cross-cutting throughout: Forge/GPU acceleration, WASM parity, CC0 golden-oracle validation, and
+Cross-cutting throughout: Forge/GPU acceleration, WASM parity, golden-oracle validation, and
 determinism/attestation.
 
 ## 8. Verification, validation, and license discipline
 
-- **CC0 golden oracles.** CGAL's CC0 documentation is the spec; its CC0 `test/` corpus is the golden-output
-  oracle (checking per-file license notices, since a file may carry its own). Native algorithms are validated
-  against these vectors — reference and validation, never derivation from the GPL/LGPL source.
+- **Golden oracles.** The de Berg et al. textbook is the algorithm spec; its stated correctness properties and
+  degeneracy behaviours are the oracle. Native algorithms are validated against independently-constructed golden
+  vectors and first-principles invariants (strong-convexity postconditions, empty-circumcircle /
+  empty-circumsphere, simplex-class partitions, exact arbitrary-precision cross-checks) — a clean-room
+  implementation validated against public algorithm descriptions, never derived from any library's source.
 - **Differential + determinism.** CPU scalar oracle per op; CPU/GPU differential including degeneracies;
   canonical/deterministic bytes for `.10d` (hash-stable → attestable); Naga validation for shaders.
 - **Targets.** Native default, native CUDA (optional), browser `wasm-scientific`, portal WebGPU, Vulkan/Metal/
@@ -489,22 +495,21 @@ hardware they own, without handing their work to anyone.
 
 ## 11. Build methodology — swarm implementation
 
-The library is ~a hundred well-scoped, mostly-independent functions, each with a **CC0 specification** (CGAL's
-`doc/`) and a **CC0 golden-output oracle** (CGAL's `test/`). That is the ideal shape for a **swarm of
-sub-agents**, using the proven *isolated-files-plus-integrator* pattern from this repo's prior multi-agent
-work.
+The library is ~a hundred well-scoped, mostly-independent functions, each with a **textbook specification**
+(the de Berg et al. chapter/section for the algorithm) and a **first-principles golden oracle** (its stated
+correctness properties). That is the ideal shape for a **swarm of sub-agents**, using the proven
+*isolated-files-plus-integrator* pattern from this repo's prior multi-agent work.
 
-**Per-agent contract.** Each sub-agent takes one unit from the CGAL capability checklist
-([`computational-geometry-cgal-port.md`](computational-geometry-cgal-port.md)) and:
-1. reads the **gist** — the CC0 documentation as the spec, the CC0 test vectors as the oracle, plus a
-   textbook / public reference for the algorithm recipe (never the GPL/LGPL source);
+**Per-agent contract.** Each sub-agent takes one unit from the textbook's algorithm-coverage checklist and:
+1. reads the **gist** — the textbook description as the spec and its stated correctness properties as the
+   oracle (never any library's source);
 2. implements it **natively in Rust on the `GeometryKernel` trait**, in **one isolated new file** (disjoint
    file sets across agents, so they never collide), caller-buffered and zero-heap on the hot path;
-3. ships its own `#[cfg(test)]` **validated against the CC0 golden vectors**, including the degenerate /
+3. ships its own `#[cfg(test)]` **validated against the golden vectors**, including the degenerate /
    near-degenerate cases, plus a CPU oracle for any GPU op.
 
 **Integrator (main loop = me).** Owns the shared surface — the `GeometryKernel` trait, `mod.rs` re-exports,
-the `.10d` container — and for every landed unit: compiles green, runs the CC0 oracle tests, and
+the `.10d` container — and for every landed unit: compiles green, runs the golden oracle tests, and
 **adversarially re-verifies correctness**. This last step is non-negotiable for geometry: a single wrong
 predicate sign yields *invalid topology*, not a small numeric error, so swarm output is **not trusted until**
 it passes degeneracy vectors, CPU/GPU differential, and the determinism / canonical-bytes check. Coordination
@@ -650,7 +655,7 @@ logic itself is the auditory plan's; the geometry kernel provides the manifold.
 All four plans share the same architectural decision: **extend Qualia's native compute substrate (Forge,
 wgpu, P64, Q42, `.10d`, the `GeometryKernel` trait) rather than adopt an external framework as the
 production runtime.** The visual plan (§2.1) and auditory plan (§2.1) both reject Candle/Burn as the
-production runtime for the same reason this plan (§2) rejects CGAL-as-source: they bring a competing
+production runtime for the same reason this plan (§2) rejects adopting an external geometry kernel as source: they bring a competing
 tensor/device/memory/certification stack that weakens the substrate the project is strengthening. The
 native-first dispatch principle (§5.1) is the same stance expressed at the dispatch layer: native uses
 full native capability, WASM is the browser target not a performance ceiling. The four plans are
