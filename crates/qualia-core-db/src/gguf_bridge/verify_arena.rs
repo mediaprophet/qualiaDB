@@ -75,8 +75,10 @@ struct VerifyLayerProtos {
 struct VerifyChunk {
     gemm: wgpu::BindGroup,
     rows: u32,
-    /// GEMM param slot (patched with `n_batch = B` per call).
+    /// GEMM param slot in the arena.
     slot: u64,
+    /// Constant GEMM params (only `n_batch` varies per call).
+    params: GemmGpuParams,
 }
 
 pub(crate) struct VerifyArenaPlan {
@@ -246,12 +248,13 @@ impl QTensorEngine {
                 let off = (plan.tail_rms_slot * SLOT) as usize;
                 scratch[off..off + ep].copy_from_slice(bytemuck::bytes_of(&e));
             }
-            // Tail: per-chunk logits GEMV params carry constant weight metadata (written once at build);
-            // only `n_batch` varies per call. Patch it in place (field offset within GemmGpuParams).
-            let nbatch_field_off = 5 * std::mem::size_of::<u32>();
+            // Tail: per-chunk logits GEMV params (full struct; only `n_batch` varies). Must write the
+            // WHOLE struct into scratch — the full-arena upload below would otherwise zero these slots.
             for chunk in &plan.chunks {
-                let off = (chunk.slot * SLOT) as usize + nbatch_field_off;
-                scratch[off..off + 4].copy_from_slice(&bu.to_le_bytes());
+                let mut g = chunk.params;
+                g.n_batch = bu;
+                let off = (chunk.slot * SLOT) as usize;
+                scratch[off..off + gp].copy_from_slice(bytemuck::bytes_of(&g));
             }
         }
         queue.write_buffer(&plan.param_arena, 0, &plan.scratch);
@@ -704,20 +707,18 @@ impl QTensorEngine {
             }
             let byte_len = rows as u64 * logits_row_bytes;
             let slot = tail_gemm_base + c as u64;
-            queue.write_buffer(
-                &param_arena,
-                slot * SLOT,
-                bytemuck::bytes_of(&GemmGpuParams {
-                    n_in: n_embd as u32,
-                    n_out: rows as u32,
-                    weight_ggml_type: logits_info.ggml_type,
-                    weight_row_elems: logits_info.dims[0] as u32,
-                    weight_byte_len: byte_len as u32,
-                    n_batch: 1,
-                    in_row_stride: 0,
-                    out_row_stride: vocab as u32,
-                }),
-            );
+            // Params are written into `scratch` every call (the full-arena upload in run overwrites the
+            // whole buffer), so no build-time write_buffer here — it would just be clobbered.
+            let params = GemmGpuParams {
+                n_in: n_embd as u32,
+                n_out: rows as u32,
+                weight_ggml_type: logits_info.ggml_type,
+                weight_row_elems: logits_info.dims[0] as u32,
+                weight_byte_len: byte_len as u32,
+                n_batch: 1,
+                in_row_stride: 0,
+                out_row_stride: vocab as u32,
+            };
             let weight = wgpu::BindingResource::Buffer(wgpu::BufferBinding {
                 buffer: &logits_buf,
                 offset: row_start as u64 * logits_row_bytes,
@@ -728,11 +729,12 @@ impl QTensorEngine {
                 offset: (row_start * 4) as wgpu::BufferAddress,
                 size: std::num::NonZeroU64::new(((bmax * vocab - row_start) * 4) as u64),
             });
-            let gemm = mk_gemm_bg(&normed, weight, slot, out_res);
+            let gemm = mk_gemm_bg(&normed, weight, slot * SLOT, out_res);
             chunks.push(VerifyChunk {
                 gemm,
                 rows: rows as u32,
                 slot,
+                params,
             });
         }
 

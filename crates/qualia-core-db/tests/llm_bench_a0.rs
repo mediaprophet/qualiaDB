@@ -270,22 +270,19 @@ fn a6_primitive_batched_verify_matches_sequential() {
     let model = path.to_string_lossy().to_string();
     let prompt =
         "The quick brown fox jumps over the lazy dog and then keeps running down the road today.";
-    let b = 6;
-    let (reference, verify) =
-        spec_verify_probe_blocking(&model, prompt, b).expect("verify primitive probe");
-    println!("[a6] reference (sequential per-token): {reference:?}");
-    println!("[a6] verify    (batched forward)     : {verify:?}");
-    assert_eq!(
-        verify.len(),
-        b,
-        "[a6] verify returned {} argmaxes, expected {b}",
-        verify.len()
-    );
-    assert_eq!(
-        reference, verify,
-        "[a6] batched verify per-position argmax diverged from the sequential per-token reference"
-    );
-    println!("[a6] PASS — batched verify == sequential per-token argmax across {b} positions");
+    // Sweep B=1..6 to localize any divergence (B=1 isolates the tail from batching).
+    for b in 1..=6usize {
+        let (reference, verify) =
+            spec_verify_probe_blocking(&model, prompt, b).expect("verify primitive probe");
+        println!("[a6 B={b}] reference: {reference:?}");
+        println!("[a6 B={b}] verify   : {verify:?}");
+        assert_eq!(verify.len(), b, "[a6 B={b}] verify returned {} argmaxes", verify.len());
+        assert_eq!(
+            reference, verify,
+            "[a6 B={b}] batched verify per-position argmax diverged from sequential per-token"
+        );
+    }
+    println!("[a6] PASS — batched verify == sequential per-token argmax across B=1..6");
 }
 
 /// a2a (W2) — the exact sampler is deterministic under a fixed seed: two runs with the same seed

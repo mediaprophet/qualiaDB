@@ -1406,6 +1406,11 @@ pub fn spec_verify_probe_blocking(
             .ok_or_else(|| "model did not memory-map".to_string())?;
         let tok = GgufTokenizer::from_gguf(&mmap);
         let idx = GgufTensorIndex::from_gguf(&mmap);
+        // The batched verify tail binds the RESIDENT logits projection (like resident_decode). Plain
+        // `load_gguf` does not upload it (only the residency-mount path does), so do it here.
+        if !engine.mc8_upload_resident_logits(&idx) {
+            return Err("resident logits upload failed (verify tail needs it)".into());
+        }
         let emb_dim = idx.emb_dim();
         if emb_dim == 0 {
             return Err("embedding dimension is 0".into());
@@ -1446,10 +1451,10 @@ pub fn spec_verify_probe_blocking(
                 &idx, &mut emb[..emb_dim], emb_dim, &mut sa, &mut sb, i as u32, 0,
             );
         }
-        let snapshot = engine
-            .get_kv_cache_cpu()
-            .map(|s| s.to_vec())
-            .ok_or_else(|| "no KV snapshot after prefill".to_string())?;
+        // No KV snapshot needed: the reference decode below writes only positions [p, p+b), never the
+        // prefix [0, p) — so the prefix KV stays valid — and `verify_draft_batch` overwrites [p, p+b)
+        // with the same inputs. (Note: `get_kv_cache_cpu` returns the CPU mirror, which is NOT synced
+        // from the GPU KV writes, so it cannot be used to snapshot the GPU cache here.)
 
         // Reference: exact sequential greedy decode of `b` steps from the last prompt token.
         let mut inputs: Vec<u32> = Vec::with_capacity(b);
@@ -1476,8 +1481,7 @@ pub fn spec_verify_probe_blocking(
             pos += 1;
         }
 
-        // Restore the post-prefill KV, then run the batched verify over the same inputs.
-        engine.set_kv_cache_cpu(&snapshot);
+        // Run the batched verify over the same inputs (prefix KV [0, p) is still valid).
         let mut verify_out: Vec<u32> = Vec::new();
         engine
             .verify_draft_batch(&idx, &inputs, p as u32, &mut verify_out)
