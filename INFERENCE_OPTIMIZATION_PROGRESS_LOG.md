@@ -278,3 +278,43 @@ correctness-critical WIP in the shared build under 4-agent contention.
   output-path counters, printed by `a0_decode_profile`). Added `docs/manuals/inference-tuning.md` —
   the full runtime-toggle reference (backend/DXC, decode fast-paths, sampler, profiling,
   path-visibility accessors) + the pre-push smoke gate. W8 stays gated on the wgpu #9741 release.
+
+## 2026-07-05 — W10: forge calibration pipeline (the training-related forge upgrade)
+
+**Status: landed as the forge's third produce-and-certify entry point; AWQ artifact end-to-end;
+future artifacts visible-not-stubbed.**
+
+**What was built:** NEW `wgsl_forge/calibration/` (native-only, behind the existing `wgsl-forge`
+feature) — an UPGRADE of the existing forge (not a new forge), a `calibration` concern beside kernel
+certification and GGUF→p64 transcode. `run_calibration(job) -> CalibrationReport` runs the 5-stage
+pipeline **corpus → capture → learn → certify → package**:
+- `calibration/corpus.rs`: `CorpusSpec::{Files, OllamaSynth{model,prompts}}` + `assemble` +
+  `content_hash` (FNV-1a, order-sensitive). **Ollama is used strictly forge-side** via
+  `std::process::Command` (`ollama run <model> <prompt>`) — no HTTP dep (avoids the reqwest lane),
+  and it NEVER enters the inference runtime (CLAUDE.md §1). Absent binary → graceful
+  `OllamaUnavailable`, Files still works.
+- capture+learn+certify (`AwqScales`): reuses the REAL pipeline — `llm_awq` activation hooks +
+  `awq_sweep_blocking` (α∈{0,0.5,1} over Q4_0 FFN, PPL-certified vs the Q8 reference) — picks the
+  best α, `delta_ppl` vs `GateSpec` (default = project `MAX_DELTA_PPL` 5%).
+- `calibration/package.rs`: `Provenance` (kind, corpus hash, `CARGO_PKG_VERSION`, ref/cand/ΔPPL,
+  passed) as **CBOR** (not ad-hoc JSON — the CBOR-first stance) + `frame_artifact`/`parse_frame`
+  (`QCAL0001` magic + u32 len + CBOR provenance + artifact); the engine fail-closed-rejects an
+  unframed/corrupt blob. Package only emitted when the gate passes.
+- **Honestly deferred (visible, not stubbed):** `KvInt8Scales` → `NotYetImplemented("W5a int8 KV
+  cache")`; `KvDictionary` → `NotYetImplemented("W5b sparse KV dictionary")`. Custom-corpus capture
+  (the assembled corpus feeding the PPL/AWQ passes rather than the built-in eval corpus) is the
+  documented follow-up — today the Files/Ollama corpus feeds the provenance hash.
+
+**Measured results:** 9/9 calibration unit tests (corpus Files round-trip + order-sensitive hash +
+empty-prompts guard; provenance CBOR round-trip; frame round-trip + garbage/truncation rejection;
+gate default; unimplemented-kinds-visible; label stability). **End-to-end AWQ integration test
+`w10_calibration_awq_end_to_end` (SmolLM2-360M Q8, A2000, 263 s): the pipeline ran fully and
+correctly ENFORCED the gate** — ref PPL 30.88 → AWQ-Q4_0-FFN candidate 34.71, **ΔPPL +12.41% → FAILED
+the 5% gate → NO packaged artifact** (fail-closed). This is the *right* behaviour and matches the
+settled finding (Q4_0-FFN-AWQ is ~2× over the 5% gate): the forge certifies and REJECTS a
+sub-threshold artifact rather than shipping it. The pipeline is proven; this particular artifact
+honestly doesn't pass (packaging is exercised by the unit frame tests + would fire on a passing gate).
+
+**⚑ Where I need the human:** the W5b eval-corpus curation (unchanged standing ask) is what unlocks
+the dictionary learner + makes the OllamaSynth corpus fully load-bearing. Ollama model tag to
+prefer for synthesis, when W5b starts.

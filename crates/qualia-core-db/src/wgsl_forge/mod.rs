@@ -5,6 +5,11 @@
 //! changing the mathematical operation being certified.
 
 pub mod backend;
+// W10: the forge's calibration/adaptation pipeline (corpus→capture→learn→certify→package). Native-
+// only (drives the real inference stack for capture + the PPL oracle). The third produce-and-certify
+// entry point beside kernel certification and GGUF→p64 transcode.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod calibration;
 pub mod cache;
 pub mod dispatch;
 pub mod emit;

@@ -272,6 +272,59 @@ fn a2b_sampler_deloops_report() {
     println!("[a2b] (reported only — sampler quality is empirical, not gated)");
 }
 
+/// w10 (forge calibration) — the AWQ-scales artifact end-to-end through the forge's calibration
+/// pipeline: corpus (Files, for the provenance hash) → capture+learn+certify (AWQ sweep vs the Q8
+/// reference) → package (CBOR-framed p64 iff it passes the ΔPPL gate). Asserts the pipeline runs and
+/// returns a coherent report; the gate PASS/FAIL is reported, not required (AWQ-Q4 quality is the
+/// empirical question). Small `max_tok` to bound the multiple PPL passes. Skips if the model absent.
+/// Run: `cargo test -p qualia-core-db --release --test llm_bench_a0 w10_calibration_awq -- --nocapture`.
+#[test]
+#[cfg(feature = "wgsl-forge")]
+fn w10_calibration_awq_end_to_end() {
+    use qualia_core_db::wgsl_forge::calibration::{
+        package, run_calibration, ArtifactKind, CalibrationJob, CorpusSpec, GateSpec,
+    };
+    let Some(model) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[w10] Q8 model absent — skipping forge calibration end-to-end");
+        return;
+    };
+    // A tiny on-disk corpus purely for the provenance hash (AWQ capture uses the built-in eval
+    // corpus today; a custom-corpus capture is the documented W5b follow-up).
+    let dir = std::env::temp_dir().join("qcal_w10_test");
+    let _ = std::fs::create_dir_all(&dir);
+    let cfile = dir.join("calib.txt");
+    std::fs::write(&cfile, "The quick brown fox jumps over the lazy dog. Paris is the capital of France.").unwrap();
+
+    let job = CalibrationJob {
+        model_path: model.clone(),
+        artifact: ArtifactKind::AwqScales,
+        corpus: CorpusSpec::Files(vec![cfile]),
+        gate: GateSpec::default(),
+        max_tok: 32,
+    };
+    let report = run_calibration(&job).expect("calibration run");
+    println!(
+        "[w10] artifact={:?} corpus_hash={:#x} docs={} ref_ppl={:.3} cand_ppl={:.3} dPPL={:+.2}% passed={}",
+        report.artifact, report.corpus_hash, report.corpus_docs,
+        report.ref_ppl, report.cand_ppl, report.delta_ppl * 100.0, report.passed
+    );
+    assert!(report.ref_ppl.is_finite() && report.ref_ppl > 1.0, "reference PPL implausible");
+    assert!(report.cand_ppl.is_finite() && report.cand_ppl > 1.0, "candidate PPL implausible");
+    assert_eq!(report.corpus_docs, 1);
+    // If it passed the gate, the packaged artifact must be a valid CBOR-framed blob whose provenance
+    // round-trips and matches the report (the engine's fail-closed adoption check).
+    if let Some(bytes) = &report.packaged {
+        let (prov, body) = package::parse_frame(bytes).expect("packaged frame parses");
+        assert!(prov.passed && prov.corpus_hash == report.corpus_hash && !body.is_empty());
+        assert_eq!(prov.engine_version, env!("CARGO_PKG_VERSION"));
+        println!("[w10] packaged {} bytes (frame + {} artifact bytes), provenance verified", bytes.len(), body.len());
+    } else {
+        println!("[w10] did not pass the ΔPPL gate → no packaged artifact (reported honestly)");
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+    println!("[w10] PASS — forge calibration pipeline ran end-to-end.");
+}
+
 /// A1b DISCRIMINATOR: boot a **verbatim** (non-ternary) P64 natively and verify it decodes
 /// COHERENTLY. This isolates the native P64-boot wiring (synthetic index + tokenizer-section +
 /// resident logits + the attention/embed/output hot path) from the ternary FFN quantization. If
