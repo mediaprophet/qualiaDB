@@ -133,6 +133,7 @@ impl QTensorEngine {
         tokens: &[u32],
         start_pos: u32,
         out_argmax: &mut Vec<u32>,
+        out_logit: &mut Vec<f32>,
     ) -> Option<()> {
         if !crate::llm_bench::resident_weights_enabled()
             || !crate::llm_bench::coop_gemv_enabled()
@@ -161,7 +162,7 @@ impl QTensorEngine {
                 }
             },
         };
-        let result = self.run_verify_batch(&mut plan, index, tokens, start_pos, out_argmax);
+        let result = self.run_verify_batch(&mut plan, index, tokens, start_pos, out_argmax, out_logit);
         self.verify_arena = VerifyArenaState::Ready(plan);
         result
     }
@@ -173,6 +174,7 @@ impl QTensorEngine {
         tokens: &[u32],
         start_pos: u32,
         out_argmax: &mut Vec<u32>,
+        out_logit: &mut Vec<f32>,
     ) -> Option<()> {
         let b = tokens.len();
         let n_embd = plan.n_embd;
@@ -349,6 +351,7 @@ impl QTensorEngine {
             return None;
         }
         out_argmax.clear();
+        out_logit.clear();
         {
             let data = slice.get_mapped_range();
             let all: &[f32] = bytemuck::cast_slice(&data[..(b * vocab * 4)]);
@@ -364,6 +367,7 @@ impl QTensorEngine {
                     }
                 }
                 out_argmax.push(best_id);
+                out_logit.push(best_v);
             }
         }
         plan.logits_staging.unmap();

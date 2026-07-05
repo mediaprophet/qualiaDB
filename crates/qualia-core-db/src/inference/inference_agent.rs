@@ -1078,6 +1078,85 @@ impl LocalLlmAgent {
                         break;
                     }
 
+                    // W6a — prompt-lookup speculative decode (default OFF, exact-output). Draft the
+                    // next few tokens by n-gram lookup, verify them in ONE batched forward, and emit
+                    // the longest greedily-agreeing prefix + the model's own correction token. Only
+                    // when no sieve/sampler/route is active and the full model runs (unit-test layer
+                    // cap keeps per-layer semantics). Bit-identical to greedy (a6a). Falls through to
+                    // the normal path on any ineligibility.
+                    #[cfg(not(target_arch = "wasm32"))]
+                    if crate::llm_bench::spec_decode_enabled()
+                        && sieve.is_none()
+                        && sampler.is_none()
+                        && TEST_TRANSFORMER_LAYER_CAP == 0
+                    {
+                        if let Some(idx) = tensor_idx.as_ref() {
+                            let cur = *ctx.last().unwrap_or(&tok.bos_token_id);
+                            let draft =
+                                crate::prompt_lookup::propose(&ctx, crate::prompt_lookup::MAX_DRAFT);
+                            if draft.len > 0 {
+                                // inputs = [cur, d0..d_{m-1}] at positions [pos, pos+m], pos = ctx.len()-1.
+                                let mut inputs = Vec::with_capacity(draft.len + 1);
+                                inputs.push(cur);
+                                inputs.extend_from_slice(draft.as_slice());
+                                let pos = ctx.len().saturating_sub(1) as u32;
+                                let mut amax: Vec<u32> = Vec::new();
+                                let mut alog: Vec<f32> = Vec::new();
+                                if engine
+                                    .verify_draft_batch(idx, &inputs, pos, &mut amax, &mut alog)
+                                    .is_some()
+                                    && amax.len() == inputs.len()
+                                {
+                                    // Accept the longest prefix where argmax[i] == draft[i]; then emit
+                                    // d0..d_{k-1} (accepted) + argmax[k] (correction/bonus) = k+1 tokens.
+                                    let m = draft.len;
+                                    let mut k = 0usize;
+                                    while k < m && amax[k] == draft.tokens[k] {
+                                        k += 1;
+                                    }
+                                    crate::llm_bench::record_spec_step(m as u64, k as u64);
+                                    let mut stop = false;
+                                    for i in 0..=k {
+                                        let (tokn, logv) = if i < k {
+                                            (draft.tokens[i], alog[i])
+                                        } else {
+                                            (amax[k], alog[k])
+                                        };
+                                        // Sentinel: anomaly flag from the top logit's IEEE-754 bytes.
+                                        let anomaly = if logv.to_le_bytes()[0] == 0x99 {
+                                            0x99u8
+                                        } else {
+                                            0x01u8
+                                        };
+                                        let _ = lp.push(LlmMsg::Logit(LogitSummary {
+                                            _top_id: tokn,
+                                            anomaly,
+                                        }));
+                                        let next = tokn % vlen;
+                                        out_ids.push(next);
+                                        ctx.push(next);
+                                        if let Some(ref tx) = stream_tx_thread {
+                                            let full = tok.decode(&out_ids);
+                                            if full.len() > streamed_len {
+                                                let delta = full[streamed_len..].to_string();
+                                                streamed_len = full.len();
+                                                let _ = tx.send(delta);
+                                            }
+                                        }
+                                        if next == eos || out_ids.len() >= gen_budget {
+                                            stop = true;
+                                            break;
+                                        }
+                                    }
+                                    if stop {
+                                        break;
+                                    }
+                                    continue; // skip the normal single-token path this step
+                                }
+                            }
+                        }
+                    }
+
                     let draft_step = try_accept_topology_draft(
                         &mut engine,
                         tensor_idx.as_ref(),

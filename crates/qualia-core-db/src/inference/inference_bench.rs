@@ -297,6 +297,60 @@ pub fn resident_prefill_enabled() -> bool {
     }
 }
 
+// ── W6a: prompt-lookup speculative decode toggle ──────────────────────────────
+// Default OFF until the `a6a` exact-output gate passes. When on (and no sieve/sampler/route is
+// active), the decode loop drafts the next few tokens by n-gram prompt-lookup, verifies them in ONE
+// batched forward (`verify_draft_batch`), and emits the longest greedily-agreeing prefix + the model's
+// own correction token — so the output is BIT-IDENTICAL to greedy decode. The win is pure latency on
+// repetitive / quoting / structured text (several tokens per forward); on novel text it drafts little
+// and costs ~nothing. `QUALIA_LLM_SPEC_DECODE=1` forces it on.
+static SPEC_DECODE: AtomicBool = AtomicBool::new(false);
+
+/// Enable/disable prompt-lookup speculative decode (`QUALIA_LLM_SPEC_DECODE`).
+#[inline]
+pub fn set_spec_decode(on: bool) {
+    SPEC_DECODE.store(on, Ordering::Relaxed);
+}
+
+/// Whether the decode loop should run prompt-lookup speculative decode.
+#[inline]
+pub fn spec_decode_enabled() -> bool {
+    match std::env::var("QUALIA_LLM_SPEC_DECODE").ok().as_deref() {
+        Some("0") | Some("false") => false,
+        Some("1") | Some("true") => true,
+        _ => SPEC_DECODE.load(Ordering::Relaxed),
+    }
+}
+
+// ── W6a/W9: speculative-decode counters ────────────────────────────────────────
+static SPEC_STEPS: AtomicU64 = AtomicU64::new(0);
+static SPEC_DRAFTED: AtomicU64 = AtomicU64::new(0);
+static SPEC_ACCEPTED: AtomicU64 = AtomicU64::new(0);
+
+/// One speculative step ran (a draft was proposed + verified).
+#[inline]
+pub fn record_spec_step(drafted: u64, accepted: u64) {
+    SPEC_STEPS.fetch_add(1, Ordering::Relaxed);
+    SPEC_DRAFTED.fetch_add(drafted, Ordering::Relaxed);
+    SPEC_ACCEPTED.fetch_add(accepted, Ordering::Relaxed);
+}
+/// (spec steps, tokens drafted, draft tokens accepted) since the last reset.
+#[inline]
+pub fn spec_decode_counts() -> (u64, u64, u64) {
+    (
+        SPEC_STEPS.load(Ordering::Relaxed),
+        SPEC_DRAFTED.load(Ordering::Relaxed),
+        SPEC_ACCEPTED.load(Ordering::Relaxed),
+    )
+}
+/// Reset the speculative-decode counters.
+#[inline]
+pub fn reset_spec_decode_counts() {
+    SPEC_STEPS.store(0, Ordering::Relaxed);
+    SPEC_DRAFTED.store(0, Ordering::Relaxed);
+    SPEC_ACCEPTED.store(0, Ordering::Relaxed);
+}
+
 // ── W3/W9: resident-prefill path counters ──────────────────────────────────────
 static RESIDENT_PREFILL_HITS: AtomicU64 = AtomicU64::new(0);
 static RESIDENT_PREFILL_FALLBACKS: AtomicU64 = AtomicU64::new(0);
@@ -1483,8 +1537,9 @@ pub fn spec_verify_probe_blocking(
 
         // Run the batched verify over the same inputs (prefix KV [0, p) is still valid).
         let mut verify_out: Vec<u32> = Vec::new();
+        let mut verify_logit: Vec<f32> = Vec::new();
         engine
-            .verify_draft_batch(&idx, &inputs, p as u32, &mut verify_out)
+            .verify_draft_batch(&idx, &inputs, p as u32, &mut verify_out, &mut verify_logit)
             .ok_or_else(|| "verify_draft_batch ineligible/failed".to_string())?;
 
         Ok((reference, verify_out))

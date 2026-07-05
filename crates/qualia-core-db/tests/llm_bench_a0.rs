@@ -285,6 +285,47 @@ fn a6_primitive_batched_verify_matches_sequential() {
     println!("[a6] PASS — batched verify == sequential per-token argmax across B=1..6");
 }
 
+/// a6a (W6a increment 2) — prompt-lookup speculative decode must emit text BIT-IDENTICAL to greedy
+/// decode (the exact-output guarantee: an accepted draft token is only kept when it equals the model's
+/// greedy argmax at that position). Uses a repetitive prompt so the n-gram proposer actually fires
+/// (asserted via the step counter). Run isolated:
+/// `cargo test -p qualia-core-db --release --test llm_bench_a0 a6a -- --nocapture --test-threads=1`.
+#[test]
+fn a6a_spec_decode_bit_identical_to_greedy() {
+    use qualia_core_db::llm_bench::{
+        decode_with_metrics_blocking, reset_spec_decode_counts, set_spec_decode, spec_decode_counts,
+    };
+    let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[a6a] model absent — skipping spec-decode exact-output gate");
+        return;
+    };
+    let model = path.to_string_lossy().to_string();
+    // Repetitive prompt → the generated continuation recurs → the n-gram proposer drafts + accepts.
+    let prompt = "Count: 1 2 3 4 5 6 7 8 9 10 1 2 3 4 5 6 7 8 9 10 1 2 3 4 5 6 7 8 9 10 1 2 3 4";
+
+    set_spec_decode(false);
+    let (greedy, greedy_tok) =
+        decode_with_metrics_blocking(&model, prompt, 48).expect("greedy decode");
+
+    reset_spec_decode_counts();
+    set_spec_decode(true);
+    let (spec, spec_tok) = decode_with_metrics_blocking(&model, prompt, 48).expect("spec decode");
+    let (steps, drafted, accepted) = spec_decode_counts();
+    set_spec_decode(false);
+
+    println!("[a6a] greedy: {greedy_tok:.2} tok/s | {greedy:?}");
+    println!("[a6a] spec  : {spec_tok:.2} tok/s | {spec:?}");
+    println!("[a6a] spec path: {steps} steps, {drafted} drafted, {accepted} accepted");
+    assert!(steps > 0, "[a6a] spec-decode path never ran (proposer drafted nothing)");
+    assert_eq!(
+        greedy, spec,
+        "[a6a] spec-decode output diverged from greedy — exact-output guarantee broken"
+    );
+    println!(
+        "[a6a] PASS — spec-decode bit-identical to greedy; {accepted}/{drafted} draft tokens accepted"
+    );
+}
+
 /// a2a (W2) — the exact sampler is deterministic under a fixed seed: two runs with the same seed
 /// must produce identical text; a different seed should diverge (reported, not asserted — a tiny
 /// model on a short prompt can coincide). Also asserts the sampled path actually ran.
