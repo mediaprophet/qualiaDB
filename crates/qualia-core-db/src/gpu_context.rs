@@ -679,15 +679,28 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
     // Inference-pipeline (GPU backend) selection. Default = wgpu's own pick; `QUALIA_WGPU_BACKEND`
     // pins it (e.g. =vulkan for the vendor-neutral path). The capability checker then reports what
     // was actually selected + the recommendation, so "which pipeline is this machine on" is visible.
-    let instance = match caps::qualia_backend_override() {
-        Some(backends) => {
-            log::info!("shared_gpu|backend_override|QUALIA_WGPU_BACKEND={backends:?}");
-            let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
-            desc.backends = backends;
-            wgpu::Instance::new(desc)
+    // DX12 shader compiler: the legacy FXC (D3DCompile) compiler CANNOT compile our flash-attention
+    // shader (`fused_attention.wgsl` — barriers after a per-thread varying-length SDPA loop; FXC
+    // error X4026), which is what the long-mislabelled "DX12 decode deadlock" actually was. DXC (the
+    // modern DirectX Shader Compiler) compiles it correctly. wgpu's own default is `Auto`
+    // (static-DXC → DXC-on-PATH → FXC), so DX12 silently falls back to FXC unless `dxcompiler.dll`
+    // is discoverable. `QUALIA_DXC_PATH` points wgpu straight at a `dxcompiler.dll` (with `dxil.dll`
+    // alongside it, for DXIL signing) so DX12 uses DXC without needing it on PATH. Absent the var we
+    // keep `Auto` (Vulkan stays the working default backend regardless).
+    let dx12_compiler = match std::env::var("QUALIA_DXC_PATH") {
+        Ok(p) if !p.trim().is_empty() => {
+            log::info!("shared_gpu|dx12_compiler|DynamicDxc={p}");
+            wgpu::Dx12Compiler::DynamicDxc { dxc_path: p }
         }
-        None => wgpu::Instance::default(),
+        _ => wgpu::Dx12Compiler::Auto,
     };
+    let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
+    desc.backend_options.dx12.shader_compiler = dx12_compiler;
+    if let Some(backends) = caps::qualia_backend_override() {
+        log::info!("shared_gpu|backend_override|QUALIA_WGPU_BACKEND={backends:?}");
+        desc.backends = backends;
+    }
+    let instance = wgpu::Instance::new(desc);
     let adapter = instance
         .request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,

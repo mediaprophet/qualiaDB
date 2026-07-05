@@ -211,6 +211,34 @@ The shader hygiene fix (early-returns → uniform if-guards) is kept regardless:
 verified improvement and a prerequisite for the DXC path. **W4 = root-caused + documented + hygiene
 fix landed** (the plan's valid-completion bar); the DXC enablement is gated on Timothy's A/B/C/D call.
 
+## 2026-07-05 — W4 FIXED: DX12 works via DXC (Timothy supplied the prebuilt DXC)
+
+**Status: DONE — DX12 is now a working, coherent GPU decode backend for the first time since 0.0.23.**
+
+Timothy pointed me at a prebuilt DXC (`C:\Projects\dxc_2026_05_27\bin\x64\{dxcompiler.dll,dxil.dll}`)
++ the DXC source (`C:\Projects\DirectXShaderCompiler-main`). Chosen fix = **option (B) DynamicDxc**
+(no build, uses the prebuilt DLLs). `gpu_context.rs`: the wgpu `InstanceDescriptor` now sets
+`backend_options.dx12.shader_compiler`. Default stays wgpu's `Auto` (static-DXC → PATH-DXC → FXC);
+**`QUALIA_DXC_PATH`** points wgpu straight at a `dxcompiler.dll` (with `dxil.dll` alongside for DXIL
+signing) so DX12 uses DXC without needing it on PATH. Vulkan remains the default backend untouched.
+
+**Measured (DX12, `QUALIA_WGPU_BACKEND=dx12 QUALIA_DXC_PATH=…dxcompiler.dll`, SmolLM2-360M Q8, A2000):**
+- `w3_gemm_parity` DX12: **PASS** (was an X4026 FXC panic) — GPU GEMM ran, matches CPU within 8.6e-6.
+- `a0_decode_profile` DX12: **18.53 tok/s**, resident single-fence (32/32 hits), fence overhead 1%,
+  completes in 6.2 s (was a 35-min "hang"). Vulkan-parity (~19 tok/s).
+- `a1c` DX12: **coherent decode, byte-identical to Vulkan** (" young woman named Sarah … poring over
+  art books,"). So DX12+DXC is not just non-hanging — it's numerically correct.
+
+(An intermediate DX12 run appeared to "hang" at a 5-min guard; it was contention-induced cold-build/
+init slowness under the 4-agent load, NOT a deadlock — the same test then completed in 6.2 s. The
+fence/poll-deadlock theory is fully retired: DX12 decode runs the resident path at 1 fence/token.)
+
+**⚑ Deployment note for Timothy (task #15 → resolved as B):** shipping DX12 support requires
+`dxcompiler.dll` + `dxil.dll` (v1.8.2502+) beside the binary, or `QUALIA_DXC_PATH` set. Options to
+make it turnkey: (i) vendor the two x64 DLLs under `vendor/dxc/` like the existing `vendor/directml`
+DLL and have the build copy them next to the exe (then wgpu `Auto` finds them, no env var); or (ii)
+keep it env-driven. Your call on vendoring binaries into the repo. Either way Vulkan stays default.
+
 ## 2026-07-05 — W6a PARTIAL: prompt-lookup speculative-decode proposer (foundation, tested)
 
 **Status: proposer DONE + tested; exact-output verify-wiring is the remaining step (specced honestly).**
