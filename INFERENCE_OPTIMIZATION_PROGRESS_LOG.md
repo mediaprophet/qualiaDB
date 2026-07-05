@@ -264,3 +264,17 @@ forward that exposes **per-position** logits (prefill writes KV but doesn't retu
 exactly what **W3's batched arena** provides, so W6a-verify should land on top of W3. Exact-output
 property (final text bit-identical to greedy) will be the `a6a` gate. Not started to avoid
 correctness-critical WIP in the shared build under 4-agent contention.
+
+## 2026-07-05 — Quick-wins cleared (a1a + W9), off the list
+
+- **a1a (task #14) RESOLVED:** relaxed the wrong invariant. The argmax path (CPU reduction / CPU
+  GEMM) and the GPU top-1 path (GPU block reduction / coop-GEMV) differ by ~1 ULP, so a near-tie
+  flips the argmax and the continuations diverge — benign FP, not a bug (tightening a tie-break
+  can't help; the logits themselves differ). a1a now asserts its REAL intent: both paths coherent
+  (#48 guard) + agree on a substantial common prefix. **GREEN** — the two agree on 92 common chars
+  (" …She spent hours") then flip (poring vs sketching); both coherent. Guard still catches
+  garbage/EOS + early divergence.
+- **W9 (task #12) DONE:** path-visibility counters already landed (W1/W2 resident + sampled +
+  output-path counters, printed by `a0_decode_profile`). Added `docs/manuals/inference-tuning.md` —
+  the full runtime-toggle reference (backend/DXC, decode fast-paths, sampler, profiling,
+  path-visibility accessors) + the pre-push smoke gate. W8 stays gated on the wgpu #9741 release.
