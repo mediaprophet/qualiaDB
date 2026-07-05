@@ -293,7 +293,8 @@ fn a6_primitive_batched_verify_matches_sequential() {
 #[test]
 fn a6a_spec_decode_bit_identical_to_greedy() {
     use qualia_core_db::llm_bench::{
-        decode_with_metrics_blocking, reset_spec_decode_counts, set_spec_decode, spec_decode_counts,
+        decode_with_metrics_blocking, reset_spec_decode_counts, set_gpu_topk, set_resident_decode,
+        set_spec_decode, spec_decode_counts,
     };
     let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
         eprintln!("[a6a] model absent — skipping spec-decode exact-output gate");
@@ -302,6 +303,13 @@ fn a6a_spec_decode_bit_identical_to_greedy() {
     let model = path.to_string_lossy().to_string();
     // Repetitive prompt → the generated continuation recurs → the n-gram proposer drafts + accepts.
     let prompt = "Count: 1 2 3 4 5 6 7 8 9 10 1 2 3 4 5 6 7 8 9 10 1 2 3 4 5 6 7 8 9 10 1 2 3 4";
+
+    // Exact-output is defined relative to the SELECTION METHOD: verify uses full-logit CPU argmax, so
+    // compare against a CPU-argmax greedy baseline (resident + GPU top-1 off). Against the default
+    // GPU-top1 path there can be rare near-tie divergences — the pre-existing a1a phenomenon, which is
+    // why spec-decode ships opt-in (default OFF).
+    set_resident_decode(false);
+    set_gpu_topk(false);
 
     set_spec_decode(false);
     let (greedy, greedy_tok) =
@@ -312,6 +320,8 @@ fn a6a_spec_decode_bit_identical_to_greedy() {
     let (spec, spec_tok) = decode_with_metrics_blocking(&model, prompt, 48).expect("spec decode");
     let (steps, drafted, accepted) = spec_decode_counts();
     set_spec_decode(false);
+    set_gpu_topk(true);
+    set_resident_decode(true);
 
     println!("[a6a] greedy: {greedy_tok:.2} tok/s | {greedy:?}");
     println!("[a6a] spec  : {spec_tok:.2} tok/s | {spec:?}");
