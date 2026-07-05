@@ -1368,6 +1368,127 @@ pub fn decode_sampled_blocking(
     out
 }
 
+/// W6a — batched verify-primitive correctness probe. Prefills `prompt` (positions `[0, p)`,
+/// `p = prompt_len-1`), snapshots the KV cache, then:
+///   * **reference** — sequentially forwards `b` steps from the last prompt token via the exact
+///     per-token path (`dispatch_transformer_forward` → output norm → full-logit argmax), collecting
+///     the greedy continuation `r0..r_{b-1}` and the inputs `[cur, r0..r_{b-2}]`;
+///   * restores the post-prefill KV, then runs the **batched** `verify_draft_batch(inputs, p)`.
+/// Returns `(reference, verify)`; they must be equal — the batched forward writes byte-identical KV
+/// and both sides take a full-logit CPU argmax (no top-k tie-break gap). Runs on a dedicated thread
+/// with a current-thread runtime (mirrors the decode/perplexity paths so GPU readback works).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn spec_verify_probe_blocking(
+    model_path: &str,
+    prompt: &str,
+    b: usize,
+) -> Result<(Vec<u32>, Vec<u32>), String> {
+    use crate::gguf_bridge::QTensorEngine;
+    use crate::gguf_sharder::{GgufTensorIndex, GgufTokenizer};
+    if !std::path::Path::new(model_path).exists() {
+        return Err(format!("model not found: {model_path}"));
+    }
+    let model_path = model_path.to_string();
+    let prompt = prompt.to_string();
+
+    std::thread::spawn(move || -> Result<(Vec<u32>, Vec<u32>), String> {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|e| e.to_string())?;
+        let _g = rt.enter();
+
+        let mut engine = QTensorEngine::new();
+        engine.load_gguf(&model_path);
+        let mmap = engine
+            .gguf_mmap
+            .clone()
+            .ok_or_else(|| "model did not memory-map".to_string())?;
+        let tok = GgufTokenizer::from_gguf(&mmap);
+        let idx = GgufTensorIndex::from_gguf(&mmap);
+        let emb_dim = idx.emb_dim();
+        if emb_dim == 0 {
+            return Err("embedding dimension is 0".into());
+        }
+        let vocab = tok.vocab_len().max(1) as usize;
+        let toks = tok.encode(&prompt);
+        if toks.len() < b + 2 {
+            return Err(format!("prompt too short: {} tokens, need >= {}", toks.len(), b + 2));
+        }
+
+        let mut emb = vec![0f32; emb_dim.max(8192)];
+        let mut sa = vec![0f32; 16384];
+        let mut sb = vec![0f32; 16384];
+        let mut logits = vec![0f32; vocab];
+        let mmap_b: &[u8] = &mmap;
+
+        let argmax = |v: &[f32]| -> u32 {
+            let mut best_i = 0u32;
+            let mut best_v = f32::NEG_INFINITY;
+            for (i, &x) in v.iter().enumerate() {
+                if x > best_v {
+                    best_v = x;
+                    best_i = i as u32;
+                }
+            }
+            best_i
+        };
+
+        // Prefill positions [0, p) so the prefix KV matches what decode would have.
+        let p = toks.len() - 1;
+        engine.reset_kv_cache();
+        for i in 0..p {
+            let n = idx.dequantize_token_embedding_into(mmap_b, toks[i], &mut emb[..emb_dim]);
+            if n == 0 {
+                return Err(format!("embedding lookup failed for token {}", toks[i]));
+            }
+            let _ = engine.dispatch_transformer_forward(
+                &idx, &mut emb[..emb_dim], emb_dim, &mut sa, &mut sb, i as u32, 0,
+            );
+        }
+        let snapshot = engine
+            .get_kv_cache_cpu()
+            .map(|s| s.to_vec())
+            .ok_or_else(|| "no KV snapshot after prefill".to_string())?;
+
+        // Reference: exact sequential greedy decode of `b` steps from the last prompt token.
+        let mut inputs: Vec<u32> = Vec::with_capacity(b);
+        let mut reference: Vec<u32> = Vec::with_capacity(b);
+        let mut input = toks[p];
+        let mut pos = p as u32;
+        for _ in 0..b {
+            inputs.push(input);
+            let n = idx.dequantize_token_embedding_into(mmap_b, input, &mut emb[..emb_dim]);
+            if n == 0 {
+                return Err("reference embedding lookup failed".into());
+            }
+            let _ = engine.dispatch_transformer_forward(
+                &idx, &mut emb[..emb_dim], emb_dim, &mut sa, &mut sb, pos, 0,
+            );
+            let _ = engine.apply_output_norm_inplace(&idx, &mut emb[..emb_dim], emb_dim);
+            let nl = engine.dispatch_output_logits_into(&idx, &emb[..emb_dim], emb_dim, &mut logits);
+            if nl == 0 {
+                return Err("reference output projection produced no logits".into());
+            }
+            let out = argmax(&logits[..nl]);
+            reference.push(out);
+            input = out;
+            pos += 1;
+        }
+
+        // Restore the post-prefill KV, then run the batched verify over the same inputs.
+        engine.set_kv_cache_cpu(&snapshot);
+        let mut verify_out: Vec<u32> = Vec::new();
+        engine
+            .verify_draft_batch(&idx, &inputs, p as u32, &mut verify_out)
+            .ok_or_else(|| "verify_draft_batch ineligible/failed".to_string())?;
+
+        Ok((reference, verify_out))
+    })
+    .join()
+    .map_err(|_| "spec-verify probe thread panicked".to_string())?
+}
+
 // ── Reporting ─────────────────────────────────────────────────────────────────
 
 /// Pretty-printed JSON for a result set.

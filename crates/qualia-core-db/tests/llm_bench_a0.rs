@@ -254,6 +254,40 @@ finally the integrated-circuit processors that power the devices used around the
     println!("[a3a] PASS — resident prefill KV byte-identical to legacy (int8 ON and OFF)");
 }
 
+/// a6_primitive (W6a) — the batched speculative-verify forward's per-position argmax must equal the
+/// exact sequential per-token forward+argmax over the same inputs. The batched forward writes
+/// byte-identical KV (batched RMSNorm reduces in CPU order) and both sides take a full-logit CPU
+/// argmax, so the token ids must match exactly. This validates the verify PRIMITIVE before it is
+/// wired into the decode loop (increment 2). Run isolated:
+/// `cargo test -p qualia-core-db --release --test llm_bench_a0 a6_primitive -- --nocapture --test-threads=1`.
+#[test]
+fn a6_primitive_batched_verify_matches_sequential() {
+    use qualia_core_db::llm_bench::spec_verify_probe_blocking;
+    let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[a6] model absent — skipping verify-primitive check");
+        return;
+    };
+    let model = path.to_string_lossy().to_string();
+    let prompt =
+        "The quick brown fox jumps over the lazy dog and then keeps running down the road today.";
+    let b = 6;
+    let (reference, verify) =
+        spec_verify_probe_blocking(&model, prompt, b).expect("verify primitive probe");
+    println!("[a6] reference (sequential per-token): {reference:?}");
+    println!("[a6] verify    (batched forward)     : {verify:?}");
+    assert_eq!(
+        verify.len(),
+        b,
+        "[a6] verify returned {} argmaxes, expected {b}",
+        verify.len()
+    );
+    assert_eq!(
+        reference, verify,
+        "[a6] batched verify per-position argmax diverged from the sequential per-token reference"
+    );
+    println!("[a6] PASS — batched verify == sequential per-token argmax across {b} positions");
+}
+
 /// a2a (W2) — the exact sampler is deterministic under a fixed seed: two runs with the same seed
 /// must produce identical text; a different seed should diverge (reported, not asserted — a tiny
 /// model on a short prompt can coincide). Also asserts the sampled path actually ran.

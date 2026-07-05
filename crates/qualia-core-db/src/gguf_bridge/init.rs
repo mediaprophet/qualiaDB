@@ -708,6 +708,8 @@ impl QTensorEngine {
             #[cfg(not(target_arch = "wasm32"))]
             prefill_arena: super::prefill_arena::PrefillArenaState::Unbuilt,
             #[cfg(not(target_arch = "wasm32"))]
+            verify_arena: super::verify_arena::VerifyArenaState::Unbuilt,
+            #[cfg(not(target_arch = "wasm32"))]
             gemm_resident_weights: std::sync::Mutex::new(std::collections::HashMap::new()),
             #[cfg(not(target_arch = "wasm32"))]
             ffn_fused_params: None,

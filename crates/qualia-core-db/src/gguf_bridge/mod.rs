@@ -537,6 +537,7 @@ mod prefill_async;
 #[cfg(not(target_arch = "wasm32"))]
 mod prefill_arena;
 mod resident_decode;
+mod verify_arena;
 
 /// MC8 pt3e: max abs error over the first `n` elements.
 #[cfg(target_arch = "wasm32")]
@@ -1161,6 +1162,9 @@ pub struct QTensorEngine {
     /// W3: native GPU-resident single-fence-per-chunk prefill plan (see `prefill_arena.rs`).
     #[cfg(not(target_arch = "wasm32"))]
     prefill_arena: prefill_arena::PrefillArenaState,
+    /// W6a: batched speculative-verify forward plan (per-position argmax; see `verify_arena.rs`).
+    #[cfg(not(target_arch = "wasm32"))]
+    verify_arena: verify_arena::VerifyArenaState,
 }
 
 #[cfg(target_arch = "wasm32")]
