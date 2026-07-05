@@ -55,7 +55,8 @@ impl QTensorEngine {
             mask_word_count,
             out_stride_elems,
             proj_row_stride: 0, // default = legacy in-shader projection; mc8_stage overrides for B
-            _pad: [0; 2],
+            kv_quant: if layout.int8 { 1 } else { 0 },
+            _pad: 0,
         }
     }
 

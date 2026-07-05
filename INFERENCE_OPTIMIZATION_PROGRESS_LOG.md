@@ -335,3 +335,34 @@ Timothy approved vendoring the DXC DLLs alongside the existing `vendor/directml`
 **Verified:** `build.rs` placed `dxcompiler.dll` in `target/release/` + `target/release/deps/`; DX12
 runs via DXC with the env var UNSET (turnkey). Vulkan remains the default backend. This closes the
 last DX12 open item — the backend is now first-class on Windows with no per-machine setup.
+
+## 2026-07-05 — W5a: int8 KV cache DONE (the memory-movement lever; gate passed, now default ON)
+
+**Status: DONE — 3.77× less KV memory + bandwidth, ΔPPL +0.05%, default ON.**
+
+The draft report's central thesis is that inference is memory-movement-bound; attention (63% of the
+forward) is bandwidth-bound on the KV-cache reads. W5a quantizes the KV cache from f32 to **int8 +
+per-(slot,kv_head) f32 scale**, reusing the existing binding-3 arena reinterpreted (no bind-group
+churn; the f32 path is byte-identical — the shader branches on a new uniform `kv_quant`, and in the
+f32 branch reads exactly as before).
+
+**Implementation (native, gated, f32-path-untouched):**
+- `KvCacheLayout` gains `int8` + an int8 slot layout (`2·n_kv_head·(1 scale + head_dim/4 packed
+  words)`, K then V); `from_hyperparams` picks int8 when the toggle is on AND `head_dim % 4 == 0`
+  (else transparent f32 fallback). Buffer alloc + all per-layer binding offsets follow `layer_stride`
+  automatically, so decode + prefill + the resident path all work unchanged.
+- `fused_attention.wgsl`: `kv_quant` uniform + int8 index/dequant helpers; SDPA reads via
+  `read_k`/`read_v` (dequant when int8, raw f32 else); `write_kv_head` quantizes per-head (amax→scale
+  =amax/127, pack 4 i8 lanes/word via `bitcast<f32>`). Plain storage load/store preserves the packed
+  bits (only bitcast, no f32 arithmetic on packed data) → portable, no NaN-canonicalization issue.
+- Toggle `QUALIA_LLM_KV_INT8` (now default ON; `=0` forces the f32 baseline).
+
+**Measured (SmolLM2-360M Q8, A2000, `w5a_int8_kv_cache_gate`):**
+- **KV memory: 80.0 MiB → 21.2 MiB (3.77×)** — `[gguf_bridge] KV arena … int8+scale`.
+- **ΔPPL +0.05%** (f32 26.313 → int8 26.327 over 288 tokens) — ≪ the 5% gate; negligible.
+- Coherent decode; int8 15.74 vs f32 13.65 tok/s (faster here; within contention noise, but the
+  bandwidth cut helps not hurts). Gate PASSED decisively → flipped default ON per the plan.
+
+**⚑ Where I need the human:** none. (CPU-attention int8 parity — the `QUALIA_LLM_CPU_ATTENTION`
+reference path — is still f32-only; that path is off by default and not on the gate, so int8+CPU-attn
+is an unsupported combo, noted as a small follow-up, not a gap in the shipping GPU path.)

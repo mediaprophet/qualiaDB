@@ -325,6 +325,58 @@ fn w10_calibration_awq_end_to_end() {
     println!("[w10] PASS — forge calibration pipeline ran end-to-end.");
 }
 
+/// w5a — int8 KV cache gate. Decodes with the KV cache in f32 (baseline) and int8 (packed i8 + f32
+/// scale per head-slot), asserting the int8 path COMPILES its shader + decodes COHERENTLY, then
+/// reports ΔPPL vs the 5% gate (report, not hard-fail — the gate decides whether int8 becomes the
+/// default). Small token budgets bound the PPL passes. Skips if the model is absent.
+/// Run: `cargo test -p qualia-core-db --release --test llm_bench_a0 w5a_int8_kv -- --nocapture --test-threads=1`.
+#[test]
+fn w5a_int8_kv_cache_gate() {
+    use qualia_core_db::llm_bench::{
+        decode_with_metrics_blocking, perplexity_eval_blocking, set_kv_int8,
+    };
+    use qualia_core_db::llm_eval::{delta_ppl, MAX_DELTA_PPL};
+    let Some(model) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[w5a] model absent — skipping int8 KV gate");
+        return;
+    };
+    let m = model.to_string_lossy().to_string();
+    let prompt = "Once upon a time, there was a";
+
+    set_kv_int8(false);
+    let (f32_text, f32_tok) = decode_with_metrics_blocking(&m, prompt, 24).expect("f32 decode");
+    set_kv_int8(true);
+    let (i8_text, i8_tok) = decode_with_metrics_blocking(&m, prompt, 24).expect("int8 decode");
+    set_kv_int8(false);
+    println!("[w5a] f32  : {f32_tok:.2} tok/s | {f32_text:?}");
+    println!("[w5a] int8 : {i8_tok:.2} tok/s | {i8_text:?}");
+    // The int8 shader must compile (pipeline creation) AND produce coherent text (not EOS/garbage) —
+    // this is the correctness gate for the quant/dequant math + the packed layout.
+    assert!(
+        !i8_text.trim_start().starts_with("<|endoftext|>") && i8_text.contains(' ') && i8_text.len() > 8,
+        "int8 KV decode must be coherent (shader/quant bug otherwise), got: {i8_text:?}"
+    );
+
+    set_kv_int8(false);
+    let (ppl_f32, n) = perplexity_eval_blocking(&m, 64).expect("f32 ppl");
+    set_kv_int8(true);
+    let (ppl_i8, _) = perplexity_eval_blocking(&m, 64).expect("int8 ppl");
+    set_kv_int8(false);
+    let d = delta_ppl(ppl_f32, ppl_i8);
+    println!(
+        "[w5a] PPL f32={ppl_f32:.4} int8={ppl_i8:.4}  ΔPPL={:+.2}% (gate ≤{:.0}%) over {n} tokens",
+        d * 100.0,
+        MAX_DELTA_PPL * 100.0
+    );
+    assert!(ppl_i8.is_finite() && ppl_i8 > 1.0, "int8 PPL implausible: {ppl_i8}");
+    println!(
+        "[w5a] int8 KV {} the {:.0}% ΔPPL gate → {}",
+        if d <= MAX_DELTA_PPL { "PASSES" } else { "is OVER" },
+        MAX_DELTA_PPL * 100.0,
+        if d <= MAX_DELTA_PPL { "eligible to default ON" } else { "stays default OFF" }
+    );
+}
+
 /// A1b DISCRIMINATOR: boot a **verbatim** (non-ternary) P64 natively and verify it decodes
 /// COHERENTLY. This isolates the native P64-boot wiring (synthetic index + tokenizer-section +
 /// resident logits + the attention/embed/output hot path) from the ternary FFN quantization. If

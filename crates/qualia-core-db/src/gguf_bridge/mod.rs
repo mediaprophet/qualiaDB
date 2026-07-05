@@ -384,7 +384,9 @@ pub const MAX_CONTEXT_WINDOW: u32 = 1024;
 /// Maximum bytes for the static KV arena (load-time allocation only).
 pub const KV_CACHE_MAX_BYTES: usize = 448 * 1024 * 1024;
 
-/// Static ring-buffer KV layout: `[layer][slot][K | V]` in f32.
+/// Static ring-buffer KV layout: `[layer][slot][K | V]` in f32, OR (W5a int8 mode) packed int8 +
+/// per-(slot,kv_head) f32 scale in the same 4-byte-element buffer. `total_f32_elems` counts 4-byte
+/// slots either way (u32/f32 share the size), so the allocation math is unchanged.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct KvCacheLayout {
     pub max_context: u32,
@@ -394,10 +396,27 @@ pub struct KvCacheLayout {
     pub slot_kv_elems: u32,
     pub layer_stride: u32,
     pub total_f32_elems: usize,
+    /// W5a: true ⇒ the arena is int8-quantized (K/V stored as packed i8 lanes + one f32 scale per
+    /// (slot, kv_head), K then V). `layer_stride` is then the int8 slot layout, not the f32 one.
+    pub int8: bool,
 }
 
 impl KvCacheLayout {
     pub fn from_hyperparams(h: &crate::gguf_sharder::GgufHyperparams) -> Option<Self> {
+        // W5a int8 KV is a native decode-path optimization, gated behind its own toggle and only when
+        // head_dim packs cleanly into u32 lanes. WASM always uses the f32 layout.
+        #[cfg(not(target_arch = "wasm32"))]
+        let want_int8 =
+            crate::llm_bench::kv_int8_enabled() && (h.head_dim() % 4 == 0) && h.head_dim() > 0;
+        #[cfg(target_arch = "wasm32")]
+        let want_int8 = false;
+        Self::from_hyperparams_mode(h, want_int8)
+    }
+
+    fn from_hyperparams_mode(
+        h: &crate::gguf_sharder::GgufHyperparams,
+        int8: bool,
+    ) -> Option<Self> {
         let n_layer = h.n_layer;
         let n_kv_head = h.effective_n_kv_head();
         let head_dim = h.head_dim();
@@ -405,7 +424,13 @@ impl KvCacheLayout {
             return None;
         }
         let slot_kv_elems = n_kv_head * head_dim;
-        let layer_stride = MAX_CONTEXT_WINDOW * slot_kv_elems * 2;
+        // f32: per slot = 2·n_kv_head·head_dim 4-byte elems (K then V).
+        // int8: per slot = 2·n_kv_head·(1 scale + head_dim/4 packed words), K then V — ~3.8× smaller.
+        let layer_stride = if int8 {
+            MAX_CONTEXT_WINDOW * 2 * n_kv_head * (1 + head_dim / 4)
+        } else {
+            MAX_CONTEXT_WINDOW * slot_kv_elems * 2
+        };
         let total = (n_layer as usize).checked_mul(layer_stride as usize)?;
         let bytes = total.checked_mul(std::mem::size_of::<f32>())?;
         if bytes > KV_CACHE_MAX_BYTES {
@@ -419,6 +444,7 @@ impl KvCacheLayout {
             slot_kv_elems,
             layer_stride,
             total_f32_elems: total,
+            int8,
         })
     }
 

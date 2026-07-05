@@ -26,7 +26,7 @@ struct AttentionParams {
     // Non-zero → read the projection directly (the parallel GEMM already did the matmul); 0 → legacy
     // in-shader matmul via gemm_row. Decouples the heavy projection from this @workgroup_size(1) kernel.
     proj_row_stride: u32,
-    _pad1: u32,
+    kv_quant: u32,   // W5a: 1 ⇒ int8 KV cache (packed i8 + f32 scale); 0 ⇒ legacy f32
     _pad2: u32,
 }
 
@@ -337,6 +337,50 @@ fn v_cache_idx(slot: u32, kv_head: u32, dim: u32) -> u32 {
     return v_base + kv_head * params.head_dim + dim;
 }
 
+// ── W5a int8 KV (kv_quant==1) ──────────────────────────────────────────────────────────────────
+// Same binding-3 arena reinterpreted: per slot (4-byte elems) = [K scales: n_kv_head f32]
+// [V scales: n_kv_head f32] [K data: n_kv_head·(head_dim/4) packed-i8 words] [V data: same]. Each
+// element is quantized as round(x / scale) with scale = amax(head)/127; dequant = i8 · scale.
+fn kv8_slot_stride() -> u32 {
+    return 2u * params.n_kv_head * (1u + params.head_dim / 4u);
+}
+fn kv8_k_scale_idx(slot: u32, kv_head: u32) -> u32 {
+    return slot * kv8_slot_stride() + kv_head;
+}
+fn kv8_v_scale_idx(slot: u32, kv_head: u32) -> u32 {
+    return slot * kv8_slot_stride() + params.n_kv_head + kv_head;
+}
+fn kv8_k_data_idx(slot: u32, kv_head: u32, word: u32) -> u32 {
+    let hd4 = params.head_dim / 4u;
+    return slot * kv8_slot_stride() + 2u * params.n_kv_head + kv_head * hd4 + word;
+}
+fn kv8_v_data_idx(slot: u32, kv_head: u32, word: u32) -> u32 {
+    let hd4 = params.head_dim / 4u;
+    return slot * kv8_slot_stride() + 2u * params.n_kv_head + params.n_kv_head * hd4 + kv_head * hd4 + word;
+}
+// Sign-extend one i8 lane out of a packed u32 word.
+fn i8_lane(packed: u32, lane: u32) -> f32 {
+    let b = (packed >> (lane * 8u)) & 0xFFu;
+    return f32(select(i32(b), i32(b) - 256, b >= 128u));
+}
+// Read one K element, dequantizing when int8, else the raw f32 (f32 path bit-identical).
+fn read_k(slot: u32, kv_head: u32, d: u32) -> f32 {
+    if params.kv_quant == 0u {
+        return kv_cache[k_cache_idx(slot, kv_head, d)];
+    }
+    let scale = kv_cache[kv8_k_scale_idx(slot, kv_head)];
+    let packed = bitcast<u32>(kv_cache[kv8_k_data_idx(slot, kv_head, d / 4u)]);
+    return i8_lane(packed, d % 4u) * scale;
+}
+fn read_v(slot: u32, kv_head: u32, d: u32) -> f32 {
+    if params.kv_quant == 0u {
+        return kv_cache[v_cache_idx(slot, kv_head, d)];
+    }
+    let scale = kv_cache[kv8_v_scale_idx(slot, kv_head)];
+    let packed = bitcast<u32>(kv_cache[kv8_v_data_idx(slot, kv_head, d / 4u)]);
+    return i8_lane(packed, d % 4u) * scale;
+}
+
 fn kv_slot_allowed(logical: u32) -> bool {
     if params.mask_active == 0u {
         return true;
@@ -397,7 +441,7 @@ fn attention_parallel(qh: u32, kv_head: u32, token_in_batch: u32, lid: u32) {
         let slot = logical % params.max_context;
         var score = 0.0;
         for (var d = 0u; d < params.head_dim; d = d + 1u) {
-            score = score + q_sh[d] * kv_cache[k_cache_idx(slot, kv_head, d)];
+            score = score + q_sh[d] * read_k(slot, kv_head, d);
         }
         score = score * scale;
         let m_new = max(m_t, score);
@@ -406,7 +450,7 @@ fn attention_parallel(qh: u32, kv_head: u32, token_in_batch: u32, lid: u32) {
         m_t = m_new;
         l_t = l_t * factor + w;
         for (var d = 0u; d < params.head_dim; d = d + 1u) {
-            acc_t[d] = acc_t[d] * factor + w * kv_cache[v_cache_idx(slot, kv_head, d)];
+            acc_t[d] = acc_t[d] * factor + w * read_v(slot, kv_head, d);
         }
     }
 
@@ -488,11 +532,43 @@ fn write_kv_head(kv_head: u32, token_in_batch: u32, abs_pos: u32, apply_rope_k: 
         workgroupBarrier();
     }
     let slot = abs_pos % params.max_context;
-    for (var d = lid; d < params.head_dim; d = d + WG_SIZE) {
-        if params.proj_kind == 1u {
-            kv_cache[k_cache_idx(slot, kv_head, d)] = q_sh[d];
-        } else {
-            kv_cache[v_cache_idx(slot, kv_head, d)] = q_sh[d];
+    if params.kv_quant == 0u {
+        for (var d = lid; d < params.head_dim; d = d + WG_SIZE) {
+            if params.proj_kind == 1u {
+                kv_cache[k_cache_idx(slot, kv_head, d)] = q_sh[d];
+            } else {
+                kv_cache[v_cache_idx(slot, kv_head, d)] = q_sh[d];
+            }
+        }
+    } else {
+        // int8: per-head amax → scale (redundant per-thread scan; head_dim is small), then pack 4
+        // i8 lanes per word. The whole workgroup shares q_sh, so every thread sees the same amax.
+        var amax = 0.0;
+        for (var d = 0u; d < params.head_dim; d = d + 1u) {
+            amax = max(amax, abs(q_sh[d]));
+        }
+        let scale = select(amax / 127.0, 1.0, amax == 0.0);
+        let inv = select(1.0 / scale, 0.0, amax == 0.0);
+        if lid == 0u {
+            if params.proj_kind == 1u {
+                kv_cache[kv8_k_scale_idx(slot, kv_head)] = scale;
+            } else {
+                kv_cache[kv8_v_scale_idx(slot, kv_head)] = scale;
+            }
+        }
+        let hd4 = params.head_dim / 4u;
+        for (var word = lid; word < hd4; word = word + WG_SIZE) {
+            var packed = 0u;
+            for (var lane = 0u; lane < 4u; lane = lane + 1u) {
+                let q = clamp(round(q_sh[word * 4u + lane] * inv), -127.0, 127.0);
+                let bits = u32(i32(q) & 0xFF);
+                packed = packed | (bits << (lane * 8u));
+            }
+            if params.proj_kind == 1u {
+                kv_cache[kv8_k_data_idx(slot, kv_head, word)] = bitcast<f32>(packed);
+            } else {
+                kv_cache[kv8_v_data_idx(slot, kv_head, word)] = bitcast<f32>(packed);
+            }
         }
     }
 }

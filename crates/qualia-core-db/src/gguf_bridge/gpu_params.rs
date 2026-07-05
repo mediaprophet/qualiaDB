@@ -55,8 +55,11 @@ pub(crate) struct AttentionGpuParams {
     /// Non-zero → the shader reads the projection directly (parallel GEMM did the matmul) instead of
     /// doing the per-element `gemm_row` matmul itself. 0 → legacy in-shader projection.
     pub proj_row_stride: u32,
+    /// W5a: `1` ⇒ the KV cache is int8-quantized (packed i8 + per-(slot,kv_head) f32 scale, reusing
+    /// the binding-3 buffer reinterpreted); `0` ⇒ the legacy f32 KV cache (byte-identical path).
+    pub kv_quant: u32,
     /// WGSL uniform struct size must be a multiple of 16 bytes.
-    pub _pad: [u32; 2],
+    pub _pad: u32,
 }
 
 /// Uniform block for `wasm_elementwise.wgsl` (MC8 GPU norm / SwiGLU / residual).

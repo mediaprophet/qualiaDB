@@ -268,6 +268,32 @@ pub fn resident_decode_enabled() -> bool {
     }
 }
 
+// ── W5a: int8 KV cache toggle ─────────────────────────────────────────────────
+// Default ON (verified). When on (and head_dim % 4 == 0), the KV cache is stored as packed int8
+// lanes + one f32 scale per (slot, kv_head) instead of f32 — ~3.8× less KV memory (80→21 MiB @
+// ctx 1024) and ~3.8× less attention memory bandwidth (the decode bottleneck). Passed the gate on
+// SmolLM2-360M Q8: ΔPPL +0.05% (≪ the 5% bar), coherent, Vulkan-parity tok/s (see `w5a_int8_kv`).
+// Read once at model load (`ensure_kv_cache`), so set it BEFORE the model loads. Models with
+// head_dim not a multiple of 4 transparently fall back to the f32 layout. `QUALIA_LLM_KV_INT8=0`
+// forces the f32 KV cache (the A/B baseline).
+static KV_INT8: AtomicBool = AtomicBool::new(true);
+
+/// Enable/disable the int8 KV cache (`QUALIA_LLM_KV_INT8`).
+#[inline]
+pub fn set_kv_int8(on: bool) {
+    KV_INT8.store(on, Ordering::Relaxed);
+}
+
+/// Whether the KV cache should be int8-quantized.
+#[inline]
+pub fn kv_int8_enabled() -> bool {
+    match std::env::var("QUALIA_LLM_KV_INT8").ok().as_deref() {
+        Some("0") | Some("false") => false,
+        Some("1") | Some("true") => true,
+        _ => KV_INT8.load(Ordering::Relaxed),
+    }
+}
+
 // ── W2: exact sampler config ──────────────────────────────────────────────────
 // Process-global sampler config, read ONCE at decode start (like the decode budget). `None` ⇒
 // greedy argmax (the pre-W2 default; a1a/a1c/a1d byte-identical). `Some(cfg)` with cfg.temperature
