@@ -1137,34 +1137,71 @@ impl LocalLlmAgent {
                     let (top_i, top_v) = if hidden_ok > 0 {
                         if let Some(idx) = tensor_idx.as_ref() {
                             let token_idx = ctx.len().saturating_sub(1) as u32;
-                            // Decode-profiler: time the 32-layer forward (the suspected bottleneck).
-                            let t_fwd = std::time::Instant::now();
-                            let _layers = engine.dispatch_transformer_forward(
-                                idx,
-                                &mut emb_buf[..emb_dim],
-                                emb_dim,
-                                &mut scratch_a,
-                                &mut scratch_b,
-                                token_idx,
-                                TEST_TRANSFORMER_LAYER_CAP,
-                            );
-                            // Final output_norm before the vocab projection — REQUIRED on all targets.
-                            let _ = engine.apply_output_norm_inplace(
-                                idx,
-                                &mut emb_buf[..emb_dim],
-                                emb_dim,
-                            );
-                            crate::llm_bench::add_decode_forward_ns(
-                                t_fwd.elapsed().as_nanos() as u64
-                            );
                             let sieve_mask = sieve.as_ref().map(|s| s.current_mask());
+                            // Resident-token fast path: the WHOLE forward (32 layers + output norm
+                            // + logits top-1) in ONE submit with ONE fence. `Some` means the token
+                            // was produced and the KV cache was written; `None` falls through to
+                            // the legacy per-layer path unchanged (non-sieve, full-depth only —
+                            // the unit-test 2-layer cap keeps its per-layer semantics).
+                            #[cfg(not(target_arch = "wasm32"))]
+                            let resident_hit = if gpu_topk_enabled
+                                && sieve_mask.is_none()
+                                && TEST_TRANSFORMER_LAYER_CAP == 0
+                            {
+                                let t_res = std::time::Instant::now();
+                                let hit = engine.dispatch_token_forward_resident(
+                                    idx,
+                                    &emb_buf[..emb_dim],
+                                    token_idx,
+                                );
+                                if hit.is_some() {
+                                    crate::llm_bench::add_decode_forward_ns(
+                                        t_res.elapsed().as_nanos() as u64,
+                                    );
+                                    crate::llm_bench::record_resident_hit();
+                                } else {
+                                    crate::llm_bench::record_resident_fallback();
+                                }
+                                hit
+                            } else {
+                                None
+                            };
+                            #[cfg(target_arch = "wasm32")]
+                            let resident_hit: Option<crate::gguf_bridge::StreamingArgmaxResult> =
+                                None;
+
+                            if resident_hit.is_none() {
+                                // Decode-profiler: time the 32-layer forward (legacy path).
+                                let t_fwd = std::time::Instant::now();
+                                let _layers = engine.dispatch_transformer_forward(
+                                    idx,
+                                    &mut emb_buf[..emb_dim],
+                                    emb_dim,
+                                    &mut scratch_a,
+                                    &mut scratch_b,
+                                    token_idx,
+                                    TEST_TRANSFORMER_LAYER_CAP,
+                                );
+                                // Final output_norm before the vocab projection — REQUIRED on all
+                                // targets.
+                                let _ = engine.apply_output_norm_inplace(
+                                    idx,
+                                    &mut emb_buf[..emb_dim],
+                                    emb_dim,
+                                );
+                                crate::llm_bench::add_decode_forward_ns(
+                                    t_fwd.elapsed().as_nanos() as u64
+                                );
+                            }
                             // Decode-profiler: time the output projection (argmax / top-k).
                             let t_out = std::time::Instant::now();
                             // A1a: GPU top-1 path (additive, default-on; non-sieve only in v1).
                             // Returns the argmax token via the on-GPU block reduction; falls
                             // through to the existing argmax path if disabled or on any failure — the
                             // working path is never bypassed.
-                            let topk_hit = if gpu_topk_enabled && sieve_mask.is_none() {
+                            let topk_hit = if resident_hit.is_some() {
+                                resident_hit
+                            } else if gpu_topk_enabled && sieve_mask.is_none() {
                                 engine.dispatch_output_top1_chunked(
                                     idx,
                                     &emb_buf[..emb_dim],

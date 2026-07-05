@@ -1,0 +1,125 @@
+# Inference Ecosystem Optimization — Progress Log
+
+Per-step honest engineering record (CLAUDE.md §9) for the workstreams in
+[`docs/plans/inference-ecosystem-optimization.md`](docs/plans/inference-ecosystem-optimization.md).
+Real numbers or "not measured" — never extrapolated.
+
+---
+
+## 2026-07-05 — W0: baseline + hot-path map + plans (DONE)
+
+**What was built:** no engine code yet — measurement + analysis + the two plan docs
+(`docs/plans/inference-decode-resident-fastpath.md` incl. the seeAlso disposition of Timothy's draft
+research notes; `docs/plans/inference-ecosystem-optimization.md`, the master plan W1–W9).
+
+**Measured results (SmolLM2-360M Q8_0, RTX A2000, Vulkan, `a0_decode_profile`, 16 tokens):**
+19.89 tok/s (50.3 ms/tok); forward 47.9 ms (attention 30.3 / FFN 17.5); output proj 1.9 ms;
+**107 submit→wait round-trips/token**; empty round-trip 0.112 ms → ~12 ms/tok (24%) pure fence.
+Caveat: 16-token run, single prompt — stable enough for structure, not a marketing number.
+
+**Key finding:** the native decode path round-trips the hidden state through the CPU twice per layer
+(fused-tail + FFN readbacks + CPU RMSNorm/residual), while the wasm MC8 path already implements the
+GPU-resident single-encoder design. The fence count (107/tok) matches the code structure exactly.
+
+**⚑ Where I need the human:** none this step (the four master-plan asks are all for later gates).
+
+**Next:** W1 — finish `resident_decode.rs` compile → `a1d` differential test → re-profile.
+
+---
+
+## 2026-07-05 — W0b: master plan expanded + EXECUTION plan written (DONE)
+
+**What was built:** Timothy's expanded framing merged into the master plan (Mac Studio
+differential-testing rationale; off-grid DC/Starlink deployment context for W7; open-standards
+mandate for W10; W10 confirmed as an UPGRADE of the existing forge, not a new one). NEW
+`docs/plans/inference-ecosystem-optimization-EXECUTION.md` — the mechanical step-by-step version:
+global preamble (environment, commands, do-not-touch lanes, per-step landing rules), then W1–W10
+broken into numbered steps, each with exact files, code skeletons, Verify commands, and failure
+branches (incl. the guarded-timeout pattern that makes the DX12 hang safely testable, the a1d/a3a/
+a6a differential-test sources, and the Ollama-via-Command forge-side rule that avoids both the
+runtime boundary and the reqwest lane).
+
+**Measured results:** none this step (docs only).
+
+**⚑ Where I need the human:** none new — the four standing asks are restated at the bottom of the
+EXECUTION plan.
+
+**Next:** W1.1 compile loop (in progress), then a1d.
+
+---
+
+## 2026-07-05 — W1: resident-token decode (IN PROGRESS)
+
+**What was built so far:** NEW `crates/qualia-core-db/src/gguf_bridge/resident_decode.rs` — per-model
+plan (pre-created bind groups for all 32 layers × 14 passes + output chain; static uniform arena;
+per-token dynamic attention-param arena; ping-pong hidden buffers; own candidate staging), driver
+`dispatch_token_forward_resident()` encoding the whole token into one submit with one fence;
+`QUALIA_LLM_RESIDENT_DECODE` toggle (default ON, auto per-model fallback to legacy) in
+`inference_bench.rs`; decode-loop wiring in `inference_agent.rs` (resident tried first; legacy path
+untouched and reachable via toggle or any ineligibility).
+
+**Measured results:** not measured yet (first compile pass in progress).
+
+**⚑ Where I need the human:** none this step.
+
+**Next:** compile-fix, `a1d` resident-vs-legacy token-identity test, re-run `a0_decode_profile` +
+`a0_native_llm_baseline`, then W2 (sampler).
+
+**Update (2026-07-05, W1.1 DONE + W1.2 in progress):** compile-fix complete — one real error
+(`resident_decode.rs:540`, closure returning a parameter borrow → nested `fn ubind`), lib check
+exit 0, `--lib gguf_bridge` tests 5/5. **Honesty note:** my broken WIP had been blocking the CG
+lane's verification build for a window (mirror of the boolean_3.rs incident from the other
+direction) — fixed as soon as flagged, unblock posted in NOTICES. W1.2: `a1d` differential test
+added to `tests/llm_bench_a0.rs`, PLUS the W9 resident-path counters pulled forward
+(`record_resident_hit/fallback` in `inference_bench.rs`, wired in the decode loop) so a1d asserts
+the resident path actually RAN (hits > 0) — trivial equality via silent ineligibility cannot fake
+a pass.
+
+## 2026-07-05 — W1 RESULT: structurally complete, token-identical, fence-collapse PROVEN; standalone tok/s latent on this HW
+
+**Status: done (on W1's own gate); one PRE-EXISTING suite failure surfaced (a1a — NOT W1), flagged below.**
+
+**What was built:** `gguf_bridge/resident_decode.rs` (per-model plan of pre-built bind groups +
+static uniform arena + per-token dynamic attention-param arena + ping-pong hidden buffers; one
+`CommandEncoder`, one `submit`, one `poll_wait`, ~400 B candidate readback for the whole token —
+32 layers of RMSNorm/K-V-preproject/Q-SDPA/O-proj/residual/FFN as GPU passes + output norm +
+chunked logits top-1). Toggle `QUALIA_LLM_RESIDENT_DECODE` (default ON, auto per-model fallback).
+Decode-loop wiring + W9 path counters + profile self-documentation + `QUALIA_LLM_PROFILE_DECODE_TOKENS`.
+
+**Measured results (SmolLM2-360M Q8, A2000, Vulkan; machine under concurrent multi-lane build load):**
+- **Correctness — `a1d` GREEN:** resident decode is TOKEN-IDENTICAL to the legacy path over 24
+  tokens (24/24 resident hits, 0 fallbacks). The one numeric change (CPU→GPU RMSNorm) preserves
+  reduction order, so output is bit-faithful.
+- **Fence collapse — PROVEN, load-independent (it's a count):** waits/token vs decode length:
+  16 tok → **43**, 64 tok → **12**, 128 tok → **6**. Monotone fall proves the per-decode-token fence
+  cost is ~1 (the resident loop's single fence); the residual is FIXED prefill fences amortizing out.
+  Legacy was **107/token flat**. So the decode loop went from ~107 → ~1 fence/token.
+- **Contention robustness (unexpected win):** under the same concurrent GPU/CPU load, resident held
+  15–19 tok/s while legacy collapsed to 0.4–10 tok/s — fewer sync points = fewer driver-stall
+  opportunities. Reproducible across runs.
+- **Standalone tok/s on THIS hw/model: ~19, statistically indistinguishable from the 19.89 baseline.**
+  Honest reason: the baseline profiler already classified decode as COMPUTE-BOUND (fences were
+  ~24% and overlappable on a quiet fast discrete GPU). Removing overlappable fences on a tiny model
+  on a fast GPU with no contention does not move wall-clock. **The fence win is real but LATENT
+  here** — it manifests (a) under contention [shown], (b) on mobile/edge GPUs where fence latency
+  dominates [the off-grid W7 target], (c) on larger models, and (d) it makes prefill (W3) the next
+  dominant fence source. NOT a tok/s regression: within run-to-run noise, and structurally superior.
+
+**⚑ PRE-EXISTING failure surfaced (NOT W1) — needs a decision:** `a1a_gpu_topk_matches_argmax_text`
+FAILS — the CPU full-argmax path (" …hours poring over art books") and the GPU top-1 block-reduction
+path (" …hours\n\n sketching and painting") pick DIFFERENT tokens after "hours". Proven pre-existing:
+(1) fails identically with `QUALIA_LLM_RESIDENT_DECODE=0`; (2) the divergent code (`gguf_bridge/output.rs`
+argmax vs top-1) is NOT in my modified set; (3) my decode-loop restructure is behaviorally identical
+to the original when resident is off (read-verified). It's a benign near-tie float-reduction-order
+flip between two coherent continuations (the class a1b's comments already document), NOT degenerate
+output — a1c (argmax) and a1d (top-1) are each individually coherent. Caveat: I did NOT run a
+clean-HEAD rebuild to confirm it predates the whole session (double full rebuild under active
+contention); the claim rests on the three-way logical proof. **Decision needed:** either (i) tighten
+the GPU top-1 block reduction to tie-break identically to CPU argmax (a real but separable output-path
+task in my lane), or (ii) relax a1a to accept documented near-ties. Recommend (i) later, not blocking.
+
+**Where I need the human:** the a1a decision above (i vs ii) — low priority, not blocking W2/W3.
+
+**Next:** commit W1; then W2 (exact sampler — pure capability, independent of the perf question) or
+W3 (prefill arena — now the dominant fence source, and where TTFT lives). Recommend W3 next since
+W1 just made prefill the bottleneck, but W2 is the bigger *capability* unlock. Timothy's steer.

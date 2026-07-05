@@ -141,6 +141,47 @@ fn a1a_gpu_topk_matches_argmax_text() {
     println!("[a1a] token-identity verified + coherent generation: top-k == argmax");
 }
 
+/// a1d (W1) — the resident single-fence decode must emit IDENTICAL text to the legacy per-layer
+/// path (same kernels, same order; the one numeric change is RMSNorm CPU→GPU elem op, which
+/// reduces in the same sequential order). Toggle is process-global — run isolated:
+/// `cargo test -p qualia-core-db --release --test llm_bench_a0 a1d -- --nocapture --test-threads=1`.
+#[test]
+fn a1d_resident_decode_matches_legacy_text() {
+    use qualia_core_db::llm_bench::{decode_with_metrics_blocking, set_resident_decode};
+    let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[a1d] model absent — skipping resident/legacy differential");
+        return;
+    };
+    let model = path.to_string_lossy().to_string();
+    let prompt = "Once upon a time, there was a";
+
+    set_resident_decode(false);
+    let (legacy, legacy_tok) =
+        decode_with_metrics_blocking(&model, prompt, 24).expect("legacy decode");
+
+    qualia_core_db::llm_bench::reset_resident_path_counts();
+    set_resident_decode(true);
+    let (resident, resident_tok) =
+        decode_with_metrics_blocking(&model, prompt, 24).expect("resident decode");
+    let (hits, fallbacks) = qualia_core_db::llm_bench::resident_path_counts();
+
+    println!("[a1d] legacy   : {legacy_tok:.2} tok/s | {legacy:?}");
+    println!("[a1d] resident : {resident_tok:.2} tok/s | {resident:?}");
+    println!("[a1d] resident path: {hits} hits / {fallbacks} fallbacks");
+    // Path-visibility guard: if the resident plan went Ineligible, both runs took the legacy path
+    // and equality would be trivial. Ineligibility on the bench model is a W1 failure — surface it.
+    assert!(
+        hits > 0,
+        "[a1d] resident path never ran (plan ineligible or fell back {fallbacks}x) — \
+trivial equality would hide a W1 failure"
+    );
+    assert_eq!(
+        legacy, resident,
+        "resident single-fence decode diverged from the legacy path"
+    );
+    println!("[a1d] PASS — token-identical; resident {resident_tok:.2} vs legacy {legacy_tok:.2} tok/s");
+}
+
 /// A1b DISCRIMINATOR: boot a **verbatim** (non-ternary) P64 natively and verify it decodes
 /// COHERENTLY. This isolates the native P64-boot wiring (synthetic index + tokenizer-section +
 /// resident logits + the attention/embed/output hot path) from the ternary FFN quantization. If
@@ -489,9 +530,17 @@ fn a0_decode_profile() {
         "auto",
         "Once upon a time, there was a",
     );
-    cfg.decode_tokens = 16; // bounded; the per-token averages are what matter
+    // Bounded; the per-token averages are what matter. `QUALIA_LLM_PROFILE_DECODE_TOKENS` lets a
+    // caller raise it — useful to watch waits/token fall as the fixed prefill fence cost amortizes
+    // over more decode tokens (the structural proof that the resident decode loop is ~1 fence/token).
+    cfg.decode_tokens = std::env::var("QUALIA_LLM_PROFILE_DECODE_TOKENS")
+        .ok()
+        .and_then(|s| s.parse::<u32>().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(16);
     cfg.warm_repeats = 1; // the single warm run leaves the accumulators populated
 
+    llm_bench::reset_resident_path_counts();
     let results = llm_bench::run_suite_blocking(&[cfg]);
     assert!(
         !results.is_empty(),
@@ -543,7 +592,18 @@ fn a0_decode_profile() {
         100.0 * out_ms / total_ms
     );
     println!("[prof]   host / other        = {other_ms:.1} ms/tok");
-    println!("[prof] GPU submit→wait round-trips = {waits_per_tok:.0}/tok");
+    let (res_hits, res_fallbacks) = llm_bench::resident_path_counts();
+    let res_path = if res_hits > 0 && res_fallbacks == 0 {
+        "resident single-fence (W1)"
+    } else if res_hits == 0 {
+        "legacy per-layer"
+    } else {
+        "mixed (resident + fallback)"
+    };
+    println!("[prof] decode path   = {res_path}  (resident {res_hits} hits / {res_fallbacks} fallbacks)");
+    println!("[prof] GPU submit→wait round-trips = {waits_per_tok:.0}/tok  (TOTAL incl. prefill; the resident");
+    println!("[prof]   decode loop itself is ~1 fence/token — the rest is still-legacy prefill amortized");
+    println!("[prof]   over {toks} decode tokens, which is why this falls as decode_tokens rises → W3 target)");
     println!("[prof] empty round-trip baseline   = {ert_per_ms:.3} ms each (n={ert_n})");
     println!(
         "[prof] est. fence overhead = {sync_ms:.1} ms/tok ({sync_pct:.0}% of token) → {}",

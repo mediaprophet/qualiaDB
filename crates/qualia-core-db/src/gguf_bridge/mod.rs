@@ -508,6 +508,8 @@ mod init;
 mod load;
 mod output;
 mod prefill_async;
+#[cfg(not(target_arch = "wasm32"))]
+mod resident_decode;
 
 /// MC8 pt3e: max abs error over the first `n` elements.
 #[cfg(target_arch = "wasm32")]
@@ -1126,6 +1128,9 @@ pub struct QTensorEngine {
     mc8_norm_resident_buf: Option<wgpu::Buffer>,
     #[cfg(target_arch = "wasm32")]
     mc8_norm_stride: u32,
+    /// Native GPU-resident single-fence decode plan (see `resident_decode.rs`).
+    #[cfg(not(target_arch = "wasm32"))]
+    resident_decode: resident_decode::ResidentDecodeState,
 }
 
 #[cfg(target_arch = "wasm32")]

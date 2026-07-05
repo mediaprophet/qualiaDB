@@ -704,6 +704,8 @@ impl QTensorEngine {
             #[cfg(not(target_arch = "wasm32"))]
             ternary_ffn: None,
             #[cfg(not(target_arch = "wasm32"))]
+            resident_decode: super::resident_decode::ResidentDecodeState::Unbuilt,
+            #[cfg(not(target_arch = "wasm32"))]
             gemm_resident_weights: std::sync::Mutex::new(std::collections::HashMap::new()),
             #[cfg(not(target_arch = "wasm32"))]
             ffn_fused_params: None,

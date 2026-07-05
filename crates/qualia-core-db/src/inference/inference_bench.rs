@@ -104,6 +104,35 @@ pub fn reset_output_path_counts() {
     ARGMAX_FALLBACKS.store(0, Ordering::Relaxed);
 }
 
+// ── W1/W9: resident-token decode path counters ─────────────────────────────────
+static RESIDENT_HITS: AtomicU64 = AtomicU64::new(0);
+static RESIDENT_FALLBACKS: AtomicU64 = AtomicU64::new(0);
+
+/// Decode loop: the resident single-fence path produced this token.
+#[inline]
+pub fn record_resident_hit() {
+    RESIDENT_HITS.fetch_add(1, Ordering::Relaxed);
+}
+/// Decode loop: resident path was enabled but ineligible/failed — legacy ran instead.
+#[inline]
+pub fn record_resident_fallback() {
+    RESIDENT_FALLBACKS.fetch_add(1, Ordering::Relaxed);
+}
+/// (resident hits, resident fallbacks) since the last reset.
+#[inline]
+pub fn resident_path_counts() -> (u64, u64) {
+    (
+        RESIDENT_HITS.load(Ordering::Relaxed),
+        RESIDENT_FALLBACKS.load(Ordering::Relaxed),
+    )
+}
+/// Reset the resident-path counters.
+#[inline]
+pub fn reset_resident_path_counts() {
+    RESIDENT_HITS.store(0, Ordering::Relaxed);
+    RESIDENT_FALLBACKS.store(0, Ordering::Relaxed);
+}
+
 // ── A1b ternary-FFN toggle (D3/D7) ────────────────────────────────────────────
 // Additive, default-OFF: when a `.q42` ternary container is booted, routes its FFN
 // GEMMs through the resident 2-bit GPU kernel (`TernaryFfnResident`). OFF runs the
@@ -191,6 +220,32 @@ pub fn resident_weights_enabled() -> bool {
         Some("0") | Some("false") => false,
         Some("1") | Some("true") => true,
         _ => RESIDENT_WEIGHTS.load(Ordering::Relaxed),
+    }
+}
+
+// ── Resident-token decode toggle (single fence per token) ─────────────────────
+// Default ON (native). Keeps the hidden state in VRAM for the WHOLE token: all 32 layers
+// (RMSNorm/residuals as GPU elem ops) + output norm + chunked logits top-1 are encoded into ONE
+// command submit with ONE blocking fence and a ~400 B candidate readback — replacing the legacy
+// ~107 submit→wait round-trips/token (measured ~24% pure fence time on SmolLM2-360M, A2000,
+// Vulkan). Any per-model ineligibility (unsupported quant, no resident logits, sieve mask, CPU
+// attention) falls back to the legacy per-layer path. `QUALIA_LLM_RESIDENT_DECODE=0` forces the
+// legacy path (the A/B baseline + the differential-test comparator).
+static RESIDENT_DECODE: AtomicBool = AtomicBool::new(true);
+
+/// Enable/disable the resident-token single-fence decode (`QUALIA_LLM_RESIDENT_DECODE`).
+#[inline]
+pub fn set_resident_decode(on: bool) {
+    RESIDENT_DECODE.store(on, Ordering::Relaxed);
+}
+
+/// Whether native decode should run the GPU-resident single-fence token path.
+#[inline]
+pub fn resident_decode_enabled() -> bool {
+    match std::env::var("QUALIA_LLM_RESIDENT_DECODE").ok().as_deref() {
+        Some("0") | Some("false") => false,
+        Some("1") | Some("true") => true,
+        _ => RESIDENT_DECODE.load(Ordering::Relaxed),
     }
 }
 
