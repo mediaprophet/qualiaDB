@@ -269,15 +269,17 @@ pub fn resident_decode_enabled() -> bool {
 }
 
 // ── W3: resident single-fence-per-chunk prefill toggle ────────────────────────
-// Default OFF until the `a3a` identity gate passes on this machine. When on (and the model is
-// eligible — GPU-eligible weights, coop GEMV, no active sparse-attention route), each prefill chunk
-// of ≤PREFILL_CHUNK_SIZE prompt tokens populates the KV cache in ONE command submit / ONE fence
-// (all 32 layers batched + resident hidden state) instead of the legacy per-layer + per-token Q/FFN
-// loop (~640 submit→wait round-trips for a 10-token prompt). Delivers TTFT and the batched-forward
-// primitive W6a-verify needs; on a fast discrete GPU the steady-state win is latent (prefill is
-// compute-bound), the fence win lands on edge/mobile/under-load. Any ineligibility falls back to the
-// legacy `dispatch_prefill_chunk` path unchanged. `QUALIA_LLM_RESIDENT_PREFILL=1` forces it on.
-static RESIDENT_PREFILL: AtomicBool = AtomicBool::new(false);
+// Default ON (verified). When on (and the model is eligible — GPU-eligible weights, coop GEMV, no
+// active sparse-attention route), each prefill chunk of ≤PREFILL_CHUNK_SIZE prompt tokens populates
+// the KV cache in ONE command submit / ONE fence (all 32 layers batched + resident hidden state)
+// instead of the legacy per-layer + per-token Q/FFN loop (~640 submit→wait round-trips for a 10-token
+// prompt). Delivers TTFT and the batched-forward primitive W6a-verify needs; on a fast discrete GPU
+// the steady-state win is latent (prefill is compute-bound), the fence win lands on
+// edge/mobile/under-load. Passed the `a3a` gate on SmolLM2-360M Q8 (A2000): the batched RMSNorm
+// reduces in the same sequential order as the legacy CPU path, so the KV it writes is BYTE-IDENTICAL
+// → decode-identical, with the int8 KV cache both ON and OFF. Any ineligibility falls back to the
+// legacy `dispatch_prefill_chunk` path unchanged. `QUALIA_LLM_RESIDENT_PREFILL=0` forces legacy.
+static RESIDENT_PREFILL: AtomicBool = AtomicBool::new(true);
 
 /// Enable/disable the resident single-fence-per-chunk prefill path (`QUALIA_LLM_RESIDENT_PREFILL`).
 #[inline]

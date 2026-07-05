@@ -366,3 +366,47 @@ f32 branch reads exactly as before).
 **⚑ Where I need the human:** none. (CPU-attention int8 parity — the `QUALIA_LLM_CPU_ATTENTION`
 reference path — is still f32-only; that path is off by default and not on the gate, so int8+CPU-attn
 is an unsupported combo, noted as a small follow-up, not a gap in the shipping GPU path.)
+
+## 2026-07-05 — W3: resident single-fence-per-chunk prefill DONE (a3a byte-identical, default ON)
+
+**Status: DONE — batched GPU-resident prefill; KV byte-identical to legacy (int8 ON and OFF); default ON.**
+
+The legacy prefill (`forward.rs::dispatch_prefill_chunk` → `dispatch_prefill_layer_batch`) batches
+K/V projection but runs Q + o_proj + FFN **per token, per layer** through CPU-orchestrated
+`dispatch_attention_q_ffn_token` — each op a `submit → poll(wait)` fence + CPU readback (~640
+blocking fences for a 10-token prompt over 32 layers, the dominant TTFT slice on edge/mobile/under
+load). W3 keeps the whole prompt chunk (`B ≤ PREFILL_CHUNK_SIZE = 64`) resident in VRAM and encodes
+every layer's batched forward into ONE encoder / ONE submit / ONE fence.
+
+**Implementation (native, gated, legacy-path-untouched):**
+- New `gguf_bridge/prefill_arena.rs` — the batched mirror of `resident_decode.rs` with a batch dim
+  and NO output tail (prefill's only product is the populated KV cache; decode re-embeds the last
+  prompt token, so there is no output norm, logits, top-k, or readback). Per-model plan (bind groups
+  built once) + a per-call param arena rewrite (only `n_batch`/`batch`/`num_tokens`/`batch_start`
+  vary; row strides are B-independent). Batched dispatch grids: elem RMSNorm `(1,B,1)`, silu/add
+  `(n/64,B,1)`, coop GEMV `(n_out,B,1)`, Q-attn `(n_head,B,1)`, K/V-write `(n_kv*B,1,1)`.
+- **int8 KV (W5a) works for free** — the K/V-write passes flow through the same `fused_attention.wgsl`
+  quantize branch; the per-layer KV binding uses `layout.layer_stride` (int8-aware). Verified both ways.
+- **Causality is loop-bound** (`logical <= abs_pos`, `abs_pos = batch_start + token_in_batch`) whenever
+  no sparse-attention route is active (`mask_active == 0`), so batched Q needs no per-token mask
+  buffer. An active route ⇒ arena ineligible → legacy per-token path (which builds each token's mask).
+- Toggle `QUALIA_LLM_RESIDENT_PREFILL` (now default ON; `=0` forces legacy) + hit/fallback counters;
+  wired into `dispatch_prefill_chunk` with a clean fallback.
+
+**Measured (SmolLM2-360M Q8, A2000, `a3a_prefill_arena_matches_legacy_text`, ~40-token prompt):**
+- **KV byte-identical**: resident-prefill decode text == legacy-prefill decode text, int8 **ON** and
+  **OFF** (arena ran: 1 hit / 0 fallbacks each). The batched RMSNorm reduces in the same sequential
+  order as the CPU `rms_norm_inplace`, so the KV is bit-exact — no near-tie flip (unlike a1a).
+- Decode tok/s (not the prefill metric; reported for coherence): int8 resident 18.19 vs legacy 14.81;
+  f32 resident 17.28 vs legacy 17.66 — within contention noise (prefill affects TTFT, not decode tok/s).
+- **Honest scope caveat:** on this fast discrete A2000 the fence win is **latent** — prefill for a
+  short prompt is compute-bound, so the one-fence-per-chunk saving does not move steady-state tok/s
+  here (it lands on edge/mobile/under-load/longer-prompts). Its concrete value on this box is (a) TTFT
+  reduction for longer prompts and (b) the batched-forward primitive W6a-verify needs. a1c/a1d re-run
+  green with the arena on the default path.
+
+**⚑ Where I need the human:** none this step.
+
+**Next:** W6a-verify (now unblocked — extend the arena to emit per-position argmax for draft
+acceptance), or kernel/shader optimization (the real steady-state tok/s lever on this compute-bound
+box). W5b still ⚑ needs your eval corpus; W8 still externally gated on wgpu #9741.
