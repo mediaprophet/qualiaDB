@@ -318,3 +318,20 @@ honestly doesn't pass (packaging is exercised by the unit frame tests + would fi
 **⚑ Where I need the human:** the W5b eval-corpus curation (unchanged standing ask) is what unlocks
 the dictionary learner + makes the OllamaSynth corpus fully load-bearing. Ollama model tag to
 prefer for synthesis, when W5b starts.
+
+## 2026-07-05 — DX12 made TURNKEY (Timothy: vendor DXC like DirectML)
+
+**Status: DONE — DX12 works with zero configuration; no `QUALIA_DXC_PATH` needed.**
+
+Timothy approved vendoring the DXC DLLs alongside the existing `vendor/directml`. Landed:
+- `vendor/dxc/bin/{x64-win,arm64-win}/{dxcompiler.dll,dxil.dll}` (v1.8.2502-class, ~19 MB x64) +
+  the DXC licenses (LLVM/MIT/MS), checked into the repo (same precedent as `vendor/directml/*.dll`).
+- `build.rs` (Windows): copies the two DLLs beside the built binaries (`target/<profile>/` AND
+  `target/<profile>/deps/`, arch-selected x64/arm64) — Windows loads a DLL from the executable's own
+  directory first. Emits a `cargo:warning` confirming the copy.
+- `gpu_context.rs`: `resolve_dx12_compiler()` order = `QUALIA_DXC_PATH` (bespoke) → `dxcompiler.dll`
+  beside the current exe (the vendored/copied one) → wgpu `Auto`. So DX12 uses DXC out of the box.
+
+**Verified:** `build.rs` placed `dxcompiler.dll` in `target/release/` + `target/release/deps/`; DX12
+runs via DXC with the env var UNSET (turnkey). Vulkan remains the default backend. This closes the
+last DX12 open item — the backend is now first-class on Windows with no per-machine setup.

@@ -674,6 +674,34 @@ impl SharedGpuContext {
 #[cfg(not(target_arch = "wasm32"))]
 static SHARED_GPU: OnceLock<SharedGpuContext> = OnceLock::new();
 
+/// Choose the DX12 shader compiler. DX12's legacy FXC compiler cannot compile our flash-attention
+/// shader (`fused_attention.wgsl`, X4026) — DXC (the modern compiler) can. Resolution order:
+///   1. `QUALIA_DXC_PATH` → `DynamicDxc` at that explicit `dxcompiler.dll` (bespoke override).
+///   2. `dxcompiler.dll` beside the current executable (where `build.rs` copies the vendored
+///      `vendor/dxc/` DLLs) → `DynamicDxc` at that path (turnkey — no env var needed).
+///   3. Otherwise `Auto` (static-DXC → PATH-DXC → FXC) — graceful fallback (Vulkan stays default).
+#[cfg(not(target_arch = "wasm32"))]
+fn resolve_dx12_compiler() -> wgpu::Dx12Compiler {
+    if let Ok(p) = std::env::var("QUALIA_DXC_PATH") {
+        if !p.trim().is_empty() {
+            log::info!("shared_gpu|dx12_compiler|DynamicDxc(env)={p}");
+            return wgpu::Dx12Compiler::DynamicDxc { dxc_path: p };
+        }
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            let dll = dir.join("dxcompiler.dll");
+            if dll.exists() {
+                log::info!("shared_gpu|dx12_compiler|DynamicDxc(vendored)={}", dll.display());
+                return wgpu::Dx12Compiler::DynamicDxc {
+                    dxc_path: dll.to_string_lossy().into_owned(),
+                };
+            }
+        }
+    }
+    wgpu::Dx12Compiler::Auto
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
     // Inference-pipeline (GPU backend) selection. Default = wgpu's own pick; `QUALIA_WGPU_BACKEND`
@@ -687,13 +715,7 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
     // is discoverable. `QUALIA_DXC_PATH` points wgpu straight at a `dxcompiler.dll` (with `dxil.dll`
     // alongside it, for DXIL signing) so DX12 uses DXC without needing it on PATH. Absent the var we
     // keep `Auto` (Vulkan stays the working default backend regardless).
-    let dx12_compiler = match std::env::var("QUALIA_DXC_PATH") {
-        Ok(p) if !p.trim().is_empty() => {
-            log::info!("shared_gpu|dx12_compiler|DynamicDxc={p}");
-            wgpu::Dx12Compiler::DynamicDxc { dxc_path: p }
-        }
-        _ => wgpu::Dx12Compiler::Auto,
-    };
+    let dx12_compiler = resolve_dx12_compiler();
     let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
     desc.backend_options.dx12.shader_compiler = dx12_compiler;
     if let Some(backends) = caps::qualia_backend_override() {

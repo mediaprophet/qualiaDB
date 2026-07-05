@@ -45,7 +45,9 @@ pub enum ArtifactKind {
 }
 
 impl ArtifactKind {
-    fn label(self) -> &'static str {
+    /// Stable machine label (diagnostics / provenance display).
+    #[allow(dead_code)]
+    pub fn label(self) -> &'static str {
         match self {
             ArtifactKind::AwqScales => "awq_scales",
             ArtifactKind::KvInt8Scales => "kv_int8_scales",

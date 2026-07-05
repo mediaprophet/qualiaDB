@@ -9,13 +9,16 @@ default. Vulkan is the default GPU backend on every platform.
 | Env var | Values | Default | Effect |
 |---|---|---|---|
 | `QUALIA_WGPU_BACKEND` | `vulkan` \| `dx12` \| `metal` \| `gl` | wgpu auto (Vulkan on this HW) | Pins the wgpu backend. |
-| `QUALIA_DXC_PATH` | path to `dxcompiler.dll` | unset → wgpu `Auto` (static-DXC → PATH-DXC → FXC) | Points DX12 at DXC. **Required for DX12**: its legacy FXC compiler cannot compile `fused_attention.wgsl` (barrier after a varying-length SDPA loop, error X4026). `dxil.dll` must sit alongside `dxcompiler.dll` (for DXIL signing). DXC v1.8.2502+. |
+| `QUALIA_DXC_PATH` | path to `dxcompiler.dll` | unset → vendored DXC beside the exe, else wgpu `Auto` | Bespoke override for the DX12 DXC compiler. DX12's legacy FXC compiler cannot compile `fused_attention.wgsl` (barrier after a varying-length SDPA loop, error X4026), so DX12 needs DXC. |
 
-DX12 example (verified: coherent decode, Vulkan-parity ~18.5 tok/s on an A2000):
+**DX12 is turnkey** — `dxcompiler.dll` + `dxil.dll` (v1.8.2502+) are vendored in `vendor/dxc/` and
+`build.rs` copies them beside the built binaries, so `gpu_context` finds them and DX12 uses DXC with
+no configuration. Just pin the backend (verified: coherent decode, Vulkan-parity ~18.5 tok/s, A2000):
 ```powershell
-$env:QUALIA_WGPU_BACKEND='dx12'
-$env:QUALIA_DXC_PATH='C:\path\to\dxc\bin\x64\dxcompiler.dll'
+$env:QUALIA_WGPU_BACKEND='dx12'   # QUALIA_DXC_PATH only needed for a non-vendored DXC location
 ```
+DXC compiler resolution order: `QUALIA_DXC_PATH` → `dxcompiler.dll` beside the executable (vendored) →
+wgpu `Auto` (static-DXC → PATH-DXC → FXC). `dxil.dll` must sit alongside `dxcompiler.dll` (DXIL signing).
 
 ## Decode fast-path toggles (all native, default ON)
 

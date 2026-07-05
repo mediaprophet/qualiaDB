@@ -61,6 +61,47 @@ fn main() {
                 println!("cargo:warning=Qualia-DB: vendor/directml not found and DIRECTML_LIB_PATH unset. \
                           GPU inference will fall back to wgpu-only path.");
             }
+
+            // DXC (DirectX Shader Compiler) — shipped in vendor/dxc/ (checked into repo). Unlike
+            // DirectML this is NOT link-time: `dxcompiler.dll` is loaded at RUNTIME by wgpu to compile
+            // WGSL→DXIL for the DX12 backend (DX12's legacy FXC cannot compile `fused_attention.wgsl`).
+            // We copy the two DLLs next to the built binaries so the OS loader finds them from the
+            // exe's own directory → wgpu's default `Auto` compiler uses DXC with no env var (turnkey
+            // DX12). `QUALIA_DXC_PATH` still overrides for a bespoke DXC location. `dxil.dll` must sit
+            // beside `dxcompiler.dll` (DXIL signing).
+            let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
+            let dxc_sub = if arch == "aarch64" { "arm64-win" } else { "x64-win" };
+            let dxc_dir = std::path::PathBuf::from(&manifest)
+                .join("..")
+                .join("..")
+                .join("vendor")
+                .join("dxc")
+                .join("bin")
+                .join(dxc_sub);
+            let dxc_dll = dxc_dir.join("dxcompiler.dll");
+            let dxil_dll = dxc_dir.join("dxil.dll");
+            if dxc_dll.exists() && dxil_dll.exists() {
+                // OUT_DIR = target/<profile>/build/<crate>-<hash>/out → the profile dir is 3 ancestors up.
+                if let Ok(out_dir) = std::env::var("OUT_DIR") {
+                    if let Some(profile_dir) = std::path::Path::new(&out_dir).ancestors().nth(3) {
+                        // binaries live in <profile>/ (qualia-cli) and <profile>/deps/ (test exes);
+                        // Windows loads a DLL from the loading module's own directory first.
+                        for dst_dir in [profile_dir.to_path_buf(), profile_dir.join("deps")] {
+                            let _ = std::fs::create_dir_all(&dst_dir);
+                            let _ = std::fs::copy(&dxc_dll, dst_dir.join("dxcompiler.dll"));
+                            let _ = std::fs::copy(&dxil_dll, dst_dir.join("dxil.dll"));
+                        }
+                        println!("cargo:rerun-if-changed={}", dxc_dll.display());
+                        println!("cargo:rerun-if-changed={}", dxil_dll.display());
+                        println!(
+                            "cargo:warning=Qualia-DB: DXC ({dxc_sub}) copied beside binaries — DX12 uses DXC (turnkey)."
+                        );
+                    }
+                }
+            } else {
+                println!("cargo:warning=Qualia-DB: vendor/dxc/{dxc_sub} not found — DX12 will fall back to \
+                          FXC (which cannot compile the attention shader). Set QUALIA_DXC_PATH or vendor DXC.");
+            }
         }
         "linux" => {
             // Target: Raw Linux Environments / Bare-metal Servers
