@@ -210,3 +210,29 @@ would destroy the key-parallel speedup. SPIR-X (Vulkan), Metal, and **DXC** all 
 The shader hygiene fix (early-returns → uniform if-guards) is kept regardless: it's a correct,
 verified improvement and a prerequisite for the DXC path. **W4 = root-caused + documented + hygiene
 fix landed** (the plan's valid-completion bar); the DXC enablement is gated on Timothy's A/B/C/D call.
+
+## 2026-07-05 — W6a PARTIAL: prompt-lookup speculative-decode proposer (foundation, tested)
+
+**Status: proposer DONE + tested; exact-output verify-wiring is the remaining step (specced honestly).**
+
+**What was built:** NEW `inference/prompt_lookup.rs` — the pure, wasm-safe n-gram proposer for
+prompt-lookup (LLMA) speculative decoding. `propose(ctx, max_draft) -> Draft`: matches the longest
+context suffix (trigram→bigram→unigram) against its most-recent earlier occurrence and drafts the
+tokens that followed it (up to `MAX_DRAFT=8`). No draft model needed; drafts only real seen tokens
+(exact-output safety premise). **7/7 unit tests** (novel text → empty; bigram/trigram continuation;
+longest-ngram wins over a shorter one with a *different* continuation; most-recent occurrence
+governs; max_draft cap; all drafted tokens are real). Wired into `inference/mod.rs` + `lib.rs`
+(additive; nothing calls it yet → zero behaviour change, build stays green for the other 3 lanes).
+
+**Measured results:** n/a (proposer is pure logic; no decode-path effect until wired).
+
+**⚑ Where I need the human:** none for the proposer.
+
+**Remaining W6a (the verify/accept wiring — deliberately NOT rushed):** after the normal greedy
+token `t0`, feed `[t0, d1..dk]` through a batched forward that returns the model's greedy argmax at
+each position, and accept the longest prefix where `argmax[i] == draft[i]`; each accepted token
+still passes the Phase-8 Sentinel + sieve/EOS checks (no governance bypass). This needs a batched
+forward that exposes **per-position** logits (prefill writes KV but doesn't return them) — which is
+exactly what **W3's batched arena** provides, so W6a-verify should land on top of W3. Exact-output
+property (final text bit-identical to greedy) will be the `a6a` gate. Not started to avoid
+correctness-critical WIP in the shared build under 4-agent contention.

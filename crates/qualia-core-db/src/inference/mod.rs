@@ -55,6 +55,8 @@ pub mod ternary_gpu;
 pub mod topk;
 // W2: exact CPU sampling chain (pure, wasm-safe — no GPU, no `rand`, no file I/O).
 pub mod sampler;
+// W6a: prompt-lookup speculative decoding proposer (pure, wasm-safe).
+pub mod prompt_lookup;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod topk_gpu;
 // OMP sparse KV-cache decomposition builds on `crate::solvers` (dense linear

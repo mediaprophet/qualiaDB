@@ -162,6 +162,7 @@ pub use inference::ternary_gpu;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use inference::topk;
 pub use inference::sampler;
+pub use inference::prompt_lookup;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::topk_gpu;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
