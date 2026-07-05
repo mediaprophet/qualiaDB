@@ -19,6 +19,7 @@ Comprehensive index of functionality for `adr`. This document serves as the grou
 - 📄 `0007-u3-acoustic-plane-symbolic-audio.md`
 - 📄 `0008-frame-layout-abi-and-inline-tags.md`
 - 📄 `0009-shex-scoped-alongside-shacl.md`
+- 📄 `0010-speculative-decode-default-on.md` — W6a prompt-lookup speculative decode ships default-ON (env/runtime mode switch); accepts benign near-tie divergence.
 - 📄 `004-sentinel-to-webizen-rebrand.md`
 - 📄 `005-dns-frontdoor-and-hcai-agreements.md`
 - 📄 `006-zero-allocation-solid-bridge.md`

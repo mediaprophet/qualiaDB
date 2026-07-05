@@ -170,6 +170,9 @@ fn a1d_resident_decode_matches_legacy_text() {
         eprintln!("[a1d] model absent — skipping resident/legacy differential");
         return;
     };
+    // Isolate the resident-vs-legacy decode path (spec-decode is default ON since ADR 0010; it would
+    // bypass the resident path and make the `resident hits > 0` guard fail).
+    qualia_core_db::llm_bench::set_spec_decode(false);
     let model = path.to_string_lossy().to_string();
     let prompt = "Once upon a time, there was a";
 
@@ -217,6 +220,8 @@ fn a3a_prefill_arena_matches_legacy_text() {
         eprintln!("[a3a] model absent — skipping prefill-arena differential");
         return;
     };
+    // Isolate the prefill path (spec-decode default ON since ADR 0010 would run in the decode phase).
+    qualia_core_db::llm_bench::set_spec_decode(false);
     let model = path.to_string_lossy().to_string();
     let prompt = "The history of computing spans many centuries, beginning with simple counting \
 tools and evolving through mechanical calculators, punch-card tabulators, vacuum-tube machines, and \
@@ -489,6 +494,8 @@ fn w5a_int8_kv_cache_gate() {
     };
     let m = model.to_string_lossy().to_string();
     let prompt = "Once upon a time, there was a";
+    // Isolate the int8-vs-f32 KV path (spec-decode default ON since ADR 0010 runs in decode).
+    qualia_core_db::llm_bench::set_spec_decode(false);
 
     set_kv_int8(false);
     let (f32_text, f32_tok) = decode_with_metrics_blocking(&m, prompt, 24).expect("f32 decode");
@@ -677,6 +684,8 @@ fn a1c_q8_gemm_decode_coherent() {
         eprintln!("[a1c] Q8_0 model absent — skipping GPU Q8 GEMM coherence check");
         return;
     };
+    // Isolate the single-token Q8 GEMM decode (spec-decode default ON since ADR 0010 runs in decode).
+    qualia_core_db::llm_bench::set_spec_decode(false);
     let model = path.to_string_lossy().to_string();
     let prompt = "Once upon a time, there was a";
     let (off, _on) =

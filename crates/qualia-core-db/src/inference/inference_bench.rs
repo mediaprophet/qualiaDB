@@ -297,22 +297,31 @@ pub fn resident_prefill_enabled() -> bool {
     }
 }
 
-// ── W6a: prompt-lookup speculative decode toggle ──────────────────────────────
-// Default OFF until the `a6a` exact-output gate passes. When on (and no sieve/sampler/route is
-// active), the decode loop drafts the next few tokens by n-gram prompt-lookup, verifies them in ONE
-// batched forward (`verify_draft_batch`), and emits the longest greedily-agreeing prefix + the model's
-// own correction token — so the output is BIT-IDENTICAL to greedy decode. The win is pure latency on
-// repetitive / quoting / structured text (several tokens per forward); on novel text it drafts little
-// and costs ~nothing. `QUALIA_LLM_SPEC_DECODE=1` forces it on.
-static SPEC_DECODE: AtomicBool = AtomicBool::new(false);
+// ── W6a: prompt-lookup speculative decode toggle (ADR 0010) ───────────────────
+// Default ON (ADR 0010, directed by Timothy). When on (and no sieve/sampler/route is active), the
+// decode loop drafts the next few tokens by n-gram prompt-lookup, verifies them in ONE batched
+// forward (`verify_draft_batch`), and emits the longest greedily-agreeing prefix + the model's own
+// correction token. Output matches ordinary decode everywhere except rare genuine near-ties (the a1a
+// phenomenon: the model is ambivalent, both tokens equally valid, and a ULP-level difference between
+// the batched and single-token forwards flips the pick). The win is pure latency on repetitive /
+// quoting / structured / code text (several tokens per forward, measured ~3–12×); on novel text it
+// drafts little and costs ~nothing.
+//
+// This is the MODE SWITCH. Change modes three ways: (1) env `QUALIA_LLM_SPEC_DECODE=0` (off) / `=1`
+// (on) at launch — the desktop/daemon reads it; (2) `set_spec_decode(bool)` at runtime (the UI /
+// host calls this); (3) `spec_decode_enabled()` to read the effective mode. The env var, when set,
+// overrides the runtime flag in BOTH directions. See ADR 0010 for the rationale.
+static SPEC_DECODE: AtomicBool = AtomicBool::new(true);
 
-/// Enable/disable prompt-lookup speculative decode (`QUALIA_LLM_SPEC_DECODE`).
+/// Enable/disable prompt-lookup speculative decode (`QUALIA_LLM_SPEC_DECODE`). Runtime mode switch —
+/// the desktop UI / host calls this to flip between exact single-token decode and speculative decode.
 #[inline]
 pub fn set_spec_decode(on: bool) {
     SPEC_DECODE.store(on, Ordering::Relaxed);
 }
 
-/// Whether the decode loop should run prompt-lookup speculative decode.
+/// Whether the decode loop should run prompt-lookup speculative decode (the effective mode: env var
+/// wins if set, else the runtime flag). Read this to reflect the current mode in a UI.
 #[inline]
 pub fn spec_decode_enabled() -> bool {
     match std::env::var("QUALIA_LLM_SPEC_DECODE").ok().as_deref() {
