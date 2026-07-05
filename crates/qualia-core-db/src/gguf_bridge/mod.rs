@@ -535,6 +535,7 @@ mod load;
 mod output;
 mod prefill_async;
 #[cfg(not(target_arch = "wasm32"))]
+mod prefill_arena;
 mod resident_decode;
 
 /// MC8 pt3e: max abs error over the first `n` elements.
@@ -1157,6 +1158,9 @@ pub struct QTensorEngine {
     /// Native GPU-resident single-fence decode plan (see `resident_decode.rs`).
     #[cfg(not(target_arch = "wasm32"))]
     resident_decode: resident_decode::ResidentDecodeState,
+    /// W3: native GPU-resident single-fence-per-chunk prefill plan (see `prefill_arena.rs`).
+    #[cfg(not(target_arch = "wasm32"))]
+    prefill_arena: prefill_arena::PrefillArenaState,
 }
 
 #[cfg(target_arch = "wasm32")]

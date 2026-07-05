@@ -268,6 +268,62 @@ pub fn resident_decode_enabled() -> bool {
     }
 }
 
+// ── W3: resident single-fence-per-chunk prefill toggle ────────────────────────
+// Default OFF until the `a3a` identity gate passes on this machine. When on (and the model is
+// eligible — GPU-eligible weights, coop GEMV, no active sparse-attention route), each prefill chunk
+// of ≤PREFILL_CHUNK_SIZE prompt tokens populates the KV cache in ONE command submit / ONE fence
+// (all 32 layers batched + resident hidden state) instead of the legacy per-layer + per-token Q/FFN
+// loop (~640 submit→wait round-trips for a 10-token prompt). Delivers TTFT and the batched-forward
+// primitive W6a-verify needs; on a fast discrete GPU the steady-state win is latent (prefill is
+// compute-bound), the fence win lands on edge/mobile/under-load. Any ineligibility falls back to the
+// legacy `dispatch_prefill_chunk` path unchanged. `QUALIA_LLM_RESIDENT_PREFILL=1` forces it on.
+static RESIDENT_PREFILL: AtomicBool = AtomicBool::new(false);
+
+/// Enable/disable the resident single-fence-per-chunk prefill path (`QUALIA_LLM_RESIDENT_PREFILL`).
+#[inline]
+pub fn set_resident_prefill(on: bool) {
+    RESIDENT_PREFILL.store(on, Ordering::Relaxed);
+}
+
+/// Whether native prefill should run the GPU-resident single-fence-per-chunk arena.
+#[inline]
+pub fn resident_prefill_enabled() -> bool {
+    match std::env::var("QUALIA_LLM_RESIDENT_PREFILL").ok().as_deref() {
+        Some("0") | Some("false") => false,
+        Some("1") | Some("true") => true,
+        _ => RESIDENT_PREFILL.load(Ordering::Relaxed),
+    }
+}
+
+// ── W3/W9: resident-prefill path counters ──────────────────────────────────────
+static RESIDENT_PREFILL_HITS: AtomicU64 = AtomicU64::new(0);
+static RESIDENT_PREFILL_FALLBACKS: AtomicU64 = AtomicU64::new(0);
+
+/// Prefill: the resident single-fence-per-chunk arena populated this chunk's KV.
+#[inline]
+pub fn record_resident_prefill_hit() {
+    RESIDENT_PREFILL_HITS.fetch_add(1, Ordering::Relaxed);
+}
+/// Prefill: resident path was enabled but ineligible/failed — legacy chunk ran instead.
+#[inline]
+pub fn record_resident_prefill_fallback() {
+    RESIDENT_PREFILL_FALLBACKS.fetch_add(1, Ordering::Relaxed);
+}
+/// (resident-prefill hits, resident-prefill fallbacks) since the last reset.
+#[inline]
+pub fn resident_prefill_counts() -> (u64, u64) {
+    (
+        RESIDENT_PREFILL_HITS.load(Ordering::Relaxed),
+        RESIDENT_PREFILL_FALLBACKS.load(Ordering::Relaxed),
+    )
+}
+/// Reset the resident-prefill path counters.
+#[inline]
+pub fn reset_resident_prefill_counts() {
+    RESIDENT_PREFILL_HITS.store(0, Ordering::Relaxed);
+    RESIDENT_PREFILL_FALLBACKS.store(0, Ordering::Relaxed);
+}
+
 // ── W5a: int8 KV cache toggle ─────────────────────────────────────────────────
 // Default ON (verified). When on (and head_dim % 4 == 0), the KV cache is stored as packed int8
 // lanes + one f32 scale per (slot, kv_head) instead of f32 — ~3.8× less KV memory (80→21 MiB @

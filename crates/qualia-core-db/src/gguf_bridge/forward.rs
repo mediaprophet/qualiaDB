@@ -349,6 +349,26 @@ impl QTensorEngine {
         if n_layer == 0 || n_tokens == 0 {
             return false;
         }
+        // W3: resident single-fence-per-chunk arena (toggle-gated, default OFF). Populates the KV
+        // cache for the whole chunk in ONE submit; any ineligibility falls back to the legacy loop.
+        #[cfg(not(target_arch = "wasm32"))]
+        if crate::llm_bench::resident_prefill_enabled() {
+            if self
+                .dispatch_prefill_chunk_resident(
+                    index,
+                    &batch_hidden[..],
+                    emb_dim,
+                    n_tokens,
+                    batch_start_token_idx,
+                    max_layers,
+                )
+                .is_some()
+            {
+                crate::llm_bench::record_resident_prefill_hit();
+                return true;
+            }
+            crate::llm_bench::record_resident_prefill_fallback();
+        }
         let limit = if max_layers == 0 {
             n_layer
         } else {

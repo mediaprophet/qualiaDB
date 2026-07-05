@@ -200,6 +200,60 @@ trivial equality would hide a W1 failure"
     println!("[a1d] PASS — token-identical; resident {resident_tok:.2} vs legacy {legacy_tok:.2} tok/s");
 }
 
+/// a3a (W3) — the resident single-fence-per-chunk prefill arena must populate a KV cache that
+/// decodes to IDENTICAL text as the legacy per-layer + per-token prefill path. Only the prefill
+/// path differs between the two runs (decode is the same resident path both times), so this
+/// isolates the batched arena. Verified with the int8 KV cache both ON (default) and OFF, since the
+/// arena's K/V writes flow through the same `fused_attention.wgsl` quantize/dequantize branch.
+/// The prompt is long enough (~40 tokens) to exercise a genuinely batched prefill chunk (B > 1).
+/// Run isolated: `cargo test -p qualia-core-db --release --test llm_bench_a0 a3a -- --nocapture --test-threads=1`.
+#[test]
+fn a3a_prefill_arena_matches_legacy_text() {
+    use qualia_core_db::llm_bench::{
+        decode_with_metrics_blocking, reset_resident_prefill_counts, resident_prefill_counts,
+        set_kv_int8, set_resident_prefill,
+    };
+    let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[a3a] model absent — skipping prefill-arena differential");
+        return;
+    };
+    let model = path.to_string_lossy().to_string();
+    let prompt = "The history of computing spans many centuries, beginning with simple counting \
+tools and evolving through mechanical calculators, punch-card tabulators, vacuum-tube machines, and \
+finally the integrated-circuit processors that power the devices used around the world today.";
+
+    for &int8 in &[true, false] {
+        set_kv_int8(int8);
+
+        set_resident_prefill(false);
+        let (legacy, legacy_tok) =
+            decode_with_metrics_blocking(&model, prompt, 24).expect("legacy prefill decode");
+
+        reset_resident_prefill_counts();
+        set_resident_prefill(true);
+        let (resident, resident_tok) =
+            decode_with_metrics_blocking(&model, prompt, 24).expect("resident prefill decode");
+        let (hits, fallbacks) = resident_prefill_counts();
+        set_resident_prefill(false);
+
+        println!("[a3a int8={int8}] legacy   : {legacy_tok:.2} tok/s | {legacy:?}");
+        println!("[a3a int8={int8}] resident : {resident_tok:.2} tok/s | {resident:?}");
+        println!("[a3a int8={int8}] resident-prefill path: {hits} hits / {fallbacks} fallbacks");
+        // Path-visibility guard: if the arena went Ineligible, both runs took the legacy prefill and
+        // equality would be trivial — surface that as a W3 failure rather than a false pass.
+        assert!(
+            hits > 0,
+            "[a3a int8={int8}] resident-prefill never ran (plan ineligible / fell back {fallbacks}x)"
+        );
+        assert_eq!(
+            legacy, resident,
+            "[a3a int8={int8}] resident prefill arena diverged from the legacy KV/decode"
+        );
+    }
+    set_kv_int8(true); // restore the process default
+    println!("[a3a] PASS — resident prefill KV byte-identical to legacy (int8 ON and OFF)");
+}
+
 /// a2a (W2) — the exact sampler is deterministic under a fixed seed: two runs with the same seed
 /// must produce identical text; a different seed should diverge (reported, not asserted — a tiny
 /// model on a short prompt can coincide). Also asserts the sampled path actually ran.
