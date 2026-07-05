@@ -163,6 +163,10 @@ pub use inference::ternary_gpu;
 pub use inference::topk;
 pub use inference::sampler;
 pub use inference::prompt_lookup;
+// W7: GPU thermal/power telemetry + auto-cap governor (native-only). Exposes the UI-reachable mode
+// switch (`set_gpu_auto_cap` / `gpu_auto_cap_enabled`) and `sample_gpu_thermal()` telemetry.
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::thermal_telemetry;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::topk_gpu;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]

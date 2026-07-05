@@ -1078,6 +1078,15 @@ impl LocalLlmAgent {
                         break;
                     }
 
+                    // W7 — periodic GPU thermal check during sustained decode: recommends a TDP cap,
+                    // and (when the auto-cap user option is on + a real NVML governor is present)
+                    // applies it under sustained Critical, restoring on cool-down. Cheap NVML read
+                    // every 32 tokens; no-op without the `nvml` feature or an NVIDIA card.
+                    #[cfg(not(target_arch = "wasm32"))]
+                    if step > 0 && step % 32 == 0 {
+                        crate::inference::thermal_telemetry::thermal_tick();
+                    }
+
                     // W6a — prompt-lookup speculative decode (default OFF, exact-output). Draft the
                     // next few tokens by n-gram lookup, verify them in ONE batched forward, and emit
                     // the longest greedily-agreeing prefix + the model's own correction token. Only

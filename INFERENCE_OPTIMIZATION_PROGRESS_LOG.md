@@ -517,3 +517,25 @@ that DOES cap under sustained Critical, that's a direction call — say the word
 
 **Next:** kernel/shader optimization (the peak-tok/s lever) or the still-gated W5b (eval corpus) / W8
 (wgpu #9741). W7 build with `--features nvml`.
+
+## 2026-07-06 — W7 addendum: auto-cap enforcement as a user option (default ON, Timothy)
+
+Per Timothy: enforcement should be a user option, ON by default when there's an NVIDIA card, and
+UI-reachable. Added to `inference/thermal_telemetry.rs`:
+- `QUALIA_LLM_GPU_AUTO_CAP` toggle (default ON; effective only when a real NVML governor is present).
+  UI-reachable 3 ways like spec-decode: env / `set_gpu_auto_cap(bool)` / `gpu_auto_cap_enabled()`;
+  re-exported at `qualia_core_db::thermal_telemetry`.
+- `decide_thermal_action(status, streak, auto_cap, capped) -> ThermalAction` — pure, unit-tested
+  decision with hysteresis: caps only on SUSTAINED Critical (`CRITICAL_DWELL=3` checks), holds through
+  Warm, restores the original limit on cool-down to Cool. Off ⇒ recommend-only.
+- `NvmlThermalGovernor.tick()` does sample→decide→apply/restore; a failed apply (no admin) degrades to
+  recommend-only + a log line. `thermal_tick()` (resident governor) is called every 32 decode tokens
+  from the decode loop, so it protects during sustained inference (not a governor that never fires).
+- Governance: it only ever REDUCES power under heat, is reversible, and is user-toggleable — a
+  protective default the principal chose for the off-grid target (human-centric-control norm).
+
+**Status: code-complete; lib compiles green with `--features nvml` (EXIT 0). The auto-cap unit tests
+could not RUN this pass — a CG lane unit test (`point_location.rs` `SlabEdge.face_below`, E0609) breaks
+the shared test binary (flagged in NOTICES, not mine to fix). The earlier smoke test already proved the
+live NVML read path on the A2000; the new logic type-checks and its decision fn is pure. Re-run the
+thermal tests once the CG test compiles.**
