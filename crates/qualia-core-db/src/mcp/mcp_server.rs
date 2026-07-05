@@ -113,8 +113,8 @@ fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
         },
         McpToolDescriptor {
             name: "llm_infer",
-            description: "Run local GGUF inference with caller prompt and optional model_path.",
-            input_schema: r#"{"type":"object","required":["prompt"],"properties":{"prompt":{"type":"string"},"model_path":{"type":"string"},"graph_context":{"type":"string"}}}"#,
+            description: "Run local GGUF inference. Greedy by default. Optional exact seeded sampling: pass `sampler_cbor`, a hex-encoded CBOR map of SamplerConfig {temperature, top_k, top_p, repeat_penalty, freq_penalty, presence_penalty, penalty_window, seed}; temperature<=0 or absent ⇒ greedy.",
+            input_schema: r#"{"type":"object","required":["prompt"],"properties":{"prompt":{"type":"string"},"model_path":{"type":"string"},"graph_context":{"type":"string"},"sampler_cbor":{"type":"string","description":"hex-encoded CBOR map of SamplerConfig"}}}"#,
         },
         McpToolDescriptor {
             name: "llm_chat",

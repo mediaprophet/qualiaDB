@@ -1,6 +1,6 @@
 //! Full implementations for MCP tools that previously returned `tool_not_ready()`.
 
-use super::mcp_tool_impls::{parse_quin_slice, parse_tool_args};
+use super::mcp_tool_impls::{hex_decode, parse_quin_slice, parse_tool_args};
 use super::McpSystemError;
 use crate::NQuin;
 use serde_json::{json, Value};
@@ -216,9 +216,33 @@ pub fn llm_infer(args: &[u8]) -> Result<String, McpSystemError> {
         return Err(McpSystemError::InvalidParameters);
     }
 
+    // W2: optional exact sampling. The sampler config rides as a CBOR map payload (the project's
+    // CBOR-first substrate) hex-encoded in the `sampler_cbor` field — extracted with the existing
+    // JSON string helper, decoded via `SamplerConfig::from_cbor` (same envelope pattern as
+    // `input_hex`). Malformed/absent ⇒ greedy. Installed only for THIS call, then restored so it
+    // never leaks to another caller.
+    let sampler_cbor = json_str(&v, "sampler_cbor", "");
+    let sampler_cfg = if sampler_cbor.is_empty() {
+        None
+    } else {
+        hex_decode(sampler_cbor)
+            .ok()
+            .as_deref()
+            .and_then(crate::sampler::SamplerConfig::from_cbor)
+            .filter(|c| !c.is_greedy())
+    };
+    let sampler_installed = sampler_cfg.is_some();
+    if sampler_installed {
+        crate::llm_bench::set_sampler_config(sampler_cfg);
+    }
+
     let agent = crate::llm_agent::LocalLlmAgent::new("did:qualia:mcp-agent", &model_path);
     let (text, provenance, tokens, semantic_quin) =
         agent.infer_local_model_streaming(prompt, graph_context, None::<fn(String)>);
+
+    if sampler_installed {
+        crate::llm_bench::set_sampler_config(None);
+    }
 
     let payload = json!({
         "text": text,
@@ -226,6 +250,7 @@ pub fn llm_infer(args: &[u8]) -> Result<String, McpSystemError> {
         "provenanceHashes": provenance,
         "semanticQuin": semantic_quin.map(|q| quin_to_json(&q)),
         "modelPath": model_path,
+        "sampled": sampler_installed,
     });
     serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
 }

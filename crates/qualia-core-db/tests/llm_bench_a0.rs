@@ -182,6 +182,78 @@ trivial equality would hide a W1 failure"
     println!("[a1d] PASS — token-identical; resident {resident_tok:.2} vs legacy {legacy_tok:.2} tok/s");
 }
 
+/// a2a (W2) — the exact sampler is deterministic under a fixed seed: two runs with the same seed
+/// must produce identical text; a different seed should diverge (reported, not asserted — a tiny
+/// model on a short prompt can coincide). Also asserts the sampled path actually ran.
+/// Run: `cargo test -p qualia-core-db --release --test llm_bench_a0 a2a -- --nocapture --test-threads=1`.
+#[test]
+fn a2a_sampler_deterministic() {
+    use qualia_core_db::llm_bench::{decode_sampled_blocking, sampled_token_count, reset_sampled_token_count};
+    use qualia_core_db::sampler::SamplerConfig;
+    let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[a2a] model absent — skipping sampler determinism");
+        return;
+    };
+    let model = path.to_string_lossy().to_string();
+    let prompt = "Once upon a time, there was a";
+    let cfg = |seed: u64| SamplerConfig {
+        temperature: 0.8,
+        top_k: 40,
+        top_p: 0.95,
+        repeat_penalty: 1.1,
+        seed,
+        ..Default::default()
+    };
+
+    reset_sampled_token_count();
+    let (a, _) = decode_sampled_blocking(&model, prompt, 24, cfg(1234)).expect("sampled a");
+    let ran = sampled_token_count();
+    let (b, _) = decode_sampled_blocking(&model, prompt, 24, cfg(1234)).expect("sampled b");
+    let (c, _) = decode_sampled_blocking(&model, prompt, 24, cfg(9876)).expect("sampled c");
+
+    println!("[a2a] seed 1234 run 1: {a:?}");
+    println!("[a2a] seed 1234 run 2: {b:?}");
+    println!("[a2a] seed 9876      : {c:?}");
+    println!("[a2a] sampled tokens on first run: {ran}");
+    assert!(ran > 0, "[a2a] sampler path never ran — full-logits readback failed or greedy leaked");
+    assert_eq!(a, b, "same seed must reproduce identical text");
+    if a == c {
+        println!("[a2a] NOTE: seed 9876 coincided with 1234 (small model / short prompt) — not asserted");
+    }
+    println!("[a2a] PASS — deterministic under fixed seed, sampler path exercised");
+}
+
+/// a2b (W2) — de-looping demonstration (REPORTED, not asserted; quality claims stay honest). Decode
+/// the same prompt greedy vs sampled-with-repetition-penalty and print unique-word ratios. Greedy is
+/// prone to repetition collapse; the sampler with a penalty should raise the unique-word fraction.
+#[test]
+fn a2b_sampler_deloops_report() {
+    use qualia_core_db::llm_bench::{decode_sampled_blocking, decode_with_metrics_blocking};
+    use qualia_core_db::llm_eval::unique_word_ratio;
+    use qualia_core_db::sampler::SamplerConfig;
+    let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[a2b] model absent — skipping de-loop report");
+        return;
+    };
+    let model = path.to_string_lossy().to_string();
+    let prompt = "List some words: apple apple apple";
+    let (greedy, _) = decode_with_metrics_blocking(&model, prompt, 48).expect("greedy");
+    let cfg = SamplerConfig {
+        temperature: 0.8,
+        top_k: 40,
+        top_p: 0.95,
+        repeat_penalty: 1.3,
+        freq_penalty: 0.3,
+        penalty_window: 64,
+        seed: 7,
+        ..Default::default()
+    };
+    let (sampled, _) = decode_sampled_blocking(&model, prompt, 48, cfg).expect("sampled");
+    println!("[a2b] greedy  (uniq {:.2}): {greedy:?}", unique_word_ratio(&greedy));
+    println!("[a2b] sampled (uniq {:.2}): {sampled:?}", unique_word_ratio(&sampled));
+    println!("[a2b] (reported only — sampler quality is empirical, not gated)");
+}
+
 /// A1b DISCRIMINATOR: boot a **verbatim** (non-ternary) P64 natively and verify it decodes
 /// COHERENTLY. This isolates the native P64-boot wiring (synthetic index + tokenizer-section +
 /// resident logits + the attention/embed/output hot path) from the ternary FFN quantization. If

@@ -53,6 +53,8 @@ pub mod ternary;
 pub mod ternary_gpu;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod topk;
+// W2: exact CPU sampling chain (pure, wasm-safe — no GPU, no `rand`, no file I/O).
+pub mod sampler;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod topk_gpu;
 // OMP sparse KV-cache decomposition builds on `crate::solvers` (dense linear

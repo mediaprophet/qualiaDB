@@ -133,6 +133,25 @@ pub fn reset_resident_path_counts() {
     RESIDENT_FALLBACKS.store(0, Ordering::Relaxed);
 }
 
+// ── W2/W9: sampled-token counter ───────────────────────────────────────────────
+static SAMPLED_TOKENS: AtomicU64 = AtomicU64::new(0);
+
+/// Decode loop: the exact CPU sampler produced this token (non-greedy path).
+#[inline]
+pub fn record_sampled_token() {
+    SAMPLED_TOKENS.fetch_add(1, Ordering::Relaxed);
+}
+/// Sampled tokens since the last reset.
+#[inline]
+pub fn sampled_token_count() -> u64 {
+    SAMPLED_TOKENS.load(Ordering::Relaxed)
+}
+/// Reset the sampled-token counter.
+#[inline]
+pub fn reset_sampled_token_count() {
+    SAMPLED_TOKENS.store(0, Ordering::Relaxed);
+}
+
 // ── A1b ternary-FFN toggle (D3/D7) ────────────────────────────────────────────
 // Additive, default-OFF: when a `.q42` ternary container is booted, routes its FFN
 // GEMMs through the resident 2-bit GPU kernel (`TernaryFfnResident`). OFF runs the
@@ -247,6 +266,28 @@ pub fn resident_decode_enabled() -> bool {
         Some("1") | Some("true") => true,
         _ => RESIDENT_DECODE.load(Ordering::Relaxed),
     }
+}
+
+// ── W2: exact sampler config ──────────────────────────────────────────────────
+// Process-global sampler config, read ONCE at decode start (like the decode budget). `None` ⇒
+// greedy argmax (the pre-W2 default; a1a/a1c/a1d byte-identical). `Some(cfg)` with cfg.temperature
+// > 0 activates the CPU sampling chain in `crate::sampler`. Set per-request by the host/MCP layer.
+static SAMPLER_CONFIG: Mutex<Option<crate::sampler::SamplerConfig>> = Mutex::new(None);
+
+/// Install the decode sampler config (`None` restores greedy argmax).
+#[inline]
+pub fn set_sampler_config(cfg: Option<crate::sampler::SamplerConfig>) {
+    if let Ok(mut g) = SAMPLER_CONFIG.lock() {
+        // A greedy config is equivalent to None — normalize so the decode loop can skip the
+        // full-logits readback entirely when nothing non-greedy is requested.
+        *g = cfg.filter(|c| !c.is_greedy());
+    }
+}
+
+/// The active decode sampler config, if a non-greedy one is installed.
+#[inline]
+pub fn sampler_config() -> Option<crate::sampler::SamplerConfig> {
+    SAMPLER_CONFIG.lock().ok().and_then(|g| *g)
 }
 
 // ── Phase 3: FFN fusion toggle ────────────────────────────────────────────────
@@ -1226,6 +1267,21 @@ pub fn decode_with_metrics_blocking(
         .build()
         .map_err(|e| e.to_string())?;
     rt.block_on(async { decode_with_metrics(model_path, prompt, decode_tokens) })
+}
+
+/// W2: decode with the exact CPU sampler installed for the duration of the call. Returns
+/// `(text, tok/s)`. Restores greedy (`None`) afterwards so it never leaks into other tests.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn decode_sampled_blocking(
+    model_path: &str,
+    prompt: &str,
+    decode_tokens: u32,
+    cfg: crate::sampler::SamplerConfig,
+) -> Result<(String, f64), String> {
+    set_sampler_config(Some(cfg));
+    let out = decode_with_metrics_blocking(model_path, prompt, decode_tokens);
+    set_sampler_config(None);
+    out
 }
 
 // ── Reporting ─────────────────────────────────────────────────────────────────

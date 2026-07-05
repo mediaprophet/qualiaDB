@@ -1118,7 +1118,7 @@ pub fn ml_inference(args: &[u8]) -> Result<String, McpSystemError> {
     .to_string())
 }
 
-fn hex_decode(s: &str) -> Result<Vec<u8>, McpSystemError> {
+pub(crate) fn hex_decode(s: &str) -> Result<Vec<u8>, McpSystemError> {
     let s = s.trim();
     if s.len() % 2 != 0 {
         return Err(McpSystemError::InvalidParameters);

@@ -1036,6 +1036,14 @@ impl LocalLlmAgent {
                 let t_decode = std::time::Instant::now();
                 // A1a: GPU top-1 decode path toggle (default-on; QUALIA_LLM_GPU_TOPK / set_gpu_topk).
                 let gpu_topk_enabled = crate::llm_bench::gpu_topk_enabled();
+                // W2: exact CPU sampler. `None` ⇒ greedy argmax (pre-W2 byte-identical path). When
+                // active, decode uses the legacy forward (leaves the normed hidden in `emb_buf`),
+                // reads back the FULL logit vector, and runs the penalty/temp/top-k/top-p chain.
+                #[cfg(not(target_arch = "wasm32"))]
+                let mut sampler = crate::llm_bench::sampler_config().map(crate::sampler::SamplerState::new);
+                #[cfg(target_arch = "wasm32")]
+                let mut sampler: Option<crate::sampler::SamplerState> = None;
+                let mut sampler_logits: Vec<f32> = Vec::new();
                 // Decode-profiler (gated): one-shot empty submit→wait baseline on the SAME device, so
                 // the bench can separate per-token fence latency from real kernel compute time.
                 #[cfg(not(target_arch = "wasm32"))]
@@ -1146,6 +1154,7 @@ impl LocalLlmAgent {
                             #[cfg(not(target_arch = "wasm32"))]
                             let resident_hit = if gpu_topk_enabled
                                 && sieve_mask.is_none()
+                                && sampler.is_none()
                                 && TEST_TRANSFORMER_LAYER_CAP == 0
                             {
                                 let t_res = std::time::Instant::now();
@@ -1195,11 +1204,52 @@ impl LocalLlmAgent {
                             }
                             // Decode-profiler: time the output projection (argmax / top-k).
                             let t_out = std::time::Instant::now();
+                            // W2: exact sampling — read back the FULL logit vector for this token and
+                            // run the CPU chain. Only when a non-greedy sampler is installed; on any
+                            // readback failure, `sampled` stays None and the greedy paths below run
+                            // (never a silent hang). The legacy forward above left the normed hidden
+                            // in `emb_buf`, so the projection input is correct.
+                            #[cfg(not(target_arch = "wasm32"))]
+                            let sampled: Option<(usize, f32)> = if let Some(s) = sampler.as_mut() {
+                                let vocab = idx
+                                    .logits_projection_info()
+                                    .map(|i| QTensorEngine::matmul_dims(i).1)
+                                    .unwrap_or(0);
+                                if vocab > 0 {
+                                    if sampler_logits.len() < vocab {
+                                        sampler_logits.resize(vocab, 0.0);
+                                    }
+                                    // Existing chunked projection; `written == vocab` iff it produced
+                                    // REAL logits (else it degraded to copying hidden → not sampleable,
+                                    // so we fall through to the greedy paths rather than sample garbage).
+                                    let written = engine.dispatch_output_logits_into(
+                                        idx,
+                                        &emb_buf[..emb_dim],
+                                        emb_dim,
+                                        &mut sampler_logits[..vocab],
+                                    );
+                                    if written == vocab {
+                                        let tok = s.sample(&mut sampler_logits[..vocab], &ctx);
+                                        Some((tok as usize, sampler_logits[tok as usize]))
+                                    } else {
+                                        None
+                                    }
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            };
+                            #[cfg(target_arch = "wasm32")]
+                            let sampled: Option<(usize, f32)> = None;
+
                             // A1a: GPU top-1 path (additive, default-on; non-sieve only in v1).
                             // Returns the argmax token via the on-GPU block reduction; falls
                             // through to the existing argmax path if disabled or on any failure — the
-                            // working path is never bypassed.
-                            let topk_hit = if resident_hit.is_some() {
+                            // working path is never bypassed. Skipped when sampling produced a token.
+                            let topk_hit = if sampled.is_some() {
+                                None
+                            } else if resident_hit.is_some() {
                                 resident_hit
                             } else if gpu_topk_enabled && sieve_mask.is_none() {
                                 engine.dispatch_output_top1_chunked(
@@ -1210,7 +1260,10 @@ impl LocalLlmAgent {
                             } else {
                                 None
                             };
-                            let out_sel = if let Some(item) = topk_hit {
+                            let out_sel = if let Some(sel) = sampled {
+                                crate::llm_bench::record_sampled_token();
+                                sel
+                            } else if let Some(item) = topk_hit {
                                 crate::llm_bench::record_topk_hit();
                                 (item.best_token_id as usize, item.max_logit)
                             } else if let Some(argmax) = engine.dispatch_output_argmax_chunked(

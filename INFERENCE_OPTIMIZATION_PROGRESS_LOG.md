@@ -123,3 +123,42 @@ task in my lane), or (ii) relax a1a to accept documented near-ties. Recommend (i
 **Next:** commit W1; then W2 (exact sampler — pure capability, independent of the perf question) or
 W3 (prefill arena — now the dominant fence source, and where TTFT lives). Recommend W3 next since
 W1 just made prefill the bottleneck, but W2 is the bigger *capability* unlock. Timothy's steer.
+
+## 2026-07-05 — W2 DONE: exact seeded sampler (capability/functionality unlock)
+
+**Status: done. Greedy path byte-identical (a1d still green); sampling deterministic + demonstrably de-loops.**
+
+**What was built:**
+- NEW `inference/sampler.rs` — pure, wasm-safe, GPU-free CPU sampling chain: repetition/frequency/
+  presence penalties (over a penalty window of prior context) → temperature → top-k → top-p →
+  seeded categorical draw. Self-contained SplitMix64 PRNG (no `rand`, deterministic, wasm-safe).
+  **`temperature <= 0` hard-short-circuits to argmax BEFORE any penalty/filter** → greedy is
+  bit-identical to the pre-W2 path. 9/9 unit tests (greedy=argmax, seed determinism, seed
+  divergence, top_k=1=argmax, repeat/presence penalty behaviour, top_p head-only, greedy-ignores-
+  penalties, CBOR round-trip + malformed-rejects).
+- Full-logits readback: **reused the existing** `gguf_bridge/async_dispatch.rs::dispatch_output_logits_into`
+  (§13 — did not duplicate; deleted a duplicate I'd started). Discriminates real logits via
+  `written == vocab` (else degraded → falls through to greedy, never samples garbage).
+- Decode-loop wiring (`inference_agent.rs`): non-greedy sampler forces the legacy forward (which
+  leaves the normed hidden in `emb_buf`), reads full logits, samples over `ctx`. Resident/top-1
+  gated with `sampler.is_none()` so greedy is untouched.
+- Config transport = **CBOR, not ad-hoc JSON** (Timothy's steer — memory `feedback-cbor-ld-payloads-
+  not-adhoc-json`): `SamplerConfig` derives serde + `to_cbor/from_cbor` (ciborium); the `llm_infer`
+  MCP tool takes one `sampler_cbor` hex field decoded via the shared `hex_decode` helper (the
+  `input_hex` precedent) — no `json_f64` added. Schema advertises the single CBOR field.
+- W9 counter `record_sampled_token` + `decode_sampled_blocking` bench helper.
+
+**Measured results (SmolLM2-360M Q8, A2000):**
+- a1d GREEN (greedy resident==legacy token-identical, 24/24 resident hits) — W2 did NOT disturb greedy.
+- a2a GREEN: seed 1234 reproduces identical text across runs; seed 9876 diverges to a different
+  coherent continuation; 24/24 sampled tokens (path exercised, not a silent greedy leak).
+- a2b (reported, not gated): greedy collapsed to "apple apple apple…" (**uniq 0.02**); sampled with
+  repeat+freq penalty produced varied text and terminated with `<|im_end|>` (**uniq 1.00**). The
+  documented greedy repetition-collapse is fixed by the sampler.
+
+**⚑ Where I need the human:** none this step. (Full CBOR-LD term-coding of the config via the Q42
+lexicon would need `q42:` sampler vocabulary COINED — a Timothy-reserved act; the plain-CBOR map is
+the right weight for now, and the codec seam drops into full-LD later if he wants it.)
+
+**Next:** W3 (prefill param-arena — the now-dominant fence source + TTFT) is the natural continuation;
+W4 (DX12 re-test, cheap now) also queued. Task #14 (pre-existing a1a near-tie) remains low-priority.
