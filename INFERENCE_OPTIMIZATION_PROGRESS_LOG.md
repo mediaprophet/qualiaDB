@@ -410,3 +410,110 @@ every layer's batched forward into ONE encoder / ONE submit / ONE fence.
 **Next:** W6a-verify (now unblocked — extend the arena to emit per-position argmax for draft
 acceptance), or kernel/shader optimization (the real steady-state tok/s lever on this compute-bound
 box). W5b still ⚑ needs your eval corpus; W8 still externally gated on wgpu #9741.
+
+## 2026-07-05 — W6a increment 1: batched speculative-verify primitive DONE (a6 green B=1..6)
+
+**Status: increment 1 DONE — the batched verify forward is correctness-verified; decode-loop wiring (increment 2) next.**
+
+Speculative decode's substance is verifying γ drafts in ONE forward. Built the primitive:
+`gguf_bridge/verify_arena.rs::verify_draft_batch(tokens, start_pos)` runs one batched resident
+forward over B≤16 consecutive positions (the W3 batched per-layer encode) + the output tail (output
+RMSNorm → chunked logits GEMV), reads back the B×vocab logit block once, and returns the greedy
+argmax at every position. Side effect: populates the KV cache for the accepted prefix (no rollback
+pass needed — rejected positions are overwritten by the next real decode). int8 KV rides the same
+`fused_attention` branch for free.
+
+**Verified (`a6_primitive`, SmolLM2-360M Q8, A2000):** batched per-position argmax == exact sequential
+per-token forward+argmax across **B=1..6** (`[2,198,1,520,9531,198]` both ways). Both sides take a
+full-logit CPU argmax, so — unlike a1a — there is no top-k tie-break gap.
+
+**Four bugs found+fixed via the gate (honest record):** (1) chunk logits uniform bound at the raw
+slot index not `slot*SLOT` → wgpu alignment panic; (2) the per-call full-scratch upload zeroed the
+chunk GEMM params (only `n_batch` was patched into zero scratch) → all-zero logits; (3) probe: plain
+`load_gguf` doesn't upload the resident logits projection (only the residency-mount path does) — call
+`mc8_upload_resident_logits` explicitly; (4) probe: `get_kv_cache_cpu` returns the CPU mirror (NOT
+synced from GPU KV writes), so snapshot/restore wiped the prefix — removed it (the reference decode
+never writes the prefix, so it stays valid). (1) and (2) were real `verify_arena` bugs; a3a doesn't
+exercise the tail, so a6 was needed to catch them. Commits: 96e78984 (primitive), 8b455546 (fixes).
+
+**⚑ Where I need the human:** none this step.
+
+**Next — increment 2:** wire `verify_draft_batch` into the `inference_agent.rs` decode loop behind
+`QUALIA_LLM_SPEC_DECODE` (default OFF): prompt-lookup `propose` → verify → accept the agreeing prefix,
+emitting each accepted token through the existing Sentinel/sieve/EOS/stream path; `a6a` gate = decode
+text bit-identical to greedy on a repetitive prompt with accept-count > 0. Honest: the tok/s win is
+content-dependent (repetitive text), ~zero on novel prose.
+
+## 2026-07-05 — W6a increment 2: speculative decode WIRED + a6a green (ships opt-in, default OFF)
+
+**Status: DONE (opt-in) — prompt-lookup speculative decode is exact-output and delivers a large,
+real decode-tok/s win on repetitive text; ships default OFF.**
+
+Wired `verify_draft_batch` into the `inference_agent.rs` decode loop behind `QUALIA_LLM_SPEC_DECODE`
+(default OFF). Per step (when no sieve/sampler/route active): prompt-lookup `propose` → verify the draft
+in ONE batched forward → accept the longest greedily-agreeing prefix + the model's correction token,
+emitting each through the SAME path as normal tokens (Sentinel `Logit` + out_ids/ctx/stream/EOS).
+`verify_draft_batch` also returns per-position max logits (for the Sentinel anomaly flag). No KV
+rollback: rejected positions are overwritten by the next decode. Budget held via `out_ids.len() >=
+gen_budget`. Counters `spec_decode_counts()`.
+
+**Measured (`a6a`, SmolLM2-360M Q8, A2000, repetitive prompt, 48 tokens):**
+- **Exact-output: bit-identical to greedy** (48/48 draft tokens accepted) — verified against a
+  consistent CPU-argmax baseline (resident + GPU top-1 off for both runs).
+- **Speedup: 50.75 vs 4.15 tok/s (~12×) with legacy forwards**; earlier run (default resident forwards)
+  showed **48.20 vs 14.04 tok/s (~3.4×)**. The win is the amortization of several tokens per forward —
+  a *real* steady-state win on this compute-bound box (unlike the latent fence wins), on repetitive /
+  quoting / structured / code text.
+
+**Honest caveats (why opt-in):** (1) verify selects with full-logit **CPU argmax**; the *default*
+decode uses **GPU top-1**, which differ on rare near-ties (the pre-existing a1a phenomenon) — so
+spec ON ≠ spec OFF under default toggles on those near-ties. Full GPU-top1 transparency (make verify
+match the default selection) is a follow-up. (2) On text where drafts fire but get rejected, a spec
+step pays a batched forward for one token — a slight loss. On novel text the proposer drafts nothing
+(≈zero cost). Net: a clear win when opted in for repetitive/structured workloads; default OFF is the
+safe, honest default.
+
+**⚑ Where I need the human:** direction call only — flip `QUALIA_LLM_SPEC_DECODE` default ON, or keep
+opt-in? (Recommend opt-in until the GPU-top1 transparency follow-up lands.) No blocker.
+
+**Commits:** 96e78984 (primitive), 8b455546 (primitive fixes), 74a6447e (wiring), 08a915b6 (a6a gate).
+
+## 2026-07-06 — W7: real NVML thermal/power governor DONE (detect + recommend, no silent escalation)
+
+**Status: DONE — real GPU temperature/power telemetry + a detect-and-recommend thermal governor;
+opt-in `nvml` feature; verified reading live A2000 telemetry.**
+
+`orchestrator::ThermalGovernor` had only a *simulated* impl (`CalculusThermalGovernor`, a Newton-cooling
+ODE). W7 adds a REAL one backed by NVIDIA NVML (`nvml-wrapper`, which dlopens the driver's NVML at
+runtime — builds without the CUDA SDK).
+
+**Implementation (`inference/thermal_telemetry.rs`, native-only, feature-gated):**
+- `status_for_temp(°C) → ThermalStatus` using the same bands as the simulated governor (Cool ≤65,
+  Warm >65, Critical >85). `GpuThermalSample { temp_c, power_w, power_limit_w, power_min/max_w, status }`.
+- `NvmlThermalGovernor` (impl `ThermalGovernor`): reads real temp/power over GPU 0; `sample()` +
+  `device_label()`.
+- **Policy = detect + RECOMMEND, never silently escalate.** `recommended_power_cap_w()` is advisory
+  (90% of the enforced limit at Warm, 80% at Critical, clamped to the driver's [min,max]; None when
+  Cool). `adjust_policy` only LOGS the recommendation. The SOLE hardware-mutating path,
+  `apply_power_limit_w`, is explicit, privileged (needs admin/root), and **never called automatically**
+  — a human/admin policy must invoke it. In-repo form of the human-centric-control norm for the
+  off-grid / constrained-power target.
+- `sample_gpu_thermal() → Option<GpuThermalSample>` (UI-pollable telemetry) + `open_thermal_governor()`
+  factory (NVML when available, else `NullThermalGovernor`). Both degrade cleanly to
+  "unavailable"/"always Cool" when the `nvml` feature is off or NVML/the driver is absent (non-NVIDIA),
+  so callers never branch on platform.
+- Cargo: `nvml-wrapper = { version = "0.10", optional = true }` (native-only target), feature
+  `nvml = ["dep:nvml-wrapper"]`. NOT in default features — the base build is unaffected.
+
+**Measured (`cargo test --lib --features nvml thermal_telemetry`, A2000):**
+- 3/3 tests pass. Live NVML read: **`Cool, 36°C, 20.9W of a 70W limit (settable 10–70W), rec=None`** —
+  real end-to-end telemetry from the card.
+- Default build (no `nvml`) compiles green with the graceful fallback (lib unaffected → other lanes
+  untouched).
+
+**⚑ Where I need the human:** none. (Enforcement — actually applying a TDP cap — is deliberately left
+as an explicit opt-in you invoke; the governor never auto-throttles. If you want it wired to a policy
+that DOES cap under sustained Critical, that's a direction call — say the word.)
+
+**Next:** kernel/shader optimization (the peak-tok/s lever) or the still-gated W5b (eval corpus) / W8
+(wgpu #9741). W7 build with `--features nvml`.

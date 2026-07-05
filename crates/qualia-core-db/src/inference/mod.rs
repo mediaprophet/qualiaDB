@@ -67,3 +67,8 @@ pub mod sparse_cache;
 // native (no mmap'd files on wasm32).
 #[cfg(not(target_arch = "wasm32"))]
 pub mod thermal_wal;
+
+// W7: real GPU thermal/power telemetry + detect-and-recommend governor (native-only; NVML behind the
+// optional `nvml` feature). The module's own inner cfg makes it empty on wasm32.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod thermal_telemetry;
