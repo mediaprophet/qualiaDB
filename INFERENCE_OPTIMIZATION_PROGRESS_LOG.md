@@ -539,3 +539,36 @@ could not RUN this pass — a CG lane unit test (`point_location.rs` `SlabEdge.f
 the shared test binary (flagged in NOTICES, not mine to fix). The earlier smoke test already proved the
 live NVML read path on the A2000; the new logic type-checks and its decision fn is pure. Re-run the
 thermal tests once the CG test compiles.**
+
+## 2026-07-06 — W8: coopmat (tensor-core) GEMM selection seam DONE (self-activating; execution externally gated)
+
+**Status: DONE (seam) — the inference-side coopmat selection seam is in place and self-activating; the
+actual coopmat EXECUTION is externally gated on the wgpu #9741 release and is already handled by the
+forge's self-activating path. Nothing more this side can do until wgpu ships the fix.**
+
+The forge already carries the complete self-activating coopmat path: `wgsl_forge::gemm_f32_tc` is a
+tiered dispatch (Tier 1 WGSL coopmat → Tier 2 CUDA WMMA → Tier 3 f32 floor) gated on a runtime
+`coopmat_usable()` probe (an 8×8×8 all-ones GEMM; on wgpu 29.0.3 the coopmat multiply returns zeros
+per #9741, so the probe is `false` and the tier is dormant — it self-activates the moment a wgpu
+release / soft-fork carries the fix; a dormant `#[ignore]`d certify test lights up then).
+
+**W8 adds the inference-side seam (`inference/inference_bench.rs`):**
+- `QUALIA_LLM_COOPMAT` toggle (default OFF) + `set_coopmat_gemm` / `coopmat_gemm_enabled`.
+- `coopmat_gemm_usable()` = armed AND the forge probe passes (feature-guarded on `wgsl-forge`; `false`
+  on wgpu 29.0.3, and always `false` on wasm / without the feature).
+- `GemmBackend { Naive, CoopGemv, Coopmat }` + `select_gemm_backend(m,k,n)` — a pure, total,
+  unit-tested selector: Coopmat only when usable AND all dims are 8-multiples (the tensor-core tile —
+  i.e. batched prefill, NOT the m=1 decode GEMV); else CoopGemv when enabled; else Naive.
+- The selector self-activates with the forge probe: no behaviour change on 29.0.3 (never returns
+  Coopmat), and it flips on automatically when the wgpu fix lands + the toggle is armed. Wiring an
+  actual inference-side coopmat kernel into the GEMM dispatch is the remaining bit and is itself gated
+  on that same wgpu release (the m=1 decode GEMV can't use the 8-tile anyway; the win is batched-prefill
+  f32 matmul).
+
+**Verify:** lib compiles green (`cargo check --lib` = EXIT 0). The `gemm_backend_selection_falls_back_
+without_coopmat` unit test compiles but could not RUN this pass — the CG lane's `point_location.rs`
+`SlabEdge.face_below` (E0609) still breaks the shared test binary (flagged in NOTICES, not mine). The
+selector is pure; it will run green once the CG test compiles.
+
+**⚑ Where I need the human:** none — W8's execution is externally gated on the wgpu #9741 release
+(tracked in `docs/WGPU_UPSTREAM_TRACKING.md`); the seam self-activates when it lands.

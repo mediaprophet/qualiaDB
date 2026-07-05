@@ -490,6 +490,80 @@ pub fn coop_gemv_enabled() -> bool {
     }
 }
 
+// ── W8: coopmat (tensor-core) GEMM selection seam ─────────────────────────────
+// Default OFF. The forge already has the self-activating coopmat path
+// (`wgsl_forge::gemm_f32_tc` → `coopmat_usable()` runtime probe): on wgpu 29.0.3 the WGSL coopmat
+// multiply returns zeros (#9741), so `coopmat_usable()` is `false` and the tier stays dormant; it
+// self-activates the moment a wgpu release / soft-fork carries the fix. This toggle is the
+// INFERENCE-side seam: when on AND coopmat is genuinely usable AND the matmul dims fit the 8×8×8 tile
+// (m,n,k multiples of 8 — so batched prefill, not the m=1 decode GEMV), the GEMM backend selector
+// reports `Coopmat`. Until the inference-side coopmat kernel is wired (which needs the wgpu fix), an
+// eligible `Coopmat` selection logs its readiness and falls back to `CoopGemv` — the plumbing is ready
+// and visible, self-activating with the forge. `QUALIA_LLM_COOPMAT=1` arms it.
+static COOPMAT_GEMM: AtomicBool = AtomicBool::new(false);
+
+/// Arm/disarm the coopmat (tensor-core) GEMM selection seam (`QUALIA_LLM_COOPMAT`).
+#[inline]
+pub fn set_coopmat_gemm(on: bool) {
+    COOPMAT_GEMM.store(on, Ordering::Relaxed);
+}
+
+/// Whether the coopmat GEMM seam is armed (env forces either direction; else the flag). Being armed
+/// does not mean coopmat runs — see [`coopmat_gemm_usable`], which also requires the hardware probe.
+#[inline]
+pub fn coopmat_gemm_enabled() -> bool {
+    match std::env::var("QUALIA_LLM_COOPMAT").ok().as_deref() {
+        Some("0") | Some("false") => false,
+        Some("1") | Some("true") => true,
+        _ => COOPMAT_GEMM.load(Ordering::Relaxed),
+    }
+}
+
+/// Whether coopmat is BOTH armed and genuinely usable on this device right now (the forge runtime
+/// probe passes — i.e. the wgpu #9741 fix is present). `false` on wgpu 29.0.3. Feature-guarded: with
+/// `wgsl-forge` off there is no probe, so coopmat is never usable.
+#[inline]
+pub fn coopmat_gemm_usable() -> bool {
+    if !coopmat_gemm_enabled() {
+        return false;
+    }
+    #[cfg(all(feature = "wgsl-forge", not(target_arch = "wasm32")))]
+    {
+        crate::wgsl_forge::coopmat_usable()
+    }
+    #[cfg(not(all(feature = "wgsl-forge", not(target_arch = "wasm32"))))]
+    {
+        false
+    }
+}
+
+/// GEMM backend the inference layer selects for a given matmul shape.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GemmBackend {
+    /// Naive 1-thread/row `main` kernel (the correctness floor / A-B baseline).
+    Naive,
+    /// Cooperative one-workgroup-per-row `coop_gemv` (coalesced reads + shared-mem reduce).
+    CoopGemv,
+    /// WGSL cooperative-matrix (tensor-core) tile — selected only when armed, usable, and the dims
+    /// fit the 8×8×8 tile. Self-activates via the forge when wgpu #9741 lands.
+    Coopmat,
+}
+
+/// Select the GEMM backend for an `m×k×n` matmul: coopmat when armed+usable and all dims are 8-mult
+/// (the tensor-core tile — batched prefill, not the m=1 decode GEMV); else cooperative GEMV when
+/// enabled; else naive. Pure + total, so it is unit-tested without a GPU.
+#[inline]
+pub fn select_gemm_backend(m: usize, k: usize, n: usize) -> GemmBackend {
+    let tile_fits = m % 8 == 0 && k % 8 == 0 && n % 8 == 0 && m.min(k).min(n) > 0;
+    if coopmat_gemm_usable() && tile_fits {
+        GemmBackend::Coopmat
+    } else if coop_gemv_enabled() {
+        GemmBackend::CoopGemv
+    } else {
+        GemmBackend::Naive
+    }
+}
+
 // ── 0.0.21: resident-activation decode toggle ─────────────────────────────────
 // readback happens, after the final layer — replacing the legacy 2 readbacks/layer (each forced by
 // ── #48 correctness path: CPU attention reference ─────────────────────────────
@@ -1651,4 +1725,36 @@ pub fn results_to_table(results: &[BenchResult]) -> String {
         ));
     }
     s
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// W8 — the GEMM backend selector. On wgpu 29.0.3 `coopmat_gemm_usable()` is `false` (the #9741
+    /// probe fails / the seam is disarmed by default), so the selector never returns `Coopmat` here —
+    /// it falls to `CoopGemv`/`Naive` by the coop-GEMV toggle. The coopmat arm self-activates when the
+    /// probe passes (a wgpu release / soft-fork). Also checks the 8×8×8 tile-fit gate.
+    #[test]
+    fn gemm_backend_selection_falls_back_without_coopmat() {
+        set_coopmat_gemm(false); // disarmed → never Coopmat regardless of dims
+        assert!(!coopmat_gemm_usable());
+        set_coop_gemv(true);
+        assert_eq!(select_gemm_backend(16, 16, 16), GemmBackend::CoopGemv);
+        assert_eq!(select_gemm_backend(1, 960, 320), GemmBackend::CoopGemv); // m=1 decode GEMV
+        set_coop_gemv(false);
+        assert_eq!(select_gemm_backend(16, 16, 16), GemmBackend::Naive);
+        // Arming the seam does not force Coopmat on 29.0.3 — the hardware probe still gates it.
+        set_coopmat_gemm(true);
+        assert!(
+            !coopmat_gemm_usable() || select_gemm_backend(16, 16, 16) == GemmBackend::Coopmat,
+            "if usable, an 8-mult matmul selects Coopmat; else it must fall back"
+        );
+        // Non-8-multiple dims never take the coopmat tile even if usable.
+        set_coop_gemv(true);
+        assert_ne!(select_gemm_backend(1, 7, 13), GemmBackend::Coopmat);
+        // Restore defaults.
+        set_coopmat_gemm(false);
+        set_coop_gemv(true);
+    }
 }
