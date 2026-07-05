@@ -509,27 +509,27 @@ fn main(
 ) {
     let lid = local_id.x;
     q_mask_token = wg_id.y;
+    // NOTE: the bounds guards below are WORKGROUP-UNIFORM (derived from `wg_id` + uniform `params`,
+    // identical for all threads in the group), and the grid is exactly sized so they never actually
+    // exclude a launched workgroup. They are written as `if`-guards, NOT early `return`s, so that the
+    // workgroup-collective `workgroupBarrier()`s inside the called functions are reached inside a
+    // uniform branch. DX12's FXC (D3DCompile) rejects a barrier that follows an early `return` in a
+    // group-varying-looking path (error X3663); a barrier inside an `if` on `wg_id`/params is uniform
+    // and compiles on FXC, DXC, SPIR-V and Metal alike. Do NOT reintroduce the early returns.
     if params.proj_kind == 1u || params.proj_kind == 2u {
         let pair = wg_id.x;
         let token_in_batch = pair / params.n_kv_head;
         let kv_head = pair % params.n_kv_head;
-        if token_in_batch >= params.num_tokens_in_batch || kv_head >= params.n_kv_head {
-            return;
+        if token_in_batch < params.num_tokens_in_batch && kv_head < params.n_kv_head {
+            let abs_pos = params.batch_start_token_idx + token_in_batch;
+            write_kv_head(kv_head, token_in_batch, abs_pos, params.proj_kind == 1u, lid);
         }
-        let abs_pos = params.batch_start_token_idx + token_in_batch;
-        write_kv_head(kv_head, token_in_batch, abs_pos, params.proj_kind == 1u, lid);
-        return;
-    }
-    if params.proj_kind == 0u {
+    } else if params.proj_kind == 0u {
         let qh = wg_id.x;
-        if qh >= params.n_head {
-            return;
-        }
-        let kv_head = qh / params.q_heads_per_kv;
         let token_ix = select(0u, wg_id.y, params.num_tokens_in_batch > 1u);
-        if token_ix >= params.num_tokens_in_batch {
-            return;
+        if qh < params.n_head && token_ix < params.num_tokens_in_batch {
+            let kv_head = qh / params.q_heads_per_kv;
+            attention_parallel(qh, kv_head, token_ix, lid);
         }
-        attention_parallel(qh, kv_head, token_ix, lid);
     }
 }

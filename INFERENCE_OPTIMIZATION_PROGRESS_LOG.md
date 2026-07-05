@@ -162,3 +162,51 @@ the right weight for now, and the codec seam drops into full-LD later if he want
 
 **Next:** W3 (prefill param-arena — the now-dominant fence source + TTFT) is the natural continuation;
 W4 (DX12 re-test, cheap now) also queued. Task #14 (pre-existing a1a near-tie) remains low-priority.
+
+## 2026-07-05 — W4 ROOT-CAUSED: the DX12 "decode deadlock" is a shader COMPILE failure, not a fence deadlock
+
+**Status: root-caused definitively (the plan's valid-completion bar); fix in progress.**
+
+The long-standing "DX12 decode deadlock" (documented as a 35-min hang, blamed on fence/poll) is
+**not a deadlock**. Guarded re-test with the W1 resident path: full decode still hung >5 min, so
+W1's fence collapse did NOT fix it → the fence theory was wrong. Bisected with `w3_gemm_parity`
+(single submit) on DX12: it does not hang, it **panics at engine init** with a wgpu Validation
+Error — DX12's legacy **FXC (D3DCompile)** HLSL compiler REJECTS `fused_attention.wgsl`:
+
+```
+error X3663: thread sync operation found in varying flow control
+  … local_id / lid_2 / d_5 dependent on potentially varying data; loop dependent on varying data
+```
+
+Naga lowers the WGSL to HLSL where the workgroup reduction barriers (`attention_parallel`, WGSL
+415–460) are reached AFTER per-thread early-`return` guards in `main` (`if qh >= n_head { return }`
+etc.). Those guards are **dynamically uniform** (wg_id-based; the grid is exactly sized so they are
+in fact dead) and legal on Vulkan/SPIR-V — but FXC's conservative static analysis can't prove
+uniformity and refuses to compile. The old code then blocked forever waiting on a pipeline that
+never built → the apparent "hang". **This corrects a mischaracterization that stood since 0.0.23.**
+
+**Fix applied (partial) + refined finding:** removed the early-`return` guards in
+`fused_attention.wgsl::main`, replacing them with workgroup-uniform `if`-guards (behaviorally
+identical — the guards are dead in practice and wg_id is workgroup-uniform; **Vulkan a1c + a1d
+re-verified token-identical, no regression**). This cleared the **X3663** class. FXC then surfaced a
+**deeper X4026** at the reduction barriers: the online-softmax SDPA runs a **per-thread
+varying-length inner loop** (`for logical = start + lid; logical <= abs_pos; += WG_SIZE`) BEFORE the
+tree-reduction barriers. FXC's conservative reconvergence analysis cannot prove all lanes reach the
+post-loop barriers (even though they always do — the loop has no barrier inside and always
+terminates), so it rejects them. **Conclusion: FXC (Direct3D's legacy, deprecated HLSL compiler)
+fundamentally cannot compile this flash-attention-style shader** without an algorithmic rewrite that
+would destroy the key-parallel speedup. SPIR-X (Vulkan), Metal, and **DXC** all accept it.
+
+**⚑ DECISION FOR TIMOTHY — how to enable DX12 (all leave Vulkan the default):**
+- **(A) Switch DX12 to DXC** (`wgpu` `static-dxc` feature → `Dx12Compiler::StaticDxc`): self-contained
+  binary, DX12 works, **cost = larger build + a big DXC build dep**. The §13-aligned modernization
+  (FXC is deprecated). *Recommended if DX12 support is wanted.*
+- **(B) `Dx12Compiler::DynamicDxc`**: loads `dxcompiler.dll` + `dxil.dll` at runtime — no build-size
+  cost, but those DLLs must be present/shipped (deployment concern for edge targets).
+- **(C) Leave DX12 unsupported**, Vulkan-only on Windows (status quo, now correctly *documented* not
+  mysterious). Zero cost.
+- **(D) Rewrite the SDPA** to remove the varying-loop-before-barrier — large, and perf-risky.
+
+The shader hygiene fix (early-returns → uniform if-guards) is kept regardless: it's a correct,
+verified improvement and a prerequisite for the DXC path. **W4 = root-caused + documented + hygiene
+fix landed** (the plan's valid-completion bar); the DXC enablement is gated on Timothy's A/B/C/D call.
