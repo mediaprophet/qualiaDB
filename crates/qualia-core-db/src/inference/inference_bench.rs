@@ -1436,7 +1436,7 @@ pub fn spec_verify_probe_blocking(
     model_path: &str,
     prompt: &str,
     b: usize,
-) -> Result<(Vec<u32>, Vec<u32>), String> {
+) -> Result<(Vec<u32>, Vec<u32>, Vec<u32>), String> {
     use crate::gguf_bridge::QTensorEngine;
     use crate::gguf_sharder::{GgufTensorIndex, GgufTokenizer};
     if !std::path::Path::new(model_path).exists() {
@@ -1445,7 +1445,7 @@ pub fn spec_verify_probe_blocking(
     let model_path = model_path.to_string();
     let prompt = prompt.to_string();
 
-    std::thread::spawn(move || -> Result<(Vec<u32>, Vec<u32>), String> {
+    std::thread::spawn(move || -> Result<(Vec<u32>, Vec<u32>, Vec<u32>), String> {
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
@@ -1542,7 +1542,33 @@ pub fn spec_verify_probe_blocking(
             .verify_draft_batch(&idx, &inputs, p as u32, &mut verify_out, &mut verify_logit)
             .ok_or_else(|| "verify_draft_batch ineligible/failed".to_string())?;
 
-        Ok((reference, verify_out))
+        // Resident-path reference: re-prefill the prefix, then forward each input through the DEFAULT
+        // single-fence resident path (GPU top-1). Isolates verify(batched, CPU argmax) vs
+        // resident(single, GPU top-1) — the crux of the transparency question. u32::MAX marks a
+        // resident-ineligible position.
+        engine.reset_kv_cache();
+        for i in 0..p {
+            let n = idx.dequantize_token_embedding_into(mmap_b, toks[i], &mut emb[..emb_dim]);
+            if n == 0 {
+                return Err("resident-ref prefill embedding failed".into());
+            }
+            let _ = engine.dispatch_transformer_forward(
+                &idx, &mut emb[..emb_dim], emb_dim, &mut sa, &mut sb, i as u32, 0,
+            );
+        }
+        let mut resident_out: Vec<u32> = Vec::with_capacity(b);
+        for (j, &t) in inputs.iter().enumerate() {
+            let n = idx.dequantize_token_embedding_into(mmap_b, t, &mut emb[..emb_dim]);
+            if n == 0 {
+                return Err("resident-ref embedding failed".into());
+            }
+            match engine.dispatch_token_forward_resident(&idx, &emb[..emb_dim], (p + j) as u32) {
+                Some(r) => resident_out.push(r.best_token_id),
+                None => resident_out.push(u32::MAX),
+            }
+        }
+
+        Ok((reference, verify_out, resident_out))
     })
     .join()
     .map_err(|_| "spec-verify probe thread panicked".to_string())?

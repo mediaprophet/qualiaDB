@@ -271,18 +271,29 @@ fn a6_primitive_batched_verify_matches_sequential() {
     let prompt =
         "The quick brown fox jumps over the lazy dog and then keeps running down the road today.";
     // Sweep B=1..6 to localize any divergence (B=1 isolates the tail from batching).
+    let mut resident_matches = true;
     for b in 1..=6usize {
-        let (reference, verify) =
+        let (reference, verify, resident) =
             spec_verify_probe_blocking(&model, prompt, b).expect("verify primitive probe");
-        println!("[a6 B={b}] reference: {reference:?}");
+        println!("[a6 B={b}] legacy-ref: {reference:?}");
         println!("[a6 B={b}] verify   : {verify:?}");
+        println!("[a6 B={b}] resident : {resident:?}");
         assert_eq!(verify.len(), b, "[a6 B={b}] verify returned {} argmaxes", verify.len());
         assert_eq!(
             reference, verify,
             "[a6 B={b}] batched verify per-position argmax diverged from sequential per-token"
         );
+        // Diagnostic (not asserted): does verify match the DEFAULT resident/GPU-top1 selection? If yes
+        // for all B, spec-decode is transparent to the default path (can ship default ON).
+        if resident != verify {
+            resident_matches = false;
+            println!("[a6 B={b}] NOTE: resident (GPU top-1) != verify (CPU argmax) — near-tie / forward ULP");
+        }
     }
-    println!("[a6] PASS — batched verify == sequential per-token argmax across B=1..6");
+    println!(
+        "[a6] PASS — batched verify == sequential per-token argmax across B=1..6 \
+(verify==resident across the sweep: {resident_matches})"
+    );
 }
 
 /// a6a (W6a increment 2) — prompt-lookup speculative decode must emit text BIT-IDENTICAL to greedy
