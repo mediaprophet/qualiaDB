@@ -572,3 +572,23 @@ selector is pure; it will run green once the CG test compiles.
 
 **⚑ Where I need the human:** none — W8's execution is externally gated on the wgpu #9741 release
 (tracked in `docs/WGPU_UPSTREAM_TRACKING.md`); the seam self-activates when it lands.
+
+## 2026-07-06 — Kernel opt: hoist int8 KV reads in the attention SDPA (correct; portable, latent on A2000)
+
+Attention is the profiler's #1 (63% of the forward), memory-bound on the KV reads. On the int8 KV
+path (the default), the SDPA inner loops called `read_k`/`read_v` per element, which **reloaded the
+per-head scale every element (head_dim× per position) and reloaded each packed word 4× (once per
+lane)**. `fused_attention.wgsl` now hoists the scale and reads each packed word ONCE (all 4 lanes) in
+both the score and the V-accumulate loops — **~4× fewer KV loads per position** on the int8 path.
+
+**Bit-identical by construction:** the same `q * (i8·scale)` products are summed in the same d-order
+(the f32 path is untouched). Proven: `a1c` reproduces the exact same coherent text (" young woman
+named Sarah who had always been fascinated by the world of art…") and `a1d` is token-identical.
+
+**Honest measurement:** on the A2000 the decode tok/s (a1d resident 20.42) is **within contention
+noise** of earlier same-session runs (18.7–20.1) — no clean isolated speedup, because the A2000's
+L1/L2 likely already absorbs the redundant reads. This is a correct instruction/load reduction that is
+**latent here and portable** (helps weaker-cache / under-load / larger-context GPUs where the KV reads
+are the real bottleneck). A precise isolated delta would need an A/B shader toggle + multi-run; not
+worth the compute for a likely-small A2000 delta. Committed as a zero-risk correctness-preserving
+reduction of the hottest kernel's work, not as a claimed A2000 tok/s win.

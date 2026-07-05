@@ -440,8 +440,25 @@ fn attention_parallel(qh: u32, kv_head: u32, token_in_batch: u32, lid: u32) {
         }
         let slot = logical % params.max_context;
         var score = 0.0;
-        for (var d = 0u; d < params.head_dim; d = d + 1u) {
-            score = score + q_sh[d] * read_k(slot, kv_head, d);
+        if params.kv_quant == 1u {
+            // int8 fast read: hoist the per-head scale and load each packed word ONCE (all 4 lanes),
+            // instead of reloading the scale every element and each word 4× via `read_k`. Attention is
+            // memory-bound, so this cuts the KV loads ~4× on the (default) int8 path. Bit-identical:
+            // the same `q * (i8 * scale)` products are summed in the same d-order.
+            let kscale = kv_cache[kv8_k_scale_idx(slot, kv_head)];
+            let hd4 = params.head_dim / 4u;
+            for (var wi = 0u; wi < hd4; wi = wi + 1u) {
+                let packed = bitcast<u32>(kv_cache[kv8_k_data_idx(slot, kv_head, wi)]);
+                let base = wi * 4u;
+                score = score + q_sh[base] * (i8_lane(packed, 0u) * kscale);
+                score = score + q_sh[base + 1u] * (i8_lane(packed, 1u) * kscale);
+                score = score + q_sh[base + 2u] * (i8_lane(packed, 2u) * kscale);
+                score = score + q_sh[base + 3u] * (i8_lane(packed, 3u) * kscale);
+            }
+        } else {
+            for (var d = 0u; d < params.head_dim; d = d + 1u) {
+                score = score + q_sh[d] * read_k(slot, kv_head, d);
+            }
         }
         score = score * scale;
         let m_new = max(m_t, score);
@@ -449,8 +466,22 @@ fn attention_parallel(qh: u32, kv_head: u32, token_in_batch: u32, lid: u32) {
         let factor = exp(m_t - m_new);
         m_t = m_new;
         l_t = l_t * factor + w;
-        for (var d = 0u; d < params.head_dim; d = d + 1u) {
-            acc_t[d] = acc_t[d] * factor + w * read_v(slot, kv_head, d);
+        if params.kv_quant == 1u {
+            // int8 fast read (mirror of the K path above): hoist the V scale + read each word once.
+            let vscale = kv_cache[kv8_v_scale_idx(slot, kv_head)];
+            let hd4 = params.head_dim / 4u;
+            for (var wi = 0u; wi < hd4; wi = wi + 1u) {
+                let packed = bitcast<u32>(kv_cache[kv8_v_data_idx(slot, kv_head, wi)]);
+                let base = wi * 4u;
+                acc_t[base] = acc_t[base] * factor + w * (i8_lane(packed, 0u) * vscale);
+                acc_t[base + 1u] = acc_t[base + 1u] * factor + w * (i8_lane(packed, 1u) * vscale);
+                acc_t[base + 2u] = acc_t[base + 2u] * factor + w * (i8_lane(packed, 2u) * vscale);
+                acc_t[base + 3u] = acc_t[base + 3u] * factor + w * (i8_lane(packed, 3u) * vscale);
+            }
+        } else {
+            for (var d = 0u; d < params.head_dim; d = d + 1u) {
+                acc_t[d] = acc_t[d] * factor + w * read_v(slot, kv_head, d);
+            }
         }
     }
 
