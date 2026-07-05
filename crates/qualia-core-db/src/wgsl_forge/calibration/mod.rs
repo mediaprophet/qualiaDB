@@ -25,9 +25,11 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 pub mod corpus;
+pub mod kv_dictionary;
 pub mod package;
 
 pub use corpus::CorpusSpec;
+pub use kv_dictionary::{learn_dictionary, KvDictionary, SparseCode};
 pub use package::Provenance;
 
 use std::path::PathBuf;

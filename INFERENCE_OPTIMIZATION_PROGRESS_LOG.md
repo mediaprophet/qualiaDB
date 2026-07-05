@@ -592,3 +592,29 @@ L1/L2 likely already absorbs the redundant reads. This is a correct instruction/
 are the real bottleneck). A precise isolated delta would need an A/B shader toggle + multi-run; not
 worth the compute for a likely-small A2000 delta. Committed as a zero-risk correctness-preserving
 reduction of the hottest kernel's work, not as a claimed A2000 tok/s win.
+
+## 2026-07-06 — W5b Phase 1: KV-dictionary learner (the "training" algorithm) DONE + validated
+
+The forge's `KvDictionary` learner (the training step Timothy asked about) is built:
+`wgsl_forge/calibration/kv_dictionary.rs` — **MOD (Method of Optimal Directions) + OMP** sparse-coding.
+Learn a per-layer dictionary of `n_atoms` unit atoms; represent each KV vector as a K-sparse combo
+(`k` atom-index/coeff pairs). Pure CPU/f32, deterministic, unit-testable. `encode` (OMP: greedy atom
+pick + least-squares re-solve on the small Gram system), `learn_dictionary` (alternate sparse-code /
+LS dictionary update + dead-atom reseed), `reconstruction_error` (the quality proxy vs int8).
+
+**Validated (`tests/kv_dictionary_learn.rs`, an INTEGRATION test — runs despite the CG lib-test
+breakage):** on 12-subspace 3-sparse data (dict=16, k=3) mean rel recon err **0.134**; k=1 VQ **0.540**
+(so k-sparse beats VQ ~4×); incompressible random data **0.776** (so the metric discriminates, 5.8×
+worse — not vacuous). Learner recovers subspace structure and the quality metric is honest.
+
+**Corpus architecture (Timothy, this session):** the calibration/recalibration corpus is **WordNet
+glosses**, and WordNet already ships as a q42 (`princeton.q42`, a release/RDF-ingest asset, not in git).
+So the corpus source is **SPARQL-over-q42**: `q42_reader::read_q42_quins(princeton.q42)` →
+`daemon_query::execute_sparql_on_graph(gloss_query)` → resolve object literals via the q42 lexicon →
+passages. All APIs verified present. This makes **recalibration a first-class user capability** (query
+their own q42 / edit the query → re-run calibration → re-tuned artifacts, corpus-hash in the provenance).
+
+**Remaining W5b phases:** Phase 2 — the `Q42Sparql` corpus source (build next; runnable once
+`princeton.q42` is fetched); Phase 3 — KV **capture** hook + wire `run_kv_dictionary` (capture → learn
+→ recon-error-vs-int8 report → package), the go/no-go on whether a learned dictionary beats W5a's
+3.77×@+0.05%; Phase 4 (gated on Phase 3) — the runtime (attention reads dictionary-coded KV, ΔPPL-certified).
