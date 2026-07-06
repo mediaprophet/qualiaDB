@@ -18,7 +18,7 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use crate::inference::orchestrator::{NullThermalGovernor, ThermalGovernor, ThermalStatus};
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 // ── Auto-cap mode switch (user option; default ON) ────────────────────────────
 // When ON *and* a real NVML governor is active (i.e. there is an NVIDIA card), the governor
@@ -218,6 +218,7 @@ mod nvml_impl {
     use super::*;
     use nvml_wrapper::enum_wrappers::device::TemperatureSensor;
     use nvml_wrapper::Nvml;
+    use std::sync::atomic::AtomicU32;
 
     /// A real NVML-backed thermal governor over GPU 0. Detect + recommend only; the sole enforcement
     /// path (`apply_power_limit_w`) is explicit, privileged, and never called automatically.
