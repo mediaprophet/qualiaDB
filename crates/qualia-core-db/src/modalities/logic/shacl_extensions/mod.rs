@@ -5,7 +5,7 @@
 //! - [`config`] — client-side configuration shapes (logging, system tray, storage /
 //!   network / tax-recipient / security settings). The opcode builders here are
 //!   off-hot-path (they allocate a `Vec<SlgOpcode>` at config-compile time).
-//! - [`identity`] — human-centric **identity & data-sovereignty** SHACL: identity as
+//! - [`identity`] — human-centric **identity & data-rights** SHACL: identity as
 //!   an enumerated multi-identifier state (never a single definitive identifier),
 //!   decentralized shape-target routing (no central aggregation), real-time severity
 //!   degradation for off-grid partial-subgraph utilization, and Verifiable-Credential

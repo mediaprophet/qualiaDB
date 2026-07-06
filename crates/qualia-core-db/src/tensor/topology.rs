@@ -12,7 +12,7 @@ pub enum TopologyClass {
     Cyclic = 1,
     /// Hyperbolic / Tree (hierarchies, family trees, taxonomies)
     Hyperbolic = 2,
-    /// Sovereign Boundary Cliques / Community Classes
+    /// Self-contained Boundary Cliques / Community Classes
     BoundaryCliques = 3,
 }
 

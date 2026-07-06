@@ -14,7 +14,7 @@
 //!   0     │ 0b0010       │ scaled × 10⁶  │ Inline xsd:decimal literal
 //!   0     │ 0b0011       │ 0 or 1        │ Inline xsd:boolean literal
 //!   0     │ 0b001        │ embedded hash │ SPARQL-Star embedded triple <<s p o>>
-//!   0     │ 0b1000       │ webizen id    │ Sovereign WebID agent identifier
+//!   0     │ 0b1000       │ webizen id    │ Person-controlled WebID agent identifier
 //!   0     │ 0b0101       │ f32 bits      │ Inline xsd:float literal (computed values)
 //!   0     │ 0b0110–0b0111│ reserved      │ Treated as IRI hash (future use)
 //! ```
@@ -50,7 +50,7 @@ pub const INLINE_TAG_BOOLEAN: u64 = 0b011u64 << 60;
 pub const INLINE_TAG_FLOAT: u64 = 0b101u64 << 60;
 /// SPARQL-Star embedded triple tag: indicates the value is a Virtual ID for <<s p o>>
 pub const TAG_EMBEDDED: u64 = 0b001u64 << 60;
-/// Webizen identity tag: indicates the value is a sovereign WebID agent identifier
+/// Webizen identity tag: indicates the value is a person-controlled WebID agent identifier
 /// Uses 0x8 prefix for instant identification without dictionary lookup
 pub const TAG_WEBIZEN: u64 = 0b1000u64 << 60;
 /// Mask over bits 0-59 — the value payload when an inline tag is present.

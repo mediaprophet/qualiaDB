@@ -603,37 +603,42 @@ pub fn dice_similarity(fp_a: &[u64], fp_b: &[u64]) -> f32 {
 
 #[cfg(all(feature = "neon_simd_unroll", target_arch = "x86_64"))]
 pub fn simd_align_x86_64(query: &[u8], target: &[u8]) -> AlignmentScore {
-    #[cfg(target_feature = "avx2")]
-    unsafe {
-        use std::arch::x86_64::*;
-        let min_len = query.len().min(target.len());
-        let mut score = 0i32;
-        let mut i = 0;
-
-        // Exact match fast-path using AVX2 (256-bit / 32-byte chunks)
-        while i + 32 <= min_len {
-            let q_vec = _mm256_loadu_si256(query.as_ptr().add(i) as *const __m256i);
-            let t_vec = _mm256_loadu_si256(target.as_ptr().add(i) as *const __m256i);
-            let cmp = _mm256_cmpeq_epi8(q_vec, t_vec);
-            let mask = _mm256_movemask_epi8(cmp);
-            let matches = mask.count_ones() as i32;
-            let mismatches = 32 - matches;
-
-            score += matches * 2; // match score
-            score -= mismatches * 3; // mismatch score
-            i += 32;
+    if std::is_x86_feature_detected!("avx2") {
+        // SAFETY: the AVX2 probe dominates the isolated kernel call.
+        unsafe { simd_align_x86_64_avx2(query, target) }
+    } else {
+        AlignmentScore {
+            score: align_nucleotide(query, target).score,
         }
+    }
+}
 
-        if i < min_len {
-            score += align_nucleotide(&query[i..], &target[i..]).score;
-        }
-        return AlignmentScore { score };
+#[cfg(all(feature = "neon_simd_unroll", target_arch = "x86_64"))]
+#[target_feature(enable = "avx2")]
+unsafe fn simd_align_x86_64_avx2(query: &[u8], target: &[u8]) -> AlignmentScore {
+    use std::arch::x86_64::*;
+    let min_len = query.len().min(target.len());
+    let mut score = 0i32;
+    let mut i = 0;
+
+    // Exact match fast-path using AVX2 (256-bit / 32-byte chunks)
+    while i + 32 <= min_len {
+        let q_vec = _mm256_loadu_si256(query.as_ptr().add(i) as *const __m256i);
+        let t_vec = _mm256_loadu_si256(target.as_ptr().add(i) as *const __m256i);
+        let cmp = _mm256_cmpeq_epi8(q_vec, t_vec);
+        let mask = _mm256_movemask_epi8(cmp);
+        let matches = mask.count_ones() as i32;
+        let mismatches = 32 - matches;
+
+        score += matches * 2;
+        score -= mismatches * 3;
+        i += 32;
     }
 
-    #[cfg(not(target_feature = "avx2"))]
-    AlignmentScore {
-        score: align_nucleotide(query, target).score,
+    if i < min_len {
+        score += align_nucleotide(&query[i..], &target[i..]).score;
     }
+    AlignmentScore { score }
 }
 
 #[cfg(all(feature = "neon_simd_unroll", target_arch = "aarch64"))]

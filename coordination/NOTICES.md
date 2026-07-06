@@ -398,6 +398,30 @@ pointing at each other build two live meshes that handshake and carry an IPv6 pa
 (`accepted_peer_records_form_a_real_tunnel`). API/command `mesh_dialability`. Tests: core-db
 social_webnet 3/3, client-core social_mesh 2/2; desktop + studio(host+wasm) green.
 
+### 2026-07-06 — RELEASE: MeshService — the running SocialWebNet (background thread)
+`p2p/mesh_service.rs` — `MeshService`: moves a `SocialWebNet` onto its own thread and drives it
+(drain commands → `pump_all` → forward inbound → `tick_all` ~1 Hz); control over channels
+(add_peer/set_endpoint/initiate/send/peers/has_session/wait_for_session/recv), clean shutdown on
+Drop. `client-core/social_mesh::start_node_mesh_service(identity, peers)` builds+spawns it. Proven:
+two running services on separate threads peer over loopback and deliver an IPv6 packet through the
+async channels (`two_services_peer_and_deliver_over_channels`). Tests: core-db mesh_service 2/2,
+client-core social_mesh 3/3 (302 client-core total); studio wasm gates the native service out.
+Remaining = desktop managed-state wiring (hold one MeshService in Tauri State) + cross-host traffic
+(external).
+
+### 2026-07-06 — RELEASE: mesh UI plumbing + two-machine `mesh-probe` CLI
+(1) **Desktop managed state**: `commands/mesh.rs` — `MeshState(Mutex<Option<MeshService>>)` managed
+in `main.rs`; commands `mesh_start`/`mesh_stop`/`mesh_status` (start builds from NodeIdentity + peers,
+dials peers with known endpoints, rest roam). (2) **Connect pane** §4 SocialWebNet section: Start/Stop
++ per-peer badges (connected / dialing / awaiting peer / unreachable). (3) **`qualia-cli mesh-probe`**
+(`listen`/`connect`/`keygen`) — the cross-host test a human runs on two machines; keys derive from a
+shared passphrase+role (SHA-256) so only the phrase + listener IP are shared. Procedure documented in
+`docs/plans/social-network-external-verification.md` #5. **Loopback-verified end-to-end**: real WG
+handshake + AEAD-encrypted message delivered & decrypted. Two production-relevant hardening fixes found
+& fixed while testing: (a) `wireguard_runtime::pump` now treats Windows `WSAECONNRESET` (10054) on UDP
+recv as non-fatal Idle (prior-send ICMP port-unreachable ≠ dead socket); (b) `mesh-probe connect` drives
+`tick()` in the handshake wait-loop so a lost init retransmits (≤5s) instead of hanging. p2p tests 17/17.
+
 ### 2026-07-06 — RELEASE: ingest integrity fix (lossy "compression" → two honest modes)
 `query/ingest.rs` + `q42_lex.rs` + `qualia-cli Import`. The RDF→.q42 ingest wrote an EMPTY lexicon
 (`lex_length: 0`) — every URI/literal hashed away, unrecoverable, while the shrunk file was called
@@ -407,3 +431,92 @@ labelled DATA-LOSS not compression)}`. New `serialize_string_lexicon` (Q42LEX wr
 safe). CLI `--strip-literals`. Proven: `tests/q42_ingest_lossless.rs` 2/2 — recovers EN/FI/JA/AR
 literals + URIs byte-intact from a reopened .q42; strip mode 0 lexicon strings & strictly smaller.
 core-db lib + cli build clean. Touched only these files (no lane collision).
+
+### 2026-07-06 — RELEASE: ingest pt.2 — graph now readable (canonical builder + BIDX)
+Found while validating pt.1: `read_all_quins` saw only 577k/5.56M quins with objects=0 — the legacy
+ingest wrote HEADERLESS blocks the canonical reader can't stride. Rewrote `query/ingest.rs` to write
+via `q42_volume::UnifiedVolumeBuilder` (160-byte SuperBlock headers + block dir + BIDX object index +
+Merkle-DAG + real lexicon); sort quins by object so FLAG_OBJECT_SORTED/BIDX are truthful. Unified
+`encode_lex` → `q42_lex::serialize_string_lexicon` (fixes latent non-char-boundary UTF-8 truncation).
+Verified on full 523 MB WordNet: 5,558,748 quins read back, 4,939,379 objects resolve (rest = inline
+typed literals). Touched: query/ingest.rs, q42/q42_volume.rs, tests. No lane collision.
+
+### 2026-07-06 — RELEASE: mesh application-datagram layer (apps can talk over the mesh)
+`p2p/mesh_datagram.rs` — frames an app payload as a real, checksum-correct **IPv6+UDP datagram** for
+the overlay, with a destination **port** so app protocols demux on one tunnel (`ports::{CHAT,PRESENCE,
+SHARE,QDP}`). `encode_datagram`/`decode_datagram` + `SocialWebNet::send_datagram`. This is the missing
+keystone that turns the raw-IP tunnel into an app transport (chat / QDP-over-mesh / record-share ride on
+it). Verified: mesh_datagram 5/5 (roundtrip, UDP checksum correct, reject non-IPv6/non-UDP/truncated),
+social_webnet `two_meshes_exchange_an_application_datagram` (two meshes exchange a port-demuxed datagram
+over loopback), and `qualia-cli mesh-probe` now sends on the CHAT port — loopback shows
+`← received … on port 6420`. Touched only p2p/ (mod.rs, mesh_datagram.rs new, social_webnet.rs) + qualia-cli/mesh.rs.
+
+### 2026-07-06 — BLOCKED (flag, not mine): concurrent lane edits break `cargo test -p qualia-core-db --lib`
+Two OTHER lanes' in-flight edits momentarily break the core-db lib **test** build (individual module
+runs pass between edits, so this is churn, not a hard break):
+1. **KV/forge lane** — `wgsl_forge/calibration/kv_dictionary.rs` + `mod.rs`: `error[E0560] struct
+   KvLayerVerdict has no field named dict_bits` (a caller/def out of sync).
+2. **Computational-geometry lane** — `specialized_libs/computational_geometry/…trapezoidal_map`:
+   `E0369 == on Result<TrapezoidalMap,_>` + `E0277 TrapezoidalMap: !Debug` (an `assert_eq!` on a
+   `Result` without Debug/PartialEq).
+Both are outside the p2p lane; not touching them (§10). Flagging so the owning instruments (or Timothy)
+close them — until then a full `cargo test -p qualia-core-db --lib` won't go green for anyone. My p2p
+work is verified via per-module runs.
+
+### 2026-07-06 — RELEASE: chat over the mesh (full transport stack, proven end-to-end)
+Chat now rides the SocialWebNet tunnels, peer-to-peer, no relay server. Four layers, all new, all tested:
+- `client-core/mesh_channel.rs` — pure reliable-datagram protocol over the (lossy) datagram transport:
+  seq + ACK + timed retransmit + receive-side dedup (`ReliableEndpoint`, 5 tests incl. loss/reorder/dup).
+- `client-core/chat_mesh.rs` — `ChatMeshBridge`: CBOR-encodes `RelayEnvelope`s and routes them per-peer
+  over reliable channels; pure state machine (4 tests, incl. two bridges exchanging an envelope + resend/dedup).
+- `client-core/chat_mesh_service.rs` — `ChatMeshService`: the running runtime (background thread) that
+  drives the bridge over a live `MeshService` — publish, drain inbound CHAT-port datagrams, ACK, forward
+  delivered envelopes, retransmit. **End-to-end proven over real loopback sockets**: a chat envelope
+  published on node A is delivered to node B's inbound queue (`chat_envelope_flows_node_to_node_over_the_mesh`).
+- `chat_relay::apply_incoming_envelope` — exposed the transport-agnostic ingest path (dedup by
+  (lamport,author) + agent-msg validation) so mesh-delivered envelopes apply to sessions like relay ones.
+Reuses the existing chat `RelayEnvelope` + signer + apply path, so the mesh is just a new transport under
+the same chat engine. client-core 312/312; studio wasm clean (runtime native-gated, bridge wasm-safe).
+Next: desktop surfacing (unify the mesh runtime to a ChatMeshService via a small MeshService
+control/inbound split; publish-on-send; apply loop). Live cross-peer payoff needs two hosts (external).
+
+### 2026-07-06 — RELEASE: chat-over-mesh WIRED INTO THE DESKTOP
+The chat-over-mesh transport is now live in webizen-desktop.
+- `p2p/mesh_service.rs`: split into a cloneable `MeshControl` (peers/endpoints/handshake/send/status
+  over the command channel) + `MeshService` (sole owner of the inbound receiver) so a status UI and a
+  chat loop can share ONE mesh. `MeshService::control()` clones a handle. Existing MeshService API
+  unchanged (additive); mesh_service tests 2/2.
+- `client-core/chat_mesh_service.rs`: `ChatMeshService` now holds a `MeshControl` (peer/status
+  pass-throughs) and has TWO sinks — `spawn` (forward to channel, for tests) and `spawn_applying(mesh,
+  storage_root)` (apply inbound envelopes straight to the session store via
+  `chat_relay::apply_incoming_envelope`). End-to-end test still 1/1.
+- Desktop `commands/mesh.rs`: `MeshState` now runs a `ChatMeshService` in apply mode — inbound
+  chat-over-mesh lands in local sessions automatically. `MeshState::publish_session_message` fans a
+  locally-sent message out to the session's connected mesh peers. `mesh_start` takes `AppState` for the
+  storage root; `mesh_stop` drops the runtime (tears down chat + mesh threads).
+- `commands::append_chat_message` now also publishes over the mesh (State-injected; JS call unchanged;
+  HTTP relay path untouched). So sending a chat message fans out over the WireGuard tunnels to connected
+  peers, and received messages appear in sessions — transparently, through the existing chat UI.
+Verified: client-core chat tests 10/10, mesh_service 2/2; desktop compiles; studio host+wasm compile
+(chat_mesh wasm-safe, service native-gated). Live cross-peer chat needs two hosts (mesh-probe-style).
+
+### 2026-07-06 — BLOCKED (flag, not fixing) + RELEASE: W5b Phase 4 code
+**BLOCKED:** `crates/qualia-core-db` does not build — the **computational_geometry** lane has uncommitted
+changes referencing `sutherland_hodgman`/`clip_difference`/`overlay_boolean`/`BooleanOp` that aren't wired
+(defs in dcel_overlay.rs/nary_csg.rs). This breaks ALL tests/builds of the crate. Not my lane (§10) — not
+touching it; flagging for the CG instrument / Timothy. My W5b Phase-4 ΔPPL certification run is blocked on
+it.
+**RELEASE:** W5b Phase 4 (runtime KV-dict reconstruct + ΔPPL certify + package) landed: `kv_dict_runtime.rs`,
+`certify_kv_dictionary` in calibration/mod.rs, reconstruct hook in gguf_bridge/attention.rs (feature-gated),
+tests. Fast unit tests green; real ΔPPL run pending the CG fix. Touched only inference/forge + attention
+hook — no CG files.
+
+### 2026-07-06 — NOTE (Timothy-directed, container_10d lane): import-scoping only, no logic change
+Fixed unused-import warnings in `container_10d/conformance.rs` + `container_10d/node_section.rs`
+(surfaced by Timothy). These were **test-only symbols mis-scoped at module level** — moved `crc32c`,
+`AlignmentTier`, `SectionType` (conformance) and `AXIS_ORDER` (node_section) into their `#[cfg(test)]
+mod tests`; dropped a redundant `NODE_MINI_HEADER_SIZE` re-import already provided by `use super::*`.
+Verified the impls were already complete (golden vectors pinned, layout gate full, AoS↔SoA transpose
+done) — NOT incomplete work. No logic touched; container_10d 107/107 tests pass. Heads-up to the
+container_10d lane owner (Devin): trivial scoping edit on two committed files, no collision with the
+CG/P10 work.

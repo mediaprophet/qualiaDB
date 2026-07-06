@@ -13,7 +13,7 @@ pub mod swarm {
     use crate::QualiaSuperBlock;
     use crossbeam_channel::{bounded, Receiver, Sender};
     use std::collections::HashMap;
-    
+
     use std::net::IpAddr;
     use std::process::Command;
     use std::sync::{Arc, Mutex};
@@ -39,6 +39,35 @@ pub mod swarm {
     /// Default peer endpoint port when DNSSEC resolution cannot determine one
     const DEFAULT_PEER_PORT: u16 = 51820;
 
+    #[cfg(target_arch = "x86_64")]
+    #[target_feature(enable = "avx2,fma")]
+    unsafe fn tensor_contraction_avx2_fma(
+        matrix_a: &[f32],
+        matrix_b: &[f32],
+        result: &mut [f32],
+        size: usize,
+    ) {
+        use core::arch::x86_64::*;
+
+        for i in 0..size {
+            for k in 0..size {
+                let a_ik = _mm256_broadcast_ss(&matrix_a[i * size + k]);
+                let mut j = 0;
+                while j + 8 <= size {
+                    let b_kj = _mm256_loadu_ps(matrix_b.as_ptr().add(k * size + j));
+                    let mut r_ij = _mm256_loadu_ps(result.as_ptr().add(i * size + j));
+                    r_ij = _mm256_fmadd_ps(a_ik, b_kj, r_ij);
+                    _mm256_storeu_ps(result.as_mut_ptr().add(i * size + j), r_ij);
+                    j += 8;
+                }
+                while j < size {
+                    result[i * size + j] += matrix_a[i * size + k] * matrix_b[k * size + j];
+                    j += 1;
+                }
+            }
+        }
+    }
+
     /// Error type for daemon swarm DNSSEC bootstrap operations.
     #[derive(Debug, Clone, PartialEq, Eq)]
     pub enum DaemonError {
@@ -61,9 +90,7 @@ pub mod swarm {
             match msg {
                 "DNSSEC resolver not initialized" => DaemonError::ResolverNotInitialized,
                 "DNSSEC lookup failed" | "DNSSEC query failed" => DaemonError::DigUnavailable,
-                "CBOR-LD payload not found in DNSSEC response" => {
-                    DaemonError::DnssecLookupFailed
-                }
+                "CBOR-LD payload not found in DNSSEC response" => DaemonError::DnssecLookupFailed,
                 "CBOR-LD payload too large" | "CBOR-LD parsing failed" => {
                     DaemonError::CborLdParsingFailed
                 }
@@ -253,7 +280,7 @@ pub mod swarm {
         ///
         /// This is the internal semantic-payload resolver used by the WireGuard bootstrap
         /// pipeline. The public [`resolve_peer_dnssec`](Self::resolve_peer_dnssec) returns a
-/// lightweight [`PeerEndpoint`] with TTL caching.
+        /// lightweight [`PeerEndpoint`] with TTL caching.
         pub fn resolve_peer_dnssec_payload(
             &mut self,
             domain: &str,
@@ -280,7 +307,9 @@ pub mod swarm {
 
             // Cache the resolved semantic payload for subsequent lookups (fresh mutable borrow)
             if let Some(ref mut resolver) = self.dnssec_resolver {
-                resolver.cache.insert(domain.to_string(), semantic_payload.clone());
+                resolver
+                    .cache
+                    .insert(domain.to_string(), semantic_payload.clone());
             }
 
             Ok(semantic_payload)
@@ -412,10 +441,7 @@ pub mod swarm {
         /// 64-bit Quin pointers (one per 8-byte chunk of the parsed semantic payload). If
         /// the parser is not initialised or the payload is invalid, an error is returned.
         #[cfg(not(target_arch = "wasm32"))]
-        pub fn parse_cbor_ld_to_quin(
-            &self,
-            cbor_data: &[u8],
-        ) -> Result<Vec<u64>, DaemonError> {
+        pub fn parse_cbor_ld_to_quin(&self, cbor_data: &[u8]) -> Result<Vec<u64>, DaemonError> {
             if cbor_data.is_empty() {
                 return Err(DaemonError::CborLdParsingFailed);
             }
@@ -464,10 +490,7 @@ pub mod swarm {
         ///    domain name to a plausible endpoint so bootstrapping can proceed offline.
         ///
         /// The result is always cached with [`DNSSEC_CACHE_TTL_SECONDS`].
-        pub fn resolve_peer_dnssec(
-            &mut self,
-            domain: &str,
-        ) -> Result<PeerEndpoint, DaemonError> {
+        pub fn resolve_peer_dnssec(&mut self, domain: &str) -> Result<PeerEndpoint, DaemonError> {
             let now = unix_now();
 
             // 1. Cache check (TTL-aware)
@@ -483,13 +506,16 @@ pub mod swarm {
                     // Parse the CBOR-LD payload to extract a verified endpoint. The semantic
                     // payload carries the WireGuard pubkey; we derive a deterministic address
                     // from it when the DNSSEC chain validated.
-                    let verified = self.dnssec_resolver.as_ref().map_or(false, |r| {
-                        r.validation_enabled
-                    });
+                    let verified = self
+                        .dnssec_resolver
+                        .as_ref()
+                        .map_or(false, |r| r.validation_enabled);
                     let payload = self.parse_cbor_ld_to_payload(&cbor_bytes);
                     let (address, port) = match payload {
                         Ok(p) => {
-                            let id = u64::from_le_bytes(p.wireguard_pubkey[..8].try_into().unwrap_or([0u8;8]));
+                            let id = u64::from_le_bytes(
+                                p.wireguard_pubkey[..8].try_into().unwrap_or([0u8; 8]),
+                            );
                             (domain_to_ip(domain, id), port_from_payload(&p))
                         }
                         Err(_) => (domain_to_ip(domain, 0), DEFAULT_PEER_PORT),
@@ -540,7 +566,8 @@ pub mod swarm {
 
         /// Set the capabilities bitmask for a peer (replaces the `peer_capabilities: 0` TODO).
         pub fn set_peer_capabilities(&mut self, peer_id: &str, capabilities: u64) {
-            self.peer_capabilities.insert(peer_id.to_string(), capabilities);
+            self.peer_capabilities
+                .insert(peer_id.to_string(), capabilities);
         }
 
         /// Set the semantic context for a peer (replaces the `semantic_context: 0` TODO).
@@ -837,27 +864,11 @@ pub mod swarm {
             // on the CPU.
 
             #[cfg(target_arch = "x86_64")]
-            if std::is_x86_feature_detected!("avx2") {
+            if std::is_x86_feature_detected!("avx2") && std::is_x86_feature_detected!("fma") {
+                // SAFETY: both features required by the isolated kernel were
+                // checked immediately above.
                 unsafe {
-                    use core::arch::x86_64::*;
-                    for i in 0..size {
-                        for k in 0..size {
-                            let a_ik = _mm256_broadcast_ss(&matrix_a[i * size + k]);
-                            let mut j = 0;
-                            while j + 8 <= size {
-                                let b_kj = _mm256_loadu_ps(matrix_b.as_ptr().add(k * size + j));
-                                let mut r_ij = _mm256_loadu_ps(result.as_ptr().add(i * size + j));
-                                r_ij = _mm256_fmadd_ps(a_ik, b_kj, r_ij);
-                                _mm256_storeu_ps(result.as_mut_ptr().add(i * size + j), r_ij);
-                                j += 8;
-                            }
-                            while j < size {
-                                result[i * size + j] +=
-                                    matrix_a[i * size + k] * matrix_b[k * size + j];
-                                j += 1;
-                            }
-                        }
-                    }
+                    tensor_contraction_avx2_fma(matrix_a, matrix_b, result, size);
                 }
                 crate::telemetry::SIEVE_OPS_COUNT.fetch_add(
                     (size * size * size) as usize,
@@ -1293,7 +1304,6 @@ pub mod swarm {
             port: u16,
         ) -> Result<u64, &'static str> {
             use boringtun::noise::Tunn;
-            
 
             // Generate ephemeral local WireGuard private key
             let mut raw_priv: [u8; 32] = rand::random();
@@ -1415,10 +1425,7 @@ pub mod swarm {
             assert_eq!(cell.get_semantic_context("did:q42:ctx"), Some(0xC0FFEE));
 
             cell.set_semantic_context("did:q42:ctx", 0x1234_5678);
-            assert_eq!(
-                cell.get_semantic_context("did:q42:ctx"),
-                Some(0x1234_5678)
-            );
+            assert_eq!(cell.get_semantic_context("did:q42:ctx"), Some(0x1234_5678));
         }
 
         #[test]

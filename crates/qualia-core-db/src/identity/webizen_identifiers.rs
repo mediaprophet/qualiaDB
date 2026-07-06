@@ -1,7 +1,7 @@
 //! Webizen Identity Module for SPARQL-Star
 //!
 //! Implements high-priority lexicon slots and signature verification for Webizen identities.
-//! Webizen IDs are sovereign actor identifiers with reserved prefix range.
+//! Webizen IDs are person-controlled actor identifiers with reserved prefix range.
 
 use crate::NQuin;
 use std::collections::HashMap;

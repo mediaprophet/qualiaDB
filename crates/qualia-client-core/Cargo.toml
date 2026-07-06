@@ -36,6 +36,10 @@ bytemuck = "1.14"
 lz4_flex = "0.13"
 chrono = "0.4.45"
 uuid = { version = "1.23.3", features = ["v4"] }
+# Semantic mail client transport (native only; the client acts as a semantic mail client over SMTP/IMAP).
+lettre = { version = "0.11", default-features = false, features = ["smtp-transport", "builder", "rustls-tls", "pool"] }
+imap = "2.4"
+native-tls = "0.2"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.56"

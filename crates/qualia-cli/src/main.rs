@@ -14,6 +14,7 @@ pub mod ingest;
 mod llm_lifecycle;
 mod llm_testing;
 pub mod mcp;
+pub mod mesh;
 pub mod qpu;
 pub mod query;
 pub mod resources;
@@ -75,6 +76,11 @@ pub enum Commands {
     Shader {
         #[command(subcommand)]
         action: shader::ShaderAction,
+    },
+    /// Two-machine SocialWebNet (userspace WireGuard) reachability probe.
+    MeshProbe {
+        #[command(subcommand)]
+        action: mesh::MeshAction,
     },
     /// Dynamically lists features and capabilities compiled into the engine
     Capabilities {
@@ -1441,6 +1447,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Shader { action } => {
             shader::run(action)?;
+        }
+        Commands::MeshProbe { action } => {
+            mesh::run(action)?;
         }
         Commands::Capabilities { list } => {
             if *list {

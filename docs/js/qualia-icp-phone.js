@@ -90,7 +90,7 @@ export function mountIcpPhone(opts) {
             ? `Storage: ${Math.round(q.usage / 1024 / 1024)} / ${Math.round(q.quota / 1024 / 1024)} MB`
             : 'Storage: OPFS probe unavailable';
         vaultPanel.innerHTML = `
-            <p class="text-xs text-white/60 mb-2">${status.ready ? 'Sovereign vault active' : 'Initialize on-device OPFS vault'}</p>
+            <p class="text-xs text-white/60 mb-2">${status.ready ? 'Private vault active' : 'Initialize on-device OPFS vault'}</p>
             <p class="text-[10px] text-white/45 mb-3 font-mono">${quotaLine}</p>
             ${status.manifest ? `<p class="text-[10px] text-emerald-400/80 mb-2">${status.manifest.identifier_did}</p>` : ''}
             <button type="button" data-icp-vault-init class="w-full py-2 mb-2 rounded-lg bg-emerald-600/30 text-emerald-300 text-sm border border-emerald-500/40">

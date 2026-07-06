@@ -30,9 +30,9 @@ pub struct CrdtResolver;
 impl CrdtResolver {
     /// Merges two conflicting mutations from the same logical Context graph.
     /// Returns the mathematically deterministically "winning" Quin.
-    pub fn resolve_lww(local: &NQuin, remote: &NQuin, is_sovereign_domain: bool) -> NQuin {
-        if is_sovereign_domain {
-            return local.clone(); // Bifurcated CRDT Logic: Protect the unalienable sovereign record from automated external merging.
+    pub fn resolve_lww(local: &NQuin, remote: &NQuin, is_selfhood_domain: bool) -> NQuin {
+        if is_selfhood_domain {
+            return local.clone(); // Bifurcated CRDT Logic: Protect the unalienable selfhood record from automated external merging.
         }
 
         let local_clock = local.extract_lamport_clock();
@@ -155,11 +155,11 @@ mod tests {
             "CRDT failed to resolve higher lamport clock in Commons"
         );
 
-        // Sovereign sync (wf: WellFair)
-        let winner_sovereign = CrdtResolver::resolve_lww(&q_local, &q_remote, true);
+        // Selfhood sync (wf: WellFair)
+        let winner_selfhood = CrdtResolver::resolve_lww(&q_local, &q_remote, true);
         assert_eq!(
-            winner_sovereign.object, 100,
-            "CRDT failed to protect sovereign domain from external merge"
+            winner_selfhood.object, 100,
+            "CRDT failed to protect selfhood domain from external merge"
         );
     }
 }

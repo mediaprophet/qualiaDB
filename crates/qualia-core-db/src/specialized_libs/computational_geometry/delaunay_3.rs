@@ -128,8 +128,9 @@ pub fn required_tetrahedra_3(n: usize) -> usize {
 }
 
 /// A tetrahedron, stored so that `orient_3d(v0, v1, v2, v3)` is **positive**
-/// (the four vertices are positively oriented). This invariant lets the
-/// insphere test read directly: `Positive` ⇒ query point inside the sphere.
+/// (the four vertices are positively oriented). Under this crate's insphere
+/// convention (see `insphere.rs`), positive orientation + inside ⇒
+/// `Sign::Negative`; callers derive `inside_sign` from the orientation.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct Tet {
     v: [u32; 4],

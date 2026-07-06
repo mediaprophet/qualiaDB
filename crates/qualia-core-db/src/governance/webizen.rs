@@ -1982,12 +1982,13 @@ pub fn execute_vm_frame(
                 let _kahan_compensation = f32::from_bits(kahan_bits);
 
                 // Create a mock continuous grid for demonstration (as bytes)
-                let grid_data: Vec<u8> = vec![0u8; 1000 * 8]; // 1000 f64 values
+                let grid_data: Vec<u8> = vec![0u8; 1001 * 8]; // 1001 f64 values
                 let grid =
-                    crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1000).unwrap();
+                    crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1001).unwrap();
 
                 let result =
-                    crate::modalities::calculus::integrate_simpsons_chunked(&grid, step_size);
+                    crate::modalities::calculus::integrate_simpsons_chunked(&grid, step_size)
+                        .unwrap_or(f64::NAN);
                 vm_log!(
                     "[Webizen] NativeCalcSimpsons: [{}, {}] h={:.4} result={:.6}",
                     start,
@@ -2008,7 +2009,8 @@ pub fn execute_vm_frame(
                     crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1000).unwrap();
 
                 let result =
-                    crate::modalities::calculus::integrate_trapezoidal_chunked(&grid, step_size);
+                    crate::modalities::calculus::integrate_trapezoidal_chunked(&grid, step_size)
+                        .unwrap_or(f64::NAN);
                 vm_log!(
                     "[Webizen] NativeCalcTrapezoidal: [{}, {}] h={:.4} result={:.6}",
                     start,
@@ -2073,17 +2075,18 @@ pub fn execute_vm_frame(
                                             e
                                         );
                                         // Fallback to CPU Simpson's
-                                        let grid_data: Vec<u8> = vec![0u8; 1000 * 8];
+                                        let grid_data: Vec<u8> = vec![0u8; 1001 * 8];
                                         let grid =
                                             crate::modalities::calculus::ContinuousGrid::new(
-                                                &grid_data, 1000,
+                                                &grid_data, 1001,
                                             )
                                             .unwrap();
                                         let cpu_result =
                                             crate::modalities::calculus::integrate_simpsons_chunked(
                                                 &grid,
                                                 step_size as f64,
-                                            );
+                                            )
+                                            .unwrap_or(f64::NAN);
                                         vm_log!(
                                             "[Webizen] NativeCalcGpu: CPU fallback result={:.6}",
                                             cpu_result
@@ -2097,16 +2100,17 @@ pub fn execute_vm_frame(
                                     e
                                 );
                                 // Fallback to CPU Simpson's
-                                let grid_data: Vec<u8> = vec![0u8; 1000 * 8];
+                                let grid_data: Vec<u8> = vec![0u8; 1001 * 8];
                                 let grid = crate::modalities::calculus::ContinuousGrid::new(
-                                    &grid_data, 1000,
+                                    &grid_data, 1001,
                                 )
                                 .unwrap();
                                 let cpu_result =
                                     crate::modalities::calculus::integrate_simpsons_chunked(
                                         &grid,
                                         step_size as f64,
-                                    );
+                                    )
+                                    .unwrap_or(f64::NAN);
                                 vm_log!(
                                     "[Webizen] NativeCalcGpu: CPU fallback result={:.6}",
                                     cpu_result
@@ -2117,14 +2121,15 @@ pub fn execute_vm_frame(
                         vm_log!(
                             "[Webizen] NativeCalcGpu: Tokio runtime failed, using CPU fallback"
                         );
-                        let grid_data: Vec<u8> = vec![0u8; 1000 * 8];
+                        let grid_data: Vec<u8> = vec![0u8; 1001 * 8];
                         let grid =
-                            crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1000)
+                            crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1001)
                                 .unwrap();
                         let cpu_result = crate::modalities::calculus::integrate_simpsons_chunked(
                             &grid,
                             step_size as f64,
-                        );
+                        )
+                        .unwrap_or(f64::NAN);
                         vm_log!(
                             "[Webizen] NativeCalcGpu: CPU fallback result={:.6}",
                             cpu_result
@@ -2137,13 +2142,14 @@ pub fn execute_vm_frame(
                     vm_log!(
                         "[Webizen] NativeCalcGpu: GPU not available on WASM, using CPU fallback"
                     );
-                    let grid_data: Vec<u8> = vec![0u8; 1000 * 8];
+                    let grid_data: Vec<u8> = vec![0u8; 1001 * 8];
                     let grid =
-                        crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1000).unwrap();
+                        crate::modalities::calculus::ContinuousGrid::new(&grid_data, 1001).unwrap();
                     let cpu_result = crate::modalities::calculus::integrate_simpsons_chunked(
                         &grid,
                         step_size as f64,
-                    );
+                    )
+                    .unwrap_or(f64::NAN);
                     vm_log!(
                         "[Webizen] NativeCalcGpu: CPU fallback result={:.6}",
                         cpu_result

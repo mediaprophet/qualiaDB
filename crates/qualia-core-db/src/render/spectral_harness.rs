@@ -11,7 +11,7 @@ use crate::render::spectral_operator::SpectralOperator;
 use crate::render::gpu_colour_kernel::{
     cpu_batch_emf_to_display_gamut_mapped, diff_cpu_gpu, GPU_COLOUR_KERNEL_WGSL
 };
-use crate::render::spectral_kernel::{Xyz, Spd};
+use crate::render::spectral_kernel::Xyz;
 
 #[cfg(test)]
 mod tests {

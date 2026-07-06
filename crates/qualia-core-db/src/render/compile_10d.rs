@@ -22,7 +22,9 @@ use crate::container_10d::section::{
     encode_container, parse_section_table, AlignmentTier, SectionInput, SectionTableError,
     SectionType,
 };
-use crate::render::assets::{import_asset, mesh_to_nquins_with_meta, AssetError, Mesh};
+use crate::render::assets::{
+    import_asset, mesh_to_nquins_with_dev, mesh_to_nquins_with_meta, AssetError, Mesh,
+};
 use crate::NQuin;
 use std::collections::HashMap;
 
@@ -206,6 +208,41 @@ pub fn compile_organ_asset(
     })
 }
 
+/// Like [`compile_asset`] but binds the compiled asset to a point on the developmental **`t`-axis** — its
+/// `gestational_age_days` (postfertilization) and `carnegie_stage`. This is the compile step for a fetal/
+/// embryonic stage: consecutive stages, ordered by gestational age, form a 4-D developmental body (the
+/// maternal–fetal dyad's fetal side, reproductive-continuum plan §2).
+pub fn compile_developmental_asset(
+    source_bytes: &[u8],
+    hint: Option<&str>,
+    asset_uri: &str,
+    source_format: &str,
+    gestational_age_days: u16,
+    carnegie_stage: u8,
+) -> Result<CompiledAsset, Compile10dError> {
+    let mesh = import_asset(source_bytes, hint).map_err(Compile10dError::Import)?;
+    let container_10d = compile_mesh_to_10d(&mesh)?;
+    let compiled = compiled_digest(&container_10d);
+    let source = crc32c(source_bytes);
+    let (quins, lexicon) = mesh_to_nquins_with_dev(
+        &mesh,
+        asset_uri,
+        source_format,
+        source,
+        compiled,
+        gestational_age_days,
+        carnegie_stage,
+    );
+    Ok(CompiledAsset {
+        mesh,
+        container_10d,
+        compiled_digest: compiled,
+        source_digest: source,
+        quins,
+        lexicon,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -348,5 +385,20 @@ mod tests {
         let none =
             compile_organ_asset(TRI_OBJ, Some("obj"), "urn:asset:organ", "obj", None, None).unwrap();
         assert_eq!(none.quins.len(), plain.quins.len());
+    }
+
+    #[test]
+    fn compile_developmental_asset_binds_the_t_axis_coordinate() {
+        let plain = compile_asset(TRI_OBJ, Some("obj"), "urn:asset:fetal", "obj").unwrap();
+        // Carnegie stage 18 ≈ 44 postfertilization days.
+        let dev =
+            compile_developmental_asset(TRI_OBJ, Some("obj"), "urn:asset:fetal", "obj", 44, 18).unwrap();
+        // Same geometry → identical container; only the manifest gains the two developmental facts.
+        assert_eq!(dev.container_10d, plain.container_10d);
+        assert_eq!(dev.quins.len(), plain.quins.len() + 2, "gestationalAgeDays + carnegieStage");
+        // The t-axis coordinate (44 days) and the stage (18) are present as u64 fact objects (a 3-vertex,
+        // 1-triangle mesh has no other facts with those values, so this is unambiguous).
+        assert!(dev.quins.iter().any(|q| q.object == 44), "gestationalAgeDays=44");
+        assert!(dev.quins.iter().any(|q| q.object == 18), "carnegieStage=18");
     }
 }

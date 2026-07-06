@@ -71,6 +71,65 @@ pub mod natural_neighbour;
 pub mod capability_manifests;
 /// P9.5 — Authoring ergonomics: primitives, transforms, scene graph, .10d export.
 pub mod authoring;
+/// P10.6 — Independent oracle and fixture licence registry (origin, licence,
+/// checksum, permitted use; rejects copyleft; textbook = invariant reference
+/// only, no copied material).
+pub mod fixture_registry;
+/// P10.3 — Allocation counter for zero-heap hot-path verification (test-only).
+#[cfg(test)]
+pub mod allocation_counter;
+/// P10.5 — Geometry workspace: caller-owned arenas with byte budgets,
+/// deterministic partition/reduction order, and cancellation.
+pub mod geometry_workspace;
+/// P10.7 — Benchmark + adversarial corpus baseline (versioned corpora,
+/// reproducible latency/allocation/hash reports).
+pub mod benchmark_corpus;
+/// P11.1 — Robust segment/line/ray primitives and exact intersections.
+pub mod segment_intersection_2;
+/// P11.2 — Bentley-Ottmann sweep and output-sensitive red/blue intersection.
+pub mod bentley_ottmann;
+/// Convex decomposition (Hertel-Mehlhorn + triangulation-only).
+pub mod convex_decomposition;
+/// P11.3 — DCEL subdivision, overlay, and full polygon-set boolean output
+/// (union/intersection/difference/xor with boundary cycles + holes; Euler and
+/// area identities).
+pub mod dcel_overlay;
+/// P11.8 — Arrangements, point-line duality, and topological sweep.
+pub mod arrangements;
+/// P11.10 — Interval, segment, hereditary segment, priority-search and range
+/// trees.
+pub mod range_trees;
+/// P11.11 — Segment-site, farthest-site and higher-order Voronoi diagrams.
+pub mod voronoi_variants;
+/// P11.4 — Simple-polygon, polygon-with-holes, and PSLG validation.
+pub mod polygon_validation;
+/// P11.5 — Monotone partition, linear monotone triangulation, ear fallback.
+pub mod triangulation_2;
+/// P11.6 — Point location in planar subdivisions (walking + slab decomposition).
+pub mod point_location;
+/// P11.6 gap — Trapezoidal map with randomized incremental point location
+/// (search DAG, seeded determinism, O(log n) expected query).
+pub mod trapezoidal_map;
+/// P11.7 — Kirkpatrick hierarchy for guaranteed O(log n) point location
+/// in triangulated planar subdivisions.
+pub mod kirkpatrick;
+/// P11.12 — Simplex/halfspace range reporting with partition and cutting trees.
+pub mod range_reporting;
+/// P11.14 — Ham-sandwich cuts, centrepoints, and directional-width coresets.
+pub mod ham_sandwich;
+/// P12.1 — N-ary CSG operations on 2D polygons and 2D mesh co-refinement.
+pub mod nary_csg;
+/// P12.2 — Exact 2D arrangement with exact-construction intersection points.
+pub mod exact_arrangement;
+/// P12.3 — Exact 3D mesh co-refinement (split meshes along intersection curves).
+pub mod corefine_3d;
+/// P11.9 — Half-plane intersection (sort-and-intersect + deque) and 2-D
+/// randomized incremental linear programming (Seidel) with seeded determinism
+/// and feasible/infeasible/unbounded certificates.
+pub mod half_plane_lp;
+/// P11.13 — Rotating calipers (diameter, width, antipodal pairs) and
+/// smallest enclosing disk (Welzl randomized incremental, seeded determinism).
+pub mod calipers_enclosing_disk;
 mod surface_mesh;
 mod surface_mesh_processing;
 mod tool;
@@ -100,7 +159,7 @@ pub use determinism_corpus::compute_corpus_hash;
 pub use exact_kernel::{construct_segment_intersection, orientation_2_exact, ExactConstructionKernel, ExactPoint2};
 pub use incircle::incircle;
 pub use insphere::insphere;
-pub use kernel::{FilteredF64Kernel, GeometryKernel};
+pub use kernel::{ConstructionKernel, ExactPoint2 as KernelExactPoint2, FilteredF64Kernel, GeometryKernel, Unsupported};
 pub use orient3d::orient_3d;
 pub use primitives::{orientation_2, orientation_2_tensor_xy, Orientation, Point2, Point3};
 pub use tool::{execute_geometry_tool_json, GeometryToolError};
@@ -179,7 +238,8 @@ pub use boolean_2::{
     BooleanOp, BooleanError,
 };
 pub use minkowski_2::{
-    minkowski_sum_2, minkowski_difference_2, minkowski_sum_brute_force, MinkowskiError,
+    minkowski_sum_2, minkowski_difference_2, minkowski_sum_brute_force,
+    minkowski_sum_convex, minkowski_sum_non_convex, MinkowskiError,
 };
 pub use hull_3::{convex_hull_3, convex_hull_3_with_kernel, required_hull_3_faces, Hull3Error};
 pub use delaunay_3::{
@@ -239,6 +299,75 @@ pub use recon_section::{
     RECON_TYPE_ALPHA_SHAPE_2D, RECON_TYPE_ALPHA_SHAPE_3D,
     RECON_TYPE_ISOSURFACE, RECON_TYPE_LAPLACIAN, RECON_TYPE_PERSISTENCE,
     RECON_VERSION,
+};
+pub use fixture_registry::{
+    validate_records, FixtureOrigin, FixtureRecord, FixtureRegistry, FixtureRegistryError,
+    LicenceKind, SEED_FIXTURES, UsePermission,
+};
+pub use geometry_workspace::{
+    deterministic_partition, deterministic_reduce, Cancellation, GeometryWorkspace,
+    WorkspaceError, DEFAULT_WORKSPACE_BUDGET,
+};
+pub use benchmark_corpus::{
+    compute_p10_corpus_baseline_hash, run_p10_corpus, CorpusReport, CORPUS_VERSION,
+};
+pub use segment_intersection_2::{
+    classify_and_construct, classify_segment_intersection_2, line_segment_intersection_2,
+    ray_segment_intersection_2, SegmentIntersectionClass, SegmentIntersectionResult, TJunctionSide,
+};
+pub use bentley_ottmann::{
+    bentley_ottmann_intersections, brute_force_intersections,
+    brute_force_red_blue_intersections, red_blue_intersections, SweepSegment,
+};
+pub use convex_decomposition::{
+    convex_decomposition_hm, convex_decomposition_triangulation,
+    is_convex_polygon, verify_convex_decomposition,
+};
+pub use polygon_validation::{
+    canonicalize_polygon_with_holes, canonicalize_simple_polygon, repair_for,
+    validate_polygon_with_holes, validate_pslg, validate_simple_polygon, PolygonWithHoles,
+    PslgEdge, RepairSuggestion, ValidationIssue, ValidationReport,
+};
+pub use triangulation_2::{
+    triangulate_ear_clipping, triangulate_monotone, triangulate_polygon, verify_triangulation,
+    Triangle,
+};
+pub use point_location::{
+    build_slab_map, locate_point, point_in_triangle, point_strictly_in_triangle, walk_locate,
+    triangulation_to_subdivision, LocateResult, PointLocationError, SlabMap, SubdivisionEdge,
+};
+pub use trapezoidal_map::{
+    TrapezoidalMap, TrapezoidalMapError, TmSegment, Trapezoid,
+};
+pub use kirkpatrick::{
+    KirkpatrickHierarchy, KirkpatrickError,
+};
+pub use range_reporting::{
+    CuttingTree, Halfspace2, KdTree2, PartitionTree,
+};
+pub use ham_sandwich::{
+    Centrepoint, HamSandwichCut, WidthCoreset,
+    centrepoint, directional_width, ham_sandwich_cut, tukey_depth, width, width_coreset,
+};
+pub use nary_csg::{
+    CorefinementResult2D, Mesh2D, NaryCsgError, NaryCsgResult, NaryOp, PolygonWithHoles as NaryPolygonWithHoles,
+    corefine_2d, nary_csg, verify_pairwise_inclusion_exclusion,
+};
+pub use exact_arrangement::{
+    ArrangementEdge, ArrangementError, ArrangementVertex, ExactArrangement, ExactLine2,
+    ZoneTraversal, build_exact_arrangement, max_coordinate_error, verify_euler,
+    verify_general_position_counts, zone_traversal,
+};
+pub use corefine_3d::{
+    CorefinementResult3D, Mesh3D as Mesh3DCorefine, corefine_3d, count_shared_vertices,
+    verify_refinement_preserves_triangles,
+};
+pub use half_plane_lp::{
+    half_plane_intersection, linear_program_2d, HalfPlane, HalfPlaneIntersection, LpResult2d,
+};
+pub use calipers_enclosing_disk::{
+    diameter_and_width, rotating_calipers, smallest_enclosing_disk, AntipodalPair, CalipersError,
+    CalipersResult, Disk, EnclosingDisk,
 };
 
 /// Versioned native geometry ABI. Increment only when public POD layouts or

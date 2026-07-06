@@ -32,7 +32,7 @@ where
     if count > u32::MAX as usize {
         return Err(HullError::TooManyPoints);
     }
-    let scratch_required = count.saturating_mul(2);
+    let scratch_required = count.saturating_mul(3);
     if scratch.len() < scratch_required {
         return Err(HullError::ScratchTooSmall {
             required: scratch_required,
@@ -45,6 +45,11 @@ where
         return Ok(0);
     }
 
+    // Split: order (n for sorting) + stack (2n for Andrew's monotone chain).
+    // The stack needs 2n because the upper hull phase can temporarily hold
+    // up to 2n-1 entries (n from the lower hull + n-1 from the upper hull
+    // before the cross-product check pops duplicates). With only n stack
+    // slots, a convex polygon input (all points on hull) overflows.
     let (order, stack) = scratch[..scratch_required].split_at_mut(count);
     for (i, slot) in order.iter_mut().enumerate() {
         let p = xy(i);
@@ -110,7 +115,7 @@ where
 /// Compute the CCW convex-hull vertex indices with no heap allocation, using
 /// the default [`FilteredF64Kernel`].
 ///
-/// `scratch` requires `2 * points.len()` entries and `out` requires
+/// `scratch` requires `3 * points.len()` entries and `out` requires
 /// `points.len()` entries. Collinear interior points and duplicates are omitted.
 pub fn convex_hull_indices_2(
     points: &[Point2],
@@ -154,10 +159,12 @@ pub fn convex_hull_2_with_kernel<K: GeometryKernel>(
             required: points.len(),
         });
     }
-    let required = points.len().saturating_mul(2);
+    let required = points.len().saturating_mul(3);
     if scratch.len() < required {
         return Err(HullError::ScratchTooSmall { required });
     }
+    // Split: order (n for sorting) + hull (2n for Andrew's monotone chain
+    // stack — see hull_indices_by for the 2n requirement).
     let (order, hull) = scratch[..required].split_at_mut(points.len());
     let count = hull_indices_by_local(kernel, points, order, hull)?;
     for i in 0..count {
@@ -301,7 +308,7 @@ mod tests {
             Point2::new(0.0, 1.0),
             Point2::new(0.0, 0.0),
         ];
-        let mut scratch = [0u32; 12];
+        let mut scratch = [0u32; 18];
         let mut out = [0u32; 6];
         let n = convex_hull_indices_2(&points, &mut scratch, &mut out).unwrap();
         assert_eq!(n, 4);
@@ -328,7 +335,7 @@ mod tests {
             Point2::new(0.0, 0.0),
             Point2::new(2.0, 0.0),
         ];
-        let mut scratch = [0u32; 6];
+        let mut scratch = [0u32; 9];
         let mut out = [0u32; 3];
         let n = convex_hull_indices_2(&points, &mut scratch, &mut out).unwrap();
         assert_eq!(n, 2);
@@ -348,7 +355,7 @@ mod tests {
             point.y = xy[1];
         }
         points[2].q = 7.0;
-        let mut scratch = [0u32; 10];
+        let mut scratch = [0u32; 15];
         let mut out = [0u32; 5];
         let n = convex_hull_tensor_xy(&points, &mut scratch, &mut out).unwrap();
         assert_eq!(&out[..n], &[0, 1, 2, 3]);
@@ -358,11 +365,11 @@ mod tests {
     #[test]
     fn reports_caller_buffer_requirements() {
         let points = [Point2::new(0.0, 0.0); 4];
-        let mut scratch = [0u32; 7];
+        let mut scratch = [0u32; 11];
         let mut out = [0u32; 4];
         assert_eq!(
             convex_hull_indices_2(&points, &mut scratch, &mut out),
-            Err(HullError::ScratchTooSmall { required: 8 })
+            Err(HullError::ScratchTooSmall { required: 12 })
         );
     }
 
@@ -382,11 +389,11 @@ mod tests {
             Point2::new(0.0, 1.0),
             Point2::new(0.25, 0.75),
         ];
-        let mut scratch_a = [0u32; 12];
+        let mut scratch_a = [0u32; 18];
         let mut out_a = [0u32; 6];
         let n_a = convex_hull_indices_2(&points, &mut scratch_a, &mut out_a).unwrap();
 
-        let mut scratch_b = [0u32; 12];
+        let mut scratch_b = [0u32; 18];
         let mut out_b = [0u32; 6];
         let n_b =
             convex_hull_indices_2_with_kernel(&FilteredF64Kernel::default(), &points, &mut scratch_b, &mut out_b)
@@ -417,5 +424,31 @@ mod tests {
         ];
         assert!(!is_ccw_strongly_convex_2(&non_convex));
         assert!(!is_ccw_strongly_convex_2_with_kernel(&FilteredF64Kernel::default(), &non_convex));
+    }
+
+    /// Regression test: all points on the convex hull must not overflow the
+    /// stack buffer. Before the fix, the upper hull phase of Andrew's
+    /// monotone chain could temporarily hold 2n entries, overflowing the
+    /// n-element stack. This hexagon (all 6 vertices on the hull) reproduces
+    /// the original panic.
+    #[test]
+    fn convex_polygon_all_points_on_hull_no_overflow() {
+        let points = [
+            Point2::new(0.0, 0.0),
+            Point2::new(2.0, 0.0),
+            Point2::new(3.0, 2.0),
+            Point2::new(2.0, 4.0),
+            Point2::new(0.0, 4.0),
+            Point2::new(-1.0, 2.0),
+        ];
+        let mut scratch = [0u32; 18]; // 3 * 6
+        let mut out = [0u32; 6];
+        let n = convex_hull_indices_2(&points, &mut scratch, &mut out).unwrap();
+        assert_eq!(n, 6, "all 6 vertices should be on the hull");
+        let hull: Vec<Point2> = out[..n]
+            .iter()
+            .map(|&i| points[i as usize])
+            .collect();
+        assert!(is_ccw_strongly_convex_2(&hull));
     }
 }

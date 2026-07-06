@@ -54,14 +54,17 @@ pub fn unpack_f32_pair(packed: u64) -> (f32, f32) {
 
 // ─── Errors ─────────────────────────────────────────────────────────────────────
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CalculusError {
     AlignmentError(AlignmentError),
     InvalidOffset,
     InsufficientData,
+    InvalidStepSize,
+    NonFiniteInput,
+    SimpsonRequiresEvenPanels,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AlignmentError {
     MisalignedPointer,
     MisalignedLength,
@@ -86,7 +89,9 @@ impl<'a> ContinuousGrid<'a> {
     /// This function validates that the raw slice is properly aligned to 8-byte
     /// boundaries before casting to f64. It returns an error if alignment is invalid.
     pub fn new(raw_slice: &'a [u8], points: usize) -> Result<Self, AlignmentError> {
-        let byte_len = points * 8;
+        let byte_len = points
+            .checked_mul(core::mem::size_of::<f64>())
+            .ok_or(AlignmentError::MisalignedLength)?;
 
         if raw_slice.len() < byte_len {
             return Err(AlignmentError::MisalignedLength);
@@ -157,21 +162,18 @@ impl<'a> ContinuousGrid<'a> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SimdWidth {
     Scalar,
-    Neon2,  // ARM NEON: 2 f64 per instruction
-    Avx2,   // x86 AVX2: 4 f64 per instruction
-    Avx512, // x86 AVX-512: 8 f64 per instruction
+    Neon2, // ARM NEON: 2 f64 per instruction
+    Avx2,  // x86 AVX2: 4 f64 per instruction
 }
 
 pub fn detect_simd_width() -> SimdWidth {
     #[cfg(target_arch = "x86_64")]
     {
-        #[cfg(target_feature = "avx512f")]
-        return SimdWidth::Avx512;
-
-        #[cfg(target_feature = "avx2")]
-        return SimdWidth::Avx2;
-
-        SimdWidth::Scalar
+        if std::is_x86_feature_detected!("avx2") {
+            SimdWidth::Avx2
+        } else {
+            SimdWidth::Scalar
+        }
     }
 
     #[cfg(target_arch = "aarch64")]
@@ -210,30 +212,43 @@ pub fn detect_cache_line_size() -> usize {
 
 /// Simpson's rule integration with Kahan summation for precision.
 ///
-/// Processes the grid in chunks to maintain cache locality and enable
-/// SIMD acceleration. Returns the integrated value and Kahan compensation.
-pub fn integrate_simpsons_kahan(grid: &ContinuousGrid, step_size: f32) -> (f64, f32) {
+/// Processes the grid in chunks to maintain cache locality and enable SIMD
+/// acceleration. The grid must contain an odd number of samples (an even
+/// number of panels). Returns the integrated value and Kahan compensation.
+pub fn integrate_simpsons_kahan(
+    grid: &ContinuousGrid,
+    step_size: f32,
+) -> Result<(f64, f32), CalculusError> {
+    validate_simpson_inputs(grid.data, step_size as f64)?;
+
     let mut sum = 0.0f64;
-    let mut compensation = 0.0f32;
+    let mut compensation = 0.0f64;
     let chunk_size = calculate_optimal_chunk_size();
 
-    for chunk in grid.data.chunks(chunk_size) {
-        let chunk_sum = process_simd_chunk(chunk, step_size as f64);
+    for (chunk_index, chunk) in grid.data.chunks(chunk_size).enumerate() {
+        let start = chunk_index * chunk_size;
+        let chunk_sum = process_simpson_weighted_chunk(chunk, start, grid.data.len());
 
         // Kahan summation
-        let y = chunk_sum - compensation as f64;
+        let y = chunk_sum - compensation;
         let t = sum + y;
-        compensation = ((t - sum) - y) as f32;
+        compensation = (t - sum) - y;
         sum = t;
     }
 
-    (sum, compensation)
+    let scale = step_size as f64 / 3.0;
+    Ok((sum * scale, (compensation * scale) as f32))
 }
 
 /// Simpson's rule integration (standard, without Kahan compensation).
 ///
 /// Use this for smaller grids where precision loss is acceptable.
-pub fn integrate_simpsons_chunked(grid: &ContinuousGrid, step_size: f64) -> f64 {
+pub fn integrate_simpsons_chunked(
+    grid: &ContinuousGrid,
+    step_size: f64,
+) -> Result<f64, CalculusError> {
+    validate_simpson_inputs(grid.data, step_size)?;
+
     let mut accumulator = 0.0f64;
     let chunk_size = calculate_optimal_chunk_size();
     let prefetch_distance = chunk_size * 2;
@@ -245,22 +260,27 @@ pub fn integrate_simpsons_chunked(grid: &ContinuousGrid, step_size: f64) -> f64 
             issue_prefetch(future_data);
         }
 
-        accumulator += process_simd_chunk(chunk, step_size);
+        accumulator += process_simpson_weighted_chunk(chunk, i * chunk_size, grid.data.len());
     }
 
-    accumulator
+    Ok(accumulator * (step_size / 3.0))
 }
 
 /// Trapezoidal rule integration (fallback for simpler integrands).
-pub fn integrate_trapezoidal_chunked(grid: &ContinuousGrid, step_size: f64) -> f64 {
+pub fn integrate_trapezoidal_chunked(
+    grid: &ContinuousGrid,
+    step_size: f64,
+) -> Result<f64, CalculusError> {
+    validate_common_inputs(grid.data, step_size, 2)?;
+
     let mut accumulator = 0.0f64;
     let chunk_size = calculate_optimal_chunk_size();
 
-    for chunk in grid.data.chunks(chunk_size) {
-        accumulator += process_trapezoidal_chunk(chunk, step_size);
+    for (chunk_index, chunk) in grid.data.chunks(chunk_size).enumerate() {
+        accumulator += process_trapezoidal_chunk(chunk, chunk_index * chunk_size, grid.data.len());
     }
 
-    accumulator
+    Ok(accumulator * (step_size / 2.0))
 }
 
 // ─── Chunk Processing ───────────────────────────────────────────────────────────
@@ -274,7 +294,6 @@ fn calculate_optimal_chunk_size() -> usize {
         SimdWidth::Scalar => 1,
         SimdWidth::Neon2 => 2,
         SimdWidth::Avx2 => 4,
-        SimdWidth::Avx512 => 8,
     };
 
     // Scale to fill cache line (64 bytes = 8 f64)
@@ -287,79 +306,120 @@ fn calculate_optimal_chunk_size() -> usize {
     ((target + base - 1) / base) * base
 }
 
-/// Processes a chunk using SIMD-accelerated Simpson's rule.
-fn process_simd_chunk(chunk: &[f64], step_size: f64) -> f64 {
-    let mut sum = 0.0f64;
+#[inline]
+fn simpson_weight(index: usize, total_len: usize) -> f64 {
+    if index == 0 || index + 1 == total_len {
+        1.0
+    } else if index & 1 == 1 {
+        4.0
+    } else {
+        2.0
+    }
+}
 
+fn validate_common_inputs(
+    data: &[f64],
+    step_size: f64,
+    minimum_len: usize,
+) -> Result<(), CalculusError> {
+    if data.len() < minimum_len {
+        return Err(CalculusError::InsufficientData);
+    }
+    if !step_size.is_finite() || step_size == 0.0 {
+        return Err(CalculusError::InvalidStepSize);
+    }
+    if data.iter().any(|value| !value.is_finite()) {
+        return Err(CalculusError::NonFiniteInput);
+    }
+    Ok(())
+}
+
+fn validate_simpson_inputs(data: &[f64], step_size: f64) -> Result<(), CalculusError> {
+    validate_common_inputs(data, step_size, 3)?;
+    if data.len() & 1 == 0 {
+        return Err(CalculusError::SimpsonRequiresEvenPanels);
+    }
+    Ok(())
+}
+
+/// Produces the unscaled globally weighted Simpson sum for one cache chunk.
+///
+/// `global_start` is deliberately explicit: restarting parity or endpoint
+/// weights at a chunk boundary changes the mathematical rule.
+fn process_simpson_weighted_chunk(chunk: &[f64], global_start: usize, total_len: usize) -> f64 {
     #[cfg(target_arch = "x86_64")]
     {
-        #[cfg(target_feature = "avx2")]
-        {
-            return process_simd_chunk_avx2(chunk, step_size);
+        if std::is_x86_feature_detected!("avx2") {
+            // SAFETY: the runtime feature probe dominates this call and the
+            // function itself is the only AVX2 compilation boundary.
+            return unsafe { process_simpson_weighted_chunk_avx2(chunk, global_start, total_len) };
         }
     }
 
     #[cfg(target_arch = "aarch64")]
     {
-        return process_simd_chunk_neon(chunk, step_size);
+        return process_simpson_weighted_chunk_neon(chunk, global_start, total_len);
     }
 
-    // Scalar fallback
-    for (i, &val) in chunk.iter().enumerate() {
-        let weight = if i == 0 || i == chunk.len() - 1 {
-            1.0
-        } else if i % 2 == 1 {
-            4.0
-        } else {
-            2.0
-        };
-        sum += weight * val;
-    }
-
-    (step_size / 3.0) * sum
+    process_simpson_weighted_chunk_scalar(chunk, global_start, total_len)
 }
 
-/// Processes a chunk using AVX2 intrinsics.
+fn process_simpson_weighted_chunk_scalar(
+    chunk: &[f64],
+    global_start: usize,
+    total_len: usize,
+) -> f64 {
+    chunk
+        .iter()
+        .enumerate()
+        .map(|(offset, value)| simpson_weight(global_start + offset, total_len) * value)
+        .sum()
+}
+
+/// Processes a globally indexed chunk using AVX2 intrinsics.
 #[cfg(target_arch = "x86_64")]
-#[cfg(target_feature = "avx2")]
-fn process_simd_chunk_avx2(chunk: &[f64], step_size: f64) -> f64 {
+#[target_feature(enable = "avx2")]
+unsafe fn process_simpson_weighted_chunk_avx2(
+    chunk: &[f64],
+    global_start: usize,
+    total_len: usize,
+) -> f64 {
     use core::arch::x86_64::*;
 
     let mut sum = 0.0f64;
     let len = chunk.len();
 
-    // Process 4 doubles at a time (AVX2)
     let simd_chunks = len / 4;
     for i in 0..simd_chunks {
         let idx = i * 4;
-        unsafe {
-            let vals = _mm256_loadu_pd(chunk.as_ptr().add(idx));
-            // Apply Simpson's weights (simplified - actual implementation needs index-aware weights)
-            let weighted = _mm256_mul_pd(vals, _mm256_set1_pd(1.0));
-            let h_sum = _mm256_hadd_pd(weighted, weighted);
-            let scalar_sum = _mm256_cvtsd_f64(h_sum);
-            sum += scalar_sum;
-        }
+        let global = global_start + idx;
+        let vals = _mm256_loadu_pd(chunk.as_ptr().add(idx));
+        let weights = _mm256_set_pd(
+            simpson_weight(global + 3, total_len),
+            simpson_weight(global + 2, total_len),
+            simpson_weight(global + 1, total_len),
+            simpson_weight(global, total_len),
+        );
+        let weighted = _mm256_mul_pd(vals, weights);
+        let mut lanes = [0.0_f64; 4];
+        _mm256_storeu_pd(lanes.as_mut_ptr(), weighted);
+        sum += lanes[0] + lanes[1] + lanes[2] + lanes[3];
     }
 
-    // Process remaining elements
     for i in (simd_chunks * 4)..len {
-        let weight = if i == 0 || i == len - 1 {
-            1.0
-        } else if i % 2 == 1 {
-            4.0
-        } else {
-            2.0
-        };
-        sum += weight * chunk[i];
+        sum += simpson_weight(global_start + i, total_len) * chunk[i];
     }
 
-    (step_size / 3.0) * sum
+    sum
 }
 
 /// Processes a chunk using NEON intrinsics.
 #[cfg(target_arch = "aarch64")]
-fn process_simd_chunk_neon(chunk: &[f64], step_size: f64) -> f64 {
+fn process_simpson_weighted_chunk_neon(
+    chunk: &[f64],
+    global_start: usize,
+    total_len: usize,
+) -> f64 {
     use core::arch::aarch64::*;
 
     let mut sum = 0.0f64;
@@ -371,40 +431,39 @@ fn process_simd_chunk_neon(chunk: &[f64], step_size: f64) -> f64 {
         let idx = i * 2;
         unsafe {
             let vals = vld1q_f64(chunk.as_ptr().add(idx));
-            // Apply Simpson's weights (simplified)
-            let weighted = vmulq_f64(vals, vdupq_n_f64(1.0));
+            let global = global_start + idx;
+            let weights = [
+                simpson_weight(global, total_len),
+                simpson_weight(global + 1, total_len),
+            ];
+            let weighted = vmulq_f64(vals, vld1q_f64(weights.as_ptr()));
             sum += vgetq_lane_f64::<0>(weighted) + vgetq_lane_f64::<1>(weighted);
         }
     }
 
     // Process remaining elements
     for i in (simd_chunks * 2)..len {
-        let weight = if i == 0 || i == len - 1 {
-            1.0
-        } else if i % 2 == 1 {
-            4.0
-        } else {
-            2.0
-        };
-        sum += weight * chunk[i];
+        sum += simpson_weight(global_start + i, total_len) * chunk[i];
     }
 
-    (step_size / 3.0) * sum
+    sum
 }
 
 /// Processes a chunk using trapezoidal rule.
-fn process_trapezoidal_chunk(chunk: &[f64], step_size: f64) -> f64 {
-    if chunk.is_empty() {
-        return 0.0;
-    }
-
-    let mut sum = chunk[0] + chunk[chunk.len() - 1];
-
-    for i in 1..chunk.len() - 1 {
-        sum += 2.0 * chunk[i];
-    }
-
-    (step_size / 2.0) * sum
+fn process_trapezoidal_chunk(chunk: &[f64], global_start: usize, total_len: usize) -> f64 {
+    chunk
+        .iter()
+        .enumerate()
+        .map(|(offset, value)| {
+            let index = global_start + offset;
+            let weight = if index == 0 || index + 1 == total_len {
+                1.0
+            } else {
+                2.0
+            };
+            weight * value
+        })
+        .sum()
 }
 
 /// Issues a hardware prefetch instruction for the given data.
@@ -431,26 +490,22 @@ mod tests {
 
     #[test]
     fn test_simpsons_integration() {
-        // Test that Simpson's integration runs without crashing on 4096-byte aligned buffer
-        // The key goal is to validate DMA-safe alignment, not numerical precision
         #[repr(C, align(4096))]
         struct TestBuffer {
-            data: [f64; 100],
+            data: [f64; 101],
         }
 
         let buffer = TestBuffer {
-            data: [1.0f64; 100],
+            data: [1.0f64; 101],
         };
 
         let raw_bytes: &[u8] = unsafe {
             core::slice::from_raw_parts(buffer.data.as_ptr() as *const u8, buffer.data.len() * 8)
         };
 
-        let grid = ContinuousGrid::new(raw_bytes, 100).unwrap();
-        let result = integrate_simpsons_chunked(&grid, 0.02);
-
-        // Verify result is finite (no NaN or Inf)
-        assert!(result.is_finite());
+        let grid = ContinuousGrid::new(raw_bytes, 101).unwrap();
+        let result = integrate_simpsons_chunked(&grid, 0.02).unwrap();
+        assert_eq!(result, 2.0);
     }
 
     #[test]
@@ -557,7 +612,7 @@ mod tests {
         let width = detect_simd_width();
         // Should return a valid width based on target architecture
         match width {
-            SimdWidth::Scalar | SimdWidth::Neon2 | SimdWidth::Avx2 | SimdWidth::Avx512 => {}
+            SimdWidth::Scalar | SimdWidth::Neon2 | SimdWidth::Avx2 => {}
         }
     }
 
@@ -571,18 +626,181 @@ mod tests {
     #[test]
     fn test_kahan_summation() {
         // Test Kahan summation with values that cause precision loss
-        let mut data = [0.0f64; 1000];
-        for i in 0..1000 {
+        let mut data = [0.0f64; 1001];
+        for i in 0..1001 {
             data[i] = 1e-10; // Very small values
         }
 
         let raw_bytes: &[u8] =
             unsafe { core::slice::from_raw_parts(data.as_ptr() as *const u8, data.len() * 8) };
 
-        let grid = ContinuousGrid::new(raw_bytes, 1000).unwrap();
-        let (sum, _compensation) = integrate_simpsons_kahan(&grid, 0.001);
+        let grid = ContinuousGrid::new(raw_bytes, 1001).unwrap();
+        let (sum, _compensation) = integrate_simpsons_kahan(&grid, 0.001).unwrap();
 
         // Kahan should preserve precision better than naive summation
         assert!(sum > 0.0);
+    }
+
+    #[test]
+    fn simpson_is_exact_for_cubic_across_cache_chunks() {
+        #[repr(C, align(64))]
+        struct Buffer {
+            data: [f64; 101],
+        }
+        let mut buffer = Buffer { data: [0.0; 101] };
+        for (i, value) in buffer.data.iter_mut().enumerate() {
+            let x = i as f64 / 100.0;
+            *value = x * x * x;
+        }
+        let bytes = unsafe {
+            core::slice::from_raw_parts(
+                buffer.data.as_ptr().cast::<u8>(),
+                buffer.data.len() * core::mem::size_of::<f64>(),
+            )
+        };
+        let grid = ContinuousGrid::new(bytes, buffer.data.len()).unwrap();
+        let integral = integrate_simpsons_chunked(&grid, 0.01).unwrap();
+        assert!((integral - 0.25).abs() <= 8.0 * f64::EPSILON);
+    }
+
+    #[test]
+    fn scalar_quadrature_exactness_holds_for_all_small_legal_lengths() {
+        #[repr(C, align(64))]
+        struct Buffer {
+            data: [f64; 257],
+        }
+        let mut buffer = Buffer { data: [0.0; 257] };
+        let h = 1.0 / 256.0;
+        for (i, value) in buffer.data.iter_mut().enumerate() {
+            let x = i as f64 * h;
+            *value = x * x * x;
+        }
+        let bytes = unsafe {
+            core::slice::from_raw_parts(
+                buffer.data.as_ptr().cast::<u8>(),
+                buffer.data.len() * core::mem::size_of::<f64>(),
+            )
+        };
+
+        for len in (3..=257).step_by(2) {
+            let grid = ContinuousGrid::new(bytes, len).unwrap();
+            let upper = (len - 1) as f64 * h;
+            let expected = upper.powi(4) / 4.0;
+            let actual = integrate_simpsons_chunked(&grid, h).unwrap();
+            assert!(
+                (actual - expected).abs() <= 128.0 * f64::EPSILON * expected.max(1.0),
+                "len={len}: expected {expected}, got {actual}"
+            );
+        }
+
+        for (i, value) in buffer.data.iter_mut().enumerate() {
+            *value = 3.0 * i as f64 * h - 2.0;
+        }
+        for len in 2..=257 {
+            let grid = ContinuousGrid::new(bytes, len).unwrap();
+            let upper = (len - 1) as f64 * h;
+            let expected = 1.5 * upper * upper - 2.0 * upper;
+            let actual = integrate_trapezoidal_chunked(&grid, h).unwrap();
+            assert!(
+                (actual - expected).abs() <= 128.0 * f64::EPSILON * expected.abs().max(1.0),
+                "len={len}: expected {expected}, got {actual}"
+            );
+        }
+    }
+
+    #[test]
+    fn trapezoid_is_exact_for_affine_data_across_cache_chunks() {
+        #[repr(C, align(64))]
+        struct Buffer {
+            data: [f64; 101],
+        }
+        let mut buffer = Buffer { data: [0.0; 101] };
+        for (i, value) in buffer.data.iter_mut().enumerate() {
+            *value = i as f64 / 100.0;
+        }
+        let bytes = unsafe {
+            core::slice::from_raw_parts(
+                buffer.data.as_ptr().cast::<u8>(),
+                buffer.data.len() * core::mem::size_of::<f64>(),
+            )
+        };
+        let grid = ContinuousGrid::new(bytes, buffer.data.len()).unwrap();
+        let integral = integrate_trapezoidal_chunked(&grid, 0.01).unwrap();
+        assert!((integral - 0.5).abs() <= 4.0 * f64::EPSILON);
+    }
+
+    #[test]
+    fn simpson_rejects_invalid_panel_count_and_non_finite_data() {
+        let even = [1.0_f64; 4];
+        let even_bytes = unsafe {
+            core::slice::from_raw_parts(
+                even.as_ptr().cast::<u8>(),
+                even.len() * core::mem::size_of::<f64>(),
+            )
+        };
+        let even_grid = ContinuousGrid::new(even_bytes, even.len()).unwrap();
+        assert_eq!(
+            integrate_simpsons_chunked(&even_grid, 1.0),
+            Err(CalculusError::SimpsonRequiresEvenPanels)
+        );
+
+        let non_finite = [0.0, f64::NAN, 1.0];
+        let non_finite_bytes = unsafe {
+            core::slice::from_raw_parts(
+                non_finite.as_ptr().cast::<u8>(),
+                non_finite.len() * core::mem::size_of::<f64>(),
+            )
+        };
+        let non_finite_grid = ContinuousGrid::new(non_finite_bytes, non_finite.len()).unwrap();
+        assert_eq!(
+            integrate_simpsons_chunked(&non_finite_grid, 0.5),
+            Err(CalculusError::NonFiniteInput)
+        );
+        assert_eq!(
+            integrate_simpsons_chunked(&non_finite_grid, 0.0),
+            Err(CalculusError::InvalidStepSize)
+        );
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn runtime_avx2_weighted_sum_matches_forced_scalar() {
+        if !std::is_x86_feature_detected!("avx2") {
+            return;
+        }
+        let mut data = [0.0_f64; 80];
+        for (index, value) in data.iter_mut().enumerate() {
+            *value = (index as f64 * 0.37).sin() * (1.0 + index as f64);
+        }
+        for offset in 0..8 {
+            for len in 0..=64 {
+                let slice = &data[offset..offset + len];
+                let scalar = process_simpson_weighted_chunk_scalar(slice, offset + 3, 97);
+                let avx2 = unsafe { process_simpson_weighted_chunk_avx2(slice, offset + 3, 97) };
+                let scale = scalar.abs().max(1.0);
+                assert!(
+                    (scalar - avx2).abs() <= 64.0 * f64::EPSILON * scale,
+                    "offset={offset}, len={len}, scalar={scalar}, avx2={avx2}"
+                );
+            }
+        }
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    #[test]
+    fn neon_weighted_sum_matches_forced_scalar() {
+        let mut data = [0.0_f64; 80];
+        for (index, value) in data.iter_mut().enumerate() {
+            *value = (index as f64 * 0.37).sin() * (1.0 + index as f64);
+        }
+        for offset in 0..8 {
+            for len in 0..=64 {
+                let slice = &data[offset..offset + len];
+                let scalar = process_simpson_weighted_chunk_scalar(slice, offset + 3, 97);
+                let neon = process_simpson_weighted_chunk_neon(slice, offset + 3, 97);
+                let scale = scalar.abs().max(1.0);
+                assert!((scalar - neon).abs() <= 64.0 * f64::EPSILON * scale);
+            }
+        }
     }
 }

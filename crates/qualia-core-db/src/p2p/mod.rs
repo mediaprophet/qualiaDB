@@ -1,3 +1,17 @@
 pub mod protocol;
 pub mod routing;
 pub mod swarm;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod sync_ops;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod sync_node;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod wireguard_userspace;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod wireguard_runtime;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod social_webnet;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod mesh_service;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod mesh_datagram;

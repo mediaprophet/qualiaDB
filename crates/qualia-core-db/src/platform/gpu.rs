@@ -65,8 +65,8 @@ pub trait GpuIntegrator: Send {
         step_size: f32,
     ) -> Result<f64, GpuError>;
 
-    /// Executes Runge-Kutta 4th order ODE step on the GPU.
-    fn rk4_step_gpu(
+    /// Executes composite Simpson 3/8 quadrature on the GPU.
+    fn integrate_simpson_38_gpu(
         &mut self,
         file_path: &Path,
         offset: u64,
@@ -88,7 +88,7 @@ pub struct WebGpuIntegrator {
     device: wgpu::Device,
     queue: wgpu::Queue,
     compute_pipeline: wgpu::ComputePipeline,
-    rk4_pipeline: wgpu::ComputePipeline,
+    simpson_38_pipeline: wgpu::ComputePipeline,
 }
 
 impl WebGpuIntegrator {
@@ -128,25 +128,43 @@ impl WebGpuIntegrator {
             cache: None,
         });
 
-        let rk4_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("RK4 Pipeline"),
-            layout: None,
-            module: &shader,
-            entry_point: Some("rk4_step"),
-            compilation_options: Default::default(),
-            cache: None,
-        });
+        let simpson_38_pipeline =
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("Simpson 3/8 Pipeline"),
+                layout: None,
+                module: &shader,
+                entry_point: Some("simpson_38_integration"),
+                compilation_options: Default::default(),
+                cache: None,
+            });
 
         Ok(Self {
             device,
             queue,
             compute_pipeline,
-            rk4_pipeline,
+            simpson_38_pipeline,
         })
     }
 
     /// Executes a compute shader with the given input data.
     async fn execute_compute(&self, input_data: &[u8], step_size: f32) -> Result<f64, GpuError> {
+        if input_data.len() % core::mem::size_of::<f32>() != 0 {
+            return Err(GpuError::DispatchFailed(
+                "calculus input must contain whole f32 values".to_string(),
+            ));
+        }
+        let element_count = input_data.len() / core::mem::size_of::<f32>();
+        if element_count < 3 || element_count % 2 == 0 {
+            return Err(GpuError::DispatchFailed(
+                "Simpson 1/3 requires an odd sample count of at least three".to_string(),
+            ));
+        }
+        if !step_size.is_finite() || step_size == 0.0 {
+            return Err(GpuError::DispatchFailed(
+                "step size must be finite and non-zero".to_string(),
+            ));
+        }
+
         // Create storage buffer for input data
         let input_buffer = self
             .device
@@ -156,12 +174,12 @@ impl WebGpuIntegrator {
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             });
 
-        // Create workgroup reduction buffer (one f64 per workgroup)
+        // Create workgroup reduction buffer (one f32 per workgroup)
         // For 5000 elements with 64-thread workgroups: ceil(5000/64) = 79 workgroups
-        let num_workgroups = ((input_data.len() / 8) + 63) / 64; // f64 bytes / 64 threads
+        let num_workgroups = (element_count + 63) / 64;
         let output_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Workgroup Reduction Buffer"),
-            size: (num_workgroups * 8) as u64, // f64 per workgroup
+            size: (num_workgroups * 4) as u64,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         });
@@ -176,7 +194,7 @@ impl WebGpuIntegrator {
 
         let uniforms = Uniforms {
             step_size,
-            total_elements: (input_data.len() / 8) as u32, // Number of f64 values
+            total_elements: element_count as u32,
         };
 
         let step_buffer = self
@@ -223,13 +241,13 @@ impl WebGpuIntegrator {
             });
             compute_pass.set_pipeline(&self.compute_pipeline);
             compute_pass.set_bind_group(0, &bind_group, &[]);
-            compute_pass.dispatch_workgroups(1, 1, 1);
+            compute_pass.dispatch_workgroups(num_workgroups as u32, 1, 1);
         }
 
         // Copy output to staging buffer for readback
         let staging_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Staging Buffer"),
-            size: (num_workgroups * 8) as u64,
+            size: (num_workgroups * 4) as u64,
             usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
             mapped_at_creation: false,
         });
@@ -239,7 +257,7 @@ impl WebGpuIntegrator {
             0,
             &staging_buffer,
             0,
-            (num_workgroups * 8) as u64,
+            (num_workgroups * 4) as u64,
         );
 
         // Submit commands
@@ -260,12 +278,12 @@ impl WebGpuIntegrator {
         let result_data = buffer_slice.get_mapped_range();
 
         // Read workgroup results and sum using Kahan summation for precision
-        let workgroup_results: &[f64] = bytemuck::cast_slice(&*result_data);
+        let workgroup_results: &[f32] = bytemuck::cast_slice(&*result_data);
         let mut sum = 0.0f64;
         let mut compensation = 0.0f64;
 
         for &partial in workgroup_results {
-            let y = partial - compensation;
+            let y = partial as f64 - compensation;
             let t = sum + y;
             compensation = (t - sum) - y;
             sum = t;
@@ -274,24 +292,41 @@ impl WebGpuIntegrator {
         Ok(sum)
     }
 
-    /// RK4 variant of execute_compute, using the rk4_step pipeline.
-    async fn execute_rk4_compute(
+    /// Composite Simpson 3/8 variant of the reduction pipeline.
+    async fn execute_simpson_38_compute(
         &self,
         input_data: &[u8],
         step_size: f32,
     ) -> Result<f64, GpuError> {
+        if input_data.len() % core::mem::size_of::<f32>() != 0 {
+            return Err(GpuError::DispatchFailed(
+                "calculus input must contain whole f32 values".to_string(),
+            ));
+        }
+        let element_count = input_data.len() / core::mem::size_of::<f32>();
+        if element_count < 4 || (element_count - 1) % 3 != 0 {
+            return Err(GpuError::DispatchFailed(
+                "Simpson 3/8 requires a positive panel count divisible by three".to_string(),
+            ));
+        }
+        if !step_size.is_finite() || step_size == 0.0 {
+            return Err(GpuError::DispatchFailed(
+                "step size must be finite and non-zero".to_string(),
+            ));
+        }
+
         let input_buffer = self
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("RK4 Input Buffer"),
+                label: Some("Simpson 3/8 Input Buffer"),
                 contents: input_data,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             });
 
-        let num_workgroups = ((input_data.len() / 8) + 63) / 64;
+        let num_workgroups = (element_count + 63) / 64;
         let output_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("RK4 Reduction Buffer"),
-            size: (num_workgroups * 8) as u64,
+            label: Some("Simpson 3/8 Reduction Buffer"),
+            size: (num_workgroups * 4) as u64,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         });
@@ -305,19 +340,19 @@ impl WebGpuIntegrator {
 
         let uniforms = Uniforms {
             step_size,
-            total_elements: (input_data.len() / 8) as u32,
+            total_elements: element_count as u32,
         };
         let step_buffer = self
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("RK4 Uniforms"),
+                label: Some("Simpson 3/8 Uniforms"),
                 contents: bytemuck::cast_slice(&[uniforms]),
                 usage: wgpu::BufferUsages::UNIFORM,
             });
 
-        let bgl = self.rk4_pipeline.get_bind_group_layout(0);
+        let bgl = self.simpson_38_pipeline.get_bind_group_layout(0);
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("RK4 Bind Group"),
+            label: Some("Simpson 3/8 Bind Group"),
             layout: &bgl,
             entries: &[
                 wgpu::BindGroupEntry {
@@ -338,25 +373,25 @@ impl WebGpuIntegrator {
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("RK4 Encoder"),
+                label: Some("Simpson 3/8 Encoder"),
             });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("RK4 Pass"),
+                label: Some("Simpson 3/8 Pass"),
                 timestamp_writes: None,
             });
-            pass.set_pipeline(&self.rk4_pipeline);
+            pass.set_pipeline(&self.simpson_38_pipeline);
             pass.set_bind_group(0, &bind_group, &[]);
             pass.dispatch_workgroups(num_workgroups as u32, 1, 1);
         }
 
         let staging = self.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("RK4 Staging"),
-            size: (num_workgroups * 8) as u64,
+            label: Some("Simpson 3/8 Staging"),
+            size: (num_workgroups * 4) as u64,
             usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
             mapped_at_creation: false,
         });
-        encoder.copy_buffer_to_buffer(&output_buffer, 0, &staging, 0, (num_workgroups * 8) as u64);
+        encoder.copy_buffer_to_buffer(&output_buffer, 0, &staging, 0, (num_workgroups * 4) as u64);
         self.queue.submit(Some(encoder.finish()));
 
         let slice = staging.slice(..);
@@ -368,13 +403,13 @@ impl WebGpuIntegrator {
         let _ = rx.await.unwrap();
 
         let mapped = slice.get_mapped_range();
-        let partials: &[f64] = bytemuck::cast_slice(&*mapped);
+        let partials: &[f32] = bytemuck::cast_slice(&*mapped);
 
         // Kahan summation for numerical stability
         let mut sum = 0.0f64;
         let mut comp = 0.0f64;
         for &p in partials {
-            let y = p - comp;
+            let y = p as f64 - comp;
             let t = sum + y;
             comp = (t - sum) - y;
             sum = t;
@@ -416,7 +451,7 @@ impl GpuIntegrator for WebGpuIntegrator {
         handle.block_on(result)
     }
 
-    fn rk4_step_gpu(
+    fn integrate_simpson_38_gpu(
         &mut self,
         file_path: &Path,
         offset: u64,
@@ -435,10 +470,10 @@ impl GpuIntegrator for WebGpuIntegrator {
         file.read_exact(&mut buffer)
             .map_err(|e| GpuError::WebGPUUnavailable(format!("Read failed: {e}")))?;
 
-        // Dispatch the rk4_step compute shader
+        // Dispatch the composite Simpson 3/8 compute shader.
         let handle = tokio::runtime::Handle::try_current()
             .map_err(|e| GpuError::WebGPUUnavailable(format!("Tokio handle failed: {e}")))?;
-        handle.block_on(self.execute_rk4_compute(&buffer, step_size))
+        handle.block_on(self.execute_simpson_38_compute(&buffer, step_size))
     }
 
     fn available_vram(&self) -> u64 {
@@ -522,5 +557,16 @@ mod tests {
         assert_eq!(quin.subject, 12345);
         assert_eq!(quin.object, 4096);
         assert_eq!(f32::from_bits(quin.context as u32), 0.001);
+    }
+
+    #[cfg(feature = "wgsl-forge")]
+    #[test]
+    fn calculus_shader_is_portable_and_semantically_named() {
+        let source = include_str!("../shaders/calculus.wgsl");
+        crate::wgsl_forge::validate_wgsl(source).expect("calculus WGSL must Naga-validate");
+        assert!(!source.contains("array<f64>"));
+        assert!(!source.contains(": f64"));
+        assert!(!source.contains("rk4_step"));
+        assert!(source.contains("simpson_38_integration"));
     }
 }

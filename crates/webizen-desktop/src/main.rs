@@ -140,6 +140,7 @@ fn main() {
         .manage(commands::binary_registry::BinaryNodeRegistry::new())
         .manage(telemetry_bridge::TelemetryBridge::new())
         .manage(commands::HostApiState(host_api_state.clone()))
+        .manage(commands::MeshState::default())
         .manage(MedReminderNotifierState::default())
         .setup(move |app| {
             let handle = app.handle();

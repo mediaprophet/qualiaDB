@@ -50,7 +50,19 @@ pub mod mesh_section;
 pub mod metric_check;
 pub mod node_section;
 pub mod section;
+// `topology_section` and `spatial_index_section` depend on
+// `crate::specialized_libs::computational_geometry`, which is itself gated
+// `#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]` at
+// `lib.rs`. The slim `--features portal` WASM build (no `wasm-scientific`)
+// configures `specialized_libs` out, so these two section modules must carry
+// the same gate or the crate fails to compile for wasm32. Their only external
+// consumers (`tool.rs`, `query_frontend.rs`) live inside `specialized_libs`
+// and carry the same gate, so this is symmetric — no portal-path regression
+// (the portal renderer upload path uses `mesh_section`, which has no
+// `specialized_libs` dependency).
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod topology_section;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod spatial_index_section;
 
 pub use axis_role::{
@@ -83,10 +95,12 @@ pub use section::{
     encode_container, parse_section_table, AlignmentTier, SectionDescriptor, SectionInput,
     SectionTableError, SectionType, SECTION_DESCRIPTOR_SIZE,
 };
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use topology_section::{
     decode_topology_section, encode_topology_section, TopologyMiniHeader, TopologySectionData,
     TopologySectionError, TOPOLOGY_MINI_HEADER_SIZE,
 };
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use spatial_index_section::{
     decode_spatial_index_section, encode_spatial_index_section, DecodedSpatialIndex,
     SpatialIndexMiniHeader, SpatialIndexSectionError, SPATIAL_INDEX_MINI_HEADER_SIZE,

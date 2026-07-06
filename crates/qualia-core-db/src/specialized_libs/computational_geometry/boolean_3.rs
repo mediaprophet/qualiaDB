@@ -406,7 +406,7 @@ fn aabb_overlap(a: &Aabb, b: &Aabb) -> bool {
 /// The segment endpoints are projected onto the triangle's edges.
 fn add_split_points(
     splits: &mut Vec<SplitSegment>,
-    tri: [Point3; 3],
+    _tri: [Point3; 3],
     p: Point3,
     q: Point3,
 ) {
@@ -599,8 +599,6 @@ fn vertex_split(
     loc_p: EdgeLoc,
     loc_q: EdgeLoc,
 ) -> Vec<[Point3; 3]> {
-    let [a, b, c] = tri;
-
     // If P is at a vertex and Q is on the opposite edge, split into 2.
     // If both are at vertices, the segment is an edge — no split needed.
     match (&loc_p, &loc_q) {
@@ -619,7 +617,7 @@ fn vertex_split(
 }
 
 /// Split a triangle where one point is at vertex `v` and the other is on edge `e`.
-fn vertex_edge_split(tri: [Point3; 3], vertex: usize, edge: usize, vp: Point3, ep: Point3) -> Vec<[Point3; 3]> {
+fn vertex_edge_split(tri: [Point3; 3], vertex: usize, edge: usize, _vp: Point3, ep: Point3) -> Vec<[Point3; 3]> {
     let [a, b, c] = tri;
     let verts = [a, b, c];
 

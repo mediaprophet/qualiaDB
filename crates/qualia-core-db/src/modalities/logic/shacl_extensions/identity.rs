@@ -1,4 +1,4 @@
-//! Human-centric identity & data-sovereignty SHACL extensions.
+//! Human-centric identity & data-rights SHACL extensions.
 //!
 //! Four structural enforcements the Webizen Sentinel needs, each grounded in the
 //! project's identity principles (`identifiers-not-identity`,
@@ -19,7 +19,7 @@
 //!    the deontic non-derogable rule.
 //! 4. **Verifiable-Credential-gated targets** — a SHACL target applies to a focus
 //!    node only when a *verified* W3C VC is presented about it (origin-authenticated
-//!    sovereign property validation; the VC layer checks the signature/expiry first).
+//!    data-rights property validation; the VC layer checks the signature/expiry first).
 //!
 //! All four runtime predicates are **zero-heap**: bounded slices in, scalars / enums
 //! / caller `out` buffers out. The TTL/opcode emitters write constants or into a
@@ -307,9 +307,9 @@ pub fn credential_gates_target(gate: &CredentialGate, focus_node: u64, vc: &Cred
     })
 }
 
-// ── SHACL TTL vocabulary for the identity / sovereignty shapes ──────────────────
+// ── SHACL TTL vocabulary for the identity / data-rights shapes ──────────────────
 
-/// SHACL shapes for human-centric identity & data sovereignty.
+/// SHACL shapes for human-centric identity & data rights.
 pub fn get_identity_shacl_ttl() -> &'static str {
     r#"
 @prefix q42: <https://webizen.org/q42#> .

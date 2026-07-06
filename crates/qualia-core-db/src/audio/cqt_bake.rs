@@ -1,4 +1,4 @@
-//! Constant-Q transform sidecar bake — log-spaced bins for timbral sovereignty (cold path).
+//! Constant-Q transform sidecar bake — log-spaced bins for timbral integrity (cold path).
 
 use crate::audio::audio_spectral_sheet::{
     AudioSpectralSidecarHeader, SIDECAR_KIND_CQT, SPECTRAL_PREVIEW_BINS, SPECTRAL_SIDECAR_MAGIC,

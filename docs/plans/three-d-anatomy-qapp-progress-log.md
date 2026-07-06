@@ -487,3 +487,208 @@ NOTICES, not touched.
 **Next step.** None mesh-independent left in my lane. When the GLBs land: `compile_organ_asset` each →
 `.10d` set per model → the desktop selects the set by `AnatomyModel::asset_set()` → `paint_organs` +
 `overlay_percepts` → `load_10d_colored` in the browser = the visible + audible body.
+
+---
+
+## 2026-07-05 — S5.4: turnkey body ingestion (`compile_body`) + GLB acquisition blocker confirmed — **done (2/2); ⚑ files not on disk**
+
+Timothy: "yup [get the GLBs in]." Built the single call that ingests a model's organ set:
+`qualia-client-core/src/wellfair/anatomy_body.rs` — `compile_body(model, [(organ_key, bytes)]) ->
+BodyCompileResult { organs: Vec<CompiledOrgan{organ_key, system_id, asset}>, unmapped, failed }`. For each
+organ it resolves the body system (`body_system_for_organ`), derives the source format from the extension,
+and compiles to a sealed `.10d` whose manifest carries `geo:bodySystem` + `geo:anatomyModel` — organs with
+no system mapping or bad bytes are reported, never silently dropped. Also made `normalize_organ_key` strip
+any mesh extension (`.glb`/`.gltf`/`.obj`/`.stl`), not just `.glb`. `cargo test -p qualia-client-core --lib
+wellfair::anatomy_body` → **2 passed**; `wellfare-core anatomy::model` still **8 passed**. The mesh bytes are
+the caller's to supply (desktop `glb_ingest` file I/O = Grok's lane); this owns the compile.
+
+**⚑ Acquisition blocker (confirmed by inspection).** The CCF/HRA GLB library is **not on disk** — no `.glb`
+anywhere under `C:\Projects`, and the path `glb_ingest.rs` defaults to
+(`C:\Projects\qualiaDB\local\ccf-3d-reference-object-library-main`) does not exist. That legacy path also
+conflicts with PROJECT RULE §0 (canonical repo is `C:\Projects\qualia-27062026`). So lighting up the real
+body needs: (a) the actual VH-Male + VH-Female organ GLBs (source: `hubmapconsortium/ccf-3d-reference-object-library`,
+CC-BY-4.0 — likely Git-LFS / CDN-served, so a naive raw fetch may return LFS pointers); (b) a decision on a
+canonical **gitignored** assets location (recommend `assets/ccf/<model>/…`) and updating `glb_ingest`'s
+default off the legacy path (Grok's lane). Surfaced to Timothy as the one real decision; everything to consume
+the files is built and verified.
+
+**Next step.** Timothy to point me at the GLB source / authorize a fetch + confirm the assets location; then
+`compile_body` each model → visible + audible body. No further mesh-independent work remains in my lane.
+
+---
+
+## 2026-07-05 — S5.5: SPARQL-driven CCF asset discovery + **real organ compiled end-to-end** — **done (ccf_resolver 5/5; real liver 2.07×)**
+
+Timothy's steer: *"you should be able to find the sparql endpoint to find them, which would be the more
+scalable solution, is that correct?"* — **correct, and proven live.** The GLBs don't need a repo clone: the
+HuBMAP HRA publishes them as linked data.
+
+**Verified against the live endpoint** (`https://lod.humanatlas.io/sparql`, HTTP 200,
+`application/sparql-results+json`): the reference-organ GLBs are registered as `foaf:depiction` `xsd:anyURI`
+values across named graphs, pointing at `cdn.humanatlas.io` — **real binaries, no Git-LFS pointers**. One
+query returns **59 distinct ref-organ GLBs, both male and female** (blood-vasculature, brain, eye, heart,
+kidney, larynx, liver, lung, lymph-node, bronchus, pancreas, skin, intestines, spinal-cord, spleen, thymus,
+trachea, ureter, bladder + sex-specific prostate / ovary / uterus / fallopian-tube / mammary / placenta),
+each URL encoding organ + sex + version.
+
+**What was built.** `qualia-client-core/src/wellfair/ccf_resolver.rs` (pure, no network — so unit-tested
+against captured real endpoint JSON): `ref_organ_glb_query()` (the stable SPARQL query),
+`parse_ref_organs(json) -> Vec<RefOrgan{filename, glb_url, model}>` (model read from the unambiguous
+`-f-`/`-m-` filename infix; unsexed/malformed skipped, not guessed), `organs_for_model()`. A discovered
+filename feeds straight into `body_system_for_organ` → `compile_body`. Added `serde` derives to
+`Karyotype`/`AnatomyModel`/`SystemRepresentation` so the manifest is a wire DTO.
+
+**Real end-to-end proof.** Fetched the SPARQL-returned male liver from its CDN URL (verified `glTF` magic,
+1,136,412 B) and ran it through `compile_body` (new `#[ignore]`d `compile_real_ccf_organ_end_to_end`
+harness, `QUALIA_TEST_GLB` env): **`3d-vh-m-liver.glb` → system=digestive · 31,264 verts / 60,369 tris ·
+GLB 1,136,412 B → sealed `.10d` 549,966 B (2.07×)**, `.10d` round-trips back to the mesh. That is the whole
+pipeline — SPARQL discovery → CDN fetch → `import_glb` → organ→system → `compile_organ_asset` — running on
+real Human Reference Atlas data.
+
+**Measured results.** `cargo test -p qualia-client-core --lib wellfair::ccf_resolver` → **5 passed** (incl.
+discovered-filename→system); real-organ harness → **1 passed** with the numbers above.
+
+**⚑ / coordination — what's left for the full body.**
+1. **Batch binary fetch** (all N organs of a model from their CDN URLs) — qualia-client-core's async HTTP is
+   **Gemini's reqwest lane (§14)**; I proved the fetch with `curl` but the in-app batch fetcher should live
+   in that lane. Flag/coordinate.
+2. **Asset cache location** — recommend a gitignored `assets/ccf/` (or the OS cache dir); the fetched liver
+   is currently only in scratch.
+3. **Architecture call (Timothy):** query the external HRA endpoint at runtime, **or** federate the
+   ref-organ triples into QualiaDB's own graph and query locally (more in keeping with local-first /
+   sparql-fed). The resolver is written to serve **either** (pure query+parse).
+4. Desktop wiring (`glb_ingest` → use `ccf_resolver` + `AnatomyModel::asset_set()` instead of the hardcoded
+   list; drop the legacy `C:\Projects\qualiaDB` default path) — **Grok's lane**, flagged.
+
+**Next step.** With Timothy's call on (3) + the fetch lane (1): pull a full model's organ set → `compile_body`
+→ `paint_organs`/`overlay_percepts` → `load_10d_colored` = the visible + audible body.
+
+---
+
+## 2026-07-05 — S5.6: **both full bodies compiled from the live SPARQL endpoint** (real HRA data) — **done**
+
+Timothy freed the blocked lanes ("neither Gemini's nor Grok is running, so if jobs need to get done do
+them"), so I built the fetch and ran the whole thing end-to-end on real data.
+
+**Live fetcher** (`ccf_resolver.rs`, gated `#[cfg(not(wasm32))]`): `discover_ref_organs(endpoint)` (SPARQL
+1.1 **POST** — `application/sparql-query` body; `GET ?query=` had no `.query()` on reqwest 0.13's blocking
+builder) + `fetch_glb(url)` (blocking reqwest, rustls). Pure query/parse stays unit-tested; transport is the
+only network part.
+
+**Both bodies, discovered → fetched → system-resolved → `.10d`-compiled:**
+
+| Model | Organs | Systems | Source GLB | Sealed `.10d` | Ratio |
+|---|---|---|---|---|---|
+| **Male** | **26 / 26** | 10 | 191,553,844 B | 97,077,174 B | 1.97× |
+| **Female** | **33 / 33** | 10 | 294,101,552 B | 122,559,282 B | 2.40× |
+
+Zero unmapped, zero failed. Female's larger set includes the sex-specific organs (uterus, ovary ×2,
+fallopian-tube ×2, mammary-gland ×2, placenta) — all resolved. The 10 systems with discrete HRA meshes:
+circulatory, digestive, immune_lymphatic, integumentary, nervous, reproductive, respiratory, sensory,
+skeletal, urinary. (The other 7 of the 17: HRA's ref-organ set ships no discrete mesh for muscular /
+endocrine / exocrine / vestibular; ecs / ens / glymphatic are the distributed overlays by design — honest,
+not a pipeline gap.)
+
+**Real-data-driven map fixes (found *because* it ran on the real set).** The first full-male run compiled
+only 19/26 — the failure surfaced genuine gaps, now fixed + unit-tested: (1) `normalize_organ_key` only
+stripped the `vh` provider — generalised to strip up to the `-m-`/`-f-` sex marker for **any** provider
+(`allen` brain, `sbu` large-intestine, `nih` lymph-node); (2) added tokens `main-bronchus`, `mouth`,
+`pelvis`, `urinary-bladder`, `placenta[-full-term]`. Re-run → 26/26 and 33/33.
+
+**Harness.** `compile_full_body_from_sparql` (`#[ignore]`d, `QUALIA_TEST_MODEL=male|female`) — the reusable
+whole-body proof. Added `discover_ref_organs`/`fetch_glb`. Verified green after changes: wellfare-core
+anatomy **40**, client-core anatomy **11** (+2 ignored harnesses), ccf_resolver **5**.
+
+**⚑ / remaining for a *visible* body.** The assets now flow all the way to sealed `.10d` + per-organ σ
+percepts. What's left is the **render surface** — a WebGPU canvas that calls `load_10d_colored` per organ
+with its `paint_organs` colour + the orbit camera + the M/F body assembly. That lives in the desktop/Studio
+UI (Grok's lane, currently idle). Also open: the runtime-query-vs-federate architecture call, and an asset
+**cache** (the harness re-downloads each run — ~200–290 MB; a gitignored `assets/ccf/` cache would make it
+one-time).
+
+**Next step.** Build the render surface (Studio WebGPU body view) so Timothy can see + hear it — or, if
+preferred first, an offline asset cache + a headless whole-body percept snapshot (systems coloured by a
+sample burden set) as an interim visual.
+
+---
+
+## 2026-07-05 — S7: fetal/embryonic developmental assets — **the Carnegie embryo series compiles from NIH 3D (6/6, real, CC-BY), first use of the `t`-axis**
+
+Timothy (returning to the anatomy core after the terminology side-track): *"are we able to build the assets
+for aging and fetal stages? … fetal stages is an important start … to demonstrate the consideration."*
+**Answer: yes — proven on real, cleanly-licensed data.**
+
+**Source found + verified.** The HRA endpoint is adult-only (its "fetal"/"embryo" hits are descriptions of
+*adult* structures). The authoritative embryology atlases (Amsterdam 3D Atlas; HDBR) are **CC-BY-NC-ND /
+-NC-SA** (NonCommercial + NoDerivatives/ShareAlike) and 3D-PDF — unusable for a derived `.10d` pipeline. But
+**NIH 3D** (`3d.nih.gov` — the same repo that hosts the HRA adult library) publishes the **Carnegie Human
+Embryo series** (author kbrowne, NIH/NIAID) as **CC-BY** GLBs: stages **12/14/16/18/20/23** (~26–56
+postfertilization days, the embryonic period, weeks 4–8). Downloads go through `https://3d.nih.gov/api/files/
+<fileId>` (raw S3 is `AccessDenied`); the WAF **403s requests with no User-Agent** — reqwest sends none by
+default, so an explicit UA was required.
+
+**Built.** `qualia-client-core/src/wellfair/fetal_stages.rs` — `CarnegieStage{stage, postfertilization_days,
+nih3d_entry, glb_file_id}` + `carnegie_series()` (the curated CC-BY series, ordered = the `t`-axis) +
+`glb_url()`. Reuses `ccf_resolver::fetch_glb` (now sends a `QualiaDB-anatomy/1.0` User-Agent — fixes the NIH
+3D 403; harmless to the HRA CDN). Unit test: series monotonic in stage + gestational age (the `t`-axis).
+
+**Measured (real, live).** `compile_fetal_series_from_nih3d` (ignored harness) fetched + compiled **all 6**
+stages → sealed `.10d`, 0 failures: Carnegie 12 (~26 d, 81,454 v/162,962 t, 2.9 MB→2.4 MB) · 14 (~32 d,
+56,467 v, 2.0 MB→1.0 MB) · 16 (~39 d, 45,548 v, 1.6 MB→820 KB) · 18 (~44 d, 23,991 v, 865 KB→432 KB) · 20
+(~49 d, 51,748 v, 1.9 MB→932 KB) · 23 (~56 d, 15,351 v, 554 KB→277 KB). (Vert counts vary by specimen/mesh
+density, not monotonically — the `t`-axis is gestational age, not vertex count.) Non-network: fetal-series
+table + ccf_resolver **6/6, 5/5** green.
+
+This is the **first concrete use of the `.10d` `t`-axis** (reproductive plan §2): a developing body as a
+function of gestational age — and it demonstrates *the consideration* Timothy asked for (fetal development as
+part of the female-anatomy picture, not scoped out). It **resolves the reproductive plan's standing ⚑** (the
+"HDCA is cell-level → no whole-fetus 3-D" gap) **for the embryonic period**.
+
+**⚑ Honest remainders.** (1) **The later *fetal* period (9 weeks → birth)** has no comparably clean CC-BY 3-D
+series — a separate acquisition (Timothy's pointer, or accept embryonic-only for the demo). (2) **Aging**:
+there is no clean scanned aged-body series like the Carnegie embryos; aging is better modelled as **parametric
+state-modulation** (the body changing with age, via the reproductive-continuum `StateModulator`), not distinct
+scanned assets — fetal-first was the right call. (3) The `t`-axis is carried as stage metadata in the resolver;
+writing it into the `.10d` node's `t` field + a `geo:gestationalAgeDays` manifest fact is the small next step.
+
+**Next step.** Either (a) write the `t`-coordinate into each fetal `.10d` (node `t` + manifest fact) so the
+series is a proper 4-D developmental body, and place the embryo within the maternal frame (the dyad — showing
+the impact on female anatomy structures); or (b) the reproductive-continuum P1 state machine. Both mesh-ready.
+
+---
+
+## 2026-07-05 — S7b: developmental `t`-coordinate on the fetal `.10d` + the maternal–fetal DYAD (real data)
+
+Timothy: "yup, do it." Two parts, both built + proven.
+
+**Part 1 — the `t`-coordinate on the fetal `.10d`.** NEW `render/assets.rs::mesh_to_nquins_with_dev` +
+`render/compile_10d.rs::compile_developmental_asset` — bind `geo:gestationalAgeDays` (postfertilization) +
+`geo:carnegieStage` as `u64` manifest facts, so a fetal `.10d` is a *slice of a 4-D developmental body*
+(consecutive stages ordered by gestational age = the `t`-axis). The `fetal_stages` series harness now
+compiles via `compile_developmental_asset` (carries the coordinate). Test
+`compile_developmental_asset_binds_the_t_axis_coordinate` → **compile_10d 10/10** (identical container to
+`compile_asset`, +2 facts; the 44-day/stage-18 objects present).
+
+**Part 2 — the maternal–fetal dyad.** NEW `qualia-client-core/src/wellfair/anatomy_dyad.rs`:
+`MaternalFetalDyad{maternal_model=Female, host_structure="uterus", carnegie_stage, gestational_age_days}` +
+`place_within(host_bbox, fetal_bbox, fill) → DyadPlacement{translate, scale}` (centre the embryo at the host
+centroid, scale to fit inside — *illustrative*: the HRA and NIH meshes are in different source scales;
+real-world-scale registration is a flagged follow-up). Pure test green. **Real-asset harness
+`place_embryo_in_maternal_uterus_from_real_assets`**: discovered + fetched the HRA **female uterus** + the
+Carnegie-18 embryo, compiled both, and seated the embryo in the uterus → *Carnegie 18 (~44 d) at the uterus
+centroid `[-0.014, 0.028, -0.059]` m, scale 0.00265; uterus extent ~`[0.052, 0.051, 0.063]` m (~5–6 cm,
+anatomically plausible), embryo source extent `[4.8, 11.5, 8.6]`.* This is **the consideration demonstrated
+on real anatomy** — the developing embryo placed within the female reproductive structure at a gestational
+age; the maternal–fetal dyad, real on both sides.
+
+**Measured.** compile_10d **10/10**, anatomy_dyad pure **1/1**, fetal_stages table **1/1** (harness compiles
+via the developmental path); dyad real-asset harness green (placement above). Non-network suites unaffected.
+
+**⚑ Honest.** The dyad placement is **illustrative** (no shared real-world scale between the HRA adult and NIH
+embryo sources — anatomically-registered placement needs real-world-scale metadata on both meshes; the
+follow-up). The `t`-coordinate is a manifest fact now; writing it into the `.10d` node's `t` **field** (so the
+container is natively 4-D, not just annotated) is the deeper step (touches `container_10d` node-section
+writing — coordinate with the CG/.10d lane). Later fetal period (9 wk→birth) still ⚑ (no clean CC-BY 3-D).
+
+**Next step.** The reproductive-continuum P1 state machine (the female continuum as whole-body states) — the
+remaining substance of "the dignity of people born female," fully in-lane and mesh-independent.

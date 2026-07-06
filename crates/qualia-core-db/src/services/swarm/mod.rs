@@ -10,7 +10,7 @@
 //!
 //! ## The load-bearing invariant: verify before you pay
 //!
-//! A paid swarm is dual-use. The same dispatch is sovereignty (your fabric works for
+//! A paid swarm is dual-use. The same dispatch is autonomy (your fabric works for
 //! you) *or* extraction (you pay for fabricated or wrong work, or a node lies about
 //! what it computed). What decides which is a **result-verification gate that runs
 //! before any payment instruction is emitted**:

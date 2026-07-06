@@ -128,6 +128,67 @@ impl SyncTransport for HttpRelayTransport {
     }
 }
 
+/// A **libp2p** `SyncTransport` (native) — a noise-encrypted request-response pipe to a single peer or
+/// relay. It wraps the core-db [`BlockingSyncClient`](qualia_core_db::p2p::sync_node::BlockingSyncClient):
+/// each [`SyncOperation`] is serialized to a CBOR op frame on publish and decoded back on pull, so the
+/// wire carries only opaque signed-op bytes. A dumb pipe like the in-memory and HTTP backends — it never
+/// validates or trusts. Undecodable inbound frames are **skipped** (they could never be admitted anyway;
+/// the fail-closed inbox is the trust boundary), so a hostile peer injecting junk cannot break sync for
+/// well-formed operations.
+#[cfg(not(target_arch = "wasm32"))]
+pub struct Libp2pSyncTransport {
+    client: qualia_core_db::p2p::sync_node::BlockingSyncClient,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl Libp2pSyncTransport {
+    /// Connect to `peer_addr` (a libp2p multiaddr, e.g. `/ip4/1.2.3.4/tcp/4001`) identified by `peer_id`
+    /// (base58). The connection is established lazily on the first publish/pull.
+    pub fn connect(peer_id: &str, peer_addr: &str) -> Result<Self, String> {
+        let client = qualia_core_db::p2p::sync_node::BlockingSyncClient::connect(
+            qualia_core_db::p2p::sync_ops::SyncOpRelay::new(),
+            peer_id,
+            peer_addr,
+        )?;
+        Ok(Self { client })
+    }
+
+    /// This node's own libp2p peer id (base58) — so a peer can be told how to reach us back.
+    pub fn local_peer_id(&self) -> String {
+        self.client.local_peer_id().to_string()
+    }
+}
+
+/// Serialize an operation to its opaque CBOR wire frame.
+#[cfg(not(target_arch = "wasm32"))]
+fn op_to_frame(op: &SyncOperation) -> Result<Vec<u8>, String> {
+    let mut buf = Vec::new();
+    ciborium::into_writer(op, &mut buf).map_err(|e| format!("encode operation: {e}"))?;
+    Ok(buf)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl SyncTransport for Libp2pSyncTransport {
+    fn publish(&self, ops: &[SyncOperation]) -> Result<(), String> {
+        if ops.is_empty() {
+            return Ok(());
+        }
+        let frames = ops.iter().map(op_to_frame).collect::<Result<Vec<_>, _>>()?;
+        self.client.publish_frames(frames)?;
+        Ok(())
+    }
+
+    fn pull(&self, since: u64) -> Result<Vec<SyncOperation>, String> {
+        let (frames, _next_cursor) = self.client.pull_frames(since)?;
+        // Dumb pipe: decode what we can, skip junk (undecodable frames can never be valid operations,
+        // and the inbox would reject them regardless).
+        Ok(frames
+            .iter()
+            .filter_map(|f| ciborium::from_reader::<SyncOperation, _>(&f[..]).ok())
+            .collect())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -269,5 +330,53 @@ mod tests {
         }
         assert_eq!(inbox_a.validated_operations().unwrap(), inbox_b.validated_operations().unwrap());
         assert_eq!(inbox_a.validated_operations().unwrap().len(), 2);
+    }
+
+    /// **End-to-end over libp2p:** real signed `SyncOperation`s travel from the transport, through the
+    /// noise-encrypted request-response wire, into a responder's relay, are pulled back (surviving the
+    /// CBOR round-trip byte-for-byte), and admit into a fail-closed inbox as `Validated`. This proves the
+    /// last piece of T3.1 — the `SyncOperation`↔frame serialization + the blocking libp2p transport.
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn libp2p_transport_round_trips_real_operations_and_inbox_admits() {
+        use qualia_core_db::p2p::sync_node::Libp2pSyncNode;
+        use qualia_core_db::p2p::sync_ops::SyncOpRelay;
+
+        // Responder A: listens and serves its relay on its own runtime; keep `a` + `rt_a` alive so A's
+        // event loop stays up for the whole test.
+        let rt_a = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(1)
+            .enable_all()
+            .build()
+            .unwrap();
+        let relay_a = SyncOpRelay::new();
+        let a = {
+            let _guard = rt_a.enter();
+            Libp2pSyncNode::spawn(relay_a.clone())
+        };
+        let a_addr = rt_a.block_on(a.listen("/ip4/127.0.0.1/tcp/0")).expect("A listen");
+
+        // The libp2p SyncTransport (the spoke) dials A.
+        let transport =
+            Libp2pSyncTransport::connect(&a.peer_id.to_string(), &a_addr.to_string()).expect("connect");
+
+        // Publish two real signed operations, then pull them back.
+        let ops = vec![
+            signed("t1", "contribution", "alpha", 1),
+            signed("t2", "contribution", "beta", 2),
+        ];
+        transport.publish(&ops).expect("publish");
+        assert_eq!(relay_a.len(), 2, "A's relay holds both op frames");
+
+        let pulled = transport.pull(0).expect("pull");
+        assert_eq!(pulled, ops, "operations round-trip losslessly through CBOR + libp2p");
+
+        // The pulled operations admit into a fresh fail-closed inbox as Validated.
+        let dir = tempfile::tempdir().unwrap();
+        let inbox = SyncInbox::open(dir.path()).unwrap();
+        for op in &pulled {
+            assert_eq!(inbox.admit(op, 1).unwrap(), AdmitOutcome::Validated);
+        }
+        assert_eq!(inbox.validated_operations().unwrap().len(), 2);
     }
 }

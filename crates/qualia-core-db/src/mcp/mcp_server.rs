@@ -502,7 +502,7 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
 
         b"validate_shacl" => execute_shacl_validation(payload.arguments_raw, intent_frame),
 
-        // ── SHACL identity / data-sovereignty extension tools ──────────────────
+        // ── SHACL identity / data-rights extension tools ──────────────────
         b"validate_enumerated_identity" => {
             execute_validate_enumerated_identity(payload.arguments_raw, intent_frame)
         }

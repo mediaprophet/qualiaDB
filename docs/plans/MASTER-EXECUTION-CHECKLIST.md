@@ -147,8 +147,22 @@ sweep — flag to Timothy before undertaking.)
       (pull → admit) + `sync_with_http_relay` + a Tauri command. **Drains outbox, feeds inbox, with
       hostile-peer + convergence + partition-rejoin + real-HTTP-round-trip tests** (26 sync tests).
       A **Studio "Sync & Backup" panel** (`b57bb89f`) now exposes "Sync now" against a relay URL.
-      **Remaining:** a true peer-to-peer **libp2p** (or WebSocket-streaming) backend behind the same trait
-      — a future backend, not blocking the acceptance criteria.
+      **libp2p backend — SCOPE CORRECTED + first slice landed (2026-07-05, local):** the existing p2p
+      (`core-db/p2p/{protocol,swarm}.rs` + the daemon swarm loop) is real but is an **authorisation
+      handshake** (`QualiaRequest::Sync` = hop-count/gatekeeper/target-shapes → `SyncAck{blocks_sent:42}`
+      *mock*), NOT op transfer; and the daemon matches `QualiaRequest` **exhaustively** (extending it touches
+      that shared service). **Built the missing op-transfer wire:** NEW `p2p/sync_ops.rs` (native) —
+      `SyncOpRequest{Publish{op_frames}|PullSince{cursor}}` / `SyncOpResponse{Published|Pulled}` carrying
+      **opaque signed-op frames** (dumb pipe; trust stays in the fail-closed inbox), a `SyncOpRelay`
+      reference responder store (dedup + cursor), and a `SyncOpCodec` (length-prefixed CBOR, mirrors
+      `QualiaSyncCodec`). Then the **swarm-driving node** — NEW `p2p/sync_node.rs` (native): a standalone
+      libp2p request-response node (own swarm, event-loop actor over command/oneshot channels) serving a
+      `SyncOpRelay` + async `publish`/`pull`. **Two libp2p nodes exchange ops over real noise-encrypted
+      localhost TCP — `two_nodes_exchange_ops_over_libp2p` GREEN** (B publishes 2 → A stores 2 → B pulls
+      them back, cursor 2). sync_ops 3/3 + node 1/1. No daemon change; noise-encrypted (vs the plaintext
+      HTTP relay). **Remaining (thin):** the blocking client-core `SyncTransport` adapter — a self-driving
+      node (dedicated thread) + `SyncOperation`↔CBOR-frame serialization; the async transport itself is
+      proven. Not blocking the acceptance criteria.
 - [~] **T3.2 → elevated to a first-class workstream: [companion-pwa-installable-qapps](companion-pwa-installable-qapps.md)**
       "author a qapp → installable wasm app on your phone" (Timothy: key feature to build upon).
       **P0 foundation DONE**: `qualia-cooperative-core::qapp_package` — `QappManifest` (extensible kinds +
@@ -166,8 +180,9 @@ sweep — flag to Timothy before undertaking.)
       `wellfair_{export,import}_backup` + `wellfair_diagnostics` Tauri commands; 7 tests. **Remaining (needs
       infra/keys — Timothy):** reproducible builds, signed installers/updates, SBOM, accessibility audit,
       42 MB Sentinel check.
-- [ ] **T3.4** Phase-7 optional (anatomy, studies/rules, authenticated Solid Pod sync, model-assisted
-      extraction, wallet, distributed analytics, native mobile)
+- [~] **T3.4** Phase-7 — **anatomy = §G below, substantially built + the current live priority**; still open:
+      studies/rules, authenticated Solid Pod sync, model-assisted extraction, wallet, distributed analytics,
+      native mobile. Plus the cross-cutting **selfhood/dignity governance threads = §H**.
 
 ## F. Cooperative Qapp plan work packages (parallel initiative)
 
@@ -188,6 +203,71 @@ sweep — flag to Timothy before undertaking.)
 - [ ] **WP4** standalone Cooperative Qapp shell
 - [ ] **WP9** QualiaDB Development Cooperative (bind repo read-only; backlog/claims/changes/reviews)
 - [ ] **WP5/6/8/10/11** finance-receipts / agreements / advanced-economics / forge-CI / release-hardening
+
+## G. Phase-7 anatomy — the WellFair 3D body (T3.4 anatomy; the current live priority)
+
+Detail: [three-d-anatomy-qapp-progress-log](three-d-anatomy-qapp-progress-log.md) (S1–S7b) +
+[reproductive-continuum](reproductive-continuum-and-maternal-fetal-dyad.md). Substance-first; render surface
+last. All items below are **local, tested, not pushed.**
+
+- [x] **Anatomy engine** (wellfare-core) — 17-system taxonomy, factor/burden accumulation, temporal kinetics,
+      systemic-implication **proposals** (`EpistemicStatus::Hypothesis`), interactions, evidence-tiered
+      provenance-tagged knowledge base. Two lenses (person / clinician).
+- [x] **σ modality-first percepts** — burden → **σ (EMF)** → BOTH colour (`render::spectral`) and pitch
+      (`render::acoustic`); `SystemPercept` / `paint_organs` (discrete) / `overlay_percepts` (ECS/ENS/glymphatic).
+- [x] **Both HRA adult bodies compile from live SPARQL** — `ccf_resolver` (lod.humanatlas.io → cdn GLBs,
+      CC-BY) + `compile_body`: **Male 26/26, Female 33/33** organs → sealed `.10d`; all 17 systems accounted
+      (14 discrete-organ + 3 distributed-overlay).
+- [x] **Karyotype (XY/XX) → model (M/F)** selection; organ→system map; `geo:bodySystem` / `geo:anatomyModel`
+      manifest facts; `compile_organ_asset`.
+- [x] **`.10d` producer + validation** — `compile_10d` (sealed QuantizedMesh + whole-file CRC),
+      `geometry_asset_shacl` (bbox/index-in-bounds/`compiledDigest`==CRC/sensitivity), `load_10d_colored`
+      (wasm GPU paint, compile-checked).
+- [x] **Fetal/embryonic assets** — NIH 3D **Carnegie series (CC-BY, stages 12–23)** fetched + compiled to
+      `.10d`, **6/6**; `fetal_stages.rs`. **First `.10d` `t`-axis use.**
+- [x] **Developmental `t`-coordinate + maternal–fetal DYAD** — `compile_developmental_asset`
+      (`geo:gestationalAgeDays` / `carnegieStage`); `anatomy_dyad.rs::place_within` — embryo seated in the
+      real HRA **female uterus** (illustrative scale, on real data).
+- [ ] **Reproductive-continuum P1** — `PhysiologicalState`/`ReproductiveState` machine + whole-body
+      `StateModulator` (cycle → gestation → the fourth trimester → menopause as **whole-body states**).
+      *In-lane, mesh-independent, NO external gate — the next build ("dignity of people born female").*
+- [ ] **Render surface** — Studio WebGPU body view (orbit camera + `load_10d_colored` per organ). *Grok's lane.*
+- [ ] **`.10d` node-`t`-field write** (natively 4-D container, not just annotated). *Coordinate with CG/.10d lane.*
+- ⚑ **Timothy:** later fetal period (9 wk→birth, no clean CC-BY 3D); real-world-scale registration for the dyad;
+      curriculum/clinical sign-off; runtime-query-vs-federate for the asset graph.
+
+## H. Selfhood & dignity governance (new threads, 2026-07-05; plans of record)
+
+Cross-cutting rights/dignity layer under the whole platform. Mostly design-of-record + a few **encoded**
+pieces; the buildable spine everywhere = **the mandate + the (care/custodian/trustee) grant role** (extends
+`consent_store`/`guardianship`/authority-attestation). Grounded in the human-rights instruments (UDHR/ICCPR/
+CRPD); **not legal advice.**
+
+- [x] **Terminology harm-fix** — removed "self-sovereign"/"sovereignty" (identity sense) repo-wide → human-
+      rights language; renamed the `sovereign` store → **`selfhood`** (daemon one-time migration + Sanctuary
+      fail-closed lock; `qualia-core-db --lib` green). **Preserved** legitimate uses (UDHR text, UN Res 1803,
+      indigenous land-sovereignty). Standing rule: use human-rights-instrument terms, never "self-sovereign".
+- [x] **Selfhood-guardian / personhood model encoded** — the self is NOT in the machine; the store holds
+      records that *pertain to* self; **personhood** (outward law/agency) vs **selfhood** (inward mind/secrets).
+- [ ] **Reproductive continuum & maternal-fetal dyad** — plan; P1 = the state machine (see §G).
+- [ ] **Interactive biology learning environment** — plan; education as emergent *lenses* over the model; OSCE.
+- [ ] **Epistemic reasoning & investigative pathways** — plan; abduction + probabilistic + argumentation +
+      deontic (mostly composition) + the one new primitive = **clinical value-of-information**.
+- [ ] **Human-centric care relationships** — plan; consented scoped care relationships + counter-record
+      legibility (NOT a public rating weapon).
+- [ ] **Selfhood-container provable ownership** — design note; encrypted payload + **pseudo-anonymous,
+      court-resolvable** ownership marker → violation is a provable, attributable crime.
+- [ ] **Selfhood/personhood content taxonomy** — design note; `forum internum` (near-absolute, non-derogable)
+      vs `forum externum` (proportionately regulable); *"they're also human."*
+- [ ] **Post-death continuity & self-definition** — plan (on Timothy's 2016 Vint-Cerf **digital-vellum** work);
+      mandate, trusteeship, erasure-prevention (murder → right to truth), reversibility, the self-defined
+      representation (grounded-or-refused, ≠ the self).
+- [ ] **Social-fabric distributed memory custody** — design note; blind encrypted copies held by *chosen
+      people* until the last lets go.
+- [ ] **Selfhood cryptography fabric** — direction (DEFERRED — define after the model): multi-sig/threshold +
+      **Shamir social recovery** + **dead-man switch** (paired with reversibility); real primitives only.
+- ⚑ **Timothy** (throughout): the mandate / death-verification / pseudonym-resolution mechanisms, key-
+      management-after-death, the legibility line, reserved vocabulary, clinical/legal sign-off.
 
 ---
 

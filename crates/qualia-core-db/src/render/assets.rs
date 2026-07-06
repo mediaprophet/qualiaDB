@@ -42,6 +42,8 @@ const P_SOURCE_DIGEST: u64 = q_hash("urn:qualia:geometry:sourceDigest");
 const P_COMPILED_DIGEST: u64 = q_hash("urn:qualia:geometry:compiledDigest");
 const P_BODY_SYSTEM: u64 = q_hash("urn:qualia:geometry:bodySystem");
 const P_ANATOMY_MODEL: u64 = q_hash("urn:qualia:geometry:anatomyModel");
+const P_GESTATIONAL_AGE_DAYS: u64 = q_hash("urn:qualia:geometry:gestationalAgeDays");
+const P_CARNEGIE_STAGE: u64 = q_hash("urn:qualia:geometry:carnegieStage");
 
 /// Error type for asset import.
 #[derive(Debug, PartialEq, Eq)]
@@ -651,6 +653,27 @@ pub fn mesh_to_nquins_with_meta(
         lexicon.insert(h, model.to_owned());
         quins.push(make_quin(subject, P_ANATOMY_MODEL, h));
     }
+    (quins, lexicon)
+}
+
+/// Like [`mesh_to_nquins_with_digests`] but for a **developmental** body: also asserts the gestational
+/// `t`-axis coordinate — `gestationalAgeDays` (postfertilization) and `carnegieStage`. This is what makes
+/// a fetal `.10d` a *slice* of a 4-D developmental body: consecutive stages, ordered by gestational age,
+/// are the same body along the `t`-axis (reproductive-continuum plan §2). Both are plain `u64` objects.
+pub fn mesh_to_nquins_with_dev(
+    mesh: &Mesh,
+    asset_uri: &str,
+    source_format: &str,
+    source_digest: u32,
+    compiled_digest: u32,
+    gestational_age_days: u16,
+    carnegie_stage: u8,
+) -> (Vec<NQuin>, HashMap<u64, String>) {
+    let (mut quins, lexicon) =
+        mesh_to_nquins_with_digests(mesh, asset_uri, source_format, source_digest, compiled_digest);
+    let subject = fnv_hash(asset_uri.as_bytes());
+    quins.push(make_quin(subject, P_GESTATIONAL_AGE_DAYS, gestational_age_days as u64));
+    quins.push(make_quin(subject, P_CARNEGIE_STAGE, carnegie_stage as u64));
     (quins, lexicon)
 }
 

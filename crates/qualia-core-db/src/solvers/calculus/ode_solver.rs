@@ -1039,8 +1039,6 @@ mod tests {
 
     #[test]
     fn test_step_quin_gpu() {
-
-
         let decay = ExponentialDecay::new(0.5);
         let mut solver = Rk4Solver::new(decay, 0.01);
 

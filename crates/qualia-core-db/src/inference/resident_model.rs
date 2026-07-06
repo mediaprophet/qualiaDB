@@ -7,7 +7,7 @@ use std::path::Path;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::{Arc, Mutex, OnceLock};
 
-#[cfg(unix)]
+#[cfg(all(unix, not(target_arch = "wasm32")))]
 fn apply_mlock(mmap: &memmap2::Mmap, mlock: bool) {
     if mlock {
         unsafe {
@@ -16,8 +16,8 @@ fn apply_mlock(mmap: &memmap2::Mmap, mlock: bool) {
     }
 }
 
-#[cfg(not(unix))]
-fn apply_mlock(_mmap: &memmap2::Mmap, _mlock: bool) {}
+#[cfg(not(all(unix, not(target_arch = "wasm32"))))]
+fn apply_mlock<T>(_mmap: &T, _mlock: bool) {}
 
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug)]

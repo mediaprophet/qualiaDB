@@ -612,11 +612,7 @@ impl SIMDOptimizer {
 
 impl SIMDCapabilities {
     pub fn new() -> Self {
-        Self {
-            vector_width: 256, // AVX2
-            supported_instructions: vec![SIMDInstruction::AVX2],
-            alignment_requirements: 32,
-        }
+        Self::detect()
     }
 
     /// Probe the running CPU for available SIMD instruction sets at runtime.
@@ -850,7 +846,8 @@ mod tests {
         let min_pending = *lb.pending_tasks.iter().min().unwrap();
         let next = lb.assign_task(4);
         assert_eq!(
-            lb.pending_tasks[next], min_pending + 1,
+            lb.pending_tasks[next],
+            min_pending + 1,
             "work-stealing should assign to the worker with the fewest pending tasks"
         );
     }
@@ -889,7 +886,9 @@ mod tests {
         );
         // Every result should be assigned to a valid worker index.
         assert!(
-            results.iter().all(|r| r.worker_index < executor.num_workers()),
+            results
+                .iter()
+                .all(|r| r.worker_index < executor.num_workers()),
             "worker indices must be within the pool"
         );
     }
@@ -900,6 +899,9 @@ mod tests {
         let results = executor
             .execute_parallel(&[])
             .expect("empty execution should succeed");
-        assert!(results.is_empty(), "empty task list should yield no results");
+        assert!(
+            results.is_empty(),
+            "empty task list should yield no results"
+        );
     }
 }

@@ -13,6 +13,13 @@ properties / invariants** — it is the algorithm spec, not a source of code; no
 read or derived. This is the QualiaDB / Webizen architecture; the textbook, HDF5, three.js, Draco, and
 meshopt are tools it directs and references, never parents of it.
 
+**2026-07-05 literature expansion.** The thirteen PDFs in `C:\Projects\computationalGeometry` were processed
+individually and cross-referenced against the public Rust surface under
+`crates/qualia-core-db/src/specialized_libs/computational_geometry/`. The resulting additional work is tracked
+in P10-P19 below. These sources are requirements and correctness-property references only: do not copy their
+prose, figures, pseudocode, tables, datasets, or source code into the repository. Tests must be independently
+authored from mathematical invariants or separately licensed fixtures.
+
 ## Status vocabulary
 
 | Term | Meaning |
@@ -481,6 +488,256 @@ interaction+governance wiring in P9.6. P9.6's boolean op is swarm-authorable aga
 gated on the P4/P5 3-D kernel — the single hard external dependency of the phase. P9.7 is the closing barrier
 and depends on all others. Security-critical output (governance fail-closed, provenance/μ preservation, robust
 exact fallback) is adversarially re-verified by the integrator before landing.
+
+## Literature-derived capability expansion (2026-07-05)
+
+### Source-by-source coverage ledger
+
+Every supplied file is represented here so later implementation sessions can trace a task back to the
+capability that motivated it. "Adds" means functionality not already delivered by the actual public API; it
+does not mean permission to reproduce copyrighted implementation material.
+
+| File | Identified work | Capability families extracted | Existing overlap | Adds to |
+|------|-----------------|-------------------------------|------------------|---------|
+| `10e-clarkson-shor.pdf` | Clarkson & Shor, *Applications of Random Sampling in Computational Geometry, II* | Randomized incremental construction, conflict graphs, trapezoidal maps, output-sensitive segment intersection/hulls, ball intersection and diameter, halfspace reporting, k-sets and higher-order Voronoi | Hulls and basic Delaunay only | P11, P15 |
+| `2207.01834v1.pdf` | Wang et al., *ParGeo* | Parallel hulls, sampling-based smallest enclosing ball, batch-dynamic log-structured kd-trees, WSPD, closest pairs, EMST, spatial graph generators and benchmark datasets | Static kd-tree, hulls, NN | P15 |
+| `BernEpp92-OptimalMeshGen.pdf` | Bern & Eppstein, *Mesh Generation and Optimal Triangulation* | Polygon/PSLG triangulation, optimal angle/weight criteria, Steiner and conforming meshes, quadtree/octree and advancing-front generation, tetrahedral quality | Basic constrained Delaunay/remeshing | P11, P13 |
+| `BKOS.pdf` | de Berg et al., *Computational Geometry: Algorithms and Applications* | Sweep-line overlays, DCEL, polygon triangulation, low-dimensional LP, range searching, point location, arrangements, BSP, motion planning, quadtrees, visibility and simplex ranges | Selected hull/Delaunay/Voronoi/topology pieces | P11, P16 |
+| `book.pdf` | LaValle, *Planning Algorithms* | Configuration spaces, collision detection, PRM/RRT, exact cell decomposition, time-varying and multi-robot planning, feedback, uncertainty, kinodynamic and optimal planning | Transforms and mesh queries only | P16 |
+| `cmsc754-lects.pdf` | Mount, *CMSC 754 Computational Geometry* | WSPD, coresets, fixed-radius NN, hereditary segment trees, Kirkpatrick point location, topological sweep, ham-sandwich cuts, multidimensional hulls and visibility planning | Static kd-tree and basic queries | P11, P15, P17 |
+| `CSG.pdf` | Levy, *Exact Predicates, Exact Constructions and Combinatorics for Mesh CSG* | Exact constructed points, co-refinement, exact CDT on facets, symbolic perturbation, radial sorting, Weiler model, n-ary CSG, coplanar simplification and snap-rounding boundary | Approximate binary `boolean_3` | P12 |
+| `dcg.pdf` | Althofer et al., *On Sparse Spanners of Weighted Graphs* | Greedy weighted-graph spanners, stretch certificates and sparse Euclidean/planar specializations | No spanner implementation | P15 |
+| `gma-v2-root.pdf` | Gallier, *Geometric Methods and Applications* | N-D affine/projective/Euclidean geometry, convexity certificates, quaternions, SVD/PCA, quadratic optimization, Lie groups, differential geometry of curves/surfaces | 3-D matrices and separate linear algebra pieces | P17 |
+| `md_147_5_051703.pdf` | Kapoor et al., parametric stent geometry and shape matching | NURBS/PARSEC-style curve composition, sweep-based lattice authoring, mixed discrete/continuous parameters, Hausdorff shape matching and budgeted surrogate optimization | Primitive mesh authoring only | P18 |
+| `paper.pdf` | Crane, *Discrete Differential Geometry: An Applied Introduction* | Simplicial operators, DEC, discrete curvature, cotangent Laplacian/FEM, Poisson/flow, conformal parameterization, Hodge decomposition, transport and vector-field design | Topology and graph Laplacians only | P14 |
+| `Parallel Techniques for Computational Geometry.pdf` | Atallah, *Parallel Techniques for Computational Geometry* | Prefix/list/tree primitives, divide-and-conquer, cascading, multisearch, prune-and-search, mesh/PRAM scheduling and I/O-aware decomposition | Ad-hoc GPU batches only | P15 |
+| `syllabus-public.pdf` | Wang, *CS 6160 Computational Geometry* syllabus | Corroborates the core sweep, closest-pair, LP, interval/segment/range/priority-tree baseline | Partial | P11 |
+
+### Baseline truth audit
+
+P10 is a hard barrier. No P11-P19 task may cite an earlier row as a dependency until the corresponding API
+claim has been checked against code. The following are known discrepancies discovered during this literature
+audit:
+
+| Claimed surface | In-tree evidence | Required correction |
+|-----------------|------------------|---------------------|
+| Exact, robust 3-D boolean/corefinement | `boolean_3.rs` explicitly says split points are approximate f64, uses an O(nm) broad phase, and does not split coplanar overlaps | Keep the current API as `approximate_binary_boolean_3` or upgrade it through P12 before calling it exact |
+| Poisson/advancing-front reconstruction | `reconstruct_3d.rs` explicitly implements nearest-oriented-point signed distance followed by marching cubes | Rename to oriented-point SDF reconstruction; P13 supplies real Poisson and advancing-front implementations |
+| Spatial-index NN inference | `nn_query.rs` performs brute-force radius and kNN scans | Preserve as oracle; route production queries through kd/BVH/BDL indices in P15 |
+| Full conforming Delaunay refinement | `constrained_delaunay.rs` uses approximate collinearity and heap-backed intermediate collections | Treat as a constrained-edge foundation; implement termination/quality-guaranteed Steiner refinement in P13 |
+| Sibson natural-neighbour coordinates | `natural_neighbour.rs` documents an approximate Laplace construction and brute-force cavity | Split the API into Laplace and true Sibson coordinates, each with its own oracle |
+| Complete persistent-homology surface | `tda.rs` still notes that full boundary-matrix reduction is absent while `persistence.rs` carries a second implementation | Consolidate the two modules and publish exact supported dimensions/coefficient fields |
+| Total `GeometryKernel` implementations | default trait methods in `kernel.rs` panic for unimplemented predicates | Replace runtime panics with required methods or typed capability errors |
+| General 3-D hull | `hull_3.rs` deliberately rejects all-coplanar input | Add the best-fit/projected planar hull result as an explicit lower-dimensional outcome |
+
+### P10 - Capability truth, contracts, and test foundations
+
+**Goal:** Make the status surface match executable reality and establish common contracts for the new families.
+
+| Task | Title | Status | Deps | Acceptance gate |
+|------|-------|--------|------|-----------------|
+| P10.1 | Public API and plan claim-to-code audit | implemented | - | Every exported geometry operation has a machine-readable maturity, exactness, allocation, dimensionality and backend declaration; every P0-P9 row is downgraded or evidenced from code and tests. |
+| P10.2 | Split decision exactness from construction exactness | implemented | P10.1 | Capability metadata distinguishes exact predicate, exact construction, topology guarantee and approximate metric output; a boolean with f64 intersections cannot advertise exact construction. |
+| P10.3 | Hot/cold path taxonomy and zero-heap enforcement | implemented | P10.1 | Allocation-counter tests cover every declared hot path; cold builders publish bounded scratch estimates and cannot be called from evaluator loops. |
+| P10.4 | Non-panicking `GeometryKernel` v2 | planned | P10.2 | All required predicates are compile-time trait requirements; optional construction capabilities return typed `Unsupported` rather than panic; existing kernels pass generic conformance tests. |
+| P10.5 | Geometry workspace and deterministic parallel contract | implemented | P10.3 | Caller-owned arenas expose byte budgets, deterministic partition/reduction order and cancellation; a maximal admitted pass remains below 42 MiB. |
+| P10.6 | Independent oracle and fixture licence registry | implemented | - | Every fixture records origin, licence, checksum and permitted use; copyrighted PDFs contribute no copied vectors; invariant-derived fixtures reproduce independently calculated answers. |
+| P10.7 | Benchmark and adversarial corpus baseline | implemented | P10.1-P10.6 | Versioned corpora cover degeneracy, scale/exponent range, topology pathologies and 10-D selector/coordinate semantics with reproducible latency, allocation and hash reports. |
+
+**Phase gate:** the plan, capability manifests, Rust exports and tests agree; unsupported cases fail with typed
+errors; no remaining `implemented` or `verified` label depends only on aspirational acceptance prose.
+
+### P11 - Complete planar algorithms, arrangements, and query structures
+
+**Goal:** Fill the classical 2-D gaps that the supplied textbooks and lecture notes consistently treat as the
+minimum complete computational-geometry substrate.
+
+| Task | Title | Status | Deps | Acceptance gate |
+|------|-------|--------|------|-----------------|
+| P11.1 | Robust segment/line/ray primitives and exact intersections | implemented | P10.4 | Proper, endpoint, T-junction, collinear overlap and disjoint cases return canonical typed results; constructed coordinates re-predicate without sign drift. |
+| P11.2 | Bentley-Ottmann sweep and output-sensitive red/blue intersection | implemented | P11.1 | Results equal an O(n^2) oracle on adversarial event ties; canonical event order; O((n+k) log n) benchmark trend without heap use in predicate loops. |
+| P11.3 | DCEL subdivision, overlay and full polygon-set boolean output | planned | P11.2, existing half-edge core | Overlay labels faces and returns boundary cycles with holes for union/intersection/difference/xor; Euler and area identities hold. |
+| P11.4 | Simple-polygon, polygon-with-holes and PSLG validation | implemented | P11.1 | Detects crossings, duplicate edges, invalid nesting and orientation; emits canonical components and typed repair suggestions without silent mutation. |
+| P11.5 | Monotone partition, linear monotone triangulation and guarded ear fallback | planned | P11.4 | n-2 triangles cover a simple polygon exactly, preserve boundary edges, and agree in total signed area on reflex/collinear fixtures. |
+| P11.6 | Trapezoidal maps and randomized incremental point location | planned | P11.1, P10.5 | Seeded random order is reproducible; queries match brute force including vertical/shared-endpoint degeneracies; conflict graph and history DAG validate. |
+| P11.7 | Kirkpatrick hierarchy and planar subdivision locator | planned | P11.3 | O(log n) query depth trend; every face/boundary query agrees with DCEL walk; hierarchy certificates reconstruct the containing triangle chain. |
+| P11.8 | Arrangements, point-line duality and topological sweep | planned | P11.2, P11.3 | Full line arrangement has correct V/E/F counts, zone traversal matches a direct oracle, and dual transforms round-trip finite/non-vertical cases. |
+| P11.9 | Half-plane intersection and fixed-dimensional randomized LP | implemented | P11.1 | Feasible optimum, infeasible and unbounded certificates match exhaustive low-dimensional fixtures; seeded permutation is deterministic. |
+| P11.10 | Interval, segment, hereditary segment, priority-search and range trees | planned | P10.5 | Stabbing/reporting/counting results equal linear scans; fractional-cascading indices are canonical; caller buffers report exact capacity needs. |
+| P11.11 | Segment-site, farthest-site and higher-order Voronoi diagrams | planned | P11.1, existing Delaunay/Voronoi | Cells satisfy nearest/farthest/order-k membership against exhaustive samples; unbounded rays and degeneracies are explicit. |
+| P11.12 | Simplex/halfspace range reporting with partition and cutting trees | planned | P11.8-P11.10 | Query results equal brute force in 2-D/3-D; space/query trade-off and approximation parameter are published and deterministic. |
+| P11.13 | Output-sensitive hull, rotating-calipers diameter/width and smallest enclosing disk | implemented | existing hull, P11.9 | Hull complexity-sensitive path matches baseline hull; diameter/width and disk support sets match exhaustive small inputs and degenerate collinear cases. |
+| P11.14 | Ham-sandwich cuts, centrepoints and directional-width coresets | planned | P11.8, P11.9 | Cut balance and epsilon-width guarantees are checked against exhaustive small sets; output certificates are stable across input permutations. |
+
+**Phase gate:** the engine can construct, overlay, locate, search and optimize over planar subdivisions without
+falling back to JSON-layer `Vec` algorithms in a declared hot path.
+
+### P12 - Exact mesh co-refinement, arrangements, and n-ary CSG
+
+**Goal:** Replace the current approximate binary boolean claim with a robust solid-modelling pipeline whose
+combinatorics remain coherent across intersecting, coplanar and overlapping facets.
+
+| Task | Title | Status | Deps | Acceptance gate |
+|------|-------|--------|------|-----------------|
+| P12.1 | Exact constructed-point representation for plane/edge/triangle intersections | planned | P10.4, expansion core | Rational/expansion coordinates survive intersection-to-predicate cascades exactly; bounded storage overflow is typed and never rounded silently. |
+| P12.2 | Arithmetic filters, interval gate and symbolic perturbation | planned | P12.1 | Easy cases stay filtered; exact fallback and deterministic simulation-of-simplicity resolve all zero determinants consistently under permutation identities. |
+| P12.3 | Complete triangle-triangle intersection classification | planned | P12.1, P12.2 | Disjoint, point, segment, coplanar polygon and identical-facet intersections return exact combinatorial results. |
+| P12.4 | Per-facet exact constrained Delaunay re-triangulation | planned | P11.5, P12.3 | Every intersection constraint is present, duplicate coplanar triangles are canonicalized, and no output triangle crosses a constraint. |
+| P12.5 | BVH-driven co-refinement with bounded workspace | planned | P12.3, existing BVH | Candidate pairs equal O(nm) oracle; co-refined facets intersect only at shared subfaces; deterministic ordering and 42-MiB tiling hold. |
+| P12.6 | Radial sort and Weiler 3-D arrangement model | planned | P12.4, combinatorial map | Facets around non-manifold edges have exact cyclic order; shells and volumetric regions satisfy incidence/involution checks. |
+| P12.7 | Arbitrary n-ary boolean-expression evaluator | planned | P12.6 | Union/intersection/difference/xor/complement trees classify arrangement regions once, support 2+ operands and return manifold boundaries where the expression defines one. |
+| P12.8 | Coplanar-region simplification and topology-preserving snap rounding | planned | P12.4-P12.7 | Simplification reduces facets without changing region labels; optional f64 export introduces no new intersections and preserves a documented isotopy/topology contract. |
+| P12.9 | CSG/arrangement `.10d` sections and repair operations | planned | P12.7, P12.8 | Expression tree, exact-point pool, region labels and output mesh round-trip canonically; repair can extract shells, remove duplicate sheets and report unresolved non-manifold input. |
+
+**Phase gate:** P5.5/P9.6 are either routed through P12 or explicitly remain named approximate operations; a
+coplanar/shared-edge/multi-operand corpus produces valid region boundaries with exact combinatorial decisions.
+
+### P13 - Quality-controlled mesh generation and reconstruction
+
+**Goal:** Build the finite-element-grade 2-D/3-D meshing capability described by Bern/Eppstein rather than
+treating basic Delaunay and nearest-normal isosurfacing as complete mesh generation.
+
+| Task | Title | Status | Deps | Acceptance gate |
+|------|-------|--------|------|-----------------|
+| P13.1 | Mesh quality metrics and size/anisotropy fields | planned | P10.2 | Min/max angle, radius-edge, aspect, dihedral, scaled Jacobian and field conformance match analytic elements; invalid/inverted cells fail closed. |
+| P13.2 | Delaunay refinement for PSLGs with Steiner points | planned | P11.4, existing constrained Delaunay | Boundary recovery, encroachment and bad-triangle queues terminate under documented preconditions and meet angle/size targets. |
+| P13.3 | Optimal fixed-vertex triangulation objectives | planned | P11.5 | Max-min angle, min-max angle and minimum-weight modes match exhaustive dynamic-programming oracles for small polygons. |
+| P13.4 | Quadtree/octree balanced meshing | planned | P13.1 | 2:1 balance, boundary conformity and deterministic leaf order hold; generated elements meet declared size-field bounds. |
+| P13.5 | Advancing-front surface and volume meshing | planned | P12.3, P13.1 | Front invariants never self-cross; closed fixtures terminate with valid manifold/tetrahedral connectivity or a typed obstruction. |
+| P13.6 | Real screened-Poisson surface reconstruction | planned | P14 sparse operators | Solves the oriented-normal Poisson system, reports residual/convergence, and meets topology/Hausdorff bounds on sphere/torus/non-uniform samples. |
+| P13.7 | Tetrahedral quality improvement and sliver handling | planned | existing Delaunay 3-D, P13.1 | Flip/smooth/insert/exude passes preserve domain and orientation while improving the selected quality distribution monotonically. |
+| P13.8 | Anisotropic remeshing with crease/feature preservation | planned | P13.1, existing remesh | Metric-space edge targets are met; tagged creases/corners remain within tolerance; projection uses BVH rather than a linear scan. |
+| P13.9 | Quadrilateral/hexahedral and mixed-cell topology foundation | planned | existing combinatorial map | POD cells/circulators validate manifold incidence, orientation and boundary extraction; conversion to/from triangle/tet views is explicit and loss-reported. |
+| P13.10 | FEM-ready mesh certificates and `.10d` encoding | planned | P13.1-P13.9 | Cells, boundary markers, material regions, quality fields and provenance round-trip canonically with per-section CRC and solver-ready adjacency. |
+
+**Phase gate:** "Poisson," "advancing front," "conforming" and "quality-guaranteed" are only advertised for
+the real algorithms above; the earlier approximations remain available under precise names as lightweight modes.
+
+### P14 - Discrete differential geometry and surface operators
+
+**Goal:** Add a coherent discrete exterior-calculus/FEM layer for analysis and editing of manifold meshes.
+
+| Task | Title | Status | Deps | Acceptance gate |
+|------|-------|--------|------|-----------------|
+| P14.1 | Oriented simplicial-chain, cochain and k-form POD streams | planned | existing topology/CSR | Boundary-of-boundary is zero in dimensions 0-3; primal/dual incidence streams are canonical and caller-buffered. |
+| P14.2 | Discrete wedge, exterior derivative and Hodge-star operators | planned | P14.1 | Discrete Stokes identities and adjoint relations hold on analytic meshes; degenerate dual cells are typed errors. |
+| P14.3 | Vertex/face normals, vector area and area/volume gradients | planned | P14.1 | Gradients match finite differences and exact symmetric fixtures; boundary conventions are explicit. |
+| P14.4 | Discrete Gaussian/mean/principal curvature | planned | P14.3 | Angle-defect Gauss-Bonnet matches Euler characteristic; convergence is measured on refined sphere/cylinder/saddle meshes. |
+| P14.5 | Cotangent Laplacian, mass matrices and boundary conditions | planned | P14.1, sparse linear algebra | Symmetry, row-sum, PSD/nullspace and Dirichlet/Neumann tests pass; obtuse/non-Delaunay policy is documented. |
+| P14.6 | Poisson, heat and implicit mean-curvature-flow solvers | planned | P14.5 | Residuals meet tolerance; constants/harmonic fixtures are preserved; smoothing decreases area without unintended volume/topology drift. |
+| P14.7 | Geodesic distance and shortest paths on surfaces | planned | P14.6 | Heat-method distances converge to analytic plane/sphere values and agree with graph/exact baselines within declared error. |
+| P14.8 | Harmonic/conformal surface parameterization | planned | P14.5 | Boundary mapping is respected, flipped UV triangles are detected, and conformal distortion is reported on disk/annulus fixtures. |
+| P14.9 | Homology/cohomology generators and Hodge decomposition | planned | P14.1, consolidated persistence | Exact+coexact+harmonic reconstruction matches the input field; harmonic dimension equals Betti numbers on sphere/torus/multi-boundary meshes. |
+| P14.10 | Tangent connections, parallel transport and vector-field design | planned | P14.4, P14.9 | Loop holonomy matches enclosed curvature; prescribed singularity indices satisfy Poincare-Hopf; interpolation is frame-invariant. |
+| P14.11 | DDG operator `.10d` sections and CPU/GPU sparse differential | planned | P14.2-P14.10 | Operators/fields round-trip canonically; GPU SpMV/operator batches match CPU within stated numeric tolerance with deterministic assembly. |
+
+### P15 - Deterministic parallel geometry, dynamic indices, and spatial graphs
+
+**Goal:** Turn existing isolated GPU batches into a reusable multicore/batched geometry layer and add the
+spatial structures and graphs described by ParGeo, Clarkson-Shor, Atallah and Althofer et al.
+
+| Task | Title | Status | Deps | Acceptance gate |
+|------|-------|--------|------|-----------------|
+| P15.1 | Deterministic parallel primitives: scan, pack, reduce, list ranking and tree contraction | planned | P10.5 | Parallel and scalar results are byte-identical across worker counts; bounded scratch and stable tie-breaking are proved by tests. |
+| P15.2 | Randomized incremental conflict-graph framework | planned | P10.5 | Seeded histories are reproducible; backward-analysis counters and conflict updates validate on hull/trapezoid clients. |
+| P15.3 | Parallel 2-D/3-D hulls with reservation batches | planned | P15.1, existing hulls | Results match scalar canonical hulls under adversarial conflicts; reservations never create non-manifold facets. |
+| P15.4 | Smallest enclosing ball in fixed dimension | planned | P15.1, P11.9 | Welzl and sampling/orthant-reduction modes return the same support-certified ball on 2-D/3-D/10-D fixtures. |
+| P15.5 | Batch-dynamic log-structured kd-tree | planned | existing kd-tree, P15.1 | Parallel insert/delete/query batches equal a rebuilt static oracle; tombstones/compaction are deterministic and memory-bounded. |
+| P15.6 | Well-separated pair decomposition | planned | P15.5 | Separation invariant holds for every pair; every unordered point pair is covered exactly by the decomposition hierarchy. |
+| P15.7 | Closest, bichromatic-closest and all-nearest pairs | planned | P15.5, P15.6 | Results equal exhaustive search with canonical distance/index ties across Euclidean and declared Tensor10D metrics. |
+| P15.8 | EMST and kNN/Delaunay/Gabriel/beta-skeleton graph generators | planned | P15.6, existing Delaunay | Graph edges match defining empty-region/cut properties; EMST weight matches Kruskal oracle; output is canonical. |
+| P15.9 | Greedy weighted and geometric t-spanners | planned | P15.7, P15.8 | All-pairs stretch is <= declared t on small exhaustive graphs; sparsity/weight certificates and disconnected-input behavior are reported. |
+| P15.10 | Cache/I/O-aware multisearch and external-memory tiling | planned | P15.1, P10.5 | Large inputs stream within the Sentinel and reproduce in-memory results; block-I/O counters demonstrate the intended asymptotic trend. |
+| P15.11 | Reproducible spatial data generators and benchmark harness | planned | P10.7 | Uniform, clustered, skewed, low-dimensional manifold and pathological corpora are seed-stable; reports separate algorithm, scheduling and transfer time. |
+
+### P16 - Collision detection and motion planning
+
+**Goal:** Build planning as a consumer of robust geometry, not as a renderer convenience: configuration-space
+models, collision/distance queries, combinatorial and sampling planners, dynamics, feedback and uncertainty.
+
+| Task | Title | Status | Deps | Acceptance gate |
+|------|-------|--------|------|-----------------|
+| P16.1 | SE(2)/SE(3) configuration-state and constraint model | planned | P17.5 | Angle/quaternion normalization, manifold interpolation and selector-vs-coordinate semantics are explicit and round-trip through `.10d`. |
+| P16.2 | Kinematic chains/trees, Jacobians and closed-chain constraints | planned | P16.1 | Forward kinematics and Jacobians match finite differences; loop closure converges or returns a typed infeasibility certificate. |
+| P16.3 | Discrete and continuous collision/distance engine | planned | P12.3, existing BVH | Static overlap, separation distance, time-of-impact and grazing contacts match analytic fixtures; broad phase never drops a narrow-phase hit. |
+| P16.4 | Configuration-space obstacles via Minkowski operations | planned | P11 polygon sets, P12 solids | Translational robot C-obstacles agree with direct collision sampling; rotational discretization publishes completeness/error bounds. |
+| P16.5 | Visibility graphs, funnel paths and exact cell decomposition | planned | P11.3, P11.6 | Polygonal shortest paths match analytic/exhaustive fixtures; decomposition cells cover free space without overlap or omission. |
+| P16.6 | PRM and lazy roadmap family | planned | P16.3, P15 indices | Seeded roadmaps are reproducible; probabilistic-completeness assumptions and collision-check counts are reported; multi-query reuse is valid. |
+| P16.7 | RRT, bidirectional RRT and asymptotically optimal RRT* | planned | P16.3, P15 indices | Seeded trees are reproducible, paths collision-free, and RRT* cost is non-increasing with samples on benchmark spaces. |
+| P16.8 | Time-varying, multi-robot and coordination-space planning | planned | P16.6, P16.7 | Returned trajectories are mutually collision-free in space-time; priority/reservation failures are explicit rather than silently serialized. |
+| P16.9 | Coverage, pursuit-evasion, manipulation and closed-chain planners | planned | P16.2, P16.5-P16.8 | Domain-specific invariants (coverage measure, visibility, grasp/closure constraints) are checked and uncertainty assumptions are surfaced. |
+| P16.10 | Differential constraints and kinodynamic planning | planned | P16.2, physics integrators | Propagated trajectories obey dynamics/control bounds; Dubins/Reeds-Shepp analytic cases and numerical shooting residuals pass. |
+| P16.11 | Feedback/vector-field and trajectory-optimization layer | planned | P14.10, P16.10 | Closed-loop simulations reach invariant goal regions under stated disturbances; optimization reports feasibility and KKT/residual metrics. |
+| P16.12 | Belief/information-space planning under sensing uncertainty | planned | statistical manifold, epistemic/deontic layers | Localization/mapping belief updates normalize, policies are observation-contingent, and governance forbids unsafe cross-context state disclosure. |
+
+**Phase gate:** every returned plan carries feasibility evidence, collision-check provenance, model assumptions and
+an exact/approximate label; no planner silently upgrades probabilistic success into a safety claim.
+
+### P17 - N-D affine, projective, convex, Lie, and smooth geometry
+
+**Goal:** Supply the mathematical geometry layer needed by CAD, registration, robotics and 10-D reasoning,
+reusing the existing linear-algebra engine rather than duplicating it.
+
+| Task | Title | Status | Deps | Acceptance gate |
+|------|-------|--------|------|-----------------|
+| P17.1 | Dimension-generic affine points/vectors/frames and barycentric coordinates | planned | P10.5 | Frame changes and affine combinations preserve invariants in 2-D/3-D/10-D; dependent inputs return rank certificates. |
+| P17.2 | Homogeneous/projective points, hyperplanes, duality and cross-ratios | planned | P17.1 | Incidence and cross-ratio invariance hold under projective transforms; points at infinity are represented explicitly. |
+| P17.3 | Convexity certificates and finite-dimensional theorem algorithms | planned | P17.1, P11.9 | Caratheodory reductions, Radon partitions, Helly witnesses, Tverberg/centrepoint approximations and separating/supporting hyperplanes return verifiable certificates. |
+| P17.4 | N-D rigid/isometric transforms, reflections and QR/Householder path | planned | linear algebra | Orthogonality/determinant and Cartan-Dieudonne reflection decomposition reconstruct the input transform within tolerance. |
+| P17.5 | Quaternions, dual quaternions and rotation/pose interpolation | planned | P17.4 | Quaternion-to-matrix and SE(3) conversions round-trip; SLERP/screw interpolation handles antipodes and small angles continuously. |
+| P17.6 | SVD/PCA, best affine subspace and rigid registration | planned | linear algebra, P17.1 | Rank-k approximation satisfies Eckart-Young on fixtures; PCA/Procrustes/Kabsch results match independent residual and orientation checks. |
+| P17.7 | Quadratic forms, constrained optimization and Schur complements | planned | linear algebra | PSD/PD and Schur certificates are correct; constrained quadratic solutions satisfy primal feasibility and stationarity residuals. |
+| P17.8 | Lie groups/algebras for SO(n)/SE(n), exp/log and Jacobians | planned | P17.4, P17.5 | Group identities, adjoint action and exp/log round-trips pass near zero and near pi; Jacobians match finite differences. |
+| P17.9 | Parametric curve differential geometry | planned | P17.1 | Arc length, tangent, curvature, torsion and Frenet/rotation-minimizing frames converge on line/circle/helix fixtures. |
+| P17.10 | Smooth surface differential geometry | planned | P17.9 | First/second fundamental forms, Gaussian/mean/principal curvature, Gauss map and geodesic equations match plane/sphere/cylinder/saddle analytics. |
+| P17.11 | Multidimensional polytopes, halfspace hulls and projections | planned | P17.2, P17.3 | V-to-H conversion and projected hulls reproduce known low-dimensional combinatorics; complexity/capacity bounds fail closed. |
+
+### P18 - Parametric CAD, procedural lattices, and shape optimisation
+
+**Goal:** Extend authoring from fixed polygonal primitives to compact, editable parametric geometry and
+budget-aware matching/optimisation. The supplied stent paper motivates generic lattice/tube functionality; it
+does not authorize clinical performance claims.
+
+| Task | Title | Status | Deps | Acceptance gate |
+|------|-------|--------|------|-----------------|
+| P18.1 | Bezier, B-spline and NURBS curves | planned | P17.1, P17.9 | de Casteljau/de Boor evaluation, derivatives, knot insertion and rational weights match analytic endpoints/partition of unity and preserve shape under refinement. |
+| P18.2 | Tensor-product, trimmed and NURBS surfaces | planned | P18.1, P17.10 | Evaluation/partials/normals are continuous to declared degree; trim loops classify robustly and tessellation error is bounded. |
+| P18.3 | Continuity-constrained composite curves and transition segments | planned | P18.1 | C0/C1/C2 and G1/G2 joins are verified numerically and symbolically where possible; invalid constraints return diagnostics. |
+| P18.4 | Sweep, loft, revolve, offset and tube/pipe solids | planned | P18.2, P12 | Frame transport avoids twist discontinuities; closed outputs validate topology; offsets report self-intersection/singularity events. |
+| P18.5 | Implicit surfaces, signed-distance fields and superquadric/primitive composition | planned | P13 isosurface, P17 | Distance/sign/gradient contracts are explicit; boolean composition and meshing reproduce analytic fixtures within error bounds. |
+| P18.6 | Repeated, helical and lattice procedural topology | planned | P18.3, P18.4 | Ring/helical/repeated cells honor discrete counts and continuous dimensions, close seams exactly, and remain editable by parameter identity. |
+| P18.7 | Shape distances, correspondence and registration | planned | P15 indices, P17.6 | Hausdorff/Chamfer/normal-aware distances match exhaustive oracles; alignment is permutation-invariant and reports outliers/partial-overlap policy. |
+| P18.8 | Mixed discrete/continuous parameter schemas and constraint propagation | planned | P18.1-P18.7 | Parameter edits either yield a valid deterministic model or a minimal violated-constraint report; no invalid mesh is silently exported. |
+| P18.9 | Reproducible design-of-experiments and surrogate models | planned | statistics/linear algebra | LHS/Sobol samples are seed-stable; GP/RBF surrogate predictions include uncertainty and pass held-out calibration/error reports. |
+| P18.10 | Budgeted shape optimisation: EI, predictor-believer and deterministic evolutionary baseline | planned | P18.7-P18.9 | Evaluation budgets are hard limits; best-so-far is monotone; algorithms are compared on identical seeds and report objective, wall time and uncertainty honestly. |
+| P18.11 | Optional domain adapters for vascular lattices and simulation export | planned | P18.6, P13.10 | Adapter generates structural geometry and FEM/CFD boundary metadata only; output carries "not clinically validated" and requires human attestation for medical interpretation. |
+
+### P19 - Expanded ABI, `.10d`, API, and end-to-end conformance
+
+**Goal:** Integrate P11-P18 without turning the geometry library into disconnected demonstrations.
+
+| Task | Title | Status | Deps | Acceptance gate |
+|------|-------|--------|------|-----------------|
+| P19.1 | Versioned section schemas for subdivisions, exact CSG, cells, operators, paths and CAD | planned | producing phases | Every new POD layout has byte/offset assertions, canonical encode/decode identity, CRC and unknown-version fail-closed tests. |
+| P19.2 | Unified typed operation descriptors and capability discovery | planned | P10.1, producing phases | Rust/WASM/MCP/qapp expose the same exactness, backend, dimension, scratch, governance and maturity metadata. |
+| P19.3 | Streaming/chunked execution and cancellation | planned | P10.5, P15.10 | Large jobs remain within the Sentinel, can be cancelled at deterministic boundaries, and resume from content-addressed checkpoints. |
+| P19.4 | Renderer and authoring integration | planned | P12-P18 | Subdivisions, CSG regions, fields, paths and parametric control cages can be inspected without losing source identity or governance metadata. |
+| P19.5 | Cross-target conformance matrix | planned | P19.1-P19.4 | Native scalar/SIMD, WASM and available GPU backends agree on combinatorial output; numeric tolerances are per-operation and published. |
+| P19.6 | Literature-expansion closeout and operator manual | planned | P11-P19 | Every source-led capability is implemented, explicitly rejected, or deferred with a named reason; manuals include examples, limits and evidence level without copied source material. |
+
+### Dependency order and recommended execution waves
+
+1. **Wave A - truth before breadth:** P10, then the P11.1/P12.1/P17.1 numerical and data-model barriers.
+2. **Wave B - missing classical core:** P11 planar structures, P12 exact CSG, and P15.1 deterministic parallel
+   primitives. These unlock most later work and correct the largest present capability overstatements.
+3. **Wave C - analysis and creation:** P13 quality meshing, P14 DDG, P17 mathematical geometry, and P18
+   parametric CAD. P13.6 waits on P14.5/P14.6 rather than shipping another "Poisson-like" placeholder.
+4. **Wave D - planning and scale:** P15 dynamic/parallel indices and spatial graphs, then P16 motion planning.
+5. **Wave E - integration:** P19 section schemas and APIs land incrementally with each producing phase; P19.5
+   and P19.6 are the final barriers.
+
+No phase is required to use parallel agent fan-out. If Timothy explicitly requests a swarm for a wave, retain
+the existing isolated-file-plus-integrator rule and keep shared ABI/container files under one integrator.
 
 ## Cross-cutting gates (always-on)
 

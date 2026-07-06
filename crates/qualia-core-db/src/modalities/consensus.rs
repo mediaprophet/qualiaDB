@@ -1,6 +1,6 @@
 //! Distributed state & consensus (§28, legal_logic.md) — multi-agent sync.
 //!
-//! Human-centric obligations span many sovereign vaults; no single node holds the complete
+//! Human-centric obligations span many person-controlled vaults; no single node holds the complete
 //! global state. A multi-party obligation must therefore be **suspended until consensus**, a
 //! norm valid *locally* does not bind the network until *synchronised*, and a network
 //! **partition** must not silently break standing obligations (those established before the

@@ -1,4 +1,4 @@
-# Human-centric identity, biometric sovereignty & rights-gated sensing
+# Human-centric identity, biometric privacy & rights-gated sensing
 
 **Status:** design-and-considerations document (2026-07-04). A cross-cutting concern, not a build tracker — it
 informs three plans rather than being owned by one. Nothing here is built; it records the principles,
@@ -65,12 +65,12 @@ architecture already fits this:
   the *auditory* lane); device radios = network-layer identifiers. Identity is a fusion across geometry, spectral
   (vision **and** audition), temporal, and network capability families.
 
-**Why proliferation makes sovereignty more essential, not less.** The same many identifiers are *empowerment*
+**Why proliferation makes control more essential, not less.** The same many identifiers are *empowerment*
 when the person is their principal steward (gated, minimal-disclosure, attestable) and a *panopticon* when
-institutions hold them. The stakes scale with the identifier count, so the sovereignty inversion is what makes
+institutions hold them. The stakes scale with the identifier count, so the rights inversion is what makes
 the proliferation safe to have.
 
-## 3. Biometric sovereignty: the inversion
+## 3. Biometric privacy & autonomy: the inversion
 
 Governments and enterprises today build libraries of natural people's biometrics that become institutionally
 owned assets driving surveillance — a rights inversion, treating a person's biometric identifiers (and, by
@@ -81,9 +81,9 @@ subject controls. The person holds the reference; the agent brings a probe + cre
 decides; a *scoped answer* returns — not the template.
 
 1. **Locus, not extraction, is the architecture.** Traditional: capture → extract template → institutional
-   library → match. Sovereign: the reference stays in the subject's store; the agent's probe + credentials route
+   library → match. Person-controlled: the reference stays in the subject's store; the agent's probe + credentials route
    a *federated query* to the subject's locus (their device, or a consented enclave); the capability runs
-   *there*; only a scoped answer crosses back. This is *why the kernels must be sovereign-executable* —
+   *there*; only a scoped answer crosses back. This is *why the kernels must be person-controlled and locally executable* —
    native-first dispatch + WASM-in-the-browser + zero-heap / 128 MB. If biometric geometry can only run on an
    institutional GPU, the person cannot hold it. Enforcement seam: the SHACL `route_is_local` / `shapes_for_locus`
    model.
@@ -118,7 +118,7 @@ decides; a *scoped answer* returns — not the template.
 
 The "subject consents, agent asks" model is the *floor*. PEPs, witness protection, intelligence functions, and
 court-ordered monitoring / exclusion (ankle-bracelets, keep-away-from-schools orders) force three shifts — and
-they *strengthen* the sovereignty argument.
+they *strengthen* the rights argument.
 
 1. **Multi-principal, obligation-weighted resolution — not consent-only.** The rights ontology must express
    *obligations* and *prohibitions* with precedence, not only subject-granted *permissions* — deontic logic
@@ -143,7 +143,7 @@ they *strengthen* the sovereignty argument.
 ## 5. Bi-directional accountability → choice
 
 Because the query runs at / through the subject's locus, **the act of querying is itself a receipted event on the
-subject's side** — sensing is bi-directional. Traditional surveillance is one-way; the sovereign inversion gives
+subject's side** — sensing is bi-directional. Traditional surveillance is one-way; the rights inversion gives
 the person a *counter-record*: who interrogated their fabric, when, under what claimed authority, granted or
 refused. That record is *actionable* — it powers ordinary choice (shop there again or not; warn others; escalate)
 without first winning a slow, asymmetric lawsuit.
@@ -166,7 +166,7 @@ eliminate it.
 
 ## 6. Spatiotemporal correlation for record refutation & source attribution (the highest-risk capability)
 
-An erroneous / disputed record carries a claimed *time*, *place*, and *identity*. The subject's own sovereign
+An erroneous / disputed record carries a claimed *time*, *place*, and *identity*. The subject's own person-controlled
 fabric — a timestamped GIS trail + local radio-environment logs (which BT / WiFi identifiers were in range) — can
 be **cross-correlated against it** to either *refute* it ("I was elsewhere, with different neighbours") or
 *attribute its source* ("the spoofed identifier co-occurs with device Z at place L, time T"). Real use-cases:
@@ -185,7 +185,7 @@ radio logs to figure out where it came from" *is* the core technique of mass sur
 analytics; the same maths that gives a person an alibi gives an institution everyone's movements and *co-presence
 graph* (who was near whom). So the inversion is the whole safety case:
 
-- **The movement / co-presence log is the single most sensitive data class** — most strongly sovereign-held,
+- **The movement / co-presence log is the single most sensitive data class** — most strongly person-held,
   encrypted, non-egressing (Sanctuary-vault class). The capability *raises* the encryption / no-silent-egress
   bar, it does not relax it.
 - **Correlation reaching past the subject's own fabric is itself a rights-gated query.** You may refute *your
@@ -211,7 +211,7 @@ disclosure rule inherits the same "offer, not proof; absence not adverse" discip
 (law enforcement, departmental staff, contractors — including *private* contractors engaged specifically so harm
 can be done with accountability laundered away) depends on an asymmetry: the powerful actor keeps the record and
 its testimonial stands unchallenged, because the natural person has *no records or computational system of their
-own*. A sovereign, attestable, reproducible record **rebalances that evidentiary asymmetry** — and cuts through
+own*. A person-controlled, attestable, reproducible record **rebalances that evidentiary asymmetry** — and cuts through
 the private-contractor laundering, because it documents what was done and its effects *independent of which entity
 is nominally responsible*, so the victim need not first win "whose fault legally." This improves not only
 human-rights outcomes but *productivity and public-expenditure performance*: unaccountable harm, wrongful
@@ -225,12 +225,12 @@ Three requirements this sharpens on the record: **third-party-attestable, not se
 duress-PIN posture); **usable by the vulnerable** (accessibility-first is a rights requirement here — the primary
 victims are often the least technical).
 
-## 8. Biometric fabric as sovereign multi-factor unlock (why user-auth was deliberately delayed)
+## 8. Biometric fabric as person-controlled multi-factor unlock (why user-auth was deliberately delayed)
 
-The biometric-sovereignty work is *also* how the person authenticates to their **own** qualia-db: if a person can
+The biometric-rights work is *also* how the person authenticates to their **own** qualia-db: if a person can
 prove it is their face, phonetic signature, typing cadence, etc., then *enough of those tests together* define an
 unlock. This is the *good* locus for biometrics — local authentication, template never leaving the device — the
-exact opposite of an institutional matching library; same technology, inverted sovereignty.
+exact opposite of an institutional matching library; same technology, inverted control.
 
 **Multi-sig (M-of-N over the fabric), not one biometric.** Unlocking on a single definitive biometric would be a
 `DefinitiveCollapse` in another guise — a single point of failure and a coercion target. The unlock is a
@@ -238,9 +238,9 @@ exact opposite of an institutional matching library; same technology, inverted s
 enumerated-identity model and the guardianship M-of-N pattern already in tree: any one factor may degrade or be
 spoofed without breaking the whole; an attacker must defeat M at once.
 
-**Why user-auth was deliberately delayed — and correctly.** Building the unlock before the biometric-sovereignty
+**Why user-auth was deliberately delayed — and correctly.** Building the unlock before the biometric-rights
 model was resolved would risk baking in the wrong thing (a single-biometric unlock; a collapsing / leakable
-template store). Sequencing the identity model first is the same "sovereignty first, then the capability"
+template store). Sequencing the identity model first is the same "the rights model first, then the capability"
 discipline — a principled delay, not a slip.
 
 **Honest technical caveats (the traps):**
@@ -271,7 +271,7 @@ docs (that's a coordinated follow-up).
   `x,y,z,t` + the `t`-ledger — the record-refutation / anti-stalking capability.
 - **Determinism-as-attestability** (the whole P1 / `.10d` canonical-bytes discipline) is what makes a match /
   refutation *reproducible* — a civil-liberties property, not just an engineering one.
-- **Sovereign-executable** (native-first + WASM + zero-heap / 128 MB) is the *enabling condition* for locus (§3.1)
+- **Person-controlled execution** (native-first + WASM + zero-heap / 128 MB) is the *enabling condition* for locus (§3.1)
   — it is why the geometry kernels must run on hardware the person owns.
 
 **For CV / vision (`native-visual-intelligence-and-generative-3d.md`):**
@@ -288,8 +288,8 @@ docs (that's a coordinated follow-up).
 
 These weave into `native-capability-ontology-and-dispatch.md` D-tasks (recorded in its §12 pointer):
 
-1. **Locus / sovereignty axis in capability metadata (D0.2)** — device affinity says *what silicon*; a locus
-   constraint says *whose sovereignty domain* a capability may run in / over a data class. `route_is_local` is
+1. **Locus / control-locus axis in capability metadata (D0.2)** — device affinity says *what silicon*; a locus
+   constraint says *whose control domain* a capability may run in / over a data class. `route_is_local` is
    the enforcement seam.
 2. **Disclosure tier as a first-class capability property (D0.2)** — minimal result form (boolean / ZK-predicate
    / scoped-attribute / full); the gate returns the *least* the requesting VC is entitled to.
@@ -321,7 +321,7 @@ Consolidated curation datums from the sections above:
 
 - This governs the **compliant, interoperable path**. It does not physically stop an institution that unlawfully
   captures and stores biometrics or movement data out-of-band. What it does: makes the rights-respecting path the
-  default and the easy one (sovereign locus, gated, minimal-disclosure, attestable), inverts who holds the asset,
+  default and the easy one (person-controlled locus, gated, minimal-disclosure, attestable), inverts who holds the asset,
   and makes non-compliant use *legible and contestable* — standing, provenance, and a reproducible basis to
   contest. It does not abolish the physics of cameras or radios. Claiming otherwise would be dishonest.
 - **Nothing here is built.** The identity model (`identity.rs`), guardianship, authority-attestation, ZK

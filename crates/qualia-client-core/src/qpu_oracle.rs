@@ -1,4 +1,4 @@
-//! Sovereign QPU Oracle — BYOK remote quantum offload for NP-hard tasks.
+//! Person-controlled QPU Oracle — BYOK remote quantum offload for NP-hard tasks.
 //!
 //! API keys are encrypted at rest via KeyVault-derived material. Only anonymized
 //! numeric matrices (QUBO / VQE parameter vectors) may egress; classified data

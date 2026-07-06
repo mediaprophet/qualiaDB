@@ -11,11 +11,11 @@
 //! small closed enum rather than a free string so a caller cannot smuggle an unvalidated value in; if
 //! additional karyotypes are ever curated they are an explicit, reviewed extension, not silent drift.
 
-use crate::anatomy::systems::body_system;
+use serde::{Deserialize, Serialize};
 
 /// The declared chromosomal basis — the user's "DNA selection". A biological-substrate attribute, not
 /// an identity or gender claim.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Karyotype {
     /// XY → the male reference model.
     Xy,
@@ -24,7 +24,7 @@ pub enum Karyotype {
 }
 
 /// Which Visible Human reference model the 3D body renders.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AnatomyModel {
     Male,
     Female,
@@ -100,13 +100,19 @@ impl AnatomyModel {
 /// bare organ (`"3d-vh-m-eye-l.glb"` → `"eye"`, `"blood-vasculature"` → `"blood-vasculature"`).
 pub fn normalize_organ_key(raw: &str) -> String {
     let mut s = raw.trim().to_ascii_lowercase();
-    if let Some(rest) = s.strip_suffix(".glb") {
-        s = rest.to_string();
-    }
-    for pre in ["3d-vh-m-", "3d-vh-f-", "vh-m-", "vh-f-"] {
-        if let Some(rest) = s.strip_prefix(pre) {
+    for ext in [".glb", ".gltf", ".obj", ".stl"] {
+        if let Some(rest) = s.strip_suffix(ext) {
             s = rest.to_string();
             break;
+        }
+    }
+    // Strip the CCF asset prefix up to and including the sex marker `-m-`/`-f-`. The provider varies
+    // (`vh`, `allen`, `sbu`, `nih`, …), so match the marker rather than a fixed prefix; organ tokens
+    // never contain a dash-bounded single `m`/`f`, so the first occurrence is always the sex marker.
+    let has_3d = s.starts_with("3d-");
+    if let Some(pos) = s.find("-m-").or_else(|| s.find("-f-")) {
+        if has_3d || pos <= 8 {
+            s = s[pos + 3..].to_string();
         }
     }
     for lat in ["-left", "-right", "-l", "-r"] {
@@ -133,10 +139,12 @@ static ORGAN_SYSTEMS: &[(&str, &str)] = &[
     ("larynx", "respiratory"),
     ("trachea", "respiratory"),
     ("bronchus", "respiratory"),
+    ("main-bronchus", "respiratory"),
     ("respiratory-system", "respiratory"),
     // Digestive
     ("liver", "digestive"),
     ("stomach", "digestive"),
+    ("mouth", "digestive"),
     ("small-intestine", "digestive"),
     ("large-intestine", "digestive"),
     ("colon", "digestive"),
@@ -158,6 +166,7 @@ static ORGAN_SYSTEMS: &[(&str, &str)] = &[
     // Urinary
     ("kidney", "urinary"),
     ("bladder", "urinary"),
+    ("urinary-bladder", "urinary"),
     ("ureter", "urinary"),
     ("urethra", "urinary"),
     ("renal-pyramid", "urinary"),
@@ -174,6 +183,7 @@ static ORGAN_SYSTEMS: &[(&str, &str)] = &[
     ("bone", "skeletal"),
     ("skeleton", "skeletal"),
     ("rib", "skeletal"),
+    ("pelvis", "skeletal"),
     // Muscular
     ("muscle", "muscular"),
     // Endocrine
@@ -197,11 +207,13 @@ static ORGAN_SYSTEMS: &[(&str, &str)] = &[
     ("ovary", "reproductive"),
     ("fallopian-tube", "reproductive"),
     ("vagina", "reproductive"),
+    ("placenta", "reproductive"),
+    ("placenta-full-term", "reproductive"),
 ];
 
 /// The body-system id for an HRA/CCF organ (after [`normalize_organ_key`]), or `None` if the organ is
 /// not in the curated map. Returned ids are guaranteed valid (a test asserts every entry resolves via
-/// [`body_system`]).
+/// [`body_system`](crate::anatomy::systems::body_system)).
 pub fn body_system_for_organ(organ: &str) -> Option<&'static str> {
     let key = normalize_organ_key(organ);
     ORGAN_SYSTEMS
@@ -211,7 +223,7 @@ pub fn body_system_for_organ(organ: &str) -> Option<&'static str> {
 }
 
 /// How a body system is rendered on the 3D body.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SystemRepresentation {
     /// Has one or more characteristic organ meshes — colour them directly (the σ percept paints the mesh).
     DiscreteOrgans,
@@ -251,6 +263,9 @@ pub fn overlay_host_systems(system_id: &str) -> &'static [&'static str] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    // `body_system` (the systems registry validity lookup) is used only by
+    // `every_mapped_system_id_is_a_real_body_system`, so it is scoped to the tests.
+    use crate::anatomy::systems::body_system;
 
     #[test]
     fn karyotype_selects_reference_model() {
@@ -280,6 +295,11 @@ mod tests {
         assert_eq!(normalize_organ_key("eye-left"), "eye");
         assert_eq!(normalize_organ_key("blood-vasculature"), "blood-vasculature");
         assert_eq!(normalize_organ_key("  VH-M-Lung  "), "lung");
+        // The provider varies across the real CCF set — strip on the sex marker, not a fixed prefix.
+        assert_eq!(normalize_organ_key("3d-allen-m-brain.glb"), "brain");
+        assert_eq!(normalize_organ_key("3d-sbu-m-large-intestine.glb"), "large-intestine");
+        assert_eq!(normalize_organ_key("3d-nih-f-lymph-node.glb"), "lymph-node");
+        assert_eq!(normalize_organ_key("3d-vh-m-main-bronchus.glb"), "main-bronchus");
     }
 
     #[test]
@@ -291,6 +311,13 @@ mod tests {
         // Model-specific reproductive organs.
         assert_eq!(body_system_for_organ("prostate"), Some("reproductive"));
         assert_eq!(body_system_for_organ("uterus"), Some("reproductive"));
+        // The organs the first real full-body run surfaced (multi-provider prefixes + new tokens).
+        assert_eq!(body_system_for_organ("3d-allen-m-brain.glb"), Some("nervous"));
+        assert_eq!(body_system_for_organ("3d-nih-m-lymph-node.glb"), Some("immune_lymphatic"));
+        assert_eq!(body_system_for_organ("3d-vh-m-main-bronchus.glb"), Some("respiratory"));
+        assert_eq!(body_system_for_organ("3d-vh-m-mouth.glb"), Some("digestive"));
+        assert_eq!(body_system_for_organ("3d-vh-m-pelvis.glb"), Some("skeletal"));
+        assert_eq!(body_system_for_organ("3d-vh-m-urinary-bladder.glb"), Some("urinary"));
         // Unknown → reported as None, never guessed.
         assert_eq!(body_system_for_organ("3d-vh-m-flux-capacitor.glb"), None);
     }

@@ -299,6 +299,21 @@ fn ingest_remote_message(
     Ok(true)
 }
 
+/// Apply an inbound [`RelayEnvelope`] to a session, regardless of the transport it arrived on.
+///
+/// This is the transport-agnostic ingest path shared by the HTTP relay and the SocialWebNet mesh
+/// (`chat_mesh`): it deduplicates by `(lamport, author_did)`, validates agent messages, and appends
+/// the message. Returns `true` if the message was newly applied, `false` if it was a duplicate or
+/// our own echo. Envelope signature verification is the caller's/session policy's concern, exactly as
+/// for the relay pull path.
+pub fn apply_incoming_envelope(
+    storage_root: &Path,
+    session_id: &str,
+    envelope: &RelayEnvelope,
+) -> Result<bool, ChatError> {
+    ingest_remote_message(storage_root, session_id, envelope)
+}
+
 pub fn sync_session_relay(storage_root: &Path, session_id: &str) -> Result<usize, String> {
     let session =
         crate::chat_session::load_session(storage_root, session_id).map_err(|e| e.to_string())?;

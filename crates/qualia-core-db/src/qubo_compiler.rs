@@ -123,7 +123,7 @@ pub fn rehydrate_solution(matrix: &mut QuboMatrix, assignment: &[u8], out: &mut 
     count
 }
 
-/// Scrub personal URIs from index_map to ensure no sovereign data leaks
+/// Scrub personal URIs from index_map to ensure no personal data leaks
 pub fn scrub_metadata(matrix: &mut QuboMatrix) {
     matrix.index_map.clear();
     matrix.index_count = 0;

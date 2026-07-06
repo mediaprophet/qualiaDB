@@ -337,7 +337,7 @@ them, and I do not edit another instrument's live tracker.**
 | Physics-of-time / QPU-elastic notes | `advanced-stuff.md` (raw capture) | Raw notes, previously no home | — | **Homed here:** QPU scaler → §5 / D3.2; time-physics → §6 / D6.1 (+ `.10d` `t`-axis input, CG-lane coordinated). |
 | WellFair / 3D Anatomy Qapp | MASTER-EXECUTION-CHECKLIST + `wellfare-core/anatomy/` | S1–S5.0 done | Claude (Opus 4.8) | The first real end-to-end *consumer* of the whole path (records → geometry → `.10d` → renderer, rights-bounded). |
 | **Capability ontology + dispatch (this plan)** | `native-capability-ontology-and-dispatch.md` | **NEW — D0–D6 planned/deferred** | Claude (Opus 4.8) | The ecosystem-optimization layer *above* the capability substrate. |
-| Human-centric identity & biometric sovereignty | `human-centric-identity-and-biometric-sovereignty.md` | Considerations doc; nothing built | Claude (Opus 4.8) | Cross-cutting rights/identity concern informing CV, computational geometry, **and** this layer; injects the D0.2/D2.2/D4/D5 improvements (see §12). |
+| Human-centric identity & biometric privacy and autonomy | `human-centric-identity-and-biometric-rights.md` | Considerations doc; nothing built | Claude (Opus 4.8) | Cross-cutting rights/identity concern informing CV, computational geometry, **and** this layer; injects the D0.2/D2.2/D4/D5 improvements (see §12). |
 
 **Dependency ordering across workstreams.** This layer is deliberately **late**: it optimizes a capability
 surface, so it is most valuable once several capabilities exist and have a stable ABI. The honest sequence:
@@ -389,12 +389,12 @@ triggered, this document + the CG progress log carry the record; a dedicated
 
 ---
 
-## 12. Motivating use-case & cross-cutting concern: human-centric identity & biometric sovereignty
+## 12. Motivating use-case & cross-cutting concern: human-centric identity & biometric privacy and autonomy
 
 The rights-gated capability routing in this plan was developed against a concrete, high-stakes use-case —
-human-centric identity and biometric sovereignty — which grew into a first-class, cross-cutting concern informing
+human-centric identity and biometric privacy and autonomy — which grew into a first-class, cross-cutting concern informing
 the CV, computational-geometry, and this dispatch layer. It now lives in its own document:
-[`human-centric-identity-and-biometric-sovereignty.md`](human-centric-identity-and-biometric-sovereignty.md).
+[`human-centric-identity-and-biometric-rights.md`](human-centric-identity-and-biometric-rights.md).
 
 **In one paragraph:** a DID is an *identifier*, not an identity; identity is a never-collapsing probabilistic
 *fabric* over many identifiers + claims (`identity.rs`'s `DefinitiveCollapse` rejection). Biometric functions
@@ -403,12 +403,12 @@ ZK-provable predicate) rather than an extracted template — the data-subject as
 institution. Biometrics *are* geometry + spectral capabilities (so: reuse the substrate, don't silo), the
 exact-predicate ladder makes them ZK-provable, and sensing is bi-directional so the person gets an actionable
 counter-record. Harder cases (authority override, witness protection, personhood, spatiotemporal correlation,
-sovereign biometric unlock) and the honest limits are in that document.
+person-controlled biometric unlock) and the honest limits are in that document.
 
 **What it injects into this layer's D-tasks** (the dispatch-specific improvements — kept here because they modify
 the plan of record):
 
-- **D0.2** — add a **locus / sovereignty** axis (whose domain a capability may run in / over, not just which
+- **D0.2** — add a **locus / control** axis (whose domain a capability may run in / over, not just which
   device; `route_is_local` is the seam) and a **disclosure tier** (boolean / ZK-predicate / scoped-attribute /
   full; return the least the requesting VC is entitled to).
 - **D2.2** — the plan-cache key includes a **consent epoch**, so memoization respects revocation.

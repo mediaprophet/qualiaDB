@@ -46,7 +46,6 @@
 
 use bytemuck::{Pod, Zeroable};
 
-use crate::container_10d::axis_role::AXIS_ORDER;
 use crate::tensor::Tensor10D;
 
 /// Section payload mini-header size in bytes.
@@ -412,6 +411,9 @@ fn set_tensor_field(t: &mut Tensor10D, axis: usize, val: f32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    // Axis *names* (for bit-exact assertion messages) — only the numeric AXIS_COUNT is used by the
+    // production transpose, so AXIS_ORDER lives with the tests that reference it.
+    use crate::container_10d::axis_role::AXIS_ORDER;
     use crate::container_10d::crc32c::crc32c;
     use crate::container_10d::header::Container10dHeader;
     use crate::container_10d::section::{

@@ -1455,6 +1455,24 @@ impl WebizenHostApi {
         Ok((pushed, report))
     }
 
+    /// One-shot sync against a **libp2p** peer/relay (noise-encrypted request-response — the peer-to-peer
+    /// wire): drain the outbox to the peer, then pull + admit from it. `peer_id` is the base58 peer id,
+    /// `peer_addr` a libp2p multiaddr (e.g. `/ip4/1.2.3.4/tcp/4001`). Returns `(pushed, pull_report)`.
+    /// Native-only (libp2p). Same dumb-pipe contract as [`Self::sync_with_http_relay`]: correctness is
+    /// enforced by the fail-closed inbox, not the transport.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn sync_with_libp2p_peer(
+        &self,
+        peer_id: &str,
+        peer_addr: &str,
+        since: u64,
+    ) -> Result<(usize, SyncPullReport), String> {
+        let transport = super::sync_transport::Libp2pSyncTransport::connect(peer_id, peer_addr)?;
+        let pushed = self.sync_push_via(&transport, 256)?;
+        let report = self.sync_pull_via(&transport, since)?;
+        Ok((pushed, report))
+    }
+
     // --- Backup / restore of the WellFair data subtree (T3.3) ---
 
     /// Build a portable backup of this node's WellFair data (the `wellfair/` subtree) as archive

@@ -57,6 +57,23 @@ community-governed **language-resource workbench** (oral-first, no forced text) 
 music analysis → production engine → TTS (consent-gated) → separation/generation → eyes+ears composition.
 Strong human-rights/consent/cultural-protocol requirements throughout.
 
+### Chora (crate `qualia-ste`) — spatio-temporal permissive-commons omniverse (the "10d browser" exploration world)
+[`spatio-temporal-commons-canvas/README.md`](spatio-temporal-commons-canvas/README.md) — a Google-Earth-like
+explorable 3D world for Webizen Desktop: temporal scrubbing, permissive-commons asset "planting", layered
+open datasets (OGC/OSM/DEM, council, biosphere/GBIF, historical maps/HGIS, orbital/JPL-Horizons), decoupled
+per-location **governed** scripting (puzzles/life-games), hypermedia containers packaging native-derivative +
+original-source + provenance, nquin stewardship. Ontology spine (Timothy): **world of man** (OWL / digital
+twin, proper) vs **world of god** (natural — computational approximation, *never* a twin); thesis: *context
+is the asset* (anti-commodification → the high-signal grounding that fixes hallucination). Grounded gap
+analysis (6 read-only code explorations): the hard engine primitives are **REAL** (render/Tensor10D/σ colour+
+sound, `.10d` container + QEM LOD, WAL+Merkle-DAG `nodes_as_of(t)` time-travel, RCC-8/Allen VM opcodes,
+VC/deontic access, webseed + chat/sync relays, `ccf_resolver` SPARQL discovery); the build is the
+**geospatial backbone** (geodetic + DEM + globe), spatio-temporal range query + H3/quadtree (stubs),
+time-scrub replay, the `.10d` **provenance-sidecar (type 7)** + licence predicates + validate-before-render,
+qapp-facing scripting + steward/delegation, host render-surface/temporal/streaming APIs, and data-layer
+adapters + a per-adapter disclosure registry. P0–P8 phased; single-participant offline-capable canvas comes
+early, external data + shared worlds later. Dependency-gated relative to the wellfair MVP. Docs-only, no code.
+
 ### T3.4 — Phase-7 optional (WellFair roadmap tail)
 From [`remaining-work-consolidated-plan.md`](remaining-work-consolidated-plan.md): 3D anatomy *(now
 prioritized above)*, studies/rules engine, authenticated **Solid Pod** sync, model-assisted extraction,
@@ -70,6 +87,37 @@ Cooperative** (§17/WP9), installed-Qapp **token v2 + loopback CSP/origin isolat
 restricted-data release gate), finance/agreements/sync/forge/release WPs. Companion-PWA delivery (T3.2) is
 the phone side; **P1 secure-origin decided: WebRTC to a local origin, same-network** (see
 [`companion-pwa-installable-qapps.md`](companion-pwa-installable-qapps.md)).
+
+### Solid Chat interop — LDP transport + live wiring (mapping DONE)
+[`solid-chat-interop.md`](solid-chat-interop.md) — the native ↔ SolidOS "long chat"
+(<https://solid.github.io/chat/>) mapping is **built + verified lossless** (`qualia-client-core/src/solid_chat.rs`,
+4 tests; **additive-fidelity** mechanism — the standard `meeting:`/`sioc:`/`foaf:` subset every Solid client
+reads, PLUS native-only `qc:` triples on the same resource, so Qualia→Solid→Qualia round-trips losslessly and
+the native format is untouched). **Parked (Timothy, 2026-07-06 — discovery comes first):** the LDP transport
+(PUT `index.ttl` + HTTP **PATCH** the day file + GET/parse), wiring to live `chat_session`/`chat_graph` + a
+"Publish / Import Solid chat" desktop action, the `sioc:has_reply` threading projection from chat-graph reply
+edges, and swapping the focused round-trip parser for the engine `N3Parser` on inbound.
+
+### Comprehensive multi-chain wallet + semantic tokens (Timothy, 2026-07-06)
+A **BIP-39** (24-word / 256-bit) **HD** wallet (BIP-32/44) in **multisig** (m-of-n) — the concrete
+instantiation of the deferred [`selfhood-cryptography-fabric.md`](selfhood-cryptography-fabric.md)
+(threshold / social-recovery / dead-man-switch; the multisig *is* that primitive). Enumerates addresses for
+**Bitcoin + Lightning** (LN on BTC), **eCash (XEC)**, and **Nym (NYM)**; **full eCash token support — both
+standards: SLP** (Simple Ledger Protocol) **+ ALP** (A Ledger Protocol); and **semantic tokens** — a native
+Rust re-expression of Timothy's [semantic-tokens-xec](https://github.com/mediaprophet/semantic-tokens-xec)
+(+ `xec-slp-rdf`) model: RDF/JSON-LD token metadata + IPFS on XEC SLP/ALP, **grounded in the Qualia
+ontology/quins** (his prior art — do not reattribute). Ties into the permissive-commons economy (Compute
+Bounties, ILP metering, Lightning micropayments — `webizen-protocol-rfc.md` §4). **Existing scaffolding:**
+`api.rs` `WalletStatus`/`CoinBalance`/`TokenEntry`/`fetch_wallet_portfolio`/`mint_semantic_token` +
+Lightning/ILP (`ilp_dispatcher.rs`). **REAL crypto only** (bip39/bip32/secp256k1; no simulation — project
+rule). Its own major workstream; not built as a unit.
+
+### Networking setup options (Cloudflare / Nym) — part of the discovery build
+Fold into the discovery plan + [`personal-platform-provider-and-networking.md`](personal-platform-provider-and-networking.md)
+§4: a tiered rendezvous menu — **email/manual** (zero-infra MVP), **Cloudflare** (easiest for domain owners:
+**Cloudflare Tunnel** = outbound-only reachability, no inbound port / static IP; + DNS front-door record +
+Workers mailbox + R2 blind state store — all BYO under the user's own account), **own-edge/generic**, **Nym**
+(privacy-max, opt-in/paid, sensitive cases), + **mDNS** local. Make install as easy as possible.
 
 ---
 

@@ -14,9 +14,9 @@
 //! or from a loaded `.10d` section. The chunk-touch fraction (ratio of
 //! nodes visited to total nodes) is reported for observability.
 
-use super::bvh::{BvhNode, MAX_BVH_DEPTH};
+use super::bvh::MAX_BVH_DEPTH;
 use super::distance::Aabb;
-use super::kd_tree::{KdNode, MAX_KD_DEPTH};
+use super::kd_tree::MAX_KD_DEPTH;
 use super::primitives::Point3;
 
 use crate::container_10d::spatial_index_section::{
@@ -451,7 +451,7 @@ impl<'a> SpatialIndexQuery<'a> {
 mod tests {
     use super::*;
     use crate::specialized_libs::computational_geometry::{
-        build_bvh_recursive, build_kd_tree_3d, Aabb, Point3, BVH_NODE_SIZE, KD_NODE_SIZE,
+        build_bvh_recursive, build_kd_tree_3d, Aabb, Point3,
     };
     use crate::container_10d::spatial_index_section::encode_spatial_index_section;
 

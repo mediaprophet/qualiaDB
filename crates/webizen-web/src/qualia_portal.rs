@@ -162,7 +162,7 @@ impl QualiaPortal {
         self.last_parsed.clone()
     }
 
-    /// Lightweight generative DOM: map parsed triples → HTML elements (B2 sovereign loader).
+    /// Lightweight generative DOM: map parsed triples → HTML elements (B2 person-controlled loader).
     pub fn mount_qapp(&self, root_id: &str) -> Result<(), JsValue> {
         let window = web_sys::window().ok_or_else(|| JsValue::from_str("no window"))?;
         let document = window.document().ok_or_else(|| JsValue::from_str("no document"))?;

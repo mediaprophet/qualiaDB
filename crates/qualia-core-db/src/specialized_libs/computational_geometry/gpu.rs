@@ -18,7 +18,6 @@
 
 use super::{incircle, orientation_2, orient_3d, Aabb, Point2, Point3};
 use super::expansion::Sign;
-use super::bvh::{BvhNode, MAX_BVH_DEPTH};
 use super::box_join::BoxPair;
 
 pub const GPU_ORIENTATION_UNCERTAIN: i32 = 2;

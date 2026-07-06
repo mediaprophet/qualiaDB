@@ -2063,6 +2063,487 @@ pub fn list_chat_contacts() -> Result<serde_json::Value, String> {
     serde_json::to_value(contacts).map_err(|e| e.to_string())
 }
 
+// ── Personal directory (AD-like): categorised addressbook + agreement slots ─────
+
+/// The unified, categorised personal directory — the addressbook (Parties joined across the directory-actor
+/// + chat-contact stores by DID) grouped into categories, with a per-entry slot for the agreements
+/// governing that relationship. See `docs/plans/rights-aware-peer-agreement-addressbook.md`.
+pub fn list_directory() -> Result<serde_json::Value, String> {
+    let actors = get_directory_actors()?;
+    let contacts = crate::social_connect::list_chat_contacts();
+    let view = crate::directory::build_view(&actors, &contacts);
+    serde_json::to_value(view).map_err(|e| e.to_string())
+}
+
+/// The directory categories (built-in + user-created).
+pub fn list_directory_categories() -> Result<serde_json::Value, String> {
+    serde_json::to_value(crate::directory::list_categories()).map_err(|e| e.to_string())
+}
+
+/// Create a custom directory category. Returns the new category.
+pub fn create_directory_category(label: String) -> Result<serde_json::Value, String> {
+    let cat = crate::directory::create_category(&label)?;
+    serde_json::to_value(cat).map_err(|e| e.to_string())
+}
+
+/// Set the categories a directory entry (by DID) belongs to; returns the refreshed directory.
+pub fn set_directory_entry_categories(
+    did: String,
+    categories: Vec<String>,
+) -> Result<serde_json::Value, String> {
+    crate::directory::set_entry_categories(&did, categories)?;
+    list_directory()
+}
+
+/// Faceted + concept-aware search over the directory. `query` is meaning-aware (a token expands across a
+/// concept cluster, so "doctor" finds a "clinician"); `facets_json` is a JSON object of
+/// `{facet_id: [selected values]}` (AND across facets, OR within). Returns ranked entries + drill-down
+/// facet counts. Both empty → the whole directory with all facet counts.
+pub fn search_directory(query: String, facets_json: String) -> Result<serde_json::Value, String> {
+    let selected: std::collections::BTreeMap<String, Vec<String>> = if facets_json.trim().is_empty() {
+        std::collections::BTreeMap::new()
+    } else {
+        serde_json::from_str(&facets_json).map_err(|e| format!("bad facets json: {e}"))?
+    };
+    let actors = get_directory_actors()?;
+    let contacts = crate::social_connect::list_chat_contacts();
+    let result = crate::directory::search(&actors, &contacts, &query, &selected);
+    serde_json::to_value(result).map_err(|e| e.to_string())
+}
+
+// ── Domains & semantic mail/address stack (the foundation) ──────────────────────
+
+fn mail_now_unix() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+fn agent_type_from_token(t: &str) -> crate::domains::AgentType {
+    use crate::domains::AgentType::*;
+    match t {
+        "org" | "organization" => Organization,
+        "ai" | "agent" => AiAgent,
+        "service" | "humanitarian" => HumanitarianService,
+        "content" => ContentProvider,
+        "group" => Group,
+        _ => NaturalPerson,
+    }
+}
+
+/// The person's context-domains (personal/work/projects/…), each an agent with a front-door DID.
+pub fn list_mail_domains() -> Result<serde_json::Value, String> {
+    serde_json::to_value(crate::domains::list_domains()).map_err(|e| e.to_string())
+}
+
+/// Add a context-domain (single-owner). `agent_type` is a token: person/org/ai/service/content/group.
+pub fn add_mail_domain(
+    name: String,
+    agent_type: String,
+    front_door_did: String,
+    label: String,
+    parent: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let owner = crate::domains::DomainOwner::Personal { did: front_door_did.clone() };
+    let d = crate::domains::make_domain(
+        &name,
+        agent_type_from_token(&agent_type),
+        owner,
+        &front_door_did,
+        &label,
+        parent,
+        mail_now_unix(),
+    )?;
+    crate::domains::upsert_domain(d)?;
+    list_mail_domains()
+}
+
+/// Built-in purpose-inbox presets (frontdoor/junkmail/mygov/newsletters).
+pub fn purpose_inbox_presets() -> Result<serde_json::Value, String> {
+    serde_json::to_value(crate::domains::purpose_presets()).map_err(|e| e.to_string())
+}
+
+/// Addresses (optionally filtered to one domain).
+pub fn list_mail_addresses(domain: Option<String>) -> Result<serde_json::Value, String> {
+    serde_json::to_value(crate::domains::list_addresses(domain.as_deref()))
+        .map_err(|e| e.to_string())
+}
+
+/// Mint a purpose inbox (`frontdoor@`, `junkmail@`, …). `rules_json` is a `MailRules` object (or empty).
+pub fn mint_purpose_inbox(
+    domain: String,
+    local: String,
+    rules_json: String,
+) -> Result<serde_json::Value, String> {
+    let rules: crate::domains::MailRules = if rules_json.trim().is_empty() {
+        crate::domains::MailRules::default()
+    } else {
+        serde_json::from_str(&rules_json).map_err(|e| format!("bad rules json: {e}"))?
+    };
+    let a = crate::domains::make_purpose_address(&domain, &local, rules, mail_now_unix())?;
+    crate::domains::upsert_address(a)?;
+    list_mail_addresses(Some(domain))
+}
+
+/// Mint a per-relationship (pairwise) address bound to a relationship DID.
+pub fn mint_relationship_address(
+    domain: String,
+    local: String,
+    relationship_did: String,
+) -> Result<serde_json::Value, String> {
+    let a = crate::domains::make_relationship_address(&domain, &local, &relationship_did, mail_now_unix())?;
+    crate::domains::upsert_address(a)?;
+    list_mail_addresses(Some(domain))
+}
+
+/// Enable/disable an address (the surgical per-relationship revoke). Returns the refreshed list.
+pub fn set_mail_address_enabled(
+    address: String,
+    enabled: bool,
+) -> Result<serde_json::Value, String> {
+    crate::domains::set_address_enabled(&address, enabled)?;
+    list_mail_addresses(None)
+}
+
+/// The QDP front-door forms for a domain — the **DNS TXT** (no-hosting anchor), the DNS record name, and
+/// the rich profile in **Turtle + JSON-LD** (served by the local HTTP server over the mesh when hosting).
+pub fn front_door_forms(domain: String) -> Result<serde_json::Value, String> {
+    let d = crate::domains::list_domains()
+        .into_iter()
+        .find(|d| d.name == domain)
+        .ok_or_else(|| format!("unknown domain '{domain}'"))?;
+    // Any eCash address minted as a service could be attached here later; start from the domain identity.
+    let rec = crate::front_door::FrontDoorRecord {
+        domain: d.name.clone(),
+        agent_type: d.agent_type.clone(),
+        front_door_did: d.front_door_did.clone(),
+        name: if d.label.is_empty() { None } else { Some(d.label.clone()) },
+        webid: None,
+        services: vec![],
+        identity_pubkey_hex: None,
+        wireguard_pubkey_hex: None,
+        overlay_addr: None,
+        profile_url: None,
+    };
+    Ok(serde_json::json!({
+        "dns_name": crate::front_door::dns_record_name(&d.name),
+        "dns_txt": rec.to_dns_txt(),
+        "turtle": rec.to_turtle(),
+        "jsonld": rec.to_json_ld(),
+    }))
+}
+
+/// Build a QDP front-door record from a stored domain's identity (shared by publish/serve).
+fn build_front_door_record(domain: &str) -> Result<crate::front_door::FrontDoorRecord, String> {
+    let d = crate::domains::list_domains()
+        .into_iter()
+        .find(|d| d.name == domain)
+        .ok_or_else(|| format!("unknown domain '{domain}'"))?;
+    Ok(crate::front_door::FrontDoorRecord {
+        domain: d.name.clone(),
+        agent_type: d.agent_type.clone(),
+        front_door_did: d.front_door_did.clone(),
+        name: if d.label.is_empty() { None } else { Some(d.label.clone()) },
+        webid: None,
+        services: vec![],
+        identity_pubkey_hex: None,
+        wireguard_pubkey_hex: None,
+        overlay_addr: None,
+        profile_url: None,
+    })
+}
+
+/// Verify a Cloudflare API token (the easy-install front-door publishing path).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn cf_verify_token(token: String) -> Result<serde_json::Value, String> {
+    crate::cloudflare::verify_token(&token)?;
+    Ok(serde_json::json!({ "ok": true }))
+}
+
+/// List the Cloudflare zones (domains) the token can manage.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn cf_list_zones(token: String) -> Result<serde_json::Value, String> {
+    let zones = crate::cloudflare::list_zones(&token)?;
+    Ok(serde_json::json!(zones
+        .into_iter()
+        .map(|(id, name)| serde_json::json!({ "id": id, "name": name }))
+        .collect::<Vec<_>>()))
+}
+
+/// Publish the domain's `_qdp` TXT front-door record to Cloudflare (no hosting needed).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn cf_publish_front_door(
+    token: String,
+    zone_id: String,
+    domain: String,
+) -> Result<serde_json::Value, String> {
+    let rec = build_front_door_record(&domain)?;
+    let cfg = crate::cloudflare::CfConfig { api_token: token, zone_id };
+    let id = crate::cloudflare::publish_front_door(&cfg, &rec)?;
+    Ok(serde_json::json!({
+        "record_id": id,
+        "dns_name": crate::front_door::dns_record_name(&domain),
+        "dns_txt": rec.to_dns_txt(),
+    }))
+}
+
+/// Start serving `/.well-known/QDP` for a domain from a local HTTP server (self-host over the mesh).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn start_qdp_server(domain: String, bind_addr: String) -> Result<serde_json::Value, String> {
+    let rec = build_front_door_record(&domain)?;
+    let addr = bind_addr.clone();
+    std::thread::spawn(move || {
+        let _ = crate::qdp_http::serve_blocking(rec, &addr);
+    });
+    Ok(serde_json::json!({ "serving": bind_addr, "path": crate::qdp_server::WELL_KNOWN_QDP_PATH }))
+}
+
+/// Parse a magic link (deep link / https / bare `qcx1_…`) into the connection identifier it carries.
+pub fn parse_magic_link(link: String) -> Result<serde_json::Value, String> {
+    let id = crate::magic_link::from_link(&link)?;
+    serde_json::to_value(id).map_err(|e| e.to_string())
+}
+
+/// Send mail via SMTP. `smtp_json` = `SmtpConfig`, `mail_json` = `OutgoingMail`.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn mail_send(smtp_json: String, mail_json: String) -> Result<serde_json::Value, String> {
+    let cfg: crate::mail_transport::SmtpConfig =
+        serde_json::from_str(&smtp_json).map_err(|e| format!("bad smtp config: {e}"))?;
+    let mail: crate::mail_transport::OutgoingMail =
+        serde_json::from_str(&mail_json).map_err(|e| format!("bad mail: {e}"))?;
+    crate::mail_transport::send(&cfg, &mail)?;
+    Ok(serde_json::json!({ "sent": true }))
+}
+
+/// Fetch unseen mail via IMAP and apply each recipient address's rules — enforcing the structural
+/// spam-kill: mail to an un-minted or disabled address is rejected, never delivered.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn mail_fetch(imap_json: String, mailbox: String) -> Result<serde_json::Value, String> {
+    let cfg: crate::mail_transport::ImapConfig =
+        serde_json::from_str(&imap_json).map_err(|e| format!("bad imap config: {e}"))?;
+    let msgs = crate::mail_transport::fetch_unseen(&cfg, &mailbox)?;
+    let addresses = crate::domains::list_addresses(None);
+    let evaluated: Vec<serde_json::Value> = msgs
+        .into_iter()
+        .map(|m| match crate::domains::resolve(&addresses, &m.to_address) {
+            Some(a) if a.enabled => {
+                let verdict = crate::mail_rules::evaluate(&a.rules, &m);
+                serde_json::json!({ "message": m, "verdict": verdict })
+            }
+            Some(_) => serde_json::json!({ "message": m, "verdict": { "deliver": false, "rejected": "address disabled" } }),
+            None => serde_json::json!({ "message": m, "verdict": { "deliver": false, "rejected": "no such address (unsolicited)" } }),
+        })
+        .collect();
+    Ok(serde_json::json!(evaluated))
+}
+
+// ── Connection flow: magic link → verify → SocialWebNet peer ────────────────────
+
+#[cfg(not(target_arch = "wasm32"))]
+fn resolve_front_door_did(front_door_did: &str) -> Result<String, String> {
+    if !front_door_did.is_empty() {
+        return Ok(front_door_did.to_string());
+    }
+    crate::domains::list_domains()
+        .first()
+        .map(|d| d.front_door_did.clone())
+        .ok_or_else(|| "no domain yet — create one in Domains & Mail first".to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn build_signed_identifier(
+    front_door_did: String,
+    relation_type: String,
+    domain: &str,
+) -> Result<crate::connection_identifier::ConnectionIdentifier, String> {
+    let id = crate::node_identity::NodeIdentity::load_or_create()?;
+    let fdd = resolve_front_door_did(&front_door_did)?;
+    let rendezvous = if domain.is_empty() {
+        vec![]
+    } else {
+        vec![crate::connection_identifier::RendezvousHint { kind: "domain".into(), value: domain.to_string() }]
+    };
+    let now = mail_now_unix();
+    let mut ci = crate::connection_identifier::ConnectionIdentifier {
+        version: crate::connection_identifier::CI_VERSION,
+        front_door_did: fdd,
+        identity_pubkey_hex: String::new(),
+        wireguard_pubkey_hex: id.wireguard_pubkey_hex(),
+        overlay_addr: id.overlay_addr(),
+        rendezvous,
+        relation_type,
+        display_name: crate::user_profile::load_profile().display_name,
+        created_at: now,
+        expires_at: now + 7 * 24 * 3600,
+        nonce: uuid::Uuid::new_v4().to_string(),
+        signature_hex: String::new(),
+    };
+    ci.sign(&id.signing_key());
+    Ok(ci)
+}
+
+/// A signed connection identifier for this node (self-certifying front-door DID + WireGuard peering).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn generate_connection_identifier(
+    front_door_did: String,
+    relation_type: String,
+) -> Result<serde_json::Value, String> {
+    let ci = build_signed_identifier(front_door_did, relation_type, "")?;
+    serde_json::to_value(ci).map_err(|e| e.to_string())
+}
+
+/// A magic link (deep link + https + mailto) carrying this node's connection identifier.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn generate_magic_link(
+    front_door_did: String,
+    relation_type: String,
+    domain: String,
+) -> Result<serde_json::Value, String> {
+    let ci = build_signed_identifier(front_door_did, relation_type, &domain)?;
+    let deep = crate::magic_link::to_deep_link(&ci)?;
+    let https = if domain.is_empty() {
+        String::new()
+    } else {
+        crate::magic_link::to_https_link(&ci, &domain)?
+    };
+    let mailto = crate::magic_link::to_mailto(&ci, "Connect with me on Webizen")?;
+    Ok(serde_json::json!({ "deep_link": deep, "https_link": https, "mailto": mailto }))
+}
+
+/// Accept a magic link: parse + **verify** the identifier (self-certifying), then register the sender as a
+/// SocialWebNet peer (their WireGuard peering material). Half of the mutual peering; the return handshake
+/// completes it.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn accept_connection(link: String) -> Result<serde_json::Value, String> {
+    let ci = crate::magic_link::from_link(&link)?;
+    ci.verify()?;
+    if ci.is_expired(mail_now_unix()) {
+        return Err("this connection link has expired".into());
+    }
+    let peer = crate::social_peers::SocialPeer {
+        did: ci.front_door_did.clone(),
+        display_name: ci.display_name.clone(),
+        wireguard_pubkey_hex: ci.wireguard_pubkey_hex.clone(),
+        overlay_addr: ci.overlay_addr.clone(),
+        endpoint: ci
+            .rendezvous
+            .iter()
+            .find(|r| r.kind == "domain" || r.kind == "edge")
+            .map(|r| r.value.clone()),
+        relation_type: ci.relation_type.clone(),
+        added_at: mail_now_unix(),
+        active: true,
+    };
+    crate::social_peers::register_peer(peer.clone())?;
+    serde_json::to_value(peer).map_err(|e| e.to_string())
+}
+
+/// The SocialWebNet peers (accepted connections).
+pub fn list_social_peers() -> Result<serde_json::Value, String> {
+    serde_json::to_value(crate::social_peers::list_peers()).map_err(|e| e.to_string())
+}
+
+/// Enable/disable a peer (the socially-defined revoke).
+pub fn set_social_peer_active(did: String, active: bool) -> Result<serde_json::Value, String> {
+    crate::social_peers::set_peer_active(&did, active)?;
+    list_social_peers()
+}
+
+/// Per-peer mesh dialability — which accepted peers can form a SocialWebNet tunnel now, which must
+/// wait for the peer to reach us (roaming), and which are missing key material. Pure/read-only.
+pub fn mesh_dialability() -> Result<serde_json::Value, String> {
+    let peers = crate::social_peers::list_peers();
+    serde_json::to_value(crate::social_mesh::dialability(&peers)).map_err(|e| e.to_string())
+}
+
+/// Answer a connection challenge — prove this node controls its identity key ("it's actually me").
+#[cfg(not(target_arch = "wasm32"))]
+pub fn answer_connection_challenge(
+    challenge_json: String,
+    my_did: String,
+) -> Result<serde_json::Value, String> {
+    let challenge: crate::handshake::Challenge =
+        serde_json::from_str(&challenge_json).map_err(|e| format!("bad challenge: {e}"))?;
+    let id = crate::node_identity::NodeIdentity::load_or_create()?;
+    let resp = crate::handshake::answer_challenge(&challenge, &my_did, &id.signing_key());
+    serde_json::to_value(resp).map_err(|e| e.to_string())
+}
+
+// ── Peer agreements (the terms of a relationship, grounded in values-credentials) ──
+
+/// All peer agreements.
+pub fn list_agreements() -> Result<serde_json::Value, String> {
+    serde_json::to_value(crate::agreements::list_agreements()).map_err(|e| e.to_string())
+}
+
+/// Agreements a DID is party to (or that govern its relationship) — fills the directory's agreement slot.
+pub fn agreements_for(did: String) -> Result<serde_json::Value, String> {
+    serde_json::to_value(crate::agreements::agreements_for(&did)).map_err(|e| e.to_string())
+}
+
+/// Create a new **draft** agreement for a relationship, grounded in the non-derogable values floor
+/// (defaults to UDHR), with a pending consent for each party. Returns the created agreement.
+pub fn create_agreement(
+    title: String,
+    relationship_did: String,
+    parties: Vec<String>,
+) -> Result<serde_json::Value, String> {
+    let now = mail_now_unix();
+    let a = crate::agreements::Agreement {
+        id: uuid::Uuid::new_v4().to_string(),
+        title,
+        relationship_did,
+        parties: parties.clone(),
+        values_anchors: vec!["urn:qualia:values:udhr".to_string()],
+        undertakings: vec![],
+        consents: parties
+            .into_iter()
+            .map(|did| crate::agreements::PartyConsent {
+                did,
+                consent: crate::agreements::ConsentState::Pending,
+                signature_hex: None,
+            })
+            .collect(),
+        stage: crate::agreements::FormationStage::Draft,
+        created_at: now,
+        updated_at: now,
+    };
+    crate::agreements::upsert_agreement(a.clone())?;
+    serde_json::to_value(a).map_err(|e| e.to_string())
+}
+
+/// Persist a full agreement (JSON) — for edits (undertakings, stage, etc.). Returns the refreshed list.
+pub fn save_agreement(agreement_json: String) -> Result<serde_json::Value, String> {
+    let a: crate::agreements::Agreement =
+        serde_json::from_str(&agreement_json).map_err(|e| format!("bad agreement: {e}"))?;
+    crate::agreements::upsert_agreement(a)?;
+    list_agreements()
+}
+
+/// Set a party's consent on an agreement (`state`: pending / granted / withdrawn).
+pub fn set_agreement_consent(
+    id: String,
+    did: String,
+    state: String,
+) -> Result<serde_json::Value, String> {
+    let mut all = crate::agreements::list_agreements();
+    let a = all
+        .iter_mut()
+        .find(|a| a.id == id)
+        .ok_or_else(|| format!("unknown agreement '{id}'"))?;
+    let cs = match state.to_lowercase().as_str() {
+        "granted" => crate::agreements::ConsentState::Granted,
+        "withdrawn" => crate::agreements::ConsentState::Withdrawn,
+        _ => crate::agreements::ConsentState::Pending,
+    };
+    crate::agreements::set_consent(a, &did, cs);
+    a.updated_at = mail_now_unix();
+    let updated = a.clone();
+    crate::agreements::upsert_agreement(updated)?;
+    list_agreements()
+}
+
 pub fn get_chat_graph(session_id: String) -> Result<serde_json::Value, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();

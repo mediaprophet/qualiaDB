@@ -326,7 +326,7 @@ pub fn spawn_loopback_server(
                     .route("/query", post(query_handler).options(preflight_handler))
                     .route("/cache", post(cache_handler))
                     .route("/proxy/fetch", get(proxy_fetch_handler).options(preflight_handler))
-                    .route("/api/v1/system/storage/sovereign", get(storage_sovereign_handler))
+                    .route("/api/v1/system/storage/selfhood", get(storage_selfhood_handler))
                     .route("/api/v1/system/storage/commons", get(storage_commons_handler))
                     .route("/api/v1/permissions/compile", post(permissions_compile_handler))
                     .route("/api/v1/webizen/rpc", post(webizen_rpc_handler))
@@ -729,8 +729,8 @@ async fn cache_handler(
     )
 }
 
-async fn storage_sovereign_handler(State(state): State<Arc<WebizenState>>) -> impl IntoResponse {
-    let path = std::path::Path::new(&state.storage_path).join("sovereign");
+async fn storage_selfhood_handler(State(state): State<Arc<WebizenState>>) -> impl IntoResponse {
+    let path = std::path::Path::new(&state.storage_path).join("selfhood");
     Json(json!({ "path": path.to_str().unwrap_or_default(), "status": "isolated" }))
 }
 
@@ -798,14 +798,16 @@ pub async fn webizen_rpc_handler(
                 .in_sanctuary_mode
                 .load(std::sync::atomic::Ordering::Relaxed)
             {
-                // Fiduciary Supremacy: Reject requests to 'wf:' or '/sovereign' paths completely.
+                // Fiduciary Supremacy: Reject requests to 'wf:' or the selfhood store completely.
+                // Block both the new `selfhood` name and the legacy `sovereign` name (fail-closed —
+                // never loosen this lock while the rename propagates).
                 if scopes
                     .iter()
-                    .any(|s| s.starts_with("wf:") || s.contains("sovereign"))
+                    .any(|s| s.starts_with("wf:") || s.contains("selfhood") || s.contains("sovereign"))
                 {
                     return (
                         StatusCode::LOCKED,
-                        Json(json!({"error": "Sovereign path locked during Sanctuary mode."})),
+                        Json(json!({"error": "Selfhood path locked during Sanctuary mode."})),
                     )
                         .into_response();
                 }

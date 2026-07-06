@@ -1,10 +1,43 @@
 //! `insphere` — the 3-D in-sphere predicate (P1.6).
 //!
 //! Computes the sign of the determinant that classifies whether a point `e`
-//! lies inside, on, or outside the oriented sphere through `a, b, c, d`. When
-//! `a, b, c, d` have positive orientation (positive `orient3d`), [`Sign::Positive`]
-//! means `e` is inside the sphere, [`Sign::Zero`] means on it, [`Sign::Negative`]
-//! means outside. The sign flips when the orientation is negative.
+//! lies inside, on, or outside the oriented sphere through `a, b, c, d`.
+//!
+//! ## Sign convention (this implementation)
+//!
+//! **This implementation uses the opposite sign convention from the standard
+//! Shewchuk / de Berg formulation.** When `a, b, c, d` have positive
+//! orientation (positive [`super::orient3d::orient_3d`]), [`Sign::Negative`]
+//! means `e` is **inside** the sphere, [`Sign::Zero`] means on it, and
+//! [`Sign::Positive`] means **outside**. The sense is reversed when the
+//! orientation is negative (negative `orient_3d` → inside = `Positive`).
+//!
+//! ### Worked example
+//!
+//! Take the unit-sphere tetrahedron with **positive** `orient_3d`:
+//! `a = (0,1,0)`, `b = (1,0,0)`, `c = (0,0,1)`, `d = (-1,0,0)` —
+//! `orient_3d(a,b,c,d) = +2` (Positive). Then:
+//! - `e = (0,0,0)` (sphere centre, inside)  → `insphere = Negative`
+//! - `e = (2,0,0)` (outside)                → `insphere = Positive`
+//! - `e = (0,-1,0)` (on the sphere)         → `insphere = Zero`
+//!
+//! ### Cross-reference
+//!
+//! The orientation is determined by [`super::orient3d::orient_3d`], which
+//! returns the sign of the scalar triple product `(b-a)·((c-a)×(d-a))`
+//! (`Positive` = `d` below the oriented plane `a→b→c`, right-hand rule).
+//! Consumers (`delaunay_3`, `alpha_shape_3d`, `verify_delaunay_3`) all treat
+//! `insphere == Negative` as "inside" for a positively-oriented tet, and
+//! derive the inside-sign from the orientation sign — see those modules.
+//!
+//! ### Why not flip to the standard convention?
+//!
+//! The impl is verified against exact arithmetic (the BigInt cross-check in
+//! the test suite below) and every consumer is consistent with it. Flipping
+//! would require inverting the sign, every call-site comparison, and every
+//! test expectation in one atomic commit — a wide change in the most
+//! correctness-critical code, where a wrong sign is invalid topology. The
+//! prose was the only defect; the code + tests are the contract.
 //!
 //! The determinant (after translating by `e`) is:
 //!
@@ -417,10 +450,11 @@ fn exact_det(d: &InsphereDiffs) -> Sign {
 /// The 3-D in-sphere predicate: side of `e` w.r.t. the oriented sphere
 /// through `a, b, c, d`.
 ///
-/// Returns [`Sign::Positive`] if `e` is inside the oriented sphere (when
-/// `a, b, c, d` are positively oriented), [`Sign::Zero`] if `e` is on the
-/// sphere, [`Sign::Negative`] if outside. The sense is reversed when the
-/// orientation is negative.
+/// **Sign convention (non-standard — see module docs):** when `a, b, c, d`
+/// are positively oriented ([`super::orient3d::orient_3d`] > 0), returns
+/// [`Sign::Negative`] if `e` is **inside** the sphere, [`Sign::Zero`] if `e`
+/// is on it, [`Sign::Positive`] if **outside**. The sense is reversed for
+/// negative orientation (inside = `Positive`).
 ///
 /// This is the public ladder entry point — it escalates from filtered to
 /// compensated to exact as needed, never returning an uncertain sign.
@@ -517,7 +551,9 @@ mod tests {
 
     // ── Basic classification ──────────────────────────────────────────────
 
-    /// Unit sphere centered at origin. a,b,c,d on sphere with positive orientation.
+    /// Unit sphere centered at origin. a,b,c,d on sphere with **negative**
+    /// orientation (`orient_3d = -2`). Under this impl's convention,
+    /// negative-orientation + inside ⇒ `Positive`.
     fn unit_sphere_points() -> (Point3, Point3, Point3, Point3) {
         let a = Point3::new(1.0, 0.0, 0.0);
         let b = Point3::new(0.0, 1.0, 0.0);
@@ -530,6 +566,7 @@ mod tests {
     fn classifies_inside_sphere() {
         let (a, b, c, d) = unit_sphere_points();
         let e = Point3::new(0.0, 0.0, 0.0); // center → inside
+        // Negative orientation ⇒ inside = Positive (this impl's convention).
         assert_eq!(insphere(a, b, c, d, e), Sign::Positive);
     }
 
@@ -537,6 +574,7 @@ mod tests {
     fn classifies_outside_sphere() {
         let (a, b, c, d) = unit_sphere_points();
         let e = Point3::new(2.0, 0.0, 0.0); // outside
+        // Negative orientation ⇒ outside = Negative.
         assert_eq!(insphere(a, b, c, d, e), Sign::Negative);
     }
 
@@ -549,14 +587,16 @@ mod tests {
 
     #[test]
     fn sign_flips_for_negative_orientation() {
-        // Swap a and b to flip orientation
+        // Swap a and b to flip orientation: this tet has **positive**
+        // orientation (`orient_3d = +2`). Under this impl's convention,
+        // positive-orientation + inside ⇒ `Negative` (the flip).
         let a = Point3::new(0.0, 1.0, 0.0);
         let b = Point3::new(1.0, 0.0, 0.0);
         let c = Point3::new(0.0, 0.0, 1.0);
         let d = Point3::new(-1.0, 0.0, 0.0);
-        let e = Point3::new(0.0, 0.0, 0.0); // center → inside, but orientation is negative
+        let e = Point3::new(0.0, 0.0, 0.0); // center → inside, but orientation is now positive
         let s = insphere(a, b, c, d, e);
-        // With negative orientation, inside → Negative
+        // With positive orientation, inside → Negative (this impl's convention).
         assert_eq!(s, Sign::Negative);
     }
 

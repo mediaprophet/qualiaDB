@@ -28,10 +28,12 @@
 //! The algorithm workspace uses `Vec` for the dynamic triangle list — this
 //! is the algorithm layer, not the predicate layer.
 
-use super::hull::convex_hull_indices_2;
 use super::incircle::incircle;
 use super::primitives::{orientation_2, Point2, Orientation};
 use super::expansion::Sign;
+
+#[cfg(test)]
+use super::hull::convex_hull_indices_2;
 
 /// Delaunay triangulation error.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -149,10 +151,7 @@ pub fn delaunay_triangulation_2(
         });
     }
 
-    // Check for collinear input by computing the convex hull.
-    // If all points are collinear, the hull has < 3 vertices.
-    let mut hull_out = [0u32; 0]; // We'll use a different approach.
-    // Actually, let's just check if all points are collinear via orientation.
+    // Check for collinear input via orientation.
     let orient_first = orientation_2(points[0], points[1], points[2]);
     if orient_first == Orientation::Collinear {
         // Check if ALL points are collinear with the first two.
@@ -183,7 +182,7 @@ pub fn delaunay_triangulation_2(
     let dy = max_y - min_y;
     let delta = dx.max(dy) * 100.0 + 1.0;
     let mid_x = (min_x + max_x) * 0.5;
-    let mid_y = (min_y + max_y) * 0.5;
+    let _mid_y = (min_y + max_y) * 0.5;
 
     // Super-triangle vertices: n, n+1, n+2 (indices after all real points).
     let st_a = n as u32; // top
@@ -521,7 +520,7 @@ mod tests {
         let count = delaunay_triangulation_2(&points, &mut scratch, &mut out).unwrap();
 
         // Compute convex hull.
-        let mut hull_scratch = vec![0u32; 10];
+        let mut hull_scratch = vec![0u32; 15];
         let mut hull_out = vec![0u32; 5];
         let hull_count = convex_hull_indices_2(&points, &mut hull_scratch, &mut hull_out).unwrap();
 

@@ -270,7 +270,7 @@ fn App() -> Element {
                 AppState::VaultInit => rsx! {
                     div {
                         style: "text-align: center; max-width: 420px;",
-                        h3 { "Sovereign Vault Initialization" }
+                        h3 { "Private Vault Initialization" }
                         p { "Your device supports Tier-1 Edge capabilities." }
                         button {
                             style: "padding: 12px 24px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; font-size: 16px; margin-top: 16px;",

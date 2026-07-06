@@ -167,7 +167,7 @@ pub fn execute_geometry_tool_json(args: &str) -> Result<String, GeometryToolErro
         }
         "convex_hull_2" => {
             let input = points(&value, "points")?;
-            let mut scratch = vec![0u32; input.len().saturating_mul(2)];
+            let mut scratch = vec![0u32; input.len().saturating_mul(3)];
             let mut indices = vec![0u32; input.len()];
             let count = convex_hull_indices_2(&input, &mut scratch, &mut indices)
                 .map_err(|error| GeometryToolError::Geometry(format!("{error:?}")))?;

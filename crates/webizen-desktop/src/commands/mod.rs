@@ -2142,6 +2142,351 @@ pub fn add_delegation_rule(rule: DelegationRule) -> Result<(), String> {
     api::add_delegation_rule(rule)
 }
 
+// ── Social connect + group chat (P0: expose the connect → group → talk loop) ────
+//
+// These wrap engine functions that already existed in `qualia_client_core::api` but were never
+// surfaced to the desktop, so a user could not actually connect to another person from the UI.
+// The invite is ed25519-signed and carries the front-door DID; contacts, group sessions,
+// participants, messages, and the threaded chat-graph are all persisted + WAL-backed by the engine.
+
+/// Generate a signed connect-invite (front-door DID + pubkey + relay endpoint, 7-day TTL) to hand to
+/// someone you choose. Returns the invite JSON + a short code + a `mailto:` share URL.
+#[command]
+pub fn generate_connect_invite(front_door_id: Option<String>) -> Result<serde_json::Value, String> {
+    api::generate_connect_invite(front_door_id)
+}
+
+/// Accept a connect-invite (paste the invite JSON). Verifies the signature, then adds the inviter as a
+/// contact + directory actor. Returns the new contact.
+#[command]
+pub fn accept_connect_invite(input: String) -> Result<serde_json::Value, String> {
+    api::accept_connect_invite(input)
+}
+
+/// The current chat contacts (people you have connected with).
+#[command]
+pub fn list_chat_contacts() -> Result<serde_json::Value, String> {
+    api::list_chat_contacts()
+}
+
+/// The local user profile (display name, sharing settings incl. whether connect-invites are enabled).
+#[command]
+pub fn get_user_profile() -> Result<serde_json::Value, String> {
+    api::get_user_profile()
+}
+
+/// Persist the local user profile (JSON). Used to set a display name and enable connect-invites.
+#[command]
+pub fn save_user_profile(profile_json: String) -> Result<serde_json::Value, String> {
+    api::save_user_profile(profile_json)
+}
+
+/// All chat sessions (solo + group), most-recent first.
+#[command]
+pub fn list_chat_sessions() -> Result<serde_json::Value, String> {
+    api::list_chat_sessions()
+}
+
+/// Load one chat session (metadata + messages).
+#[command]
+pub fn load_chat_session(id: String) -> Result<serde_json::Value, String> {
+    api::load_chat_session(id)
+}
+
+/// Create a group chat from a set of contact DIDs. Returns the new session id.
+#[command]
+pub fn create_group_chat_session(
+    title: Option<String>,
+    participant_dids: Vec<String>,
+) -> Result<String, String> {
+    api::create_group_chat_session(title, participant_dids)
+}
+
+/// Add a participant (by DID) to a group session. Returns the updated participant list.
+#[command]
+pub fn add_chat_participant(
+    session_id: String,
+    participant_did: String,
+) -> Result<serde_json::Value, String> {
+    api::add_chat_participant(session_id, participant_did)
+}
+
+/// Remove a participant (by DID) from a group session. Returns the updated participant list.
+#[command]
+pub fn remove_chat_participant(
+    session_id: String,
+    participant_did: String,
+) -> Result<serde_json::Value, String> {
+    api::remove_chat_participant(session_id, participant_did)
+}
+
+/// The participants of a group session.
+#[command]
+pub fn get_chat_participants(session_id: String) -> Result<serde_json::Value, String> {
+    api::get_chat_participants(session_id)
+}
+
+/// Send a message into a session. `role` is `"user"` / `"agent"` / `"system"`; group messages are
+/// signed + fanned out to participants' relays by the engine. Returns the message Lamport clock.
+#[command]
+pub fn append_chat_message(
+    session_id: String,
+    role: String,
+    content: String,
+    mesh: State<'_, mesh::MeshState>,
+    app_state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
+) -> Result<u64, String> {
+    let lamport = api::append_chat_message(session_id.clone(), role, content)?;
+    // Fan the message out to connected peers over the mesh (no-op if the mesh is stopped or none of
+    // the session's participants are mesh peers). The HTTP relay path is unaffected.
+    mesh.publish_session_message(&app_state, &session_id, lamport);
+    Ok(lamport)
+}
+
+/// The threaded chat-graph (fragments + reply edges) for a session.
+#[command]
+pub fn get_chat_graph(session_id: String) -> Result<serde_json::Value, String> {
+    api::get_chat_graph(session_id)
+}
+
+// ── Personal directory (AD-like): categorised addressbook + agreement slots ─────
+
+/// The unified, categorised personal directory: the addressbook (Parties joined by DID across the
+/// directory-actor + chat-contact stores) grouped into categories, each entry carrying a slot for the
+/// agreements governing that relationship.
+#[command]
+pub fn list_directory() -> Result<serde_json::Value, String> {
+    api::list_directory()
+}
+
+/// The directory categories (built-in + user-created).
+#[command]
+pub fn list_directory_categories() -> Result<serde_json::Value, String> {
+    api::list_directory_categories()
+}
+
+/// Create a custom directory category.
+#[command]
+pub fn create_directory_category(label: String) -> Result<serde_json::Value, String> {
+    api::create_directory_category(label)
+}
+
+/// Set which categories a directory entry (by DID) belongs to; returns the refreshed directory.
+#[command]
+pub fn set_directory_entry_categories(
+    did: String,
+    categories: Vec<String>,
+) -> Result<serde_json::Value, String> {
+    api::set_directory_entry_categories(did, categories)
+}
+
+/// Faceted + concept-aware search over the directory. `query` is meaning-aware; `facets_json` is a JSON
+/// object of `{facet_id: [values]}`. Returns ranked entries + drill-down facet counts.
+#[command]
+pub fn search_directory(query: String, facets_json: String) -> Result<serde_json::Value, String> {
+    api::search_directory(query, facets_json)
+}
+
+// ── Domains & semantic mail/address stack (the foundation) ──────────────────────
+
+/// The person's context-domains (personal/work/projects…), each an agent with a front-door DID.
+#[command]
+pub fn list_mail_domains() -> Result<serde_json::Value, String> {
+    api::list_mail_domains()
+}
+
+/// Add a context-domain. `agent_type` token: person/org/ai/service/content/group.
+#[command]
+pub fn add_mail_domain(
+    name: String,
+    agent_type: String,
+    front_door_did: String,
+    label: String,
+    parent: Option<String>,
+) -> Result<serde_json::Value, String> {
+    api::add_mail_domain(name, agent_type, front_door_did, label, parent)
+}
+
+/// Built-in purpose-inbox presets (frontdoor/junkmail/mygov/newsletters).
+#[command]
+pub fn purpose_inbox_presets() -> Result<serde_json::Value, String> {
+    api::purpose_inbox_presets()
+}
+
+/// Addresses (optionally filtered to one domain).
+#[command]
+pub fn list_mail_addresses(domain: Option<String>) -> Result<serde_json::Value, String> {
+    api::list_mail_addresses(domain)
+}
+
+/// Mint a purpose inbox (`frontdoor@`, `junkmail@`, …). `rules_json` is a `MailRules` object (or empty).
+#[command]
+pub fn mint_purpose_inbox(
+    domain: String,
+    local: String,
+    rules_json: String,
+) -> Result<serde_json::Value, String> {
+    api::mint_purpose_inbox(domain, local, rules_json)
+}
+
+/// Mint a per-relationship (pairwise) address bound to a relationship DID.
+#[command]
+pub fn mint_relationship_address(
+    domain: String,
+    local: String,
+    relationship_did: String,
+) -> Result<serde_json::Value, String> {
+    api::mint_relationship_address(domain, local, relationship_did)
+}
+
+/// Enable/disable an address (the surgical per-relationship revoke).
+#[command]
+pub fn set_mail_address_enabled(address: String, enabled: bool) -> Result<serde_json::Value, String> {
+    api::set_mail_address_enabled(address, enabled)
+}
+
+/// The QDP front-door forms for a domain — DNS TXT (no-hosting anchor), record name, Turtle, JSON-LD.
+#[command]
+pub fn front_door_forms(domain: String) -> Result<serde_json::Value, String> {
+    api::front_door_forms(domain)
+}
+
+/// Verify a Cloudflare API token (easy-install front-door publishing).
+#[command]
+pub fn cf_verify_token(token: String) -> Result<serde_json::Value, String> {
+    api::cf_verify_token(token)
+}
+
+/// List the Cloudflare zones (domains) the token can manage.
+#[command]
+pub fn cf_list_zones(token: String) -> Result<serde_json::Value, String> {
+    api::cf_list_zones(token)
+}
+
+/// Publish the domain's `_qdp` TXT front-door record to Cloudflare (no hosting needed).
+#[command]
+pub fn cf_publish_front_door(
+    token: String,
+    zone_id: String,
+    domain: String,
+) -> Result<serde_json::Value, String> {
+    api::cf_publish_front_door(token, zone_id, domain)
+}
+
+/// Start serving `/.well-known/QDP` for a domain over a local HTTP server (self-host over the mesh).
+#[command]
+pub fn start_qdp_server(domain: String, bind_addr: String) -> Result<serde_json::Value, String> {
+    api::start_qdp_server(domain, bind_addr)
+}
+
+/// Parse a magic link (deep link / https / bare `qcx1_…`) into the connection identifier it carries.
+#[command]
+pub fn parse_magic_link(link: String) -> Result<serde_json::Value, String> {
+    api::parse_magic_link(link)
+}
+
+/// Send mail via SMTP (`smtp_json` = SmtpConfig, `mail_json` = OutgoingMail).
+#[command]
+pub fn mail_send(smtp_json: String, mail_json: String) -> Result<serde_json::Value, String> {
+    api::mail_send(smtp_json, mail_json)
+}
+
+/// Fetch unseen mail via IMAP + apply each address's rules (structural spam-kill on un-minted addresses).
+#[command]
+pub fn mail_fetch(imap_json: String, mailbox: String) -> Result<serde_json::Value, String> {
+    api::mail_fetch(imap_json, mailbox)
+}
+
+/// A signed connection identifier for this node (front-door DID + WireGuard peering).
+#[command]
+pub fn generate_connection_identifier(
+    front_door_did: String,
+    relation_type: String,
+) -> Result<serde_json::Value, String> {
+    api::generate_connection_identifier(front_door_did, relation_type)
+}
+
+/// A magic link (deep link + https + mailto) carrying this node's connection identifier.
+#[command]
+pub fn generate_magic_link(
+    front_door_did: String,
+    relation_type: String,
+    domain: String,
+) -> Result<serde_json::Value, String> {
+    api::generate_magic_link(front_door_did, relation_type, domain)
+}
+
+/// Accept a magic link: verify the identifier, then register the sender as a SocialWebNet peer.
+#[command]
+pub fn accept_connection(link: String) -> Result<serde_json::Value, String> {
+    api::accept_connection(link)
+}
+
+/// The SocialWebNet peers (accepted connections).
+#[command]
+pub fn list_social_peers() -> Result<serde_json::Value, String> {
+    api::list_social_peers()
+}
+
+/// Enable/disable a peer (the socially-defined revoke).
+#[command]
+pub fn set_social_peer_active(did: String, active: bool) -> Result<serde_json::Value, String> {
+    api::set_social_peer_active(did, active)
+}
+
+/// Answer a connection challenge — prove this node controls its identity key.
+#[command]
+pub fn answer_connection_challenge(
+    challenge_json: String,
+    my_did: String,
+) -> Result<serde_json::Value, String> {
+    api::answer_connection_challenge(challenge_json, my_did)
+}
+
+/// Per-peer SocialWebNet mesh dialability (who can form a tunnel now / on roaming / not at all).
+#[command]
+pub fn mesh_dialability() -> Result<serde_json::Value, String> {
+    api::mesh_dialability()
+}
+
+/// All peer agreements.
+#[command]
+pub fn list_agreements() -> Result<serde_json::Value, String> {
+    api::list_agreements()
+}
+
+/// Agreements a DID is party to (fills the directory's agreement slot).
+#[command]
+pub fn agreements_for(did: String) -> Result<serde_json::Value, String> {
+    api::agreements_for(did)
+}
+
+/// Create a draft agreement for a relationship (grounded in the values floor).
+#[command]
+pub fn create_agreement(
+    title: String,
+    relationship_did: String,
+    parties: Vec<String>,
+) -> Result<serde_json::Value, String> {
+    api::create_agreement(title, relationship_did, parties)
+}
+
+/// Persist a full agreement (JSON) — for edits.
+#[command]
+pub fn save_agreement(agreement_json: String) -> Result<serde_json::Value, String> {
+    api::save_agreement(agreement_json)
+}
+
+/// Set a party's consent on an agreement (pending / granted / withdrawn).
+#[command]
+pub fn set_agreement_consent(
+    id: String,
+    did: String,
+    state: String,
+) -> Result<serde_json::Value, String> {
+    api::set_agreement_consent(id, did, state)
+}
+
 // -- QPU Oracle / Advanced Capabilities ----------------------------------------
 
 #[command]
@@ -3215,7 +3560,7 @@ pub async fn probe_localhost_preview() -> LocalPreviewProbe {
     }
 }
 
-// ── Sovereign QApp Export (WASM + QR + LAN server) ──────────────────────────────
+// ── Standalone QApp Export (WASM + QR + LAN server) ──────────────────────────────
 
 /// Export a QApp as a self-contained WASM app package (single package using webizen-web).
 /// Generates .q42 from the QApp using full QualiaDB, bundles with the web WASM runtime,
@@ -3231,8 +3576,8 @@ pub async fn export_qapp_as_wasm_package(qapp_name: String) -> Result<QappWasmEx
 
     let qapp_result = qapp_analyze(QappAnalysisRequest {
         discipline: qapp_name.clone(),
-        fields: vec![("export_mode".into(), "sovereign_wasm".into())],
-        notes: "LAN sovereign export bundle".into(),
+        fields: vec![("export_mode".into(), "standalone_wasm".into())],
+        notes: "LAN standalone export bundle".into(),
     })?;
 
     #[derive(serde::Serialize)]
@@ -3654,6 +3999,8 @@ pub async fn render_preview_tick(app: &AppHandle) -> Result<(), String> {
 pub mod render_pipeline;
 pub mod binary_registry;
 pub mod glb_ingest;
+pub mod mesh;
+pub use mesh::MeshState;
 
 // ── Telemetry Bridge ───────────────────────────────────────────────────────────
 // Telemetry bridge is in parent src directory, not commands directory
@@ -4400,6 +4747,54 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         add_directory_actor,
         get_delegation_rules,
         add_delegation_rule,
+        generate_connect_invite,
+        accept_connect_invite,
+        list_chat_contacts,
+        get_user_profile,
+        save_user_profile,
+        list_chat_sessions,
+        load_chat_session,
+        create_group_chat_session,
+        add_chat_participant,
+        remove_chat_participant,
+        get_chat_participants,
+        append_chat_message,
+        get_chat_graph,
+        list_directory,
+        list_directory_categories,
+        create_directory_category,
+        set_directory_entry_categories,
+        search_directory,
+        list_mail_domains,
+        add_mail_domain,
+        purpose_inbox_presets,
+        list_mail_addresses,
+        mint_purpose_inbox,
+        mint_relationship_address,
+        set_mail_address_enabled,
+        front_door_forms,
+        cf_verify_token,
+        cf_list_zones,
+        cf_publish_front_door,
+        start_qdp_server,
+        parse_magic_link,
+        mail_send,
+        mail_fetch,
+        generate_connection_identifier,
+        generate_magic_link,
+        accept_connection,
+        list_social_peers,
+        set_social_peer_active,
+        answer_connection_challenge,
+        mesh_dialability,
+        mesh::mesh_start,
+        mesh::mesh_stop,
+        mesh::mesh_status,
+        list_agreements,
+        agreements_for,
+        create_agreement,
+        save_agreement,
+        set_agreement_consent,
         get_qpu_settings,
         save_qpu_settings,
         enable_qpu_feature,

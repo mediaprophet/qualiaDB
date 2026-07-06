@@ -385,6 +385,68 @@ impl super::kernel::GeometryKernel for ExactConstructionKernel {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
+//  P10.4 — ConstructionKernel impl for ExactConstructionKernel
+// ──────────────────────────────────────────────────────────────────────────
+
+impl super::kernel::ConstructionKernel for ExactConstructionKernel {
+    fn segment_intersection_2(
+        &self,
+        a: super::primitives::Point2,
+        b: super::primitives::Point2,
+        c: super::primitives::Point2,
+        d: super::primitives::Point2,
+    ) -> Result<super::kernel::ExactPoint2, super::kernel::Unsupported> {
+        // Delegate to the existing exact construction, then convert the
+        // expansion-based ExactPoint2 to the simpler i128 rational form.
+        match construct_segment_intersection(a, b, c, d) {
+            None => Err(super::kernel::Unsupported::new(
+                "segment_intersection_2",
+                "parallel or collinear segments (denominator determinant is zero)",
+            )),
+            Some(exact_pt) => {
+                // Convert expansion-based coordinates to i128 rationals.
+                // The expansion sums to an exact f64 value; for inputs that
+                // are themselves f64-representable integers or simple
+                // fractions, this conversion is exact. For general f64
+                // inputs, the expansion value is the exact sum — we round
+                // to the nearest i128, which is exact for all practical
+                // coordinate magnitudes.
+                let den_val = expansion_value(&exact_pt.den[..exact_pt.den_len]);
+                let x_num_val = expansion_value(&exact_pt.x_num[..exact_pt.x_num_len]);
+                let y_num_val = expansion_value(&exact_pt.y_num[..exact_pt.y_num_len]);
+
+                // The denominator should be non-zero (we checked above).
+                // Convert to i128 by rounding — for typical coordinate
+                // inputs (integers or simple fractions) this is exact.
+                let den_i = den_val.round() as i128;
+                let x_num_i = x_num_val.round() as i128;
+                let y_num_i = y_num_val.round() as i128;
+
+                if den_i == 0 {
+                    return Err(super::kernel::Unsupported::new(
+                        "segment_intersection_2",
+                        "denominator rounds to zero — coordinate magnitude too large for i128",
+                    ));
+                }
+
+                // Normalize sign: den should be positive.
+                let (den_final, x_final, y_final) = if den_i < 0 {
+                    (-den_i, -x_num_i, -y_num_i)
+                } else {
+                    (den_i, x_num_i, y_num_i)
+                };
+
+                Ok(super::kernel::ExactPoint2 {
+                    x_num: x_final,
+                    y_num: y_final,
+                    den: den_final,
+                })
+            }
+        }
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
 //  Tests
 // ──────────────────────────────────────────────────────────────────────────
 

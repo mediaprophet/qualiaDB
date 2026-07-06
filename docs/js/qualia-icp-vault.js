@@ -1,5 +1,5 @@
 /**
- * ICP sovereign vault — OPFS pairing cache, IndexedDB handles, standpoint promotion.
+ * ICP private vault — OPFS pairing cache, IndexedDB handles, standpoint promotion.
  */
 
 import { PAIRING_STORAGE_KEY, parsePairingPayload, pairingToJson } from './qualia-icp-session.js';
@@ -254,7 +254,7 @@ export async function getVaultStatus() {
 }
 
 /**
- * Optional sovereign folder — persists handle in IndexedDB.
+ * Optional private folder — persists handle in IndexedDB.
  */
 export async function pickVaultFolder() {
     if (!('showDirectoryPicker' in window)) {

@@ -30,16 +30,16 @@
 //! execution plan's P0.7 deliverable; this module is the executable
 //! conformance check, not the prose spec.
 
-use crate::container_10d::crc32c::crc32c;
 use crate::container_10d::header::{Container10dHeader, HEADER_BYTE_SIZE};
 use crate::container_10d::mesh_section::{MeshMiniHeader, MESH_MINI_HEADER_SIZE};
 use crate::container_10d::metric_check::MetricBranchDescriptor;
 use crate::container_10d::node_section::{
     NodeMiniHeader, NODE_MINI_HEADER_SIZE, TENSOR10D_SIZE,
 };
-use crate::container_10d::section::{
-    AlignmentTier, SectionDescriptor, SECTION_DESCRIPTOR_SIZE, SectionInput, SectionType,
-};
+// Only the layout-drift gate runs outside `#[cfg(test)]`, so it imports just the descriptor + its
+// size constant. `crc32c`, `AlignmentTier`, `SectionInput`, and `SectionType` are used exclusively by
+// the golden-vector tests and are imported there.
+use crate::container_10d::section::{SectionDescriptor, SECTION_DESCRIPTOR_SIZE};
 
 // ---------------------------------------------------------------------------
 // Layout-table drift gate — the spec's single source of truth for sizes &
@@ -210,14 +210,15 @@ pub const GOLDEN_MESH_ONLY_CRC: u32 = 0x18B5_DD86; // pinned 2026-07-04
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::container_10d::crc32c::crc32c;
     use crate::container_10d::header::Container10dHeader;
     use crate::container_10d::integrity::{
         seal_whole_file_crc32c, verify_whole_file_crc32c,
     };
-    use crate::container_10d::node_section::{
-        read_node, write_node_section_aos, NodeMiniHeader, NODE_MINI_HEADER_SIZE,
+    use crate::container_10d::node_section::{read_node, write_node_section_aos, NodeMiniHeader};
+    use crate::container_10d::section::{
+        encode_container, parse_section_table, AlignmentTier, SectionInput, SectionType,
     };
-    use crate::container_10d::section::{encode_container, parse_section_table, SectionInput};
     use crate::tensor::Tensor10D;
 
     // ====================================================================

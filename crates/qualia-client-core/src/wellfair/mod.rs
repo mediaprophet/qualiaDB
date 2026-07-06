@@ -1,6 +1,10 @@
 pub mod accessibility_prefs;
+pub mod anatomy_body;
 pub mod anatomy_view;
 pub mod api;
+pub mod anatomy_dyad;
+pub mod ccf_resolver;
+pub mod fetal_stages;
 pub mod backup;
 pub mod blob_store;
 pub mod companion_tests;

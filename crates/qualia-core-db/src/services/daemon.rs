@@ -80,12 +80,27 @@ pub async fn start_local_daemon_with_options(
             .unwrap_or_else(|_| ".qualia".to_string())
     });
 
-    // Create Isolated Paths for Ontological Path Isolation
-    let sovereign_path = std::path::Path::new(&storage_path).join("sovereign");
+    // Create Isolated Paths for Ontological Path Isolation.
+    // `selfhood` = the guarded store of the records that *pertain to* the self (mind + secrets — the
+    // dignity foundation). The self is NOT in the machine and is never captured; this store is a
+    // *selfhood guardian* holding those records on the principal's (the natural person's) behalf, in a
+    // principal→agent relationship, later linked with rights (the outward personhood layer). An identifier
+    // or record is *about* the person, never *is* the person. Migrate the legacy `sovereign` store name
+    // if an existing install still carries it (one-time, non-destructive: only when the new name is absent).
+    let selfhood_path = std::path::Path::new(&storage_path).join("selfhood");
+    let legacy_selfhood_path = std::path::Path::new(&storage_path).join("sovereign");
+    if legacy_selfhood_path.exists() && !selfhood_path.exists() {
+        if let Err(e) = std::fs::rename(&legacy_selfhood_path, &selfhood_path) {
+            eprintln!(
+                "[Qualia Daemon] WARN: failed to migrate legacy 'sovereign' store to 'selfhood': {}",
+                e
+            );
+        }
+    }
     let commons_path = std::path::Path::new(&storage_path).join("commons");
-    if let Err(e) = std::fs::create_dir_all(&sovereign_path) {
+    if let Err(e) = std::fs::create_dir_all(&selfhood_path) {
         eprintln!(
-            "[Qualia Daemon] FATAL: Failed to create sovereign storage path: {}",
+            "[Qualia Daemon] FATAL: Failed to create selfhood storage path: {}",
             e
         );
         std::process::exit(1); // Graceful fail on volume disconnect

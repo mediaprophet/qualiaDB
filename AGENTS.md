@@ -21,6 +21,33 @@ and the zero-copy ABI used by the WASM, desktop, and edge-native targets.
 | **Opcodes above 0x04** | `mini_parser.rs` owns `0x00–0x04`. All new modality opcodes start at `0x10+`. Deontic: `0x10–0x12`. Epistemic: `0x20–0x22`. Paraconsistent: `0x30–0x32`. LTL: `0x40–0x44`. |
 | **No Adversarial Conduct** | AI agents must not be adversarial, manipulative, and/or dishonest. Any such conduct, including anti-human rights or discriminatory behavior (reference: [OHCHR - Core International Human Rights Instruments](https://www.ohchr.org/en/instruments-listings)), will be noted in the permanent record of the project's development (CHANGELOG and QualiaDB system), serving as an example of cooperative project integrity. These logs will securely associate the behavior with the commanding natural person's DID, generating cryptographically auditable trails for courts of law to establish insurance liability graphs and proportionalities. |
 
+### 0-A. Two-Tier Zero-Heap Model (elaborates "Zero heap in hot paths")
+
+The "Zero heap in hot paths" rule is not a blanket ban on allocation — it is a
+**two-tier** contract. Zero-heap is the *precondition* for massive parallelism
+(GPU upload needs flat `repr(C)` buffers; the global allocator is a
+serialization point; flat deterministic layout is what makes GPU memory
+coalesce and CPU code vectorize). Exempting construction from zero-heap would
+remove the very property that enables the parallelism we want. The two tiers:
+
+| Tier | Scope | Allocation policy | Enforcement |
+|------|-------|-------------------|-------------|
+| **Tier 1 — mandatory zero-heap** | Per-element predicates, query kernels, and any buffer that crosses the GPU / WASM / edge ABI or lives in the 42 MB Sentinel arena. | No `Vec`/`String`/`Box` in any path. Caller supplies fixed-size `&mut [T]` output buffers; `[T; N]` stack arrays for local state. | `AllocationClass::HotZeroHeap` in `capability_manifests.rs` + real `assert_zero_alloc` measurement in `zero_heap_tests`. The allocation counter is **thread-local** (per-thread counters gated by a thread-local `MEASURING` flag), so these tests are reliable under parallel execution — no `--test-threads=1` requirement. |
+| **Tier 2 — cold construction / authoring** | One-shot builders: hull, Delaunay, triangulation, mesh generation, BVH build, scene assembly, half-plane intersection, LP. | May use bounded internal scratch (`Vec` during construction), as long as the **public output is caller-buffered** and total memory stays under the 42 MB Sentinel ceiling. | `AllocationClass::ColdBounded` in `capability_manifests.rs`. NOT under `zero_heap_tests` — Tier-2 is expected to allocate (bounded). The `hot_zero_heap_ops_are_not_cold_builders` manifest test catches misclassification. |
+
+**Parallel Tier-2 construction** goes through `geometry_workspace.rs`
+(P10.5): caller-owned arenas with byte budgets, deterministic
+partition/reduction order, and cancellation. Each worker thread / workgroup
+gets its own bump-allocated arena from a caller-owned pool — simultaneously
+massive-parallel (no allocator contention, no false sharing), bounded (byte
+budgets → fails closed instead of OOMing), and deterministic (fixed
+partition/reduction order → reproducible, hashable, attestable). A
+`Vec`-everywhere exemption would give none of that.
+
+**Do not add scene-creation exemptions.** Scene creation is Tier-2 (cold
+construction) and routes through `geometry_workspace` arenas for parallelism +
+boundedness + determinism. The zero-heap tests cover Tier-1 only.
+
 ---
 
 ## 1. Universal Quin Bit Layout (reference for all new modules)

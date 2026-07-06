@@ -114,7 +114,7 @@ pub fn geometry_convex_hull_2(val: JsValue) -> Result<JsValue, JsValue> {
         .collect();
 
     let n = pts.len();
-    let mut scratch = vec![0u32; n.saturating_mul(2)];
+    let mut scratch = vec![0u32; n.saturating_mul(3)];
     let mut indices = vec![0u32; n];
 
     let count = convex_hull_indices_2(&pts, &mut scratch, &mut indices)
@@ -371,7 +371,7 @@ mod tests {
             Point2::new(1.0, 1.0),
             Point2::new(0.0, 1.0),
         ];
-        let mut scratch = vec![0u32; 10];
+        let mut scratch = vec![0u32; 15];
         let mut indices = vec![0u32; 5];
         let count = convex_hull_indices_2(&pts, &mut scratch, &mut indices).unwrap();
         indices.truncate(count);

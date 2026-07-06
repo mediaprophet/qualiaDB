@@ -593,7 +593,7 @@ pub fn validate_shacl(args: &[u8]) -> Result<String, McpSystemError> {
     serde_json::to_string(&payload).map_err(|_| McpSystemError::ParseError)
 }
 
-// ── SHACL identity / data-sovereignty extension tools ───────────────────────────
+// ── SHACL identity / data-rights extension tools ───────────────────────────
 //
 // Expose the `shacl_extensions::identity` capabilities (enumerated identity, VC-gated
 // targets, severity degradation, decentralized routing) through the MCP tool surface,
