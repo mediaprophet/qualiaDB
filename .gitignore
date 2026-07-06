@@ -177,3 +177,6 @@ fix_quotes.py
 /docs/plans/
 /docs/manuals/planning/
 docs/to-do/
+
+# W5b: full WordNet gloss corpus (derived from Princeton data.rdf; ~20MB) — sample is committed
+benchmarks/data/wordnet_glosses.txt

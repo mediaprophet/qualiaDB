@@ -671,3 +671,23 @@ Two real paths to a WordNet gloss corpus:
 **W5b status:** Phase 1 learner DONE. Corpus SOURCE built (`Files`/`OllamaSynth`/`Q42Field`/`Q42Lexicon`).
 The WordNet-gloss corpus is data-gated: path (1) needs a gloss text file; path (2) needs an ingest that
 keeps literals. Then Phase 3 (KV capture) + the recon-vs-int8 go/no-go.
+
+## 2026-07-06 — W5b corpus: real WordNet gloss corpus extracted from Princeton source (Timothy)
+
+Per Timothy ("get the full version from Princeton source"): the source RDF
+`C:\Projects\Local_LIbraries\qualia-db-old-files\local\ontology\wordnet\data.rdf` (500MB RDF/XML) has
+650k `<j.0:gloss xml:lang="eng">` elements — the definitional text the q42 ingest dropped. Extracted
+**324,397 English glosses** → `benchmarks/data/wordnet_glosses.txt` (~20MB, one gloss/line; gitignored
+as derived). A 2,496-gloss representative sample (`wordnet_glosses_sample.txt`, every ~130th) IS
+committed. Recipe (LC_ALL=C for the RDF's non-ASCII translations):
+  grep -a '<j.0:gloss xml:lang="eng">' data.rdf | sed -E 's/.*<j\.0:gloss xml:lang="eng">([^<]*)<.*/\1/' \
+    | sed -E 's/^[[:space:]]+//;s/[[:space:]]+$//' | awk 'length>0'
+
+Usage: `CorpusSpec::Files(["benchmarks/data/wordnet_glosses.txt"])` feeds the learner/calibration real
+WordNet definitional text today — no q42 needed for the corpus. This is a broad, neutral,
+definition-dense corpus over the whole lexicon (ideal calibration coverage).
+
+**W5b status:** learner DONE; corpus source built; **real corpus now in hand.** Remaining: Phase 3 (KV
+capture hook) to run the dictionary learner on it end-to-end + the recon-vs-int8 go/no-go; and the
+architectural fix — re-ingest WordNet RETAINING the `j.0:gloss` literals so the q42 carries them (then
+`Q42Lexicon`/`Q42Field` + SPARQL recalibration work directly off `princeton.q42`).
