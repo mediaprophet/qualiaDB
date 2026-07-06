@@ -861,3 +861,38 @@ that compression?), not on reconstruction alone. K compresses better than V (pos
 **Next (Phase 4, only if the ΔPPL pays off):** wire a runtime dictionary-decode KV path + certify ΔPPL
 via the existing oracle + package (the `run_calibration(KvDictionary)` seam already exists). This is a
 larger build; recommend deciding it against the int8 incumbent + actual long-context memory pressure.
+
+## 2026-07-06 — W5b Phase 4 IMPLEMENTED (ΔPPL certify + package); real run BLOCKED by a CG-lane build break
+
+**Step:** W5b Phase 4 (runtime KV-dictionary decode + ΔPPL certify + package) — **code DONE + fast-tested;
+the real ΔPPL certification run is BLOCKED by an unrelated computational-geometry lane build break (not
+mine).**
+
+**Built (files):**
+- `wgsl_forge/calibration/kv_dict_runtime.rs` — gated per-layer K/V dictionary reconstruction on the KV
+  WRITE path (`enable/disable/clear/reconstruct_kv`). Reconstruct-on-write is quality-identical to a real
+  compressed cache (store-code, reconstruct-on-read), so ΔPPL through it is faithful.
+- `gguf_bridge/attention.rs` — hook in `cpu_attention_pass`: reconstruct post-RoPE K (and V) through the
+  layer dictionary before the cache write (`#[cfg(feature="wgsl-forge")]`; no-op when the runtime is off).
+- `wgsl_forge/calibration/mod.rs` — `certify_kv_dictionary()`: capture (GPU readback) → learn per-layer
+  K/V dicts → measure PPL on the CPU reference path dict-OFF (ref, f32 KV) vs dict-ON (cand), same path +
+  f32 both times so the delta is purely the dictionary → gate at 5% ΔPPL → package CBOR dicts + provenance
+  (fail-closed, like AWQ). `run_calibration(KvDictionary)` now runs this (was the go/no-go stub).
+- Tests: `kv_dictionary_learn::runtime_reconstruct_matches_dict_and_is_gated` (PASS — reconstruct_kv equals
+  the dict's own encode→reconstruct, no-ops when disabled, passthrough for un-dicted layers);
+  `kv_dictionary_certify_real` (real ΔPPL harness, skips w/o model).
+
+**Measured:** fast unit tests 3/3 green (incl. the Phase-4 runtime test). **Real ΔPPL number: NOT YET —**
+the certify run failed to COMPILE, not on my code: the crate currently doesn't build because the
+**computational_geometry** lane has uncommitted, half-finished changes (missing `sutherland_hodgman`,
+`clip_difference`, `overlay_boolean`, `BooleanOp` — defs sit in `dcel_overlay.rs`/`nary_csg.rs` but aren't
+wired). My lib built clean (1.6 s incremental) minutes before; the break appeared mid-run.
+
+**⚑ Human / coordination:** the CG-lane working tree is non-compiling (another instrument's live §10 lane —
+I did NOT touch it). The moment `cargo build -p qualia-core-db --features wgsl-forge` is green again, run:
+`cargo test -p qualia-core-db --features wgsl-forge --test kv_dictionary_certify_real -- --nocapture`
+to get the ΔPPL verdict (PASS → dict certified+packaged; FAIL → sweep atoms/sparsity). Phase 4a code is
+committed and ready.
+
+**Next:** get the ΔPPL number once CG compiles; if PASS, Phase 4b = compressed GPU KV cache layout to
+realize the ~5.7×-vs-int8 memory saving (the runtime decode + shader work).

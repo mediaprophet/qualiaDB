@@ -451,6 +451,16 @@ impl QTensorEngine {
                         base_freq,
                         rope_scale,
                     );
+                    // W5b Phase 4: reconstruct post-RoPE K through the layer's dictionary before storing
+                    // (lossy) — so attention reads the compressed vectors and PPL reflects the artifact.
+                    #[cfg(feature = "wgsl-forge")]
+                    crate::wgsl_forge::calibration::kv_dict_runtime::reconstruct_kv(
+                        layer as usize,
+                        true,
+                        &mut proj[..out_dim],
+                        n_kv,
+                        head_dim,
+                    );
                     let kv = unsafe { core::slice::from_raw_parts_mut(kv_ptr, kv_len) };
                     for kvh in 0..n_kv {
                         for d in 0..head_dim {
@@ -468,6 +478,15 @@ impl QTensorEngine {
                     crate::kv_capture::record(layer as usize, true, &proj[..out_dim], n_kv, head_dim);
                 }
                 2 => {
+                    // W5b Phase 4: reconstruct V through the layer's dictionary before storing (lossy).
+                    #[cfg(feature = "wgsl-forge")]
+                    crate::wgsl_forge::calibration::kv_dict_runtime::reconstruct_kv(
+                        layer as usize,
+                        false,
+                        &mut proj[..out_dim],
+                        n_kv,
+                        head_dim,
+                    );
                     let kv = unsafe { core::slice::from_raw_parts_mut(kv_ptr, kv_len) };
                     for kvh in 0..n_kv {
                         for d in 0..head_dim {

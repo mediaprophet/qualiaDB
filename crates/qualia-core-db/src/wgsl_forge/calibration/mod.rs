@@ -25,6 +25,7 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 pub mod corpus;
+pub mod kv_dict_runtime;
 pub mod kv_dictionary;
 pub mod package;
 
@@ -327,11 +328,9 @@ fn analyze_kv_capture(
     }
 }
 
-/// `run_calibration` arm for [`ArtifactKind::KvDictionary`]: run the Phase-3 go/no-go with sensible
-/// defaults and map it into a [`CalibrationReport`]. For this artifact kind `ref_ppl`/`cand_ppl` carry
-/// the mean **reconstruction error** (int8 vs dictionary) — the quality metric that governs the
-/// decision — and `passed` is the overall GO. `packaged` is always `None`: a certified runtime artifact
-/// is Phase 4, gated on GO (this stays honest rather than emitting an unbuilt artifact).
+/// `run_calibration` arm for [`ArtifactKind::KvDictionary`]: the full W5b Phase-4 certify — learn the
+/// per-layer dictionaries, gate them by real ΔPPL, and package if they pass. Defaults: 256 atoms,
+/// 4-sparse, 20 learn iterations.
 #[cfg(not(target_arch = "wasm32"))]
 fn run_kv_dictionary(
     job: &CalibrationJob,
@@ -339,22 +338,108 @@ fn run_kv_dictionary(
     corpus_docs: usize,
 ) -> Result<CalibrationReport, CalibrationError> {
     let model = job.model_path.to_string_lossy().to_string();
-    // Defaults: 256 atoms, 4-sparse, over up to 2048 vectors/layer, sampling ~every 6th layer.
-    let report = kv_dictionary_go_no_go(&model, 80, 2048, 256, 4, 25, job.max_tok, 6)?;
+    certify_kv_dictionary(&model, 256, 4, 20, job.max_tok, job.gate, corpus_hash, corpus_docs)
+}
 
-    let mean = |f: fn(&KvLayerVerdict) -> f64| -> f64 {
-        if report.layers.is_empty() {
-            0.0
-        } else {
-            report.layers.iter().map(f).sum::<f64>() / report.layers.len() as f64
-        }
+/// W5b Phase 4 — certify a learned KV dictionary by **ΔPPL** and package it if it passes.
+///
+/// Captures the engine's real KV (fast GPU-readback route), learns per-layer K/V dictionaries, then
+/// measures perplexity on the **CPU reference attention path** with the dictionary OFF (ref) vs ON
+/// (cand). Both runs use the same path and an f32 KV cache, so the delta isolates the dictionary's
+/// lossy reconstruction — reconstruct-on-write here is quality-identical to a real compressed cache
+/// (store-code, reconstruct-on-read), so this ΔPPL is faithful. Packages the CBOR-framed dictionaries +
+/// provenance only when `ΔPPL ≤ gate`. Realizing the memory saving in the GPU cache layout is Phase 4b.
+#[cfg(not(target_arch = "wasm32"))]
+#[allow(clippy::too_many_arguments)]
+pub fn certify_kv_dictionary(
+    model_path: &str,
+    n_atoms: usize,
+    sparsity: usize,
+    iters: usize,
+    max_tok: usize,
+    gate: GateSpec,
+    corpus_hash: u64,
+    corpus_docs: usize,
+) -> Result<CalibrationReport, CalibrationError> {
+    use kv_dictionary::{learn_dictionary, KvDictionary};
+
+    // 1. Capture the engine's real KV (fast GPU-readback route).
+    let cap = crate::llm_bench::capture_kv_gpu_readback(model_path, max_tok, 2048)
+        .map_err(CalibrationError::CaptureFailed)?;
+    let head_dim = cap.head_dim;
+
+    // 2. Learn per-layer K/V dictionaries (a layer with too few vectors stays passthrough = None).
+    let learn = |vecs: &Vec<Vec<f32>>| -> Option<KvDictionary> {
+        (vecs.len() >= n_atoms.max(16))
+            .then(|| learn_dictionary(vecs, head_dim, n_atoms, sparsity, iters))
     };
-    let ref_ppl = mean(|l| l.recon_int8);
-    let cand_ppl = mean(|l| l.recon_dict);
-    let delta_ppl = if ref_ppl > 0.0 {
-        (cand_ppl - ref_ppl) / ref_ppl
+    let k_dicts: Vec<Option<KvDictionary>> = cap.k.iter().map(learn).collect();
+    let v_dicts: Vec<Option<KvDictionary>> = cap.v.iter().map(learn).collect();
+    if k_dicts.iter().all(|d| d.is_none()) && v_dicts.iter().all(|d| d.is_none()) {
+        return Err(CalibrationError::CaptureFailed(
+            "no layer had enough KV to learn a dictionary".into(),
+        ));
+    }
+
+    // 3. Perplexity on the CPU reference attention path (so the reconstruct hook is on the path), with
+    //    an f32 KV cache, dict OFF then ON. Same conditions both times → the delta is purely the dict.
+    let prev_cpu = crate::llm_bench::cpu_attention_enabled();
+    let prev_pre = crate::llm_bench::attention_preproject_enabled();
+    let prev_of = crate::llm_bench::attention_o_fuse_enabled();
+    let prev_int8 = crate::llm_bench::kv_int8_enabled();
+    crate::llm_bench::set_cpu_attention(true);
+    crate::llm_bench::set_attention_preproject(false);
+    crate::llm_bench::set_attention_o_fuse(false);
+    crate::llm_bench::set_kv_int8(false);
+
+    kv_dict_runtime::disable();
+    let ref_res = crate::llm_bench::perplexity_eval_blocking(model_path, max_tok);
+
+    kv_dict_runtime::enable(k_dicts.clone(), v_dicts.clone(), sparsity);
+    let cand_res = crate::llm_bench::perplexity_eval_blocking(model_path, max_tok);
+    kv_dict_runtime::disable();
+    kv_dict_runtime::clear();
+
+    crate::llm_bench::set_cpu_attention(prev_cpu);
+    crate::llm_bench::set_attention_preproject(prev_pre);
+    crate::llm_bench::set_attention_o_fuse(prev_of);
+    crate::llm_bench::set_kv_int8(prev_int8);
+
+    let (ref_ppl, _) = ref_res.map_err(CalibrationError::CertifyFailed)?;
+    let (cand_ppl, _) = cand_res.map_err(CalibrationError::CertifyFailed)?;
+    let delta_ppl = crate::llm_eval::delta_ppl(ref_ppl, cand_ppl);
+    let passed = delta_ppl <= gate.max_delta_ppl;
+
+    // 4. Package the certified dictionaries (CBOR) + provenance frame — only when it passed.
+    let packaged = if passed {
+        #[derive(serde::Serialize)]
+        struct KvDictArtifact<'a> {
+            sparsity: usize,
+            head_dim: usize,
+            k: &'a [Option<KvDictionary>],
+            v: &'a [Option<KvDictionary>],
+        }
+        let art = KvDictArtifact {
+            sparsity,
+            head_dim,
+            k: &k_dicts,
+            v: &v_dicts,
+        };
+        let mut cbor = Vec::new();
+        ciborium::into_writer(&art, &mut cbor)
+            .map_err(|e| CalibrationError::PackageFailed(format!("cbor encode: {e}")))?;
+        let prov = Provenance::new(
+            ArtifactKind::KvDictionary,
+            corpus_hash,
+            corpus_docs,
+            ref_ppl,
+            cand_ppl,
+            delta_ppl,
+            true,
+        );
+        Some(package::frame_artifact(&cbor, &prov))
     } else {
-        0.0
+        None
     };
 
     Ok(CalibrationReport {
@@ -364,8 +449,8 @@ fn run_kv_dictionary(
         ref_ppl,
         cand_ppl,
         delta_ppl,
-        passed: report.overall_go,
-        packaged: None,
+        passed,
+        packaged,
     })
 }
 

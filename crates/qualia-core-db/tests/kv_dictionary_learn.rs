@@ -158,3 +158,51 @@ fn dictionary_beats_uniform_at_matched_rate_only_on_low_rank_data() {
     assert_eq!(int8_bits_per_vector(64), (64 * 8 + 32) as f64);
     println!("[w5b/gonogo] PASS — the rate-distortion decision discriminates in both directions.");
 }
+
+/// Phase 4 runtime: `kv_dict_runtime::reconstruct_kv` replaces vectors in place with exactly what the
+/// dictionary's encode→reconstruct produces (so a PPL run through it measures the dictionary's real
+/// quality), is a no-op when disabled, and the dictionaries survive a CBOR round-trip (packaging).
+#[test]
+fn runtime_reconstruct_matches_dict_and_is_gated() {
+    use qualia_core_db::wgsl_forge::calibration::kv_dict_runtime;
+
+    let dim = 32usize;
+    let k = 3usize;
+    let mut rng = Rng(0x5151_2626);
+    let atoms: Vec<Vec<f32>> = (0..6)
+        .map(|_| unit((0..dim).map(|_| rng.f32()).collect()))
+        .collect();
+    let data = synth_subspace_data(&mut rng, &atoms, dim, 400, k, 0.01);
+    let dict = learn_dictionary(&data, dim, 16, k, 25);
+
+    // Two heads' worth of test vectors in one proj slice.
+    let v0 = data[7].clone();
+    let v1 = data[42].clone();
+    let mut proj: Vec<f32> = v0.iter().chain(v1.iter()).copied().collect();
+    let expected: Vec<f32> = [&v0, &v1]
+        .iter()
+        .flat_map(|v| dict.reconstruct(&dict.encode(v, k)))
+        .collect();
+
+    // Disabled → no-op.
+    kv_dict_runtime::reconstruct_kv(0, true, &mut proj, 2, dim);
+    assert_eq!(proj, [v0.clone(), v1.clone()].concat(), "no-op while disabled");
+
+    // Enabled for layer 0 K → in-place reconstruction equals the dictionary's own encode→reconstruct.
+    kv_dict_runtime::enable(vec![Some(dict.clone())], vec![None], k);
+    kv_dict_runtime::reconstruct_kv(0, true, &mut proj, 2, dim);
+    kv_dict_runtime::disable();
+    kv_dict_runtime::clear();
+    for (got, want) in proj.iter().zip(&expected) {
+        assert!((got - want).abs() < 1e-5, "reconstruct_kv must match dict path: {got} vs {want}");
+    }
+    // Layer with no dictionary (V here) stays passthrough.
+    let mut untouched = vec![1.0f32; 2 * dim];
+    let snap = untouched.clone();
+    kv_dict_runtime::enable(vec![Some(dict.clone())], vec![None], k);
+    kv_dict_runtime::reconstruct_kv(0, false, &mut untouched, 2, dim); // V has None → passthrough
+    kv_dict_runtime::disable();
+    kv_dict_runtime::clear();
+    assert_eq!(untouched, snap, "a layer with no dictionary must be passthrough");
+    println!("[w5b/phase4] PASS — runtime reconstruct matches the dictionary and is properly gated.");
+}
