@@ -39,19 +39,31 @@ fn certify_kv_dictionary_on_smollm2() {
     match certify_kv_dictionary(&model, atoms, k, 20, max_tok, GateSpec::default(), 0, 0) {
         Ok(r) => {
             let pkg = r.packaged.as_ref().map(|p| p.len()).unwrap_or(0);
+            // Persist the certified artifact on PASS so it's a real, inspectable file (Phase 4b input).
+            // Out-of-repo (not a git blob); path is env-overridable.
+            let mut saved = String::new();
+            if let Some(bytes) = r.packaged.as_ref() {
+                let out = std::env::var("QUALIA_W5B_ARTIFACT").unwrap_or_else(|_| {
+                    format!("../../target/kv_dict_smollm2_{atoms}atoms_{k}sparse.q42art")
+                });
+                if std::fs::write(&out, bytes).is_ok() {
+                    saved = format!("\n saved              = {out}");
+                }
+            }
             println!(
-                "\n=== W5b Phase 4 certify — SmolLM2-360M (256 atoms, 4-sparse) ===\n\
+                "\n=== W5b Phase 4 certify — SmolLM2-360M ({atoms} atoms, {k}-sparse) ===\n\
                  ref_ppl (f32 KV)   = {:.4}\n\
                  cand_ppl (dict KV) = {:.4}\n\
                  ΔPPL               = {:+.2}%  (gate ≤ {:.1}%)\n\
                  VERDICT            = {}\n\
-                 packaged artifact  = {} bytes",
+                 packaged artifact  = {} bytes{}",
                 r.ref_ppl,
                 r.cand_ppl,
                 r.delta_ppl * 100.0,
                 GateSpec::default().max_delta_ppl * 100.0,
                 if r.passed { "PASS — dictionary certified + packaged" } else { "FAIL — ΔPPL over gate (not packaged)" },
                 pkg,
+                saved,
             );
             assert!(r.ref_ppl.is_finite() && r.ref_ppl > 1.0, "ref PPL must be a sane finite value");
             assert!(r.cand_ppl.is_finite(), "cand PPL must be finite");

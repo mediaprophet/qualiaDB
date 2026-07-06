@@ -918,3 +918,29 @@ realize the saving. If FAIL → build the EFFICIENT sweep (capture once + ref on
 K-only, per-stream k, more atoms) rather than re-capturing each time; or conclude int8 dominates this
 model's regime. int8 remains the strong incumbent (ΔPPL +0.05% at 3.77× — W5a); the dictionary must
 clearly beat that trade to be worth Phase 4b.
+
+## 2026-07-06 — W5b Phase 4 CERTIFIED: k=6 KV dictionary PASSES (+0.42% ΔPPL, 3.8× vs int8)
+
+**Step:** W5b Phase 4a (certify + package) — **DONE. Certified PASS.**
+
+**Measured (SmolLM2-360M, CPU-reference path, f32 KV, ≤48 tok/passage, 256 atoms / 6-sparse):**
+- ref_ppl (f32 KV) = **29.0169**, cand_ppl (dict KV) = **29.1402** → **ΔPPL = +0.42%** (gate ≤ 5%).
+- **VERDICT: PASS — dictionary certified + packaged** (CBOR dicts + provenance, ~5.2 MB). Run 123 min.
+- The k=4→k=6 cliff is stark: ΔPPL 6.83% (FAIL) → 0.42% (PASS). Two extra coefficients per vector make
+  the 6-sparse code essentially lossless for this model, at 144 bits/vec (~2.25 bit/elem) = **3.8× smaller
+  than int8** (544 bits) ≈ 14× smaller than f32.
+
+**vs the incumbent (honest):** int8 KV (W5a) is +0.05% ΔPPL at 3.77× vs f32. The k=6 dictionary is +0.42%
+at ~14× vs f32 (3.8× on top of int8) — a real additional KV-memory win, at a slightly larger but still
+tiny quality cost. The catch is RUNTIME: realizing the saving needs Phase 4b (store sparse codes in the
+GPU cache + reconstruct in the attention shader on read), which ADDS reconstruction compute per attention.
+So the win lands on **memory-bound / long-context** targets (edge, mobile, big context) where KV cache
+dominates; on this compute-bound A2000 the extra compute may offset it. That's the Phase 4b tradeoff.
+
+**Fixes this step:** corrected a cosmetic header that always printed "4-sparse" (now reflects the real
+config — §9), and the harness now writes the certified artifact to disk on PASS (Phase 4b input).
+
+**Next:** Phase 4b decision (Timothy) — build the compressed GPU KV-cache layout to realize the memory win
+(justified now: the dict is certified coherent at 3.8× vs int8), or bank the certified artifact and revisit
+when a memory-bound target makes it the priority. A quick k=5 probe (120 bits, 4.5× vs int8) could find an
+even smaller passing point if wanted.
