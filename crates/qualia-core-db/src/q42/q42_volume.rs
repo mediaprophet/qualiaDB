@@ -195,33 +195,11 @@ pub fn is_unified_volume(path: &Path) -> io::Result<bool> {
 
 /// Encode Q42LEX bytes from a hash → string map.
 pub fn encode_lex(lex: &HashMap<u64, String>) -> Vec<u8> {
-    let mut entries: Vec<(u64, &str)> = lex.iter().map(|(&h, s)| (h, s.as_str())).collect();
-    entries.sort_unstable_by_key(|&(h, _)| h);
-
-    let entry_count = entries.len() as u64;
-    let strings_offset = 32 + entry_count * 16;
-
-    let mut string_blob: Vec<u8> = Vec::new();
-    let mut index = Vec::with_capacity(entries.len() * 16);
-    for (hash, s) in &entries {
-        let str_off = string_blob.len() as u64;
-        let b = s.as_bytes();
-        let len = b.len().min(65535) as u16;
-        string_blob.push(0x01); // LEX_TAG_STRING
-        string_blob.extend_from_slice(&len.to_le_bytes());
-        string_blob.extend_from_slice(&b[..len as usize]);
-        index.extend_from_slice(&hash.to_le_bytes());
-        index.extend_from_slice(&str_off.to_le_bytes());
-    }
-
-    let mut out = Vec::with_capacity(strings_offset as usize + string_blob.len());
-    out.extend_from_slice(&LEX_MAGIC);
-    out.extend_from_slice(&entry_count.to_le_bytes());
-    out.extend_from_slice(&strings_offset.to_le_bytes());
-    out.extend_from_slice(&1u64.to_le_bytes());
-    out.extend_from_slice(&index);
-    out.extend_from_slice(&string_blob);
-    out
+    // Single source of truth for the Q42LEX write format. `serialize_string_lexicon` is UTF-8 and
+    // truncates over-long literals at a CHARACTER boundary (never mid-codepoint), so multilingual
+    // literals round-trip byte-intact — a plain `b.len().min(65535)` byte cut could split a codepoint
+    // and produce invalid UTF-8 that the reader then drops.
+    crate::q42_lex::serialize_string_lexicon(lex)
 }
 
 /// Encode Q42LEX bytes from a hash → LexiconEntry map (supports embedded triples).

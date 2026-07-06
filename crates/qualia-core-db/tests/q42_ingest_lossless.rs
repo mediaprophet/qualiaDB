@@ -82,6 +82,27 @@ fn complete_mode_recovers_uris_and_multilingual_literals() {
         "predicate URI retained"
     );
 
+    // The GRAPH itself must be readable via the canonical reader — not just the lexicon. The old
+    // ingest wrote headerless blocks that `read_all_quins` mis-parsed (objects came back as 0). Prove
+    // every triple round-trips and its object hash resolves back to the stored literal.
+    const MASK: u64 = 0x0FFF_FFFF_FFFF_FFFF; // clears the 4-bit modality tag → the stored object field
+    let quins = vol.read_all_quins().expect("read_all_quins");
+    assert_eq!(
+        quins.len(),
+        5,
+        "canonical reader must see all 5 triples (got {})",
+        quins.len()
+    );
+    let lex = vol.lex_view().expect("lex");
+    let resolvable = quins
+        .iter()
+        .filter(|q| lex.lookup_hash(q.object).is_some() || lex.lookup_hash(q.object & MASK).is_some())
+        .count();
+    assert_eq!(
+        resolvable, 5,
+        "every triple's object hash must resolve to its stored string (got {resolvable}/5)"
+    );
+
     let _ = std::fs::remove_file(&in_path);
     let _ = std::fs::remove_file(&out_path);
 }

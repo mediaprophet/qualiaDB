@@ -16,6 +16,8 @@ fn find_q42() -> Option<PathBuf> {
     // Prefer the real WordNet q42 (glosses = the calibration corpus) if present locally, then the
     // release/repo locations, then small bundled ontologies as a fallback.
     let wordnet = [
+        // Lossless re-ingest (Complete mode) — glosses recoverable from the lexicon; prefer it.
+        r"C:\Projects\Local_LIbraries\Local_LIbraries\wordnet\wordnet-lossless.q42",
         r"C:\Projects\Local_LIbraries\Local_LIbraries\wordnet\wordnet.q42",
         "docs/data/wordnet/princeton.q42",
         "../../docs/data/wordnet/princeton.q42",

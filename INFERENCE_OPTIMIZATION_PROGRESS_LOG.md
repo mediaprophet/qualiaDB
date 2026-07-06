@@ -740,3 +740,47 @@ already feeds the learner today.
 **Next:** on Timothy's go — the WordNet re-ingest + validate `q42_corpus_source.rs` PASS-path (real
 gloss extraction from the lossless q42). Independently: W5b Phase 3 (KV capture hook → learn on glosses
 → recon-vs-int8 go/no-go).
+
+## 2026-07-06 — INGEST FIX pt.2: graph was UNREADABLE too — routed through the canonical builder
+
+**Step:** ingest correctness (graph format) — **done, verified end-to-end on the full 523 MB WordNet.**
+
+**Second defect found while validating pt.1:** re-opening the lossless WordNet q42 showed the *lexicon*
+recovered fine, but `Q42Volume::read_all_quins` returned only **577,150** of 5,558,748 quins with
+**objects reading as 0** and **0/577150 objects resolvable**. Root cause (separate, pre-existing): the
+legacy `streaming_import_rdf` wrote **headerless** LZ4 blocks (`compress_prepend_size(&raw_quins)`),
+but the canonical reader expects each SuperBlock to carry a **160-byte header** (live quin-count at
+bytes [16..24], quins at offset 160). So the reader mis-strided every block. The graph this ingest
+produced had **never** been readable by the governing reader — exactly the "migration-era format" the
+module header warned about.
+
+**Fix:** rewrote the writer to produce the **governing** layout via
+`q42_volume::UnifiedVolumeBuilder` instead of hand-rolling blocks:
+- Workers hash + intern the lexicon (unchanged); a collector gathers the quins; the main thread merges
+  the lexicon, **sorts quins by object hash**, and pushes `QUINS_PER_BLOCK` chunks to the builder;
+  `builder.finish()` writes header + lexicon + **BIDX object index** + block dir + data + Merkle-DAG.
+- Sorting makes `FLAG_OBJECT_SORTED` and the BIDX truthful — the old path set the sorted flag without
+  sorting (another honesty gap), and wrote no BIDX at all. BIDX now enables object-hash→block lookup.
+- Unified the lexicon writer: `q42_volume::encode_lex` now delegates to
+  `q42_lex::serialize_string_lexicon` (single source of truth), which fixed a latent multilingual bug
+  in `encode_lex` — it truncated over-long literals at a raw byte offset (could split a UTF-8
+  codepoint → invalid bytes the reader drops); the shared writer cuts on a **char boundary**.
+- Trade-off (stated honestly): the builder holds the quins + lexicon + compressed data in RAM
+  (~0.7 GB peak for WordNet) rather than streaming blocks to disk. Fine at WordNet scale; a streaming
+  canonical writer is a future option if a much larger corpus needs it.
+
+**Measured (real):**
+- Re-ingest (release): 5,558,748 triples, 2,593,506 terms (157 MB lexicon), 523 MB → **294 MB**,
+  **43.3 s**.
+- Re-open + `read_all_quins`: **5,558,748** quins (was 577,150). **4,939,379 objects resolve** to
+  their stored strings (was 0); the non-resolving remainder are inline typed literals, correct by
+  design. Multilingual literals resolve (`jpn`/`fin`/`fra`/`ind`/`cat`/`spa` seen). Lexicon dump:
+  248,448 sentence-like passages. `q42_corpus_source` PASS; `q42_ingest_lossless` 2/2 (now also asserts
+  `read_all_quins` count + object resolution).
+- `qualia-core-db` lib + release CLI build clean (no new warnings in the touched files).
+
+**Net:** the ingest now (1) keeps all text (pt.1) AND (2) writes a graph the canonical reader can query
+(pt.2), with a real object index. `Q42Field`/`Q42Lexicon` recalibration off `wordnet-lossless.q42` is
+unblocked. Default remains lossless.
+
+**Next:** W5b Phase 3 (KV capture hook → learn on the recovered glosses → recon-vs-int8 go/no-go).

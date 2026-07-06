@@ -1,10 +1,15 @@
-//! Legacy streaming import path for RDF text sources.
+//! Streaming import path for RDF text sources → canonical `.q42` volume.
 //!
-//! Important: this function currently writes framed LZ4 blocks directly to the
-//! output path. That behavior predates the canonical split between raw `.q42`
-//! SuperBlock containers and `.c.q42` transport artifacts, and should now be
-//! treated as a migration-era compatibility format rather than the governing
-//! raw `.q42` layout.
+//! Pipeline: a Rio parser on the main thread streams triples into a bounded channel; a pool of worker
+//! shards hashes each triple into an `NQuin` and (in [`IngestMode::Complete`]) interns every
+//! subject/predicate/object string into a per-shard lexicon; a collector gathers the quins; the main
+//! thread merges the lexicon, sorts the quins by object hash, and writes the volume via
+//! [`crate::q42_volume::UnifiedVolumeBuilder`] — the GOVERNING `.q42` layout (160-byte SuperBlock
+//! headers, block directory, BIDX object index, Merkle-DAG, and a real lexicon section).
+//!
+//! History: this path previously wrote headerless LZ4 blocks and an empty lexicon, so
+//! `Q42Volume::read_all_quins` could not read the graph back and all literal text was discarded while
+//! the shrunk file was reported as "compression". Both defects are fixed — see [`IngestMode`].
 
 use crate::{q_hash, NQuin};
 use log;
@@ -16,7 +21,7 @@ use rio_turtle::{NTriplesParser, TurtleParser};
 use rio_xml::RdfXmlParser;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, Write};
+use std::io::BufReader;
 use std::thread;
 use std::time::Instant;
 use sysinfo::System;
@@ -62,23 +67,6 @@ pub struct RawTriple {
     pub predicate: String,
     pub object: String,
     pub packed_object: Option<u64>,
-}
-
-/// What the writer thread hands back so the main thread can append the lexicon (Complete mode) and
-/// then stamp the header — the header must record the real `lex_offset`/`lex_length`, which are only
-/// known after the full lexicon is serialized.
-struct WriterOutput {
-    file: File,
-    written_count: u64,
-    block_count: u64,
-    data_offset: u64,
-    block_dir_offset: u64,
-    block_dir_length: u64,
-    dag_root_offset: u64,
-    dag_root_length: u64,
-    /// Offset just past the DAG blob — where the lexicon section begins.
-    tail_offset: u64,
-    merkle_root: [u8; 32],
 }
 
 /// Back-compat entry point: ingests losslessly ([`IngestMode::Complete`]) — the honest default.
@@ -181,150 +169,18 @@ pub fn streaming_import_rdf_with_mode(
     // Drop the extra transmitters so channels close correctly
     drop(tx_bin);
 
-    // 4. Spawn Writer Thread
-    let out_path_copy = out_path.to_string();
-    let writer_handle = thread::spawn(move || -> WriterOutput {
-        use crate::git_bridge::DagStore;
-        use crate::q42_volume::{BlockDirectoryEntry, HEADER_SIZE};
-        use std::io::{Seek, SeekFrom};
-
-        let mut out_file = std::fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(out_path_copy)
-            .expect("Failed to create output .q42 file");
-        out_file.seek(SeekFrom::Start(HEADER_SIZE as u64)).unwrap();
-
-        let mut written_count = 0;
-        let mut block_id: u64 = 0;
-        let mut buffer = Vec::with_capacity(393_216);
-
-        let mut block_directory: Vec<BlockDirectoryEntry> = Vec::new();
-        let mut dag_store = DagStore::new();
-        let mut last_dag_hash = [0u8; 32];
-
-        let data_offset = HEADER_SIZE as u64;
-        let mut current_offset = data_offset;
-
+    // 4. Spawn a collector thread that drains the hashed quins concurrently with parsing (the bounded
+    // channel would otherwise backpressure the parser to a halt). It just gathers them; the canonical
+    // volume is written on the main thread once the full set is known, via `UnifiedVolumeBuilder` —
+    // which produces the GOVERNING `.q42` layout (160-byte SuperBlock headers, block directory, BIDX
+    // object index, Merkle-DAG, real lexicon offsets). The previous hand-rolled writer emitted
+    // headerless blocks that `Q42Volume::read_all_quins` could not parse — the graph was unreadable.
+    let collector_handle = thread::spawn(move || -> Vec<NQuin> {
+        let mut quins: Vec<NQuin> = Vec::new();
         for quin in rx_bin {
-            let bytes = bytemuck::bytes_of(&quin);
-            buffer.extend_from_slice(bytes);
-            written_count += 1;
-
-            if buffer.len() >= 393_216 {
-                let compressed = lz4_flex::compress_prepend_size(&buffer);
-
-                out_file.write_all(&compressed).unwrap();
-
-                let block_size = compressed.len() as u32;
-                block_directory.push(BlockDirectoryEntry {
-                    rel_offset: current_offset - data_offset,
-                    comp_len: block_size,
-                    uncomp_len: buffer.len() as u32,
-                });
-                current_offset += block_size as u64;
-
-                let quins_slice: &[NQuin] = bytemuck::cast_slice(&buffer);
-                let ts = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map(|d| d.as_millis() as u64)
-                    .unwrap_or(0);
-                let msg = format!("ingest block {block_id}");
-                last_dag_hash = if last_dag_hash == [0u8; 32] {
-                    dag_store.genesis_node(quins_slice, 0, ts, &msg)
-                } else {
-                    dag_store.commit_node(last_dag_hash, quins_slice, 0, ts, &msg)
-                };
-
-                log::info!(
-                    "Ontology Ingest: wrote SuperBlock #{}, streamed {} quins so far",
-                    block_id + 1,
-                    written_count
-                );
-                buffer.clear();
-                block_id += 1;
-            }
+            quins.push(quin);
         }
-
-        // Flush remaining
-        if !buffer.is_empty() {
-            let compressed = lz4_flex::compress_prepend_size(&buffer);
-            out_file.write_all(&compressed).unwrap();
-
-            let block_size = compressed.len() as u32;
-            block_directory.push(BlockDirectoryEntry {
-                rel_offset: current_offset - data_offset,
-                comp_len: block_size,
-                uncomp_len: buffer.len() as u32,
-            });
-            current_offset += block_size as u64;
-
-            let quins_slice: &[NQuin] = bytemuck::cast_slice(&buffer);
-            let ts = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_millis() as u64)
-                .unwrap_or(0);
-            let msg = format!("ingest block {block_id}");
-            last_dag_hash = if last_dag_hash == [0u8; 32] {
-                dag_store.genesis_node(quins_slice, 0, ts, &msg)
-            } else {
-                dag_store.commit_node(last_dag_hash, quins_slice, 0, ts, &msg)
-            };
-
-            log::info!(
-                "Ontology Ingest: wrote SuperBlock #{} (final block, {} quins total)",
-                block_id + 1,
-                written_count
-            );
-            block_id += 1;
-        }
-
-        let block_dir_offset = current_offset;
-        for entry in &block_directory {
-            entry.write_to(&mut out_file).unwrap();
-        }
-        let block_dir_length = (block_directory.len() * BlockDirectoryEntry::SIZE) as u64;
-        current_offset += block_dir_length;
-
-        let dag_root_offset = current_offset;
-        let dag_blob = dag_store.serialize();
-        out_file.write_all(&dag_blob).unwrap();
-        let dag_root_length = dag_blob.len() as u64;
-        current_offset += dag_root_length;
-
-        out_file.flush().unwrap();
-
-        let merkle_root = if last_dag_hash == [0u8; 32] {
-            [0u8; 32]
-        } else {
-            use sha2::{Digest, Sha256};
-            let mut h = Sha256::new();
-            h.update(last_dag_hash);
-            h.finalize().into()
-        };
-
-        log::debug!(
-            "Ontology Ingest: writer processed {} quins across {} SuperBlocks",
-            written_count,
-            block_id
-        );
-
-        // Hand the file + offsets back; the main thread appends the lexicon (Complete mode) and only
-        // then writes the header, so `lex_offset`/`lex_length` reflect what was actually stored.
-        WriterOutput {
-            file: out_file,
-            written_count,
-            block_count: block_id,
-            data_offset,
-            block_dir_offset,
-            block_dir_length,
-            dag_root_offset,
-            dag_root_length,
-            tail_offset: current_offset,
-            merkle_root,
-        }
+        quins
     });
 
     // 5. The Streaming Sieve (Main Thread)
@@ -485,9 +341,10 @@ pub fn streaming_import_rdf_with_mode(
     // Drop the main sender so workers know to terminate
     drop(tx_raw);
 
-    // 6. Join the workers first (this closes the writer's channel), merging each shard's lexicon into
-    // one hash→string map. First-writer-wins on hash collisions across shards — deterministic given the
-    // same input regardless of shard scheduling, since a given term always hashes to the same key.
+    // 6. Join the workers first (this closes the collector's channel), merging each shard's lexicon
+    // into one hash→string map. First-writer-wins on hash collisions across shards — deterministic
+    // given the same input regardless of shard scheduling, since a given term always hashes to the same
+    // key.
     let mut lexicon: HashMap<u64, String> = HashMap::new();
     for handle in worker_handles {
         let shard = handle.join().unwrap();
@@ -500,60 +357,35 @@ pub fn streaming_import_rdf_with_mode(
         }
     }
 
-    let mut writer_out = writer_handle.join().unwrap();
-    let total_written = writer_out.written_count;
+    let mut quins = collector_handle.join().unwrap();
+    let total_written = quins.len() as u64;
 
-    // 7. Finalize the volume: in Complete mode serialize the lexicon and append it, then stamp the
-    // header with the REAL lex_offset/lex_length (previously hard-coded to 0 — the data-loss bug).
-    let lex_length: u64 = {
-        use crate::q42_volume::{header_to_bytes, Q42VolumeHeader};
-        use std::io::{Seek, SeekFrom};
+    // 7. Write the canonical volume via `UnifiedVolumeBuilder`. Sort by object hash first so the
+    // `FLAG_OBJECT_SORTED` flag and the BIDX object index (both set by the builder) are truthful, not
+    // decorative — the old path set the sorted flag without sorting. A quin set is unordered, so this
+    // reordering changes nothing semantically.
+    quins.sort_unstable_by_key(|q| q.object);
 
-        let (lex_offset, lex_length) = if mode == IngestMode::Complete && !lexicon.is_empty() {
-            let lex_bytes = crate::q42_lex::serialize_string_lexicon(&lexicon);
-            writer_out.file.seek(SeekFrom::Start(writer_out.tail_offset))?;
-            writer_out.file.write_all(&lex_bytes)?;
-            (writer_out.tail_offset, lex_bytes.len() as u64)
-        } else {
-            (writer_out.tail_offset, 0u64)
-        };
-
-        let assertion_timestamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_millis() as u64)
-            .unwrap_or(0);
-
-        let header = Q42VolumeHeader {
-            magic: crate::q42_volume::Q42_MAGIC,
-            version: crate::q42_volume::Q42_VERSION_V3,
-            flags: crate::q42_volume::FLAG_BLOCKS_LZ4 | crate::q42_volume::FLAG_OBJECT_SORTED,
-            lex_offset,
-            lex_length,
-            bidx_offset: lex_offset + lex_length,
-            bidx_length: 0,
-            block_dir_offset: writer_out.block_dir_offset,
-            block_dir_length: writer_out.block_dir_length,
-            data_offset: writer_out.data_offset,
-            data_length: writer_out.block_dir_offset - writer_out.data_offset,
-            block_count: writer_out.block_count,
-            block_size: crate::q42_volume::SUPERBLOCK_SIZE as u32,
-            quins_per_block: crate::QUINS_PER_BLOCK as u32,
-            temporal_index_offset: 0,
-            temporal_index_length: 0,
-            merkle_root: writer_out.merkle_root,
-            assertion_timestamp,
-            dag_root_offset: writer_out.dag_root_offset,
-            dag_root_length: writer_out.dag_root_length,
-            natural_person_did_offset: 0,
-            software_agent_did_offset: 0,
-            _reserved: [0u8; 80],
-        };
-
-        writer_out.file.seek(SeekFrom::Start(0))?;
-        writer_out.file.write_all(&header_to_bytes(&header))?;
-        writer_out.file.flush()?;
-        lex_length
+    let mut builder = match mode {
+        IngestMode::Complete => crate::q42_volume::UnifiedVolumeBuilder::with_lex_map(&lexicon),
+        IngestMode::StripLiterals => crate::q42_volume::UnifiedVolumeBuilder::with_empty_lex(),
     };
+    let mut seq_id: u64 = 0;
+    for chunk in quins.chunks(crate::QUINS_PER_BLOCK) {
+        builder.push_block(seq_id, chunk);
+        seq_id += 1;
+    }
+    builder
+        .finish(std::path::Path::new(out_path))
+        .map_err(|e| {
+            std::io::Error::new(e.kind(), format!("write canonical .q42 volume: {e}"))
+        })?;
+
+    // Lexicon byte size actually written — read back cheaply from the finished header (mmap, no
+    // re-serialize) so the report reflects what is really on disk.
+    let lex_length: u64 = crate::q42_volume::Q42Volume::open(std::path::Path::new(out_path))
+        .map(|v| v.header().lex_length)
+        .unwrap_or(0);
 
     let duration = start_time.elapsed();
 
