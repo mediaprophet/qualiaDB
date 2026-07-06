@@ -896,3 +896,25 @@ committed and ready.
 
 **Next:** get the ΔPPL number once CG compiles; if PASS, Phase 4b = compressed GPU KV cache layout to
 realize the ~5.7×-vs-int8 memory saving (the runtime decode + shader work).
+
+## 2026-07-06 — W5b Phase 4 ΔPPL verdict: FAIL at 2-bit (6.83%), retrying k=6
+
+**Step:** W5b Phase 4 certify — **ran (real ΔPPL), FAILED the 5% gate at the aggressive config; retry in
+flight.**
+
+**Measured (SmolLM2-360M, CPU-reference path, f32 KV, ≤48 tok/passage, 256 atoms / 4-sparse):**
+- ref_ppl (f32 KV) = **29.0169**, cand_ppl (dict KV) = **30.9993** → **ΔPPL = +6.83%** (gate ≤ 5%).
+- **VERDICT: FAIL** — over gate, **not packaged (0 bytes)**. Fail-closed worked exactly. Run took 100 min
+  (3 model passes; the cand pass is slow — OMP-encode per KV vector on the CPU reference path).
+- Honest read: the 96-bit (~2-bit/elem) code is too lossy for the 5% gate on this model — but only just.
+  Phase 3 showed V reconstructs far worse than K (0.30–0.49 vs 0.19–0.26), so V likely dominates the cost.
+
+**Retry:** the harness is now env-driven (`QUALIA_W5B_ATOMS/K/MAXTOK`, no recompile per config). Running
+**k=6** (256 atoms, 6-sparse) — 144 bits/vec ≈ 2.25 bit/elem, still **3.8× smaller than int8** (544 bits),
+notably lower recon error → the most likely single config to pass while keeping a real memory win.
+
+**Next:** k=6 verdict. If PASS → certified + packaged; Phase 4b = compressed GPU KV cache layout to
+realize the saving. If FAIL → build the EFFICIENT sweep (capture once + ref once, loop cand over configs:
+K-only, per-stream k, more atoms) rather than re-capturing each time; or conclude int8 dominates this
+model's regime. int8 remains the strong incumbent (ΔPPL +0.05% at 3.77× — W5a); the dictionary must
+clearly beat that trade to be worth Phase 4b.

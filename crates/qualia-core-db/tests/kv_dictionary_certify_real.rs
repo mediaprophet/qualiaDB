@@ -27,9 +27,16 @@ fn certify_kv_dictionary_on_smollm2() {
     };
     let model = model.to_string_lossy().to_string();
 
-    // 256 atoms, 4-sparse, 20 learn iters, ≤48 tok/passage (three CPU-reference passes → keep it short),
-    // default 5% ΔPPL gate. corpus_hash/docs are provenance placeholders here.
-    match certify_kv_dictionary(&model, 256, 4, 20, 48, GateSpec::default(), 0, 0) {
+    // Config is env-driven so a ΔPPL sweep needs no recompile:
+    //   QUALIA_W5B_ATOMS (default 256), QUALIA_W5B_K (default 4), QUALIA_W5B_MAXTOK (default 48).
+    let env_usize = |k: &str, d: usize| std::env::var(k).ok().and_then(|v| v.parse().ok()).unwrap_or(d);
+    let atoms = env_usize("QUALIA_W5B_ATOMS", 256);
+    let k = env_usize("QUALIA_W5B_K", 4);
+    let max_tok = env_usize("QUALIA_W5B_MAXTOK", 48);
+    println!("[w5b/certify] config: {atoms} atoms, {k}-sparse, ≤{max_tok} tok/passage");
+
+    // 20 learn iters, default 5% ΔPPL gate. corpus_hash/docs are provenance placeholders here.
+    match certify_kv_dictionary(&model, atoms, k, 20, max_tok, GateSpec::default(), 0, 0) {
         Ok(r) => {
             let pkg = r.packaged.as_ref().map(|p| p.len()).unwrap_or(0);
             println!(
