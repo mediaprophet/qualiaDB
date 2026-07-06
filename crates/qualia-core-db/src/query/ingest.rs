@@ -14,11 +14,46 @@ use crossbeam_channel::{bounded, Receiver, Sender};
 use rio_api::parser::TriplesParser;
 use rio_turtle::{NTriplesParser, TurtleParser};
 use rio_xml::RdfXmlParser;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Write};
 use std::thread;
 use std::time::Instant;
 use sysinfo::System;
+
+/// How much of the source graph the `.q42` retains.
+///
+/// The historical ingest hashed every subject/predicate/object into a 48-byte quin and wrote an
+/// **empty** lexicon (`lex_length: 0`). That threw away every URI and every literal — the source text
+/// was irrecoverable — while the shrunk output was presented as "compression". It was not compression;
+/// it was data loss reported as a size win. That is exactly the kind of claim-vs-reality gap this
+/// project's integrity rules (CLAUDE.md §15) forbid. This enum makes the choice explicit and the
+/// reporting honest.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum IngestMode {
+    /// **Lossless.** Intern every subject/predicate URI and every literal (full UTF-8 / Unicode) into
+    /// the q42 lexicon, so `Q42LexMmap::lookup_hash(quin.field)` recovers the original term. The `.q42`
+    /// is a faithful, reversible representation of the source graph. This is the default — honesty over
+    /// a smaller file.
+    #[default]
+    Complete,
+    /// **Lossy, structure-only.** Store only the 48-byte hash quins; discard all human-readable text
+    /// (URIs and literals). Smaller on disk, but the original strings CANNOT be recovered. The size
+    /// reduction is data loss, not compression, and is reported as such. Use only when the graph
+    /// structure alone is wanted and the term strings are available elsewhere.
+    StripLiterals,
+}
+
+impl IngestMode {
+    fn label(self) -> &'static str {
+        match self {
+            IngestMode::Complete => "COMPLETE (lossless — all URIs & literals retained)",
+            IngestMode::StripLiterals => {
+                "STRIP-LITERALS (lossy — human-readable text discarded, structure only)"
+            }
+        }
+    }
+}
 
 /// Represents a raw string-based Triple extracted from RDF/XML
 #[derive(Debug)]
@@ -29,7 +64,34 @@ pub struct RawTriple {
     pub packed_object: Option<u64>,
 }
 
+/// What the writer thread hands back so the main thread can append the lexicon (Complete mode) and
+/// then stamp the header — the header must record the real `lex_offset`/`lex_length`, which are only
+/// known after the full lexicon is serialized.
+struct WriterOutput {
+    file: File,
+    written_count: u64,
+    block_count: u64,
+    data_offset: u64,
+    block_dir_offset: u64,
+    block_dir_length: u64,
+    dag_root_offset: u64,
+    dag_root_length: u64,
+    /// Offset just past the DAG blob — where the lexicon section begins.
+    tail_offset: u64,
+    merkle_root: [u8; 32],
+}
+
+/// Back-compat entry point: ingests losslessly ([`IngestMode::Complete`]) — the honest default.
 pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u64> {
+    streaming_import_rdf_with_mode(in_path, out_path, IngestMode::Complete)
+}
+
+/// Stream-ingest an RDF source into a `.q42` volume under an explicit [`IngestMode`].
+pub fn streaming_import_rdf_with_mode(
+    in_path: &str,
+    out_path: &str,
+    mode: IngestMode,
+) -> std::io::Result<u64> {
     let start_time = Instant::now();
     println!("Initializing Native Ingestion Pipeline...");
 
@@ -48,16 +110,26 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
     let (tx_bin, rx_bin): (Sender<NQuin>, Receiver<NQuin>) = bounded(10_000);
 
     // 3. Spawn Parallel Hasher Shards (Workers)
-    let mut worker_handles = vec![];
+    // Each worker returns its local hash→string lexicon shard (empty in StripLiterals mode); the main
+    // thread merges the shards into one lexicon and writes it into the volume so the terms are
+    // recoverable. This is the fix for the historical data loss: previously the strings were hashed and
+    // thrown away here, and no lexicon was ever written.
+    let collect_lexicon = mode == IngestMode::Complete;
+    let mut worker_handles: Vec<thread::JoinHandle<HashMap<u64, String>>> = vec![];
     for _worker_id in 0..target_workers {
         let rx = rx_raw.clone();
         let tx = tx_bin.clone();
 
         let handle = thread::spawn(move || {
             let mut _local_count = 0u64;
+            let mut lex: HashMap<u64, String> = HashMap::new();
             for triple in rx {
                 let s_hash = q_hash(&triple.subject);
                 let p_hash = q_hash(&triple.predicate);
+                // Objects that pack into the quin inline (typed int/decimal/bool) carry their full value
+                // in the field itself — no string needed. Everything else is stored under the same
+                // masked hash that lands in `quin.object`, so `lookup_hash(quin.object)` resolves it.
+                let is_inline = triple.packed_object.is_some();
                 let o_hash = triple
                     .packed_object
                     .unwrap_or_else(|| q_hash(&triple.object) & OBJECT_HASH_MASK);
@@ -74,6 +146,20 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
                     parity,
                 };
 
+                if collect_lexicon {
+                    // `or_insert_with(|| moved)` still moves the string even when the entry is
+                    // occupied, so branch explicitly to avoid needless clones/moves on hot hits.
+                    if !lex.contains_key(&s_hash) {
+                        lex.insert(s_hash, triple.subject);
+                    }
+                    if !lex.contains_key(&p_hash) {
+                        lex.insert(p_hash, triple.predicate);
+                    }
+                    if !is_inline && !lex.contains_key(&o_hash) {
+                        lex.insert(o_hash, triple.object);
+                    }
+                }
+
                 // Send back to the writer thread
                 if tx.send(quin).is_err() {
                     break;
@@ -82,10 +168,12 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
             }
             if _local_count > 0 {
                 log::debug!(
-                    "Ontology Ingest: worker shard finished {} triples",
-                    _local_count
+                    "Ontology Ingest: worker shard finished {} triples ({} lexemes)",
+                    _local_count,
+                    lex.len()
                 );
             }
+            lex
         });
         worker_handles.push(handle);
     }
@@ -95,11 +183,9 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
 
     // 4. Spawn Writer Thread
     let out_path_copy = out_path.to_string();
-    let writer_handle = thread::spawn(move || {
+    let writer_handle = thread::spawn(move || -> WriterOutput {
         use crate::git_bridge::DagStore;
-        use crate::q42_volume::{
-            header_to_bytes, BlockDirectoryEntry, Q42VolumeHeader, HEADER_SIZE,
-        };
+        use crate::q42_volume::{BlockDirectoryEntry, HEADER_SIZE};
         use std::io::{Seek, SeekFrom};
 
         let mut out_file = std::fs::OpenOptions::new()
@@ -208,7 +294,6 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
         let dag_root_length = dag_blob.len() as u64;
         current_offset += dag_root_length;
 
-        let empty_section_offset = current_offset;
         out_file.flush().unwrap();
 
         let merkle_root = if last_dag_hash == [0u8; 32] {
@@ -220,47 +305,26 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
             h.finalize().into()
         };
 
-        let assertion_timestamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_millis() as u64)
-            .unwrap_or(0);
-
-        let header = Q42VolumeHeader {
-            magic: crate::q42_volume::Q42_MAGIC,
-            version: crate::q42_volume::Q42_VERSION_V3,
-            flags: crate::q42_volume::FLAG_BLOCKS_LZ4 | crate::q42_volume::FLAG_OBJECT_SORTED,
-            lex_offset: empty_section_offset,
-            lex_length: 0,
-            bidx_offset: empty_section_offset,
-            bidx_length: 0,
-            block_dir_offset,
-            block_dir_length,
-            data_offset,
-            data_length: block_dir_offset - data_offset,
-            block_count: block_id,
-            block_size: crate::q42_volume::SUPERBLOCK_SIZE as u32,
-            quins_per_block: crate::QUINS_PER_BLOCK as u32,
-            temporal_index_offset: 0,
-            temporal_index_length: 0,
-            merkle_root,
-            assertion_timestamp,
-            dag_root_offset,
-            dag_root_length,
-            natural_person_did_offset: 0,
-            software_agent_did_offset: 0,
-            _reserved: [0u8; 80],
-        };
-
-        out_file.seek(SeekFrom::Start(0)).unwrap();
-        out_file.write_all(&header_to_bytes(&header)).unwrap();
-        out_file.flush().unwrap();
-
         log::debug!(
             "Ontology Ingest: writer processed {} quins across {} SuperBlocks",
             written_count,
             block_id
         );
-        written_count
+
+        // Hand the file + offsets back; the main thread appends the lexicon (Complete mode) and only
+        // then writes the header, so `lex_offset`/`lex_length` reflect what was actually stored.
+        WriterOutput {
+            file: out_file,
+            written_count,
+            block_count: block_id,
+            data_offset,
+            block_dir_offset,
+            block_dir_length,
+            dag_root_offset,
+            dag_root_length,
+            tail_offset: current_offset,
+            merkle_root,
+        }
     });
 
     // 5. The Streaming Sieve (Main Thread)
@@ -421,25 +485,118 @@ pub fn streaming_import_rdf(in_path: &str, out_path: &str) -> std::io::Result<u6
     // Drop the main sender so workers know to terminate
     drop(tx_raw);
 
-    // 6. Wait for all threads to finish
+    // 6. Join the workers first (this closes the writer's channel), merging each shard's lexicon into
+    // one hash→string map. First-writer-wins on hash collisions across shards — deterministic given the
+    // same input regardless of shard scheduling, since a given term always hashes to the same key.
+    let mut lexicon: HashMap<u64, String> = HashMap::new();
     for handle in worker_handles {
-        handle.join().unwrap();
+        let shard = handle.join().unwrap();
+        if lexicon.is_empty() {
+            lexicon = shard;
+        } else {
+            for (k, v) in shard {
+                lexicon.entry(k).or_insert(v);
+            }
+        }
     }
 
-    let total_written = writer_handle.join().unwrap();
+    let mut writer_out = writer_handle.join().unwrap();
+    let total_written = writer_out.written_count;
+
+    // 7. Finalize the volume: in Complete mode serialize the lexicon and append it, then stamp the
+    // header with the REAL lex_offset/lex_length (previously hard-coded to 0 — the data-loss bug).
+    let lex_length: u64 = {
+        use crate::q42_volume::{header_to_bytes, Q42VolumeHeader};
+        use std::io::{Seek, SeekFrom};
+
+        let (lex_offset, lex_length) = if mode == IngestMode::Complete && !lexicon.is_empty() {
+            let lex_bytes = crate::q42_lex::serialize_string_lexicon(&lexicon);
+            writer_out.file.seek(SeekFrom::Start(writer_out.tail_offset))?;
+            writer_out.file.write_all(&lex_bytes)?;
+            (writer_out.tail_offset, lex_bytes.len() as u64)
+        } else {
+            (writer_out.tail_offset, 0u64)
+        };
+
+        let assertion_timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0);
+
+        let header = Q42VolumeHeader {
+            magic: crate::q42_volume::Q42_MAGIC,
+            version: crate::q42_volume::Q42_VERSION_V3,
+            flags: crate::q42_volume::FLAG_BLOCKS_LZ4 | crate::q42_volume::FLAG_OBJECT_SORTED,
+            lex_offset,
+            lex_length,
+            bidx_offset: lex_offset + lex_length,
+            bidx_length: 0,
+            block_dir_offset: writer_out.block_dir_offset,
+            block_dir_length: writer_out.block_dir_length,
+            data_offset: writer_out.data_offset,
+            data_length: writer_out.block_dir_offset - writer_out.data_offset,
+            block_count: writer_out.block_count,
+            block_size: crate::q42_volume::SUPERBLOCK_SIZE as u32,
+            quins_per_block: crate::QUINS_PER_BLOCK as u32,
+            temporal_index_offset: 0,
+            temporal_index_length: 0,
+            merkle_root: writer_out.merkle_root,
+            assertion_timestamp,
+            dag_root_offset: writer_out.dag_root_offset,
+            dag_root_length: writer_out.dag_root_length,
+            natural_person_did_offset: 0,
+            software_agent_did_offset: 0,
+            _reserved: [0u8; 80],
+        };
+
+        writer_out.file.seek(SeekFrom::Start(0))?;
+        writer_out.file.write_all(&header_to_bytes(&header))?;
+        writer_out.file.flush()?;
+        lex_length
+    };
+
     let duration = start_time.elapsed();
+
+    // 8. Honest reporting — state the mode and, for the lossy mode, that the size reduction is data
+    // loss, NOT compression (CLAUDE.md §15: no claim-vs-reality gap).
+    let src_bytes = std::fs::metadata(in_path).map(|m| m.len()).unwrap_or(0);
+    let out_bytes = std::fs::metadata(out_path).map(|m| m.len()).unwrap_or(0);
 
     println!("✅ Import Complete!");
     println!("Parsed {} triples.", triples_read);
     log::info!("Ontology Ingest: parsed {} triples", triples_read);
     println!("Wrote {} Super-Quins to {}.", total_written, out_path);
+    println!("Ingest mode: {}", mode.label());
+    match mode {
+        IngestMode::Complete => {
+            println!(
+                "Lexicon: {} unique terms retained ({} bytes) — every URI and literal recoverable (full Unicode).",
+                lexicon.len(),
+                lex_length
+            );
+            println!(
+                "Source {} B → .q42 {} B (lossless: 48-byte structure + complete lexicon; reversible to the source terms).",
+                src_bytes, out_bytes
+            );
+        }
+        IngestMode::StripLiterals => {
+            println!(
+                "⚠  STRIP-LITERALS mode: human-readable text (URIs and literals) was DISCARDED and is NOT recoverable."
+            );
+            println!(
+                "Source {} B → .q42 {} B. This size reduction is DATA LOSS (structure-only), not compression.",
+                src_bytes, out_bytes
+            );
+        }
+    }
     println!("Total Time: {:?}", duration);
     let total_superblocks =
         (total_written + (crate::QUINS_PER_BLOCK as u64) - 1) / crate::QUINS_PER_BLOCK as u64;
     log::info!(
-        "Ontology Ingest: Completed {} SuperBlocks ({} quins) in {:?}",
+        "Ontology Ingest: Completed {} SuperBlocks ({} quins, mode {:?}) in {:?}",
         total_superblocks,
         total_written,
+        mode,
         duration
     );
 

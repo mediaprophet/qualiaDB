@@ -170,12 +170,20 @@ pub enum Commands {
         #[arg(long)]
         dataset: PathBuf,
     },
-    /// Stream-ingests an RDF/XML file into a mathematically pure .q42 binary
+    /// Stream-ingests an RDF/XML file into a .q42 binary.
+    ///
+    /// By default the ingest is LOSSLESS: every URI and literal (full Unicode) is interned into the
+    /// volume's lexicon and is recoverable. Pass `--strip-literals` for the smaller, lossy,
+    /// structure-only form — that discards all human-readable text (the size reduction is data loss,
+    /// not compression) and is only appropriate when the term strings live elsewhere.
     Import {
         /// The input .rdf or .ttl file
         input: PathBuf,
         /// The output .q42 file
         output: PathBuf,
+        /// Discard URIs & literals, keeping only 48-byte structural quins (lossy, not reversible).
+        #[arg(long)]
+        strip_literals: bool,
     },
     /// Ingest and compile raw data into .q42 SuperBlocks
     Ingest {
@@ -1688,15 +1696,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
-        Commands::Import { input, output } => {
+        Commands::Import {
+            input,
+            output,
+            strip_literals,
+        } => {
             println!("============================================================");
             println!("📥 QualiaDB Native RDF/XML Ingestion Pipeline");
             println!("============================================================");
 
             let in_path = input.to_string_lossy().to_string();
             let out_path = output.to_string_lossy().to_string();
+            let mode = if *strip_literals {
+                qualia_core_db::ingest::IngestMode::StripLiterals
+            } else {
+                qualia_core_db::ingest::IngestMode::Complete
+            };
 
-            match qualia_core_db::ingest::streaming_import_rdf(&in_path, &out_path) {
+            match qualia_core_db::ingest::streaming_import_rdf_with_mode(&in_path, &out_path, mode) {
                 Ok(quin_count) => {
                     println!("✨ Done! Wrote {quin_count} Super-Quins.");
                 }

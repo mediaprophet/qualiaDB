@@ -691,3 +691,52 @@ definition-dense corpus over the whole lexicon (ideal calibration coverage).
 capture hook) to run the dictionary learner on it end-to-end + the recon-vs-int8 go/no-go; and the
 architectural fix — re-ingest WordNet RETAINING the `j.0:gloss` literals so the q42 carries them (then
 `Q42Lexicon`/`Q42Field` + SPARQL recalibration work directly off `princeton.q42`).
+
+## 2026-07-06 — INGEST INTEGRITY FIX: lossy "compression" was data loss; now two honest modes (Timothy)
+
+**Step:** ingest correctness / §15 integrity — **done (mechanism proven end-to-end; full WordNet
+re-ingest not yet run — see ⚑).**
+
+**The problem (Timothy's diagnosis, confirmed):** `query::ingest::streaming_import_rdf` hashed every
+subject/predicate/object into a 48-byte quin and wrote the header with **`lex_offset: <tail>,
+lex_length: 0`** — an *empty* lexicon. So every URI and every literal (all the human-readable text) was
+replaced by an 8-byte FNV hash and **thrown away, unrecoverable**. The resulting small `.q42` was then
+presented as "compression". It was not compression — it was irreversible data loss reported as a size
+win. That is a claim-vs-reality gap of exactly the kind CLAUDE.md §15 forbids ("fraudulent bots").
+
+**What was built (files):**
+- `q42_lex.rs` — added `serialize_string_lexicon(&HashMap<u64,String>) -> Vec<u8>`: the **write** side
+  of the Q42LEX format (magic, sorted 16-byte index, tagged UTF-8 string blob) that `Q42LexMmap`
+  already reads. **Unicode, not ASCII** (Timothy's requirement — multilingual is foundational, not a
+  detail): strings stored as full UTF-8; over-long literals truncated at a **char boundary**, never
+  mid-codepoint. + `utf8_prefix` helper. + two unit tests (multilingual round-trip; boundary truncate).
+- `query/ingest.rs` — `IngestMode::{Complete (default), StripLiterals}`; new
+  `streaming_import_rdf_with_mode`, with `streaming_import_rdf` delegating to `Complete`. Workers now
+  intern every term into a per-shard `HashMap<u64,String>` (objects keyed by the same `OBJECT_HASH_MASK`
+  hash that lands in `quin.object`, so `lookup_hash(quin.object)` resolves; inline typed literals need
+  no string). The writer thread returns a `WriterOutput` (file + offsets) instead of stamping the
+  header; the main thread merges the shard lexicons, appends the serialized lexicon, and **writes the
+  header with the REAL `lex_offset`/`lex_length`**. Honest end-of-run reporting: names the mode, and for
+  StripLiterals states plainly that the size reduction is **DATA LOSS, not compression**.
+- `qualia-cli` `Import` — added `--strip-literals` (default = lossless Complete); help text says so.
+- `tests/q42_ingest_lossless.rs` (integration, runs despite the CG `#[cfg(test)]` breakage).
+
+**Measured results (real, `cargo test -p qualia-core-db --test q42_ingest_lossless`, 2 passed):**
+- **Complete**: 5-triple RDF with English + Finnish (ä) + Japanese + Arabic literals → reopened `.q42`
+  and recovered **every literal and both URIs byte-intact across all four scripts** from the lexicon.
+- **Strip**: reopened `.q42` has **0 lexicon strings** (structure-only); its file is strictly smaller
+  than the Complete output — the delta being the discarded text, asserted as such (not "compression").
+- Build: `qualia-core-db` lib + `qualia-cli` both compile clean (only pre-existing CG warnings).
+
+**⚑ Where I need the human:** the fix is done + proven on a small multilingual corpus. Re-ingesting the
+full **523 MB** WordNet `data.rdf` in Complete mode to produce a lossless `wordnet.q42` (glosses
+recoverable → `Q42Lexicon`/`Q42Field` + in-app SPARQL recalibration work directly off the q42) is a
+heavier one-off job: a large (~100s MB) out-of-repo artifact + a Complete-mode lexicon that holds all
+unique strings in RAM during the build (§15 resource cost — I won't spend it silently). **Say the word
+and I'll run it** (I'll build release CLI first and write the output out-of-repo, not into git). The
+W5b training corpus does **not** block on this — the extracted `wordnet_glosses.txt` (324k glosses)
+already feeds the learner today.
+
+**Next:** on Timothy's go — the WordNet re-ingest + validate `q42_corpus_source.rs` PASS-path (real
+gloss extraction from the lossless q42). Independently: W5b Phase 3 (KV capture hook → learn on glosses
+→ recon-vs-int8 go/no-go).
