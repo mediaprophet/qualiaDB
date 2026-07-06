@@ -462,6 +462,10 @@ impl QTensorEngine {
                             kv[idx] = proj[kvh * head_dim + d];
                         }
                     }
+                    // W5b: tap the post-RoPE K vectors (what the int8 KV cache would quantize) for the
+                    // sparse-dictionary go/no-go. No-op unless calibration capture is enabled.
+                    #[cfg(not(target_arch = "wasm32"))]
+                    crate::kv_capture::record(layer as usize, true, &proj[..out_dim], n_kv, head_dim);
                 }
                 2 => {
                     let kv = unsafe { core::slice::from_raw_parts_mut(kv_ptr, kv_len) };
@@ -475,6 +479,9 @@ impl QTensorEngine {
                             kv[idx] = proj[kvh * head_dim + d];
                         }
                     }
+                    // W5b: tap the V vectors (no RoPE on V) alongside K.
+                    #[cfg(not(target_arch = "wasm32"))]
+                    crate::kv_capture::record(layer as usize, false, &proj[..out_dim], n_kv, head_dim);
                 }
                 0 => {
                     let mut att_scores = [0f32; MAX_CONTEXT_WINDOW as usize];

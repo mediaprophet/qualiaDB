@@ -321,6 +321,85 @@ fn solve_spd(g: &mut [f32], b: &mut [f32], n: usize) {
     }
 }
 
+/// Mean relative L2 error of **per-vector symmetric uniform** quantization to `bits` bits: one f32
+/// scale per vector, `scale = max|v| / (2^(bits-1) − 1)`, `q_i = round(v_i / scale)` clamped, dequant
+/// `v'_i = q_i · scale`. This is the "naive scalar quantizer" baseline a learned codebook must beat *at
+/// the same bit rate* to be worthwhile. Vectors with ~0 norm are skipped (they quantize exactly).
+pub fn uniform_reconstruction_error(vectors: &[Vec<f32>], bits: u32) -> f64 {
+    let levels = ((1u32 << bits.clamp(1, 16).saturating_sub(1)) - 1).max(1) as f32;
+    let mut acc = 0f64;
+    let mut n = 0usize;
+    for v in vectors {
+        let vn = l2(v);
+        if vn <= 1e-12 {
+            continue;
+        }
+        let amax = v.iter().fold(0f32, |m, &x| m.max(x.abs()));
+        if amax <= 1e-12 {
+            continue;
+        }
+        let scale = amax / levels;
+        let mut err = 0f32;
+        for &x in v {
+            let q = (x / scale).round().clamp(-levels, levels);
+            let d = x - q * scale;
+            err += d * d;
+        }
+        acc += (err.sqrt() / vn) as f64;
+        n += 1;
+    }
+    if n == 0 {
+        0.0
+    } else {
+        acc / n as f64
+    }
+}
+
+/// The W5a incumbent: per-vector symmetric **int8** KV reconstruction error (uniform at 8 bits).
+pub fn int8_reconstruction_error(vectors: &[Vec<f32>]) -> f64 {
+    uniform_reconstruction_error(vectors, 8)
+}
+
+/// Footprint of `bits`-bit uniform KV per vector: `dim` codes + one f32 scale.
+pub fn uniform_bits_per_vector(dim: usize, bits: u32) -> f64 {
+    (dim * bits as usize + 32) as f64
+}
+
+/// Footprint of int8 KV per vector (uniform at 8 bits): `dim` int8 elements + one f32 scale.
+pub fn int8_bits_per_vector(dim: usize) -> f64 {
+    uniform_bits_per_vector(dim, 8)
+}
+
+/// Bits per stored index for a dictionary of `n_atoms` atoms: `ceil(log2 n_atoms)`.
+pub fn index_bits(n_atoms: usize) -> f64 {
+    (usize::BITS - n_atoms.saturating_sub(1).leading_zeros()).max(1) as f64
+}
+
+/// **Asymptotic** (code-only) footprint of a k-sparse dictionary code per vector: `k` × (index +
+/// coefficient). At deployment the shared dictionary amortizes over millions of cached vectors → ~0,
+/// so this is the rate that matters for the rate-distortion comparison against uniform quantization.
+pub fn dict_code_bits_per_vector(n_atoms: usize, k: usize, coeff_bits: usize) -> f64 {
+    k as f64 * (index_bits(n_atoms) + coeff_bits as f64)
+}
+
+/// **Full** footprint of a k-sparse dictionary over exactly `n_vectors` vectors: the code plus the
+/// per-vector amortized share of the shared `n_atoms · dim` f32 dictionary. Use this to report the
+/// realized footprint of a finite capture (where the dictionary is NOT yet amortized away).
+pub fn dict_bits_per_vector(
+    n_atoms: usize,
+    k: usize,
+    dim: usize,
+    n_vectors: usize,
+    coeff_bits: usize,
+) -> f64 {
+    let dict_amortized = if n_vectors == 0 {
+        0.0
+    } else {
+        (n_atoms * dim * 32) as f64 / n_vectors as f64
+    };
+    dict_code_bits_per_vector(n_atoms, k, coeff_bits) + dict_amortized
+}
+
 #[inline]
 fn dot(a: &[f32], b: &[f32]) -> f32 {
     a.iter().zip(b).map(|(x, y)| x * y).sum()

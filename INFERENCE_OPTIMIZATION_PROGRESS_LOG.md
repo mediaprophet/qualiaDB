@@ -784,3 +784,42 @@ module header warned about.
 unblocked. Default remains lossless.
 
 **Next:** W5b Phase 3 (KV capture hook → learn on the recovered glosses → recon-vs-int8 go/no-go).
+
+## 2026-07-06 — W5b Phase 3: KV-dictionary go/no-go — methodology built + validated; real-vector capture blocked on GPU readback
+
+**Step:** W5b Phase 3 (sparse-KV-dictionary go/no-go) — **methodology + learner + comparison DONE and
+unit-validated; the real-model DECISION is NOT yet obtained** (honest: capture point isn't on the GPU
+eval forward — see the block below).
+
+**Built (files):**
+- `inference/kv_capture.rs` — gated KV-vector capture hook (sibling of `llm_awq`): `enable/record/
+  snapshot/disable/clear`, bounded per-layer, self-sizing head_dim. Zero cost when off.
+- Hook calls added in `gguf_bridge/attention.rs::cpu_attention_pass` at the post-RoPE K and V writes.
+- `wgsl_forge/calibration/kv_dictionary.rs` — the rate-distortion baseline: `uniform_reconstruction_
+  error(bits)`, `int8_reconstruction_error` (= uniform@8), `dict_code_bits_per_vector` (asymptotic),
+  `dict_bits_per_vector` (finite-n, with amortized dictionary), `uniform/int8_bits_per_vector`.
+- `wgsl_forge/calibration/mod.rs` — `KvLayerVerdict`/`KvDictReport` + `kv_dictionary_go_no_go(...)`
+  (capture → learn per sampled layer → compare) + `run_calibration(KvDictionary)` wired to it.
+
+**Key finding (methodology, real numbers on synthetic data):** int8 is a STRONG baseline — on genuinely
+low-rank data int8 reconstructs at **0.0048** rel-err vs the 4-sparse dictionary's **0.033** — int8 is
+*more accurate*, just ~4–8× larger. So "dictionary beats int8 accuracy" is the wrong test; the honest
+one is **rate-distortion**: at the dictionary's own bit rate, does the learned basis beat NAIVE uniform
+quantization? It does, decisively, on low-rank data (66-bit code: dict **0.034** vs 2-bit-uniform
+**0.624**) and correctly LOSES on incompressible data (dict 0.782 vs uniform 0.490). The gate
+discriminates in both directions — `kv_dictionary_learn` 2/2 green.
+
+**⚑ BLOCKED — real-model capture needs GPU KV readback (needs a decision):** the go/no-go on *real*
+SmolLM2-360M KV did not run: the native eval forward (`dispatch_transformer_layer`) uses
+`encode_attention_pass_gpu` (GPU-only), which never consults `cpu_attention_enabled()`. The flag-gated
+CPU SDPA (`cpu_attention_pass`, where the hook lives) is not on that path, so with a GPU present K/V
+never reach host memory and the hook can't fire (verified: two 13-min runs captured 0 vectors, before
+and after forcing `set_cpu_attention(true)`). To get real vectors we need one of: (a) a
+`read_kv_cache_gpu()` buffer-readback (+ a small forward-over-one-sequence harness, f32 KV) — bounded
+~60–80 lines of GPU plumbing; or (b) routing `dispatch_transformer_layer` through the CPU attention
+path under the flag (riskier — touches the decode forward). **Neither is silently worth the compute
+without Timothy's steer** — asking which (or defer W5b runtime). The `kv_dictionary_gonogo_real` harness
+is committed and SKIPS honestly until capture is wired (does not fake a verdict).
+
+**Next:** Timothy's call on (a) vs (b) vs defer. If GO on capture: get the real per-layer verdict, then
+Phase 4 (runtime dictionary decode + ΔPPL certify + package) only if the real KV proves low-rank.

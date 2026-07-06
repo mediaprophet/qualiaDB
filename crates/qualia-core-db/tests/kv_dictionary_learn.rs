@@ -8,7 +8,10 @@
 
 #![cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
 
-use qualia_core_db::wgsl_forge::calibration::kv_dictionary::{learn_dictionary, KvDictionary};
+use qualia_core_db::wgsl_forge::calibration::kv_dictionary::{
+    dict_code_bits_per_vector, int8_bits_per_vector, int8_reconstruction_error, learn_dictionary,
+    uniform_reconstruction_error, KvDictionary,
+};
 
 /// Deterministic LCG → f32 in [-1, 1).
 struct Rng(u64);
@@ -100,4 +103,58 @@ fn learns_a_dictionary_that_reconstructs_subspace_data() {
     );
 
     println!("[w5b] PASS — MOD+OMP learner recovers subspace structure; metric discriminates.");
+}
+
+/// The go/no-go is a RATE-DISTORTION test, and it must discriminate in both directions. int8 (8
+/// bits/elem) is a strong, accurate baseline that a low-rate sparse code will NOT beat on accuracy — so
+/// the honest question is whether the learned dictionary beats NAIVE uniform quantization *at its own
+/// bit rate*. On genuinely low-rank data it should (the learned basis captures the subspace a coarse
+/// scalar grid can't); on incompressible data it should NOT (nothing to learn). If it "won" everywhere
+/// the metric would be vacuous.
+#[test]
+fn dictionary_beats_uniform_at_matched_rate_only_on_low_rank_data() {
+    let dim = 64usize;
+    // 3-sparse over 64 atoms (6-bit index) + f16 coeff = 3*(6+16) = 66 bits/vec ≈ 1 bit/elem → matched
+    // uniform baseline is ~1-2 bits/elem. int8 (544 bits) is far more accurate but ~8× the footprint.
+    let n_atoms = 64usize;
+    let k = 3usize;
+    let code_bits = dict_code_bits_per_vector(n_atoms, k, 16);
+    let matched_bits = ((code_bits / dim as f64).round() as u32).clamp(2, 8);
+
+    // (a) Low-rank data (8 atoms, 3-sparse) — the regime a dictionary is designed for.
+    let mut rng = Rng(0x1122_3344);
+    let atoms: Vec<Vec<f32>> = (0..8)
+        .map(|_| unit((0..dim).map(|_| rng.f32()).collect()))
+        .collect();
+    let low = synth_subspace_data(&mut rng, &atoms, dim, 1200, 3, 0.01);
+    let dict = learn_dictionary(&low, dim, n_atoms, k, 30);
+    let recon_dict = dict.reconstruction_error(&low, k);
+    let recon_unif = uniform_reconstruction_error(&low, matched_bits);
+    let recon_int8 = int8_reconstruction_error(&low);
+    println!(
+        "[w5b/gonogo] low-rank @ {code_bits:.0}b: dict {recon_dict:.4} vs uniform@{matched_bits}b {recon_unif:.4} (int8 {recon_int8:.4} @ {:.0}b)",
+        int8_bits_per_vector(dim)
+    );
+    assert!(
+        recon_dict < recon_unif,
+        "on low-rank data the learned dictionary should beat matched-rate uniform quant ({recon_dict:.4} vs {recon_unif:.4})"
+    );
+
+    // (b) Incompressible data: nothing to learn → naive uniform quant should be no worse.
+    let mut rng2 = Rng(0x9911_2244);
+    let rand_data: Vec<Vec<f32>> = (0..1200)
+        .map(|_| (0..dim).map(|_| rng2.f32()).collect())
+        .collect();
+    let rdict = learn_dictionary(&rand_data, dim, n_atoms, k, 20);
+    let r_dict = rdict.reconstruction_error(&rand_data, k);
+    let r_unif = uniform_reconstruction_error(&rand_data, matched_bits);
+    println!("[w5b/gonogo] random @ {code_bits:.0}b: dict {r_dict:.4} vs uniform@{matched_bits}b {r_unif:.4}");
+    assert!(
+        r_unif <= r_dict,
+        "on incompressible data uniform quant must be no worse than the dictionary ({r_unif:.4} vs {r_dict:.4}) — else the gate is vacuous"
+    );
+
+    // int8 footprint sanity: dim int8 elems + one f32 scale.
+    assert_eq!(int8_bits_per_vector(64), (64 * 8 + 32) as f64);
+    println!("[w5b/gonogo] PASS — the rate-distortion decision discriminates in both directions.");
 }

@@ -145,10 +145,179 @@ pub fn run_calibration(job: &CalibrationJob) -> Result<CalibrationReport, Calibr
         // int8-KV scale calibration needs the W5a int8 KV cache (write-side amax → per-head-slot f16
         // scale). The seam lands with W5a; visible-not-stubbed until then.
         ArtifactKind::KvInt8Scales => Err(CalibrationError::NotYetImplemented("W5a int8 KV cache")),
-        // Dictionary / Top-K SAE learning (Lexico) needs a trained per-layer dictionary via k-SVD +
-        // OMP over a custom corpus — the W5b research task with its own eval-corpus curation.
-        ArtifactKind::KvDictionary => Err(CalibrationError::NotYetImplemented("W5b sparse KV dictionary")),
+        // Sparse KV dictionary (Lexico / Top-K SAE): W5b. Phase 3 = the go/no-go — capture the
+        // engine's real KV vectors, learn a per-layer dictionary, and compare its reconstruction to
+        // int8's at footprint. Packaging a certified runtime artifact is Phase 4 and only justified if
+        // this gate says GO.
+        ArtifactKind::KvDictionary => run_kv_dictionary(job, corpus_hash, corpus_docs),
     }
+}
+
+/// Per-(layer, stream) rate-distortion comparison. int8 (the W5a incumbent, 8 bits/elem) is a strong,
+/// accurate baseline; a sparse dictionary trades accuracy for a much smaller footprint. So the decision
+/// isn't "does the dictionary beat int8's accuracy" (it won't — int8 has ~4× the bits) but "at the
+/// dictionary's OWN low bit rate, does the learned basis beat NAIVE uniform quantization?" — i.e. is the
+/// learned codebook worth more than just quantizing more coarsely.
+#[derive(Debug, Clone)]
+pub struct KvLayerVerdict {
+    pub layer: usize,
+    /// "K" or "V".
+    pub stream: &'static str,
+    pub n_vectors: usize,
+    /// int8 incumbent (8-bit) reconstruction error and footprint — context, not the gate.
+    pub recon_int8: f64,
+    pub int8_bits: f64,
+    /// k-sparse dictionary reconstruction error and asymptotic code footprint (bits/vec, dictionary
+    /// amortized away as at deployment scale).
+    pub recon_dict: f64,
+    pub dict_code_bits: f64,
+    /// Naive uniform quantization at the dictionary's matched bit rate — the head-to-head baseline.
+    pub matched_bits: u32,
+    pub recon_uniform_matched: f64,
+    /// GO here: the learned dictionary reconstructs at least as well as uniform quantization AT THE
+    /// SAME bit rate (the learned basis earns its keep).
+    pub go: bool,
+}
+
+/// The W5b Phase-3 decision: does a learned sparse dictionary beat int8 on the engine's real KV
+/// vectors? Per-layer detail plus an overall verdict.
+#[derive(Debug, Clone)]
+pub struct KvDictReport {
+    pub head_dim: usize,
+    pub n_atoms: usize,
+    pub sparsity: usize,
+    pub layers: Vec<KvLayerVerdict>,
+    /// GO iff a majority of analyzed (layer, stream) pairs have the dictionary dominating int8.
+    pub overall_go: bool,
+}
+
+/// W5b Phase 3 — the sparse-KV-dictionary go/no-go on **real engine KV vectors**.
+///
+/// Enables the [`crate::kv_capture`] hook, runs a calibration forward (the native attention path routes
+/// through the CPU SDPA that the hook taps), then per sampled layer learns a dictionary over the
+/// captured K and V vectors and compares its reconstruction error + footprint to per-vector int8. This
+/// is a **measurement**, not a packaged artifact — the artifact (runtime dictionary decode + ΔPPL
+/// certify) is Phase 4, built only if this returns GO.
+#[cfg(not(target_arch = "wasm32"))]
+#[allow(clippy::too_many_arguments)]
+pub fn kv_dictionary_go_no_go(
+    model_path: &str,
+    n_layer_hint: usize,
+    max_per_layer: usize,
+    n_atoms: usize,
+    sparsity: usize,
+    iters: usize,
+    max_tok: usize,
+    layer_stride: usize,
+) -> Result<KvDictReport, CalibrationError> {
+    use kv_dictionary::{
+        dict_code_bits_per_vector, int8_bits_per_vector, int8_reconstruction_error, learn_dictionary,
+        uniform_reconstruction_error,
+    };
+
+    // The KV hook taps `cpu_attention_pass`, which is opt-in (default native attention runs on the GPU
+    // shader). Force the CPU reference path for the duration of the capture, then restore it. The
+    // captured K/V are numerically the same vectors either path produces (the CPU SDPA is the GPU
+    // path's certified reference), so this doesn't bias the geometry we're measuring.
+    let prev_cpu_attn = crate::llm_bench::cpu_attention_enabled();
+    crate::llm_bench::set_cpu_attention(true);
+    crate::kv_capture::enable(n_layer_hint, max_per_layer);
+    let ev = crate::llm_bench::perplexity_eval_blocking(model_path, max_tok);
+    let cap = crate::kv_capture::snapshot();
+    crate::kv_capture::disable();
+    crate::kv_capture::clear();
+    crate::llm_bench::set_cpu_attention(prev_cpu_attn);
+    ev.map_err(CalibrationError::CaptureFailed)?;
+    let cap = cap.ok_or_else(|| {
+        CalibrationError::CaptureFailed(
+            "no KV captured — the calibration forward never hit the CPU attention path".into(),
+        )
+    })?;
+
+    let head_dim = cap.head_dim;
+    let int8_bits = int8_bits_per_vector(head_dim);
+    // Asymptotic code rate of the dictionary (dictionary amortized away, as at deployment scale) and
+    // the integer bit-rate of uniform quantization that matches it — the head-to-head baseline.
+    let dict_code_bits = dict_code_bits_per_vector(n_atoms, sparsity, 16);
+    let matched_bits = ((dict_code_bits / head_dim as f64).round() as u32).clamp(2, 8);
+    let mut layers = Vec::new();
+    for li in (0..cap.k.len()).step_by(layer_stride.max(1)) {
+        for (stream, vecs) in [("K", &cap.k[li]), ("V", &cap.v[li])] {
+            // Need enough vectors for the dictionary to be meaningful (≥ atom count).
+            if vecs.len() < n_atoms.max(16) {
+                continue;
+            }
+            let dict = learn_dictionary(vecs, head_dim, n_atoms, sparsity, iters);
+            let recon_dict = dict.reconstruction_error(vecs, sparsity);
+            let recon_int8 = int8_reconstruction_error(vecs);
+            let recon_uniform_matched = uniform_reconstruction_error(vecs, matched_bits);
+            // GO: the learned basis beats naive uniform quantization at the same bit rate.
+            let go = recon_dict <= recon_uniform_matched;
+            layers.push(KvLayerVerdict {
+                layer: li,
+                stream,
+                n_vectors: vecs.len(),
+                recon_int8,
+                int8_bits,
+                recon_dict,
+                dict_code_bits,
+                matched_bits,
+                recon_uniform_matched,
+                go,
+            });
+        }
+    }
+    let go_count = layers.iter().filter(|l| l.go).count();
+    let overall_go = !layers.is_empty() && go_count * 2 >= layers.len();
+    Ok(KvDictReport {
+        head_dim,
+        n_atoms,
+        sparsity,
+        layers,
+        overall_go,
+    })
+}
+
+/// `run_calibration` arm for [`ArtifactKind::KvDictionary`]: run the Phase-3 go/no-go with sensible
+/// defaults and map it into a [`CalibrationReport`]. For this artifact kind `ref_ppl`/`cand_ppl` carry
+/// the mean **reconstruction error** (int8 vs dictionary) — the quality metric that governs the
+/// decision — and `passed` is the overall GO. `packaged` is always `None`: a certified runtime artifact
+/// is Phase 4, gated on GO (this stays honest rather than emitting an unbuilt artifact).
+#[cfg(not(target_arch = "wasm32"))]
+fn run_kv_dictionary(
+    job: &CalibrationJob,
+    corpus_hash: u64,
+    corpus_docs: usize,
+) -> Result<CalibrationReport, CalibrationError> {
+    let model = job.model_path.to_string_lossy().to_string();
+    // Defaults: 256 atoms, 4-sparse, over up to 2048 vectors/layer, sampling ~every 6th layer.
+    let report = kv_dictionary_go_no_go(&model, 80, 2048, 256, 4, 25, job.max_tok, 6)?;
+
+    let mean = |f: fn(&KvLayerVerdict) -> f64| -> f64 {
+        if report.layers.is_empty() {
+            0.0
+        } else {
+            report.layers.iter().map(f).sum::<f64>() / report.layers.len() as f64
+        }
+    };
+    let ref_ppl = mean(|l| l.recon_int8);
+    let cand_ppl = mean(|l| l.recon_dict);
+    let delta_ppl = if ref_ppl > 0.0 {
+        (cand_ppl - ref_ppl) / ref_ppl
+    } else {
+        0.0
+    };
+
+    Ok(CalibrationReport {
+        artifact: ArtifactKind::KvDictionary,
+        corpus_hash,
+        corpus_docs,
+        ref_ppl,
+        cand_ppl,
+        delta_ppl,
+        passed: report.overall_go,
+        packaged: None,
+    })
 }
 
 /// AWQ scales: the real capture→fold→sweep pipeline (reuses [`awq_sweep_blocking`]), certified

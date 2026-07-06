@@ -128,6 +128,8 @@ pub use inference::inference_agent as llm_agent;
 pub use inference::inference_awq;
 pub use inference::inference_awq as llm_awq;
 #[cfg(not(target_arch = "wasm32"))]
+pub use inference::kv_capture;
+#[cfg(not(target_arch = "wasm32"))]
 pub use inference::inference_bench;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::inference_bench as llm_bench;
