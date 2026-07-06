@@ -23,6 +23,20 @@ pub enum CorpusSpec {
         /// One generation per prompt.
         prompts: Vec<String>,
     },
+    /// Draw the corpus from a **q42 knowledge graph** (e.g. Princeton WordNet as `princeton.q42`): one
+    /// document per literal that is the object of `predicate`. The canonical use is WordNet **glosses**
+    /// — definitional text over the whole lexicon, ideal calibration coverage. Because the source is a
+    /// query over the user's own q42, **recalibration is a first-class user capability**: point at a
+    /// different q42 / predicate → re-run → re-tuned artifacts (the corpus hash records which knowledge
+    /// shaped them). This is the single-predicate projection; a richer SPARQL WHERE-pattern slice is a
+    /// future extension over the same `read_all_quins` + lexicon path.
+    Q42Field {
+        /// Path to the q42 volume (`Q42Volume` format).
+        volume: PathBuf,
+        /// The predicate URI whose object literals form the corpus, e.g.
+        /// `"http://www.w3.org/2000/01/rdf-schema#comment"` or the WordNet gloss predicate.
+        predicate: String,
+    },
 }
 
 /// Assemble the corpus into a list of non-empty documents.
@@ -48,7 +62,40 @@ pub fn assemble(spec: &CorpusSpec) -> Result<Vec<String>, CalibrationError> {
             Ok(docs)
         }
         CorpusSpec::OllamaSynth { model, prompts } => synth_with_ollama(model, prompts),
+        CorpusSpec::Q42Field { volume, predicate } => assemble_q42_field(volume, predicate),
     }
+}
+
+/// Project a q42 volume's `predicate`-object literals into corpus documents. Loads every quin
+/// (`read_all_quins`), keeps those whose predicate hashes to `predicate`, and resolves each object
+/// hash back to its string via the volume lexicon (`lookup`) — so e.g. WordNet glosses / `rdfs:comment`
+/// text come out as documents. Dedups exact repeats (a shared gloss shouldn't over-weight calibration).
+fn assemble_q42_field(volume: &std::path::Path, predicate: &str) -> Result<Vec<String>, CalibrationError> {
+    use crate::q42_volume::Q42Volume;
+    let vol = Q42Volume::open(volume)
+        .map_err(|e| CalibrationError::CaptureFailed(format!("open q42 {volume:?}: {e}")))?;
+    let quins = vol
+        .read_all_quins()
+        .map_err(|e| CalibrationError::CaptureFailed(format!("read q42 quins: {e}")))?;
+    let lex = vol
+        .lex_view()
+        .map_err(|e| CalibrationError::CaptureFailed(format!("q42 lexicon: {e:?}")))?;
+    let pred_hash = crate::q_hash(predicate);
+
+    let mut docs: Vec<String> = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    for q in &quins {
+        if q.predicate != pred_hash {
+            continue;
+        }
+        if let Some(s) = lex.lookup_hash(q.object) {
+            let t = s.trim();
+            if !t.is_empty() && seen.insert(q.object) {
+                docs.push(t.to_string());
+            }
+        }
+    }
+    Ok(docs)
 }
 
 /// Deterministic FNV-1a content hash over the concatenated documents (provenance).

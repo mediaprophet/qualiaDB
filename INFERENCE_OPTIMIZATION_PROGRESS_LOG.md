@@ -618,3 +618,30 @@ their own q42 / edit the query → re-run calibration → re-tuned artifacts, co
 `princeton.q42` is fetched); Phase 3 — KV **capture** hook + wire `run_kv_dictionary` (capture → learn
 → recon-error-vs-int8 report → package), the go/no-go on whether a learned dictionary beats W5a's
 3.77×@+0.05%; Phase 4 (gated on Phase 3) — the runtime (attention reads dictionary-coded KV, ΔPPL-certified).
+
+## 2026-07-06 — W5b Phase 2: q42→corpus source built; FINDING: bundled q42s are structure-only
+
+Built the corpus source Timothy specified — draw calibration text from a q42 knowledge graph by
+predicate projection (`wgsl_forge/calibration/corpus.rs::CorpusSpec::Q42Field { volume, predicate }`):
+`Q42Volume::read_all_quins` → keep quins whose predicate hashes to `predicate` → resolve each object
+hash to text via the volume lexicon (`lookup_hash`) → dedup → documents. Canonical use = WordNet
+glosses / `rdfs:comment`. This is the mechanism that makes recalibration user-driven (query your own
+q42 / change the predicate → re-run → re-tuned artifacts).
+
+**FINDING (empirical, `tests/q42_corpus_source.rs` against real `bundled/.../dqv.q42`):** the mechanism
+compiles + runs (opens the volume, reads 71 quins, queries the lexicon) but extracts **0 passages** —
+**0/71 quin hashes resolve against the lexicon, raw OR masked** (the hashes are already in the low
+`0x00..0x0f` range, so the modality-tag mask is a no-op). The bundled ontology q42s carry the *graph*
+(hashed quins) but **not a populated lexicon** mapping those hashes back to strings — they are
+**structure-only** exports, so there is no literal text to project.
+
+**Consequence for the architecture (honest):** Q42Field is built + correct, but it needs a q42 whose
+lexicon RETAINS literal text. The bundled ontologies don't. The natural text-bearing q42 is
+`princeton.q42` (WordNet — glosses are its content, so its ingest should lexicon them), but that file
+isn't on disk (release/RDF-ingest asset) to confirm. So Phase 2 is **built + data-gated**: validate +
+use against `princeton.q42` (fetch or RDF-ingest), or verify/extend the RDF ingest to keep literals in
+the lexicon. The test SKIPs (not fails) on structure-only q42s, documenting this.
+
+**W5b status:** Phase 1 (learner) DONE + validated. Phase 2 (q42 corpus source) BUILT + data-gated on a
+lexicon-bearing q42. Phases 3–4 (KV capture, runtime + ΔPPL certify) unstarted. The "training" ALGORITHM
+exists and works; feeding it real WordNet gloss text is gated on `princeton.q42`.
