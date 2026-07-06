@@ -37,6 +37,16 @@ pub enum CorpusSpec {
         /// `"http://www.w3.org/2000/01/rdf-schema#comment"` or the WordNet gloss predicate.
         predicate: String,
     },
+    /// Draw the corpus from a q42 volume's **string lexicon** — every stored lexeme that reads as
+    /// definitional text. For a WordNet q42 (`princeton.q42` / `wordnet.q42`) this is the glosses +
+    /// examples: a broad, neutral, definition-dense corpus over the whole lexicon, recovered directly
+    /// from the lexicon strings without traversing the graph's (synset-ID-keyed) structure — the
+    /// robust path, since WordNet objects are structured IDs, not `q_hash(gloss)`. `min_len` filters
+    /// out URIs / single tokens (keep sentence-like strings: interior whitespace + length ≥ `min_len`).
+    Q42Lexicon {
+        volume: PathBuf,
+        min_len: usize,
+    },
 }
 
 /// Assemble the corpus into a list of non-empty documents.
@@ -63,7 +73,33 @@ pub fn assemble(spec: &CorpusSpec) -> Result<Vec<String>, CalibrationError> {
         }
         CorpusSpec::OllamaSynth { model, prompts } => synth_with_ollama(model, prompts),
         CorpusSpec::Q42Field { volume, predicate } => assemble_q42_field(volume, predicate),
+        CorpusSpec::Q42Lexicon { volume, min_len } => assemble_q42_lexicon(volume, *min_len),
     }
+}
+
+/// Assemble a corpus from a q42 volume's string lexicon: every stored lexeme that is sentence-like
+/// (interior whitespace + trimmed length ≥ `min_len`) becomes a document — for a WordNet q42 these are
+/// the glosses/examples. Deduped. Works regardless of the graph's object-encoding, since it reads the
+/// lexicon strings directly (the WordNet objects are structured synset IDs, not gloss hashes).
+fn assemble_q42_lexicon(volume: &std::path::Path, min_len: usize) -> Result<Vec<String>, CalibrationError> {
+    use crate::q42_volume::Q42Volume;
+    let vol = Q42Volume::open(volume)
+        .map_err(|e| CalibrationError::CaptureFailed(format!("open q42 {volume:?}: {e}")))?;
+    let lex = vol
+        .lex_view()
+        .map_err(|e| CalibrationError::CaptureFailed(format!("q42 lexicon: {e:?}")))?;
+    let min_len = min_len.max(1);
+    let mut docs = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    for i in 0..lex.entry_count() {
+        if let Some(s) = lex.string_at(i) {
+            let t = s.trim();
+            if t.len() >= min_len && t.contains(' ') && seen.insert(t.to_string()) {
+                docs.push(t.to_string());
+            }
+        }
+    }
+    Ok(docs)
 }
 
 /// Project a q42 volume's `predicate`-object literals into corpus documents. Loads every quin

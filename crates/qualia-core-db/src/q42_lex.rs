@@ -106,6 +106,18 @@ impl<'a> Q42LexMmap<'a> {
         None
     }
 
+    /// The lexeme string of the `i`-th index entry (`0..entry_count`), if it is a UTF-8 string entry
+    /// (not an embedded-triple / Webizen entry). Enables iterating ALL lexicon strings without knowing
+    /// their hashes — e.g. to assemble a calibration corpus from a WordNet q42's gloss text.
+    pub fn string_at(&self, i: usize) -> Option<&'a str> {
+        if i >= self.entry_count {
+            return None;
+        }
+        let off = HEADER_SIZE + i * INDEX_ENTRY_SIZE;
+        let str_off = u64::from_le_bytes(self.data[off + 8..off + 16].try_into().ok()?) as usize;
+        Self::read_string_at(self.data, self.strings_offset, str_off)
+    }
+
     fn read_string_at(data: &[u8], blob_base: usize, rel_off: usize) -> Option<&str> {
         let start = blob_base.saturating_add(rel_off);
         if start + 3 > data.len() {

@@ -645,3 +645,29 @@ the lexicon. The test SKIPs (not fails) on structure-only q42s, documenting this
 **W5b status:** Phase 1 (learner) DONE + validated. Phase 2 (q42 corpus source) BUILT + data-gated on a
 lexicon-bearing q42. Phases 3–4 (KV capture, runtime + ΔPPL certify) unstarted. The "training" ALGORITHM
 exists and works; feeding it real WordNet gloss text is gated on `princeton.q42`.
+
+## 2026-07-06 — W5b Phase 2 finding CONFIRMED against real wordnet.q42 (133MB): no gloss TEXT in the q42
+
+Ran the corpus source against the real `C:\...\wordnet\wordnet.q42` (133 MB, valid Q42Volume v3, 5.5M
+quins). Added `Q42Lexicon` (dump the volume's string lexicon → sentence-like passages, robust to the
+graph's object encoding) + a `Q42LexMmap::string_at(i)` iterator. Result:
+
+- The q42 is real WordNet structure (5,558,748 quins) with a POPULATED lexicon (`lookup_hash` works —
+  the neuro-symbolic sieve resolves words/URIs from it). BUT: **0 sentence-like strings** in the lexicon,
+  and 0 quins resolve via `lookup_hash(object)` (objects are structured synset/sense IDs, not
+  `q_hash(gloss)`). i.e. the q42 carries WordNet's *graph* (words, synset relations) but **NOT the gloss
+  definitional TEXT as recoverable strings**.
+
+**Definitive conclusion:** `wordnet.q42` as currently built cannot feed a gloss calibration corpus —
+the gloss sentences aren't in it (not ingested as literals, or stored as embedded-triple structures).
+Two real paths to a WordNet gloss corpus:
+1. **Pragmatic / now:** source glosses from WordNet directly (the WordNet `data.*` files or the RDF) into
+   a text file → the EXISTING `CorpusSpec::Files` (or `eval_corpus.txt`) feeds the learner today. No q42
+   needed for the corpus.
+2. **Architecturally clean / later:** re-ingest WordNet **retaining glosses as string literals** in the
+   q42 lexicon (an INGEST change) — then `Q42Lexicon`/`Q42Field` recover them and the SPARQL-recalibration
+   story holds. This is the ingest-layer finding: the current RDF→q42 ingest drops literal text.
+
+**W5b status:** Phase 1 learner DONE. Corpus SOURCE built (`Files`/`OllamaSynth`/`Q42Field`/`Q42Lexicon`).
+The WordNet-gloss corpus is data-gated: path (1) needs a gloss text file; path (2) needs an ingest that
+keeps literals. Then Phase 3 (KV capture) + the recon-vs-int8 go/no-go.

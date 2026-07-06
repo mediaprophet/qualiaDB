@@ -13,7 +13,19 @@ use qualia_core_db::wgsl_forge::calibration::CorpusSpec;
 use std::path::PathBuf;
 
 fn find_q42() -> Option<PathBuf> {
-    // A few small bundled ontologies + repo-root candidates (bench runs from the crate dir).
+    // Prefer the real WordNet q42 (glosses = the calibration corpus) if present locally, then the
+    // release/repo locations, then small bundled ontologies as a fallback.
+    let wordnet = [
+        r"C:\Projects\Local_LIbraries\Local_LIbraries\wordnet\wordnet.q42",
+        "docs/data/wordnet/princeton.q42",
+        "../../docs/data/wordnet/princeton.q42",
+    ];
+    for p in wordnet {
+        let pb = PathBuf::from(p);
+        if pb.exists() {
+            return Some(pb);
+        }
+    }
     for name in ["dqv", "duv", "adms", "activitystreams-owl"] {
         for root in ["bundled/ontologies/w3c-archives", "../../bundled/ontologies/w3c-archives"] {
             let p = PathBuf::from(format!("{root}/{name}.q42"));
@@ -33,8 +45,12 @@ fn extracts_corpus_text_from_in_repo_q42() {
     };
     // Common description/definition predicates; whichever the ontology uses should yield text.
     let predicates = [
-        "http://www.w3.org/2000/01/rdf-schema#comment",
+        // WordNet gloss/definition predicates (Princeton WN 2.0/3.0/3.1 RDF schemas + skos).
+        "http://www.w3.org/2006/03/wn/wn20/schema/gloss",
+        "http://wordnet-rdf.princeton.edu/ontology#definition",
         "http://www.w3.org/2004/02/skos/core#definition",
+        "http://globalwordnet.github.io/schemas/wn#definition",
+        "http://www.w3.org/2000/01/rdf-schema#comment",
         "http://purl.org/dc/terms/description",
         "http://www.w3.org/2000/01/rdf-schema#label",
     ];
@@ -58,6 +74,22 @@ fn extracts_corpus_text_from_in_repo_q42() {
         let obj_raw = quins.iter().filter(|q| lex.lookup_hash(q.object).is_some()).count();
         let obj_masked = quins.iter().filter(|q| lex.lookup_hash(q.object & MASK).is_some()).count();
         println!("[q42diag] resolvable objects: raw {}/{}, masked {}/{}", obj_raw, quins.len(), obj_masked, quins.len());
+    }
+
+    // Primary path: dump the lexicon's sentence-like strings (WordNet glosses/examples). Robust —
+    // reads the lexicon strings directly, independent of the graph's object encoding.
+    match assemble(&CorpusSpec::Q42Lexicon { volume: vol.clone(), min_len: 24 }) {
+        Ok(docs) if !docs.is_empty() => {
+            println!("[q42corpus] LEXICON DUMP → {} sentence-like passages from {}", docs.len(), vol.display());
+            for d in docs.iter().take(5) {
+                println!("  · {}", d.chars().take(120).collect::<String>());
+            }
+            assert!(docs.iter().all(|d| d.contains(' ') && d.trim().len() >= 24));
+            println!("[q42corpus] PASS — real definitional corpus recovered from the q42 lexicon.");
+            return;
+        }
+        Ok(_) => println!("[q42corpus] lexicon dump: 0 sentence-like strings (structure-only / URI-only lexicon)"),
+        Err(e) => println!("[q42corpus] lexicon dump error: {e}"),
     }
 
     for pred in predicates {
