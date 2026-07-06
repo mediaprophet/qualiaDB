@@ -1416,6 +1416,165 @@ pub fn perplexity_eval_blocking(model_path: &str, max_tok: usize) -> Result<(f64
     .map_err(|_| "perplexity eval thread panicked".to_string())?
 }
 
+/// GPU-readback KV capture for the W5b sparse-dictionary go/no-go — the independent route to the
+/// CPU-reference hook. Loads the model with an **f32** KV cache, runs the REAL fast GPU decode forward
+/// over the eval corpus, and after each passage reads the KV arena back from VRAM
+/// ([`QTensorEngine::capture_kv_f32`]), accumulating up to `max_per_layer` K and V vectors per layer.
+/// Because it samples the actual decode-path vectors (not the CPU reference), it cross-checks the hook
+/// capture: if both agree, the measured KV geometry is trustworthy. Stops early once every layer's cap
+/// is hit. Needs a GPU.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn capture_kv_gpu_readback(
+    model_path: &str,
+    max_tok: usize,
+    max_per_layer: usize,
+) -> Result<crate::kv_capture::KvCapture, String> {
+    use crate::gguf_bridge::QTensorEngine;
+    use crate::gguf_sharder::{GgufTensorIndex, GgufTokenizer};
+
+    let corpus = crate::llm_eval::load_corpus().map_err(|e| format!("corpus load: {e}"))?;
+    if corpus.is_empty() {
+        return Err("eval corpus is empty".into());
+    }
+    let model_path = model_path.to_string();
+
+    std::thread::spawn(move || -> Result<crate::kv_capture::KvCapture, String> {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|e| e.to_string())?;
+        let _g = rt.enter();
+
+        // Force an f32 KV layout so the readback decodes via k_index/v_index (int8 packs differently).
+        let prev_int8 = kv_int8_enabled();
+        set_kv_int8(false);
+
+        let mut engine = QTensorEngine::new();
+        let mut magic = [0u8; 4];
+        let is_q42 = {
+            use std::io::Read;
+            std::fs::File::open(&model_path)
+                .and_then(|mut f| f.read_exact(&mut magic))
+                .map(|_| &magic == b"p64\0")
+                .unwrap_or(false)
+        };
+        if is_q42 {
+            let f = std::fs::File::open(&model_path).map_err(|e| e.to_string())?;
+            let mmap = unsafe { memmap2::Mmap::map(&f) }.map_err(|e| e.to_string())?;
+            engine
+                .adopt_resident_p64_mmap(std::sync::Arc::new(mmap))
+                .map_err(|e| format!("q42 adopt: {e}"))?;
+        } else {
+            engine.load_gguf(&model_path);
+        }
+
+        let mmap = engine
+            .gguf_mmap
+            .clone()
+            .ok_or_else(|| "model did not memory-map (load failed)".to_string())?;
+        let is_q42_mmap = mmap.len() >= 4 && mmap[0..4] == *b"p64\0";
+        let tok = if is_q42_mmap {
+            crate::p64_weight::P64TensorIndex::from_p64(&mmap)
+                .ok()
+                .and_then(|qi| GgufTokenizer::from_p64_section(qi.tokenizer_bytes(&mmap)))
+                .unwrap_or_default()
+        } else {
+            GgufTokenizer::from_gguf(&mmap)
+        };
+        let tensor_idx = if is_q42_mmap {
+            crate::p64_weight::P64TensorIndex::from_p64(&mmap)
+                .map(|qi| qi.to_gguf_index())
+                .map_err(|e| format!("q42 index: {e}"))?
+        } else {
+            GgufTensorIndex::from_gguf(&mmap)
+        };
+
+        let emb_dim = tensor_idx.emb_dim();
+        if emb_dim == 0 {
+            return Err("embedding dimension is 0".into());
+        }
+        let mut emb_buf = vec![0f32; emb_dim.max(8192)];
+        let mut scratch_a = vec![0f32; 16384];
+        let mut scratch_b = vec![0f32; 16384];
+        let mmap_bytes: &[u8] = &mmap;
+
+        let mut acc_k: Vec<Vec<Vec<f32>>> = Vec::new();
+        let mut acc_v: Vec<Vec<Vec<f32>>> = Vec::new();
+        let mut head_dim = 0usize;
+
+        'corpus: for passage in &corpus {
+            let toks = tok.encode(passage);
+            if toks.len() < 2 {
+                continue;
+            }
+            let limit = if max_tok > 0 {
+                (max_tok + 1).min(toks.len())
+            } else {
+                toks.len()
+            };
+            engine.reset_kv_cache();
+            for i in 0..limit - 1 {
+                let n_emb = tensor_idx.dequantize_token_embedding_into(
+                    mmap_bytes,
+                    toks[i],
+                    &mut emb_buf[..emb_dim],
+                );
+                if n_emb == 0 {
+                    return Err(format!("embedding lookup failed for token {}", toks[i]));
+                }
+                let _ = engine.dispatch_transformer_forward(
+                    &tensor_idx,
+                    &mut emb_buf[..emb_dim],
+                    emb_dim,
+                    &mut scratch_a,
+                    &mut scratch_b,
+                    i as u32,
+                    0,
+                );
+            }
+            // Read this passage's KV back from VRAM and merge into the accumulator.
+            if let Some(cap) = engine.capture_kv_f32((limit - 1) as u32, max_per_layer) {
+                head_dim = cap.head_dim;
+                if acc_k.is_empty() {
+                    acc_k = vec![Vec::new(); cap.k.len()];
+                    acc_v = vec![Vec::new(); cap.v.len()];
+                }
+                let mut all_full = true;
+                for l in 0..cap.k.len().min(acc_k.len()) {
+                    for vk in &cap.k[l] {
+                        if acc_k[l].len() < max_per_layer {
+                            acc_k[l].push(vk.clone());
+                        }
+                    }
+                    for vv in &cap.v[l] {
+                        if acc_v[l].len() < max_per_layer {
+                            acc_v[l].push(vv.clone());
+                        }
+                    }
+                    if acc_k[l].len() < max_per_layer {
+                        all_full = false;
+                    }
+                }
+                if all_full {
+                    break 'corpus; // caps hit — stop early, don't burn the rest of the corpus
+                }
+            }
+        }
+
+        set_kv_int8(prev_int8);
+        if head_dim == 0 {
+            return Err("no KV captured via GPU readback (int8 layout, or empty forward)".into());
+        }
+        Ok(crate::kv_capture::KvCapture {
+            head_dim,
+            k: acc_k,
+            v: acc_v,
+        })
+    })
+    .join()
+    .map_err(|_| "kv capture thread panicked".to_string())?
+}
+
 /// AWQ α-sweep on the ternary FFN (AWQ steps 1–3 end to end): capture activation salience from the Q8
 /// reference at `gguf_path`, then for each α compile an AWQ-scaled ternary `.q42`
 /// (`compile_gguf_to_q42_ternary_ffn_awq`), evaluate its perplexity + unique-word coherence, and return

@@ -1,14 +1,17 @@
 //! W5b Phase 3 — the sparse-KV-dictionary **go/no-go on real engine KV vectors** (SmolLM2-360M).
 //!
-//! Enables the KV capture hook, runs a short calibration forward (native attention routes through the
-//! CPU SDPA the hook taps), learns a per-layer dictionary over the captured K and V, and compares its
-//! reconstruction to per-vector int8 at footprint. Prints a per-layer table and the overall verdict —
-//! this is the measurement that decides whether the runtime dictionary decode (Phase 4) is worth
-//! building. Skips (does not fail) when the model isn't present locally.
+//! Two independent capture routes, so the verdict can be cross-checked:
+//!   * `go_no_go_gpu_readback`  — reads the REAL fast-decode-path K/V straight from VRAM (f32 KV).
+//!   * `go_no_go_cpu_reference` — routes attention through the CPU reference SDPA and taps the hook.
+//! Each learns a per-layer dictionary over captured K/V and compares it to matched-rate uniform
+//! quantization (int8 shown for context). Prints a per-layer table + the overall verdict. Skips (does
+//! not fail) when the model isn't present or a GPU/forward is unavailable.
 
 #![cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
 
-use qualia_core_db::wgsl_forge::calibration::kv_dictionary_go_no_go;
+use qualia_core_db::wgsl_forge::calibration::{
+    kv_dictionary_go_no_go, kv_dictionary_go_no_go_gpu, KvDictReport,
+};
 use std::path::{Path, PathBuf};
 
 fn find_model(name: &str) -> Option<PathBuf> {
@@ -18,28 +21,9 @@ fn find_model(name: &str) -> Option<PathBuf> {
         .find(|p| Path::new(p).exists())
 }
 
-#[test]
-fn kv_dictionary_go_no_go_on_smollm2() {
-    let Some(model) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
-        eprintln!("[w5b/real] no smollm2-360m-instruct-q8_0.gguf under docs/models/ — skipping");
-        return;
-    };
-    let model = model.to_string_lossy().to_string();
-
-    // 256 atoms, 4-sparse, ≤2048 vectors/layer, ≤128 tokens/passage of eval corpus (CPU attention is
-    // slower, so bound per-passage work), sample every 6th layer.
-    let report = match kv_dictionary_go_no_go(&model, 80, 2048, 256, 4, 25, 128, 6) {
-        Ok(r) => r,
-        Err(e) => {
-            // A capture/forward failure (e.g. no GPU adapter in CI) is a skip, not a red test — the
-            // pure learner + decision logic are covered by kv_dictionary_learn.rs.
-            eprintln!("[w5b/real] capture/eval unavailable ({e}) — skipping");
-            return;
-        }
-    };
-
+fn print_report(route: &str, report: &KvDictReport) {
     println!(
-        "\n=== W5b go/no-go — SmolLM2-360M, head_dim={}, {} atoms, {}-sparse ===",
+        "\n=== W5b go/no-go [{route}] — SmolLM2-360M, head_dim={}, {} atoms, {}-sparse ===",
         report.head_dim, report.n_atoms, report.sparsity
     );
     println!(
@@ -50,7 +34,7 @@ fn kv_dictionary_go_no_go_on_smollm2() {
     );
     println!(
         "{:>5} {:>3} {:>8}  {:>10} {:>10} {:>12}  {}",
-        "layer", "s", "n_vec", "int8_err", "dict_err", "unif_matched", "dict>=unif?"
+        "layer", "s", "n_vec", "int8_err", "dict_err", "unif_matched", "winner"
     );
     for l in &report.layers {
         println!(
@@ -66,21 +50,54 @@ fn kv_dictionary_go_no_go_on_smollm2() {
     }
     let go = report.layers.iter().filter(|l| l.go).count();
     println!(
-        "OVERALL: {} — learned dictionary beats matched-rate uniform in {}/{} (layer,stream) pairs.",
+        "OVERALL [{route}]: {} — learned dictionary beats matched-rate uniform in {}/{} pairs.",
         if report.overall_go { "GO" } else { "NO-GO" },
         go,
         report.layers.len()
     );
+}
 
-    // The test asserts the analysis RAN and produced verdicts (the decision itself — GO or NO-GO — is
-    // the deliverable, not an assertion target). If the CPU attention path yielded nothing, that's a
-    // real problem to surface.
+fn assert_analysed(report: &KvDictReport) {
     assert!(
         !report.layers.is_empty(),
-        "capture produced no analysable layers — the KV hook did not fire on the forward"
+        "capture produced no analysable layers"
     );
     for l in &report.layers {
         assert!(l.recon_int8.is_finite() && l.recon_dict.is_finite());
         assert!(l.n_vectors >= 16);
+    }
+}
+
+#[test]
+fn go_no_go_gpu_readback() {
+    let Some(model) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[w5b/gpu] no smollm2-360m-instruct-q8_0.gguf under docs/models/ — skipping");
+        return;
+    };
+    let model = model.to_string_lossy().to_string();
+    // 256 atoms, 4-sparse, ≤2048 vec/layer, ≤128 tok/passage, sample every 6th layer.
+    match kv_dictionary_go_no_go_gpu(&model, 2048, 256, 4, 25, 128, 6) {
+        Ok(report) => {
+            print_report("gpu-readback", &report);
+            assert_analysed(&report);
+        }
+        Err(e) => eprintln!("[w5b/gpu] capture/eval unavailable ({e}) — skipping"),
+    }
+}
+
+#[test]
+fn go_no_go_cpu_reference() {
+    let Some(model) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
+        eprintln!("[w5b/cpu] no smollm2-360m-instruct-q8_0.gguf under docs/models/ — skipping");
+        return;
+    };
+    let model = model.to_string_lossy().to_string();
+    // CPU reference path is slower → ≤64 tok/passage.
+    match kv_dictionary_go_no_go(&model, 80, 2048, 256, 4, 25, 64, 6) {
+        Ok(report) => {
+            print_report("cpu-reference", &report);
+            assert_analysed(&report);
+        }
+        Err(e) => eprintln!("[w5b/cpu] capture/eval unavailable ({e}) — skipping"),
     }
 }

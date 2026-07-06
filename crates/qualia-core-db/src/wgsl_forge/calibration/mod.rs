@@ -215,18 +215,28 @@ pub fn kv_dictionary_go_no_go(
         uniform_reconstruction_error,
     };
 
-    // The KV hook taps `cpu_attention_pass`, which is opt-in (default native attention runs on the GPU
-    // shader). Force the CPU reference path for the duration of the capture, then restore it. The
-    // captured K/V are numerically the same vectors either path produces (the CPU SDPA is the GPU
-    // path's certified reference), so this doesn't bias the geometry we're measuring.
+    // The KV hook taps `cpu_attention_pass`, which the fast GPU decode path bypasses. To route the
+    // whole attention block through the CPU reference SDPA (so K/V pass through the hook AND the hidden
+    // state stays correct for deeper layers), force three flags for the capture and restore them after:
+    //   * cpu_attention ON  — route K/V/Q projections through `cpu_attention_pass`;
+    //   * preproject   OFF  — skip the fused GPU K/V pre-projection that writes straight to VRAM;
+    //   * o_fuse       OFF  — skip the fused GPU Q+O tail so attention output comes from the CPU SDPA.
+    // This is the engine's certified correctness reference, so the captured K/V are the real vectors,
+    // just computed on the reference path rather than the fast one.
     let prev_cpu_attn = crate::llm_bench::cpu_attention_enabled();
+    let prev_preproject = crate::llm_bench::attention_preproject_enabled();
+    let prev_o_fuse = crate::llm_bench::attention_o_fuse_enabled();
     crate::llm_bench::set_cpu_attention(true);
+    crate::llm_bench::set_attention_preproject(false);
+    crate::llm_bench::set_attention_o_fuse(false);
     crate::kv_capture::enable(n_layer_hint, max_per_layer);
     let ev = crate::llm_bench::perplexity_eval_blocking(model_path, max_tok);
     let cap = crate::kv_capture::snapshot();
     crate::kv_capture::disable();
     crate::kv_capture::clear();
     crate::llm_bench::set_cpu_attention(prev_cpu_attn);
+    crate::llm_bench::set_attention_preproject(prev_preproject);
+    crate::llm_bench::set_attention_o_fuse(prev_o_fuse);
     ev.map_err(CalibrationError::CaptureFailed)?;
     let cap = cap.ok_or_else(|| {
         CalibrationError::CaptureFailed(
@@ -234,12 +244,51 @@ pub fn kv_dictionary_go_no_go(
         )
     })?;
 
+    Ok(analyze_kv_capture(&cap, n_atoms, sparsity, iters, layer_stride))
+}
+
+/// W5b Phase 3 — the same go/no-go via the **GPU-readback** capture route ([`crate::llm_bench::
+/// capture_kv_gpu_readback`]): reads the real fast-decode-path K/V straight from VRAM instead of forcing
+/// the CPU reference SDPA. Running this alongside [`kv_dictionary_go_no_go`] cross-checks the measured
+/// geometry — if the two routes agree, the verdict is trustworthy.
+#[cfg(not(target_arch = "wasm32"))]
+#[allow(clippy::too_many_arguments)]
+pub fn kv_dictionary_go_no_go_gpu(
+    model_path: &str,
+    max_per_layer: usize,
+    n_atoms: usize,
+    sparsity: usize,
+    iters: usize,
+    max_tok: usize,
+    layer_stride: usize,
+) -> Result<KvDictReport, CalibrationError> {
+    let cap = crate::llm_bench::capture_kv_gpu_readback(model_path, max_tok, max_per_layer)
+        .map_err(CalibrationError::CaptureFailed)?;
+    Ok(analyze_kv_capture(&cap, n_atoms, sparsity, iters, layer_stride))
+}
+
+/// Shared analysis: per sampled layer + stream, learn a dictionary over the captured vectors and score
+/// it against int8 (context) and matched-rate uniform quantization (the gate). Pure CPU; identical for
+/// both capture routes so their verdicts are directly comparable.
+#[cfg(not(target_arch = "wasm32"))]
+fn analyze_kv_capture(
+    cap: &crate::kv_capture::KvCapture,
+    n_atoms: usize,
+    sparsity: usize,
+    iters: usize,
+    layer_stride: usize,
+) -> KvDictReport {
+    use kv_dictionary::{
+        dict_code_bits_per_vector, int8_bits_per_vector, int8_reconstruction_error, learn_dictionary,
+        uniform_reconstruction_error,
+    };
+
     let head_dim = cap.head_dim;
     let int8_bits = int8_bits_per_vector(head_dim);
     // Asymptotic code rate of the dictionary (dictionary amortized away, as at deployment scale) and
     // the integer bit-rate of uniform quantization that matches it — the head-to-head baseline.
     let dict_code_bits = dict_code_bits_per_vector(n_atoms, sparsity, 16);
-    let matched_bits = ((dict_code_bits / head_dim as f64).round() as u32).clamp(2, 8);
+    let matched_bits = ((dict_code_bits / head_dim.max(1) as f64).round() as u32).clamp(2, 8);
     let mut layers = Vec::new();
     for li in (0..cap.k.len()).step_by(layer_stride.max(1)) {
         for (stream, vecs) in [("K", &cap.k[li]), ("V", &cap.v[li])] {
@@ -269,13 +318,13 @@ pub fn kv_dictionary_go_no_go(
     }
     let go_count = layers.iter().filter(|l| l.go).count();
     let overall_go = !layers.is_empty() && go_count * 2 >= layers.len();
-    Ok(KvDictReport {
+    KvDictReport {
         head_dim,
         n_atoms,
         sparsity,
         layers,
         overall_go,
-    })
+    }
 }
 
 /// `run_calibration` arm for [`ArtifactKind::KvDictionary`]: run the Phase-3 go/no-go with sensible

@@ -874,6 +874,107 @@ impl QTensorEngine {
         }
     }
 
+    /// Read the entire GPU KV-cache arena back to host as `f32` (native, cold path — forge KV capture,
+    /// not the decode hot path). The returned flat buffer is interpretable via `KvCacheLayout::
+    /// k_index`/`v_index` **only when the layout is f32** (int8 KV disabled at load); with an int8
+    /// layout the bytes are packed i8 lanes + scales and this returns `None`.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn read_kv_cache_gpu(&self) -> Option<Vec<f32>> {
+        let gpu = self.kv_cache_gpu.as_ref()?;
+        let layout = self.kv_layout.as_ref()?;
+        if layout.int8 {
+            return None;
+        }
+        let n = layout.total_f32_elems;
+        let size = (n * std::mem::size_of::<f32>()) as wgpu::BufferAddress;
+        let staging = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+            label: Some("KvCacheReadback"),
+            size: size.max(4),
+            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let mut encoder = self
+            .gpu_device()
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("KvReadback") });
+        encoder.copy_buffer_to_buffer(gpu, 0, &staging, 0, size);
+        self.gpu_queue().submit(Some(encoder.finish()));
+
+        let slice = staging.slice(..);
+        let (tx, rx) = futures_channel::oneshot::channel();
+        slice.map_async(wgpu::MapMode::Read, move |v| {
+            let _ = tx.send(v);
+        });
+        self.poll_wait();
+        let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| {
+            let rt = Box::leak(Box::new(tokio::runtime::Runtime::new().unwrap()));
+            rt.handle().clone()
+        });
+        if handle.block_on(rx).ok()?.is_err() {
+            return None;
+        }
+        let data = slice.get_mapped_range();
+        let out: Vec<f32> = bytemuck::cast_slice(&data).to_vec();
+        drop(data);
+        staging.unmap();
+        Some(out)
+    }
+
+    /// Decode the current f32 KV cache into per-layer K and V vectors for token positions `0..n_tokens`
+    /// (capped at `max_per_layer` per layer per stream). The **GPU-readback** capture route for the
+    /// sparse-KV-dictionary go/no-go — reads the real decode-path K/V straight from VRAM, no CPU
+    /// reference forward. Returns `None` on an int8 layout or if readback fails.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn capture_kv_f32(
+        &self,
+        n_tokens: u32,
+        max_per_layer: usize,
+    ) -> Option<crate::kv_capture::KvCapture> {
+        let layout = *self.kv_layout.as_ref()?;
+        let flat = self.read_kv_cache_gpu()?;
+        let n_layer = layout.n_layer as usize;
+        let n_kv = layout.n_kv_head as usize;
+        let head_dim = layout.head_dim as usize;
+        if head_dim == 0 || n_kv == 0 || n_layer == 0 {
+            return None;
+        }
+        let take = (n_tokens as usize).min(layout.max_context as usize);
+        let mut k = vec![Vec::new(); n_layer];
+        let mut v = vec![Vec::new(); n_layer];
+        let read_vec = |base_of: &dyn Fn(u32) -> usize| -> Option<Vec<f32>> {
+            let mut out = Vec::with_capacity(head_dim);
+            for d in 0..head_dim {
+                let idx = base_of(d as u32);
+                if idx >= flat.len() {
+                    return None;
+                }
+                out.push(flat[idx]);
+            }
+            Some(out)
+        };
+        for l in 0..n_layer {
+            for pos in 0..take {
+                let slot = layout.ring_slot(pos as u32);
+                for hkv in 0..n_kv {
+                    if k[l].len() < max_per_layer {
+                        if let Some(vec_k) =
+                            read_vec(&|d| layout.k_index(l as u32, slot, hkv as u32, d))
+                        {
+                            k[l].push(vec_k);
+                        }
+                    }
+                    if v[l].len() < max_per_layer {
+                        if let Some(vec_v) =
+                            read_vec(&|d| layout.v_index(l as u32, slot, hkv as u32, d))
+                        {
+                            v[l].push(vec_v);
+                        }
+                    }
+                }
+            }
+        }
+        Some(crate::kv_capture::KvCapture { head_dim, k, v })
+    }
+
     pub(crate) fn ensure_gemm_buffers(&mut self, max_weight_bytes: usize, max_out_dim: u32) {
         // A1a: build the persistent GPU top-k pipeline + candidate buffers once (additive; the
         // existing argmax path is unaffected whether or not this succeeds).

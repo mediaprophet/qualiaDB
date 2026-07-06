@@ -823,3 +823,41 @@ is committed and SKIPS honestly until capture is wired (does not fake a verdict)
 
 **Next:** Timothy's call on (a) vs (b) vs defer. If GO on capture: get the real per-layer verdict, then
 Phase 4 (runtime dictionary decode + ΔPPL certify + package) only if the real KV proves low-rank.
+
+## 2026-07-06 — W5b Phase 3 RESOLVED: real KV captured two ways; verdict is GO (cross-validated)
+
+**Step:** W5b Phase 3 go/no-go — **DONE, with the real SmolLM2-360M verdict, captured two independent
+ways that agree.** (Supersedes the "BLOCKED" note above — the block is cleared.)
+
+**Two capture routes built (Timothy asked for both):**
+1. **CPU-reference** (`kv_dictionary_go_no_go`): force cpu_attention ON + preproject OFF + o_fuse OFF so
+   the whole attention block runs through the certified CPU SDPA `cpu_attention_pass`, where the hook
+   taps post-RoPE K / V. (The earlier failure was that the fast GPU decode never routes through that
+   path; these three flags fix it.)
+2. **GPU-readback** (`kv_dictionary_go_no_go_gpu`): new `QTensorEngine::read_kv_cache_gpu()` +
+   `capture_kv_f32()` (init.rs) copy the KV arena out of VRAM and decode via `k_index`/`v_index`;
+   `llm_bench::capture_kv_gpu_readback()` runs the REAL fast GPU decode over the corpus (f32 KV forced)
+   and reads back per passage. No CPU reference — samples the actual decode-path vectors.
+   `analyze_kv_capture` is shared, so the two routes are directly comparable.
+
+**Measured (real SmolLM2-360M, eval corpus, 256 atoms / 4-sparse / 96-bit code ≈ 2-bit-per-elem):**
+| layer,stream | int8 (544b) | dict (96b) | uniform@2b (96b) | winner |
+|---|---|---|---|---|
+| 0 K  | 0.007 | 0.19 | 0.74 | DICT |
+| 0 V  | 0.011 | 0.31 | 0.65 | DICT |
+| 30 K | 0.011 | 0.22 | 0.65 | DICT |
+| 30 V | 0.007 | 0.49 | 0.74 | DICT |
+- **OVERALL: GO — dict beats matched-rate uniform in 12/12 pairs, on BOTH routes.**
+- Cross-check: int8 & uniform errors match to 4 decimals across routes (same real vectors); dict errors
+  agree within ~1–2% (CPU saw 1440 vec/layer, GPU 1605). Runtime: GPU 15 min, CPU 33 min.
+
+**What it means (honest):** SmolLM2's KV geometry IS low-rank enough that a learned basis massively
+beats naive low-bit quantization at ~2 bits/elem — so a sparse KV dictionary is worth building **as a
+low-rate/high-compression option** (~5.7× smaller than int8's 544 bits). BUT int8 stays far more
+accurate (0.007–0.011 vs the dict's 0.19–0.49), so the dictionary is NOT an int8 replacement; its 19–49%
+per-vector reconstruction error means **Phase 4 must gate on ΔPPL** (does the model stay coherent at
+that compression?), not on reconstruction alone. K compresses better than V (post-RoPE K has structure).
+
+**Next (Phase 4, only if the ΔPPL pays off):** wire a runtime dictionary-decode KV path + certify ΔPPL
+via the existing oracle + package (the `run_calibration(KvDictionary)` seam already exists). This is a
+larger build; recommend deciding it against the int8 incumbent + actual long-context memory pressure.
