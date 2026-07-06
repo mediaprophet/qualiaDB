@@ -211,11 +211,6 @@ pub fn kv_dictionary_go_no_go(
     max_tok: usize,
     layer_stride: usize,
 ) -> Result<KvDictReport, CalibrationError> {
-    use kv_dictionary::{
-        dict_code_bits_per_vector, int8_bits_per_vector, int8_reconstruction_error, learn_dictionary,
-        uniform_reconstruction_error,
-    };
-
     // The KV hook taps `cpu_attention_pass`, which the fast GPU decode path bypasses. To route the
     // whole attention block through the CPU reference SDPA (so K/V pass through the hook AND the hidden
     // state stays correct for deeper layers), force three flags for the capture and restore them after:
