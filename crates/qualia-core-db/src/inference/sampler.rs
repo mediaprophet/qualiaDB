@@ -347,7 +347,7 @@ mod tests {
         };
         let mut s = SamplerState::new(cfg);
         // softmax([10,0,0,0]) ≈ [0.9999,...]; nucleus 0.5 keeps just id 0.
-        let mut l = logits(&[10.0, 0.0, 0.0, 0.0]);
+        let l = logits(&[10.0, 0.0, 0.0, 0.0]);
         for _ in 0..20 {
             assert_eq!(s.sample(&mut l.clone(), &[]), 0);
         }
