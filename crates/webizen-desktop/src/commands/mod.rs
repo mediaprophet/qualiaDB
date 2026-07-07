@@ -1121,6 +1121,626 @@ pub fn wellfair_compute_anatomy_view(
     serde_json::to_string(&report).map_err(|e| e.to_string())
 }
 
+/// 3D Anatomy Qapp — the accumulative, traceable **score-card** + investigable hypotheses over the person's
+/// own records. Forum-internum / `Sanctuary`-class; a set of Hypotheses + pathway-starts, never a diagnosis
+/// and never a rating. `threshold` (default 2) is how many distinct adverse factors flag a system.
+#[command]
+pub fn wellfair_compute_scorecard(
+    app: AppHandle,
+    threshold: Option<usize>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let report = host.compute_scorecard(threshold.unwrap_or(2))?;
+    serde_json::to_string(&report).map_err(|e| e.to_string())
+}
+
+/// The person's own score-card weight model (how their body is read) + the seed suggestion + whether they've
+/// authored their own. Returns `{ model, seed, authored }`.
+#[command]
+pub fn wellfair_get_weight_model(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    serde_json::to_string(&serde_json::json!({
+        "model": host.get_weight_model(),
+        "seed": host.seed_weight_model(),
+        "authored": host.weight_model_is_authored(),
+    }))
+    .map_err(|e| e.to_string())
+}
+
+/// Set the person's own weight model (JSON = `WeightModel`) — their authorship of how the card reads them.
+#[command]
+pub fn wellfair_set_weight_model(app: AppHandle, model_json: String) -> Result<String, String> {
+    let model: wellfare_core::anatomy::WeightModel =
+        serde_json::from_str(&model_json).map_err(|e| format!("invalid weight model JSON: {e}"))?;
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    host.set_weight_model(&model)?;
+    Ok("{\"set\":true}".into())
+}
+
+/// Reset the weight model to the seed suggestion (clears the person's authored model).
+#[command]
+pub fn wellfair_reset_weight_model(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    host.reset_weight_model()?;
+    Ok("{\"reset\":true}".into())
+}
+
+// ── Accountability fabric (ADR 0011) — tamper-evident ledger + revocable consent credentials ──
+//
+// The desktop surface for the welfare/fairness accountability thread: grant a worker scoped access, record
+// how/why they acted (attributable, court-auditable), let the person revoke (crypto-enforced — access ends,
+// the conduct trail survives), all written into a signed hash-chained ledger the person's own key signs.
+
+/// Append a raw record to the person's tamper-evident accountability ledger (owner-signed).
+#[command]
+pub fn wellfair_ledger_append(
+    app: AppHandle,
+    kind: String,
+    payload_json: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let entry = host.ledger_append(&kind, &payload_json)?;
+    serde_json::to_string(&entry).map_err(|e| e.to_string())
+}
+
+/// Verify the whole ledger chain. Returns `{ "ok": bool, "tamper": <detail|null> }`.
+#[command]
+pub fn wellfair_ledger_verify(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let tamper = host.ledger_verify()?;
+    serde_json::to_string(&serde_json::json!({ "ok": tamper.is_none(), "tamper": tamper }))
+        .map_err(|e| e.to_string())
+}
+
+/// The most-recent ledger entries (newest first), capped to `limit` (default 64).
+#[command]
+pub fn wellfair_ledger_entries(app: AppHandle, limit: Option<usize>) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let entries = host.ledger_entries(limit.unwrap_or(64))?;
+    serde_json::to_string(&entries).map_err(|e| e.to_string())
+}
+
+/// Grant a consent credential to an agent over a committed payload (subject = vault owner).
+#[command]
+#[allow(clippy::too_many_arguments)]
+pub fn wellfair_grant_consent_credential(
+    app: AppHandle,
+    agent_did: String,
+    scope: String,
+    purpose: String,
+    commitment_hex: String,
+    wrapped_key_hex: String,
+    expiry_unix: Option<u64>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let cred = host.grant_consent_credential(
+        &agent_did,
+        &scope,
+        &purpose,
+        &commitment_hex,
+        &wrapped_key_hex,
+        expiry_unix,
+    )?;
+    serde_json::to_string(&cred).map_err(|e| e.to_string())
+}
+
+/// Revoke a consent credential — crypto-enforced (the wrapped key is destroyed). `{ "revoked": bool }`.
+#[command]
+pub fn wellfair_revoke_consent_credential(
+    app: AppHandle,
+    credential_id: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let revoked = host.revoke_consent_credential(&credential_id)?;
+    serde_json::to_string(&serde_json::json!({ "revoked": revoked })).map_err(|e| e.to_string())
+}
+
+/// List stored consent credentials (active and revoked — revoked rows remain as the audit anchor).
+#[command]
+pub fn wellfair_list_consent_credentials(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let creds = host.list_consent_credentials()?;
+    serde_json::to_string(&creds).map_err(|e| e.to_string())
+}
+
+/// Record an agent's conduct under a credential — signed, into the durable trail + tamper-evident ledger.
+#[command]
+pub fn wellfair_record_conduct(
+    app: AppHandle,
+    agent_did: String,
+    credential_id: String,
+    action: String,
+    reason: String,
+    commitment_hex: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let record = host.record_conduct(&agent_did, &credential_id, &action, &reason, &commitment_hex)?;
+    serde_json::to_string(&record).map_err(|e| e.to_string())
+}
+
+/// The audit view — every conduct record taken under one credential (survives its revocation).
+#[command]
+pub fn wellfair_conduct_audit_trail(
+    app: AppHandle,
+    credential_id: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let trail = host.conduct_audit_trail(&credential_id)?;
+    serde_json::to_string(&trail).map_err(|e| e.to_string())
+}
+
+// ── Hypermedia asset library: ingest a document → find it by meaning ──
+
+/// Ingest a text document into the library (derive topics + searchable text; guardianship flag→notify).
+#[command]
+pub fn wellfair_ingest_document(
+    app: AppHandle,
+    uri: String,
+    media_type: String,
+    text: String,
+    guardian_did: Option<String>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let summary = host.ingest_document(&uri, &media_type, &text, guardian_did)?;
+    serde_json::to_string(&summary).map_err(|e| e.to_string())
+}
+
+/// Search the library by facet (`topic` | `depicts` | `place` | `project` | `purpose`).
+#[command]
+pub fn wellfair_search_library(app: AppHandle, facet: String, value: String) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let results = host.search_library(&facet, &value)?;
+    serde_json::to_string(&results).map_err(|e| e.to_string())
+}
+
+/// The timeline query — entries whose event instant falls within `[start, end]` (unix seconds).
+#[command]
+pub fn wellfair_search_library_time(app: AppHandle, start: i64, end: i64) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let results = host.search_library_time(start, end)?;
+    serde_json::to_string(&results).map_err(|e| e.to_string())
+}
+
+/// Everything in the library (newest first).
+#[command]
+pub fn wellfair_list_library(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let results = host.list_library()?;
+    serde_json::to_string(&results).map_err(|e| e.to_string())
+}
+
+/// The owner's envelope PUBLIC key (hex) — publishable so others can seal payloads to the owner.
+#[command]
+pub fn wellfair_owner_envelope_public(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    serde_json::to_string(&serde_json::json!({ "public_hex": host.owner_envelope_public_hex() }))
+        .map_err(|e| e.to_string())
+}
+
+/// Seal a real plaintext payload and grant a consent credential over it (real envelope encryption).
+/// Empty `agent_public_hex` seals to the owner (self-custody, openable here); a supplied X25519 public key
+/// grants that agent access instead.
+#[command]
+#[allow(clippy::too_many_arguments)]
+pub fn wellfair_seal_and_grant_credential(
+    app: AppHandle,
+    agent_did: String,
+    agent_public_hex: String,
+    scope: String,
+    purpose: String,
+    plaintext: String,
+    expiry_unix: Option<u64>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let cred = host.seal_and_grant_consent_credential(
+        &agent_did,
+        &agent_public_hex,
+        &scope,
+        &purpose,
+        &plaintext,
+        expiry_unix,
+    )?;
+    serde_json::to_string(&cred).map_err(|e| e.to_string())
+}
+
+/// Open an owner-sealed payload through a credential (works while live; fails once revoked).
+#[command]
+pub fn wellfair_open_owner_payload(app: AppHandle, credential_id: String) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard
+        .as_ref()
+        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let plaintext = host.open_owner_payload(&credential_id)?;
+    serde_json::to_string(&serde_json::json!({ "plaintext": plaintext })).map_err(|e| e.to_string())
+}
+
+// ── Safeguard switches (ADR 0011 D6/D7): dead-man + incapacity ──
+
+/// Arm a dead-man switch from primitive fields (the command builds the domain type).
+/// `disposition` is `"make_public"` or `"release_to"` (the latter uses `disposition_parties`).
+#[command]
+#[allow(clippy::too_many_arguments)]
+pub fn wellfair_arm_dead_mans_switch(
+    app: AppHandle,
+    commitment_hex: String,
+    lapse_after_secs: u64,
+    parties: Vec<String>,
+    threshold: usize,
+    disposition: String,
+    disposition_parties: Vec<String>,
+) -> Result<String, String> {
+    use qualia_client_core::dead_mans_switch::{DeadMansSwitch, Disposition, Heartbeat, TriggerRule};
+    let commitment = qualia_client_core::accountability_store::parse_commitment_hex(&commitment_hex)?;
+    let now = wellfair_now_unix() as u64;
+    let disposition = match disposition.as_str() {
+        "make_public" => Disposition::MakePublic,
+        _ => Disposition::ReleaseTo { parties: disposition_parties },
+    };
+    let switch = DeadMansSwitch {
+        payload_commitment: commitment,
+        heartbeat: Heartbeat::new(now, lapse_after_secs),
+        trigger: TriggerRule {
+            require_heartbeat_lapsed: true,
+            attestation_threshold: threshold,
+            parties,
+        },
+        disposition,
+        fired_unix: None,
+    };
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    host.arm_dead_mans_switch(switch)?;
+    Ok("{\"armed\":true}".into())
+}
+
+/// Touch the heartbeat / un-fire a dead-man switch (the "I'm alive" action).
+#[command]
+pub fn wellfair_dead_mans_alive(app: AppHandle, commitment_hex: String) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let found = host.dead_mans_alive(&commitment_hex)?;
+    serde_json::to_string(&serde_json::json!({ "found": found })).map_err(|e| e.to_string())
+}
+
+/// Record a party attestation toward a dead-man switch. `kind` = `no_contact` | `believed_dead` | `abandon`.
+#[command]
+pub fn wellfair_attest_dead_mans(
+    app: AppHandle,
+    commitment_hex: String,
+    party_did: String,
+    kind: String,
+) -> Result<String, String> {
+    use qualia_client_core::dead_mans_switch::{AttestationKind, PartyAttestation};
+    let kind = match kind.as_str() {
+        "no_contact" => AttestationKind::NoContact,
+        "abandon" => AttestationKind::Abandon,
+        _ => AttestationKind::BelievedDead,
+    };
+    let attestation = PartyAttestation { party_did, kind, time_unix: wellfair_now_unix() as u64 };
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let found = host.attest_dead_mans(&commitment_hex, attestation)?;
+    serde_json::to_string(&serde_json::json!({ "found": found })).map_err(|e| e.to_string())
+}
+
+/// Enact a dead-man switch if triggerable — returns the disposition (or null).
+#[command]
+pub fn wellfair_enact_dead_mans(app: AppHandle, commitment_hex: String) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let disposition = host.enact_dead_mans(&commitment_hex)?;
+    serde_json::to_string(&serde_json::json!({ "disposition": disposition })).map_err(|e| e.to_string())
+}
+
+/// List armed dead-man switches (with attestations).
+#[command]
+pub fn wellfair_list_dead_mans_switches(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let list = host.list_dead_mans_switches()?;
+    serde_json::to_string(&list).map_err(|e| e.to_string())
+}
+
+/// Enact a dead-man switch AND release the keys to the disposition parties. `party_keys` = `[did, pubkey_hex]`
+/// pairs. Returns `{ enacted, disposition }`.
+#[command]
+pub fn wellfair_enact_dead_mans_release(
+    app: AppHandle,
+    commitment_hex: String,
+    party_keys: Vec<(String, String)>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let result = host.enact_dead_mans_release(&commitment_hex, party_keys)?;
+    serde_json::to_string(&result).map_err(|e| e.to_string())
+}
+
+/// Split a payload's DEK into Shamir social-recovery shares (`threshold`-of-`parties.len()`). Returns the
+/// shares paired with the parties to hand them to (distribute off-device; not stored).
+#[command]
+pub fn wellfair_split_dek_recovery(
+    app: AppHandle,
+    commitment_hex: String,
+    threshold: usize,
+    parties: Vec<String>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let result = host.split_dek_recovery(&commitment_hex, threshold, parties)?;
+    serde_json::to_string(&result).map_err(|e| e.to_string())
+}
+
+/// Social-recovery enactment: reconstruct the DEK from a quorum of friends' shares and release (no owner key).
+/// `shares` = the Shamir shares; `party_keys` = `[did, pubkey_hex]` pairs.
+#[command]
+pub fn wellfair_reconstruct_and_release(
+    app: AppHandle,
+    commitment_hex: String,
+    shares: Vec<qualia_client_core::shamir_recovery::Share>,
+    party_keys: Vec<(String, String)>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let result = host.reconstruct_and_release(&commitment_hex, shares, party_keys)?;
+    serde_json::to_string(&result).map_err(|e| e.to_string())
+}
+
+/// Publish a peer's envelope (X25519) public key into their peer record (remote-key distribution).
+#[command]
+pub fn wellfair_set_peer_envelope_key(
+    app: AppHandle,
+    did: String,
+    pubkey_hex: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    host.set_peer_envelope_key(&did, &pubkey_hex)?;
+    Ok("{\"set\":true}".into())
+}
+
+/// Enact + release resolving the disposition parties' keys from the peer store. Returns
+/// `{ result, missing_keys_for }`.
+#[command]
+pub fn wellfair_enact_dead_mans_release_via_peers(
+    app: AppHandle,
+    commitment_hex: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let result = host.enact_dead_mans_release_via_peers(&commitment_hex)?;
+    serde_json::to_string(&result).map_err(|e| e.to_string())
+}
+
+/// Arm an incapacity switch from primitive fields. `kind` = `involuntary_psychiatric` | `serious_injury` |
+/// any other string (→ `Other`).
+#[command]
+#[allow(clippy::too_many_arguments)]
+pub fn wellfair_arm_incapacity_switch(
+    app: AppHandle,
+    principal_did: String,
+    kind: String,
+    advocate_did: String,
+    parties: Vec<String>,
+    threshold: usize,
+    require_official_instrument: bool,
+) -> Result<String, String> {
+    use qualia_client_core::incapacity_switch::{IncapacityKind, IncapacitySwitch, IncapacityTrigger};
+    let kind = match kind.as_str() {
+        "involuntary_psychiatric" => IncapacityKind::InvoluntaryPsychiatric,
+        "serious_injury" => IncapacityKind::SeriousInjury,
+        other => IncapacityKind::Other(other.to_string()),
+    };
+    let switch = IncapacitySwitch {
+        principal_did,
+        kind,
+        trigger: IncapacityTrigger { parties, attestation_threshold: threshold, require_official_instrument },
+        advocate_did,
+        active_since_unix: None,
+    };
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    host.arm_incapacity_switch(switch)?;
+    Ok("{\"armed\":true}".into())
+}
+
+/// Activate advocacy on a validated incapacity trigger.
+#[command]
+pub fn wellfair_activate_incapacity(
+    app: AppHandle,
+    principal_did: String,
+    attesting_parties: Vec<String>,
+    official_instrument: Option<String>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let activated = host.activate_incapacity(&principal_did, attesting_parties, official_instrument)?;
+    serde_json::to_string(&serde_json::json!({ "activated": activated })).map_err(|e| e.to_string())
+}
+
+/// Regain capacity — the advocate stands down (reversibility).
+#[command]
+pub fn wellfair_regain_capacity(app: AppHandle, principal_did: String) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let found = host.regain_capacity(&principal_did)?;
+    serde_json::to_string(&serde_json::json!({ "found": found })).map_err(|e| e.to_string())
+}
+
+/// List armed incapacity switches.
+#[command]
+pub fn wellfair_list_incapacity_switches(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let list = host.list_incapacity_switches()?;
+    serde_json::to_string(&list).map_err(|e| e.to_string())
+}
+
+// ── Disclosure traceability (ADR 0011 D5) + duty of inquiry (D8) ──
+
+/// Record a transparency cc (the protective "I informed authority X" note).
+#[command]
+pub fn wellfair_record_transparency_cc(
+    app: AppHandle,
+    credential_id: String,
+    informed_authority_did: String,
+    purpose: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    host.record_transparency_cc(&credential_id, &informed_authority_did, &purpose)?;
+    Ok("{\"recorded\":true}".into())
+}
+
+/// Record a disclosure event (access, or onward-share if `onward_to` set). Returns the event (incl. its
+/// tracing fingerprint).
+#[command]
+pub fn wellfair_record_disclosure(
+    app: AppHandle,
+    commitment_hex: String,
+    credential_id: String,
+    recipient_did: String,
+    acting_delegate_did: Option<String>,
+    onward_to: Option<String>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let event = host.record_disclosure(&commitment_hex, &credential_id, &recipient_did, acting_delegate_did, onward_to)?;
+    serde_json::to_string(&event).map_err(|e| e.to_string())
+}
+
+/// The disclosure chain for a payload.
+#[command]
+pub fn wellfair_disclosure_chain(app: AppHandle, commitment_hex: String) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let chain = host.disclosure_chain(&commitment_hex)?;
+    serde_json::to_string(&chain).map_err(|e| e.to_string())
+}
+
+/// The distinct actors who had access to a payload (the leak-suspect set).
+#[command]
+pub fn wellfair_actors_with_access(app: AppHandle, commitment_hex: String) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let actors = host.actors_with_access(&commitment_hex)?;
+    serde_json::to_string(&actors).map_err(|e| e.to_string())
+}
+
+/// Trace a leak by fingerprint (hex) → the disclosure + accountable actor (or null).
+#[command]
+pub fn wellfair_trace_leak(app: AppHandle, fingerprint_hex: String) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let event = host.trace_leak(&fingerprint_hex)?;
+    serde_json::to_string(&serde_json::json!({ "event": event })).map_err(|e| e.to_string())
+}
+
+/// List transparency cc records.
+#[command]
+pub fn wellfair_list_transparency_ccs(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let ccs = host.list_transparency_ccs()?;
+    serde_json::to_string(&ccs).map_err(|e| e.to_string())
+}
+
+/// Assess a duty of inquiry (JSON = `DutyOfInquiry`, `ConductAgainstDuty`) → the verdict.
+#[command]
+pub fn wellfair_assess_duty_of_inquiry(
+    app: AppHandle,
+    duty_json: String,
+    conduct_json: String,
+) -> Result<String, String> {
+    let duty: qualia_client_core::duty_of_inquiry::DutyOfInquiry =
+        serde_json::from_str(&duty_json).map_err(|e| format!("invalid duty JSON: {e}"))?;
+    let conduct: qualia_client_core::duty_of_inquiry::ConductAgainstDuty =
+        serde_json::from_str(&conduct_json).map_err(|e| format!("invalid conduct JSON: {e}"))?;
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let verdict = host.assess_duty_of_inquiry(duty, conduct);
+    serde_json::to_string(&serde_json::json!({ "verdict": verdict })).map_err(|e| e.to_string())
+}
+
 /// Score + record a sitting. `responses` is a comma-separated list of ordinal values (one per item,
 /// in order). Returns the scored result (total, band, interpretation, any safety flags).
 #[command]
@@ -4661,6 +5281,46 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_record_assessment,
         wellfair_list_assessments,
         wellfair_compute_anatomy_view,
+        wellfair_compute_scorecard,
+        wellfair_get_weight_model,
+        wellfair_set_weight_model,
+        wellfair_reset_weight_model,
+        wellfair_ledger_append,
+        wellfair_ledger_verify,
+        wellfair_ledger_entries,
+        wellfair_grant_consent_credential,
+        wellfair_revoke_consent_credential,
+        wellfair_list_consent_credentials,
+        wellfair_record_conduct,
+        wellfair_conduct_audit_trail,
+        wellfair_ingest_document,
+        wellfair_search_library,
+        wellfair_search_library_time,
+        wellfair_list_library,
+        wellfair_owner_envelope_public,
+        wellfair_seal_and_grant_credential,
+        wellfair_open_owner_payload,
+        wellfair_arm_dead_mans_switch,
+        wellfair_dead_mans_alive,
+        wellfair_attest_dead_mans,
+        wellfair_enact_dead_mans,
+        wellfair_list_dead_mans_switches,
+        wellfair_enact_dead_mans_release,
+        wellfair_split_dek_recovery,
+        wellfair_reconstruct_and_release,
+        wellfair_set_peer_envelope_key,
+        wellfair_enact_dead_mans_release_via_peers,
+        wellfair_arm_incapacity_switch,
+        wellfair_activate_incapacity,
+        wellfair_regain_capacity,
+        wellfair_list_incapacity_switches,
+        wellfair_record_transparency_cc,
+        wellfair_record_disclosure,
+        wellfair_disclosure_chain,
+        wellfair_actors_with_access,
+        wellfair_trace_leak,
+        wellfair_list_transparency_ccs,
+        wellfair_assess_duty_of_inquiry,
         wellfair_propose_proxy_condition,
         wellfair_list_guardianship_proposals,
         wellfair_vote_guardianship_proposal,

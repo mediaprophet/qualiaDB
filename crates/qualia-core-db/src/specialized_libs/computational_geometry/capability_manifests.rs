@@ -1623,6 +1623,42 @@ pub const GEOMETRY_OP_MANIFESTS: &[OpManifest] = &[
         allocation: AllocationClass::ColdBounded,
         dimensionality: Dimensionality::D3,
     },
+    // ── P13.5 — Advancing-front surface meshing (2-D) ──
+    OpManifest {
+        op: "advancing_front_surface_2d",
+        description: "Advancing-front 2-D triangulation from a closed CCW boundary polyline and a target-size function. Shortest-edge-first deterministic ordering; equilateral-vertex placement with snap-to-existing; self-crossing guard rejects any candidate whose new edges properly intersect a non-adjacent front edge; front collapses on exhaustion guaranteeing monotone shrinkage. Identical input → bit-identical mesh.",
+        backends: &[Backend::Scalar, Backend::Wasm],
+        determinism: DeterminismClass::BitExact,
+        limits: ResourceLimits {
+            max_input_points: 1_000_000,
+            max_output_bytes: 128 * 1024 * 1024,
+            max_memory_bytes: 256 * 1024 * 1024,
+            max_time_us: 0,
+        },
+        topology_critical: true,
+        maturity: Maturity::Implemented,
+        exactness: ExactnessClass::TopologyGuaranteed,
+        allocation: AllocationClass::ColdBounded,
+        dimensionality: Dimensionality::D2,
+    },
+    // ── P13.5 — Advancing-front volume meshing (3-D) ──
+    OpManifest {
+        op: "advancing_front_volume_3d",
+        description: "Advancing-front 3-D tetrahedralisation from a closed orientable surface mesh and a target-size function. Smallest-area-face-first deterministic ordering; inradius-offset apex placement with snap-to-existing; self-crossing guard rejects any candidate whose new edges properly intersect a non-adjacent front face (Möller–Trumbore); front collapses on exhaustion guaranteeing monotone shrinkage. Identical input → bit-identical mesh.",
+        backends: &[Backend::Scalar, Backend::Wasm],
+        determinism: DeterminismClass::BitExact,
+        limits: ResourceLimits {
+            max_input_points: 1_000_000,
+            max_output_bytes: 256 * 1024 * 1024,
+            max_memory_bytes: 512 * 1024 * 1024,
+            max_time_us: 0,
+        },
+        topology_critical: true,
+        maturity: Maturity::Implemented,
+        exactness: ExactnessClass::TopologyGuaranteed,
+        allocation: AllocationClass::ColdBounded,
+        dimensionality: Dimensionality::D3,
+    },
 ];
 
 // ───────────────────────────────────────────────────────────────────────────

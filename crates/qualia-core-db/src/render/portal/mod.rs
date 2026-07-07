@@ -610,7 +610,7 @@ impl QualiaPortal {
                         provenance_mu = t.mu;
                     }
                 }
-                container_10d::SectionType::SpecReservedProvenanceSidecar => {
+                container_10d::SectionType::ProvenanceSidecar => {
                     has_attestation = true;
                 }
                 _ => {}
@@ -742,7 +742,7 @@ impl QualiaPortal {
                         provenance_mu = t.mu;
                     }
                 }
-                container_10d::SectionType::SpecReservedProvenanceSidecar => {
+                container_10d::SectionType::ProvenanceSidecar => {
                     has_attestation = true;
                 }
                 _ => {}

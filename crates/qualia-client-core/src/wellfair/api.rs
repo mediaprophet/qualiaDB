@@ -163,6 +163,20 @@ fn contribution_from_summary(id: String, summary: &str, occurred_at_unix: u32) -
     })
 }
 
+/// A per-entry summary of a hypermedia library entry for the UI (drops the raw quins).
+fn library_summary(e: &super::hypermedia_store::LibraryEntry) -> serde_json::Value {
+    serde_json::json!({
+        "asset_uri": e.asset_uri,
+        "media_type": e.media_type,
+        "topics": e.topics,
+        "projects": e.projects,
+        "place": e.place,
+        "flags": e.flags,
+        "ingested_unix": e.ingested_unix,
+        "excerpt": e.excerpt,
+    })
+}
+
 /// Transport-neutral Host API exported for UI and qApps.
 pub struct WebizenHostApi {
     vault: VaultService,
@@ -724,6 +738,706 @@ impl WebizenHostApi {
             super::anatomy_view::parse_lens(lens),
             convergence_threshold,
         ))
+    }
+
+    /// The accumulative, traceable **score-card** + investigable hypotheses over the person's own records —
+    /// the reading they can act on. Forum-internum / `Sanctuary`-class selfhood content; a set of
+    /// **hypotheses** and pathway-starts, never a diagnosis, never a rating.
+    pub fn compute_scorecard(
+        &self,
+        convergence_threshold: usize,
+    ) -> Result<super::anatomy_view::WellbeingScorecardReport, String> {
+        let conditions = self.list_journal_by_kind("condition", 256)?;
+        let medications = self.list_journal_by_kind("medication", 256)?;
+        let diet = self.list_journal_by_kind("diet", 256)?;
+        // Read the person through **their own** weight model — their authorship of how they're read — falling
+        // back to the seed *suggestion* only if they have not authored one.
+        let weights = self.get_weight_model();
+        Ok(super::anatomy_view::build_scorecard_report_from_journal_with_weights(
+            &conditions,
+            &medications,
+            &diet,
+            convergence_threshold,
+            &weights,
+        ))
+    }
+
+    /// The person's own score-card **weight model** — the interpretive lens the card uses — or the seed
+    /// *suggestion* if they have not authored one. Theirs to see, edit, or reset; the software offers a
+    /// starting point, it does not *define* how they are read.
+    pub fn get_weight_model(&self) -> wellfare_core::anatomy::WeightModel {
+        super::scorecard_prefs::load(&self.storage_root)
+            .unwrap_or_else(wellfare_core::anatomy::seed_weight_model)
+    }
+
+    /// The seed **suggestion** on its own — so a UI can show "this is the starting point; here's yours" and
+    /// let the person compare / adopt / edit.
+    pub fn seed_weight_model(&self) -> wellfare_core::anatomy::WeightModel {
+        wellfare_core::anatomy::seed_weight_model()
+    }
+
+    /// Whether the person has **authored their own** model (vs. still using the seed suggestion).
+    pub fn weight_model_is_authored(&self) -> bool {
+        super::scorecard_prefs::load(&self.storage_root).is_some()
+    }
+
+    /// **Set the person's own** weight model — their authorship of how the score-card reads them.
+    pub fn set_weight_model(
+        &self,
+        model: &wellfare_core::anatomy::WeightModel,
+    ) -> Result<(), String> {
+        super::scorecard_prefs::save(&self.storage_root, model)
+    }
+
+    /// **Reset** to the seed suggestion (clears the person's authored model — a choice, always reversible by
+    /// re-authoring).
+    pub fn reset_weight_model(&self) -> Result<(), String> {
+        super::scorecard_prefs::clear(&self.storage_root)
+    }
+
+    // --- Accountability fabric (ADR 0011) — tamper-evident ledger + revocable consent credentials ---
+    //
+    // Turns the tested domain models (`crate::accountability_ledger`, `crate::consent_credential`) into a
+    // usable loop: grant a worker scoped access, record how/why they acted (attributable, court-auditable),
+    // let the person revoke (crypto-enforced — the key is destroyed, access ends), and keep the conduct trail
+    // un-erasable. All acts are written into a signed, hash-chained ledger the person's own key signs; a
+    // betrayer cannot quietly drop the inconvenient act without `verify()` naming it. Anti-deletion durability
+    // across parties (commons replication) and real envelope encryption of the wrapped key are the deferred
+    // composition steps (coordinate) — the wrapped key is carried as opaque bytes here, as the model intends.
+
+    fn accountability_store(&self) -> Result<crate::accountability_store::AccountabilityStore, String> {
+        crate::accountability_store::AccountabilityStore::open(&self.storage_root)
+            .map_err(|e| e.to_string())
+    }
+
+    /// Append a raw record to the person's tamper-evident accountability ledger, signed by the owner key.
+    pub fn ledger_append(
+        &self,
+        kind: &str,
+        payload_json: &str,
+    ) -> Result<crate::accountability_ledger::LedgerEntry, String> {
+        self.accountability_store()?
+            .append_ledger(kind, payload_json, &self.signing_key, Self::now_unix())
+            .map_err(|e| e.to_string())
+    }
+
+    /// Verify the whole ledger chain. `Ok(None)` = intact; `Ok(Some(tamper))` = a detected, named tamper.
+    pub fn ledger_verify(
+        &self,
+    ) -> Result<Option<crate::accountability_ledger::LedgerTamper>, String> {
+        let verdict = self.accountability_store()?.verify_ledger().map_err(|e| e.to_string())?;
+        Ok(verdict.err())
+    }
+
+    /// The most-recent ledger entries (newest first), capped to `limit`.
+    pub fn ledger_entries(
+        &self,
+        limit: usize,
+    ) -> Result<Vec<crate::accountability_ledger::LedgerEntry>, String> {
+        self.accountability_store()?.ledger_entries(limit).map_err(|e| e.to_string())
+    }
+
+    /// **Grant a consent credential** to an agent (e.g. a social worker) over a committed payload. The
+    /// subject is the vault owner. `commitment_hex` is the 32-byte payload commitment; `wrapped_key_hex` is
+    /// the (opaque) wrapped data key that revocation destroys; `expiry_unix` optionally auto-expires access.
+    pub fn grant_consent_credential(
+        &self,
+        agent_did: &str,
+        scope: &str,
+        purpose: &str,
+        commitment_hex: &str,
+        wrapped_key_hex: &str,
+        expiry_unix: Option<u64>,
+    ) -> Result<crate::consent_credential::ConsentCredential, String> {
+        let commitment = crate::accountability_store::parse_commitment_hex(commitment_hex)?;
+        let wrapped_key = hex::decode(wrapped_key_hex.trim())
+            .map_err(|e| format!("wrapped key not hex: {e}"))?;
+        let now = Self::now_unix();
+        let id = {
+            let digest = Sha256::digest(format!("{agent_did}:{scope}:{now}").as_bytes());
+            format!("cc-{}", hex::encode(&digest[..6]))
+        };
+        let cred = crate::consent_credential::ConsentCredential::grant(
+            id,
+            &self.owner_did,
+            agent_did,
+            scope,
+            purpose,
+            commitment,
+            wrapped_key,
+            now,
+            expiry_unix,
+        );
+        self.accountability_store()?
+            .grant_credential(cred, &self.signing_key, now)
+            .map_err(|e| e.to_string())
+    }
+
+    /// **Revoke a consent credential** — crypto-enforced (the wrapped key is destroyed). Returns whether a
+    /// live credential was revoked. The conduct trail under it persists.
+    pub fn revoke_consent_credential(&self, credential_id: &str) -> Result<bool, String> {
+        self.accountability_store()?
+            .revoke_credential(credential_id, &self.signing_key, Self::now_unix())
+            .map_err(|e| e.to_string())
+    }
+
+    /// All stored consent credentials (active and revoked — revoked rows remain as the audit anchor).
+    pub fn list_consent_credentials(
+        &self,
+    ) -> Result<Vec<crate::consent_credential::ConsentCredential>, String> {
+        self.accountability_store()?.list_credentials().map_err(|e| e.to_string())
+    }
+
+    /// **Record an agent's conduct** under a credential — signed (attributable + court-auditable) — into the
+    /// durable trail and the tamper-evident ledger. Binds to the payload commitment, not the payload.
+    pub fn record_conduct(
+        &self,
+        agent_did: &str,
+        credential_id: &str,
+        action: &str,
+        reason: &str,
+        commitment_hex: &str,
+    ) -> Result<crate::consent_credential::ConductRecord, String> {
+        let commitment = crate::accountability_store::parse_commitment_hex(commitment_hex)?;
+        self.accountability_store()?
+            .record_conduct(
+                agent_did,
+                credential_id,
+                action,
+                reason,
+                commitment,
+                &self.signing_key,
+                Self::now_unix(),
+            )
+            .map_err(|e| e.to_string())
+    }
+
+    /// The **audit view** — every conduct record taken under one credential (survives its revocation).
+    pub fn conduct_audit_trail(
+        &self,
+        credential_id: &str,
+    ) -> Result<Vec<crate::consent_credential::ConductRecord>, String> {
+        self.accountability_store()?.audit_trail(credential_id).map_err(|e| e.to_string())
+    }
+
+    /// **Record guardian notifications** from a flagged ingest into the tamper-evident ledger — so a flagged
+    /// ingest under a guardianship relation is both a notification to the guardian AND an auditable,
+    /// un-erasable event (who was notified, about what, when). Composes the hypermedia flags → guardian layer
+    /// (`super::ingest_guardian`) with the accountability ledger.
+    pub fn record_guardian_notifications(
+        &self,
+        notifications: &[super::ingest_guardian::GuardianNotification],
+    ) -> Result<(), String> {
+        let store = self.accountability_store()?;
+        for n in notifications {
+            let payload = serde_json::to_string(n).map_err(|e| e.to_string())?;
+            store
+                .append_ledger("guardian_notified", &payload, &self.signing_key, Self::now_unix())
+                .map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    }
+
+    // --- Hypermedia asset library: ingest a document → make it searchable by meaning ---
+
+    fn library(&self) -> Result<super::hypermedia_store::HypermediaStore, String> {
+        super::hypermedia_store::HypermediaStore::open(&self.storage_root).map_err(|e| e.to_string())
+    }
+
+    /// **Ingest a text document** into the library: derive its topics + searchable text, bind them into a
+    /// hypermedia container, persist it (findable by meaning), and — if `guardian_did` is set (the principal
+    /// is under a guardianship relation) and a flag is raised — notify the guardian **and record it in the
+    /// tamper-evident ledger**. Returns a summary (topics, flags, any guardian notifications).
+    pub fn ingest_document(
+        &self,
+        uri: &str,
+        media_type: &str,
+        text: &str,
+        guardian_did: Option<String>,
+    ) -> Result<serde_json::Value, String> {
+        use qualia_core_db::hypermedia::{ingest_with, FlagSeverity, Processor, TextProcessor};
+        let proc = TextProcessor::default();
+        let out = proc.process(uri, text.as_bytes(), media_type);
+        let r = ingest_with(&proc, uri, media_type, 0, text.as_bytes());
+        let now = Self::now_unix();
+        let flags: Vec<super::hypermedia_store::LibraryFlag> = out
+            .flags
+            .iter()
+            .map(|f| super::hypermedia_store::LibraryFlag {
+                kind: f.kind.clone(),
+                severity_level: f.severity.level(),
+                detail: f.detail.clone(),
+            })
+            .collect();
+        let entry = super::hypermedia_store::LibraryEntry {
+            asset_uri: uri.to_string(),
+            primary_subject: r.container.primary.subject(),
+            media_type: media_type.to_string(),
+            quins: r.quins,
+            topics: out.descriptors.topics.clone(),
+            projects: out.descriptors.projects.clone(),
+            place: out.descriptors.place.as_ref().map(|p| p.label.clone()),
+            flags: flags.clone(),
+            ingested_unix: now,
+            excerpt: text.chars().take(160).collect(),
+        };
+        self.library()?.add(entry).map_err(|e| e.to_string())?;
+
+        // Guardianship hook: a flagged ingest under a guardianship relation notifies + records.
+        let mut notified = Vec::new();
+        if let Some(g) = &guardian_did {
+            if !out.flags.is_empty() {
+                let ns = super::ingest_guardian::guardian_notifications(
+                    &out.flags,
+                    uri,
+                    g,
+                    &self.owner_did,
+                    FlagSeverity::Notice,
+                    now,
+                );
+                self.record_guardian_notifications(&ns)?;
+                notified = ns;
+            }
+        }
+        Ok(serde_json::json!({
+            "asset_uri": uri,
+            "topics": out.descriptors.topics,
+            "flags": flags,
+            "guardian_notifications": notified,
+        }))
+    }
+
+    /// Search the library by facet (`topic` | `depicts` | `place` | `project` | `purpose`). Returns per-entry
+    /// summaries (not the raw quins).
+    pub fn search_library(&self, facet: &str, value: &str) -> Result<Vec<serde_json::Value>, String> {
+        let entries = self.library()?.search(facet, value).map_err(|e| e.to_string())?;
+        Ok(entries.iter().map(library_summary).collect())
+    }
+
+    /// The **timeline** query — entries whose event instant falls within `[start, end]` (unix seconds).
+    pub fn search_library_time(&self, start: i64, end: i64) -> Result<Vec<serde_json::Value>, String> {
+        let entries = self.library()?.search_time_range(start, end).map_err(|e| e.to_string())?;
+        Ok(entries.iter().map(library_summary).collect())
+    }
+
+    /// Everything in the library (newest first), as summaries.
+    pub fn list_library(&self) -> Result<Vec<serde_json::Value>, String> {
+        let entries = self.library()?.all().map_err(|e| e.to_string())?;
+        Ok(entries.iter().map(library_summary).collect())
+    }
+
+    // --- Real envelope encryption over the consent credential (ADR 0011 D1/D2) ---
+    //
+    // Makes "revoke destroys the wrapped key ⇒ no key, no payload" a *fact*: the payload is AEAD-encrypted
+    // under a random DEK; the DEK is sealed (X25519 sealed box) to the recipient's public key — that sealed
+    // DEK is the credential's real `wrapped_key`; revoke destroys it. The owner's envelope keypair is
+    // **derived** from the owner signing-key seed (nothing secret stored at rest). Native-only (the sealed-box
+    // primitives are `not(wasm32)`; the desktop owns keys).
+
+    /// The owner's envelope **public** key (hex) — publishable so others can seal payloads *to* the owner.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn owner_envelope_public_hex(&self) -> String {
+        use crate::envelope_encryption::{EnvelopeKeypair, OWNER_ENVELOPE_DOMAIN};
+        EnvelopeKeypair::derive(&self.signing_key.to_bytes(), OWNER_ENVELOPE_DOMAIN).public_hex()
+    }
+
+    /// **Seal a plaintext payload and grant a consent credential over it** — real envelope encryption. If
+    /// `agent_public_hex` is empty, the payload is sealed to the OWNER's derived envelope key (self-custody,
+    /// so the owner can [`open_owner_payload`]); supply an agent's X25519 public key to grant *that* agent
+    /// access (they open it on their own device with their secret — the owner cannot).
+    ///
+    /// [`open_owner_payload`]: WebizenHostApi::open_owner_payload
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn seal_and_grant_consent_credential(
+        &self,
+        agent_did: &str,
+        agent_public_hex: &str,
+        scope: &str,
+        purpose: &str,
+        plaintext: &str,
+        expiry_unix: Option<u64>,
+    ) -> Result<crate::consent_credential::ConsentCredential, String> {
+        use crate::envelope_encryption::{EnvelopeKeypair, OWNER_ENVELOPE_DOMAIN};
+        let owner = EnvelopeKeypair::derive(&self.signing_key.to_bytes(), OWNER_ENVELOPE_DOMAIN);
+        let recipient_public: [u8; 32] = if agent_public_hex.trim().is_empty() {
+            owner.public
+        } else {
+            let bytes = hex::decode(agent_public_hex.trim())
+                .map_err(|e| format!("agent public key not hex: {e}"))?;
+            bytes
+                .as_slice()
+                .try_into()
+                .map_err(|_| "agent public key must be 32 bytes".to_string())?
+        };
+        let now = Self::now_unix();
+        let id = {
+            let d = Sha256::digest(format!("{agent_did}:{scope}:{now}").as_bytes());
+            format!("cc-{}", hex::encode(&d[..6]))
+        };
+        self.accountability_store()?
+            .seal_and_grant_credential(
+                id,
+                &self.owner_did,
+                agent_did,
+                scope,
+                purpose,
+                plaintext.as_bytes(),
+                &recipient_public,
+                vec![self.owner_did.clone()],
+                expiry_unix,
+                &self.signing_key,
+                now,
+            )
+            .map_err(|e| e.to_string())
+    }
+
+    /// **Open an owner-sealed payload** through a credential — proves the crypto-revoke property end-to-end:
+    /// works while the credential is live, fails once revoked (the wrapped key is gone), though the commons
+    /// ciphertext survives. Only opens payloads sealed to the owner (an agent-sealed payload opens on the
+    /// agent's device).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn open_owner_payload(&self, credential_id: &str) -> Result<String, String> {
+        use crate::envelope_encryption::{EnvelopeKeypair, OWNER_ENVELOPE_DOMAIN};
+        let owner = EnvelopeKeypair::derive(&self.signing_key.to_bytes(), OWNER_ENVELOPE_DOMAIN);
+        let bytes = self
+            .accountability_store()?
+            .open_payload_via_credential(credential_id, &owner.secret, Self::now_unix())
+            .map_err(|e| e.to_string())?;
+        String::from_utf8(bytes).map_err(|e| format!("payload not valid utf-8: {e}"))
+    }
+
+    // --- Safeguard switches (ADR 0011 D6/D7): dead-man + incapacity, owner-signed into the ledger ---
+
+    /// Arm a **dead-man switch** over a payload (post-death disposition; gamified + reversible).
+    pub fn arm_dead_mans_switch(
+        &self,
+        switch: crate::dead_mans_switch::DeadMansSwitch,
+    ) -> Result<(), String> {
+        self.accountability_store()?
+            .arm_dead_mans_switch(switch, &self.signing_key, Self::now_unix())
+            .map_err(|e| e.to_string())
+    }
+
+    /// **I'm alive** — touch the heartbeat + un-fire a not-yet-enacted switch (reversibility). The routine
+    /// owner-side action that keeps a dead-man switch from firing.
+    pub fn dead_mans_alive(&self, commitment_hex: &str) -> Result<bool, String> {
+        let c = crate::accountability_store::parse_commitment_hex(commitment_hex)?;
+        self.accountability_store()?
+            .dead_mans_alive(&c, &self.signing_key, Self::now_unix())
+            .map_err(|e| e.to_string())
+    }
+
+    /// Record a **party attestation** toward a dead-man switch's gamified trigger.
+    pub fn attest_dead_mans(
+        &self,
+        commitment_hex: &str,
+        attestation: crate::dead_mans_switch::PartyAttestation,
+    ) -> Result<bool, String> {
+        let c = crate::accountability_store::parse_commitment_hex(commitment_hex)?;
+        self.accountability_store()?
+            .attest_dead_mans(&c, attestation, &self.signing_key, Self::now_unix())
+            .map_err(|e| e.to_string())
+    }
+
+    /// **Enact** a dead-man switch if the gamified rule holds — returns the [`Disposition`] to carry out.
+    ///
+    /// [`Disposition`]: crate::dead_mans_switch::Disposition
+    pub fn enact_dead_mans(
+        &self,
+        commitment_hex: &str,
+    ) -> Result<Option<crate::dead_mans_switch::Disposition>, String> {
+        let c = crate::accountability_store::parse_commitment_hex(commitment_hex)?;
+        self.accountability_store()?
+            .enact_dead_mans(&c, &self.signing_key, Self::now_unix())
+            .map_err(|e| e.to_string())
+    }
+
+    /// List armed dead-man switches (with accumulated attestations).
+    pub fn list_dead_mans_switches(
+        &self,
+    ) -> Result<Vec<crate::accountability_store::DeadMansSwitchRecord>, String> {
+        self.accountability_store()?.list_dead_mans_switches().map_err(|e| e.to_string())
+    }
+
+    /// **Enact a dead-man switch AND release the keys** (ADR 0011 D6, key-release-on-enact). Recovers the
+    /// payload DEK by unwrapping the owner's own credential, then — for a `ReleaseTo` disposition — re-seals
+    /// the DEK to each supplied party X25519 pubkey and grants them a credential, so the disposition actually
+    /// hands over access. `party_keys` = `(did, pubkey_hex)` pairs. (The owner key is derivable here; the true
+    /// post-death friend-side release without the owner needs Shamir pre-positioning — separate.)
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn enact_dead_mans_release(
+        &self,
+        commitment_hex: &str,
+        party_keys_hex: Vec<(String, String)>,
+    ) -> Result<serde_json::Value, String> {
+        use crate::envelope_encryption::{unwrap_dek, EnvelopeKeypair, OWNER_ENVELOPE_DOMAIN};
+        let c = crate::accountability_store::parse_commitment_hex(commitment_hex)?;
+        let now = Self::now_unix();
+        let store = self.accountability_store()?;
+        let owner = EnvelopeKeypair::derive(&self.signing_key.to_bytes(), OWNER_ENVELOPE_DOMAIN);
+        // Recover the DEK by unwrapping the owner's own credential for this payload.
+        let wrapped = store
+            .wrapped_key_for(&c, &self.owner_did, now)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| {
+                "no owner credential holds the DEK for this payload (seal it to yourself first)".to_string()
+            })?;
+        let dek = unwrap_dek(&owner.secret, &wrapped)?;
+        let mut party_keys: Vec<(String, [u8; 32])> = Vec::new();
+        for (did, pk_hex) in party_keys_hex {
+            let bytes = hex::decode(pk_hex.trim()).map_err(|e| format!("party key not hex: {e}"))?;
+            let pk: [u8; 32] = bytes
+                .as_slice()
+                .try_into()
+                .map_err(|_| "party key must be 32 bytes".to_string())?;
+            party_keys.push((did, pk));
+        }
+        let disposition = store
+            .enact_dead_mans_release(&c, &dek, &party_keys, &self.owner_did, &self.signing_key, now)
+            .map_err(|e| e.to_string())?;
+        Ok(serde_json::json!({ "enacted": disposition.is_some(), "disposition": disposition }))
+    }
+
+    /// **Split a payload's DEK into Shamir social-recovery shares** (`threshold`-of-`parties.len()`), so a
+    /// quorum of friends can later reconstruct the key **without the owner**. Recovers the DEK from the owner's
+    /// own credential, splits it, and returns the shares paired with the parties they should be handed to
+    /// (the caller distributes them off-device — they are NOT stored here). Owner-side, done while alive.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn split_dek_recovery(
+        &self,
+        commitment_hex: &str,
+        threshold: usize,
+        parties: Vec<String>,
+    ) -> Result<serde_json::Value, String> {
+        use crate::envelope_encryption::{unwrap_dek, EnvelopeKeypair, OWNER_ENVELOPE_DOMAIN};
+        let c = crate::accountability_store::parse_commitment_hex(commitment_hex)?;
+        let now = Self::now_unix();
+        let store = self.accountability_store()?;
+        let owner = EnvelopeKeypair::derive(&self.signing_key.to_bytes(), OWNER_ENVELOPE_DOMAIN);
+        let wrapped = store
+            .wrapped_key_for(&c, &self.owner_did, now)
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| "no owner credential holds the DEK for this payload".to_string())?;
+        let dek = unwrap_dek(&owner.secret, &wrapped)?;
+        let shares = crate::shamir_recovery::split(&dek, threshold, parties.len())?;
+        let tagged: Vec<serde_json::Value> = parties
+            .iter()
+            .zip(shares.iter())
+            .map(|(party, share)| serde_json::json!({ "party": party, "share": share }))
+            .collect();
+        Ok(serde_json::json!({ "threshold": threshold, "shares": tagged }))
+    }
+
+    /// **Social-recovery enactment (no owner key):** given a quorum of friends' Shamir shares, reconstruct the
+    /// DEK, enact the dead-man switch, and release to the disposition parties. `party_keys` = `(did, pubkey_hex)`.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn reconstruct_and_release(
+        &self,
+        commitment_hex: &str,
+        shares: Vec<crate::shamir_recovery::Share>,
+        party_keys_hex: Vec<(String, String)>,
+    ) -> Result<serde_json::Value, String> {
+        let c = crate::accountability_store::parse_commitment_hex(commitment_hex)?;
+        let now = Self::now_unix();
+        let mut party_keys: Vec<(String, [u8; 32])> = Vec::new();
+        for (did, pk_hex) in party_keys_hex {
+            let bytes = hex::decode(pk_hex.trim()).map_err(|e| format!("party key not hex: {e}"))?;
+            let pk: [u8; 32] = bytes
+                .as_slice()
+                .try_into()
+                .map_err(|_| "party key must be 32 bytes".to_string())?;
+            party_keys.push((did, pk));
+        }
+        let disposition = self
+            .accountability_store()?
+            .reconstruct_and_release(&c, &shares, &party_keys, &self.owner_did, &self.signing_key, now)
+            .map_err(|e| e.to_string())?;
+        Ok(serde_json::json!({ "enacted": disposition.is_some(), "disposition": disposition }))
+    }
+
+    /// Publish a **peer's envelope (X25519) public key** into their peer record, so releases to that party
+    /// can resolve the key automatically (remote-key distribution). The owner's own publishable key is
+    /// [`owner_envelope_public_hex`](Self::owner_envelope_public_hex).
+    pub fn set_peer_envelope_key(&self, did: &str, pubkey_hex: &str) -> Result<(), String> {
+        crate::social_peers::set_peer_envelope_key(did, pubkey_hex)
+    }
+
+    /// **Enact + release resolving the disposition parties' keys from the peer store** (remote-key
+    /// distribution). Reads the switch's `ReleaseTo` parties, looks up each one's published envelope key from
+    /// `social_peers`, and releases to those with a known key — reporting any parties whose key is still
+    /// missing (so the owner knows to obtain it). No keys pasted by hand.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn enact_dead_mans_release_via_peers(
+        &self,
+        commitment_hex: &str,
+    ) -> Result<serde_json::Value, String> {
+        let c = crate::accountability_store::parse_commitment_hex(commitment_hex)?;
+        let switches = self
+            .accountability_store()?
+            .list_dead_mans_switches()
+            .map_err(|e| e.to_string())?;
+        let rec = switches
+            .iter()
+            .find(|r| r.switch.payload_commitment == c)
+            .ok_or_else(|| "no dead-man switch for that commitment".to_string())?;
+        let parties = match &rec.switch.disposition {
+            crate::dead_mans_switch::Disposition::ReleaseTo { parties } => parties.clone(),
+            _ => Vec::new(),
+        };
+        let peers = crate::social_peers::list_peers();
+        let resolved = crate::social_peers::resolve_envelope_keys(&peers, &parties);
+        let have: std::collections::BTreeSet<&str> = resolved.iter().map(|(d, _)| d.as_str()).collect();
+        let missing: Vec<String> =
+            parties.iter().filter(|d| !have.contains(d.as_str())).cloned().collect();
+        let result = self.enact_dead_mans_release(commitment_hex, resolved)?;
+        Ok(serde_json::json!({ "result": result, "missing_keys_for": missing }))
+    }
+
+    /// Arm an **incapacity switch** (advocate activation on validated, reversible incapacity).
+    pub fn arm_incapacity_switch(
+        &self,
+        switch: crate::incapacity_switch::IncapacitySwitch,
+    ) -> Result<(), String> {
+        self.accountability_store()?
+            .arm_incapacity_switch(switch, &self.signing_key, Self::now_unix())
+            .map_err(|e| e.to_string())
+    }
+
+    /// **Activate** advocacy if the corroborated trigger holds (quorum + optional official instrument).
+    pub fn activate_incapacity(
+        &self,
+        principal_did: &str,
+        attesting_parties: Vec<String>,
+        official_instrument: Option<String>,
+    ) -> Result<bool, String> {
+        self.accountability_store()?
+            .activate_incapacity(
+                principal_did,
+                &attesting_parties,
+                official_instrument.as_deref(),
+                &self.signing_key,
+                Self::now_unix(),
+            )
+            .map_err(|e| e.to_string())
+    }
+
+    /// **Regain capacity** — the advocate stands down (reversibility).
+    pub fn regain_capacity(&self, principal_did: &str) -> Result<bool, String> {
+        self.accountability_store()?
+            .regain_capacity(principal_did, &self.signing_key, Self::now_unix())
+            .map_err(|e| e.to_string())
+    }
+
+    /// List armed incapacity switches.
+    pub fn list_incapacity_switches(
+        &self,
+    ) -> Result<Vec<crate::incapacity_switch::IncapacitySwitch>, String> {
+        self.accountability_store()?.list_incapacity_switches().map_err(|e| e.to_string())
+    }
+
+    // --- Disclosure traceability (ADR 0011 D5) + duty of inquiry (D8) ---
+
+    /// Record a **transparency cc** — the protective "I informed authority X for purpose Y" note.
+    pub fn record_transparency_cc(
+        &self,
+        credential_id: &str,
+        informed_authority_did: &str,
+        purpose: &str,
+    ) -> Result<(), String> {
+        let cc = crate::disclosure_trace::TransparencyCc {
+            credential_id: credential_id.to_string(),
+            informed_authority_did: informed_authority_did.to_string(),
+            purpose: purpose.to_string(),
+            informed_unix: Self::now_unix(),
+        };
+        self.accountability_store()?
+            .record_transparency_cc(cc, &self.signing_key, Self::now_unix())
+            .map_err(|e| e.to_string())
+    }
+
+    /// Record a **disclosure event** (an access, or an onward-share if `onward_to` is set). A per-recipient
+    /// fingerprint + id are generated. Returns the recorded event (its `fingerprint` is the tracing anchor).
+    pub fn record_disclosure(
+        &self,
+        commitment_hex: &str,
+        credential_id: &str,
+        recipient_did: &str,
+        acting_delegate_did: Option<String>,
+        onward_to: Option<String>,
+    ) -> Result<crate::disclosure_trace::DisclosureEvent, String> {
+        let commitment = crate::accountability_store::parse_commitment_hex(commitment_hex)?;
+        let now = Self::now_unix();
+        let actor = acting_delegate_did.as_deref().unwrap_or(recipient_did);
+        // Deterministic per-recipient/per-disclosure fingerprint (the traitor-tracing anchor).
+        let digest = Sha256::digest(
+            format!("{}:{recipient_did}:{actor}:{now}", hex::encode(commitment)).as_bytes(),
+        );
+        let mut fingerprint = [0u8; 16];
+        fingerprint.copy_from_slice(&digest[..16]);
+        let id = format!("d-{}", hex::encode(&digest[16..22]));
+        let kind = match onward_to {
+            Some(to_did) => crate::disclosure_trace::DisclosureKind::OnwardShare { to_did },
+            None => crate::disclosure_trace::DisclosureKind::DirectAccess,
+        };
+        let event = crate::disclosure_trace::DisclosureEvent {
+            id,
+            payload_commitment: commitment,
+            credential_id: credential_id.to_string(),
+            recipient_did: recipient_did.to_string(),
+            acting_delegate_did,
+            time_unix: now,
+            fingerprint,
+            kind,
+        };
+        self.accountability_store()?
+            .record_disclosure_event(event.clone(), &self.signing_key, now)
+            .map_err(|e| e.to_string())?;
+        Ok(event)
+    }
+
+    /// The disclosure chain for a payload (who saw it, via which route).
+    pub fn disclosure_chain(
+        &self,
+        commitment_hex: &str,
+    ) -> Result<Vec<crate::disclosure_trace::DisclosureEvent>, String> {
+        let c = crate::accountability_store::parse_commitment_hex(commitment_hex)?;
+        self.accountability_store()?.disclosure_chain(&c).map_err(|e| e.to_string())
+    }
+
+    /// The distinct actors who had access to a payload — the set a leak must be within.
+    pub fn actors_with_access(&self, commitment_hex: &str) -> Result<Vec<String>, String> {
+        let c = crate::accountability_store::parse_commitment_hex(commitment_hex)?;
+        self.accountability_store()?.actors_with_access(&c).map_err(|e| e.to_string())
+    }
+
+    /// **Trace a leak** by its fingerprint (hex, 16 bytes) → the disclosure + accountable actor.
+    pub fn trace_leak(
+        &self,
+        fingerprint_hex: &str,
+    ) -> Result<Option<crate::disclosure_trace::DisclosureEvent>, String> {
+        let bytes = hex::decode(fingerprint_hex.trim()).map_err(|e| format!("fingerprint not hex: {e}"))?;
+        let fp: crate::disclosure_trace::DisclosureFingerprint = bytes
+            .as_slice()
+            .try_into()
+            .map_err(|_| "fingerprint must be 16 bytes".to_string())?;
+        self.accountability_store()?.trace_leak(&fp).map_err(|e| e.to_string())
+    }
+
+    /// List transparency cc records.
+    pub fn list_transparency_ccs(
+        &self,
+    ) -> Result<Vec<crate::disclosure_trace::TransparencyCc>, String> {
+        self.accountability_store()?.list_transparency_ccs().map_err(|e| e.to_string())
+    }
+
+    /// **Assess a duty of inquiry** — classify conduct against the duty (the fair negligence classifier: was
+    /// an accessible means left unchecked, and did a harmful act follow?). Pure; no persistence.
+    pub fn assess_duty_of_inquiry(
+        &self,
+        duty: crate::duty_of_inquiry::DutyOfInquiry,
+        conduct: crate::duty_of_inquiry::ConductAgainstDuty,
+    ) -> crate::duty_of_inquiry::InquiryVerdict {
+        crate::duty_of_inquiry::assess(&duty, &conduct)
     }
 
     pub fn sleep_analytics(&self, target_min: f64) -> Result<(SleepDebtReport, SleepHeatmapReport), String> {

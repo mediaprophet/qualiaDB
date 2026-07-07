@@ -65,7 +65,10 @@ pub enum SectionType {
     SpecReservedGovernance = 4,
     SpecReservedTemporalIndex = 5,
     SpecReservedManifoldHeadTable = 6,
-    SpecReservedProvenanceSidecar = 7,
+    /// Provenance sidecar — source bytes + licence + verifiable credential
+    /// bundled in-envelope so context is byte-inseparable (P1; see
+    /// [`super::provenance_section`]). No longer spec-reserved.
+    ProvenanceSidecar = 7,
     SpecReservedFieldSidecar = 8,
     SpecReservedCorrespondenceMap = 9,
     /// Topology section — half-edge graph + CSR adjacency + connectivity
@@ -89,7 +92,7 @@ impl SectionType {
             4 => Some(SectionType::SpecReservedGovernance),
             5 => Some(SectionType::SpecReservedTemporalIndex),
             6 => Some(SectionType::SpecReservedManifoldHeadTable),
-            7 => Some(SectionType::SpecReservedProvenanceSidecar),
+            7 => Some(SectionType::ProvenanceSidecar),
             8 => Some(SectionType::SpecReservedFieldSidecar),
             9 => Some(SectionType::SpecReservedCorrespondenceMap),
             10 => Some(SectionType::Topology),
@@ -107,6 +110,7 @@ impl SectionType {
             SectionType::QuantizedMesh
                 | SectionType::Tensor10DNodes
                 | SectionType::Reconstruction
+                | SectionType::ProvenanceSidecar
                 | SectionType::Topology
                 | SectionType::SpatialIndex
         )

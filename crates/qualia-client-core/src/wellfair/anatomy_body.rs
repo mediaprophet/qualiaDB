@@ -7,7 +7,13 @@
 //! `glb_ingest` loads them from the CCF/HRA set chosen by `AnatomyModel::asset_set()`), so the file I/O
 //! and the compile stay in their own lanes.
 
+use std::collections::HashMap;
+
+use qualia_core_db::hypermedia::{
+    container_to_nquins, descriptors_to_nquins, AssetRef, AssetRole, Descriptors, HypermediaContainer,
+};
 use qualia_core_db::render::compile_10d::{compile_organ_asset, CompiledAsset};
+use qualia_core_db::NQuin;
 use wellfare_core::anatomy::{body_system_for_organ, AnatomyModel};
 
 /// One organ compiled into the body: its resolved system and the sealed `.10d` asset.
@@ -66,6 +72,120 @@ pub fn compile_body(model: AnatomyModel, organs: &[(String, Vec<u8>)]) -> BodyCo
         }
     }
     BodyCompileResult { model, organs: compiled, unmapped, failed }
+}
+
+// ── An organ / body as a HYPERMEDIA CONTAINER (not a bare .10d file) ─────────────────────────────
+//
+// P2 of the hypermedia semantic library: an anatomy asset becomes a semantic container — the sealed `.10d`
+// mesh (primary) ⊕ its source GLB (with CCF/HRA provenance + licence) ⊕ topic/depiction/system descriptors —
+// so it is *findable by meaning* (search by "respiratory", by the organ it depicts, by "3d-anatomy-model")
+// and carries its lineage, not a folder path. The container's primary subject shares the organ's own
+// geometry-manifest subject (one identity space), so the edges join to the mesh facts.
+
+/// An organ made real as a hypermedia container: the container model + its full semantic quin set (the
+/// organ's geometry manifest ⊕ the hypermedia edges ⊕ the descriptors) + the lexicon.
+pub struct OrganContainer {
+    pub container: HypermediaContainer,
+    pub quins: Vec<NQuin>,
+    pub lexicon: HashMap<u64, String>,
+}
+
+/// The stable URI a compiled organ is known by (matches `compile_body`'s compile URI, so subjects join).
+fn organ_uri(model: AnatomyModel, organ_key: &str) -> String {
+    format!("urn:qualia:anatomy:{}:{organ_key}", model.as_str())
+}
+
+/// Turn a [`CompiledOrgan`] into a [`HypermediaContainer`]. `source_url` is the CCF/HRA CDN URL the GLB was
+/// fetched from — recorded as the immutable source with its licence/creator; pass `None` if unknown.
+pub fn organ_container(organ: &CompiledOrgan, model: AnatomyModel, source_url: Option<&str>) -> OrganContainer {
+    let ouri = organ_uri(model, &organ.organ_key);
+    let source_uri = source_url
+        .map(str::to_string)
+        .unwrap_or_else(|| format!("urn:hra:ccf:{}", organ.organ_key));
+
+    let primary = AssetRef::new(&ouri, organ.asset.compiled_digest as u64, "model/qualia-10d", AssetRole::Primary)
+        .derived_from(&source_uri);
+    let mut source = AssetRef::new(&source_uri, organ.asset.source_digest as u64, "model/gltf-binary", AssetRole::Source)
+        .with_licence("CC-BY-4.0");
+    source.creator = Some("Human Reference Atlas (CCF), lod.humanatlas.io".into());
+    let provenance = AssetRef::new(
+        format!("{ouri}#provenance"),
+        0,
+        "application/ld+json",
+        AssetRole::Provenance,
+    );
+
+    let container = HypermediaContainer::new(format!("urn:qualia:container:{}", organ.organ_key), primary.clone())
+        .with_related(source)
+        .with_related(provenance);
+
+    let (mut quins, mut lexicon) = container_to_nquins(&container);
+    // Join the organ's own geometry manifest (same identity space) so the container edges connect to the facts.
+    quins.extend(organ.asset.quins.iter().cloned());
+    for (k, v) in &organ.asset.lexicon {
+        lexicon.entry(*k).or_insert_with(|| v.clone());
+    }
+
+    // Descriptors that make the organ findable by meaning.
+    let label = organ
+        .organ_key
+        .rsplit('/')
+        .next()
+        .unwrap_or(&organ.organ_key)
+        .trim_end_matches(".glb")
+        .trim_end_matches(".obj")
+        .trim_end_matches(".gltf")
+        .to_string();
+    let descriptors = Descriptors {
+        topics: vec!["anatomy".into(), "biology".into(), organ.system_id.clone()],
+        depicts: vec![label],
+        document_type: Some("3d-anatomy-model".into()),
+        ..Default::default()
+    };
+    let (dq, dl) = descriptors_to_nquins(primary.subject(), &descriptors);
+    quins.extend(dq);
+    for (k, v) in dl {
+        lexicon.entry(k).or_insert(v);
+    }
+
+    OrganContainer { container, quins, lexicon }
+}
+
+/// Bundle a model's organ containers into a single **body** container — one addressable unit whose members
+/// are the organs (so the body is a semantic bundle, not a folder of files). Returns the body container + the
+/// combined quin graph (every organ container's quins + the body's bundling edges + descriptors).
+pub fn body_container(model: AnatomyModel, organs: &[OrganContainer]) -> OrganContainer {
+    let body_uri = format!("urn:qualia:anatomy:{}:body", model.as_str());
+    let primary = AssetRef::new(&body_uri, 0, "application/qualia-body", AssetRole::Primary);
+    let mut container = HypermediaContainer::new(
+        format!("urn:qualia:container:{}:body", model.as_str()),
+        primary.clone(),
+    );
+    for oc in organs {
+        // Each organ's primary asset is a member of the body.
+        let p = &oc.container.primary;
+        container = container.with_related(AssetRef::new(&p.uri, p.digest, &p.media_type, AssetRole::Related));
+    }
+
+    let (mut quins, mut lexicon) = container_to_nquins(&container);
+    for oc in organs {
+        quins.extend(oc.quins.iter().cloned());
+        for (k, v) in &oc.lexicon {
+            lexicon.entry(*k).or_insert_with(|| v.clone());
+        }
+    }
+    let descriptors = Descriptors {
+        topics: vec!["anatomy".into(), "biology".into()],
+        depicts: vec![format!("{} body", model.as_str())],
+        document_type: Some("3d-anatomy-body".into()),
+        ..Default::default()
+    };
+    let (dq, dl) = descriptors_to_nquins(primary.subject(), &descriptors);
+    quins.extend(dq);
+    for (k, v) in dl {
+        lexicon.entry(k).or_insert(v);
+    }
+    OrganContainer { container, quins, lexicon }
 }
 
 #[cfg(test)]
@@ -198,5 +318,42 @@ mod tests {
         assert_eq!(result.compiled_count(), 0);
         assert_eq!(result.failed.len(), 1);
         assert_eq!(result.failed[0].0, "3d-vh-f-lung.glb");
+    }
+
+    #[test]
+    fn organ_becomes_a_searchable_provenance_carrying_container() {
+        use qualia_core_db::hypermedia::{by_topic, derived_from, provenance_of};
+        let organs = vec![("3d-vh-m-lung.obj".to_string(), TRI_OBJ.to_vec())];
+        let body = compile_body(AnatomyModel::Male, &organs);
+        let organ = &body.organs[0];
+        let oc = organ_container(organ, AnatomyModel::Male, Some("https://cdn.humanatlas.io/hra/lung.glb"));
+
+        let primary = oc.container.primary.subject();
+        // Findable by MEANING (its system + generic topics), not by a folder path.
+        assert!(by_topic(&oc.quins, "respiratory").contains(&primary), "found by system topic");
+        assert!(by_topic(&oc.quins, "anatomy").contains(&primary));
+        // Lineage + provenance are edges on the asset.
+        assert!(!derived_from(&oc.quins, primary).is_empty(), "derived from its source GLB");
+        assert!(provenance_of(&oc.quins, primary).is_some(), "provenance record bound");
+        // The container joins to the organ's own geometry manifest (one identity space).
+        let vals: Vec<&str> = oc.lexicon.values().map(String::as_str).collect();
+        assert!(vals.contains(&"respiratory"), "manifest system fact present in the container");
+        assert!(oc.quins.iter().all(|q| q.verify_ecc_parity()), "all quins valid parity");
+    }
+
+    #[test]
+    fn body_container_bundles_the_organs_as_a_semantic_unit() {
+        use qualia_core_db::hypermedia::bundled;
+        let organs = vec![
+            ("3d-vh-m-lung.obj".to_string(), TRI_OBJ.to_vec()),
+            ("3d-vh-m-blood-vasculature.obj".to_string(), TRI_OBJ.to_vec()),
+        ];
+        let result = compile_body(AnatomyModel::Male, &organs);
+        let ocs: Vec<_> =
+            result.organs.iter().map(|o| organ_container(o, AnatomyModel::Male, None)).collect();
+        let body = body_container(AnatomyModel::Male, &ocs);
+        // The body is a semantic bundle of its organ members, not a folder of files.
+        let members = bundled(&body.quins, body.container.subject());
+        assert!(members.len() >= 2, "body bundles its organ members");
     }
 }

@@ -49,6 +49,7 @@ pub mod integrity;
 pub mod mesh_section;
 pub mod metric_check;
 pub mod node_section;
+pub mod provenance_section;
 pub mod section;
 // `topology_section` and `spatial_index_section` depend on
 // `crate::specialized_libs::computational_geometry`, which is itself gated
@@ -90,6 +91,12 @@ pub use node_section::{
     transpose_aos_to_soa, transpose_soa_to_aos, write_node_q_at, write_node_section_aos,
     write_node_section_soa, NodeMiniHeader, NodeSectionError, AXIS_COUNT, LAYOUT_AOS, LAYOUT_SOA,
     MAX_NODE_COUNT, NODE_MINI_HEADER_SIZE, TENSOR10D_SIZE,
+};
+pub use provenance_section::{
+    decode_provenance_section, encode_provenance_section, encoded_len as provenance_encoded_len,
+    validate_provenance, ProvenanceMiniHeader, ProvenanceSectionError, ProvenanceSidecar,
+    ProvenanceSidecarView, FLAG_HAS_VC, PROVENANCE_MAGIC, PROVENANCE_MINI_HEADER_SIZE,
+    PROVENANCE_SECTION_VERSION,
 };
 pub use section::{
     encode_container, parse_section_table, AlignmentTier, SectionDescriptor, SectionInput,

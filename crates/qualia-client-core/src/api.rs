@@ -2434,6 +2434,8 @@ pub fn accept_connection(link: String) -> Result<serde_json::Value, String> {
         relation_type: ci.relation_type.clone(),
         added_at: mail_now_unix(),
         active: true,
+        // Set separately once the peer publishes their envelope key (or via the handshake, later).
+        envelope_pubkey_hex: None,
     };
     crate::social_peers::register_peer(peer.clone())?;
     serde_json::to_value(peer).map_err(|e| e.to_string())

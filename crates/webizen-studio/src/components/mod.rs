@@ -52,6 +52,7 @@ pub mod matrix_lab;
 pub mod mcp_inspector;
 pub mod model_lifecycle;
 pub mod n3_logic_studio;
+pub mod logic_modeler;
 pub mod ode_solver;
 pub mod p2p_dashboard;
 pub mod physics_simulator;

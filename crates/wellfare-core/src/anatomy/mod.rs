@@ -19,11 +19,16 @@
 //! identity.
 
 mod accumulate;
+mod birth;
 mod bridge;
+mod dyad;
 mod factor;
 mod knowledge;
 mod lens;
 mod model;
+mod pathway;
+mod physiology;
+mod scorecard;
 mod systems;
 mod temporal;
 
@@ -40,6 +45,26 @@ pub use lens::{build_view, burden_to_sigma, AnatomyView, Lens, SystemView, Wellb
 pub use model::{
     body_system_for_organ, normalize_organ_key, overlay_host_systems, system_representation,
     AnatomyModel, Karyotype, SystemRepresentation,
+};
+pub use physiology::{
+    state_modulator, whole_body_profile, CyclePhase, EngagementLevel, PhysiologicalState,
+    ReproductiveState, StateModulator, SystemEngagement, Trimester,
+};
+pub use birth::{
+    AgencyStage, BiometricClass, BirthRecordInvalid, CredentialRef, DigitalBirthRecord, Guardianship,
+    GuardianshipCredential, Steward, StewardBasis, StewardRole,
+};
+pub use dyad::{
+    ConsiderationKind, DyadConsideration, DyadInvalid, EmergingChild, InterfaceKind, MaternalBody,
+    MaternalFetalDyad, Parentage, PrincipalRef, Progenitor, RightsStage, SocialRightsThreshold,
+};
+pub use pathway::{
+    hypotheses_from_implications, investigative_pathway, value_of_information, Hypothesis,
+    InvestigativePathway, InvestigativeStep, RankedStep, StepKind,
+};
+pub use scorecard::{
+    score_card, seed_weight_model, Aspect, AspectScore, Contribution, ContributionKind, ForumClass,
+    ScoreBand, ScoreCard, SystemAspectWeight, WeightModel,
 };
 pub use knowledge::{
     import_condition_map, import_entries, seed_knowledge_base, FactorKnowledge, ImportResult,

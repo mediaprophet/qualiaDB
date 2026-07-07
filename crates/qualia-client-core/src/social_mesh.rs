@@ -194,6 +194,7 @@ mod tests {
             relation_type: "spc:Collaboration".into(),
             added_at: 0,
             active,
+            envelope_pubkey_hex: None,
         }
     }
 

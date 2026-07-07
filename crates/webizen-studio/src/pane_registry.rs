@@ -684,6 +684,16 @@ pub fn builtin_pane_definitions() -> Vec<PaneDefinition> {
             rdf_type_hash: q42("q42:N3LogicStudio"),
         },
         PaneDefinition {
+            component_id: "qualia-logic-modeler".into(),
+            display_name: "Logic Modeler".into(),
+            element_tag: "qualia-logic-modeler".into(),
+            icon: "diagram-3".into(),
+            category: PaneCategory::Governance,
+            default_w: 10,
+            default_h: 8,
+            rdf_type_hash: q42("q42:LogicModeler"),
+        },
+        PaneDefinition {
             component_id: "rdf-star-editor".into(),
             display_name: "RDF-Star Editor".into(),
             element_tag: "rdf-star-editor".into(),

@@ -42,6 +42,11 @@ pub struct SocialPeer {
     /// Whether the peering is currently active (a soft on/off that leaves the
     /// record in place).
     pub active: bool,
+    /// The peer's **envelope (X25519) public key**, hex — the key to *seal payloads to* this peer (distinct
+    /// from the WireGuard key, which routes packets). Lets the accountability fabric resolve a
+    /// worker/trustee's key from their peer record instead of pasting it. `None` until the peer publishes it.
+    #[serde(default)]
+    pub envelope_pubkey_hex: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -119,6 +124,29 @@ pub fn remove_peer(did: &str) -> Result<(), String> {
     save_peers(&peers)
 }
 
+/// Set the peer's **envelope (X25519) public key** (hex), then persist. Errors if no such peer.
+pub fn set_peer_envelope_key(did: &str, pubkey_hex: &str) -> Result<(), String> {
+    let mut peers = list_peers();
+    match peers.iter_mut().find(|p| p.did == did) {
+        Some(p) => p.envelope_pubkey_hex = Some(pubkey_hex.to_string()),
+        None => return Err(format!("no peer with did {did}")),
+    }
+    save_peers(&peers)
+}
+
+/// Resolve `dids` to `(did, envelope_pubkey_hex)` pairs from `peers` — the parties whose envelope key is
+/// known. Parties without a published key (or not peered) are simply omitted (the caller learns which keys
+/// are still missing by comparing lengths). Pure; unit-tested.
+pub fn resolve_envelope_keys(peers: &[SocialPeer], dids: &[String]) -> Vec<(String, String)> {
+    dids.iter()
+        .filter_map(|did| {
+            find(peers, did)
+                .and_then(|p| p.envelope_pubkey_hex.clone())
+                .map(|pk| (did.clone(), pk))
+        })
+        .collect()
+}
+
 // ---------------------------------------------------------------------------
 // Tests — PURE ONLY. These operate on a local `Vec<SocialPeer>` via the
 // pure helpers and never touch the real filesystem / app dir.
@@ -138,6 +166,7 @@ mod tests {
             relation_type: "collaboration".to_string(),
             added_at: 1_700_000_000,
             active: true,
+            envelope_pubkey_hex: None,
         }
     }
 
@@ -149,6 +178,20 @@ mod tests {
         assert_eq!(peers.len(), 2);
         assert_eq!(peers[0].did, "did:key:alice");
         assert_eq!(peers[1].did, "did:key:bob");
+    }
+
+    #[test]
+    fn resolve_envelope_keys_returns_only_peers_with_a_published_key() {
+        let mut alice = peer("did:key:alice", "Alice");
+        alice.envelope_pubkey_hex = Some("ab".repeat(32));
+        let bob = peer("did:key:bob", "Bob"); // no envelope key yet
+        let peers = vec![alice, bob];
+        let resolved = resolve_envelope_keys(
+            &peers,
+            &["did:key:alice".to_string(), "did:key:bob".to_string(), "did:key:carol".to_string()],
+        );
+        // Only Alice has a key; Bob (no key) and Carol (not a peer) are omitted.
+        assert_eq!(resolved, vec![("did:key:alice".to_string(), "ab".repeat(32))]);
     }
 
     #[test]

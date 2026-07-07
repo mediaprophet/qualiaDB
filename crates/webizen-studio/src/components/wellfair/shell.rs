@@ -1,5 +1,10 @@
+use super::accountability_panel::WellfairAccountabilityPanel;
+use super::disclosure_inquiry_panel::WellfairDisclosureInquiryPanel;
+use super::library_panel::WellfairLibraryPanel;
 use super::agency_panel::WellfairAgencyPanel;
 use super::anatomy_panel::WellfairAnatomyPanel;
+use super::safeguards_panel::WellfairSafeguardsPanel;
+use super::scorecard_panel::WellfairScorecardPanel;
 use super::assessment_panel::WellfairAssessmentPanel;
 use super::clinical_panel::WellfairClinicalPanel;
 use super::consent_panel::WellfairConsentPanel;
@@ -33,12 +38,15 @@ const AREAS: &[(&str, &str)] = &[
     ("Personal", "Phase 2 — profile and accessibility"),
     ("Health", "Phase 2 — observations and sleep"),
     ("Anatomy", "Whole-person systemic view"),
+    ("Library", "Find your files by meaning"),
     ("Clinical", "Phase 3 — documents and pathology"),
     ("Life", "Phase 3 — events and welfare"),
     ("Relationships", "Phase 2 — Social Book + consent"),
     ("Consent", "Phase 2 — access profiles"),
     ("Guardianship", "Supported agency — co-signature"),
     ("Agency", "Supported agency — domains & delegations"),
+    ("Accountability", "Consent credentials & tamper-evident ledger"),
+    ("Safeguards", "Dead-man & incapacity switches"),
     ("Sanctuary", "Phase 3 — isolated domain"),
     ("Communications", "Phase 4 — live share consent"),
     ("Projects", "Phase 5 — cooperative work"),
@@ -88,7 +96,11 @@ pub fn WellfairShell() -> Element {
             WellfairSleepPanel {}
             WellfairMedicationPanel {}
         },
-        "Anatomy" => rsx! { WellfairAnatomyPanel {} },
+        "Anatomy" => rsx! {
+            WellfairScorecardPanel {}
+            WellfairAnatomyPanel {}
+        },
+        "Library" => rsx! { WellfairLibraryPanel {} },
         "Life" => rsx! {
             WellfairLifePanel {}
             WellfairWelfarePanel {}
@@ -105,6 +117,11 @@ pub fn WellfairShell() -> Element {
         "Consent" => rsx! { WellfairConsentPanel {} },
         "Guardianship" => rsx! { WellfairGuardianshipPanel {} },
         "Agency" => rsx! { WellfairAgencyPanel {} },
+        "Accountability" => rsx! {
+            WellfairAccountabilityPanel {}
+            WellfairDisclosureInquiryPanel {}
+        },
+        "Safeguards" => rsx! { WellfairSafeguardsPanel {} },
         "Communications" => rsx! {
             WellfairCommunicationsPanel {}
             CompanionPairingPanel {}

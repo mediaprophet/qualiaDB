@@ -153,6 +153,10 @@ pub mod triangulation_opt;
 /// balance, conforming 2-D triangulation with hanging-node templates, 3-D
 /// hex/tet extraction).
 pub mod quad_octree_mesh;
+/// P13.5 — Advancing-front surface (2-D) and volume (3-D) meshing with
+/// deterministic shortest-edge/face-first ordering, self-crossing guards,
+/// and typed obstructions.
+pub mod advancing_front;
 mod surface_mesh;
 mod surface_mesh_processing;
 mod tool;
@@ -430,6 +434,10 @@ pub use quad_octree_mesh::{
     size_field_2d_fn, size_target_refiner_2d, size_target_refiner_3d, OctLeaf, OctMeshError,
     OctMeshOptions, OctNode, OctTree, OCT_MAX_LEVEL, QuadLeaf, QuadMeshError, QuadMeshOptions,
     QuadNode, QuadTree, QUAD_MAX_LEVEL,
+};
+pub use advancing_front::{
+    advancing_front_tetrahedralise_3d, advancing_front_triangulate_2d, FrontError,
+    FrontOptions2d, FrontOptions3d, FrontResult2d, FrontResult3d,
 };
 
 /// Versioned native geometry ABI. Increment only when public POD layouts or

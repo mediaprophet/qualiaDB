@@ -2756,3 +2756,736 @@ pub async fn fetch_diagnostics() -> Result<DiagnosticsDto, String> {
 pub async fn fetch_diagnostics() -> Result<DiagnosticsDto, String> {
     Ok(DiagnosticsDto::default())
 }
+
+// ── Accountability fabric (ADR 0011) — tamper-evident ledger + revocable consent credentials ──
+//
+// Bridges the desktop backend (store + host API + Tauri commands) to the Studio panel. Responses are
+// returned as `serde_json::Value` so the panel renders from JSON without duplicating the client-core types
+// as Studio DTOs. Each has a non-wasm stub (these need the Tauri host).
+
+/// Verify the tamper-evident ledger. Returns `{ "ok": bool, "tamper": <detail|null> }`.
+#[cfg(target_arch = "wasm32")]
+pub async fn ledger_verify() -> Result<serde_json::Value, String> {
+    let js = tauri_invoke("wellfair_ledger_verify", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "ledger verify not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn ledger_verify() -> Result<serde_json::Value, String> {
+    Err("The accountability ledger requires the Tauri desktop host".into())
+}
+
+/// The most-recent ledger entries (newest first), capped to `limit`.
+#[cfg(target_arch = "wasm32")]
+pub async fn ledger_entries(limit: usize) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"limit".into(), &wasm_bindgen::JsValue::from_f64(limit as f64))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_ledger_entries", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "ledger entries not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn ledger_entries(_limit: usize) -> Result<serde_json::Value, String> {
+    Err("The accountability ledger requires the Tauri desktop host".into())
+}
+
+/// Grant a consent credential to an agent over a committed payload (subject = vault owner).
+#[cfg(target_arch = "wasm32")]
+pub async fn grant_consent_credential(
+    agent_did: &str,
+    scope: &str,
+    purpose: &str,
+    commitment_hex: &str,
+    wrapped_key_hex: &str,
+    expiry_unix: Option<u64>,
+) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    for (key, val) in [
+        ("agentDid", agent_did),
+        ("scope", scope),
+        ("purpose", purpose),
+        ("commitmentHex", commitment_hex),
+        ("wrappedKeyHex", wrapped_key_hex),
+    ] {
+        js_sys::Reflect::set(&args, &key.into(), &wasm_bindgen::JsValue::from_str(val))
+            .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    if let Some(exp) = expiry_unix {
+        js_sys::Reflect::set(&args, &"expiryUnix".into(), &wasm_bindgen::JsValue::from_f64(exp as f64))
+            .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_grant_consent_credential", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "grant response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn grant_consent_credential(
+    _agent_did: &str,
+    _scope: &str,
+    _purpose: &str,
+    _commitment_hex: &str,
+    _wrapped_key_hex: &str,
+    _expiry_unix: Option<u64>,
+) -> Result<serde_json::Value, String> {
+    Err("Consent credentials require the Tauri desktop host".into())
+}
+
+/// Revoke a consent credential — crypto-enforced (the wrapped key is destroyed). Returns whether one was live.
+#[cfg(target_arch = "wasm32")]
+pub async fn revoke_consent_credential(credential_id: &str) -> Result<bool, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"credentialId".into(), &wasm_bindgen::JsValue::from_str(credential_id))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_revoke_consent_credential", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "revoke response not JSON".to_string())?;
+    let v: serde_json::Value = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    Ok(v.get("revoked").and_then(|x| x.as_bool()).unwrap_or(false))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn revoke_consent_credential(_credential_id: &str) -> Result<bool, String> {
+    Err("Consent credentials require the Tauri desktop host".into())
+}
+
+/// List stored consent credentials (active and revoked — revoked rows remain as the audit anchor).
+#[cfg(target_arch = "wasm32")]
+pub async fn list_consent_credentials() -> Result<serde_json::Value, String> {
+    let js = tauri_invoke("wellfair_list_consent_credentials", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "credentials list not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn list_consent_credentials() -> Result<serde_json::Value, String> {
+    Err("Consent credentials require the Tauri desktop host".into())
+}
+
+/// Record an agent's conduct under a credential — signed, into the durable trail + tamper-evident ledger.
+#[cfg(target_arch = "wasm32")]
+pub async fn record_conduct(
+    agent_did: &str,
+    credential_id: &str,
+    action: &str,
+    reason: &str,
+    commitment_hex: &str,
+) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    for (key, val) in [
+        ("agentDid", agent_did),
+        ("credentialId", credential_id),
+        ("action", action),
+        ("reason", reason),
+        ("commitmentHex", commitment_hex),
+    ] {
+        js_sys::Reflect::set(&args, &key.into(), &wasm_bindgen::JsValue::from_str(val))
+            .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_record_conduct", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "conduct response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn record_conduct(
+    _agent_did: &str,
+    _credential_id: &str,
+    _action: &str,
+    _reason: &str,
+    _commitment_hex: &str,
+) -> Result<serde_json::Value, String> {
+    Err("Conduct records require the Tauri desktop host".into())
+}
+
+/// The audit view — every conduct record taken under one credential (survives its revocation).
+#[cfg(target_arch = "wasm32")]
+pub async fn conduct_audit_trail(credential_id: &str) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"credentialId".into(), &wasm_bindgen::JsValue::from_str(credential_id))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_conduct_audit_trail", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "audit trail not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn conduct_audit_trail(_credential_id: &str) -> Result<serde_json::Value, String> {
+    Err("Conduct records require the Tauri desktop host".into())
+}
+
+/// The accumulative, traceable well-being **score-card** over the person's own records — forum-internum /
+/// Sanctuary-class; a set of Hypotheses + pathway-starts, never a diagnosis, never a rating.
+#[cfg(target_arch = "wasm32")]
+pub async fn compute_scorecard(threshold: usize) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"threshold".into(), &wasm_bindgen::JsValue::from_f64(threshold as f64))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_compute_scorecard", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "score-card not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn compute_scorecard(_threshold: usize) -> Result<serde_json::Value, String> {
+    Err("The score-card requires the Tauri desktop host".into())
+}
+
+/// The person's own weight model + the seed suggestion + whether authored. `{ model, seed, authored }`.
+#[cfg(target_arch = "wasm32")]
+pub async fn get_weight_model() -> Result<serde_json::Value, String> {
+    let js = tauri_invoke("wellfair_get_weight_model", wasm_bindgen::JsValue::NULL).await.map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "weight model not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn get_weight_model() -> Result<serde_json::Value, String> {
+    Err("The score-card requires the Tauri desktop host".into())
+}
+
+/// Set the person's own weight model (`model_json` = a serialized `WeightModel`).
+#[cfg(target_arch = "wasm32")]
+pub async fn set_weight_model(model_json: &str) -> Result<(), String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"modelJson".into(), &wasm_bindgen::JsValue::from_str(model_json)).map_err(|_| "args".to_string())?;
+    tauri_invoke("wellfair_set_weight_model", args.into()).await.map_err(|e| format!("{e:?}"))?;
+    Ok(())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn set_weight_model(_model_json: &str) -> Result<(), String> {
+    Err("The score-card requires the Tauri desktop host".into())
+}
+
+/// Reset the weight model to the seed suggestion.
+#[cfg(target_arch = "wasm32")]
+pub async fn reset_weight_model() -> Result<(), String> {
+    tauri_invoke("wellfair_reset_weight_model", wasm_bindgen::JsValue::NULL).await.map_err(|e| format!("{e:?}"))?;
+    Ok(())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn reset_weight_model() -> Result<(), String> {
+    Err("The score-card requires the Tauri desktop host".into())
+}
+
+// ── Hypermedia asset library: ingest a document → find it by meaning ──
+
+/// Ingest a text document (derive topics + searchable text; guardianship flag→notify). Returns a summary.
+#[cfg(target_arch = "wasm32")]
+pub async fn ingest_document(uri: &str, media_type: &str, text: &str, guardian_did: Option<String>) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    for (k, v) in [("uri", uri), ("mediaType", media_type), ("text", text)] {
+        js_sys::Reflect::set(&args, &k.into(), &wasm_bindgen::JsValue::from_str(v)).map_err(|_| "args".to_string())?;
+    }
+    if let Some(g) = guardian_did {
+        js_sys::Reflect::set(&args, &"guardianDid".into(), &wasm_bindgen::JsValue::from_str(&g)).map_err(|_| "args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_ingest_document", args.into()).await.map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "ingest response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn ingest_document(_u: &str, _m: &str, _t: &str, _g: Option<String>) -> Result<serde_json::Value, String> {
+    Err("The library requires the Tauri desktop host".into())
+}
+
+/// Search the library by facet (topic/depicts/place/project/purpose). Returns entry summaries.
+#[cfg(target_arch = "wasm32")]
+pub async fn search_library(facet: &str, value: &str) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"facet".into(), &wasm_bindgen::JsValue::from_str(facet)).map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"value".into(), &wasm_bindgen::JsValue::from_str(value)).map_err(|_| "args".to_string())?;
+    let js = tauri_invoke("wellfair_search_library", args.into()).await.map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "search response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn search_library(_f: &str, _v: &str) -> Result<serde_json::Value, String> {
+    Err("The library requires the Tauri desktop host".into())
+}
+
+/// Everything in the library (newest first).
+#[cfg(target_arch = "wasm32")]
+pub async fn list_library() -> Result<serde_json::Value, String> {
+    let js = tauri_invoke("wellfair_list_library", wasm_bindgen::JsValue::NULL).await.map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "list response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn list_library() -> Result<serde_json::Value, String> {
+    Err("The library requires the Tauri desktop host".into())
+}
+
+// ── Real envelope encryption over the consent credential (ADR 0011 D1/D2) ──
+
+/// The owner's envelope PUBLIC key (hex) — publishable so others can seal payloads to the owner.
+#[cfg(target_arch = "wasm32")]
+pub async fn owner_envelope_public() -> Result<String, String> {
+    let js = tauri_invoke("wellfair_owner_envelope_public", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "owner key not JSON".to_string())?;
+    let v: serde_json::Value = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    Ok(v.get("public_hex").and_then(|x| x.as_str()).unwrap_or_default().to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn owner_envelope_public() -> Result<String, String> {
+    Err("Envelope encryption requires the Tauri desktop host".into())
+}
+
+/// Seal a real plaintext payload and grant a consent credential over it (real envelope encryption).
+#[cfg(target_arch = "wasm32")]
+pub async fn seal_and_grant_credential(
+    agent_did: &str,
+    agent_public_hex: &str,
+    scope: &str,
+    purpose: &str,
+    plaintext: &str,
+    expiry_unix: Option<u64>,
+) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    for (key, val) in [
+        ("agentDid", agent_did),
+        ("agentPublicHex", agent_public_hex),
+        ("scope", scope),
+        ("purpose", purpose),
+        ("plaintext", plaintext),
+    ] {
+        js_sys::Reflect::set(&args, &key.into(), &wasm_bindgen::JsValue::from_str(val))
+            .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    if let Some(exp) = expiry_unix {
+        js_sys::Reflect::set(&args, &"expiryUnix".into(), &wasm_bindgen::JsValue::from_f64(exp as f64))
+            .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_seal_and_grant_credential", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "seal-grant response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn seal_and_grant_credential(
+    _agent_did: &str,
+    _agent_public_hex: &str,
+    _scope: &str,
+    _purpose: &str,
+    _plaintext: &str,
+    _expiry_unix: Option<u64>,
+) -> Result<serde_json::Value, String> {
+    Err("Envelope encryption requires the Tauri desktop host".into())
+}
+
+/// Open an owner-sealed payload through a credential — returns the decrypted plaintext (fails once revoked).
+#[cfg(target_arch = "wasm32")]
+pub async fn open_owner_payload(credential_id: &str) -> Result<String, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"credentialId".into(), &wasm_bindgen::JsValue::from_str(credential_id))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_open_owner_payload", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "open response not JSON".to_string())?;
+    let v: serde_json::Value = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    Ok(v.get("plaintext").and_then(|x| x.as_str()).unwrap_or_default().to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn open_owner_payload(_credential_id: &str) -> Result<String, String> {
+    Err("Envelope encryption requires the Tauri desktop host".into())
+}
+
+// ── Safeguard switches (ADR 0011 D6/D7): dead-man + incapacity ──
+
+/// Generic single-string-arg invoke returning parsed JSON `Value` (for the switch commands).
+#[cfg(target_arch = "wasm32")]
+async fn invoke_str_arg(cmd: &str, key: &str, val: &str) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &key.into(), &wasm_bindgen::JsValue::from_str(val))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke(cmd, args.into()).await.map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+
+/// Arm a dead-man switch from primitive fields. `disposition` = `"make_public"` | `"release_to"`.
+#[cfg(target_arch = "wasm32")]
+#[allow(clippy::too_many_arguments)]
+pub async fn arm_dead_mans_switch(
+    commitment_hex: &str,
+    lapse_after_secs: u64,
+    parties: Vec<String>,
+    threshold: usize,
+    disposition: &str,
+    disposition_parties: Vec<String>,
+) -> Result<(), String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"commitmentHex".into(), &wasm_bindgen::JsValue::from_str(commitment_hex))
+        .map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"lapseAfterSecs".into(), &wasm_bindgen::JsValue::from_f64(lapse_after_secs as f64))
+        .map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"parties".into(), &serde_wasm_bindgen::to_value(&parties).map_err(|e| e.to_string())?)
+        .map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"threshold".into(), &wasm_bindgen::JsValue::from_f64(threshold as f64))
+        .map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"disposition".into(), &wasm_bindgen::JsValue::from_str(disposition))
+        .map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"dispositionParties".into(), &serde_wasm_bindgen::to_value(&disposition_parties).map_err(|e| e.to_string())?)
+        .map_err(|_| "args".to_string())?;
+    tauri_invoke("wellfair_arm_dead_mans_switch", args.into()).await.map_err(|e| format!("{e:?}"))?;
+    Ok(())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn arm_dead_mans_switch(
+    _commitment_hex: &str,
+    _lapse_after_secs: u64,
+    _parties: Vec<String>,
+    _threshold: usize,
+    _disposition: &str,
+    _disposition_parties: Vec<String>,
+) -> Result<(), String> {
+    Err("Safeguard switches require the Tauri desktop host".into())
+}
+
+/// "I'm alive" — touch a dead-man switch's heartbeat.
+#[cfg(target_arch = "wasm32")]
+pub async fn dead_mans_alive(commitment_hex: &str) -> Result<bool, String> {
+    let v = invoke_str_arg("wellfair_dead_mans_alive", "commitmentHex", commitment_hex).await?;
+    Ok(v.get("found").and_then(|x| x.as_bool()).unwrap_or(false))
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn dead_mans_alive(_commitment_hex: &str) -> Result<bool, String> {
+    Err("Safeguard switches require the Tauri desktop host".into())
+}
+
+/// Record a party attestation toward a dead-man switch. `kind` = `no_contact` | `believed_dead` | `abandon`.
+#[cfg(target_arch = "wasm32")]
+pub async fn attest_dead_mans(commitment_hex: &str, party_did: &str, kind: &str) -> Result<bool, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"commitmentHex".into(), &wasm_bindgen::JsValue::from_str(commitment_hex))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"partyDid".into(), &wasm_bindgen::JsValue::from_str(party_did))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"kind".into(), &wasm_bindgen::JsValue::from_str(kind))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let js = tauri_invoke("wellfair_attest_dead_mans", args.into()).await.map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "response not JSON".to_string())?;
+    let v: serde_json::Value = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    Ok(v.get("found").and_then(|x| x.as_bool()).unwrap_or(false))
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn attest_dead_mans(_commitment_hex: &str, _party_did: &str, _kind: &str) -> Result<bool, String> {
+    Err("Safeguard switches require the Tauri desktop host".into())
+}
+
+/// Enact a dead-man switch — returns the disposition JSON (or null).
+#[cfg(target_arch = "wasm32")]
+pub async fn enact_dead_mans(commitment_hex: &str) -> Result<serde_json::Value, String> {
+    invoke_str_arg("wellfair_enact_dead_mans", "commitmentHex", commitment_hex).await
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn enact_dead_mans(_commitment_hex: &str) -> Result<serde_json::Value, String> {
+    Err("Safeguard switches require the Tauri desktop host".into())
+}
+
+/// List armed dead-man switches.
+#[cfg(target_arch = "wasm32")]
+pub async fn list_dead_mans_switches() -> Result<serde_json::Value, String> {
+    let js = tauri_invoke("wellfair_list_dead_mans_switches", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "list not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn list_dead_mans_switches() -> Result<serde_json::Value, String> {
+    Err("Safeguard switches require the Tauri desktop host".into())
+}
+
+/// Enact a dead-man switch AND release the keys to the disposition parties. `party_keys` = `(did, pubkey_hex)`.
+#[cfg(target_arch = "wasm32")]
+pub async fn enact_dead_mans_release(commitment_hex: &str, party_keys: Vec<(String, String)>) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"commitmentHex".into(), &wasm_bindgen::JsValue::from_str(commitment_hex)).map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"partyKeys".into(), &serde_wasm_bindgen::to_value(&party_keys).map_err(|e| e.to_string())?).map_err(|_| "args".to_string())?;
+    let js = tauri_invoke("wellfair_enact_dead_mans_release", args.into()).await.map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn enact_dead_mans_release(_commitment_hex: &str, _party_keys: Vec<(String, String)>) -> Result<serde_json::Value, String> {
+    Err("Safeguard switches require the Tauri desktop host".into())
+}
+
+/// Split a payload's DEK into Shamir social-recovery shares. Returns `{ threshold, shares: [{party, share}] }`.
+#[cfg(target_arch = "wasm32")]
+pub async fn split_dek_recovery(commitment_hex: &str, threshold: usize, parties: Vec<String>) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"commitmentHex".into(), &wasm_bindgen::JsValue::from_str(commitment_hex)).map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"threshold".into(), &wasm_bindgen::JsValue::from_f64(threshold as f64)).map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"parties".into(), &serde_wasm_bindgen::to_value(&parties).map_err(|e| e.to_string())?).map_err(|_| "args".to_string())?;
+    let js = tauri_invoke("wellfair_split_dek_recovery", args.into()).await.map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn split_dek_recovery(_c: &str, _t: usize, _p: Vec<String>) -> Result<serde_json::Value, String> {
+    Err("Safeguard switches require the Tauri desktop host".into())
+}
+
+/// Social-recovery enactment: reconstruct from friends' `shares` (a JSON array of Shamir shares) and release.
+#[cfg(target_arch = "wasm32")]
+pub async fn reconstruct_and_release(commitment_hex: &str, shares: serde_json::Value, party_keys: Vec<(String, String)>) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"commitmentHex".into(), &wasm_bindgen::JsValue::from_str(commitment_hex)).map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"shares".into(), &serde_wasm_bindgen::to_value(&shares).map_err(|e| e.to_string())?).map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"partyKeys".into(), &serde_wasm_bindgen::to_value(&party_keys).map_err(|e| e.to_string())?).map_err(|_| "args".to_string())?;
+    let js = tauri_invoke("wellfair_reconstruct_and_release", args.into()).await.map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn reconstruct_and_release(_c: &str, _s: serde_json::Value, _p: Vec<(String, String)>) -> Result<serde_json::Value, String> {
+    Err("Safeguard switches require the Tauri desktop host".into())
+}
+
+/// Publish a peer's envelope (X25519) public key into their peer record (remote-key distribution).
+#[cfg(target_arch = "wasm32")]
+pub async fn set_peer_envelope_key(did: &str, pubkey_hex: &str) -> Result<(), String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"did".into(), &wasm_bindgen::JsValue::from_str(did)).map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"pubkeyHex".into(), &wasm_bindgen::JsValue::from_str(pubkey_hex)).map_err(|_| "args".to_string())?;
+    tauri_invoke("wellfair_set_peer_envelope_key", args.into()).await.map_err(|e| format!("{e:?}"))?;
+    Ok(())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn set_peer_envelope_key(_did: &str, _pubkey_hex: &str) -> Result<(), String> {
+    Err("Safeguard switches require the Tauri desktop host".into())
+}
+
+/// Enact + release resolving the disposition parties' keys from the peer store. `{ result, missing_keys_for }`.
+#[cfg(target_arch = "wasm32")]
+pub async fn enact_dead_mans_release_via_peers(commitment_hex: &str) -> Result<serde_json::Value, String> {
+    invoke_str_arg("wellfair_enact_dead_mans_release_via_peers", "commitmentHex", commitment_hex).await
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn enact_dead_mans_release_via_peers(_commitment_hex: &str) -> Result<serde_json::Value, String> {
+    Err("Safeguard switches require the Tauri desktop host".into())
+}
+
+/// Arm an incapacity switch from primitive fields. `kind` = `involuntary_psychiatric` | `serious_injury` | ...
+#[cfg(target_arch = "wasm32")]
+#[allow(clippy::too_many_arguments)]
+pub async fn arm_incapacity_switch(
+    principal_did: &str,
+    kind: &str,
+    advocate_did: &str,
+    parties: Vec<String>,
+    threshold: usize,
+    require_official_instrument: bool,
+) -> Result<(), String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"principalDid".into(), &wasm_bindgen::JsValue::from_str(principal_did))
+        .map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"kind".into(), &wasm_bindgen::JsValue::from_str(kind))
+        .map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"advocateDid".into(), &wasm_bindgen::JsValue::from_str(advocate_did))
+        .map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"parties".into(), &serde_wasm_bindgen::to_value(&parties).map_err(|e| e.to_string())?)
+        .map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"threshold".into(), &wasm_bindgen::JsValue::from_f64(threshold as f64))
+        .map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"requireOfficialInstrument".into(), &wasm_bindgen::JsValue::from_bool(require_official_instrument))
+        .map_err(|_| "args".to_string())?;
+    tauri_invoke("wellfair_arm_incapacity_switch", args.into()).await.map_err(|e| format!("{e:?}"))?;
+    Ok(())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn arm_incapacity_switch(
+    _principal_did: &str,
+    _kind: &str,
+    _advocate_did: &str,
+    _parties: Vec<String>,
+    _threshold: usize,
+    _require_official_instrument: bool,
+) -> Result<(), String> {
+    Err("Safeguard switches require the Tauri desktop host".into())
+}
+
+/// Activate advocacy on a validated incapacity trigger.
+#[cfg(target_arch = "wasm32")]
+pub async fn activate_incapacity(
+    principal_did: &str,
+    attesting_parties: Vec<String>,
+    official_instrument: Option<String>,
+) -> Result<bool, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"principalDid".into(), &wasm_bindgen::JsValue::from_str(principal_did))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    let parties = serde_wasm_bindgen::to_value(&attesting_parties).map_err(|e| e.to_string())?;
+    js_sys::Reflect::set(&args, &"attestingParties".into(), &parties)
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    if let Some(instr) = official_instrument {
+        js_sys::Reflect::set(&args, &"officialInstrument".into(), &wasm_bindgen::JsValue::from_str(&instr))
+            .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_activate_incapacity", args.into()).await.map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "response not JSON".to_string())?;
+    let v: serde_json::Value = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    Ok(v.get("activated").and_then(|x| x.as_bool()).unwrap_or(false))
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn activate_incapacity(
+    _principal_did: &str,
+    _attesting_parties: Vec<String>,
+    _official_instrument: Option<String>,
+) -> Result<bool, String> {
+    Err("Safeguard switches require the Tauri desktop host".into())
+}
+
+/// Regain capacity — the advocate stands down.
+#[cfg(target_arch = "wasm32")]
+pub async fn regain_capacity(principal_did: &str) -> Result<bool, String> {
+    let v = invoke_str_arg("wellfair_regain_capacity", "principalDid", principal_did).await?;
+    Ok(v.get("found").and_then(|x| x.as_bool()).unwrap_or(false))
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn regain_capacity(_principal_did: &str) -> Result<bool, String> {
+    Err("Safeguard switches require the Tauri desktop host".into())
+}
+
+/// List armed incapacity switches.
+#[cfg(target_arch = "wasm32")]
+pub async fn list_incapacity_switches() -> Result<serde_json::Value, String> {
+    let js = tauri_invoke("wellfair_list_incapacity_switches", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "list not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn list_incapacity_switches() -> Result<serde_json::Value, String> {
+    Err("Safeguard switches require the Tauri desktop host".into())
+}
+
+// ── Disclosure traceability (ADR 0011 D5) + duty of inquiry (D8) ──
+
+/// Record a transparency cc (the protective "I informed authority X" note).
+#[cfg(target_arch = "wasm32")]
+pub async fn record_transparency_cc(credential_id: &str, informed_authority_did: &str, purpose: &str) -> Result<(), String> {
+    let args = js_sys::Object::new();
+    for (k, v) in [("credentialId", credential_id), ("informedAuthorityDid", informed_authority_did), ("purpose", purpose)] {
+        js_sys::Reflect::set(&args, &k.into(), &wasm_bindgen::JsValue::from_str(v)).map_err(|_| "args".to_string())?;
+    }
+    tauri_invoke("wellfair_record_transparency_cc", args.into()).await.map_err(|e| format!("{e:?}"))?;
+    Ok(())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn record_transparency_cc(_c: &str, _a: &str, _p: &str) -> Result<(), String> {
+    Err("Disclosure trace requires the Tauri desktop host".into())
+}
+
+/// Record a disclosure event (onward-share if `onward_to` set). Returns the event JSON (incl. fingerprint).
+#[cfg(target_arch = "wasm32")]
+pub async fn record_disclosure(
+    commitment_hex: &str,
+    credential_id: &str,
+    recipient_did: &str,
+    acting_delegate_did: Option<String>,
+    onward_to: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    for (k, v) in [("commitmentHex", commitment_hex), ("credentialId", credential_id), ("recipientDid", recipient_did)] {
+        js_sys::Reflect::set(&args, &k.into(), &wasm_bindgen::JsValue::from_str(v)).map_err(|_| "args".to_string())?;
+    }
+    if let Some(d) = acting_delegate_did {
+        js_sys::Reflect::set(&args, &"actingDelegateDid".into(), &wasm_bindgen::JsValue::from_str(&d)).map_err(|_| "args".to_string())?;
+    }
+    if let Some(t) = onward_to {
+        js_sys::Reflect::set(&args, &"onwardTo".into(), &wasm_bindgen::JsValue::from_str(&t)).map_err(|_| "args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_record_disclosure", args.into()).await.map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn record_disclosure(_c: &str, _cr: &str, _r: &str, _d: Option<String>, _o: Option<String>) -> Result<serde_json::Value, String> {
+    Err("Disclosure trace requires the Tauri desktop host".into())
+}
+
+/// The disclosure chain for a payload.
+#[cfg(target_arch = "wasm32")]
+pub async fn disclosure_chain(commitment_hex: &str) -> Result<serde_json::Value, String> {
+    invoke_str_arg("wellfair_disclosure_chain", "commitmentHex", commitment_hex).await
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn disclosure_chain(_commitment_hex: &str) -> Result<serde_json::Value, String> {
+    Err("Disclosure trace requires the Tauri desktop host".into())
+}
+
+/// The distinct actors who had access to a payload (leak-suspect set).
+#[cfg(target_arch = "wasm32")]
+pub async fn actors_with_access(commitment_hex: &str) -> Result<serde_json::Value, String> {
+    invoke_str_arg("wellfair_actors_with_access", "commitmentHex", commitment_hex).await
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn actors_with_access(_commitment_hex: &str) -> Result<serde_json::Value, String> {
+    Err("Disclosure trace requires the Tauri desktop host".into())
+}
+
+/// Trace a leak by fingerprint (hex) → `{ event }` (null if no match).
+#[cfg(target_arch = "wasm32")]
+pub async fn trace_leak(fingerprint_hex: &str) -> Result<serde_json::Value, String> {
+    invoke_str_arg("wellfair_trace_leak", "fingerprintHex", fingerprint_hex).await
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn trace_leak(_fingerprint_hex: &str) -> Result<serde_json::Value, String> {
+    Err("Disclosure trace requires the Tauri desktop host".into())
+}
+
+/// List transparency cc records.
+#[cfg(target_arch = "wasm32")]
+pub async fn list_transparency_ccs() -> Result<serde_json::Value, String> {
+    let js = tauri_invoke("wellfair_list_transparency_ccs", wasm_bindgen::JsValue::NULL).await.map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "list not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn list_transparency_ccs() -> Result<serde_json::Value, String> {
+    Err("Disclosure trace requires the Tauri desktop host".into())
+}
+
+/// Assess a duty of inquiry (`duty_json`, `conduct_json`) → the verdict string.
+#[cfg(target_arch = "wasm32")]
+pub async fn assess_duty_of_inquiry(duty_json: &str, conduct_json: &str) -> Result<String, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"dutyJson".into(), &wasm_bindgen::JsValue::from_str(duty_json)).map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"conductJson".into(), &wasm_bindgen::JsValue::from_str(conduct_json)).map_err(|_| "args".to_string())?;
+    let js = tauri_invoke("wellfair_assess_duty_of_inquiry", args.into()).await.map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "response not JSON".to_string())?;
+    let v: serde_json::Value = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    Ok(v.get("verdict").and_then(|x| x.as_str()).unwrap_or("").to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn assess_duty_of_inquiry(_duty_json: &str, _conduct_json: &str) -> Result<String, String> {
+    Err("Duty of inquiry requires the Tauri desktop host".into())
+}

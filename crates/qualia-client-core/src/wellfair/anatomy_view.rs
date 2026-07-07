@@ -14,8 +14,8 @@ use serde::{Deserialize, Serialize};
 
 use wellfare_core::anatomy::{
     self, body_system_for_organ, burden_to_sigma, overlay_host_systems, system_representation,
-    AnatomyView, KnowledgeBase, Lens, Provenance, RecordRef, SystemBurden, SystemRepresentation,
-    WellbeingLevel,
+    AnatomyView, Hypothesis, KnowledgeBase, Lens, PhysiologicalState, Provenance, RecordRef,
+    ScoreCard, SystemBurden, SystemRepresentation, WellbeingLevel,
 };
 
 use qualia_core_db::render::{acoustic, spectral};
@@ -276,6 +276,93 @@ pub fn build_report_from_journal(
 ) -> AnatomyViewReport {
     let refs = record_refs_from_journal(conditions, medications, diet);
     build_report(refs, lens, convergence_threshold)
+}
+
+/// Honest note for the score-card surface: it is the person's inward, forum-internum self-assessment — a
+/// discussion aid + pathway start, never a diagnosis, never a rating.
+const SCORECARD_DISCLOSURE: &str = "This score-card is your own inward reading (forum-internum, Sanctuary-class) — a set of Hypotheses to explore, not a diagnosis and not a rating. Each aspect links to the underlying considerations, and each is a starting point toward knowing more (questions to ask, what could be tracked or tested, levers you control, when a clinician you choose could help).";
+
+/// The accumulative, **traceable** score-card + the investigable hypotheses it surfaces — the reading a
+/// person can act on. Companion to [`AnatomyViewReport`]; **forum-internum, `Sanctuary`-class** selfhood
+/// content (the storage/consent layer must honour that).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WellbeingScorecardReport {
+    /// The score-card across health-relevant aspects, each score linked to its contributions.
+    pub scorecard: ScoreCard,
+    /// The investigable hypotheses (from converging systemic implications) — the seeds of the investigative
+    /// pathway (the step library that ranks next-steps by value-of-information is curation-grade, pending).
+    pub hypotheses: Vec<Hypothesis>,
+    /// Classification the storage/consent layer must honour: forum-internum (the person's inward domain).
+    pub forum_internum: bool,
+    /// The sensitivity class to store/handle this under (always `"Sanctuary"`, the most restrictive).
+    pub sensitivity_class: String,
+    /// How many records resolved to a factor / were considered.
+    pub mapped_count: usize,
+    pub total_records: usize,
+    pub disclosure: String,
+}
+
+/// Compute the score-card + investigable-hypotheses surface from records, using the **person's own weight
+/// model** — *their* authorship of how their body is read, not a lens the software imposes. The seed model is
+/// only a starting suggestion the person can edit or replace (see [`build_scorecard_report`]).
+pub fn build_scorecard_report_with_weights(
+    records: Vec<RecordRef>,
+    convergence_threshold: usize,
+    weight_model: &anatomy::WeightModel,
+) -> WellbeingScorecardReport {
+    let total_records = records.len();
+    let kb = host_knowledge_base();
+    let bridge = anatomy::records_to_factors(&records, &kb);
+    let scorecard = anatomy::score_card(
+        &bridge.factors,
+        convergence_threshold,
+        PhysiologicalState::Baseline,
+        weight_model,
+    );
+    let implications = anatomy::systemic_implications(&bridge.factors, convergence_threshold);
+    let hypotheses = anatomy::hypotheses_from_implications(&implications);
+    WellbeingScorecardReport {
+        forum_internum: scorecard.forum_class() == anatomy::ForumClass::Internum,
+        sensitivity_class: scorecard.sensitivity_class().to_string(),
+        scorecard,
+        hypotheses,
+        mapped_count: bridge.factors.len(),
+        total_records,
+        disclosure: SCORECARD_DISCLOSURE.to_string(),
+    }
+}
+
+/// Compute the score-card with the **seed** weight model — the *suggested* starting interpretation, used when
+/// the person has not (yet) authored their own. The physiological state defaults to
+/// [`PhysiologicalState::Baseline`] until the person declares one.
+pub fn build_scorecard_report(
+    records: Vec<RecordRef>,
+    convergence_threshold: usize,
+) -> WellbeingScorecardReport {
+    build_scorecard_report_with_weights(records, convergence_threshold, &anatomy::seed_weight_model())
+}
+
+/// One-shot: journal entries → score-card report, with the person's own weight model.
+pub fn build_scorecard_report_from_journal_with_weights(
+    conditions: &[JournalEntry],
+    medications: &[JournalEntry],
+    diet: &[JournalEntry],
+    convergence_threshold: usize,
+    weight_model: &anatomy::WeightModel,
+) -> WellbeingScorecardReport {
+    let refs = record_refs_from_journal(conditions, medications, diet);
+    build_scorecard_report_with_weights(refs, convergence_threshold, weight_model)
+}
+
+/// One-shot with the seed (suggested) weights.
+pub fn build_scorecard_report_from_journal(
+    conditions: &[JournalEntry],
+    medications: &[JournalEntry],
+    diet: &[JournalEntry],
+    convergence_threshold: usize,
+) -> WellbeingScorecardReport {
+    let refs = record_refs_from_journal(conditions, medications, diet);
+    build_scorecard_report(refs, convergence_threshold)
 }
 
 fn summary_value(entry: &JournalEntry) -> Option<serde_json::Value> {

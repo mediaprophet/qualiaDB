@@ -36,3 +36,4 @@ pub mod resolver;
 ))]
 pub mod shacl_compiler;
 pub mod temporal_graph;
+pub mod visual_model_bridge;

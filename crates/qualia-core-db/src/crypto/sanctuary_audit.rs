@@ -65,6 +65,15 @@ impl AuditKeypair {
         Ok(Self { public, secret })
     }
 
+    /// Construct a keypair from a caller-supplied 32-byte secret (e.g. a KDF-derived key). Lets an envelope
+    /// keypair be **re-derived from a root secret** rather than stored at rest. `StaticSecret::from` clamps
+    /// the scalar deterministically, so any 32 bytes are a valid secret and `seal_to(public)` /
+    /// `open_sealed(secret)` stay consistent.
+    pub fn from_secret(secret: [u8; 32]) -> Self {
+        let public = PublicKey::from(&StaticSecret::from(secret)).to_bytes();
+        Self { public, secret }
+    }
+
     /// The secret half — hold this only inside the real lane.
     pub fn secret_bytes(&self) -> &[u8; 32] {
         &self.secret

@@ -15,7 +15,9 @@ pub mod personal_profile;
 pub mod checkpoint_store;
 pub mod graph_store;
 pub mod host_state;
+pub mod hypermedia_store;
 pub mod import_samsung;
+pub mod ingest_guardian;
 pub mod journal;
 pub mod live_share;
 pub mod med_reminders;
@@ -25,6 +27,7 @@ pub mod policy;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod qapp_publish;
 pub mod receipt;
+pub mod scorecard_prefs;
 pub mod sanctuary;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod sanctuary_vault;

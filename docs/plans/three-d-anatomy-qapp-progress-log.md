@@ -692,3 +692,293 @@ writing — coordinate with the CG/.10d lane). Later fetal period (9 wk→birth)
 
 **Next step.** The reproductive-continuum P1 state machine (the female continuum as whole-body states) — the
 remaining substance of "the dignity of people born female," fully in-lane and mesh-independent.
+
+---
+
+## 2026-07-06 — P1: the reproductive-continuum state model (the continuum as whole-body states)
+
+Timothy: this is "the most important next set of tasks." Built + proven; the whole-body continuum layer
+the plan (`reproductive-continuum-and-maternal-fetal-dyad.md` §3.1–§3.2, §8) turns on.
+
+**What was built.** NEW `wellfare-core/src/anatomy/physiology.rs` (wired into `anatomy/mod.rs`):
+- **`ReproductiveState` state machine** — `PreMenarche → Cycling(CyclePhase) → Pregnant(Trimester) →
+  Postpartum (the fourth trimester) → Lactating → Perimenopause → PostMenopause`, with `CyclePhase`
+  (Menstrual→Follicular→Ovulatory→Luteal, wrapping) + `Trimester` (First/Second/Third, `week_span`).
+  `next_states()`/`can_transition_to()` encode the biological ordering (menarche opens cycling; conception
+  from any phase; gestation advances by trimester then to postpartum; perimenopause precedes menopause;
+  post-menopause terminal). `PhysiologicalState = Baseline | Reproductive(..)` (room for other states later).
+- **`StateModulator`** — the whole-body sibling of `EnvironmentModulator`: a per-system engagement scale
+  (percent) that scales an **external** adverse load per system (`apply_to_burdens`) — a nephrotoxic med is
+  a bigger ask on the kidneys in the third trimester (renal filtration already elevated) — **without
+  fabricating burden from the healthy state**. `as_environment_modulators` re-expresses a state as
+  `EnvironmentModulator`s so a state drops onto a `Timeline`.
+- **`whole_body_profile`** — the dignified, non-pathological view: which systems a state engages *above
+  baseline*, as `EngagementLevel` (Baseline/Elevated/High), never "adverse burden." Pregnancy engages the
+  whole body (circulatory/renal/respiratory/endocrine/musculoskeletal), deepening by trimester.
+
+**Design fidelity (the point of the plan).** The continuum is **baseline biology, not deviation** (§0/§1):
+a state is heightened *engagement*, not pathology; the modulator changes how an *external* load lands, it
+does not pathologise pregnancy/menstruation/menopause. Integer-only, coarse, non-diagnostic; every
+downstream implication still routes through the existing `Hypothesis` path.
+
+**Measured.** `wellfare-core --lib anatomy::physiology` **9/9**; full `anatomy::` **49/49**, zero warnings
+from the new module. No other lane touched.
+
+**⚑ Where I need Timothy (curation-grade, §9 — machinery built, content deferred).** The per-system
+engagement scale is a **coarse illustrative seed of well-established directions**, not authoritative
+magnitudes; and the plain-language state labels are neutral standard names. The **authoritative milestone
+content, the dignity-centered framing per state, and any clinician/midwife-signed specifics** are yours to
+supply — I built the state machine + modulator, not the curated continuum vocabulary.
+
+**Next step.** P2 — the maternal–fetal dyad *domain* model (two coupled bodies + guardianship / emerging-
+identity semantics), buildable now for the domain (the *visual* dyad stays gated on the developmental-body
+geometry source, §9.1). The S7b `anatomy_dyad.rs` placement is the geometry seed to build the domain onto.
+
+---
+
+## 2026-07-06 — the score-card: accumulative, traceable interpretation across aspects
+
+Timothy: "there should be a sort of score-card for different aspects, accumulatively interpreted, alongside
+linkages to underlying considerations; a bit like a human weights model for health / stress / illness /
+disease." Built as the **anti-black-box** reading of that idea.
+
+**What was built.** NEW `wellfare-core/src/anatomy/scorecard.rs` (+ mod.rs exports):
+- **`ScoreCard` of `Aspect`s** — six discussion *lenses*, not one reductive number: `SystemicLoad`, `Stress`,
+  `Resilience` (the supportive side, first-class), `Convergence`, `InteractionLoad`, `PhysiologicalDemand`
+  (ties in the P1 continuum state).
+- **Every `AspectScore` shows its work** — carries `Contribution`s linking back to the underlying
+  considerations (which system / factor / interaction / state, each with `weighted_milli` + `EvidenceTier`).
+  The score is never asserted; it is *traceable*. `dominant_evidence` per aspect; `EpistemicStatus::Hypothesis`
+  on every one; coarse dignity-framed `ScoreBand` (Settled/Building/Heightened/Marked).
+- **The "human weights model", written out** — `WeightModel` is a plain, inspectable `(system, aspect) →
+  weight` table (`seed_weight_model` seeds Stress/Resilience directions), NOT a hidden net. Read it, edit it.
+- **Integrated** — scores over the **state-modulated** burdens (P1), so "these factors, in this life stage"
+  is what's read (a nephrotoxic med scores as more systemic load in the third trimester).
+
+**Design stance (the point).** A "health score" is exactly what becomes a rating/surveillance weapon if built
+as one opaque grade — so this is the inverse: multi-aspect, fully traceable, non-diagnostic, the person's own
+tool (a counter-record for discussion with a clinician *they* choose — see human-centric-care-relationships),
+and it scores load/stress/resilience/convergence — the discussable *precursors* — **explicitly NOT "illness"
+or "disease"** (that's diagnosis, which this never does).
+
+**Measured.** `anatomy::scorecard` **7/7**; full `anatomy::` **56/56**; zero new warnings; only wellfare-core/
+anatomy touched.
+
+**⚑ Where I need Timothy (curation-grade, machinery built / content deferred).** The **set of aspects**, the
+**weights table**, and the **band thresholds + framing** are the interpretive heart — an illustrative seed
+now (well-established directions), authoritative curation is yours/an expert's. Also: does "resilience" want
+richer sub-structure (sleep / nutrition / social / movement)? and should the card ever surface a single
+"overall" roll-up, or is the multi-aspect card deliberately the whole point (I built the latter)?
+
+**Next step.** P2 — the maternal–fetal dyad *domain* model (per the reproductive-continuum plan), plus (on
+Timothy's steer) wiring the score-card into the host bridge (`wellfair/anatomy_view.rs`) + a Studio card view.
+
+---
+
+## 2026-07-06 — score-card = selfhood (forum internum); P2 = the maternal–fetal dyad domain model
+
+Two things this pass. (1) Timothy: "scorecard should be part of selfhood." Encoded **structurally**:
+`ScoreCard::forum_class() → ForumClass::Internum` + `sensitivity_class() → "Sanctuary"` are intrinsic to the
+type — a self-assessment of one's own body is inward, non-derogable selfhood content; any storage/consent
+layer must treat every card as most-restrictive, non-default-disclosed. New `ForumClass` enum
+(Internum/Externum). This is the type-system backing for "the person's own tool, not a rating weapon."
+(Store-level enforcement = the §H selfhood-store wiring in client-core/wellfair — coordinate.)
+
+(2) **P2 — the maternal–fetal dyad domain model.** NEW `wellfare-core/src/anatomy/dyad.rs` (+ mod.rs):
+`MaternalFetalDyad = MaternalBody (a principal in a pregnant `PhysiologicalState`) + FetalBody (an
+`EmergingPrincipal` held in guardianship, indexed on gestational-age `t`) + `InterfaceKind::Placenta`` —
+gestation as **two coupled principals, not one body with an organ** (§3.3). The **rights invariants are in
+the type + `validate()`**: `ChildIdentityCollapsed` (the child's pairwise DID must be non-empty AND ≠ the
+mother's — never a field of her record, never correlated by default), `NoGuardian` (an emerging principal is
+never unstewarded), `NotPregnant` (a dyad exists only in gestation), `ImplausibleGestationalAge`. Data is
+**forum-internum / Sanctuary**. `considerations()` emits only **structural/rights proposals**
+(`EpistemicStatus::Hypothesis`) — the cross-body medical correlation content is pointedly **not seeded**
+(deferred curation §9.3, its absence deliberate).
+
+**Design fidelity.** This is the *domain/rights* model; the *visual* dyad (mesh placement) is the separate,
+geometry-gated `wellfair/anatomy_dyad.rs` in the client layer — they compose (this = who/what, that = where).
+Machinery built, medical + guardianship-policy content deferred to Timothy (§9.4).
+
+**Measured.** `anatomy::dyad` **8/8**, `anatomy::scorecard` **8/8** (+forum-class), full `anatomy::` **65/65**,
+zero new warnings. Only wellfare-core/anatomy touched.
+
+**⚑ Where I need Timothy.** (§9.4) the **personhood/guardianship model for the emerging child** — how the
+pairwise fabric is stewarded and *when it transfers* to the person — is a values call, yours to direct; and
+the cross-body physiological correlation content + clinician/midwife sign-off (§9.3). The gestational-age
+*convention* (LMP vs postfertilization — the Carnegie assets are postfert) is caller-stated; precise
+stage↔age↔trimester alignment is clinical content, not asserted.
+
+**Next step.** On Timothy's steer: P5 reproductive-data rights enforcement (wire the `Sanctuary`/forum-internum
+classification into the client-core selfhood store + consent gate — mostly wiring existing primitives); or
+P6 translational literacy (extend `bridge.rs` to feed cycle/pregnancy factors → the score-card); or the
+Studio surface for the score-card + dyad. HDCA discovery (P3) + developmental geometry (P4) stay ⚑-gated.
+
+---
+
+## 2026-07-06 — REFINEMENT (Timothy): the dyad on the science; info-asymmetry framing corrected
+
+Two corrections from Timothy, both taken into the model.
+
+**(1) Information asymmetry is two-sided.** "As much as information can be weaponized, the lack of
+information is equally a threat" — the right to *know oneself* with real science and move hypothesis → test
+→ specialist → action is itself a human right. Corrected the score-card framing: forum-internum/Sanctuary is
+**control-for-enablement**, not suppression — the person's control is what makes it *safe* to know and to
+deliberately share with a chosen specialist. Each aspect is a `Hypothesis` = a **pathway start** (toward the
+investigative-pathway / care-relationship layers), never a dead-end. (Doc/framing change in `scorecard.rs`;
+the enablement *pathway* itself = the epistemic-reasoning plan, the natural next build.)
+
+**(2) The dyad rebuilt on the science.** `wellfare-core/src/anatomy/dyad.rs` revised (10 tests):
+- **Two genetic progenitors.** Fertilization needs ovum + sperm (an ovum alone is not a new life). New
+  `Progenitor { Known | Donor | Unknown }` × 2 in `Parentage` — a **father may be unknown or unaware**
+  (first-class, not an error), and **gamete donation** is representable.
+- **Genetic ≠ gestational ≠ social ≠ guardian.** `Parentage` (ovum/sperm/intended-parents) is distinct from
+  the gestational mother (`MaternalBody`) and from guardianship. **Surrogacy** modelled: the carrier can be
+  neither genetic parent, with separate intended parents.
+- **Guardian during gestation = the gestational mother** (`guardian()` → the one carrying). Test proves it
+  stays the surrogate, not the intended parents.
+- **Social/legal personhood accrues at/after *birth*** (`RightsStage::{EmergingInGestation, Born}` +
+  `SocialRightsThreshold::{AtBirth, AfterFourthTrimester, Undecided}`). During gestation the entity is
+  *stewarded*, **not a competing legal person** — the gestational mother's autonomy stays paramount. A
+  gestational dyad requires `EmergingInGestation` (a born child isn't one).
+- **Non-collapse strengthened:** the child's pairwise DID must differ from the gestational mother AND every
+  *known* adult (genetic or intended).
+
+**Measured.** `anatomy::dyad` **10/10**, full `anatomy::` **67/67**, zero new warnings. My lane only.
+
+**⚑ Timothy (values, deliberately not decided by the agent).** The **social-rights threshold** (birth vs
+after the fourth trimester — you flagged "not sure") and **when/whether guardianship transfers** post-birth
+(surrogacy) are carried as deferred settings, not asserted. Plus (unchanged) the cross-body medical
+correlation content + clinician/midwife sign-off.
+
+---
+
+## 2026-07-06 — the birth transition + the Digital Birth Record (aligned to Timothy's draft standard)
+
+Timothy pointed to the **DigitalBirthRecord** draft standard (`docs/manuals/standards/init-draft-standards-
+wip-main/DigitalBirthRecord`) — expands the historical birth certificate with biometrics (DNA, blood type)
+for health/safety + ancestry use-cases; the record is "an **inalienable digital prosthetic extension of a
+person**" (self-owned, permission-controlled); `br:` ontology (`hasGuardian`/`isGuardianOf`/`hasCredential`/
+`hasConsentFrom`); references real QualiaDB machinery (did:q42, CBOR-LD, N3 deontic, VC, wallet QApp). His
+framing: **guardians default to biological parents, subject to official credentials.**
+
+**What was built.** NEW `wellfare-core/src/anatomy/birth.rs` (+ mod.rs), extending the dyad:
+`MaternalFetalDyad::give_birth(...) → DigitalBirthRecord` — the `RightsStage::Born` transition. The emerging
+child becomes the born **subject who OWNS the record**; `Guardianship` = **default biological parents (the
+known genetic progenitors), SUBJECT TO official credentials** (`GuardianshipCredential::{ProofOfParentage,
+AdoptionOrder, SurrogacyParentageOrder, GuardianshipGrant}`) — `effective_guardians()` returns the
+credentialed guardians if any, else the biological default (tests: default = both bio parents; a surrogacy
+order overrides to the intended parents, NOT the surrogate). Biometrics recorded **by class**
+(`BiometricClass::{Dna,BloodType,Fingerprint,Footprint,..}`) — structure only, the datum is Sanctuary-held
+and referenced, never inlined (data-minimisation). `validate()`: subject present, never collapsed into a
+guardian/parent, never left unstewarded (`NoGuardian`). forum-internum/Sanctuary.
+
+**Measured.** `anatomy::birth` **5/5**, full `anatomy::` **72/72**, zero new warnings. My lane only.
+
+**⚑ Timothy / coordinate.** (a) The standard's RDF `br:` vocabulary, biometric wire formats (HL7 FHIR etc.),
+VC issuance + verification, and the wallet/`did:q42` integration are the identity/credential layer's +
+the standard's — this is the domain model, coordinate the wiring. (b) The draft standard's prose uses
+"**sovereignty**" (identity sense) — flagged per the standing human-rights-terms rule; his draft, his call to
+revise (I used dignity/autonomy/inalienable/control in the code). (c) Values calls unchanged (§9.4): the
+social-rights threshold, guardianship-transfer policy.
+
+**Next step.** On Timothy's steer: wire the birth record into the VC / guardianship / wallet layers (real
+`br:` credentials + consent gate); or the enablement/investigative-pathway layer (his info-asymmetry point);
+or P5 reproductive-data rights enforcement (Sanctuary end-to-end into the selfhood store).
+
+---
+
+## 2026-07-06 — CORRECTION (Timothy): stewardship-via-commons, not self-sovereignty; agency is a gradient
+
+Timothy: the infant/child case **illustrates why "self-sovereign" is the wrong (harmful) model** — support
+for an infant is not self-sovereignty; it is **stewardship via a permissive commons, defined *between*
+guardians** (plural, varied roles/responsibilities), and personhood **accrues gradually and relationally** as
+the child develops (neurologically + otherwise), toward maintaining adult personhood **if healthy** — with
+continued stewardship for those who need it being **supported personhood, not a lesser status**. My prior
+`birth.rs` encoded the error (a thin single-holder guardianship + a binary Born). Corrected:
+
+- **Guardianship → a `Steward` commons** (`wellfare-core/src/anatomy/birth.rs`): `Guardianship { stewards:
+  Vec<Steward>, credentials }`, each `Steward { principal, roles: Vec<StewardRole>, basis }`. Stewardship is
+  a *variety of distinct responsibilities* (`StewardRole::{Guardian, PrimaryCare, Medical, Legal, Financial,
+  Educational, Cultural, ..}`) that **different guardians may hold** (`stewards_with(role)` — the medical
+  decision-maker need not be the day-to-day carer), held in the child's interest, **never ownership of the
+  person**. Default = biological parents (`BiologicalDefault`), subject to official credentials
+  (`Credentialed` — adoption/surrogacy order/grant override; test: surrogacy → intended parents, not the
+  surrogate).
+- **Agency as a `AgencyStage` gradient, not a switch:** `Neonate → Infant → Child → Adolescent → Adult →
+  SupportedAdult`. `self_determination()` increases monotonically; `SupportedAdult` = **full** self-
+  determination *with supports* (CRPD supported-not-substituted), not reduced. The stage *boundaries* +
+  legal-majority mapping are pointedly **not asserted** (values/legal, Timothy §9.4) — the type encodes the
+  *shape* (a monotone gradient) so no downstream layer can model personhood as an on/off sovereign property.
+- Born subject **owns** the record, starts at `Neonate`. Invariants: never unstewarded (`NoSteward`), never
+  collapsed into a steward/parent.
+
+This is the anti-"self-sovereign" stance made structural — the same anti-erasure move as DID≠identity, applied
+to the developmental, relational nature of personhood.
+
+**Measured.** `anatomy::birth` **7/7**, full `anatomy::` **74/74**, zero new warnings. My lane only.
+
+**⚑ Timothy (values/legal, deliberately not decided).** The `AgencyStage` boundaries + the legal age/capacity
+mapping; the authoritative `StewardRole` set + how role-splitting is credentialed; when/whether adult status is
+recognised; guardianship-transfer policy. Machinery built; the values are yours (§9.4).
+
+---
+
+## 2026-07-06 — the investigative pathway: know-thyself → hypothesis → what-would-help → action (the point of Qualia)
+
+Timothy affirmed this layer *is* "kinda the point of Qualia" — helping a person come to know their own
+experience/reality rigorously and honestly, and act with agency. Built as the enablement engine.
+
+**What was built.** NEW `wellfare-core/src/anatomy/pathway.rs` (+ mod.rs). Turns a **hypothesis** (a
+score-card aspect / a converging `SystemicImplication`) into a **path toward knowing and acting**:
+`InvestigativeStep`s across the modes — `StepKind::{Question, Observation, Test, LifestyleLever,
+SpecialistInput}` (a lever the person controls; a specialist *they* choose) — VOI-ranked and traceable
+(each step's `bears_on` links it to the hypotheses it would help discriminate). `investigative_pathway()`
+ranks + drops zero-value steps; `hypotheses_from_implications()` bridges the anatomy engine's proposals in.
+
+**The one new primitive — value of information.** `value_of_information(step, hypotheses)` (0..=1000): a
+transparent, monotone proxy that rewards a step bearing **strongly on high-prior hypotheses** (relevance)
+AND that would **separate** them — supporting some, telling against others (discrimination). A test on an
+already-unlikely hypothesis is low-value; a test that splits two live, similarly-weighted hypotheses is the
+most informative — exactly "what should I find out next". Tested both properties.
+
+**Stance.** It **enables, never directs or diagnoses**: every step is a `Hypothesis` proposal ("this might
+help you find out / discuss / act on"), never "you have X" / "you must do Y"; the specialist step points to
+the person's *chosen* clinician, not a gatekeeper. This is the corrective to information-asymmetry — the
+right to know oneself with science — with the person in control. The opposite of a credential you present.
+
+**Measured.** `anatomy::pathway` **6/6**, full `anatomy::` **80/80**, zero new warnings. My lane only.
+
+**⚑ Timothy / clinician (curation).** The **step library** — *which* questions/tests/levers/specialist-cues
+attach to a hypothesis, and their bearings — is the authoritative content (curation/clinician-gated, §9);
+this is the machinery (pathway + VOI + ranking + framing). Also: richer composition with the core-db
+abductive/argumentation/probabilistic engine is the deeper step (this first slice is self-contained over the
+anatomy hypotheses).
+
+---
+
+## 2026-07-06 — desktop wellfair: score-card surface wired; + social-worker plan of record
+
+**(1) Score-card surfaced into webizen-desktop.** The new anatomy engine (score-card + investigable
+hypotheses) now flows through the host bridge to a Tauri command:
+- `qualia-client-core/wellfair/anatomy_view.rs`: NEW `WellbeingScorecardReport { scorecard, hypotheses,
+  forum_internum, sensitivity_class, ... }` + `build_scorecard_report[_from_journal]()` — computes the
+  `score_card` + `hypotheses_from_implications` over the person's condition/medication/diet journal
+  (Baseline physiological state until declared). Carries the **forum-internum / Sanctuary** classification.
+- `wellfair/api.rs`: `WebizenHostApi::compute_scorecard(threshold)`.
+- `webizen-desktop/commands`: `wellfair_compute_scorecard` Tauri command (registered). Honest disclosure:
+  Hypotheses + pathway-starts, never a diagnosis/rating.
+Verified: `wellfair::anatomy_view` 9/9; desktop compiles. **Next slice = the Studio panel** rendering the
+card (aspects + contribution linkages + the hypotheses as pathway-starts) — the data path is now live.
+
+**(2) Social-worker support + accountability — plan of record.** NEW
+`docs/plans/social-worker-support-and-accountability.md`. Two things never collapsed: **support the worker to
+help** (consented need = the person's score-card + pathway; means to act + escalation-as-a-recordable-act)
+and **fair accountability** — the record distinguishes Timothy's spectrum: **unable (no fault → system
+failed, worker exonerated)** vs **negligence (sad, no malice)** vs **malfeasance (court/political/gov,
+needs tamper-evident admissible evidence)**. Mechanism = the **Six Vectors of Transparency (§15.5) applied
+to a human worker** (the **Cost** vector — requests↔answers + omissions — separates fault from no-fault),
+tamper-evident (signed WAL + receipts + counter-record). Authority modes: **consensual** (care-relationship)
+vs **statutory** (lawful, proportionately-required-by-law — accountable to person AND the democratic-legal
+order; not self-sovereignty). NOT a rating weapon; dignity for the worker (its everyday job is exoneration).
+Locus determination = a `Hypothesis` proposal over evidence, never an automated verdict. ⚑ Timothy/legal:
+statutory model per jurisdiction, evidentiary standard, locus criteria, the anti-weapon line.

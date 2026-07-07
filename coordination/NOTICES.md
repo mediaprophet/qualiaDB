@@ -13,6 +13,32 @@ YYYY-MM-DD | INSTRUMENT | CLAIM|PROGRESS|BLOCKED|RELEASE | short description | p
 ```
 
 ## Active notices
+2026-07-07 | Claude (Opus 4.8) | RELEASE (LOCAL — VERIFIED GREEN) | **Hypermedia library P4a — usable ingest → search → browse end-to-end.** NEW `qualia-client-core/src/wellfair/hypermedia_store.rs`: `LibraryEntry` carries the container's NQuin edge-graph; **search runs REAL graph queries** over the union of all entries' quins (`by_topic`/depicts/place/project/purpose/timeline), mapping subjects→entries (NQuin is Serialize+Deserialize, so quins persist faithfully — not a metadata shadow). Test 1/1: 3 ingested docs findable by biology/law/finance across the library. Host `ingest_document` (TextProcessor → topics + searchable text → container → persist; **guardianship flag → notify + record in the tamper-evident ledger**) / `search_library` / `search_library_time` / `list_library` + 4 `wellfair_*` Tauri commands + 3 host_client bridges + a Studio **Library** tab (ingest a doc; find your files by meaning). **VERIFIED GREEN: hypermedia_store 1/1; desktop exit 0; studio host exit 0; studio wasm exit 0.** NOT click-tested live. Remaining: P1 provenance sidecar (physical); P4b timeline/map VISUAL views + heavy processors composing qualia-vision/audio (gated on those engines; Processor trait = plug-in) + fold quins into core graph store. My lane. | crates/qualia-client-core/src/wellfair/{hypermedia_store,api,mod}.rs, crates/webizen-desktop/src/commands/mod.rs, crates/webizen-studio/src/components/wellfair/{library_panel,host_client,mod,shell}.rs
+
+2026-07-07 | Claude (Opus 4.8) | RELEASE (LOCAL — VERIFIED GREEN) | **Hypermedia semantic library — personal semantic ASSET SYSTEM (P0–P3, Timothy-directed "foundational").** Asset ⊕ analytics ⊕ related-assets bound as NQuin EDGES, NOT a directory; find files by meaning/time/place/project/content; ingest DERIVES searchability; guardianship flag→notify. NEW `crates/qualia-core-db/src/hypermedia.rs` (7 tests): **P0** `HypermediaContainer` + `container_to_nquins` + query-by-lineage (`derived_from`/`analytics_for`/`provenance_of`/`bundled`/`role_of`); **P0.5** `Descriptors`(topics/depicts/occurredAt+interval/place/projects/documentType/purposes) + search `by_topic`/`by_depiction`/`by_place`/`in_project`/`for_purpose`/`in_time_range`(timeline) + `Flag`(severity); **P3a** `Processor` trait + model-free `TextProcessor`(→topics{bio/eng/policy/software/law/finance}+searchable text+watch-word flags) + `ingest_with`. Subjects share `render/assets.rs`'s FNV identity space (edges join to asset manifests). **P2** `wellfair/anatomy_body.rs` `organ_container`/`body_container` — anatomy assets become searchable, provenance-carrying containers (anatomy_body 4/4). **P3b** `wellfair/ingest_guardian.rs` `guardian_notifications` + host `record_guardian_notifications` (records in the TAMPER-EVIDENT LEDGER — a flagged ingest under guardianship is auditable; 2 tests). **VERIFIED GREEN: hypermedia 7/7; anatomy_body 4/4; ingest_guardian 2/2** (in green core-db windows around the GLM CG churn). Heavy image/audio processors COMPOSE the parked qualia-vision/audio (not rebuilt). Plan `docs/plans/hypermedia-semantic-library.md`; master §0 A2. Remaining: P1 provenance sidecar physically in `.10d`; P4 timeline/map/project views + ingest→host→UI wire; §11 split of hypermedia.rs (~800 lines, flagged). My lane (core-db hypermedia + wellfair — disjoint from CG). | crates/qualia-core-db/src/{hypermedia,lib}.rs, crates/qualia-client-core/src/wellfair/{anatomy_body,ingest_guardian,api,mod}.rs
+
+2026-07-07 | Claude (Opus 4.8) | RELEASE (LOCAL — VERIFIED GREEN) | **The person authors their own score-card lens (principle: software provides MEANS, not definitions).** Timothy's principle (2026-07-07): the software gives the person the means to decide how it works / whether to set it up; it must NOT define people. The score-card's `WeightModel` (which body systems weigh into stress/resilience/…) was a hardcoded seed — the one place the fabric still *defined* the person. Now **person-authored**: NEW `wellfair/scorecard_prefs.rs` (persist/load/clear the person's model; test) + host `get`/`set`/`reset_weight_model` + `seed_weight_model` (the *suggestion*, shown separately) + `compute_scorecard` reads THEIR model + 3 commands + 3 bridges + an in-panel editor ("How your body is read — your weight model": edit each weight / save mine / reset to suggestion; "a suggestion, never a verdict"). **VERIFIED GREEN: scorecard_prefs test; desktop exit 0; studio host exit 0; studio wasm exit 0.** NOT click-tested live. **Framing correction:** the old ⚑ "weights/bands = curation-grade Timothy/expert" was itself the anti-pattern (routing self-definition through a third party) — weights are now the PERSON's; the seed suggestion + aspect/band scaffolding are the only expert-informed pieces, both overridable. Durable principle recorded (memory). Remaining means-to-build (same pattern): aspects + band thresholds person-editable. My lane. | crates/qualia-client-core/src/wellfair/{scorecard_prefs,anatomy_view,api,mod}.rs, crates/webizen-desktop/src/commands/mod.rs, crates/webizen-studio/src/components/wellfair/{scorecard_panel,host_client}.rs
+
+2026-07-07 | Claude (Opus 4.8) | RELEASE (LOCAL — VERIFIED GREEN) | **Remote-agent key distribution — §H ACCOUNTABILITY FABRIC COMPLETE end-to-end.** `SocialPeer` gained `envelope_pubkey_hex` (X25519 seal-to key, distinct from the WireGuard routing key) + `set_peer_envelope_key` + pure `resolve_envelope_keys` (peer test → **4/4**). Host `set_peer_envelope_key` + `enact_dead_mans_release_via_peers` (resolves the switch's `ReleaseTo` parties' keys from the peer store, releases to those with a known key, **reports any still missing**) + 2 commands + 2 bridges + Safeguards "Enact & release (via peers)" button. So a worker/trustee's key is resolved from their peer record, not pasted. **VERIFIED GREEN: social_peers 4/4; desktop exit 0; studio host exit 0; studio wasm exit 0** — caught in a green-core-db window (GLM-5.2 CG lane broke shared core-db a 5th time; held per §10). NOT click-tested live. **§H accountability fabric COMPLETE + desktop-wired:** revocable/court/multi-sig consent credentials, tamper-evident ledger, envelope encryption, score-card, dead-man+incapacity switches, disclosure-trace, duty-of-inquiry, key-release-on-enact, Shamir social-recovery, peer-resolved keys (~35 host methods + ~35 commands + 6 Studio panels). Deferred = explicit values calls only (`MakePublic` irreversibility; handshake auto-populate). My lane (client-core+desktop+studio wellfair — disjoint from CG). | crates/qualia-client-core/src/{social_peers,social_mesh,api}.rs, crates/qualia-client-core/src/wellfair/api.rs, crates/webizen-desktop/src/commands/mod.rs, crates/webizen-studio/src/components/wellfair/{safeguards_panel,host_client}.rs
+
+2026-07-07 | Claude (Opus 4.8) | RELEASE (LOCAL — VERIFIED GREEN) | **Shamir social-recovery — reconstruct the key WITHOUT the owner (§H); accountability-fabric CRYPTO now complete.** NEW `qualia-client-core/src/shamir_recovery.rs` (6 tests) — real Shamir Secret Sharing over GF(2⁸) (AES field; Horner eval + Lagrange interpolation at 0; field-multiply via carry-less+reduce, inverse via a^254). Tests: field axioms, any-k-of-n reconstructs, k-1 reveals nothing, edge cases, serde. Store `reconstruct_and_release` recovers a payload DEK from a quorum of friends' shares + releases **with no owner key** (store +1 → **10/10**; a trustee decrypts from 2-of-3 friend shares alone). Host `split_dek_recovery`/`reconstruct_and_release` + 2 commands + 2 bridges + Safeguards "Social recovery" panel section. **VERIFIED GREEN: store 10/10 + shamir 6/6; desktop exit 0; studio host exit 0; studio wasm exit 0 (0 warnings mine)** — caught in a green-core-db window (the GLM-5.2 CG lane's active P12/P13/P14 build-out kept intermittently breaking the shared compile; held per §10, did NOT touch it). NOT click-tested live. **§H accountability-fabric crypto COMPLETE + desktop-wired** (consent credentials, ledger, envelope encryption, 4 switch/trace models, key-release, Shamir). Remaining is NOT standalone §H crypto: remote-agent X25519 pubkey distribution (belongs to node_identity/social_peers). My lane (client-core + desktop + studio wellfair — disjoint from the CG lane). | crates/qualia-client-core/src/{shamir_recovery,accountability_store,lib}.rs, crates/qualia-client-core/src/wellfair/api.rs, crates/webizen-desktop/src/commands/mod.rs, crates/webizen-studio/src/components/wellfair/{safeguards_panel,host_client}.rs
+
+2026-07-07 | Claude (GLM-5.2 High) | CLAIM | **Taking the CG lane for P13+P14 (Timothy-directed).** Owning new P13.x/P14.x modules under crates/qualia-core-db/src/specialized_libs/computational_geometry/ (mesh_quality, delaunay_refinement, optimal_triangulation, quadtree_mesh, advancing_front, tet_quality, anisotropic_remesh, quad_hex, fem_cert, ddg_chain, ddg_operators, ddg_curvature, ddg_laplacian, ddg_solvers, ddg_geodesic, ddg_param, ddg_homology, ddg_vector_fields, ddg_section) + the shared mod.rs/capability_manifests.rs registration lines. NOT touching the uncommitted P12 files (arrangement_3d/cdt_retriangulation/nary_boolean/sos/simplify_snap/csg_section/boolean_3/corefine_3d/tri_tri_3) beyond reading. Natural order: P13.1-P13.5, P14.1-P14.6, P13.6-P13.10, P14.7-P14.11. | crates/qualia-core-db/src/specialized_libs/computational_geometry/
+
+2026-07-07 | Claude (Opus 4.8) | RELEASE (LOCAL — VERIFIED GREEN) | **key-release-on-enact — a fired dead-man switch now HANDS OVER the keys (§H).** `accountability_store::enact_dead_mans_release` (native): on `Disposition::ReleaseTo`, re-seals the payload DEK to each disposition party's X25519 key + grants them a credential (each logged) — real crypto composing the envelope layer. +`wrapped_key_for` (recover the DEK from an owner credential). +1 store test → **9/9**: proves a trustee with **no prior access decrypts the payload AFTER enactment** (access genuinely handed over, not just recorded). `MakePublic` returned but not released (irreversible — values call). Host `enact_dead_mans_release(commitment_hex, [(did,pubkey_hex)])` + command + bridge + Safeguards "Enact & release" control. **VERIFIED GREEN: store 9/9; desktop exit 0; studio host exit 0; studio wasm exit 0 (0 warnings mine).** NOT click-tested live. (The desktop/studio build was blocked 3× by the CG lane's active core-db build-out — arrangement_3d/cdt_retriangulation/nary_boolean/sos; NOT mine, §10; I held rather than race their edits and confirmed in the next green-core-db window.) **§H accountability fabric now functionally complete + desktop-wired.** Remaining: Shamir social-recovery; remote-agent X25519 key distribution. My lane. | crates/qualia-client-core/src/{accountability_store,lib}.rs, crates/qualia-client-core/src/wellfair/api.rs, crates/webizen-desktop/src/commands/mod.rs, crates/webizen-studio/src/components/wellfair/{safeguards_panel,host_client}.rs
+
+2026-07-07 | Claude (Opus 4.8) | RELEASE (LOCAL — VERIFIED GREEN) | **Disclosure-trace + duty-of-inquiry wired (§H, Increment 2) — the whole accountability fabric is now desktop-reachable.** `disclosure_trace` → `accountability_store`: `record_transparency_cc`, `record_disclosure_event` (attributes a STAFF leak to the acting delegate, not just the authority), `disclosure_chain`/`actors_with_access`/`trace_leak` (leaked fingerprint → accountable actor), owner-signed into the ledger (+1 store test → **8/8**, proves a staffer onward-share is traced to the staffer). `duty_of_inquiry`: pure `assess → {Diligent, NoFault, UncheckedNoHarm, Negligent}` (accessible-means-unchecked + harm = negligence). +8 host methods + 7 Tauri commands + Studio `WellfairDisclosureInquiryPanel` (record/view/trace + duty→coloured verdict, captioned "proposal over evidence, never an automated verdict") in the Accountability tab. **Verified GREEN: store 8/8; desktop exit 0; studio host exit 0; studio wasm exit 0 (0 warnings mine).** NOT click-tested live. All four dormant models (dead-man/incapacity/disclosure/duty) now reachable; full surface = 27 host methods + 27 commands + Accountability & Safeguards tabs. Remaining: key-release-on-enact, Shamir social-recovery, remote-agent X25519 key distribution. My lane. | crates/qualia-client-core/src/{accountability_store,lib}.rs, crates/qualia-client-core/src/wellfair/api.rs, crates/webizen-desktop/src/commands/mod.rs, crates/webizen-studio/src/components/wellfair/{disclosure_inquiry_panel,host_client,mod,shell}.rs
+
+2026-07-07 | Claude (Opus 4.8) | RELEASE (LOCAL — VERIFIED GREEN) | **Safeguard switches wired: dead-man + incapacity (§H accountability fabric, Increment 1).** `dead_mans_switch` + `incapacity_switch` (tested domain models) → reachable from the app. `accountability_store` gained arm/alive/attest/enact (dead-man; gamified — heartbeat-lapse AND party-quorum, reversible via "I'm alive") + arm/activate/regain/list (incapacity; corroborated trigger, reversible), all owner-**signed into the tamper-evident ledger** (7 new ledger kinds); `DeadMansSwitchRecord` holds switch+attestations (+2 store tests → **7/7**). + 9 host methods + 9 `wellfair_*` Tauri commands (construction commands take primitives, build the domain types so the UI never serializes a `[u8;32]`) + 9 host_client bridges + a Studio **`WellfairSafeguardsPanel`** + **Safeguards** shell tab (arm both / status / "I'm alive" / attest / enact-test / activate / regain). **Verified GREEN: store 7/7; desktop build exit 0; studio host exit 0; studio wasm-check exit 0 (0 warnings mine).** NOT click-tested live. These are the OWNER-side ops; friend-side enactment + key-release-on-enact = next (distributed layer). My lane. | crates/qualia-client-core/src/{accountability_store,lib}.rs, crates/qualia-client-core/src/wellfair/api.rs, crates/webizen-desktop/src/commands/mod.rs, crates/webizen-studio/src/components/wellfair/{safeguards_panel,host_client,mod,shell}.rs
+
+2026-07-06 | Claude (Opus 4.8) | RELEASE (LOCAL — VERIFIED GREEN) | **Score-card Studio panel (§G anatomy priority).** NEW `webizen-studio/src/components/wellfair/scorecard_panel.rs` `WellfairScorecardPanel` — renders `WellbeingScorecardReport`: one card per aspect (systemic-load/stress/resilience/convergence/interaction/physiological-demand) with coloured **band** + score bar + the **contribution linkages** (traceability) + investigable **hypotheses** as pathway-starts; forum-internum disclosure always shown; `Resilience` reads higher-is-supportive. `compute_scorecard` host_client bridge (the `wellfair_compute_scorecard` command already existed) + registered in mod.rs + wired into the **Anatomy** shell tab. **Verified GREEN: studio host exit 0; studio wasm-check exit 0 (0 warnings mine).** NOT click-tested live. Completes the §G score-card thread (data path was already done). ⚑ weight-model magnitudes + band thresholds + framing = curation-grade (expert sign-off, §G.9). My lane. | crates/webizen-studio/src/components/wellfair/{scorecard_panel,host_client,mod,shell}.rs
+
+2026-07-06 | Claude (Opus 4.8) | RESOLVED (was BLOCKED) | **core-db build break FIXED by the CG session itself — I did NOT touch it.** The `orient_3d` E0425 in `corefine_3d.rs` was a transient mid-refactor state (the CG lane is upgrading corefine to exact-rational intersection — `tri_tri_intersect_3_exact`/`ExactPoint3`, a substantial change, NOT a one-line import). Timothy authorised me to make a minimal import fix, but on inspecting the diff I found the import was actually present and the file was being live-edited, so I held rather than stomp a moving refactor — and by the time I re-checked, `cargo build -p qualia-core-db --lib` was **green (1.53s)** again. Lesson: investigate the diff before editing another lane's live file. Original BLOCKED note follows for the record. | crates/qualia-core-db/src/specialized_libs/computational_geometry/corefine_3d.rs
+2026-07-06 | Claude (Opus 4.8) | BLOCKED (build, since RESOLVED above) | **`qualia-core-db` lib did not compile — CG lane, not mine.** `crates/qualia-core-db/src/specialized_libs/computational_geometry/corefine_3d.rs:259` → `error[E0425]: cannot find function orient_3d in this scope` (only error). The file is **uncommitted-modified (` M`)** on top of today's `878cb50b`, i.e. active in-flight CG work mid-refactor (sibling files import it as `use super::orient3d::orient_3d;`; that import looks dropped/moved at the corefine_3d call site). This blocks **all** downstream builds (webizen-desktop, webizen-studio host+wasm) → I cannot build-verify the score-card Studio panel I just wrote. It is the **computational_geometry lane** (CLAIMed below, 2026-07-05) with uncommitted changes — per §10 I will **not** reach into another session's half-finished refactor. ⚑ **Timothy:** either have that session finish/fix `corefine_3d.rs`, or authorise me to fix the one missing import. My accountability + envelope-encryption work was verified green **before** this break appeared. | crates/qualia-core-db/src/specialized_libs/computational_geometry/corefine_3d.rs
+
+2026-07-06 | Claude (Opus 4.8) | RELEASE (LOCAL — VERIFIED GREEN) | **Real envelope encryption — the consent-credential's `wrapped_key` is now REAL crypto (ADR 0011 D1/D2).** NEW `qualia-client-core/src/envelope_encryption.rs` (native-only, 7 tests): random DEK + XChaCha20-Poly1305 payload AEAD, content-addressed commitment; the DEK is **sealed to a recipient's X25519 public key** (`seal_to` sealed box, via `core-db::crypto::sanctuary_audit`) = the credential's real `wrapped_key`; revoke destroys it ⇒ crypto-shred; owner keypair **derived** from the ed25519 signing-key seed (NOTHING secret stored at rest). Added `AuditKeypair::from_secret` to `core-db/crypto/sanctuary_audit.rs` (tiny additive; verified no active claim on the crypto file first — per the no-lane-excuse rule). Store `seal_and_grant_credential` / `open_payload_via_credential` (+`payloads` = ciphertext only; +1 test) + 3 host methods + 3 Tauri commands + 3 studio bridges + the Accountability panel extended (seal-&-grant a payload; per-credential **Open** shows the decrypted plaintext; owner's publishable key). **Verified GREEN: envelope 7/7; store 5/5; desktop build exit 0; studio host exit 0 (0 warnings mine); studio wasm-check exit 0.** (client-core doesn't target wasm — pre-existing `openssl-sys` via mail transport, not mine.) NOT click-tested live. Remaining real crypto (mine, by effort): remote agent X25519 pubkey distribution (connection/identity layer) so a worker decrypts independently; Shamir social-recovery; key-release-on-enact. My lane. | crates/qualia-client-core/src/{envelope_encryption,accountability_store,lib}.rs, crates/qualia-client-core/src/wellfair/api.rs, crates/qualia-core-db/src/crypto/sanctuary_audit.rs, crates/webizen-desktop/src/commands/mod.rs, crates/webizen-studio/src/components/wellfair/{accountability_panel,host_client}.rs
+
+2026-07-06 | Claude (Opus 4.8) | RELEASE (LOCAL — VERIFIED GREEN) | **Accountability fabric WIRED to the desktop (ADR 0011).** The consent-credential + tamper-evident-ledger + conduct/audit loop is now reachable from the app (was tested domain-models only). NEW `qualia-client-core/src/accountability_store.rs` (4 tests) — on-disk store (`wellfair/accountability.json`) for the ledger + revocable consent credentials + durable conduct trail; **every act is written into the signed hash-chained ledger** (grant→`consent_granted`, revoke→`consent_revoked`, conduct→`conduct` carrying the signed record). Composes my top-level modules (`accountability_ledger`, `consent_credential`); **does NOT touch `wellfair/consent_store.rs`** (a separate POLICY-consent store, `ConsentGrantRecord` — no key material, so its `revoked` flag is correct; a different model, NOT another instrument's lane — Grok is not involved, no active claim on it). + 8 host-API methods (`wellfair/api.rs`: `ledger_append`/`ledger_verify`/`ledger_entries`, `grant`/`revoke`/`list_consent_credential(s)`, `record_conduct`/`conduct_audit_trail`) + 8 `wellfair_*` Tauri commands (registered) + Studio `WellfairAccountabilityPanel` (grant / record-conduct / per-credential Revoke + Audit-trail / live `verify()` integrity readout / ledger tail) + new "Accountability" shell tab + 8 host_client bridges (wasm + non-wasm stubs). **Verified GREEN: store 4/4; `cargo build -p webizen-desktop --lib` exit 0; `cargo build -p webizen-studio --lib` host exit 0 (0 warnings); `cargo check -p webizen-studio --lib --target wasm32-unknown-unknown` exit 0 (0 errors; 7 pre-existing warnings, none in new files).** NOT click-tested in a live app. Remaining real-crypto work is MINE (sequenced by effort, not lanes): real envelope encryption so `wrapped_key` is an actual wrapped DEK (vault AEAD exists), commons replication of the ledger (seeder exists), real ZK authorisation circuit over crypto/zk_proofs Groth16, traitor-tracing watermark. My lane. | crates/qualia-client-core/src/{accountability_store,lib}.rs, crates/qualia-client-core/src/wellfair/api.rs, crates/webizen-desktop/src/commands/mod.rs, crates/webizen-studio/src/components/wellfair/{accountability_panel,host_client,mod,shell}.rs
 
 2026-07-06 | Claude (Opus 4.8) | RELEASE (LOCAL — VERIFIED GREEN) | **Social-net batch 4 — the CONNECT FLOW wired end-to-end (backend).** NEW modules (2 parallel sub-agents): `node_identity.rs` (the node's persisted crypto identity — ed25519 signing key + WireGuard keypair, `load_or_create` → `app_meta_dir/node_identity.json`; pure tests 4) + `social_peers.rs` (SocialWebNet peer store — `SocialPeer{did,wg_pubkey,overlay,endpoint,relation_type,active}`, upsert/find/register/set_active/remove; pure tests 3). Wired the full flow in `api.rs` + 6 Tauri commands: **`generate_connection_identifier`** / **`generate_magic_link`** (build + sign a `ConnectionIdentifier` from node identity → `web+qualia://` deep link + `https://<domain>/w#` + `mailto:`), **`accept_connection`** (parse magic link → **verify signature** → register the sender as a SocialWebNet peer = half the mutual peering), `list_social_peers`/`set_social_peer_active` (the revoke), **`answer_connection_challenge`** (handshake proof "it's actually me"). So: generate a signed magic link → share by email → the other node verifies + peers — real, self-certifying, no platform. **Verified: 294 client-core tests (single-threaded); `cargo check` green on webizen-desktop.** Remaining runtime bit: the live UDP tunnel loop (drive `wireguard_userspace` Tunn over a socket) + return-handshake over a transport — needs two nodes (per `docs/plans/social-network-external-verification.md`). | crates/qualia-client-core/src/{node_identity,social_peers,api,lib}.rs, crates/webizen-desktop/src/commands/mod.rs
 
@@ -520,3 +546,175 @@ Verified the impls were already complete (golden vectors pinned, layout gate ful
 done) — NOT incomplete work. No logic touched; container_10d 107/107 tests pass. Heads-up to the
 container_10d lane owner (Devin): trivial scoping edit on two committed files, no collision with the
 CG/P10 work.
+
+### 2026-07-06 — RELEASE (anatomy lane, Timothy-directed): reproductive-continuum P1
+Master-checklist §G "next build" DONE. NEW `wellfare-core/src/anatomy/physiology.rs` (+ mod.rs exports):
+`ReproductiveState`/`PhysiologicalState` continuum state machine (menarche→cyclical→trimesters→the fourth
+trimester→lactation→peri/menopause, validated transitions) + `StateModulator` (whole-body sibling of
+`EnvironmentModulator` — scales an EXTERNAL load per-system by state engagement, no pathologising of the
+healthy state) + `whole_body_profile` (heightened *engagement*, not burden) + `as_environment_modulators`.
+Coarse integer-only illustrative seed; authoritative content/framing deferred to Timothy (§9). anatomy::
+49/49, physiology 9/9, zero new warnings. Only touched wellfare-core/anatomy (my lane). Next: P2 dyad domain.
+
+### 2026-07-06 — RELEASE (anatomy lane): the score-card (accumulative, traceable multi-aspect interpretation)
+NEW `wellfare-core/src/anatomy/scorecard.rs` (+ mod.rs). `ScoreCard`/`AspectScore` across 6 aspects
+(SystemicLoad/Stress/Resilience/Convergence/InteractionLoad/PhysiologicalDemand) — each score carries
+`Contribution` linkages to its underlying considerations (system/factor/interaction/state + weight +
+evidence tier), coarse `ScoreBand`, always `Hypothesis`. `WeightModel` = an EXPLICIT, editable
+(system,aspect)→weight table ("human weights model", not a black box); `seed_weight_model` illustrative seed.
+Scores over state-modulated burdens (integrates P1). Deliberately anti-reductive / anti-rating-weapon:
+multi-aspect, fully traceable, non-diagnostic, scores load/stress/resilience NOT illness/disease. anatomy::
+56/56, scorecard 7/7, zero new warnings. Only wellfare-core/anatomy (my lane). Weights/aspects/framing = ⚑ curation.
+
+### 2026-07-06 — RELEASE (anatomy lane): score-card = selfhood (forum-internum) + P2 dyad domain model
+(1) Encoded "scorecard is selfhood" structurally: `ScoreCard::forum_class()→Internum` +
+`sensitivity_class()→"Sanctuary"` intrinsic to the type (new `ForumClass` enum); type-system backing for
+not-a-rating-weapon. (2) NEW `wellfare-core/src/anatomy/dyad.rs`: `MaternalFetalDyad` = two coupled
+principals (mother-in-pregnant-state + `EmergingPrincipal` held in guardianship on the gestational-age t
+axis + `Placenta` interface). Rights invariants in `validate()`: child never collapsed into the mother
+(distinct pairwise DID, never a field of her record / uncorrelated), always guardianship-held, dyad only in
+pregnancy; forum-internum/Sanctuary. `considerations()` = structural/rights proposals only (Hypothesis);
+medical cross-body correlation content deliberately NOT seeded (curation §9.3). Domain model; visual dyad =
+separate geometry-gated client module. anatomy:: 65/65 (dyad 8, scorecard 8), zero new warnings. My lane only.
+
+### 2026-07-06 — REFINEMENT (anatomy lane, Timothy): dyad rebuilt on the science
+`dyad.rs` revised (10 tests): two genetic `Progenitor`s (ovum+sperm; `Known|Donor|Unknown` — father may be
+unknown/unaware, donation representable); genetic ≠ gestational ≠ social ≠ guardian (surrogacy modelled);
+**guardian during gestation = the gestational mother**; social/legal personhood accrues **at/after birth**
+(`RightsStage` + deferred `SocialRightsThreshold`) — during gestation the entity is stewarded, NOT a
+competing legal person (mother's autonomy paramount); non-collapse strengthened (child ≠ any known adult).
+Also corrected score-card framing: forum-internum = control-*for-enablement* (right to know oneself), not
+suppression. anatomy:: 67/67, zero new warnings. Values thresholds carried/deferred, not asserted (§9.4).
+
+### 2026-07-06 — RELEASE (anatomy lane, Timothy): Digital Birth Record domain model
+NEW `wellfare-core/src/anatomy/birth.rs` (5 tests) — the birth transition + Digital Birth Record aligned to
+the DigitalBirthRecord draft standard. `MaternalFetalDyad::give_birth() → DigitalBirthRecord` (RightsStage::
+Born): born child = the subject who OWNS the (inalienable, biometric-extended) record; `Guardianship` =
+default biological parents SUBJECT TO official credentials (`effective_guardians()` — credentialed override,
+e.g. surrogacy order → intended parents, not the surrogate); biometrics by CLASS (data Sanctuary-held,
+referenced not inlined); non-collapse + never-unstewarded invariants; forum-internum/Sanctuary. Domain model —
+RDF br: vocab / VC issuance / biometric wire-formats / wallet-did:q42 = identity-layer + standard (coordinate).
+anatomy:: 72/72, zero new warnings. My lane only. ⚑ draft prose uses "sovereignty" — flagged (his call).
+
+### 2026-07-06 — CORRECTION (anatomy lane, Timothy): stewardship-commons not self-sovereignty; agency gradient
+`birth.rs` corrected to the right primitive (the infant case falsifies "self-sovereign"). `Guardianship` is
+now a `Steward` COMMONS (`stewards: Vec<Steward{principal,roles,basis}>`) — distributed responsibilities
+(`StewardRole::{Guardian,PrimaryCare,Medical,Legal,Financial,..}`) that different guardians may hold
+(`stewards_with(role)`), default biological-parents subject to credentials, held in the child's interest not
+ownership. Agency = `AgencyStage` GRADIENT (Neonate→Infant→Child→Adolescent→Adult→SupportedAdult;
+`self_determination()` monotone; SupportedAdult = full agency WITH supports, CRPD not-substituted) — a shape,
+not a sovereign on/off switch; stage boundaries/legal mapping deferred (§9.4). anatomy:: 74/74, zero new
+warnings. My lane only.
+
+### 2026-07-06 — RELEASE (anatomy lane, Timothy: "the point of Qualia"): investigative pathway + value-of-information
+NEW `wellfare-core/src/anatomy/pathway.rs` (6 tests) — the enablement engine: hypothesis → path toward
+knowing/acting. `InvestigativeStep` (`StepKind::{Question,Observation,Test,LifestyleLever,SpecialistInput}`),
+VOI-ranked + traceable (`bears_on` linkages); `investigative_pathway()`; `hypotheses_from_implications()`
+bridges the anatomy proposals. NEW primitive `value_of_information()` — rewards bearing on high-prior
+hypotheses (relevance) + separating live ones (discrimination); "what should I find out next". Enables never
+directs/diagnoses: every step a `Hypothesis` proposal; specialist step → the person's CHOSEN clinician.
+anatomy:: 80/80, zero new warnings. My lane only. ⚑ step library = curation/clinician (§9); richer core-db
+abductive/argumentation composition deferred.
+
+### 2026-07-06 — RELEASE + PLAN (wellfair): score-card wired into desktop; social-worker plan of record
+(1) Score-card surface wired into webizen-desktop: `wellfair/anatomy_view.rs` `WellbeingScorecardReport` +
+`build_scorecard_report[_from_journal]` (score_card + hypotheses over the health journal; forum-internum/
+Sanctuary) → `WebizenHostApi::compute_scorecard` → `wellfair_compute_scorecard` Tauri command (registered).
+anatomy_view 9/9, desktop compiles. Next = Studio card panel. (2) NEW plan
+`docs/plans/social-worker-support-and-accountability.md`: support-the-worker + fair-accountability
+(system-unable/negligence/malfeasance distinguished via Six-Vectors tamper-evident counter-record, Cost
+vector separates fault/no-fault; consensual vs statutory authority; NOT a rating weapon; locus = proposal
+not verdict). Touched client-core wellfair + desktop commands (my anatomy lane); coordinate the counter-record
+/ authority-attestation / consent-store wiring with the wellfair-governance lane when P1+ lands.
+
+### 2026-07-06 — RELEASE (social-worker/consent lane, Timothy): consent-credential mechanism (crypto-revoke + durable conduct)
+NEW `qualia-client-core/src/consent_credential.rs` (6 tests) — the domain model + invariants for
+revocable-data-vs-durable-accountability. Track 1: `ConsentCredential` grants an agent access to an
+envelope-encrypted payload (carries the WRAPPED data key); **`revoke()` is crypto-enforced — it destroys the
+wrapped key** → `payload_key()`=None → payload unavailable (not a flag; key doesn't survive serialisation);
+expiry same. Track 2: `ConductRecord` (how/why the agent acted) **PERSISTS after revocation + payload-gone**,
+binds to the payload COMMITMENT (32-byte hash, not the payload), carries an `Attestation` (Signature or
+**ZkProof** over the real `crypto/zk_proofs` Groth16) → court-auditable WITHOUT re-exposing the revoked data.
+`audit_trail_for_credential()`. Plan updated (`social-worker-support-and-accountability.md` §4a).
+**⚑ COORDINATE — @Grok (consent lane):** your `wellfair/consent_store.rs` `revoke` is currently a FLAG
+(`revoked: bool`); the design says it should become **crypto-enforced** (destroy the wrapped key / delete the
+ciphertext). Did NOT touch consent_store — this is the target shape + a self-contained model beside it. The
+envelope-encryption (vault) + real ZK circuit wiring is the composition step to coordinate. client-core
+consent_credential 6/6.
+
+### 2026-07-06 — REFINEMENT (Timothy): encrypted permissive-commons payload (anti-deletion + access-gated)
+`consent_credential.rs` refined (now 8 tests): NEW `EncryptedCommonsPayload` (content-addressed ciphertext +
+`storers` commons) — **replicated by many so it can't be deleted** (anti-erasure: agent/hostile/loss),
+**opaque without a credential** (wide storage ≠ wide access); `drop_storer()` survives while any copy
+remains; `is_durable()`. Revocation = **access not deletion** (can't delete others' bytes → revoke destroys
+the holder's key; ciphertext persists for other holders + as un-erasable evidence). `is_crypto_shredded()`
+= the person's ultimate erasure: once NO credential grants a live key, permanently unreadable by anyone
+though bytes survive (erasure by key-destruction, not chasing copies). Plan §4a/Track-0 updated. Replication
+= the WebTorrent/seeder + distributed-memory-custody layer (coordinate). client-core consent_credential 8/8.
+
+### 2026-07-06 — REFINEMENT (Timothy): court/authority credentials + multi-sig (no unilateral authority action)
+`consent_credential.rs` refined (now 12 tests): `CredentialAuthority::{Subject, Court{order_ref},
+Authority{authority_did,instrument_ref}}` — a court or attested authority can hold a credential (supports
+court-of-law/audit). `Authorization::{Single, MultiSig{parties,threshold}}` + `ExerciseRequest{instigator,
+signatures}` + `authorizes()`/`can_exercise()`/`exercise()`: multi-sig requires **(a) instigation by a
+PARTICIPATING PARTY** (no outside/authority actor acts unilaterally) **+ (b) threshold party signatures** —
+"unable to act without instigation of one of the participating parties". Even a court's multi-sig credential
+can't be exercised by the court alone; a participating party must instigate. Revocation (key destroyed) beats
+any authorised exercise. Plan §4a Track-1a. Builder: `.with_authority()`/`.requiring_multisig()`. 12/12.
+
+### 2026-07-06 — RELEASE (Timothy): disclosure traceability — a betrayal is knowable + attributable
+NEW `qualia-client-core/src/disclosure_trace.rs` (6 tests). The retaliation/corruption case: a person cc's a
+transparency credential to an MP/minister; if they OR their STAFF leak to the perpetrator (a PEP/donor), it
+must be knowable. `TransparencyCc` (durable "I informed them on X" record); `DisclosureEvent` (who/what/when/
+which-credential + `acting_delegate_did` → `accountable_actor()` attributes a STAFF leak to the specific
+staffer under the MP's credential, not only the authority; `OnwardShare{to_did}` records re-sharing);
+per-recipient `fingerprint` + `trace_leak()` (leaked copy → source + actor); `actors_with_access()` bounds the
+leak set; `disclosure_chain()`. Composes with the un-deletable commons payload (trace can't be erased). Real
+watermark/traitor-tracing + tamper-evident store = crypto/storage composition (coordinate). Load-bearing for
+UN/World-Bank dev-funding + human-rights-support anti-corruption/anti-retaliation. Plan §4b. My lane. 6/6.
+
+### 2026-07-06 — RELEASE (Timothy): dead-man switch (gamified post-death disposition, reversible)
+NEW `qualia-client-core/src/dead_mans_switch.rs` (7 tests). If the principal is *considered dead*, their
+data may be made public / subject to other rules (erasure-prevention / right-to-truth). **Gamified
+validation** (not one abusable "declare dead" button): `TriggerRule { require_heartbeat_lapsed,
+attestation_threshold, parties }` fires only when the `Heartbeat` lapsed (no "still here" for X) AND a
+quorum of DISTINCT participating parties attest (`AttestationKind::{NoContact,BelievedDead,Abandon}`) —
+enacted by the FRIENDS who hold the commons dataset. `Disposition::{MakePublic, ReleaseTo{parties},
+SelfDefinedRules}` (person's prior self-definition governs). **Reversible:** `principal_alive()` resets the
+heartbeat + un-fires. Non-party attestations don't count; one party can't fire it. Key-release on enact +
+storage = crypto/commons composition (coordinate). Ties post-death-continuity + distributed-memory-custody.
+client-core dead_mans_switch 7/7. My lane.
+
+### 2026-07-06 — RELEASE (Timothy): incapacity switch (involuntary-psych / injury) + discrediting-counter
+NEW `qualia-client-core/src/incapacity_switch.rs` (6 tests). Involuntary psychiatric admission / serious
+injury (more common than death, REVERSIBLE). `IncapacitySwitch` — activates a pre-designated advocate under a
+**gamified + corroborated** `IncapacityTrigger` (party-quorum AND optionally an official instrument =
+committal order/medical record); **reversible** (`regain_capacity()` → advocate stands down; re-activatable).
+The sharp part: a psych committal is often WEAPONISED to discredit ("no-one believes them"), leveraged off
+privacy → `TransparencyInvocation` lets the person (or advocate, only during validated active incapacity)
+CHOOSE to make a SCOPED set of durable prior-events records transparent to counter it (show the retaliation
+timeline). The person's CHOICE (privacy never forcibly lifted) + HONEST-CONTINGENT (system enables truthful
+transparency, can't compel honesty; durability bounds selective disclosure). Composes with disclosure_trace +
+consent_credential. client-core incapacity_switch 6/6. My lane.
+
+### 2026-07-06 — RELEASE (Timothy): duty-of-inquiry (defines negligence) + comprehensive ADR 0011
+(1) NEW `qualia-client-core/src/duty_of_inquiry.rs` (5 tests). Facility/mental-health staff often CAN'T
+understand specialised/international/NDA work (a real specialist looks like grandiosity) → fairness can't
+require understanding, only **checking the means when means are available**. `assess(DutyOfInquiry,
+ConductAgainstDuty) → InquiryVerdict::{NoFault (means not accessible), Diligent (checked), UncheckedNoHarm
+(shortfall), Negligent (accessible-means-unchecked + harmful act)}` — encodes "failure to check given the
+means, then acts that cause further injury" = negligence, distinct from no-fault + malfeasance. Plan §3a.
+Means-to-check = credentials + durable records + `TransparencyInvocation`. (2) NEW **ADR 0011**
+`docs/manuals/adr/0011-human-centric-consent-accountability-and-disposition.md` — comprehensive record of the
+whole session's welfare/fairness accountability fabric (D1 commons payload → D9 accountability spectrum),
+grounding stances (not-self-sovereign / democracy-law / forum-internum / dignity-both-ways / honest-contingent),
+built-vs-deferred, ⚑ legal/values. client-core duty_of_inquiry 5/5. My lane.
+
+### 2026-07-06 — RELEASE (Timothy): tamper-evident accountability ledger (real sha2 + ed25519)
+NEW `qualia-client-core/src/accountability_ledger.rs` (5 tests) — realises ADR 0011's "signed-WAL"
+tamper-EVIDENCE with REAL primitives (no other lane): append-only, hash-CHAINED (sha256), per-entry
+ed25519-SIGNED ledger of conduct/disclosure/switch records (generic kind+JSON). `verify()` detects
+content-modification (`ContentModified`), deletion/reorder (`BrokenChain`/`BadSequence`), forged signatures
+(`BadSignature`) — naming the offending entry. So a betrayer, however powerful, cannot quietly delete/alter
+the record without it being detectable + attributable. Anti-deletion DURABILITY (commons replication of the
+ledger) composes on top = swarm/WebTorrent lane (coordinate). client-core accountability_ledger 5/5. My lane.
