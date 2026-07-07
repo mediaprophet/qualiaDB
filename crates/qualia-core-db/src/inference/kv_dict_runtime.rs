@@ -182,6 +182,30 @@ pub fn load_certified(path: &std::path::Path) -> Result<CertInfo, String> {
     Ok(info)
 }
 
+/// **User switch — ON.** Load a certified dictionary from `path` and turn the dict-coded KV cache on
+/// (`QUALIA_LLM_KV_DICT`). One call for "use the small KV cache". Fail-closed via [`load_certified`].
+/// Take effect at the NEXT model load (the cache layout is chosen then), like the int8 toggle.
+pub fn activate(path: &std::path::Path) -> Result<CertInfo, String> {
+    let info = load_certified(path)?;
+    crate::llm_bench::set_kv_dict(true);
+    Ok(info)
+}
+
+/// **User switch — OFF.** Turn the dict-coded KV cache off and drop the installed dictionaries; the next
+/// model load uses the default f32/int8 cache.
+pub fn deactivate() {
+    crate::llm_bench::set_kv_dict(false);
+    disable();
+    clear();
+}
+
+/// Whether the dict-coded KV cache is currently the active choice: the toggle is on AND a dictionary is
+/// installed. (`QUALIA_LLM_KV_DICT` / [`crate::llm_bench::set_kv_dict`] / this read-back = the 3-way
+/// user switch, mirroring speculative-decode and int8-KV.)
+pub fn dict_active() -> bool {
+    crate::llm_bench::kv_dict_enabled() && installed_meta().is_some()
+}
+
 /// Reconstruct each of the `n_kv` head vectors in `proj` (length ≥ `n_kv * head_dim`) through this
 /// layer's dictionary, in place. No-op (one atomic load) when disabled, when the layer has no
 /// dictionary, or on a head_dim mismatch — so the caller stores the original vector unchanged.
