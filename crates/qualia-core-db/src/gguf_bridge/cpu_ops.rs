@@ -1,8 +1,8 @@
 //! CPU numeric kernels + pre-norm helpers used by the native/fallback LLM forward path.
 //! Split out of the monolithic `gguf_bridge` module (structural refactor; no behaviour change).
 
-use super::{RMS_NORM_EPS, VOCAB_CHUNK_ROWS};
 use super::gpu_params::{elem_op_label, ELEM_OP_RELU};
+use super::{RMS_NORM_EPS, VOCAB_CHUNK_ROWS};
 use crate::gguf_sharder::GgufTensorInfo;
 
 #[inline]

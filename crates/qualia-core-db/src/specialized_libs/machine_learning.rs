@@ -3345,8 +3345,7 @@ impl ModelLoader {
 
     /// Register a loading strategy under the given name.
     pub fn register_loading_strategy(&mut self, name: &str, strategy: LoadingStrategy) {
-        self.loading_strategies
-            .insert(name.to_string(), strategy);
+        self.loading_strategies.insert(name.to_string(), strategy);
     }
 
     /// Get a registered loading strategy by name.
@@ -3361,8 +3360,7 @@ impl ModelLoader {
 
     /// Register a format converter under the given name.
     pub fn register_format_converter(&mut self, name: &str, converter: FormatConverter) {
-        self.format_converters
-            .insert(name.to_string(), converter);
+        self.format_converters.insert(name.to_string(), converter);
     }
 
     /// Get a registered format converter by name.
@@ -3537,8 +3535,7 @@ impl ModelConverter {
 
     /// Register a conversion pipeline under the given name.
     pub fn register_pipeline(&mut self, name: &str, pipeline: ConversionPipeline) {
-        self.conversion_pipelines
-            .insert(name.to_string(), pipeline);
+        self.conversion_pipelines.insert(name.to_string(), pipeline);
     }
 
     /// Get a registered conversion pipeline by name.
@@ -4415,8 +4412,7 @@ impl HealthChecker {
 
     /// Register a health check under its check id.
     pub fn register_health_check(&mut self, check: HealthCheck) {
-        self.health_checks
-            .insert(check.check_id.clone(), check);
+        self.health_checks.insert(check.check_id.clone(), check);
     }
 
     /// Get a registered health check by id.
@@ -4727,8 +4723,7 @@ impl AutoTuner {
 
     /// Register a tuning algorithm under the given name.
     pub fn register_tuning_algorithm(&mut self, name: &str, algorithm: TuningAlgorithm) {
-        self.tuning_algorithms
-            .insert(name.to_string(), algorithm);
+        self.tuning_algorithms.insert(name.to_string(), algorithm);
     }
 
     /// Get a registered tuning algorithm by name.
@@ -5430,8 +5425,7 @@ impl DataPipeline {
 
     /// Register a data source under its source id.
     pub fn register_data_source(&mut self, source: DataSource) {
-        self.data_sources
-            .insert(source.source_id.clone(), source);
+        self.data_sources.insert(source.source_id.clone(), source);
     }
 
     /// Get a registered data source by id.
@@ -5462,8 +5456,7 @@ impl DataPipeline {
 
     /// Register a data loader under its loader id.
     pub fn register_loader(&mut self, loader: DataLoader) {
-        self.data_loaders
-            .insert(loader.loader_id.clone(), loader);
+        self.data_loaders.insert(loader.loader_id.clone(), loader);
     }
 
     /// Get a registered data loader by id.

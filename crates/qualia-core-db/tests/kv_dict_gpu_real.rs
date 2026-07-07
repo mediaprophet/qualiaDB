@@ -12,10 +12,13 @@ use qualia_core_db::{kv_dict_runtime, llm_bench};
 use std::path::{Path, PathBuf};
 
 fn find_model(name: &str) -> Option<PathBuf> {
-    [format!("../../docs/models/{name}"), format!("docs/models/{name}")]
-        .iter()
-        .map(PathBuf::from)
-        .find(|p| Path::new(p).exists())
+    [
+        format!("../../docs/models/{name}"),
+        format!("docs/models/{name}"),
+    ]
+    .iter()
+    .map(PathBuf::from)
+    .find(|p| Path::new(p).exists())
 }
 
 fn find_artifact() -> Option<PathBuf> {
@@ -48,7 +51,8 @@ fn dict_coded_cache_on_gpu_path() {
     llm_bench::set_kv_dict(false);
     kv_dict_runtime::deactivate();
 
-    let (ref_ppl, _) = llm_bench::perplexity_eval_blocking(&model, 48).expect("GPU f32 reference PPL");
+    let (ref_ppl, _) =
+        llm_bench::perplexity_eval_blocking(&model, 48).expect("GPU f32 reference PPL");
 
     // Activate the dict-coded cache (GPU shader encode + reconstruct).
     let info = kv_dict_runtime::activate(&art).expect("certified k=5 artifact must load");
@@ -70,8 +74,15 @@ fn dict_coded_cache_on_gpu_path() {
         info.delta_ppl * 100.0,
     );
 
-    assert!(cand_ppl.is_finite() && cand_ppl > 1.0, "GPU dict decode must be coherent");
-    assert!(delta < 0.05, "GPU dict ΔPPL must stay under the 5% gate (got {:+.2}%)", delta * 100.0);
+    assert!(
+        cand_ppl.is_finite() && cand_ppl > 1.0,
+        "GPU dict decode must be coherent"
+    );
+    assert!(
+        delta < 0.05,
+        "GPU dict ΔPPL must stay under the 5% gate (got {:+.2}%)",
+        delta * 100.0
+    );
     // GPU OMP encode + f16 codes should track the CPU-path / certified value (a loose band catches
     // gross shader bugs — a wrong reconstruction blows PPL up).
     assert!(

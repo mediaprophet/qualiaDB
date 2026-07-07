@@ -50,12 +50,18 @@ impl core::fmt::Display for ReconstructionError {
         match self {
             Self::TooFewPoints { got } => write!(f, "reconstruction: too few points: {got}"),
             Self::CountMismatch { points, normals } => {
-                write!(f, "reconstruction: count mismatch, {points} points vs {normals} normals")
+                write!(
+                    f,
+                    "reconstruction: count mismatch, {points} points vs {normals} normals"
+                )
             }
             Self::EmptyGrid => write!(f, "reconstruction: empty grid"),
             Self::IsosurfaceFailed(e) => write!(f, "reconstruction: isosurface failed: {e}"),
             Self::BufferTooSmall { needed, have } => {
-                write!(f, "reconstruction: buffer too small, need {needed}, have {have}")
+                write!(
+                    f,
+                    "reconstruction: buffer too small, need {needed}, have {have}"
+                )
             }
         }
     }
@@ -140,7 +146,8 @@ pub fn poisson_reconstruct_3d(
                 // Signed distance: (x - p) · n.
                 let p = points[best_idx];
                 let n = normals[best_idx];
-                let signed_dist = (query.x - p.x) * n.x + (query.y - p.y) * n.y + (query.z - p.z) * n.z;
+                let signed_dist =
+                    (query.x - p.x) * n.x + (query.y - p.y) * n.y + (query.z - p.z) * n.z;
                 grid_scratch[i + j * nx + k * nx * ny] = signed_dist;
             }
         }
@@ -148,10 +155,21 @@ pub fn poisson_reconstruct_3d(
 
     // Extract isosurface at level 0.
     let (vc, tc) = marching_cubes(
-        grid_scratch, nx, ny, nz, dx, dy, dz,
-        origin_x, origin_y, origin_z, 0.0,
-        out_vertices, out_triangles,
-    ).map_err(ReconstructionError::IsosurfaceFailed)?;
+        grid_scratch,
+        nx,
+        ny,
+        nz,
+        dx,
+        dy,
+        dz,
+        origin_x,
+        origin_y,
+        origin_z,
+        0.0,
+        out_vertices,
+        out_triangles,
+    )
+    .map_err(ReconstructionError::IsosurfaceFailed)?;
 
     Ok((vc, tc))
 }
@@ -164,14 +182,23 @@ pub fn poisson_reconstruct_3d(
 mod tests {
     use super::*;
 
-    fn sphere_points_normals(n: usize, cx: f64, cy: f64, cz: f64, r: f64) -> (Vec<Point3>, Vec<Point3>) {
+    fn sphere_points_normals(
+        n: usize,
+        cx: f64,
+        cy: f64,
+        cz: f64,
+        r: f64,
+    ) -> (Vec<Point3>, Vec<Point3>) {
         let mut pts = Vec::with_capacity(n);
         let mut nrm = Vec::with_capacity(n);
         // Fibonacci sphere distribution.
         let golden = (1.0 + 5.0f64.sqrt()) / 2.0;
         for i in 0..n {
             let t = i as f64 / n as f64;
-            let _phi = (2.0 * core::f64::consts::PI * i as f64 / golden).cos().acos() * 0.0; // placeholder
+            let _phi = (2.0 * core::f64::consts::PI * i as f64 / golden)
+                .cos()
+                .acos()
+                * 0.0; // placeholder
             let inclination = (1.0 - 2.0 * t).acos();
             let azimuth = 2.0 * core::f64::consts::PI * i as f64 / golden;
             let x = r * inclination.sin() * azimuth.cos();
@@ -198,9 +225,9 @@ mod tests {
         let mut tris = vec![[0u32; 3]; max_tris];
 
         let (vc, tc) = poisson_reconstruct_3d(
-            &pts, &nrm, nx, ny, nz, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0,
-            &mut grid, &mut verts, &mut tris,
-        ).unwrap();
+            &pts, &nrm, nx, ny, nz, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, &mut grid, &mut verts, &mut tris,
+        )
+        .unwrap();
 
         assert!(vc > 0, "sphere reconstruction should produce vertices");
         assert!(tc > 0, "sphere reconstruction should produce triangles");
@@ -214,7 +241,9 @@ mod tests {
         let mut verts = vec![Point3::default(); 100];
         let mut tris = vec![[0u32; 3]; 100];
         assert!(matches!(
-            poisson_reconstruct_3d(&pts, &nrm, 2, 2, 2, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, &mut grid, &mut verts, &mut tris),
+            poisson_reconstruct_3d(
+                &pts, &nrm, 2, 2, 2, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, &mut grid, &mut verts, &mut tris
+            ),
             Err(ReconstructionError::TooFewPoints { .. })
         ));
     }
@@ -227,7 +256,9 @@ mod tests {
         let mut verts = vec![Point3::default(); 100];
         let mut tris = vec![[0u32; 3]; 100];
         assert!(matches!(
-            poisson_reconstruct_3d(&pts, &nrm, 2, 2, 2, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, &mut grid, &mut verts, &mut tris),
+            poisson_reconstruct_3d(
+                &pts, &nrm, 2, 2, 2, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, &mut grid, &mut verts, &mut tris
+            ),
             Err(ReconstructionError::CountMismatch { .. })
         ));
     }
@@ -248,16 +279,34 @@ mod tests {
         let mut v2 = vec![Point3::default(); max_verts];
         let mut t2 = vec![[0u32; 3]; max_tris];
 
-        let (vc1, tc1) = poisson_reconstruct_3d(&pts, &nrm, nx, ny, nz, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, &mut g1, &mut v1, &mut t1).unwrap();
-        let (vc2, tc2) = poisson_reconstruct_3d(&pts, &nrm, nx, ny, nz, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, &mut g2, &mut v2, &mut t2).unwrap();
+        let (vc1, tc1) = poisson_reconstruct_3d(
+            &pts, &nrm, nx, ny, nz, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, &mut g1, &mut v1, &mut t1,
+        )
+        .unwrap();
+        let (vc2, tc2) = poisson_reconstruct_3d(
+            &pts, &nrm, nx, ny, nz, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, &mut g2, &mut v2, &mut t2,
+        )
+        .unwrap();
 
         assert_eq!(vc1, vc2);
         assert_eq!(tc1, tc2);
         // Compare vertex positions.
         for i in 0..vc1 {
-            assert_eq!(v1[i].x.to_bits(), v2[i].x.to_bits(), "vertex {i} x mismatch");
-            assert_eq!(v1[i].y.to_bits(), v2[i].y.to_bits(), "vertex {i} y mismatch");
-            assert_eq!(v1[i].z.to_bits(), v2[i].z.to_bits(), "vertex {i} z mismatch");
+            assert_eq!(
+                v1[i].x.to_bits(),
+                v2[i].x.to_bits(),
+                "vertex {i} x mismatch"
+            );
+            assert_eq!(
+                v1[i].y.to_bits(),
+                v2[i].y.to_bits(),
+                "vertex {i} y mismatch"
+            );
+            assert_eq!(
+                v1[i].z.to_bits(),
+                v2[i].z.to_bits(),
+                "vertex {i} z mismatch"
+            );
         }
     }
 }

@@ -19,7 +19,6 @@ pub use performance::*;
 pub use privacy::*;
 pub use storage::*;
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -465,7 +464,9 @@ mod tests {
         assert!(stats.total_operations > 0);
 
         // Verify operation metrics were recorded
-        let op_metrics = library.performance_monitor.get_operation_metrics("matrix_multiply");
+        let op_metrics = library
+            .performance_monitor
+            .get_operation_metrics("matrix_multiply");
         assert!(op_metrics.is_some());
         assert!(op_metrics.unwrap().count > 0);
 
@@ -481,10 +482,22 @@ mod tests {
         library.initialize().unwrap();
 
         library
-            .create_matrix("A".to_string(), 2, 2, DataType::Float64, vec![1.0, 2.0, 3.0, 4.0])
+            .create_matrix(
+                "A".to_string(),
+                2,
+                2,
+                DataType::Float64,
+                vec![1.0, 2.0, 3.0, 4.0],
+            )
             .unwrap();
         library
-            .create_matrix("B".to_string(), 2, 2, DataType::Float64, vec![5.0, 6.0, 7.0, 8.0])
+            .create_matrix(
+                "B".to_string(),
+                2,
+                2,
+                DataType::Float64,
+                vec![5.0, 6.0, 7.0, 8.0],
+            )
             .unwrap();
 
         // After multiply, the result "C" should be in the cache
@@ -512,8 +525,12 @@ mod tests {
 
         let analysis = library.analyze_matrix("S").unwrap();
         assert_eq!(analysis.matrix_id, "S");
-        assert!(analysis.detected_patterns.contains(&MatrixPattern::Symmetric));
-        assert!(analysis.detected_patterns.contains(&MatrixPattern::PositiveDefinite));
+        assert!(analysis
+            .detected_patterns
+            .contains(&MatrixPattern::Symmetric));
+        assert!(analysis
+            .detected_patterns
+            .contains(&MatrixPattern::PositiveDefinite));
         assert!(!analysis.recommended_algorithms.is_empty());
     }
 
@@ -533,7 +550,9 @@ mod tests {
             .unwrap();
 
         let analysis = library.analyze_matrix("D").unwrap();
-        assert!(analysis.detected_patterns.contains(&MatrixPattern::Diagonal));
+        assert!(analysis
+            .detected_patterns
+            .contains(&MatrixPattern::Diagonal));
     }
 
     #[test]
@@ -542,10 +561,22 @@ mod tests {
         library.initialize().unwrap();
 
         library
-            .create_matrix("A".to_string(), 2, 2, DataType::Float64, vec![1.0, 2.0, 3.0, 4.0])
+            .create_matrix(
+                "A".to_string(),
+                2,
+                2,
+                DataType::Float64,
+                vec![1.0, 2.0, 3.0, 4.0],
+            )
             .unwrap();
         library
-            .create_matrix("B".to_string(), 2, 2, DataType::Float64, vec![5.0, 6.0, 7.0, 8.0])
+            .create_matrix(
+                "B".to_string(),
+                2,
+                2,
+                DataType::Float64,
+                vec![5.0, 6.0, 7.0, 8.0],
+            )
             .unwrap();
         library.matrix_multiply("A", "B", "C", 1.0, 0.0).unwrap();
 
@@ -563,10 +594,22 @@ mod tests {
         assert_eq!(library.cache_hit_rate(), 0.0);
 
         library
-            .create_matrix("A".to_string(), 2, 2, DataType::Float64, vec![1.0, 2.0, 3.0, 4.0])
+            .create_matrix(
+                "A".to_string(),
+                2,
+                2,
+                DataType::Float64,
+                vec![1.0, 2.0, 3.0, 4.0],
+            )
             .unwrap();
         library
-            .create_matrix("B".to_string(), 2, 2, DataType::Float64, vec![5.0, 6.0, 7.0, 8.0])
+            .create_matrix(
+                "B".to_string(),
+                2,
+                2,
+                DataType::Float64,
+                vec![5.0, 6.0, 7.0, 8.0],
+            )
             .unwrap();
         library.matrix_multiply("A", "B", "C", 1.0, 0.0).unwrap();
 
@@ -580,12 +623,20 @@ mod tests {
         library.initialize().unwrap();
 
         library
-            .create_matrix("A".to_string(), 2, 3, DataType::Float64, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+            .create_matrix(
+                "A".to_string(),
+                2,
+                3,
+                DataType::Float64,
+                vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            )
             .unwrap();
 
         library.matrix_transpose("A", "AT").unwrap();
 
-        let op_metrics = library.performance_monitor.get_operation_metrics("matrix_transpose");
+        let op_metrics = library
+            .performance_monitor
+            .get_operation_metrics("matrix_transpose");
         assert!(op_metrics.is_some());
         assert!(op_metrics.unwrap().count > 0);
     }
@@ -596,12 +647,20 @@ mod tests {
         library.initialize().unwrap();
 
         library
-            .create_matrix("A".to_string(), 2, 2, DataType::Float64, vec![2.0, 1.0, 1.0, 1.0])
+            .create_matrix(
+                "A".to_string(),
+                2,
+                2,
+                DataType::Float64,
+                vec![2.0, 1.0, 1.0, 1.0],
+            )
             .unwrap();
 
         library.matrix_inverse("A", "A_inv").unwrap();
 
-        let op_metrics = library.performance_monitor.get_operation_metrics("matrix_inverse");
+        let op_metrics = library
+            .performance_monitor
+            .get_operation_metrics("matrix_inverse");
         assert!(op_metrics.is_some());
         assert!(op_metrics.unwrap().count > 0);
     }
@@ -612,7 +671,13 @@ mod tests {
         library.initialize().unwrap();
 
         library
-            .create_matrix("A".to_string(), 2, 2, DataType::Float64, vec![2.0, 1.0, 1.0, 1.0])
+            .create_matrix(
+                "A".to_string(),
+                2,
+                2,
+                DataType::Float64,
+                vec![2.0, 1.0, 1.0, 1.0],
+            )
             .unwrap();
         library
             .create_matrix("b".to_string(), 2, 1, DataType::Float64, vec![3.0, 2.0])
@@ -620,7 +685,9 @@ mod tests {
 
         library.solve_linear_system("A", "b", "x").unwrap();
 
-        let op_metrics = library.performance_monitor.get_operation_metrics("solve_linear_system");
+        let op_metrics = library
+            .performance_monitor
+            .get_operation_metrics("solve_linear_system");
         assert!(op_metrics.is_some());
         assert!(op_metrics.unwrap().count > 0);
     }
@@ -724,7 +791,10 @@ impl LinearAlgebraLibrary {
         let start_time = std::time::Instant::now();
 
         // Check cache for the result matrix
-        let cache_key = format!("mul:{}:{}:{}:{}:{}", left_id, right_id, result_id, alpha, beta);
+        let cache_key = format!(
+            "mul:{}:{}:{}:{}:{}",
+            left_id, right_id, result_id, alpha, beta
+        );
         let cache_hit = self.matrix_storage.cache.get(&cache_key).is_some();
         if cache_hit {
             // Retrieve from cache
@@ -787,8 +857,11 @@ impl LinearAlgebraLibrary {
         let memory_usage = (left.rows * right.cols * 8) as u64;
 
         // Update performance metrics with detailed info
-        self.performance_monitor
-            .record_operation_detailed("matrix_multiply", execution_time as f64, (left.rows, right.cols));
+        self.performance_monitor.record_operation_detailed(
+            "matrix_multiply",
+            execution_time as f64,
+            (left.rows, right.cols),
+        );
         self.performance_monitor
             .record_operation("matrix_multiply", execution_time, memory_usage);
         self.performance_monitor
@@ -852,8 +925,11 @@ impl LinearAlgebraLibrary {
         let memory_usage = (left.rows * left.cols * 8) as u64;
 
         // Update performance metrics
-        self.performance_monitor
-            .record_operation_detailed("matrix_add", execution_time as f64, (left.rows, left.cols));
+        self.performance_monitor.record_operation_detailed(
+            "matrix_add",
+            execution_time as f64,
+            (left.rows, left.cols),
+        );
         self.performance_monitor
             .record_operation("matrix_add", execution_time, memory_usage);
         self.performance_monitor
@@ -907,8 +983,11 @@ impl LinearAlgebraLibrary {
         let memory_usage = (input.rows * input.cols * 8) as u64;
 
         // Update performance metrics
-        self.performance_monitor
-            .record_operation_detailed("matrix_transpose", execution_time as f64, (input.rows, input.cols));
+        self.performance_monitor.record_operation_detailed(
+            "matrix_transpose",
+            execution_time as f64,
+            (input.rows, input.cols),
+        );
         self.performance_monitor
             .record_operation("matrix_transpose", execution_time, memory_usage);
         self.performance_monitor
@@ -1005,8 +1084,13 @@ impl LinearAlgebraLibrary {
         }
 
         // Create result matrix
-        let result =
-            self.create_matrix(result_id.to_string(), n, n, input.data_type.clone(), result_data)?;
+        let result = self.create_matrix(
+            result_id.to_string(),
+            n,
+            n,
+            input.data_type.clone(),
+            result_data,
+        )?;
 
         // Store result in cache
         self.matrix_storage.cache.put(&result)?;
@@ -1015,8 +1099,11 @@ impl LinearAlgebraLibrary {
         let memory_usage = (n * n * 8) as u64;
 
         // Update performance metrics
-        self.performance_monitor
-            .record_operation_detailed("matrix_inverse", execution_time as f64, (n, n));
+        self.performance_monitor.record_operation_detailed(
+            "matrix_inverse",
+            execution_time as f64,
+            (n, n),
+        );
         self.performance_monitor
             .record_operation("matrix_inverse", execution_time, memory_usage);
         self.performance_monitor
@@ -1100,10 +1187,16 @@ impl LinearAlgebraLibrary {
         let memory_usage = (n * n * 8) as u64;
 
         // Update performance metrics
-        self.performance_monitor
-            .record_operation_detailed("solve_linear_system", execution_time as f64, (n, n));
-        self.performance_monitor
-            .record_operation("solve_linear_system", execution_time, memory_usage);
+        self.performance_monitor.record_operation_detailed(
+            "solve_linear_system",
+            execution_time as f64,
+            (n, n),
+        );
+        self.performance_monitor.record_operation(
+            "solve_linear_system",
+            execution_time,
+            memory_usage,
+        );
         self.performance_monitor
             .record_matrix_access(solution_id, "solve_linear_system", false);
 

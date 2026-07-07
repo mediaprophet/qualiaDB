@@ -265,7 +265,10 @@ mod nvml_impl {
             let temp_c = dev
                 .temperature(TemperatureSensor::Gpu)
                 .map_err(|e| format!("temperature: {e}"))?;
-            let power_w = dev.power_usage().map(|mw| mw as f64 / 1000.0).unwrap_or(0.0);
+            let power_w = dev
+                .power_usage()
+                .map(|mw| mw as f64 / 1000.0)
+                .unwrap_or(0.0);
             let power_limit_w = dev
                 .enforced_power_limit()
                 .map(|mw| mw as f64 / 1000.0)
@@ -344,7 +347,8 @@ mod nvml_impl {
                         match self.apply_power_limit_mw(saved) {
                             Ok(()) => log::info!(
                                 "W7|thermal|cooled to {}\u{b0}C — restored power limit {:.0}W",
-                                s.temp_c, saved as f64 / 1000.0
+                                s.temp_c,
+                                saved as f64 / 1000.0
                             ),
                             Err(e) => log::warn!("W7|thermal|restore power limit FAILED: {e}"),
                         }
@@ -366,7 +370,9 @@ mod nvml_impl {
 
     impl ThermalGovernor for NvmlThermalGovernor {
         fn get_thermal_state(&self) -> ThermalStatus {
-            self.sample().map(|s| s.status).unwrap_or(ThermalStatus::Cool)
+            self.sample()
+                .map(|s| s.status)
+                .unwrap_or(ThermalStatus::Cool)
         }
 
         fn adjust_policy(&self, _status: ThermalStatus) {
@@ -393,7 +399,10 @@ mod tests {
         assert_eq!(status_for_temp(WARM_THRESHOLD_C + 1), ThermalStatus::Warm);
         assert_eq!(status_for_temp(80), ThermalStatus::Warm);
         assert_eq!(status_for_temp(CRITICAL_THRESHOLD_C), ThermalStatus::Warm);
-        assert_eq!(status_for_temp(CRITICAL_THRESHOLD_C + 1), ThermalStatus::Critical);
+        assert_eq!(
+            status_for_temp(CRITICAL_THRESHOLD_C + 1),
+            ThermalStatus::Critical
+        );
         assert_eq!(status_for_temp(95), ThermalStatus::Critical);
     }
 
@@ -414,7 +423,10 @@ mod tests {
         assert!((warm - 63.0).abs() < 1e-6, "warm cap {warm}");
         // Critical → 80%, clamped up to the driver minimum.
         let crit = mk(90, 70.0, 60.0, 90.0).recommended_power_cap_w().unwrap();
-        assert!((crit - 60.0).abs() < 1e-6, "critical cap clamped to min: {crit}");
+        assert!(
+            (crit - 60.0).abs() < 1e-6,
+            "critical cap clamped to min: {crit}"
+        );
     }
 
     #[test]
@@ -428,13 +440,25 @@ mod tests {
         assert_eq!(decide_thermal_action(Warm, 0, true, false), Recommend);
         assert_eq!(decide_thermal_action(Warm, 0, true, true), Nothing);
         // Critical below the dwell → recommend only, even with auto-cap on.
-        assert_eq!(decide_thermal_action(Critical, CRITICAL_DWELL - 1, true, false), Recommend);
+        assert_eq!(
+            decide_thermal_action(Critical, CRITICAL_DWELL - 1, true, false),
+            Recommend
+        );
         // Critical sustained past the dwell with auto-cap ON → apply the cap.
-        assert_eq!(decide_thermal_action(Critical, CRITICAL_DWELL, true, false), ApplyCap);
+        assert_eq!(
+            decide_thermal_action(Critical, CRITICAL_DWELL, true, false),
+            ApplyCap
+        );
         // Same, but auto-cap OFF → recommend only (the user option gates enforcement).
-        assert_eq!(decide_thermal_action(Critical, CRITICAL_DWELL, false, false), Recommend);
+        assert_eq!(
+            decide_thermal_action(Critical, CRITICAL_DWELL, false, false),
+            Recommend
+        );
         // Already capped and still Critical → hold (don't re-apply).
-        assert_eq!(decide_thermal_action(Critical, CRITICAL_DWELL + 5, true, true), Nothing);
+        assert_eq!(
+            decide_thermal_action(Critical, CRITICAL_DWELL + 5, true, true),
+            Nothing
+        );
     }
 
     #[test]
@@ -442,7 +466,10 @@ mod tests {
         set_gpu_auto_cap(false);
         assert!(!gpu_auto_cap_enabled() || std::env::var("QUALIA_LLM_GPU_AUTO_CAP").is_ok());
         set_gpu_auto_cap(true);
-        assert!(gpu_auto_cap_enabled() || std::env::var("QUALIA_LLM_GPU_AUTO_CAP").as_deref() == Ok("0"));
+        assert!(
+            gpu_auto_cap_enabled()
+                || std::env::var("QUALIA_LLM_GPU_AUTO_CAP").as_deref() == Ok("0")
+        );
     }
 
     /// Hardware smoke test — only compiled with `--features nvml` and only meaningful on an NVIDIA
@@ -454,10 +481,19 @@ mod tests {
             Some(s) => {
                 println!(
                     "[w7] {:?} temp={}\u{b0}C power={:.1}W limit={:.1}W [{:.1}..{:.1}]W rec={:?}",
-                    s.status, s.temp_c, s.power_w, s.power_limit_w, s.power_min_w, s.power_max_w,
+                    s.status,
+                    s.temp_c,
+                    s.power_w,
+                    s.power_limit_w,
+                    s.power_min_w,
+                    s.power_max_w,
                     s.recommended_power_cap_w()
                 );
-                assert!(s.temp_c > 0 && s.temp_c < 130, "implausible GPU temp {}", s.temp_c);
+                assert!(
+                    s.temp_c > 0 && s.temp_c < 130,
+                    "implausible GPU temp {}",
+                    s.temp_c
+                );
                 assert_eq!(s.status, status_for_temp(s.temp_c));
             }
             None => eprintln!("[w7] NVML unavailable on this host — smoke test skipped"),

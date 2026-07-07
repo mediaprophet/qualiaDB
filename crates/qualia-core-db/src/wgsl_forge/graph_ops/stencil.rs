@@ -61,7 +61,12 @@ pub struct RopeConfig {
 impl RopeConfig {
     /// A config at the default θ base (10000).
     pub fn new(head_dim: u32, pos: u32, mode: RopeMode) -> Self {
-        Self { head_dim, pos, mode, theta_base: ROPE_DEFAULT_THETA_BASE }
+        Self {
+            head_dim,
+            pos,
+            mode,
+            theta_base: ROPE_DEFAULT_THETA_BASE,
+        }
     }
 
     fn validate(&self, n: usize) -> Result<(), ForgeError> {
@@ -79,7 +84,13 @@ impl RopeConfig {
 /// The `[n, head_dim, pos, mode, theta_base_bits]` u32 params buffer the RoPE kernel reads
 /// (binding 2). `theta_base` is carried as its IEEE-754 bit pattern and `bitcast` back in WGSL.
 pub fn rope_params(n: u32, cfg: &RopeConfig) -> [u32; 5] {
-    [n, cfg.head_dim, cfg.pos, cfg.mode.code(), cfg.theta_base.to_bits()]
+    [
+        n,
+        cfg.head_dim,
+        cfg.pos,
+        cfg.mode.code(),
+        cfg.theta_base.to_bits(),
+    ]
 }
 
 /// Emit the WGSL module for stencil `kind` at workgroup size `wg`. One invocation per grid
@@ -199,7 +210,11 @@ pub fn rope_cpu(input: &[f32], cfg: &RopeConfig) -> Result<Vec<f32>, ForgeError>
         let (c, s) = (theta.cos(), theta.sin());
         let xv = input[i];
         let pv = if partner < n { input[partner] } else { 0.0 };
-        out[i] = if is_first { xv * c - pv * s } else { pv * s + xv * c };
+        out[i] = if is_first {
+            xv * c - pv * s
+        } else {
+            pv * s + xv * c
+        };
     }
     Ok(out)
 }
@@ -218,7 +233,9 @@ pub fn stencil_gpu(
 
     let n = input.len();
     if n == 0 {
-        return Err(ForgeError::GpuValidation("stencil_gpu: empty input".to_string()));
+        return Err(ForgeError::GpuValidation(
+            "stencil_gpu: empty input".to_string(),
+        ));
     }
     if kind == StencilKind::RopePair {
         rope.validate(n)?;
@@ -241,10 +258,17 @@ pub fn stencil_gpu(
         StencilKind::RopePair => rope_params(n as u32, &rope),
         _ => [n as u32, 0, 0, 0, 0],
     };
-    let view_params =
-        ctx.allocate_and_write(bytemuck::cast_slice(&params), 2, 0, BindingUsage::StorageRead)?;
+    let view_params = ctx.allocate_and_write(
+        bytemuck::cast_slice(&params),
+        2,
+        0,
+        BindingUsage::StorageRead,
+    )?;
     let pipeline = WgpuPipeline::compile(&ctx, &src, STENCIL_ENTRY)?;
-    let schedule = Schedule { workgroup_size: wg, ..Default::default() };
+    let schedule = Schedule {
+        workgroup_size: wg,
+        ..Default::default()
+    };
     pipeline.dispatch(&[view_in, view_out, view_params], &schedule, n)?;
     let mut out = ctx.read_buffer_f32(&view_out)?;
     out.truncate(n);
@@ -303,7 +327,10 @@ mod tests {
         for mode in [RopeMode::Interleaved, RopeMode::Neox] {
             let out = rope_cpu(&inp, &RopeConfig::new(8, 0, mode)).unwrap();
             for (a, b) in out.iter().zip(&inp) {
-                assert!((a - b).abs() < 1e-6, "pos-0 RoPE must be identity ({mode:?})");
+                assert!(
+                    (a - b).abs() < 1e-6,
+                    "pos-0 RoPE must be identity ({mode:?})"
+                );
             }
         }
     }
@@ -324,7 +351,10 @@ mod tests {
                     };
                     let n_in = inp[ai] * inp[ai] + inp[bi] * inp[bi];
                     let n_out = out[ai] * out[ai] + out[bi] * out[bi];
-                    assert!((n_in - n_out).abs() < 1e-4, "{mode:?} pair norm: {n_in} vs {n_out}");
+                    assert!(
+                        (n_in - n_out).abs() < 1e-4,
+                        "{mode:?} pair norm: {n_in} vs {n_out}"
+                    );
                 }
             }
         }
@@ -335,8 +365,12 @@ mod tests {
         // RoPE's defining property: the attention score dot(RoPE(q,m), RoPE(k,n)) depends only on
         // the RELATIVE offset (m−n). So shifting both positions by the same Δ leaves it unchanged.
         let head_dim = 8u32;
-        let q: Vec<f32> = (0..head_dim).map(|i| ((i * 3 % 7) as f32) * 0.2 - 0.5).collect();
-        let k: Vec<f32> = (0..head_dim).map(|i| ((i * 5 % 11) as f32) * 0.15 - 0.4).collect();
+        let q: Vec<f32> = (0..head_dim)
+            .map(|i| ((i * 3 % 7) as f32) * 0.2 - 0.5)
+            .collect();
+        let k: Vec<f32> = (0..head_dim)
+            .map(|i| ((i * 5 % 11) as f32) * 0.15 - 0.4)
+            .collect();
         for mode in [RopeMode::Interleaved, RopeMode::Neox] {
             let (m, n) = (3u32, 7u32);
             let base = dot(
@@ -366,21 +400,31 @@ mod tests {
     #[ignore = "requires a GPU adapter"]
     fn stencil_gpu_matches_oracle() {
         // Laplacian.
-        let inp: Vec<f32> = (0..512).map(|i| ((i * 7 % 31) as f32) * 0.1 - 1.5).collect();
+        let inp: Vec<f32> = (0..512)
+            .map(|i| ((i * 7 % 31) as f32) * 0.1 - 1.5)
+            .collect();
         let lap_cfg = RopeConfig::new(2, 0, RopeMode::Interleaved);
         let gpu = stencil_gpu(&inp, StencilKind::Laplacian, lap_cfg).expect("gpu laplacian");
         let cpu = stencil_cpu(&inp, StencilKind::Laplacian, lap_cfg).unwrap();
         for (g, c) in gpu.iter().zip(&cpu) {
-            assert!((g - c).abs() <= 1e-4 * c.abs().max(1.0), "laplacian: {g} vs {c}");
+            assert!(
+                (g - c).abs() <= 1e-4 * c.abs().max(1.0),
+                "laplacian: {g} vs {c}"
+            );
         }
         // Real RoPE, both conventions, a non-trivial position and multi-head layout.
-        let rope_in: Vec<f32> = (0..512).map(|i| ((i * 11 % 23) as f32) * 0.08 - 0.9).collect();
+        let rope_in: Vec<f32> = (0..512)
+            .map(|i| ((i * 11 % 23) as f32) * 0.08 - 0.9)
+            .collect();
         for mode in [RopeMode::Interleaved, RopeMode::Neox] {
             let cfg = RopeConfig::new(64, 5, mode);
             let gpu = rope_gpu(&rope_in, &cfg).expect("gpu rope");
             let cpu = rope_cpu(&rope_in, &cfg).unwrap();
             for (g, c) in gpu.iter().zip(&cpu) {
-                assert!((g - c).abs() <= 1e-4 * c.abs().max(1.0), "rope {mode:?}: {g} vs {c}");
+                assert!(
+                    (g - c).abs() <= 1e-4 * c.abs().max(1.0),
+                    "rope {mode:?}: {g} vs {c}"
+                );
             }
         }
     }

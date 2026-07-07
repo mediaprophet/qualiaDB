@@ -93,7 +93,10 @@ impl LicenceKind {
     /// Returns `true` if this licence is copyleft and therefore forbidden
     /// in the registry.
     pub fn is_copyleft(&self) -> bool {
-        matches!(self, LicenceKind::Gpl | LicenceKind::Lgpl | LicenceKind::Agpl)
+        matches!(
+            self,
+            LicenceKind::Gpl | LicenceKind::Lgpl | LicenceKind::Agpl
+        )
     }
 }
 
@@ -198,7 +201,10 @@ impl std::fmt::Display for FixtureRegistryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             FixtureRegistryError::CopyleftLicence { id, kind } => {
-                write!(f, "fixture `{id}` carries forbidden copyleft licence ({kind:?})")
+                write!(
+                    f,
+                    "fixture `{id}` carries forbidden copyleft licence ({kind:?})"
+                )
             }
             FixtureRegistryError::ZeroChecksum { id } => {
                 write!(f, "fixture `{id}` has an all-zero checksum")
@@ -207,7 +213,10 @@ impl std::fmt::Display for FixtureRegistryError {
                 write!(f, "duplicate fixture id `{id}`")
             }
             FixtureRegistryError::MissingSection { id } => {
-                write!(f, "fixture `{id}` is a TextbookInvariant with an empty section")
+                write!(
+                    f,
+                    "fixture `{id}` is a TextbookInvariant with an empty section"
+                )
             }
             FixtureRegistryError::UnknownLicence { id } => {
                 write!(f, "fixture `{id}` carries an unrecognised licence")
@@ -504,7 +513,12 @@ mod tests {
             notes: "intentionally zero checksum for the rejection test",
         };
         let err = validate_records(&[bad]).expect_err("zero checksum must be rejected");
-        assert_eq!(err, FixtureRegistryError::ZeroChecksum { id: "bad/zero_checksum" });
+        assert_eq!(
+            err,
+            FixtureRegistryError::ZeroChecksum {
+                id: "bad/zero_checksum"
+            }
+        );
     }
 
     /// A duplicate-id pair is rejected.
@@ -548,7 +562,12 @@ mod tests {
             notes: "intentionally empty section for the rejection test",
         };
         let err = validate_records(&[bad]).expect_err("empty section must be rejected");
-        assert_eq!(err, FixtureRegistryError::MissingSection { id: "bad/empty_section" });
+        assert_eq!(
+            err,
+            FixtureRegistryError::MissingSection {
+                id: "bad/empty_section"
+            }
+        );
     }
 
     /// `find` returns the right record for a known id and `None` for unknown.
@@ -645,7 +664,10 @@ mod tests {
             }
         }
         assert!(has_textbook, "seed must include a TextbookInvariant record");
-        assert!(has_independent, "seed must include an IndependentlyComputed record");
+        assert!(
+            has_independent,
+            "seed must include an IndependentlyComputed record"
+        );
         assert!(has_cc0, "seed must include a Cc0Input record");
         assert!(has_hand, "seed must include a HandAuthored record");
     }

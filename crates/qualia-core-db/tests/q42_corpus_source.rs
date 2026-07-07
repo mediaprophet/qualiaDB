@@ -29,7 +29,10 @@ fn find_q42() -> Option<PathBuf> {
         }
     }
     for name in ["dqv", "duv", "adms", "activitystreams-owl"] {
-        for root in ["bundled/ontologies/w3c-archives", "../../bundled/ontologies/w3c-archives"] {
+        for root in [
+            "bundled/ontologies/w3c-archives",
+            "../../bundled/ontologies/w3c-archives",
+        ] {
             let p = PathBuf::from(format!("{root}/{name}.q42"));
             if p.exists() {
                 return Some(p);
@@ -65,24 +68,49 @@ fn extracts_corpus_text_from_in_repo_q42() {
         let lex = dvol.lex_view().expect("lex");
         println!("[q42diag] {} quins in {}", quins.len(), vol.display());
         const MASK: u64 = 0x0FFF_FFFF_FFFF_FFFF; // clear the upper 4-bit modality/type tag
-        let r = |h: u64| lex.lookup_hash(h).map(|s| s.chars().take(50).collect::<String>());
-        let rm = |h: u64| lex.lookup_hash(h & MASK).map(|s| s.chars().take(50).collect::<String>());
+        let r = |h: u64| {
+            lex.lookup_hash(h)
+                .map(|s| s.chars().take(50).collect::<String>())
+        };
+        let rm = |h: u64| {
+            lex.lookup_hash(h & MASK)
+                .map(|s| s.chars().take(50).collect::<String>())
+        };
         for (i, q) in quins.iter().take(12).enumerate() {
             println!(
                 "[q42diag] #{i} raw o={:016x} p={:016x} | s={:?} p={:?} o={:?} | masked o={:?} p={:?}",
                 q.object, q.predicate, r(q.subject), r(q.predicate), r(q.object), rm(q.object), rm(q.predicate)
             );
         }
-        let obj_raw = quins.iter().filter(|q| lex.lookup_hash(q.object).is_some()).count();
-        let obj_masked = quins.iter().filter(|q| lex.lookup_hash(q.object & MASK).is_some()).count();
-        println!("[q42diag] resolvable objects: raw {}/{}, masked {}/{}", obj_raw, quins.len(), obj_masked, quins.len());
+        let obj_raw = quins
+            .iter()
+            .filter(|q| lex.lookup_hash(q.object).is_some())
+            .count();
+        let obj_masked = quins
+            .iter()
+            .filter(|q| lex.lookup_hash(q.object & MASK).is_some())
+            .count();
+        println!(
+            "[q42diag] resolvable objects: raw {}/{}, masked {}/{}",
+            obj_raw,
+            quins.len(),
+            obj_masked,
+            quins.len()
+        );
     }
 
     // Primary path: dump the lexicon's sentence-like strings (WordNet glosses/examples). Robust —
     // reads the lexicon strings directly, independent of the graph's object encoding.
-    match assemble(&CorpusSpec::Q42Lexicon { volume: vol.clone(), min_len: 24 }) {
+    match assemble(&CorpusSpec::Q42Lexicon {
+        volume: vol.clone(),
+        min_len: 24,
+    }) {
         Ok(docs) if !docs.is_empty() => {
-            println!("[q42corpus] LEXICON DUMP → {} sentence-like passages from {}", docs.len(), vol.display());
+            println!(
+                "[q42corpus] LEXICON DUMP → {} sentence-like passages from {}",
+                docs.len(),
+                vol.display()
+            );
             for d in docs.iter().take(5) {
                 println!("  · {}", d.chars().take(120).collect::<String>());
             }
@@ -90,7 +118,9 @@ fn extracts_corpus_text_from_in_repo_q42() {
             println!("[q42corpus] PASS — real definitional corpus recovered from the q42 lexicon.");
             return;
         }
-        Ok(_) => println!("[q42corpus] lexicon dump: 0 sentence-like strings (structure-only / URI-only lexicon)"),
+        Ok(_) => println!(
+            "[q42corpus] lexicon dump: 0 sentence-like strings (structure-only / URI-only lexicon)"
+        ),
         Err(e) => println!("[q42corpus] lexicon dump error: {e}"),
     }
 
@@ -117,7 +147,9 @@ fn extracts_corpus_text_from_in_repo_q42() {
                 println!("[q42corpus] PASS — SPARQL/q42 corpus mechanism extracts real text via the lexicon.");
                 return;
             }
-            Ok(_) => println!("[q42corpus] <{pred}>: 0 passages (predicate not used by this ontology)"),
+            Ok(_) => {
+                println!("[q42corpus] <{pred}>: 0 passages (predicate not used by this ontology)")
+            }
             Err(e) => println!("[q42corpus] <{pred}>: {e}"),
         }
     }

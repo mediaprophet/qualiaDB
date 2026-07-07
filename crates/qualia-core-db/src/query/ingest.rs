@@ -377,9 +377,7 @@ pub fn streaming_import_rdf_with_mode(
     }
     builder
         .finish(std::path::Path::new(out_path))
-        .map_err(|e| {
-            std::io::Error::new(e.kind(), format!("write canonical .q42 volume: {e}"))
-        })?;
+        .map_err(|e| std::io::Error::new(e.kind(), format!("write canonical .q42 volume: {e}")))?;
 
     // Lexicon byte size actually written — read back cheaply from the finished header (mmap, no
     // re-serialize) so the report reflects what is really on disk.
@@ -443,7 +441,6 @@ pub fn verify_integrity(
     use crate::sparql_library::parsers::turtle_star::TurtleStarParser;
     use std::fs::File;
     use std::io::BufReader;
-    
 
     // Calculate source checksum
     let mut source_checksum: u64 = 0;

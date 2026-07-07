@@ -62,7 +62,7 @@
 //! the public output is returned as grown `Vec`s.
 
 use super::mesh_quality::{tet_quality_points, tri_quality_points, SizeField};
-use super::primitives::{orientation_2, Point2, Point3, Orientation};
+use super::primitives::{orientation_2, Orientation, Point2, Point3};
 use super::segment_intersection_2::classify_segment_intersection_2;
 
 // ---------------------------------------------------------------------------
@@ -171,7 +171,11 @@ pub struct FrontResult2d {
 /// (planar, `z = 0`).
 pub fn size_field_2d_fn(sf: &SizeField) -> impl Fn([f64; 2]) -> f64 {
     let sf = sf.clone();
-    move |p| sf.size_at(Point3::new(p[0], p[1], 0.0)).unwrap_or(1e-12).max(1e-12)
+    move |p| {
+        sf.size_at(Point3::new(p[0], p[1], 0.0))
+            .unwrap_or(1e-12)
+            .max(1e-12)
+    }
 }
 
 /// Triangulate the interior of a closed CCW boundary polyline using the
@@ -321,32 +325,51 @@ pub fn advancing_front_triangulate_2d(
             let search_r2 = search_r * search_r;
             let mut candidates: Vec<(u32, f64)> = Vec::new();
             for (i, v) in vertices.iter().enumerate() {
-                if i as u32 == a_idx || i as u32 == b_idx { continue; }
+                if i as u32 == a_idx || i as u32 == b_idx {
+                    continue;
+                }
                 let d2 = (v.x - cand.x).powi(2) + (v.y - cand.y).powi(2);
                 if d2 < search_r2 {
                     candidates.push((i as u32, d2));
                 }
             }
-            candidates.sort_unstable_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(core::cmp::Ordering::Equal));
+            candidates.sort_unstable_by(|a, b| {
+                a.1.partial_cmp(&b.1).unwrap_or(core::cmp::Ordering::Equal)
+            });
 
             // Try each existing vertex (closest first).
             for &(vidx, _) in &candidates {
                 let vc = vertices[vidx as usize];
                 if try_accept_triangle_2d(
-                    a, b, vc, a_idx, b_idx, vidx, edge_idx, &front, &vertices,
-                    relaxed_threshold, false,
+                    a,
+                    b,
+                    vc,
+                    a_idx,
+                    b_idx,
+                    vidx,
+                    edge_idx,
+                    &front,
+                    &vertices,
+                    relaxed_threshold,
+                    false,
                 ) {
                     triangles.push([a_idx, b_idx, vidx]);
                     front.swap_remove(edge_idx);
                     let ab = remove_front_edge(&mut front, a_idx, vidx);
-                    if !ab { front.push((a_idx, vidx)); }
+                    if !ab {
+                        front.push((a_idx, vidx));
+                    }
                     let bc = remove_front_edge(&mut front, vidx, b_idx);
-                    if !bc { front.push((vidx, b_idx)); }
+                    if !bc {
+                        front.push((vidx, b_idx));
+                    }
                     placed = true;
                     break;
                 }
             }
-            if placed { break; }
+            if placed {
+                break;
+            }
 
             // No existing vertex worked — try the new equilateral vertex.
             // Only create a new vertex if the edge is longer than the target
@@ -354,22 +377,37 @@ pub fn advancing_front_triangulate_2d(
             if edge_len > target * 0.7 || attempt > 0 {
                 let new_idx = vertices.len() as u32;
                 if try_accept_triangle_2d(
-                    a, b, cand, a_idx, b_idx, new_idx, edge_idx, &front, &vertices,
-                    relaxed_threshold, true,
+                    a,
+                    b,
+                    cand,
+                    a_idx,
+                    b_idx,
+                    new_idx,
+                    edge_idx,
+                    &front,
+                    &vertices,
+                    relaxed_threshold,
+                    true,
                 ) {
                     vertices.push(cand);
                     triangles.push([a_idx, b_idx, new_idx]);
                     front.swap_remove(edge_idx);
                     let ab = remove_front_edge(&mut front, a_idx, new_idx);
-                    if !ab { front.push((a_idx, new_idx)); }
+                    if !ab {
+                        front.push((a_idx, new_idx));
+                    }
                     let bc = remove_front_edge(&mut front, new_idx, b_idx);
-                    if !bc { front.push((new_idx, b_idx)); }
+                    if !bc {
+                        front.push((new_idx, b_idx));
+                    }
                     placed = true;
                     break;
                 }
             }
 
-            if placed { break; }
+            if placed {
+                break;
+            }
             rejected_candidates += 1;
             scale *= opts.growth_factor;
         }
@@ -382,7 +420,9 @@ pub fn advancing_front_triangulate_2d(
             let mut gap_filled = false;
             let mut best: Option<(u32, f64)> = None;
             for (i, v) in vertices.iter().enumerate() {
-                if i as u32 == a_idx || i as u32 == b_idx { continue; }
+                if i as u32 == a_idx || i as u32 == b_idx {
+                    continue;
+                }
                 // Check validity (CCW + no self-crossing, no quality).
                 let vc = vertices[i as usize];
                 if orientation_2(a, b, vc) == Orientation::CounterClockwise
@@ -401,9 +441,13 @@ pub fn advancing_front_triangulate_2d(
                 triangles.push([a_idx, b_idx, vidx]);
                 front.swap_remove(edge_idx);
                 let ab = remove_front_edge(&mut front, a_idx, vidx);
-                if !ab { front.push((a_idx, vidx)); }
+                if !ab {
+                    front.push((a_idx, vidx));
+                }
                 let bc = remove_front_edge(&mut front, vidx, b_idx);
-                if !bc { front.push((vidx, b_idx)); }
+                if !bc {
+                    front.push((vidx, b_idx));
+                }
                 gap_filled = true;
             }
             if !gap_filled {
@@ -481,9 +525,7 @@ fn shortest_front_edge_2d(front: &[(u32, u32)], vertices: &[Point2]) -> (usize, 
         let pb = vertices[b as usize];
         let len = (pb.x - pa.x).powi(2) + (pb.y - pa.y).powi(2);
         let key = (a.min(b), a.max(b));
-        if len < best_len
-            || (len == best_len && key < best_key)
-        {
+        if len < best_len || (len == best_len && key < best_key) {
             best_len = len;
             best_idx = i;
             best_key = key;
@@ -757,7 +799,11 @@ fn advancing_front_tetrahedralise_3d_inner(
             front.swap_remove(face_idx);
             continue;
         }
-        let n_out = [cross[0] / cross_len, cross[1] / cross_len, cross[2] / cross_len];
+        let n_out = [
+            cross[0] / cross_len,
+            cross[1] / cross_len,
+            cross[2] / cross_len,
+        ];
         // Interior direction = -n_out.
         let n_in = [-n_out[0], -n_out[1], -n_out[2]];
 
@@ -795,22 +841,24 @@ fn advancing_front_tetrahedralise_3d_inner(
             let search_r2 = search_r * search_r;
             let mut candidates: Vec<(u32, f64)> = Vec::new();
             for (i, v) in vertices.iter().enumerate() {
-                if i as u32 == a_idx || i as u32 == b_idx || i as u32 == c_idx { continue; }
-                let d2 = (v.x - apex.x).powi(2)
-                    + (v.y - apex.y).powi(2)
-                    + (v.z - apex.z).powi(2);
+                if i as u32 == a_idx || i as u32 == b_idx || i as u32 == c_idx {
+                    continue;
+                }
+                let d2 = (v.x - apex.x).powi(2) + (v.y - apex.y).powi(2) + (v.z - apex.z).powi(2);
                 if d2 < search_r2 {
                     candidates.push((i as u32, d2));
                 }
             }
-            candidates.sort_unstable_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(core::cmp::Ordering::Equal));
+            candidates.sort_unstable_by(|a, b| {
+                a.1.partial_cmp(&b.1).unwrap_or(core::cmp::Ordering::Equal)
+            });
 
             // Try each existing vertex (closest first).
             for &(vidx, _) in &candidates {
                 let vd = vertices[vidx as usize];
                 if try_accept_tet_3d(
-                    a, b, c, vd, a_idx, b_idx, c_idx, vidx, face_idx,
-                    &front, &vertices, centroid, n_in, relaxed_re,
+                    a, b, c, vd, a_idx, b_idx, c_idx, vidx, face_idx, &front, &vertices, centroid,
+                    n_in, relaxed_re,
                 ) {
                     tetrahedra.push([a_idx, b_idx, c_idx, vidx]);
                     front.swap_remove(face_idx);
@@ -819,13 +867,15 @@ fn advancing_front_tetrahedralise_3d_inner(
                     break;
                 }
             }
-            if placed { break; }
+            if placed {
+                break;
+            }
 
             // No existing vertex worked — try the new apex vertex.
             let new_idx = vertices.len() as u32;
             if try_accept_tet_3d(
-                a, b, c, apex, a_idx, b_idx, c_idx, new_idx, face_idx,
-                &front, &vertices, centroid, n_in, relaxed_re,
+                a, b, c, apex, a_idx, b_idx, c_idx, new_idx, face_idx, &front, &vertices, centroid,
+                n_in, relaxed_re,
             ) {
                 vertices.push(apex);
                 tetrahedra.push([a_idx, b_idx, c_idx, new_idx]);
@@ -835,7 +885,9 @@ fn advancing_front_tetrahedralise_3d_inner(
                 break;
             }
 
-            if placed { break; }
+            if placed {
+                break;
+            }
             rejected_candidates += 1;
             scale *= opts.growth_factor;
         }
@@ -847,18 +899,26 @@ fn advancing_front_tetrahedralise_3d_inner(
             let mut gap_filled = false;
             let mut best: Option<(u32, f64)> = None;
             for (i, _v) in vertices.iter().enumerate() {
-                if i as u32 == a_idx || i as u32 == b_idx || i as u32 == c_idx { continue; }
+                if i as u32 == a_idx || i as u32 == b_idx || i as u32 == c_idx {
+                    continue;
+                }
                 let vd = vertices[i as usize];
                 // Check interior side + non-degenerate + no self-crossing (no quality).
                 let dc = [vd.x - centroid.x, vd.y - centroid.y, vd.z - centroid.z];
                 let dot_in = dc[0] * n_in[0] + dc[1] * n_in[1] + dc[2] * n_in[2];
-                if dot_in <= 0.0 { continue; }
+                if dot_in <= 0.0 {
+                    continue;
+                }
                 let vol = orient_3d_sign(a, b, c, vd).abs();
-                if vol < 1e-15 { continue; }
+                if vol < 1e-15 {
+                    continue;
+                }
                 if edge_crosses_front_3d(a, vd, a_idx, i as u32, face_idx, &front, &vertices)
                     || edge_crosses_front_3d(b, vd, b_idx, i as u32, face_idx, &front, &vertices)
                     || edge_crosses_front_3d(c, vd, c_idx, i as u32, face_idx, &front, &vertices)
-                { continue; }
+                {
+                    continue;
+                }
                 // Prefer closest to the ideal apex position.
                 let apex_d2 = (vd.x - (centroid.x + n_in[0] * target * 0.2)).powi(2)
                     + (vd.y - (centroid.y + n_in[1] * target * 0.2)).powi(2)
@@ -891,13 +951,7 @@ fn advancing_front_tetrahedralise_3d_inner(
 
 /// Order a triangular face so that its outward normal points toward the
 /// `opposite` vertex. Returns the correctly-oriented [a, b, c] indices.
-fn orient_face_outward_idx(
-    a: u32,
-    b: u32,
-    c: u32,
-    opposite: u32,
-    vertices: &[Point3],
-) -> [u32; 3] {
+fn orient_face_outward_idx(a: u32, b: u32, c: u32, opposite: u32, vertices: &[Point3]) -> [u32; 3] {
     let pa = vertices[a as usize];
     let pb = vertices[b as usize];
     let pc = vertices[c as usize];
@@ -993,9 +1047,15 @@ fn add_new_faces_3d(
     let f_bcd = orient_face_outward_idx(b_idx, c_idx, d_idx, a_idx, vertices);
     let f_cad = orient_face_outward_idx(c_idx, a_idx, d_idx, b_idx, vertices);
     let f_abd = orient_face_outward_idx(a_idx, b_idx, d_idx, c_idx, vertices);
-    if !remove_front_face(front, f_bcd) { front.push(f_bcd); }
-    if !remove_front_face(front, f_cad) { front.push(f_cad); }
-    if !remove_front_face(front, f_abd) { front.push(f_abd); }
+    if !remove_front_face(front, f_bcd) {
+        front.push(f_bcd);
+    }
+    if !remove_front_face(front, f_cad) {
+        front.push(f_cad);
+    }
+    if !remove_front_face(front, f_abd) {
+        front.push(f_abd);
+    }
 }
 
 /// Find the smallest-area front face. Returns (index, area). Ties broken by
@@ -1060,13 +1120,7 @@ fn edge_crosses_front_3d(
 /// Conservative segment-triangle intersection test in 3-D.
 /// Returns true if the segment (p, q) passes through the interior of triangle
 /// (a, b, c). Uses the Möller–Trumbore algorithm.
-fn segment_triangle_intersects_3d(
-    p: Point3,
-    q: Point3,
-    a: Point3,
-    b: Point3,
-    c: Point3,
-) -> bool {
+fn segment_triangle_intersects_3d(p: Point3, q: Point3, a: Point3, b: Point3, c: Point3) -> bool {
     let eps = 1e-12;
     let dir = [q.x - p.x, q.y - p.y, q.z - p.z];
     let edge1 = [b.x - a.x, b.y - a.y, b.z - a.z];
@@ -1105,14 +1159,11 @@ fn segment_triangle_intersects_3d(
 fn remove_front_face(front: &mut Vec<[u32; 3]>, face: [u32; 3]) -> bool {
     let mut target = face;
     target.sort_unstable();
-    if let Some(pos) = front
-        .iter()
-        .position(|f| {
-            let mut fk = *f;
-            fk.sort_unstable();
-            fk == target
-        })
-    {
+    if let Some(pos) = front.iter().position(|f| {
+        let mut fk = *f;
+        fk.sort_unstable();
+        fk == target
+    }) {
         front.swap_remove(pos);
         true
     } else {
@@ -1132,9 +1183,7 @@ fn collapse_front_face_3d(face_idx: usize, front: &mut Vec<[u32; 3]>, vertices: 
         let b = face[(e + 1) % 3];
         let pa = vertices[a as usize];
         let pb = vertices[b as usize];
-        let len = (pb.x - pa.x).powi(2)
-            + (pb.y - pa.y).powi(2)
-            + (pb.z - pa.z).powi(2);
+        let len = (pb.x - pa.x).powi(2) + (pb.y - pa.y).powi(2) + (pb.z - pa.z).powi(2);
         if len < shortest_len {
             shortest_len = len;
             shortest_edge = (a, b);
@@ -1260,7 +1309,11 @@ mod tests {
     #[test]
     fn rejects_too_few_boundary_vertices() {
         let r = advancing_front_triangulate_2d(
-            &[Point2::new(0.0, 0.0), Point2::new(1.0, 0.0), Point2::new(0.0, 0.0)],
+            &[
+                Point2::new(0.0, 0.0),
+                Point2::new(1.0, 0.0),
+                Point2::new(0.0, 0.0),
+            ],
             &[],
             &uniform_2d(0.3),
             &FrontOptions2d::default(),
@@ -1292,13 +1345,8 @@ mod tests {
             max_iterations: 10_000,
             ..Default::default()
         };
-        let r = advancing_front_triangulate_2d(
-            &square_boundary(),
-            &[],
-            &uniform_2d(0.3),
-            &opts,
-        )
-        .unwrap();
+        let r = advancing_front_triangulate_2d(&square_boundary(), &[], &uniform_2d(0.3), &opts)
+            .unwrap();
         // No inverted triangles.
         assert_eq!(count_inverted(&r.vertices, &r.triangles), 0);
         // Total area ≈ 1.0 (unit square).
@@ -1332,20 +1380,11 @@ mod tests {
             max_iterations: 50_000,
             ..Default::default()
         };
-        let coarse = advancing_front_triangulate_2d(
-            &square_boundary(),
-            &[],
-            &uniform_2d(0.5),
-            &opts,
-        )
-        .unwrap();
-        let fine = advancing_front_triangulate_2d(
-            &square_boundary(),
-            &[],
-            &uniform_2d(0.2),
-            &opts,
-        )
-        .unwrap();
+        let coarse =
+            advancing_front_triangulate_2d(&square_boundary(), &[], &uniform_2d(0.5), &opts)
+                .unwrap();
+        let fine = advancing_front_triangulate_2d(&square_boundary(), &[], &uniform_2d(0.2), &opts)
+            .unwrap();
         assert!(fine.triangles.len() > coarse.triangles.len());
         assert_eq!(count_inverted(&fine.vertices, &fine.triangles), 0);
         let area = mesh_total_area(&fine.vertices, &fine.triangles);
@@ -1392,28 +1431,19 @@ mod tests {
         let area = mesh_total_area(&r.vertices, &r.triangles);
         assert!((area - 1.0).abs() < 1e-9);
         // The interior point should be used (it's a vertex).
-        assert!(r.vertices.iter().any(|v| {
-            (v.x - 0.5).abs() < 1e-12 && (v.y - 0.5).abs() < 1e-12
-        }));
+        assert!(r
+            .vertices
+            .iter()
+            .any(|v| { (v.x - 0.5).abs() < 1e-12 && (v.y - 0.5).abs() < 1e-12 }));
     }
 
     #[test]
     fn square_deterministic() {
         let opts = FrontOptions2d::default();
-        let r1 = advancing_front_triangulate_2d(
-            &square_boundary(),
-            &[],
-            &uniform_2d(0.3),
-            &opts,
-        )
-        .unwrap();
-        let r2 = advancing_front_triangulate_2d(
-            &square_boundary(),
-            &[],
-            &uniform_2d(0.3),
-            &opts,
-        )
-        .unwrap();
+        let r1 = advancing_front_triangulate_2d(&square_boundary(), &[], &uniform_2d(0.3), &opts)
+            .unwrap();
+        let r2 = advancing_front_triangulate_2d(&square_boundary(), &[], &uniform_2d(0.3), &opts)
+            .unwrap();
         assert_eq!(r1.vertices, r2.vertices);
         assert_eq!(r1.triangles, r2.triangles);
     }
@@ -1425,13 +1455,8 @@ mod tests {
             max_iterations: 10_000,
             ..Default::default()
         };
-        let r = advancing_front_triangulate_2d(
-            &square_boundary(),
-            &[],
-            &uniform_2d(0.25),
-            &opts,
-        )
-        .unwrap();
+        let r = advancing_front_triangulate_2d(&square_boundary(), &[], &uniform_2d(0.25), &opts)
+            .unwrap();
         for t in &r.triangles {
             let a = r.vertices[t[0] as usize];
             let b = r.vertices[t[1] as usize];
@@ -1454,7 +1479,8 @@ mod tests {
             Point3::new(0.0, 1.0, 0.0),
         ];
         let t = vec![[0u32, 1, 2]];
-        let r = advancing_front_tetrahedralise_3d(&v, &t, &uniform_3d(0.3), &FrontOptions3d::default());
+        let r =
+            advancing_front_tetrahedralise_3d(&v, &t, &uniform_3d(0.3), &FrontOptions3d::default());
         assert!(matches!(r, Err(FrontError::InvalidSurface { .. })));
     }
 
@@ -1528,8 +1554,16 @@ mod tests {
                 assert_eq!(a.vertices, b.vertices);
                 assert_eq!(a.tetrahedra, b.tetrahedra);
             }
-            (Err(FrontError::Obstruction { remaining_front: ra, iterations: ia }),
-             Err(FrontError::Obstruction { remaining_front: rb, iterations: ib })) => {
+            (
+                Err(FrontError::Obstruction {
+                    remaining_front: ra,
+                    iterations: ia,
+                }),
+                Err(FrontError::Obstruction {
+                    remaining_front: rb,
+                    iterations: ib,
+                }),
+            ) => {
                 assert_eq!(ra, rb, "obstruction remaining_front differs");
                 assert_eq!(ia, ib, "obstruction iterations differs");
             }
@@ -1560,7 +1594,10 @@ mod tests {
             Err(e) => panic!("unexpected: {e:?}"),
         };
         // Fine mesh should produce at least as many tets as coarse.
-        assert!(fine_tets >= coarse_tets, "fine={fine_tets} < coarse={coarse_tets}");
+        assert!(
+            fine_tets >= coarse_tets,
+            "fine={fine_tets} < coarse={coarse_tets}"
+        );
     }
 
     #[test]

@@ -28,16 +28,15 @@ impl SparseDictionaryCache {
         };
 
         // Perform the constant tensor contraction to find the sparse coefficients.
-        let sparse_coefficients = contractor.tensor_a.contract(
-            &contractor.tensor_b,
-            &contractor.contraction_indices
-        );
+        let sparse_coefficients = contractor
+            .tensor_a
+            .contract(&contractor.tensor_b, &contractor.contraction_indices);
 
         // Apply a hard threshold to enforce sparsity (Top-K approximation).
         let mut thresholded = Tensor3x3x3::zero();
-        
+
         let threshold = 1e-3; // Define sparsity cutoff
-        
+
         for i in 0..3 {
             for j in 0..3 {
                 for k in 0..3 {

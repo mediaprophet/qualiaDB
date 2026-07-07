@@ -290,8 +290,8 @@ mod tests {
             .collect();
         // Header (20 bytes) + up to 4 frames × 64 bins × 4 bytes.
         let mut buf = [0u8; 20 + 64 * 4 * 4];
-        let n = bake_stft_sidecar_from_samples(&samples, FRAME, FRAME, 44_100, &mut buf)
-            .expect("bake");
+        let n =
+            bake_stft_sidecar_from_samples(&samples, FRAME, FRAME, 44_100, &mut buf).expect("bake");
         let h = parse_sidecar_header(&buf).expect("valid header");
         assert_eq!(h.bin_count, SPECTRAL_PREVIEW_BINS as u32);
         assert_eq!(h._pad, SIDECAR_KIND_STFT);

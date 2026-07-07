@@ -185,8 +185,16 @@ pub fn vr_filtration(
     }
 
     // Upper bound on simplices, respecting max_dim.
-    let max_edges = if max_dim >= 1 { n * n.saturating_sub(1) / 2 } else { 0 };
-    let max_tris = if max_dim >= 2 { n * n.saturating_sub(1) * n.saturating_sub(2) / 6 } else { 0 };
+    let max_edges = if max_dim >= 1 {
+        n * n.saturating_sub(1) / 2
+    } else {
+        0
+    };
+    let max_tris = if max_dim >= 2 {
+        n * n.saturating_sub(1) * n.saturating_sub(2) / 6
+    } else {
+        0
+    };
     let max_simplices = n + max_edges + max_tris;
     if out_simplices.len() < max_simplices {
         return Err(VrError::BufferTooSmall {
@@ -289,7 +297,11 @@ pub fn vr_filtration_full(
     }
 
     let max_edges = n * n.saturating_sub(1) / 2;
-    let max_tris = if max_dim >= 2 { n * n.saturating_sub(1) * n.saturating_sub(2) / 6 } else { 0 };
+    let max_tris = if max_dim >= 2 {
+        n * n.saturating_sub(1) * n.saturating_sub(2) / 6
+    } else {
+        0
+    };
     let max_simplices = n + max_edges + max_tris;
     if out_simplices.len() < max_simplices {
         return Err(VrError::BufferTooSmall {
@@ -302,7 +314,10 @@ pub fn vr_filtration_full(
 
     for i in 0..n {
         out_simplices[count] = VrSimplex {
-            dim: 0, v0: i as u32, v1: 0, v2: 0,
+            dim: 0,
+            v0: i as u32,
+            v1: 0,
+            v2: 0,
             birth: 0.0f64.to_bits(),
         };
         count += 1;
@@ -317,9 +332,14 @@ pub fn vr_filtration_full(
         for j in (i + 1)..n {
             let d = full_coordinate_distance(&points[i], &points[j]);
             let birth = d / 2.0;
-            if max_radius > 0.0 && birth > max_radius { continue; }
+            if max_radius > 0.0 && birth > max_radius {
+                continue;
+            }
             out_simplices[count] = VrSimplex {
-                dim: 1, v0: i as u32, v1: j as u32, v2: 0,
+                dim: 1,
+                v0: i as u32,
+                v1: j as u32,
+                v2: 0,
                 birth: birth.to_bits(),
             };
             count += 1;
@@ -339,9 +359,14 @@ pub fn vr_filtration_full(
                 let d_jk = full_coordinate_distance(&points[j], &points[k]);
                 let diameter = d_ij.max(d_ik).max(d_jk);
                 let birth = diameter / 2.0;
-                if max_radius > 0.0 && birth > max_radius { continue; }
+                if max_radius > 0.0 && birth > max_radius {
+                    continue;
+                }
                 out_simplices[count] = VrSimplex {
-                    dim: 2, v0: i as u32, v1: j as u32, v2: k as u32,
+                    dim: 2,
+                    v0: i as u32,
+                    v1: j as u32,
+                    v2: k as u32,
                     birth: birth.to_bits(),
                 };
                 count += 1;
@@ -378,7 +403,10 @@ pub fn alpha_filtration_4_cocircular(
         return Err(VrError::TooFewPoints { got: points.len() });
     }
     if out_simplices.len() < 14 {
-        return Err(VrError::BufferTooSmall { needed: 14, have: out_simplices.len() });
+        return Err(VrError::BufferTooSmall {
+            needed: 14,
+            have: out_simplices.len(),
+        });
     }
 
     for (i, p) in points.iter().enumerate() {
@@ -401,16 +429,17 @@ pub fn alpha_filtration_4_cocircular(
     // For co-circular points, the circumradius is the distance from the
     // circumcenter to any point. We compute it via the triangle (0,1,2)
     // circumradius — for co-circular points, all triangles give the same R.
-    let r_circ = triangle_circumradius_3d(
-        &points[0], &points[1], &points[2],
-    );
+    let r_circ = triangle_circumradius_3d(&points[0], &points[1], &points[2]);
 
     let mut count = 0usize;
 
     // 4 vertices.
     for i in 0..4 {
         out_simplices[count] = VrSimplex {
-            dim: 0, v0: i as u32, v1: 0, v2: 0,
+            dim: 0,
+            v0: i as u32,
+            v1: 0,
+            v2: 0,
             birth: 0.0f64.to_bits(),
         };
         count += 1;
@@ -421,7 +450,10 @@ pub fn alpha_filtration_4_cocircular(
         for j in (i + 1)..4 {
             let birth = dists[i][j] / 2.0;
             out_simplices[count] = VrSimplex {
-                dim: 1, v0: i as u32, v1: j as u32, v2: 0,
+                dim: 1,
+                v0: i as u32,
+                v1: j as u32,
+                v2: 0,
                 birth: birth.to_bits(),
             };
             count += 1;
@@ -433,7 +465,10 @@ pub fn alpha_filtration_4_cocircular(
         for j in (i + 1)..4 {
             for k in (j + 1)..4 {
                 out_simplices[count] = VrSimplex {
-                    dim: 2, v0: i as u32, v1: j as u32, v2: k as u32,
+                    dim: 2,
+                    v0: i as u32,
+                    v1: j as u32,
+                    v2: k as u32,
                     birth: r_circ.to_bits(),
                 };
                 count += 1;
@@ -542,51 +577,66 @@ mod tests {
     fn vr_unit_square_edge_births() {
         let pts = unit_square_with_centre();
         let n = pts.len();
-        let mut simplices = vec![VrSimplex::default(); n + n * (n - 1) / 2 + n * (n - 1) * (n - 2) / 6];
+        let mut simplices =
+            vec![VrSimplex::default(); n + n * (n - 1) / 2 + n * (n - 1) * (n - 2) / 6];
 
         let count = vr_filtration(&pts, 1, 0.0, &mut simplices).unwrap();
 
         // Find the edge (0,4) — centre to corner.
-        let edge_04 = simplices[..count].iter().find(|s| {
-            s.dim == 1 && s.v0 == 0 && s.v1 == 4
-        }).unwrap();
+        let edge_04 = simplices[..count]
+            .iter()
+            .find(|s| s.dim == 1 && s.v0 == 0 && s.v1 == 4)
+            .unwrap();
         let expected = spatial_distance(&pts[0], &pts[4]) / 2.0;
-        assert!((edge_04.birth_f64() - expected).abs() < 1e-10,
-            "edge (0,4) birth should be {}", expected);
+        assert!(
+            (edge_04.birth_f64() - expected).abs() < 1e-10,
+            "edge (0,4) birth should be {}",
+            expected
+        );
     }
 
     #[test]
     fn vr_unit_square_triangle_birth_is_half_diameter() {
         let pts = unit_square_with_centre();
         let n = pts.len();
-        let mut simplices = vec![VrSimplex::default(); n + n * (n - 1) / 2 + n * (n - 1) * (n - 2) / 6];
+        let mut simplices =
+            vec![VrSimplex::default(); n + n * (n - 1) / 2 + n * (n - 1) * (n - 2) / 6];
 
         let count = vr_filtration(&pts, 2, 0.0, &mut simplices).unwrap();
 
         // Triangle (0,1,2): corners (0,0), (1,0), (1,1).
         // Diameter = max(d01, d02, d12) = max(1, sqrt(2), 1) = sqrt(2).
         // Birth = sqrt(2)/2.
-        let tri = simplices[..count].iter().find(|s| {
-            s.dim == 2 && s.v0 == 0 && s.v1 == 1 && s.v2 == 2
-        }).unwrap();
+        let tri = simplices[..count]
+            .iter()
+            .find(|s| s.dim == 2 && s.v0 == 0 && s.v1 == 1 && s.v2 == 2)
+            .unwrap();
         let expected = (2.0f64).sqrt() / 2.0;
-        assert!((tri.birth_f64() - expected).abs() < 1e-10,
-            "triangle (0,1,2) birth should be {}", expected);
+        assert!(
+            (tri.birth_f64() - expected).abs() < 1e-10,
+            "triangle (0,1,2) birth should be {}",
+            expected
+        );
     }
 
     #[test]
     fn vr_max_radius_filters_simplices() {
         let pts = unit_square_with_centre();
         let n = pts.len();
-        let mut simplices = vec![VrSimplex::default(); n + n * (n - 1) / 2 + n * (n - 1) * (n - 2) / 6];
+        let mut simplices =
+            vec![VrSimplex::default(); n + n * (n - 1) / 2 + n * (n - 1) * (n - 2) / 6];
 
         // With max_radius = 0.4, only edges with birth ≤ 0.4 survive.
         // Edge (0,4) has birth = sqrt(0.5)/2 ≈ 0.354 — should survive.
         // Edge (0,2) has birth = sqrt(2)/2 ≈ 0.707 — should be filtered.
         let count = vr_filtration(&pts, 2, 0.4, &mut simplices).unwrap();
 
-        let has_04 = simplices[..count].iter().any(|s| s.dim == 1 && s.v0 == 0 && s.v1 == 4);
-        let has_02 = simplices[..count].iter().any(|s| s.dim == 1 && s.v0 == 0 && s.v1 == 2);
+        let has_04 = simplices[..count]
+            .iter()
+            .any(|s| s.dim == 1 && s.v0 == 0 && s.v1 == 4);
+        let has_02 = simplices[..count]
+            .iter()
+            .any(|s| s.dim == 1 && s.v0 == 0 && s.v1 == 2);
         assert!(has_04, "edge (0,4) should survive at radius 0.4");
         assert!(!has_02, "edge (0,2) should be filtered at radius 0.4");
     }
@@ -667,13 +717,18 @@ mod tests {
         // All triangles should have the same birth (circumradius).
         let first_birth = tris[0].birth_f64();
         for t in &tris {
-            assert!((t.birth_f64() - first_birth).abs() < 1e-10,
-                "all co-circular triangles should have same birth");
+            assert!(
+                (t.birth_f64() - first_birth).abs() < 1e-10,
+                "all co-circular triangles should have same birth"
+            );
         }
 
         // The circumradius of the unit circle is 1.0.
-        assert!((first_birth - 1.0).abs() < 1e-10,
-            "circumradius of unit circle should be 1.0, got {}", first_birth);
+        assert!(
+            (first_birth - 1.0).abs() < 1e-10,
+            "circumradius of unit circle should be 1.0, got {}",
+            first_birth
+        );
     }
 
     #[test]
@@ -683,19 +738,25 @@ mod tests {
         let count = alpha_filtration_4_cocircular(&pts, &mut simplices).unwrap();
 
         // Edge (0,1): distance = sqrt(2), birth = sqrt(2)/2.
-        let edge_01 = simplices[..count].iter().find(|s| {
-            s.dim == 1 && s.v0 == 0 && s.v1 == 1
-        }).unwrap();
+        let edge_01 = simplices[..count]
+            .iter()
+            .find(|s| s.dim == 1 && s.v0 == 0 && s.v1 == 1)
+            .unwrap();
         let expected = (2.0f64).sqrt() / 2.0;
-        assert!((edge_01.birth_f64() - expected).abs() < 1e-10,
-            "edge (0,1) birth should be sqrt(2)/2");
+        assert!(
+            (edge_01.birth_f64() - expected).abs() < 1e-10,
+            "edge (0,1) birth should be sqrt(2)/2"
+        );
 
         // Edge (0,2): distance = 2 (diameter), birth = 1.0.
-        let edge_02 = simplices[..count].iter().find(|s| {
-            s.dim == 1 && s.v0 == 0 && s.v1 == 2
-        }).unwrap();
-        assert!((edge_02.birth_f64() - 1.0).abs() < 1e-10,
-            "edge (0,2) birth should be 1.0 (diameter/2)");
+        let edge_02 = simplices[..count]
+            .iter()
+            .find(|s| s.dim == 1 && s.v0 == 0 && s.v1 == 2)
+            .unwrap();
+        assert!(
+            (edge_02.birth_f64() - 1.0).abs() < 1e-10,
+            "edge (0,2) birth should be 1.0 (diameter/2)"
+        );
     }
 
     #[test]
@@ -744,8 +805,11 @@ mod tests {
 
         let edge = simplices[..count].iter().find(|s| s.dim == 1).unwrap();
         // Full distance = 1.0 (σ difference), birth = 0.5.
-        assert!((edge.birth_f64() - 0.5).abs() < 1e-10,
-            "full-coordinate edge birth should be 0.5, got {}", edge.birth_f64());
+        assert!(
+            (edge.birth_f64() - 0.5).abs() < 1e-10,
+            "full-coordinate edge birth should be 0.5, got {}",
+            edge.birth_f64()
+        );
     }
 
     #[test]
@@ -760,8 +824,10 @@ mod tests {
 
         let edge = simplices[..count].iter().find(|s| s.dim == 1).unwrap();
         // Spatial distance = 0, birth = 0.
-        assert!((edge.birth_f64() - 0.0).abs() < 1e-10,
-            "spatial-only edge birth should be 0");
+        assert!(
+            (edge.birth_f64() - 0.0).abs() < 1e-10,
+            "spatial-only edge birth should be 0"
+        );
     }
 
     #[test]
@@ -774,8 +840,11 @@ mod tests {
 
         // Verify sorted order.
         for i in 1..count {
-            assert!(simplices[i - 1] <= simplices[i],
-                "simplices must be sorted at index {}", i);
+            assert!(
+                simplices[i - 1] <= simplices[i],
+                "simplices must be sorted at index {}",
+                i
+            );
         }
     }
 }

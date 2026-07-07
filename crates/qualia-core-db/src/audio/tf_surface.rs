@@ -18,7 +18,6 @@
 //! All operations are deterministic: the raster is a fixed f32 matrix,
 //! and sampling/gradient/ridge are pure functions.
 
-
 // ───────────────────────────────────────────────────────────────────────────
 //  Types
 // ───────────────────────────────────────────────────────────────────────────
@@ -358,14 +357,21 @@ mod tests {
         // At frame 2, bin 16: prev = get(1, 16) = 1.0, next = get(3, 16) = 0.0.
         // Gradient = (0.0 - 1.0) * 0.5 = -0.5 — negative after the peak.
         let g = s.time_gradient(2, 16);
-        assert!(g < 0.0, "time gradient should be negative after peak: {}", g);
+        assert!(
+            g < 0.0,
+            "time gradient should be negative after peak: {}",
+            g
+        );
     }
 
     #[test]
     fn total_energy_correct() {
         let (raster, frames, bins) = make_test_surface();
         let s = TfSurface::new(&raster, frames, bins, 44100, 512);
-        assert!((s.total_energy() - 1.8).abs() < 1e-6, "total energy should be 1.8");
+        assert!(
+            (s.total_energy() - 1.8).abs() < 1e-6,
+            "total energy should be 1.8"
+        );
     }
 
     #[test]

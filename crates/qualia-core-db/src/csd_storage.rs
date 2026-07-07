@@ -308,7 +308,6 @@ impl CsdManager {
         Ok(())
     }
 
-
     /// Discover CSD devices
     pub fn discover_devices(&mut self) -> Result<Vec<String>, CsdError> {
         let mut discovered_devices = Vec::new();
@@ -875,9 +874,9 @@ impl CsdScheduler {
                     OperationPriority::Low => 0,
                 })
             }),
-            SchedulingPolicy::ShortestJobFirst => self.pending_operations.sort_by_key(|op| {
-                op.outputs.iter().map(|o| o.size).sum::<u64>()
-            }),
+            SchedulingPolicy::ShortestJobFirst => self
+                .pending_operations
+                .sort_by_key(|op| op.outputs.iter().map(|o| o.size).sum::<u64>()),
             _ => {}
         }
 
@@ -927,11 +926,7 @@ impl CsdScheduler {
         operation: &CsdOperationRequest,
         completion: &CsdCompletion,
     ) {
-        let data_size = operation
-            .outputs
-            .iter()
-            .map(|o| o.size)
-            .sum::<u64>();
+        let data_size = operation.outputs.iter().map(|o| o.size).sum::<u64>();
         monitor.update_metrics(
             &operation.device_id,
             &operation.function_id,
@@ -1262,7 +1257,9 @@ mod tests {
         let b = vec![5.0_f32, 6.0_f32, 7.0_f32, 8.0_f32];
 
         // This would normally work with a real device
-        let result = manager.matrix_multiply("test_device", &a, &b, (2, 2, 2)).unwrap();
+        let result = manager
+            .matrix_multiply("test_device", &a, &b, (2, 2, 2))
+            .unwrap();
         assert_eq!(result.len(), 4);
     }
 

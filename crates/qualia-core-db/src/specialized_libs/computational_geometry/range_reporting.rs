@@ -49,7 +49,11 @@ impl Halfspace2 {
 
     /// Test if point `q` is in this halfspace (on the left or on the line).
     pub fn contains(&self, q: Point2) -> bool {
-        let o = orientation_2(self.p, Point2::new(self.p.x + self.dir.x, self.p.y + self.dir.y), q);
+        let o = orientation_2(
+            self.p,
+            Point2::new(self.p.x + self.dir.x, self.p.y + self.dir.y),
+            q,
+        );
         o != Orientation::Clockwise
     }
 }
@@ -457,9 +461,8 @@ impl PartitionTree {
 
         for (ci, class) in node.classes.iter().enumerate() {
             // Test if the class triangle intersects the halfspace.
-            let tri_in = hs.contains(class.tri[0])
-                && hs.contains(class.tri[1])
-                && hs.contains(class.tri[2]);
+            let tri_in =
+                hs.contains(class.tri[0]) && hs.contains(class.tri[1]) && hs.contains(class.tri[2]);
 
             if tri_in {
                 // All points in this class are in the halfspace.
@@ -635,7 +638,9 @@ fn segments_properly_intersect(a: Point2, b: Point2, c: Point2, d: Point2) -> bo
     let o3 = orientation_2(c, d, a);
     let o4 = orientation_2(c, d, b);
 
-    o1 != o2 && o1 != Orientation::Collinear && o2 != Orientation::Collinear
+    o1 != o2
+        && o1 != Orientation::Collinear
+        && o2 != Orientation::Collinear
         && o3 != o4
         && o3 != Orientation::Collinear
         && o4 != Orientation::Collinear
@@ -1037,7 +1042,10 @@ mod tests {
         let tree = PartitionTree::build(&[]);
         assert!(tree.is_empty());
         let mut out = Vec::new();
-        assert_eq!(tree.report_simplex(pt(0.0, 0.0), pt(1.0, 0.0), pt(0.0, 1.0), &mut out), 0);
+        assert_eq!(
+            tree.report_simplex(pt(0.0, 0.0), pt(1.0, 0.0), pt(0.0, 1.0), &mut out),
+            0
+        );
     }
 
     // ── Cutting tree tests ──────────────────────────────────────────────
@@ -1185,24 +1193,36 @@ mod tests {
     #[test]
     fn triangles_intersect_overlap() {
         assert!(triangles_intersect(
-            pt(0.0, 0.0), pt(4.0, 0.0), pt(2.0, 4.0),
-            pt(2.0, 0.0), pt(6.0, 0.0), pt(4.0, 4.0),
+            pt(0.0, 0.0),
+            pt(4.0, 0.0),
+            pt(2.0, 4.0),
+            pt(2.0, 0.0),
+            pt(6.0, 0.0),
+            pt(4.0, 4.0),
         ));
     }
 
     #[test]
     fn triangles_intersect_disjoint() {
         assert!(!triangles_intersect(
-            pt(0.0, 0.0), pt(2.0, 0.0), pt(1.0, 2.0),
-            pt(10.0, 10.0), pt(12.0, 10.0), pt(11.0, 12.0),
+            pt(0.0, 0.0),
+            pt(2.0, 0.0),
+            pt(1.0, 2.0),
+            pt(10.0, 10.0),
+            pt(12.0, 10.0),
+            pt(11.0, 12.0),
         ));
     }
 
     #[test]
     fn triangles_intersect_contained() {
         assert!(triangles_intersect(
-            pt(0.0, 0.0), pt(10.0, 0.0), pt(5.0, 10.0),
-            pt(3.0, 1.0), pt(7.0, 1.0), pt(5.0, 5.0),
+            pt(0.0, 0.0),
+            pt(10.0, 0.0),
+            pt(5.0, 10.0),
+            pt(3.0, 1.0),
+            pt(7.0, 1.0),
+            pt(5.0, 5.0),
         ));
     }
 }

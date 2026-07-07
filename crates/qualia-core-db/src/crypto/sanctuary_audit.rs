@@ -98,7 +98,8 @@ fn derive_seal_key_nonce(
 }
 
 fn cipher_for(key: &[u8; 32]) -> Result<XChaCha20Poly1305, SanctuaryAuditError> {
-    let key = <&chacha20poly1305::Key>::try_from(&key[..]).map_err(|_| SanctuaryAuditError::Encrypt)?;
+    let key =
+        <&chacha20poly1305::Key>::try_from(&key[..]).map_err(|_| SanctuaryAuditError::Encrypt)?;
     Ok(XChaCha20Poly1305::new(key))
 }
 
@@ -133,7 +134,8 @@ fn aead_open(
     let cipher = cipher_for(key)?;
     let nonce = <&chacha20poly1305::XNonce>::try_from(&nonce[..])
         .map_err(|_| SanctuaryAuditError::Decrypt)?;
-    let tag = <&chacha20poly1305::Tag>::try_from(tag_bytes).map_err(|_| SanctuaryAuditError::Malformed)?;
+    let tag = <&chacha20poly1305::Tag>::try_from(tag_bytes)
+        .map_err(|_| SanctuaryAuditError::Malformed)?;
     let mut buffer = ct.to_vec();
     cipher
         .decrypt_inout_detached(nonce, aad, buffer.as_mut_slice().into(), tag)
@@ -152,7 +154,8 @@ pub fn seal_to(
     let ephemeral_secret = StaticSecret::from(rand_bytes::<32>()?);
     let ephemeral_public = PublicKey::from(&ephemeral_secret).to_bytes();
     let shared = ephemeral_secret.diffie_hellman(&PublicKey::from(*recipient_public));
-    let (key, nonce) = derive_seal_key_nonce(shared.as_bytes(), &ephemeral_public, recipient_public);
+    let (key, nonce) =
+        derive_seal_key_nonce(shared.as_bytes(), &ephemeral_public, recipient_public);
     let body = aead_seal(&key, &nonce, plaintext, aad)?;
     let mut out = Vec::with_capacity(EPK_BYTES + body.len());
     out.extend_from_slice(&ephemeral_public);
@@ -177,7 +180,8 @@ pub fn open_sealed(
     let secret = StaticSecret::from(*recipient_secret);
     let recipient_public = PublicKey::from(&secret).to_bytes();
     let shared = secret.diffie_hellman(&PublicKey::from(ephemeral_public));
-    let (key, nonce) = derive_seal_key_nonce(shared.as_bytes(), &ephemeral_public, &recipient_public);
+    let (key, nonce) =
+        derive_seal_key_nonce(shared.as_bytes(), &ephemeral_public, &recipient_public);
     aead_open(&key, &nonce, body, aad)
 }
 
@@ -284,7 +288,10 @@ mod tests {
         let real_key = rand_bytes::<32>().unwrap();
         let decoy_key = [7u8; 32];
         let wrapped = wrap_key(&real_key, &decoy_key, b"role:decoy-lane-key").unwrap();
-        assert_eq!(unwrap_key(&real_key, &wrapped, b"role:decoy-lane-key").unwrap(), decoy_key);
+        assert_eq!(
+            unwrap_key(&real_key, &wrapped, b"role:decoy-lane-key").unwrap(),
+            decoy_key
+        );
         // Wrong wrapping key (the decoy cannot reach up).
         assert!(unwrap_key(&[9u8; 32], &wrapped, b"role:decoy-lane-key").is_err());
         // Wrong AAD.

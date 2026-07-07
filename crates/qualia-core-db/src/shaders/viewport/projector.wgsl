@@ -310,9 +310,12 @@ fn vertex_main(
     let frame_time = camera._padding0.x;
     let camera_eye = camera._padding0.yzw;
 
-    // Temporal scrub — discard vertices outside the observer's t_window band.
+    // Temporal scrub — smooth spawn/decay α ramp.
     let temporal_delta = abs(tensor.t - observer.t_slice);
-    let outside_time = temporal_delta > observer.t_window;
+    let ramp_width = observer.t_window * 0.2; // 20% fade on the edges
+    let time_dist_to_edge = observer.t_window - temporal_delta;
+    let alpha_fade = smoothstep(0.0, ramp_width, time_dist_to_edge);
+    let outside_time = alpha_fade <= 0.0;
 
     let local = vec3<f32>(tensor.x, tensor.y, tensor.z);
     let world_pos = apply_semantic_motor(local, tensor, frame_time, observer, camera_eye);
@@ -336,7 +339,7 @@ fn vertex_main(
     }
     output.local_uv = base_vertex;
     let rgb = sigma_to_linear_rgb(tensor.sigma);
-    let alpha = clamp(0.4 + tensor.alpha * 0.55, 0.25, 1.0);
+    let alpha = clamp(0.4 + tensor.alpha * 0.55, 0.25, 1.0) * alpha_fade;
     output.color = vec4<f32>(rgb, alpha);
     output.epistemic_q = tensor.q;
     output.pick_id = instance_index;

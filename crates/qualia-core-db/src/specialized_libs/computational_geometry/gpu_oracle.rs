@@ -12,10 +12,10 @@
 //! The CPU oracle is fully deterministic. The GPU kernel must produce
 //! output within tolerance of the CPU oracle.
 
-use crate::tensor::Tensor10D;
-use super::vr_filtration::spatial_distance;
 use super::cknn_laplacian::local_density;
 use super::nn_query::axis_honest_distance;
+use super::vr_filtration::spatial_distance;
+use crate::tensor::Tensor10D;
 
 // ───────────────────────────────────────────────────────────────────────────
 //  CPU oracle: batch distance computation
@@ -130,9 +130,7 @@ pub fn cpu_batch_density(
         super::cknn_laplacian::CknnError::TooFewPoints { got } => {
             GpuOracleError::TooFewPoints { got }
         }
-        super::cknn_laplacian::CknnError::KTooLarge { k, n } => {
-            GpuOracleError::KTooLarge { k, n }
-        }
+        super::cknn_laplacian::CknnError::KTooLarge { k, n } => GpuOracleError::KTooLarge { k, n },
         super::cknn_laplacian::CknnError::NonFinite { point_index } => {
             GpuOracleError::NonFinite { point_index }
         }
@@ -268,7 +266,10 @@ impl core::fmt::Display for GpuOracleError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::BufferTooSmall { needed, have } => {
-                write!(f, "gpu_oracle: buffer too small, need {needed}, have {have}")
+                write!(
+                    f,
+                    "gpu_oracle: buffer too small, need {needed}, have {have}"
+                )
             }
             Self::TooFewPoints { got } => write!(f, "gpu_oracle: too few points: {got}"),
             Self::KTooLarge { k, n } => write!(f, "gpu_oracle: k={k} > n={n}"),
@@ -378,8 +379,10 @@ mod tests {
         cpu_batch_pairwise_distances(&pts, &mut d).unwrap();
         for i in 0..n {
             for j in 0..n {
-                assert!((d[i * n + j] - d[j * n + i]).abs() < 1e-10,
-                    "distance matrix must be symmetric");
+                assert!(
+                    (d[i * n + j] - d[j * n + i]).abs() < 1e-10,
+                    "distance matrix must be symmetric"
+                );
             }
         }
     }
@@ -419,8 +422,12 @@ mod tests {
         let mut r = vec![0.0f64; 1];
         cpu_batch_circumradius(&pts, &tris, &mut r).unwrap();
         let expected = (2.0f64).sqrt() / 2.0;
-        assert!((r[0] - expected).abs() < 1e-10,
-            "circumradius of unit right triangle should be {}, got {}", expected, r[0]);
+        assert!(
+            (r[0] - expected).abs() < 1e-10,
+            "circumradius of unit right triangle should be {}, got {}",
+            expected,
+            r[0]
+        );
     }
 
     #[test]
@@ -434,7 +441,10 @@ mod tests {
         let tris = [[0u32, 1, 2]];
         let mut r = vec![0.0f64; 1];
         cpu_batch_circumradius(&pts, &tris, &mut r).unwrap();
-        assert!(r[0].is_infinite(), "degenerate triangle should have infinite circumradius");
+        assert!(
+            r[0].is_infinite(),
+            "degenerate triangle should have infinite circumradius"
+        );
     }
 
     #[test]

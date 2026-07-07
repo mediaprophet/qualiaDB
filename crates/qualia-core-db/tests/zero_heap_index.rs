@@ -83,7 +83,10 @@ fn quin_index_resolution_is_zero_heap() {
         "object_of must resolve the modal kind"
     );
     assert_eq!(idx.iter_by_subject_and_predicate(7, 101).count(), 1);
-    assert!(idx.object_of(7, 999).is_none(), "absent predicate resolves to None");
+    assert!(
+        idx.object_of(7, 999).is_none(),
+        "absent predicate resolves to None"
+    );
 
     // ── Contrast: the legacy Vec-returning method DOES allocate (the trap we replaced). ──
     let before_vec = ALLOCS.load(Ordering::SeqCst);

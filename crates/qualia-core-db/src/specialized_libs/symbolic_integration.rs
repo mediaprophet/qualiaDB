@@ -104,8 +104,8 @@ fn eval_at(e: &Expr, x: &str, v: f64) -> Option<f64> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::symbolic_algebra::differentiate;
+    use super::*;
 
     /// d/dx of the antiderivative recovers the integrand (the honest correctness gate).
     fn roundtrip(expr: &Expr, x: &str) {

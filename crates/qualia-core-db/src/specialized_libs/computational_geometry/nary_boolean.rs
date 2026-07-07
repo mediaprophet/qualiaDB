@@ -29,7 +29,9 @@
 //!
 //! Tier-2 cold construction.
 
-use super::boolean_3::{boolean_3, Boolean3Op, Boolean3Error, required_triangles_3, required_vertices_3};
+use super::boolean_3::{
+    boolean_3, required_triangles_3, required_vertices_3, Boolean3Error, Boolean3Op,
+};
 use super::primitives::Point3;
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -370,8 +372,10 @@ fn binary_op(
     let mut out_triangles = vec![[0u32; 3]; max_t];
 
     let (vc, tc) = boolean_3(
-        &a.0, &a.1,
-        &b.0, &b.1,
+        &a.0,
+        &a.1,
+        &b.0,
+        &b.1,
         op,
         &mut out_vertices,
         &mut out_triangles,
@@ -405,12 +409,18 @@ mod tests {
                 Point3::new(cx - h, cy + h, cz + h),
             ],
             triangles: vec![
-                [0, 1, 2], [0, 2, 3], // bottom
-                [4, 6, 5], [4, 7, 6], // top
-                [0, 5, 1], [0, 4, 5], // front
-                [1, 5, 6], [1, 6, 2], // right
-                [2, 6, 7], [2, 7, 3], // back
-                [3, 7, 4], [3, 4, 0], // left
+                [0, 1, 2],
+                [0, 2, 3], // bottom
+                [4, 6, 5],
+                [4, 7, 6], // top
+                [0, 5, 1],
+                [0, 4, 5], // front
+                [1, 5, 6],
+                [1, 6, 2], // right
+                [2, 6, 7],
+                [2, 7, 3], // back
+                [3, 7, 4],
+                [3, 4, 0], // left
             ],
         }
     }
@@ -577,7 +587,11 @@ mod tests {
         let expr = BoolExpr::union(BoolExpr::Operand(0), BoolExpr::Operand(1));
 
         let (_verts, tris) = nary_boolean(&[a, b], &expr).unwrap();
-        assert!(tris.len() >= 24, "union of disjoint cubes should have ≥24 triangles, got {}", tris.len());
+        assert!(
+            tris.len() >= 24,
+            "union of disjoint cubes should have ≥24 triangles, got {}",
+            tris.len()
+        );
     }
 
     #[test]
@@ -587,7 +601,11 @@ mod tests {
         let expr = BoolExpr::intersection(BoolExpr::Operand(0), BoolExpr::Operand(1));
 
         let (_verts, tris) = nary_boolean(&[a, b], &expr).unwrap();
-        assert_eq!(tris.len(), 0, "intersection of disjoint cubes should be empty");
+        assert_eq!(
+            tris.len(),
+            0,
+            "intersection of disjoint cubes should be empty"
+        );
     }
 
     #[test]
@@ -612,7 +630,11 @@ mod tests {
         ]);
 
         let (_verts, tris) = nary_boolean(&[a, b, c], &expr).unwrap();
-        assert!(tris.len() >= 36, "union of 3 disjoint cubes should have ≥36 triangles, got {}", tris.len());
+        assert!(
+            tris.len() >= 36,
+            "union of 3 disjoint cubes should have ≥36 triangles, got {}",
+            tris.len()
+        );
     }
 
     #[test]

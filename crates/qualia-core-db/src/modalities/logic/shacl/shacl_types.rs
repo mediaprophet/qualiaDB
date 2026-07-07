@@ -202,17 +202,23 @@ pub enum ShaclConstraint {
     /// Deontic prohibition constraint — validates that a Quin encodes a valid forbiddal
     DeonticForbid,
     /// Deontic expiry constraint — validates that a norm has not expired
-    DeonticNotExpired { now_unix: u32 },
+    DeonticNotExpired {
+        now_unix: u32,
+    },
     /// Epistemic logic constraint (generic — any epistemic opcode)
     EpistemicConstraint {
         certainty_threshold: f32,
     },
     /// Epistemic knowledge constraint — validates that an agent holds a knowledge claim (OP_KNOWS)
     /// with certainty >= min_certainty
-    EpistemicKnowledge { min_certainty: u8 },
+    EpistemicKnowledge {
+        min_certainty: u8,
+    },
     /// Epistemic belief constraint — validates that an agent holds a belief claim (OP_BELIEVES)
     /// with certainty >= min_certainty
-    EpistemicBelief { min_certainty: u8 },
+    EpistemicBelief {
+        min_certainty: u8,
+    },
     /// Common knowledge constraint — validates that a claim is common knowledge (OP_COMMON_KNOWLEDGE)
     CommonKnowledge,
     /// Temporal LTL constraint

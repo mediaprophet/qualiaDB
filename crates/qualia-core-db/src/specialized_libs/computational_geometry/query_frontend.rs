@@ -450,10 +450,10 @@ impl<'a> SpatialIndexQuery<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::container_10d::spatial_index_section::encode_spatial_index_section;
     use crate::specialized_libs::computational_geometry::{
         build_bvh_recursive, build_kd_tree_3d, Aabb, Point3,
     };
-    use crate::container_10d::spatial_index_section::encode_spatial_index_section;
 
     fn test_aabbs() -> Vec<Aabb> {
         (0..8)
@@ -461,10 +461,7 @@ mod tests {
                 let x = (i % 2) as f64;
                 let y = ((i / 2) % 2) as f64;
                 let z = (i / 4) as f64;
-                Aabb::new(
-                    Point3::new(x, y, z),
-                    Point3::new(x + 1.0, y + 1.0, z + 1.0),
-                )
+                Aabb::new(Point3::new(x, y, z), Point3::new(x + 1.0, y + 1.0, z + 1.0))
             })
             .collect()
     }
@@ -482,7 +479,8 @@ mod tests {
     fn build_and_encode() -> Vec<u8> {
         let aabbs = test_aabbs();
         let n = aabbs.len();
-        let mut bvh_nodes = vec![crate::specialized_libs::computational_geometry::BvhNode::default(); 2 * n];
+        let mut bvh_nodes =
+            vec![crate::specialized_libs::computational_geometry::BvhNode::default(); 2 * n];
         let mut bvh_indices = vec![0u32; n];
         let mut bvh_codes = vec![0u64; n];
         let mut bvh_sort = vec![0u32; n];
@@ -497,7 +495,8 @@ mod tests {
 
         let points = test_points();
         let np = points.len();
-        let mut kd_nodes = vec![crate::specialized_libs::computational_geometry::KdNode::default(); np];
+        let mut kd_nodes =
+            vec![crate::specialized_libs::computational_geometry::KdNode::default(); np];
         let mut kd_indices = vec![0u32; np];
         let mut kd_codes = vec![0u64; np];
         let mut kd_sort = vec![0u32; np];
@@ -510,7 +509,12 @@ mod tests {
         )
         .unwrap();
 
-        let need = crate::container_10d::spatial_index_section::encoded_len(bvh_count as u32, kd_count as u32, n as u32, np as u32);
+        let need = crate::container_10d::spatial_index_section::encoded_len(
+            bvh_count as u32,
+            kd_count as u32,
+            n as u32,
+            np as u32,
+        );
         let mut buf = vec![0u8; need];
         encode_spatial_index_section(
             &bvh_nodes[..bvh_count],
@@ -531,10 +535,7 @@ mod tests {
         let payload = build_and_encode();
         let query_frontend = SpatialIndexQuery::load(&payload).unwrap();
 
-        let query = Aabb::new(
-            Point3::new(-0.5, -0.5, -0.5),
-            Point3::new(0.5, 0.5, 0.5),
-        );
+        let query = Aabb::new(Point3::new(-0.5, -0.5, -0.5), Point3::new(0.5, 0.5, 0.5));
         let mut out = vec![0u32; aabbs.len()];
         let mut stack = vec![0u32; MAX_BVH_DEPTH * 2];
         let (count, stats) = query_frontend
@@ -625,10 +626,7 @@ mod tests {
     fn empty_section_queries_return_none() {
         let need = crate::container_10d::spatial_index_section::encoded_len(0, 0, 0, 0);
         let mut buf = vec![0u8; need];
-        encode_spatial_index_section(
-            &[], &[], 0, &[], &[], 0, &mut buf,
-        )
-        .unwrap();
+        encode_spatial_index_section(&[], &[], 0, &[], &[], 0, &mut buf).unwrap();
 
         let query_frontend = SpatialIndexQuery::load(&buf).unwrap();
         let mut stack = vec![0u32; MAX_BVH_DEPTH * 2];
@@ -645,10 +643,7 @@ mod tests {
         let query_frontend = SpatialIndexQuery::load(&payload).unwrap();
 
         // Small query box that only touches a few nodes.
-        let query = Aabb::new(
-            Point3::new(-0.1, -0.1, -0.1),
-            Point3::new(0.1, 0.1, 0.1),
-        );
+        let query = Aabb::new(Point3::new(-0.1, -0.1, -0.1), Point3::new(0.1, 0.1, 0.1));
         let mut out = vec![0u32; aabbs.len()];
         let mut stack = vec![0u32; MAX_BVH_DEPTH * 2];
         let (_, stats) = query_frontend

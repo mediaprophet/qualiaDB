@@ -70,7 +70,10 @@ impl core::fmt::Display for MeshQualityError {
                 write!(f, "mesh_quality: non-finite coordinate at vertex {index}")
             }
             Self::IndefiniteMetric { vertex } => {
-                write!(f, "mesh_quality: indefinite metric tensor at vertex {vertex}")
+                write!(
+                    f,
+                    "mesh_quality: indefinite metric tensor at vertex {vertex}"
+                )
             }
             Self::EmptyBackground => write!(f, "mesh_quality: empty background mesh"),
             Self::QueryOutsideBackground => {
@@ -123,10 +126,12 @@ fn fetch_tri(
 ) -> Result<[Point3; 3], MeshQualityError> {
     let mut out = [Point3::new(0.0, 0.0, 0.0); 3];
     for (i, &vi) in tri.iter().enumerate() {
-        let v = *vertices.get(vi as usize).ok_or(MeshQualityError::IndexOutOfBounds {
-            element,
-            vertex: vi,
-        })?;
+        let v = *vertices
+            .get(vi as usize)
+            .ok_or(MeshQualityError::IndexOutOfBounds {
+                element,
+                vertex: vi,
+            })?;
         if !clamp_finite(v.x) || !clamp_finite(v.y) || !clamp_finite(v.z) {
             return Err(MeshQualityError::NonFiniteCoordinate { index: vi });
         }
@@ -143,10 +148,12 @@ fn fetch_tet(
 ) -> Result<[Point3; 4], MeshQualityError> {
     let mut out = [Point3::new(0.0, 0.0, 0.0); 4];
     for (i, &vi) in tet.iter().enumerate() {
-        let v = *vertices.get(vi as usize).ok_or(MeshQualityError::IndexOutOfBounds {
-            element,
-            vertex: vi,
-        })?;
+        let v = *vertices
+            .get(vi as usize)
+            .ok_or(MeshQualityError::IndexOutOfBounds {
+                element,
+                vertex: vi,
+            })?;
         if !clamp_finite(v.x) || !clamp_finite(v.y) || !clamp_finite(v.z) {
             return Err(MeshQualityError::NonFiniteCoordinate { index: vi });
         }
@@ -271,9 +278,21 @@ pub fn tri_quality_points(a: Point3, b: Point3, c: Point3) -> TriQuality {
     let max_angle = ang_a.max(ang_b).max(ang_c);
     let r = inradius_tri(l0, l1, l2, area);
     let r_circ = circumradius_tri(l0, l1, l2, area);
-    let edge_ratio = if min_edge > 0.0 { max_edge / min_edge } else { f64::INFINITY };
-    let aspect_ratio = if r > 0.0 { r_circ / (2.0 * r) } else { f64::INFINITY };
-    let radius_edge = if min_edge > 0.0 { r_circ / min_edge } else { f64::INFINITY };
+    let edge_ratio = if min_edge > 0.0 {
+        max_edge / min_edge
+    } else {
+        f64::INFINITY
+    };
+    let aspect_ratio = if r > 0.0 {
+        r_circ / (2.0 * r)
+    } else {
+        f64::INFINITY
+    };
+    let radius_edge = if min_edge > 0.0 {
+        r_circ / min_edge
+    } else {
+        f64::INFINITY
+    };
     let valid = area > 0.0 && min_edge > 0.0;
     TriQuality {
         min_angle,
@@ -337,14 +356,7 @@ impl TetQuality {
 }
 
 /// The six edges of a tet (as pairs of vertex-local-indices 0..3).
-const TET_EDGES: [(usize, usize); 6] = [
-    (0, 1),
-    (0, 2),
-    (0, 3),
-    (1, 2),
-    (1, 3),
-    (2, 3),
-];
+const TET_EDGES: [(usize, usize); 6] = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)];
 
 /// The four faces of a tet as triples of vertex-local-indices, outward-oriented
 /// (opposite vertex listed last is excluded; winding chosen so the normal
@@ -447,7 +459,9 @@ fn circumradius_tet(corners: &[Point3; 4]) -> f64 {
 /// (`valid: false`, `signed_volume < 0`).
 pub fn tet_quality(vertices: &[Point3], tet: &[u32; 4]) -> Result<TetQuality, MeshQualityError> {
     let corners = fetch_tet(vertices, tet, 0)?;
-    Ok(tet_quality_points(corners[0], corners[1], corners[2], corners[3]))
+    Ok(tet_quality_points(
+        corners[0], corners[1], corners[2], corners[3],
+    ))
 }
 
 /// Measure the quality of a single tet from its four corner points directly.
@@ -511,8 +525,16 @@ pub fn tet_quality_points(a: Point3, b: Point3, c: Point3, d: Point3) -> TetQual
     }
     // Circumradius.
     let r_circ = circumradius_tet(&corners);
-    let radius_edge = if min_edge > 0.0 { r_circ / min_edge } else { f64::INFINITY };
-    let edge_ratio = if min_edge > 0.0 { max_edge / min_edge } else { f64::INFINITY };
+    let radius_edge = if min_edge > 0.0 {
+        r_circ / min_edge
+    } else {
+        f64::INFINITY
+    };
+    let edge_ratio = if min_edge > 0.0 {
+        max_edge / min_edge
+    } else {
+        f64::INFINITY
+    };
     let valid = volume > 0.0 && min_edge > 0.0 && signed_volume > 0.0;
     TetQuality {
         min_dihedral,
@@ -885,9 +907,7 @@ impl AnisotropyField {
                         let m2 = bg_metrics[tri[2] as usize];
                         let m = blend_metric(m0, m1, m2, lambda[0], lambda[1], lambda[2]);
                         if !m.is_positive_definite() {
-                            return Err(MeshQualityError::IndefiniteMetric {
-                                vertex: tri[0],
-                            });
+                            return Err(MeshQualityError::IndefiniteMetric { vertex: tri[0] });
                         }
                         return Ok(m);
                     }
@@ -1060,11 +1080,27 @@ mod tests {
         let b = Point3::new(1.0, 0.0, 0.0);
         let c = Point3::new(0.5, s / 2.0, 0.0);
         let q = tri_quality_points(a, b, c);
-        assert!(approx(q.min_angle, FRAC_PI_3, 1e-12), "min angle {}", q.min_angle);
-        assert!(approx(q.max_angle, FRAC_PI_3, 1e-12), "max angle {}", q.max_angle);
+        assert!(
+            approx(q.min_angle, FRAC_PI_3, 1e-12),
+            "min angle {}",
+            q.min_angle
+        );
+        assert!(
+            approx(q.max_angle, FRAC_PI_3, 1e-12),
+            "max angle {}",
+            q.max_angle
+        );
         assert!(approx(q.edge_ratio, 1.0, 1e-12));
-        assert!(approx(q.aspect_ratio, 1.0, 1e-9), "aspect {}", q.aspect_ratio);
-        assert!(approx(q.radius_edge, 1.0 / s, 1e-9), "radius_edge {}", q.radius_edge);
+        assert!(
+            approx(q.aspect_ratio, 1.0, 1e-9),
+            "aspect {}",
+            q.aspect_ratio
+        );
+        assert!(
+            approx(q.radius_edge, 1.0 / s, 1e-9),
+            "radius_edge {}",
+            q.radius_edge
+        );
         assert!(approx(q.area, s / 4.0, 1e-12));
         assert!(q.valid);
     }
@@ -1150,7 +1186,11 @@ mod tests {
         let [a, b, c, d] = regular_tet(1.0);
         let q = tet_quality_points(a, b, c, d);
         assert!(q.valid);
-        assert!(approx(q.volume, 2.0f64.sqrt() / 12.0, 1e-12), "volume {}", q.volume);
+        assert!(
+            approx(q.volume, 2.0f64.sqrt() / 12.0, 1e-12),
+            "volume {}",
+            q.volume
+        );
         // Scaled Jacobian of regular tet = sqrt(2)/2.
         assert!(
             approx(q.scaled_jacobian, 2.0f64.sqrt() / 2.0, 1e-12),
@@ -1208,7 +1248,10 @@ mod tests {
         let d = Point3::new(0.5, 0.4, 0.01);
         let q = tet_quality_points(a, b, c, d);
         assert!(q.valid, "sliver should be valid (positive volume)");
-        assert!(q.is_sliver(20.0), "should be flagged sliver at 20 deg threshold");
+        assert!(
+            q.is_sliver(20.0),
+            "should be flagged sliver at 20 deg threshold"
+        );
         assert!(q.min_dihedral < 20.0f64.to_radians());
     }
 
@@ -1236,7 +1279,11 @@ mod tests {
     #[test]
     fn size_field_constant() {
         let f = SizeField::Constant { h: 0.5 };
-        assert!(approx(f.size_at(Point3::new(1.0, 2.0, 3.0)).unwrap(), 0.5, 1e-12));
+        assert!(approx(
+            f.size_at(Point3::new(1.0, 2.0, 3.0)).unwrap(),
+            0.5,
+            1e-12
+        ));
     }
 
     #[test]
@@ -1259,7 +1306,11 @@ mod tests {
         let c = Point3::new(1.0 / 3.0, 1.0 / 3.0, 0.0);
         assert!(approx(f.size_at(c).unwrap(), 2.0, 1e-12));
         // At vertex 0, size = 1.0.
-        assert!(approx(f.size_at(Point3::new(0.0, 0.0, 0.0)).unwrap(), 1.0, 1e-12));
+        assert!(approx(
+            f.size_at(Point3::new(0.0, 0.0, 0.0)).unwrap(),
+            1.0,
+            1e-12
+        ));
         // Outside -> error.
         assert!(f.size_at(Point3::new(2.0, 2.0, 0.0)).is_err());
     }

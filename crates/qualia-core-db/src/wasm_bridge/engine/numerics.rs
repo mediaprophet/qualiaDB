@@ -148,7 +148,9 @@ pub fn num_orthopoly_wasm(val: JsValue) -> Result<JsValue, JsValue> {
         x: f64,
     }
     let p: In = serde_wasm_bindgen::from_value(val).map_err(jserr)?;
-    use crate::solvers::special_functions::{chebyshev_t, chebyshev_u, hermite, laguerre, legendre};
+    use crate::solvers::special_functions::{
+        chebyshev_t, chebyshev_u, hermite, laguerre, legendre,
+    };
     let value = match p.kind.as_str() {
         "legendre" => legendre(p.n, p.x),
         "chebyshev_t" => chebyshev_t(p.n, p.x),

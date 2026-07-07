@@ -15,7 +15,13 @@ use std::collections::HashSet;
 /// can be tested without a model / GPU / the installed-dictionary machinery.
 const N_ATOMS: u32 = 8;
 
-fn dict_layout(n_layer: u32, max_context: u32, n_kv: u32, head_dim: u32, dict_k: u32) -> KvCacheLayout {
+fn dict_layout(
+    n_layer: u32,
+    max_context: u32,
+    n_kv: u32,
+    head_dim: u32,
+    dict_k: u32,
+) -> KvCacheLayout {
     // codes + the per-layer dictionary atoms resident in the same slice.
     let layer_stride = max_context * 2 * n_kv * dict_k + 2 * N_ATOMS * head_dim;
     KvCacheLayout {
@@ -59,7 +65,11 @@ fn code_index_is_a_dense_bijection() {
         }
     }
     let expected = (n_layer * max_context * n_kv * 2 * k) as usize;
-    assert_eq!(seen.len(), expected, "addressing must fill every code word (dense)");
+    assert_eq!(
+        seen.len(),
+        expected,
+        "addressing must fill every code word (dense)"
+    );
     let atoms = (n_layer * 2 * N_ATOMS * head_dim) as usize;
     assert_eq!(
         l.total_f32_elems,

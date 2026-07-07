@@ -98,14 +98,26 @@ pub fn nbody_step_gpu(
     let capacity = (state_in.len() * 8).max(4 << 20);
     let mut ctx = WgpuComputeContext::new(capacity)?;
 
-    let view_in =
-        ctx.allocate_and_write(bytemuck::cast_slice(state_in), 0, 0, BindingUsage::StorageRead)?;
+    let view_in = ctx.allocate_and_write(
+        bytemuck::cast_slice(state_in),
+        0,
+        0,
+        BindingUsage::StorageRead,
+    )?;
     let zeros = vec![0.0f32; state_in.len()];
-    let view_out =
-        ctx.allocate_and_write(bytemuck::cast_slice(&zeros), 1, 0, BindingUsage::StorageReadWrite)?;
+    let view_out = ctx.allocate_and_write(
+        bytemuck::cast_slice(&zeros),
+        1,
+        0,
+        BindingUsage::StorageReadWrite,
+    )?;
     let params = [dt, soft, coupling];
-    let view_params =
-        ctx.allocate_and_write(bytemuck::cast_slice(&params), 2, 0, BindingUsage::StorageRead)?;
+    let view_params = ctx.allocate_and_write(
+        bytemuck::cast_slice(&params),
+        2,
+        0,
+        BindingUsage::StorageRead,
+    )?;
 
     let buffers = vec![view_in, view_out, view_params];
     let pipeline = WgpuPipeline::compile(&ctx, KIN_STEP_WGSL, KIN_STEP_ENTRY)?;
@@ -147,7 +159,11 @@ mod tests {
         let out = nbody_step_cpu(&state, 0.1, 1e-4, 1.0);
         // Particle 0 (left) pushed −x → new x < 0; particle 1 (right) pushed +x → x > 1.
         assert!(out[0] < 0.0, "left particle should move −x, got {}", out[0]);
-        assert!(out[8] > 1.0, "right particle should move +x, got {}", out[8]);
+        assert!(
+            out[8] > 1.0,
+            "right particle should move +x, got {}",
+            out[8]
+        );
         // x-velocities are equal and opposite (symmetric two-body).
         assert!((out[3] + out[11]).abs() < 1e-5, "momentum not conserved");
         // Mass/charge slots carried through unchanged.
@@ -164,7 +180,11 @@ mod tests {
         ];
         let out = nbody_step_cpu(&state, 0.1, 1e-4, 1.0);
         assert!(out[0] > 0.0, "left particle should move +x, got {}", out[0]);
-        assert!(out[8] < 1.0, "right particle should move −x, got {}", out[8]);
+        assert!(
+            out[8] < 1.0,
+            "right particle should move −x, got {}",
+            out[8]
+        );
     }
 
     /// GPU certify: the kernel on a real adapter must match the CPU oracle within f32

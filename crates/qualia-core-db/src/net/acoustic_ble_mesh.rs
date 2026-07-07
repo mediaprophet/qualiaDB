@@ -1683,7 +1683,9 @@ impl MeshRouter {
 
     pub fn optimize_routes(&mut self) -> Result<(), MeshError> {
         // Prune stale forwarding entries (expired TTL or empty next hop).
-        self.forwarding_table.entries.retain(|e| e.ttl > 0 && !e.next_hop.is_empty());
+        self.forwarding_table
+            .entries
+            .retain(|e| e.ttl > 0 && !e.next_hop.is_empty());
         // Decrement TTL on remaining entries.
         for e in &mut self.forwarding_table.entries {
             e.ttl = e.ttl.saturating_sub(1);
@@ -1809,9 +1811,14 @@ impl AcousticChannelManager {
     }
 
     pub fn allocate_channel(&mut self, channel_id: &str) -> Option<&AcousticChannel> {
-        if let Some(pos) = self.available_channels.iter().position(|c| c.channel_id == channel_id) {
+        if let Some(pos) = self
+            .available_channels
+            .iter()
+            .position(|c| c.channel_id == channel_id)
+        {
             let channel = self.available_channels.remove(pos);
-            self.active_channels.insert(channel.channel_id.clone(), channel);
+            self.active_channels
+                .insert(channel.channel_id.clone(), channel);
         }
         self.active_channels.get(channel_id)
     }

@@ -147,13 +147,13 @@ impl<'a> SparqlDidHandler<'a> {
         if signature.len() != 64 {
             return Err("Invalid signature length".to_string());
         }
-        
+
         let _ = (signature, data);
-        
+
         #[cfg(feature = "interop-crypto")]
         {
             use ed25519_dalek::{Signature, Verifier, VerifyingKey};
-            
+
             let mut sig_bytes = [0u8; 64];
             sig_bytes.copy_from_slice(signature);
             if let Ok(sig) = Signature::from_bytes(&sig_bytes) {
@@ -175,13 +175,15 @@ impl<'a> SparqlDidHandler<'a> {
                 }
             }
         }
-        
+
         // If we reach here, either interop-crypto is disabled or the fast-path failed.
         // We do not have the public key locally, so we fail closed.
-        Err("did:verify fast-path failed: no resolvable verification key is provisioned \
+        Err(
+            "did:verify fast-path failed: no resolvable verification key is provisioned \
              in the SPARQL read-side shim. Verify via the identity/key-vault layer \
              (KeyVault::verify_signature)."
-            .to_string())
+                .to_string(),
+        )
     }
 
     /// Check DID permission for graph access
@@ -330,7 +332,7 @@ pub fn did_verify(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> boo
     } else {
         &[0u8; 64]
     };
-    
+
     let data = if data_ptr != 0 {
         unsafe { std::slice::from_raw_parts(data_ptr as *const u8, 256) }
     } else {
@@ -672,7 +674,9 @@ mod tests {
         assert_eq!(result.did, did);
         // Endpoint must be a valid HTTPS URL — not XOR garbage.
         assert!(
-            result.endpoint_url.starts_with("https://q42.network/agents/"),
+            result
+                .endpoint_url
+                .starts_with("https://q42.network/agents/"),
             "endpoint_url should be a q42.network agent URL, got '{}'",
             result.endpoint_url
         );
@@ -697,7 +701,10 @@ mod tests {
         let did = "did:q42:z6MkpTHR8VNs";
         let a = resolver.resolve(did).unwrap();
         let b = resolver.resolve(did).unwrap();
-        assert_eq!(a.endpoint_url, b.endpoint_url, "resolution must be deterministic");
+        assert_eq!(
+            a.endpoint_url, b.endpoint_url,
+            "resolution must be deterministic"
+        );
         assert_eq!(a.verification_method, b.verification_method);
     }
 
@@ -706,7 +713,10 @@ mod tests {
         let resolver = DIDResolver::new();
         let a = resolver.resolve("did:q42:z6MkpTHR8VNs").unwrap();
         let b = resolver.resolve("did:q42:z6MkpTHR8VNt").unwrap();
-        assert_ne!(a.endpoint_url, b.endpoint_url, "distinct DIDs must resolve to distinct URLs");
+        assert_ne!(
+            a.endpoint_url, b.endpoint_url,
+            "distinct DIDs must resolve to distinct URLs"
+        );
     }
 
     #[test]
@@ -809,8 +819,7 @@ mod tests {
         // verification must fail closed even when the DID and payload are valid.
         let resolver = DIDResolver::new();
         let did = "did:q42:z6MkpTHR8VNs";
-        let result =
-            resolver.verify_authentication_signature(did, &[1u8; 64], &[2u8; 32]);
+        let result = resolver.verify_authentication_signature(did, &[1u8; 64], &[2u8; 32]);
         assert!(result.is_err(), "must fail closed, not return valid");
         assert!(result.unwrap_err().contains("identity/key-vault layer"));
     }

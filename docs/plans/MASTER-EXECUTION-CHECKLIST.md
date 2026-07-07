@@ -66,7 +66,8 @@ plans. Tags: `[x]` done (local unless noted) · `[~]` partial · `[ ]` not start
   (topics/depicts/occurredAt+interval/place/projects/documentType/purposes) + `descriptors_to_nquins` +
   `by_topic`/`by_depiction`/`by_place`/`in_project`/`for_purpose`/`in_time_range` (timeline) + `Flag`
   (severity-graded, `flags_on`/`flag_severity`) for the guardian-notify path. **VERIFIED GREEN.**
-  ⚑ §11: `hypermedia.rs` now ~630 lines — split into `hypermedia/{container,descriptors,processors}.rs` at P3.
+  §11: **DONE** — `hypermedia.rs` split into `hypermedia/mod.rs` + `hypermedia/processors/{mod,image,audio}.rs`
+  (the new content-processors are their own submodule; the public path `crate::hypermedia::*` is preserved).
 - [x] **P2 — anatomy on it (VERIFIED GREEN):** `wellfair/anatomy_body.rs` `organ_container` (an organ = sealed
   `.10d` mesh primary ⊕ source-GLB with CCF/HRA provenance+licence ⊕ topic/depicts/system descriptors, joined
   to its geometry manifest — **findable by system**) + `body_container` (bundles organs as one semantic unit).
@@ -85,12 +86,25 @@ plans. Tags: `[x]` done (local unless noted) · `[~]` partial · `[ ]` not start
   persist; **guardianship flag → notify + ledger record**) / `search_library` / `search_library_time` /
   `list_library` + 4 Tauri commands + 3 bridges + a Studio **Library** tab (ingest a doc; find by facet).
   hypermedia_store 1/1; desktop + studio host + studio wasm green.
-- [ ] **P1** provenance sidecar in `.10d` (type-7 section: physical source bytes + licence + VC) +
-  validate-before-use gate. M. *(P2 records provenance semantically; P1 bundles the source bytes in-envelope.)*
-- [ ] **P4b** timeline / map **visual views** (the query host methods exist; the Studio timeline/map surfaces
-  don't) + heavy content processors **composing `qualia-vision` / `qualia-audio`** (image→depicted-subjects/OCR,
-  audio→transcript) — those engines are parked plans, so this is gated on them; the `Processor` trait is the
-  plug-in point. + fold the library quins into the core graph store / daemon `/query`. L.
+- [x] **P1 — provenance sidecar PHYSICALLY in `.10d` (VERIFIED GREEN).** NEW `container_10d/provenance_section.rs`
+  (source bytes + licence + optional VC in-envelope; encode/decode + **validate-before-use gate** — carried
+  source must hash to the declared digest AND a licence must be present, else it's a stripped context). Flipped
+  the reserved `SpecReservedProvenanceSidecar` → honest **`ProvenanceSidecar`** (now `is_implemented`, encodable);
+  `render/portal/mod.rs`'s existing `has_attestation` governance gate now lights up. Producer
+  `render/compile_10d.rs::compile_mesh_to_10d_with_provenance` bundles it into a compiled organ `.10d`.
+  **provenance_section 7/7; compile_10d 11/11** (incl. an end-to-end round-trip through the real section table +
+  a bundled-`.10d` that still decodes the mesh AND validates the sidecar). *(P2 records provenance semantically;
+  P1 makes the source bytes byte-inseparable.)*
+- [x] **P4b (processors + views) — heavy content processors + timeline/map (core VERIFIED GREEN; UI wired).**
+  `hypermedia/processors/`: **`ImageProcessor`** — REAL model-free EXIF/PNG → a photo's capture-time (**timeline**)
+  + GPS (**map**); **`WavProcessor`** — composes the project's own STFT → duration + dominant-frequency;
+  `processor_for` media-type dispatch. **hypermedia 14/14** (EXIF Paris fixture + 1000 Hz tone verified). Studio
+  Library panel gained **List / Timeline / Map** views + person-authored date/place facets; host `ingest_bytes`/
+  `ingest_file_hex` (photo) + `ingest_document_annotated` + `wellfair_ingest_file_hex` command + bridges.
+  **⚑ honest gaps (NOT faked):** *depicted-subject recognition / OCR* and *speech transcript* need a **vision /
+  ASR model** — they are `Processor` plug-in points (the dispatcher already routes by media type), the one true
+  out-of-band dependency. Also remaining: a native **file-picker** in the Studio to feed `ingest_file_hex` bytes
+  (the host path is ready + tested); fold the library quins into the core graph store / daemon `/query`. L.
 
 **B · Anatomy / health (§G — the flagged priority; "advance so it works properly", Timothy 2026-07-07)**
 - [ ] **Make the anatomy asset pipeline real, on the hypermedia container (A2).** Canonical GLB→Q42 honouring

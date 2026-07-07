@@ -17,8 +17,9 @@ use qualia_core_db::sparql_library::quin_sink::QuinSink;
 use qualia_core_db::{q_hash, NQuin};
 use std::io;
 
-const ICCPR_CONCEPTS: &str =
-    include_str!("../../../core-ontologies/concepts/international-covenant-civil-and-political-rights.n3");
+const ICCPR_CONCEPTS: &str = include_str!(
+    "../../../core-ontologies/concepts/international-covenant-civil-and-political-rights.n3"
+);
 
 #[derive(Default)]
 struct VecSink(Vec<NQuin>);
@@ -44,7 +45,9 @@ fn epistemic_and_temporal_modalities_compose_over_the_corpus() {
     let obligation = q_hash("https://ns.webcivics.net/values/Obligation");
     // Deontic content is present: this corpus term IS typed an Obligation.
     assert!(
-        corpus.iter().any(|q| q.subject == norm && q.predicate == rdf_type && q.object == obligation),
+        corpus
+            .iter()
+            .any(|q| q.subject == norm && q.predicate == rdf_type && q.object == obligation),
         "the corpus norm must be a deontic Obligation"
     );
 
@@ -78,8 +81,15 @@ fn epistemic_and_temporal_modalities_compose_over_the_corpus() {
     let mut out = [blank; 4];
     let n = evaluate_epistemic_frame(&[knows], state, world, &mut out).expect("epistemic eval");
     assert_eq!(n, 1);
-    assert_eq!(out[0].status, EpistemicStatus::Active, "KNOWS a corpus norm -> Active (factive)");
-    assert_eq!(out[0].claim.object, norm, "the epistemic claim is ABOUT the corpus norm");
+    assert_eq!(
+        out[0].status,
+        EpistemicStatus::Active,
+        "KNOWS a corpus norm -> Active (factive)"
+    );
+    assert_eq!(
+        out[0].claim.object, norm,
+        "the epistemic claim is ABOUT the corpus norm"
+    );
 
     let mut out2 = [blank; 4];
     evaluate_epistemic_frame(&[weak_belief], state, world, &mut out2).expect("epistemic eval");
@@ -92,6 +102,12 @@ fn epistemic_and_temporal_modalities_compose_over_the_corpus() {
     // ── TEMPORAL: the norm's in-force window (ICCPR entered into force 1976-03-23). ──
     // Unix seconds: 1976-03-23 ~= 196387200; "now" 2024 ~= 1_700_000_000.
     let in_force = TemporalInterval::new(norm, 196_387_200, i64::MAX);
-    assert!(in_force.contains(1_700_000_000), "the norm is in force in 2024");
-    assert!(!in_force.contains(0), "the norm was not in force at the unix epoch (1970)");
+    assert!(
+        in_force.contains(1_700_000_000),
+        "the norm is in force in 2024"
+    );
+    assert!(
+        !in_force.contains(0),
+        "the norm was not in force at the unix epoch (1970)"
+    );
 }

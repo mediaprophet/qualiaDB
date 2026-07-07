@@ -383,7 +383,8 @@ fn embedding_fallback_logits(
             }
             #[cfg(target_arch = "wasm32")]
             {
-                let n = idx.dequantize_token_embedding_into(mmap, token_id, &mut emb_buf[..emb_dim]);
+                let n =
+                    idx.dequantize_token_embedding_into(mmap, token_id, &mut emb_buf[..emb_dim]);
                 if n > 0 {
                     engine.dispatch_fused_transformer_block(wt, &emb_buf[..n])
                 } else {
@@ -570,7 +571,9 @@ fn build_sieve(
     }
 }
 
-static PREFIX_CACHE: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<u64, Box<[f32]>>>> = std::sync::OnceLock::new();
+static PREFIX_CACHE: std::sync::OnceLock<
+    std::sync::Mutex<std::collections::HashMap<u64, Box<[f32]>>>,
+> = std::sync::OnceLock::new();
 
 fn get_prefix_cache() -> &'static std::sync::Mutex<std::collections::HashMap<u64, Box<[f32]>>> {
     PREFIX_CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
@@ -1040,7 +1043,8 @@ impl LocalLlmAgent {
                 // active, decode uses the legacy forward (leaves the normed hidden in `emb_buf`),
                 // reads back the FULL logit vector, and runs the penalty/temp/top-k/top-p chain.
                 #[cfg(not(target_arch = "wasm32"))]
-                let mut sampler = crate::llm_bench::sampler_config().map(crate::sampler::SamplerState::new);
+                let mut sampler =
+                    crate::llm_bench::sampler_config().map(crate::sampler::SamplerState::new);
                 #[cfg(target_arch = "wasm32")]
                 let mut sampler: Option<crate::sampler::SamplerState> = None;
                 let mut sampler_logits: Vec<f32> = Vec::new();
@@ -1101,8 +1105,10 @@ impl LocalLlmAgent {
                     {
                         if let Some(idx) = tensor_idx.as_ref() {
                             let cur = *ctx.last().unwrap_or(&tok.bos_token_id);
-                            let draft =
-                                crate::prompt_lookup::propose(&ctx, crate::prompt_lookup::MAX_DRAFT);
+                            let draft = crate::prompt_lookup::propose(
+                                &ctx,
+                                crate::prompt_lookup::MAX_DRAFT,
+                            );
                             if draft.len > 0 {
                                 // inputs = [cur, d0..d_{m-1}] at positions [pos, pos+m], pos = ctx.len()-1.
                                 let mut inputs = Vec::with_capacity(draft.len + 1);
@@ -1264,8 +1270,9 @@ impl LocalLlmAgent {
                                 None
                             };
                             #[cfg(target_arch = "wasm32")]
-                            let resident_hit: Option<crate::gguf_bridge::StreamingArgmaxResult> =
-                                None;
+                            let resident_hit: Option<
+                                crate::gguf_bridge::StreamingArgmaxResult,
+                            > = None;
 
                             if resident_hit.is_none() {
                                 // Decode-profiler: time the 32-layer forward (legacy path).
@@ -1390,29 +1397,41 @@ impl LocalLlmAgent {
 
                                     #[cfg(not(target_arch = "wasm32"))]
                                     if let Some(ref mut wal) = thermal_wal_opt {
-                                        let record = crate::inference::thermal_wal::ThermalEvictionRecord {
-                                            timestamp_ms: std::time::SystemTime::now()
-                                                .duration_since(std::time::UNIX_EPOCH)
-                                                .unwrap_or_default()
-                                                .as_millis() as u64,
-                                            page_id: (current_page_id - 1) as u32,
-                                            fast_entropy,
-                                            top1_v,
-                                            top2_v,
-                                            reserved: [0; 8],
-                                        };
+                                        let record =
+                                            crate::inference::thermal_wal::ThermalEvictionRecord {
+                                                timestamp_ms: std::time::SystemTime::now()
+                                                    .duration_since(std::time::UNIX_EPOCH)
+                                                    .unwrap_or_default()
+                                                    .as_millis()
+                                                    as u64,
+                                                page_id: (current_page_id - 1) as u32,
+                                                fast_entropy,
+                                                top1_v,
+                                                top2_v,
+                                                reserved: [0; 8],
+                                            };
                                         wal.append(record);
                                     }
 
                                     if std::env::var("QUALIA_LLM_DEBUG_DECODE").is_ok() {
-                                        eprintln!("[NEW CHUNK] page_id={} entropy={:.3}", current_page_id, fast_entropy);
-                                        eprintln!("[THERMAL EVICT] Hard eviction logged for page_id={}", current_page_id - 1);
+                                        eprintln!(
+                                            "[NEW CHUNK] page_id={} entropy={:.3}",
+                                            current_page_id, fast_entropy
+                                        );
+                                        eprintln!(
+                                            "[THERMAL EVICT] Hard eviction logged for page_id={}",
+                                            current_page_id - 1
+                                        );
                                     }
                                 }
 
                                 // Update KV provenance for this new token
                                 let token_idx = ctx.len() as u32;
-                                crate::tensor::kv_provenance::record_kv_provenance(token_idx, token_idx, current_page_id);
+                                crate::tensor::kv_provenance::record_kv_provenance(
+                                    token_idx,
+                                    token_idx,
+                                    current_page_id,
+                                );
 
                                 (top1_i, top1_v)
                             };

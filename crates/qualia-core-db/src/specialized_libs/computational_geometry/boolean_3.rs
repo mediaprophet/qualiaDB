@@ -48,7 +48,11 @@ use super::tri_tri_3::{tri_tri_intersect_3, tri_tri_intersect_3_exact};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Boolean3Error {
     /// A triangle referenced a vertex index outside `vertices`.
-    IndexOutOfBounds { mesh: &'static str, triangle: usize, vertex: u32 },
+    IndexOutOfBounds {
+        mesh: &'static str,
+        triangle: usize,
+        vertex: u32,
+    },
     /// A referenced vertex had a non-finite coordinate (NaN / ±∞).
     NonFiniteCoordinate { mesh: &'static str, index: usize },
     /// Output vertex buffer too small; `required` is a sufficient size.
@@ -108,10 +112,7 @@ pub fn required_vertices_3(
 /// at most 3 sub-triangles per intersection, and a triangle can intersect at
 /// most all triangles of the other mesh. In practice the count is far smaller.
 #[inline]
-pub fn required_triangles_3(
-    triangles_a: usize,
-    triangles_b: usize,
-) -> usize {
+pub fn required_triangles_3(triangles_a: usize, triangles_b: usize) -> usize {
     // Each triangle split by at most `other_mesh_count` segments, each split
     // producing at most +2 triangles. Generous upper bound.
     3 * (triangles_a + triangles_b) * (triangles_a.max(triangles_b) + 1)
@@ -241,7 +242,10 @@ pub fn boolean_3_with_kernel<K: GeometryKernel>(
         let segs = std::mem::take(&mut splits_b[i]);
         let frags = split_triangle(*corners, &segs);
         for f in frags {
-            fragments.push(Tri3 { v: f, from_a: false });
+            fragments.push(Tri3 {
+                v: f,
+                from_a: false,
+            });
         }
     }
     // Suppress unused warning for _kernel.
@@ -293,7 +297,10 @@ pub fn boolean_3_with_kernel<K: GeometryKernel>(
             if op == Boolean3Op::Difference && !frag.from_a {
                 v.swap(1, 2);
             }
-            kept.push(Tri3 { v, from_a: frag.from_a });
+            kept.push(Tri3 {
+                v,
+                from_a: frag.from_a,
+            });
         }
     }
 
@@ -369,8 +376,7 @@ pub fn boolean_3_exact(
     for (ia, ib) in &candidate_pairs {
         let ca = corners_a[*ia];
         let cb = corners_b[*ib];
-        let (hit, exact_seg) =
-            tri_tri_intersect_3_exact(ca[0], ca[1], ca[2], cb[0], cb[1], cb[2]);
+        let (hit, exact_seg) = tri_tri_intersect_3_exact(ca[0], ca[1], ca[2], cb[0], cb[1], cb[2]);
         if hit {
             if let Some(seg) = exact_seg {
                 // Convert exact points to f64 for the split geometry.
@@ -402,7 +408,10 @@ pub fn boolean_3_exact(
         let segs = std::mem::take(&mut splits_b[i]);
         let frags = split_triangle(*corners, &segs);
         for f in frags {
-            fragments.push(Tri3 { v: f, from_a: false });
+            fragments.push(Tri3 {
+                v: f,
+                from_a: false,
+            });
         }
     }
 
@@ -445,7 +454,10 @@ pub fn boolean_3_exact(
             if op == Boolean3Op::Difference && !frag.from_a {
                 v.swap(1, 2);
             }
-            kept.push(Tri3 { v, from_a: frag.from_a });
+            kept.push(Tri3 {
+                v,
+                from_a: frag.from_a,
+            });
         }
     }
 
@@ -470,7 +482,11 @@ fn validate_mesh(
     for (t, tri) in triangles.iter().enumerate() {
         for &vi in tri {
             if vi as usize >= vertices.len() {
-                return Err(Boolean3Error::IndexOutOfBounds { mesh, triangle: t, vertex: vi });
+                return Err(Boolean3Error::IndexOutOfBounds {
+                    mesh,
+                    triangle: t,
+                    vertex: vi,
+                });
             }
         }
     }
@@ -486,11 +502,13 @@ fn gather_corners(
     for (t, tri) in triangles.iter().enumerate() {
         let mut corners = [Point3::new(0.0, 0.0, 0.0); 3];
         for (i, &vi) in tri.iter().enumerate() {
-            corners[i] = *vertices.get(vi as usize).ok_or(Boolean3Error::IndexOutOfBounds {
-                mesh,
-                triangle: t,
-                vertex: vi,
-            })?;
+            corners[i] = *vertices
+                .get(vi as usize)
+                .ok_or(Boolean3Error::IndexOutOfBounds {
+                    mesh,
+                    triangle: t,
+                    vertex: vi,
+                })?;
         }
         out.push(corners);
     }
@@ -543,9 +561,12 @@ fn brute_force_aabb_pairs(boxes_a: &[Aabb], boxes_b: &[Aabb]) -> Vec<(usize, usi
 
 #[inline]
 fn aabb_overlap(a: &Aabb, b: &Aabb) -> bool {
-    a.min.x <= b.max.x && a.max.x >= b.min.x
-        && a.min.y <= b.max.y && a.max.y >= b.min.y
-        && a.min.z <= b.max.z && a.max.z >= b.min.z
+    a.min.x <= b.max.x
+        && a.max.x >= b.min.x
+        && a.min.y <= b.max.y
+        && a.max.y >= b.min.y
+        && a.min.z <= b.max.z
+        && a.max.z >= b.min.z
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -554,12 +575,7 @@ fn aabb_overlap(a: &Aabb, b: &Aabb) -> bool {
 
 /// Add split points from an intersection segment to a triangle's split list.
 /// The segment endpoints are projected onto the triangle's edges.
-fn add_split_points(
-    splits: &mut Vec<SplitSegment>,
-    _tri: [Point3; 3],
-    p: Point3,
-    q: Point3,
-) {
+fn add_split_points(splits: &mut Vec<SplitSegment>, _tri: [Point3; 3], p: Point3, q: Point3) {
     // The intersection segment endpoints already lie on the triangle's surface
     // (they were constructed as edge-plane intersections). Store them directly.
     splits.push(SplitSegment { p, q });
@@ -667,7 +683,7 @@ fn split_one(tri: [Point3; 3], p: Point3, q: Point3) -> Vec<[Point3; 3]> {
 /// Location of a point on a triangle's boundary.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum EdgeLoc {
-    Edge(usize),  // 0=AB, 1=BC, 2=CA
+    Edge(usize),   // 0=AB, 1=BC, 2=CA
     Vertex(usize), // 0=A, 1=B, 2=C
     Interior,
 }
@@ -759,12 +775,8 @@ fn vertex_split(
     // If P is at a vertex and Q is on the opposite edge, split into 2.
     // If both are at vertices, the segment is an edge — no split needed.
     match (&loc_p, &loc_q) {
-        (EdgeLoc::Vertex(v), EdgeLoc::Edge(e)) => {
-            vertex_edge_split(tri, *v, *e, p, q)
-        }
-        (EdgeLoc::Edge(e), EdgeLoc::Vertex(v)) => {
-            vertex_edge_split(tri, *v, *e, q, p)
-        }
+        (EdgeLoc::Vertex(v), EdgeLoc::Edge(e)) => vertex_edge_split(tri, *v, *e, p, q),
+        (EdgeLoc::Edge(e), EdgeLoc::Vertex(v)) => vertex_edge_split(tri, *v, *e, q, p),
         (EdgeLoc::Vertex(_), EdgeLoc::Vertex(_)) => {
             // Both at vertices — segment is a triangle edge, no split.
             vec![tri]
@@ -774,7 +786,13 @@ fn vertex_split(
 }
 
 /// Split a triangle where one point is at vertex `v` and the other is on edge `e`.
-fn vertex_edge_split(tri: [Point3; 3], vertex: usize, edge: usize, _vp: Point3, ep: Point3) -> Vec<[Point3; 3]> {
+fn vertex_edge_split(
+    tri: [Point3; 3],
+    vertex: usize,
+    edge: usize,
+    _vp: Point3,
+    ep: Point3,
+) -> Vec<[Point3; 3]> {
     let [a, b, c] = tri;
     let verts = [a, b, c];
 
@@ -849,7 +867,11 @@ fn classify_point(point: Point3, triangles: &[[Point3; 3]]) -> MeshSide {
             return MeshSide::OnSurface;
         }
         if count > 0 {
-            return if count % 2 == 1 { MeshSide::Inside } else { MeshSide::Outside };
+            return if count % 2 == 1 {
+                MeshSide::Inside
+            } else {
+                MeshSide::Outside
+            };
         }
     }
 
@@ -868,22 +890,33 @@ pub fn point_in_mesh(point: Point3, triangles: &[[Point3; 3]]) -> bool {
 fn normals_align(frag: [Point3; 3], other: &[[Point3; 3]]) -> bool {
     let centroid = tri_centroid(frag);
     let frag_normal = tri_normal(frag[0], frag[1], frag[2]);
-    let frag_len = (frag_normal.x * frag_normal.x + frag_normal.y * frag_normal.y + frag_normal.z * frag_normal.z).sqrt();
+    let frag_len = (frag_normal.x * frag_normal.x
+        + frag_normal.y * frag_normal.y
+        + frag_normal.z * frag_normal.z)
+        .sqrt();
 
     for tri in other {
         // Check if centroid lies on this triangle.
         let result = ray_triangle_intersect_3d(
             centroid,
             Point3::new(frag_normal.x, frag_normal.y, frag_normal.z),
-            tri[0], tri[1], tri[2],
+            tri[0],
+            tri[1],
+            tri[2],
         );
         if let RayTriangleResult::Hit(hit) = result {
             if hit.t.abs() < 1e-9 {
                 // Centroid is on this triangle. Compare normals.
                 let other_normal = tri_normal(tri[0], tri[1], tri[2]);
-                let other_len = (other_normal.x * other_normal.x + other_normal.y * other_normal.y + other_normal.z * other_normal.z).sqrt();
+                let other_len = (other_normal.x * other_normal.x
+                    + other_normal.y * other_normal.y
+                    + other_normal.z * other_normal.z)
+                    .sqrt();
                 if frag_len > 0.0 && other_len > 0.0 {
-                    let dot = (frag_normal.x * other_normal.x + frag_normal.y * other_normal.y + frag_normal.z * other_normal.z) / (frag_len * other_len);
+                    let dot = (frag_normal.x * other_normal.x
+                        + frag_normal.y * other_normal.y
+                        + frag_normal.z * other_normal.z)
+                        / (frag_len * other_len);
                     // Same direction → coincident face → keep.
                     return dot > 0.0;
                 }
@@ -1006,22 +1039,34 @@ mod tests {
     /// Unit cube mesh (8 vertices, 12 triangles, outward-facing CCW winding).
     fn unit_cube() -> (Vec<Point3>, Vec<[u32; 3]>) {
         let v = vec![
-            p(0.0, 0.0, 0.0), p(1.0, 0.0, 0.0), p(1.0, 1.0, 0.0), p(0.0, 1.0, 0.0),
-            p(0.0, 0.0, 1.0), p(1.0, 0.0, 1.0), p(1.0, 1.0, 1.0), p(0.0, 1.0, 1.0),
+            p(0.0, 0.0, 0.0),
+            p(1.0, 0.0, 0.0),
+            p(1.0, 1.0, 0.0),
+            p(0.0, 1.0, 0.0),
+            p(0.0, 0.0, 1.0),
+            p(1.0, 0.0, 1.0),
+            p(1.0, 1.0, 1.0),
+            p(0.0, 1.0, 1.0),
         ];
         let t = vec![
             // Bottom (z=0, facing down)
-            [0, 3, 2], [0, 2, 1],
+            [0, 3, 2],
+            [0, 2, 1],
             // Top (z=1, facing up)
-            [4, 5, 6], [4, 6, 7],
+            [4, 5, 6],
+            [4, 6, 7],
             // Front (y=0, facing -y)
-            [0, 1, 5], [0, 5, 4],
+            [0, 1, 5],
+            [0, 5, 4],
             // Back (y=1, facing +y)
-            [3, 7, 6], [3, 6, 2],
+            [3, 7, 6],
+            [3, 6, 2],
             // Left (x=0, facing -x)
-            [0, 4, 7], [0, 7, 3],
+            [0, 4, 7],
+            [0, 7, 3],
             // Right (x=1, facing +x)
-            [1, 2, 6], [1, 6, 5],
+            [1, 2, 6],
+            [1, 6, 5],
         ];
         (v, t)
     }
@@ -1029,13 +1074,23 @@ mod tests {
     /// Translated cube.
     fn translated_cube(dx: f64, dy: f64, dz: f64) -> (Vec<Point3>, Vec<[u32; 3]>) {
         let (v, t) = unit_cube();
-        (v.into_iter().map(|p| Point3::new(p.x + dx, p.y + dy, p.z + dz)).collect(), t)
+        (
+            v.into_iter()
+                .map(|p| Point3::new(p.x + dx, p.y + dy, p.z + dz))
+                .collect(),
+            t,
+        )
     }
 
     /// Scaled cube.
     fn scaled_cube(sx: f64, sy: f64, sz: f64) -> (Vec<Point3>, Vec<[u32; 3]>) {
         let (v, t) = unit_cube();
-        (v.into_iter().map(|p| Point3::new(p.x * sx, p.y * sy, p.z * sz)).collect(), t)
+        (
+            v.into_iter()
+                .map(|p| Point3::new(p.x * sx, p.y * sy, p.z * sz))
+                .collect(),
+            t,
+        )
     }
 
     fn tetrahedron() -> (Vec<Point3>, Vec<[u32; 3]>) {
@@ -1080,7 +1135,16 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (vc, tc) = boolean_3(&va, &ta, &vb, &tb, Boolean3Op::Intersection, &mut ov, &mut ot).unwrap();
+        let (vc, tc) = boolean_3(
+            &va,
+            &ta,
+            &vb,
+            &tb,
+            Boolean3Op::Intersection,
+            &mut ov,
+            &mut ot,
+        )
+        .unwrap();
         assert_eq!(tc, 0, "intersection of disjoint cubes should be empty");
         assert_eq!(vc, 0);
     }
@@ -1093,9 +1157,13 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (vc, tc) = boolean_3(&va, &ta, &vb, &tb, Boolean3Op::Difference, &mut ov, &mut ot).unwrap();
+        let (vc, tc) =
+            boolean_3(&va, &ta, &vb, &tb, Boolean3Op::Difference, &mut ov, &mut ot).unwrap();
         // A \ B where disjoint = A itself.
-        assert_eq!(tc, 12, "difference of disjoint cubes = first cube (12 triangles)");
+        assert_eq!(
+            tc, 12,
+            "difference of disjoint cubes = first cube (12 triangles)"
+        );
         assert_eq!(vc, 8);
     }
 
@@ -1120,7 +1188,16 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (_vc, tc) = boolean_3(&va, &ta, &vb, &tb, Boolean3Op::Intersection, &mut ov, &mut ot).unwrap();
+        let (_vc, tc) = boolean_3(
+            &va,
+            &ta,
+            &vb,
+            &tb,
+            Boolean3Op::Intersection,
+            &mut ov,
+            &mut ot,
+        )
+        .unwrap();
         // Intersection of identical cubes = one cube (12 triangles).
         assert_eq!(tc, 12, "intersection of identical cubes = one cube");
     }
@@ -1133,7 +1210,8 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (_vc, tc) = boolean_3(&va, &ta, &vb, &tb, Boolean3Op::Difference, &mut ov, &mut ot).unwrap();
+        let (_vc, tc) =
+            boolean_3(&va, &ta, &vb, &tb, Boolean3Op::Difference, &mut ov, &mut ot).unwrap();
         assert_eq!(tc, 0, "difference of identical cubes = empty");
     }
 
@@ -1147,7 +1225,10 @@ mod tests {
         let mut ot = vec![[0u32; 3]; max_t];
         let (vc, tc) = boolean_3(&va, &ta, &vb, &tb, Boolean3Op::Union, &mut ov, &mut ot).unwrap();
         // Union of two overlapping cubes should produce a valid mesh.
-        assert!(tc > 0, "union of overlapping cubes should produce triangles");
+        assert!(
+            tc > 0,
+            "union of overlapping cubes should produce triangles"
+        );
         assert!(vc > 0, "union of overlapping cubes should produce vertices");
     }
 
@@ -1159,9 +1240,21 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (vc, tc) = boolean_3(&va, &ta, &vb, &tb, Boolean3Op::Intersection, &mut ov, &mut ot).unwrap();
+        let (vc, tc) = boolean_3(
+            &va,
+            &ta,
+            &vb,
+            &tb,
+            Boolean3Op::Intersection,
+            &mut ov,
+            &mut ot,
+        )
+        .unwrap();
         // Intersection of two overlapping cubes (overlap = [0.5,1]×[0,1]×[0,1]).
-        assert!(tc > 0, "intersection of overlapping cubes should produce triangles");
+        assert!(
+            tc > 0,
+            "intersection of overlapping cubes should produce triangles"
+        );
         assert!(vc > 0);
     }
 
@@ -1173,9 +1266,13 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (vc, tc) = boolean_3(&va, &ta, &vb, &tb, Boolean3Op::Difference, &mut ov, &mut ot).unwrap();
+        let (vc, tc) =
+            boolean_3(&va, &ta, &vb, &tb, Boolean3Op::Difference, &mut ov, &mut ot).unwrap();
         // Difference: cube A minus the overlap region.
-        assert!(tc > 0, "difference of overlapping cubes should produce triangles");
+        assert!(
+            tc > 0,
+            "difference of overlapping cubes should produce triangles"
+        );
         assert!(vc > 0);
     }
 
@@ -1194,7 +1291,10 @@ mod tests {
         // cross large cube faces.
         assert!(tc > 0, "union of nested cubes should produce triangles");
         let vol = mesh_volume(&ov[..vc], &ot[..tc]);
-        assert!((vol - 8.0).abs() < 0.01, "union of nested cubes volume ≈ 8, got {vol}");
+        assert!(
+            (vol - 8.0).abs() < 0.01,
+            "union of nested cubes volume ≈ 8, got {vol}"
+        );
     }
 
     #[test]
@@ -1205,9 +1305,21 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (_vc, tc) = boolean_3(&va, &ta, &vb, &tb, Boolean3Op::Intersection, &mut ov, &mut ot).unwrap();
+        let (_vc, tc) = boolean_3(
+            &va,
+            &ta,
+            &vb,
+            &tb,
+            Boolean3Op::Intersection,
+            &mut ov,
+            &mut ot,
+        )
+        .unwrap();
         // Intersection = small cube (inside large).
-        assert_eq!(tc, 12, "intersection of nested cubes = inner cube (12 triangles)");
+        assert_eq!(
+            tc, 12,
+            "intersection of nested cubes = inner cube (12 triangles)"
+        );
     }
 
     #[test]
@@ -1218,9 +1330,13 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (_vc, tc) = boolean_3(&va, &ta, &vb, &tb, Boolean3Op::Difference, &mut ov, &mut ot).unwrap();
+        let (_vc, tc) =
+            boolean_3(&va, &ta, &vb, &tb, Boolean3Op::Difference, &mut ov, &mut ot).unwrap();
         // Difference: large cube minus small cube = hollow shell.
-        assert!(tc > 12, "difference of nested cubes should produce more than 12 triangles");
+        assert!(
+            tc > 12,
+            "difference of nested cubes should produce more than 12 triangles"
+        );
     }
 
     #[test]
@@ -1244,11 +1360,27 @@ mod tests {
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); 100];
         let mut ot = vec![[0u32; 3]; 100];
         assert!(matches!(
-            boolean_3(&empty_v, &empty_t, &v, &t, Boolean3Op::Union, &mut ov, &mut ot),
+            boolean_3(
+                &empty_v,
+                &empty_t,
+                &v,
+                &t,
+                Boolean3Op::Union,
+                &mut ov,
+                &mut ot
+            ),
             Err(Boolean3Error::DegenerateMesh { mesh: "A" })
         ));
         assert!(matches!(
-            boolean_3(&v, &t, &empty_v, &empty_t, Boolean3Op::Union, &mut ov, &mut ot),
+            boolean_3(
+                &v,
+                &t,
+                &empty_v,
+                &empty_t,
+                Boolean3Op::Union,
+                &mut ov,
+                &mut ot
+            ),
             Err(Boolean3Error::DegenerateMesh { mesh: "B" })
         ));
     }
@@ -1262,20 +1394,32 @@ mod tests {
         let mut ot = vec![[0u32; 3]; 100];
         assert!(matches!(
             boolean_3(&v, &t, &vb, &tb, Boolean3Op::Union, &mut ov, &mut ot),
-            Err(Boolean3Error::NonFiniteCoordinate { mesh: "A", index: 0 })
+            Err(Boolean3Error::NonFiniteCoordinate {
+                mesh: "A",
+                index: 0
+            })
         ));
     }
 
     #[test]
     fn index_out_of_bounds_errors() {
-        let v = vec![p(0.0, 0.0, 0.0), p(1.0, 0.0, 0.0), p(0.0, 1.0, 0.0), p(0.0, 0.0, 1.0)];
+        let v = vec![
+            p(0.0, 0.0, 0.0),
+            p(1.0, 0.0, 0.0),
+            p(0.0, 1.0, 0.0),
+            p(0.0, 0.0, 1.0),
+        ];
         let t = vec![[0, 1, 2], [0, 2, 3], [0, 3, 1], [1, 3, 2], [99, 0, 1]]; // bad index
         let (vb, tb) = unit_cube();
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); 100];
         let mut ot = vec![[0u32; 3]; 100];
         assert!(matches!(
             boolean_3(&v, &t, &vb, &tb, Boolean3Op::Union, &mut ov, &mut ot),
-            Err(Boolean3Error::IndexOutOfBounds { mesh: "A", triangle: 4, vertex: 99 })
+            Err(Boolean3Error::IndexOutOfBounds {
+                mesh: "A",
+                triangle: 4,
+                vertex: 99
+            })
         ));
     }
 
@@ -1301,8 +1445,10 @@ mod tests {
         let mut ot1 = vec![[0u32; 3]; max_t];
         let mut ov2 = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot2 = vec![[0u32; 3]; max_t];
-        let (vc1, tc1) = boolean_3(&va, &ta, &vb, &tb, Boolean3Op::Union, &mut ov1, &mut ot1).unwrap();
-        let (vc2, tc2) = boolean_3(&va, &ta, &vb, &tb, Boolean3Op::Union, &mut ov2, &mut ot2).unwrap();
+        let (vc1, tc1) =
+            boolean_3(&va, &ta, &vb, &tb, Boolean3Op::Union, &mut ov1, &mut ot1).unwrap();
+        let (vc2, tc2) =
+            boolean_3(&va, &ta, &vb, &tb, Boolean3Op::Union, &mut ov2, &mut ot2).unwrap();
         assert_eq!(vc1, vc2);
         assert_eq!(tc1, tc2);
         assert_eq!(&ov1[..vc1], &ov2[..vc2]);
@@ -1312,7 +1458,10 @@ mod tests {
     #[test]
     fn point_in_mesh_inside_outside() {
         let (v, t) = unit_cube();
-        let corners: Vec<[Point3; 3]> = t.iter().map(|tri| [v[tri[0] as usize], v[tri[1] as usize], v[tri[2] as usize]]).collect();
+        let corners: Vec<[Point3; 3]> = t
+            .iter()
+            .map(|tri| [v[tri[0] as usize], v[tri[1] as usize], v[tri[2] as usize]])
+            .collect();
         // Center of cube → inside.
         assert!(point_in_mesh(p(0.5, 0.5, 0.5), &corners));
         // Outside.
@@ -1323,7 +1472,10 @@ mod tests {
     #[test]
     fn point_in_mesh_tetrahedron() {
         let (v, t) = tetrahedron();
-        let corners: Vec<[Point3; 3]> = t.iter().map(|tri| [v[tri[0] as usize], v[tri[1] as usize], v[tri[2] as usize]]).collect();
+        let corners: Vec<[Point3; 3]> = t
+            .iter()
+            .map(|tri| [v[tri[0] as usize], v[tri[1] as usize], v[tri[2] as usize]])
+            .collect();
         // Centroid of tetrahedron → inside.
         let centroid = p(0.5, 0.5, 0.5);
         assert!(point_in_mesh(centroid, &corners));
@@ -1344,9 +1496,15 @@ mod tests {
         // Union of two face-sharing cubes = a 2×1×1 box.
         // Volume should be 2×1×1 = 2. Triangle count may exceed 12 due to
         // splitting where shared face edges cross.
-        assert!(tc > 0, "union of face-sharing cubes should produce triangles");
+        assert!(
+            tc > 0,
+            "union of face-sharing cubes should produce triangles"
+        );
         let vol = mesh_volume(&ov[..vc], &ot[..tc]);
-        assert!((vol - 2.0).abs() < 0.01, "union of face-sharing cubes volume ≈ 2, got {vol}");
+        assert!(
+            (vol - 2.0).abs() < 0.01,
+            "union of face-sharing cubes volume ≈ 2, got {vol}"
+        );
     }
 
     // ── Exact boolean tests (P12.4) ─────────────────────────────────────────
@@ -1359,9 +1517,16 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (vc, tc) = boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Union, &mut ov, &mut ot).unwrap();
-        assert_eq!(tc, 24, "exact union of disjoint cubes should have 24 triangles");
-        assert_eq!(vc, 16, "exact union of disjoint cubes should have 16 vertices");
+        let (vc, tc) =
+            boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Union, &mut ov, &mut ot).unwrap();
+        assert_eq!(
+            tc, 24,
+            "exact union of disjoint cubes should have 24 triangles"
+        );
+        assert_eq!(
+            vc, 16,
+            "exact union of disjoint cubes should have 16 vertices"
+        );
     }
 
     #[test]
@@ -1372,8 +1537,20 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (vc, tc) = boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Intersection, &mut ov, &mut ot).unwrap();
-        assert_eq!(tc, 0, "exact intersection of disjoint cubes should be empty");
+        let (vc, tc) = boolean_3_exact(
+            &va,
+            &ta,
+            &vb,
+            &tb,
+            Boolean3Op::Intersection,
+            &mut ov,
+            &mut ot,
+        )
+        .unwrap();
+        assert_eq!(
+            tc, 0,
+            "exact intersection of disjoint cubes should be empty"
+        );
         assert_eq!(vc, 0);
     }
 
@@ -1385,8 +1562,12 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (vc, tc) = boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Difference, &mut ov, &mut ot).unwrap();
-        assert_eq!(tc, 12, "exact difference of disjoint cubes = first cube (12 triangles)");
+        let (vc, tc) =
+            boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Difference, &mut ov, &mut ot).unwrap();
+        assert_eq!(
+            tc, 12,
+            "exact difference of disjoint cubes = first cube (12 triangles)"
+        );
         assert_eq!(vc, 8);
     }
 
@@ -1398,9 +1579,16 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (vc, tc) = boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Union, &mut ov, &mut ot).unwrap();
-        assert!(tc > 0, "exact union of overlapping cubes should produce triangles");
-        assert!(vc > 0, "exact union of overlapping cubes should produce vertices");
+        let (vc, tc) =
+            boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Union, &mut ov, &mut ot).unwrap();
+        assert!(
+            tc > 0,
+            "exact union of overlapping cubes should produce triangles"
+        );
+        assert!(
+            vc > 0,
+            "exact union of overlapping cubes should produce vertices"
+        );
     }
 
     #[test]
@@ -1411,8 +1599,20 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (vc, tc) = boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Intersection, &mut ov, &mut ot).unwrap();
-        assert!(tc > 0, "exact intersection of overlapping cubes should produce triangles");
+        let (vc, tc) = boolean_3_exact(
+            &va,
+            &ta,
+            &vb,
+            &tb,
+            Boolean3Op::Intersection,
+            &mut ov,
+            &mut ot,
+        )
+        .unwrap();
+        assert!(
+            tc > 0,
+            "exact intersection of overlapping cubes should produce triangles"
+        );
         assert!(vc > 0);
     }
 
@@ -1424,8 +1624,12 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (vc, tc) = boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Difference, &mut ov, &mut ot).unwrap();
-        assert!(tc > 0, "exact difference of overlapping cubes should produce triangles");
+        let (vc, tc) =
+            boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Difference, &mut ov, &mut ot).unwrap();
+        assert!(
+            tc > 0,
+            "exact difference of overlapping cubes should produce triangles"
+        );
         assert!(vc > 0);
     }
 
@@ -1437,10 +1641,17 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (vc, tc) = boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Union, &mut ov, &mut ot).unwrap();
-        assert!(tc > 0, "exact union of nested cubes should produce triangles");
+        let (vc, tc) =
+            boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Union, &mut ov, &mut ot).unwrap();
+        assert!(
+            tc > 0,
+            "exact union of nested cubes should produce triangles"
+        );
         let vol = mesh_volume(&ov[..vc], &ot[..tc]);
-        assert!((vol - 8.0).abs() < 0.01, "exact union of nested cubes volume ≈ 8, got {vol}");
+        assert!(
+            (vol - 8.0).abs() < 0.01,
+            "exact union of nested cubes volume ≈ 8, got {vol}"
+        );
     }
 
     #[test]
@@ -1453,8 +1664,10 @@ mod tests {
         let mut ot1 = vec![[0u32; 3]; max_t];
         let mut ov2 = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot2 = vec![[0u32; 3]; max_t];
-        let (vc1, tc1) = boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Union, &mut ov1, &mut ot1).unwrap();
-        let (vc2, tc2) = boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Union, &mut ov2, &mut ot2).unwrap();
+        let (vc1, tc1) =
+            boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Union, &mut ov1, &mut ot1).unwrap();
+        let (vc2, tc2) =
+            boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Union, &mut ov2, &mut ot2).unwrap();
         assert_eq!(vc1, vc2);
         assert_eq!(tc1, tc2);
         assert_eq!(&ov1[..vc1], &ov2[..vc2]);
@@ -1469,11 +1682,27 @@ mod tests {
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); 100];
         let mut ot = vec![[0u32; 3]; 100];
         assert!(matches!(
-            boolean_3_exact(&empty_v, &empty_t, &v, &t, Boolean3Op::Union, &mut ov, &mut ot),
+            boolean_3_exact(
+                &empty_v,
+                &empty_t,
+                &v,
+                &t,
+                Boolean3Op::Union,
+                &mut ov,
+                &mut ot
+            ),
             Err(Boolean3Error::DegenerateMesh { mesh: "A" })
         ));
         assert!(matches!(
-            boolean_3_exact(&v, &t, &empty_v, &empty_t, Boolean3Op::Union, &mut ov, &mut ot),
+            boolean_3_exact(
+                &v,
+                &t,
+                &empty_v,
+                &empty_t,
+                Boolean3Op::Union,
+                &mut ov,
+                &mut ot
+            ),
             Err(Boolean3Error::DegenerateMesh { mesh: "B" })
         ));
     }
@@ -1490,10 +1719,17 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (vc, tc) = boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Union, &mut ov, &mut ot).unwrap();
-        assert!(tc > 0, "union of face-sharing cubes should produce triangles");
+        let (vc, tc) =
+            boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Union, &mut ov, &mut ot).unwrap();
+        assert!(
+            tc > 0,
+            "union of face-sharing cubes should produce triangles"
+        );
         let vol = mesh_volume(&ov[..vc], &ot[..tc]);
-        assert!((vol - 2.0).abs() < 0.01, "exact union of face-sharing cubes volume ≈ 2, got {vol}");
+        assert!(
+            (vol - 2.0).abs() < 0.01,
+            "exact union of face-sharing cubes volume ≈ 2, got {vol}"
+        );
     }
 
     #[test]
@@ -1508,9 +1744,21 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (vc, tc) = boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Intersection, &mut ov, &mut ot).unwrap();
+        let (vc, tc) = boolean_3_exact(
+            &va,
+            &ta,
+            &vb,
+            &tb,
+            Boolean3Op::Intersection,
+            &mut ov,
+            &mut ot,
+        )
+        .unwrap();
         let vol = mesh_volume(&ov[..vc], &ot[..tc]);
-        assert!(vol < 0.01, "exact intersection of face-sharing cubes volume ≈ 0, got {vol}");
+        assert!(
+            vol < 0.01,
+            "exact intersection of face-sharing cubes volume ≈ 0, got {vol}"
+        );
     }
 
     #[test]
@@ -1527,11 +1775,18 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (vc, tc) = boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Difference, &mut ov, &mut ot).unwrap();
-        assert!(tc > 0, "difference of face-sharing cubes should produce triangles");
+        let (vc, tc) =
+            boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Difference, &mut ov, &mut ot).unwrap();
+        assert!(
+            tc > 0,
+            "difference of face-sharing cubes should produce triangles"
+        );
         let vol = mesh_volume(&ov[..vc], &ot[..tc]);
         // Volume = 2/3 due to shared face being dropped (OnSurface => false).
-        assert!((vol - 2.0/3.0).abs() < 0.01, "exact difference A-B of face-sharing cubes volume ≈ 2/3, got {vol}");
+        assert!(
+            (vol - 2.0 / 3.0).abs() < 0.01,
+            "exact difference A-B of face-sharing cubes volume ≈ 2/3, got {vol}"
+        );
     }
 
     #[test]
@@ -1545,10 +1800,14 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (vc, tc) = boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Union, &mut ov, &mut ot).unwrap();
+        let (vc, tc) =
+            boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Union, &mut ov, &mut ot).unwrap();
         assert!(tc > 0, "union of nested cubes should produce triangles");
         let vol = mesh_volume(&ov[..vc], &ot[..tc]);
-        assert!((vol - 8.0).abs() < 0.01, "exact union of nested cubes volume ≈ 8, got {vol}");
+        assert!(
+            (vol - 8.0).abs() < 0.01,
+            "exact union of nested cubes volume ≈ 8, got {vol}"
+        );
     }
 
     #[test]
@@ -1561,10 +1820,25 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (vc, tc) = boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Intersection, &mut ov, &mut ot).unwrap();
-        assert!(tc > 0, "intersection of nested cubes should produce triangles");
+        let (vc, tc) = boolean_3_exact(
+            &va,
+            &ta,
+            &vb,
+            &tb,
+            Boolean3Op::Intersection,
+            &mut ov,
+            &mut ot,
+        )
+        .unwrap();
+        assert!(
+            tc > 0,
+            "intersection of nested cubes should produce triangles"
+        );
         let vol = mesh_volume(&ov[..vc], &ot[..tc]);
-        assert!((vol - 1.0).abs() < 0.01, "exact intersection of nested cubes volume ≈ 1, got {vol}");
+        assert!(
+            (vol - 1.0).abs() < 0.01,
+            "exact intersection of nested cubes volume ≈ 1, got {vol}"
+        );
     }
 
     #[test]
@@ -1577,10 +1851,17 @@ mod tests {
         let max_t = required_triangles_3(ta.len(), tb.len());
         let mut ov = vec![Point3::new(0.0, 0.0, 0.0); max_v];
         let mut ot = vec![[0u32; 3]; max_t];
-        let (vc, tc) = boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Difference, &mut ov, &mut ot).unwrap();
-        assert!(tc > 0, "difference of nested cubes should produce triangles");
+        let (vc, tc) =
+            boolean_3_exact(&va, &ta, &vb, &tb, Boolean3Op::Difference, &mut ov, &mut ot).unwrap();
+        assert!(
+            tc > 0,
+            "difference of nested cubes should produce triangles"
+        );
         let vol = mesh_volume(&ov[..vc], &ot[..tc]);
         // Volume should be 7 (8 - 1). Allow some tolerance for coplanar degeneracy.
-        assert!((vol - 7.0).abs() < 0.1, "exact difference of nested cubes volume ≈ 7, got {vol}");
+        assert!(
+            (vol - 7.0).abs() < 0.1,
+            "exact difference of nested cubes volume ≈ 7, got {vol}"
+        );
     }
 }

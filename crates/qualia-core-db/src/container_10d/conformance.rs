@@ -33,9 +33,7 @@
 use crate::container_10d::header::{Container10dHeader, HEADER_BYTE_SIZE};
 use crate::container_10d::mesh_section::{MeshMiniHeader, MESH_MINI_HEADER_SIZE};
 use crate::container_10d::metric_check::MetricBranchDescriptor;
-use crate::container_10d::node_section::{
-    NodeMiniHeader, NODE_MINI_HEADER_SIZE, TENSOR10D_SIZE,
-};
+use crate::container_10d::node_section::{NodeMiniHeader, NODE_MINI_HEADER_SIZE, TENSOR10D_SIZE};
 // Only the layout-drift gate runs outside `#[cfg(test)]`, so it imports just the descriptor + its
 // size constant. `crc32c`, `AlignmentTier`, `SectionInput`, and `SectionType` are used exclusively by
 // the golden-vector tests and are imported there.
@@ -52,11 +50,31 @@ use crate::container_10d::section::{SectionDescriptor, SECTION_DESCRIPTOR_SIZE};
 pub fn assert_layout_invariants() {
     // --- Container10dHeader (64 bytes) ---
     assert_eq!(std::mem::size_of::<Container10dHeader>(), 64, "header size");
-    assert_eq!(std::mem::offset_of!(Container10dHeader, magic), 0, "header.magic offset");
-    assert_eq!(std::mem::offset_of!(Container10dHeader, version), 4, "header.version offset");
-    assert_eq!(std::mem::offset_of!(Container10dHeader, flags), 6, "header.flags offset");
-    assert_eq!(std::mem::offset_of!(Container10dHeader, axis_roles), 8, "header.axis_roles offset");
-    assert_eq!(std::mem::offset_of!(Container10dHeader, pad0), 18, "header.pad0 offset");
+    assert_eq!(
+        std::mem::offset_of!(Container10dHeader, magic),
+        0,
+        "header.magic offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(Container10dHeader, version),
+        4,
+        "header.version offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(Container10dHeader, flags),
+        6,
+        "header.flags offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(Container10dHeader, axis_roles),
+        8,
+        "header.axis_roles offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(Container10dHeader, pad0),
+        18,
+        "header.pad0 offset"
+    );
     assert_eq!(
         std::mem::offset_of!(Container10dHeader, metric_descriptor),
         20,
@@ -86,33 +104,125 @@ pub fn assert_layout_invariants() {
     );
 
     // --- SectionDescriptor (24 bytes) ---
-    assert_eq!(std::mem::size_of::<SectionDescriptor>(), 24, "section_descriptor size");
-    assert_eq!(std::mem::offset_of!(SectionDescriptor, section_type), 0, "section_descriptor.section_type offset");
-    assert_eq!(std::mem::offset_of!(SectionDescriptor, alignment_tier), 1, "section_descriptor.alignment_tier offset");
-    assert_eq!(std::mem::offset_of!(SectionDescriptor, reserved16), 2, "section_descriptor.reserved16 offset");
-    assert_eq!(std::mem::offset_of!(SectionDescriptor, byte_offset), 4, "section_descriptor.byte_offset offset");
-    assert_eq!(std::mem::offset_of!(SectionDescriptor, byte_length), 8, "section_descriptor.byte_length offset");
-    assert_eq!(std::mem::offset_of!(SectionDescriptor, stride), 12, "section_descriptor.stride offset");
-    assert_eq!(std::mem::offset_of!(SectionDescriptor, element_count), 16, "section_descriptor.element_count offset");
-    assert_eq!(std::mem::offset_of!(SectionDescriptor, crc32c), 20, "section_descriptor.crc32c offset");
+    assert_eq!(
+        std::mem::size_of::<SectionDescriptor>(),
+        24,
+        "section_descriptor size"
+    );
+    assert_eq!(
+        std::mem::offset_of!(SectionDescriptor, section_type),
+        0,
+        "section_descriptor.section_type offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(SectionDescriptor, alignment_tier),
+        1,
+        "section_descriptor.alignment_tier offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(SectionDescriptor, reserved16),
+        2,
+        "section_descriptor.reserved16 offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(SectionDescriptor, byte_offset),
+        4,
+        "section_descriptor.byte_offset offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(SectionDescriptor, byte_length),
+        8,
+        "section_descriptor.byte_length offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(SectionDescriptor, stride),
+        12,
+        "section_descriptor.stride offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(SectionDescriptor, element_count),
+        16,
+        "section_descriptor.element_count offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(SectionDescriptor, crc32c),
+        20,
+        "section_descriptor.crc32c offset"
+    );
 
     // --- NodeMiniHeader (16 bytes) ---
-    assert_eq!(std::mem::size_of::<NodeMiniHeader>(), 16, "node_mini_header size");
-    assert_eq!(std::mem::offset_of!(NodeMiniHeader, node_count), 0, "node_mini_header.node_count offset");
-    assert_eq!(std::mem::offset_of!(NodeMiniHeader, layout), 4, "node_mini_header.layout offset");
-    assert_eq!(std::mem::offset_of!(NodeMiniHeader, reserved_u8), 5, "node_mini_header.reserved_u8 offset");
-    assert_eq!(std::mem::offset_of!(NodeMiniHeader, reserved_u16), 6, "node_mini_header.reserved_u16 offset");
-    assert_eq!(std::mem::offset_of!(NodeMiniHeader, reserved_u64), 8, "node_mini_header.reserved_u64 offset");
+    assert_eq!(
+        std::mem::size_of::<NodeMiniHeader>(),
+        16,
+        "node_mini_header size"
+    );
+    assert_eq!(
+        std::mem::offset_of!(NodeMiniHeader, node_count),
+        0,
+        "node_mini_header.node_count offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(NodeMiniHeader, layout),
+        4,
+        "node_mini_header.layout offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(NodeMiniHeader, reserved_u8),
+        5,
+        "node_mini_header.reserved_u8 offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(NodeMiniHeader, reserved_u16),
+        6,
+        "node_mini_header.reserved_u16 offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(NodeMiniHeader, reserved_u64),
+        8,
+        "node_mini_header.reserved_u64 offset"
+    );
 
     // --- MeshMiniHeader (40 bytes) ---
-    assert_eq!(std::mem::size_of::<MeshMiniHeader>(), 40, "mesh_mini_header size");
-    assert_eq!(std::mem::offset_of!(MeshMiniHeader, flags), 0, "mesh_mini_header.flags offset");
-    assert_eq!(std::mem::offset_of!(MeshMiniHeader, reserved_u16), 2, "mesh_mini_header.reserved_u16 offset");
-    assert_eq!(std::mem::offset_of!(MeshMiniHeader, vertex_count), 4, "mesh_mini_header.vertex_count offset");
-    assert_eq!(std::mem::offset_of!(MeshMiniHeader, triangle_count), 8, "mesh_mini_header.triangle_count offset");
-    assert_eq!(std::mem::offset_of!(MeshMiniHeader, min), 12, "mesh_mini_header.min offset");
-    assert_eq!(std::mem::offset_of!(MeshMiniHeader, max), 24, "mesh_mini_header.max offset");
-    assert_eq!(std::mem::offset_of!(MeshMiniHeader, reserved_u32), 36, "mesh_mini_header.reserved_u32 offset");
+    assert_eq!(
+        std::mem::size_of::<MeshMiniHeader>(),
+        40,
+        "mesh_mini_header size"
+    );
+    assert_eq!(
+        std::mem::offset_of!(MeshMiniHeader, flags),
+        0,
+        "mesh_mini_header.flags offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(MeshMiniHeader, reserved_u16),
+        2,
+        "mesh_mini_header.reserved_u16 offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(MeshMiniHeader, vertex_count),
+        4,
+        "mesh_mini_header.vertex_count offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(MeshMiniHeader, triangle_count),
+        8,
+        "mesh_mini_header.triangle_count offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(MeshMiniHeader, min),
+        12,
+        "mesh_mini_header.min offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(MeshMiniHeader, max),
+        24,
+        "mesh_mini_header.max offset"
+    );
+    assert_eq!(
+        std::mem::offset_of!(MeshMiniHeader, reserved_u32),
+        36,
+        "mesh_mini_header.reserved_u32 offset"
+    );
 
     // --- Constants ---
     assert_eq!(HEADER_BYTE_SIZE, 64, "HEADER_BYTE_SIZE");
@@ -155,16 +265,13 @@ pub fn assert_layout_invariants() {
 /// `v_class=255`. These bytes are the normative reference for `.10d` v1.
 pub const GOLDEN_BARE_HEADER: [u8; HEADER_BYTE_SIZE] = [
     // magic "10d\0"
-    0x31, 0x30, 0x64, 0x00,
-    // version: u16 LE = 1
-    0x01, 0x00,
-    // flags: u16 LE = FLAG_DEFAULT_DISPOSITION_REFUSE (1)
+    0x31, 0x30, 0x64, 0x00, // version: u16 LE = 1
+    0x01, 0x00, // flags: u16 LE = FLAG_DEFAULT_DISPOSITION_REFUSE (1)
     0x01, 0x00,
     // axis_roles[10]: Option A — q=Selector(1), v=Selector(1), w=Selector(1),
     //   x=Coordinate(2), y=Coordinate(2), z=Coordinate(2), t=Coordinate(2),
     //   α=Coordinate(2), μ=CoordinateCarrier(4), σ=Coordinate(2)
-    0x01, 0x01, 0x01, 0x02, 0x02, 0x02, 0x02, 0x02, 0x04, 0x02,
-    // pad0[2] = 0
+    0x01, 0x01, 0x01, 0x02, 0x02, 0x02, 0x02, 0x02, 0x04, 0x02, // pad0[2] = 0
     0x00, 0x00,
     // metric_descriptor (32 bytes): 4 x MetricBranchDescriptor (8 bytes each).
     //   Branch 0 (v=0 Euclidean): v_class=0, metric_kind=Euclidean(1),
@@ -180,10 +287,8 @@ pub const GOLDEN_BARE_HEADER: [u8; HEADER_BYTE_SIZE] = [
     //     folded_axes=0x0000 (no coordinate axes folded), reserved=0
     0xFF, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     // header_crc32c: u32 LE = 0 (unsealed at the bare-header level)
-    0x00, 0x00, 0x00, 0x00,
-    // section_table_offset: u32 LE = 0 (bare header)
-    0x00, 0x00, 0x00, 0x00,
-    // section_count: u32 LE = 0 (bare header)
+    0x00, 0x00, 0x00, 0x00, // section_table_offset: u32 LE = 0 (bare header)
+    0x00, 0x00, 0x00, 0x00, // section_count: u32 LE = 0 (bare header)
     0x00, 0x00, 0x00, 0x00,
 ];
 
@@ -212,9 +317,7 @@ mod tests {
     use super::*;
     use crate::container_10d::crc32c::crc32c;
     use crate::container_10d::header::Container10dHeader;
-    use crate::container_10d::integrity::{
-        seal_whole_file_crc32c, verify_whole_file_crc32c,
-    };
+    use crate::container_10d::integrity::{seal_whole_file_crc32c, verify_whole_file_crc32c};
     use crate::container_10d::node_section::{read_node, write_node_section_aos, NodeMiniHeader};
     use crate::container_10d::section::{
         encode_container, parse_section_table, AlignmentTier, SectionInput, SectionType,
@@ -239,15 +342,14 @@ mod tests {
         // (a) Pin the content hash.
         let actual_crc = crc32c(&GOLDEN_BARE_HEADER);
         assert_eq!(
-            actual_crc,
-            GOLDEN_BARE_HEADER_CRC,
+            actual_crc, GOLDEN_BARE_HEADER_CRC,
             "golden bare header CRC-32C must match the pinned value; \
              if you changed the header encoding, update both the golden bytes \
              AND the pinned CRC, or bump the version"
         );
         // (b) Decode.
-        let parsed = Container10dHeader::parse(&GOLDEN_BARE_HEADER)
-            .expect("golden bare header must parse");
+        let parsed =
+            Container10dHeader::parse(&GOLDEN_BARE_HEADER).expect("golden bare header must parse");
         // (c) Re-encode.
         let mut reencoded = [0u8; HEADER_BYTE_SIZE];
         parsed.encode(&mut reencoded);
@@ -343,8 +445,7 @@ mod tests {
         // the pin is set; it's here to surface the value when the test runs.
         if GOLDEN_NODE_ONLY_CRC != 0 {
             assert_eq!(
-                pinned_crc,
-                GOLDEN_NODE_ONLY_CRC,
+                pinned_crc, GOLDEN_NODE_ONLY_CRC,
                 "golden NODE-only container CRC-32C must match the pinned value"
             );
         } else {
@@ -369,15 +470,35 @@ mod tests {
 
         // The unit cube: 8 vertices, 12 triangles — the canonical test mesh.
         let positions = vec![
-            [0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0], [1.0, 0.0, 1.0], [1.0, 1.0, 1.0], [0.0, 1.0, 1.0],
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [1.0, 0.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [0.0, 1.0, 1.0],
         ];
         let triangles = vec![
-            [0, 1, 2], [0, 2, 3], [4, 5, 6], [4, 6, 7],
-            [0, 1, 5], [0, 5, 4], [2, 3, 7], [2, 7, 6],
-            [1, 2, 6], [1, 6, 5], [0, 3, 7], [0, 7, 4],
+            [0, 1, 2],
+            [0, 2, 3],
+            [4, 5, 6],
+            [4, 6, 7],
+            [0, 1, 5],
+            [0, 5, 4],
+            [2, 3, 7],
+            [2, 7, 6],
+            [1, 2, 6],
+            [1, 6, 5],
+            [0, 3, 7],
+            [0, 7, 4],
         ];
-        let mesh = Mesh { positions, triangles, min: [0.0; 3], max: [1.0; 3] };
+        let mesh = Mesh {
+            positions,
+            triangles,
+            min: [0.0; 3],
+            max: [1.0; 3],
+        };
 
         let mesh_need = crate::container_10d::mesh_section::encoded_len(8, 12);
         let mut mesh_payload = vec![0u8; mesh_need];
@@ -404,7 +525,10 @@ mod tests {
         let p_off = descs[0].byte_offset as usize;
         let p_len = descs[0].byte_length as usize;
         let mesh_back = decode_mesh_section(&out[p_off..p_off + p_len]).expect("mesh decode");
-        assert_eq!(mesh_back.triangles, mesh.triangles, "indices exact through container");
+        assert_eq!(
+            mesh_back.triangles, mesh.triangles,
+            "indices exact through container"
+        );
 
         // Re-encode: rebuild the container from the decoded content.
         let mut reencoded = vec![0u8; 512];
@@ -424,8 +548,7 @@ mod tests {
         let pinned_crc = crc32c(&out[..n]);
         if GOLDEN_MESH_ONLY_CRC != 0 {
             assert_eq!(
-                pinned_crc,
-                GOLDEN_MESH_ONLY_CRC,
+                pinned_crc, GOLDEN_MESH_ONLY_CRC,
                 "golden MESH-only container CRC-32C must match the pinned value"
             );
         } else {

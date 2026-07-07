@@ -115,11 +115,11 @@ pub fn fit(
             break;
         }
     }
-    
+
     // Standard errors from info⁻¹ at the solution.
     let mut l = vec![0.0; p * p];
     cholesky_factor(p, &info, &mut l).map_err(|_| LearningError::Singular)?;
-    
+
     let mut std_errors = vec![0.0; p];
     let mut z_values = vec![0.0; p];
     let mut p_values = vec![0.0; p];
@@ -137,7 +137,7 @@ pub fn fit(
             p_values[a] = normal::two_sided_p(z);
         }
     }
-    
+
     Ok(CoxModel {
         coefficients: beta,
         std_errors,

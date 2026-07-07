@@ -14,8 +14,8 @@
 
 #![cfg(not(target_arch = "wasm32"))]
 
-pub use crate::inference::kv_dict::{KvDictionary, SparseCode};
 use crate::inference::kv_dict::{l2, normalize};
+pub use crate::inference::kv_dict::{KvDictionary, SparseCode};
 
 impl KvDictionary {
     /// Mean relative reconstruction error over `vectors`: `mean_i ‖v_i − D·code_i‖ / ‖v_i‖`. The

@@ -18,7 +18,7 @@ use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use sha2::{Digest, Sha256};
 
 /// A credential: who attests, about whom, what, and for how long.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Credential {
     /// The issuing agent's identifier.
     pub issuer: u64,
@@ -40,7 +40,24 @@ pub enum VcError {
     Expired,
     /// The issuer is an ungrounded artificial agent (no Principal) — agency.n3 G1'.
     UngroundedIssuer,
+    /// The binary payload is too short to parse a Credential header.
+    DecodeTooShort,
+    /// The binary payload is too short for the declared claim count.
+    DecodeBadClaimCount,
 }
+
+impl std::fmt::Display for VcError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidSignature => write!(f, "VC invalid signature"),
+            Self::Expired => write!(f, "VC expired"),
+            Self::UngroundedIssuer => write!(f, "VC ungrounded issuer"),
+            Self::DecodeTooShort => write!(f, "VC decode: too short"),
+            Self::DecodeBadClaimCount => write!(f, "VC decode: bad claim count"),
+        }
+    }
+}
+impl std::error::Error for VcError {}
 
 /// Canonical SHA-256 digest over the binding fields + claim quins (claim count is
 /// length-prefixed to prevent extension ambiguity). Streams — no allocation.
@@ -93,6 +110,50 @@ pub fn verify_grounded(
         return Err(VcError::UngroundedIssuer);
     }
     verify(credential, issuer_key, signature, now)
+}
+
+/// Serialize a `Credential` to binary format.
+pub fn encode_credential(c: &Credential) -> Vec<u8> {
+    let mut out = Vec::with_capacity(28 + c.claims.len() * 48);
+    out.extend_from_slice(&c.issuer.to_le_bytes());
+    out.extend_from_slice(&c.subject.to_le_bytes());
+    out.extend_from_slice(&c.issued_at.to_le_bytes());
+    out.extend_from_slice(&c.valid_until.to_le_bytes());
+    out.extend_from_slice(&(c.claims.len() as u32).to_le_bytes());
+    for q in &c.claims {
+        let b: &[u8; 48] = bytemuck::cast_ref(q);
+        out.extend_from_slice(b);
+    }
+    out
+}
+
+/// Deserialize a `Credential` from binary format.
+pub fn decode_credential(bytes: &[u8]) -> Result<Credential, VcError> {
+    if bytes.len() < 28 {
+        return Err(VcError::DecodeTooShort);
+    }
+    let issuer = u64::from_le_bytes(bytes[0..8].try_into().unwrap());
+    let subject = u64::from_le_bytes(bytes[8..16].try_into().unwrap());
+    let issued_at = u32::from_le_bytes(bytes[16..20].try_into().unwrap());
+    let valid_until = u32::from_le_bytes(bytes[20..24].try_into().unwrap());
+    let claims_len = u32::from_le_bytes(bytes[24..28].try_into().unwrap()) as usize;
+    if bytes.len() < 28 + claims_len * 48 {
+        return Err(VcError::DecodeBadClaimCount);
+    }
+    let mut claims = Vec::with_capacity(claims_len);
+    for i in 0..claims_len {
+        let start = 28 + i * 48;
+        let b = &bytes[start..start + 48];
+        let q: NQuin = *bytemuck::from_bytes(b);
+        claims.push(q);
+    }
+    Ok(Credential {
+        issuer,
+        subject,
+        issued_at,
+        valid_until,
+        claims,
+    })
 }
 
 #[cfg(test)]
@@ -196,5 +257,28 @@ mod tests {
             verify_grounded(&c, &sk.verifying_key(), &sig, 1_500, &grounded),
             Ok(())
         );
+    }
+
+    #[test]
+    fn encode_decode_roundtrips() {
+        let c = sample();
+        let bytes = encode_credential(&c);
+        let back = decode_credential(&bytes).unwrap();
+        assert_eq!(c.issuer, back.issuer);
+        assert_eq!(c.subject, back.subject);
+        assert_eq!(c.issued_at, back.issued_at);
+        assert_eq!(c.valid_until, back.valid_until);
+        assert_eq!(c.claims.len(), back.claims.len());
+        assert_eq!(c.claims[0].subject, back.claims[0].subject);
+    }
+
+    #[test]
+    fn decode_rejects_truncated() {
+        assert_eq!(decode_credential(&[0u8; 10]), Err(VcError::DecodeTooShort));
+        
+        let c = sample();
+        let mut bytes = encode_credential(&c);
+        bytes.truncate(bytes.len() - 10);
+        assert_eq!(decode_credential(&bytes), Err(VcError::DecodeBadClaimCount));
     }
 }

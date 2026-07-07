@@ -198,7 +198,10 @@ pub fn load_certified(path: &std::path::Path) -> Result<CertInfo, String> {
     let prov: MiniProvenance = ciborium::from_reader(&bytes[12..payload_start])
         .map_err(|e| format!("provenance CBOR: {e}"))?;
     if prov.kind != "KvDictionary" {
-        return Err(format!("not a KV-dictionary artifact (kind={:?})", prov.kind));
+        return Err(format!(
+            "not a KV-dictionary artifact (kind={:?})",
+            prov.kind
+        ));
     }
     if !prov.passed {
         return Err("artifact did NOT pass its ΔPPL gate — refusing (fail-closed)".into());

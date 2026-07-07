@@ -80,7 +80,10 @@ impl core::fmt::Display for PointLocationError {
         match self {
             Self::EmptyTriangulation => write!(f, "point_location: empty triangulation"),
             Self::InvalidStartFace { index, count } => {
-                write!(f, "point_location: start face {index} out of range (have {count})")
+                write!(
+                    f,
+                    "point_location: start face {index} out of range (have {count})"
+                )
             }
         }
     }
@@ -126,7 +129,9 @@ pub fn walk_locate(
     // but start from `start_face` in case the caller has a hint.
     // Check the start face first, then scan the rest.
     if point_in_triangle(query, &triangles[start_face]) {
-        return Ok(LocateResult::Inside { face_index: start_face });
+        return Ok(LocateResult::Inside {
+            face_index: start_face,
+        });
     }
 
     // Linear scan — O(n). With adjacency, this would be a walk.
@@ -277,7 +282,10 @@ pub fn build_slab_map(edges: &[SubdivisionEdge]) -> SlabMap {
         edges_in_slab.sort_by(|a, b| a.x_at_mid.total_cmp(&b.x_at_mid));
     }
 
-    SlabMap { slab_ys: ys, slab_edges }
+    SlabMap {
+        slab_ys: ys,
+        slab_edges,
+    }
 }
 
 /// Compute the x-coordinate of the line through `a` and `b` at y-coordinate `y`.
@@ -329,7 +337,11 @@ impl SlabMap {
         let mut hi = edges.len() as i64;
         while lo < hi {
             let mid = (lo + hi) / 2;
-            let x_at_y = edge_x_at_y(edges[mid as usize].v_from, edges[mid as usize].v_to, query.y);
+            let x_at_y = edge_x_at_y(
+                edges[mid as usize].v_from,
+                edges[mid as usize].v_to,
+                query.y,
+            );
             if x_at_y < query.x {
                 lo = mid + 1;
             } else {
@@ -342,11 +354,19 @@ impl SlabMap {
             // Query is to the left of all edges in this slab.
             // The face is face_left_x of the first edge.
             let face = edges[0].face_left_x;
-            if face == usize::MAX { None } else { Some(face) }
+            if face == usize::MAX {
+                None
+            } else {
+                Some(face)
+            }
         } else {
             // Query is to the right of edges[pos-1].
             let face = edges[pos - 1].face_right_x;
-            if face == usize::MAX { None } else { Some(face) }
+            if face == usize::MAX {
+                None
+            } else {
+                Some(face)
+            }
         }
     }
 
@@ -506,10 +526,7 @@ mod tests {
         let result = walk_locate(&triangles, p(0.0, 0.0), 5);
         assert_eq!(
             result,
-            Err(PointLocationError::InvalidStartFace {
-                index: 5,
-                count: 1
-            })
+            Err(PointLocationError::InvalidStartFace { index: 5, count: 1 })
         );
     }
 
@@ -565,12 +582,37 @@ mod tests {
         // Shared edge: (2,0)→(2,2)
         let edges = vec![
             // Face 0 boundary (CCW).
-            SubdivisionEdge { v_from: p(0.0, 0.0), v_to: p(2.0, 0.0), face_left: 0, face_right: usize::MAX },
-            SubdivisionEdge { v_from: p(2.0, 0.0), v_to: p(2.0, 2.0), face_left: 0, face_right: 1 },
-            SubdivisionEdge { v_from: p(2.0, 2.0), v_to: p(0.0, 0.0), face_left: 0, face_right: usize::MAX },
+            SubdivisionEdge {
+                v_from: p(0.0, 0.0),
+                v_to: p(2.0, 0.0),
+                face_left: 0,
+                face_right: usize::MAX,
+            },
+            SubdivisionEdge {
+                v_from: p(2.0, 0.0),
+                v_to: p(2.0, 2.0),
+                face_left: 0,
+                face_right: 1,
+            },
+            SubdivisionEdge {
+                v_from: p(2.0, 2.0),
+                v_to: p(0.0, 0.0),
+                face_left: 0,
+                face_right: usize::MAX,
+            },
             // Face 1 boundary (CCW, excluding shared edge).
-            SubdivisionEdge { v_from: p(2.0, 0.0), v_to: p(4.0, 0.0), face_left: 1, face_right: usize::MAX },
-            SubdivisionEdge { v_from: p(4.0, 0.0), v_to: p(2.0, 2.0), face_left: 1, face_right: usize::MAX },
+            SubdivisionEdge {
+                v_from: p(2.0, 0.0),
+                v_to: p(4.0, 0.0),
+                face_left: 1,
+                face_right: usize::MAX,
+            },
+            SubdivisionEdge {
+                v_from: p(4.0, 0.0),
+                v_to: p(2.0, 2.0),
+                face_left: 1,
+                face_right: usize::MAX,
+            },
         ];
         let sm = build_slab_map(&edges);
         // Point in face 0 (left triangle).
@@ -582,9 +624,24 @@ mod tests {
     #[test]
     fn slab_map_above_and_below_returns_none() {
         let edges = vec![
-            SubdivisionEdge { v_from: p(0.0, 0.0), v_to: p(4.0, 0.0), face_left: 0, face_right: usize::MAX },
-            SubdivisionEdge { v_from: p(4.0, 0.0), v_to: p(2.0, 4.0), face_left: 0, face_right: usize::MAX },
-            SubdivisionEdge { v_from: p(2.0, 4.0), v_to: p(0.0, 0.0), face_left: 0, face_right: usize::MAX },
+            SubdivisionEdge {
+                v_from: p(0.0, 0.0),
+                v_to: p(4.0, 0.0),
+                face_left: 0,
+                face_right: usize::MAX,
+            },
+            SubdivisionEdge {
+                v_from: p(4.0, 0.0),
+                v_to: p(2.0, 4.0),
+                face_left: 0,
+                face_right: usize::MAX,
+            },
+            SubdivisionEdge {
+                v_from: p(2.0, 4.0),
+                v_to: p(0.0, 0.0),
+                face_left: 0,
+                face_right: usize::MAX,
+            },
         ];
         let sm = build_slab_map(&edges);
         // Above all slabs.
@@ -633,7 +690,10 @@ mod tests {
         assert_eq!(edges.len(), 6);
         // Two edges should be internal (have face_right != MAX).
         let internal_count = edges.iter().filter(|e| e.face_right != usize::MAX).count();
-        assert_eq!(internal_count, 2, "shared edge should produce 2 internal edges (one per direction)");
+        assert_eq!(
+            internal_count, 2,
+            "shared edge should produce 2 internal edges (one per direction)"
+        );
     }
 
     // ── Integration: triangulation + slab map ───────────────────────────
@@ -711,10 +771,30 @@ mod tests {
     fn horizontal_edges_handled() {
         // Square with CCW boundary: (0,0)→(4,0)→(4,4)→(0,4).
         let edges = vec![
-            SubdivisionEdge { v_from: p(0.0, 0.0), v_to: p(4.0, 0.0), face_left: 0, face_right: usize::MAX },
-            SubdivisionEdge { v_from: p(4.0, 0.0), v_to: p(4.0, 4.0), face_left: 0, face_right: usize::MAX },
-            SubdivisionEdge { v_from: p(4.0, 4.0), v_to: p(0.0, 4.0), face_left: 0, face_right: usize::MAX },
-            SubdivisionEdge { v_from: p(0.0, 4.0), v_to: p(0.0, 0.0), face_left: 0, face_right: usize::MAX },
+            SubdivisionEdge {
+                v_from: p(0.0, 0.0),
+                v_to: p(4.0, 0.0),
+                face_left: 0,
+                face_right: usize::MAX,
+            },
+            SubdivisionEdge {
+                v_from: p(4.0, 0.0),
+                v_to: p(4.0, 4.0),
+                face_left: 0,
+                face_right: usize::MAX,
+            },
+            SubdivisionEdge {
+                v_from: p(4.0, 4.0),
+                v_to: p(0.0, 4.0),
+                face_left: 0,
+                face_right: usize::MAX,
+            },
+            SubdivisionEdge {
+                v_from: p(0.0, 4.0),
+                v_to: p(0.0, 0.0),
+                face_left: 0,
+                face_right: usize::MAX,
+            },
         ];
         let sm = build_slab_map(&edges);
         assert_eq!(sm.locate(p(2.0, 2.0)), Some(0));
@@ -727,12 +807,42 @@ mod tests {
         // Rectangle with multiple collinear vertices on the bottom edge.
         // CCW boundary: (0,0)→(1,0)→(2,0)→(3,0)→(3,5)→(0,5).
         let edges = vec![
-            SubdivisionEdge { v_from: p(0.0, 0.0), v_to: p(1.0, 0.0), face_left: 0, face_right: usize::MAX },
-            SubdivisionEdge { v_from: p(1.0, 0.0), v_to: p(2.0, 0.0), face_left: 0, face_right: usize::MAX },
-            SubdivisionEdge { v_from: p(2.0, 0.0), v_to: p(3.0, 0.0), face_left: 0, face_right: usize::MAX },
-            SubdivisionEdge { v_from: p(3.0, 0.0), v_to: p(3.0, 5.0), face_left: 0, face_right: usize::MAX },
-            SubdivisionEdge { v_from: p(3.0, 5.0), v_to: p(0.0, 5.0), face_left: 0, face_right: usize::MAX },
-            SubdivisionEdge { v_from: p(0.0, 5.0), v_to: p(0.0, 0.0), face_left: 0, face_right: usize::MAX },
+            SubdivisionEdge {
+                v_from: p(0.0, 0.0),
+                v_to: p(1.0, 0.0),
+                face_left: 0,
+                face_right: usize::MAX,
+            },
+            SubdivisionEdge {
+                v_from: p(1.0, 0.0),
+                v_to: p(2.0, 0.0),
+                face_left: 0,
+                face_right: usize::MAX,
+            },
+            SubdivisionEdge {
+                v_from: p(2.0, 0.0),
+                v_to: p(3.0, 0.0),
+                face_left: 0,
+                face_right: usize::MAX,
+            },
+            SubdivisionEdge {
+                v_from: p(3.0, 0.0),
+                v_to: p(3.0, 5.0),
+                face_left: 0,
+                face_right: usize::MAX,
+            },
+            SubdivisionEdge {
+                v_from: p(3.0, 5.0),
+                v_to: p(0.0, 5.0),
+                face_left: 0,
+                face_right: usize::MAX,
+            },
+            SubdivisionEdge {
+                v_from: p(0.0, 5.0),
+                v_to: p(0.0, 0.0),
+                face_left: 0,
+                face_right: usize::MAX,
+            },
         ];
         let sm = build_slab_map(&edges);
         assert_eq!(sm.locate(p(1.5, 2.0)), Some(0));

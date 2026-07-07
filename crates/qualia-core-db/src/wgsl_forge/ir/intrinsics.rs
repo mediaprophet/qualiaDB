@@ -28,10 +28,18 @@ pub enum IntrinsicClass {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Intrinsic {
-    SubgroupReduce { op: SubgroupReduceOp },
-    SubgroupShuffle { delta: u32 },
+    SubgroupReduce {
+        op: SubgroupReduceOp,
+    },
+    SubgroupShuffle {
+        delta: u32,
+    },
     SubgroupBallot,
-    CoopMatMul { m: u32, n: u32, k: u32 },
+    CoopMatMul {
+        m: u32,
+        n: u32,
+        k: u32,
+    },
     /// Hardware ray-query intersection against a bound acceleration structure.
     /// `destination` receives the committed-hit distance (or a miss sentinel).
     RayQuery {

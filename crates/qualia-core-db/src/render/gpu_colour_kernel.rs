@@ -24,9 +24,7 @@
 //! bit-identical output to the CPU oracle for the same input (within
 //! f32 rounding tolerance).
 
-use crate::render::spectral_kernel::{
-    emf_to_spd, spd_to_xyz, xyz_to_linear_srgb,
-};
+use crate::render::spectral_kernel::{emf_to_spd, spd_to_xyz, xyz_to_linear_srgb};
 
 // ───────────────────────────────────────────────────────────────────────────
 //  CPU oracle — batch EMF → gamut-mapped display RGB
@@ -241,9 +239,9 @@ pub struct GpuBufferLayout {
 impl Default for GpuBufferLayout {
     fn default() -> Self {
         Self {
-            emf_stride: 12,   // 3 × f32
-            rgb_stride: 4,    // 1 × u32 (packed RGB24)
-            params_size: 4,   // 1 × u32 (count)
+            emf_stride: 12, // 3 × f32
+            rgb_stride: 4,  // 1 × u32 (packed RGB24)
+            params_size: 4, // 1 × u32 (count)
         }
     }
 }
@@ -324,23 +322,46 @@ mod tests {
 
     #[test]
     fn gpu_kernel_source_contains_cmf_data() {
-        assert!(GPU_COLOUR_KERNEL_WGSL.contains("CMF_X"), "WGSL must contain CMF X data");
-        assert!(GPU_COLOUR_KERNEL_WGSL.contains("CMF_Y"), "WGSL must contain CMF Y data");
-        assert!(GPU_COLOUR_KERNEL_WGSL.contains("CMF_Z"), "WGSL must contain CMF Z data");
+        assert!(
+            GPU_COLOUR_KERNEL_WGSL.contains("CMF_X"),
+            "WGSL must contain CMF X data"
+        );
+        assert!(
+            GPU_COLOUR_KERNEL_WGSL.contains("CMF_Y"),
+            "WGSL must contain CMF Y data"
+        );
+        assert!(
+            GPU_COLOUR_KERNEL_WGSL.contains("CMF_Z"),
+            "WGSL must contain CMF Z data"
+        );
     }
 
     #[test]
     fn gpu_kernel_source_contains_pipeline() {
-        assert!(GPU_COLOUR_KERNEL_WGSL.contains("SPD"), "WGSL must mention SPD");
-        assert!(GPU_COLOUR_KERNEL_WGSL.contains("XYZ"), "WGSL must mention XYZ");
-        assert!(GPU_COLOUR_KERNEL_WGSL.contains("sRGB"), "WGSL must mention sRGB");
-        assert!(GPU_COLOUR_KERNEL_WGSL.contains("clamp"), "WGSL must gamut-map with clamp");
+        assert!(
+            GPU_COLOUR_KERNEL_WGSL.contains("SPD"),
+            "WGSL must mention SPD"
+        );
+        assert!(
+            GPU_COLOUR_KERNEL_WGSL.contains("XYZ"),
+            "WGSL must mention XYZ"
+        );
+        assert!(
+            GPU_COLOUR_KERNEL_WGSL.contains("sRGB"),
+            "WGSL must mention sRGB"
+        );
+        assert!(
+            GPU_COLOUR_KERNEL_WGSL.contains("clamp"),
+            "WGSL must gamut-map with clamp"
+        );
     }
 
     #[test]
     fn gpu_kernel_source_has_workgroup_size() {
-        assert!(GPU_COLOUR_KERNEL_WGSL.contains("workgroup_size(64)"),
-            "WGSL must specify workgroup size");
+        assert!(
+            GPU_COLOUR_KERNEL_WGSL.contains("workgroup_size(64)"),
+            "WGSL must specify workgroup size"
+        );
     }
 
     #[test]
@@ -363,7 +384,10 @@ mod tests {
         let cpu = [100u8, 150, 200, 50, 60, 70];
         let gpu = [101u8, 149, 202, 51, 58, 72]; // all within ±2
         let mismatches = diff_cpu_gpu(&cpu, &gpu);
-        assert_eq!(mismatches, 0, "within-tolerance differences should not count");
+        assert_eq!(
+            mismatches, 0,
+            "within-tolerance differences should not count"
+        );
     }
 
     #[test]

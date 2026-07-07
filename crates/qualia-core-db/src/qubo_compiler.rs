@@ -186,7 +186,7 @@ pub fn publish_to_commons(
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_rigorous_metadata_scrubbing() {
         let mut matrix = QuboMatrix::new(2);

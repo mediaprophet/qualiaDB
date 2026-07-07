@@ -386,21 +386,21 @@ mod tests {
         let quins = [mk_knows(agent_a), mk_knows(agent_b)];
 
         // Evaluate: both agents' knowledge claims should be Active
-        let mut out = [
-            EpistemicVerdict {
-                claim: NQuin::default(),
-                status: EpistemicStatus::Skipped,
-                certainty: 0,
-            };
-            4
-        ];
+        let mut out = [EpistemicVerdict {
+            claim: NQuin::default(),
+            status: EpistemicStatus::Skipped,
+            certainty: 0,
+        }; 4];
         let count = evaluate_epistemic_frame(&quins, 0, world_w, &mut out).unwrap();
         assert_eq!(count, 2, "both agents' claims must be evaluated");
         assert_eq!(out[0].status, EpistemicStatus::Active);
         assert_eq!(out[1].status, EpistemicStatus::Active);
 
         // Both agents know → everyone_knows is true
-        let agent_knows = [out[0].status == EpistemicStatus::Active, out[1].status == EpistemicStatus::Active];
+        let agent_knows = [
+            out[0].status == EpistemicStatus::Active,
+            out[1].status == EpistemicStatus::Active,
+        ];
         assert!(everyone_knows(&agent_knows), "everyone knows φ");
 
         // Public announcement → common knowledge

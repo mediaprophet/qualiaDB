@@ -200,22 +200,48 @@ fn build_kd_recursive(
         split_axis: axis,
         _pad: [0; 3],
         point_index: point_indices[mid],
-        left: if left_count > 0 { (*next_node) as u32 } else { super::topology::INVALID_INDEX },
-        right: if right_count > 0 { 0 } else { super::topology::INVALID_INDEX }, // fixed after left build
+        left: if left_count > 0 {
+            (*next_node) as u32
+        } else {
+            super::topology::INVALID_INDEX
+        },
+        right: if right_count > 0 {
+            0
+        } else {
+            super::topology::INVALID_INDEX
+        }, // fixed after left build
         parent,
         bbox_min,
     };
 
     // Build left subtree.
     if left_count > 0 {
-        build_kd_recursive(points, point_indices, start, left_count, nodes, next_node, node_idx as u32, depth + 1);
+        build_kd_recursive(
+            points,
+            point_indices,
+            start,
+            left_count,
+            nodes,
+            next_node,
+            node_idx as u32,
+            depth + 1,
+        );
     }
 
     // Build right subtree. Now we know the right child index.
     if right_count > 0 {
         let right_idx = *next_node;
         nodes[node_idx].right = right_idx as u32;
-        build_kd_recursive(points, point_indices, mid + 1, right_count, nodes, next_node, node_idx as u32, depth + 1);
+        build_kd_recursive(
+            points,
+            point_indices,
+            mid + 1,
+            right_count,
+            nodes,
+            next_node,
+            node_idx as u32,
+            depth + 1,
+        );
     }
 }
 
@@ -355,14 +381,18 @@ pub fn query_radius_3d(
         let plane_dist_sq = diff * diff;
 
         // Visit both children if the plane is within radius.
-        if node.left != super::topology::INVALID_INDEX && (diff <= 0.0 || plane_dist_sq <= radius_sq) {
+        if node.left != super::topology::INVALID_INDEX
+            && (diff <= 0.0 || plane_dist_sq <= radius_sq)
+        {
             if stack_top + 1 > stack.len() {
                 break;
             }
             stack[stack_top] = node.left;
             stack_top += 1;
         }
-        if node.right != super::topology::INVALID_INDEX && (diff >= 0.0 || plane_dist_sq <= radius_sq) {
+        if node.right != super::topology::INVALID_INDEX
+            && (diff >= 0.0 || plane_dist_sq <= radius_sq)
+        {
             if stack_top + 1 > stack.len() {
                 break;
             }
@@ -409,7 +439,8 @@ mod tests {
         let mut codes = vec![0u64; n];
         let mut sort = vec![0u32; n];
 
-        let (node_count, root) = build_kd_tree_3d(&points, &mut nodes, &mut indices, &mut codes, &mut sort).unwrap();
+        let (node_count, root) =
+            build_kd_tree_3d(&points, &mut nodes, &mut indices, &mut codes, &mut sort).unwrap();
         assert_eq!(node_count, n);
         assert_eq!(root, 0);
     }
@@ -423,13 +454,27 @@ mod tests {
         let mut indices_a = vec![0u32; n];
         let mut codes_a = vec![0u64; n];
         let mut sort_a = vec![0u32; n];
-        let (count_a, _) = build_kd_tree_3d(&points, &mut nodes_a, &mut indices_a, &mut codes_a, &mut sort_a).unwrap();
+        let (count_a, _) = build_kd_tree_3d(
+            &points,
+            &mut nodes_a,
+            &mut indices_a,
+            &mut codes_a,
+            &mut sort_a,
+        )
+        .unwrap();
 
         let mut nodes_b = vec![KdNode::default(); n];
         let mut indices_b = vec![0u32; n];
         let mut codes_b = vec![0u64; n];
         let mut sort_b = vec![0u32; n];
-        let (count_b, _) = build_kd_tree_3d(&points, &mut nodes_b, &mut indices_b, &mut codes_b, &mut sort_b).unwrap();
+        let (count_b, _) = build_kd_tree_3d(
+            &points,
+            &mut nodes_b,
+            &mut indices_b,
+            &mut codes_b,
+            &mut sort_b,
+        )
+        .unwrap();
 
         assert_eq!(count_a, count_b);
         assert_eq!(nodes_a[..count_a], nodes_b[..count_b]);
@@ -445,10 +490,19 @@ mod tests {
         let mut codes = vec![0u64; n];
         let mut sort = vec![0u32; n];
 
-        let (node_count, root) = build_kd_tree_3d(&points, &mut nodes, &mut indices, &mut codes, &mut sort).unwrap();
+        let (node_count, root) =
+            build_kd_tree_3d(&points, &mut nodes, &mut indices, &mut codes, &mut sort).unwrap();
 
         let mut stack = vec![0u32; MAX_KD_DEPTH * 2];
-        let result = query_nearest_3d(&nodes, &points, root, node_count, [0.1, 0.1, 0.1], &mut stack).unwrap();
+        let result = query_nearest_3d(
+            &nodes,
+            &points,
+            root,
+            node_count,
+            [0.1, 0.1, 0.1],
+            &mut stack,
+        )
+        .unwrap();
         assert!(result.is_some());
         let (idx, dist_sq) = result.unwrap();
         assert_eq!(points[idx as usize], [0.0, 0.0, 0.0]);
@@ -464,7 +518,8 @@ mod tests {
         let mut codes = vec![0u64; n];
         let mut sort = vec![0u32; n];
 
-        let (node_count, root) = build_kd_tree_3d(&points, &mut nodes, &mut indices, &mut codes, &mut sort).unwrap();
+        let (node_count, root) =
+            build_kd_tree_3d(&points, &mut nodes, &mut indices, &mut codes, &mut sort).unwrap();
 
         let mut stack = vec![0u32; MAX_KD_DEPTH * 2];
 
@@ -478,13 +533,16 @@ mod tests {
         ];
 
         for q in queries {
-            let kd_result = query_nearest_3d(&nodes, &points, root, node_count, q, &mut stack).unwrap();
+            let kd_result =
+                query_nearest_3d(&nodes, &points, root, node_count, q, &mut stack).unwrap();
             let brute_result = brute_force_nearest(&points, q);
             // Compare distances (indices may differ on ties).
             let kd_dist = kd_result.map(|(_, d)| d);
             let brute_dist = brute_result.map(|(_, d)| d);
-            assert_eq!(kd_dist, brute_dist,
-                "q={q:?} kd={kd_result:?} brute={brute_result:?}");
+            assert_eq!(
+                kd_dist, brute_dist,
+                "q={q:?} kd={kd_result:?} brute={brute_result:?}"
+            );
         }
     }
 
@@ -511,11 +569,22 @@ mod tests {
         let mut codes = vec![0u64; n];
         let mut sort = vec![0u32; n];
 
-        let (node_count, root) = build_kd_tree_3d(&points, &mut nodes, &mut indices, &mut codes, &mut sort).unwrap();
+        let (node_count, root) =
+            build_kd_tree_3d(&points, &mut nodes, &mut indices, &mut codes, &mut sort).unwrap();
 
         let mut out = vec![0u32; n];
         let mut stack = vec![0u32; MAX_KD_DEPTH * 2];
-        let count = query_radius_3d(&nodes, &points, root, node_count, [0.0, 0.0, 0.0], 1.5, &mut out, &mut stack).unwrap();
+        let count = query_radius_3d(
+            &nodes,
+            &points,
+            root,
+            node_count,
+            [0.0, 0.0, 0.0],
+            1.5,
+            &mut out,
+            &mut stack,
+        )
+        .unwrap();
 
         // Points within sqrt(1.5) ≈ 1.22 of origin: (0,0,0), (1,0,0), (0,1,0), (0,0,1)
         assert_eq!(count, 4);
@@ -530,12 +599,23 @@ mod tests {
         let mut codes = vec![0u64; n];
         let mut sort = vec![0u32; n];
 
-        let (node_count, root) = build_kd_tree_3d(&points, &mut nodes, &mut indices, &mut codes, &mut sort).unwrap();
+        let (node_count, root) =
+            build_kd_tree_3d(&points, &mut nodes, &mut indices, &mut codes, &mut sort).unwrap();
 
         let mut out = vec![0u32; n];
         let mut stack = vec![0u32; MAX_KD_DEPTH * 2];
         let radius_sq = 3.0;
-        let kd_count = query_radius_3d(&nodes, &points, root, node_count, [0.5, 0.5, 0.5], radius_sq, &mut out, &mut stack).unwrap();
+        let kd_count = query_radius_3d(
+            &nodes,
+            &points,
+            root,
+            node_count,
+            [0.5, 0.5, 0.5],
+            radius_sq,
+            &mut out,
+            &mut stack,
+        )
+        .unwrap();
 
         let mut brute_out: Vec<u32> = Vec::new();
         for (i, p) in points.iter().enumerate() {
@@ -563,11 +643,13 @@ mod tests {
         let mut codes = vec![0u64; 1];
         let mut sort = vec![0u32; 1];
 
-        let (node_count, _) = build_kd_tree_3d(&points, &mut nodes, &mut indices, &mut codes, &mut sort).unwrap();
+        let (node_count, _) =
+            build_kd_tree_3d(&points, &mut nodes, &mut indices, &mut codes, &mut sort).unwrap();
         assert_eq!(node_count, 0);
 
         let mut stack = vec![0u32; MAX_KD_DEPTH * 2];
-        let result = query_nearest_3d(&nodes, &points, 0, node_count, [0.0, 0.0, 0.0], &mut stack).unwrap();
+        let result =
+            query_nearest_3d(&nodes, &points, 0, node_count, [0.0, 0.0, 0.0], &mut stack).unwrap();
         assert!(result.is_none());
     }
 
@@ -580,11 +662,20 @@ mod tests {
         let mut codes = vec![0u64; n];
         let mut sort = vec![0u32; n];
 
-        let (node_count, root) = build_kd_tree_3d(&points, &mut nodes, &mut indices, &mut codes, &mut sort).unwrap();
+        let (node_count, root) =
+            build_kd_tree_3d(&points, &mut nodes, &mut indices, &mut codes, &mut sort).unwrap();
         assert_eq!(node_count, 1);
 
         let mut stack = vec![0u32; MAX_KD_DEPTH * 2];
-        let result = query_nearest_3d(&nodes, &points, root, node_count, [0.0, 0.0, 0.0], &mut stack).unwrap();
+        let result = query_nearest_3d(
+            &nodes,
+            &points,
+            root,
+            node_count,
+            [0.0, 0.0, 0.0],
+            &mut stack,
+        )
+        .unwrap();
         assert!(result.is_some());
         let (idx, _) = result.unwrap();
         assert_eq!(points[idx as usize], [1.0, 2.0, 3.0]);

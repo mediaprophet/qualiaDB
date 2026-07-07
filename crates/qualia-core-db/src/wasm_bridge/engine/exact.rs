@@ -32,8 +32,9 @@ struct StringOut {
 
 /// Parse a decimal string into a `BigInt`, failing closed with a clear message.
 fn parse_int(s: &str, name: &str) -> Result<BigInt, JsValue> {
-    BigInt::from_str(s)
-        .ok_or_else(|| JsValue::from_str(&format!("`{name}` is not a valid decimal integer: {s:?}")))
+    BigInt::from_str(s).ok_or_else(|| {
+        JsValue::from_str(&format!("`{name}` is not a valid decimal integer: {s:?}"))
+    })
 }
 
 /// Parse a `"p/q"` (or bare `"p"`) string into a reduced `BigRational`.
@@ -46,15 +47,18 @@ fn parse_rational(s: &str, name: &str) -> Result<BigRational, JsValue> {
     };
     let num = parse_int(num_s, name)?;
     let den = parse_int(den_s, name)?;
-    BigRational::new(num, den).ok_or_else(|| {
-        JsValue::from_str(&format!("`{name}` has a zero denominator: {s:?}"))
-    })
+    BigRational::new(num, den)
+        .ok_or_else(|| JsValue::from_str(&format!("`{name}` has a zero denominator: {s:?}")))
 }
 
 /// Render a reduced rational as `"p/q"` (denominator always shown, always
 /// positive — the demo wants an unambiguous canonical pair).
 fn rational_pq(r: &BigRational) -> String {
-    format!("{}/{}", r.numerator().to_string(), r.denominator().to_string())
+    format!(
+        "{}/{}",
+        r.numerator().to_string(),
+        r.denominator().to_string()
+    )
 }
 
 // ── BigInt exports ───────────────────────────────────────────────────────────

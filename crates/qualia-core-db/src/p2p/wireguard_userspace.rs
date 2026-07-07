@@ -98,11 +98,7 @@ pub fn public_key_from_hex(s: &str) -> Result<PublicKey, String> {
 /// `Tunn::new` in 0.7.1 is infallible (returns `Self`), but we keep a `Result` signature so
 /// the public surface stays stable if a future boringtun revision makes construction fallible
 /// or we add validation (e.g. rejecting an all-zero peer key) here.
-pub fn new_tunnel(
-    mine: &WgKeypair,
-    peer_public: PublicKey,
-    index: u32,
-) -> Result<Tunn, String> {
+pub fn new_tunnel(mine: &WgKeypair, peer_public: PublicKey, index: u32) -> Result<Tunn, String> {
     // `StaticSecret` is not `Copy` and `Tunn::new` takes it by value, so hand it a clone
     // built from our stored secret bytes; `mine` keeps ownership of its own key.
     let static_private = StaticSecret::from(mine.private.to_bytes());

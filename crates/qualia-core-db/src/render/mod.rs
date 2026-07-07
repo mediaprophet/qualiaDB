@@ -9,9 +9,6 @@
 pub mod acoustic;
 /// Asset import: OBJ / STL / GLB → `Mesh` + semantic NQuins (Phase 1.3).
 pub mod assets;
-/// Compile a `Mesh` into a sealed `.10d` container (the dense compiled-geometry sidecar)
-/// and read it back — the "mesh → `.10d`" step of the 3-D-anatomy asset pipeline.
-pub mod compile_10d;
 /// Authoring vocabulary + render planner (Phase 5): a qapp declares 3D + 2D views over one
 /// manifold; the planner enforces attestation gates, rights-bounded contexts, and budget-driven
 /// 3D→2D degradation before drawing. Gated like `place_time` (needs `crate::modalities`).
@@ -22,9 +19,20 @@ pub mod compile_10d;
     feature = "wasm-full"
 ))]
 pub mod authoring;
+pub mod barrier;
 pub mod camera;
+pub mod derivation;
+/// Compile a `Mesh` into a sealed `.10d` container (the dense compiled-geometry sidecar)
+/// and read it back — the "mesh → `.10d`" step of the 3-D-anatomy asset pipeline.
+pub mod compile_10d;
 pub mod contract;
 pub mod control;
+/// P7.2 — Gamut / object-colour solid + closest-point gamut mapping.
+pub mod gamut;
+/// P7.4 — GPU colour-projection / gamut batch kernel + CPU oracle.
+pub mod gpu_colour_kernel;
+/// P7.1 — Metamers as the affine fibre of the colour-matching projection.
+pub mod metamer;
 /// Model-as-substrate (Phase 6, §F): one buffer holds a renderable manifold AND the transcoded
 /// P64 weights; the renderer projects the manifold while the weights are co-resident. Gated to
 /// where `crate::p64_weight` (the transcoder) compiles.
@@ -59,22 +67,16 @@ pub mod projection;
 ))]
 pub mod sense;
 pub mod spectral;
-/// P7.0 — Spectral-space kernel: SPD/CMF POD types + CIE linear-projection.
-pub mod spectral_kernel;
-/// P7.1 — Metamers as the affine fibre of the colour-matching projection.
-pub mod metamer;
-/// P7.2 — Gamut / object-colour solid + closest-point gamut mapping.
-pub mod gamut;
 /// P7.3 — σ spectral blend as interpolation on the spectral manifold.
 pub mod spectral_blend;
-/// P7.7 — Unified spectral-operator API surface.
-pub mod spectral_operator;
-/// P7.4 — GPU colour-projection / gamut batch kernel + CPU oracle.
-pub mod gpu_colour_kernel;
-/// P7.8 — golden-oracle + CPU/GPU differential + determinism harness.
-pub mod spectral_oracle;
 #[cfg(test)]
 pub mod spectral_harness;
+/// P7.0 — Spectral-space kernel: SPD/CMF POD types + CIE linear-projection.
+pub mod spectral_kernel;
+/// P7.7 — Unified spectral-operator API surface.
+pub mod spectral_operator;
+/// P7.8 — golden-oracle + CPU/GPU differential + determinism harness.
+pub mod spectral_oracle;
 pub mod standpoint;
 pub mod telemetry;
 

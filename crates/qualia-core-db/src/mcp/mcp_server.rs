@@ -485,12 +485,8 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
         b"engineering_analysis_op" => {
             execute_engineering_analysis(payload.arguments_raw, intent_frame)
         }
-        b"computational_geometry" => {
-            mcp_tool_impls::computational_geometry(payload.arguments_raw)
-        }
-        b"geometry_manifests" => {
-            mcp_tool_impls::geometry_manifests(payload.arguments_raw)
-        }
+        b"computational_geometry" => mcp_tool_impls::computational_geometry(payload.arguments_raw),
+        b"geometry_manifests" => mcp_tool_impls::geometry_manifests(payload.arguments_raw),
 
         // ── Identifiers & Wallet Tools ─────────────────────────────────────────
         b"get_wallet_status" => execute_wallet_status(payload.arguments_raw, intent_frame),
@@ -539,9 +535,7 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
         // ── Extended Logic & Science Tools ───────────────────────────────────
         b"evaluate_modality" => execute_evaluate_modality(payload.arguments_raw, intent_frame),
 
-        b"evaluate_logic_rules" => {
-            mcp_tool_impls::evaluate_logic_rules(payload.arguments_raw)
-        }
+        b"evaluate_logic_rules" => mcp_tool_impls::evaluate_logic_rules(payload.arguments_raw),
 
         b"bioinformatics_align" => {
             execute_bioinformatics_align(payload.arguments_raw, intent_frame)
@@ -1507,11 +1501,9 @@ mod tests {
         assert!(tools.iter().any(|tool| tool["name"] == "parse_rdf"));
         assert!(tools.iter().any(|tool| tool["name"] == "list_qapps"));
         assert!(tools.iter().any(|tool| tool["name"] == "list_capabilities"));
-        assert!(
-            tools
-                .iter()
-                .any(|tool| tool["name"] == "computational_geometry")
-        );
+        assert!(tools
+            .iter()
+            .any(|tool| tool["name"] == "computational_geometry"));
         assert_eq!(tools.len(), stable_mcp_tools().len());
     }
 
@@ -1635,8 +1627,10 @@ mod tests {
         assert!(payload["op_count"].as_u64().unwrap() > 0);
         let ops = payload["ops"].as_array().unwrap();
         for op in ops {
-            assert!(op["backends"].as_array().unwrap().len() > 0,
-                "every op must have non-empty backends");
+            assert!(
+                op["backends"].as_array().unwrap().len() > 0,
+                "every op must have non-empty backends"
+            );
         }
     }
 
@@ -1656,7 +1650,9 @@ mod tests {
         assert_eq!(payload["op"], "vr_filtration");
         assert!(payload["backend_count"].as_u64().unwrap() > 0);
         let backends = payload["runnable_backends"].as_array().unwrap();
-        assert!(!backends.iter().any(|b| b == "wgpu"),
-            "wgpu should not be runnable when device.wgpu=false");
+        assert!(
+            !backends.iter().any(|b| b == "wgpu"),
+            "wgpu should not be runnable when device.wgpu=false"
+        );
     }
 }

@@ -25,7 +25,7 @@
 //! deterministic (P4.4). Output is sorted canonically.
 
 use super::delaunay_2::delaunay_triangulation_2;
-use super::primitives::{orientation_2, Point2, Orientation};
+use super::primitives::{orientation_2, Orientation, Point2};
 
 /// Constrained Delaunay error.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -46,12 +46,17 @@ impl core::fmt::Display for ConstrainedDelaunayError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::DelaunayFailed(msg) => write!(f, "constrained delaunay: {msg}"),
-            Self::TooFewPoints { got } => write!(f, "constrained delaunay: need ≥3 points, got {got}"),
+            Self::TooFewPoints { got } => {
+                write!(f, "constrained delaunay: need ≥3 points, got {got}")
+            }
             Self::InvalidConstraintIndex { index, point_count } => {
                 write!(f, "constrained delaunay: constraint index {index} out of range (point_count={point_count})")
             }
             Self::OutputTooSmall { required, have } => {
-                write!(f, "constrained delaunay: output too small, need {required}, have {have}")
+                write!(
+                    f,
+                    "constrained delaunay: output too small, need {required}, have {have}"
+                )
             }
             Self::MaxSubdivisionDepthExceeded => {
                 write!(f, "constrained delaunay: max subdivision depth exceeded")
@@ -214,12 +219,7 @@ pub fn conforming_delaunay_2(
 ///
 /// Traces the edge from a to b through the triangulation by walking
 /// along triangles that intersect the line segment.
-pub fn constraint_edge_present(
-    points: &[Point2],
-    triangles: &[[u32; 3]],
-    a: u32,
-    b: u32,
-) -> bool {
+pub fn constraint_edge_present(points: &[Point2], triangles: &[[u32; 3]], a: u32, b: u32) -> bool {
     // Simple check: does the direct edge exist?
     if edge_exists_in_triangulation(triangles, a, b) {
         return true;
@@ -244,9 +244,13 @@ pub fn constraint_edge_present(
             for i in 0..3 {
                 let v0 = tri[i];
                 let v1 = tri[(i + 1) % 3];
-                let neighbor = if v0 == current { Some(v1) }
-                    else if v1 == current { Some(v0) }
-                    else { None };
+                let neighbor = if v0 == current {
+                    Some(v1)
+                } else if v1 == current {
+                    Some(v0)
+                } else {
+                    None
+                };
 
                 if let Some(next) = neighbor {
                     if next == b {
@@ -263,7 +267,9 @@ pub fn constraint_edge_present(
                             (pn.y - pa.y) / (pb.y - pa.y)
                         };
                         if t > 0.0 && t < 1.0 {
-                            let dist = ((pn.x - pa.x) * (pb.x - pa.x) + (pn.y - pa.y) * (pb.y - pa.y)).abs();
+                            let dist = ((pn.x - pa.x) * (pb.x - pa.x)
+                                + (pn.y - pa.y) * (pb.y - pa.y))
+                                .abs();
                             if dist < best_dist {
                                 best_dist = dist;
                                 best_next = Some(next);
@@ -319,7 +325,8 @@ mod tests {
         let constraints = vec![(0u32, 2u32)];
         let mut out_points = Vec::new();
         let mut out_tris = vec![[0u32; 3]; 100];
-        let (pc, tc) = conforming_delaunay_2(&points, &constraints, &mut out_points, &mut out_tris).unwrap();
+        let (pc, tc) =
+            conforming_delaunay_2(&points, &constraints, &mut out_points, &mut out_tris).unwrap();
 
         assert!(tc > 0);
         // The constraint edge (0, 2) should be present (possibly subdivided).
@@ -341,7 +348,8 @@ mod tests {
         let constraints = vec![(0u32, 2u32), (1u32, 3u32)];
         let mut out_points = Vec::new();
         let mut out_tris = vec![[0u32; 3]; 100];
-        let (pc, tc) = conforming_delaunay_2(&points, &constraints, &mut out_points, &mut out_tris).unwrap();
+        let (pc, tc) =
+            conforming_delaunay_2(&points, &constraints, &mut out_points, &mut out_tris).unwrap();
 
         assert!(tc > 0);
         assert!(
@@ -368,7 +376,10 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
-            ConstrainedDelaunayError::InvalidConstraintIndex { index: 5, point_count: 3 }
+            ConstrainedDelaunayError::InvalidConstraintIndex {
+                index: 5,
+                point_count: 3
+            }
         );
     }
 

@@ -334,7 +334,9 @@ impl MatrixAllocator {
         };
 
         let block_index = block_index.ok_or_else(|| {
-            LinearAlgebraError::StorageError("No free block large enough for allocation".to_string())
+            LinearAlgebraError::StorageError(
+                "No free block large enough for allocation".to_string(),
+            )
         })?;
 
         // Remove the free block from the list
@@ -372,10 +374,9 @@ impl MatrixAllocator {
     /// and coalescing adjacent free blocks.
     pub fn deallocate(&mut self, address: usize) -> Result<(), LinearAlgebraError> {
         let key = address.to_string();
-        let mut block = self
-            .allocated_blocks
-            .remove(&key)
-            .ok_or_else(|| LinearAlgebraError::StorageError(format!("No allocated block at address {}", address)))?;
+        let mut block = self.allocated_blocks.remove(&key).ok_or_else(|| {
+            LinearAlgebraError::StorageError(format!("No allocated block at address {}", address))
+        })?;
 
         block.is_free = true;
         block.block_id = self.generate_block_id();
@@ -464,7 +465,11 @@ impl MatrixAllocator {
     pub fn stats(&self) -> (usize, usize, f64) {
         let total_allocated: u64 = self.allocated_blocks.values().map(|b| b.size).sum();
         let total_free: u64 = self.free_blocks.iter().map(|b| b.size).sum();
-        (total_allocated as usize, total_free as usize, self.fragmentation_ratio())
+        (
+            total_allocated as usize,
+            total_free as usize,
+            self.fragmentation_ratio(),
+        )
     }
 }
 
@@ -544,9 +549,7 @@ impl MatrixCache {
         }
 
         // Evict entries until we have room for the new entry
-        while self.current_size + size_bytes > self.max_size
-            && !self.cache_entries.is_empty()
-        {
+        while self.current_size + size_bytes > self.max_size && !self.cache_entries.is_empty() {
             self.evict();
         }
 
@@ -846,16 +849,25 @@ mod tests {
         cache.put(&m4).unwrap();
 
         // m1 should still be in cache (was accessed recently)
-        assert!(cache.cache_entries.contains_key("m1"), "m1 should still be cached");
+        assert!(
+            cache.cache_entries.contains_key("m1"),
+            "m1 should still be cached"
+        );
         // m2 should have been evicted (oldest access_time)
         assert!(
             !cache.cache_entries.contains_key("m2"),
             "m2 should have been evicted"
         );
         // m3 should still be in cache
-        assert!(cache.cache_entries.contains_key("m3"), "m3 should still be cached");
+        assert!(
+            cache.cache_entries.contains_key("m3"),
+            "m3 should still be cached"
+        );
         // m4 should be in cache
-        assert!(cache.cache_entries.contains_key("m4"), "m4 should be in cache");
+        assert!(
+            cache.cache_entries.contains_key("m4"),
+            "m4 should be in cache"
+        );
     }
 
     #[test]
@@ -1076,7 +1088,10 @@ mod tests {
 
         let a_count = cache.cache_entries.get("a").unwrap().access_count;
         let b_count = cache.cache_entries.get("b").unwrap().access_count;
-        assert!(a_count > b_count, "a should have a higher access_count than b");
+        assert!(
+            a_count > b_count,
+            "a should have a higher access_count than b"
+        );
 
         // Insert "c" — LFU should evict "b" (lowest access_count)
         cache.put(&make_test_matrix("c", 2, 2)).unwrap();
@@ -1117,7 +1132,10 @@ mod tests {
         );
 
         // get() should always miss
-        assert!(cache.get("m1").is_none(), "get on a capacity-0 cache should miss");
+        assert!(
+            cache.get("m1").is_none(),
+            "get on a capacity-0 cache should miss"
+        );
         assert_eq!(cache.miss_count, 1);
         assert_eq!(cache.hit_count, 0);
     }
@@ -1204,7 +1222,10 @@ mod tests {
         // (the coalesced addr1+addr2 block, and possibly the remainder)
         // After coalescing, adjacent free blocks merge
         let free_count = allocator.free_blocks.len();
-        assert!(free_count >= 1, "should have at least 1 free block after coalescing");
+        assert!(
+            free_count >= 1,
+            "should have at least 1 free block after coalescing"
+        );
 
         // Now deallocate addr3 — everything should coalesce back to one block
         allocator.deallocate(addr3).unwrap();

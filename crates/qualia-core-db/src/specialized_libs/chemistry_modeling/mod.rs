@@ -1624,11 +1624,11 @@ impl MolecularSimulator {
         self.simulation_engine.initialize()?;
         self.force_field_calculator.initialize()?;
         self.integrator.initialize()?;
-        
+
         let _ = self.boundary_conditions.boundary_type();
         let _ = self.boundary_conditions.box_vectors();
         let _ = self.boundary_conditions.minimum_image();
-        
+
         Ok(())
     }
 
@@ -3609,7 +3609,8 @@ impl PhaseCalculator {
 
     /// Register a phase diagram under its `diagram_id`, replacing any existing entry.
     pub fn add_phase_diagram(&mut self, diagram: PhaseDiagram) {
-        self.phase_diagrams.insert(diagram.diagram_id.clone(), diagram);
+        self.phase_diagrams
+            .insert(diagram.diagram_id.clone(), diagram);
     }
 
     /// Look up a phase diagram by id.
@@ -3905,7 +3906,10 @@ impl PropertyPredictor {
             if descriptor == "intercept" {
                 predicted += coefficient;
             } else {
-                let value = molecular_descriptors.get(descriptor).copied().unwrap_or(0.0);
+                let value = molecular_descriptors
+                    .get(descriptor)
+                    .copied()
+                    .unwrap_or(0.0);
                 predicted += coefficient * value;
             }
         }
@@ -4713,7 +4717,12 @@ mod tests {
 
         let tb = predictor.predict("boiling_point", &descriptors).unwrap();
         let expected = 198.2 + 23.97 * 1.0 + 22.88 * 4.0;
-        assert!((tb - expected).abs() < 1e-9, "predicted {} != {}", tb, expected);
+        assert!(
+            (tb - expected).abs() < 1e-9,
+            "predicted {} != {}",
+            tb,
+            expected
+        );
         assert!(tb.is_finite() && tb > 0.0);
     }
 
@@ -4729,7 +4738,12 @@ mod tests {
 
         let logs = predictor.predict("solubility", &descriptors).unwrap();
         let expected = -0.5 * 2.0 - 0.01 * 100.0 + 0.5;
-        assert!((logs - expected).abs() < 1e-9, "predicted {} != {}", logs, expected);
+        assert!(
+            (logs - expected).abs() < 1e-9,
+            "predicted {} != {}",
+            logs,
+            expected
+        );
     }
 
     #[test]
@@ -4744,7 +4758,12 @@ mod tests {
 
         let mw = predictor.predict("molecular_weight", &descriptors).unwrap();
         let expected = 2.0 * 1.008 + 1.0 * 15.999;
-        assert!((mw - expected).abs() < 1e-9, "predicted {} != {}", mw, expected);
+        assert!(
+            (mw - expected).abs() < 1e-9,
+            "predicted {} != {}",
+            mw,
+            expected
+        );
     }
 
     #[test]

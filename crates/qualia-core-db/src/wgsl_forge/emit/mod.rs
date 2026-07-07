@@ -1,31 +1,31 @@
-pub mod wgsl;
+pub mod coopmat;
+pub mod cuda_c;
+pub mod cuda_graph;
+pub mod df64;
+pub mod dxc;
+pub mod graph_hlsl;
+pub mod graph_msl;
 pub mod hlsl;
 pub mod msl;
 pub mod ptx;
-pub mod cuda_c;
-pub mod cuda_graph;
-pub mod graph_msl;
-pub mod graph_hlsl;
-pub mod coopmat;
-pub mod df64;
-pub mod dxc;
 pub mod spirv;
+pub mod wgsl;
 
 use serde::{Deserialize, Serialize};
 
 use super::{ForgeError, KernelSpec, Schedule};
-pub use wgsl::{emit_graph_wgsl, emit_wgsl};
-pub use msl::emit_msl;
-pub use hlsl::emit_hlsl;
-pub use ptx::emit_ptx;
+pub use coopmat::{matmul_tc_wgsl, matmul_tc_wgsl_tiled, MATMUL_TC_TILED_ENTRY};
 pub use cuda_c::emit_cuda_c;
 pub use cuda_graph::{emit_graph_cuda_c, graph_cuda_entry, CudaCLowerer};
-pub use graph_msl::{emit_graph_msl, MslLowerer};
-pub use graph_hlsl::{emit_graph_hlsl, HlslLowerer};
-pub use coopmat::{matmul_tc_wgsl, matmul_tc_wgsl_tiled, MATMUL_TC_TILED_ENTRY};
 pub use df64::{GEMM_DF64_ENTRY, GEMM_DF64_WGSL};
 pub use dxc::compile_hlsl_to_spirv;
+pub use graph_hlsl::{emit_graph_hlsl, HlslLowerer};
+pub use graph_msl::{emit_graph_msl, MslLowerer};
+pub use hlsl::emit_hlsl;
+pub use msl::emit_msl;
+pub use ptx::emit_ptx;
 pub use spirv::{decode_spirv_words, emit_spirv};
+pub use wgsl::{emit_graph_wgsl, emit_wgsl};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

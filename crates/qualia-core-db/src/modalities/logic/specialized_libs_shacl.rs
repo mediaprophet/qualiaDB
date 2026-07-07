@@ -481,7 +481,9 @@ impl QuantumBiologyCalculation {
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
         let mut ops = vec![SlgOpcode::CheckMaxInclusive(self.max_quantum_states as f64)];
         if self.require_solvent_model {
-            ops.push(SlgOpcode::CheckHasValue(crate::q_hash("solvent_model_required")));
+            ops.push(SlgOpcode::CheckHasValue(crate::q_hash(
+                "solvent_model_required",
+            )));
         }
         ops
     }

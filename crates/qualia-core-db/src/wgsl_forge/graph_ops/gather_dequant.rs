@@ -140,8 +140,12 @@ pub fn gather_dequant_ternary_gpu(
     let wg: u32 = 64;
     let src = gather_dequant_ternary_wgsl(wg);
     let mut ctx = WgpuComputeContext::new((n * 4).max(4 << 20))?;
-    let view_packed =
-        ctx.allocate_and_write(bytemuck::cast_slice(packed), 0, 0, BindingUsage::StorageRead)?;
+    let view_packed = ctx.allocate_and_write(
+        bytemuck::cast_slice(packed),
+        0,
+        0,
+        BindingUsage::StorageRead,
+    )?;
     let view_scale =
         ctx.allocate_and_write(bytemuck::cast_slice(scale), 1, 0, BindingUsage::StorageRead)?;
     let zeros = vec![0.0f32; n];
@@ -152,10 +156,17 @@ pub fn gather_dequant_ternary_gpu(
         BindingUsage::StorageReadWrite,
     )?;
     let params: [u32; 4] = [rows as u32, cols as u32, k_words as u32, 0];
-    let view_params =
-        ctx.allocate_and_write(bytemuck::cast_slice(&params), 3, 0, BindingUsage::StorageRead)?;
+    let view_params = ctx.allocate_and_write(
+        bytemuck::cast_slice(&params),
+        3,
+        0,
+        BindingUsage::StorageRead,
+    )?;
     let pipeline = WgpuPipeline::compile(&ctx, &src, GATHER_DEQUANT_ENTRY)?;
-    let schedule = Schedule { workgroup_size: wg, ..Default::default() };
+    let schedule = Schedule {
+        workgroup_size: wg,
+        ..Default::default()
+    };
     pipeline.dispatch(
         &[view_packed, view_scale, view_out, view_params],
         &schedule,
@@ -174,7 +185,10 @@ mod tests {
     #[test]
     fn gather_dequant_wgsl_validates() {
         let report = validate_wgsl(&gather_dequant_ternary_wgsl(64)).expect("validate");
-        assert!(report.entry_points.iter().any(|e| e == GATHER_DEQUANT_ENTRY));
+        assert!(report
+            .entry_points
+            .iter()
+            .any(|e| e == GATHER_DEQUANT_ENTRY));
         assert_eq!(report.binding_count, 4);
     }
 

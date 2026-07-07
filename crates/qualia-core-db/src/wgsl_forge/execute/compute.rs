@@ -1,4 +1,4 @@
-use super::super::{ForgeError, schedule::Schedule};
+use super::super::{schedule::Schedule, ForgeError};
 use super::memory::BufferView;
 
 /// A strictly stateless execution bridge designed to execute WGSL Forge IR operations.

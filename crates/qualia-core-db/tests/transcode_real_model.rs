@@ -23,8 +23,8 @@ fn compile_smollm2_q8_gguf_to_runnable_ternary_ffn() {
 
     let out = qualia_core_db::p64_weight::compile_gguf_to_p64_ternary_ffn(&mmap, 14)
         .expect("ternary-FFN GGUF compile");
-    let idx = qualia_core_db::p64_weight::P64TensorIndex::from_p64(&out)
-        .expect("round-trip from_p64");
+    let idx =
+        qualia_core_db::p64_weight::P64TensorIndex::from_p64(&out).expect("round-trip from_p64");
 
     // The container is COMPLETE (runnable): hyperparams + tokenizer carried through.
     assert!(idx.hparams.n_layer > 0, "n_layers must survive");
@@ -199,8 +199,8 @@ fn transcode_smollm2_360m_ffn_ternary() {
             .expect("ternary-policy transcode");
 
     // Parse the emitted container back (validates CRC + manifest).
-    let idx = qualia_core_db::p64_weight::P64TensorIndex::from_p64(&out)
-        .expect("round-trip from_p64");
+    let idx =
+        qualia_core_db::p64_weight::P64TensorIndex::from_p64(&out).expect("round-trip from_p64");
 
     // Classify entries: ternary (FFN) vs verbatim, and tally the tensor-data bytes.
     let tern_code = qualia_core_db::ternary::GGML_TYPE_TERNARY_158;

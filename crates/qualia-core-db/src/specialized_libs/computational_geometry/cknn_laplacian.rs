@@ -29,8 +29,8 @@
 //! All operations are deterministic: kNN is computed in canonical
 //! (distance, index) order, and the Laplacian is a fixed matrix operation.
 
-use crate::tensor::Tensor10D;
 use super::vr_filtration::spatial_distance;
+use crate::tensor::Tensor10D;
 
 // ───────────────────────────────────────────────────────────────────────────
 //  Errors
@@ -91,7 +91,10 @@ pub fn knn_distances(
         return Err(CknnError::KTooLarge { k, n });
     }
     if out_knn_dist.len() < n || out_knn_idx.len() < n {
-        return Err(CknnError::BufferTooSmall { needed: n, have: out_knn_dist.len().min(out_knn_idx.len()) });
+        return Err(CknnError::BufferTooSmall {
+            needed: n,
+            have: out_knn_dist.len().min(out_knn_idx.len()),
+        });
     }
 
     for (i, p) in points.iter().enumerate() {
@@ -109,7 +112,8 @@ pub fn knn_distances(
         }
         // Sort by (distance, index) — canonical order.
         dists.sort_by(|a, b| {
-            a.0.partial_cmp(&b.0).unwrap_or(core::cmp::Ordering::Equal)
+            a.0.partial_cmp(&b.0)
+                .unwrap_or(core::cmp::Ordering::Equal)
                 .then(a.1.cmp(&b.1))
         });
         // dists[0] is self (distance 0), dists[k] is the k-th nearest.
@@ -146,7 +150,10 @@ pub fn cknn_graph(
         return Err(CknnError::KTooLarge { k, n });
     }
     if out_edges.len() < n * k {
-        return Err(CknnError::BufferTooSmall { needed: n * k, have: out_edges.len() });
+        return Err(CknnError::BufferTooSmall {
+            needed: n * k,
+            have: out_edges.len(),
+        });
     }
 
     // Compute k-NN distances.
@@ -163,7 +170,8 @@ pub fn cknn_graph(
             dists[j] = (spatial_distance(&points[i], &points[j]), j as u32);
         }
         dists.sort_by(|a, b| {
-            a.0.partial_cmp(&b.0).unwrap_or(core::cmp::Ordering::Equal)
+            a.0.partial_cmp(&b.0)
+                .unwrap_or(core::cmp::Ordering::Equal)
                 .then(a.1.cmp(&b.1))
         });
 
@@ -217,7 +225,10 @@ pub fn graph_laplacian(
     out_laplacian: &mut [f64],
 ) -> Result<(), CknnError> {
     if out_laplacian.len() < n * n {
-        return Err(CknnError::BufferTooSmall { needed: n * n, have: out_laplacian.len() });
+        return Err(CknnError::BufferTooSmall {
+            needed: n * n,
+            have: out_laplacian.len(),
+        });
     }
 
     // Zero the matrix.
@@ -251,7 +262,10 @@ pub fn normalised_graph_laplacian(
     out_laplacian: &mut [f64],
 ) -> Result<(), CknnError> {
     if out_laplacian.len() < n * n {
-        return Err(CknnError::BufferTooSmall { needed: n * n, have: out_laplacian.len() });
+        return Err(CknnError::BufferTooSmall {
+            needed: n * n,
+            have: out_laplacian.len(),
+        });
     }
 
     // First compute unnormalised L = D - W.
@@ -268,8 +282,16 @@ pub fn normalised_graph_laplacian(
     // = D^{-1/2} L D^{-1/2}
     for i in 0..n {
         for j in 0..n {
-            let di = if degrees[i] > 0.0 { degrees[i].sqrt() } else { 1.0 };
-            let dj = if degrees[j] > 0.0 { degrees[j].sqrt() } else { 1.0 };
+            let di = if degrees[i] > 0.0 {
+                degrees[i].sqrt()
+            } else {
+                1.0
+            };
+            let dj = if degrees[j] > 0.0 {
+                degrees[j].sqrt()
+            } else {
+                1.0
+            };
             out_laplacian[i * n + j] /= di * dj;
         }
     }
@@ -320,7 +342,10 @@ pub fn local_density(
         return Err(CknnError::KTooLarge { k, n });
     }
     if out_density.len() < n {
-        return Err(CknnError::BufferTooSmall { needed: n, have: out_density.len() });
+        return Err(CknnError::BufferTooSmall {
+            needed: n,
+            have: out_density.len(),
+        });
     }
 
     let mut dists = vec![(0.0f64, 0u32); n];
@@ -329,7 +354,8 @@ pub fn local_density(
             dists[j] = (spatial_distance(&points[i], &points[j]), j as u32);
         }
         dists.sort_by(|a, b| {
-            a.0.partial_cmp(&b.0).unwrap_or(core::cmp::Ordering::Equal)
+            a.0.partial_cmp(&b.0)
+                .unwrap_or(core::cmp::Ordering::Equal)
                 .then(a.1.cmp(&b.1))
         });
         // Average distance to k nearest (excluding self).
@@ -412,7 +438,14 @@ mod tests {
         let pts = grid_points(3, 3, 1.0);
         let n = pts.len();
         let k = 3;
-        let mut edges = vec![CknnEdge { from: 0, to: 0, weight: 0.0 }; n * k];
+        let mut edges = vec![
+            CknnEdge {
+                from: 0,
+                to: 0,
+                weight: 0.0
+            };
+            n * k
+        ];
         let count = cknn_graph(&pts, k, &mut edges).unwrap();
         assert!(count > 0, "should have edges");
     }
@@ -422,7 +455,14 @@ mod tests {
         let pts = grid_points(4, 4, 1.0);
         let n = pts.len();
         let k = 4;
-        let mut edges = vec![CknnEdge { from: 0, to: 0, weight: 0.0 }; n * k];
+        let mut edges = vec![
+            CknnEdge {
+                from: 0,
+                to: 0,
+                weight: 0.0
+            };
+            n * k
+        ];
         let count = cknn_graph(&pts, k, &mut edges).unwrap();
 
         // For edges that have both directions, weights must match.
@@ -430,9 +470,14 @@ mod tests {
             let (from, to, w) = (edges[e].from, edges[e].to, edges[e].weight);
             for e2 in 0..count {
                 if edges[e2].from == to && edges[e2].to == from {
-                    assert!((edges[e2].weight - w).abs() < 1e-10,
+                    assert!(
+                        (edges[e2].weight - w).abs() < 1e-10,
                         "bidirectional edge ({},{}) weight {} must match reverse {}",
-                        from, to, w, edges[e2].weight);
+                        from,
+                        to,
+                        w,
+                        edges[e2].weight
+                    );
                     break;
                 }
             }
@@ -444,14 +489,23 @@ mod tests {
         let pts = grid_points(3, 3, 1.0);
         let n = pts.len();
         let k = 4;
-        let mut edges = vec![CknnEdge { from: 0, to: 0, weight: 0.0 }; n * k];
+        let mut edges = vec![
+            CknnEdge {
+                from: 0,
+                to: 0,
+                weight: 0.0
+            };
+            n * k
+        ];
         let count = cknn_graph(&pts, k, &mut edges).unwrap();
 
         let mut lap = vec![0.0f64; n * n];
         graph_laplacian(n, &edges[..count], &mut lap).unwrap();
 
-        assert!(verify_laplacian(&lap, n, 1e-10),
-            "Laplacian must be symmetric with zero row sums");
+        assert!(
+            verify_laplacian(&lap, n, 1e-10),
+            "Laplacian must be symmetric with zero row sums"
+        );
     }
 
     #[test]
@@ -459,7 +513,14 @@ mod tests {
         let pts = grid_points(4, 4, 1.0);
         let n = pts.len();
         let k = 4;
-        let mut edges = vec![CknnEdge { from: 0, to: 0, weight: 0.0 }; n * k];
+        let mut edges = vec![
+            CknnEdge {
+                from: 0,
+                to: 0,
+                weight: 0.0
+            };
+            n * k
+        ];
         let count = cknn_graph(&pts, k, &mut edges).unwrap();
 
         let mut lap = vec![0.0f64; n * n];
@@ -467,7 +528,12 @@ mod tests {
 
         for i in 0..n {
             let row_sum: f64 = (0..n).map(|j| lap[i * n + j]).sum();
-            assert!(row_sum.abs() < 1e-10, "row {} sum should be 0, got {}", i, row_sum);
+            assert!(
+                row_sum.abs() < 1e-10,
+                "row {} sum should be 0, got {}",
+                i,
+                row_sum
+            );
         }
     }
 
@@ -476,15 +542,25 @@ mod tests {
         let pts = grid_points(3, 3, 1.0);
         let n = pts.len();
         let k = 4;
-        let mut edges = vec![CknnEdge { from: 0, to: 0, weight: 0.0 }; n * k];
+        let mut edges = vec![
+            CknnEdge {
+                from: 0,
+                to: 0,
+                weight: 0.0
+            };
+            n * k
+        ];
         let count = cknn_graph(&pts, k, &mut edges).unwrap();
 
         let mut lap = vec![0.0f64; n * n];
         normalised_graph_laplacian(n, &edges[..count], &mut lap).unwrap();
 
         for i in 0..n {
-            assert!((lap[i * n + i] - 1.0).abs() < 1e-10,
-                "normalised Laplacian diagonal should be 1, got {}", lap[i * n + i]);
+            assert!(
+                (lap[i * n + i] - 1.0).abs() < 1e-10,
+                "normalised Laplacian diagonal should be 1, got {}",
+                lap[i * n + i]
+            );
         }
     }
 
@@ -499,9 +575,12 @@ mod tests {
         // than sparse cluster (last 25 points).
         let dense_avg: f64 = density[..100].iter().sum::<f64>() / 100.0;
         let sparse_avg: f64 = density[100..].iter().sum::<f64>() / 25.0;
-        assert!(dense_avg < sparse_avg,
+        assert!(
+            dense_avg < sparse_avg,
             "dense cluster avg distance {} should be < sparse {}",
-            dense_avg, sparse_avg);
+            dense_avg,
+            sparse_avg
+        );
     }
 
     #[test]
@@ -510,10 +589,24 @@ mod tests {
         let n = pts.len();
         let k = 4;
 
-        let mut e1 = vec![CknnEdge { from: 0, to: 0, weight: 0.0 }; n * k];
+        let mut e1 = vec![
+            CknnEdge {
+                from: 0,
+                to: 0,
+                weight: 0.0
+            };
+            n * k
+        ];
         let c1 = cknn_graph(&pts, k, &mut e1).unwrap();
 
-        let mut e2 = vec![CknnEdge { from: 0, to: 0, weight: 0.0 }; n * k];
+        let mut e2 = vec![
+            CknnEdge {
+                from: 0,
+                to: 0,
+                weight: 0.0
+            };
+            n * k
+        ];
         let c2 = cknn_graph(&pts, k, &mut e2).unwrap();
 
         assert_eq!(c1, c2);
@@ -526,7 +619,14 @@ mod tests {
         let n = pts.len();
         let k = 4;
 
-        let mut edges = vec![CknnEdge { from: 0, to: 0, weight: 0.0 }; n * k];
+        let mut edges = vec![
+            CknnEdge {
+                from: 0,
+                to: 0,
+                weight: 0.0
+            };
+            n * k
+        ];
         let count = cknn_graph(&pts, k, &mut edges).unwrap();
 
         let mut lap1 = vec![0.0f64; n * n];
@@ -540,7 +640,14 @@ mod tests {
     #[test]
     fn cknn_too_few_points() {
         let pts = vec![make_point(0.0, 0.0, 0.0)];
-        let mut edges = vec![CknnEdge { from: 0, to: 0, weight: 0.0 }; 10];
+        let mut edges = vec![
+            CknnEdge {
+                from: 0,
+                to: 0,
+                weight: 0.0
+            };
+            10
+        ];
         let err = cknn_graph(&pts, 1, &mut edges).unwrap_err();
         assert!(matches!(err, CknnError::TooFewPoints { .. }));
     }
@@ -549,7 +656,14 @@ mod tests {
     fn cknn_k_too_large() {
         let pts = grid_points(2, 2, 1.0);
         let n = pts.len();
-        let mut edges = vec![CknnEdge { from: 0, to: 0, weight: 0.0 }; n * 10];
+        let mut edges = vec![
+            CknnEdge {
+                from: 0,
+                to: 0,
+                weight: 0.0
+            };
+            n * 10
+        ];
         let err = cknn_graph(&pts, 10, &mut edges).unwrap_err();
         assert!(matches!(err, CknnError::KTooLarge { .. }));
     }
@@ -559,7 +673,14 @@ mod tests {
         let mut pts = grid_points(3, 3, 1.0);
         pts[4].x = f32::NAN;
         let n = pts.len();
-        let mut edges = vec![CknnEdge { from: 0, to: 0, weight: 0.0 }; n * 4];
+        let mut edges = vec![
+            CknnEdge {
+                from: 0,
+                to: 0,
+                weight: 0.0
+            };
+            n * 4
+        ];
         let err = cknn_graph(&pts, 4, &mut edges).unwrap_err();
         assert!(matches!(err, CknnError::NonFinite { .. }));
     }
@@ -575,7 +696,14 @@ mod tests {
         let n = pts.len();
         let k = 2; // each point connects to 2 nearest (all others)
 
-        let mut edges = vec![CknnEdge { from: 0, to: 0, weight: 0.0 }; n * k];
+        let mut edges = vec![
+            CknnEdge {
+                from: 0,
+                to: 0,
+                weight: 0.0
+            };
+            n * k
+        ];
         let count = cknn_graph(&pts, k, &mut edges).unwrap();
 
         let mut lap = vec![0.0f64; n * n];

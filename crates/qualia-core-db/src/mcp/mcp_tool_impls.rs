@@ -42,12 +42,30 @@ pub fn geometry_manifests(args: &[u8]) -> Result<String, McpSystemError> {
         // Reserve-mode budget query.
         let device = v.get("device");
         let avail = capability_manifests::DeviceAvailability {
-            cpu: device.and_then(|d| d.get("cpu")).and_then(Value::as_bool).unwrap_or(true),
-            simd: device.and_then(|d| d.get("simd")).and_then(Value::as_bool).unwrap_or(true),
-            wgpu: device.and_then(|d| d.get("wgpu")).and_then(Value::as_bool).unwrap_or(false),
-            cuda: device.and_then(|d| d.get("cuda")).and_then(Value::as_bool).unwrap_or(false),
-            wasm: device.and_then(|d| d.get("wasm")).and_then(Value::as_bool).unwrap_or(false),
-            exact: device.and_then(|d| d.get("exact")).and_then(Value::as_bool).unwrap_or(true),
+            cpu: device
+                .and_then(|d| d.get("cpu"))
+                .and_then(Value::as_bool)
+                .unwrap_or(true),
+            simd: device
+                .and_then(|d| d.get("simd"))
+                .and_then(Value::as_bool)
+                .unwrap_or(true),
+            wgpu: device
+                .and_then(|d| d.get("wgpu"))
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            cuda: device
+                .and_then(|d| d.get("cuda"))
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            wasm: device
+                .and_then(|d| d.get("wasm"))
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            exact: device
+                .and_then(|d| d.get("exact"))
+                .and_then(Value::as_bool)
+                .unwrap_or(true),
         };
         Ok(capability_manifests::budget_query_to_json(op_name, &avail).to_string())
     } else {
@@ -1848,9 +1866,7 @@ pub fn evaluate_logic_rules(args: &[u8]) -> Result<String, McpSystemError> {
         .get("n3_source")
         .and_then(Value::as_str)
         .ok_or(McpSystemError::InvalidParameters)?;
-    let quin_obj = v
-        .get("quin")
-        .ok_or(McpSystemError::InvalidParameters)?;
+    let quin_obj = v.get("quin").ok_or(McpSystemError::InvalidParameters)?;
     let subject = json_u64(quin_obj, "subject", 0);
     let predicate = json_u64(quin_obj, "predicate", 0);
     let object = json_u64(quin_obj, "object", 0);

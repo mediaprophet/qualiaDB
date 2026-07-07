@@ -50,9 +50,7 @@ impl std::error::Error for GamutError {}
 #[inline]
 pub fn is_in_gamut(xyz: &Xyz) -> bool {
     let rgb = xyz_to_linear_srgb(xyz);
-    rgb.r >= 0.0 && rgb.r <= 1.0
-        && rgb.g >= 0.0 && rgb.g <= 1.0
-        && rgb.b >= 0.0 && rgb.b <= 1.0
+    rgb.r >= 0.0 && rgb.r <= 1.0 && rgb.g >= 0.0 && rgb.g <= 1.0 && rgb.b >= 0.0 && rgb.b <= 1.0
 }
 
 /// Map an out-of-gamut colour to the closest in-gamut colour.
@@ -82,9 +80,7 @@ pub fn linear_srgb_to_xyz(rgb: &LinearRgb) -> Xyz {
 /// Check if a linear sRGB colour is in gamut.
 #[inline]
 pub fn linear_rgb_is_in_gamut(rgb: &LinearRgb) -> bool {
-    rgb.r >= 0.0 && rgb.r <= 1.0
-        && rgb.g >= 0.0 && rgb.g <= 1.0
-        && rgb.b >= 0.0 && rgb.b <= 1.0
+    rgb.r >= 0.0 && rgb.r <= 1.0 && rgb.g >= 0.0 && rgb.g <= 1.0 && rgb.b >= 0.0 && rgb.b <= 1.0
 }
 
 /// Interior idempotence: an in-gamut colour maps to itself.
@@ -94,7 +90,8 @@ pub fn gamut_map_idempotent(xyz: &Xyz) -> bool {
         return false;
     }
     let mapped = gamut_map_clamp(xyz);
-    let diff = ((mapped.x - xyz.x).abs() + (mapped.y - xyz.y).abs() + (mapped.z - xyz.z).abs()) / 3.0;
+    let diff =
+        ((mapped.x - xyz.x).abs() + (mapped.y - xyz.y).abs() + (mapped.z - xyz.z).abs()) / 3.0;
     diff < 1e-6
 }
 
@@ -131,8 +128,10 @@ mod tests {
     fn interior_idempotence() {
         let in_gamut = Xyz::new(0.4, 0.5, 0.6);
         if is_in_gamut(&in_gamut) {
-            assert!(gamut_map_idempotent(&in_gamut),
-                "in-gamut colour should map to itself");
+            assert!(
+                gamut_map_idempotent(&in_gamut),
+                "in-gamut colour should map to itself"
+            );
         }
     }
 

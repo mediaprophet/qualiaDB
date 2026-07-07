@@ -123,9 +123,7 @@ pub fn build_vertex_adjacency_csr(
     for he in half_edges.iter() {
         let origin = he.origin as usize;
         if origin >= vc {
-            return Err(CsrError::EntityOutOfRange {
-                index: he.origin,
-            });
+            return Err(CsrError::EntityOutOfRange { index: he.origin });
         }
         offsets[origin + 1] += 1;
     }
@@ -297,10 +295,7 @@ mod tests {
         build_triangle_half_edges, required_edge_slots, EdgeSlot,
     };
 
-    fn build_he(
-        vertex_count: u32,
-        triangles: &[[u32; 3]],
-    ) -> Vec<HalfEdge> {
+    fn build_he(vertex_count: u32, triangles: &[[u32; 3]]) -> Vec<HalfEdge> {
         let n = triangles.len() * 3;
         let mut edges = vec![HalfEdge::default(); n];
         let mut slots = vec![EdgeSlot::default(); required_edge_slots(triangles.len())];
@@ -315,8 +310,7 @@ mod tests {
         let edges = build_he(3, &[[0, 1, 2]]);
         let mut offsets = [0u32; 4];
         let mut neighbours = [0u32; 3];
-        let summary = build_vertex_adjacency_csr(3, &edges, &mut offsets, &mut neighbours)
-            .unwrap();
+        let summary = build_vertex_adjacency_csr(3, &edges, &mut offsets, &mut neighbours).unwrap();
         assert_eq!(summary.entity_count, 3);
         assert_eq!(summary.edge_count, 3);
         assert_eq!(summary.max_degree, 1);
@@ -334,11 +328,10 @@ mod tests {
         let edges = build_he(4, &[[0, 1, 2], [2, 1, 3]]);
         let mut offsets = [0u32; 5];
         let mut neighbours = [0u32; 6];
-        let summary = build_vertex_adjacency_csr(4, &edges, &mut offsets, &mut neighbours)
-            .unwrap();
+        let summary = build_vertex_adjacency_csr(4, &edges, &mut offsets, &mut neighbours).unwrap();
         assert_eq!(summary.edge_count, 6);
         assert_eq!(summary.max_degree, 2); // vertices 1 and 2 have degree 2
-        // offsets: vertex 0 → 1 edge, vertex 1 → 2 edges, vertex 2 → 2 edges, vertex 3 → 1 edge
+                                           // offsets: vertex 0 → 1 edge, vertex 1 → 2 edges, vertex 2 → 2 edges, vertex 3 → 1 edge
         assert_eq!(offsets, [0, 1, 3, 5, 6]);
         // Vertex 0: [1]
         assert_eq!(neighbours[0], 1);
@@ -357,8 +350,7 @@ mod tests {
         let edges = build_he(4, &[[0, 1, 2], [0, 2, 3], [0, 3, 1], [1, 3, 2]]);
         let mut offsets = [0u32; 5];
         let mut neighbours = [0u32; 12];
-        let summary = build_vertex_adjacency_csr(4, &edges, &mut offsets, &mut neighbours)
-            .unwrap();
+        let summary = build_vertex_adjacency_csr(4, &edges, &mut offsets, &mut neighbours).unwrap();
         assert_eq!(summary.edge_count, 12);
         assert_eq!(summary.max_degree, 3); // every vertex has degree 3
         assert_eq!(offsets, [0, 3, 6, 9, 12]);
@@ -369,8 +361,7 @@ mod tests {
         let edges = build_he(3, &[[0, 1, 2]]);
         let mut offsets = [0u32; 3]; // too small (needs 4)
         let mut neighbours = [0u32; 3];
-        let err = build_vertex_adjacency_csr(3, &edges, &mut offsets, &mut neighbours)
-            .unwrap_err();
+        let err = build_vertex_adjacency_csr(3, &edges, &mut offsets, &mut neighbours).unwrap_err();
         assert_eq!(err, CsrError::OffsetBufferTooSmall { required: 4 });
     }
 
@@ -394,8 +385,7 @@ mod tests {
         let edges = build_he(3, &[[0, 1, 2]]);
         let mut offsets = [0u32; 2];
         let mut neighbours = [0u32; 3];
-        let summary = build_face_adjacency_csr(1, &edges, &mut offsets, &mut neighbours)
-            .unwrap();
+        let summary = build_face_adjacency_csr(1, &edges, &mut offsets, &mut neighbours).unwrap();
         assert_eq!(summary.entity_count, 1);
         assert_eq!(summary.edge_count, 3);
         assert_eq!(summary.max_degree, 3);
@@ -409,8 +399,7 @@ mod tests {
         let edges = build_he(4, &[[0, 1, 2], [2, 1, 3]]);
         let mut offsets = [0u32; 3];
         let mut neighbours = [0u32; 6];
-        let summary = build_face_adjacency_csr(2, &edges, &mut offsets, &mut neighbours)
-            .unwrap();
+        let summary = build_face_adjacency_csr(2, &edges, &mut offsets, &mut neighbours).unwrap();
         assert_eq!(summary.edge_count, 6);
         assert_eq!(summary.max_degree, 3);
         assert_eq!(offsets, [0, 3, 6]);
@@ -431,8 +420,7 @@ mod tests {
         let edges = build_he(4, &[[0, 1, 2], [0, 2, 3], [0, 3, 1], [1, 3, 2]]);
         let mut offsets = [0u32; 5];
         let mut neighbours = [0u32; 12];
-        let summary = build_face_adjacency_csr(4, &edges, &mut offsets, &mut neighbours)
-            .unwrap();
+        let summary = build_face_adjacency_csr(4, &edges, &mut offsets, &mut neighbours).unwrap();
         assert_eq!(summary.edge_count, 12);
         assert_eq!(summary.max_degree, 3);
         assert_eq!(offsets, [0, 3, 6, 9, 12]);
@@ -557,8 +545,7 @@ mod tests {
         let edges = build_he(5, &[[0, 1, 2], [0, 3, 4]]);
         let mut offsets = [0u32; 6];
         let mut neighbours = [0u32; 6];
-        let summary = build_vertex_adjacency_csr(5, &edges, &mut offsets, &mut neighbours)
-            .unwrap();
+        let summary = build_vertex_adjacency_csr(5, &edges, &mut offsets, &mut neighbours).unwrap();
         assert_eq!(summary.edge_count, 6);
         // Vertex 0 has degree 2 (one from each triangle).
         assert_eq!(offsets[1] - offsets[0], 2);

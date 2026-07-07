@@ -76,8 +76,18 @@ fn overclaimed_completion_is_flagged_and_routed_to_review() {
 
     // A bot asserts a task is done; the task is NOT verified.
     assert_fact(&mut arena, "ex:BotX", "a", "values:ArtificialAgent");
-    assert_fact(&mut arena, "ex:BotX", "values:assertsCompletion", "ex:TaskY");
-    assert_fact(&mut arena, "ex:TaskY", "values:verificationStatus", "values:Unverified");
+    assert_fact(
+        &mut arena,
+        "ex:BotX",
+        "values:assertsCompletion",
+        "ex:TaskY",
+    );
+    assert_fact(
+        &mut arena,
+        "ex:TaskY",
+        "values:verificationStatus",
+        "values:Unverified",
+    );
 
     arena.fire_guard_rules();
 
@@ -100,10 +110,30 @@ fn substantiated_claim_is_not_flagged_and_is_trusted() {
     register_rules(&mut arena, B_TRUST);
 
     assert_fact(&mut arena, "ex:BotX", "a", "values:ArtificialAgent");
-    assert_fact(&mut arena, "ex:BotX", "values:assertsCompletion", "ex:TaskZ");
-    assert_fact(&mut arena, "ex:TaskZ", "values:verificationStatus", "values:Verified");
-    assert_fact(&mut arena, "ex:TaskZ", "values:substantiatedBy", "ex:RoundTripZ");
-    assert_fact(&mut arena, "ex:RoundTripZ", "values:verificationResult", "values:Passed");
+    assert_fact(
+        &mut arena,
+        "ex:BotX",
+        "values:assertsCompletion",
+        "ex:TaskZ",
+    );
+    assert_fact(
+        &mut arena,
+        "ex:TaskZ",
+        "values:verificationStatus",
+        "values:Verified",
+    );
+    assert_fact(
+        &mut arena,
+        "ex:TaskZ",
+        "values:substantiatedBy",
+        "ex:RoundTripZ",
+    );
+    assert_fact(
+        &mut arena,
+        "ex:RoundTripZ",
+        "values:verificationResult",
+        "values:Passed",
+    );
 
     arena.fire_guard_rules();
 
@@ -124,8 +154,18 @@ fn overclaimed_zero_heap_property_is_flagged() {
     register_rules(&mut arena, B1_PROPERTY);
 
     assert_fact(&mut arena, "ex:BotX", "a", "values:ArtificialAgent");
-    assert_fact(&mut arena, "ex:BotX", "values:assertsProperty", "ex:ZeroHeapClaim");
-    assert_fact(&mut arena, "ex:ZeroHeapClaim", "values:verificationStatus", "values:Unverified");
+    assert_fact(
+        &mut arena,
+        "ex:BotX",
+        "values:assertsProperty",
+        "ex:ZeroHeapClaim",
+    );
+    assert_fact(
+        &mut arena,
+        "ex:ZeroHeapClaim",
+        "values:verificationStatus",
+        "values:Unverified",
+    );
 
     arena.fire_guard_rules();
 

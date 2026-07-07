@@ -328,12 +328,19 @@ pub enum JoinType {
 #[derive(Debug, Clone, PartialEq)]
 pub enum QueryOperation {
     /// Full table scan; `estimated_rows` is the table's row count.
-    Scan { table: String, estimated_rows: usize },
+    Scan {
+        table: String,
+        estimated_rows: usize,
+    },
     /// Predicate filter; `selectivity` (0.0–1.0) is the fraction of rows that pass.
     Filter { predicate: String, selectivity: f64 },
     /// Join of two inputs; `left_cost`/`right_cost` are estimated row counts
     /// of the left and right inputs. The optimizer may override `join_type`.
-    Join { left_cost: f64, right_cost: f64, join_type: JoinType },
+    Join {
+        left_cost: f64,
+        right_cost: f64,
+        join_type: JoinType,
+    },
     /// Aggregation; `group_by` lists the grouping columns.
     Aggregate { group_by: Vec<String> },
     /// Sort by the given columns.
@@ -362,16 +369,18 @@ pub struct QueryPlan {
 }
 
 impl QueryOperation {
-    /// A rough data-size proxy used by the legacy `estimate_cost` / 
+    /// A rough data-size proxy used by the legacy `estimate_cost` /
     /// `optimize_with_cost` path when the input row count is not known
     /// in isolation. The `optimize()` method uses proper per-step tracking.
     fn data_size_hint(&self) -> f64 {
         match self {
             QueryOperation::Scan { estimated_rows, .. } => *estimated_rows as f64,
-            QueryOperation::Filter { selectivity, .. } => {
-                100.0 / selectivity.max(0.01)
-            }
-            QueryOperation::Join { left_cost, right_cost, .. } => left_cost * right_cost,
+            QueryOperation::Filter { selectivity, .. } => 100.0 / selectivity.max(0.01),
+            QueryOperation::Join {
+                left_cost,
+                right_cost,
+                ..
+            } => left_cost * right_cost,
             QueryOperation::Aggregate { group_by } => group_by.len().max(1) as f64 * 100.0,
             QueryOperation::Sort { columns } => columns.len().max(1) as f64 * 100.0,
             QueryOperation::Limit { count } => *count as f64,
@@ -1521,12 +1530,13 @@ impl StatisticalComputingLibrary {
         // actual query sensitivity.
         let (final_mean, privacy_cost) = if privacy_preserved {
             let sensitivity = {
-                let analyzer =
-                    &mut self.privacy_engine.differential_privacy.sensitivity_analyzer;
+                let analyzer = &mut self
+                    .privacy_engine
+                    .differential_privacy
+                    .sensitivity_analyzer;
                 analyzer.get_sensitivity("mean", &values).unwrap_or(1.0)
             };
-            let (noisy_mean, cost) =
-                self.privacy_engine.add_laplace_noise(mean, sensitivity)?;
+            let (noisy_mean, cost) = self.privacy_engine.add_laplace_noise(mean, sensitivity)?;
             (noisy_mean, cost)
         } else {
             (mean, 0.0)
@@ -2289,10 +2299,9 @@ impl StatisticalDataStorage {
             .ok_or_else(|| StatisticalError::DataNotFound(dataset_id.to_string()))?
             .clone();
 
-        let zone = self
-            .zones
-            .get_mut(zone_id)
-            .ok_or_else(|| StatisticalError::StorageError(format!("Zone '{}' not found", zone_id)))?;
+        let zone = self.zones.get_mut(zone_id).ok_or_else(|| {
+            StatisticalError::StorageError(format!("Zone '{}' not found", zone_id))
+        })?;
 
         zone.datasets
             .insert(dataset_id.to_string(), dataset.metadata);
@@ -2428,12 +2437,7 @@ impl DataCatalog {
     }
 
     /// Record a relationship between two datasets, keyed by the source dataset.
-    pub fn add_relationship(
-        &mut self,
-        source: &str,
-        target: &str,
-        relationship: Relationship,
-    ) {
+    pub fn add_relationship(&mut self, source: &str, target: &str, relationship: Relationship) {
         // Keep the relationship record consistent with the requested endpoints.
         let mut rel = relationship;
         rel.source_dataset = source.to_string();
@@ -2631,8 +2635,11 @@ impl DataCompressionEngine {
         let start = Instant::now();
         let compressed = rle_compress(data);
         let elapsed = start.elapsed().as_nanos() as u64;
-        self.compression_statistics
-            .record_compression(data.len() as u64, compressed.len() as u64, elapsed);
+        self.compression_statistics.record_compression(
+            data.len() as u64,
+            compressed.len() as u64,
+            elapsed,
+        );
         Ok(compressed)
     }
 
@@ -2642,8 +2649,7 @@ impl DataCompressionEngine {
         let start = Instant::now();
         let decompressed = rle_decompress(data)?;
         let elapsed = start.elapsed().as_nanos() as u64;
-        self.compression_statistics
-            .record_decompression(elapsed);
+        self.compression_statistics.record_decompression(elapsed);
         Ok(decompressed)
     }
 
@@ -2945,8 +2951,12 @@ impl QueryOptimizer {
         &mut self,
         operations: &[QueryOperation],
     ) -> Result<ExecutionPlan, StatisticalError> {
-        let mut indexed: Vec<(usize, QueryOperation)> =
-            operations.iter().cloned().map(|op| op).enumerate().collect();
+        let mut indexed: Vec<(usize, QueryOperation)> = operations
+            .iter()
+            .cloned()
+            .map(|op| op)
+            .enumerate()
+            .collect();
         // Greedy: sort by estimated total cost, cheapest first. The original
         // index is retained so callers can inspect the reordering if desired.
         indexed.sort_by(|a, b| {
@@ -2963,23 +2973,20 @@ impl QueryOptimizer {
 
         // Aggregate the per-operation costs into the optimizer's cost model so
         // the field is actually used.
-        self.cost_model = ordered
-            .iter()
-            .map(|op| self.estimate_cost(op))
-            .fold(
-                CostModel {
-                    cpu_cost: 0.0,
-                    io_cost: 0.0,
-                    memory_cost: 0.0,
-                    network_cost: 0.0,
-                },
-                |acc, c| CostModel {
-                    cpu_cost: acc.cpu_cost + c.cpu_cost,
-                    io_cost: acc.io_cost + c.io_cost,
-                    memory_cost: acc.memory_cost + c.memory_cost,
-                    network_cost: acc.network_cost + c.network_cost,
-                },
-            );
+        self.cost_model = ordered.iter().map(|op| self.estimate_cost(op)).fold(
+            CostModel {
+                cpu_cost: 0.0,
+                io_cost: 0.0,
+                memory_cost: 0.0,
+                network_cost: 0.0,
+            },
+            |acc, c| CostModel {
+                cpu_cost: acc.cpu_cost + c.cpu_cost,
+                io_cost: acc.io_cost + c.io_cost,
+                memory_cost: acc.memory_cost + c.memory_cost,
+                network_cost: acc.network_cost + c.network_cost,
+            },
+        );
 
         let plan = ExecutionPlan {
             plan_id: format!("plan_{}", self.next_plan_id()),
@@ -3019,10 +3026,7 @@ impl QueryOptimizer {
     /// After reordering, per-step cost and output row count are estimated
     /// using a simple cost model that tracks the running row count through
     /// the plan.
-    pub fn optimize(
-        &self,
-        operations: Vec<QueryOperation>,
-    ) -> Result<QueryPlan, StatisticalError> {
+    pub fn optimize(&self, operations: Vec<QueryOperation>) -> Result<QueryPlan, StatisticalError> {
         if operations.is_empty() {
             return Ok(QueryPlan {
                 operations: Vec::new(),
@@ -3039,7 +3043,12 @@ impl QueryOptimizer {
 
         // 2. Join-type selection: override join_type based on input sizes.
         for op in reordered.iter_mut() {
-            if let QueryOperation::Join { left_cost, right_cost, join_type } = op {
+            if let QueryOperation::Join {
+                left_cost,
+                right_cost,
+                join_type,
+            } = op
+            {
                 if *left_cost >= 1000.0 && *right_cost >= 1000.0 {
                     *join_type = JoinType::HashJoin;
                 } else if *left_cost < 100.0 && *right_cost < 100.0 {
@@ -3085,7 +3094,11 @@ impl QueryOptimizer {
                 let output = (n * selectivity).round() as usize;
                 (cost, output)
             }
-            QueryOperation::Join { left_cost, right_cost, .. } => {
+            QueryOperation::Join {
+                left_cost,
+                right_cost,
+                ..
+            } => {
                 let n = left_cost * right_cost;
                 let cost = n * 0.001;
                 let output = n.round() as usize;
@@ -3591,21 +3604,13 @@ impl StatisticalPrivacyEngine {
             .map_err(|e| StatisticalError::PrivacyError(e.to_string()))?;
 
         // Public input: the commitment bound to the published outputs.
-        zk.add_variable(
-            &circuit_id,
-            "commitment".to_string(),
-            VariableType::Public,
-        )
-        .map_err(|e| StatisticalError::PrivacyError(e.to_string()))?;
+        zk.add_variable(&circuit_id, "commitment".to_string(), VariableType::Public)
+            .map_err(|e| StatisticalError::PrivacyError(e.to_string()))?;
         // Private witness: the multiplicative identity and the same commitment.
         zk.add_variable(&circuit_id, "one".to_string(), VariableType::Private)
             .map_err(|e| StatisticalError::PrivacyError(e.to_string()))?;
-        zk.add_variable(
-            &circuit_id,
-            "in_commit".to_string(),
-            VariableType::Private,
-        )
-        .map_err(|e| StatisticalError::PrivacyError(e.to_string()))?;
+        zk.add_variable(&circuit_id, "in_commit".to_string(), VariableType::Private)
+            .map_err(|e| StatisticalError::PrivacyError(e.to_string()))?;
 
         // Constraint: one * in_commit = commitment (binds private/public).
         zk.add_constraint(
@@ -3625,14 +3630,8 @@ impl StatisticalPrivacyEngine {
 
         let mut witness = HashMap::new();
         witness.insert("one".to_string(), FieldElement { value: one_val });
-        witness.insert(
-            "in_commit".to_string(),
-            FieldElement { value: commitment },
-        );
-        witness.insert(
-            "commitment".to_string(),
-            FieldElement { value: commitment },
-        );
+        witness.insert("in_commit".to_string(), FieldElement { value: commitment });
+        witness.insert("commitment".to_string(), FieldElement { value: commitment });
 
         let public_inputs = vec![FieldElement { value: commitment }];
 
@@ -3640,8 +3639,7 @@ impl StatisticalPrivacyEngine {
             .generate_proof(&circuit_id, witness, public_inputs)
             .map_err(|e| StatisticalError::PrivacyError(e.to_string()))?;
 
-        serde_json::to_vec(&proof)
-            .map_err(|e| StatisticalError::PrivacyError(e.to_string()))
+        serde_json::to_vec(&proof).map_err(|e| StatisticalError::PrivacyError(e.to_string()))
     }
 
     /// Verify a zero-knowledge computation proof produced by `prove_computation`.
@@ -3743,11 +3741,7 @@ impl DifferentialPrivacy {
     /// Spend `epsilon`/`delta` from the privacy budget, recording the
     /// consumption in the accountant. Returns `Err` when the budget is
     /// insufficient.
-    pub fn spend_budget(
-        &mut self,
-        epsilon: f64,
-        delta: f64,
-    ) -> Result<(), StatisticalError> {
+    pub fn spend_budget(&mut self, epsilon: f64, delta: f64) -> Result<(), StatisticalError> {
         let remaining = &self.privacy_accountant.remaining_budget;
         if remaining.remaining_epsilon < epsilon || remaining.remaining_delta < delta {
             return Err(StatisticalError::PrivacyError(
@@ -4785,7 +4779,9 @@ mod tests {
         storage.store_dataset_data(&dataset).unwrap();
 
         // Explicitly place the dataset into the "timeseries" zone.
-        storage.store_dataset_to_zone("zoned_ds", "timeseries").unwrap();
+        storage
+            .store_dataset_to_zone("zoned_ds", "timeseries")
+            .unwrap();
 
         // The metadata should now be registered with that zone.
         let zone = storage.zones.get("timeseries").unwrap();
@@ -4795,7 +4791,9 @@ mod tests {
         assert!(storage.store_dataset_to_zone("zoned_ds", "nope").is_err());
 
         // Storing an uncached dataset errors.
-        assert!(storage.store_dataset_to_zone("ghost", "timeseries").is_err());
+        assert!(storage
+            .store_dataset_to_zone("ghost", "timeseries")
+            .is_err());
     }
 
     // ---- Feature 2: Fiduciary crypto / ZK proof wiring ----
@@ -4805,7 +4803,9 @@ mod tests {
         let engine = StatisticalPrivacyEngine::new();
 
         let payload = b"mean=3.0; n=10";
-        let signature = engine.encrypt_result(payload).expect("encryption should succeed");
+        let signature = engine
+            .encrypt_result(payload)
+            .expect("encryption should succeed");
 
         // The signature is a real ML-DSA signature (non-empty).
         assert!(!signature.is_empty());
@@ -5094,7 +5094,10 @@ mod tests {
         let stats = engine.get_statistics();
         assert_eq!(stats.compression_count, 2);
         assert_eq!(stats.original_size, 1000 + 256);
-        assert_eq!(stats.compressed_size, (compressed.len() + compressed2.len()) as u64);
+        assert_eq!(
+            stats.compressed_size,
+            (compressed.len() + compressed2.len()) as u64
+        );
 
         // Summary is human-readable and non-empty.
         let summary = stats.summary();

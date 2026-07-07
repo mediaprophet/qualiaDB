@@ -48,13 +48,19 @@ impl core::fmt::Display for ArrangementError {
                 write!(f, "arrangement: triangle {index} out of range")
             }
             Self::VertexOutOfRange { triangle, vertex } => {
-                write!(f, "arrangement: vertex {vertex} out of range in triangle {triangle}")
+                write!(
+                    f,
+                    "arrangement: vertex {vertex} out of range in triangle {triangle}"
+                )
             }
             Self::DegenerateTriangle { triangle } => {
                 write!(f, "arrangement: degenerate triangle {triangle}")
             }
             Self::BoundaryEdge { from, to } => {
-                write!(f, "arrangement: boundary edge ({from}, {to}) in closed arrangement")
+                write!(
+                    f,
+                    "arrangement: boundary edge ({from}, {to}) in closed arrangement"
+                )
             }
             Self::ShellInvalid { reason } => {
                 write!(f, "arrangement: shell invalid — {reason}")
@@ -190,11 +196,7 @@ pub fn radial_sort_around_edge(
 
         // Project n onto plane perpendicular to d.
         let nd = n.x * d.x + n.y * d.y + n.z * d.z;
-        let n_proj = Point3::new(
-            n.x - nd * d.x,
-            n.y - nd * d.y,
-            n.z - nd * d.z,
-        );
+        let n_proj = Point3::new(n.x - nd * d.x, n.y - nd * d.y, n.z - nd * d.z);
 
         // Angle = atan2(n_proj · t, n_proj · r).
         let cos_angle = n_proj.x * r.x + n_proj.y * r.y + n_proj.z * r.z;
@@ -216,7 +218,10 @@ pub fn radial_sort_around_edge(
             .then(a.triangle.cmp(&b.triangle))
     });
 
-    facets.into_iter().map(|f| (f.triangle, f.local_edge)).collect()
+    facets
+        .into_iter()
+        .map(|f| (f.triangle, f.local_edge))
+        .collect()
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -285,7 +290,10 @@ pub fn build_arrangement_3d(
         }
         for &v in tri {
             if v as usize >= vertices.len() {
-                return Err(ArrangementError::VertexOutOfRange { triangle: i, vertex: v });
+                return Err(ArrangementError::VertexOutOfRange {
+                    triangle: i,
+                    vertex: v,
+                });
             }
         }
     }
@@ -476,9 +484,7 @@ pub fn validate_arrangement(
             let key = EdgeKey::new(v0, v1);
             if !arrangement.edge_order.contains_key(&key) {
                 return Err(ArrangementError::ShellInvalid {
-                    reason: format!(
-                        "triangle {i} edge ({v0}, {v1}) missing from arrangement"
-                    ),
+                    reason: format!("triangle {i} edge ({v0}, {v1}) missing from arrangement"),
                 });
             }
         }
@@ -503,7 +509,10 @@ pub fn validate_arrangement(
             return Err(ArrangementError::ShellInvalid {
                 reason: format!(
                     "edge ({}, {}) has {} facets in arrangement but {} in input",
-                    key.a, key.b, ordered.len(), expected.len()
+                    key.a,
+                    key.b,
+                    ordered.len(),
+                    expected.len()
                 ),
             });
         }
@@ -567,10 +576,10 @@ mod tests {
     fn radial_sort_four_facets_around_edge() {
         // Four triangles meeting at a common edge (non-manifold).
         let vertices = vec![
-            p(0.0, 0.0, 0.0), // 0
-            p(0.0, 1.0, 0.0), // 1 (edge is 0→1, along Y)
-            p(1.0, 0.5, 0.0), // 2 (+X direction)
-            p(0.0, 0.5, 1.0), // 3 (+Z direction)
+            p(0.0, 0.0, 0.0),  // 0
+            p(0.0, 1.0, 0.0),  // 1 (edge is 0→1, along Y)
+            p(1.0, 0.5, 0.0),  // 2 (+X direction)
+            p(0.0, 0.5, 1.0),  // 3 (+Z direction)
             p(-1.0, 0.5, 0.0), // 4 (-X direction)
             p(0.0, 0.5, -1.0), // 5 (-Z direction)
         ];
@@ -647,11 +656,11 @@ mod tests {
     fn build_arrangement_non_manifold_edge() {
         // Two tetrahedra sharing an edge (non-manifold).
         let vertices = vec![
-            p(0.0, 0.0, 0.0), // 0
-            p(0.0, 0.0, 1.0), // 1 (shared edge 0→1)
-            p(1.0, 0.0, 0.5), // 2 (tet A)
+            p(0.0, 0.0, 0.0),  // 0
+            p(0.0, 0.0, 1.0),  // 1 (shared edge 0→1)
+            p(1.0, 0.0, 0.5),  // 2 (tet A)
             p(-1.0, 0.0, 0.5), // 3 (tet A)
-            p(0.0, 1.0, 0.5), // 4 (tet B)
+            p(0.0, 1.0, 0.5),  // 4 (tet B)
             p(0.0, -1.0, 0.5), // 5 (tet B)
         ];
         let triangles = vec![
@@ -765,11 +774,7 @@ mod tests {
 
     #[test]
     fn radial_sort_single_facet() {
-        let vertices = vec![
-            p(0.0, 0.0, 0.0),
-            p(0.0, 0.0, 1.0),
-            p(1.0, 0.0, 0.5),
-        ];
+        let vertices = vec![p(0.0, 0.0, 0.0), p(0.0, 0.0, 1.0), p(1.0, 0.0, 0.5)];
         let triangles = vec![[0, 1, 2]];
         let edge = EdgeKey::new(0, 1);
         let incident = vec![(0u32, 0u32)];

@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::str::FromStr;
 
-use crate::wgsl_forge::ForgeError;
 use super::intrinsics::Intrinsic;
+use crate::wgsl_forge::ForgeError;
 
 /// Portable GPU view of one 64-byte P64 record.
 ///
@@ -157,18 +157,69 @@ pub struct BufferSpec {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Op {
-    Load { buffer: String, index: String, destination: String },
-    Store { buffer: String, index: String, value: String },
-    Mul { left: String, right: String, destination: String },
-    Add { left: String, right: String, destination: String },
-    Fma { a: String, b: String, c: String, destination: String },
+    Load {
+        buffer: String,
+        index: String,
+        destination: String,
+    },
+    Store {
+        buffer: String,
+        index: String,
+        value: String,
+    },
+    Mul {
+        left: String,
+        right: String,
+        destination: String,
+    },
+    Add {
+        left: String,
+        right: String,
+        destination: String,
+    },
+    Fma {
+        a: String,
+        b: String,
+        c: String,
+        destination: String,
+    },
     Intrinsic(Intrinsic),
-    StructLoad { buffer: String, field: String, destination: String },
-    Loop { induction_var: String, start: String, end: String, step: String, body: Vec<Op> },
-    DotProduct { left_buffer: String, left_base: String, right_buffer: String, right_base: String, len: String, destination: String },
-    Relu { operand: String, destination: String },
-    Gelu { operand: String, destination: String },
-    MatrixMultiply { left_buffer: String, right_buffer: String, destination: String, m: String, n: String, k: String },
+    StructLoad {
+        buffer: String,
+        field: String,
+        destination: String,
+    },
+    Loop {
+        induction_var: String,
+        start: String,
+        end: String,
+        step: String,
+        body: Vec<Op>,
+    },
+    DotProduct {
+        left_buffer: String,
+        left_base: String,
+        right_buffer: String,
+        right_base: String,
+        len: String,
+        destination: String,
+    },
+    Relu {
+        operand: String,
+        destination: String,
+    },
+    Gelu {
+        operand: String,
+        destination: String,
+    },
+    MatrixMultiply {
+        left_buffer: String,
+        right_buffer: String,
+        destination: String,
+        m: String,
+        n: String,
+        k: String,
+    },
     /// Workgroup execution + shared-memory barrier (WGSL `workgroupBarrier()`).
     Barrier,
 }
@@ -228,7 +279,7 @@ impl KernelSpec {
         if self.id == BuiltinKernel::AffineF32.name() {
             validate_affine_buffers(&self.buffers)?;
         }
-        
+
         if self.id == BuiltinKernel::FusedFfn.name() {
             validate_fused_ffn_buffers(&self.buffers)?;
         }
@@ -307,11 +358,36 @@ fn validate_affine_buffers(buffers: &[BufferSpec]) -> Result<(), ForgeError> {
 
 fn validate_fused_ffn_buffers(buffers: &[BufferSpec]) -> Result<(), ForgeError> {
     let expected = [
-        ("input", 0, BufferElement::Scalar(ScalarType::F32), BufferAccess::StorageRead),
-        ("w1", 1, BufferElement::Scalar(ScalarType::F32), BufferAccess::StorageRead),
-        ("w2", 2, BufferElement::Scalar(ScalarType::F32), BufferAccess::StorageRead),
-        ("output", 3, BufferElement::Scalar(ScalarType::F32), BufferAccess::StorageReadWrite),
-        ("params", 4, BufferElement::AffineParams, BufferAccess::Uniform),
+        (
+            "input",
+            0,
+            BufferElement::Scalar(ScalarType::F32),
+            BufferAccess::StorageRead,
+        ),
+        (
+            "w1",
+            1,
+            BufferElement::Scalar(ScalarType::F32),
+            BufferAccess::StorageRead,
+        ),
+        (
+            "w2",
+            2,
+            BufferElement::Scalar(ScalarType::F32),
+            BufferAccess::StorageRead,
+        ),
+        (
+            "output",
+            3,
+            BufferElement::Scalar(ScalarType::F32),
+            BufferAccess::StorageReadWrite,
+        ),
+        (
+            "params",
+            4,
+            BufferElement::AffineParams,
+            BufferAccess::Uniform,
+        ),
     ];
     for (name, binding, element, access) in expected {
         let Some(buffer) = buffers
@@ -333,9 +409,24 @@ fn validate_fused_ffn_buffers(buffers: &[BufferSpec]) -> Result<(), ForgeError> 
 
 fn validate_topk_buffers(buffers: &[BufferSpec]) -> Result<(), ForgeError> {
     let expected = [
-        ("input", 0, BufferElement::Scalar(ScalarType::F32), BufferAccess::StorageRead),
-        ("output", 1, BufferElement::Scalar(ScalarType::F32), BufferAccess::StorageReadWrite),
-        ("params", 2, BufferElement::AffineParams, BufferAccess::Uniform),
+        (
+            "input",
+            0,
+            BufferElement::Scalar(ScalarType::F32),
+            BufferAccess::StorageRead,
+        ),
+        (
+            "output",
+            1,
+            BufferElement::Scalar(ScalarType::F32),
+            BufferAccess::StorageReadWrite,
+        ),
+        (
+            "params",
+            2,
+            BufferElement::AffineParams,
+            BufferAccess::Uniform,
+        ),
     ];
     for (name, binding, element, access) in expected {
         let Some(buffer) = buffers
@@ -376,8 +467,17 @@ pub enum BuiltinKernel {
 }
 
 impl BuiltinKernel {
-    pub const ALL: [Self; 9] =
-        [Self::AffineF32, Self::FusedFfn, Self::P64Project, Self::TopK, Self::RayProbe, Self::TernaryGemv, Self::Gemm, Self::Gemv, Self::Fft];
+    pub const ALL: [Self; 9] = [
+        Self::AffineF32,
+        Self::FusedFfn,
+        Self::P64Project,
+        Self::TopK,
+        Self::RayProbe,
+        Self::TernaryGemv,
+        Self::Gemm,
+        Self::Gemv,
+        Self::Fft,
+    ];
 
     pub const fn name(self) -> &'static str {
         match self {
@@ -443,11 +543,32 @@ impl BuiltinKernel {
                     },
                 ],
                 ops: vec![
-                    Op::StructLoad { buffer: "params".to_string(), field: "scale".to_string(), destination: "scale".to_string() },
-                    Op::StructLoad { buffer: "params".to_string(), field: "bias".to_string(), destination: "bias".to_string() },
-                    Op::Load { buffer: "input".to_string(), index: "global_id".to_string(), destination: "in_val".to_string() },
-                    Op::Fma { a: "in_val".to_string(), b: "scale".to_string(), c: "bias".to_string(), destination: "out_val".to_string() },
-                    Op::Store { buffer: "output".to_string(), index: "global_id".to_string(), value: "out_val".to_string() },
+                    Op::StructLoad {
+                        buffer: "params".to_string(),
+                        field: "scale".to_string(),
+                        destination: "scale".to_string(),
+                    },
+                    Op::StructLoad {
+                        buffer: "params".to_string(),
+                        field: "bias".to_string(),
+                        destination: "bias".to_string(),
+                    },
+                    Op::Load {
+                        buffer: "input".to_string(),
+                        index: "global_id".to_string(),
+                        destination: "in_val".to_string(),
+                    },
+                    Op::Fma {
+                        a: "in_val".to_string(),
+                        b: "scale".to_string(),
+                        c: "bias".to_string(),
+                        destination: "out_val".to_string(),
+                    },
+                    Op::Store {
+                        buffer: "output".to_string(),
+                        index: "global_id".to_string(),
+                        value: "out_val".to_string(),
+                    },
                 ],
                 shared_memory: Vec::new(),
             },
@@ -457,17 +578,50 @@ impl BuiltinKernel {
                 entry_point: "fused_ffn".to_string(),
                 description: "out[o] = sum_h w2[o,h] * gelu(sum_i w1[h,i] * in[i])".to_string(),
                 buffers: vec![
-                    BufferSpec { group: 0, binding: 0, name: "input".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
-                    BufferSpec { group: 0, binding: 1, name: "w1".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
-                    BufferSpec { group: 0, binding: 2, name: "w2".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
-                    BufferSpec { group: 0, binding: 3, name: "output".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageReadWrite },
+                    BufferSpec {
+                        group: 0,
+                        binding: 0,
+                        name: "input".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageRead,
+                    },
+                    BufferSpec {
+                        group: 0,
+                        binding: 1,
+                        name: "w1".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageRead,
+                    },
+                    BufferSpec {
+                        group: 0,
+                        binding: 2,
+                        name: "w2".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageRead,
+                    },
+                    BufferSpec {
+                        group: 0,
+                        binding: 3,
+                        name: "output".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageReadWrite,
+                    },
                     // A generic 16-byte uniform block (input_size, hidden_size, output_size, _pad).
-                    BufferSpec { group: 0, binding: 4, name: "params".to_string(), element: BufferElement::AffineParams, access: BufferAccess::Uniform },
+                    BufferSpec {
+                        group: 0,
+                        binding: 4,
+                        name: "params".to_string(),
+                        element: BufferElement::AffineParams,
+                        access: BufferAccess::Uniform,
+                    },
                 ],
                 // The FFN body (nested matvec + GELU + accumulate over the hidden
                 // dimension) is target-specialised in the emitters; Gelu is the
                 // reusable IR primitive it relies on.
-                ops: vec![Op::Gelu { operand: "hv".to_string(), destination: "g".to_string() }],
+                ops: vec![Op::Gelu {
+                    operand: "hv".to_string(),
+                    destination: "g".to_string(),
+                }],
                 shared_memory: Vec::new(),
             },
             Self::P64Project => KernelSpec {
@@ -478,9 +632,27 @@ impl BuiltinKernel {
                 // weight vector: out[r] = sum_w weights[w] * f32(record[r].word[w]).
                 description: "out[r] = sum_w weights[w] * f32(p64[r].word[w])".to_string(),
                 buffers: vec![
-                    BufferSpec { group: 0, binding: 0, name: "input".to_string(), element: BufferElement::P64Words64, access: BufferAccess::StorageRead },
-                    BufferSpec { group: 0, binding: 1, name: "weights".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
-                    BufferSpec { group: 0, binding: 2, name: "output".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageReadWrite },
+                    BufferSpec {
+                        group: 0,
+                        binding: 0,
+                        name: "input".to_string(),
+                        element: BufferElement::P64Words64,
+                        access: BufferAccess::StorageRead,
+                    },
+                    BufferSpec {
+                        group: 0,
+                        binding: 1,
+                        name: "weights".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageRead,
+                    },
+                    BufferSpec {
+                        group: 0,
+                        binding: 2,
+                        name: "output".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageReadWrite,
+                    },
                 ],
                 // Body is target-specialised (it indexes the packed P64 lanes);
                 // the bound length is read via arrayLength(&output), no params buffer.
@@ -495,20 +667,54 @@ impl BuiltinKernel {
                 // emit the `k` largest values in descending order into `output`.
                 description: "out[block*k + i] = i-th largest of input[block]".to_string(),
                 buffers: vec![
-                    BufferSpec { group: 0, binding: 0, name: "input".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
-                    BufferSpec { group: 0, binding: 1, name: "output".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageReadWrite },
+                    BufferSpec {
+                        group: 0,
+                        binding: 0,
+                        name: "input".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageRead,
+                    },
+                    BufferSpec {
+                        group: 0,
+                        binding: 1,
+                        name: "output".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageReadWrite,
+                    },
                     // A generic 16-byte uniform block (length, k, block_size, _pad);
                     // reuses the AffineParams element purely as a 16-byte uniform.
-                    BufferSpec { group: 0, binding: 2, name: "params".to_string(), element: BufferElement::AffineParams, access: BufferAccess::Uniform },
+                    BufferSpec {
+                        group: 0,
+                        binding: 2,
+                        name: "params".to_string(),
+                        element: BufferElement::AffineParams,
+                        access: BufferAccess::Uniform,
+                    },
                 ],
                 // The reduction body is target-specialised in the WGSL emitter; the
                 // Barrier op and these shared arrays are the reusable IR primitives.
                 ops: vec![Op::Barrier],
                 shared_memory: vec![
-                    SharedMemorySpec { name: "s_val".to_string(), element: ScalarType::F32, length: SharedLen::WorkgroupSize },
-                    SharedMemorySpec { name: "s_idx".to_string(), element: ScalarType::U32, length: SharedLen::WorkgroupSize },
-                    SharedMemorySpec { name: "r_val".to_string(), element: ScalarType::F32, length: SharedLen::WorkgroupSize },
-                    SharedMemorySpec { name: "r_idx".to_string(), element: ScalarType::U32, length: SharedLen::WorkgroupSize },
+                    SharedMemorySpec {
+                        name: "s_val".to_string(),
+                        element: ScalarType::F32,
+                        length: SharedLen::WorkgroupSize,
+                    },
+                    SharedMemorySpec {
+                        name: "s_idx".to_string(),
+                        element: ScalarType::U32,
+                        length: SharedLen::WorkgroupSize,
+                    },
+                    SharedMemorySpec {
+                        name: "r_val".to_string(),
+                        element: ScalarType::F32,
+                        length: SharedLen::WorkgroupSize,
+                    },
+                    SharedMemorySpec {
+                        name: "r_idx".to_string(),
+                        element: ScalarType::U32,
+                        length: SharedLen::WorkgroupSize,
+                    },
                 ],
             },
             Self::RayProbe => KernelSpec {
@@ -520,9 +726,27 @@ impl BuiltinKernel {
                 // hit distance (or -1 on miss).
                 description: "hits[i] = ray_query(scene, rays[i]) committed t or -1".to_string(),
                 buffers: vec![
-                    BufferSpec { group: 0, binding: 0, name: "scene".to_string(), element: BufferElement::AccelerationStructure, access: BufferAccess::StorageRead },
-                    BufferSpec { group: 0, binding: 1, name: "rays".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
-                    BufferSpec { group: 0, binding: 2, name: "hits".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageReadWrite },
+                    BufferSpec {
+                        group: 0,
+                        binding: 0,
+                        name: "scene".to_string(),
+                        element: BufferElement::AccelerationStructure,
+                        access: BufferAccess::StorageRead,
+                    },
+                    BufferSpec {
+                        group: 0,
+                        binding: 1,
+                        name: "rays".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageRead,
+                    },
+                    BufferSpec {
+                        group: 0,
+                        binding: 2,
+                        name: "hits".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageReadWrite,
+                    },
                 ],
                 ops: vec![Op::Intrinsic(Intrinsic::RayQuery {
                     acceleration_structure: "scene".to_string(),
@@ -544,13 +768,43 @@ impl BuiltinKernel {
                 // 0->0.0, 1->+1.0, 2->-1.0, 3->0.0), ceil(K/16) words per row.
                 description: "out[o] = scale[o] * sum_i ternary(w[o,i]) * x[i]".to_string(),
                 buffers: vec![
-                    BufferSpec { group: 0, binding: 0, name: "x".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
-                    BufferSpec { group: 0, binding: 1, name: "w_packed".to_string(), element: BufferElement::Scalar(ScalarType::U32), access: BufferAccess::StorageRead },
-                    BufferSpec { group: 0, binding: 2, name: "scale".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
-                    BufferSpec { group: 0, binding: 3, name: "output".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageReadWrite },
+                    BufferSpec {
+                        group: 0,
+                        binding: 0,
+                        name: "x".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageRead,
+                    },
+                    BufferSpec {
+                        group: 0,
+                        binding: 1,
+                        name: "w_packed".to_string(),
+                        element: BufferElement::Scalar(ScalarType::U32),
+                        access: BufferAccess::StorageRead,
+                    },
+                    BufferSpec {
+                        group: 0,
+                        binding: 2,
+                        name: "scale".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageRead,
+                    },
+                    BufferSpec {
+                        group: 0,
+                        binding: 3,
+                        name: "output".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageReadWrite,
+                    },
                     // A generic 16-byte uniform block (m, k, k_words, _pad), reusing
                     // the AffineParams element purely as a 16-byte uniform.
-                    BufferSpec { group: 0, binding: 4, name: "params".to_string(), element: BufferElement::AffineParams, access: BufferAccess::Uniform },
+                    BufferSpec {
+                        group: 0,
+                        binding: 4,
+                        name: "params".to_string(),
+                        element: BufferElement::AffineParams,
+                        access: BufferAccess::Uniform,
+                    },
                 ],
                 // The unpack + dequant + GEMV body is target-specialised in the WGSL
                 // emitter (it indexes the 2-bit-packed ternary codes); dimensions come
@@ -566,12 +820,36 @@ impl BuiltinKernel {
                 // element o = i*N + j computes C[i][j] = sum_k A[i*K+k] * B[k*N+j].
                 description: "C[i][j] = sum_k A[i*K+k] * B[k*N+j]".to_string(),
                 buffers: vec![
-                    BufferSpec { group: 0, binding: 0, name: "a".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
-                    BufferSpec { group: 0, binding: 1, name: "b".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
-                    BufferSpec { group: 0, binding: 2, name: "c".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageReadWrite },
+                    BufferSpec {
+                        group: 0,
+                        binding: 0,
+                        name: "a".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageRead,
+                    },
+                    BufferSpec {
+                        group: 0,
+                        binding: 1,
+                        name: "b".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageRead,
+                    },
+                    BufferSpec {
+                        group: 0,
+                        binding: 2,
+                        name: "c".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageReadWrite,
+                    },
                     // A generic 16-byte uniform block (m, n, k, _pad), reusing the
                     // AffineParams element purely as a 16-byte uniform.
-                    BufferSpec { group: 0, binding: 3, name: "params".to_string(), element: BufferElement::AffineParams, access: BufferAccess::Uniform },
+                    BufferSpec {
+                        group: 0,
+                        binding: 3,
+                        name: "params".to_string(),
+                        element: BufferElement::AffineParams,
+                        access: BufferAccess::Uniform,
+                    },
                 ],
                 // The triple-index + K-loop accumulate body is target-specialised in
                 // the WGSL emitter; dimensions come from the uniform params block.
@@ -586,12 +864,36 @@ impl BuiltinKernel {
                 // output row i computes y[i] = sum_j A[i*N+j] * x[j].
                 description: "y[i] = sum_j a[i*N+j] * x[j]".to_string(),
                 buffers: vec![
-                    BufferSpec { group: 0, binding: 0, name: "a".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
-                    BufferSpec { group: 0, binding: 1, name: "x".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
-                    BufferSpec { group: 0, binding: 2, name: "y".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageReadWrite },
+                    BufferSpec {
+                        group: 0,
+                        binding: 0,
+                        name: "a".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageRead,
+                    },
+                    BufferSpec {
+                        group: 0,
+                        binding: 1,
+                        name: "x".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageRead,
+                    },
+                    BufferSpec {
+                        group: 0,
+                        binding: 2,
+                        name: "y".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageReadWrite,
+                    },
                     // A generic 16-byte uniform block (m, n, _pad0, _pad1), reusing the
                     // AffineParams element purely as a 16-byte uniform.
-                    BufferSpec { group: 0, binding: 3, name: "params".to_string(), element: BufferElement::AffineParams, access: BufferAccess::Uniform },
+                    BufferSpec {
+                        group: 0,
+                        binding: 3,
+                        name: "params".to_string(),
+                        element: BufferElement::AffineParams,
+                        access: BufferAccess::Uniform,
+                    },
                 ],
                 // The per-row N-loop accumulate body is target-specialised in the WGSL
                 // emitter; dimensions come from the uniform params block.
@@ -612,18 +914,44 @@ impl BuiltinKernel {
                 // primitives (mirroring top-k).
                 description: "out = forward DFT(in) via workgroup radix-2 DIT".to_string(),
                 buffers: vec![
-                    BufferSpec { group: 0, binding: 0, name: "input".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageRead },
-                    BufferSpec { group: 0, binding: 1, name: "output".to_string(), element: BufferElement::Scalar(ScalarType::F32), access: BufferAccess::StorageReadWrite },
+                    BufferSpec {
+                        group: 0,
+                        binding: 0,
+                        name: "input".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageRead,
+                    },
+                    BufferSpec {
+                        group: 0,
+                        binding: 1,
+                        name: "output".to_string(),
+                        element: BufferElement::Scalar(ScalarType::F32),
+                        access: BufferAccess::StorageReadWrite,
+                    },
                     // A generic 16-byte uniform block (n, log2n, _pad0, _pad1),
                     // reusing the AffineParams element purely as a 16-byte uniform.
-                    BufferSpec { group: 0, binding: 2, name: "params".to_string(), element: BufferElement::AffineParams, access: BufferAccess::Uniform },
+                    BufferSpec {
+                        group: 0,
+                        binding: 2,
+                        name: "params".to_string(),
+                        element: BufferElement::AffineParams,
+                        access: BufferAccess::Uniform,
+                    },
                 ],
                 // The butterfly control flow is specialised in the WGSL emitter; the
                 // Barrier op and these shared arrays are the reusable IR primitives.
                 ops: vec![Op::Barrier],
                 shared_memory: vec![
-                    SharedMemorySpec { name: "s_re".to_string(), element: ScalarType::F32, length: SharedLen::WorkgroupSize },
-                    SharedMemorySpec { name: "s_im".to_string(), element: ScalarType::F32, length: SharedLen::WorkgroupSize },
+                    SharedMemorySpec {
+                        name: "s_re".to_string(),
+                        element: ScalarType::F32,
+                        length: SharedLen::WorkgroupSize,
+                    },
+                    SharedMemorySpec {
+                        name: "s_im".to_string(),
+                        element: ScalarType::F32,
+                        length: SharedLen::WorkgroupSize,
+                    },
                 ],
             },
         }

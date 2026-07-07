@@ -139,7 +139,10 @@ impl HalfPlane {
             // validate constraints before constructing.
             Point2::new(0.0, 0.0)
         };
-        let hp = Self { point, direction: dir };
+        let hp = Self {
+            point,
+            direction: dir,
+        };
         // Verify: a*p + b*p + c should be <= 0 for a point on the left.
         // Pick a test point clearly on the left: point + left_normal.
         // left_normal of dir=(-b,a) is (-a,-b)? Let's just check the implicit
@@ -158,7 +161,10 @@ impl HalfPlane {
     /// True iff `p` lies in (or on the boundary of) this half-plane.
     #[inline]
     pub fn contains(&self, p: Point2) -> bool {
-        let head = Point2::new(self.point.x + self.direction.x, self.point.y + self.direction.y);
+        let head = Point2::new(
+            self.point.x + self.direction.x,
+            self.point.y + self.direction.y,
+        );
         !matches!(orientation_2(self.point, head, p), Orientation::Clockwise)
     }
 
@@ -189,12 +195,7 @@ impl HalfPlane {
 /// Solves `p1 + s*d1 = p2 + t*d2` for `s`:
 /// `s = cross(p2 - p1, d2) / cross(d1, d2)`.
 #[inline]
-fn line_line_intersect(
-    p1: Point2,
-    d1: Point2,
-    p2: Point2,
-    d2: Point2,
-) -> Option<Point2> {
+fn line_line_intersect(p1: Point2, d1: Point2, p2: Point2, d2: Point2) -> Option<Point2> {
     let denom = d1.x * d2.y - d1.y * d2.x; // cross(d1, d2)
     if denom == 0.0 {
         return None;
@@ -211,11 +212,7 @@ fn line_line_intersect(
 /// Solves `p + t*d = hp.point + s*hp.direction` for `t`:
 /// `t = cross(hp.point - p, hp.direction) / cross(d, hp.direction)`.
 #[inline]
-fn line_half_plane_intersect_t(
-    p: Point2,
-    d: Point2,
-    hp: &HalfPlane,
-) -> Option<f64> {
+fn line_half_plane_intersect_t(p: Point2, d: Point2, hp: &HalfPlane) -> Option<f64> {
     let denom = d.x * hp.direction.y - d.y * hp.direction.x; // cross(d, hp.dir)
     if denom == 0.0 {
         return None;
@@ -278,9 +275,7 @@ pub fn half_plane_intersection(half_planes: &[HalfPlane]) -> HalfPlaneIntersecti
     hps.extend_from_slice(&box_hps);
 
     // Sort by boundary angle.
-    hps.sort_by(|a, b| {
-        a.angle().total_cmp(&b.angle())
-    });
+    hps.sort_by(|a, b| a.angle().total_cmp(&b.angle()));
 
     // Reduce parallel half-planes (same angle) to the innermost one. Two
     // half-planes with the same direction keep the one whose boundary is
@@ -295,7 +290,10 @@ pub fn half_plane_intersection(half_planes: &[HalfPlane]) -> HalfPlaneIntersecti
                 // Same direction. Keep the innermost: the one whose boundary
                 // is on the feasible (left) side of the other. If `hp` is on
                 // the left of `last`'s boundary, `hp` is innermost (tighter).
-                let head = Point2::new(last.point.x + last.direction.x, last.point.y + last.direction.y);
+                let head = Point2::new(
+                    last.point.x + last.direction.x,
+                    last.point.y + last.direction.y,
+                );
                 if orientation_2(last.point, head, hp.point) == Orientation::CounterClockwise {
                     *last = hp;
                 }
@@ -399,9 +397,9 @@ pub fn half_plane_intersection(half_planes: &[HalfPlane]) -> HalfPlaneIntersecti
 
     // Detect unboundedness: does any vertex lie on (or very near) the sentinel
     // box boundary?
-    let touches_box = poly.iter().any(|p| {
-        (p.x.abs() >= BIG * 0.999) || (p.y.abs() >= BIG * 0.999)
-    });
+    let touches_box = poly
+        .iter()
+        .any(|p| (p.x.abs() >= BIG * 0.999) || (p.y.abs() >= BIG * 0.999));
     if touches_box {
         // Strip box-edge vertices: keep only vertices strictly inside the box.
         let inner: Vec<Point2> = poly
@@ -445,21 +443,13 @@ fn build_polygon(deque: &[HalfPlane]) -> Vec<Point2> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum LpResult2d {
     /// A feasible optimum exists.
-    Optimal {
-        point: Point2,
-        value: f64,
-    },
+    Optimal { point: Point2, value: f64 },
     /// The constraint set is infeasible. The two carried indices identify a
     /// conflicting pair (whose 1-D intervals on a boundary line are empty).
-    Infeasible {
-        witness_a: usize,
-        witness_b: usize,
-    },
+    Infeasible { witness_a: usize, witness_b: usize },
     /// The objective is unbounded below over the feasible region. `ray` is a
     /// feasible direction along which `objective · x` decreases without bound.
-    Unbounded {
-        ray: Point2,
-    },
+    Unbounded { ray: Point2 },
 }
 
 /// Solve a 2-D LP: minimize `objective · (x, y)` subject to `constraints`
@@ -467,11 +457,7 @@ pub enum LpResult2d {
 ///
 /// `seed` controls the randomized constraint permutation; the same seed + input
 /// always yields the same result (bit-identical across platforms).
-pub fn linear_program_2d(
-    objective: Point2,
-    constraints: &[HalfPlane],
-    seed: u64,
-) -> LpResult2d {
+pub fn linear_program_2d(objective: Point2, constraints: &[HalfPlane], seed: u64) -> LpResult2d {
     // Filter degenerate constraints.
     let valid: Vec<HalfPlane> = constraints
         .iter()
@@ -528,7 +514,11 @@ pub fn linear_program_2d(
     let mut added: Vec<usize> = Vec::with_capacity(valid.len());
     added.push(first_idx);
 
-    if let Lp1d::Infeasible { witness_a, witness_b } = current {
+    if let Lp1d::Infeasible {
+        witness_a,
+        witness_b,
+    } = current
+    {
         return LpResult2d::Infeasible {
             witness_a,
             witness_b,
@@ -557,7 +547,11 @@ pub fn linear_program_2d(
         current = new_current;
         basis = new_basis;
         added.push(idx);
-        if let Lp1d::Infeasible { witness_a, witness_b } = current {
+        if let Lp1d::Infeasible {
+            witness_a,
+            witness_b,
+        } = current
+        {
             return LpResult2d::Infeasible {
                 witness_a,
                 witness_b,
@@ -568,7 +562,10 @@ pub fn linear_program_2d(
     match current {
         Lp1d::Optimal { point, value } => LpResult2d::Optimal { point, value },
         Lp1d::Unbounded { ray } => LpResult2d::Unbounded { ray },
-        Lp1d::Infeasible { witness_a, witness_b } => LpResult2d::Infeasible {
+        Lp1d::Infeasible {
+            witness_a,
+            witness_b,
+        } => LpResult2d::Infeasible {
             witness_a,
             witness_b,
         },
@@ -773,7 +770,10 @@ fn brute_force_half_plane_intersection(hps: &[HalfPlane]) -> HalfPlaneIntersecti
     for i in 0..hps.len() {
         for j in (i + 1)..hps.len() {
             if let Some(v) = line_line_intersect(
-                hps[i].point, hps[i].direction, hps[j].point, hps[j].direction,
+                hps[i].point,
+                hps[i].direction,
+                hps[j].point,
+                hps[j].direction,
             ) {
                 if hps.iter().all(|h| h.contains(v)) {
                     verts.push(v);
@@ -836,7 +836,10 @@ fn brute_force_lp(objective: Point2, hps: &[HalfPlane]) -> LpResult2d {
     for i in 0..hps.len() {
         for j in (i + 1)..hps.len() {
             if let Some(v) = line_line_intersect(
-                hps[i].point, hps[i].direction, hps[j].point, hps[j].direction,
+                hps[i].point,
+                hps[i].direction,
+                hps[j].point,
+                hps[j].direction,
             ) {
                 if hps.iter().all(|h| h.contains(v)) {
                     let val = objective.x * v.x + objective.y * v.y;
@@ -863,8 +866,8 @@ fn brute_force_lp(objective: Point2, hps: &[HalfPlane]) -> LpResult2d {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::hull::is_ccw_strongly_convex_2;
+    use super::*;
 
     fn hp(a: (f64, f64), b: (f64, f64)) -> HalfPlane {
         HalfPlane::from_directed_line(Point2::new(a.0, a.1), Point2::new(b.0, b.1))
@@ -952,10 +955,10 @@ mod tests {
     fn hpi_unit_square_bounded() {
         // y >= 0, x <= 1, y <= 1, x >= 0.
         let hps = [
-            hp((-1.0, 0.0), (1.0, 0.0)),  // y >= 0 (left = above)
-            hp((1.0, -1.0), (1.0, 1.0)),  // x <= 1
-            hp((1.0, 1.0), (-1.0, 1.0)),  // y <= 1
-            hp((0.0, 1.0), (0.0, -1.0)),  // x >= 0
+            hp((-1.0, 0.0), (1.0, 0.0)), // y >= 0 (left = above)
+            hp((1.0, -1.0), (1.0, 1.0)), // x <= 1
+            hp((1.0, 1.0), (-1.0, 1.0)), // y <= 1
+            hp((0.0, 1.0), (0.0, -1.0)), // x >= 0
         ];
         let r = half_plane_intersection(&hps);
         match r {
@@ -973,9 +976,9 @@ mod tests {
     fn hpi_triangle_bounded() {
         // Three half-planes forming a triangle: x>=0, y>=0, x+y<=2.
         let hps = [
-            hp((-1.0, 0.0), (1.0, 0.0)),  // y >= 0
-            hp((0.0, 1.0), (0.0, -1.0)),  // x >= 0
-            hp((2.0, 0.0), (0.0, 2.0)),   // x + y <= 2 (left of (2,0)->(0,2))
+            hp((-1.0, 0.0), (1.0, 0.0)), // y >= 0
+            hp((0.0, 1.0), (0.0, -1.0)), // x >= 0
+            hp((2.0, 0.0), (0.0, 2.0)),  // x + y <= 2 (left of (2,0)->(0,2))
         ];
         let r = half_plane_intersection(&hps);
         match r {
@@ -993,7 +996,7 @@ mod tests {
     fn hpi_empty_when_contradictory() {
         // y >= 0 and y <= -1 ⇒ empty.
         let hps = [
-            hp((-1.0, 0.0), (1.0, 0.0)),  // y >= 0
+            hp((-1.0, 0.0), (1.0, 0.0)),   // y >= 0
             hp((1.0, -1.0), (-1.0, -1.0)), // y <= -1
         ];
         let r = half_plane_intersection(&hps);
@@ -1004,32 +1007,40 @@ mod tests {
     fn hpi_unbounded_wedge() {
         // x >= 0 and y >= 0 ⇒ unbounded quadrant.
         let hps = [
-            hp((0.0, 1.0), (0.0, -1.0)),  // x >= 0
-            hp((-1.0, 0.0), (1.0, 0.0)),  // y >= 0
+            hp((0.0, 1.0), (0.0, -1.0)), // x >= 0
+            hp((-1.0, 0.0), (1.0, 0.0)), // y >= 0
         ];
         let r = half_plane_intersection(&hps);
-        assert!(matches!(r, HalfPlaneIntersection::Unbounded(_)), "got {:?}", r);
+        assert!(
+            matches!(r, HalfPlaneIntersection::Unbounded(_)),
+            "got {:?}",
+            r
+        );
     }
 
     #[test]
     fn hpi_strip_is_unbounded() {
         // 0 <= y <= 1 ⇒ unbounded horizontal strip.
         let hps = [
-            hp((-1.0, 0.0), (1.0, 0.0)),  // y >= 0
-            hp((1.0, 1.0), (-1.0, 1.0)),  // y <= 1
+            hp((-1.0, 0.0), (1.0, 0.0)), // y >= 0
+            hp((1.0, 1.0), (-1.0, 1.0)), // y <= 1
         ];
         let r = half_plane_intersection(&hps);
-        assert!(matches!(r, HalfPlaneIntersection::Unbounded(_)), "got {:?}", r);
+        assert!(
+            matches!(r, HalfPlaneIntersection::Unbounded(_)),
+            "got {:?}",
+            r
+        );
     }
 
     #[test]
     fn hpi_redundant_half_planes_ignored() {
         // Unit square + redundant y >= -5 (weaker than y >= 0).
         let hps = [
-            hp((-1.0, 0.0), (1.0, 0.0)),  // y >= 0
-            hp((1.0, -1.0), (1.0, 1.0)),  // x <= 1
-            hp((1.0, 1.0), (-1.0, 1.0)),  // y <= 1
-            hp((0.0, 1.0), (0.0, -1.0)),  // x >= 0
+            hp((-1.0, 0.0), (1.0, 0.0)),   // y >= 0
+            hp((1.0, -1.0), (1.0, 1.0)),   // x <= 1
+            hp((1.0, 1.0), (-1.0, 1.0)),   // y <= 1
+            hp((0.0, 1.0), (0.0, -1.0)),   // x >= 0
             hp((-1.0, -5.0), (1.0, -5.0)), // y >= -5 (redundant)
         ];
         let r = half_plane_intersection(&hps);
@@ -1046,11 +1057,11 @@ mod tests {
     fn hpi_matches_brute_force_on_random_grid() {
         // A bounded pentagon.
         let hps = [
-            hp((-2.0, 0.0), (2.0, 0.0)),   // y >= 0
-            hp((2.0, -2.0), (2.0, 2.0)),   // x <= 2
-            hp((2.0, 2.0), (-2.0, 2.0)),   // y <= 2
-            hp((0.0, 2.0), (0.0, -1.0)),   // x >= 0
-            hp((2.0, 0.0), (0.0, 2.0)),    // x + y <= 2
+            hp((-2.0, 0.0), (2.0, 0.0)), // y >= 0
+            hp((2.0, -2.0), (2.0, 2.0)), // x <= 2
+            hp((2.0, 2.0), (-2.0, 2.0)), // y <= 2
+            hp((0.0, 2.0), (0.0, -1.0)), // x >= 0
+            hp((2.0, 0.0), (0.0, 2.0)),  // x + y <= 2
         ];
         let r = half_plane_intersection(&hps);
         let brute = brute_force_half_plane_intersection(&hps);
@@ -1101,16 +1112,18 @@ mod tests {
         // Clockwise ⇒ NOT in left half-plane. So left of (2,0)->(0,2) is the
         // origin side (x+y<=2). We need the OPPOSITE orientation: (0,2)->(2,0).
         let hps = [
-            hp((0.0, 1.0), (0.0, -1.0)),  // x >= 0
-            hp((-1.0, 0.0), (1.0, 0.0)),  // y >= 0
-            hp((0.0, 2.0), (2.0, 0.0)),   // x + y >= 2 (left of (0,2)->(2,0))
+            hp((0.0, 1.0), (0.0, -1.0)), // x >= 0
+            hp((-1.0, 0.0), (1.0, 0.0)), // y >= 0
+            hp((0.0, 2.0), (2.0, 0.0)),  // x + y >= 2 (left of (0,2)->(2,0))
         ];
         let r = linear_program_2d(Point2::new(1.0, 1.0), &hps, 7);
         match r {
             LpResult2d::Optimal { point, value } => {
                 assert!(
                     approx_eq(value, 2.0, 1e-6),
-                    "value = {} (point {:?})", value, point
+                    "value = {} (point {:?})",
+                    value,
+                    point
                 );
                 // Point must be feasible.
                 assert!(hps.iter().all(|h| h.contains(point)));
@@ -1123,12 +1136,15 @@ mod tests {
     fn lp_infeasible_returns_witnesses() {
         // x >= 1 and x <= 0 ⇒ infeasible.
         let hps = [
-            hp((1.0, 1.0), (1.0, -1.0)),  // x >= 1
-            hp((0.0, -1.0), (0.0, 1.0)),  // x <= 0
+            hp((1.0, 1.0), (1.0, -1.0)), // x >= 1
+            hp((0.0, -1.0), (0.0, 1.0)), // x <= 0
         ];
         let r = linear_program_2d(Point2::new(1.0, 0.0), &hps, 3);
         match r {
-            LpResult2d::Infeasible { witness_a, witness_b } => {
+            LpResult2d::Infeasible {
+                witness_a,
+                witness_b,
+            } => {
                 assert_ne!(witness_a, witness_b);
                 assert!(witness_a < 2 && witness_b < 2);
             }
@@ -1159,9 +1175,9 @@ mod tests {
         // any point on x+y=4, value -4. Pick (4,0) or (0,4) or (2,2). The
         // algorithm picks a specific vertex deterministically for a given seed.
         let hps = [
-            hp((0.0, 1.0), (0.0, -1.0)),  // x >= 0
-            hp((-1.0, 0.0), (1.0, 0.0)),  // y >= 0
-            hp((4.0, 0.0), (0.0, 4.0)),   // x + y <= 4 (left of (4,0)->(0,4))
+            hp((0.0, 1.0), (0.0, -1.0)), // x >= 0
+            hp((-1.0, 0.0), (1.0, 0.0)), // y >= 0
+            hp((4.0, 0.0), (0.0, 4.0)),  // x + y <= 4 (left of (4,0)->(0,4))
         ];
         let r = linear_program_2d(Point2::new(-1.0, -1.0), &hps, 99);
         match r {
@@ -1177,9 +1193,9 @@ mod tests {
     #[test]
     fn lp_seed_determinism() {
         let hps = [
-            hp((0.0, 1.0), (0.0, -1.0)),  // x >= 0
-            hp((-1.0, 0.0), (1.0, 0.0)),  // y >= 0
-            hp((0.0, 2.0), (2.0, 0.0)),   // x + y >= 2
+            hp((0.0, 1.0), (0.0, -1.0)), // x >= 0
+            hp((-1.0, 0.0), (1.0, 0.0)), // y >= 0
+            hp((0.0, 2.0), (2.0, 0.0)),  // x + y >= 2
         ];
         let r1 = linear_program_2d(Point2::new(1.0, 1.0), &hps, 12345);
         let r2 = linear_program_2d(Point2::new(1.0, 1.0), &hps, 12345);
@@ -1189,7 +1205,12 @@ mod tests {
         let r3 = linear_program_2d(Point2::new(1.0, 1.0), &hps, 99999);
         match (&r1, &r3) {
             (LpResult2d::Optimal { value: v1, .. }, LpResult2d::Optimal { value: v3, .. }) => {
-                assert!(approx_eq(*v1, *v3, 1e-9), "value differs across seeds: {} vs {}", v1, v3);
+                assert!(
+                    approx_eq(*v1, *v3, 1e-9),
+                    "value differs across seeds: {} vs {}",
+                    v1,
+                    v3
+                );
             }
             other => panic!("expected both Optimal, got {:?}", other),
         }
@@ -1199,10 +1220,10 @@ mod tests {
     fn lp_matches_brute_force_on_grid() {
         // minimise x + 2y s.t. x>=0, y>=0, x+y<=3, x<=2.
         let hps = [
-            hp((0.0, 1.0), (0.0, -1.0)),  // x >= 0
-            hp((-1.0, 0.0), (1.0, 0.0)),  // y >= 0
-            hp((3.0, 0.0), (0.0, 3.0)),   // x + y <= 3
-            hp((2.0, -1.0), (2.0, 1.0)),  // x <= 2
+            hp((0.0, 1.0), (0.0, -1.0)), // x >= 0
+            hp((-1.0, 0.0), (1.0, 0.0)), // y >= 0
+            hp((3.0, 0.0), (0.0, 3.0)),  // x + y <= 3
+            hp((2.0, -1.0), (2.0, 1.0)), // x <= 2
         ];
         let obj = Point2::new(1.0, 2.0);
         let r = linear_program_2d(obj, &hps, 2024);
@@ -1225,7 +1246,7 @@ mod tests {
             direction: Point2::new(0.0, 0.0),
         };
         let hps = [
-            hp((0.0, 1.0), (0.0, -1.0)),  // x >= 0
+            hp((0.0, 1.0), (0.0, -1.0)), // x >= 0
             bad,
         ];
         let r = linear_program_2d(Point2::new(-1.0, 0.0), &hps, 5);

@@ -45,7 +45,11 @@ impl core::fmt::Display for NaryCsgError {
         match self {
             Self::NoInputs => write!(f, "nary_csg: no input polygons"),
             Self::DegeneratePolygon { index, got } => {
-                write!(f, "nary_csg: polygon {} has {} vertices (need ≥ 3)", index, got)
+                write!(
+                    f,
+                    "nary_csg: polygon {} has {} vertices (need ≥ 3)",
+                    index, got
+                )
             }
         }
     }
@@ -211,9 +215,13 @@ fn union_area(polygons: &[Vec<Point2>]) -> f64 {
                 for k in (j + 1)..n {
                     for l in (k + 1)..n {
                         let inter12 = sutherland_hodgman(&polygons[i], &polygons[j]);
-                        if inter12.is_empty() { continue; }
+                        if inter12.is_empty() {
+                            continue;
+                        }
                         let inter123 = sutherland_hodgman(&inter12, &polygons[k]);
-                        if inter123.is_empty() { continue; }
+                        if inter123.is_empty() {
+                            continue;
+                        }
                         let inter1234 = sutherland_hodgman(&inter123, &polygons[l]);
                         if !inter1234.is_empty() {
                             total -= polygon_signed_area(&inter1234).abs();
@@ -288,7 +296,9 @@ fn nary_difference(polygons: &[Vec<Point2>]) -> Result<NaryCsgResult, NaryCsgErr
         for i in 0..rest.len() {
             for j in (i + 1)..rest.len() {
                 let inter1 = sutherland_hodgman(&polygons[0], &rest[i]);
-                if inter1.len() < 3 { continue; }
+                if inter1.len() < 3 {
+                    continue;
+                }
                 let inter2 = sutherland_hodgman(&inter1, &rest[j]);
                 if inter2.len() >= 3 {
                     area_intersection -= polygon_signed_area(&inter2).abs();
@@ -303,9 +313,13 @@ fn nary_difference(polygons: &[Vec<Point2>]) -> Result<NaryCsgResult, NaryCsgErr
             for j in (i + 1)..rest.len() {
                 for k in (j + 1)..rest.len() {
                     let inter1 = sutherland_hodgman(&polygons[0], &rest[i]);
-                    if inter1.len() < 3 { continue; }
+                    if inter1.len() < 3 {
+                        continue;
+                    }
                     let inter2 = sutherland_hodgman(&inter1, &rest[j]);
-                    if inter2.len() < 3 { continue; }
+                    if inter2.len() < 3 {
+                        continue;
+                    }
                     let inter3 = sutherland_hodgman(&inter2, &rest[k]);
                     if inter3.len() >= 3 {
                         area_intersection += polygon_signed_area(&inter3).abs();
@@ -402,7 +416,9 @@ fn nary_symmetric_difference(polygons: &[Vec<Point2>]) -> Result<NaryCsgResult, 
             for j in 0..others.len() {
                 for k in (j + 1)..others.len() {
                     let inter1 = sutherland_hodgman(&polygons[i], others[j]);
-                    if inter1.len() < 3 { continue; }
+                    if inter1.len() < 3 {
+                        continue;
+                    }
                     let inter2 = sutherland_hodgman(&inter1, others[k]);
                     if inter2.len() >= 3 {
                         area_inter -= polygon_signed_area(&inter2).abs();
@@ -442,7 +458,9 @@ fn nary_symmetric_difference(polygons: &[Vec<Point2>]) -> Result<NaryCsgResult, 
         if pieces.is_empty() && piece_area > 0.01 {
             let mut holes: Vec<Vec<Point2>> = Vec::new();
             for j in 0..n {
-                if j == i { continue; }
+                if j == i {
+                    continue;
+                }
                 let inter = sutherland_hodgman(&polygons[i], &polygons[j]);
                 if inter.len() >= 3 {
                     let inter_area = polygon_signed_area(&inter).abs();
@@ -544,9 +562,9 @@ fn insert_points_and_retriangulate(mesh: &Mesh2D, new_points: &[Point2]) -> Mesh
 
     for &p in new_points {
         // Check if the point is already a vertex.
-        let existing = vertices.iter().position(|v| {
-            (v.x - p.x).abs() < 1e-10 && (v.y - p.y).abs() < 1e-10
-        });
+        let existing = vertices
+            .iter()
+            .position(|v| (v.x - p.x).abs() < 1e-10 && (v.y - p.y).abs() < 1e-10);
         if existing.is_some() {
             continue;
         }
@@ -575,7 +593,10 @@ fn insert_points_and_retriangulate(mesh: &Mesh2D, new_points: &[Point2]) -> Mesh
         }
     }
 
-    Mesh2D { vertices, triangles }
+    Mesh2D {
+        vertices,
+        triangles,
+    }
 }
 
 /// Compute the intersection point of two segments, if they properly cross.
@@ -703,9 +724,7 @@ fn is_inside(p: Point2, a: Point2, b: Point2) -> bool {
 }
 
 /// Compute the intersection point of two line segments.
-fn line_segment_intersection(
-    p1: Point2, p2: Point2, p3: Point2, p4: Point2,
-) -> Option<Point2> {
+fn line_segment_intersection(p1: Point2, p2: Point2, p3: Point2, p4: Point2) -> Option<Point2> {
     let d1x = p2.x - p1.x;
     let d1y = p2.y - p1.y;
     let d2x = p4.x - p3.x;
@@ -917,7 +936,11 @@ mod tests {
         let result = nary_csg(&[a, b], NaryOp::Union).unwrap();
         // A = [-1,-1]×[1,1] area 4, B = [0,-1]×[2,1] area 4.
         // Overlap = [0,-1]×[1,1] area 2. Union = 6.
-        assert!((result.area - 6.0).abs() < 0.1, "union area = {}", result.area);
+        assert!(
+            (result.area - 6.0).abs() < 0.1,
+            "union area = {}",
+            result.area
+        );
     }
 
     #[test]
@@ -926,7 +949,11 @@ mod tests {
         let b = square(10.0, 0.0, 1.0);
         let c = square(20.0, 0.0, 1.0);
         let result = nary_csg(&[a, b, c], NaryOp::Union).unwrap();
-        assert!((result.area - 3.0).abs() < 0.1, "union area = {}", result.area);
+        assert!(
+            (result.area - 3.0).abs() < 0.1,
+            "union area = {}",
+            result.area
+        );
     }
 
     #[test]
@@ -936,14 +963,22 @@ mod tests {
         let c = square(0.5, 0.0, 2.0);
         let result = nary_csg(&[a, b, c], NaryOp::Union).unwrap();
         // All three overlap. Union should be roughly 3 × 4 - overlaps.
-        assert!(result.area > 5.0 && result.area < 8.0, "union area = {}", result.area);
+        assert!(
+            result.area > 5.0 && result.area < 8.0,
+            "union area = {}",
+            result.area
+        );
     }
 
     #[test]
     fn nary_union_single() {
         let a = square(0.0, 0.0, 2.0);
         let result = nary_csg(&[a], NaryOp::Union).unwrap();
-        assert!((result.area - 4.0).abs() < 0.01, "single union area = {}", result.area);
+        assert!(
+            (result.area - 4.0).abs() < 0.01,
+            "single union area = {}",
+            result.area
+        );
     }
 
     // ── N-ary intersection ──────────────────────────────────────────────
@@ -954,7 +989,11 @@ mod tests {
         let b = square(1.0, 0.0, 2.0);
         let result = nary_csg(&[a, b], NaryOp::Intersection).unwrap();
         // Overlap = [0,-1]×[1,1] area 2.
-        assert!((result.area - 2.0).abs() < 0.1, "intersection area = {}", result.area);
+        assert!(
+            (result.area - 2.0).abs() < 0.1,
+            "intersection area = {}",
+            result.area
+        );
     }
 
     #[test]
@@ -962,7 +1001,11 @@ mod tests {
         let a = square(0.0, 0.0, 1.0);
         let b = square(10.0, 0.0, 1.0);
         let result = nary_csg(&[a, b], NaryOp::Intersection).unwrap();
-        assert!(result.area < 0.01, "disjoint intersection area = {}", result.area);
+        assert!(
+            result.area < 0.01,
+            "disjoint intersection area = {}",
+            result.area
+        );
     }
 
     #[test]
@@ -972,7 +1015,11 @@ mod tests {
         let c = square(0.0, 0.0, 2.0);
         let result = nary_csg(&[a, b, c], NaryOp::Intersection).unwrap();
         // Intersection of nested squares = smallest.
-        assert!((result.area - 4.0).abs() < 0.1, "nested intersection area = {}", result.area);
+        assert!(
+            (result.area - 4.0).abs() < 0.1,
+            "nested intersection area = {}",
+            result.area
+        );
     }
 
     #[test]
@@ -990,7 +1037,11 @@ mod tests {
         let b = square(0.0, 0.0, 2.0); // area 4
         let result = nary_csg(&[a, b], NaryOp::Difference).unwrap();
         // B is inside A, so difference = 16 - 4 = 12.
-        assert!((result.area - 12.0).abs() < 0.5, "difference area = {}", result.area);
+        assert!(
+            (result.area - 12.0).abs() < 0.5,
+            "difference area = {}",
+            result.area
+        );
     }
 
     #[test]
@@ -998,7 +1049,11 @@ mod tests {
         let a = square(0.0, 0.0, 2.0);
         let b = square(10.0, 0.0, 2.0);
         let result = nary_csg(&[a, b], NaryOp::Difference).unwrap();
-        assert!((result.area - 4.0).abs() < 0.1, "disjoint difference area = {}", result.area);
+        assert!(
+            (result.area - 4.0).abs() < 0.1,
+            "disjoint difference area = {}",
+            result.area
+        );
     }
 
     #[test]
@@ -1010,7 +1065,11 @@ mod tests {
         // B = [-1,-1]×[1,1] area 4, C = [1,-1]×[3,1] area 4.
         // B∩C = [1,-1]×[1,1] area 2. B∪C = 4+4-2 = 6.
         // Difference = 36 - 6 = 30.
-        assert!((result.area - 30.0).abs() < 3.0, "three-way difference area = {}", result.area);
+        assert!(
+            (result.area - 30.0).abs() < 3.0,
+            "three-way difference area = {}",
+            result.area
+        );
     }
 
     // ── N-ary symmetric difference ──────────────────────────────────────
@@ -1021,7 +1080,11 @@ mod tests {
         let b = square(1.0, 0.0, 2.0);
         let result = nary_csg(&[a, b], NaryOp::SymmetricDifference).unwrap();
         // XOR = union - intersection = 6 - 2 = 4.
-        assert!((result.area - 4.0).abs() < 0.3, "xor area = {}", result.area);
+        assert!(
+            (result.area - 4.0).abs() < 0.3,
+            "xor area = {}",
+            result.area
+        );
     }
 
     #[test]
@@ -1030,14 +1093,21 @@ mod tests {
         let b = square(10.0, 0.0, 2.0);
         let result = nary_csg(&[a, b], NaryOp::SymmetricDifference).unwrap();
         // Disjoint XOR = union = 8.
-        assert!((result.area - 8.0).abs() < 0.1, "disjoint xor area = {}", result.area);
+        assert!(
+            (result.area - 8.0).abs() < 0.1,
+            "disjoint xor area = {}",
+            result.area
+        );
     }
 
     // ── Error cases ─────────────────────────────────────────────────────
 
     #[test]
     fn nary_empty_errors() {
-        assert!(matches!(nary_csg(&[], NaryOp::Union), Err(NaryCsgError::NoInputs)));
+        assert!(matches!(
+            nary_csg(&[], NaryOp::Union),
+            Err(NaryCsgError::NoInputs)
+        ));
     }
 
     #[test]

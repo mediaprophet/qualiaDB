@@ -138,8 +138,14 @@ mod tests {
 
     #[test]
     fn affine_is_memory_bound_ffn_is_compute_bound() {
-        assert_eq!(roofline_for(BuiltinKernel::AffineF32, 1_000_000).bound, RooflineBound::Memory);
-        assert_eq!(roofline_for(BuiltinKernel::FusedFfn, 4096).bound, RooflineBound::Compute);
+        assert_eq!(
+            roofline_for(BuiltinKernel::AffineF32, 1_000_000).bound,
+            RooflineBound::Memory
+        );
+        assert_eq!(
+            roofline_for(BuiltinKernel::FusedFfn, 4096).bound,
+            RooflineBound::Compute
+        );
     }
 
     #[test]

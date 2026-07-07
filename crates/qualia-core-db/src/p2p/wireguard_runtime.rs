@@ -134,8 +134,9 @@ impl WgTunnel {
     }
 
     fn endpoint(&self) -> Result<SocketAddr, String> {
-        self.peer_endpoint
-            .ok_or_else(|| "peer endpoint not set (call set_peer_endpoint or receive a packet first)".to_string())
+        self.peer_endpoint.ok_or_else(|| {
+            "peer endpoint not set (call set_peer_endpoint or receive a packet first)".to_string()
+        })
     }
 
     /// Kick off the Noise_IKpsk2 handshake: produce a handshake initiation and send it to the peer.
@@ -384,6 +385,9 @@ mod tests {
             Some(b_addr),
             "A learned B's endpoint from the authenticated handshake (roaming)"
         );
-        assert!(a.has_session(), "handshake still completes when the endpoint is learned");
+        assert!(
+            a.has_session(),
+            "handshake still completes when the endpoint is learned"
+        );
     }
 }

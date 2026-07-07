@@ -104,7 +104,7 @@ pub fn encode_datagram(src_port: u16, dst_port: u16, payload: &[u8]) -> Vec<u8> 
 
     // ── IPv6 header ──
     pkt[0] = 0x60; // version 6, traffic class 0
-    // flow label 0 (bytes 1..4 already zero)
+                   // flow label 0 (bytes 1..4 already zero)
     pkt[4..6].copy_from_slice(&(udp_len as u16).to_be_bytes()); // payload length = UDP length
     pkt[6] = NEXT_HEADER_UDP;
     pkt[7] = 64; // hop limit

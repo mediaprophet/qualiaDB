@@ -1,8 +1,9 @@
-use qualia_core_db::modalities::logic::n3_parser::{N3Parser, N3Event, RuleType, Term};
 use qualia_core_db::modalities::logic::n3_compiler::{
-    compile_rule_to_opcodes, compile_rule_to_quin, compile_rule_to_zero_heap, compile_rules_with_shacl_gate,
-    default_observation_shape, MAX_COMPILED_OPCODES, MAX_COMPILED_QUINS,
+    compile_rule_to_opcodes, compile_rule_to_quin, compile_rule_to_zero_heap,
+    compile_rules_with_shacl_gate, default_observation_shape, MAX_COMPILED_OPCODES,
+    MAX_COMPILED_QUINS,
 };
+use qualia_core_db::modalities::logic::n3_parser::{N3Event, N3Parser, RuleType, Term};
 use qualia_core_db::webizen::SlgOpcode;
 use qualia_core_db::{q_hash, NQuin};
 
@@ -82,12 +83,18 @@ fn test_n3_parser_complex_multiline_and_abbreviations() {
         // 2: ?company <values:claims> ?right
         // 3: ?right a <values:Right>
         // 4: ?right a <values:Privilege>
-        assert_eq!(rule.premise.triples.len(), 4, "Semicolon and comma abbreviations should expand to 4 triples");
+        assert_eq!(
+            rule.premise.triples.len(),
+            4,
+            "Semicolon and comma abbreviations should expand to 4 triples"
+        );
         assert_eq!(rule.conclusion.triples.len(), 1);
 
-        assert!(rule.premise.triples.iter().any(|t| 
-            matches!(&t.predicate, Term::Uri(u) if *u == "values:claims")
-        ));
+        assert!(rule
+            .premise
+            .triples
+            .iter()
+            .any(|t| matches!(&t.predicate, Term::Uri(u) if *u == "values:claims")));
     } else {
         panic!("Expected LogicRule event");
     }
@@ -124,8 +131,9 @@ fn test_n3_compiler_quin_generation() {
 
     let contract_hash = q_hash("did:test:contract");
     let mut quins = [NQuin::default(); MAX_COMPILED_QUINS];
-    
-    let count = compile_rule_to_quin(&compile_rule_to_zero_heap(rule), contract_hash, &mut quins).unwrap();
+
+    let count =
+        compile_rule_to_quin(&compile_rule_to_zero_heap(rule), contract_hash, &mut quins).unwrap();
     assert!(count > 0, "Should generate at least 1 Quin from rule");
 
     // Context field should be the contract hash
@@ -155,9 +163,24 @@ fn test_n3_shacl_gate_validation() {
     let mut quins = [NQuin::default(); MAX_COMPILED_QUINS];
     let contract_hash = q_hash("did:test:contract");
 
-    let result_valid = compile_rules_with_shacl_gate(&[valid_rule], &shapes, &mut opcodes, &mut quins, contract_hash);
+    let result_valid = compile_rules_with_shacl_gate(
+        &[valid_rule],
+        &shapes,
+        &mut opcodes,
+        &mut quins,
+        contract_hash,
+    );
     assert!(result_valid.is_ok(), "Valid rule should pass SHACL gate");
 
-    let result_invalid = compile_rules_with_shacl_gate(&[invalid_rule], &shapes, &mut opcodes, &mut quins, contract_hash);
-    assert!(result_invalid.is_err(), "Invalid rule should fail SHACL gate");
+    let result_invalid = compile_rules_with_shacl_gate(
+        &[invalid_rule],
+        &shapes,
+        &mut opcodes,
+        &mut quins,
+        contract_hash,
+    );
+    assert!(
+        result_invalid.is_err(),
+        "Invalid rule should fail SHACL gate"
+    );
 }

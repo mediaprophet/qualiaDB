@@ -86,11 +86,22 @@ pub enum SpatialIndexSectionError {
 impl std::fmt::Display for SpatialIndexSectionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::PayloadTooShort { got, need } => write!(f, "10d SPATIAL_INDEX payload too short: got {got}, need {need}"),
+            Self::PayloadTooShort { got, need } => write!(
+                f,
+                "10d SPATIAL_INDEX payload too short: got {got}, need {need}"
+            ),
             Self::NonZeroReserved => write!(f, "10d SPATIAL_INDEX non-zero reserved field"),
-            Self::NodeCountTooLarge { got, max } => write!(f, "10d SPATIAL_INDEX node_count {got} exceeds max {max}"),
-            Self::PayloadTruncated { expected, got } => write!(f, "10d SPATIAL_INDEX payload truncated: expected {expected}, got {got}"),
-            Self::OutputBufferTooSmall { needed, have } => write!(f, "10d SPATIAL_INDEX output buffer too small: need {needed}, have {have}"),
+            Self::NodeCountTooLarge { got, max } => {
+                write!(f, "10d SPATIAL_INDEX node_count {got} exceeds max {max}")
+            }
+            Self::PayloadTruncated { expected, got } => write!(
+                f,
+                "10d SPATIAL_INDEX payload truncated: expected {expected}, got {got}"
+            ),
+            Self::OutputBufferTooSmall { needed, have } => write!(
+                f,
+                "10d SPATIAL_INDEX output buffer too small: need {needed}, have {have}"
+            ),
         }
     }
 }
@@ -113,7 +124,7 @@ pub fn encoded_len(
         + bc * BVH_NODE_SIZE       // bvh_nodes
         + pc * 4                   // bvh_prim_indices
         + kc * KD_NODE_SIZE        // kd_nodes
-        + qc * 4                   // kd_point_indices
+        + qc * 4 // kd_point_indices
 }
 
 /// Encode a spatial-index section from BVH and kd-tree node arrays.
@@ -178,8 +189,7 @@ pub fn encode_spatial_index_section(
     };
 
     let mut off = 0usize;
-    out[off..off + SPATIAL_INDEX_MINI_HEADER_SIZE]
-        .copy_from_slice(bytes_of(&header));
+    out[off..off + SPATIAL_INDEX_MINI_HEADER_SIZE].copy_from_slice(bytes_of(&header));
     off += SPATIAL_INDEX_MINI_HEADER_SIZE;
 
     // BVH nodes.
@@ -227,9 +237,7 @@ pub fn decode_spatial_index_section(
         });
     }
 
-    let header: SpatialIndexMiniHeader = *from_bytes(
-        &payload[..SPATIAL_INDEX_MINI_HEADER_SIZE],
-    );
+    let header: SpatialIndexMiniHeader = *from_bytes(&payload[..SPATIAL_INDEX_MINI_HEADER_SIZE]);
 
     if header.reserved_u32 != 0 || header.reserved_u32_2 != 0 {
         return Err(SpatialIndexSectionError::NonZeroReserved);
@@ -253,7 +261,12 @@ pub fn decode_spatial_index_section(
         });
     }
 
-    let need = encoded_len(header.bvh_node_count, header.kd_node_count, header.bvh_prim_count, header.kd_point_count);
+    let need = encoded_len(
+        header.bvh_node_count,
+        header.kd_node_count,
+        header.bvh_prim_count,
+        header.kd_point_count,
+    );
     if payload.len() < need {
         return Err(SpatialIndexSectionError::PayloadTruncated {
             expected: need,
@@ -263,24 +276,16 @@ pub fn decode_spatial_index_section(
 
     let mut off = SPATIAL_INDEX_MINI_HEADER_SIZE;
 
-    let bvh_nodes: &[BvhNode] = cast_slice(
-        &payload[off..off + bc * BVH_NODE_SIZE],
-    );
+    let bvh_nodes: &[BvhNode] = cast_slice(&payload[off..off + bc * BVH_NODE_SIZE]);
     off += bc * BVH_NODE_SIZE;
 
-    let bvh_prim_indices: &[u32] = cast_slice(
-        &payload[off..off + pc * 4],
-    );
+    let bvh_prim_indices: &[u32] = cast_slice(&payload[off..off + pc * 4]);
     off += pc * 4;
 
-    let kd_nodes: &[KdNode] = cast_slice(
-        &payload[off..off + kc * KD_NODE_SIZE],
-    );
+    let kd_nodes: &[KdNode] = cast_slice(&payload[off..off + kc * KD_NODE_SIZE]);
     off += kc * KD_NODE_SIZE;
 
-    let kd_point_indices: &[u32] = cast_slice(
-        &payload[off..off + qc * 4],
-    );
+    let kd_point_indices: &[u32] = cast_slice(&payload[off..off + qc * 4]);
     off += qc * 4;
 
     debug_assert_eq!(off, need);
@@ -311,10 +316,7 @@ mod tests {
                 let x = (i % 2) as f64;
                 let y = ((i / 2) % 2) as f64;
                 let z = (i / 4) as f64;
-                Aabb::new(
-                    Point3::new(x, y, z),
-                    Point3::new(x + 1.0, y + 1.0, z + 1.0),
-                )
+                Aabb::new(Point3::new(x, y, z), Point3::new(x + 1.0, y + 1.0, z + 1.0))
             })
             .collect()
     }
@@ -479,16 +481,7 @@ mod tests {
     fn empty_section_round_trip() {
         let need = encoded_len(0, 0, 0, 0);
         let mut buf = vec![0u8; need];
-        encode_spatial_index_section(
-            &[],
-            &[],
-            0,
-            &[],
-            &[],
-            0,
-            &mut buf,
-        )
-        .unwrap();
+        encode_spatial_index_section(&[], &[], 0, &[], &[], 0, &mut buf).unwrap();
 
         let decoded = decode_spatial_index_section(&buf).unwrap();
         assert_eq!(decoded.header.bvh_node_count, 0);

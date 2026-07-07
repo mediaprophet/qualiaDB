@@ -15,10 +15,13 @@ use qualia_core_db::wgsl_forge::calibration::{
 use std::path::{Path, PathBuf};
 
 fn find_model(name: &str) -> Option<PathBuf> {
-    [format!("../../docs/models/{name}"), format!("docs/models/{name}")]
-        .iter()
-        .map(PathBuf::from)
-        .find(|p| Path::new(p).exists())
+    [
+        format!("../../docs/models/{name}"),
+        format!("docs/models/{name}"),
+    ]
+    .iter()
+    .map(PathBuf::from)
+    .find(|p| Path::new(p).exists())
 }
 
 fn print_report(route: &str, report: &KvDictReport) {
@@ -29,7 +32,11 @@ fn print_report(route: &str, report: &KvDictReport) {
     println!(
         "int8 incumbent: {:.0} bits/vec.  dict code: {:.0} bits/vec (~matched to {}-bit uniform).",
         report.layers.first().map(|l| l.int8_bits).unwrap_or(0.0),
-        report.layers.first().map(|l| l.dict_code_bits).unwrap_or(0.0),
+        report
+            .layers
+            .first()
+            .map(|l| l.dict_code_bits)
+            .unwrap_or(0.0),
         report.layers.first().map(|l| l.matched_bits).unwrap_or(0),
     );
     println!(

@@ -2282,14 +2282,11 @@ impl CryptographicLibrary {
         self.key_manager.store_key(public_key.clone())?;
 
         // Track the KeyPair relationship in the catalog
-        self.key_manager
-            .key_storage
-            .key_catalog
-            .add_relationship(
-                &private_key.key_id,
-                &public_key.key_id,
-                KeyRelationshipType::KeyPair,
-            );
+        self.key_manager.key_storage.key_catalog.add_relationship(
+            &private_key.key_id,
+            &public_key.key_id,
+            KeyRelationshipType::KeyPair,
+        );
         self.key_manager
             .key_storage
             .key_catalog
@@ -2661,14 +2658,11 @@ impl CryptographicLibrary {
         let new_key = self.key_manager.rotate_key(&old_key)?;
 
         // Track the RotatedFrom relationship in the catalog
-        self.key_manager
-            .key_storage
-            .key_catalog
-            .add_relationship(
-                &new_key.key_id,
-                &old_key.key_id,
-                KeyRelationshipType::RotatedFrom,
-            );
+        self.key_manager.key_storage.key_catalog.add_relationship(
+            &new_key.key_id,
+            &old_key.key_id,
+            KeyRelationshipType::RotatedFrom,
+        );
         self.key_manager
             .key_storage
             .key_catalog
@@ -2833,7 +2827,10 @@ impl KeyStorage {
     ) -> Result<Key, CryptographicError> {
         // If policies are registered, enforce them
         if self.access_control.policy_count() > 0 {
-            if !self.access_control.check_permission(key_id, operation.clone()) {
+            if !self
+                .access_control
+                .check_permission(key_id, operation.clone())
+            {
                 self.access_control
                     .log_access(key_id, operation.clone(), user_id, false);
                 return Err(CryptographicError::AccessDenied(format!(
@@ -2923,7 +2920,11 @@ impl KeyCatalog {
     }
 
     /// Find the related key of a given type (e.g. find the public key paired with a private key).
-    pub fn find_related(&self, key_id: &str, rel_type: KeyRelationshipType) -> Option<&KeyRelationship> {
+    pub fn find_related(
+        &self,
+        key_id: &str,
+        rel_type: KeyRelationshipType,
+    ) -> Option<&KeyRelationship> {
         self.relationships
             .get(key_id)
             .and_then(|rels| rels.iter().find(|r| r.relationship_type == rel_type))
@@ -2933,10 +2934,7 @@ impl KeyCatalog {
     pub fn register_key(&mut self, metadata: KeyMetadata) {
         // Populate the search index so the key is discoverable by keyword/metadata.
         let mut index_metadata = HashMap::new();
-        index_metadata.insert(
-            "key_type".to_string(),
-            format!("{:?}", metadata.key_type),
-        );
+        index_metadata.insert("key_type".to_string(), format!("{:?}", metadata.key_type));
         index_metadata.insert(
             "algorithm".to_string(),
             format!("{:?}", metadata.key_algorithm),
@@ -2988,9 +2986,15 @@ impl KeyCatalog {
         // 1. Match against registered key metadata (key_id, algorithm, type, level).
         for (key_id, metadata) in &self.keys {
             if key_id.to_lowercase().contains(&q)
-                || format!("{:?}", metadata.key_algorithm).to_lowercase().contains(&q)
-                || format!("{:?}", metadata.key_type).to_lowercase().contains(&q)
-                || format!("{:?}", metadata.security_level).to_lowercase().contains(&q)
+                || format!("{:?}", metadata.key_algorithm)
+                    .to_lowercase()
+                    .contains(&q)
+                || format!("{:?}", metadata.key_type)
+                    .to_lowercase()
+                    .contains(&q)
+                || format!("{:?}", metadata.security_level)
+                    .to_lowercase()
+                    .contains(&q)
             {
                 matches.insert(key_id.clone());
             }
@@ -2998,10 +3002,7 @@ impl KeyCatalog {
 
         // 2. Match against tags (case-insensitive).
         for (key_id, tags) in &self.tags {
-            if tags
-                .iter()
-                .any(|t| t.to_lowercase().contains(&q))
-            {
+            if tags.iter().any(|t| t.to_lowercase().contains(&q)) {
                 matches.insert(key_id.clone());
             }
         }
@@ -3080,10 +3081,7 @@ impl KeySearchIndex {
             .values()
             .filter(|entry| {
                 entry.entry_id.to_lowercase().contains(&q)
-                    || entry
-                        .keywords
-                        .iter()
-                        .any(|k| k.to_lowercase().contains(&q))
+                    || entry.keywords.iter().any(|k| k.to_lowercase().contains(&q))
             })
             .collect()
     }
@@ -3126,7 +3124,8 @@ impl KeySearchEngine {
     /// calls can filter on algorithm, creation date, and the textual
     /// representation of the metadata fields.
     pub fn index_key(&mut self, key_id: &str, metadata: &KeyMetadata) {
-        self.key_metadata.insert(key_id.to_string(), metadata.clone());
+        self.key_metadata
+            .insert(key_id.to_string(), metadata.clone());
     }
 
     /// Attach a tag to a previously indexed key. Tags are case-sensitive but
@@ -3348,10 +3347,9 @@ impl EncryptionAtRest {
     /// Returns (ciphertext, nonce, tag) tuple flattened into a single Vec
     /// with layout: [12-byte nonce | 16-byte tag | ciphertext].
     pub fn encrypt_key_data(&self, plaintext: &[u8]) -> Result<Vec<u8>, CryptographicError> {
-        let kek = self
-            .key_encryption_keys
-            .get("master_kek")
-            .ok_or_else(|| CryptographicError::EncryptionError("no master KEK available".to_string()))?;
+        let kek = self.key_encryption_keys.get("master_kek").ok_or_else(|| {
+            CryptographicError::EncryptionError("no master KEK available".to_string())
+        })?;
 
         use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit, Nonce};
         let key = aes_gcm::Key::<Aes256Gcm>::try_from(kek.as_slice()).unwrap();
@@ -3360,9 +3358,9 @@ impl EncryptionAtRest {
         let nonce_bytes: [u8; 12] = rand::random();
         let nonce = Nonce::try_from(nonce_bytes.as_slice()).unwrap();
 
-        let ciphertext = cipher
-            .encrypt(&nonce, plaintext)
-            .map_err(|e| CryptographicError::EncryptionError(format!("AES-GCM encrypt failed: {e}")))?;
+        let ciphertext = cipher.encrypt(&nonce, plaintext).map_err(|e| {
+            CryptographicError::EncryptionError(format!("AES-GCM encrypt failed: {e}"))
+        })?;
 
         // Pack: nonce (12) + ciphertext (includes 16-byte GCM tag appended by aes-gcm)
         let mut packed = Vec::with_capacity(12 + ciphertext.len());
@@ -3378,10 +3376,9 @@ impl EncryptionAtRest {
                 "packed data too short".to_string(),
             ));
         }
-        let kek = self
-            .key_encryption_keys
-            .get("master_kek")
-            .ok_or_else(|| CryptographicError::DecryptionError("no master KEK available".to_string()))?;
+        let kek = self.key_encryption_keys.get("master_kek").ok_or_else(|| {
+            CryptographicError::DecryptionError("no master KEK available".to_string())
+        })?;
 
         use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit, Nonce};
         let key = aes_gcm::Key::<Aes256Gcm>::try_from(kek.as_slice()).unwrap();
@@ -3390,9 +3387,9 @@ impl EncryptionAtRest {
         let nonce = Nonce::try_from(&packed[..12]).unwrap();
         let ciphertext = &packed[12..];
 
-        cipher
-            .decrypt(&nonce, ciphertext)
-            .map_err(|e| CryptographicError::DecryptionError(format!("AES-GCM decrypt failed: {e}")))
+        cipher.decrypt(&nonce, ciphertext).map_err(|e| {
+            CryptographicError::DecryptionError(format!("AES-GCM decrypt failed: {e}"))
+        })
     }
 
     /// Check if encryption at rest is enabled (KEK exists).
@@ -3441,7 +3438,8 @@ impl KeyAccessControl {
 
     /// Register an access policy for a key.
     pub fn add_policy(&mut self, policy: AccessPolicy) {
-        self.access_policies.insert(policy.policy_id.clone(), policy);
+        self.access_policies
+            .insert(policy.policy_id.clone(), policy);
     }
 
     /// Check whether a given operation is permitted on a key.
@@ -3462,31 +3460,28 @@ impl KeyAccessControl {
         current_day: u8,
         ip_address: &str,
     ) -> bool {
-        self.access_policies
-            .values()
-            .any(|p| {
-                if p.key_id != key_id || !p.allowed_operations.contains(&operation) {
-                    return false;
-                }
-                // Check time restrictions
-                if !p.time_restrictions.allowed_hours.is_empty()
-                    && !p.time_restrictions.allowed_hours.contains(&current_hour)
-                {
-                    return false;
-                }
-                if !p.time_restrictions.allowed_days.is_empty()
-                    && !p.time_restrictions.allowed_days.contains(&current_day)
-                {
-                    return false;
-                }
-                // Check IP restrictions
-                if !p.ip_restrictions.is_empty()
-                    && !p.ip_restrictions.iter().any(|ip| ip == ip_address)
-                {
-                    return false;
-                }
-                true
-            })
+        self.access_policies.values().any(|p| {
+            if p.key_id != key_id || !p.allowed_operations.contains(&operation) {
+                return false;
+            }
+            // Check time restrictions
+            if !p.time_restrictions.allowed_hours.is_empty()
+                && !p.time_restrictions.allowed_hours.contains(&current_hour)
+            {
+                return false;
+            }
+            if !p.time_restrictions.allowed_days.is_empty()
+                && !p.time_restrictions.allowed_days.contains(&current_day)
+            {
+                return false;
+            }
+            // Check IP restrictions
+            if !p.ip_restrictions.is_empty() && !p.ip_restrictions.iter().any(|ip| ip == ip_address)
+            {
+                return false;
+            }
+            true
+        })
     }
 
     /// Record an access attempt in the audit log.
@@ -3497,7 +3492,8 @@ impl KeyAccessControl {
         user_id: &str,
         success: bool,
     ) {
-        self.audit_log.log_entry(key_id, operation, user_id, success);
+        self.audit_log
+            .log_entry(key_id, operation, user_id, success);
     }
 
     /// Number of registered policies.
@@ -3541,7 +3537,13 @@ impl AccessAuditLog {
     }
 
     /// Record a key access event. Called after every key read/write/sign/verify operation.
-    pub fn log_entry(&mut self, key_id: &str, operation: KeyOperation, user_id: &str, success: bool) {
+    pub fn log_entry(
+        &mut self,
+        key_id: &str,
+        operation: KeyOperation,
+        user_id: &str,
+        success: bool,
+    ) {
         let timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
@@ -3554,11 +3556,16 @@ impl AccessAuditLog {
             user_id: user_id.to_string(),
             ip_address: String::new(),
             success,
-            error_message: if success { None } else { Some("operation failed".to_string()) },
+            error_message: if success {
+                None
+            } else {
+                Some("operation failed".to_string())
+            },
         };
         self.entries.push(entry);
         // Enforce retention: drop entries older than retention_days
-        let cutoff = timestamp.saturating_sub((self.retention_policy.retention_days as u64) * 86400);
+        let cutoff =
+            timestamp.saturating_sub((self.retention_policy.retention_days as u64) * 86400);
         self.entries.retain(|e| e.timestamp >= cutoff);
     }
 
@@ -3629,7 +3636,10 @@ impl KeyGenerator {
     /// filled with `rand::random()`. The generated material is also folded into
     /// the quality metrics as a simple entropy estimate.
     pub fn generate_key_data(&mut self, key_size: usize) -> Result<Vec<u8>, CryptographicError> {
-        let source = self.selected_entropy_source.clone().unwrap_or(EntropySource::OSRandom);
+        let source = self
+            .selected_entropy_source
+            .clone()
+            .unwrap_or(EntropySource::OSRandom);
 
         if !self.entropy_sources.contains(&source) {
             return Err(CryptographicError::SecurityError(format!(
@@ -3640,9 +3650,7 @@ impl KeyGenerator {
 
         let mut data = vec![0u8; key_size];
         match source {
-            EntropySource::HardwareRNG
-            | EntropySource::OSRandom
-            | EntropySource::Quantum => {
+            EntropySource::HardwareRNG | EntropySource::OSRandom | EntropySource::Quantum => {
                 // rand::random() draws from the OS CSPRNG; for HardwareRNG and
                 // Quantum this is a placeholder until dedicated hardware is wired.
                 for byte in data.iter_mut() {
@@ -3675,7 +3683,8 @@ impl KeyGenerator {
         })?;
 
         // Generate key data
-        let key_data = self.generate_algorithm_key_data(&generation_algorithm, security_level.clone())?;
+        let key_data =
+            self.generate_algorithm_key_data(&generation_algorithm, security_level.clone())?;
 
         // Create metadata
         let metadata = KeyMetadata {
@@ -4621,7 +4630,8 @@ impl SignatureAuditLog {
             success,
         };
         self.entries.push(entry);
-        let cutoff = timestamp.saturating_sub((self.retention_policy.retention_days as u64) * 86400);
+        let cutoff =
+            timestamp.saturating_sub((self.retention_policy.retention_days as u64) * 86400);
         self.entries.retain(|e| e.timestamp >= cutoff);
     }
 
@@ -4916,8 +4926,9 @@ impl EncryptionEngine {
         let tag = match algorithm {
             EncryptionAlgorithm::AES256GCM => {
                 use aes_gcm::Aes256Gcm;
-                let cipher =
-                    Aes256Gcm::new(&aes_gcm::Key::<Aes256Gcm>::try_from(&key.key_data[..32]).unwrap());
+                let cipher = Aes256Gcm::new(
+                    &aes_gcm::Key::<Aes256Gcm>::try_from(&key.key_data[..32]).unwrap(),
+                );
                 cipher
                     .encrypt_inout_detached(
                         &aes_gcm::Nonce::try_from(iv).unwrap(),
@@ -4995,8 +5006,9 @@ impl EncryptionEngine {
         match algorithm {
             EncryptionAlgorithm::AES256GCM => {
                 use aes_gcm::Aes256Gcm;
-                let cipher =
-                    Aes256Gcm::new(&aes_gcm::Key::<Aes256Gcm>::try_from(&key.key_data[..32]).unwrap());
+                let cipher = Aes256Gcm::new(
+                    &aes_gcm::Key::<Aes256Gcm>::try_from(&key.key_data[..32]).unwrap(),
+                );
                 cipher
                     .decrypt_inout_detached(
                         &aes_gcm::Nonce::try_from(iv).unwrap(),
@@ -5073,7 +5085,9 @@ impl KeyDerivation {
     }
 
     /// Iterate over all registered derivation function names.
-    pub fn list_derivation_functions(&self) -> impl Iterator<Item = (&String, &DerivationFunction)> {
+    pub fn list_derivation_functions(
+        &self,
+    ) -> impl Iterator<Item = (&String, &DerivationFunction)> {
         self.derivation_functions.iter()
     }
 
@@ -5331,7 +5345,8 @@ impl HashAuditLog {
             success,
         };
         self.entries.push(entry);
-        let cutoff = timestamp.saturating_sub((self.retention_policy.retention_days as u64) * 86400);
+        let cutoff =
+            timestamp.saturating_sub((self.retention_policy.retention_days as u64) * 86400);
         self.entries.retain(|e| e.timestamp >= cutoff);
     }
 
@@ -5668,7 +5683,7 @@ impl ProofEngine {
     ) -> Result<Vec<u8>, CryptographicError> {
         use ark_bls12_381::Bls12_381;
         use ark_groth16::Groth16;
-        
+
         use ark_serialize::CanonicalSerialize;
         use ark_snark::SNARK;
         use sha2::{Digest, Sha256};
@@ -5807,7 +5822,8 @@ impl ProofAuditLog {
             success,
         };
         self.entries.push(entry);
-        let cutoff = timestamp.saturating_sub((self.retention_policy.retention_days as u64) * 86400);
+        let cutoff =
+            timestamp.saturating_sub((self.retention_policy.retention_days as u64) * 86400);
         self.entries.retain(|e| e.timestamp >= cutoff);
     }
 
@@ -5949,8 +5965,7 @@ impl VerificationPerformanceOptimizer {
         if m.average_verification_time == 0.0 {
             m.average_verification_time = duration_ms;
         } else {
-            m.average_verification_time =
-                0.9 * m.average_verification_time + 0.1 * duration_ms;
+            m.average_verification_time = 0.9 * m.average_verification_time + 0.1 * duration_ms;
         }
         if m.average_verification_time > 0.0 {
             m.throughput = 1000.0 / m.average_verification_time;
@@ -6420,7 +6435,8 @@ impl ReportQueueManager {
 
     /// Mark a running report as completed.
     pub fn complete_report(&mut self, report: CompletedReport) {
-        self.running_reports.retain(|r| r.report_id != report.report_id);
+        self.running_reports
+            .retain(|r| r.report_id != report.report_id);
         self.completed_reports.push(report);
     }
 
@@ -6673,9 +6689,11 @@ mod tests {
         // Sign data
         let data = b"Hello, World!";
         let signature = library.sign_data("test_key_private", data).unwrap();
-        
+
         // Verify signature
-        let is_valid = library.verify_signature("test_key", &signature.result, data).unwrap();
+        let is_valid = library
+            .verify_signature("test_key", &signature.result, data)
+            .unwrap();
         assert!(is_valid.result);
 
         assert_eq!(signature.result.key_id, "test_key_private");
@@ -7157,12 +7175,30 @@ mod tests {
 
         // Check that the signature audit log has recorded both operations
         let audit = &library.signature_engine.signature_storage.audit_log;
-        assert!(audit.entry_count() >= 2, "audit log should have at least 2 entries (sign + verify)");
+        assert!(
+            audit.entry_count() >= 2,
+            "audit log should have at least 2 entries (sign + verify)"
+        );
         let entries = audit.entries();
-        assert!(entries.iter().any(|e| e.operation == SignatureOperation::Sign), "should have a Sign entry");
-        assert!(entries.iter().any(|e| e.operation == SignatureOperation::Verify), "should have a Verify entry");
+        assert!(
+            entries
+                .iter()
+                .any(|e| e.operation == SignatureOperation::Sign),
+            "should have a Sign entry"
+        );
+        assert!(
+            entries
+                .iter()
+                .any(|e| e.operation == SignatureOperation::Verify),
+            "should have a Verify entry"
+        );
         // All entries should reference the correct signature_id
-        assert!(entries.iter().all(|e| e.signature_id == signature.result.signature_id), "entries should reference the correct signature_id");
+        assert!(
+            entries
+                .iter()
+                .all(|e| e.signature_id == signature.result.signature_id),
+            "entries should reference the correct signature_id"
+        );
     }
 
     #[test]
@@ -7174,9 +7210,15 @@ mod tests {
         let _hash = library.compute_hash(b"test data").unwrap();
 
         let audit = &library.hash_engine.hash_storage.audit_log;
-        assert!(audit.entry_count() >= 1, "audit log should have at least 1 entry");
         assert!(
-            audit.entries().iter().any(|e| e.operation == HashOperation::Compute),
+            audit.entry_count() >= 1,
+            "audit log should have at least 1 entry"
+        );
+        assert!(
+            audit
+                .entries()
+                .iter()
+                .any(|e| e.operation == HashOperation::Compute),
             "should have a Compute entry"
         );
     }
@@ -7194,21 +7236,25 @@ mod tests {
         let catalog = &library.key_manager.key_storage.key_catalog;
 
         // The catalog should have registered both keys
-        assert!(catalog.key_count() >= 2, "catalog should have at least 2 keys registered");
+        assert!(
+            catalog.key_count() >= 2,
+            "catalog should have at least 2 keys registered"
+        );
 
         // The KeyPair relationship should exist from private → public
         let rels = catalog.get_relationships(&key_pair.result.0.key_id);
         assert!(
-            rels.iter().any(|r| r.relationship_type == KeyRelationshipType::KeyPair),
+            rels.iter()
+                .any(|r| r.relationship_type == KeyRelationshipType::KeyPair),
             "should have a KeyPair relationship from private to public key"
         );
 
         // find_related should locate the public key
-        let related = catalog.find_related(
-            &key_pair.result.0.key_id,
-            KeyRelationshipType::KeyPair,
+        let related = catalog.find_related(&key_pair.result.0.key_id, KeyRelationshipType::KeyPair);
+        assert!(
+            related.is_some(),
+            "find_related should find the KeyPair relationship"
         );
-        assert!(related.is_some(), "find_related should find the KeyPair relationship");
         assert_eq!(
             related.unwrap().target_key,
             key_pair.result.1.key_id,
@@ -7232,11 +7278,15 @@ mod tests {
         let catalog = &library.key_manager.key_storage.key_catalog;
         let rels = catalog.get_relationships(&new_key.result.key_id);
         assert!(
-            rels.iter().any(|r| r.relationship_type == KeyRelationshipType::RotatedFrom),
+            rels.iter()
+                .any(|r| r.relationship_type == KeyRelationshipType::RotatedFrom),
             "should have a RotatedFrom relationship from new key to old key"
         );
 
-        assert!(catalog.relationship_count() >= 2, "should have at least 2 relationships (KeyPair + RotatedFrom)");
+        assert!(
+            catalog.relationship_count() >= 2,
+            "should have at least 2 relationships (KeyPair + RotatedFrom)"
+        );
     }
 
     #[test]
@@ -7250,7 +7300,9 @@ mod tests {
             .unwrap();
 
         // Sign data — should update signing time metrics
-        let signature = library.sign_data("perf_key_private", b"performance test").unwrap();
+        let signature = library
+            .sign_data("perf_key_private", b"performance test")
+            .unwrap();
 
         // Verify — should update verification time metrics
         let _is_valid = library
@@ -7327,22 +7379,27 @@ mod tests {
         );
 
         // get_key_with_access should deny Read and log the failure
-        let result = library
-            .key_manager
-            .key_storage
-            .get_key_with_access("acl_key_private", KeyOperation::Read, "test_user");
+        let result = library.key_manager.key_storage.get_key_with_access(
+            "acl_key_private",
+            KeyOperation::Read,
+            "test_user",
+        );
         assert!(result.is_err(), "get_key_with_access should deny Read");
 
         // Sign should succeed
-        let result = library
-            .key_manager
-            .key_storage
-            .get_key_with_access("acl_key_private", KeyOperation::Sign, "test_user");
+        let result = library.key_manager.key_storage.get_key_with_access(
+            "acl_key_private",
+            KeyOperation::Sign,
+            "test_user",
+        );
         assert!(result.is_ok(), "get_key_with_access should allow Sign");
 
         // Audit log should have both the denied and allowed entries
         let audit = library.key_manager.key_storage.access_control.audit_log();
-        assert!(audit.entry_count() >= 2, "audit log should have at least 2 entries");
+        assert!(
+            audit.entry_count() >= 2,
+            "audit log should have at least 2 entries"
+        );
     }
 
     #[test]
@@ -7351,7 +7408,10 @@ mod tests {
         assert!(!ear.is_enabled(), "KEK should not exist before initialize");
 
         ear.initialize().unwrap();
-        assert!(ear.is_enabled(), "master KEK should be generated after initialize");
+        assert!(
+            ear.is_enabled(),
+            "master KEK should be generated after initialize"
+        );
         assert!(ear.kek_count() >= 1, "should have at least one KEK");
 
         // Encrypt some key data
@@ -7360,7 +7420,8 @@ mod tests {
 
         // Ciphertext should be different from plaintext (nonce + tag + ciphertext)
         assert_ne!(
-            &encrypted[..], plaintext,
+            &encrypted[..],
+            plaintext,
             "encrypted data should differ from plaintext"
         );
         assert!(
@@ -7371,7 +7432,8 @@ mod tests {
         // Decrypt and verify roundtrip
         let decrypted = ear.decrypt_key_data(&encrypted).unwrap();
         assert_eq!(
-            &decrypted[..], plaintext,
+            &decrypted[..],
+            plaintext,
             "decrypted data should match original plaintext"
         );
     }
@@ -7481,11 +7543,17 @@ mod tests {
         let mut index = KeySearchIndex::new();
         // Before initialize the engine defaults to Encrypted/Encrypted.
         assert_eq!(index.search_engine.engine_type, SearchEngineType::Encrypted);
-        assert_eq!(index.search_engine.indexing_strategy, IndexingStrategy::Encrypted);
+        assert_eq!(
+            index.search_engine.indexing_strategy,
+            IndexingStrategy::Encrypted
+        );
 
         index.initialize().unwrap();
         assert_eq!(index.search_engine.engine_type, SearchEngineType::Hybrid);
-        assert_eq!(index.search_engine.indexing_strategy, IndexingStrategy::Inverted);
+        assert_eq!(
+            index.search_engine.indexing_strategy,
+            IndexingStrategy::Inverted
+        );
     }
 
     #[test]
@@ -7712,7 +7780,10 @@ mod tests {
     #[test]
     fn test_key_generator_set_and_get_entropy_source() {
         let mut gen = KeyGenerator::new();
-        assert!(gen.get_entropy_source().is_none(), "no source selected by default");
+        assert!(
+            gen.get_entropy_source().is_none(),
+            "no source selected by default"
+        );
 
         gen.set_entropy_source(EntropySource::HardwareRNG);
         assert_eq!(
@@ -7737,7 +7808,11 @@ mod tests {
 
         let key_size = 32;
         let data = gen.generate_key_data(key_size).unwrap();
-        assert_eq!(data.len(), key_size, "generated data should have the requested length");
+        assert_eq!(
+            data.len(),
+            key_size,
+            "generated data should have the requested length"
+        );
         assert!(
             !data.iter().all(|&b| b == 0),
             "generated data should not be all zeros"
@@ -7828,10 +7903,7 @@ mod tests {
         let key = sample_key(KeyAlgorithm::AES, 128, now_secs());
         let result = engine.validate_key(&key, "std").unwrap();
 
-        assert!(
-            !result.passed,
-            "a too-small key should not pass validation"
-        );
+        assert!(!result.passed, "a too-small key should not pass validation");
         assert!(
             result
                 .violations
@@ -7940,7 +8012,10 @@ mod tests {
         let key = sample_key(KeyAlgorithm::RSA, 128, too_old);
         let result = engine.validate_key(&key, "std").unwrap();
 
-        assert!(!result.passed, "a key violating multiple rules should not pass");
+        assert!(
+            !result.passed,
+            "a key violating multiple rules should not pass"
+        );
         let rules: Vec<&str> = result.violations.iter().map(|v| v.rule.as_str()).collect();
         assert!(
             rules.contains(&"min_key_size"),
@@ -7957,7 +8032,11 @@ mod tests {
             "expected key_rotation_interval_days violation, rules = {:?}",
             rules
         );
-        assert_eq!(result.violations.len(), 3, "expected exactly three violations");
+        assert_eq!(
+            result.violations.len(),
+            3,
+            "expected exactly three violations"
+        );
     }
 
     #[test]

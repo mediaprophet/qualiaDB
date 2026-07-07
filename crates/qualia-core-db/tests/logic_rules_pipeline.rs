@@ -155,9 +155,9 @@ fn test_wal_rule_evaluation_event_written() {
         let mut wal = wal::WriteAheadLog::open(wal_path).expect("WAL must open");
         let recovered = wal.recover().unwrap_or_default();
         let eval_pred = q_hash("q42:ruleEvaluation");
-        let has_eval_event = recovered.iter().any(|q| {
-            q.predicate == eval_pred && q.context == unique_contract
-        });
+        let has_eval_event = recovered
+            .iter()
+            .any(|q| q.predicate == eval_pred && q.context == unique_contract);
         assert!(
             has_eval_event,
             "WAL must contain at least one q42:ruleEvaluation event for our contract; \
@@ -210,18 +210,12 @@ fn test_mcp_evaluate_logic_rules_tool() {
         .expect("response must contain text content");
 
     let result: Value = serde_json::from_str(text).expect("tool result must be valid JSON");
-    assert_eq!(
-        result["rules_loaded"], 1,
-        "one rule must be loaded"
-    );
+    assert_eq!(result["rules_loaded"], 1, "one rule must be loaded");
     assert_eq!(
         result["ruleset_name"], RULESET_NAME,
         "ruleset name must match"
     );
-    assert_eq!(
-        result["total_results"], 1,
-        "one result for one rule"
-    );
+    assert_eq!(result["total_results"], 1, "one result for one rule");
     assert_eq!(
         result["passed_count"], 1,
         "the premise Quin must match → passed_count=1"
@@ -258,8 +252,7 @@ fn test_mcp_evaluate_logic_rules_tool_no_match() {
     });
 
     let request_str = serde_json::to_string(&request).unwrap();
-    let response = handle_jsonrpc_message(&request_str, false, false)
-        .expect("MCP must respond");
+    let response = handle_jsonrpc_message(&request_str, false, false).expect("MCP must respond");
 
     let response: Value = serde_json::from_str(&response).unwrap();
     let text = response["result"]["content"][0]["text"]
@@ -286,17 +279,17 @@ fn test_mcp_tools_list_includes_evaluate_logic_rules() {
     });
 
     let request_str = serde_json::to_string(&request).unwrap();
-    let response = handle_jsonrpc_message(&request_str, false, false)
-        .expect("MCP must respond to tools/list");
+    let response =
+        handle_jsonrpc_message(&request_str, false, false).expect("MCP must respond to tools/list");
 
     let response: Value = serde_json::from_str(&response).unwrap();
     let tools = response["result"]["tools"]
         .as_array()
         .expect("tools must be an array");
 
-    let found = tools.iter().any(|t| {
-        t["name"].as_str() == Some("evaluate_logic_rules")
-    });
+    let found = tools
+        .iter()
+        .any(|t| t["name"].as_str() == Some("evaluate_logic_rules"));
     assert!(
         found,
         "tools/list must include evaluate_logic_rules; got {} tools",

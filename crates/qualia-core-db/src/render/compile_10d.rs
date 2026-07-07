@@ -12,12 +12,16 @@
 //! picking) and the LOD chain (from `decimate_3`, P5.7) are named as the next
 //! slices — deliberately not stubbed with placeholders here.
 
+use crate::container_10d::crc32c::crc32c;
 use crate::container_10d::header::Container10dHeader;
 use crate::container_10d::integrity::{compute_whole_file_crc32c, seal_whole_file_crc32c};
 use crate::container_10d::mesh_section::{
     decode_mesh_section, encode_mesh_section, encoded_len, MeshSectionError,
 };
-use crate::container_10d::crc32c::crc32c;
+use crate::container_10d::provenance_section::{
+    encode_provenance_section, encoded_len as provenance_encoded_len, ProvenanceSectionError,
+    ProvenanceSidecar,
+};
 use crate::container_10d::section::{
     encode_container, parse_section_table, AlignmentTier, SectionInput, SectionTableError,
     SectionType,
@@ -40,6 +44,8 @@ pub enum Compile10dError {
     Mesh(MeshSectionError),
     /// The container section table encode/decode failed.
     Section(SectionTableError),
+    /// Encoding the provenance sidecar section failed.
+    Provenance(ProvenanceSectionError),
     /// The container parsed but held no `QuantizedMesh` section.
     NoMeshSection,
     /// The 64-byte container header failed to parse on read-back.
@@ -54,6 +60,7 @@ impl std::fmt::Display for Compile10dError {
             Self::Import(e) => write!(f, ".10d compile: source import: {e}"),
             Self::Mesh(e) => write!(f, ".10d compile: mesh section: {e}"),
             Self::Section(e) => write!(f, ".10d compile: section table: {e:?}"),
+            Self::Provenance(e) => write!(f, ".10d compile: provenance section: {e}"),
             Self::NoMeshSection => write!(f, ".10d: no QuantizedMesh section in container"),
             Self::BadHeader => write!(f, ".10d: container header failed to parse"),
             Self::SectionOutOfBounds => write!(f, ".10d: section byte range outside container"),
@@ -70,20 +77,55 @@ impl std::error::Error for Compile10dError {}
 /// render/query paths operate zero-heap on the decoded section, not here.
 /// Deterministic: identical input → byte-identical container (attestable).
 pub fn compile_mesh_to_10d(mesh: &Mesh) -> Result<Vec<u8>, Compile10dError> {
+    compile_mesh_to_10d_with_provenance(mesh, None)
+}
+
+/// Compile a mesh into a sealed `.10d`, optionally **bundling a provenance sidecar
+/// physically inside the container** (P1) — the immutable source bytes + licence
+/// (+ optional VC) the asset was derived from, so context is byte-inseparable: a
+/// `.10d` copied on its own still carries what it came from and under what licence.
+/// The renderer's governance path treats the presence of this section as the
+/// attestation that makes the mesh *citable* (see `render/portal/mod.rs`).
+pub fn compile_mesh_to_10d_with_provenance(
+    mesh: &Mesh,
+    provenance: Option<&ProvenanceSidecar>,
+) -> Result<Vec<u8>, Compile10dError> {
     // 1. Encode the QuantizedMesh section payload.
     let mut payload = vec![0u8; encoded_len(mesh.vertex_count(), mesh.triangle_count())];
     let written = encode_mesh_section(mesh, &mut payload).map_err(Compile10dError::Mesh)?;
     payload.truncate(written);
 
-    // 2. Assemble the container. Page-aligned so the mesh payload is GPU-stageable.
+    // 1b. Encode the provenance sidecar payload, if bundling one.
+    let prov_payload: Option<Vec<u8>> = match provenance {
+        Some(p) => {
+            let mut buf = vec![0u8; provenance_encoded_len(p)];
+            let n = encode_provenance_section(p, &mut buf).map_err(Compile10dError::Provenance)?;
+            buf.truncate(n);
+            Some(buf)
+        }
+        None => None,
+    };
+
+    // 2. Assemble the container. Mesh is Page-aligned so its payload is GPU-stageable;
+    // the provenance blob is Word-aligned. The writer canonical-orders by section type
+    // (mesh=1 before provenance=7), so the input order here does not matter.
     let header = Container10dHeader::proposed();
-    let inputs = [SectionInput {
+    let mut inputs = vec![SectionInput {
         section_type: SectionType::QuantizedMesh,
         alignment_tier: AlignmentTier::Page,
         stride: 0,
         element_count: 0,
         payload: &payload,
     }];
+    if let Some(pp) = &prov_payload {
+        inputs.push(SectionInput {
+            section_type: SectionType::ProvenanceSidecar,
+            alignment_tier: AlignmentTier::Word,
+            stride: 0,
+            element_count: 0,
+            payload: pp,
+        });
+    }
     // Dry-run against an empty buffer to size the output exactly.
     let needed = match encode_container(&header, &inputs, &mut []) {
         Err(SectionTableError::OutputBufferTooSmall { needed, .. }) => needed,
@@ -111,7 +153,8 @@ pub fn compiled_digest(container_10d: &[u8]) -> u32 {
 /// anatomy path that avoids reparsing the source GLB. Extracts the first
 /// `QuantizedMesh` section.
 pub fn decode_10d_mesh(container_10d: &[u8]) -> Result<Mesh, Compile10dError> {
-    let header = Container10dHeader::parse(container_10d).map_err(|_| Compile10dError::BadHeader)?;
+    let header =
+        Container10dHeader::parse(container_10d).map_err(|_| Compile10dError::BadHeader)?;
     let descs = parse_section_table(container_10d, &header).map_err(Compile10dError::Section)?;
     for d in descs {
         if d.typ() == Some(SectionType::QuantizedMesh) {
@@ -262,12 +305,18 @@ mod tests {
                 [0.0, 1.0, 1.0],
             ],
             triangles: vec![
-                [0, 3, 2], [0, 2, 1],
-                [4, 5, 6], [4, 6, 7],
-                [0, 1, 5], [0, 5, 4],
-                [3, 7, 6], [3, 6, 2],
-                [0, 4, 7], [0, 7, 3],
-                [1, 2, 6], [1, 6, 5],
+                [0, 3, 2],
+                [0, 2, 1],
+                [4, 5, 6],
+                [4, 6, 7],
+                [0, 1, 5],
+                [0, 5, 4],
+                [3, 7, 6],
+                [3, 6, 2],
+                [0, 4, 7],
+                [0, 7, 3],
+                [1, 2, 6],
+                [1, 6, 5],
             ],
             min: [0.0, 0.0, 0.0],
             max: [1.0, 1.0, 1.0],
@@ -277,9 +326,42 @@ mod tests {
     #[test]
     fn container_is_well_formed_and_sealed() {
         let mut bytes = compile_mesh_to_10d(&cube()).unwrap();
-        assert!(bytes.len() > 64, "container must be larger than the 64-byte header");
+        assert!(
+            bytes.len() > 64,
+            "container must be larger than the 64-byte header"
+        );
         // The seal verifies (whole-file CRC matches the header) — proves it's well-formed.
         verify_whole_file_crc32c(&mut bytes).expect(".10d whole-file CRC must verify");
+    }
+
+    #[test]
+    fn bundles_provenance_physically_and_still_decodes_the_mesh() {
+        use crate::container_10d::provenance_section::{
+            decode_provenance_section, validate_provenance,
+        };
+
+        let source = b"<the original source GLB bytes for this organ>".to_vec();
+        let sidecar = ProvenanceSidecar::new(source.clone(), "model/gltf-binary", "CC-BY-4.0");
+        let mut bytes = compile_mesh_to_10d_with_provenance(&cube(), Some(&sidecar)).unwrap();
+
+        // The whole-file seal still verifies with the extra section.
+        verify_whole_file_crc32c(&mut bytes).expect(".10d whole-file CRC must verify");
+        // The mesh is still decodable (the provenance section does not disturb it).
+        let mesh = decode_10d_mesh(&bytes).unwrap();
+        assert_eq!(mesh.triangle_count(), cube().triangle_count());
+
+        // The provenance sidecar is physically present in the container and passes its gate.
+        let header = Container10dHeader::parse(&bytes).unwrap();
+        let descs = parse_section_table(&bytes, &header).unwrap();
+        let prov = descs
+            .iter()
+            .find(|d| d.typ() == Some(SectionType::ProvenanceSidecar))
+            .expect("provenance section bundled in the .10d");
+        let payload = &bytes[prov.byte_offset as usize..][..prov.byte_length as usize];
+        let view = decode_provenance_section(payload).unwrap();
+        validate_provenance(&view).expect("bundled provenance validates before use");
+        assert_eq!(view.licence(), "CC-BY-4.0");
+        assert_eq!(view.source_bytes(), source.as_slice());
     }
 
     #[test]
@@ -341,8 +423,14 @@ mod tests {
 
         // Both digests appear as manifest facts (object-side), binding the two layers.
         let objs: Vec<u64> = a.quins.iter().map(|q| q.object).collect();
-        assert!(objs.contains(&(a.compiled_digest as u64)), "manifest cites compiledDigest");
-        assert!(objs.contains(&(a.source_digest as u64)), "manifest cites sourceDigest");
+        assert!(
+            objs.contains(&(a.compiled_digest as u64)),
+            "manifest cites compiledDigest"
+        );
+        assert!(
+            objs.contains(&(a.source_digest as u64)),
+            "manifest cites sourceDigest"
+        );
     }
 
     #[test]
@@ -376,14 +464,18 @@ mod tests {
         // Same geometry → identical container + digests; only the manifest gains the anatomy facts.
         assert_eq!(organ.container_10d, plain.container_10d);
         assert_eq!(organ.compiled_digest, plain.compiled_digest);
-        assert_eq!(organ.quins.len(), plain.quins.len() + 2, "two anatomy facts added");
+        assert_eq!(
+            organ.quins.len(),
+            plain.quins.len() + 2,
+            "two anatomy facts added"
+        );
         // bodySystem + anatomyModel strings are carried in the lexicon.
         let vals: Vec<&str> = organ.lexicon.values().map(String::as_str).collect();
         assert!(vals.contains(&"respiratory"), "bodySystem fact present");
         assert!(vals.contains(&"male"), "anatomyModel fact present");
         // None/None path is exactly compile_asset — no phantom facts.
-        let none =
-            compile_organ_asset(TRI_OBJ, Some("obj"), "urn:asset:organ", "obj", None, None).unwrap();
+        let none = compile_organ_asset(TRI_OBJ, Some("obj"), "urn:asset:organ", "obj", None, None)
+            .unwrap();
         assert_eq!(none.quins.len(), plain.quins.len());
     }
 
@@ -392,13 +484,21 @@ mod tests {
         let plain = compile_asset(TRI_OBJ, Some("obj"), "urn:asset:fetal", "obj").unwrap();
         // Carnegie stage 18 ≈ 44 postfertilization days.
         let dev =
-            compile_developmental_asset(TRI_OBJ, Some("obj"), "urn:asset:fetal", "obj", 44, 18).unwrap();
+            compile_developmental_asset(TRI_OBJ, Some("obj"), "urn:asset:fetal", "obj", 44, 18)
+                .unwrap();
         // Same geometry → identical container; only the manifest gains the two developmental facts.
         assert_eq!(dev.container_10d, plain.container_10d);
-        assert_eq!(dev.quins.len(), plain.quins.len() + 2, "gestationalAgeDays + carnegieStage");
+        assert_eq!(
+            dev.quins.len(),
+            plain.quins.len() + 2,
+            "gestationalAgeDays + carnegieStage"
+        );
         // The t-axis coordinate (44 days) and the stage (18) are present as u64 fact objects (a 3-vertex,
         // 1-triangle mesh has no other facts with those values, so this is unambiguous).
-        assert!(dev.quins.iter().any(|q| q.object == 44), "gestationalAgeDays=44");
+        assert!(
+            dev.quins.iter().any(|q| q.object == 44),
+            "gestationalAgeDays=44"
+        );
         assert!(dev.quins.iter().any(|q| q.object == 18), "carnegieStage=18");
     }
 }

@@ -58,11 +58,7 @@ impl<'a> SurfaceMeshView<'a> {
     /// Construct a view from the half-edge array and pre-built maps.
     ///
     /// The maps must have been built by [`build_surface_mesh_maps`].
-    pub fn new(
-        half_edges: &'a [HalfEdge],
-        vertex_to_he: &'a [u32],
-        face_to_he: &'a [u32],
-    ) -> Self {
+    pub fn new(half_edges: &'a [HalfEdge], vertex_to_he: &'a [u32], face_to_he: &'a [u32]) -> Self {
         Self {
             half_edges,
             vertex_to_he,
@@ -153,10 +149,7 @@ impl<'a> SurfaceMeshView<'a> {
     ///
     /// Writes the indices of boundary half-edges into `out` and returns the
     /// count. If `out` is too small, returns an error with the required size.
-    pub fn collect_boundary_half_edges(
-        &self,
-        out: &mut [u32],
-    ) -> Result<usize, SurfaceMeshError> {
+    pub fn collect_boundary_half_edges(&self, out: &mut [u32]) -> Result<usize, SurfaceMeshError> {
         let mut count = 0;
         for (i, he) in self.half_edges.iter().enumerate() {
             if he.twin == INVALID_INDEX {
@@ -461,10 +454,10 @@ impl<'a> Iterator for BoundaryLoopWalker<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::topology::{
         build_triangle_half_edges, required_edge_slots, EdgeSlot, HalfEdge, INVALID_INDEX,
     };
+    use super::*;
 
     /// Build a half-edge graph and surface-mesh view for testing.
     fn build_view(

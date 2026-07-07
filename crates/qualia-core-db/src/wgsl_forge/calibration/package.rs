@@ -97,7 +97,15 @@ mod tests {
     use super::*;
 
     fn sample_prov() -> Provenance {
-        Provenance::new(ArtifactKind::AwqScales, 0xDEAD_BEEF, 12, 8.5, 8.7, 0.0235, true)
+        Provenance::new(
+            ArtifactKind::AwqScales,
+            0xDEAD_BEEF,
+            12,
+            8.5,
+            8.7,
+            0.0235,
+            true,
+        )
     }
 
     #[test]

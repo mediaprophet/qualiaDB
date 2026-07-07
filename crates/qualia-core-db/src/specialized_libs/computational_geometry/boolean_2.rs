@@ -25,8 +25,8 @@
 //!
 //! `area(A∪B) + area(A∩B) = area(A) + area(B)` is asserted in tests.
 
-use super::primitives::{orientation_2, Point2, Orientation};
 use super::distance::{point_segment_distance_sq_2d, segment_segment_intersect_2d};
+use super::primitives::{orientation_2, Orientation, Point2};
 
 /// Boolean operation error.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -121,12 +121,7 @@ pub fn point_in_or_on_polygon(point: Point2, polygon: &[Point2]) -> bool {
 /// Compute the intersection of segment (a1,a2) with the **infinite line**
 /// through b1 and b2. Used by Sutherland-Hodgman clipping.
 /// Returns the intersection point if it lies on segment (a1,a2).
-fn line_segment_intersection(
-    a1: Point2,
-    a2: Point2,
-    b1: Point2,
-    b2: Point2,
-) -> Option<Point2> {
+fn line_segment_intersection(a1: Point2, a2: Point2, b1: Point2, b2: Point2) -> Option<Point2> {
     let d1x = a2.x - a1.x;
     let d1y = a2.y - a1.y;
     let d2x = b2.x - b1.x;
@@ -155,7 +150,9 @@ pub fn find_intersections(a: &[Point2], b: &[Point2]) -> Vec<Point2> {
         for j in 0..b.len() {
             let b1 = b[j];
             let b2 = b[(j + 1) % b.len()];
-            if segment_segment_intersect_2d(a1, a2, b1, b2) != super::distance::SegmentIntersection2d::Disjoint {
+            if segment_segment_intersect_2d(a1, a2, b1, b2)
+                != super::distance::SegmentIntersection2d::Disjoint
+            {
                 if let Some(pt) = line_segment_intersection(a1, a2, b1, b2) {
                     intersections.push(pt);
                 }
@@ -231,7 +228,8 @@ pub fn boolean_intersection_area(a: &[Point2], b: &[Point2]) -> Result<f64, Bool
             if current_inside {
                 if !prev_inside {
                     // Entering: compute intersection.
-                    if let Some(pt) = line_segment_intersection(prev, current, clip_start, clip_end) {
+                    if let Some(pt) = line_segment_intersection(prev, current, clip_start, clip_end)
+                    {
                         output.push(pt);
                     }
                 }
@@ -403,7 +401,10 @@ mod tests {
             Point2::new(1.0, -1.0),
         ];
         let inter = boolean_intersection_area(&a, &b).unwrap();
-        assert!(inter > 0.0, "overlapping triangles should have positive intersection");
+        assert!(
+            inter > 0.0,
+            "overlapping triangles should have positive intersection"
+        );
         assert!(verify_area_conservation(&a, &b));
     }
 
@@ -429,8 +430,14 @@ mod tests {
             Point2::new(1.0, 2.0),
         ];
         let inter = boolean_intersection_area(&outer, &inner).unwrap();
-        assert!((inter - 1.0).abs() < 1e-9, "nested: intersection = inner area = {inter}");
+        assert!(
+            (inter - 1.0).abs() < 1e-9,
+            "nested: intersection = inner area = {inter}"
+        );
         let union = boolean_union_area(&outer, &inner).unwrap();
-        assert!((union - 16.0).abs() < 1e-9, "nested: union = outer area = {union}");
+        assert!(
+            (union - 16.0).abs() < 1e-9,
+            "nested: union = outer area = {union}"
+        );
     }
 }

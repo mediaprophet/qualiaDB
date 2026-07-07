@@ -300,7 +300,11 @@ mod tests {
                 .map(|_| s.sample(&mut base.to_vec(), &[]))
                 .collect::<Vec<_>>()
         };
-        assert_ne!(seq(1), seq(999), "different seeds should diverge on a uniform dist");
+        assert_ne!(
+            seq(1),
+            seq(999),
+            "different seeds should diverge on a uniform dist"
+        );
     }
 
     #[test]
@@ -314,7 +318,11 @@ mod tests {
             };
             let mut s = SamplerState::new(cfg);
             let mut l = logits(&[0.2, 0.1, 2.5, 0.4, 2.5]); // argmax id 2 (tie→lowest)
-            assert_eq!(s.sample(&mut l, &[]), 2, "top_k=1 must equal argmax at T={temp}");
+            assert_eq!(
+                s.sample(&mut l, &[]),
+                2,
+                "top_k=1 must equal argmax at T={temp}"
+            );
         }
     }
 
@@ -332,7 +340,10 @@ mod tests {
         let mut s = SamplerState::new(cfg);
         let mut l = logits(&[5.0, 4.0, 3.0, 2.0]);
         let picked = s.sample(&mut l, &[0, 0, 0]); // id 0 heavily penalized
-        assert_ne!(picked, 0, "repeated token should be suppressed below the runner-up");
+        assert_ne!(
+            picked, 0,
+            "repeated token should be suppressed below the runner-up"
+        );
         assert_eq!(picked, 1);
     }
 
@@ -365,7 +376,11 @@ mod tests {
         };
         let mut s = SamplerState::new(cfg);
         let mut l = logits(&[5.0, 4.0, 3.0]);
-        assert_eq!(s.sample(&mut l, &[0, 0, 0]), 0, "greedy must ignore penalties and return argmax");
+        assert_eq!(
+            s.sample(&mut l, &[0, 0, 0]),
+            0,
+            "greedy must ignore penalties and return argmax"
+        );
     }
 
     #[test]

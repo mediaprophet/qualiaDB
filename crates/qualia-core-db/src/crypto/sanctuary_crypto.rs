@@ -100,8 +100,13 @@ pub fn derive_sanctuary_key_material_argon2(
 ) -> Result<SanctuaryKeyMaterial, String> {
     use argon2::{Algorithm, Argon2, Params, Version};
 
-    let params = Params::new(m_cost_kib, t_cost, p_cost, Some(SANCTUARY_KEY_MATERIAL_BYTES))
-        .map_err(|e| format!("argon2 params: {e}"))?;
+    let params = Params::new(
+        m_cost_kib,
+        t_cost,
+        p_cost,
+        Some(SANCTUARY_KEY_MATERIAL_BYTES),
+    )
+    .map_err(|e| format!("argon2 params: {e}"))?;
     let argon = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
 
     let mut key_material = [0u8; SANCTUARY_KEY_MATERIAL_BYTES];

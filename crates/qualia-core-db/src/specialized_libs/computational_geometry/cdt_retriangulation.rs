@@ -28,7 +28,7 @@
 //! Tier-2 cold construction (uses `Vec` during build).
 
 use super::constrained_delaunay::conforming_delaunay_2;
-use super::primitives::{orientation_2, Point2, Point3, Orientation};
+use super::primitives::{orientation_2, Orientation, Point2, Point3};
 
 /// CDT re-triangulation error.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -165,12 +165,9 @@ pub fn cdt_retriangulate_facet(
     let mut out_points_2d: Vec<Point2> = Vec::new();
     let mut out_tris: Vec<[u32; 3]> = vec![[0u32; 3]; 2 * total + 10];
 
-    let (point_count_2d, tri_count) = conforming_delaunay_2(
-        &points_2d,
-        &constraints,
-        &mut out_points_2d,
-        &mut out_tris,
-    ).map_err(|e| CdtError::DelaunayFailed(e.to_string()))?;
+    let (point_count_2d, tri_count) =
+        conforming_delaunay_2(&points_2d, &constraints, &mut out_points_2d, &mut out_tris)
+            .map_err(|e| CdtError::DelaunayFailed(e.to_string()))?;
 
     // The conforming Delaunay may add subdivision points. Map them back to 3-D.
     // Original points (0..total) map directly. Subdivision points (total..point_count_2d)
@@ -227,10 +224,7 @@ pub fn cdt_retriangulate_facet(
         let pa = out_points_2d[tri[0] as usize];
         let pb = out_points_2d[tri[1] as usize];
         let pc = out_points_2d[tri[2] as usize];
-        let centroid = Point2::new(
-            (pa.x + pb.x + pc.x) / 3.0,
-            (pa.y + pb.y + pc.y) / 3.0,
-        );
+        let centroid = Point2::new((pa.x + pb.x + pc.x) / 3.0, (pa.y + pb.y + pc.y) / 3.0);
 
         if point_in_triangle_2d(centroid, points_2d[0], points_2d[1], points_2d[2]) {
             result_tris.push(tri);
@@ -355,13 +349,21 @@ mod tests {
         // Index 3 = first constraint point, index 4 = second.
         let segments = vec![(3u32, 4u32)];
 
-        let (_points, triangles) = cdt_retriangulate_facet(tri, &constraint_points, &segments).unwrap();
+        let (_points, triangles) =
+            cdt_retriangulate_facet(tri, &constraint_points, &segments).unwrap();
 
         // Should produce at least 2 triangles (split along the segment).
-        assert!(triangles.len() >= 2, "expected ≥2 triangles, got {}", triangles.len());
+        assert!(
+            triangles.len() >= 2,
+            "expected ≥2 triangles, got {}",
+            triangles.len()
+        );
 
         // Verify the constraint edge is present (possibly as a chain).
-        assert!(edge_chain_present(&triangles, 3, 4), "constraint edge (3,4) should be present in the triangulation");
+        assert!(
+            edge_chain_present(&triangles, 3, 4),
+            "constraint edge (3,4) should be present in the triangulation"
+        );
     }
 
     #[test]
@@ -387,7 +389,10 @@ mod tests {
         let (_points, triangles) = cdt_retriangulate_facet(tri, &cp, &segments).unwrap();
 
         // The constraint must be present (possibly as a chain).
-        assert!(edge_chain_present(&triangles, 3, 4), "constraint edge must be present");
+        assert!(
+            edge_chain_present(&triangles, 3, 4),
+            "constraint edge must be present"
+        );
     }
 
     #[test]
@@ -421,19 +426,29 @@ mod tests {
         // Segment 1: midpoint AB to midpoint AC
         // Segment 2: midpoint AB to midpoint BC
         let cp = vec![
-            p(2.0, 0.0, 0.0),  // index 3: midpoint AB
-            p(0.0, 2.0, 0.0),  // index 4: midpoint AC
-            p(2.0, 2.0, 0.0),  // index 5: on BC (x+y=4)
+            p(2.0, 0.0, 0.0), // index 3: midpoint AB
+            p(0.0, 2.0, 0.0), // index 4: midpoint AC
+            p(2.0, 2.0, 0.0), // index 5: on BC (x+y=4)
         ];
         let segments = vec![(3u32, 4u32), (3u32, 5u32)];
 
         let (_points, triangles) = cdt_retriangulate_facet(tri, &cp, &segments).unwrap();
 
-        assert!(triangles.len() >= 3, "expected ≥3 triangles, got {}", triangles.len());
+        assert!(
+            triangles.len() >= 3,
+            "expected ≥3 triangles, got {}",
+            triangles.len()
+        );
 
         // Both constraint edges should be present (possibly as chains).
-        assert!(edge_chain_present(&triangles, 3, 4), "constraint (3,4) missing");
-        assert!(edge_chain_present(&triangles, 3, 5), "constraint (3,5) missing");
+        assert!(
+            edge_chain_present(&triangles, 3, 4),
+            "constraint (3,4) missing"
+        );
+        assert!(
+            edge_chain_present(&triangles, 3, 5),
+            "constraint (3,5) missing"
+        );
     }
 
     #[test]
@@ -445,7 +460,10 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
-            CdtError::InvalidConstraintIndex { index: 10, point_count: 3 }
+            CdtError::InvalidConstraintIndex {
+                index: 10,
+                point_count: 3
+            }
         );
     }
 
@@ -486,7 +504,8 @@ mod tests {
                 assert!(
                     point_in_triangle_2d(p2d, a2d, b2d, c2d),
                     "vertex {} at {:?} is outside the original triangle",
-                    vi, points[vi as usize]
+                    vi,
+                    points[vi as usize]
                 );
             }
         }
@@ -498,7 +517,8 @@ mod tests {
         use std::collections::HashSet;
 
         // Build adjacency set.
-        let mut adj: std::collections::HashMap<u32, HashSet<u32>> = std::collections::HashMap::new();
+        let mut adj: std::collections::HashMap<u32, HashSet<u32>> =
+            std::collections::HashMap::new();
         for tri in triangles {
             for i in 0..3 {
                 let v0 = tri[i];

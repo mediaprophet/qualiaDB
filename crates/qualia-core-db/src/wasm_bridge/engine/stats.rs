@@ -43,8 +43,8 @@ pub fn stats_describe_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     // median / quantiles need a sorted owned buffer (the `*_in_place` kernels sort
     // the caller's slice — clone so we never mutate caller intent twice).
     let mut buf = p.data.clone();
-    let median = d::median_in_place(&mut buf)
-        .ok_or_else(|| JsValue::from_str("data must be non-empty"))?;
+    let median =
+        d::median_in_place(&mut buf).ok_or_else(|| JsValue::from_str("data must be non-empty"))?;
     // `buf` is now sorted ascending; reuse the sorted-slice quantile.
     let q1 = d::quantile_sorted(&buf, 0.25)
         .ok_or_else(|| JsValue::from_str("data must be non-empty"))?;
@@ -221,10 +221,13 @@ pub fn stats_paired_t_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     }
     let p: In = serde_wasm_bindgen::from_value(val).map_err(jserr)?;
     if p.a.len() != p.b.len() {
-        return Err(JsValue::from_str("paired t-test requires equal-length samples"));
+        return Err(JsValue::from_str(
+            "paired t-test requires equal-length samples",
+        ));
     }
-    let r = crate::solvers::statistics::hypothesis::paired_t(&p.a, &p.b)
-        .ok_or_else(|| JsValue::from_str("paired t-test requires equal-length samples with n >= 2"))?;
+    let r = crate::solvers::statistics::hypothesis::paired_t(&p.a, &p.b).ok_or_else(|| {
+        JsValue::from_str("paired t-test requires equal-length samples with n >= 2")
+    })?;
     #[derive(Serialize)]
     struct Out {
         t_statistic: f64,
@@ -298,7 +301,9 @@ pub fn stats_chi_square_gof_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     }
     let p: In = serde_wasm_bindgen::from_value(val).map_err(jserr)?;
     if p.observed.len() != p.expected.len() {
-        return Err(JsValue::from_str("observed and expected must have equal length"));
+        return Err(JsValue::from_str(
+            "observed and expected must have equal length",
+        ));
     }
     let r = crate::solvers::statistics::hypothesis::chi_square_gof(&p.observed, &p.expected)
         .ok_or_else(|| {
@@ -581,9 +586,8 @@ pub fn stats_friedman_wasm(val: JsValue) -> Result<JsValue, JsValue> {
         return Err(JsValue::from_str("friedman needs >= 2 blocks"));
     }
     let rows: Vec<&[f64]> = p.blocks.iter().map(|b| b.as_slice()).collect();
-    let r = crate::solvers::statistics::hypothesis::friedman(&rows).ok_or_else(|| {
-        JsValue::from_str("friedman requires >= 2 blocks of equal length k >= 2")
-    })?;
+    let r = crate::solvers::statistics::hypothesis::friedman(&rows)
+        .ok_or_else(|| JsValue::from_str("friedman requires >= 2 blocks of equal length k >= 2"))?;
     #[derive(Serialize)]
     struct Out {
         chi_square: f64,

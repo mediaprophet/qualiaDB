@@ -52,27 +52,18 @@ pub enum ValidationIssue {
         point: Point2,
     },
     /// The same edge appears twice (possibly in opposite direction).
-    DuplicateEdge {
-        edge1: usize,
-        edge2: usize,
-    },
+    DuplicateEdge { edge1: usize, edge2: usize },
     /// A zero-length edge (consecutive duplicate vertices).
-    DegenerateEdge {
-        edge: usize,
-    },
+    DegenerateEdge { edge: usize },
     /// The polygon has fewer than 3 vertices.
-    TooFewVertices {
-        actual: usize,
-    },
+    TooFewVertices { actual: usize },
     /// The polygon orientation is wrong (expected CCW for outer, CW for holes).
     WrongOrientation {
         expected_ccw: bool,
         actual_ccw: bool,
     },
     /// A hole is not inside the outer boundary.
-    HoleOutsideBoundary {
-        hole_index: usize,
-    },
+    HoleOutsideBoundary { hole_index: usize },
     /// A hole edge crosses an outer boundary edge.
     HoleCrossesBoundary {
         hole_index: usize,
@@ -80,21 +71,20 @@ pub enum ValidationIssue {
         boundary_edge: usize,
     },
     /// Two holes overlap (their edges cross).
-    HolesOverlap {
-        hole1: usize,
-        hole2: usize,
-    },
+    HolesOverlap { hole1: usize, hole2: usize },
     /// A vertex in the PSLG is not referenced by any edge.
-    IsolatedVertex {
-        vertex: usize,
-    },
+    IsolatedVertex { vertex: usize },
 }
 
 /// A typed repair suggestion for a validation issue.
 #[derive(Debug, Clone, PartialEq)]
 pub enum RepairSuggestion {
     /// Split the crossing edges at the intersection point.
-    SplitAtIntersection { edge1: usize, edge2: usize, point: Point2 },
+    SplitAtIntersection {
+        edge1: usize,
+        edge2: usize,
+        point: Point2,
+    },
     /// Remove the duplicate edge.
     RemoveDuplicateEdge { edge_to_remove: usize },
     /// Remove the degenerate (zero-length) edge by merging the vertices.
@@ -140,34 +130,39 @@ impl ValidationReport {
 /// Get the repair suggestion for a single issue.
 pub fn repair_for(issue: &ValidationIssue) -> RepairSuggestion {
     match issue {
-        ValidationIssue::CrossingEdges { edge1, edge2, point } => {
-            RepairSuggestion::SplitAtIntersection {
-                edge1: *edge1,
-                edge2: *edge2,
-                point: *point,
-            }
-        }
+        ValidationIssue::CrossingEdges {
+            edge1,
+            edge2,
+            point,
+        } => RepairSuggestion::SplitAtIntersection {
+            edge1: *edge1,
+            edge2: *edge2,
+            point: *point,
+        },
         ValidationIssue::DuplicateEdge { edge1: _, edge2 } => {
-            RepairSuggestion::RemoveDuplicateEdge { edge_to_remove: *edge2 }
+            RepairSuggestion::RemoveDuplicateEdge {
+                edge_to_remove: *edge2,
+            }
         }
         ValidationIssue::DegenerateEdge { edge } => {
             RepairSuggestion::RemoveDegenerateEdge { edge: *edge }
         }
-        ValidationIssue::WrongOrientation { .. } => {
-            RepairSuggestion::ReverseVertexOrder
-        }
+        ValidationIssue::WrongOrientation { .. } => RepairSuggestion::ReverseVertexOrder,
         ValidationIssue::TooFewVertices { actual } => {
             RepairSuggestion::AddVertices { needed: 3 - actual }
         }
-        ValidationIssue::HoleOutsideBoundary { hole_index } => {
-            RepairSuggestion::MoveHoleInside { hole_index: *hole_index }
-        }
+        ValidationIssue::HoleOutsideBoundary { hole_index } => RepairSuggestion::MoveHoleInside {
+            hole_index: *hole_index,
+        },
         ValidationIssue::HoleCrossesBoundary { hole_index, .. } => {
-            RepairSuggestion::RemoveCrossingHole { hole_index: *hole_index }
+            RepairSuggestion::RemoveCrossingHole {
+                hole_index: *hole_index,
+            }
         }
-        ValidationIssue::HolesOverlap { hole1, hole2 } => {
-            RepairSuggestion::FixOverlappingHoles { hole1: *hole1, hole2: *hole2 }
-        }
+        ValidationIssue::HolesOverlap { hole1, hole2 } => RepairSuggestion::FixOverlappingHoles {
+            hole1: *hole1,
+            hole2: *hole2,
+        },
         ValidationIssue::IsolatedVertex { vertex } => {
             RepairSuggestion::RemoveIsolatedVertex { vertex: *vertex }
         }
@@ -195,7 +190,9 @@ pub fn validate_simple_polygon(vertices: &[Point2]) -> ValidationReport {
 
     // Check minimum vertex count.
     if vertices.len() < 3 {
-        issues.push(ValidationIssue::TooFewVertices { actual: vertices.len() });
+        issues.push(ValidationIssue::TooFewVertices {
+            actual: vertices.len(),
+        });
         return ValidationReport::from_issues(issues);
     }
 
@@ -234,9 +231,8 @@ pub fn validate_simple_polygon(vertices: &[Point2]) -> ValidationReport {
             if k == i || k == j || l == i || l == j {
                 continue;
             }
-            let result = classify_segment_intersection_2(
-                vertices[i], vertices[j], vertices[k], vertices[l],
-            );
+            let result =
+                classify_segment_intersection_2(vertices[i], vertices[j], vertices[k], vertices[l]);
             if let Some(pt) = result.point {
                 // Only report proper crossings and T-junctions, not shared
                 // endpoints (which are adjacent edges already skipped).
@@ -343,9 +339,8 @@ pub fn validate_polygon_with_holes(poly: &PolygonWithHoles) -> ValidationReport 
             let j = (i + 1) % hn;
             for k in 0..on {
                 let l = (k + 1) % on;
-                let result = classify_segment_intersection_2(
-                    hole[i], hole[j], poly.outer[k], poly.outer[l],
-                );
+                let result =
+                    classify_segment_intersection_2(hole[i], hole[j], poly.outer[k], poly.outer[l]);
                 if let Some(_pt) = result.point {
                     match result.class {
                         super::segment_intersection_2::SegmentIntersectionClass::Proper
@@ -373,13 +368,14 @@ pub fn validate_polygon_with_holes(poly: &PolygonWithHoles) -> ValidationReport 
                 let j = (i + 1) % h1n;
                 for k in 0..h2n {
                     let l = (k + 1) % h2n;
-                    let result = classify_segment_intersection_2(
-                        hole1[i], hole1[j], hole2[k], hole2[l],
-                    );
+                    let result =
+                        classify_segment_intersection_2(hole1[i], hole1[j], hole2[k], hole2[l]);
                     if let Some(_) = result.point {
                         match result.class {
                             super::segment_intersection_2::SegmentIntersectionClass::Proper
-                            | super::segment_intersection_2::SegmentIntersectionClass::TJunction(_) => {
+                            | super::segment_intersection_2::SegmentIntersectionClass::TJunction(
+                                _,
+                            ) => {
                                 found_crossing = true;
                                 break 'outer;
                             }
@@ -389,7 +385,10 @@ pub fn validate_polygon_with_holes(poly: &PolygonWithHoles) -> ValidationReport 
                 }
             }
             if found_crossing {
-                issues.push(ValidationIssue::HolesOverlap { hole1: hi, hole2: hj });
+                issues.push(ValidationIssue::HolesOverlap {
+                    hole1: hi,
+                    hole2: hj,
+                });
             }
         }
     }
@@ -459,20 +458,22 @@ pub fn validate_pslg(vertices: &[Point2], edges: &[PslgEdge]) -> ValidationRepor
             // Skip edges that share a vertex.
             let e1 = edges[i];
             let e2 = edges[j];
-            if e1.from == e2.from || e1.from == e2.to
-                || e1.to == e2.from || e1.to == e2.to
-            {
+            if e1.from == e2.from || e1.from == e2.to || e1.to == e2.from || e1.to == e2.to {
                 continue;
             }
             // Bounds check.
-            if e1.from >= vertices.len() || e1.to >= vertices.len()
-                || e2.from >= vertices.len() || e2.to >= vertices.len()
+            if e1.from >= vertices.len()
+                || e1.to >= vertices.len()
+                || e2.from >= vertices.len()
+                || e2.to >= vertices.len()
             {
                 continue;
             }
             let result = classify_segment_intersection_2(
-                vertices[e1.from], vertices[e1.to],
-                vertices[e2.from], vertices[e2.to],
+                vertices[e1.from],
+                vertices[e1.to],
+                vertices[e2.from],
+                vertices[e2.to],
             );
             if let Some(pt) = result.point {
                 match result.class {
@@ -532,18 +533,22 @@ pub fn canonicalize_simple_polygon(vertices: &[Point2]) -> Vec<Point2> {
 /// Canonicalize a polygon with holes: outer CCW, holes CW.
 pub fn canonicalize_polygon_with_holes(poly: &PolygonWithHoles) -> PolygonWithHoles {
     let outer = canonicalize_simple_polygon(&poly.outer);
-    let holes: Vec<Vec<Point2>> = poly.holes.iter().map(|hole| {
-        let mut h = hole.to_vec();
-        if h.len() > 1 && h[0] == h[h.len() - 1] {
-            h.pop();
-        }
-        let area = signed_area(&h);
-        if area > 0.0 {
-            // Hole should be CW (negative area).
-            h.reverse();
-        }
-        h
-    }).collect();
+    let holes: Vec<Vec<Point2>> = poly
+        .holes
+        .iter()
+        .map(|hole| {
+            let mut h = hole.to_vec();
+            if h.len() > 1 && h[0] == h[h.len() - 1] {
+                h.pop();
+            }
+            let area = signed_area(&h);
+            if area > 0.0 {
+                // Hole should be CW (negative area).
+                h.reverse();
+            }
+            h
+        })
+        .collect();
     PolygonWithHoles { outer, holes }
 }
 
@@ -565,7 +570,11 @@ mod tests {
     fn valid_ccw_square_passes() {
         let square = vec![p(0.0, 0.0), p(1.0, 0.0), p(1.0, 1.0), p(0.0, 1.0)];
         let report = validate_simple_polygon(&square);
-        assert!(report.is_valid, "CCW square should be valid: {:?}", report.issues);
+        assert!(
+            report.is_valid,
+            "CCW square should be valid: {:?}",
+            report.issues
+        );
     }
 
     #[test]
@@ -573,14 +582,20 @@ mod tests {
         let square = vec![p(0.0, 0.0), p(0.0, 1.0), p(1.0, 1.0), p(1.0, 0.0)];
         let report = validate_simple_polygon(&square);
         assert!(!report.is_valid);
-        assert!(report.issues.iter().any(|i| matches!(i, ValidationIssue::WrongOrientation { .. })));
+        assert!(report
+            .issues
+            .iter()
+            .any(|i| matches!(i, ValidationIssue::WrongOrientation { .. })));
     }
 
     #[test]
     fn too_few_vertices_reported() {
         let report = validate_simple_polygon(&[p(0.0, 0.0), p(1.0, 0.0)]);
         assert!(!report.is_valid);
-        assert!(report.issues.iter().any(|i| matches!(i, ValidationIssue::TooFewVertices { actual: 2 })));
+        assert!(report
+            .issues
+            .iter()
+            .any(|i| matches!(i, ValidationIssue::TooFewVertices { actual: 2 })));
     }
 
     #[test]
@@ -589,7 +604,10 @@ mod tests {
         let bowtie = vec![p(0.0, 0.0), p(1.0, 1.0), p(1.0, 0.0), p(0.0, 1.0)];
         let report = validate_simple_polygon(&bowtie);
         assert!(!report.is_valid);
-        assert!(report.issues.iter().any(|i| matches!(i, ValidationIssue::CrossingEdges { .. })));
+        assert!(report
+            .issues
+            .iter()
+            .any(|i| matches!(i, ValidationIssue::CrossingEdges { .. })));
     }
 
     #[test]
@@ -598,7 +616,10 @@ mod tests {
         let poly = vec![p(0.0, 0.0), p(1.0, 0.0), p(1.0, 0.0), p(0.0, 1.0)];
         let report = validate_simple_polygon(&poly);
         assert!(!report.is_valid);
-        assert!(report.issues.iter().any(|i| matches!(i, ValidationIssue::DegenerateEdge { .. })));
+        assert!(report
+            .issues
+            .iter()
+            .any(|i| matches!(i, ValidationIssue::DegenerateEdge { .. })));
     }
 
     #[test]
@@ -607,23 +628,38 @@ mod tests {
         let poly = vec![p(0.0, 0.0), p(1.0, 0.0), p(0.0, 0.0), p(0.0, 1.0)];
         let report = validate_simple_polygon(&poly);
         assert!(!report.is_valid);
-        assert!(report.issues.iter().any(|i| matches!(i, ValidationIssue::DuplicateEdge { .. })));
+        assert!(report
+            .issues
+            .iter()
+            .any(|i| matches!(i, ValidationIssue::DuplicateEdge { .. })));
     }
 
     #[test]
     fn valid_triangle_passes() {
         let tri = vec![p(0.0, 0.0), p(1.0, 0.0), p(0.0, 1.0)];
         let report = validate_simple_polygon(&tri);
-        assert!(report.is_valid, "CCW triangle should be valid: {:?}", report.issues);
+        assert!(
+            report.is_valid,
+            "CCW triangle should be valid: {:?}",
+            report.issues
+        );
     }
 
     #[test]
     fn valid_convex_polygon_passes() {
         let pent = vec![
-            p(0.0, 0.0), p(2.0, 0.0), p(3.0, 1.0), p(1.0, 2.0), p(0.0, 1.0),
+            p(0.0, 0.0),
+            p(2.0, 0.0),
+            p(3.0, 1.0),
+            p(1.0, 2.0),
+            p(0.0, 1.0),
         ];
         let report = validate_simple_polygon(&pent);
-        assert!(report.is_valid, "CCW pentagon should be valid: {:?}", report.issues);
+        assert!(
+            report.is_valid,
+            "CCW pentagon should be valid: {:?}",
+            report.issues
+        );
     }
 
     // ── Repair suggestions ───────────────────────────────────────────────
@@ -631,15 +667,23 @@ mod tests {
     #[test]
     fn repair_suggestion_for_crossing() {
         let issue = ValidationIssue::CrossingEdges {
-            edge1: 0, edge2: 2, point: p(0.5, 0.5),
+            edge1: 0,
+            edge2: 2,
+            point: p(0.5, 0.5),
         };
         let repair = repair_for(&issue);
-        assert!(matches!(repair, RepairSuggestion::SplitAtIntersection { .. }));
+        assert!(matches!(
+            repair,
+            RepairSuggestion::SplitAtIntersection { .. }
+        ));
     }
 
     #[test]
     fn repair_suggestion_for_orientation() {
-        let issue = ValidationIssue::WrongOrientation { expected_ccw: true, actual_ccw: false };
+        let issue = ValidationIssue::WrongOrientation {
+            expected_ccw: true,
+            actual_ccw: false,
+        };
         let repair = repair_for(&issue);
         assert!(matches!(repair, RepairSuggestion::ReverseVertexOrder));
     }
@@ -664,7 +708,11 @@ mod tests {
         // Signed area = 0.5 * [(1*3-1*1) + (1*3-3*3) + (3*1-3*3) + (3*1-1*1)]
         // = 0.5 * [2 + (-6) + (-6) + 2] = 0.5 * (-8) = -4. Negative → CW. Good.
         let report = validate_polygon_with_holes(&poly);
-        assert!(report.is_valid, "valid polygon with hole: {:?}", report.issues);
+        assert!(
+            report.is_valid,
+            "valid polygon with hole: {:?}",
+            report.issues
+        );
     }
 
     #[test]
@@ -675,7 +723,10 @@ mod tests {
         };
         let report = validate_polygon_with_holes(&poly);
         assert!(!report.is_valid);
-        assert!(report.issues.iter().any(|i| matches!(i, ValidationIssue::HoleOutsideBoundary { .. })));
+        assert!(report
+            .issues
+            .iter()
+            .any(|i| matches!(i, ValidationIssue::HoleOutsideBoundary { .. })));
     }
 
     #[test]
@@ -687,7 +738,10 @@ mod tests {
         // The hole is CCW (positive area) — should be CW.
         let report = validate_polygon_with_holes(&poly);
         assert!(!report.is_valid);
-        assert!(report.issues.iter().any(|i| matches!(i, ValidationIssue::WrongOrientation { .. })));
+        assert!(report
+            .issues
+            .iter()
+            .any(|i| matches!(i, ValidationIssue::WrongOrientation { .. })));
     }
 
     #[test]
@@ -725,7 +779,10 @@ mod tests {
         ];
         let report = validate_pslg(&vertices, &edges);
         assert!(!report.is_valid);
-        assert!(report.issues.iter().any(|i| matches!(i, ValidationIssue::CrossingEdges { .. })));
+        assert!(report
+            .issues
+            .iter()
+            .any(|i| matches!(i, ValidationIssue::CrossingEdges { .. })));
     }
 
     #[test]
@@ -737,7 +794,10 @@ mod tests {
         ];
         let report = validate_pslg(&vertices, &edges);
         assert!(!report.is_valid);
-        assert!(report.issues.iter().any(|i| matches!(i, ValidationIssue::DuplicateEdge { .. })));
+        assert!(report
+            .issues
+            .iter()
+            .any(|i| matches!(i, ValidationIssue::DuplicateEdge { .. })));
     }
 
     #[test]
@@ -746,7 +806,10 @@ mod tests {
         let edges = vec![PslgEdge { from: 0, to: 1 }];
         let report = validate_pslg(&vertices, &edges);
         assert!(!report.is_valid);
-        assert!(report.issues.iter().any(|i| matches!(i, ValidationIssue::IsolatedVertex { vertex: 2 })));
+        assert!(report
+            .issues
+            .iter()
+            .any(|i| matches!(i, ValidationIssue::IsolatedVertex { vertex: 2 })));
     }
 
     #[test]
@@ -757,7 +820,11 @@ mod tests {
             PslgEdge { from: 0, to: 2 }, // shares vertex 0 — not a crossing
         ];
         let report = validate_pslg(&vertices, &edges);
-        assert!(report.is_valid, "shared vertex should not be a crossing: {:?}", report.issues);
+        assert!(
+            report.is_valid,
+            "shared vertex should not be a crossing: {:?}",
+            report.issues
+        );
     }
 
     // ── Canonicalization ─────────────────────────────────────────────────
@@ -766,12 +833,21 @@ mod tests {
     fn canonicalize_cw_to_ccw() {
         let cw = vec![p(0.0, 0.0), p(0.0, 1.0), p(1.0, 1.0), p(1.0, 0.0)];
         let canon = canonicalize_simple_polygon(&cw);
-        assert!(signed_area(&canon) > 0.0, "canonicalized polygon should be CCW");
+        assert!(
+            signed_area(&canon) > 0.0,
+            "canonicalized polygon should be CCW"
+        );
     }
 
     #[test]
     fn canonicalize_removes_trailing_duplicate() {
-        let poly = vec![p(0.0, 0.0), p(1.0, 0.0), p(1.0, 1.0), p(0.0, 1.0), p(0.0, 0.0)];
+        let poly = vec![
+            p(0.0, 0.0),
+            p(1.0, 0.0),
+            p(1.0, 1.0),
+            p(0.0, 1.0),
+            p(0.0, 0.0),
+        ];
         let canon = canonicalize_simple_polygon(&poly);
         assert_eq!(canon.len(), 4, "trailing duplicate should be removed");
     }

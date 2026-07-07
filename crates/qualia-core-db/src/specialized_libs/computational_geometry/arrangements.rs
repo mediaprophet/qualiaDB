@@ -133,7 +133,8 @@ impl Line2 {
         if self.is_vertical || other.is_vertical {
             return false;
         }
-        (self.slope - other.slope).abs() <= f64::EPSILON * (self.slope.abs() + other.slope.abs() + 1.0)
+        (self.slope - other.slope).abs()
+            <= f64::EPSILON * (self.slope.abs() + other.slope.abs() + 1.0)
     }
 }
 
@@ -267,7 +268,10 @@ fn clip_line_to_bbox(line: &Line2, bmin: Point2, bmax: Point2) -> (Point2, Point
     // Liang-Barsky clipping of the line to the box [bmin, bmax].
     // Parametrize the line as P(t) = P0 + t * d.
     let (p0, d) = if line.is_vertical {
-        (Point2::new(line.x_const, bmin.y), Point2::new(0.0, bmax.y - bmin.y))
+        (
+            Point2::new(line.x_const, bmin.y),
+            Point2::new(0.0, bmax.y - bmin.y),
+        )
     } else {
         // Pick two far-apart points on the line.
         let x0 = bmin.x - (bmax.x - bmin.x);
@@ -391,7 +395,11 @@ pub fn build_line_arrangement(lines: &[Line2]) -> Result<Arrangement, Arrangemen
             let start = w[0].1;
             let end = w[1].1;
             if (start.x - end.x).abs() > 1e-12 || (start.y - end.y).abs() > 1e-12 {
-                edges.push(ArrangementEdge { line: li, start, end });
+                edges.push(ArrangementEdge {
+                    line: li,
+                    start,
+                    end,
+                });
             }
         }
     }
@@ -449,7 +457,11 @@ fn point_on_line(p: Point2, line: &Line2) -> bool {
 /// The bbox has 4 sides. Each side is split at every boundary point that lies
 /// on it, producing edges between consecutive split points (including corners).
 /// A special line index `usize::MAX` marks bbox boundary edges.
-fn build_bbox_boundary_edges(bmin: Point2, bmax: Point2, boundary_points: &[Point2]) -> Vec<ArrangementEdge> {
+fn build_bbox_boundary_edges(
+    bmin: Point2,
+    bmax: Point2,
+    boundary_points: &[Point2],
+) -> Vec<ArrangementEdge> {
     let corners = [
         Point2::new(bmin.x, bmin.y), // bottom-left
         Point2::new(bmax.x, bmin.y), // bottom-right
@@ -552,12 +564,15 @@ fn extract_faces(
     let m = edges.len();
 
     // Build half-edges: two per edge.
-    let mut he = vec![ArrHalfEdge {
-        origin: 0,
-        twin: 0,
-        next: 0,
-        face: usize::MAX,
-    }; 2 * m];
+    let mut he = vec![
+        ArrHalfEdge {
+            origin: 0,
+            twin: 0,
+            next: 0,
+            face: usize::MAX,
+        };
+        2 * m
+    ];
 
     for (i, e) in edges.iter().enumerate() {
         let from = find_point(&all_points, e.start).unwrap();
@@ -639,7 +654,10 @@ fn extract_faces(
         // CCW (area > 0) → bounded face. CW (area < 0) → unbounded face
         // (the "outer" cycle of the arrangement, wrapping around the bbox).
         let unbounded = area < 0.0;
-        faces.push(ArrangementFace { boundary, unbounded });
+        faces.push(ArrangementFace {
+            boundary,
+            unbounded,
+        });
     }
 
     // For the unbounded face, reverse the boundary to get CCW (convention).
@@ -725,10 +743,7 @@ pub fn zone_traversal(arr: &Arrangement, query: &Line2) -> Vec<usize> {
     if crossings.is_empty() {
         // The query line doesn't cross any edge — it's entirely in one face.
         // Find which face contains a point on the query line.
-        let mid = Point2::new(
-            q_start.x + 0.5 * q_dir.x,
-            q_start.y + 0.5 * q_dir.y,
-        );
+        let mid = Point2::new(q_start.x + 0.5 * q_dir.x, q_start.y + 0.5 * q_dir.y);
         if let Some(fi) = locate_face(arr, mid) {
             return vec![fi];
         }
@@ -740,10 +755,7 @@ pub fn zone_traversal(arr: &Arrangement, query: &Line2) -> Vec<usize> {
     let mut zone: Vec<usize> = Vec::new();
     for w in crossings.windows(2) {
         let t_mid = (w[0].0 + w[1].0) * 0.5;
-        let mid = Point2::new(
-            q_start.x + t_mid * q_dir.x,
-            q_start.y + t_mid * q_dir.y,
-        );
+        let mid = Point2::new(q_start.x + t_mid * q_dir.x, q_start.y + t_mid * q_dir.y);
         if let Some(fi) = locate_face(arr, mid) {
             zone.push(fi);
         }
@@ -877,9 +889,9 @@ mod tests {
     /// Three lines in general position (no two parallel, no three concurrent).
     fn three_general_lines() -> Vec<Line2> {
         vec![
-            Line2::new(1.0, 0.0),   // y = x
-            Line2::new(-1.0, 2.0),  // y = -x + 2
-            Line2::new(0.0, 1.0),   // y = 1 (horizontal)
+            Line2::new(1.0, 0.0),  // y = x
+            Line2::new(-1.0, 2.0), // y = -x + 2
+            Line2::new(0.0, 1.0),  // y = 1 (horizontal)
         ]
     }
 
@@ -893,7 +905,11 @@ mod tests {
 
     #[test]
     fn rejects_all_parallel() {
-        let lines = vec![Line2::new(1.0, 0.0), Line2::new(1.0, 1.0), Line2::new(1.0, 2.0)];
+        let lines = vec![
+            Line2::new(1.0, 0.0),
+            Line2::new(1.0, 1.0),
+            Line2::new(1.0, 2.0),
+        ];
         assert_eq!(
             build_line_arrangement(&lines),
             Err(ArrangementError::AllParallel)
@@ -906,7 +922,11 @@ mod tests {
         // vertices. 4 line edges + 4 bbox edges = 8 edges. Euler: 5-8+F=2 → F=5.
         let arr = build_line_arrangement(&two_general_lines()).unwrap();
         let c = arr.counts();
-        assert_eq!(c.euler, 2, "Euler V-E+F must be 2, got V={} E={} F={}", c.vertices, c.edges, c.faces);
+        assert_eq!(
+            c.euler, 2,
+            "Euler V-E+F must be 2, got V={} E={} F={}",
+            c.vertices, c.edges, c.faces
+        );
     }
 
     #[test]
@@ -915,7 +935,11 @@ mod tests {
         // points. Just check Euler = 2.
         let arr = build_line_arrangement(&three_general_lines()).unwrap();
         let c = arr.counts();
-        assert_eq!(c.euler, 2, "Euler V-E+F must be 2, got V={} E={} F={}", c.vertices, c.edges, c.faces);
+        assert_eq!(
+            c.euler, 2,
+            "Euler V-E+F must be 2, got V={} E={} F={}",
+            c.vertices, c.edges, c.faces
+        );
     }
 
     #[test]
@@ -949,7 +973,9 @@ mod tests {
         let arr = build_line_arrangement(&lines).unwrap();
         // The origin (0,0) must be among the vertices.
         assert!(
-            arr.vertices.iter().any(|v| (v.x - 0.0).abs() < 1e-9 && (v.y - 0.0).abs() < 1e-9),
+            arr.vertices
+                .iter()
+                .any(|v| (v.x - 0.0).abs() < 1e-9 && (v.y - 0.0).abs() < 1e-9),
             "concurrent lines must include the origin in vertices"
         );
         assert_eq!(arr.counts().euler, 2);
@@ -962,7 +988,9 @@ mod tests {
         let arr = build_line_arrangement(&lines).unwrap();
         // The origin (0,0) must be among the vertices.
         assert!(
-            arr.vertices.iter().any(|v| (v.x - 0.0).abs() < 1e-9 && (v.y - 0.0).abs() < 1e-9),
+            arr.vertices
+                .iter()
+                .any(|v| (v.x - 0.0).abs() < 1e-9 && (v.y - 0.0).abs() < 1e-9),
             "vertical + non-vertical must include the origin"
         );
         assert_eq!(arr.counts().euler, 2);
@@ -977,9 +1005,11 @@ mod tests {
         // The zone should be the same set of faces (order may differ at
         // boundaries, but the sequence should match).
         assert_eq!(
-            zone.len(), oracle.len(),
+            zone.len(),
+            oracle.len(),
             "zone length {} should match oracle {}",
-            zone.len(), oracle.len()
+            zone.len(),
+            oracle.len()
         );
         for i in 0..zone.len() {
             assert_eq!(
@@ -996,10 +1026,7 @@ mod tests {
         let query = Line2::new(0.3, 0.7);
         let zone = zone_traversal(&arr, &query);
         let oracle = zone_traversal_oracle(&arr, &query, 2000);
-        assert_eq!(
-            zone, oracle,
-            "zone traversal must match brute-force oracle"
-        );
+        assert_eq!(zone, oracle, "zone traversal must match brute-force oracle");
     }
 
     #[test]
@@ -1011,10 +1038,7 @@ mod tests {
         let query = Line2::new(0.7, 0.3);
         let zone = zone_traversal(&arr, &query);
         let oracle = zone_traversal_oracle(&arr, &query, 5000);
-        assert_eq!(
-            zone, oracle,
-            "zone traversal must match oracle for 5 lines"
-        );
+        assert_eq!(zone, oracle, "zone traversal must match oracle for 5 lines");
     }
 
     #[test]
@@ -1075,7 +1099,13 @@ mod tests {
     #[test]
     fn dual_round_trip_finite_non_vertical() {
         // dual(dual(p)) = p for all finite, non-vertical points.
-        for &(a, b) in &[(0.0, 0.0), (1.0, 2.0), (-3.5, 7.2), (1e6, -1e-6), (0.001, -0.001)] {
+        for &(a, b) in &[
+            (0.0, 0.0),
+            (1.0, 2.0),
+            (-3.5, 7.2),
+            (1e6, -1e-6),
+            (0.001, -0.001),
+        ] {
             let p = Point2::new(a, b);
             let rt = dual_round_trip(p);
             assert!(
@@ -1119,7 +1149,10 @@ mod tests {
         // If p is on l, then p* passes through l*.
         let l = Line2::new(2.0, 1.0); // y = 2x + 1
         let p = Point2::new(1.0, 3.0); // on l: 3 = 2·1 + 1 ✓
-        assert!(dual_incidence_holds(p, &l), "incidence must hold for p on l");
+        assert!(
+            dual_incidence_holds(p, &l),
+            "incidence must hold for p on l"
+        );
 
         // If p is NOT on l, then p* does NOT pass through l*.
         let p_off = Point2::new(1.0, 4.0); // not on l: 4 ≠ 3
@@ -1171,7 +1204,7 @@ mod tests {
         // Two parallel lines + one transversal.
         let lines = vec![
             Line2::new(1.0, 0.0),
-            Line2::new(1.0, 2.0), // parallel to first
+            Line2::new(1.0, 2.0),  // parallel to first
             Line2::new(-1.0, 3.0), // transversal
         ];
         let arr = build_line_arrangement(&lines).unwrap();
@@ -1180,5 +1213,4 @@ mod tests {
         // bbox corners and clip points).
         assert_eq!(arr.counts().euler, 2);
     }
-
 }

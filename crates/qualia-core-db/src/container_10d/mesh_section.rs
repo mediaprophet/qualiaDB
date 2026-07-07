@@ -107,13 +107,30 @@ pub enum MeshSectionError {
 impl std::fmt::Display for MeshSectionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::PayloadTooShort { got, need } => write!(f, "10d MESH payload too short: got {got}, need {need}"),
-            Self::NonZeroReserved { field } => write!(f, "10d MESH non-zero reserved field {field:?}"),
-            Self::VertexCountTooLarge { got, max } => write!(f, "10d MESH vertex_count {got} exceeds max {max}"),
-            Self::TriangleCountTooLarge { got, max } => write!(f, "10d MESH triangle_count {got} exceeds max {max}"),
-            Self::PayloadTruncated { expected, got } => write!(f, "10d MESH payload truncated: expected {expected}, got {got}"),
-            Self::OutputBufferTooSmall { needed, have } => write!(f, "10d MESH output buffer too small: need {needed}, have {have}"),
-            Self::UnknownFlags { got } => write!(f, "10d MESH unknown flags bits {got:#06x} (only bit 0 defined in v1)"),
+            Self::PayloadTooShort { got, need } => {
+                write!(f, "10d MESH payload too short: got {got}, need {need}")
+            }
+            Self::NonZeroReserved { field } => {
+                write!(f, "10d MESH non-zero reserved field {field:?}")
+            }
+            Self::VertexCountTooLarge { got, max } => {
+                write!(f, "10d MESH vertex_count {got} exceeds max {max}")
+            }
+            Self::TriangleCountTooLarge { got, max } => {
+                write!(f, "10d MESH triangle_count {got} exceeds max {max}")
+            }
+            Self::PayloadTruncated { expected, got } => write!(
+                f,
+                "10d MESH payload truncated: expected {expected}, got {got}"
+            ),
+            Self::OutputBufferTooSmall { needed, have } => write!(
+                f,
+                "10d MESH output buffer too small: need {needed}, have {have}"
+            ),
+            Self::UnknownFlags { got } => write!(
+                f,
+                "10d MESH unknown flags bits {got:#06x} (only bit 0 defined in v1)"
+            ),
         }
     }
 }
@@ -129,7 +146,11 @@ pub fn fits_u16_indices(vertex_count: usize) -> bool {
 /// Encoded length in bytes for a mesh of the given size (for size reporting without allocating).
 #[inline]
 pub fn encoded_len(vertex_count: usize, triangle_count: usize) -> usize {
-    let idx_bytes = if fits_u16_indices(vertex_count) { 6 } else { 12 };
+    let idx_bytes = if fits_u16_indices(vertex_count) {
+        6
+    } else {
+        12
+    };
     MESH_MINI_HEADER_SIZE + vertex_count * 6 + triangle_count * idx_bytes
 }
 
@@ -177,7 +198,10 @@ fn bbox(positions: &[[f32; 3]]) -> ([f32; 3], [f32; 3]) {
 /// total payload byte length it claims.
 pub fn parse_mesh_header(bytes: &[u8]) -> Result<(MeshMiniHeader, usize), MeshSectionError> {
     if bytes.len() < MESH_MINI_HEADER_SIZE {
-        return Err(MeshSectionError::PayloadTooShort { got: bytes.len(), need: MESH_MINI_HEADER_SIZE });
+        return Err(MeshSectionError::PayloadTooShort {
+            got: bytes.len(),
+            need: MESH_MINI_HEADER_SIZE,
+        });
     }
     let header: MeshMiniHeader = {
         let mut buf = [0u8; MESH_MINI_HEADER_SIZE];
@@ -185,10 +209,14 @@ pub fn parse_mesh_header(bytes: &[u8]) -> Result<(MeshMiniHeader, usize), MeshSe
         *from_bytes(&buf)
     };
     if header.reserved_u16 != 0 {
-        return Err(MeshSectionError::NonZeroReserved { field: "reserved_u16" });
+        return Err(MeshSectionError::NonZeroReserved {
+            field: "reserved_u16",
+        });
     }
     if header.reserved_u32 != 0 {
-        return Err(MeshSectionError::NonZeroReserved { field: "reserved_u32" });
+        return Err(MeshSectionError::NonZeroReserved {
+            field: "reserved_u32",
+        });
     }
     // Only bit 0 (FLAG_U16_INDICES) is defined in v1.
     if header.flags & !FLAG_U16_INDICES != 0 {
@@ -197,15 +225,24 @@ pub fn parse_mesh_header(bytes: &[u8]) -> Result<(MeshMiniHeader, usize), MeshSe
     let vcount = header.vertex_count as usize;
     let tcount = header.triangle_count as usize;
     if vcount > MAX_VERTEX_COUNT {
-        return Err(MeshSectionError::VertexCountTooLarge { got: header.vertex_count, max: MAX_VERTEX_COUNT });
+        return Err(MeshSectionError::VertexCountTooLarge {
+            got: header.vertex_count,
+            max: MAX_VERTEX_COUNT,
+        });
     }
     if tcount > MAX_TRIANGLE_COUNT {
-        return Err(MeshSectionError::TriangleCountTooLarge { got: header.triangle_count, max: MAX_TRIANGLE_COUNT });
+        return Err(MeshSectionError::TriangleCountTooLarge {
+            got: header.triangle_count,
+            max: MAX_TRIANGLE_COUNT,
+        });
     }
     let u16_idx = header.flags & FLAG_U16_INDICES != 0;
     let total = MeshMiniHeader::payload_bytes(vcount, tcount, u16_idx);
     if bytes.len() < total {
-        return Err(MeshSectionError::PayloadTruncated { expected: total, got: bytes.len() });
+        return Err(MeshSectionError::PayloadTruncated {
+            expected: total,
+            got: bytes.len(),
+        });
     }
     Ok((header, total))
 }
@@ -218,17 +255,26 @@ pub fn encode_mesh_section(mesh: &Mesh, out: &mut [u8]) -> Result<usize, MeshSec
     let vcount = mesh.positions.len();
     let tcount = mesh.triangles.len();
     if vcount > MAX_VERTEX_COUNT {
-        return Err(MeshSectionError::VertexCountTooLarge { got: vcount as u32, max: MAX_VERTEX_COUNT });
+        return Err(MeshSectionError::VertexCountTooLarge {
+            got: vcount as u32,
+            max: MAX_VERTEX_COUNT,
+        });
     }
     if tcount > MAX_TRIANGLE_COUNT {
-        return Err(MeshSectionError::TriangleCountTooLarge { got: tcount as u32, max: MAX_TRIANGLE_COUNT });
+        return Err(MeshSectionError::TriangleCountTooLarge {
+            got: tcount as u32,
+            max: MAX_TRIANGLE_COUNT,
+        });
     }
     let u16_idx = fits_u16_indices(vcount);
     let (min, max) = bbox(&mesh.positions);
     let extent = [max[0] - min[0], max[1] - min[1], max[2] - min[2]];
     let need = encoded_len(vcount, tcount);
     if out.len() < need {
-        return Err(MeshSectionError::OutputBufferTooSmall { needed: need, have: out.len() });
+        return Err(MeshSectionError::OutputBufferTooSmall {
+            needed: need,
+            have: out.len(),
+        });
     }
     let header = MeshMiniHeader {
         flags: if u16_idx { FLAG_U16_INDICES } else { 0 },
@@ -276,7 +322,10 @@ pub fn decode_mesh_section(bytes: &[u8]) -> Result<Mesh, MeshSectionError> {
         header.max[1] - header.min[1],
         header.max[2] - header.min[2],
     ];
-    debug_assert_eq!(total, MESH_MINI_HEADER_SIZE + vcount * 6 + tcount * if u16_idx { 6 } else { 12 });
+    debug_assert_eq!(
+        total,
+        MESH_MINI_HEADER_SIZE + vcount * 6 + tcount * if u16_idx { 6 } else { 12 }
+    );
 
     let mut positions = Vec::with_capacity(vcount);
     let mut off = MESH_MINI_HEADER_SIZE;
@@ -298,14 +347,24 @@ pub fn decode_mesh_section(bytes: &[u8]) -> Result<Mesh, MeshSectionError> {
                 *corner = u16::from_le_bytes([bytes[off], bytes[off + 1]]) as u32;
                 off += 2;
             } else {
-                *corner = u32::from_le_bytes([bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]]);
+                *corner = u32::from_le_bytes([
+                    bytes[off],
+                    bytes[off + 1],
+                    bytes[off + 2],
+                    bytes[off + 3],
+                ]);
                 off += 4;
             }
         }
         triangles.push(t);
     }
 
-    Ok(Mesh { positions, triangles, min: header.min, max: header.max })
+    Ok(Mesh {
+        positions,
+        triangles,
+        min: header.min,
+        max: header.max,
+    })
 }
 
 #[cfg(test)]
@@ -330,11 +389,25 @@ mod tests {
             [0.0, 1.0, 1.0],
         ];
         let triangles = vec![
-            [0, 1, 2], [0, 2, 3], [4, 5, 6], [4, 6, 7],
-            [0, 1, 5], [0, 5, 4], [2, 3, 7], [2, 7, 6],
-            [1, 2, 6], [1, 6, 5], [0, 3, 7], [0, 7, 4],
+            [0, 1, 2],
+            [0, 2, 3],
+            [4, 5, 6],
+            [4, 6, 7],
+            [0, 1, 5],
+            [0, 5, 4],
+            [2, 3, 7],
+            [2, 7, 6],
+            [1, 2, 6],
+            [1, 6, 5],
+            [0, 3, 7],
+            [0, 7, 4],
         ];
-        Mesh { positions, triangles, min: [0.0; 3], max: [1.0; 3] }
+        Mesh {
+            positions,
+            triangles,
+            min: [0.0; 3],
+            max: [1.0; 3],
+        }
     }
 
     #[test]
@@ -386,7 +459,12 @@ mod tests {
     fn u32_indices_when_over_65k_vertices() {
         let positions = vec![[0.0f32, 0.0, 0.0]; 70_000];
         let triangles = vec![[0u32, 1, 69_999]];
-        let mesh = Mesh { positions, triangles: triangles.clone(), min: [0.0; 3], max: [0.0; 3] };
+        let mesh = Mesh {
+            positions,
+            triangles: triangles.clone(),
+            min: [0.0; 3],
+            max: [0.0; 3],
+        };
         let need = encoded_len(mesh.positions.len(), mesh.triangles.len());
         let mut buf = vec![0u8; need];
         encode_mesh_section(&mesh, &mut buf).expect("encode");
@@ -415,12 +493,28 @@ mod tests {
         encode_mesh_section(&mesh, &mut buf).expect("encode");
         buf[2] = 1; // reserved_u16
         let err = parse_mesh_header(&buf).expect_err("non-zero reserved_u16 must reject");
-        assert!(matches!(err, MeshSectionError::NonZeroReserved { field: "reserved_u16" }), "{err}");
+        assert!(
+            matches!(
+                err,
+                MeshSectionError::NonZeroReserved {
+                    field: "reserved_u16"
+                }
+            ),
+            "{err}"
+        );
         // Restore and corrupt reserved_u32 (offset 36).
         buf[2] = 0;
         buf[36] = 1;
         let err = parse_mesh_header(&buf).expect_err("non-zero reserved_u32 must reject");
-        assert!(matches!(err, MeshSectionError::NonZeroReserved { field: "reserved_u32" }), "{err}");
+        assert!(
+            matches!(
+                err,
+                MeshSectionError::NonZeroReserved {
+                    field: "reserved_u32"
+                }
+            ),
+            "{err}"
+        );
     }
 
     #[test]
@@ -431,7 +525,10 @@ mod tests {
         encode_mesh_section(&mesh, &mut buf).expect("encode");
         buf[0] = 0x02; // bit 1 is undefined in v1
         let err = parse_mesh_header(&buf).expect_err("unknown flags must reject");
-        assert!(matches!(err, MeshSectionError::UnknownFlags { .. }), "{err}");
+        assert!(
+            matches!(err, MeshSectionError::UnknownFlags { .. }),
+            "{err}"
+        );
     }
 
     #[test]
@@ -448,7 +545,10 @@ mod tests {
         let mut buf = vec![0u8; MESH_MINI_HEADER_SIZE];
         buf[..MESH_MINI_HEADER_SIZE].copy_from_slice(bytemuck::bytes_of(&header));
         let err = parse_mesh_header(&buf).expect_err("too-large vertex count must reject");
-        assert!(matches!(err, MeshSectionError::VertexCountTooLarge { .. }), "{err}");
+        assert!(
+            matches!(err, MeshSectionError::VertexCountTooLarge { .. }),
+            "{err}"
+        );
     }
 
     #[test]
@@ -490,7 +590,10 @@ mod tests {
         let p_off = descs[0].byte_offset as usize;
         let p_len = descs[0].byte_length as usize;
         let mesh_back = decode_mesh_section(&out[p_off..p_off + p_len]).expect("mesh decode");
-        assert_eq!(mesh_back.triangles, mesh.triangles, "indices exact through container");
+        assert_eq!(
+            mesh_back.triangles, mesh.triangles,
+            "indices exact through container"
+        );
         // Positions within quantization tolerance.
         let tol = 1.0f32 / 65535.0 * 2.0;
         for (a, b) in mesh.positions.iter().zip(&mesh_back.positions) {
@@ -522,13 +625,25 @@ mod tests {
         let p_off = descs[0].byte_offset as usize;
         // Flip a bit in the mesh payload (past the mini-header, in vertex data).
         out[p_off + MESH_MINI_HEADER_SIZE + 1] ^= 0x01;
-        let err = parse_section_table(&out[..n], &parsed_h).expect_err("flipped bit must be caught");
-        assert!(matches!(err, crate::container_10d::section::SectionTableError::CrcMismatch { .. }), "{err}");
+        let err =
+            parse_section_table(&out[..n], &parsed_h).expect_err("flipped bit must be caught");
+        assert!(
+            matches!(
+                err,
+                crate::container_10d::section::SectionTableError::CrcMismatch { .. }
+            ),
+            "{err}"
+        );
     }
 
     #[test]
     fn empty_mesh_round_trips() {
-        let mesh = Mesh { positions: vec![], triangles: vec![], min: [0.0; 3], max: [0.0; 3] };
+        let mesh = Mesh {
+            positions: vec![],
+            triangles: vec![],
+            min: [0.0; 3],
+            max: [0.0; 3],
+        };
         let need = encoded_len(0, 0);
         assert_eq!(need, MESH_MINI_HEADER_SIZE);
         let mut buf = vec![0u8; need];

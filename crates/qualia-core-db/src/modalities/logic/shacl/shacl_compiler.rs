@@ -391,7 +391,9 @@ mod tests {
             &mut opcodes,
         );
         assert!(
-            opcodes.iter().any(|o| matches!(o, SlgOpcode::NativeEpistemicEval(m) if *m == 200)),
+            opcodes
+                .iter()
+                .any(|o| matches!(o, SlgOpcode::NativeEpistemicEval(m) if *m == 200)),
             "EpistemicKnowledge must emit NativeEpistemicEval with the specified min_certainty"
         );
     }
@@ -404,7 +406,9 @@ mod tests {
             &mut opcodes,
         );
         assert!(
-            opcodes.iter().any(|o| matches!(o, SlgOpcode::NativeEpistemicEval(m) if *m == 128)),
+            opcodes
+                .iter()
+                .any(|o| matches!(o, SlgOpcode::NativeEpistemicEval(m) if *m == 128)),
             "EpistemicBelief must emit NativeEpistemicEval with the specified min_certainty"
         );
     }
@@ -414,7 +418,9 @@ mod tests {
         let mut opcodes = Vec::new();
         ShaclCompiler::push_constraint(&ShaclConstraint::CommonKnowledge, &mut opcodes);
         assert!(
-            opcodes.iter().any(|o| matches!(o, SlgOpcode::NativeEpistemicEval(m) if *m == 255)),
+            opcodes
+                .iter()
+                .any(|o| matches!(o, SlgOpcode::NativeEpistemicEval(m) if *m == 255)),
             "CommonKnowledge must emit NativeEpistemicEval with certainty 255 (max)"
         );
     }

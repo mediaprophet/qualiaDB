@@ -50,13 +50,9 @@ pub fn emit_spirv(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedSh
 
     // 4. Lower to SPIR-V words. Default Options targets SPIR-V 1.0 with portable
     //    flags; passing `None` for pipeline options emits every entry point.
-    let words = naga::back::spv::write_vec(
-        &module,
-        &info,
-        &naga::back::spv::Options::default(),
-        None,
-    )
-    .map_err(|error| ForgeError::Emission(format!("SPIR-V backend: {error}")))?;
+    let words =
+        naga::back::spv::write_vec(&module, &info, &naga::back::spv::Options::default(), None)
+            .map_err(|error| ForgeError::Emission(format!("SPIR-V backend: {error}")))?;
 
     if words.is_empty() {
         return Err(ForgeError::Emission(
@@ -91,9 +87,9 @@ pub fn decode_spirv_words(source: &str) -> Result<Vec<u32>, ForgeError> {
     source
         .split(SPIRV_WORD_SEPARATOR)
         .map(|token| {
-            token
-                .parse::<u32>()
-                .map_err(|error| ForgeError::Emission(format!("invalid SPIR-V word {token:?}: {error}")))
+            token.parse::<u32>().map_err(|error| {
+                ForgeError::Emission(format!("invalid SPIR-V word {token:?}: {error}"))
+            })
         })
         .collect()
 }

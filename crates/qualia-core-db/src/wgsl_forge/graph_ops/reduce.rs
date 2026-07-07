@@ -22,7 +22,12 @@ pub const REDUCE_ENTRY: &str = "reduce_main";
 fn fragments(op: RedKind) -> (&'static str, &'static str, &'static str, &'static str) {
     match op {
         // init,        fold,            pair-combine,                       finalize
-        RedKind::Sum => ("0.0", "acc + x", "scratch[tid] + scratch[tid + stride]", "scratch[0]"),
+        RedKind::Sum => (
+            "0.0",
+            "acc + x",
+            "scratch[tid] + scratch[tid + stride]",
+            "scratch[0]",
+        ),
         RedKind::Mean => (
             "0.0",
             "acc + x",
@@ -98,7 +103,13 @@ pub fn reduce_cpu(input: &[f32], op: RedKind) -> f32 {
                 (input.iter().map(|&x| x as f64).sum::<f64>() / input.len() as f64) as f32
             }
         }
-        RedKind::L2 => (input.iter().map(|&x| (x as f64) * (x as f64)).sum::<f64>().sqrt()) as f32,
+        RedKind::L2 => {
+            (input
+                .iter()
+                .map(|&x| (x as f64) * (x as f64))
+                .sum::<f64>()
+                .sqrt()) as f32
+        }
         RedKind::Max => input.iter().copied().fold(f32::MIN, f32::max),
     }
 }
@@ -113,7 +124,9 @@ pub fn reduce_gpu(input: &[f32], op: RedKind) -> Result<f32, ForgeError> {
     use crate::wgsl_forge::Schedule;
 
     if input.is_empty() {
-        return Err(ForgeError::GpuValidation("reduce_gpu: empty input".to_string()));
+        return Err(ForgeError::GpuValidation(
+            "reduce_gpu: empty input".to_string(),
+        ));
     }
     let wg: u32 = 256;
     let src = reduce_wgsl(op, wg);
@@ -130,12 +143,19 @@ pub fn reduce_gpu(input: &[f32], op: RedKind) -> Result<f32, ForgeError> {
         BindingUsage::StorageReadWrite,
     )?;
     let params: [u32; 4] = [input.len() as u32, 0, 0, 0];
-    let view_params =
-        ctx.allocate_and_write(bytemuck::cast_slice(&params), 2, 0, BindingUsage::StorageRead)?;
+    let view_params = ctx.allocate_and_write(
+        bytemuck::cast_slice(&params),
+        2,
+        0,
+        BindingUsage::StorageRead,
+    )?;
 
     let buffers = vec![view_in, view_out, view_params];
     let pipeline = WgpuPipeline::compile(&ctx, &src, REDUCE_ENTRY)?;
-    let schedule = Schedule { workgroup_size: wg, ..Default::default() };
+    let schedule = Schedule {
+        workgroup_size: wg,
+        ..Default::default()
+    };
     // element_count == wg → ceil(wg / wg) == 1 workgroup (the kernel is single-workgroup).
     pipeline.dispatch(&buffers, &schedule, wg as usize)?;
     let out = ctx.read_buffer_f32(&view_out)?;

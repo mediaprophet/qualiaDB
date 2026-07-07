@@ -8,6 +8,13 @@
 /crates/webizen-studio/assets/vendor/
 /crates/webizen-studio/.vendor-tmp/
 
+# Stray per-run target directories (e.g. from composer / isolated checks)
+target-*
+/target-*
+target-chora*
+target-p*
+target-clean*
+
 # Private Development Documents, not for GitHub (do not publish on repo)
 .dev-docs/
 
@@ -174,7 +181,8 @@ fix_quotes.py
 # Private Development Documents, not for GitHub (do not publish)
 
 # Plan Files
-/docs/plans/
+/docs/plans/*
+!/docs/plans/native-computational-economics.md
 /docs/manuals/planning/
 docs/to-do/
 

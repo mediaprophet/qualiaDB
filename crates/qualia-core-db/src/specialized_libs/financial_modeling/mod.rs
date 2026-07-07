@@ -2622,7 +2622,8 @@ impl PortfolioAccessControl {
     /// Register an access policy. The policy is keyed by its `policy_id` and
     /// grants `user_id` the listed `permissions` over `portfolio_id`.
     pub fn add_access_policy(&mut self, policy: AccessPolicy) {
-        self.access_policies.insert(policy.policy_id.clone(), policy);
+        self.access_policies
+            .insert(policy.policy_id.clone(), policy);
     }
 
     /// Return `true` iff some registered policy grants `user_id` the
@@ -2763,10 +2764,7 @@ impl AssetManager {
     /// `DataError` when no feed is registered for the asset.
     pub fn ingest_from_feed(&mut self, asset_id: &str) -> Result<(), FinancialError> {
         let feed = self.price_feeds.get(asset_id).cloned().ok_or_else(|| {
-            FinancialError::DataError(format!(
-                "no price feed registered for asset '{}'",
-                asset_id
-            ))
+            FinancialError::DataError(format!("no price feed registered for asset '{}'", asset_id))
         })?;
 
         let prices = if !feed.cached_prices.is_empty() {
@@ -2908,21 +2906,16 @@ impl AssetCatalog {
     /// recorded by adding the asset's id to the class's `characteristics` list
     /// (the catalog has no separate membership map, so the class's own fields carry
     /// membership). Returns `Ok(())` when the asset is already a member (idempotent).
-    pub fn classify_asset(
-        &mut self,
-        asset_id: &str,
-        class_id: &str,
-    ) -> Result<(), FinancialError> {
+    pub fn classify_asset(&mut self, asset_id: &str, class_id: &str) -> Result<(), FinancialError> {
         if !self.assets.contains_key(asset_id) {
             return Err(FinancialError::AssetError(format!(
                 "asset '{}' is not registered in the catalog",
                 asset_id
             )));
         }
-        let class = self
-            .asset_classes
-            .get_mut(class_id)
-            .ok_or_else(|| FinancialError::AssetError(format!("asset class '{}' is not registered", class_id)))?;
+        let class = self.asset_classes.get_mut(class_id).ok_or_else(|| {
+            FinancialError::AssetError(format!("asset class '{}' is not registered", class_id))
+        })?;
         if !class.characteristics.iter().any(|c| c == asset_id) {
             class.characteristics.push(asset_id.to_string());
         }
@@ -2961,13 +2954,55 @@ impl AssetCatalog {
     /// Each is keyed by a lowercase id and tagged with its corresponding `AssetType`.
     pub fn initialize(&mut self) -> Result<(), FinancialError> {
         let standards: &[(&str, &str, AssetType, RiskLevel, &[&str])] = &[
-            ("equity", "Equity", AssetType::Stock, RiskLevel::Medium, &["Stocks", "Shares"]),
-            ("fixed_income", "Fixed Income", AssetType::Bond, RiskLevel::Low, &["Bonds", "Debt instruments"]),
-            ("commodity", "Commodity", AssetType::Commodity, RiskLevel::High, &["Physical goods", "Futures"]),
-            ("real_estate", "Real Estate", AssetType::RealEstate, RiskLevel::Medium, &["Property", "Land"]),
-            ("cash", "Cash", AssetType::Currency, RiskLevel::Low, &["Currency", "Money market"]),
-            ("derivative", "Derivative", AssetType::Derivative, RiskLevel::VeryHigh, &["Options", "Futures", "Swaps"]),
-            ("cryptocurrency", "Cryptocurrency", AssetType::Cryptocurrency, RiskLevel::VeryHigh, &["Digital assets", "Tokens"]),
+            (
+                "equity",
+                "Equity",
+                AssetType::Stock,
+                RiskLevel::Medium,
+                &["Stocks", "Shares"],
+            ),
+            (
+                "fixed_income",
+                "Fixed Income",
+                AssetType::Bond,
+                RiskLevel::Low,
+                &["Bonds", "Debt instruments"],
+            ),
+            (
+                "commodity",
+                "Commodity",
+                AssetType::Commodity,
+                RiskLevel::High,
+                &["Physical goods", "Futures"],
+            ),
+            (
+                "real_estate",
+                "Real Estate",
+                AssetType::RealEstate,
+                RiskLevel::Medium,
+                &["Property", "Land"],
+            ),
+            (
+                "cash",
+                "Cash",
+                AssetType::Currency,
+                RiskLevel::Low,
+                &["Currency", "Money market"],
+            ),
+            (
+                "derivative",
+                "Derivative",
+                AssetType::Derivative,
+                RiskLevel::VeryHigh,
+                &["Options", "Futures", "Swaps"],
+            ),
+            (
+                "cryptocurrency",
+                "Cryptocurrency",
+                AssetType::Cryptocurrency,
+                RiskLevel::VeryHigh,
+                &["Digital assets", "Tokens"],
+            ),
         ];
         for (id, name, ty, risk, chars) in standards {
             self.register_asset_class(
@@ -3221,7 +3256,11 @@ impl ScenarioAnalyzer {
         for _ in 0..num_simulations {
             let mut sim_value = portfolio.cash_balance;
             for asset in &portfolio.assets {
-                let z = if volatility > 0.0 { rng.next_normal() } else { 0.0 };
+                let z = if volatility > 0.0 {
+                    rng.next_normal()
+                } else {
+                    0.0
+                };
                 let shock = z * volatility;
                 let new_price = asset.current_price * (1.0 + shock);
                 sim_value += new_price * asset.quantity;
@@ -3229,7 +3268,11 @@ impl ScenarioAnalyzer {
             values.push(sim_value);
         }
 
-        Ok(aggregate_stress_test_result(&values, initial_value, num_simulations))
+        Ok(aggregate_stress_test_result(
+            &values,
+            initial_value,
+            num_simulations,
+        ))
     }
 
     /// Apply each registered `MarketScenario` to `portfolio` and compute its
@@ -3333,8 +3376,11 @@ fn aggregate_stress_test_result(
 
     // Expected shortfall: average of losses at/above the 95% VaR threshold.
     let tail_threshold = percentile(0.95);
-    let tail_losses: Vec<f64> =
-        losses.iter().filter(|&&l| l >= tail_threshold).copied().collect();
+    let tail_losses: Vec<f64> = losses
+        .iter()
+        .filter(|&&l| l >= tail_threshold)
+        .copied()
+        .collect();
     let expected_shortfall = if tail_losses.is_empty() {
         var_95
     } else {
@@ -3370,7 +3416,13 @@ struct McRng {
 impl McRng {
     fn new(seed: u64) -> Self {
         // LCG requires a non-zero state; fall back to a canonical seed.
-        Self { state: if seed == 0 { 0x9E37_79B9_7F4A_7C15 } else { seed } }
+        Self {
+            state: if seed == 0 {
+                0x9E37_79B9_7F4A_7C15
+            } else {
+                seed
+            },
+        }
     }
 
     /// Next raw u64 from the LCG.
@@ -4349,13 +4401,7 @@ impl PricingEngine {
         (-0.5 * x * x).exp() / (2.0 * std::f64::consts::PI).sqrt()
     }
 
-    fn calculate_theta(
-        &self,
-        params: &OptionParameters,
-        _d1: f64,
-        d2: f64,
-        pdf_d1: f64,
-    ) -> f64 {
+    fn calculate_theta(&self, params: &OptionParameters, _d1: f64, d2: f64, pdf_d1: f64) -> f64 {
         // Theta per calendar day (divided by 365). The annualized theta is the
         // standard Black-Scholes expression; reporting per-day matches how the
         // Greek is conventionally quoted.
@@ -4514,7 +4560,8 @@ impl PositionManager {
     }
 
     pub fn add_position(&mut self, position: Position) {
-        self.positions.insert(position.position_id.clone(), position);
+        self.positions
+            .insert(position.position_id.clone(), position);
     }
 
     pub fn get_position(&self, position_id: &str) -> Option<&Position> {
@@ -4678,10 +4725,7 @@ impl ComplianceMonitor {
 
             if !verdict.passed {
                 failed += 1;
-                violations.push(format!(
-                    "{}: {}",
-                    rule.rule_id, verdict.message
-                ));
+                violations.push(format!("{}: {}", rule.rule_id, verdict.message));
                 recommendations.push(verdict.recommendation);
             } else if verdict.flagged {
                 flagged += 1;
@@ -4719,7 +4763,8 @@ impl ComplianceMonitor {
                         passed: false,
                         flagged: false,
                         message: "PositionLimit rule has no max_position parameter".to_string(),
-                        recommendation: "Set the 'max_position' parameter to a positive value.".to_string(),
+                        recommendation: "Set the 'max_position' parameter to a positive value."
+                            .to_string(),
                     };
                 }
                 // Check each asset's market value against the limit.
@@ -4763,7 +4808,8 @@ impl ComplianceMonitor {
                         return RuleVerdict {
                             passed: false,
                             flagged: false,
-                            message: "KYC verification required but owner identity not verified".to_string(),
+                            message: "KYC verification required but owner identity not verified"
+                                .to_string(),
                             recommendation: "Complete KYC verification before trading.".to_string(),
                         };
                     }
@@ -4782,7 +4828,8 @@ impl ComplianceMonitor {
                         passed: false,
                         flagged: false,
                         message: "AML clearance required but no owner identified".to_string(),
-                        recommendation: "Provide owner identification for AML screening.".to_string(),
+                        recommendation: "Provide owner identification for AML screening."
+                            .to_string(),
                     };
                 }
                 RuleVerdict {
@@ -4799,7 +4846,8 @@ impl ComplianceMonitor {
                         passed: false,
                         flagged: false,
                         message: "MarginRequirement rule has no margin_pct parameter".to_string(),
-                        recommendation: "Set the 'margin_pct' parameter to a positive value.".to_string(),
+                        recommendation: "Set the 'margin_pct' parameter to a positive value."
+                            .to_string(),
                     };
                 }
                 let required_margin = portfolio.total_value * margin_pct / 100.0;
@@ -4809,7 +4857,10 @@ impl ComplianceMonitor {
                         flagged: false,
                         message: format!(
                             "Cash balance {:.2} below required margin {:.2} ({:.1}% of {:.2})",
-                            portfolio.cash_balance, required_margin, margin_pct, portfolio.total_value
+                            portfolio.cash_balance,
+                            required_margin,
+                            margin_pct,
+                            portfolio.total_value
                         ),
                         recommendation: format!(
                             "Increase cash balance to at least {:.2} to meet margin requirement.",
@@ -4820,12 +4871,17 @@ impl ComplianceMonitor {
                 RuleVerdict {
                     passed: true,
                     flagged: false,
-                    message: format!("Margin satisfied: {:.2} >= {:.2}", portfolio.cash_balance, required_margin),
+                    message: format!(
+                        "Margin satisfied: {:.2} >= {:.2}",
+                        portfolio.cash_balance, required_margin
+                    ),
                     recommendation: String::new(),
                 }
             }
             ComplianceRuleType::TradingRestriction => {
-                let restricted = rule.string_parameters.get("restricted_assets")
+                let restricted = rule
+                    .string_parameters
+                    .get("restricted_assets")
                     .map(|s| s.as_str())
                     .unwrap_or("");
                 if restricted.is_empty() {
@@ -4860,7 +4916,8 @@ impl ComplianceMonitor {
                     passed: true,
                     flagged: true,
                     message: "Custom rule — no built-in check, passes by default".to_string(),
-                    recommendation: "Implement a custom evaluator if enforcement is needed.".to_string(),
+                    recommendation: "Implement a custom evaluator if enforcement is needed."
+                        .to_string(),
                 }
             }
         }
@@ -5218,10 +5275,7 @@ impl ReportDistributor {
                         channel_name: name.to_string(),
                         success: true,
                         timestamp,
-                        message: format!(
-                            "Email delivered to {} recipient(s)",
-                            recipients.len()
-                        ),
+                        message: format!("Email delivered to {} recipient(s)", recipients.len()),
                     }
                 } else {
                     DeliveryResult {
@@ -6566,10 +6620,8 @@ mod tests {
     fn risk_profile_flags_conservative_with_high_volatility() {
         // prices 100→130→90→125 ⇒ returns 0.3, -0.3077, 0.3889 — high volatility
         // (~0.35) that exceeds the Conservative band (vol > 0.10, VaR > 0.05).
-        let portfolio = portfolio_with_tolerance(
-            RiskTolerance::Conservative,
-            vec![100.0, 130.0, 90.0, 125.0],
-        );
+        let portfolio =
+            portfolio_with_tolerance(RiskTolerance::Conservative, vec![100.0, 130.0, 90.0, 125.0]);
         let analyzer = RiskAnalyzer::new();
         let metrics = analyzer.calculate_risk_metrics(&portfolio).unwrap();
 
@@ -6710,10 +6762,8 @@ mod tests {
     #[test]
     fn risk_analyzer_benchmark_makes_beta_alpha_real() {
         // Portfolio returns (prices 100→110→99→108.9): 0.1, -0.1, 0.1.
-        let portfolio = portfolio_with_tolerance(
-            RiskTolerance::Moderate,
-            vec![100.0, 110.0, 99.0, 108.9],
-        );
+        let portfolio =
+            portfolio_with_tolerance(RiskTolerance::Moderate, vec![100.0, 110.0, 99.0, 108.9]);
 
         // Without a benchmark, beta/alpha are NaN.
         let analyzer = RiskAnalyzer::new();
@@ -6759,7 +6809,9 @@ mod tests {
         ));
 
         manager.ingest_from_feed("A").unwrap();
-        let history = manager.get_price_history("A").expect("history cached for A");
+        let history = manager
+            .get_price_history("A")
+            .expect("history cached for A");
         assert_eq!(history, &cached);
     }
 
@@ -6778,10 +6830,16 @@ mod tests {
         });
 
         manager.ingest_from_feed("B").unwrap();
-        let first = manager.get_price_history("B").expect("history for B").clone();
+        let first = manager
+            .get_price_history("B")
+            .expect("history for B")
+            .clone();
         // Deterministic: re-ingesting yields the identical series.
         manager.ingest_from_feed("B").unwrap();
-        let second = manager.get_price_history("B").expect("history for B").clone();
+        let second = manager
+            .get_price_history("B")
+            .expect("history for B")
+            .clone();
         assert_eq!(first, second);
         // Enough points for risk computation (need ≥ 3).
         assert!(first.len() >= 3);
@@ -6960,10 +7018,7 @@ mod tests {
         let mut portfolio = two_asset_portfolio("A", "B", 700.0, 300.0, 100.0);
         let mut strategy = RebalancingStrategy::new();
         strategy.parameters.deviation_threshold = 0.05;
-        strategy.target_weights = HashMap::from([
-            ("A".to_string(), 0.5),
-            ("B".to_string(), 0.5),
-        ]);
+        strategy.target_weights = HashMap::from([("A".to_string(), 0.5), ("B".to_string(), 0.5)]);
 
         let engine = RebalancingEngine::new();
         let trades = engine.rebalance(&mut portfolio, &strategy).unwrap();
@@ -6976,12 +7031,20 @@ mod tests {
 
         // A is overweight (0.7 vs 0.5) ⇒ sell down to 500 (200 units at 100).
         assert_eq!(a_trade.action, TradeAction::Sell);
-        assert!((a_trade.quantity - 2.0).abs() < 1e-9, "A qty {}", a_trade.quantity);
+        assert!(
+            (a_trade.quantity - 2.0).abs() < 1e-9,
+            "A qty {}",
+            a_trade.quantity
+        );
         assert!((a_trade.target_weight - 0.5).abs() < 1e-9);
 
         // B is underweight (0.3 vs 0.5) ⇒ buy up to 500 (200 units at 100).
         assert_eq!(b_trade.action, TradeAction::Buy);
-        assert!((b_trade.quantity - 2.0).abs() < 1e-9, "B qty {}", b_trade.quantity);
+        assert!(
+            (b_trade.quantity - 2.0).abs() < 1e-9,
+            "B qty {}",
+            b_trade.quantity
+        );
         assert!((b_trade.target_weight - 0.5).abs() < 1e-9);
     }
 
@@ -6991,10 +7054,7 @@ mod tests {
         let mut portfolio = two_asset_portfolio("A", "B", 520.0, 480.0, 100.0);
         let mut strategy = RebalancingStrategy::new();
         strategy.parameters.deviation_threshold = 0.05;
-        strategy.target_weights = HashMap::from([
-            ("A".to_string(), 0.5),
-            ("B".to_string(), 0.5),
-        ]);
+        strategy.target_weights = HashMap::from([("A".to_string(), 0.5), ("B".to_string(), 0.5)]);
 
         let engine = RebalancingEngine::new();
         let trades = engine.rebalance(&mut portfolio, &strategy).unwrap();
@@ -7021,16 +7081,17 @@ mod tests {
 
         let mut strategy = RebalancingStrategy::new();
         strategy.parameters.deviation_threshold = 0.05;
-        strategy.target_weights = HashMap::from([
-            ("A".to_string(), 0.5),
-            ("B".to_string(), 0.5),
-        ]);
+        strategy.target_weights = HashMap::from([("A".to_string(), 0.5), ("B".to_string(), 0.5)]);
         pm.register_rebalancing_strategy(strategy);
 
         let trades = pm.rebalance_portfolio("rebal_pf").unwrap();
         assert_eq!(trades.len(), 2);
-        assert!(trades.iter().any(|t| t.asset_id == "A" && t.action == TradeAction::Sell));
-        assert!(trades.iter().any(|t| t.asset_id == "B" && t.action == TradeAction::Buy));
+        assert!(trades
+            .iter()
+            .any(|t| t.asset_id == "A" && t.action == TradeAction::Sell));
+        assert!(trades
+            .iter()
+            .any(|t| t.asset_id == "B" && t.action == TradeAction::Buy));
     }
 
     // ----- Asset relationship tracking tests ----------------------------------
@@ -7068,7 +7129,10 @@ mod tests {
         let rels = catalog.get_relationships("AAPL");
         assert_eq!(rels.len(), 1);
         assert_eq!(rels[0].target_asset, "MSFT");
-        assert_eq!(rels[0].relationship_type, AssetRelationshipType::Correlation);
+        assert_eq!(
+            rels[0].relationship_type,
+            AssetRelationshipType::Correlation
+        );
 
         let related = catalog.get_related_assets("AAPL");
         assert_eq!(related, vec!["MSFT".to_string()]);
@@ -7095,7 +7159,10 @@ mod tests {
             );
         }
         assert_eq!(catalog.relationship_count(), 2);
-        assert_eq!(catalog.get_related_assets("AAPL"), vec!["MSFT".to_string(), "GOOGL".to_string()]);
+        assert_eq!(
+            catalog.get_related_assets("AAPL"),
+            vec!["MSFT".to_string(), "GOOGL".to_string()]
+        );
     }
 
     // ----- Asset classification system tests ----------------------------------
@@ -7105,8 +7172,20 @@ mod tests {
         let mut catalog = AssetCatalog::new();
         catalog.initialize().unwrap();
         let classes = catalog.list_asset_classes();
-        for expected in ["equity", "fixed_income", "commodity", "real_estate", "cash", "derivative", "cryptocurrency"] {
-            assert!(classes.iter().any(|c| c == expected), "missing class {}", expected);
+        for expected in [
+            "equity",
+            "fixed_income",
+            "commodity",
+            "real_estate",
+            "cash",
+            "derivative",
+            "cryptocurrency",
+        ] {
+            assert!(
+                classes.iter().any(|c| c == expected),
+                "missing class {}",
+                expected
+            );
         }
         let equity = catalog.get_asset_class("equity").unwrap();
         assert_eq!(equity.class_name, "Equity");
@@ -7250,7 +7329,11 @@ mod tests {
             option_type: OptionType::Call,
         };
         let result = engine.price_option(&itm).unwrap();
-        assert!((result.price - 10.0).abs() < 1e-9, "ITM intrinsic {}", result.price);
+        assert!(
+            (result.price - 10.0).abs() < 1e-9,
+            "ITM intrinsic {}",
+            result.price
+        );
         assert!((result.delta - 1.0).abs() < 1e-9);
 
         let otm = OptionParameters {
@@ -7262,7 +7345,11 @@ mod tests {
             option_type: OptionType::Call,
         };
         let result = engine.price_option(&otm).unwrap();
-        assert!((result.price - 0.0).abs() < 1e-9, "OTM intrinsic {}", result.price);
+        assert!(
+            (result.price - 0.0).abs() < 1e-9,
+            "OTM intrinsic {}",
+            result.price
+        );
         assert!((result.delta - 0.0).abs() < 1e-9);
 
         // ITM put intrinsic.
@@ -7275,7 +7362,11 @@ mod tests {
             option_type: OptionType::Put,
         };
         let result = engine.price_option(&itm_put).unwrap();
-        assert!((result.price - 10.0).abs() < 1e-9, "ITM put intrinsic {}", result.price);
+        assert!(
+            (result.price - 10.0).abs() < 1e-9,
+            "ITM put intrinsic {}",
+            result.price
+        );
     }
 
     #[test]
@@ -7316,7 +7407,11 @@ mod tests {
             option_type: OptionType::Call,
         };
         let result = engine.price_option(&otm_call).unwrap();
-        assert!((result.price - 0.0).abs() < 1e-9, "zero-vol OTM call {}", result.price);
+        assert!(
+            (result.price - 0.0).abs() < 1e-9,
+            "zero-vol OTM call {}",
+            result.price
+        );
         assert!((result.delta - 0.0).abs() < 1e-9);
 
         // ITM put (S=90, K=100): 100*disc - 90 > 0.
@@ -7362,7 +7457,11 @@ mod tests {
         );
         let results = distributor.distribute(&sample_report()).unwrap();
         assert_eq!(results.len(), 1);
-        assert!(results[0].success, "expected success, got: {}", results[0].message);
+        assert!(
+            results[0].success,
+            "expected success, got: {}",
+            results[0].message
+        );
         assert_eq!(results[0].channel_name, "email_channel");
     }
 
@@ -7392,7 +7491,11 @@ mod tests {
         );
         let results = distributor.distribute(&sample_report()).unwrap();
         assert_eq!(results.len(), 1);
-        assert!(results[0].success, "expected success, got: {}", results[0].message);
+        assert!(
+            results[0].success,
+            "expected success, got: {}",
+            results[0].message
+        );
         assert_eq!(results[0].channel_name, "webhook_channel");
     }
 
@@ -7464,7 +7567,11 @@ mod tests {
             message: "fail".to_string(),
         });
         let rate = tracker.success_rate("ch");
-        assert!((rate - 0.75).abs() < 1e-9, "success rate {} expected 0.75", rate);
+        assert!(
+            (rate - 0.75).abs() < 1e-9,
+            "success rate {} expected 0.75",
+            rate
+        );
     }
 
     #[test]
@@ -7586,7 +7693,11 @@ mod tests {
             result.mean_portfolio_value,
             initial
         );
-        assert!(result.std_dev < 1e-6, "std_dev should be ~0, got {}", result.std_dev);
+        assert!(
+            result.std_dev < 1e-6,
+            "std_dev should be ~0, got {}",
+            result.std_dev
+        );
         assert!(
             result.probability_of_loss < 1e-9,
             "no losses expected with zero volatility, got {}",
@@ -7624,7 +7735,10 @@ mod tests {
             "portfolio_impact {} expected -6000",
             r.portfolio_impact
         );
-        assert!(r.portfolio_impact < 0.0, "crash should produce a negative impact");
+        assert!(
+            r.portfolio_impact < 0.0,
+            "crash should produce a negative impact"
+        );
     }
 
     #[test]
@@ -7632,7 +7746,10 @@ mod tests {
         let analyzer = ScenarioAnalyzer::new();
         let portfolio = mc_test_portfolio();
         let results = analyzer.run_scenarios(&portfolio).unwrap();
-        assert!(results.is_empty(), "no scenarios should yield empty results");
+        assert!(
+            results.is_empty(),
+            "no scenarios should yield empty results"
+        );
     }
 
     #[test]
@@ -7655,7 +7772,12 @@ mod tests {
     // ── Compliance rule engine tests ──────────────────────────────────────
 
     /// Helper: a minimal portfolio with one asset and a known risk profile.
-    fn compliance_portfolio(owner: &str, asset_symbol: &str, market_value: f64, cash: f64) -> Portfolio {
+    fn compliance_portfolio(
+        owner: &str,
+        asset_symbol: &str,
+        market_value: f64,
+        cash: f64,
+    ) -> Portfolio {
         Portfolio {
             portfolio_id: "pf_1".to_string(),
             portfolio_name: "Test".to_string(),
@@ -7766,9 +7888,10 @@ mod tests {
             rule_id: "restricted".to_string(),
             rule_type: ComplianceRuleType::TradingRestriction,
             parameters: HashMap::new(),
-            string_parameters: HashMap::from([
-                ("restricted_assets".to_string(), "AAPL,GOOG,MSFT".to_string()),
-            ]),
+            string_parameters: HashMap::from([(
+                "restricted_assets".to_string(),
+                "AAPL,GOOG,MSFT".to_string(),
+            )]),
             description: "Banned assets".to_string(),
         });
         let portfolio = compliance_portfolio("user_1", "AAPL", 5000.0, 1000.0);
@@ -7784,9 +7907,10 @@ mod tests {
             rule_id: "restricted".to_string(),
             rule_type: ComplianceRuleType::TradingRestriction,
             parameters: HashMap::new(),
-            string_parameters: HashMap::from([
-                ("restricted_assets".to_string(), "GOOG,MSFT".to_string()),
-            ]),
+            string_parameters: HashMap::from([(
+                "restricted_assets".to_string(),
+                "GOOG,MSFT".to_string(),
+            )]),
             description: "Banned assets".to_string(),
         });
         let portfolio = compliance_portfolio("user_1", "AAPL", 5000.0, 1000.0);

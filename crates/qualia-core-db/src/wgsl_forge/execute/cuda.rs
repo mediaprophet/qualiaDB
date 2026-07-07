@@ -17,11 +17,6 @@
 use std::sync::Arc;
 
 #[cfg(feature = "cuda")]
-use cudarc::driver::{
-    CudaContext, CudaFunction, CudaModule, CudaSlice, CudaStream, DevicePtr, DeviceRepr,
-    LaunchConfig, PushKernelArg,
-};
-#[cfg(feature = "cuda")]
 use super::compute::QualiaCompute;
 #[cfg(feature = "cuda")]
 use super::memory::{BindingUsage, BufferView, MemoryTopology, QualiaSlabAllocator};
@@ -31,6 +26,11 @@ use super::oracle_ctx::OracleContext;
 use crate::wgsl_forge::{
     emit_shader, AdapterConstraints, AdapterIdentity, BufferAccess, BufferElement, BufferSpec,
     ForgeError, KernelSpec, ScalarType, Schedule, TargetBackend,
+};
+#[cfg(feature = "cuda")]
+use cudarc::driver::{
+    CudaContext, CudaFunction, CudaModule, CudaSlice, CudaStream, DevicePtr, DeviceRepr,
+    LaunchConfig, PushKernelArg,
 };
 
 /// 16-byte affine uniform block passed to the kernel by value.
@@ -92,14 +92,16 @@ impl CudaComputeContext {
             warp_size: 32, // NVIDIA
         };
 
-        let topology = MemoryTopology::Discrete { staging_required: true };
+        let topology = MemoryTopology::Discrete {
+            staging_required: true,
+        };
         let allocator = QualiaSlabAllocator::new(topology, capacity_bytes);
 
         // Pre-allocate the persistent device slab. All transient buffers are
         // sub-ranges of this allocation, addressed by offset.
-        let slab = stream
-            .alloc_zeros::<u8>(capacity_bytes)
-            .map_err(|e| ForgeError::GpuUnavailable(format!("Failed to allocate CUDA slab: {:?}", e)))?;
+        let slab = stream.alloc_zeros::<u8>(capacity_bytes).map_err(|e| {
+            ForgeError::GpuUnavailable(format!("Failed to allocate CUDA slab: {:?}", e))
+        })?;
 
         Ok(Self {
             ctx,
@@ -119,9 +121,16 @@ impl CudaComputeContext {
     ) -> Result<BufferView, ForgeError> {
         // CUDA addresses everything through one slab via raw pointers, so the
         // wgpu usage class is not load-bearing here.
-        let view = self.allocator.allocate_transient(data.len(), binding, group, BindingUsage::StorageReadWrite)?;
+        let view = self.allocator.allocate_transient(
+            data.len(),
+            binding,
+            group,
+            BindingUsage::StorageReadWrite,
+        )?;
         if !data.is_empty() {
-            let mut dst = self.slab.slice_mut(view.offset..view.offset + view.length_bytes);
+            let mut dst = self
+                .slab
+                .slice_mut(view.offset..view.offset + view.length_bytes);
             self.stream
                 .memcpy_htod(data, &mut dst)
                 .map_err(|e| ForgeError::GpuValidation(format!("H2D transfer failed: {:?}", e)))?;
@@ -135,7 +144,12 @@ impl CudaComputeContext {
         binding: u32,
         group: u32,
     ) -> Result<BufferView, ForgeError> {
-        self.allocator.allocate_transient(size_bytes, binding, group, BindingUsage::StorageReadWrite)
+        self.allocator.allocate_transient(
+            size_bytes,
+            binding,
+            group,
+            BindingUsage::StorageReadWrite,
+        )
     }
 
     pub fn advance_read_head(&mut self, offset: usize) {
@@ -147,7 +161,9 @@ impl CudaComputeContext {
     }
 
     pub fn read_buffer_f32(&self, view: &BufferView) -> Result<Vec<f32>, ForgeError> {
-        let src = self.slab.slice(view.offset..view.offset + view.length_bytes);
+        let src = self
+            .slab
+            .slice(view.offset..view.offset + view.length_bytes);
         let bytes = self
             .stream
             .clone_dtoh(&src)
@@ -162,7 +178,9 @@ impl CudaComputeContext {
     /// (8 bytes/elem). Used by the native CUDA-f64 GEMM path — WGSL has no `f64`,
     /// so this is CUDA-only by construction.
     pub fn read_buffer_f64(&self, view: &BufferView) -> Result<Vec<f64>, ForgeError> {
-        let src = self.slab.slice(view.offset..view.offset + view.length_bytes);
+        let src = self
+            .slab
+            .slice(view.offset..view.offset + view.length_bytes);
         let bytes = self
             .stream
             .clone_dtoh(&src)
@@ -193,7 +211,12 @@ impl<'a> CudaPipeline<'a> {
         schedule: Schedule,
     ) -> Result<Self, ForgeError> {
         let generated = emit_shader(kernel, schedule, TargetBackend::CudaC)?;
-        Self::from_source(context, &generated.source, &kernel.entry_point, kernel.clone())
+        Self::from_source(
+            context,
+            &generated.source,
+            &kernel.entry_point,
+            kernel.clone(),
+        )
     }
 
     /// Compile a *raw* CUDA-C source string (entry point + storage-buffer bindings
@@ -282,7 +305,9 @@ fn nvrtc_compile_to_ptx(
     // The installed nvrtc can be newer than the driver, which then rejects the PTX
     // ISA version. Our kernels use only long-stable instructions (incl. the stable
     // WMMA `mma.sync`), so rewrite `.version` down to one the driver supports.
-    Ok(cudarc::nvrtc::Ptx::from_src(downgrade_ptx_isa(&compiled.to_src())))
+    Ok(cudarc::nvrtc::Ptx::from_src(downgrade_ptx_isa(
+        &compiled.to_src(),
+    )))
 }
 
 /// Maps a CUDA compute capability to the `--gpu-architecture=compute_XX` virtual
@@ -356,14 +381,19 @@ impl<'a> QualiaCompute for CudaPipeline<'a> {
                 .iter()
                 .find(|b| b.binding == bspec.binding)
                 .ok_or_else(|| {
-                    ForgeError::GpuValidation(format!("CUDA dispatch missing binding {}", bspec.binding))
+                    ForgeError::GpuValidation(format!(
+                        "CUDA dispatch missing binding {}",
+                        bspec.binding
+                    ))
                 })?;
             if bspec.access == BufferAccess::Uniform {
                 let host = self
                     .context
                     .stream
                     .clone_dtoh(&self.context.slab.slice(view.offset..view.offset + 16))
-                    .map_err(|e| ForgeError::GpuValidation(format!("Failed to read params: {:?}", e)))?;
+                    .map_err(|e| {
+                        ForgeError::GpuValidation(format!("Failed to read params: {:?}", e))
+                    })?;
                 let mut blob = AffineParamsRaw { bytes: [0u8; 16] };
                 blob.bytes.copy_from_slice(&host[..16]);
                 params = Some(blob);

@@ -28,9 +28,7 @@
 //! struct exists for configuration but the solver runs laminar. Compressible
 //! flow and 3-D are flagged, not faked.
 
-use super::{
-    AnalysisResults, AnalysisType, EngineeringError, EngineeringModel,
-};
+use super::{AnalysisResults, AnalysisType, EngineeringError, EngineeringModel};
 
 // ─── Grid ────────────────────────────────────────────────────────────────────
 
@@ -231,11 +229,11 @@ fn apply_bc(grid: &mut StaggeredGrid, bc: &CfdBc) {
 
 /// Solver configuration.
 pub struct SolverConfig {
-    pub density: f64,       // ρ (kg/m³)
-    pub viscosity: f64,     // μ (Pa·s)
-    pub dt: f64,            // time step (s)
-    pub max_steps: usize,   // max time steps
-    pub tolerance: f64,     // convergence tolerance for steady-state check
+    pub density: f64,         // ρ (kg/m³)
+    pub viscosity: f64,       // μ (Pa·s)
+    pub dt: f64,              // time step (s)
+    pub max_steps: usize,     // max time steps
+    pub tolerance: f64,       // convergence tolerance for steady-state check
     pub poisson_iters: usize, // Gauss–Seidel iterations for pressure Poisson
 }
 
@@ -360,10 +358,22 @@ fn solve(
     let vel_scale = u_char / u_lattice; // lattice → physical velocity scale
 
     // ── Extract wall velocities from BCs (convert to lattice units) ──
-    let _u_top = match bc.top { BcKind::Inflow { u, .. } => u / vel_scale, _ => 0.0 };
-    let _u_bot = match bc.bottom { BcKind::Inflow { u, .. } => u / vel_scale, _ => 0.0 };
-    let _v_left = match bc.left { BcKind::Inflow { v, .. } => v / vel_scale, _ => 0.0 };
-    let _v_right = match bc.right { BcKind::Inflow { v, .. } => v / vel_scale, _ => 0.0 };
+    let _u_top = match bc.top {
+        BcKind::Inflow { u, .. } => u / vel_scale,
+        _ => 0.0,
+    };
+    let _u_bot = match bc.bottom {
+        BcKind::Inflow { u, .. } => u / vel_scale,
+        _ => 0.0,
+    };
+    let _v_left = match bc.left {
+        BcKind::Inflow { v, .. } => v / vel_scale,
+        _ => 0.0,
+    };
+    let _v_right = match bc.right {
+        BcKind::Inflow { v, .. } => v / vel_scale,
+        _ => 0.0,
+    };
 
     // ── D2Q9 lattice directions ──
     //   i:  0  1  2  3  4  5  6  7  8
@@ -375,8 +385,14 @@ fn solve(
     const CY: [i32; 9] = [0, 0, 1, 0, -1, 1, 1, -1, -1];
     const W: [f64; 9] = [
         4.0 / 9.0,
-        1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0, 1.0 / 9.0,
-        1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0,
+        1.0 / 9.0,
+        1.0 / 9.0,
+        1.0 / 9.0,
+        1.0 / 9.0,
+        1.0 / 36.0,
+        1.0 / 36.0,
+        1.0 / 36.0,
+        1.0 / 36.0,
     ];
     // Opposite directions: 0→0, 1→3, 2→4, 3→1, 4→2, 5→7, 6→8, 7→5, 8→6
     const OPP: [usize; 9] = [0, 3, 4, 1, 2, 7, 8, 5, 6];
@@ -603,7 +619,8 @@ fn solve(
 
         if max_vel > 1e6 || max_vel.is_nan() {
             return Err(EngineeringError::ConvergenceError(format!(
-                "velocity blow-up at step {}: max_vel = {}", step, max_vel
+                "velocity blow-up at step {}: max_vel = {}",
+                step, max_vel
             )));
         }
 
@@ -643,7 +660,11 @@ fn solve(
     // u at vertical faces: average of cell-centre u values.
     for j in 0..ny {
         for i in 0..nx + 1 {
-            let u_left = if i > 0 { u_final[j * nx + (i - 1)] } else { 0.0 };
+            let u_left = if i > 0 {
+                u_final[j * nx + (i - 1)]
+            } else {
+                0.0
+            };
             let u_right = if i < nx { u_final[j * nx + i] } else { 0.0 };
             grid.u[u_idx(nx, i, j)] = 0.5 * (u_left + u_right) * vel_scale;
         }
@@ -651,7 +672,11 @@ fn solve(
     // v at horizontal faces: average of cell-centre v values.
     for j in 0..ny + 1 {
         for i in 0..nx {
-            let v_bot = if j > 0 { v_final[(j - 1) * nx + i] } else { 0.0 };
+            let v_bot = if j > 0 {
+                v_final[(j - 1) * nx + i]
+            } else {
+                0.0
+            };
             let v_top = if j < ny { v_final[j * nx + i] } else { 0.0 };
             grid.v[v_idx(nx, i, j)] = 0.5 * (v_bot + v_top) * vel_scale;
         }
@@ -669,8 +694,10 @@ fn solve(
     let mut max_div = 0.0f64;
     for j in 1..ny - 1 {
         for i in 1..nx - 1 {
-            let du_dx = (u_final[j * nx + (i + 1)] - u_final[j * nx + (i - 1)]) * vel_scale / (2.0 * dx);
-            let dv_dy = (v_final[(j + 1) * nx + i] - v_final[(j - 1) * nx + i]) * vel_scale / (2.0 * dy);
+            let du_dx =
+                (u_final[j * nx + (i + 1)] - u_final[j * nx + (i - 1)]) * vel_scale / (2.0 * dx);
+            let dv_dy =
+                (v_final[(j + 1) * nx + i] - v_final[(j - 1) * nx + i]) * vel_scale / (2.0 * dy);
             max_div = max_div.max((du_dx + dv_dy).abs());
         }
     }
@@ -823,10 +850,10 @@ pub fn cfd_to_analysis_results(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::{
         EngineeringModel, Geometry, GeometryType, Material, MaterialProperties, ModelType,
     };
+    use super::*;
     use std::collections::HashMap;
 
     fn cfd_model(lx: f64, ly: f64) -> EngineeringModel {
@@ -871,11 +898,11 @@ mod tests {
         let bc = CfdBc::default(); // no-slip walls + top lid at u=1.
         let cfg = SolverConfig {
             density: 1.0,
-            viscosity: 0.1, 
+            viscosity: 0.1,
             dt: 0.0025, // Maps to u_LBM = 0.05, tau = 0.8
             max_steps: 10000,
             tolerance: 1e-6,
-            poisson_iters: 0, 
+            poisson_iters: 0,
         };
         let result = run_cfd(&model, bc, cfg, 20, 20);
         assert!(result.is_ok(), "cavity solver failed: {:?}", result.err());
@@ -883,13 +910,21 @@ mod tests {
 
         // The cavity should converge to a steady recirculation.
         // Interior divergence should be small (LBM is divergence-free in bulk).
-        assert!(sol.max_divergence < 1.0, "interior divergence too high: {}", sol.max_divergence);
+        assert!(
+            sol.max_divergence < 1.0,
+            "interior divergence too high: {}",
+            sol.max_divergence
+        );
 
         // The lid velocity (top wall) should be close to 1.0.
         // u at the top row of staggered grid (j=ny-1=19).
         let top_u: Vec<f64> = (1..20).map(|i| sol.u[19 * 21 + i]).collect();
         let max_u = top_u.iter().cloned().fold(0.0f64, f64::max);
-        assert!(max_u > 0.3, "lid velocity should be significant, got max u = {}", max_u);
+        assert!(
+            max_u > 0.3,
+            "lid velocity should be significant, got max u = {}",
+            max_u
+        );
 
         // Centre of the cavity should have a vortex (non-zero velocity).
         let ci = 10;
@@ -897,7 +932,11 @@ mod tests {
         let u_c = 0.5 * (sol.u[cj * 21 + ci] + sol.u[cj * 21 + ci + 1]);
         let v_c = 0.5 * (sol.v[cj * 20 + ci] + sol.v[(cj + 1) * 20 + ci]);
         let vel_c = (u_c * u_c + v_c * v_c).sqrt();
-        assert!(vel_c > 1e-4, "cavity centre should have non-zero velocity, got {}", vel_c);
+        assert!(
+            vel_c > 1e-4,
+            "cavity centre should have non-zero velocity, got {}",
+            vel_c
+        );
     }
 
     #[test]
@@ -932,7 +971,11 @@ mod tests {
         // No-slip walls: v at top and bottom should be ~0.
         let top_v: Vec<f64> = (0..20).map(|i| sol.v[10 * 20 + i]).collect();
         let max_top_v = top_v.iter().cloned().fold(0.0f64, f64::max);
-        assert!(max_top_v.abs() < 0.1, "top wall v should be ~0, got {}", max_top_v);
+        assert!(
+            max_top_v.abs() < 0.1,
+            "top wall v should be ~0, got {}",
+            max_top_v
+        );
     }
 
     #[test]

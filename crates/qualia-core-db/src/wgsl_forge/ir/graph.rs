@@ -49,7 +49,10 @@ pub struct Shape {
 impl Shape {
     /// A rank-0 scalar.
     pub fn scalar() -> Self {
-        Shape { dims: [1, 1, 1, 1], rank: 0 }
+        Shape {
+            dims: [1, 1, 1, 1],
+            rank: 0,
+        }
     }
 
     /// Build from a slice of up to 4 dims (extra dims are dropped).
@@ -57,7 +60,10 @@ impl Shape {
         let mut d = [1u32; 4];
         let rank = dims.len().min(4);
         d[..rank].copy_from_slice(&dims[..rank]);
-        Shape { dims: d, rank: rank as u8 }
+        Shape {
+            dims: d,
+            rank: rank as u8,
+        }
     }
 
     /// Product of the declared dims (0 if any runtime-parameterized dim is present).
@@ -201,25 +207,68 @@ pub enum NeighborEnc {
 /// to an explicit `Err` until their phase builds them.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OpNode {
-    Elementwise { f: EwKind },
-    MatMul { m: u32, n: u32, k: u32, tc: bool, trans_b: bool },
-    Gemv { m: u32, n: u32 },
-    Fft { len: u32, inverse: bool },
-    Reduce { op: RedKind, axis: Axis },
-    GatherDequant { scheme: DType, block: u32 },
-    Broadcast { shape: Shape },
-    Softmax { axis: Axis },
-    Stencil { kind: StencilKind, halo: u32, axis: Axis },
-    ScatterAccum { op: AccumKind },
-    Neighbor { kind: NbKind, k_or_r: f32, dims: u8, enc: NeighborEnc },
+    Elementwise {
+        f: EwKind,
+    },
+    MatMul {
+        m: u32,
+        n: u32,
+        k: u32,
+        tc: bool,
+        trans_b: bool,
+    },
+    Gemv {
+        m: u32,
+        n: u32,
+    },
+    Fft {
+        len: u32,
+        inverse: bool,
+    },
+    Reduce {
+        op: RedKind,
+        axis: Axis,
+    },
+    GatherDequant {
+        scheme: DType,
+        block: u32,
+    },
+    Broadcast {
+        shape: Shape,
+    },
+    Softmax {
+        axis: Axis,
+    },
+    Stencil {
+        kind: StencilKind,
+        halo: u32,
+        axis: Axis,
+    },
+    ScatterAccum {
+        op: AccumKind,
+    },
+    Neighbor {
+        kind: NbKind,
+        k_or_r: f32,
+        dims: u8,
+        enc: NeighborEnc,
+    },
     /// Extract a contiguous sub-range `input[offset .. offset+len]` (1 input → `[len]`). The
     /// composable primitive for per-head slicing of projected q/K/V in multi-head attention.
-    Slice { offset: u32, len: u32 },
+    Slice {
+        offset: u32,
+        len: u32,
+    },
     /// Rotary position embedding over a flat `[.., head_dim]` vector (1 input). `pos` is carried so
     /// the executor writes it into the kernel's params buffer — the kernel *source* is independent
     /// of `pos`, so the pipeline cache stays warm across tokens. `mode` is 0=interleaved / 1=NeoX;
     /// `base_bits` is the f32 θ-base bit pattern. See `graph_ops::stencil::{rope_wgsl, rope_cpu}`.
-    Rope { head_dim: u32, pos: u32, mode: u32, base_bits: u32 },
+    Rope {
+        head_dim: u32,
+        pos: u32,
+        mode: u32,
+        base_bits: u32,
+    },
 }
 
 /// One node of a [`ComputeGraph`]: an op, its input edges, its single output edge, and a
@@ -281,7 +330,8 @@ impl ComputeGraph {
             let prod_out = &self.nodes[pidx].out;
             if prod_out.dtype != inp.dtype || !shapes_compatible(prod_out.shape, inp.shape) {
                 return Err(ForgeError::Emission(
-                    "ComputeGraph::push: input edge shape/dtype mismatch vs producer output".to_string(),
+                    "ComputeGraph::push: input edge shape/dtype mismatch vs producer output"
+                        .to_string(),
                 ));
             }
         }
@@ -425,7 +475,13 @@ impl KernelSpec {
                 let a = TensorRef::external(dyn2, DType::F32);
                 let b = TensorRef::external(dyn2, DType::F32);
                 let out = g.push(
-                    OpNode::MatMul { m: 0, n: 0, k: 0, tc: false, trans_b: false },
+                    OpNode::MatMul {
+                        m: 0,
+                        n: 0,
+                        k: 0,
+                        tc: false,
+                        trans_b: false,
+                    },
                     &[a, b],
                     dyn2,
                     DType::F32,
@@ -436,13 +492,22 @@ impl KernelSpec {
             "gemv" => {
                 let a = TensorRef::external(dyn2, DType::F32);
                 let x = TensorRef::external(dyn1, DType::F32);
-                let out = g.push(OpNode::Gemv { m: 0, n: 0 }, &[a, x], dyn1, DType::F32, sched)?;
+                let out = g.push(
+                    OpNode::Gemv { m: 0, n: 0 },
+                    &[a, x],
+                    dyn1,
+                    DType::F32,
+                    sched,
+                )?;
                 g.mark_output(out);
             }
             "fft" => {
                 let inp = TensorRef::external(dyn1, DType::F32);
                 let out = g.push(
-                    OpNode::Fft { len: 0, inverse: false },
+                    OpNode::Fft {
+                        len: 0,
+                        inverse: false,
+                    },
                     &[inp],
                     dyn1,
                     DType::F32,
@@ -478,7 +543,13 @@ mod tests {
         let b = ext(&[4, 4]);
         let mm = g
             .push(
-                OpNode::MatMul { m: 4, n: 4, k: 4, tc: false, trans_b: false },
+                OpNode::MatMul {
+                    m: 4,
+                    n: 4,
+                    k: 4,
+                    tc: false,
+                    trans_b: false,
+                },
                 &[a, b],
                 Shape::new(&[4, 4]),
                 DType::F32,
@@ -531,7 +602,13 @@ mod tests {
         let b = ext(&[4, 4]);
         let mm = g
             .push(
-                OpNode::MatMul { m: 4, n: 4, k: 4, tc: false, trans_b: false },
+                OpNode::MatMul {
+                    m: 4,
+                    n: 4,
+                    k: 4,
+                    tc: false,
+                    trans_b: false,
+                },
                 &[a, b],
                 Shape::new(&[4, 4]),
                 DType::F32,
@@ -620,7 +697,13 @@ mod tests {
         let b = ext(&[4, 4]);
         let mm = g
             .push(
-                OpNode::MatMul { m: 4, n: 4, k: 4, tc: false, trans_b: false },
+                OpNode::MatMul {
+                    m: 4,
+                    n: 4,
+                    k: 4,
+                    tc: false,
+                    trans_b: false,
+                },
                 &[a, b],
                 Shape::new(&[4, 4]),
                 DType::F32,
@@ -642,7 +725,10 @@ mod tests {
         // A graph with an unimplemented op-class errors (no silent skip).
         let mut g2 = ComputeGraph::new();
         g2.push(
-            OpNode::Reduce { op: RedKind::Sum, axis: Axis::Last },
+            OpNode::Reduce {
+                op: RedKind::Sum,
+                axis: Axis::Last,
+            },
             &[ext(&[8])],
             Shape::new(&[1]),
             DType::F32,

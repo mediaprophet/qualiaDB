@@ -179,10 +179,8 @@ impl QTensorEngine {
         // 1) Per-token uploads: embedded token, KV mask, dynamic attention params.
         queue.write_buffer(&plan.hidden_a, 0, bytemuck::cast_slice(&emb[..n_embd]));
 
-        let (mask_words, mask_active) = crate::compute_universe::attention_kv_mask_u32(
-            token_idx,
-            plan.layout.max_context,
-        );
+        let (mask_words, mask_active) =
+            crate::compute_universe::attention_kv_mask_u32(token_idx, plan.layout.max_context);
         queue.write_buffer(
             self.attention_mask_buf.as_ref()?,
             0,
@@ -215,11 +213,11 @@ impl QTensorEngine {
         queue.write_buffer(&plan.attn_dyn_arena, 0, &plan.dyn_scratch);
 
         // 2) Encode the whole token: 32 layers + output norm + logits top-1.
-        let mut encoder = self
-            .gpu_device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("ResidentTokenEncoder"),
-            });
+        let mut encoder =
+            self.gpu_device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("ResidentTokenEncoder"),
+                });
         let gemv = if plan.use_coop {
             &self.coop_gemv_pipeline
         } else {
@@ -231,7 +229,13 @@ impl QTensorEngine {
         let attn = &self.attention_pipeline;
         let topk = self.output_topk_pipeline.as_ref()?;
 
-        let gemv_wg = |n_out: u32| if plan.use_coop { n_out } else { n_out.div_ceil(64) };
+        let gemv_wg = |n_out: u32| {
+            if plan.use_coop {
+                n_out
+            } else {
+                n_out.div_ceil(64)
+            }
+        };
         let elem_wg = |n: u32| n.div_ceil(64);
         let (n_embd_u, n_ffn_u) = (n_embd as u32, plan.n_ffn as u32);
         let kv_dim_u = plan.kv_dim as u32;
@@ -567,8 +571,14 @@ impl QTensorEngine {
                 label: Some(label),
                 layout,
                 entries: &[
-                    wgpu::BindGroupEntry { binding: 0, resource: a },
-                    wgpu::BindGroupEntry { binding: 1, resource: b },
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: a,
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: b,
+                    },
                     wgpu::BindGroupEntry {
                         binding: 2,
                         resource: out.as_entire_binding(),
@@ -593,7 +603,10 @@ impl QTensorEngine {
                         binding: 0,
                         resource: input.as_entire_binding(),
                     },
-                    wgpu::BindGroupEntry { binding: 1, resource: weight },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: weight,
+                    },
                     wgpu::BindGroupEntry {
                         binding: 2,
                         resource: ubind(&static_arena, p_slot * SLOT, gp_sz),
@@ -649,8 +662,8 @@ impl QTensorEngine {
             })
         };
 
-        let gemm_params = |info: &GgufTensorInfo, n_in: usize, n_out: usize, raw_len: usize| {
-            GemmGpuParams {
+        let gemm_params =
+            |info: &GgufTensorInfo, n_in: usize, n_out: usize, raw_len: usize| GemmGpuParams {
                 n_in: n_in as u32,
                 n_out: n_out as u32,
                 weight_ggml_type: info.ggml_type,
@@ -659,8 +672,7 @@ impl QTensorEngine {
                 n_batch: 1,
                 in_row_stride: 0,
                 out_row_stride: 0,
-            }
-        };
+            };
 
         let mut layers = Vec::with_capacity(n_layer as usize);
         let mut layer_protos = Vec::with_capacity(n_layer as usize);
@@ -719,8 +731,7 @@ impl QTensorEngine {
             let (q_w, k_w, v_w) = (res(q_raw)?, res(k_raw)?, res(v_raw)?);
             let (o_w, g_w, u_w, d_w) = (res(o_raw)?, res(g_raw)?, res(u_raw)?, res(d_raw)?);
 
-            if !upload_norm(2 * l as u64, &attn_norm) || !upload_norm(2 * l as u64 + 1, &ffn_norm)
-            {
+            if !upload_norm(2 * l as u64, &attn_norm) || !upload_norm(2 * l as u64 + 1, &ffn_norm) {
                 return None;
             }
 
@@ -746,15 +757,48 @@ impl QTensorEngine {
 
             // Prototype attention params (position/mask patched per token).
             let mut k_p = Self::attention_gpu_params(
-                &h, &layout, l, 0, &k_info, k_raw.len(), 1, 1, 0, 0, 0, 0,
+                &h,
+                &layout,
+                l,
+                0,
+                &k_info,
+                k_raw.len(),
+                1,
+                1,
+                0,
+                0,
+                0,
+                0,
             );
             k_p.proj_row_stride = kv_dim as u32;
             let mut v_p = Self::attention_gpu_params(
-                &h, &layout, l, 0, &v_info, v_raw.len(), 2, 1, 0, 0, 0, 0,
+                &h,
+                &layout,
+                l,
+                0,
+                &v_info,
+                v_raw.len(),
+                2,
+                1,
+                0,
+                0,
+                0,
+                0,
             );
             v_p.proj_row_stride = kv_dim as u32;
             let q_p = Self::attention_gpu_params(
-                &h, &layout, l, 0, &q_info, q_raw.len(), 0, 1, 0, 0, 0, 0,
+                &h,
+                &layout,
+                l,
+                0,
+                &q_info,
+                q_raw.len(),
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
             );
             layer_protos.push(LayerProtos {
                 k_write: k_p,
@@ -772,7 +816,13 @@ impl QTensorEngine {
                     &normed,
                     ELEM_SLOT_RMS,
                 ),
-                k_gemm: mk_gemm_bg("ResKGemm", &normed, k_w.as_entire_binding(), gbase, &kv_proj),
+                k_gemm: mk_gemm_bg(
+                    "ResKGemm",
+                    &normed,
+                    k_w.as_entire_binding(),
+                    gbase,
+                    &kv_proj,
+                ),
                 k_write: mk_attn_bg("ResKWrite", &kv_proj, &k_w, dyn_base, l, &attn_out),
                 v_gemm: mk_gemm_bg(
                     "ResVGemm",
@@ -783,7 +833,13 @@ impl QTensorEngine {
                 ),
                 v_write: mk_attn_bg("ResVWrite", &kv_proj, &v_w, dyn_base + 1, l, &attn_out),
                 q: mk_attn_bg("ResQ", &normed, &q_w, dyn_base + 2, l, &attn_out),
-                o: mk_gemm_bg("ResO", &attn_out, o_w.as_entire_binding(), gbase + 2, &delta),
+                o: mk_gemm_bg(
+                    "ResO",
+                    &attn_out,
+                    o_w.as_entire_binding(),
+                    gbase + 2,
+                    &delta,
+                ),
                 add1: mk_elem_bg(
                     "ResAdd1",
                     &add_layout,
@@ -807,7 +863,13 @@ impl QTensorEngine {
                     gbase + 3,
                     &gate_buf,
                 ),
-                up: mk_gemm_bg("ResUp", &normed, u_w.as_entire_binding(), gbase + 4, &up_buf),
+                up: mk_gemm_bg(
+                    "ResUp",
+                    &normed,
+                    u_w.as_entire_binding(),
+                    gbase + 4,
+                    &up_buf,
+                ),
                 silu: mk_elem_bg(
                     "ResSilu",
                     &silu_layout,
@@ -927,4 +989,3 @@ impl QTensorEngine {
         }))
     }
 }
-

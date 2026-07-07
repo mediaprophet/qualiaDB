@@ -45,9 +45,9 @@
 
 use std::sync::{Mutex, OnceLock};
 
+use super::execute::WgpuComputeContext;
 use super::oracle::{dft_cpu, gemm_cpu, gemv_cpu};
 use super::ForgeError;
-use super::execute::WgpuComputeContext;
 use super::ForgeRuntime;
 
 /// Problem-size threshold (in `m * n * k` multiply-adds) below which GEMM stays on
@@ -287,8 +287,12 @@ fn df64_usable() -> bool {
         // 8x8x8 with low-mantissa-bit perturbations: the exact f64 result differs from
         // an f32 evaluation by ~1e-7, so only a working df64 lands within 1e-9.
         let n = 8usize;
-        let a: Vec<f64> = (0..n * n).map(|i| 1.0 + (i as f64) * 1.0e-7 + 1.0e-9).collect();
-        let b: Vec<f64> = (0..n * n).map(|i| 1.0 - (i as f64) * 1.0e-7 + 3.0e-10).collect();
+        let a: Vec<f64> = (0..n * n)
+            .map(|i| 1.0 + (i as f64) * 1.0e-7 + 1.0e-9)
+            .collect();
+        let b: Vec<f64> = (0..n * n)
+            .map(|i| 1.0 - (i as f64) * 1.0e-7 + 3.0e-10)
+            .collect();
         let cpu = gemm_cpu_f64(&a, &b, n, n, n);
         match gemm_f64_df64(n, n, n, &a, &b) {
             Ok(df) => df.iter().zip(&cpu).all(|(d, c)| (d - c).abs() <= 1.0e-9),
@@ -324,9 +328,7 @@ pub fn coopmat_usable() -> bool {
         let a = vec![1.0f32; n * n];
         let b = vec![1.0f32; n * n];
         match gemm_f32_tc_coopmat(n, n, n, &a, &b) {
-            Ok(out) => {
-                out.len() == n * n && out.iter().all(|&v| (v - 8.0).abs() <= 1.0e-3)
-            }
+            Ok(out) => out.len() == n * n && out.iter().all(|&v| (v - 8.0).abs() <= 1.0e-3),
             Err(_) => false,
         }
     })
@@ -368,14 +370,16 @@ pub fn gemm_f32_tc_coopmat(
     }
     validate_dims(m, k, n, a.len(), b.len())?;
 
-    let element_count = m
-        .checked_mul(n)
-        .ok_or_else(|| ForgeError::GpuValidation("m*n overflow in gemm_f32_tc_coopmat".to_string()))?;
+    let element_count = m.checked_mul(n).ok_or_else(|| {
+        ForgeError::GpuValidation("m*n overflow in gemm_f32_tc_coopmat".to_string())
+    })?;
     let capacity = (element_count.saturating_mul(8)).max(4 << 20);
     let mut ctx = WgpuComputeContext::new(capacity)?;
 
-    let view_a = ctx.allocate_and_write(bytemuck::cast_slice(a), 0, 0, BindingUsage::StorageRead)?;
-    let view_b = ctx.allocate_and_write(bytemuck::cast_slice(b), 1, 0, BindingUsage::StorageRead)?;
+    let view_a =
+        ctx.allocate_and_write(bytemuck::cast_slice(a), 0, 0, BindingUsage::StorageRead)?;
+    let view_b =
+        ctx.allocate_and_write(bytemuck::cast_slice(b), 1, 0, BindingUsage::StorageRead)?;
     let zeros = vec![0.0f32; element_count];
     let view_c = ctx.allocate_and_write(
         bytemuck::cast_slice(&zeros),
@@ -461,7 +465,13 @@ fn gemm_f64_cuda(
 ///
 /// This is **opt-in** because tiers 1–2 trade f32 precision for tensor-core throughput; the
 /// default [`gemm_f32`] stays full-precision. Use for LLM matmuls (already f16-tolerant).
-pub fn gemm_f32_tc(m: usize, k: usize, n: usize, a: &[f32], b: &[f32]) -> Result<Vec<f32>, ForgeError> {
+pub fn gemm_f32_tc(
+    m: usize,
+    k: usize,
+    n: usize,
+    a: &[f32],
+    b: &[f32],
+) -> Result<Vec<f32>, ForgeError> {
     validate_dims(m, k, n, a.len(), b.len())?;
 
     // Tier 1: WGSL coopmat — the *portable* wgpu tensor-core path (f32), gated on the
@@ -486,12 +496,7 @@ pub fn gemm_f32_tc(m: usize, k: usize, n: usize, a: &[f32], b: &[f32]) -> Result
     // Tier 2: CUDA WMMA (genuine NVIDIA tensor cores, f16-input precision).
     #[cfg(feature = "cuda")]
     {
-        if caps().cuda
-            && m % 16 == 0
-            && n % 16 == 0
-            && k % 16 == 0
-            && m.min(n).min(k) > 0
-        {
+        if caps().cuda && m % 16 == 0 && n % 16 == 0 && k % 16 == 0 && m.min(n).min(k) > 0 {
             if let Ok(out) = gemm_tc_cuda(m, k, n, a, b) {
                 return Ok(out);
             }
@@ -511,7 +516,13 @@ pub fn gemm_f32_tc(m: usize, k: usize, n: usize, a: &[f32], b: &[f32]) -> Result
 /// f32 inputs are converted to f16 bit patterns host-side and uploaded as `u16`; the
 /// `dims = [m, n, k]` storage buffer drives the kernel's tiling. Returns `m*n` f32 outputs.
 #[cfg(feature = "cuda")]
-pub fn gemm_tc_cuda(m: usize, k: usize, n: usize, a: &[f32], b: &[f32]) -> Result<Vec<f32>, ForgeError> {
+pub fn gemm_tc_cuda(
+    m: usize,
+    k: usize,
+    n: usize,
+    a: &[f32],
+    b: &[f32],
+) -> Result<Vec<f32>, ForgeError> {
     use crate::wgsl_forge::emit::cuda_c::{WMMA_GEMM_TILED_ENTRY, WMMA_GEMM_TILED_SRC};
     use crate::wgsl_forge::execute::{CudaComputeContext, CudaPipeline, QualiaCompute};
 
@@ -522,8 +533,14 @@ pub fn gemm_tc_cuda(m: usize, k: usize, n: usize, a: &[f32], b: &[f32]) -> Resul
     }
     validate_dims(m, k, n, a.len(), b.len())?;
 
-    let a_bits: Vec<u16> = a.iter().map(|&x| half::f16::from_f32(x).to_bits()).collect();
-    let b_bits: Vec<u16> = b.iter().map(|&x| half::f16::from_f32(x).to_bits()).collect();
+    let a_bits: Vec<u16> = a
+        .iter()
+        .map(|&x| half::f16::from_f32(x).to_bits())
+        .collect();
+    let b_bits: Vec<u16> = b
+        .iter()
+        .map(|&x| half::f16::from_f32(x).to_bits())
+        .collect();
 
     let mut ctx = CudaComputeContext::new(64 * 1024 * 1024)?;
     let view_a = ctx.allocate_and_write(bytemuck::cast_slice(&a_bits), 0, 0)?;
@@ -536,7 +553,10 @@ pub fn gemm_tc_cuda(m: usize, k: usize, n: usize, a: &[f32], b: &[f32]) -> Resul
     let buffers = vec![view_a, view_b, view_c, view_dims];
     let num_tiles = (m / 16) * (n / 16);
     // workgroup_size 32 (one warp/tile) → element_count = num_tiles*32 gives num_tiles blocks.
-    let schedule = super::Schedule { workgroup_size: 32, ..Default::default() };
+    let schedule = super::Schedule {
+        workgroup_size: 32,
+        ..Default::default()
+    };
     let pipeline = CudaPipeline::compile_cuda_c_source(
         &ctx,
         WMMA_GEMM_TILED_SRC,
@@ -655,12 +675,8 @@ pub fn gemm_f64_df64(
     // dims is a u32 storage buffer [m, n, k] (binding 3, StorageRead) — note the
     // kernel reads dims[0]=m, dims[1]=n, dims[2]=k.
     let dims: [u32; 3] = [m as u32, n as u32, k as u32];
-    let view_dims = ctx.allocate_and_write(
-        bytemuck::cast_slice(&dims),
-        3,
-        0,
-        BindingUsage::StorageRead,
-    )?;
+    let view_dims =
+        ctx.allocate_and_write(bytemuck::cast_slice(&dims), 3, 0, BindingUsage::StorageRead)?;
 
     let buffers = vec![view_a, view_b, view_c, view_dims];
     let pipeline = WgpuPipeline::compile(&ctx, GEMM_DF64_WGSL, GEMM_DF64_ENTRY)?;
@@ -792,12 +808,7 @@ pub fn pairwise_sq_dist_cpu_f64(a: &[f64], b: &[f64], n: usize, m: usize, p: usi
 ///
 /// `a` must have `m * n` elements (row-major) and `x` must have `n`. Returns `m`
 /// row elements. Dimension/length mismatches are the only hard errors.
-pub fn gemv_f32(
-    m: usize,
-    n: usize,
-    a: &[f32],
-    x: &[f32],
-) -> Result<Vec<f32>, ForgeError> {
+pub fn gemv_f32(m: usize, n: usize, a: &[f32], x: &[f32]) -> Result<Vec<f32>, ForgeError> {
     validate_gemv_dims(m, n, a.len(), x.len())?;
 
     let work = m.saturating_mul(n);
@@ -844,12 +855,7 @@ fn gemv_f32_gpu(m: usize, n: usize, a: &[f32], x: &[f32]) -> Option<Vec<f32>> {
 ///
 /// `a` must have `m * n` elements (row-major) and `x` must have `n`. Returns `m`
 /// row elements.
-pub fn gemv_f64(
-    m: usize,
-    n: usize,
-    a: &[f64],
-    x: &[f64],
-) -> Result<Vec<f64>, ForgeError> {
+pub fn gemv_f64(m: usize, n: usize, a: &[f64], x: &[f64]) -> Result<Vec<f64>, ForgeError> {
     validate_gemv_dims(m, n, a.len(), x.len())?;
 
     #[cfg(feature = "cuda")]
@@ -874,12 +880,7 @@ pub fn gemv_f64(
 /// thread per output row (`element_count = m`), and reads back the `y` buffer as
 /// `f64`. This is the exact-double path WGSL cannot provide.
 #[cfg(feature = "cuda")]
-fn gemv_f64_cuda(
-    m: usize,
-    n: usize,
-    a: &[f64],
-    x: &[f64],
-) -> Result<Vec<f64>, ForgeError> {
+fn gemv_f64_cuda(m: usize, n: usize, a: &[f64], x: &[f64]) -> Result<Vec<f64>, ForgeError> {
     use super::emit::cuda_c::{GEMV_F64_ENTRY, GEMV_F64_SRC};
     use super::execute::{CudaComputeContext, CudaPipeline, QualiaCompute};
     use super::Schedule;
@@ -993,12 +994,7 @@ fn fft_f32_gpu(complex_interleaved: &[f32]) -> Option<Vec<f32>> {
 
 /// Shared dimension/length validation for both GEMV entry points: `a` is `m*n`
 /// (row-major) and `x` is `n`.
-fn validate_gemv_dims(
-    m: usize,
-    n: usize,
-    a_len: usize,
-    x_len: usize,
-) -> Result<(), ForgeError> {
+fn validate_gemv_dims(m: usize, n: usize, a_len: usize, x_len: usize) -> Result<(), ForgeError> {
     if m == 0 || n == 0 {
         return Err(ForgeError::GpuValidation(
             "gemv requires m > 0 and n > 0".to_string(),
@@ -1164,7 +1160,10 @@ mod tests {
     fn gemm_cpu_f64_matches_hand_checked() {
         let a = [1.0f64, 2.0, 3.0, 4.0, 5.0, 6.0];
         let b = [7.0f64, 8.0, 9.0, 10.0, 11.0, 12.0];
-        assert_eq!(gemm_cpu_f64(&a, &b, 2, 3, 2), vec![58.0, 64.0, 139.0, 154.0]);
+        assert_eq!(
+            gemm_cpu_f64(&a, &b, 2, 3, 2),
+            vec![58.0, 64.0, 139.0, 154.0]
+        );
     }
 
     /// Non-GPU: the df64 (double-single) host pack/unpack helpers round-trip a
@@ -1358,10 +1357,7 @@ mod tests {
         let cpu = gemm_cpu(&a, &b, m, k, n);
         assert_eq!(gpu.len(), cpu.len());
         for (g, c) in gpu.iter().zip(cpu.iter()) {
-            assert!(
-                (g - c).abs() <= 1.0e-3,
-                "f32 GPU/CPU mismatch: {g} vs {c}"
-            );
+            assert!((g - c).abs() <= 1.0e-3, "f32 GPU/CPU mismatch: {g} vs {c}");
         }
     }
 
@@ -1433,8 +1429,14 @@ mod tests {
     fn gemm_tc_cuda_tiled_matches_f16_reference() {
         let (m, k, n) = (64usize, 64, 64);
         // Small-magnitude data so f16 rounding error stays bounded over the K=64 sum.
-        let a: Vec<f32> = det_f32(m * k, 0x574D_4D41_5449_4C45).iter().map(|&x| x * 0.5).collect();
-        let b: Vec<f32> = det_f32(k * n, 0x574D_4D41_5449_4C46).iter().map(|&x| x * 0.5).collect();
+        let a: Vec<f32> = det_f32(m * k, 0x574D_4D41_5449_4C45)
+            .iter()
+            .map(|&x| x * 0.5)
+            .collect();
+        let b: Vec<f32> = det_f32(k * n, 0x574D_4D41_5449_4C46)
+            .iter()
+            .map(|&x| x * 0.5)
+            .collect();
         // Reference: f32 matmul of the f16-rounded inputs.
         let ar: Vec<f32> = a.iter().map(|&x| half::f16::from_f32(x).to_f32()).collect();
         let br: Vec<f32> = b.iter().map(|&x| half::f16::from_f32(x).to_f32()).collect();
@@ -1495,7 +1497,10 @@ mod tests {
         // tier actually works (df64 / CUDA-f64 / CPU).
         let chain = gemm_f64(m, k, n, &a, &b).expect("gemm_f64");
         for (g, c) in chain.iter().zip(cpu.iter()) {
-            assert!((g - c).abs() <= 1.0e-9, "gemm_f64 chain incorrect: {g} vs {c}");
+            assert!(
+                (g - c).abs() <= 1.0e-9,
+                "gemm_f64 chain incorrect: {g} vs {c}"
+            );
         }
     }
 

@@ -39,7 +39,10 @@ fn fetch(vertices: &[Point3], tri: &[u32; 3], t: usize) -> Result<[Point3; 3], M
     for (i, &vi) in tri.iter().enumerate() {
         let v = *vertices
             .get(vi as usize)
-            .ok_or(MeshMeasureError::IndexOutOfBounds { triangle: t, vertex: vi })?;
+            .ok_or(MeshMeasureError::IndexOutOfBounds {
+                triangle: t,
+                vertex: vi,
+            })?;
         if !v.x.is_finite() || !v.y.is_finite() || !v.z.is_finite() {
             return Err(MeshMeasureError::NonFiniteCoordinate { index: vi as usize });
         }
@@ -106,12 +109,18 @@ mod tests {
             Point3::new(0.0, 1.0, 1.0), // 7
         ];
         let t = vec![
-            [0, 3, 2], [0, 2, 1], // -Z
-            [4, 5, 6], [4, 6, 7], // +Z
-            [0, 1, 5], [0, 5, 4], // -Y
-            [3, 7, 6], [3, 6, 2], // +Y
-            [0, 4, 7], [0, 7, 3], // -X
-            [1, 2, 6], [1, 6, 5], // +X
+            [0, 3, 2],
+            [0, 2, 1], // -Z
+            [4, 5, 6],
+            [4, 6, 7], // +Z
+            [0, 1, 5],
+            [0, 5, 4], // -Y
+            [3, 7, 6],
+            [3, 6, 2], // +Y
+            [0, 4, 7],
+            [0, 7, 3], // -X
+            [1, 2, 6],
+            [1, 6, 5], // +X
         ];
         (v, t)
     }
@@ -138,7 +147,10 @@ mod tests {
     fn cube_volume_is_one_and_outward() {
         let (v, t) = unit_cube();
         let vol = signed_volume(&v, &t).unwrap();
-        assert!((vol - 1.0).abs() < 1e-12, "outward cube volume should be +1, got {vol}");
+        assert!(
+            (vol - 1.0).abs() < 1e-12,
+            "outward cube volume should be +1, got {vol}"
+        );
     }
 
     #[test]
@@ -146,7 +158,10 @@ mod tests {
         let (v, t) = unit_cube();
         let reversed: Vec<[u32; 3]> = t.iter().map(|tr| [tr[0], tr[2], tr[1]]).collect();
         let vol = signed_volume(&v, &reversed).unwrap();
-        assert!((vol + 1.0).abs() < 1e-12, "reversed cube volume should be -1, got {vol}");
+        assert!(
+            (vol + 1.0).abs() < 1e-12,
+            "reversed cube volume should be -1, got {vol}"
+        );
     }
 
     #[test]
@@ -191,7 +206,10 @@ mod tests {
         let v = vec![Point3::new(0.0, 0.0, 0.0)];
         assert_eq!(
             surface_area(&v, &[[0, 1, 2]]),
-            Err(MeshMeasureError::IndexOutOfBounds { triangle: 0, vertex: 1 })
+            Err(MeshMeasureError::IndexOutOfBounds {
+                triangle: 0,
+                vertex: 1
+            })
         );
     }
 

@@ -129,9 +129,8 @@ pub fn snapshot() -> Option<KvCapture> {
         return None;
     }
     let hd = b.head_dim;
-    let rows = |flat: &Vec<f32>| -> Vec<Vec<f32>> {
-        flat.chunks_exact(hd).map(|c| c.to_vec()).collect()
-    };
+    let rows =
+        |flat: &Vec<f32>| -> Vec<Vec<f32>> { flat.chunks_exact(hd).map(|c| c.to_vec()).collect() };
     Some(KvCapture {
         head_dim: hd,
         k: b.k.iter().map(rows).collect(),

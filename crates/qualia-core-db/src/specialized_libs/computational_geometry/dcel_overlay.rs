@@ -370,11 +370,7 @@ struct InputEdge {
 /// Split every edge of `a` and `b` into sub-edges at every merged vertex lying
 /// on it. Returns the deduplicated set of directed sub-edges (each undirected
 /// edge appears once, oriented `from → to`).
-fn split_edges(
-    a: &[Point2],
-    b: &[Point2],
-    verts: &VertexMerger,
-) -> Vec<SubEdge> {
+fn split_edges(a: &[Point2], b: &[Point2], verts: &VertexMerger) -> Vec<SubEdge> {
     let na = a.len();
     let nb = b.len();
     let mut input_edges: Vec<InputEdge> = Vec::with_capacity(na + nb);
@@ -556,7 +552,10 @@ fn build_overlay_dcel(a: &[Point2], b: &[Point2]) -> Result<Dcel, DcelError> {
     let mut cycle_pts: Vec<Vec<Point2>> = Vec::with_capacity(face_cycles.len());
     let mut cycle_area: Vec<f64> = Vec::with_capacity(face_cycles.len());
     for cyc in &face_cycles {
-        let pts: Vec<Point2> = cyc.iter().map(|&h| points[he[h as usize].origin as usize]).collect();
+        let pts: Vec<Point2> = cyc
+            .iter()
+            .map(|&h| points[he[h as usize].origin as usize])
+            .collect();
         let area = cycle_signed_area(&pts);
         cycle_pts.push(pts);
         cycle_area.push(area);
@@ -582,7 +581,10 @@ fn build_overlay_dcel(a: &[Point2], b: &[Point2]) -> Result<Dcel, DcelError> {
             faces.push(DcelFace {
                 outer: face_outer[c],
                 holes: Vec::new(),
-                label: FaceLabel { in_a: false, in_b: false },
+                label: FaceLabel {
+                    in_a: false,
+                    in_b: false,
+                },
                 bounded: true,
             });
         }
@@ -625,7 +627,10 @@ fn build_overlay_dcel(a: &[Point2], b: &[Point2]) -> Result<Dcel, DcelError> {
                     faces.push(DcelFace {
                         outer: u32::MAX,
                         holes: Vec::new(),
-                        label: FaceLabel { in_a: false, in_b: false },
+                        label: FaceLabel {
+                            in_a: false,
+                            in_b: false,
+                        },
                         bounded: false,
                     });
                     unbounded_face = Some(id);
@@ -644,7 +649,10 @@ fn build_overlay_dcel(a: &[Point2], b: &[Point2]) -> Result<Dcel, DcelError> {
         faces.push(DcelFace {
             outer: u32::MAX,
             holes: Vec::new(),
-            label: FaceLabel { in_a: false, in_b: false },
+            label: FaceLabel {
+                in_a: false,
+                in_b: false,
+            },
             bounded: false,
         });
     }
@@ -665,7 +673,10 @@ fn build_overlay_dcel(a: &[Point2], b: &[Point2]) -> Result<Dcel, DcelError> {
     // Build vertex incident pointers (any outgoing half-edge).
     let mut vertices: Vec<DcelVertex> = points
         .iter()
-        .map(|&p| DcelVertex { point: p, incident: u32::MAX })
+        .map(|&p| DcelVertex {
+            point: p,
+            incident: u32::MAX,
+        })
         .collect();
     for (i, h) in he.iter().enumerate() {
         let o = h.origin as usize;
@@ -684,11 +695,7 @@ fn build_overlay_dcel(a: &[Point2], b: &[Point2]) -> Result<Dcel, DcelError> {
 /// Compute a point strictly inside the face whose outer boundary starts at
 /// `outer_he`. Uses the bottom-most outer vertex nudged along the inward
 /// bisector of its two incident boundary edges — robust for non-convex faces.
-fn representative_point(
-    outer_he: u32,
-    he: &[DcelHalfEdge],
-    points: &[Point2],
-) -> Option<Point2> {
+fn representative_point(outer_he: u32, he: &[DcelHalfEdge], points: &[Point2]) -> Option<Point2> {
     if outer_he == u32::MAX {
         return None;
     }
@@ -895,11 +902,19 @@ pub fn total_area(components: &[PolygonWithHoles]) -> f64 {
 /// Compute the overlay of two simple polygons and extract the boolean result
 /// for `op`. The returned [`OverlayResult`] carries the labelled DCEL, the
 /// extracted polygon-with-holes components, and the Euler characteristic.
-pub fn overlay_boolean(a: &[Point2], b: &[Point2], op: BooleanOp) -> Result<OverlayResult, DcelError> {
+pub fn overlay_boolean(
+    a: &[Point2],
+    b: &[Point2],
+    op: BooleanOp,
+) -> Result<OverlayResult, DcelError> {
     let dcel = build_overlay_dcel(a, b)?;
     let components = extract_boolean(&dcel, op);
     let euler = euler_characteristic(&dcel);
-    Ok(OverlayResult { dcel, components, euler })
+    Ok(OverlayResult {
+        dcel,
+        components,
+        euler,
+    })
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -946,13 +961,14 @@ mod tests {
         let a = unit_square();
         let b = shifted_square(5.0);
         let res = overlay_boolean(&a, &b, BooleanOp::Union).unwrap();
-        assert_eq!(res.components.len(), 2, "disjoint union should be 2 components");
+        assert_eq!(
+            res.components.len(),
+            2,
+            "disjoint union should be 2 components"
+        );
         // Area identity: area(union) = area(A) + area(B) = 2.
         let area = total_area(&res.components);
-        assert!(
-            (area - 2.0).abs() < 1e-9,
-            "union area {area} should be 2.0"
-        );
+        assert!((area - 2.0).abs() < 1e-9, "union area {area} should be 2.0");
     }
 
     #[test]
@@ -960,7 +976,10 @@ mod tests {
         let a = unit_square();
         let b = shifted_square(5.0);
         let res = overlay_boolean(&a, &b, BooleanOp::Intersection).unwrap();
-        assert!(res.components.is_empty(), "disjoint intersection should be empty");
+        assert!(
+            res.components.is_empty(),
+            "disjoint intersection should be empty"
+        );
     }
 
     #[test]
@@ -968,9 +987,16 @@ mod tests {
         let a = unit_square();
         let b = unit_square();
         let res = overlay_boolean(&a, &b, BooleanOp::Union).unwrap();
-        assert_eq!(res.components.len(), 1, "identical union should be 1 component");
+        assert_eq!(
+            res.components.len(),
+            1,
+            "identical union should be 1 component"
+        );
         let area = total_area(&res.components);
-        assert!((area - 1.0).abs() < 1e-9, "identical union area {area} should be 1.0");
+        assert!(
+            (area - 1.0).abs() < 1e-9,
+            "identical union area {area} should be 1.0"
+        );
     }
 
     #[test]
@@ -980,7 +1006,10 @@ mod tests {
         let res = overlay_boolean(&a, &b, BooleanOp::Intersection).unwrap();
         assert_eq!(res.components.len(), 1);
         let area = total_area(&res.components);
-        assert!((area - 1.0).abs() < 1e-9, "identical intersection area {area} should be 1.0");
+        assert!(
+            (area - 1.0).abs() < 1e-9,
+            "identical intersection area {area} should be 1.0"
+        );
     }
 
     #[test]
@@ -1002,7 +1031,11 @@ mod tests {
         let a = unit_square();
         let b = shifted_square(0.5);
         let res = overlay_boolean(&a, &b, BooleanOp::Intersection).unwrap();
-        assert_eq!(res.components.len(), 1, "half-overlap intersection is one piece");
+        assert_eq!(
+            res.components.len(),
+            1,
+            "half-overlap intersection is one piece"
+        );
         let area = total_area(&res.components);
         assert!(
             (area - 0.25).abs() < 1e-9,
@@ -1030,10 +1063,7 @@ mod tests {
         let b = shifted_square(0.5);
         let res = overlay_boolean(&a, &b, BooleanOp::Xor).unwrap();
         let area = total_area(&res.components);
-        assert!(
-            (area - 1.5).abs() < 1e-9,
-            "xor area {area} should be 1.5"
-        );
+        assert!((area - 1.5).abs() < 1e-9, "xor area {area} should be 1.5");
     }
 
     #[test]
@@ -1078,7 +1108,11 @@ mod tests {
             Point2::new(1.0, 2.0),
         ];
         let res = overlay_boolean(&a, &b, BooleanOp::Difference).unwrap();
-        assert_eq!(res.components.len(), 1, "difference should be one component");
+        assert_eq!(
+            res.components.len(),
+            1,
+            "difference should be one component"
+        );
         assert_eq!(
             res.components[0].holes.len(),
             1,
@@ -1109,9 +1143,15 @@ mod tests {
         ];
         let res = overlay_boolean(&a, &b, BooleanOp::Union).unwrap();
         assert_eq!(res.components.len(), 1);
-        assert!(res.components[0].holes.is_empty(), "union of nested squares has no hole");
+        assert!(
+            res.components[0].holes.is_empty(),
+            "union of nested squares has no hole"
+        );
         let area = total_area(&res.components);
-        assert!((area - 9.0).abs() < 1e-9, "nested union area {area} should be 9.0");
+        assert!(
+            (area - 9.0).abs() < 1e-9,
+            "nested union area {area} should be 9.0"
+        );
     }
 
     #[test]
@@ -1131,7 +1171,10 @@ mod tests {
         let res = overlay_boolean(&a, &b, BooleanOp::Intersection).unwrap();
         assert_eq!(res.components.len(), 1);
         let area = total_area(&res.components);
-        assert!((area - 1.0).abs() < 1e-9, "nested intersection area {area} should be 1.0");
+        assert!(
+            (area - 1.0).abs() < 1e-9,
+            "nested intersection area {area} should be 1.0"
+        );
     }
 
     #[test]
@@ -1181,7 +1224,11 @@ mod tests {
             Point2::new(0.0, 0.6),
         ];
         let res = overlay_boolean(&a, &b, BooleanOp::Union).unwrap();
-        assert_eq!(res.components.len(), 1, "cross union should be one component");
+        assert_eq!(
+            res.components.len(),
+            1,
+            "cross union should be one component"
+        );
         // Area = 0.2*1 + 1*0.2 - 0.2*0.2 = 0.2 + 0.2 - 0.04 = 0.36.
         let area = total_area(&res.components);
         assert!(
@@ -1208,7 +1255,10 @@ mod tests {
         let res = overlay_boolean(&a, &b, BooleanOp::Intersection).unwrap();
         assert_eq!(res.components.len(), 1);
         let area = total_area(&res.components);
-        assert!((area - 0.04).abs() < 1e-9, "cross intersection area {area} should be 0.04");
+        assert!(
+            (area - 0.04).abs() < 1e-9,
+            "cross intersection area {area} should be 0.04"
+        );
     }
 
     #[test]
@@ -1283,7 +1333,10 @@ mod tests {
         let b = shifted_square(0.5);
         let r1 = overlay_boolean(&a, &b, BooleanOp::Union).unwrap();
         let r2 = overlay_boolean(&a, &b, BooleanOp::Union).unwrap();
-        assert_eq!(r1.components, r2.components, "overlay must be deterministic");
+        assert_eq!(
+            r1.components, r2.components,
+            "overlay must be deterministic"
+        );
         assert_eq!(r1.euler, r2.euler);
     }
 }

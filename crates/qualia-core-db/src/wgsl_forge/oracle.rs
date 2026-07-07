@@ -5,9 +5,9 @@ use crate::wgsl_forge::execute::{
     BindingUsage, OracleContext, QualiaCompute, WgpuComputeContext, WgpuPipeline,
 };
 use crate::wgsl_forge::{
-    AdapterConstraints, AdapterIdentity, BuiltinKernel, CandidateEvaluation, CertificationManifest,
-    ForgeError, GeneratedShader, P64GpuWords64, Schedule, TargetBackend, TimingSource, TimingSummary,
-    ValidationLevel, emit_shader, validate_wgsl,
+    emit_shader, validate_wgsl, AdapterConstraints, AdapterIdentity, BuiltinKernel,
+    CandidateEvaluation, CertificationManifest, ForgeError, GeneratedShader, P64GpuWords64,
+    Schedule, TargetBackend, TimingSource, TimingSummary, ValidationLevel,
 };
 
 #[repr(C)]
@@ -298,11 +298,7 @@ pub fn ternary_gemv_cpu(
 /// scales (length M). Codes are drawn from the xorshift stream and reduced into
 /// `{0,1,2}` so the weights only ever decode to `{0, +1, -1}` (never the unused
 /// `3`), keeping the GPU and CPU paths bit-identical.
-pub fn ternary_gemv_tensors(
-    m: usize,
-    k: usize,
-    seed: u64,
-) -> (Vec<f32>, Vec<u32>, Vec<f32>) {
+pub fn ternary_gemv_tensors(m: usize, k: usize, seed: u64) -> (Vec<f32>, Vec<u32>, Vec<f32>) {
     let k_words = k.div_ceil(TERNARY_CODES_PER_WORD);
     let x = topk_inputs(k, seed);
     // Scales in [-1, 1] — same generator/contract as every other oracle vector.
@@ -407,7 +403,9 @@ pub struct GpuEvaluation {
 /// blake3 hex of a `&[f32]` expected vector's little-endian bytes. Used to record
 /// exactly which CPU-reference output a certified manifest was checked against.
 fn vector_hash_f32(expected: &[f32]) -> String {
-    blake3::hash(bytemuck::cast_slice(expected)).to_hex().to_string()
+    blake3::hash(bytemuck::cast_slice(expected))
+        .to_hex()
+        .to_string()
 }
 
 pub fn evaluate_builtin(
@@ -507,15 +505,22 @@ pub fn evaluate_affine<C: OracleContext>(
     let view_input = context.allocate_and_write(input_bytes, 0, 0, BindingUsage::StorageRead)?;
 
     let output_bytes_len = (case.input.len() * size_of::<f32>()).max(4);
-    let view_output = context.allocate_transient(output_bytes_len, 1, 0, BindingUsage::StorageReadWrite)?;
+    let view_output =
+        context.allocate_transient(output_bytes_len, 1, 0, BindingUsage::StorageReadWrite)?;
 
     let params_bytes = bytemuck::bytes_of(&case.params);
     let view_params = context.allocate_and_write(params_bytes, 2, 0, BindingUsage::Uniform)?;
 
     let buffers = vec![view_input, view_output, view_params];
 
-    let timing_samples =
-        context.run_kernel(&kernel, &schedule, &buffers, case.input.len(), warmups, samples)?;
+    let timing_samples = context.run_kernel(
+        &kernel,
+        &schedule,
+        &buffers,
+        case.input.len(),
+        warmups,
+        samples,
+    )?;
     if timing_samples.iter().any(|s| *s == 0) {
         return Err(ForgeError::GpuValidation(
             "GPU produced a zero-duration timing sample".to_string(),
@@ -545,9 +550,8 @@ pub fn evaluate_affine<C: OracleContext>(
         TimingSource::CompletionClock
     };
 
-    let timing = TimingSummary::from_samples(source, &timing_samples).ok_or_else(|| {
-        ForgeError::GpuValidation("GPU produced no timing samples".to_string())
-    })?;
+    let timing = TimingSummary::from_samples(source, &timing_samples)
+        .ok_or_else(|| ForgeError::GpuValidation("GPU produced no timing samples".to_string()))?;
 
     Ok((
         generated,
@@ -690,7 +694,9 @@ pub fn evaluate_fft(
     samples: usize,
 ) -> Result<(GeneratedShader, GpuEvaluation), ForgeError> {
     if samples == 0 {
-        return Err(ForgeError::GpuValidation("sample count must be non-zero".to_string()));
+        return Err(ForgeError::GpuValidation(
+            "sample count must be non-zero".to_string(),
+        ));
     }
     if n == 0 || !n.is_power_of_two() {
         return Err(ForgeError::GpuValidation(format!(
@@ -714,16 +720,23 @@ pub fn evaluate_fft(
     let expected = dft_cpu(&input, n);
     let log2n = n.trailing_zeros();
 
-    let view_input = context.allocate_and_write(bytemuck::cast_slice(&input), 0, 0, BindingUsage::StorageRead)?;
+    let view_input = context.allocate_and_write(
+        bytemuck::cast_slice(&input),
+        0,
+        0,
+        BindingUsage::StorageRead,
+    )?;
     let output_bytes_len = (2 * n * size_of::<f32>()).max(4);
-    let view_output = context.allocate_transient(output_bytes_len, 1, 0, BindingUsage::StorageReadWrite)?;
+    let view_output =
+        context.allocate_transient(output_bytes_len, 1, 0, BindingUsage::StorageReadWrite)?;
     let params = FftParams {
         n: n as u32,
         log2n,
         _pad0: 0,
         _pad1: 0,
     };
-    let view_params = context.allocate_and_write(bytemuck::bytes_of(&params), 2, 0, BindingUsage::Uniform)?;
+    let view_params =
+        context.allocate_and_write(bytemuck::bytes_of(&params), 2, 0, BindingUsage::Uniform)?;
 
     let buffers = vec![view_input, view_output, view_params];
     let pipeline = WgpuPipeline::compile(context, &generated.source, &kernel.entry_point)?;
@@ -737,14 +750,19 @@ pub fn evaluate_fft(
         timing_samples.push(pipeline.dispatch(&buffers, &schedule, n)?);
     }
     if timing_samples.iter().any(|s| *s == 0) {
-        return Err(ForgeError::GpuValidation("GPU produced a zero-duration timing sample".to_string()));
+        return Err(ForgeError::GpuValidation(
+            "GPU produced a zero-duration timing sample".to_string(),
+        ));
     }
 
     let actual = context.read_buffer_f32(&view_output)?;
     // f32 FFT vs (f64-accumulated) DFT: for N<=1024 they agree to ~1e-3..1e-2.
     // The absolute tolerance carries near-zero bins (cancellation), the relative
     // one carries the O(1) bins.
-    let tolerance = OracleTolerance { absolute: 1.0e-2, relative: 1.0e-2 };
+    let tolerance = OracleTolerance {
+        absolute: 1.0e-2,
+        relative: 1.0e-2,
+    };
     let oracle = compare_f32(&expected, &actual, tolerance);
 
     drop(pipeline);
@@ -753,7 +771,10 @@ pub fn evaluate_fft(
     if !oracle.passed() {
         return Err(ForgeError::OracleMismatch(format!(
             "fft: {} mismatches; first={:?}, max_abs={}, max_rel={}",
-            oracle.mismatch_count, oracle.first_mismatch, oracle.max_absolute_error, oracle.max_relative_error
+            oracle.mismatch_count,
+            oracle.first_mismatch,
+            oracle.max_absolute_error,
+            oracle.max_relative_error
         )));
     }
 
@@ -786,7 +807,9 @@ pub fn evaluate_fft(
 /// One subgroup (32-lane NVIDIA warp) cooperatively computes the tile; the
 /// row-major loads/store reproduce the row-major CPU reference, so agreement is
 /// to f32 precision (a tiny tolerance covers tensor-core accumulation order).
-pub fn evaluate_matmul_tc(context: &mut WgpuComputeContext) -> Result<ComparisonReport, ForgeError> {
+pub fn evaluate_matmul_tc(
+    context: &mut WgpuComputeContext,
+) -> Result<ComparisonReport, ForgeError> {
     if !context.constraints.supports_coopmat {
         return Err(ForgeError::GpuUnavailable(
             "adapter lacks cooperative-matrix support".to_string(),
@@ -800,27 +823,46 @@ pub fn evaluate_matmul_tc(context: &mut WgpuComputeContext) -> Result<Comparison
     let b = topk_inputs(n * n, 0x4D41_545F_4242_4242);
     let expected = matmul_cpu(&a, &b, n);
 
-    let view_a = context.allocate_and_write(bytemuck::cast_slice(&a), 0, 0, BindingUsage::StorageRead)?;
-    let view_b = context.allocate_and_write(bytemuck::cast_slice(&b), 1, 0, BindingUsage::StorageRead)?;
+    let view_a =
+        context.allocate_and_write(bytemuck::cast_slice(&a), 0, 0, BindingUsage::StorageRead)?;
+    let view_b =
+        context.allocate_and_write(bytemuck::cast_slice(&b), 1, 0, BindingUsage::StorageRead)?;
     let zeros = vec![0.0f32; n * n];
-    let view_c = context.allocate_and_write(bytemuck::cast_slice(&zeros), 2, 0, BindingUsage::StorageReadWrite)?;
+    let view_c = context.allocate_and_write(
+        bytemuck::cast_slice(&zeros),
+        2,
+        0,
+        BindingUsage::StorageReadWrite,
+    )?;
     let buffers = vec![view_a, view_b, view_c];
 
-    let schedule = Schedule { workgroup_size: 32, ..Default::default() };
+    let schedule = Schedule {
+        workgroup_size: 32,
+        ..Default::default()
+    };
     let pipeline = WgpuPipeline::compile(context, &source, "matmul_tc")?;
     pipeline.dispatch(&buffers, &schedule, 1)?;
     let actual = context.read_buffer_f32(&view_c)?;
 
     drop(pipeline);
     context.clear_transient_allocations();
-    Ok(compare_f32(&expected, &actual, OracleTolerance { absolute: 1.0e-3, relative: 1.0e-3 }))
+    Ok(compare_f32(
+        &expected,
+        &actual,
+        OracleTolerance {
+            absolute: 1.0e-3,
+            relative: 1.0e-3,
+        },
+    ))
 }
 
 /// Diagnostic: cooperative-matrix load→store round-trip (no multiply). Loads `a`
 /// as a role-C fragment and stores it to `c`; `c` must equal `a`. This verifies
 /// `coopLoadT`/`coopStoreT` work on the adapter (they do — the `coopMultiplyAdd`
 /// path is the one currently blocked on the experimental backend).
-pub fn evaluate_coopmat_loadstore(context: &mut WgpuComputeContext) -> Result<ComparisonReport, ForgeError> {
+pub fn evaluate_coopmat_loadstore(
+    context: &mut WgpuComputeContext,
+) -> Result<ComparisonReport, ForgeError> {
     let source = r#"enable wgpu_cooperative_matrix;
 @group(0) @binding(0) var<storage, read> a: array<f32>;
 @group(0) @binding(2) var<storage, read_write> c: array<f32>;
@@ -833,11 +875,20 @@ fn matmul_tc() {
     validate_wgsl(source)?;
     let n = 8usize;
     let a = topk_inputs(n * n, 0x4D41_545F_4141_4141);
-    let view_a = context.allocate_and_write(bytemuck::cast_slice(&a), 0, 0, BindingUsage::StorageRead)?;
+    let view_a =
+        context.allocate_and_write(bytemuck::cast_slice(&a), 0, 0, BindingUsage::StorageRead)?;
     let zeros = vec![0.0f32; n * n];
-    let view_c = context.allocate_and_write(bytemuck::cast_slice(&zeros), 2, 0, BindingUsage::StorageReadWrite)?;
+    let view_c = context.allocate_and_write(
+        bytemuck::cast_slice(&zeros),
+        2,
+        0,
+        BindingUsage::StorageReadWrite,
+    )?;
     let buffers = vec![view_a, view_c];
-    let schedule = Schedule { workgroup_size: 32, ..Default::default() };
+    let schedule = Schedule {
+        workgroup_size: 32,
+        ..Default::default()
+    };
     let pipeline = WgpuPipeline::compile(context, source, "matmul_tc")?;
     pipeline.dispatch(&buffers, &schedule, 1)?;
     let actual = context.read_buffer_f32(&view_c)?;
@@ -857,7 +908,10 @@ fn matmul_tc() {
 pub fn evaluate_affine_cuda(length: usize) -> Result<ComparisonReport, ForgeError> {
     use crate::wgsl_forge::execute::CudaComputeContext;
     let mut context = CudaComputeContext::new(16 * 1024 * 1024)?;
-    let schedule = Schedule { workgroup_size: 64, ..Default::default() };
+    let schedule = Schedule {
+        workgroup_size: 64,
+        ..Default::default()
+    };
     let (_, evaluation) = evaluate_affine(&mut context, schedule, length, 0, 1)?;
     Ok(evaluation.oracle)
 }
@@ -872,9 +926,19 @@ pub fn evaluate_ffn_cuda(
 ) -> Result<ComparisonReport, ForgeError> {
     use crate::wgsl_forge::execute::CudaComputeContext;
     let mut context = CudaComputeContext::new(64 * 1024 * 1024)?;
-    let schedule = Schedule { workgroup_size: 64, ..Default::default() };
-    let (_, evaluation) =
-        evaluate_ffn(&mut context, schedule, input_size, hidden_size, output_size, 0, 1)?;
+    let schedule = Schedule {
+        workgroup_size: 64,
+        ..Default::default()
+    };
+    let (_, evaluation) = evaluate_ffn(
+        &mut context,
+        schedule,
+        input_size,
+        hidden_size,
+        output_size,
+        0,
+        1,
+    )?;
     Ok(evaluation.oracle)
 }
 
@@ -885,7 +949,10 @@ pub fn evaluate_ffn_cuda(
 pub fn evaluate_topk_cuda(length: usize, k: usize) -> Result<ComparisonReport, ForgeError> {
     use crate::wgsl_forge::execute::CudaComputeContext;
     let mut context = CudaComputeContext::new(64 * 1024 * 1024)?;
-    let schedule = Schedule { workgroup_size: 64, ..Default::default() };
+    let schedule = Schedule {
+        workgroup_size: 64,
+        ..Default::default()
+    };
     let (_, evaluation) = evaluate_topk(&mut context, schedule, length, k, 0, 1)?;
     Ok(evaluation.oracle)
 }
@@ -910,10 +977,22 @@ pub fn evaluate_matmul_tc_cuda() -> Result<ComparisonReport, ForgeError> {
     // input precision (the f32 accumulator keeps the K=16 sum tight).
     let a_f32 = topk_inputs(n * n, 0x574D_4D41_5F41_4141);
     let b_f32 = topk_inputs(n * n, 0x574D_4D41_5F42_4242);
-    let a_bits: Vec<u16> = a_f32.iter().map(|&x| half::f16::from_f32(x).to_bits()).collect();
-    let b_bits: Vec<u16> = b_f32.iter().map(|&x| half::f16::from_f32(x).to_bits()).collect();
-    let a_round: Vec<f32> = a_bits.iter().map(|&b| half::f16::from_bits(b).to_f32()).collect();
-    let b_round: Vec<f32> = b_bits.iter().map(|&b| half::f16::from_bits(b).to_f32()).collect();
+    let a_bits: Vec<u16> = a_f32
+        .iter()
+        .map(|&x| half::f16::from_f32(x).to_bits())
+        .collect();
+    let b_bits: Vec<u16> = b_f32
+        .iter()
+        .map(|&x| half::f16::from_f32(x).to_bits())
+        .collect();
+    let a_round: Vec<f32> = a_bits
+        .iter()
+        .map(|&b| half::f16::from_bits(b).to_f32())
+        .collect();
+    let b_round: Vec<f32> = b_bits
+        .iter()
+        .map(|&b| half::f16::from_bits(b).to_f32())
+        .collect();
     let expected = matmul_cpu(&a_round, &b_round, n);
 
     let view_a = context.allocate_and_write(bytemuck::cast_slice(&a_bits), 0, 0)?;
@@ -923,7 +1002,10 @@ pub fn evaluate_matmul_tc_cuda() -> Result<ComparisonReport, ForgeError> {
     let buffers = vec![view_a, view_b, view_c];
 
     // One warp computes the whole tile: workgroup_size 32, element_count 1 -> grid (1,1,1).
-    let schedule = Schedule { workgroup_size: 32, ..Default::default() };
+    let schedule = Schedule {
+        workgroup_size: 32,
+        ..Default::default()
+    };
     let pipeline = CudaPipeline::compile_cuda_c_source(
         &context,
         WMMA_GEMM_16X16_SRC,
@@ -932,7 +1014,14 @@ pub fn evaluate_matmul_tc_cuda() -> Result<ComparisonReport, ForgeError> {
     )?;
     pipeline.dispatch(&buffers, &schedule, 1)?;
     let actual = context.read_buffer_f32(&view_c)?;
-    Ok(compare_f32(&expected, &actual, OracleTolerance { absolute: 5.0e-2, relative: 1.0e-2 }))
+    Ok(compare_f32(
+        &expected,
+        &actual,
+        OracleTolerance {
+            absolute: 5.0e-2,
+            relative: 1.0e-2,
+        },
+    ))
 }
 
 pub fn certify_builtin(
@@ -1048,7 +1137,9 @@ pub fn evaluate_p64(
     samples: usize,
 ) -> Result<(GeneratedShader, GpuEvaluation), ForgeError> {
     if samples == 0 {
-        return Err(ForgeError::GpuValidation("sample count must be non-zero".to_string()));
+        return Err(ForgeError::GpuValidation(
+            "sample count must be non-zero".to_string(),
+        ));
     }
     let kernel = BuiltinKernel::P64Project.spec();
     schedule.validate(&kernel, &context.constraints)?;
@@ -1061,10 +1152,21 @@ pub fn evaluate_p64(
     let weights = topk_inputs(16, 0x5036_345F_5742_5453);
     let expected = p64_project_cpu(&records, &weights);
 
-    let view_input = context.allocate_and_write(bytemuck::cast_slice(&records), 0, 0, BindingUsage::StorageRead)?;
-    let view_weights = context.allocate_and_write(bytemuck::cast_slice(&weights), 1, 0, BindingUsage::StorageRead)?;
+    let view_input = context.allocate_and_write(
+        bytemuck::cast_slice(&records),
+        0,
+        0,
+        BindingUsage::StorageRead,
+    )?;
+    let view_weights = context.allocate_and_write(
+        bytemuck::cast_slice(&weights),
+        1,
+        0,
+        BindingUsage::StorageRead,
+    )?;
     let output_bytes_len = (count * size_of::<f32>()).max(4);
-    let view_output = context.allocate_transient(output_bytes_len, 2, 0, BindingUsage::StorageReadWrite)?;
+    let view_output =
+        context.allocate_transient(output_bytes_len, 2, 0, BindingUsage::StorageReadWrite)?;
 
     let buffers = vec![view_input, view_weights, view_output];
     let pipeline = WgpuPipeline::compile(context, &generated.source, &kernel.entry_point)?;
@@ -1077,11 +1179,16 @@ pub fn evaluate_p64(
         timing_samples.push(pipeline.dispatch(&buffers, &schedule, count)?);
     }
     if timing_samples.iter().any(|s| *s == 0) {
-        return Err(ForgeError::GpuValidation("GPU produced a zero-duration timing sample".to_string()));
+        return Err(ForgeError::GpuValidation(
+            "GPU produced a zero-duration timing sample".to_string(),
+        ));
     }
 
     let actual = context.read_buffer_f32(&view_output)?;
-    let tolerance = OracleTolerance { absolute: 1.0e-1, relative: 1.0e-4 };
+    let tolerance = OracleTolerance {
+        absolute: 1.0e-1,
+        relative: 1.0e-4,
+    };
     let oracle = compare_f32(&expected, &actual, tolerance);
 
     drop(pipeline);
@@ -1090,7 +1197,10 @@ pub fn evaluate_p64(
     if !oracle.passed() {
         return Err(ForgeError::OracleMismatch(format!(
             "p64-project: {} mismatches; first={:?}, max_abs={}, max_rel={}",
-            oracle.mismatch_count, oracle.first_mismatch, oracle.max_absolute_error, oracle.max_relative_error
+            oracle.mismatch_count,
+            oracle.first_mismatch,
+            oracle.max_absolute_error,
+            oracle.max_relative_error
         )));
     }
 
@@ -1133,7 +1243,9 @@ pub fn evaluate_ffn<C: OracleContext>(
     samples: usize,
 ) -> Result<(GeneratedShader, GpuEvaluation), ForgeError> {
     if samples == 0 {
-        return Err(ForgeError::GpuValidation("sample count must be non-zero".to_string()));
+        return Err(ForgeError::GpuValidation(
+            "sample count must be non-zero".to_string(),
+        ));
     }
     let kernel = BuiltinKernel::FusedFfn.spec();
     schedule.validate(&kernel, context.constraints())?;
@@ -1145,30 +1257,44 @@ pub fn evaluate_ffn<C: OracleContext>(
     let (input, w1, w2) = ffn_tensors(input_size, hidden_size, output_size, vector_seed);
     let expected = ffn_cpu(&input, &w1, &w2, input_size, hidden_size, output_size);
 
-    let view_input = context.allocate_and_write(bytemuck::cast_slice(&input), 0, 0, BindingUsage::StorageRead)?;
-    let view_w1 = context.allocate_and_write(bytemuck::cast_slice(&w1), 1, 0, BindingUsage::StorageRead)?;
-    let view_w2 = context.allocate_and_write(bytemuck::cast_slice(&w2), 2, 0, BindingUsage::StorageRead)?;
+    let view_input = context.allocate_and_write(
+        bytemuck::cast_slice(&input),
+        0,
+        0,
+        BindingUsage::StorageRead,
+    )?;
+    let view_w1 =
+        context.allocate_and_write(bytemuck::cast_slice(&w1), 1, 0, BindingUsage::StorageRead)?;
+    let view_w2 =
+        context.allocate_and_write(bytemuck::cast_slice(&w2), 2, 0, BindingUsage::StorageRead)?;
     let output_bytes_len = (output_size * size_of::<f32>()).max(4);
-    let view_output = context.allocate_transient(output_bytes_len, 3, 0, BindingUsage::StorageReadWrite)?;
+    let view_output =
+        context.allocate_transient(output_bytes_len, 3, 0, BindingUsage::StorageReadWrite)?;
     let params = FfnParams {
         input_size: input_size as u32,
         hidden_size: hidden_size as u32,
         output_size: output_size as u32,
         _pad: 0,
     };
-    let view_params = context.allocate_and_write(bytemuck::bytes_of(&params), 4, 0, BindingUsage::Uniform)?;
+    let view_params =
+        context.allocate_and_write(bytemuck::bytes_of(&params), 4, 0, BindingUsage::Uniform)?;
 
     let buffers = vec![view_input, view_w1, view_w2, view_output, view_params];
     let timing_samples =
         context.run_kernel(&kernel, &schedule, &buffers, output_size, warmups, samples)?;
     if timing_samples.iter().any(|s| *s == 0) {
-        return Err(ForgeError::GpuValidation("GPU produced a zero-duration timing sample".to_string()));
+        return Err(ForgeError::GpuValidation(
+            "GPU produced a zero-duration timing sample".to_string(),
+        ));
     }
 
     let actual = context.read_buffer_f32(&view_output)?;
     // FFN accumulates over the hidden dim and uses tanh, so allow a modest
     // tolerance for GPU/CPU transcendental + accumulation differences.
-    let tolerance = OracleTolerance { absolute: 2.0e-3, relative: 2.0e-3 };
+    let tolerance = OracleTolerance {
+        absolute: 2.0e-3,
+        relative: 2.0e-3,
+    };
     let oracle = compare_f32(&expected, &actual, tolerance);
 
     context.clear_transient_allocations();
@@ -1176,7 +1302,10 @@ pub fn evaluate_ffn<C: OracleContext>(
     if !oracle.passed() {
         return Err(ForgeError::OracleMismatch(format!(
             "fused-ffn: {} mismatches; first={:?}, max_abs={}, max_rel={}",
-            oracle.mismatch_count, oracle.first_mismatch, oracle.max_absolute_error, oracle.max_relative_error
+            oracle.mismatch_count,
+            oracle.first_mismatch,
+            oracle.max_absolute_error,
+            oracle.max_relative_error
         )));
     }
 
@@ -1214,7 +1343,9 @@ pub fn evaluate_ternary_gemv(
     samples: usize,
 ) -> Result<(GeneratedShader, GpuEvaluation), ForgeError> {
     if samples == 0 {
-        return Err(ForgeError::GpuValidation("sample count must be non-zero".to_string()));
+        return Err(ForgeError::GpuValidation(
+            "sample count must be non-zero".to_string(),
+        ));
     }
     let kernel = BuiltinKernel::TernaryGemv.spec();
     schedule.validate(&kernel, &context.constraints)?;
@@ -1227,18 +1358,31 @@ pub fn evaluate_ternary_gemv(
     let expected = ternary_gemv_cpu(&x, &w_packed, &scale, m, k);
     let k_words = k.div_ceil(TERNARY_CODES_PER_WORD);
 
-    let view_x = context.allocate_and_write(bytemuck::cast_slice(&x), 0, 0, BindingUsage::StorageRead)?;
-    let view_w = context.allocate_and_write(bytemuck::cast_slice(&w_packed), 1, 0, BindingUsage::StorageRead)?;
-    let view_scale = context.allocate_and_write(bytemuck::cast_slice(&scale), 2, 0, BindingUsage::StorageRead)?;
+    let view_x =
+        context.allocate_and_write(bytemuck::cast_slice(&x), 0, 0, BindingUsage::StorageRead)?;
+    let view_w = context.allocate_and_write(
+        bytemuck::cast_slice(&w_packed),
+        1,
+        0,
+        BindingUsage::StorageRead,
+    )?;
+    let view_scale = context.allocate_and_write(
+        bytemuck::cast_slice(&scale),
+        2,
+        0,
+        BindingUsage::StorageRead,
+    )?;
     let output_bytes_len = (m * size_of::<f32>()).max(4);
-    let view_output = context.allocate_transient(output_bytes_len, 3, 0, BindingUsage::StorageReadWrite)?;
+    let view_output =
+        context.allocate_transient(output_bytes_len, 3, 0, BindingUsage::StorageReadWrite)?;
     let params = TernaryGemvParams {
         m: m as u32,
         k: k as u32,
         k_words: k_words as u32,
         _pad: 0,
     };
-    let view_params = context.allocate_and_write(bytemuck::bytes_of(&params), 4, 0, BindingUsage::Uniform)?;
+    let view_params =
+        context.allocate_and_write(bytemuck::bytes_of(&params), 4, 0, BindingUsage::Uniform)?;
 
     let buffers = vec![view_x, view_w, view_scale, view_output, view_params];
     let pipeline = WgpuPipeline::compile(context, &generated.source, &kernel.entry_point)?;
@@ -1251,13 +1395,18 @@ pub fn evaluate_ternary_gemv(
         timing_samples.push(pipeline.dispatch(&buffers, &schedule, m)?);
     }
     if timing_samples.iter().any(|s| *s == 0) {
-        return Err(ForgeError::GpuValidation("GPU produced a zero-duration timing sample".to_string()));
+        return Err(ForgeError::GpuValidation(
+            "GPU produced a zero-duration timing sample".to_string(),
+        ));
     }
 
     let actual = context.read_buffer_f32(&view_output)?;
     // The ternary path is exact arithmetic (±1/0 weights, no transcendentals); a
     // tight tolerance covers only f32 summation-order differences across the K sum.
-    let tolerance = OracleTolerance { absolute: 1.0e-3, relative: 1.0e-3 };
+    let tolerance = OracleTolerance {
+        absolute: 1.0e-3,
+        relative: 1.0e-3,
+    };
     let oracle = compare_f32(&expected, &actual, tolerance);
 
     drop(pipeline);
@@ -1266,7 +1415,10 @@ pub fn evaluate_ternary_gemv(
     if !oracle.passed() {
         return Err(ForgeError::OracleMismatch(format!(
             "ternary-gemv: {} mismatches; first={:?}, max_abs={}, max_rel={}",
-            oracle.mismatch_count, oracle.first_mismatch, oracle.max_absolute_error, oracle.max_relative_error
+            oracle.mismatch_count,
+            oracle.first_mismatch,
+            oracle.max_absolute_error,
+            oracle.max_relative_error
         )));
     }
 
@@ -1306,7 +1458,9 @@ pub fn evaluate_gemm(
     samples: usize,
 ) -> Result<(GeneratedShader, GpuEvaluation), ForgeError> {
     if samples == 0 {
-        return Err(ForgeError::GpuValidation("sample count must be non-zero".to_string()));
+        return Err(ForgeError::GpuValidation(
+            "sample count must be non-zero".to_string(),
+        ));
     }
     let kernel = BuiltinKernel::Gemm.spec();
     schedule.validate(&kernel, &context.constraints)?;
@@ -1319,17 +1473,21 @@ pub fn evaluate_gemm(
     let expected = gemm_cpu(&a, &b, m, k, n);
     let element_count = m * n;
 
-    let view_a = context.allocate_and_write(bytemuck::cast_slice(&a), 0, 0, BindingUsage::StorageRead)?;
-    let view_b = context.allocate_and_write(bytemuck::cast_slice(&b), 1, 0, BindingUsage::StorageRead)?;
+    let view_a =
+        context.allocate_and_write(bytemuck::cast_slice(&a), 0, 0, BindingUsage::StorageRead)?;
+    let view_b =
+        context.allocate_and_write(bytemuck::cast_slice(&b), 1, 0, BindingUsage::StorageRead)?;
     let output_bytes_len = (element_count * size_of::<f32>()).max(4);
-    let view_c = context.allocate_transient(output_bytes_len, 2, 0, BindingUsage::StorageReadWrite)?;
+    let view_c =
+        context.allocate_transient(output_bytes_len, 2, 0, BindingUsage::StorageReadWrite)?;
     let params = GemmParams {
         m: m as u32,
         n: n as u32,
         k: k as u32,
         _pad: 0,
     };
-    let view_params = context.allocate_and_write(bytemuck::bytes_of(&params), 3, 0, BindingUsage::Uniform)?;
+    let view_params =
+        context.allocate_and_write(bytemuck::bytes_of(&params), 3, 0, BindingUsage::Uniform)?;
 
     let buffers = vec![view_a, view_b, view_c, view_params];
     let pipeline = WgpuPipeline::compile(context, &generated.source, &kernel.entry_point)?;
@@ -1342,13 +1500,18 @@ pub fn evaluate_gemm(
         timing_samples.push(pipeline.dispatch(&buffers, &schedule, element_count)?);
     }
     if timing_samples.iter().any(|s| *s == 0) {
-        return Err(ForgeError::GpuValidation("GPU produced a zero-duration timing sample".to_string()));
+        return Err(ForgeError::GpuValidation(
+            "GPU produced a zero-duration timing sample".to_string(),
+        ));
     }
 
     let actual = context.read_buffer_f32(&view_c)?;
     // Dense f32 GEMM: only the length-K summation order differs between GPU and
     // CPU (no transcendentals), so a tight tolerance covers accumulation drift.
-    let tolerance = OracleTolerance { absolute: 1.0e-3, relative: 1.0e-3 };
+    let tolerance = OracleTolerance {
+        absolute: 1.0e-3,
+        relative: 1.0e-3,
+    };
     let oracle = compare_f32(&expected, &actual, tolerance);
 
     drop(pipeline);
@@ -1357,7 +1520,10 @@ pub fn evaluate_gemm(
     if !oracle.passed() {
         return Err(ForgeError::OracleMismatch(format!(
             "gemm: {} mismatches; first={:?}, max_abs={}, max_rel={}",
-            oracle.mismatch_count, oracle.first_mismatch, oracle.max_absolute_error, oracle.max_relative_error
+            oracle.mismatch_count,
+            oracle.first_mismatch,
+            oracle.max_absolute_error,
+            oracle.max_relative_error
         )));
     }
 
@@ -1396,7 +1562,9 @@ pub fn evaluate_gemv(
     samples: usize,
 ) -> Result<(GeneratedShader, GpuEvaluation), ForgeError> {
     if samples == 0 {
-        return Err(ForgeError::GpuValidation("sample count must be non-zero".to_string()));
+        return Err(ForgeError::GpuValidation(
+            "sample count must be non-zero".to_string(),
+        ));
     }
     let kernel = BuiltinKernel::Gemv.spec();
     schedule.validate(&kernel, &context.constraints)?;
@@ -1409,17 +1577,21 @@ pub fn evaluate_gemv(
     let expected = gemv_cpu(&a, &x, m, n);
     let element_count = m;
 
-    let view_a = context.allocate_and_write(bytemuck::cast_slice(&a), 0, 0, BindingUsage::StorageRead)?;
-    let view_x = context.allocate_and_write(bytemuck::cast_slice(&x), 1, 0, BindingUsage::StorageRead)?;
+    let view_a =
+        context.allocate_and_write(bytemuck::cast_slice(&a), 0, 0, BindingUsage::StorageRead)?;
+    let view_x =
+        context.allocate_and_write(bytemuck::cast_slice(&x), 1, 0, BindingUsage::StorageRead)?;
     let output_bytes_len = (element_count * size_of::<f32>()).max(4);
-    let view_y = context.allocate_transient(output_bytes_len, 2, 0, BindingUsage::StorageReadWrite)?;
+    let view_y =
+        context.allocate_transient(output_bytes_len, 2, 0, BindingUsage::StorageReadWrite)?;
     let params = GemvParams {
         m: m as u32,
         n: n as u32,
         _pad0: 0,
         _pad1: 0,
     };
-    let view_params = context.allocate_and_write(bytemuck::bytes_of(&params), 3, 0, BindingUsage::Uniform)?;
+    let view_params =
+        context.allocate_and_write(bytemuck::bytes_of(&params), 3, 0, BindingUsage::Uniform)?;
 
     let buffers = vec![view_a, view_x, view_y, view_params];
     let pipeline = WgpuPipeline::compile(context, &generated.source, &kernel.entry_point)?;
@@ -1432,13 +1604,18 @@ pub fn evaluate_gemv(
         timing_samples.push(pipeline.dispatch(&buffers, &schedule, element_count)?);
     }
     if timing_samples.iter().any(|s| *s == 0) {
-        return Err(ForgeError::GpuValidation("GPU produced a zero-duration timing sample".to_string()));
+        return Err(ForgeError::GpuValidation(
+            "GPU produced a zero-duration timing sample".to_string(),
+        ));
     }
 
     let actual = context.read_buffer_f32(&view_y)?;
     // Dense f32 GEMV: only the length-N summation order differs between GPU and CPU
     // (no transcendentals), so a tight tolerance covers accumulation drift.
-    let tolerance = OracleTolerance { absolute: 1.0e-3, relative: 1.0e-3 };
+    let tolerance = OracleTolerance {
+        absolute: 1.0e-3,
+        relative: 1.0e-3,
+    };
     let oracle = compare_f32(&expected, &actual, tolerance);
 
     drop(pipeline);
@@ -1447,7 +1624,10 @@ pub fn evaluate_gemv(
     if !oracle.passed() {
         return Err(ForgeError::OracleMismatch(format!(
             "gemv: {} mismatches; first={:?}, max_abs={}, max_rel={}",
-            oracle.mismatch_count, oracle.first_mismatch, oracle.max_absolute_error, oracle.max_relative_error
+            oracle.mismatch_count,
+            oracle.first_mismatch,
+            oracle.max_absolute_error,
+            oracle.max_relative_error
         )));
     }
 
@@ -1517,7 +1697,8 @@ pub fn evaluate_topk<C: OracleContext>(
 
     let output_len = expected.len();
     let output_bytes_len = (output_len * size_of::<f32>()).max(4);
-    let view_output = context.allocate_transient(output_bytes_len, 1, 0, BindingUsage::StorageReadWrite)?;
+    let view_output =
+        context.allocate_transient(output_bytes_len, 1, 0, BindingUsage::StorageReadWrite)?;
 
     let params = TopKParams {
         length: length as u32,
@@ -1525,7 +1706,8 @@ pub fn evaluate_topk<C: OracleContext>(
         block_size: block_size as u32,
         _pad: 0,
     };
-    let view_params = context.allocate_and_write(bytemuck::bytes_of(&params), 2, 0, BindingUsage::Uniform)?;
+    let view_params =
+        context.allocate_and_write(bytemuck::bytes_of(&params), 2, 0, BindingUsage::Uniform)?;
 
     let buffers = vec![view_input, view_output, view_params];
     let timing_samples =
@@ -1554,9 +1736,8 @@ pub fn evaluate_topk<C: OracleContext>(
     } else {
         TimingSource::CompletionClock
     };
-    let timing = TimingSummary::from_samples(timing_source, &timing_samples).ok_or_else(|| {
-        ForgeError::GpuValidation("GPU produced no timing samples".to_string())
-    })?;
+    let timing = TimingSummary::from_samples(timing_source, &timing_samples)
+        .ok_or_else(|| ForgeError::GpuValidation("GPU produced no timing samples".to_string()))?;
 
     Ok((
         generated,
@@ -1644,17 +1825,17 @@ pub fn rayprobe_scene() -> Vec<f32> {
 pub fn rayprobe_rays() -> Vec<f32> {
     // (x, y) at z=-1; expected committed t = 3.0 for hits at z=2, else -1.0.
     let xy: [(f32, f32); 12] = [
-        (0.5, 0.5),   // T0 (also over T2 -> commit nearer T0)
-        (0.3, 0.3),   // T0 (over T2)
-        (1.0, 0.5),   // T0
-        (0.5, 1.0),   // T0
-        (1.5, 1.7),   // T1
-        (1.7, 1.5),   // T1
-        (1.6, 1.6),   // T1
-        (5.0, 5.0),   // miss
-        (-2.0, 0.5),  // miss
-        (0.5, -2.0),  // miss
-        (3.0, 3.0),   // miss
+        (0.5, 0.5),    // T0 (also over T2 -> commit nearer T0)
+        (0.3, 0.3),    // T0 (over T2)
+        (1.0, 0.5),    // T0
+        (0.5, 1.0),    // T0
+        (1.5, 1.7),    // T1
+        (1.7, 1.5),    // T1
+        (1.6, 1.6),    // T1
+        (5.0, 5.0),    // miss
+        (-2.0, 0.5),   // miss
+        (0.5, -2.0),   // miss
+        (3.0, 3.0),    // miss
         (10.0, -10.0), // miss
     ];
     let mut rays = Vec::with_capacity(xy.len() * 8);
@@ -1731,9 +1912,11 @@ pub fn evaluate_rayprobe(
     // The acceleration structure is binding 0 (not a slab buffer); rays are binding
     // 1 (read), hits are binding 2 (read-write).
     let (_blas, tlas) = context.build_triangle_scene(&scene)?;
-    let view_rays = context.allocate_and_write(bytemuck::cast_slice(&rays), 1, 0, BindingUsage::StorageRead)?;
+    let view_rays =
+        context.allocate_and_write(bytemuck::cast_slice(&rays), 1, 0, BindingUsage::StorageRead)?;
     let output_bytes_len = (n_rays * size_of::<f32>()).max(4);
-    let view_hits = context.allocate_transient(output_bytes_len, 2, 0, BindingUsage::StorageReadWrite)?;
+    let view_hits =
+        context.allocate_transient(output_bytes_len, 2, 0, BindingUsage::StorageReadWrite)?;
     let buffers = vec![view_rays, view_hits];
 
     let pipeline = WgpuPipeline::compile(context, &generated.source, &kernel.entry_point)?;
@@ -1746,7 +1929,10 @@ pub fn evaluate_rayprobe(
     }
 
     let actual = context.read_buffer_f32(&view_hits)?;
-    let tolerance = OracleTolerance { absolute: 1.0e-2, relative: 1.0e-2 };
+    let tolerance = OracleTolerance {
+        absolute: 1.0e-2,
+        relative: 1.0e-2,
+    };
     let oracle = compare_f32(&expected, &actual, tolerance);
 
     drop(pipeline);
@@ -1755,7 +1941,11 @@ pub fn evaluate_rayprobe(
     if !oracle.passed() {
         return Err(ForgeError::OracleMismatch(format!(
             "ray-probe: {} mismatches; first={:?}, max_abs={}; expected={:?} actual={:?}",
-            oracle.mismatch_count, oracle.first_mismatch, oracle.max_absolute_error, expected, actual
+            oracle.mismatch_count,
+            oracle.first_mismatch,
+            oracle.max_absolute_error,
+            expected,
+            actual
         )));
     }
 
@@ -1820,7 +2010,10 @@ mod tests {
         // shader, checking committed hit distances against the Möller–Trumbore CPU
         // reference. This is the gate for whether wgpu 29.0.3 ray-query *executes*.
         let mut context = WgpuComputeContext::new(1024 * 1024).expect("adapter");
-        let schedule = Schedule { workgroup_size: 64, ..Default::default() };
+        let schedule = Schedule {
+            workgroup_size: 64,
+            ..Default::default()
+        };
         let (_, eval) =
             evaluate_rayprobe(&mut context, schedule, 1, 3).expect("ray-probe evaluation");
         assert!(
@@ -1837,7 +2030,10 @@ mod tests {
         // evaluate_rayprobe -> manifest, proving RayProbe is a first-class
         // certifiable builtin (not just a standalone test).
         let mut context = WgpuComputeContext::new(1024 * 1024).expect("adapter");
-        let schedule = Schedule { workgroup_size: 64, ..Default::default() };
+        let schedule = Schedule {
+            workgroup_size: 64,
+            ..Default::default()
+        };
         let manifest = certify_builtin(&mut context, BuiltinKernel::RayProbe, schedule, 12, 1, 3)
             .expect("ray-probe certification");
         assert_eq!(manifest.validation_level, ValidationLevel::Certified);
@@ -1894,7 +2090,14 @@ mod tests {
     #[test]
     fn ffn_cpu_zero_weights_yield_zero() {
         // gelu(0) = 0, so all-zero w1 forces every output to 0 regardless of w2.
-        let out = ffn_cpu(&[1.0, 2.0, 3.0], &vec![0.0; 4 * 3], &vec![0.5; 2 * 4], 3, 4, 2);
+        let out = ffn_cpu(
+            &[1.0, 2.0, 3.0],
+            &vec![0.0; 4 * 3],
+            &vec![0.5; 2 * 4],
+            3,
+            4,
+            2,
+        );
         assert_eq!(out, vec![0.0, 0.0]);
     }
 
@@ -1951,7 +2154,10 @@ mod tests {
         for word in &w0 {
             for lane in 0..TERNARY_CODES_PER_WORD {
                 let code = (word >> (lane * 2)) & 3;
-                assert_ne!(code, 3, "generator must never emit the unused ternary code 3");
+                assert_ne!(
+                    code, 3,
+                    "generator must never emit the unused ternary code 3"
+                );
             }
         }
     }
@@ -2096,8 +2302,8 @@ mod tests {
             vector_width: 1,
             ..Default::default()
         };
-        let (_, evaluation) =
-            evaluate_ternary_gemv(&mut context, schedule, 256, 256, 2, 5).expect("ternary-gemv evaluation");
+        let (_, evaluation) = evaluate_ternary_gemv(&mut context, schedule, 256, 256, 2, 5)
+            .expect("ternary-gemv evaluation");
         assert!(
             evaluation.oracle.passed(),
             "ternary-gemv GPU/oracle mismatch: {:?}",
@@ -2153,8 +2359,13 @@ mod tests {
             vector_width: 1,
             ..Default::default()
         };
-        let (_, evaluation) = evaluate_p64(&mut context, schedule, 1000, 2, 5).expect("p64 evaluation");
-        assert!(evaluation.oracle.passed(), "p64 GPU/oracle mismatch: {:?}", evaluation.oracle);
+        let (_, evaluation) =
+            evaluate_p64(&mut context, schedule, 1000, 2, 5).expect("p64 evaluation");
+        assert!(
+            evaluation.oracle.passed(),
+            "p64 GPU/oracle mismatch: {:?}",
+            evaluation.oracle
+        );
     }
 
     #[test]
@@ -2169,7 +2380,11 @@ mod tests {
         };
         let (_, evaluation) =
             evaluate_ffn(&mut context, schedule, 64, 128, 256, 2, 5).expect("ffn evaluation");
-        assert!(evaluation.oracle.passed(), "fused-ffn GPU/oracle mismatch: {:?}", evaluation.oracle);
+        assert!(
+            evaluation.oracle.passed(),
+            "fused-ffn GPU/oracle mismatch: {:?}",
+            evaluation.oracle
+        );
     }
 
     #[test]
@@ -2184,7 +2399,11 @@ mod tests {
         };
         let (_, evaluation) =
             evaluate_topk(&mut context, schedule, 64 * 10, 4, 2, 5).expect("topk evaluation");
-        assert!(evaluation.oracle.passed(), "top-k GPU/oracle mismatch: {:?}", evaluation.oracle);
+        assert!(
+            evaluation.oracle.passed(),
+            "top-k GPU/oracle mismatch: {:?}",
+            evaluation.oracle
+        );
     }
 
     #[cfg(feature = "cuda")]
@@ -2192,7 +2411,10 @@ mod tests {
     #[ignore = "requires a CUDA device"]
     fn affine_oracle_matches_across_cuda_backend() {
         let report = evaluate_affine_cuda(4099).expect("cuda affine evaluation");
-        assert!(report.passed(), "CUDA affine GPU/oracle mismatch: {report:?}");
+        assert!(
+            report.passed(),
+            "CUDA affine GPU/oracle mismatch: {report:?}"
+        );
     }
 
     #[cfg(feature = "cuda")]
@@ -2227,7 +2449,10 @@ mod tests {
         // Diagnostic: coopLoadT/coopStoreT round-trip correctly on the adapter (c == a).
         let mut context = WgpuComputeContext::new(1024 * 1024).expect("adapter");
         let report = evaluate_coopmat_loadstore(&mut context).expect("coopmat round-trip");
-        assert!(report.passed(), "coopmat load/store round-trip mismatch: {report:?}");
+        assert!(
+            report.passed(),
+            "coopmat load/store round-trip mismatch: {report:?}"
+        );
     }
 
     // NOTE: there is intentionally no GPU test asserting the *WGSL* coopmat

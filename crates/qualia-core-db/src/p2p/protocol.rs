@@ -159,7 +159,8 @@ pub(crate) mod qcborld {
     /// falling back to the deterministic `q_hash` when the term is not in the lexicon.
     #[inline]
     fn key(lex: &Q42Lexicon, term: &str) -> u64 {
-        lex.resolve_term(term).unwrap_or_else(|| crate::q_hash(term))
+        lex.resolve_term(term)
+            .unwrap_or_else(|| crate::q_hash(term))
     }
     #[inline]
     fn kv(lex: &Q42Lexicon, term: &str, v: Value) -> (Value, Value) {
@@ -232,7 +233,12 @@ pub(crate) mod qcborld {
                 m.push(kv(
                     lex,
                     "target_shapes",
-                    Value::Array(target_shapes.iter().map(|s| Value::Text(s.clone())).collect()),
+                    Value::Array(
+                        target_shapes
+                            .iter()
+                            .map(|s| Value::Text(s.clone()))
+                            .collect(),
+                    ),
                 ));
                 m.push(kv(
                     lex,
@@ -259,7 +265,9 @@ pub(crate) mod qcborld {
                 context: CONTEXT_IRI.to_string(),
                 request_type: "Handshake".to_string(),
                 did_q42,
-                semantic_context: get(map, lex, "semantic_context").and_then(u64v).unwrap_or(0),
+                semantic_context: get(map, lex, "semantic_context")
+                    .and_then(u64v)
+                    .unwrap_or(0),
                 credentials: get(map, lex, "credentials")
                     .and_then(|v| v.as_bytes())
                     .cloned()
@@ -280,8 +288,9 @@ pub(crate) mod qcborld {
                             .collect()
                     })
                     .unwrap_or_default(),
-                routing_constraints: get(map, lex, "routing_constraints").and_then(u64v).unwrap_or(0)
-                    as u8,
+                routing_constraints: get(map, lex, "routing_constraints")
+                    .and_then(u64v)
+                    .unwrap_or(0) as u8,
             }),
             _ => Err(()),
         }
@@ -337,7 +346,9 @@ pub(crate) mod qcborld {
             return Err(());
         }
         let ty = get(map, lex, "type").and_then(|v| v.as_text()).ok_or(())?;
-        let success = get(map, lex, "success").and_then(|v| v.as_bool()).unwrap_or(false);
+        let success = get(map, lex, "success")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
         let did_q42 = get(map, lex, "did_q42").and_then(u64v).unwrap_or(0);
         match ty {
             "HandshakeAck" => Ok(QualiaResponse::HandshakeAck {
@@ -345,7 +356,9 @@ pub(crate) mod qcborld {
                 response_type: "HandshakeAck".to_string(),
                 success,
                 did_q42,
-                semantic_context: get(map, lex, "semantic_context").and_then(u64v).unwrap_or(0),
+                semantic_context: get(map, lex, "semantic_context")
+                    .and_then(u64v)
+                    .unwrap_or(0),
             }),
             "SyncAck" => Ok(QualiaResponse::SyncAck {
                 context: CONTEXT_IRI.to_string(),
@@ -356,8 +369,9 @@ pub(crate) mod qcborld {
                     .unwrap_or_default(),
                 blocks_sent: get(map, lex, "blocks_sent").and_then(u64v).unwrap_or(0),
                 did_q42,
-                routing_constraints: get(map, lex, "routing_constraints").and_then(u64v).unwrap_or(0)
-                    as u8,
+                routing_constraints: get(map, lex, "routing_constraints")
+                    .and_then(u64v)
+                    .unwrap_or(0) as u8,
             }),
             _ => Err(()),
         }
@@ -553,7 +567,12 @@ mod cbor_ld_tests {
         assert!(ciborium::from_reader::<QualiaRequest, _>(&bytes[..]).is_err());
         let back = qcborld::decode_request(&lex, &bytes).unwrap();
         match back {
-            QualiaRequest::Handshake { did_q42, semantic_context, credentials, .. } => {
+            QualiaRequest::Handshake {
+                did_q42,
+                semantic_context,
+                credentials,
+                ..
+            } => {
                 assert_eq!(did_q42, 0xDEAD_BEEF);
                 assert_eq!(semantic_context, 0x1234_5678);
                 assert_eq!(credentials, vec![1, 2, 3, 4, 5, 250, 251, 252]);
@@ -570,13 +589,24 @@ mod cbor_ld_tests {
             target_shapes: vec!["foaf:Person".to_string(), "qualia:Vault".to_string()],
             routing_constraints: 7,
         };
-        let back = qcborld::decode_request(&lex, &qcborld::encode_request(&lex, &sync).unwrap()).unwrap();
+        let back =
+            qcborld::decode_request(&lex, &qcborld::encode_request(&lex, &sync).unwrap()).unwrap();
         match back {
-            QualiaRequest::Sync { did_q42, hop_count, gatekeeper_token, target_shapes, routing_constraints, .. } => {
+            QualiaRequest::Sync {
+                did_q42,
+                hop_count,
+                gatekeeper_token,
+                target_shapes,
+                routing_constraints,
+                ..
+            } => {
                 assert_eq!(did_q42, 42);
                 assert_eq!(hop_count, 2);
                 assert_eq!(gatekeeper_token.as_deref(), Some("tok-abc"));
-                assert_eq!(target_shapes, vec!["foaf:Person".to_string(), "qualia:Vault".to_string()]);
+                assert_eq!(
+                    target_shapes,
+                    vec!["foaf:Person".to_string(), "qualia:Vault".to_string()]
+                );
                 assert_eq!(routing_constraints, 7);
             }
             _ => panic!("variant changed across round-trip"),
@@ -595,9 +625,17 @@ mod cbor_ld_tests {
             did_q42: 99,
             routing_constraints: 3,
         };
-        let back = qcborld::decode_response(&lex, &qcborld::encode_response(&lex, &ack).unwrap()).unwrap();
+        let back =
+            qcborld::decode_response(&lex, &qcborld::encode_response(&lex, &ack).unwrap()).unwrap();
         match back {
-            QualiaResponse::SyncAck { success, message, blocks_sent, did_q42, routing_constraints, .. } => {
+            QualiaResponse::SyncAck {
+                success,
+                message,
+                blocks_sent,
+                did_q42,
+                routing_constraints,
+                ..
+            } => {
                 assert!(success);
                 assert_eq!(message, "synced");
                 assert_eq!(blocks_sent, 1234);

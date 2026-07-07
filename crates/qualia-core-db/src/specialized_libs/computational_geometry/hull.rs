@@ -134,7 +134,13 @@ pub fn convex_hull_indices_2_with_kernel<K: GeometryKernel>(
     scratch: &mut [u32],
     out: &mut [u32],
 ) -> Result<usize, HullError> {
-    hull_indices_by(kernel, points.len(), |i| (points[i].x, points[i].y), scratch, out)
+    hull_indices_by(
+        kernel,
+        points.len(),
+        |i| (points[i].x, points[i].y),
+        scratch,
+        out,
+    )
 }
 
 /// Compute CCW convex-hull points into a caller-owned output slice, using
@@ -277,7 +283,10 @@ pub fn is_ccw_strongly_convex_2(points: &[Point2]) -> bool {
 }
 
 /// Kernel-generic variant of [`is_ccw_strongly_convex_2`].
-pub fn is_ccw_strongly_convex_2_with_kernel<K: GeometryKernel>(kernel: &K, points: &[Point2]) -> bool {
+pub fn is_ccw_strongly_convex_2_with_kernel<K: GeometryKernel>(
+    kernel: &K,
+    points: &[Point2],
+) -> bool {
     if points.len() < 3 {
         return false;
     }
@@ -395,9 +404,13 @@ mod tests {
 
         let mut scratch_b = [0u32; 18];
         let mut out_b = [0u32; 6];
-        let n_b =
-            convex_hull_indices_2_with_kernel(&FilteredF64Kernel::default(), &points, &mut scratch_b, &mut out_b)
-                .unwrap();
+        let n_b = convex_hull_indices_2_with_kernel(
+            &FilteredF64Kernel::default(),
+            &points,
+            &mut scratch_b,
+            &mut out_b,
+        )
+        .unwrap();
 
         assert_eq!(n_a, n_b);
         assert_eq!(&out_a[..n_a], &out_b[..n_b]);
@@ -414,7 +427,10 @@ mod tests {
             Point2::new(0.0, 1.0),
         ];
         assert!(is_ccw_strongly_convex_2(&hull));
-        assert!(is_ccw_strongly_convex_2_with_kernel(&FilteredF64Kernel::default(), &hull));
+        assert!(is_ccw_strongly_convex_2_with_kernel(
+            &FilteredF64Kernel::default(),
+            &hull
+        ));
 
         let non_convex = [
             Point2::new(0.0, 0.0),
@@ -423,7 +439,10 @@ mod tests {
             Point2::new(1.0, 1.0),
         ];
         assert!(!is_ccw_strongly_convex_2(&non_convex));
-        assert!(!is_ccw_strongly_convex_2_with_kernel(&FilteredF64Kernel::default(), &non_convex));
+        assert!(!is_ccw_strongly_convex_2_with_kernel(
+            &FilteredF64Kernel::default(),
+            &non_convex
+        ));
     }
 
     /// Regression test: all points on the convex hull must not overflow the
@@ -445,10 +464,7 @@ mod tests {
         let mut out = [0u32; 6];
         let n = convex_hull_indices_2(&points, &mut scratch, &mut out).unwrap();
         assert_eq!(n, 6, "all 6 vertices should be on the hull");
-        let hull: Vec<Point2> = out[..n]
-            .iter()
-            .map(|&i| points[i as usize])
-            .collect();
+        let hull: Vec<Point2> = out[..n].iter().map(|&i| points[i as usize]).collect();
         assert!(is_ccw_strongly_convex_2(&hull));
     }
 }

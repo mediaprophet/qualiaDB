@@ -289,7 +289,14 @@ impl ExactNormal {
         let nx_len = exact_cross_component(uy, uz, vy, vz, &mut nx);
         let ny_len = exact_cross_component(uz, ux, vz, vx, &mut ny);
         let nz_len = exact_cross_component(ux, uy, vx, vy, &mut nz);
-        ExactNormal { nx, nx_len, ny, ny_len, nz, nz_len }
+        ExactNormal {
+            nx,
+            nx_len,
+            ny,
+            ny_len,
+            nz,
+            nz_len,
+        }
     }
 
     /// True iff the normal is the zero vector (degenerate plane).
@@ -316,7 +323,12 @@ impl ExactNormal {
         let mut sum_scratch = [0.0f64; MAX_DEN];
         let partial_len =
             add_compressed(&tx[..tx_len], &ty[..ty_len], &mut sum_scratch, &mut partial);
-        add_compressed(&partial[..partial_len], &tz[..tz_len], &mut sum_scratch, out)
+        add_compressed(
+            &partial[..partial_len],
+            &tz[..tz_len],
+            &mut sum_scratch,
+            out,
+        )
     }
 }
 
@@ -516,9 +528,18 @@ pub fn orient_3d_exact_3(a: Point3, b: Point3, c: Point3, p: &ExactPoint3) -> Si
     let mut det = [0.0f64; MAX_DET3];
     let mut partial = [0.0f64; MAX_DET3];
     let mut scratch = [0.0f64; MAX_DET3];
-    let partial_len =
-        add_compressed(&termx[..termx_len], &termy[..termy_len], &mut scratch, &mut partial);
-    let det_len = add_compressed(&partial[..partial_len], &termz[..termz_len], &mut scratch, &mut det);
+    let partial_len = add_compressed(
+        &termx[..termx_len],
+        &termy[..termy_len],
+        &mut scratch,
+        &mut partial,
+    );
+    let det_len = add_compressed(
+        &partial[..partial_len],
+        &termz[..termz_len],
+        &mut scratch,
+        &mut det,
+    );
 
     sign_of_expansion(&det[..det_len])
 }
@@ -556,8 +577,12 @@ fn mul_expansions(a: &[f64], b: &[f64], out: &mut [f64]) -> usize {
             acc_len = prod_len;
         } else {
             let mut next = [0.0f64; MAX_DET3];
-            let next_len =
-                add_compressed(&acc[..acc_len], &prod[..prod_len], &mut sum_scratch, &mut next);
+            let next_len = add_compressed(
+                &acc[..acc_len],
+                &prod[..prod_len],
+                &mut sum_scratch,
+                &mut next,
+            );
             acc[..next_len].copy_from_slice(&next[..next_len]);
             acc_len = next_len;
         }
@@ -758,7 +783,12 @@ pub fn segment_plane_parameter_sign(
     negate_expansion(&mut neg_t[..t_num_len]);
     let mut diff = [0.0f64; MAX_DEN];
     let mut scratch = [0.0f64; MAX_DEN];
-    let diff_len = add_compressed(&den_norm[..den_len], &neg_t[..t_num_len], &mut scratch, &mut diff);
+    let diff_len = add_compressed(
+        &den_norm[..den_len],
+        &neg_t[..t_num_len],
+        &mut scratch,
+        &mut diff,
+    );
     let one_minus_t_sign = sign_of_expansion(&diff[..diff_len]);
 
     Ok(match (t_sign, one_minus_t_sign) {
@@ -814,14 +844,20 @@ mod tests {
 
         // det = r3x·(r1y·r2z − r1z·r2y) − r3y·(r1x·r2z − r1z·r2x)
         //     + r3z·(r1x·r2y − r1y·r2x)
-        let mx = r1y.clone().mul(r2z.clone()).sub(r1z.clone().mul(r2y.clone()));
-        let my = r1x.clone().mul(r2z.clone()).sub(r1z.clone().mul(r2x.clone()));
-        let mz = r1x.clone().mul(r2y.clone()).sub(r1y.clone().mul(r2x.clone()));
+        let mx = r1y
+            .clone()
+            .mul(r2z.clone())
+            .sub(r1z.clone().mul(r2y.clone()));
+        let my = r1x
+            .clone()
+            .mul(r2z.clone())
+            .sub(r1z.clone().mul(r2x.clone()));
+        let mz = r1x
+            .clone()
+            .mul(r2y.clone())
+            .sub(r1y.clone().mul(r2x.clone()));
 
-        let det = r3x
-            .mul(mx)
-            .sub(r3y.mul(my))
-            .add(r3z.mul(mz));
+        let det = r3x.mul(mx).sub(r3y.mul(my)).add(r3z.mul(mz));
 
         // den > 0 by construction, so the scaled determinant has the same sign
         // as the true (divided) determinant.
@@ -864,9 +900,15 @@ mod tests {
             .add(nz.clone().mul(e(p.z).sub(e(a.z))));
 
         // x_num_i = p_i·den + t_num·(q_i − p_i)
-        let x_num = e(p.x).mul(den.clone()).add(t_num.clone().mul(e(q.x).sub(e(p.x))));
-        let y_num = e(p.y).mul(den.clone()).add(t_num.clone().mul(e(q.y).sub(e(p.y))));
-        let z_num = e(p.z).mul(den.clone()).add(t_num.clone().mul(e(q.z).sub(e(p.z))));
+        let x_num = e(p.x)
+            .mul(den.clone())
+            .add(t_num.clone().mul(e(q.x).sub(e(p.x))));
+        let y_num = e(p.y)
+            .mul(den.clone())
+            .add(t_num.clone().mul(e(q.y).sub(e(p.y))));
+        let z_num = e(p.z)
+            .mul(den.clone())
+            .add(t_num.clone().mul(e(q.z).sub(e(p.z))));
 
         // Normalize den positive (flip numerators too).
         if den.sign() == Sign::Negative {
@@ -888,7 +930,10 @@ mod tests {
         let c = Point3::new(0.0, 1.0, 0.0);
         let point = construct_segment_plane_intersection_3(p, q, a, b, c).unwrap();
         let r = point.to_point3();
-        assert!(r.x.abs() < 1e-12 && r.y.abs() < 1e-12 && r.z.abs() < 1e-12, "{r:?}");
+        assert!(
+            r.x.abs() < 1e-12 && r.y.abs() < 1e-12 && r.z.abs() < 1e-12,
+            "{r:?}"
+        );
     }
 
     #[test]
@@ -903,7 +948,10 @@ mod tests {
         let c = Point3::new(-1.0, 0.0, 1.0);
         let point = construct_segment_plane_intersection_3(p, q, a, b, c).unwrap();
         let r = point.to_point3();
-        assert!(r.x.abs() < 1e-12 && r.y.abs() < 1e-12 && r.z.abs() < 1e-12, "{r:?}");
+        assert!(
+            r.x.abs() < 1e-12 && r.y.abs() < 1e-12 && r.z.abs() < 1e-12,
+            "{r:?}"
+        );
     }
 
     #[test]
@@ -937,10 +985,8 @@ mod tests {
     fn ratio_to_f64(num: &Exact, den: &Exact) -> f64 {
         // Convert via f64 by scaling: value = mantissa*2^exp. We use a coarse
         // conversion adequate for the 1e-12 checks (num and den are small).
-        let n = num.mantissa.to_string().parse::<f64>().unwrap()
-            * 2f64.powi(num.exponent);
-        let d = den.mantissa.to_string().parse::<f64>().unwrap()
-            * 2f64.powi(den.exponent);
+        let n = num.mantissa.to_string().parse::<f64>().unwrap() * 2f64.powi(num.exponent);
+        let d = den.mantissa.to_string().parse::<f64>().unwrap() * 2f64.powi(den.exponent);
         n / d
     }
 
@@ -1111,10 +1157,26 @@ mod tests {
         let b = Point3::new(1.0, 0.0, 1.0 / 3.0);
         let c = Point3::new(0.0, 1.0, 1.0 / 3.0);
         let ref_planes = [
-            (Point3::new(0.0, 0.0, 0.0), Point3::new(3.0, 0.0, 1.0), Point3::new(0.0, 3.0, 1.0)),
-            (Point3::new(1.0, 1.0, 0.0), Point3::new(2.0, 0.0, 1.0), Point3::new(0.0, 2.0, 0.5)),
-            (Point3::new(-1.0, -1.0, 0.0), Point3::new(1.0, 0.0, 1.0), Point3::new(0.0, 1.0, 2.0)),
-            (Point3::new(1.0, 0.0, 0.0), Point3::new(0.0, 1.0, 0.0), Point3::new(0.0, 0.0, 1.0)),
+            (
+                Point3::new(0.0, 0.0, 0.0),
+                Point3::new(3.0, 0.0, 1.0),
+                Point3::new(0.0, 3.0, 1.0),
+            ),
+            (
+                Point3::new(1.0, 1.0, 0.0),
+                Point3::new(2.0, 0.0, 1.0),
+                Point3::new(0.0, 2.0, 0.5),
+            ),
+            (
+                Point3::new(-1.0, -1.0, 0.0),
+                Point3::new(1.0, 0.0, 1.0),
+                Point3::new(0.0, 1.0, 2.0),
+            ),
+            (
+                Point3::new(1.0, 0.0, 0.0),
+                Point3::new(0.0, 1.0, 0.0),
+                Point3::new(0.0, 0.0, 1.0),
+            ),
         ];
         let mut total = 0usize;
         for i in 0..7i32 {
@@ -1154,13 +1216,28 @@ mod tests {
 
         let segments = [
             (Point3::new(0.1, 0.2, -0.3), Point3::new(0.4, 0.9, 1.1)),
-            (Point3::new(1.0 / 7.0, 2.0 / 7.0, -1.0), Point3::new(3.0 / 7.0, 1.0 / 7.0, 1.0)),
+            (
+                Point3::new(1.0 / 7.0, 2.0 / 7.0, -1.0),
+                Point3::new(3.0 / 7.0, 1.0 / 7.0, 1.0),
+            ),
             (Point3::new(0.5, 0.5, -0.5), Point3::new(0.5, 0.5, 0.5)),
         ];
         let ref_planes = [
-            (Point3::new(0.0, 0.0, 0.0), Point3::new(3.0, 0.0, 1.0), Point3::new(0.0, 3.0, 1.0)),
-            (Point3::new(1.0, 1.0, 0.0), Point3::new(2.0, 0.0, 1.0), Point3::new(0.0, 2.0, 0.5)),
-            (Point3::new(-1.0, -1.0, 0.0), Point3::new(1.0, 0.0, 1.0), Point3::new(0.0, 1.0, 2.0)),
+            (
+                Point3::new(0.0, 0.0, 0.0),
+                Point3::new(3.0, 0.0, 1.0),
+                Point3::new(0.0, 3.0, 1.0),
+            ),
+            (
+                Point3::new(1.0, 1.0, 0.0),
+                Point3::new(2.0, 0.0, 1.0),
+                Point3::new(0.0, 2.0, 0.5),
+            ),
+            (
+                Point3::new(-1.0, -1.0, 0.0),
+                Point3::new(1.0, 0.0, 1.0),
+                Point3::new(0.0, 1.0, 2.0),
+            ),
         ];
 
         for &(p, q) in &segments {
@@ -1188,8 +1265,7 @@ mod tests {
         let centroid = Point3::new(1.0 / 3.0, 1.0 / 3.0, 0.0);
         let p = Point3::new(centroid.x, centroid.y, -1.0);
         let q = Point3::new(centroid.x, centroid.y, 1.0);
-        let (_pt, containment) =
-            construct_segment_triangle_intersection_3(p, q, a, b, c).unwrap();
+        let (_pt, containment) = construct_segment_triangle_intersection_3(p, q, a, b, c).unwrap();
         assert_eq!(containment, TriangleContainment::Inside);
     }
 
@@ -1201,8 +1277,7 @@ mod tests {
         let c = Point3::new(0.0, 1.0, 0.0);
         let p = Point3::new(5.0, 5.0, -1.0);
         let q = Point3::new(5.0, 5.0, 1.0);
-        let (_pt, containment) =
-            construct_segment_triangle_intersection_3(p, q, a, b, c).unwrap();
+        let (_pt, containment) = construct_segment_triangle_intersection_3(p, q, a, b, c).unwrap();
         assert_eq!(containment, TriangleContainment::Outside);
     }
 
@@ -1214,8 +1289,7 @@ mod tests {
         let c = Point3::new(0.0, 2.0, 0.0);
         let p = Point3::new(1.0, 0.0, -1.0);
         let q = Point3::new(1.0, 0.0, 1.0);
-        let (_pt, containment) =
-            construct_segment_triangle_intersection_3(p, q, a, b, c).unwrap();
+        let (_pt, containment) = construct_segment_triangle_intersection_3(p, q, a, b, c).unwrap();
         assert_eq!(containment, TriangleContainment::OnBoundary);
     }
 
@@ -1227,8 +1301,7 @@ mod tests {
         let c = Point3::new(0.0, 2.0, 0.0);
         let p = Point3::new(0.0, 2.0, -1.0);
         let q = Point3::new(0.0, 2.0, 1.0);
-        let (_pt, containment) =
-            construct_segment_triangle_intersection_3(p, q, a, b, c).unwrap();
+        let (_pt, containment) = construct_segment_triangle_intersection_3(p, q, a, b, c).unwrap();
         assert_eq!(containment, TriangleContainment::OnBoundary);
     }
 

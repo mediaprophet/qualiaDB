@@ -111,7 +111,8 @@ pub fn corefine_3d(
         &mut bvh_prim_indices,
         &mut bvh_morton_codes,
         &mut bvh_sort_indices,
-    ).map_err(|_| Boolean3Error::DegenerateMesh { mesh: "B" })?;
+    )
+    .map_err(|_| Boolean3Error::DegenerateMesh { mesh: "B" })?;
 
     // Query buffers (reused across all mesh A triangles).
     let mut query_out = vec![0u32; nb];
@@ -136,7 +137,8 @@ pub fn corefine_3d(
             &boxes_a[i],
             &mut query_out,
             &mut query_stack,
-        ).map_err(|_| Boolean3Error::DegenerateMesh { mesh: "B" })?;
+        )
+        .map_err(|_| Boolean3Error::DegenerateMesh { mesh: "B" })?;
 
         // Sort candidates for deterministic ordering.
         query_out[..hit_count].sort_unstable();
@@ -189,23 +191,26 @@ pub fn corefine_3d(
 
 /// Compute per-triangle AABBs for a mesh.
 fn compute_triangle_aabbs(mesh: &Mesh3D) -> Vec<Aabb> {
-    mesh.triangles.iter().map(|tri| {
-        let a = mesh.vertices[tri[0] as usize];
-        let b = mesh.vertices[tri[1] as usize];
-        let c = mesh.vertices[tri[2] as usize];
-        Aabb::new(
-            Point3::new(
-                a.x.min(b.x).min(c.x),
-                a.y.min(b.y).min(c.y),
-                a.z.min(b.z).min(c.z),
-            ),
-            Point3::new(
-                a.x.max(b.x).max(c.x),
-                a.y.max(b.y).max(c.y),
-                a.z.max(b.z).max(c.z),
-            ),
-        )
-    }).collect()
+    mesh.triangles
+        .iter()
+        .map(|tri| {
+            let a = mesh.vertices[tri[0] as usize];
+            let b = mesh.vertices[tri[1] as usize];
+            let c = mesh.vertices[tri[2] as usize];
+            Aabb::new(
+                Point3::new(
+                    a.x.min(b.x).min(c.x),
+                    a.y.min(b.y).min(c.y),
+                    a.z.min(b.z).min(c.z),
+                ),
+                Point3::new(
+                    a.x.max(b.x).max(c.x),
+                    a.y.max(b.y).max(c.y),
+                    a.z.max(b.z).max(c.z),
+                ),
+            )
+        })
+        .collect()
 }
 
 /// Validate a 3D mesh.
@@ -228,7 +233,10 @@ fn validate_mesh(mesh: &Mesh3D, name: &'static str) -> Result<(), Boolean3Error>
 
     for (i, v) in mesh.vertices.iter().enumerate() {
         if !v.x.is_finite() || !v.y.is_finite() || !v.z.is_finite() {
-            return Err(Boolean3Error::NonFiniteCoordinate { mesh: name, index: i });
+            return Err(Boolean3Error::NonFiniteCoordinate {
+                mesh: name,
+                index: i,
+            });
         }
     }
 
@@ -298,9 +306,7 @@ fn refine_mesh(mesh: &Mesh3D, new_points: &[Point3]) -> Mesh3D {
     for &p in new_points {
         // Check if the point is already a vertex.
         let existing = vertices.iter().position(|v| {
-            (v.x - p.x).abs() < 1e-10
-                && (v.y - p.y).abs() < 1e-10
-                && (v.z - p.z).abs() < 1e-10
+            (v.x - p.x).abs() < 1e-10 && (v.y - p.y).abs() < 1e-10 && (v.z - p.z).abs() < 1e-10
         });
         if existing.is_some() {
             continue;
@@ -330,7 +336,10 @@ fn refine_mesh(mesh: &Mesh3D, new_points: &[Point3]) -> Mesh3D {
         }
     }
 
-    Mesh3D { vertices, triangles }
+    Mesh3D {
+        vertices,
+        triangles,
+    }
 }
 
 /// Check if a point lies on or near a 3D triangle.
@@ -396,10 +405,7 @@ pub fn count_shared_vertices(a: &Mesh3D, b: &Mesh3D) -> usize {
 
 /// Verify that the co-refinement preserved the number of triangles
 /// (should only increase).
-pub fn verify_refinement_preserves_triangles(
-    original: &Mesh3D,
-    refined: &Mesh3D,
-) -> bool {
+pub fn verify_refinement_preserves_triangles(original: &Mesh3D, refined: &Mesh3D) -> bool {
     refined.triangles.len() >= original.triangles.len()
 }
 
@@ -449,13 +455,22 @@ mod tests {
         let result = corefine_3d(&a, &b).unwrap();
 
         // Should have some intersections.
-        assert!(result.num_intersecting_pairs > 0,
-            "expected intersections, got {}", result.num_intersecting_pairs);
+        assert!(
+            result.num_intersecting_pairs > 0,
+            "expected intersections, got {}",
+            result.num_intersecting_pairs
+        );
         // Refined meshes should have at least as many triangles.
-        assert!(result.mesh_a.triangles.len() >= 4,
-            "mesh_a triangles = {}", result.mesh_a.triangles.len());
-        assert!(result.mesh_b.triangles.len() >= 4,
-            "mesh_b triangles = {}", result.mesh_b.triangles.len());
+        assert!(
+            result.mesh_a.triangles.len() >= 4,
+            "mesh_a triangles = {}",
+            result.mesh_a.triangles.len()
+        );
+        assert!(
+            result.mesh_b.triangles.len() >= 4,
+            "mesh_b triangles = {}",
+            result.mesh_b.triangles.len()
+        );
     }
 
     #[test]

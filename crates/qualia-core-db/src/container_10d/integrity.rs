@@ -43,8 +43,14 @@ pub enum IntegrityError {
 impl std::fmt::Display for IntegrityError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::WholeFileCrcMismatch { expected, got } => write!(f, "10d whole-file CRC-32C mismatch: expected {expected:#010x}, got {got:#010x}"),
-            Self::TooShort { got } => write!(f, "10d input too short for integrity check: got {got}, need {HEADER_BYTE_SIZE}"),
+            Self::WholeFileCrcMismatch { expected, got } => write!(
+                f,
+                "10d whole-file CRC-32C mismatch: expected {expected:#010x}, got {got:#010x}"
+            ),
+            Self::TooShort { got } => write!(
+                f,
+                "10d input too short for integrity check: got {got}, need {HEADER_BYTE_SIZE}"
+            ),
         }
     }
 }
@@ -66,7 +72,8 @@ pub fn compute_whole_file_crc32c(data: &[u8]) -> u32 {
     // CRC over [0..52] + [56..end], with [52..56] treated as zero.
     // Compute incrementally: first the head, then four zero bytes, then the
     // tail. This avoids allocating a modified copy.
-    let mut crc = crate::container_10d::crc32c::crc32c_update(0xFFFF_FFFF, &data[..HEADER_CRC32C_OFFSET]);
+    let mut crc =
+        crate::container_10d::crc32c::crc32c_update(0xFFFF_FFFF, &data[..HEADER_CRC32C_OFFSET]);
     // Four zero bytes for the crc field itself.
     crc = crate::container_10d::crc32c::crc32c_update(crc, &[0u8, 0, 0, 0]);
     crc = crate::container_10d::crc32c::crc32c_update(crc, &data[HEADER_CRC32C_OFFSET + 4..]);
@@ -105,7 +112,10 @@ pub fn verify_whole_file_crc32c(data: &mut [u8]) -> Result<(), IntegrityError> {
     let actual = compute_whole_file_crc32c(data);
     data[HEADER_CRC32C_OFFSET..HEADER_CRC32C_OFFSET + 4].copy_from_slice(&stored.to_le_bytes());
     if actual != stored {
-        return Err(IntegrityError::WholeFileCrcMismatch { expected: stored, got: actual });
+        return Err(IntegrityError::WholeFileCrcMismatch {
+            expected: stored,
+            got: actual,
+        });
     }
     Ok(())
 }
@@ -124,8 +134,20 @@ mod tests {
         let mesh_payload = [0xAAu8; 100];
         let node_payload = [0xBBu8; 40 * 3];
         let inputs = [
-            SectionInput { section_type: SectionType::QuantizedMesh, alignment_tier: AlignmentTier::Word, stride: 0, element_count: 0, payload: &mesh_payload },
-            SectionInput { section_type: SectionType::Tensor10DNodes, alignment_tier: AlignmentTier::CacheLine, stride: 40, element_count: 3, payload: &node_payload },
+            SectionInput {
+                section_type: SectionType::QuantizedMesh,
+                alignment_tier: AlignmentTier::Word,
+                stride: 0,
+                element_count: 0,
+                payload: &mesh_payload,
+            },
+            SectionInput {
+                section_type: SectionType::Tensor10DNodes,
+                alignment_tier: AlignmentTier::CacheLine,
+                stride: 40,
+                element_count: 3,
+                payload: &node_payload,
+            },
         ];
         let mut out_a = [0u8; 512];
         let mut out_b = [0u8; 512];
@@ -135,7 +157,10 @@ mod tests {
         seal_whole_file_crc32c(&mut out_b[..n_b]);
         let crc_a = compute_whole_file_crc32c(&out_a[..n_a]);
         let crc_b = compute_whole_file_crc32c(&out_b[..n_b]);
-        assert_eq!(crc_a, crc_b, "whole-file CRC must be stable across identical encodes");
+        assert_eq!(
+            crc_a, crc_b,
+            "whole-file CRC must be stable across identical encodes"
+        );
         // And the sealed bytes are identical.
         assert_eq!(&out_a[..n_a], &out_b[..n_b]);
     }
@@ -144,7 +169,13 @@ mod tests {
     fn whole_file_crc_changes_on_payload_bit_flip() {
         let h = Container10dHeader::proposed();
         let payload = [0xAAu8; 100];
-        let inputs = [SectionInput { section_type: SectionType::QuantizedMesh, alignment_tier: AlignmentTier::Word, stride: 0, element_count: 0, payload: &payload }];
+        let inputs = [SectionInput {
+            section_type: SectionType::QuantizedMesh,
+            alignment_tier: AlignmentTier::Word,
+            stride: 0,
+            element_count: 0,
+            payload: &payload,
+        }];
         let mut out = [0u8; 512];
         let n = encode_container(&h, &inputs, &mut out).expect("encode");
         seal_whole_file_crc32c(&mut out[..n]);
@@ -155,14 +186,23 @@ mod tests {
         let p_off = descs[0].byte_offset as usize;
         out[p_off] ^= 0x01;
         let crc_flipped = compute_whole_file_crc32c(&out[..n]);
-        assert_ne!(crc_clean, crc_flipped, "whole-file CRC must change on a payload bit flip");
+        assert_ne!(
+            crc_clean, crc_flipped,
+            "whole-file CRC must change on a payload bit flip"
+        );
     }
 
     #[test]
     fn whole_file_crc_changes_on_header_byte_flip() {
         let h = Container10dHeader::proposed();
         let payload = [0xAAu8; 100];
-        let inputs = [SectionInput { section_type: SectionType::QuantizedMesh, alignment_tier: AlignmentTier::Word, stride: 0, element_count: 0, payload: &payload }];
+        let inputs = [SectionInput {
+            section_type: SectionType::QuantizedMesh,
+            alignment_tier: AlignmentTier::Word,
+            stride: 0,
+            element_count: 0,
+            payload: &payload,
+        }];
         let mut out = [0u8; 512];
         let n = encode_container(&h, &inputs, &mut out).expect("encode");
         seal_whole_file_crc32c(&mut out[..n]);
@@ -170,14 +210,23 @@ mod tests {
         // Flip a header byte (the flags field at offset 6, avoiding the crc field).
         out[6] ^= 0x01;
         let crc_flipped = compute_whole_file_crc32c(&out[..n]);
-        assert_ne!(crc_clean, crc_flipped, "whole-file CRC must change on a header byte flip");
+        assert_ne!(
+            crc_clean, crc_flipped,
+            "whole-file CRC must change on a header byte flip"
+        );
     }
 
     #[test]
     fn verify_passes_on_clean_file() {
         let h = Container10dHeader::proposed();
         let payload = [0xAAu8; 100];
-        let inputs = [SectionInput { section_type: SectionType::QuantizedMesh, alignment_tier: AlignmentTier::Word, stride: 0, element_count: 0, payload: &payload }];
+        let inputs = [SectionInput {
+            section_type: SectionType::QuantizedMesh,
+            alignment_tier: AlignmentTier::Word,
+            stride: 0,
+            element_count: 0,
+            payload: &payload,
+        }];
         let mut out = [0u8; 512];
         let n = encode_container(&h, &inputs, &mut out).expect("encode");
         seal_whole_file_crc32c(&mut out[..n]);
@@ -188,7 +237,13 @@ mod tests {
     fn verify_rejects_flipped_payload_bit() {
         let h = Container10dHeader::proposed();
         let payload = [0xAAu8; 100];
-        let inputs = [SectionInput { section_type: SectionType::QuantizedMesh, alignment_tier: AlignmentTier::Word, stride: 0, element_count: 0, payload: &payload }];
+        let inputs = [SectionInput {
+            section_type: SectionType::QuantizedMesh,
+            alignment_tier: AlignmentTier::Word,
+            stride: 0,
+            element_count: 0,
+            payload: &payload,
+        }];
         let mut out = [0u8; 512];
         let n = encode_container(&h, &inputs, &mut out).expect("encode");
         seal_whole_file_crc32c(&mut out[..n]);
@@ -197,8 +252,12 @@ mod tests {
         let descs = parse_section_table(&out[..n], &parsed_h).expect("table parse");
         let p_off = descs[0].byte_offset as usize;
         out[p_off] ^= 0x01;
-        let err = verify_whole_file_crc32c(&mut out[..n]).expect_err("flipped bit must fail verify");
-        assert!(matches!(err, IntegrityError::WholeFileCrcMismatch { .. }), "{err}");
+        let err =
+            verify_whole_file_crc32c(&mut out[..n]).expect_err("flipped bit must fail verify");
+        assert!(
+            matches!(err, IntegrityError::WholeFileCrcMismatch { .. }),
+            "{err}"
+        );
     }
 
     #[test]
@@ -208,14 +267,27 @@ mod tests {
         // pass or fail).
         let h = Container10dHeader::proposed();
         let payload = [0xAAu8; 100];
-        let inputs = [SectionInput { section_type: SectionType::QuantizedMesh, alignment_tier: AlignmentTier::Word, stride: 0, element_count: 0, payload: &payload }];
+        let inputs = [SectionInput {
+            section_type: SectionType::QuantizedMesh,
+            alignment_tier: AlignmentTier::Word,
+            stride: 0,
+            element_count: 0,
+            payload: &payload,
+        }];
         let mut out = [0u8; 512];
         let n = encode_container(&h, &inputs, &mut out).expect("encode");
         seal_whole_file_crc32c(&mut out[..n]);
-        let stored_before: [u8; 4] = out[HEADER_CRC32C_OFFSET..HEADER_CRC32C_OFFSET + 4].try_into().unwrap();
+        let stored_before: [u8; 4] = out[HEADER_CRC32C_OFFSET..HEADER_CRC32C_OFFSET + 4]
+            .try_into()
+            .unwrap();
         let _ = verify_whole_file_crc32c(&mut out[..n]);
-        let stored_after: [u8; 4] = out[HEADER_CRC32C_OFFSET..HEADER_CRC32C_OFFSET + 4].try_into().unwrap();
-        assert_eq!(stored_before, stored_after, "verify must restore the crc field");
+        let stored_after: [u8; 4] = out[HEADER_CRC32C_OFFSET..HEADER_CRC32C_OFFSET + 4]
+            .try_into()
+            .unwrap();
+        assert_eq!(
+            stored_before, stored_after,
+            "verify must restore the crc field"
+        );
     }
 
     #[test]

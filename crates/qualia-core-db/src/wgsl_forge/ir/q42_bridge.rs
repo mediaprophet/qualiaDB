@@ -32,11 +32,11 @@
 
 use std::collections::HashMap;
 
-use crate::wgsl_forge::ir::graph::{
-    Axis, ComputeGraph, DType, EwKind, Layout, NbKind, NeighborEnc, NodeId, OpNode, RedKind,
-    Shape, StencilKind, TensorId, TensorRef,
-};
 use crate::wgsl_forge::ir::graph::AccumKind;
+use crate::wgsl_forge::ir::graph::{
+    Axis, ComputeGraph, DType, EwKind, Layout, NbKind, NeighborEnc, NodeId, OpNode, RedKind, Shape,
+    StencilKind, TensorId, TensorRef,
+};
 use crate::wgsl_forge::{ForgeError, Schedule};
 use crate::{q_hash, NQuin};
 
@@ -282,26 +282,26 @@ fn unpack_dims(w: u64) -> [u32; 4] {
 fn encode_op(op: &OpNode) -> Result<(u64, u64, u64), ForgeError> {
     Ok(match *op {
         OpNode::Elementwise { f } => (OP_ELEMENTWISE, ewkind_code(f), 0),
-        OpNode::MatMul { m, n, k, tc, trans_b } => (
+        OpNode::MatMul {
+            m,
+            n,
+            k,
+            tc,
+            trans_b,
+        } => (
             OP_MATMUL,
             (m as u64) | ((n as u64) << 32),
             (k as u64) | ((tc as u64) << 32) | ((trans_b as u64) << 33),
         ),
         OpNode::Gemv { m, n } => (OP_GEMV, (m as u64) | ((n as u64) << 32), 0),
-        OpNode::Fft { len, inverse } => {
-            (OP_FFT, (len as u64) | ((inverse as u64) << 32), 0)
-        }
-        OpNode::Reduce { op, axis } => {
-            (OP_REDUCE, redkind_code(op) | (axis_code(axis) << 16), 0)
-        }
+        OpNode::Fft { len, inverse } => (OP_FFT, (len as u64) | ((inverse as u64) << 32), 0),
+        OpNode::Reduce { op, axis } => (OP_REDUCE, redkind_code(op) | (axis_code(axis) << 16), 0),
         OpNode::GatherDequant { scheme, block } => (
             OP_GATHER_DEQUANT,
             dtype_code(scheme) | ((block as u64) << 32),
             0,
         ),
-        OpNode::Broadcast { shape } => {
-            (OP_BROADCAST, pack_dims(shape.dims)?, shape.rank as u64)
-        }
+        OpNode::Broadcast { shape } => (OP_BROADCAST, pack_dims(shape.dims)?, shape.rank as u64),
         OpNode::Softmax { axis } => (OP_SOFTMAX, axis_code(axis), 0),
         OpNode::Stencil { kind, halo, axis } => (
             OP_STENCIL,
@@ -309,7 +309,12 @@ fn encode_op(op: &OpNode) -> Result<(u64, u64, u64), ForgeError> {
             0,
         ),
         OpNode::ScatterAccum { op } => (OP_SCATTER_ACCUM, accum_code(op), 0),
-        OpNode::Neighbor { kind, k_or_r, dims, enc } => (
+        OpNode::Neighbor {
+            kind,
+            k_or_r,
+            dims,
+            enc,
+        } => (
             OP_NEIGHBOR,
             nb_code(kind)
                 | ((dims as u64) << 8)
@@ -317,10 +322,13 @@ fn encode_op(op: &OpNode) -> Result<(u64, u64, u64), ForgeError> {
                 | ((k_or_r.to_bits() as u64) << 32),
             0,
         ),
-        OpNode::Slice { offset, len } => {
-            (OP_SLICE, (offset as u64) | ((len as u64) << 32), 0)
-        }
-        OpNode::Rope { head_dim, pos, mode, base_bits } => (
+        OpNode::Slice { offset, len } => (OP_SLICE, (offset as u64) | ((len as u64) << 32), 0),
+        OpNode::Rope {
+            head_dim,
+            pos,
+            mode,
+            base_bits,
+        } => (
             OP_ROPE,
             (head_dim as u64) | ((pos as u64) << 32),
             (mode as u64) | ((base_bits as u64) << 32),
@@ -331,7 +339,9 @@ fn encode_op(op: &OpNode) -> Result<(u64, u64, u64), ForgeError> {
 /// Decode `(opcode, word0, word1)` back to an [`OpNode`].
 fn decode_op(opcode: u64, w0: u64, w1: u64) -> Result<OpNode, ForgeError> {
     Ok(match opcode {
-        OP_ELEMENTWISE => OpNode::Elementwise { f: ewkind_from(w0 & 0xFFFF)? },
+        OP_ELEMENTWISE => OpNode::Elementwise {
+            f: ewkind_from(w0 & 0xFFFF)?,
+        },
         OP_MATMUL => OpNode::MatMul {
             m: (w0 & 0xFFFF_FFFF) as u32,
             n: (w0 >> 32) as u32,
@@ -339,8 +349,14 @@ fn decode_op(opcode: u64, w0: u64, w1: u64) -> Result<OpNode, ForgeError> {
             tc: (w1 >> 32) & 1 == 1,
             trans_b: (w1 >> 33) & 1 == 1,
         },
-        OP_GEMV => OpNode::Gemv { m: (w0 & 0xFFFF_FFFF) as u32, n: (w0 >> 32) as u32 },
-        OP_FFT => OpNode::Fft { len: (w0 & 0xFFFF_FFFF) as u32, inverse: (w0 >> 32) & 1 == 1 },
+        OP_GEMV => OpNode::Gemv {
+            m: (w0 & 0xFFFF_FFFF) as u32,
+            n: (w0 >> 32) as u32,
+        },
+        OP_FFT => OpNode::Fft {
+            len: (w0 & 0xFFFF_FFFF) as u32,
+            inverse: (w0 >> 32) & 1 == 1,
+        },
         OP_REDUCE => OpNode::Reduce {
             op: redkind_from(w0 & 0xFFFF)?,
             axis: axis_from((w0 >> 16) & 0xFFFF)?,
@@ -350,15 +366,22 @@ fn decode_op(opcode: u64, w0: u64, w1: u64) -> Result<OpNode, ForgeError> {
             block: (w0 >> 32) as u32,
         },
         OP_BROADCAST => OpNode::Broadcast {
-            shape: Shape { dims: unpack_dims(w0), rank: (w1 & 0xFF) as u8 },
+            shape: Shape {
+                dims: unpack_dims(w0),
+                rank: (w1 & 0xFF) as u8,
+            },
         },
-        OP_SOFTMAX => OpNode::Softmax { axis: axis_from(w0)? },
+        OP_SOFTMAX => OpNode::Softmax {
+            axis: axis_from(w0)?,
+        },
         OP_STENCIL => OpNode::Stencil {
             kind: stencil_from(w0 & 0xFFFF)?,
             halo: ((w0 >> 16) & 0xFFFF) as u32,
             axis: axis_from((w0 >> 32) & 0xFFFF)?,
         },
-        OP_SCATTER_ACCUM => OpNode::ScatterAccum { op: accum_from(w0 & 0xFFFF)? },
+        OP_SCATTER_ACCUM => OpNode::ScatterAccum {
+            op: accum_from(w0 & 0xFFFF)?,
+        },
         OP_NEIGHBOR => OpNode::Neighbor {
             kind: nb_from(w0 & 0xFF)?,
             dims: ((w0 >> 8) & 0xFF) as u8,
@@ -494,7 +517,10 @@ pub fn deserialize_graph(quins: &[NQuin]) -> Result<ComputeGraph, ForgeError> {
                 opkind.insert(q.subject as u32, (q.object, q.context, q.parity));
             }
             P_SHAPE => {
-                shape.insert(q.subject as u32, (unpack_dims(q.object), (q.parity & 0xFF) as u8));
+                shape.insert(
+                    q.subject as u32,
+                    (unpack_dims(q.object), (q.parity & 0xFF) as u8),
+                );
             }
             P_DTYPE => {
                 dtype.insert(q.subject as u32, dtype_from(q.object)?);
@@ -515,7 +541,12 @@ pub fn deserialize_graph(quins: &[NQuin]) -> Result<ComputeGraph, ForgeError> {
         }
     }
 
-    let n_nodes = opkind.keys().copied().max().map(|m| m as usize + 1).unwrap_or(0);
+    let n_nodes = opkind
+        .keys()
+        .copied()
+        .max()
+        .map(|m| m as usize + 1)
+        .unwrap_or(0);
     let mut g = ComputeGraph::new();
     let mut out_refs: Vec<TensorRef> = Vec::with_capacity(n_nodes);
     for i in 0..n_nodes {
@@ -577,7 +608,11 @@ mod tests {
         assert_eq!(g2.outputs, g.outputs, "outputs");
         // The byte image is stable across a second serialization (zero-copy, deterministic).
         let quins2 = serialize_graph(&g2).expect("serialize2");
-        assert_eq!(graph_merkle_root(&quins), graph_merkle_root(&quins2), "merkle");
+        assert_eq!(
+            graph_merkle_root(&quins),
+            graph_merkle_root(&quins2),
+            "merkle"
+        );
     }
 
     #[test]
@@ -603,18 +638,51 @@ mod tests {
         let dyn1 = Shape::new(&[4]);
         let ops = [
             OpNode::Elementwise { f: EwKind::Gelu },
-            OpNode::MatMul { m: 70000, n: 3, k: 99999, tc: true, trans_b: true },
+            OpNode::MatMul {
+                m: 70000,
+                n: 3,
+                k: 99999,
+                tc: true,
+                trans_b: true,
+            },
             OpNode::Gemv { m: 5, n: 6 },
-            OpNode::Fft { len: 1024, inverse: true },
-            OpNode::Reduce { op: RedKind::L2, axis: Axis::Index(2) },
-            OpNode::GatherDequant { scheme: DType::Ternary, block: 64 },
-            OpNode::Broadcast { shape: Shape::new(&[3, 5]) },
-            OpNode::Softmax { axis: Axis::Penultimate },
-            OpNode::Stencil { kind: StencilKind::Advection, halo: 2, axis: Axis::Last },
+            OpNode::Fft {
+                len: 1024,
+                inverse: true,
+            },
+            OpNode::Reduce {
+                op: RedKind::L2,
+                axis: Axis::Index(2),
+            },
+            OpNode::GatherDequant {
+                scheme: DType::Ternary,
+                block: 64,
+            },
+            OpNode::Broadcast {
+                shape: Shape::new(&[3, 5]),
+            },
+            OpNode::Softmax {
+                axis: Axis::Penultimate,
+            },
+            OpNode::Stencil {
+                kind: StencilKind::Advection,
+                halo: 2,
+                axis: Axis::Last,
+            },
             OpNode::ScatterAccum { op: AccumKind::Max },
-            OpNode::Neighbor { kind: NbKind::Knn, k_or_r: 3.5, dims: 3, enc: NeighborEnc::Project },
+            OpNode::Neighbor {
+                kind: NbKind::Knn,
+                k_or_r: 3.5,
+                dims: 3,
+                enc: NeighborEnc::Project,
+            },
             OpNode::Slice { offset: 7, len: 13 },
-            OpNode::Rope { head_dim: 64, pos: 9, mode: 1, base_bits: 10000.0f32.to_bits() },
+            OpNode::Rope {
+                head_dim: 64,
+                pos: 9,
+                mode: 1,
+                base_bits: 10000.0f32.to_bits(),
+            },
         ];
         for op in ops {
             let (opcode, w0, w1) = encode_op(&op).expect("encode");
@@ -650,11 +718,23 @@ mod tests {
     #[test]
     fn opcodes_are_in_the_reserved_modality_range() {
         let codes = [
-            OP_ELEMENTWISE, OP_MATMUL, OP_GEMV, OP_FFT, OP_REDUCE, OP_GATHER_DEQUANT,
-            OP_BROADCAST, OP_SOFTMAX, OP_STENCIL, OP_SCATTER_ACCUM, OP_NEIGHBOR,
+            OP_ELEMENTWISE,
+            OP_MATMUL,
+            OP_GEMV,
+            OP_FFT,
+            OP_REDUCE,
+            OP_GATHER_DEQUANT,
+            OP_BROADCAST,
+            OP_SOFTMAX,
+            OP_STENCIL,
+            OP_SCATTER_ACCUM,
+            OP_NEIGHBOR,
         ];
         for &c in &codes {
-            assert!((0x10..=0x1A).contains(&c), "opcode {c:#x} out of reserved range");
+            assert!(
+                (0x10..=0x1A).contains(&c),
+                "opcode {c:#x} out of reserved range"
+            );
             assert!(c > 0x04, "collides with mini_parser 0x00-0x04");
             assert!(!(0x50..=0x5F).contains(&c), "collides with deontic 0x50+");
         }

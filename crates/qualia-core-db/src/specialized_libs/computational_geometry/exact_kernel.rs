@@ -81,9 +81,13 @@ impl ExactPoint2 {
     /// Create an exact point from a plain `f64` point (denominator = 1).
     pub fn from_point2(p: Point2) -> Self {
         ExactPoint2 {
-            x_num: [p.x, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            x_num: [
+                p.x, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            ],
             x_num_len: 1,
-            y_num: [p.y, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            y_num: [
+                p.y, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            ],
             y_num_len: 1,
             den: [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             den_len: 1,
@@ -193,15 +197,15 @@ pub fn construct_segment_intersection(
 
     // x_num = ax * den + t_num * abx
     let mut x_prod1 = [0.0f64; MAX_NUMER]; // ax * den
-    let x_p1_len = scale_expansion(&den[..den_len], a.x, &mut x_prod1)
-        .expect("x_prod1 sized for 2*den");
+    let x_p1_len =
+        scale_expansion(&den[..den_len], a.x, &mut x_prod1).expect("x_prod1 sized for 2*den");
     let mut x_comp1 = [0.0f64; MAX_NUMER];
     let x_c1_len = compress_expansion(&x_prod1[..x_p1_len], &mut x_comp1)
         .expect("x_comp1 sized for MAX_NUMER");
 
     let mut x_prod2 = [0.0f64; MAX_NUMER]; // t_num * abx
-    let x_p2_len = scale_expansion(&t_num[..t_num_len], abx, &mut x_prod2)
-        .expect("x_prod2 sized for 2*t_num");
+    let x_p2_len =
+        scale_expansion(&t_num[..t_num_len], abx, &mut x_prod2).expect("x_prod2 sized for 2*t_num");
     let mut x_comp2 = [0.0f64; MAX_NUMER];
     let x_c2_len = compress_expansion(&x_prod2[..x_p2_len], &mut x_comp2)
         .expect("x_comp2 sized for MAX_NUMER");
@@ -210,20 +214,20 @@ pub fn construct_segment_intersection(
     let mut x_temp = [0.0f64; MAX_NUMER];
     let x_sum_len = expansion_sum(&x_comp1[..x_c1_len], &x_comp2[..x_c2_len], &mut x_temp)
         .expect("x_temp sized for MAX_NUMER");
-    let x_num_len = compress_expansion(&x_temp[..x_sum_len], &mut x_num)
-        .expect("x_num sized for MAX_NUMER");
+    let x_num_len =
+        compress_expansion(&x_temp[..x_sum_len], &mut x_num).expect("x_num sized for MAX_NUMER");
 
     // y_num = ay * den + t_num * aby
     let mut y_prod1 = [0.0f64; MAX_NUMER];
-    let y_p1_len = scale_expansion(&den[..den_len], a.y, &mut y_prod1)
-        .expect("y_prod1 sized for 2*den");
+    let y_p1_len =
+        scale_expansion(&den[..den_len], a.y, &mut y_prod1).expect("y_prod1 sized for 2*den");
     let mut y_comp1 = [0.0f64; MAX_NUMER];
     let y_c1_len = compress_expansion(&y_prod1[..y_p1_len], &mut y_comp1)
         .expect("y_comp1 sized for MAX_NUMER");
 
     let mut y_prod2 = [0.0f64; MAX_NUMER];
-    let y_p2_len = scale_expansion(&t_num[..t_num_len], aby, &mut y_prod2)
-        .expect("y_prod2 sized for 2*t_num");
+    let y_p2_len =
+        scale_expansion(&t_num[..t_num_len], aby, &mut y_prod2).expect("y_prod2 sized for 2*t_num");
     let mut y_comp2 = [0.0f64; MAX_NUMER];
     let y_c2_len = compress_expansion(&y_prod2[..y_p2_len], &mut y_comp2)
         .expect("y_comp2 sized for MAX_NUMER");
@@ -232,8 +236,8 @@ pub fn construct_segment_intersection(
     let mut y_temp = [0.0f64; MAX_NUMER];
     let y_sum_len = expansion_sum(&y_comp1[..y_c1_len], &y_comp2[..y_c2_len], &mut y_temp)
         .expect("y_temp sized for MAX_NUMER");
-    let y_num_len = compress_expansion(&y_temp[..y_sum_len], &mut y_num)
-        .expect("y_num sized for MAX_NUMER");
+    let y_num_len =
+        compress_expansion(&y_temp[..y_sum_len], &mut y_num).expect("y_num sized for MAX_NUMER");
 
     // Normalize: ensure den is positive (flip signs if needed).
     if den_sign == Sign::Negative {
@@ -272,18 +276,14 @@ pub fn construct_segment_intersection(
 /// ```
 ///
 /// This eliminates the division, keeping everything in expansion arithmetic.
-pub fn orientation_2_exact(
-    a: Point2,
-    b: Point2,
-    c: &ExactPoint2,
-) -> Sign {
+pub fn orientation_2_exact(a: Point2, b: Point2, c: &ExactPoint2) -> Sign {
     let abx = b.x - a.x;
     let aby = b.y - a.y;
 
     // cy_diff = cy_num - a.y * den  (expansion)
     let mut ay_den = [0.0f64; MAX_NUMER];
-    let ay_den_len = scale_expansion(&c.den[..c.den_len], a.y, &mut ay_den)
-        .expect("ay_den sized for 2*den");
+    let ay_den_len =
+        scale_expansion(&c.den[..c.den_len], a.y, &mut ay_den).expect("ay_den sized for 2*den");
     negate_expansion(&mut ay_den[..ay_den_len]); // -a.y * den
     let mut cy_diff = [0.0f64; MAX_NUMER];
     let cy_d_len = expansion_sum(&c.y_num[..c.y_num_len], &ay_den[..ay_den_len], &mut cy_diff)
@@ -294,8 +294,8 @@ pub fn orientation_2_exact(
 
     // cx_diff = cx_num - a.x * den  (expansion)
     let mut ax_den = [0.0f64; MAX_NUMER];
-    let ax_den_len = scale_expansion(&c.den[..c.den_len], a.x, &mut ax_den)
-        .expect("ax_den sized for 2*den");
+    let ax_den_len =
+        scale_expansion(&c.den[..c.den_len], a.x, &mut ax_den).expect("ax_den sized for 2*den");
     negate_expansion(&mut ax_den[..ax_den_len]); // -a.x * den
     let mut cx_diff = [0.0f64; MAX_NUMER];
     let cx_d_len = expansion_sum(&c.x_num[..c.x_num_len], &ax_den[..ax_den_len], &mut cx_diff)
@@ -306,19 +306,19 @@ pub fn orientation_2_exact(
 
     // term1 = abx * cy_comp (scalar × expansion → expansion)
     let mut term1 = [0.0f64; MAX_NUMER];
-    let t1_len = scale_expansion(&cy_comp[..cy_c_len], abx, &mut term1)
-        .expect("term1 sized for 2*cy_comp");
+    let t1_len =
+        scale_expansion(&cy_comp[..cy_c_len], abx, &mut term1).expect("term1 sized for 2*cy_comp");
     let mut t1_comp = [0.0f64; MAX_NUMER];
-    let t1_c_len = compress_expansion(&term1[..t1_len], &mut t1_comp)
-        .expect("t1_comp sized for MAX_NUMER");
+    let t1_c_len =
+        compress_expansion(&term1[..t1_len], &mut t1_comp).expect("t1_comp sized for MAX_NUMER");
 
     // term2 = aby * cx_comp
     let mut term2 = [0.0f64; MAX_NUMER];
-    let t2_len = scale_expansion(&cx_comp[..cx_c_len], aby, &mut term2)
-        .expect("term2 sized for 2*cx_comp");
+    let t2_len =
+        scale_expansion(&cx_comp[..cx_c_len], aby, &mut term2).expect("term2 sized for 2*cx_comp");
     let mut t2_comp = [0.0f64; MAX_NUMER];
-    let t2_c_len = compress_expansion(&term2[..t2_len], &mut t2_comp)
-        .expect("t2_comp sized for MAX_NUMER");
+    let t2_c_len =
+        compress_expansion(&term2[..t2_len], &mut t2_comp).expect("t2_comp sized for MAX_NUMER");
 
     // det = term1 - term2 = term1 + (-term2)
     negate_expansion(&mut t2_comp[..t2_c_len]);
@@ -326,8 +326,8 @@ pub fn orientation_2_exact(
     let mut det_temp = [0.0f64; MAX_NUMER];
     let det_sum_len = expansion_sum(&t1_comp[..t1_c_len], &t2_comp[..t2_c_len], &mut det_temp)
         .expect("det_temp sized for MAX_NUMER");
-    let det_len = compress_expansion(&det_temp[..det_sum_len], &mut det)
-        .expect("det sized for MAX_NUMER");
+    let det_len =
+        compress_expansion(&det_temp[..det_sum_len], &mut det).expect("det sized for MAX_NUMER");
 
     sign_of_expansion(&det[..det_len])
 }
@@ -454,7 +454,9 @@ impl super::kernel::ConstructionKernel for ExactConstructionKernel {
 mod tests {
     use super::*;
     use crate::specialized_libs::computational_geometry::exact_test_helper::Exact;
-    use crate::specialized_libs::computational_geometry::kernel::{FilteredF64Kernel, GeometryKernel};
+    use crate::specialized_libs::computational_geometry::kernel::{
+        FilteredF64Kernel, GeometryKernel,
+    };
     use crate::specialized_libs::computational_geometry::primitives::{orientation_2, Orientation};
 
     /// BigInt reference for orientation_2 where c is an exact rational point.
@@ -529,8 +531,16 @@ mod tests {
         // Orientation of (a, b, p) — p should be on line ab, so orientation = Collinear.
         let orient_exact = orientation_2_exact(a, b, &p);
         let orient_filtered = orientation_2(a, b, rounded);
-        assert_eq!(orient_exact, Sign::Zero, "exact orientation should be Zero (on line)");
-        assert_eq!(orient_filtered, Orientation::Collinear, "filtered orientation should be Collinear");
+        assert_eq!(
+            orient_exact,
+            Sign::Zero,
+            "exact orientation should be Zero (on line)"
+        );
+        assert_eq!(
+            orient_filtered,
+            Orientation::Collinear,
+            "filtered orientation should be Collinear"
+        );
     }
 
     #[test]
@@ -548,8 +558,8 @@ mod tests {
 
         // Check orientation of (a, c, p) against BigInt reference.
         let _cx_num = Exact::from_f64(rounded.x); // This is the rounded value, not exact
-        // Actually, we need the EXACT value for the BigInt reference.
-        // Let's compute the exact intersection using BigInt.
+                                                  // Actually, we need the EXACT value for the BigInt reference.
+                                                  // Let's compute the exact intersection using BigInt.
         let ax = Exact::from_f64(a.x);
         let ay = Exact::from_f64(a.y);
         let bx = Exact::from_f64(b.x);
@@ -567,13 +577,25 @@ mod tests {
         let acy = cy.sub(ay.clone());
 
         // den = abx*cdy - aby*cdx
-        let den = abx.clone().mul(cdy.clone()).sub(aby.clone().mul(cdx.clone()));
+        let den = abx
+            .clone()
+            .mul(cdy.clone())
+            .sub(aby.clone().mul(cdx.clone()));
         // t_num = acx*cdy - acy*cdx
-        let t_num = acx.clone().mul(cdy.clone()).sub(acy.clone().mul(cdx.clone()));
+        let t_num = acx
+            .clone()
+            .mul(cdy.clone())
+            .sub(acy.clone().mul(cdx.clone()));
 
         // p = a + t_num/den * (b-a) = (ax*den + t_num*abx) / den, (ay*den + t_num*aby) / den
-        let px_num = ax.clone().mul(den.clone()).add(t_num.clone().mul(abx.clone()));
-        let py_num = ay.clone().mul(den.clone()).add(t_num.clone().mul(aby.clone()));
+        let px_num = ax
+            .clone()
+            .mul(den.clone())
+            .add(t_num.clone().mul(abx.clone()));
+        let py_num = ay
+            .clone()
+            .mul(den.clone())
+            .add(t_num.clone().mul(aby.clone()));
 
         // BigInt reference for orientation(a, c, p)
         let big_sign = exact_orientation_2_bigint(a, c, &px_num, &py_num, &den);
@@ -581,7 +603,10 @@ mod tests {
         // Our exact construction
         let exact_sign = orientation_2_exact(a, c, &p);
 
-        assert_eq!(exact_sign, big_sign, "exact construction orientation should match BigInt");
+        assert_eq!(
+            exact_sign, big_sign,
+            "exact construction orientation should match BigInt"
+        );
     }
 
     // ── Adversarial: where filtered-f64 provably mis-signs ────────────────
@@ -730,11 +755,7 @@ mod tests {
                     }
                     let s_f = filtered.orientation_2(points[i], points[j], points[k]);
                     let s_e = exact.orientation_2(points[i], points[j], points[k]);
-                    assert_eq!(
-                        s_f, s_e,
-                        "orientation mismatch at ({}, {}, {})",
-                        i, j, k
-                    );
+                    assert_eq!(s_f, s_e, "orientation mismatch at ({}, {}, {})", i, j, k);
                 }
             }
         }
@@ -757,10 +778,10 @@ mod tests {
     #[test]
     fn exact_det2_matches_bigint() {
         let cases = [
-            (1.0_f64, 0.0_f64, 0.0_f64, 1.0_f64),   // det = 1
-            (2.0, 3.0, 1.0, 4.0),                     // det = 8 - 3 = 5
-            (1.0, 1.0, 1.0, 1.0),                     // det = 0
-            (1e15, 1.0, 1.0, 1e15),                   // det = 1e30 - 1 (cancellation)
+            (1.0_f64, 0.0_f64, 0.0_f64, 1.0_f64), // det = 1
+            (2.0, 3.0, 1.0, 4.0),                 // det = 8 - 3 = 5
+            (1.0, 1.0, 1.0, 1.0),                 // det = 0
+            (1e15, 1.0, 1.0, 1e15),               // det = 1e30 - 1 (cancellation)
         ];
 
         for &(adx, ady, bdx, bdy) in &cases {
@@ -768,18 +789,25 @@ mod tests {
             let len = exact_det2(adx, ady, bdx, bdy, &mut out);
             let val = expansion_value(&out[..len]);
 
-            let exact_val = Exact::from_f64(adx).mul(Exact::from_f64(bdy))
+            let exact_val = Exact::from_f64(adx)
+                .mul(Exact::from_f64(bdy))
                 .sub(Exact::from_f64(ady).mul(Exact::from_f64(bdx)));
             let exact_sign = exact_val.sign();
 
             let our_sign = sign_of_expansion(&out[..len]);
-            assert_eq!(our_sign, exact_sign, "det2 sign mismatch for ({adx}, {ady}, {bdx}, {bdy})");
+            assert_eq!(
+                our_sign, exact_sign,
+                "det2 sign mismatch for ({adx}, {ady}, {bdx}, {bdy})"
+            );
 
             // Also check the value is close (for non-cancellation cases)
             if exact_val.mantissa != 0.into() {
                 let _big_val = exact_val;
                 // Compare signs (value comparison is harder with BigInt)
-                assert_eq!(val.is_sign_positive(), exact_sign != Sign::Negative || val == 0.0);
+                assert_eq!(
+                    val.is_sign_positive(),
+                    exact_sign != Sign::Negative || val == 0.0
+                );
             }
         }
     }

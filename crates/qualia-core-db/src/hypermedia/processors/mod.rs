@@ -65,7 +65,9 @@ mod tests {
     fn dispatch_routes_by_media_type() {
         assert!(processor_for("image/jpeg").unwrap().handles("image/jpeg"));
         assert!(processor_for("audio/wav").unwrap().handles("audio/wav"));
-        assert!(processor_for("text/markdown").unwrap().handles("text/markdown"));
+        assert!(processor_for("text/markdown")
+            .unwrap()
+            .handles("text/markdown"));
         // An unknown binary type has no registered processor.
         assert!(processor_for("application/octet-stream").is_none());
     }

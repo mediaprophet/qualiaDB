@@ -11,3 +11,6 @@ pub mod host_topology;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod nym_adapter;
 pub mod sonic_token;
+pub mod disclosure;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod fetch_10d;

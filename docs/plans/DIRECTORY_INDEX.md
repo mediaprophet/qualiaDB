@@ -29,6 +29,10 @@ Webizen, inference, rendering, desktop/QApps, and supporting compute infrastruct
 - `native-auditory-language-and-music-intelligence.md`: Capability-aware plan for acoustic
   understanding, community-governed language resources, speech, music analysis/production,
   generative audio, and cross-modal perception.
+- `native-computational-economics.md`: Native Rust computational-economics library plan spanning
+  stochastic processes, time series, dynamic programming, heterogeneous agents, input-output/network
+  economics, market design, game theory, econometrics, welfare/public finance, ontology bridges, and
+  Webizen/WASM/MCP exposure.
 - `native-visual-intelligence-and-generative-3d.md`: Capability-aware plan for native image
   classification, object detection, video understanding, synthetic datasets, image generation,
   image-to-3D, canonical GLB-to-Q42 asset compilation, and tiered engineering/biological
@@ -45,6 +49,8 @@ Webizen, inference, rendering, desktop/QApps, and supporting compute infrastruct
   and engineering/biological digital-twin phases.
 - **2026-07-03**: Added the native auditory, language, and music intelligence companion plan and
   linked the visual plan into the shared eyes-and-ears architecture.
+- **2026-07-07**: Added the native computational economics plan for a comprehensive, zero-heap-aware
+  Rust economics substrate rather than isolated finance functions.
 - **2026-07-03**: Added the native visual intelligence and generative 3D plan and refreshed the
   manifest to include all current plans.
 - **2026-06-30**: Automated full index generation, extracting code definitions.

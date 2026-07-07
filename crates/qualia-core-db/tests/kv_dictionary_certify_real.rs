@@ -14,10 +14,13 @@ use qualia_core_db::wgsl_forge::calibration::{sweep_kv_dictionary, GateSpec};
 use std::path::{Path, PathBuf};
 
 fn find_model(name: &str) -> Option<PathBuf> {
-    [format!("../../docs/models/{name}"), format!("docs/models/{name}")]
-        .iter()
-        .map(PathBuf::from)
-        .find(|p| Path::new(p).exists())
+    [
+        format!("../../docs/models/{name}"),
+        format!("docs/models/{name}"),
+    ]
+    .iter()
+    .map(PathBuf::from)
+    .find(|p| Path::new(p).exists())
 }
 
 #[test]
@@ -29,8 +32,14 @@ fn certify_kv_dictionary_sweep_on_smollm2() {
     let model = model.to_string_lossy().to_string();
 
     // Env-driven, no recompile: QUALIA_W5B_ATOMS (256), QUALIA_W5B_KS ("5,6"), QUALIA_W5B_MAXTOK (48).
-    let atoms: usize = std::env::var("QUALIA_W5B_ATOMS").ok().and_then(|v| v.parse().ok()).unwrap_or(256);
-    let max_tok: usize = std::env::var("QUALIA_W5B_MAXTOK").ok().and_then(|v| v.parse().ok()).unwrap_or(48);
+    let atoms: usize = std::env::var("QUALIA_W5B_ATOMS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(256);
+    let max_tok: usize = std::env::var("QUALIA_W5B_MAXTOK")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(48);
     let ks: Vec<usize> = std::env::var("QUALIA_W5B_KS")
         .unwrap_or_else(|_| "5,6".to_string())
         .split(',')
@@ -45,17 +54,30 @@ fn certify_kv_dictionary_sweep_on_smollm2() {
 
     match sweep_kv_dictionary(&model, &configs, 20, max_tok, gate, 0, 0) {
         Ok(results) => {
-            let ref_ppl = results.first().map(|(_, _, r)| r.ref_ppl).unwrap_or(f64::NAN);
+            let ref_ppl = results
+                .first()
+                .map(|(_, _, r)| r.ref_ppl)
+                .unwrap_or(f64::NAN);
             println!(
                 "\n=== W5b Phase 4 certify sweep — SmolLM2-360M ({atoms} atoms), ref_ppl(f32 KV)={:.4} ===",
                 ref_ppl
             );
-            println!("{:>7} {:>10} {:>9} {:>7}  {}", "k", "cand_ppl", "ΔPPL", "bits/v", "verdict");
+            println!(
+                "{:>7} {:>10} {:>9} {:>7}  {}",
+                "k", "cand_ppl", "ΔPPL", "bits/v", "verdict"
+            );
             for (na, k, r) in &results {
                 // asymptotic dict code rate: k × (ceil(log2 atoms) index + 16-bit coeff).
                 let idx_bits = (usize::BITS - na.saturating_sub(1).leading_zeros()).max(1) as usize;
                 let bits = k * (idx_bits + 16);
-                let mut verdict = if r.passed { format!("PASS ({} B)", r.packaged.as_ref().map(|p| p.len()).unwrap_or(0)) } else { "FAIL".to_string() };
+                let mut verdict = if r.passed {
+                    format!(
+                        "PASS ({} B)",
+                        r.packaged.as_ref().map(|p| p.len()).unwrap_or(0)
+                    )
+                } else {
+                    "FAIL".to_string()
+                };
                 if let Some(bytes) = r.packaged.as_ref() {
                     let out = format!("../../target/kv_dict_smollm2_{na}atoms_{k}sparse.q42art");
                     if std::fs::write(&out, bytes).is_ok() {
@@ -64,7 +86,11 @@ fn certify_kv_dictionary_sweep_on_smollm2() {
                 }
                 println!(
                     "{:>7} {:>10.4} {:>+8.2}% {:>7}  {}",
-                    k, r.cand_ppl, r.delta_ppl * 100.0, bits, verdict
+                    k,
+                    r.cand_ppl,
+                    r.delta_ppl * 100.0,
+                    bits,
+                    verdict
                 );
             }
             // Self-consistency: sane ref, finite candidates, package iff passed.

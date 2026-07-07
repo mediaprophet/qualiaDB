@@ -114,9 +114,7 @@ pub fn label_components(
                 }
                 let twin_idx = he.twin as usize;
                 if twin_idx >= half_edges.len() {
-                    return Err(ConnectivityError::HalfEdgeOutOfRange {
-                        index: he.twin,
-                    });
+                    return Err(ConnectivityError::HalfEdgeOutOfRange { index: he.twin });
                 }
                 let neighbour = half_edges[twin_idx].face;
                 if neighbour == INVALID_INDEX || (neighbour as usize) >= fc {
@@ -207,9 +205,7 @@ pub fn count_boundary_loops(
             while half_edges[candidate as usize].twin != INVALID_INDEX {
                 let twin = half_edges[candidate as usize].twin;
                 if (twin as usize) >= he_len {
-                    return Err(ConnectivityError::HalfEdgeOutOfRange {
-                        index: twin,
-                    });
+                    return Err(ConnectivityError::HalfEdgeOutOfRange { index: twin });
                 }
                 let next_after_twin = half_edges[twin as usize].next;
                 if (next_after_twin as usize) >= he_len {
@@ -221,9 +217,7 @@ pub fn count_boundary_loops(
                 rotations += 1;
                 if rotations > he_len {
                     // Malformed mesh — stuck in a cycle with no boundary.
-                    return Err(ConnectivityError::HalfEdgeOutOfRange {
-                        index: candidate,
-                    });
+                    return Err(ConnectivityError::HalfEdgeOutOfRange { index: candidate });
                 }
             }
 
@@ -249,11 +243,7 @@ pub fn count_boundary_loops(
 ///   as (total half-edges + boundary half-edges) / 2, since each interior edge
 ///   contributes 2 half-edges and each boundary edge contributes 1.
 #[inline]
-pub fn euler_characteristic(
-    vertex_count: u32,
-    face_count: u32,
-    half_edges: &[HalfEdge],
-) -> i32 {
+pub fn euler_characteristic(vertex_count: u32, face_count: u32, half_edges: &[HalfEdge]) -> i32 {
     let boundary = half_edges
         .iter()
         .filter(|he| he.twin == INVALID_INDEX)
@@ -331,10 +321,7 @@ mod tests {
         build_triangle_half_edges, required_edge_slots, EdgeSlot,
     };
 
-    fn build_he(
-        vertex_count: u32,
-        triangles: &[[u32; 3]],
-    ) -> (Vec<HalfEdge>, u32) {
+    fn build_he(vertex_count: u32, triangles: &[[u32; 3]]) -> (Vec<HalfEdge>, u32) {
         let n = triangles.len() * 3;
         let mut edges = vec![HalfEdge::default(); n];
         let mut slots = vec![EdgeSlot::default(); required_edge_slots(triangles.len())];
@@ -497,8 +484,8 @@ mod tests {
         let mut labels = [0u32; 4];
         let mut queue = [0u32; 4];
         let mut visited = [false; 12];
-        let summary = compute_connectivity(4, 4, &edges, &mut labels, &mut queue, &mut visited)
-            .unwrap();
+        let summary =
+            compute_connectivity(4, 4, &edges, &mut labels, &mut queue, &mut visited).unwrap();
         assert_eq!(summary.component_count, 1);
         assert_eq!(summary.boundary_loop_count, 0);
         assert_eq!(summary.euler_characteristic, 2);
@@ -514,8 +501,8 @@ mod tests {
         let mut labels = [0u32; 1];
         let mut queue = [0u32; 1];
         let mut visited = [false; 3];
-        let summary = compute_connectivity(3, 1, &edges, &mut labels, &mut queue, &mut visited)
-            .unwrap();
+        let summary =
+            compute_connectivity(3, 1, &edges, &mut labels, &mut queue, &mut visited).unwrap();
         assert_eq!(summary.component_count, 1);
         assert_eq!(summary.boundary_loop_count, 1);
         assert_eq!(summary.euler_characteristic, 1);
@@ -529,8 +516,8 @@ mod tests {
         let mut labels = [0u32; 2];
         let mut queue = [0u32; 2];
         let mut visited = [false; 6];
-        let summary = compute_connectivity(6, 2, &edges, &mut labels, &mut queue, &mut visited)
-            .unwrap();
+        let summary =
+            compute_connectivity(6, 2, &edges, &mut labels, &mut queue, &mut visited).unwrap();
         assert_eq!(summary.component_count, 2);
         assert_eq!(summary.boundary_loop_count, 2);
         // V=6, E=6, F=2 → χ=2
@@ -570,6 +557,9 @@ mod tests {
         let (edges, _) = build_he(3, &[[0, 1, 2]]);
         let mut visited = [false; 2];
         let err = count_boundary_loops(&edges, &mut visited).unwrap_err();
-        assert_eq!(err, ConnectivityError::VisitedBufferTooSmall { required: 3 });
+        assert_eq!(
+            err,
+            ConnectivityError::VisitedBufferTooSmall { required: 3 }
+        );
     }
 }

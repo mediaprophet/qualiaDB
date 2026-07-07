@@ -1,5 +1,6 @@
 use super::accountability_panel::WellfairAccountabilityPanel;
 use super::disclosure_inquiry_panel::WellfairDisclosureInquiryPanel;
+use super::chora_panel::WellfairChoraPanel;
 use super::library_panel::WellfairLibraryPanel;
 use super::agency_panel::WellfairAgencyPanel;
 use super::anatomy_panel::WellfairAnatomyPanel;
@@ -39,6 +40,7 @@ const AREAS: &[(&str, &str)] = &[
     ("Health", "Phase 2 — observations and sleep"),
     ("Anatomy", "Whole-person systemic view"),
     ("Library", "Find your files by meaning"),
+    ("Chora", "Spatio-temporal commons canvas"),
     ("Clinical", "Phase 3 — documents and pathology"),
     ("Life", "Phase 3 — events and welfare"),
     ("Relationships", "Phase 2 — Social Book + consent"),
@@ -101,6 +103,7 @@ pub fn WellfairShell() -> Element {
             WellfairAnatomyPanel {}
         },
         "Library" => rsx! { WellfairLibraryPanel {} },
+        "Chora" => rsx! { WellfairChoraPanel {} },
         "Life" => rsx! {
             WellfairLifePanel {}
             WellfairWelfarePanel {}

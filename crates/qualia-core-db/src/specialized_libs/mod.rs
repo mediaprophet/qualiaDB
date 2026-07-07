@@ -7,6 +7,14 @@
 pub mod category_theory;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod chemistry_modeling;
+/// Computational economics and finance coordination layer: capability matrices,
+/// shared categorical transforms, and native economics kernels. Kept available
+/// to WASM because the first layer is metadata + zero-dependency utilities.
+pub mod computational_economics;
+/// Native computational geometry: robust predicates, topology/graph structures,
+/// Q42/10D adapters, and the computational-geometry algorithm families. Unlike the older
+/// specialized libraries this module is available to browser/WASM builds.
+pub mod computational_geometry;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod constructibility;
 #[cfg(not(target_arch = "wasm32"))]
@@ -34,10 +42,6 @@ pub mod quantum_biology;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod statistical_computing;
 pub mod symbolic_algebra;
-/// Native computational geometry: robust predicates, topology/graph structures,
-/// Q42/10D adapters, and the computational-geometry algorithm families. Unlike the older
-/// specialized libraries this module is available to browser/WASM builds.
-pub mod computational_geometry;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod symbolic_assumptions;
 #[cfg(not(target_arch = "wasm32"))]

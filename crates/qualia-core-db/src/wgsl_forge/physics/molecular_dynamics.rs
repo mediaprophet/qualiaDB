@@ -81,11 +81,19 @@ pub fn md_step_gpu(state: &[f32], box_size: [f32; 3], dt: f32) -> Result<Vec<f32
     let capacity = (state.len() * 4).max(4 << 20);
     let mut ctx = WgpuComputeContext::new(capacity)?;
 
-    let view_state =
-        ctx.allocate_and_write(bytemuck::cast_slice(state), 0, 0, BindingUsage::StorageReadWrite)?;
+    let view_state = ctx.allocate_and_write(
+        bytemuck::cast_slice(state),
+        0,
+        0,
+        BindingUsage::StorageReadWrite,
+    )?;
     let params = [box_size[0], box_size[1], box_size[2], dt];
-    let view_params =
-        ctx.allocate_and_write(bytemuck::cast_slice(&params), 1, 0, BindingUsage::StorageRead)?;
+    let view_params = ctx.allocate_and_write(
+        bytemuck::cast_slice(&params),
+        1,
+        0,
+        BindingUsage::StorageRead,
+    )?;
 
     let buffers = vec![view_state, view_params];
     let pipeline = WgpuPipeline::compile(&ctx, MD_STEP_WGSL, MD_STEP_ENTRY)?;

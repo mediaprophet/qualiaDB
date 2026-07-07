@@ -449,13 +449,13 @@ mod tests {
     #[test]
     fn serialize_lexicon_round_trips_unicode() {
         let samples = [
-            "carefully",                          // ASCII (WordNet eng gloss word)
-            "välinpitämättömästi",                // Finnish (WordNet fin)
-            "อย่างสะเพร่า",                          // Thai
-            "不注意に",                            // Japanese
-            "بلا مبالاة",                          // Arabic (RTL)
-            "невнимательно",                      // Russian (Cyrillic)
-            "a definition — with em-dash & 😀",   // punctuation + emoji (4-byte codepoint)
+            "carefully",                        // ASCII (WordNet eng gloss word)
+            "välinpitämättömästi",              // Finnish (WordNet fin)
+            "อย่างสะเพร่า",                       // Thai
+            "不注意に",                         // Japanese
+            "بلا مبالاة",                         // Arabic (RTL)
+            "невнимательно",                    // Russian (Cyrillic)
+            "a definition — with em-dash & 😀", // punctuation + emoji (4-byte codepoint)
         ];
         let mut map = HashMap::new();
         for s in samples {
@@ -485,7 +485,9 @@ mod tests {
         map.insert(h, long);
         let bytes = serialize_string_lexicon(&map);
         let lex = Q42LexMmap::from_bytes(&bytes).unwrap();
-        let got = lex.lookup_hash(h).expect("truncated string still valid UTF-8");
+        let got = lex
+            .lookup_hash(h)
+            .expect("truncated string still valid UTF-8");
         assert!(got.len() <= u16::MAX as usize);
         assert!(got.chars().all(|c| c == 'あ'));
     }

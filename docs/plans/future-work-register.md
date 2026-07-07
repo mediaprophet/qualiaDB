@@ -57,6 +57,15 @@ community-governed **language-resource workbench** (oral-first, no forced text) 
 music analysis → production engine → TTS (consent-gated) → separation/generation → eyes+ears composition.
 Strong human-rights/consent/cultural-protocol requirements throughout.
 
+### Native computational economics
+[`native-computational-economics.md`](native-computational-economics.md) — comprehensive Rust economics
+substrate for QualiaDB, extending the current GBM/VaR, macro-flow, Leontief shock, survival-pricing, and
+`financial_modeling` surfaces into a real library: deterministic stochastic/time-series core, dynamic
+programming, Markov models, heterogeneous agents/EGM, input-output and network economics, market design,
+game theory, agent-based economics, econometrics/calibration, welfare/public finance, ontology/SHACL/NQuin
+bridges, Webizen/WASM/CLI/MCP exposure, and explicit anti-fake-finish gates. It reuses existing solvers,
+geometry, inference, privacy, and FIBO assets; Julia/Python are future clients, not the core engine.
+
 ### Chora (crate `qualia-ste`) — spatio-temporal permissive-commons omniverse (the "10d browser" exploration world)
 [`spatio-temporal-commons-canvas/README.md`](spatio-temporal-commons-canvas/README.md) — a Google-Earth-like
 explorable 3D world for Webizen Desktop: temporal scrubbing, permissive-commons asset "planting", layered

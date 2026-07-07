@@ -1,5 +1,4 @@
 use std::path::Path;
-
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::accessibility_prefs;
@@ -171,10 +170,62 @@ fn library_summary(e: &super::hypermedia_store::LibraryEntry) -> serde_json::Val
         "topics": e.topics,
         "projects": e.projects,
         "place": e.place,
+        "occurred_at": e.occurred_at,
+        "lat": e.lat,
+        "lon": e.lon,
         "flags": e.flags,
         "ingested_unix": e.ingested_unix,
         "excerpt": e.excerpt,
     })
+}
+
+/// Facets a **person** attaches to an asset at ingest — the "software provides the means, the person
+/// authors the meaning" path. These merge *on top of* whatever a processor derived automatically (a photo's
+/// EXIF still wins for its own time/place); they let a plain document be placed on the **timeline** (a date)
+/// or the **map** (coordinates), or collected under a **project** / **purpose** — none of it imposed.
+#[derive(Debug, Clone, Default)]
+pub struct ManualFacets {
+    pub occurred_at: Option<i64>,
+    pub place_label: Option<String>,
+    pub lat: Option<f32>,
+    pub lon: Option<f32>,
+    pub projects: Vec<String>,
+    pub purposes: Vec<String>,
+}
+
+impl ManualFacets {
+    fn is_empty(&self) -> bool {
+        self.occurred_at.is_none()
+            && self.place_label.is_none()
+            && self.lat.is_none()
+            && self.projects.is_empty()
+            && self.purposes.is_empty()
+    }
+}
+
+/// Decode a lowercase/uppercase hex string to bytes (the desktop passes binary assets — a JPEG is not utf-8 —
+/// as hex across the command boundary). Dependency-free; rejects odd length / non-hex.
+fn decode_hex(s: &str) -> Result<Vec<u8>, String> {
+    let s = s.trim();
+    if s.len() % 2 != 0 {
+        return Err("odd-length hex".to_string());
+    }
+    let val = |c: u8| -> Result<u8, String> {
+        match c {
+            b'0'..=b'9' => Ok(c - b'0'),
+            b'a'..=b'f' => Ok(c - b'a' + 10),
+            b'A'..=b'F' => Ok(c - b'A' + 10),
+            _ => Err(format!("non-hex byte {:#x}", c)),
+        }
+    };
+    let b = s.as_bytes();
+    let mut out = Vec::with_capacity(b.len() / 2);
+    let mut i = 0;
+    while i < b.len() {
+        out.push((val(b[i])? << 4) | val(b[i + 1])?);
+        i += 2;
+    }
+    Ok(out)
 }
 
 /// Transport-neutral Host API exported for UI and qApps.
@@ -248,6 +299,18 @@ impl WebizenHostApi {
             }
         }
         snap
+    }
+
+    pub(crate) fn chora_storage_root(&self) -> &std::path::Path {
+        &self.storage_root
+    }
+
+    pub(crate) fn chora_signing_key(&self) -> &SigningKey {
+        &self.signing_key
+    }
+
+    pub(crate) fn chora_owner_did(&self) -> &str {
+        &self.owner_did
     }
 
     fn now_unix() -> u64 {
@@ -955,11 +1018,73 @@ impl WebizenHostApi {
         text: &str,
         guardian_did: Option<String>,
     ) -> Result<serde_json::Value, String> {
-        use qualia_core_db::hypermedia::{ingest_with, FlagSeverity, Processor, TextProcessor};
-        let proc = TextProcessor::default();
-        let out = proc.process(uri, text.as_bytes(), media_type);
-        let r = ingest_with(&proc, uri, media_type, 0, text.as_bytes());
+        self.ingest_bytes(uri, media_type, text.as_bytes(), text, &ManualFacets::default(), guardian_did)
+    }
+
+    /// Ingest a text document **with person-authored facets** — an optional date (→ timeline), place
+    /// (→ map), project and purpose the person chooses to attach. The document's derived topics still come
+    /// from its content; these facets are added on top (the person authoring meaning, not being defined).
+    pub fn ingest_document_annotated(
+        &self,
+        uri: &str,
+        media_type: &str,
+        text: &str,
+        manual: &ManualFacets,
+        guardian_did: Option<String>,
+    ) -> Result<serde_json::Value, String> {
+        self.ingest_bytes(uri, media_type, text.as_bytes(), text, manual, guardian_did)
+    }
+
+    /// **Ingest any asset bytes** (a document, a **photo**, an audio clip) into the library. The processor
+    /// registered for `media_type` derives searchability — a text doc → topics; a **JPEG/PNG → its EXIF
+    /// capture time (timeline) + GPS place (map)**; a WAV → duration + dominant frequency — and it all folds
+    /// into the container so the original is findable by meaning. `excerpt_source` is a short human string for
+    /// the results list (the text for a doc; a caption/filename for binary). Guardianship + ledger hook as
+    /// [`Self::ingest_document`].
+    pub fn ingest_bytes(
+        &self,
+        uri: &str,
+        media_type: &str,
+        bytes: &[u8],
+        excerpt_source: &str,
+        manual: &ManualFacets,
+        guardian_did: Option<String>,
+    ) -> Result<serde_json::Value, String> {
+        use qualia_core_db::hypermedia::processors::processor_for;
+        use qualia_core_db::hypermedia::{
+            content_digest, descriptors_to_nquins, ingest_with, Descriptors, FlagSeverity, Place,
+        };
+
+        let proc = processor_for(media_type)
+            .ok_or_else(|| format!("no ingest processor for media type '{media_type}'"))?;
+        let digest = content_digest(bytes);
+        let out = proc.process(uri, bytes, media_type);
+        let mut r = ingest_with(proc.as_ref(), uri, media_type, digest, bytes);
         let now = Self::now_unix();
+        let primary_subject = r.container.primary.subject();
+
+        // Merge the person-authored facets as additional descriptor edges on the primary asset. A processor's
+        // own derivation (a photo's EXIF) takes precedence for its fields; manual facets fill / extend.
+        let manual_place = match (manual.lat, manual.lon) {
+            (Some(lat), Some(lon)) => Some(Place {
+                label: manual.place_label.clone().unwrap_or_else(|| format!("{lat:.5},{lon:.5}")),
+                lat,
+                lon,
+            }),
+            _ => None,
+        };
+        if !manual.is_empty() {
+            let extra = Descriptors {
+                occurred_at: manual.occurred_at.filter(|_| out.descriptors.occurred_at.is_none()),
+                place: if out.descriptors.place.is_none() { manual_place.clone() } else { None },
+                projects: manual.projects.clone(),
+                purposes: manual.purposes.clone(),
+                ..Default::default()
+            };
+            let (eq, _lex) = descriptors_to_nquins(primary_subject, &extra);
+            r.quins.extend(eq);
+        }
+
         let flags: Vec<super::hypermedia_store::LibraryFlag> = out
             .flags
             .iter()
@@ -969,17 +1094,31 @@ impl WebizenHostApi {
                 detail: f.detail.clone(),
             })
             .collect();
+
+        // Effective facets for the entry's display fields: processor-derived first, else the person's.
+        let eff_occurred_at = out.descriptors.occurred_at.or(manual.occurred_at);
+        let eff_place = out.descriptors.place.clone().or(manual_place);
+        let (lat, lon) = eff_place
+            .as_ref()
+            .map(|p| (Some(p.lat), Some(p.lon)))
+            .unwrap_or((None, None));
+        let mut projects = out.descriptors.projects.clone();
+        projects.extend(manual.projects.iter().cloned());
+
         let entry = super::hypermedia_store::LibraryEntry {
             asset_uri: uri.to_string(),
-            primary_subject: r.container.primary.subject(),
+            primary_subject,
             media_type: media_type.to_string(),
             quins: r.quins,
             topics: out.descriptors.topics.clone(),
-            projects: out.descriptors.projects.clone(),
-            place: out.descriptors.place.as_ref().map(|p| p.label.clone()),
+            projects,
+            place: eff_place.as_ref().map(|p| p.label.clone()),
+            occurred_at: eff_occurred_at,
+            lat,
+            lon,
             flags: flags.clone(),
             ingested_unix: now,
-            excerpt: text.chars().take(160).collect(),
+            excerpt: excerpt_source.chars().take(160).collect(),
         };
         self.library()?.add(entry).map_err(|e| e.to_string())?;
 
@@ -1002,9 +1141,29 @@ impl WebizenHostApi {
         Ok(serde_json::json!({
             "asset_uri": uri,
             "topics": out.descriptors.topics,
+            "occurred_at": eff_occurred_at,
+            "place": eff_place.as_ref().map(|p| &p.label),
+            "lat": lat,
+            "lon": lon,
             "flags": flags,
             "guardian_notifications": notified,
         }))
+    }
+
+    /// **Ingest a photo/audio file from hex-encoded bytes** — the boundary form for the desktop, which reads a
+    /// picked file and passes its bytes as hex (a JPEG is not valid utf-8, so it cannot come through the text
+    /// path). A photo's EXIF capture-time + GPS auto-populate the timeline + map. `caption` is the short
+    /// display string. Same derive + persist + guardian hook as [`Self::ingest_bytes`].
+    pub fn ingest_file_hex(
+        &self,
+        uri: &str,
+        media_type: &str,
+        bytes_hex: &str,
+        caption: &str,
+        guardian_did: Option<String>,
+    ) -> Result<serde_json::Value, String> {
+        let bytes = decode_hex(bytes_hex).map_err(|e| format!("bad hex: {e}"))?;
+        self.ingest_bytes(uri, media_type, &bytes, caption, &ManualFacets::default(), guardian_did)
     }
 
     /// Search the library by facet (`topic` | `depicts` | `place` | `project` | `purpose`). Returns per-entry

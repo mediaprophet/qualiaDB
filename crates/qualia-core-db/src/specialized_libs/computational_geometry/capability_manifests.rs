@@ -52,7 +52,10 @@ impl Backend {
     /// Returns `true` if this backend is a deterministic fallback
     /// (CPU or WASM or exact).
     pub fn is_deterministic_fallback(&self) -> bool {
-        matches!(self, Backend::Scalar | Backend::Simd | Backend::Wasm | Backend::Exact)
+        matches!(
+            self,
+            Backend::Scalar | Backend::Simd | Backend::Wasm | Backend::Exact
+        )
     }
 }
 
@@ -1659,6 +1662,24 @@ pub const GEOMETRY_OP_MANIFESTS: &[OpManifest] = &[
         allocation: AllocationClass::ColdBounded,
         dimensionality: Dimensionality::D3,
     },
+    // ── P13.7 — Tetrahedral quality improvement & sliver handling ──
+    OpManifest {
+        op: "tet_quality_improve",
+        description: "Tetrahedral mesh quality improvement via four monotonic passes (2-3/3-2 flip, optimisation-based smooth, Delaunay cavity Steiner insertion, sliver exudation by local perturbation). Boundary faces and fixed vertices are never moved; every accepted operation strictly increases the local worst-case score under the selected objective (min dihedral / radius-edge ratio / scaled Jacobian) and preserves positive tet orientation. Identical input -> bit-identical mesh.",
+        backends: &[Backend::Scalar, Backend::Wasm],
+        determinism: DeterminismClass::BitExact,
+        limits: ResourceLimits {
+            max_input_points: 1_000_000,
+            max_output_bytes: 256 * 1024 * 1024,
+            max_memory_bytes: 512 * 1024 * 1024,
+            max_time_us: 0,
+        },
+        topology_critical: true,
+        maturity: Maturity::Implemented,
+        exactness: ExactnessClass::TopologyGuaranteed,
+        allocation: AllocationClass::ColdBounded,
+        dimensionality: Dimensionality::D3,
+    },
 ];
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -1763,15 +1784,13 @@ impl DeviceAvailability {
 /// Given a device availability mask, return the backends runnable on
 /// this device for the given op. Never returns an empty list — if all
 /// GPU backends are unavailable, the CPU/WASM fallback is returned.
-pub fn reserve_budget_query(
-    op: &str,
-    device: &DeviceAvailability,
-) -> Vec<Backend> {
+pub fn reserve_budget_query(op: &str, device: &DeviceAvailability) -> Vec<Backend> {
     GEOMETRY_OP_MANIFESTS
         .iter()
         .find(|m| m.op == op)
         .map(|m| {
-            let runnable: Vec<Backend> = m.backends
+            let runnable: Vec<Backend> = m
+                .backends
                 .iter()
                 .copied()
                 .filter(|b| device.supports(*b))
@@ -1896,9 +1915,11 @@ mod tests {
             let has_gpu = m.backends.iter().any(|b| b.requires_gpu());
             let has_fallback = m.backends.iter().any(|b| b.is_deterministic_fallback());
             if has_gpu {
-                assert!(has_fallback,
+                assert!(
+                    has_fallback,
                     "{} advertises GPU without deterministic fallback",
-                    m.op);
+                    m.op
+                );
             }
         }
     }
@@ -1906,10 +1927,16 @@ mod tests {
     #[test]
     fn resource_bounds_are_finite() {
         for m in GEOMETRY_OP_MANIFESTS {
-            assert!(m.limits.max_output_bytes > 0,
-                "{}: max_output_bytes is 0", m.op);
-            assert!(m.limits.max_memory_bytes > 0,
-                "{}: max_memory_bytes is 0", m.op);
+            assert!(
+                m.limits.max_output_bytes > 0,
+                "{}: max_output_bytes is 0",
+                m.op
+            );
+            assert!(
+                m.limits.max_memory_bytes > 0,
+                "{}: max_memory_bytes is 0",
+                m.op
+            );
         }
     }
 
@@ -1996,9 +2023,11 @@ mod tests {
             if m.topology_critical {
                 let has_exact = m.backends.contains(&Backend::Exact);
                 let has_scalar = m.backends.contains(&Backend::Scalar);
-                assert!(has_exact || has_scalar,
+                assert!(
+                    has_exact || has_scalar,
                     "{} is topology_critical but has no exact/scalar backend",
-                    m.op);
+                    m.op
+                );
             }
         }
     }
@@ -2023,14 +2052,10 @@ mod tests {
     fn determinism_class_serialises_correctly() {
         let json = manifests_to_json();
         let ops = json["ops"].as_array().unwrap();
-        let orientation = ops.iter()
-            .find(|op| op["op"] == "orientation_2")
-            .unwrap();
+        let orientation = ops.iter().find(|op| op["op"] == "orientation_2").unwrap();
         assert_eq!(orientation["determinism"], "bit-exact");
 
-        let oracle = ops.iter()
-            .find(|op| op["op"] == "gpu_oracle")
-            .unwrap();
+        let oracle = ops.iter().find(|op| op["op"] == "gpu_oracle").unwrap();
         assert_eq!(oracle["determinism"], "tolerance");
     }
 
@@ -2105,17 +2130,13 @@ mod tests {
     fn p10_capability_fields_serialise_in_json() {
         let json = manifests_to_json();
         let ops = json["ops"].as_array().unwrap();
-        let orientation = ops.iter()
-            .find(|op| op["op"] == "orientation_2")
-            .unwrap();
+        let orientation = ops.iter().find(|op| op["op"] == "orientation_2").unwrap();
         assert_eq!(orientation["maturity"], "implemented");
         assert_eq!(orientation["exactness"], "exact-predicate");
         assert_eq!(orientation["allocation"], "hot-zero-heap");
         assert_eq!(orientation["dimensionality"], "d2");
 
-        let marching = ops.iter()
-            .find(|op| op["op"] == "marching_cubes")
-            .unwrap();
+        let marching = ops.iter().find(|op| op["op"] == "marching_cubes").unwrap();
         assert_eq!(marching["exactness"], "topology-guaranteed");
         assert_eq!(marching["dimensionality"], "d3");
     }
@@ -2150,7 +2171,10 @@ mod tests {
             dimensionality: Dimensionality::D2,
         };
         let err = validate_manifests(&[bad]).unwrap_err();
-        assert!(err.contains("Planned"), "expected Planned rejection, got: {err}");
+        assert!(
+            err.contains("Planned"),
+            "expected Planned rejection, got: {err}"
+        );
     }
 
     #[test]
@@ -2168,7 +2192,10 @@ mod tests {
             dimensionality: Dimensionality::D2,
         };
         let err = validate_manifests(&[bad]).unwrap_err();
-        assert!(err.contains("ApproximateMetric"), "expected ApproximateMetric rejection, got: {err}");
+        assert!(
+            err.contains("ApproximateMetric"),
+            "expected ApproximateMetric rejection, got: {err}"
+        );
     }
 
     // ── P10.2 — decision exactness vs construction exactness split ────────
@@ -2192,7 +2219,9 @@ mod tests {
             "boolean_difference",
         ];
         for op in f64_intersection_ops {
-            let m = GEOMETRY_OP_MANIFESTS.iter().find(|m| m.op == *op)
+            let m = GEOMETRY_OP_MANIFESTS
+                .iter()
+                .find(|m| m.op == *op)
                 .unwrap_or_else(|| panic!("`{}` missing from registry", op));
             assert!(
                 !matches!(m.exactness, ExactnessClass::ExactConstruction),
@@ -2228,11 +2257,15 @@ mod tests {
     #[test]
     fn exact_predicate_and_exact_construction_ops_carry_exact_backend() {
         for m in GEOMETRY_OP_MANIFESTS {
-            if matches!(m.exactness, ExactnessClass::ExactPredicate | ExactnessClass::ExactConstruction) {
+            if matches!(
+                m.exactness,
+                ExactnessClass::ExactPredicate | ExactnessClass::ExactConstruction
+            ) {
                 assert!(
                     m.backends.contains(&Backend::Exact),
                     "{}: exactness is {:?} but no Exact backend advertised",
-                    m.op, m.exactness
+                    m.op,
+                    m.exactness
                 );
             }
         }
@@ -2251,23 +2284,51 @@ mod tests {
     fn hot_zero_heap_ops_are_not_cold_builders() {
         // Ops that build a structure (allocate during construction).
         const COLD_BUILDERS: &[&str] = &[
-            "convex_hull_2", "convex_hull_3",
-            "delaunay_2", "delaunay_3", "voronoi_2", "conforming_delaunay_2",
-            "bvh_3d", "kd_tree_3d", "box_join",
-            "boolean_2", "minkowski_2",
-            "boolean_3", "boolean_3_exact", "boolean_union",
-            "boolean_intersect", "boolean_difference",
-            "decimate_qem", "isotropic_remesh",
-            "alpha_shape_2d", "alpha_shape_3d", "alpha_filtration_2d",
-            "marching_cubes", "poisson_reconstruct_3d", "point_set_3d",
-            "vr_filtration", "persistence", "cknn_laplacian", "cknn_laplacian_3d",
-            "nn_query", "gpu_oracle", "natural_neighbour",
-            "create_box", "create_sphere", "create_cylinder", "create_plane",
-            "create_torus", "create_grid", "drag_vertex",
-            "triangle_topology", "mesh_topology",
+            "convex_hull_2",
+            "convex_hull_3",
+            "delaunay_2",
+            "delaunay_3",
+            "voronoi_2",
+            "conforming_delaunay_2",
+            "bvh_3d",
+            "kd_tree_3d",
+            "box_join",
+            "boolean_2",
+            "minkowski_2",
+            "boolean_3",
+            "boolean_3_exact",
+            "boolean_union",
+            "boolean_intersect",
+            "boolean_difference",
+            "decimate_qem",
+            "isotropic_remesh",
+            "alpha_shape_2d",
+            "alpha_shape_3d",
+            "alpha_filtration_2d",
+            "marching_cubes",
+            "poisson_reconstruct_3d",
+            "point_set_3d",
+            "vr_filtration",
+            "persistence",
+            "cknn_laplacian",
+            "cknn_laplacian_3d",
+            "nn_query",
+            "gpu_oracle",
+            "natural_neighbour",
+            "create_box",
+            "create_sphere",
+            "create_cylinder",
+            "create_plane",
+            "create_torus",
+            "create_grid",
+            "drag_vertex",
+            "triangle_topology",
+            "mesh_topology",
         ];
         for op in COLD_BUILDERS {
-            let m = GEOMETRY_OP_MANIFESTS.iter().find(|m| m.op == *op)
+            let m = GEOMETRY_OP_MANIFESTS
+                .iter()
+                .find(|m| m.op == *op)
                 .unwrap_or_else(|| panic!("`{}` missing from registry", op));
             assert!(
                 !matches!(m.allocation, AllocationClass::HotZeroHeap),
@@ -2283,12 +2344,18 @@ mod tests {
     #[test]
     fn predicate_ops_are_hot_zero_heap() {
         const HOT_PREDICATES: &[&str] = &[
-            "orientation_2", "orient_3d", "incircle", "insphere",
-            "construct_segment_intersection_2", "exact_construct_3",
+            "orientation_2",
+            "orient_3d",
+            "incircle",
+            "insphere",
+            "construct_segment_intersection_2",
+            "exact_construct_3",
             "spatial_order",
         ];
         for op in HOT_PREDICATES {
-            let m = GEOMETRY_OP_MANIFESTS.iter().find(|m| m.op == *op)
+            let m = GEOMETRY_OP_MANIFESTS
+                .iter()
+                .find(|m| m.op == *op)
                 .unwrap_or_else(|| panic!("`{}` missing from registry", op));
             assert!(
                 matches!(m.allocation, AllocationClass::HotZeroHeap),
@@ -2326,11 +2393,27 @@ mod zero_heap_tests {
     #[test]
     fn orientation_2_hot_path_is_zero_heap() {
         // Warm up (in case of lazy init).
-        let _ = orientation_2(Point2::new(0.0, 0.0), Point2::new(1.0, 0.0), Point2::new(0.5, 0.5));
+        let _ = orientation_2(
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 0.0),
+            Point2::new(0.5, 0.5),
+        );
         assert_zero_alloc("orientation_2", || {
-            let _ = orientation_2(Point2::new(0.0, 0.0), Point2::new(1.0, 0.0), Point2::new(0.5, 0.5));
-            let _ = orientation_2(Point2::new(0.0, 0.0), Point2::new(1.0, 0.0), Point2::new(2.0, 0.0));
-            let _ = orientation_2(Point2::new(0.0, 0.0), Point2::new(1.0, 0.0), Point2::new(1.0, -1.0));
+            let _ = orientation_2(
+                Point2::new(0.0, 0.0),
+                Point2::new(1.0, 0.0),
+                Point2::new(0.5, 0.5),
+            );
+            let _ = orientation_2(
+                Point2::new(0.0, 0.0),
+                Point2::new(1.0, 0.0),
+                Point2::new(2.0, 0.0),
+            );
+            let _ = orientation_2(
+                Point2::new(0.0, 0.0),
+                Point2::new(1.0, 0.0),
+                Point2::new(1.0, -1.0),
+            );
         });
     }
 

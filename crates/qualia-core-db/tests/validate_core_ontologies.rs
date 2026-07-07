@@ -39,11 +39,21 @@ fn n3_files(dir: &Path) -> Vec<PathBuf> {
 }
 
 const SPINE: [&str; 7] = [
-    "selfhood.n3", "values.n3", "agency.n3", "sense.n3",
-    "tiering.n3", "policy.n3", "humanitarian-ict.n3",
+    "selfhood.n3",
+    "values.n3",
+    "agency.n3",
+    "sense.n3",
+    "tiering.n3",
+    "policy.n3",
+    "humanitarian-ict.n3",
 ];
-const BOILERPLATE: [&str; 5] =
-    ["Download: PDF", "Download:", "Table of Contents", "Print this page", "Share via"];
+const BOILERPLATE: [&str; 5] = [
+    "Download: PDF",
+    "Download:",
+    "Table of Contents",
+    "Print this page",
+    "Share via",
+];
 const GOV_FIELDS: [&str; 4] = ["tier", "legalForm", "bindingStatus", "curationStatus"];
 
 #[test]
@@ -93,7 +103,9 @@ fn validate_core_ontologies() {
         }
         // HARD: a Tier-B (Mutable) instrument must live under mutable/.
         if txt.contains("values:Mutable") && !rel.replace('\\', "/").contains("mutable/") {
-            hard.push(format!("{rel}: Tier-B (values:Mutable) instrument outside `mutable/`"));
+            hard.push(format!(
+                "{rel}: Tier-B (values:Mutable) instrument outside `mutable/`"
+            ));
         }
         // WARN: governance-field coverage (curation pass tightens these).
         for (i, fld) in GOV_FIELDS.iter().enumerate() {
@@ -113,7 +125,10 @@ fn validate_core_ontologies() {
         }
     }
 
-    eprintln!("validate_core_ontologies: scanned {n} instruments + {} spine files", SPINE.len());
+    eprintln!(
+        "validate_core_ontologies: scanned {n} instruments + {} spine files",
+        SPINE.len()
+    );
     for w in &warn {
         eprintln!("  WARN: {w}");
     }
@@ -125,7 +140,10 @@ fn validate_core_ontologies() {
         for h in &hard {
             eprintln!("  FAIL: {h}");
         }
-        panic!("validate_core_ontologies: {} HARD violation(s) — see FAIL lines above", hard.len());
+        panic!(
+            "validate_core_ontologies: {} HARD violation(s) — see FAIL lines above",
+            hard.len()
+        );
     }
     eprintln!("validate_core_ontologies: PASS — no hard violations.");
 }

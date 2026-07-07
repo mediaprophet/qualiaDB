@@ -26,9 +26,9 @@
 //!
 //! Tier-2 cold construction.
 
-use super::primitives::Point3;
 use super::expansion::Sign;
 use super::orient3d::orient_3d;
+use super::primitives::Point3;
 
 // ───────────────────────────────────────────────────────────────────────────
 //  Errors
@@ -49,9 +49,14 @@ pub enum SimplifyError {
 impl core::fmt::Display for SimplifyError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::TriangleOutOfRange { index } => write!(f, "simplify: triangle {index} out of range"),
+            Self::TriangleOutOfRange { index } => {
+                write!(f, "simplify: triangle {index} out of range")
+            }
             Self::VertexOutOfRange { triangle, vertex } => {
-                write!(f, "simplify: vertex {vertex} out of range in triangle {triangle}")
+                write!(
+                    f,
+                    "simplify: vertex {vertex} out of range in triangle {triangle}"
+                )
             }
             Self::DegenerateTriangle { triangle } => {
                 write!(f, "simplify: degenerate triangle {triangle}")
@@ -137,7 +142,9 @@ pub fn simplify_coplanar_regions(
 
     // Validate.
     if region_labels.len() != n {
-        return Err(SimplifyError::TriangleOutOfRange { index: region_labels.len() });
+        return Err(SimplifyError::TriangleOutOfRange {
+            index: region_labels.len(),
+        });
     }
     for (i, tri) in triangles.iter().enumerate() {
         if tri[0] == tri[1] || tri[1] == tri[2] || tri[2] == tri[0] {
@@ -145,7 +152,10 @@ pub fn simplify_coplanar_regions(
         }
         for &v in tri {
             if v as usize >= vertices.len() {
-                return Err(SimplifyError::VertexOutOfRange { triangle: i, vertex: v });
+                return Err(SimplifyError::VertexOutOfRange {
+                    triangle: i,
+                    vertex: v,
+                });
             }
         }
     }
@@ -435,7 +445,9 @@ mod tests {
         let triangles = vec![[0, 1, 2]];
         let labels = vec![0u32];
 
-        let result = simplify_coplanar_regions(&vertices, &triangles, &labels, &SimplifyOptions::default()).unwrap();
+        let result =
+            simplify_coplanar_regions(&vertices, &triangles, &labels, &SimplifyOptions::default())
+                .unwrap();
         assert_eq!(result.triangles.len(), 1);
         assert_eq!(result.merged_count, 0);
     }
@@ -452,7 +464,9 @@ mod tests {
         let triangles = vec![[0, 1, 2], [0, 2, 3]];
         let labels = vec![0u32, 0u32];
 
-        let result = simplify_coplanar_regions(&vertices, &triangles, &labels, &SimplifyOptions::default()).unwrap();
+        let result =
+            simplify_coplanar_regions(&vertices, &triangles, &labels, &SimplifyOptions::default())
+                .unwrap();
 
         // Should merge into fewer triangles (fan from vertex 0).
         // A square has 4 boundary vertices → 2 fan triangles.
@@ -471,7 +485,9 @@ mod tests {
         let triangles = vec![[0, 1, 2], [0, 2, 3]];
         let labels = vec![0u32, 1u32]; // Different labels.
 
-        let result = simplify_coplanar_regions(&vertices, &triangles, &labels, &SimplifyOptions::default()).unwrap();
+        let result =
+            simplify_coplanar_regions(&vertices, &triangles, &labels, &SimplifyOptions::default())
+                .unwrap();
 
         // Should NOT merge — different labels.
         assert_eq!(result.triangles.len(), 2);
@@ -490,7 +506,9 @@ mod tests {
         let triangles = vec![[0, 1, 2], [0, 1, 3]];
         let labels = vec![0u32, 0u32];
 
-        let result = simplify_coplanar_regions(&vertices, &triangles, &labels, &SimplifyOptions::default()).unwrap();
+        let result =
+            simplify_coplanar_regions(&vertices, &triangles, &labels, &SimplifyOptions::default())
+                .unwrap();
 
         // Should NOT merge — not coplanar.
         assert_eq!(result.triangles.len(), 2);
@@ -511,18 +529,28 @@ mod tests {
             p(2.0, 2.0, 0.0), // 8
         ];
         let triangles = vec![
-            [0, 1, 4], [0, 4, 3],
-            [1, 2, 5], [1, 5, 4],
-            [3, 4, 7], [3, 7, 6],
-            [4, 5, 8], [4, 8, 7],
+            [0, 1, 4],
+            [0, 4, 3],
+            [1, 2, 5],
+            [1, 5, 4],
+            [3, 4, 7],
+            [3, 7, 6],
+            [4, 5, 8],
+            [4, 8, 7],
         ];
         let labels = vec![0u32; 8];
 
-        let result = simplify_coplanar_regions(&vertices, &triangles, &labels, &SimplifyOptions::default()).unwrap();
+        let result =
+            simplify_coplanar_regions(&vertices, &triangles, &labels, &SimplifyOptions::default())
+                .unwrap();
 
         // All 8 triangles are coplanar with the same label → 1 region.
         // Boundary has 8 vertices (the perimeter) → 6 fan triangles.
-        assert!(result.triangles.len() < 8, "simplification should reduce triangle count, got {}", result.triangles.len());
+        assert!(
+            result.triangles.len() < 8,
+            "simplification should reduce triangle count, got {}",
+            result.triangles.len()
+        );
         assert!(result.merged_count > 0);
     }
 
@@ -537,8 +565,12 @@ mod tests {
         let triangles = vec![[0, 1, 2], [0, 2, 3]];
         let labels = vec![0u32, 0u32];
 
-        let r1 = simplify_coplanar_regions(&vertices, &triangles, &labels, &SimplifyOptions::default()).unwrap();
-        let r2 = simplify_coplanar_regions(&vertices, &triangles, &labels, &SimplifyOptions::default()).unwrap();
+        let r1 =
+            simplify_coplanar_regions(&vertices, &triangles, &labels, &SimplifyOptions::default())
+                .unwrap();
+        let r2 =
+            simplify_coplanar_regions(&vertices, &triangles, &labels, &SimplifyOptions::default())
+                .unwrap();
 
         assert_eq!(r1.triangles, r2.triangles);
         assert_eq!(r1.region_labels, r2.region_labels);
@@ -546,11 +578,7 @@ mod tests {
 
     #[test]
     fn snap_round_no_change() {
-        let vertices = vec![
-            p(0.0, 0.0, 0.0),
-            p(1.0, 0.0, 0.0),
-            p(0.0, 1.0, 0.0),
-        ];
+        let vertices = vec![p(0.0, 0.0, 0.0), p(1.0, 0.0, 0.0), p(0.0, 1.0, 0.0)];
         let triangles = vec![[0, 1, 2]];
 
         let (snapped, changed) = snap_round_3d(&vertices, &triangles, 0.001).unwrap();
@@ -560,11 +588,7 @@ mod tests {
 
     #[test]
     fn snap_round_snaps_to_grid() {
-        let vertices = vec![
-            p(0.0001, 0.0, 0.0),
-            p(1.0001, 0.0, 0.0),
-            p(0.0, 1.0, 0.0),
-        ];
+        let vertices = vec![p(0.0001, 0.0, 0.0), p(1.0001, 0.0, 0.0), p(0.0, 1.0, 0.0)];
         let triangles = vec![[0, 1, 2]];
 
         let (snapped, changed) = snap_round_3d(&vertices, &triangles, 0.001).unwrap();
@@ -602,11 +626,7 @@ mod tests {
     #[test]
     fn snap_round_rejects_degenerate() {
         // Three nearly-collinear points that become degenerate after rounding.
-        let vertices = vec![
-            p(0.0, 0.0, 0.0),
-            p(0.0001, 0.0, 0.0),
-            p(0.0002, 0.0, 0.0),
-        ];
+        let vertices = vec![p(0.0, 0.0, 0.0), p(0.0001, 0.0, 0.0), p(0.0002, 0.0, 0.0)];
         let triangles = vec![[0, 1, 2]];
 
         // Large epsilon will snap all to the same point.
@@ -616,11 +636,7 @@ mod tests {
 
     #[test]
     fn snap_round_determinism() {
-        let vertices = vec![
-            p(0.0001, 0.0, 0.0),
-            p(1.0001, 0.0, 0.0),
-            p(0.0, 1.0, 0.0),
-        ];
+        let vertices = vec![p(0.0001, 0.0, 0.0), p(1.0001, 0.0, 0.0), p(0.0, 1.0, 0.0)];
         let triangles = vec![[0, 1, 2]];
 
         let (s1, c1) = snap_round_3d(&vertices, &triangles, 0.001).unwrap();

@@ -44,11 +44,21 @@ pub struct ExactLine2 {
 
 impl ExactLine2 {
     pub fn new(slope: f64, intercept: f64) -> Self {
-        Self { slope, intercept, is_vertical: false, x_const: 0.0 }
+        Self {
+            slope,
+            intercept,
+            is_vertical: false,
+            x_const: 0.0,
+        }
     }
 
     pub fn vertical(x: f64) -> Self {
-        Self { slope: 0.0, intercept: 0.0, is_vertical: true, x_const: x }
+        Self {
+            slope: 0.0,
+            intercept: 0.0,
+            is_vertical: true,
+            x_const: x,
+        }
     }
 
     /// Evaluate y at x (non-vertical only).
@@ -59,9 +69,15 @@ impl ExactLine2 {
     /// Get two points on the line (for intersection construction).
     pub fn two_points(&self) -> (Point2, Point2) {
         if self.is_vertical {
-            (Point2::new(self.x_const, 0.0), Point2::new(self.x_const, 1.0))
+            (
+                Point2::new(self.x_const, 0.0),
+                Point2::new(self.x_const, 1.0),
+            )
         } else {
-            (Point2::new(0.0, self.intercept), Point2::new(1.0, self.slope + self.intercept))
+            (
+                Point2::new(0.0, self.intercept),
+                Point2::new(1.0, self.slope + self.intercept),
+            )
         }
     }
 }
@@ -155,7 +171,9 @@ fn exact_line_intersection(l1: &ExactLine2, l2: &ExactLine2) -> Option<ExactPoin
 /// - V = n(n-1)/2 vertices
 /// - E = n² edges
 /// - F = n(n-1)/2 + 1 faces
-pub fn build_exact_arrangement(lines: Vec<ExactLine2>) -> Result<ExactArrangement, ArrangementError> {
+pub fn build_exact_arrangement(
+    lines: Vec<ExactLine2>,
+) -> Result<ExactArrangement, ArrangementError> {
     let n = lines.len();
     if n < 2 {
         return Err(ArrangementError::TooFewLines);
@@ -188,7 +206,10 @@ pub fn build_exact_arrangement(lines: Vec<ExactLine2>) -> Result<ExactArrangemen
         let pb = b.point.to_point2();
         pa.x.partial_cmp(&pb.x)
             .unwrap_or(core::cmp::Ordering::Equal)
-            .then(pa.y.partial_cmp(&pb.y).unwrap_or(core::cmp::Ordering::Equal))
+            .then(
+                pa.y.partial_cmp(&pb.y)
+                    .unwrap_or(core::cmp::Ordering::Equal),
+            )
     });
 
     // Build edges: for each line, find all vertices on it, sort them
@@ -220,9 +241,11 @@ pub fn build_exact_arrangement(lines: Vec<ExactLine2>) -> Result<ExactArrangemen
             let pa = vertices[a].point.to_point2();
             let pb = vertices[b].point.to_point2();
             if line.is_vertical {
-                pa.y.partial_cmp(&pb.y).unwrap_or(core::cmp::Ordering::Equal)
+                pa.y.partial_cmp(&pb.y)
+                    .unwrap_or(core::cmp::Ordering::Equal)
             } else {
-                pa.x.partial_cmp(&pb.x).unwrap_or(core::cmp::Ordering::Equal)
+                pa.x.partial_cmp(&pb.x)
+                    .unwrap_or(core::cmp::Ordering::Equal)
             }
         });
 
@@ -303,9 +326,11 @@ pub fn zone_traversal(arr: &ExactArrangement, query: ExactLine2) -> ZoneTraversa
         let pa = a.1.to_point2();
         let pb = b.1.to_point2();
         if query.is_vertical {
-            pa.y.partial_cmp(&pb.y).unwrap_or(core::cmp::Ordering::Equal)
+            pa.y.partial_cmp(&pb.y)
+                .unwrap_or(core::cmp::Ordering::Equal)
         } else {
-            pa.x.partial_cmp(&pb.x).unwrap_or(core::cmp::Ordering::Equal)
+            pa.x.partial_cmp(&pb.x)
+                .unwrap_or(core::cmp::Ordering::Equal)
         }
     });
 
@@ -342,9 +367,7 @@ pub fn verify_general_position_counts(arr: &ExactArrangement) -> bool {
     let expected_e = n * n;
     let expected_f = n * (n + 1) / 2 + 1;
 
-    arr.vertices.len() == expected_v
-        && arr.edges.len() == expected_e
-        && arr.num_faces == expected_f
+    arr.vertices.len() == expected_v && arr.edges.len() == expected_e && arr.num_faces == expected_f
 }
 
 /// Compare exact arrangement vertex coordinates against f64 computation.
@@ -387,7 +410,7 @@ mod tests {
 
     #[test]
     fn two_lines_intersection() {
-        let l1 = ExactLine2::new(1.0, 0.0);  // y = x
+        let l1 = ExactLine2::new(1.0, 0.0); // y = x
         let l2 = ExactLine2::new(-1.0, 2.0); // y = -x + 2
         let arr = build_exact_arrangement(vec![l1, l2]).unwrap();
 
@@ -429,8 +452,13 @@ mod tests {
             ExactLine2::new(2.0, -1.0),
         ];
         let arr = build_exact_arrangement(lines).unwrap();
-        assert!(verify_general_position_counts(&arr),
-            "V={}, E={}, F={}", arr.vertices.len(), arr.edges.len(), arr.num_faces);
+        assert!(
+            verify_general_position_counts(&arr),
+            "V={}, E={}, F={}",
+            arr.vertices.len(),
+            arr.edges.len(),
+            arr.num_faces
+        );
     }
 
     #[test]
@@ -479,10 +507,13 @@ mod tests {
         let zone = zone_traversal(&arr, query);
 
         // Should cross l1 at (0.5, 0.5) and l2 at (1.5, 0.5).
-        assert_eq!(zone.crossed_lines.len(), 2,
-            "zone crossed {} lines", zone.crossed_lines.len());
-        assert_eq!(zone.num_faces, 3,
-            "zone has {} faces", zone.num_faces);
+        assert_eq!(
+            zone.crossed_lines.len(),
+            2,
+            "zone crossed {} lines",
+            zone.crossed_lines.len()
+        );
+        assert_eq!(zone.num_faces, 3, "zone has {} faces", zone.num_faces);
     }
 
     #[test]
@@ -495,8 +526,12 @@ mod tests {
         let query = ExactLine2::vertical(0.5);
         let zone = zone_traversal(&arr, query);
         // x=0.5 crosses y=x at (0.5,0.5), y=1 at (0.5,1), y=-x+2 at (0.5,1.5).
-        assert_eq!(zone.crossed_lines.len(), 3,
-            "vertical zone crossed {} lines", zone.crossed_lines.len());
+        assert_eq!(
+            zone.crossed_lines.len(),
+            3,
+            "vertical zone crossed {} lines",
+            zone.crossed_lines.len()
+        );
     }
 
     #[test]
@@ -509,7 +544,9 @@ mod tests {
 
     #[test]
     fn error_display() {
-        assert!(ArrangementError::TooFewLines.to_string().contains("at least 2"));
+        assert!(ArrangementError::TooFewLines
+            .to_string()
+            .contains("at least 2"));
         assert!(ArrangementError::ParallelLines { i: 0, j: 1 }
             .to_string()
             .contains("parallel"));

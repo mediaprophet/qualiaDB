@@ -384,9 +384,7 @@ pub fn classify_and_construct<K: GeometryKernel + ConstructionKernel>(
     match result.class {
         SegmentIntersectionClass::Disjoint
         | SegmentIntersectionClass::CollinearDisjoint
-        | SegmentIntersectionClass::CollinearOverlap => {
-            Ok((result.class, None))
-        }
+        | SegmentIntersectionClass::CollinearOverlap => Ok((result.class, None)),
         SegmentIntersectionClass::Proper
         | SegmentIntersectionClass::Endpoint
         | SegmentIntersectionClass::TJunction(_)
@@ -408,12 +406,7 @@ pub fn classify_and_construct<K: GeometryKernel + ConstructionKernel>(
 /// Returns the intersection point if the line crosses the segment, or `None`
 /// if the line is parallel to the segment or the segment doesn't span the
 /// line.
-pub fn line_segment_intersection_2(
-    a: Point2,
-    b: Point2,
-    c: Point2,
-    d: Point2,
-) -> Option<Point2> {
+pub fn line_segment_intersection_2(a: Point2, b: Point2, c: Point2, d: Point2) -> Option<Point2> {
     let o1 = orientation_2(a, b, c);
     let o2 = orientation_2(a, b, d);
 
@@ -554,7 +547,10 @@ mod tests {
         let c = Point2::new(1.0, 0.0);
         let d = Point2::new(1.0, 1.0);
         let result = classify_segment_intersection_2(a, b, c, d);
-        assert_eq!(result.class, SegmentIntersectionClass::TJunction(TJunctionSide::AbOnCd));
+        assert_eq!(
+            result.class,
+            SegmentIntersectionClass::TJunction(TJunctionSide::AbOnCd)
+        );
         assert_eq!(result.point, Some(c));
     }
 
@@ -565,7 +561,10 @@ mod tests {
         let c = Point2::new(1.0, 1.0);
         let d = Point2::new(1.0, 0.0);
         let result = classify_segment_intersection_2(a, b, c, d);
-        assert_eq!(result.class, SegmentIntersectionClass::TJunction(TJunctionSide::AbOnCd));
+        assert_eq!(
+            result.class,
+            SegmentIntersectionClass::TJunction(TJunctionSide::AbOnCd)
+        );
         assert_eq!(result.point, Some(d));
     }
 
@@ -576,7 +575,10 @@ mod tests {
         let c = Point2::new(0.0, 0.0);
         let d = Point2::new(2.0, 0.0);
         let result = classify_segment_intersection_2(a, b, c, d);
-        assert_eq!(result.class, SegmentIntersectionClass::TJunction(TJunctionSide::CdOnAb));
+        assert_eq!(
+            result.class,
+            SegmentIntersectionClass::TJunction(TJunctionSide::CdOnAb)
+        );
         assert_eq!(result.point, Some(a));
     }
 
@@ -587,7 +589,10 @@ mod tests {
         let c = Point2::new(0.0, 0.0);
         let d = Point2::new(2.0, 0.0);
         let result = classify_segment_intersection_2(a, b, c, d);
-        assert_eq!(result.class, SegmentIntersectionClass::TJunction(TJunctionSide::CdOnAb));
+        assert_eq!(
+            result.class,
+            SegmentIntersectionClass::TJunction(TJunctionSide::CdOnAb)
+        );
         assert_eq!(result.point, Some(b));
     }
 
@@ -766,11 +771,19 @@ mod tests {
         // Re-predicate: the point (1,1) should be collinear with (0,0) and (2,2).
         let pt_f64 = Point2::new(x_val, y_val);
         let orient = orientation_2(a, b, pt_f64);
-        assert_eq!(orient, Orientation::Collinear, "exact point should be collinear with ab");
+        assert_eq!(
+            orient,
+            Orientation::Collinear,
+            "exact point should be collinear with ab"
+        );
 
         // And collinear with (0,2) and (2,0).
         let orient2 = orientation_2(c, d, pt_f64);
-        assert_eq!(orient2, Orientation::Collinear, "exact point should be collinear with cd");
+        assert_eq!(
+            orient2,
+            Orientation::Collinear,
+            "exact point should be collinear with cd"
+        );
     }
 
     // ── Line and ray intersection ────────────────────────────────────────
@@ -829,7 +842,10 @@ mod tests {
         let d = Point2::new(1.0, 0.0);
         // The intersection at (0.5, 0.5) is behind the ray origin (1,1).
         let pt = ray_segment_intersection_2(origin, dir, c, d);
-        assert!(pt.is_none(), "intersection behind ray origin should be None");
+        assert!(
+            pt.is_none(),
+            "intersection behind ray origin should be None"
+        );
     }
 
     #[test]
@@ -860,7 +876,10 @@ mod tests {
         let d = Point2::new(1.0, 1.0);
         let result = classify_segment_intersection_2(a, b, c, d);
         // (0.5, 0.5) lies on segment cd → T-junction (AbOnCd).
-        assert_eq!(result.class, SegmentIntersectionClass::TJunction(TJunctionSide::AbOnCd));
+        assert_eq!(
+            result.class,
+            SegmentIntersectionClass::TJunction(TJunctionSide::AbOnCd)
+        );
     }
 
     #[test]

@@ -158,12 +158,7 @@ impl LAPerformanceMonitor {
 
     /// Record a matrix access, tracking access count, last access time,
     /// and cache hit rate for each matrix.
-    pub fn record_matrix_access(
-        &mut self,
-        matrix_id: &str,
-        operation: &str,
-        cache_hit: bool,
-    ) {
+    pub fn record_matrix_access(&mut self, matrix_id: &str, operation: &str, cache_hit: bool) {
         let now = Self::current_time();
         let metrics = self
             .matrix_metrics
@@ -258,7 +253,10 @@ impl LAPerformanceMonitor {
             sys.memory_utilization
         ));
 
-        lines.push(format!("\n--- Operation Metrics ({} types) ---", self.operation_metrics.len()));
+        lines.push(format!(
+            "\n--- Operation Metrics ({} types) ---",
+            self.operation_metrics.len()
+        ));
         for (name, m) in &self.operation_metrics {
             lines.push(format!(
                 "  {}: count={}, last_time={}ms, memory={}bytes, size={}x{}",
@@ -266,11 +264,17 @@ impl LAPerformanceMonitor {
             ));
         }
 
-        lines.push(format!("\n--- Matrix Metrics ({} matrices) ---", self.matrix_metrics.len()));
+        lines.push(format!(
+            "\n--- Matrix Metrics ({} matrices) ---",
+            self.matrix_metrics.len()
+        ));
         for (id, m) in &self.matrix_metrics {
             lines.push(format!(
                 "  {}: accesses={}, cache_hit_rate={:.2}%, last_op={}",
-                id, m.access_count, m.cache_hit_rate * 100.0, m.last_operation
+                id,
+                m.access_count,
+                m.cache_hit_rate * 100.0,
+                m.last_operation
             ));
         }
 

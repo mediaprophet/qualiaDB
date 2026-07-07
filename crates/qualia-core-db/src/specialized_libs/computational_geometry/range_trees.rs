@@ -84,7 +84,10 @@ impl IntervalTree {
     pub fn build(intervals: &[Interval]) -> Self {
         let count = intervals.len();
         if intervals.is_empty() {
-            return Self { root: None, count: 0 };
+            return Self {
+                root: None,
+                count: 0,
+            };
         }
         let root = build_interval_node(intervals);
         Self { root, count }
@@ -334,7 +337,10 @@ impl RangeTree2D {
     pub fn build(points: &[(Point2, u32)]) -> Self {
         let count = points.len();
         if points.is_empty() {
-            return Self { root: None, count: 0 };
+            return Self {
+                root: None,
+                count: 0,
+            };
         }
         let root = build_range2d_node(points);
         Self { root, count }
@@ -376,7 +382,11 @@ fn build_range2d_node(points: &[(Point2, u32)]) -> Option<Box<Range2DNode>> {
     }
     // Sort by x and find median.
     let mut sorted: Vec<(Point2, u32)> = points.to_vec();
-    sorted.sort_by(|a, b| a.0.x.partial_cmp(&b.0.x).unwrap_or(std::cmp::Ordering::Equal));
+    sorted.sort_by(|a, b| {
+        a.0.x
+            .partial_cmp(&b.0.x)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     let mid = sorted.len() / 2;
     let min_x = sorted[0].0.x;
     let max_x = sorted[sorted.len() - 1].0.x;
@@ -455,7 +465,11 @@ fn range2d_count(node: &Range2DNode, x_lo: f64, x_hi: f64, y_lo: f64, y_hi: f64)
         return count_y_range(&node.y_sorted, y_lo, y_hi);
     }
     if node.left.is_none() && node.right.is_none() {
-        return node.y_sorted.iter().filter(|(x, y, _)| *x >= x_lo && *x <= x_hi && *y >= y_lo && *y <= y_hi).count();
+        return node
+            .y_sorted
+            .iter()
+            .filter(|(x, y, _)| *x >= x_lo && *x <= x_hi && *y >= y_lo && *y <= y_hi)
+            .count();
     }
     let mut count = 0;
     if let Some(ref left) = node.left {
@@ -467,7 +481,13 @@ fn range2d_count(node: &Range2DNode, x_lo: f64, x_hi: f64, y_lo: f64, y_hi: f64)
     count
 }
 
-fn report_y_range(y_sorted: &[(f64, f64, u32)], y_lo: f64, y_hi: f64, out: &mut [u32], written: &mut usize) {
+fn report_y_range(
+    y_sorted: &[(f64, f64, u32)],
+    y_lo: f64,
+    y_hi: f64,
+    out: &mut [u32],
+    written: &mut usize,
+) {
     let start = y_sorted.partition_point(|(_, y, _)| *y < y_lo);
     let end = y_sorted.partition_point(|(_, y, _)| *y <= y_hi);
     for i in start..end {
@@ -513,7 +533,10 @@ impl PrioritySearchTree {
     pub fn build(points: &[(Point2, u32)]) -> Self {
         let count = points.len();
         if points.is_empty() {
-            return Self { root: None, count: 0 };
+            return Self {
+                root: None,
+                count: 0,
+            };
         }
         let root = build_pst_node(points);
         Self { root, count }
@@ -552,7 +575,11 @@ fn build_pst_node(points: &[(Point2, u32)]) -> Option<Box<PSTNode>> {
     let min_idx = points
         .iter()
         .enumerate()
-        .min_by(|(_, a), (_, b)| a.0.y.partial_cmp(&b.0.y).unwrap_or(std::cmp::Ordering::Equal))
+        .min_by(|(_, a), (_, b)| {
+            a.0.y
+                .partial_cmp(&b.0.y)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
         .map(|(i, _)| i)
         .unwrap();
     let (min_point, min_index) = points[min_idx];
@@ -599,7 +626,14 @@ fn build_pst_node(points: &[(Point2, u32)]) -> Option<Box<PSTNode>> {
     }))
 }
 
-fn pst_query(node: &PSTNode, x_lo: f64, x_hi: f64, y_max: f64, out: &mut [u32], written: &mut usize) {
+fn pst_query(
+    node: &PSTNode,
+    x_lo: f64,
+    x_hi: f64,
+    y_max: f64,
+    out: &mut [u32],
+    written: &mut usize,
+) {
     // If this node's point has y > y_max, no point in the subtree can match
     // (this node has the min y).
     if node.point.y > y_max {
@@ -822,7 +856,13 @@ pub fn brute_range_1d(data: &[(f64, u32)], lo: f64, hi: f64) -> Vec<u32> {
 }
 
 /// Brute-force 2-D range query: linear scan.
-pub fn brute_range_2d(points: &[(Point2, u32)], x_lo: f64, x_hi: f64, y_lo: f64, y_hi: f64) -> Vec<u32> {
+pub fn brute_range_2d(
+    points: &[(Point2, u32)],
+    x_lo: f64,
+    x_hi: f64,
+    y_lo: f64,
+    y_hi: f64,
+) -> Vec<u32> {
     points
         .iter()
         .filter(|(p, _)| p.x >= x_lo && p.x <= x_hi && p.y >= y_lo && p.y <= y_hi)
@@ -923,7 +963,10 @@ mod tests {
         // Undersized buffer: only writes 2, but returns 3.
         let mut buf = [0u32; 2];
         let written = tree.stab(5.0, &mut buf);
-        assert_eq!(written, 3, "should report full count even if buffer is small");
+        assert_eq!(
+            written, 3,
+            "should report full count even if buffer is small"
+        );
     }
 
     // ── 1-D range tree ──
@@ -931,7 +974,13 @@ mod tests {
     #[test]
     fn range_1d_matches_brute_force() {
         let data: Vec<(f64, u32)> = vec![
-            (3.0, 0), (1.0, 1), (5.0, 2), (2.0, 3), (4.0, 4), (7.0, 5), (6.0, 6),
+            (3.0, 0),
+            (1.0, 1),
+            (5.0, 2),
+            (2.0, 3),
+            (4.0, 4),
+            (7.0, 5),
+            (6.0, 6),
         ];
         let tree = RangeTree1D::build(&data);
         for (lo, hi) in [(0.0, 10.0), (2.0, 5.0), (3.0, 3.0), (6.0, 8.0), (0.0, 0.5)] {
@@ -950,9 +999,14 @@ mod tests {
     #[test]
     fn range_2d_matches_brute_force() {
         let points: Vec<(Point2, u32)> = vec![
-            pt(1.0, 1.0, 0), pt(3.0, 2.0, 1), pt(2.0, 5.0, 2),
-            pt(5.0, 3.0, 3), pt(4.0, 4.0, 4), pt(6.0, 1.0, 5),
-            pt(3.0, 6.0, 6), pt(7.0, 7.0, 7),
+            pt(1.0, 1.0, 0),
+            pt(3.0, 2.0, 1),
+            pt(2.0, 5.0, 2),
+            pt(5.0, 3.0, 3),
+            pt(4.0, 4.0, 4),
+            pt(6.0, 1.0, 5),
+            pt(3.0, 6.0, 6),
+            pt(7.0, 7.0, 7),
         ];
         let tree = RangeTree2D::build(&points);
         for (x_lo, x_hi, y_lo, y_hi) in [
@@ -964,11 +1018,18 @@ mod tests {
         ] {
             let expected = sort_vec(brute_range_2d(&points, x_lo, x_hi, y_lo, y_hi));
             let count = tree.range_count(x_lo, x_hi, y_lo, y_hi);
-            assert_eq!(count, expected.len(), "count mismatch for [{x_lo},{x_hi}]×[{y_lo},{y_hi}]");
+            assert_eq!(
+                count,
+                expected.len(),
+                "count mismatch for [{x_lo},{x_hi}]×[{y_lo},{y_hi}]"
+            );
             let mut buf = vec![u32::MAX; count];
             tree.range_query(x_lo, x_hi, y_lo, y_hi, &mut buf);
             sort_mut(&mut buf);
-            assert_eq!(buf, expected, "range mismatch for [{x_lo},{x_hi}]×[{y_lo},{y_hi}]");
+            assert_eq!(
+                buf, expected,
+                "range mismatch for [{x_lo},{x_hi}]×[{y_lo},{y_hi}]"
+            );
         }
     }
 
@@ -977,8 +1038,12 @@ mod tests {
     #[test]
     fn pst_matches_brute_force() {
         let points: Vec<(Point2, u32)> = vec![
-            pt(1.0, 5.0, 0), pt(3.0, 2.0, 1), pt(2.0, 7.0, 2),
-            pt(5.0, 1.0, 3), pt(4.0, 3.0, 4), pt(6.0, 6.0, 5),
+            pt(1.0, 5.0, 0),
+            pt(3.0, 2.0, 1),
+            pt(2.0, 7.0, 2),
+            pt(5.0, 1.0, 3),
+            pt(4.0, 3.0, 4),
+            pt(6.0, 6.0, 5),
         ];
         let tree = PrioritySearchTree::build(&points);
         for (x_lo, x_hi, y_max) in [
@@ -990,11 +1055,18 @@ mod tests {
         ] {
             let expected = sort_vec(brute_pst(&points, x_lo, x_hi, y_max));
             let count = tree.query_count(x_lo, x_hi, y_max);
-            assert_eq!(count, expected.len(), "count mismatch for x∈[{x_lo},{x_hi}] y≤{y_max}");
+            assert_eq!(
+                count,
+                expected.len(),
+                "count mismatch for x∈[{x_lo},{x_hi}] y≤{y_max}"
+            );
             let mut buf = vec![u32::MAX; count];
             tree.query(x_lo, x_hi, y_max, &mut buf);
             sort_mut(&mut buf);
-            assert_eq!(buf, expected, "pst mismatch for x∈[{x_lo},{x_hi}] y≤{y_max}");
+            assert_eq!(
+                buf, expected,
+                "pst mismatch for x∈[{x_lo},{x_hi}] y≤{y_max}"
+            );
         }
     }
 

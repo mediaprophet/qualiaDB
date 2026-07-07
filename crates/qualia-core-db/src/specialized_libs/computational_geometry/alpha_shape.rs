@@ -53,7 +53,10 @@ impl core::fmt::Display for AlphaShapeError {
             Self::TooFewPoints { got } => write!(f, "alpha_shape: too few points: {got}"),
             Self::DelaunayFailed(e) => write!(f, "alpha_shape: delaunay failed: {e:?}"),
             Self::BufferTooSmall { needed, have } => {
-                write!(f, "alpha_shape: buffer too small, need {needed}, have {have}")
+                write!(
+                    f,
+                    "alpha_shape: buffer too small, need {needed}, have {have}"
+                )
             }
             Self::NonFiniteAlpha => write!(f, "alpha_shape: alpha is not finite"),
         }
@@ -225,8 +228,12 @@ pub fn alpha_shape_2d(
                 continue;
             }
             let [ia, ib, ic] = out_triangles[t];
-            let has_edge = (ia == ei && ib == ej) || (ia == ei && ic == ej) || (ib == ei && ic == ej)
-                || (ia == ej && ib == ei) || (ia == ej && ic == ei) || (ib == ej && ic == ei);
+            let has_edge = (ia == ei && ib == ej)
+                || (ia == ei && ic == ej)
+                || (ib == ei && ic == ej)
+                || (ia == ej && ib == ei)
+                || (ia == ej && ic == ei)
+                || (ib == ej && ic == ei);
             if has_edge {
                 alpha_tri_count += 1;
             }
@@ -277,9 +284,7 @@ pub fn alpha_shape_2d(
             for &(u, v) in &[(ia, ib), (ib, ic), (ia, ic)] {
                 let (a, b) = if u < v { (u, v) } else { (v, u) };
                 // Binary search for this edge.
-                let found = out_edges[..edge_count].binary_search_by(|e| {
-                    (e.i, e.j).cmp(&(a, b))
-                });
+                let found = out_edges[..edge_count].binary_search_by(|e| (e.i, e.j).cmp(&(a, b)));
                 if let Ok(idx) = found {
                     if out_edges[idx].class == 1 || out_edges[idx].class == 2 {
                         out_tri_classes[t] = TriangleClass::Regular;
@@ -428,7 +433,11 @@ pub fn alpha_shape_3d(
 /// Matches delaunay_2's internal formula: 2n + 1 (upper bound including super-triangle).
 #[inline]
 pub fn max_triangles(n: usize) -> usize {
-    if n < 2 { 1 } else { 2 * n + 1 }
+    if n < 2 {
+        1
+    } else {
+        2 * n + 1
+    }
 }
 
 /// Circumsphere radius squared for a tetrahedron (f64 approximation).
@@ -471,8 +480,7 @@ fn circumsphere_radius_sq(a: Point3, b: Point3, c: Point3, d: Point3) -> f64 {
     let m21 = 2.0 * ad.y;
     let m22 = 2.0 * ad.z;
 
-    let det_m = m00 * (m11 * m22 - m12 * m21)
-        - m01 * (m10 * m22 - m12 * m20)
+    let det_m = m00 * (m11 * m22 - m12 * m21) - m01 * (m10 * m22 - m12 * m20)
         + m02 * (m10 * m21 - m11 * m20);
 
     if det_m.abs() < 1e-20 {
@@ -480,9 +488,15 @@ fn circumsphere_radius_sq(a: Point3, b: Point3, c: Point3, d: Point3) -> f64 {
     }
 
     let inv_det_m = 1.0 / det_m;
-    let x = (rhs[0] * (m11 * m22 - m12 * m21) - m01 * (rhs[1] * m22 - m12 * rhs[2]) + m02 * (rhs[1] * m21 - m11 * rhs[2])) * inv_det_m;
-    let y = (m00 * (rhs[1] * m22 - m12 * rhs[2]) - rhs[0] * (m10 * m22 - m12 * m20) + m02 * (m10 * rhs[2] - rhs[1] * m20)) * inv_det_m;
-    let z = (m00 * (m11 * rhs[2] - rhs[1] * m21) - m01 * (m10 * rhs[2] - rhs[1] * m20) + rhs[0] * (m10 * m21 - m11 * m20)) * inv_det_m;
+    let x = (rhs[0] * (m11 * m22 - m12 * m21) - m01 * (rhs[1] * m22 - m12 * rhs[2])
+        + m02 * (rhs[1] * m21 - m11 * rhs[2]))
+        * inv_det_m;
+    let y = (m00 * (rhs[1] * m22 - m12 * rhs[2]) - rhs[0] * (m10 * m22 - m12 * m20)
+        + m02 * (m10 * rhs[2] - rhs[1] * m20))
+        * inv_det_m;
+    let z = (m00 * (m11 * rhs[2] - rhs[1] * m21) - m01 * (m10 * rhs[2] - rhs[1] * m20)
+        + rhs[0] * (m10 * m21 - m11 * m20))
+        * inv_det_m;
 
     // R² = |x|² (since a is origin, circumcenter = a + x, R = |x|)
     x * x + y * y + z * z
@@ -560,11 +574,20 @@ mod tests {
 
         // Very large alpha → all triangles are interior → convex hull.
         let (tc, _ec, report) = alpha_shape_2d(
-            &pts, 100.0, &mut scratch, &mut tris, &mut tri_classes, &mut edges,
-        ).unwrap();
+            &pts,
+            100.0,
+            &mut scratch,
+            &mut tris,
+            &mut tri_classes,
+            &mut edges,
+        )
+        .unwrap();
 
         assert!(tc > 0, "should have triangles");
-        assert_eq!(report.exterior_triangles, 0, "large alpha → no exterior triangles");
+        assert_eq!(
+            report.exterior_triangles, 0,
+            "large alpha → no exterior triangles"
+        );
     }
 
     #[test]
@@ -579,22 +602,33 @@ mod tests {
 
         // Very small alpha → no triangles are interior.
         let (tc, _ec, report) = alpha_shape_2d(
-            &pts, 0.01, &mut scratch, &mut tris, &mut tri_classes, &mut edges,
-        ).unwrap();
+            &pts,
+            0.01,
+            &mut scratch,
+            &mut tris,
+            &mut tri_classes,
+            &mut edges,
+        )
+        .unwrap();
 
         assert!(tc > 0, "Delaunay should produce triangles");
-        assert_eq!(report.interior_triangles + report.regular_triangles, 0,
-            "small alpha → no alpha triangles");
+        assert_eq!(
+            report.interior_triangles + report.regular_triangles,
+            0,
+            "small alpha → no alpha triangles"
+        );
     }
 
     #[test]
     fn alpha_shape_determinism() {
         // Use jittered circle points to avoid cocircular degeneracy.
-        let pts: Vec<Point2> = (0..20).map(|i| {
-            let angle = 2.0 * core::f64::consts::PI * i as f64 / 20.0;
-            let r = 1.0 + (i as f64 * 0.0001).sin() * 0.01;
-            Point2::new(r * angle.cos(), r * angle.sin())
-        }).collect();
+        let pts: Vec<Point2> = (0..20)
+            .map(|i| {
+                let angle = 2.0 * core::f64::consts::PI * i as f64 / 20.0;
+                let r = 1.0 + (i as f64 * 0.0001).sin() * 0.01;
+                Point2::new(r * angle.cos(), r * angle.sin())
+            })
+            .collect();
         let n = pts.len();
         let max_tris = max_triangles(n);
 
@@ -620,11 +654,13 @@ mod tests {
     #[test]
     fn alpha_shape_circle_captures_boundary() {
         // Use jittered circle points to avoid cocircular degeneracy.
-        let pts: Vec<Point2> = (0..30).map(|i| {
-            let angle = 2.0 * core::f64::consts::PI * i as f64 / 30.0;
-            let r = 1.0 + (i as f64 * 0.0001).sin() * 0.01; // small jitter
-            Point2::new(r * angle.cos(), r * angle.sin())
-        }).collect();
+        let pts: Vec<Point2> = (0..30)
+            .map(|i| {
+                let angle = 2.0 * core::f64::consts::PI * i as f64 / 30.0;
+                let r = 1.0 + (i as f64 * 0.0001).sin() * 0.01; // small jitter
+                Point2::new(r * angle.cos(), r * angle.sin())
+            })
+            .collect();
         let n = pts.len();
         let max_tris = max_triangles(n);
         let mut scratch = vec![0u32; n];
@@ -634,11 +670,20 @@ mod tests {
 
         // Alpha slightly larger than the circumradius of boundary triangles.
         let (_tc, ec, report) = alpha_shape_2d(
-            &pts, 1.5, &mut scratch, &mut tris, &mut tri_classes, &mut edges,
-        ).unwrap();
+            &pts,
+            1.5,
+            &mut scratch,
+            &mut tris,
+            &mut tri_classes,
+            &mut edges,
+        )
+        .unwrap();
 
         // Should have some boundary edges forming the circle boundary.
-        assert!(report.boundary_edges > 0, "circle should have boundary edges");
+        assert!(
+            report.boundary_edges > 0,
+            "circle should have boundary edges"
+        );
         assert!(ec > 0, "should have alpha-shape edges");
     }
 
@@ -650,7 +695,14 @@ mod tests {
         let mut tri_classes = vec![TriangleClass::Exterior; 1];
         let mut edges = vec![AlphaEdge::default(); 3];
         assert!(matches!(
-            alpha_shape_2d(&pts, 1.0, &mut scratch, &mut tris, &mut tri_classes, &mut edges),
+            alpha_shape_2d(
+                &pts,
+                1.0,
+                &mut scratch,
+                &mut tris,
+                &mut tri_classes,
+                &mut edges
+            ),
             Err(AlphaShapeError::TooFewPoints { .. })
         ));
     }
@@ -665,7 +717,14 @@ mod tests {
         let mut tri_classes = vec![TriangleClass::Exterior; max_tris];
         let mut edges = vec![AlphaEdge::default(); max_tris * 3];
         assert!(matches!(
-            alpha_shape_2d(&pts, f64::NAN, &mut scratch, &mut tris, &mut tri_classes, &mut edges),
+            alpha_shape_2d(
+                &pts,
+                f64::NAN,
+                &mut scratch,
+                &mut tris,
+                &mut tri_classes,
+                &mut edges
+            ),
             Err(AlphaShapeError::NonFiniteAlpha)
         ));
     }
@@ -688,7 +747,10 @@ mod tests {
         // Large alpha → tetrahedron is interior.
         let (tc, bc) = alpha_shape_3d(&pts, 10.0, &tetras, &mut classes, &mut boundary).unwrap();
         assert_eq!(tc, 1);
-        assert!(classes[0], "tetrahedron should be interior with large alpha");
+        assert!(
+            classes[0],
+            "tetrahedron should be interior with large alpha"
+        );
         assert_eq!(bc, 4, "single tetrahedron has 4 boundary faces");
     }
 
@@ -706,7 +768,10 @@ mod tests {
 
         let (tc, bc) = alpha_shape_3d(&pts, 0.01, &tetras, &mut classes, &mut boundary).unwrap();
         assert_eq!(tc, 1);
-        assert!(!classes[0], "tetrahedron should be exterior with small alpha");
+        assert!(
+            !classes[0],
+            "tetrahedron should be exterior with small alpha"
+        );
         assert_eq!(bc, 0, "no boundary faces with small alpha");
     }
 }

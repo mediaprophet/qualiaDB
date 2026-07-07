@@ -621,7 +621,11 @@ pub fn mesh_to_nquins_with_digests(
     let (mut quins, lexicon) = mesh_to_nquins(mesh, asset_uri, source_format);
     let subject = fnv_hash(asset_uri.as_bytes());
     quins.push(make_quin(subject, P_SOURCE_DIGEST, source_digest as u64));
-    quins.push(make_quin(subject, P_COMPILED_DIGEST, compiled_digest as u64));
+    quins.push(make_quin(
+        subject,
+        P_COMPILED_DIGEST,
+        compiled_digest as u64,
+    ));
     (quins, lexicon)
 }
 
@@ -640,8 +644,13 @@ pub fn mesh_to_nquins_with_meta(
     body_system: Option<&str>,
     anatomy_model: Option<&str>,
 ) -> (Vec<NQuin>, HashMap<u64, String>) {
-    let (mut quins, mut lexicon) =
-        mesh_to_nquins_with_digests(mesh, asset_uri, source_format, source_digest, compiled_digest);
+    let (mut quins, mut lexicon) = mesh_to_nquins_with_digests(
+        mesh,
+        asset_uri,
+        source_format,
+        source_digest,
+        compiled_digest,
+    );
     let subject = fnv_hash(asset_uri.as_bytes());
     if let Some(sys) = body_system {
         let h = fnv_hash(sys.as_bytes());
@@ -669,10 +678,19 @@ pub fn mesh_to_nquins_with_dev(
     gestational_age_days: u16,
     carnegie_stage: u8,
 ) -> (Vec<NQuin>, HashMap<u64, String>) {
-    let (mut quins, lexicon) =
-        mesh_to_nquins_with_digests(mesh, asset_uri, source_format, source_digest, compiled_digest);
+    let (mut quins, lexicon) = mesh_to_nquins_with_digests(
+        mesh,
+        asset_uri,
+        source_format,
+        source_digest,
+        compiled_digest,
+    );
     let subject = fnv_hash(asset_uri.as_bytes());
-    quins.push(make_quin(subject, P_GESTATIONAL_AGE_DAYS, gestational_age_days as u64));
+    quins.push(make_quin(
+        subject,
+        P_GESTATIONAL_AGE_DAYS,
+        gestational_age_days as u64,
+    ));
     quins.push(make_quin(subject, P_CARNEGIE_STAGE, carnegie_stage as u64));
     (quins, lexicon)
 }

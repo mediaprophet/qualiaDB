@@ -27,9 +27,9 @@
 //! geometry. The de Berg et al. textbook is referenced as the algorithm spec only.
 
 use super::delaunay_2::{delaunay_triangulation_2, triangulation_hash, verify_delaunay};
-use super::incircle::incircle;
-use super::primitives::{orientation_2, Point2, Orientation};
 use super::expansion::Sign;
+use super::incircle::incircle;
+use super::primitives::{orientation_2, Orientation, Point2};
 
 /// Corpus entry for orientation tests.
 #[derive(Clone, Copy)]
@@ -208,9 +208,15 @@ static SQUARE_WITH_CENTER: [Point2; 5] = [
 ];
 
 static GRID_3X3: [Point2; 9] = [
-    Point2::new(0.0, 0.0), Point2::new(1.0, 0.0), Point2::new(2.0, 0.0),
-    Point2::new(0.0, 1.0), Point2::new(1.0, 1.0), Point2::new(2.0, 1.0),
-    Point2::new(0.0, 2.0), Point2::new(1.0, 2.0), Point2::new(2.0, 2.0),
+    Point2::new(0.0, 0.0),
+    Point2::new(1.0, 0.0),
+    Point2::new(2.0, 0.0),
+    Point2::new(0.0, 1.0),
+    Point2::new(1.0, 1.0),
+    Point2::new(2.0, 1.0),
+    Point2::new(0.0, 2.0),
+    Point2::new(1.0, 2.0),
+    Point2::new(2.0, 2.0),
 ];
 
 pub const DELAUNAY_CORPUS: &[DelaunayVector] = &[
@@ -390,7 +396,10 @@ mod tests {
         // detect the mismatch (falsifiable, not decorative).
         let v = &ORIENTATION_CORPUS[0]; // basic_ccw
         let wrong_result = orientation_2(v.b, v.a, v.c); // swap a,b → CW
-        assert_ne!(wrong_result, v.expected, "corrupted vector must not match expected");
+        assert_ne!(
+            wrong_result, v.expected,
+            "corrupted vector must not match expected"
+        );
     }
 
     #[test]

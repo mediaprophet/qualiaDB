@@ -154,5 +154,9 @@ fn partial_premise_match_does_not_fire() {
         0,
         "an unsatisfied premise conjunct must block the conclusion"
     );
-    assert!(!is_flagged(&mut arena, "ex:AcmeCorp", "values:PersonhoodCategoryError"));
+    assert!(!is_flagged(
+        &mut arena,
+        "ex:AcmeCorp",
+        "values:PersonhoodCategoryError"
+    ));
 }

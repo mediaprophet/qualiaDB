@@ -22,7 +22,6 @@
 //! matrix entries computed in canonical order. Identical input →
 //! bit-identical output.
 
-
 use super::point_set_3d::{knn_all_brute_force_3d, KnnEntry};
 use super::primitives::Point3;
 
@@ -79,8 +78,8 @@ impl std::error::Error for LaplacianError {}
 pub fn cknn_laplacian_3d(
     points: &[Point3],
     k: usize,
-    out_weights: &mut [f64], // n*k: weights for each kNN edge
-    out_degree: &mut [f64],  // n: degree D_ii
+    out_weights: &mut [f64],        // n*k: weights for each kNN edge
+    out_degree: &mut [f64],         // n: degree D_ii
     out_laplacian_diag: &mut [f64], // n: L_ii = D_ii
     knn_buffer: &mut [KnnEntry],
     knn_scratch: &mut [KnnEntry],
@@ -93,17 +92,27 @@ pub fn cknn_laplacian_3d(
     }
     let n = points.len();
     if out_weights.len() < n * k {
-        return Err(LaplacianError::BufferTooSmall { needed: n * k, have: out_weights.len() });
+        return Err(LaplacianError::BufferTooSmall {
+            needed: n * k,
+            have: out_weights.len(),
+        });
     }
     if out_degree.len() < n {
-        return Err(LaplacianError::BufferTooSmall { needed: n, have: out_degree.len() });
+        return Err(LaplacianError::BufferTooSmall {
+            needed: n,
+            have: out_degree.len(),
+        });
     }
     if out_laplacian_diag.len() < n {
-        return Err(LaplacianError::BufferTooSmall { needed: n, have: out_laplacian_diag.len() });
+        return Err(LaplacianError::BufferTooSmall {
+            needed: n,
+            have: out_laplacian_diag.len(),
+        });
     }
 
     // Compute kNN for all points.
-    knn_all_brute_force_3d(points, k, knn_buffer, knn_scratch).map_err(|_| LaplacianError::KnnFailed)?;
+    knn_all_brute_force_3d(points, k, knn_buffer, knn_scratch)
+        .map_err(|_| LaplacianError::KnnFailed)?;
 
     // Compute CkNN weights and degrees.
     for i in 0..n {
@@ -142,14 +151,21 @@ pub fn cknn_laplacian_normalised_3d(
     }
     let n = points.len();
     if out_weights.len() < n * k {
-        return Err(LaplacianError::BufferTooSmall { needed: n * k, have: out_weights.len() });
+        return Err(LaplacianError::BufferTooSmall {
+            needed: n * k,
+            have: out_weights.len(),
+        });
     }
     if out_laplacian_diag.len() < n {
-        return Err(LaplacianError::BufferTooSmall { needed: n, have: out_laplacian_diag.len() });
+        return Err(LaplacianError::BufferTooSmall {
+            needed: n,
+            have: out_laplacian_diag.len(),
+        });
     }
 
     // Compute kNN.
-    knn_all_brute_force_3d(points, k, knn_buffer, knn_scratch).map_err(|_| LaplacianError::KnnFailed)?;
+    knn_all_brute_force_3d(points, k, knn_buffer, knn_scratch)
+        .map_err(|_| LaplacianError::KnnFailed)?;
 
     // Compute degrees first.
     let mut degree = vec![0.0f64; n];
@@ -278,7 +294,16 @@ mod tests {
         let mut knn_buf = vec![KnnEntry::default(); n * k];
         let mut knn_scratch = vec![KnnEntry::default(); MAX_K + 1];
 
-        let count = cknn_laplacian_3d(&pts, k, &mut weights, &mut degree, &mut diag, &mut knn_buf, &mut knn_scratch).unwrap();
+        let count = cknn_laplacian_3d(
+            &pts,
+            k,
+            &mut weights,
+            &mut degree,
+            &mut diag,
+            &mut knn_buf,
+            &mut knn_scratch,
+        )
+        .unwrap();
 
         assert_eq!(count, n * k);
         // All degrees should be positive.
@@ -287,7 +312,10 @@ mod tests {
         }
         // Diagonal should equal degree (combinatorial Laplacian).
         for i in 0..n {
-            assert!((diag[i] - degree[i]).abs() < 1e-10, "L_ii should equal D_ii");
+            assert!(
+                (diag[i] - degree[i]).abs() < 1e-10,
+                "L_ii should equal D_ii"
+            );
         }
     }
 
@@ -302,7 +330,16 @@ mod tests {
         let mut knn_buf = vec![KnnEntry::default(); n * k];
         let mut knn_scratch = vec![KnnEntry::default(); MAX_K + 1];
 
-        cknn_laplacian_3d(&pts, k, &mut weights, &mut degree, &mut diag, &mut knn_buf, &mut knn_scratch).unwrap();
+        cknn_laplacian_3d(
+            &pts,
+            k,
+            &mut weights,
+            &mut degree,
+            &mut diag,
+            &mut knn_buf,
+            &mut knn_scratch,
+        )
+        .unwrap();
 
         // Row sum of L = D - W should be ≈ 0 (each off-diagonal -w_ij is
         // cancelled by the diagonal D_ii = sum w_ij). But since the CkNN
@@ -332,10 +369,22 @@ mod tests {
         let mut knn_buf = vec![KnnEntry::default(); n * k];
         let mut knn_scratch = vec![KnnEntry::default(); MAX_K + 1];
 
-        cknn_laplacian_normalised_3d(&pts, k, &mut weights, &mut diag, &mut knn_buf, &mut knn_scratch).unwrap();
+        cknn_laplacian_normalised_3d(
+            &pts,
+            k,
+            &mut weights,
+            &mut diag,
+            &mut knn_buf,
+            &mut knn_scratch,
+        )
+        .unwrap();
 
         for i in 0..n {
-            assert!((diag[i] - 1.0).abs() < 1e-10, "normalised L_ii should be 1, got {}", diag[i]);
+            assert!(
+                (diag[i] - 1.0).abs() < 1e-10,
+                "normalised L_ii should be 1, got {}",
+                diag[i]
+            );
         }
     }
 
@@ -391,7 +440,16 @@ mod tests {
         let mut knn_buf = vec![KnnEntry::default(); n * k];
         let mut knn_scratch = vec![KnnEntry::default(); MAX_K + 1];
 
-        cknn_laplacian_3d(&pts, k, &mut weights, &mut degree, &mut diag, &mut knn_buf, &mut knn_scratch).unwrap();
+        cknn_laplacian_3d(
+            &pts,
+            k,
+            &mut weights,
+            &mut degree,
+            &mut diag,
+            &mut knn_buf,
+            &mut knn_scratch,
+        )
+        .unwrap();
 
         // Dense region (indices 0-26) should have higher degree than
         // sparse region (indices 27-29).

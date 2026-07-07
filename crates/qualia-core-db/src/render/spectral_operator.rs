@@ -13,15 +13,15 @@
 
 use crate::audio::tf_surface::TfSurface;
 use crate::audio::tf_surface_edit::{
-    apply_gain, copy_patch, crossfade, fade_in, fade_out, pitch_shift, spectral_gate,
-    time_stretch, Region as TfRegion, SurfaceEditError,
+    apply_gain, copy_patch, crossfade, fade_in, fade_out, pitch_shift, spectral_gate, time_stretch,
+    Region as TfRegion, SurfaceEditError,
 };
 use crate::render::gamut::{gamut_map_clamp, is_in_gamut, linear_srgb_to_xyz};
-use crate::render::metamer::{fibre_spd, is_metameric, min_norm_spd_for_xyz, metamer_kernel_basis};
+use crate::render::metamer::{fibre_spd, is_metameric, metamer_kernel_basis, min_norm_spd_for_xyz};
 use crate::render::spectral_blend::{blend_divergence, spectral_blend_emf, spectral_blend_spd};
 use crate::render::spectral_kernel::{
-    delta_e_76, emf_to_linear_rgb, emf_to_spd, linear_rgb_to_display, spd_to_xyz,
-    xyz_to_lab, xyz_to_linear_srgb, LinearRgb, Spd, Xyz,
+    delta_e_76, emf_to_linear_rgb, emf_to_spd, linear_rgb_to_display, spd_to_xyz, xyz_to_lab,
+    xyz_to_linear_srgb, LinearRgb, Spd, Xyz,
 };
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -95,7 +95,9 @@ impl SpectralOperator {
 
     /// Compute the kernel basis for metameric-black SPDs.
     #[inline]
-    pub fn metamer_kernel_basis(out_basis: &mut [f32]) -> Result<usize, crate::render::metamer::MetamerError> {
+    pub fn metamer_kernel_basis(
+        out_basis: &mut [f32],
+    ) -> Result<usize, crate::render::metamer::MetamerError> {
         metamer_kernel_basis(out_basis)
     }
 
@@ -148,8 +150,12 @@ impl SpectralOperator {
     /// Blend two EMF payloads in spectral space and return XYZ.
     #[inline]
     pub fn spectral_blend_emf(
-        alpha_a: f32, mu_a: f32, sigma_a: f32,
-        alpha_b: f32, mu_b: f32, sigma_b: f32,
+        alpha_a: f32,
+        mu_a: f32,
+        sigma_a: f32,
+        alpha_b: f32,
+        mu_b: f32,
+        sigma_b: f32,
         t: f32,
     ) -> Xyz {
         spectral_blend_emf(alpha_a, mu_a, sigma_a, alpha_b, mu_b, sigma_b, t)
@@ -158,8 +164,12 @@ impl SpectralOperator {
     /// ΔE divergence between spectral blend and gamma-encoded sRGB lerp.
     #[inline]
     pub fn blend_divergence(
-        alpha_a: f32, mu_a: f32, sigma_a: f32,
-        alpha_b: f32, mu_b: f32, sigma_b: f32,
+        alpha_a: f32,
+        mu_a: f32,
+        sigma_a: f32,
+        alpha_b: f32,
+        mu_b: f32,
+        sigma_b: f32,
         t: f32,
     ) -> f32 {
         blend_divergence(alpha_a, mu_a, sigma_a, alpha_b, mu_b, sigma_b, t)

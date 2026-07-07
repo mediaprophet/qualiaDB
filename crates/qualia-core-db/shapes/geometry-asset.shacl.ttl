@@ -100,6 +100,32 @@ geo:MeshShape a sh:NodeShape ;
         sh:in ( "Public" "Restricted" "Classified" "Sanctuary" ) ;
         sh:message "sensitivityClass — absent is treated fail-closed as most-restrictive; health-derived anatomy geometry MUST carry it" ;
         sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path geo:licence ;
+        sh:datatype xsd:string ;
+        sh:in ( "CC0" "CC-BY" "CC-BY-SA" "ODC-PDDL" "MIT" "Apache-2.0" ) ;
+        sh:minCount 1 ;
+        sh:message "licence must be one of the explicitly permitted commons licences" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:creator ;
+        sh:datatype xsd:string ;
+        sh:message "creator identity or signature reference" ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path geo:validFrom ;
+        sh:datatype xsd:integer ;
+        sh:message "validFrom epoch timestamp (if temporally bounded)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:validUntil ;
+        sh:datatype xsd:integer ;
+        sh:message "validUntil epoch timestamp (if temporally bounded)" ;
+        sh:severity sh:Violation ;
     ] .
 
 # ── LOD level (a decimated QuantizedMesh section, from decimate_3) ────────────────
@@ -159,4 +185,5 @@ geo:TopologyFeatureShape a sh:NodeShape ;
 #   • valid NQuin parity on every emitted fact         (subject^predicate^object^context)
 #   • compiledDigest == the .10d whole-file CRC-32C     (manifest cites its real container)
 #   • sensitivity high-water-mark: a derived asset inherits its inputs' most-restrictive class
+#   • validFrom <= validUntil                         (temporal validity non-inverted)
 # These belong in geometry_asset_shacl.rs (the SLG-VM opcode path), documented in §5 of the spec.

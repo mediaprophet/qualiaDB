@@ -494,11 +494,7 @@ impl RemeshMesh {
         let is_boundary_edge = tris.len() == 1;
         let a = self.vertices[u as usize];
         let b = self.vertices[v as usize];
-        let m = Point3::new(
-            0.5 * (a.x + b.x),
-            0.5 * (a.y + b.y),
-            0.5 * (a.z + b.z),
-        );
+        let m = Point3::new(0.5 * (a.x + b.x), 0.5 * (a.y + b.y), 0.5 * (a.z + b.z));
         let mid = self.vertices.len() as u32;
         self.vertices.push(m);
         self.incident.push(Vec::new());
@@ -632,11 +628,7 @@ impl RemeshMesh {
         // pulls it onto the surface.
         let a = self.vertices[u as usize];
         let b = self.vertices[v as usize];
-        let target = Point3::new(
-            0.5 * (a.x + b.x),
-            0.5 * (a.y + b.y),
-            0.5 * (a.z + b.z),
-        );
+        let target = Point3::new(0.5 * (a.x + b.x), 0.5 * (a.y + b.y), 0.5 * (a.z + b.z));
 
         // Fold guard + edge-length guard: simulate the collapse over the union of the
         // one-rings of u and v, excluding the shared (to-be-deleted) triangles.
@@ -649,7 +641,10 @@ impl RemeshMesh {
         };
         // Gather affected triangles: incident to u or v, not shared.
         let mut affected: Vec<u32> = Vec::new();
-        for &ti in self.incident[u as usize].iter().chain(self.incident[v as usize].iter()) {
+        for &ti in self.incident[u as usize]
+            .iter()
+            .chain(self.incident[v as usize].iter())
+        {
             if ti == shared_set[0] || ti == shared_set[1] {
                 continue;
             }
@@ -690,9 +685,21 @@ impl RemeshMesh {
             }
             // Edge-length guard: don't create an over-long edge (anti-oscillation).
             let p_new: [Point3; 3] = [
-                if remapped[0] == u { target } else { self.vertices[remapped[0] as usize] },
-                if remapped[1] == u { target } else { self.vertices[remapped[1] as usize] },
-                if remapped[2] == u { target } else { self.vertices[remapped[2] as usize] },
+                if remapped[0] == u {
+                    target
+                } else {
+                    self.vertices[remapped[0] as usize]
+                },
+                if remapped[1] == u {
+                    target
+                } else {
+                    self.vertices[remapped[1] as usize]
+                },
+                if remapped[2] == u {
+                    target
+                } else {
+                    self.vertices[remapped[2] as usize]
+                },
             ];
             for k in 0..3 {
                 let q0 = p_new[k];
@@ -746,9 +753,21 @@ impl RemeshMesh {
             self.vertices[remapped[2] as usize],
         ];
         let new = [
-            if remapped[0] == moved { new_pos } else { old[0] },
-            if remapped[1] == moved { new_pos } else { old[1] },
-            if remapped[2] == moved { new_pos } else { old[2] },
+            if remapped[0] == moved {
+                new_pos
+            } else {
+                old[0]
+            },
+            if remapped[1] == moved {
+                new_pos
+            } else {
+                old[1]
+            },
+            if remapped[2] == moved {
+                new_pos
+            } else {
+                old[2]
+            },
         ];
         // Build a fixed off-plane reference apex from the OLD triangle normal so both
         // orientations are measured against the same external point. Using the old
@@ -882,7 +901,12 @@ impl RemeshMesh {
             let d = val - ideal;
             d * d
         };
-        let (vu, vv, va, vb) = (self.valence(u), self.valence(v), self.valence(a), self.valence(b));
+        let (vu, vv, va, vb) = (
+            self.valence(u),
+            self.valence(v),
+            self.valence(a),
+            self.valence(b),
+        );
         let (iu, iv, ia, ib) = (
             self.ideal_valence(u),
             self.ideal_valence(v),
@@ -890,8 +914,7 @@ impl RemeshMesh {
             self.ideal_valence(b),
         );
         let before = dev(vu, iu) + dev(vv, iv) + dev(va, ia) + dev(vb, ib);
-        let after =
-            dev(vu - 1, iu) + dev(vv - 1, iv) + dev(va + 1, ia) + dev(vb + 1, ib);
+        let after = dev(vu - 1, iu) + dev(vv - 1, iv) + dev(va + 1, ia) + dev(vb + 1, ib);
         after < before
     }
 
@@ -1165,11 +1188,7 @@ fn triangle_normal(a: Point3, b: Point3, c: Point3) -> Point3 {
     let vx = c.x - a.x;
     let vy = c.y - a.y;
     let vz = c.z - a.z;
-    Point3::new(
-        uy * vz - uz * vy,
-        uz * vx - ux * vz,
-        ux * vy - uy * vx,
-    )
+    Point3::new(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx)
 }
 
 /// Does triangle `tri` traverse the directed edge `u→v` (as opposed to `v→u`)?
@@ -1330,9 +1349,11 @@ fn dot(a: Point3, b: Point3) -> f64 {
 
 #[cfg(test)]
 mod tests {
+    use super::super::surface_mesh_processing::{signed_volume, surface_area};
+    use super::super::topology::{
+        build_triangle_half_edges, required_edge_slots, EdgeSlot, HalfEdge,
+    };
     use super::*;
-    use super::super::surface_mesh_processing::{surface_area, signed_volume};
-    use super::super::topology::{build_triangle_half_edges, required_edge_slots, EdgeSlot, HalfEdge};
 
     // ── Mesh builders ─────────────────────────────────────────────────────
 
@@ -1349,12 +1370,18 @@ mod tests {
             Point3::new(0.0, 1.0, 1.0),
         ];
         let t = vec![
-            [0, 3, 2], [0, 2, 1],
-            [4, 5, 6], [4, 6, 7],
-            [0, 1, 5], [0, 5, 4],
-            [3, 7, 6], [3, 6, 2],
-            [0, 4, 7], [0, 7, 3],
-            [1, 2, 6], [1, 6, 5],
+            [0, 3, 2],
+            [0, 2, 1],
+            [4, 5, 6],
+            [4, 6, 7],
+            [0, 1, 5],
+            [0, 5, 4],
+            [3, 7, 6],
+            [3, 6, 2],
+            [0, 4, 7],
+            [0, 7, 3],
+            [1, 2, 6],
+            [1, 6, 5],
         ];
         (v, t)
     }
@@ -1442,7 +1469,10 @@ mod tests {
     /// Verify no triangle is degenerate (repeated index) or references a missing vertex.
     fn assert_wellformed(vertices: &[Point3], triangles: &[[u32; 3]]) {
         for (t, tri) in triangles.iter().enumerate() {
-            assert!(tri[0] != tri[1] && tri[1] != tri[2] && tri[2] != tri[0], "degenerate tri {t}");
+            assert!(
+                tri[0] != tri[1] && tri[1] != tri[2] && tri[2] != tri[0],
+                "degenerate tri {t}"
+            );
             for &vi in tri {
                 assert!((vi as usize) < vertices.len(), "tri {t} vertex {vi} OOB");
             }
@@ -1474,7 +1504,10 @@ mod tests {
         let mut ot = vec![[0u32; 3]; 16];
         assert_eq!(
             isotropic_remesh(&v, &t, RemeshOptions::new(1.0, 1), &mut ov, &mut ot),
-            Err(RemeshError::IndexOutOfBounds { triangle: 0, vertex: 1 })
+            Err(RemeshError::IndexOutOfBounds {
+                triangle: 0,
+                vertex: 1
+            })
         );
     }
 
@@ -1560,7 +1593,8 @@ mod tests {
         let (cap_v, cap_t) = required_output_capacity(v.len(), t.len(), 5);
         let mut ov = vec![Point3::default(); cap_v];
         let mut ot = vec![[0u32; 3]; cap_t];
-        let rep = isotropic_remesh(&v, &t, RemeshOptions::new(target, 5), &mut ov, &mut ot).unwrap();
+        let rep =
+            isotropic_remesh(&v, &t, RemeshOptions::new(target, 5), &mut ov, &mut ot).unwrap();
 
         let ov = &ov[..rep.vertex_count];
         let ot = &ot[..rep.triangle_count];
@@ -1575,13 +1609,24 @@ mod tests {
         let lens = edge_lengths(ov, ot);
         let low = 0.8 * target;
         let high = 4.0 / 3.0 * target;
-        let within = lens.iter().filter(|&&l| l >= low * 0.9 && l <= high * 1.15).count();
+        let within = lens
+            .iter()
+            .filter(|&&l| l >= low * 0.9 && l <= high * 1.15)
+            .count();
         let frac = within as f64 / lens.len() as f64;
-        assert!(frac > 0.6, "only {:.0}% of edges near target ({} of {})",
-            frac * 100.0, within, lens.len());
+        assert!(
+            frac > 0.6,
+            "only {:.0}% of edges near target ({} of {})",
+            frac * 100.0,
+            within,
+            lens.len()
+        );
         // No edge should be wildly longer than target after refinement.
         let max_len = lens.iter().cloned().fold(0.0f64, f64::max);
-        assert!(max_len < 2.0 * target, "max edge {max_len} >> target {target}");
+        assert!(
+            max_len < 2.0 * target,
+            "max edge {max_len} >> target {target}"
+        );
     }
 
     #[test]
@@ -1592,14 +1637,17 @@ mod tests {
         let (cap_v, cap_t) = required_output_capacity(v.len(), t.len(), 5);
         let mut ov = vec![Point3::default(); cap_v];
         let mut ot = vec![[0u32; 3]; cap_t];
-        let rep = isotropic_remesh(&v, &t, RemeshOptions::new(target, 5), &mut ov, &mut ot).unwrap();
+        let rep =
+            isotropic_remesh(&v, &t, RemeshOptions::new(target, 5), &mut ov, &mut ot).unwrap();
         let ov = &ov[..rep.vertex_count];
         let ot = &ot[..rep.triangle_count];
         let new_area = surface_area(ov, ot).unwrap();
         // A flat plane's area is exactly preserved by on-plane projection (tolerance
         // for boundary handling — boundary vertices are pinned, so area is exact here).
-        assert!((new_area - orig_area).abs() < 1e-9,
-            "plane area drifted: {orig_area} → {new_area}");
+        assert!(
+            (new_area - orig_area).abs() < 1e-9,
+            "plane area drifted: {orig_area} → {new_area}"
+        );
     }
 
     // ── Closed manifold refine preserves manifoldness + orientation + volume ─
@@ -1608,13 +1656,17 @@ mod tests {
     fn octahedron_refine_preserves_manifold_and_orientation() {
         let (v, t) = octahedron();
         let orig_vol = signed_volume(&v, &t).unwrap();
-        assert!(orig_vol > 0.0, "octahedron must be outward-wound (+vol), got {orig_vol}");
+        assert!(
+            orig_vol > 0.0,
+            "octahedron must be outward-wound (+vol), got {orig_vol}"
+        );
 
         let target = 0.5;
         let (cap_v, cap_t) = required_output_capacity(v.len(), t.len(), 4);
         let mut ov = vec![Point3::default(); cap_v];
         let mut ot = vec![[0u32; 3]; cap_t];
-        let rep = isotropic_remesh(&v, &t, RemeshOptions::new(target, 4), &mut ov, &mut ot).unwrap();
+        let rep =
+            isotropic_remesh(&v, &t, RemeshOptions::new(target, 4), &mut ov, &mut ot).unwrap();
         let ov = &ov[..rep.vertex_count];
         let ot = &ot[..rep.triangle_count];
 
@@ -1634,18 +1686,30 @@ mod tests {
         // for L=0.5). We assert it stays within a wide band and does not collapse to
         // near-zero. Tight volume preservation is only expected on smooth surfaces or
         // when collapses do not fire — see `closed_mesh_no_collapse_preserves_volume`.
-        assert!(new_vol > 0.55 * orig_vol && new_vol <= orig_vol * 1.05,
-            "volume out of expected band: {orig_vol} → {new_vol}");
+        assert!(
+            new_vol > 0.55 * orig_vol && new_vol <= orig_vol * 1.05,
+            "volume out of expected band: {orig_vol} → {new_vol}"
+        );
 
         // Edge-length histogram must be tight around target (the primary quality goal).
         let lens = edge_lengths(ov, ot);
         let low = 0.8 * target;
         let high = 4.0 / 3.0 * target;
-        let within = lens.iter().filter(|&&l| l >= low * 0.85 && l <= high * 1.2).count();
+        let within = lens
+            .iter()
+            .filter(|&&l| l >= low * 0.85 && l <= high * 1.2)
+            .count();
         let frac = within as f64 / lens.len() as f64;
-        assert!(frac > 0.85, "only {:.0}% of edges near target", frac * 100.0);
+        assert!(
+            frac > 0.85,
+            "only {:.0}% of edges near target",
+            frac * 100.0
+        );
 
-        assert!(rep.splits > 0, "no splits on a coarse octahedron toward L=0.5");
+        assert!(
+            rep.splits > 0,
+            "no splits on a coarse octahedron toward L=0.5"
+        );
         assert!(rep.vertex_count > v.len(), "mesh did not refine");
     }
 
@@ -1657,7 +1721,8 @@ mod tests {
         let (cap_v, cap_t) = required_output_capacity(v.len(), t.len(), 4);
         let mut ov = vec![Point3::default(); cap_v];
         let mut ot = vec![[0u32; 3]; cap_t];
-        let rep = isotropic_remesh(&v, &t, RemeshOptions::new(target, 4), &mut ov, &mut ot).unwrap();
+        let rep =
+            isotropic_remesh(&v, &t, RemeshOptions::new(target, 4), &mut ov, &mut ot).unwrap();
         let ov = &ov[..rep.vertex_count];
         let ot = &ot[..rep.triangle_count];
 
@@ -1669,8 +1734,10 @@ mod tests {
         // Orientation preserved (positive); volume within the feature-rounding band
         // (a cube is all sharp edges — measured ~19% loss for L=0.35).
         assert!(new_vol > 0.0);
-        assert!(new_vol > 0.7 * orig_vol && new_vol <= orig_vol * 1.05,
-            "cube volume out of band {orig_vol}→{new_vol}");
+        assert!(
+            new_vol > 0.7 * orig_vol && new_vol <= orig_vol * 1.05,
+            "cube volume out of band {orig_vol}→{new_vol}"
+        );
     }
 
     /// The algorithm itself does NOT drift volume: on a closed mesh whose edges are
@@ -1697,7 +1764,11 @@ mod tests {
             let mut my = 0.5 * (pa.y + pb.y);
             let mut mz = 0.5 * (pa.z + pb.z);
             let r = (mx * mx + my * my + mz * mz).sqrt();
-            if r > 0.0 { mx /= r; my /= r; mz /= r; }
+            if r > 0.0 {
+                mx /= r;
+                my /= r;
+                mz /= r;
+            }
             let idx = v.len() as u32;
             v.push(Point3::new(mx, my, mz));
             mid.insert(key, idx);
@@ -1705,7 +1776,9 @@ mod tests {
         };
         let mut t: Vec<[u32; 3]> = Vec::new();
         for tri in &t0 {
-            let a = tri[0]; let b = tri[1]; let c = tri[2];
+            let a = tri[0];
+            let b = tri[1];
+            let c = tri[2];
             let ab = get_mid(&mut v, a, b, &mut mid);
             let bc = get_mid(&mut v, b, c, &mut mid);
             let ca = get_mid(&mut v, c, a, &mut mid);
@@ -1726,7 +1799,8 @@ mod tests {
         let (cap_v, cap_t) = required_output_capacity(v.len(), t.len(), 3);
         let mut ov = vec![Point3::default(); cap_v];
         let mut ot = vec![[0u32; 3]; cap_t];
-        let rep = isotropic_remesh(&v, &t, RemeshOptions::new(target, 3), &mut ov, &mut ot).unwrap();
+        let rep =
+            isotropic_remesh(&v, &t, RemeshOptions::new(target, 3), &mut ov, &mut ot).unwrap();
         let ov = &ov[..rep.vertex_count];
         let ot = &ot[..rep.triangle_count];
 
@@ -1735,8 +1809,10 @@ mod tests {
         let new_vol = signed_volume(ov, ot).unwrap();
         // With few/no collapses on this rounder mesh, volume is preserved to a few %.
         assert!(new_vol > 0.0);
-        assert!((new_vol - orig_vol).abs() < 0.12 * orig_vol,
-            "uniform closed remesh drifted too much: {orig_vol} → {new_vol}");
+        assert!(
+            (new_vol - orig_vol).abs() < 0.12 * orig_vol,
+            "uniform closed remesh drifted too much: {orig_vol} → {new_vol}"
+        );
     }
 
     // ── Coarsening: collapse shortens over-fine edges toward target ────────
@@ -1753,19 +1829,30 @@ mod tests {
         let (cap_v, cap_t) = required_output_capacity(v.len(), t.len(), 6);
         let mut ov = vec![Point3::default(); cap_v];
         let mut ot = vec![[0u32; 3]; cap_t];
-        let rep = isotropic_remesh(&v, &t, RemeshOptions::new(target, 6), &mut ov, &mut ot).unwrap();
+        let rep =
+            isotropic_remesh(&v, &t, RemeshOptions::new(target, 6), &mut ov, &mut ot).unwrap();
         let ov = &ov[..rep.vertex_count];
         let ot = &ot[..rep.triangle_count];
 
         assert_wellformed(ov, ot);
-        assert!(rep.collapses > 0, "no collapses when coarsening a fine plane");
+        assert!(
+            rep.collapses > 0,
+            "no collapses when coarsening a fine plane"
+        );
         // Vertex count must drop meaningfully.
-        assert!(rep.vertex_count < v.len(), "coarsening did not reduce vertices ({} → {})",
-            v.len(), rep.vertex_count);
+        assert!(
+            rep.vertex_count < v.len(),
+            "coarsening did not reduce vertices ({} → {})",
+            v.len(),
+            rep.vertex_count
+        );
         // Mean edge length should move toward the (larger) target.
         let new_edges = edge_lengths(ov, ot);
         let new_mean: f64 = new_edges.iter().sum::<f64>() / new_edges.len() as f64;
-        assert!(new_mean > fine_mean, "mean edge did not grow: {fine_mean} → {new_mean}");
+        assert!(
+            new_mean > fine_mean,
+            "mean edge did not grow: {fine_mean} → {new_mean}"
+        );
         // Plane must remain open with a boundary.
         let (_f, boundary) = manifold_summary(ov, ot);
         assert!(boundary > 0);
@@ -1781,11 +1868,13 @@ mod tests {
 
         let mut ov_a = vec![Point3::default(); cap_v];
         let mut ot_a = vec![[0u32; 3]; cap_t];
-        let ra = isotropic_remesh(&v, &t, RemeshOptions::new(target, 4), &mut ov_a, &mut ot_a).unwrap();
+        let ra =
+            isotropic_remesh(&v, &t, RemeshOptions::new(target, 4), &mut ov_a, &mut ot_a).unwrap();
 
         let mut ov_b = vec![Point3::default(); cap_v];
         let mut ot_b = vec![[0u32; 3]; cap_t];
-        let rb = isotropic_remesh(&v, &t, RemeshOptions::new(target, 4), &mut ov_b, &mut ot_b).unwrap();
+        let rb =
+            isotropic_remesh(&v, &t, RemeshOptions::new(target, 4), &mut ov_b, &mut ot_b).unwrap();
 
         assert_eq!(ra, rb);
         assert_eq!(ra.vertex_count, rb.vertex_count);

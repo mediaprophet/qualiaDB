@@ -57,14 +57,17 @@ pub fn validate_native(
     target: TargetBackend,
     kernel: Option<&KernelSpec>,
 ) -> Result<ValidationReport, ForgeError> {
-    
     use std::process::Command;
 
     let tool_name = match target {
         TargetBackend::Ptx => "ptxas",
         TargetBackend::Hlsl => "dxc",
         TargetBackend::Msl => "xcrun",
-        _ => return Err(ForgeError::WgslValidation("Not a native target supported by offline validation".to_string())),
+        _ => {
+            return Err(ForgeError::WgslValidation(
+                "Not a native target supported by offline validation".to_string(),
+            ))
+        }
     };
 
     let temp_file = tempfile::Builder::new()
@@ -78,7 +81,7 @@ pub fn validate_native(
         .map_err(|e| ForgeError::Io(format!("Failed to create temp file: {}", e)))?;
 
     let temp_path = temp_file.path().to_path_buf();
-    
+
     // Write source to temp file
     std::fs::write(&temp_path, source)
         .map_err(|e| ForgeError::Io(format!("Failed to write to temp file: {}", e)))?;
@@ -88,30 +91,45 @@ pub fn validate_native(
         TargetBackend::Ptx => {
             // Check if ptxas exists first, fallback gently
             if Command::new("ptxas").arg("--version").output().is_err() {
-                return Err(ForgeError::WgslValidation("ptxas not found in PATH".to_string()));
+                return Err(ForgeError::WgslValidation(
+                    "ptxas not found in PATH".to_string(),
+                ));
             }
             cmd.arg(&temp_path).arg("-c"); // Compile only
         }
         TargetBackend::Hlsl => {
             if Command::new("dxc").arg("--help").output().is_err() {
-                return Err(ForgeError::WgslValidation("dxc not found in PATH".to_string()));
+                return Err(ForgeError::WgslValidation(
+                    "dxc not found in PATH".to_string(),
+                ));
             }
             cmd.arg("-T").arg("cs_6_0").arg(&temp_path);
         }
         TargetBackend::Msl => {
             if Command::new("xcrun").arg("--version").output().is_err() {
-                return Err(ForgeError::WgslValidation("xcrun not found in PATH".to_string()));
+                return Err(ForgeError::WgslValidation(
+                    "xcrun not found in PATH".to_string(),
+                ));
             }
-            cmd.arg("-sdk").arg("macosx").arg("metal").arg("-c").arg(&temp_path);
+            cmd.arg("-sdk")
+                .arg("macosx")
+                .arg("metal")
+                .arg("-c")
+                .arg(&temp_path);
         }
         _ => {}
     }
 
-    let output = cmd.output().map_err(|e| ForgeError::Io(format!("Failed to execute validation tool: {}", e)))?;
-    
+    let output = cmd
+        .output()
+        .map_err(|e| ForgeError::Io(format!("Failed to execute validation tool: {}", e)))?;
+
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(ForgeError::WgslValidation(format!("{} validation failed: {}", tool_name, stderr)));
+        return Err(ForgeError::WgslValidation(format!(
+            "{} validation failed: {}",
+            tool_name, stderr
+        )));
     }
 
     // The native compiler validated the source; report the kernel's real entry
@@ -238,9 +256,13 @@ mod tests {
             TargetBackend::Wgsl,
         )
         .unwrap();
-        assert!(generated.source.contains("var scene: acceleration_structure;"));
+        assert!(generated
+            .source
+            .contains("var scene: acceleration_structure;"));
         assert!(generated.source.contains("rayQueryInitialize"));
-        assert!(generated.source.contains("rayQueryGetCommittedIntersection"));
+        assert!(generated
+            .source
+            .contains("rayQueryGetCommittedIntersection"));
         let report = validate_wgsl(&generated.source).expect("Naga validation of ray-probe");
         assert_eq!(report.entry_points, vec!["ray_probe"]);
         assert_eq!(report.binding_count, 3);

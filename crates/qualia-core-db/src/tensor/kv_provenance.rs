@@ -40,13 +40,21 @@ impl KvProvenanceMap {
     pub fn record(&mut self, tensor_index: u32, kv_slot: u32, parent_page_id: u64) {
         let ti = tensor_index as usize;
         if ti < MAX_KV_PROVENANCE && kv_slot < MAX_KV_PROVENANCE as u32 {
-            self.tensor_to_kv[ti] = KvSlotInfo { kv_slot, parent_page_id };
+            self.tensor_to_kv[ti] = KvSlotInfo {
+                kv_slot,
+                parent_page_id,
+            };
             self.generation = self.generation.wrapping_add(1);
         }
     }
 
     /// 1:1 prompt alignment: tensor node `i` → KV slot `i` for `min(prompt, nodes)`.
-    pub fn build_prompt_alignment(&mut self, prompt_token_count: u32, tensor_node_count: u32, root_page_id: u64) {
+    pub fn build_prompt_alignment(
+        &mut self,
+        prompt_token_count: u32,
+        tensor_node_count: u32,
+        root_page_id: u64,
+    ) {
         let n = prompt_token_count
             .min(tensor_node_count)
             .min(MAX_KV_PROVENANCE as u32);
@@ -103,7 +111,11 @@ pub fn global_kv_provenance() -> std::sync::RwLockReadGuard<'static, KvProvenanc
 }
 
 /// Rebuild provenance table (prompt prefill / spatial encode).
-pub fn rebuild_prompt_provenance(prompt_token_count: u32, tensor_node_count: u32, root_page_id: u64) {
+pub fn rebuild_prompt_provenance(
+    prompt_token_count: u32,
+    tensor_node_count: u32,
+    root_page_id: u64,
+) {
     kv_lock()
         .write()
         .expect("kv provenance poisoned")
@@ -112,10 +124,11 @@ pub fn rebuild_prompt_provenance(prompt_token_count: u32, tensor_node_count: u32
 
 #[inline]
 pub fn record_kv_provenance(tensor_index: u32, kv_slot: u32, parent_page_id: u64) {
-    kv_lock()
-        .write()
-        .expect("kv provenance poisoned")
-        .record(tensor_index, kv_slot, parent_page_id);
+    kv_lock().write().expect("kv provenance poisoned").record(
+        tensor_index,
+        kv_slot,
+        parent_page_id,
+    );
 }
 
 #[cfg(test)]

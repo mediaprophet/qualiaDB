@@ -92,28 +92,24 @@ fn constant_by_name(name: &str) -> Option<(Quantity, &'static str, &'static str)
             "Newtonian constant of gravitation",
         ),
         "planck" | "h" => (constants::PLANCK, "h", "Planck constant"),
-        "reduced_planck" | "hbar" | "ħ" => {
-            (constants::REDUCED_PLANCK, "ħ", "reduced Planck constant h/2π")
-        }
+        "reduced_planck" | "hbar" | "ħ" => (
+            constants::REDUCED_PLANCK,
+            "ħ",
+            "reduced Planck constant h/2π",
+        ),
         "boltzmann" | "k_B" | "kB" => (constants::BOLTZMANN, "k_B", "Boltzmann constant"),
         "avogadro" | "N_A" | "NA" => (constants::AVOGADRO, "N_A", "Avogadro constant"),
-        "elementary_charge" | "e" => {
-            (constants::ELEMENTARY_CHARGE, "e", "elementary charge")
-        }
+        "elementary_charge" | "e" => (constants::ELEMENTARY_CHARGE, "e", "elementary charge"),
         "gas_constant" | "R" => (constants::GAS_CONSTANT, "R", "molar gas constant N_A·k_B"),
         "stefan_boltzmann" | "sigma" | "σ" => (
             constants::STEFAN_BOLTZMANN,
             "σ",
             "Stefan–Boltzmann constant",
         ),
-        "standard_gravity" | "g0" => {
-            (constants::STANDARD_GRAVITY, "g₀", "standard gravity")
+        "standard_gravity" | "g0" => (constants::STANDARD_GRAVITY, "g₀", "standard gravity"),
+        "standard_atmosphere" | "atm" => {
+            (constants::STANDARD_ATMOSPHERE, "atm", "standard atmosphere")
         }
-        "standard_atmosphere" | "atm" => (
-            constants::STANDARD_ATMOSPHERE,
-            "atm",
-            "standard atmosphere",
-        ),
         "electron_mass" | "m_e" | "me" => (constants::ELECTRON_MASS, "m_e", "electron mass"),
         "proton_mass" | "m_p" | "mp" => (constants::PROTON_MASS, "m_p", "proton mass"),
         _ => return None,

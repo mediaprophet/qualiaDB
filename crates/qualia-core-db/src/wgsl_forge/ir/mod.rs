@@ -12,7 +12,7 @@ pub use core::{
     ScalarType, SharedLen, SharedMemorySpec,
 };
 pub use graph::{
-    ComputeGraph, DType, GraphNode, Layout, Lowerer, NodeId, OpNode, Shape, TensorRef, lower_graph,
+    lower_graph, ComputeGraph, DType, GraphNode, Layout, Lowerer, NodeId, OpNode, Shape, TensorRef,
 };
 pub use intrinsics::{Intrinsic, IntrinsicClass, SubgroupReduceOp};
 pub use q42_bridge::{deserialize_graph, graph_merkle_root, opcode_of, serialize_graph};

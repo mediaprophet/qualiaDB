@@ -10,13 +10,13 @@ pub use inference_agent as llm_agent; // transitional alias
 pub mod inference_awq;
 pub use inference_awq as llm_awq; // transitional alias
 #[cfg(not(target_arch = "wasm32"))]
+pub mod inference_bench;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod kv_capture;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod kv_dict;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod kv_dict_runtime;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod inference_bench;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference_bench as llm_bench; // transitional alias
 pub mod inference_eval;

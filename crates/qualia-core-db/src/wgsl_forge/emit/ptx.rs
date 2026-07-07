@@ -8,8 +8,12 @@ pub fn emit_ptx(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedShad
     let semantic_hash = kernel.semantic_hash()?;
     let mut source = String::with_capacity(2048);
 
-    writeln!(source, "// PTX emitted for {}@{}", kernel.id, kernel.semantic_version)
-        .map_err(|e| ForgeError::Emission(e.to_string()))?;
+    writeln!(
+        source,
+        "// PTX emitted for {}@{}",
+        kernel.id, kernel.semantic_version
+    )
+    .map_err(|e| ForgeError::Emission(e.to_string()))?;
     writeln!(source, "// Semantic hash: {}", semantic_hash)
         .map_err(|e| ForgeError::Emission(e.to_string()))?;
 
@@ -30,9 +34,11 @@ fn emit_kernel_body(
     kernel: &KernelSpec,
     _schedule: Schedule,
 ) -> Result<(), ForgeError> {
-    writeln!(source, ".version 7.5\n.target sm_75\n.address_size 64\n").map_err(|error| ForgeError::Emission(error.to_string()))?;
-    
-    writeln!(source, ".visible .entry {}(", kernel.entry_point).map_err(|error| ForgeError::Emission(error.to_string()))?;
+    writeln!(source, ".version 7.5\n.target sm_75\n.address_size 64\n")
+        .map_err(|error| ForgeError::Emission(error.to_string()))?;
+
+    writeln!(source, ".visible .entry {}(", kernel.entry_point)
+        .map_err(|error| ForgeError::Emission(error.to_string()))?;
     for (i, buffer) in kernel.buffers.iter().enumerate() {
         // A uniform block is a by-value byte array `<name>[16]`; storage buffers
         // are pointers passed as `<name>_ptr`.
@@ -42,8 +48,13 @@ fn emit_kernel_body(
             }
             _ => format!(".param .u64 {}_ptr", buffer.name),
         };
-        let separator = if i < kernel.buffers.len() - 1 { "," } else { "" };
-        writeln!(source, "    {param_decl}{separator}").map_err(|error| ForgeError::Emission(error.to_string()))?;
+        let separator = if i < kernel.buffers.len() - 1 {
+            ","
+        } else {
+            ""
+        };
+        writeln!(source, "    {param_decl}{separator}")
+            .map_err(|error| ForgeError::Emission(error.to_string()))?;
     }
     writeln!(source, ")\n{{").map_err(|error| ForgeError::Emission(error.to_string()))?;
 
@@ -86,10 +97,17 @@ fn emit_kernel_body(
 
 EXIT:
     ret;"#
-        ).map_err(|error| ForgeError::Emission(error.to_string()))?;
+        )
+        .map_err(|error| ForgeError::Emission(error.to_string()))?;
     } else {
-        writeln!(source, "    // General PTX emit_ops requires register allocation, returning error.").map_err(|error| ForgeError::Emission(error.to_string()))?;
-        return Err(ForgeError::Emission("unsupported operation sequence for PTX".to_string()));
+        writeln!(
+            source,
+            "    // General PTX emit_ops requires register allocation, returning error."
+        )
+        .map_err(|error| ForgeError::Emission(error.to_string()))?;
+        return Err(ForgeError::Emission(
+            "unsupported operation sequence for PTX".to_string(),
+        ));
     }
     writeln!(source, "}}").map_err(|error| ForgeError::Emission(error.to_string()))?;
 

@@ -1086,7 +1086,8 @@ impl PowerManager {
         self.battery_monitor.drain(power_consumed, execution_time);
 
         // Apply thermal impact from the power draw.
-        self.thermal_monitor.apply_heat(power_consumed, execution_time);
+        self.thermal_monitor
+            .apply_heat(power_consumed, execution_time);
 
         // Record the optimization state transition.
         let input_state = PowerState {
@@ -1236,7 +1237,11 @@ impl PowerManager {
         let battery_pct = self.battery_monitor.current_level;
         let estimated_battery_hours = if battery_pct > 0.0 {
             let hours = self.estimate_battery_life_remaining(battery_pct, 15.0);
-            if hours > 0.0 { Some(hours) } else { None }
+            if hours > 0.0 {
+                Some(hours)
+            } else {
+                None
+            }
         } else {
             None
         };
@@ -1276,31 +1281,32 @@ impl TaskScheduler {
             }
             SchedulingPolicy::Priority => {
                 // Priority: highest priority first.
-                self.task_queue.pending_tasks.sort_by(|a, b| {
-                    b.priority.cmp(&a.priority)
-                });
+                self.task_queue
+                    .pending_tasks
+                    .sort_by(|a, b| b.priority.cmp(&a.priority));
             }
             SchedulingPolicy::ShortestJobFirst => {
                 // SJF: shortest estimated duration first.
-                self.task_queue.pending_tasks.sort_by(|a, b| {
-                    a.estimated_duration.cmp(&b.estimated_duration)
-                });
+                self.task_queue
+                    .pending_tasks
+                    .sort_by(|a, b| a.estimated_duration.cmp(&b.estimated_duration));
             }
             SchedulingPolicy::Deadline => {
                 // Deadline: earliest deadline first (tasks without deadlines go last).
-                self.task_queue.pending_tasks.sort_by(|a, b| {
-                    match (a.deadline, b.deadline) {
+                self.task_queue
+                    .pending_tasks
+                    .sort_by(|a, b| match (a.deadline, b.deadline) {
                         (Some(da), Some(db)) => da.cmp(&db),
                         (Some(_), None) => std::cmp::Ordering::Less,
                         (None, Some(_)) => std::cmp::Ordering::Greater,
                         (None, None) => std::cmp::Ordering::Equal,
-                    }
-                });
+                    });
             }
             SchedulingPolicy::Adaptive => {
                 // Adaptive: priority first, then shortest job as tiebreaker.
                 self.task_queue.pending_tasks.sort_by(|a, b| {
-                    b.priority.cmp(&a.priority)
+                    b.priority
+                        .cmp(&a.priority)
                         .then_with(|| a.estimated_duration.cmp(&b.estimated_duration))
                 });
             }
@@ -1341,9 +1347,20 @@ impl TaskScheduler {
     }
 
     /// Mark a running task as completed, recording it in execution history.
-    pub fn complete_task(&mut self, task_id: &str, device_id: &str, success: bool, usage: ResourceUsage) {
+    pub fn complete_task(
+        &mut self,
+        task_id: &str,
+        device_id: &str,
+        success: bool,
+        usage: ResourceUsage,
+    ) {
         // Remove from running tasks.
-        if let Some(pos) = self.task_queue.running_tasks.iter().position(|t| t.task_id == task_id) {
+        if let Some(pos) = self
+            .task_queue
+            .running_tasks
+            .iter()
+            .position(|t| t.task_id == task_id)
+        {
             let task = self.task_queue.running_tasks.remove(pos);
             self.task_queue.completed_tasks.push(task.clone());
 
@@ -1477,7 +1494,9 @@ impl AmbientPerformanceMonitor {
     pub fn get_global_stats(&self) -> AmbientGlobalMetrics {
         let total_tasks = self.task_metrics.len() as u64;
         let avg_time = if !self.task_metrics.is_empty() {
-            let sum: f64 = self.task_metrics.values()
+            let sum: f64 = self
+                .task_metrics
+                .values()
                 .map(|m| m.execution_time.as_secs_f64())
                 .sum();
             Duration::from_secs_f64(sum / self.task_metrics.len() as f64)
@@ -1486,17 +1505,21 @@ impl AmbientPerformanceMonitor {
         };
 
         let avg_efficiency = if !self.task_metrics.is_empty() {
-            self.task_metrics.values()
+            self.task_metrics
+                .values()
                 .map(|m| m.resource_efficiency)
-                .sum::<f64>() / self.task_metrics.len() as f64
+                .sum::<f64>()
+                / self.task_metrics.len() as f64
         } else {
             self.global_metrics.overall_efficiency
         };
 
         let avg_success_rate = if !self.task_metrics.is_empty() {
-            self.task_metrics.values()
+            self.task_metrics
+                .values()
                 .map(|m| m.success_rate)
-                .sum::<f64>() / self.task_metrics.len() as f64
+                .sum::<f64>()
+                / self.task_metrics.len() as f64
         } else {
             1.0
         };
@@ -1674,12 +1697,10 @@ impl ThermalMonitor {
         let secs = duration.as_secs_f64();
         // Cool at ~0.5°C/s toward ambient.
         let cooling = 0.5 * secs;
-        self.cpu_temperature = self.cpu_temperature
-            .max(self.ambient_temperature + cooling)
-            - cooling;
-        self.gpu_temperature = self.gpu_temperature
-            .max(self.ambient_temperature + cooling)
-            - cooling;
+        self.cpu_temperature =
+            self.cpu_temperature.max(self.ambient_temperature + cooling) - cooling;
+        self.gpu_temperature =
+            self.gpu_temperature.max(self.ambient_temperature + cooling) - cooling;
         // Reclassify state after cooling.
         self.thermal_state = if self.cpu_temperature > 85.0 {
             ThermalState::Critical
@@ -1758,9 +1779,11 @@ impl PowerOptimizer {
         if self.optimization_history.is_empty() {
             return 0.0;
         }
-        self.optimization_history.iter()
+        self.optimization_history
+            .iter()
             .map(|r| r.efficiency_gain)
-            .sum::<f64>() / self.optimization_history.len() as f64
+            .sum::<f64>()
+            / self.optimization_history.len() as f64
     }
 
     /// Get the target efficiency this optimizer is configured for.
@@ -1784,7 +1807,8 @@ impl WorkloadAnalyzer {
         // Trim history to the analysis window (keep at most 1000 samples).
         let now = Instant::now();
         let window = self.analysis_window;
-        self.workload_history.retain(|s| now.duration_since(s.timestamp) <= window);
+        self.workload_history
+            .retain(|s| now.duration_since(s.timestamp) <= window);
         if self.workload_history.len() > 1000 {
             let drop = self.workload_history.len() - 1000;
             self.workload_history.drain(0..drop);
@@ -1808,9 +1832,11 @@ impl WorkloadAnalyzer {
 
         // Current load = average of the most recent samples' CPU + neural engine usage.
         let recent: Vec<&WorkloadSample> = self.workload_history.iter().rev().take(10).collect();
-        let current_load = recent.iter()
+        let current_load = recent
+            .iter()
             .map(|s| (s.cpu_usage + s.neural_engine_usage) / 2.0)
-            .sum::<f64>() / recent.len() as f64;
+            .sum::<f64>()
+            / recent.len() as f64;
 
         // Predicted load using the linear regression model:
         // predicted = w0*cpu + w1*memory + w2*neural + bias
@@ -1826,19 +1852,19 @@ impl WorkloadAnalyzer {
         };
 
         // Resource pressure from memory usage.
-        let resource_pressure = recent.iter()
-            .map(|s| s.memory_usage)
-            .sum::<f64>() / recent.len() as f64;
+        let resource_pressure =
+            recent.iter().map(|s| s.memory_usage).sum::<f64>() / recent.len() as f64;
 
         // Thermal pressure from thermal state (0-1 scale, 0=cool, 1=hot).
-        let thermal_pressure = recent.iter()
-            .map(|s| s.thermal_state)
-            .sum::<f64>() / recent.len() as f64;
+        let thermal_pressure =
+            recent.iter().map(|s| s.thermal_state).sum::<f64>() / recent.len() as f64;
 
         // Battery pressure: 1.0 - battery_level/100 (higher = more pressure).
-        let battery_pressure = recent.iter()
+        let battery_pressure = recent
+            .iter()
             .map(|s| 1.0 - (s.battery_level / 100.0).clamp(0.0, 1.0))
-            .sum::<f64>() / recent.len() as f64;
+            .sum::<f64>()
+            / recent.len() as f64;
 
         WorkloadAnalysis {
             current_load: current_load.clamp(0.0, 1.0),
@@ -1911,9 +1937,9 @@ impl ResourceAllocator {
 
     /// Release previously-allocated compute units back to the pool.
     pub fn release(&mut self, units: u32) {
-        self.resource_pool.available_compute_units =
-            (self.resource_pool.available_compute_units + units)
-                .min(self.resource_pool.total_compute_units);
+        self.resource_pool.available_compute_units = (self.resource_pool.available_compute_units
+            + units)
+            .min(self.resource_pool.total_compute_units);
     }
 
     /// Get the current available compute units in the pool.
@@ -1966,12 +1992,18 @@ impl AdaptationEngine {
         // For ML/Hybrid strategies, adjust thresholds based on past success rate.
         // If recent adaptations mostly succeeded, we keep the policy; if they
         // failed, we bias toward more conservative (PowerEfficiency) choices.
-        if matches!(self.adaptation_strategy, AdaptationStrategy::MachineLearning | AdaptationStrategy::Hybrid) {
-            let recent: Vec<&AdaptationRecord> = self.adaptation_history.iter().rev().take(20).collect();
+        if matches!(
+            self.adaptation_strategy,
+            AdaptationStrategy::MachineLearning | AdaptationStrategy::Hybrid
+        ) {
+            let recent: Vec<&AdaptationRecord> =
+                self.adaptation_history.iter().rev().take(20).collect();
             if !recent.is_empty() {
-                let success_rate = recent.iter()
+                let success_rate = recent
+                    .iter()
                     .filter(|r| r.result == AdaptationResult::Success)
-                    .count() as f64 / recent.len() as f64;
+                    .count() as f64
+                    / recent.len() as f64;
                 // Learning rate influences how much we trust past outcomes.
                 // Low success rate + high learning rate → more conservative.
                 if success_rate < 0.5 && self.learning_rate > 0.0 {
@@ -2312,10 +2344,7 @@ mod tests {
 
         // 50% of a 10Wh battery = 5Wh / 5W = 1.0 hour
         let hours = pm.estimate_battery_life_remaining(50.0, 10.0);
-        assert!(
-            (hours - 1.0).abs() < 1e-9,
-            "expected 1.0 hour, got {hours}"
-        );
+        assert!((hours - 1.0).abs() < 1e-9, "expected 1.0 hour, got {hours}");
 
         // 100% of 15Wh / 5W = 3.0 hours
         let hours = pm.estimate_battery_life_remaining(100.0, 15.0);
@@ -2382,9 +2411,7 @@ mod tests {
         // 50% of 15Wh / 7W = 1.0714...h
         let expected = (15.0 * 50.0 / 100.0) / 7.0;
         assert!(metrics.estimated_battery_hours.is_some());
-        assert!(
-            (metrics.estimated_battery_hours.unwrap() - expected).abs() < 1e-9
-        );
+        assert!((metrics.estimated_battery_hours.unwrap() - expected).abs() < 1e-9);
     }
 
     #[test]

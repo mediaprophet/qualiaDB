@@ -11,7 +11,9 @@
 
 #![cfg(not(target_arch = "wasm32"))]
 
-use crate::p2p::sync_ops::{SyncOpCodec, SyncOpRelay, SyncOpRequest, SyncOpResponse, SYNC_OP_PROTOCOL};
+use crate::p2p::sync_ops::{
+    SyncOpCodec, SyncOpRelay, SyncOpRequest, SyncOpResponse, SYNC_OP_PROTOCOL,
+};
 use libp2p::futures::StreamExt;
 use libp2p::request_response::{self, OutboundRequestId, ProtocolSupport};
 use libp2p::swarm::{NetworkBehaviour, SwarmEvent};
@@ -28,7 +30,11 @@ enum Cmd {
     Listen(Multiaddr, oneshot::Sender<Result<Multiaddr, String>>),
     AddPeer(PeerId, Multiaddr),
     Publish(PeerId, Vec<Vec<u8>>, oneshot::Sender<Result<u64, String>>),
-    Pull(PeerId, u64, oneshot::Sender<Result<(Vec<Vec<u8>>, u64), String>>),
+    Pull(
+        PeerId,
+        u64,
+        oneshot::Sender<Result<(Vec<Vec<u8>>, u64), String>>,
+    ),
 }
 
 enum Pending {
@@ -64,7 +70,9 @@ impl Libp2pSyncNode {
                 ),
             })
             .expect("behaviour")
-            .with_swarm_config(|c| c.with_idle_connection_timeout(std::time::Duration::from_secs(60)))
+            .with_swarm_config(|c| {
+                c.with_idle_connection_timeout(std::time::Duration::from_secs(60))
+            })
             .build();
 
         tokio::spawn(event_loop(swarm, relay, cmd_rx));
@@ -73,8 +81,11 @@ impl Libp2pSyncNode {
 
     async fn call<R>(&self, make: impl FnOnce(oneshot::Sender<R>) -> Cmd) -> Result<R, String> {
         let (tx, rx) = oneshot::channel();
-        self.cmd_tx.send(make(tx)).map_err(|_| "sync node stopped".to_string())?;
-        rx.await.map_err(|_| "sync node dropped the response".to_string())
+        self.cmd_tx
+            .send(make(tx))
+            .map_err(|_| "sync node stopped".to_string())?;
+        rx.await
+            .map_err(|_| "sync node dropped the response".to_string())
     }
 
     /// Listen on `addr` (e.g. `/ip4/127.0.0.1/tcp/0`), returning the actual bound multiaddr.
@@ -90,12 +101,16 @@ impl Libp2pSyncNode {
 
     /// Publish opaque signed-op frames to `peer`; returns how many were newly accepted.
     pub async fn publish(&self, peer: PeerId, frames: Vec<Vec<u8>>) -> Result<u64, String> {
-        self.call(|tx| Cmd::Publish(peer, frames, tx)).await.and_then(|r| r)
+        self.call(|tx| Cmd::Publish(peer, frames, tx))
+            .await
+            .and_then(|r| r)
     }
 
     /// Pull `peer`'s frames after `since`; returns them plus the next cursor.
     pub async fn pull(&self, peer: PeerId, since: u64) -> Result<(Vec<Vec<u8>>, u64), String> {
-        self.call(|tx| Cmd::Pull(peer, since, tx)).await.and_then(|r| r)
+        self.call(|tx| Cmd::Pull(peer, since, tx))
+            .await
+            .and_then(|r| r)
     }
 }
 
@@ -187,7 +202,9 @@ impl BlockingSyncClient {
     /// `peer_addr` is a libp2p multiaddr (e.g. `/ip4/127.0.0.1/tcp/4001`).
     pub fn connect(relay: SyncOpRelay, peer_id: &str, peer_addr: &str) -> Result<Self, String> {
         let peer: PeerId = peer_id.parse().map_err(|e| format!("bad peer id: {e}"))?;
-        let addr: Multiaddr = peer_addr.parse().map_err(|e| format!("bad multiaddr: {e}"))?;
+        let addr: Multiaddr = peer_addr
+            .parse()
+            .map_err(|e| format!("bad multiaddr: {e}"))?;
         let rt = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(1)
             .enable_all()
@@ -270,11 +287,17 @@ mod tests {
             let _guard = rt_a.enter();
             Libp2pSyncNode::spawn(relay_a.clone())
         };
-        let a_addr = rt_a.block_on(a.listen("/ip4/127.0.0.1/tcp/0")).expect("A listen");
+        let a_addr = rt_a
+            .block_on(a.listen("/ip4/127.0.0.1/tcp/0"))
+            .expect("A listen");
 
         // B: the blocking client, constructed from A's string peer id + multiaddr (exercises parsing).
-        let b = BlockingSyncClient::connect(SyncOpRelay::new(), &a.peer_id.to_string(), &a_addr.to_string())
-            .expect("connect");
+        let b = BlockingSyncClient::connect(
+            SyncOpRelay::new(),
+            &a.peer_id.to_string(),
+            &a_addr.to_string(),
+        )
+        .expect("connect");
 
         let accepted = b
             .publish_frames(vec![b"op-1".to_vec(), b"op-2".to_vec()])

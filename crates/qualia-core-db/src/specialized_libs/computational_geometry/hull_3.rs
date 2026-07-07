@@ -401,10 +401,10 @@ fn canonical_rotation(v: [u32; 3]) -> [u32; 3] {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::topology::{
         build_triangle_half_edges, required_edge_slots, EdgeSlot, HalfEdge,
     };
+    use super::*;
 
     fn k() -> FilteredF64Kernel {
         FilteredF64Kernel::default()
@@ -492,7 +492,10 @@ mod tests {
                 seen[vtx as usize] = true;
             }
         }
-        assert!(seen.iter().all(|&s| s), "all 8 cube corners must be on the hull");
+        assert!(
+            seen.iter().all(|&s| s),
+            "all 8 cube corners must be on the hull"
+        );
     }
 
     #[test]
@@ -692,7 +695,11 @@ mod tests {
         let na = convex_hull_3(&pts, &mut out_a).unwrap();
         let nb = convex_hull_3(&pts, &mut out_b).unwrap();
         assert_eq!(na, nb);
-        assert_eq!(&out_a[..na], &out_b[..nb], "hull output must be deterministic");
+        assert_eq!(
+            &out_a[..na],
+            &out_b[..nb],
+            "hull output must be deterministic"
+        );
     }
 
     #[test]

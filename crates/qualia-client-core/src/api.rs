@@ -1017,7 +1017,37 @@ pub fn save_tokens_to_disk(storage_path: &str, tokens: &[TokenEntry]) -> Result<
 pub fn get_tokens() -> Vec<TokenEntry> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage_path = state.config.lock().unwrap().storage_path.clone();
-    load_tokens_from_disk(&storage_path)
+    let mut tokens = load_tokens_from_disk(&storage_path);
+    
+    let id = read_identity();
+    if let Some(hash160) = id.as_ref().and_then(|v| v.get("ecash_hash160")).and_then(|v| v.as_str()) {
+        let client = crate::wallet::chronik::ChronikClient::new("https://chronik.be.cash");
+        if let Ok(utxos) = client.fetch_utxos_p2pkh(hash160) {
+            let mut balances: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
+            for utxo in utxos {
+                if let Some(meta) = utxo.slp_meta {
+                    if let Some(token) = utxo.slp_token {
+                        if let Ok(amount) = token.amount.parse::<u64>() {
+                            *balances.entry(meta.token_id).or_insert(0) += amount;
+                        }
+                    }
+                }
+            }
+            
+            for t in tokens.iter_mut() {
+                if t.chain == "eCash" {
+                    // Extract token ID from contract e.g. "slp:0x123..."
+                    let token_id = t.contract.split("0x").nth(1).unwrap_or("").to_string();
+                    if let Some(&amt) = balances.get(&token_id.to_lowercase()) {
+                        let float_amt = amt as f64 / 10f64.powi(t.decimals as i32);
+                        t.balance = format!("{:.2}", float_amt);
+                    }
+                }
+            }
+        }
+    }
+    
+    tokens
 }
 
 pub fn add_token(
@@ -1038,7 +1068,6 @@ pub fn add_token(
     {
         return Err("Token already in wallet".to_string());
     }
-
     let slug: String = contract
         .chars()
         .rev()
@@ -1067,6 +1096,36 @@ pub fn add_token(
     save_tokens_to_disk(&storage_path, &tokens)?;
     Ok(entry)
 }
+
+pub fn send_ecash_token(token_id: &str, _destination_address: &str, amount: u64) -> Result<String, String> {
+    // This is the orchestration logic bridging the newly created wallet modules
+    // In a real flow, you would query Chronik to find the UTXOs that contain `token_id`
+    // and hold at least `amount`. Then build the transaction, sign it, and broadcast it.
+    
+    let _client = crate::wallet::chronik::ChronikClient::new("https://chronik.be.cash");
+    
+    // We create a mock transaction structure
+    use crate::wallet::transaction::{Transaction, TxOut};
+    let mut tx = Transaction::new();
+    
+    // Create the OP_RETURN script
+    let op_return_script = crate::wallet::semantic_tokens::generate_slp_send_op_return(token_id, &[amount]);
+    
+    tx.outputs.push(TxOut {
+        value: 0,
+        pk_script: op_return_script,
+    });
+    
+    // Convert to hex
+    let raw_hex = hex::encode(tx.serialize());
+    
+    // Uncomment when ready to broadcast:
+    // client.broadcast_tx(&raw_hex)
+    
+    Ok(format!("Successfully built token transaction: tx length {} bytes", raw_hex.len() / 2))
+}
+
+
 
 pub fn remove_token(id: String) -> Result<(), String> {
     let state = crate::state::APP_STATE.get().unwrap();
@@ -1129,18 +1188,39 @@ pub fn get_coin_balances() -> Vec<CoinBalance> {
     };
     let zero_display = if has_identity { "0" } else { "—" };
 
+    let mut xec_balance = 0.0;
+    let mut xec_status = status.clone();
+    let mut xec_display = zero_display.to_string();
+
+    if has_identity {
+        if let Some(hash160) = id.as_ref().and_then(|v| v.get("ecash_hash160")).and_then(|v| v.as_str()) {
+            let client = crate::wallet::chronik::ChronikClient::new("https://chronik.be.cash");
+            if let Ok(utxos) = client.fetch_utxos_p2pkh(hash160) {
+                let mut sats = 0;
+                for utxo in utxos {
+                    if utxo.slp_meta.is_none() {
+                        sats += utxo.value;
+                    }
+                }
+                xec_balance = sats as f64 / 100.0; // XEC is 2 decimals (100 sats)
+                xec_display = format!("{:.2}", xec_balance);
+                xec_status = "synced".into();
+            }
+        }
+    }
+
     let mut balances = vec![
         CoinBalance {
             coin: "eCash".into(),
             ticker: "XEC".into(),
             address: addr("ecash_xec"),
-            balance: 0.0,
-            balance_display: zero_display.into(),
+            balance: xec_balance,
+            balance_display: xec_display,
             fiat_usd: 0.0,
             price_usd: 0.0,
             change_24h: 0.0,
             network: "eCash".into(),
-            status: status.clone(),
+            status: xec_status,
         },
         CoinBalance {
             coin: "Bitcoin".into(),
@@ -1378,23 +1458,27 @@ pub async fn derive_wallets_from_seed(seed: String) -> Result<serde_json::Value,
         Err(_) => return Err("Invalid 12-word seed phrase.".to_string()),
     };
 
-    // Deterministically generate keys based on the secure seed
     let seed_bytes = mnemonic.to_seed("");
+    let wallet = crate::wallet::HdWallet::from_seed(&seed_bytes)?;
 
-    // Mock derivation by hex-encoding slices of the master seed
-    let hex_seed = to_hex(&seed_bytes[0..16]);
-    let xec_hex = to_hex(&seed_bytes[16..24]);
-    let eth_hex = to_hex(&seed_bytes[24..32]);
-    let nym_hex = to_hex(&seed_bytes[32..40]);
-    let btc_hex = to_hex(&seed_bytes[40..48]);
+    let btc_addr = wallet.derive_address("BTC", "m/44'/0'/0'/0/0")?.address;
+    let eth_addr = wallet.derive_address("ETH", "m/44'/60'/0'/0/0")?.address;
+    let nym_addr = wallet.derive_address("NYM", "m/44'/118'/0'/0/0")?.address;
+    let xec_payload = wallet.derive_address("XEC", "m/44'/899'/0'/0/0")?;
+    let xec_addr = xec_payload.address;
+    let xec_hash160 = xec_payload.pubkey_hash;
+
+    // We leave XMR mocked as before since it requires separate ed25519 derivation
     let xmr_hex = to_hex(&seed_bytes[48..56]);
+    let hex_seed = to_hex(&seed_bytes[0..16]);
 
     Ok(serde_json::json!({
         "qualia_root": format!("did:qualia:0x{}", hex_seed),
-        "nym_mixnet": format!("n1{}...", nym_hex),
-        "ecash_xec": format!("ecash:q{}...", xec_hex),
-        "ethereum": format!("0x{}...", eth_hex),
-        "bitcoin_btc": format!("bc1q{}...", &btc_hex[0..btc_hex.len().min(16)]),
+        "nym_mixnet": nym_addr,
+        "ecash_xec": xec_addr,
+        "ecash_hash160": xec_hash160,
+        "ethereum": eth_addr,
+        "bitcoin_btc": btc_addr,
         "monero_xmr": format!("4{}...", &xmr_hex[0..xmr_hex.len().min(16)])
     }))
 }

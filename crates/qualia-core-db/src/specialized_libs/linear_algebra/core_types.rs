@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-
 /// Matrix metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MatrixMetadata {

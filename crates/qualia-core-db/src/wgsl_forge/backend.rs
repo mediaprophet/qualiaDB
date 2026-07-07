@@ -31,8 +31,16 @@ fn fallback_chain(preferred: TargetBackend) -> &'static [TargetBackend] {
     match preferred {
         TargetBackend::Ptx => &[TargetBackend::Ptx, TargetBackend::Wgsl],
         TargetBackend::CudaC => &[TargetBackend::CudaC, TargetBackend::Wgsl],
-        TargetBackend::Msl => &[TargetBackend::Msl, TargetBackend::Spirv, TargetBackend::Wgsl],
-        TargetBackend::Hlsl => &[TargetBackend::Hlsl, TargetBackend::Spirv, TargetBackend::Wgsl],
+        TargetBackend::Msl => &[
+            TargetBackend::Msl,
+            TargetBackend::Spirv,
+            TargetBackend::Wgsl,
+        ],
+        TargetBackend::Hlsl => &[
+            TargetBackend::Hlsl,
+            TargetBackend::Spirv,
+            TargetBackend::Wgsl,
+        ],
         TargetBackend::Spirv => &[TargetBackend::Spirv, TargetBackend::Wgsl],
         TargetBackend::Wgsl => &[TargetBackend::Wgsl],
     }
@@ -130,8 +138,14 @@ mod tests {
         let (chosen, note) = resolve_execution_backend(TargetBackend::Ptx, available(&[]));
         assert_eq!(chosen, TargetBackend::Wgsl);
         let note = note.expect("a downgrade must be reported");
-        assert!(note.contains("Ptx"), "note must name the unavailable backend: {note}");
-        assert!(note.contains("Wgsl"), "note must name the chosen backend: {note}");
+        assert!(
+            note.contains("Ptx"),
+            "note must name the unavailable backend: {note}"
+        );
+        assert!(
+            note.contains("Wgsl"),
+            "note must name the chosen backend: {note}"
+        );
     }
 
     #[test]

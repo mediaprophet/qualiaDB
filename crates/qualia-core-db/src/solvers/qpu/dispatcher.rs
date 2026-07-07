@@ -7,9 +7,9 @@
 //! Ported from `qpu/src/dispatcher.rs`.
 
 use super::{JobStatus, QpuError, QpuJob, QpuResult};
+use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use std::sync::Arc;
-use std::cmp::Ordering;
 use tokio::sync::{Mutex, RwLock};
 
 // ── Job state ─────────────────────────────────────────────────────────────────
@@ -71,7 +71,11 @@ impl Ord for PrioritizedJob {
         // QGroup heuristic: group by similar circuit depth and shot count.
         // We sort descending so the BinaryHeap (max-heap) pops highest depth first,
         // and jobs with similar depths will be contiguous.
-        let depth_ord = self.0.parameters.circuit_depth.cmp(&other.0.parameters.circuit_depth);
+        let depth_ord = self
+            .0
+            .parameters
+            .circuit_depth
+            .cmp(&other.0.parameters.circuit_depth);
         if depth_ord != Ordering::Equal {
             return depth_ord;
         }
@@ -121,35 +125,47 @@ impl JobQueue {
 
         for job in jobs {
             let job_id = job.job_id.clone();
-            
+
             let mut state = JobState {
                 job: job.clone(),
                 enqueued_at_ms: now_ms(),
                 retries: 0,
                 status: InternalStatus::Queued,
             };
-            
+
             let mut dispatch_result = dispatch(&job);
-            
+
             while dispatch_result.is_err() && state.retries < 3 {
                 state.retries += 1;
-                log::warn!("Retrying QPU dispatch for {} (retry {})", job_id, state.retries);
+                log::warn!(
+                    "Retrying QPU dispatch for {} (retry {})",
+                    job_id,
+                    state.retries
+                );
                 dispatch_result = dispatch(&job);
             }
-            
+
             match dispatch_result {
                 Ok(provider_id) => {
                     state.job.job_id = provider_id.clone();
                     state.status = InternalStatus::Submitted;
-                    self.running.write().await.insert(provider_id.clone(), state.clone());
-                    
+                    self.running
+                        .write()
+                        .await
+                        .insert(provider_id.clone(), state.clone());
+
                     let mut running = self.running.write().await;
                     if let Some(s) = running.get_mut(&provider_id) {
                         s.status = InternalStatus::Running;
                     }
                 }
                 Err(e) => {
-                    log::error!("QPU dispatch failed for {} after {} retries: {}", job_id, state.retries, e);
+                    log::error!(
+                        "QPU dispatch failed for {} after {} retries: {}",
+                        job_id,
+                        state.retries,
+                        e
+                    );
                     state.status = InternalStatus::Failed;
                     let result = QpuResult::failed(job_id, e);
                     self.completed.lock().await.push(result);
@@ -304,15 +320,15 @@ mod tests {
     #[tokio::test]
     async fn test_qgroup_heuristic_sorting() {
         let q = JobQueue::new();
-        
+
         let mut job1 = QpuJob::new("job1".into(), ProblemType::Vqe, JobParameters::default());
         job1.parameters.circuit_depth = 10;
         job1.parameters.shots = 1000;
-        
+
         let mut job2 = QpuJob::new("job2".into(), ProblemType::Vqe, JobParameters::default());
         job2.parameters.circuit_depth = 50;
         job2.parameters.shots = 1000;
-        
+
         let mut job3 = QpuJob::new("job3".into(), ProblemType::Vqe, JobParameters::default());
         job3.parameters.circuit_depth = 10;
         job3.parameters.shots = 2000;
@@ -336,7 +352,7 @@ mod tests {
             extracted
         };
 
-        // BinaryHeap pops the largest first. 
+        // BinaryHeap pops the largest first.
         // Based on our Ord implementation: highest depth first, then highest shots.
         assert_eq!(jobs[0].job_id, "job2"); // depth: 50, shots: 1000
         assert_eq!(jobs[1].job_id, "job4"); // depth: 50, shots: 500

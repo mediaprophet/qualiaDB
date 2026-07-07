@@ -135,7 +135,11 @@ pub enum ProvenanceSectionError {
     /// Unknown flags bit set (only bit 0 is defined in v1).
     UnknownFlags { got: u16 },
     /// A variable-length field exceeds [`MAX_PROVENANCE_FIELD`].
-    FieldTooLarge { field: &'static str, got: usize, max: usize },
+    FieldTooLarge {
+        field: &'static str,
+        got: usize,
+        max: usize,
+    },
     /// The payload is too short for the declared field lengths.
     PayloadTruncated { expected: usize, got: usize },
     /// The output buffer is too small.
@@ -154,17 +158,39 @@ pub enum ProvenanceSectionError {
 impl std::fmt::Display for ProvenanceSectionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::PayloadTooShort { got, need } => write!(f, "10d PRV payload too short: got {got}, need {need}"),
-            Self::BadMagic { got } => write!(f, "10d PRV bad magic {got:#010x} (expected {PROVENANCE_MAGIC:#010x})"),
+            Self::PayloadTooShort { got, need } => {
+                write!(f, "10d PRV payload too short: got {got}, need {need}")
+            }
+            Self::BadMagic { got } => write!(
+                f,
+                "10d PRV bad magic {got:#010x} (expected {PROVENANCE_MAGIC:#010x})"
+            ),
             Self::UnsupportedVersion { got } => write!(f, "10d PRV unsupported version {got}"),
             Self::NonZeroReserved => write!(f, "10d PRV non-zero reserved_u32"),
-            Self::UnknownFlags { got } => write!(f, "10d PRV unknown flags bits {got:#06x} (only bit 0 defined in v1)"),
-            Self::FieldTooLarge { field, got, max } => write!(f, "10d PRV field {field:?} too large: {got} > {max}"),
-            Self::PayloadTruncated { expected, got } => write!(f, "10d PRV payload truncated: expected {expected}, got {got}"),
-            Self::OutputBufferTooSmall { needed, have } => write!(f, "10d PRV output buffer too small: need {needed}, have {have}"),
-            Self::VcFlagInconsistent { has_vc, vc_len } => write!(f, "10d PRV vc flag inconsistent: has_vc={has_vc}, vc_len={vc_len}"),
+            Self::UnknownFlags { got } => write!(
+                f,
+                "10d PRV unknown flags bits {got:#06x} (only bit 0 defined in v1)"
+            ),
+            Self::FieldTooLarge { field, got, max } => {
+                write!(f, "10d PRV field {field:?} too large: {got} > {max}")
+            }
+            Self::PayloadTruncated { expected, got } => write!(
+                f,
+                "10d PRV payload truncated: expected {expected}, got {got}"
+            ),
+            Self::OutputBufferTooSmall { needed, have } => write!(
+                f,
+                "10d PRV output buffer too small: need {needed}, have {have}"
+            ),
+            Self::VcFlagInconsistent { has_vc, vc_len } => write!(
+                f,
+                "10d PRV vc flag inconsistent: has_vc={has_vc}, vc_len={vc_len}"
+            ),
             Self::NonUtf8 { field } => write!(f, "10d PRV field {field:?} is not valid utf8"),
-            Self::SourceDigestMismatch { expected, got } => write!(f, "10d PRV source-digest mismatch: expected {expected:#010x}, got {got:#010x}"),
+            Self::SourceDigestMismatch { expected, got } => write!(
+                f,
+                "10d PRV source-digest mismatch: expected {expected:#010x}, got {got:#010x}"
+            ),
             Self::MissingLicence => write!(f, "10d PRV missing licence (context stripped)"),
         }
     }
@@ -190,7 +216,11 @@ pub fn encode_provenance_section(
 ) -> Result<usize, ProvenanceSectionError> {
     let check = |field, len: usize| -> Result<(), ProvenanceSectionError> {
         if len > MAX_PROVENANCE_FIELD {
-            Err(ProvenanceSectionError::FieldTooLarge { field, got: len, max: MAX_PROVENANCE_FIELD })
+            Err(ProvenanceSectionError::FieldTooLarge {
+                field,
+                got: len,
+                max: MAX_PROVENANCE_FIELD,
+            })
         } else {
             Ok(())
         }
@@ -202,7 +232,10 @@ pub fn encode_provenance_section(
 
     let total = encoded_len(s);
     if out.len() < total {
-        return Err(ProvenanceSectionError::OutputBufferTooSmall { needed: total, have: out.len() });
+        return Err(ProvenanceSectionError::OutputBufferTooSmall {
+            needed: total,
+            have: out.len(),
+        });
     }
 
     let flags = if s.vc.is_empty() { 0 } else { FLAG_HAS_VC };
@@ -263,7 +296,11 @@ impl<'a> ProvenanceSidecarView<'a> {
     /// The attached verifiable credential, if any.
     #[inline]
     pub fn vc(&self) -> Option<&'a [u8]> {
-        if self.vc.is_empty() { None } else { Some(self.vc) }
+        if self.vc.is_empty() {
+            None
+        } else {
+            Some(self.vc)
+        }
     }
     /// The declared source digest (CRC-32C over the source bytes).
     #[inline]
@@ -294,7 +331,9 @@ pub fn decode_provenance_section(
         return Err(ProvenanceSectionError::BadMagic { got: header.magic });
     }
     if header.version != PROVENANCE_SECTION_VERSION {
-        return Err(ProvenanceSectionError::UnsupportedVersion { got: header.version });
+        return Err(ProvenanceSectionError::UnsupportedVersion {
+            got: header.version,
+        });
     }
     if header.reserved_u32 != 0 {
         return Err(ProvenanceSectionError::NonZeroReserved);
@@ -304,7 +343,10 @@ pub fn decode_provenance_section(
     }
     let has_vc = header.flags & FLAG_HAS_VC != 0;
     if has_vc != (header.vc_len > 0) {
-        return Err(ProvenanceSectionError::VcFlagInconsistent { has_vc, vc_len: header.vc_len });
+        return Err(ProvenanceSectionError::VcFlagInconsistent {
+            has_vc,
+            vc_len: header.vc_len,
+        });
     }
 
     let source_len = header.source_len as usize;
@@ -318,13 +360,20 @@ pub fn decode_provenance_section(
         ("vc", vc_len),
     ] {
         if len > MAX_PROVENANCE_FIELD {
-            return Err(ProvenanceSectionError::FieldTooLarge { field, got: len, max: MAX_PROVENANCE_FIELD });
+            return Err(ProvenanceSectionError::FieldTooLarge {
+                field,
+                got: len,
+                max: MAX_PROVENANCE_FIELD,
+            });
         }
     }
 
     let expected = PROVENANCE_MINI_HEADER_SIZE + source_len + media_len + licence_len + vc_len;
     if payload.len() < expected {
-        return Err(ProvenanceSectionError::PayloadTruncated { expected, got: payload.len() });
+        return Err(ProvenanceSectionError::PayloadTruncated {
+            expected,
+            got: payload.len(),
+        });
     }
 
     let mut cursor = PROVENANCE_MINI_HEADER_SIZE;
@@ -337,11 +386,19 @@ pub fn decode_provenance_section(
     let vc = &payload[cursor..cursor + vc_len];
 
     let source_media_type =
-        std::str::from_utf8(media_raw).map_err(|_| ProvenanceSectionError::NonUtf8 { field: "media_type" })?;
-    let licence =
-        std::str::from_utf8(licence_raw).map_err(|_| ProvenanceSectionError::NonUtf8 { field: "licence" })?;
+        std::str::from_utf8(media_raw).map_err(|_| ProvenanceSectionError::NonUtf8 {
+            field: "media_type",
+        })?;
+    let licence = std::str::from_utf8(licence_raw)
+        .map_err(|_| ProvenanceSectionError::NonUtf8 { field: "licence" })?;
 
-    Ok(ProvenanceSidecarView { header, source_bytes, source_media_type, licence, vc })
+    Ok(ProvenanceSidecarView {
+        header,
+        source_bytes,
+        source_media_type,
+        licence,
+        vc,
+    })
 }
 
 /// The **validate-before-use gate**: return `Ok` only if the sidecar can be
@@ -439,7 +496,10 @@ mod tests {
         let mut buf = vec![0u8; encoded_len(&s)];
         encode_provenance_section(&s, &mut buf).unwrap();
         let view = decode_provenance_section(&buf).unwrap();
-        assert_eq!(validate_provenance(&view), Err(ProvenanceSectionError::MissingLicence));
+        assert_eq!(
+            validate_provenance(&view),
+            Err(ProvenanceSectionError::MissingLicence)
+        );
     }
 
     #[test]

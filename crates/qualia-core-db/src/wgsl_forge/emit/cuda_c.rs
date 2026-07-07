@@ -12,8 +12,12 @@ pub fn emit_cuda_c(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedS
     kernel.validate()?;
     let semantic_hash = kernel.semantic_hash()?;
     let mut source = String::with_capacity(2048);
-    writeln!(source, "// CUDA-C emitted for {}@{}", kernel.id, kernel.semantic_version)
-        .map_err(|e| ForgeError::Emission(e.to_string()))?;
+    writeln!(
+        source,
+        "// CUDA-C emitted for {}@{}",
+        kernel.id, kernel.semantic_version
+    )
+    .map_err(|e| ForgeError::Emission(e.to_string()))?;
 
     let wg = schedule.workgroup_size;
     match kernel.id.as_str() {
@@ -26,7 +30,9 @@ pub fn emit_cuda_c(kernel: &KernelSpec, schedule: Schedule) -> Result<GeneratedS
         // lowering this phase, so it stays out of the route and errors via `other` below.)
         "gemm" | "gemv" => {
             let graph = kernel.to_graph()?;
-            let mut lowerer = super::cuda_graph::CudaCLowerer { source: &mut source };
+            let mut lowerer = super::cuda_graph::CudaCLowerer {
+                source: &mut source,
+            };
             crate::wgsl_forge::ir::graph::lower_graph(&graph, &mut lowerer)?;
         }
         other => {

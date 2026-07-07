@@ -294,10 +294,7 @@ pub fn segment_segment_intersect_2d(
 /// Check if point `p` lies on segment `ab` (assuming collinearity).
 #[inline]
 fn on_segment_2d(a: Point2, b: Point2, p: Point2) -> bool {
-    p.x >= a.x.min(b.x)
-        && p.x <= a.x.max(b.x)
-        && p.y >= a.y.min(b.y)
-        && p.y <= a.y.max(b.y)
+    p.x >= a.x.min(b.x) && p.x <= a.x.max(b.x) && p.y >= a.y.min(b.y) && p.y <= a.y.max(b.y)
 }
 
 // ---------------------------------------------------------------------------

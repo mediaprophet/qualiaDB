@@ -265,7 +265,11 @@ impl<'a> SparqlMmHandler<'a> {
     }
 
     /// Query quins within a time window
-    pub fn query_window(&self, window_id: u8, _timestamp_field: u64) -> Result<Vec<&NQuin>, String> {
+    pub fn query_window(
+        &self,
+        window_id: u8,
+        _timestamp_field: u64,
+    ) -> Result<Vec<&NQuin>, String> {
         let window = self
             .windows
             .get(window_id as usize)

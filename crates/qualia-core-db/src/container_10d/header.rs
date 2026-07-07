@@ -72,13 +72,24 @@ pub enum HeaderParseError {
 impl std::fmt::Display for HeaderParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::TooShort { got } => write!(f, "10d header too short: got {got} bytes, need {HEADER_BYTE_SIZE}"),
+            Self::TooShort { got } => write!(
+                f,
+                "10d header too short: got {got} bytes, need {HEADER_BYTE_SIZE}"
+            ),
             Self::BadMagic { got } => write!(f, "10d bad magic: got {got:?}, need {MAGIC_10D:?}"),
-            Self::UnknownVersion { got } => write!(f, "10d unknown version: got {got}, need {HEADER_VERSION}"),
+            Self::UnknownVersion { got } => {
+                write!(f, "10d unknown version: got {got}, need {HEADER_VERSION}")
+            }
             Self::NonZeroPadding { field } => write!(f, "10d non-zero padding in field {field:?}"),
-            Self::UndefinedAxisRole { axis_index, got } => write!(f, "10d undefined axis role at index {axis_index}: raw {got}"),
+            Self::UndefinedAxisRole { axis_index, got } => write!(
+                f,
+                "10d undefined axis role at index {axis_index}: raw {got}"
+            ),
             Self::MetricDivergence(msg) => write!(f, "10d {msg}"),
-            Self::BadSectionTablePointer { offset, count } => write!(f, "10d bad section-table pointer: offset={offset}, count={count}"),
+            Self::BadSectionTablePointer { offset, count } => write!(
+                f,
+                "10d bad section-table pointer: offset={offset}, count={count}"
+            ),
         }
     }
 }
@@ -195,7 +206,9 @@ impl Container10dHeader {
             return Err(HeaderParseError::BadMagic { got: header.magic });
         }
         if header.version != HEADER_VERSION {
-            return Err(HeaderParseError::UnknownVersion { got: header.version });
+            return Err(HeaderParseError::UnknownVersion {
+                got: header.version,
+            });
         }
         if header.pad0 != [0, 0] {
             return Err(HeaderParseError::NonZeroPadding { field: "pad0" });
@@ -214,11 +227,17 @@ impl Container10dHeader {
             && off as usize <= data.len()
             && cnt <= MAX_SECTION_COUNT;
         if !both_zero && !valid_nonzero {
-            return Err(HeaderParseError::BadSectionTablePointer { offset: off, count: cnt });
+            return Err(HeaderParseError::BadSectionTablePointer {
+                offset: off,
+                count: cnt,
+            });
         }
         for (i, &raw) in header.axis_roles.iter().enumerate() {
             if AxisRole::from_u8(raw).is_none() || raw == AxisRole::Undefined as u8 {
-                return Err(HeaderParseError::UndefinedAxisRole { axis_index: i, got: raw });
+                return Err(HeaderParseError::UndefinedAxisRole {
+                    axis_index: i,
+                    got: raw,
+                });
             }
         }
         verify_descriptor_against_reality(&header.metric_descriptor)
@@ -230,7 +249,7 @@ impl Container10dHeader {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::container_10d::axis_role::{AXIS_ORDER, AxisRole};
+    use crate::container_10d::axis_role::{AxisRole, AXIS_ORDER};
     use crate::container_10d::metric_check::{MetricKind, BOUNDARY_CLIQUE_BRANCH_INDEX};
 
     #[test]
@@ -246,9 +265,15 @@ mod tests {
         assert_eq!(std::mem::offset_of!(Container10dHeader, flags), 6);
         assert_eq!(std::mem::offset_of!(Container10dHeader, axis_roles), 8);
         assert_eq!(std::mem::offset_of!(Container10dHeader, pad0), 18);
-        assert_eq!(std::mem::offset_of!(Container10dHeader, metric_descriptor), 20);
+        assert_eq!(
+            std::mem::offset_of!(Container10dHeader, metric_descriptor),
+            20
+        );
         assert_eq!(std::mem::offset_of!(Container10dHeader, header_crc32c), 52);
-        assert_eq!(std::mem::offset_of!(Container10dHeader, section_table_offset), 56);
+        assert_eq!(
+            std::mem::offset_of!(Container10dHeader, section_table_offset),
+            56
+        );
         assert_eq!(std::mem::offset_of!(Container10dHeader, section_count), 60);
         // The proposed (bare) header has zero pad and no section table.
         let h = Container10dHeader::proposed();
@@ -264,7 +289,10 @@ mod tests {
         let mut b = [0u8; HEADER_BYTE_SIZE];
         h.encode(&mut a);
         h.encode(&mut b);
-        assert_eq!(a, b, "two encodes of the same header must be byte-identical");
+        assert_eq!(
+            a, b,
+            "two encodes of the same header must be byte-identical"
+        );
     }
 
     #[test]
@@ -290,7 +318,10 @@ mod tests {
         bytes[4] = 0xff;
         bytes[5] = 0xff;
         let err = Container10dHeader::parse(&bytes).expect_err("unknown version must reject");
-        assert!(matches!(err, HeaderParseError::UnknownVersion { got: 0xffff }), "{err}");
+        assert!(
+            matches!(err, HeaderParseError::UnknownVersion { got: 0xffff }),
+            "{err}"
+        );
     }
 
     #[test]
@@ -299,7 +330,13 @@ mod tests {
         // axis_roles starts at offset 8; set the first (q) to Undefined (0).
         bytes[8] = AxisRole::Undefined as u8;
         let err = Container10dHeader::parse(&bytes).expect_err("undefined axis role must reject");
-        assert!(matches!(err, HeaderParseError::UndefinedAxisRole { axis_index: 0, .. }), "{err}");
+        assert!(
+            matches!(
+                err,
+                HeaderParseError::UndefinedAxisRole { axis_index: 0, .. }
+            ),
+            "{err}"
+        );
     }
 
     #[test]
@@ -307,8 +344,18 @@ mod tests {
         let mut bytes = Container10dHeader::proposed().encode_to_vec64();
         // axis_roles[3] (x) — set to an undefined raw value (5).
         bytes[8 + 3] = 5;
-        let err = Container10dHeader::parse(&bytes).expect_err("unknown axis role byte must reject");
-        assert!(matches!(err, HeaderParseError::UndefinedAxisRole { axis_index: 3, got: 5 }), "{err}");
+        let err =
+            Container10dHeader::parse(&bytes).expect_err("unknown axis role byte must reject");
+        assert!(
+            matches!(
+                err,
+                HeaderParseError::UndefinedAxisRole {
+                    axis_index: 3,
+                    got: 5
+                }
+            ),
+            "{err}"
+        );
     }
 
     #[test]
@@ -316,7 +363,10 @@ mod tests {
         let mut bytes = Container10dHeader::proposed().encode_to_vec64();
         bytes[18] = 1;
         let err = Container10dHeader::parse(&bytes).expect_err("non-zero pad0 must reject");
-        assert!(matches!(err, HeaderParseError::NonZeroPadding { field: "pad0" }), "{err}");
+        assert!(
+            matches!(err, HeaderParseError::NonZeroPadding { field: "pad0" }),
+            "{err}"
+        );
     }
 
     #[test]
@@ -327,7 +377,10 @@ mod tests {
         bytes[56..60].copy_from_slice(&8u32.to_le_bytes());
         bytes[60..64].copy_from_slice(&1u32.to_le_bytes());
         let err = Container10dHeader::parse(&bytes).expect_err("offset < header size must reject");
-        assert!(matches!(err, HeaderParseError::BadSectionTablePointer { .. }), "{err}");
+        assert!(
+            matches!(err, HeaderParseError::BadSectionTablePointer { .. }),
+            "{err}"
+        );
     }
 
     #[test]
@@ -336,7 +389,10 @@ mod tests {
         let mut bytes = Container10dHeader::proposed().encode_to_vec64();
         bytes[60..64].copy_from_slice(&1u32.to_le_bytes());
         let err = Container10dHeader::parse(&bytes).expect_err("count without offset must reject");
-        assert!(matches!(err, HeaderParseError::BadSectionTablePointer { .. }), "{err}");
+        assert!(
+            matches!(err, HeaderParseError::BadSectionTablePointer { .. }),
+            "{err}"
+        );
     }
 
     #[test]
@@ -345,7 +401,10 @@ mod tests {
         let mut bytes = Container10dHeader::proposed().encode_to_vec64();
         bytes[56..60].copy_from_slice(&64u32.to_le_bytes());
         let err = Container10dHeader::parse(&bytes).expect_err("offset without count must reject");
-        assert!(matches!(err, HeaderParseError::BadSectionTablePointer { .. }), "{err}");
+        assert!(
+            matches!(err, HeaderParseError::BadSectionTablePointer { .. }),
+            "{err}"
+        );
     }
 
     #[test]
@@ -366,7 +425,8 @@ mod tests {
         // Set the t bit (bit 6) in folded_axes at offset 28 + 2.
         let folded_offset = 28 + 2;
         bytes[folded_offset] |= 1 << 6;
-        let err = Container10dHeader::parse(&bytes).expect_err("diverging metric descriptor must reject");
+        let err =
+            Container10dHeader::parse(&bytes).expect_err("diverging metric descriptor must reject");
         match err {
             HeaderParseError::MetricDivergence(msg) => {
                 assert!(msg.contains("v=1"), "message must name v=1: {msg}");
@@ -383,15 +443,22 @@ mod tests {
         // folded_axes at offset 44 + 2. Set bit 3 (x).
         let folded_offset = 44 + 2;
         bytes[folded_offset] |= 1 << 3;
-        let err = Container10dHeader::parse(&bytes).expect_err("diverging metric descriptor must reject");
-        assert!(matches!(err, HeaderParseError::MetricDivergence(_)), "{err:?}");
+        let err =
+            Container10dHeader::parse(&bytes).expect_err("diverging metric descriptor must reject");
+        assert!(
+            matches!(err, HeaderParseError::MetricDivergence(_)),
+            "{err:?}"
+        );
     }
 
     #[test]
     fn parse_rejects_too_short_input() {
         let short = [0u8; 32];
         let err = Container10dHeader::parse(&short).expect_err("short input must reject");
-        assert!(matches!(err, HeaderParseError::TooShort { got: 32 }), "{err}");
+        assert!(
+            matches!(err, HeaderParseError::TooShort { got: 32 }),
+            "{err}"
+        );
     }
 
     #[test]
@@ -399,7 +466,11 @@ mod tests {
         let h = Container10dHeader::proposed();
         for (i, &raw) in h.axis_roles.iter().enumerate() {
             let role = AxisRole::from_u8(raw).expect("proposed roles are all defined");
-            assert_eq!(role as u8, PROPOSED_AXIS_ROLES[i] as u8, "axis {}", AXIS_ORDER[i]);
+            assert_eq!(
+                role as u8, PROPOSED_AXIS_ROLES[i] as u8,
+                "axis {}",
+                AXIS_ORDER[i]
+            );
         }
         // μ (index 8) is the dual-role coordinate+carrier
         assert_eq!(h.axis_roles[8], AxisRole::CoordinateCarrier as u8);
@@ -431,6 +502,10 @@ mod tests {
     #[test]
     fn proposed_header_default_disposition_is_refuse() {
         let h = Container10dHeader::proposed();
-        assert_ne!(h.flags & FLAG_DEFAULT_DISPOSITION_REFUSE, 0, "v1 header must fail closed by default");
+        assert_ne!(
+            h.flags & FLAG_DEFAULT_DISPOSITION_REFUSE,
+            0,
+            "v1 header must fail closed by default"
+        );
     }
 }

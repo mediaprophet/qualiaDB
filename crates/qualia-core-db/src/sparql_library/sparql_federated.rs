@@ -509,7 +509,11 @@ pub struct DidCorsHelper;
 
 impl DidCorsHelper {
     /// Verify DID signature for CORS preflight
-    pub fn verify_did_signature(_did: u64, _signature: u64, _challenge: u64) -> Result<bool, String> {
+    pub fn verify_did_signature(
+        _did: u64,
+        _signature: u64,
+        _challenge: u64,
+    ) -> Result<bool, String> {
         // In production, this would:
         // 1. Resolve DID to get public key
         // 2. Verify signature of challenge using public key
@@ -647,8 +651,14 @@ mod tests {
 
     #[test]
     fn test_service_local_graph() {
-        assert_eq!(FederatedService::new("local:default").local_graph(), Some("default"));
-        assert_eq!(FederatedService::new("qualia:graph1").local_graph(), Some("graph1"));
+        assert_eq!(
+            FederatedService::new("local:default").local_graph(),
+            Some("default")
+        );
+        assert_eq!(
+            FederatedService::new("qualia:graph1").local_graph(),
+            Some("graph1")
+        );
         assert_eq!(
             FederatedService::new("https://remote.example.org/sparql").local_graph(),
             None
@@ -664,7 +674,11 @@ mod tests {
             .execute_service(&service, "SELECT ?s WHERE { ?s ?p ?o }")
             .unwrap();
         assert_eq!(result.service_endpoint, "local:default");
-        assert!(result.success, "local execution should succeed: {:?}", result.error);
+        assert!(
+            result.success,
+            "local execution should succeed: {:?}",
+            result.error
+        );
         assert!(result.remote_query_url.is_none());
         // No quins → no rows, but still a successful local execution.
         assert_eq!(result.row_count(), 0);
@@ -734,7 +748,10 @@ mod tests {
         assert_eq!(results[0].service_endpoint, "local:default");
         assert!(results[0].success);
         assert!(results[0].remote_query_url.is_none());
-        assert_eq!(results[1].service_endpoint, "https://remote.example.org/sparql");
+        assert_eq!(
+            results[1].service_endpoint,
+            "https://remote.example.org/sparql"
+        );
         assert!(results[1].success);
         assert!(results[1].remote_query_url.is_some());
     }

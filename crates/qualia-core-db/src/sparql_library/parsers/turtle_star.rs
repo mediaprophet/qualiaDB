@@ -213,7 +213,11 @@ impl TurtleStarParser {
         // Parse subject
         {
             let frame = self.stack.current();
-            Self::expect_state(frame, ParsingState::ExpectSubject, ParsingState::ExpectPredicate)?;
+            Self::expect_state(
+                frame,
+                ParsingState::ExpectSubject,
+                ParsingState::ExpectPredicate,
+            )?;
         }
         while *pos < input.len() && input[*pos].is_ascii_whitespace() {
             *pos += 1;
@@ -232,7 +236,11 @@ impl TurtleStarParser {
         // Parse predicate
         {
             let frame = self.stack.current();
-            Self::expect_state(frame, ParsingState::ExpectPredicate, ParsingState::ExpectObject)?;
+            Self::expect_state(
+                frame,
+                ParsingState::ExpectPredicate,
+                ParsingState::ExpectObject,
+            )?;
         }
         match self.parse_token(input, pos)? {
             Some(hash) => self.stack.current().predicate = Some(hash),
@@ -242,7 +250,11 @@ impl TurtleStarParser {
         // Parse object (could be another embedded triple)
         {
             let frame = self.stack.current();
-            Self::expect_state(frame, ParsingState::ExpectObject, ParsingState::ExpectEmbeddedEnd)?;
+            Self::expect_state(
+                frame,
+                ParsingState::ExpectObject,
+                ParsingState::ExpectEmbeddedEnd,
+            )?;
         }
         while *pos < input.len() && input[*pos].is_ascii_whitespace() {
             *pos += 1;
@@ -263,7 +275,11 @@ impl TurtleStarParser {
         // Expect >> terminator
         {
             let frame = self.stack.current();
-            Self::expect_state(frame, ParsingState::ExpectEmbeddedEnd, ParsingState::ExpectSubject)?;
+            Self::expect_state(
+                frame,
+                ParsingState::ExpectEmbeddedEnd,
+                ParsingState::ExpectSubject,
+            )?;
         }
         while *pos + 1 < input.len() && input[*pos].is_ascii_whitespace() {
             *pos += 1;
@@ -459,7 +475,7 @@ pub fn parse_turtle_star_stream<R: Read>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rdf_star::{RdfStarParser};
+    use crate::rdf_star::RdfStarParser;
 
     #[test]
     fn test_turtle_star_parser_creation() {

@@ -250,17 +250,47 @@ mod tests {
         // Test a variety of degenerate and non-degenerate configurations.
         let cases = [
             // Non-degenerate: regular tetrahedron.
-            (p(0.0, 0.0, 0.0), p(1.0, 0.0, 0.0), p(0.0, 1.0, 0.0), p(0.0, 0.0, 1.0)),
+            (
+                p(0.0, 0.0, 0.0),
+                p(1.0, 0.0, 0.0),
+                p(0.0, 1.0, 0.0),
+                p(0.0, 0.0, 1.0),
+            ),
             // Coplanar: four points in z=0.
-            (p(0.0, 0.0, 0.0), p(1.0, 0.0, 0.0), p(0.0, 1.0, 0.0), p(1.0, 1.0, 0.0)),
+            (
+                p(0.0, 0.0, 0.0),
+                p(1.0, 0.0, 0.0),
+                p(0.0, 1.0, 0.0),
+                p(1.0, 1.0, 0.0),
+            ),
             // Coplanar: four points in z=1.
-            (p(0.0, 0.0, 1.0), p(1.0, 0.0, 1.0), p(0.0, 1.0, 1.0), p(1.0, 1.0, 1.0)),
+            (
+                p(0.0, 0.0, 1.0),
+                p(1.0, 0.0, 1.0),
+                p(0.0, 1.0, 1.0),
+                p(1.0, 1.0, 1.0),
+            ),
             // Collinear: four points on the x-axis.
-            (p(0.0, 0.0, 0.0), p(1.0, 0.0, 0.0), p(2.0, 0.0, 0.0), p(3.0, 0.0, 0.0)),
+            (
+                p(0.0, 0.0, 0.0),
+                p(1.0, 0.0, 0.0),
+                p(2.0, 0.0, 0.0),
+                p(3.0, 0.0, 0.0),
+            ),
             // Identical points.
-            (p(1.0, 2.0, 3.0), p(1.0, 2.0, 3.0), p(1.0, 2.0, 3.0), p(1.0, 2.0, 3.0)),
+            (
+                p(1.0, 2.0, 3.0),
+                p(1.0, 2.0, 3.0),
+                p(1.0, 2.0, 3.0),
+                p(1.0, 2.0, 3.0),
+            ),
             // Coplanar with a shared vertex.
-            (p(0.0, 0.0, 0.0), p(2.0, 0.0, 0.0), p(0.0, 2.0, 0.0), p(1.0, 1.0, 0.0)),
+            (
+                p(0.0, 0.0, 0.0),
+                p(2.0, 0.0, 0.0),
+                p(0.0, 2.0, 0.0),
+                p(1.0, 1.0, 0.0),
+            ),
         ];
 
         for (a, b, c, d) in &cases {
@@ -359,7 +389,11 @@ mod tests {
         // b_xy = (1, 0), c_xy = (1, 1), d_xy = (0, 1).
         // orient_2d((1,0), (1,1), (0,1)) = CCW (positive).
         let sign = orient_3d_sos(a, b, c, d);
-        assert_eq!(sign, Sign::Positive, "square (a,b,c,d) should be Positive via 3rd cofactor");
+        assert_eq!(
+            sign,
+            Sign::Positive,
+            "square (a,b,c,d) should be Positive via 3rd cofactor"
+        );
     }
 
     #[test]
@@ -372,7 +406,11 @@ mod tests {
         let d = p(3.0, 0.0, 0.0);
 
         let sign = orient_3d_sos(a, b, c, d);
-        assert_eq!(sign, Sign::Positive, "collinear fallback should return Positive");
+        assert_eq!(
+            sign,
+            Sign::Positive,
+            "collinear fallback should return Positive"
+        );
     }
 
     #[test]
@@ -380,7 +418,11 @@ mod tests {
         // All four points identical — fully degenerate.
         let a = p(1.0, 2.0, 3.0);
         let sign = orient_3d_sos(a, a, a, a);
-        assert_eq!(sign, Sign::Positive, "identical points fallback should return Positive");
+        assert_eq!(
+            sign,
+            Sign::Positive,
+            "identical points fallback should return Positive"
+        );
     }
 
     #[test]

@@ -14,9 +14,7 @@
 
 use std::collections::HashMap;
 
-use super::super::{
-    fnv60, AssetRef, AssetRole, Descriptors, Processor, ProcessorOutput,
-};
+use super::super::{fnv60, AssetRef, AssetRole, Descriptors, Processor, ProcessorOutput};
 
 /// A model-free acoustic summary of a recording — what the DSP can honestly say.
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -84,14 +82,22 @@ impl Processor for WavProcessor {
         };
 
         let meta_uri = format!("{asset_uri}#acoustic");
-        let derived = vec![
-            AssetRef::new(&meta_uri, fnv60(text.as_bytes()), "text/plain", AssetRole::Analysis)
-                .derived_from(asset_uri),
-        ];
+        let derived = vec![AssetRef::new(
+            &meta_uri,
+            fnv60(text.as_bytes()),
+            "text/plain",
+            AssetRole::Analysis,
+        )
+        .derived_from(asset_uri)];
         let mut derived_bytes = HashMap::new();
         derived_bytes.insert(meta_uri, text.into_bytes());
 
-        ProcessorOutput { derived, derived_bytes, descriptors, flags: Vec::new() }
+        ProcessorOutput {
+            derived,
+            derived_bytes,
+            descriptors,
+            flags: Vec::new(),
+        }
     }
 }
 
@@ -187,7 +193,11 @@ fn parse_wav(b: &[u8]) -> Option<WavData> {
         _ => return None, // unsupported encoding — honestly decline rather than guess
     }
 
-    Some(WavData { sample_rate, channels, samples })
+    Some(WavData {
+        sample_rate,
+        channels,
+        samples,
+    })
 }
 
 /// Dominant frequency (Hz) via the project's STFT: average the magnitude
@@ -257,7 +267,7 @@ mod tests {
         b.extend_from_slice(&byte_rate.to_le_bytes());
         b.extend_from_slice(&2u16.to_le_bytes()); // block align
         b.extend_from_slice(&16u16.to_le_bytes()); // bits
-        // data chunk
+                                                   // data chunk
         b.extend_from_slice(b"data");
         b.extend_from_slice(&(data.len() as u32).to_le_bytes());
         b.extend_from_slice(&data);
@@ -270,7 +280,11 @@ mod tests {
         let s = WavProcessor::analyse(&wav).expect("wav parsed");
         assert_eq!(s.sample_rate, 8000);
         assert_eq!(s.channels, 1);
-        assert!((s.duration_secs - 0.5).abs() < 0.02, "≈0.5s, got {}", s.duration_secs);
+        assert!(
+            (s.duration_secs - 0.5).abs() < 0.02,
+            "≈0.5s, got {}",
+            s.duration_secs
+        );
     }
 
     #[test]
@@ -290,6 +304,9 @@ mod tests {
         assert!(proc.handles("audio/wav"));
         let r = ingest_with(&proc, "urn:audio:clip", "audio/wav", 0xA0D10, &wav);
         let subj = r.container.primary.subject();
-        assert!(by_topic(&r.quins, "audio").contains(&subj), "findable as audio");
+        assert!(
+            by_topic(&r.quins, "audio").contains(&subj),
+            "findable as audio"
+        );
     }
 }

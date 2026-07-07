@@ -163,9 +163,7 @@ impl VaultManifestProcessor {
         // Check if all terms exist in Q42 lexicon
         let lexicon = self.cbor_ld_parser.lexicon();
         for collection in &manifest.collections {
-            if lexicon
-                .resolve_term(&collection.collection_type)
-                .is_none()
+            if lexicon.resolve_term(&collection.collection_type).is_none()
                 && self
                     .q42_context
                     .resolve_semantic_term(&collection.collection_type)
@@ -176,9 +174,7 @@ impl VaultManifestProcessor {
         }
 
         for capability in &manifest.capabilities {
-            if lexicon
-                .resolve_term(&capability.capability_type)
-                .is_none()
+            if lexicon.resolve_term(&capability.capability_type).is_none()
                 && self
                     .q42_context
                     .resolve_semantic_term(&capability.capability_type)
@@ -431,7 +427,7 @@ impl VaultManifest {
 #[cfg(test)]
 mod tests {
     use super::*;
-        
+
     #[test]
     fn test_vault_manifest_creation() {
         let manifest = VaultManifest::new("test-vault-123".to_string());

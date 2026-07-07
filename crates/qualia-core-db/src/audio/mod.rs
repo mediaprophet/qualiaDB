@@ -31,15 +31,11 @@ pub use audio_spectral_sheet::{
     parse_sidecar_header, AudioSpectralSheetView, AudioSpectralSidecarHeader,
     SPECTRAL_PREVIEW_BINS, SPECTRAL_SIDECAR_MAGIC,
 };
-pub use cqt_bake::{
-    bake_cqt_sidecar_from_preview, bake_cqt_sidecar_from_samples, forward_cqt,
-};
+pub use cqt_bake::{bake_cqt_sidecar_from_preview, bake_cqt_sidecar_from_samples, forward_cqt};
 pub use dsp_kernel::{epistemic_fm_index, epistemic_temperature_from_q, ParametricVoiceState};
 pub use hrtf::{
     binaural_from_position, binaural_render, convolve_fir, set_hrtf_profile, synthesize_hrir,
     BinauralGains, HrtfProfile,
 };
-pub use stft::{
-    bake_stft_sidecar_from_samples, forward_stft, stft_magnitudes,
-};
+pub use stft::{bake_stft_sidecar_from_samples, forward_stft, stft_magnitudes};
 pub use stft_bake::{bake_stft_sidecar_from_preview, bake_tensor_stft_sidecar, StftBakeError};

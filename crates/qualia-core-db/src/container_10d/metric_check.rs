@@ -286,13 +286,20 @@ mod tests {
     fn probe_v0_euclidean_folds_all_seven_coordinates() {
         let mask = probe_folded_axes(0);
         // x,y,z,t,α,μ,σ
-        assert_eq!(mask, (1 << 3) | (1 << 4) | (1 << 5) | (1 << 6) | (1 << 7) | (1 << 8) | (1 << 9));
+        assert_eq!(
+            mask,
+            (1 << 3) | (1 << 4) | (1 << 5) | (1 << 6) | (1 << 7) | (1 << 8) | (1 << 9)
+        );
     }
 
     #[test]
     fn probe_v1_cyclic_folds_xyz_only() {
         let mask = probe_folded_axes(1);
-        assert_eq!(mask, (1 << 3) | (1 << 4) | (1 << 5), "v=1 must fold only x,y,z; got {mask:#b}");
+        assert_eq!(
+            mask,
+            (1 << 3) | (1 << 4) | (1 << 5),
+            "v=1 must fold only x,y,z; got {mask:#b}"
+        );
         // explicitly: t, α, μ, σ are NOT folded
         assert_eq!(mask & (1 << 6), 0, "t must not be folded under v=1");
         assert_eq!(mask & (1 << 7), 0, "α must not be folded under v=1");
@@ -303,20 +310,29 @@ mod tests {
     #[test]
     fn probe_v2_hyperbolic_folds_xyz_only() {
         let mask = probe_folded_axes(2);
-        assert_eq!(mask, (1 << 3) | (1 << 4) | (1 << 5), "v=2 must fold only x,y,z; got {mask:#b}");
+        assert_eq!(
+            mask,
+            (1 << 3) | (1 << 4) | (1 << 5),
+            "v=2 must fold only x,y,z; got {mask:#b}"
+        );
     }
 
     #[test]
     fn probe_v3_boundary_folds_no_coordinate_axes() {
         let mask = probe_folded_axes(3);
-        assert_eq!(mask, 0, "v>=3 boundary clique must fold no coordinate axes; got {mask:#b}");
+        assert_eq!(
+            mask, 0,
+            "v>=3 boundary clique must fold no coordinate axes; got {mask:#b}"
+        );
     }
 
     #[test]
     fn proposed_descriptor_matches_reality() {
         let desc = proposed_metric_descriptor();
-        assert!(verify_descriptor_against_reality(&desc).is_ok(),
-            "the proposed (option b) descriptor must match full_distance's actual behaviour");
+        assert!(
+            verify_descriptor_against_reality(&desc).is_ok(),
+            "the proposed (option b) descriptor must match full_distance's actual behaviour"
+        );
     }
 
     #[test]
@@ -324,7 +340,8 @@ mod tests {
         let mut desc = proposed_metric_descriptor();
         // Claim v=1 (cyclic) folds t (bit 6) — it does not.
         desc.branches[1].folded_axes |= 1 << 6;
-        let err = verify_descriptor_against_reality(&desc).expect_err("must reject diverging claim");
+        let err =
+            verify_descriptor_against_reality(&desc).expect_err("must reject diverging claim");
         assert_eq!(err.v_class, 1);
         assert_eq!(err.axis_index, 6, "divergence must name axis t (index 6)");
         assert!(err.declared_folds);
@@ -336,7 +353,8 @@ mod tests {
         let mut desc = proposed_metric_descriptor();
         // Claim v=0 does NOT fold σ (clear bit 9) — it does.
         desc.branches[0].folded_axes &= !(1 << 9);
-        let err = verify_descriptor_against_reality(&desc).expect_err("must reject diverging claim");
+        let err =
+            verify_descriptor_against_reality(&desc).expect_err("must reject diverging claim");
         assert_eq!(err.v_class, 0);
         assert_eq!(err.axis_index, 9, "divergence must name axis σ (index 9)");
         assert!(!err.declared_folds);
@@ -348,7 +366,8 @@ mod tests {
         let mut desc = proposed_metric_descriptor();
         // Claim v>=3 boundary folds x (bit 3) — it folds nothing.
         desc.branches[BOUNDARY_CLIQUE_BRANCH_INDEX].folded_axes |= 1 << 3;
-        let err = verify_descriptor_against_reality(&desc).expect_err("must reject diverging claim");
+        let err =
+            verify_descriptor_against_reality(&desc).expect_err("must reject diverging claim");
         assert_eq!(err.v_class, 3);
         assert_eq!(err.axis_index, 3);
     }

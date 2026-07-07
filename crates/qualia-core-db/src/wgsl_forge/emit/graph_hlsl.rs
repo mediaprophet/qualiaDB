@@ -11,9 +11,7 @@
 use std::fmt::Write;
 
 use super::GeneratedShader;
-use crate::wgsl_forge::ir::graph::{
-    ComputeGraph, EwKind, GraphNode, Lowerer, OpNode, RedKind,
-};
+use crate::wgsl_forge::ir::graph::{ComputeGraph, EwKind, GraphNode, Lowerer, OpNode, RedKind};
 use crate::wgsl_forge::{ForgeError, Schedule, FORGE_SCHEMA_VERSION};
 
 fn unary_expr_hlsl(kind: EwKind) -> Option<&'static str> {
@@ -66,7 +64,12 @@ pub fn elementwise_hlsl(kind: EwKind, wg: u32) -> Result<String, ForgeError> {
 
 fn reduce_fragments_hlsl(op: RedKind) -> (&'static str, &'static str, &'static str, &'static str) {
     match op {
-        RedKind::Sum => ("0.0f", "acc + x", "scratch[tid] + scratch[tid + stride]", "scratch[0]"),
+        RedKind::Sum => (
+            "0.0f",
+            "acc + x",
+            "scratch[tid] + scratch[tid + stride]",
+            "scratch[0]",
+        ),
         RedKind::Mean => (
             "0.0f",
             "acc + x",
@@ -116,7 +119,9 @@ impl Lowerer for HlslLowerer<'_> {
                 .push_str(&elementwise_hlsl(f, node.sched.workgroup_size.max(1))?);
             Ok(())
         } else {
-            Err(ForgeError::Emission("HlslLowerer::elementwise on non-Elementwise".into()))
+            Err(ForgeError::Emission(
+                "HlslLowerer::elementwise on non-Elementwise".into(),
+            ))
         }
     }
     fn reduce(&mut self, node: &GraphNode) -> Result<(), ForgeError> {
@@ -125,7 +130,9 @@ impl Lowerer for HlslLowerer<'_> {
                 .push_str(&reduce_hlsl(op, node.sched.workgroup_size.max(1)));
             Ok(())
         } else {
-            Err(ForgeError::Emission("HlslLowerer::reduce on non-Reduce".into()))
+            Err(ForgeError::Emission(
+                "HlslLowerer::reduce on non-Reduce".into(),
+            ))
         }
     }
     fn broadcast(&mut self, node: &GraphNode) -> Result<(), ForgeError> {
@@ -137,11 +144,19 @@ impl Lowerer for HlslLowerer<'_> {
 
 /// Emit a complete HLSL module for a portable compute-graph (the HLSL analogue of
 /// `emit_graph_wgsl`). Non-portable nodes lower to an explicit `Err`.
-pub fn emit_graph_hlsl(graph: &ComputeGraph, schedule: Schedule) -> Result<GeneratedShader, ForgeError> {
+pub fn emit_graph_hlsl(
+    graph: &ComputeGraph,
+    schedule: Schedule,
+) -> Result<GeneratedShader, ForgeError> {
     let mut source = String::with_capacity(1_024);
-    writeln!(source, "// Qualia WGSL Forge schema {FORGE_SCHEMA_VERSION} (compute-graph -> HLSL).")
-        .map_err(|e| ForgeError::Emission(e.to_string()))?;
-    let mut lowerer = HlslLowerer { source: &mut source };
+    writeln!(
+        source,
+        "// Qualia WGSL Forge schema {FORGE_SCHEMA_VERSION} (compute-graph -> HLSL)."
+    )
+    .map_err(|e| ForgeError::Emission(e.to_string()))?;
+    let mut lowerer = HlslLowerer {
+        source: &mut source,
+    };
     crate::wgsl_forge::ir::graph::lower_graph(graph, &mut lowerer)?;
     let source_hash = blake3::hash(source.as_bytes()).to_hex().to_string();
     Ok(GeneratedShader {
@@ -159,7 +174,9 @@ mod tests {
 
     #[test]
     fn hlsl_portable_kit_emits_hlsl_constructs() {
-        assert!(elementwise_hlsl(EwKind::Silu, 64).unwrap().contains("void ewise_main"));
+        assert!(elementwise_hlsl(EwKind::Silu, 64)
+            .unwrap()
+            .contains("void ewise_main"));
         assert!(elementwise_hlsl(EwKind::Add, 64).unwrap().contains("a + b"));
         assert!(elementwise_hlsl(EwKind::Fma, 64).unwrap().contains("mad("));
         assert!(elementwise_hlsl(EwKind::Bias, 64).is_err());

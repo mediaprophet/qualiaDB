@@ -585,9 +585,9 @@ mod gemm;
 mod init;
 mod load;
 mod output;
-mod prefill_async;
 #[cfg(not(target_arch = "wasm32"))]
 mod prefill_arena;
+mod prefill_async;
 mod resident_decode;
 mod verify_arena;
 

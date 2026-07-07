@@ -55,8 +55,8 @@ use qualia_core_db::{q_hash, NQuin};
 const ACME: &str = "ex:AcmeCorp"; // a values:CorporatePerson
 const DIGNITY_RIGHT: &str = "ex:UDHR-Art1-DignityRight"; // a NaturalPerson-only right
 const CONTRACT: &str = "did:webizen:agency:G1"; // the guard's contract graph
-// Predicate text deliberately contains "forbid" so `opcode_from_predicate_uri`
-// (deontic.rs) compiles a `Strict` rule to OP_FORBID.
+                                                // Predicate text deliberately contains "forbid" so `opcode_from_predicate_uri`
+                                                // (deontic.rs) compiles a `Strict` rule to OP_FORBID.
 const FORBID_PRED: &str = "q42:forbidsHoldingDignityRight";
 
 /// Run the real line-based N3 parser over a fixture, collecting logic rules.
@@ -97,8 +97,7 @@ fn data_quin(subject: u64, predicate: u64, object: u64, context: u64) -> NQuin {
 fn test_deontic_smoke() {
     // ── 1. The values-credential rule (ground instance of agency.n3 G1) ──────────
     // One line: the line-based MVP parser requires the whole rule on a single line.
-    let fixture =
-        "{ ex:AcmeCorp q42:forbidsHoldingDignityRight ex:UDHR-Art1-DignityRight } => \
+    let fixture = "{ ex:AcmeCorp q42:forbidsHoldingDignityRight ex:UDHR-Art1-DignityRight } => \
          { ex:AcmeCorp q42:triggers ex:PersonhoodCategoryError } .\n";
     let rules = parse_rules(fixture);
     assert_eq!(rules.len(), 1, "exactly one logic rule must parse");
@@ -114,7 +113,11 @@ fn test_deontic_smoke() {
     for rule in &rules {
         arena.register_rule(rule);
     }
-    assert_eq!(arena.rule_count(), 1, "rule registered into the VM registry");
+    assert_eq!(
+        arena.rule_count(),
+        1,
+        "rule registered into the VM registry"
+    );
 
     // fire_registered_rules: compile_n3_rule_to_norm -> write_table (norm into the
     // arena) AND compile_rule_to_opcodes -> execute_vm_frame (the VM runs).
@@ -148,9 +151,7 @@ fn test_deontic_smoke() {
 
     // ── 5. THE DENY: an Active FORBID verdict for AcmeCorp's dignity-right claim ──
     let deny = verdicts[..verdict_count].iter().find(|v| {
-        v.opcode == OP_FORBID
-            && v.norm.subject == q_hash(ACME)
-            && v.status == DeonticStatus::Active
+        v.opcode == OP_FORBID && v.norm.subject == q_hash(ACME) && v.status == DeonticStatus::Active
     });
     assert!(
         deny.is_some(),
@@ -174,13 +175,13 @@ fn test_deontic_smoke() {
     // step 5's `Active` were a hardcoded constant, this would not change — so the
     // flip proves a real evaluation (PLAN §11.1 defeasibility; "run the round-trip").
     let overlay = compile_norm_quin(
-        q_hash(ACME),          // same party
-        OP_PERMIT,             // the overlay PERMITS (cosmetic for a defeater node)
-        q_hash(FORBID_PRED),   // SAME property-path as the compiled norm
+        q_hash(ACME),        // same party
+        OP_PERMIT,           // the overlay PERMITS (cosmetic for a defeater node)
+        q_hash(FORBID_PRED), // SAME property-path as the compiled norm
         q_hash("ex:ECHR-Art6-CorporateFairTrialOverlay"),
-        contract,              // same contract graph
-        0,                     // no expiry
-        true,                  // is_defeater -> sets DEFEATER_BIT (a q42:unless node)
+        contract, // same contract graph
+        0,        // no expiry
+        true,     // is_defeater -> sets DEFEATER_BIT (a q42:unless node)
     );
     arena.write_table(overlay);
 

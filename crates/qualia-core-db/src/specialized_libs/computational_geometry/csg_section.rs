@@ -85,10 +85,16 @@ impl core::fmt::Display for CsgSectionError {
                 write!(f, "csg_section: unknown type {got}")
             }
             Self::SizeMismatch { expected, got } => {
-                write!(f, "csg_section: size mismatch, expected {expected}, got {got}")
+                write!(
+                    f,
+                    "csg_section: size mismatch, expected {expected}, got {got}"
+                )
             }
             Self::CrcMismatch { expected, got } => {
-                write!(f, "csg_section: CRC mismatch, expected {expected:#x}, got {got:#x}")
+                write!(
+                    f,
+                    "csg_section: CRC mismatch, expected {expected:#x}, got {got:#x}"
+                )
             }
             Self::InvalidExprTree { reason } => {
                 write!(f, "csg_section: invalid expression tree — {reason}")
@@ -178,10 +184,7 @@ pub fn deserialize_expr(bytes: &[u8]) -> Result<BoolExpr, CsgSectionError> {
     Ok(expr)
 }
 
-fn deserialize_expr_recursive(
-    bytes: &[u8],
-    pos: &mut usize,
-) -> Result<BoolExpr, CsgSectionError> {
+fn deserialize_expr_recursive(bytes: &[u8], pos: &mut usize) -> Result<BoolExpr, CsgSectionError> {
     if *pos >= bytes.len() {
         return Err(CsgSectionError::InvalidExprTree {
             reason: "unexpected end of data".to_string(),
@@ -240,10 +243,7 @@ fn deserialize_expr_recursive(
     }
 }
 
-fn deserialize_children(
-    bytes: &[u8],
-    pos: &mut usize,
-) -> Result<Vec<BoolExpr>, CsgSectionError> {
+fn deserialize_children(bytes: &[u8], pos: &mut usize) -> Result<Vec<BoolExpr>, CsgSectionError> {
     if *pos + 4 > bytes.len() {
         return Err(CsgSectionError::InvalidExprTree {
             reason: "not enough bytes for child count".to_string(),
@@ -407,16 +407,34 @@ pub fn decode_csg_section(bytes: &[u8]) -> Result<DecodedCsgSection, CsgSectionE
     let mut vertices = Vec::with_capacity(v_count);
     for _ in 0..v_count {
         let x = f64::from_le_bytes([
-            bytes[pos], bytes[pos + 1], bytes[pos + 2], bytes[pos + 3],
-            bytes[pos + 4], bytes[pos + 5], bytes[pos + 6], bytes[pos + 7],
+            bytes[pos],
+            bytes[pos + 1],
+            bytes[pos + 2],
+            bytes[pos + 3],
+            bytes[pos + 4],
+            bytes[pos + 5],
+            bytes[pos + 6],
+            bytes[pos + 7],
         ]);
         let y = f64::from_le_bytes([
-            bytes[pos + 8], bytes[pos + 9], bytes[pos + 10], bytes[pos + 11],
-            bytes[pos + 12], bytes[pos + 13], bytes[pos + 14], bytes[pos + 15],
+            bytes[pos + 8],
+            bytes[pos + 9],
+            bytes[pos + 10],
+            bytes[pos + 11],
+            bytes[pos + 12],
+            bytes[pos + 13],
+            bytes[pos + 14],
+            bytes[pos + 15],
         ]);
         let z = f64::from_le_bytes([
-            bytes[pos + 16], bytes[pos + 17], bytes[pos + 18], bytes[pos + 19],
-            bytes[pos + 20], bytes[pos + 21], bytes[pos + 22], bytes[pos + 23],
+            bytes[pos + 16],
+            bytes[pos + 17],
+            bytes[pos + 18],
+            bytes[pos + 19],
+            bytes[pos + 20],
+            bytes[pos + 21],
+            bytes[pos + 22],
+            bytes[pos + 23],
         ]);
         vertices.push(Point3::new(x, y, z));
         pos += 24;
@@ -426,8 +444,18 @@ pub fn decode_csg_section(bytes: &[u8]) -> Result<DecodedCsgSection, CsgSectionE
     let mut triangles = Vec::with_capacity(t_count);
     for _ in 0..t_count {
         let a = u32::from_le_bytes([bytes[pos], bytes[pos + 1], bytes[pos + 2], bytes[pos + 3]]);
-        let b = u32::from_le_bytes([bytes[pos + 4], bytes[pos + 5], bytes[pos + 6], bytes[pos + 7]]);
-        let c = u32::from_le_bytes([bytes[pos + 8], bytes[pos + 9], bytes[pos + 10], bytes[pos + 11]]);
+        let b = u32::from_le_bytes([
+            bytes[pos + 4],
+            bytes[pos + 5],
+            bytes[pos + 6],
+            bytes[pos + 7],
+        ]);
+        let c = u32::from_le_bytes([
+            bytes[pos + 8],
+            bytes[pos + 9],
+            bytes[pos + 10],
+            bytes[pos + 11],
+        ]);
         triangles.push([a, b, c]);
         pos += 12;
     }
@@ -435,7 +463,8 @@ pub fn decode_csg_section(bytes: &[u8]) -> Result<DecodedCsgSection, CsgSectionE
     // Region labels.
     let mut region_labels = Vec::with_capacity(r_count);
     for _ in 0..r_count {
-        let label = u32::from_le_bytes([bytes[pos], bytes[pos + 1], bytes[pos + 2], bytes[pos + 3]]);
+        let label =
+            u32::from_le_bytes([bytes[pos], bytes[pos + 1], bytes[pos + 2], bytes[pos + 3]]);
         region_labels.push(label);
         pos += 4;
     }
@@ -487,10 +516,7 @@ pub struct RepairReport {
 /// 3. Identify non-manifold edges (edges with >2 incident triangles).
 /// 4. Extract shells (connected components).
 /// 5. Report findings.
-pub fn repair_mesh(
-    _vertices: &[Point3],
-    triangles: &[[u32; 3]],
-) -> (Vec<[u32; 3]>, RepairReport) {
+pub fn repair_mesh(_vertices: &[Point3], triangles: &[[u32; 3]]) -> (Vec<[u32; 3]>, RepairReport) {
     let mut report = RepairReport {
         duplicate_sheets_removed: 0,
         shells_extracted: 0,
@@ -730,7 +756,10 @@ mod tests {
         encoded[10] ^= 0xFF;
         let result = decode_csg_section(&encoded);
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), CsgSectionError::CrcMismatch { .. }));
+        assert!(matches!(
+            result.unwrap_err(),
+            CsgSectionError::CrcMismatch { .. }
+        ));
     }
 
     #[test]
@@ -745,7 +774,10 @@ mod tests {
         });
         encoded[0] = b'X';
         let result = decode_csg_section(&encoded);
-        assert!(matches!(result.unwrap_err(), CsgSectionError::MagicMismatch { .. }));
+        assert!(matches!(
+            result.unwrap_err(),
+            CsgSectionError::MagicMismatch { .. }
+        ));
     }
 
     #[test]
@@ -760,11 +792,7 @@ mod tests {
 
     #[test]
     fn repair_removes_duplicate_sheets() {
-        let vertices = vec![
-            p(0.0, 0.0, 0.0),
-            p(1.0, 0.0, 0.0),
-            p(0.0, 1.0, 0.0),
-        ];
+        let vertices = vec![p(0.0, 0.0, 0.0), p(1.0, 0.0, 0.0), p(0.0, 1.0, 0.0)];
         // Two identical triangles with opposite winding = duplicate sheet.
         let triangles = vec![[0, 1, 2], [2, 1, 0]];
 
@@ -783,12 +811,7 @@ mod tests {
             p(0.0, 1.0, 0.5),
         ];
         // Four triangles sharing edge (0,1) — non-manifold.
-        let triangles = vec![
-            [0, 2, 1],
-            [0, 1, 3],
-            [0, 1, 4],
-            [1, 4, 3],
-        ];
+        let triangles = vec![[0, 2, 1], [0, 1, 3], [0, 1, 4], [1, 4, 3]];
 
         let (_clean, report) = repair_mesh(&vertices, &triangles);
         assert!(!report.is_manifold);
@@ -803,12 +826,7 @@ mod tests {
             p(0.0, 1.0, 0.0),
             p(0.0, 0.0, 1.0),
         ];
-        let triangles = vec![
-            [0, 1, 2],
-            [0, 3, 1],
-            [1, 3, 2],
-            [2, 3, 0],
-        ];
+        let triangles = vec![[0, 1, 2], [0, 3, 1], [1, 3, 2], [2, 3, 0]];
 
         let (clean, report) = repair_mesh(&vertices, &triangles);
         assert_eq!(clean.len(), 4);
@@ -826,10 +844,7 @@ mod tests {
             p(11.0, 0.0, 0.0),
             p(10.0, 1.0, 0.0),
         ];
-        let triangles = vec![
-            [0, 1, 2],
-            [3, 4, 5],
-        ];
+        let triangles = vec![[0, 1, 2], [3, 4, 5]];
 
         let (_clean, report) = repair_mesh(&vertices, &triangles);
         assert_eq!(report.shells_extracted, 2);

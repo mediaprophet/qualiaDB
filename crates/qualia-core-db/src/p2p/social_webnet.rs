@@ -251,9 +251,15 @@ mod tests {
             let _ = b.pump_all();
             let _ = a.pump_all();
         }
-        assert!(a.has_session("did:wf:bob"), "A established a session with B");
+        assert!(
+            a.has_session("did:wf:bob"),
+            "A established a session with B"
+        );
         let _ = b.pump_all(); // B consumes the keepalive to establish too
-        assert!(b.has_session("did:wf:alice"), "B established a session with A");
+        assert!(
+            b.has_session("did:wf:alice"),
+            "B established a session with A"
+        );
 
         // A sends an inner IPv6 packet addressed to peer id "did:wf:bob".
         let payload = v6(b"mesh packet by peer id");

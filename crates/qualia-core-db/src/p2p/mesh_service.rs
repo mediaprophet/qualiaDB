@@ -83,7 +83,8 @@ impl MeshControl {
         self.cmd_tx
             .send(make(tx))
             .map_err(|_| "mesh thread is gone".to_string())?;
-        rx.recv().map_err(|_| "mesh thread dropped the reply".to_string())
+        rx.recv()
+            .map_err(|_| "mesh thread dropped the reply".to_string())
     }
 
     /// Add a peer; returns the local socket address the tunnel bound.
@@ -204,7 +205,8 @@ impl MeshService {
         self.cmd_tx
             .send(make(tx))
             .map_err(|_| "mesh thread is gone".to_string())?;
-        rx.recv().map_err(|_| "mesh thread dropped the reply".to_string())
+        rx.recv()
+            .map_err(|_| "mesh thread dropped the reply".to_string())
     }
 
     /// Add a peer; returns the local socket address the tunnel bound (advertise it to the peer).

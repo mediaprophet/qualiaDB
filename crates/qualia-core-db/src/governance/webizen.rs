@@ -193,6 +193,11 @@ pub struct SlgArena {
     rule_registry: alloc::vec::Vec<CompiledRule>,
     #[cfg(not(feature = "alloc_buffers"))]
     rule_registry: std::vec::Vec<CompiledRule>,
+    /// Pre-parsed rules indexed by id; activated via `NativeRegisterRule`.
+    #[cfg(feature = "alloc_buffers")]
+    staged_rules: alloc::vec::Vec<CompiledRule>,
+    #[cfg(not(feature = "alloc_buffers"))]
+    staged_rules: std::vec::Vec<CompiledRule>,
 }
 
 #[cfg(feature = "alloc_buffers")]
@@ -224,6 +229,10 @@ impl SlgArena {
         let rule_registry = alloc::vec::Vec::new();
         #[cfg(not(feature = "alloc_buffers"))]
         let rule_registry = std::vec::Vec::new();
+        #[cfg(feature = "alloc_buffers")]
+        let staged_rules = alloc::vec::Vec::new();
+        #[cfg(not(feature = "alloc_buffers"))]
+        let staged_rules = std::vec::Vec::new();
 
         Self {
             buffer,
@@ -231,6 +240,7 @@ impl SlgArena {
             recent_slots: [0; RECENT_SLOT_RING],
             recent_slot_head: 0,
             rule_registry,
+            staged_rules,
         }
     }
 
@@ -240,8 +250,30 @@ impl SlgArena {
         self.rule_registry.push(compile_rule_to_zero_heap(rule));
     }
 
+    /// Stage a parsed rule for later activation via `NativeRegisterRule`.
+    /// Returns the rule id (`object_reg` value) used to activate it.
+    pub fn stage_rule(&mut self, rule: &Rule<'_>) -> u64 {
+        let id = self.staged_rules.len() as u64;
+        self.staged_rules.push(compile_rule_to_zero_heap(rule));
+        id
+    }
+
+    /// Activate a staged rule by id into the live rule registry.
+    pub fn activate_staged_rule(&mut self, rule_id: u64) -> bool {
+        let idx = rule_id as usize;
+        if idx >= self.staged_rules.len() {
+            return false;
+        }
+        self.rule_registry.push(self.staged_rules[idx].clone());
+        true
+    }
+
     pub fn rule_count(&self) -> usize {
         self.rule_registry.len()
+    }
+
+    pub fn staged_rule_count(&self) -> usize {
+        self.staged_rules.len()
     }
 
     /// Collect recently written Quins with valid ECC parity (bounded scan, zero heap).
@@ -675,6 +707,16 @@ pub enum SlgOpcode {
     /// and region `frame.object_reg` (each = boundary-point quins) must equal the
     /// param (0=DC,1=EC,2=PO,3=TPP,4=TPPi,5=NTPP,6=NTPPi,7=EQ).
     NativeRcc8(u8),
+    /// RCC-8 fact-emitting assertion: if the relation holds, asserts a derived fact.
+    NativeRcc8Assert(u8),
+    /// Fact-emitting temporal interval relation assertion.
+    NativeAllenIntervalAssert(u8),
+    /// qapp-facing dynamic N3 rule registration
+    NativeRegisterRule,
+    /// M-of-N steward quorum gate
+    NativeStewardQuorum(u8),
+    /// Governed canvas placement gate
+    NativeCanvasPlacement,
 
     // ── Native: cognitive ai (ACT-R) ──────────────────────────────────────────
     NativeRetrieveByActivation,
@@ -1064,7 +1106,7 @@ fn execute_snapshot_logic(arena: &SlgArena, opcode: SlgOpcode, frame: &mut VmFra
             crate::q_hash("modal:accesses"),
             crate::q_hash("modal:holds"),
         ),
-        SlgOpcode::NativeRcc8(expected) => {
+        SlgOpcode::NativeRcc8(expected) | SlgOpcode::NativeRcc8Assert(expected) => {
             let boundary = crate::q_hash("spatial:boundary");
             let mut region_a = [(0.0f64, 0.0f64); spatio_temporal::MAX_BOUNDARY_POINTS];
             let mut region_a_count = 0usize;
@@ -1891,10 +1933,59 @@ pub fn execute_vm_frame(
             | SlgOpcode::NativeCtlAlwaysGlobally
             | SlgOpcode::NativeModalNecessary
             | SlgOpcode::NativeModalPossible
-            | SlgOpcode::NativeRcc8(_) => {
+            | SlgOpcode::NativeRcc8(_) | SlgOpcode::NativeRcc8Assert(_) => {
+                let is_assert = matches!(opcode, SlgOpcode::NativeRcc8Assert(_));
                 if !execute_snapshot_logic(arena, opcode, frame) {
                     return None;
                 }
+                if is_assert {
+                    arena.write_table(frame_to_quin(frame));
+                    vm_log!("[Webizen] NativeRcc8Assert: asserted derived fact");
+                }
+            }
+            SlgOpcode::NativeStewardQuorum(quorum) => {
+                let mut scratch = [NQuin::default(); 512];
+                let count = arena.collect_active_quins(&mut scratch);
+                let stewards = crate::q_hash("q42:stewards");
+                let mut matches = 0;
+                for quin in &scratch[..count] {
+                    // Check if quin represents a steward endorsing this access
+                    if quin.predicate == stewards && quin.object == frame.object_reg {
+                        matches += 1;
+                    }
+                }
+                if matches < quorum {
+                    vm_log!("[Webizen] NativeStewardQuorum: failed. Found {}/{} stewards", matches, quorum);
+                    return None;
+                }
+                vm_log!("[Webizen] NativeStewardQuorum: passed with {}/{} stewards", matches, quorum);
+            }
+            SlgOpcode::NativeRegisterRule => {
+                if !arena.activate_staged_rule(frame.object_reg) {
+                    vm_log!(
+                        "[Webizen] NativeRegisterRule: unknown staged rule id {}",
+                        frame.object_reg
+                    );
+                    return None;
+                }
+                vm_log!(
+                    "[Webizen] NativeRegisterRule: activated staged rule {}",
+                    frame.object_reg
+                );
+            }
+            SlgOpcode::NativeCanvasPlacement => {
+                let mut scratch = [NQuin::default(); 512];
+                let count = arena.collect_active_quins(&mut scratch);
+                if !crate::domains::geospatial::canvas_rights::CanvasRightsModel::validate_placement(
+                    frame.subject_reg, // location hash
+                    frame.object_reg,  // principal hash
+                    frame.context_reg, // asset hash
+                    &scratch[..count],
+                ) {
+                    vm_log!("[Webizen] NativeCanvasPlacement: rejected by rights model");
+                    return None;
+                }
+                vm_log!("[Webizen] NativeCanvasPlacement: accepted");
             }
             SlgOpcode::NativeUnless => {
                 let goal = frame_to_quin(frame);
@@ -1967,6 +2058,29 @@ pub fn execute_vm_frame(
                     "[Webizen] NativeAllenInterval: relation mode {} holds",
                     mode
                 );
+            }
+            SlgOpcode::NativeAllenIntervalAssert(mode) => {
+                let op = match mode {
+                    0 => spatio_temporal::TemporalOp::Before,
+                    1 => spatio_temporal::TemporalOp::Meets,
+                    2 => spatio_temporal::TemporalOp::Overlaps,
+                    3 => spatio_temporal::TemporalOp::Starts,
+                    4 => spatio_temporal::TemporalOp::During,
+                    5 => spatio_temporal::TemporalOp::Finishes,
+                    _ => spatio_temporal::TemporalOp::Equals,
+                };
+                let holds = spatio_temporal::evaluate_temporal(
+                    op,
+                    frame.subject_reg as i64,
+                    frame.predicate_reg as i64,
+                    frame.object_reg as i64,
+                    frame.context_reg as i64,
+                );
+                if !holds {
+                    return None;
+                }
+                arena.write_table(frame_to_quin(frame));
+                vm_log!("[Webizen] NativeAllenIntervalAssert: asserted derived fact");
             }
             SlgOpcode::NativeLorentzDistance
             | SlgOpcode::NativeTropicalDistance
@@ -2941,7 +3055,7 @@ mod tests {
     #[test]
     fn agency_n3_file_parses_and_g1_fires_end_to_end() {
         use crate::modalities::logic::n3_parser::{N3Event, N3Parser};
-        
+
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../core-ontologies/agency.n3");
         let text = std::fs::read_to_string(&path).expect("agency.n3 must be readable");

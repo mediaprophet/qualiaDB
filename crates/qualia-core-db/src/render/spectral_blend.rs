@@ -20,8 +20,7 @@
 //! the CMF projection is a compile-time constant.
 
 use super::spectral_kernel::{
-    delta_e_76, emf_to_spd, linear_to_srgb_channel, spd_to_xyz,
-    xyz_to_linear_srgb, Spd, Xyz,
+    delta_e_76, emf_to_spd, linear_to_srgb_channel, spd_to_xyz, xyz_to_linear_srgb, Spd, Xyz,
 };
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -37,8 +36,12 @@ pub fn spectral_blend_spd(a: &Spd, b: &Spd, t: f32) -> Spd {
 /// Blend two EMF payloads in spectral space and return the resulting XYZ.
 #[inline]
 pub fn spectral_blend_emf(
-    alpha_a: f32, mu_a: f32, sigma_a: f32,
-    alpha_b: f32, mu_b: f32, sigma_b: f32,
+    alpha_a: f32,
+    mu_a: f32,
+    sigma_a: f32,
+    alpha_b: f32,
+    mu_b: f32,
+    sigma_b: f32,
     t: f32,
 ) -> Xyz {
     let spd_a = emf_to_spd(alpha_a, mu_a, sigma_a);
@@ -49,11 +52,7 @@ pub fn spectral_blend_emf(
 
 /// RGB lerp in linear sRGB space (for comparison with spectral blend).
 #[inline]
-pub fn rgb_lerp(
-    rgb_a: [f32; 3],
-    rgb_b: [f32; 3],
-    t: f32,
-) -> [f32; 3] {
+pub fn rgb_lerp(rgb_a: [f32; 3], rgb_b: [f32; 3], t: f32) -> [f32; 3] {
     [
         rgb_a[0] * (1.0 - t) + rgb_b[0] * t,
         rgb_a[1] * (1.0 - t) + rgb_b[1] * t,
@@ -75,8 +74,12 @@ pub fn rgb_lerp(
 /// 8-bit sRGB" workflow: encode both endpoints to 8-bit sRGB, lerp the
 /// 8-bit values, decode back to linear, convert to XYZ.
 pub fn blend_divergence(
-    alpha_a: f32, mu_a: f32, sigma_a: f32,
-    alpha_b: f32, mu_b: f32, sigma_b: f32,
+    alpha_a: f32,
+    mu_a: f32,
+    sigma_a: f32,
+    alpha_b: f32,
+    mu_b: f32,
+    sigma_b: f32,
     t: f32,
 ) -> f32 {
     let spd_a = emf_to_spd(alpha_a, mu_a, sigma_a);
@@ -165,7 +168,11 @@ mod tests {
         // should be significant because spectral blending preserves the
         // two peaks while RGB lerp produces a mid-colour.
         let de = blend_divergence(1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.5);
-        assert!(de > 0.5, "spectral blend should differ from RGB lerp: ΔE={}", de);
+        assert!(
+            de > 0.5,
+            "spectral blend should differ from RGB lerp: ΔE={}",
+            de
+        );
     }
 
     #[test]

@@ -166,7 +166,14 @@ impl QTensorEngine {
                 }
             },
         };
-        let result = self.run_prefill_chunk(&mut plan, batch_hidden, emb_dim, n_tokens, batch_start_token_idx, max_layers);
+        let result = self.run_prefill_chunk(
+            &mut plan,
+            batch_hidden,
+            emb_dim,
+            n_tokens,
+            batch_start_token_idx,
+            max_layers,
+        );
         self.prefill_arena = PrefillArenaState::Ready(plan);
         result
     }
@@ -197,7 +204,11 @@ impl QTensorEngine {
         let queue = self.gpu_queue();
 
         // 1) Upload the B embedded tokens (packed B × n_embd, contiguous rows).
-        queue.write_buffer(&plan.hidden_a, 0, bytemuck::cast_slice(&batch_hidden[..b * n_embd]));
+        queue.write_buffer(
+            &plan.hidden_a,
+            0,
+            bytemuck::cast_slice(&batch_hidden[..b * n_embd]),
+        );
 
         // 2) Rewrite the param arena with this chunk's batch fields. `protos` (read) and
         //    `scratch` (write) are disjoint fields, so the split borrow is safe.
@@ -209,9 +220,16 @@ impl QTensorEngine {
             let scratch = &mut plan.scratch;
             for (l, proto) in plan.protos.iter().enumerate() {
                 let base = l as u64 * SLOTS_PER_LAYER * SLOT;
-                for (i, slot) in [S_GEMM_K, S_GEMM_V, S_GEMM_O, S_GEMM_GATE, S_GEMM_UP, S_GEMM_DOWN]
-                    .into_iter()
-                    .enumerate()
+                for (i, slot) in [
+                    S_GEMM_K,
+                    S_GEMM_V,
+                    S_GEMM_O,
+                    S_GEMM_GATE,
+                    S_GEMM_UP,
+                    S_GEMM_DOWN,
+                ]
+                .into_iter()
+                .enumerate()
                 {
                     let mut g = proto.gemm[i];
                     g.n_batch = bu;
@@ -226,9 +244,15 @@ impl QTensorEngine {
                     let off = (base + slot * SLOT) as usize;
                     scratch[off..off + ap].copy_from_slice(bytemuck::bytes_of(&a));
                 }
-                for (i, slot) in [S_ELEM_RMS_ATTN, S_ELEM_ADD1, S_ELEM_RMS_FFN, S_ELEM_SILU, S_ELEM_ADD2]
-                    .into_iter()
-                    .enumerate()
+                for (i, slot) in [
+                    S_ELEM_RMS_ATTN,
+                    S_ELEM_ADD1,
+                    S_ELEM_RMS_FFN,
+                    S_ELEM_SILU,
+                    S_ELEM_ADD2,
+                ]
+                .into_iter()
+                .enumerate()
                 {
                     let mut e = proto.elem[i];
                     e.batch = bu;
@@ -240,11 +264,11 @@ impl QTensorEngine {
         queue.write_buffer(&plan.param_arena, 0, &plan.scratch);
 
         // 3) Encode every layer's batched forward into ONE encoder.
-        let mut encoder = self
-            .gpu_device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("ResidentPrefillEncoder"),
-            });
+        let mut encoder =
+            self.gpu_device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("ResidentPrefillEncoder"),
+                });
         let gemv = if plan.use_coop {
             &self.coop_gemv_pipeline
         } else {
@@ -255,7 +279,13 @@ impl QTensorEngine {
         let silu = &self.elem_silu_mul_pipeline;
         let attn = &self.attention_pipeline;
 
-        let gemv_wg = |n_out: u32| if plan.use_coop { n_out } else { n_out.div_ceil(64) };
+        let gemv_wg = |n_out: u32| {
+            if plan.use_coop {
+                n_out
+            } else {
+                n_out.div_ceil(64)
+            }
+        };
         let elem_wg = |n: u32| n.div_ceil(64);
         let (n_embd_u, n_ffn_u, kv_dim_u) = (n_embd as u32, plan.n_ffn as u32, plan.kv_dim as u32);
         let kv_pairs = plan.n_kv_head.max(1) * bu;
@@ -373,7 +403,11 @@ impl QTensorEngine {
             if dequant_norm_row_into(mmap, index.tensor_data_start, info, &mut w) < n_embd {
                 return false;
             }
-            queue.write_buffer(&norm_res, slot * norm_stride, bytemuck::cast_slice(&w[..n_embd]));
+            queue.write_buffer(
+                &norm_res,
+                slot * norm_stride,
+                bytemuck::cast_slice(&w[..n_embd]),
+            );
             true
         };
 
@@ -426,10 +460,22 @@ impl QTensorEngine {
                 label: Some("PrefillElemBG"),
                 layout,
                 entries: &[
-                    wgpu::BindGroupEntry { binding: 0, resource: a },
-                    wgpu::BindGroupEntry { binding: 1, resource: bb },
-                    wgpu::BindGroupEntry { binding: 2, resource: out.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 3, resource: ubind(&param_arena, p_off, ep_sz) },
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: a,
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: bb,
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: out.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: ubind(&param_arena, p_off, ep_sz),
+                    },
                 ],
             })
         };
@@ -441,10 +487,22 @@ impl QTensorEngine {
                 label: Some("PrefillGemmBG"),
                 layout: &gemm_layout,
                 entries: &[
-                    wgpu::BindGroupEntry { binding: 0, resource: input.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 1, resource: weight },
-                    wgpu::BindGroupEntry { binding: 2, resource: ubind(&param_arena, p_off, gp_sz) },
-                    wgpu::BindGroupEntry { binding: 3, resource: out.as_entire_binding() },
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: input.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: weight,
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: ubind(&param_arena, p_off, gp_sz),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: out.as_entire_binding(),
+                    },
                 ],
             })
         };
@@ -463,27 +521,46 @@ impl QTensorEngine {
                 label: Some("PrefillAttnBG"),
                 layout: &attn_layout,
                 entries: &[
-                    wgpu::BindGroupEntry { binding: 0, resource: input.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 1, resource: weight.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 2, resource: ubind(&param_arena, p_off, ap_sz) },
-                    wgpu::BindGroupEntry { binding: 3, resource: wgpu::BindingResource::Buffer(kv_binding) },
-                    wgpu::BindGroupEntry { binding: 4, resource: out.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 5, resource: mask_buf.as_entire_binding() },
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: input.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: weight.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: ubind(&param_arena, p_off, ap_sz),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: wgpu::BindingResource::Buffer(kv_binding),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 4,
+                        resource: out.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 5,
+                        resource: mask_buf.as_entire_binding(),
+                    },
                 ],
             })
         };
 
         // Prototype GEMM params (batched-tight: in/out row strides default to n_in/n_out).
-        let gemm_proto = |info: &GgufTensorInfo, n_in: usize, n_out: usize, raw_len: usize| GemmGpuParams {
-            n_in: n_in as u32,
-            n_out: n_out as u32,
-            weight_ggml_type: info.ggml_type,
-            weight_row_elems: info.dims[0] as u32,
-            weight_byte_len: raw_len as u32,
-            n_batch: 1,
-            in_row_stride: 0,
-            out_row_stride: 0,
-        };
+        let gemm_proto =
+            |info: &GgufTensorInfo, n_in: usize, n_out: usize, raw_len: usize| GemmGpuParams {
+                n_in: n_in as u32,
+                n_out: n_out as u32,
+                weight_ggml_type: info.ggml_type,
+                weight_row_elems: info.dims[0] as u32,
+                weight_byte_len: raw_len as u32,
+                n_batch: 1,
+                in_row_stride: 0,
+                out_row_stride: 0,
+            };
         let elem_proto = |n: usize, op: u32| ElemGpuParams {
             n: n as u32,
             batch: 1,
@@ -508,7 +585,9 @@ impl QTensorEngine {
             let attn_norm = t.attn_norm?;
             let ffn_norm = t.ffn_norm?;
             for i in [&q_info, &k_info, &v_info] {
-                if !ggml_gpu_attention_shader_supported(i.ggml_type) || !ggml_gpu_gemm_supported(i.ggml_type) {
+                if !ggml_gpu_attention_shader_supported(i.ggml_type)
+                    || !ggml_gpu_gemm_supported(i.ggml_type)
+                {
                     return None;
                 }
             }
@@ -523,10 +602,18 @@ impl QTensorEngine {
             let (g_in, g_out) = Self::matmul_dims(&gate_info);
             let (u_in, u_out) = Self::matmul_dims(&up_info);
             let (d_in, d_out) = Self::matmul_dims(&down_info);
-            if k_in != n_embd || v_in != n_embd || k_out != kv_dim || v_out != kv_dim
-                || o_in != q_dim || o_out != n_embd
-                || g_in != n_embd || u_in != n_embd || g_out != n_ffn || u_out != n_ffn
-                || d_in != n_ffn || d_out != n_embd
+            if k_in != n_embd
+                || v_in != n_embd
+                || k_out != kv_dim
+                || v_out != kv_dim
+                || o_in != q_dim
+                || o_out != n_embd
+                || g_in != n_embd
+                || u_in != n_embd
+                || g_out != n_ffn
+                || u_out != n_ffn
+                || d_in != n_ffn
+                || d_out != n_embd
             {
                 return None;
             }
@@ -534,8 +621,12 @@ impl QTensorEngine {
                 crate::ggml_quants::fetch_tensor_bytes(mmap, index.tensor_data_start, i).ok()
             };
             let (q_raw, k_raw, v_raw) = (fetch(&q_info)?, fetch(&k_info)?, fetch(&v_info)?);
-            let (o_raw, g_raw, u_raw, d_raw) =
-                (fetch(&o_info)?, fetch(&gate_info)?, fetch(&up_info)?, fetch(&down_info)?);
+            let (o_raw, g_raw, u_raw, d_raw) = (
+                fetch(&o_info)?,
+                fetch(&gate_info)?,
+                fetch(&up_info)?,
+                fetch(&down_info)?,
+            );
             let res = |raw: &[u8]| self.resident_weight_buffer(raw.as_ptr() as u64, raw);
             let (q_w, k_w, v_w) = (res(q_raw)?, res(k_raw)?, res(v_raw)?);
             let (o_w, g_w, u_w, d_w) = (res(o_raw)?, res(g_raw)?, res(u_raw)?, res(d_raw)?);
@@ -545,12 +636,51 @@ impl QTensorEngine {
             }
 
             // Prototype attention params (batch fields patched per call).
-            let mut k_p = Self::attention_gpu_params(&h, &layout, l, 0, &k_info, k_raw.len(), 1, 1, 0, 0, 0, 0);
+            let mut k_p = Self::attention_gpu_params(
+                &h,
+                &layout,
+                l,
+                0,
+                &k_info,
+                k_raw.len(),
+                1,
+                1,
+                0,
+                0,
+                0,
+                0,
+            );
             k_p.proj_row_stride = kv_dim as u32;
-            let mut v_p = Self::attention_gpu_params(&h, &layout, l, 0, &v_info, v_raw.len(), 2, 1, 0, 0, 0, 0);
+            let mut v_p = Self::attention_gpu_params(
+                &h,
+                &layout,
+                l,
+                0,
+                &v_info,
+                v_raw.len(),
+                2,
+                1,
+                0,
+                0,
+                0,
+                0,
+            );
             v_p.proj_row_stride = kv_dim as u32;
             // Q: in-shader projection over `normed` (proj_row_stride = 0), output stride = q_dim.
-            let q_p = Self::attention_gpu_params(&h, &layout, l, 0, &q_info, q_raw.len(), 0, 1, 0, 0, 0, q_dim as u32);
+            let q_p = Self::attention_gpu_params(
+                &h,
+                &layout,
+                l,
+                0,
+                &q_info,
+                q_raw.len(),
+                0,
+                1,
+                0,
+                0,
+                0,
+                q_dim as u32,
+            );
 
             protos.push(PrefillLayerProtos {
                 gemm: [
@@ -573,20 +703,80 @@ impl QTensorEngine {
 
             let lu = l as u64;
             layers.push(PrefillLayerBinds {
-                rms_attn: mk_elem_bg(&rms_layout, hidden_a.as_entire_binding(), norm_bind(2 * lu), &normed, slot_off(lu, S_ELEM_RMS_ATTN)),
-                k_gemm: mk_gemm_bg(&normed, k_w.as_entire_binding(), slot_off(lu, S_GEMM_K), &kv_proj),
+                rms_attn: mk_elem_bg(
+                    &rms_layout,
+                    hidden_a.as_entire_binding(),
+                    norm_bind(2 * lu),
+                    &normed,
+                    slot_off(lu, S_ELEM_RMS_ATTN),
+                ),
+                k_gemm: mk_gemm_bg(
+                    &normed,
+                    k_w.as_entire_binding(),
+                    slot_off(lu, S_GEMM_K),
+                    &kv_proj,
+                ),
                 k_write: mk_attn_bg(&kv_proj, &k_w, slot_off(lu, S_ATTN_KW), l, &attn_out),
-                v_gemm: mk_gemm_bg(&normed, v_w.as_entire_binding(), slot_off(lu, S_GEMM_V), &kv_proj),
+                v_gemm: mk_gemm_bg(
+                    &normed,
+                    v_w.as_entire_binding(),
+                    slot_off(lu, S_GEMM_V),
+                    &kv_proj,
+                ),
                 v_write: mk_attn_bg(&kv_proj, &v_w, slot_off(lu, S_ATTN_VW), l, &attn_out),
                 q: mk_attn_bg(&normed, &q_w, slot_off(lu, S_ATTN_Q), l, &attn_out),
-                o: mk_gemm_bg(&attn_out, o_w.as_entire_binding(), slot_off(lu, S_GEMM_O), &delta),
-                add1: mk_elem_bg(&add_layout, hidden_a.as_entire_binding(), delta.as_entire_binding(), &hidden_b, slot_off(lu, S_ELEM_ADD1)),
-                rms_ffn: mk_elem_bg(&rms_layout, hidden_b.as_entire_binding(), norm_bind(2 * lu + 1), &normed, slot_off(lu, S_ELEM_RMS_FFN)),
-                gate: mk_gemm_bg(&normed, g_w.as_entire_binding(), slot_off(lu, S_GEMM_GATE), &gate_buf),
-                up: mk_gemm_bg(&normed, u_w.as_entire_binding(), slot_off(lu, S_GEMM_UP), &up_buf),
-                silu: mk_elem_bg(&silu_layout, gate_buf.as_entire_binding(), up_buf.as_entire_binding(), &silu_buf, slot_off(lu, S_ELEM_SILU)),
-                down: mk_gemm_bg(&silu_buf, d_w.as_entire_binding(), slot_off(lu, S_GEMM_DOWN), &delta),
-                add2: mk_elem_bg(&add_layout, hidden_b.as_entire_binding(), delta.as_entire_binding(), &hidden_a, slot_off(lu, S_ELEM_ADD2)),
+                o: mk_gemm_bg(
+                    &attn_out,
+                    o_w.as_entire_binding(),
+                    slot_off(lu, S_GEMM_O),
+                    &delta,
+                ),
+                add1: mk_elem_bg(
+                    &add_layout,
+                    hidden_a.as_entire_binding(),
+                    delta.as_entire_binding(),
+                    &hidden_b,
+                    slot_off(lu, S_ELEM_ADD1),
+                ),
+                rms_ffn: mk_elem_bg(
+                    &rms_layout,
+                    hidden_b.as_entire_binding(),
+                    norm_bind(2 * lu + 1),
+                    &normed,
+                    slot_off(lu, S_ELEM_RMS_FFN),
+                ),
+                gate: mk_gemm_bg(
+                    &normed,
+                    g_w.as_entire_binding(),
+                    slot_off(lu, S_GEMM_GATE),
+                    &gate_buf,
+                ),
+                up: mk_gemm_bg(
+                    &normed,
+                    u_w.as_entire_binding(),
+                    slot_off(lu, S_GEMM_UP),
+                    &up_buf,
+                ),
+                silu: mk_elem_bg(
+                    &silu_layout,
+                    gate_buf.as_entire_binding(),
+                    up_buf.as_entire_binding(),
+                    &silu_buf,
+                    slot_off(lu, S_ELEM_SILU),
+                ),
+                down: mk_gemm_bg(
+                    &silu_buf,
+                    d_w.as_entire_binding(),
+                    slot_off(lu, S_GEMM_DOWN),
+                    &delta,
+                ),
+                add2: mk_elem_bg(
+                    &add_layout,
+                    hidden_b.as_entire_binding(),
+                    delta.as_entire_binding(),
+                    &hidden_a,
+                    slot_off(lu, S_ELEM_ADD2),
+                ),
             });
         }
 
@@ -611,5 +801,4 @@ impl QTensorEngine {
             use_coop,
         }))
     }
-
 }

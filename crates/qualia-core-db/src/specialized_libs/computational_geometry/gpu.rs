@@ -16,9 +16,9 @@
 //! oracle's exact path. On the no-adapter path, the CPU oracle is the
 //! deterministic fallback (identical results, no GPU needed).
 
-use super::{incircle, orientation_2, orient_3d, Aabb, Point2, Point3};
-use super::expansion::Sign;
 use super::box_join::BoxPair;
+use super::expansion::Sign;
+use super::{incircle, orient_3d, orientation_2, Aabb, Point2, Point3};
 
 pub const GPU_ORIENTATION_UNCERTAIN: i32 = 2;
 
@@ -67,9 +67,13 @@ pub enum GeometryGpuError {
     InputLengthNotMultipleOfEight,
     InputLengthNotMultipleOfTwelve,
     InputLengthNotMultipleOfTwentyFour,
-    OutputTooSmall { required: usize },
+    OutputTooSmall {
+        required: usize,
+    },
     /// Candidate buffer too small for GPU-generated candidates.
-    CandidateBufferTooSmall { required: usize },
+    CandidateBufferTooSmall {
+        required: usize,
+    },
 }
 
 /// Deterministically emit a typed computational-geometry shader.
@@ -467,17 +471,29 @@ pub fn evaluate_aabb_overlap_batch_f32(
             Point3::new(pair[6] as f64, pair[7] as f64, pair[8] as f64),
             Point3::new(pair[9] as f64, pair[10] as f64, pair[11] as f64),
         );
-        out[index] = if a.overlaps(&b) { GPU_OVERLAP_YES } else { GPU_OVERLAP_NO };
+        out[index] = if a.overlaps(&b) {
+            GPU_OVERLAP_YES
+        } else {
+            GPU_OVERLAP_NO
+        };
     }
     Ok(count)
 }
 
 /// GPU filter simulation for AABB overlap (f32). Returns YES/NO/UNCERTAIN.
 fn gpu_filter_aabb_overlap_f32(pair: &[f32]) -> i32 {
-    let aminx = pair[0] as f64; let aminy = pair[1] as f64; let aminz = pair[2] as f64;
-    let amaxx = pair[3] as f64; let amaxy = pair[4] as f64; let amaxz = pair[5] as f64;
-    let bminx = pair[6] as f64; let bminy = pair[7] as f64; let bminz = pair[8] as f64;
-    let bmaxx = pair[9] as f64; let bmaxy = pair[10] as f64; let bmaxz = pair[11] as f64;
+    let aminx = pair[0] as f64;
+    let aminy = pair[1] as f64;
+    let aminz = pair[2] as f64;
+    let amaxx = pair[3] as f64;
+    let amaxy = pair[4] as f64;
+    let amaxz = pair[5] as f64;
+    let bminx = pair[6] as f64;
+    let bminy = pair[7] as f64;
+    let bminz = pair[8] as f64;
+    let bmaxx = pair[9] as f64;
+    let bmaxy = pair[10] as f64;
+    let bmaxz = pair[11] as f64;
 
     let dx1 = bmaxx - aminx;
     let dx2 = amaxx - bminx;
@@ -531,7 +547,11 @@ pub fn merge_aabb_overlap_results(
                 Point3::new(pair[6] as f64, pair[7] as f64, pair[8] as f64),
                 Point3::new(pair[9] as f64, pair[10] as f64, pair[11] as f64),
             );
-            out[i] = if a.overlaps(&b) { GPU_OVERLAP_YES } else { GPU_OVERLAP_NO };
+            out[i] = if a.overlaps(&b) {
+                GPU_OVERLAP_YES
+            } else {
+                GPU_OVERLAP_NO
+            };
         } else {
             // Trust GPU-certain lanes.
             out[i] = gpu_results[i];
@@ -560,7 +580,9 @@ pub fn gpu_candidate_box_join(
 ) -> Result<usize, GeometryGpuError> {
     let max_pairs = boxes_a.len() * boxes_b.len();
     if out_pairs.len() < max_pairs {
-        return Err(GeometryGpuError::CandidateBufferTooSmall { required: max_pairs });
+        return Err(GeometryGpuError::CandidateBufferTooSmall {
+            required: max_pairs,
+        });
     }
 
     // Pack all pairs into f32 buffer (12 f32s per pair).
@@ -568,10 +590,18 @@ pub fn gpu_candidate_box_join(
     let mut pair_indices: Vec<(u32, u32)> = Vec::with_capacity(max_pairs);
     for (i, a) in boxes_a.iter().enumerate() {
         for (j, b) in boxes_b.iter().enumerate() {
-            packed.push(a.min.x as f32); packed.push(a.min.y as f32); packed.push(a.min.z as f32);
-            packed.push(a.max.x as f32); packed.push(a.max.y as f32); packed.push(a.max.z as f32);
-            packed.push(b.min.x as f32); packed.push(b.min.y as f32); packed.push(b.min.z as f32);
-            packed.push(b.max.x as f32); packed.push(b.max.y as f32); packed.push(b.max.z as f32);
+            packed.push(a.min.x as f32);
+            packed.push(a.min.y as f32);
+            packed.push(a.min.z as f32);
+            packed.push(a.max.x as f32);
+            packed.push(a.max.y as f32);
+            packed.push(a.max.z as f32);
+            packed.push(b.min.x as f32);
+            packed.push(b.min.y as f32);
+            packed.push(b.min.z as f32);
+            packed.push(b.max.x as f32);
+            packed.push(b.max.y as f32);
+            packed.push(b.max.z as f32);
             pair_indices.push((i as u32, j as u32));
         }
     }
@@ -621,14 +651,28 @@ fn sign_to_i8(s: Sign) -> i8 {
 /// differential test to verify that GPU-certain lanes match the CPU exact
 /// ladder and GPU-uncertain lanes are flagged.
 pub fn gpu_filter_orient3d_f32(quad: &[f32]) -> i32 {
-    let ax = quad[0] as f64; let ay = quad[1] as f64; let az = quad[2] as f64;
-    let bx = quad[3] as f64; let by = quad[4] as f64; let bz = quad[5] as f64;
-    let cx = quad[6] as f64; let cy = quad[7] as f64; let cz = quad[8] as f64;
-    let dx = quad[9] as f64; let dy = quad[10] as f64; let dz = quad[11] as f64;
+    let ax = quad[0] as f64;
+    let ay = quad[1] as f64;
+    let az = quad[2] as f64;
+    let bx = quad[3] as f64;
+    let by = quad[4] as f64;
+    let bz = quad[5] as f64;
+    let cx = quad[6] as f64;
+    let cy = quad[7] as f64;
+    let cz = quad[8] as f64;
+    let dx = quad[9] as f64;
+    let dy = quad[10] as f64;
+    let dz = quad[11] as f64;
 
-    let abx = bx - ax; let aby = by - ay; let abz = bz - az;
-    let acx = cx - ax; let acy = cy - ay; let acz = cz - az;
-    let adx = dx - ax; let ady = dy - ay; let adz = dz - az;
+    let abx = bx - ax;
+    let aby = by - ay;
+    let abz = bz - az;
+    let acx = cx - ax;
+    let acy = cy - ay;
+    let acz = cz - az;
+    let adx = dx - ax;
+    let ady = dy - ay;
+    let adz = dz - az;
 
     let cx0 = acy * adz - acz * ady;
     let cy0 = acz * adx - acx * adz;
@@ -652,14 +696,21 @@ pub fn gpu_filter_orient3d_f32(quad: &[f32]) -> i32 {
 
 /// GPU filter result for a single incircle quadruple (f32).
 pub fn gpu_filter_incircle_f32(quad: &[f32]) -> i32 {
-    let ax = quad[0] as f64; let ay = quad[1] as f64;
-    let bx = quad[2] as f64; let by = quad[3] as f64;
-    let cx = quad[4] as f64; let cy = quad[5] as f64;
-    let dx = quad[6] as f64; let dy = quad[7] as f64;
+    let ax = quad[0] as f64;
+    let ay = quad[1] as f64;
+    let bx = quad[2] as f64;
+    let by = quad[3] as f64;
+    let cx = quad[4] as f64;
+    let cy = quad[5] as f64;
+    let dx = quad[6] as f64;
+    let dy = quad[7] as f64;
 
-    let adx = ax - dx; let ady = ay - dy;
-    let bdx = bx - dx; let bdy = by - dy;
-    let cdx = cx - dx; let cdy = cy - dy;
+    let adx = ax - dx;
+    let ady = ay - dy;
+    let bdx = bx - dx;
+    let bdy = by - dy;
+    let cdx = cx - dx;
+    let cdy = cy - dy;
     let ad2 = adx * adx + ady * ady;
     let bd2 = bdx * bdx + bdy * bdy;
     let cd2 = cdx * cdx + cdy * cdy;
@@ -787,7 +838,11 @@ mod tests {
             let gpu = gpu_filter_orient3d_f32(quad);
             // GPU-certain lanes must match CPU exact
             assert_ne!(gpu, GPU_ORIENTATION_UNCERTAIN, "lane {i} should be certain");
-            assert_eq!(gpu as i8, cpu_out[i], "lane {i}: GPU={gpu}, CPU={}", cpu_out[i]);
+            assert_eq!(
+                gpu as i8, cpu_out[i],
+                "lane {i}: GPU={gpu}, CPU={}",
+                cpu_out[i]
+            );
         }
     }
 
@@ -795,11 +850,12 @@ mod tests {
     fn orient3d_gpu_uncertain_lanes_flagged_near_degeneracy() {
         // Coplanar case — exact zero determinant. GPU filter flags uncertain
         // (|det| = 0 <= error_bound = 0).
-        let packed = [
-            0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0,
-        ];
+        let packed = [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0];
         let gpu = gpu_filter_orient3d_f32(&packed);
-        assert_eq!(gpu, GPU_ORIENTATION_UNCERTAIN, "coplanar should be uncertain");
+        assert_eq!(
+            gpu, GPU_ORIENTATION_UNCERTAIN,
+            "coplanar should be uncertain"
+        );
 
         // CPU oracle resolves it exactly (Zero)
         let mut cpu_out = [9i8; 1];
@@ -851,8 +907,7 @@ mod tests {
     fn incircle_gpu_certain_lanes_match_cpu_exact() {
         let packed = [
             // Inside (clear)
-            1.0, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0, 0.0,
-            // Outside (clear)
+            1.0, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0, 0.0, // Outside (clear)
             1.0, 0.0, 0.0, 1.0, -1.0, 0.0, 2.0, 0.0,
         ];
         let mut cpu_out = [9i8; 2];
@@ -861,18 +916,23 @@ mod tests {
         for (i, quad) in packed.chunks_exact(8).enumerate() {
             let gpu = gpu_filter_incircle_f32(quad);
             assert_ne!(gpu, GPU_ORIENTATION_UNCERTAIN, "lane {i} should be certain");
-            assert_eq!(gpu as i8, cpu_out[i], "lane {i}: GPU={gpu}, CPU={}", cpu_out[i]);
+            assert_eq!(
+                gpu as i8, cpu_out[i],
+                "lane {i}: GPU={gpu}, CPU={}",
+                cpu_out[i]
+            );
         }
     }
 
     #[test]
     fn incircle_gpu_uncertain_lanes_flagged_near_degeneracy() {
         // Cocircular case — exact zero determinant. GPU filter flags uncertain.
-        let packed = [
-            1.0, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0, -1.0,
-        ];
+        let packed = [1.0, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0, -1.0];
         let gpu = gpu_filter_incircle_f32(&packed);
-        assert_eq!(gpu, GPU_ORIENTATION_UNCERTAIN, "cocircular should be uncertain");
+        assert_eq!(
+            gpu, GPU_ORIENTATION_UNCERTAIN,
+            "cocircular should be uncertain"
+        );
 
         let mut cpu_out = [9i8; 1];
         evaluate_incircle_batch_f32(&packed, &mut cpu_out).unwrap();
@@ -887,8 +947,7 @@ mod tests {
         // A set of orient3d cases covering clear, degenerate, and near-degenerate
         let packed: [f32; 36] = [
             // Clear positive
-            0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0,
-            // Clear negative
+            0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, // Clear negative
             0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
             // Coplanar (exact zero)
             0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0,
@@ -915,10 +974,8 @@ mod tests {
     fn cpu_gpu_differential_incircle_over_corpus() {
         let packed: [f32; 24] = [
             // Inside (clear)
-            1.0, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0, 0.0,
-            // Outside (clear)
-            1.0, 0.0, 0.0, 1.0, -1.0, 0.0, 2.0, 0.0,
-            // On circle (exact zero)
+            1.0, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0, 0.0, // Outside (clear)
+            1.0, 0.0, 0.0, 1.0, -1.0, 0.0, 2.0, 0.0, // On circle (exact zero)
             1.0, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0, -1.0,
         ];
 
@@ -1057,7 +1114,9 @@ mod tests {
         let gpu_count = gpu_candidate_box_join(&boxes_a, &boxes_b, &mut gpu_out).unwrap();
 
         let mut brute_out = vec![BoxPair { a: 0, b: 0 }; max_pairs];
-        let brute_count = super::super::box_join::box_join_brute_force(&boxes_a, &boxes_b, &mut brute_out).unwrap();
+        let brute_count =
+            super::super::box_join::box_join_brute_force(&boxes_a, &boxes_b, &mut brute_out)
+                .unwrap();
 
         assert_eq!(gpu_count, brute_count);
         let mut gpu_sorted = gpu_out[..gpu_count].to_vec();
@@ -1073,9 +1132,10 @@ mod tests {
             Aabb::new(Point3::new(0.0, 0.0, 0.0), Point3::new(2.0, 2.0, 2.0)),
             Aabb::new(Point3::new(1.0, 1.0, 1.0), Point3::new(3.0, 3.0, 3.0)),
         ];
-        let boxes_b: Vec<Aabb> = vec![
-            Aabb::new(Point3::new(1.5, 0.0, 0.0), Point3::new(2.5, 1.0, 1.0)),
-        ];
+        let boxes_b: Vec<Aabb> = vec![Aabb::new(
+            Point3::new(1.5, 0.0, 0.0),
+            Point3::new(2.5, 1.0, 1.0),
+        )];
 
         let run = || {
             let mut out = vec![BoxPair { a: 0, b: 0 }; boxes_a.len() * boxes_b.len()];

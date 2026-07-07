@@ -238,7 +238,12 @@ pub enum SectionTableError {
     /// An alignment tier byte is not a defined variant.
     UnsupportedAlignmentTier { got: u8 },
     /// `stride * element_count != payload.len()`.
-    StrideInconsistent { section_type: u8, stride: u32, element_count: u32, payload_len: usize },
+    StrideInconsistent {
+        section_type: u8,
+        stride: u32,
+        element_count: u32,
+        payload_len: usize,
+    },
     /// The caller-supplied output buffer is too small.
     OutputBufferTooSmall { needed: usize, have: usize },
     /// The input bytes are too short to hold the header + section table.
@@ -249,19 +254,38 @@ pub enum SectionTableError {
     /// A descriptor's `reserved16` is non-zero.
     NonZeroDescriptorReserved { index: usize },
     /// A descriptor's `byte_offset` is misaligned relative to its tier.
-    MisalignedSection { index: usize, offset: u32, tier: AlignmentTier },
+    MisalignedSection {
+        index: usize,
+        offset: u32,
+        tier: AlignmentTier,
+    },
     /// A descriptor's `byte_offset`/`byte_length` is out of bounds.
-    OutOfBounds { index: usize, offset: u32, length: u32, file_len: usize },
+    OutOfBounds {
+        index: usize,
+        offset: u32,
+        length: u32,
+        file_len: usize,
+    },
     /// Two descriptors' payload regions overlap.
     OverlappingSections { index_a: usize, index_b: usize },
     /// A descriptor's `stride * element_count != byte_length`.
-    StrideInconsistentDescriptor { index: usize, stride: u32, element_count: u32, byte_length: u32 },
+    StrideInconsistentDescriptor {
+        index: usize,
+        stride: u32,
+        element_count: u32,
+        byte_length: u32,
+    },
     /// A descriptor's section type is `Undefined` or an unknown byte.
     UndefinedSectionType { index: usize, got: u8 },
     /// A descriptor's alignment tier is undefined.
     UndefinedAlignmentTier { index: usize, got: u8 },
     /// A payload's CRC-32C does not match the stored value (a flipped bit).
-    CrcMismatch { index: usize, section_type: u8, expected: u32, got: u32 },
+    CrcMismatch {
+        index: usize,
+        section_type: u8,
+        expected: u32,
+        got: u32,
+    },
     /// A padding region between sections is non-zero.
     NonZeroPadding { at: usize },
 }
@@ -326,7 +350,9 @@ fn plan_layout(
     descs: &mut [SectionDescriptor; MAX_SECTIONS_ENCODE],
 ) -> Result<usize, SectionTableError> {
     if inputs.len() > MAX_SECTIONS_ENCODE {
-        return Err(SectionTableError::TooManySections { count: inputs.len() });
+        return Err(SectionTableError::TooManySections {
+            count: inputs.len(),
+        });
     }
     *order = sort_indices_stack(inputs);
 
@@ -397,7 +423,10 @@ pub fn encode_container(
     let mut descs = [ZEROED_SECTION_DESCRIPTOR; MAX_SECTIONS_ENCODE];
     let total = plan_layout(inputs, &mut order, &mut descs)?;
     if out.len() < total {
-        return Err(SectionTableError::OutputBufferTooSmall { needed: total, have: out.len() });
+        return Err(SectionTableError::OutputBufferTooSmall {
+            needed: total,
+            have: out.len(),
+        });
     }
 
     // Zero the whole output region we will write into (so padding is zero).
@@ -477,20 +506,29 @@ pub fn parse_section_table<'a>(
         && off as usize <= data.len()
         && cnt <= MAX_SECTION_COUNT;
     if !both_zero && !valid_nonzero {
-        return Err(SectionTableError::BadSectionTablePointer { offset: off, count: cnt });
+        return Err(SectionTableError::BadSectionTablePointer {
+            offset: off,
+            count: cnt,
+        });
     }
     let table_start = off as usize;
     let table_bytes = cnt as usize * SECTION_DESCRIPTOR_SIZE;
-    let table_end = table_start
-        .checked_add(table_bytes)
-        .ok_or(SectionTableError::BadSectionTablePointer { offset: off, count: cnt })?;
+    let table_end =
+        table_start
+            .checked_add(table_bytes)
+            .ok_or(SectionTableError::BadSectionTablePointer {
+                offset: off,
+                count: cnt,
+            })?;
     if table_end > data.len() {
-        return Err(SectionTableError::InputTooShort { got: data.len(), need: table_end });
+        return Err(SectionTableError::InputTooShort {
+            got: data.len(),
+            need: table_end,
+        });
     }
     // SAFETY: SectionDescriptor is repr(C) + Pod + size 24 with no padding;
     // the table slice is byte-aligned and fully within `data`.
-    let descs: &[SectionDescriptor] =
-        bytemuck::cast_slice(&data[table_start..table_end]);
+    let descs: &[SectionDescriptor] = bytemuck::cast_slice(&data[table_start..table_end]);
 
     // Per-descriptor validation + cross-descriptor overlap/alignment scan.
     // We scan in table order (which is canonical = ascending section_type
@@ -500,34 +538,70 @@ pub fn parse_section_table<'a>(
         if d.reserved16 != 0 {
             return Err(SectionTableError::NonZeroDescriptorReserved { index: i });
         }
-        let st = SectionType::from_u8(d.section_type).ok_or(SectionTableError::UndefinedSectionType { index: i, got: d.section_type })?;
+        let st = SectionType::from_u8(d.section_type).ok_or(
+            SectionTableError::UndefinedSectionType {
+                index: i,
+                got: d.section_type,
+            },
+        )?;
         if st == SectionType::Undefined {
-            return Err(SectionTableError::UndefinedSectionType { index: i, got: d.section_type });
+            return Err(SectionTableError::UndefinedSectionType {
+                index: i,
+                got: d.section_type,
+            });
         }
-        let tier = AlignmentTier::from_u8(d.alignment_tier)
-            .ok_or(SectionTableError::UndefinedAlignmentTier { index: i, got: d.alignment_tier })?;
+        let tier = AlignmentTier::from_u8(d.alignment_tier).ok_or(
+            SectionTableError::UndefinedAlignmentTier {
+                index: i,
+                got: d.alignment_tier,
+            },
+        )?;
         let align = tier.to_bytes();
         let o = d.byte_offset as usize;
         let l = d.byte_length as usize;
         if o % align != 0 {
-            return Err(SectionTableError::MisalignedSection { index: i, offset: d.byte_offset, tier });
+            return Err(SectionTableError::MisalignedSection {
+                index: i,
+                offset: d.byte_offset,
+                tier,
+            });
         }
-        let end = o.checked_add(l).ok_or(SectionTableError::OutOfBounds { index: i, offset: d.byte_offset, length: d.byte_length, file_len: data.len() })?;
+        let end = o.checked_add(l).ok_or(SectionTableError::OutOfBounds {
+            index: i,
+            offset: d.byte_offset,
+            length: d.byte_length,
+            file_len: data.len(),
+        })?;
         if end > data.len() {
-            return Err(SectionTableError::OutOfBounds { index: i, offset: d.byte_offset, length: d.byte_length, file_len: data.len() });
+            return Err(SectionTableError::OutOfBounds {
+                index: i,
+                offset: d.byte_offset,
+                length: d.byte_length,
+                file_len: data.len(),
+            });
         }
         // Stride consistency.
         if d.stride > 0 {
             let expected = d.stride as usize * d.element_count as usize;
             if expected != l {
-                return Err(SectionTableError::StrideInconsistentDescriptor { index: i, stride: d.stride, element_count: d.element_count, byte_length: d.byte_length });
+                return Err(SectionTableError::StrideInconsistentDescriptor {
+                    index: i,
+                    stride: d.stride,
+                    element_count: d.element_count,
+                    byte_length: d.byte_length,
+                });
             }
         }
         // Per-section CRC.
         let stored = d.crc32c;
         let actual = crc32c(&data[o..end]);
         if actual != stored {
-            return Err(SectionTableError::CrcMismatch { index: i, section_type: d.section_type, expected: stored, got: actual });
+            return Err(SectionTableError::CrcMismatch {
+                index: i,
+                section_type: d.section_type,
+                expected: stored,
+                got: actual,
+            });
         }
     }
 
@@ -549,7 +623,10 @@ pub fn parse_section_table<'a>(
                 if al == 0 || bl == 0 {
                     continue;
                 }
-                return Err(SectionTableError::OverlappingSections { index_a: a, index_b: b });
+                return Err(SectionTableError::OverlappingSections {
+                    index_a: a,
+                    index_b: b,
+                });
             }
         }
     }
@@ -557,7 +634,8 @@ pub fn parse_section_table<'a>(
     // Padding-between-sections is zero: scan the gaps. The gap before the
     // first section (between table_end and the first section's offset) and
     // between consecutive sections. Walk in offset order.
-    let mut order_by_off: [usize; MAX_SECTION_COUNT as usize] = [0usize; MAX_SECTION_COUNT as usize];
+    let mut order_by_off: [usize; MAX_SECTION_COUNT as usize] =
+        [0usize; MAX_SECTION_COUNT as usize];
     for i in 0..descs.len() {
         order_by_off[i] = i;
     }
@@ -617,7 +695,10 @@ mod tests {
 
     #[test]
     fn descriptor_is_pod_with_exact_size() {
-        assert_eq!(std::mem::size_of::<SectionDescriptor>(), SECTION_DESCRIPTOR_SIZE);
+        assert_eq!(
+            std::mem::size_of::<SectionDescriptor>(),
+            SECTION_DESCRIPTOR_SIZE
+        );
         assert_eq!(std::mem::offset_of!(SectionDescriptor, section_type), 0);
         assert_eq!(std::mem::offset_of!(SectionDescriptor, alignment_tier), 1);
         assert_eq!(std::mem::offset_of!(SectionDescriptor, reserved16), 2);
@@ -655,8 +736,14 @@ mod tests {
         assert_eq!(descs[0].section_type, SectionType::QuantizedMesh as u8);
         assert_eq!(descs[1].section_type, SectionType::Tensor10DNodes as u8);
         // Payloads round-trip.
-        assert_eq!(&out[descs[0].byte_offset as usize..][..mesh_payload.len()], &mesh_payload);
-        assert_eq!(&out[descs[1].byte_offset as usize..][..node_payload.len()], &node_payload);
+        assert_eq!(
+            &out[descs[0].byte_offset as usize..][..mesh_payload.len()],
+            &mesh_payload
+        );
+        assert_eq!(
+            &out[descs[1].byte_offset as usize..][..node_payload.len()],
+            &node_payload
+        );
         // Stride/element_count for the node section.
         assert_eq!(descs[1].stride, 40);
         assert_eq!(descs[1].element_count, 3);
@@ -698,7 +785,10 @@ mod tests {
         // The gap between the mesh payload end and the node section start must be zero.
         let mesh_end = descs[0].byte_offset as usize + descs[0].byte_length as usize;
         let node_start = descs[1].byte_offset as usize;
-        assert!(node_start > mesh_end, "there must be padding between the odd-length mesh and the 16-aligned node");
+        assert!(
+            node_start > mesh_end,
+            "there must be padding between the odd-length mesh and the 16-aligned node"
+        );
         for b in &out[mesh_end..node_start] {
             assert_eq!(*b, 0, "padding between sections must be zero");
         }
@@ -716,7 +806,11 @@ mod tests {
         let n_a = encode_container(&h, &inputs_a, &mut out_a).expect("encode a");
         let n_b = encode_container(&h, &inputs_b, &mut out_b).expect("encode b");
         assert_eq!(n_a, n_b);
-        assert_eq!(&out_a[..n_a], &out_b[..n_b], "permuted input must produce byte-identical output");
+        assert_eq!(
+            &out_a[..n_a],
+            &out_b[..n_b],
+            "permuted input must produce byte-identical output"
+        );
     }
 
     #[test]
@@ -727,7 +821,13 @@ mod tests {
         let inputs = [mesh_input(&p1), mesh_input(&p2)];
         let mut out = [0u8; 512];
         let err = encode_container(&h, &inputs, &mut out).expect_err("duplicate type must reject");
-        assert!(matches!(err, SectionTableError::DuplicateSectionType { section_type: 1 }), "{err}");
+        assert!(
+            matches!(
+                err,
+                SectionTableError::DuplicateSectionType { section_type: 1 }
+            ),
+            "{err}"
+        );
     }
 
     #[test]
@@ -742,8 +842,12 @@ mod tests {
             payload: &[0u8; 100],
         };
         let mut out = [0u8; 512];
-        let err = encode_container(&h, std::slice::from_ref(&bad), &mut out).expect_err("stride inconsistent must reject");
-        assert!(matches!(err, SectionTableError::StrideInconsistent { .. }), "{err}");
+        let err = encode_container(&h, std::slice::from_ref(&bad), &mut out)
+            .expect_err("stride inconsistent must reject");
+        assert!(
+            matches!(err, SectionTableError::StrideInconsistent { .. }),
+            "{err}"
+        );
     }
 
     #[test]
@@ -753,7 +857,10 @@ mod tests {
         let inputs = [mesh_input(&payload)];
         let mut out = [0u8; 80]; // way too small
         let err = encode_container(&h, &inputs, &mut out).expect_err("small buffer must reject");
-        assert!(matches!(err, SectionTableError::OutputBufferTooSmall { .. }), "{err}");
+        assert!(
+            matches!(err, SectionTableError::OutputBufferTooSmall { .. }),
+            "{err}"
+        );
     }
 
     #[test]
@@ -768,8 +875,12 @@ mod tests {
         let descs_ok = parse_section_table(&out[..n], &parsed_h).expect("clean table parses");
         let p_off = descs_ok[0].byte_offset as usize;
         out[p_off] ^= 0x01;
-        let err = parse_section_table(&out[..n], &parsed_h).expect_err("flipped bit must be caught");
-        assert!(matches!(err, SectionTableError::CrcMismatch { .. }), "{err}");
+        let err =
+            parse_section_table(&out[..n], &parsed_h).expect_err("flipped bit must be caught");
+        assert!(
+            matches!(err, SectionTableError::CrcMismatch { .. }),
+            "{err}"
+        );
     }
 
     #[test]
@@ -783,8 +894,15 @@ mod tests {
         // Corrupt the descriptor's reserved16 (offset table_start + 2).
         let table_start = parsed_h.section_table_offset as usize;
         out[table_start + 2] = 0xFF;
-        let err = parse_section_table(&out[..n], &parsed_h).expect_err("non-zero reserved16 must reject");
-        assert!(matches!(err, SectionTableError::NonZeroDescriptorReserved { index: 0 }), "{err}");
+        let err =
+            parse_section_table(&out[..n], &parsed_h).expect_err("non-zero reserved16 must reject");
+        assert!(
+            matches!(
+                err,
+                SectionTableError::NonZeroDescriptorReserved { index: 0 }
+            ),
+            "{err}"
+        );
     }
 
     #[test]
@@ -803,8 +921,12 @@ mod tests {
         out[off_field..off_field + 4].copy_from_slice(&65u32.to_le_bytes());
         // Re-parse the header (the section-table pointer is unchanged).
         parsed_h = Container10dHeader::parse(&out[..n]).expect("header still parses");
-        let err = parse_section_table(&out[..n], &parsed_h).expect_err("misaligned offset must reject");
-        assert!(matches!(err, SectionTableError::MisalignedSection { .. }), "{err}");
+        let err =
+            parse_section_table(&out[..n], &parsed_h).expect_err("misaligned offset must reject");
+        assert!(
+            matches!(err, SectionTableError::MisalignedSection { .. }),
+            "{err}"
+        );
     }
 
     #[test]
@@ -820,7 +942,10 @@ mod tests {
         let len_field = table_start + 8;
         out[len_field..len_field + 4].copy_from_slice(&0xFFFF_FFFFu32.to_le_bytes());
         let err = parse_section_table(&out[..n], &parsed_h).expect_err("OOB must reject");
-        assert!(matches!(err, SectionTableError::OutOfBounds { .. }), "{err}");
+        assert!(
+            matches!(err, SectionTableError::OutOfBounds { .. }),
+            "{err}"
+        );
     }
 
     #[test]
@@ -838,9 +963,8 @@ mod tests {
         let parsed_h = Container10dHeader::parse(&out[..n]).expect("header parse");
         let table_start = parsed_h.section_table_offset as usize;
         // Read the first section's offset.
-        let first_off = u32::from_le_bytes(
-            out[table_start + 4..table_start + 8].try_into().unwrap(),
-        ) as usize;
+        let first_off =
+            u32::from_le_bytes(out[table_start + 4..table_start + 8].try_into().unwrap()) as usize;
         // Patch the second descriptor's byte_offset to overlap the first.
         // The node section declares CacheLine (16-byte) tier, so the patched
         // offset must stay 16-aligned; align up from first_off+10 so it
@@ -852,7 +976,8 @@ mod tests {
             (new_second_off as usize) < first_off + mesh_payload.len(),
             "patched offset must overlap the first payload"
         );
-        out[second_desc_off + 4..second_desc_off + 8].copy_from_slice(&new_second_off.to_le_bytes());
+        out[second_desc_off + 4..second_desc_off + 8]
+            .copy_from_slice(&new_second_off.to_le_bytes());
         let crc_start = new_second_off as usize;
         let crc_end = crc_start + 40;
         let new_crc = crc32c(&out[crc_start..crc_end]);
@@ -860,7 +985,10 @@ mod tests {
         // The patched file's header still parses (pointer unchanged).
         let parsed_h2 = Container10dHeader::parse(&out[..n]).expect("header still parses");
         let err = parse_section_table(&out[..n], &parsed_h2).expect_err("overlap must reject");
-        assert!(matches!(err, SectionTableError::OverlappingSections { .. }), "{err}");
+        assert!(
+            matches!(err, SectionTableError::OverlappingSections { .. }),
+            "{err}"
+        );
     }
 
     #[test]
@@ -876,8 +1004,12 @@ mod tests {
         let mesh_end = descs[0].byte_offset as usize + descs[0].byte_length as usize;
         // Corrupt a padding byte.
         out[mesh_end] = 0x42;
-        let err = parse_section_table(&out[..n], &parsed_h).expect_err("non-zero padding must reject");
-        assert!(matches!(err, SectionTableError::NonZeroPadding { .. }), "{err}");
+        let err =
+            parse_section_table(&out[..n], &parsed_h).expect_err("non-zero padding must reject");
+        assert!(
+            matches!(err, SectionTableError::NonZeroPadding { .. }),
+            "{err}"
+        );
     }
 
     #[test]
@@ -891,7 +1023,11 @@ mod tests {
             payload: &[0u8; 16],
         };
         let mut out = [0u8; 512];
-        let err = encode_container(&h, std::slice::from_ref(&bad), &mut out).expect_err("spec-reserved type must reject");
-        assert!(matches!(err, SectionTableError::UnsupportedSectionType { .. }), "{err}");
+        let err = encode_container(&h, std::slice::from_ref(&bad), &mut out)
+            .expect_err("spec-reserved type must reject");
+        assert!(
+            matches!(err, SectionTableError::UnsupportedSectionType { .. }),
+            "{err}"
+        );
     }
 }

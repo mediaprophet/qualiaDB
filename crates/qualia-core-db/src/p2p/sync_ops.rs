@@ -43,7 +43,10 @@ pub enum SyncOpResponse {
     /// How many *new* (non-duplicate) frames the publish added.
     Published { accepted: u64 },
     /// The frames after the requested cursor, plus the cursor to use next time.
-    Pulled { op_frames: Vec<Vec<u8>>, next_cursor: u64 },
+    Pulled {
+        op_frames: Vec<Vec<u8>>,
+        next_cursor: u64,
+    },
 }
 
 /// A reference op relay/store — append-only, dedup by frame content, cursor = position. The responder
@@ -96,7 +99,10 @@ impl SyncOpRelay {
             },
             SyncOpRequest::PullSince { cursor } => {
                 let (op_frames, next_cursor) = self.pull_since(cursor);
-                SyncOpResponse::Pulled { op_frames, next_cursor }
+                SyncOpResponse::Pulled {
+                    op_frames,
+                    next_cursor,
+                }
             }
         }
     }
@@ -117,11 +123,15 @@ where
     io.read_exact(&mut len_buf).await?;
     let len = u32::from_be_bytes(len_buf) as usize;
     if len > MAX_FRAME_BYTES {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "sync-op frame too large"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "sync-op frame too large",
+        ));
     }
     let mut buf = vec![0u8; len];
     io.read_exact(&mut buf).await?;
-    ciborium::from_reader(&buf[..]).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))
+    ciborium::from_reader(&buf[..])
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))
 }
 
 async fn write_frame<T, V>(io: &mut T, v: &V) -> io::Result<()>
@@ -150,7 +160,11 @@ impl Codec for SyncOpCodec {
         read_frame(io).await
     }
 
-    async fn read_response<T>(&mut self, _: &StreamProtocol, io: &mut T) -> io::Result<SyncOpResponse>
+    async fn read_response<T>(
+        &mut self,
+        _: &StreamProtocol,
+        io: &mut T,
+    ) -> io::Result<SyncOpResponse>
     where
         T: AsyncRead + Unpin + Send,
     {
@@ -208,12 +222,17 @@ mod tests {
     fn handle_maps_requests_to_responses() {
         let relay = SyncOpRelay::new();
         assert_eq!(
-            relay.handle(SyncOpRequest::Publish { op_frames: vec![b"x".to_vec()] }),
+            relay.handle(SyncOpRequest::Publish {
+                op_frames: vec![b"x".to_vec()]
+            }),
             SyncOpResponse::Published { accepted: 1 }
         );
         assert_eq!(
             relay.handle(SyncOpRequest::PullSince { cursor: 0 }),
-            SyncOpResponse::Pulled { op_frames: vec![b"x".to_vec()], next_cursor: 1 }
+            SyncOpResponse::Pulled {
+                op_frames: vec![b"x".to_vec()],
+                next_cursor: 1
+            }
         );
     }
 
@@ -222,7 +241,9 @@ mod tests {
     #[test]
     fn wire_payload_roundtrips_losslessly() {
         for req in [
-            SyncOpRequest::Publish { op_frames: vec![b"op-1".to_vec(), b"op-2".to_vec()] },
+            SyncOpRequest::Publish {
+                op_frames: vec![b"op-1".to_vec(), b"op-2".to_vec()],
+            },
             SyncOpRequest::PullSince { cursor: 42 },
         ] {
             let mut buf = Vec::new();
@@ -232,7 +253,10 @@ mod tests {
         }
         for res in [
             SyncOpResponse::Published { accepted: 3 },
-            SyncOpResponse::Pulled { op_frames: vec![b"op-1".to_vec()], next_cursor: 7 },
+            SyncOpResponse::Pulled {
+                op_frames: vec![b"op-1".to_vec()],
+                next_cursor: 7,
+            },
         ] {
             let mut buf = Vec::new();
             ciborium::into_writer(&res, &mut buf).unwrap();

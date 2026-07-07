@@ -8,7 +8,7 @@
 pub trait Object {
     /// Associated properties of this object, if any.
     type Properties;
-    
+
     fn properties(&self) -> Self::Properties;
 }
 
@@ -28,7 +28,10 @@ impl<T: Object, M: Morphism<T, T>> Endomorphism<T> for M {}
 /// A Functor maps Objects to Objects and Morphisms to Morphisms between two Categories.
 pub trait Functor<DomCat, CodCat> {
     type MapObject<T: Object>: Object;
-    type MapMorphism<Dom: Object, Cod: Object, M: Morphism<Dom, Cod>>: Morphism<Self::MapObject<Dom>, Self::MapObject<Cod>>;
+    type MapMorphism<Dom: Object, Cod: Object, M: Morphism<Dom, Cod>>: Morphism<
+        Self::MapObject<Dom>,
+        Self::MapObject<Cod>,
+    >;
 }
 
 /// The overall Category.

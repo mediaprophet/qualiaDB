@@ -126,7 +126,12 @@ pub struct AssetRef {
 }
 
 impl AssetRef {
-    pub fn new(uri: impl Into<String>, digest: u64, media_type: impl Into<String>, role: AssetRole) -> Self {
+    pub fn new(
+        uri: impl Into<String>,
+        digest: u64,
+        media_type: impl Into<String>,
+        role: AssetRole,
+    ) -> Self {
         Self {
             uri: uri.into(),
             digest,
@@ -181,7 +186,12 @@ pub struct HypermediaContainer {
 
 impl HypermediaContainer {
     pub fn new(uri: impl Into<String>, primary: AssetRef) -> Self {
-        Self { uri: uri.into(), primary, related: Vec::new(), analytics: Vec::new() }
+        Self {
+            uri: uri.into(),
+            primary,
+            related: Vec::new(),
+            analytics: Vec::new(),
+        }
     }
     pub fn with_related(mut self, asset: AssetRef) -> Self {
         self.related.push(asset);
@@ -205,6 +215,13 @@ pub(crate) fn fnv60(bytes: &[u8]) -> u64 {
         h = h.wrapping_mul(0x0000_0100_0000_01b3);
     }
     h & 0x0FFF_FFFF_FFFF_FFFF
+}
+
+/// A content digest for an asset's bytes, in the same 60-bit identity space as
+/// asset subjects — the anti-tamper / dedup anchor a caller stores as
+/// [`AssetRef::digest`]. (Public wrapper so client-core ingest can compute it.)
+pub fn content_digest(bytes: &[u8]) -> u64 {
+    fnv60(bytes)
 }
 
 fn edge(subject: u64, predicate: u64, object: u64) -> NQuin {
@@ -291,14 +308,18 @@ pub fn container_to_nquins(c: &HypermediaContainer) -> (Vec<NQuin>, HashMap<u64,
 fn objects(quins: &[NQuin], subject: u64, predicate: u64) -> Vec<u64> {
     quins
         .iter()
-        .filter(|q| q.context == HYPERMEDIA_CONTEXT && q.subject == subject && q.predicate == predicate)
+        .filter(|q| {
+            q.context == HYPERMEDIA_CONTEXT && q.subject == subject && q.predicate == predicate
+        })
         .map(|q| q.object)
         .collect()
 }
 
 /// The container's primary asset subject.
 pub fn primary_of(quins: &[NQuin], container_subject: u64) -> Option<u64> {
-    objects(quins, container_subject, P_HAS_PRIMARY).first().copied()
+    objects(quins, container_subject, P_HAS_PRIMARY)
+        .first()
+        .copied()
 }
 
 /// Every asset subject a container bundles (primary + related).
@@ -321,7 +342,9 @@ pub fn derived_from(quins: &[NQuin], asset_subject: u64) -> Vec<u64> {
 
 /// The provenance-record subject bound to an asset, if any.
 pub fn provenance_of(quins: &[NQuin], asset_subject: u64) -> Option<u64> {
-    objects(quins, asset_subject, P_HAS_PROVENANCE).first().copied()
+    objects(quins, asset_subject, P_HAS_PROVENANCE)
+        .first()
+        .copied()
 }
 
 /// The analytics subjects that are *about* a given asset — the derived data belonging to it.
@@ -394,11 +417,12 @@ pub fn descriptors_to_nquins(
 ) -> (Vec<NQuin>, HashMap<u64, String>) {
     let mut quins = Vec::new();
     let mut lex = HashMap::new();
-    let str_edge = |quins: &mut Vec<NQuin>, lex: &mut HashMap<u64, String>, pred: u64, val: &str| {
-        let o = fnv60(val.as_bytes());
-        lex.insert(o, val.to_string());
-        quins.push(edge(asset_subject, pred, o));
-    };
+    let str_edge =
+        |quins: &mut Vec<NQuin>, lex: &mut HashMap<u64, String>, pred: u64, val: &str| {
+            let o = fnv60(val.as_bytes());
+            lex.insert(o, val.to_string());
+            quins.push(edge(asset_subject, pred, o));
+        };
     for t in &d.topics {
         str_edge(&mut quins, &mut lex, P_TOPIC, t);
     }
@@ -434,7 +458,9 @@ pub fn descriptors_to_nquins(
 fn subjects_with(quins: &[NQuin], predicate: u64, object: u64) -> Vec<u64> {
     quins
         .iter()
-        .filter(|q| q.context == HYPERMEDIA_CONTEXT && q.predicate == predicate && q.object == object)
+        .filter(|q| {
+            q.context == HYPERMEDIA_CONTEXT && q.predicate == predicate && q.object == object
+        })
         .map(|q| q.subject)
         .collect()
 }
@@ -536,7 +562,9 @@ pub fn flags_on(quins: &[NQuin], asset_subject: u64) -> Vec<u64> {
 }
 /// A flag's severity level (0 Info .. 3 Urgent), if present.
 pub fn flag_severity(quins: &[NQuin], flag_subject: u64) -> Option<u64> {
-    objects(quins, flag_subject, P_FLAG_SEVERITY).first().copied()
+    objects(quins, flag_subject, P_FLAG_SEVERITY)
+        .first()
+        .copied()
 }
 
 // ── Ingest processors: ingest DERIVES searchability (P3) ─────────────────────────────────────────
@@ -585,12 +613,38 @@ impl Default for TextProcessor {
         let kw = |t: &str, ws: &[&str]| (t.to_string(), ws.iter().map(|s| s.to_string()).collect());
         Self {
             topic_keywords: vec![
-                kw("biology", &["cell", "organ", "gene", "protein", "hepatocyte", "liver", "anatomy"]),
-                kw("engineering", &["stress", "load", "circuit", "tolerance", "mechanical"]),
-                kw("policy", &["policy", "regulation", "governance", "legislation"]),
-                kw("software", &["function", "compiler", "api", "struct", "runtime"]),
-                kw("law", &["contract", "statute", "liability", "clause", "jurisdiction"]),
-                kw("finance", &["invoice", "expense", "tax", "receipt", "deduction"]),
+                kw(
+                    "biology",
+                    &[
+                        "cell",
+                        "organ",
+                        "gene",
+                        "protein",
+                        "hepatocyte",
+                        "liver",
+                        "anatomy",
+                    ],
+                ),
+                kw(
+                    "engineering",
+                    &["stress", "load", "circuit", "tolerance", "mechanical"],
+                ),
+                kw(
+                    "policy",
+                    &["policy", "regulation", "governance", "legislation"],
+                ),
+                kw(
+                    "software",
+                    &["function", "compiler", "api", "struct", "runtime"],
+                ),
+                kw(
+                    "law",
+                    &["contract", "statute", "liability", "clause", "jurisdiction"],
+                ),
+                kw(
+                    "finance",
+                    &["invoice", "expense", "tax", "receipt", "deduction"],
+                ),
             ],
             flag_words: Vec::new(),
         }
@@ -613,16 +667,31 @@ impl Processor for TextProcessor {
         let mut flags = Vec::new();
         for (word, (kind, sev)) in &self.flag_words {
             if text.contains(&word.to_lowercase()) {
-                flags.push(Flag { kind: kind.clone(), severity: *sev, detail: format!("matched '{word}'") });
+                flags.push(Flag {
+                    kind: kind.clone(),
+                    severity: *sev,
+                    detail: format!("matched '{word}'"),
+                });
             }
         }
         // A plain-text derivation of the original (what makes it searchable), derived from the primary.
         let text_uri = format!("{asset_uri}#text");
-        let derived = vec![AssetRef::new(&text_uri, fnv60(bytes), "text/plain", AssetRole::Derivation)
-            .derived_from(asset_uri)];
+        let derived =
+            vec![
+                AssetRef::new(&text_uri, fnv60(bytes), "text/plain", AssetRole::Derivation)
+                    .derived_from(asset_uri),
+            ];
         let mut derived_bytes = HashMap::new();
         derived_bytes.insert(text_uri, bytes.to_vec());
-        ProcessorOutput { derived, derived_bytes, descriptors: Descriptors { topics, ..Default::default() }, flags }
+        ProcessorOutput {
+            derived,
+            derived_bytes,
+            descriptors: Descriptors {
+                topics,
+                ..Default::default()
+            },
+            flags,
+        }
     }
 }
 
@@ -662,7 +731,12 @@ pub fn ingest_with(
     for (k, v) in fl {
         lexicon.entry(k).or_insert(v);
     }
-    IngestResult { container, quins, lexicon, flags: out.flags }
+    IngestResult {
+        container,
+        quins,
+        lexicon,
+        flags: out.flags,
+    }
 }
 
 #[cfg(test)]
@@ -674,11 +748,26 @@ mod tests {
     /// a **semantic graph of edges**, not a directory.
     #[test]
     fn container_round_trips_as_a_semantic_graph_not_a_directory() {
-        let primary = AssetRef::new("urn:qualia:organ:liver.10d", 0xABCD, "model/qualia-10d", AssetRole::Primary)
-            .derived_from("urn:hra:ccf:liver.glb");
-        let source = AssetRef::new("urn:hra:ccf:liver.glb", 0x1234, "model/gltf-binary", AssetRole::Source)
-            .with_licence("CC-BY-4.0");
-        let provenance = AssetRef::new("urn:qualia:prov:liver", 0x5555, "application/ld+json", AssetRole::Provenance);
+        let primary = AssetRef::new(
+            "urn:qualia:organ:liver.10d",
+            0xABCD,
+            "model/qualia-10d",
+            AssetRole::Primary,
+        )
+        .derived_from("urn:hra:ccf:liver.glb");
+        let source = AssetRef::new(
+            "urn:hra:ccf:liver.glb",
+            0x1234,
+            "model/gltf-binary",
+            AssetRole::Source,
+        )
+        .with_licence("CC-BY-4.0");
+        let provenance = AssetRef::new(
+            "urn:qualia:prov:liver",
+            0x5555,
+            "application/ld+json",
+            AssetRole::Provenance,
+        );
         let analysis = AnalyticsRef {
             id: "urn:qualia:analysis:liver-burden".into(),
             method: "wellfare:systemic-burden".into(),
@@ -692,7 +781,10 @@ mod tests {
             .with_analytics(analysis.clone());
 
         let (quins, _lex) = container_to_nquins(&c);
-        assert!(quins.iter().all(|q| q.verify_ecc_parity()), "every emitted quin has valid parity");
+        assert!(
+            quins.iter().all(|q| q.verify_ecc_parity()),
+            "every emitted quin has valid parity"
+        );
 
         let cs = c.subject();
         // The primary edge resolves to the SAME subject the asset's own manifest would use.
@@ -705,11 +797,20 @@ mod tests {
         assert_eq!(role_of(&quins, primary.subject()), Some(AssetRole::Primary));
         assert_eq!(role_of(&quins, source.subject()), Some(AssetRole::Source));
         // Lineage: the primary was derived from the source GLB.
-        assert_eq!(derived_from(&quins, primary.subject()), vec![source.subject()]);
+        assert_eq!(
+            derived_from(&quins, primary.subject()),
+            vec![source.subject()]
+        );
         // Provenance is bound to the primary.
-        assert_eq!(provenance_of(&quins, primary.subject()), Some(provenance.subject()));
+        assert_eq!(
+            provenance_of(&quins, primary.subject()),
+            Some(provenance.subject())
+        );
         // The analysis is bound *back to the mesh it is about* — not a sibling file, an edge.
-        assert_eq!(analytics_for(&quins, primary.subject()), vec![analysis.subject()]);
+        assert_eq!(
+            analytics_for(&quins, primary.subject()),
+            vec![analysis.subject()]
+        );
     }
 
     #[test]
@@ -731,8 +832,17 @@ mod tests {
     fn subject_hash_matches_the_asset_identity_space() {
         // A container's reference to a URI hashes to the same 60-bit FNV subject that render/assets uses,
         // so container edges join to the asset's own geometry facts.
-        let a = AssetRef::new("urn:qualia:organ:heart.10d", 1, "model/qualia-10d", AssetRole::Primary);
-        assert_eq!(a.subject() & 0xF000_0000_0000_0000, 0, "subject stays in the 60-bit identity space");
+        let a = AssetRef::new(
+            "urn:qualia:organ:heart.10d",
+            1,
+            "model/qualia-10d",
+            AssetRole::Primary,
+        );
+        assert_eq!(
+            a.subject() & 0xF000_0000_0000_0000,
+            0,
+            "subject stays in the 60-bit identity space"
+        );
         assert_eq!(a.subject(), fnv60(b"urn:qualia:organ:heart.10d"));
     }
 
@@ -745,7 +855,11 @@ mod tests {
             projects: vec!["med-course".into()],
             purposes: vec!["study".into()],
             occurred_at: Some(1_700_000_000),
-            place: Some(Place { label: "Sydney".into(), lat: -33.87, lon: 151.21 }),
+            place: Some(Place {
+                label: "Sydney".into(),
+                lat: -33.87,
+                lon: 151.21,
+            }),
             ..Default::default()
         };
         let d_heart = Descriptors {
@@ -756,7 +870,10 @@ mod tests {
         let (mut q, _) = descriptors_to_nquins(liver, &d_liver);
         let (q2, _) = descriptors_to_nquins(heart, &d_heart);
         q.extend(q2);
-        assert!(q.iter().all(|x| x.verify_ecc_parity()), "descriptor quins have valid parity");
+        assert!(
+            q.iter().all(|x| x.verify_ecc_parity()),
+            "descriptor quins have valid parity"
+        );
 
         // By topic: both are biology; only the liver is anatomy — search by MEANING, not path.
         let bio = by_topic(&q, "biology");
@@ -777,11 +894,19 @@ mod tests {
         let (q, _) = flags_to_nquins(
             asset,
             uri,
-            &[Flag { kind: "sensitive-medical".into(), severity: FlagSeverity::Concern, detail: "radiograph".into() }],
+            &[Flag {
+                kind: "sensitive-medical".into(),
+                severity: FlagSeverity::Concern,
+                detail: "radiograph".into(),
+            }],
         );
         assert!(q.iter().all(|x| x.verify_ecc_parity()));
         let flags = flags_on(&q, asset);
-        assert_eq!(flags.len(), 1, "the flag is bound to the asset (what the guardian-notify path reads)");
+        assert_eq!(
+            flags.len(),
+            1,
+            "the flag is bound to the asset (what the guardian-notify path reads)"
+        );
         assert_eq!(flag_severity(&q, flags[0]), Some(2), "Concern = level 2");
     }
 
@@ -790,8 +915,15 @@ mod tests {
         let proc = TextProcessor::default();
         let doc = b"The human liver is an organ; hepatocytes secrete bile.";
         let out = proc.process("urn:doc:liver-notes", doc, "text/markdown");
-        assert!(out.descriptors.topics.contains(&"biology".to_string()), "topic derived from content");
-        assert_eq!(out.derived.len(), 1, "a searchable text derivation is produced");
+        assert!(
+            out.descriptors.topics.contains(&"biology".to_string()),
+            "topic derived from content"
+        );
+        assert_eq!(
+            out.derived.len(),
+            1,
+            "a searchable text derivation is produced"
+        );
         assert_eq!(out.derived[0].role, AssetRole::Derivation);
     }
 
@@ -800,13 +932,19 @@ mod tests {
         // A processor with a topic (law) and a watch-word that raises a flag (for the guardian path).
         let proc = TextProcessor {
             topic_keywords: vec![("law".into(), vec!["contract".into(), "statute".into()])],
-            flag_words: vec![("confidential".into(), ("sensitive".into(), FlagSeverity::Concern))],
+            flag_words: vec![(
+                "confidential".into(),
+                ("sensitive".into(), FlagSeverity::Concern),
+            )],
         };
         let doc = b"This CONFIDENTIAL contract is governed by statute.";
         let r = ingest_with(&proc, "urn:doc:nda", "text/plain", 0xAA, doc);
         let primary = r.container.primary.subject();
         // The original is now findable by meaning.
-        assert!(by_topic(&r.quins, "law").contains(&primary), "original findable by derived topic");
+        assert!(
+            by_topic(&r.quins, "law").contains(&primary),
+            "original findable by derived topic"
+        );
         // The flag is raised AND bound to the asset — the guardian-notify path reads it.
         assert_eq!(r.flags.len(), 1);
         assert!(!flags_on(&r.quins, primary).is_empty());

@@ -177,10 +177,7 @@ pub fn la_eigenvalues_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     }
     let roots = crate::solvers::linear_algebra::spectral::eigenvalues_general(m.rows, &m.data)
         .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
-    let eigenvalues: Vec<Cplx> = roots
-        .iter()
-        .map(|r| Cplx { re: r.re, im: r.im })
-        .collect();
+    let eigenvalues: Vec<Cplx> = roots.iter().map(|r| Cplx { re: r.re, im: r.im }).collect();
     #[derive(Serialize)]
     struct Out {
         eigenvalues: Vec<Cplx>,
@@ -229,10 +226,7 @@ pub fn la_polynomial_roots_wasm(val: JsValue) -> Result<JsValue, JsValue> {
     let p: In = serde_wasm_bindgen::from_value(val).map_err(jserr)?;
     let roots = crate::solvers::polynomial::polynomial_roots(&p.coeffs)
         .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
-    let out: Vec<Cplx> = roots
-        .iter()
-        .map(|r| Cplx { re: r.re, im: r.im })
-        .collect();
+    let out: Vec<Cplx> = roots.iter().map(|r| Cplx { re: r.re, im: r.im }).collect();
     #[derive(Serialize)]
     struct Out {
         degree: usize,

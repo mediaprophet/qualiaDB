@@ -84,10 +84,9 @@ pub enum QuadMeshError {
 impl core::fmt::Display for QuadMeshError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::MaxLevelTooLarge { requested, max } => write!(
-                f,
-                "quadtree: max_level {requested} exceeds cap {max}"
-            ),
+            Self::MaxLevelTooLarge { requested, max } => {
+                write!(f, "quadtree: max_level {requested} exceeds cap {max}")
+            }
             Self::InvalidRootHalf { got } => {
                 write!(f, "quadtree: root_half must be finite > 0, got {got}")
             }
@@ -122,10 +121,9 @@ pub enum OctMeshError {
 impl core::fmt::Display for OctMeshError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::MaxLevelTooLarge { requested, max } => write!(
-                f,
-                "octree: max_level {requested} exceeds cap {max}"
-            ),
+            Self::MaxLevelTooLarge { requested, max } => {
+                write!(f, "octree: max_level {requested} exceeds cap {max}")
+            }
             Self::InvalidRootHalf { got } => {
                 write!(f, "octree: root_half must be finite > 0, got {got}")
             }
@@ -418,10 +416,7 @@ pub fn build_quadtree(
 /// Enforce the 2:1 balance constraint on a quadtree in place. Repeatedly
 /// subdivides any leaf that has a face-neighbour more than one level coarser,
 /// until a full pass makes no change. Bounded by `max_cells`.
-pub fn balance_quadtree_2to1(
-    tree: &mut QuadTree,
-    max_cells: usize,
-) -> Result<(), QuadMeshError> {
+pub fn balance_quadtree_2to1(tree: &mut QuadTree, max_cells: usize) -> Result<(), QuadMeshError> {
     loop {
         // Snapshot the current leaf indices to scan in deterministic order.
         let leaves: Vec<u32> = tree
@@ -627,7 +622,11 @@ pub fn size_target_refiner_2d<F: Fn([f64; 2]) -> f64>(
 /// (no borrowed lifetime).
 pub fn size_field_2d_fn(sf: &SizeField) -> impl Fn([f64; 2]) -> f64 {
     let sf = sf.clone();
-    move |p| sf.size_at(Point3::new(p[0], p[1], 0.0)).unwrap_or(1e-12).max(1e-12)
+    move |p| {
+        sf.size_at(Point3::new(p[0], p[1], 0.0))
+            .unwrap_or(1e-12)
+            .max(1e-12)
+    }
 }
 
 // ===========================================================================
@@ -873,14 +872,7 @@ pub fn balance_octtree_2to1(tree: &mut OctTree, max_cells: usize) -> Result<(), 
         let mut subdivided: Vec<u32> = Vec::new();
         for &leaf in &leaves {
             let lvl = tree.nodes[leaf as usize].level;
-            for (axis, sign) in [
-                (0u8, 1i8),
-                (0, -1),
-                (1, 1),
-                (1, -1),
-                (2, 1),
-                (2, -1),
-            ] {
+            for (axis, sign) in [(0u8, 1i8), (0, -1), (1, 1), (1, -1), (2, 1), (2, -1)] {
                 if let Some(nbr) = tree.face_neighbor(leaf, axis, sign) {
                     let nn = tree.nodes[nbr as usize];
                     if nn.is_leaf() && nn.level + 1 < lvl {
@@ -1359,7 +1351,11 @@ mod tests {
         assert!(no_t_junctions(&v, &tris), "graded mesh has T-junctions");
 
         // Graded mesh should have more triangles than the uniform one.
-        assert!(tris.len() > 32, "graded mesh should have >32 triangles, got {}", tris.len());
+        assert!(
+            tris.len() > 32,
+            "graded mesh should have >32 triangles, got {}",
+            tris.len()
+        );
     }
 
     #[test]
@@ -1386,7 +1382,11 @@ mod tests {
         let tree = build_quadtree([0.5; 2], 0.5, &pred, &opts).unwrap();
         let (v, tris) = quadtree_to_triangles(&tree);
         // A 4×4 grid of cells has a 5×5 grid of vertices = 25.
-        assert_eq!(v.len(), 25, "uniform 4x4 grid should have 25 unique vertices");
+        assert_eq!(
+            v.len(),
+            25,
+            "uniform 4x4 grid should have 25 unique vertices"
+        );
         // All triangle indices in range.
         for t in &tris {
             for &i in t {
@@ -1532,14 +1532,7 @@ mod tests {
             .collect();
         for &leaf in &leaves {
             let lvl = tree.nodes[leaf as usize].level;
-            for (axis, sign) in [
-                (0u8, 1i8),
-                (0, -1),
-                (1, 1),
-                (1, -1),
-                (2, 1),
-                (2, -1),
-            ] {
+            for (axis, sign) in [(0u8, 1i8), (0, -1), (1, 1), (1, -1), (2, 1), (2, -1)] {
                 if let Some(nbr) = tree.face_neighbor(leaf, axis, sign) {
                     let nn = tree.nodes[nbr as usize];
                     if nn.is_leaf() {
@@ -1621,7 +1614,10 @@ mod tests {
                 tet_volume(a, b, c, d)
             })
             .sum();
-        assert!((total - 1.0).abs() < 1e-9, "total tet volume {total} != 1.0");
+        assert!(
+            (total - 1.0).abs() < 1e-9,
+            "total tet volume {total} != 1.0"
+        );
     }
 
     fn tet_volume(a: Point3, b: Point3, c: Point3, d: Point3) -> f64 {
@@ -1690,7 +1686,7 @@ mod tests {
         // Root (idx 0) is internal; children at 1..4 (SW,SE,NW,NE).
         let sw = 1u32; // child_idx 0
         let se = 2u32; // child_idx 1 (x-bit set)
-        // SW's +x neighbour is SE.
+                       // SW's +x neighbour is SE.
         assert_eq!(tree.face_neighbor(sw, 0, 1), Some(se));
         // SE's -x neighbour is SW.
         assert_eq!(tree.face_neighbor(se, 0, -1), Some(sw));
@@ -1740,7 +1736,10 @@ mod tests {
                 }
             }
         }
-        assert!(found_coarser, "expected a coarser neighbour of a refined SW leaf");
+        assert!(
+            found_coarser,
+            "expected a coarser neighbour of a refined SW leaf"
+        );
     }
 
     #[test]

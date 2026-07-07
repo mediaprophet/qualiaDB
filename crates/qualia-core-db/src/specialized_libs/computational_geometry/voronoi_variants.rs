@@ -202,7 +202,6 @@ fn circumcenter(a: Point2, b: Point2, c: Point2) -> Point2 {
     Point2::new(ux, uy)
 }
 
-
 /// Compute the farthest-site Voronoi diagram.
 ///
 /// The farthest-site diagram only has cells for convex-hull sites. The
@@ -492,7 +491,11 @@ mod tests {
         let fv = farthest_voronoi(&sites).unwrap();
         // The farthest site for any query should always be a hull site.
         for q in [
-            p(2.0, 2.0), p(10.0, 10.0), p(-5.0, -5.0), p(0.0, 10.0), p(10.0, 0.0),
+            p(2.0, 2.0),
+            p(10.0, 10.0),
+            p(-5.0, -5.0),
+            p(0.0, 10.0),
+            p(10.0, 0.0),
         ] {
             let farthest = farthest_site_brute(&sites, q);
             assert!(
@@ -561,7 +564,11 @@ mod tests {
     #[test]
     fn k_nearest_matches_brute_force() {
         let sites = vec![
-            p(0.0, 0.0), p(5.0, 0.0), p(2.0, 3.0), p(1.0, 1.0), p(4.0, 4.0),
+            p(0.0, 0.0),
+            p(5.0, 0.0),
+            p(2.0, 3.0),
+            p(1.0, 1.0),
+            p(4.0, 4.0),
         ];
         let q = p(2.0, 1.0);
         let k2 = k_nearest_sites(&sites, q, 2);
@@ -590,7 +597,11 @@ mod tests {
     #[test]
     fn order_k_cells_cover_all_sites() {
         let sites = vec![
-            p(0.0, 0.0), p(5.0, 0.0), p(2.0, 5.0), p(5.0, 5.0), p(0.0, 5.0),
+            p(0.0, 0.0),
+            p(5.0, 0.0),
+            p(2.0, 5.0),
+            p(5.0, 5.0),
+            p(0.0, 5.0),
         ];
         let cells = order_k_cells(&sites, 1, p(-2.0, -2.0), p(7.0, 7.0), 20);
         // For order 1, each cell corresponds to a single nearest site.
@@ -605,7 +616,11 @@ mod tests {
     #[test]
     fn order_2_cells_have_pairs() {
         let sites = vec![
-            p(0.0, 0.0), p(5.0, 0.0), p(2.0, 5.0), p(5.0, 5.0), p(0.0, 5.0),
+            p(0.0, 0.0),
+            p(5.0, 0.0),
+            p(2.0, 5.0),
+            p(5.0, 5.0),
+            p(0.0, 5.0),
         ];
         let cells = order_k_cells(&sites, 2, p(-2.0, -2.0), p(7.0, 7.0), 20);
         // Each order-2 cell has exactly 2 sites.
@@ -613,7 +628,11 @@ mod tests {
             assert_eq!(sig.sites.len(), 2, "order-2 cell should have 2 sites");
         }
         // There should be more than 5 cells (order-2 has more cells than order-1).
-        assert!(cells.len() >= 5, "order-2 should have >= 5 cells, got {}", cells.len());
+        assert!(
+            cells.len() >= 5,
+            "order-2 should have >= 5 cells, got {}",
+            cells.len()
+        );
     }
 
     #[test]
@@ -630,11 +649,29 @@ mod tests {
     #[test]
     fn nearest_segment_matches_brute_force() {
         let segments = vec![
-            SegmentSite { a: p(0.0, 0.0), b: p(0.0, 4.0), index: 0 }, // vertical left
-            SegmentSite { a: p(4.0, 0.0), b: p(4.0, 4.0), index: 1 }, // vertical right
-            SegmentSite { a: p(0.0, 2.0), b: p(4.0, 2.0), index: 2 }, // horizontal mid
+            SegmentSite {
+                a: p(0.0, 0.0),
+                b: p(0.0, 4.0),
+                index: 0,
+            }, // vertical left
+            SegmentSite {
+                a: p(4.0, 0.0),
+                b: p(4.0, 4.0),
+                index: 1,
+            }, // vertical right
+            SegmentSite {
+                a: p(0.0, 2.0),
+                b: p(4.0, 2.0),
+                index: 2,
+            }, // horizontal mid
         ];
-        for q in [p(2.0, 2.0), p(1.0, 1.0), p(3.0, 3.0), p(-1.0, 2.0), p(5.0, 2.0)] {
+        for q in [
+            p(2.0, 2.0),
+            p(1.0, 1.0),
+            p(3.0, 3.0),
+            p(-1.0, 2.0),
+            p(5.0, 2.0),
+        ] {
             let nearest = nearest_segment_site(&segments, q);
             // Verify by brute force.
             let mut best = 0u32;
@@ -653,8 +690,16 @@ mod tests {
     #[test]
     fn segment_voronoi_cells_distinct() {
         let segments = vec![
-            SegmentSite { a: p(0.0, 0.0), b: p(0.0, 4.0), index: 0 },
-            SegmentSite { a: p(4.0, 0.0), b: p(4.0, 4.0), index: 1 },
+            SegmentSite {
+                a: p(0.0, 0.0),
+                b: p(0.0, 4.0),
+                index: 0,
+            },
+            SegmentSite {
+                a: p(4.0, 0.0),
+                b: p(4.0, 4.0),
+                index: 1,
+            },
         ];
         let cells = segment_voronoi_cells(&segments, p(-2.0, -2.0), p(6.0, 6.0), 10);
         // Both segments should have cells.
@@ -693,7 +738,12 @@ mod tests {
     #[test]
     fn convex_hull_indices_correct() {
         let points = vec![
-            p(0.0, 0.0), p(4.0, 0.0), p(2.0, 2.0), p(4.0, 4.0), p(0.0, 4.0), p(2.0, 1.0),
+            p(0.0, 0.0),
+            p(4.0, 0.0),
+            p(2.0, 2.0),
+            p(4.0, 4.0),
+            p(0.0, 4.0),
+            p(2.0, 1.0),
         ];
         let hull = convex_hull_indices(&points);
         // Hull should be 4 vertices (the square corners), not the interior points.
@@ -712,8 +762,14 @@ mod tests {
         // All 3 hull edges should produce rays with explicit directions.
         for edge in &fv.edges {
             if edge.ray_dir.is_some() {
-                assert!(edge.vertex_b.is_none(), "ray edge should have vertex_b = None");
-                assert!(edge.vertex_a.is_some(), "ray edge should have a starting vertex");
+                assert!(
+                    edge.vertex_b.is_none(),
+                    "ray edge should have vertex_b = None"
+                );
+                assert!(
+                    edge.vertex_a.is_some(),
+                    "ray edge should have a starting vertex"
+                );
             }
         }
     }

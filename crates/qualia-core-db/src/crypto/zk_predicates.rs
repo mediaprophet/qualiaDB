@@ -134,8 +134,14 @@ impl ConstraintSynthesizer<Fr> for ThresholdCircuit {
         // Enforce value >= threshold, binding the proof to the public threshold.
         enforce_geq(
             cs,
-            Operand { val: self.value, var: value_var },
-            Operand { val: self.threshold, var: threshold_var },
+            Operand {
+                val: self.value,
+                var: value_var,
+            },
+            Operand {
+                val: self.threshold,
+                var: threshold_var,
+            },
         )?;
         Ok(())
     }
@@ -173,18 +179,27 @@ impl ConstraintSynthesizer<Fr> for RangeCircuit {
                 .map(Fr::from)
                 .ok_or(SynthesisError::AssignmentMissing)
         })?;
-        let value = Operand { val: self.value, var: value_var };
+        let value = Operand {
+            val: self.value,
+            var: value_var,
+        };
 
         // value >= lo  (diff_lo = value - lo is a non-negative N-bit integer).
         enforce_geq(
             cs.clone(),
             value,
-            Operand { val: self.lo, var: lo_var },
+            Operand {
+                val: self.lo,
+                var: lo_var,
+            },
         )?;
         // hi >= value  (diff_hi = hi - value is a non-negative N-bit integer).
         enforce_geq(
             cs,
-            Operand { val: self.hi, var: hi_var },
+            Operand {
+                val: self.hi,
+                var: hi_var,
+            },
             value,
         )?;
         Ok(())
@@ -474,7 +489,10 @@ mod tests {
     fn threshold_boundary_verifies() {
         // Boundary: 18 >= 18 must verify (diff = 0, all bits zero).
         let proof = prove_threshold(18, 18).expect("18 >= 18 is provable");
-        assert!(verify_threshold(&proof, 18), "18 >= 18 (boundary) must verify");
+        assert!(
+            verify_threshold(&proof, 18),
+            "18 >= 18 (boundary) must verify"
+        );
     }
 
     #[test]
@@ -517,7 +535,10 @@ mod tests {
         // SOUNDNESS (public-input binding): a proof made for threshold = 18 must
         // NOT verify when checked against a different public threshold = 50.
         let proof = prove_threshold(21, 18).expect("21 >= 18 is provable");
-        assert!(verify_threshold(&proof, 18), "must verify against its own threshold");
+        assert!(
+            verify_threshold(&proof, 18),
+            "must verify against its own threshold"
+        );
         assert!(
             !verify_threshold(&proof, 50),
             "a proof for threshold=18 must NOT verify against threshold=50"
@@ -580,7 +601,10 @@ mod tests {
         // SOUNDNESS (public-input binding): a proof for [18,65] must not verify
         // against different public bounds.
         let proof = prove_range(42, 18, 65).expect("42 in [18,65] is provable");
-        assert!(verify_range(&proof, 18, 65), "must verify against its own bounds");
+        assert!(
+            verify_range(&proof, 18, 65),
+            "must verify against its own bounds"
+        );
         assert!(
             !verify_range(&proof, 43, 65),
             "a proof for [18,65] must NOT verify against [43,65]"
@@ -614,7 +638,10 @@ mod tests {
     fn proof_has_nontrivial_size() {
         // Sanity: a real Groth16 proof + VK is a few hundred bytes, not empty.
         let proof = prove_threshold(21, 18).unwrap();
-        assert!(proof.size_bytes() > 100, "real proof+vk must be non-trivial");
+        assert!(
+            proof.size_bytes() > 100,
+            "real proof+vk must be non-trivial"
+        );
     }
 
     // ---- Integrator adversarial checks (independent of the authoring agent) ----
@@ -624,7 +651,10 @@ mod tests {
         // Flipping a proof byte must fail verification (not silently accept).
         let mut proof = prove_threshold(21, 18).unwrap();
         proof.proof[0] ^= 0xFF;
-        assert!(!verify_threshold(&proof, 18), "a tampered proof must not verify");
+        assert!(
+            !verify_threshold(&proof, 18),
+            "a tampered proof must not verify"
+        );
     }
 
     #[test]

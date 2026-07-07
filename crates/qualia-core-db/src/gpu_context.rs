@@ -692,7 +692,10 @@ fn resolve_dx12_compiler() -> wgpu::Dx12Compiler {
         if let Some(dir) = exe.parent() {
             let dll = dir.join("dxcompiler.dll");
             if dll.exists() {
-                log::info!("shared_gpu|dx12_compiler|DynamicDxc(vendored)={}", dll.display());
+                log::info!(
+                    "shared_gpu|dx12_compiler|DynamicDxc(vendored)={}",
+                    dll.display()
+                );
                 return wgpu::Dx12Compiler::DynamicDxc {
                     dxc_path: dll.to_string_lossy().into_owned(),
                 };

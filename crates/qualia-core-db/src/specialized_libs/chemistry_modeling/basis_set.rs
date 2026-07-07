@@ -95,7 +95,6 @@ impl AngularMomentum {
     }
 }
 
-
 impl std::fmt::Display for AngularMomentum {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.letter())
@@ -120,7 +119,11 @@ pub struct Vec3 {
 }
 
 impl Vec3 {
-    pub const ZERO: Self = Self { x: 0.0, y: 0.0, z: 0.0 };
+    pub const ZERO: Self = Self {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
 
     pub fn new(x: f64, y: f64, z: f64) -> Self {
         Self { x, y, z }
@@ -181,7 +184,11 @@ pub struct PrimitiveGaussian {
 impl PrimitiveGaussian {
     /// Create an s-type primitive (l=0) at the given center.
     pub fn s(exponent: f64, center: Vec3) -> Self {
-        Self { exponent, center, l: [0, 0, 0] }
+        Self {
+            exponent,
+            center,
+            l: [0, 0, 0],
+        }
     }
 
     /// Angular momentum quantum number l = lx + ly + lz.
@@ -195,9 +202,8 @@ impl PrimitiveGaussian {
         let dy = r.y - self.center.y;
         let dz = r.z - self.center.z;
         let r2 = dx * dx + dy * dy + dz * dz;
-        let poly = dx.powi(self.l[0] as i32)
-            * dy.powi(self.l[1] as i32)
-            * dz.powi(self.l[2] as i32);
+        let poly =
+            dx.powi(self.l[0] as i32) * dy.powi(self.l[1] as i32) * dz.powi(self.l[2] as i32);
         poly * (-self.exponent * r2).exp()
     }
 
@@ -320,8 +326,19 @@ impl ContractedShell {
         exponents: Vec<f64>,
         coefficients: Vec<Vec<f64>>,
     ) -> Self {
-        let max_am = angular_momentum.iter().copied().max().unwrap_or(AngularMomentum(0));
-        Self { angular_momentum, shell_type, center, exponents, coefficients, max_am }
+        let max_am = angular_momentum
+            .iter()
+            .copied()
+            .max()
+            .unwrap_or(AngularMomentum(0));
+        Self {
+            angular_momentum,
+            shell_type,
+            center,
+            exponents,
+            coefficients,
+            max_am,
+        }
     }
 
     /// Number of primitives in this shell.
@@ -332,7 +349,10 @@ impl ContractedShell {
     /// Number of basis functions produced by this shell.
     /// For a combined shell (e.g. SP), this is the sum over all angular momenta.
     pub fn n_functions(&self) -> usize {
-        self.angular_momentum.iter().map(|am| self.shell_type.n_functions(*am)).sum()
+        self.angular_momentum
+            .iter()
+            .map(|am| self.shell_type.n_functions(*am))
+            .sum()
     }
 
     /// Split a combined shell into individual shells (one per angular momentum).
@@ -341,7 +361,15 @@ impl ContractedShell {
         self.angular_momentum
             .iter()
             .zip(self.coefficients.iter())
-            .map(|(am, coeffs)| ContractedShell::new(*am, self.shell_type, self.center, self.exponents.clone(), coeffs.clone()))
+            .map(|(am, coeffs)| {
+                ContractedShell::new(
+                    *am,
+                    self.shell_type,
+                    self.center,
+                    self.exponents.clone(),
+                    coeffs.clone(),
+                )
+            })
             .collect()
     }
 
@@ -540,12 +568,18 @@ pub struct MolecularBasis {
 impl MolecularBasis {
     /// Total number of basis functions in the entire molecule.
     pub fn n_functions(&self) -> usize {
-        self.atoms.iter().map(|(_, _, _, eb)| eb.n_functions()).sum()
+        self.atoms
+            .iter()
+            .map(|(_, _, _, eb)| eb.n_functions())
+            .sum()
     }
 
     /// Total number of primitive Gaussians in the entire molecule.
     pub fn n_primitives(&self) -> usize {
-        self.atoms.iter().map(|(_, _, _, eb)| eb.n_primitives()).sum()
+        self.atoms
+            .iter()
+            .map(|(_, _, _, eb)| eb.n_primitives())
+            .sum()
     }
 
     /// Maximum angular momentum across all atoms.
@@ -568,7 +602,10 @@ impl MolecularBasis {
 
     /// Collect all contracted shells from all atoms, with their centers.
     pub fn all_shells(&self) -> Vec<&ContractedShell> {
-        self.atoms.iter().flat_map(|(_, _, _, eb)| eb.shells.iter()).collect()
+        self.atoms
+            .iter()
+            .flat_map(|(_, _, _, eb)| eb.shells.iter())
+            .collect()
     }
 
     /// Collect all shells from all atoms with per-atom nuclear centers assigned.
@@ -721,7 +758,9 @@ pub fn parse_bse_json(
                             "family" => family = map.next_value()?,
                             "description" => description = map.next_value()?,
                             "elements" => {
-                                elements = map.next_value_seed(ElementsSeed { target_zs: self.target_zs })?;
+                                elements = map.next_value_seed(ElementsSeed {
+                                    target_zs: self.target_zs,
+                                })?;
                             }
                             _ => {
                                 map.next_value::<IgnoredAny>()?;
@@ -729,11 +768,18 @@ pub fn parse_bse_json(
                         }
                     }
 
-                    Ok(BseBasis { name, family, description, elements })
+                    Ok(BseBasis {
+                        name,
+                        family,
+                        description,
+                        elements,
+                    })
                 }
             }
 
-            deserializer.deserialize_map(BseBasisVisitor { target_zs: self.target_zs })
+            deserializer.deserialize_map(BseBasisVisitor {
+                target_zs: self.target_zs,
+            })
         }
     }
 
@@ -775,15 +821,19 @@ pub fn parse_bse_json(
                 }
             }
 
-            deserializer.deserialize_map(ElementsVisitor { target_zs: self.target_zs })
+            deserializer.deserialize_map(ElementsVisitor {
+                target_zs: self.target_zs,
+            })
         }
     }
 
     let target_zs: HashSet<String> = atoms.iter().map(|(z, _, _)| z.to_string()).collect();
     let mut deserializer = serde_json::Deserializer::from_str(json);
-    let bse: BseBasis = BseBasisSeed { target_zs: &target_zs }
-        .deserialize(&mut deserializer)
-        .map_err(BasisSetError::JsonParse)?;
+    let bse: BseBasis = BseBasisSeed {
+        target_zs: &target_zs,
+    }
+    .deserialize(&mut deserializer)
+    .map_err(BasisSetError::JsonParse)?;
 
     let mut atom_basis = Vec::with_capacity(atoms.len());
     for (z, symbol, center) in atoms {
@@ -791,12 +841,20 @@ pub fn parse_bse_json(
         let elem = bse
             .elements
             .get(&key)
-            .ok_or_else(|| BasisSetError::ElementNotFound { z: *z, basis: bse.name.clone() })?;
+            .ok_or_else(|| BasisSetError::ElementNotFound {
+                z: *z,
+                basis: bse.name.clone(),
+            })?;
 
         let shells = elem
             .electron_shells
             .as_ref()
-            .map(|shells| shells.iter().map(parse_shell).collect::<Result<Vec<_>, _>>())
+            .map(|shells| {
+                shells
+                    .iter()
+                    .map(parse_shell)
+                    .collect::<Result<Vec<_>, _>>()
+            })
             .transpose()?
             .unwrap_or_default();
 
@@ -812,12 +870,17 @@ pub fn parse_bse_json(
             None
         };
 
-        atom_basis.push((*z, symbol.clone(), *center, ElementBasis {
-            atomic_number: *z,
-            symbol: symbol.clone(),
-            shells,
-            ecp,
-        }));
+        atom_basis.push((
+            *z,
+            symbol.clone(),
+            *center,
+            ElementBasis {
+                atomic_number: *z,
+                symbol: symbol.clone(),
+                shells,
+                ecp,
+            },
+        ));
     }
 
     Ok(MolecularBasis {
@@ -966,7 +1029,10 @@ fn parse_fortran_float(s: &str) -> Result<f64, BasisSetError> {
     };
     normalized
         .parse::<f64>()
-        .map_err(|e| BasisSetError::FloatParse { input: s.to_string(), source: e })
+        .map_err(|e| BasisSetError::FloatParse {
+            input: s.to_string(),
+            source: e,
+        })
 }
 
 // ─── Error Type ───────────────────────────────────────────────────────────
@@ -975,11 +1041,21 @@ fn parse_fortran_float(s: &str) -> Result<f64, BasisSetError> {
 #[derive(Debug)]
 pub enum BasisSetError {
     JsonParse(serde_json::Error),
-    ElementNotFound { z: u32, basis: String },
+    ElementNotFound {
+        z: u32,
+        basis: String,
+    },
     UnknownFunctionType(String),
     InvalidAngularMomentum(i32),
-    DimensionMismatch { expected: usize, got: usize, context: String },
-    FloatParse { input: String, source: std::num::ParseFloatError },
+    DimensionMismatch {
+        expected: usize,
+        got: usize,
+        context: String,
+    },
+    FloatParse {
+        input: String,
+        source: std::num::ParseFloatError,
+    },
     EcpNotFound(AngularMomentum),
 }
 
@@ -987,12 +1063,32 @@ impl std::fmt::Display for BasisSetError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::JsonParse(e) => write!(f, "JSON parse error: {}", e),
-            Self::ElementNotFound { z, basis } => write!(f, "element Z={} not found in basis set '{}'", z, basis),
-            Self::UnknownFunctionType(s) => write!(f, "unknown function type: '{}' (expected 'gto' or 'gto_spherical')", s),
-            Self::InvalidAngularMomentum(am) => write!(f, "invalid angular momentum value: {} (must be 0–255)", am),
-            Self::DimensionMismatch { expected, got, context } => write!(f, "dimension mismatch: expected {}, got {} ({})", expected, got, context),
-            Self::FloatParse { input, source } => write!(f, "failed to parse float from '{}': {}", input, source),
-            Self::EcpNotFound(am) => write!(f, "ECP potential not found for angular momentum {}", am.0),
+            Self::ElementNotFound { z, basis } => {
+                write!(f, "element Z={} not found in basis set '{}'", z, basis)
+            }
+            Self::UnknownFunctionType(s) => write!(
+                f,
+                "unknown function type: '{}' (expected 'gto' or 'gto_spherical')",
+                s
+            ),
+            Self::InvalidAngularMomentum(am) => {
+                write!(f, "invalid angular momentum value: {} (must be 0–255)", am)
+            }
+            Self::DimensionMismatch {
+                expected,
+                got,
+                context,
+            } => write!(
+                f,
+                "dimension mismatch: expected {}, got {} ({})",
+                expected, got, context
+            ),
+            Self::FloatParse { input, source } => {
+                write!(f, "failed to parse float from '{}': {}", input, source)
+            }
+            Self::EcpNotFound(am) => {
+                write!(f, "ECP potential not found for angular momentum {}", am.0)
+            }
         }
     }
 }
@@ -1018,17 +1114,13 @@ impl From<serde_json::Error> for BasisSetError {
 /// Atomic number → element symbol lookup (H through Lw, Z=1–103).
 pub fn element_symbol(z: u32) -> Option<&'static str> {
     const SYMBOLS: [&str; 104] = [
-        "n", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne",
-        "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar", "K", "Ca",
-        "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn",
-        "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr",
-        "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn",
-        "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd",
-        "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb",
-        "Lu", "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt", "Au", "Hg",
-        "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th",
-        "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm",
-        "Md", "No", "Lr",
+        "n", "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg", "Al", "Si", "P",
+        "S", "Cl", "Ar", "K", "Ca", "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn",
+        "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr", "Nb", "Mo", "Tc", "Ru", "Rh",
+        "Pd", "Ag", "Cd", "In", "Sn", "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd",
+        "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W", "Re",
+        "Os", "Ir", "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th",
+        "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr",
     ];
     if (z as usize) < SYMBOLS.len() {
         Some(SYMBOLS[z as usize])
@@ -1219,14 +1311,14 @@ mod tests {
 
     #[test]
     fn angular_momentum_function_counts() {
-        assert_eq!(AngularMomentum(0).n_cartesian(), 1);   // s
-        assert_eq!(AngularMomentum(1).n_cartesian(), 3);   // p
-        assert_eq!(AngularMomentum(2).n_cartesian(), 6);   // d
-        assert_eq!(AngularMomentum(3).n_cartesian(), 10);  // f
-        assert_eq!(AngularMomentum(0).n_spherical(), 1);   // s
-        assert_eq!(AngularMomentum(1).n_spherical(), 3);   // p
-        assert_eq!(AngularMomentum(2).n_spherical(), 5);   // d
-        assert_eq!(AngularMomentum(3).n_spherical(), 7);   // f
+        assert_eq!(AngularMomentum(0).n_cartesian(), 1); // s
+        assert_eq!(AngularMomentum(1).n_cartesian(), 3); // p
+        assert_eq!(AngularMomentum(2).n_cartesian(), 6); // d
+        assert_eq!(AngularMomentum(3).n_cartesian(), 10); // f
+        assert_eq!(AngularMomentum(0).n_spherical(), 1); // s
+        assert_eq!(AngularMomentum(1).n_spherical(), 3); // p
+        assert_eq!(AngularMomentum(2).n_spherical(), 5); // d
+        assert_eq!(AngularMomentum(3).n_spherical(), 7); // f
     }
 
     // ── PrimitiveGaussian tests ──
@@ -1287,10 +1379,7 @@ mod tests {
             ShellType::Cartesian,
             Vec3::ZERO,
             vec![2.941, 0.683, 0.222],
-            vec![
-                vec![-0.100, 0.400, 0.700],
-                vec![0.156, 0.608, 0.392],
-            ],
+            vec![vec![-0.100, 0.400, 0.700], vec![0.156, 0.608, 0.392]],
         );
         assert_eq!(shell.n_functions(), 4); // 1 (s) + 3 (p)
         let split = shell.split();
@@ -1376,10 +1465,13 @@ mod tests {
         assert_eq!(elem.shells[0].max_am, AngularMomentum(0));
         assert_eq!(elem.shells[0].n_primitives(), 3);
         // Second shell: SP combined (3 primitives, 4 functions).
-        assert_eq!(elem.shells[1].angular_momentum, vec![AngularMomentum(0), AngularMomentum(1)]);
+        assert_eq!(
+            elem.shells[1].angular_momentum,
+            vec![AngularMomentum(0), AngularMomentum(1)]
+        );
         assert_eq!(elem.shells[1].n_primitives(), 3);
         assert_eq!(elem.shells[1].n_functions(), 4); // 1s + 3p
-        // Total: 1 + 4 = 5 functions.
+                                                     // Total: 1 + 4 = 5 functions.
         assert_eq!(elem.n_functions(), 5);
     }
 
@@ -1390,9 +1482,21 @@ mod tests {
         let atoms = vec![
             (6u32, "C".to_string(), Vec3::ZERO),
             (1u32, "H".to_string(), Vec3::new(ch_dist, ch_dist, ch_dist)),
-            (1u32, "H".to_string(), Vec3::new(-ch_dist, -ch_dist, ch_dist)),
-            (1u32, "H".to_string(), Vec3::new(-ch_dist, ch_dist, -ch_dist)),
-            (1u32, "H".to_string(), Vec3::new(ch_dist, -ch_dist, -ch_dist)),
+            (
+                1u32,
+                "H".to_string(),
+                Vec3::new(-ch_dist, -ch_dist, ch_dist),
+            ),
+            (
+                1u32,
+                "H".to_string(),
+                Vec3::new(-ch_dist, ch_dist, -ch_dist),
+            ),
+            (
+                1u32,
+                "H".to_string(),
+                Vec3::new(ch_dist, -ch_dist, -ch_dist),
+            ),
         ];
         let basis = parse_bse_json(STO3G_HC_JSON, &atoms).expect("parse STO-3G CH4");
 
@@ -1450,7 +1554,10 @@ mod tests {
     fn element_not_found_error() {
         let atoms = vec![(99u32, "Es".to_string(), Vec3::ZERO)];
         let result = parse_bse_json(STO3G_HC_JSON, &atoms);
-        assert!(matches!(result, Err(BasisSetError::ElementNotFound { z: 99, .. })));
+        assert!(matches!(
+            result,
+            Err(BasisSetError::ElementNotFound { z: 99, .. })
+        ));
     }
 
     // ── Category theory tests ──

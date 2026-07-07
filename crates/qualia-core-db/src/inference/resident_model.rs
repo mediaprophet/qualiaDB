@@ -36,7 +36,11 @@ fn slot() -> &'static Arc<Mutex<Option<ResidentModelSlot>>> {
 
 /// Memory-map `path` and retain until [`clear_resident_model`].
 #[cfg(not(target_arch = "wasm32"))]
-pub fn mount_resident_gguf(model_id: u64, path: &str, mlock: bool) -> Result<GgufLoadReport, String> {
+pub fn mount_resident_gguf(
+    model_id: u64,
+    path: &str,
+    mlock: bool,
+) -> Result<GgufLoadReport, String> {
     clear_resident_model();
     let mut engine = tokio::task::block_in_place(|| {
         tokio::runtime::Handle::current().block_on(QTensorEngine::try_new())
@@ -70,10 +74,15 @@ pub fn mount_resident_gguf(_model_id: u64, _path: &str) -> Result<(), String> {
 /// The function name is retained for source compatibility. New format-neutral
 /// callers should use [`mount_resident_model`].
 #[cfg(not(target_arch = "wasm32"))]
-pub fn mount_resident_q42(model_id: u64, path: &str, mlock: bool) -> Result<GgufLoadReport, String> {
+pub fn mount_resident_q42(
+    model_id: u64,
+    path: &str,
+    mlock: bool,
+) -> Result<GgufLoadReport, String> {
     clear_resident_model();
     let file = std::fs::File::open(path).map_err(|e| format!("open {path}: {e}"))?;
-    let mmap_raw = unsafe { memmap2::MmapOptions::new().populate().map(&file) }.map_err(|e| e.to_string())?;
+    let mmap_raw =
+        unsafe { memmap2::MmapOptions::new().populate().map(&file) }.map_err(|e| e.to_string())?;
     apply_mlock(&mmap_raw, mlock);
     let mmap = Arc::new(mmap_raw);
     let mut engine = tokio::task::block_in_place(|| {
@@ -99,7 +108,11 @@ pub fn mount_resident_q42(model_id: u64, path: &str, mlock: bool) -> Result<Gguf
 /// `mount_resident_q42` function remains as a compatibility alias for callers
 /// that already know they have a P64 container.
 #[cfg(not(target_arch = "wasm32"))]
-pub fn mount_resident_model(model_id: u64, path: &str, mlock: bool) -> Result<GgufLoadReport, String> {
+pub fn mount_resident_model(
+    model_id: u64,
+    path: &str,
+    mlock: bool,
+) -> Result<GgufLoadReport, String> {
     clear_resident_model();
     let mut engine = tokio::task::block_in_place(|| {
         tokio::runtime::Handle::current().block_on(QTensorEngine::try_new())

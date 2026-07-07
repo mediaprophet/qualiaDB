@@ -268,7 +268,11 @@ mod tests {
         let before = AllocSnapshot::now();
         let _ = vec![0u8; 64]; // allocates
         let after = AllocSnapshot::now();
-        assert_eq!(after.alloc_delta(before), 0, "allocs outside a guard must not be counted");
+        assert_eq!(
+            after.alloc_delta(before),
+            0,
+            "allocs outside a guard must not be counted"
+        );
     }
 
     /// The counter MUST count allocations on the measuring thread inside a guard.
@@ -277,10 +281,21 @@ mod tests {
         let guard = AllocGuard::begin("test_guard", true);
         let _ = vec![0u8; 64]; // allocates
         let result = guard.check();
-        assert!(result.is_err(), "expected the guard to detect the allocation");
+        assert!(
+            result.is_err(),
+            "expected the guard to detect the allocation"
+        );
         let msg = result.unwrap_err();
-        assert!(msg.contains("test_guard"), "error should name the label: {}", msg);
-        assert!(msg.contains("zero-heap"), "error should mention zero-heap: {}", msg);
+        assert!(
+            msg.contains("test_guard"),
+            "error should name the label: {}",
+            msg
+        );
+        assert!(
+            msg.contains("zero-heap"),
+            "error should mention zero-heap: {}",
+            msg
+        );
     }
 
     /// A closure that does not allocate must pass.
@@ -305,7 +320,11 @@ mod tests {
         let before = AllocSnapshot::now();
         let _ = vec![0u8; 64];
         let after = AllocSnapshot::now();
-        assert_eq!(after.alloc_delta(before), 0, "flag must be cleared after check");
+        assert_eq!(
+            after.alloc_delta(before),
+            0,
+            "flag must be cleared after check"
+        );
     }
 
     /// The measuring flag is cleared even if the closure panics (Drop clears it).
@@ -321,6 +340,10 @@ mod tests {
         let before = AllocSnapshot::now();
         let _ = vec![0u8; 64];
         let after = AllocSnapshot::now();
-        assert_eq!(after.alloc_delta(before), 0, "flag must be cleared after panic-drop");
+        assert_eq!(
+            after.alloc_delta(before),
+            0,
+            "flag must be cleared after panic-drop"
+        );
     }
 }

@@ -268,8 +268,16 @@ pub fn compute_persistence(
     out_pairs[..pair_count].sort_by(|a, b| {
         a.dim
             .cmp(&b.dim)
-            .then(a.birth.partial_cmp(&b.birth).unwrap_or(core::cmp::Ordering::Equal))
-            .then(a.death.partial_cmp(&b.death).unwrap_or(core::cmp::Ordering::Equal))
+            .then(
+                a.birth
+                    .partial_cmp(&b.birth)
+                    .unwrap_or(core::cmp::Ordering::Equal),
+            )
+            .then(
+                a.death
+                    .partial_cmp(&b.death)
+                    .unwrap_or(core::cmp::Ordering::Equal),
+            )
     });
 
     Ok(pair_count)
@@ -288,7 +296,10 @@ impl core::fmt::Display for PersistenceError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::BufferTooSmall { needed, have } => {
-                write!(f, "persistence: buffer too small, need {needed}, have {have}")
+                write!(
+                    f,
+                    "persistence: buffer too small, need {needed}, have {have}"
+                )
             }
         }
     }
@@ -320,8 +331,8 @@ pub fn barcode_hash(pairs: &[PersistencePair]) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::vr_filtration::vr_filtration;
+    use super::*;
     use crate::tensor::Tensor10D;
 
     fn make_point(x: f32, y: f32, z: f32) -> Tensor10D {
@@ -385,9 +396,12 @@ mod tests {
             .count();
 
         // A circle should produce at least one H1 feature.
-        assert!(h1_persistent + h1_essential >= 1,
+        assert!(
+            h1_persistent + h1_essential >= 1,
             "circle should have at least 1 H1 feature (got {} persistent + {} essential)",
-            h1_persistent, h1_essential);
+            h1_persistent,
+            h1_essential
+        );
     }
 
     #[test]
@@ -414,7 +428,10 @@ mod tests {
             .count();
         // Two disjoint clusters → 2 essential H0 (they never merge if
         // the gap is large enough relative to the cluster radius).
-        assert!(h0_essential >= 1, "two clusters should have ≥ 1 essential H0");
+        assert!(
+            h0_essential >= 1,
+            "two clusters should have ≥ 1 essential H0"
+        );
     }
 
     #[test]
@@ -498,7 +515,10 @@ mod tests {
             .iter()
             .filter(|p| p.dim == 1 && p.death > p.birth)
             .count();
-        assert_eq!(h1_persistent, 0, "collinear points must not produce persistent H1");
+        assert_eq!(
+            h1_persistent, 0,
+            "collinear points must not produce persistent H1"
+        );
     }
 
     #[test]
@@ -529,7 +549,14 @@ mod tests {
         let mut simplices = vec![VrSimplex::default(); cap];
         let count = vr_filtration(&pts, 2, 0.0, &mut simplices).unwrap();
 
-        let mut pairs = vec![PersistencePair { dim: 0, birth: 0.0, death: 0.0 }; 2];
+        let mut pairs = vec![
+            PersistencePair {
+                dim: 0,
+                birth: 0.0,
+                death: 0.0
+            };
+            2
+        ];
         let err = compute_persistence(&simplices[..count], &mut pairs).unwrap_err();
         assert!(matches!(err, PersistenceError::BufferTooSmall { .. }));
     }
@@ -560,15 +587,26 @@ mod tests {
             .collect();
         h0.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
         assert_eq!(h0.len(), 3, "expected 3 H0 bars, got {h0:?}");
-        assert!(approx(h0[0].0, 0.0) && approx(h0[0].1, 0.5), "H0 bar 0 = {:?}", h0[0]);
-        assert!(approx(h0[1].0, 0.0) && approx(h0[1].1, 1.0), "H0 bar 1 = {:?}", h0[1]);
+        assert!(
+            approx(h0[0].0, 0.0) && approx(h0[0].1, 0.5),
+            "H0 bar 0 = {:?}",
+            h0[0]
+        );
+        assert!(
+            approx(h0[1].0, 0.0) && approx(h0[1].1, 1.0),
+            "H0 bar 1 = {:?}",
+            h0[1]
+        );
         assert!(
             approx(h0[2].0, 0.0) && h0[2].1 == f64::INFINITY,
             "H0 essential = {:?}",
             h0[2]
         );
 
-        let h1_persistent = bars.iter().filter(|p| p.dim == 1 && p.death > p.birth).count();
+        let h1_persistent = bars
+            .iter()
+            .filter(|p| p.dim == 1 && p.death > p.birth)
+            .count();
         assert_eq!(h1_persistent, 0, "collinear points: no persistent H1");
     }
 
@@ -596,8 +634,16 @@ mod tests {
             .filter(|p| p.dim == 1 && p.death > p.birth && p.death.is_finite())
             .map(|p| (p.birth, p.death))
             .collect();
-        assert_eq!(h1.len(), 1, "square should have exactly one persistent H1, got {h1:?}");
-        assert!(approx(h1[0].0, 1.0), "H1 birth should be 1.0, got {}", h1[0].0);
+        assert_eq!(
+            h1.len(),
+            1,
+            "square should have exactly one persistent H1, got {h1:?}"
+        );
+        assert!(
+            approx(h1[0].0, 1.0),
+            "H1 birth should be 1.0, got {}",
+            h1[0].0
+        );
         assert!(
             approx(h1[0].1, core::f64::consts::SQRT_2),
             "H1 death should be √2, got {}",

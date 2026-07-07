@@ -70,7 +70,10 @@ impl core::fmt::Display for StatManifoldError {
             }
             Self::ZeroSupport => write!(f, "stat_manifold: zero support"),
             Self::DimMismatch { expected, got } => {
-                write!(f, "stat_manifold: dim mismatch, expected {expected}, got {got}")
+                write!(
+                    f,
+                    "stat_manifold: dim mismatch, expected {expected}, got {got}"
+                )
             }
         }
     }
@@ -362,8 +365,12 @@ mod tests {
         let q = [0.4f32, 0.4, 0.2];
         let kl_direct = kl_divergence(&p, &q).unwrap();
         let kl_bregman = kl_bregman_form(&p, &q).unwrap();
-        assert!((kl_direct - kl_bregman).abs() < 1e-10,
-            "KL direct {} must match Bregman form {}", kl_direct, kl_bregman);
+        assert!(
+            (kl_direct - kl_bregman).abs() < 1e-10,
+            "KL direct {} must match Bregman form {}",
+            kl_direct,
+            kl_bregman
+        );
     }
 
     #[test]
@@ -372,8 +379,12 @@ mod tests {
         let q = [0.1f32, 0.2, 0.3, 0.4];
         let kl_direct = kl_divergence(&p, &q).unwrap();
         let kl_bregman = kl_bregman_form(&p, &q).unwrap();
-        assert!((kl_direct - kl_bregman).abs() < 1e-6,
-            "KL direct {} must match Bregman form {}", kl_direct, kl_bregman);
+        assert!(
+            (kl_direct - kl_bregman).abs() < 1e-6,
+            "KL direct {} must match Bregman form {}",
+            kl_direct,
+            kl_bregman
+        );
     }
 
     #[test]
@@ -389,8 +400,11 @@ mod tests {
         let u = [1.0f32, -1.0];
         let g_uu = fisher_inner_product(&p, &u, &u).unwrap();
         // g_uu = 1/0.5 + 1/0.5 = 4.
-        assert!((g_uu - 4.0).abs() < 1e-10,
-            "Fisher g(u,u) at p=(0.5,0.5) should be 4, got {}", g_uu);
+        assert!(
+            (g_uu - 4.0).abs() < 1e-10,
+            "Fisher g(u,u) at p=(0.5,0.5) should be 4, got {}",
+            g_uu
+        );
     }
 
     #[test]
@@ -406,19 +420,26 @@ mod tests {
         let p = [1.0f32, 0.0];
         let q = [0.0f32, 1.0];
         let d = fisher_distance(&p, &q).unwrap();
-        assert!((d - core::f64::consts::FRAC_PI_2).abs() < 1e-10,
-            "Fisher distance between disjoint supports should be π/2, got {}", d);
+        assert!(
+            (d - core::f64::consts::FRAC_PI_2).abs() < 1e-10,
+            "Fisher distance between disjoint supports should be π/2, got {}",
+            d
+        );
     }
 
     #[test]
     fn simplex_projection_is_idempotent() {
         let p = [0.3f32, 0.7, 0.0];
-        assert!(simplex_project_idempotent(&p),
-            "projection must be idempotent on valid distribution");
+        assert!(
+            simplex_project_idempotent(&p),
+            "projection must be idempotent on valid distribution"
+        );
 
         let p2 = [0.5f32, 0.5];
-        assert!(simplex_project_idempotent(&p2),
-            "projection must be idempotent on valid distribution");
+        assert!(
+            simplex_project_idempotent(&p2),
+            "projection must be idempotent on valid distribution"
+        );
     }
 
     #[test]
@@ -457,16 +478,22 @@ mod tests {
 
         let lhs = kl_p_q;
         let rhs = kl_p_qstar + kl_qstar_q;
-        assert!((lhs - rhs).abs() < 1e-6,
+        assert!(
+            (lhs - rhs).abs() < 1e-6,
             "Bregman-Pythagorean: KL(p||q)={} should equal KL(p||q*)+KL(q*||q)={}",
-            lhs, rhs);
+            lhs,
+            rhs
+        );
     }
 
     #[test]
     fn validate_rejects_negative() {
         let p = [0.5f32, -0.3, 0.8];
         let err = validate_probability(&p).unwrap_err();
-        assert!(matches!(err, StatManifoldError::NegativeMass { index: 1, .. }));
+        assert!(matches!(
+            err,
+            StatManifoldError::NegativeMass { index: 1, .. }
+        ));
     }
 
     #[test]
@@ -494,7 +521,10 @@ mod tests {
         let p = [0.5f32, 0.5];
         let q = [1.0f32, 0.0];
         let kl = kl_divergence(&p, &q).unwrap();
-        assert!(kl.is_infinite(), "KL must be infinite when q has zero support");
+        assert!(
+            kl.is_infinite(),
+            "KL must be infinite when q has zero support"
+        );
     }
 
     #[test]
@@ -520,8 +550,12 @@ mod tests {
         let psi = neg_entropy(&p);
         // ψ(uniform) = Σ (1/n) log(1/n) = log(1/n) = -log(n)
         let expected = (0.25f64).ln(); // = -log(4) = -1.386...
-        assert!((psi - expected).abs() < 1e-10,
-            "neg entropy of uniform should be -log(n) = {}, got {}", expected, psi);
+        assert!(
+            (psi - expected).abs() < 1e-10,
+            "neg entropy of uniform should be -log(n) = {}, got {}",
+            expected,
+            psi
+        );
     }
 
     #[test]
@@ -547,7 +581,11 @@ mod tests {
         let q = [0.5f32, 0.5];
         let d1 = fisher_distance(&p, &q).unwrap();
         let d2 = fisher_distance(&p, &q).unwrap();
-        assert_eq!(d1.to_bits(), d2.to_bits(), "Fisher distance must be bit-identical");
+        assert_eq!(
+            d1.to_bits(),
+            d2.to_bits(),
+            "Fisher distance must be bit-identical"
+        );
     }
 
     #[test]
@@ -558,8 +596,11 @@ mod tests {
         let p = [1.0f32, 0.0];
         let q = [0.5f32, 0.5];
         let d = fisher_distance(&p, &q).unwrap();
-        assert!((d - core::f64::consts::FRAC_PI_4).abs() < 1e-10,
-            "Fisher distance (1,0)→(0.5,0.5) should be π/4, got {}", d);
+        assert!(
+            (d - core::f64::consts::FRAC_PI_4).abs() < 1e-10,
+            "Fisher distance (1,0)→(0.5,0.5) should be π/4, got {}",
+            d
+        );
     }
 
     #[test]
@@ -569,6 +610,10 @@ mod tests {
         let p = [0.5f32, 0.5];
         let u = [1.0f32, 0.0];
         let g = fisher_inner_product(&p, &u, &u).unwrap();
-        assert!((g - 2.0).abs() < 1e-10, "Fisher g(u,u) should be 2, got {}", g);
+        assert!(
+            (g - 2.0).abs() < 1e-10,
+            "Fisher g(u,u) should be 2, got {}",
+            g
+        );
     }
 }

@@ -107,12 +107,18 @@ pub fn alpha_filtration_2d(
     let n = points.len();
     let max_tris = 2 * n + 1;
     if out_triangles.len() < max_tris {
-        return Err(TdaError::BufferTooSmall { needed: max_tris, have: out_triangles.len() });
+        return Err(TdaError::BufferTooSmall {
+            needed: max_tris,
+            have: out_triangles.len(),
+        });
     }
     // Upper bound: n vertices + 3n edges + 2n triangles.
     let max_simplices = n + 3 * n + 2 * n;
     if out_simplices.len() < max_simplices {
-        return Err(TdaError::BufferTooSmall { needed: max_simplices, have: out_simplices.len() });
+        return Err(TdaError::BufferTooSmall {
+            needed: max_simplices,
+            have: out_simplices.len(),
+        });
     }
 
     // Compute Delaunay triangulation.
@@ -224,7 +230,10 @@ pub fn compute_persistence(
     if n > 1024 {
         // For larger inputs, we'd need a heap-allocated union-find.
         // For now, limit to 1024 simplices.
-        return Err(TdaError::BufferTooSmall { needed: 1024, have: n });
+        return Err(TdaError::BufferTooSmall {
+            needed: 1024,
+            have: n,
+        });
     }
 
     // Initialize union-find: each vertex is its own parent.
@@ -308,7 +317,7 @@ pub fn compute_persistence(
                     (vb.min(vc), vb.max(vc)),
                     (va.min(vc), va.max(vc)),
                 ];
-                
+
                 // Find the most recently born active H1 whose creating edge
                 // is a subset of this triangle's edges.
                 if let Some(pos) = active_h1
@@ -364,8 +373,16 @@ pub fn compute_persistence(
     out_pairs[..pair_count].sort_by(|a, b| {
         a.dim
             .cmp(&b.dim)
-            .then(a.birth.partial_cmp(&b.birth).unwrap_or(core::cmp::Ordering::Equal))
-            .then(a.death.partial_cmp(&b.death).unwrap_or(core::cmp::Ordering::Equal))
+            .then(
+                a.birth
+                    .partial_cmp(&b.birth)
+                    .unwrap_or(core::cmp::Ordering::Equal),
+            )
+            .then(
+                a.death
+                    .partial_cmp(&b.death)
+                    .unwrap_or(core::cmp::Ordering::Equal),
+            )
     });
 
     Ok(pair_count)
@@ -398,11 +415,13 @@ mod tests {
     use super::*;
 
     fn circle_points_jittered(n: usize, r: f64) -> Vec<Point2> {
-        (0..n).map(|i| {
-            let angle = 2.0 * core::f64::consts::PI * i as f64 / n as f64;
-            let r_jit = r + (i as f64 * 0.0001).sin() * 0.01;
-            Point2::new(r_jit * angle.cos(), r_jit * angle.sin())
-        }).collect()
+        (0..n)
+            .map(|i| {
+                let angle = 2.0 * core::f64::consts::PI * i as f64 / n as f64;
+                let r_jit = r + (i as f64 * 0.0001).sin() * 0.01;
+                Point2::new(r_jit * angle.cos(), r_jit * angle.sin())
+            })
+            .collect()
     }
 
     fn two_clusters() -> Vec<Point2> {
@@ -449,7 +468,14 @@ mod tests {
 
         let count = alpha_filtration_2d(&pts, &mut scratch, &mut tris, &mut simplices).unwrap();
 
-        let mut pairs = vec![PersistencePair { dim: 0, birth: 0.0, death: 0.0 }; count];
+        let mut pairs = vec![
+            PersistencePair {
+                dim: 0,
+                birth: 0.0,
+                death: 0.0
+            };
+            count
+        ];
         let n_pairs = compute_persistence(&simplices[..count], &mut pairs).unwrap();
 
         // Count H0 and H1 pairs.
@@ -472,11 +498,19 @@ mod tests {
 
         let count = alpha_filtration_2d(&pts, &mut scratch, &mut tris, &mut simplices).unwrap();
 
-        let mut pairs = vec![PersistencePair { dim: 0, birth: 0.0, death: 0.0 }; count];
+        let mut pairs = vec![
+            PersistencePair {
+                dim: 0,
+                birth: 0.0,
+                death: 0.0
+            };
+            count
+        ];
         let n_pairs = compute_persistence(&simplices[..count], &mut pairs).unwrap();
 
         // Should have at least 2 H0 features (two clusters).
-        let h0_essential = pairs[..n_pairs].iter()
+        let h0_essential = pairs[..n_pairs]
+            .iter()
             .filter(|p| p.dim == 0 && p.death == f64::INFINITY)
             .count();
         assert!(h0_essential >= 1, "should have at least 1 essential H0");
@@ -491,19 +525,36 @@ mod tests {
         let mut t1 = vec![[0u32; 3]; 2 * n + 1];
         let mut simp1 = vec![Simplex::default(); n + 3 * n + 2 * n];
         let count1 = alpha_filtration_2d(&pts, &mut s1, &mut t1, &mut simp1).unwrap();
-        let mut pairs1 = vec![PersistencePair { dim: 0, birth: 0.0, death: 0.0 }; count1];
+        let mut pairs1 = vec![
+            PersistencePair {
+                dim: 0,
+                birth: 0.0,
+                death: 0.0
+            };
+            count1
+        ];
         let np1 = compute_persistence(&simp1[..count1], &mut pairs1).unwrap();
 
         let mut s2 = vec![0u32; n];
         let mut t2 = vec![[0u32; 3]; 2 * n + 1];
         let mut simp2 = vec![Simplex::default(); n + 3 * n + 2 * n];
         let count2 = alpha_filtration_2d(&pts, &mut s2, &mut t2, &mut simp2).unwrap();
-        let mut pairs2 = vec![PersistencePair { dim: 0, birth: 0.0, death: 0.0 }; count2];
+        let mut pairs2 = vec![
+            PersistencePair {
+                dim: 0,
+                birth: 0.0,
+                death: 0.0
+            };
+            count2
+        ];
         let np2 = compute_persistence(&simp2[..count2], &mut pairs2).unwrap();
 
         assert_eq!(count1, count2);
         assert_eq!(np1, np2);
-        assert_eq!(persistence_hash(&pairs1[..np1]), persistence_hash(&pairs2[..np2]));
+        assert_eq!(
+            persistence_hash(&pairs1[..np1]),
+            persistence_hash(&pairs2[..np2])
+        );
     }
 
     #[test]

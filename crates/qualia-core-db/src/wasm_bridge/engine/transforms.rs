@@ -26,7 +26,11 @@ use crate::solvers::transforms::ztransform::{geometric_z, unit_step_z, z_transfo
 /// * `data` is real-only — each entry becomes `(x, 0)`; OR
 /// * `re` and `im` are given as equal-length parallel arrays — `(re[k], im[k])`.
 /// Exactly one encoding must be supplied and it must be non-empty.
-fn build_cplx(data: &Option<Vec<f64>>, re: &Option<Vec<f64>>, im: &Option<Vec<f64>>) -> Result<Vec<Cplx>, JsValue> {
+fn build_cplx(
+    data: &Option<Vec<f64>>,
+    re: &Option<Vec<f64>>,
+    im: &Option<Vec<f64>>,
+) -> Result<Vec<Cplx>, JsValue> {
     match (data, re, im) {
         (Some(d), None, None) => {
             if d.is_empty() {
@@ -67,7 +71,12 @@ fn to_spectrum(out: Vec<Cplx>) -> Spectrum {
     let im: Vec<f64> = out.iter().map(|c| c.1).collect();
     let magnitude: Vec<f64> = out.iter().map(|c| (c.0 * c.0 + c.1 * c.1).sqrt()).collect();
     let n = out.len();
-    Spectrum { re, im, magnitude, n }
+    Spectrum {
+        re,
+        im,
+        magnitude,
+        n,
+    }
 }
 
 // ── Fourier: forward DFT ─────────────────────────────────────────────────────

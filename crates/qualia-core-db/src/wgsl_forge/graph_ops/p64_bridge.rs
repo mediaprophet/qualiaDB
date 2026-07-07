@@ -46,7 +46,10 @@ pub fn read_role(
 /// Transpose a `[d0,d1]` row-major tensor to `[d1,d0]` row-major.
 fn transpose_2d(t: &P64Tensor) -> Result<Vec<f32>, String> {
     if t.dims.len() != 2 {
-        return Err(format!("transpose_2d: expected rank-2, got dims {:?}", t.dims));
+        return Err(format!(
+            "transpose_2d: expected rank-2, got dims {:?}",
+            t.dims
+        ));
     }
     let (r, c) = (t.dims[0] as usize, t.dims[1] as usize);
     let mut out = vec![0.0f32; r * c];
@@ -131,16 +134,25 @@ mod tests {
             return;
         };
         let gguf = std::fs::read(&path).expect("read gguf");
-        let p64 = crate::q42::p64_weight::compile_gguf_to_p64(&gguf, 14).expect("compile gguf->p64");
+        let p64 =
+            crate::q42::p64_weight::compile_gguf_to_p64(&gguf, 14).expect("compile gguf->p64");
         drop(gguf);
         let index = P64TensorIndex::from_p64(&p64).expect("from_p64");
         let h = &index.hparams;
         let n_head = h.n_head;
-        let n_kv = if h.n_kv_head > 0 { h.n_kv_head } else { h.n_head };
+        let n_kv = if h.n_kv_head > 0 {
+            h.n_kv_head
+        } else {
+            h.n_head
+        };
         let n_embd = h.n_embd;
         let head_dim = n_embd / n_head;
         let d = n_head * head_dim;
-        let theta_base = if h.rope_freq_base > 0.0 { h.rope_freq_base } else { 10000.0 };
+        let theta_base = if h.rope_freq_base > 0.0 {
+            h.rope_freq_base
+        } else {
+            10000.0
+        };
 
         let w = read_forge_layer_weights(&index, &p64, 0).expect("read layer 0 weights");
         let ffn = (w.wg.len() as u32) / d; // wg is [in=d, out=ffn]
@@ -155,9 +167,9 @@ mod tests {
                 .collect()
         };
         let ext = vec![
-            gen(d as usize, 1),                            // x
-            gen((n_kv * head_dim * seq) as usize, 2),      // Kt [n_kv, head_dim, seq]
-            gen((n_kv * seq * head_dim) as usize, 3),      // V  [n_kv, seq, head_dim]
+            gen(d as usize, 1),                       // x
+            gen((n_kv * head_dim * seq) as usize, 2), // Kt [n_kv, head_dim, seq]
+            gen((n_kv * seq * head_dim) as usize, 3), // V  [n_kv, seq, head_dim]
             w.wq,
             w.wo,
             w.wg,
@@ -176,7 +188,10 @@ mod tests {
         for (a, b) in gpu.iter().zip(&cpu) {
             let rel = (a - b).abs() / b.abs().max(1.0);
             max_rel = max_rel.max(rel);
-            assert!(rel <= 2e-2, "real-weights forge vs oracle: {a} vs {b} (rel {rel})");
+            assert!(
+                rel <= 2e-2,
+                "real-weights forge vs oracle: {a} vs {b} (rel {rel})"
+            );
         }
         println!(
             "[bridge] SmolLM2-360M layer-0 on the forge: n_embd={n_embd} heads={n_head} kv={n_kv} \
@@ -202,21 +217,32 @@ mod tests {
             return;
         };
         let gguf = std::fs::read(&path).expect("read gguf");
-        let p64 = crate::q42::p64_weight::compile_gguf_to_p64(&gguf, 14).expect("compile gguf->p64");
+        let p64 =
+            crate::q42::p64_weight::compile_gguf_to_p64(&gguf, 14).expect("compile gguf->p64");
         drop(gguf);
         let index = P64TensorIndex::from_p64(&p64).expect("from_p64");
         let h = &index.hparams;
         let n_head = h.n_head;
-        let n_kv = if h.n_kv_head > 0 { h.n_kv_head } else { h.n_head };
+        let n_kv = if h.n_kv_head > 0 {
+            h.n_kv_head
+        } else {
+            h.n_head
+        };
         let head_dim = h.n_embd / n_head;
         let d = n_head * head_dim;
-        let theta = if h.rope_freq_base > 0.0 { h.rope_freq_base } else { 10000.0 };
+        let theta = if h.rope_freq_base > 0.0 {
+            h.rope_freq_base
+        } else {
+            10000.0
+        };
         let w = read_forge_layer_weights(&index, &p64, 0).expect("read layer 0");
         let ffn = (w.wg.len() as u32) / d;
         let (seq, pos) = (24u32, 23u32);
         let inv_scale = 1.0f32 / (head_dim as f32).sqrt();
         let gen = |len: usize, salt: usize| -> Vec<f32> {
-            (0..len).map(|i| (((i * 7 + salt * 13) % 23) as f32) * 0.02 - 0.23).collect()
+            (0..len)
+                .map(|i| (((i * 7 + salt * 13) % 23) as f32) * 0.02 - 0.23)
+                .collect()
         };
 
         let g = decode_layer_graph(n_head, n_kv, head_dim, seq, ffn, pos, 0, theta).unwrap();
@@ -224,15 +250,26 @@ mod tests {
         // Big matrices resident (indices 3..=9); activations uploaded per call (0,1,2,10,11).
         let resident = exec
             .load_weights(&[
-                (3, w.wq), (4, w.wo), (5, w.wg), (6, w.wu), (7, w.wd),
-                (8, w.attn_norm), (9, w.ffn_norm),
+                (3, w.wq),
+                (4, w.wo),
+                (5, w.wg),
+                (6, w.wu),
+                (7, w.wd),
+                (8, w.attn_norm),
+                (9, w.ffn_norm),
             ])
             .expect("load_weights");
         let acts = vec![
             gen(d as usize, 1),                       // x
             gen((n_kv * head_dim * seq) as usize, 2), // Kt
             gen((n_kv * seq * head_dim) as usize, 3), // V
-            vec![], vec![], vec![], vec![], vec![], vec![], vec![], // resident slots
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![], // resident slots
             vec![inv_scale],
             vec![1e-5],
         ];

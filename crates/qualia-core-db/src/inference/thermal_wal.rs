@@ -19,8 +19,8 @@ pub struct ThermalEvictionRecord {
 pub struct ThermalWalHeader {
     pub magic: [u8; 4], // "WAL\0"
     pub version: u32,
-    pub head: u32, // index of next write
-    pub capacity: u32, // total number of records
+    pub head: u32,          // index of next write
+    pub capacity: u32,      // total number of records
     pub reserved: [u8; 48], // align to 64 bytes
 }
 
@@ -39,9 +39,9 @@ impl ThermalWal {
             .create(true)
             .open(path)?;
         file.set_len(file_size as u64)?;
-        
+
         let mut mmap = unsafe { MmapOptions::new().map_mut(&file)? };
-        
+
         // initialize header if new
         let header_ptr = mmap.as_mut_ptr() as *mut ThermalWalHeader;
         let mut head = 0;
@@ -55,19 +55,19 @@ impl ThermalWal {
                 head = (*header_ptr).head as usize;
             }
         }
-        
+
         Ok(Self {
             mmap,
             capacity: capacity_records,
             head,
         })
     }
-    
+
     pub fn append(&mut self, record: ThermalEvictionRecord) {
         let offset = 64 + (self.head * 32);
         let record_bytes = bytemuck::bytes_of(&record);
-        self.mmap[offset..offset+32].copy_from_slice(record_bytes);
-        
+        self.mmap[offset..offset + 32].copy_from_slice(record_bytes);
+
         self.head = (self.head + 1) % self.capacity;
         let header_ptr = self.mmap.as_mut_ptr() as *mut ThermalWalHeader;
         unsafe {

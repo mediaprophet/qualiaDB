@@ -1,9 +1,6 @@
 use axum::{
     body::{Body, Bytes},
-    extract::{
-        ws::Message,
-        Query, State, WebSocketUpgrade,
-    },
+    extract::{ws::Message, Query, State, WebSocketUpgrade},
     http::{header, HeaderMap, HeaderName, HeaderValue, Method, StatusCode},
     response::{IntoResponse, Response},
     routing::{get, post},
@@ -16,11 +13,7 @@ use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use tokio::sync::broadcast;
 use tokio_stream::wrappers::UnboundedReceiverStream;
-use tower_http::{
-    cors::CorsLayer,
-    services::ServeDir,
-    set_header::SetResponseHeaderLayer,
-};
+use tower_http::{cors::CorsLayer, services::ServeDir, set_header::SetResponseHeaderLayer};
 
 use crate::{
     daemon_query::{self, QueryExecError},
@@ -801,10 +794,9 @@ pub async fn webizen_rpc_handler(
                 // Fiduciary Supremacy: Reject requests to 'wf:' or the selfhood store completely.
                 // Block both the new `selfhood` name and the legacy `sovereign` name (fail-closed —
                 // never loosen this lock while the rename propagates).
-                if scopes
-                    .iter()
-                    .any(|s| s.starts_with("wf:") || s.contains("selfhood") || s.contains("sovereign"))
-                {
+                if scopes.iter().any(|s| {
+                    s.starts_with("wf:") || s.contains("selfhood") || s.contains("sovereign")
+                }) {
                     return (
                         StatusCode::LOCKED,
                         Json(json!({"error": "Selfhood path locked during Sanctuary mode."})),

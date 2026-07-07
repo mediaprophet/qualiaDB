@@ -98,31 +98,83 @@ pub fn compute_corpus_hash() -> u64 {
     h = hash_str(h, "orientation_2");
 
     // Clear cases
-    h = hash_orientation(h, orientation_2(Point2::new(0.0, 0.0), Point2::new(1.0, 0.0), Point2::new(1.0, 1.0)));
-    h = hash_orientation(h, orientation_2(Point2::new(0.0, 0.0), Point2::new(1.0, 0.0), Point2::new(1.0, -1.0)));
-    h = hash_orientation(h, orientation_2(Point2::new(0.0, 0.0), Point2::new(1.0, 0.0), Point2::new(2.0, 0.0)));
+    h = hash_orientation(
+        h,
+        orientation_2(
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 0.0),
+            Point2::new(1.0, 1.0),
+        ),
+    );
+    h = hash_orientation(
+        h,
+        orientation_2(
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 0.0),
+            Point2::new(1.0, -1.0),
+        ),
+    );
+    h = hash_orientation(
+        h,
+        orientation_2(
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 0.0),
+            Point2::new(2.0, 0.0),
+        ),
+    );
 
     // Collinear on arbitrary line
-    h = hash_orientation(h, orientation_2(Point2::new(3.0, 7.0), Point2::new(5.0, 11.0), Point2::new(7.0, 15.0)));
+    h = hash_orientation(
+        h,
+        orientation_2(
+            Point2::new(3.0, 7.0),
+            Point2::new(5.0, 11.0),
+            Point2::new(7.0, 15.0),
+        ),
+    );
 
     // Near-collinear (±1-ulp)
     let base_y = 0.0f64;
     for &delta in &[1i64, -1, 2, -2, 5, -5] {
         let y = f64::from_bits((base_y.to_bits() as i64 + delta) as u64);
-        h = hash_orientation(h, orientation_2(Point2::new(0.0, 0.0), Point2::new(1.0, 0.0), Point2::new(0.5, y)));
+        h = hash_orientation(
+            h,
+            orientation_2(
+                Point2::new(0.0, 0.0),
+                Point2::new(1.0, 0.0),
+                Point2::new(0.5, y),
+            ),
+        );
     }
 
     // Extreme exponents
-    h = hash_orientation(h, orientation_2(Point2::new(1e100, 0.0), Point2::new(0.0, 1e100), Point2::new(0.0, 0.0)));
-    h = hash_orientation(h, orientation_2(Point2::new(1e-100, 0.0), Point2::new(0.0, 1e-100), Point2::new(0.0, 0.0)));
+    h = hash_orientation(
+        h,
+        orientation_2(
+            Point2::new(1e100, 0.0),
+            Point2::new(0.0, 1e100),
+            Point2::new(0.0, 0.0),
+        ),
+    );
+    h = hash_orientation(
+        h,
+        orientation_2(
+            Point2::new(1e-100, 0.0),
+            Point2::new(0.0, 1e-100),
+            Point2::new(0.0, 0.0),
+        ),
+    );
 
     // Translation invariance
     let t = Point2::new(1e10, -1e10);
-    h = hash_orientation(h, orientation_2(
-        Point2::new(0.0 + t.x, 0.0 + t.y),
-        Point2::new(1.0 + t.x, 0.0 + t.y),
-        Point2::new(1.0 + t.x, 1.0 + t.y),
-    ));
+    h = hash_orientation(
+        h,
+        orientation_2(
+            Point2::new(0.0 + t.x, 0.0 + t.y),
+            Point2::new(1.0 + t.x, 0.0 + t.y),
+            Point2::new(1.0 + t.x, 1.0 + t.y),
+        ),
+    );
 
     // ══════════════════════════════════════════════════════════════════════
     //  orient_3d (3D orientation)
@@ -130,58 +182,115 @@ pub fn compute_corpus_hash() -> u64 {
     h = hash_str(h, "orient_3d");
 
     // Clear cases: positive and negative tetrahedra
-    h = hash_sign(h, orient_3d(
-        Point3::new(0.0, 0.0, 0.0), Point3::new(1.0, 0.0, 0.0),
-        Point3::new(0.0, 1.0, 0.0), Point3::new(0.0, 0.0, 1.0)));
-    h = hash_sign(h, orient_3d(
-        Point3::new(0.0, 0.0, 0.0), Point3::new(0.0, 1.0, 0.0),
-        Point3::new(1.0, 0.0, 0.0), Point3::new(0.0, 0.0, 1.0)));
+    h = hash_sign(
+        h,
+        orient_3d(
+            Point3::new(0.0, 0.0, 0.0),
+            Point3::new(1.0, 0.0, 0.0),
+            Point3::new(0.0, 1.0, 0.0),
+            Point3::new(0.0, 0.0, 1.0),
+        ),
+    );
+    h = hash_sign(
+        h,
+        orient_3d(
+            Point3::new(0.0, 0.0, 0.0),
+            Point3::new(0.0, 1.0, 0.0),
+            Point3::new(1.0, 0.0, 0.0),
+            Point3::new(0.0, 0.0, 1.0),
+        ),
+    );
 
     // Coplanar (exact zero)
-    h = hash_sign(h, orient_3d(
-        Point3::new(0.0, 0.0, 0.0), Point3::new(1.0, 0.0, 0.0),
-        Point3::new(1.0, 1.0, 0.0), Point3::new(0.0, 1.0, 0.0)));
+    h = hash_sign(
+        h,
+        orient_3d(
+            Point3::new(0.0, 0.0, 0.0),
+            Point3::new(1.0, 0.0, 0.0),
+            Point3::new(1.0, 1.0, 0.0),
+            Point3::new(0.0, 1.0, 0.0),
+        ),
+    );
 
     // Coplanar on arbitrary plane
-    h = hash_sign(h, orient_3d(
-        Point3::new(1.0, 2.0, 3.0), Point3::new(4.0, 5.0, 6.0),
-        Point3::new(7.0, 8.0, 9.0), Point3::new(10.0, 11.0, 12.0)));
+    h = hash_sign(
+        h,
+        orient_3d(
+            Point3::new(1.0, 2.0, 3.0),
+            Point3::new(4.0, 5.0, 6.0),
+            Point3::new(7.0, 8.0, 9.0),
+            Point3::new(10.0, 11.0, 12.0),
+        ),
+    );
 
     // Near-coplanar (±1-ulp)
     let base_z = 0.0f64;
     for &delta in &[1i64, -1, 2, -2, 5, -5, 100, -100] {
         let z = f64::from_bits((base_z.to_bits() as i64 + delta) as u64);
-        h = hash_sign(h, orient_3d(
-            Point3::new(0.0, 0.0, 0.0), Point3::new(1.0, 0.0, 0.0),
-            Point3::new(0.0, 1.0, 0.0), Point3::new(0.0, 0.0, z)));
+        h = hash_sign(
+            h,
+            orient_3d(
+                Point3::new(0.0, 0.0, 0.0),
+                Point3::new(1.0, 0.0, 0.0),
+                Point3::new(0.0, 1.0, 0.0),
+                Point3::new(0.0, 0.0, z),
+            ),
+        );
     }
 
     // Extreme exponents
-    h = hash_sign(h, orient_3d(
-        Point3::new(1e50, 0.0, 0.0), Point3::new(0.0, 1e50, 0.0),
-        Point3::new(0.0, 0.0, 1e50), Point3::new(0.0, 0.0, 0.0)));
-    h = hash_sign(h, orient_3d(
-        Point3::new(1e-50, 0.0, 0.0), Point3::new(0.0, 1e-50, 0.0),
-        Point3::new(0.0, 0.0, 1e-50), Point3::new(0.0, 0.0, 0.0)));
+    h = hash_sign(
+        h,
+        orient_3d(
+            Point3::new(1e50, 0.0, 0.0),
+            Point3::new(0.0, 1e50, 0.0),
+            Point3::new(0.0, 0.0, 1e50),
+            Point3::new(0.0, 0.0, 0.0),
+        ),
+    );
+    h = hash_sign(
+        h,
+        orient_3d(
+            Point3::new(1e-50, 0.0, 0.0),
+            Point3::new(0.0, 1e-50, 0.0),
+            Point3::new(0.0, 0.0, 1e-50),
+            Point3::new(0.0, 0.0, 0.0),
+        ),
+    );
 
     // Massive cancellation
-    h = hash_sign(h, orient_3d(
-        Point3::new(1e50, 0.0, 0.0), Point3::new(0.0, 1e50, 0.0),
-        Point3::new(0.0, 0.0, 1e50), Point3::new(1e50, 1e50, 1e50)));
+    h = hash_sign(
+        h,
+        orient_3d(
+            Point3::new(1e50, 0.0, 0.0),
+            Point3::new(0.0, 1e50, 0.0),
+            Point3::new(0.0, 0.0, 1e50),
+            Point3::new(1e50, 1e50, 1e50),
+        ),
+    );
 
     // Vertex swap flips sign
-    h = hash_sign(h, orient_3d(
-        Point3::new(0.0, 1.0, 0.0), Point3::new(0.0, 0.0, 0.0),
-        Point3::new(1.0, 0.0, 0.0), Point3::new(0.0, 0.0, 1.0)));
+    h = hash_sign(
+        h,
+        orient_3d(
+            Point3::new(0.0, 1.0, 0.0),
+            Point3::new(0.0, 0.0, 0.0),
+            Point3::new(1.0, 0.0, 0.0),
+            Point3::new(0.0, 0.0, 1.0),
+        ),
+    );
 
     // Translation invariance
     let t3 = Point3::new(1e10, -1e10, 5e9);
-    h = hash_sign(h, orient_3d(
-        Point3::new(0.0 + t3.x, 0.0 + t3.y, 0.0 + t3.z),
-        Point3::new(1.0 + t3.x, 0.0 + t3.y, 0.0 + t3.z),
-        Point3::new(0.0 + t3.x, 1.0 + t3.y, 0.0 + t3.z),
-        Point3::new(0.0 + t3.x, 0.0 + t3.y, 1.0 + t3.z),
-    ));
+    h = hash_sign(
+        h,
+        orient_3d(
+            Point3::new(0.0 + t3.x, 0.0 + t3.y, 0.0 + t3.z),
+            Point3::new(1.0 + t3.x, 0.0 + t3.y, 0.0 + t3.z),
+            Point3::new(0.0 + t3.x, 1.0 + t3.y, 0.0 + t3.z),
+            Point3::new(0.0 + t3.x, 0.0 + t3.y, 1.0 + t3.z),
+        ),
+    );
 
     // ══════════════════════════════════════════════════════════════════════
     //  incircle (2D in-circle)
@@ -198,9 +307,15 @@ pub fn compute_corpus_hash() -> u64 {
     h = hash_sign(h, incircle(ca, cb, cc, Point2::new(0.0, -1.0))); // on
 
     // Cocircular on arbitrary circle
-    h = hash_sign(h, incircle(
-        Point2::new(8.0, 4.0), Point2::new(3.0, 9.0),
-        Point2::new(-2.0, 4.0), Point2::new(3.0, -1.0)));
+    h = hash_sign(
+        h,
+        incircle(
+            Point2::new(8.0, 4.0),
+            Point2::new(3.0, 9.0),
+            Point2::new(-2.0, 4.0),
+            Point2::new(3.0, -1.0),
+        ),
+    );
 
     // Near-cocircular (±1-ulp)
     let base_dy = -1.0f64;
@@ -210,31 +325,58 @@ pub fn compute_corpus_hash() -> u64 {
     }
 
     // Extreme exponents
-    h = hash_sign(h, incircle(
-        Point2::new(1e50, 0.0), Point2::new(0.0, 1e50),
-        Point2::new(-1e50, 0.0), Point2::new(0.0, 0.0)));
-    h = hash_sign(h, incircle(
-        Point2::new(1e-50, 0.0), Point2::new(0.0, 1e-50),
-        Point2::new(-1e-50, 0.0), Point2::new(0.0, 0.0)));
+    h = hash_sign(
+        h,
+        incircle(
+            Point2::new(1e50, 0.0),
+            Point2::new(0.0, 1e50),
+            Point2::new(-1e50, 0.0),
+            Point2::new(0.0, 0.0),
+        ),
+    );
+    h = hash_sign(
+        h,
+        incircle(
+            Point2::new(1e-50, 0.0),
+            Point2::new(0.0, 1e-50),
+            Point2::new(-1e-50, 0.0),
+            Point2::new(0.0, 0.0),
+        ),
+    );
 
     // Massive cancellation
-    h = hash_sign(h, incircle(
-        Point2::new(1e50, 0.0), Point2::new(0.0, 1e50),
-        Point2::new(-1e50, 0.0), Point2::new(0.0, -1e50 + 1.0)));
+    h = hash_sign(
+        h,
+        incircle(
+            Point2::new(1e50, 0.0),
+            Point2::new(0.0, 1e50),
+            Point2::new(-1e50, 0.0),
+            Point2::new(0.0, -1e50 + 1.0),
+        ),
+    );
 
     // Clockwise abc (sign flips)
-    h = hash_sign(h, incircle(
-        Point2::new(1.0, 0.0), Point2::new(-1.0, 0.0),
-        Point2::new(0.0, 1.0), Point2::new(0.0, 0.0)));
+    h = hash_sign(
+        h,
+        incircle(
+            Point2::new(1.0, 0.0),
+            Point2::new(-1.0, 0.0),
+            Point2::new(0.0, 1.0),
+            Point2::new(0.0, 0.0),
+        ),
+    );
 
     // Translation invariance
     let ti = Point2::new(1e10, -1e10);
-    h = hash_sign(h, incircle(
-        Point2::new(ca.x + ti.x, ca.y + ti.y),
-        Point2::new(cb.x + ti.x, cb.y + ti.y),
-        Point2::new(cc.x + ti.x, cc.y + ti.y),
-        Point2::new(0.0 + ti.x, 0.0 + ti.y),
-    ));
+    h = hash_sign(
+        h,
+        incircle(
+            Point2::new(ca.x + ti.x, ca.y + ti.y),
+            Point2::new(cb.x + ti.x, cb.y + ti.y),
+            Point2::new(cc.x + ti.x, cc.y + ti.y),
+            Point2::new(0.0 + ti.x, 0.0 + ti.y),
+        ),
+    );
 
     // ══════════════════════════════════════════════════════════════════════
     //  insphere (3D in-sphere)
@@ -252,10 +394,16 @@ pub fn compute_corpus_hash() -> u64 {
     h = hash_sign(h, insphere(sa, sb, sc, sd, Point3::new(0.0, -1.0, 0.0))); // on
 
     // Cospherical on arbitrary sphere
-    h = hash_sign(h, insphere(
-        Point3::new(7.0, 2.0, 3.0), Point3::new(1.0, 8.0, 3.0),
-        Point3::new(1.0, 2.0, 9.0), Point3::new(-5.0, 2.0, 3.0),
-        Point3::new(1.0, -4.0, 3.0)));
+    h = hash_sign(
+        h,
+        insphere(
+            Point3::new(7.0, 2.0, 3.0),
+            Point3::new(1.0, 8.0, 3.0),
+            Point3::new(1.0, 2.0, 9.0),
+            Point3::new(-5.0, 2.0, 3.0),
+            Point3::new(1.0, -4.0, 3.0),
+        ),
+    );
 
     // Near-cospherical (±1-ulp)
     let base_ey = -1.0f64;
@@ -265,36 +413,63 @@ pub fn compute_corpus_hash() -> u64 {
     }
 
     // Extreme exponents
-    h = hash_sign(h, insphere(
-        Point3::new(1e30, 0.0, 0.0), Point3::new(0.0, 1e30, 0.0),
-        Point3::new(0.0, 0.0, 1e30), Point3::new(-1e30, 0.0, 0.0),
-        Point3::new(0.0, 0.0, 0.0)));
-    h = hash_sign(h, insphere(
-        Point3::new(1e-30, 0.0, 0.0), Point3::new(0.0, 1e-30, 0.0),
-        Point3::new(0.0, 0.0, 1e-30), Point3::new(-1e-30, 0.0, 0.0),
-        Point3::new(0.0, 0.0, 0.0)));
+    h = hash_sign(
+        h,
+        insphere(
+            Point3::new(1e30, 0.0, 0.0),
+            Point3::new(0.0, 1e30, 0.0),
+            Point3::new(0.0, 0.0, 1e30),
+            Point3::new(-1e30, 0.0, 0.0),
+            Point3::new(0.0, 0.0, 0.0),
+        ),
+    );
+    h = hash_sign(
+        h,
+        insphere(
+            Point3::new(1e-30, 0.0, 0.0),
+            Point3::new(0.0, 1e-30, 0.0),
+            Point3::new(0.0, 0.0, 1e-30),
+            Point3::new(-1e-30, 0.0, 0.0),
+            Point3::new(0.0, 0.0, 0.0),
+        ),
+    );
 
     // Massive cancellation
-    h = hash_sign(h, insphere(
-        Point3::new(1e30, 0.0, 0.0), Point3::new(0.0, 1e30, 0.0),
-        Point3::new(0.0, 0.0, 1e30), Point3::new(-1e30, 0.0, 0.0),
-        Point3::new(0.0, -1e30 + 1.0, 0.0)));
+    h = hash_sign(
+        h,
+        insphere(
+            Point3::new(1e30, 0.0, 0.0),
+            Point3::new(0.0, 1e30, 0.0),
+            Point3::new(0.0, 0.0, 1e30),
+            Point3::new(-1e30, 0.0, 0.0),
+            Point3::new(0.0, -1e30 + 1.0, 0.0),
+        ),
+    );
 
     // Negative orientation (sign flips)
-    h = hash_sign(h, insphere(
-        Point3::new(0.0, 1.0, 0.0), Point3::new(1.0, 0.0, 0.0),
-        Point3::new(0.0, 0.0, 1.0), Point3::new(-1.0, 0.0, 0.0),
-        Point3::new(0.0, 0.0, 0.0)));
+    h = hash_sign(
+        h,
+        insphere(
+            Point3::new(0.0, 1.0, 0.0),
+            Point3::new(1.0, 0.0, 0.0),
+            Point3::new(0.0, 0.0, 1.0),
+            Point3::new(-1.0, 0.0, 0.0),
+            Point3::new(0.0, 0.0, 0.0),
+        ),
+    );
 
     // Translation invariance
     let ts = Point3::new(1e10, -1e10, 5e9);
-    h = hash_sign(h, insphere(
-        Point3::new(sa.x + ts.x, sa.y + ts.y, sa.z + ts.z),
-        Point3::new(sb.x + ts.x, sb.y + ts.y, sb.z + ts.z),
-        Point3::new(sc.x + ts.x, sc.y + ts.y, sc.z + ts.z),
-        Point3::new(sd.x + ts.x, sd.y + ts.y, sd.z + ts.z),
-        Point3::new(0.0 + ts.x, 0.0 + ts.y, 0.0 + ts.z),
-    ));
+    h = hash_sign(
+        h,
+        insphere(
+            Point3::new(sa.x + ts.x, sa.y + ts.y, sa.z + ts.z),
+            Point3::new(sb.x + ts.x, sb.y + ts.y, sb.z + ts.z),
+            Point3::new(sc.x + ts.x, sc.y + ts.y, sc.z + ts.z),
+            Point3::new(sd.x + ts.x, sd.y + ts.y, sd.z + ts.z),
+            Point3::new(0.0 + ts.x, 0.0 + ts.y, 0.0 + ts.z),
+        ),
+    );
 
     h
 }
@@ -365,6 +540,9 @@ mod tests {
         // the contract: if fast-math is introduced, the error-free transforms
         // (two_product via fma) will break, changing the hash.
         let h = compute_corpus_hash();
-        assert_eq!(h, PINNED_CORPUS_HASH, "fast-math would break the pinned hash");
+        assert_eq!(
+            h, PINNED_CORPUS_HASH,
+            "fast-math would break the pinned hash"
+        );
     }
 }

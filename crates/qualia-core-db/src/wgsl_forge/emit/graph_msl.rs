@@ -16,9 +16,7 @@
 use std::fmt::Write;
 
 use super::GeneratedShader;
-use crate::wgsl_forge::ir::graph::{
-    ComputeGraph, EwKind, GraphNode, Lowerer, OpNode, RedKind,
-};
+use crate::wgsl_forge::ir::graph::{ComputeGraph, EwKind, GraphNode, Lowerer, OpNode, RedKind};
 use crate::wgsl_forge::{ForgeError, Schedule, FORGE_SCHEMA_VERSION};
 
 /// MSL expression for a unary [`EwKind`] (`f(v)`), or `None` if not unary.
@@ -72,7 +70,12 @@ pub fn elementwise_msl(kind: EwKind) -> Result<String, ForgeError> {
 
 fn reduce_fragments_msl(op: RedKind) -> (&'static str, &'static str, &'static str, &'static str) {
     match op {
-        RedKind::Sum => ("0.0f", "acc + x", "scratch[tid] + scratch[tid + stride]", "scratch[0]"),
+        RedKind::Sum => (
+            "0.0f",
+            "acc + x",
+            "scratch[tid] + scratch[tid + stride]",
+            "scratch[0]",
+        ),
         RedKind::Mean => (
             "0.0f",
             "acc + x",
@@ -118,15 +121,20 @@ impl Lowerer for MslLowerer<'_> {
             self.source.push_str(&elementwise_msl(f)?);
             Ok(())
         } else {
-            Err(ForgeError::Emission("MslLowerer::elementwise on non-Elementwise".into()))
+            Err(ForgeError::Emission(
+                "MslLowerer::elementwise on non-Elementwise".into(),
+            ))
         }
     }
     fn reduce(&mut self, node: &GraphNode) -> Result<(), ForgeError> {
         if let OpNode::Reduce { op, .. } = node.op {
-            self.source.push_str(&reduce_msl(op, node.sched.workgroup_size.max(1)));
+            self.source
+                .push_str(&reduce_msl(op, node.sched.workgroup_size.max(1)));
             Ok(())
         } else {
-            Err(ForgeError::Emission("MslLowerer::reduce on non-Reduce".into()))
+            Err(ForgeError::Emission(
+                "MslLowerer::reduce on non-Reduce".into(),
+            ))
         }
     }
     fn broadcast(&mut self, _node: &GraphNode) -> Result<(), ForgeError> {
@@ -137,11 +145,19 @@ impl Lowerer for MslLowerer<'_> {
 
 /// Emit a complete MSL module for a portable compute-graph (the MSL analogue of
 /// `emit_graph_wgsl`). Non-portable nodes lower to an explicit `Err`.
-pub fn emit_graph_msl(graph: &ComputeGraph, schedule: Schedule) -> Result<GeneratedShader, ForgeError> {
+pub fn emit_graph_msl(
+    graph: &ComputeGraph,
+    schedule: Schedule,
+) -> Result<GeneratedShader, ForgeError> {
     let mut source = String::with_capacity(1_024);
-    writeln!(source, "// Qualia WGSL Forge schema {FORGE_SCHEMA_VERSION} (compute-graph → MSL).")
-        .map_err(|e| ForgeError::Emission(e.to_string()))?;
-    let mut lowerer = MslLowerer { source: &mut source };
+    writeln!(
+        source,
+        "// Qualia WGSL Forge schema {FORGE_SCHEMA_VERSION} (compute-graph → MSL)."
+    )
+    .map_err(|e| ForgeError::Emission(e.to_string()))?;
+    let mut lowerer = MslLowerer {
+        source: &mut source,
+    };
     crate::wgsl_forge::ir::graph::lower_graph(graph, &mut lowerer)?;
     let source_hash = blake3::hash(source.as_bytes()).to_hex().to_string();
     Ok(GeneratedShader {
@@ -160,7 +176,9 @@ mod tests {
     #[test]
     fn msl_portable_kit_emits_metal_constructs() {
         // Elementwise: a unary, a binary, fma.
-        assert!(elementwise_msl(EwKind::Silu).unwrap().contains("kernel void ewise_main"));
+        assert!(elementwise_msl(EwKind::Silu)
+            .unwrap()
+            .contains("kernel void ewise_main"));
         assert!(elementwise_msl(EwKind::Add).unwrap().contains("a + b"));
         assert!(elementwise_msl(EwKind::Fma).unwrap().contains("fma("));
         assert!(elementwise_msl(EwKind::Scale).is_err());

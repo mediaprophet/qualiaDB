@@ -321,7 +321,12 @@ impl MlDsaKeyManager {
     /// Check if a key should be rotated based on the rotation policy.
     /// Returns true if the key has exceeded its maximum signature count
     /// or the rotation interval has elapsed.
-    pub fn should_rotate_key(&self, _key_id: &str, signature_count: u64, key_age_seconds: u64) -> bool {
+    pub fn should_rotate_key(
+        &self,
+        _key_id: &str,
+        signature_count: u64,
+        key_age_seconds: u64,
+    ) -> bool {
         signature_count >= self.key_rotation_policy.max_signatures
             || key_age_seconds >= self.key_rotation_policy.rotation_interval
     }
@@ -581,7 +586,12 @@ impl FiduciaryCrypto {
     }
 
     /// Check if a key should be rotated according to the key manager's policy.
-    pub fn should_rotate_key(&self, key_id: &str, signature_count: u64, key_age_seconds: u64) -> bool {
+    pub fn should_rotate_key(
+        &self,
+        key_id: &str,
+        signature_count: u64,
+        key_age_seconds: u64,
+    ) -> bool {
         let key_manager = self.key_manager.lock().unwrap();
         key_manager.should_rotate_key(key_id, signature_count, key_age_seconds)
     }

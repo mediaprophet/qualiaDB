@@ -39,10 +39,16 @@ impl core::fmt::Display for IsosurfaceError {
         match self {
             Self::EmptyGrid => write!(f, "isosurface: empty grid"),
             Self::GridSizeMismatch { expected, got } => {
-                write!(f, "isosurface: grid size mismatch, expected {expected}, got {got}")
+                write!(
+                    f,
+                    "isosurface: grid size mismatch, expected {expected}, got {got}"
+                )
             }
             Self::BufferTooSmall { needed, have } => {
-                write!(f, "isosurface: buffer too small, need {needed}, have {have}")
+                write!(
+                    f,
+                    "isosurface: buffer too small, need {needed}, have {have}"
+                )
             }
         }
     }
@@ -78,29 +84,53 @@ const EDGE_TABLE: [u16; 256] = {
     while i < 256 {
         let mut bits = 0u16;
         // Edge 0: between corner 0 and 1
-        if (i & 1) != ((i >> 1) & 1) { bits |= 1 << 0; }
+        if (i & 1) != ((i >> 1) & 1) {
+            bits |= 1 << 0;
+        }
         // Edge 1: between corner 1 and 2
-        if ((i >> 1) & 1) != ((i >> 2) & 1) { bits |= 1 << 1; }
+        if ((i >> 1) & 1) != ((i >> 2) & 1) {
+            bits |= 1 << 1;
+        }
         // Edge 2: between corner 2 and 3
-        if ((i >> 2) & 1) != ((i >> 3) & 1) { bits |= 1 << 2; }
+        if ((i >> 2) & 1) != ((i >> 3) & 1) {
+            bits |= 1 << 2;
+        }
         // Edge 3: between corner 3 and 0
-        if ((i >> 3) & 1) != (i & 1) { bits |= 1 << 3; }
+        if ((i >> 3) & 1) != (i & 1) {
+            bits |= 1 << 3;
+        }
         // Edge 4: between corner 4 and 5
-        if ((i >> 4) & 1) != ((i >> 5) & 1) { bits |= 1 << 4; }
+        if ((i >> 4) & 1) != ((i >> 5) & 1) {
+            bits |= 1 << 4;
+        }
         // Edge 5: between corner 5 and 6
-        if ((i >> 5) & 1) != ((i >> 6) & 1) { bits |= 1 << 5; }
+        if ((i >> 5) & 1) != ((i >> 6) & 1) {
+            bits |= 1 << 5;
+        }
         // Edge 6: between corner 6 and 7
-        if ((i >> 6) & 1) != ((i >> 7) & 1) { bits |= 1 << 6; }
+        if ((i >> 6) & 1) != ((i >> 7) & 1) {
+            bits |= 1 << 6;
+        }
         // Edge 7: between corner 7 and 4
-        if ((i >> 7) & 1) != ((i >> 4) & 1) { bits |= 1 << 7; }
+        if ((i >> 7) & 1) != ((i >> 4) & 1) {
+            bits |= 1 << 7;
+        }
         // Edge 8: between corner 0 and 4
-        if (i & 1) != ((i >> 4) & 1) { bits |= 1 << 8; }
+        if (i & 1) != ((i >> 4) & 1) {
+            bits |= 1 << 8;
+        }
         // Edge 9: between corner 1 and 5
-        if ((i >> 1) & 1) != ((i >> 5) & 1) { bits |= 1 << 9; }
+        if ((i >> 1) & 1) != ((i >> 5) & 1) {
+            bits |= 1 << 9;
+        }
         // Edge 10: between corner 2 and 6
-        if ((i >> 2) & 1) != ((i >> 6) & 1) { bits |= 1 << 10; }
+        if ((i >> 2) & 1) != ((i >> 6) & 1) {
+            bits |= 1 << 10;
+        }
         // Edge 11: between corner 3 and 7
-        if ((i >> 3) & 1) != ((i >> 7) & 1) { bits |= 1 << 11; }
+        if ((i >> 3) & 1) != ((i >> 7) & 1) {
+            bits |= 1 << 11;
+        }
         table[i] = bits;
         i += 1;
     }
@@ -414,15 +444,30 @@ const TRI_TABLE_RAW: [&[i8]; 256] = [
 
 /// Edge endpoints: for each edge index (0-11), the two corner indices.
 const EDGE_CORNERS: [[u8; 2]; 12] = [
-    [0, 1], [1, 2], [2, 3], [3, 0], // bottom face
-    [4, 5], [5, 6], [6, 7], [7, 4], // top face
-    [0, 4], [1, 5], [2, 6], [3, 7], // vertical edges
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [3, 0], // bottom face
+    [4, 5],
+    [5, 6],
+    [6, 7],
+    [7, 4], // top face
+    [0, 4],
+    [1, 5],
+    [2, 6],
+    [3, 7], // vertical edges
 ];
 
 /// Corner offsets within a cell: (dx, dy, dz) for each of 8 corners.
 const CORNER_OFFSETS: [[u32; 3]; 8] = [
-    [0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], // bottom
-    [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1], // top
+    [0, 0, 0],
+    [1, 0, 0],
+    [1, 1, 0],
+    [0, 1, 0], // bottom
+    [0, 0, 1],
+    [1, 0, 1],
+    [1, 1, 1],
+    [0, 1, 1], // top
 ];
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -462,16 +507,25 @@ pub fn marching_cubes(
     }
     let expected = nx * ny * nz;
     if grid.len() < expected {
-        return Err(IsosurfaceError::GridSizeMismatch { expected, got: grid.len() });
+        return Err(IsosurfaceError::GridSizeMismatch {
+            expected,
+            got: grid.len(),
+        });
     }
 
     let max_verts = (nx - 1) * (ny - 1) * (nz - 1) * 30;
     let max_tris = (nx - 1) * (ny - 1) * (nz - 1) * 10;
     if out_vertices.len() < max_verts {
-        return Err(IsosurfaceError::BufferTooSmall { needed: max_verts, have: out_vertices.len() });
+        return Err(IsosurfaceError::BufferTooSmall {
+            needed: max_verts,
+            have: out_vertices.len(),
+        });
     }
     if out_triangles.len() < max_tris {
-        return Err(IsosurfaceError::BufferTooSmall { needed: max_tris, have: out_triangles.len() });
+        return Err(IsosurfaceError::BufferTooSmall {
+            needed: max_tris,
+            have: out_triangles.len(),
+        });
     }
 
     let mut vert_count = 0usize;
@@ -599,7 +653,15 @@ pub fn isosurface_hash(vertices: &[Point3], triangles: &[[u32; 3]]) -> u64 {
 mod tests {
     use super::*;
 
-    fn sphere_field(nx: usize, ny: usize, nz: usize, cx: f64, cy: f64, cz: f64, r: f64) -> Vec<f64> {
+    fn sphere_field(
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        cx: f64,
+        cy: f64,
+        cz: f64,
+        r: f64,
+    ) -> Vec<f64> {
         let mut grid = vec![0.0f64; nx * ny * nz];
         for k in 0..nz {
             for j in 0..ny {
@@ -627,9 +689,9 @@ mod tests {
         let mut tris = vec![[0u32; 3]; max_tris];
 
         let (vc, tc) = marching_cubes(
-            &grid, nx, ny, nz, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0,
-            &mut verts, &mut tris,
-        ).unwrap();
+            &grid, nx, ny, nz, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, &mut verts, &mut tris,
+        )
+        .unwrap();
 
         assert!(vc > 0, "sphere should produce vertices");
         assert!(tc > 0, "sphere should produce triangles");
@@ -643,9 +705,9 @@ mod tests {
         let mut tris = vec![[0u32; 3]; 3 * 3 * 3 * 10];
 
         let (vc, tc) = marching_cubes(
-            &grid, 4, 4, 4, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0,
-            &mut verts, &mut tris,
-        ).unwrap();
+            &grid, 4, 4, 4, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, &mut verts, &mut tris,
+        )
+        .unwrap();
 
         assert_eq!(vc, 0, "uniform field above isolevel → no vertices");
         assert_eq!(tc, 0, "uniform field above isolevel → no triangles");
@@ -665,8 +727,14 @@ mod tests {
         let mut v2 = vec![Point3::default(); max_verts];
         let mut t2 = vec![[0u32; 3]; max_tris];
 
-        let (vc1, tc1) = marching_cubes(&grid, nx, ny, nz, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, &mut v1, &mut t1).unwrap();
-        let (vc2, tc2) = marching_cubes(&grid, nx, ny, nz, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, &mut v2, &mut t2).unwrap();
+        let (vc1, tc1) = marching_cubes(
+            &grid, nx, ny, nz, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, &mut v1, &mut t1,
+        )
+        .unwrap();
+        let (vc2, tc2) = marching_cubes(
+            &grid, nx, ny, nz, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, &mut v2, &mut t2,
+        )
+        .unwrap();
 
         assert_eq!(vc1, vc2);
         assert_eq!(tc1, tc2);
@@ -682,7 +750,9 @@ mod tests {
         let mut verts = vec![Point3::default(); 1];
         let mut tris = vec![[0u32; 3]; 1];
         assert!(matches!(
-            marching_cubes(&grid, 0, 0, 0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, &mut verts, &mut tris),
+            marching_cubes(
+                &grid, 0, 0, 0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, &mut verts, &mut tris
+            ),
             Err(IsosurfaceError::EmptyGrid)
         ));
     }
@@ -693,7 +763,9 @@ mod tests {
         let mut verts = vec![Point3::default(); 100];
         let mut tris = vec![[0u32; 3]; 100];
         assert!(matches!(
-            marching_cubes(&grid, 4, 4, 4, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, &mut verts, &mut tris),
+            marching_cubes(
+                &grid, 4, 4, 4, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, &mut verts, &mut tris
+            ),
             Err(IsosurfaceError::GridSizeMismatch { .. })
         ));
     }
@@ -718,9 +790,9 @@ mod tests {
         let mut tris = vec![[0u32; 3]; max_tris];
 
         let (vc, tc) = marching_cubes(
-            &grid, nx, ny, nz, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0,
-            &mut verts, &mut tris,
-        ).unwrap();
+            &grid, nx, ny, nz, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, &mut verts, &mut tris,
+        )
+        .unwrap();
 
         // A plane should produce triangles.
         assert!(tc > 0, "plane should produce triangles");
@@ -834,7 +906,10 @@ mod tests {
         }
         // 2-manifold: no edge shared by more than two triangles.
         for (e, &cnt) in &edge_count {
-            assert!(cnt <= 2, "non-manifold edge {e:?} shared by {cnt} triangles");
+            assert!(
+                cnt <= 2,
+                "non-manifold edge {e:?} shared by {cnt} triangles"
+            );
         }
     }
 }

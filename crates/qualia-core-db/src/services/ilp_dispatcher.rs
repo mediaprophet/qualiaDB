@@ -251,14 +251,18 @@ impl<T: IlpTransport> IlpDispatcher<T> {
             instructions: vec![instruction],
         };
         let result = self.dispatch(&plan);
-        result.receipts.into_iter().next().unwrap_or(PaymentReceipt {
-            recipient_label: String::new(),
-            ilp_address: String::new(),
-            amount_micro_cents: 0,
-            via_nym: false,
-            status: PaymentStatus::Failed("no receipt generated".to_string()),
-            timestamp_ms: system_time_ms(),
-        })
+        result
+            .receipts
+            .into_iter()
+            .next()
+            .unwrap_or(PaymentReceipt {
+                recipient_label: String::new(),
+                ilp_address: String::new(),
+                amount_micro_cents: 0,
+                via_nym: false,
+                status: PaymentStatus::Failed("no receipt generated".to_string()),
+                timestamp_ms: system_time_ms(),
+            })
     }
 }
 

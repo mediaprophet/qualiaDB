@@ -362,7 +362,10 @@ mod tests {
 
         // beta/alpha must now be real numbers, not NaN.
         assert!(!m.beta.is_nan(), "beta should be computed with a benchmark");
-        assert!(!m.alpha.is_nan(), "alpha should be computed with a benchmark");
+        assert!(
+            !m.alpha.is_nan(),
+            "alpha should be computed with a benchmark"
+        );
         assert!((m.beta - 2.0).abs() < 1e-9, "beta {} should be 2.0", m.beta);
         assert!(m.alpha.abs() < 1e-9, "alpha {} should be ~0.0", m.alpha);
 

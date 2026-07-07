@@ -15,9 +15,7 @@
 
 use std::collections::HashMap;
 
-use super::super::{
-    fnv60, AssetRef, AssetRole, Descriptors, Place, Processor, ProcessorOutput,
-};
+use super::super::{fnv60, AssetRef, AssetRole, Descriptors, Place, Processor, ProcessorOutput};
 
 /// Metadata read out of an image's own header — none of it inferred from pixels.
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -125,14 +123,22 @@ impl Processor for ImageProcessor {
         }
 
         let meta_uri = format!("{asset_uri}#exif");
-        let derived = vec![
-            AssetRef::new(&meta_uri, fnv60(summary.as_bytes()), "text/plain", AssetRole::Analysis)
-                .derived_from(asset_uri),
-        ];
+        let derived = vec![AssetRef::new(
+            &meta_uri,
+            fnv60(summary.as_bytes()),
+            "text/plain",
+            AssetRole::Analysis,
+        )
+        .derived_from(asset_uri)];
         let mut derived_bytes = HashMap::new();
         derived_bytes.insert(meta_uri, summary.into_bytes());
 
-        ProcessorOutput { derived, derived_bytes, descriptors, flags: Vec::new() }
+        ProcessorOutput {
+            derived,
+            derived_bytes,
+            descriptors,
+            flags: Vec::new(),
+        }
     }
 }
 
@@ -279,13 +285,21 @@ fn parse_tiff(t: &[u8]) -> ImageMetadata {
             _ => {}
         });
         if let Some(mut v) = lat {
-            if lat_ref.as_deref().map(|r| r.starts_with('S')).unwrap_or(false) {
+            if lat_ref
+                .as_deref()
+                .map(|r| r.starts_with('S'))
+                .unwrap_or(false)
+            {
                 v = -v;
             }
             meta.lat = Some(v);
         }
         if let Some(mut v) = lon {
-            if lon_ref.as_deref().map(|r| r.starts_with('W')).unwrap_or(false) {
+            if lon_ref
+                .as_deref()
+                .map(|r| r.starts_with('W'))
+                .unwrap_or(false)
+            {
                 v = -v;
             }
             meta.lon = Some(v);
@@ -314,13 +328,22 @@ fn walk_ifd(t: &Tiff<'_>, ifd_off: usize, f: &mut dyn FnMut(u16, &Entry)) {
         }
         let total = sz.saturating_mul(cnt as usize);
         // Value is inline in the 4-byte field when it fits, else `field` is an offset.
-        let value_off = if total <= 4 { e_off + 8 } else {
+        let value_off = if total <= 4 {
+            e_off + 8
+        } else {
             match t.u32(e_off + 8) {
                 Some(o) => o as usize,
                 None => continue,
             }
         };
-        f(tag, &Entry { typ, count: cnt, value_off });
+        f(
+            tag,
+            &Entry {
+                typ,
+                count: cnt,
+                value_off,
+            },
+        );
     }
 }
 
@@ -413,7 +436,7 @@ fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
 fn parse_png(b: &[u8]) -> ImageMetadata {
     let mut meta = ImageMetadata::default();
     let mut i = 8; // skip signature
-    // First chunk is IHDR: width/height are the first two u32 of its data.
+                   // First chunk is IHDR: width/height are the first two u32 of its data.
     while i + 8 <= b.len() {
         let len = u32::from_be_bytes([b[i], b[i + 1], b[i + 2], b[i + 3]]) as usize;
         let typ = match b.get(i + 4..i + 8) {
@@ -490,7 +513,7 @@ mod tests {
 
         // --- IFD0 (offset 8) ---
         b.extend_from_slice(&2u16.to_le_bytes()); // entry count
-        // Exif IFD pointer (tag 0x8769, LONG, count1)
+                                                  // Exif IFD pointer (tag 0x8769, LONG, count1)
         push_entry(&mut b, 0x8769, 4, 1, exif_ifd);
         // GPS IFD pointer (tag 0x8825, LONG, count1)
         push_entry(&mut b, 0x8825, 4, 1, gps_ifd);
@@ -520,7 +543,7 @@ mod tests {
 
         // --- value heap (offset 110) ---
         b.extend_from_slice(dt); // datetime string
-        // lat = 48° 51' 30" (≈ Paris 48.858333)
+                                 // lat = 48° 51' 30" (≈ Paris 48.858333)
         push_rational(&mut b, 48, 1);
         push_rational(&mut b, 51, 1);
         push_rational(&mut b, 30, 1);
@@ -576,10 +599,16 @@ mod tests {
         let subj = r.container.primary.subject();
         // On the timeline: a window around the capture instant finds the photo.
         let hits = in_time_range(&r.quins, 1_626_255_000 - 60, 1_626_255_000 + 60);
-        assert!(hits.contains(&subj), "photo findable on the timeline by its EXIF instant");
+        assert!(
+            hits.contains(&subj),
+            "photo findable on the timeline by its EXIF instant"
+        );
         // On the map: the coordinate-labelled place finds it.
         let place = format!("{:.5},{:.5}", 48.858_333_f32, 2.294_444_f32);
-        assert!(by_place(&r.quins, &place).contains(&subj), "photo findable at its GPS place");
+        assert!(
+            by_place(&r.quins, &place).contains(&subj),
+            "photo findable at its GPS place"
+        );
     }
 
     #[test]
@@ -593,13 +622,13 @@ mod tests {
         b.extend_from_slice(&480u32.to_be_bytes());
         b.extend_from_slice(&[8, 2, 0, 0, 0]); // bit depth, colour, etc.
         b.extend_from_slice(&0u32.to_be_bytes()); // fake CRC
-        // tIME = 2020-01-02 03:04:05
+                                                  // tIME = 2020-01-02 03:04:05
         b.extend_from_slice(&7u32.to_be_bytes());
         b.extend_from_slice(b"tIME");
         b.extend_from_slice(&2020u16.to_be_bytes());
         b.extend_from_slice(&[1, 2, 3, 4, 5]);
         b.extend_from_slice(&0u32.to_be_bytes()); // fake CRC
-        // IEND
+                                                  // IEND
         b.extend_from_slice(&0u32.to_be_bytes());
         b.extend_from_slice(b"IEND");
         b.extend_from_slice(&0u32.to_be_bytes());

@@ -65,7 +65,7 @@ fn complete_mode_recovers_uris_and_multilingual_literals() {
     for needle in [
         "a domesticated carnivore", // English
         "koira on eläin",           // Finnish (ä)
-        "犬は動物です",              // Japanese
+        "犬は動物です",             // Japanese
         "الكلب حيوان أليف",         // Arabic (RTL)
         "hound",
     ] {
@@ -96,7 +96,9 @@ fn complete_mode_recovers_uris_and_multilingual_literals() {
     let lex = vol.lex_view().expect("lex");
     let resolvable = quins
         .iter()
-        .filter(|q| lex.lookup_hash(q.object).is_some() || lex.lookup_hash(q.object & MASK).is_some())
+        .filter(|q| {
+            lex.lookup_hash(q.object).is_some() || lex.lookup_hash(q.object & MASK).is_some()
+        })
         .count();
     assert_eq!(
         resolvable, 5,

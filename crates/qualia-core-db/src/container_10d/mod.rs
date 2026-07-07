@@ -62,9 +62,9 @@ pub mod section;
 // (the portal renderer upload path uses `mesh_section`, which has no
 // `specialized_libs` dependency).
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-pub mod topology_section;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod spatial_index_section;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub mod topology_section;
 
 pub use axis_role::{
     AxisRole, AXIS_ORDER, COORDINATE_AXES, MU_AXIS, PROPOSED_AXIS_ROLES, SELECTOR_AXES,
@@ -77,14 +77,14 @@ pub use header::{
 pub use integrity::{
     compute_whole_file_crc32c, seal_whole_file_crc32c, verify_whole_file_crc32c, IntegrityError,
 };
+pub use mesh_section::{
+    decode_mesh_section, encode_mesh_section, parse_mesh_header, MeshMiniHeader, MeshSectionError,
+    FLAG_U16_INDICES, MAX_TRIANGLE_COUNT, MAX_VERTEX_COUNT, MESH_MINI_HEADER_SIZE,
+};
 pub use metric_check::{
     proposed_metric_descriptor, verify_descriptor_against_reality, MetricBranchDescriptor,
     MetricCompletenessDescriptor, MetricDivergence, MetricKind, BOUNDARY_CLIQUE_BRANCH_INDEX,
     METRIC_BRANCH_COUNT,
-};
-pub use mesh_section::{
-    decode_mesh_section, encode_mesh_section, parse_mesh_header, MeshMiniHeader, MeshSectionError,
-    FLAG_U16_INDICES, MAX_TRIANGLE_COUNT, MAX_VERTEX_COUNT, MESH_MINI_HEADER_SIZE,
 };
 pub use node_section::{
     parse_node_header, read_node, read_node_aos, read_node_soa, read_node_soa_lane,
@@ -103,14 +103,14 @@ pub use section::{
     SectionTableError, SectionType, SECTION_DESCRIPTOR_SIZE,
 };
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-pub use topology_section::{
-    decode_topology_section, encode_topology_section, TopologyMiniHeader, TopologySectionData,
-    TopologySectionError, TOPOLOGY_MINI_HEADER_SIZE,
-};
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub use spatial_index_section::{
     decode_spatial_index_section, encode_spatial_index_section, DecodedSpatialIndex,
     SpatialIndexMiniHeader, SpatialIndexSectionError, SPATIAL_INDEX_MINI_HEADER_SIZE,
+};
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use topology_section::{
+    decode_topology_section, encode_topology_section, TopologyMiniHeader, TopologySectionData,
+    TopologySectionError, TOPOLOGY_MINI_HEADER_SIZE,
 };
 
 /// Versioned `.10d` container ABI. Increment only when public POD layouts or

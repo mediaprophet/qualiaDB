@@ -83,7 +83,6 @@ impl QTensorEngine {
         })
     }
 
-
     /// A1a: create the persistent GPU top-k pipeline + small candidate/staging buffers (once).
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn init_output_topk(&mut self) {

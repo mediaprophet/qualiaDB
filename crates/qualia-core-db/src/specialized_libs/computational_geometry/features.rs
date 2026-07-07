@@ -2,9 +2,9 @@
 
 use crate::tensor::Tensor10D;
 
-use super::{HalfEdge, INVALID_INDEX};
 use super::connectivity::ConnectivitySummary;
 use super::csr_adjacency::{CsrHeader, CsrSummary};
+use super::{HalfEdge, INVALID_INDEX};
 
 // ---------------------------------------------------------------------------
 // Compile-time alignment / Pod assertions for GPU staging

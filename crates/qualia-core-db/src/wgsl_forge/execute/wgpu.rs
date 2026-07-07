@@ -5,15 +5,15 @@ use std::time::Instant;
 
 use super::compute::QualiaCompute;
 use super::memory::{
-    BindingUsage, BufferView, DEFAULT_BINDING_ALIGNMENT, MemoryTopology, QualiaSlabAllocator,
+    BindingUsage, BufferView, MemoryTopology, QualiaSlabAllocator, DEFAULT_BINDING_ALIGNMENT,
 };
 use super::oracle_ctx::OracleContext;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::gpu_context::GpuAdapterCaps;
 use crate::wgsl_forge::{
     emit_shader, AdapterConstraints, AdapterIdentity, ForgeError, HardwareProfile, KernelSpec,
     Schedule, TargetBackend,
 };
-#[cfg(not(target_arch = "wasm32"))]
-use crate::gpu_context::GpuAdapterCaps;
 
 pub struct WgpuComputeContext {
     pub device: wgpu::Device,
@@ -112,10 +112,14 @@ impl WgpuComputeContext {
         };
 
         // Determine topology (unified vs discrete)
-        let topology = if info.device_type == wgpu::DeviceType::IntegratedGpu || info.device_type == wgpu::DeviceType::Cpu {
+        let topology = if info.device_type == wgpu::DeviceType::IntegratedGpu
+            || info.device_type == wgpu::DeviceType::Cpu
+        {
             MemoryTopology::Unified { zero_copy: true }
         } else {
-            MemoryTopology::Discrete { staging_required: true }
+            MemoryTopology::Discrete {
+                staging_required: true,
+            }
         };
         let memory_class = match topology {
             MemoryTopology::Unified { .. } => "unified",
@@ -144,7 +148,7 @@ impl WgpuComputeContext {
         };
 
         let allocator = QualiaSlabAllocator::new(topology, capacity_bytes);
-        
+
         let slab = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("forge-slab"),
             size: capacity_bytes as u64,
@@ -223,8 +227,7 @@ impl WgpuComputeContext {
         constraints.supports_subgroups = features.contains(wgpu::Features::SUBGROUP);
         constraints.supports_coopmat =
             features.contains(wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX);
-        constraints.supports_rt_cores =
-            features.contains(wgpu::Features::EXPERIMENTAL_RAY_QUERY);
+        constraints.supports_rt_cores = features.contains(wgpu::Features::EXPERIMENTAL_RAY_QUERY);
         // AMD wavefronts are 64-wide; others 32. Vendor id 0x1002 = AMD.
         constraints.warp_size = if caps.vendor == 0x1002 { 64 } else { 32 };
 
@@ -234,7 +237,9 @@ impl WgpuComputeContext {
         ) {
             MemoryTopology::Unified { zero_copy: true }
         } else {
-            MemoryTopology::Discrete { staging_required: true }
+            MemoryTopology::Discrete {
+                staging_required: true,
+            }
         };
         let memory_class = match topology {
             MemoryTopology::Unified { .. } => "unified",
@@ -337,11 +342,20 @@ impl WgpuComputeContext {
     /// zero-copy benefit cannot be measured on this discrete-only host (RTX A2000),
     /// so it is left as documented future work rather than shipped unverified. See
     /// [`MemoryTopology`] for the full rationale.
-    pub fn allocate_and_write(&mut self, data: &[u8], binding: u32, group: u32, usage: BindingUsage) -> Result<BufferView, ForgeError> {
-        let view = self.allocator.allocate_transient(data.len(), binding, group, usage)?;
+    pub fn allocate_and_write(
+        &mut self,
+        data: &[u8],
+        binding: u32,
+        group: u32,
+        usage: BindingUsage,
+    ) -> Result<BufferView, ForgeError> {
+        let view = self
+            .allocator
+            .allocate_transient(data.len(), binding, group, usage)?;
         if !data.is_empty() {
             let slab = self.slab_for(usage);
-            self.queue.write_buffer(slab, view.offset as wgpu::BufferAddress, data);
+            self.queue
+                .write_buffer(slab, view.offset as wgpu::BufferAddress, data);
         }
         Ok(view)
     }
@@ -358,7 +372,8 @@ impl WgpuComputeContext {
         binding: u32,
         group: u32,
     ) -> Result<BufferView, ForgeError> {
-        let offset = self.weight_cursor.div_ceil(DEFAULT_BINDING_ALIGNMENT) * DEFAULT_BINDING_ALIGNMENT;
+        let offset =
+            self.weight_cursor.div_ceil(DEFAULT_BINDING_ALIGNMENT) * DEFAULT_BINDING_ALIGNMENT;
         let end = offset + data.len();
         let cap = self.weight_slab.size() as usize;
         if end > cap {
@@ -392,18 +407,25 @@ impl WgpuComputeContext {
         self.weight_cursor
     }
 
-    pub fn allocate_transient(&mut self, size_bytes: usize, binding: u32, group: u32, usage: BindingUsage) -> Result<BufferView, ForgeError> {
-        self.allocator.allocate_transient(size_bytes, binding, group, usage)
+    pub fn allocate_transient(
+        &mut self,
+        size_bytes: usize,
+        binding: u32,
+        group: u32,
+        usage: BindingUsage,
+    ) -> Result<BufferView, ForgeError> {
+        self.allocator
+            .allocate_transient(size_bytes, binding, group, usage)
     }
 
     pub fn advance_read_head(&mut self, offset: usize) {
         self.allocator.advance_read_head(offset);
     }
-    
+
     pub fn clear_transient_allocations(&mut self) {
         self.allocator.clear();
     }
-    
+
     /// Builds a bottom-level (BLAS) + top-level (TLAS) acceleration structure for a
     /// triangle soup and returns both, ready to bind to a ray-query shader. `vertices`
     /// is a flat list of `f32` triples (3 per vertex, 3 vertices per triangle),
@@ -496,7 +518,9 @@ impl WgpuComputeContext {
         self.queue.submit(Some(encoder.finish()));
         self.device
             .poll(wgpu::PollType::wait_indefinitely())
-            .map_err(|e| ForgeError::DeviceLost(format!("device poll failed building accel: {e:?}")))?;
+            .map_err(|e| {
+                ForgeError::DeviceLost(format!("device poll failed building accel: {e:?}"))
+            })?;
 
         Ok((blas, tlas))
     }
@@ -512,18 +536,22 @@ impl WgpuComputeContext {
         entry_point: &str,
     ) -> Result<wgpu::ComputePipeline, ForgeError> {
         let error_scope = self.device.push_error_scope(wgpu::ErrorFilter::Validation);
-        let shader = self.device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("qualia-wgsl-forge"),
-            source: wgpu::ShaderSource::Wgsl(source.into()),
-        });
-        let pipeline = self.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("qualia-wgsl-forge-pipeline"),
-            layout: None,
-            module: &shader,
-            entry_point: Some(entry_point),
-            compilation_options: Default::default(),
-            cache: None,
-        });
+        let shader = self
+            .device
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("qualia-wgsl-forge"),
+                source: wgpu::ShaderSource::Wgsl(source.into()),
+            });
+        let pipeline = self
+            .device
+            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("qualia-wgsl-forge-pipeline"),
+                layout: None,
+                module: &shader,
+                entry_point: Some(entry_point),
+                compilation_options: Default::default(),
+                cache: None,
+            });
         if let Some(error) = pollster::block_on(error_scope.pop()) {
             return Err(ForgeError::GpuValidation(error.to_string()));
         }
@@ -596,9 +624,11 @@ impl WgpuComputeContext {
     /// completion and surfaces any validation error.
     pub fn submit_graph(&self, passes: &[GraphPass]) -> Result<(), ForgeError> {
         let error_scope = self.device.push_error_scope(wgpu::ErrorFilter::Validation);
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("forge-graph-encoder"),
-        });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("forge-graph-encoder"),
+            });
         for pass in passes {
             {
                 let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -628,7 +658,9 @@ impl WgpuComputeContext {
         self.queue.submit(Some(encoder.finish()));
         self.device
             .poll(wgpu::PollType::wait_indefinitely())
-            .map_err(|e| ForgeError::DeviceLost(format!("device poll failed submitting graph: {e:?}")))?;
+            .map_err(|e| {
+                ForgeError::DeviceLost(format!("device poll failed submitting graph: {e:?}"))
+            })?;
         if let Some(error) = pollster::block_on(error_scope.pop()) {
             return Err(ForgeError::GpuValidation(error.to_string()));
         }
@@ -646,9 +678,11 @@ impl WgpuComputeContext {
         if len == 0 {
             return Ok(());
         }
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("forge-view-copy"),
-        });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("forge-view-copy"),
+            });
         encoder.copy_buffer_to_buffer(
             self.slab_for(src.usage),
             src.offset as u64,
@@ -668,13 +702,21 @@ impl WgpuComputeContext {
             usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
             mapped_at_creation: false,
         });
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("forge-output-copy"),
-        });
-        encoder.copy_buffer_to_buffer(self.slab_for(view.usage), view.offset as u64, &staging, 0, size);
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("forge-output-copy"),
+            });
+        encoder.copy_buffer_to_buffer(
+            self.slab_for(view.usage),
+            view.offset as u64,
+            &staging,
+            0,
+            size,
+        );
         self.queue.submit(Some(encoder.finish()));
         let bytes = map_read(&self.device, &staging)?;
-        
+
         let elements = view.length_bytes / size_of::<f32>();
         let output = bytemuck::cast_slice::<u8, f32>(&bytes)[..elements].to_vec();
         drop(bytes);
@@ -768,7 +810,11 @@ pub struct WgpuPipeline<'a> {
 }
 
 impl<'a> WgpuPipeline<'a> {
-    pub fn compile(context: &'a WgpuComputeContext, source: &str, entry_point: &str) -> Result<Self, ForgeError> {
+    pub fn compile(
+        context: &'a WgpuComputeContext,
+        source: &str,
+        entry_point: &str,
+    ) -> Result<Self, ForgeError> {
         let pipeline = context.compile_pipeline(source, entry_point)?;
         Ok(Self { context, pipeline })
     }
@@ -813,12 +859,12 @@ impl<'a> WgpuPipeline<'a> {
         let dispatch_x = schedule.dispatch_workgroups(element_count);
 
         let started = Instant::now();
-        let mut encoder = self
-            .context
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("forge-rayprobe-dispatch"),
-            });
+        let mut encoder =
+            self.context
+                .device
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("forge-rayprobe-dispatch"),
+                });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("forge-rayprobe-pass"),
@@ -829,7 +875,10 @@ impl<'a> WgpuPipeline<'a> {
             pass.dispatch_workgroups(dispatch_x, 1, 1);
         }
         self.context.queue.submit(Some(encoder.finish()));
-        let _ = self.context.device.poll(wgpu::PollType::wait_indefinitely());
+        let _ = self
+            .context
+            .device
+            .poll(wgpu::PollType::wait_indefinitely());
         Ok(started.elapsed().as_nanos().min(u64::MAX as u128) as u64)
     }
 }
@@ -841,18 +890,25 @@ impl<'a> QualiaCompute for WgpuPipeline<'a> {
         schedule: &Schedule,
         element_count: usize,
     ) -> Result<u64, ForgeError> {
-        let bind_group = self.context.create_compute_bind_group(&self.pipeline, buffers);
+        let bind_group = self
+            .context
+            .create_compute_bind_group(&self.pipeline, buffers);
         let dispatch_x = schedule.dispatch_workgroups(element_count);
 
         let started = Instant::now();
-        let mut encoder = self.context.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("forge-dispatch"),
-        });
+        let mut encoder =
+            self.context
+                .device
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("forge-dispatch"),
+                });
         {
-            let timestamp_writes = self.context.timestamp_resources.as_ref().map(|resources| wgpu::ComputePassTimestampWrites {
-                query_set: &resources.query_set,
-                beginning_of_pass_write_index: Some(0),
-                end_of_pass_write_index: Some(1),
+            let timestamp_writes = self.context.timestamp_resources.as_ref().map(|resources| {
+                wgpu::ComputePassTimestampWrites {
+                    query_set: &resources.query_set,
+                    beginning_of_pass_write_index: Some(0),
+                    end_of_pass_write_index: Some(1),
+                }
             });
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("forge-compute-pass"),
@@ -862,7 +918,7 @@ impl<'a> QualiaCompute for WgpuPipeline<'a> {
             pass.set_bind_group(0, &bind_group, &[]);
             pass.dispatch_workgroups(dispatch_x, 1, 1);
         }
-        
+
         if let Some(resources) = &self.context.timestamp_resources {
             encoder.resolve_query_set(&resources.query_set, 0..2, &resources.resolve, 0);
             encoder.copy_buffer_to_buffer(&resources.resolve, 0, &resources.staging, 0, 16);

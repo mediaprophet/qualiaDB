@@ -2987,9 +2987,22 @@ pub async fn reset_weight_model() -> Result<(), String> {
 
 // ── Hypermedia asset library: ingest a document → find it by meaning ──
 
-/// Ingest a text document (derive topics + searchable text; guardianship flag→notify). Returns a summary.
+/// The person-authored facets attached at ingest — an optional date (timeline), place (map), project and
+/// purpose. All `None`/empty ⇒ ingest derives what it can from the content alone.
+#[derive(Debug, Clone, Default)]
+pub struct IngestFacets {
+    pub occurred_at: Option<i64>,
+    pub place_label: Option<String>,
+    pub lat: Option<f32>,
+    pub lon: Option<f32>,
+    pub project: Option<String>,
+    pub purpose: Option<String>,
+}
+
+/// Ingest a text document (derive topics + searchable text; guardianship flag→notify), optionally placing it
+/// on the timeline/map via person-authored `facets`. Returns a summary.
 #[cfg(target_arch = "wasm32")]
-pub async fn ingest_document(uri: &str, media_type: &str, text: &str, guardian_did: Option<String>) -> Result<serde_json::Value, String> {
+pub async fn ingest_document(uri: &str, media_type: &str, text: &str, guardian_did: Option<String>, facets: &IngestFacets) -> Result<serde_json::Value, String> {
     let args = js_sys::Object::new();
     for (k, v) in [("uri", uri), ("mediaType", media_type), ("text", text)] {
         js_sys::Reflect::set(&args, &k.into(), &wasm_bindgen::JsValue::from_str(v)).map_err(|_| "args".to_string())?;
@@ -2997,12 +3010,50 @@ pub async fn ingest_document(uri: &str, media_type: &str, text: &str, guardian_d
     if let Some(g) = guardian_did {
         js_sys::Reflect::set(&args, &"guardianDid".into(), &wasm_bindgen::JsValue::from_str(&g)).map_err(|_| "args".to_string())?;
     }
+    if let Some(t) = facets.occurred_at {
+        js_sys::Reflect::set(&args, &"occurredAt".into(), &wasm_bindgen::JsValue::from_f64(t as f64)).map_err(|_| "args".to_string())?;
+    }
+    if let Some(l) = &facets.place_label {
+        js_sys::Reflect::set(&args, &"placeLabel".into(), &wasm_bindgen::JsValue::from_str(l)).map_err(|_| "args".to_string())?;
+    }
+    if let Some(v) = facets.lat {
+        js_sys::Reflect::set(&args, &"lat".into(), &wasm_bindgen::JsValue::from_f64(v as f64)).map_err(|_| "args".to_string())?;
+    }
+    if let Some(v) = facets.lon {
+        js_sys::Reflect::set(&args, &"lon".into(), &wasm_bindgen::JsValue::from_f64(v as f64)).map_err(|_| "args".to_string())?;
+    }
+    if let Some(p) = &facets.project {
+        js_sys::Reflect::set(&args, &"project".into(), &wasm_bindgen::JsValue::from_str(p)).map_err(|_| "args".to_string())?;
+    }
+    if let Some(p) = &facets.purpose {
+        js_sys::Reflect::set(&args, &"purpose".into(), &wasm_bindgen::JsValue::from_str(p)).map_err(|_| "args".to_string())?;
+    }
     let js = tauri_invoke("wellfair_ingest_document", args.into()).await.map_err(|e| format!("{e:?}"))?;
     let json = js.as_string().ok_or_else(|| "ingest response not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn ingest_document(_u: &str, _m: &str, _t: &str, _g: Option<String>) -> Result<serde_json::Value, String> {
+pub async fn ingest_document(_u: &str, _m: &str, _t: &str, _g: Option<String>, _f: &IngestFacets) -> Result<serde_json::Value, String> {
+    Err("The library requires the Tauri desktop host".into())
+}
+
+/// Ingest a binary asset (photo/audio) from hex-encoded bytes — a photo's EXIF time/GPS auto-populate the
+/// timeline/map. Returns a summary.
+#[cfg(target_arch = "wasm32")]
+pub async fn ingest_file_hex(uri: &str, media_type: &str, bytes_hex: &str, caption: &str, guardian_did: Option<String>) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    for (k, v) in [("uri", uri), ("mediaType", media_type), ("bytesHex", bytes_hex), ("caption", caption)] {
+        js_sys::Reflect::set(&args, &k.into(), &wasm_bindgen::JsValue::from_str(v)).map_err(|_| "args".to_string())?;
+    }
+    if let Some(g) = guardian_did {
+        js_sys::Reflect::set(&args, &"guardianDid".into(), &wasm_bindgen::JsValue::from_str(&g)).map_err(|_| "args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_ingest_file_hex", args.into()).await.map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "ingest response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn ingest_file_hex(_u: &str, _m: &str, _b: &str, _c: &str, _g: Option<String>) -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }
 
@@ -3030,6 +3081,21 @@ pub async fn list_library() -> Result<serde_json::Value, String> {
 }
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn list_library() -> Result<serde_json::Value, String> {
+    Err("The library requires the Tauri desktop host".into())
+}
+
+/// The timeline query — entries whose event instant falls within `[start, end]` (unix seconds).
+#[cfg(target_arch = "wasm32")]
+pub async fn search_library_time(start: i64, end: i64) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"start".into(), &wasm_bindgen::JsValue::from_f64(start as f64)).map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"end".into(), &wasm_bindgen::JsValue::from_f64(end as f64)).map_err(|_| "args".to_string())?;
+    let js = tauri_invoke("wellfair_search_library_time", args.into()).await.map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "timeline response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn search_library_time(_s: i64, _e: i64) -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }
 

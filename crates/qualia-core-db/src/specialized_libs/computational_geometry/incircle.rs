@@ -102,7 +102,17 @@ impl IncircleDiffs {
     /// The permanent: sum of absolute values of the 6 determinant terms.
     #[inline]
     fn permanent(&self) -> f64 {
-        let IncircleDiffs { adx, ady, bdx, bdy, cdx, cdy, ad2, bd2, cd2 } = *self;
+        let IncircleDiffs {
+            adx,
+            ady,
+            bdx,
+            bdy,
+            cdx,
+            cdy,
+            ad2,
+            bd2,
+            cd2,
+        } = *self;
         (adx.abs() * (bdy.abs() * cd2.abs() + cdy.abs() * bd2.abs()))
             + (ady.abs() * (bdx.abs() * cd2.abs() + cdx.abs() * bd2.abs()))
             + (ad2.abs() * (bdx.abs() * cdy.abs() + bdy.abs() * cdx.abs()))
@@ -115,7 +125,17 @@ impl IncircleDiffs {
 
 #[inline]
 fn filtered_det(d: &IncircleDiffs) -> f64 {
-    let IncircleDiffs { adx, ady, bdx, bdy, cdx, cdy, ad2, bd2, cd2 } = *d;
+    let IncircleDiffs {
+        adx,
+        ady,
+        bdx,
+        bdy,
+        cdx,
+        cdy,
+        ad2,
+        bd2,
+        cd2,
+    } = *d;
     adx * (bdy * cd2 - cdy * bd2) - ady * (bdx * cd2 - cdx * bd2) + ad2 * (bdx * cdy - bdy * cdx)
 }
 
@@ -125,7 +145,17 @@ fn filtered_det(d: &IncircleDiffs) -> f64 {
 
 #[inline]
 fn compensated_det(d: &IncircleDiffs) -> f64 {
-    let IncircleDiffs { adx, ady, bdx, bdy, cdx, cdy, ad2, bd2, cd2 } = *d;
+    let IncircleDiffs {
+        adx,
+        ady,
+        bdx,
+        bdy,
+        cdx,
+        cdy,
+        ad2,
+        bd2,
+        cd2,
+    } = *d;
 
     // Compensated squared distances: ad2 + ad2_err = adx² + ady² (exact).
     // The filtered `ad2` is `round(round(adx²) + round(ady²))`. The error
@@ -180,7 +210,15 @@ fn compensated_det(d: &IncircleDiffs) -> f64 {
 /// are summed with compression after each addition into the 96-element
 /// workspace.
 fn exact_det(d: &IncircleDiffs) -> Sign {
-    let IncircleDiffs { adx, ady, bdx, bdy, cdx, cdy, .. } = *d;
+    let IncircleDiffs {
+        adx,
+        ady,
+        bdx,
+        bdy,
+        cdx,
+        cdy,
+        ..
+    } = *d;
 
     // Compute the three squared distances as expansions (length ≤ 4 each).
     let mut ad2_exp = [0.0f64; 4];
@@ -215,13 +253,25 @@ fn exact_det(d: &IncircleDiffs) -> Sign {
     // Process the first 4 terms (cd2 or bd2 as the expansion).
     for &(s1, s2, exp, negate) in &terms[..4] {
         let term_len = compute_term(exp, s1, s2, &mut scaled, &mut term);
-        add_term(&mut accum, &mut accum_len, &term[..term_len], negate, &mut temp);
+        add_term(
+            &mut accum,
+            &mut accum_len,
+            &term[..term_len],
+            negate,
+            &mut temp,
+        );
     }
 
     // Process terms 5 and 6 (ad2 as the expansion).
     // Term 5: +ad2 * bdx * cdy
     let t5_len = compute_term(&ad2_exp[..ad2_len], bdx, cdy, &mut scaled, &mut term);
-    add_term(&mut accum, &mut accum_len, &term[..t5_len], false, &mut temp);
+    add_term(
+        &mut accum,
+        &mut accum_len,
+        &term[..t5_len],
+        false,
+        &mut temp,
+    );
     // Term 6: -ad2 * bdy * cdx
     let t6_len = compute_term(&ad2_exp[..ad2_len], bdy, cdx, &mut scaled, &mut term);
     add_term(&mut accum, &mut accum_len, &term[..t6_len], true, &mut temp);
@@ -253,7 +303,13 @@ fn sq_dist_expansion(dx: f64, dy: f64, out: &mut [f64; 4]) -> usize {
 ///
 /// `scaled` must have length ≥ 2 * exp.len(). `term` must have length ≥
 /// 4 * exp.len().
-fn compute_term(exp: &[f64], s1: f64, s2: f64, scaled: &mut [f64; 16], term: &mut [f64; 32]) -> usize {
+fn compute_term(
+    exp: &[f64],
+    s1: f64,
+    s2: f64,
+    scaled: &mut [f64; 16],
+    term: &mut [f64; 32],
+) -> usize {
     // Scale exp by s1 → length ≤ 2*exp.len().
     let len1 = scale_expansion(exp, s1, scaled).expect("scaled sized for 2*exp");
     // Compress to keep it small.
@@ -365,9 +421,18 @@ mod tests {
         let cdx = Exact::from_f64(cdx_f);
         let cdy = Exact::from_f64(cdy_f);
 
-        let ad2 = adx.clone().mul(adx.clone()).add(ady.clone().mul(ady.clone()));
-        let bd2 = bdx.clone().mul(bdx.clone()).add(bdy.clone().mul(bdy.clone()));
-        let cd2 = cdx.clone().mul(cdx.clone()).add(cdy.clone().mul(cdy.clone()));
+        let ad2 = adx
+            .clone()
+            .mul(adx.clone())
+            .add(ady.clone().mul(ady.clone()));
+        let bd2 = bdx
+            .clone()
+            .mul(bdx.clone())
+            .add(bdy.clone().mul(bdy.clone()));
+        let cd2 = cdx
+            .clone()
+            .mul(cdx.clone())
+            .add(cdy.clone().mul(cdy.clone()));
 
         // det = adx*bdy*cd2 - adx*cdy*bd2 - ady*bdx*cd2 + ady*cdx*bd2 + ad2*bdx*cdy - ad2*bdy*cdx
         let t1 = adx.clone().mul(bdy.clone()).mul(cd2.clone());
@@ -419,7 +484,10 @@ mod tests {
         let b = Point2::new(-1.0, 0.0);
         let c = Point2::new(0.0, 1.0);
         let d = Point2::new(0.0, 0.0); // inside
-        assert_eq!(orientation_2(a, b, c), crate::specialized_libs::computational_geometry::primitives::Orientation::Clockwise);
+        assert_eq!(
+            orientation_2(a, b, c),
+            crate::specialized_libs::computational_geometry::primitives::Orientation::Clockwise
+        );
         // Inside with CW → Negative (flipped)
         assert_eq!(incircle(a, b, c, d), Sign::Negative);
     }
@@ -429,11 +497,36 @@ mod tests {
     #[test]
     fn agrees_with_exact_on_basic_cases() {
         let cases = [
-            (Point2::new(1.0, 0.0), Point2::new(0.0, 1.0), Point2::new(-1.0, 0.0), Point2::new(0.0, 0.0)),
-            (Point2::new(1.0, 0.0), Point2::new(0.0, 1.0), Point2::new(-1.0, 0.0), Point2::new(2.0, 0.0)),
-            (Point2::new(1.0, 0.0), Point2::new(0.0, 1.0), Point2::new(-1.0, 0.0), Point2::new(0.0, -1.0)),
-            (Point2::new(0.0, 0.0), Point2::new(1.0, 0.0), Point2::new(0.0, 1.0), Point2::new(0.5, 0.5)),
-            (Point2::new(3.0, 4.0), Point2::new(0.0, 0.0), Point2::new(6.0, 0.0), Point2::new(3.0, 0.0)),
+            (
+                Point2::new(1.0, 0.0),
+                Point2::new(0.0, 1.0),
+                Point2::new(-1.0, 0.0),
+                Point2::new(0.0, 0.0),
+            ),
+            (
+                Point2::new(1.0, 0.0),
+                Point2::new(0.0, 1.0),
+                Point2::new(-1.0, 0.0),
+                Point2::new(2.0, 0.0),
+            ),
+            (
+                Point2::new(1.0, 0.0),
+                Point2::new(0.0, 1.0),
+                Point2::new(-1.0, 0.0),
+                Point2::new(0.0, -1.0),
+            ),
+            (
+                Point2::new(0.0, 0.0),
+                Point2::new(1.0, 0.0),
+                Point2::new(0.0, 1.0),
+                Point2::new(0.5, 0.5),
+            ),
+            (
+                Point2::new(3.0, 4.0),
+                Point2::new(0.0, 0.0),
+                Point2::new(6.0, 0.0),
+                Point2::new(3.0, 0.0),
+            ),
         ];
         for (a, b, c, d) in cases {
             assert_eq!(
@@ -497,9 +590,24 @@ mod tests {
         // stay within f64 range. With coords ~1e50, sq_dist ~1e100, and triple
         // products ~1e200, we're well within f64's ~1e308 max.
         let cases = [
-            (Point2::new(1e50, 0.0), Point2::new(0.0, 1e50), Point2::new(-1e50, 0.0), Point2::new(0.0, 0.0)),
-            (Point2::new(1e-50, 0.0), Point2::new(0.0, 1e-50), Point2::new(-1e-50, 0.0), Point2::new(0.0, 0.0)),
-            (Point2::new(1e50, 0.0), Point2::new(0.0, 1e50), Point2::new(-1e50, 0.0), Point2::new(1e50, 1e-50)),
+            (
+                Point2::new(1e50, 0.0),
+                Point2::new(0.0, 1e50),
+                Point2::new(-1e50, 0.0),
+                Point2::new(0.0, 0.0),
+            ),
+            (
+                Point2::new(1e-50, 0.0),
+                Point2::new(0.0, 1e-50),
+                Point2::new(-1e-50, 0.0),
+                Point2::new(0.0, 0.0),
+            ),
+            (
+                Point2::new(1e50, 0.0),
+                Point2::new(0.0, 1e50),
+                Point2::new(-1e50, 0.0),
+                Point2::new(1e50, 1e-50),
+            ),
         ];
         for (a, b, c, d) in cases {
             assert_eq!(

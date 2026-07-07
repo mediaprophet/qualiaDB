@@ -49,7 +49,10 @@ impl KeyVault {
 
     #[cfg(not(target_arch = "wasm32"))]
     pub fn unlock(&mut self) -> Result<(), String> {
-        let dir = self.storage_dir.as_ref().ok_or("No storage dir configured")?;
+        let dir = self
+            .storage_dir
+            .as_ref()
+            .ok_or("No storage dir configured")?;
         let temp = Self::load_or_generate(dir)?;
         self.master_key = temp.master_key;
         Ok(())
@@ -80,8 +83,8 @@ impl KeyVault {
             }
             Err(_) => {
                 if vault_path.exists() {
-                    let bytes =
-                        fs::read(&vault_path).map_err(|e| format!("Failed to read keystore: {e}"))?;
+                    let bytes = fs::read(&vault_path)
+                        .map_err(|e| format!("Failed to read keystore: {e}"))?;
                     if bytes.len() != 32 {
                         return Err("Corrupted master key length".into());
                     }
@@ -140,7 +143,7 @@ impl KeyVault {
             SigningKey::from_bytes(&secret)
         };
 
-        Ok(Self { 
+        Ok(Self {
             master_key: Some(master_key),
             storage_dir: Some(storage_dir.to_string()),
         })
@@ -167,7 +170,10 @@ impl KeyVault {
 
     /// Exposes the raw bytes of the master key for libp2p identity bindings
     pub fn get_master_key_bytes(&self) -> [u8; 32] {
-        self.master_key.as_ref().expect("Vault is locked").to_bytes()
+        self.master_key
+            .as_ref()
+            .expect("Vault is locked")
+            .to_bytes()
     }
 
     /// Ed25519 verifying key bytes for a context-derived pairwise key.

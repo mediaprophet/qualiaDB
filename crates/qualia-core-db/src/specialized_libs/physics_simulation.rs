@@ -2251,7 +2251,8 @@ impl SimulationEngine {
     ) -> Result<(), PhysicsError> {
         // Apply registered boundary conditions to each field at the current simulation time.
         for field in fields.iter_mut() {
-            self.boundary_conditions.apply_to_field(field, simulation.current_time);
+            self.boundary_conditions
+                .apply_to_field(field, simulation.current_time);
         }
         Ok(())
     }
@@ -2300,11 +2301,7 @@ impl TimeIntegrator {
     /// the fixed `dt` argument is returned unchanged.
     pub fn adaptive_step(&mut self, field: &PhysicsField, dt: f64) -> f64 {
         if self.time_step_control.control_type == TimeStepControlType::CFLBased {
-            let max_velocity = field
-                .data
-                .iter()
-                .map(|&v| v.abs())
-                .fold(0.0f64, f64::max);
+            let max_velocity = field.data.iter().map(|&v| v.abs()).fold(0.0f64, f64::max);
 
             // Estimate dx from the first dimension length.
             let dx = field
@@ -2797,7 +2794,11 @@ impl StencilOperators {
 
         let n = field.len() as isize;
         let mut sum = 0.0f64;
-        for (point, coeff) in stencil.stencil_points.iter().zip(stencil.coefficients.iter()) {
+        for (point, coeff) in stencil
+            .stencil_points
+            .iter()
+            .zip(stencil.coefficients.iter())
+        {
             let offset = point.relative_position.first().copied().unwrap_or(0) as isize;
             let idx = index as isize + offset;
             if idx < 0 || idx >= n {
@@ -3022,10 +3023,8 @@ impl InitialConditions {
         cond_type: InitialConditionType,
         values: Vec<f64>,
     ) {
-        self.condition_types
-            .insert(field_id.to_string(), cond_type);
-        self.condition_values
-            .insert(field_id.to_string(), values);
+        self.condition_types.insert(field_id.to_string(), cond_type);
+        self.condition_values.insert(field_id.to_string(), values);
     }
 
     /// Get the initial condition type registered for a field, if any.
@@ -3634,10 +3633,9 @@ impl MeshCoordinator {
 
     pub fn initialize_mesh_network(&mut self) -> Result<(), PhysicsError> {
         // Lock the mesh network and call its initialization method.
-        let mut network = self
-            .mesh_network
-            .lock()
-            .map_err(|e| PhysicsError::NetworkError(format!("Mesh network lock poisoned: {}", e)))?;
+        let mut network = self.mesh_network.lock().map_err(|e| {
+            PhysicsError::NetworkError(format!("Mesh network lock poisoned: {}", e))
+        })?;
         network
             .initialize()
             .map_err(|e| PhysicsError::NetworkError(format!("Mesh init failed: {}", e)))
@@ -3645,10 +3643,9 @@ impl MeshCoordinator {
 
     /// Query the current mesh network status.
     pub fn get_mesh_status(&self) -> Result<MeshStatus, PhysicsError> {
-        let network = self
-            .mesh_network
-            .lock()
-            .map_err(|e| PhysicsError::NetworkError(format!("Mesh network lock poisoned: {}", e)))?;
+        let network = self.mesh_network.lock().map_err(|e| {
+            PhysicsError::NetworkError(format!("Mesh network lock poisoned: {}", e))
+        })?;
         let status: NetworkStatus = network.get_network_status();
         Ok(MeshStatus {
             total_nodes: status.total_nodes,
@@ -3661,16 +3658,11 @@ impl MeshCoordinator {
 
     /// Distribute a simulation task (raw bytes) through the mesh network.
     pub fn distribute_simulation_task(&self, task_data: &[u8]) -> Result<(), PhysicsError> {
-        let mut network = self
-            .mesh_network
-            .lock()
-            .map_err(|e| PhysicsError::NetworkError(format!("Mesh network lock poisoned: {}", e)))?;
+        let mut network = self.mesh_network.lock().map_err(|e| {
+            PhysicsError::NetworkError(format!("Mesh network lock poisoned: {}", e))
+        })?;
         network
-            .send_message_ephemeral(
-                "broadcast",
-                task_data,
-                MessagePriority::High,
-            )
+            .send_message_ephemeral("broadcast", task_data, MessagePriority::High)
             .map_err(|e| PhysicsError::NetworkError(format!("Mesh send failed: {}", e)))?;
         Ok(())
     }
@@ -3780,8 +3772,7 @@ impl NodeManager {
 
     /// Register capabilities for a node.
     pub fn add_node_capability(&mut self, node_id: &str, caps: NodeCapabilities) {
-        self.node_capabilities
-            .insert(node_id.to_string(), caps);
+        self.node_capabilities.insert(node_id.to_string(), caps);
     }
 
     /// Get the capabilities registered for a node, if any.
@@ -4330,8 +4321,7 @@ impl DataCompression {
 
     /// Register a compression algorithm under the given name.
     pub fn add_compression_algorithm(&mut self, name: &str, algo: CompressionAlgorithm) {
-        self.compression_algorithms
-            .insert(name.to_string(), algo);
+        self.compression_algorithms.insert(name.to_string(), algo);
     }
 
     /// Get a compression algorithm by name, if any.

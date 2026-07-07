@@ -19,7 +19,7 @@
 //! constant, and the pseudo-inverse is computed via fixed-point iteration.
 
 use super::spectral_kernel::{
-    spd_to_xyz, CIE_1931_CMF_X, CIE_1931_CMF_Y, CIE_1931_CMF_Z, Spd, Xyz, SPD_SAMPLES,
+    spd_to_xyz, Spd, Xyz, CIE_1931_CMF_X, CIE_1931_CMF_Y, CIE_1931_CMF_Z, SPD_SAMPLES,
 };
 
 /// Normalisation factor used by `spd_to_xyz` (1 / Σȳ).
@@ -92,7 +92,11 @@ pub fn metamer_kernel_basis(out_basis: &mut [f32]) -> Result<usize, MetamerError
     let mut ppt = [[0.0f64; 3]; 3];
     for i in 0..3 {
         for j in 0..3 {
-            ppt[i][j] = cmf_f64[i].iter().zip(cmf_f64[j].iter()).map(|(a, b)| a * b).sum();
+            ppt[i][j] = cmf_f64[i]
+                .iter()
+                .zip(cmf_f64[j].iter())
+                .map(|(a, b)| a * b)
+                .sum();
         }
     }
 
@@ -205,7 +209,10 @@ pub fn min_norm_spd_for_xyz(target: &Xyz) -> Spd {
     for i in 0..SPD_SAMPLES {
         let mut val = 0.0f32;
         for j in 0..3 {
-            val += cmf[j][i] * (inv[j][0] * target_vec[0] + inv[j][1] * target_vec[1] + inv[j][2] * target_vec[2]);
+            val += cmf[j][i]
+                * (inv[j][0] * target_vec[0]
+                    + inv[j][1] * target_vec[1]
+                    + inv[j][2] * target_vec[2]);
         }
         spd.samples[i] = val;
     }
@@ -297,11 +304,17 @@ mod tests {
         // Each basis vector should project to ~zero.
         for k in 0..count {
             let mut spd = Spd::default();
-            spd.samples.copy_from_slice(&basis[k * SPD_SAMPLES..(k + 1) * SPD_SAMPLES]);
+            spd.samples
+                .copy_from_slice(&basis[k * SPD_SAMPLES..(k + 1) * SPD_SAMPLES]);
             let xyz = spd_to_xyz(&spd);
-            assert!(is_metameric_black(&spd, 5e-2),
+            assert!(
+                is_metameric_black(&spd, 5e-2),
                 "kernel vector {} should be metameric-black, got XYZ=({:.6}, {:.6}, {:.6})",
-                k, xyz.x, xyz.y, xyz.z);
+                k,
+                xyz.x,
+                xyz.y,
+                xyz.z
+            );
         }
     }
 
@@ -310,9 +323,24 @@ mod tests {
         let target = Xyz::new(0.5, 0.6, 0.4);
         let spd = min_norm_spd_for_xyz(&target);
         let reprojected = spd_to_xyz(&spd);
-        assert!((reprojected.x - target.x).abs() < 0.05, "X reprojection mismatch: {} vs {}", reprojected.x, target.x);
-        assert!((reprojected.y - target.y).abs() < 0.05, "Y reprojection mismatch: {} vs {}", reprojected.y, target.y);
-        assert!((reprojected.z - target.z).abs() < 0.05, "Z reprojection mismatch: {} vs {}", reprojected.z, target.z);
+        assert!(
+            (reprojected.x - target.x).abs() < 0.05,
+            "X reprojection mismatch: {} vs {}",
+            reprojected.x,
+            target.x
+        );
+        assert!(
+            (reprojected.y - target.y).abs() < 0.05,
+            "Y reprojection mismatch: {} vs {}",
+            reprojected.y,
+            target.y
+        );
+        assert!(
+            (reprojected.z - target.z).abs() < 0.05,
+            "Z reprojection mismatch: {} vs {}",
+            reprojected.z,
+            target.z
+        );
     }
 
     #[test]
@@ -329,8 +357,10 @@ mod tests {
         let coeffs: Vec<f32> = (0..count).map(|i| (i as f32 * 0.1).sin()).collect();
         let fibre = fibre_spd(&particular, &basis, &coeffs);
 
-        assert!(is_metameric(&fibre, &target, 5e-2),
-            "fibre element must be metameric to the target");
+        assert!(
+            is_metameric(&fibre, &target, 5e-2),
+            "fibre element must be metameric to the target"
+        );
     }
 
     #[test]

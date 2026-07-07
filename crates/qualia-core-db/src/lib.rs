@@ -91,6 +91,8 @@ pub use query::resolver;
 ))]
 pub use query::shacl_compiler;
 pub use query::temporal_graph;
+pub use query::spawn_decay;
+pub use query::temporal_scrub;
 // --- platform/ category (reorg) ---
 pub mod platform;
 #[cfg(not(target_arch = "wasm32"))]
@@ -128,12 +130,6 @@ pub use inference::inference_agent as llm_agent;
 pub use inference::inference_awq;
 pub use inference::inference_awq as llm_awq;
 #[cfg(not(target_arch = "wasm32"))]
-pub use inference::kv_capture;
-#[cfg(not(target_arch = "wasm32"))]
-pub use inference::kv_dict;
-#[cfg(not(target_arch = "wasm32"))]
-pub use inference::kv_dict_runtime;
-#[cfg(not(target_arch = "wasm32"))]
 pub use inference::inference_bench;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::inference_bench as llm_bench;
@@ -145,18 +141,26 @@ pub use inference::inference_gpu_profiler;
 pub use inference::inference_gpu_profiler as llm_gpu_profiler;
 pub use inference::inference_kernel_parity;
 pub use inference::inference_kernel_parity as llm_kernel_parity;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::kv_capture;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::kv_dict;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::kv_dict_runtime;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 pub use inference::metal_bridge;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use inference::neuro_symbolic_sieve;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use inference::orchestrator;
+pub use inference::prompt_lookup;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::residency_planner;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use inference::resident_model;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use inference::safetensor;
+pub use inference::sampler;
 pub use inference::semantic_culler;
 pub use inference::spatial_sieve;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
@@ -167,8 +171,6 @@ pub use inference::ternary;
 pub use inference::ternary_gpu;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use inference::topk;
-pub use inference::sampler;
-pub use inference::prompt_lookup;
 // W7: GPU thermal/power telemetry + auto-cap governor (native-only). Exposes the UI-reachable mode
 // switch (`set_gpu_auto_cap` / `gpu_auto_cap_enabled`) and `sample_gpu_thermal()` telemetry.
 #[cfg(not(target_arch = "wasm32"))]
@@ -265,12 +267,12 @@ pub use net::host_topology;
 pub use net::nym_adapter;
 pub use net::sonic_token;
 pub mod audio;
-pub mod tensor;
 /// `.10d` living-container v1 — normative header, axis-role taxonomy, and
 /// metric-completeness descriptor for the 10-D tensor substrate. P0.1 barrier
 /// task. Available to browser/WASM builds (P0.8 parity target). See
 /// `docs/plans/native-computational-geometry-EXECUTION.md` P0.1.
 pub mod container_10d;
+pub mod tensor;
 // geometric_algebra moved into solvers/ (it is a math solver, not a logic modality);
 // re-exported here so `crate::geometric_algebra::*` paths keep resolving. Gated to match the
 // `solvers` module below — on wasm32 it only exists under the `wasm-scientific` feature.
@@ -348,11 +350,11 @@ pub mod clinical_engine {
         }
     }
 }
-pub mod qubo_compiler;
-pub mod render;
 /// Hypermedia semantic library — asset ⊕ analytics ⊕ related-assets bound as a semantic graph (not a
 /// directory). See `docs/plans/hypermedia-semantic-library.md`.
 pub mod hypermedia;
+pub mod qubo_compiler;
+pub mod render;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod spatial_wasm;
 #[cfg(all(
@@ -1517,9 +1519,10 @@ mod tests {
 
         let quad_tree = SpatiotemporalQuadTree {
             root_bounds: (0.0, 0.0, 100.0, 100.0),
+            elements: vec![],
         };
 
-        let results = quad_tree.query_region(10.0, 10.0, 20.0, 20.0);
+        let results = quad_tree.query_region(10.0, 10.0, 20.0, 20.0, 0, 0);
         // We expect it to be empty since it's a structural mock
         assert_eq!(
             results.len(),

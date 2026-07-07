@@ -43,10 +43,7 @@ pub enum CorpusSpec {
     /// from the lexicon strings without traversing the graph's (synset-ID-keyed) structure — the
     /// robust path, since WordNet objects are structured IDs, not `q_hash(gloss)`. `min_len` filters
     /// out URIs / single tokens (keep sentence-like strings: interior whitespace + length ≥ `min_len`).
-    Q42Lexicon {
-        volume: PathBuf,
-        min_len: usize,
-    },
+    Q42Lexicon { volume: PathBuf, min_len: usize },
 }
 
 /// Assemble the corpus into a list of non-empty documents.
@@ -81,7 +78,10 @@ pub fn assemble(spec: &CorpusSpec) -> Result<Vec<String>, CalibrationError> {
 /// (interior whitespace + trimmed length ≥ `min_len`) becomes a document — for a WordNet q42 these are
 /// the glosses/examples. Deduped. Works regardless of the graph's object-encoding, since it reads the
 /// lexicon strings directly (the WordNet objects are structured synset IDs, not gloss hashes).
-fn assemble_q42_lexicon(volume: &std::path::Path, min_len: usize) -> Result<Vec<String>, CalibrationError> {
+fn assemble_q42_lexicon(
+    volume: &std::path::Path,
+    min_len: usize,
+) -> Result<Vec<String>, CalibrationError> {
     use crate::q42_volume::Q42Volume;
     let vol = Q42Volume::open(volume)
         .map_err(|e| CalibrationError::CaptureFailed(format!("open q42 {volume:?}: {e}")))?;
@@ -106,7 +106,10 @@ fn assemble_q42_lexicon(volume: &std::path::Path, min_len: usize) -> Result<Vec<
 /// (`read_all_quins`), keeps those whose predicate hashes to `predicate`, and resolves each object
 /// hash back to its string via the volume lexicon (`lookup`) — so e.g. WordNet glosses / `rdfs:comment`
 /// text come out as documents. Dedups exact repeats (a shared gloss shouldn't over-weight calibration).
-fn assemble_q42_field(volume: &std::path::Path, predicate: &str) -> Result<Vec<String>, CalibrationError> {
+fn assemble_q42_field(
+    volume: &std::path::Path,
+    predicate: &str,
+) -> Result<Vec<String>, CalibrationError> {
     use crate::q42_volume::Q42Volume;
     let vol = Q42Volume::open(volume)
         .map_err(|e| CalibrationError::CaptureFailed(format!("open q42 {volume:?}: {e}")))?;
@@ -198,7 +201,12 @@ mod tests {
         std::fs::write(&a, "the quick brown fox").unwrap();
         std::fs::write(&b, "jumps over the lazy dog").unwrap();
         std::fs::write(&empty, "   \n  ").unwrap();
-        let docs = assemble(&CorpusSpec::Files(vec![a.clone(), b.clone(), empty.clone()])).unwrap();
+        let docs = assemble(&CorpusSpec::Files(vec![
+            a.clone(),
+            b.clone(),
+            empty.clone(),
+        ]))
+        .unwrap();
         assert_eq!(docs.len(), 2, "empty/whitespace docs are dropped");
         assert_eq!(docs[0], "the quick brown fox");
         let _ = std::fs::remove_dir_all(&dir);

@@ -219,7 +219,9 @@ pub fn build_bvh_recursive(
 
     let max_nodes = 2 * n - 1;
     if nodes.len() < max_nodes {
-        return Err(BvhError::NodeBufferTooSmall { required: max_nodes });
+        return Err(BvhError::NodeBufferTooSmall {
+            required: max_nodes,
+        });
     }
 
     // Compute centroids for Morton sorting.
@@ -427,11 +429,14 @@ pub fn query_closest(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::primitives::Point3;
+    use super::*;
 
     fn make_aabb(min: [f64; 3], max: [f64; 3]) -> Aabb {
-        Aabb::new(Point3::new(min[0], min[1], min[2]), Point3::new(max[0], max[1], max[2]))
+        Aabb::new(
+            Point3::new(min[0], min[1], min[2]),
+            Point3::new(max[0], max[1], max[2]),
+        )
     }
 
     fn unit_cubes() -> Vec<Aabb> {
@@ -488,13 +493,27 @@ mod tests {
         let mut indices_a = vec![0u32; n];
         let mut codes_a = vec![0u64; n];
         let mut sort_a = vec![0u32; n];
-        let (count_a, _) = build_bvh_recursive(&prims, &mut nodes_a, &mut indices_a, &mut codes_a, &mut sort_a).unwrap();
+        let (count_a, _) = build_bvh_recursive(
+            &prims,
+            &mut nodes_a,
+            &mut indices_a,
+            &mut codes_a,
+            &mut sort_a,
+        )
+        .unwrap();
 
         let mut nodes_b = vec![BvhNode::default(); 2 * n];
         let mut indices_b = vec![0u32; n];
         let mut codes_b = vec![0u64; n];
         let mut sort_b = vec![0u32; n];
-        let (count_b, _) = build_bvh_recursive(&prims, &mut nodes_b, &mut indices_b, &mut codes_b, &mut sort_b).unwrap();
+        let (count_b, _) = build_bvh_recursive(
+            &prims,
+            &mut nodes_b,
+            &mut indices_b,
+            &mut codes_b,
+            &mut sort_b,
+        )
+        .unwrap();
 
         assert_eq!(count_a, count_b);
         assert_eq!(nodes_a[..count_a], nodes_b[..count_b]);
@@ -523,7 +542,17 @@ mod tests {
         let query = make_aabb([-0.5, -0.5, -0.5], [0.5, 0.5, 0.5]);
         let mut out = vec![0u32; n];
         let mut stack = vec![0u32; MAX_BVH_DEPTH * 2];
-        let count = query_overlap(&nodes, &prims, &prim_indices, root, node_count, &query, &mut out, &mut stack).unwrap();
+        let count = query_overlap(
+            &nodes,
+            &prims,
+            &prim_indices,
+            root,
+            node_count,
+            &query,
+            &mut out,
+            &mut stack,
+        )
+        .unwrap();
 
         assert_eq!(count, 1);
         // The found primitive should be the one at (0,0,0).
@@ -553,7 +582,17 @@ mod tests {
         let query = make_aabb([-10.0, -10.0, -10.0], [10.0, 10.0, 10.0]);
         let mut out = vec![0u32; n];
         let mut stack = vec![0u32; MAX_BVH_DEPTH * 2];
-        let count = query_overlap(&nodes, &prims, &prim_indices, root, node_count, &query, &mut out, &mut stack).unwrap();
+        let count = query_overlap(
+            &nodes,
+            &prims,
+            &prim_indices,
+            root,
+            node_count,
+            &query,
+            &mut out,
+            &mut stack,
+        )
+        .unwrap();
 
         assert_eq!(count, n);
     }
@@ -665,7 +704,17 @@ mod tests {
         let query = make_aabb([1.5, 1.5, 0.0], [3.5, 2.5, 1.0]);
         let mut bvh_out = vec![0u32; n];
         let mut stack = vec![0u32; MAX_BVH_DEPTH * 2];
-        let bvh_count = query_overlap(&nodes, &prims, &prim_indices, root, node_count, &query, &mut bvh_out, &mut stack).unwrap();
+        let bvh_count = query_overlap(
+            &nodes,
+            &prims,
+            &prim_indices,
+            root,
+            node_count,
+            &query,
+            &mut bvh_out,
+            &mut stack,
+        )
+        .unwrap();
 
         // Brute force.
         let mut brute_out: Vec<u32> = Vec::new();

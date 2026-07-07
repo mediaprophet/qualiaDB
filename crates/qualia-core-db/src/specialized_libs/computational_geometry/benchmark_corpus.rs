@@ -91,8 +91,13 @@ impl CorpusReport {
     pub fn to_report_line(&self) -> String {
         format!(
             "v{} | {:>12} | {:>20} | inputs={:>6} | hash={:#018x} | latency={:>8}μs | allocs={:>6}",
-            self.version, self.category, self.algorithm, self.input_count,
-            self.output_hash, self.latency_us, self.alloc_calls
+            self.version,
+            self.category,
+            self.algorithm,
+            self.input_count,
+            self.output_hash,
+            self.latency_us,
+            self.alloc_calls
         )
     }
 }
@@ -107,18 +112,42 @@ impl CorpusReport {
 pub fn degeneracy_inputs_2d() -> Vec<(Point2, Point2, Point2)> {
     vec![
         // Exact collinear.
-        (Point2::new(0.0, 0.0), Point2::new(1.0, 0.0), Point2::new(2.0, 0.0)),
+        (
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 0.0),
+            Point2::new(2.0, 0.0),
+        ),
         // Near-collinear (1-ulp perturbation).
-        (Point2::new(0.0, 0.0), Point2::new(1.0, 0.0), Point2::new(2.0, f64::EPSILON)),
+        (
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 0.0),
+            Point2::new(2.0, f64::EPSILON),
+        ),
         // Cocircular: (0,0), (1,0), (0,1), (1,1) are on circle center (0.5,0.5).
         // Use 3 of them + a 4th on the circle.
-        (Point2::new(0.0, 0.0), Point2::new(1.0, 0.0), Point2::new(1.0, 1.0)),
+        (
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 0.0),
+            Point2::new(1.0, 1.0),
+        ),
         // Duplicate points.
-        (Point2::new(0.5, 0.5), Point2::new(0.5, 0.5), Point2::new(1.0, 1.0)),
+        (
+            Point2::new(0.5, 0.5),
+            Point2::new(0.5, 0.5),
+            Point2::new(1.0, 1.0),
+        ),
         // Right angle.
-        (Point2::new(0.0, 0.0), Point2::new(1.0, 0.0), Point2::new(0.0, 1.0)),
+        (
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 0.0),
+            Point2::new(0.0, 1.0),
+        ),
         // Very small triangle.
-        (Point2::new(0.0, 0.0), Point2::new(1e-15, 0.0), Point2::new(0.0, 1e-15)),
+        (
+            Point2::new(0.0, 0.0),
+            Point2::new(1e-15, 0.0),
+            Point2::new(0.0, 1e-15),
+        ),
     ]
 }
 
@@ -128,15 +157,35 @@ pub fn degeneracy_inputs_2d() -> Vec<(Point2, Point2, Point2)> {
 pub fn scale_inputs_2d() -> Vec<(Point2, Point2, Point2)> {
     vec![
         // Large coordinates.
-        (Point2::new(1e12, 0.0), Point2::new(1e12 + 1.0, 0.0), Point2::new(1e12, 1.0)),
+        (
+            Point2::new(1e12, 0.0),
+            Point2::new(1e12 + 1.0, 0.0),
+            Point2::new(1e12, 1.0),
+        ),
         // Small coordinates.
-        (Point2::new(1e-12, 0.0), Point2::new(2e-12, 0.0), Point2::new(1e-12, 1e-12)),
+        (
+            Point2::new(1e-12, 0.0),
+            Point2::new(2e-12, 0.0),
+            Point2::new(1e-12, 1e-12),
+        ),
         // Mixed scale.
-        (Point2::new(1e12, 1e-12), Point2::new(1e-12, 1e12), Point2::new(0.0, 0.0)),
+        (
+            Point2::new(1e12, 1e-12),
+            Point2::new(1e-12, 1e12),
+            Point2::new(0.0, 0.0),
+        ),
         // Near-overflow.
-        (Point2::new(1e308, 0.0), Point2::new(1e308, 1.0), Point2::new(1e308, -1.0)),
+        (
+            Point2::new(1e308, 0.0),
+            Point2::new(1e308, 1.0),
+            Point2::new(1e308, -1.0),
+        ),
         // Near-underflow.
-        (Point2::new(1e-308, 0.0), Point2::new(2e-308, 0.0), Point2::new(1e-308, 1e-308)),
+        (
+            Point2::new(1e-308, 0.0),
+            Point2::new(2e-308, 0.0),
+            Point2::new(1e-308, 1e-308),
+        ),
     ]
 }
 
@@ -146,19 +195,30 @@ pub fn scale_inputs_2d() -> Vec<(Point2, Point2, Point2)> {
 pub fn topology_pathology_hull_2d() -> Vec<Vec<Point2>> {
     vec![
         // All collinear.
-        vec![Point2::new(0.0, 0.0), Point2::new(1.0, 0.0), Point2::new(2.0, 0.0), Point2::new(3.0, 0.0)],
+        vec![
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 0.0),
+            Point2::new(2.0, 0.0),
+            Point2::new(3.0, 0.0),
+        ],
         // Single point.
         vec![Point2::new(0.0, 0.0)],
         // All duplicates.
-        vec![Point2::new(1.0, 1.0), Point2::new(1.0, 1.0), Point2::new(1.0, 1.0)],
+        vec![
+            Point2::new(1.0, 1.0),
+            Point2::new(1.0, 1.0),
+            Point2::new(1.0, 1.0),
+        ],
         // Two points.
         vec![Point2::new(0.0, 0.0), Point2::new(1.0, 0.0)],
         // Empty.
         vec![],
         // Square (normal case for baseline).
         vec![
-            Point2::new(0.0, 0.0), Point2::new(1.0, 0.0),
-            Point2::new(1.0, 1.0), Point2::new(0.0, 1.0),
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 0.0),
+            Point2::new(1.0, 1.0),
+            Point2::new(0.0, 1.0),
         ],
     ]
 }
@@ -171,27 +231,33 @@ pub fn topology_pathology_hull_2d() -> Vec<Vec<Point2>> {
 pub fn tensor10d_clouds() -> Vec<Vec<[f64; 10]>> {
     vec![
         // Simple cloud: 8 points on a line in the first dimension.
-        (0..8).map(|i| {
-            let mut p = [0.0; 10];
-            p[0] = i as f64;
-            p
-        }).collect(),
+        (0..8)
+            .map(|i| {
+                let mut p = [0.0; 10];
+                p[0] = i as f64;
+                p
+            })
+            .collect(),
         // Random-ish cloud: 16 points with distinct values in all dims.
-        (0..16).map(|i| {
-            let mut p = [0.0; 10];
-            for j in 0..10 {
-                p[j] = ((i * 7 + j * 13) % 97) as f64;
-            }
-            p
-        }).collect(),
+        (0..16)
+            .map(|i| {
+                let mut p = [0.0; 10];
+                for j in 0..10 {
+                    p[j] = ((i * 7 + j * 13) % 97) as f64;
+                }
+                p
+            })
+            .collect(),
         // Degenerate cloud: all points identical.
         vec![[1.0; 10]; 8],
         // Near-degenerate: 8 points with tiny perturbations.
-        (0..8).map(|i| {
-            let mut p = [1.0; 10];
-            p[0] += i as f64 * f64::EPSILON;
-            p
-        }).collect(),
+        (0..8)
+            .map(|i| {
+                let mut p = [1.0; 10];
+                p[0] += i as f64 * f64::EPSILON;
+                p
+            })
+            .collect(),
     ]
 }
 
@@ -361,20 +427,31 @@ mod tests {
         let reports = run_p10_corpus();
         assert!(!reports.is_empty(), "corpus must produce reports");
         for r in &reports {
-            assert!(r.input_count > 0, "{}:{}: input_count must be positive", r.category, r.algorithm);
+            assert!(
+                r.input_count > 0,
+                "{}:{}: input_count must be positive",
+                r.category,
+                r.algorithm
+            );
         }
     }
 
     #[test]
     fn degeneracy_inputs_cover_collinear_and_cocircular() {
         let inputs = degeneracy_inputs_2d();
-        assert!(inputs.len() >= 4, "degeneracy corpus must have at least 4 cases");
+        assert!(
+            inputs.len() >= 4,
+            "degeneracy corpus must have at least 4 cases"
+        );
         // At least one collinear case.
         let has_collinear = inputs.iter().any(|(a, b, c)| {
             super::super::primitives::orientation_2(*a, *b, *c)
                 == super::super::primitives::Orientation::Collinear
         });
-        assert!(has_collinear, "degeneracy corpus must include a collinear case");
+        assert!(
+            has_collinear,
+            "degeneracy corpus must include a collinear case"
+        );
     }
 
     #[test]
@@ -382,15 +459,21 @@ mod tests {
         let inputs = scale_inputs_2d();
         assert!(inputs.len() >= 4, "scale corpus must have at least 4 cases");
         // At least one case with coordinates >= 1e10.
-        let has_large = inputs.iter().any(|(a, b, c)| {
-            a.x.abs() >= 1e10 || b.x.abs() >= 1e10 || c.x.abs() >= 1e10
-        });
-        assert!(has_large, "scale corpus must include a large-coordinate case");
+        let has_large = inputs
+            .iter()
+            .any(|(a, b, c)| a.x.abs() >= 1e10 || b.x.abs() >= 1e10 || c.x.abs() >= 1e10);
+        assert!(
+            has_large,
+            "scale corpus must include a large-coordinate case"
+        );
         // At least one case with coordinates <= 1e-10.
-        let has_small = inputs.iter().any(|(a, b, c)| {
-            a.x.abs() <= 1e-10 || b.x.abs() <= 1e-10 || c.x.abs() <= 1e-10
-        });
-        assert!(has_small, "scale corpus must include a small-coordinate case");
+        let has_small = inputs
+            .iter()
+            .any(|(a, b, c)| a.x.abs() <= 1e-10 || b.x.abs() <= 1e-10 || c.x.abs() <= 1e-10);
+        assert!(
+            has_small,
+            "scale corpus must include a small-coordinate case"
+        );
     }
 
     #[test]
@@ -399,7 +482,10 @@ mod tests {
         let has_empty = inputs.iter().any(|v| v.is_empty());
         let has_single = inputs.iter().any(|v| v.len() == 1);
         assert!(has_empty, "topology corpus must include an empty input");
-        assert!(has_single, "topology corpus must include a single-point input");
+        assert!(
+            has_single,
+            "topology corpus must include a single-point input"
+        );
     }
 
     #[test]
@@ -416,10 +502,13 @@ mod tests {
     fn tensor10d_clouds_include_degenerate() {
         let clouds = tensor10d_clouds();
         // At least one cloud with all-identical points.
-        let has_degenerate = clouds.iter().any(|cloud| {
-            cloud.len() > 1 && cloud.windows(2).all(|w| w[0] == w[1])
-        });
-        assert!(has_degenerate, "10-D corpus must include a degenerate (all-identical) cloud");
+        let has_degenerate = clouds
+            .iter()
+            .any(|cloud| cloud.len() > 1 && cloud.windows(2).all(|w| w[0] == w[1]));
+        assert!(
+            has_degenerate,
+            "10-D corpus must include a degenerate (all-identical) cloud"
+        );
     }
 
     #[test]

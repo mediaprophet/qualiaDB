@@ -127,10 +127,18 @@ impl QualiaSlabAllocator {
     /// bumps the write_count past any alignment/wrap padding plus the size. If
     /// the end of the slab is reached, it wraps around to 0 (itself aligned). If
     /// the new allocation would lap the read_count, it returns an error.
-    pub fn allocate_transient(&mut self, size_bytes: usize, binding: u32, group: u32, usage: BindingUsage) -> Result<BufferView, ForgeError> {
+    pub fn allocate_transient(
+        &mut self,
+        size_bytes: usize,
+        binding: u32,
+        group: u32,
+        usage: BindingUsage,
+    ) -> Result<BufferView, ForgeError> {
         let size_u64 = size_bytes as u64;
         if size_u64 > self.capacity_bytes {
-            return Err(ForgeError::GpuValidation("Allocation exceeds total slab capacity".to_string()));
+            return Err(ForgeError::GpuValidation(
+                "Allocation exceeds total slab capacity".to_string(),
+            ));
         }
 
         // Align the write head up to the binding alignment, accounting for the
@@ -148,7 +156,9 @@ impl QualiaSlabAllocator {
 
         // Check if allocation + padding laps the read head
         if self.write_count + padding + size_u64 - self.read_count > self.capacity_bytes {
-             return Err(ForgeError::GpuValidation("Write head lapped read head in slab allocator".to_string()));
+            return Err(ForgeError::GpuValidation(
+                "Write head lapped read head in slab allocator".to_string(),
+            ));
         }
 
         self.write_count += padding + size_u64;
@@ -162,7 +172,7 @@ impl QualiaSlabAllocator {
         })
     }
 
-    /// Advances the read head to free up space. 
+    /// Advances the read head to free up space.
     /// This should be called *after* a device synchronization fence guarantees
     /// the buffer region is no longer in flight.
     pub fn advance_read_head(&mut self, new_head_offset: usize) {
@@ -196,11 +206,16 @@ mod tests {
     #[test]
     fn ring_buffer_allocates_and_wraps() {
         // Alignment 1 exercises the pure ring-buffer bookkeeping.
-        let mut allocator =
-            QualiaSlabAllocator::new_with_alignment(MemoryTopology::Unified { zero_copy: true }, 100, 1);
+        let mut allocator = QualiaSlabAllocator::new_with_alignment(
+            MemoryTopology::Unified { zero_copy: true },
+            100,
+            1,
+        );
 
         // Allocate 60 bytes
-        let view1 = allocator.allocate_transient(60, 0, 0, BindingUsage::StorageReadWrite).unwrap();
+        let view1 = allocator
+            .allocate_transient(60, 0, 0, BindingUsage::StorageReadWrite)
+            .unwrap();
         assert_eq!(view1.offset, 0);
         assert_eq!(allocator.write_count, 60);
 
@@ -213,15 +228,19 @@ mod tests {
 
         // Now the 50 byte allocation should wrap to 0 and succeed.
         // It will add 40 bytes of padding to wrap around, plus the 50 bytes.
-        let view2 = allocator.allocate_transient(50, 1, 0, BindingUsage::StorageReadWrite).unwrap();
+        let view2 = allocator
+            .allocate_transient(50, 1, 0, BindingUsage::StorageReadWrite)
+            .unwrap();
         assert_eq!(view2.offset, 0);
         assert_eq!(allocator.write_count, 150);
 
         // Another 10 byte allocation should succeed
-        let view3 = allocator.allocate_transient(10, 2, 0, BindingUsage::StorageReadWrite).unwrap();
+        let view3 = allocator
+            .allocate_transient(10, 2, 0, BindingUsage::StorageReadWrite)
+            .unwrap();
         assert_eq!(view3.offset, 50);
         assert_eq!(allocator.write_count, 160);
-        
+
         // Another 1 byte allocation should fail since write_count (160) - read_count (60) == 100
         let err2 = allocator.allocate_transient(1, 3, 0, BindingUsage::StorageReadWrite);
         assert!(err2.is_err());
@@ -234,7 +253,9 @@ mod tests {
         // the write head by a few "dispatches") and recycle the ring many times.
         let capacity = 1 << 14; // 16 KiB, a multiple of the 256-byte alignment
         let mut allocator = QualiaSlabAllocator::new(
-            MemoryTopology::Discrete { staging_required: true },
+            MemoryTopology::Discrete {
+                staging_required: true,
+            },
             capacity,
         );
         let chunk = 512usize;
@@ -261,13 +282,17 @@ mod tests {
         // Mirrors the affine case (4099 f32 = 16396 bytes) that wgpu rejected at
         // offset 16396 for not respecting min_storage_buffer_offset_alignment.
         let mut allocator = QualiaSlabAllocator::new(
-            MemoryTopology::Discrete { staging_required: true },
+            MemoryTopology::Discrete {
+                staging_required: true,
+            },
             1 << 20,
         );
         let sizes = [16_396usize, 16_396, 16, 4, 65_537];
         let mut last_end = 0usize;
         for (binding, size) in sizes.into_iter().enumerate() {
-            let view = allocator.allocate_transient(size, binding as u32, 0, BindingUsage::StorageReadWrite).unwrap();
+            let view = allocator
+                .allocate_transient(size, binding as u32, 0, BindingUsage::StorageReadWrite)
+                .unwrap();
             assert_eq!(
                 view.offset % DEFAULT_BINDING_ALIGNMENT,
                 0,

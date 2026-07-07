@@ -384,8 +384,13 @@ mod tests {
         );
         // Expired (now > valid_until) before signature is even checked.
         assert_eq!(
-            eval_authorization_grant(0xA, 0xB0, 100, 101, |_, _| panic!("must not verify when expired")),
-            Err(CoordFault::GrantExpired { now: 101, valid_until: 100 })
+            eval_authorization_grant(0xA, 0xB0, 100, 101, |_, _| panic!(
+                "must not verify when expired"
+            )),
+            Err(CoordFault::GrantExpired {
+                now: 101,
+                valid_until: 100
+            })
         );
         // In-window but bad signature → unauthorized.
         assert_eq!(
@@ -399,7 +404,10 @@ mod tests {
         // Over the global allowance → yield to the suspended queue.
         assert_eq!(
             eval_resource_declaration(7, 5000, 1000, 4000),
-            Err(CoordFault::InsufficientGlobalResources { declared: 5000, global_limit: 4000 })
+            Err(CoordFault::InsufficientGlobalResources {
+                declared: 5000,
+                global_limit: 4000
+            })
         );
         let mut c = eval_resource_declaration(7, 1000, 10, 4000).unwrap();
         // Cycle breaker decrements and trips on underflow.
@@ -431,7 +439,10 @@ mod tests {
     #[test]
     fn privilege_gate_blocks_synthetic_agents() {
         assert_eq!(require_privileged(true), Ok(()));
-        assert_eq!(require_privileged(false), Err(CoordFault::PrivilegeViolation));
+        assert_eq!(
+            require_privileged(false),
+            Err(CoordFault::PrivilegeViolation)
+        );
     }
 
     #[test]
@@ -475,7 +486,10 @@ mod tests {
         };
         assert_eq!(
             execute_coordination(&prog, &ctx_exp),
-            Err(CoordVmError::Fault(CoordFault::GrantExpired { now: 101, valid_until: 100 }))
+            Err(CoordVmError::Fault(CoordFault::GrantExpired {
+                now: 101,
+                valid_until: 100
+            }))
         );
 
         // Bad signature → UnauthorizedActor.
@@ -487,7 +501,9 @@ mod tests {
         };
         assert_eq!(
             execute_coordination(&prog, &ctx_bad),
-            Err(CoordVmError::Fault(CoordFault::UnauthorizedActor { agent: 0xA }))
+            Err(CoordVmError::Fault(CoordFault::UnauthorizedActor {
+                agent: 0xA
+            }))
         );
     }
 
@@ -517,10 +533,12 @@ mod tests {
         prog2.push(OP_RESOURCE_DECLARATION);
         assert_eq!(
             execute_coordination(&prog2, &ctx),
-            Err(CoordVmError::Fault(CoordFault::InsufficientGlobalResources {
-                declared: 5000,
-                global_limit: 4000
-            }))
+            Err(CoordVmError::Fault(
+                CoordFault::InsufficientGlobalResources {
+                    declared: 5000,
+                    global_limit: 4000
+                }
+            ))
         );
 
         // PERFORMANCE_RATING (privileged): PUSH agent, declared(1000), actual(800), valid(1), RATE.
@@ -561,7 +579,10 @@ mod tests {
         let mut prog = Vec::new();
         push(&mut prog, 1);
         prog.push(OP_AUTHORIZATION_GRANT);
-        assert_eq!(execute_coordination(&prog, &ctx), Err(CoordVmError::StackUnderflow));
+        assert_eq!(
+            execute_coordination(&prog, &ctx),
+            Err(CoordVmError::StackUnderflow)
+        );
         // Truncated PUSH operand → invalid program.
         assert_eq!(
             execute_coordination(&[OP_PUSH_U64, 1, 2, 3], &ctx),

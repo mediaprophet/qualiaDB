@@ -291,8 +291,12 @@ impl KirkpatrickHierarchy {
 
             for (fi, ft) in finer.iter().enumerate() {
                 // Find which coarse triangle contains the centroid of ft.
-                let cx = (all_vertices[ft.v[0]].x + all_vertices[ft.v[1]].x + all_vertices[ft.v[2]].x) / 3.0;
-                let cy = (all_vertices[ft.v[0]].y + all_vertices[ft.v[1]].y + all_vertices[ft.v[2]].y) / 3.0;
+                let cx =
+                    (all_vertices[ft.v[0]].x + all_vertices[ft.v[1]].x + all_vertices[ft.v[2]].x)
+                        / 3.0;
+                let cy =
+                    (all_vertices[ft.v[0]].y + all_vertices[ft.v[1]].y + all_vertices[ft.v[2]].y)
+                        / 3.0;
                 let centroid = Point2::new(cx, cy);
 
                 for (ci, ct) in coarse.iter().enumerate() {
@@ -363,7 +367,11 @@ impl KirkpatrickHierarchy {
                 // No children — we're at the finest level for this branch.
                 // The face is at the current level.
                 let tri = &self.levels[li + 1].triangles[current_tri];
-                return Ok(if tri.face == usize::MAX { None } else { Some(tri.face) });
+                return Ok(if tri.face == usize::MAX {
+                    None
+                } else {
+                    Some(tri.face)
+                });
             }
 
             // Find which child contains the query.
@@ -390,7 +398,11 @@ impl KirkpatrickHierarchy {
 
         // We're at the finest level (level 0).
         let tri = &self.levels[0].triangles[current_tri];
-        Ok(if tri.face == usize::MAX { None } else { Some(tri.face) })
+        Ok(if tri.face == usize::MAX {
+            None
+        } else {
+            Some(tri.face)
+        })
     }
 
     /// Number of levels in the hierarchy.
@@ -418,7 +430,11 @@ impl KirkpatrickHierarchy {
                 self.vertices[t.v[1]],
                 self.vertices[t.v[2]],
             ) {
-                return if t.face == usize::MAX { None } else { Some(t.face) };
+                return if t.face == usize::MAX {
+                    None
+                } else {
+                    Some(t.face)
+                };
             }
         }
         None
@@ -455,9 +471,9 @@ fn build_next_level(current: &Level, vertices: &[Point2], max_degree: usize) -> 
             continue;
         }
         // Check that no triangle in the star contains a bbox vertex.
-        let is_interior = vert_tris[v].iter().all(|&ti| {
-            current.triangles[ti].v.iter().all(|&vv| vv < n_orig)
-        });
+        let is_interior = vert_tris[v]
+            .iter()
+            .all(|&ti| current.triangles[ti].v.iter().all(|&vv| vv < n_orig));
         if !is_interior {
             continue;
         }
@@ -530,11 +546,7 @@ fn build_next_level(current: &Level, vertices: &[Point2], max_degree: usize) -> 
                 level: current.triangles[0].level + 1,
             };
             // Verify CCW; flip if needed.
-            let o = orientation_2(
-                vertices[tri.v[0]],
-                vertices[tri.v[1]],
-                vertices[tri.v[2]],
-            );
+            let o = orientation_2(vertices[tri.v[0]], vertices[tri.v[1]], vertices[tri.v[2]]);
             if o == Orientation::Clockwise {
                 new_tris.push(Tri {
                     v: [tri.v[0], tri.v[2], tri.v[1]],
@@ -712,7 +724,10 @@ mod tests {
 
     // ── Grid triangulation ──────────────────────────────────────────────
 
-    fn build_grid_triangulation(nx: usize, ny: usize) -> (Vec<Point2>, Vec<[usize; 3]>, Vec<usize>) {
+    fn build_grid_triangulation(
+        nx: usize,
+        ny: usize,
+    ) -> (Vec<Point2>, Vec<[usize; 3]>, Vec<usize>) {
         let mut verts = Vec::new();
         for j in 0..=ny {
             for i in 0..=nx {
@@ -752,7 +767,12 @@ mod tests {
                 let qx = i as f64 + 0.25;
                 let qy = j as f64 + 0.25;
                 let result = h.locate(pt(qx, qy)).unwrap();
-                assert!(result.is_some(), "point ({}, {}) should be in a face", qx, qy);
+                assert!(
+                    result.is_some(),
+                    "point ({}, {}) should be in a face",
+                    qx,
+                    qy
+                );
             }
         }
     }
@@ -774,7 +794,10 @@ mod tests {
                     dag.is_some(),
                     bf.is_some(),
                     "mismatch at ({}, {}): dag={:?}, bf={:?}",
-                    qx, qy, dag, bf
+                    qx,
+                    qy,
+                    dag,
+                    bf
                 );
             }
         }
@@ -789,7 +812,11 @@ mod tests {
         for i in 0..4 {
             let p = pt(i as f64 + 0.5, 2.0);
             let result = h.locate(p);
-            assert!(result.is_ok(), "edge point ({}, 2) should be locatable", p.x);
+            assert!(
+                result.is_ok(),
+                "edge point ({}, 2) should be locatable",
+                p.x
+            );
         }
     }
 
@@ -819,7 +846,12 @@ mod tests {
                 let qx = i as f64 + 0.5;
                 let qy = j as f64 + 0.5;
                 let result = h.locate(pt(qx, qy)).unwrap();
-                assert!(result.is_some(), "point ({}, {}) should be in a face", qx, qy);
+                assert!(
+                    result.is_some(),
+                    "point ({}, {}) should be in a face",
+                    qx,
+                    qy
+                );
             }
         }
     }
@@ -828,9 +860,15 @@ mod tests {
 
     #[test]
     fn error_display() {
-        assert!(KirkpatrickError::EmptyTriangulation.to_string().contains("empty"));
-        assert!(KirkpatrickError::TooFewVertices.to_string().contains("at least 3"));
-        assert!(KirkpatrickError::OutsideBoundingTriangle.to_string().contains("bounding triangle"));
+        assert!(KirkpatrickError::EmptyTriangulation
+            .to_string()
+            .contains("empty"));
+        assert!(KirkpatrickError::TooFewVertices
+            .to_string()
+            .contains("at least 3"));
+        assert!(KirkpatrickError::OutsideBoundingTriangle
+            .to_string()
+            .contains("bounding triangle"));
     }
 
     // ── Determinism ─────────────────────────────────────────────────────

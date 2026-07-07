@@ -218,7 +218,10 @@ pub struct Disk {
 impl Disk {
     /// The disk of zero radius at a point.
     pub fn point(p: Point2) -> Self {
-        Self { center: p, radius: 0.0 }
+        Self {
+            center: p,
+            radius: 0.0,
+        }
     }
 
     /// The disk with `a` and `b` as diameter endpoints.
@@ -233,8 +236,7 @@ impl Disk {
     /// points are collinear (no finite circumcircle).
     pub fn from_three(a: Point2, b: Point2, c: Point2) -> Option<Self> {
         // Circumcentre via perpendicular bisectors.
-        let d = 2.0
-            * (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y));
+        let d = 2.0 * (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y));
         if d == 0.0 {
             return None; // collinear
         }
@@ -483,8 +485,8 @@ fn brute_force_enclosing_disk(points: &[Point2]) -> (Disk, Vec<usize>) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::hull::convex_hull_2;
+    use super::*;
 
     fn approx_eq(a: f64, b: f64, tol: f64) -> bool {
         (a - b).abs() <= tol
@@ -508,7 +510,11 @@ mod tests {
             Point2::new(0.0, 1.0),
         ];
         let r = rotating_calipers(&hull).unwrap();
-        assert!(approx_eq(r.diameter, 2.0f64.sqrt(), 1e-9), "diameter = {}", r.diameter);
+        assert!(
+            approx_eq(r.diameter, 2.0f64.sqrt(), 1e-9),
+            "diameter = {}",
+            r.diameter
+        );
         // The farthest pair must be opposite corners.
         let p1 = hull[r.diameter_pair.i];
         let p2 = hull[r.diameter_pair.j];
@@ -572,12 +578,20 @@ mod tests {
         ];
         let r = rotating_calipers(&hull).unwrap();
         let bf_w = brute_force_width(&hull);
-        assert!(approx_eq(r.width, bf_w, 1e-9), "width {} vs brute {}", r.width, bf_w);
+        assert!(
+            approx_eq(r.width, bf_w, 1e-9),
+            "width {} vs brute {}",
+            r.width,
+            bf_w
+        );
     }
 
     #[test]
     fn calipers_too_few_points_errors() {
-        assert_eq!(rotating_calipers(&[Point2::new(0.0, 0.0)]), Err(CalipersError::TooFewPoints));
+        assert_eq!(
+            rotating_calipers(&[Point2::new(0.0, 0.0)]),
+            Err(CalipersError::TooFewPoints)
+        );
         assert_eq!(rotating_calipers(&[]), Err(CalipersError::TooFewPoints));
     }
 
@@ -781,9 +795,21 @@ mod tests {
         )
         .unwrap();
         // All three on boundary.
-        assert!(approx_eq(distance_2d(d.center, Point2::new(0.0, 0.0)), d.radius, 1e-9));
-        assert!(approx_eq(distance_2d(d.center, Point2::new(2.0, 0.0)), d.radius, 1e-9));
-        assert!(approx_eq(distance_2d(d.center, Point2::new(1.0, 3.0f64.sqrt())), d.radius, 1e-9));
+        assert!(approx_eq(
+            distance_2d(d.center, Point2::new(0.0, 0.0)),
+            d.radius,
+            1e-9
+        ));
+        assert!(approx_eq(
+            distance_2d(d.center, Point2::new(2.0, 0.0)),
+            d.radius,
+            1e-9
+        ));
+        assert!(approx_eq(
+            distance_2d(d.center, Point2::new(1.0, 3.0f64.sqrt())),
+            d.radius,
+            1e-9
+        ));
     }
 
     #[test]

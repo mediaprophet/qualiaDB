@@ -10,7 +10,6 @@
 //! - Authentication and rate limiting
 //! - Error handling and fallback mechanisms
 
-
 /// QPU Bridge Manager - Main interface for quantum computing operations
 ///
 /// This struct manages connections to remote quantum computing resources while

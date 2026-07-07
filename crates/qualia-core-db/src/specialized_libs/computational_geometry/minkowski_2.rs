@@ -1,4 +1,4 @@
-﻿//! Minkowski sum of two 2-D polygons (P4.8 / P11.7).
+//! Minkowski sum of two 2-D polygons (P4.8 / P11.7).
 //!
 //! The Minkowski sum of polygons A and B is the set of all points
 //! `{a + b | a ∈ A, b ∈ B}`.
@@ -46,7 +46,10 @@ impl core::fmt::Display for MinkowskiError {
             Self::TooFewVertices { got } => write!(f, "minkowski: need â‰¥1 vertex, got {got}"),
             Self::HullFailed(msg) => write!(f, "minkowski: hull failed: {msg}"),
             Self::OutputTooSmall { required, have } => {
-                write!(f, "minkowski: output too small, need {required}, have {have}")
+                write!(
+                    f,
+                    "minkowski: output too small, need {required}, have {have}"
+                )
             }
         }
     }
@@ -101,8 +104,9 @@ pub fn minkowski_sum_2(
     }
 
     let mut hull_indices = vec![0u32; pair_count];
-    let hull_count = convex_hull_indices_2(&sums, &mut scratch[..hull_scratch_size], &mut hull_indices)
-        .map_err(|e| MinkowskiError::HullFailed(format!("{e:?}")))?;
+    let hull_count =
+        convex_hull_indices_2(&sums, &mut scratch[..hull_scratch_size], &mut hull_indices)
+            .map_err(|e| MinkowskiError::HullFailed(format!("{e:?}")))?;
 
     // Copy hull vertices to output.
     for i in 0..hull_count {
@@ -153,8 +157,7 @@ fn convex_edges_from_bottom(poly: &[Point2]) -> (usize, Vec<(f64, f64)>) {
     // Find the bottom-most vertex (lowest y, then lowest x).
     let mut bottom = 0;
     for i in 1..n {
-        if poly[i].y < poly[bottom].y
-            || (poly[i].y == poly[bottom].y && poly[i].x < poly[bottom].x)
+        if poly[i].y < poly[bottom].y || (poly[i].y == poly[bottom].y && poly[i].x < poly[bottom].x)
         {
             bottom = i;
         }
@@ -199,10 +202,16 @@ pub fn minkowski_sum_convex(a: &[Point2], b: &[Point2]) -> Vec<Point2> {
 
     // Handle degenerate cases (single point or segment).
     if na == 1 {
-        return b.iter().map(|p| Point2::new(p.x + a[0].x, p.y + a[0].y)).collect();
+        return b
+            .iter()
+            .map(|p| Point2::new(p.x + a[0].x, p.y + a[0].y))
+            .collect();
     }
     if nb == 1 {
-        return a.iter().map(|p| Point2::new(p.x + b[0].x, p.y + b[0].y)).collect();
+        return a
+            .iter()
+            .map(|p| Point2::new(p.x + b[0].x, p.y + b[0].y))
+            .collect();
     }
 
     // Get edge vectors starting from the bottom-most vertex of each polygon.
@@ -210,10 +219,7 @@ pub fn minkowski_sum_convex(a: &[Point2], b: &[Point2]) -> Vec<Point2> {
     let (bottom_b, edges_b) = convex_edges_from_bottom(b);
 
     // Start point: sum of the bottom-most vertices.
-    let start = Point2::new(
-        a[bottom_a].x + b[bottom_b].x,
-        a[bottom_a].y + b[bottom_b].y,
-    );
+    let start = Point2::new(a[bottom_a].x + b[bottom_b].x, a[bottom_a].y + b[bottom_b].y);
 
     // Merge edges by polar angle.
     let mut raw = Vec::with_capacity(na + nb);
@@ -330,8 +336,8 @@ pub fn minkowski_sum_non_convex(a: &[Point2], b: &[Point2]) -> Vec<Point2> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::boolean_2::polygon_area;
+    use super::*;
 
     fn unit_square() -> Vec<Point2> {
         vec![
@@ -369,8 +375,14 @@ mod tests {
         let area = polygon_area(&out[..count]);
         assert!((area - 1.0).abs() < 1e-9);
         // Check translation: the minimum x should be 1.0, minimum y should be 2.0.
-        let min_x = out[..count].iter().map(|p| p.x).fold(f64::INFINITY, f64::min);
-        let min_y = out[..count].iter().map(|p| p.y).fold(f64::INFINITY, f64::min);
+        let min_x = out[..count]
+            .iter()
+            .map(|p| p.x)
+            .fold(f64::INFINITY, f64::min);
+        let min_y = out[..count]
+            .iter()
+            .map(|p| p.y)
+            .fold(f64::INFINITY, f64::min);
         assert!((min_x - 1.0).abs() < 1e-9);
         assert!((min_y - 2.0).abs() < 1e-9);
     }
@@ -456,7 +468,11 @@ mod tests {
             Point2::new(2.0, 1.0),
             Point2::new(0.0, 1.0),
         ];
-        let b = vec![Point2::new(0.0, 0.0), Point2::new(1.0, 0.0), Point2::new(0.0, 1.0)];
+        let b = vec![
+            Point2::new(0.0, 0.0),
+            Point2::new(1.0, 0.0),
+            Point2::new(0.0, 1.0),
+        ];
         let pair_count = a.len() * b.len();
         let mut scratch = vec![0u32; pair_count * 3];
         let mut out = vec![Point2::new(0.0, 0.0); pair_count];
@@ -487,7 +503,11 @@ mod tests {
             Point2::new(1.0, 2.0),
             Point2::new(0.0, 2.0),
         ];
-        let b = vec![Point2::new(0.0, 0.0), Point2::new(0.5, 0.0), Point2::new(0.0, 0.5)];
+        let b = vec![
+            Point2::new(0.0, 0.0),
+            Point2::new(0.5, 0.0),
+            Point2::new(0.0, 0.5),
+        ];
         let pair_count = a.len() * b.len();
         let mut scratch = vec![0u32; pair_count * 3];
         let mut out = vec![Point2::new(0.0, 0.0); pair_count];
@@ -663,7 +683,10 @@ mod tests {
             })
             .sum::<f64>()
             * 0.5;
-        assert!((hull_area - 4.0).abs() < 1e-9, "hull area should be 4.0, got {hull_area}");
+        assert!(
+            (hull_area - 4.0).abs() < 1e-9,
+            "hull area should be 4.0, got {hull_area}"
+        );
     }
 
     #[test]
@@ -707,5 +730,3 @@ mod tests {
         assert!((polar_angle(0.0, -1.0) - 3.0 * std::f64::consts::FRAC_PI_2).abs() < 1e-12);
     }
 }
-
-

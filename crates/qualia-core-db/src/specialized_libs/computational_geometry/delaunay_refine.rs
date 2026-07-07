@@ -54,7 +54,11 @@ pub enum RefineError {
     /// Fewer than 3 input vertices.
     TooFewPoints { got: usize },
     /// A segment referenced an out-of-range vertex index.
-    InvalidSegmentIndex { segment: usize, vertex: u32, point_count: usize },
+    InvalidSegmentIndex {
+        segment: usize,
+        vertex: u32,
+        point_count: usize,
+    },
     /// A segment is degenerate (zero length).
     DegenerateSegment { segment: usize },
     /// The minimum-angle threshold exceeds the termination bound and the
@@ -63,7 +67,10 @@ pub enum RefineError {
     /// The underlying Delaunay triangulation failed.
     DelaunayFailed(String),
     /// The `max_steiner` cap was reached before the bad-triangle queue emptied.
-    SteinerCapReached { inserted: usize, bad_remaining: usize },
+    SteinerCapReached {
+        inserted: usize,
+        bad_remaining: usize,
+    },
 }
 
 impl core::fmt::Display for RefineError {
@@ -351,8 +358,7 @@ pub fn delaunay_refine_2(
             let pc = all_points[c as usize];
             let ma = tri_min_angle(pa, pb, pc);
             let area = tri_area(pa, pb, pc);
-            let is_bad = ma < min_angle_rad
-                || (options.max_area > 0.0 && area > options.max_area);
+            let is_bad = ma < min_angle_rad || (options.max_area > 0.0 && area > options.max_area);
             if is_bad {
                 bad.push((ma, tri));
             }
@@ -419,10 +425,7 @@ pub fn delaunay_refine_2(
                 // handled via a tiny perturbation-free skip: just continue.
                 // To avoid an infinite loop on the same triangle, perturb the
                 // circumcenter slightly toward the triangle centroid.
-                let centroid = Point2::new(
-                    (pa.x + pb.x + pc.x) / 3.0,
-                    (pa.y + pb.y + pc.y) / 3.0,
-                );
+                let centroid = Point2::new((pa.x + pb.x + pc.x) / 3.0, (pa.y + pb.y + pc.y) / 3.0);
                 let perturbed = Point2::new(
                     cc.x + (centroid.x - cc.x) * 1e-9,
                     cc.y + (centroid.y - cc.y) * 1e-9,
@@ -562,7 +565,10 @@ mod tests {
         let mut out_p = Vec::new();
         let mut out_t = vec![[0u32; 3]; 1000];
         let r = delaunay_refine_2(&pts, &[], &opts, &mut out_p, &mut out_t);
-        assert!(matches!(r, Err(RefineError::AngleAboveTerminationBound { .. })));
+        assert!(matches!(
+            r,
+            Err(RefineError::AngleAboveTerminationBound { .. })
+        ));
     }
 
     #[test]
@@ -575,7 +581,13 @@ mod tests {
         let segs = vec![(0u32, 0u32)];
         let mut out_p = Vec::new();
         let mut out_t = vec![[0u32; 3]; 1000];
-        let r = delaunay_refine_2(&pts, &segs, &RefineOptions::default(), &mut out_p, &mut out_t);
+        let r = delaunay_refine_2(
+            &pts,
+            &segs,
+            &RefineOptions::default(),
+            &mut out_p,
+            &mut out_t,
+        );
         assert!(matches!(r, Err(RefineError::DegenerateSegment { .. })));
     }
 
@@ -589,7 +601,13 @@ mod tests {
         let segs = vec![(0u32, 5u32)];
         let mut out_p = Vec::new();
         let mut out_t = vec![[0u32; 3]; 1000];
-        let r = delaunay_refine_2(&pts, &segs, &RefineOptions::default(), &mut out_p, &mut out_t);
+        let r = delaunay_refine_2(
+            &pts,
+            &segs,
+            &RefineOptions::default(),
+            &mut out_p,
+            &mut out_t,
+        );
         assert!(matches!(r, Err(RefineError::InvalidSegmentIndex { .. })));
     }
 
@@ -714,7 +732,8 @@ mod tests {
                         continue;
                     }
                     // Is (cur, w) an edge?
-                    let is_edge = (verts.iter().any(|&v| v == cur) && verts.iter().any(|&v| v == w))
+                    let is_edge = (verts.iter().any(|&v| v == cur)
+                        && verts.iter().any(|&v| v == w))
                         && ((x == cur && (y == w || z == w))
                             || (y == cur && (x == w || z == w))
                             || (z == cur && (x == w || y == w)));
@@ -790,6 +809,9 @@ mod tests {
         let mut out_t = vec![[0u32; 3]; 2000];
         let r = delaunay_refine_2(&pts, &segs, &opts, &mut out_p, &mut out_t);
         // With only 1 Steiner point the mesh won't meet 20 deg -> cap error.
-        assert!(matches!(r, Err(RefineError::SteinerCapReached { .. }) | Ok(_)));
+        assert!(matches!(
+            r,
+            Err(RefineError::SteinerCapReached { .. }) | Ok(_)
+        ));
     }
 }

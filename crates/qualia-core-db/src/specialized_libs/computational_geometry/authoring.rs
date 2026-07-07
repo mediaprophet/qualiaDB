@@ -11,13 +11,14 @@
 //! matches an independent oracle. Exported `.10d` assets are byte-stable
 //! across identical exports.
 
-use crate::container_10d::{
-    encode_container, seal_whole_file_crc32c, verify_whole_file_crc32c,
-    Container10dHeader, SectionInput, SectionType, AlignmentTier,
-    encode_mesh_section, decode_mesh_section,
-};
 use crate::container_10d::mesh_section::encoded_len as mesh_encoded_len;
-use crate::container_10d::node_section::{write_node_section_aos, read_node, NODE_MINI_HEADER_SIZE};
+use crate::container_10d::node_section::{
+    read_node, write_node_section_aos, NODE_MINI_HEADER_SIZE,
+};
+use crate::container_10d::{
+    decode_mesh_section, encode_container, encode_mesh_section, seal_whole_file_crc32c,
+    verify_whole_file_crc32c, AlignmentTier, Container10dHeader, SectionInput, SectionType,
+};
 use crate::render::assets::Mesh;
 use crate::tensor::Tensor10D;
 
@@ -65,45 +66,88 @@ impl std::error::Error for AuthoringError {}
 /// 8 vertices, 12 triangles. Deterministic.
 pub fn unit_box() -> Mesh {
     let positions = vec![
-        [-0.5, -0.5, -0.5], [ 0.5, -0.5, -0.5], [ 0.5,  0.5, -0.5], [-0.5,  0.5, -0.5],
-        [-0.5, -0.5,  0.5], [ 0.5, -0.5,  0.5], [ 0.5,  0.5,  0.5], [-0.5,  0.5,  0.5],
+        [-0.5, -0.5, -0.5],
+        [0.5, -0.5, -0.5],
+        [0.5, 0.5, -0.5],
+        [-0.5, 0.5, -0.5],
+        [-0.5, -0.5, 0.5],
+        [0.5, -0.5, 0.5],
+        [0.5, 0.5, 0.5],
+        [-0.5, 0.5, 0.5],
     ];
     let triangles = vec![
-        [0, 1, 2], [0, 2, 3], // -Z
-        [4, 6, 5], [4, 7, 6], // +Z
-        [0, 4, 5], [0, 5, 1], // -Y
-        [2, 6, 7], [2, 7, 3], // +Y
-        [0, 3, 7], [0, 7, 4], // -X
-        [1, 5, 6], [1, 6, 2], // +X
+        [0, 1, 2],
+        [0, 2, 3], // -Z
+        [4, 6, 5],
+        [4, 7, 6], // +Z
+        [0, 4, 5],
+        [0, 5, 1], // -Y
+        [2, 6, 7],
+        [2, 7, 3], // +Y
+        [0, 3, 7],
+        [0, 7, 4], // -X
+        [1, 5, 6],
+        [1, 6, 2], // +X
     ];
-    Mesh { positions, triangles, min: [-0.5; 3], max: [0.5; 3] }
+    Mesh {
+        positions,
+        triangles,
+        min: [-0.5; 3],
+        max: [0.5; 3],
+    }
 }
 
 /// Generate a box with custom dimensions centred at the origin.
 pub fn box_mesh(width: f32, height: f32, depth: f32) -> Result<Mesh, AuthoringError> {
     if width <= 0.0 || height <= 0.0 || depth <= 0.0 {
-        return Err(AuthoringError::InvalidParameters("dimensions must be positive"));
+        return Err(AuthoringError::InvalidParameters(
+            "dimensions must be positive",
+        ));
     }
     let hx = width * 0.5;
     let hy = height * 0.5;
     let hz = depth * 0.5;
     let positions = vec![
-        [-hx, -hy, -hz], [ hx, -hy, -hz], [ hx,  hy, -hz], [-hx,  hy, -hz],
-        [-hx, -hy,  hz], [ hx, -hy,  hz], [ hx,  hy,  hz], [-hx,  hy,  hz],
+        [-hx, -hy, -hz],
+        [hx, -hy, -hz],
+        [hx, hy, -hz],
+        [-hx, hy, -hz],
+        [-hx, -hy, hz],
+        [hx, -hy, hz],
+        [hx, hy, hz],
+        [-hx, hy, hz],
     ];
     let triangles = vec![
-        [0, 1, 2], [0, 2, 3], [4, 6, 5], [4, 7, 6],
-        [0, 4, 5], [0, 5, 1], [2, 6, 7], [2, 7, 3],
-        [0, 3, 7], [0, 7, 4], [1, 5, 6], [1, 6, 2],
+        [0, 1, 2],
+        [0, 2, 3],
+        [4, 6, 5],
+        [4, 7, 6],
+        [0, 4, 5],
+        [0, 5, 1],
+        [2, 6, 7],
+        [2, 7, 3],
+        [0, 3, 7],
+        [0, 7, 4],
+        [1, 5, 6],
+        [1, 6, 2],
     ];
-    Ok(Mesh { positions, triangles, min: [-hx, -hy, -hz], max: [hx, hy, hz] })
+    Ok(Mesh {
+        positions,
+        triangles,
+        min: [-hx, -hy, -hz],
+        max: [hx, hy, hz],
+    })
 }
 
 /// Generate a UV sphere of given radius, latitude/longitude segments.
 ///
 /// Deterministic: identical (radius, lat_segments, lon_segments) yields
 /// byte-identical mesh.
-pub fn uv_sphere(radius: f32, lat_segments: u32, lon_segments: u32) -> Result<Mesh, AuthoringError> {
+pub fn uv_sphere(
+    radius: f32,
+    lat_segments: u32,
+    lon_segments: u32,
+) -> Result<Mesh, AuthoringError> {
     if radius <= 0.0 {
         return Err(AuthoringError::InvalidParameters("radius must be positive"));
     }
@@ -160,13 +204,20 @@ pub fn uv_sphere(radius: f32, lat_segments: u32, lon_segments: u32) -> Result<Me
         triangles.push([north, last_ring + lon + 1, last_ring + lon]);
     }
 
-    Ok(Mesh { positions, triangles, min: [-radius; 3], max: [radius; 3] })
+    Ok(Mesh {
+        positions,
+        triangles,
+        min: [-radius; 3],
+        max: [radius; 3],
+    })
 }
 
 /// Generate a cylinder along the Y axis with given radius, height, segments.
 pub fn cylinder(radius: f32, height: f32, segments: u32) -> Result<Mesh, AuthoringError> {
     if radius <= 0.0 || height <= 0.0 {
-        return Err(AuthoringError::InvalidParameters("radius and height must be positive"));
+        return Err(AuthoringError::InvalidParameters(
+            "radius and height must be positive",
+        ));
     }
     if segments < 3 {
         return Err(AuthoringError::InvalidParameters("need segments>=3"));
@@ -217,7 +268,12 @@ pub fn cylinder(radius: f32, height: f32, segments: u32) -> Result<Mesh, Authori
         triangles.push([top_center, i + segments, i_next + segments]);
     }
 
-    Ok(Mesh { positions, triangles, min: [-radius, -hy, -radius], max: [radius, hy, radius] })
+    Ok(Mesh {
+        positions,
+        triangles,
+        min: [-radius, -hy, -radius],
+        max: [radius, hy, radius],
+    })
 }
 
 /// Generate a plane in the XZ plane with given size, centred at origin.
@@ -226,11 +282,14 @@ pub fn plane(size: f32) -> Result<Mesh, AuthoringError> {
         return Err(AuthoringError::InvalidParameters("size must be positive"));
     }
     let h = size * 0.5;
-    let positions = vec![
-        [-h, 0.0, -h], [ h, 0.0, -h], [ h, 0.0,  h], [-h, 0.0,  h],
-    ];
+    let positions = vec![[-h, 0.0, -h], [h, 0.0, -h], [h, 0.0, h], [-h, 0.0, h]];
     let triangles = vec![[0, 1, 2], [0, 2, 3]];
-    Ok(Mesh { positions, triangles, min: [-h, 0.0, -h], max: [h, 0.0, h] })
+    Ok(Mesh {
+        positions,
+        triangles,
+        min: [-h, 0.0, -h],
+        max: [h, 0.0, h],
+    })
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -256,16 +315,16 @@ pub fn translation(tx: f64, ty: f64, tz: f64) -> Mat4 {
         [1.0, 0.0, 0.0, 0.0],
         [0.0, 1.0, 0.0, 0.0],
         [0.0, 0.0, 1.0, 0.0],
-        [tx,  ty,  tz,  1.0],
+        [tx, ty, tz, 1.0],
     ]
 }
 
 /// Scale matrix.
 pub fn scale(sx: f64, sy: f64, sz: f64) -> Mat4 {
     [
-        [sx,  0.0, 0.0, 0.0],
-        [0.0, sy,  0.0, 0.0],
-        [0.0, 0.0, sz,  0.0],
+        [sx, 0.0, 0.0, 0.0],
+        [0.0, sy, 0.0, 0.0],
+        [0.0, 0.0, sz, 0.0],
         [0.0, 0.0, 0.0, 1.0],
     ]
 }
@@ -275,8 +334,8 @@ pub fn rotation_z(angle_rad: f64) -> Mat4 {
     let c = angle_rad.cos();
     let s = angle_rad.sin();
     [
-        [c,  s,  0.0, 0.0],
-        [-s, c,  0.0, 0.0],
+        [c, s, 0.0, 0.0],
+        [-s, c, 0.0, 0.0],
         [0.0, 0.0, 1.0, 0.0],
         [0.0, 0.0, 0.0, 1.0],
     ]
@@ -287,9 +346,9 @@ pub fn rotation_y(angle_rad: f64) -> Mat4 {
     let c = angle_rad.cos();
     let s = angle_rad.sin();
     [
-        [c,  0.0, -s,  0.0],
+        [c, 0.0, -s, 0.0],
         [0.0, 1.0, 0.0, 0.0],
-        [s,  0.0, c,   0.0],
+        [s, 0.0, c, 0.0],
         [0.0, 0.0, 0.0, 1.0],
     ]
 }
@@ -300,8 +359,8 @@ pub fn rotation_x(angle_rad: f64) -> Mat4 {
     let s = angle_rad.sin();
     [
         [1.0, 0.0, 0.0, 0.0],
-        [0.0, c,   s,   0.0],
-        [0.0, -s,  c,   0.0],
+        [0.0, c, s, 0.0],
+        [0.0, -s, c, 0.0],
         [0.0, 0.0, 0.0, 1.0],
     ]
 }
@@ -326,9 +385,15 @@ pub fn mat_mul(a: &Mat4, b: &Mat4) -> Mat4 {
 ///
 /// `rotation` is (rx, ry, rz) in radians, applied as Rx·Ry·Rz.
 pub fn compose_trs(
-    tx: f64, ty: f64, tz: f64,
-    rx: f64, ry: f64, rz: f64,
-    sx: f64, sy: f64, sz: f64,
+    tx: f64,
+    ty: f64,
+    tz: f64,
+    rx: f64,
+    ry: f64,
+    rz: f64,
+    sx: f64,
+    sy: f64,
+    sz: f64,
 ) -> Mat4 {
     let t = translation(tx, ty, tz);
     let r = mat_mul(&mat_mul(&rotation_x(rx), &rotation_y(ry)), &rotation_z(rz));
@@ -339,16 +404,20 @@ pub fn compose_trs(
 
 /// Apply a Mat4 transform to a mesh's vertex positions (f32 → f64 → f32).
 pub fn transform_mesh(mesh: &Mesh, m: &Mat4) -> Mesh {
-    let positions: Vec<[f32; 3]> = mesh.positions.iter().map(|p| {
-        let x = p[0] as f64;
-        let y = p[1] as f64;
-        let z = p[2] as f64;
-        // Column-major: result = [x y z 1] * M
-        let nx = x * m[0][0] + y * m[1][0] + z * m[2][0] + m[3][0];
-        let ny = x * m[0][1] + y * m[1][1] + z * m[2][1] + m[3][1];
-        let nz = x * m[0][2] + y * m[1][2] + z * m[2][2] + m[3][2];
-        [nx as f32, ny as f32, nz as f32]
-    }).collect();
+    let positions: Vec<[f32; 3]> = mesh
+        .positions
+        .iter()
+        .map(|p| {
+            let x = p[0] as f64;
+            let y = p[1] as f64;
+            let z = p[2] as f64;
+            // Column-major: result = [x y z 1] * M
+            let nx = x * m[0][0] + y * m[1][0] + z * m[2][0] + m[3][0];
+            let ny = x * m[0][1] + y * m[1][1] + z * m[2][1] + m[3][1];
+            let nz = x * m[0][2] + y * m[1][2] + z * m[2][2] + m[3][2];
+            [nx as f32, ny as f32, nz as f32]
+        })
+        .collect();
 
     let mut min = [f32::INFINITY; 3];
     let mut max = [f32::NEG_INFINITY; 3];
@@ -401,9 +470,15 @@ impl Scene {
         &mut self,
         name: &str,
         mesh: Mesh,
-        tx: f64, ty: f64, tz: f64,
-        rx: f64, ry: f64, rz: f64,
-        sx: f64, sy: f64, sz: f64,
+        tx: f64,
+        ty: f64,
+        tz: f64,
+        rx: f64,
+        ry: f64,
+        rz: f64,
+        sx: f64,
+        sy: f64,
+        sz: f64,
     ) {
         self.nodes.push(SceneNode {
             name: name.to_string(),
@@ -475,16 +550,16 @@ impl ProvenanceMetadata {
         let w = f32::from_bits(self.domain_hash as u32);
         let x = f32::from_bits((self.domain_hash >> 32) as u32);
         Tensor10D::new(
-            q,                            // q — DID low 32 bits
-            v,                            // v — DID high 32 bits
-            w,                            // w — domain low 32 bits
-            x,                            // x — domain high 32 bits
-            0.0,                          // y
-            0.0,                          // z
-            self.timestamp,               // t
-            0.0,                          // alpha
-            self.mu,                      // mu
-            0.0,                          // sigma
+            q,              // q — DID low 32 bits
+            v,              // v — DID high 32 bits
+            w,              // w — domain low 32 bits
+            x,              // x — domain high 32 bits
+            0.0,            // y
+            0.0,            // z
+            self.timestamp, // t
+            0.0,            // alpha
+            self.mu,        // mu
+            0.0,            // sigma
         )
     }
 
@@ -502,8 +577,8 @@ impl ProvenanceMetadata {
 pub fn asset_encoded_len(mesh: &Mesh, _provenance: &ProvenanceMetadata) -> usize {
     let mesh_len = mesh_encoded_len(mesh.positions.len(), mesh.triangles.len());
     let node_len = NODE_MINI_HEADER_SIZE + 40; // 1 tensor = 40 bytes
-    // Header (64) + 2 section descriptors (48) + aligned payloads
-    // Conservative estimate: 64 + 48 + mesh_len + 64 (alignment) + node_len + 64
+                                               // Header (64) + 2 section descriptors (48) + aligned payloads
+                                               // Conservative estimate: 64 + 48 + mesh_len + 64 (alignment) + node_len + 64
     64 + 48 + mesh_len + 64 + node_len + 64
 }
 
@@ -521,7 +596,9 @@ pub fn export_asset(
     out: &mut [u8],
 ) -> Result<usize, AuthoringError> {
     if !provenance.is_non_empty() {
-        return Err(AuthoringError::ProvenanceEncode("provenance μ must be non-zero".into()));
+        return Err(AuthoringError::ProvenanceEncode(
+            "provenance μ must be non-zero".into(),
+        ));
     }
 
     // Encode mesh section payload.
@@ -584,16 +661,19 @@ pub fn import_asset(bytes: &mut [u8]) -> Result<(Mesh, ProvenanceMetadata), Auth
     let mut provenance_tensor = None;
 
     for desc in descs {
-        let st = SectionType::from_u8(desc.section_type)
-            .ok_or(AuthoringError::ContainerEncode("unknown section type".into()))?;
+        let st = SectionType::from_u8(desc.section_type).ok_or(AuthoringError::ContainerEncode(
+            "unknown section type".into(),
+        ))?;
         let off = desc.byte_offset as usize;
         let len = desc.byte_length as usize;
         let payload = &bytes[off..off + len];
 
         match st {
             SectionType::QuantizedMesh => {
-                mesh = Some(decode_mesh_section(payload)
-                    .map_err(|e| AuthoringError::ContainerEncode(format!("mesh decode: {e}")))?);
+                mesh =
+                    Some(decode_mesh_section(payload).map_err(|e| {
+                        AuthoringError::ContainerEncode(format!("mesh decode: {e}"))
+                    })?);
             }
             SectionType::Tensor10DNodes => {
                 let t = read_node(payload, 0)
@@ -605,7 +685,9 @@ pub fn import_asset(bytes: &mut [u8]) -> Result<(Mesh, ProvenanceMetadata), Auth
     }
 
     let mesh = mesh.ok_or(AuthoringError::ContainerEncode("no mesh section".into()))?;
-    let tensor = provenance_tensor.ok_or(AuthoringError::ContainerEncode("no provenance node section".into()))?;
+    let tensor = provenance_tensor.ok_or(AuthoringError::ContainerEncode(
+        "no provenance node section".into(),
+    ))?;
 
     // Reconstruct provenance from tensor.
     let author_did_hash = ((tensor.v.to_bits() as u64) << 32) | (tensor.q.to_bits() as u64);
@@ -651,9 +733,17 @@ pub fn boolean_op(mesh_a: &Mesh, mesh_b: &Mesh, op: BooleanOp) -> Result<Mesh, A
     use super::boolean_3::{boolean_3, required_triangles_3, required_vertices_3};
     use super::primitives::Point3;
 
-    let va: Vec<Point3> = mesh_a.positions.iter().map(|p| Point3::new(p[0] as f64, p[1] as f64, p[2] as f64)).collect();
+    let va: Vec<Point3> = mesh_a
+        .positions
+        .iter()
+        .map(|p| Point3::new(p[0] as f64, p[1] as f64, p[2] as f64))
+        .collect();
     let ta: Vec<[u32; 3]> = mesh_a.triangles.clone();
-    let vb: Vec<Point3> = mesh_b.positions.iter().map(|p| Point3::new(p[0] as f64, p[1] as f64, p[2] as f64)).collect();
+    let vb: Vec<Point3> = mesh_b
+        .positions
+        .iter()
+        .map(|p| Point3::new(p[0] as f64, p[1] as f64, p[2] as f64))
+        .collect();
     let tb: Vec<[u32; 3]> = mesh_b.triangles.clone();
 
     let max_v = required_vertices_3(va.len(), vb.len(), ta.len(), tb.len());
@@ -664,7 +754,10 @@ pub fn boolean_op(mesh_a: &Mesh, mesh_b: &Mesh, op: BooleanOp) -> Result<Mesh, A
     let (vc, tc) = boolean_3(&va, &ta, &vb, &tb, op.to_kernel(), &mut ov, &mut ot)
         .map_err(|e| AuthoringError::ContainerEncode(format!("boolean_3: {e}")))?;
 
-    let positions: Vec<[f32; 3]> = ov[..vc].iter().map(|p| [p.x as f32, p.y as f32, p.z as f32]).collect();
+    let positions: Vec<[f32; 3]> = ov[..vc]
+        .iter()
+        .map(|p| [p.x as f32, p.y as f32, p.z as f32])
+        .collect();
     let triangles: Vec<[u32; 3]> = ot[..tc].to_vec();
 
     let mut min = [f32::INFINITY; 3];
@@ -676,7 +769,12 @@ pub fn boolean_op(mesh_a: &Mesh, mesh_b: &Mesh, op: BooleanOp) -> Result<Mesh, A
         }
     }
 
-    Ok(Mesh { positions, triangles, min, max })
+    Ok(Mesh {
+        positions,
+        triangles,
+        min,
+        max,
+    })
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -702,7 +800,9 @@ pub fn torus(
         return Err(AuthoringError::InvalidParameters("need major>=3, minor>=3"));
     }
     if minor_radius >= major_radius {
-        return Err(AuthoringError::InvalidParameters("minor_radius must be < major_radius"));
+        return Err(AuthoringError::InvalidParameters(
+            "minor_radius must be < major_radius",
+        ));
     }
 
     let mut positions = Vec::new();
@@ -741,7 +841,12 @@ pub fn torus(
         }
     }
 
-    Ok(Mesh { positions, triangles, min, max })
+    Ok(Mesh {
+        positions,
+        triangles,
+        min,
+        max,
+    })
 }
 
 /// Generate a grid mesh (subdivided plane) centred at the origin.
@@ -776,7 +881,12 @@ pub fn grid(size: f32, subdivisions: u32) -> Result<Mesh, AuthoringError> {
         }
     }
 
-    Ok(Mesh { positions, triangles, min: [-half, 0.0, -half], max: [half, 0.0, half] })
+    Ok(Mesh {
+        positions,
+        triangles,
+        min: [-half, 0.0, -half],
+        max: [half, 0.0, half],
+    })
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -794,7 +904,10 @@ pub struct DragConsent {
 
 impl Default for DragConsent {
     fn default() -> Self {
-        Self { consent_granted: true, sealed_prior: true }
+        Self {
+            consent_granted: true,
+            sealed_prior: true,
+        }
     }
 }
 
@@ -813,7 +926,9 @@ impl core::fmt::Display for DragError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::GovernanceRefused => write!(f, "drag refused: governance/consent violation"),
-            Self::VertexOutOfBounds { index, count } => write!(f, "drag: vertex {index} out of bounds (count={count})"),
+            Self::VertexOutOfBounds { index, count } => {
+                write!(f, "drag: vertex {index} out of bounds (count={count})")
+            }
             Self::SealedSlice => write!(f, "drag: prior t-slice is sealed and cannot be mutated"),
         }
     }
@@ -1064,9 +1179,32 @@ mod tests {
     #[test]
     fn scene_add_primitive() {
         let mut scene = Scene::new();
-        scene.add_primitive("box", unit_box(), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
-        scene.add_primitive("sphere", uv_sphere(1.0, 8, 16).unwrap(),
-            5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+        scene.add_primitive(
+            "box",
+            unit_box(),
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+        );
+        scene.add_primitive(
+            "sphere",
+            uv_sphere(1.0, 8, 16).unwrap(),
+            5.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+        );
         assert_eq!(scene.node_count(), 2);
         assert!(scene.total_vertices() > 0);
         assert!(scene.total_triangles() > 0);
@@ -1075,9 +1213,33 @@ mod tests {
     #[test]
     fn scene_deterministic() {
         let mut a = Scene::new();
-        a.add_primitive("box", unit_box(), 1.0, 2.0, 3.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+        a.add_primitive(
+            "box",
+            unit_box(),
+            1.0,
+            2.0,
+            3.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+        );
         let mut b = Scene::new();
-        b.add_primitive("box", unit_box(), 1.0, 2.0, 3.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+        b.add_primitive(
+            "box",
+            unit_box(),
+            1.0,
+            2.0,
+            3.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+        );
         assert_eq!(a.nodes[0].transform, b.nodes[0].transform);
     }
 
@@ -1116,7 +1278,8 @@ mod tests {
     #[test]
     fn export_asset_byte_identical_on_repeat() {
         let mesh = unit_box();
-        let provenance = ProvenanceMetadata::new(0x1234_5678_9abc_def0, 0x4242_4242_4242_4242, 1000.0);
+        let provenance =
+            ProvenanceMetadata::new(0x1234_5678_9abc_def0, 0x4242_4242_4242_4242, 1000.0);
 
         let need = asset_encoded_len(&mesh, &provenance);
         let mut a = vec![0u8; need];
@@ -1125,13 +1288,18 @@ mod tests {
         let nb = export_asset(&mesh, &provenance, &mut b).unwrap();
 
         assert_eq!(na, nb);
-        assert_eq!(&a[..na], &b[..nb], "two identical exports must be byte-identical");
+        assert_eq!(
+            &a[..na],
+            &b[..nb],
+            "two identical exports must be byte-identical"
+        );
     }
 
     #[test]
     fn export_import_round_trips_within_quantization_tolerance() {
         let mesh = unit_box();
-        let provenance = ProvenanceMetadata::new(0x1234_5678_9abc_def0, 0x4242_4242_4242_4242, 1000.0);
+        let provenance =
+            ProvenanceMetadata::new(0x1234_5678_9abc_def0, 0x4242_4242_4242_4242, 1000.0);
 
         let need = asset_encoded_len(&mesh, &provenance);
         let mut buf = vec![0u8; need];
@@ -1161,7 +1329,12 @@ mod tests {
     #[test]
     fn export_rejects_empty_provenance() {
         let mesh = unit_box();
-        let provenance = ProvenanceMetadata { author_did_hash: 0, mu: 0.0, timestamp: 0.0, domain_hash: 0 };
+        let provenance = ProvenanceMetadata {
+            author_did_hash: 0,
+            mu: 0.0,
+            timestamp: 0.0,
+            domain_hash: 0,
+        };
         let need = asset_encoded_len(&mesh, &provenance);
         let mut buf = vec![0u8; need];
         assert!(export_asset(&mesh, &provenance, &mut buf).is_err());
@@ -1176,7 +1349,10 @@ mod tests {
         let n = export_asset(&mesh, &provenance, &mut buf).unwrap();
 
         let (_, prov_back) = import_asset(&mut buf[..n]).unwrap();
-        assert!(prov_back.is_non_empty(), "imported asset must carry non-empty μ provenance");
+        assert!(
+            prov_back.is_non_empty(),
+            "imported asset must carry non-empty μ provenance"
+        );
         assert_eq!(prov_back.author_did_hash, 0xABCD);
     }
 
@@ -1261,7 +1437,11 @@ mod tests {
         let b = box_mesh(1.0, 1.0, 1.0).unwrap();
         // Translate b by 0.5 in x — overlapping union.
         let b_translated = Mesh {
-            positions: b.positions.iter().map(|p| [p[0] + 0.5, p[1], p[2]]).collect(),
+            positions: b
+                .positions
+                .iter()
+                .map(|p| [p[0] + 0.5, p[1], p[2]])
+                .collect(),
             triangles: b.triangles.clone(),
             min: [b.min[0] + 0.5, b.min[1], b.min[2]],
             max: [b.max[0] + 0.5, b.max[1], b.max[2]],
@@ -1275,7 +1455,11 @@ mod tests {
     fn boolean_difference_of_disjoint_boxes() {
         let a = unit_box();
         let b = Mesh {
-            positions: unit_box().positions.iter().map(|p| [p[0] + 5.0, p[1], p[2]]).collect(),
+            positions: unit_box()
+                .positions
+                .iter()
+                .map(|p| [p[0] + 5.0, p[1], p[2]])
+                .collect(),
             triangles: unit_box().triangles.clone(),
             min: [4.5, -0.5, -0.5],
             max: [5.5, 0.5, 0.5],
@@ -1290,7 +1474,11 @@ mod tests {
     fn boolean_intersection_of_disjoint_is_empty() {
         let a = unit_box();
         let b = Mesh {
-            positions: unit_box().positions.iter().map(|p| [p[0] + 5.0, p[1], p[2]]).collect(),
+            positions: unit_box()
+                .positions
+                .iter()
+                .map(|p| [p[0] + 5.0, p[1], p[2]])
+                .collect(),
             triangles: unit_box().triangles.clone(),
             min: [4.5, -0.5, -0.5],
             max: [5.5, 0.5, 0.5],
@@ -1314,8 +1502,14 @@ mod tests {
     fn torus_rejects_invalid_params() {
         assert!(torus(0.0, 0.3, 16, 8).is_err());
         assert!(torus(1.0, 0.0, 16, 8).is_err());
-        assert!(torus(1.0, 1.0, 16, 8).is_err(), "minor >= major should fail");
-        assert!(torus(1.0, 0.3, 2, 8).is_err(), "major_segments < 3 should fail");
+        assert!(
+            torus(1.0, 1.0, 16, 8).is_err(),
+            "minor >= major should fail"
+        );
+        assert!(
+            torus(1.0, 0.3, 2, 8).is_err(),
+            "major_segments < 3 should fail"
+        );
     }
 
     #[test]
@@ -1346,13 +1540,8 @@ mod tests {
     fn drag_vertex_produces_new_t_slice() {
         let mesh = unit_box();
         let prior_t = 10.0;
-        let result = drag_vertex(
-            &mesh,
-            0,
-            [1.0, 2.0, 3.0],
-            prior_t,
-            DragConsent::default(),
-        ).unwrap();
+        let result =
+            drag_vertex(&mesh, 0, [1.0, 2.0, 3.0], prior_t, DragConsent::default()).unwrap();
         // New t-slice = prior_t + 1.0.
         assert_eq!(result.new_t, 11.0);
         assert_eq!(result.prior_t, 10.0);
@@ -1368,13 +1557,7 @@ mod tests {
     fn drag_vertex_prior_slice_unmutated() {
         let mesh = unit_box();
         let original_positions = mesh.positions.clone();
-        let _ = drag_vertex(
-            &mesh,
-            0,
-            [1.0, 2.0, 3.0],
-            5.0,
-            DragConsent::default(),
-        ).unwrap();
+        let _ = drag_vertex(&mesh, 0, [1.0, 2.0, 3.0], 5.0, DragConsent::default()).unwrap();
         // The original mesh is not mutated.
         assert_eq!(mesh.positions, original_positions);
     }
@@ -1387,7 +1570,10 @@ mod tests {
             0,
             [1.0, 2.0, 3.0],
             5.0,
-            DragConsent { consent_granted: false, sealed_prior: true },
+            DragConsent {
+                consent_granted: false,
+                sealed_prior: true,
+            },
         );
         assert!(matches!(result, Err(DragError::GovernanceRefused)));
     }
@@ -1395,14 +1581,11 @@ mod tests {
     #[test]
     fn drag_vertex_out_of_bounds() {
         let mesh = unit_box();
-        let result = drag_vertex(
-            &mesh,
-            99,
-            [1.0, 2.0, 3.0],
-            5.0,
-            DragConsent::default(),
-        );
-        assert!(matches!(result, Err(DragError::VertexOutOfBounds { index: 99, .. })));
+        let result = drag_vertex(&mesh, 99, [1.0, 2.0, 3.0], 5.0, DragConsent::default());
+        assert!(matches!(
+            result,
+            Err(DragError::VertexOutOfBounds { index: 99, .. })
+        ));
     }
 
     // ── P9.7 end-to-end acceptance walkthrough ───────────────────────────
@@ -1413,18 +1596,39 @@ mod tests {
         let mut scene = Scene::new();
         let box_mesh = box_mesh(1.0, 1.0, 1.0).unwrap();
         let sphere_mesh = uv_sphere(0.5, 8, 16).unwrap();
-        scene.add_primitive("box", box_mesh.clone(), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
-        scene.add_primitive("sphere", sphere_mesh.clone(), 1.5, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0);
+        scene.add_primitive(
+            "box",
+            box_mesh.clone(),
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+        );
+        scene.add_primitive(
+            "sphere",
+            sphere_mesh.clone(),
+            1.5,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+        );
         assert_eq!(scene.node_count(), 2);
         assert!(scene.total_vertices() > 0);
         assert!(scene.total_triangles() > 0);
 
         // 2. Export the first mesh as a .10d asset with provenance + Q42 identity.
-        let provenance = ProvenanceMetadata::new(
-            0x1234_5678_9abc_def0,
-            0x4242_4242_4242_4242,
-            1000.0,
-        );
+        let provenance =
+            ProvenanceMetadata::new(0x1234_5678_9abc_def0, 0x4242_4242_4242_4242, 1000.0);
         let need = asset_encoded_len(&box_mesh, &provenance);
         let mut buf_a = vec![0u8; need];
         let mut buf_b = vec![0u8; need];
@@ -1433,10 +1637,17 @@ mod tests {
 
         // 3. Hash stability: two identical exports are byte-identical.
         assert_eq!(na, nb, "export sizes must match");
-        assert_eq!(&buf_a[..na], &buf_b[..nb], "two identical exports must be byte-identical");
+        assert_eq!(
+            &buf_a[..na],
+            &buf_b[..nb],
+            "two identical exports must be byte-identical"
+        );
         let hash_a = fnv1a_hash(&buf_a[..na]);
         let hash_b = fnv1a_hash(&buf_b[..nb]);
-        assert_eq!(hash_a, hash_b, "whole-file hash must be stable across identical exports");
+        assert_eq!(
+            hash_a, hash_b,
+            "whole-file hash must be stable across identical exports"
+        );
 
         // 4. Re-load via import_asset — governance + μ provenance + Q42 identity intact.
         let mut buf_reload = buf_a[..na].to_vec();
@@ -1445,12 +1656,24 @@ mod tests {
         // Triangles are exact.
         assert_eq!(mesh_back.triangles, box_mesh.triangles);
         // Provenance μ is non-zero and matches.
-        assert!(prov_back.is_non_empty(), "μ provenance must be non-zero after reload");
+        assert!(
+            prov_back.is_non_empty(),
+            "μ provenance must be non-zero after reload"
+        );
         assert_eq!(prov_back.mu, provenance.mu, "μ must match after reload");
         // Q42 identity (author DID hash) intact.
-        assert_eq!(prov_back.author_did_hash, provenance.author_did_hash, "Q42 identity must match after reload");
-        assert_eq!(prov_back.domain_hash, provenance.domain_hash, "domain hash must match after reload");
-        assert_eq!(prov_back.timestamp, provenance.timestamp, "timestamp must match after reload");
+        assert_eq!(
+            prov_back.author_did_hash, provenance.author_did_hash,
+            "Q42 identity must match after reload"
+        );
+        assert_eq!(
+            prov_back.domain_hash, provenance.domain_hash,
+            "domain hash must match after reload"
+        );
+        assert_eq!(
+            prov_back.timestamp, provenance.timestamp,
+            "timestamp must match after reload"
+        );
 
         // 5. Drag a vertex on the imported mesh — new t-slice, prior unmutated.
         let prior_t = prov_back.timestamp;
@@ -1460,13 +1683,21 @@ mod tests {
             [0.7, -0.7, -0.7],
             prior_t,
             DragConsent::default(),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(drag.new_t, prior_t + 1.0, "drag must produce new t-slice");
         assert_eq!(drag.prior_t, prior_t, "prior t must be unchanged");
         // Prior mesh is unmutated.
-        assert_eq!(mesh_back.positions[0], box_mesh.positions[0], "prior slice vertex must be unmutated");
+        assert_eq!(
+            mesh_back.positions[0], box_mesh.positions[0],
+            "prior slice vertex must be unmutated"
+        );
         // New mesh has the dragged vertex.
-        assert_eq!(drag.mesh.positions[0], [0.7, -0.7, -0.7], "dragged vertex must be at new position");
+        assert_eq!(
+            drag.mesh.positions[0],
+            [0.7, -0.7, -0.7],
+            "dragged vertex must be at new position"
+        );
 
         // 6. Governance refusal: drag with consent denied is refused.
         let refused = drag_vertex(
@@ -1474,9 +1705,15 @@ mod tests {
             0,
             [1.0, 1.0, 1.0],
             prior_t,
-            DragConsent { consent_granted: false, sealed_prior: true },
+            DragConsent {
+                consent_granted: false,
+                sealed_prior: true,
+            },
         );
-        assert!(matches!(refused, Err(DragError::GovernanceRefused)), "governance refusal must be enforced");
+        assert!(
+            matches!(refused, Err(DragError::GovernanceRefused)),
+            "governance refusal must be enforced"
+        );
 
         // 7. Re-export the dragged mesh with new provenance — hash stable.
         let new_provenance = ProvenanceMetadata::new(
@@ -1489,7 +1726,11 @@ mod tests {
         let mut buf_d = vec![0u8; need2];
         let nc = export_asset(&drag.mesh, &new_provenance, &mut buf_c).unwrap();
         let nd = export_asset(&drag.mesh, &new_provenance, &mut buf_d).unwrap();
-        assert_eq!(&buf_c[..nc], &buf_d[..nd], "re-exported dragged asset must be byte-identical");
+        assert_eq!(
+            &buf_c[..nc],
+            &buf_d[..nd],
+            "re-exported dragged asset must be byte-identical"
+        );
         let hash_c = fnv1a_hash(&buf_c[..nc]);
         let hash_d = fnv1a_hash(&buf_d[..nd]);
         assert_eq!(hash_c, hash_d, "re-exported hash must be stable");

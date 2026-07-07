@@ -110,7 +110,19 @@ pub fn fit(
                 Kernel::Linear => {
                     use crate::solvers::linear_algebra::gemm::{gemm, Transpose};
                     // Gram = X·Xᵀ ([n×n]): op(A)=X (n×p), op(B)=Xᵀ (p×n).
-                    if gemm(Transpose::No, Transpose::Yes, n, n, p, 1.0, x, x, 0.0, &mut k).is_err()
+                    if gemm(
+                        Transpose::No,
+                        Transpose::Yes,
+                        n,
+                        n,
+                        p,
+                        1.0,
+                        x,
+                        x,
+                        0.0,
+                        &mut k,
+                    )
+                    .is_err()
                     {
                         fill_kernel_cpu(&mut k, x, n, p, kernel);
                     }

@@ -21,7 +21,9 @@ const MIN_SEALED: usize = EPK_BYTES + TAG_BYTES; // 48
 
 /// Deterministic-but-varied filler bytes so we don't depend on a specific RNG in tests.
 fn filler(seed: u8, len: usize) -> Vec<u8> {
-    (0..len).map(|i| seed.wrapping_mul(31).wrapping_add(i as u8)).collect()
+    (0..len)
+        .map(|i| seed.wrapping_mul(31).wrapping_add(i as u8))
+        .collect()
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -38,7 +40,11 @@ fn sealed_box_only_intended_recipient_reads() {
 
     // Sanity: the true recipient does recover it, with the right AAD.
     let opened = open_sealed(recipient.secret_bytes(), &sealed, aad).expect("intended open");
-    assert_eq!(opened.as_slice(), msg, "intended recipient must recover the exact plaintext");
+    assert_eq!(
+        opened.as_slice(),
+        msg,
+        "intended recipient must recover the exact plaintext"
+    );
 
     // ~16 other keypairs (B..=Q) must each fail to open. None may recover the plaintext.
     let mut attackers = 0usize;
@@ -107,8 +113,15 @@ fn every_single_byte_flip_of_sealed_box_is_rejected() {
         }
     }
     // sealed.len() == EPK(32) + ct(msg.len()) + tag(16); 2 mutations each.
-    assert_eq!(assertions, sealed.len() * 2, "expected two mutations per byte position");
-    assert!(assertions >= sealed.len() * 2 && assertions >= 96, "broad byte-flip coverage");
+    assert_eq!(
+        assertions,
+        sealed.len() * 2,
+        "expected two mutations per byte position"
+    );
+    assert!(
+        assertions >= sealed.len() * 2 && assertions >= 96,
+        "broad byte-flip coverage"
+    );
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -172,7 +185,9 @@ fn sealed_box_aad_is_bound() {
 
     // Correct AAD opens.
     assert_eq!(
-        open_sealed(recipient.secret_bytes(), &sealed, b"branch-1").expect("open branch-1").as_slice(),
+        open_sealed(recipient.secret_bytes(), &sealed, b"branch-1")
+            .expect("open branch-1")
+            .as_slice(),
         msg
     );
 
@@ -185,7 +200,9 @@ fn sealed_box_aad_is_bound() {
     // A record sealed with *empty* AAD must not open under a *non-empty* AAD.
     let sealed_empty = seal_to(&recipient.public, msg, b"").expect("seal empty aad");
     assert_eq!(
-        open_sealed(recipient.secret_bytes(), &sealed_empty, b"").expect("open empty aad").as_slice(),
+        open_sealed(recipient.secret_bytes(), &sealed_empty, b"")
+            .expect("open empty aad")
+            .as_slice(),
         msg
     );
     assert!(open_sealed(recipient.secret_bytes(), &sealed_empty, b"branch-1").is_err());
@@ -226,7 +243,11 @@ fn sealing_identical_plaintext_is_non_deterministic() {
         );
         // The ephemeral public prefix (first 32 bytes) must also differ across seals.
         for prev in &seals {
-            assert_ne!(&prev[..EPK_BYTES], &s[..EPK_BYTES], "ephemeral key reused across seals");
+            assert_ne!(
+                &prev[..EPK_BYTES],
+                &s[..EPK_BYTES],
+                "ephemeral key reused across seals"
+            );
         }
         seals.push(s);
     }
@@ -234,7 +255,12 @@ fn sealing_identical_plaintext_is_non_deterministic() {
 
     // But every one of them still opens to the same plaintext.
     for s in &seals {
-        assert_eq!(open_sealed(recipient.secret_bytes(), s, aad).expect("open").as_slice(), msg);
+        assert_eq!(
+            open_sealed(recipient.secret_bytes(), s, aad)
+                .expect("open")
+                .as_slice(),
+            msg
+        );
     }
 }
 
@@ -254,7 +280,9 @@ fn key_wrap_round_trip_and_binds_key_and_aad() {
 
     // Correct key + correct AAD recovers exactly.
     assert_eq!(
-        unwrap_key(&real_key, &wrapped, aad).expect("unwrap").as_slice(),
+        unwrap_key(&real_key, &wrapped, aad)
+            .expect("unwrap")
+            .as_slice(),
         decoy_key_material.as_slice(),
         "correct key+aad must recover the exact key material"
     );
@@ -273,7 +301,10 @@ fn key_wrap_round_trip_and_binds_key_and_aad() {
         );
         wrong_keys += 1;
     }
-    assert!(wrong_keys >= 15, "expected ~16 wrong-key attempts, got {wrong_keys}");
+    assert!(
+        wrong_keys >= 15,
+        "expected ~16 wrong-key attempts, got {wrong_keys}"
+    );
 
     // Wrong AAD fails.
     assert!(unwrap_key(&real_key, &wrapped, b"role:something-else").is_err());
@@ -320,7 +351,11 @@ fn every_single_byte_flip_of_wrapped_blob_is_rejected() {
             assertions += 1;
         }
     }
-    assert_eq!(assertions, wrapped.len() * 2, "two mutations per byte of the wrapped blob");
+    assert_eq!(
+        assertions,
+        wrapped.len() * 2,
+        "two mutations per byte of the wrapped blob"
+    );
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -381,7 +416,10 @@ fn hash_chain_payload_tamper_propagates() {
         let tampered = build_chain(&tampered_payloads);
 
         // The tampered link itself changes.
-        assert_ne!(original[t], tampered[t], "tampering payload {t} did not change its own link");
+        assert_ne!(
+            original[t], tampered[t],
+            "tampering payload {t} did not change its own link"
+        );
         // Every link at or after t changes (parent link no longer matches).
         for k in t..payloads.len() {
             assert_ne!(
@@ -392,11 +430,17 @@ fn hash_chain_payload_tamper_propagates() {
         }
         // Links before t are unchanged (tamper-evidence is forward-propagating, not retroactive).
         for k in 0..t {
-            assert_eq!(original[k], tampered[k], "link {k} before tamper point {t} should be stable");
+            assert_eq!(
+                original[k], tampered[k],
+                "link {k} before tamper point {t} should be stable"
+            );
         }
     }
     // 5 + 4 + 3 + 2 + 1 = 15 downstream checks.
-    assert_eq!(checks, 15, "expected 15 downstream tamper-propagation checks");
+    assert_eq!(
+        checks, 15,
+        "expected 15 downstream tamper-propagation checks"
+    );
 }
 
 #[test]
@@ -435,13 +479,7 @@ fn hash_chain_reorder_is_detectable() {
 fn hash_chain_wrong_parent_changes_link() {
     // Using the wrong parent for a link changes its hash — this is what "drop a record" looks like:
     // link k+1 that should chain off id[k] instead chains off id[k-1] (the dropped record's parent).
-    let payloads: [&[u8]; 5] = [
-        b"r0",
-        b"r1",
-        b"r2 -- to be dropped",
-        b"r3",
-        b"r4",
-    ];
+    let payloads: [&[u8]; 5] = [b"r0", b"r1", b"r2 -- to be dropped", b"r3", b"r4"];
     let ids = build_chain(&payloads);
 
     // Correct link for r3 chains off id[2].
@@ -458,7 +496,10 @@ fn hash_chain_wrong_parent_changes_link() {
     // Also: chaining off GENESIS instead of the true parent differs for every link past the first.
     for k in 1..payloads.len() {
         let wrong = chain_hash(&GENESIS_PARENT, payloads[k]);
-        assert_ne!(wrong, ids[k], "link {k} off GENESIS matched its true-parent hash");
+        assert_ne!(
+            wrong, ids[k],
+            "link {k} off GENESIS matched its true-parent hash"
+        );
     }
 }
 
@@ -476,7 +517,10 @@ fn hash_chain_parent_and_payload_are_domain_separated() {
     for i in 0u16..256 {
         let payload = [i as u8, (i >> 8) as u8, 0xAB, 0xCD];
         let h = chain_hash(&parent_a, &payload);
-        assert!(!seen.contains(&h), "hash collision within a 256-sample sweep -- unexpected");
+        assert!(
+            !seen.contains(&h),
+            "hash collision within a 256-sample sweep -- unexpected"
+        );
         seen.push(h);
     }
     assert_eq!(seen.len(), 256);

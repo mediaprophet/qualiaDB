@@ -4,8 +4,8 @@ use serde_json::{json, Value};
 
 use super::{
     build_triangle_half_edges, convex_hull_indices_2, delaunay_triangulation_2,
-    nearest_site_brute_force, orientation_2, required_edge_slots, voronoi_diagram_2,
-    EdgeSlot, HalfEdge, Point2, INVALID_INDEX,
+    nearest_site_brute_force, orientation_2, required_edge_slots, voronoi_diagram_2, EdgeSlot,
+    HalfEdge, Point2, INVALID_INDEX,
 };
 use crate::container_10d::topology_section::{
     decode_topology_section, encode_topology_section, encoded_len as topology_encoded_len,
@@ -94,9 +94,13 @@ fn triangles(value: &Value) -> Result<Vec<[u32; 3]>, GeometryToolError> {
 
 /// Parse a mesh from a JSON value with `positions` and `triangles` arrays.
 fn parse_mesh_json(value: &Value) -> Result<crate::render::assets::Mesh, GeometryToolError> {
-    let pos_arr = value.get("positions").and_then(Value::as_array)
+    let pos_arr = value
+        .get("positions")
+        .and_then(Value::as_array)
         .ok_or(GeometryToolError::InvalidParameters)?;
-    let tri_arr = value.get("triangles").and_then(Value::as_array)
+    let tri_arr = value
+        .get("triangles")
+        .and_then(Value::as_array)
         .ok_or(GeometryToolError::InvalidParameters)?;
 
     let mut positions = Vec::with_capacity(pos_arr.len());
@@ -134,7 +138,12 @@ fn parse_mesh_json(value: &Value) -> Result<crate::render::assets::Mesh, Geometr
         }
     }
 
-    Ok(crate::render::assets::Mesh { positions, triangles, min, max })
+    Ok(crate::render::assets::Mesh {
+        positions,
+        triangles,
+        min,
+        max,
+    })
 }
 
 /// Execute a computational-geometry operation over a serde JSON boundary.
@@ -276,19 +285,49 @@ pub fn execute_geometry_tool_json(args: &str) -> Result<String, GeometryToolErro
             }
             let mut tri_scratch = vec![0u32; n];
             let mut tri_out = vec![[0u32; 3]; 2 * n + 1];
-            let mut verts = vec![super::VoronoiVertex { triangle_index: 0, center: Point2::new(0.0, 0.0) }; 2 * n + 1];
-            let mut edges = vec![super::VoronoiEdge { site_a: 0, site_b: 0, triangle: 0, neighbor_triangle: None }; 3 * n];
-            let (vc, ec) = voronoi_diagram_2(&input, &mut tri_scratch, &mut tri_out, &mut verts, &mut edges)
-                .map_err(|error| GeometryToolError::Geometry(format!("{error:?}")))?;
-            let vert_json: Vec<Value> = verts[..vc].iter().map(|v| json!({
-                "triangle": v.triangle_index,
-                "center": [v.center.x, v.center.y],
-            })).collect();
-            let edge_json: Vec<Value> = edges[..ec].iter().map(|e| json!({
-                "sites": [e.site_a, e.site_b],
-                "triangle": e.triangle,
-                "neighbor": e.neighbor_triangle,
-            })).collect();
+            let mut verts = vec![
+                super::VoronoiVertex {
+                    triangle_index: 0,
+                    center: Point2::new(0.0, 0.0)
+                };
+                2 * n + 1
+            ];
+            let mut edges = vec![
+                super::VoronoiEdge {
+                    site_a: 0,
+                    site_b: 0,
+                    triangle: 0,
+                    neighbor_triangle: None
+                };
+                3 * n
+            ];
+            let (vc, ec) = voronoi_diagram_2(
+                &input,
+                &mut tri_scratch,
+                &mut tri_out,
+                &mut verts,
+                &mut edges,
+            )
+            .map_err(|error| GeometryToolError::Geometry(format!("{error:?}")))?;
+            let vert_json: Vec<Value> = verts[..vc]
+                .iter()
+                .map(|v| {
+                    json!({
+                        "triangle": v.triangle_index,
+                        "center": [v.center.x, v.center.y],
+                    })
+                })
+                .collect();
+            let edge_json: Vec<Value> = edges[..ec]
+                .iter()
+                .map(|e| {
+                    json!({
+                        "sites": [e.site_a, e.site_b],
+                        "triangle": e.triangle,
+                        "neighbor": e.neighbor_triangle,
+                    })
+                })
+                .collect();
             Ok(json!({
                 "op": op,
                 "vertex_count": vc,
@@ -300,14 +339,19 @@ pub fn execute_geometry_tool_json(args: &str) -> Result<String, GeometryToolErro
         }
         "nearest_site" => {
             let input = points(&value, "points")?;
-            let query_arr = value.get("query")
+            let query_arr = value
+                .get("query")
                 .and_then(Value::as_array)
                 .ok_or(GeometryToolError::InvalidParameters)?;
             if query_arr.len() < 2 {
                 return Err(GeometryToolError::InvalidParameters);
             }
-            let qx = query_arr[0].as_f64().ok_or(GeometryToolError::InvalidParameters)?;
-            let qy = query_arr[1].as_f64().ok_or(GeometryToolError::InvalidParameters)?;
+            let qx = query_arr[0]
+                .as_f64()
+                .ok_or(GeometryToolError::InvalidParameters)?;
+            let qy = query_arr[1]
+                .as_f64()
+                .ok_or(GeometryToolError::InvalidParameters)?;
             let idx = nearest_site_brute_force(&input, Point2::new(qx, qy))
                 .ok_or(GeometryToolError::InvalidParameters)?;
             Ok(json!({
@@ -318,11 +362,17 @@ pub fn execute_geometry_tool_json(args: &str) -> Result<String, GeometryToolErro
             .to_string())
         }
         "create_box" => {
-            let width = value.get("width").and_then(Value::as_f64)
+            let width = value
+                .get("width")
+                .and_then(Value::as_f64)
                 .ok_or(GeometryToolError::InvalidParameters)?;
-            let height = value.get("height").and_then(Value::as_f64)
+            let height = value
+                .get("height")
+                .and_then(Value::as_f64)
                 .ok_or(GeometryToolError::InvalidParameters)?;
-            let depth = value.get("depth").and_then(Value::as_f64)
+            let depth = value
+                .get("depth")
+                .and_then(Value::as_f64)
                 .ok_or(GeometryToolError::InvalidParameters)?;
             let mesh = super::authoring::box_mesh(width as f32, height as f32, depth as f32)
                 .map_err(|e| GeometryToolError::Geometry(format!("{e}")))?;
@@ -336,10 +386,18 @@ pub fn execute_geometry_tool_json(args: &str) -> Result<String, GeometryToolErro
             .to_string())
         }
         "create_sphere" => {
-            let radius = value.get("radius").and_then(Value::as_f64)
+            let radius = value
+                .get("radius")
+                .and_then(Value::as_f64)
                 .ok_or(GeometryToolError::InvalidParameters)?;
-            let lat = value.get("lat_segments").and_then(Value::as_u64).unwrap_or(8) as u32;
-            let lon = value.get("lon_segments").and_then(Value::as_u64).unwrap_or(16) as u32;
+            let lat = value
+                .get("lat_segments")
+                .and_then(Value::as_u64)
+                .unwrap_or(8) as u32;
+            let lon = value
+                .get("lon_segments")
+                .and_then(Value::as_u64)
+                .unwrap_or(16) as u32;
             let mesh = super::authoring::uv_sphere(radius as f32, lat, lon)
                 .map_err(|e| GeometryToolError::Geometry(format!("{e}")))?;
             Ok(json!({
@@ -352,9 +410,13 @@ pub fn execute_geometry_tool_json(args: &str) -> Result<String, GeometryToolErro
             .to_string())
         }
         "create_cylinder" => {
-            let radius = value.get("radius").and_then(Value::as_f64)
+            let radius = value
+                .get("radius")
+                .and_then(Value::as_f64)
                 .ok_or(GeometryToolError::InvalidParameters)?;
-            let height = value.get("height").and_then(Value::as_f64)
+            let height = value
+                .get("height")
+                .and_then(Value::as_f64)
                 .ok_or(GeometryToolError::InvalidParameters)?;
             let segments = value.get("segments").and_then(Value::as_u64).unwrap_or(16) as u32;
             let mesh = super::authoring::cylinder(radius as f32, height as f32, segments)
@@ -369,7 +431,9 @@ pub fn execute_geometry_tool_json(args: &str) -> Result<String, GeometryToolErro
             .to_string())
         }
         "create_plane" => {
-            let size = value.get("size").and_then(Value::as_f64)
+            let size = value
+                .get("size")
+                .and_then(Value::as_f64)
                 .ok_or(GeometryToolError::InvalidParameters)?;
             let mesh = super::authoring::plane(size as f32)
                 .map_err(|e| GeometryToolError::Geometry(format!("{e}")))?;
@@ -383,12 +447,22 @@ pub fn execute_geometry_tool_json(args: &str) -> Result<String, GeometryToolErro
             .to_string())
         }
         "create_torus" => {
-            let major = value.get("major_radius").and_then(Value::as_f64)
+            let major = value
+                .get("major_radius")
+                .and_then(Value::as_f64)
                 .ok_or(GeometryToolError::InvalidParameters)?;
-            let minor = value.get("minor_radius").and_then(Value::as_f64)
+            let minor = value
+                .get("minor_radius")
+                .and_then(Value::as_f64)
                 .ok_or(GeometryToolError::InvalidParameters)?;
-            let maj_seg = value.get("major_segments").and_then(Value::as_u64).unwrap_or(16) as u32;
-            let min_seg = value.get("minor_segments").and_then(Value::as_u64).unwrap_or(8) as u32;
+            let maj_seg = value
+                .get("major_segments")
+                .and_then(Value::as_u64)
+                .unwrap_or(16) as u32;
+            let min_seg = value
+                .get("minor_segments")
+                .and_then(Value::as_u64)
+                .unwrap_or(8) as u32;
             let mesh = super::authoring::torus(major as f32, minor as f32, maj_seg, min_seg)
                 .map_err(|e| GeometryToolError::Geometry(format!("{e}")))?;
             Ok(json!({
@@ -401,9 +475,14 @@ pub fn execute_geometry_tool_json(args: &str) -> Result<String, GeometryToolErro
             .to_string())
         }
         "create_grid" => {
-            let size = value.get("size").and_then(Value::as_f64)
+            let size = value
+                .get("size")
+                .and_then(Value::as_f64)
                 .ok_or(GeometryToolError::InvalidParameters)?;
-            let subs = value.get("subdivisions").and_then(Value::as_u64).unwrap_or(4) as u32;
+            let subs = value
+                .get("subdivisions")
+                .and_then(Value::as_u64)
+                .unwrap_or(4) as u32;
             let mesh = super::authoring::grid(size as f32, subs)
                 .map_err(|e| GeometryToolError::Geometry(format!("{e}")))?;
             Ok(json!({
@@ -421,10 +500,16 @@ pub fn execute_geometry_tool_json(args: &str) -> Result<String, GeometryToolErro
                 "boolean_intersect" => super::authoring::BooleanOp::Intersection,
                 _ => super::authoring::BooleanOp::Difference,
             };
-            let mesh_a = parse_mesh_json(value.get("mesh_a")
-                .ok_or(GeometryToolError::InvalidParameters)?)?;
-            let mesh_b = parse_mesh_json(value.get("mesh_b")
-                .ok_or(GeometryToolError::InvalidParameters)?)?;
+            let mesh_a = parse_mesh_json(
+                value
+                    .get("mesh_a")
+                    .ok_or(GeometryToolError::InvalidParameters)?,
+            )?;
+            let mesh_b = parse_mesh_json(
+                value
+                    .get("mesh_b")
+                    .ok_or(GeometryToolError::InvalidParameters)?,
+            )?;
             let result = super::authoring::boolean_op(&mesh_a, &mesh_b, bool_op)
                 .map_err(|e| GeometryToolError::Geometry(format!("{e}")))?;
             Ok(json!({
@@ -437,11 +522,18 @@ pub fn execute_geometry_tool_json(args: &str) -> Result<String, GeometryToolErro
             .to_string())
         }
         "drag_vertex" => {
-            let mesh = parse_mesh_json(value.get("mesh")
-                .ok_or(GeometryToolError::InvalidParameters)?)?;
-            let vi = value.get("vertex_index").and_then(Value::as_u64)
+            let mesh = parse_mesh_json(
+                value
+                    .get("mesh")
+                    .ok_or(GeometryToolError::InvalidParameters)?,
+            )?;
+            let vi = value
+                .get("vertex_index")
+                .and_then(Value::as_u64)
                 .ok_or(GeometryToolError::InvalidParameters)? as usize;
-            let np = value.get("new_position").and_then(Value::as_array)
+            let np = value
+                .get("new_position")
+                .and_then(Value::as_array)
                 .ok_or(GeometryToolError::InvalidParameters)?;
             if np.len() != 3 {
                 return Err(GeometryToolError::InvalidParameters);
@@ -452,7 +544,10 @@ pub fn execute_geometry_tool_json(args: &str) -> Result<String, GeometryToolErro
                 np[2].as_f64().ok_or(GeometryToolError::InvalidParameters)? as f32,
             ];
             let prior_t = value.get("prior_t").and_then(Value::as_f64).unwrap_or(0.0) as f32;
-            let consent = value.get("consent_granted").and_then(Value::as_bool).unwrap_or(true);
+            let consent = value
+                .get("consent_granted")
+                .and_then(Value::as_bool)
+                .unwrap_or(true);
             let drag_consent = super::authoring::DragConsent {
                 consent_granted: consent,
                 sealed_prior: true,
@@ -495,13 +590,11 @@ mod tests {
         assert_eq!(value["indices"], json!([0, 1, 3, 4]));
     }
 
-
     #[test]
     fn json_delaunay_returns_triangles() {
-        let result = execute_geometry_tool_json(
-            r#"{"op":"delaunay_2","points":[[0,0],[1,0],[1,1],[0,1]]}"#,
-        )
-        .unwrap();
+        let result =
+            execute_geometry_tool_json(r#"{"op":"delaunay_2","points":[[0,0],[1,0],[1,1],[0,1]]}"#)
+                .unwrap();
         let value: Value = serde_json::from_str(&result).unwrap();
         assert_eq!(value["op"], "delaunay_2");
         assert_eq!(value["triangle_count"], 2);
@@ -511,10 +604,9 @@ mod tests {
 
     #[test]
     fn json_voronoi_returns_vertices_and_edges() {
-        let result = execute_geometry_tool_json(
-            r#"{"op":"voronoi_2","points":[[0,0],[2,0],[2,2],[0,2]]}"#,
-        )
-        .unwrap();
+        let result =
+            execute_geometry_tool_json(r#"{"op":"voronoi_2","points":[[0,0],[2,0],[2,2],[0,2]]}"#)
+                .unwrap();
         let value: Value = serde_json::from_str(&result).unwrap();
         assert_eq!(value["op"], "voronoi_2");
         assert!(value["vertex_count"].as_u64().unwrap() > 0);
@@ -587,10 +679,7 @@ mod tests {
 
     #[test]
     fn json_create_plane_returns_mesh() {
-        let result = execute_geometry_tool_json(
-            r#"{"op":"create_plane","size":2.0}"#,
-        )
-        .unwrap();
+        let result = execute_geometry_tool_json(r#"{"op":"create_plane","size":2.0}"#).unwrap();
         let value: Value = serde_json::from_str(&result).unwrap();
         assert_eq!(value["op"], "create_plane");
         assert_eq!(value["vertex_count"], 4);
@@ -610,9 +699,9 @@ mod tests {
 
     #[test]
     fn json_create_grid_returns_mesh() {
-        let result = execute_geometry_tool_json(
-            r#"{"op":"create_grid","size":2.0,"subdivisions":4}"#,
-        ).unwrap();
+        let result =
+            execute_geometry_tool_json(r#"{"op":"create_grid","size":2.0,"subdivisions":4}"#)
+                .unwrap();
         let value: Value = serde_json::from_str(&result).unwrap();
         assert_eq!(value["op"], "create_grid");
         assert_eq!(value["vertex_count"], 25);
@@ -622,12 +711,16 @@ mod tests {
     #[test]
     fn json_boolean_union_of_disjoint_cubes() {
         let box_json = r#"{"positions":[[-0.5,-0.5,-0.5],[0.5,-0.5,-0.5],[0.5,0.5,-0.5],[-0.5,0.5,-0.5],[-0.5,-0.5,0.5],[0.5,-0.5,0.5],[0.5,0.5,0.5],[-0.5,0.5,0.5]],"triangles":[[0,1,2],[0,2,3],[4,6,5],[4,7,6],[0,4,5],[0,5,1],[2,6,7],[2,7,3],[0,3,7],[0,7,4],[1,5,6],[1,6,2]]}"#;
-        let result = execute_geometry_tool_json(
-            &format!(r#"{{"op":"boolean_union","mesh_a":{box_json},"mesh_b":{box_json}}}"#),
-        ).unwrap();
+        let result = execute_geometry_tool_json(&format!(
+            r#"{{"op":"boolean_union","mesh_a":{box_json},"mesh_b":{box_json}}}"#
+        ))
+        .unwrap();
         let value: Value = serde_json::from_str(&result).unwrap();
         assert_eq!(value["op"], "boolean_union");
-        assert_eq!(value["triangle_count"], 12, "union of identical cubes = one cube");
+        assert_eq!(
+            value["triangle_count"], 12,
+            "union of identical cubes = one cube"
+        );
     }
 
     #[test]

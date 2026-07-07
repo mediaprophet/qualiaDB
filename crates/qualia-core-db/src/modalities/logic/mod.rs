@@ -89,13 +89,13 @@ pub use shacl_extensions::{
 
 // ─── SHACL Extensions for Specialized Libraries ─────────────────────────────────
 
+pub mod geometry_asset_shacl;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-scientific",
     feature = "wasm-full"
 ))]
 pub mod specialized_libs_shacl;
-pub mod geometry_asset_shacl;
 pub use geometry_asset_shacl::{
     validate_geometry_manifest, GeometryAssetConfiguration, GeometryConstraintViolation,
     GeometryManifestFacts, MAX_GEOMETRY_COUNT,

@@ -82,7 +82,7 @@ impl ThermalGovernor for NullThermalGovernor {
     }
 }
 
-use crate::solvers::calculus::{RungeKutta4Static, ODEFunction};
+use crate::solvers::calculus::{ODEFunction, RungeKutta4Static};
 use crate::solvers::SolverConfig;
 
 struct NewtonCoolingODE {
@@ -114,18 +114,20 @@ impl CalculusThermalGovernor {
 impl ThermalGovernor for CalculusThermalGovernor {
     fn get_thermal_state(&self) -> ThermalStatus {
         let mut temp = self.current_temp.lock().unwrap();
-        
+
         let ode = NewtonCoolingODE {
             ambient_temp: 25.0,
             cooling_constant: 0.1,
             power_input: 5.0, // Represents current SoC TDP
         };
-        
+
         let mut solver = RungeKutta4Static::new(0.1, SolverConfig::default());
-        let final_state = solver.integrate(&ode, 0.0, [*temp, 0.0, 0.0, 0.0], 1.0).unwrap();
-        
+        let final_state = solver
+            .integrate(&ode, 0.0, [*temp, 0.0, 0.0, 0.0], 1.0)
+            .unwrap();
+
         *temp = final_state.y[0];
-        
+
         if *temp > 85.0 {
             ThermalStatus::Critical
         } else if *temp > 65.0 {

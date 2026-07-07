@@ -1315,17 +1315,50 @@ pub fn wellfair_conduct_audit_trail(
 
 /// Ingest a text document into the library (derive topics + searchable text; guardianship flag→notify).
 #[command]
+#[allow(clippy::too_many_arguments)]
 pub fn wellfair_ingest_document(
     app: AppHandle,
     uri: String,
     media_type: String,
     text: String,
     guardian_did: Option<String>,
+    occurred_at: Option<i64>,
+    place_label: Option<String>,
+    lat: Option<f32>,
+    lon: Option<f32>,
+    project: Option<String>,
+    purpose: Option<String>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     let guard = state.0.lock().map_err(|e| e.to_string())?;
     let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let summary = host.ingest_document(&uri, &media_type, &text, guardian_did)?;
+    let manual = qualia_client_core::wellfair::api::ManualFacets {
+        occurred_at,
+        place_label,
+        lat,
+        lon,
+        projects: project.into_iter().filter(|s| !s.trim().is_empty()).collect(),
+        purposes: purpose.into_iter().filter(|s| !s.trim().is_empty()).collect(),
+    };
+    let summary = host.ingest_document_annotated(&uri, &media_type, &text, &manual, guardian_did)?;
+    serde_json::to_string(&summary).map_err(|e| e.to_string())
+}
+
+/// Ingest a **binary asset** (photo / audio) whose bytes are passed hex-encoded. A photo's EXIF capture-time
+/// + GPS auto-populate the timeline + map.
+#[command]
+pub fn wellfair_ingest_file_hex(
+    app: AppHandle,
+    uri: String,
+    media_type: String,
+    bytes_hex: String,
+    caption: String,
+    guardian_did: Option<String>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let summary = host.ingest_file_hex(&uri, &media_type, &bytes_hex, &caption, guardian_did)?;
     serde_json::to_string(&summary).map_err(|e| e.to_string())
 }
 
@@ -1357,6 +1390,108 @@ pub fn wellfair_list_library(app: AppHandle) -> Result<String, String> {
     let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
     let results = host.list_library()?;
     serde_json::to_string(&results).map_err(|e| e.to_string())
+}
+
+// --- Chora spatio-temporal canvas ---
+
+#[command]
+pub fn chora_list_worlds(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    serde_json::to_string(&host.list_canvas_worlds()?).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn chora_get_world(app: AppHandle, world_id: String) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let v = host.get_canvas_world(&world_id)?;
+    serde_json::to_string(&v).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn chora_save_world(app: AppHandle, config_json: String) -> Result<(), String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    host.save_canvas_world(&config_json)
+}
+
+#[command]
+pub fn chora_delete_world(app: AppHandle, world_id: String) -> Result<bool, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    host.delete_canvas_world(&world_id)
+}
+
+#[command]
+pub fn chora_seed_demo(app: AppHandle) -> Result<bool, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    host.seed_canvas_demo()
+}
+
+#[command]
+pub fn chora_navigation(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    Ok(host.canvas_navigation_state().to_string())
+}
+
+#[command]
+pub fn chora_set_temporal(app: AppHandle, t_value: f64) -> Result<(), String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    host.set_temporal_slice(t_value)
+}
+
+#[command]
+pub fn chora_set_active_world(app: AppHandle, world_id: String) -> Result<(), String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    host.set_active_canvas_world(&world_id)
+}
+
+#[command]
+pub fn chora_query_region(
+    app: AppHandle,
+    x1: f64,
+    y1: f64,
+    x2: f64,
+    y2: f64,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let hits = host.query_canvas_region(x1, y1, x2, y2)?;
+    serde_json::to_string(&hits).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn chora_publish_asset(app: AppHandle, asset_json: String) -> Result<(), String> {
+    use qualia_core_db::domains::geospatial::spatial_sync::PlantedAsset;
+
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let asset: PlantedAsset = serde_json::from_str(&asset_json).map_err(|e| e.to_string())?;
+    host.publish_planted_asset(asset)
+}
+
+#[command]
+pub fn chora_pull_assets(app: AppHandle, cell_id: u64) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let assets = host.pull_spatial_assets(cell_id)?;
+    serde_json::to_string(&assets).map_err(|e| e.to_string())
 }
 
 /// The owner's envelope PUBLIC key (hex) — publishable so others can seal payloads to the owner.
@@ -5294,9 +5429,21 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_record_conduct,
         wellfair_conduct_audit_trail,
         wellfair_ingest_document,
+        wellfair_ingest_file_hex,
         wellfair_search_library,
         wellfair_search_library_time,
         wellfair_list_library,
+        chora_list_worlds,
+        chora_get_world,
+        chora_save_world,
+        chora_delete_world,
+        chora_seed_demo,
+        chora_navigation,
+        chora_set_temporal,
+        chora_set_active_world,
+        chora_query_region,
+        chora_publish_asset,
+        chora_pull_assets,
         wellfair_owner_envelope_public,
         wellfair_seal_and_grant_credential,
         wellfair_open_owner_payload,

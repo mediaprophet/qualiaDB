@@ -45,7 +45,10 @@ impl core::fmt::Display for TrapezoidalMapError {
                 write!(f, "trapezoidal_map: segments {i} and {j} cross")
             }
             Self::DegenerateSegment { index } => {
-                write!(f, "trapezoidal_map: segment {index} is degenerate (zero-length)")
+                write!(
+                    f,
+                    "trapezoidal_map: segment {index} is degenerate (zero-length)"
+                )
             }
             Self::OutsideBoundingBox => write!(f, "trapezoidal_map: query outside bounding box"),
         }
@@ -75,8 +78,7 @@ impl TmSegment {
     }
 
     pub fn is_degenerate(&self) -> bool {
-        (self.left.x - self.right.x).abs() < 1e-15
-            && (self.left.y - self.right.y).abs() < 1e-15
+        (self.left.x - self.right.x).abs() < 1e-15 && (self.left.y - self.right.y).abs() < 1e-15
     }
 
     /// Evaluate the line at x (linear interpolation).
@@ -111,9 +113,17 @@ impl TmSegment {
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum NodeKind {
     /// X-node: compares query x to a segment endpoint x.
-    XNode { point_x: f64, left: usize, right: usize },
+    XNode {
+        point_x: f64,
+        left: usize,
+        right: usize,
+    },
     /// Y-node: tests query above/below a segment.
-    YNode { segment: usize, left: usize, right: usize },
+    YNode {
+        segment: usize,
+        left: usize,
+        right: usize,
+    },
     /// Leaf: a trapezoid.
     Leaf { trapezoid: usize },
 }
@@ -187,7 +197,11 @@ struct SeededRng {
 impl SeededRng {
     fn new(seed: u64) -> Self {
         Self {
-            state: if seed == 0 { 0x9E37_79B9_7F4A_7C15 } else { seed },
+            state: if seed == 0 {
+                0x9E37_79B9_7F4A_7C15
+            } else {
+                seed
+            },
         }
     }
 
@@ -237,8 +251,12 @@ fn segments_cross(a: &TmSegment, b: &TmSegment) -> bool {
     let o4 = orientation_2(b.left, b.right, a.right);
 
     // Proper crossing: endpoints of each segment are on opposite sides.
-    if o1 != o2 && o1 != Orientation::Collinear && o2 != Orientation::Collinear
-        && o3 != o4 && o3 != Orientation::Collinear && o4 != Orientation::Collinear
+    if o1 != o2
+        && o1 != Orientation::Collinear
+        && o2 != Orientation::Collinear
+        && o3 != o4
+        && o3 != Orientation::Collinear
+        && o4 != Orientation::Collinear
     {
         return true;
     }
@@ -345,14 +363,22 @@ impl TrapezoidalMap {
         let mut node = self.root;
         loop {
             match self.nodes[node].kind {
-                NodeKind::XNode { point_x, left, right } => {
+                NodeKind::XNode {
+                    point_x,
+                    left,
+                    right,
+                } => {
                     if p.x < point_x {
                         node = left;
                     } else {
                         node = right;
                     }
                 }
-                NodeKind::YNode { segment, left, right } => {
+                NodeKind::YNode {
+                    segment,
+                    left,
+                    right,
+                } => {
                     let seg = self.segments[segment];
                     if seg.is_above(p) {
                         node = left;
@@ -815,14 +841,20 @@ mod tests {
     fn degenerate_segment_errors() {
         let segs = vec![s(5.0, 5.0, 5.0, 5.0)];
         let result = TrapezoidalMap::build(&segs, 42);
-        assert!(matches!(result, Err(TrapezoidalMapError::DegenerateSegment { .. })));
+        assert!(matches!(
+            result,
+            Err(TrapezoidalMapError::DegenerateSegment { .. })
+        ));
     }
 
     #[test]
     fn crossing_segments_errors() {
         let segs = vec![s(0.0, 0.0, 10.0, 10.0), s(0.0, 10.0, 10.0, 0.0)];
         let result = TrapezoidalMap::build(&segs, 42);
-        assert!(matches!(result, Err(TrapezoidalMapError::CrossingSegments { .. })));
+        assert!(matches!(
+            result,
+            Err(TrapezoidalMapError::CrossingSegments { .. })
+        ));
     }
 
     // ── Point location ──────────────────────────────────────────────────
@@ -865,8 +897,14 @@ mod tests {
     fn locate_outside_bbox_errors() {
         let segs = vec![s(0.0, 5.0, 10.0, 5.0)];
         let tm = TrapezoidalMap::build(&segs, 42).unwrap();
-        assert!(matches!(tm.locate(pt(100.0, 100.0)), Err(TrapezoidalMapError::OutsideBoundingBox)));
-        assert!(matches!(tm.locate(pt(-100.0, -100.0)), Err(TrapezoidalMapError::OutsideBoundingBox)));
+        assert!(matches!(
+            tm.locate(pt(100.0, 100.0)),
+            Err(TrapezoidalMapError::OutsideBoundingBox)
+        ));
+        assert!(matches!(
+            tm.locate(pt(-100.0, -100.0)),
+            Err(TrapezoidalMapError::OutsideBoundingBox)
+        ));
     }
 
     // ── Multiple segments ───────────────────────────────────────────────
@@ -919,10 +957,18 @@ mod tests {
         let tm = TrapezoidalMap::build(&segs, 42).unwrap();
 
         for (x, y) in [
-            (1.0, 1.0), (5.0, 1.0), (9.0, 1.0),
-            (1.0, 5.0), (5.0, 5.0), (9.0, 5.0),
-            (1.0, 9.0), (5.0, 9.0), (9.0, 9.0),
-            (3.0, 3.0), (7.0, 7.0), (2.0, 8.0),
+            (1.0, 1.0),
+            (5.0, 1.0),
+            (9.0, 1.0),
+            (1.0, 5.0),
+            (5.0, 5.0),
+            (9.0, 5.0),
+            (1.0, 9.0),
+            (5.0, 9.0),
+            (9.0, 9.0),
+            (3.0, 3.0),
+            (7.0, 7.0),
+            (2.0, 8.0),
         ] {
             let dag = tm.locate(pt(x, y)).unwrap();
             let bf = tm.locate_brute_force(pt(x, y)).unwrap();
@@ -932,12 +978,14 @@ mod tests {
             assert!(
                 tm.point_in_trapezoid(pt(x, y), dag_trap),
                 "DAG result doesn't contain ({}, {})",
-                x, y
+                x,
+                y
             );
             assert!(
                 tm.point_in_trapezoid(pt(x, y), bf_trap),
                 "Brute-force result doesn't contain ({}, {})",
-                x, y
+                x,
+                y
             );
         }
     }
@@ -945,10 +993,7 @@ mod tests {
     #[test]
     fn dag_locate_matches_brute_force_multi() {
         // Segments must not cross — use non-crossing ones.
-        let segs = vec![
-            s(1.0, 3.0, 8.0, 3.0),
-            s(2.0, 6.0, 9.0, 6.0),
-        ];
+        let segs = vec![s(1.0, 3.0, 8.0, 3.0), s(2.0, 6.0, 9.0, 6.0)];
         let tm = TrapezoidalMap::build(&segs, 42).unwrap();
 
         for x in 0..20 {
@@ -961,7 +1006,8 @@ mod tests {
                     assert!(
                         tm.point_in_trapezoid(p, dag_trap),
                         "DAG result doesn't contain ({}, {})",
-                        qx, qy
+                        qx,
+                        qy
                     );
                 }
             }
@@ -1006,7 +1052,9 @@ mod tests {
                         assert!(
                             tm.point_in_trapezoid(p, trap),
                             "seed {} point ({}, {}) not in returned trapezoid",
-                            seed, p.x, p.y
+                            seed,
+                            p.x,
+                            p.y
                         );
                     }
                 }
@@ -1019,10 +1067,7 @@ mod tests {
     #[test]
     fn non_crossing_diagonals() {
         // Two diagonal segments that don't cross.
-        let segs = vec![
-            s(1.0, 1.0, 4.0, 4.0),
-            s(6.0, 1.0, 9.0, 4.0),
-        ];
+        let segs = vec![s(1.0, 1.0, 4.0, 4.0), s(6.0, 1.0, 9.0, 4.0)];
         let tm = TrapezoidalMap::build(&segs, 42).unwrap();
 
         // Points near each segment.
@@ -1100,7 +1145,8 @@ mod tests {
                     assert!(
                         tm.point_in_trapezoid(p, trap),
                         "staircase: point ({}, {}) not in returned trapezoid",
-                        p.x, p.y
+                        p.x,
+                        p.y
                     );
                 }
             }

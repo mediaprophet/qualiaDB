@@ -548,11 +548,7 @@ pub fn decimate_qem_with_kernel<K: GeometryKernel>(
     {
         let mut seen: std::collections::HashSet<(u32, u32)> = std::collections::HashSet::new();
         for tri in triangles.iter() {
-            let e = [
-                (tri[0], tri[1]),
-                (tri[1], tri[2]),
-                (tri[2], tri[0]),
-            ];
+            let e = [(tri[0], tri[1]), (tri[1], tri[2]), (tri[2], tri[0])];
             for &(i, j) in &e {
                 let (lo, hi) = if i < j { (i, j) } else { (j, i) };
                 if seen.insert((lo, hi)) {
@@ -912,13 +908,7 @@ fn one_ring(mesh: &Mesh, v: u32, exclude: u32) -> Vec<u32> {
 /// after the move (lo→hi, hi→newp). A sign flip means the triangle inverted —
 /// the collapse is rejected. We use the exact [`GeometryKernel::orient_3d`]
 /// against the face's own apex projected out of plane to get a robust sign.
-fn foldover_ok<K: GeometryKernel>(
-    kernel: &K,
-    mesh: &Mesh,
-    lo: u32,
-    hi: u32,
-    newp: Point3,
-) -> bool {
+fn foldover_ok<K: GeometryKernel>(kernel: &K, mesh: &Mesh, lo: u32, hi: u32, newp: Point3) -> bool {
     // Gather candidate faces from both endpoints (dedup by face index).
     let mut faces: Vec<u32> = Vec::new();
     for &f in &mesh.faces_of[lo as usize] {
@@ -985,7 +975,11 @@ fn flips_normal<K: GeometryKernel>(kernel: &K, orig: &[Point3; 3], newc: &[Point
     let cy = (orig[0].y + orig[1].y + orig[2].y) / 3.0;
     let cz = (orig[0].z + orig[1].z + orig[2].z) / 3.0;
     let scale = len2.sqrt().sqrt(); // ~ sqrt of edge length scale
-    let apex = Point3::new(cx + nx * 0.5 / scale.max(1e-12), cy + ny * 0.5 / scale.max(1e-12), cz + nz * 0.5 / scale.max(1e-12));
+    let apex = Point3::new(
+        cx + nx * 0.5 / scale.max(1e-12),
+        cy + ny * 0.5 / scale.max(1e-12),
+        cz + nz * 0.5 / scale.max(1e-12),
+    );
 
     let s_orig = kernel.orient_3d(orig[0], orig[1], orig[2], apex);
     // If the new triangle is degenerate, reject (collapsing must not create a
@@ -1022,19 +1016,11 @@ fn tri_normal(t: &[Point3; 3]) -> (f64, f64, f64) {
     let vx = t[2].x - t[0].x;
     let vy = t[2].y - t[0].y;
     let vz = t[2].z - t[0].z;
-    (
-        uy * vz - uz * vy,
-        uz * vx - ux * vz,
-        ux * vy - uy * vx,
-    )
+    (uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx)
 }
 
 /// Re-evaluate and enqueue every edge incident to the surviving vertex `hi`.
-fn reenqueue_incident(
-    mesh: &Mesh,
-    hi: u32,
-    heap: &mut std::collections::BinaryHeap<Pending>,
-) {
+fn reenqueue_incident(mesh: &Mesh, hi: u32, heap: &mut std::collections::BinaryHeap<Pending>) {
     let ring = one_ring(mesh, hi, REMOVED);
     for w in ring {
         let (lo, hipair) = if w < hi { (w, hi) } else { (hi, w) };
@@ -1139,12 +1125,18 @@ mod tests {
             Point3::new(0.0, 1.0, 1.0),
         ];
         let t = vec![
-            [0, 3, 2], [0, 2, 1],
-            [4, 5, 6], [4, 6, 7],
-            [0, 1, 5], [0, 5, 4],
-            [3, 7, 6], [3, 6, 2],
-            [0, 4, 7], [0, 7, 3],
-            [1, 2, 6], [1, 6, 5],
+            [0, 3, 2],
+            [0, 2, 1],
+            [4, 5, 6],
+            [4, 6, 7],
+            [0, 1, 5],
+            [0, 5, 4],
+            [3, 7, 6],
+            [3, 6, 2],
+            [0, 4, 7],
+            [0, 7, 3],
+            [1, 2, 6],
+            [1, 6, 5],
         ];
         (v, t)
     }
@@ -1245,14 +1237,8 @@ mod tests {
         let target = 24usize;
         let mut ov = vec![Point3::default(); required_vertices(v.len())];
         let mut ot = vec![[0u32; 3]; required_triangles(t.len())];
-        let report = decimate_qem(
-            &v,
-            &t,
-            DecimateOptions::to_faces(target),
-            &mut ov,
-            &mut ot,
-        )
-        .unwrap();
+        let report =
+            decimate_qem(&v, &t, DecimateOptions::to_faces(target), &mut ov, &mut ot).unwrap();
 
         // Hit (or beat) the target.
         assert!(
@@ -1299,18 +1285,15 @@ mod tests {
         let (v, t) = flat_grid(4); // 32 triangles
         let mut ov = vec![Point3::default(); v.len()];
         let mut ot = vec![[0u32; 3]; t.len()];
-        let report = decimate_qem(
-            &v,
-            &t,
-            DecimateOptions::to_faces(2),
-            &mut ov,
-            &mut ot,
-        )
-        .unwrap();
+        let report = decimate_qem(&v, &t, DecimateOptions::to_faces(2), &mut ov, &mut ot).unwrap();
 
         // Interior of a plane decimates to (near) the 2-triangle quad; error is
         // essentially zero since all removed points were coplanar.
-        assert!(report.max_error < 1e-9, "planar error should vanish, got {}", report.max_error);
+        assert!(
+            report.max_error < 1e-9,
+            "planar error should vanish, got {}",
+            report.max_error
+        );
         // Area is exactly preserved for a coplanar decimation (the quad area).
         let area0 = surface_area(&v, &t).unwrap();
         let area1 = surface_area(&ov[..report.vertices], &ot[..report.faces]).unwrap();
@@ -1333,14 +1316,8 @@ mod tests {
         let mut ot = vec![[0u32; 3]; t.len()];
 
         let ceiling = 1e-9;
-        let report = decimate_qem(
-            &v,
-            &t,
-            DecimateOptions::to_error(ceiling),
-            &mut ov,
-            &mut ot,
-        )
-        .unwrap();
+        let report =
+            decimate_qem(&v, &t, DecimateOptions::to_error(ceiling), &mut ov, &mut ot).unwrap();
 
         // Every committed collapse cost <= ceiling.
         assert!(
@@ -1354,7 +1331,10 @@ mod tests {
         // subdivided cube there are always corner edges left, so it stops on error.
         assert!(report.stopped_on_error, "should stop on the error ceiling");
         // It still made progress on the coplanar interior collapses.
-        assert!(report.collapses > 0, "coplanar interior collapses should proceed");
+        assert!(
+            report.collapses > 0,
+            "coplanar interior collapses should proceed"
+        );
         // Output remains manifold + closed.
         let (manifold, boundary) = is_manifold_closed(&ov[..report.vertices], &ot[..report.faces]);
         assert!(manifold);
@@ -1370,13 +1350,20 @@ mod tests {
         let (v, t) = subdivide(&v0, &t0, 2);
         let mut ov = vec![Point3::default(); v.len()];
         let mut ot = vec![[0u32; 3]; t.len()];
-        let report =
-            decimate_qem(&v, &t, DecimateOptions::to_faces(30), &mut ov, &mut ot).unwrap();
+        let report = decimate_qem(&v, &t, DecimateOptions::to_faces(30), &mut ov, &mut ot).unwrap();
         let vol = signed_volume(&ov[..report.vertices], &ot[..report.faces]).unwrap();
-        assert!(vol > 0.0, "orientation must be preserved (vol > 0), got {}", vol);
+        assert!(
+            vol > 0.0,
+            "orientation must be preserved (vol > 0), got {}",
+            vol
+        );
         // For a convex solid decimated toward its hull, the enclosed volume is
         // close to 1 (the cube), bounded below by the inscribed decimation.
-        assert!(vol > 0.5 && vol <= 1.0 + 1e-9, "volume {} out of expected band", vol);
+        assert!(
+            vol > 0.5 && vol <= 1.0 + 1e-9,
+            "volume {} out of expected band",
+            vol
+        );
     }
 
     #[test]
@@ -1451,7 +1438,10 @@ mod tests {
         let mut ot = vec![[0u32; 3]; 1];
         assert_eq!(
             decimate_qem(&v, &t, DecimateOptions::to_faces(0), &mut ov, &mut ot),
-            Err(DecimateError::IndexOutOfBounds { triangle: 0, vertex: 1 })
+            Err(DecimateError::IndexOutOfBounds {
+                triangle: 0,
+                vertex: 1
+            })
         );
     }
 
@@ -1526,7 +1516,10 @@ mod tests {
         assert_eq!(report.collapses, 0);
         assert_eq!(report.max_error, 0.0);
         // Identity output preserves area & volume exactly.
-        assert!((surface_area(&ov[..report.vertices], &ot[..report.faces]).unwrap() - 6.0).abs() < 1e-12);
+        assert!(
+            (surface_area(&ov[..report.vertices], &ot[..report.faces]).unwrap() - 6.0).abs()
+                < 1e-12
+        );
     }
 
     #[test]

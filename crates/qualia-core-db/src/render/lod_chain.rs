@@ -48,9 +48,15 @@ pub enum LodChainError {
     /// Decimation failed at the given LOD level.
     DecimateFailed { level: usize, cause: DecimateError },
     /// `.10d` encoding failed at the given LOD level.
-    EncodeFailed { level: usize, cause: MeshSectionError },
+    EncodeFailed {
+        level: usize,
+        cause: MeshSectionError,
+    },
     /// `.10d` decoding failed at the given LOD level.
-    DecodeFailed { level: usize, cause: MeshSectionError },
+    DecodeFailed {
+        level: usize,
+        cause: MeshSectionError,
+    },
     /// Output buffer too small for the serialized LOD chain.
     BufferTooSmall { needed: usize, have: usize },
     /// No LOD levels were requested.
@@ -63,7 +69,10 @@ impl core::fmt::Display for LodChainError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::DecimateFailed { level, cause } => {
-                write!(f, "lod_chain: decimation failed at level {level}: {cause:?}")
+                write!(
+                    f,
+                    "lod_chain: decimation failed at level {level}: {cause:?}"
+                )
             }
             Self::EncodeFailed { level, cause } => {
                 write!(f, "lod_chain: encode failed at level {level}: {cause}")
@@ -241,14 +250,32 @@ pub fn build_lod_chain(
             positions: f32_positions.clone(),
             triangles: current_tris.clone(),
             min: [
-                f32_positions.iter().map(|p| p[0]).fold(f32::INFINITY, f32::min),
-                f32_positions.iter().map(|p| p[1]).fold(f32::INFINITY, f32::min),
-                f32_positions.iter().map(|p| p[2]).fold(f32::INFINITY, f32::min),
+                f32_positions
+                    .iter()
+                    .map(|p| p[0])
+                    .fold(f32::INFINITY, f32::min),
+                f32_positions
+                    .iter()
+                    .map(|p| p[1])
+                    .fold(f32::INFINITY, f32::min),
+                f32_positions
+                    .iter()
+                    .map(|p| p[2])
+                    .fold(f32::INFINITY, f32::min),
             ],
             max: [
-                f32_positions.iter().map(|p| p[0]).fold(f32::NEG_INFINITY, f32::max),
-                f32_positions.iter().map(|p| p[1]).fold(f32::NEG_INFINITY, f32::max),
-                f32_positions.iter().map(|p| p[2]).fold(f32::NEG_INFINITY, f32::max),
+                f32_positions
+                    .iter()
+                    .map(|p| p[0])
+                    .fold(f32::NEG_INFINITY, f32::max),
+                f32_positions
+                    .iter()
+                    .map(|p| p[1])
+                    .fold(f32::NEG_INFINITY, f32::max),
+                f32_positions
+                    .iter()
+                    .map(|p| p[2])
+                    .fold(f32::NEG_INFINITY, f32::max),
             ],
         };
 
@@ -354,8 +381,7 @@ pub fn parse_lod_level(
         buffer.len()
     };
     let section_bytes = &buffer[offset..end];
-    decode_mesh_section(section_bytes)
-        .map_err(|e| LodChainError::DecodeFailed { level, cause: e })
+    decode_mesh_section(section_bytes).map_err(|e| LodChainError::DecodeFailed { level, cause: e })
 }
 
 /// Extract the per-level byte offsets from a `LodChainReport`.
@@ -404,9 +430,7 @@ pub fn plan_view_with_lod(
     now_unix: u32,
     lod_level_count: usize,
 ) -> LodViewDisposition {
-    use crate::render::authoring::{
-        has_attestation, Sensitivity, ViewKind,
-    };
+    use crate::render::authoring::{has_attestation, Sensitivity, ViewKind};
 
     // 1) Attestation gate.
     if view.requires_attestation && !has_attestation(view, attestations) {
@@ -469,19 +493,34 @@ mod tests {
     use super::*;
     use crate::q_hash;
     use crate::render::authoring::{
-        attestation_quin, plan_view, QappView, RenderStandpoint, Sensitivity,
-        ViewDisposition, ViewKind,
+        attestation_quin, plan_view, QappView, RenderStandpoint, Sensitivity, ViewDisposition,
+        ViewKind,
     };
 
     fn unit_cube_mesh() -> Mesh {
         let positions = vec![
-            [0.0f32, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0], [1.0, 0.0, 1.0], [1.0, 1.0, 1.0], [0.0, 1.0, 1.0],
+            [0.0f32, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [1.0, 0.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [0.0, 1.0, 1.0],
         ];
         let triangles = vec![
-            [0, 3, 2], [0, 2, 1], [4, 5, 6], [4, 6, 7],
-            [0, 1, 5], [0, 5, 4], [3, 7, 6], [3, 6, 2],
-            [0, 4, 7], [0, 7, 3], [1, 2, 6], [1, 6, 5],
+            [0, 3, 2],
+            [0, 2, 1],
+            [4, 5, 6],
+            [4, 6, 7],
+            [0, 1, 5],
+            [0, 5, 4],
+            [3, 7, 6],
+            [3, 6, 2],
+            [0, 4, 7],
+            [0, 7, 3],
+            [1, 2, 6],
+            [1, 6, 5],
         ];
         Mesh {
             positions,
@@ -516,8 +555,16 @@ mod tests {
         // Top (z=1, facing up)
         for i in 0..subdivs {
             for j in 0..subdivs {
-                triangles.push([idx(i, j, subdivs), idx(i + 1, j + 1, subdivs), idx(i, j + 1, subdivs)]);
-                triangles.push([idx(i, j, subdivs), idx(i + 1, j, subdivs), idx(i + 1, j + 1, subdivs)]);
+                triangles.push([
+                    idx(i, j, subdivs),
+                    idx(i + 1, j + 1, subdivs),
+                    idx(i, j + 1, subdivs),
+                ]);
+                triangles.push([
+                    idx(i, j, subdivs),
+                    idx(i + 1, j, subdivs),
+                    idx(i + 1, j + 1, subdivs),
+                ]);
             }
         }
         // Front (y=0, facing -y)
@@ -530,8 +577,16 @@ mod tests {
         // Back (y=1, facing +y)
         for i in 0..subdivs {
             for k in 0..subdivs {
-                triangles.push([idx(i, subdivs, k), idx(i, subdivs, k + 1), idx(i + 1, subdivs, k + 1)]);
-                triangles.push([idx(i, subdivs, k), idx(i + 1, subdivs, k + 1), idx(i + 1, subdivs, k)]);
+                triangles.push([
+                    idx(i, subdivs, k),
+                    idx(i, subdivs, k + 1),
+                    idx(i + 1, subdivs, k + 1),
+                ]);
+                triangles.push([
+                    idx(i, subdivs, k),
+                    idx(i + 1, subdivs, k + 1),
+                    idx(i + 1, subdivs, k),
+                ]);
             }
         }
         // Left (x=0, facing -x)
@@ -544,35 +599,56 @@ mod tests {
         // Right (x=1, facing +x)
         for j in 0..subdivs {
             for k in 0..subdivs {
-                triangles.push([idx(subdivs, j, k), idx(subdivs, j + 1, k + 1), idx(subdivs, j, k + 1)]);
-                triangles.push([idx(subdivs, j, k), idx(subdivs, j + 1, k), idx(subdivs, j + 1, k + 1)]);
+                triangles.push([
+                    idx(subdivs, j, k),
+                    idx(subdivs, j + 1, k + 1),
+                    idx(subdivs, j, k + 1),
+                ]);
+                triangles.push([
+                    idx(subdivs, j, k),
+                    idx(subdivs, j + 1, k),
+                    idx(subdivs, j + 1, k + 1),
+                ]);
             }
         }
         let min = [0.0f32; 3];
         let max = [1.0f32; 3];
-        Mesh { positions, triangles, min, max }
+        Mesh {
+            positions,
+            triangles,
+            min,
+            max,
+        }
     }
 
     #[test]
     fn build_lod_chain_3_levels() {
         let mesh = subdivided_cube_mesh(4); // 125 verts, 96 tris
         let options = LodChainOptions::default_3_tier();
-        let buf_size = required_lod_buffer_size(mesh.positions.len(), mesh.triangles.len(), options);
+        let buf_size =
+            required_lod_buffer_size(mesh.positions.len(), mesh.triangles.len(), options);
         let mut buf = vec![0u8; buf_size];
         let report = build_lod_chain(&mesh, options, &mut buf).unwrap();
 
-        assert!(report.levels.len() >= 2, "should produce at least 2 LOD levels");
+        assert!(
+            report.levels.len() >= 2,
+            "should produce at least 2 LOD levels"
+        );
         assert_eq!(report.levels[0].level, 0);
         assert_eq!(report.levels[0].vertices, mesh.positions.len());
         assert_eq!(report.levels[0].triangles, mesh.triangles.len());
-        assert_eq!(report.total_bytes, report.levels.iter().map(|l| l.encoded_bytes).sum::<usize>());
+        assert_eq!(
+            report.total_bytes,
+            report.levels.iter().map(|l| l.encoded_bytes).sum::<usize>()
+        );
     }
 
     #[test]
     fn lod_chain_hash_stable() {
         let mesh = subdivided_cube_mesh(3);
         let options = LodChainOptions::default_3_tier();
-        let buf_size = required_lod_buffer_size(mesh.positions.len(), mesh.triangles.len(), options);
+        let buf_size =
+            required_lod_buffer_size(mesh.positions.len(), mesh.triangles.len(), options);
 
         let mut buf1 = vec![0u8; buf_size];
         let mut buf2 = vec![0u8; buf_size];
@@ -582,14 +658,18 @@ mod tests {
         assert_eq!(report1.total_bytes, report2.total_bytes);
         let h1 = lod_chain_hash(&buf1[..report1.total_bytes]);
         let h2 = lod_chain_hash(&buf2[..report2.total_bytes]);
-        assert_eq!(h1, h2, "LOD chain bytes must be hash-stable across two encodes");
+        assert_eq!(
+            h1, h2,
+            "LOD chain bytes must be hash-stable across two encodes"
+        );
     }
 
     #[test]
     fn lod_chain_round_trip() {
         let mesh = subdivided_cube_mesh(3);
         let options = LodChainOptions::default_3_tier();
-        let buf_size = required_lod_buffer_size(mesh.positions.len(), mesh.triangles.len(), options);
+        let buf_size =
+            required_lod_buffer_size(mesh.positions.len(), mesh.triangles.len(), options);
         let mut buf = vec![0u8; buf_size];
         let report = build_lod_chain(&mesh, options, &mut buf).unwrap();
 
@@ -603,8 +683,16 @@ mod tests {
         // Parse any additional LODs.
         for (i, lvl) in report.levels.iter().enumerate() {
             let decoded = parse_lod_level(&buf, &offsets, i).unwrap();
-            assert_eq!(decoded.positions.len(), lvl.vertices, "LOD {i} vertex count mismatch");
-            assert_eq!(decoded.triangles.len(), lvl.triangles, "LOD {i} triangle count mismatch");
+            assert_eq!(
+                decoded.positions.len(),
+                lvl.vertices,
+                "LOD {i} vertex count mismatch"
+            );
+            assert_eq!(
+                decoded.triangles.len(),
+                lvl.triangles,
+                "LOD {i} triangle count mismatch"
+            );
         }
     }
 
@@ -623,7 +711,8 @@ mod tests {
     fn lod_chain_decreasing_triangle_counts() {
         let mesh = subdivided_cube_mesh(5);
         let options = LodChainOptions::default_3_tier();
-        let buf_size = required_lod_buffer_size(mesh.positions.len(), mesh.triangles.len(), options);
+        let buf_size =
+            required_lod_buffer_size(mesh.positions.len(), mesh.triangles.len(), options);
         let mut buf = vec![0u8; buf_size];
         let report = build_lod_chain(&mesh, options, &mut buf).unwrap();
 
@@ -657,7 +746,15 @@ mod tests {
         );
         // Reserve → LOD 2.
         assert_eq!(
-            plan_view_with_lod(&view, &standpoint, OperationalMode::Reserve, &[], &[], 100, 3),
+            plan_view_with_lod(
+                &view,
+                &standpoint,
+                OperationalMode::Reserve,
+                &[],
+                &[],
+                100,
+                3
+            ),
             LodViewDisposition::Render3dWithLod { lod: 2 }
         );
     }
@@ -718,9 +815,21 @@ mod tests {
         );
 
         // With attestation → rendered at LOD 0.
-        let att = attestation_quin(q_hash("did:example:auditor"), m, q_hash("urn:qualia:frame:app"));
+        let att = attestation_quin(
+            q_hash("did:example:auditor"),
+            m,
+            q_hash("urn:qualia:frame:app"),
+        );
         assert_eq!(
-            plan_view_with_lod(&view, &standpoint, OperationalMode::Full, &[att], &[], 100, 3),
+            plan_view_with_lod(
+                &view,
+                &standpoint,
+                OperationalMode::Full,
+                &[att],
+                &[],
+                100,
+                3
+            ),
             LodViewDisposition::Render3dWithLod { lod: 0 }
         );
     }
@@ -799,7 +908,8 @@ mod tests {
     fn single_level_lod_chain() {
         let mesh = unit_cube_mesh();
         let options = LodChainOptions::new(1, 0.5);
-        let buf_size = required_lod_buffer_size(mesh.positions.len(), mesh.triangles.len(), options);
+        let buf_size =
+            required_lod_buffer_size(mesh.positions.len(), mesh.triangles.len(), options);
         let mut buf = vec![0u8; buf_size];
         let report = build_lod_chain(&mesh, options, &mut buf).unwrap();
         assert_eq!(report.levels.len(), 1);

@@ -572,7 +572,9 @@ mod tests {
     fn test_compile_n3_rule_to_norm() {
         use crate::modalities::logic::n3_parser::RuleType;
 
-        use crate::modalities::logic::n3_compiler::{CompiledFormula, CompiledTerm, CompiledTriple};
+        use crate::modalities::logic::n3_compiler::{
+            CompiledFormula, CompiledTerm, CompiledTriple,
+        };
         let make_rule = |rt: RuleType, pred: &str| -> CompiledRule {
             let mut premise_triples = [CompiledTriple {
                 subject: CompiledTerm::Uri(0),

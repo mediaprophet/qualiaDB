@@ -954,7 +954,8 @@ pub fn run_bench(cfg: &BenchConfig) -> Result<BenchResult, String> {
     // ── Make resident so warm runs adopt the mmap (skip disk load). ──
     let model_id = crate::q_hash(&cfg.model_path);
     let mut meta = ModelMeta::default();
-    if let Ok(report) = crate::resident_model::mount_resident_gguf(model_id, &cfg.model_path, false) {
+    if let Ok(report) = crate::resident_model::mount_resident_gguf(model_id, &cfg.model_path, false)
+    {
         meta = ModelMeta {
             n_layer: report.n_layer,
             n_head: report.n_head,
@@ -1748,7 +1749,11 @@ pub fn spec_verify_probe_blocking(
         let vocab = tok.vocab_len().max(1) as usize;
         let toks = tok.encode(&prompt);
         if toks.len() < b + 2 {
-            return Err(format!("prompt too short: {} tokens, need >= {}", toks.len(), b + 2));
+            return Err(format!(
+                "prompt too short: {} tokens, need >= {}",
+                toks.len(),
+                b + 2
+            ));
         }
 
         let mut emb = vec![0f32; emb_dim.max(8192)];
@@ -1778,7 +1783,13 @@ pub fn spec_verify_probe_blocking(
                 return Err(format!("embedding lookup failed for token {}", toks[i]));
             }
             let _ = engine.dispatch_transformer_forward(
-                &idx, &mut emb[..emb_dim], emb_dim, &mut sa, &mut sb, i as u32, 0,
+                &idx,
+                &mut emb[..emb_dim],
+                emb_dim,
+                &mut sa,
+                &mut sb,
+                i as u32,
+                0,
             );
         }
         // No KV snapshot needed: the reference decode below writes only positions [p, p+b), never the
@@ -1798,10 +1809,17 @@ pub fn spec_verify_probe_blocking(
                 return Err("reference embedding lookup failed".into());
             }
             let _ = engine.dispatch_transformer_forward(
-                &idx, &mut emb[..emb_dim], emb_dim, &mut sa, &mut sb, pos, 0,
+                &idx,
+                &mut emb[..emb_dim],
+                emb_dim,
+                &mut sa,
+                &mut sb,
+                pos,
+                0,
             );
             let _ = engine.apply_output_norm_inplace(&idx, &mut emb[..emb_dim], emb_dim);
-            let nl = engine.dispatch_output_logits_into(&idx, &emb[..emb_dim], emb_dim, &mut logits);
+            let nl =
+                engine.dispatch_output_logits_into(&idx, &emb[..emb_dim], emb_dim, &mut logits);
             if nl == 0 {
                 return Err("reference output projection produced no logits".into());
             }
@@ -1829,7 +1847,13 @@ pub fn spec_verify_probe_blocking(
                 return Err("resident-ref prefill embedding failed".into());
             }
             let _ = engine.dispatch_transformer_forward(
-                &idx, &mut emb[..emb_dim], emb_dim, &mut sa, &mut sb, i as u32, 0,
+                &idx,
+                &mut emb[..emb_dim],
+                emb_dim,
+                &mut sa,
+                &mut sb,
+                i as u32,
+                0,
             );
         }
         let mut resident_out: Vec<u32> = Vec::with_capacity(b);

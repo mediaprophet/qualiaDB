@@ -117,12 +117,26 @@ pub enum NodeSectionError {
 impl std::fmt::Display for NodeSectionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::PayloadTooShort { got, need } => write!(f, "10d NODE payload too short: got {got}, need {need}"),
-            Self::UnknownLayout { got } => write!(f, "10d NODE unknown layout byte {got} (expected 0=AoS or 1=SoA)"),
-            Self::NonZeroReserved { field } => write!(f, "10d NODE non-zero reserved field {field:?}"),
-            Self::NodeCountTooLarge { got, max } => write!(f, "10d NODE node_count {got} exceeds max {max}"),
-            Self::PayloadTruncated { expected, got } => write!(f, "10d NODE payload truncated: expected {expected}, got {got}"),
-            Self::IndexOutOfRange { index, count } => write!(f, "10d NODE index {index} out of range (count={count})"),
+            Self::PayloadTooShort { got, need } => {
+                write!(f, "10d NODE payload too short: got {got}, need {need}")
+            }
+            Self::UnknownLayout { got } => write!(
+                f,
+                "10d NODE unknown layout byte {got} (expected 0=AoS or 1=SoA)"
+            ),
+            Self::NonZeroReserved { field } => {
+                write!(f, "10d NODE non-zero reserved field {field:?}")
+            }
+            Self::NodeCountTooLarge { got, max } => {
+                write!(f, "10d NODE node_count {got} exceeds max {max}")
+            }
+            Self::PayloadTruncated { expected, got } => write!(
+                f,
+                "10d NODE payload truncated: expected {expected}, got {got}"
+            ),
+            Self::IndexOutOfRange { index, count } => {
+                write!(f, "10d NODE index {index} out of range (count={count})")
+            }
         }
     }
 }
@@ -133,41 +147,65 @@ impl std::error::Error for NodeSectionError {}
 /// total payload byte length it claims.
 pub fn parse_node_header(payload: &[u8]) -> Result<(NodeMiniHeader, usize), NodeSectionError> {
     if payload.len() < NODE_MINI_HEADER_SIZE {
-        return Err(NodeSectionError::PayloadTooShort { got: payload.len(), need: NODE_MINI_HEADER_SIZE });
+        return Err(NodeSectionError::PayloadTooShort {
+            got: payload.len(),
+            need: NODE_MINI_HEADER_SIZE,
+        });
     }
     let header: NodeMiniHeader = *bytemuck::from_bytes(&payload[..NODE_MINI_HEADER_SIZE]);
     if header.layout != LAYOUT_AOS && header.layout != LAYOUT_SOA {
         return Err(NodeSectionError::UnknownLayout { got: header.layout });
     }
     if header.reserved_u8 != 0 {
-        return Err(NodeSectionError::NonZeroReserved { field: "reserved_u8" });
+        return Err(NodeSectionError::NonZeroReserved {
+            field: "reserved_u8",
+        });
     }
     if header.reserved_u16 != 0 {
-        return Err(NodeSectionError::NonZeroReserved { field: "reserved_u16" });
+        return Err(NodeSectionError::NonZeroReserved {
+            field: "reserved_u16",
+        });
     }
     if header.reserved_u64 != 0 {
-        return Err(NodeSectionError::NonZeroReserved { field: "reserved_u64" });
+        return Err(NodeSectionError::NonZeroReserved {
+            field: "reserved_u64",
+        });
     }
     let count = header.node_count as usize;
     if count > MAX_NODE_COUNT {
-        return Err(NodeSectionError::NodeCountTooLarge { got: header.node_count, max: MAX_NODE_COUNT });
+        return Err(NodeSectionError::NodeCountTooLarge {
+            got: header.node_count,
+            max: MAX_NODE_COUNT,
+        });
     }
     let total = NodeMiniHeader::payload_bytes(count);
     if payload.len() < total {
-        return Err(NodeSectionError::PayloadTruncated { expected: total, got: payload.len() });
+        return Err(NodeSectionError::PayloadTruncated {
+            expected: total,
+            got: payload.len(),
+        });
     }
     Ok((header, total))
 }
 
 /// Write a tensor set as a NODE section in AoS layout into a caller-supplied
 /// buffer. Returns the bytes written. Zero-heap.
-pub fn write_node_section_aos(tensors: &[Tensor10D], out: &mut [u8]) -> Result<usize, NodeSectionError> {
+pub fn write_node_section_aos(
+    tensors: &[Tensor10D],
+    out: &mut [u8],
+) -> Result<usize, NodeSectionError> {
     let need = NodeMiniHeader::payload_bytes(tensors.len());
     if out.len() < need {
-        return Err(NodeSectionError::PayloadTruncated { expected: need, got: out.len() });
+        return Err(NodeSectionError::PayloadTruncated {
+            expected: need,
+            got: out.len(),
+        });
     }
     if tensors.len() > MAX_NODE_COUNT {
-        return Err(NodeSectionError::NodeCountTooLarge { got: tensors.len() as u32, max: MAX_NODE_COUNT });
+        return Err(NodeSectionError::NodeCountTooLarge {
+            got: tensors.len() as u32,
+            max: MAX_NODE_COUNT,
+        });
     }
     let header = NodeMiniHeader {
         node_count: tensors.len() as u32,
@@ -192,13 +230,22 @@ pub fn write_node_section_aos(tensors: &[Tensor10D], out: &mut [u8]) -> Result<u
 ///
 /// SoA lane layout: lane `axis` occupies bytes `[16 + axis*N*4 .. 16 + (axis+1)*N*4)`.
 /// Lane 0 = `q`, lane 1 = `v`, …, lane 9 = `σ` (matching `AXIS_ORDER`).
-pub fn write_node_section_soa(tensors: &[Tensor10D], out: &mut [u8]) -> Result<usize, NodeSectionError> {
+pub fn write_node_section_soa(
+    tensors: &[Tensor10D],
+    out: &mut [u8],
+) -> Result<usize, NodeSectionError> {
     let need = NodeMiniHeader::payload_bytes(tensors.len());
     if out.len() < need {
-        return Err(NodeSectionError::PayloadTruncated { expected: need, got: out.len() });
+        return Err(NodeSectionError::PayloadTruncated {
+            expected: need,
+            got: out.len(),
+        });
     }
     if tensors.len() > MAX_NODE_COUNT {
-        return Err(NodeSectionError::NodeCountTooLarge { got: tensors.len() as u32, max: MAX_NODE_COUNT });
+        return Err(NodeSectionError::NodeCountTooLarge {
+            got: tensors.len() as u32,
+            max: MAX_NODE_COUNT,
+        });
     }
     let n = tensors.len();
     let header = NodeMiniHeader {
@@ -251,9 +298,16 @@ pub fn read_node_aos(payload: &[u8], index: usize) -> Result<Tensor10D, NodeSect
 /// Read one `f32` lane value (axis `axis`, node `index`) from an SoA-layout
 /// NODE section. Zero-heap. This is the "per-axis SoA lane read" the P0.5
 /// acceptance gate names.
-pub fn read_node_soa_lane(payload: &[u8], axis: usize, index: usize) -> Result<f32, NodeSectionError> {
+pub fn read_node_soa_lane(
+    payload: &[u8],
+    axis: usize,
+    index: usize,
+) -> Result<f32, NodeSectionError> {
     if axis >= AXIS_COUNT {
-        return Err(NodeSectionError::IndexOutOfRange { index: axis, count: AXIS_COUNT });
+        return Err(NodeSectionError::IndexOutOfRange {
+            index: axis,
+            count: AXIS_COUNT,
+        });
     }
     let (header, _) = parse_node_header(payload)?;
     let count = header.node_count as usize;
@@ -262,7 +316,9 @@ pub fn read_node_soa_lane(payload: &[u8], axis: usize, index: usize) -> Result<f
     }
     let n = count;
     let off = NODE_MINI_HEADER_SIZE + axis * n * 4 + index * 4;
-    Ok(f32::from_le_bytes(payload[off..off + 4].try_into().unwrap()))
+    Ok(f32::from_le_bytes(
+        payload[off..off + 4].try_into().unwrap(),
+    ))
 }
 
 /// Read one `Tensor10D` by index from an SoA-layout NODE section (assembles
@@ -311,7 +367,10 @@ pub fn transpose_aos_to_soa(payload: &[u8], out: &mut [u8]) -> Result<usize, Nod
         return Err(NodeSectionError::UnknownLayout { got: header.layout });
     }
     if out.len() < total {
-        return Err(NodeSectionError::PayloadTruncated { expected: total, got: out.len() });
+        return Err(NodeSectionError::PayloadTruncated {
+            expected: total,
+            got: out.len(),
+        });
     }
     let n = header.node_count as usize;
     // Write the SoA mini-header.
@@ -346,7 +405,10 @@ pub fn transpose_soa_to_aos(payload: &[u8], out: &mut [u8]) -> Result<usize, Nod
         return Err(NodeSectionError::UnknownLayout { got: header.layout });
     }
     if out.len() < total {
-        return Err(NodeSectionError::PayloadTruncated { expected: total, got: out.len() });
+        return Err(NodeSectionError::PayloadTruncated {
+            expected: total,
+            got: out.len(),
+        });
     }
     let n = header.node_count as usize;
     let aos_header = NodeMiniHeader {
@@ -570,7 +632,10 @@ mod tests {
         write_node_section_soa(&tensors, &mut payload).expect("soa write");
         // Collapse node 2's q (currently 999.0 Sandbox) to 0.0.
         let prev = write_node_q_at(&mut payload, 2, 0.0).expect("q write");
-        assert!((prev - 999.0).abs() < 1e-4, "prev q must be 999.0, got {prev}");
+        assert!(
+            (prev - 999.0).abs() < 1e-4,
+            "prev q must be 999.0, got {prev}"
+        );
         let t = read_node(&payload, 2).expect("read after collapse");
         assert!(t.q.abs() < 1e-6, "q must be collapsed to 0.0");
         // Other fields unchanged.
@@ -586,7 +651,10 @@ mod tests {
         let mut payload = vec![0u8; need];
         write_node_section_aos(&tensors, &mut payload).expect("aos write");
         let err = write_node_q_at(&mut payload, 99, 0.0).expect_err("oob must reject");
-        assert!(matches!(err, NodeSectionError::IndexOutOfRange { .. }), "{err}");
+        assert!(
+            matches!(err, NodeSectionError::IndexOutOfRange { .. }),
+            "{err}"
+        );
     }
 
     #[test]
@@ -613,7 +681,8 @@ mod tests {
         crate::container_10d::integrity::seal_whole_file_crc32c(&mut out[..n]);
 
         // Verify whole-file CRC.
-        crate::container_10d::integrity::verify_whole_file_crc32c(&mut out[..n]).expect("whole-file CRC");
+        crate::container_10d::integrity::verify_whole_file_crc32c(&mut out[..n])
+            .expect("whole-file CRC");
 
         let parsed_h = Container10dHeader::parse(&out[..n]).expect("header parse");
         let descs = parse_section_table(&out[..n], &parsed_h).expect("table parse");
@@ -652,8 +721,15 @@ mod tests {
         let p_off = descs[0].byte_offset as usize;
         // Flip a bit in the NODE payload (inside the tensor data, past the mini-header).
         out[p_off + NODE_MINI_HEADER_SIZE + 5] ^= 0x01;
-        let err = parse_section_table(&out[..n], &parsed_h).expect_err("flipped bit must be caught");
-        assert!(matches!(err, crate::container_10d::section::SectionTableError::CrcMismatch { .. }), "{err}");
+        let err =
+            parse_section_table(&out[..n], &parsed_h).expect_err("flipped bit must be caught");
+        assert!(
+            matches!(
+                err,
+                crate::container_10d::section::SectionTableError::CrcMismatch { .. }
+            ),
+            "{err}"
+        );
     }
 
     #[test]
@@ -665,7 +741,10 @@ mod tests {
         let header_bytes: &[u8; NODE_MINI_HEADER_SIZE] = bytemuck::cast_ref(&header);
         payload[..NODE_MINI_HEADER_SIZE].copy_from_slice(header_bytes);
         let err = parse_node_header(&payload).expect_err("unknown layout must reject");
-        assert!(matches!(err, NodeSectionError::UnknownLayout { got: 99 }), "{err}");
+        assert!(
+            matches!(err, NodeSectionError::UnknownLayout { got: 99 }),
+            "{err}"
+        );
     }
 
     #[test]
@@ -678,7 +757,10 @@ mod tests {
         let header_bytes: &[u8; NODE_MINI_HEADER_SIZE] = bytemuck::cast_ref(&header);
         payload[..NODE_MINI_HEADER_SIZE].copy_from_slice(header_bytes);
         let err = parse_node_header(&payload).expect_err("non-zero reserved must reject");
-        assert!(matches!(err, NodeSectionError::NonZeroReserved { .. }), "{err}");
+        assert!(
+            matches!(err, NodeSectionError::NonZeroReserved { .. }),
+            "{err}"
+        );
     }
 
     #[test]
@@ -690,7 +772,10 @@ mod tests {
         let header_bytes: &[u8; NODE_MINI_HEADER_SIZE] = bytemuck::cast_ref(&header);
         payload[..NODE_MINI_HEADER_SIZE].copy_from_slice(header_bytes);
         let err = parse_node_header(&payload).expect_err("too-large count must reject");
-        assert!(matches!(err, NodeSectionError::NodeCountTooLarge { .. }), "{err}");
+        assert!(
+            matches!(err, NodeSectionError::NodeCountTooLarge { .. }),
+            "{err}"
+        );
     }
 
     #[test]

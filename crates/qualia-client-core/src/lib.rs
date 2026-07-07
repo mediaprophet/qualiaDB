@@ -4,6 +4,10 @@ pub mod anatomy_context;
 pub mod api;
 pub mod bundled_ontologies;
 pub mod bundled_qapps;
+pub mod canvas_state;
+pub mod canvas_store;
+pub mod canvas_world;
+pub mod chora;
 pub mod chat_agents;
 pub mod chat_files;
 pub mod chat_graph;
@@ -77,6 +81,7 @@ pub mod update_installer;
 pub mod user_profile;
 pub mod vision_ingest;
 pub mod wellfair;
+pub mod wallet;
 
 pub use api::*;
 pub use state::*;

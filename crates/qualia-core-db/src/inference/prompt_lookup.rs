@@ -103,7 +103,11 @@ mod tests {
         // several ahead is the point).
         let ctx = [1u32, 2, 3, 9, 1, 2];
         let d = propose(&ctx, 4);
-        assert_eq!(d.as_slice(), &[3, 9, 1, 2], "drafts the earlier continuation of [1,2]");
+        assert_eq!(
+            d.as_slice(),
+            &[3, 9, 1, 2],
+            "drafts the earlier continuation of [1,2]"
+        );
     }
 
     #[test]
@@ -113,7 +117,11 @@ mod tests {
         // selective and must win → draft starts with 9, not 7.
         let ctx = [7u32, 1, 2, 9, 3, 1, 2, 7, 1, 2];
         let d = propose(&ctx, 4);
-        assert_eq!(d.as_slice()[0], 9, "trigram continuation (9), not the bigram's (7)");
+        assert_eq!(
+            d.as_slice()[0],
+            9,
+            "trigram continuation (9), not the bigram's (7)"
+        );
     }
 
     #[test]
@@ -153,11 +161,18 @@ mod tests {
     fn draft_is_a_prefix_of_real_tokens() {
         // Whatever is drafted must be tokens that literally appear in ctx (never fabricated) —
         // the exact-output safety premise. Fuzz a few structured inputs.
-        let inputs: [&[u32]; 3] = [&[1, 2, 1, 2, 1, 2], &[4, 4, 5, 4, 4], &[7, 8, 9, 7, 8, 9, 7]];
+        let inputs: [&[u32]; 3] = [
+            &[1, 2, 1, 2, 1, 2],
+            &[4, 4, 5, 4, 4],
+            &[7, 8, 9, 7, 8, 9, 7],
+        ];
         for ctx in inputs {
             let d = propose(ctx, MAX_DRAFT);
             for &t in d.as_slice() {
-                assert!(ctx.contains(&t), "drafted token {t} not present in ctx {ctx:?}");
+                assert!(
+                    ctx.contains(&t),
+                    "drafted token {t} not present in ctx {ctx:?}"
+                );
             }
         }
     }

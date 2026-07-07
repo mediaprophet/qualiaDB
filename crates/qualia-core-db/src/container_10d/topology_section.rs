@@ -89,11 +89,21 @@ pub enum TopologySectionError {
 impl std::fmt::Display for TopologySectionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::PayloadTooShort { got, need } => write!(f, "10d TOPOLOGY payload too short: got {got}, need {need}"),
+            Self::PayloadTooShort { got, need } => {
+                write!(f, "10d TOPOLOGY payload too short: got {got}, need {need}")
+            }
             Self::NonZeroReserved => write!(f, "10d TOPOLOGY non-zero reserved field"),
-            Self::HalfEdgeCountTooLarge { got, max } => write!(f, "10d TOPOLOGY half_edge_count {got} exceeds max {max}"),
-            Self::PayloadTruncated { expected, got } => write!(f, "10d TOPOLOGY payload truncated: expected {expected}, got {got}"),
-            Self::OutputBufferTooSmall { needed, have } => write!(f, "10d TOPOLOGY output buffer too small: need {needed}, have {have}"),
+            Self::HalfEdgeCountTooLarge { got, max } => {
+                write!(f, "10d TOPOLOGY half_edge_count {got} exceeds max {max}")
+            }
+            Self::PayloadTruncated { expected, got } => write!(
+                f,
+                "10d TOPOLOGY payload truncated: expected {expected}, got {got}"
+            ),
+            Self::OutputBufferTooSmall { needed, have } => write!(
+                f,
+                "10d TOPOLOGY output buffer too small: need {needed}, have {have}"
+            ),
             Self::ConnectivityError => write!(f, "10d TOPOLOGY connectivity computation failed"),
         }
     }
@@ -112,7 +122,7 @@ pub fn encoded_len(vertex_count: u32, face_count: u32, half_edge_count: u32) -> 
         + (vc + 1) * 4     // v_offsets
         + ec * 4           // v_neighbours
         + (fc + 1) * 4     // f_offsets
-        + ec * 4           // f_neighbours
+        + ec * 4 // f_neighbours
 }
 
 /// Encode a topology section from a half-edge array.
@@ -193,8 +203,7 @@ pub fn encode_topology_section(
     let mut off = 0usize;
 
     // Mini-header.
-    out[off..off + TOPOLOGY_MINI_HEADER_SIZE]
-        .copy_from_slice(bytes_of(&header));
+    out[off..off + TOPOLOGY_MINI_HEADER_SIZE].copy_from_slice(bytes_of(&header));
     off += TOPOLOGY_MINI_HEADER_SIZE;
 
     // Half-edges.
@@ -242,8 +251,7 @@ pub fn decode_topology_section(bytes: &[u8]) -> Result<TopologySectionData, Topo
         });
     }
 
-    let header: TopologyMiniHeader =
-        *from_bytes(&bytes[..TOPOLOGY_MINI_HEADER_SIZE]);
+    let header: TopologyMiniHeader = *from_bytes(&bytes[..TOPOLOGY_MINI_HEADER_SIZE]);
     if header.reserved_u32 != 0 {
         return Err(TopologySectionError::NonZeroReserved);
     }
@@ -259,7 +267,11 @@ pub fn decode_topology_section(bytes: &[u8]) -> Result<TopologySectionData, Topo
         });
     }
 
-    let need = encoded_len(header.vertex_count, header.face_count, header.half_edge_count);
+    let need = encoded_len(
+        header.vertex_count,
+        header.face_count,
+        header.half_edge_count,
+    );
     if bytes.len() < need {
         return Err(TopologySectionError::PayloadTruncated {
             expected: need,
@@ -318,8 +330,8 @@ mod tests {
         let n = triangles.len() * 3;
         let mut edges = vec![HalfEdge::default(); n];
         let mut slots = vec![EdgeSlot::default(); required_edge_slots(triangles.len())];
-        let summary = build_triangle_half_edges(vertex_count, triangles, &mut edges, &mut slots)
-            .unwrap();
+        let summary =
+            build_triangle_half_edges(vertex_count, triangles, &mut edges, &mut slots).unwrap();
         assert_eq!(summary.vertex_count, vertex_count);
         assert_eq!(summary.face_count, triangles.len() as u32);
         (edges, vertex_count, triangles.len() as u32)
@@ -327,13 +339,25 @@ mod tests {
 
     #[test]
     fn mini_header_is_pod_with_exact_size() {
-        assert_eq!(std::mem::size_of::<TopologyMiniHeader>(), TOPOLOGY_MINI_HEADER_SIZE);
+        assert_eq!(
+            std::mem::size_of::<TopologyMiniHeader>(),
+            TOPOLOGY_MINI_HEADER_SIZE
+        );
         assert_eq!(std::mem::offset_of!(TopologyMiniHeader, vertex_count), 0);
         assert_eq!(std::mem::offset_of!(TopologyMiniHeader, face_count), 4);
         assert_eq!(std::mem::offset_of!(TopologyMiniHeader, half_edge_count), 8);
-        assert_eq!(std::mem::offset_of!(TopologyMiniHeader, boundary_loop_count), 12);
-        assert_eq!(std::mem::offset_of!(TopologyMiniHeader, component_count), 16);
-        assert_eq!(std::mem::offset_of!(TopologyMiniHeader, euler_characteristic), 20);
+        assert_eq!(
+            std::mem::offset_of!(TopologyMiniHeader, boundary_loop_count),
+            12
+        );
+        assert_eq!(
+            std::mem::offset_of!(TopologyMiniHeader, component_count),
+            16
+        );
+        assert_eq!(
+            std::mem::offset_of!(TopologyMiniHeader, euler_characteristic),
+            20
+        );
         assert_eq!(std::mem::offset_of!(TopologyMiniHeader, genus), 24);
         assert_eq!(std::mem::offset_of!(TopologyMiniHeader, reserved_u32), 28);
     }

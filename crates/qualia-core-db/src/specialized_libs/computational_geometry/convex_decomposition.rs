@@ -19,9 +19,9 @@
 //!
 //! Both algorithms are deterministic. Output pieces are CCW convex polygons.
 
+use super::polygon_validation::canonicalize_simple_polygon;
 use super::primitives::{orientation_2, Orientation, Point2};
 use super::triangulation_2::{triangulate_ear_clipping, triangulate_polygon, Triangle};
-use super::polygon_validation::canonicalize_simple_polygon;
 
 // ───────────────────────────────────────────────────────────────────────────
 //  Convexity test
@@ -158,10 +158,7 @@ fn hm_merge(triangles: &[Triangle]) -> Vec<Vec<Point2>> {
     }
 
     // Start with each triangle as a separate piece.
-    let mut pieces: Vec<Vec<Point2>> = triangles
-        .iter()
-        .map(|t| vec![t.a, t.b, t.c])
-        .collect();
+    let mut pieces: Vec<Vec<Point2>> = triangles.iter().map(|t| vec![t.a, t.b, t.c]).collect();
 
     // Build adjacency.
     let adj_edges = build_adjacency(triangles);
@@ -261,8 +258,7 @@ fn try_merge(
     let mut a_edge_start = None;
     for i in 0..na {
         let j = (i + 1) % na;
-        if (poly_a[i] == ep_lo && poly_a[j] == ep_hi)
-            || (poly_a[i] == ep_hi && poly_a[j] == ep_lo)
+        if (poly_a[i] == ep_lo && poly_a[j] == ep_hi) || (poly_a[i] == ep_hi && poly_a[j] == ep_lo)
         {
             a_edge_start = Some(i);
             break;
@@ -274,8 +270,7 @@ fn try_merge(
     let mut b_edge_start = None;
     for i in 0..nb {
         let j = (i + 1) % nb;
-        if (poly_b[i] == ep_lo && poly_b[j] == ep_hi)
-            || (poly_b[i] == ep_hi && poly_b[j] == ep_lo)
+        if (poly_b[i] == ep_lo && poly_b[j] == ep_hi) || (poly_b[i] == ep_hi && poly_b[j] == ep_lo)
         {
             b_edge_start = Some(i);
             break;
@@ -354,10 +349,7 @@ pub fn convex_decomposition_triangulation(vertices: &[Point2]) -> Vec<Vec<Point2
 /// 1. Every piece is convex.
 /// 2. The total area of all pieces equals the area of the original polygon.
 /// 3. The number of pieces is reasonable (≤ n-2 for triangulation, fewer for HM).
-pub fn verify_convex_decomposition(
-    vertices: &[Point2],
-    pieces: &[Vec<Point2>],
-) -> bool {
+pub fn verify_convex_decomposition(vertices: &[Point2], pieces: &[Vec<Point2>]) -> bool {
     if pieces.is_empty() {
         return vertices.len() < 3;
     }
@@ -416,7 +408,12 @@ mod tests {
     #[test]
     fn reflex_polygon_is_not_convex() {
         let l_shape = vec![
-            p(0.0, 0.0), p(2.0, 0.0), p(2.0, 1.0), p(1.0, 1.0), p(1.0, 2.0), p(0.0, 2.0),
+            p(0.0, 0.0),
+            p(2.0, 0.0),
+            p(2.0, 1.0),
+            p(1.0, 1.0),
+            p(1.0, 2.0),
+            p(0.0, 2.0),
         ];
         assert!(!is_convex_polygon(&l_shape));
     }
@@ -430,7 +427,13 @@ mod tests {
     #[test]
     fn collinear_polygon_is_convex() {
         // Polygon with collinear vertices — still convex (no reflex turns).
-        let poly = vec![p(0.0, 0.0), p(1.0, 0.0), p(2.0, 0.0), p(2.0, 2.0), p(0.0, 2.0)];
+        let poly = vec![
+            p(0.0, 0.0),
+            p(1.0, 0.0),
+            p(2.0, 0.0),
+            p(2.0, 2.0),
+            p(0.0, 2.0),
+        ];
         assert!(is_convex_polygon(&poly));
     }
 
@@ -447,34 +450,65 @@ mod tests {
     #[test]
     fn hm_l_shape() {
         let l_shape = vec![
-            p(0.0, 0.0), p(2.0, 0.0), p(2.0, 1.0), p(1.0, 1.0), p(1.0, 2.0), p(0.0, 2.0),
+            p(0.0, 0.0),
+            p(2.0, 0.0),
+            p(2.0, 1.0),
+            p(1.0, 1.0),
+            p(1.0, 2.0),
+            p(0.0, 2.0),
         ];
         let pieces = convex_decomposition_hm(&l_shape);
-        assert!(pieces.len() <= 4, "L-shape should decompose into ≤4 pieces, got {}", pieces.len());
+        assert!(
+            pieces.len() <= 4,
+            "L-shape should decompose into ≤4 pieces, got {}",
+            pieces.len()
+        );
         assert!(verify_convex_decomposition(&l_shape, &pieces));
     }
 
     #[test]
     fn hm_comb_shape() {
         let comb = vec![
-            p(0.0, 0.0), p(5.0, 0.0), p(5.0, 3.0),
-            p(4.0, 3.0), p(4.0, 1.0), p(3.0, 1.0),
-            p(3.0, 3.0), p(2.0, 3.0), p(2.0, 1.0),
-            p(1.0, 1.0), p(1.0, 3.0), p(0.0, 3.0),
+            p(0.0, 0.0),
+            p(5.0, 0.0),
+            p(5.0, 3.0),
+            p(4.0, 3.0),
+            p(4.0, 1.0),
+            p(3.0, 1.0),
+            p(3.0, 3.0),
+            p(2.0, 3.0),
+            p(2.0, 1.0),
+            p(1.0, 1.0),
+            p(1.0, 3.0),
+            p(0.0, 3.0),
         ];
         let pieces = convex_decomposition_hm(&comb);
-        assert!(pieces.len() <= 10, "comb should decompose into ≤10 pieces, got {}", pieces.len());
+        assert!(
+            pieces.len() <= 10,
+            "comb should decompose into ≤10 pieces, got {}",
+            pieces.len()
+        );
         assert!(verify_convex_decomposition(&comb, &pieces));
     }
 
     #[test]
     fn hm_star_shape() {
         let star = vec![
-            p(0.0, 2.0), p(0.5, 0.5), p(2.0, 0.0), p(0.5, -0.5),
-            p(0.0, -2.0), p(-0.5, -0.5), p(-2.0, 0.0), p(-0.5, 0.5),
+            p(0.0, 2.0),
+            p(0.5, 0.5),
+            p(2.0, 0.0),
+            p(0.5, -0.5),
+            p(0.0, -2.0),
+            p(-0.5, -0.5),
+            p(-2.0, 0.0),
+            p(-0.5, 0.5),
         ];
         let pieces = convex_decomposition_hm(&star);
-        assert!(pieces.len() <= 6, "star should decompose into ≤6 pieces, got {}", pieces.len());
+        assert!(
+            pieces.len() <= 6,
+            "star should decompose into ≤6 pieces, got {}",
+            pieces.len()
+        );
         assert!(verify_convex_decomposition(&star, &pieces));
     }
 
@@ -489,19 +523,37 @@ mod tests {
     #[test]
     fn hm_double_c_shape() {
         let double_c = vec![
-            p(0.0, 0.0), p(6.0, 0.0), p(6.0, 6.0), p(5.0, 6.0),
-            p(5.0, 1.0), p(4.0, 1.0), p(4.0, 5.0), p(3.0, 5.0),
-            p(3.0, 1.0), p(2.0, 1.0), p(2.0, 6.0), p(0.0, 6.0),
+            p(0.0, 0.0),
+            p(6.0, 0.0),
+            p(6.0, 6.0),
+            p(5.0, 6.0),
+            p(5.0, 1.0),
+            p(4.0, 1.0),
+            p(4.0, 5.0),
+            p(3.0, 5.0),
+            p(3.0, 1.0),
+            p(2.0, 1.0),
+            p(2.0, 6.0),
+            p(0.0, 6.0),
         ];
         let pieces = convex_decomposition_hm(&double_c);
-        assert!(pieces.len() <= 10, "double-C should decompose into ≤10 pieces, got {}", pieces.len());
+        assert!(
+            pieces.len() <= 10,
+            "double-C should decompose into ≤10 pieces, got {}",
+            pieces.len()
+        );
         assert!(verify_convex_decomposition(&double_c, &pieces));
     }
 
     #[test]
     fn hm_all_pieces_are_convex() {
         let l_shape = vec![
-            p(0.0, 0.0), p(2.0, 0.0), p(2.0, 1.0), p(1.0, 1.0), p(1.0, 2.0), p(0.0, 2.0),
+            p(0.0, 0.0),
+            p(2.0, 0.0),
+            p(2.0, 1.0),
+            p(1.0, 1.0),
+            p(1.0, 2.0),
+            p(0.0, 2.0),
         ];
         let pieces = convex_decomposition_hm(&l_shape);
         for (i, piece) in pieces.iter().enumerate() {
@@ -513,7 +565,12 @@ mod tests {
     fn hm_fewer_pieces_than_triangulation() {
         // Hertel-Mehlhorn should produce fewer pieces than pure triangulation.
         let l_shape = vec![
-            p(0.0, 0.0), p(2.0, 0.0), p(2.0, 1.0), p(1.0, 1.0), p(1.0, 2.0), p(0.0, 2.0),
+            p(0.0, 0.0),
+            p(2.0, 0.0),
+            p(2.0, 1.0),
+            p(1.0, 1.0),
+            p(1.0, 2.0),
+            p(0.0, 2.0),
         ];
         let hm_pieces = convex_decomposition_hm(&l_shape);
         let tri_pieces = convex_decomposition_triangulation(&l_shape);
@@ -538,7 +595,12 @@ mod tests {
     #[test]
     fn triangulation_decomposition_l_shape() {
         let l_shape = vec![
-            p(0.0, 0.0), p(2.0, 0.0), p(2.0, 1.0), p(1.0, 1.0), p(1.0, 2.0), p(0.0, 2.0),
+            p(0.0, 0.0),
+            p(2.0, 0.0),
+            p(2.0, 1.0),
+            p(1.0, 1.0),
+            p(1.0, 2.0),
+            p(0.0, 2.0),
         ];
         let pieces = convex_decomposition_triangulation(&l_shape);
         assert_eq!(pieces.len(), 4, "L-shape (6 vertices) → 4 triangles (n-2)");
@@ -548,10 +610,18 @@ mod tests {
     #[test]
     fn triangulation_decomposition_all_convex() {
         let comb = vec![
-            p(0.0, 0.0), p(5.0, 0.0), p(5.0, 3.0),
-            p(4.0, 3.0), p(4.0, 1.0), p(3.0, 1.0),
-            p(3.0, 3.0), p(2.0, 3.0), p(2.0, 1.0),
-            p(1.0, 1.0), p(1.0, 3.0), p(0.0, 3.0),
+            p(0.0, 0.0),
+            p(5.0, 0.0),
+            p(5.0, 3.0),
+            p(4.0, 3.0),
+            p(4.0, 1.0),
+            p(3.0, 1.0),
+            p(3.0, 3.0),
+            p(2.0, 3.0),
+            p(2.0, 1.0),
+            p(1.0, 1.0),
+            p(1.0, 3.0),
+            p(0.0, 3.0),
         ];
         let pieces = convex_decomposition_triangulation(&comb);
         for piece in &pieces {
@@ -564,7 +634,12 @@ mod tests {
     #[test]
     fn verify_rejects_non_convex_piece() {
         let l_shape = vec![
-            p(0.0, 0.0), p(2.0, 0.0), p(2.0, 1.0), p(1.0, 1.0), p(1.0, 2.0), p(0.0, 2.0),
+            p(0.0, 0.0),
+            p(2.0, 0.0),
+            p(2.0, 1.0),
+            p(1.0, 1.0),
+            p(1.0, 2.0),
+            p(0.0, 2.0),
         ];
         let bad_pieces = vec![l_shape.clone()]; // L-shape is not convex
         assert!(!verify_convex_decomposition(&l_shape, &bad_pieces));
@@ -574,7 +649,9 @@ mod tests {
     fn verify_rejects_wrong_area() {
         let square = vec![p(0.0, 0.0), p(1.0, 0.0), p(1.0, 1.0), p(0.0, 1.0)];
         let bad_pieces = vec![vec![
-            p(0.0, 0.0), p(2.0, 0.0), p(2.0, 2.0), // area 2.0, not 1.0
+            p(0.0, 0.0),
+            p(2.0, 0.0),
+            p(2.0, 2.0), // area 2.0, not 1.0
         ]];
         assert!(!verify_convex_decomposition(&square, &bad_pieces));
     }

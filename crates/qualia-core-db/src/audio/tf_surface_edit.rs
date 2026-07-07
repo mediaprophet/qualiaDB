@@ -32,7 +32,10 @@ impl core::fmt::Display for SurfaceEditError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::BufferTooSmall { needed, have } => {
-                write!(f, "surface edit: buffer too small, need {needed}, have {have}")
+                write!(
+                    f,
+                    "surface edit: buffer too small, need {needed}, have {have}"
+                )
             }
             Self::InvalidRegion => write!(f, "surface edit: invalid region"),
         }
@@ -256,8 +259,7 @@ pub fn crossfade(
     t: f32,
     out: &mut [f32],
 ) -> Result<usize, SurfaceEditError> {
-    if surface_a.frame_count != surface_b.frame_count
-        || surface_a.bin_count != surface_b.bin_count
+    if surface_a.frame_count != surface_b.frame_count || surface_a.bin_count != surface_b.bin_count
     {
         return Err(SurfaceEditError::InvalidRegion);
     }
@@ -359,9 +361,15 @@ mod tests {
         let mut out = vec![0.0f32; frames * bins];
         apply_gain(&s, &region, 2.0, &mut out).unwrap();
         // Inside region: doubled.
-        assert!((out[1 * bins + 16] - 2.0).abs() < 1e-6, "peak should be doubled");
+        assert!(
+            (out[1 * bins + 16] - 2.0).abs() < 1e-6,
+            "peak should be doubled"
+        );
         // Outside region: unchanged.
-        assert!((out[0 * bins + 0] - 0.5).abs() < 1e-6, "outside should be unchanged");
+        assert!(
+            (out[0 * bins + 0] - 0.5).abs() < 1e-6,
+            "outside should be unchanged"
+        );
     }
 
     #[test]
@@ -386,7 +394,10 @@ mod tests {
         let mut out = vec![0.0f32; frames * bins];
         copy_patch(&s, &src, 3, 40, &mut out).unwrap();
         // The value 1.0 should now appear at (3, 40).
-        assert!((out[3 * bins + 40] - 1.0).abs() < 1e-6, "patch should be copied");
+        assert!(
+            (out[3 * bins + 40] - 1.0).abs() < 1e-6,
+            "patch should be copied"
+        );
     }
 
     #[test]
@@ -410,7 +421,10 @@ mod tests {
             .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
             .unwrap()
             .0;
-        assert!(peak_frame >= 1 && peak_frame <= 3, "peak should be near frame 2");
+        assert!(
+            peak_frame >= 1 && peak_frame <= 3,
+            "peak should be near frame 2"
+        );
     }
 
     #[test]
@@ -421,7 +435,10 @@ mod tests {
         pitch_shift(&s, 2.0, &mut out).unwrap();
         // Frame count unchanged.
         // Check that the output has non-zero values.
-        assert!(out.iter().any(|&v| v > 0.0), "pitch shift should preserve energy");
+        assert!(
+            out.iter().any(|&v| v > 0.0),
+            "pitch shift should preserve energy"
+        );
     }
 
     #[test]
@@ -446,7 +463,10 @@ mod tests {
         let mut out = vec![0.0f32; frames * bins];
         crossfade(&sa, &sb, 0.0, &mut out).unwrap();
         for i in 0..frames * bins {
-            assert!((out[i] - raster_a[i]).abs() < 1e-6, "t=0 should return surface A");
+            assert!(
+                (out[i] - raster_a[i]).abs() < 1e-6,
+                "t=0 should return surface A"
+            );
         }
     }
 
@@ -459,7 +479,10 @@ mod tests {
         let mut out = vec![0.0f32; frames * bins];
         crossfade(&sa, &sb, 1.0, &mut out).unwrap();
         for i in 0..frames * bins {
-            assert!((out[i] - raster_b[i]).abs() < 1e-6, "t=1 should return surface B");
+            assert!(
+                (out[i] - raster_b[i]).abs() < 1e-6,
+                "t=1 should return surface B"
+            );
         }
     }
 
@@ -472,9 +495,15 @@ mod tests {
         // Frame 0 should be zeroed (gain = 0/2 = 0).
         assert_eq!(out[0], 0.0, "frame 0 should be zeroed by fade-in");
         // Frame 1 should be half (gain = 1/2 = 0.5).
-        assert!((out[1 * bins] - 0.25).abs() < 1e-6, "frame 1 should be halved");
+        assert!(
+            (out[1 * bins] - 0.25).abs() < 1e-6,
+            "frame 1 should be halved"
+        );
         // Frame 2+ should be unchanged.
-        assert!((out[2 * bins] - 0.5).abs() < 1e-6, "frame 2 should be unchanged");
+        assert!(
+            (out[2 * bins] - 0.5).abs() < 1e-6,
+            "frame 2 should be unchanged"
+        );
     }
 
     #[test]
@@ -486,7 +515,10 @@ mod tests {
         // Last frame should be zeroed.
         assert_eq!(out[(frames - 1) * bins], 0.0, "last frame should be zeroed");
         // Second-to-last should be halved.
-        assert!((out[(frames - 2) * bins] - 0.25).abs() < 1e-6, "second-to-last should be halved");
+        assert!(
+            (out[(frames - 2) * bins] - 0.25).abs() < 1e-6,
+            "second-to-last should be halved"
+        );
     }
 
     #[test]
@@ -515,9 +547,12 @@ mod tests {
         let mut out = vec![0.0f32; 10]; // too small
         let region = Region::full(frames, bins);
         let err = apply_gain(&s, &region, 2.0, &mut out).unwrap_err();
-        assert_eq!(err, SurfaceEditError::BufferTooSmall {
-            needed: frames * bins,
-            have: 10,
-        });
+        assert_eq!(
+            err,
+            SurfaceEditError::BufferTooSmall {
+                needed: frames * bins,
+                have: 10,
+            }
+        );
     }
 }

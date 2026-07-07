@@ -25,8 +25,8 @@
 //! - Total signed area of triangles equals the polygon's signed area.
 //! - Triangles are CCW (matching the canonical CCW polygon convention).
 
-use super::primitives::{orientation_2, Point2};
 use super::polygon_validation::canonicalize_simple_polygon;
+use super::primitives::{orientation_2, Point2};
 
 // ───────────────────────────────────────────────────────────────────────────
 //  Triangle representation
@@ -242,7 +242,8 @@ pub fn triangulate_monotone(vertices: &[Point2]) -> Vec<Triangle> {
     sorted.sort_by(|&a, &b| {
         let ya = vertices[a].y + a as f64 * EPS;
         let yb = vertices[b].y + b as f64 * EPS;
-        yb.total_cmp(&ya).then_with(|| vertices[a].x.total_cmp(&vertices[b].x))
+        yb.total_cmp(&ya)
+            .then_with(|| vertices[a].x.total_cmp(&vertices[b].x))
     });
 
     let mut triangles: Vec<Triangle> = Vec::with_capacity(n - 2);
@@ -422,7 +423,8 @@ fn monotone_partition(vertices: &[Point2]) -> Vec<Vec<usize>> {
     order.sort_by(|&a, &b| {
         let ya = perturbed_y(a);
         let yb = perturbed_y(b);
-        yb.total_cmp(&ya).then_with(|| vertices[a].x.total_cmp(&vertices[b].x))
+        yb.total_cmp(&ya)
+            .then_with(|| vertices[a].x.total_cmp(&vertices[b].x))
     });
 
     // Sweep status: a list of edges crossing the sweep line, sorted by the
@@ -683,9 +685,9 @@ fn split_polygon_by_diagonals(n: usize, diagonals: &[(usize, usize)]) -> Vec<Vec
 
     for &(a, b) in diagonals {
         // Find which sub-polygon contains both a and b.
-        let split_idx = sub_polys.iter().position(|sp| {
-            sp.contains(&a) && sp.contains(&b)
-        });
+        let split_idx = sub_polys
+            .iter()
+            .position(|sp| sp.contains(&a) && sp.contains(&b));
         if let Some(idx) = split_idx {
             let sp = sub_polys.remove(idx);
             // Split sp into two sub-polygons at diagonal (a, b).
@@ -854,7 +856,11 @@ mod tests {
     #[test]
     fn pentagon_triangulates_to_three_triangles() {
         let pent = vec![
-            p(0.0, 0.0), p(2.0, 0.0), p(3.0, 1.0), p(1.0, 2.0), p(0.0, 1.0),
+            p(0.0, 0.0),
+            p(2.0, 0.0),
+            p(3.0, 1.0),
+            p(1.0, 2.0),
+            p(0.0, 1.0),
         ];
         let result = triangulate_polygon(&pent);
         assert_eq!(result.len(), 3, "pentagon → 3 triangles (n-2 = 3)");
@@ -864,7 +870,12 @@ mod tests {
     #[test]
     fn hexagon_triangulates_to_four_triangles() {
         let hex = vec![
-            p(0.0, 0.0), p(1.0, 0.0), p(2.0, 0.5), p(2.0, 1.5), p(1.0, 2.0), p(0.0, 2.0),
+            p(0.0, 0.0),
+            p(1.0, 0.0),
+            p(2.0, 0.5),
+            p(2.0, 1.5),
+            p(1.0, 2.0),
+            p(0.0, 2.0),
         ];
         let result = triangulate_polygon(&hex);
         assert_eq!(result.len(), 4, "hexagon → 4 triangles (n-2 = 4)");
@@ -877,7 +888,12 @@ mod tests {
     fn reflex_polygon_triangulates_correctly() {
         // L-shaped polygon with a reflex vertex.
         let l_shape = vec![
-            p(0.0, 0.0), p(2.0, 0.0), p(2.0, 1.0), p(1.0, 1.0), p(1.0, 2.0), p(0.0, 2.0),
+            p(0.0, 0.0),
+            p(2.0, 0.0),
+            p(2.0, 1.0),
+            p(1.0, 1.0),
+            p(1.0, 2.0),
+            p(0.0, 2.0),
         ];
         let result = triangulate_polygon(&l_shape);
         assert_eq!(result.len(), 4, "L-shape (6 vertices) → 4 triangles");
@@ -888,8 +904,14 @@ mod tests {
     fn star_polygon_triangulates_correctly() {
         // Star-shaped polygon with multiple reflex vertices.
         let star = vec![
-            p(0.0, 2.0), p(0.5, 0.5), p(2.0, 0.0), p(0.5, -0.5),
-            p(0.0, -2.0), p(-0.5, -0.5), p(-2.0, 0.0), p(-0.5, 0.5),
+            p(0.0, 2.0),
+            p(0.5, 0.5),
+            p(2.0, 0.0),
+            p(0.5, -0.5),
+            p(0.0, -2.0),
+            p(-0.5, -0.5),
+            p(-2.0, 0.0),
+            p(-0.5, 0.5),
         ];
         let result = triangulate_polygon(&star);
         assert_eq!(result.len(), 6, "star (8 vertices) → 6 triangles");
@@ -902,7 +924,11 @@ mod tests {
     fn collinear_vertices_triangulate() {
         // Polygon with collinear vertices on an edge.
         let poly = vec![
-            p(0.0, 0.0), p(1.0, 0.0), p(2.0, 0.0), p(2.0, 2.0), p(0.0, 2.0),
+            p(0.0, 0.0),
+            p(1.0, 0.0),
+            p(2.0, 0.0),
+            p(2.0, 2.0),
+            p(0.0, 2.0),
         ];
         let result = triangulate_polygon(&poly);
         assert_eq!(result.len(), 3, "5 vertices → 3 triangles");
@@ -938,7 +964,12 @@ mod tests {
         // The acceptance gate: "agree in total signed area on reflex/collinear
         // fixtures."
         let reflex = vec![
-            p(0.0, 0.0), p(3.0, 0.0), p(3.0, 1.0), p(1.0, 1.0), p(1.0, 3.0), p(0.0, 3.0),
+            p(0.0, 0.0),
+            p(3.0, 0.0),
+            p(3.0, 1.0),
+            p(1.0, 1.0),
+            p(1.0, 3.0),
+            p(0.0, 3.0),
         ];
         let result = triangulate_polygon(&reflex);
         let poly_area = polygon_signed_area(&reflex).abs();
@@ -954,7 +985,12 @@ mod tests {
     #[test]
     fn area_agreement_on_collinear_polygon() {
         let collinear = vec![
-            p(0.0, 0.0), p(1.0, 0.0), p(2.0, 0.0), p(3.0, 0.0), p(3.0, 3.0), p(0.0, 3.0),
+            p(0.0, 0.0),
+            p(1.0, 0.0),
+            p(2.0, 0.0),
+            p(3.0, 0.0),
+            p(3.0, 3.0),
+            p(0.0, 3.0),
         ];
         let result = triangulate_polygon(&collinear);
         let poly_area = polygon_signed_area(&collinear).abs();
@@ -986,7 +1022,11 @@ mod tests {
                     || (t.b == square[j] && t.c == square[i])
                     || (t.c == square[j] && t.a == square[i])
             });
-            assert!(edge_found, "boundary edge {}→{} should be in a triangle", i, j);
+            assert!(
+                edge_found,
+                "boundary edge {}→{} should be in a triangle",
+                i, j
+            );
         }
     }
 
@@ -1008,7 +1048,11 @@ mod tests {
         // just check that we got some triangles and they're all CCW.
         assert!(!result.is_empty(), "should produce triangles");
         for t in &result {
-            assert!(t.signed_area() > 0.0, "monotone triangles should be CCW, got area {}", t.signed_area());
+            assert!(
+                t.signed_area() > 0.0,
+                "monotone triangles should be CCW, got area {}",
+                t.signed_area()
+            );
         }
     }
 
@@ -1083,7 +1127,12 @@ mod tests {
     fn monotone_partition_of_l_shape() {
         // L-shaped polygon with a reflex vertex at index 3.
         let l_shape = vec![
-            p(0.0, 0.0), p(2.0, 0.0), p(2.0, 1.0), p(1.0, 1.0), p(1.0, 2.0), p(0.0, 2.0),
+            p(0.0, 0.0),
+            p(2.0, 0.0),
+            p(2.0, 1.0),
+            p(1.0, 1.0),
+            p(1.0, 2.0),
+            p(0.0, 2.0),
         ];
         let poly = canonicalize_simple_polygon(&l_shape);
         let parts = monotone_partition(&poly);
@@ -1133,7 +1182,12 @@ mod tests {
         // L-shape: should be partitioned into 2 monotone pieces, then
         // triangulated. Total should be 4 triangles (n-2 = 6-2 = 4).
         let l_shape = vec![
-            p(0.0, 0.0), p(2.0, 0.0), p(2.0, 1.0), p(1.0, 1.0), p(1.0, 2.0), p(0.0, 2.0),
+            p(0.0, 0.0),
+            p(2.0, 0.0),
+            p(2.0, 1.0),
+            p(1.0, 1.0),
+            p(1.0, 2.0),
+            p(0.0, 2.0),
         ];
         let result = triangulate_polygon(&l_shape);
         assert_eq!(result.len(), 4, "L-shape → 4 triangles");
@@ -1143,10 +1197,18 @@ mod tests {
     #[test]
     fn triangulate_polygon_complex_reflex_polygon() {
         let comb = vec![
-            p(0.0, 0.0), p(5.0, 0.0), p(5.0, 3.0),
-            p(4.0, 3.0), p(4.0, 1.0), p(3.0, 1.0),
-            p(3.0, 3.0), p(2.0, 3.0), p(2.0, 1.0),
-            p(1.0, 1.0), p(1.0, 3.0), p(0.0, 3.0),
+            p(0.0, 0.0),
+            p(5.0, 0.0),
+            p(5.0, 3.0),
+            p(4.0, 3.0),
+            p(4.0, 1.0),
+            p(3.0, 1.0),
+            p(3.0, 3.0),
+            p(2.0, 3.0),
+            p(2.0, 1.0),
+            p(1.0, 1.0),
+            p(1.0, 3.0),
+            p(0.0, 3.0),
         ];
         let result = triangulate_polygon(&comb);
         assert_eq!(result.len(), 10, "12-vertex comb → 10 triangles (n-2)");
@@ -1157,8 +1219,14 @@ mod tests {
     fn triangulate_polygon_star_shape() {
         // 5-pointed star (non-convex, multiple reflex vertices).
         let star = vec![
-            p(0.0, 2.0), p(0.5, 0.5), p(2.0, 0.0), p(0.5, -0.5),
-            p(0.0, -2.0), p(-0.5, -0.5), p(-2.0, 0.0), p(-0.5, 0.5),
+            p(0.0, 2.0),
+            p(0.5, 0.5),
+            p(2.0, 0.0),
+            p(0.5, -0.5),
+            p(0.0, -2.0),
+            p(-0.5, -0.5),
+            p(-2.0, 0.0),
+            p(-0.5, 0.5),
         ];
         let result = triangulate_polygon(&star);
         assert_eq!(result.len(), 6, "8-vertex star → 6 triangles (n-2)");
@@ -1169,11 +1237,21 @@ mod tests {
     fn triangulate_polygon_collinear_chain() {
         // Polygon with multiple collinear vertices on edges.
         let poly = vec![
-            p(0.0, 0.0), p(1.0, 0.0), p(2.0, 0.0), p(3.0, 0.0),
-            p(3.0, 3.0), p(2.0, 3.0), p(1.0, 3.0), p(0.0, 3.0),
+            p(0.0, 0.0),
+            p(1.0, 0.0),
+            p(2.0, 0.0),
+            p(3.0, 0.0),
+            p(3.0, 3.0),
+            p(2.0, 3.0),
+            p(1.0, 3.0),
+            p(0.0, 3.0),
         ];
         let result = triangulate_polygon(&poly);
-        assert_eq!(result.len(), 6, "8-vertex with collinear → 6 triangles (n-2)");
+        assert_eq!(
+            result.len(),
+            6,
+            "8-vertex with collinear → 6 triangles (n-2)"
+        );
         assert!(verify_triangulation(&poly, &result));
     }
 
@@ -1182,9 +1260,18 @@ mod tests {
         // A double-C shape with multiple nested reflex vertices.
         // Carefully constructed to be a valid simple polygon.
         let double_c = vec![
-            p(0.0, 0.0), p(6.0, 0.0), p(6.0, 6.0), p(5.0, 6.0),
-            p(5.0, 1.0), p(4.0, 1.0), p(4.0, 5.0), p(3.0, 5.0),
-            p(3.0, 1.0), p(2.0, 1.0), p(2.0, 6.0), p(0.0, 6.0),
+            p(0.0, 0.0),
+            p(6.0, 0.0),
+            p(6.0, 6.0),
+            p(5.0, 6.0),
+            p(5.0, 1.0),
+            p(4.0, 1.0),
+            p(4.0, 5.0),
+            p(3.0, 5.0),
+            p(3.0, 1.0),
+            p(2.0, 1.0),
+            p(2.0, 6.0),
+            p(0.0, 6.0),
         ];
         let result = triangulate_polygon(&double_c);
         assert_eq!(result.len(), 10, "12-vertex double-C → 10 triangles (n-2)");
@@ -1196,7 +1283,12 @@ mod tests {
         // For a simple polygon, both algorithms should produce the same
         // number of triangles and the same total area.
         let poly = vec![
-            p(0.0, 0.0), p(3.0, 0.0), p(3.0, 1.0), p(1.0, 1.0), p(1.0, 3.0), p(0.0, 3.0),
+            p(0.0, 0.0),
+            p(3.0, 0.0),
+            p(3.0, 1.0),
+            p(1.0, 1.0),
+            p(1.0, 3.0),
+            p(0.0, 3.0),
         ];
         let ear_result = triangulate_ear_clipping(&poly);
         let mono_result = triangulate_polygon(&poly);

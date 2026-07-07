@@ -1431,7 +1431,6 @@ mod tests {
             if name.starts_with("blk.0.") && (name.contains("attn_q") || name.contains("ffn_down"))
             {
                 println!("tensor: {name} type={ggml_type} dims={dims:?} off={byte_off:#x}");
-
             }
         }
     }

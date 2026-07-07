@@ -309,7 +309,10 @@ pub fn derive_sessions(records: &[AuditRecord]) -> Vec<Session> {
         if !groups.contains_key(&r.branch_ref) {
             order.push(r.branch_ref.clone());
         }
-        groups.entry(r.branch_ref.clone()).or_default().push(r.clone());
+        groups
+            .entry(r.branch_ref.clone())
+            .or_default()
+            .push(r.clone());
     }
 
     order
@@ -457,10 +460,24 @@ mod tests {
     fn canonical_bytes_is_unambiguous_across_field_boundaries() {
         // "ab"+"c" vs "a"+"bc" for (branch_ref, actor_did) must not collide thanks to length prefixes.
         let x = AuditRecord::new(
-            GENESIS_PARENT, "ab", "c", None, None, AuditAction::AddNote, 1, vec![],
+            GENESIS_PARENT,
+            "ab",
+            "c",
+            None,
+            None,
+            AuditAction::AddNote,
+            1,
+            vec![],
         );
         let y = AuditRecord::new(
-            GENESIS_PARENT, "a", "bc", None, None, AuditAction::AddNote, 1, vec![],
+            GENESIS_PARENT,
+            "a",
+            "bc",
+            None,
+            None,
+            AuditAction::AddNote,
+            1,
+            vec![],
         );
         assert_ne!(x.id, y.id);
     }
@@ -468,10 +485,24 @@ mod tests {
     #[test]
     fn none_and_empty_option_are_distinct() {
         let none = AuditRecord::new(
-            GENESIS_PARENT, "b", "a", None, None, AuditAction::AddNote, 1, vec![],
+            GENESIS_PARENT,
+            "b",
+            "a",
+            None,
+            None,
+            AuditAction::AddNote,
+            1,
+            vec![],
         );
         let empty = AuditRecord::new(
-            GENESIS_PARENT, "b", "a", Some(String::new()), None, AuditAction::AddNote, 1, vec![],
+            GENESIS_PARENT,
+            "b",
+            "a",
+            Some(String::new()),
+            None,
+            AuditAction::AddNote,
+            1,
+            vec![],
         );
         assert_ne!(none.id, empty.id);
     }
@@ -494,7 +525,10 @@ mod tests {
         // Tampered first — this isolates the genesis-link check.
         branch[0].parent = [5u8; 32];
         branch[0].id = branch[0].recomputed_id();
-        assert_eq!(verify_chain(&branch), ChainStatus::BrokenLink { at_index: 0 });
+        assert_eq!(
+            verify_chain(&branch),
+            ChainStatus::BrokenLink { at_index: 0 }
+        );
     }
 
     #[test]
@@ -512,7 +546,10 @@ mod tests {
         let mut branch = build_branch("session-1", 3);
         branch[1].sealed = vec![0xFF, 0xEE];
         branch[1].id = branch[1].recomputed_id();
-        assert_eq!(verify_chain(&branch), ChainStatus::BrokenLink { at_index: 2 });
+        assert_eq!(
+            verify_chain(&branch),
+            ChainStatus::BrokenLink { at_index: 2 }
+        );
     }
 
     #[test]
@@ -522,7 +559,10 @@ mod tests {
         // tamper check) is what fires.
         branch[2].parent = [7u8; 32];
         branch[2].id = branch[2].recomputed_id();
-        assert_eq!(verify_chain(&branch), ChainStatus::BrokenLink { at_index: 2 });
+        assert_eq!(
+            verify_chain(&branch),
+            ChainStatus::BrokenLink { at_index: 2 }
+        );
     }
 
     #[test]
@@ -530,7 +570,10 @@ mod tests {
         let branch = build_branch("session-1", 3);
         let dropped = vec![branch[0].clone(), branch[2].clone()];
         // record[2].parent points at record[1].id, which is now absent => break at index 1.
-        assert_eq!(verify_chain(&dropped), ChainStatus::BrokenLink { at_index: 1 });
+        assert_eq!(
+            verify_chain(&dropped),
+            ChainStatus::BrokenLink { at_index: 1 }
+        );
     }
 
     #[test]
@@ -541,8 +584,14 @@ mod tests {
         let sessions = derive_sessions(&all);
         assert_eq!(sessions.len(), 2);
 
-        let a = sessions.iter().find(|s| s.branch_ref == "branch-A").unwrap();
-        let b = sessions.iter().find(|s| s.branch_ref == "branch-B").unwrap();
+        let a = sessions
+            .iter()
+            .find(|s| s.branch_ref == "branch-A")
+            .unwrap();
+        let b = sessions
+            .iter()
+            .find(|s| s.branch_ref == "branch-B")
+            .unwrap();
         assert_eq!(a.action_count, 3);
         assert_eq!(a.records.len(), 3);
         assert_eq!(b.action_count, 2);
@@ -583,7 +632,12 @@ mod tests {
         assert!(routed.inbox.is_empty());
         // Idempotent: re-routing the archived+inbox union yields the same partition.
         let again = route(
-            routed.archived.iter().chain(routed.inbox.iter()).cloned().collect(),
+            routed
+                .archived
+                .iter()
+                .chain(routed.inbox.iter())
+                .cloned()
+                .collect(),
             RetentionMode::AutoArchive,
         );
         assert_eq!(again, routed);
@@ -597,7 +651,12 @@ mod tests {
         assert!(routed.archived.is_empty());
         // Idempotent.
         let again = route(
-            routed.archived.iter().chain(routed.inbox.iter()).cloned().collect(),
+            routed
+                .archived
+                .iter()
+                .chain(routed.inbox.iter())
+                .cloned()
+                .collect(),
             RetentionMode::ManualTriage,
         );
         assert_eq!(again, routed);

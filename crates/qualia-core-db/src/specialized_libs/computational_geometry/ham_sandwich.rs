@@ -234,12 +234,8 @@ pub fn centrepoint(points: &[Point2]) -> Option<Centrepoint> {
         for j in (i + 1)..n {
             for k in 0..n {
                 for l in (k + 1)..n {
-                    if let Some(pt) = line_intersection(
-                        points[i],
-                        points[j],
-                        points[k],
-                        points[l],
-                    ) {
+                    if let Some(pt) = line_intersection(points[i], points[j], points[k], points[l])
+                    {
                         candidates.push(pt);
                     }
                 }
@@ -256,10 +252,7 @@ pub fn centrepoint(points: &[Point2]) -> Option<Centrepoint> {
     for &c in &candidates {
         let d = tukey_depth(c, points);
         if d > best.depth {
-            best = Centrepoint {
-                point: c,
-                depth: d,
-            };
+            best = Centrepoint { point: c, depth: d };
         }
     }
 
@@ -307,7 +300,11 @@ pub fn tukey_depth(query: Point2, points: &[Point2]) -> usize {
         let mut count = 0;
         for j in 0..m {
             let diff = angles[(i + j) % m] - base;
-            let diff = if diff < 0.0 { diff + 2.0 * core::f64::consts::PI } else { diff };
+            let diff = if diff < 0.0 {
+                diff + 2.0 * core::f64::consts::PI
+            } else {
+                diff
+            };
             if diff < core::f64::consts::PI - 1e-10 {
                 count += 1;
             } else {
@@ -413,7 +410,10 @@ pub fn width_coreset(points: &[Point2], epsilon: f64) -> Option<WidthCoreset> {
 
     indices.sort();
 
-    Some(WidthCoreset { indices, directions })
+    Some(WidthCoreset {
+        indices,
+        directions,
+    })
 }
 
 /// Find the indices of the points with minimum and maximum projection
@@ -508,8 +508,18 @@ mod tests {
         // Each half-plane should have at most 1 point from each set.
         let (la, ra, _) = count_sides(&a, cut.point, cut.dir);
         let (lb, rb, _) = count_sides(&b, cut.point, cut.dir);
-        assert!(la <= 1 && ra <= 1, "set A not bisected: left={}, right={}", la, ra);
-        assert!(lb <= 1 && rb <= 1, "set B not bisected: left={}, right={}", lb, rb);
+        assert!(
+            la <= 1 && ra <= 1,
+            "set A not bisected: left={}, right={}",
+            la,
+            ra
+        );
+        assert!(
+            lb <= 1 && rb <= 1,
+            "set B not bisected: left={}, right={}",
+            lb,
+            rb
+        );
     }
 
     #[test]
@@ -520,8 +530,18 @@ mod tests {
 
         let (la, ra, _) = count_sides(&a, cut.point, cut.dir);
         let (lb, rb, _) = count_sides(&b, cut.point, cut.dir);
-        assert!(la <= 2 && ra <= 2, "set A not bisected: left={}, right={}", la, ra);
-        assert!(lb <= 2 && rb <= 2, "set B not bisected: left={}, right={}", lb, rb);
+        assert!(
+            la <= 2 && ra <= 2,
+            "set A not bisected: left={}, right={}",
+            la,
+            ra
+        );
+        assert!(
+            lb <= 2 && rb <= 2,
+            "set B not bisected: left={}, right={}",
+            lb,
+            rb
+        );
     }
 
     #[test]
@@ -532,8 +552,18 @@ mod tests {
 
         let (la, ra, _) = count_sides(&a, cut.point, cut.dir);
         let (lb, rb, _) = count_sides(&b, cut.point, cut.dir);
-        assert!(la <= 1 && ra <= 1, "set A not bisected: left={}, right={}", la, ra);
-        assert!(lb <= 1 && rb <= 1, "set B not bisected: left={}, right={}", lb, rb);
+        assert!(
+            la <= 1 && ra <= 1,
+            "set A not bisected: left={}, right={}",
+            la,
+            ra
+        );
+        assert!(
+            lb <= 1 && rb <= 1,
+            "set B not bisected: left={}, right={}",
+            lb,
+            rb
+        );
     }
 
     #[test]
@@ -560,8 +590,18 @@ mod tests {
 
         let (la, ra, _) = count_sides(&a, cut.point, cut.dir);
         let (lb, rb, _) = count_sides(&b, cut.point, cut.dir);
-        assert!(la <= 10 && ra <= 10, "set A not bisected: left={}, right={}", la, ra);
-        assert!(lb <= 10 && rb <= 10, "set B not bisected: left={}, right={}", lb, rb);
+        assert!(
+            la <= 10 && ra <= 10,
+            "set A not bisected: left={}, right={}",
+            la,
+            ra
+        );
+        assert!(
+            lb <= 10 && rb <= 10,
+            "set B not bisected: left={}, right={}",
+            lb,
+            rb
+        );
     }
 
     // ── Centrepoint ─────────────────────────────────────────────────────
@@ -576,14 +616,20 @@ mod tests {
 
     #[test]
     fn centrepoint_symmetric() {
-        let pts = vec![
-            pt(-1.0, -1.0), pt(1.0, -1.0), pt(-1.0, 1.0), pt(1.0, 1.0),
-        ];
+        let pts = vec![pt(-1.0, -1.0), pt(1.0, -1.0), pt(-1.0, 1.0), pt(1.0, 1.0)];
         let cp = centrepoint(&pts).unwrap();
         // For 4 symmetric points, the centre should be near (0,0) with depth ≥ 2.
         assert!(cp.depth >= 1, "depth {} < n/3=1", cp.depth);
-        assert!(cp.point.x.abs() < 0.5, "centrepoint x={} not near 0", cp.point.x);
-        assert!(cp.point.y.abs() < 0.5, "centrepoint y={} not near 0", cp.point.y);
+        assert!(
+            cp.point.x.abs() < 0.5,
+            "centrepoint x={} not near 0",
+            cp.point.x
+        );
+        assert!(
+            cp.point.y.abs() < 0.5,
+            "centrepoint y={} not near 0",
+            cp.point.y
+        );
     }
 
     #[test]
@@ -620,18 +666,14 @@ mod tests {
 
     #[test]
     fn tukey_depth_center() {
-        let pts = vec![
-            pt(-1.0, 0.0), pt(1.0, 0.0), pt(0.0, -1.0), pt(0.0, 1.0),
-        ];
+        let pts = vec![pt(-1.0, 0.0), pt(1.0, 0.0), pt(0.0, -1.0), pt(0.0, 1.0)];
         let d = tukey_depth(pt(0.0, 0.0), &pts);
         assert_eq!(d, 2); // Any line through origin has 2 on each side.
     }
 
     #[test]
     fn tukey_depth_corner() {
-        let pts = vec![
-            pt(-1.0, 0.0), pt(1.0, 0.0), pt(0.0, -1.0), pt(0.0, 1.0),
-        ];
+        let pts = vec![pt(-1.0, 0.0), pt(1.0, 0.0), pt(0.0, -1.0), pt(0.0, 1.0)];
         let d = tukey_depth(pt(10.0, 10.0), &pts);
         assert_eq!(d, 0); // All points on one side.
     }
@@ -648,7 +690,10 @@ mod tests {
     #[test]
     fn width_coreset_basic() {
         let pts = vec![
-            pt(0.0, 0.0), pt(10.0, 0.0), pt(0.0, 10.0), pt(10.0, 10.0),
+            pt(0.0, 0.0),
+            pt(10.0, 0.0),
+            pt(0.0, 10.0),
+            pt(10.0, 10.0),
             pt(5.0, 5.0),
         ];
         let cs = width_coreset(&pts, 0.1).unwrap();
@@ -683,7 +728,10 @@ mod tests {
                 assert!(
                     ratio > 0.8,
                     "direction {}: coreset width {} vs full {} (ratio {})",
-                    i, core_w, full_w, ratio
+                    i,
+                    core_w,
+                    full_w,
+                    ratio
                 );
             }
         }
@@ -702,7 +750,9 @@ mod tests {
 
     #[test]
     fn width_coreset_size_bounded() {
-        let pts: Vec<Point2> = (0..100).map(|i| pt(i as f64 * 0.1, (i as f64 * 0.07).sin())).collect();
+        let pts: Vec<Point2> = (0..100)
+            .map(|i| pt(i as f64 * 0.1, (i as f64 * 0.07).sin()))
+            .collect();
         let cs = width_coreset(&pts, 0.2).unwrap();
         // Coreset should be much smaller than the full set.
         assert!(cs.indices.len() < pts.len());
@@ -734,9 +784,7 @@ mod tests {
 
     #[test]
     fn width_of_square() {
-        let pts = vec![
-            pt(0.0, 0.0), pt(10.0, 0.0), pt(10.0, 10.0), pt(0.0, 10.0),
-        ];
+        let pts = vec![pt(0.0, 0.0), pt(10.0, 0.0), pt(10.0, 10.0), pt(0.0, 10.0)];
         let w = width(&pts);
         // Width of a square = side length = 10.
         assert!((w - 10.0).abs() < 0.1, "width of square: {}", w);
@@ -744,9 +792,7 @@ mod tests {
 
     #[test]
     fn width_of_rectangle() {
-        let pts = vec![
-            pt(0.0, 0.0), pt(20.0, 0.0), pt(20.0, 5.0), pt(0.0, 5.0),
-        ];
+        let pts = vec![pt(0.0, 0.0), pt(20.0, 0.0), pt(20.0, 5.0), pt(0.0, 5.0)];
         let w = width(&pts);
         // Width of a 20×5 rectangle = 5 (the shorter side).
         assert!((w - 5.0).abs() < 0.1, "width of rectangle: {}", w);

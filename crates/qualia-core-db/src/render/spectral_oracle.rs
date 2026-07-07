@@ -20,9 +20,7 @@
 //! always match the current implementation. A separate "frozen" set
 //! would require manual updates on any pipeline change.
 
-use crate::render::gpu_colour_kernel::{
-    cpu_batch_emf_to_display_gamut_mapped, diff_cpu_gpu,
-};
+use crate::render::gpu_colour_kernel::{cpu_batch_emf_to_display_gamut_mapped, diff_cpu_gpu};
 use crate::render::spectral_kernel::{emf_to_spd, spd_to_xyz, Xyz};
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -175,7 +173,10 @@ mod tests {
     #[test]
     fn golden_vectors_all_pass() {
         let mismatches = verify_golden_vectors();
-        assert_eq!(mismatches, 0, "all golden vectors must match current implementation");
+        assert_eq!(
+            mismatches, 0,
+            "all golden vectors must match current implementation"
+        );
     }
 
     #[test]
@@ -189,8 +190,12 @@ mod tests {
         let vectors = golden_vectors();
         for (i, v) in vectors.iter().enumerate() {
             let expected_sigma = i as f32 / 10.0;
-            assert!((v.sigma - expected_sigma).abs() < 1e-6,
-                "vector {} should have σ={}", i, expected_sigma);
+            assert!(
+                (v.sigma - expected_sigma).abs() < 1e-6,
+                "vector {} should have σ={}",
+                i,
+                expected_sigma
+            );
         }
     }
 
@@ -206,15 +211,19 @@ mod tests {
 
     #[test]
     fn determinism_xyz_100_runs() {
-        assert!(determinism_check_xyz(1.0, 0.3, 0.5, 100),
-            "EMF→XYZ must be deterministic over 100 runs");
+        assert!(
+            determinism_check_xyz(1.0, 0.3, 0.5, 100),
+            "EMF→XYZ must be deterministic over 100 runs"
+        );
     }
 
     #[test]
     fn determinism_batch_50_runs() {
         let emf = [1.0, 0.0, 0.0, 1.0, 0.5, 0.5, 1.0, 0.0, 1.0, 0.8, 0.2, 0.6];
-        assert!(determinism_check_batch(&emf, 50),
-            "batch EMF→RGB must be deterministic over 50 runs");
+        assert!(
+            determinism_check_batch(&emf, 50),
+            "batch EMF→RGB must be deterministic over 50 runs"
+        );
     }
 
     #[test]
@@ -228,14 +237,22 @@ mod tests {
     #[test]
     fn fnv1a_hash_known_vector() {
         // FNV-1a of empty input = 0x811c9dc5 (offset basis).
-        assert_eq!(fnv1a_hash(&[]), 0x811c9dc5, "FNV-1a of empty = offset basis");
+        assert_eq!(
+            fnv1a_hash(&[]),
+            0x811c9dc5,
+            "FNV-1a of empty = offset basis"
+        );
     }
 
     #[test]
     fn fnv1a_hash_differs_on_input() {
         let a = [0u8, 0, 0];
         let b = [0u8, 0, 1];
-        assert_ne!(fnv1a_hash(&a), fnv1a_hash(&b), "different inputs must hash differently");
+        assert_ne!(
+            fnv1a_hash(&a),
+            fnv1a_hash(&b),
+            "different inputs must hash differently"
+        );
     }
 
     #[test]
@@ -297,7 +314,10 @@ mod tests {
             .unwrap()
             .0;
         // The peak should be somewhere in the middle third (indices 3-7).
-        assert!(max_idx >= 3 && max_idx <= 7,
-            "Y peak should be near green (mid σ), got index {}", max_idx);
+        assert!(
+            max_idx >= 3 && max_idx <= 7,
+            "Y peak should be near green (mid σ), got index {}",
+            max_idx
+        );
     }
 }

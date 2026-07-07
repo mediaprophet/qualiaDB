@@ -417,8 +417,14 @@ impl QTensorEngine {
         let dict_mode = dict_k > 0;
         let (k_dict, v_dict) = if dict_mode {
             match proj_kind {
-                1 => (crate::kv_dict_runtime::clone_layer_dict(layer as usize, true), None),
-                2 => (None, crate::kv_dict_runtime::clone_layer_dict(layer as usize, false)),
+                1 => (
+                    crate::kv_dict_runtime::clone_layer_dict(layer as usize, true),
+                    None,
+                ),
+                2 => (
+                    None,
+                    crate::kv_dict_runtime::clone_layer_dict(layer as usize, false),
+                ),
                 _ => (
                     crate::kv_dict_runtime::clone_layer_dict(layer as usize, true),
                     crate::kv_dict_runtime::clone_layer_dict(layer as usize, false),
@@ -480,7 +486,10 @@ impl QTensorEngine {
                         for kvh in 0..n_kv {
                             let base = layout.code_index(layer, slot, kvh as u32, true, 0);
                             if base + dict_k > kv.len() {
-                                wlog(&format!("[cpu_attn] K code OOB base={base} len={}", kv.len()));
+                                wlog(&format!(
+                                    "[cpu_attn] K code OOB base={base} len={}",
+                                    kv.len()
+                                ));
                                 return false;
                             }
                             let vh = &proj[kvh * head_dim..(kvh + 1) * head_dim];
@@ -505,7 +514,10 @@ impl QTensorEngine {
                             for d in 0..head_dim {
                                 let idx = layout.k_index(layer, slot, kvh as u32, d as u32);
                                 if idx >= kv.len() {
-                                    wlog(&format!("[cpu_attn] K idx OOB idx={idx} len={}", kv.len()));
+                                    wlog(&format!(
+                                        "[cpu_attn] K idx OOB idx={idx} len={}",
+                                        kv.len()
+                                    ));
                                     return false;
                                 }
                                 kv[idx] = proj[kvh * head_dim + d];
@@ -514,7 +526,13 @@ impl QTensorEngine {
                     }
                     // W5b: tap the post-RoPE K vectors for the go/no-go capture. No-op unless enabled.
                     #[cfg(not(target_arch = "wasm32"))]
-                    crate::kv_capture::record(layer as usize, true, &proj[..out_dim], n_kv, head_dim);
+                    crate::kv_capture::record(
+                        layer as usize,
+                        true,
+                        &proj[..out_dim],
+                        n_kv,
+                        head_dim,
+                    );
                 }
                 2 => {
                     let kv = unsafe { core::slice::from_raw_parts_mut(kv_ptr, kv_len) };
@@ -523,7 +541,10 @@ impl QTensorEngine {
                         for kvh in 0..n_kv {
                             let base = layout.code_index(layer, slot, kvh as u32, false, 0);
                             if base + dict_k > kv.len() {
-                                wlog(&format!("[cpu_attn] V code OOB base={base} len={}", kv.len()));
+                                wlog(&format!(
+                                    "[cpu_attn] V code OOB base={base} len={}",
+                                    kv.len()
+                                ));
                                 return false;
                             }
                             let vh = &proj[kvh * head_dim..(kvh + 1) * head_dim];
@@ -546,7 +567,10 @@ impl QTensorEngine {
                             for d in 0..head_dim {
                                 let idx = layout.v_index(layer, slot, kvh as u32, d as u32);
                                 if idx >= kv.len() {
-                                    wlog(&format!("[cpu_attn] V idx OOB idx={idx} len={}", kv.len()));
+                                    wlog(&format!(
+                                        "[cpu_attn] V idx OOB idx={idx} len={}",
+                                        kv.len()
+                                    ));
                                     return false;
                                 }
                                 kv[idx] = proj[kvh * head_dim + d];
@@ -554,7 +578,13 @@ impl QTensorEngine {
                         }
                     }
                     #[cfg(not(target_arch = "wasm32"))]
-                    crate::kv_capture::record(layer as usize, false, &proj[..out_dim], n_kv, head_dim);
+                    crate::kv_capture::record(
+                        layer as usize,
+                        false,
+                        &proj[..out_dim],
+                        n_kv,
+                        head_dim,
+                    );
                 }
                 0 => {
                     let mut att_scores = [0f32; MAX_CONTEXT_WINDOW as usize];
@@ -639,7 +669,8 @@ impl QTensorEngine {
                                 let kval = if dict_mode {
                                     recon_k[rbase + d]
                                 } else {
-                                    let k_idx = layout.k_index(layer, past_slot, kv_h as u32, d as u32);
+                                    let k_idx =
+                                        layout.k_index(layer, past_slot, kv_h as u32, d as u32);
                                     if k_idx >= kv.len() {
                                         wlog(&format!(
                                             "[cpu_attn] SDPA K idx OOB idx={k_idx} len={}",
@@ -677,7 +708,8 @@ impl QTensorEngine {
                                 let vval = if dict_mode {
                                     recon_v[rbase + d]
                                 } else {
-                                    let v_idx = layout.v_index(layer, past_slot, kv_h as u32, d as u32);
+                                    let v_idx =
+                                        layout.v_index(layer, past_slot, kv_h as u32, d as u32);
                                     if v_idx >= kv.len() {
                                         wlog(&format!(
                                             "[cpu_attn] SDPA V idx OOB idx={v_idx} len={}",

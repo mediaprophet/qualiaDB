@@ -12,7 +12,6 @@
 
 use core::sync::atomic::{AtomicU32, AtomicU64};
 
-
 #[repr(C)]
 pub struct QPUMetrics {
     /// Total quantum operations

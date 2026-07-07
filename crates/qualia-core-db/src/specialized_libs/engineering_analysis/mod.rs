@@ -94,13 +94,17 @@ fn normal_cdf(x: f64) -> f64 {
     let erf = if z >= 0.0 {
         // erf(z) for z ≥ 0 via A&S 7.1.26
         let t = 1.0 / (1.0 + 0.3275911 * z);
-        let poly = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
+        let poly = t
+            * (0.254829592
+                + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
         1.0 - poly * (-z * z).exp()
     } else {
         // erf(-z) = -erf(z)
         let az = -z;
         let t = 1.0 / (1.0 + 0.3275911 * az);
-        let poly = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
+        let poly = t
+            * (0.254829592
+                + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
         -(1.0 - poly * (-az * az).exp())
     };
     0.5 * (1.0 + erf)
@@ -1660,7 +1664,11 @@ pub struct ComponentReliability {
 }
 
 impl ComponentReliability {
-    pub fn new(name: impl Into<String>, failure_probability: f64, mean_time_to_failure: f64) -> Self {
+    pub fn new(
+        name: impl Into<String>,
+        failure_probability: f64,
+        mean_time_to_failure: f64,
+    ) -> Self {
         Self {
             name: name.into(),
             failure_probability,
@@ -2331,15 +2339,22 @@ impl MeshGenerator {
     /// by the closest available enum members — Mixed for prism/pyramid hybrid
     /// meshes).
     pub fn initialize(&mut self) -> Result<(), EngineeringError> {
-        self.mesh_types.insert("triangular".to_string(), MeshType::Triangular);
-        self.mesh_types.insert("quadrilateral".to_string(), MeshType::Quadrilateral);
-        self.mesh_types.insert("tetrahedral".to_string(), MeshType::Tetrahedral);
-        self.mesh_types.insert("hexahedral".to_string(), MeshType::Hexahedral);
+        self.mesh_types
+            .insert("triangular".to_string(), MeshType::Triangular);
+        self.mesh_types
+            .insert("quadrilateral".to_string(), MeshType::Quadrilateral);
+        self.mesh_types
+            .insert("tetrahedral".to_string(), MeshType::Tetrahedral);
+        self.mesh_types
+            .insert("hexahedral".to_string(), MeshType::Hexahedral);
         self.mesh_types.insert("prism".to_string(), MeshType::Mixed);
-        self.mesh_types.insert("pyramid".to_string(), MeshType::Mixed);
+        self.mesh_types
+            .insert("pyramid".to_string(), MeshType::Mixed);
         self.mesh_types.insert("mixed".to_string(), MeshType::Mixed);
-        self.mesh_types.insert("structured".to_string(), MeshType::Structured);
-        self.mesh_types.insert("unstructured".to_string(), MeshType::Unstructured);
+        self.mesh_types
+            .insert("structured".to_string(), MeshType::Structured);
+        self.mesh_types
+            .insert("unstructured".to_string(), MeshType::Unstructured);
 
         let default_params = MeshAlgorithmParameters {
             element_size: 1.0,
@@ -2880,7 +2895,9 @@ impl StructuralDynamics {
         damping: f64,
     ) -> Result<DynamicsResults, EngineeringError> {
         if mass <= 0.0 {
-            return Err(EngineeringError::ValidationError("mass must be positive".to_string()));
+            return Err(EngineeringError::ValidationError(
+                "mass must be positive".to_string(),
+            ));
         }
         let ti = &self.transient_analysis.time_integration;
         let lh = &self.transient_analysis.loading_history;
@@ -2901,7 +2918,7 @@ impl StructuralDynamics {
 
         for i in 0..=num_steps {
             let t = i as f64 * dt;
-            
+
             // Interpolate force from loading history
             let mut force = 0.0;
             if !lh.time_points.is_empty() && lh.time_points.len() == lh.load_values.len() {
@@ -2923,7 +2940,7 @@ impl StructuralDynamics {
             }
 
             let acc = (force - damping * vel - stiffness * pos) / mass;
-            
+
             positions.push(pos);
             velocities.push(vel);
             accelerations.push(acc);
@@ -3338,7 +3355,6 @@ impl MechanicalAnalyzer {
             time_steps: time_steps.to_vec(),
         })
     }
-
 
     /// Dynamics time-history analysis from Newton's second law (F = m·a).
     ///
@@ -3785,7 +3801,10 @@ impl ThermalAnalyzer {
     }
 
     /// Attach the Phase 2 statistical-computing library for stochastic thermal analysis.
-    pub fn attach_statistical_computing(&mut self, lib: Option<Arc<Mutex<StatisticalComputingLibrary>>>) {
+    pub fn attach_statistical_computing(
+        &mut self,
+        lib: Option<Arc<Mutex<StatisticalComputingLibrary>>>,
+    ) {
         self.statistical_computing = lib;
     }
 
@@ -4274,7 +4293,11 @@ impl ReliabilityAnalyzer {
         let beta = if sigma_sf > 0.0 {
             (safety_factor - 1.0) / sigma_sf
         } else {
-            if safety_factor > 1.0 { 6.0 } else { -6.0 } // clamp to ±6σ
+            if safety_factor > 1.0 {
+                6.0
+            } else {
+                -6.0
+            } // clamp to ±6σ
         };
 
         // Failure probability: P(fail) = Φ(−β)
@@ -4468,7 +4491,11 @@ impl ReliabilityAnalyzer {
         // abstract "demand" cycles; if no component carries an MTTF (> 0) the
         // result stays in demand units (scale = 1).
         let avg_mttf: f64 = {
-            let sum: f64 = config.components.iter().map(|c| c.mean_time_to_failure).sum();
+            let sum: f64 = config
+                .components
+                .iter()
+                .map(|c| c.mean_time_to_failure)
+                .sum();
             sum / n as f64
         };
         let time_scale = if avg_mttf > 0.0 { avg_mttf } else { 1.0 };
@@ -4500,8 +4527,7 @@ impl ReliabilityAnalyzer {
             let sys_down =
                 system_reliability_from_component_reliabilities(&r_down, &config.system_model);
             // Importance = dR_sys/dR_i ~= R_sys(R_i=1) - R_sys(R_i=0).
-            component_importance
-                .insert(config.components[i].name.clone(), sys_up - sys_down);
+            component_importance.insert(config.components[i].name.clone(), sys_up - sys_down);
         }
 
         // -- 95% confidence interval (normal approximation for a proportion) --
@@ -4563,8 +4589,7 @@ fn system_reliability_from_component_reliabilities(r: &[f64], model: &SystemMode
             for &ri in r {
                 // Walk j downwards so we don't double-count within this step.
                 for j in (0..=r.len()).rev() {
-                    prob[j] = prob[j] * (1.0 - ri)
-                        + if j > 0 { prob[j - 1] * ri } else { 0.0 };
+                    prob[j] = prob[j] * (1.0 - ri) + if j > 0 { prob[j - 1] * ri } else { 0.0 };
                 }
             }
             // P(>= k) = sum_{j=k..n} prob[j]
@@ -5382,8 +5407,14 @@ mod tests {
         let result = library
             .perform_reliability_analysis(model, AnalysisType::LinearStatic)
             .unwrap();
-        assert!(result.result.reliability_index > 0.0, "safe model should have positive β");
-        assert!(result.result.failure_probability < 0.01, "safe model should have Pf < 1%");
+        assert!(
+            result.result.reliability_index > 0.0,
+            "safe model should have positive β"
+        );
+        assert!(
+            result.result.failure_probability < 0.01,
+            "safe model should have Pf < 1%"
+        );
         assert!(result.convergence_info.converged);
     }
 
@@ -5476,7 +5507,10 @@ mod tests {
         assert!(algos.contains(&"unstructured".to_string()));
 
         // Accessors return the right variants.
-        assert_eq!(mesh.get_mesh_type("triangular"), Some(&MeshType::Triangular));
+        assert_eq!(
+            mesh.get_mesh_type("triangular"),
+            Some(&MeshType::Triangular)
+        );
         assert_eq!(
             mesh.get_mesh_type("hexahedral"),
             Some(&MeshType::Hexahedral)
@@ -5572,8 +5606,11 @@ mod tests {
             "sample mean {sample_mean} too far from {mean}"
         );
         // Sample std-dev should be close to the population std-dev.
-        let var: f64 =
-            samples.iter().map(|x| (x - sample_mean).powi(2)).sum::<f64>() / n as f64;
+        let var: f64 = samples
+            .iter()
+            .map(|x| (x - sample_mean).powi(2))
+            .sum::<f64>()
+            / n as f64;
         let sample_std = var.sqrt();
         assert!(
             (sample_std - std_dev).abs() < 2.0,
@@ -5586,9 +5623,7 @@ mod tests {
         // Capacity threshold = 100, load ~ N(100, 10). Roughly half the samples
         // fall below the threshold ⇒ Pf ≈ 0.5 ⇒ β ≈ 0.
         let mut analyzer = ReliabilityAnalyzer::new();
-        let result = analyzer
-            .analyze_monte_carlo(&[100.0], 100.0, 10.0)
-            .unwrap();
+        let result = analyzer.analyze_monte_carlo(&[100.0], 100.0, 10.0).unwrap();
 
         assert_eq!(result.results_id, "monte_carlo");
         assert!(
@@ -5609,9 +5644,7 @@ mod tests {
         // and threshold = 70, Pf = P(x < 70) = Φ((70−100)/10) = Φ(−3) ≈ 0.00135
         // ⇒ β ≈ 3.0.
         let mut analyzer = ReliabilityAnalyzer::new();
-        let result = analyzer
-            .analyze_monte_carlo(&[70.0], 100.0, 10.0)
-            .unwrap();
+        let result = analyzer.analyze_monte_carlo(&[70.0], 100.0, 10.0).unwrap();
 
         // With 10k samples the estimate is noisy at Pf~0.001; allow a wide band.
         assert!(
@@ -5652,9 +5685,7 @@ mod tests {
         let mut ma = MechanicalAnalyzer::new();
         // x₀ = 0, v₀ = 5, a = 2. At t = 0,1,2,3.
         let times = vec![0.0, 1.0, 2.0, 3.0];
-        let r = ma
-            .analyze_kinematics(0.0, 5.0, 2.0, &times)
-            .unwrap();
+        let r = ma.analyze_kinematics(0.0, 5.0, 2.0, &times).unwrap();
 
         assert_eq!(r.time_steps, times);
         // position(t) = 5t + t²
@@ -5662,7 +5693,7 @@ mod tests {
         assert!((r.positions[1] - 6.0).abs() < 1e-9); // 5 + 1
         assert!((r.positions[2] - 14.0).abs() < 1e-9); // 10 + 4
         assert!((r.positions[3] - 24.0).abs() < 1e-9); // 15 + 9
-        // velocity(t) = 5 + 2t
+                                                       // velocity(t) = 5 + 2t
         assert!((r.velocities[0] - 5.0).abs() < 1e-9);
         assert!((r.velocities[1] - 7.0).abs() < 1e-9);
         assert!((r.velocities[2] - 9.0).abs() < 1e-9);
@@ -5709,9 +5740,7 @@ mod tests {
             r.total_energy
         );
         // And the identity total = KE + PE holds.
-        assert!(
-            (r.total_energy - (r.kinetic_energy + r.potential_energy)).abs() < 1e-9
-        );
+        assert!((r.total_energy - (r.kinetic_energy + r.potential_energy)).abs() < 1e-9);
 
         // Cross-check at every step: ½·m·v² − F·x is constant.
         let conserved = 0.0; // ½·m·v₀²
@@ -5745,9 +5774,7 @@ mod tests {
         reliabilities
             .iter()
             .enumerate()
-            .map(|(i, &r)| {
-                ComponentReliability::new(format!("c{}", i + 1), 1.0 - r, 1000.0)
-            })
+            .map(|(i, &r)| ComponentReliability::new(format!("c{}", i + 1), 1.0 - r, 1000.0))
             .collect()
     }
 
@@ -5755,10 +5782,7 @@ mod tests {
     fn test_series_system() {
         // 3 components in series, each 0.9 reliability => 0.9^3 = 0.729.
         let analyzer = ReliabilityAnalyzer::new();
-        let config = ReliabilityConfig::new(
-            SystemModel::Series,
-            components(&[0.9, 0.9, 0.9]),
-        );
+        let config = ReliabilityConfig::new(SystemModel::Series, components(&[0.9, 0.9, 0.9]));
         let result = analyzer.analyze_reliability(&config).unwrap();
         assert!(
             (result.system_reliability - 0.729).abs() < 0.02,
@@ -5777,10 +5801,7 @@ mod tests {
     fn test_parallel_system() {
         // 3 components in parallel, each 0.5 => 1 - 0.5^3 = 0.875.
         let analyzer = ReliabilityAnalyzer::new();
-        let config = ReliabilityConfig::new(
-            SystemModel::Parallel,
-            components(&[0.5, 0.5, 0.5]),
-        );
+        let config = ReliabilityConfig::new(SystemModel::Parallel, components(&[0.5, 0.5, 0.5]));
         let result = analyzer.analyze_reliability(&config).unwrap();
         assert!(
             (result.system_reliability - 0.875).abs() < 0.02,
@@ -5809,10 +5830,7 @@ mod tests {
     fn test_perfect_components() {
         // All 1.0 reliability => system 1.0 (series and parallel).
         let analyzer = ReliabilityAnalyzer::new();
-        let series = ReliabilityConfig::new(
-            SystemModel::Series,
-            components(&[1.0, 1.0, 1.0]),
-        );
+        let series = ReliabilityConfig::new(SystemModel::Series, components(&[1.0, 1.0, 1.0]));
         let r = analyzer.analyze_reliability(&series).unwrap();
         assert!(
             (r.system_reliability - 1.0).abs() < 1e-9,
@@ -5822,10 +5840,7 @@ mod tests {
         assert!(r.failure_rate.abs() < 1e-9);
         assert!(r.mtbf.is_infinite());
 
-        let parallel = ReliabilityConfig::new(
-            SystemModel::Parallel,
-            components(&[1.0, 1.0, 1.0]),
-        );
+        let parallel = ReliabilityConfig::new(SystemModel::Parallel, components(&[1.0, 1.0, 1.0]));
         let r = analyzer.analyze_reliability(&parallel).unwrap();
         assert!(
             (r.system_reliability - 1.0).abs() < 1e-9,
@@ -5838,10 +5853,7 @@ mod tests {
     fn test_failed_components() {
         // All 0.0 reliability => system 0.0 (series and parallel).
         let analyzer = ReliabilityAnalyzer::new();
-        let series = ReliabilityConfig::new(
-            SystemModel::Series,
-            components(&[0.0, 0.0, 0.0]),
-        );
+        let series = ReliabilityConfig::new(SystemModel::Series, components(&[0.0, 0.0, 0.0]));
         let r = analyzer.analyze_reliability(&series).unwrap();
         assert!(
             r.system_reliability.abs() < 1e-9,
@@ -5850,10 +5862,7 @@ mod tests {
         );
         assert!((r.failure_rate - 1.0).abs() < 1e-9);
 
-        let parallel = ReliabilityConfig::new(
-            SystemModel::Parallel,
-            components(&[0.0, 0.0, 0.0]),
-        );
+        let parallel = ReliabilityConfig::new(SystemModel::Parallel, components(&[0.0, 0.0, 0.0]));
         let r = analyzer.analyze_reliability(&parallel).unwrap();
         assert!(
             r.system_reliability.abs() < 1e-9,
@@ -5870,10 +5879,7 @@ mod tests {
         //   I(c2) = 0.9*0.7 = 0.63
         //   I(c3) = 0.9*0.8 = 0.72
         let analyzer = ReliabilityAnalyzer::new();
-        let config = ReliabilityConfig::new(
-            SystemModel::Series,
-            components(&[0.9, 0.8, 0.7]),
-        );
+        let config = ReliabilityConfig::new(SystemModel::Series, components(&[0.9, 0.8, 0.7]));
         let result = analyzer.analyze_reliability(&config).unwrap();
         assert_eq!(result.component_importance.len(), 3);
         let i1 = *result.component_importance.get("c1").unwrap();
@@ -5892,10 +5898,7 @@ mod tests {
     fn test_confidence_interval() {
         // The 95% CI must contain the point estimate and be a valid interval.
         let analyzer = ReliabilityAnalyzer::new();
-        let config = ReliabilityConfig::new(
-            SystemModel::Series,
-            components(&[0.9, 0.9, 0.9]),
-        );
+        let config = ReliabilityConfig::new(SystemModel::Series, components(&[0.9, 0.9, 0.9]));
         let result = analyzer.analyze_reliability(&config).unwrap();
         let (lo, hi) = result.confidence_interval;
         assert!(lo <= hi, "CI lower {lo} > upper {hi}");
@@ -5907,7 +5910,10 @@ mod tests {
         assert!(lo >= 0.0 && hi <= 1.0, "CI [{lo}, {hi}] out of [0,1]");
         // With 10k samples the CI half-width for p~0.73 is ~0.017.
         let half = (hi - lo) / 2.0;
-        assert!(half > 0.0 && half < 0.05, "CI half-width {half} unreasonable");
+        assert!(
+            half > 0.0 && half < 0.05,
+            "CI half-width {half} unreasonable"
+        );
     }
 
     #[test]
@@ -5936,10 +5942,8 @@ mod tests {
             Err(EngineeringError::ValidationError(_))
         ));
         // KOutOfN.n mismatch.
-        let cfg = ReliabilityConfig::new(
-            SystemModel::KOutOfN { k: 2, n: 3 },
-            components(&[0.8, 0.8]),
-        );
+        let cfg =
+            ReliabilityConfig::new(SystemModel::KOutOfN { k: 2, n: 3 }, components(&[0.8, 0.8]));
         assert!(matches!(
             analyzer.analyze_reliability(&cfg),
             Err(EngineeringError::ValidationError(_))
@@ -5948,7 +5952,11 @@ mod tests {
 
     // ── ReliabilityAnalyzer::analyze (model-based) tests ──────────────────
 
-    fn reliability_model(force: f64, yield_strength: f64, ultimate_strength: f64) -> EngineeringModel {
+    fn reliability_model(
+        force: f64,
+        yield_strength: f64,
+        ultimate_strength: f64,
+    ) -> EngineeringModel {
         let mut materials = HashMap::new();
         materials.insert(
             "steel".to_string(),
@@ -5994,9 +6002,17 @@ mod tests {
         // Yield = 250 MPa → SF = 2500. Very safe → β >> 0, Pf ≈ 0.
         let mut analyzer = ReliabilityAnalyzer::new();
         let model = reliability_model(1000.0, 250.0e6, 400.0e6);
-        let result = analyzer.analyze(&model, AnalysisType::LinearStatic).unwrap();
-        assert!(result.reliability_index > 0.0, "safe model should have positive β");
-        assert!(result.failure_probability < 0.01, "safe model should have Pf < 1%");
+        let result = analyzer
+            .analyze(&model, AnalysisType::LinearStatic)
+            .unwrap();
+        assert!(
+            result.reliability_index > 0.0,
+            "safe model should have positive β"
+        );
+        assert!(
+            result.failure_probability < 0.01,
+            "safe model should have Pf < 1%"
+        );
         assert!(result.mean_time_to_failure > 0.0);
         assert!(result.maintenance_interval > 0);
     }
@@ -6007,9 +6023,17 @@ mod tests {
         // Yield = 250 MPa → SF = 0.0025. Yield exceeded → β < 0, Pf > 0.5.
         let mut analyzer = ReliabilityAnalyzer::new();
         let model = reliability_model(1e9, 250.0e6, 400.0e6);
-        let result = analyzer.analyze(&model, AnalysisType::LinearStatic).unwrap();
-        assert!(result.reliability_index < 0.0, "yield-exceeded model should have negative β");
-        assert!(result.failure_probability > 0.5, "yield-exceeded model should have Pf > 50%");
+        let result = analyzer
+            .analyze(&model, AnalysisType::LinearStatic)
+            .unwrap();
+        assert!(
+            result.reliability_index < 0.0,
+            "yield-exceeded model should have negative β"
+        );
+        assert!(
+            result.failure_probability > 0.5,
+            "yield-exceeded model should have Pf > 50%"
+        );
     }
 
     #[test]
@@ -6024,7 +6048,9 @@ mod tests {
             boundary_conditions: Vec::new(),
             loads: Vec::new(),
         };
-        let err = analyzer.analyze(&model, AnalysisType::LinearStatic).unwrap_err();
+        let err = analyzer
+            .analyze(&model, AnalysisType::LinearStatic)
+            .unwrap_err();
         assert!(matches!(err, EngineeringError::InsufficientData(_)));
     }
 
@@ -6033,7 +6059,9 @@ mod tests {
         let mut analyzer = ReliabilityAnalyzer::new();
         let mut model = reliability_model(1000.0, 250.0e6, 400.0e6);
         model.loads.clear();
-        let err = analyzer.analyze(&model, AnalysisType::LinearStatic).unwrap_err();
+        let err = analyzer
+            .analyze(&model, AnalysisType::LinearStatic)
+            .unwrap_err();
         assert!(matches!(err, EngineeringError::InsufficientData(_)));
     }
 
@@ -6041,7 +6069,9 @@ mod tests {
     fn reliability_analyze_results_id_contains_model_id() {
         let mut analyzer = ReliabilityAnalyzer::new();
         let model = reliability_model(1000.0, 250.0e6, 400.0e6);
-        let result = analyzer.analyze(&model, AnalysisType::LinearStatic).unwrap();
+        let result = analyzer
+            .analyze(&model, AnalysisType::LinearStatic)
+            .unwrap();
         assert!(result.results_id.contains("rel_model"));
     }
 }

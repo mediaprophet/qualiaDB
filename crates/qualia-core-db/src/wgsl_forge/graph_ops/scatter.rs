@@ -122,10 +122,17 @@ pub fn scatter_gpu(
         BindingUsage::StorageReadWrite,
     )?;
     let params: [u32; 4] = [p as u32, o_count as u32, accum_op_code(op), 0];
-    let view_params =
-        ctx.allocate_and_write(bytemuck::cast_slice(&params), 3, 0, BindingUsage::StorageRead)?;
+    let view_params = ctx.allocate_and_write(
+        bytemuck::cast_slice(&params),
+        3,
+        0,
+        BindingUsage::StorageRead,
+    )?;
     let pipeline = WgpuPipeline::compile(&ctx, &src_wgsl, SCATTER_ENTRY)?;
-    let schedule = Schedule { workgroup_size: wg, ..Default::default() };
+    let schedule = Schedule {
+        workgroup_size: wg,
+        ..Default::default()
+    };
     pipeline.dispatch(&[view_src, view_idx, view_out, view_params], &schedule, p)?;
     let mut out = ctx.read_buffer_f32(&view_out)?;
     out.truncate(o_count);
@@ -171,8 +178,15 @@ mod tests {
             let cpu = scatter_cpu(&src, &idx, o, op);
             for (g, c) in gpu.iter().zip(&cpu) {
                 // Add accumulates in nondeterministic order → small fp tolerance; Max exact.
-                let tol = if matches!(op, AccumKind::Add) { 1e-3 } else { 0.0 };
-                assert!((g - c).abs() <= tol + 1e-3 * c.abs().max(1.0), "{op:?}: {g} vs {c}");
+                let tol = if matches!(op, AccumKind::Add) {
+                    1e-3
+                } else {
+                    0.0
+                };
+                assert!(
+                    (g - c).abs() <= tol + 1e-3 * c.abs().max(1.0),
+                    "{op:?}: {g} vs {c}"
+                );
             }
         }
     }

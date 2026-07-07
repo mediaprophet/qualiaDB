@@ -24,7 +24,10 @@ impl Exact {
     /// Convert an `f64` to its exact representation.
     pub fn from_f64(x: f64) -> Self {
         if x == 0.0 {
-            return Exact { mantissa: BigInt::from(0), exponent: 0 };
+            return Exact {
+                mantissa: BigInt::from(0),
+                exponent: 0,
+            };
         }
         let bits = x.to_bits();
         let sign: i8 = if bits >> 63 != 0 { -1 } else { 1 };
@@ -40,8 +43,7 @@ impl Exact {
         } else {
             // Normalized: value = sign * (2^52 + raw_mant) * 2^(raw_exp - 1023 - 52)
             Exact {
-                mantissa: BigInt::from(sign)
-                    * (BigInt::from(1u64 << 52) + BigInt::from(raw_mant)),
+                mantissa: BigInt::from(sign) * (BigInt::from(1u64 << 52) + BigInt::from(raw_mant)),
                 exponent: raw_exp - 1023 - 52,
             }
         }
@@ -114,7 +116,10 @@ impl Exact {
     #[allow(dead_code)]
     fn normalize(mut self) -> Self {
         if self.mantissa == 0.into() {
-            return Exact { mantissa: BigInt::from(0), exponent: 0 };
+            return Exact {
+                mantissa: BigInt::from(0),
+                exponent: 0,
+            };
         }
         let zero = BigInt::from(0);
         let one = BigInt::from(1);
@@ -129,7 +134,10 @@ impl Exact {
 /// Convert an expansion (sum of `f64`s) to its exact value.
 #[allow(dead_code)]
 pub fn expansion_to_exact(e: &[f64]) -> Exact {
-    let mut acc = Exact { mantissa: BigInt::from(0), exponent: 0 };
+    let mut acc = Exact {
+        mantissa: BigInt::from(0),
+        exponent: 0,
+    };
     for &x in e {
         acc = acc.add(Exact::from_f64(x));
     }

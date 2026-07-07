@@ -160,7 +160,9 @@ pub fn unary_gpu(input: &[f32], kind: EwKind) -> Result<Vec<f32>, ForgeError> {
 
     let n = input.len();
     if n == 0 {
-        return Err(ForgeError::GpuValidation("unary_gpu: empty input".to_string()));
+        return Err(ForgeError::GpuValidation(
+            "unary_gpu: empty input".to_string(),
+        ));
     }
     let wg: u32 = 64;
     let src = elementwise_wgsl(kind, wg)?;
@@ -175,10 +177,17 @@ pub fn unary_gpu(input: &[f32], kind: EwKind) -> Result<Vec<f32>, ForgeError> {
         BindingUsage::StorageReadWrite,
     )?;
     let params: [u32; 4] = [n as u32, 0, 0, 0];
-    let view_params =
-        ctx.allocate_and_write(bytemuck::cast_slice(&params), 2, 0, BindingUsage::StorageRead)?;
+    let view_params = ctx.allocate_and_write(
+        bytemuck::cast_slice(&params),
+        2,
+        0,
+        BindingUsage::StorageRead,
+    )?;
     let pipeline = WgpuPipeline::compile(&ctx, &src, EWISE_ENTRY)?;
-    let schedule = Schedule { workgroup_size: wg, ..Default::default() };
+    let schedule = Schedule {
+        workgroup_size: wg,
+        ..Default::default()
+    };
     pipeline.dispatch(&[view_in, view_out, view_params], &schedule, n)?;
     let mut out = ctx.read_buffer_f32(&view_out)?;
     out.truncate(n);
@@ -213,10 +222,17 @@ pub fn binary_gpu(a: &[f32], b: &[f32], kind: EwKind) -> Result<Vec<f32>, ForgeE
         BindingUsage::StorageReadWrite,
     )?;
     let params: [u32; 4] = [n as u32, 0, 0, 0];
-    let view_params =
-        ctx.allocate_and_write(bytemuck::cast_slice(&params), 3, 0, BindingUsage::StorageRead)?;
+    let view_params = ctx.allocate_and_write(
+        bytemuck::cast_slice(&params),
+        3,
+        0,
+        BindingUsage::StorageRead,
+    )?;
     let pipeline = WgpuPipeline::compile(&ctx, &src, EWISE_ENTRY)?;
-    let schedule = Schedule { workgroup_size: wg, ..Default::default() };
+    let schedule = Schedule {
+        workgroup_size: wg,
+        ..Default::default()
+    };
     pipeline.dispatch(&[view_a, view_b, view_out, view_params], &schedule, n)?;
     let mut out = ctx.read_buffer_f32(&view_out)?;
     out.truncate(n);
@@ -242,8 +258,14 @@ mod tests {
 
     #[test]
     fn binary_and_fma_cpu_hand_checked() {
-        assert_eq!(binary_cpu(&[1.0, 2.0], &[3.0, 4.0], EwKind::Add), vec![4.0, 6.0]);
-        assert_eq!(binary_cpu(&[2.0, 3.0], &[5.0, 7.0], EwKind::Mul), vec![10.0, 21.0]);
+        assert_eq!(
+            binary_cpu(&[1.0, 2.0], &[3.0, 4.0], EwKind::Add),
+            vec![4.0, 6.0]
+        );
+        assert_eq!(
+            binary_cpu(&[2.0, 3.0], &[5.0, 7.0], EwKind::Mul),
+            vec![10.0, 21.0]
+        );
         assert_eq!(fma_cpu(&[2.0], &[3.0], &[1.0]), vec![7.0]);
     }
 
@@ -280,14 +302,20 @@ mod tests {
             let gpu = unary_gpu(&signed, kind).expect("unary_gpu");
             let cpu = unary_cpu(&signed, kind);
             for (g, c) in gpu.iter().zip(cpu.iter()) {
-                assert!((g - c).abs() <= 1e-3 * c.abs().max(1.0), "{kind:?}: {g} vs {c}");
+                assert!(
+                    (g - c).abs() <= 1e-3 * c.abs().max(1.0),
+                    "{kind:?}: {g} vs {c}"
+                );
             }
         }
         for kind in [EwKind::RecipSqrt, EwKind::Recip] {
             let gpu = unary_gpu(&pos, kind).expect("unary_gpu");
             let cpu = unary_cpu(&pos, kind);
             for (g, c) in gpu.iter().zip(cpu.iter()) {
-                assert!((g - c).abs() <= 1e-3 * c.abs().max(1.0), "{kind:?}: {g} vs {c}");
+                assert!(
+                    (g - c).abs() <= 1e-3 * c.abs().max(1.0),
+                    "{kind:?}: {g} vs {c}"
+                );
             }
         }
         let a: Vec<f32> = signed.clone();
@@ -296,7 +324,10 @@ mod tests {
             let gpu = binary_gpu(&a, &b, kind).expect("binary_gpu");
             let cpu = binary_cpu(&a, &b, kind);
             for (g, c) in gpu.iter().zip(cpu.iter()) {
-                assert!((g - c).abs() <= 1e-3 * c.abs().max(1.0), "{kind:?}: {g} vs {c}");
+                assert!(
+                    (g - c).abs() <= 1e-3 * c.abs().max(1.0),
+                    "{kind:?}: {g} vs {c}"
+                );
             }
         }
     }

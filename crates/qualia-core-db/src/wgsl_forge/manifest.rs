@@ -272,10 +272,16 @@ mod tests {
     #[test]
     fn topology_hash_is_stable_and_sensitive() {
         let profile = sample_profile();
-        assert_eq!(profile.topology_hash().unwrap(), profile.topology_hash().unwrap());
+        assert_eq!(
+            profile.topology_hash().unwrap(),
+            profile.topology_hash().unwrap()
+        );
         let mut other = sample_profile();
         other.memory_class = "unified".to_string();
-        assert_ne!(profile.topology_hash().unwrap(), other.topology_hash().unwrap());
+        assert_ne!(
+            profile.topology_hash().unwrap(),
+            other.topology_hash().unwrap()
+        );
     }
 
     #[test]

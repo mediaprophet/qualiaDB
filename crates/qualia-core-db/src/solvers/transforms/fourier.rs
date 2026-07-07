@@ -85,10 +85,7 @@ pub fn dft_accelerated(x: &[Cplx]) -> Vec<Cplx> {
     // Eligible only for a power-of-two N in [2, 1024] on a machine with a wgpu
     // adapter; any forge error falls straight through to the exact CPU DFT.
     #[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
-    if n.is_power_of_two()
-        && (2..=1024).contains(&n)
-        && crate::wgsl_forge::dispatch::caps().wgpu
-    {
+    if n.is_power_of_two() && (2..=1024).contains(&n) && crate::wgsl_forge::dispatch::caps().wgpu {
         // f64 (re, im) -> interleaved f32 [re0, im0, re1, im1, …].
         let mut interleaved = Vec::with_capacity(2 * n);
         for &(re, im) in x {
@@ -183,8 +180,16 @@ mod tests {
         let s = dft_accelerated(&imp);
         assert_eq!(s.len(), 8);
         for (k, b) in s.iter().enumerate() {
-            assert!((b.0 - 1.0).abs() < TOL, "impulse bin {k} re should be 1, got {}", b.0);
-            assert!(b.1.abs() < TOL, "impulse bin {k} im should be 0, got {}", b.1);
+            assert!(
+                (b.0 - 1.0).abs() < TOL,
+                "impulse bin {k} re should be 1, got {}",
+                b.0
+            );
+            assert!(
+                b.1.abs() < TOL,
+                "impulse bin {k} im should be 0, got {}",
+                b.1
+            );
         }
 
         // Case 2: cos(2π·1·j/8) → energy only in k=1 and k=7, each (4, 0).
@@ -197,8 +202,16 @@ mod tests {
             .collect();
         let cs = dft_accelerated(&cosine);
         for (k, b) in cs.iter().enumerate() {
-            let expect_re = if k == 1 || k == n - 1 { (n as f64) / 2.0 } else { 0.0 };
-            assert!((b.0 - expect_re).abs() < TOL, "cos bin {k} re: expected {expect_re}, got {}", b.0);
+            let expect_re = if k == 1 || k == n - 1 {
+                (n as f64) / 2.0
+            } else {
+                0.0
+            };
+            assert!(
+                (b.0 - expect_re).abs() < TOL,
+                "cos bin {k} re: expected {expect_re}, got {}",
+                b.0
+            );
             assert!(b.1.abs() < TOL, "cos bin {k} im should be ~0, got {}", b.1);
         }
     }
@@ -216,8 +229,18 @@ mod tests {
         for (k, (e, f)) in exact.iter().zip(&fast).enumerate() {
             // f32 magnitudes here are O(10); a 1e-2 absolute tol comfortably
             // covers the f32 rounding while still catching any sign/scale error.
-            assert!((e.0 - f.0).abs() < 1e-2, "bin {k} re: exact {} vs fast {}", e.0, f.0);
-            assert!((e.1 - f.1).abs() < 1e-2, "bin {k} im: exact {} vs fast {}", e.1, f.1);
+            assert!(
+                (e.0 - f.0).abs() < 1e-2,
+                "bin {k} re: exact {} vs fast {}",
+                e.0,
+                f.0
+            );
+            assert!(
+                (e.1 - f.1).abs() < 1e-2,
+                "bin {k} im: exact {} vs fast {}",
+                e.1,
+                f.1
+            );
         }
     }
 

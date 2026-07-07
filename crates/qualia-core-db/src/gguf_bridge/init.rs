@@ -725,7 +725,8 @@ impl QTensorEngine {
         // Exercise the CPU elementwise oracle (ReLU) once at engine init so the fallback
         // path stays linked when GPU elem kernels are unavailable.
         let mut relu_probe = [-1.0f32, 2.0];
-        let _ = super::cpu_ops::apply_cpu_elem_op(super::gpu_params::ELEM_OP_RELU, &mut relu_probe, 2);
+        let _ =
+            super::cpu_ops::apply_cpu_elem_op(super::gpu_params::ELEM_OP_RELU, &mut relu_probe, 2);
         let _ = super::gpu_params::elem_op_label(super::gpu_params::ELEM_OP_RMS_NORM);
         let _ = engine.elem_gpu_pipeline(super::gpu_params::ELEM_OP_RMS_NORM);
         let _ = engine.elem_gpu_pipeline(super::gpu_params::ELEM_OP_ADD_RESIDUAL);
@@ -875,9 +876,10 @@ impl QTensorEngine {
         if layout.dict_k == 0 {
             return;
         }
-        let (Some(buf), Some((flat, na, hd))) =
-            (self.kv_cache_gpu.as_ref(), crate::kv_dict_runtime::atoms_flat())
-        else {
+        let (Some(buf), Some((flat, na, hd))) = (
+            self.kv_cache_gpu.as_ref(),
+            crate::kv_dict_runtime::atoms_flat(),
+        ) else {
             return;
         };
         let code_region = (layout.max_context * 2 * layout.n_kv_head * layout.dict_k) as usize;
@@ -890,8 +892,11 @@ impl QTensorEngine {
                 break;
             }
             let dst_word = l * ls + code_region;
-            self.gpu_queue()
-                .write_buffer(buf, (dst_word * 4) as u64, bytemuck::cast_slice(&flat[s..e]));
+            self.gpu_queue().write_buffer(
+                buf,
+                (dst_word * 4) as u64,
+                bytemuck::cast_slice(&flat[s..e]),
+            );
         }
     }
 
@@ -935,9 +940,11 @@ impl QTensorEngine {
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        let mut encoder = self
-            .gpu_device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("KvReadback") });
+        let mut encoder =
+            self.gpu_device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("KvReadback"),
+                });
         encoder.copy_buffer_to_buffer(gpu, 0, &staging, 0, size);
         self.gpu_queue().submit(Some(encoder.finish()));
 

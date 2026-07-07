@@ -118,7 +118,10 @@ pub fn laplace_coordinates(
         return Err(NniError::TooFewSites { got: n });
     }
     if out_weights.len() < n {
-        return Err(NniError::BufferTooSmall { needed: n, have: out_weights.len() });
+        return Err(NniError::BufferTooSmall {
+            needed: n,
+            have: out_weights.len(),
+        });
     }
 
     // Check if query is at a data site.
@@ -182,8 +185,7 @@ pub fn laplace_coordinates(
             let jx = sj.x - query.x;
             let jy = sj.y - query.y;
             let a = 2.0 * (ux * jx + uy * jy);
-            let b = 2.0 * (mid_x * jx + mid_y * jy)
-                + (query.x * query.x + query.y * query.y)
+            let b = 2.0 * (mid_x * jx + mid_y * jy) + (query.x * query.x + query.y * query.y)
                 - (sj.x * sj.x + sj.y * sj.y);
             if a > EPS_A {
                 // t ≤ −B/A.
@@ -253,7 +255,6 @@ pub fn laplace_coordinates(
     Ok(count)
 }
 
-
 // ───────────────────────────────────────────────────────────────────────────
 //  Interpolation
 // ───────────────────────────────────────────────────────────────────────────
@@ -276,7 +277,13 @@ pub fn interpolate_scalar(
     }
 
     let n = sites.len();
-    let mut weights = vec![NnWeight { site: 0, weight: 0.0 }; n];
+    let mut weights = vec![
+        NnWeight {
+            site: 0,
+            weight: 0.0
+        };
+        n
+    ];
     let count = laplace_coordinates(sites, query, &mut weights)?;
 
     let mut result = 0.0f64;
@@ -350,20 +357,36 @@ mod tests {
     fn laplace_partition_of_unity() {
         let sites = grid_sites(4, 4, 1.0);
         let query = Point2::new(1.5, 1.5);
-        let mut weights = vec![NnWeight { site: 0, weight: 0.0 }; sites.len()];
+        let mut weights = vec![
+            NnWeight {
+                site: 0,
+                weight: 0.0
+            };
+            sites.len()
+        ];
         let count = laplace_coordinates(&sites, query, &mut weights).unwrap();
-        assert!(verify_partition_of_unity(&weights[..count]),
-            "weights must sum to 1");
+        assert!(
+            verify_partition_of_unity(&weights[..count]),
+            "weights must sum to 1"
+        );
     }
 
     #[test]
     fn laplace_non_negative() {
         let sites = grid_sites(4, 4, 1.0);
         let query = Point2::new(1.5, 1.5);
-        let mut weights = vec![NnWeight { site: 0, weight: 0.0 }; sites.len()];
+        let mut weights = vec![
+            NnWeight {
+                site: 0,
+                weight: 0.0
+            };
+            sites.len()
+        ];
         let count = laplace_coordinates(&sites, query, &mut weights).unwrap();
-        assert!(verify_non_negative(&weights[..count]),
-            "weights must be non-negative");
+        assert!(
+            verify_non_negative(&weights[..count]),
+            "weights must be non-negative"
+        );
     }
 
     #[test]
@@ -375,8 +398,12 @@ mod tests {
         let query = Point2::new(1.5, 2.5);
         let result = interpolate_scalar(&sites, &values, query).unwrap();
         let expected = 2.0 * 1.5 + 3.0 * 2.5;
-        assert!((result - expected).abs() < 1e-6,
-            "linear precision: expected {}, got {}", expected, result);
+        assert!(
+            (result - expected).abs() < 1e-6,
+            "linear precision: expected {}, got {}",
+            expected,
+            result
+        );
     }
 
     #[test]
@@ -387,8 +414,12 @@ mod tests {
         let query = Point2::new(2.3, 1.7);
         let result = interpolate_scalar(&sites, &values, query).unwrap();
         let expected = 5.0 * 2.3 - 2.0 * 1.7 + 1.0;
-        assert!((result - expected).abs() < 1e-6,
-            "linear precision with offset: expected {}, got {}", expected, result);
+        assert!(
+            (result - expected).abs() < 1e-6,
+            "linear precision with offset: expected {}, got {}",
+            expected,
+            result
+        );
     }
 
     #[test]
@@ -396,8 +427,20 @@ mod tests {
         let sites = grid_sites(4, 4, 1.0);
         let query = Point2::new(1.5, 1.5);
 
-        let mut w1 = vec![NnWeight { site: 0, weight: 0.0 }; sites.len()];
-        let mut w2 = vec![NnWeight { site: 0, weight: 0.0 }; sites.len()];
+        let mut w1 = vec![
+            NnWeight {
+                site: 0,
+                weight: 0.0
+            };
+            sites.len()
+        ];
+        let mut w2 = vec![
+            NnWeight {
+                site: 0,
+                weight: 0.0
+            };
+            sites.len()
+        ];
         let c1 = laplace_coordinates(&sites, query, &mut w1).unwrap();
         let c2 = laplace_coordinates(&sites, query, &mut w2).unwrap();
 
@@ -419,7 +462,13 @@ mod tests {
         ];
         // Query slightly off-centre to avoid hitting a data site.
         let query = Point2::new(1.01, 1.01);
-        let mut weights = vec![NnWeight { site: 0, weight: 0.0 }; sites.len()];
+        let mut weights = vec![
+            NnWeight {
+                site: 0,
+                weight: 0.0
+            };
+            sites.len()
+        ];
         let count = laplace_coordinates(&sites, query, &mut weights).unwrap();
 
         // Should have at least 3 neighbours.
@@ -436,7 +485,13 @@ mod tests {
         // but still produces a partition of unity.
         let sites = grid_sites(3, 3, 1.0);
         let query = Point2::new(10.0, 10.0); // far outside
-        let mut weights = vec![NnWeight { site: 0, weight: 0.0 }; sites.len()];
+        let mut weights = vec![
+            NnWeight {
+                site: 0,
+                weight: 0.0
+            };
+            sites.len()
+        ];
         let result = laplace_coordinates(&sites, query, &mut weights);
         // Should succeed (extrapolation) and produce valid weights.
         if let Ok(count) = result {
@@ -448,7 +503,13 @@ mod tests {
     fn laplace_at_data_site_errors() {
         let sites = grid_sites(3, 3, 1.0);
         let query = sites[0]; // exactly at a data site
-        let mut weights = vec![NnWeight { site: 0, weight: 0.0 }; sites.len()];
+        let mut weights = vec![
+            NnWeight {
+                site: 0,
+                weight: 0.0
+            };
+            sites.len()
+        ];
         let err = laplace_coordinates(&sites, query, &mut weights).unwrap_err();
         assert!(matches!(err, NniError::QueryAtDataSite));
     }
@@ -457,7 +518,13 @@ mod tests {
     fn laplace_too_few_sites() {
         let sites = vec![Point2::new(0.0, 0.0), Point2::new(1.0, 0.0)];
         let query = Point2::new(0.5, 0.0);
-        let mut weights = vec![NnWeight { site: 0, weight: 0.0 }; 2];
+        let mut weights = vec![
+            NnWeight {
+                site: 0,
+                weight: 0.0
+            };
+            2
+        ];
         let err = laplace_coordinates(&sites, query, &mut weights).unwrap_err();
         assert!(matches!(err, NniError::TooFewSites { .. }));
     }
@@ -466,7 +533,13 @@ mod tests {
     fn laplace_polygon_interior() {
         let sites = regular_polygon(6, 1.0);
         let query = Point2::new(0.0, 0.0); // centre of hexagon
-        let mut weights = vec![NnWeight { site: 0, weight: 0.0 }; sites.len()];
+        let mut weights = vec![
+            NnWeight {
+                site: 0,
+                weight: 0.0
+            };
+            sites.len()
+        ];
         let count = laplace_coordinates(&sites, query, &mut weights).unwrap();
 
         assert!(count >= 3, "centre of hexagon should have ≥ 3 neighbours");
@@ -482,19 +555,31 @@ mod tests {
 
         let r1 = interpolate_scalar(&sites, &values, query).unwrap();
         let r2 = interpolate_scalar(&sites, &values, query).unwrap();
-        assert_eq!(r1.to_bits(), r2.to_bits(), "interpolation must be bit-identical");
+        assert_eq!(
+            r1.to_bits(),
+            r2.to_bits(),
+            "interpolation must be bit-identical"
+        );
     }
 
     #[test]
     fn laplace_weights_sorted_by_site() {
         let sites = grid_sites(4, 4, 1.0);
         let query = Point2::new(1.5, 1.5);
-        let mut weights = vec![NnWeight { site: 0, weight: 0.0 }; sites.len()];
+        let mut weights = vec![
+            NnWeight {
+                site: 0,
+                weight: 0.0
+            };
+            sites.len()
+        ];
         let count = laplace_coordinates(&sites, query, &mut weights).unwrap();
 
         for i in 1..count {
-            assert!(weights[i - 1].site <= weights[i].site,
-                "weights must be sorted by site index");
+            assert!(
+                weights[i - 1].site <= weights[i].site,
+                "weights must be sorted by site index"
+            );
         }
     }
 
@@ -537,10 +622,19 @@ mod tests {
             Point2::new(1.1, 4.2),
         ];
         for q in queries {
-            let mut w = vec![NnWeight { site: 0, weight: 0.0 }; sites.len()];
+            let mut w = vec![
+                NnWeight {
+                    site: 0,
+                    weight: 0.0
+                };
+                sites.len()
+            ];
             let c = laplace_coordinates(&sites, q, &mut w).unwrap();
             assert!(c >= 3, "interior query {q:?} should have >= 3 neighbours");
-            assert!(verify_partition_of_unity(&w[..c]), "partition of unity at {q:?}");
+            assert!(
+                verify_partition_of_unity(&w[..c]),
+                "partition of unity at {q:?}"
+            );
             assert!(verify_non_negative(&w[..c]), "non-negative at {q:?}");
         }
     }

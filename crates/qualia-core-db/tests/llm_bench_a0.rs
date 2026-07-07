@@ -44,7 +44,11 @@ fn a0_native_llm_baseline() {
     let prompt = "The capital of France is";
     let candidates = [
         ("SmolLM2-360M Q8", "smollm2-360m-instruct-q8_0.gguf", "Q8_0"),
-        ("SmolLM2-360M Q4_K_M", "SmolLM2-360M-Instruct-Q4_K_M.gguf", "Q4_K_M"),
+        (
+            "SmolLM2-360M Q4_K_M",
+            "SmolLM2-360M-Instruct-Q4_K_M.gguf",
+            "Q4_K_M",
+        ),
     ];
 
     let cfgs: Vec<BenchConfig> = candidates
@@ -125,8 +129,8 @@ fn a1a_gpu_topk_matches_argmax_text() {
     let model = path.to_string_lossy().to_string();
     // Unambiguous continuation prompt — a working forward must produce real words, not EOS/garbage.
     let prompt = "Once upon a time, there was a";
-    let (off, on) = llm_bench::compare_topk_decode_blocking(&model, prompt, 24)
-        .expect("compare_topk_decode");
+    let (off, on) =
+        llm_bench::compare_topk_decode_blocking(&model, prompt, 24).expect("compare_topk_decode");
     println!("[a1a] argmax: {off:?}");
     println!("[a1a] topk  : {on:?}");
     // The argmax path (CPU reduction over the CPU GEMM chunk logits) and the GPU top-1 path (GPU
@@ -137,11 +141,16 @@ fn a1a_gpu_topk_matches_argmax_text() {
     // (1) both paths produce coherent text (the real #48 regression guard — no EOS/garbage), and
     // (2) they agree on a meaningful common prefix (a real regression would diverge from the first
     // token or emit garbage; a near-tie only flips deep into the sequence).
-    let coherent = |s: &str| {
-        !s.trim_start().starts_with("<|endoftext|>") && s.contains(' ') && s.len() > 8
-    };
-    assert!(coherent(&off), "argmax path must produce coherent text (regression of #48), got: {off:?}");
-    assert!(coherent(&on), "top-1 path must produce coherent text (regression of #48), got: {on:?}");
+    let coherent =
+        |s: &str| !s.trim_start().starts_with("<|endoftext|>") && s.contains(' ') && s.len() > 8;
+    assert!(
+        coherent(&off),
+        "argmax path must produce coherent text (regression of #48), got: {off:?}"
+    );
+    assert!(
+        coherent(&on),
+        "top-1 path must produce coherent text (regression of #48), got: {on:?}"
+    );
     let common: usize = off
         .chars()
         .zip(on.chars())
@@ -200,7 +209,9 @@ trivial equality would hide a W1 failure"
         legacy, resident,
         "resident single-fence decode diverged from the legacy path"
     );
-    println!("[a1d] PASS — token-identical; resident {resident_tok:.2} vs legacy {legacy_tok:.2} tok/s");
+    println!(
+        "[a1d] PASS — token-identical; resident {resident_tok:.2} vs legacy {legacy_tok:.2} tok/s"
+    );
 }
 
 /// a3a (W3) — the resident single-fence-per-chunk prefill arena must populate a KV cache that
@@ -283,7 +294,12 @@ fn a6_primitive_batched_verify_matches_sequential() {
         println!("[a6 B={b}] legacy-ref: {reference:?}");
         println!("[a6 B={b}] verify   : {verify:?}");
         println!("[a6 B={b}] resident : {resident:?}");
-        assert_eq!(verify.len(), b, "[a6 B={b}] verify returned {} argmaxes", verify.len());
+        assert_eq!(
+            verify.len(),
+            b,
+            "[a6 B={b}] verify returned {} argmaxes",
+            verify.len()
+        );
         assert_eq!(
             reference, verify,
             "[a6 B={b}] batched verify per-position argmax diverged from sequential per-token"
@@ -342,7 +358,10 @@ fn a6a_spec_decode_bit_identical_to_greedy() {
     println!("[a6a] greedy: {greedy_tok:.2} tok/s | {greedy:?}");
     println!("[a6a] spec  : {spec_tok:.2} tok/s | {spec:?}");
     println!("[a6a] spec path: {steps} steps, {drafted} drafted, {accepted} accepted");
-    assert!(steps > 0, "[a6a] spec-decode path never ran (proposer drafted nothing)");
+    assert!(
+        steps > 0,
+        "[a6a] spec-decode path never ran (proposer drafted nothing)"
+    );
     assert_eq!(
         greedy, spec,
         "[a6a] spec-decode output diverged from greedy — exact-output guarantee broken"
@@ -358,7 +377,9 @@ fn a6a_spec_decode_bit_identical_to_greedy() {
 /// Run: `cargo test -p qualia-core-db --release --test llm_bench_a0 a2a -- --nocapture --test-threads=1`.
 #[test]
 fn a2a_sampler_deterministic() {
-    use qualia_core_db::llm_bench::{decode_sampled_blocking, sampled_token_count, reset_sampled_token_count};
+    use qualia_core_db::llm_bench::{
+        decode_sampled_blocking, reset_sampled_token_count, sampled_token_count,
+    };
     use qualia_core_db::sampler::SamplerConfig;
     let Some(path) = find_model("smollm2-360m-instruct-q8_0.gguf") else {
         eprintln!("[a2a] model absent — skipping sampler determinism");
@@ -385,10 +406,15 @@ fn a2a_sampler_deterministic() {
     println!("[a2a] seed 1234 run 2: {b:?}");
     println!("[a2a] seed 9876      : {c:?}");
     println!("[a2a] sampled tokens on first run: {ran}");
-    assert!(ran > 0, "[a2a] sampler path never ran — full-logits readback failed or greedy leaked");
+    assert!(
+        ran > 0,
+        "[a2a] sampler path never ran — full-logits readback failed or greedy leaked"
+    );
     assert_eq!(a, b, "same seed must reproduce identical text");
     if a == c {
-        println!("[a2a] NOTE: seed 9876 coincided with 1234 (small model / short prompt) — not asserted");
+        println!(
+            "[a2a] NOTE: seed 9876 coincided with 1234 (small model / short prompt) — not asserted"
+        );
     }
     println!("[a2a] PASS — deterministic under fixed seed, sampler path exercised");
 }
@@ -419,8 +445,14 @@ fn a2b_sampler_deloops_report() {
         ..Default::default()
     };
     let (sampled, _) = decode_sampled_blocking(&model, prompt, 48, cfg).expect("sampled");
-    println!("[a2b] greedy  (uniq {:.2}): {greedy:?}", unique_word_ratio(&greedy));
-    println!("[a2b] sampled (uniq {:.2}): {sampled:?}", unique_word_ratio(&sampled));
+    println!(
+        "[a2b] greedy  (uniq {:.2}): {greedy:?}",
+        unique_word_ratio(&greedy)
+    );
+    println!(
+        "[a2b] sampled (uniq {:.2}): {sampled:?}",
+        unique_word_ratio(&sampled)
+    );
     println!("[a2b] (reported only — sampler quality is empirical, not gated)");
 }
 
@@ -445,7 +477,11 @@ fn w10_calibration_awq_end_to_end() {
     let dir = std::env::temp_dir().join("qcal_w10_test");
     let _ = std::fs::create_dir_all(&dir);
     let cfile = dir.join("calib.txt");
-    std::fs::write(&cfile, "The quick brown fox jumps over the lazy dog. Paris is the capital of France.").unwrap();
+    std::fs::write(
+        &cfile,
+        "The quick brown fox jumps over the lazy dog. Paris is the capital of France.",
+    )
+    .unwrap();
 
     let job = CalibrationJob {
         model_path: model.clone(),
@@ -460,8 +496,14 @@ fn w10_calibration_awq_end_to_end() {
         report.artifact, report.corpus_hash, report.corpus_docs,
         report.ref_ppl, report.cand_ppl, report.delta_ppl * 100.0, report.passed
     );
-    assert!(report.ref_ppl.is_finite() && report.ref_ppl > 1.0, "reference PPL implausible");
-    assert!(report.cand_ppl.is_finite() && report.cand_ppl > 1.0, "candidate PPL implausible");
+    assert!(
+        report.ref_ppl.is_finite() && report.ref_ppl > 1.0,
+        "reference PPL implausible"
+    );
+    assert!(
+        report.cand_ppl.is_finite() && report.cand_ppl > 1.0,
+        "candidate PPL implausible"
+    );
     assert_eq!(report.corpus_docs, 1);
     // If it passed the gate, the packaged artifact must be a valid CBOR-framed blob whose provenance
     // round-trips and matches the report (the engine's fail-closed adoption check).
@@ -469,7 +511,11 @@ fn w10_calibration_awq_end_to_end() {
         let (prov, body) = package::parse_frame(bytes).expect("packaged frame parses");
         assert!(prov.passed && prov.corpus_hash == report.corpus_hash && !body.is_empty());
         assert_eq!(prov.engine_version, env!("CARGO_PKG_VERSION"));
-        println!("[w10] packaged {} bytes (frame + {} artifact bytes), provenance verified", bytes.len(), body.len());
+        println!(
+            "[w10] packaged {} bytes (frame + {} artifact bytes), provenance verified",
+            bytes.len(),
+            body.len()
+        );
     } else {
         println!("[w10] did not pass the ΔPPL gate → no packaged artifact (reported honestly)");
     }
@@ -507,7 +553,9 @@ fn w5a_int8_kv_cache_gate() {
     // The int8 shader must compile (pipeline creation) AND produce coherent text (not EOS/garbage) —
     // this is the correctness gate for the quant/dequant math + the packed layout.
     assert!(
-        !i8_text.trim_start().starts_with("<|endoftext|>") && i8_text.contains(' ') && i8_text.len() > 8,
+        !i8_text.trim_start().starts_with("<|endoftext|>")
+            && i8_text.contains(' ')
+            && i8_text.len() > 8,
         "int8 KV decode must be coherent (shader/quant bug otherwise), got: {i8_text:?}"
     );
 
@@ -522,12 +570,23 @@ fn w5a_int8_kv_cache_gate() {
         d * 100.0,
         MAX_DELTA_PPL * 100.0
     );
-    assert!(ppl_i8.is_finite() && ppl_i8 > 1.0, "int8 PPL implausible: {ppl_i8}");
+    assert!(
+        ppl_i8.is_finite() && ppl_i8 > 1.0,
+        "int8 PPL implausible: {ppl_i8}"
+    );
     println!(
         "[w5a] int8 KV {} the {:.0}% ΔPPL gate → {}",
-        if d <= MAX_DELTA_PPL { "PASSES" } else { "is OVER" },
+        if d <= MAX_DELTA_PPL {
+            "PASSES"
+        } else {
+            "is OVER"
+        },
         MAX_DELTA_PPL * 100.0,
-        if d <= MAX_DELTA_PPL { "eligible to default ON" } else { "stays default OFF" }
+        if d <= MAX_DELTA_PPL {
+            "eligible to default ON"
+        } else {
+            "stays default OFF"
+        }
     );
 }
 
@@ -545,8 +604,8 @@ fn a1b_verbatim_p64_native_boot_is_coherent() {
     };
     let src = std::fs::File::open(&gguf).expect("open gguf");
     let mmap = unsafe { memmap2::Mmap::map(&src) }.expect("mmap gguf");
-    let p64 = qualia_core_db::p64_weight::compile_gguf_to_p64(&mmap, 14)
-        .expect("verbatim P64 compile");
+    let p64 =
+        qualia_core_db::p64_weight::compile_gguf_to_p64(&mmap, 14).expect("verbatim P64 compile");
     drop(mmap);
     drop(src);
     let path = results_dir().join("smollm2-360m-verbatim.p64");
@@ -591,7 +650,11 @@ fn a1b_ternary_ffn_decode_mvpp() {
     std::fs::write(&p64_path, &p64).expect("write P64");
     let p64_str = p64_path.to_string_lossy().to_string();
     let gguf_str = gguf.to_string_lossy().to_string();
-    eprintln!("[a1b] built ternary P64: {:.1} MB → {}", p64.len() as f64 / 1e6, p64_str);
+    eprintln!(
+        "[a1b] built ternary P64: {:.1} MB → {}",
+        p64.len() as f64 / 1e6,
+        p64_str
+    );
 
     let prompt = "Once upon a time, there was a";
     let n = 24u32;
@@ -639,13 +702,20 @@ fn a1b_ternary_ffn_decode_mvpp() {
     );
     eprintln!(
         "  QUALITY: ternary FFN decode is {} — naive PTQ (no calibration). Adoption is D20-gated.",
-        if tern_coherent { "COHERENT" } else { "DEGENERATE (repetition collapse)" }
+        if tern_coherent {
+            "COHERENT"
+        } else {
+            "DEGENERATE (repetition collapse)"
+        }
     );
     eprintln!("──────────────────────────────────────────────────────────────");
 
     // ── Engineering gates (what is genuinely true + proven; NOT a coherence claim) ──
     // 1. The native P64 ternary decode path runs end-to-end and emits non-empty text.
-    assert!(on_text.len() > 8 && on_text.contains(' '), "ternary decode produced no text: {on_text:?}");
+    assert!(
+        on_text.len() > 8 && on_text.contains(' '),
+        "ternary decode produced no text: {on_text:?}"
+    );
     // 2. GPU 2-bit and CPU oracle compute the SAME ternary math, but the f32 REDUCTION ORDER
     //    differs (GPU parallel tree vs CPU sequential sum), so per-token logits agree only within
     //    f32 tolerance — NOT bit-for-bit. On a degenerate quantization (near-tied logits) that tiny
@@ -665,7 +735,10 @@ fn a1b_ternary_ffn_decode_mvpp() {
         );
     }
     // 3. The GPU kernel delivers a real speedup over the CPU oracle on the same weights.
-    assert!(on_tok > off_tok, "GPU ternary must beat the CPU oracle ({on_tok} vs {off_tok})");
+    assert!(
+        on_tok > off_tok,
+        "GPU ternary must beat the CPU oracle ({on_tok} vs {off_tok})"
+    );
     // NOTE (measurement honesty): coherence is NOT asserted here. The companion test
     // `a1b_verbatim_p64_native_boot_is_coherent` proves the P64 boot path is correct, so any ternary
     // degeneration is PTQ quality loss (the D20-eval-gated adoption decision), not an engine bug.
@@ -688,8 +761,8 @@ fn a1c_q8_gemm_decode_coherent() {
     qualia_core_db::llm_bench::set_spec_decode(false);
     let model = path.to_string_lossy().to_string();
     let prompt = "Once upon a time, there was a";
-    let (off, _on) =
-        llm_bench::compare_topk_decode_blocking(&model, prompt, 24).expect("compare_topk_decode (q8)");
+    let (off, _on) = llm_bench::compare_topk_decode_blocking(&model, prompt, 24)
+        .expect("compare_topk_decode (q8)");
     println!("[a1c] q8 argmax: {off:?}");
     // If the GPU Q8_0 dequant diverged from the CPU path, the FFN/output projection would corrupt the
     // residual stream → EOS/garbage (regression of #48). Coherent text == GPU Q8 GEMM matches CPU.
@@ -723,9 +796,13 @@ fn chatml_tokenizer_check() {
         let ids = tok.encode(tag);
         println!("[chatml] {tag:?} -> {ids:?} ({} token(s))", ids.len());
     }
-    let chatml = "<|im_start|>user\nOnce upon a time, there was a<|im_end|>\n<|im_start|>assistant\n";
+    let chatml =
+        "<|im_start|>user\nOnce upon a time, there was a<|im_end|>\n<|im_start|>assistant\n";
     let ids = tok.encode(chatml);
-    println!("[chatml] full ChatML prompt -> {} tokens: {ids:?}", ids.len());
+    println!(
+        "[chatml] full ChatML prompt -> {} tokens: {ids:?}",
+        ids.len()
+    );
     assert!(!ids.is_empty(), "tokenizer produced no tokens");
 
     let start = tok.encode("<|im_start|>");
@@ -765,7 +842,10 @@ fn tokenizer_parity_dump() {
         let withp = tok.encode_prompt(p);
         println!("[tokparity] {p:?}");
         println!("[tokparity]   encode()        = {} toks {raw:?}", raw.len());
-        println!("[tokparity]   encode_prompt() = {} toks {withp:?}", withp.len());
+        println!(
+            "[tokparity]   encode_prompt() = {} toks {withp:?}",
+            withp.len()
+        );
     }
 }
 
@@ -824,8 +904,9 @@ fn route_mask_state_after_decode() {
         attention_route_mask().active_bits,
         attention_mask_seq()
     );
-    let (out, _) = llm_bench::compare_topk_decode_blocking(&model, "Once upon a time, there was a", 16)
-        .expect("decode");
+    let (out, _) =
+        llm_bench::compare_topk_decode_blocking(&model, "Once upon a time, there was a", 16)
+            .expect("decode");
     println!(
         "[mask] after  decode: route.active_bits={} mask_seq={}",
         attention_route_mask().active_bits,
@@ -846,9 +927,11 @@ fn chatml_decode_demo() {
     };
     let model = path.to_string_lossy().to_string();
     let raw = "Once upon a time, there was a";
-    let chatml = "<|im_start|>user\nOnce upon a time, there was a<|im_end|>\n<|im_start|>assistant\n";
+    let chatml =
+        "<|im_start|>user\nOnce upon a time, there was a<|im_end|>\n<|im_start|>assistant\n";
 
-    let (raw_out, _) = llm_bench::compare_topk_decode_blocking(&model, raw, 48).expect("raw decode");
+    let (raw_out, _) =
+        llm_bench::compare_topk_decode_blocking(&model, raw, 48).expect("raw decode");
     println!("[chatml-decode] RAW greedy:\n  {raw_out:?}");
 
     let (tmpl_out, _) =
@@ -951,7 +1034,9 @@ fn a0_decode_profile() {
     } else {
         "mixed (resident + fallback)"
     };
-    println!("[prof] decode path   = {res_path}  (resident {res_hits} hits / {res_fallbacks} fallbacks)");
+    println!(
+        "[prof] decode path   = {res_path}  (resident {res_hits} hits / {res_fallbacks} fallbacks)"
+    );
     println!("[prof] GPU submit→wait round-trips = {waits_per_tok:.0}/tok  (TOTAL incl. prefill; the resident");
     println!("[prof]   decode loop itself is ~1 fence/token — the rest is still-legacy prefill amortized");
     println!("[prof]   over {toks} decode tokens, which is why this falls as decode_tokens rises → W3 target)");
@@ -1035,8 +1120,16 @@ fn w2_gpu_phase_profile() {
         total_ns as f64 / 1000.0
     );
 
-    let calls = |p: gprof::Phase| snap.iter().find(|t| t.phase == p).map(|t| t.calls).unwrap_or(0);
-    assert!(gprof::any_recorded(), "no GPU timestamps recorded on the decode path");
+    let calls = |p: gprof::Phase| {
+        snap.iter()
+            .find(|t| t.phase == p)
+            .map(|t| t.calls)
+            .unwrap_or(0)
+    };
+    assert!(
+        gprof::any_recorded(),
+        "no GPU timestamps recorded on the decode path"
+    );
     assert!(
         calls(gprof::Phase::Attention) > 0,
         "attention kernel was not profiled on decode"
@@ -1089,7 +1182,10 @@ fn w3_gemm_parity_f16_gpu_vs_cpu() {
             println!("\n=== W3/F16 GEMM parity (F16, 256x64, A2000) ===");
             println!("[w3-f16] gpu gemm passes profiled = {gpu_calls} (>0 ⇒ real GPU F16 path)");
             println!("[w3-f16] max_abs_err = {max_abs:.3e}   mean_abs_err = {mean_abs:.3e}   max_ulp = {max_ulp}");
-            assert!(gpu_calls > 0, "GPU F16 GEMM did not execute (fell back to CPU)");
+            assert!(
+                gpu_calls > 0,
+                "GPU F16 GEMM did not execute (fell back to CPU)"
+            );
             assert!(
                 max_abs.is_finite() && max_abs < 1e-2,
                 "GPU↔CPU F16 GEMM divergence too large: max_abs_err={max_abs:e}"
@@ -1125,7 +1221,10 @@ fn coop_gemv_parity_gpu_vs_cpu() {
         match r {
             Ok((max_abs, mean_abs, max_ulp, gpu_calls)) => {
                 println!("[coop:{tag}] gpu passes = {gpu_calls}  max_abs_err = {max_abs:.3e}  mean_abs_err = {mean_abs:.3e}  max_ulp = {max_ulp}");
-                assert!(gpu_calls > 0, "[coop:{tag}] GPU GEMM did not execute (CPU fallback)");
+                assert!(
+                    gpu_calls > 0,
+                    "[coop:{tag}] GPU GEMM did not execute (CPU fallback)"
+                );
                 assert!(
                     max_abs.is_finite() && max_abs < 1e-2,
                     "[coop:{tag}] coop-GEMV↔CPU divergence too large: max_abs_err={max_abs:e}"
@@ -1163,9 +1262,18 @@ fn w1_perplexity_smollm2_q8_vs_q4() {
         d * 100.0,
         MAX_DELTA_PPL * 100.0
     );
-    assert!(ppl_ref.is_finite() && ppl_ref > 1.0 && ppl_ref < 1.0e4, "Q8 PPL implausible: {ppl_ref}");
-    assert!(ppl_cand.is_finite() && ppl_cand > 1.0 && ppl_cand < 1.0e4, "Q4 PPL implausible: {ppl_cand}");
-    assert!(d > -0.05, "candidate beating reference by >5% is suspicious: ΔPPL={d}");
+    assert!(
+        ppl_ref.is_finite() && ppl_ref > 1.0 && ppl_ref < 1.0e4,
+        "Q8 PPL implausible: {ppl_ref}"
+    );
+    assert!(
+        ppl_cand.is_finite() && ppl_cand > 1.0 && ppl_cand < 1.0e4,
+        "Q4 PPL implausible: {ppl_cand}"
+    );
+    assert!(
+        d > -0.05,
+        "candidate beating reference by >5% is suspicious: ΔPPL={d}"
+    );
     println!("[w1] PASS — teacher-forced PPL oracle produces sane numbers on a real model.");
 }
 
@@ -1188,9 +1296,15 @@ fn w1_perplexity_llama3b_fp16_vs_q4() {
     if std::path::Path::new(q4).exists() {
         let (ppl_cand, _) = perplexity_eval_blocking(q4, 48).expect("q4 3b ppl");
         let d = qualia_core_db::llm_eval::delta_ppl(ppl_ref, ppl_cand);
-        println!("[w1-3b] Q4_K_M candidate PPL = {ppl_cand:.4}   ΔPPL = {:+.2}%", d * 100.0);
+        println!(
+            "[w1-3b] Q4_K_M candidate PPL = {ppl_cand:.4}   ΔPPL = {:+.2}%",
+            d * 100.0
+        );
     }
-    assert!(ppl_ref.is_finite() && ppl_ref > 1.0, "FP16 3B PPL implausible: {ppl_ref}");
+    assert!(
+        ppl_ref.is_finite() && ppl_ref > 1.0,
+        "FP16 3B PPL implausible: {ppl_ref}"
+    );
     println!("[w1-3b] PASS — FP16 reference runs through the native engine.");
 }
 
@@ -1230,9 +1344,17 @@ fn w1_awq_activation_capture_smollm2() {
             any_salient = true;
         }
     }
-    assert!(stats[0].iter().any(|&v| v > 0.0), "layer 0 captured all-zero activations (hook not firing)");
-    assert!(any_salient, "no salient channels (>3x median) — AWQ would have no signal; check the hook");
-    println!("[awq] PASS — activation salience captured; salient channels present → AWQ has signal.");
+    assert!(
+        stats[0].iter().any(|&v| v > 0.0),
+        "layer 0 captured all-zero activations (hook not firing)"
+    );
+    assert!(
+        any_salient,
+        "no salient channels (>3x median) — AWQ would have no signal; check the hook"
+    );
+    println!(
+        "[awq] PASS — activation salience captured; salient channels present → AWQ has signal."
+    );
 }
 
 /// AWQ α-sweep (steps 1–3 end to end) on SmolLM2-360M ternary FFN. Coarse 3-point sweep to verify the
@@ -1248,14 +1370,20 @@ fn w1_awq_sweep_smollm2() {
         return;
     };
     let alphas = [0.0f32, 0.5, 1.0];
-    let (ref_ppl, results) =
-        awq_sweep_blocking(&gguf.to_string_lossy(), &alphas, 64, qualia_core_db::p64_weight::FfnQuant::Ternary)
-            .expect("awq sweep");
+    let (ref_ppl, results) = awq_sweep_blocking(
+        &gguf.to_string_lossy(),
+        &alphas,
+        64,
+        qualia_core_db::p64_weight::FfnQuant::Ternary,
+    )
+    .expect("awq sweep");
 
     println!("\n=== AWQ alpha-sweep (SmolLM2-360M ternary FFN; Q8 ref PPL {ref_ppl:.2}) ===");
     for (a, ppl, uniq) in &results {
         let dppl = (ppl - ref_ppl) / ref_ppl * 100.0;
-        println!("[awq-sweep] alpha={a:.2}  ternary PPL {ppl:9.2}  dPPL {dppl:+8.1}%  uniq {uniq:.3}");
+        println!(
+            "[awq-sweep] alpha={a:.2}  ternary PPL {ppl:9.2}  dPPL {dppl:+8.1}%  uniq {uniq:.3}"
+        );
     }
     let base = results
         .iter()
@@ -1297,7 +1425,8 @@ fn w1_awq_q4_sweep_smollm2() {
     };
     let alphas = [0.0f32, 0.5, 1.0];
     let (ref_ppl, results) =
-        awq_sweep_blocking(&gguf.to_string_lossy(), &alphas, 64, FfnQuant::Q4_0).expect("awq q4 sweep");
+        awq_sweep_blocking(&gguf.to_string_lossy(), &alphas, 64, FfnQuant::Q4_0)
+            .expect("awq q4 sweep");
 
     println!("\n=== AWQ Q4 alpha-sweep (SmolLM2-360M FFN->Q4_0; Q8 ref PPL {ref_ppl:.2}) ===");
     for (a, ppl, uniq) in &results {
@@ -1356,24 +1485,70 @@ fn pathc_dump_llama3_rope_kv() {
     // Returns a printable value + advances pos. None for arrays (just notes element count).
     fn read_val(m: &[u8], p: &mut usize, vtype: u32) -> String {
         match vtype {
-            0 => { let v = m[*p]; *p += 1; format!("u8 {v}") }
-            1 => { let v = m[*p] as i8; *p += 1; format!("i8 {v}") }
-            2 => { let v = u16::from_le_bytes(m[*p..*p+2].try_into().unwrap()); *p += 2; format!("u16 {v}") }
-            3 => { let v = i16::from_le_bytes(m[*p..*p+2].try_into().unwrap()); *p += 2; format!("i16 {v}") }
-            4 => { let v = u32::from_le_bytes(m[*p..*p+4].try_into().unwrap()); *p += 4; format!("u32 {v}") }
-            5 => { let v = i32::from_le_bytes(m[*p..*p+4].try_into().unwrap()); *p += 4; format!("i32 {v}") }
-            6 => { let v = f32::from_bits(u32::from_le_bytes(m[*p..*p+4].try_into().unwrap())); *p += 4; format!("f32 {v}") }
-            7 => { let v = m[*p]; *p += 1; format!("bool {}", v != 0) }
-            8 => format!("str {:?}", read_str(m, p)),
-            10 => { let v = u64::from_le_bytes(m[*p..*p+8].try_into().unwrap()); *p += 8; format!("u64 {v}") }
-            11 => { let v = i64::from_le_bytes(m[*p..*p+8].try_into().unwrap()); *p += 8; format!("i64 {v}") }
-            12 => { let v = f64::from_bits(u64::from_le_bytes(m[*p..*p+8].try_into().unwrap())); *p += 8; format!("f64 {v}") }
-            9 => {
-                let etype = u32::from_le_bytes(m[*p..*p+4].try_into().unwrap());
+            0 => {
+                let v = m[*p];
+                *p += 1;
+                format!("u8 {v}")
+            }
+            1 => {
+                let v = m[*p] as i8;
+                *p += 1;
+                format!("i8 {v}")
+            }
+            2 => {
+                let v = u16::from_le_bytes(m[*p..*p + 2].try_into().unwrap());
+                *p += 2;
+                format!("u16 {v}")
+            }
+            3 => {
+                let v = i16::from_le_bytes(m[*p..*p + 2].try_into().unwrap());
+                *p += 2;
+                format!("i16 {v}")
+            }
+            4 => {
+                let v = u32::from_le_bytes(m[*p..*p + 4].try_into().unwrap());
                 *p += 4;
-                let cnt = u64::from_le_bytes(m[*p..*p+8].try_into().unwrap()) as usize;
+                format!("u32 {v}")
+            }
+            5 => {
+                let v = i32::from_le_bytes(m[*p..*p + 4].try_into().unwrap());
+                *p += 4;
+                format!("i32 {v}")
+            }
+            6 => {
+                let v = f32::from_bits(u32::from_le_bytes(m[*p..*p + 4].try_into().unwrap()));
+                *p += 4;
+                format!("f32 {v}")
+            }
+            7 => {
+                let v = m[*p];
+                *p += 1;
+                format!("bool {}", v != 0)
+            }
+            8 => format!("str {:?}", read_str(m, p)),
+            10 => {
+                let v = u64::from_le_bytes(m[*p..*p + 8].try_into().unwrap());
                 *p += 8;
-                for _ in 0..cnt { let _ = read_val(m, p, etype); }
+                format!("u64 {v}")
+            }
+            11 => {
+                let v = i64::from_le_bytes(m[*p..*p + 8].try_into().unwrap());
+                *p += 8;
+                format!("i64 {v}")
+            }
+            12 => {
+                let v = f64::from_bits(u64::from_le_bytes(m[*p..*p + 8].try_into().unwrap()));
+                *p += 8;
+                format!("f64 {v}")
+            }
+            9 => {
+                let etype = u32::from_le_bytes(m[*p..*p + 4].try_into().unwrap());
+                *p += 4;
+                let cnt = u64::from_le_bytes(m[*p..*p + 8].try_into().unwrap()) as usize;
+                *p += 8;
+                for _ in 0..cnt {
+                    let _ = read_val(m, p, etype);
+                }
                 format!("array<type {etype}> x{cnt}")
             }
             _ => panic!("unknown vtype {vtype}"),
@@ -1384,7 +1559,9 @@ fn pathc_dump_llama3_rope_kv() {
     for _ in 0..kv_count {
         let klen = u64::from_le_bytes(mmap[pos..pos + 8].try_into().unwrap()) as usize;
         pos += 8;
-        let key = std::str::from_utf8(&mmap[pos..pos + klen]).unwrap_or("").to_string();
+        let key = std::str::from_utf8(&mmap[pos..pos + klen])
+            .unwrap_or("")
+            .to_string();
         pos += klen;
         let vtype = u32::from_le_bytes(mmap[pos..pos + 4].try_into().unwrap());
         pos += 4;
@@ -1410,7 +1587,9 @@ fn pathc_dump_llama3_rope_kv() {
     for _ in 0..tensor_count {
         let nlen = u64::from_le_bytes(mmap[pos..pos + 8].try_into().unwrap()) as usize;
         pos += 8;
-        let name = std::str::from_utf8(&mmap[pos..pos + nlen]).unwrap_or("").to_string();
+        let name = std::str::from_utf8(&mmap[pos..pos + nlen])
+            .unwrap_or("")
+            .to_string();
         pos += nlen;
         let n_dims = u32::from_le_bytes(mmap[pos..pos + 4].try_into().unwrap()) as usize;
         pos += 4;
@@ -1418,11 +1597,18 @@ fn pathc_dump_llama3_rope_kv() {
         for d in 0..n_dims {
             let v = u64::from_le_bytes(mmap[pos..pos + 8].try_into().unwrap());
             pos += 8;
-            if d < 4 { dims[d] = v; }
+            if d < 4 {
+                dims[d] = v;
+            }
         }
         pos += 12; // ggml_type(4) + offset(8)
-        if name == "output.weight" { has_output_weight = true; output_weight_dims = dims; }
-        if name == "token_embd.weight" { token_embd_dims = dims; }
+        if name == "output.weight" {
+            has_output_weight = true;
+            output_weight_dims = dims;
+        }
+        if name == "token_embd.weight" {
+            token_embd_dims = dims;
+        }
     }
     println!("TENSOR  output.weight present = {has_output_weight}  (false => tied embeddings)");
     println!("TENSOR  token_embd.weight dims = {token_embd_dims:?}");
@@ -1437,9 +1623,15 @@ fn pathc_dump_llama3_rope_kv() {
     println!(
         "[parser] n_layer={} n_embd={} n_head={} n_kv_head={} head_dim={} \
 rope_freq_base={} (eff {}) rope_scale={} (eff {}) tied={}",
-        h.n_layer, h.n_embd, h.n_head, h.n_kv_head, h.head_dim(),
-        h.rope_freq_base, h.effective_rope_freq_base(),
-        h.rope_scale, h.effective_rope_scale(),
+        h.n_layer,
+        h.n_embd,
+        h.n_head,
+        h.n_kv_head,
+        h.head_dim(),
+        h.rope_freq_base,
+        h.effective_rope_freq_base(),
+        h.rope_scale,
+        h.effective_rope_scale(),
         idx.output_weights_tied(),
     );
 }
@@ -1454,8 +1646,8 @@ fn pathc_llama3b_short_generation() {
         return;
     }
     let prompt = "The capital of France is";
-    let (text, tok_s) = llm_bench::decode_with_metrics_blocking(path, prompt, 24)
-        .expect("3B decode failed");
+    let (text, tok_s) =
+        llm_bench::decode_with_metrics_blocking(path, prompt, 24).expect("3B decode failed");
     println!("\n=== Path C: Llama-3.2-3B short generation ===");
     println!("[pathc-gen] prompt : {prompt:?}");
     println!("[pathc-gen] output : {text:?}");
@@ -1463,10 +1655,16 @@ fn pathc_llama3b_short_generation() {
     println!("=== end Path C generation ===\n");
     // Coherence smell-test: output must be non-empty and not collapse to a single repeated token.
     let trimmed = text.trim();
-    assert!(!trimmed.is_empty(), "empty generation — model produced nothing");
+    assert!(
+        !trimmed.is_empty(),
+        "empty generation — model produced nothing"
+    );
     let uniq: std::collections::HashSet<&str> = trimmed.split_whitespace().collect();
-    println!("[pathc-gen] unique-word ratio = {} / {}", uniq.len(),
-        trimmed.split_whitespace().count().max(1));
+    println!(
+        "[pathc-gen] unique-word ratio = {} / {}",
+        uniq.len(),
+        trimmed.split_whitespace().count().max(1)
+    );
 }
 
 /// Path C lever check: decode the SAME 3B model quantized to Q4_K (~0.5 B/weight vs F16's 2 B) —
@@ -1480,8 +1678,8 @@ fn pathc_llama3b_q4k_generation() {
         return;
     }
     let prompt = "The capital of France is";
-    let (text, tok_s) = llm_bench::decode_with_metrics_blocking(path, prompt, 24)
-        .expect("3B Q4_K decode failed");
+    let (text, tok_s) =
+        llm_bench::decode_with_metrics_blocking(path, prompt, 24).expect("3B Q4_K decode failed");
     println!("\n=== Path C: Llama-3.2-3B Q4_K_M generation ===");
     println!("[pathc-q4k] prompt : {prompt:?}");
     println!("[pathc-q4k] output : {text:?}");
@@ -1531,13 +1729,29 @@ fn pathc_3b_gpu_bottleneck_profile() {
     println!("[pathc-prof] decode = {tok:.2} tok/s (PROFILING-PERTURBED) · wall = {:.1}s · {DECODE_TOK} tok", wall.as_secs_f64());
     println!("[pathc-prof] --- GPU kernel split (timestamp-attributed) ---");
     for t in &snap {
-        let pct = if total_ns > 0 { 100.0 * t.total_ns as f64 / total_ns as f64 } else { 0.0 };
-        println!("[pathc-prof]   {:<12} {:>12.1} us  {:>7} calls  ({:>4.1}% of instrumented GPU)",
-            t.phase.label(), t.micros(), t.calls, pct);
+        let pct = if total_ns > 0 {
+            100.0 * t.total_ns as f64 / total_ns as f64
+        } else {
+            0.0
+        };
+        println!(
+            "[pathc-prof]   {:<12} {:>12.1} us  {:>7} calls  ({:>4.1}% of instrumented GPU)",
+            t.phase.label(),
+            t.micros(),
+            t.calls,
+            pct
+        );
     }
-    println!("[pathc-prof]   {:<12} {:>12.1} us  (sum of instrumented GPU passes)", "TOTAL_GPU", total_ns as f64 / 1000.0);
+    println!(
+        "[pathc-prof]   {:<12} {:>12.1} us  (sum of instrumented GPU passes)",
+        "TOTAL_GPU",
+        total_ns as f64 / 1000.0
+    );
     println!("[pathc-prof] --- sync attribution ---");
-    println!("[pathc-prof]   submit->wait round-trips = {waits}  (~{:.1} per decode token)", waits as f64 / DECODE_TOK as f64);
+    println!(
+        "[pathc-prof]   submit->wait round-trips = {waits}  (~{:.1} per decode token)",
+        waits as f64 / DECODE_TOK as f64
+    );
     let kernel_ms = total_ns as f64 / 1_000_000.0;
     let wall_ms = wall.as_secs_f64() * 1000.0;
     println!("[pathc-prof]   instrumented GPU kernel = {kernel_ms:.0} ms  vs  wall = {wall_ms:.0} ms  -> non-kernel (sync+CPU+mount) = {:.0} ms", (wall_ms - kernel_ms).max(0.0));
@@ -1599,5 +1813,8 @@ fn perf_topk_ab_smollm2() {
     // restore the process default (ON)
     set_gpu_topk(true);
     let _ = llm_bench::gpu_topk_enabled();
-    assert!(on_tps.is_finite() && on_tps > 0.0, "top-k decode produced no rate");
+    assert!(
+        on_tps.is_finite() && on_tps > 0.0,
+        "top-k decode produced no rate"
+    );
 }

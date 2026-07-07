@@ -147,11 +147,12 @@ pub fn merge_vertices(
     remap: &mut [u32],
     merged_positions: &mut [f64],
 ) -> Result<u32, SoupError> {
-    let needed = (vertex_count as usize)
-        .checked_mul(3)
-        .ok_or(SoupError::PositionBufferTooSmall {
-            required: usize::MAX,
-        })?;
+    let needed =
+        (vertex_count as usize)
+            .checked_mul(3)
+            .ok_or(SoupError::PositionBufferTooSmall {
+                required: usize::MAX,
+            })?;
     if positions.len() < needed {
         return Err(SoupError::PositionBufferTooSmall { required: needed });
     }
@@ -238,24 +239,27 @@ pub fn filter_degenerate_faces(
 
     let mut kept = 0usize;
     for triangle in triangles.iter().copied() {
-        let a = remap.get(triangle[0] as usize).copied().ok_or(
-            SoupError::VertexOutOfRange {
+        let a = remap
+            .get(triangle[0] as usize)
+            .copied()
+            .ok_or(SoupError::VertexOutOfRange {
                 face: kept,
                 vertex: triangle[0],
-            },
-        )?;
-        let b = remap.get(triangle[1] as usize).copied().ok_or(
-            SoupError::VertexOutOfRange {
+            })?;
+        let b = remap
+            .get(triangle[1] as usize)
+            .copied()
+            .ok_or(SoupError::VertexOutOfRange {
                 face: kept,
                 vertex: triangle[1],
-            },
-        )?;
-        let c = remap.get(triangle[2] as usize).copied().ok_or(
-            SoupError::VertexOutOfRange {
+            })?;
+        let c = remap
+            .get(triangle[2] as usize)
+            .copied()
+            .ok_or(SoupError::VertexOutOfRange {
                 face: kept,
                 vertex: triangle[2],
-            },
-        )?;
+            })?;
         if a == b || b == c || a == c {
             continue;
         }
@@ -379,7 +383,9 @@ pub fn orient_consistently(
         return Err(SoupError::WorkspaceTooSmall { required: needed });
     }
     if visited.len() < face_count || queue.len() < face_count {
-        return Err(SoupError::WorkspaceTooSmall { required: face_count });
+        return Err(SoupError::WorkspaceTooSmall {
+            required: face_count,
+        });
     }
 
     for v in visited.iter_mut() {
@@ -522,9 +528,7 @@ pub fn repair_polygon_soup(
     half_edges: &mut [HalfEdge],
     edge_slots: &mut [EdgeSlot],
 ) -> Result<RepairReport, SoupError> {
-    if repaired_triangles.len() < triangles.len()
-        || original_triangles.len() < triangles.len()
-    {
+    if repaired_triangles.len() < triangles.len() || original_triangles.len() < triangles.len() {
         return Err(SoupError::IndexBufferTooSmall {
             required: triangles.len(),
         });
@@ -547,13 +551,7 @@ pub fn repair_polygon_soup(
     }
 
     // Step 1 — merge vertices.
-    let merged_count = merge_vertices(
-        positions,
-        vertex_count,
-        tolerance,
-        remap,
-        merged_positions,
-    )?;
+    let merged_count = merge_vertices(positions, vertex_count, tolerance, remap, merged_positions)?;
 
     // Step 2 — filter degenerate faces into repaired_triangles.
     let surviving = filter_degenerate_faces(triangles, remap, repaired_triangles)?;
@@ -567,12 +565,8 @@ pub fn repair_polygon_soup(
     let visited_slice = &mut visited[..surviving];
     let queue_slice = &mut queue[..surviving];
     build_face_adjacency(surviving_slice, adjacency_slice)?;
-    let components = orient_consistently(
-        surviving_slice,
-        adjacency_slice,
-        visited_slice,
-        queue_slice,
-    )?;
+    let components =
+        orient_consistently(surviving_slice, adjacency_slice, visited_slice, queue_slice)?;
     let flipped = count_flipped(&original_triangles[..surviving], surviving_slice);
 
     // Step 4 — fail-closed half-edge validation.
@@ -646,9 +640,7 @@ mod tests {
 
     #[test]
     fn merge_keeps_separate_vertices_outside_tolerance() {
-        let positions: Vec<f64> = vec![
-            0.0, 0.0, 0.0, 0.0, 0.0, 1e-3, 0.0, 0.0, 2e-3,
-        ];
+        let positions: Vec<f64> = vec![0.0, 0.0, 0.0, 0.0, 0.0, 1e-3, 0.0, 0.0, 2e-3];
         let mut remap = [0u32; 3];
         let mut merged = [0.0f64; 9];
         let count = merge_vertices(&positions, 3, 1e-6, &mut remap, &mut merged).unwrap();
@@ -659,7 +651,18 @@ mod tests {
     #[test]
     fn merge_is_deterministic_across_runs() {
         let positions: Vec<f64> = vec![
-            0.1, 0.2, 0.3, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.1, 0.2, 0.300_000_1,
+            0.1,
+            0.2,
+            0.3,
+            0.1,
+            0.2,
+            0.3,
+            0.4,
+            0.5,
+            0.6,
+            0.1,
+            0.2,
+            0.300_000_1,
         ];
         let mut remap_a = [0u32; 4];
         let mut merged_a = [0.0f64; 12];

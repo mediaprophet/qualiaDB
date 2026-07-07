@@ -88,8 +88,7 @@ pub fn forward_cqt(
         let f_k = f_min * 2.0_f32.powf(k as f32 / bins_per_octave as f32);
         // Window length tracks the bin frequency (constant-Q: more cycles at HF
         // would need fewer samples; here longer windows at LF).
-        let nk = ((q * sample_rate / f_k).round() as usize)
-            .clamp(1, samples.len());
+        let nk = ((q * sample_rate / f_k).round() as usize).clamp(1, samples.len());
 
         let mut acc_re = 0.0_f32;
         let mut acc_im = 0.0_f32;
@@ -243,9 +242,8 @@ mod tests {
             .map(|i| (core::f32::consts::TAU * 220.0 * i as f32 / sample_rate).sin())
             .collect();
         let mut buf = [0u8; 20 + 64 * 4];
-        let written =
-            bake_cqt_sidecar_from_samples(&samples, sample_rate, 55.0, 12, 48, &mut buf)
-                .expect("bake cqt");
+        let written = bake_cqt_sidecar_from_samples(&samples, sample_rate, 55.0, 12, 48, &mut buf)
+            .expect("bake cqt");
         let h = parse_sidecar_header(&buf).expect("valid header");
         assert_eq!(h._pad, SIDECAR_KIND_CQT);
         assert_eq!(h.bin_count, SPECTRAL_PREVIEW_BINS as u32);
@@ -260,7 +258,9 @@ mod tests {
     /// When n_bins == SPECTRAL_PREVIEW_BINS the preview is the magnitudes verbatim.
     #[test]
     fn cqt_preview_passthrough_when_64_bins() {
-        let mags: Vec<f32> = (0..SPECTRAL_PREVIEW_BINS).map(|i| i as f32 * 0.01).collect();
+        let mags: Vec<f32> = (0..SPECTRAL_PREVIEW_BINS)
+            .map(|i| i as f32 * 0.01)
+            .collect();
         let preview = cqt_to_preview(&mags);
         for (a, b) in preview.iter().zip(mags.iter()) {
             assert!((a - b).abs() < 1e-9);

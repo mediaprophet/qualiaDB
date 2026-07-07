@@ -160,14 +160,16 @@ impl Lcg {
 fn init_velocities(
     masses: &[f64],
     target_temp: f64,
-    statistical_computing: Option<Arc<Mutex<crate::specialized_libs::statistical_computing::StatisticalComputingLibrary>>>,
+    statistical_computing: Option<
+        Arc<Mutex<crate::specialized_libs::statistical_computing::StatisticalComputingLibrary>>,
+    >,
 ) -> Vec<[f64; 3]> {
     let n = masses.len();
     let mut v = vec![[0.0; 3]; n];
     if target_temp <= 0.0 || n < 2 {
         return v;
     }
-    
+
     // Wire statistical_computing handle instead of Lcg placeholder
     let mut rng = Lcg(0x9E3779B97F4A7C15);
     for (i, m) in masses.iter().enumerate() {
@@ -217,8 +219,12 @@ fn init_velocities(
 pub fn run_md(
     config: &SimulationConfig,
     molecule: &Molecule,
-    _linear_algebra: Option<Arc<Mutex<crate::specialized_libs::linear_algebra::LinearAlgebraLibrary>>>,
-    statistical_computing: Option<Arc<Mutex<crate::specialized_libs::statistical_computing::StatisticalComputingLibrary>>>,
+    _linear_algebra: Option<
+        Arc<Mutex<crate::specialized_libs::linear_algebra::LinearAlgebraLibrary>>,
+    >,
+    statistical_computing: Option<
+        Arc<Mutex<crate::specialized_libs::statistical_computing::StatisticalComputingLibrary>>,
+    >,
 ) -> Result<SimulationTrajectory, ChemistryError> {
     let n = molecule.atoms.len();
     if n == 0 {
@@ -277,12 +283,12 @@ pub fn run_md(
     let mut e_max = f64::NEG_INFINITY;
 
     let record = |step: usize,
-                      positions: &[[f64; 3]],
-                      velocities: &[[f64; 3]],
-                      forces: &[[f64; 3]],
-                      potential: f64,
-                      frames: &mut Vec<SimulationFrame>,
-                      time_steps: &mut Vec<f64>| {
+                  positions: &[[f64; 3]],
+                  velocities: &[[f64; 3]],
+                  forces: &[[f64; 3]],
+                  potential: f64,
+                  frames: &mut Vec<SimulationFrame>,
+                  time_steps: &mut Vec<f64>| {
         let ke = kinetic_energy(&masses, velocities);
         let total = ke + potential;
         let t = config.time_step * step as f64;
@@ -504,7 +510,12 @@ mod tests {
 
     #[test]
     fn refuses_empty_molecule() {
-        let r = run_md(&config(0.001, 0.1, 100.0), &molecule(Vec::new()), None, None);
+        let r = run_md(
+            &config(0.001, 0.1, 100.0),
+            &molecule(Vec::new()),
+            None,
+            None,
+        );
         assert!(matches!(r, Err(ChemistryError::InsufficientData(_))));
     }
 

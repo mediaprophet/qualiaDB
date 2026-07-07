@@ -140,9 +140,7 @@ impl TensorVolumeGpu {
         max_distance: f32,
         out: &mut [usize],
     ) -> usize {
-        let node_count = global_resident_substrate()
-            .node_count()
-            .min(self.max_nodes);
+        let node_count = global_resident_substrate().node_count().min(self.max_nodes);
         if node_count == 0 || out.is_empty() || !self.upload_nodes(queue, node_count) {
             return 0;
         }

@@ -151,7 +151,10 @@ mod tests {
         assert_eq!(legalize(3, NeighborEnc::Native3D), NeighborPath::RtEligible);
         assert_eq!(legalize(2, NeighborEnc::Native3D), NeighborPath::RtEligible);
         assert_eq!(legalize(4, NeighborEnc::Native3D), NeighborPath::Grid);
-        assert_eq!(legalize(128, NeighborEnc::Project), NeighborPath::RtEligible);
+        assert_eq!(
+            legalize(128, NeighborEnc::Project),
+            NeighborPath::RtEligible
+        );
     }
 
     /// FRNN on a 1-D line: points at x=0..4, query at x=2, r=1.5 → {1,2,3} (|Δ|≤1.5).

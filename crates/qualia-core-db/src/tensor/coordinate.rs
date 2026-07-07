@@ -1,6 +1,5 @@
 //! Coordinate types and utilities for 10D tensor system
 
-
 /// Quantum context coordinate type
 pub type QuantumContext = f32;
 

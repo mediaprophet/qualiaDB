@@ -145,12 +145,16 @@ fn angle_at(v: Point2, p: Point2, q: Point2) -> f64 {
 
 /// Minimum interior angle of a triangle (radians).
 fn tri_min_angle(a: Point2, b: Point2, c: Point2) -> f64 {
-    angle_at(a, b, c).min(angle_at(b, a, c)).min(angle_at(c, a, b))
+    angle_at(a, b, c)
+        .min(angle_at(b, a, c))
+        .min(angle_at(c, a, b))
 }
 
 /// Maximum interior angle of a triangle (radians).
 fn tri_max_angle(a: Point2, b: Point2, c: Point2) -> f64 {
-    angle_at(a, b, c).max(angle_at(b, a, c)).max(angle_at(c, a, b))
+    angle_at(a, b, c)
+        .max(angle_at(b, a, c))
+        .max(angle_at(c, a, b))
 }
 
 /// Unsigned area of a triangle.
@@ -294,11 +298,7 @@ fn tri_objective(a: Point2, b: Point2, c: Point2, objective: TriObjective) -> f6
 /// Returns `Some((t0, t1, c, d))` where `triangles[t0]` has vertices (a, b, c)
 /// and `triangles[t1]` has vertices (a, b, d), with c != d. Returns `None` if
 /// the edge is on the boundary (only one triangle) or is not present.
-fn find_edge_pair(
-    triangles: &[[u32; 3]],
-    a: u32,
-    b: u32,
-) -> Option<(usize, usize, u32, u32)> {
+fn find_edge_pair(triangles: &[[u32; 3]], a: u32, b: u32) -> Option<(usize, usize, u32, u32)> {
     let mut t0: Option<(usize, u32)> = None;
     let mut t1: Option<(usize, u32)> = None;
     for (ti, tri) in triangles.iter().enumerate() {
@@ -504,7 +504,11 @@ pub fn optimise_triangulation(
         let mut edges: Vec<(u32, u32)> = Vec::new();
         for tri in triangles.iter() {
             let [a, b, c] = *tri;
-            for &(u, v) in &[(a.min(b), a.max(b)), (b.min(c), b.max(c)), (c.min(a), c.max(a))] {
+            for &(u, v) in &[
+                (a.min(b), a.max(b)),
+                (b.min(c), b.max(c)),
+                (c.min(a), c.max(a)),
+            ] {
                 // Check if this edge is interior (shared by 2 triangles).
                 if let Some((_, _, _, _)) = find_edge_pair(triangles, u, v) {
                     // Interior edge — add if not already present.
@@ -599,10 +603,10 @@ mod tests {
     /// Points: (0,0), (4,0), (3,1), (0,2) — all on the convex hull.
     fn convex_quad() -> Vec<Point2> {
         vec![
-            Point2::new(0.0, 0.0),  // 0
-            Point2::new(4.0, 0.0),  // 1
-            Point2::new(3.0, 1.0),  // 2
-            Point2::new(0.0, 2.0),  // 3
+            Point2::new(0.0, 0.0), // 0
+            Point2::new(4.0, 0.0), // 1
+            Point2::new(3.0, 1.0), // 2
+            Point2::new(0.0, 2.0), // 3
         ]
     }
 
@@ -623,7 +627,10 @@ mod tests {
         ];
         let mut tris: Vec<[u32; 3]> = vec![];
         let r = optimise_triangulation(&pts, &mut tris, TriObjective::MaxMinAngle, 100);
-        assert!(matches!(r, Err(TriangulationOptError::EmptyTriangulation { .. })));
+        assert!(matches!(
+            r,
+            Err(TriangulationOptError::EmptyTriangulation { .. })
+        ));
     }
 
     #[test]
@@ -635,7 +642,10 @@ mod tests {
         ];
         let mut tris = vec![[0u32, 1, 5]]; // 5 is out of range
         let r = optimise_triangulation(&pts, &mut tris, TriObjective::MaxMinAngle, 100);
-        assert!(matches!(r, Err(TriangulationOptError::InconsistentTriangulation { .. })));
+        assert!(matches!(
+            r,
+            Err(TriangulationOptError::InconsistentTriangulation { .. })
+        ));
     }
 
     #[test]
@@ -797,12 +807,16 @@ mod tests {
         // Check that edge (0,2) is no longer present and (1,3) is.
         let has_02 = tris.iter().any(|t| {
             let edges = [(t[0], t[1]), (t[1], t[2]), (t[2], t[0])];
-            edges.iter().any(|&(u, v)| (u == 0 && v == 2) || (u == 2 && v == 0))
+            edges
+                .iter()
+                .any(|&(u, v)| (u == 0 && v == 2) || (u == 2 && v == 0))
         });
         assert!(!has_02, "edge (0,2) should be gone after flip");
         let has_13 = tris.iter().any(|t| {
             let edges = [(t[0], t[1]), (t[1], t[2]), (t[2], t[0])];
-            edges.iter().any(|&(u, v)| (u == 1 && v == 3) || (u == 3 && v == 1))
+            edges
+                .iter()
+                .any(|&(u, v)| (u == 1 && v == 3) || (u == 3 && v == 1))
         });
         assert!(has_13, "edge (1,3) should be present after flip");
     }

@@ -317,8 +317,10 @@ mod tests {
         let base = Tensor10D::default();
         let mut perturbed = base;
         perturbed.alpha += 0.25;
-        assert!(base.full_distance(&perturbed) > 1e-6,
-            "v=0: changing α must change distance (axis-complete)");
+        assert!(
+            base.full_distance(&perturbed) > 1e-6,
+            "v=0: changing α must change distance (axis-complete)"
+        );
     }
 
     #[test]
@@ -326,8 +328,10 @@ mod tests {
         let base = Tensor10D::default();
         let mut perturbed = base;
         perturbed.mu += 0.25;
-        assert!(base.full_distance(&perturbed) > 1e-6,
-            "v=0: changing μ must change distance (axis-complete)");
+        assert!(
+            base.full_distance(&perturbed) > 1e-6,
+            "v=0: changing μ must change distance (axis-complete)"
+        );
     }
 
     #[test]
@@ -335,8 +339,10 @@ mod tests {
         let base = Tensor10D::default();
         let mut perturbed = base;
         perturbed.sigma += 0.25;
-        assert!(base.full_distance(&perturbed) > 1e-6,
-            "v=0: changing σ must change distance (axis-complete)");
+        assert!(
+            base.full_distance(&perturbed) > 1e-6,
+            "v=0: changing σ must change distance (axis-complete)"
+        );
     }
 
     #[test]
@@ -344,8 +350,10 @@ mod tests {
         let base = Tensor10D::default();
         let mut perturbed = base;
         perturbed.t += 0.25;
-        assert!(base.full_distance(&perturbed) > 1e-6,
-            "v=0: changing t must change distance (axis-complete)");
+        assert!(
+            base.full_distance(&perturbed) > 1e-6,
+            "v=0: changing t must change distance (axis-complete)"
+        );
     }
 
     #[test]
@@ -354,8 +362,10 @@ mod tests {
         base.v = 1.0;
         let mut perturbed = base;
         perturbed.alpha += 0.25;
-        assert!(base.full_distance(&perturbed) < 1e-6,
-            "v=1: changing α must NOT change distance (documented limit)");
+        assert!(
+            base.full_distance(&perturbed) < 1e-6,
+            "v=1: changing α must NOT change distance (documented limit)"
+        );
     }
 
     #[test]
@@ -364,8 +374,10 @@ mod tests {
         base.v = 1.0;
         let mut perturbed = base;
         perturbed.sigma += 0.25;
-        assert!(base.full_distance(&perturbed) < 1e-6,
-            "v=1: changing σ must NOT change distance (documented limit)");
+        assert!(
+            base.full_distance(&perturbed) < 1e-6,
+            "v=1: changing σ must NOT change distance (documented limit)"
+        );
     }
 
     #[test]
@@ -376,8 +388,12 @@ mod tests {
         perturbed.t += 0.25;
         let d_base = base.full_distance(&base);
         let d_perturbed = base.full_distance(&perturbed);
-        assert!((d_perturbed - d_base).abs() < 1e-6,
-            "v=2: changing t must NOT change distance (documented limit): {} vs {}", d_base, d_perturbed);
+        assert!(
+            (d_perturbed - d_base).abs() < 1e-6,
+            "v=2: changing t must NOT change distance (documented limit): {} vs {}",
+            d_base,
+            d_perturbed
+        );
     }
 
     #[test]
@@ -386,8 +402,10 @@ mod tests {
         base.v = 3.0;
         let mut perturbed = base;
         perturbed.alpha += 0.25;
-        assert!(base.full_distance(&perturbed) < 1e-6,
-            "v>=3: changing α must NOT change distance (documented limit)");
+        assert!(
+            base.full_distance(&perturbed) < 1e-6,
+            "v>=3: changing α must NOT change distance (documented limit)"
+        );
     }
 
     #[test]
@@ -395,8 +413,10 @@ mod tests {
         let base = Tensor10D::default();
         let mut perturbed = base;
         perturbed.q += 0.25;
-        assert!(base.full_distance(&perturbed) < 1e-6,
-            "v=0: q is a SELECTOR, must NOT change distance");
+        assert!(
+            base.full_distance(&perturbed) < 1e-6,
+            "v=0: q is a SELECTOR, must NOT change distance"
+        );
     }
 
     #[test]
@@ -404,7 +424,9 @@ mod tests {
         let base = Tensor10D::default();
         let mut perturbed = base;
         perturbed.w += 0.25;
-        assert!(base.full_distance(&perturbed) < 1e-6,
-            "v=0: w is a SELECTOR, must NOT change distance");
+        assert!(
+            base.full_distance(&perturbed) < 1e-6,
+            "v=0: w is a SELECTOR, must NOT change distance"
+        );
     }
 }

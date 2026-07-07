@@ -58,12 +58,12 @@ pub struct Q42VolumeHeader {
     pub assertion_timestamp: u64, // ms since Unix epoch when volume was last written
     pub dag_root_offset: u64,  // offset into file of DagNode store; 0 = absent
     pub dag_root_length: u64,  // byte length of DagNode store section
-    
+
     // Governance / Identity Bifurcation
     pub natural_person_did_offset: u64, // Offset to human-reality declarative/consent DAG
     pub software_agent_did_offset: u64, // Offset to agent-reality logic/policy DAG
-    
-    pub _reserved: [u8; 80],   // remaining reserved (88 named + 72 v3 ext + 16 gov + 80 = 256 bytes)
+
+    pub _reserved: [u8; 80], // remaining reserved (88 named + 72 v3 ext + 16 gov + 80 = 256 bytes)
 }
 
 const _: () = assert!(
@@ -722,7 +722,7 @@ pub fn bidx_blocks_for_hash(bidx: &[u8], object_hash: u64) -> Vec<usize> {
 mod tests {
     use super::*;
     use crate::mini_parser::hash_token;
-        use tempfile::NamedTempFile;
+    use tempfile::NamedTempFile;
 
     fn sample_quin(subj: &str, pred: &str, obj: &str) -> (NQuin, HashMap<u64, String>) {
         let mut lex = HashMap::new();

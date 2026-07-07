@@ -280,11 +280,7 @@ impl<'a> SparqlWebSocketHandler<'a> {
     /// `generate_60bit_token`) so the same query re-subscribed by the same
     /// client yields a stable id. The query and client_id are stored in the
     /// subscriptions map for later notification.
-    pub fn subscribe(
-        &mut self,
-        client_id: &str,
-        query: &str,
-    ) -> Result<String, String> {
+    pub fn subscribe(&mut self, client_id: &str, query: &str) -> Result<String, String> {
         let token = crate::lexicon::generate_60bit_token(query.as_bytes());
         let subscription_id = format!("sub-{}-{}", client_id, token);
         let subscription = Subscription::new(
@@ -292,7 +288,8 @@ impl<'a> SparqlWebSocketHandler<'a> {
             client_id.to_string(),
             query.to_string(),
         );
-        self.subscriptions.insert(subscription_id.clone(), subscription);
+        self.subscriptions
+            .insert(subscription_id.clone(), subscription);
         Ok(subscription_id)
     }
 
@@ -346,9 +343,7 @@ impl<'a> SparqlWebSocketHandler<'a> {
 
         // Serialize results as JSON bytes.
         let vars = match &sparql_query {
-            SparqlQuery::Select(select) => {
-                select.variables[..select.var_count as usize].to_vec()
-            }
+            SparqlQuery::Select(select) => select.variables[..select.var_count as usize].to_vec(),
             _ => vec![],
         };
         let mut output = Vec::new();
@@ -561,8 +556,7 @@ mod tests {
         // Notify both.
         let notifications = handler.notify_subscribers("{\"type\":\"update\"}");
         assert_eq!(notifications.len(), 2);
-        let client_ids: Vec<&str> =
-            notifications.iter().map(|(c, _)| c.as_str()).collect();
+        let client_ids: Vec<&str> = notifications.iter().map(|(c, _)| c.as_str()).collect();
         assert!(client_ids.contains(&"client-1"));
         assert!(client_ids.contains(&"client-2"));
         for (_, msg) in &notifications {

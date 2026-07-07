@@ -17,7 +17,12 @@ use qualia_core_db::wgsl_forge::calibration::{ArtifactKind, Provenance};
 use serial_test::serial;
 
 /// A tiny but real dictionary (learned from deterministic synthetic data), layer-0 K only.
-fn tiny_dicts() -> (usize, usize, Vec<Option<KvDictionary>>, Vec<Option<KvDictionary>>) {
+fn tiny_dicts() -> (
+    usize,
+    usize,
+    Vec<Option<KvDictionary>>,
+    Vec<Option<KvDictionary>>,
+) {
     let dim = 8usize;
     let n_atoms = 4usize;
     let k = 2usize;
@@ -59,14 +64,23 @@ fn write_temp(name: &str, bytes: &[u8]) -> std::path::PathBuf {
 fn loads_certified_installs_and_reconstructs() {
     rt::disable();
     rt::clear();
-    let p = write_temp("kvdict_ok.q42art", &framed(true, ArtifactKind::KvDictionary));
+    let p = write_temp(
+        "kvdict_ok.q42art",
+        &framed(true, ArtifactKind::KvDictionary),
+    );
 
     let info = rt::load_certified(&p).expect("a certified KvDictionary artifact must load");
-    assert!(rt::is_enabled(), "loading a certified artifact installs + enables it");
+    assert!(
+        rt::is_enabled(),
+        "loading a certified artifact installs + enables it"
+    );
     assert_eq!(info.k_layers, 1);
     assert_eq!(info.v_layers, 0);
     assert_eq!(info.head_dim, 8);
-    assert!((info.delta_ppl - 0.005).abs() < 1e-9, "gate ΔPPL surfaced from provenance");
+    assert!(
+        (info.delta_ppl - 0.005).abs() < 1e-9,
+        "gate ΔPPL surfaced from provenance"
+    );
 
     // Layer-0 K has a dictionary → reconstruct runs (lossy; must not panic on a valid head vector).
     let mut kproj = vec![1.0f32, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
@@ -76,7 +90,10 @@ fn loads_certified_installs_and_reconstructs() {
     let mut vproj = vec![2.0f32; 8];
     let snap = vproj.clone();
     rt::reconstruct_kv(0, false, &mut vproj, 1, 8);
-    assert_eq!(vproj, snap, "a stream/layer with no dictionary must be passthrough");
+    assert_eq!(
+        vproj, snap,
+        "a stream/layer with no dictionary must be passthrough"
+    );
 
     rt::disable();
     rt::clear();
@@ -89,14 +106,23 @@ fn fail_closed_refuses_uncertified_wrong_kind_and_garbage() {
     rt::disable();
     rt::clear();
 
-    let p1 = write_temp("kvdict_failed.q42art", &framed(false, ArtifactKind::KvDictionary));
+    let p1 = write_temp(
+        "kvdict_failed.q42art",
+        &framed(false, ArtifactKind::KvDictionary),
+    );
     assert!(
         rt::load_certified(&p1).is_err(),
         "an artifact that did NOT pass its ΔPPL gate must be refused"
     );
-    assert!(!rt::is_enabled(), "a refused artifact must not be installed");
+    assert!(
+        !rt::is_enabled(),
+        "a refused artifact must not be installed"
+    );
 
-    let p2 = write_temp("kvdict_wrongkind.q42art", &framed(true, ArtifactKind::AwqScales));
+    let p2 = write_temp(
+        "kvdict_wrongkind.q42art",
+        &framed(true, ArtifactKind::AwqScales),
+    );
     assert!(
         rt::load_certified(&p2).is_err(),
         "a non-KvDictionary artifact must be refused"
@@ -108,7 +134,10 @@ fn fail_closed_refuses_uncertified_wrong_kind_and_garbage() {
         "a bad frame magic must be refused"
     );
 
-    assert!(!rt::is_enabled(), "no refused artifact left the runtime enabled");
+    assert!(
+        !rt::is_enabled(),
+        "no refused artifact left the runtime enabled"
+    );
     for p in [p1, p2, p3] {
         let _ = std::fs::remove_file(&p);
     }

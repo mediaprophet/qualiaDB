@@ -119,7 +119,8 @@ impl AdapterConstraints {
                 }
                 IntrinsicClass::RayTracing if !self.supports_rt_cores => {
                     return Err(ForgeError::InvalidSchedule(
-                        "kernel requires ray-query (RT cores) unavailable on this adapter".to_string(),
+                        "kernel requires ray-query (RT cores) unavailable on this adapter"
+                            .to_string(),
                     ));
                 }
                 _ => {}
@@ -192,8 +193,8 @@ impl ScheduleSpace {
                     // Prune non-warp-aligned workgroups (plan §6): a partial warp
                     // wastes lanes. Generation is unaffected — this only narrows
                     // the tuning search.
-                    let warp_aligned = constraints.warp_size <= 1
-                        || workgroup_size % constraints.warp_size == 0;
+                    let warp_aligned =
+                        constraints.warp_size <= 1 || workgroup_size % constraints.warp_size == 0;
                     if warp_aligned && schedule.validate(kernel, constraints).is_ok() {
                         candidates.push(schedule);
                     }
@@ -246,7 +247,9 @@ mod tests {
         };
         // Guard the precondition: the schedule itself is invalid.
         let kernel = BuiltinKernel::AffineF32.spec();
-        assert!(invalid.validate(&kernel, &AdapterConstraints::portable()).is_err());
+        assert!(invalid
+            .validate(&kernel, &AdapterConstraints::portable())
+            .is_err());
 
         let result = generate_builtin(BuiltinKernel::AffineF32, invalid, TargetBackend::Wgsl);
         // It must be the schedule-validation error, not an emission error — proving
@@ -292,7 +295,9 @@ mod tests {
         };
 
         // Generation/schedule validity is hardware-agnostic and must succeed.
-        assert!(Schedule::default().validate(&kernel, &AdapterConstraints::portable()).is_ok());
+        assert!(Schedule::default()
+            .validate(&kernel, &AdapterConstraints::portable())
+            .is_ok());
 
         // The hardware-vs-kernel check prunes it when RT cores are absent...
         let without = AdapterConstraints::portable();

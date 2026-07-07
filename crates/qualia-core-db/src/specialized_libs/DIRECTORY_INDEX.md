@@ -1,241 +1,47 @@
 ---
 created: 2026-06-30
-updated: 2026-06-30
-update_scope: Comprehensive
+updated: 2026-07-07
+update_scope: Focused
 ---
 
 # specialized_libs Index
 
-## Functionality Overview
-Comprehensive index of functionality for `specialized_libs`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+Specialized scientific, mathematical, financial, and coordination libraries.
 
-## File & Subdirectory Manifest
-### Subdirectories
-- 📁 `[chemistry_modeling](chemistry_modeling/DIRECTORY_INDEX.md)`
-- 📁 `[cryptographic_library](cryptographic_library/DIRECTORY_INDEX.md)`
-- 📁 `[engineering_analysis](engineering_analysis/DIRECTORY_INDEX.md)`
-- 📁 `[financial_modeling](financial_modeling/DIRECTORY_INDEX.md)`
-- 📁 `[linear_algebra](linear_algebra/DIRECTORY_INDEX.md)`
-- 📁 `[medical_computing](medical_computing/DIRECTORY_INDEX.md)`
-- 📁 `[qpu_bridge](qpu_bridge/DIRECTORY_INDEX.md)`
-- 📁 `[quantum_biology](quantum_biology/DIRECTORY_INDEX.md)`
-- 📁 `[shared](shared/DIRECTORY_INDEX.md)`
+## Subdirectories
 
-### Files & Exported Functionality
-- 📄 `constructibility.rs`
-  - `fn is_power_of_two`
-  - `fn constructible_from_min_poly_degree`
-  - `fn is_prime`
-  - `fn is_fermat_prime`
-  - `fn is_regular_polygon_constructible`
-  - `fn is_central_angle_constructible`
-  - `fn doubling_the_cube_constructible`
-  - `fn trisecting_general_angle_constructible`
-  - `fn squaring_the_circle_constructible`
-  - `enum ConstructibilityVerdict`
-  - `fn sqrt_count`
-  - `fn invalidity`
-  - `fn is_constructible_number`
-  - `fn power_of_two`
-  - `fn fermat_primes_are_the_known_five`
-  - *(...and 6 more)*
-- 📄 `linear_algebra.rs`
-  - `fn test_linear_algebra_library_creation`
-  - `fn test_matrix_creation`
-  - `fn test_matrix_multiplication`
-  - `fn test_matrix_transpose`
-  - `fn test_matrix_inverse`
-  - `fn test_solve_linear_system`
-  - `fn test_solve_quadratic_two_real`
-  - `fn test_solve_quadratic_double_and_complex_and_linear`
-  - `fn test_polynomial_roots_general`
-  - `fn test_polynomial_roots_complex_quartic`
-  - `fn test_determinant`
-  - `fn test_eigen_symmetric`
-  - `fn test_eigen_symmetric_rejects_asymmetric`
-  - `fn test_lu_decompose_reconstructs_and_dets`
-  - `fn test_eigenvalues_general`
-  - *(...and 27 more)*
-- 📄 `machine_learning.rs`
-  - `struct MachineLearningLibrary`
-  - `struct ModelManager`
-  - `struct ModelStorage`
-  - `struct ModelZone`
-  - `enum ModelZoneType`
-  - `struct ModelMetadata`
-  - `enum ModelType`
-  - `enum MLFramework`
-  - `struct ModelArchitecture`
-  - `struct LayerInfo`
-  - `enum LayerType`
-  - `enum ActivationFunction`
-  - `struct LayerConnection`
-  - `enum ConnectionType`
-  - `struct ModelParameters`
-  - *(...and 312 more)*
-- 📄 `mod.rs`
-- 📄 `multivar_calculus.rs`
-  - `fn partial`
-  - `fn gradient`
-  - `fn jacobian`
-  - `fn hessian`
-  - `fn gradient_at`
-  - `fn hessian_at`
-  - `fn env`
-  - `fn gradient_of_a_quadratic_form`
-  - `fn hessian_of_a_quadratic_is_constant`
-  - `fn jacobian_shape_and_values`
-  - `fn gradient_at_evaluates_numerically`
-- 📄 `physics_simulation.rs`
-  - `struct PhysicsSimulationLibrary`
-  - `struct PhysicsPerformanceMetrics`
-  - `struct SimulationEngine`
-  - `struct SimulationConfig`
-  - `impl SimulationConfig`
-  - `fn default`
-  - `enum SimulationType`
-  - `enum DomainType`
-  - `struct SpatialResolution`
-  - `enum NumericalMethod`
-  - `struct ParallelConfig`
-  - `enum DomainDecomposition`
-  - `enum LoadBalancing`
-  - `enum CommunicationPattern`
-  - `struct TimeIntegrator`
-  - *(...and 247 more)*
-- 📄 `polynomial_algebra.rs`
-  - `struct Polynomial`
-  - `impl Polynomial`
-  - `fn new`
-  - `fn zero`
-  - `fn constant`
-  - `fn coeffs`
-  - `fn is_zero`
-  - `fn degree`
-  - `fn leading`
-  - `fn trim`
-  - `fn eval`
-  - `fn add`
-  - `fn sub`
-  - `fn scale`
-  - `fn mul`
-  - *(...and 18 more)*
-- 📄 `qpu_bridge.rs.bak`
-- 📄 `statistical_computing.rs`
-  - `struct StatisticalComputingLibrary`
-  - `struct StatisticalDataStorage`
-  - `struct StatisticalZone`
-  - `enum StatisticalZoneType`
-  - `struct DatasetMetadata`
-  - `enum DatasetType`
-  - `struct DatasetDimensions`
-  - `enum DataType`
-  - `enum PrivacyLevel`
-  - `enum AccessPattern`
-  - `struct DataCatalog`
-  - `struct Relationship`
-  - `enum RelationshipType`
-  - `struct SearchIndex`
-  - `struct IndexEntry`
-  - *(...and 178 more)*
-- 📄 `symbolic_algebra.rs`
-  - `enum Expr`
-  - `fn c`
-  - `fn var`
-  - `fn add`
-  - `fn sub`
-  - `fn mul`
-  - `fn div`
-  - `fn pow`
-  - `fn neg`
-  - `fn sqrt`
-  - `fn exp`
-  - `fn ln`
-  - `fn sin`
-  - `fn cos`
-  - `fn tan`
-  - *(...and 44 more)*
-- 📄 `symbolic_assumptions.rs`
-  - `enum Sign`
-  - `struct Assumptions`
-  - `impl Assumptions`
-  - `fn new`
-  - `fn assume`
-  - `fn var_sign`
-  - `fn is_nonnegative`
-  - `fn is_positive`
-  - `fn is_nonpositive`
-  - `fn is_negative`
-  - `fn is_nonzero`
-  - `fn simplify_with_assumptions`
-  - `fn rewrite`
-  - `fn sqrt_of_square_uses_sign`
-  - `fn sqrt_square_inverse`
-  - *(...and 2 more)*
-- 📄 `symbolic_integration.rs`
-  - `enum IntegrationError`
-  - `fn is_var`
-  - `fn integrate`
-  - `fn integrate_definite`
-  - `fn eval_at`
-  - `fn roundtrip`
-  - `fn power_rule_roundtrips`
-  - `fn linearity_roundtrips`
-  - `fn definite_integral_ftc_and_numeric`
-  - `fn transcendental_antiderivatives_roundtrip`
-  - `fn fails_closed_on_nonlinear_inner`
-- 📄 `symbolic_limits.rs`
-  - `fn eval_at`
-  - `fn limit`
-  - `fn limit_at_infinity`
-  - `fn lhopital_on_zero_over_zero`
-  - `fn direct_substitution_when_defined`
-  - `fn divergent_fails_closed`
-  - `fn rational_limit_at_infinity`
-- 📄 `symbolic_ode.rs`
-  - `enum OdeError`
-  - `impl From`
-  - `fn from`
-  - `enum OdeSolution`
-  - `fn solve_separable`
-  - `fn solve_linear_first_order`
-  - `fn solve_linear_second_order`
-  - `enum PdeSolution`
-  - `enum PdeClass`
-  - `fn solve_first_order_linear_pde`
-  - `fn classify_second_order_pde`
-  - `fn env`
-  - `fn separable_growth`
-  - `fn separable_fails_closed`
-  - `fn linear_first_order_satisfies_the_ode`
-  - *(...and 7 more)*
-- 📄 `symbolic_series.rs`
-  - `fn taylor_coefficients`
-  - `fn taylor_eval`
-  - `fn series_of_polynomial_is_exact`
-  - `fn series_of_sqrt_about_one`
-  - `fn singularity_fails_closed`
-- 📄 `symbolic_solve.rs`
-  - `enum SolveError`
-  - `fn roots`
-  - `fn real_roots`
-  - `fn solve_linear_system`
-  - `fn solve_polynomial_expr`
-  - `fn close`
-  - `fn quadratic_and_cubic_real_roots`
-  - `fn complex_roots_filtered_out`
-  - `fn linear_system_solves`
-  - `fn roots_from_a_cas_expression`
-- 📄 `symbolic_trig.rs`
-  - `fn simplify_trig`
-  - `fn as_scaled_square`
-  - `fn pythagorean`
-  - `fn rewrite`
-  - `fn val`
-  - `fn pythagorean_identity_collapses`
-  - `fn pythagorean_in_a_larger_sum`
-  - `fn one_minus_square`
-  - `fn parity_and_quotient`
+- `chemistry_modeling/`
+- `computational_economics/` - capability/status matrix and categorical
+  composition helpers for economics, finance, statistics, accounting, and safe
+  interface work.
+- `cryptographic_library/`
+- `engineering_analysis/`
+- `financial_modeling/`
+- `linear_algebra/`
+- `medical_computing/`
+- `qpu_bridge/`
+- `quantum_biology/`
+- `shared/`
+
+## Files
+
+- `mod.rs` - module registration barrel.
+- `constructibility.rs`
+- `linear_algebra.rs`
+- `machine_learning.rs`
+- `multivar_calculus.rs`
+- `physics_simulation.rs`
+- `polynomial_algebra.rs`
+- `statistical_computing.rs`
+- `symbolic_algebra.rs`
+- Symbolic math helpers: `symbolic_assumptions.rs`, `symbolic_integration.rs`,
+  `symbolic_limits.rs`, `symbolic_ode.rs`, `symbolic_series.rs`,
+  `symbolic_solve.rs`, `symbolic_trig.rs`.
 
 ## Changelog
-- **2026-06-30**: Automated full index generation, extracting code definitions.
+
+- **2026-07-07**: Added `computational_economics/` as the coordination layer for
+  comprehensive economics/finance/statistics build-out.
+- **2026-07-01**: Replaced the privacy metadata stub with real BFV homomorphic
+  arithmetic and calibrated differential privacy; split the module by concern.
+- **2026-06-30**: Automated full index generation.

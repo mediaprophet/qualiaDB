@@ -242,7 +242,10 @@ mod tests {
         // A 1000-token budget admits spend up to the 110% ceiling (1100); past it is usurious.
         assert_eq!(usury_ceiling(1000, USURY_OVERAGE_PERCENT_DEFAULT), 1100);
         assert!(check_usury(1000, 1000, USURY_OVERAGE_PERCENT_DEFAULT).is_ok());
-        assert!(check_usury(1100, 1000, USURY_OVERAGE_PERCENT_DEFAULT).is_ok(), "exactly at ceiling is permitted");
+        assert!(
+            check_usury(1100, 1000, USURY_OVERAGE_PERCENT_DEFAULT).is_ok(),
+            "exactly at ceiling is permitted"
+        );
         assert!(!is_usurious(1100, 1000, USURY_OVERAGE_PERCENT_DEFAULT));
         let err = check_usury(1101, 1000, USURY_OVERAGE_PERCENT_DEFAULT).unwrap_err();
         assert_eq!(err.ceiling, 1100);

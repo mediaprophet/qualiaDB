@@ -80,12 +80,20 @@ pub enum CMapError {
     /// the permutation is malformed (not a finite cycle).
     Beta1NotPermutation { dart: u32 },
     /// `β₂(β₂(d)) != d` — the twin link is not an involution.
-    Beta2NotInvolution { dart: u32, beta2: u32, beta2_beta2: u32 },
+    Beta2NotInvolution {
+        dart: u32,
+        beta2: u32,
+        beta2_beta2: u32,
+    },
     /// Two darts in the same β₁-cycle carry different `face` fields.
     FaceInconsistent { dart: u32, face_a: u32, face_b: u32 },
     /// The origin connectivity invariant failed:
     /// `origin(d) != origin(β₁(β₂(d)))` for an interior dart.
-    OriginInconsistent { dart: u32, expected: u32, found: u32 },
+    OriginInconsistent {
+        dart: u32,
+        expected: u32,
+        found: u32,
+    },
 }
 
 // ---------------------------------------------------------------------------
@@ -287,10 +295,7 @@ mod tests {
 
     /// Build a half-edge graph from triangles and return the edge slice.
     /// Uses `vec!` for test setup only (allowed by project rules).
-    fn build_he(
-        vertex_count: u32,
-        triangles: &[[u32; 3]],
-    ) -> Vec<HalfEdge> {
+    fn build_he(vertex_count: u32, triangles: &[[u32; 3]]) -> Vec<HalfEdge> {
         let n = triangles.len() * 3;
         let mut edges = vec![HalfEdge::default(); n];
         let mut slots = vec![EdgeSlot::default(); required_edge_slots(triangles.len())];
@@ -330,10 +335,7 @@ mod tests {
 
     fn tetrahedron() -> Vec<HalfEdge> {
         // Closed mesh: 4 triangles, every edge has a twin.
-        build_he(
-            4,
-            &[[0, 1, 2], [0, 2, 3], [0, 3, 1], [1, 3, 2]],
-        )
+        build_he(4, &[[0, 1, 2], [0, 2, 3], [0, 3, 1], [1, 3, 2]])
     }
 
     fn boundary_mesh() -> Vec<HalfEdge> {
@@ -435,10 +437,7 @@ mod tests {
 
         // Find an interior dart (one with a twin) and corrupt its twin partner
         // so that β₂(β₂(d)) != d.
-        let d_idx = darts
-            .iter()
-            .position(|d| d.beta2 != INVALID_INDEX)
-            .unwrap() as u32;
+        let d_idx = darts.iter().position(|d| d.beta2 != INVALID_INDEX).unwrap() as u32;
         let partner = darts[d_idx as usize].beta2;
         // Point the partner's beta2 somewhere else (still in range, but not d_idx).
         let wrong = if partner == 0 { 1 } else { 0 };
@@ -548,10 +547,7 @@ mod tests {
 
         // Find an interior dart and change its origin so the connectivity
         // invariant origin(d) == origin(beta1(beta2(d))) breaks.
-        let d_idx = darts
-            .iter()
-            .position(|d| d.beta2 != INVALID_INDEX)
-            .unwrap();
+        let d_idx = darts.iter().position(|d| d.beta2 != INVALID_INDEX).unwrap();
         let twin = darts[d_idx].beta2;
         let after_twin = darts[twin as usize].beta1;
         let correct_origin = darts[after_twin as usize].origin;

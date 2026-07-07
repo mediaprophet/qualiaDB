@@ -71,12 +71,19 @@ pub enum ReconSectionError {
 impl core::fmt::Display for ReconSectionError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::PayloadTooShort { got, need } => write!(f, "recon: payload too short, {got} < {need}"),
+            Self::PayloadTooShort { got, need } => {
+                write!(f, "recon: payload too short, {got} < {need}")
+            }
             Self::MagicMismatch { got } => write!(f, "recon: magic mismatch, got {:?}", got),
             Self::UnsupportedVersion { got } => write!(f, "recon: unsupported version {got}"),
             Self::UnknownType { got } => write!(f, "recon: unknown type {got}"),
-            Self::SizeMismatch { expected, got } => write!(f, "recon: size mismatch, expected {expected}, got {got}"),
-            Self::CrcMismatch { expected, got } => write!(f, "recon: CRC mismatch, expected {expected:#x}, got {got:#x}"),
+            Self::SizeMismatch { expected, got } => {
+                write!(f, "recon: size mismatch, expected {expected}, got {got}")
+            }
+            Self::CrcMismatch { expected, got } => write!(
+                f,
+                "recon: CRC mismatch, expected {expected:#x}, got {got:#x}"
+            ),
         }
     }
 }
@@ -121,13 +128,13 @@ pub fn encode_recon_section(
     extra_data: &[u8],
     out: &mut [u8],
 ) -> Result<usize, ReconSectionError> {
-    let needed = RECON_HEADER_SIZE
-        + vertices.len() * 24
-        + triangles.len() * 12
-        + extra_data.len()
-        + 4;
+    let needed =
+        RECON_HEADER_SIZE + vertices.len() * 24 + triangles.len() * 12 + extra_data.len() + 4;
     if out.len() < needed {
-        return Err(ReconSectionError::PayloadTooShort { got: out.len(), need: needed });
+        return Err(ReconSectionError::PayloadTooShort {
+            got: out.len(),
+            need: needed,
+        });
     }
 
     let mut offset = 0usize;
@@ -246,19 +253,28 @@ pub fn decode_recon_section(bytes: &[u8]) -> Result<DecodedRecon, ReconSectionEr
 
     // Vertex count.
     let vert_count = u32::from_le_bytes([
-        bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3],
+        bytes[offset],
+        bytes[offset + 1],
+        bytes[offset + 2],
+        bytes[offset + 3],
     ]) as usize;
     offset += 4;
 
     // Triangle count.
     let tri_count = u32::from_le_bytes([
-        bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3],
+        bytes[offset],
+        bytes[offset + 1],
+        bytes[offset + 2],
+        bytes[offset + 3],
     ]) as usize;
     offset += 4;
 
     // Extra data length.
     let extra_len = u32::from_le_bytes([
-        bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3],
+        bytes[offset],
+        bytes[offset + 1],
+        bytes[offset + 2],
+        bytes[offset + 3],
     ]) as usize;
     offset += 4;
 
@@ -274,7 +290,10 @@ pub fn decode_recon_section(bytes: &[u8]) -> Result<DecodedRecon, ReconSectionEr
     // CRC-32C verification.
     let data_end = bytes.len() - 4;
     let stored_crc = u32::from_le_bytes([
-        bytes[data_end], bytes[data_end + 1], bytes[data_end + 2], bytes[data_end + 3],
+        bytes[data_end],
+        bytes[data_end + 1],
+        bytes[data_end + 2],
+        bytes[data_end + 3],
     ]);
     let computed_crc = crc32c(&bytes[..data_end]);
     if stored_crc != computed_crc {
@@ -288,18 +307,36 @@ pub fn decode_recon_section(bytes: &[u8]) -> Result<DecodedRecon, ReconSectionEr
     let mut vertices = Vec::with_capacity(vert_count);
     for _ in 0..vert_count {
         let x = f64::from_le_bytes([
-            bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3],
-            bytes[offset + 4], bytes[offset + 5], bytes[offset + 6], bytes[offset + 7],
+            bytes[offset],
+            bytes[offset + 1],
+            bytes[offset + 2],
+            bytes[offset + 3],
+            bytes[offset + 4],
+            bytes[offset + 5],
+            bytes[offset + 6],
+            bytes[offset + 7],
         ]);
         offset += 8;
         let y = f64::from_le_bytes([
-            bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3],
-            bytes[offset + 4], bytes[offset + 5], bytes[offset + 6], bytes[offset + 7],
+            bytes[offset],
+            bytes[offset + 1],
+            bytes[offset + 2],
+            bytes[offset + 3],
+            bytes[offset + 4],
+            bytes[offset + 5],
+            bytes[offset + 6],
+            bytes[offset + 7],
         ]);
         offset += 8;
         let z = f64::from_le_bytes([
-            bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3],
-            bytes[offset + 4], bytes[offset + 5], bytes[offset + 6], bytes[offset + 7],
+            bytes[offset],
+            bytes[offset + 1],
+            bytes[offset + 2],
+            bytes[offset + 3],
+            bytes[offset + 4],
+            bytes[offset + 5],
+            bytes[offset + 6],
+            bytes[offset + 7],
         ]);
         offset += 8;
         vertices.push(Point3::new(x, y, z));
@@ -309,15 +346,24 @@ pub fn decode_recon_section(bytes: &[u8]) -> Result<DecodedRecon, ReconSectionEr
     let mut triangles = Vec::with_capacity(tri_count);
     for _ in 0..tri_count {
         let a = u32::from_le_bytes([
-            bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3],
+            bytes[offset],
+            bytes[offset + 1],
+            bytes[offset + 2],
+            bytes[offset + 3],
         ]);
         offset += 4;
         let b = u32::from_le_bytes([
-            bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3],
+            bytes[offset],
+            bytes[offset + 1],
+            bytes[offset + 2],
+            bytes[offset + 3],
         ]);
         offset += 4;
         let c = u32::from_le_bytes([
-            bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3],
+            bytes[offset],
+            bytes[offset + 1],
+            bytes[offset + 2],
+            bytes[offset + 3],
         ]);
         offset += 4;
         triangles.push([a, b, c]);
@@ -374,9 +420,9 @@ mod tests {
         let needed = RECON_HEADER_SIZE + verts.len() * 24 + tris.len() * 12 + 4;
         let mut buf = vec![0u8; needed];
 
-        let written = encode_recon_section(
-            RECON_TYPE_ISOSURFACE, 0x0001, &verts, &tris, &[], &mut buf,
-        ).unwrap();
+        let written =
+            encode_recon_section(RECON_TYPE_ISOSURFACE, 0x0001, &verts, &tris, &[], &mut buf)
+                .unwrap();
         assert_eq!(written, needed);
 
         let decoded = decode_recon_section(&buf).unwrap();
@@ -395,8 +441,14 @@ mod tests {
         let mut buf = vec![0u8; needed];
 
         encode_recon_section(
-            RECON_TYPE_ALPHA_SHAPE_3D, 0, &verts, &tris, &extra, &mut buf,
-        ).unwrap();
+            RECON_TYPE_ALPHA_SHAPE_3D,
+            0,
+            &verts,
+            &tris,
+            &extra,
+            &mut buf,
+        )
+        .unwrap();
 
         let decoded = decode_recon_section(&buf).unwrap();
         assert_eq!(decoded.recon_type, RECON_TYPE_ALPHA_SHAPE_3D);
@@ -410,8 +462,10 @@ mod tests {
         let mut buf1 = vec![0u8; needed];
         let mut buf2 = vec![0u8; needed];
 
-        let w1 = encode_recon_section(RECON_TYPE_ISOSURFACE, 0, &verts, &tris, &[], &mut buf1).unwrap();
-        let w2 = encode_recon_section(RECON_TYPE_ISOSURFACE, 0, &verts, &tris, &[], &mut buf2).unwrap();
+        let w1 =
+            encode_recon_section(RECON_TYPE_ISOSURFACE, 0, &verts, &tris, &[], &mut buf1).unwrap();
+        let w2 =
+            encode_recon_section(RECON_TYPE_ISOSURFACE, 0, &verts, &tris, &[], &mut buf2).unwrap();
 
         assert_eq!(w1, w2);
         assert_eq!(buf1, buf2);

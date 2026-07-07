@@ -166,8 +166,12 @@ fn heat_flux(temps: &[f64], k: f64, h: f64) -> Vec<f64> {
 pub fn analyze_conduction(
     model: &EngineeringModel,
     analysis_type: AnalysisType,
-    _physics_simulation: Option<Arc<Mutex<crate::specialized_libs::physics_simulation::PhysicsSimulationLibrary>>>,
-    _statistical_computing: Option<Arc<Mutex<crate::specialized_libs::statistical_computing::StatisticalComputingLibrary>>>,
+    _physics_simulation: Option<
+        Arc<Mutex<crate::specialized_libs::physics_simulation::PhysicsSimulationLibrary>>,
+    >,
+    _statistical_computing: Option<
+        Arc<Mutex<crate::specialized_libs::statistical_computing::StatisticalComputingLibrary>>,
+    >,
 ) -> Result<AnalysisResults, EngineeringError> {
     // Thermal conductivity from the (first) material.
     let material = model.materials.values().next().ok_or_else(|| {

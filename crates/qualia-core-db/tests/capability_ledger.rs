@@ -72,7 +72,10 @@ fn check_ternary() -> (Verdict, String) {
     let mut out = [0.0f32; 2];
     ternary_gemm_cpu(&act, &packed, 2.0, 3, 2, 1, 0, 0, &mut out);
     if (out[0] + 2.0).abs() < 1e-6 && (out[1] - 10.0).abs() < 1e-6 {
-        (Verdict::Real, format!("scale·Σtrit·act = {out:?} == [-2, 10] ✓"))
+        (
+            Verdict::Real,
+            format!("scale·Σtrit·act = {out:?} == [-2, 10] ✓"),
+        )
     } else {
         (Verdict::Stub, format!("expected [-2, 10], got {out:?}"))
     }
@@ -163,7 +166,10 @@ fn check_linalg_matrix4() -> (Verdict, String) {
     } else {
         (
             Verdict::Stub,
-            format!("Matrix4×4 wrong: det={det} (exp 120), (A·A)[1][1]={} (exp 9)", m2.get(1, 1)),
+            format!(
+                "Matrix4×4 wrong: det={det} (exp 120), (A·A)[1][1]={} (exp 9)",
+                m2.get(1, 1)
+            ),
         )
     }
 }
@@ -196,12 +202,42 @@ fn capability_ledger() {
     type Check = fn() -> (Verdict, String);
     // (category, capability, the claim being checked, runner)
     let checks: &[(&str, &str, &str, Check)] = &[
-        ("Algebra/CAS", "symbolic differentiation", "d/dx via Expr → correct derivative", check_cas_diff),
-        ("Algebra/CAS", "symbolic MATRIX algebra", "matrix/tensor symbolic simplification", check_cas_matrix),
-        ("Linear algebra", "Matrix4×4 multiply/determinant", "dense 4×4 ops", check_linalg_matrix4),
-        ("Linear algebra", "general N×N eigen / SVD / tensor", "FixedLanczosEigensolver et al.", check_eigen_svd),
-        ("Logic/temporal", "LTL trace evaluation", "real temporal operators over a trace", check_ltl),
-        ("Quantization", "ternary BitNet GEMM", "scale·Σ trit·act", check_ternary),
+        (
+            "Algebra/CAS",
+            "symbolic differentiation",
+            "d/dx via Expr → correct derivative",
+            check_cas_diff,
+        ),
+        (
+            "Algebra/CAS",
+            "symbolic MATRIX algebra",
+            "matrix/tensor symbolic simplification",
+            check_cas_matrix,
+        ),
+        (
+            "Linear algebra",
+            "Matrix4×4 multiply/determinant",
+            "dense 4×4 ops",
+            check_linalg_matrix4,
+        ),
+        (
+            "Linear algebra",
+            "general N×N eigen / SVD / tensor",
+            "FixedLanczosEigensolver et al.",
+            check_eigen_svd,
+        ),
+        (
+            "Logic/temporal",
+            "LTL trace evaluation",
+            "real temporal operators over a trace",
+            check_ltl,
+        ),
+        (
+            "Quantization",
+            "ternary BitNet GEMM",
+            "scale·Σ trit·act",
+            check_ternary,
+        ),
     ];
 
     let mut rows: Vec<(&str, &str, Verdict, String)> = Vec::new();
@@ -238,8 +274,12 @@ fn capability_ledger() {
     // Markdown artifact (gitignored .dev-docs — the human-facing ground-truth map).
     let mut md = String::new();
     md.push_str("# Qualia Capability Ledger (auto-generated)\n\n");
-    md.push_str("Known-answer verification of *claimed* engine capabilities. `REAL` = produced the\n");
-    md.push_str("correct answer to an independently-computed problem (not \"returned Ok\"). Regenerate:\n");
+    md.push_str(
+        "Known-answer verification of *claimed* engine capabilities. `REAL` = produced the\n",
+    );
+    md.push_str(
+        "correct answer to an independently-computed problem (not \"returned Ok\"). Regenerate:\n",
+    );
     md.push_str("`cargo test -p qualia-core-db --test capability_ledger -- --nocapture`.\n\n");
     md.push_str("| Category | Capability | Verdict | Evidence |\n|---|---|---|---|\n");
     for (cat, name, v, ev) in &rows {
@@ -254,7 +294,9 @@ fn capability_ledger() {
         count(Verdict::Present),
         rows.len()
     ));
-    md.push_str("\n_v1 slice. Coverage grows incrementally; v2 adds soundness probes for the documented\n");
+    md.push_str(
+        "\n_v1 slice. Coverage grows incrementally; v2 adds soundness probes for the documented\n",
+    );
     md.push_str("fakes (zk commitment-vs-proof, logic.rs threshold-vs-LTL, n3 router-vs-evaluator) + deontic/SHACL._\n");
     let path = ledger_md_path();
     if let Err(e) = std::fs::write(&path, &md) {
@@ -265,12 +307,24 @@ fn capability_ledger() {
 
     // Regression guard: capabilities already verified REAL must not silently rot to STUB.
     // (PARTIAL/ABSENT/PRESENT are honest states, not failures.)
-    let must_be_real = ["ternary BitNet GEMM", "LTL trace evaluation", "symbolic differentiation"];
+    let must_be_real = [
+        "ternary BitNet GEMM",
+        "LTL trace evaluation",
+        "symbolic differentiation",
+    ];
     for (_, name, v, ev) in &rows {
         if must_be_real.contains(name) {
-            assert_ne!(*v, Verdict::Stub, "REGRESSION: '{name}' verified REAL before, now STUB: {ev}");
+            assert_ne!(
+                *v,
+                Verdict::Stub,
+                "REGRESSION: '{name}' verified REAL before, now STUB: {ev}"
+            );
             assert_eq!(*v, Verdict::Real, "'{name}' must stay REAL ({ev})");
         }
     }
-    assert_eq!(rows.len(), checks.len(), "ledger framework must produce one row per check");
+    assert_eq!(
+        rows.len(),
+        checks.len(),
+        "ledger framework must produce one row per check"
+    );
 }

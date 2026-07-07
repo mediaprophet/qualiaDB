@@ -37,9 +37,7 @@
 //! caching them across calls is a further, independent step.
 
 use super::{broadcast, elementwise, gather_dequant, reduce, slice, stencil};
-use crate::wgsl_forge::execute::{
-    BindingUsage, BufferView, GraphPass, WgpuComputeContext,
-};
+use crate::wgsl_forge::execute::{BindingUsage, BufferView, GraphPass, WgpuComputeContext};
 use crate::wgsl_forge::ir::graph::{ComputeGraph, DType, EwKind, GraphNode, NodeId, OpNode};
 use crate::wgsl_forge::ir::BuiltinKernel;
 use crate::wgsl_forge::{ForgeError, Schedule};
@@ -88,7 +86,9 @@ pub fn execute_graph_cpu(
                     )))
                 }
             },
-            OpNode::MatMul { m, n, k, trans_b, .. } => {
+            OpNode::MatMul {
+                m, n, k, trans_b, ..
+            } => {
                 if trans_b {
                     // C[m,n] = A[m,k] · Bᵀ, B stored [n,k] row-major (native [out,in] weight layout).
                     let (mm, nn, kk) = (m as usize, n as usize, k as usize);
@@ -105,7 +105,9 @@ pub fn execute_graph_cpu(
                     }
                     c
                 } else {
-                    crate::wgsl_forge::oracle::gemm_cpu(&ins[0], &ins[1], m as usize, k as usize, n as usize)
+                    crate::wgsl_forge::oracle::gemm_cpu(
+                        &ins[0], &ins[1], m as usize, k as usize, n as usize,
+                    )
                 }
             }
             OpNode::GatherDequant { scheme, .. } => {
@@ -121,7 +123,12 @@ pub fn execute_graph_cpu(
             OpNode::Slice { offset, len } => {
                 slice::slice_cpu(&ins[0], offset as usize, len as usize)
             }
-            OpNode::Rope { head_dim, pos, mode, base_bits } => {
+            OpNode::Rope {
+                head_dim,
+                pos,
+                mode,
+                base_bits,
+            } => {
                 let rope_mode = if mode == 0 {
                     stencil::RopeMode::Interleaved
                 } else {
@@ -165,10 +172,7 @@ fn final_output<T: Clone>(graph: &ComputeGraph, node_out: &[T]) -> Result<T, For
 /// runs many graphs — e.g. one decode block per generated token — should instead hold a
 /// [`ForgeGraphExecutor`] and call [`ForgeGraphExecutor::run`] per step, so device/slab
 /// creation is paid once rather than per call (the throughput pass, plan §8.1).
-pub fn execute_graph(
-    graph: &ComputeGraph,
-    externals: &[Vec<f32>],
-) -> Result<Vec<f32>, ForgeError> {
+pub fn execute_graph(graph: &ComputeGraph, externals: &[Vec<f32>]) -> Result<Vec<f32>, ForgeError> {
     ForgeGraphExecutor::new()?.run(graph, externals)
 }
 
@@ -382,9 +386,18 @@ impl ResidentWeights {
 }
 
 /// Allocate a zeroed `n`-element f32 output buffer at `binding` (read_write slab).
-fn alloc_out(ctx: &mut WgpuComputeContext, n: usize, binding: u32) -> Result<BufferView, ForgeError> {
+fn alloc_out(
+    ctx: &mut WgpuComputeContext,
+    n: usize,
+    binding: u32,
+) -> Result<BufferView, ForgeError> {
     let zeros = vec![0.0f32; n.max(1)];
-    ctx.allocate_and_write(bytemuck::cast_slice(&zeros), binding, 0, BindingUsage::StorageReadWrite)
+    ctx.allocate_and_write(
+        bytemuck::cast_slice(&zeros),
+        binding,
+        0,
+        BindingUsage::StorageReadWrite,
+    )
 }
 
 /// Allocate a `u32` params buffer at `binding` with the given `usage`.
@@ -426,7 +439,12 @@ fn record_kernel(
     // (`out` read_write slab → `read_copy` read slab) is recorded into the shared encoder by
     // `submit_graph`, so it is ordered after this node's pass and before any consumer.
     let read_copy = ctx.allocate_transient(out.length_bytes, 0, 0, BindingUsage::StorageRead)?;
-    let pass = GraphPass { pipeline, bind_group, workgroups, copy: Some((out, read_copy)) };
+    let pass = GraphPass {
+        pipeline,
+        bind_group,
+        workgroups,
+        copy: Some((out, read_copy)),
+    };
     Ok((pass, read_copy))
 }
 
@@ -446,9 +464,20 @@ fn prepare_node(
             let out = alloc_out(ctx, 1, 1)?;
             let params = alloc_params(ctx, &[n as u32, 0, 0, 0], 2, BindingUsage::StorageRead)?;
             let src = reduce::reduce_wgsl(op, WG);
-            let sched = Schedule { workgroup_size: WG, ..Default::default() };
+            let sched = Schedule {
+                workgroup_size: WG,
+                ..Default::default()
+            };
             // element_count == WG → one workgroup (the reduce is single-workgroup).
-            record_kernel(ctx, &src, reduce::REDUCE_ENTRY, &[at(ins[0], 0), out, params], out, sched, WG as usize)
+            record_kernel(
+                ctx,
+                &src,
+                reduce::REDUCE_ENTRY,
+                &[at(ins[0], 0), out, params],
+                out,
+                sched,
+                WG as usize,
+            )
         }
         OpNode::Broadcast { .. } => {
             const WG: u32 = 64;
@@ -462,8 +491,19 @@ fn prepare_node(
                 BindingUsage::StorageRead,
             )?;
             let src = broadcast::broadcast_wgsl(WG);
-            let sched = Schedule { workgroup_size: WG, ..Default::default() };
-            record_kernel(ctx, &src, broadcast::BROADCAST_ENTRY, &[at(ins[0], 0), out, params], out, sched, out_len)
+            let sched = Schedule {
+                workgroup_size: WG,
+                ..Default::default()
+            };
+            record_kernel(
+                ctx,
+                &src,
+                broadcast::BROADCAST_ENTRY,
+                &[at(ins[0], 0), out, params],
+                out,
+                sched,
+                out_len,
+            )
         }
         OpNode::Elementwise { f } => prepare_elementwise(ctx, f, node.n_in, ins),
         OpNode::GatherDequant { scheme, .. } => {
@@ -481,7 +521,10 @@ fn prepare_node(
             let params =
                 alloc_params(ctx, &[rows, cols, k_words, 0], 3, BindingUsage::StorageRead)?;
             let src = gather_dequant::gather_dequant_ternary_wgsl(WG);
-            let sched = Schedule { workgroup_size: WG, ..Default::default() };
+            let sched = Schedule {
+                workgroup_size: WG,
+                ..Default::default()
+            };
             // packed (0), scale (1), output (2, read_write), params (3).
             record_kernel(
                 ctx,
@@ -493,7 +536,13 @@ fn prepare_node(
                 out_elems,
             )
         }
-        OpNode::MatMul { m, n, k, tc, trans_b } => {
+        OpNode::MatMul {
+            m,
+            n,
+            k,
+            tc,
+            trans_b,
+        } => {
             // `trans_b` consumes B as `[n,k]` row-major (the native GGUF/p64 weight layout
             // `[out,in]`), computing `C[m,n] = A[m,k] · Bᵀ` with no transpose copy — this is what
             // lets the forge feed on p64 projection weights directly. `tc=true` requests tensor
@@ -521,11 +570,27 @@ fn prepare_node(
             let out = alloc_out(ctx, out_len, 1)?;
             let params = alloc_params(ctx, &[len, offset, 0, 0], 2, BindingUsage::StorageRead)?;
             let src = slice::slice_wgsl(WG);
-            let sched = Schedule { workgroup_size: WG, ..Default::default() };
+            let sched = Schedule {
+                workgroup_size: WG,
+                ..Default::default()
+            };
             // input (0), output (1, read_write), params (2).
-            record_kernel(ctx, &src, slice::SLICE_ENTRY, &[at(ins[0], 0), out, params], out, sched, out_len)
+            record_kernel(
+                ctx,
+                &src,
+                slice::SLICE_ENTRY,
+                &[at(ins[0], 0), out, params],
+                out,
+                sched,
+                out_len,
+            )
         }
-        OpNode::Rope { head_dim, pos, mode, base_bits } => {
+        OpNode::Rope {
+            head_dim,
+            pos,
+            mode,
+            base_bits,
+        } => {
             const WG: u32 = 64;
             let n = elems(&ins[0]);
             let out = alloc_out(ctx, n, 1)?;
@@ -538,8 +603,19 @@ fn prepare_node(
                 BindingUsage::StorageRead,
             )?;
             let src = stencil::rope_wgsl(WG)?;
-            let sched = Schedule { workgroup_size: WG, ..Default::default() };
-            record_kernel(ctx, &src, stencil::STENCIL_ENTRY, &[at(ins[0], 0), out, params], out, sched, n)
+            let sched = Schedule {
+                workgroup_size: WG,
+                ..Default::default()
+            };
+            record_kernel(
+                ctx,
+                &src,
+                stencil::STENCIL_ENTRY,
+                &[at(ins[0], 0), out, params],
+                out,
+                sched,
+                n,
+            )
         }
         other => Err(ForgeError::Emission(format!(
             "executor: op {other:?} not supported"
@@ -563,7 +639,10 @@ fn prepare_matmul_plain(
     // GEMM params is a 16-byte UNIFORM block [m, n, k, _pad].
     let params = alloc_params(ctx, &[m, n, k, 0], 3, BindingUsage::Uniform)?;
     let spec = BuiltinKernel::Gemm.spec();
-    let sched = Schedule { workgroup_size: WG, ..Default::default() };
+    let sched = Schedule {
+        workgroup_size: WG,
+        ..Default::default()
+    };
     let module = crate::wgsl_forge::emit::emit_wgsl(&spec, sched)?;
     record_kernel(
         ctx,
@@ -617,7 +696,10 @@ fn prepare_matmul_trans_b(
     let out = alloc_out(ctx, out_elems, 2)?;
     let dims = alloc_params(ctx, &[m, n, k, 0], 3, BindingUsage::StorageRead)?;
     let src = gemm_trans_b_wgsl(WG);
-    let sched = Schedule { workgroup_size: WG, ..Default::default() };
+    let sched = Schedule {
+        workgroup_size: WG,
+        ..Default::default()
+    };
     record_kernel(
         ctx,
         &src,
@@ -650,7 +732,10 @@ fn prepare_matmul_coopmat(
     let dims = alloc_params(ctx, &[m, n, k, 0], 3, BindingUsage::StorageRead)?;
     let src = matmul_tc_wgsl_tiled();
     let num_tiles = ((m / 8) * (n / 8)) as usize;
-    let sched = Schedule { workgroup_size: 32, ..Default::default() };
+    let sched = Schedule {
+        workgroup_size: 32,
+        ..Default::default()
+    };
     record_kernel(
         ctx,
         &src,
@@ -671,12 +756,23 @@ fn prepare_elementwise(
     const WG: u32 = 64;
     let n = elems(&ins[0]);
     let src = elementwise::elementwise_wgsl(f, WG)?;
-    let sched = Schedule { workgroup_size: WG, ..Default::default() };
+    let sched = Schedule {
+        workgroup_size: WG,
+        ..Default::default()
+    };
     match n_in {
         1 => {
             let out = alloc_out(ctx, n, 1)?;
             let params = alloc_params(ctx, &[n as u32, 0, 0, 0], 2, BindingUsage::StorageRead)?;
-            record_kernel(ctx, &src, elementwise::EWISE_ENTRY, &[at(ins[0], 0), out, params], out, sched, n)
+            record_kernel(
+                ctx,
+                &src,
+                elementwise::EWISE_ENTRY,
+                &[at(ins[0], 0), out, params],
+                out,
+                sched,
+                n,
+            )
         }
         2 => {
             let out = alloc_out(ctx, n, 2)?;
@@ -721,13 +817,61 @@ pub fn softmax_graph(n: u32) -> Result<ComputeGraph, ForgeError> {
     let s = Schedule::default();
     let (sh_n, sh_1) = (Shape::new(&[n]), Shape::new(&[1]));
     let x = TensorRef::input(0, sh_n, DType::F32);
-    let mx = g.push(OpNode::Reduce { op: RedKind::Max, axis: Axis::Last }, &[x], sh_1, DType::F32, s)?;
-    let mxb = g.push(OpNode::Broadcast { shape: sh_n }, &[mx], sh_n, DType::F32, s)?;
-    let shifted = g.push(OpNode::Elementwise { f: EwKind::Sub }, &[x, mxb], sh_n, DType::F32, s)?;
-    let e = g.push(OpNode::Elementwise { f: EwKind::Exp }, &[shifted], sh_n, DType::F32, s)?;
-    let sm = g.push(OpNode::Reduce { op: RedKind::Sum, axis: Axis::Last }, &[e], sh_1, DType::F32, s)?;
-    let smb = g.push(OpNode::Broadcast { shape: sh_n }, &[sm], sh_n, DType::F32, s)?;
-    let out = g.push(OpNode::Elementwise { f: EwKind::Div }, &[e, smb], sh_n, DType::F32, s)?;
+    let mx = g.push(
+        OpNode::Reduce {
+            op: RedKind::Max,
+            axis: Axis::Last,
+        },
+        &[x],
+        sh_1,
+        DType::F32,
+        s,
+    )?;
+    let mxb = g.push(
+        OpNode::Broadcast { shape: sh_n },
+        &[mx],
+        sh_n,
+        DType::F32,
+        s,
+    )?;
+    let shifted = g.push(
+        OpNode::Elementwise { f: EwKind::Sub },
+        &[x, mxb],
+        sh_n,
+        DType::F32,
+        s,
+    )?;
+    let e = g.push(
+        OpNode::Elementwise { f: EwKind::Exp },
+        &[shifted],
+        sh_n,
+        DType::F32,
+        s,
+    )?;
+    let sm = g.push(
+        OpNode::Reduce {
+            op: RedKind::Sum,
+            axis: Axis::Last,
+        },
+        &[e],
+        sh_1,
+        DType::F32,
+        s,
+    )?;
+    let smb = g.push(
+        OpNode::Broadcast { shape: sh_n },
+        &[sm],
+        sh_n,
+        DType::F32,
+        s,
+    )?;
+    let out = g.push(
+        OpNode::Elementwise { f: EwKind::Div },
+        &[e, smb],
+        sh_n,
+        DType::F32,
+        s,
+    )?;
     g.mark_output(out);
     Ok(g)
 }
@@ -740,11 +884,40 @@ pub fn rmsnorm_graph(n: u32) -> Result<ComputeGraph, ForgeError> {
     let s = Schedule::default();
     let (sh_n, sh_1) = (Shape::new(&[n]), Shape::new(&[1]));
     let x = TensorRef::input(0, sh_n, DType::F32);
-    let sq = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[x, x], sh_n, DType::F32, s)?;
-    let ms = g.push(OpNode::Reduce { op: RedKind::Mean, axis: Axis::Last }, &[sq], sh_1, DType::F32, s)?;
-    let r = g.push(OpNode::Elementwise { f: EwKind::RecipSqrt }, &[ms], sh_1, DType::F32, s)?;
+    let sq = g.push(
+        OpNode::Elementwise { f: EwKind::Mul },
+        &[x, x],
+        sh_n,
+        DType::F32,
+        s,
+    )?;
+    let ms = g.push(
+        OpNode::Reduce {
+            op: RedKind::Mean,
+            axis: Axis::Last,
+        },
+        &[sq],
+        sh_1,
+        DType::F32,
+        s,
+    )?;
+    let r = g.push(
+        OpNode::Elementwise {
+            f: EwKind::RecipSqrt,
+        },
+        &[ms],
+        sh_1,
+        DType::F32,
+        s,
+    )?;
     let rb = g.push(OpNode::Broadcast { shape: sh_n }, &[r], sh_n, DType::F32, s)?;
-    let out = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[x, rb], sh_n, DType::F32, s)?;
+    let out = g.push(
+        OpNode::Elementwise { f: EwKind::Mul },
+        &[x, rb],
+        sh_n,
+        DType::F32,
+        s,
+    )?;
     g.mark_output(out);
     Ok(g)
 }
@@ -765,11 +938,29 @@ pub fn swiglu_ffn_graph(seq: u32, dim: u32, ffn: u32) -> Result<ComputeGraph, Fo
     let wg = TensorRef::input(1, sh_w, DType::F32);
     let wu = TensorRef::input(2, sh_w, DType::F32);
     let wd = TensorRef::input(3, sh_wd, DType::F32);
-    let mm = |m, n, k| OpNode::MatMul { m, n, k, tc: false, trans_b: false };
+    let mm = |m, n, k| OpNode::MatMul {
+        m,
+        n,
+        k,
+        tc: false,
+        trans_b: false,
+    };
     let gate = g.push(mm(seq, ffn, dim), &[x, wg], sh_h, DType::F32, s)?;
     let up = g.push(mm(seq, ffn, dim), &[x, wu], sh_h, DType::F32, s)?;
-    let sg = g.push(OpNode::Elementwise { f: EwKind::Silu }, &[gate], sh_h, DType::F32, s)?;
-    let h = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[sg, up], sh_h, DType::F32, s)?;
+    let sg = g.push(
+        OpNode::Elementwise { f: EwKind::Silu },
+        &[gate],
+        sh_h,
+        DType::F32,
+        s,
+    )?;
+    let h = g.push(
+        OpNode::Elementwise { f: EwKind::Mul },
+        &[sg, up],
+        sh_h,
+        DType::F32,
+        s,
+    )?;
     let out = g.push(mm(seq, dim, ffn), &[h, wd], sh_o, DType::F32, s)?;
     g.mark_output(out);
     Ok(g)
@@ -793,12 +984,53 @@ fn push_rmsnorm(
     sh_1: Shape,
     s: Schedule,
 ) -> Result<TensorRef, ForgeError> {
-    let sq = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[x, x], sh_row, DType::F32, s)?;
-    let ms = g.push(OpNode::Reduce { op: RedKind::Mean, axis: Axis::Last }, &[sq], sh_1, DType::F32, s)?;
-    let ms_eps = g.push(OpNode::Elementwise { f: EwKind::Add }, &[ms, eps_ref], sh_1, DType::F32, s)?;
-    let r = g.push(OpNode::Elementwise { f: EwKind::RecipSqrt }, &[ms_eps], sh_1, DType::F32, s)?;
-    let rb = g.push(OpNode::Broadcast { shape: sh_row }, &[r], sh_row, DType::F32, s)?;
-    g.push(OpNode::Elementwise { f: EwKind::Mul }, &[x, rb], sh_row, DType::F32, s)
+    let sq = g.push(
+        OpNode::Elementwise { f: EwKind::Mul },
+        &[x, x],
+        sh_row,
+        DType::F32,
+        s,
+    )?;
+    let ms = g.push(
+        OpNode::Reduce {
+            op: RedKind::Mean,
+            axis: Axis::Last,
+        },
+        &[sq],
+        sh_1,
+        DType::F32,
+        s,
+    )?;
+    let ms_eps = g.push(
+        OpNode::Elementwise { f: EwKind::Add },
+        &[ms, eps_ref],
+        sh_1,
+        DType::F32,
+        s,
+    )?;
+    let r = g.push(
+        OpNode::Elementwise {
+            f: EwKind::RecipSqrt,
+        },
+        &[ms_eps],
+        sh_1,
+        DType::F32,
+        s,
+    )?;
+    let rb = g.push(
+        OpNode::Broadcast { shape: sh_row },
+        &[r],
+        sh_row,
+        DType::F32,
+        s,
+    )?;
+    g.push(
+        OpNode::Elementwise { f: EwKind::Mul },
+        &[x, rb],
+        sh_row,
+        DType::F32,
+        s,
+    )
 }
 
 /// Append numerically-stable softmax of `scores` (a `len`-element vector) to `g`, returning
@@ -810,13 +1042,61 @@ fn push_softmax(
     sh_1: Shape,
     s: Schedule,
 ) -> Result<TensorRef, ForgeError> {
-    let mx = g.push(OpNode::Reduce { op: RedKind::Max, axis: Axis::Last }, &[scores], sh_1, DType::F32, s)?;
-    let mxb = g.push(OpNode::Broadcast { shape: sh_vec }, &[mx], sh_vec, DType::F32, s)?;
-    let shifted = g.push(OpNode::Elementwise { f: EwKind::Sub }, &[scores, mxb], sh_vec, DType::F32, s)?;
-    let e = g.push(OpNode::Elementwise { f: EwKind::Exp }, &[shifted], sh_vec, DType::F32, s)?;
-    let sm = g.push(OpNode::Reduce { op: RedKind::Sum, axis: Axis::Last }, &[e], sh_1, DType::F32, s)?;
-    let smb = g.push(OpNode::Broadcast { shape: sh_vec }, &[sm], sh_vec, DType::F32, s)?;
-    g.push(OpNode::Elementwise { f: EwKind::Div }, &[e, smb], sh_vec, DType::F32, s)
+    let mx = g.push(
+        OpNode::Reduce {
+            op: RedKind::Max,
+            axis: Axis::Last,
+        },
+        &[scores],
+        sh_1,
+        DType::F32,
+        s,
+    )?;
+    let mxb = g.push(
+        OpNode::Broadcast { shape: sh_vec },
+        &[mx],
+        sh_vec,
+        DType::F32,
+        s,
+    )?;
+    let shifted = g.push(
+        OpNode::Elementwise { f: EwKind::Sub },
+        &[scores, mxb],
+        sh_vec,
+        DType::F32,
+        s,
+    )?;
+    let e = g.push(
+        OpNode::Elementwise { f: EwKind::Exp },
+        &[shifted],
+        sh_vec,
+        DType::F32,
+        s,
+    )?;
+    let sm = g.push(
+        OpNode::Reduce {
+            op: RedKind::Sum,
+            axis: Axis::Last,
+        },
+        &[e],
+        sh_1,
+        DType::F32,
+        s,
+    )?;
+    let smb = g.push(
+        OpNode::Broadcast { shape: sh_vec },
+        &[sm],
+        sh_vec,
+        DType::F32,
+        s,
+    )?;
+    g.push(
+        OpNode::Elementwise { f: EwKind::Div },
+        &[e, smb],
+        sh_vec,
+        DType::F32,
+        s,
+    )
 }
 
 /// Single-token (decode-step) **scaled** dot-product attention as one graph:
@@ -843,11 +1123,29 @@ pub fn attention_graph(d: u32, kv: u32) -> Result<ComputeGraph, ForgeError> {
     let kt = TensorRef::input(1, sh_kt, DType::F32);
     let v = TensorRef::input(2, sh_v, DType::F32);
     let inv_scale = TensorRef::input(3, sh_1, DType::F32);
-    let mm = |m, n, k| OpNode::MatMul { m, n, k, tc: false, trans_b: false };
+    let mm = |m, n, k| OpNode::MatMul {
+        m,
+        n,
+        k,
+        tc: false,
+        trans_b: false,
+    };
     // scores = Q[1,d] · Kᵀ[d,kv] = [1,kv], scaled by 1/√d before softmax.
     let scores = g.push(mm(1, kv, d), &[q, kt], sh_scores, DType::F32, s)?;
-    let inv_bc = g.push(OpNode::Broadcast { shape: sh_scores }, &[inv_scale], sh_scores, DType::F32, s)?;
-    let scaled = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[scores, inv_bc], sh_scores, DType::F32, s)?;
+    let inv_bc = g.push(
+        OpNode::Broadcast { shape: sh_scores },
+        &[inv_scale],
+        sh_scores,
+        DType::F32,
+        s,
+    )?;
+    let scaled = g.push(
+        OpNode::Elementwise { f: EwKind::Mul },
+        &[scores, inv_bc],
+        sh_scores,
+        DType::F32,
+        s,
+    )?;
     let probs = push_softmax(&mut g, scaled, sh_scores, sh_1, s)?;
     // out = probs[1,kv] · V[kv,d] = [1,d]
     let out = g.push(mm(1, d, kv), &[probs, v], sh_o, DType::F32, s)?;
@@ -878,7 +1176,13 @@ pub fn decode_block_graph(d: u32, kv: u32, ffn: u32) -> Result<ComputeGraph, For
     let sh_w = Shape::new(&[d, ffn]);
     let sh_wd = Shape::new(&[ffn, d]);
     let sh_h = Shape::new(&[1, ffn]);
-    let mm = |m, n, k| OpNode::MatMul { m, n, k, tc: false, trans_b: false };
+    let mm = |m, n, k| OpNode::MatMul {
+        m,
+        n,
+        k,
+        tc: false,
+        trans_b: false,
+    };
 
     let x = TensorRef::input(0, sh_row, DType::F32);
     let kt = TensorRef::input(1, sh_kt, DType::F32);
@@ -892,20 +1196,56 @@ pub fn decode_block_graph(d: u32, kv: u32, ffn: u32) -> Result<ComputeGraph, For
     // ── Attention sub-block over RMSNorm(x), residual back to x ──
     let n1 = push_rmsnorm(&mut g, x, eps, sh_row, sh_1, s)?;
     let scores = g.push(mm(1, kv, d), &[n1, kt], sh_scores, DType::F32, s)?;
-    let inv_bc = g.push(OpNode::Broadcast { shape: sh_scores }, &[inv_scale], sh_scores, DType::F32, s)?;
-    let scaled = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[scores, inv_bc], sh_scores, DType::F32, s)?;
+    let inv_bc = g.push(
+        OpNode::Broadcast { shape: sh_scores },
+        &[inv_scale],
+        sh_scores,
+        DType::F32,
+        s,
+    )?;
+    let scaled = g.push(
+        OpNode::Elementwise { f: EwKind::Mul },
+        &[scores, inv_bc],
+        sh_scores,
+        DType::F32,
+        s,
+    )?;
     let probs = push_softmax(&mut g, scaled, sh_scores, sh_1, s)?;
     let attn = g.push(mm(1, d, kv), &[probs, v], sh_row, DType::F32, s)?;
-    let res1 = g.push(OpNode::Elementwise { f: EwKind::Add }, &[x, attn], sh_row, DType::F32, s)?;
+    let res1 = g.push(
+        OpNode::Elementwise { f: EwKind::Add },
+        &[x, attn],
+        sh_row,
+        DType::F32,
+        s,
+    )?;
 
     // ── SwiGLU-FFN sub-block over RMSNorm(res1), residual back to res1 ──
     let n2 = push_rmsnorm(&mut g, res1, eps, sh_row, sh_1, s)?;
     let gate = g.push(mm(1, ffn, d), &[n2, wg], sh_h, DType::F32, s)?;
     let up = g.push(mm(1, ffn, d), &[n2, wu], sh_h, DType::F32, s)?;
-    let sg = g.push(OpNode::Elementwise { f: EwKind::Silu }, &[gate], sh_h, DType::F32, s)?;
-    let h = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[sg, up], sh_h, DType::F32, s)?;
+    let sg = g.push(
+        OpNode::Elementwise { f: EwKind::Silu },
+        &[gate],
+        sh_h,
+        DType::F32,
+        s,
+    )?;
+    let h = g.push(
+        OpNode::Elementwise { f: EwKind::Mul },
+        &[sg, up],
+        sh_h,
+        DType::F32,
+        s,
+    )?;
     let ffn_out = g.push(mm(1, d, ffn), &[h, wd], sh_row, DType::F32, s)?;
-    let out = g.push(OpNode::Elementwise { f: EwKind::Add }, &[res1, ffn_out], sh_row, DType::F32, s)?;
+    let out = g.push(
+        OpNode::Elementwise { f: EwKind::Add },
+        &[res1, ffn_out],
+        sh_row,
+        DType::F32,
+        s,
+    )?;
     g.mark_output(out);
     Ok(g)
 }
@@ -951,7 +1291,13 @@ pub fn decode_layer_graph(
     let sh_hd = Shape::new(&[1, head_dim]);
     let sh_seq = Shape::new(&[1, seq]);
     let sh_ffn = Shape::new(&[1, ffn]);
-    let mm = |m, n, k| OpNode::MatMul { m, n, k, tc: false, trans_b: false };
+    let mm = |m, n, k| OpNode::MatMul {
+        m,
+        n,
+        k,
+        tc: false,
+        trans_b: false,
+    };
 
     let x = TensorRef::input(0, sh_d, DType::F32);
     let kt = TensorRef::input(1, Shape::new(&[n_kv_heads * head_dim * seq]), DType::F32);
@@ -968,10 +1314,21 @@ pub fn decode_layer_graph(
 
     // Attention: RMSNorm·w(x) → Q-proj → RoPE(q) → per-head GQA attention → residual.
     let n1 = push_rmsnorm(&mut g, x, eps, sh_d, sh_1, s)?;
-    let n1 = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[n1, attn_norm], sh_d, DType::F32, s)?;
+    let n1 = g.push(
+        OpNode::Elementwise { f: EwKind::Mul },
+        &[n1, attn_norm],
+        sh_d,
+        DType::F32,
+        s,
+    )?;
     let q = g.push(mm(1, d, d), &[n1, wq], sh_d, DType::F32, s)?;
     let q = g.push(
-        OpNode::Rope { head_dim, pos, mode: rope_mode, base_bits },
+        OpNode::Rope {
+            head_dim,
+            pos,
+            mode: rope_mode,
+            base_bits,
+        },
         &[q],
         sh_d,
         DType::F32,
@@ -982,21 +1339,30 @@ pub fn decode_layer_graph(
     for h in 0..n_heads {
         let kh = h / group; // GQA: query head h reads kv-head kh.
         let q_h = g.push(
-            OpNode::Slice { offset: h * head_dim, len: head_dim },
+            OpNode::Slice {
+                offset: h * head_dim,
+                len: head_dim,
+            },
             &[q],
             sh_hd,
             DType::F32,
             s,
         )?;
         let kt_h = g.push(
-            OpNode::Slice { offset: kh * head_dim * seq, len: head_dim * seq },
+            OpNode::Slice {
+                offset: kh * head_dim * seq,
+                len: head_dim * seq,
+            },
             &[kt],
             Shape::new(&[head_dim, seq]),
             DType::F32,
             s,
         )?;
         let v_h = g.push(
-            OpNode::Slice { offset: kh * seq * head_dim, len: seq * head_dim },
+            OpNode::Slice {
+                offset: kh * seq * head_dim,
+                len: seq * head_dim,
+            },
             &[v],
             Shape::new(&[seq, head_dim]),
             DType::F32,
@@ -1004,13 +1370,28 @@ pub fn decode_layer_graph(
         )?;
         // scores = q_h · Kᵀ_h [1,seq]; scaled by 1/√head_dim; softmax; · V_h → o_h [1,head_dim].
         let scores = g.push(mm(1, seq, head_dim), &[q_h, kt_h], sh_seq, DType::F32, s)?;
-        let inv_bc = g.push(OpNode::Broadcast { shape: sh_seq }, &[inv_scale], sh_seq, DType::F32, s)?;
-        let scaled = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[scores, inv_bc], sh_seq, DType::F32, s)?;
+        let inv_bc = g.push(
+            OpNode::Broadcast { shape: sh_seq },
+            &[inv_scale],
+            sh_seq,
+            DType::F32,
+            s,
+        )?;
+        let scaled = g.push(
+            OpNode::Elementwise { f: EwKind::Mul },
+            &[scores, inv_bc],
+            sh_seq,
+            DType::F32,
+            s,
+        )?;
         let probs = push_softmax(&mut g, scaled, sh_seq, sh_1, s)?;
         let o_h = g.push(mm(1, head_dim, seq), &[probs, v_h], sh_hd, DType::F32, s)?;
         // Output projection, per head: o_h · Wo[h·head_dim : (h+1)·head_dim, :] → [1,d]; summed.
         let wo_h = g.push(
-            OpNode::Slice { offset: h * head_dim * d, len: head_dim * d },
+            OpNode::Slice {
+                offset: h * head_dim * d,
+                len: head_dim * d,
+            },
             &[wo],
             Shape::new(&[head_dim, d]),
             DType::F32,
@@ -1021,19 +1402,55 @@ pub fn decode_layer_graph(
     }
     let mut attn = head_parts[0];
     for &part in &head_parts[1..] {
-        attn = g.push(OpNode::Elementwise { f: EwKind::Add }, &[attn, part], sh_d, DType::F32, s)?;
+        attn = g.push(
+            OpNode::Elementwise { f: EwKind::Add },
+            &[attn, part],
+            sh_d,
+            DType::F32,
+            s,
+        )?;
     }
-    let res1 = g.push(OpNode::Elementwise { f: EwKind::Add }, &[x, attn], sh_d, DType::F32, s)?;
+    let res1 = g.push(
+        OpNode::Elementwise { f: EwKind::Add },
+        &[x, attn],
+        sh_d,
+        DType::F32,
+        s,
+    )?;
 
     // SwiGLU-FFN over RMSNorm·w(res1), residual.
     let n2 = push_rmsnorm(&mut g, res1, eps, sh_d, sh_1, s)?;
-    let n2 = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[n2, ffn_norm], sh_d, DType::F32, s)?;
+    let n2 = g.push(
+        OpNode::Elementwise { f: EwKind::Mul },
+        &[n2, ffn_norm],
+        sh_d,
+        DType::F32,
+        s,
+    )?;
     let gate = g.push(mm(1, ffn, d), &[n2, wg], sh_ffn, DType::F32, s)?;
     let up = g.push(mm(1, ffn, d), &[n2, wu], sh_ffn, DType::F32, s)?;
-    let sg = g.push(OpNode::Elementwise { f: EwKind::Silu }, &[gate], sh_ffn, DType::F32, s)?;
-    let hh = g.push(OpNode::Elementwise { f: EwKind::Mul }, &[sg, up], sh_ffn, DType::F32, s)?;
+    let sg = g.push(
+        OpNode::Elementwise { f: EwKind::Silu },
+        &[gate],
+        sh_ffn,
+        DType::F32,
+        s,
+    )?;
+    let hh = g.push(
+        OpNode::Elementwise { f: EwKind::Mul },
+        &[sg, up],
+        sh_ffn,
+        DType::F32,
+        s,
+    )?;
     let ffn_out = g.push(mm(1, d, ffn), &[hh, wd], sh_d, DType::F32, s)?;
-    let out = g.push(OpNode::Elementwise { f: EwKind::Add }, &[res1, ffn_out], sh_d, DType::F32, s)?;
+    let out = g.push(
+        OpNode::Elementwise { f: EwKind::Add },
+        &[res1, ffn_out],
+        sh_d,
+        DType::F32,
+        s,
+    )?;
     g.mark_output(out);
     Ok(g)
 }
@@ -1057,14 +1474,23 @@ pub fn dequant_matmul_graph(rows: u32, cols: u32) -> Result<ComputeGraph, ForgeE
     let packed = TensorRef::input(1, sh_packed, D::F32);
     let scale = TensorRef::input(2, sh_scale, D::F32);
     let w = g.push(
-        OpNode::GatherDequant { scheme: D::Ternary, block: cols },
+        OpNode::GatherDequant {
+            scheme: D::Ternary,
+            block: cols,
+        },
         &[packed, scale],
         sh_w,
         D::F32,
         s,
     )?;
     let y = g.push(
-        OpNode::MatMul { m: 1, n: cols, k: rows, tc: false, trans_b: false },
+        OpNode::MatMul {
+            m: 1,
+            n: cols,
+            k: rows,
+            tc: false,
+            trans_b: false,
+        },
         &[x, w],
         sh_y,
         D::F32,
@@ -1175,16 +1601,27 @@ mod tests {
             let gpu = execute_graph(&g, &[x.clone()]).expect("rmsnorm gpu");
             let cpu = execute_graph_cpu(&g, &[x]).unwrap();
             for (a, b) in gpu.iter().zip(cpu.iter()) {
-                assert!((a - b).abs() <= 1e-3 * b.abs().max(1.0), "rmsnorm: {a} vs {b}");
+                assert!(
+                    (a - b).abs() <= 1e-3 * b.abs().max(1.0),
+                    "rmsnorm: {a} vs {b}"
+                );
             }
         }
         // SwiGLU-FFN block (the LLM workhorse) — MatMul + Elementwise multi-node DAG.
         {
             let (seq, dim, ffn) = (8u32, 64u32, 128u32);
-            let x: Vec<f32> = (0..seq * dim).map(|i| ((i % 17) as f32) * 0.05 - 0.4).collect();
-            let wg: Vec<f32> = (0..dim * ffn).map(|i| ((i % 13) as f32) * 0.02 - 0.12).collect();
-            let wu: Vec<f32> = (0..dim * ffn).map(|i| ((i % 11) as f32) * 0.015 - 0.07).collect();
-            let wd: Vec<f32> = (0..ffn * dim).map(|i| ((i % 7) as f32) * 0.01 - 0.03).collect();
+            let x: Vec<f32> = (0..seq * dim)
+                .map(|i| ((i % 17) as f32) * 0.05 - 0.4)
+                .collect();
+            let wg: Vec<f32> = (0..dim * ffn)
+                .map(|i| ((i % 13) as f32) * 0.02 - 0.12)
+                .collect();
+            let wu: Vec<f32> = (0..dim * ffn)
+                .map(|i| ((i % 11) as f32) * 0.015 - 0.07)
+                .collect();
+            let wd: Vec<f32> = (0..ffn * dim)
+                .map(|i| ((i % 7) as f32) * 0.01 - 0.03)
+                .collect();
             let g = swiglu_ffn_graph(seq, dim, ffn).unwrap();
             let ext = vec![x, wg, wu, wd];
             let gpu = execute_graph(&g, &ext).expect("ffn gpu");
@@ -1205,8 +1642,8 @@ mod tests {
     #[test]
     #[ignore = "requires a GPU adapter"]
     fn shared_device_executor_matches_cpu_oracle() {
-        let mut exec = ForgeGraphExecutor::on_shared_gpu()
-            .expect("forge executor on shared_gpu device");
+        let mut exec =
+            ForgeGraphExecutor::on_shared_gpu().expect("forge executor on shared_gpu device");
 
         // The forge must report the SAME adapter as the process-wide shared device — i.e. it did
         // not silently spin up a second adapter/device.
@@ -1241,11 +1678,21 @@ mod tests {
             let inv_scale = 1.0f32 / (d as f32).sqrt();
             let eps = 1e-5f32;
             let x: Vec<f32> = (0..d).map(|i| ((i % 17) as f32) * 0.05 - 0.4).collect();
-            let kt: Vec<f32> = (0..d * kv).map(|i| ((i * 5 % 7) as f32) * 0.03 - 0.09).collect();
-            let v: Vec<f32> = (0..kv * d).map(|i| ((i * 3 % 5) as f32) * 0.04 - 0.08).collect();
-            let wg: Vec<f32> = (0..d * ffn).map(|i| ((i % 13) as f32) * 0.02 - 0.12).collect();
-            let wu: Vec<f32> = (0..d * ffn).map(|i| ((i % 11) as f32) * 0.015 - 0.07).collect();
-            let wd: Vec<f32> = (0..ffn * d).map(|i| ((i % 7) as f32) * 0.01 - 0.03).collect();
+            let kt: Vec<f32> = (0..d * kv)
+                .map(|i| ((i * 5 % 7) as f32) * 0.03 - 0.09)
+                .collect();
+            let v: Vec<f32> = (0..kv * d)
+                .map(|i| ((i * 3 % 5) as f32) * 0.04 - 0.08)
+                .collect();
+            let wg: Vec<f32> = (0..d * ffn)
+                .map(|i| ((i % 13) as f32) * 0.02 - 0.12)
+                .collect();
+            let wu: Vec<f32> = (0..d * ffn)
+                .map(|i| ((i % 11) as f32) * 0.015 - 0.07)
+                .collect();
+            let wd: Vec<f32> = (0..ffn * d)
+                .map(|i| ((i % 7) as f32) * 0.01 - 0.03)
+                .collect();
             let ext = vec![x, kt, v, wg, wu, wd, vec![inv_scale], vec![eps]];
             let g = decode_block_graph(d, kv, ffn).unwrap();
             let gpu = exec.run(&g, &ext).expect("decode-block shared-gpu");
@@ -1274,22 +1721,44 @@ mod tests {
         let inv_scale = 1.0f32 / (d as f32).sqrt();
         let eps = 1e-5f32;
         let x: Vec<f32> = (0..d).map(|i| ((i % 17) as f32) * 0.05 - 0.4).collect();
-        let kt: Vec<f32> = (0..d * kv).map(|i| ((i * 5 % 7) as f32) * 0.03 - 0.09).collect();
-        let v: Vec<f32> = (0..kv * d).map(|i| ((i * 3 % 5) as f32) * 0.04 - 0.08).collect();
-        let wg: Vec<f32> = (0..d * ffn).map(|i| ((i % 13) as f32) * 0.02 - 0.12).collect();
-        let wu: Vec<f32> = (0..d * ffn).map(|i| ((i % 11) as f32) * 0.015 - 0.07).collect();
-        let wd: Vec<f32> = (0..ffn * d).map(|i| ((i % 7) as f32) * 0.01 - 0.03).collect();
+        let kt: Vec<f32> = (0..d * kv)
+            .map(|i| ((i * 5 % 7) as f32) * 0.03 - 0.09)
+            .collect();
+        let v: Vec<f32> = (0..kv * d)
+            .map(|i| ((i * 3 % 5) as f32) * 0.04 - 0.08)
+            .collect();
+        let wg: Vec<f32> = (0..d * ffn)
+            .map(|i| ((i % 13) as f32) * 0.02 - 0.12)
+            .collect();
+        let wu: Vec<f32> = (0..d * ffn)
+            .map(|i| ((i % 11) as f32) * 0.015 - 0.07)
+            .collect();
+        let wd: Vec<f32> = (0..ffn * d)
+            .map(|i| ((i % 7) as f32) * 0.01 - 0.03)
+            .collect();
         let g = decode_block_graph(d, kv, ffn).unwrap();
 
         // All-upload externals (the run() baseline) — every tensor provided.
         let full = vec![
-            x.clone(), kt.clone(), v.clone(), wg.clone(), wu.clone(), wd.clone(),
-            vec![inv_scale], vec![eps],
+            x.clone(),
+            kt.clone(),
+            v.clone(),
+            wg.clone(),
+            wu.clone(),
+            wd.clone(),
+            vec![inv_scale],
+            vec![eps],
         ];
         // Resident-activation externals: indices 3,4,5 (Wg,Wu,Wd) are resident → empty placeholders.
         let acts = vec![
-            x.clone(), kt.clone(), v.clone(), vec![], vec![], vec![],
-            vec![inv_scale], vec![eps],
+            x.clone(),
+            kt.clone(),
+            v.clone(),
+            vec![],
+            vec![],
+            vec![],
+            vec![inv_scale],
+            vec![eps],
         ];
 
         let mut exec = ForgeGraphExecutor::new().expect("forge executor");
@@ -1306,13 +1775,18 @@ mod tests {
         // Resident path matches the all-upload path EXACTLY (identical kernels + bytes), and the
         // CPU oracle, on every one of several calls (resident weights persist across runs).
         for call in 0..3 {
-            let res = exec.run_resident(&g, &acts, &resident).expect("run_resident");
+            let res = exec
+                .run_resident(&g, &acts, &resident)
+                .expect("run_resident");
             assert_eq!(res.len(), upload_ref.len());
             for (a, b) in res.iter().zip(upload_ref.iter()) {
                 assert_eq!(a, b, "resident != all-upload on call {call}");
             }
             for (a, b) in res.iter().zip(cpu.iter()) {
-                assert!((a - b).abs() <= 1e-2 * b.abs().max(1.0), "resident != oracle: {a} vs {b}");
+                assert!(
+                    (a - b).abs() <= 1e-2 * b.abs().max(1.0),
+                    "resident != oracle: {a} vs {b}"
+                );
             }
         }
 
@@ -1375,12 +1849,20 @@ mod tests {
         let (d, kv) = (4usize, 6usize);
         let inv_scale = 1.0f32 / (d as f32).sqrt();
         let q: Vec<f32> = (0..d).map(|i| (i as f32) * 0.2 - 0.3).collect();
-        let kt: Vec<f32> = (0..d * kv).map(|i| ((i * 5 % 7) as f32) * 0.1 - 0.25).collect();
-        let v: Vec<f32> = (0..kv * d).map(|i| ((i * 3 % 5) as f32) * 0.15 - 0.2).collect();
+        let kt: Vec<f32> = (0..d * kv)
+            .map(|i| ((i * 5 % 7) as f32) * 0.1 - 0.25)
+            .collect();
+        let v: Vec<f32> = (0..kv * d)
+            .map(|i| ((i * 3 % 5) as f32) * 0.15 - 0.2)
+            .collect();
         let g = attention_graph(d as u32, kv as u32).unwrap();
-        let out = execute_graph_cpu(&g, &[q.clone(), kt.clone(), v.clone(), vec![inv_scale]]).unwrap();
+        let out =
+            execute_graph_cpu(&g, &[q.clone(), kt.clone(), v.clone(), vec![inv_scale]]).unwrap();
         // Reference: scores = (q·Kᵀ)/√d [1,kv]; probs = softmax(scores); out = probs·V [1,d].
-        let scores: Vec<f32> = ref_mm(&q, &kt, 1, d, kv).iter().map(|s| s * inv_scale).collect();
+        let scores: Vec<f32> = ref_mm(&q, &kt, 1, d, kv)
+            .iter()
+            .map(|s| s * inv_scale)
+            .collect();
         let probs = ref_softmax(&scores);
         let want = ref_mm(&probs, &v, 1, kv, d);
         assert_eq!(out.len(), d);
@@ -1400,8 +1882,12 @@ mod tests {
         ffn: u32,
     ) -> Vec<Vec<f32>> {
         let d = (n_heads * head_dim) as usize;
-        let (hd, seqn, ffnn, n_kv) =
-            (head_dim as usize, seq as usize, ffn as usize, n_kv_heads as usize);
+        let (hd, seqn, ffnn, n_kv) = (
+            head_dim as usize,
+            seq as usize,
+            ffn as usize,
+            n_kv_heads as usize,
+        );
         let gen = |len: usize, salt: usize| -> Vec<f32> {
             (0..len)
                 .map(|i| (((i * 7 + salt * 13) % 23) as f32) * 0.05 - 0.55)
@@ -1409,18 +1895,18 @@ mod tests {
         };
         let inv_scale = 1.0f32 / (head_dim as f32).sqrt();
         vec![
-            gen(d, 1),                  // x  [1,d]
-            gen(n_kv * hd * seqn, 2),   // Kt [n_kv, head_dim, seq]
-            gen(n_kv * seqn * hd, 3),   // V  [n_kv, seq, head_dim]
-            gen(d * d, 4),              // Wq [d,d]
-            gen(d * d, 5),              // Wo [d,d]
-            gen(d * ffnn, 6),           // Wg [d,ffn]
-            gen(d * ffnn, 7),           // Wu [d,ffn]
-            gen(ffnn * d, 8),           // Wd [ffn,d]
-            gen(d, 9),                  // attn_norm [d]
-            gen(d, 10),                 // ffn_norm  [d]
-            vec![inv_scale],            // inv_scale
-            vec![1e-5],                 // eps
+            gen(d, 1),                // x  [1,d]
+            gen(n_kv * hd * seqn, 2), // Kt [n_kv, head_dim, seq]
+            gen(n_kv * seqn * hd, 3), // V  [n_kv, seq, head_dim]
+            gen(d * d, 4),            // Wq [d,d]
+            gen(d * d, 5),            // Wo [d,d]
+            gen(d * ffnn, 6),         // Wg [d,ffn]
+            gen(d * ffnn, 7),         // Wu [d,ffn]
+            gen(ffnn * d, 8),         // Wd [ffn,d]
+            gen(d, 9),                // attn_norm [d]
+            gen(d, 10),               // ffn_norm  [d]
+            vec![inv_scale],          // inv_scale
+            vec![1e-5],               // eps
         ]
     }
 
@@ -1443,25 +1929,44 @@ mod tests {
         let d = (n_heads * head_dim) as usize;
         let (hd, seqn, ffnn) = (head_dim as usize, seq as usize, ffn as usize);
         let group = (n_heads / n_kv_heads) as usize;
-        let (x, kt, v, wq, wo, wg, wu, wd) =
-            (&ext[0], &ext[1], &ext[2], &ext[3], &ext[4], &ext[5], &ext[6], &ext[7]);
+        let (x, kt, v, wq, wo, wg, wu, wd) = (
+            &ext[0], &ext[1], &ext[2], &ext[3], &ext[4], &ext[5], &ext[6], &ext[7],
+        );
         let attn_norm = &ext[8];
         let ffn_norm = &ext[9];
         let inv_scale = ext[10][0];
         let eps = ext[11][0];
-        let n1: Vec<f32> =
-            ref_rmsnorm(x, eps).iter().zip(attn_norm).map(|(a, w)| a * w).collect();
+        let n1: Vec<f32> = ref_rmsnorm(x, eps)
+            .iter()
+            .zip(attn_norm)
+            .map(|(a, w)| a * w)
+            .collect();
         let q = ref_mm(&n1, wq, 1, d, d);
-        let rmode = if mode == 0 { RopeMode::Interleaved } else { RopeMode::Neox };
-        let q = rope_cpu(&q, &RopeConfig { head_dim, pos, mode: rmode, theta_base: base }).unwrap();
+        let rmode = if mode == 0 {
+            RopeMode::Interleaved
+        } else {
+            RopeMode::Neox
+        };
+        let q = rope_cpu(
+            &q,
+            &RopeConfig {
+                head_dim,
+                pos,
+                mode: rmode,
+                theta_base: base,
+            },
+        )
+        .unwrap();
         let mut attn = vec![0.0f32; d];
         for h in 0..n_heads as usize {
             let kh = h / group;
             let q_h = &q[h * hd..(h + 1) * hd];
             let kt_h = &kt[kh * hd * seqn..(kh + 1) * hd * seqn];
             let v_h = &v[kh * seqn * hd..(kh + 1) * seqn * hd];
-            let scores: Vec<f32> =
-                ref_mm(q_h, kt_h, 1, hd, seqn).iter().map(|s| s * inv_scale).collect();
+            let scores: Vec<f32> = ref_mm(q_h, kt_h, 1, hd, seqn)
+                .iter()
+                .map(|s| s * inv_scale)
+                .collect();
             let probs = ref_softmax(&scores);
             let o_h = ref_mm(&probs, v_h, 1, seqn, hd);
             let wo_h = &wo[h * hd * d..(h + 1) * hd * d];
@@ -1471,8 +1976,11 @@ mod tests {
             }
         }
         let res1: Vec<f32> = x.iter().zip(&attn).map(|(a, b)| a + b).collect();
-        let n2: Vec<f32> =
-            ref_rmsnorm(&res1, eps).iter().zip(ffn_norm).map(|(a, w)| a * w).collect();
+        let n2: Vec<f32> = ref_rmsnorm(&res1, eps)
+            .iter()
+            .zip(ffn_norm)
+            .map(|(a, w)| a * w)
+            .collect();
         let gate = ref_mm(&n2, wg, 1, d, ffnn);
         let up = ref_mm(&n2, wu, 1, d, ffnn);
         let hsl: Vec<f32> = gate
@@ -1493,11 +2001,12 @@ mod tests {
         let (pos, base) = (3u32, 10000.0f32);
         let ext = decode_layer_externals(n_heads, n_kv_heads, head_dim, seq, ffn);
         for mode in [0u32, 1u32] {
-            let g =
-                decode_layer_graph(n_heads, n_kv_heads, head_dim, seq, ffn, pos, mode, base).unwrap();
+            let g = decode_layer_graph(n_heads, n_kv_heads, head_dim, seq, ffn, pos, mode, base)
+                .unwrap();
             let cpu = execute_graph_cpu(&g, &ext).unwrap();
-            let want =
-                ref_decode_layer(&ext, n_heads, n_kv_heads, head_dim, seq, ffn, pos, mode, base);
+            let want = ref_decode_layer(
+                &ext, n_heads, n_kv_heads, head_dim, seq, ffn, pos, mode, base,
+            );
             assert_eq!(cpu.len(), (n_heads * head_dim) as usize);
             for (a, b) in cpu.iter().zip(&want) {
                 assert!(
@@ -1517,8 +2026,8 @@ mod tests {
         let (pos, base) = (5u32, 10000.0f32);
         let ext = decode_layer_externals(n_heads, n_kv_heads, head_dim, seq, ffn);
         for mode in [0u32, 1u32] {
-            let g =
-                decode_layer_graph(n_heads, n_kv_heads, head_dim, seq, ffn, pos, mode, base).unwrap();
+            let g = decode_layer_graph(n_heads, n_kv_heads, head_dim, seq, ffn, pos, mode, base)
+                .unwrap();
             let gpu = execute_graph(&g, &ext).expect("decode-layer gpu");
             let cpu = execute_graph_cpu(&g, &ext).unwrap();
             assert_eq!(gpu.len(), (n_heads * head_dim) as usize);
@@ -1540,7 +2049,13 @@ mod tests {
         let b = TensorRef::input(1, Shape::new(&[n, k]), DType::F32);
         let out = g
             .push(
-                OpNode::MatMul { m, n, k, tc: false, trans_b: true },
+                OpNode::MatMul {
+                    m,
+                    n,
+                    k,
+                    tc: false,
+                    trans_b: true,
+                },
                 &[a, b],
                 Shape::new(&[m, n]),
                 DType::F32,
@@ -1558,9 +2073,11 @@ mod tests {
         let (m, n, k) = (2usize, 3usize, 4usize);
         let a: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.2 - 0.5).collect();
         let b_nk: Vec<f32> = (0..n * k).map(|i| (i as f32) * 0.1 - 0.2).collect();
-        let cpu =
-            execute_graph_cpu(&trans_b_graph(m as u32, n as u32, k as u32), &[a.clone(), b_nk.clone()])
-                .unwrap();
+        let cpu = execute_graph_cpu(
+            &trans_b_graph(m as u32, n as u32, k as u32),
+            &[a.clone(), b_nk.clone()],
+        )
+        .unwrap();
         let mut want = vec![0.0f32; m * n];
         for i in 0..m {
             for j in 0..n {
@@ -1583,12 +2100,17 @@ mod tests {
     fn matmul_trans_b_gpu_matches_plain_on_transposed() {
         let (m, n, k) = (3usize, 5usize, 4usize);
         let a: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.1 - 0.3).collect();
-        let b_nk: Vec<f32> = (0..n * k).map(|i| ((i * 3 % 7) as f32) * 0.05 - 0.15).collect();
+        let b_nk: Vec<f32> = (0..n * k)
+            .map(|i| ((i * 3 % 7) as f32) * 0.05 - 0.15)
+            .collect();
         let g = trans_b_graph(m as u32, n as u32, k as u32);
         let gpu = execute_graph(&g, &[a.clone(), b_nk.clone()]).expect("trans_b gpu");
         let cpu = execute_graph_cpu(&g, &[a.clone(), b_nk.clone()]).unwrap();
         for (gp, cp) in gpu.iter().zip(&cpu) {
-            assert!((gp - cp).abs() <= 1e-4 * cp.abs().max(1.0), "trans_b gpu {gp} vs cpu {cp}");
+            assert!(
+                (gp - cp).abs() <= 1e-4 * cp.abs().max(1.0),
+                "trans_b gpu {gp} vs cpu {cp}"
+            );
         }
         // Cross-check: plain GEMM on B explicitly transposed to [k,n] must match.
         let mut b_kn = vec![0.0f32; k * n];
@@ -1603,7 +2125,13 @@ mod tests {
         let b2 = TensorRef::input(1, Shape::new(&[k as u32, n as u32]), DType::F32);
         let out2 = g2
             .push(
-                OpNode::MatMul { m: m as u32, n: n as u32, k: k as u32, tc: false, trans_b: false },
+                OpNode::MatMul {
+                    m: m as u32,
+                    n: n as u32,
+                    k: k as u32,
+                    tc: false,
+                    trans_b: false,
+                },
                 &[a2, b2],
                 Shape::new(&[m as u32, n as u32]),
                 DType::F32,
@@ -1658,21 +2186,40 @@ mod tests {
         let inv_scale = 1.0f32 / (d as f32).sqrt();
         let eps = 1e-5f32;
         let x: Vec<f32> = (0..d).map(|i| (i as f32) * 0.2 - 0.3).collect();
-        let kt: Vec<f32> = (0..d * kv).map(|i| ((i * 5 % 7) as f32) * 0.1 - 0.25).collect();
-        let v: Vec<f32> = (0..kv * d).map(|i| ((i * 3 % 5) as f32) * 0.15 - 0.2).collect();
-        let wg: Vec<f32> = (0..d * ffn).map(|i| ((i % 11) as f32) * 0.03 - 0.15).collect();
-        let wu: Vec<f32> = (0..d * ffn).map(|i| ((i % 7) as f32) * 0.02 - 0.07).collect();
-        let wd: Vec<f32> = (0..ffn * d).map(|i| ((i % 5) as f32) * 0.04 - 0.08).collect();
+        let kt: Vec<f32> = (0..d * kv)
+            .map(|i| ((i * 5 % 7) as f32) * 0.1 - 0.25)
+            .collect();
+        let v: Vec<f32> = (0..kv * d)
+            .map(|i| ((i * 3 % 5) as f32) * 0.15 - 0.2)
+            .collect();
+        let wg: Vec<f32> = (0..d * ffn)
+            .map(|i| ((i % 11) as f32) * 0.03 - 0.15)
+            .collect();
+        let wu: Vec<f32> = (0..d * ffn)
+            .map(|i| ((i % 7) as f32) * 0.02 - 0.07)
+            .collect();
+        let wd: Vec<f32> = (0..ffn * d)
+            .map(|i| ((i % 5) as f32) * 0.04 - 0.08)
+            .collect();
         let g = decode_block_graph(d as u32, kv as u32, ffn as u32).unwrap();
         let ext = vec![
-            x.clone(), kt.clone(), v.clone(), wg.clone(), wu.clone(), wd.clone(),
-            vec![inv_scale], vec![eps],
+            x.clone(),
+            kt.clone(),
+            v.clone(),
+            wg.clone(),
+            wu.clone(),
+            wd.clone(),
+            vec![inv_scale],
+            vec![eps],
         ];
         let out = execute_graph_cpu(&g, &ext).unwrap();
 
         // Reference (with 1/√d attention scale + RMSNorm eps).
         let n1 = ref_rmsnorm(&x, eps);
-        let scores: Vec<f32> = ref_mm(&n1, &kt, 1, d, kv).iter().map(|s| s * inv_scale).collect();
+        let scores: Vec<f32> = ref_mm(&n1, &kt, 1, d, kv)
+            .iter()
+            .map(|s| s * inv_scale)
+            .collect();
         let probs = ref_softmax(&scores);
         let attn = ref_mm(&probs, &v, 1, kv, d);
         let res1: Vec<f32> = x.iter().zip(&attn).map(|(a, b)| a + b).collect();
@@ -1703,8 +2250,12 @@ mod tests {
         {
             let (d, kv) = (64usize, 96usize);
             let q: Vec<f32> = (0..d).map(|i| ((i * 7 % 23) as f32) * 0.05 - 0.5).collect();
-            let kt: Vec<f32> = (0..d * kv).map(|i| ((i % 19) as f32) * 0.02 - 0.18).collect();
-            let v: Vec<f32> = (0..kv * d).map(|i| ((i % 13) as f32) * 0.03 - 0.18).collect();
+            let kt: Vec<f32> = (0..d * kv)
+                .map(|i| ((i % 19) as f32) * 0.02 - 0.18)
+                .collect();
+            let v: Vec<f32> = (0..kv * d)
+                .map(|i| ((i % 13) as f32) * 0.03 - 0.18)
+                .collect();
             let g = attention_graph(d as u32, kv as u32).unwrap();
             let ext = vec![q, kt, v, vec![1.0f32 / (d as f32).sqrt()]];
             let gpu = execute_graph(&g, &ext).expect("attn gpu");
@@ -1717,7 +2268,11 @@ mod tests {
         {
             let (rows, cols) = (48usize, 64usize);
             let vals: Vec<f32> = (0..rows * cols)
-                .map(|i| match (i * 7) % 3 { 0 => 1.0, 1 => -1.0, _ => 0.0 })
+                .map(|i| match (i * 7) % 3 {
+                    0 => 1.0,
+                    1 => -1.0,
+                    _ => 0.0,
+                })
                 .collect();
             let scale: Vec<f32> = (0..rows).map(|r| 0.25 + (r % 5) as f32 * 0.1).collect();
             let packed = pack_ternary_as_words(&vals, rows, cols);
@@ -1727,13 +2282,20 @@ mod tests {
             let gpu = execute_graph(&g, &ext).expect("dequant gpu");
             let cpu = execute_graph_cpu(&g, &ext).unwrap();
             for (a, b) in gpu.iter().zip(&cpu) {
-                assert!((a - b).abs() <= 1e-3 * b.abs().max(1.0), "dequant: {a} vs {b}");
+                assert!(
+                    (a - b).abs() <= 1e-3 * b.abs().max(1.0),
+                    "dequant: {a} vs {b}"
+                );
             }
         }
         // Full decode block.
         {
             let (d, kv, ffn) = (64u32, 80u32, 128u32);
-            let mk = |n: usize, m: u32| (0..n).map(|i| ((i as u32 % m) as f32) * 0.01 - 0.1).collect::<Vec<f32>>();
+            let mk = |n: usize, m: u32| {
+                (0..n)
+                    .map(|i| ((i as u32 % m) as f32) * 0.01 - 0.1)
+                    .collect::<Vec<f32>>()
+            };
             let ext = vec![
                 mk(d as usize, 17),
                 mk((d * kv) as usize, 19),
@@ -1749,7 +2311,10 @@ mod tests {
             let cpu = execute_graph_cpu(&g, &ext).unwrap();
             assert_eq!(gpu.len(), cpu.len());
             for (a, b) in gpu.iter().zip(&cpu) {
-                assert!((a - b).abs() <= 1e-2 * b.abs().max(1.0), "decode: {a} vs {b}");
+                assert!(
+                    (a - b).abs() <= 1e-2 * b.abs().max(1.0),
+                    "decode: {a} vs {b}"
+                );
             }
         }
     }
@@ -1774,7 +2339,9 @@ mod tests {
         use std::time::Instant;
         let (d, kv, ffn) = (576u32, 128u32, 1536u32);
         let mk = |n: usize, m: u32, off: f32| {
-            (0..n).map(|i| ((i as u32 % m) as f32) * 0.001 - off).collect::<Vec<f32>>()
+            (0..n)
+                .map(|i| ((i as u32 % m) as f32) * 0.001 - off)
+                .collect::<Vec<f32>>()
         };
         let ext = vec![
             mk(d as usize, 97, 0.05),
@@ -1834,11 +2401,20 @@ mod tests {
     #[ignore = "requires a GPU adapter"]
     fn pipeline_cache_amortizes_across_runs() {
         let (d, kv, ffn) = (64u32, 80u32, 128u32);
-        let mk = |n: usize, m: u32| (0..n).map(|i| ((i as u32 % m) as f32) * 0.01 - 0.1).collect::<Vec<f32>>();
+        let mk = |n: usize, m: u32| {
+            (0..n)
+                .map(|i| ((i as u32 % m) as f32) * 0.01 - 0.1)
+                .collect::<Vec<f32>>()
+        };
         let ext = vec![
-            mk(d as usize, 17), mk((d * kv) as usize, 19), mk((kv * d) as usize, 13),
-            mk((d * ffn) as usize, 11), mk((d * ffn) as usize, 7), mk((ffn * d) as usize, 5),
-            vec![1.0f32 / (d as f32).sqrt()], vec![1e-5f32],
+            mk(d as usize, 17),
+            mk((d * kv) as usize, 19),
+            mk((kv * d) as usize, 13),
+            mk((d * ffn) as usize, 11),
+            mk((d * ffn) as usize, 7),
+            mk((ffn * d) as usize, 5),
+            vec![1.0f32 / (d as f32).sqrt()],
+            vec![1e-5f32],
         ];
         let g = decode_block_graph(d, kv, ffn).unwrap();
         let mut exec = ForgeGraphExecutor::new().expect("executor");
@@ -1847,9 +2423,16 @@ mod tests {
         let _ = exec.run(&g, &ext).expect("run 2");
         let after_second = exec.context().cached_pipeline_count();
         // Stable: the second run compiled nothing new.
-        assert_eq!(after_first, after_second, "cache must be stable across runs");
+        assert_eq!(
+            after_first, after_second,
+            "cache must be stable across runs"
+        );
         // Distinct kernels < node count (repeated op-classes share a pipeline).
-        assert!(after_first > 0 && after_first <= g.nodes.len(), "cached={after_first} nodes={}", g.nodes.len());
+        assert!(
+            after_first > 0 && after_first <= g.nodes.len(),
+            "cached={after_first} nodes={}",
+            g.nodes.len()
+        );
         // The result is unchanged across runs (cache returns the same pipeline).
         let a = exec.run(&g, &ext).unwrap();
         let b = exec.run(&g, &ext).unwrap();

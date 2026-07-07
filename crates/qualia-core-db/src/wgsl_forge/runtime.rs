@@ -26,9 +26,11 @@
 use std::path::PathBuf;
 
 use super::execute::{BindingUsage, QualiaCompute, WgpuComputeContext, WgpuPipeline};
-use super::oracle::{FftParams, GemmParams, GemvParams, TERNARY_CODES_PER_WORD, TernaryGemvParams, TopKParams};
+use super::oracle::{
+    FftParams, GemmParams, GemvParams, TernaryGemvParams, TopKParams, TERNARY_CODES_PER_WORD,
+};
 use super::{
-    BuiltinKernel, ForgeError, ManifestCache, Schedule, TargetBackend, emit_shader, validate_wgsl,
+    emit_shader, validate_wgsl, BuiltinKernel, ForgeError, ManifestCache, Schedule, TargetBackend,
 };
 
 /// A ready-to-use handle for running certified forge kernels on real data.
@@ -178,9 +180,12 @@ impl ForgeRuntime {
             self.context
                 .allocate_and_write(input_bytes, 0, 0, BindingUsage::StorageRead)?;
         let output_bytes_len = (output_len * size_of::<f32>()).max(4);
-        let view_output =
-            self.context
-                .allocate_transient(output_bytes_len, 1, 0, BindingUsage::StorageReadWrite)?;
+        let view_output = self.context.allocate_transient(
+            output_bytes_len,
+            1,
+            0,
+            BindingUsage::StorageReadWrite,
+        )?;
         let params = TopKParams {
             length: length as u32,
             k: k as u32,
@@ -195,7 +200,8 @@ impl ForgeRuntime {
         )?;
 
         let buffers = vec![view_input, view_output, view_params];
-        let pipeline = WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)?;
+        let pipeline =
+            WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)?;
         pipeline.dispatch(&buffers, &schedule, length)?;
         let mut out = self.context.read_buffer_f32(&view_output)?;
         out.truncate(output_len);
@@ -268,9 +274,12 @@ impl ForgeRuntime {
         let generated = emit_shader(&kernel, schedule, TargetBackend::Wgsl)?;
         validate_wgsl(&generated.source)?;
 
-        let view_x =
-            self.context
-                .allocate_and_write(bytemuck::cast_slice(x), 0, 0, BindingUsage::StorageRead)?;
+        let view_x = self.context.allocate_and_write(
+            bytemuck::cast_slice(x),
+            0,
+            0,
+            BindingUsage::StorageRead,
+        )?;
         let view_w = self.context.allocate_and_write(
             bytemuck::cast_slice(packed_w),
             1,
@@ -284,9 +293,12 @@ impl ForgeRuntime {
             BindingUsage::StorageRead,
         )?;
         let output_bytes_len = (m * size_of::<f32>()).max(4);
-        let view_output =
-            self.context
-                .allocate_transient(output_bytes_len, 3, 0, BindingUsage::StorageReadWrite)?;
+        let view_output = self.context.allocate_transient(
+            output_bytes_len,
+            3,
+            0,
+            BindingUsage::StorageReadWrite,
+        )?;
         let params = TernaryGemvParams {
             m: m as u32,
             k: k as u32,
@@ -301,7 +313,8 @@ impl ForgeRuntime {
         )?;
 
         let buffers = vec![view_x, view_w, view_scale, view_output, view_params];
-        let pipeline = WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)?;
+        let pipeline =
+            WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)?;
         pipeline.dispatch(&buffers, &schedule, m)?;
         let mut out = self.context.read_buffer_f32(&view_output)?;
         out.truncate(m);
@@ -380,12 +393,16 @@ impl ForgeRuntime {
             BindingUsage::StorageRead,
         )?;
         let output_bytes_len = (record_count * size_of::<f32>()).max(4);
-        let view_output =
-            self.context
-                .allocate_transient(output_bytes_len, 2, 0, BindingUsage::StorageReadWrite)?;
+        let view_output = self.context.allocate_transient(
+            output_bytes_len,
+            2,
+            0,
+            BindingUsage::StorageReadWrite,
+        )?;
 
         let buffers = vec![view_input, view_weights, view_output];
-        let pipeline = WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)?;
+        let pipeline =
+            WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)?;
         pipeline.dispatch(&buffers, &schedule, record_count)?;
         let mut out = self.context.read_buffer_f32(&view_output)?;
         out.truncate(record_count);
@@ -452,16 +469,25 @@ impl ForgeRuntime {
         validate_wgsl(&generated.source)?;
 
         let element_count = m * n;
-        let view_a =
-            self.context
-                .allocate_and_write(bytemuck::cast_slice(a), 0, 0, BindingUsage::StorageRead)?;
-        let view_b =
-            self.context
-                .allocate_and_write(bytemuck::cast_slice(b), 1, 0, BindingUsage::StorageRead)?;
+        let view_a = self.context.allocate_and_write(
+            bytemuck::cast_slice(a),
+            0,
+            0,
+            BindingUsage::StorageRead,
+        )?;
+        let view_b = self.context.allocate_and_write(
+            bytemuck::cast_slice(b),
+            1,
+            0,
+            BindingUsage::StorageRead,
+        )?;
         let output_bytes_len = (element_count * size_of::<f32>()).max(4);
-        let view_c =
-            self.context
-                .allocate_transient(output_bytes_len, 2, 0, BindingUsage::StorageReadWrite)?;
+        let view_c = self.context.allocate_transient(
+            output_bytes_len,
+            2,
+            0,
+            BindingUsage::StorageReadWrite,
+        )?;
         let params = GemmParams {
             m: m as u32,
             n: n as u32,
@@ -476,7 +502,8 @@ impl ForgeRuntime {
         )?;
 
         let buffers = vec![view_a, view_b, view_c, view_params];
-        let pipeline = WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)?;
+        let pipeline =
+            WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)?;
         pipeline.dispatch(&buffers, &schedule, element_count)?;
         let mut out = self.context.read_buffer_f32(&view_c)?;
         out.truncate(element_count);
@@ -542,16 +569,25 @@ impl ForgeRuntime {
         validate_wgsl(&generated.source)?;
 
         let element_count = m;
-        let view_a =
-            self.context
-                .allocate_and_write(bytemuck::cast_slice(a), 0, 0, BindingUsage::StorageRead)?;
-        let view_x =
-            self.context
-                .allocate_and_write(bytemuck::cast_slice(x), 1, 0, BindingUsage::StorageRead)?;
+        let view_a = self.context.allocate_and_write(
+            bytemuck::cast_slice(a),
+            0,
+            0,
+            BindingUsage::StorageRead,
+        )?;
+        let view_x = self.context.allocate_and_write(
+            bytemuck::cast_slice(x),
+            1,
+            0,
+            BindingUsage::StorageRead,
+        )?;
         let output_bytes_len = (element_count * size_of::<f32>()).max(4);
-        let view_y =
-            self.context
-                .allocate_transient(output_bytes_len, 2, 0, BindingUsage::StorageReadWrite)?;
+        let view_y = self.context.allocate_transient(
+            output_bytes_len,
+            2,
+            0,
+            BindingUsage::StorageReadWrite,
+        )?;
         let params = GemvParams {
             m: m as u32,
             n: n as u32,
@@ -566,7 +602,8 @@ impl ForgeRuntime {
         )?;
 
         let buffers = vec![view_a, view_x, view_y, view_params];
-        let pipeline = WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)?;
+        let pipeline =
+            WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)?;
         pipeline.dispatch(&buffers, &schedule, element_count)?;
         let mut out = self.context.read_buffer_f32(&view_y)?;
         out.truncate(element_count);
@@ -644,9 +681,12 @@ impl ForgeRuntime {
             BindingUsage::StorageRead,
         )?;
         let output_bytes_len = (2 * n * size_of::<f32>()).max(4);
-        let view_output =
-            self.context
-                .allocate_transient(output_bytes_len, 1, 0, BindingUsage::StorageReadWrite)?;
+        let view_output = self.context.allocate_transient(
+            output_bytes_len,
+            1,
+            0,
+            BindingUsage::StorageReadWrite,
+        )?;
         let params = FftParams {
             n: n as u32,
             log2n: n.trailing_zeros(),
@@ -661,7 +701,8 @@ impl ForgeRuntime {
         )?;
 
         let buffers = vec![view_input, view_output, view_params];
-        let pipeline = WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)?;
+        let pipeline =
+            WgpuPipeline::compile(&self.context, &generated.source, &kernel.entry_point)?;
         pipeline.dispatch(&buffers, &schedule, n)?;
         let mut out = self.context.read_buffer_f32(&view_output)?;
         out.truncate(2 * n);
@@ -689,7 +730,8 @@ mod tests {
         for builtin in BuiltinKernel::ALL {
             let schedule = ForgeRuntime::lookup_tuned_schedule(None, None, builtin);
             assert_eq!(
-                schedule, expected,
+                schedule,
+                expected,
                 "{} must default to workgroup_size 64",
                 builtin.name()
             );
@@ -721,7 +763,10 @@ mod tests {
             Some(topology.as_str()),
             BuiltinKernel::TopK,
         );
-        assert_eq!(schedule, ForgeRuntime::default_schedule(BuiltinKernel::TopK));
+        assert_eq!(
+            schedule,
+            ForgeRuntime::default_schedule(BuiltinKernel::TopK)
+        );
         let _ = std::fs::remove_dir_all(&root);
     }
 
@@ -759,7 +804,9 @@ mod tests {
         let row1 = 0x0000_00AAu32; // lanes 0..4 = code 2 (-1.0)
         let packed_w = [row0, row1];
         let scale = [2.0f32, 10.0];
-        let out = rt.ternary_gemv(&x, &packed_w, &scale, 2, 4).expect("ternary gemv");
+        let out = rt
+            .ternary_gemv(&x, &packed_w, &scale, 2, 4)
+            .expect("ternary gemv");
         assert_eq!(out, vec![20.0, -100.0]);
     }
 

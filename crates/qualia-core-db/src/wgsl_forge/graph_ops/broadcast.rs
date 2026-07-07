@@ -67,12 +67,19 @@ pub fn broadcast_gpu(input: &[f32], out_len: usize) -> Result<Vec<f32>, ForgeErr
         BindingUsage::StorageReadWrite,
     )?;
     let params: [u32; 4] = [input.len() as u32, out_len as u32, 0, 0];
-    let view_params =
-        ctx.allocate_and_write(bytemuck::cast_slice(&params), 2, 0, BindingUsage::StorageRead)?;
+    let view_params = ctx.allocate_and_write(
+        bytemuck::cast_slice(&params),
+        2,
+        0,
+        BindingUsage::StorageRead,
+    )?;
 
     let buffers = vec![view_in, view_out, view_params];
     let pipeline = WgpuPipeline::compile(&ctx, &src, BROADCAST_ENTRY)?;
-    let schedule = Schedule { workgroup_size: wg, ..Default::default() };
+    let schedule = Schedule {
+        workgroup_size: wg,
+        ..Default::default()
+    };
     pipeline.dispatch(&buffers, &schedule, out_len)?;
     let mut out = ctx.read_buffer_f32(&view_out)?;
     out.truncate(out_len);
@@ -88,10 +95,7 @@ mod tests {
     fn broadcast_cpu_tiles_the_vector() {
         // scale = [a, b, c] expanded across 2 tokens → [a,b,c, a,b,c].
         let scale = [1.0f32, 2.0, 3.0];
-        assert_eq!(
-            broadcast_cpu(&scale, 6),
-            vec![1.0, 2.0, 3.0, 1.0, 2.0, 3.0]
-        );
+        assert_eq!(broadcast_cpu(&scale, 6), vec![1.0, 2.0, 3.0, 1.0, 2.0, 3.0]);
         // A scalar fans out to a constant vector.
         assert_eq!(broadcast_cpu(&[7.0], 4), vec![7.0, 7.0, 7.0, 7.0]);
     }

@@ -61,7 +61,9 @@ pub fn box_join_brute_force(
         for (j, b) in boxes_b.iter().enumerate() {
             if a.overlaps(b) {
                 if count >= out_pairs.len() {
-                    return Err(BoxJoinError::OutputBufferTooSmall { required: count + 1 });
+                    return Err(BoxJoinError::OutputBufferTooSmall {
+                        required: count + 1,
+                    });
                 }
                 out_pairs[count] = BoxPair {
                     a: i as u32,
@@ -168,11 +170,14 @@ pub fn box_join_bvh(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::primitives::Point3;
+    use super::*;
 
     fn make_aabb(min: [f64; 3], max: [f64; 3]) -> Aabb {
-        Aabb::new(Point3::new(min[0], min[1], min[2]), Point3::new(max[0], max[1], max[2]))
+        Aabb::new(
+            Point3::new(min[0], min[1], min[2]),
+            Point3::new(max[0], max[1], max[2]),
+        )
     }
 
     #[test]

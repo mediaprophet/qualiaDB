@@ -37,7 +37,14 @@ fn unit(mut v: Vec<f32>) -> Vec<f32> {
 
 /// Build `m` vectors, each a `k`-sparse combination of `true_atoms` (a union of k-dim subspaces) plus
 /// a little noise.
-fn synth_subspace_data(rng: &mut Rng, true_atoms: &[Vec<f32>], dim: usize, m: usize, k: usize, noise: f32) -> Vec<Vec<f32>> {
+fn synth_subspace_data(
+    rng: &mut Rng,
+    true_atoms: &[Vec<f32>],
+    dim: usize,
+    m: usize,
+    k: usize,
+    noise: f32,
+) -> Vec<Vec<f32>> {
     let d = true_atoms.len();
     (0..m)
         .map(|_| {
@@ -96,7 +103,9 @@ fn learns_a_dictionary_that_reconstructs_subspace_data() {
         .collect();
     let rand_dict = learn_dictionary(&rand_data, dim, 16, k, 25);
     let rand_err = rand_dict.reconstruction_error(&rand_data, k);
-    println!("[w5b] incompressible random data, dict=16 atoms k={k}: mean rel recon err = {rand_err:.4}");
+    println!(
+        "[w5b] incompressible random data, dict=16 atoms k={k}: mean rel recon err = {rand_err:.4}"
+    );
     assert!(
         rand_err > err,
         "incompressible data must reconstruct worse than low-rank data ({rand_err:.4} vs {err:.4})"
@@ -186,7 +195,11 @@ fn runtime_reconstruct_matches_dict_and_is_gated() {
 
     // Disabled → no-op.
     kv_dict_runtime::reconstruct_kv(0, true, &mut proj, 2, dim);
-    assert_eq!(proj, [v0.clone(), v1.clone()].concat(), "no-op while disabled");
+    assert_eq!(
+        proj,
+        [v0.clone(), v1.clone()].concat(),
+        "no-op while disabled"
+    );
 
     // Enabled for layer 0 K → in-place reconstruction equals the dictionary's own encode→reconstruct.
     kv_dict_runtime::enable(vec![Some(dict.clone())], vec![None], k);
@@ -194,7 +207,10 @@ fn runtime_reconstruct_matches_dict_and_is_gated() {
     kv_dict_runtime::disable();
     kv_dict_runtime::clear();
     for (got, want) in proj.iter().zip(&expected) {
-        assert!((got - want).abs() < 1e-5, "reconstruct_kv must match dict path: {got} vs {want}");
+        assert!(
+            (got - want).abs() < 1e-5,
+            "reconstruct_kv must match dict path: {got} vs {want}"
+        );
     }
     // Layer with no dictionary (V here) stays passthrough.
     let mut untouched = vec![1.0f32; 2 * dim];
@@ -203,6 +219,11 @@ fn runtime_reconstruct_matches_dict_and_is_gated() {
     kv_dict_runtime::reconstruct_kv(0, false, &mut untouched, 2, dim); // V has None → passthrough
     kv_dict_runtime::disable();
     kv_dict_runtime::clear();
-    assert_eq!(untouched, snap, "a layer with no dictionary must be passthrough");
-    println!("[w5b/phase4] PASS — runtime reconstruct matches the dictionary and is properly gated.");
+    assert_eq!(
+        untouched, snap,
+        "a layer with no dictionary must be passthrough"
+    );
+    println!(
+        "[w5b/phase4] PASS — runtime reconstruct matches the dictionary and is properly gated."
+    );
 }

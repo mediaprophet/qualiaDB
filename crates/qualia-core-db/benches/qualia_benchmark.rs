@@ -26,11 +26,11 @@
 //! cargo bench --package qualia-core-db 2>&1 | tee bench_results.txt
 //! ```
 
-use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use qualia_core_db::query_compiler::QueryCompiler;
 use qualia_core_db::NQuin;
 use std::collections::{BTreeMap, HashMap};
+use std::hint::black_box;
 
 // ─── FNV-1a hash — same algorithm as the qualiaDB lexicon engine ─────────────
 #[inline(always)]
@@ -385,7 +385,9 @@ fn bench_lanczos_eigensolver(c: &mut Criterion) {
     c.bench_function("lanczos_4x4_eigen_solve", |b| {
         b.iter(|| {
             let mut solver = FixedLanczosEigensolver::new(config);
-            let eigs = solver.find_lowest_eigenvalues(black_box(&matrix), 4).unwrap();
+            let eigs = solver
+                .find_lowest_eigenvalues(black_box(&matrix), 4)
+                .unwrap();
             black_box(eigs);
         })
     });

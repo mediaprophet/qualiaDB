@@ -51,17 +51,11 @@ pub const ARENA_ALIGN: usize = 8;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WorkspaceError {
     /// The allocation would exceed the byte budget.
-    BudgetExceeded {
-        requested: usize,
-        available: usize,
-    },
+    BudgetExceeded { requested: usize, available: usize },
     /// The caller set the cancellation token.
     Cancelled,
     /// The input is too large for a single admitted pass under the budget.
-    PassTooLarge {
-        input_bytes: usize,
-        budget: usize,
-    },
+    PassTooLarge { input_bytes: usize, budget: usize },
     /// The arena is exhausted (all bytes used; reset needed).
     Exhausted,
 }
@@ -69,12 +63,26 @@ pub enum WorkspaceError {
 impl std::fmt::Display for WorkspaceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            WorkspaceError::BudgetExceeded { requested, available } => {
-                write!(f, "workspace budget exceeded: requested {} bytes, {} available", requested, available)
+            WorkspaceError::BudgetExceeded {
+                requested,
+                available,
+            } => {
+                write!(
+                    f,
+                    "workspace budget exceeded: requested {} bytes, {} available",
+                    requested, available
+                )
             }
             WorkspaceError::Cancelled => write!(f, "workspace operation cancelled by caller"),
-            WorkspaceError::PassTooLarge { input_bytes, budget } => {
-                write!(f, "input too large for single pass: {} bytes > {} budget", input_bytes, budget)
+            WorkspaceError::PassTooLarge {
+                input_bytes,
+                budget,
+            } => {
+                write!(
+                    f,
+                    "input too large for single pass: {} bytes > {} budget",
+                    input_bytes, budget
+                )
             }
             WorkspaceError::Exhausted => write!(f, "workspace arena exhausted (reset needed)"),
         }
@@ -100,7 +108,9 @@ pub struct Cancellation {
 impl Cancellation {
     /// Create a new non-cancelled token.
     pub fn new() -> Self {
-        Self { cancelled: AtomicBool::new(false) }
+        Self {
+            cancelled: AtomicBool::new(false),
+        }
     }
 
     /// Set the cancellation flag.
@@ -121,7 +131,9 @@ impl Cancellation {
 
 impl Clone for Cancellation {
     fn clone(&self) -> Self {
-        Self { cancelled: AtomicBool::new(self.cancelled.load(Ordering::Relaxed)) }
+        Self {
+            cancelled: AtomicBool::new(self.cancelled.load(Ordering::Relaxed)),
+        }
     }
 }
 
@@ -167,14 +179,27 @@ impl<'a> GeometryWorkspace<'a> {
     /// borrowed from the caller.
     pub fn new(buffer: &'a mut [u8], cancel: &'a Cancellation) -> Self {
         let byte_budget = buffer.len();
-        Self { buffer, offset: 0, byte_budget, cancel }
+        Self {
+            buffer,
+            offset: 0,
+            byte_budget,
+            cancel,
+        }
     }
 
     /// Create a workspace with a custom byte budget (smaller than the buffer
     /// to reserve headroom).
     pub fn with_budget(buffer: &'a mut [u8], byte_budget: usize, cancel: &'a Cancellation) -> Self {
-        assert!(byte_budget <= buffer.len(), "budget cannot exceed buffer size");
-        Self { buffer, offset: 0, byte_budget, cancel }
+        assert!(
+            byte_budget <= buffer.len(),
+            "budget cannot exceed buffer size"
+        );
+        Self {
+            buffer,
+            offset: 0,
+            byte_budget,
+            cancel,
+        }
     }
 
     /// The total byte budget.
@@ -211,10 +236,17 @@ impl<'a> GeometryWorkspace<'a> {
         }
         // Align the offset up.
         let aligned_offset = align_up(self.offset, ARENA_ALIGN);
-        let end = aligned_offset.checked_add(size)
-            .ok_or(WorkspaceError::BudgetExceeded { requested: size, available: self.bytes_available() })?;
+        let end = aligned_offset
+            .checked_add(size)
+            .ok_or(WorkspaceError::BudgetExceeded {
+                requested: size,
+                available: self.bytes_available(),
+            })?;
         if end > self.byte_budget {
-            return Err(WorkspaceError::BudgetExceeded { requested: size, available: self.bytes_available() });
+            return Err(WorkspaceError::BudgetExceeded {
+                requested: size,
+                available: self.bytes_available(),
+            });
         }
         self.offset = end;
         Ok(&mut self.buffer[aligned_offset..end])
@@ -223,17 +255,29 @@ impl<'a> GeometryWorkspace<'a> {
     /// Allocate space for `count` elements of `T` (typed slice). The caller
     /// is responsible for initializing the memory.
     pub fn alloc_slice<T>(&mut self, count: usize) -> Result<&mut [T], WorkspaceError> {
-        let size = count.checked_mul(std::mem::size_of::<T>())
-            .ok_or(WorkspaceError::BudgetExceeded { requested: usize::MAX, available: self.bytes_available() })?;
+        let size =
+            count
+                .checked_mul(std::mem::size_of::<T>())
+                .ok_or(WorkspaceError::BudgetExceeded {
+                    requested: usize::MAX,
+                    available: self.bytes_available(),
+                })?;
         let align = std::mem::align_of::<T>().max(ARENA_ALIGN);
         if self.cancel.is_cancelled() {
             return Err(WorkspaceError::Cancelled);
         }
         let aligned_offset = align_up(self.offset, align);
-        let end = aligned_offset.checked_add(size)
-            .ok_or(WorkspaceError::BudgetExceeded { requested: size, available: self.bytes_available() })?;
+        let end = aligned_offset
+            .checked_add(size)
+            .ok_or(WorkspaceError::BudgetExceeded {
+                requested: size,
+                available: self.bytes_available(),
+            })?;
         if end > self.byte_budget {
-            return Err(WorkspaceError::BudgetExceeded { requested: size, available: self.bytes_available() });
+            return Err(WorkspaceError::BudgetExceeded {
+                requested: size,
+                available: self.bytes_available(),
+            });
         }
         self.offset = end;
         // SAFETY: the buffer is valid for `byte_budget` bytes, we've checked
@@ -343,7 +387,13 @@ mod tests {
         let mut buf = vec![0u8; 128];
         let mut ws = GeometryWorkspace::new(&mut buf, &cancel);
         let result = ws.alloc(256);
-        assert_eq!(result, Err(WorkspaceError::BudgetExceeded { requested: 256, available: 128 }));
+        assert_eq!(
+            result,
+            Err(WorkspaceError::BudgetExceeded {
+                requested: 256,
+                available: 128
+            })
+        );
     }
 
     #[test]
@@ -410,7 +460,10 @@ mod tests {
         // 2 KB input — exceeds 1 KB budget (with 50% scratch overhead).
         assert_eq!(
             ws.admit_pass(2048),
-            Err(WorkspaceError::PassTooLarge { input_bytes: 2048, budget: 1024 })
+            Err(WorkspaceError::PassTooLarge {
+                input_bytes: 2048,
+                budget: 1024
+            })
         );
     }
 
@@ -422,9 +475,15 @@ mod tests {
         // A maximal admitted pass: input + 50% scratch = 42 MiB.
         // input = 42 MiB / 1.5 = 28 MiB.
         let max_input = DEFAULT_WORKSPACE_BUDGET * 2 / 3;
-        assert!(ws.admit_pass(max_input).is_ok(), "maximal admitted pass should fit");
+        assert!(
+            ws.admit_pass(max_input).is_ok(),
+            "maximal admitted pass should fit"
+        );
         // One byte more should fail.
-        assert!(ws.admit_pass(max_input + 1).is_err(), "pass above maximal should fail");
+        assert!(
+            ws.admit_pass(max_input + 1).is_err(),
+            "pass above maximal should fail"
+        );
     }
 
     #[test]
@@ -496,7 +555,10 @@ mod tests {
 
     #[test]
     fn workspace_error_displays() {
-        let e = WorkspaceError::BudgetExceeded { requested: 100, available: 50 };
+        let e = WorkspaceError::BudgetExceeded {
+            requested: 100,
+            available: 50,
+        };
         let s = format!("{}", e);
         assert!(s.contains("100"));
         assert!(s.contains("50"));
@@ -504,7 +566,10 @@ mod tests {
         let e = WorkspaceError::Cancelled;
         assert!(format!("{}", e).contains("cancelled"));
 
-        let e = WorkspaceError::PassTooLarge { input_bytes: 200, budget: 100 };
+        let e = WorkspaceError::PassTooLarge {
+            input_bytes: 200,
+            budget: 100,
+        };
         assert!(format!("{}", e).contains("200"));
     }
 
@@ -518,7 +583,10 @@ mod tests {
         // 1 more byte should fail (budget is 512, not 1024).
         assert_eq!(
             ws.alloc(1),
-            Err(WorkspaceError::BudgetExceeded { requested: 1, available: 0 })
+            Err(WorkspaceError::BudgetExceeded {
+                requested: 1,
+                available: 0
+            })
         );
     }
 

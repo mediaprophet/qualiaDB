@@ -81,7 +81,11 @@ impl Unsupported {
 
 impl core::fmt::Display for Unsupported {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "unsupported construction `{}`: {}", self.capability, self.reason)
+        write!(
+            f,
+            "unsupported construction `{}`: {}",
+            self.capability, self.reason
+        )
     }
 }
 
@@ -225,9 +229,18 @@ mod tests {
         let k = FilteredF64Kernel::default();
         let a = Point2::new(0.0, 0.0);
         let b = Point2::new(1.0, 0.0);
-        assert_eq!(k.orientation_2(a, b, Point2::new(1.0, 1.0)), Orientation::CounterClockwise);
-        assert_eq!(k.orientation_2(a, b, Point2::new(1.0, -1.0)), Orientation::Clockwise);
-        assert_eq!(k.orientation_2(a, b, Point2::new(2.0, 0.0)), Orientation::Collinear);
+        assert_eq!(
+            k.orientation_2(a, b, Point2::new(1.0, 1.0)),
+            Orientation::CounterClockwise
+        );
+        assert_eq!(
+            k.orientation_2(a, b, Point2::new(1.0, -1.0)),
+            Orientation::Clockwise
+        );
+        assert_eq!(
+            k.orientation_2(a, b, Point2::new(2.0, 0.0)),
+            Orientation::Collinear
+        );
     }
 
     // ── P10.4 — Generic conformance tests ─────────────────────────────────
@@ -249,7 +262,10 @@ mod tests {
         let y = Point2::new(0.0, 1.0);
         assert_eq!(k.orientation_2(o, x, y), Orientation::CounterClockwise);
         assert_eq!(k.orientation_2(o, y, x), Orientation::Clockwise);
-        assert_eq!(k.orientation_2(o, x, Point2::new(2.0, 0.0)), Orientation::Collinear);
+        assert_eq!(
+            k.orientation_2(o, x, Point2::new(2.0, 0.0)),
+            Orientation::Collinear
+        );
 
         // ── orient_3d ──
         let a3 = Point3::new(0.0, 0.0, 0.0);
@@ -290,9 +306,21 @@ mod tests {
         let t3 = Point3::new(0.0, 0.0, 1.0);
         let inside = Point3::new(0.1, 0.1, 0.1);
         let outside = Point3::new(2.0, 2.0, 2.0);
-        assert_eq!(k.insphere(t0, t1, t2, t3, inside), Sign::Negative, "inside should be Negative (positive orientation)");
-        assert_eq!(k.insphere(t0, t1, t2, t3, outside), Sign::Positive, "outside should be Positive (positive orientation)");
-        assert_eq!(k.insphere(t0, t1, t2, t3, t0), Sign::Zero, "vertex on sphere");
+        assert_eq!(
+            k.insphere(t0, t1, t2, t3, inside),
+            Sign::Negative,
+            "inside should be Negative (positive orientation)"
+        );
+        assert_eq!(
+            k.insphere(t0, t1, t2, t3, outside),
+            Sign::Positive,
+            "outside should be Positive (positive orientation)"
+        );
+        assert_eq!(
+            k.insphere(t0, t1, t2, t3, t0),
+            Sign::Zero,
+            "vertex on sphere"
+        );
     }
 
     #[test]
@@ -310,12 +338,18 @@ mod tests {
     #[test]
     fn unsupported_is_zero_sized() {
         // Unsupported carries only &'static str — no heap.
-        assert_eq!(std::mem::size_of::<Unsupported>(), 2 * std::mem::size_of::<&'static str>());
+        assert_eq!(
+            std::mem::size_of::<Unsupported>(),
+            2 * std::mem::size_of::<&'static str>()
+        );
     }
 
     #[test]
     fn unsupported_displays() {
-        let u = Unsupported::new("segment_intersection_2", "filtered f64 kernel does not construct exact points");
+        let u = Unsupported::new(
+            "segment_intersection_2",
+            "filtered f64 kernel does not construct exact points",
+        );
         let s = format!("{}", u);
         assert!(s.contains("segment_intersection_2"));
         assert!(s.contains("filtered f64"));

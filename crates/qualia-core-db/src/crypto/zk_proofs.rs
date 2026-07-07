@@ -410,9 +410,11 @@ impl ZkProofSystem {
 
             self.proving_key = proving_key.clone();
             self.verifying_key = verifying_key.clone();
-            
-            self.proof_generator.store_proving_key(circuit_id.to_string(), proving_key);
-            self.proof_verifier.store_verifying_key(circuit_id.to_string(), verifying_key);
+
+            self.proof_generator
+                .store_proving_key(circuit_id.to_string(), proving_key);
+            self.proof_verifier
+                .store_verifying_key(circuit_id.to_string(), verifying_key);
 
             Ok(())
         }
@@ -443,7 +445,9 @@ impl ZkProofSystem {
             };
 
             use ark_serialize::CanonicalDeserialize;
-            let pk_data = self.proof_generator.get_proving_key(circuit_id)
+            let pk_data = self
+                .proof_generator
+                .get_proving_key(circuit_id)
                 .map(|pk| pk.key_data.clone())
                 .unwrap_or_else(|_| self.proving_key.key_data.clone());
             let pk = ark_groth16::ProvingKey::<ark_bls12_381::Bls12_381>::deserialize_compressed(
@@ -506,7 +510,9 @@ impl ZkProofSystem {
         {
             use ark_serialize::CanonicalDeserialize;
             use ark_snark::SNARK;
-            let vk_data = self.proof_verifier.get_verifying_key(&proof.verification_key_id)
+            let vk_data = self
+                .proof_verifier
+                .get_verifying_key(&proof.verification_key_id)
                 .map(|vk| vk.key_data.clone())
                 .unwrap_or_else(|_| self.verifying_key.key_data.clone());
             let vk = ark_groth16::VerifyingKey::<ark_bls12_381::Bls12_381>::deserialize_compressed(
@@ -562,10 +568,13 @@ impl ZkProofSystem {
         // `vk.gamma_abc_g1.len()` and verification fails with MalformedVerifyingKey.
         // Derive them from the built circuit, reading each value from the same
         // witness the prover uses, so prove-time and verify-time assignments agree.
-        
+
         let circuit = self.get_circuit_info(&circuit_id).unwrap();
-        let full_witness = self.proof_generator.witness_generator.generate_witness(&circuit, witness)?;
-        
+        let full_witness = self
+            .proof_generator
+            .witness_generator
+            .generate_witness(&circuit, witness)?;
+
         let public_inputs = self.extract_public_inputs(&circuit_id, &full_witness);
         let proof = self.generate_proof(&circuit_id, full_witness, public_inputs)?;
 
@@ -1189,8 +1198,9 @@ impl WitnessGenerator {
         partial_witness: HashMap<String, FieldElement>,
     ) -> Result<HashMap<String, FieldElement>, ZkError> {
         let mut full_witness = partial_witness.clone();
-        
-        self.assignments.insert(circuit.circuit_id.clone(), partial_witness);
+
+        self.assignments
+            .insert(circuit.circuit_id.clone(), partial_witness);
 
         // Generate random values for intermediate variables
         for (var_id, variable) in &circuit.variables {
@@ -1198,7 +1208,8 @@ impl WitnessGenerator {
                 && variable.variable_type == VariableType::Intermediate
             {
                 let random_value = FieldElement { value: [0u8; 32] }; // Dummy random value
-                self.random_values.insert(var_id.clone(), random_value.clone());
+                self.random_values
+                    .insert(var_id.clone(), random_value.clone());
                 full_witness.insert(var_id.clone(), random_value);
             }
         }
@@ -1350,14 +1361,17 @@ impl ZkPerformanceMonitor {
 
         self.proof_metrics.insert(proof.proof_id.clone(), metrics);
 
-        let circuit_metrics = self.circuit_metrics.entry(proof.circuit_id.clone()).or_insert_with(|| CircuitMetrics {
-            circuit_id: proof.circuit_id.clone(),
-            num_constraints: proof.metadata.circuit_size,
-            proving_time: 0,
-            verification_time: 0,
-            memory_usage: 0,
-            success_rate: 0.0,
-        });
+        let circuit_metrics = self
+            .circuit_metrics
+            .entry(proof.circuit_id.clone())
+            .or_insert_with(|| CircuitMetrics {
+                circuit_id: proof.circuit_id.clone(),
+                num_constraints: proof.metadata.circuit_size,
+                proving_time: 0,
+                verification_time: 0,
+                memory_usage: 0,
+                success_rate: 0.0,
+            });
         circuit_metrics.proving_time += proof.metadata.proving_time;
         if is_valid {
             circuit_metrics.success_rate = 1.0;

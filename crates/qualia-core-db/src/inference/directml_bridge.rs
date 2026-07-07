@@ -36,7 +36,6 @@ use windows::{
     },
 };
 
-
 // ─── FFI Firewall: Type-Erased Interface ─────────────────────────────────────
 
 #[repr(C)]

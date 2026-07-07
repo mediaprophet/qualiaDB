@@ -20,7 +20,9 @@ where
     }
 
     pub fn zeros() -> Self {
-        Self { data: [[T::default(); COLS]; ROWS] }
+        Self {
+            data: [[T::default(); COLS]; ROWS],
+        }
     }
 
     pub fn get(&self, row: usize, col: usize) -> T {
@@ -33,7 +35,8 @@ where
 }
 
 // Implement matrix multiplication
-impl<T, const R1: usize, const C1: usize, const C2: usize> Mul<ZeroHeapMatrix<T, C1, C2>> for ZeroHeapMatrix<T, R1, C1>
+impl<T, const R1: usize, const C1: usize, const C2: usize> Mul<ZeroHeapMatrix<T, C1, C2>>
+    for ZeroHeapMatrix<T, R1, C1>
 where
     T: Copy + Default + Add<Output = T> + Mul<Output = T>,
 {
@@ -42,7 +45,7 @@ where
     fn mul(self, rhs: ZeroHeapMatrix<T, C1, C2>) -> Self::Output {
         // Safe because the arrays are fully initialized with T::Default
         let mut result_data = [[T::default(); C2]; R1];
-        
+
         for i in 0..R1 {
             for j in 0..C2 {
                 let mut sum = T::default();
@@ -52,7 +55,7 @@ where
                 result_data[i][j] = sum;
             }
         }
-        
+
         ZeroHeapMatrix::new(result_data)
     }
 }

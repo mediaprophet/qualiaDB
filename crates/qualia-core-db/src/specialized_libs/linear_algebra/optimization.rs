@@ -250,10 +250,7 @@ impl MatrixAnalyzer {
         }
 
         // Pick the primary structure: prefer the most specific pattern
-        let structure = detected
-            .first()
-            .cloned()
-            .unwrap_or(MatrixPattern::Dense);
+        let structure = detected.first().cloned().unwrap_or(MatrixPattern::Dense);
 
         Ok(MatrixAnalysis {
             matrix_id: matrix.matrix_id.clone(),
@@ -281,9 +278,7 @@ impl MatrixAnalyzer {
         let mut patterns = Vec::new();
 
         // Helper: get element (i, j)
-        let at = |i: usize, j: usize| -> f64 {
-            data[i * cols + j]
-        };
+        let at = |i: usize, j: usize| -> f64 { data[i * cols + j] };
 
         // --- Sparse: fraction of non-zero elements < 0.3 ---
         let non_zero_count = data.iter().filter(|&&x| x.abs() > TOL).count();
@@ -652,20 +647,32 @@ impl PatternLibrary {
 
     pub fn initialize(&mut self) -> Result<(), LinearAlgebraError> {
         // Populate the patterns HashMap with names for each MatrixPattern variant
-        self.patterns.insert("diagonal".to_string(), MatrixPattern::Diagonal);
-        self.patterns.insert("triangular".to_string(), MatrixPattern::Triangular);
-        self.patterns.insert("banded".to_string(), MatrixPattern::Banded);
-        self.patterns.insert("symmetric".to_string(), MatrixPattern::Symmetric);
         self.patterns
-            .insert("positive_definite".to_string(), MatrixPattern::PositiveDefinite);
-        self.patterns.insert("orthogonal".to_string(), MatrixPattern::Orthogonal);
-        self.patterns.insert("sparse".to_string(), MatrixPattern::Sparse);
-        self.patterns.insert("dense".to_string(), MatrixPattern::Dense);
+            .insert("diagonal".to_string(), MatrixPattern::Diagonal);
+        self.patterns
+            .insert("triangular".to_string(), MatrixPattern::Triangular);
+        self.patterns
+            .insert("banded".to_string(), MatrixPattern::Banded);
+        self.patterns
+            .insert("symmetric".to_string(), MatrixPattern::Symmetric);
+        self.patterns.insert(
+            "positive_definite".to_string(),
+            MatrixPattern::PositiveDefinite,
+        );
+        self.patterns
+            .insert("orthogonal".to_string(), MatrixPattern::Orthogonal);
+        self.patterns
+            .insert("sparse".to_string(), MatrixPattern::Sparse);
+        self.patterns
+            .insert("dense".to_string(), MatrixPattern::Dense);
         self.patterns
             .insert("block_diagonal".to_string(), MatrixPattern::BlockDiagonal);
-        self.patterns.insert("toeplitz".to_string(), MatrixPattern::Toeplitz);
-        self.patterns.insert("hankel".to_string(), MatrixPattern::Hankel);
-        self.patterns.insert("circulant".to_string(), MatrixPattern::Circulant);
+        self.patterns
+            .insert("toeplitz".to_string(), MatrixPattern::Toeplitz);
+        self.patterns
+            .insert("hankel".to_string(), MatrixPattern::Hankel);
+        self.patterns
+            .insert("circulant".to_string(), MatrixPattern::Circulant);
 
         // Populate optimization_hints with recommended algorithms for each pattern
         self.optimization_hints.insert(
@@ -844,9 +851,8 @@ impl MatrixTransformer {
 
         // Read a logical element (i, j) from the source according to its
         // current storage_format.
-        let src = |i: usize, j: usize| -> Result<f64, LinearAlgebraError> {
-            read_element(matrix, i, j)
-        };
+        let src =
+            |i: usize, j: usize| -> Result<f64, LinearAlgebraError> { read_element(matrix, i, j) };
 
         let (data, storage_format) = match target_layout {
             MatrixLayout::RowMajor => {
@@ -1220,12 +1226,7 @@ mod tests {
         let analyzer = make_analyzer();
         // Hankel: constant along anti-diagonals
         // [[1,2,3],[2,3,4],[3,4,5]]
-        let m = make_matrix(
-            "h",
-            3,
-            3,
-            vec![1.0, 2.0, 3.0, 2.0, 3.0, 4.0, 3.0, 4.0, 5.0],
-        );
+        let m = make_matrix("h", 3, 3, vec![1.0, 2.0, 3.0, 2.0, 3.0, 4.0, 3.0, 4.0, 5.0]);
         let patterns = analyzer.detect_structure(&m);
         assert!(patterns.contains(&MatrixPattern::Hankel));
     }
@@ -1280,7 +1281,9 @@ mod tests {
 
         assert_eq!(result.matrix_id, "s");
         assert!(result.detected_patterns.contains(&MatrixPattern::Symmetric));
-        assert!(result.detected_patterns.contains(&MatrixPattern::PositiveDefinite));
+        assert!(result
+            .detected_patterns
+            .contains(&MatrixPattern::PositiveDefinite));
         assert!(!result.recommended_algorithms.is_empty());
     }
 
@@ -1351,7 +1354,7 @@ mod tests {
         let bj = j / block_size;
         let li = i % block_size; // local row within block
         let lj = j % block_size; // local col within block
-        // Count elements in blocks preceding (bi, bj) in row-major block order.
+                                 // Count elements in blocks preceding (bi, bj) in row-major block order.
         let mut offset = 0usize;
         'outer: for bbi in 0..block_rows {
             for bbj in 0..block_cols {
@@ -1448,7 +1451,10 @@ mod tests {
         );
 
         let result = transformer
-            .transform_matrix(&m, MatrixLayout::Blocked(Box::new(MatrixLayout::RowMajor), 2))
+            .transform_matrix(
+                &m,
+                MatrixLayout::Blocked(Box::new(MatrixLayout::RowMajor), 2),
+            )
             .unwrap();
 
         assert_eq!(result.storage_format, StorageFormat::Blocked);

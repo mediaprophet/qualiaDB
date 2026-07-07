@@ -390,7 +390,7 @@ impl FixedLanczosEigensolver {
 
             // Check convergence
             self.iteration += 1;
-            
+
             if beta_i < self.config.tolerance {
                 self.solver_state.converged = true;
                 break;
@@ -429,16 +429,20 @@ impl FixedLanczosEigensolver {
         }
 
         let mut eigvecs = [0.0; 100 * 100];
-        
+
         // solve eigensystem for the n x n block
-        crate::solvers::linear_algebra::eigen::symmetric_eigen(n, &mut tridiag[..n * n], &mut eigvecs[..n * n])?;
+        crate::solvers::linear_algebra::eigen::symmetric_eigen(
+            n,
+            &mut tridiag[..n * n],
+            &mut eigvecs[..n * n],
+        )?;
 
         // Extract eigenvalues from diagonal
         let mut eigs = [0.0; 100];
         for i in 0..n {
             eigs[i] = tridiag[i * n + i];
         }
-        
+
         // Sort ascending to get lowest eigenvalues
         eigs[..n].sort_by(|a, b| a.partial_cmp(b).unwrap_or(core::cmp::Ordering::Equal));
 

@@ -38,10 +38,10 @@ impl IntegralEngine {
             for j in 0..M {
                 let a = &basis_a[i];
                 let b = &basis_b[j];
-                
+
                 // Adaptive dispatch
                 let l_total = a.total_angular_momentum() + b.total_angular_momentum();
-                
+
                 let val = if l_total <= 2 {
                     // s, p, d orbitals use Obara-Saika / HGP
                     Self::os_overlap(a, b)
@@ -49,11 +49,11 @@ impl IntegralEngine {
                     // f, g orbitals use Rys Quadrature
                     Self::rys_overlap(a, b)
                 };
-                
+
                 s_matrix.set(i, j, val);
             }
         }
-        
+
         s_matrix
     }
 
@@ -65,14 +65,14 @@ impl IntegralEngine {
         let beta = b.exponent;
         let p = alpha + beta;
         let mu = (alpha * beta) / p;
-        
+
         let dx = a.origin[0] - b.origin[0];
         let dy = a.origin[1] - b.origin[1];
         let dz = a.origin[2] - b.origin[2];
-        let ab2 = dx*dx + dy*dy + dz*dz;
-        
+        let ab2 = dx * dx + dy * dy + dz * dz;
+
         let s_s = (PI / p).powf(1.5) * f64::exp(-mu * ab2);
-        
+
         // Return s_s * coefficients
         s_s * a.coefficient * b.coefficient
     }
@@ -94,10 +94,10 @@ impl IntegralEngine {
         c: &GtoPrimitive,
         d: &GtoPrimitive,
     ) -> f64 {
-        let l_total = a.total_angular_momentum() 
-                    + b.total_angular_momentum() 
-                    + c.total_angular_momentum() 
-                    + d.total_angular_momentum();
+        let l_total = a.total_angular_momentum()
+            + b.total_angular_momentum()
+            + c.total_angular_momentum()
+            + d.total_angular_momentum();
 
         if l_total <= 4 {
             Self::hgp_eri(a, b, c, d)
@@ -112,51 +112,62 @@ impl IntegralEngine {
         let beta = b.exponent;
         let gamma = c.exponent;
         let delta = d.exponent;
-        
+
         let p = alpha + beta;
         let q = gamma + delta;
         let alpha_p = (alpha * beta) / p;
         let alpha_q = (gamma * delta) / q;
-        
+
         let r_p = [
             (alpha * a.origin[0] + beta * b.origin[0]) / p,
             (alpha * a.origin[1] + beta * b.origin[1]) / p,
             (alpha * a.origin[2] + beta * b.origin[2]) / p,
         ];
-        
+
         let r_q = [
             (gamma * c.origin[0] + delta * d.origin[0]) / q,
             (gamma * c.origin[1] + delta * d.origin[1]) / q,
             (gamma * c.origin[2] + delta * d.origin[2]) / q,
         ];
-        
-        let ab2 = (a.origin[0]-b.origin[0]).powi(2) + (a.origin[1]-b.origin[1]).powi(2) + (a.origin[2]-b.origin[2]).powi(2);
-        let cd2 = (c.origin[0]-d.origin[0]).powi(2) + (c.origin[1]-d.origin[1]).powi(2) + (c.origin[2]-d.origin[2]).powi(2);
-        let pq2 = (r_p[0]-r_q[0]).powi(2) + (r_p[1]-r_q[1]).powi(2) + (r_p[2]-r_q[2]).powi(2);
-        
+
+        let ab2 = (a.origin[0] - b.origin[0]).powi(2)
+            + (a.origin[1] - b.origin[1]).powi(2)
+            + (a.origin[2] - b.origin[2]).powi(2);
+        let cd2 = (c.origin[0] - d.origin[0]).powi(2)
+            + (c.origin[1] - d.origin[1]).powi(2)
+            + (c.origin[2] - d.origin[2]).powi(2);
+        let pq2 = (r_p[0] - r_q[0]).powi(2) + (r_p[1] - r_q[1]).powi(2) + (r_p[2] - r_q[2]).powi(2);
+
         let t = (p * q) / (p + q) * pq2;
         let f0_t = Self::boys_function(0, t);
-        
+
         let prefactor = 2.0 * PI.powf(2.5) / (p * q * f64::sqrt(p + q));
         let exp_ab = f64::exp(-alpha_p * ab2);
         let exp_cd = f64::exp(-alpha_q * cd2);
-        
-        prefactor * exp_ab * exp_cd * f0_t * a.coefficient * b.coefficient * c.coefficient * d.coefficient
+
+        prefactor
+            * exp_ab
+            * exp_cd
+            * f0_t
+            * a.coefficient
+            * b.coefficient
+            * c.coefficient
+            * d.coefficient
     }
 
     /// Rys Quadrature for high-angular ERIs using zero-heap roots and weights
     fn rys_eri(a: &GtoPrimitive, b: &GtoPrimitive, c: &GtoPrimitive, d: &GtoPrimitive) -> f64 {
-        let l_total = a.total_angular_momentum() 
-                    + b.total_angular_momentum() 
-                    + c.total_angular_momentum() 
-                    + d.total_angular_momentum();
-        
+        let l_total = a.total_angular_momentum()
+            + b.total_angular_momentum()
+            + c.total_angular_momentum()
+            + d.total_angular_momentum();
+
         let n_roots = (l_total / 2 + 1) as usize;
-        
+
         // Zero-heap constraint: we support up to 8 roots (enough for l_total <= 14)
         let mut roots = [0.0; 8];
         let mut weights = [0.0; 8];
-        
+
         let alpha = a.exponent;
         let beta = b.exponent;
         let gamma = c.exponent;
@@ -164,40 +175,47 @@ impl IntegralEngine {
         let p = alpha + beta;
         let q = gamma + delta;
         let t = (p * q) / (p + q); // Simplified T for root finding
-        
+
         // Generate Boys function values needed for the Jacobi matrix (F_0 to F_{2N})
         let mut f_vals = [0.0; 17]; // max 2*8 = 16
         for m in 0..=(2 * n_roots) {
             f_vals[m] = Self::boys_function(m as u8, t);
         }
-        
+
         // Statically sized Golub-Welsch eigenvalue solver for Rys polynomials
         // Diagonalize the tridiagonal Jacobi matrix here using the f_vals as moments to find roots and weights.
         let mut alpha_coef = [0.0; 8];
         let mut beta_coef = [0.0; 8];
         let mut sigma = [[0.0; 17]; 9]; // sigma_k^l
-        
+
         // Chebyshev algorithm to compute recursion coefficients from moments
         for i in 0..=(2 * n_roots) {
-            sigma[1][i] = f_vals[i]; 
+            sigma[1][i] = f_vals[i];
         }
-        
+
         if f_vals[0].abs() > 1e-15 {
             alpha_coef[0] = f_vals[1] / f_vals[0];
             beta_coef[0] = f_vals[0];
-            
+
             for k in 1..n_roots {
                 for l in k..(2 * n_roots - k + 1) {
-                    sigma[k + 1][l] = sigma[k][l + 1] - alpha_coef[k - 1] * sigma[k][l] - beta_coef[k - 1] * sigma[k - 1][l];
+                    sigma[k + 1][l] = sigma[k][l + 1]
+                        - alpha_coef[k - 1] * sigma[k][l]
+                        - beta_coef[k - 1] * sigma[k - 1][l];
                 }
                 if sigma[k][k - 1].abs() > 1e-15 {
-                    alpha_coef[k] = sigma[k + 1][k + 1] / sigma[k + 1][k] - sigma[k][k] / sigma[k][k - 1];
+                    alpha_coef[k] =
+                        sigma[k + 1][k + 1] / sigma[k + 1][k] - sigma[k][k] / sigma[k][k - 1];
                     beta_coef[k] = sigma[k + 1][k] / sigma[k][k - 1];
                 }
             }
-            
+
             // Build and diagonalize symmetric tridiagonal matrix T
-            let mut t_mat = crate::specialized_libs::shared::zero_heap_algebra::ZeroHeapMatrix::<f64, 8, 8>::zeros();
+            let mut t_mat = crate::specialized_libs::shared::zero_heap_algebra::ZeroHeapMatrix::<
+                f64,
+                8,
+                8,
+            >::zeros();
             for i in 0..8 {
                 if i < n_roots {
                     t_mat.set(i, i, alpha_coef[i]);
@@ -210,8 +228,10 @@ impl IntegralEngine {
                     t_mat.set(i, i, 1.0); // Dummy for unused dimensions
                 }
             }
-            
-            if let Ok((evals, evecs)) = crate::specialized_libs::chemistry_modeling::scf::jacobi_diagonalization(&t_mat) {
+
+            if let Ok((evals, evecs)) =
+                crate::specialized_libs::chemistry_modeling::scf::jacobi_diagonalization(&t_mat)
+            {
                 for i in 0..n_roots {
                     roots[i] = evals[i];
                     let v = evecs.get(0, i);
@@ -225,7 +245,7 @@ impl IntegralEngine {
             roots[0] = t / (p + q);
             weights[0] = f_vals[0];
         }
-        
+
         let mut eri = 0.0;
 
         // Compute Gaussian product centers P (from a,b) and Q (from c,d).
@@ -249,19 +269,43 @@ impl IntegralEngine {
             // For s-type (l=0): I = 1.0
             // For p-type (l=1): I = u * displacement
             // Higher angular momentum would need the full VRR recurrence.
-            let ix = Self::hermite_1d(u2, r_p[0] - a.origin[0], r_p[0] - b.origin[0],
-                                      r_q[0] - c.origin[0], r_q[0] - d.origin[0],
-                                      a.l[0], b.l[0], c.l[0], d.l[0]);
-            let iy = Self::hermite_1d(u2, r_p[1] - a.origin[1], r_p[1] - b.origin[1],
-                                      r_q[1] - c.origin[1], r_q[1] - d.origin[1],
-                                      a.l[1], b.l[1], c.l[1], d.l[1]);
-            let iz = Self::hermite_1d(u2, r_p[2] - a.origin[2], r_p[2] - b.origin[2],
-                                      r_q[2] - c.origin[2], r_q[2] - d.origin[2],
-                                      a.l[2], b.l[2], c.l[2], d.l[2]);
+            let ix = Self::hermite_1d(
+                u2,
+                r_p[0] - a.origin[0],
+                r_p[0] - b.origin[0],
+                r_q[0] - c.origin[0],
+                r_q[0] - d.origin[0],
+                a.l[0],
+                b.l[0],
+                c.l[0],
+                d.l[0],
+            );
+            let iy = Self::hermite_1d(
+                u2,
+                r_p[1] - a.origin[1],
+                r_p[1] - b.origin[1],
+                r_q[1] - c.origin[1],
+                r_q[1] - d.origin[1],
+                a.l[1],
+                b.l[1],
+                c.l[1],
+                d.l[1],
+            );
+            let iz = Self::hermite_1d(
+                u2,
+                r_p[2] - a.origin[2],
+                r_p[2] - b.origin[2],
+                r_q[2] - c.origin[2],
+                r_q[2] - d.origin[2],
+                a.l[2],
+                b.l[2],
+                c.l[2],
+                d.l[2],
+            );
 
             eri += w * ix * iy * iz;
         }
-        
+
         eri * a.coefficient * b.coefficient * c.coefficient * d.coefficient
     }
 
@@ -276,8 +320,17 @@ impl IntegralEngine {
     ///
     /// This is a simplified implementation that handles up to l=1 (p-type)
     /// exactly and falls back to the s-type value for higher l.
-    fn hermite_1d(u: f64, pa: f64, pb: f64, qc: f64, qd: f64,
-                  la: u8, lb: u8, lc: u8, ld: u8) -> f64 {
+    fn hermite_1d(
+        u: f64,
+        pa: f64,
+        pb: f64,
+        qc: f64,
+        qd: f64,
+        la: u8,
+        lb: u8,
+        lc: u8,
+        ld: u8,
+    ) -> f64 {
         // ssss: I(0,0,0,0) = 1
         if la + lb + lc + ld == 0 {
             return 1.0;
@@ -286,20 +339,34 @@ impl IntegralEngine {
         // Build up the bra side (la, lb) using VRR on PA/PB.
         // I(1,0,0,0) = u * PA
         // I(0,1,0,0) = u * PB
-        let bra = if la == 1 && lb == 0 { u * pa }
-                  else if la == 0 && lb == 1 { u * pb }
-                  else if la == 1 && lb == 1 { u * u * pa * pb }
-                  else if la == 2 && lb == 0 { u * u * pa * pa + 0.5 }
-                  else if la == 0 && lb == 2 { u * u * pb * pb + 0.5 }
-                  else { 1.0 }; // fallback for unsupported l
+        let bra = if la == 1 && lb == 0 {
+            u * pa
+        } else if la == 0 && lb == 1 {
+            u * pb
+        } else if la == 1 && lb == 1 {
+            u * u * pa * pb
+        } else if la == 2 && lb == 0 {
+            u * u * pa * pa + 0.5
+        } else if la == 0 && lb == 2 {
+            u * u * pb * pb + 0.5
+        } else {
+            1.0
+        }; // fallback for unsupported l
 
         // Build up the ket side (lc, ld) using VRR on QC/QD.
-        let ket = if lc == 1 && ld == 0 { u * qc }
-                  else if lc == 0 && ld == 1 { u * qd }
-                  else if lc == 1 && ld == 1 { u * u * qc * qd }
-                  else if lc == 2 && ld == 0 { u * u * qc * qc + 0.5 }
-                  else if lc == 0 && ld == 2 { u * u * qd * qd + 0.5 }
-                  else { 1.0 };
+        let ket = if lc == 1 && ld == 0 {
+            u * qc
+        } else if lc == 0 && ld == 1 {
+            u * qd
+        } else if lc == 1 && ld == 1 {
+            u * u * qc * qd
+        } else if lc == 2 && ld == 0 {
+            u * u * qc * qc + 0.5
+        } else if lc == 0 && ld == 2 {
+            u * u * qd * qd + 0.5
+        } else {
+            1.0
+        };
 
         bra * ket
     }
@@ -318,12 +385,13 @@ impl IntegralEngine {
             let mut result = 0.0;
             let mut term = 1.0 / (2.0 * n as f64 + 1.0);
             let mut k = 0;
-            
+
             while term.abs() > 1e-15 && k < 10 {
                 result += term;
                 k += 1;
                 let k_f64 = k as f64;
-                term = -term * t * (2.0 * n as f64 + 2.0 * k_f64 - 1.0) / (k_f64 * (2.0 * n as f64 + 2.0 * k_f64 + 1.0));
+                term = -term * t * (2.0 * n as f64 + 2.0 * k_f64 - 1.0)
+                    / (k_f64 * (2.0 * n as f64 + 2.0 * k_f64 + 1.0));
             }
             result
         } else if t >= T_UPPER {
@@ -350,9 +418,10 @@ impl IntegralEngine {
                 fm += term;
                 k += 1;
                 let k_f64 = k as f64;
-                term = -term * t * (2.0 * m_max as f64 + 2.0 * k_f64 - 1.0) / (k_f64 * (2.0 * m_max as f64 + 2.0 * k_f64 + 1.0));
+                term = -term * t * (2.0 * m_max as f64 + 2.0 * k_f64 - 1.0)
+                    / (k_f64 * (2.0 * m_max as f64 + 2.0 * k_f64 + 1.0));
             }
-            
+
             let exp_t = f64::exp(-t);
             for m in (n..m_max).rev() {
                 fm = (2.0 * t * fm + exp_t) / (2.0 * m as f64 + 1.0);
@@ -375,22 +444,27 @@ mod tests {
             l: [0, 0, 0],
             coefficient: 1.0,
         };
-        
+
         let b = GtoPrimitive {
             origin: [1.0, 0.0, 0.0],
             exponent: 1.0,
             l: [0, 0, 0],
             coefficient: 1.0,
         };
-        
+
         let basis_a = [a];
         let basis_b = [b];
-        
+
         let overlap = IntegralEngine::evaluate_overlap(&basis_a, &basis_b);
         let val = overlap.get(0, 0);
-        
+
         // Analytical check
         let expected = (PI / 2.0).powf(1.5) * f64::exp(-0.5);
-        assert!((val - expected).abs() < 1e-8, "Overlap mismatch: expected {}, got {}", expected, val);
+        assert!(
+            (val - expected).abs() < 1e-8,
+            "Overlap mismatch: expected {}, got {}",
+            expected,
+            val
+        );
     }
 }

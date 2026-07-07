@@ -515,6 +515,14 @@ impl QualiaPortal {
         self.standpoint.t_window
     }
 
+    pub fn set_temporal_slice(&mut self, t_slice: f32, t_window: f32) {
+        self.standpoint = self.standpoint.with_temporal(t_slice, t_window);
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut gpu) = self.gpu {
+            gpu.set_standpoint(self.standpoint);
+        }
+    }
+
     pub fn encode_geometry(&mut self, json: &str) -> Result<JsValue, JsValue> {
         let parsed = spatial_encode_wasm(json)?;
         let buf_js = export_tensor_buffer_wasm(json)?;
@@ -611,7 +619,11 @@ impl QualiaPortal {
                     }
                 }
                 container_10d::SectionType::ProvenanceSidecar => {
-                    has_attestation = true;
+                    if let Ok(view) = crate::container_10d::provenance_section::decode_provenance_section(payload) {
+                        if crate::container_10d::provenance_section::validate_provenance(&view).is_ok() {
+                            has_attestation = true;
+                        }
+                    }
                 }
                 _ => {}
             }
@@ -743,7 +755,11 @@ impl QualiaPortal {
                     }
                 }
                 container_10d::SectionType::ProvenanceSidecar => {
-                    has_attestation = true;
+                    if let Ok(view) = crate::container_10d::provenance_section::decode_provenance_section(payload) {
+                        if crate::container_10d::provenance_section::validate_provenance(&view).is_ok() {
+                            has_attestation = true;
+                        }
+                    }
                 }
                 _ => {}
             }

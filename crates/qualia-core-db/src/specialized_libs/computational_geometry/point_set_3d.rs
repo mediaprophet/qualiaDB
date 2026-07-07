@@ -119,7 +119,10 @@ pub fn knn_brute_force_3d(
         return Err(PointSetError::InvalidK { k, n: points.len() });
     }
     if out.len() < k {
-        return Err(PointSetError::BufferTooSmall { needed: k, have: out.len() });
+        return Err(PointSetError::BufferTooSmall {
+            needed: k,
+            have: out.len(),
+        });
     }
     if scratch.len() < k + 1 {
         return Err(PointSetError::BufferTooSmall {
@@ -137,7 +140,10 @@ pub fn knn_brute_force_3d(
             continue;
         }
         let d = distance_sq_3d(query, p);
-        scratch[count] = KnnEntry { index: i, dist_sq: d };
+        scratch[count] = KnnEntry {
+            index: i,
+            dist_sq: d,
+        };
         count += 1;
     }
 
@@ -172,7 +178,10 @@ pub fn knn_all_brute_force_3d(
     }
     let needed = points.len() * k;
     if out.len() < needed {
-        return Err(PointSetError::BufferTooSmall { needed, have: out.len() });
+        return Err(PointSetError::BufferTooSmall {
+            needed,
+            have: out.len(),
+        });
     }
 
     for i in 0..points.len() {
@@ -205,7 +214,10 @@ pub fn knn_search_3d(
         return Err(PointSetError::InvalidK { k, n: points.len() });
     }
     if out.len() < k {
-        return Err(PointSetError::BufferTooSmall { needed: k, have: out.len() });
+        return Err(PointSetError::BufferTooSmall {
+            needed: k,
+            have: out.len(),
+        });
     }
     if scratch.len() < points.len().min(MAX_K + 1) {
         return Err(PointSetError::BufferTooSmall {
@@ -218,7 +230,10 @@ pub fn knn_search_3d(
     let mut count = 0usize;
     for (i, &p) in points.iter().enumerate() {
         let d = distance_sq_3d(q, p);
-        scratch[count] = KnnEntry { index: i, dist_sq: d };
+        scratch[count] = KnnEntry {
+            index: i,
+            dist_sq: d,
+        };
         count += 1;
         if count >= MAX_K {
             break;
@@ -268,7 +283,10 @@ pub fn cknn_graph_3d(
     }
     let max_edges = points.len() * k;
     if out_edges.len() < max_edges {
-        return Err(PointSetError::BufferTooSmall { needed: max_edges, have: out_edges.len() });
+        return Err(PointSetError::BufferTooSmall {
+            needed: max_edges,
+            have: out_edges.len(),
+        });
     }
     if knn_buffer.len() < points.len() * k {
         return Err(PointSetError::BufferTooSmall {
@@ -547,11 +565,17 @@ mod tests {
         let mut pts = Vec::with_capacity(n);
         let mut s = seed;
         for _ in 0..n {
-            s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            s = s
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             let x = ((s >> 33) as f64) / (1u64 << 31) as f64;
-            s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            s = s
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             let y = ((s >> 33) as f64) / (1u64 << 31) as f64;
-            s = s.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            s = s
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             let z = ((s >> 33) as f64) / (1u64 << 31) as f64;
             pts.push(Point3::new(x, y, z));
         }
@@ -696,7 +720,16 @@ mod tests {
         let mut mean_dist = vec![0.0f64; pts.len()];
         let mut knn_buf = vec![KnnEntry::default(); pts.len() * k];
         let mut scratch = vec![KnnEntry::default(); MAX_K + 1];
-        let n_outliers = remove_outliers_3d(&pts, k, 2.0, &mut flags, &mut mean_dist, &mut knn_buf, &mut scratch).unwrap();
+        let n_outliers = remove_outliers_3d(
+            &pts,
+            k,
+            2.0,
+            &mut flags,
+            &mut mean_dist,
+            &mut knn_buf,
+            &mut scratch,
+        )
+        .unwrap();
 
         assert!(n_outliers > 0, "should detect at least the outlier");
         // The last point (index 27) should be flagged.

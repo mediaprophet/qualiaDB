@@ -13,10 +13,13 @@ use qualia_core_db::{kv_dict_runtime, llm_bench};
 use std::path::{Path, PathBuf};
 
 fn find_model(name: &str) -> Option<PathBuf> {
-    [format!("../../docs/models/{name}"), format!("docs/models/{name}")]
-        .iter()
-        .map(PathBuf::from)
-        .find(|p| Path::new(p).exists())
+    [
+        format!("../../docs/models/{name}"),
+        format!("docs/models/{name}"),
+    ]
+    .iter()
+    .map(PathBuf::from)
+    .find(|p| Path::new(p).exists())
 }
 
 fn find_artifact() -> Option<PathBuf> {

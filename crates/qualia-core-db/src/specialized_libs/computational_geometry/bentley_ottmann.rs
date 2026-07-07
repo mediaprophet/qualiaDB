@@ -60,11 +60,7 @@ pub struct SweepSegment {
 impl SweepSegment {
     /// Create a sweep segment from two endpoints, canonicalizing left/right.
     pub fn new(index: usize, a: Point2, b: Point2) -> Self {
-        let (left, right) = if point_less(a, b) {
-            (a, b)
-        } else {
-            (b, a)
-        };
+        let (left, right) = if point_less(a, b) { (a, b) } else { (b, a) };
         Self { index, left, right }
     }
 }
@@ -90,7 +86,11 @@ enum Event {
     /// Right endpoint of a segment (segment leaves the sweep).
     Right { seg: SweepSegment },
     /// Intersection point of two segments.
-    Intersection { point: Point2, seg1: usize, seg2: usize },
+    Intersection {
+        point: Point2,
+        seg1: usize,
+        seg2: usize,
+    },
 }
 
 /// Canonical event ordering for the event queue.
@@ -208,12 +208,14 @@ pub fn bentley_ottmann_intersections(segments: &[(Point2, Point2)]) -> Vec<Point
         events.push(Event::Left { seg: *seg });
         events.push(Event::Right { seg: *seg });
     }
-    events.sort_by(|a, b| if event_less(a, b) {
-        std::cmp::Ordering::Less
-    } else if event_less(b, a) {
-        std::cmp::Ordering::Greater
-    } else {
-        std::cmp::Ordering::Equal
+    events.sort_by(|a, b| {
+        if event_less(a, b) {
+            std::cmp::Ordering::Less
+        } else if event_less(b, a) {
+            std::cmp::Ordering::Greater
+        } else {
+            std::cmp::Ordering::Equal
+        }
     });
 
     // Active segments (sweep-line status), ordered by x at the current
@@ -350,13 +352,15 @@ pub fn bentley_ottmann_intersections(segments: &[(Point2, Point2)]) -> Vec<Point
         }
 
         // Re-sort events (new intersection events may have been added).
-        events.sort_by(|a, b| if event_less(a, b) {
-        std::cmp::Ordering::Less
-    } else if event_less(b, a) {
-        std::cmp::Ordering::Greater
-    } else {
-        std::cmp::Ordering::Equal
-    });
+        events.sort_by(|a, b| {
+            if event_less(a, b) {
+                std::cmp::Ordering::Less
+            } else if event_less(b, a) {
+                std::cmp::Ordering::Greater
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        });
 
         ei = batch_end;
     }
@@ -403,10 +407,7 @@ fn x_at_y(seg: SweepSegment, y: f64) -> f64 {
 /// Returns a sorted list of intersection points between red and blue
 /// segments (not red-red or blue-blue). The result equals the brute-force
 /// oracle on all inputs.
-pub fn red_blue_intersections(
-    red: &[(Point2, Point2)],
-    blue: &[(Point2, Point2)],
-) -> Vec<Point2> {
+pub fn red_blue_intersections(red: &[(Point2, Point2)], blue: &[(Point2, Point2)]) -> Vec<Point2> {
     // For correctness, delegate to the brute-force oracle. A full
     // sweep-line red/blue implementation would maintain two active sets
     // and only check red-blue adjacency. The brute-force is correct and
@@ -443,10 +444,7 @@ mod tests {
 
     #[test]
     fn brute_force_finds_crossing() {
-        let segments = vec![
-            seg((0.0, 0.0), (1.0, 1.0)),
-            seg((0.0, 1.0), (1.0, 0.0)),
-        ];
+        let segments = vec![seg((0.0, 0.0), (1.0, 1.0)), seg((0.0, 1.0), (1.0, 0.0))];
         let intersections = brute_force_intersections(&segments);
         assert_eq!(intersections.len(), 1);
         assert!((intersections[0].x - 0.5).abs() < 1e-9);
@@ -455,10 +453,7 @@ mod tests {
 
     #[test]
     fn brute_force_no_intersections() {
-        let segments = vec![
-            seg((0.0, 0.0), (1.0, 0.0)),
-            seg((0.0, 1.0), (1.0, 1.0)),
-        ];
+        let segments = vec![seg((0.0, 0.0), (1.0, 0.0)), seg((0.0, 1.0), (1.0, 1.0))];
         let intersections = brute_force_intersections(&segments);
         assert!(intersections.is_empty());
     }
@@ -484,10 +479,7 @@ mod tests {
 
     #[test]
     fn bentley_ottmann_matches_oracle_simple_crossing() {
-        let segments = vec![
-            seg((0.0, 0.0), (1.0, 1.0)),
-            seg((0.0, 1.0), (1.0, 0.0)),
-        ];
+        let segments = vec![seg((0.0, 0.0), (1.0, 1.0)), seg((0.0, 1.0), (1.0, 0.0))];
         let oracle = brute_force_intersections(&segments);
         let sweep = bentley_ottmann_intersections(&segments);
         assert!(
@@ -550,10 +542,7 @@ mod tests {
     #[test]
     fn bentley_ottmann_matches_oracle_collinear_overlap() {
         // Collinear overlapping segments — no single intersection point.
-        let segments = vec![
-            seg((0.0, 0.0), (2.0, 0.0)),
-            seg((1.0, 0.0), (3.0, 0.0)),
-        ];
+        let segments = vec![seg((0.0, 0.0), (2.0, 0.0)), seg((1.0, 0.0), (3.0, 0.0))];
         let oracle = brute_force_intersections(&segments);
         let sweep = bentley_ottmann_intersections(&segments);
         assert!(pts_equal(&sweep, &oracle, 1e-9));
@@ -577,10 +566,7 @@ mod tests {
 
     #[test]
     fn bentley_ottmann_matches_oracle_t_junction() {
-        let segments = vec![
-            seg((0.0, 0.0), (2.0, 0.0)),
-            seg((1.0, 0.0), (1.0, 1.0)),
-        ];
+        let segments = vec![seg((0.0, 0.0), (2.0, 0.0)), seg((1.0, 0.0), (1.0, 1.0))];
         let oracle = brute_force_intersections(&segments);
         let sweep = bentley_ottmann_intersections(&segments);
         assert!(
@@ -593,10 +579,7 @@ mod tests {
 
     #[test]
     fn bentley_ottmann_matches_oracle_shared_endpoint() {
-        let segments = vec![
-            seg((0.0, 0.0), (1.0, 0.0)),
-            seg((1.0, 0.0), (1.0, 1.0)),
-        ];
+        let segments = vec![seg((0.0, 0.0), (1.0, 0.0)), seg((1.0, 0.0), (1.0, 1.0))];
         let oracle = brute_force_intersections(&segments);
         let sweep = bentley_ottmann_intersections(&segments);
         assert!(pts_equal(&sweep, &oracle, 1e-9));
@@ -616,7 +599,11 @@ mod tests {
         }
         let oracle = brute_force_intersections(&segments);
         let sweep = bentley_ottmann_intersections(&segments);
-        assert_eq!(sweep.len(), oracle.len(), "sweep and oracle should find same number of intersections");
+        assert_eq!(
+            sweep.len(),
+            oracle.len(),
+            "sweep and oracle should find same number of intersections"
+        );
         assert!(pts_equal(&sweep, &oracle, 1e-9));
     }
 
@@ -634,10 +621,7 @@ mod tests {
     #[test]
     fn red_blue_ignores_same_color() {
         // Two red segments that cross each other — should NOT be reported.
-        let red = vec![
-            seg((0.0, 0.0), (1.0, 1.0)),
-            seg((0.0, 1.0), (1.0, 0.0)),
-        ];
+        let red = vec![seg((0.0, 0.0), (1.0, 1.0)), seg((0.0, 1.0), (1.0, 0.0))];
         let blue: Vec<(Point2, Point2)> = vec![];
         let intersections = red_blue_intersections(&red, &blue);
         assert!(intersections.is_empty(), "red-red should not be reported");
@@ -645,14 +629,8 @@ mod tests {
 
     #[test]
     fn red_blue_matches_oracle() {
-        let red = vec![
-            seg((0.0, 0.0), (4.0, 4.0)),
-            seg((0.0, 2.0), (4.0, 2.0)),
-        ];
-        let blue = vec![
-            seg((0.0, 4.0), (4.0, 0.0)),
-            seg((2.0, 0.0), (2.0, 4.0)),
-        ];
+        let red = vec![seg((0.0, 0.0), (4.0, 4.0)), seg((0.0, 2.0), (4.0, 2.0))];
+        let blue = vec![seg((0.0, 4.0), (4.0, 0.0)), seg((2.0, 0.0), (2.0, 4.0))];
         let oracle = brute_force_red_blue_intersections(&red, &blue);
         let sweep = red_blue_intersections(&red, &blue);
         assert!(pts_equal(&sweep, &oracle, 1e-9));
@@ -676,7 +654,10 @@ mod tests {
         ];
         let r1 = bentley_ottmann_intersections(&segments1);
         let r2 = bentley_ottmann_intersections(&segments2);
-        assert!(pts_equal(&r1, &r2, 1e-9), "output should be deterministic regardless of input order");
+        assert!(
+            pts_equal(&r1, &r2, 1e-9),
+            "output should be deterministic regardless of input order"
+        );
     }
 
     // ── Sweep segment canonicalization ───────────────────────────────────

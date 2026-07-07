@@ -298,10 +298,7 @@ fn distance_sq(a: Point2, b: Point2) -> f64 {
 }
 
 /// Compute a determinism hash for a Voronoi diagram.
-pub fn voronoi_hash(
-    vertices: &[VoronoiVertex],
-    edges: &[VoronoiEdge],
-) -> u64 {
+pub fn voronoi_hash(vertices: &[VoronoiVertex], edges: &[VoronoiEdge]) -> u64 {
     let mut hash: u64 = 0xcbf29ce484222325;
     for v in vertices {
         hash ^= v.triangle_index as u64;
@@ -333,7 +330,11 @@ mod tests {
     use super::*;
 
     fn max_tri(n: usize) -> usize {
-        if n < 2 { 1 } else { 2 * n + 1 }
+        if n < 2 {
+            1
+        } else {
+            2 * n + 1
+        }
     }
 
     #[test]
@@ -348,7 +349,14 @@ mod tests {
         let mut tri_out = vec![[0u32; 3]; max_tri(4)];
         let mut verts = vec![VoronoiVertex::default_for(0); max_tri(4)];
         let mut edges = vec![VoronoiEdge::default(); 3 * 4];
-        let (vc, ec) = voronoi_diagram_2(&sites, &mut tri_scratch, &mut tri_out, &mut verts, &mut edges).unwrap();
+        let (vc, ec) = voronoi_diagram_2(
+            &sites,
+            &mut tri_scratch,
+            &mut tri_out,
+            &mut verts,
+            &mut edges,
+        )
+        .unwrap();
         assert_eq!(vc, 2); // 2 Delaunay triangles → 2 Voronoi vertices
         assert!(ec > 0);
     }
@@ -365,7 +373,14 @@ mod tests {
         let mut tri_out = vec![[0u32; 3]; max_tri(4)];
         let mut verts = vec![VoronoiVertex::default_for(0); max_tri(4)];
         let mut edges = vec![VoronoiEdge::default(); 3 * 4];
-        let (vc, _) = voronoi_diagram_2(&sites, &mut tri_scratch, &mut tri_out, &mut verts, &mut edges).unwrap();
+        let (vc, _) = voronoi_diagram_2(
+            &sites,
+            &mut tri_scratch,
+            &mut tri_out,
+            &mut verts,
+            &mut edges,
+        )
+        .unwrap();
         assert!(
             verify_voronoi_vertices(&sites, &tri_out[..vc], &verts[..vc], 1e-10),
             "Voronoi vertices should be equidistant to their sites"
@@ -398,7 +413,10 @@ mod tests {
         for qp in test_points {
             let bf = nearest_site_brute_force(&sites, qp).unwrap();
             let delaunay = nearest_site_via_delaunay(&sites, &tri_out[..tri_count], qp).unwrap();
-            assert_eq!(bf, delaunay, "nearest site mismatch at {qp:?}: brute={bf}, delaunay={delaunay}");
+            assert_eq!(
+                bf, delaunay,
+                "nearest site mismatch at {qp:?}: brute={bf}, delaunay={delaunay}"
+            );
         }
     }
 

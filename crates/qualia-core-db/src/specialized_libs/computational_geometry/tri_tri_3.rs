@@ -52,8 +52,8 @@
 use super::bvh::{build_bvh_recursive, query_overlap, BvhNode, MAX_BVH_DEPTH};
 use super::distance::Aabb;
 use super::exact_construct_3::{
-    construct_segment_plane_intersection_3, construct_segment_triangle_intersection_3,
-    ExactPoint3, TriangleContainment,
+    construct_segment_plane_intersection_3, construct_segment_triangle_intersection_3, ExactPoint3,
+    TriangleContainment,
 };
 use super::expansion::Sign;
 use super::kernel::{FilteredF64Kernel, GeometryKernel};
@@ -400,10 +400,26 @@ fn seg_seg_cross_2d<K: GeometryKernel>(
     d: (f64, f64),
 ) -> bool {
     use super::primitives::{Orientation, Point2};
-    let o1 = kernel.orientation_2(Point2::new(a.0, a.1), Point2::new(b.0, b.1), Point2::new(c.0, c.1));
-    let o2 = kernel.orientation_2(Point2::new(a.0, a.1), Point2::new(b.0, b.1), Point2::new(d.0, d.1));
-    let o3 = kernel.orientation_2(Point2::new(c.0, c.1), Point2::new(d.0, d.1), Point2::new(a.0, a.1));
-    let o4 = kernel.orientation_2(Point2::new(c.0, c.1), Point2::new(d.0, d.1), Point2::new(b.0, b.1));
+    let o1 = kernel.orientation_2(
+        Point2::new(a.0, a.1),
+        Point2::new(b.0, b.1),
+        Point2::new(c.0, c.1),
+    );
+    let o2 = kernel.orientation_2(
+        Point2::new(a.0, a.1),
+        Point2::new(b.0, b.1),
+        Point2::new(d.0, d.1),
+    );
+    let o3 = kernel.orientation_2(
+        Point2::new(c.0, c.1),
+        Point2::new(d.0, d.1),
+        Point2::new(a.0, a.1),
+    );
+    let o4 = kernel.orientation_2(
+        Point2::new(c.0, c.1),
+        Point2::new(d.0, d.1),
+        Point2::new(b.0, b.1),
+    );
 
     if o1 != o2 && o3 != o4 {
         return true;
@@ -565,8 +581,7 @@ pub fn tri_tri_intersect_3_exact(
     let kernel = FilteredF64Kernel::default();
 
     // Exact boolean decision (same as tri_tri_intersect_3).
-    let (intersects, _) =
-        tri_tri_intersect_3_with_kernel(&kernel, p1, q1, r1, p2, q2, r2);
+    let (intersects, _) = tri_tri_intersect_3_with_kernel(&kernel, p1, q1, r1, p2, q2, r2);
     if !intersects {
         return (false, None);
     }
@@ -588,9 +603,7 @@ pub fn tri_tri_intersect_3_exact(
 
     // Edges of T1 vs triangle T2.
     for &(u, v) in &[(p1, q1), (q1, r1), (r1, p1)] {
-        if let Ok((pt, containment)) =
-            construct_segment_triangle_intersection_3(u, v, p2, q2, r2)
-        {
+        if let Ok((pt, containment)) = construct_segment_triangle_intersection_3(u, v, p2, q2, r2) {
             if containment != TriangleContainment::Outside {
                 push_unique_exact(&mut points, &pt);
             }
@@ -599,9 +612,7 @@ pub fn tri_tri_intersect_3_exact(
 
     // Edges of T2 vs triangle T1.
     for &(u, v) in &[(p2, q2), (q2, r2), (r2, p2)] {
-        if let Ok((pt, containment)) =
-            construct_segment_triangle_intersection_3(u, v, p1, q1, r1)
-        {
+        if let Ok((pt, containment)) = construct_segment_triangle_intersection_3(u, v, p1, q1, r1) {
             if containment != TriangleContainment::Outside {
                 push_unique_exact(&mut points, &pt);
             }
@@ -711,10 +722,7 @@ fn push_unique_exact(points: &mut Vec<ExactPoint3>, pt: &ExactPoint3) {
     let r = pt.to_point3();
     for existing in points.iter() {
         let er = existing.to_point3();
-        if (er.x - r.x).abs() < 1e-12
-            && (er.y - r.y).abs() < 1e-12
-            && (er.z - r.z).abs() < 1e-12
-        {
+        if (er.x - r.x).abs() < 1e-12 && (er.y - r.y).abs() < 1e-12 && (er.z - r.z).abs() < 1e-12 {
             return;
         }
     }
@@ -765,7 +773,8 @@ fn point_in_tri_3d(x: Point3, a: Point3, b: Point3, c: Point3, n: Point3) -> boo
         let cx = ey * wz - ez * wy;
         let cy = ez * wx - ex * wz;
         let cz = ex * wy - ey * wx;
-        (cx * n.x + cy * n.y + cz * n.z) >= -1e-9 * (n.x * n.x + n.y * n.y + n.z * n.z).sqrt().max(1.0)
+        (cx * n.x + cy * n.y + cz * n.z)
+            >= -1e-9 * (n.x * n.x + n.y * n.y + n.z * n.z).sqrt().max(1.0)
     };
     edge_ok(a, b) && edge_ok(b, c) && edge_ok(c, a)
 }
@@ -803,7 +812,10 @@ fn fetch(vertices: &[Point3], tri: &[u32; 3], t: usize) -> Result<[Point3; 3], T
     for (i, &vi) in tri.iter().enumerate() {
         let v = *vertices
             .get(vi as usize)
-            .ok_or(TriTriError::IndexOutOfBounds { triangle: t, vertex: vi })?;
+            .ok_or(TriTriError::IndexOutOfBounds {
+                triangle: t,
+                vertex: vi,
+            })?;
         if !v.x.is_finite() || !v.y.is_finite() || !v.z.is_finite() {
             return Err(TriTriError::NonFiniteCoordinate { index: vi as usize });
         }
@@ -861,7 +873,12 @@ pub fn self_intersecting_pairs(
     triangles: &[[u32; 3]],
     out_pairs: &mut [TriPair],
 ) -> Result<usize, TriTriError> {
-    self_intersecting_pairs_with_kernel(&FilteredF64Kernel::default(), vertices, triangles, out_pairs)
+    self_intersecting_pairs_with_kernel(
+        &FilteredF64Kernel::default(),
+        vertices,
+        triangles,
+        out_pairs,
+    )
 }
 
 /// Kernel-generic variant of [`self_intersecting_pairs`].
@@ -931,10 +948,12 @@ pub fn self_intersecting_pairs_with_kernel<K: GeometryKernel>(
             }
             let [p1, q1, r1] = corners[a];
             let [p2, q2, r2] = corners[b];
-            let (hit, _seg) =
-                tri_tri_intersect_3_with_kernel(kernel, p1, q1, r1, p2, q2, r2);
+            let (hit, _seg) = tri_tri_intersect_3_with_kernel(kernel, p1, q1, r1, p2, q2, r2);
             if hit {
-                found.push(TriPair { a: a as u32, b: b as u32 });
+                found.push(TriPair {
+                    a: a as u32,
+                    b: b as u32,
+                });
             }
         }
     }
@@ -944,7 +963,9 @@ pub fn self_intersecting_pairs_with_kernel<K: GeometryKernel>(
     found.dedup();
 
     if out_pairs.len() < found.len() {
-        return Err(TriTriError::OutputTooSmall { required: found.len() });
+        return Err(TriTriError::OutputTooSmall {
+            required: found.len(),
+        });
     }
     out_pairs[..found.len()].copy_from_slice(&found);
     Ok(found.len())
@@ -963,10 +984,7 @@ mod tests {
     }
 
     // ── Brute-force oracle for self-intersection (O(n²), no BVH) ────────────
-    fn brute_force_self_intersections(
-        vertices: &[Point3],
-        triangles: &[[u32; 3]],
-    ) -> Vec<TriPair> {
+    fn brute_force_self_intersections(vertices: &[Point3], triangles: &[[u32; 3]]) -> Vec<TriPair> {
         let mut out = Vec::new();
         let n = triangles.len();
         for a in 0..n {
@@ -992,7 +1010,10 @@ mod tests {
                 };
                 let (hit, _) = tri_tri_intersect_3(ca[0], ca[1], ca[2], cb[0], cb[1], cb[2]);
                 if hit {
-                    out.push(TriPair { a: a as u32, b: b as u32 });
+                    out.push(TriPair {
+                        a: a as u32,
+                        b: b as u32,
+                    });
                 }
             }
         }
@@ -1010,7 +1031,11 @@ mod tests {
         Point3::new(a.x - b.x, a.y - b.y, a.z - b.z)
     }
     fn cross(a: Point3, b: Point3) -> Point3 {
-        Point3::new(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x)
+        Point3::new(
+            a.y * b.z - a.z * b.y,
+            a.z * b.x - a.x * b.z,
+            a.x * b.y - a.y * b.x,
+        )
     }
     fn dot(a: Point3, b: Point3) -> f64 {
         a.x * b.x + a.y * b.y + a.z * b.z
@@ -1153,7 +1178,10 @@ mod tests {
             );
         }
         // Sanity: the fixture must exercise both branches and both outcomes.
-        assert!(tested > 100_000, "fuzz should test >100k non-degenerate pairs");
+        assert!(
+            tested > 100_000,
+            "fuzz should test >100k non-degenerate pairs"
+        );
         assert!(hits > 1000, "fuzz should include many intersecting pairs");
         assert!(coplanar > 20, "fuzz should include coplanar configurations");
     }
@@ -1174,7 +1202,10 @@ mod tests {
         );
         assert!(hit, "crossing triangles must intersect");
         // Non-coplanar crossing yields a segment.
-        assert!(seg.is_some(), "non-coplanar crossing should produce a segment");
+        assert!(
+            seg.is_some(),
+            "non-coplanar crossing should produce a segment"
+        );
     }
 
     #[test]
@@ -1234,7 +1265,10 @@ mod tests {
             p(1.0, 3.0, 0.0),
         );
         assert!(hit, "overlapping coplanar triangles must intersect");
-        assert!(seg.is_none(), "coplanar overlap yields an area, not a segment");
+        assert!(
+            seg.is_none(),
+            "coplanar overlap yields an area, not a segment"
+        );
     }
 
     #[test]
@@ -1261,7 +1295,10 @@ mod tests {
             p(3.0, 2.0, 0.0),
             p(2.0, 3.0, 0.0),
         );
-        assert!(hit, "a triangle nested inside another (coplanar) must intersect");
+        assert!(
+            hit,
+            "a triangle nested inside another (coplanar) must intersect"
+        );
     }
 
     // ── Boundary/degenerate contact ─────────────────────────────────────────
@@ -1280,7 +1317,10 @@ mod tests {
             p(1.0, 0.0, 0.0),
             p(0.0, 0.0, 1.0),
         );
-        assert!(hit, "triangles sharing an edge touch → geometric intersection");
+        assert!(
+            hit,
+            "triangles sharing an edge touch → geometric intersection"
+        );
     }
 
     #[test]
@@ -1391,10 +1431,26 @@ mod tests {
     /// A regular tetrahedron mesh (4 vertices, 4 faces), wound outward.
     fn tetra(center: Point3, scale: f64) -> (Vec<Point3>, Vec<[u32; 3]>) {
         let v = vec![
-            Point3::new(center.x + scale * 0.0, center.y + scale * 0.0, center.z + scale * 0.0),
-            Point3::new(center.x + scale * 1.0, center.y + scale * 0.0, center.z + scale * 0.0),
-            Point3::new(center.x + scale * 0.0, center.y + scale * 1.0, center.z + scale * 0.0),
-            Point3::new(center.x + scale * 0.0, center.y + scale * 0.0, center.z + scale * 1.0),
+            Point3::new(
+                center.x + scale * 0.0,
+                center.y + scale * 0.0,
+                center.z + scale * 0.0,
+            ),
+            Point3::new(
+                center.x + scale * 1.0,
+                center.y + scale * 0.0,
+                center.z + scale * 0.0,
+            ),
+            Point3::new(
+                center.x + scale * 0.0,
+                center.y + scale * 1.0,
+                center.z + scale * 0.0,
+            ),
+            Point3::new(
+                center.x + scale * 0.0,
+                center.y + scale * 0.0,
+                center.z + scale * 1.0,
+            ),
         ];
         let t = vec![[0, 2, 1], [0, 1, 3], [0, 3, 2], [1, 2, 3]];
         (v, t)
@@ -1435,7 +1491,10 @@ mod tests {
 
         let mut out = vec![TriPair { a: 0, b: 0 }; required_self_intersection_pairs(t.len())];
         let n = self_intersecting_pairs(&v, &t, &mut out).unwrap();
-        assert!(n > 0, "interpenetrating tetra must be flagged self-intersecting");
+        assert!(
+            n > 0,
+            "interpenetrating tetra must be flagged self-intersecting"
+        );
 
         // Cross-check against the O(n²) brute-force oracle (same predicate,
         // no BVH) — the BVH broad phase must not change the answer set.
@@ -1447,7 +1506,10 @@ mod tests {
         for pair in &out[..n] {
             let a_in_first = pair.a < 4;
             let b_in_first = pair.b < 4;
-            assert_ne!(a_in_first, b_in_first, "self-intersection should be cross-tetra");
+            assert_ne!(
+                a_in_first, b_in_first,
+                "self-intersection should be cross-tetra"
+            );
         }
     }
 
@@ -1466,7 +1528,10 @@ mod tests {
         let t = vec![[0, 1, 2], [1, 3, 2]];
         let mut out = vec![TriPair { a: 0, b: 0 }; 4];
         let n = self_intersecting_pairs(&v, &t, &mut out).unwrap();
-        assert_eq!(n, 0, "adjacent (shared-edge) faces are not self-intersections");
+        assert_eq!(
+            n, 0,
+            "adjacent (shared-edge) faces are not self-intersections"
+        );
     }
 
     #[test]
@@ -1515,7 +1580,10 @@ mod tests {
         let mut out = vec![TriPair { a: 0, b: 0 }; 1];
         assert_eq!(
             self_intersecting_pairs(&v, &t, &mut out),
-            Err(TriTriError::IndexOutOfBounds { triangle: 0, vertex: 2 })
+            Err(TriTriError::IndexOutOfBounds {
+                triangle: 0,
+                vertex: 2
+            })
         );
     }
 
@@ -1535,7 +1603,10 @@ mod tests {
         let mut out = vec![TriPair { a: 0, b: 0 }; 1];
         assert_eq!(self_intersecting_pairs(&[], &[], &mut out).unwrap(), 0);
         let v = vec![p(0.0, 0.0, 0.0), p(1.0, 0.0, 0.0), p(0.0, 1.0, 0.0)];
-        assert_eq!(self_intersecting_pairs(&v, &[[0, 1, 2]], &mut out).unwrap(), 0);
+        assert_eq!(
+            self_intersecting_pairs(&v, &[[0, 1, 2]], &mut out).unwrap(),
+            0
+        );
     }
 
     // ── Determinism of the mesh driver ──────────────────────────────────────
@@ -1555,7 +1626,11 @@ mod tests {
         let na = self_intersecting_pairs(&v, &t, &mut out_a).unwrap();
         let nb = self_intersecting_pairs(&v, &t, &mut out_b).unwrap();
         assert_eq!(na, nb);
-        assert_eq!(out_a[..na], out_b[..nb], "identical input → identical output");
+        assert_eq!(
+            out_a[..na],
+            out_b[..nb],
+            "identical input → identical output"
+        );
     }
 
     // ── BVH-vs-brute cross-check on a larger interpenetrating fixture ────────
@@ -1583,7 +1658,11 @@ mod tests {
         let mut out = vec![TriPair { a: 0, b: 0 }; cap];
         let n = self_intersecting_pairs(&v, &t, &mut out).unwrap();
         let brute = brute_force_self_intersections(&v, &t);
-        assert_eq!(&out[..n], &brute[..], "BVH broad phase must match brute force exactly");
+        assert_eq!(
+            &out[..n],
+            &brute[..],
+            "BVH broad phase must match brute force exactly"
+        );
         assert!(n > 0, "the fixture is constructed to self-intersect");
     }
 
@@ -1595,26 +1674,55 @@ mod tests {
         let t1 = [p(0.0, 0.0, 0.0), p(1.0, 0.0, 0.0), p(0.0, 1.0, 0.0)];
         let t2 = [p(0.2, 0.2, -1.0), p(0.2, 0.2, 1.0), p(0.8, 0.2, 0.0)];
         let (bool_f64, seg_f64) = tri_tri_intersect_3(t1[0], t1[1], t1[2], t2[0], t2[1], t2[2]);
-        let (bool_exact, seg_exact) = tri_tri_intersect_3_exact(t1[0], t1[1], t1[2], t2[0], t2[1], t2[2]);
+        let (bool_exact, seg_exact) =
+            tri_tri_intersect_3_exact(t1[0], t1[1], t1[2], t2[0], t2[1], t2[2]);
         assert_eq!(bool_f64, bool_exact, "boolean decision must match");
         if let Some(s_f64) = seg_f64 {
             let s_exact = seg_exact.expect("exact segment should be Some when f64 is Some");
             let ex_start = s_exact.start.to_point3();
             let ex_end = s_exact.end.to_point3();
             // Exact points should be very close to f64 points.
-            assert!((ex_start.x - s_f64.start.x).abs() < 1e-10, "start x: {ex_start:?} vs {:?}", s_f64.start);
-            assert!((ex_start.y - s_f64.start.y).abs() < 1e-10, "start y: {ex_start:?} vs {:?}", s_f64.start);
-            assert!((ex_start.z - s_f64.start.z).abs() < 1e-10, "start z: {ex_start:?} vs {:?}", s_f64.start);
-            assert!((ex_end.x - s_f64.end.x).abs() < 1e-10, "end x: {ex_end:?} vs {:?}", s_f64.end);
-            assert!((ex_end.y - s_f64.end.y).abs() < 1e-10, "end y: {ex_end:?} vs {:?}", s_f64.end);
-            assert!((ex_end.z - s_f64.end.z).abs() < 1e-10, "end z: {ex_end:?} vs {:?}", s_f64.end);
+            assert!(
+                (ex_start.x - s_f64.start.x).abs() < 1e-10,
+                "start x: {ex_start:?} vs {:?}",
+                s_f64.start
+            );
+            assert!(
+                (ex_start.y - s_f64.start.y).abs() < 1e-10,
+                "start y: {ex_start:?} vs {:?}",
+                s_f64.start
+            );
+            assert!(
+                (ex_start.z - s_f64.start.z).abs() < 1e-10,
+                "start z: {ex_start:?} vs {:?}",
+                s_f64.start
+            );
+            assert!(
+                (ex_end.x - s_f64.end.x).abs() < 1e-10,
+                "end x: {ex_end:?} vs {:?}",
+                s_f64.end
+            );
+            assert!(
+                (ex_end.y - s_f64.end.y).abs() < 1e-10,
+                "end y: {ex_end:?} vs {:?}",
+                s_f64.end
+            );
+            assert!(
+                (ex_end.z - s_f64.end.z).abs() < 1e-10,
+                "end z: {ex_end:?} vs {:?}",
+                s_f64.end
+            );
         }
     }
 
     #[test]
     fn exact_intersect_disjoint_triangles() {
         let t1 = [p(0.0, 0.0, 0.0), p(1.0, 0.0, 0.0), p(0.0, 1.0, 0.0)];
-        let t2 = [p(10.0, 10.0, 10.0), p(11.0, 10.0, 10.0), p(10.0, 11.0, 10.0)];
+        let t2 = [
+            p(10.0, 10.0, 10.0),
+            p(11.0, 10.0, 10.0),
+            p(10.0, 11.0, 10.0),
+        ];
         let (hit, seg) = tri_tri_intersect_3_exact(t1[0], t1[1], t1[2], t2[0], t2[1], t2[2]);
         assert!(!hit, "disjoint triangles should not intersect");
         assert!(seg.is_none(), "no segment for disjoint triangles");
@@ -1636,12 +1744,21 @@ mod tests {
         // All points should be in z=0 plane.
         let start = seg.start.to_point3();
         let end = seg.end.to_point3();
-        assert!(start.z.abs() < 1e-12, "coplanar segment start z ≈ 0, got {start:?}");
-        assert!(end.z.abs() < 1e-12, "coplanar segment end z ≈ 0, got {end:?}");
+        assert!(
+            start.z.abs() < 1e-12,
+            "coplanar segment start z ≈ 0, got {start:?}"
+        );
+        assert!(
+            end.z.abs() < 1e-12,
+            "coplanar segment end z ≈ 0, got {end:?}"
+        );
         // The segment should have positive length.
         let dx = end.x - start.x;
         let dy = end.y - start.y;
-        assert!(dx * dx + dy * dy > 1e-10, "coplanar segment should have positive length");
+        assert!(
+            dx * dx + dy * dy > 1e-10,
+            "coplanar segment should have positive length"
+        );
     }
 
     #[test]
@@ -1659,7 +1776,10 @@ mod tests {
         // T2's most distant vertices: (1,1)-(2,1) distance 1, (1,1)-(1,2) distance 1,
         // (2,1)-(1,2) distance sqrt(2) ≈ 1.414 — so the segment should be (2,1)-(1,2).
         let dist_sq = (start.x - end.x).powi(2) + (start.y - end.y).powi(2);
-        assert!((dist_sq - 2.0).abs() < 1e-10, "nested coplanar segment should be T2's longest diagonal, got dist_sq={dist_sq}");
+        assert!(
+            (dist_sq - 2.0).abs() < 1e-10,
+            "nested coplanar segment should be T2's longest diagonal, got dist_sq={dist_sq}"
+        );
     }
 
     #[test]
@@ -1669,7 +1789,10 @@ mod tests {
         let t2 = [p(0.0, 0.0, 0.0), p(-1.0, 0.0, 0.0), p(0.0, -1.0, 0.0)];
         let (hit, seg) = tri_tri_intersect_3_exact(t1[0], t1[1], t1[2], t2[0], t2[1], t2[2]);
         assert!(hit, "vertex-touching coplanar triangles do intersect");
-        assert!(seg.is_none(), "single-vertex touch should not produce a segment");
+        assert!(
+            seg.is_none(),
+            "single-vertex touch should not produce a segment"
+        );
     }
 
     #[test]

@@ -83,7 +83,10 @@ pub struct LoweringContext {
 
 impl LoweringContext {
     pub fn new(capabilities: HardwareCapabilityMatrix, schedule: Schedule) -> Self {
-        Self { capabilities, schedule }
+        Self {
+            capabilities,
+            schedule,
+        }
     }
 
     /// Selects the 64-bit lowering policy for the current adapter.
@@ -125,25 +128,37 @@ mod tests {
     #[test]
     fn rt_intrinsic_excluded_without_rt_cores() {
         let absent = HardwareCapabilityMatrix::default();
-        assert_eq!(absent.intrinsic_support(&ray_query()), IntrinsicSupport::Exclude);
+        assert_eq!(
+            absent.intrinsic_support(&ray_query()),
+            IntrinsicSupport::Exclude
+        );
 
         let present = HardwareCapabilityMatrix {
             supports_rt_cores: true,
             ..Default::default()
         };
-        assert_eq!(present.intrinsic_support(&ray_query()), IntrinsicSupport::Native);
+        assert_eq!(
+            present.intrinsic_support(&ray_query()),
+            IntrinsicSupport::Native
+        );
     }
 
     #[test]
     fn coopmat_excluded_but_subgroup_lowers() {
         let caps = HardwareCapabilityMatrix::default();
         assert_eq!(
-            caps.intrinsic_support(&Intrinsic::CoopMatMul { m: 16, n: 16, k: 16 }),
+            caps.intrinsic_support(&Intrinsic::CoopMatMul {
+                m: 16,
+                n: 16,
+                k: 16
+            }),
             IntrinsicSupport::Exclude
         );
         // No subgroup hardware → portable shared-memory lowering, not exclusion.
         assert_eq!(
-            caps.intrinsic_support(&Intrinsic::SubgroupReduce { op: SubgroupReduceOp::Add }),
+            caps.intrinsic_support(&Intrinsic::SubgroupReduce {
+                op: SubgroupReduceOp::Add
+            }),
             IntrinsicSupport::LowerToSharedMemory
         );
     }

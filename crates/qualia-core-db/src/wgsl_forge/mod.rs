@@ -8,9 +8,9 @@ pub mod backend;
 // W10: the forge's calibration/adaptation pipeline (corpus→capture→learn→certify→package). Native-
 // only (drives the real inference stack for capture + the PPL oracle). The third produce-and-certify
 // entry point beside kernel certification and GGUF→p64 transcode.
+pub mod cache;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod calibration;
-pub mod cache;
 pub mod dispatch;
 pub mod emit;
 pub mod execute;
@@ -34,8 +34,8 @@ pub use dispatch::{
 };
 pub use emit::{decode_spirv_words, emit_shader, matmul_tc_wgsl, GeneratedShader, TargetBackend};
 pub use ir::{
-    BufferAccess, BufferElement, BufferSpec, BuiltinKernel, KernelSpec, Op,
-    P64GpuWords64, ScalarType, SharedLen, SharedMemorySpec,
+    BufferAccess, BufferElement, BufferSpec, BuiltinKernel, KernelSpec, Op, P64GpuWords64,
+    ScalarType, SharedLen, SharedMemorySpec,
 };
 pub use manifest::{
     AdapterIdentity, CertificationManifest, HardwareProfile, TimingSource, TimingSummary,
@@ -44,9 +44,8 @@ pub use manifest::{
 pub use oracle::{
     candidate_evaluation, certify_builtin, compare_f32, dft_cpu, evaluate_builtin, evaluate_ffn,
     evaluate_fft, evaluate_matmul_tc, evaluate_p64, evaluate_topk, ffn_cpu, ffn_tensors,
-    fft_inputs, matmul_cpu, p64_project_cpu, p64_records, topk_cpu,
-    topk_inputs, AffineParams, ComparisonReport, FfnParams, FftParams, GpuEvaluation, OracleCase,
-    OracleTolerance, TopKParams,
+    fft_inputs, matmul_cpu, p64_project_cpu, p64_records, topk_cpu, topk_inputs, AffineParams,
+    ComparisonReport, FfnParams, FftParams, GpuEvaluation, OracleCase, OracleTolerance, TopKParams,
 };
 #[cfg(feature = "cuda")]
 pub use oracle::{evaluate_affine_cuda, evaluate_ffn_cuda, evaluate_topk_cuda};
@@ -56,7 +55,7 @@ pub use schedule::{AdapterConstraints, Schedule, ScheduleSpace};
 pub use tune::{
     tune_with, CandidateEvaluation, CandidateFailure, CandidateResult, TuningConfig, TuningResult,
 };
-pub use validate::{validate_wgsl, validate_native, ValidationReport};
+pub use validate::{validate_native, validate_wgsl, ValidationReport};
 
 pub const FORGE_SCHEMA_VERSION: u32 = 2;
 pub const WGPU_API_VERSION: &str = "29.0.3";

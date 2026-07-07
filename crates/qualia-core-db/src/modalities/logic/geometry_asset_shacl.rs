@@ -23,6 +23,7 @@ pub struct GeometryAssetConfiguration {
     pub max_triangle_count: u32,
     pub allowed_source_formats: Vec<String>,
     pub allowed_units: Vec<String>,
+    pub allowed_licences: Vec<String>,
     /// Sensitivity classes, least→most restrictive (index = rank). Absent/unknown ⇒ most restrictive.
     pub sensitivity_ladder: Vec<String>,
 }
@@ -35,6 +36,7 @@ impl Default for GeometryAssetConfiguration {
             max_triangle_count: MAX_GEOMETRY_COUNT,
             allowed_source_formats: owned(&["obj", "stl", "glb", "gltf"]),
             allowed_units: owned(&["metre", "millimetre", "centimetre", "inch", "dimensionless"]),
+            allowed_licences: owned(&["CC0", "CC-BY", "CC-BY-SA", "ODC-PDDL", "MIT", "Apache-2.0"]),
             sensitivity_ladder: owned(&["Public", "Restricted", "Classified", "Sanctuary"]),
         }
     }
@@ -54,6 +56,9 @@ impl GeometryAssetConfiguration {
         }
         for unit in &self.allowed_units {
             ops.push(SlgOpcode::CheckHasValue(q_hash(unit)));
+        }
+        for licence in &self.allowed_licences {
+            ops.push(SlgOpcode::CheckHasValue(q_hash(licence)));
         }
         ops
     }
@@ -88,27 +93,54 @@ pub struct GeometryManifestFacts<'a> {
     pub input_sensitivities: &'a [&'a str],
     /// The sensitivity class declared on this asset (if any).
     pub declared_sensitivity: Option<&'a str>,
+    pub licence: &'a str,
+    pub creator: Option<&'a str>,
+    pub valid_from: Option<u64>,
+    pub valid_until: Option<u64>,
 }
 
 /// A geometry-asset constraint violation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GeometryConstraintViolation {
-    VertexCountOutOfRange { count: u32, max: u32 },
-    TriangleCountOutOfRange { count: u32, max: u32 },
+    VertexCountOutOfRange {
+        count: u32,
+        max: u32,
+    },
+    TriangleCountOutOfRange {
+        count: u32,
+        max: u32,
+    },
     UnknownSourceFormat(String),
     UnknownUnit(String),
+    UnknownLicence(String),
     /// A bbox coordinate is NaN/∞ — no unit-bearing geometry may carry a non-finite box.
     NonFiniteBbox,
     /// `bboxMin[axis] > bboxMax[axis]` — an inverted (impossible) box.
-    InvertedBbox { axis: u8 },
+    InvertedBbox {
+        axis: u8,
+    },
     /// A triangle references a vertex index `>= vertexCount`.
-    IndexOutOfBounds { max_index: u32, vertex_count: u32 },
+    IndexOutOfBounds {
+        max_index: u32,
+        vertex_count: u32,
+    },
     /// The manifest's `compiledDigest` does not equal the real `.10d` whole-file CRC — the manifest
     /// does not describe the container it claims to.
-    CompiledDigestMismatch { claimed: u32, actual: u32 },
+    CompiledDigestMismatch {
+        claimed: u32,
+        actual: u32,
+    },
     /// A derived asset declared a **less** restrictive sensitivity than one of its inputs — the
     /// high-water-mark forbids down-classifying derived geometry.
-    SensitivityDowngraded { declared: String, required: String },
+    SensitivityDowngraded {
+        declared: String,
+        required: String,
+    },
+    /// validFrom > validUntil
+    TemporalValidityInverted {
+        from: u64,
+        until: u64,
+    },
 }
 
 /// Validate the relational constraints of a compiled geometry-asset manifest. Empty result = valid.
@@ -122,18 +154,31 @@ pub fn validate_geometry_manifest(
 
     // Counts in [1, max].
     if facts.vertex_count < 1 || facts.vertex_count > cfg.max_vertex_count {
-        v.push(VertexCountOutOfRange { count: facts.vertex_count, max: cfg.max_vertex_count });
+        v.push(VertexCountOutOfRange {
+            count: facts.vertex_count,
+            max: cfg.max_vertex_count,
+        });
     }
     if facts.triangle_count < 1 || facts.triangle_count > cfg.max_triangle_count {
-        v.push(TriangleCountOutOfRange { count: facts.triangle_count, max: cfg.max_triangle_count });
+        v.push(TriangleCountOutOfRange {
+            count: facts.triangle_count,
+            max: cfg.max_triangle_count,
+        });
     }
 
-    // Format / unit membership (the sh:in sets).
-    if !cfg.allowed_source_formats.iter().any(|s| s == facts.source_format) {
+    // Format / unit / licence membership (the sh:in sets).
+    if !cfg
+        .allowed_source_formats
+        .iter()
+        .any(|s| s == facts.source_format)
+    {
         v.push(UnknownSourceFormat(facts.source_format.to_string()));
     }
     if !cfg.allowed_units.iter().any(|s| s == facts.unit) {
         v.push(UnknownUnit(facts.unit.to_string()));
+    }
+    if !cfg.allowed_licences.iter().any(|s| s == facts.licence) {
+        v.push(UnknownLicence(facts.licence.to_string()));
     }
 
     // Bbox finite and non-inverted.
@@ -155,7 +200,10 @@ pub fn validate_geometry_manifest(
     // Every triangle index < vertexCount.
     if let Some(max_index) = facts.max_triangle_index {
         if max_index >= facts.vertex_count {
-            v.push(IndexOutOfBounds { max_index, vertex_count: facts.vertex_count });
+            v.push(IndexOutOfBounds {
+                max_index,
+                vertex_count: facts.vertex_count,
+            });
         }
     }
 
@@ -183,6 +231,13 @@ pub fn validate_geometry_manifest(
         }
     }
 
+    // Temporal validity checks
+    if let (Some(from), Some(until)) = (facts.valid_from, facts.valid_until) {
+        if from > until {
+            v.push(TemporalValidityInverted { from, until });
+        }
+    }
+
     v
 }
 
@@ -203,22 +258,32 @@ mod tests {
             actual_container_crc32c: 0xDEAD_BEEF,
             input_sensitivities: &["Restricted"],
             declared_sensitivity: Some("Classified"),
+            licence: "CC-BY",
+            creator: Some("did:qualia:test_creator"),
+            valid_from: Some(100),
+            valid_until: Some(200),
         }
     }
 
     #[test]
     fn a_well_formed_manifest_passes() {
-        assert!(validate_geometry_manifest(&valid_facts(), &GeometryAssetConfiguration::default()).is_empty());
+        assert!(
+            validate_geometry_manifest(&valid_facts(), &GeometryAssetConfiguration::default())
+                .is_empty()
+        );
     }
 
     #[test]
     fn to_opcodes_emits_bounds_and_membership() {
         let ops = GeometryAssetConfiguration::default().to_opcodes();
-        // min(1) + 2×max + 4 formats + 5 units = 12 opcodes.
-        assert_eq!(ops.len(), 12);
-        assert!(ops.iter().any(|o| matches!(o, SlgOpcode::CheckMaxInclusive(m) if *m == MAX_GEOMETRY_COUNT as f64)));
+        // min(1) + 2×max + 4 formats + 5 units + 6 licences = 18 opcodes.
+        assert_eq!(ops.len(), 18);
+        assert!(ops.iter().any(
+            |o| matches!(o, SlgOpcode::CheckMaxInclusive(m) if *m == MAX_GEOMETRY_COUNT as f64)
+        ));
         assert!(ops.contains(&SlgOpcode::CheckHasValue(q_hash("glb"))));
         assert!(ops.contains(&SlgOpcode::CheckHasValue(q_hash("metre"))));
+        assert!(ops.contains(&SlgOpcode::CheckHasValue(q_hash("CC0"))));
     }
 
     #[test]
@@ -228,19 +293,37 @@ mod tests {
         f.vertex_count = 0;
         f.triangle_count = MAX_GEOMETRY_COUNT + 1;
         let v = validate_geometry_manifest(&f, &cfg);
-        assert!(v.contains(&GeometryConstraintViolation::VertexCountOutOfRange { count: 0, max: MAX_GEOMETRY_COUNT }));
-        assert!(v.iter().any(|x| matches!(x, GeometryConstraintViolation::TriangleCountOutOfRange { .. })));
+        assert!(
+            v.contains(&GeometryConstraintViolation::VertexCountOutOfRange {
+                count: 0,
+                max: MAX_GEOMETRY_COUNT
+            })
+        );
+        assert!(v.iter().any(|x| matches!(
+            x,
+            GeometryConstraintViolation::TriangleCountOutOfRange { .. }
+        )));
     }
 
     #[test]
-    fn unknown_format_and_unit_are_caught() {
+    fn unknown_format_and_unit_and_licence_are_caught() {
         let cfg = GeometryAssetConfiguration::default();
         let mut f = valid_facts();
         f.source_format = "fbx";
         f.unit = "cubits";
+        f.licence = "proprietary";
         let v = validate_geometry_manifest(&f, &cfg);
-        assert!(v.contains(&GeometryConstraintViolation::UnknownSourceFormat("fbx".to_string())));
-        assert!(v.contains(&GeometryConstraintViolation::UnknownUnit("cubits".to_string())));
+        assert!(
+            v.contains(&GeometryConstraintViolation::UnknownSourceFormat(
+                "fbx".to_string()
+            ))
+        );
+        assert!(v.contains(&GeometryConstraintViolation::UnknownUnit(
+            "cubits".to_string()
+        )));
+        assert!(v.contains(&GeometryConstraintViolation::UnknownLicence(
+            "proprietary".to_string()
+        )));
     }
 
     #[test]
@@ -254,7 +337,8 @@ mod tests {
 
         let mut g = valid_facts();
         g.bbox_max = [f32::NAN, 1.0, 1.0];
-        assert!(validate_geometry_manifest(&g, &cfg).contains(&GeometryConstraintViolation::NonFiniteBbox));
+        assert!(validate_geometry_manifest(&g, &cfg)
+            .contains(&GeometryConstraintViolation::NonFiniteBbox));
     }
 
     #[test]
@@ -262,8 +346,12 @@ mod tests {
         let cfg = GeometryAssetConfiguration::default();
         let mut f = valid_facts();
         f.max_triangle_index = Some(3); // == vertex_count (3) → OOB
-        assert!(validate_geometry_manifest(&f, &cfg)
-            .contains(&GeometryConstraintViolation::IndexOutOfBounds { max_index: 3, vertex_count: 3 }));
+        assert!(validate_geometry_manifest(&f, &cfg).contains(
+            &GeometryConstraintViolation::IndexOutOfBounds {
+                max_index: 3,
+                vertex_count: 3
+            }
+        ));
     }
 
     #[test]
@@ -271,8 +359,12 @@ mod tests {
         let cfg = GeometryAssetConfiguration::default();
         let mut f = valid_facts();
         f.claimed_compiled_digest = 0x0000_0001; // manifest cites a different container
-        assert!(validate_geometry_manifest(&f, &cfg)
-            .contains(&GeometryConstraintViolation::CompiledDigestMismatch { claimed: 1, actual: 0xDEAD_BEEF }));
+        assert!(validate_geometry_manifest(&f, &cfg).contains(
+            &GeometryConstraintViolation::CompiledDigestMismatch {
+                claimed: 1,
+                actual: 0xDEAD_BEEF
+            }
+        ));
     }
 
     #[test]
@@ -292,5 +384,19 @@ mod tests {
         assert!(!validate_geometry_manifest(&f, &cfg)
             .iter()
             .any(|x| matches!(x, GeometryConstraintViolation::SensitivityDowngraded { .. })));
+    }
+
+    #[test]
+    fn inverted_temporal_validity_is_caught() {
+        let cfg = GeometryAssetConfiguration::default();
+        let mut f = valid_facts();
+        f.valid_from = Some(200);
+        f.valid_until = Some(100);
+        assert!(validate_geometry_manifest(&f, &cfg).contains(
+            &GeometryConstraintViolation::TemporalValidityInverted {
+                from: 200,
+                until: 100
+            }
+        ));
     }
 }

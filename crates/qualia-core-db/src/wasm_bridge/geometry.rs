@@ -19,9 +19,8 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(target_arch = "wasm32")]
 use crate::specialized_libs::computational_geometry::{
-    convex_hull_indices_2, delaunay_triangulation_2, nearest_site_brute_force,
-    orientation_2, voronoi_diagram_2, EdgeSlot, HalfEdge, Orientation, Point2,
-    VoronoiEdge, VoronoiVertex,
+    convex_hull_indices_2, delaunay_triangulation_2, nearest_site_brute_force, orientation_2,
+    voronoi_diagram_2, EdgeSlot, HalfEdge, Orientation, Point2, VoronoiEdge, VoronoiVertex,
 };
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -34,11 +33,7 @@ use crate::specialized_libs::computational_geometry::{
 /// identical to the native `orientation_2` sign.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
-pub fn geometry_orientation_2(
-    ax: f64, ay: f64,
-    bx: f64, by: f64,
-    cx: f64, cy: f64,
-) -> String {
+pub fn geometry_orientation_2(ax: f64, ay: f64, bx: f64, by: f64, cx: f64, cy: f64) -> String {
     let orient = orientation_2(
         Point2::new(ax, ay),
         Point2::new(bx, by),
@@ -55,11 +50,7 @@ pub fn geometry_orientation_2(
 /// Numeric orientation sign (-1, 0, 1) for machine consumption.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
-pub fn geometry_orientation_2_sign(
-    ax: f64, ay: f64,
-    bx: f64, by: f64,
-    cx: f64, cy: f64,
-) -> i8 {
+pub fn geometry_orientation_2_sign(ax: f64, ay: f64, bx: f64, by: f64, cx: f64, cy: f64) -> i8 {
     let orient = orientation_2(
         Point2::new(ax, ay),
         Point2::new(bx, by),
@@ -102,14 +93,16 @@ pub struct ConvexHullOutput {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn geometry_convex_hull_2(val: JsValue) -> Result<JsValue, JsValue> {
-    let input: ConvexHullInput = serde_wasm_bindgen::from_value(val)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let input: ConvexHullInput =
+        serde_wasm_bindgen::from_value(val).map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     if input.points.len() % 2 != 0 {
         return Err(JsValue::from_str("points must be a flat [x,y,...] array"));
     }
 
-    let pts: Vec<Point2> = input.points.chunks(2)
+    let pts: Vec<Point2> = input
+        .points
+        .chunks(2)
         .map(|pair| Point2::new(pair[0], pair[1]))
         .collect();
 
@@ -160,14 +153,16 @@ pub struct DelaunayOutput {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn geometry_delaunay_2(val: JsValue) -> Result<JsValue, JsValue> {
-    let input: DelaunayInput = serde_wasm_bindgen::from_value(val)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let input: DelaunayInput =
+        serde_wasm_bindgen::from_value(val).map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     if input.points.len() % 2 != 0 {
         return Err(JsValue::from_str("points must be a flat [x,y,...] array"));
     }
 
-    let pts: Vec<Point2> = input.points.chunks(2)
+    let pts: Vec<Point2> = input
+        .points
+        .chunks(2)
         .map(|pair| Point2::new(pair[0], pair[1]))
         .collect();
 
@@ -224,14 +219,16 @@ pub struct VoronoiOutput {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn geometry_voronoi_2(val: JsValue) -> Result<JsValue, JsValue> {
-    let input: VoronoiInput = serde_wasm_bindgen::from_value(val)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let input: VoronoiInput =
+        serde_wasm_bindgen::from_value(val).map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     if input.points.len() % 2 != 0 {
         return Err(JsValue::from_str("points must be a flat [x,y,...] array"));
     }
 
-    let pts: Vec<Point2> = input.points.chunks(2)
+    let pts: Vec<Point2> = input
+        .points
+        .chunks(2)
         .map(|pair| Point2::new(pair[0], pair[1]))
         .collect();
 
@@ -242,8 +239,22 @@ pub fn geometry_voronoi_2(val: JsValue) -> Result<JsValue, JsValue> {
 
     let mut tri_scratch = vec![0u32; n];
     let mut tri_out = vec![[0u32; 3]; 2 * n + 1];
-    let mut verts = vec![VoronoiVertex { triangle_index: 0, center: Point2::new(0.0, 0.0) }; 2 * n + 1];
-    let mut edges = vec![VoronoiEdge { site_a: 0, site_b: 0, triangle: 0, neighbor_triangle: None }; 3 * n];
+    let mut verts = vec![
+        VoronoiVertex {
+            triangle_index: 0,
+            center: Point2::new(0.0, 0.0)
+        };
+        2 * n + 1
+    ];
+    let mut edges = vec![
+        VoronoiEdge {
+            site_a: 0,
+            site_b: 0,
+            triangle: 0,
+            neighbor_triangle: None
+        };
+        3 * n
+    ];
 
     let (vc, ec) = voronoi_diagram_2(&pts, &mut tri_scratch, &mut tri_out, &mut verts, &mut edges)
         .map_err(|e| JsValue::from_str(&format!("{e:?}")))?;
@@ -279,16 +290,13 @@ pub fn geometry_voronoi_2(val: JsValue) -> Result<JsValue, JsValue> {
 /// Returns the index of the nearest site, or -1 if the point set is empty.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
-pub fn geometry_nearest_site(
-    points: &[f64],
-    qx: f64,
-    qy: f64,
-) -> i32 {
+pub fn geometry_nearest_site(points: &[f64], qx: f64, qy: f64) -> i32 {
     if points.len() % 2 != 0 || points.is_empty() {
         return -1;
     }
 
-    let pts: Vec<Point2> = points.chunks(2)
+    let pts: Vec<Point2> = points
+        .chunks(2)
         .map(|pair| Point2::new(pair[0], pair[1]))
         .collect();
 
@@ -319,8 +327,7 @@ pub fn geometry_execute_json(args: &str) -> Result<String, JsValue> {
 #[cfg(test)]
 mod tests {
     use crate::specialized_libs::computational_geometry::{
-        execute_geometry_tool_json, orientation_2, Point2, Orientation,
-        convex_hull_indices_2,
+        convex_hull_indices_2, execute_geometry_tool_json, orientation_2, Orientation, Point2,
     };
 
     /// The 5-point fixture used by the acceptance gate: WASM hull must

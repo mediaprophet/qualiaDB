@@ -3,7 +3,6 @@
 //! Run via `cargo test -p qualia-core-db phenomenal_contract --lib` or
 //! `node docs/tests/phenomenal-verify.mjs`.
 
-
 /// Rust `portal_gpu` projector camera bind group (group 0).
 pub const PROJECTOR_GROUP0_BINDINGS: &[u32] = &[0, 1];
 /// Rust `portal_gpu` projector tensor SOA bind group (group 1).
@@ -82,21 +81,21 @@ mod tests {
     use crate::gpu_context::{
         ambient_draw_instances_for_mode, ComputeUniverse, OperationalMode, UniverseOrchestrator,
     };
+    use crate::render::acoustic::{
+        sigma_to_center_frequency_hz, sigma_to_wavelength_nm, ACOUSTIC_UNIFORM_FLOAT_COUNT,
+    };
+    use crate::render::control::{PortalControlCommand, CONTROL_RING_CAP, ICP_MAGIC_BIT};
     use crate::render::pga::motor_rq_gated;
+    use crate::render::spectral::sigma_to_cie_xyz;
     use crate::render::telemetry::{
         CameraUniform, ObserverStandpoint, ParticleInstance, SystemTelemetry, STANDPOINT_DID,
         STANDPOINT_EPHEMERAL, STANDPOINT_SPECTATOR, STANDPOINT_VAULT,
     };
-    use crate::render::acoustic::{
-        sigma_to_center_frequency_hz, sigma_to_wavelength_nm, ACOUSTIC_UNIFORM_FLOAT_COUNT,
-    };
-    use crate::render::spectral::sigma_to_cie_xyz;
-    use crate::render::control::{PortalControlCommand, CONTROL_RING_CAP, ICP_MAGIC_BIT};
     use crate::shaders::viewport::{AMBIENT_WGSL, BLOOM_WGSL, PROJECTOR_WGSL};
-    use crate::tensor::buffer_export::{TensorBufferHeader, TENSOR_HEADER_BYTES, TENSOR_STRIDE};
-    use crate::tensor::Tensor10D;
     use crate::sonic_token::SonicToken;
     use crate::tensor::buffer_export::tensor_node_count;
+    use crate::tensor::buffer_export::{TensorBufferHeader, TENSOR_HEADER_BYTES, TENSOR_STRIDE};
+    use crate::tensor::Tensor10D;
 
     const IDENTITY_ROTOR: [f32; 4] = [1.0, 0.0, 0.0, 0.0];
 

@@ -161,7 +161,13 @@ pub fn crypto_hkdf_sha256(val: JsValue) -> Result<JsValue, JsValue> {
 
 /// Resolve a 32-byte key + an algorithm-correct nonce, then seal. Validates all
 /// lengths and fails closed before constructing fixed-size key/nonce arrays.
-fn aead_seal(alg: &str, key: &[u8], nonce: &[u8], pt: &[u8], aad: &[u8]) -> Result<Vec<u8>, JsValue> {
+fn aead_seal(
+    alg: &str,
+    key: &[u8],
+    nonce: &[u8],
+    pt: &[u8],
+    aad: &[u8],
+) -> Result<Vec<u8>, JsValue> {
     use aes_gcm::aead::{Aead, KeyInit, Payload};
     if key.len() != 32 {
         return Err(JsValue::from_str("key must be 32 bytes (64 hex chars)"));
@@ -171,7 +177,9 @@ fn aead_seal(alg: &str, key: &[u8], nonce: &[u8], pt: &[u8], aad: &[u8]) -> Resu
     match alg.to_ascii_lowercase().as_str() {
         "aes256gcm" | "aes-256-gcm" => {
             if nonce.len() != 12 {
-                return Err(JsValue::from_str("aes256gcm nonce must be 12 bytes (24 hex)"));
+                return Err(JsValue::from_str(
+                    "aes256gcm nonce must be 12 bytes (24 hex)",
+                ));
             }
             let c = aes_gcm::Aes256Gcm::new(
                 &aes_gcm::Key::<aes_gcm::Aes256Gcm>::try_from(key).unwrap(),
@@ -181,29 +189,27 @@ fn aead_seal(alg: &str, key: &[u8], nonce: &[u8], pt: &[u8], aad: &[u8]) -> Resu
         }
         "chacha20poly1305" | "chacha" => {
             if nonce.len() != 12 {
-                return Err(JsValue::from_str("chacha20poly1305 nonce must be 12 bytes (24 hex)"));
+                return Err(JsValue::from_str(
+                    "chacha20poly1305 nonce must be 12 bytes (24 hex)",
+                ));
             }
             let c = chacha20poly1305::ChaCha20Poly1305::new(
                 &chacha20poly1305::Key::try_from(key).unwrap(),
             );
-            c.encrypt(
-                &chacha20poly1305::Nonce::try_from(nonce).unwrap(),
-                payload,
-            )
-            .map_err(|_| fail())
+            c.encrypt(&chacha20poly1305::Nonce::try_from(nonce).unwrap(), payload)
+                .map_err(|_| fail())
         }
         "xchacha20poly1305" | "xchacha" => {
             if nonce.len() != 24 {
-                return Err(JsValue::from_str("xchacha20poly1305 nonce must be 24 bytes (48 hex)"));
+                return Err(JsValue::from_str(
+                    "xchacha20poly1305 nonce must be 24 bytes (48 hex)",
+                ));
             }
             let c = chacha20poly1305::XChaCha20Poly1305::new(
                 &chacha20poly1305::Key::try_from(key).unwrap(),
             );
-            c.encrypt(
-                &chacha20poly1305::XNonce::try_from(nonce).unwrap(),
-                payload,
-            )
-            .map_err(|_| fail())
+            c.encrypt(&chacha20poly1305::XNonce::try_from(nonce).unwrap(), payload)
+                .map_err(|_| fail())
         }
         other => Err(JsValue::from_str(&format!(
             "unknown algorithm '{other}' (aes256gcm | chacha20poly1305 | xchacha20poly1305)"
@@ -213,7 +219,13 @@ fn aead_seal(alg: &str, key: &[u8], nonce: &[u8], pt: &[u8], aad: &[u8]) -> Resu
 
 /// Open (decrypt + verify). Same validation; returns the plaintext or fails closed
 /// on a bad tag / wrong key / wrong nonce / tampered ciphertext.
-fn aead_open(alg: &str, key: &[u8], nonce: &[u8], ct: &[u8], aad: &[u8]) -> Result<Vec<u8>, JsValue> {
+fn aead_open(
+    alg: &str,
+    key: &[u8],
+    nonce: &[u8],
+    ct: &[u8],
+    aad: &[u8],
+) -> Result<Vec<u8>, JsValue> {
     use aes_gcm::aead::{Aead, KeyInit, Payload};
     if key.len() != 32 {
         return Err(JsValue::from_str("key must be 32 bytes (64 hex chars)"));
@@ -223,7 +235,9 @@ fn aead_open(alg: &str, key: &[u8], nonce: &[u8], ct: &[u8], aad: &[u8]) -> Resu
     match alg.to_ascii_lowercase().as_str() {
         "aes256gcm" | "aes-256-gcm" => {
             if nonce.len() != 12 {
-                return Err(JsValue::from_str("aes256gcm nonce must be 12 bytes (24 hex)"));
+                return Err(JsValue::from_str(
+                    "aes256gcm nonce must be 12 bytes (24 hex)",
+                ));
             }
             let c = aes_gcm::Aes256Gcm::new(
                 &aes_gcm::Key::<aes_gcm::Aes256Gcm>::try_from(key).unwrap(),
@@ -233,29 +247,27 @@ fn aead_open(alg: &str, key: &[u8], nonce: &[u8], ct: &[u8], aad: &[u8]) -> Resu
         }
         "chacha20poly1305" | "chacha" => {
             if nonce.len() != 12 {
-                return Err(JsValue::from_str("chacha20poly1305 nonce must be 12 bytes (24 hex)"));
+                return Err(JsValue::from_str(
+                    "chacha20poly1305 nonce must be 12 bytes (24 hex)",
+                ));
             }
             let c = chacha20poly1305::ChaCha20Poly1305::new(
                 &chacha20poly1305::Key::try_from(key).unwrap(),
             );
-            c.decrypt(
-                &chacha20poly1305::Nonce::try_from(nonce).unwrap(),
-                payload,
-            )
-            .map_err(|_| fail())
+            c.decrypt(&chacha20poly1305::Nonce::try_from(nonce).unwrap(), payload)
+                .map_err(|_| fail())
         }
         "xchacha20poly1305" | "xchacha" => {
             if nonce.len() != 24 {
-                return Err(JsValue::from_str("xchacha20poly1305 nonce must be 24 bytes (48 hex)"));
+                return Err(JsValue::from_str(
+                    "xchacha20poly1305 nonce must be 24 bytes (48 hex)",
+                ));
             }
             let c = chacha20poly1305::XChaCha20Poly1305::new(
                 &chacha20poly1305::Key::try_from(key).unwrap(),
             );
-            c.decrypt(
-                &chacha20poly1305::XNonce::try_from(nonce).unwrap(),
-                payload,
-            )
-            .map_err(|_| fail())
+            c.decrypt(&chacha20poly1305::XNonce::try_from(nonce).unwrap(), payload)
+                .map_err(|_| fail())
         }
         other => Err(JsValue::from_str(&format!(
             "unknown algorithm '{other}' (aes256gcm | chacha20poly1305 | xchacha20poly1305)"

@@ -16,9 +16,7 @@
 //! cross-backend kernel is one generic `fn evaluate_*<C: OracleContext>` instead of
 //! two divergent copies.
 
-use crate::wgsl_forge::{
-    AdapterConstraints, AdapterIdentity, ForgeError, KernelSpec, Schedule,
-};
+use crate::wgsl_forge::{AdapterConstraints, AdapterIdentity, ForgeError, KernelSpec, Schedule};
 
 use super::memory::{BindingUsage, BufferView};
 

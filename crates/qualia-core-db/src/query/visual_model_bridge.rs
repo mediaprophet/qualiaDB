@@ -1,7 +1,7 @@
 //! Translates visual graph structures from the UI into `NQuin` evaluator inputs.
 
+use crate::{q_hash, NQuin};
 use serde::{Deserialize, Serialize};
-use crate::{NQuin, q_hash};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UiLogicNode {
@@ -32,12 +32,9 @@ pub struct EvaluationReport {
 
 /// Converts the graph to a series of zero-heap semantic Quins.
 /// Only writes to the pre-allocated slice up to its capacity, returning the number of Quins written.
-pub fn translate_graph_to_quins(
-    graph: &UiLogicGraph,
-    out: &mut [NQuin],
-) -> usize {
+pub fn translate_graph_to_quins(graph: &UiLogicGraph, out: &mut [NQuin]) -> usize {
     let mut count = 0;
-    
+
     // Each edge becomes a Quin: Subject(from) -> Predicate(label) -> Object(to)
     for edge in &graph.edges {
         if count >= out.len() {
@@ -52,10 +49,10 @@ pub fn translate_graph_to_quins(
             q.subject = q_hash(&f.title);
             q.predicate = q_hash(&edge.label);
             q.object = q_hash(&t.title);
-            
+
             // Basic parity fold for completeness (subject ^ predicate ^ object ^ context)
             q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
-            
+
             out[count] = q;
             count += 1;
         }

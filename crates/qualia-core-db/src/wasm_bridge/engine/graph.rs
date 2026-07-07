@@ -33,10 +33,14 @@ fn build_adjacency(
         let v = e[1];
         let w = e[2];
         if !u.is_finite() || u < 0.0 || u.fract() != 0.0 {
-            return Err(JsValue::from_str("edge source u must be a non-negative integer"));
+            return Err(JsValue::from_str(
+                "edge source u must be a non-negative integer",
+            ));
         }
         if !v.is_finite() || v < 0.0 || v.fract() != 0.0 {
-            return Err(JsValue::from_str("edge target v must be a non-negative integer"));
+            return Err(JsValue::from_str(
+                "edge target v must be a non-negative integer",
+            ));
         }
         if !w.is_finite() || w < 0.0 {
             return Err(JsValue::from_str(
@@ -129,7 +133,8 @@ pub fn graph_shortest_path(val: JsValue) -> Result<JsValue, JsValue> {
         }
         let mut found = false;
         for &(u, w) in &rev[cur] {
-            if dist[u].is_finite() && (dist[u] + w - dist[cur]).abs() <= tol * (1.0 + dist[cur].abs())
+            if dist[u].is_finite()
+                && (dist[u] + w - dist[cur]).abs() <= tol * (1.0 + dist[cur].abs())
             {
                 path.push(u);
                 cur = u;
@@ -185,7 +190,9 @@ pub fn graph_spreading_activation(val: JsValue) -> Result<JsValue, JsValue> {
         return Err(JsValue::from_str("decay must be in (0, 1]"));
     }
     if !p.threshold.is_finite() || p.threshold < 0.0 {
-        return Err(JsValue::from_str("threshold must be finite and non-negative"));
+        return Err(JsValue::from_str(
+            "threshold must be finite and non-negative",
+        ));
     }
     // Reuse the validated edge builder to get n and bounds; then flatten to Edge[].
     let (n_from_edges, _adj) = build_adjacency(&p.edges, p.n)?;
@@ -200,7 +207,9 @@ pub fn graph_spreading_activation(val: JsValue) -> Result<JsValue, JsValue> {
         let node = s[0];
         let act = s[1];
         if !node.is_finite() || node < 0.0 || node.fract() != 0.0 {
-            return Err(JsValue::from_str("seed node must be a non-negative integer"));
+            return Err(JsValue::from_str(
+                "seed node must be a non-negative integer",
+            ));
         }
         if !act.is_finite() {
             return Err(JsValue::from_str("seed activation must be finite"));
@@ -341,13 +350,13 @@ pub fn graph_kge_score(val: JsValue) -> Result<JsValue, JsValue> {
         ("tail", &inp.tail),
     ] {
         if v.iter().any(|x| !x.is_finite()) {
-            return Err(JsValue::from_str(&format!("{name} contains a non-finite value")));
+            return Err(JsValue::from_str(&format!(
+                "{name} contains a non-finite value"
+            )));
         }
     }
     if inp.head.len() != inp.tail.len() {
-        return Err(JsValue::from_str(
-            "head and tail must have the same length",
-        ));
+        return Err(JsValue::from_str("head and tail must have the same length"));
     }
 
     // Resolve the model and infer rank k from the entity vector length.
@@ -443,13 +452,17 @@ pub fn graph_kge_predict(val: JsValue) -> Result<JsValue, JsValue> {
         "distmult" => (ScoreModel::DistMult, ent_len),
         "complex" => {
             if ent_len % 2 != 0 {
-                return Err(JsValue::from_str("complex entity vectors must be even length (2k)"));
+                return Err(JsValue::from_str(
+                    "complex entity vectors must be even length (2k)",
+                ));
             }
             (ScoreModel::ComplEx, ent_len / 2)
         }
         "rotate" => {
             if ent_len % 2 != 0 {
-                return Err(JsValue::from_str("rotate entity vectors must be even length (2k)"));
+                return Err(JsValue::from_str(
+                    "rotate entity vectors must be even length (2k)",
+                ));
             }
             (ScoreModel::RotatE, ent_len / 2)
         }

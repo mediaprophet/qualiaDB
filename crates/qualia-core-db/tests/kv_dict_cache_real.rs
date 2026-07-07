@@ -12,10 +12,13 @@ use qualia_core_db::{kv_dict_runtime, llm_bench};
 use std::path::{Path, PathBuf};
 
 fn find_model(name: &str) -> Option<PathBuf> {
-    [format!("../../docs/models/{name}"), format!("docs/models/{name}")]
-        .iter()
-        .map(PathBuf::from)
-        .find(|p| Path::new(p).exists())
+    [
+        format!("../../docs/models/{name}"),
+        format!("docs/models/{name}"),
+    ]
+    .iter()
+    .map(PathBuf::from)
+    .find(|p| Path::new(p).exists())
 }
 
 fn find_artifact() -> Option<PathBuf> {
@@ -35,7 +38,9 @@ fn dict_coded_cache_runs_and_tracks_certified_delta() {
         return;
     };
     let Some(art) = find_artifact() else {
-        eprintln!("[w5b/4b] no k=5 artifact under target/ (run the certify sweep first) — skipping");
+        eprintln!(
+            "[w5b/4b] no k=5 artifact under target/ (run the certify sweep first) — skipping"
+        );
         return;
     };
     let model = model.to_string_lossy().to_string();
@@ -74,7 +79,10 @@ fn dict_coded_cache_runs_and_tracks_certified_delta() {
         info.delta_ppl * 100.0,
     );
 
-    assert!(cand_ppl.is_finite() && cand_ppl > 1.0, "dict-cache decode must stay coherent");
+    assert!(
+        cand_ppl.is_finite() && cand_ppl > 1.0,
+        "dict-cache decode must stay coherent"
+    );
     assert!(
         delta < 0.05,
         "dict-cache ΔPPL must stay under the 5% gate (got {:+.2}%)",

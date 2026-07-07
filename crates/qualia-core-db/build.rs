@@ -70,7 +70,11 @@ fn main() {
             // DX12). `QUALIA_DXC_PATH` still overrides for a bespoke DXC location. `dxil.dll` must sit
             // beside `dxcompiler.dll` (DXIL signing).
             let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
-            let dxc_sub = if arch == "aarch64" { "arm64-win" } else { "x64-win" };
+            let dxc_sub = if arch == "aarch64" {
+                "arm64-win"
+            } else {
+                "x64-win"
+            };
             let dxc_dir = std::path::PathBuf::from(&manifest)
                 .join("..")
                 .join("..")

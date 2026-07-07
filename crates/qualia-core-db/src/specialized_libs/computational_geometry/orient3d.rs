@@ -95,7 +95,17 @@ impl Diffs {
     /// This is the scale factor for the error bounds.
     #[inline]
     fn permanent(&self) -> f64 {
-        let Diffs { abx, aby, abz, acx, acy, acz, adx, ady, adz } = *self;
+        let Diffs {
+            abx,
+            aby,
+            abz,
+            acx,
+            acy,
+            acz,
+            adx,
+            ady,
+            adz,
+        } = *self;
         (abx.abs() * (acy.abs() * adz.abs() + acz.abs() * ady.abs()))
             + (aby.abs() * (acx.abs() * adz.abs() + acz.abs() * adx.abs()))
             + (abz.abs() * (acx.abs() * ady.abs() + acy.abs() * adx.abs()))
@@ -109,9 +119,18 @@ impl Diffs {
 /// The filtered 3×3 determinant: `det(b−a, c−a, d−a)` as a single f64.
 #[inline]
 fn filtered_det(d: &Diffs) -> f64 {
-    let Diffs { abx, aby, abz, acx, acy, acz, adx, ady, adz } = *d;
-    abx * (acy * adz - acz * ady) - aby * (acx * adz - acz * adx)
-        + abz * (acx * ady - acy * adx)
+    let Diffs {
+        abx,
+        aby,
+        abz,
+        acx,
+        acy,
+        acz,
+        adx,
+        ady,
+        adz,
+    } = *d;
+    abx * (acy * adz - acz * ady) - aby * (acx * adz - acz * adx) + abz * (acx * ady - acy * adx)
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -124,7 +143,17 @@ fn filtered_det(d: &Diffs) -> f64 {
 /// [`filtered_det`] because the first-order product rounding is eliminated.
 #[inline]
 fn compensated_det(d: &Diffs) -> f64 {
-    let Diffs { abx, aby, abz, acx, acy, acz, adx, ady, adz } = *d;
+    let Diffs {
+        abx,
+        aby,
+        abz,
+        acx,
+        acy,
+        acz,
+        adx,
+        ady,
+        adz,
+    } = *d;
 
     // Each inner product: two_product recovers the exact residual.
     let (p_acy_adz, e_acy_adz) = two_product(acy, adz);
@@ -167,7 +196,17 @@ fn compensated_det(d: &Diffs) -> f64 {
 /// (with signs) into the 24-element workspace, compressed, and the sign of the
 /// resulting expansion is returned.
 fn exact_det(d: &Diffs) -> Sign {
-    let Diffs { abx, aby, abz, acx, acy, acz, adx, ady, adz } = *d;
+    let Diffs {
+        abx,
+        aby,
+        abz,
+        acx,
+        acy,
+        acz,
+        adx,
+        ady,
+        adz,
+    } = *d;
 
     // The 6 terms of the determinant with their signs:
     //   +abx*acy*adz  - abx*acz*ady  - aby*acx*adz
@@ -357,14 +396,30 @@ mod tests {
     #[test]
     fn agrees_with_exact_on_basic_cases() {
         let cases = [
-            (Point3::new(0.0, 0.0, 0.0), Point3::new(1.0, 0.0, 0.0),
-             Point3::new(0.0, 1.0, 0.0), Point3::new(0.0, 0.0, 1.0)),
-            (Point3::new(0.0, 0.0, 0.0), Point3::new(1.0, 0.0, 0.0),
-             Point3::new(0.0, 0.0, 1.0), Point3::new(0.0, 1.0, 0.0)),
-            (Point3::new(0.0, 0.0, 0.0), Point3::new(1.0, 0.0, 0.0),
-             Point3::new(0.0, 1.0, 0.0), Point3::new(1.0, 1.0, 0.0)),
-            (Point3::new(1.0, 2.0, 3.0), Point3::new(4.0, 5.0, 6.0),
-             Point3::new(7.0, 8.0, 10.0), Point3::new(11.0, 12.0, 13.0)),
+            (
+                Point3::new(0.0, 0.0, 0.0),
+                Point3::new(1.0, 0.0, 0.0),
+                Point3::new(0.0, 1.0, 0.0),
+                Point3::new(0.0, 0.0, 1.0),
+            ),
+            (
+                Point3::new(0.0, 0.0, 0.0),
+                Point3::new(1.0, 0.0, 0.0),
+                Point3::new(0.0, 0.0, 1.0),
+                Point3::new(0.0, 1.0, 0.0),
+            ),
+            (
+                Point3::new(0.0, 0.0, 0.0),
+                Point3::new(1.0, 0.0, 0.0),
+                Point3::new(0.0, 1.0, 0.0),
+                Point3::new(1.0, 1.0, 0.0),
+            ),
+            (
+                Point3::new(1.0, 2.0, 3.0),
+                Point3::new(4.0, 5.0, 6.0),
+                Point3::new(7.0, 8.0, 10.0),
+                Point3::new(11.0, 12.0, 13.0),
+            ),
         ];
         for (a, b, c, d) in cases {
             assert_eq!(
@@ -381,14 +436,26 @@ mod tests {
     fn extreme_exponents_agree_with_exact() {
         let cases = [
             // Large coordinates, small separation
-            (Point3::new(1e100, 0.0, 0.0), Point3::new(1e100, 1.0, 0.0),
-             Point3::new(1e100, 0.0, 1.0), Point3::new(1e100, 1e-100, 1e-100)),
+            (
+                Point3::new(1e100, 0.0, 0.0),
+                Point3::new(1e100, 1.0, 0.0),
+                Point3::new(1e100, 0.0, 1.0),
+                Point3::new(1e100, 1e-100, 1e-100),
+            ),
             // Small coordinates
-            (Point3::new(1e-100, 0.0, 0.0), Point3::new(1e-100, 1e-100, 0.0),
-             Point3::new(1e-100, 0.0, 1e-100), Point3::new(1e-100, 2e-100, 2e-100)),
+            (
+                Point3::new(1e-100, 0.0, 0.0),
+                Point3::new(1e-100, 1e-100, 0.0),
+                Point3::new(1e-100, 0.0, 1e-100),
+                Point3::new(1e-100, 2e-100, 2e-100),
+            ),
             // Mixed exponents
-            (Point3::new(1e100, 1e-100, 0.0), Point3::new(1e100, 1e-100, 1.0),
-             Point3::new(1e100, 2e-100, 0.0), Point3::new(1e100, 0.0, 1e-100)),
+            (
+                Point3::new(1e100, 1e-100, 0.0),
+                Point3::new(1e100, 1e-100, 1.0),
+                Point3::new(1e100, 2e-100, 0.0),
+                Point3::new(1e100, 0.0, 1e-100),
+            ),
         ];
         for (a, b, c, d) in cases {
             assert_eq!(

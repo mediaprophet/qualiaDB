@@ -173,11 +173,7 @@ pub fn two_diff(a: f64, b: f64) -> (f64, f64) {
 ///
 /// # Errors
 /// Returns [`ExpansionError::OutputTooSmall`] if `h.len() < elen + 1`.
-pub fn grow_expansion(
-    e: &[f64],
-    b: f64,
-    h: &mut [f64],
-) -> Result<usize, ExpansionError> {
+pub fn grow_expansion(e: &[f64], b: f64, h: &mut [f64]) -> Result<usize, ExpansionError> {
     let elen = e.len();
     if h.len() < elen + 1 {
         return Err(ExpansionError::OutputTooSmall);
@@ -213,11 +209,7 @@ pub fn grow_expansion(
 ///
 /// # Errors
 /// Returns [`ExpansionError::OutputTooSmall`] if `h.len() < 2 * elen`.
-pub fn scale_expansion(
-    e: &[f64],
-    b: f64,
-    h: &mut [f64],
-) -> Result<usize, ExpansionError> {
+pub fn scale_expansion(e: &[f64], b: f64, h: &mut [f64]) -> Result<usize, ExpansionError> {
     let elen = e.len();
     if h.len() < 2 * elen {
         return Err(ExpansionError::OutputTooSmall);
@@ -258,11 +250,7 @@ pub fn scale_expansion(
 ///
 /// # Errors
 /// Returns [`ExpansionError::OutputTooSmall`] if `h.len() < e.len() + f.len()`.
-pub fn expansion_sum(
-    e: &[f64],
-    f: &[f64],
-    h: &mut [f64],
-) -> Result<usize, ExpansionError> {
+pub fn expansion_sum(e: &[f64], f: &[f64], h: &mut [f64]) -> Result<usize, ExpansionError> {
     let elen = e.len();
     let flen = f.len();
     if h.len() < elen + flen {
@@ -356,10 +344,7 @@ pub fn expansion_sum(
 ///
 /// # Errors
 /// Returns [`ExpansionError::OutputTooSmall`] if `h.len() < e.len()`.
-pub fn compress_expansion(
-    e: &[f64],
-    h: &mut [f64],
-) -> Result<usize, ExpansionError> {
+pub fn compress_expansion(e: &[f64], h: &mut [f64]) -> Result<usize, ExpansionError> {
     let elen = e.len();
     if h.len() < elen {
         return Err(ExpansionError::OutputTooSmall);
@@ -538,7 +523,10 @@ mod tests {
         /// Convert an f64 to its exact representation.
         fn from_f64(x: f64) -> Self {
             if x == 0.0 {
-                return Exact { mantissa: BigInt::from(0), exponent: 0 };
+                return Exact {
+                    mantissa: BigInt::from(0),
+                    exponent: 0,
+                };
             }
             let bits = x.to_bits();
             let sign: i8 = if bits >> 63 != 0 { -1 } else { 1 };
@@ -617,7 +605,10 @@ mod tests {
         /// Normalize: remove trailing zeros from the mantissa.
         fn normalize(mut self) -> Self {
             if self.mantissa == 0.into() {
-                return Exact { mantissa: BigInt::from(0), exponent: 0 };
+                return Exact {
+                    mantissa: BigInt::from(0),
+                    exponent: 0,
+                };
             }
             let zero = BigInt::from(0);
             let one = BigInt::from(1);
@@ -641,7 +632,10 @@ mod tests {
 
     /// Convert an expansion (sum of f64s) to its exact value.
     fn expansion_to_exact(e: &[f64]) -> Exact {
-        let mut acc = Exact { mantissa: BigInt::from(0), exponent: 0 };
+        let mut acc = Exact {
+            mantissa: BigInt::from(0),
+            exponent: 0,
+        };
         for &x in e {
             acc = acc.add(Exact::from_f64(x));
         }
@@ -728,11 +722,7 @@ mod tests {
 
     #[test]
     fn two_diff_is_error_free() {
-        let cases = [
-            (3.0, 1.0),
-            (1e100, 1e100 - 1.0),
-            (1.0, 1.0 + f64::EPSILON),
-        ];
+        let cases = [(3.0, 1.0), (1e100, 1e100 - 1.0), (1.0, 1.0 + f64::EPSILON)];
         for &(a, b) in &cases {
             let (s, e) = two_diff(a, b);
             let exact_a = Exact::from_f64(a);
@@ -907,10 +897,7 @@ mod tests {
 
         let exact_e = expansion_to_exact(&e);
         let exact_h = expansion_to_exact(&h[..n]);
-        assert!(
-            exact_h.equals(&exact_e),
-            "compress: value changed"
-        );
+        assert!(exact_h.equals(&exact_e), "compress: value changed");
         // The compressed version should not be longer than the input.
         assert!(n <= e.len());
     }
@@ -989,7 +976,8 @@ mod tests {
 
         let sign = sign_of_expansion(&h3[..n3]);
         assert_eq!(
-            sign, Sign::Positive,
+            sign,
+            Sign::Positive,
             "sign should be positive (tiny > 0) after compress"
         );
     }

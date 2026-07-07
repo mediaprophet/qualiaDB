@@ -28,9 +28,9 @@
 //! The algorithm workspace uses `Vec` for the dynamic triangle list — this
 //! is the algorithm layer, not the predicate layer.
 
-use super::incircle::incircle;
-use super::primitives::{orientation_2, Point2, Orientation};
 use super::expansion::Sign;
+use super::incircle::incircle;
+use super::primitives::{orientation_2, Orientation, Point2};
 
 #[cfg(test)]
 use super::hull::convex_hull_indices_2;
@@ -54,10 +54,16 @@ impl core::fmt::Display for DelaunayError {
             Self::TooFewPoints { got } => write!(f, "delaunay: need ≥3 points, got {got}"),
             Self::CollinearInput => write!(f, "delaunay: all points collinear"),
             Self::OutputTooSmall { required, have } => {
-                write!(f, "delaunay: output too small, need {required}, have {have}")
+                write!(
+                    f,
+                    "delaunay: output too small, need {required}, have {have}"
+                )
             }
             Self::ScratchTooSmall { required, have } => {
-                write!(f, "delaunay: scratch too small, need {required}, have {have}")
+                write!(
+                    f,
+                    "delaunay: scratch too small, need {required}, have {have}"
+                )
             }
         }
     }
@@ -115,7 +121,11 @@ impl Edge {
 /// Plus the super-triangle: +1.
 #[inline]
 fn max_triangles(n: usize) -> usize {
-    if n < 2 { 1 } else { 2 * n + 1 }
+    if n < 2 {
+        1
+    } else {
+        2 * n + 1
+    }
 }
 
 /// Compute the Delaunay triangulation of a set of 2-D points.
@@ -141,7 +151,10 @@ pub fn delaunay_triangulation_2(
         return Err(DelaunayError::TooFewPoints { got: n });
     }
     if scratch.len() < n {
-        return Err(DelaunayError::ScratchTooSmall { required: n, have: scratch.len() });
+        return Err(DelaunayError::ScratchTooSmall {
+            required: n,
+            have: scratch.len(),
+        });
     }
     let max_tris = max_triangles(n);
     if out.len() < max_tris {
@@ -311,9 +324,7 @@ pub fn delaunay_triangulation_2(
     }
 
     // Remove triangles that reference super-triangle vertices.
-    triangles.retain(|t| {
-        t.v[0] < n as u32 && t.v[1] < n as u32 && t.v[2] < n as u32
-    });
+    triangles.retain(|t| t.v[0] < n as u32 && t.v[1] < n as u32 && t.v[2] < n as u32);
 
     // Sort triangles canonically for deterministic output (by sort key,
     // preserving CCW winding).
@@ -322,12 +333,19 @@ pub fn delaunay_triangulation_2(
     // Also remove degenerate triangles (zero area).
     // Ensure CCW orientation for all remaining triangles.
     triangles.retain(|t| {
-        orientation_2(points[t.v[0] as usize], points[t.v[1] as usize], points[t.v[2] as usize])
-            != Orientation::Collinear
+        orientation_2(
+            points[t.v[0] as usize],
+            points[t.v[1] as usize],
+            points[t.v[2] as usize],
+        ) != Orientation::Collinear
     });
     // Normalize winding to CCW.
     for t in &mut triangles {
-        let orient = orientation_2(points[t.v[0] as usize], points[t.v[1] as usize], points[t.v[2] as usize]);
+        let orient = orientation_2(
+            points[t.v[0] as usize],
+            points[t.v[1] as usize],
+            points[t.v[2] as usize],
+        );
         if orient == Orientation::Clockwise {
             t.v.swap(1, 2);
         }
@@ -347,10 +365,7 @@ pub fn delaunay_triangulation_2(
 ///
 /// Uses the exact `incircle` predicate. Returns `true` if the triangulation
 /// is valid Delaunay, `false` otherwise.
-pub fn verify_delaunay(
-    points: &[Point2],
-    triangles: &[[u32; 3]],
-) -> bool {
+pub fn verify_delaunay(points: &[Point2], triangles: &[[u32; 3]]) -> bool {
     for tri in triangles {
         let a = points[tri[0] as usize];
         let b = points[tri[1] as usize];
@@ -401,8 +416,8 @@ pub fn triangulation_hash(triangles: &[[u32; 3]]) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::topology::{build_triangle_half_edges, required_edge_slots, EdgeSlot};
+    use super::*;
 
     #[test]
     fn square_produces_two_triangles() {
@@ -489,9 +504,13 @@ mod tests {
         let mut seed: u64 = 12345;
         for _ in 0..20 {
             // LCG for deterministic pseudo-random.
-            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             let x = ((seed >> 33) as f64) / (1u64 << 31) as f64;
-            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             let y = ((seed >> 33) as f64) / (1u64 << 31) as f64;
             points.push(Point2::new(x * 10.0, y * 10.0));
         }
@@ -569,20 +588,23 @@ mod tests {
         let mut half_edges = vec![super::super::topology::HalfEdge::default(); edge_count];
         let slot_count = required_edge_slots(triangles.len());
         let mut slots = vec![EdgeSlot::default(); slot_count];
-        let result = build_triangle_half_edges(
-            points.len() as u32,
-            triangles,
-            &mut half_edges,
-            &mut slots,
+        let result =
+            build_triangle_half_edges(points.len() as u32, triangles, &mut half_edges, &mut slots);
+        assert!(
+            result.is_ok(),
+            "build_triangle_half_edges failed: {:?}",
+            result.err()
         );
-        assert!(result.is_ok(), "build_triangle_half_edges failed: {:?}", result.err());
         let summary = result.unwrap();
 
         // For a planar triangulation of a convex region with 1 interior point:
         // V=5, E=?, F=count. Euler: V - E + F = 2 (for a disk, it's V - E + F = 1).
         // Actually for a triangulation of a disk: V - E + F = 1.
         // Boundary edges = boundary_half_edges.
-        assert!(summary.boundary_half_edges > 0, "should have boundary edges (disk topology)");
+        assert!(
+            summary.boundary_half_edges > 0,
+            "should have boundary edges (disk topology)"
+        );
     }
 
     #[test]
@@ -605,7 +627,10 @@ mod tests {
 
         assert_eq!(count1, count2);
         assert_eq!(&out1[..count1], &out2[..count2]);
-        assert_eq!(triangulation_hash(&out1[..count1]), triangulation_hash(&out2[..count2]));
+        assert_eq!(
+            triangulation_hash(&out1[..count1]),
+            triangulation_hash(&out2[..count2])
+        );
     }
 
     #[test]

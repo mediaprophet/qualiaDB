@@ -270,10 +270,9 @@ pub fn LogicModeler() -> Element {
                 svg {
                     style: "position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;",
                     
-                // Render existing edges
-                for edge in edges.read().clone().into_iter() {
-                    if let (Some(n1), Some(n2)) = (nodes.read().iter().find(|n| n.id == edge.from).cloned(), nodes.read().iter().find(|n| n.id == edge.to).cloned()) {
-                            {
+                    {
+                        edges.read().clone().into_iter().filter_map(|edge| {
+                            if let (Some(n1), Some(n2)) = (nodes.read().iter().find(|n| n.id == edge.from).cloned(), nodes.read().iter().find(|n| n.id == edge.to).cloned()) {
                                 let is_selected = selected_edge.read().map_or(false, |id| id == edge.id);
                                 let color = match edge.status.as_str() {
                                     "contradiction" => "#FF007F",
@@ -288,7 +287,7 @@ pub fn LogicModeler() -> Element {
                                 let end_y = n2.y + 40.0;
                                 let label_text = edge.def.as_ref().map(|d| d.friendly_name.clone()).unwrap_or_else(|| "untyped (click to set)".into());
 
-                                rsx! {
+                                Some(rsx! {
                                     g {
                                         style: "pointer-events: bounding-box; cursor: pointer;",
                                         onclick: move |e| select_edge(e, edge.id),
@@ -320,22 +319,25 @@ pub fn LogicModeler() -> Element {
                                             "{label_text}"
                                         }
                                     }
-                                }
+                                })
+                            } else {
+                                None
                             }
-                        }
+                        })
                     }
                     
                     // Render drawing edge
-                    if let Some(from_id) = drawing_edge_from.read().clone() {
-                        if let Some(n1) = nodes.read().iter().find(|n| n.id == from_id) {
-                            {
+                    {
+                        let mut result = None;
+                        if let Some(from_id) = drawing_edge_from.read().clone() {
+                            if let Some(n1) = nodes.read().iter().find(|n| n.id == from_id) {
                                 let start_x = n1.x + 100.0;
                                 let start_y = n1.y + 40.0;
                                 // Need to offset cursor based on sidebar width roughly (280px)
                                 let end_x = cursor_pos.read().0 - 280.0;
                                 let end_y = cursor_pos.read().1;
                                 
-                                rsx! {
+                                result = Some(rsx! {
                                     path {
                                         d: "M {start_x} {start_y} C {start_x + 80.0} {start_y}, {end_x - 80.0} {end_y}, {end_x} {end_y}",
                                         fill: "none",
@@ -343,15 +345,16 @@ pub fn LogicModeler() -> Element {
                                         stroke_width: "2",
                                         stroke_dasharray: "4,4",
                                     }
-                                }
+                                });
                             }
                         }
+                        result
                     }
                 }
 
                 // Render Nodes
-                for node in nodes.read().clone().into_iter() {
-                    {
+                {
+                    nodes.read().clone().into_iter().map(|node| {
                         let is_selected = selected_node.read().map_or(false, |id| id == node.id);
                         let border_glow = if is_selected { "0 0 20px rgba(0, 184, 255, 0.8)" } else { "0 8px 32px rgba(0,0,0,0.3)" };
                         let bg_color = match node.def.kind.as_str() {
@@ -403,7 +406,7 @@ pub fn LogicModeler() -> Element {
                                 }
                             }
                         }
-                    }
+                    })
                 }
                 
                 // Right Inspector Panel

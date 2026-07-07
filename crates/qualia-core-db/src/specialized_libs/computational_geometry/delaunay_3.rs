@@ -71,8 +71,8 @@
 //! `status = implemented` caveat. The empty-ball property is *verified* by test
 //! (exhaustive `verify_delaunay_3`) on the covered inputs.
 
-use super::kernel::{FilteredF64Kernel, GeometryKernel};
 use super::expansion::Sign;
+use super::kernel::{FilteredF64Kernel, GeometryKernel};
 use super::primitives::Point3;
 
 /// Delaunay tetrahedralization error.
@@ -99,7 +99,10 @@ impl core::fmt::Display for Delaunay3Error {
                 write!(f, "delaunay_3: non-finite coordinate at index {index}")
             }
             Self::OutputTooSmall { required, have } => {
-                write!(f, "delaunay_3: output too small, need {required}, have {have}")
+                write!(
+                    f,
+                    "delaunay_3: output too small, need {required}, have {have}"
+                )
             }
         }
     }
@@ -405,9 +408,7 @@ pub fn delaunay_tetrahedralization_3_with_kernel<K: GeometryKernel>(
             if k - j == 1 {
                 // Unique face ⇒ on the cavity boundary. Build new tetra.
                 let of = faces[j].oriented;
-                if let Some(t) =
-                    Tet::new_oriented(kernel, of[0], of[1], of[2], p_idx, &lookup)
-                {
+                if let Some(t) = Tet::new_oriented(kernel, of[0], of[1], of[2], p_idx, &lookup) {
                     tets.push(t);
                 }
             }
@@ -590,9 +591,7 @@ fn all_coplanar<K: GeometryKernel>(kernel: &K, points: &[Point3]) -> bool {
             Point2::new(b.z, b.x),
             Point2::new(p.z, p.x),
         );
-        xy != Orientation::Collinear
-            || yz != Orientation::Collinear
-            || zx != Orientation::Collinear
+        xy != Orientation::Collinear || yz != Orientation::Collinear || zx != Orientation::Collinear
     };
 
     // First point making (a, b, c) genuinely non-collinear.
@@ -835,7 +834,10 @@ mod tests {
         pts.push(Point3::new(0.0, 0.0, 0.0));
         let tets = run(&pts);
         assert!(!tets.is_empty());
-        assert!(verify_delaunay_3(&pts, &tets), "octahedron+center not Delaunay");
+        assert!(
+            verify_delaunay_3(&pts, &tets),
+            "octahedron+center not Delaunay"
+        );
         let total: f64 = tets.iter().map(|t| tetra_volume(&pts, t)).sum();
         assert!(
             (total - 4.0 / 3.0).abs() < 1e-9,

@@ -57,30 +57,27 @@ pub const LAMBDA_STEP: f32 = 10.0;
 /// Data source: CIE technical report (interpolated to 10 nm grid).
 /// These are the standard x̄(λ), ȳ(λ), z̄(λ) values.
 pub const CIE_1931_CMF_X: [f32; SPD_SAMPLES] = [
-    0.001368, 0.004243, 0.014310, 0.043510, 0.134380, 0.283900, 0.348280,
-    0.336200, 0.290800, 0.195360, 0.095640, 0.032010, 0.004900, 0.009300,
-    0.063270, 0.165500, 0.290400, 0.433450, 0.594500, 0.762100, 0.916300,
-    1.026300, 1.062200, 1.002600, 0.854450, 0.642400, 0.447900, 0.283500,
-    0.164900, 0.087400, 0.046770, 0.022700, 0.011359, 0.005790, 0.002899,
-    0.001440, 0.000690, 0.000332, 0.000166, 0.000083, 0.000042,
+    0.001368, 0.004243, 0.014310, 0.043510, 0.134380, 0.283900, 0.348280, 0.336200, 0.290800,
+    0.195360, 0.095640, 0.032010, 0.004900, 0.009300, 0.063270, 0.165500, 0.290400, 0.433450,
+    0.594500, 0.762100, 0.916300, 1.026300, 1.062200, 1.002600, 0.854450, 0.642400, 0.447900,
+    0.283500, 0.164900, 0.087400, 0.046770, 0.022700, 0.011359, 0.005790, 0.002899, 0.001440,
+    0.000690, 0.000332, 0.000166, 0.000083, 0.000042,
 ];
 
 pub const CIE_1931_CMF_Y: [f32; SPD_SAMPLES] = [
-    0.000039, 0.000120, 0.000396, 0.001210, 0.004000, 0.011600, 0.023000,
-    0.038000, 0.060000, 0.090980, 0.139020, 0.208020, 0.323000, 0.503000,
-    0.710000, 0.862000, 0.954000, 0.994950, 0.995000, 0.952000, 0.870000,
-    0.757000, 0.631000, 0.503000, 0.381000, 0.265000, 0.175000, 0.107000,
-    0.061000, 0.032000, 0.017000, 0.008210, 0.004102, 0.002091, 0.001047,
-    0.000520, 0.000249, 0.000120, 0.000060, 0.000030, 0.000015,
+    0.000039, 0.000120, 0.000396, 0.001210, 0.004000, 0.011600, 0.023000, 0.038000, 0.060000,
+    0.090980, 0.139020, 0.208020, 0.323000, 0.503000, 0.710000, 0.862000, 0.954000, 0.994950,
+    0.995000, 0.952000, 0.870000, 0.757000, 0.631000, 0.503000, 0.381000, 0.265000, 0.175000,
+    0.107000, 0.061000, 0.032000, 0.017000, 0.008210, 0.004102, 0.002091, 0.001047, 0.000520,
+    0.000249, 0.000120, 0.000060, 0.000030, 0.000015,
 ];
 
 pub const CIE_1931_CMF_Z: [f32; SPD_SAMPLES] = [
-    0.006450, 0.020050, 0.067850, 0.207400, 0.645600, 1.282500, 1.453000,
-    1.562100, 1.562700, 1.385600, 1.114600, 0.777500, 0.445600, 0.198700,
-    0.068100, 0.019800, 0.004100, 0.000500, 0.000200, 0.000010, 0.000000,
-    0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
-    0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
-    0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
+    0.006450, 0.020050, 0.067850, 0.207400, 0.645600, 1.282500, 1.453000, 1.562100, 1.562700,
+    1.385600, 1.114600, 0.777500, 0.445600, 0.198700, 0.068100, 0.019800, 0.004100, 0.000500,
+    0.000200, 0.000010, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
+    0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
+    0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
 ];
 
 /// CIE D65 illuminant white point (normalised, Y=1).
@@ -366,8 +363,7 @@ pub fn gaussian_vs_tabulated_delta_e(sigma: f32) -> f32 {
         let d = (lambda - center) / width;
         (-0.5 * d * d).exp()
     };
-    let x = 1.056 * gauss(lambda, 599.8, 43.2)
-        + 0.362 * gauss(lambda, 442.0, 32.0)
+    let x = 1.056 * gauss(lambda, 599.8, 43.2) + 0.362 * gauss(lambda, 442.0, 32.0)
         - 0.065 * gauss(lambda, 501.1, 20.4);
     let y = 0.821 * gauss(lambda, 568.8, 46.9) + 0.286 * gauss(lambda, 530.9, 16.3);
     let z = 1.217 * gauss(lambda, 437.0, 11.8) + 0.681 * gauss(lambda, 459.0, 26.0);
@@ -418,17 +414,29 @@ mod tests {
         // For illuminant E, X/Y ≈ Σx̄/Σȳ and Z/Y ≈ Σz̄/Σȳ.
         let xyz = flat_spd_to_xyz();
         // Y should be 1.0 (by normalisation).
-        assert!((xyz.y - 1.0).abs() < 0.01, "Y should be ~1.0, got {}", xyz.y);
+        assert!(
+            (xyz.y - 1.0).abs() < 0.01,
+            "Y should be ~1.0, got {}",
+            xyz.y
+        );
         // X/Y should equal Σx̄/Σȳ (equal-energy white).
         let sum_x: f32 = CIE_1931_CMF_X.iter().copied().sum();
         let sum_y: f32 = CIE_1931_CMF_Y.iter().copied().sum();
         let sum_z: f32 = CIE_1931_CMF_Z.iter().copied().sum();
         let expected_x_ratio = sum_x / sum_y;
         let expected_z_ratio = sum_z / sum_y;
-        assert!((xyz.x / xyz.y - expected_x_ratio).abs() < 0.01,
-            "X/Y ratio {} should match equal-energy {}", xyz.x / xyz.y, expected_x_ratio);
-        assert!((xyz.z / xyz.y - expected_z_ratio).abs() < 0.01,
-            "Z/Y ratio {} should match equal-energy {}", xyz.z / xyz.y, expected_z_ratio);
+        assert!(
+            (xyz.x / xyz.y - expected_x_ratio).abs() < 0.01,
+            "X/Y ratio {} should match equal-energy {}",
+            xyz.x / xyz.y,
+            expected_x_ratio
+        );
+        assert!(
+            (xyz.z / xyz.y - expected_z_ratio).abs() < 0.01,
+            "Z/Y ratio {} should match equal-energy {}",
+            xyz.z / xyz.y,
+            expected_z_ratio
+        );
     }
 
     #[test]
@@ -443,9 +451,18 @@ mod tests {
         let expected_z = CIE_1931_CMF_Z[idx];
         // XYZ should be proportional to the CMF values at that wavelength.
         let norm = 1.0 / CIE_1931_CMF_Y.iter().copied().sum::<f32>();
-        assert!((xyz.x - expected_x * norm).abs() < 0.01, "X should match CMF");
-        assert!((xyz.y - expected_y * norm).abs() < 0.01, "Y should match CMF");
-        assert!((xyz.z - expected_z * norm).abs() < 0.01, "Z should match CMF");
+        assert!(
+            (xyz.x - expected_x * norm).abs() < 0.01,
+            "X should match CMF"
+        );
+        assert!(
+            (xyz.y - expected_y * norm).abs() < 0.01,
+            "Y should match CMF"
+        );
+        assert!(
+            (xyz.z - expected_z * norm).abs() < 0.01,
+            "Z should match CMF"
+        );
     }
 
     #[test]
@@ -475,8 +492,18 @@ mod tests {
         // σ=0.5 → λ=550 nm (green) → G should dominate.
         // Use a small μ to ensure narrow peak at the right wavelength.
         let rgb = emf_to_linear_rgb(1.0, 0.1, 0.5);
-        assert!(rgb.g >= rgb.r, "G should dominate R at σ=0.5: r={} g={}", rgb.r, rgb.g);
-        assert!(rgb.g >= rgb.b, "G should dominate B at σ=0.5: g={} b={}", rgb.g, rgb.b);
+        assert!(
+            rgb.g >= rgb.r,
+            "G should dominate R at σ=0.5: r={} g={}",
+            rgb.r,
+            rgb.g
+        );
+        assert!(
+            rgb.g >= rgb.b,
+            "G should dominate B at σ=0.5: g={} b={}",
+            rgb.g,
+            rgb.b
+        );
     }
 
     #[test]
@@ -492,8 +519,18 @@ mod tests {
         // σ=1.0 → λ=700 nm (red) → R should dominate.
         // Use a small μ for narrow peak.
         let rgb = emf_to_linear_rgb(1.0, 0.1, 1.0);
-        assert!(rgb.r >= rgb.g, "R should dominate G at σ=1.0: r={} g={}", rgb.r, rgb.g);
-        assert!(rgb.r >= rgb.b, "R should dominate B at σ=1.0: r={} b={}", rgb.r, rgb.b);
+        assert!(
+            rgb.r >= rgb.g,
+            "R should dominate G at σ=1.0: r={} g={}",
+            rgb.r,
+            rgb.g
+        );
+        assert!(
+            rgb.r >= rgb.b,
+            "R should dominate B at σ=1.0: r={} b={}",
+            rgb.r,
+            rgb.b
+        );
     }
 
     #[test]
@@ -551,7 +588,11 @@ mod tests {
     fn xyz_to_lab_d65_white_is_l100() {
         let white = Xyz::new(CIE_D65_X, CIE_D65_Y, CIE_D65_Z);
         let (l, _a, _b) = xyz_to_lab(&white);
-        assert!((l - 100.0).abs() < 0.5, "D65 white should have L≈100, got {}", l);
+        assert!(
+            (l - 100.0).abs() < 0.5,
+            "D65 white should have L≈100, got {}",
+            l
+        );
     }
 
     #[test]

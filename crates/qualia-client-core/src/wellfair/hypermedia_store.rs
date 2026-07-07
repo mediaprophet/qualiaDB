@@ -27,7 +27,7 @@ pub struct LibraryFlag {
 }
 
 /// One ingested asset in the person's library — its identity + the container's semantic edge-graph.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LibraryEntry {
     pub asset_uri: String,
     /// The container primary's subject (`= fnv60(asset_uri)`) — the join key for search results.
@@ -42,6 +42,16 @@ pub struct LibraryEntry {
     pub projects: Vec<String>,
     #[serde(default)]
     pub place: Option<String>,
+    /// Event instant (unix seconds) if the asset carries one — the timeline anchor
+    /// (e.g. a photo's EXIF capture time). `None` = no dated event.
+    #[serde(default)]
+    pub occurred_at: Option<i64>,
+    /// Geographic coordinates if the asset carries them (e.g. a photo's GPS) — the
+    /// map pin. Both present together or both `None`.
+    #[serde(default)]
+    pub lat: Option<f32>,
+    #[serde(default)]
+    pub lon: Option<f32>,
     #[serde(default)]
     pub flags: Vec<LibraryFlag>,
     pub ingested_unix: u64,
@@ -147,6 +157,9 @@ mod tests {
             topics: Vec::new(),
             projects: Vec::new(),
             place: None,
+            occurred_at: None,
+            lat: None,
+            lon: None,
             flags: Vec::new(),
             ingested_unix: now,
             excerpt: text.chars().take(40).collect(),

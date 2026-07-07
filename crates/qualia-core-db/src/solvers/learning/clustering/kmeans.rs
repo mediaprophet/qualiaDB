@@ -134,7 +134,8 @@ pub fn fit(
             let work = n.saturating_mul(k).saturating_mul(p);
             let caps = crate::wgsl_forge::dispatch::caps();
             if (caps.cuda || caps.wgpu) && work >= crate::wgsl_forge::dispatch::GEMM_GPU_THRESHOLD {
-                let dist = crate::wgsl_forge::dispatch::pairwise_sq_dist_f64(x, &centroids, n, k, p);
+                let dist =
+                    crate::wgsl_forge::dispatch::pairwise_sq_dist_f64(x, &centroids, n, k, p);
                 for i in 0..n {
                     let row = &dist[i * k..(i + 1) * k];
                     let mut best = 0;

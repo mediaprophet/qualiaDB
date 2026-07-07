@@ -79,10 +79,7 @@ struct BloomChain {
 impl BloomChain {
     /// HDR scene target extent in pixels.
     pub(super) fn hdr_extent(&self) -> (u32, u32) {
-        (
-            self.hdr_texture.width(),
-            self.hdr_texture.height(),
-        )
+        (self.hdr_texture.width(), self.hdr_texture.height())
     }
 
     /// Half-resolution Kawase ping-pong extent.

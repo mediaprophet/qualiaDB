@@ -134,10 +134,7 @@ fn orient3d_f32_filtered(a: [f32; 3], b: [f32; 3], c: [f32; 3], d: [f32; 3]) -> 
 /// CPU simulation of the GPU point-in-tetra fast path (f32), for a GPU/CPU differential test
 /// that needs no adapter. Returns `INSIDE` / `OUTSIDE` / `UNCERTAIN` (never `BOUNDARY` — the
 /// fast path maps every near-face case to `UNCERTAIN` for the CPU exact oracle to resolve).
-pub fn gpu_filter_point_in_tetra_f32(
-    packed: &[f32],
-    out: &mut [i8],
-) -> Result<usize, Gpu3dError> {
+pub fn gpu_filter_point_in_tetra_f32(packed: &[f32], out: &mut [i8]) -> Result<usize, Gpu3dError> {
     if packed.len() % POINT_IN_TETRA_STRIDE != 0 {
         return Err(Gpu3dError::InputLengthNotMultipleOfStride);
     }
@@ -288,7 +285,9 @@ mod tests {
     #[test]
     fn degenerate_tetra_has_no_interior() {
         // Four coplanar points (all z=0): no interior → boundary for any query.
-        let flat = [0.0f32, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0];
+        let flat = [
+            0.0f32, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0,
+        ];
         let mut v = vec![0.3f32, 0.3, 0.0];
         v.extend_from_slice(&flat);
         let mut out = [0i8; 1];
@@ -305,8 +304,18 @@ mod tests {
             query([0.1, 0.1, 0.05]),
         ]
         .concat();
-        assert_eq!(evaluate_point_in_tetra_batch_f32(&batch, &mut out).unwrap(), 3);
-        assert_eq!(out, [POINT_IN_TETRA_INSIDE, POINT_IN_TETRA_OUTSIDE, POINT_IN_TETRA_INSIDE]);
+        assert_eq!(
+            evaluate_point_in_tetra_batch_f32(&batch, &mut out).unwrap(),
+            3
+        );
+        assert_eq!(
+            out,
+            [
+                POINT_IN_TETRA_INSIDE,
+                POINT_IN_TETRA_OUTSIDE,
+                POINT_IN_TETRA_INSIDE
+            ]
+        );
         assert_eq!(
             evaluate_point_in_tetra_batch_f32(&[0.0; 14], &mut out),
             Err(Gpu3dError::InputLengthNotMultipleOfStride)
@@ -339,7 +348,9 @@ mod tests {
             assert!(
                 gp[0] == ex[0] || gp[0] == POINT_IN_TETRA_UNCERTAIN,
                 "gpu {} vs exact {} for {:?}",
-                gp[0], ex[0], p
+                gp[0],
+                ex[0],
+                p
             );
         }
         // On-face point: exact says boundary, GPU fast path must defer (uncertain).

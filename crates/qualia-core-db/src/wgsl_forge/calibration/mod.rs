@@ -123,11 +123,15 @@ impl std::fmt::Display for CalibrationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             CalibrationError::CorpusEmpty => write!(f, "calibration corpus is empty"),
-            CalibrationError::OllamaUnavailable(e) => write!(f, "ollama corpus synthesis unavailable: {e}"),
+            CalibrationError::OllamaUnavailable(e) => {
+                write!(f, "ollama corpus synthesis unavailable: {e}")
+            }
             CalibrationError::CaptureFailed(e) => write!(f, "activation capture failed: {e}"),
             CalibrationError::CertifyFailed(e) => write!(f, "certification (PPL) failed: {e}"),
             CalibrationError::PackageFailed(e) => write!(f, "artifact packaging failed: {e}"),
-            CalibrationError::NotYetImplemented(w) => write!(f, "artifact learner not yet implemented ({w})"),
+            CalibrationError::NotYetImplemented(w) => {
+                write!(f, "artifact learner not yet implemented ({w})")
+            }
         }
     }
 }
@@ -243,7 +247,13 @@ pub fn kv_dictionary_go_no_go(
         )
     })?;
 
-    Ok(analyze_kv_capture(&cap, n_atoms, sparsity, iters, layer_stride))
+    Ok(analyze_kv_capture(
+        &cap,
+        n_atoms,
+        sparsity,
+        iters,
+        layer_stride,
+    ))
 }
 
 /// W5b Phase 3 — the same go/no-go via the **GPU-readback** capture route ([`crate::llm_bench::
@@ -263,7 +273,13 @@ pub fn kv_dictionary_go_no_go_gpu(
 ) -> Result<KvDictReport, CalibrationError> {
     let cap = crate::llm_bench::capture_kv_gpu_readback(model_path, max_tok, max_per_layer)
         .map_err(CalibrationError::CaptureFailed)?;
-    Ok(analyze_kv_capture(&cap, n_atoms, sparsity, iters, layer_stride))
+    Ok(analyze_kv_capture(
+        &cap,
+        n_atoms,
+        sparsity,
+        iters,
+        layer_stride,
+    ))
 }
 
 /// Shared analysis: per sampled layer + stream, learn a dictionary over the captured vectors and score
@@ -278,8 +294,8 @@ fn analyze_kv_capture(
     layer_stride: usize,
 ) -> KvDictReport {
     use kv_dictionary::{
-        dict_code_bits_per_vector, int8_bits_per_vector, int8_reconstruction_error, learn_dictionary,
-        uniform_reconstruction_error,
+        dict_code_bits_per_vector, int8_bits_per_vector, int8_reconstruction_error,
+        learn_dictionary, uniform_reconstruction_error,
     };
 
     let head_dim = cap.head_dim;
@@ -336,7 +352,16 @@ fn run_kv_dictionary(
     corpus_docs: usize,
 ) -> Result<CalibrationReport, CalibrationError> {
     let model = job.model_path.to_string_lossy().to_string();
-    certify_kv_dictionary(&model, 256, 4, 20, job.max_tok, job.gate, corpus_hash, corpus_docs)
+    certify_kv_dictionary(
+        &model,
+        256,
+        4,
+        20,
+        job.max_tok,
+        job.gate,
+        corpus_hash,
+        corpus_docs,
+    )
 }
 
 /// RAII: engage the CPU-reference attention path + f32 KV (so the reconstruct hook is on the PPL path)
@@ -493,7 +518,15 @@ pub fn sweep_kv_dictionary(
     let mut out = Vec::with_capacity(configs.len());
     for &(n_atoms, sparsity) in configs {
         let report = certify_one_config(
-            &cap, ref_ppl, model_path, n_atoms, sparsity, iters, max_tok, gate, corpus_hash,
+            &cap,
+            ref_ppl,
+            model_path,
+            n_atoms,
+            sparsity,
+            iters,
+            max_tok,
+            gate,
+            corpus_hash,
             corpus_docs,
         )?;
         out.push((n_atoms, sparsity, report));
@@ -550,7 +583,9 @@ fn run_awq(
         .filter(|(_, p, _)| p.is_finite() && *p > 1.0)
         .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
         .copied()
-        .ok_or_else(|| CalibrationError::CertifyFailed("AWQ sweep produced no finite PPL".into()))?;
+        .ok_or_else(|| {
+            CalibrationError::CertifyFailed("AWQ sweep produced no finite PPL".into())
+        })?;
     let (best_alpha, cand_ppl, _uniq) = best;
     let delta_ppl = crate::llm_eval::delta_ppl(ref_ppl, cand_ppl);
     let passed = delta_ppl <= job.gate.max_delta_ppl;
@@ -629,12 +664,18 @@ mod tests {
             max_tok: 0,
         };
         // Empty Files corpus → CorpusEmpty (the corpus stage gates before artifact dispatch).
-        assert_eq!(run_calibration(&job(ArtifactKind::KvInt8Scales)).unwrap_err(), CalibrationError::CorpusEmpty);
+        assert_eq!(
+            run_calibration(&job(ArtifactKind::KvInt8Scales)).unwrap_err(),
+            CalibrationError::CorpusEmpty
+        );
     }
 
     #[test]
     fn gate_default_is_the_project_ppl_gate() {
-        assert_eq!(GateSpec::default().max_delta_ppl, crate::llm_eval::MAX_DELTA_PPL);
+        assert_eq!(
+            GateSpec::default().max_delta_ppl,
+            crate::llm_eval::MAX_DELTA_PPL
+        );
     }
 
     #[test]

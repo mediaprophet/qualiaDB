@@ -98,25 +98,52 @@ const COMPENSATED_BOUND: f64 = 64.0 * f64::EPSILON;
 /// determinant (after translating by `e`).
 #[derive(Clone, Copy)]
 struct InsphereDiffs {
-    adx: f64, ady: f64, adz: f64,
-    bdx: f64, bdy: f64, bdz: f64,
-    cdx: f64, cdy: f64, cdz: f64,
-    ddx: f64, ddy: f64, ddz: f64,
-    ad2: f64, bd2: f64, cd2: f64, dd2: f64,
+    adx: f64,
+    ady: f64,
+    adz: f64,
+    bdx: f64,
+    bdy: f64,
+    bdz: f64,
+    cdx: f64,
+    cdy: f64,
+    cdz: f64,
+    ddx: f64,
+    ddy: f64,
+    ddz: f64,
+    ad2: f64,
+    bd2: f64,
+    cd2: f64,
+    dd2: f64,
 }
 
 impl InsphereDiffs {
     #[inline]
     fn from_points(a: Point3, b: Point3, c: Point3, d: Point3, e: Point3) -> Self {
-        let adx = a.x - e.x; let ady = a.y - e.y; let adz = a.z - e.z;
-        let bdx = b.x - e.x; let bdy = b.y - e.y; let bdz = b.z - e.z;
-        let cdx = c.x - e.x; let cdy = c.y - e.y; let cdz = c.z - e.z;
-        let ddx = d.x - e.x; let ddy = d.y - e.y; let ddz = d.z - e.z;
+        let adx = a.x - e.x;
+        let ady = a.y - e.y;
+        let adz = a.z - e.z;
+        let bdx = b.x - e.x;
+        let bdy = b.y - e.y;
+        let bdz = b.z - e.z;
+        let cdx = c.x - e.x;
+        let cdy = c.y - e.y;
+        let cdz = c.z - e.z;
+        let ddx = d.x - e.x;
+        let ddy = d.y - e.y;
+        let ddz = d.z - e.z;
         InsphereDiffs {
-            adx, ady, adz,
-            bdx, bdy, bdz,
-            cdx, cdy, cdz,
-            ddx, ddy, ddz,
+            adx,
+            ady,
+            adz,
+            bdx,
+            bdy,
+            bdz,
+            cdx,
+            cdy,
+            cdz,
+            ddx,
+            ddy,
+            ddz,
             ad2: adx * adx + ady * ady + adz * adz,
             bd2: bdx * bdx + bdy * bdy + bdz * bdz,
             cd2: cdx * cdx + cdy * cdy + cdz * cdz,
@@ -128,8 +155,22 @@ impl InsphereDiffs {
     #[inline]
     fn permanent(&self) -> f64 {
         let InsphereDiffs {
-            adx, ady, adz, bdx, bdy, bdz, cdx, cdy, cdz, ddx, ddy, ddz,
-            ad2, bd2, cd2, dd2,
+            adx,
+            ady,
+            adz,
+            bdx,
+            bdy,
+            bdz,
+            cdx,
+            cdy,
+            cdz,
+            ddx,
+            ddy,
+            ddz,
+            ad2,
+            bd2,
+            cd2,
+            dd2,
         } = *self;
 
         // Minor_a: det(b, c, d) — 6 terms
@@ -167,13 +208,17 @@ impl InsphereDiffs {
 /// 3×3 determinant: m1x*(m2y*m3z - m2z*m3y) - m1y*(m2x*m3z - m2z*m3x) + m1z*(m2x*m3y - m2y*m3x)
 #[inline]
 fn det3(
-    m1x: f64, m1y: f64, m1z: f64,
-    m2x: f64, m2y: f64, m2z: f64,
-    m3x: f64, m3y: f64, m3z: f64,
+    m1x: f64,
+    m1y: f64,
+    m1z: f64,
+    m2x: f64,
+    m2y: f64,
+    m2z: f64,
+    m3x: f64,
+    m3y: f64,
+    m3z: f64,
 ) -> f64 {
-    m1x * (m2y * m3z - m2z * m3y)
-        - m1y * (m2x * m3z - m2z * m3x)
-        + m1z * (m2x * m3y - m2y * m3x)
+    m1x * (m2y * m3z - m2z * m3y) - m1y * (m2x * m3z - m2z * m3x) + m1z * (m2x * m3y - m2y * m3x)
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -183,8 +228,22 @@ fn det3(
 #[inline]
 fn filtered_det(d: &InsphereDiffs) -> f64 {
     let InsphereDiffs {
-        adx, ady, adz, bdx, bdy, bdz, cdx, cdy, cdz, ddx, ddy, ddz,
-        ad2, bd2, cd2, dd2,
+        adx,
+        ady,
+        adz,
+        bdx,
+        bdy,
+        bdz,
+        cdx,
+        cdy,
+        cdz,
+        ddx,
+        ddy,
+        ddz,
+        ad2,
+        bd2,
+        cd2,
+        dd2,
     } = *d;
 
     let minor_a = det3(bdx, bdy, bdz, cdx, cdy, cdz, ddx, ddy, ddz);
@@ -203,9 +262,15 @@ fn filtered_det(d: &InsphereDiffs) -> f64 {
 /// Compensated 3×3 determinant with residual recovery.
 #[inline]
 fn compensated_det3(
-    m1x: f64, m1y: f64, m1z: f64,
-    m2x: f64, m2y: f64, m2z: f64,
-    m3x: f64, m3y: f64, m3z: f64,
+    m1x: f64,
+    m1y: f64,
+    m1z: f64,
+    m2x: f64,
+    m2y: f64,
+    m2z: f64,
+    m3x: f64,
+    m3y: f64,
+    m3z: f64,
 ) -> f64 {
     // Inner 2×2 minors with residual recovery.
     let (p_yn, e_yn) = two_product(m2y, m3z);
@@ -237,8 +302,22 @@ fn compensated_det3(
 #[inline]
 fn compensated_det(d: &InsphereDiffs) -> f64 {
     let InsphereDiffs {
-        adx, ady, adz, bdx, bdy, bdz, cdx, cdy, cdz, ddx, ddy, ddz,
-        ad2, bd2, cd2, dd2,
+        adx,
+        ady,
+        adz,
+        bdx,
+        bdy,
+        bdz,
+        cdx,
+        cdy,
+        cdz,
+        ddx,
+        ddy,
+        ddz,
+        ad2,
+        bd2,
+        cd2,
+        dd2,
     } = *d;
 
     let minor_a = compensated_det3(bdx, bdy, bdz, cdx, cdy, cdz, ddx, ddy, ddz);
@@ -279,9 +358,15 @@ fn sq_dist_3d_expansion(dx: f64, dy: f64, dz: f64, out: &mut [f64; 8]) -> usize 
 /// after two scale_expansions). Summed with compression.
 /// Writes into `accum` and returns the compressed length.
 fn exact_det3(
-    m1x: f64, m1y: f64, m1z: f64,
-    m2x: f64, m2y: f64, m2z: f64,
-    m3x: f64, m3y: f64, m3z: f64,
+    m1x: f64,
+    m1y: f64,
+    m1z: f64,
+    m2x: f64,
+    m2y: f64,
+    m2z: f64,
+    m3x: f64,
+    m3y: f64,
+    m3z: f64,
     accum: &mut [f64; 48],
 ) -> usize {
     // 6 terms: (d1, d2, d3, negate)
@@ -319,8 +404,8 @@ fn exact_det3(
             } else {
                 let sum_len = expansion_sum(&accum[..accum_len], &neg[..comp_len], &mut temp)
                     .expect("temp sized for 48");
-                accum_len = compress_expansion(&temp[..sum_len], accum)
-                    .expect("accum sized for 48");
+                accum_len =
+                    compress_expansion(&temp[..sum_len], accum).expect("accum sized for 48");
             }
         } else {
             if accum_len == 0 {
@@ -329,8 +414,8 @@ fn exact_det3(
             } else {
                 let sum_len = expansion_sum(&accum[..accum_len], &comp[..comp_len], &mut temp)
                     .expect("temp sized for 48");
-                accum_len = compress_expansion(&temp[..sum_len], accum)
-                    .expect("accum sized for 48");
+                accum_len =
+                    compress_expansion(&temp[..sum_len], accum).expect("accum sized for 48");
             }
         }
     }
@@ -354,8 +439,8 @@ fn multiply_expansions(
 
     for &ei in e {
         let scaled_len = scale_expansion(f, ei, scaled).expect("scaled sized for 2*f");
-        let comp_len = compress_expansion(&scaled[..scaled_len], &mut comp)
-            .expect("comp sized for 32");
+        let comp_len =
+            compress_expansion(&scaled[..scaled_len], &mut comp).expect("comp sized for 32");
 
         if accum_len == 0 {
             accum[..comp_len].copy_from_slice(&comp[..comp_len]);
@@ -363,8 +448,8 @@ fn multiply_expansions(
         } else {
             let sum_len = expansion_sum(&accum[..accum_len], &comp[..comp_len], scratch)
                 .expect("scratch sized for accum+comp");
-            accum_len = compress_expansion(&scratch[..sum_len], accum)
-                .expect("accum sized for result");
+            accum_len =
+                compress_expansion(&scratch[..sum_len], accum).expect("accum sized for result");
         }
     }
     accum_len
@@ -373,7 +458,18 @@ fn multiply_expansions(
 /// The exact in-sphere determinant via expansion arithmetic. Zero-heap.
 fn exact_det(d: &InsphereDiffs) -> Sign {
     let InsphereDiffs {
-        adx, ady, adz, bdx, bdy, bdz, cdx, cdy, cdz, ddx, ddy, ddz,
+        adx,
+        ady,
+        adz,
+        bdx,
+        bdy,
+        bdz,
+        cdx,
+        cdy,
+        cdz,
+        ddx,
+        ddy,
+        ddz,
         ..
     } = *d;
 
@@ -431,10 +527,10 @@ fn exact_det(d: &InsphereDiffs) -> Sign {
         };
     }
 
-    add_product!(ad2_exp, ad2_len, minor_a, ma_len, true);   // -ad2*minor_a
-    add_product!(bd2_exp, bd2_len, minor_b, mb_len, false);  // +bd2*minor_b
-    add_product!(cd2_exp, cd2_len, minor_c, mc_len, true);   // -cd2*minor_c
-    add_product!(dd2_exp, dd2_len, minor_d, md_len, false);  // +dd2*minor_d
+    add_product!(ad2_exp, ad2_len, minor_a, ma_len, true); // -ad2*minor_a
+    add_product!(bd2_exp, bd2_len, minor_b, mb_len, false); // +bd2*minor_b
+    add_product!(cd2_exp, cd2_len, minor_c, mc_len, true); // -cd2*minor_c
+    add_product!(dd2_exp, dd2_len, minor_d, md_len, false); // +dd2*minor_d
 
     // Final compress and sign.
     let mut compressed = [0.0f64; MAX_EXPANSION_INSPHERE];
@@ -488,20 +584,52 @@ mod tests {
     /// Computes coordinate differences in f64 first (matching the predicate),
     /// then converts to exact BigInt values.
     fn exact_insphere_sign(a: Point3, b: Point3, c: Point3, d: Point3, e: Point3) -> Sign {
-        let adx_f = a.x - e.x; let ady_f = a.y - e.y; let adz_f = a.z - e.z;
-        let bdx_f = b.x - e.x; let bdy_f = b.y - e.y; let bdz_f = b.z - e.z;
-        let cdx_f = c.x - e.x; let cdy_f = c.y - e.y; let cdz_f = c.z - e.z;
-        let ddx_f = d.x - e.x; let ddy_f = d.y - e.y; let ddz_f = d.z - e.z;
+        let adx_f = a.x - e.x;
+        let ady_f = a.y - e.y;
+        let adz_f = a.z - e.z;
+        let bdx_f = b.x - e.x;
+        let bdy_f = b.y - e.y;
+        let bdz_f = b.z - e.z;
+        let cdx_f = c.x - e.x;
+        let cdy_f = c.y - e.y;
+        let cdz_f = c.z - e.z;
+        let ddx_f = d.x - e.x;
+        let ddy_f = d.y - e.y;
+        let ddz_f = d.z - e.z;
 
-        let adx = Exact::from_f64(adx_f); let ady = Exact::from_f64(ady_f); let adz = Exact::from_f64(adz_f);
-        let bdx = Exact::from_f64(bdx_f); let bdy = Exact::from_f64(bdy_f); let bdz = Exact::from_f64(bdz_f);
-        let cdx = Exact::from_f64(cdx_f); let cdy = Exact::from_f64(cdy_f); let cdz = Exact::from_f64(cdz_f);
-        let ddx = Exact::from_f64(ddx_f); let ddy = Exact::from_f64(ddy_f); let ddz = Exact::from_f64(ddz_f);
+        let adx = Exact::from_f64(adx_f);
+        let ady = Exact::from_f64(ady_f);
+        let adz = Exact::from_f64(adz_f);
+        let bdx = Exact::from_f64(bdx_f);
+        let bdy = Exact::from_f64(bdy_f);
+        let bdz = Exact::from_f64(bdz_f);
+        let cdx = Exact::from_f64(cdx_f);
+        let cdy = Exact::from_f64(cdy_f);
+        let cdz = Exact::from_f64(cdz_f);
+        let ddx = Exact::from_f64(ddx_f);
+        let ddy = Exact::from_f64(ddy_f);
+        let ddz = Exact::from_f64(ddz_f);
 
-        let ad2 = adx.clone().mul(adx.clone()).add(ady.clone().mul(ady.clone())).add(adz.clone().mul(adz.clone()));
-        let bd2 = bdx.clone().mul(bdx.clone()).add(bdy.clone().mul(bdy.clone())).add(bdz.clone().mul(bdz.clone()));
-        let cd2 = cdx.clone().mul(cdx.clone()).add(cdy.clone().mul(cdy.clone())).add(cdz.clone().mul(cdz.clone()));
-        let dd2 = ddx.clone().mul(ddx.clone()).add(ddy.clone().mul(ddy.clone())).add(ddz.clone().mul(ddz.clone()));
+        let ad2 = adx
+            .clone()
+            .mul(adx.clone())
+            .add(ady.clone().mul(ady.clone()))
+            .add(adz.clone().mul(adz.clone()));
+        let bd2 = bdx
+            .clone()
+            .mul(bdx.clone())
+            .add(bdy.clone().mul(bdy.clone()))
+            .add(bdz.clone().mul(bdz.clone()));
+        let cd2 = cdx
+            .clone()
+            .mul(cdx.clone())
+            .add(cdy.clone().mul(cdy.clone()))
+            .add(cdz.clone().mul(cdz.clone()));
+        let dd2 = ddx
+            .clone()
+            .mul(ddx.clone())
+            .add(ddy.clone().mul(ddy.clone()))
+            .add(ddz.clone().mul(ddz.clone()));
 
         // 3×3 minors via BigInt
         let minor_a = {
@@ -542,7 +670,9 @@ mod tests {
         };
 
         // det = -ad2*minor_a + bd2*minor_b - cd2*minor_c + dd2*minor_d
-        let det = ad2.mul(minor_a).neg()
+        let det = ad2
+            .mul(minor_a)
+            .neg()
             .add(bd2.mul(minor_b))
             .sub(cd2.mul(minor_c))
             .add(dd2.mul(minor_d));
@@ -566,7 +696,7 @@ mod tests {
     fn classifies_inside_sphere() {
         let (a, b, c, d) = unit_sphere_points();
         let e = Point3::new(0.0, 0.0, 0.0); // center → inside
-        // Negative orientation ⇒ inside = Positive (this impl's convention).
+                                            // Negative orientation ⇒ inside = Positive (this impl's convention).
         assert_eq!(insphere(a, b, c, d, e), Sign::Positive);
     }
 
@@ -574,7 +704,7 @@ mod tests {
     fn classifies_outside_sphere() {
         let (a, b, c, d) = unit_sphere_points();
         let e = Point3::new(2.0, 0.0, 0.0); // outside
-        // Negative orientation ⇒ outside = Negative.
+                                            // Negative orientation ⇒ outside = Negative.
         assert_eq!(insphere(a, b, c, d, e), Sign::Negative);
     }
 
@@ -606,11 +736,17 @@ mod tests {
     fn agrees_with_exact_on_basic_cases() {
         let (a, b, c, d) = unit_sphere_points();
         let cases = [
-            (a, b, c, d, Point3::new(0.0, 0.0, 0.0)),   // inside
-            (a, b, c, d, Point3::new(2.0, 0.0, 0.0)),   // outside
-            (a, b, c, d, Point3::new(0.0, -1.0, 0.0)),  // on sphere
-            (a, b, c, d, Point3::new(0.5, 0.5, 0.5)),   // inside
-            (Point3::new(3.0, 4.0, 0.0), Point3::new(0.0, 0.0, 0.0), Point3::new(6.0, 0.0, 0.0), Point3::new(3.0, 0.0, 4.0), Point3::new(3.0, 1.0, 0.0)),
+            (a, b, c, d, Point3::new(0.0, 0.0, 0.0)),  // inside
+            (a, b, c, d, Point3::new(2.0, 0.0, 0.0)),  // outside
+            (a, b, c, d, Point3::new(0.0, -1.0, 0.0)), // on sphere
+            (a, b, c, d, Point3::new(0.5, 0.5, 0.5)),  // inside
+            (
+                Point3::new(3.0, 4.0, 0.0),
+                Point3::new(0.0, 0.0, 0.0),
+                Point3::new(6.0, 0.0, 0.0),
+                Point3::new(3.0, 0.0, 4.0),
+                Point3::new(3.0, 1.0, 0.0),
+            ),
         ];
         for (a, b, c, d, e) in cases {
             assert_eq!(
@@ -673,19 +809,31 @@ mod tests {
 
     #[test]
     fn extreme_exponents_agree_with_exact() {
-    // Keep products within f64 range: coords ~1e30, sq_dist ~1e60, products ~1e150.
-    let cases = [
-        (Point3::new(1e30, 0.0, 0.0), Point3::new(0.0, 1e30, 0.0), Point3::new(0.0, 0.0, 1e30), Point3::new(-1e30, 0.0, 0.0), Point3::new(0.0, 0.0, 0.0)),
-        (Point3::new(1e-30, 0.0, 0.0), Point3::new(0.0, 1e-30, 0.0), Point3::new(0.0, 0.0, 1e-30), Point3::new(-1e-30, 0.0, 0.0), Point3::new(0.0, 0.0, 0.0)),
-    ];
-    for (a, b, c, d, e) in cases {
-        assert_eq!(
-            insphere(a, b, c, d, e),
-            exact_insphere_sign(a, b, c, d, e),
-            "mismatch on extreme-exponent case"
-        );
+        // Keep products within f64 range: coords ~1e30, sq_dist ~1e60, products ~1e150.
+        let cases = [
+            (
+                Point3::new(1e30, 0.0, 0.0),
+                Point3::new(0.0, 1e30, 0.0),
+                Point3::new(0.0, 0.0, 1e30),
+                Point3::new(-1e30, 0.0, 0.0),
+                Point3::new(0.0, 0.0, 0.0),
+            ),
+            (
+                Point3::new(1e-30, 0.0, 0.0),
+                Point3::new(0.0, 1e-30, 0.0),
+                Point3::new(0.0, 0.0, 1e-30),
+                Point3::new(-1e-30, 0.0, 0.0),
+                Point3::new(0.0, 0.0, 0.0),
+            ),
+        ];
+        for (a, b, c, d, e) in cases {
+            assert_eq!(
+                insphere(a, b, c, d, e),
+                exact_insphere_sign(a, b, c, d, e),
+                "mismatch on extreme-exponent case"
+            );
+        }
     }
-}
 
     // ── Adversarial: cancellation ─────────────────────────────────────────
 
