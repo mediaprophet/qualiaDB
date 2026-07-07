@@ -816,6 +816,9 @@ impl QTensorEngine {
         self.kv_layout = Some(layout);
         self.kv_cache_gpu = Some(gpu);
         self.kv_cache_cpu = Some(cpu);
+        // W5b Phase 4b: seed the dictionary atoms into each layer's arena tail (after the codes).
+        #[cfg(not(target_arch = "wasm32"))]
+        self.upload_dict_atoms();
         #[cfg(not(target_arch = "wasm32"))]
         {
             let ledger = crate::gpu_context::global_vram_ledger();
@@ -856,6 +859,39 @@ impl QTensorEngine {
         if let (Some(cpu), Some(gpu)) = (self.kv_cache_cpu.as_ref(), self.kv_cache_gpu.as_ref()) {
             self.gpu_queue()
                 .write_buffer(gpu, 0, bytemuck::cast_slice(&cpu[..n]));
+        }
+        // W5b Phase 4b: the zero above wiped the atoms tail — re-seed it (dict mode only).
+        #[cfg(not(target_arch = "wasm32"))]
+        self.upload_dict_atoms();
+    }
+
+    /// W5b Phase 4b: write the installed dictionary atoms into the tail of each layer's arena slice
+    /// (after that layer's code region). No-op unless dict mode is active and atoms are installed.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) fn upload_dict_atoms(&self) {
+        let Some(layout) = self.kv_layout.as_ref() else {
+            return;
+        };
+        if layout.dict_k == 0 {
+            return;
+        }
+        let (Some(buf), Some((flat, na, hd))) =
+            (self.kv_cache_gpu.as_ref(), crate::kv_dict_runtime::atoms_flat())
+        else {
+            return;
+        };
+        let code_region = (layout.max_context * 2 * layout.n_kv_head * layout.dict_k) as usize;
+        let per_layer_atoms = 2 * na * hd;
+        let ls = layout.layer_stride as usize;
+        for l in 0..layout.n_layer as usize {
+            let s = l * per_layer_atoms;
+            let e = ((l + 1) * per_layer_atoms).min(flat.len());
+            if e <= s {
+                break;
+            }
+            let dst_word = l * ls + code_region;
+            self.gpu_queue()
+                .write_buffer(buf, (dst_word * 4) as u64, bytemuck::cast_slice(&flat[s..e]));
         }
     }
 

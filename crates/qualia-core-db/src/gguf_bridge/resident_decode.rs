@@ -135,6 +135,9 @@ impl QTensorEngine {
         if !crate::llm_bench::resident_decode_enabled()
             || !crate::llm_bench::resident_weights_enabled()
             || crate::llm_bench::cpu_attention_enabled()
+            // W5b Phase 4b: dict-coded KV needs the write to run through the attention pass
+            // (`write_kv_head` encodes to codes); the resident fast path bypasses it.
+            || crate::llm_bench::kv_dict_enabled()
         {
             return None;
         }

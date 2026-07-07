@@ -403,6 +403,9 @@ pub struct KvCacheLayout {
     /// K/V vector — each word packs `u16 atom-index | f16 coefficient`), reconstructed in the attention
     /// shader. Mutually exclusive with `int8` (dict mode wins). `0` ⇒ f32/int8 as above.
     pub dict_k: u32,
+    /// W5b Phase 4b: dictionary size (atoms) — the atoms live in each layer's arena AFTER the code
+    /// region (`[K atoms n_atoms×head_dim][V atoms …]`), so the per-layer binding covers them.
+    pub dict_n_atoms: u32,
 }
 
 impl KvCacheLayout {
@@ -411,16 +414,16 @@ impl KvCacheLayout {
         // on AND a certified dictionary is installed whose head_dim matches this model. Otherwise it
         // transparently falls back (dict_k = 0).
         #[cfg(not(target_arch = "wasm32"))]
-        let dict_k = if crate::llm_bench::kv_dict_enabled() {
+        let (dict_k, dict_n_atoms) = if crate::llm_bench::kv_dict_enabled() {
             crate::kv_dict_runtime::installed_meta()
-                .filter(|&(_, hd)| hd == h.head_dim() as usize)
-                .map(|(k, _)| k as u32)
-                .unwrap_or(0)
+                .filter(|&(_, hd, _)| hd == h.head_dim() as usize)
+                .map(|(k, _, na)| (k as u32, na as u32))
+                .unwrap_or((0, 0))
         } else {
-            0
+            (0, 0)
         };
         #[cfg(target_arch = "wasm32")]
-        let dict_k = 0u32;
+        let (dict_k, dict_n_atoms) = (0u32, 0u32);
 
         // W5a int8 KV is a native decode-path optimization, gated behind its own toggle and only when
         // head_dim packs cleanly into u32 lanes. WASM always uses the f32 layout.
@@ -431,13 +434,14 @@ impl KvCacheLayout {
             && h.head_dim() > 0;
         #[cfg(target_arch = "wasm32")]
         let want_int8 = false;
-        Self::from_hyperparams_mode(h, want_int8, dict_k)
+        Self::from_hyperparams_mode(h, want_int8, dict_k, dict_n_atoms)
     }
 
     fn from_hyperparams_mode(
         h: &crate::gguf_sharder::GgufHyperparams,
         int8: bool,
         dict_k: u32,
+        dict_n_atoms: u32,
     ) -> Option<Self> {
         let n_layer = h.n_layer;
         let n_kv_head = h.effective_n_kv_head();
@@ -452,7 +456,9 @@ impl KvCacheLayout {
         // int8: per slot = 2·n_kv_head·(1 scale + head_dim/4 packed words), K then V — ~3.8× smaller.
         // dict: per slot = 2·n_kv_head·dict_k code-words (K then V) — each word = u16 index | f16 coeff.
         let layer_stride = if dict_k > 0 {
-            MAX_CONTEXT_WINDOW * 2 * n_kv_head * dict_k
+            // codes ([max_context][2 streams][n_kv_head][dict_k]) + the layer's dictionary atoms
+            // ([2 streams][dict_n_atoms][head_dim]) resident in the same slice for the shader.
+            MAX_CONTEXT_WINDOW * 2 * n_kv_head * dict_k + 2 * dict_n_atoms * head_dim
         } else if int8 {
             MAX_CONTEXT_WINDOW * 2 * n_kv_head * (1 + head_dim / 4)
         } else {
@@ -473,6 +479,7 @@ impl KvCacheLayout {
             total_f32_elems: total,
             int8,
             dict_k,
+            dict_n_atoms,
         })
     }
 

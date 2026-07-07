@@ -13,8 +13,11 @@ use std::collections::HashSet;
 
 /// Hand-build a dict-mode layout (mirrors `from_hyperparams_mode`'s dict branch) so the addressing math
 /// can be tested without a model / GPU / the installed-dictionary machinery.
+const N_ATOMS: u32 = 8;
+
 fn dict_layout(n_layer: u32, max_context: u32, n_kv: u32, head_dim: u32, dict_k: u32) -> KvCacheLayout {
-    let layer_stride = max_context * 2 * n_kv * dict_k;
+    // codes + the per-layer dictionary atoms resident in the same slice.
+    let layer_stride = max_context * 2 * n_kv * dict_k + 2 * N_ATOMS * head_dim;
     KvCacheLayout {
         max_context,
         n_layer,
@@ -25,6 +28,7 @@ fn dict_layout(n_layer: u32, max_context: u32, n_kv: u32, head_dim: u32, dict_k:
         total_f32_elems: (n_layer as usize) * (layer_stride as usize),
         int8: false,
         dict_k,
+        dict_n_atoms: N_ATOMS,
     }
 }
 
@@ -56,7 +60,12 @@ fn code_index_is_a_dense_bijection() {
     }
     let expected = (n_layer * max_context * n_kv * 2 * k) as usize;
     assert_eq!(seen.len(), expected, "addressing must fill every code word (dense)");
-    assert_eq!(l.total_f32_elems, expected, "buffer is exactly sized to the codes");
+    let atoms = (n_layer * 2 * N_ATOMS * head_dim) as usize;
+    assert_eq!(
+        l.total_f32_elems,
+        expected + atoms,
+        "buffer = codes + resident dictionary atoms"
+    );
 
     // K and V regions of the same (layer, slot, head) must be disjoint.
     let k0 = l.code_index(0, 0, 0, true, 0);

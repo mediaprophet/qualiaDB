@@ -27,7 +27,9 @@ struct AttentionParams {
     // in-shader matmul via gemm_row. Decouples the heavy projection from this @workgroup_size(1) kernel.
     proj_row_stride: u32,
     kv_quant: u32,   // W5a: 1 ⇒ int8 KV cache (packed i8 + f32 scale); 0 ⇒ legacy f32
-    _pad2: u32,
+    // W5b Phase 4b: dict-coded KV. `dict_pack` = dict_k (low 16) | n_atoms (high 16); dict_k>0 ⇒ store
+    // k-sparse codes (u16 atom-index | f16 coeff per word) reconstructed from `kv_atoms`. 0 ⇒ f32/int8.
+    dict_pack: u32,
 }
 
 @group(0) @binding(0) var<storage, read> hidden: array<f32>;
@@ -37,6 +39,16 @@ var<private> q_mask_token: u32;
 @group(0) @binding(3) var<storage, read_write> kv_cache: array<f32>;
 @group(0) @binding(4) var<storage, read_write> attn_out: array<f32>;
 @group(0) @binding(5) var<storage, read> kv_mask_words: array<u32>;
+
+// Dict-encode workgroup scratch (Phase 4b, write path). Sized for n_atoms ≤ 512, k ≤ 8.
+const MAX_ATOMS: u32 = 512u;
+const MAX_K: u32 = 8u;
+var<workgroup> enc_residual: array<f32, MAX_HEAD_DIM>;
+var<workgroup> enc_corr: array<f32, MAX_ATOMS>;
+var<workgroup> enc_sel: array<u32, MAX_K>;
+var<workgroup> enc_coeff: array<f32, MAX_K>;
+var<workgroup> enc_gram: array<f32, 64>; // MAX_K × MAX_K
+var<workgroup> enc_rhs: array<f32, MAX_K>;
 
 const BLOCK_Q6K_BYTES: u32 = 210u;
 const BLOCK_Q6K_ELEMS: u32 = 256u;
@@ -363,8 +375,52 @@ fn i8_lane(packed: u32, lane: u32) -> f32 {
     let b = (packed >> (lane * 8u)) & 0xFFu;
     return f32(select(i32(b), i32(b) - 256, b >= 128u));
 }
-// Read one K element, dequantizing when int8, else the raw f32 (f32 path bit-identical).
+
+// ── W5b Phase 4b dict-coded KV ─────────────────────────────────────────────────────────────────
+fn dict_k_val() -> u32 { return params.dict_pack & 0xFFFFu; }
+fn dict_n_atoms() -> u32 { return params.dict_pack >> 16u; }
+
+// Layer-local code-word offset (mirrors Rust `KvCacheLayout::code_index`; the binding is one layer
+// slice, so no layer term). `is_v`: 0 = K region, 1 = V region.
+fn code_idx(slot: u32, kv_head: u32, is_v: u32, i: u32) -> u32 {
+    let dk = dict_k_val();
+    let per_slot = 2u * params.n_kv_head * dk;
+    let stream_off = select(0u, params.n_kv_head * dk, is_v == 1u);
+    return slot * per_slot + stream_off + kv_head * dk + i;
+}
+// Atom element: the dictionary atoms live in the KV arena AFTER the per-layer code region (the
+// binding is already this layer's slice), as `[K atoms n_atoms×hd][V atoms n_atoms×hd]`.
+fn atom_elem(is_v: u32, a: u32, d: u32) -> f32 {
+    let na = dict_n_atoms();
+    let atoms_base = params.max_context * 2u * params.n_kv_head * dict_k_val(); // per-layer code region
+    let stream_off = select(0u, na * params.head_dim, is_v == 1u);
+    return kv_cache[atoms_base + stream_off + a * params.head_dim + d];
+}
+// Pack (atom_index, coeff) into a code word: u16 index (high) | f16 coeff (low).
+fn pack_code(index: u32, coeff: f32) -> f32 {
+    let f16bits = pack2x16float(vec2<f32>(coeff, 0.0)) & 0xFFFFu;
+    return bitcast<f32>((index << 16u) | f16bits);
+}
+// Reconstruct element `d` of the K (is_v=0) or V (is_v=1) vector at (slot, kv_head) from its codes.
+fn recon_elem(slot: u32, kv_head: u32, is_v: u32, d: u32) -> f32 {
+    let dk = dict_k_val();
+    var acc = 0.0;
+    for (var i = 0u; i < dk; i = i + 1u) {
+        let word = bitcast<u32>(kv_cache[code_idx(slot, kv_head, is_v, i)]);
+        let coeff = unpack2x16float(word & 0xFFFFu).x;
+        let idx = word >> 16u;
+        if coeff != 0.0 {
+            acc = acc + coeff * atom_elem(is_v, idx, d);
+        }
+    }
+    return acc;
+}
+
+// Read one K element: dict-reconstruct, else int8-dequant, else raw f32 (f32 path bit-identical).
 fn read_k(slot: u32, kv_head: u32, d: u32) -> f32 {
+    if dict_k_val() > 0u {
+        return recon_elem(slot, kv_head, 0u, d);
+    }
     if params.kv_quant == 0u {
         return kv_cache[k_cache_idx(slot, kv_head, d)];
     }
@@ -373,6 +429,9 @@ fn read_k(slot: u32, kv_head: u32, d: u32) -> f32 {
     return i8_lane(packed, d % 4u) * scale;
 }
 fn read_v(slot: u32, kv_head: u32, d: u32) -> f32 {
+    if dict_k_val() > 0u {
+        return recon_elem(slot, kv_head, 1u, d);
+    }
     if params.kv_quant == 0u {
         return kv_cache[v_cache_idx(slot, kv_head, d)];
     }
@@ -563,7 +622,93 @@ fn write_kv_head(kv_head: u32, token_in_batch: u32, abs_pos: u32, apply_rope_k: 
         workgroupBarrier();
     }
     let slot = abs_pos % params.max_context;
-    if params.kv_quant == 0u {
+    let enc_dk = dict_k_val();
+    if enc_dk > 0u {
+        // ── Phase 4b: OMP-encode the head vector (q_sh) to `enc_dk` code words ──
+        let na = dict_n_atoms();
+        let is_v = select(0u, 1u, params.proj_kind == 2u);
+        for (var d = lid; d < params.head_dim; d = d + WG_SIZE) {
+            enc_residual[d] = q_sh[d];
+        }
+        workgroupBarrier();
+        var n_sel = 0u;
+        for (var pass = 0u; pass < enc_dk; pass = pass + 1u) {
+            for (var a = lid; a < na; a = a + WG_SIZE) {
+                var s = 0.0;
+                for (var d = 0u; d < params.head_dim; d = d + 1u) {
+                    s = s + enc_residual[d] * atom_elem(is_v, a, d);
+                }
+                enc_corr[a] = s;
+            }
+            workgroupBarrier();
+            if lid == 0u {
+                // Greedy pick: atom of max |corr| not already selected.
+                var best = 0u;
+                var bestabs = -1.0;
+                for (var a = 0u; a < na; a = a + 1u) {
+                    var used = false;
+                    for (var s2 = 0u; s2 < n_sel; s2 = s2 + 1u) {
+                        if enc_sel[s2] == a { used = true; }
+                    }
+                    let ab = abs(enc_corr[a]);
+                    if !used && ab > bestabs { bestabs = ab; best = a; }
+                }
+                enc_sel[n_sel] = best;
+                n_sel = n_sel + 1u;
+                // Least-squares re-solve for the selected atoms (the "orthogonal" in OMP): build the
+                // n_sel×n_sel Gram matrix + rhs against the ORIGINAL vector, solve by Gaussian elim.
+                for (var i = 0u; i < n_sel; i = i + 1u) {
+                    var r = 0.0;
+                    for (var d = 0u; d < params.head_dim; d = d + 1u) {
+                        r = r + atom_elem(is_v, enc_sel[i], d) * q_sh[d];
+                    }
+                    enc_rhs[i] = r;
+                    for (var j = 0u; j < n_sel; j = j + 1u) {
+                        var g = 0.0;
+                        for (var d = 0u; d < params.head_dim; d = d + 1u) {
+                            g = g + atom_elem(is_v, enc_sel[i], d) * atom_elem(is_v, enc_sel[j], d);
+                        }
+                        enc_gram[i * MAX_K + j] = g;
+                    }
+                    enc_gram[i * MAX_K + i] = enc_gram[i * MAX_K + i] + 1e-6;
+                }
+                for (var col = 0u; col < n_sel; col = col + 1u) {
+                    let piv = enc_gram[col * MAX_K + col];
+                    if abs(piv) > 1e-12 {
+                        for (var row = 0u; row < n_sel; row = row + 1u) {
+                            if row != col {
+                                let f = enc_gram[row * MAX_K + col] / piv;
+                                for (var c = col; c < n_sel; c = c + 1u) {
+                                    enc_gram[row * MAX_K + c] = enc_gram[row * MAX_K + c] - f * enc_gram[col * MAX_K + c];
+                                }
+                                enc_rhs[row] = enc_rhs[row] - f * enc_rhs[col];
+                            }
+                        }
+                    }
+                }
+                for (var i = 0u; i < n_sel; i = i + 1u) {
+                    let dgn = enc_gram[i * MAX_K + i];
+                    enc_coeff[i] = select(0.0, enc_rhs[i] / dgn, abs(dgn) > 1e-12);
+                }
+            }
+            workgroupBarrier();
+            for (var d = lid; d < params.head_dim; d = d + WG_SIZE) {
+                var r = q_sh[d];
+                for (var i = 0u; i < n_sel; i = i + 1u) {
+                    r = r - enc_coeff[i] * atom_elem(is_v, enc_sel[i], d);
+                }
+                enc_residual[d] = r;
+            }
+            workgroupBarrier();
+        }
+        if lid == 0u {
+            for (var i = 0u; i < enc_dk; i = i + 1u) {
+                let idx = select(0u, enc_sel[i], i < n_sel);
+                let c = select(0.0, enc_coeff[i], i < n_sel);
+                kv_cache[code_idx(slot, kv_head, is_v, i)] = pack_code(idx, c);
+            }
+        }
+    } else if params.kv_quant == 0u {
         for (var d = lid; d < params.head_dim; d = d + WG_SIZE) {
             if params.proj_kind == 1u {
                 kv_cache[k_cache_idx(slot, kv_head, d)] = q_sh[d];

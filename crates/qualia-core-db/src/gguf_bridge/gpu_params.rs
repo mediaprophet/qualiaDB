@@ -58,8 +58,10 @@ pub(crate) struct AttentionGpuParams {
     /// W5a: `1` ⇒ the KV cache is int8-quantized (packed i8 + per-(slot,kv_head) f32 scale, reusing
     /// the binding-3 buffer reinterpreted); `0` ⇒ the legacy f32 KV cache (byte-identical path).
     pub kv_quant: u32,
-    /// WGSL uniform struct size must be a multiple of 16 bytes.
-    pub _pad: u32,
+    /// W5b Phase 4b: `dict_k (low 16) | n_atoms (high 16)`. Low16 > 0 ⇒ the KV cache stores k-sparse
+    /// dictionary codes (reconstructed in the shader from the `kv_atoms` binding). `0` ⇒ f32/int8.
+    /// Doubles as the struct's 16-byte-alignment tail.
+    pub dict_pack: u32,
 }
 
 /// Uniform block for `wasm_elementwise.wgsl` (MC8 GPU norm / SwiGLU / residual).

@@ -189,6 +189,11 @@ pub fn set_attention_preproject(on: bool) {
 
 #[inline]
 pub fn attention_preproject_enabled() -> bool {
+    // W5b Phase 4b: the dict-coded write happens in `write_kv_head` (the attention pass); the fused
+    // pre-projection bypasses it, so force it off in dict mode.
+    if kv_dict_enabled() {
+        return false;
+    }
     match std::env::var("QUALIA_LLM_PREPROJECT_ATTN").ok().as_deref() {
         Some("0") | Some("false") => false,
         Some("1") | Some("true") => true,
@@ -209,6 +214,11 @@ pub fn set_attention_o_fuse(on: bool) {
 
 #[inline]
 pub fn attention_o_fuse_enabled() -> bool {
+    // W5b Phase 4b: the fused Q+O tail reads K/V from the cache on the GPU path; keep the plain
+    // read_k/read_v (dict-aware) path in dict mode.
+    if kv_dict_enabled() {
+        return false;
+    }
     match std::env::var("QUALIA_LLM_FUSE_ATTN_O").ok().as_deref() {
         Some("0") | Some("false") => false,
         Some("1") | Some("true") => true,
@@ -614,9 +624,6 @@ pub fn cpu_attention_enabled() -> bool {
             std::env::var("QUALIA_LLM_CPU_ATTENTION").ok().as_deref(),
             Some("1") | Some("true")
         )
-        // W5b Phase 4b: the dict-coded KV cache is reconstructed on the CPU attention path; force it so
-        // the GPU path never writes f32 into a (smaller) dict-sized arena. The GPU shader read is 5b.
-        || kv_dict_enabled()
 }
 
 // ── Shared phase metrics ──────────────────────────────────────────────────────

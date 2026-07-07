@@ -56,7 +56,12 @@ impl QTensorEngine {
             out_stride_elems,
             proj_row_stride: 0, // default = legacy in-shader projection; mc8_stage overrides for B
             kv_quant: if layout.int8 { 1 } else { 0 },
-            _pad: 0,
+            // W5b Phase 4b: dict_k (low 16) | n_atoms (high 16); 0 ⇒ f32/int8.
+            dict_pack: if layout.dict_k > 0 {
+                layout.dict_k | (layout.dict_n_atoms << 16)
+            } else {
+                0
+            },
         }
     }
 

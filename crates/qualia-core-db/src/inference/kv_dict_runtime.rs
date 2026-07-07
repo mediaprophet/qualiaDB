@@ -24,6 +24,8 @@ struct Rt {
     sparsity: usize,
     /// head_dim (atom length) of the installed dictionaries; 0 if none installed.
     head_dim: usize,
+    /// n_atoms of the installed dictionaries (from the first non-None dict).
+    n_atoms: usize,
 }
 
 fn rt() -> &'static Mutex<Option<Rt>> {
@@ -44,33 +46,57 @@ pub struct KvDictArtifact {
 
 /// Install the per-layer dictionaries and turn reconstruction ON.
 pub fn enable(k: Vec<Option<KvDictionary>>, v: Vec<Option<KvDictionary>>, sparsity: usize) {
-    let head_dim = k
-        .iter()
-        .chain(v.iter())
-        .flatten()
-        .map(|d| d.dim)
-        .next()
-        .unwrap_or(0);
+    let first = k.iter().chain(v.iter()).flatten().next();
+    let head_dim = first.map(|d| d.dim).unwrap_or(0);
+    let n_atoms = first.map(|d| d.n_atoms).unwrap_or(0);
     if let Ok(mut g) = rt().lock() {
         *g = Some(Rt {
             k,
             v,
             sparsity,
             head_dim,
+            n_atoms,
         });
     }
     ENABLED.store(true, Ordering::Relaxed);
 }
 
+/// Flatten the installed atoms into the arena layout `[layer][K atoms n_atoms×head_dim][V atoms …]`,
+/// with `(flat, n_atoms, head_dim)`; layers/streams with no dictionary are zero (never selected). The
+/// engine uploads this into the tail of each layer's KV-arena slice for the GPU shader to reconstruct.
+pub fn atoms_flat() -> Option<(Vec<f32>, usize, usize)> {
+    let g = rt().lock().ok()?;
+    let rt = g.as_ref()?;
+    if rt.head_dim == 0 || rt.n_atoms == 0 {
+        return None;
+    }
+    let (na, hd) = (rt.n_atoms, rt.head_dim);
+    let per_stream = na * hd;
+    let n_layer = rt.k.len().max(rt.v.len());
+    let mut out = vec![0f32; n_layer * 2 * per_stream];
+    for l in 0..n_layer {
+        let base = l * 2 * per_stream;
+        if let Some(Some(d)) = rt.k.get(l) {
+            let n = per_stream.min(d.atoms.len());
+            out[base..base + n].copy_from_slice(&d.atoms[..n]);
+        }
+        if let Some(Some(d)) = rt.v.get(l) {
+            let n = per_stream.min(d.atoms.len());
+            out[base + per_stream..base + per_stream + n].copy_from_slice(&d.atoms[..n]);
+        }
+    }
+    Some((out, na, hd))
+}
+
 /// The installed dictionary's `(sparsity, head_dim)`, or `None` if nothing is installed. The KV-cache
 /// layout consults this to size the dict-coded slots (Phase 4b step 3).
-pub fn installed_meta() -> Option<(usize, usize)> {
+pub fn installed_meta() -> Option<(usize, usize, usize)> {
     let g = rt().lock().ok()?;
     let rt = g.as_ref()?;
     if rt.head_dim == 0 {
         None
     } else {
-        Some((rt.sparsity, rt.head_dim))
+        Some((rt.sparsity, rt.head_dim, rt.n_atoms))
     }
 }
 
