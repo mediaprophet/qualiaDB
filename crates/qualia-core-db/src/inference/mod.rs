@@ -12,6 +12,8 @@ pub use inference_awq as llm_awq; // transitional alias
 #[cfg(not(target_arch = "wasm32"))]
 pub mod kv_capture;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod kv_dict;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod inference_bench;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference_bench as llm_bench; // transitional alias

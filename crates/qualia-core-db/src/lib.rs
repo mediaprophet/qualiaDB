@@ -130,6 +130,8 @@ pub use inference::inference_awq as llm_awq;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::kv_capture;
 #[cfg(not(target_arch = "wasm32"))]
+pub use inference::kv_dict;
+#[cfg(not(target_arch = "wasm32"))]
 pub use inference::inference_bench;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::inference_bench as llm_bench;
@@ -346,6 +348,9 @@ pub mod clinical_engine {
 }
 pub mod qubo_compiler;
 pub mod render;
+/// Hypermedia semantic library — asset ⊕ analytics ⊕ related-assets bound as a semantic graph (not a
+/// directory). See `docs/plans/hypermedia-semantic-library.md`.
+pub mod hypermedia;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub mod spatial_wasm;
 #[cfg(all(
