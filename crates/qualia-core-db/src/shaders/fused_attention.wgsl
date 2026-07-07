@@ -631,8 +631,10 @@ fn write_kv_head(kv_head: u32, token_in_batch: u32, abs_pos: u32, apply_rope_k: 
             enc_residual[d] = q_sh[d];
         }
         workgroupBarrier();
-        var n_sel = 0u;
-        for (var pass = 0u; pass < enc_dk; pass = pass + 1u) {
+        // `n_sel` after pass p is `p + 1` (one atom per pass) — a uniform quantity, so no shared
+        // counter is needed (a per-invocation counter would only advance on lid 0 → divergent loops).
+        for (var omp_pass = 0u; omp_pass < enc_dk; omp_pass = omp_pass + 1u) {
+            let n_sel = omp_pass + 1u;
             for (var a = lid; a < na; a = a + WG_SIZE) {
                 var s = 0.0;
                 for (var d = 0u; d < params.head_dim; d = d + 1u) {
@@ -642,21 +644,20 @@ fn write_kv_head(kv_head: u32, token_in_batch: u32, abs_pos: u32, apply_rope_k: 
             }
             workgroupBarrier();
             if lid == 0u {
-                // Greedy pick: atom of max |corr| not already selected.
+                // Greedy pick: atom of max |corr| not already selected (the `omp_pass` picked so far).
                 var best = 0u;
                 var bestabs = -1.0;
                 for (var a = 0u; a < na; a = a + 1u) {
                     var used = false;
-                    for (var s2 = 0u; s2 < n_sel; s2 = s2 + 1u) {
+                    for (var s2 = 0u; s2 < omp_pass; s2 = s2 + 1u) {
                         if enc_sel[s2] == a { used = true; }
                     }
                     let ab = abs(enc_corr[a]);
                     if !used && ab > bestabs { bestabs = ab; best = a; }
                 }
-                enc_sel[n_sel] = best;
-                n_sel = n_sel + 1u;
-                // Least-squares re-solve for the selected atoms (the "orthogonal" in OMP): build the
-                // n_sel×n_sel Gram matrix + rhs against the ORIGINAL vector, solve by Gaussian elim.
+                enc_sel[omp_pass] = best;
+                // Least-squares re-solve for the n_sel selected atoms (the "orthogonal" in OMP): build
+                // the Gram matrix + rhs against the ORIGINAL vector, solve by Gaussian elimination.
                 for (var i = 0u; i < n_sel; i = i + 1u) {
                     var r = 0.0;
                     for (var d = 0u; d < params.head_dim; d = d + 1u) {
@@ -703,9 +704,7 @@ fn write_kv_head(kv_head: u32, token_in_batch: u32, abs_pos: u32, apply_rope_k: 
         }
         if lid == 0u {
             for (var i = 0u; i < enc_dk; i = i + 1u) {
-                let idx = select(0u, enc_sel[i], i < n_sel);
-                let c = select(0.0, enc_coeff[i], i < n_sel);
-                kv_cache[code_idx(slot, kv_head, is_v, i)] = pack_code(idx, c);
+                kv_cache[code_idx(slot, kv_head, is_v, i)] = pack_code(enc_sel[i], enc_coeff[i]);
             }
         }
     } else if params.kv_quant == 0u {
