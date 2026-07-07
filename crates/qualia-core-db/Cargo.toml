@@ -245,6 +245,7 @@ io-uring = "0.7.12"
 
 [dev-dependencies]
 naga = { version = "29", features = ["wgsl-in", "spv-out"] }
+ciborium = "0.2.2"
 criterion = "0.8.2"
 dhat = "0.3.3"
 proptest = "1.11.0"

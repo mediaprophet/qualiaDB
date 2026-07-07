@@ -25,9 +25,12 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 pub mod corpus;
-pub mod kv_dict_runtime;
 pub mod kv_dictionary;
 pub mod package;
+
+/// Re-export the runtime KV-dictionary install/reconstruct — it now lives in core
+/// ([`crate::kv_dict_runtime`]) so the engine can run a certified artifact without the forge feature.
+pub use crate::kv_dict_runtime;
 
 pub use corpus::CorpusSpec;
 pub use kv_dictionary::{learn_dictionary, KvDictionary, SparseCode};
@@ -417,18 +420,13 @@ fn certify_one_config(
     let passed = delta_ppl <= gate.max_delta_ppl;
 
     let packaged = if passed {
-        #[derive(serde::Serialize)]
-        struct KvDictArtifact<'a> {
-            sparsity: usize,
-            head_dim: usize,
-            k: &'a [Option<KvDictionary>],
-            v: &'a [Option<KvDictionary>],
-        }
-        let art = KvDictArtifact {
+        // The engine's core loader (`kv_dict_runtime::load_certified`) deserializes exactly this struct,
+        // so the forge and engine share one on-disk dictionary format.
+        let art = crate::kv_dict_runtime::KvDictArtifact {
             sparsity,
             head_dim,
-            k: &k_dicts,
-            v: &v_dicts,
+            k: k_dicts,
+            v: v_dicts,
         };
         let mut cbor = Vec::new();
         ciborium::into_writer(&art, &mut cbor)

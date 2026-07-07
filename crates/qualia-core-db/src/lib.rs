@@ -132,6 +132,8 @@ pub use inference::kv_capture;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::kv_dict;
 #[cfg(not(target_arch = "wasm32"))]
+pub use inference::kv_dict_runtime;
+#[cfg(not(target_arch = "wasm32"))]
 pub use inference::inference_bench;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::inference_bench as llm_bench;

@@ -453,8 +453,7 @@ impl QTensorEngine {
                     );
                     // W5b Phase 4: reconstruct post-RoPE K through the layer's dictionary before storing
                     // (lossy) — so attention reads the compressed vectors and PPL reflects the artifact.
-                    #[cfg(feature = "wgsl-forge")]
-                    crate::wgsl_forge::calibration::kv_dict_runtime::reconstruct_kv(
+                    crate::kv_dict_runtime::reconstruct_kv(
                         layer as usize,
                         true,
                         &mut proj[..out_dim],
@@ -479,8 +478,7 @@ impl QTensorEngine {
                 }
                 2 => {
                     // W5b Phase 4: reconstruct V through the layer's dictionary before storing (lossy).
-                    #[cfg(feature = "wgsl-forge")]
-                    crate::wgsl_forge::calibration::kv_dict_runtime::reconstruct_kv(
+                    crate::kv_dict_runtime::reconstruct_kv(
                         layer as usize,
                         false,
                         &mut proj[..out_dim],
