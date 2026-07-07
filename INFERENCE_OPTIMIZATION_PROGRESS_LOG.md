@@ -944,3 +944,132 @@ config — §9), and the harness now writes the certified artifact to disk on PA
 (justified now: the dict is certified coherent at 3.8× vs int8), or bank the certified artifact and revisit
 when a memory-bound target makes it the priority. A quick k=5 probe (120 bits, 4.5× vs int8) could find an
 even smaller passing point if wanted.
+
+## 2026-07-07 — W5b Phase 4a sweep: k=5 is the smallest certified config (+0.65%, 4.5× vs int8)
+
+**Step:** W5b Phase 4a k-sweep — **DONE.** Efficient sweep (shared capture + reference across configs).
+
+**Measured (SmolLM2-360M, CPU-ref path, f32 KV, ≤48 tok/passage, 256 atoms, ref_ppl=29.0169):**
+| k | cand_ppl | ΔPPL | code bits/vec | verdict |
+|---|---|---|---|---|
+| 4 | 30.9993 | +6.83% | 96  | FAIL |
+| **5** | **29.2054** | **+0.65%** | **120** | **PASS** — 5.2 MB artifact |
+| 6 | 29.1402 | +0.42% | 144 | PASS — 5.2 MB artifact |
+
+- **k=5 (256 atoms) is the SMALLEST certified config** — k=4 fails, so no smaller integer-k exists. 120
+  bits/vec ≈ 1.9 bit/elem = **4.5× smaller than int8** (544 b), ~13× vs f32; +0.65% ΔPPL. This is the
+  config Phase 4b should ship. Artifacts saved: `target/kv_dict_smollm2_256atoms_{5,6}sparse.q42art`.
+- Sweep wall = 4h2m (both dict-ON candidate passes are CPU-bound on the OMP encode on the CPU-reference
+  path — inherent to certifying on that path; the SHARED capture+ref made it one run, not two).
+- Efficient-sweep harness (`sweep_kv_dictionary`) + RAII flag guard landed (commit 92f3f924); artifacts
+  now persisted on PASS.
+
+**W5b status: COMPLETE through Phase 4a** (learner → go/no-go GO cross-validated → runtime reconstruct →
+ΔPPL certify → k-sweep → certified+packaged artifact). Phase 4b (compressed GPU KV cache to realize the
+memory saving) is planned (docs/plans/inference-W5b-phase4b-compressed-kv-cache.md) + tasked (#18), ship
+config = **k=5/256**. Owner decision: build 4b now (helps memory-bound/long-context; may cost tok/s on the
+compute-bound A2000) or bank the certified artifact until a memory-bound target is the priority.
+
+## 2026-07-07 — W5b Phase 4b: steps 1-3 done (foundation), stepwise per Timothy
+
+**Step:** Phase 4b (compressed KV cache) — **3/6 steps DONE, tested, committed. Steps 4-6 = the heavy
+GPU/attention-path work.** Building sequentially, each verified before the next (Timothy's directive).
+
+- **Step 1 (eb8089cb)** — moved `KvDictionary` + the `encode`/`reconstruct` codec into core
+  `inference/kv_dict.rs`; the engine can run a certified dict without the forge feature. Learner +
+  metrics stay forge-side, re-export the type. Behavior-preserving (kv_dictionary_learn 3/3 identical).
+- **Step 2 (ec1f14cf)** — core `kv_dict_runtime::load_certified()`: parse the framed `.q42art`, **verify
+  the provenance gate (kind==KvDictionary && passed) fail-closed**, install. Refuses uncertified /
+  wrong-kind / garbage. Shared `KvDictArtifact` format (forge packager ↔ engine loader). Reconstruct
+  hook now core (un-gated). Test kv_dict_loader 2/2.
+- **Step 3 (6cf1f0ac)** — `KvCacheLayout` dict variant: `dict_k` code-words/vector (u16 idx | f16 coeff),
+  ~12.8× smaller than f32; `code_index` addressing (proven dense bijection); `QUALIA_LLM_KV_DICT` toggle;
+  `installed_meta()` feeds the layout. f32/int8 byte-identical. Test kv_dict_cache_layout 2/2.
+
+**Remaining (the hard part):** Step 4 (encode-on-write) + Step 5 (reconstruct-on-read; CPU path first
+then the fused_attention.wgsl shader) rewrite the KV storage/read in the attention path — real hot-path
+work needing slow model-GPU validation. Step 6 = the A/B that decides shipping. **Honest caveat unchanged:
+the memory win helps memory-bound / long-context; on this compute-bound A2000 the reconstruct compute may
+cost tok/s** — so 4-6 optimize a constraint this machine doesn't have. The foundation (loader + layout) is
+banked + tested regardless.
+
+## 2026-07-07 — W5b Phase 4b steps 4-5a: dict-coded KV cache — MEMORY WIN REALIZED + validated
+
+**Step:** Phase 4b steps 4 (encode-on-write) + 5a (reconstruct-on-read, CPU path) — **DONE, validated
+end-to-end. The memory saving is realized.** (5fa8dd05)
+
+- Dict-coded KV cache: `cpu_attention_pass` encodes each K/V head vector to `dict_k` code words on write
+  (u16 atom-index | f16 coeff, one per f32 slot via `half`), reconstructs K/V once per (kv_head,
+  past_pos) on the Q read. Code format owned by `kv_dict::{pack,unpack}_code_word` +
+  `encode_to_words`/`reconstruct_from_words`. `cpu_attention_enabled()` forces the CPU path in dict mode
+  (GPU shader read = 5b).
+- **Measured (SmolLM2-360M, core build — NO forge feature, proving the engine runs the certified
+  artifact standalone):** loading the certified k=5 artifact drops the KV arena **80.0 MiB → 6.2 MiB
+  (12.9× smaller)** at **ΔPPL +0.59%** (certified +0.65%, gate 5%) — coherent, tracks the certificate
+  (the +0.06% gap is f16-coeff rounding). Test `kv_dict_cache_real` green. Both passes 36 min.
+
+**So the point of Phase 4b — a smaller KV cache at runtime, certified-coherent — is achieved on the CPU
+attention path.** Remaining: **5b** reconstruct in `fused_attention.wgsl` for the fast GPU decode path
+(needs a GPU encode-on-write too — the hard part; OMP-on-GPU), and **6** the A/B (tok/s + MiB + ΔPPL vs
+int8/f32, A2000 + long-context). Honest caveat holds: on the compute-bound A2000 the GPU-path dict cache
+may cost tok/s; its win is memory-bound / long-context, which the CPU-path already serves.
+
+## 2026-07-07 — W5b Phase 4b: user switch DONE; GPU-fast path scoped (large, slow, A2000-negative)
+
+- **User switch (b3109d2d):** `kv_dict_runtime::activate(artifact)` / `deactivate()` / `dict_active()`
+  + the `QUALIA_LLM_KV_DICT` 3-way toggle. The dict-coded KV cache is now a working, user-switchable
+  feature on the validated CPU attention path (12.9× smaller KV, +0.59% ΔPPL).
+- **GPU-fast path (step 5b) — scoped, honest sizing.** To run dict mode on the fast GPU decode path
+  needs: (1) reconstruct branch in `fused_attention.wgsl` `read_k`/`read_v` + an atoms storage binding +
+  `dict_k`/`n_atoms` params (tractable, ~a few hours); (2) a **GPU OMP encode** compute kernel (input
+  K/V projection + atoms → codes; k greedy passes + a 5×5 LS solve per vector) — the hard, risky piece,
+  ~150 lines WGSL with reductions + a serial solve, validated only by slow model-GPU runs. Kept OMP (not
+  the lossier MP) to stay consistent with the CPU path + the certificate.
+- **The measured reason it's low priority HERE:** dict read is ~5–10× the per-element compute of int8;
+  this A2000 is compute-bound with no KV memory pressure (KV = 6 MiB), so a working GPU dict path would
+  be *slower than int8 with no benefit* on this box. Its value is memory-bound / long-context / edge HW —
+  where the CPU-path cache already delivers the memory. So the GPU build is real work that regresses the
+  only hardware we can benchmark on.
+
+## 2026-07-07 — W5b Phase 4b step 5b: dict-coded KV on the GPU path — VALIDATED
+
+**Step:** Phase 4b step 5b (GPU fast-path dict cache) — **DONE, validated.** (fa542f73, a1d16533)
+
+- `fused_attention.wgsl` now does the dict cache: `write_kv_head` OMP-encodes each K/V head vector to
+  `dict_k` code words (u16 index | f16 coeff via `pack2x16float`; a WG-parallel correlation scan + a
+  per-vector Gram/LS Gaussian solve); `read_k`/`read_v` reconstruct via `unpack2x16float` from the
+  per-layer atoms resident in the KV-arena tail (no new binding). dict mode routes through the attention
+  pass (preproject/o_fuse/resident forced off), cpu_attention no longer forced.
+- **Two bugs found + fixed via the model run** (each a fast/slow iteration): `pass` is a reserved WGSL
+  word; and the selected-atom counter was a per-invocation `var` incremented only on lid 0, so 63/64
+  threads skipped the residual update → garbage codes (ΔPPL +35.6% → fixed to `omp_pass+1`, uniform).
+- **Measured (SmolLM2-360M, GPU decode, k=5):** dict-coded ΔPPL **−0.28%** vs f32 (certified +0.65%,
+  CPU-path +0.59%; −0.28% is run-to-run noise at 48 tok) — coherent, essentially lossless, **KV 12.9×
+  smaller**. `kv_dict_gpu_real` green. The engine runs it with NO forge feature.
+
+**Remaining:** step 6 — the tok/s A/B (dict vs int8 vs f32) to record the honest decode cost on the
+A2000 (expected slower; the memory win is for memory-bound/long-context HW).
+
+## 2026-07-07 — W5b Phase 4b COMPLETE: all 6 steps done, A/B recorded
+
+**Step:** Phase 4b (compressed KV cache) — **DONE, 6/6 steps, validated + benchmarked.**
+
+**Step 6 A/B (SmolLM2-360M, RTX A2000, 64-tok decode):**
+| KV mode | tok/s | KV cache | ΔPPL |
+|---|---|---|---|
+| f32  | 31.77 | 80.0 MiB | — |
+| int8 (W5a) | 32.22 | 21.2 MiB | +0.05% |
+| **dict k=5** | **13.88** | **6.2 MiB** | **~0%** (−0.28% GPU / +0.59% CPU) |
+
+- dict is **~2.3× slower** than int8/f32 on this box (in-shader OMP encode + per-element reconstruct add
+  compute) for a **12.9× smaller KV cache** (3.4× < int8). Exactly the predicted compute-vs-memory
+  trade: a decode-speed loss on this compute-bound A2000 with no memory pressure; the memory win is for
+  memory-bound / long-context / edge HW. **So it ships as a per-target user switch, never a default.**
+- The A/B needs `RUST_MIN_STACK` bumped in debug (a pre-existing large decode stack frame overflows the
+  default thread stack — hit on the f32 baseline, not dict-specific).
+
+**Full Phase 4b (all committed):** (1) dict+codec in core (eb8089cb); (2) fail-closed loader (ec1f14cf);
+(3) compressed layout (6cf1f0ac); (4-5a) CPU-path encode+reconstruct, memory realized 80→6.2 MiB @
++0.59% (5fa8dd05); (5b) GPU shader OMP-encode + reconstruct, validated −0.28% (fa542f73 + a1d16533);
+user switch activate/deactivate/QUALIA_LLM_KV_DICT (b3109d2d). Engine runs the certified artifact with
+NO forge feature. **W5b is fully complete: learner → go/no-go → certify → runtime → GPU path.**
