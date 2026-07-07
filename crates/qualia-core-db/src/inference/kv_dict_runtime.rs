@@ -22,6 +22,8 @@ struct Rt {
     k: Vec<Option<KvDictionary>>,
     v: Vec<Option<KvDictionary>>,
     sparsity: usize,
+    /// head_dim (atom length) of the installed dictionaries; 0 if none installed.
+    head_dim: usize,
 }
 
 fn rt() -> &'static Mutex<Option<Rt>> {
@@ -42,10 +44,34 @@ pub struct KvDictArtifact {
 
 /// Install the per-layer dictionaries and turn reconstruction ON.
 pub fn enable(k: Vec<Option<KvDictionary>>, v: Vec<Option<KvDictionary>>, sparsity: usize) {
+    let head_dim = k
+        .iter()
+        .chain(v.iter())
+        .flatten()
+        .map(|d| d.dim)
+        .next()
+        .unwrap_or(0);
     if let Ok(mut g) = rt().lock() {
-        *g = Some(Rt { k, v, sparsity });
+        *g = Some(Rt {
+            k,
+            v,
+            sparsity,
+            head_dim,
+        });
     }
     ENABLED.store(true, Ordering::Relaxed);
+}
+
+/// The installed dictionary's `(sparsity, head_dim)`, or `None` if nothing is installed. The KV-cache
+/// layout consults this to size the dict-coded slots (Phase 4b step 3).
+pub fn installed_meta() -> Option<(usize, usize)> {
+    let g = rt().lock().ok()?;
+    let rt = g.as_ref()?;
+    if rt.head_dim == 0 {
+        None
+    } else {
+        Some((rt.sparsity, rt.head_dim))
+    }
 }
 
 pub fn disable() {

@@ -399,23 +399,45 @@ pub struct KvCacheLayout {
     /// W5a: true ⇒ the arena is int8-quantized (K/V stored as packed i8 lanes + one f32 scale per
     /// (slot, kv_head), K then V). `layer_stride` is then the int8 slot layout, not the f32 one.
     pub int8: bool,
+    /// W5b Phase 4b: `> 0` ⇒ the arena stores k-sparse **dictionary codes** (`dict_k` code-words per
+    /// K/V vector — each word packs `u16 atom-index | f16 coefficient`), reconstructed in the attention
+    /// shader. Mutually exclusive with `int8` (dict mode wins). `0` ⇒ f32/int8 as above.
+    pub dict_k: u32,
 }
 
 impl KvCacheLayout {
     pub fn from_hyperparams(h: &crate::gguf_sharder::GgufHyperparams) -> Option<Self> {
+        // W5b Phase 4b: sparse-dictionary KV takes precedence over int8/f32 — but only when its toggle is
+        // on AND a certified dictionary is installed whose head_dim matches this model. Otherwise it
+        // transparently falls back (dict_k = 0).
+        #[cfg(not(target_arch = "wasm32"))]
+        let dict_k = if crate::llm_bench::kv_dict_enabled() {
+            crate::kv_dict_runtime::installed_meta()
+                .filter(|&(_, hd)| hd == h.head_dim() as usize)
+                .map(|(k, _)| k as u32)
+                .unwrap_or(0)
+        } else {
+            0
+        };
+        #[cfg(target_arch = "wasm32")]
+        let dict_k = 0u32;
+
         // W5a int8 KV is a native decode-path optimization, gated behind its own toggle and only when
         // head_dim packs cleanly into u32 lanes. WASM always uses the f32 layout.
         #[cfg(not(target_arch = "wasm32"))]
-        let want_int8 =
-            crate::llm_bench::kv_int8_enabled() && (h.head_dim() % 4 == 0) && h.head_dim() > 0;
+        let want_int8 = dict_k == 0
+            && crate::llm_bench::kv_int8_enabled()
+            && (h.head_dim() % 4 == 0)
+            && h.head_dim() > 0;
         #[cfg(target_arch = "wasm32")]
         let want_int8 = false;
-        Self::from_hyperparams_mode(h, want_int8)
+        Self::from_hyperparams_mode(h, want_int8, dict_k)
     }
 
     fn from_hyperparams_mode(
         h: &crate::gguf_sharder::GgufHyperparams,
         int8: bool,
+        dict_k: u32,
     ) -> Option<Self> {
         let n_layer = h.n_layer;
         let n_kv_head = h.effective_n_kv_head();
@@ -423,10 +445,15 @@ impl KvCacheLayout {
         if n_layer == 0 || n_kv_head == 0 || head_dim == 0 {
             return None;
         }
+        // dict mode wins over int8.
+        let int8 = int8 && dict_k == 0;
         let slot_kv_elems = n_kv_head * head_dim;
-        // f32: per slot = 2·n_kv_head·head_dim 4-byte elems (K then V).
+        // f32:  per slot = 2·n_kv_head·head_dim 4-byte elems (K then V).
         // int8: per slot = 2·n_kv_head·(1 scale + head_dim/4 packed words), K then V — ~3.8× smaller.
-        let layer_stride = if int8 {
+        // dict: per slot = 2·n_kv_head·dict_k code-words (K then V) — each word = u16 index | f16 coeff.
+        let layer_stride = if dict_k > 0 {
+            MAX_CONTEXT_WINDOW * 2 * n_kv_head * dict_k
+        } else if int8 {
             MAX_CONTEXT_WINDOW * 2 * n_kv_head * (1 + head_dim / 4)
         } else {
             MAX_CONTEXT_WINDOW * slot_kv_elems * 2
@@ -445,6 +472,7 @@ impl KvCacheLayout {
             layer_stride,
             total_f32_elems: total,
             int8,
+            dict_k,
         })
     }
 
@@ -466,6 +494,23 @@ impl KvCacheLayout {
             + slot as usize * self.slot_kv_elems as usize * 2;
         let v_off = self.n_kv_head as usize * self.head_dim as usize;
         k_base + v_off + kv_head as usize * self.head_dim as usize + dim as usize
+    }
+
+    /// W5b Phase 4b (dict mode): word offset of the `i`-th code word (`0..dict_k`) for the K
+    /// (`k_not_v = true`) or V vector of `(layer, slot, kv_head)`. Each code word packs
+    /// `u16 atom-index (high 16) | f16 coefficient (low 16)`. Slot layout mirrors f32 (K region then V
+    /// region), but each vector is `dict_k` words instead of `head_dim` floats.
+    #[inline]
+    pub fn code_index(&self, layer: u32, slot: u32, kv_head: u32, k_not_v: bool, i: u32) -> usize {
+        let dk = self.dict_k as usize;
+        let per_slot = 2 * self.n_kv_head as usize * dk;
+        let base = layer as usize * self.layer_stride as usize + slot as usize * per_slot;
+        let stream_off = if k_not_v {
+            0
+        } else {
+            self.n_kv_head as usize * dk
+        };
+        base + stream_off + kv_head as usize * dk + i as usize
     }
 }
 

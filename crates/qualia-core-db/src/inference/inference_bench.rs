@@ -415,6 +415,30 @@ pub fn kv_int8_enabled() -> bool {
     }
 }
 
+// ── W5b Phase 4b: sparse-dictionary KV cache ──────────────────────────────────
+// Store each KV vector as its k-sparse dictionary code instead of f32/int8, reconstructing in the
+// attention shader on read (~3-4× smaller than int8). Read once at model load (`ensure_kv_cache`); a
+// certified dictionary must be installed (`kv_dict_runtime::load_certified`) whose head_dim matches the
+// model, else the layout transparently falls back. Default OFF — it trades memory for reconstruct
+// compute, so it only wins on memory-bound / long-context targets (see the Phase 4b plan).
+static KV_DICT: AtomicBool = AtomicBool::new(false);
+
+/// Enable/disable the sparse-dictionary KV cache (`QUALIA_LLM_KV_DICT`).
+#[inline]
+pub fn set_kv_dict(on: bool) {
+    KV_DICT.store(on, Ordering::Relaxed);
+}
+
+/// Whether the KV cache should use the installed sparse dictionary.
+#[inline]
+pub fn kv_dict_enabled() -> bool {
+    match std::env::var("QUALIA_LLM_KV_DICT").ok().as_deref() {
+        Some("0") | Some("false") => false,
+        Some("1") | Some("true") => true,
+        _ => KV_DICT.load(Ordering::Relaxed),
+    }
+}
+
 // ── W2: exact sampler config ──────────────────────────────────────────────────
 // Process-global sampler config, read ONCE at decode start (like the decode budget). `None` ⇒
 // greedy argmax (the pre-W2 default; a1a/a1c/a1d byte-identical). `Some(cfg)` with cfg.temperature
