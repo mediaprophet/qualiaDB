@@ -336,17 +336,53 @@ fn run_kv_dictionary(
     certify_kv_dictionary(&model, 256, 4, 20, job.max_tok, job.gate, corpus_hash, corpus_docs)
 }
 
-/// W5b Phase 4 — certify a learned KV dictionary by **ΔPPL** and package it if it passes.
-///
-/// Captures the engine's real KV (fast GPU-readback route), learns per-layer K/V dictionaries, then
-/// measures perplexity on the **CPU reference attention path** with the dictionary OFF (ref) vs ON
-/// (cand). Both runs use the same path and an f32 KV cache, so the delta isolates the dictionary's
-/// lossy reconstruction — reconstruct-on-write here is quality-identical to a real compressed cache
-/// (store-code, reconstruct-on-read), so this ΔPPL is faithful. Packages the CBOR-framed dictionaries +
-/// provenance only when `ΔPPL ≤ gate`. Realizing the memory saving in the GPU cache layout is Phase 4b.
+/// RAII: engage the CPU-reference attention path + f32 KV (so the reconstruct hook is on the PPL path)
+/// and restore the prior flags on drop — so any early return during certification can't leave the
+/// engine's global toggles flipped.
+#[cfg(not(target_arch = "wasm32"))]
+struct CpuRefPathGuard {
+    cpu: bool,
+    pre: bool,
+    of: bool,
+    int8: bool,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl CpuRefPathGuard {
+    fn engage() -> Self {
+        let g = Self {
+            cpu: crate::llm_bench::cpu_attention_enabled(),
+            pre: crate::llm_bench::attention_preproject_enabled(),
+            of: crate::llm_bench::attention_o_fuse_enabled(),
+            int8: crate::llm_bench::kv_int8_enabled(),
+        };
+        crate::llm_bench::set_cpu_attention(true);
+        crate::llm_bench::set_attention_preproject(false);
+        crate::llm_bench::set_attention_o_fuse(false);
+        crate::llm_bench::set_kv_int8(false);
+        g
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl Drop for CpuRefPathGuard {
+    fn drop(&mut self) {
+        crate::llm_bench::set_cpu_attention(self.cpu);
+        crate::llm_bench::set_attention_preproject(self.pre);
+        crate::llm_bench::set_attention_o_fuse(self.of);
+        crate::llm_bench::set_kv_int8(self.int8);
+    }
+}
+
+/// Learn one config's dictionaries over an already-captured KV set and measure the candidate PPL, then
+/// gate + package. Assumes the CPU-reference/f32 path is already engaged and `ref_ppl` was measured
+/// under the same conditions — the delta is purely the dictionary. Config-specific work only, so a
+/// sweep pays the capture + reference cost once and this per config.
 #[cfg(not(target_arch = "wasm32"))]
 #[allow(clippy::too_many_arguments)]
-pub fn certify_kv_dictionary(
+fn certify_one_config(
+    cap: &crate::kv_capture::KvCapture,
+    ref_ppl: f64,
     model_path: &str,
     n_atoms: usize,
     sparsity: usize,
@@ -358,12 +394,7 @@ pub fn certify_kv_dictionary(
 ) -> Result<CalibrationReport, CalibrationError> {
     use kv_dictionary::{learn_dictionary, KvDictionary};
 
-    // 1. Capture the engine's real KV (fast GPU-readback route).
-    let cap = crate::llm_bench::capture_kv_gpu_readback(model_path, max_tok, 2048)
-        .map_err(CalibrationError::CaptureFailed)?;
     let head_dim = cap.head_dim;
-
-    // 2. Learn per-layer K/V dictionaries (a layer with too few vectors stays passthrough = None).
     let learn = |vecs: &Vec<Vec<f32>>| -> Option<KvDictionary> {
         (vecs.len() >= n_atoms.max(16))
             .then(|| learn_dictionary(vecs, head_dim, n_atoms, sparsity, iters))
@@ -376,36 +407,15 @@ pub fn certify_kv_dictionary(
         ));
     }
 
-    // 3. Perplexity on the CPU reference attention path (so the reconstruct hook is on the path), with
-    //    an f32 KV cache, dict OFF then ON. Same conditions both times → the delta is purely the dict.
-    let prev_cpu = crate::llm_bench::cpu_attention_enabled();
-    let prev_pre = crate::llm_bench::attention_preproject_enabled();
-    let prev_of = crate::llm_bench::attention_o_fuse_enabled();
-    let prev_int8 = crate::llm_bench::kv_int8_enabled();
-    crate::llm_bench::set_cpu_attention(true);
-    crate::llm_bench::set_attention_preproject(false);
-    crate::llm_bench::set_attention_o_fuse(false);
-    crate::llm_bench::set_kv_int8(false);
-
-    kv_dict_runtime::disable();
-    let ref_res = crate::llm_bench::perplexity_eval_blocking(model_path, max_tok);
-
     kv_dict_runtime::enable(k_dicts.clone(), v_dicts.clone(), sparsity);
     let cand_res = crate::llm_bench::perplexity_eval_blocking(model_path, max_tok);
     kv_dict_runtime::disable();
     kv_dict_runtime::clear();
-
-    crate::llm_bench::set_cpu_attention(prev_cpu);
-    crate::llm_bench::set_attention_preproject(prev_pre);
-    crate::llm_bench::set_attention_o_fuse(prev_of);
-    crate::llm_bench::set_kv_int8(prev_int8);
-
-    let (ref_ppl, _) = ref_res.map_err(CalibrationError::CertifyFailed)?;
     let (cand_ppl, _) = cand_res.map_err(CalibrationError::CertifyFailed)?;
+
     let delta_ppl = crate::llm_eval::delta_ppl(ref_ppl, cand_ppl);
     let passed = delta_ppl <= gate.max_delta_ppl;
 
-    // 4. Package the certified dictionaries (CBOR) + provenance frame — only when it passed.
     let packaged = if passed {
         #[derive(serde::Serialize)]
         struct KvDictArtifact<'a> {
@@ -447,6 +457,78 @@ pub fn certify_kv_dictionary(
         passed,
         packaged,
     })
+}
+
+/// W5b Phase 4 — certify one or more KV-dictionary configs by **ΔPPL**, sharing the expensive capture +
+/// reference-PPL across all of them.
+///
+/// Captures the engine's real KV once (fast GPU-readback route), measures the reference perplexity once
+/// on the CPU-reference/f32 attention path (dictionary OFF), then for each `(n_atoms, sparsity)` config
+/// learns the per-layer dictionaries, measures the candidate PPL (dictionary ON, same path), gates at
+/// `ΔPPL ≤ gate`, and packages the CBOR dictionaries + provenance if it passes (fail-closed). Because
+/// the capture and reference are config-independent, an N-config sweep costs one capture + one reference
+/// + N candidate passes, not N full certifications. Realizing the memory saving in the GPU cache layout
+/// is Phase 4b.
+#[cfg(not(target_arch = "wasm32"))]
+#[allow(clippy::too_many_arguments)]
+pub fn sweep_kv_dictionary(
+    model_path: &str,
+    configs: &[(usize, usize)],
+    iters: usize,
+    max_tok: usize,
+    gate: GateSpec,
+    corpus_hash: u64,
+    corpus_docs: usize,
+) -> Result<Vec<(usize, usize, CalibrationReport)>, CalibrationError> {
+    // Capture once, on the FAST path (before engaging the CPU-reference path below).
+    let cap = crate::llm_bench::capture_kv_gpu_readback(model_path, max_tok, 2048)
+        .map_err(CalibrationError::CaptureFailed)?;
+
+    // Engage the CPU-reference/f32 path for ALL the PPL runs (restored on drop / any early return).
+    let _guard = CpuRefPathGuard::engage();
+
+    // Reference perplexity once (dictionary OFF), shared across configs.
+    kv_dict_runtime::disable();
+    let (ref_ppl, _) = crate::llm_bench::perplexity_eval_blocking(model_path, max_tok)
+        .map_err(CalibrationError::CertifyFailed)?;
+
+    let mut out = Vec::with_capacity(configs.len());
+    for &(n_atoms, sparsity) in configs {
+        let report = certify_one_config(
+            &cap, ref_ppl, model_path, n_atoms, sparsity, iters, max_tok, gate, corpus_hash,
+            corpus_docs,
+        )?;
+        out.push((n_atoms, sparsity, report));
+    }
+    Ok(out)
+}
+
+/// Single-config convenience wrapper over [`sweep_kv_dictionary`].
+#[cfg(not(target_arch = "wasm32"))]
+#[allow(clippy::too_many_arguments)]
+pub fn certify_kv_dictionary(
+    model_path: &str,
+    n_atoms: usize,
+    sparsity: usize,
+    iters: usize,
+    max_tok: usize,
+    gate: GateSpec,
+    corpus_hash: u64,
+    corpus_docs: usize,
+) -> Result<CalibrationReport, CalibrationError> {
+    let mut results = sweep_kv_dictionary(
+        model_path,
+        &[(n_atoms, sparsity)],
+        iters,
+        max_tok,
+        gate,
+        corpus_hash,
+        corpus_docs,
+    )?;
+    results
+        .pop()
+        .map(|(_, _, r)| r)
+        .ok_or_else(|| CalibrationError::CertifyFailed("no config produced a report".into()))
 }
 
 /// AWQ scales: the real capture→fold→sweep pipeline (reuses [`awq_sweep_blocking`]), certified
