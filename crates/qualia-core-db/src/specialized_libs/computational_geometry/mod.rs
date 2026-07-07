@@ -123,6 +123,18 @@ pub mod nary_csg;
 pub mod exact_arrangement;
 /// P12.3 — Exact 3D mesh co-refinement (split meshes along intersection curves).
 pub mod corefine_3d;
+/// P12.2 — Simulation of Simplicity for deterministic degeneracy resolution.
+pub mod sos;
+/// P12.4 — Per-facet exact constrained Delaunay re-triangulation.
+pub mod cdt_retriangulation;
+/// P12.6 — Radial sort and Weiler 3-D arrangement model.
+pub mod arrangement_3d;
+/// P12.7 — Arbitrary n-ary boolean-expression evaluator.
+pub mod nary_boolean;
+/// P12.8 — Coplanar-region simplification and topology-preserving snap rounding.
+pub mod simplify_snap;
+/// P12.9 — CSG/arrangement .10d sections and repair operations.
+pub mod csg_section;
 /// P11.9 — Half-plane intersection (sort-and-intersect + deque) and 2-D
 /// randomized incremental linear programming (Seidel) with seeded determinism
 /// and feasible/infeasible/unbounded certificates.
@@ -130,6 +142,17 @@ pub mod half_plane_lp;
 /// P11.13 — Rotating calipers (diameter, width, antipodal pairs) and
 /// smallest enclosing disk (Welzl randomized incremental, seeded determinism).
 pub mod calipers_enclosing_disk;
+/// P13.1 — Mesh quality metrics (tri/tet min/max angle, radius-edge, aspect,
+/// scaled Jacobian, dihedral) and isotropic size / anisotropic metric fields.
+pub mod mesh_quality;
+/// P13.2 — Delaunay refinement for PSLGs with Steiner points (Ruppert).
+pub mod delaunay_refine;
+/// P13.3 — Optimal fixed-vertex triangulation objectives (edge-flip hill-climbing).
+pub mod triangulation_opt;
+/// P13.4 — Quadtree/octree balanced meshing (size-field refinement, 2:1
+/// balance, conforming 2-D triangulation with hanging-node templates, 3-D
+/// hex/tet extraction).
+pub mod quad_octree_mesh;
 mod surface_mesh;
 mod surface_mesh_processing;
 mod tool;
@@ -249,12 +272,12 @@ pub use delaunay_3::{
 };
 pub use tri_tri_3::{
     required_self_intersection_pairs, self_intersecting_pairs,
-    self_intersecting_pairs_with_kernel, tri_tri_intersect_3, tri_tri_intersect_3_with_kernel,
-    TriPair, TriTriError, TriTriSegment,
+    self_intersecting_pairs_with_kernel, tri_tri_intersect_3, tri_tri_intersect_3_exact,
+    tri_tri_intersect_3_with_kernel, ExactTriTriSegment, TriPair, TriTriError, TriTriSegment,
 };
 pub use boolean_3::{
-    boolean_3, boolean_3_with_kernel, required_triangles_3, required_vertices_3,
-    Boolean3Error, Boolean3Op,
+    boolean_3, boolean_3_exact, boolean_3_with_kernel, required_triangles_3,
+    required_vertices_3, Boolean3Error, Boolean3Op,
 };
 pub use decimate_3::{
     decimate_qem, decimate_qem_with_kernel, required_triangles, required_vertices,
@@ -264,6 +287,24 @@ pub use exact_construct_3::{
     construct_segment_plane_intersection_3, construct_segment_triangle_intersection_3,
     orient_3d_exact_3, segment_plane_parameter_sign, Exact3Error, ExactPoint3,
     ParameterSpan, TriangleContainment,
+};
+pub use sos::orient_3d_sos;
+pub use cdt_retriangulation::{cdt_retriangulate_facet, CdtError};
+pub use arrangement_3d::{
+    build_arrangement_3d, validate_arrangement, radial_sort_around_edge,
+    Arrangement3D, ArrangementError as Arrangement3DError, EdgeKey, Region, Shell,
+};
+pub use nary_boolean::{
+    nary_boolean, evaluate_expr, BoolExpr, MeshInput, NaryBoolError,
+    RegionMask, MAX_OPERANDS,
+};
+pub use simplify_snap::{
+    simplify_coplanar_regions, snap_round_3d, SimplifyError, SimplifyOptions, SimplifyResult,
+};
+pub use csg_section::{
+    encode_csg_section, decode_csg_section, serialize_expr, deserialize_expr,
+    repair_mesh, CsgSection, DecodedCsgSection, CsgSectionError, RepairReport as MeshRepairReport,
+    CSG_MAGIC, CSG_VERSION, CSG_TYPE_EXPRESSION, CSG_TYPE_ARRANGEMENT, CSG_TYPE_REPAIR_REPORT,
 };
 pub use remesh_3::{
     isotropic_remesh, isotropic_remesh_with_kernel, required_output_capacity,
@@ -368,6 +409,27 @@ pub use half_plane_lp::{
 pub use calipers_enclosing_disk::{
     diameter_and_width, rotating_calipers, smallest_enclosing_disk, AntipodalPair, CalipersError,
     CalipersResult, Disk, EnclosingDisk,
+};
+pub use mesh_quality::{
+    check_field_conformance_tet, check_field_conformance_tri, tet_mesh_quality_slice,
+    tet_quality, tet_quality_points, tri_mesh_quality_2d, tri_quality, tri_quality_points,
+    tri_signed_area_2d, AnisotropyField, FieldConformance, MeshQualityError, MetricTensor,
+    SizeField, TetMeshQualityStats, TetQuality, TriMeshQualityStats, TriQuality,
+};
+pub use delaunay_refine::{
+    delaunay_refine_2, verify_refined_mesh, RefineError, RefineOptions,
+    RUPPERT_TERMINATION_BOUND_DEG,
+};
+pub use triangulation_opt::{
+    evaluate_objective, optimise_and_evaluate, optimise_triangulation, TriObjective,
+    TriangulationOptError,
+};
+pub use quad_octree_mesh::{
+    balance_octtree_2to1, balance_quadtree_2to1, build_octtree, build_quadtree,
+    const_size_fn_3d, octtree_to_hexahedra, octtree_to_tetrahedra, quadtree_to_triangles,
+    size_field_2d_fn, size_target_refiner_2d, size_target_refiner_3d, OctLeaf, OctMeshError,
+    OctMeshOptions, OctNode, OctTree, OCT_MAX_LEVEL, QuadLeaf, QuadMeshError, QuadMeshOptions,
+    QuadNode, QuadTree, QUAD_MAX_LEVEL,
 };
 
 /// Versioned native geometry ABI. Increment only when public POD layouts or

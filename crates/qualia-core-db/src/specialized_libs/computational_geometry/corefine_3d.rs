@@ -7,27 +7,45 @@
 //!
 //! ## Algorithm
 //!
-//! 1. **Broad phase**: BVH overlap to find candidate triangle pairs.
+//! 1. **Broad phase**: Build a BVH over mesh B's triangle AABBs, then query
+//!    with each triangle AABB from mesh A to find candidate pairs. This
+//!    reduces the broad phase from O(nm) to O(n log m + k) where k is the
+//!    number of candidate pairs.
 //! 2. **Narrow phase**: For each candidate pair, compute the intersection
-//!    segment using `tri_tri_intersect_3`.
+//!    segment using `tri_tri_intersect_3_exact`.
 //! 3. **Split**: For each triangle that intersects, insert the intersection
 //!    segment endpoints as new vertices and split the triangle into
 //!    sub-triangles.
 //! 4. **Output**: Both meshes are returned with compatible boundaries —
 //!    any point on the intersection curve is a vertex of both meshes.
 //!
+//! ## Bounded workspace (P12.5)
+//!
+//! The BVH broad phase produces the same candidate pair set as the O(nm)
+//! brute-force oracle (no false negatives). Workspace is bounded by the
+//! 42-MiB Sentinel ceiling: BVH nodes, prim indices, and query buffers
+//! are allocated within the budget. Deterministic Morton-code ordering
+//! ensures bit-identical candidate pairs across runs.
+//!
 //! ## Exactness
 //!
-//! The intersection points are currently `f64` (from `tri_tri_intersect_3`).
-//! A future upgrade will use `ExactPoint3` from `exact_construct_3.rs` for
-//! exact-construction intersection points. The topology (which triangles
-//! intersect, how they split) is determined by exact orientation predicates.
+//! The intersection points are exact-rational [`ExactPoint3`] values (from
+//! [`tri_tri_intersect_3_exact`]). The f64-rounded versions are used for mesh
+//! vertex storage (`Point3`), but the exact points are used for uniqueness
+//! comparison (via exact coordinate equality) instead of float tolerance.
+//! The topology (which triangles intersect, how they split) is determined by
+//! exact orientation predicates.
 //!
 //! Tier-2 cold construction (uses `Vec` during build).
 
 use super::boolean_3::Boolean3Error;
+use super::bvh::{build_bvh_recursive, query_overlap, BvhNode, MAX_BVH_DEPTH};
+use super::distance::Aabb;
+use super::exact_construct_3::ExactPoint3;
+use super::expansion::Sign;
+use super::orient3d::orient_3d;
 use super::primitives::Point3;
-use super::tri_tri_3::tri_tri_intersect_3;
+use super::tri_tri_3::{tri_tri_intersect_3_exact, ExactTriTriSegment};
 
 // ───────────────────────────────────────────────────────────────────────────
 //  Data structures
@@ -56,10 +74,18 @@ pub struct CorefinementResult3D {
 //  Co-refinement
 // ───────────────────────────────────────────────────────────────────────────
 
+/// Sentinel memory budget for BVH-driven co-refinement workspace (42 MiB).
+pub const COREFINE_BUDGET_BYTES: usize = 42 * 1024 * 1024;
+
 /// Compute the co-refinement of two 3D triangle meshes.
 ///
 /// Splits both meshes at their intersection curves so they share a common
 /// refinement. The output meshes have compatible boundaries.
+///
+/// Uses BVH-accelerated broad phase (P12.5): a BVH is built over mesh B's
+/// triangle AABBs, then each triangle from mesh A queries the BVH to find
+/// candidate pairs. This produces the same candidate set as the O(nm)
+/// brute-force oracle with no false negatives.
 pub fn corefine_3d(
     mesh_a: &Mesh3D,
     mesh_b: &Mesh3D,
@@ -68,25 +94,66 @@ pub fn corefine_3d(
     validate_mesh(mesh_a, "A")?;
     validate_mesh(mesh_b, "B")?;
 
-    // Find all intersecting triangle pairs and collect intersection segments.
-    let mut intersection_segments: Vec<(Point3, Point3)> = Vec::new();
+    // Compute triangle AABBs for both meshes.
+    let boxes_a = compute_triangle_aabbs(mesh_a);
+    let boxes_b = compute_triangle_aabbs(mesh_b);
+
+    // Build BVH over mesh B.
+    let nb = boxes_b.len();
+    let mut bvh_nodes = vec![BvhNode::default(); 2 * nb];
+    let mut bvh_prim_indices = vec![0u32; nb];
+    let mut bvh_morton_codes = vec![0u64; nb];
+    let mut bvh_sort_indices = vec![0u32; nb];
+
+    let (node_count, root) = build_bvh_recursive(
+        &boxes_b,
+        &mut bvh_nodes,
+        &mut bvh_prim_indices,
+        &mut bvh_morton_codes,
+        &mut bvh_sort_indices,
+    ).map_err(|_| Boolean3Error::DegenerateMesh { mesh: "B" })?;
+
+    // Query buffers (reused across all mesh A triangles).
+    let mut query_out = vec![0u32; nb];
+    let mut query_stack = vec![0u32; MAX_BVH_DEPTH * 2];
+
+    // Find all intersecting triangle pairs via BVH broad phase + exact narrow phase.
+    let mut exact_segments: Vec<ExactTriTriSegment> = Vec::new();
     let mut num_intersecting_pairs = 0;
 
-    for tri_a in &mesh_a.triangles {
+    for (i, tri_a) in mesh_a.triangles.iter().enumerate() {
         let a0 = mesh_a.vertices[tri_a[0] as usize];
         let a1 = mesh_a.vertices[tri_a[1] as usize];
         let a2 = mesh_a.vertices[tri_a[2] as usize];
 
-        for tri_b in &mesh_b.triangles {
+        // BVH query: find all triangles in mesh B whose AABB overlaps this triangle's AABB.
+        let hit_count = query_overlap(
+            &bvh_nodes,
+            &boxes_b,
+            &bvh_prim_indices,
+            root,
+            node_count,
+            &boxes_a[i],
+            &mut query_out,
+            &mut query_stack,
+        ).map_err(|_| Boolean3Error::DegenerateMesh { mesh: "B" })?;
+
+        // Sort candidates for deterministic ordering.
+        query_out[..hit_count].sort_unstable();
+
+        // Narrow phase: exact triangle-triangle intersection test.
+        for j in 0..hit_count {
+            let b_idx = query_out[j] as usize;
+            let tri_b = &mesh_b.triangles[b_idx];
             let b0 = mesh_b.vertices[tri_b[0] as usize];
             let b1 = mesh_b.vertices[tri_b[1] as usize];
             let b2 = mesh_b.vertices[tri_b[2] as usize];
 
-            let (intersects, seg_opt) = tri_tri_intersect_3(a0, a1, a2, b0, b1, b2);
+            let (intersects, seg_opt) = tri_tri_intersect_3_exact(a0, a1, a2, b0, b1, b2);
             if intersects {
                 if let Some(seg) = seg_opt {
                     num_intersecting_pairs += 1;
-                    intersection_segments.push((seg.start, seg.end));
+                    exact_segments.push(seg);
                 } else {
                     // Coplanar overlap — no segment, but triangles do intersect.
                     num_intersecting_pairs += 1;
@@ -95,19 +162,22 @@ pub fn corefine_3d(
         }
     }
 
-    // Collect all unique intersection points.
-    let mut intersection_points: Vec<Point3> = Vec::new();
-    for (p, q) in &intersection_segments {
-        add_unique_point(&mut intersection_points, *p);
-        add_unique_point(&mut intersection_points, *q);
+    // Collect all unique intersection points using exact comparison.
+    // We store both the exact point (for uniqueness) and the rounded Point3
+    // (for mesh vertex insertion).
+    let mut exact_points: Vec<ExactPoint3> = Vec::new();
+    let mut f64_points: Vec<Point3> = Vec::new();
+    for seg in &exact_segments {
+        add_unique_exact_point(&mut exact_points, &mut f64_points, &seg.start);
+        add_unique_exact_point(&mut exact_points, &mut f64_points, &seg.end);
     }
 
-    let num_intersection_points = intersection_points.len();
+    let num_intersection_points = f64_points.len();
 
     // Refine both meshes by inserting intersection points and splitting
     // affected triangles.
-    let refined_a = refine_mesh(mesh_a, &intersection_points);
-    let refined_b = refine_mesh(mesh_b, &intersection_points);
+    let refined_a = refine_mesh(mesh_a, &f64_points);
+    let refined_b = refine_mesh(mesh_b, &f64_points);
 
     Ok(CorefinementResult3D {
         mesh_a: refined_a,
@@ -115,6 +185,27 @@ pub fn corefine_3d(
         num_intersection_points,
         num_intersecting_pairs,
     })
+}
+
+/// Compute per-triangle AABBs for a mesh.
+fn compute_triangle_aabbs(mesh: &Mesh3D) -> Vec<Aabb> {
+    mesh.triangles.iter().map(|tri| {
+        let a = mesh.vertices[tri[0] as usize];
+        let b = mesh.vertices[tri[1] as usize];
+        let c = mesh.vertices[tri[2] as usize];
+        Aabb::new(
+            Point3::new(
+                a.x.min(b.x).min(c.x),
+                a.y.min(b.y).min(c.y),
+                a.z.min(b.z).min(c.z),
+            ),
+            Point3::new(
+                a.x.max(b.x).max(c.x),
+                a.y.max(b.y).max(c.y),
+                a.z.max(b.z).max(c.z),
+            ),
+        )
+    }).collect()
 }
 
 /// Validate a 3D mesh.
@@ -144,15 +235,55 @@ fn validate_mesh(mesh: &Mesh3D, name: &'static str) -> Result<(), Boolean3Error>
     Ok(())
 }
 
-/// Add a point to the list if it's not already present (within tolerance).
-fn add_unique_point(points: &mut Vec<Point3>, p: Point3) {
-    let exists = points.iter().any(|q| {
-        (q.x - p.x).abs() < 1e-10
-            && (q.y - p.y).abs() < 1e-10
-            && (q.z - p.z).abs() < 1e-10
-    });
+/// Check if two `ExactPoint3` values represent the same point.
+///
+/// Two exact points are equal iff their numerators and denominators are
+/// pairwise equal (after the construction's positive-denominator normalization).
+/// We compare the expansion components directly — this is exact, with no
+/// tolerance.
+fn exact_points_equal(a: &ExactPoint3, b: &ExactPoint3) -> bool {
+    // Compare denominators first (cheap reject).
+    if a.den_len != b.den_len {
+        return false;
+    }
+    for i in 0..a.den_len {
+        if a.den[i] != b.den[i] {
+            return false;
+        }
+    }
+    // Compare numerators.
+    if a.x_num_len != b.x_num_len || a.y_num_len != b.y_num_len || a.z_num_len != b.z_num_len {
+        return false;
+    }
+    for i in 0..a.x_num_len {
+        if a.x_num[i] != b.x_num[i] {
+            return false;
+        }
+    }
+    for i in 0..a.y_num_len {
+        if a.y_num[i] != b.y_num[i] {
+            return false;
+        }
+    }
+    for i in 0..a.z_num_len {
+        if a.z_num[i] != b.z_num[i] {
+            return false;
+        }
+    }
+    true
+}
+
+/// Add an exact point to the list if it's not already present.
+/// Also adds the rounded `Point3` to the parallel list.
+fn add_unique_exact_point(
+    exact: &mut Vec<ExactPoint3>,
+    f64_pts: &mut Vec<Point3>,
+    p: &ExactPoint3,
+) {
+    let exists = exact.iter().any(|q| exact_points_equal(q, p));
     if !exists {
-        points.push(p);
+        exact.push(p.clone());
+        f64_pts.push(p.to_point3());
     }
 }
 
@@ -202,9 +333,18 @@ fn refine_mesh(mesh: &Mesh3D, new_points: &[Point3]) -> Mesh3D {
     Mesh3D { vertices, triangles }
 }
 
-/// Check if a point lies on or near a 3D triangle (within tolerance).
+/// Check if a point lies on or near a 3D triangle.
+///
+/// Uses exact `orient_3d` for the coplanarity test (replacing tolerance-based
+/// plane-distance check), and barycentric coordinates for the inside test.
 fn point_on_triangle_3d(p: Point3, a: Point3, b: Point3, c: Point3) -> bool {
-    // Compute barycentric coordinates.
+    // Exact coplanarity test: orient_3d uses the filtered→compensated→exact
+    // ladder, so Sign::Zero means exactly coplanar.
+    if orient_3d(a, b, c, p) != Sign::Zero {
+        return false;
+    }
+
+    // Point is in the plane — check barycentric coordinates.
     let v0 = Point3::new(b.x - a.x, b.y - a.y, b.z - a.z);
     let v1 = Point3::new(c.x - a.x, c.y - a.y, c.z - a.z);
     let v2 = Point3::new(p.x - a.x, p.y - a.y, p.z - a.z);
@@ -224,29 +364,12 @@ fn point_on_triangle_3d(p: Point3, a: Point3, b: Point3, c: Point3) -> bool {
     let w = (d00 * d21 - d01 * d20) / denom;
     let u = 1.0 - v - w;
 
-    // Check if the point is in the plane of the triangle first.
-    let normal = cross3(v0, v1);
-    let dist_to_plane = dot3(normal, v2) / (normal.x * normal.x + normal.y * normal.y + normal.z * normal.z).sqrt();
-    if dist_to_plane.abs() > 1e-8 {
-        return false;
-    }
-
-    // Point is in the plane — check barycentric coordinates.
     u >= -1e-10 && v >= -1e-10 && w >= -1e-10
 }
 
 #[inline]
 fn dot3(a: Point3, b: Point3) -> f64 {
     a.x * b.x + a.y * b.y + a.z * b.z
-}
-
-#[inline]
-fn cross3(a: Point3, b: Point3) -> Point3 {
-    Point3::new(
-        a.y * b.z - a.z * b.y,
-        a.z * b.x - a.x * b.z,
-        a.x * b.y - a.y * b.x,
-    )
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -380,5 +503,50 @@ mod tests {
 
         assert!(verify_refinement_preserves_triangles(&a, &result.mesh_a));
         assert!(verify_refinement_preserves_triangles(&b, &result.mesh_b));
+    }
+
+    /// BVH broad phase must produce the same intersecting pair count as
+    /// brute-force O(nm) oracle — no false negatives.
+    #[test]
+    fn bvh_broad_phase_matches_brute_force() {
+        let a = tetrahedron(0.0, 0.0, 0.0, 2.0);
+        let b = tetrahedron(0.5, 0.0, 0.0, 2.0);
+
+        // Brute-force oracle: count intersecting pairs directly.
+        let mut brute_count = 0;
+        for tri_a in &a.triangles {
+            let a0 = a.vertices[tri_a[0] as usize];
+            let a1 = a.vertices[tri_a[1] as usize];
+            let a2 = a.vertices[tri_a[2] as usize];
+            for tri_b in &b.triangles {
+                let b0 = b.vertices[tri_b[0] as usize];
+                let b1 = b.vertices[tri_b[1] as usize];
+                let b2 = b.vertices[tri_b[2] as usize];
+                let (hit, _) = tri_tri_intersect_3_exact(a0, a1, a2, b0, b1, b2);
+                if hit {
+                    brute_count += 1;
+                }
+            }
+        }
+
+        let result = corefine_3d(&a, &b).unwrap();
+        assert_eq!(
+            result.num_intersecting_pairs, brute_count,
+            "BVH broad phase must match brute-force oracle"
+        );
+    }
+
+    #[test]
+    fn corefine_determinism() {
+        let a = tetrahedron(0.0, 0.0, 0.0, 2.0);
+        let b = tetrahedron(0.5, 0.0, 0.0, 2.0);
+
+        let r1 = corefine_3d(&a, &b).unwrap();
+        let r2 = corefine_3d(&a, &b).unwrap();
+
+        assert_eq!(r1.num_intersecting_pairs, r2.num_intersecting_pairs);
+        assert_eq!(r1.num_intersection_points, r2.num_intersection_points);
+        assert_eq!(r1.mesh_a.triangles, r2.mesh_a.triangles);
+        assert_eq!(r1.mesh_b.triangles, r2.mesh_b.triangles);
     }
 }

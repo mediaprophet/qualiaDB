@@ -51,6 +51,10 @@
 
 use super::bvh::{build_bvh_recursive, query_overlap, BvhNode, MAX_BVH_DEPTH};
 use super::distance::Aabb;
+use super::exact_construct_3::{
+    construct_segment_plane_intersection_3, construct_segment_triangle_intersection_3,
+    ExactPoint3, TriangleContainment,
+};
 use super::expansion::Sign;
 use super::kernel::{FilteredF64Kernel, GeometryKernel};
 use super::primitives::Point3;
@@ -89,6 +93,21 @@ pub struct TriPair {
 pub struct TriTriSegment {
     pub start: Point3,
     pub end: Point3,
+}
+
+/// The (exact, rational) intersection segment of two triangles.
+///
+/// Only meaningful when [`tri_tri_intersect_3_exact`] reports `true` for the
+/// non-coplanar case; for coplanar overlaps there is an intersection *area*,
+/// not a single segment, and no segment is produced.
+///
+/// Unlike [`TriTriSegment`], the endpoints are exact-rational [`ExactPoint3`]
+/// values — no f64 rounding — so downstream predicates on those points (e.g.
+/// [`super::exact_construct_3::orient_3d_exact_3`]) will not mis-sign.
+#[derive(Debug, Clone)]
+pub struct ExactTriTriSegment {
+    pub start: ExactPoint3,
+    pub end: ExactPoint3,
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -502,6 +521,204 @@ fn construct_intersection_segment(
         start: pts[i0],
         end: pts[i1],
     })
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+//  Exact intersection-segment construction (rational, no rounding)
+// ───────────────────────────────────────────────────────────────────────────
+
+/// Exact-construction variant of [`tri_tri_intersect_3`].
+///
+/// The boolean decision is identical (exact `orient_3d` signs via
+/// [`FilteredF64Kernel`]). The intersection segment endpoints are now
+/// exact-rational [`ExactPoint3`] values — no f64 rounding — so downstream
+/// predicates on those points (e.g. [`orient_3d_exact_3`]) will not mis-sign
+/// due to cascaded rounding error.
+///
+/// Returns `(intersect, segment)`. `segment` is `Some` for both the
+/// **non-coplanar** and **coplanar** intersecting cases when at least two
+/// distinct intersection points are found; it is `None` for degenerate
+/// touches (single point or collinear edge overlap) and for non-intersecting
+/// pairs.
+///
+/// # Algorithm
+///
+/// 1. The boolean decision reuses [`tri_tri_intersect_3`] (exact `orient_3d`).
+/// 2. For the construction, each edge of T1 is intersected with triangle T2
+///    using [`construct_segment_triangle_intersection_3`], which returns an
+///    exact-rational point plus an exact containment classification. The same
+///    is done for edges of T2 against T1. Points classified as `Inside` or
+///    `OnBoundary` are collected.
+/// 3. The two most distant collected points (by rounded f64 distance) form the
+///    intersection segment endpoints.
+///
+/// This is a **cold** construction (uses `Vec` for point collection). The
+/// boolean predicate itself is zero-heap.
+pub fn tri_tri_intersect_3_exact(
+    p1: Point3,
+    q1: Point3,
+    r1: Point3,
+    p2: Point3,
+    q2: Point3,
+    r2: Point3,
+) -> (bool, Option<ExactTriTriSegment>) {
+    let kernel = FilteredF64Kernel::default();
+
+    // Exact boolean decision (same as tri_tri_intersect_3).
+    let (intersects, _) =
+        tri_tri_intersect_3_with_kernel(&kernel, p1, q1, r1, p2, q2, r2);
+    if !intersects {
+        return (false, None);
+    }
+
+    // Coplanar case: construct exact points via 2D projection + perpendicular plane trick.
+    let dp1 = kernel.orient_3d(p2, q2, r2, p1);
+    let dq1 = kernel.orient_3d(p2, q2, r2, q1);
+    let dr1 = kernel.orient_3d(p2, q2, r2, r1);
+    if dp1 == Sign::Zero && dq1 == Sign::Zero && dr1 == Sign::Zero {
+        let points = coplanar_exact_points(&kernel, p1, q1, r1, p2, q2, r2);
+        if points.len() < 2 {
+            return (true, None);
+        }
+        return (true, Some(make_exact_segment(&points)));
+    }
+
+    // Collect exact intersection points from edge-triangle crossings.
+    let mut points: Vec<ExactPoint3> = Vec::with_capacity(6);
+
+    // Edges of T1 vs triangle T2.
+    for &(u, v) in &[(p1, q1), (q1, r1), (r1, p1)] {
+        if let Ok((pt, containment)) =
+            construct_segment_triangle_intersection_3(u, v, p2, q2, r2)
+        {
+            if containment != TriangleContainment::Outside {
+                push_unique_exact(&mut points, &pt);
+            }
+        }
+    }
+
+    // Edges of T2 vs triangle T1.
+    for &(u, v) in &[(p2, q2), (q2, r2), (r2, p2)] {
+        if let Ok((pt, containment)) =
+            construct_segment_triangle_intersection_3(u, v, p1, q1, r1)
+        {
+            if containment != TriangleContainment::Outside {
+                push_unique_exact(&mut points, &pt);
+            }
+        }
+    }
+
+    if points.len() < 2 {
+        return (true, None);
+    }
+
+    (true, Some(make_exact_segment(&points)))
+}
+
+/// Collect exact intersection points for coplanar triangle pairs.
+///
+/// Uses the **perpendicular plane trick**: for each crossing edge pair (AB
+/// from T1, CD from T2), constructs the exact intersection by intersecting
+/// segment AB with the plane through `(C, D, C + normal)`. This plane is
+/// perpendicular to the triangles' common plane and contains line CD, so the
+/// intersection point is exactly the 2D line-line crossing lifted back to 3D.
+///
+/// Also collects vertices of T1 inside T2 and vice versa (using exact
+/// `orientation_2` via `point_in_tri_2d`).
+fn coplanar_exact_points(
+    kernel: &FilteredF64Kernel,
+    p1: Point3,
+    q1: Point3,
+    r1: Point3,
+    p2: Point3,
+    q2: Point3,
+    r2: Point3,
+) -> Vec<ExactPoint3> {
+    let n = tri_normal(p1, q1, r1);
+    // Degenerate triangle (zero normal) — cannot construct perpendicular plane.
+    if n.x == 0.0 && n.y == 0.0 && n.z == 0.0 {
+        return Vec::new();
+    }
+
+    let proj = plane_projector(n);
+
+    let t1 = [p1, q1, r1];
+    let t2 = [p2, q2, r2];
+    let t1_2d = [proj(p1), proj(q1), proj(r1)];
+    let t2_2d = [proj(p2), proj(q2), proj(r2)];
+
+    let mut points: Vec<ExactPoint3> = Vec::with_capacity(6);
+
+    // Edge-edge crossings: use perpendicular plane through the other edge.
+    for i in 0..3 {
+        let (u, v) = (t1[i], t1[(i + 1) % 3]);
+        let (pu, pv) = (t1_2d[i], t1_2d[(i + 1) % 3]);
+        for j in 0..3 {
+            let (s, t) = (t2[j], t2[(j + 1) % 3]);
+            let (ps, pt) = (t2_2d[j], t2_2d[(j + 1) % 3]);
+            if seg_seg_cross_2d(kernel, pu, pv, ps, pt) {
+                // Perpendicular plane through edge s→t: plane(s, t, s+n).
+                let p3 = Point3::new(s.x + n.x, s.y + n.y, s.z + n.z);
+                if let Ok(pt_exact) = construct_segment_plane_intersection_3(u, v, s, t, p3) {
+                    push_unique_exact(&mut points, &pt_exact);
+                }
+            }
+        }
+    }
+
+    // Vertices of T1 inside T2.
+    for i in 0..3 {
+        if point_in_tri_2d(kernel, t1_2d[i], t2_2d[0], t2_2d[1], t2_2d[2]) {
+            push_unique_exact(&mut points, &ExactPoint3::from_point3(t1[i]));
+        }
+    }
+
+    // Vertices of T2 inside T1.
+    for i in 0..3 {
+        if point_in_tri_2d(kernel, t2_2d[i], t1_2d[0], t1_2d[1], t1_2d[2]) {
+            push_unique_exact(&mut points, &ExactPoint3::from_point3(t2[i]));
+        }
+    }
+
+    points
+}
+
+/// Build an `ExactTriTriSegment` from a list of exact points by selecting the
+/// two most distant (by rounded f64 distance).
+fn make_exact_segment(points: &[ExactPoint3]) -> ExactTriTriSegment {
+    let rounded: Vec<Point3> = points.iter().map(|p| p.to_point3()).collect();
+    let (mut i0, mut i1) = (0usize, 1usize);
+    let mut best = dist_sq(rounded[0], rounded[1]);
+    for i in 0..points.len() {
+        for j in (i + 1)..points.len() {
+            let d = dist_sq(rounded[i], rounded[j]);
+            if d > best {
+                best = d;
+                i0 = i;
+                i1 = j;
+            }
+        }
+    }
+    ExactTriTriSegment {
+        start: points[i0].clone(),
+        end: points[i1].clone(),
+    }
+}
+
+/// Append `pt` to `points` unless a numerically-coincident point is already
+/// present (compared by rounded f64 values).
+fn push_unique_exact(points: &mut Vec<ExactPoint3>, pt: &ExactPoint3) {
+    let r = pt.to_point3();
+    for existing in points.iter() {
+        let er = existing.to_point3();
+        if (er.x - r.x).abs() < 1e-12
+            && (er.y - r.y).abs() < 1e-12
+            && (er.z - r.z).abs() < 1e-12
+        {
+            return;
+        }
+    }
+    points.push(pt.clone());
 }
 
 #[inline]
@@ -1368,5 +1585,117 @@ mod tests {
         let brute = brute_force_self_intersections(&v, &t);
         assert_eq!(&out[..n], &brute[..], "BVH broad phase must match brute force exactly");
         assert!(n > 0, "the fixture is constructed to self-intersect");
+    }
+
+    // ── Exact construction tests ───────────────────────────────────────────
+
+    #[test]
+    fn exact_intersect_matches_bool_basic() {
+        // Two triangles that cross: T1 in z=0 plane, T2 crossing through it.
+        let t1 = [p(0.0, 0.0, 0.0), p(1.0, 0.0, 0.0), p(0.0, 1.0, 0.0)];
+        let t2 = [p(0.2, 0.2, -1.0), p(0.2, 0.2, 1.0), p(0.8, 0.2, 0.0)];
+        let (bool_f64, seg_f64) = tri_tri_intersect_3(t1[0], t1[1], t1[2], t2[0], t2[1], t2[2]);
+        let (bool_exact, seg_exact) = tri_tri_intersect_3_exact(t1[0], t1[1], t1[2], t2[0], t2[1], t2[2]);
+        assert_eq!(bool_f64, bool_exact, "boolean decision must match");
+        if let Some(s_f64) = seg_f64 {
+            let s_exact = seg_exact.expect("exact segment should be Some when f64 is Some");
+            let ex_start = s_exact.start.to_point3();
+            let ex_end = s_exact.end.to_point3();
+            // Exact points should be very close to f64 points.
+            assert!((ex_start.x - s_f64.start.x).abs() < 1e-10, "start x: {ex_start:?} vs {:?}", s_f64.start);
+            assert!((ex_start.y - s_f64.start.y).abs() < 1e-10, "start y: {ex_start:?} vs {:?}", s_f64.start);
+            assert!((ex_start.z - s_f64.start.z).abs() < 1e-10, "start z: {ex_start:?} vs {:?}", s_f64.start);
+            assert!((ex_end.x - s_f64.end.x).abs() < 1e-10, "end x: {ex_end:?} vs {:?}", s_f64.end);
+            assert!((ex_end.y - s_f64.end.y).abs() < 1e-10, "end y: {ex_end:?} vs {:?}", s_f64.end);
+            assert!((ex_end.z - s_f64.end.z).abs() < 1e-10, "end z: {ex_end:?} vs {:?}", s_f64.end);
+        }
+    }
+
+    #[test]
+    fn exact_intersect_disjoint_triangles() {
+        let t1 = [p(0.0, 0.0, 0.0), p(1.0, 0.0, 0.0), p(0.0, 1.0, 0.0)];
+        let t2 = [p(10.0, 10.0, 10.0), p(11.0, 10.0, 10.0), p(10.0, 11.0, 10.0)];
+        let (hit, seg) = tri_tri_intersect_3_exact(t1[0], t1[1], t1[2], t2[0], t2[1], t2[2]);
+        assert!(!hit, "disjoint triangles should not intersect");
+        assert!(seg.is_none(), "no segment for disjoint triangles");
+    }
+
+    #[test]
+    fn exact_intersect_coplanar_overlap_produces_segment() {
+        // Two coplanar overlapping triangles in z=0.
+        // T1: (0,0)-(1,0)-(0,1), T2: (0.5,0)-(1.5,0)-(0.5,1)
+        // Overlap region is a quadrilateral with vertices at:
+        //   (0.5,0), (1,0), (0.5,0.5), (0,0.5) — but (0,0.5) is outside T2...
+        //   Actually T2 contains (0.5,0) and T1 contains (0.5,0) on its edge.
+        //   The overlap is a triangle: (0.5,0)-(1,0)-(0.5,0.5).
+        let t1 = [p(0.0, 0.0, 0.0), p(1.0, 0.0, 0.0), p(0.0, 1.0, 0.0)];
+        let t2 = [p(0.5, 0.0, 0.0), p(1.5, 0.0, 0.0), p(0.5, 1.0, 0.0)];
+        let (hit, seg) = tri_tri_intersect_3_exact(t1[0], t1[1], t1[2], t2[0], t2[1], t2[2]);
+        assert!(hit, "coplanar overlapping triangles do intersect");
+        let seg = seg.expect("coplanar overlap should produce a segment with >= 2 points");
+        // All points should be in z=0 plane.
+        let start = seg.start.to_point3();
+        let end = seg.end.to_point3();
+        assert!(start.z.abs() < 1e-12, "coplanar segment start z ≈ 0, got {start:?}");
+        assert!(end.z.abs() < 1e-12, "coplanar segment end z ≈ 0, got {end:?}");
+        // The segment should have positive length.
+        let dx = end.x - start.x;
+        let dy = end.y - start.y;
+        assert!(dx * dx + dy * dy > 1e-10, "coplanar segment should have positive length");
+    }
+
+    #[test]
+    fn exact_intersect_coplanar_nested() {
+        // T2 is entirely inside T1 (both in z=0 plane).
+        let t1 = [p(0.0, 0.0, 0.0), p(4.0, 0.0, 0.0), p(0.0, 4.0, 0.0)];
+        let t2 = [p(1.0, 1.0, 0.0), p(2.0, 1.0, 0.0), p(1.0, 2.0, 0.0)];
+        let (hit, seg) = tri_tri_intersect_3_exact(t1[0], t1[1], t1[2], t2[0], t2[1], t2[2]);
+        assert!(hit, "nested coplanar triangles intersect");
+        let seg = seg.expect("nested coplanar should produce a segment from T2's vertices");
+        // The segment endpoints should be T2's vertices (the most distant pair).
+        let start = seg.start.to_point3();
+        let end = seg.end.to_point3();
+        assert!(start.z.abs() < 1e-12 && end.z.abs() < 1e-12, "all z ≈ 0");
+        // T2's most distant vertices: (1,1)-(2,1) distance 1, (1,1)-(1,2) distance 1,
+        // (2,1)-(1,2) distance sqrt(2) ≈ 1.414 — so the segment should be (2,1)-(1,2).
+        let dist_sq = (start.x - end.x).powi(2) + (start.y - end.y).powi(2);
+        assert!((dist_sq - 2.0).abs() < 1e-10, "nested coplanar segment should be T2's longest diagonal, got dist_sq={dist_sq}");
+    }
+
+    #[test]
+    fn exact_intersect_coplanar_touch_vertex_no_segment() {
+        // Two coplanar triangles touching at a single vertex.
+        let t1 = [p(0.0, 0.0, 0.0), p(1.0, 0.0, 0.0), p(0.0, 1.0, 0.0)];
+        let t2 = [p(0.0, 0.0, 0.0), p(-1.0, 0.0, 0.0), p(0.0, -1.0, 0.0)];
+        let (hit, seg) = tri_tri_intersect_3_exact(t1[0], t1[1], t1[2], t2[0], t2[1], t2[2]);
+        assert!(hit, "vertex-touching coplanar triangles do intersect");
+        assert!(seg.is_none(), "single-vertex touch should not produce a segment");
+    }
+
+    #[test]
+    fn exact_intersect_coplanar_disjoint_no_segment() {
+        // Two coplanar disjoint triangles in z=0.
+        let t1 = [p(0.0, 0.0, 0.0), p(1.0, 0.0, 0.0), p(0.0, 1.0, 0.0)];
+        let t2 = [p(5.0, 5.0, 0.0), p(6.0, 5.0, 0.0), p(5.0, 6.0, 0.0)];
+        let (hit, seg) = tri_tri_intersect_3_exact(t1[0], t1[1], t1[2], t2[0], t2[1], t2[2]);
+        assert!(!hit, "disjoint coplanar triangles should not intersect");
+        assert!(seg.is_none());
+    }
+
+    #[test]
+    fn exact_intersect_rational_crossing() {
+        // Triangle T1 in the z=0 plane. Triangle T2 has an edge crossing z=0
+        // at t=1/3, producing a rational intersection point with denominator 3.
+        let t1 = [p(0.0, 0.0, 0.0), p(1.0, 0.0, 0.0), p(0.0, 1.0, 0.0)];
+        // Edge from (0.1, 0.1, -1) to (0.1, 0.1, 2) crosses z=0 at t=1/3.
+        let t2 = [p(0.1, 0.1, -1.0), p(0.1, 0.1, 2.0), p(0.9, 0.1, 0.0)];
+        let (hit, seg) = tri_tri_intersect_3_exact(t1[0], t1[1], t1[2], t2[0], t2[1], t2[2]);
+        assert!(hit, "triangles should intersect");
+        let seg = seg.expect("non-coplanar intersection should produce a segment");
+        // The exact point should have z very close to 0.
+        let start = seg.start.to_point3();
+        let end = seg.end.to_point3();
+        assert!(start.z.abs() < 1e-12, "intersection z ≈ 0, got {start:?}");
+        assert!(end.z.abs() < 1e-12, "intersection z ≈ 0, got {end:?}");
     }
 }
