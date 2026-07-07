@@ -405,6 +405,24 @@ impl QTensorEngine {
             None => return false,
         };
 
+        // W5b Phase 4b: dict-coded KV cache. When the layout stores sparse codes, clone this layer's
+        // dictionaries once for the call — the write path encodes K/V to codes, the read path (Q pass)
+        // reconstructs them. `dict_k = 0` ⇒ the untouched f32/int8 paths below.
+        let dict_k = layout.dict_k as usize;
+        let dict_mode = dict_k > 0;
+        let (k_dict, v_dict) = if dict_mode {
+            match proj_kind {
+                1 => (crate::kv_dict_runtime::clone_layer_dict(layer as usize, true), None),
+                2 => (None, crate::kv_dict_runtime::clone_layer_dict(layer as usize, false)),
+                _ => (
+                    crate::kv_dict_runtime::clone_layer_dict(layer as usize, true),
+                    crate::kv_dict_runtime::clone_layer_dict(layer as usize, false),
+                ),
+            }
+        } else {
+            (None, None)
+        };
+
         let mut proj = [0f32; MAX_STACK_GEMM_OUT];
         let mut norm_tok = [0f32; MAX_HIDDEN_DIM];
         for t in 0..num_tokens_in_batch as usize {
@@ -451,52 +469,85 @@ impl QTensorEngine {
                         base_freq,
                         rope_scale,
                     );
-                    // W5b Phase 4: reconstruct post-RoPE K through the layer's dictionary before storing
-                    // (lossy) — so attention reads the compressed vectors and PPL reflects the artifact.
-                    crate::kv_dict_runtime::reconstruct_kv(
-                        layer as usize,
-                        true,
-                        &mut proj[..out_dim],
-                        n_kv,
-                        head_dim,
-                    );
                     let kv = unsafe { core::slice::from_raw_parts_mut(kv_ptr, kv_len) };
-                    for kvh in 0..n_kv {
-                        for d in 0..head_dim {
-                            let idx = layout.k_index(layer, slot, kvh as u32, d as u32);
-                            if idx >= kv.len() {
-                                wlog(&format!("[cpu_attn] K idx OOB idx={idx} len={}", kv.len()));
+                    if dict_mode {
+                        // Phase 4b: encode each post-RoPE K head vector to `dict_k` code words.
+                        for kvh in 0..n_kv {
+                            let base = layout.code_index(layer, slot, kvh as u32, true, 0);
+                            if base + dict_k > kv.len() {
+                                wlog(&format!("[cpu_attn] K code OOB base={base} len={}", kv.len()));
                                 return false;
                             }
-                            kv[idx] = proj[kvh * head_dim + d];
+                            let vh = &proj[kvh * head_dim..(kvh + 1) * head_dim];
+                            match &k_dict {
+                                Some(d) if d.dim == head_dim => {
+                                    d.encode_to_words(vh, dict_k, &mut kv[base..base + dict_k])
+                                }
+                                _ => kv[base..base + dict_k].iter_mut().for_each(|w| *w = 0.0),
+                            }
+                        }
+                    } else {
+                        // Phase 4a certify path: reconstruct-on-write (f32 store); no-op unless the dict
+                        // runtime is enabled on the f32 layout.
+                        crate::kv_dict_runtime::reconstruct_kv(
+                            layer as usize,
+                            true,
+                            &mut proj[..out_dim],
+                            n_kv,
+                            head_dim,
+                        );
+                        for kvh in 0..n_kv {
+                            for d in 0..head_dim {
+                                let idx = layout.k_index(layer, slot, kvh as u32, d as u32);
+                                if idx >= kv.len() {
+                                    wlog(&format!("[cpu_attn] K idx OOB idx={idx} len={}", kv.len()));
+                                    return false;
+                                }
+                                kv[idx] = proj[kvh * head_dim + d];
+                            }
                         }
                     }
-                    // W5b: tap the post-RoPE K vectors (what the int8 KV cache would quantize) for the
-                    // sparse-dictionary go/no-go. No-op unless calibration capture is enabled.
+                    // W5b: tap the post-RoPE K vectors for the go/no-go capture. No-op unless enabled.
                     #[cfg(not(target_arch = "wasm32"))]
                     crate::kv_capture::record(layer as usize, true, &proj[..out_dim], n_kv, head_dim);
                 }
                 2 => {
-                    // W5b Phase 4: reconstruct V through the layer's dictionary before storing (lossy).
-                    crate::kv_dict_runtime::reconstruct_kv(
-                        layer as usize,
-                        false,
-                        &mut proj[..out_dim],
-                        n_kv,
-                        head_dim,
-                    );
                     let kv = unsafe { core::slice::from_raw_parts_mut(kv_ptr, kv_len) };
-                    for kvh in 0..n_kv {
-                        for d in 0..head_dim {
-                            let idx = layout.v_index(layer, slot, kvh as u32, d as u32);
-                            if idx >= kv.len() {
-                                wlog(&format!("[cpu_attn] V idx OOB idx={idx} len={}", kv.len()));
+                    if dict_mode {
+                        // Phase 4b: encode each V head vector to `dict_k` code words.
+                        for kvh in 0..n_kv {
+                            let base = layout.code_index(layer, slot, kvh as u32, false, 0);
+                            if base + dict_k > kv.len() {
+                                wlog(&format!("[cpu_attn] V code OOB base={base} len={}", kv.len()));
                                 return false;
                             }
-                            kv[idx] = proj[kvh * head_dim + d];
+                            let vh = &proj[kvh * head_dim..(kvh + 1) * head_dim];
+                            match &v_dict {
+                                Some(d) if d.dim == head_dim => {
+                                    d.encode_to_words(vh, dict_k, &mut kv[base..base + dict_k])
+                                }
+                                _ => kv[base..base + dict_k].iter_mut().for_each(|w| *w = 0.0),
+                            }
+                        }
+                    } else {
+                        crate::kv_dict_runtime::reconstruct_kv(
+                            layer as usize,
+                            false,
+                            &mut proj[..out_dim],
+                            n_kv,
+                            head_dim,
+                        );
+                        for kvh in 0..n_kv {
+                            for d in 0..head_dim {
+                                let idx = layout.v_index(layer, slot, kvh as u32, d as u32);
+                                if idx >= kv.len() {
+                                    wlog(&format!("[cpu_attn] V idx OOB idx={idx} len={}", kv.len()));
+                                    return false;
+                                }
+                                kv[idx] = proj[kvh * head_dim + d];
+                            }
                         }
                     }
-                    // W5b: tap the V vectors (no RoPE on V) alongside K.
                     #[cfg(not(target_arch = "wasm32"))]
                     crate::kv_capture::record(layer as usize, false, &proj[..out_dim], n_kv, head_dim);
                 }
@@ -531,6 +582,45 @@ impl QTensorEngine {
                         return false;
                     }
                     let kv = unsafe { core::slice::from_raw_parts(kv_ptr, kv_len) };
+
+                    // Phase 4b dict mode: reconstruct K and V for every (kv_head, past_pos) ONCE (shared
+                    // across the GQA q-heads), so the score/output loops read plain f32 vectors either
+                    // way. `recon_*[(kv_h·npos + past_pos)·head_dim + d]`.
+                    let npos = pos_usize + 1;
+                    let (recon_k, recon_v) = if dict_mode {
+                        let mut rk = vec![0f32; n_kv * npos * head_dim];
+                        let mut rv = vec![0f32; n_kv * npos * head_dim];
+                        for kvh in 0..n_kv {
+                            for pp in 0..npos {
+                                let ps = layout.ring_slot(pp as u32);
+                                let ro = (kvh * npos + pp) * head_dim;
+                                if let Some(d) = k_dict.as_ref().filter(|d| d.dim == head_dim) {
+                                    let base = layout.code_index(layer, ps, kvh as u32, true, 0);
+                                    if base + dict_k <= kv.len() {
+                                        d.reconstruct_from_words(
+                                            &kv[base..base + dict_k],
+                                            dict_k,
+                                            &mut rk[ro..ro + head_dim],
+                                        );
+                                    }
+                                }
+                                if let Some(d) = v_dict.as_ref().filter(|d| d.dim == head_dim) {
+                                    let base = layout.code_index(layer, ps, kvh as u32, false, 0);
+                                    if base + dict_k <= kv.len() {
+                                        d.reconstruct_from_words(
+                                            &kv[base..base + dict_k],
+                                            dict_k,
+                                            &mut rv[ro..ro + head_dim],
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                        (rk, rv)
+                    } else {
+                        (Vec::new(), Vec::new())
+                    };
+
                     for q_h in 0..n_head {
                         let kv_h = q_h / q_heads_per_kv;
                         let q_head_slice = &proj[q_h * head_dim..(q_h + 1) * head_dim];
@@ -538,17 +628,23 @@ impl QTensorEngine {
                         let mut max_score = f32::NEG_INFINITY;
                         for past_pos in 0..=pos {
                             let past_slot = layout.ring_slot(past_pos);
+                            let rbase = (kv_h * npos + past_pos as usize) * head_dim;
                             let mut dot = 0.0f32;
                             for d in 0..head_dim {
-                                let k_idx = layout.k_index(layer, past_slot, kv_h as u32, d as u32);
-                                if k_idx >= kv.len() {
-                                    wlog(&format!(
-                                        "[cpu_attn] SDPA K idx OOB idx={k_idx} len={}",
-                                        kv.len()
-                                    ));
-                                    return false;
-                                }
-                                dot += q_head_slice[d] * kv[k_idx];
+                                let kval = if dict_mode {
+                                    recon_k[rbase + d]
+                                } else {
+                                    let k_idx = layout.k_index(layer, past_slot, kv_h as u32, d as u32);
+                                    if k_idx >= kv.len() {
+                                        wlog(&format!(
+                                            "[cpu_attn] SDPA K idx OOB idx={k_idx} len={}",
+                                            kv.len()
+                                        ));
+                                        return false;
+                                    }
+                                    kv[k_idx]
+                                };
+                                dot += q_head_slice[d] * kval;
                             }
                             let score = dot * scale;
                             att_scores[past_pos as usize] = score;
@@ -571,16 +667,22 @@ impl QTensorEngine {
                         for past_pos in 0..=pos {
                             let prob = att_scores[past_pos as usize] / sum_exp;
                             let past_slot = layout.ring_slot(past_pos);
+                            let rbase = (kv_h * npos + past_pos as usize) * head_dim;
                             for d in 0..head_dim {
-                                let v_idx = layout.v_index(layer, past_slot, kv_h as u32, d as u32);
-                                if v_idx >= kv.len() {
-                                    wlog(&format!(
-                                        "[cpu_attn] SDPA V idx OOB idx={v_idx} len={}",
-                                        kv.len()
-                                    ));
-                                    return false;
-                                }
-                                out_head_slice[d] += kv[v_idx] * prob;
+                                let vval = if dict_mode {
+                                    recon_v[rbase + d]
+                                } else {
+                                    let v_idx = layout.v_index(layer, past_slot, kv_h as u32, d as u32);
+                                    if v_idx >= kv.len() {
+                                        wlog(&format!(
+                                            "[cpu_attn] SDPA V idx OOB idx={v_idx} len={}",
+                                            kv.len()
+                                        ));
+                                        return false;
+                                    }
+                                    kv[v_idx]
+                                };
+                                out_head_slice[d] += vval * prob;
                             }
                         }
                     }

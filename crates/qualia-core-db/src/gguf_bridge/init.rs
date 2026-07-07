@@ -831,7 +831,13 @@ impl QTensorEngine {
             "[gguf_bridge] KV arena {} slots ({:.1} MiB, {}), context={}",
             layout.total_f32_elems,
             bytes as f64 / (1024.0 * 1024.0),
-            if layout.int8 { "int8+scale" } else { "f32" },
+            if layout.dict_k > 0 {
+                "dict-coded"
+            } else if layout.int8 {
+                "int8+scale"
+            } else {
+                "f32"
+            },
             layout.max_context,
         );
     }

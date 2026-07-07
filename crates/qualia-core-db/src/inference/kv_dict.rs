@@ -100,6 +100,58 @@ impl KvDictionary {
     }
 }
 
+/// Pack a `(atom_index, coefficient)` pair into one 32-bit KV code word — `u16 atom-index (high) |
+/// f16 coeff (low)` — stored as an `f32` in the dict-mode KV arena. The GPU attention shader unpacks the
+/// coeff with `unpack2x16float(word).x` and the index with `word >> 16`.
+#[inline]
+pub fn pack_code_word(index: u32, coeff: f32) -> f32 {
+    let w = (index << 16) | (half::f16::from_f32(coeff).to_bits() as u32);
+    f32::from_bits(w)
+}
+
+/// Inverse of [`pack_code_word`]: `(atom_index, coefficient)` from a code word.
+#[inline]
+pub fn unpack_code_word(word: f32) -> (usize, f32) {
+    let w = word.to_bits();
+    (
+        (w >> 16) as usize,
+        half::f16::from_bits((w & 0xFFFF) as u16).to_f32(),
+    )
+}
+
+impl KvDictionary {
+    /// Encode `vec` to `k` contiguous code words in `out` (len ≥ `k`). Pads with zero-coeff words if OMP
+    /// selected fewer than `k` atoms (a zero coeff reconstructs to nothing).
+    pub fn encode_to_words(&self, vec: &[f32], k: usize, out: &mut [f32]) {
+        let code = self.encode(vec, k);
+        for (i, slot) in out.iter_mut().enumerate().take(k) {
+            let (ai, ci) = if i < code.indices.len() {
+                (code.indices[i], code.coeffs[i])
+            } else {
+                (0, 0.0)
+            };
+            *slot = pack_code_word(ai, ci);
+        }
+    }
+
+    /// Reconstruct a vector from `k` contiguous code words (`words` len ≥ `k`) into `out` (len = `dim`).
+    /// The exact `f16`-coefficient inverse of [`encode_to_words`] — the compressed-cache read path.
+    pub fn reconstruct_from_words(&self, words: &[f32], k: usize, out: &mut [f32]) {
+        for o in out.iter_mut() {
+            *o = 0.0;
+        }
+        for &word in words.iter().take(k) {
+            let (ai, ci) = unpack_code_word(word);
+            if ci != 0.0 && ai < self.n_atoms {
+                let atom = self.atom(ai);
+                for (o, &a) in out.iter_mut().zip(atom) {
+                    *o += ci * a;
+                }
+            }
+        }
+    }
+}
+
 /// Least-squares coefficients for the selected atoms fitting `v`: solve `(DₛᵀDₛ) c = Dₛᵀv` via the
 /// normal equations (Gaussian elimination on the small `|S|×|S|` system).
 fn least_squares_coeffs(selected: &[usize], dict: &KvDictionary, v: &[f32]) -> Vec<f32> {

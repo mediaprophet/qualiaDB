@@ -74,6 +74,24 @@ pub fn installed_meta() -> Option<(usize, usize)> {
     }
 }
 
+/// The installed sparsity `k` (0 if nothing installed).
+pub fn sparsity() -> usize {
+    rt().lock()
+        .ok()
+        .and_then(|g| g.as_ref().map(|r| r.sparsity))
+        .unwrap_or(0)
+}
+
+/// Clone a layer's K (`k_not_v = true`) or V dictionary, or `None` if that layer/stream is passthrough.
+/// The dict-cache write (encode) and read (reconstruct) paths clone once per attention call and work
+/// against the local copy, avoiding a mutex lock per KV vector on the hot loop.
+pub fn clone_layer_dict(layer: usize, k_not_v: bool) -> Option<KvDictionary> {
+    let g = rt().lock().ok()?;
+    let rt = g.as_ref()?;
+    let dicts = if k_not_v { &rt.k } else { &rt.v };
+    dicts.get(layer).cloned().flatten()
+}
+
 pub fn disable() {
     ENABLED.store(false, Ordering::Relaxed);
 }

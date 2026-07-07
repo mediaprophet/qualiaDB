@@ -614,6 +614,9 @@ pub fn cpu_attention_enabled() -> bool {
             std::env::var("QUALIA_LLM_CPU_ATTENTION").ok().as_deref(),
             Some("1") | Some("true")
         )
+        // W5b Phase 4b: the dict-coded KV cache is reconstructed on the CPU attention path; force it so
+        // the GPU path never writes f32 into a (smaller) dict-sized arena. The GPU shader read is 5b.
+        || kv_dict_enabled()
 }
 
 // ── Shared phase metrics ──────────────────────────────────────────────────────
