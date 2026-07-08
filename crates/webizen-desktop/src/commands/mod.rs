@@ -3383,6 +3383,74 @@ pub fn cf_publish_front_door(
     api::cf_publish_front_door(token, zone_id, domain)
 }
 
+/// Deploy full Cloudflare Node infrastructure (R2 + Worker + Tunnel + DNS).
+#[command]
+pub fn cf_deploy_infrastructure(
+    token: String,
+    account_id: String,
+    zone_id: String,
+    domain: String,
+) -> Result<serde_json::Value, String> {
+    // 1. Provision R2 Bucket
+    let bucket_name = format!("qualia-offline-{}", domain.replace('.', "-"));
+    api::cf_provision_r2_bucket(token.clone(), account_id.clone(), bucket_name.clone())?;
+    
+    // 2. Provision Worker
+    let script_name = format!("qualia-relay-{}", domain.replace('.', "-"));
+    api::cf_provision_worker(token.clone(), account_id.clone(), script_name.clone())?;
+    
+    // 3. Provision Tunnel
+    let tunnel_name = format!("qualia-tunnel-{}", domain.replace('.', "-"));
+    // Generate a secure 32-byte secret (mocked with simple random bytes for demo)
+    let secret_bytes: Vec<u8> = (0..32).map(|_| rand::random::<u8>()).collect();
+    use base64::{engine::general_purpose, Engine as _};
+    let tunnel_secret = general_purpose::STANDARD.encode(&secret_bytes);
+    
+    let tunnel_res = api::cf_provision_tunnel(token.clone(), account_id.clone(), tunnel_name.clone(), tunnel_secret)?;
+    let tunnel_id = tunnel_res.get("tunnel_id").and_then(|v| v.as_str()).unwrap_or_default().to_string();
+    
+    // 4. Route Tunnel DNS
+    api::cf_route_tunnel_dns(token.clone(), zone_id, domain.clone(), tunnel_id.clone())?;
+    
+    Ok(serde_json::json!({
+        "ok": true,
+        "bucket": bucket_name,
+        "worker": script_name,
+        "tunnel_id": tunnel_id,
+        "domain": domain
+    }))
+}
+
+/// Deploy a static site to GitHub and provision a Cloudflare Pages project.
+#[command]
+pub fn deploy_static_site_cf_pages(
+    github_token: String,
+    github_repo: String,
+    cf_token: String,
+    cf_account: String,
+) -> Result<serde_json::Value, String> {
+    // 1. Verify GitHub token and create repo
+    let full_name = api::github_deploy_static_site(
+        github_token.clone(),
+        github_repo.clone(),
+        std::collections::HashMap::from([
+            ("index.html".to_string(), "<h1>Welcome to Qualia Webizen</h1><p>Static site deployed via Cloudflare Pages and GitHub.</p>".to_string()),
+        ]),
+    )?;
+    
+    let repo_full_name = full_name.get("full_name").and_then(|v| v.as_str()).unwrap_or_default().to_string();
+
+    // 2. Provision Cloudflare Pages Project
+    let project_name = format!("qualia-site-{}", github_repo.replace('.', "-").to_lowercase());
+    api::cf_provision_pages_project(cf_token, cf_account, project_name.clone(), repo_full_name.clone())?;
+
+    Ok(serde_json::json!({
+        "ok": true,
+        "github_repo": repo_full_name,
+        "cf_project": project_name
+    }))
+}
+
 /// Start serving `/.well-known/QDP` for a domain over a local HTTP server (self-host over the mesh).
 #[command]
 pub fn start_qdp_server(domain: String, bind_addr: String) -> Result<serde_json::Value, String> {
@@ -3572,14 +3640,15 @@ pub fn submit_omnibox_query(query: String) -> String {
         && q.contains('.')
         && !q.starts_with("http://")
         && !q.starts_with("https://")
-        && !q.starts_with("qualia://");
+        && !q.starts_with("qualia://")
+        && !q.starts_with("webizen://");
     if looks_like_domain {
-        return format!("qualia://webid/{}", q);
+        return format!("https://{}", q);
     }
-    if query.starts_with("http://") || query.starts_with("https://") {
-        query
+    if q.starts_with("http://") || q.starts_with("https://") || q.starts_with("qualia://") || q.starts_with("webizen://") {
+        q.to_string()
     } else {
-        format!("https://duckduckgo.com/?q={}", urlencoding::encode(&query))
+        format!("https://duckduckgo.com/?q={}", urlencoding::encode(q))
     }
 }
 
@@ -6110,6 +6179,8 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         cf_verify_token,
         cf_list_zones,
         cf_publish_front_door,
+        cf_deploy_infrastructure,
+        deploy_static_site_cf_pages,
         start_qdp_server,
         parse_magic_link,
         mail_send,

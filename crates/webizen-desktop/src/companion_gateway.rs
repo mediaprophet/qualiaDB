@@ -21,6 +21,13 @@ use wellfare_core::live_share::{
     LiveSectionRequest, UsageAgreement, MSG_LIVE_SECTION_REQUEST, MSG_USAGE_AGREEMENT,
 };
 
+#[derive(Debug, Deserialize, serde::Serialize)]
+pub struct WebRtcSignal {
+    #[serde(rename = "type")]
+    pub msg_type: String, // "WEBRTC_OFFER", "WEBRTC_ANSWER", "WEBRTC_ICE_CANDIDATE"
+    pub payload: Value,
+}
+
 pub type HostApiHandle = Arc<Mutex<Option<WebizenHostApi>>>;
 
 pub const DEFAULT_COMPANION_PORT: u16 = 8080;
@@ -249,6 +256,31 @@ async fn companion_ws_session(mut socket: WebSocket, host_api: HostApiHandle) {
             continue;
         }
 
+        if let Ok(signal) = serde_json::from_str::<WebRtcSignal>(&text) {
+            if signal.msg_type == "WEBRTC_OFFER" {
+                if let Some(sdp) = signal.payload.get("sdp").and_then(|s| s.as_str()) {
+                    let sdp_str = sdp.to_string();
+                    let ack = match crate::webrtc_manager::handle_webrtc_offer(&sdp_str).await {
+                        Ok(answer_sdp) => serde_json::json!({
+                            "type": "WEBRTC_ANSWER",
+                            "payload": {
+                                "type": "answer",
+                                "sdp": answer_sdp,
+                            }
+                        }),
+                        Err(e) => serde_json::json!({
+                            "type": "WEBRTC_ERROR",
+                            "error": e,
+                        }),
+                    };
+                    if socket.send(Message::Text(ack.to_string().into())).await.is_err() {
+                        break;
+                    }
+                }
+                continue;
+            }
+        }
+
         if let Ok(wire) = serde_json::from_str::<HealthBundleWire>(&text) {
             if wire.msg_type == "HEALTH_BUNDLE" {
                 let bundle_json = wire.bundle.to_string();
@@ -315,6 +347,23 @@ async fn companion_ws_session(mut socket: WebSocket, host_api: HostApiHandle) {
                         "errors": [e],
                     }),
                 };
+                if socket.send(Message::Text(ack.to_string().into())).await.is_err() {
+                    break;
+                }
+                continue;
+            }
+        }
+
+        // Scaffold for WebRTC Signaling (PWA Secure-Origin Delivery / Data Channel)
+        if let Ok(signal) = serde_json::from_str::<WebRtcSignal>(&text) {
+            if signal.msg_type.starts_with("WEBRTC_") {
+                // TODO: Wire to a WebRTC engine (e.g. webrtc-rs) to establish the
+                // data channel and stream the PWA Service Worker scaffold securely.
+                let ack = serde_json::json!({
+                    "type": "WEBRTC_SIGNAL_ACK",
+                    "ok": true,
+                    "note": "WebRTC scaffold active. PWA delivery channel pending integration."
+                });
                 if socket.send(Message::Text(ack.to_string().into())).await.is_err() {
                     break;
                 }

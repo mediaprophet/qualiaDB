@@ -30,6 +30,13 @@ fn protocol_response(status: u16, mime: Option<&str>, body: Vec<u8>) -> Protocol
     if let Some(mime) = mime {
         builder = builder.header(tauri::http::header::CONTENT_TYPE, mime);
     }
+    builder = builder.header(
+        "Content-Security-Policy",
+        "default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data: ws: wss: http://127.0.0.1:8080 http://localhost:8080;"
+    );
+    builder = builder.header("X-Content-Type-Options", "nosniff");
+    builder = builder.header("Referrer-Policy", "no-referrer");
+
     builder
         .body(body)
         .expect("static protocol response metadata is valid")

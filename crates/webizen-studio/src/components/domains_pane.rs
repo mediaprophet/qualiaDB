@@ -90,6 +90,9 @@ pub fn DomainsPane() -> Element {
 
     // Cloudflare easy-install + self-hosting serve.
     let cf_token = use_signal(String::new);
+    let cf_account_id = use_signal(String::new);
+    let github_token = use_signal(String::new);
+    let github_repo = use_signal(String::new);
     let cf_status = use_signal(String::new);
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -97,7 +100,7 @@ pub fn DomainsPane() -> Element {
         let _ = (
             &domains, &presets, &addresses, &forms, &selected, &status, &new_name, &new_agent,
             &new_did, &new_label, &new_parent, &preset_local, &rel_local, &rel_did, &show_turtle,
-            &show_jsonld, &cf_token, &cf_status,
+            &show_jsonld, &cf_token, &cf_account_id, &github_token, &github_repo, &cf_status,
         );
     }
 
@@ -464,9 +467,14 @@ pub fn DomainsPane() -> Element {
                                     div { style: "border-top: 1px solid #374151; margin-top: 14px; padding-top: 12px;",
                                         div { style: "color: #cbd5e1; font-size: 12px; font-weight: 600; margin-bottom: 6px;", "Publish via Cloudflare (optional — just an API token)" }
                                         input {
-                                            style: "{INPUT} font-size: 12px; font-family: monospace;",
+                                            style: "{INPUT} font-size: 12px; font-family: monospace; margin-bottom: 4px;",
                                             placeholder: "Cloudflare API token", value: "{cf_token}",
                                             oninput: move |e| { let mut t = cf_token; t.set(e.value()); }
+                                        }
+                                        input {
+                                            style: "{INPUT} font-size: 12px; font-family: monospace; margin-bottom: 4px;",
+                                            placeholder: "Cloudflare Account ID", value: "{cf_account_id}",
+                                            oninput: move |e| { let mut t = cf_account_id; t.set(e.value()); }
                                         }
                                         button {
                                             style: "{BTN} width: 100%; font-size: 12px; margin-top: 4px;",
@@ -491,6 +499,73 @@ pub fn DomainsPane() -> Element {
                                                 }
                                             },
                                             "Publish _qdp record to Cloudflare"
+                                        }
+                                        button {
+                                            style: "{BTN} width: 100%; font-size: 12px; margin-top: 6px; background: #0ea5e9;",
+                                            onclick: move |_| {
+                                                #[cfg(target_arch = "wasm32")]
+                                                {
+                                                    let (cf_token, cf_account_id, mut cf_status) = (cf_token, cf_account_id, cf_status);
+                                                    let dom = selected();
+                                                    spawn(async move {
+                                                        let token = cf_token();
+                                                        let account = cf_account_id();
+                                                        if token.trim().is_empty() || account.trim().is_empty() { 
+                                                            cf_status.set("Paste Cloudflare API token and Account ID first.".into()); return; 
+                                                        }
+                                                        cf_status.set("Verifying token and fetching zones…".into());
+                                                        if let Err(e) = invoke_json::<serde_json::Value>("cf_verify_token", json!({ "token": token })).await { cf_status.set(format!("Token invalid: {e}")); return; }
+                                                        let zones = match invoke_json::<serde_json::Value>("cf_list_zones", json!({ "token": token })).await { Ok(z) => z, Err(e) => { cf_status.set(format!("List zones failed: {e}")); return; } };
+                                                        let zone_id = zones.as_array().and_then(|zs| zs.iter().find(|z| { let n = s(z, "name"); !n.is_empty() && dom.ends_with(&n) }).map(|z| s(z, "id")));
+                                                        let Some(zone_id) = zone_id else { cf_status.set("No matching Cloudflare zone for this domain.".into()); return; };
+                                                        
+                                                        cf_status.set("Deploying full node infrastructure (R2 + Worker + Tunnel)…".into());
+                                                        match invoke_json::<serde_json::Value>("cf_deploy_infrastructure", json!({ "token": token, "accountId": account, "zoneId": zone_id, "domain": dom })).await {
+                                                            Ok(_) => cf_status.set("Provisioned full node infrastructure successfully! ✓".into()),
+                                                            Err(e) => cf_status.set(format!("Deployment failed: {e}")),
+                                                        }
+                                                    });
+                                                }
+                                            },
+                                            "Provision Full Node (Worker + R2 + Tunnel)"
+                                        }
+                                        div { style: "border-top: 1px solid #374151; margin-top: 14px; padding-top: 12px;",
+                                            div { style: "color: #cbd5e1; font-size: 12px; font-weight: 600; margin-bottom: 6px;", "Publish Static Site (GitHub + CF Pages)" }
+                                            input {
+                                                style: "{INPUT} font-size: 12px; font-family: monospace; margin-bottom: 4px;",
+                                                placeholder: "GitHub Personal Access Token", value: "{github_token}",
+                                                oninput: move |e| { let mut t = github_token; t.set(e.value()); }
+                                            }
+                                            input {
+                                                style: "{INPUT} font-size: 12px; font-family: monospace; margin-bottom: 4px;",
+                                                placeholder: "GitHub Repository Name (e.g. my-site)", value: "{github_repo}",
+                                                oninput: move |e| { let mut t = github_repo; t.set(e.value()); }
+                                            }
+                                            button {
+                                                style: "{BTN} width: 100%; font-size: 12px; margin-top: 4px; background: #8b5cf6;",
+                                                onclick: move |_| {
+                                                    #[cfg(target_arch = "wasm32")]
+                                                    {
+                                                        let (gh_token, gh_repo, cf_token, cf_account, mut cf_status) = (github_token, github_repo, cf_token, cf_account_id, cf_status);
+                                                        spawn(async move {
+                                                            let gh_t = gh_token();
+                                                            let gh_r = gh_repo();
+                                                            let cf_t = cf_token();
+                                                            let cf_a = cf_account();
+                                                            if gh_t.trim().is_empty() || gh_r.trim().is_empty() || cf_t.trim().is_empty() || cf_a.trim().is_empty() { 
+                                                                cf_status.set("Fill GitHub Token, Repo Name, Cloudflare Token, and Account ID first.".into()); return; 
+                                                            }
+                                                            
+                                                            cf_status.set("Deploying static site to GitHub and CF Pages...".into());
+                                                            match invoke_json::<serde_json::Value>("deploy_static_site_cf_pages", json!({ "githubToken": gh_t, "githubRepo": gh_r, "cfToken": cf_t, "cfAccount": cf_a })).await {
+                                                                Ok(res) => cf_status.set(format!("Deployed successfully to {} ✓", res["cf_project"].as_str().unwrap_or(""))),
+                                                                Err(e) => cf_status.set(format!("Deployment failed: {e}")),
+                                                            }
+                                                        });
+                                                    }
+                                                },
+                                                "Publish Static Site to CF Pages"
+                                            }
                                         }
                                         button {
                                             style: "{BTN_MUTED} width: 100%; font-size: 12px; margin-top: 6px;",

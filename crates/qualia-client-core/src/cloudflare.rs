@@ -164,6 +164,138 @@ pub fn publish_front_door(cfg: &CfConfig, rec: &FrontDoorRecord) -> Result<Strin
         .ok_or_else(|| format!("cloudflare publish returned no result.id: {json}"))
 }
 
+/// Provision a Cloudflare R2 bucket (`POST /accounts/{account_id}/r2/buckets`).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn provision_r2_bucket(token: &str, account_id: &str, bucket_name: &str) -> Result<(), String> {
+    let url = format!("{CF_API_BASE}/accounts/{account_id}/r2/buckets");
+    let payload = json!({ "name": bucket_name });
+    let resp = authed(client()?.post(&url), token)
+        .json(&payload)
+        .send()
+        .map_err(|e| format!("cloudflare r2 provision request failed: {e}"))?;
+    
+    // Cloudflare returns 400 with code 10015 if the bucket already exists.
+    let status = resp.status();
+    let body = resp.text().unwrap_or_default();
+    if !status.is_success() && !body.contains("10015") {
+        return Err(format!("cloudflare r2 provision HTTP {status}: {body}"));
+    }
+    Ok(())
+}
+
+/// Provision a Cloudflare Worker script (`PUT /accounts/{account_id}/workers/scripts/{script_name}`).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn provision_worker(token: &str, account_id: &str, script_name: &str, script_content: &str) -> Result<(), String> {
+    let url = format!("{CF_API_BASE}/accounts/{account_id}/workers/scripts/{script_name}");
+    
+    // For simple JS workers, we send application/javascript.
+    let mut req = client()?.put(&url);
+    req = req.header("Authorization", format!("Bearer {token}"))
+             .header("Content-Type", "application/javascript");
+             
+    let resp = req.body(script_content.to_string())
+        .send()
+        .map_err(|e| format!("cloudflare worker provision request failed: {e}"))?;
+        
+    let _json = read_json(resp)?;
+    Ok(())
+}
+
+/// Provision a Cloudflare Tunnel (`POST /accounts/{account_id}/cfd_tunnel`).
+/// Returns the generated Tunnel ID.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn provision_tunnel(token: &str, account_id: &str, tunnel_name: &str, tunnel_secret_b64: &str) -> Result<String, String> {
+    let url = format!("{CF_API_BASE}/accounts/{account_id}/cfd_tunnel");
+    let payload = json!({ "name": tunnel_name, "tunnel_secret": tunnel_secret_b64 });
+    let resp = authed(client()?.post(&url), token)
+        .json(&payload)
+        .send()
+        .map_err(|e| format!("cloudflare tunnel provision request failed: {e}"))?;
+        
+    let json = read_json(resp)?;
+    json.get("result")
+        .and_then(|r| r.get("id"))
+        .and_then(Value::as_str)
+        .map(|s| s.to_string())
+        .ok_or_else(|| format!("cloudflare tunnel response missing id: {json}"))
+}
+
+/// Route DNS to a Cloudflare Tunnel (`POST /zones/{zone_id}/dns_records`).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn route_tunnel_dns(token: &str, zone_id: &str, record_name: &str, tunnel_id: &str) -> Result<String, String> {
+    let url = format!("{CF_API_BASE}/zones/{zone_id}/dns_records");
+    let payload = json!({
+        "type": "CNAME",
+        "name": record_name,
+        "content": format!("{tunnel_id}.cfargotunnel.com"),
+        "proxied": true,
+        "ttl": 1
+    });
+    
+    let resp = authed(client()?.post(&url), token)
+        .json(&payload)
+        .send()
+        .map_err(|e| format!("cloudflare tunnel dns route request failed: {e}"))?;
+        
+    // 81053 means record already exists. If so, we could update it, but for now we ignore or return OK.
+    let status = resp.status();
+    let body = resp.text().unwrap_or_default();
+    if !status.is_success() {
+        if body.contains("81053") {
+            return Ok("already_exists".to_string());
+        }
+        return Err(format!("cloudflare tunnel dns route HTTP {status}: {body}"));
+    }
+    
+    let json: Value = serde_json::from_str(&body).unwrap_or_default();
+    json.get("result")
+        .and_then(|r| r.get("id"))
+        .and_then(Value::as_str)
+        .map(|s| s.to_string())
+        .ok_or_else(|| format!("cloudflare tunnel dns route missing id: {body}"))
+}
+
+/// Provision a Cloudflare Pages Project linked to a GitHub repository (`POST /accounts/{account_id}/pages/projects`).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn provision_pages_project(token: &str, account_id: &str, project_name: &str, github_repo: &str) -> Result<String, String> {
+    let url = format!("{}/accounts/{}/pages/projects", CF_API_BASE, account_id);
+    let payload = json!({
+        "name": project_name,
+        "source": {
+            "type": "github",
+            "config": {
+                "owner": github_repo.split('/').next().unwrap_or(""),
+                "repo_name": github_repo.split('/').nth(1).unwrap_or(""),
+                "production_branch": "main",
+                "pr_comments_enabled": false,
+                "deployments_enabled": true
+            }
+        },
+        "build_config": {
+            "build_command": "",
+            "destination_dir": "",
+            "root_dir": "",
+            "web_analytics_tag": null,
+            "web_analytics_token": null
+        }
+    });
+
+    let resp = authed(client()?.post(&url), token)
+        .json(&payload)
+        .send()
+        .map_err(|e| format!("cloudflare pages provision request failed: {}", e))?;
+
+    let status = resp.status();
+    let body = resp.text().unwrap_or_default();
+    
+    // 8000007 means project already exists, which is fine
+    if !status.is_success() && !body.contains("8000007") {
+        return Err(format!("cloudflare pages provision HTTP {}: {}", status, body));
+    }
+
+    Ok("success".to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -54,7 +54,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "PLACEHOLDER_REPLACE_WITH_TAURI_SIGN_PUBLIC_KEY",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE0MEEzMzI1RjZGMDcyNUYKUldSZmN2RDJKVE1LRksyN0tyZG8vQ29TbTQwOUZhM2RFRngxaEYxdnphR1NnQjVQMW9lZDFiVkIK",
       "endpoints": [
         "https://mediaprophet.github.io/webizen-browser/releases/latest.json"
       ]

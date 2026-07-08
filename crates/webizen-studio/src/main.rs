@@ -79,6 +79,36 @@ pub enum Route {
     #[route("/nexus")]
     NexusRoute {},
 
+    #[route("/library")]
+    LibraryRoute {},
+
+    #[route("/communications")]
+    CommunicationsRoute {},
+
+    #[route("/health")]
+    HealthRoute {},
+
+    #[route("/anatomy")]
+    AnatomyRoute {},
+
+    #[route("/clinical")]
+    ClinicalRoute {},
+
+    #[route("/identity")]
+    IdentityRoute {},
+
+    #[route("/agency")]
+    AgencyRoute {},
+
+    #[route("/sanctuary")]
+    SanctuaryRoute {},
+
+    #[route("/work")]
+    WorkRoute {},
+
+    #[route("/tools")]
+    ToolsRoute {},
+
     #[route("/wellfair")]
     WellfairRoute {},
 
@@ -118,15 +148,11 @@ fn QAppsRoute() -> Element {
 
 #[component]
 fn BrowserRoute() -> Element {
-    if crate::endpoints::supports_browser_pane() {
-        rsx! {
-            div {
-                style: "flex: 1; display: flex; overflow: hidden;",
-                components::browser_panes::WebBrowserPane {}
-            }
+    rsx! {
+        div {
+            style: "flex: 1; display: flex; overflow: hidden;",
+            components::browser_panes::WebBrowserPane {}
         }
-    } else {
-        rsx! { components::browser_unavailable::BrowserUnavailable {} }
     }
 }
 
@@ -153,6 +179,125 @@ fn SceneInteractionRoute() -> Element {
 #[component]
 fn NexusRoute() -> Element {
     rsx! { components::nexus::Nexus {} }
+}
+
+#[component]
+fn LibraryRoute() -> Element {
+    rsx! {
+        div {
+            style: "flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 2rem;",
+            components::wellfair::library_panel::WellfairLibraryPanel {}
+        }
+    }
+}
+
+#[component]
+fn CommunicationsRoute() -> Element {
+    rsx! {
+        div {
+            style: "flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 2rem;",
+            components::wellfair::WellfairCommunicationsPanel {}
+        }
+    }
+}
+
+#[component]
+fn HealthRoute() -> Element {
+    rsx! {
+        div {
+            style: "flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 2rem; gap: 2rem;",
+            components::wellfair::WellfairHealthPanel {}
+            components::wellfair::WellfairWellbeingPanel {}
+            components::wellfair::WellfairSleepPanel {}
+            components::wellfair::WellfairMedicationPanel {}
+        }
+    }
+}
+
+#[component]
+fn AnatomyRoute() -> Element {
+    rsx! {
+        div {
+            style: "flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 2rem; gap: 2rem;",
+            components::wellfair::WellfairScorecardPanel {}
+            components::wellfair::WellfairAnatomy3dPanel {}
+            components::wellfair::WellfairAnatomyPanel {}
+        }
+    }
+}
+
+#[component]
+fn ClinicalRoute() -> Element {
+    rsx! {
+        div {
+            style: "flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 2rem; gap: 2rem;",
+            components::wellfair::WellfairClinicalPanel {}
+            components::wellfair::WellfairLifePanel {}
+            components::wellfair::WellfairWelfarePanel {}
+        }
+    }
+}
+
+#[component]
+fn IdentityRoute() -> Element {
+    rsx! {
+        div {
+            style: "flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 2rem; gap: 2rem;",
+            components::wellfair::WellfairPersonalPanel {}
+            components::wellfair::WellfairSocialBookPanel {}
+            components::wellfair::WellfairConsentPanel {}
+        }
+    }
+}
+
+#[component]
+fn AgencyRoute() -> Element {
+    rsx! {
+        div {
+            style: "flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 2rem; gap: 2rem;",
+            components::wellfair::WellfairGuardianshipPanel {}
+            components::wellfair::WellfairAgencyPanel {}
+            components::wellfair::WellfairAccountabilityPanel {}
+            components::wellfair::WellfairSafeguardsPanel {}
+        }
+    }
+}
+
+#[component]
+fn SanctuaryRoute() -> Element {
+    rsx! {
+        div {
+            style: "flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 2rem; gap: 2rem;",
+            components::wellfair::WellfairSanctuaryPanel {}
+            components::wellfair::WellfairSanctuaryVaultPanel {}
+        }
+    }
+}
+
+#[component]
+fn WorkRoute() -> Element {
+    rsx! {
+        div {
+            style: "flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 2rem; gap: 2rem;",
+            components::wellfair::WellfairProjectsPanel {}
+            components::wellfair::WellfairWorkBoardPanel {}
+            components::wellfair::WellfairFinancePanel {}
+            components::wellfair::WellfairCredentialsPanel {}
+        }
+    }
+}
+
+#[component]
+fn ToolsRoute() -> Element {
+    rsx! {
+        div {
+            style: "flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 2rem; gap: 2rem;",
+            components::wellfair::WellfairToolsPanel {}
+            components::wellfair::WellfairSyncBackupPanel {}
+            components::wellfair::WellfairSyncPanel {}
+            components::wellfair::WellfairAuditPanel {}
+        }
+    }
 }
 
 #[component]
@@ -277,78 +422,43 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                Link {
-                    to: Route::DashboardRoute {},
-                    class: "nav-item",
-                    style: "color: {text_muted};",
-                    sl-icon { "name": "grid-1x2", style: "font-size: 0.9rem;" }
-                    "Dashboard"
-                }
-                Link {
-                    to: Route::AnatomyTestRoute {},
-                    class: "nav-item",
-                    style: "color: {accent}; font-weight: 600;",
-                    sl-icon { "name": "activity", style: "font-size: 0.9rem;" }
-                    "Anatomy Test"
-                }
-                Link {
-                    to: Route::WellfairRoute {},
-                    class: "nav-item",
-                    style: "color: {text_muted};",
-                    sl-icon { "name": "heart-pulse", style: "font-size: 0.9rem;" }
-                    "WellFair"
-                }
-                Link {
-                    to: Route::QAppsRoute {},
-                    class: "nav-item",
-                    style: "color: {text_muted};",
-                    sl-icon { "name": "grid", style: "font-size: 0.9rem;" }
-                    "QApps"
-                }
+                // ── Personal Utility ──
+                div { style: "font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: {text_muted}; margin: 1rem 0.6rem 0.2rem; font-weight: 700; opacity: 0.7;", "Personal Utility" }
+                Link { to: Route::DashboardRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "grid-1x2", style: "font-size: 0.9rem;" } "Dashboard" }
+                Link { to: Route::NexusRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "people", style: "font-size: 0.9rem;" } "Nexus" }
+                Link { to: Route::CommunicationsRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "chat-dots", style: "font-size: 0.9rem;" } "Communications" }
+                Link { to: Route::LibraryRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "journal-richtext", style: "font-size: 0.9rem;" } "Library" }
+
+                // ── Health & Body ──
+                div { style: "font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: {text_muted}; margin: 1rem 0.6rem 0.2rem; font-weight: 700; opacity: 0.7;", "Health & Body" }
+                Link { to: Route::HealthRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "heart-pulse", style: "font-size: 0.9rem;" } "Health & Wellbeing" }
+                Link { to: Route::AnatomyRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "person", style: "font-size: 0.9rem;" } "Anatomy" }
+                Link { to: Route::ClinicalRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "file-medical", style: "font-size: 0.9rem;" } "Clinical & Life" }
+
+                // ── Identity & Agency ──
+                div { style: "font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: {text_muted}; margin: 1rem 0.6rem 0.2rem; font-weight: 700; opacity: 0.7;", "Identity & Agency" }
+                Link { to: Route::IdentityRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "fingerprint", style: "font-size: 0.9rem;" } "Identity" }
+                Link { to: Route::AgencyRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "shield-check", style: "font-size: 0.9rem;" } "Agency & Safeguards" }
+                Link { to: Route::SanctuaryRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "safe", style: "font-size: 0.9rem;" } "Sanctuary" }
+
+                // ── Work & Assets ──
+                div { style: "font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: {text_muted}; margin: 1rem 0.6rem 0.2rem; font-weight: 700; opacity: 0.7;", "Work & Assets" }
+                Link { to: Route::WorkRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "briefcase", style: "font-size: 0.9rem;" } "Work & Finance" }
+                
+                // ── System Tools ──
+                div { style: "font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: {text_muted}; margin: 1rem 0.6rem 0.2rem; font-weight: 700; opacity: 0.7;", "System Tools" }
+                Link { to: Route::ToolsRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "tools", style: "font-size: 0.9rem;" } "Settings & Sync" }
+                Link { to: Route::QAppsRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "grid", style: "font-size: 0.9rem;" } "QApps" }
                 if crate::endpoints::supports_browser_pane() {
-                    Link {
-                        to: Route::BrowserRoute {},
-                        class: "nav-item",
-                        style: "color: {text_muted};",
-                        sl-icon { "name": "globe2", style: "font-size: 0.9rem;" }
-                        "Browser"
-                    }
+                    Link { to: Route::BrowserRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "globe2", style: "font-size: 0.9rem;" } "Browser" }
                 }
-                Link {
-                    to: Route::ContextStudioRoute {},
-                    class: "nav-item",
-                    style: "color: {text_muted};",
-                    sl-icon { "name": "diagram-3", style: "font-size: 0.9rem;" }
-                    "Context Studio"
-                }
-                Link {
-                    to: Route::ChoraRoute {},
-                    class: "nav-item",
-                    style: "color: {text_muted};",
-                    sl-icon { "name": "globe-americas", style: "font-size: 0.9rem;" }
-                    "Chora"
-                }
-                Link {
-                    to: Route::StudioRoute {},
-                    class: "nav-item",
-                    style: "color: {text_muted};",
-                    sl-icon { "name": "layers", style: "font-size: 0.9rem;" }
-                    "QApp Studio"
-                }
-                Link {
-                    to: Route::TenDBrowserRoute {},
-                    class: "nav-item",
-                    style: "color: {text_muted};",
-                    sl-icon { "name": "box", style: "font-size: 0.9rem;" }
-                    "10D Browser"
-                }
-                Link {
-                    to: Route::GpuViewportRoute {},
-                    class: "nav-item",
-                    style: "color: {text_muted};",
-                    sl-icon { "name": "gpu-card", style: "font-size: 0.9rem;" }
-                    "GPU Viewport"
-                }
+                Link { to: Route::ChoraRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "globe-americas", style: "font-size: 0.9rem;" } "Chora" }
+                Link { to: Route::StudioRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "layers", style: "font-size: 0.9rem;" } "QApp Studio" }
+                Link { to: Route::ContextStudioRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "diagram-3", style: "font-size: 0.9rem;" } "Context Studio" }
+                Link { to: Route::TenDBrowserRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "box", style: "font-size: 0.9rem;" } "10D Browser" }
+                Link { to: Route::GpuViewportRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "gpu-card", style: "font-size: 0.9rem;" } "GPU Viewport" }
+                Link { to: Route::AnatomyTestRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "activity", style: "font-size: 0.9rem;" } "Anatomy Test" }
+                Link { to: Route::WellfairRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "heart-pulse", style: "font-size: 0.9rem;" } "Wellfair (Legacy)" }
                 Link {
                     to: Route::RenderPreviewRoute {},
                     class: "nav-item",

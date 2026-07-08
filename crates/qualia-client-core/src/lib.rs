@@ -2,6 +2,7 @@ pub mod activity_signals;
 pub mod asset_recommendations;
 pub mod anatomy_context;
 pub mod api;
+pub mod github;
 pub mod bundled_ontologies;
 pub mod bundled_qapps;
 pub mod canvas_state;

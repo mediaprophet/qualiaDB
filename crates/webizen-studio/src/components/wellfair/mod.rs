@@ -41,6 +41,7 @@ pub mod tools_panel;
 
 pub use accountability_panel::WellfairAccountabilityPanel;
 pub use anatomy_3d_panel::WellfairAnatomy3dPanel;
+pub use anatomy_panel::WellfairAnatomyPanel;
 pub use agency_panel::WellfairAgencyPanel;
 pub use assessment_panel::WellfairAssessmentPanel;
 pub use audit_panel::WellfairAuditPanel;

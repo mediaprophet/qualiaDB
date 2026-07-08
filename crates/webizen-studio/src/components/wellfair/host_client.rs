@@ -1228,6 +1228,7 @@ pub async fn add_ledger_entry(
     amount_cents: i64,
     currency: &str,
     category: Option<&str>,
+    attached_asset_uri: Option<&str>,
 ) -> Result<HealthRecordDto, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(&args, &"description".into(), &wasm_bindgen::JsValue::from_str(description))
@@ -1238,6 +1239,10 @@ pub async fn add_ledger_entry(
         .map_err(|_| "failed to build invoke args".to_string())?;
     if let Some(c) = category {
         js_sys::Reflect::set(&args, &"category".into(), &wasm_bindgen::JsValue::from_str(c))
+            .map_err(|_| "failed to build invoke args".to_string())?;
+    }
+    if let Some(uri) = attached_asset_uri {
+        js_sys::Reflect::set(&args, &"attachedAssetUri".into(), &wasm_bindgen::JsValue::from_str(uri))
             .map_err(|_| "failed to build invoke args".to_string())?;
     }
     let js = tauri_invoke("wellfair_add_ledger_entry", args.into())
@@ -1253,6 +1258,7 @@ pub async fn add_ledger_entry(
     _amount_cents: i64,
     _currency: &str,
     _category: Option<&str>,
+    _attached_asset_uri: Option<&str>,
 ) -> Result<HealthRecordDto, String> {
     Err("Ledger entries require the Tauri desktop host".into())
 }
@@ -1299,6 +1305,7 @@ pub async fn add_contribution(
     contributor_did: &str,
     description: &str,
     effort_minutes: u32,
+    attached_asset_uri: Option<&str>,
 ) -> Result<HealthRecordDto, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(&args, &"projectId".into(), &wasm_bindgen::JsValue::from_str(project_id))
@@ -1309,6 +1316,10 @@ pub async fn add_contribution(
         .map_err(|_| "failed to build invoke args".to_string())?;
     js_sys::Reflect::set(&args, &"effortMinutes".into(), &wasm_bindgen::JsValue::from(effort_minutes))
         .map_err(|_| "failed to build invoke args".to_string())?;
+    if let Some(uri) = attached_asset_uri {
+        js_sys::Reflect::set(&args, &"attachedAssetUri".into(), &wasm_bindgen::JsValue::from_str(uri))
+            .map_err(|_| "failed to build invoke args".to_string())?;
+    }
     let js = tauri_invoke("wellfair_add_contribution", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -1322,6 +1333,7 @@ pub async fn add_contribution(
     _contributor_did: &str,
     _description: &str,
     _effort_minutes: u32,
+    _attached_asset_uri: Option<&str>,
 ) -> Result<HealthRecordDto, String> {
     Err("Contributions require the Tauri desktop host".into())
 }
@@ -3172,9 +3184,9 @@ pub struct IngestFacets {
 /// Ingest a text document (derive topics + searchable text; guardianship flag→notify), optionally placing it
 /// on the timeline/map via person-authored `facets`. Returns a summary.
 #[cfg(target_arch = "wasm32")]
-pub async fn ingest_document(uri: &str, media_type: &str, text: &str, guardian_did: Option<String>, facets: &IngestFacets) -> Result<serde_json::Value, String> {
+pub async fn ingest_document(uri: &str, media_type: &str, text: &str, guardian_did: Option<String>, facets: &IngestFacets, sensitivity: &str) -> Result<serde_json::Value, String> {
     let args = js_sys::Object::new();
-    for (k, v) in [("uri", uri), ("mediaType", media_type), ("text", text)] {
+    for (k, v) in [("uri", uri), ("mediaType", media_type), ("text", text), ("sensitivity", sensitivity)] {
         js_sys::Reflect::set(&args, &k.into(), &wasm_bindgen::JsValue::from_str(v)).map_err(|_| "args".to_string())?;
     }
     if let Some(g) = guardian_did {
@@ -3203,16 +3215,16 @@ pub async fn ingest_document(uri: &str, media_type: &str, text: &str, guardian_d
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn ingest_document(_u: &str, _m: &str, _t: &str, _g: Option<String>, _f: &IngestFacets) -> Result<serde_json::Value, String> {
+pub async fn ingest_document(_u: &str, _m: &str, _t: &str, _g: Option<String>, _f: &IngestFacets, _s: &str) -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }
 
 /// Ingest a binary asset (photo/audio) from hex-encoded bytes — a photo's EXIF time/GPS auto-populate the
 /// timeline/map. Returns a summary.
 #[cfg(target_arch = "wasm32")]
-pub async fn ingest_file_hex(uri: &str, media_type: &str, bytes_hex: &str, caption: &str, guardian_did: Option<String>) -> Result<serde_json::Value, String> {
+pub async fn ingest_file_hex(uri: &str, media_type: &str, bytes_hex: &str, caption: &str, guardian_did: Option<String>, sensitivity: &str) -> Result<serde_json::Value, String> {
     let args = js_sys::Object::new();
-    for (k, v) in [("uri", uri), ("mediaType", media_type), ("bytesHex", bytes_hex), ("caption", caption)] {
+    for (k, v) in [("uri", uri), ("mediaType", media_type), ("bytesHex", bytes_hex), ("caption", caption), ("sensitivity", sensitivity)] {
         js_sys::Reflect::set(&args, &k.into(), &wasm_bindgen::JsValue::from_str(v)).map_err(|_| "args".to_string())?;
     }
     if let Some(g) = guardian_did {
@@ -3223,7 +3235,7 @@ pub async fn ingest_file_hex(uri: &str, media_type: &str, bytes_hex: &str, capti
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn ingest_file_hex(_u: &str, _m: &str, _b: &str, _c: &str, _g: Option<String>) -> Result<serde_json::Value, String> {
+pub async fn ingest_file_hex(_u: &str, _m: &str, _b: &str, _c: &str, _g: Option<String>, _s: &str) -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }
 

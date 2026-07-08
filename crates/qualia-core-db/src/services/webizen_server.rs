@@ -913,9 +913,9 @@ async fn query_handler(
     if !state.dev {
         if let Some(t) = token.as_ref() {
             let vault = state.vault.lock().unwrap();
-            match vault.verify_qapp_token(t) {
+            match vault.verify_qapp_token(t, "localhost") {
                 Ok(payload) => {
-                    allowed_shapes = Some(payload.allowed_shapes);
+                    allowed_shapes = Some(payload.capabilities);
                 }
                 Err(_) => {
                     if Some(t) != state.token.as_ref() {

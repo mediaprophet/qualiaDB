@@ -226,11 +226,19 @@ impl KeyVault {
     pub fn issue_qapp_token(
         &self,
         qapp_did: &str,
-        allowed_shapes: Vec<String>,
+        audience: &str,
+        expiry_epoch: u64,
+        nonce: &str,
+        capabilities: Vec<String>,
+        sensitivity_clearance: SubgraphLayer,
     ) -> Result<String, String> {
-        let payload = QappTokenPayload {
+        let payload = QappSessionTokenV2 {
             qapp_did: qapp_did.to_string(),
-            allowed_shapes,
+            expiry_epoch,
+            audience: audience.to_string(),
+            nonce: nonce.to_string(),
+            capabilities,
+            sensitivity_clearance,
         };
         let payload_json =
             serde_json::to_string(&payload).map_err(|e| format!("Serialization error: {}", e))?;
@@ -244,8 +252,8 @@ impl KeyVault {
         Ok(format!("{}.{}", payload_hex, signature_hex))
     }
 
-    /// Verifies a qapp token's signature using the Master Key, returning the requested payload shapes.
-    pub fn verify_qapp_token(&self, token: &str) -> Result<QappTokenPayload, String> {
+    /// Verifies a qapp token's signature using the Master Key, and checks expiry and audience.
+    pub fn verify_qapp_token(&self, token: &str, expected_audience: &str) -> Result<QappSessionTokenV2, String> {
         let parts: Vec<&str> = token.split('.').collect();
         if parts.len() != 2 {
             return Err("Invalid semantic token format".into());
@@ -269,17 +277,34 @@ impl KeyVault {
             .verify(&payload_bytes, &signature)
             .map_err(|_| "Invalid token signature".to_string())?;
 
-        let payload: QappTokenPayload = serde_json::from_slice(&payload_bytes)
+        let payload: QappSessionTokenV2 = serde_json::from_slice(&payload_bytes)
             .map_err(|e| format!("Failed to parse token payload: {}", e))?;
+
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|_| "Time went backwards")?
+            .as_secs();
+
+        if payload.expiry_epoch < now {
+            return Err("Token expired".into());
+        }
+
+        if payload.audience != expected_audience {
+            return Err("Token audience mismatch".into());
+        }
 
         Ok(payload)
     }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-pub struct QappTokenPayload {
+pub struct QappSessionTokenV2 {
     pub qapp_did: String,
-    pub allowed_shapes: Vec<String>,
+    pub expiry_epoch: u64,
+    pub audience: String,
+    pub nonce: String,
+    pub capabilities: Vec<String>,
+    pub sensitivity_clearance: SubgraphLayer,
 }
 
 // ── Credential-gated subgraph layer encryption ───────────────────────────────
@@ -289,7 +314,7 @@ pub struct QappTokenPayload {
 /// Each layer has a dedicated AES-256-GCM key derived from the node's master key.
 /// Access is gated by the deontic engine evaluating the agent's VCs against the
 /// layer's ODRL policy before releasing the key.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]
 pub enum SubgraphLayer {
     Public = 0,

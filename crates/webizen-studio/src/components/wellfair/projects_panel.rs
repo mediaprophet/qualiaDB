@@ -19,6 +19,7 @@ struct ProjectsUi {
     contributor_did: String,
     contribution_description: String,
     effort_minutes: String,
+    attached_asset_uri: String,
     records: Vec<HealthRecordDto>,
     obligations: Vec<ObligationDto>,
 }
@@ -33,6 +34,7 @@ impl Default for ProjectsUi {
             contributor_did: "self".into(),
             contribution_description: String::new(),
             effort_minutes: String::new(),
+            attached_asset_uri: String::new(),
             records: Vec::new(),
             obligations: Vec::new(),
         }
@@ -187,6 +189,16 @@ pub fn WellfairProjectsPanel() -> Element {
                         style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
                     }
                 }
+                div {
+                    style: "margin-bottom:0.85rem;",
+                    input {
+                        r#type: "text",
+                        placeholder: "Attach Document URI (e.g. urn:doc:spec-456)",
+                        value: "{ui().attached_asset_uri}",
+                        oninput: move |e| ui.write().attached_asset_uri = e.value(),
+                        style: "width:100%;padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
+                    }
+                }
                 button {
                     style: "padding:0.4rem 0.75rem;border-radius:8px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.8rem;cursor:pointer;",
                     onclick: move |_| {
@@ -204,13 +216,16 @@ pub fn WellfairProjectsPanel() -> Element {
                             return;
                         }
                         let contributor = if contributor.is_empty() { "self".to_string() } else { contributor };
+                        let asset_uri = ui().attached_asset_uri.trim().to_string();
+                        let attached_uri = if asset_uri.is_empty() { None } else { Some(asset_uri) };
                         spawn(async move {
                             ui.write().status = "Saving contribution…".into();
-                            match add_contribution(&project_id, &contributor, &description, minutes).await {
+                            match add_contribution(&project_id, &contributor, &description, minutes, attached_uri.as_deref()).await {
                                 Ok(_) => {
                                     ui.write().status = "Contribution saved.".into();
                                     ui.write().contribution_description = String::new();
                                     ui.write().effort_minutes = String::new();
+                                    ui.write().attached_asset_uri = String::new();
                                     reload();
                                 }
                                 Err(e) => ui.write().status = format!("Failed: {e}"),

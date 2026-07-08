@@ -71,10 +71,6 @@ impl BrowserTab {
 
 #[component]
 pub fn WebBrowserPane() -> Element {
-    if !crate::endpoints::supports_browser_pane() {
-        return rsx! { crate::components::browser_unavailable::BrowserUnavailable {} };
-    }
-
     let mut tabs = use_signal(|| {
         vec![BrowserTab::new("https://duckduckgo.com/".to_string())]
     });
@@ -174,6 +170,15 @@ pub fn WebBrowserPane() -> Element {
         });
     };
 
+    let current_url = omnibox_input.read().clone();
+    let (scheme_icon, scheme_color) = if current_url.starts_with("qualia://") {
+        ("box", "text-purple-400")
+    } else if current_url.starts_with("webizen://") {
+        ("globe", "text-cyan-400")
+    } else {
+        ("globe-americas", "text-gray-400")
+    };
+
     rsx! {
         div {
             class: "flex flex-col w-full h-full bg-surface text-text-main overflow-hidden",
@@ -248,7 +253,11 @@ pub fn WebBrowserPane() -> Element {
                         e.prevent_default();
                         submit_query(omnibox_input.read().clone());
                     },
-                    div { class: "w-2 h-2 rounded-full bg-primary mr-3 shadow-[0_0_8px_var(--color-primary)] animate-pulse" }
+                    div { 
+                        class: "mr-3 flex items-center justify-center {scheme_color}", 
+                        title: "Protocol Indicator",
+                        sl-icon { "name": "{scheme_icon}", style: "font-size: 1.1rem;" } 
+                    }
                     input {
                         class: "flex-1 bg-transparent border-none outline-none text-text-main placeholder:text-text-muted/70",
                         value: "{omnibox_input}",

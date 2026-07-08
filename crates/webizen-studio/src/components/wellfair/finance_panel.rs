@@ -14,6 +14,7 @@ struct FinanceUi {
     currency: String,
     direction: String,
     category: String,
+    attached_asset_uri: String,
     balance: BalanceReportDto,
     records: Vec<HealthRecordDto>,
 }
@@ -27,6 +28,7 @@ impl Default for FinanceUi {
             currency: "AUD".into(),
             direction: "out".into(),
             category: String::new(),
+            attached_asset_uri: String::new(),
             balance: BalanceReportDto::default(),
             records: Vec::new(),
         }
@@ -131,6 +133,16 @@ pub fn WellfairFinancePanel() -> Element {
                     style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
                 }
             }
+            div {
+                style: "margin-bottom:0.85rem;",
+                input {
+                    r#type: "text",
+                    placeholder: "Attach Document URI (e.g. urn:doc:receipt-123)",
+                    value: "{ui().attached_asset_uri}",
+                    oninput: move |e| ui.write().attached_asset_uri = e.value(),
+                    style: "width:100%;padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
+                }
+            }
             button {
                 style: "margin-bottom:0.85rem;padding:0.4rem 0.75rem;border-radius:8px;border:none;background:var(--qualia-accent,#2a6f97);color:#fff;font-size:0.8rem;cursor:pointer;",
                 onclick: move |_| {
@@ -150,15 +162,18 @@ pub fn WellfairFinancePanel() -> Element {
                         ui.write().status = "Currency required (e.g. AUD).".into();
                         return;
                     }
+                    let asset_uri = ui().attached_asset_uri.trim().to_string();
+                    let attached_uri = if asset_uri.is_empty() { None } else { Some(asset_uri) };
                     spawn(async move {
                         ui.write().status = "Saving ledger entry…".into();
                         let cat = if category.is_empty() { None } else { Some(category.as_str()) };
-                        match add_ledger_entry(&description, cents, &currency, cat).await {
+                        match add_ledger_entry(&description, cents, &currency, cat, attached_uri.as_deref()).await {
                             Ok(_) => {
                                 ui.write().status = "Ledger entry saved.".into();
                                 ui.write().description = String::new();
                                 ui.write().amount = String::new();
                                 ui.write().category = String::new();
+                                ui.write().attached_asset_uri = String::new();
                                 reload();
                             }
                             Err(e) => ui.write().status = format!("Failed: {e}"),

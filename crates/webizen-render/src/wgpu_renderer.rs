@@ -198,6 +198,14 @@ struct ScreenVertex {
     color: [f32; 4],
 }
 
+/// Vertex for 3D projector pipeline
+#[repr(C)]
+#[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy)]
+struct ProjectorVertex {
+    position: [f32; 3],
+    color: [f32; 4],
+}
+
 /// Where the renderer draws each frame.
 enum RenderTarget<'a> {
     /// Windowed swapchain.
@@ -290,7 +298,11 @@ pub struct WgpuRenderer<'a> {
     viewport_size: (f64, f64),
     // Render pipeline for 2D screen-space rendering
     render_pipeline: wgpu::RenderPipeline,
+    #[allow(dead_code)]
+    projector_pipeline: Option<wgpu::RenderPipeline>,
     vertex_buffer: wgpu::Buffer,
+    #[allow(dead_code)]
+    projector_vertex_buffer: wgpu::Buffer,
     max_vertices: usize,
     // Track node positions for epistemic anchor coordination (zero-heap: binary indices)
     node_positions: Vec<(usize, ScreenPoint, f64)>, // (index, position, radius)
@@ -338,7 +350,9 @@ impl<'a> WgpuRenderer<'a> {
         surface.configure(&device, &surface_config);
 
         let render_pipeline = Self::create_render_pipeline(&device, surface_format);
-        let (vertex_buffer, max_vertices) = Self::create_vertex_buffer(&device);
+        let projector_pipeline = Self::create_projector_pipeline(&device, surface_format);
+
+        let (vertex_buffer, projector_vertex_buffer, max_vertices) = Self::create_vertex_buffer(&device);
 
         #[cfg(not(feature = "qualia"))]
         let (
@@ -360,7 +374,9 @@ impl<'a> WgpuRenderer<'a> {
             camera: Camera::default(),
             viewport_size: (width as f64, height as f64),
             render_pipeline,
+            projector_pipeline: Some(projector_pipeline),
             vertex_buffer,
+            projector_vertex_buffer,
             max_vertices,
             node_positions: Vec::new(),
             #[cfg(not(feature = "qualia"))]
@@ -405,7 +421,9 @@ impl<'a> WgpuRenderer<'a> {
         let texture = Self::create_offscreen_texture(&device, format, width, height);
 
         let render_pipeline = Self::create_render_pipeline(&device, format);
-        let (vertex_buffer, max_vertices) = Self::create_vertex_buffer(&device);
+        let projector_pipeline = Self::create_projector_pipeline(&device, format);
+
+        let (vertex_buffer, projector_vertex_buffer, max_vertices) = Self::create_vertex_buffer(&device);
 
         #[cfg(not(feature = "qualia"))]
         let (
@@ -429,7 +447,9 @@ impl<'a> WgpuRenderer<'a> {
             camera: Camera::default(),
             viewport_size: (width as f64, height as f64),
             render_pipeline,
+            projector_pipeline: Some(projector_pipeline),
             vertex_buffer,
+            projector_vertex_buffer,
             max_vertices,
             node_positions: Vec::new(),
             #[cfg(not(feature = "qualia"))]
@@ -533,7 +553,7 @@ impl<'a> WgpuRenderer<'a> {
         })
     }
 
-    fn create_vertex_buffer(device: &wgpu::Device) -> (wgpu::Buffer, usize) {
+    fn create_vertex_buffer(device: &wgpu::Device) -> (wgpu::Buffer, wgpu::Buffer, usize) {
         // Max 10000 vertices for immediate-mode rendering.
         let max_vertices = 10000;
         let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -542,7 +562,97 @@ impl<'a> WgpuRenderer<'a> {
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        (vertex_buffer, max_vertices)
+        let projector_vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("webizen-projector-vertex-buffer"),
+            size: (max_vertices * std::mem::size_of::<ProjectorVertex>()) as u64,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        (vertex_buffer, projector_vertex_buffer, max_vertices)
+    }
+
+    fn create_projector_pipeline(
+        device: &wgpu::Device,
+        target_format: wgpu::TextureFormat,
+    ) -> wgpu::RenderPipeline {
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("webizen-projector-shader"),
+            source: wgpu::ShaderSource::Wgsl(crate::shaders::PROJECTOR_WGSL.into()),
+        });
+
+        // The projector shader requires 3 bindings: view_projection (uniform), motors (storage), motor_index (uniform).
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("webizen-projector-bgl"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer { ty: wgpu::BufferBindingType::Uniform, has_dynamic_offset: false, min_binding_size: None },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer { ty: wgpu::BufferBindingType::Storage { read_only: true }, has_dynamic_offset: false, min_binding_size: None },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer { ty: wgpu::BufferBindingType::Uniform, has_dynamic_offset: false, min_binding_size: None },
+                    count: None,
+                },
+            ],
+        });
+
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("webizen-projector-pipeline-layout"),
+            bind_group_layouts: &[Some(&bind_group_layout)],
+            immediate_size: 0,
+        });
+
+        device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("webizen-projector-pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: Some("vertex_main"),
+                compilation_options: Default::default(),
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: (std::mem::size_of::<[f32; 3]>() + std::mem::size_of::<[f32; 4]>()) as wgpu::BufferAddress,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &[
+                        wgpu::VertexAttribute { offset: 0, shader_location: 0, format: wgpu::VertexFormat::Float32x3 },
+                        wgpu::VertexAttribute { offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress, shader_location: 1, format: wgpu::VertexFormat::Float32x4 },
+                    ],
+                }],
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                // Note: projector.wgsl does not currently have a fragment_main, it expects to be linked with a standard fragment shader.
+                // For this wiring, we bind it to the basic screen shader fragment_main (which just returns color).
+                entry_point: Some("fragment_main"),
+                compilation_options: Default::default(),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: target_format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
+                unclipped_depth: false,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            multiview_mask: None,
+            cache: None,
+        })
     }
 
     fn create_render_pipeline(
@@ -1594,8 +1704,17 @@ pub fn render_scene_png_with_time_and_telemetry(
                         0,
                         bytemuck::cast_slice(&clip_vertices),
                     );
-                    render_pass.set_pipeline(&renderer.render_pipeline);
-                    render_pass.set_vertex_buffer(0, renderer.vertex_buffer.slice(..));
+                    
+                    if let Some(projector) = &renderer.projector_pipeline {
+                        // TODO: Bind projector motor/telemetry uniforms here when ready
+                        render_pass.set_pipeline(projector);
+                        // Temporarily using the projector vertex buffer for the projector until the full 10D pipeline is passed
+                        render_pass.set_vertex_buffer(0, renderer.projector_vertex_buffer.slice(..));
+                    } else {
+                        render_pass.set_pipeline(&renderer.render_pipeline);
+                        render_pass.set_vertex_buffer(0, renderer.vertex_buffer.slice(..));
+                    }
+                    
                     render_pass.draw(0..clip_vertices.len() as u32, 0..1);
                 }
             }

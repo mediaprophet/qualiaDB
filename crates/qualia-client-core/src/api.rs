@@ -2734,6 +2734,88 @@ pub fn cf_publish_front_door(
     }))
 }
 
+/// Provision a Cloudflare R2 bucket.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn cf_provision_r2_bucket(
+    token: String,
+    account_id: String,
+    bucket_name: String,
+) -> Result<serde_json::Value, String> {
+    crate::cloudflare::provision_r2_bucket(&token, &account_id, &bucket_name)?;
+    Ok(serde_json::json!({ "ok": true, "bucket": bucket_name }))
+}
+
+/// Provision a Cloudflare Worker using the local vendor JS file.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn cf_provision_worker(
+    token: String,
+    account_id: String,
+    script_name: String,
+) -> Result<serde_json::Value, String> {
+    let script_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../vendor/cloudflare-worker/worker.js");
+    let script_content = std::fs::read_to_string(&script_path)
+        .map_err(|e| format!("Failed to read worker.js: {e}"))?;
+        
+    crate::cloudflare::provision_worker(&token, &account_id, &script_name, &script_content)?;
+    Ok(serde_json::json!({ "ok": true, "script": script_name }))
+}
+
+/// Provision a Cloudflare Tunnel.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn cf_provision_tunnel(
+    token: String,
+    account_id: String,
+    tunnel_name: String,
+    tunnel_secret: String,
+) -> Result<serde_json::Value, String> {
+    let tunnel_id = crate::cloudflare::provision_tunnel(&token, &account_id, &tunnel_name, &tunnel_secret)?;
+    Ok(serde_json::json!({ "ok": true, "tunnel_id": tunnel_id }))
+}
+
+/// Route a Cloudflare Tunnel in DNS.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn cf_route_tunnel_dns(
+    token: String,
+    zone_id: String,
+    record_name: String,
+    tunnel_id: String,
+) -> Result<serde_json::Value, String> {
+    let record_id = crate::cloudflare::route_tunnel_dns(&token, &zone_id, &record_name, &tunnel_id)?;
+    Ok(serde_json::json!({ "ok": true, "record_id": record_id }))
+}
+
+/// Verify a GitHub PAT.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn github_verify_token(token: String) -> Result<serde_json::Value, String> {
+    let login = crate::github::verify_github_token(&token).map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({ "ok": true, "login": login }))
+}
+
+/// Create a GitHub repository and push static site files.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn github_deploy_static_site(
+    token: String,
+    repo_name: String,
+    files: std::collections::HashMap<String, String>,
+) -> Result<serde_json::Value, String> {
+    let full_name = crate::github::create_repository(&token, &repo_name).map_err(|e| e.to_string())?;
+    crate::github::push_static_site(&token, &full_name, files).map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({ "ok": true, "full_name": full_name }))
+}
+
+/// Provision a Cloudflare Pages project linked to a GitHub repo.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn cf_provision_pages_project(
+    token: String,
+    account_id: String,
+    project_name: String,
+    github_repo: String,
+) -> Result<serde_json::Value, String> {
+    crate::cloudflare::provision_pages_project(&token, &account_id, &project_name, &github_repo)?;
+    Ok(serde_json::json!({ "ok": true, "project": project_name }))
+}
+
 /// Start serving `/.well-known/QDP` for a domain from a local HTTP server (self-host over the mesh).
 #[cfg(not(target_arch = "wasm32"))]
 pub fn start_qdp_server(domain: String, bind_addr: String) -> Result<serde_json::Value, String> {
@@ -3781,7 +3863,14 @@ pub fn issue_qapp_session_token(qapp_name: &str) -> Result<String, String> {
         manifest.name.to_lowercase().replace(' ', "-")
     );
     let vault = state.key_vault.lock().unwrap();
-    vault.issue_qapp_token(&qapp_did, manifest.required_shapes.clone())
+    vault.issue_qapp_token(
+        &qapp_did,
+        "localhost",
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() + 86400,
+        &uuid::Uuid::new_v4().to_string(),
+        manifest.required_shapes.clone(),
+        qualia_core_db::identity::key_vault::SubgraphLayer::Professional,
+    )
 }
 
 // ── Qapp launcher ─────────────────────────────────────────────────────────────

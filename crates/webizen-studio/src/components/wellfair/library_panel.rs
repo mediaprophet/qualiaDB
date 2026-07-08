@@ -115,6 +115,7 @@ pub fn WellfairLibraryPanel() -> Element {
     let mut ing_text = use_signal(|| "Notes: the liver is an organ; keep this receipt for the tax deduction.".to_string());
     let mut ing_binary = use_signal(|| false);
     let mut ing_guardian = use_signal(String::new);
+    let mut ing_sensitivity = use_signal(|| "public".to_string());
     // person-authored facets
     let mut ing_date = use_signal(String::new);
     let mut ing_place = use_signal(String::new); // "lat,lon"
@@ -143,8 +144,8 @@ pub fn WellfairLibraryPanel() -> Element {
     });
 
     let do_ingest = move |_| {
-        let (uri, media, text, binary, g) =
-            (ing_uri(), ing_media(), ing_text(), ing_binary(), ing_guardian());
+        let (uri, media, text, binary, g, sensitivity) =
+            (ing_uri(), ing_media(), ing_text(), ing_binary(), ing_guardian(), ing_sensitivity());
         let (date, place, place_label, project, purpose) =
             (ing_date(), ing_place(), ing_place_label(), ing_project(), ing_purpose());
         spawn(async move {
@@ -157,7 +158,7 @@ pub fn WellfairLibraryPanel() -> Element {
                 } else {
                     to_hex(text.as_bytes())
                 };
-                ingest_file_hex(&uri, &media, &hex, &uri, guardian).await
+                ingest_file_hex(&uri, &media, &hex, &uri, guardian, &sensitivity).await
             } else {
                 let (lat, lon) = parse_latlon(&place).map(|(a, b)| (Some(a), Some(b))).unwrap_or((None, None));
                 let facets = IngestFacets {
@@ -168,7 +169,7 @@ pub fn WellfairLibraryPanel() -> Element {
                     project: if project.trim().is_empty() { None } else { Some(project) },
                     purpose: if purpose.trim().is_empty() { None } else { Some(purpose) },
                 };
-                ingest_document(&uri, &media, &text, guardian, &facets).await
+                ingest_document(&uri, &media, &text, guardian, &facets, &sensitivity).await
             };
             match res {
                 Ok(v) => {
@@ -282,6 +283,16 @@ pub fn WellfairLibraryPanel() -> Element {
                             option { value: "image/jpeg", "image/jpeg" }
                             option { value: "image/png", "image/png" }
                             option { value: "audio/wav", "audio/wav" }
+                        }
+                    }
+                    label { style: "{label_style}", "Sensitivity (Sanctuary Vault)"
+                        select {
+                            style: "{field_style}",
+                            value: "{ing_sensitivity}",
+                            oninput: move |e| ing_sensitivity.set(e.value()),
+                            option { value: "public", "Public (Cleartext)" }
+                            option { value: "restricted", "Restricted (Encrypted Enclave)" }
+                            option { value: "classified", "Classified (M-of-N Guardianship)" }
                         }
                     }
                 }

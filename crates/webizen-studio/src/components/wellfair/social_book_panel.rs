@@ -226,10 +226,19 @@ pub fn WellfairSocialBookPanel() -> Element {
             div {
                 style: "display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;",
                 h2 { style: "margin:0;font-size:1rem;", "Relationships — Social Book" }
-                button {
-                    style: "padding:0.25rem 0.55rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.75rem;cursor:pointer;",
-                    onclick: move |_| reload(),
-                    "Refresh"
+                div {
+                    style: "display:flex;gap:0.4rem;",
+                    Link {
+                        to: crate::Route::NexusRoute {},
+                        style: "padding:0.25rem 0.55rem;border-radius:6px;border:1px solid var(--qualia-accent,#2b6);background:var(--qualia-accent,#2b6);color:#fff;font-size:0.75rem;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:0.3rem;",
+                        sl-icon { "name": "people" }
+                        "Open Nexus Directory"
+                    }
+                    button {
+                        style: "padding:0.25rem 0.55rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.75rem;cursor:pointer;",
+                        onclick: move |_| reload(),
+                        "Refresh"
+                    }
                 }
             }
             p {
