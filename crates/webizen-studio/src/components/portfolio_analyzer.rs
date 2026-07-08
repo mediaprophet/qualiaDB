@@ -1,4 +1,4 @@
-use crate::components::qapp_engine::tauri_invoke;
+use crate::components::qapp_engine::invoke_json;
 use dioxus::prelude::*;
 
 #[derive(Clone, PartialEq)]
@@ -45,13 +45,12 @@ pub fn PortfolioAnalyzer() -> Element {
         is_loading.set(true);
         backend_status.set("Analyzing...".to_string());
         spawn(async move {
-            let js_args = serde_json::json!({
+            let args = serde_json::json!({
                 "payload": [5, 6, 7], // mock payload for SLG VM
             });
-            let js_value = serde_wasm_bindgen::to_value(&js_args).unwrap();
-            
-            if let Ok(res) = tauri_invoke("execute_computational_vm", js_value).await {
-                if let Ok(text) = serde_wasm_bindgen::from_value::<String>(res) {
+
+            if let Ok(res) = invoke_json("execute_computational_vm", args).await {
+                if let Ok(text) = serde_json::from_value::<String>(res) {
                     backend_status.set(format!("VM: {}", text));
                 }
             } else {

@@ -1,10 +1,90 @@
 use dioxus::prelude::*;
 use serde::Deserialize;
 
-#[wasm_bindgen::prelude::wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen::prelude::wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    pub async fn tauri_invoke(cmd: &str, args: wasm_bindgen::JsValue) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
+// ── Dual-mode Tauri invoke ───────────────────────────────────────────────────
+//
+// On WASM (web build): calls `window.__TAURI__.core.invoke()` via wasm_bindgen.
+// On native (desktop build): calls the local settings server's REST API on
+//   http://127.0.0.1:8080/api/invoke/{cmd} — the settings server proxies all
+//   Tauri commands through a single REST endpoint.
+//
+// This allows the same component code to work in both builds without change.
+
+#[cfg(target_arch = "wasm32")]
+mod imp {
+    use wasm_bindgen::prelude::*;
+
+    #[wasm_bindgen::prelude::wasm_bindgen]
+    extern "C" {
+        #[wasm_bindgen(
+            js_namespace = ["window", "__TAURI__", "core"],
+            js_name = invoke,
+            catch
+        )]
+        pub async fn tauri_invoke(
+            cmd: &str,
+            args: wasm_bindgen::JsValue,
+        ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+mod imp {
+    use serde_json::Value;
+
+    /// Native invoke — calls the local settings server's REST API.
+    /// The settings server on :8080 proxies all Tauri commands.
+    pub async fn tauri_invoke(
+        cmd: &str,
+        args: serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
+        let url = format!("http://127.0.0.1:8080/api/invoke/{cmd}");
+        let client = reqwest::Client::new();
+        let resp = client
+            .post(&url)
+            .json(&args)
+            .send()
+            .await
+            .map_err(|e| format!("invoke {cmd}: {e}"))?;
+
+        if resp.status().is_success() {
+            resp.json::<Value>()
+                .await
+                .map_err(|e| format!("invoke {cmd} parse: {e}"))
+        } else {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            Err(format!("invoke {cmd} failed: {status} — {body}"))
+        }
+    }
+}
+
+// Re-export the invoke function for both modes
+#[cfg(target_arch = "wasm32")]
+pub use imp::tauri_invoke;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use imp::tauri_invoke;
+
+// ── Convenience wrapper for native mode ──────────────────────────────────────
+//
+// On native, tauri_invoke takes serde_json::Value and returns serde_json::Value.
+// On wasm, it takes wasm_bindgen::JsValue and returns wasm_bindgen::JsValue.
+// Components that use serde_json can use this helper on native:
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn invoke_json(cmd: &str, args: serde_json::Value) -> Result<serde_json::Value, String> {
+    tauri_invoke(cmd, args).await
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn invoke_json(cmd: &str, args: serde_json::Value) -> Result<serde_json::Value, String> {
+    let js_args = serde_wasm_bindgen::to_value(&args)
+        .map_err(|e| format!("serialize args: {e}"))?;
+    let result = tauri_invoke(cmd, js_args).await
+        .map_err(|e| format!("invoke {cmd}: {:?}", e))?;
+    serde_wasm_bindgen::from_value::<serde_json::Value>(result)
+        .map_err(|e| format!("deserialize result: {e}"))
 }
 
 #[derive(Props, Clone, PartialEq)]
@@ -42,13 +122,9 @@ pub fn QAppEngine(props: QAppEngineProps) -> Element {
         let domain_id = ontology_id.clone();
         spawn(async move {
             let args = serde_json::json!({ "domainId": domain_id });
-            if let Ok(js_val) = serde_wasm_bindgen::to_value(&args) {
-                if let Ok(res) = tauri_invoke("fetch_domain_ontology", js_val).await {
-                    if let Some(json_str) = res.as_string() {
-                        if let Ok(parsed) = serde_json::from_str::<OntologySchema>(&json_str) {
-                            schema.set(Some(parsed));
-                        }
-                    }
+            if let Ok(res) = invoke_json("fetch_domain_ontology", args).await {
+                if let Ok(parsed) = serde_json::from_value::<OntologySchema>(res) {
+                    schema.set(Some(parsed));
                 }
             }
         });
@@ -57,37 +133,37 @@ pub fn QAppEngine(props: QAppEngineProps) -> Element {
     rsx! {
         div { class: "qapp-engine w-full h-full p-6 text-qualia-fg bg-qualia-bg",
             h2 { class: "text-2xl font-bold mb-4", "{props.title}" }
-            
+
             if let Some(s) = schema.read().as_ref() {
                 div { class: "ontology-viewer",
                     div { class: "text-sm text-gray-400 mb-6", "Domain: {s.domain}" }
-                    
+
                     for shape in s.shapes.iter() {
                         div { class: "shape-form mb-8 p-4 border border-gray-700 rounded-lg",
                             h3 { class: "text-xl font-semibold mb-4", "{shape.target_class}" }
-                            
+
                             form { class: "flex flex-col gap-4",
                                 for prop in shape.properties.iter() {
                                     div { class: "form-group flex flex-col",
                                         label { class: "text-sm font-medium mb-1", "{prop.name.as_deref().unwrap_or(&prop.path)}" }
-                                        input { 
+                                        input {
                                             class: "px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white focus:outline-none focus:border-blue-500",
                                             placeholder: "Enter {prop.datatype.as_deref().unwrap_or(\"value\")}"
                                         }
                                         div { class: "text-xs text-gray-500 mt-1", "Path: {prop.path}" }
                                     }
                                 }
-                                button { 
+                                button {
                                     class: "mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded",
-                                    type: "submit", 
-                                    "Save Node" 
+                                    type: "submit",
+                                    "Save Node"
                                 }
                             }
                         }
                     }
                 }
             } else {
-                div { class: "text-gray-400", "Loading domain ontology constraints via Tauri..." }
+                div { class: "text-gray-400", "Loading domain ontology constraints..." }
             }
         }
     }

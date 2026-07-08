@@ -1,10 +1,6 @@
 use dioxus::prelude::*;
 
-#[wasm_bindgen::prelude::wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen::prelude::wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    pub async fn tauri_invoke(cmd: &str, args: wasm_bindgen::JsValue) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
-}
+use crate::components::qapp_engine::invoke_json;
 
 #[component]
 pub fn SolidLdpBrowser() -> Element {
@@ -14,14 +10,13 @@ pub fn SolidLdpBrowser() -> Element {
     let validate_graph = move |_| {
         validation_status.set("Validating...".to_string());
         spawn(async move {
-            let js_args = serde_json::json!({
+            let args = serde_json::json!({
                 "node": 1234, // mock node hash
                 "shapeUri": 5678, // mock shape hash
             });
-            let js_value = serde_wasm_bindgen::to_value(&js_args).unwrap();
-            
-            if let Ok(res) = tauri_invoke("validate_shacl_shape", js_value).await {
-                if let Ok(is_valid) = serde_wasm_bindgen::from_value::<bool>(res) {
+
+            if let Ok(res) = invoke_json("validate_shacl_shape", args).await {
+                if let Ok(is_valid) = serde_json::from_value::<bool>(res) {
                     validation_status.set(if is_valid { "Graph Valid".to_string() } else { "Invalid Shape".to_string() });
                 }
             } else {

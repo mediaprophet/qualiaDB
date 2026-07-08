@@ -1,13 +1,7 @@
 use dioxus::prelude::*;
-use serde::{Deserialize, Serialize};
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
+use serde::Deserialize;
 
-use crate::components::qapp_engine::tauri_invoke;
-#[derive(Serialize)]
-struct QuantumDftArgs {
-    molecule: String,
-}
+use crate::components::qapp_engine::invoke_json;
 
 #[derive(Deserialize, Default, Clone)]
 struct QuantumDftProps {
@@ -21,11 +15,10 @@ pub fn QuantumDft() -> Element {
     let energy_resource = use_resource(move || {
         let current_geometry = geometry.read().clone();
         async move {
-            if let Ok(args) = serde_wasm_bindgen::to_value(&QuantumDftArgs { molecule: current_geometry }) {
-                if let Ok(res) = tauri_invoke("calculate_quantum_dft", args).await {
-                    if let Ok(parsed) = serde_wasm_bindgen::from_value::<QuantumDftProps>(res) {
-                        return parsed;
-                    }
+            let args = serde_json::json!({ "molecule": current_geometry });
+            if let Ok(res) = invoke_json("calculate_quantum_dft", args).await {
+                if let Ok(parsed) = serde_json::from_value::<QuantumDftProps>(res) {
+                    return parsed;
                 }
             }
             QuantumDftProps::default()

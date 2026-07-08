@@ -301,6 +301,10 @@ pub fn spawn_loopback_server(
                     // WebSockets
                     .route("/qualia-bridge", get(bridge_handler))
                     .route("/telemetry", get(telemetry_handler))
+                    // External WASM telemetry ingestion — external devices
+                    // (phones, browser tabs, other machines) POST their
+                    // SystemTelemetry here for local processing.
+                    .route("/telemetry/ingest", post(telemetry_ingest_handler).options(preflight_handler))
                     
                     // REST
                     .route("/health", get(health_handler).options(preflight_handler))
@@ -1067,6 +1071,52 @@ async fn telemetry_handler(
             }
         }
     })
+}
+
+/// External WASM telemetry ingestion endpoint.
+///
+/// External devices (phones, browser tabs, other machines on the LAN) can
+/// POST their `SystemTelemetry` data here for local processing. The desktop
+/// app receives it, processes it locally (GPU visualisation, graph storage,
+/// anomaly detection), and broadcasts it to all connected telemetry
+/// subscribers (including the ambient visualisation bridge).
+///
+/// POST /telemetry/ingest
+/// Body: { "source": "device-id", "telemetry": { ...SystemTelemetry fields } }
+/// Response: 200 OK { "status": "ingested", "subscribers": N }
+async fn telemetry_ingest_handler(
+    State(state): State<Arc<WebizenState>>,
+    Json(payload): Json<TelemetryIngestRequest>,
+) -> impl IntoResponse {
+    // Serialize the SystemTelemetry to bytes and broadcast to all subscribers
+    let bytes = bytemuck::bytes_of(&payload.telemetry);
+    let subscriber_count = state.telemetry_tx.receiver_count();
+
+    // Broadcast the telemetry to all connected subscribers (ambient viz,
+    // render bridge, etc.)
+    let _ = state.telemetry_tx.send(bytes.to_vec());
+
+    // Also store the telemetry source for provenance tracking
+    // (the source device ID is logged for audit purposes)
+    eprintln!(
+        "[telemetry] Ingested external telemetry from {} ({} subscribers)",
+        payload.source, subscriber_count
+    );
+
+    (StatusCode::OK, Json(json!({
+        "status": "ingested",
+        "source": payload.source,
+        "subscribers": subscriber_count,
+    })))
+}
+
+/// Request body for external telemetry ingestion
+#[derive(Deserialize)]
+struct TelemetryIngestRequest {
+    /// Source device identifier (e.g. "phone-abc123", "browser-tab-1")
+    source: String,
+    /// The telemetry data from the external device
+    telemetry: crate::render::telemetry::SystemTelemetry,
 }
 
 async fn manifest_handler(mut body: Body) -> impl IntoResponse {

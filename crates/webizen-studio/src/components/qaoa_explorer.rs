@@ -1,4 +1,4 @@
-use crate::components::qapp_engine::tauri_invoke;
+use crate::components::qapp_engine::invoke_json;
 use dioxus::prelude::*;
 
 #[component]
@@ -9,13 +9,12 @@ pub fn QaoaExplorer() -> Element {
     let optimize = move |_| {
         is_loading.set(true);
         spawn(async move {
-            let js_args = serde_json::json!({
+            let args = serde_json::json!({
                 "payload": [0, 1, 2, 3], // mock payload for SLG VM
             });
-            let js_value = serde_wasm_bindgen::to_value(&js_args).unwrap();
-            
-            if let Ok(res) = tauri_invoke("execute_computational_vm", js_value).await {
-                if let Ok(text) = serde_wasm_bindgen::from_value::<String>(res) {
+
+            if let Ok(res) = invoke_json("execute_computational_vm", args).await {
+                if let Ok(text) = serde_json::from_value::<String>(res) {
                     result_text.set(format!("VM Result: {}", text));
                 }
             } else {

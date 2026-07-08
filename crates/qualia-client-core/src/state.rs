@@ -65,6 +65,10 @@ pub struct AgentConfig {
     pub daemon_host: String,
     pub daemon_port: u16,
     pub inference_backend: String,
+    /// User-configurable port for the local web server (settings portal +
+    /// Studio WASM + companion gateway). Default: 8080. If 0, auto-finds
+    /// an open port starting from 8080.
+    pub settings_port: u16,
 }
 
 impl Default for AgentConfig {
@@ -76,6 +80,7 @@ impl Default for AgentConfig {
             daemon_host: "127.0.0.1".to_string(),
             daemon_port: 4242,
             inference_backend: "local".to_string(),
+            settings_port: 8080,
         }
     }
 }

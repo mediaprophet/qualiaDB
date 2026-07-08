@@ -1,21 +1,14 @@
 use dioxus::prelude::*;
 use serde_json::json;
 use uuid::Uuid;
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
 
-use crate::components::qapp_engine::tauri_invoke;
+use crate::components::qapp_engine::invoke_json;
 async fn invoke_tauri(cmd: &str, args: serde_json::Value) -> Result<String, String> {
-    let js_args = serde_wasm_bindgen::to_value(&args).map_err(|e| e.to_string())?;
-    match tauri_invoke(cmd, js_args.into()).await {
-        Ok(val) => {
-            if val.is_string() {
-                Ok(val.as_string().unwrap_or_default())
-            } else {
-                Ok(serde_wasm_bindgen::from_value::<String>(val).unwrap_or_default())
-            }
-        }
-        Err(e) => Err(format!("{:?}", e)),
+    let res = invoke_json(cmd, args).await?;
+    if let Some(s) = res.as_str() {
+        Ok(s.to_string())
+    } else {
+        serde_json::from_value::<String>(res).map_err(|e| e.to_string())
     }
 }
 
@@ -24,6 +17,56 @@ pub struct BrowserTab {
     pub id: String,
     pub title: String,
     pub url: String,
+    pub history: Vec<String>,
+    pub history_index: usize,
+}
+
+impl BrowserTab {
+    fn new(url: String) -> Self {
+        Self {
+            id: Uuid::new_v4().to_string(),
+            title: "New Tab".to_string(),
+            url: url.clone(),
+            history: vec![url],
+            history_index: 0,
+        }
+    }
+
+    fn can_go_back(&self) -> bool {
+        self.history_index > 0
+    }
+
+    fn can_go_forward(&self) -> bool {
+        self.history_index < self.history.len() - 1
+    }
+
+    fn go_back(&mut self) -> bool {
+        if self.can_go_back() {
+            self.history_index -= 1;
+            self.url = self.history[self.history_index].clone();
+            true
+        } else {
+            false
+        }
+    }
+
+    fn go_forward(&mut self) -> bool {
+        if self.can_go_forward() {
+            self.history_index += 1;
+            self.url = self.history[self.history_index].clone();
+            true
+        } else {
+            false
+        }
+    }
+
+    fn navigate(&mut self, url: String) {
+        // Truncate forward history
+        self.history.truncate(self.history_index + 1);
+        self.history.push(url.clone());
+        self.history_index = self.history.len() - 1;
+        self.url = url;
+    }
 }
 
 #[component]
@@ -33,11 +76,7 @@ pub fn WebBrowserPane() -> Element {
     }
 
     let mut tabs = use_signal(|| {
-        vec![BrowserTab {
-            id: Uuid::new_v4().to_string(),
-            title: "New Tab".to_string(),
-            url: "https://duckduckgo.com/".to_string(),
-        }]
+        vec![BrowserTab::new("https://duckduckgo.com/".to_string())]
     });
 
     let mut active_tab_id = use_signal(|| tabs.read()[0].id.clone());
@@ -58,11 +97,58 @@ pub fn WebBrowserPane() -> Element {
                 let current_id = active_tab_id.read().clone();
                 let mut t = tabs.write();
                 if let Some(tab) = t.iter_mut().find(|t| t.id == current_id) {
-                    tab.url = new_url.clone();
+                    tab.navigate(new_url.clone());
                 }
                 omnibox_input.set(new_url);
             }
         });
+    };
+
+    let go_back = move |_| {
+        let current_id = active_tab_id.read().clone();
+        let mut t = tabs.write();
+        if let Some(tab) = t.iter_mut().find(|t| t.id == current_id) {
+            if tab.go_back() {
+                let url = tab.url.clone();
+                omnibox_input.set(url);
+            }
+        }
+    };
+
+    let go_forward = move |_| {
+        let current_id = active_tab_id.read().clone();
+        let mut t = tabs.write();
+        if let Some(tab) = t.iter_mut().find(|t| t.id == current_id) {
+            if tab.go_forward() {
+                let url = tab.url.clone();
+                omnibox_input.set(url);
+            }
+        }
+    };
+
+    let reload = move |_| {
+        // Force iframe reload by toggling a key — Dioxus will re-render
+        let current_id = active_tab_id.read().clone();
+        let url = tabs.read().iter()
+            .find(|t| t.id == current_id)
+            .map(|t| t.url.clone())
+            .unwrap_or_default();
+        omnibox_input.set(url.clone());
+        // Re-navigate to the same URL
+        let mut t = tabs.write();
+        if let Some(tab) = t.iter_mut().find(|t| t.id == current_id) {
+            let current = tab.url.clone();
+            tab.url = String::new();
+            tab.url = current;
+        }
+    };
+
+    // Get current tab's navigation state
+    let (can_back, can_fwd) = {
+        let current_id = active_tab_id.read().clone();
+        let t = tabs.read();
+        let tab = t.iter().find(|t| t.id == current_id);
+        (tab.map(|t| t.can_go_back()).unwrap_or(false), tab.map(|t| t.can_go_forward()).unwrap_or(false))
     };
 
     let save_qlink = move || {
@@ -114,7 +200,7 @@ pub fn WebBrowserPane() -> Element {
                     class: "px-3 cursor-pointer text-text-muted hover:text-primary bg-transparent border-none text-xl font-bold",
                     onclick: move |_| {
                         let new_id = Uuid::new_v4().to_string();
-                        tabs.write().push(BrowserTab { id: new_id.clone(), title: "New Tab".into(), url: "https://duckduckgo.com/".into() });
+                        tabs.write().push(BrowserTab::new("https://duckduckgo.com/".to_string()));
                         active_tab_id.set(new_id);
                     },
                     "+"
@@ -123,7 +209,39 @@ pub fn WebBrowserPane() -> Element {
 
             // Navigation & Omnibox
             div {
-                class: "flex flex-row p-2 items-center gap-3 border-b border-border/50 bg-surface",
+                class: "flex flex-row p-2 items-center gap-2 border-b border-border/50 bg-surface",
+
+                // Back button
+                button {
+                    r#type: "button",
+                    class: "bg-transparent border-none cursor-pointer p-1.5 rounded text-text-muted hover:text-primary transition-all",
+                    disabled: !can_back,
+                    onclick: go_back,
+                    title: "Back",
+                    style: if !can_back { "opacity:0.4;cursor:default;" } else { "" },
+                    sl-icon { "name": "arrow-left", style: "font-size:1rem;" }
+                }
+
+                // Forward button
+                button {
+                    r#type: "button",
+                    class: "bg-transparent border-none cursor-pointer p-1.5 rounded text-text-muted hover:text-primary transition-all",
+                    disabled: !can_fwd,
+                    onclick: go_forward,
+                    title: "Forward",
+                    style: if !can_fwd { "opacity:0.4;cursor:default;" } else { "" },
+                    sl-icon { "name": "arrow-right", style: "font-size:1rem;" }
+                }
+
+                // Reload button
+                button {
+                    r#type: "button",
+                    class: "bg-transparent border-none cursor-pointer p-1.5 rounded text-text-muted hover:text-primary transition-all",
+                    onclick: reload,
+                    title: "Reload",
+                    sl-icon { "name": "arrow-clockwise", style: "font-size:1rem;" }
+                }
+
                 form {
                     class: "flex-1 flex flex-row items-center px-4 py-1.5 bg-black/20 rounded-full border border-border/50 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/50 transition-all shadow-inner",
                     onsubmit: move |e| {

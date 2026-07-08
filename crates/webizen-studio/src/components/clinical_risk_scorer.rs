@@ -1,17 +1,7 @@
 use dioxus::prelude::*;
-use serde::{Deserialize, Serialize};
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
+use serde::Deserialize;
 
-use crate::components::qapp_engine::tauri_invoke;
-#[derive(Serialize)]
-struct FraminghamArgs {
-    age: u8,
-    sys_bp: f64,
-    tot_chol: f64,
-    hdl_chol: f64,
-    smoker: bool,
-}
+use crate::components::qapp_engine::invoke_json;
 
 #[derive(Deserialize, Default, Clone)]
 struct ClinicalRiskProps {
@@ -39,17 +29,16 @@ pub fn ClinicalRiskScorer() -> Element {
         let current_smoker = smoker.read().clone();
 
         async move {
-            if let Ok(args) = serde_wasm_bindgen::to_value(&FraminghamArgs {
-                age: current_age,
-                sys_bp: current_sys,
-                tot_chol: current_tot,
-                hdl_chol: current_hdl,
-                smoker: current_smoker,
-            }) {
-                if let Ok(res) = tauri_invoke("calculate_framingham_risk", args).await {
-                    if let Ok(parsed) = serde_wasm_bindgen::from_value::<ClinicalRiskProps>(res) {
-                        return parsed;
-                    }
+            let args = serde_json::json!({
+                "age": current_age,
+                "sys_bp": current_sys,
+                "tot_chol": current_tot,
+                "hdl_chol": current_hdl,
+                "smoker": current_smoker,
+            });
+            if let Ok(res) = invoke_json("calculate_framingham_risk", args).await {
+                if let Ok(parsed) = serde_json::from_value::<ClinicalRiskProps>(res) {
+                    return parsed;
                 }
             }
             ClinicalRiskProps::default()

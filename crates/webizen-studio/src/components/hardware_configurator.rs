@@ -44,18 +44,21 @@ pub fn HardwareConfigurator() -> Element {
 
     // 2. Token Vaporization (Runs once on component mount to strip session tokens from URL)
     use_effect(move || {
-        if let Some(window) = web_sys::window() {
-            let location = window.location();
-            let mut clean_url = location.pathname().unwrap_or_else(|_| "/".to_string());
-            if let Ok(hash) = location.hash() {
-                clean_url.push_str(&hash);
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(window) = web_sys::window() {
+                let location = window.location();
+                let mut clean_url = location.pathname().unwrap_or_else(|_| "/".to_string());
+                if let Ok(hash) = location.hash() {
+                    clean_url.push_str(&hash);
+                }
+                // Scrub qualia_token from the URL history
+                let _ = window.history().unwrap().replace_state_with_url(
+                    &wasm_bindgen::JsValue::NULL,
+                    "",
+                    Some(&clean_url),
+                );
             }
-            // Scrub qualia_token from the URL history
-            let _ = window.history().unwrap().replace_state_with_url(
-                &wasm_bindgen::JsValue::NULL,
-                "",
-                Some(&clean_url),
-            );
         }
     });
 

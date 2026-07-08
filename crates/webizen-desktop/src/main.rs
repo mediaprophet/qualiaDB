@@ -4,14 +4,16 @@
 )]
 
 use std::path::PathBuf;
-use tauri::menu::{MenuBuilder, MenuItem};
+use tauri::menu::{MenuBuilder, MenuItem, SubmenuBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Emitter, Manager};
+use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_updater::UpdaterExt;
 
 use webizen_desktop::{
     commands::{self, PreviewState, RenderLoopState},
     med_reminder_notifier::{self, MedReminderNotifierState},
+    native_surface::NativeSurfaceState,
     runtime::{spawn_runtime, RuntimeHandle},
     settings_server,
     telemetry_bridge,
@@ -61,6 +63,92 @@ fn render_preview_response(app: &tauri::AppHandle) -> ProtocolResponse {
     }
 }
 
+fn anatomy_body_response(app: &tauri::AppHandle) -> ProtocolResponse {
+    match app.try_state::<commands::AnatomyBodyState>() {
+        Some(state) => {
+            let bytes = state
+                .png
+                .lock()
+                .map(|guard| guard.clone())
+                .unwrap_or_default();
+            if bytes.is_empty() {
+                protocol_response(404, None, Vec::new())
+            } else {
+                protocol_response(200, Some("image/png"), bytes)
+            }
+        }
+        None => protocol_response(503, None, Vec::new()),
+    }
+}
+
+/// `webizen://localhost/anatomy/body.json` — the per-organ percepts + organ keys for the cached body,
+/// so the browser portal can paint each organ. Returns `{ model, cached, organ_count, percepts,
+/// unmapped }` (percepts = `[{ organ_key, system_id, percept: { system_id, sigma, rgba, frequency_hz }
+/// }]`). The model defaults to "male" if not specified.
+fn anatomy_body_json_response(app: &tauri::AppHandle) -> ProtocolResponse {
+    let host_state = match app.try_state::<commands::HostApiState>() {
+        Some(s) => s,
+        None => return protocol_response(503, None, Vec::new()),
+    };
+    let guard = match host_state.0.lock() {
+        Ok(g) => g,
+        Err(_) => return protocol_response(503, None, Vec::new()),
+    };
+    let host = match guard.as_ref() {
+        Some(h) => h,
+        None => return protocol_response(503, None, Vec::new()),
+    };
+    // Default to male; a future pass can read the model from a query param.
+    let model = "male";
+    let status = match host.body_assets_status(model) {
+        Ok(s) => s,
+        Err(_) => return protocol_response(500, None, Vec::new()),
+    };
+    if !status.cached {
+        return protocol_response(404, None, Vec::new());
+    }
+    let (painted, unmapped) = match host.cached_body_organ_percepts(model) {
+        Ok(p) => p,
+        Err(_) => return protocol_response(500, None, Vec::new()),
+    };
+    let body = serde_json::json!({
+        "model": status.model,
+        "cached": status.cached,
+        "organ_count": status.organ_count,
+        "percepts": painted,
+        "unmapped": unmapped,
+    });
+    match serde_json::to_vec(&body) {
+        Ok(bytes) => protocol_response(200, Some("application/json"), bytes),
+        Err(_) => protocol_response(500, None, Vec::new()),
+    }
+}
+
+/// `webizen://localhost/anatomy/10d/{model}/{organ_key}` — one cached `.10d` file for the browser
+/// portal's `load_body_organs_colored`.
+fn anatomy_10d_response(
+    app: &tauri::AppHandle,
+    model: &str,
+    organ_key: &str,
+) -> ProtocolResponse {
+    let host_state = match app.try_state::<commands::HostApiState>() {
+        Some(s) => s,
+        None => return protocol_response(503, None, Vec::new()),
+    };
+    let guard = match host_state.0.lock() {
+        Ok(g) => g,
+        Err(_) => return protocol_response(503, None, Vec::new()),
+    };
+    let host = match guard.as_ref() {
+        Some(h) => h,
+        None => return protocol_response(503, None, Vec::new()),
+    };
+    match host.load_cached_organ_10d(model, organ_key) {
+        Ok(bytes) => protocol_response(200, Some("application/octet-stream"), bytes),
+        Err(_) => protocol_response(404, None, Vec::new()),
+    }
+}
+
 fn webizen_protocol_response(
     app: &tauri::AppHandle,
     request: &tauri::http::Request<Vec<u8>>,
@@ -77,6 +165,11 @@ fn webizen_protocol_response(
             Err(_) => protocol_response(400, None, Vec::new()),
         },
         ["render", "preview.png"] => render_preview_response(app),
+        ["anatomy", "body.png"] => anatomy_body_response(app),
+        ["anatomy", "body.json"] => anatomy_body_json_response(app),
+        ["anatomy", "10d", model, organ_key] => {
+            anatomy_10d_response(app, model, organ_key)
+        }
         _ => protocol_response(404, None, Vec::new()),
     }
 }
@@ -128,6 +221,7 @@ fn main() {
         })
         .manage(app_state.clone())
         .manage(PreviewState::default())
+        .manage(commands::AnatomyBodyState::default())
         .manage(RenderLoopState(std::sync::Arc::new(
             std::sync::atomic::AtomicBool::new(false),
         )))
@@ -142,44 +236,200 @@ fn main() {
         .manage(commands::HostApiState(host_api_state.clone()))
         .manage(commands::MeshState::default())
         .manage(MedReminderNotifierState::default())
+        .manage(std::sync::Arc::new(NativeSurfaceState::default()))
         .setup(move |app| {
             let handle = app.handle();
             med_reminder_notifier::spawn_med_reminder_poller(handle.clone());
             let daemon_status_item =
-                MenuItem::with_id(app, "daemon_status", "Daemon Status", true, None::<&str>)?;
+                MenuItem::with_id(app, "daemon_status", "Daemon: starting…", true, None::<&str>)?;
+
+            // ── Sanctuary submenu ─────────────────────────────────────────────
+            let sanctuary_menu = SubmenuBuilder::new(app, "Sanctuary")
+                .text("sanctuary_lock", "Lock Sanctuary")
+                .text("sanctuary_unlock", "Unlock Sanctuary…")
+                .separator()
+                .text("sanctuary_status", "Vault Status")
+                .build()?;
+
+            // ── Daemon submenu ────────────────────────────────────────────────
+            let daemon_menu = SubmenuBuilder::new(app, "Daemon")
+                .item(&daemon_status_item)
+                .separator()
+                .text("daemon_restart", "Restart Daemon")
+                .text("daemon_stop", "Stop Daemon")
+                .build()?;
+
+            // ── Health submenu ────────────────────────────────────────────────
+            let health_menu = SubmenuBuilder::new(app, "Health")
+                .text("health_med_reminders", "Due Medication Reminders")
+                .separator()
+                .text("health_backup", "Quick Backup…")
+                .text("health_diagnostics", "Diagnostics")
+                .build()?;
+
+            // ── Sync submenu ──────────────────────────────────────────────────
+            let sync_menu = SubmenuBuilder::new(app, "Sync")
+                .text("sync_relay", "Sync with Relay")
+                .text("sync_inbox", "View Sync Inbox")
+                .build()?;
+
+            // ── Help submenu ──────────────────────────────────────────────────
+            let help_menu = SubmenuBuilder::new(app, "Help")
+                .text("help_about", "About Webizen")
+                .text("help_update", "Check for Updates")
+                .separator()
+                .text("help_logs", "View Logs")
+                .text("help_portal", "Open Settings Portal")
+                .build()?;
+
             let tray_menu = MenuBuilder::new(app)
                 .text("show", "Open Webizen Studio")
                 .separator()
+                .item(&sanctuary_menu)
+                .item(&daemon_menu)
+                .item(&health_menu)
+                .item(&sync_menu)
+                .separator()
                 .text("settings", "Settings")
-                .text("logs", "View Logs")
-                .text("localhost_preview", "Open Settings Portal")
+                .text("toggle_ambient", "Toggle Ambient Visualization")
                 .separator()
                 .text("revoke", "Revoke Sessions")
                 .separator()
-                .item(&daemon_status_item)
-                .text("toggle_ambient", "Toggle Ambient Visualization")
+                .item(&help_menu)
                 .separator()
                 .text("quit", "Quit")
                 .build()?;
+
             let tx_for_tray = tx.clone();
+            let tray_icon = tauri::image::Image::from_bytes(include_bytes!("../icons/32x32.png"))
+                .expect("failed to load tray icon");
             TrayIconBuilder::with_id("main")
+                .icon(tray_icon)
+                .tooltip("Webizen Desktop")
                 .menu(&tray_menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(move |app, event| match event.id().as_ref() {
-                    "show" | "logs" => show_main_window(app),
+                    // ── Window ─────────────────────────────────────────────────
+                    "show" => show_main_window(app),
                     "settings" => {
                         show_main_window(app);
                         let _ = app.emit("open-settings", "settings");
                     }
-                    "localhost_preview" => {
-                        let _ = open::that("http://127.0.0.1:8080/");
+
+                    // ── Sanctuary ──────────────────────────────────────────────
+                    "sanctuary_lock" => {
+                        match commands::wellfair_lock_sanctuary(app.clone()) {
+                            Ok(_) => {
+                                let _ = app.emit("sanctuary-locked", ());
+                                eprintln!("Sanctuary locked via tray");
+                            }
+                            Err(e) => eprintln!("Sanctuary lock via tray failed: {e}"),
+                        }
                     }
+                    "sanctuary_unlock" => {
+                        // Unlock requires a PIN — open the window and let the UI handle it.
+                        show_main_window(app);
+                        let _ = app.emit("open-sanctuary-unlock", ());
+                    }
+                    "sanctuary_status" => {
+                        show_main_window(app);
+                        let _ = app.emit("open-sanctuary-status", ());
+                    }
+
+                    // ── Daemon ─────────────────────────────────────────────────
+                    "daemon_restart" => {
+                        let _ = tx_for_tray.try_send("RESTART".to_string());
+                        eprintln!("Daemon restart requested via tray");
+                    }
+                    "daemon_stop" => {
+                        let _ = tx_for_tray.try_send("STOP".to_string());
+                        eprintln!("Daemon stop requested via tray");
+                    }
+
+                    // ── Health ────────────────────────────────────────────────
+                    "health_med_reminders" => {
+                        show_main_window(app);
+                        let _ = app.emit("open-med-reminders", ());
+                    }
+                    "health_backup" => {
+                        show_main_window(app);
+                        let _ = app.emit("open-backup", ());
+                    }
+                    "health_diagnostics" => {
+                        match commands::wellfair_diagnostics(app.clone()) {
+                            Ok(json) => {
+                                show_main_window(app);
+                                let _ = app.emit("diagnostics-result", json);
+                            }
+                            Err(e) => eprintln!("Diagnostics via tray failed: {e}"),
+                        }
+                    }
+
+                    // ── Sync ──────────────────────────────────────────────────
+                    "sync_relay" => {
+                        match commands::wellfair_sync_with_relay(app.clone(), "http://127.0.0.1:4242".to_string(), 0) {
+                            Ok(msg) => eprintln!("Sync relay via tray: {msg}"),
+                            Err(e) => eprintln!("Sync relay via tray failed: {e}"),
+                        }
+                    }
+                    "sync_inbox" => {
+                        show_main_window(app);
+                        let _ = app.emit("open-sync-inbox", ());
+                    }
+
+                    // ── Ambient ───────────────────────────────────────────────
+                    "toggle_ambient" => {
+                        if let Some(bridge) =
+                            app.try_state::<telemetry_bridge::TelemetryBridge>()
+                        {
+                            let new_state = bridge.toggle();
+                            eprintln!(
+                                "Ambient visualization: {}",
+                                if new_state { "enabled" } else { "disabled" }
+                            );
+                        }
+                    }
+
+                    // ── Sessions ──────────────────────────────────────────────
                     "revoke" => {
                         let _ = tx_for_tray.try_send("REVOKE".to_string());
                     }
-                    "toggle_ambient" => {
-                        let _ = tx_for_tray.try_send("TOGGLE_AMBIENT".to_string());
+
+                    // ── Help ──────────────────────────────────────────────────
+                    "help_about" => {
+                        let version = env!("CARGO_PKG_VERSION");
+                        let _ = app.dialog().message(
+                            format!(
+                                "Webizen Desktop — v{version}\n\nThe flagship local desktop application for the QualiaDB / Webizen / WellFair ecosystem.\n\nLocal crates: qualia-core-db, qualia-client-core, wellfare-core, qualia-cooperative-core, webizen-runtime, webizen-render, webizen-studio, qualia-semantic-library"
+                            ),
+                        );
                     }
+                    "help_update" => {
+                        let upd_h = app.clone();
+                        tauri::async_runtime::spawn(async move {
+                            match upd_h.updater() {
+                                Ok(updater) => {
+                                    match updater.check().await {
+                                        Ok(Some(update)) => {
+                                            eprintln!("Update available: {} — downloading…", update.version);
+                                            let _ = update.download_and_install(|_, _| {}, || {}).await;
+                                        }
+                                        Ok(None) => {
+                                            eprintln!("No updates available");
+                                        }
+                                        Err(e) => eprintln!("Update check failed: {e}"),
+                                    }
+                                }
+                                Err(e) => eprintln!("Updater not available: {e}"),
+                            }
+                        });
+                    }
+                    "help_logs" => show_main_window(app),
+                    "help_portal" => {
+                        let _ = open::that("http://127.0.0.1:8080/");
+                    }
+
+                    // ── Quit ──────────────────────────────────────────────────
                     "quit" => app.exit(0),
                     _ => {}
                 })
@@ -203,7 +453,9 @@ fn main() {
                 eprintln!("Qapp loopback asset server failed to start: {e}");
             }
 
-            qualia_client_core::local_job_scheduler::LocalJobScheduler::spawn_global_worker();
+            qualia_client_core::local_job_scheduler::LocalJobScheduler::spawn_global_worker(
+                Some(tauri::async_runtime::handle().inner().clone()),
+            );
 
             if let Ok(kv) = app_state.key_vault.lock() {
                 if !kv.is_locked() {
@@ -237,6 +489,9 @@ fn main() {
                     }
                 }
             }
+
+            // Store the app handle for the settings server's invoke proxy
+            let _ = settings_server::APP_HANDLE.set(app.handle().clone());
 
             let settings_port =
                 settings_server::spawn_settings_server(app_state.clone(), host_api_state.clone());
@@ -359,21 +614,24 @@ fn main() {
                 )
                 .await;
 
-                // Forward tray commands to daemon
+                // Forward tray commands to daemon. RESTART and STOP are handled here;
+                // other commands (REVOKE, etc.) are forwarded to the daemon control channel.
                 while let Some(cmd) = rx.recv().await {
-                    // Ambient toggle temporarily disabled - commands not properly configured
-                    // if cmd == "TOGGLE_AMBIENT" {
-                    //     if let Some(bridge) =
-                    //         bridge_handle_tray.try_state::<telemetry_bridge::TelemetryBridge>()
-                    //     {
-                    //         let new_state = bridge.toggle();
-                    //         eprintln!(
-                    //             "Ambient visualization: {}",
-                    //             if new_state { "enabled" } else { "disabled" }
-                    //         );
-                    //     }
-                    // }
-                    let _ = control_tx.send(cmd).await;
+                    match cmd.as_str() {
+                        "STOP" => {
+                            eprintln!("Daemon stop requested via tray — forwarding STOP to daemon");
+                            let _ = control_tx.send("STOP".to_string()).await;
+                            *flag.lock().unwrap() = false;
+                            let _ = daemon_status_for_runtime.set_text("Daemon: stopped");
+                        }
+                        "RESTART" => {
+                            eprintln!("Daemon restart requested via tray — forwarding RESTART to daemon");
+                            let _ = control_tx.send("RESTART".to_string()).await;
+                        }
+                        _ => {
+                            let _ = control_tx.send(cmd).await;
+                        }
+                    }
                 }
 
                 *flag.lock().unwrap() = false;

@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use crate::components::qapp_engine::tauri_invoke;
+use crate::components::qapp_engine::invoke_json;
 
 /// Anatomy Project stress test component
 ///
@@ -14,46 +14,26 @@ pub fn AnatomyTest() -> Element {
         is_running.set(true);
         test_result.set("Running IPC handshake test...".to_string());
 
-        // TODO: Implement Tauri command invocation
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            // Tauri invocation will be added here
-            dioxus::prelude::spawn(async move {
-                match tauri_invoke("test_ccf_ipc_handshake", wasm_bindgen::JsValue::NULL).await {
-                    Ok(val) => test_result.set(val.as_string().unwrap_or("Success".to_string())),
-                    Err(e) => test_result.set(format!("Error: {:?}", e)),
-                }
-                is_running.set(false);
-            });
-        }
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            test_result.set("IPC handshake test: Not available in WASM environment".to_string());
+        spawn(async move {
+            match invoke_json("test_ccf_ipc_handshake", serde_json::json!({})).await {
+                Ok(val) => test_result.set(val.as_str().unwrap_or("Success").to_string()),
+                Err(e) => test_result.set(format!("Error: {}", e)),
+            }
             is_running.set(false);
-        }
+        });
     };
 
     let run_larynx_smoke = move |_| {
         is_running.set(true);
         test_result.set("Running Larynx smoke test (335KB)...".to_string());
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            dioxus::prelude::spawn(async move {
-                match tauri_invoke("test_larynx_smoke", wasm_bindgen::JsValue::NULL).await {
-                    Ok(val) => test_result.set(val.as_string().unwrap_or("Success".to_string())),
-                    Err(e) => test_result.set(format!("Error: {:?}", e)),
-                }
-                is_running.set(false);
-            });
-        }
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            test_result.set("Larynx smoke test: Not available in WASM environment".to_string());
+        spawn(async move {
+            match invoke_json("test_larynx_smoke", serde_json::json!({})).await {
+                Ok(val) => test_result.set(val.as_str().unwrap_or("Success").to_string()),
+                Err(e) => test_result.set(format!("Error: {}", e)),
+            }
             is_running.set(false);
-        }
+        });
     };
 
     let run_vasculature_stress = move |_| {
@@ -61,23 +41,13 @@ pub fn AnatomyTest() -> Element {
         test_result
             .set("Running Vasculature stress test (18MB) with memory profiling...".to_string());
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            dioxus::prelude::spawn(async move {
-                match tauri_invoke("test_vasculature_stress", wasm_bindgen::JsValue::NULL).await {
-                    Ok(val) => test_result.set(val.as_string().unwrap_or("Success".to_string())),
-                    Err(e) => test_result.set(format!("Error: {:?}", e)),
-                }
-                is_running.set(false);
-            });
-        }
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            test_result
-                .set("Vasculature stress test: Not available in WASM environment".to_string());
+        spawn(async move {
+            match invoke_json("test_vasculature_stress", serde_json::json!({})).await {
+                Ok(val) => test_result.set(val.as_str().unwrap_or("Success").to_string()),
+                Err(e) => test_result.set(format!("Error: {}", e)),
+            }
             is_running.set(false);
-        }
+        });
     };
 
     rsx! {

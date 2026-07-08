@@ -1,19 +1,7 @@
 use dioxus::prelude::*;
-use serde::{Deserialize, Serialize};
-use wasm_bindgen::prelude::*;
+use serde::Deserialize;
 
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    pub async fn tauri_invoke(cmd: &str, args: JsValue) -> Result<JsValue, JsValue>;
-}
-
-#[derive(Serialize)]
-struct RiskArgs {
-    portfolio_value: f64,
-    volatility: f64,
-    time_horizon: f64,
-}
+use crate::components::qapp_engine::invoke_json;
 
 #[derive(Deserialize, Default, Clone)]
 struct RiskProps {
@@ -52,15 +40,14 @@ pub fn RiskEngine() -> Element {
         let current_time = time_horizon.read().clone();
         
         async move {
-            if let Ok(args) = serde_wasm_bindgen::to_value(&RiskArgs {
-                portfolio_value: current_val,
-                volatility: current_vol,
-                time_horizon: current_time,
-            }) {
-                if let Ok(res) = tauri_invoke("calculate_monte_carlo_var", args).await {
-                    if let Ok(parsed) = serde_wasm_bindgen::from_value::<RiskProps>(res) {
-                        return parsed;
-                    }
+            let args = serde_json::json!({
+                "portfolio_value": current_val,
+                "volatility": current_vol,
+                "time_horizon": current_time,
+            });
+            if let Ok(res) = invoke_json("calculate_monte_carlo_var", args).await {
+                if let Ok(parsed) = serde_json::from_value::<RiskProps>(res) {
+                    return parsed;
                 }
             }
             RiskProps::default()

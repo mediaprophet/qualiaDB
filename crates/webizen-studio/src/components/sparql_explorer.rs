@@ -1,10 +1,6 @@
 use dioxus::prelude::*;
 
-#[wasm_bindgen::prelude::wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen::prelude::wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    pub async fn tauri_invoke(cmd: &str, args: wasm_bindgen::JsValue) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
-}
+use crate::components::qapp_engine::invoke_json;
 
 #[component]
 pub fn SparqlExplorer() -> Element {
@@ -18,14 +14,12 @@ pub fn SparqlExplorer() -> Element {
     let run_query = move |_| {
         is_loading.set(true);
         spawn(async move {
-            let js_args = serde_json::json!({
+            let args = serde_json::json!({
                 "query": query.read().clone(),
             });
-            
-            let js_value = serde_wasm_bindgen::to_value(&js_args).unwrap();
-            
-            if let Ok(res) = tauri_invoke("execute_sparql_query", js_value).await {
-                if let Ok(data) = serde_wasm_bindgen::from_value::<Vec<(String, String, String)>>(res) {
+
+            if let Ok(res) = invoke_json("execute_sparql_query", args).await {
+                if let Ok(data) = serde_json::from_value::<Vec<(String, String, String)>>(res) {
                     results.set(data);
                 } else {
                     results.set(vec![("Error parsing response".to_string(), "".to_string(), "".to_string())]);

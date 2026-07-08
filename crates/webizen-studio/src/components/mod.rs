@@ -17,6 +17,8 @@ pub mod qapps;
 pub mod render_preview;
 pub mod scene_interaction;
 pub mod shoelace;
+pub mod ten_d_browser;
+pub mod native_gpu_viewport;
 
 // 10D Integration Components
 // Fixed: Renamed .rsx files to .rs for Rust module system compatibility

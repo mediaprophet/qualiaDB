@@ -1,11 +1,6 @@
 use dioxus::prelude::*;
 
-
-#[wasm_bindgen::prelude::wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen::prelude::wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    pub async fn tauri_invoke(cmd: &str, args: wasm_bindgen::JsValue) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
-}
+use crate::components::qapp_engine::invoke_json;
 
 #[component]
 pub fn ProvenanceGraph() -> Element {
@@ -15,17 +10,16 @@ pub fn ProvenanceGraph() -> Element {
     use_effect(move || {
         spawn(async move {
             let query = "SELECT ?s ?p ?o WHERE { ?s ?p ?o . FILTER(?p = <urn:prov:wasGeneratedBy> || ?p = <urn:prov:wasAssociatedWith>) }";
-            if let Ok(js_val) = serde_wasm_bindgen::to_value(&serde_json::json!({"query": query})) {
-                if let Ok(res) = tauri_invoke("execute_sparql_query", js_val).await {
-                    if let Ok(triples) = serde_wasm_bindgen::from_value::<Vec<(String, String, String)>>(res) {
-                        let mut n = Vec::new();
-                        for t in triples.iter() {
-                            if !n.contains(&(t.0.clone(), "Entity".to_string())) { n.push((t.0.clone(), "Entity".to_string())); }
-                            if !n.contains(&(t.2.clone(), "Target".to_string())) { n.push((t.2.clone(), "Target".to_string())); }
-                        }
-                        nodes.set(n);
-                        edges.set(triples);
+            let args = serde_json::json!({"query": query});
+            if let Ok(res) = invoke_json("execute_sparql_query", args).await {
+                if let Ok(triples) = serde_json::from_value::<Vec<(String, String, String)>>(res) {
+                    let mut n = Vec::new();
+                    for t in triples.iter() {
+                        if !n.contains(&(t.0.clone(), "Entity".to_string())) { n.push((t.0.clone(), "Entity".to_string())); }
+                        if !n.contains(&(t.2.clone(), "Target".to_string())) { n.push((t.2.clone(), "Target".to_string())); }
                     }
+                    nodes.set(n);
+                    edges.set(triples);
                 }
             }
         });

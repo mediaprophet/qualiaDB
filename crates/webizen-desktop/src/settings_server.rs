@@ -8,7 +8,7 @@ use axum::{
     http::{header, HeaderMap, StatusCode},
     response::{
         sse::{Event, KeepAlive, Sse},
-        IntoResponse,
+        IntoResponse, Response,
     },
     routing::{get, post},
     Json, Router,
@@ -108,11 +108,47 @@ fn static_portal_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("static/portal")
 }
 
+/// Directory where the Studio WASM build is served from.
+/// The `dx build --release` command outputs to `target/dx/webizen-studio/release/web/public/`.
+/// A build script or manual copy step places the assets in `static/studio-wasm/`.
+fn studio_wasm_dir() -> PathBuf {
+    // Check for a manual override first
+    if let Ok(dir) = std::env::var("QUALIA_STUDIO_WASM_DIR") {
+        return PathBuf::from(dir);
+    }
+    // Default: look for the Studio WASM build in the target directory
+    let target_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent() // crates/
+        .and_then(|p| p.parent()) // project root
+        .map(|root| root.join("target/dx/webizen-studio/release/web/public"))
+        .unwrap_or_else(|| PathBuf::from("target/dx/webizen-studio/release/web/public"));
+    if target_dir.is_dir() {
+        return target_dir;
+    }
+    // Fallback: static/studio-wasm (populated by a build script)
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("static/studio-wasm")
+}
+
 pub fn spawn_settings_server(
     app_state: Arc<AppState>,
     host_api: crate::companion_gateway::HostApiHandle,
 ) -> u16 {
-    let port = find_open_port("0.0.0.0", DEFAULT_SETTINGS_PORT);
+    // Use the user-configured port from AgentConfig, or auto-find if set to 0
+    let configured_port = app_state.config.lock().unwrap().settings_port;
+    let port = if configured_port > 0 {
+        // Try the user-specified port; if it's taken, fall back to auto-find
+        if std::net::TcpListener::bind(("0.0.0.0", configured_port)).is_ok() {
+            configured_port
+        } else {
+            eprintln!(
+                "Settings port {} is in use, auto-finding an open port...",
+                configured_port
+            );
+            find_open_port("0.0.0.0", DEFAULT_SETTINGS_PORT)
+        }
+    } else {
+        find_open_port("0.0.0.0", DEFAULT_SETTINGS_PORT)
+    };
     let storage_path = app_state.config.lock().unwrap().storage_path.clone();
     let initial_manifest = load_persisted_manifest(&storage_path);
     let state = SettingsServerState {
@@ -151,12 +187,11 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/manifest/history", get(get_manifest_history_handler))
         .route("/manifest/undo-chain", get(get_manifest_undo_chain_handler))
         .route("/manifest/undo-frame", post(post_manifest_undo_frame_handler))
-        .route("/manifest/replay/:revision", post(replay_manifest_handler))
         .route("/manifest/replay/{revision}", post(replay_manifest_handler))
         .route("/telemetry", get(telemetry_handler))
         .route("/api/jobs", get(list_jobs_handler).post(enqueue_job_handler))
-        .route("/api/jobs/:id", get(get_job_handler))
-        .route("/api/jobs/:id/cancel", post(cancel_job_handler))
+        .route("/api/jobs/{id}", get(get_job_handler))
+        .route("/api/jobs/{id}/cancel", post(cancel_job_handler))
         .route("/api/telemetry", get(system_telemetry_handler))
         .route("/api/sparql/endpoints", get(sparql_endpoints_handler))
         .route("/api/sparql/query", post(sparql_query_handler))
@@ -171,7 +206,10 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/mobile/stream", get(companion_ws_route))
         .route("/mobile/qr", get(companion_qr_route))
         .route("/api/wellfair/companion/pairing", get(companion_pairing_route))
-        .nest_service("/", ServeDir::new(static_root).append_index_html_on_directories(true))
+        .route("/api/invoke/{cmd}", post(invoke_command_handler))
+        // Studio WASM build — browser-accessible Studio UI at /studio/
+        .nest_service("/studio", ServeDir::new(studio_wasm_dir()).append_index_html_on_directories(true))
+        .fallback_service(ServeDir::new(static_root).append_index_html_on_directories(true))
         .layer(CorsLayer::permissive())
         .with_state(state);
 
@@ -195,6 +233,104 @@ async fn health_handler(State(state): State<SettingsServerState>) -> Json<Health
         port,
     })
 }
+
+/// Generic command invocation proxy — allows the native Studio (and any
+/// browser client) to call any Tauri command via REST.
+///
+/// POST /api/invoke/{cmd} with JSON body → command result as JSON
+///
+/// This dispatches through the webview's `on_message` IPC handler, which
+/// routes to the same `generate_handler!` registry that the webview uses.
+async fn invoke_command_handler(
+    _state: State<SettingsServerState>,
+    Path(cmd): Path<String>,
+    Json(body): Json<serde_json::Value>,
+) -> Response {
+    use tauri::Manager;
+
+    let app = APP_HANDLE.get();
+    let Some(handle) = app else {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "App handle not initialised",
+        )
+            .into_response();
+    };
+
+    // Get the main webview — commands are dispatched through it
+    let webview = match handle.get_webview_window("main") {
+        Some(w) => w,
+        None => {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Main webview not found",
+            )
+                .into_response();
+        }
+    };
+
+    // Build the IPC request — use the actual invoke key from the app handle
+    let invoke_key = handle.invoke_key().to_string();
+    let url = if cfg!(windows) || cfg!(target_os = "android") {
+        "http://tauri.localhost"
+    } else {
+        "tauri://localhost"
+    };
+    let request = tauri::webview::InvokeRequest {
+        cmd: cmd.clone(),
+        body: tauri::ipc::InvokeBody::Json(body),
+        headers: Default::default(),
+        url: url.parse().unwrap_or_else(|_| "http://tauri.localhost".parse().unwrap()),
+        invoke_key,
+        callback: tauri::ipc::CallbackFn(0),
+        error: tauri::ipc::CallbackFn(1),
+    };
+
+    // Dispatch through the webview's on_message handler.
+    // Use a tokio oneshot channel so we can await the result without blocking
+    // the async runtime — on_message schedules the callback on the event loop.
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    webview.on_message(
+        request,
+        Box::new(move |_window, _cmd, response, _callback, _error| {
+            let _ = tx.send(response);
+        }),
+    );
+
+    // Await the result with a 10-second timeout
+    let result = tokio::time::timeout(std::time::Duration::from_secs(10), rx).await;
+    match result {
+        Ok(Ok(tauri::ipc::InvokeResponse::Ok(body))) => {
+            let json = match body {
+                tauri::ipc::InvokeResponseBody::Json(s) => {
+                    serde_json::from_str::<serde_json::Value>(&s)
+                        .unwrap_or(serde_json::Value::Null)
+                }
+                tauri::ipc::InvokeResponseBody::Raw(bytes) => {
+                    serde_json::from_slice::<serde_json::Value>(&bytes)
+                        .unwrap_or(serde_json::Value::Null)
+                }
+            };
+            Json(json).into_response()
+        }
+        Ok(Ok(tauri::ipc::InvokeResponse::Err(e))) => {
+            let err_val = e.0;
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(err_val)).into_response()
+        }
+        Ok(Err(_)) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Command '{cmd}' channel closed"),
+        )
+            .into_response(),
+        Err(_) => (
+            StatusCode::REQUEST_TIMEOUT,
+            format!("Command '{cmd}' timed out (10s)"),
+        )
+            .into_response(),
+    }
+}
+
+pub static APP_HANDLE: std::sync::OnceLock<tauri::AppHandle> = std::sync::OnceLock::new();
 
 async fn status_handler(State(state): State<SettingsServerState>) -> Json<StatusResponse> {
     let config = state.app_state.config.lock().unwrap().clone();

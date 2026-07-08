@@ -1,13 +1,7 @@
 use dioxus::prelude::*;
-use serde::{Deserialize, Serialize};
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
+use serde::Deserialize;
 
-use crate::components::qapp_engine::tauri_invoke;
-#[derive(Serialize)]
-struct ChemistryArgs {
-    smiles: String,
-}
+use crate::components::qapp_engine::invoke_json;
 
 #[derive(Deserialize, Default, Clone)]
 struct ChemistryProps {
@@ -22,11 +16,10 @@ pub fn ChemistryModeler() -> Element {
     let props_resource = use_resource(move || {
         let current_smiles = smiles.read().clone();
         async move {
-            if let Ok(args) = serde_wasm_bindgen::to_value(&ChemistryArgs { smiles: current_smiles }) {
-                if let Ok(res) = tauri_invoke("calculate_chemistry_properties", args).await {
-                    if let Ok(parsed) = serde_wasm_bindgen::from_value::<ChemistryProps>(res) {
-                        return parsed;
-                    }
+            let args = serde_json::json!({ "smiles": current_smiles });
+            if let Ok(res) = invoke_json("calculate_chemistry_properties", args).await {
+                if let Ok(parsed) = serde_json::from_value::<ChemistryProps>(res) {
+                    return parsed;
                 }
             }
             ChemistryProps::default()

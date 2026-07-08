@@ -25,7 +25,7 @@ pub const FABRIC_SHARED: u32 = 1;
 
 /// System telemetry for ambient / projector shaders (`#[repr(C)]`, 48 bytes).
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default, Pod, Zeroable)]
+#[derive(Clone, Copy, Debug, Default, Pod, Zeroable, serde::Serialize, serde::Deserialize)]
 pub struct SystemTelemetry {
     pub memory_pressure: f32,
     pub network_ripple: f32,

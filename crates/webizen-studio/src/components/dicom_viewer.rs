@@ -1,10 +1,6 @@
 use dioxus::prelude::*;
 
-#[wasm_bindgen::prelude::wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen::prelude::wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    pub async fn tauri_invoke(cmd: &str, args: wasm_bindgen::JsValue) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
-}
+use crate::components::qapp_engine::invoke_json;
 
 #[component]
 pub fn DicomViewer() -> Element {
@@ -20,13 +16,11 @@ pub fn DicomViewer() -> Element {
         spawn(async move {
             // Using the slice index as a slot mock for diffusion_frame
             let args = serde_json::json!({ "slot": (current_slice % 8) as u8 });
-            if let Ok(js_val) = serde_wasm_bindgen::to_value(&args) {
-                if let Ok(res) = tauri_invoke("get_diffusion_frame_rgba", js_val).await {
-                    if let Ok(data) = serde_wasm_bindgen::from_value::<Vec<u8>>(res) {
-                        use base64::Engine;
-                        let b64 = base64::engine::general_purpose::STANDARD.encode(&data);
-                        image_data_b64.set(format!("data:image/png;base64,{}", b64));
-                    }
+            if let Ok(res) = invoke_json("get_diffusion_frame_rgba", args).await {
+                if let Ok(data) = serde_json::from_value::<Vec<u8>>(res) {
+                    use base64::Engine;
+                    let b64 = base64::engine::general_purpose::STANDARD.encode(&data);
+                    image_data_b64.set(format!("data:image/png;base64,{}", b64));
                 }
             }
         });

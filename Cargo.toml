@@ -31,3 +31,10 @@ opt-level = "s"
 lto = true
 codegen-units = 1
 strip = "symbols"
+
+# Vendored imap-proto 0.10.2 with the trailing-semicolon-in-macro future-incompat lint fixed
+# (upstream imap 2.4.1 pins imap-proto ^0.10.0; the fix hasn't been published to crates.io for
+# the 0.10.x line, so we vendor + patch locally). Remove when imap publishes a 0.10.x fix or when
+# we upgrade to imap 3.x (which uses the imap-types ecosystem instead).
+[patch.crates-io]
+imap-proto = { path = "vendor/imap-proto" }

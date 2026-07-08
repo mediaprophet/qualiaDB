@@ -82,6 +82,15 @@ pub enum Route {
     #[route("/wellfair")]
     WellfairRoute {},
 
+    #[route("/chora")]
+    ChoraRoute {},
+
+    #[route("/10d-browser")]
+    TenDBrowserRoute {},
+
+    #[route("/gpu-viewport")]
+    GpuViewportRoute {},
+
     #[end_layout]
     #[route("/:..path")]
     DynamicPage { path: Vec<String> },
@@ -153,6 +162,25 @@ fn WellfairRoute() -> Element {
             components::wellfair::WellfairShell {}
         }
     }
+}
+
+#[component]
+fn ChoraRoute() -> Element {
+    rsx! {
+        components::wellfair::HostSnapshotProvider {
+            components::wellfair::WellfairChoraPanel {}
+        }
+    }
+}
+
+#[component]
+fn TenDBrowserRoute() -> Element {
+    rsx! { components::ten_d_browser::TenDBrowser {} }
+}
+
+#[component]
+fn GpuViewportRoute() -> Element {
+    rsx! { components::native_gpu_viewport::NativeGpuViewportPage {} }
 }
 
 #[component]
@@ -286,12 +314,6 @@ fn AppLayout() -> Element {
                         "Browser"
                     }
                 }
-                div {
-                    class: "nav-item",
-                    style: "color: {text_muted}; cursor: default;",
-                    sl-icon { "name": "robot", style: "font-size: 0.9rem;" }
-                    "Agents"
-                }
                 Link {
                     to: Route::ContextStudioRoute {},
                     class: "nav-item",
@@ -300,11 +322,32 @@ fn AppLayout() -> Element {
                     "Context Studio"
                 }
                 Link {
+                    to: Route::ChoraRoute {},
+                    class: "nav-item",
+                    style: "color: {text_muted};",
+                    sl-icon { "name": "globe-americas", style: "font-size: 0.9rem;" }
+                    "Chora"
+                }
+                Link {
                     to: Route::StudioRoute {},
                     class: "nav-item",
                     style: "color: {text_muted};",
                     sl-icon { "name": "layers", style: "font-size: 0.9rem;" }
                     "QApp Studio"
+                }
+                Link {
+                    to: Route::TenDBrowserRoute {},
+                    class: "nav-item",
+                    style: "color: {text_muted};",
+                    sl-icon { "name": "box", style: "font-size: 0.9rem;" }
+                    "10D Browser"
+                }
+                Link {
+                    to: Route::GpuViewportRoute {},
+                    class: "nav-item",
+                    style: "color: {text_muted};",
+                    sl-icon { "name": "gpu-card", style: "font-size: 0.9rem;" }
+                    "GPU Viewport"
                 }
                 Link {
                     to: Route::RenderPreviewRoute {},
@@ -319,12 +362,6 @@ fn AppLayout() -> Element {
                     style: "color: {text_muted};",
                     sl-icon { "name": "cursor", style: "font-size: 0.9rem;" }
                     "Scene Interaction"
-                }
-                div {
-                    class: "nav-item",
-                    style: "color: {text_muted}; cursor: default;",
-                    sl-icon { "name": "bar-chart-line", style: "font-size: 0.9rem;" }
-                    "Analytics"
                 }
 
                 div { style: "flex: 1;" }
