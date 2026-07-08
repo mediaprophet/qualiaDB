@@ -63,8 +63,11 @@ pub fn WellfairAgencyPanel() -> Element {
         consent: "granted".into(),
         ..Default::default()
     });
+    let mut init_done = use_signal(|| false);
 
     use_effect(move || {
+        if init_done() { return; }
+        init_done.set(true);
         spawn(reload(ui));
     });
 

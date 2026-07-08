@@ -36,8 +36,11 @@ pub fn WellfairDecoyRetentionPanel(real_pin: String) -> Element {
     // Hold the prop in a Copy signal so the async load/save closures can share it.
     let real_pin = use_signal(|| real_pin);
     let mut ui = use_signal(DecoyRetentionUi::default);
+    let mut init_done = use_signal(|| false);
 
     use_effect(move || {
+        if init_done() { return; }
+        init_done.set(true);
         spawn(async move {
             let pin = real_pin();
             match get_decoy_retention_mode(&pin).await {

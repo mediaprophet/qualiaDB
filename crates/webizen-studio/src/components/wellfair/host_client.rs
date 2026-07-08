@@ -36,8 +36,11 @@ pub async fn fetch_host_snapshot() -> WellfairHostSnapshot {
 #[component]
 pub fn HostSnapshotProvider(children: Element) -> Element {
     let mut snapshot = use_signal(WellfairHostSnapshot::default);
+    let mut loaded = use_signal(|| false);
 
     use_effect(move || {
+        if loaded() { return; }
+        loaded.set(true);
         spawn(async move {
             let next = fetch_host_snapshot().await;
             snapshot.set(next);

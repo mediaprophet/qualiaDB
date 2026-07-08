@@ -93,7 +93,13 @@ pub fn WellfairSafeguardsPanel() -> Element {
             }
         });
     };
-    use_effect(move || reload());
+    let mut loaded = use_signal(|| false);
+
+    use_effect(move || {
+        if loaded() { return; }
+        loaded.set(true);
+        reload();
+    });
 
     let do_arm_dm = move |_| {
         let (c, grace, parties, thr, disp, dparties) = (

@@ -24,6 +24,7 @@ struct SanctuaryUi {
 #[component]
 pub fn WellfairSanctuaryPanel() -> Element {
     let mut ui = use_signal(SanctuaryUi::default);
+    let mut loaded = use_signal(|| false);
 
     let reload = move || {
         spawn(async move {
@@ -41,6 +42,8 @@ pub fn WellfairSanctuaryPanel() -> Element {
     };
 
     use_effect(move || {
+        if loaded() { return; }
+        loaded.set(true);
         reload();
     });
 
@@ -225,8 +228,11 @@ struct VaultUi {
 #[component]
 pub fn WellfairSanctuaryVaultPanel() -> Element {
     let mut ui = use_signal(VaultUi::default);
+    let mut vault_loaded = use_signal(|| false);
 
     use_effect(move || {
+        if vault_loaded() { return; }
+        vault_loaded.set(true);
         spawn(async move {
             if let Ok(c) = sanctuary_vault_configured().await {
                 ui.write().configured = c;

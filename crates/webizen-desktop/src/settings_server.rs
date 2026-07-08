@@ -181,6 +181,7 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
 
     let app = Router::new()
         .route("/health", get(health_handler))
+        .route("/shell", get(shell_handler))
         .route("/api/status", get(status_handler))
         .route("/api/config", get(get_config_handler).post(save_config_handler))
         .route("/manifest", get(get_manifest_handler).post(post_manifest_handler))
@@ -232,6 +233,15 @@ async fn health_handler(State(state): State<SettingsServerState>) -> Json<Health
         service: "qualia-settings-portal",
         port,
     })
+}
+
+async fn shell_handler() -> Response {
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
+        .header(header::CACHE_CONTROL, "no-cache")
+        .body(crate::shell::shell_html::SHELL_HTML.to_string().into())
+        .unwrap()
 }
 
 /// Generic command invocation proxy — allows the native Studio (and any

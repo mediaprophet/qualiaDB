@@ -130,8 +130,11 @@ fn level_word(level: &str) -> &'static str {
 #[component]
 pub fn WellfairAnatomyPanel() -> Element {
     let mut ui = use_signal(|| AnatomyUi { lens: "person".to_string(), ..Default::default() });
+    let mut init_done = use_signal(|| false);
 
     use_effect(move || {
+        if init_done() { return; }
+        init_done.set(true);
         spawn(load(ui));
         spawn(load_phys_state(ui));
     });

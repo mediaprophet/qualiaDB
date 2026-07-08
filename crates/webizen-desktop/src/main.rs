@@ -240,6 +240,15 @@ fn main() {
         .setup(move |app| {
             let handle = app.handle();
             med_reminder_notifier::spawn_med_reminder_poller(handle.clone());
+
+            // ── Native application menu bar ──────────────────────────────────
+            let app_menu = webizen_desktop::shell::build_app_menu(&handle)?;
+            app.set_menu(app_menu)?;
+            let menu_handle = handle.clone();
+            app.on_menu_event(move |_app, event| {
+                webizen_desktop::shell::menu::handle_menu_event(&menu_handle, &event);
+            });
+
             let daemon_status_item =
                 MenuItem::with_id(app, "daemon_status", "Daemon: starting…", true, None::<&str>)?;
 
@@ -498,6 +507,13 @@ fn main() {
             eprintln!(
                 "Settings + companion gateway ready at http://127.0.0.1:{settings_port}/ (LAN ws://<host>:{settings_port}/mobile/stream)"
             );
+
+            // ── Navigate main window to the native shell ───────────────────
+            if let Some(window) = app.get_webview_window("main") {
+                let shell_url = format!("http://127.0.0.1:{settings_port}/shell");
+                let _ = window.eval(&format!("window.location.href = '{shell_url}'"));
+                eprintln!("Main window navigated to shell at {shell_url}");
+            }
 
             // Cold-path essentials: seed bundled ontologies when the queue is idle.
             if let Ok(job) = qualia_client_core::local_job_scheduler::LocalJobScheduler::global()

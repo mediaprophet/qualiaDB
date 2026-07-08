@@ -103,12 +103,20 @@ pub fn WellfairPersonalPanel() -> Element {
         });
     };
 
+    let mut prefs_loaded = use_signal(|| false);
+
     use_effect(move || {
+        if prefs_loaded() { return; }
+        prefs_loaded.set(true);
         let prefs = snapshot().accessibility.clone();
         state.write().prefs = prefs;
     });
 
+    let mut loaded = use_signal(|| false);
+
     use_effect(move || {
+        if loaded() { return; }
+        loaded.set(true);
         reload_profile_records();
         reload_contacts();
         spawn(async move {

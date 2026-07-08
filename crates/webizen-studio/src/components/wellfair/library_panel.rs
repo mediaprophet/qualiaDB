@@ -134,7 +134,13 @@ pub fn WellfairLibraryPanel() -> Element {
             }
         });
     };
-    use_effect(move || reload());
+    let mut loaded = use_signal(|| false);
+
+    use_effect(move || {
+        if loaded() { return; }
+        loaded.set(true);
+        reload();
+    });
 
     let do_ingest = move |_| {
         let (uri, media, text, binary, g) =

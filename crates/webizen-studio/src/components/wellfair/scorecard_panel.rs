@@ -99,7 +99,11 @@ pub fn WellfairScorecardPanel() -> Element {
         });
     };
 
+    let mut loaded = use_signal(|| false);
+
     use_effect(move || {
+        if loaded() { return; }
+        loaded.set(true);
         reload();
     });
 
@@ -128,6 +132,8 @@ pub fn WellfairScorecardPanel() -> Element {
         });
     };
     use_effect(move || {
+        if loaded() { return; }
+        loaded.set(true);
         load_model();
     });
 

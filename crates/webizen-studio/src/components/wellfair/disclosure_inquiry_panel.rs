@@ -70,7 +70,13 @@ pub fn WellfairDisclosureInquiryPanel() -> Element {
             }
         });
     };
-    use_effect(move || reload());
+    let mut loaded = use_signal(|| false);
+
+    use_effect(move || {
+        if loaded() { return; }
+        loaded.set(true);
+        reload();
+    });
 
     let do_cc = move |_| {
         let (c, a, p) = (cc_credential(), cc_authority(), cc_purpose());
