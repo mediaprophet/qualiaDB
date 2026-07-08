@@ -4,8 +4,8 @@
 //! Worlds are configurations, not engine forks (doc 02 §2).
 
 use super::chora_host_client::{
-    canvas_navigation, list_canvas_worlds, query_canvas_region, seed_canvas_demo,
-    set_active_canvas_world, set_canvas_temporal,
+    canvas_navigation, download_layer, list_canvas_worlds, list_layers, query_canvas_region,
+    seed_canvas_demo, set_active_canvas_world, set_canvas_temporal, set_gpu_camera_mode,
 };
 use dioxus::prelude::*;
 
@@ -20,6 +20,9 @@ pub fn WellfairChoraPanel() -> Element {
     let mut region_hits = use_signal(Vec::<serde_json::Value>::new);
     let mut status = use_signal(String::new);
     let mut temporal_t = use_signal(|| 1_750_000_000f64);
+    let mut layers = use_signal(Vec::<serde_json::Value>::new);
+    let mut downloading = use_signal(|| false);
+    let mut camera_mode = use_signal(|| "earth".to_string());
 
     let refresh = move || {
         spawn(async move {
@@ -31,6 +34,9 @@ pub fn WellfairChoraPanel() -> Element {
                     temporal_t.set(t);
                 }
                 nav.set(n);
+            }
+            if let Ok(l) = list_layers().await {
+                layers.set(l);
             }
         });
     };

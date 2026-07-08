@@ -33,6 +33,8 @@ pub struct NativeSurfaceState {
     pub camera_yaw: Mutex<f32>,
     pub camera_pitch: Mutex<f32>,
     pub camera_zoom: Mutex<f32>,
+    /// Camera mode: "earth" (close) or "space" (far) or "free"
+    pub camera_mode: Mutex<String>,
     /// Whether a mesh is loaded.
     pub mesh_loaded: AtomicBool,
 }
@@ -51,6 +53,7 @@ impl Default for NativeSurfaceState {
             camera_yaw: Mutex::new(0.0),
             camera_pitch: Mutex::new(-0.3),
             camera_zoom: Mutex::new(1.0),
+            camera_mode: Mutex::new("earth".to_string()),
             mesh_loaded: AtomicBool::new(false),
         }
     }
@@ -274,6 +277,29 @@ pub fn set_gpu_camera(
     *state.camera_yaw.lock().unwrap() = yaw;
     *state.camera_pitch.lock().unwrap() = pitch;
     *state.camera_zoom.lock().unwrap() = zoom;
+    Ok(())
+}
+
+/// Set camera mode: "earth" (close-up), "space" (far out, stars visible), "free" (manual).
+/// In "earth" mode, zoom is set to 1.0 (close). In "space" mode, zoom is set to 0.1 (far).
+#[tauri::command]
+pub fn set_gpu_camera_mode(
+    app: AppHandle,
+    mode: String,
+) -> Result<(), String> {
+    let state = app.state::<std::sync::Arc<NativeSurfaceState>>();
+    *state.camera_mode.lock().unwrap() = mode.clone();
+    match mode.as_str() {
+        "earth" => {
+            *state.camera_zoom.lock().unwrap() = 1.0;
+            *state.camera_pitch.lock().unwrap() = -0.3;
+        }
+        "space" => {
+            *state.camera_zoom.lock().unwrap() = 0.05;
+            *state.camera_pitch.lock().unwrap() = 0.0;
+        }
+        _ => {}
+    }
     Ok(())
 }
 

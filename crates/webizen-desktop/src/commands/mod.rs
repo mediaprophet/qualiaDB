@@ -6181,6 +6181,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         crate::native_surface::mount_gpu_surface,
         crate::native_surface::set_gpu_scene,
         crate::native_surface::set_gpu_camera,
+        crate::native_surface::set_gpu_camera_mode,
         crate::native_surface::upload_gpu_mesh,
         crate::native_surface::upload_gpu_mesh_colored,
         crate::native_surface::upload_gpu_10d_mesh,

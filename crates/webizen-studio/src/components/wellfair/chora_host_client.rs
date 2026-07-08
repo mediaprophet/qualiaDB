@@ -197,3 +197,51 @@ pub async fn pull_spatial_assets(cell_id: u64) -> Result<Vec<serde_json::Value>,
 pub async fn pull_spatial_assets(_cell_id: u64) -> Result<Vec<serde_json::Value>, String> {
     Err("Chora requires the Tauri desktop host".into())
 }
+
+// ── Layer library + asset download pipeline ─────────────────────────────────
+
+#[cfg(target_arch = "wasm32")]
+pub async fn list_layers() -> Result<Vec<serde_json::Value>, String> {
+    let js = tauri_invoke("chora_list_layers", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "layers response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn list_layers() -> Result<Vec<serde_json::Value>, String> {
+    Err("Chora requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn download_layer(layer_id: &str, resolution: u32) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"layerId".into(), &wasm_bindgen::JsValue::from_str(layer_id))
+        .map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"resolution".into(), &wasm_bindgen::JsValue::from_f64(resolution as f64))
+        .map_err(|_| "args".to_string())?;
+    let js = tauri_invoke("chora_download_layer", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "download response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn download_layer(_layer_id: &str, _resolution: u32) -> Result<serde_json::Value, String> {
+    Err("Chora requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn set_gpu_camera_mode(mode: &str) -> Result<(), String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"mode".into(), &wasm_bindgen::JsValue::from_str(mode))
+        .map_err(|_| "args".to_string())?;
+    tauri_invoke("set_gpu_camera_mode", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    Ok(())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn set_gpu_camera_mode(_mode: &str) -> Result<(), String> {
+    Err("Chora requires the Tauri desktop host".into())
+}
