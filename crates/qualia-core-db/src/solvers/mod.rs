@@ -5,10 +5,8 @@
 //! fixed-size stack arrays and maintain strict memory constraints.
 //!
 //! Enabled:
+//! - All native and WASM solver kernels
 //! - `qpu` — QPU problem formulation + in-process job queue (non-WASM only)
-//!
-//! Disabled (build errors to fix — broken ExecutionError/SolverState refs):
-//! - calculus, linear_algebra, optimization, quantum_optimizers, symbolic_logic
 //!
 //! (Note: this module is **not** actually `#![no_std]` — the `qpu` submodule pulls in
 //! std + tokio. The individual solver kernels are written to be no-std-compatible, but the
