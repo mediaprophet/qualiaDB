@@ -125,6 +125,7 @@ impl HypermediaStore {
             "place" => hypermedia::by_place(&all, value),
             "project" => hypermedia::in_project(&all, value),
             "purpose" => hypermedia::for_purpose(&all, value),
+            "target" => hypermedia::analytics_for(&all, qualia_core_db::q_hash::fnv60(value.as_bytes())),
             _ => Vec::new(),
         }
         .into_iter()

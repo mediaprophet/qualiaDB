@@ -15,6 +15,7 @@ use super::host_client::{
     ingest_document, ingest_file_hex, list_library, search_library, search_library_time, IngestFacets,
 };
 use dioxus::prelude::*;
+use crate::Route;
 
 fn str_field(v: &serde_json::Value, key: &str) -> String {
     v.get(key).and_then(|x| x.as_str()).unwrap_or("").to_string()
@@ -262,6 +263,28 @@ pub fn WellfairLibraryPanel() -> Element {
             p { style: "margin:0;font-size:0.7rem;color:var(--qualia-text-muted,#777);",
                 "Ingest an asset — it's processed to derive its meaning (a doc → topics; a photo → its EXIF date + GPS; a WAV → duration + pitch). Attach a date or place yourself to put anything on the timeline or map. Not a folder of files; a graph of meaning."
             }
+
+            // ── Operational Contexts (Quick Links) ──
+            div {
+                style: "display:flex; gap:0.5rem; flex-wrap:wrap; padding: 0.6rem 0; border-top: 1px dashed var(--qualia-border,#eee); border-bottom: 1px dashed var(--qualia-border,#eee);",
+                Link { to: Route::SanctuaryRoute {}, style: "text-decoration:none; display:flex; align-items:center; gap:0.3rem; padding:0.3rem 0.6rem; border-radius:6px; background:var(--qualia-surface-2,#fff); border:1px solid var(--qualia-border,#ddd); font-size:0.75rem; color:var(--qualia-text,#333);",
+                    sl-icon { "name": "safe" }
+                    "Secure Enclave"
+                }
+                Link { to: Route::WorkRoute {}, style: "text-decoration:none; display:flex; align-items:center; gap:0.3rem; padding:0.3rem 0.6rem; border-radius:6px; background:var(--qualia-surface-2,#fff); border:1px solid var(--qualia-border,#ddd); font-size:0.75rem; color:var(--qualia-text,#333);",
+                    sl-icon { "name": "wallet2" }
+                    "Wallet & Finance"
+                }
+                Link { to: Route::WorkRoute {}, style: "text-decoration:none; display:flex; align-items:center; gap:0.3rem; padding:0.3rem 0.6rem; border-radius:6px; background:var(--qualia-surface-2,#fff); border:1px solid var(--qualia-border,#ddd); font-size:0.75rem; color:var(--qualia-text,#333);",
+                    sl-icon { "name": "diagram-3" }
+                    "Cooperative Projects"
+                }
+                Link { to: Route::IdentityRoute {}, style: "text-decoration:none; display:flex; align-items:center; gap:0.3rem; padding:0.3rem 0.6rem; border-radius:6px; background:var(--qualia-surface-2,#fff); border:1px solid var(--qualia-border,#ddd); font-size:0.75rem; color:var(--qualia-text,#333);",
+                    sl-icon { "name": "journal-bookmark-fill" }
+                    "Social Directory"
+                }
+            }
+
             if !status().is_empty() {
                 p { style: "margin:0;font-size:0.76rem;color:var(--qualia-accent,#2b6);", "{status()}" }
             }

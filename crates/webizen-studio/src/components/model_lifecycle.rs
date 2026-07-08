@@ -1,8 +1,30 @@
 use dioxus::prelude::*;
+use crate::commands::invoke;
 
 #[component]
 pub fn ModelLifecycle() -> Element {
     let mut step = use_signal(|| 2);
+    let mut lifecycle_label_state = use_signal(|| "StreamingVRAM".to_string());
+
+    use_future(move || async move {
+        loop {
+            if let Ok(response) = invoke("wellfair_get_model_lifecycle_status", serde_wasm_bindgen::to_value(&()).unwrap()).await {
+                if let Some(state_str) = response.as_string() {
+                    lifecycle_label_state.set(state_str.clone());
+                    let new_step = match state_str.as_str() {
+                        "Discovered" => 0,
+                        "MappedToDisk" => 1,
+                        "StreamingVRAM" => 2,
+                        "Active" => 3,
+                        "Scrubbing" => 4,
+                        _ => 0,
+                    };
+                    step.set(new_step);
+                }
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        }
+    });
 
     rsx! {
         div { style: "padding: 2rem; background: #f8fafc; color: #0f172a; height: 100%; box-sizing: border-box; overflow-y: auto;",
@@ -23,7 +45,7 @@ pub fn ModelLifecycle() -> Element {
             }
 
             div { style: "background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;",
-                h3 { style: "margin-top: 0; font-size: 1.25rem;", "Current Phase: StreamingVRAM" }
+                h3 { style: "margin-top: 0; font-size: 1.25rem;", "Current Phase: {lifecycle_label_state()}" }
                 p { style: "color: #64748b; line-height: 1.5;", "The model weights are currently being asynchronously mapped to DirectML/wgpu buffers. The SLG Arena pointer map is active." }
 
                 div { style: "margin: 24px 0; background: #f1f5f9; height: 24px; border-radius: 12px; overflow: hidden;",
@@ -34,7 +56,15 @@ pub fn ModelLifecycle() -> Element {
 
                 div { style: "display: flex; gap: 12px;",
                     button { style: "padding: 10px 20px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;", "Abort Loading" }
-                    button { style: "padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;", onclick: move |_| { if step() < 4 { step += 1; } }, "Force Next Phase" }
+                    button { 
+                        style: "padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;", 
+                        onclick: move |_| { 
+                            let phase = if step() < 4 { step() + 1 } else { 0 };
+                            let args = serde_wasm_bindgen::to_value(&serde_json::json!({ "phase": phase })).unwrap();
+                            let _ = invoke("wellfair_force_model_lifecycle_phase", args);
+                        }, 
+                        "Force Next Phase" 
+                    }
                 }
             }
         }

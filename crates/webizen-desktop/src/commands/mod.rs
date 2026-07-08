@@ -731,13 +731,14 @@ pub fn wellfair_add_project(
     app: AppHandle,
     name: String,
     description: String,
+    licensing_ontologies: Vec<String>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     let mut guard = state.0.lock().map_err(|e| e.to_string())?;
     let host = guard
         .as_mut()
         .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let project = wellfare_core::projects::Project::new(name, description, wellfair_now_unix());
+    let project = wellfare_core::projects::Project::new(name, description, licensing_ontologies, wellfair_now_unix());
     let committed = host.add_project(&project)?;
     serde_json::to_string(&committed).map_err(|e| e.to_string())
 }
@@ -749,17 +750,30 @@ pub fn wellfair_add_contribution(
     contributor_did: String,
     description: String,
     effort_minutes: u32,
+    capital_cents: u64,
+    roi_multiplier: f32,
+    privacy_level: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     let mut guard = state.0.lock().map_err(|e| e.to_string())?;
     let host = guard
         .as_mut()
         .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    
+    let privacy = match privacy_level.as_str() {
+        "Private" => wellfare_core::projects::ContributionPrivacy::Private,
+        "Permissive" => wellfare_core::projects::ContributionPrivacy::Permissive,
+        _ => wellfare_core::projects::ContributionPrivacy::Public,
+    };
+
     let contribution = wellfare_core::projects::Contribution::new(
         project_id,
         contributor_did,
         description,
         effort_minutes,
+        capital_cents,
+        roi_multiplier,
+        privacy,
         wellfair_now_unix(),
     );
     let committed = host.add_contribution(&contribution)?;
@@ -3704,54 +3718,95 @@ pub async fn apply_semantic_handshake(
 }
 
 #[command]
-pub fn save_qlink(
+pub async fn save_qlink(
+    app: tauri::AppHandle,
     url: String,
     title: String,
     context_assertions: Option<Vec<serde_json::Value>>,
 ) -> Result<String, String> {
     use qualia_client_core::state::{config_file_path, AgentConfig};
     use std::fs;
+    use scraper::{Html, Selector};
+    use tauri::Manager;
 
+    let mut final_title = title.clone();
+    let mut description = String::new();
+    let mut extracted_content = String::new();
+    
+    if let Ok(response) = reqwest::get(&url).await {
+        if let Ok(html_text) = response.text().await {
+            let document = Html::parse_document(&html_text);
+            
+            if let Ok(title_sel) = Selector::parse("title") {
+                if let Some(t_el) = document.select(&title_sel).next() {
+                    let t = t_el.text().collect::<Vec<_>>().join("");
+                    if !t.trim().is_empty() { final_title = t; }
+                }
+            }
+            if let Ok(og_desc) = Selector::parse("meta[property='og:description'], meta[name='description']") {
+                if let Some(desc_el) = document.select(&og_desc).next() {
+                    if let Some(content) = desc_el.value().attr("content") { description = content.to_string(); }
+                }
+            }
+            if let Ok(json_ld) = Selector::parse("script[type='application/ld+json']") {
+                for script in document.select(&json_ld) {
+                    let ld_text = script.text().collect::<Vec<_>>().join("");
+                    extracted_content.push_str(&format!("\n```json\n{}\n```\n", ld_text));
+                }
+            }
+        }
+    }
+    
+    let combined_text = format!("Bookmark: {}\nURL: {}\nDescription: {}\nStructured Data:\n{}", final_title, url, description, extracted_content);
+    
+    let state = app.state::<crate::HostApiState>();
+    let ingested_result = {
+        if let Ok(guard) = state.0.lock() {
+            if let Some(host) = guard.as_ref() {
+                let manual = qualia_client_core::wellfair::api::ManualFacets {
+                    occurred_at: Some(chrono::Utc::now().timestamp()),
+                    place_label: None, lat: None, lon: None, projects: vec![],
+                    purposes: vec!["bookmark".to_string()],
+                };
+                host.ingest_document_annotated(&url, "text/html", &combined_text, &manual, None)
+            } else {
+                Err("Host API not initialized".to_string())
+            }
+        } else {
+            Err("Lock failed".to_string())
+        }
+    };
+    
     let config_path = config_file_path();
     let storage_path = if let Ok(config_str) = fs::read_to_string(&config_path) {
         if let Ok(config) = serde_json::from_str::<AgentConfig>(&config_str) {
             config.storage_path
-        } else {
-            qualia_client_core::state::dirs_default_path()
-        }
-    } else {
-        qualia_client_core::state::dirs_default_path()
-    };
+        } else { qualia_client_core::state::dirs_default_path() }
+    } else { qualia_client_core::state::dirs_default_path() };
 
     let qlinks_dir = std::path::PathBuf::from(&storage_path).join("qlinks");
-    if !qlinks_dir.exists() {
-        let _ = fs::create_dir_all(&qlinks_dir);
-    }
+    if !qlinks_dir.exists() { let _ = fs::create_dir_all(&qlinks_dir); }
 
     let mut doc = serde_json::json!({
         "@context": ["http://schema.org", "http://www.w3.org/ns/anno.jsonld"],
-        "@type": "Bookmark",
-        "url": url,
-        "name": title,
-        "dateCreated": chrono::Utc::now().to_rfc3339()
+        "@type": "Bookmark", "url": url, "name": final_title, "description": description,
+        "dateCreated": chrono::Utc::now().to_rfc3339(), "ingestedToLibrary": ingested_result.is_ok()
     });
-
     if let Some(assertions) = context_assertions {
         if let Some(obj) = doc.as_object_mut() {
-            obj.insert(
-                "cml:contextAssertions".to_string(),
-                serde_json::json!(assertions),
-            );
+            obj.insert("cml:contextAssertions".to_string(), serde_json::json!(assertions));
         }
     }
 
     let id = uuid::Uuid::new_v4().to_string();
     let file_path = qlinks_dir.join(format!("{}.json", id));
-
     let json_str = serde_json::to_string_pretty(&doc).map_err(|e| e.to_string())?;
     fs::write(&file_path, json_str).map_err(|e| e.to_string())?;
 
-    Ok(format!("QLink saved to {:?}", file_path))
+    match ingested_result {
+        Ok(_) => Ok(format!("Semantic Bookmark ingested and saved to {:?}", file_path)),
+        Err(e) => Ok(format!("Saved offline to {:?} (Ingestion skipped: {})", file_path, e))
+    }
 }
 
 #[command]
@@ -3783,6 +3838,28 @@ pub fn run_computational_geometry(
 
 // ── QApp ↔ QualiaDB analysis contract ───────────────────────────────────────────
 // Mirrors `webizen-studio/src/components/qapp_engine.rs`. The discipline QApps call
+#[command]
+pub fn wellfair_get_model_lifecycle_status() -> Result<String, String> {
+    let state = qualia_client_core::model_lifecycle::get_model_lifecycle_state();
+    Ok(qualia_client_core::model_lifecycle::lifecycle_label(state).to_string())
+}
+
+#[command]
+pub fn wellfair_force_model_lifecycle_phase(phase: u8) -> Result<String, String> {
+    // For now, this is a mock implementation until orchestrator forceful state overrides are fully exposed.
+    Ok("OK".into())
+}
+
+#[command]
+pub fn wellfair_get_llm_telemetry() -> Result<serde_json::Value, String> {
+    // Connect to ambient orchestration and qtensor engine when ready. Returning static telemetry for UI tests.
+    Ok(serde_json::json!({
+        "tokens_per_sec": 18.32,
+        "vram_usage_gb": 12.4,
+        "vram_total_gb": 18.2,
+        "loaded_model": "SmolLM2-360M-Instruct-Q8_0.gguf"
+    }))
+}
 // this via `invoke("qapp_analyze", { request })` when running in the desktop webview;
 // the plain-browser demo uses the studio-side deterministic stub instead.
 
@@ -6225,6 +6302,9 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         reconfigure_diffusion,
         get_diffusion_frame_rgba,
         get_diffusion_ledger_health,
+        wellfair_get_model_lifecycle_status,
+        wellfair_force_model_lifecycle_phase,
+        wellfair_get_llm_telemetry,
         probe_localhost_preview,
         update_render_preview,
         toggle_render_loop,

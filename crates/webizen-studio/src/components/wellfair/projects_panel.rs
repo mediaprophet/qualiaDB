@@ -15,10 +15,14 @@ struct ProjectsUi {
     status: String,
     project_name: String,
     project_description: String,
+    project_ontologies: String,
     selected_project_id: String,
     contributor_did: String,
     contribution_description: String,
     effort_minutes: String,
+    capital_dollars: String,
+    roi_multiplier: String,
+    privacy_level: String,
     attached_asset_uri: String,
     records: Vec<HealthRecordDto>,
     obligations: Vec<ObligationDto>,
@@ -30,10 +34,14 @@ impl Default for ProjectsUi {
             status: String::new(),
             project_name: String::new(),
             project_description: String::new(),
+            project_ontologies: String::new(),
             selected_project_id: String::new(),
             contributor_did: "self".into(),
             contribution_description: String::new(),
             effort_minutes: String::new(),
+            capital_dollars: String::new(),
+            roi_multiplier: "1.0".to_string(),
+            privacy_level: "Public".to_string(),
             attached_asset_uri: String::new(),
             records: Vec::new(),
             obligations: Vec::new(),
@@ -118,6 +126,13 @@ pub fn WellfairProjectsPanel() -> Element {
                     style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
                 }
             }
+            input {
+                r#type: "text",
+                placeholder: "Licensing Ontologies (comma-separated URIs, e.g. urn:ontology:humanitarian)",
+                value: "{ui().project_ontologies}",
+                oninput: move |e| ui.write().project_ontologies = e.value(),
+                style: "width:100%;margin-bottom:0.5rem;padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
+            }
             button {
                 style: "margin-bottom:0.85rem;padding:0.4rem 0.75rem;border-radius:8px;border:none;background:var(--qualia-accent,#2a6f97);color:#fff;font-size:0.8rem;cursor:pointer;",
                 onclick: move |_| {
@@ -127,13 +142,20 @@ pub fn WellfairProjectsPanel() -> Element {
                         return;
                     }
                     let description = ui().project_description.trim().to_string();
+                    let onts: Vec<String> = ui()
+                        .project_ontologies
+                        .split(',')
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect();
                     spawn(async move {
                         ui.write().status = "Saving project…".into();
-                        match add_project(&name, &description).await {
+                        match add_project(&name, &description, onts).await {
                             Ok(_) => {
                                 ui.write().status = "Project saved.".into();
                                 ui.write().project_name = String::new();
                                 ui.write().project_description = String::new();
+                                ui.write().project_ontologies = String::new();
                                 reload();
                             }
                             Err(e) => ui.write().status = format!("Failed: {e}"),
@@ -183,10 +205,37 @@ pub fn WellfairProjectsPanel() -> Element {
                     }
                     input {
                         r#type: "number",
-                        placeholder: "Minutes",
+                        placeholder: "Effort Minutes",
                         value: "{ui().effort_minutes}",
                         oninput: move |e| ui.write().effort_minutes = e.value(),
                         style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
+                    }
+                }
+                div {
+                    style: "display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;",
+                    input {
+                        r#type: "number",
+                        step: "0.01",
+                        placeholder: "Capital Injected ($)",
+                        value: "{ui().capital_dollars}",
+                        oninput: move |e| ui.write().capital_dollars = e.value(),
+                        style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
+                    }
+                    input {
+                        r#type: "number",
+                        step: "0.1",
+                        placeholder: "ROI Multiplier (e.g. 1.0)",
+                        value: "{ui().roi_multiplier}",
+                        oninput: move |e| ui.write().roi_multiplier = e.value(),
+                        style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
+                    }
+                    select {
+                        value: "{ui().privacy_level}",
+                        onchange: move |e| ui.write().privacy_level = e.value(),
+                        style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",
+                        option { value: "Public", "Public (Visible)" }
+                        option { value: "Permissive", "Permissive (Shared)" }
+                        option { value: "Private", "Private (Obfuscated)" }
                     }
                 }
                 div {
@@ -200,31 +249,30 @@ pub fn WellfairProjectsPanel() -> Element {
                     }
                 }
                 button {
-                    style: "padding:0.4rem 0.75rem;border-radius:8px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.8rem;cursor:pointer;",
+                    style: "padding:0.4rem 0.75rem;border-radius:8px;border:none;background:var(--qualia-primary,#e76f51);color:#fff;font-size:0.8rem;cursor:pointer;",
                     onclick: move |_| {
-                        let mut project_id = ui().selected_project_id.trim().to_string();
-                        if project_id.is_empty() {
-                            if let Some((uuid, _)) = projects.first() {
-                                project_id = uuid.clone();
-                            }
-                        }
-                        let contributor = ui().contributor_did.trim().to_string();
-                        let description = ui().contribution_description.trim().to_string();
-                        let minutes: u32 = ui().effort_minutes.trim().parse().unwrap_or(0);
-                        if project_id.is_empty() || description.is_empty() || minutes == 0 {
-                            ui.write().status = "Select a project, describe the work, and enter minutes.".into();
+                        let proj = ui().selected_project_id.clone();
+                        let did = ui().contributor_did.clone();
+                        let desc = ui().contribution_description.clone();
+                        let eff = ui().effort_minutes.parse::<u32>().unwrap_or(0);
+                        let cap_dollars = ui().capital_dollars.parse::<f64>().unwrap_or(0.0);
+                        let cap_cents = (cap_dollars * 100.0) as u64;
+                        let roi = ui().roi_multiplier.parse::<f32>().unwrap_or(1.0);
+                        let priv_lvl = ui().privacy_level.clone();
+                        let uri = ui().attached_asset_uri.trim().to_string();
+                        let uri_opt = if uri.is_empty() { None } else { Some(uri) };
+                        if proj.is_empty() || did.trim().is_empty() {
+                            ui.write().status = "Project and contributor required.".into();
                             return;
                         }
-                        let contributor = if contributor.is_empty() { "self".to_string() } else { contributor };
-                        let asset_uri = ui().attached_asset_uri.trim().to_string();
-                        let attached_uri = if asset_uri.is_empty() { None } else { Some(asset_uri) };
                         spawn(async move {
                             ui.write().status = "Saving contribution…".into();
-                            match add_contribution(&project_id, &contributor, &description, minutes, attached_uri.as_deref()).await {
+                            match add_contribution(&proj, did.trim(), desc.trim(), eff, cap_cents, roi, &priv_lvl, uri_opt.as_deref()).await {
                                 Ok(_) => {
                                     ui.write().status = "Contribution saved.".into();
                                     ui.write().contribution_description = String::new();
                                     ui.write().effort_minutes = String::new();
+                                    ui.write().capital_dollars = String::new();
                                     ui.write().attached_asset_uri = String::new();
                                     reload();
                                 }
@@ -238,15 +286,32 @@ pub fn WellfairProjectsPanel() -> Element {
 
             if !ui().obligations.is_empty() {
                 h3 { style: "margin:0.85rem 0 0.35rem;font-size:0.88rem;", "Derived effort obligations" }
-                ul {
-                    style: "margin:0 0 0.5rem;padding:0;list-style:none;display:flex;flex-direction:column;gap:0.3rem;",
-                    for ob in ui().obligations.clone() {
-                        li {
-                            key: "{ob.project_id}-{ob.contributor_did}",
-                            style: "display:flex;justify-content:space-between;padding:0.4rem 0.5rem;border:1px solid var(--qualia-border,#eee);border-radius:6px;font-size:0.76rem;",
-                            span { "{ob.contributor_did}" }
-                            span { style: "color:var(--qualia-text-muted,#666);",
-                                "{ob.total_effort_minutes} min · {ob.contribution_count} contributions"
+                div {
+                    style: "border:1px solid var(--qualia-border,#eee);border-radius:8px;overflow:hidden;",
+                    table {
+                        style: "width:100%;border-collapse:collapse;font-size:0.78rem;text-align:left;",
+                        thead {
+                            style: "background:var(--qualia-bg-subtle,#f0f0f0);",
+                            tr {
+                                th { style: "padding:0.4rem;border-bottom:1px solid var(--qualia-border,#ddd);", "Project" }
+                                th { style: "padding:0.4rem;border-bottom:1px solid var(--qualia-border,#ddd);", "Contributor" }
+                                th { style: "padding:0.4rem;border-bottom:1px solid var(--qualia-border,#ddd);", "Effort" }
+                                th { style: "padding:0.4rem;border-bottom:1px solid var(--qualia-border,#ddd);", "Capital" }
+                                th { style: "padding:0.4rem;border-bottom:1px solid var(--qualia-border,#ddd);", "Resolved ROI" }
+                                th { style: "padding:0.4rem;border-bottom:1px solid var(--qualia-border,#ddd);", "Count" }
+                            }
+                        }
+                        tbody {
+                            for ob in ui().obligations {
+                                tr {
+                                    style: "border-bottom:1px solid var(--qualia-border,#eee);",
+                                    td { style: "padding:0.4rem;", "{ob.project_id}" }
+                                    td { style: "padding:0.4rem;color:var(--qualia-text-muted,#666);", "{ob.contributor_did}" }
+                                    td { style: "padding:0.4rem;", "{ob.total_effort_minutes} m" }
+                                    td { style: "padding:0.4rem;", "${(ob.total_capital_cents as f64) / 100.0:.2}" }
+                                    td { style: "padding:0.4rem;font-weight:bold;color:var(--qualia-accent,#2a6f97);", "{ob.resolved_obligation_score:.2}" }
+                                    td { style: "padding:0.4rem;", "{ob.contribution_count}" }
+                                }
                             }
                         }
                     }

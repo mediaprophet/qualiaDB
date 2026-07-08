@@ -18,6 +18,7 @@ use webizen_desktop::{
     settings_server,
     telemetry_bridge,
     telemetry_hooks,
+    mcp_server,
 };
 
 use qualia_client_core::qapp_registry::QAPPS_DIR;
@@ -511,6 +512,7 @@ fn main() {
 
             let settings_port =
                 settings_server::spawn_settings_server(app_state.clone(), host_api_state.clone());
+            mcp_server::spawn_mcp_tcp_server(app_state.clone());
             eprintln!(
                 "Settings + companion gateway ready at http://127.0.0.1:{settings_port}/ (LAN ws://<host>:{settings_port}/mobile/stream)"
             );

@@ -10,5 +10,6 @@ pub mod settings_server;
 pub mod shell;
 pub mod telemetry_bridge;
 pub mod telemetry_hooks;
+pub mod mcp_server;
 
 pub use commands::*;

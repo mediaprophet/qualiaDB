@@ -96,6 +96,15 @@ pub struct Agreement {
     pub parties: Vec<String>,
     /// The values-credentials this agreement is anchored in (e.g. UDHR article ids).
     pub values_anchors: Vec<String>,
+    /// The choice of law / jurisdiction governing this agreement (e.g. urn:jurisdiction:AU).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub jurisdiction: Option<String>,
+    /// The intended purposes of the agreement (e.g. urn:intent:public-good).
+    #[serde(default)]
+    pub intents: Vec<String>,
+    /// The contextual nature of the artifact being produced or licensed (e.g. urn:context:humanitarian-ict).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub artifact_context: Option<String>,
     /// The terms of the agreement.
     pub undertakings: Vec<Undertaking>,
     /// Per-party consent records.

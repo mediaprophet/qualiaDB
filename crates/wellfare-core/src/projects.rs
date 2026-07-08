@@ -38,6 +38,9 @@ pub struct Project {
     pub id: String,
     pub name: String,
     pub description: String,
+    /// Semantic URIs defining the licensing constraints (e.g. human rights values, trade rules).
+    #[serde(default)]
+    pub licensing_ontologies: Vec<String>,
     pub created_at_unix: u32,
 }
 
@@ -45,12 +48,14 @@ impl Project {
     pub fn new(
         name: impl Into<String>,
         description: impl Into<String>,
+        licensing_ontologies: Vec<String>,
         created_at_unix: u32,
     ) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
             name: name.into(),
             description: description.into(),
+            licensing_ontologies,
             created_at_unix,
         }
     }
@@ -84,6 +89,19 @@ impl ProjectMembership {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ContributionPrivacy {
+    Public,
+    Permissive,
+    Private,
+}
+
+impl Default for ContributionPrivacy {
+    fn default() -> Self {
+        Self::Public
+    }
+}
+
 /// A single immutable unit of contributed effort. Never mutated; a correction is a
 /// new entry linked via `predecessor_id`, so `id` is a stable content anchor for dedup
 /// and the entries form an append-only author chain.
@@ -95,11 +113,22 @@ pub struct Contribution {
     pub description: String,
     /// Effort in whole minutes. Non-negative by construction.
     pub effort_minutes: u32,
+    /// Capital injected into the project in cents (e.g. $10.00 = 1000).
+    #[serde(default)]
+    pub capital_cents: u64,
+    /// ROI Multiplier to apply to the obligation ledger (e.g. 1.0, 1.5, 2.0).
+    #[serde(default = "default_roi")]
+    pub roi_multiplier: f32,
+    /// Privacy scope of this contributor's identity.
+    #[serde(default)]
+    pub privacy_level: ContributionPrivacy,
     pub occurred_at_unix: u32,
     /// Prior contribution in this contributor's chain, if any.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub predecessor_id: Option<String>,
 }
+
+fn default_roi() -> f32 { 1.0 }
 
 impl Contribution {
     pub fn new(
@@ -107,6 +136,9 @@ impl Contribution {
         contributor_did: impl Into<String>,
         description: impl Into<String>,
         effort_minutes: u32,
+        capital_cents: u64,
+        roi_multiplier: f32,
+        privacy_level: ContributionPrivacy,
         occurred_at_unix: u32,
     ) -> Self {
         Self {
@@ -115,6 +147,9 @@ impl Contribution {
             contributor_did: contributor_did.into(),
             description: description.into(),
             effort_minutes,
+            capital_cents,
+            roi_multiplier,
+            privacy_level,
             occurred_at_unix,
             predecessor_id: None,
         }
@@ -127,14 +162,18 @@ impl Contribution {
     }
 }
 
-/// Effort obligation owed to a contributor on a project. NOT a stored record — it is
-/// **derived** from the unique set of `Contribution`s via [`derive_obligations`].
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Obligation {
     pub project_id: String,
     pub contributor_did: String,
     /// Total effort minutes across the unique contributions for this pair.
     pub total_effort_minutes: u64,
+    /// Total capital invested.
+    #[serde(default)]
+    pub total_capital_cents: u64,
+    /// The mathematically resolved ROI obligation value.
+    #[serde(default)]
+    pub resolved_obligation_score: f64,
     /// Number of unique contributions aggregated.
     pub contribution_count: usize,
 }
@@ -203,18 +242,28 @@ pub fn derive_obligations(contributions: &[Contribution]) -> Vec<Obligation> {
             None => obligations.push(Obligation {
                 project_id: c.project_id.clone(),
                 contributor_did: c.contributor_did.clone(),
-                total_effort_minutes: u64::from(c.effort_minutes),
-                contribution_count: 1,
-            }),
-        }
+                total_effort_minutes: 0,
+                total_capital_cents: 0,
+                resolved_obligation_score: 0.0,
+                contribution_count: 0,
+            });
+        entry.total_effort_minutes += c.effort_minutes as u64;
+        entry.total_capital_cents += c.capital_cents;
+        // Base rate logic: effort minutes * rate + capital * roi
+        let effort_score = (c.effort_minutes as f64) * c.roi_multiplier as f64;
+        let capital_score = (c.capital_cents as f64) * c.roi_multiplier as f64;
+        entry.resolved_obligation_score += effort_score + capital_score;
+        entry.contribution_count += 1;
     }
-    // Deterministic order independent of input: by project, then contributor.
-    obligations.sort_by(|a, b| {
+
+    let mut result: Vec<_> = agg.into_values().collect();
+    // Sort for determinism
+    result.sort_by(|a, b| {
         a.project_id
             .cmp(&b.project_id)
-            .then_with(|| a.contributor_did.cmp(&b.contributor_did))
+            .then(a.contributor_did.cmp(&b.contributor_did))
     });
-    obligations
+    result
 }
 
 // ---------------------------------------------------------------------------

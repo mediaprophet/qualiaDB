@@ -52,6 +52,8 @@ pub enum McpAction {
     Status,
     /// Inspect the MCP surface, transport, and health checks
     Doctor,
+    /// Proxy MCP stdio to the Webizen Desktop GUI application (TCP 4245)
+    DesktopProxy,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

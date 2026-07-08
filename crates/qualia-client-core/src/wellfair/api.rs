@@ -3685,11 +3685,11 @@ mod api_tests {
         use wellfare_core::projects::{Contribution, Project};
         let dir = tempdir().unwrap();
         let mut host = test_host(dir.path());
-        let p = Project::new("Community Garden", "shared beds", 1_700_000_000);
+        let p = Project::new("Community Garden", "shared beds", vec![], 1_700_000_000);
         host.add_project(&p).unwrap();
-        host.add_contribution(&Contribution::new(&p.id, "did:wf:owner", "dig", 60, 1_700_000_050))
+        host.add_contribution(&Contribution::new(&p.id, "did:wf:owner", "dig", 60, 0, 1.0, wellfare_core::projects::ContributionPrivacy::Public, 1_700_000_050))
             .unwrap();
-        host.add_contribution(&Contribution::new(&p.id, "did:wf:owner", "plant", 30, 1_700_000_100))
+        host.add_contribution(&Contribution::new(&p.id, "did:wf:owner", "plant", 30, 0, 1.0, wellfare_core::projects::ContributionPrivacy::Public, 1_700_000_100))
             .unwrap();
 
         let obligations = host.project_obligations(64).unwrap();
@@ -3996,10 +3996,10 @@ mod api_tests {
         // Peer A commits a contribution and emits a signed sync operation for it.
         let dir_a = tempdir().unwrap();
         let mut peer_a = test_host(dir_a.path());
-        let pa = Project::new("Shared Garden", "beds", 1_700_000_000);
+        let pa = Project::new("Shared Garden", "beds", vec![], 1_700_000_000);
         peer_a.add_project(&pa).unwrap();
         let a_entry = peer_a
-            .add_contribution(&Contribution::new(&pa.id, "did:wf:alice", "dig", 60, 1_700_000_050))
+            .add_contribution(&Contribution::new(&pa.id, "did:wf:alice", "dig", 60, 0, 1.0, wellfare_core::projects::ContributionPrivacy::Public, 1_700_000_050))
             .unwrap();
         let remote_op = peer_a.build_outbound_operation(&a_entry, 5).unwrap();
 
@@ -4007,7 +4007,7 @@ mod api_tests {
         let dir_b = tempdir().unwrap();
         let mut peer_b = test_host(dir_b.path());
         peer_b
-            .add_contribution(&Contribution::new(&pa.id, "did:wf:bob", "plant", 30, 1_700_000_100))
+            .add_contribution(&Contribution::new(&pa.id, "did:wf:bob", "plant", 30, 0, 1.0, wellfare_core::projects::ContributionPrivacy::Public, 1_700_000_100))
             .unwrap();
 
         // Local-only view: just Bob's 30 min.

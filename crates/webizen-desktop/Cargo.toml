@@ -51,6 +51,7 @@ pollster = "0.4.0"
 fast_qr = { version = "0.13.1", features = ["svg"] }
 raw-window-handle = "0.6"
 webrtc = "0.17.1"
+scraper = "0.27.0"
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.61", features = [

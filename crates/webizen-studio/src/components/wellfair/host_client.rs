@@ -1281,12 +1281,20 @@ pub async fn fetch_ledger_balance(_limit: usize) -> Result<BalanceReportDto, Str
 }
 
 #[cfg(target_arch = "wasm32")]
-pub async fn add_project(name: &str, description: &str) -> Result<HealthRecordDto, String> {
+pub async fn add_project(name: &str, description: &str, ontologies: Vec<String>) -> Result<HealthRecordDto, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(&args, &"name".into(), &wasm_bindgen::JsValue::from_str(name))
         .map_err(|_| "failed to build invoke args".to_string())?;
     js_sys::Reflect::set(&args, &"description".into(), &wasm_bindgen::JsValue::from_str(description))
         .map_err(|_| "failed to build invoke args".to_string())?;
+    
+    let js_ontologies = js_sys::Array::new();
+    for o in ontologies {
+        js_ontologies.push(&wasm_bindgen::JsValue::from_str(&o));
+    }
+    js_sys::Reflect::set(&args, &"licensingOntologies".into(), &js_ontologies)
+        .map_err(|_| "failed to build invoke args".to_string())?;
+
     let js = tauri_invoke("wellfair_add_project", args.into())
         .await
         .map_err(|e| format!("{e:?}"))?;
@@ -1295,7 +1303,7 @@ pub async fn add_project(name: &str, description: &str) -> Result<HealthRecordDt
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn add_project(_name: &str, _description: &str) -> Result<HealthRecordDto, String> {
+pub async fn add_project(_name: &str, _description: &str, _ontologies: Vec<String>) -> Result<HealthRecordDto, String> {
     Err("Projects require the Tauri desktop host".into())
 }
 
@@ -1305,6 +1313,9 @@ pub async fn add_contribution(
     contributor_did: &str,
     description: &str,
     effort_minutes: u32,
+    capital_cents: u64,
+    roi_multiplier: f32,
+    privacy_level: &str,
     attached_asset_uri: Option<&str>,
 ) -> Result<HealthRecordDto, String> {
     let args = js_sys::Object::new();
@@ -1315,6 +1326,12 @@ pub async fn add_contribution(
     js_sys::Reflect::set(&args, &"description".into(), &wasm_bindgen::JsValue::from_str(description))
         .map_err(|_| "failed to build invoke args".to_string())?;
     js_sys::Reflect::set(&args, &"effortMinutes".into(), &wasm_bindgen::JsValue::from(effort_minutes))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"capitalCents".into(), &wasm_bindgen::JsValue::from(capital_cents as u32))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"roiMultiplier".into(), &wasm_bindgen::JsValue::from_f64(roi_multiplier as f64))
+        .map_err(|_| "failed to build invoke args".to_string())?;
+    js_sys::Reflect::set(&args, &"privacyLevel".into(), &wasm_bindgen::JsValue::from_str(privacy_level))
         .map_err(|_| "failed to build invoke args".to_string())?;
     if let Some(uri) = attached_asset_uri {
         js_sys::Reflect::set(&args, &"attachedAssetUri".into(), &wasm_bindgen::JsValue::from_str(uri))
@@ -1333,6 +1350,9 @@ pub async fn add_contribution(
     _contributor_did: &str,
     _description: &str,
     _effort_minutes: u32,
+    _capital_cents: u64,
+    _roi_multiplier: f32,
+    _privacy_level: &str,
     _attached_asset_uri: Option<&str>,
 ) -> Result<HealthRecordDto, String> {
     Err("Contributions require the Tauri desktop host".into())

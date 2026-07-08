@@ -47,6 +47,7 @@ lettre = { version = "0.11", default-features = false, features = ["smtp-transpo
 imap = "2.4"
 native-tls = "0.2"
 bech32 = "0.12.0"
+scraper = "0.27.0"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.56"
