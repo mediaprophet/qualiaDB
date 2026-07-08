@@ -1,18 +1,34 @@
 //! Geospatial data adapters for integrating external layers into the canvas.
 
+pub mod astrometry_adapter;
 pub mod dem_adapter;
 pub mod gbif_adapter;
+pub mod ivoa_tap_adapter;
+pub mod ogc_3d_tiles;
+pub mod opendap_adapter;
 pub mod osm_adapter;
+pub mod sparql_adapter;
+pub mod stac_adapter;
 pub mod wms_adapter;
+pub mod ckan_adapter;
+
+pub mod canvas_defaults;
 
 use std::collections::HashMap;
 
 use crate::net::disclosure::NetworkDisclosureRegistry;
 
+pub use astrometry_adapter::AstrometryAdapter;
 pub use dem_adapter::DemAdapter;
 pub use gbif_adapter::GbifAdapter;
+pub use ivoa_tap_adapter::IvoaTapAdapter;
+pub use ogc_3d_tiles::Ogc3dTilesAdapter;
+pub use opendap_adapter::OpendapAdapter;
 pub use osm_adapter::OsmAdapter;
+pub use sparql_adapter::SparqlAdapter;
+pub use stac_adapter::StacAdapter;
 pub use wms_adapter::WmsAdapter;
+pub use ckan_adapter::CkanAdapter;
 
 pub trait DataAdapter {
     /// Returns the unique identifier for this adapter (e.g., "dem_adapter")
@@ -97,7 +113,7 @@ impl DataAdapter for WmsAdapter {
     }
 
     fn primary_endpoint(&self) -> &str {
-        &self.getmap_endpoint
+        &self.endpoint
     }
 
     fn estimate_tile_count(&self, bbox: (f64, f64, f64, f64)) -> u32 {
@@ -218,7 +234,9 @@ impl AdapterRegistry {
 
 impl Default for AdapterRegistry {
     fn default() -> Self {
-        Self::new()
+        let mut registry = Self::new();
+        canvas_defaults::register_canvas_defaults(&mut registry);
+        registry
     }
 }
 
@@ -248,7 +266,7 @@ mod tests {
     #[test]
     fn test_adapter_registry_consent_denied() {
         let mut registry = AdapterRegistry::new();
-        registry.register_adapter(Box::new(DemAdapter::new("https://elevation.example.com")));
+        registry.register_adapter(Box::new(DemAdapter::new("dem_adapter", "https://elevation.example.com")));
 
         let report = registry
             .fetch_layer("dem_adapter", (0.0, 0.0, 1.0, 1.0), (0, 0))
@@ -263,6 +281,7 @@ mod tests {
     fn test_adapter_registry_consent_granted() {
         let mut registry = AdapterRegistry::new();
         registry.register_adapter(Box::new(OsmAdapter::new(
+            "osm_adapter",
             "https://overpass-api.de/api/interpreter",
             "https://tiles.example.com/osm",
         )));

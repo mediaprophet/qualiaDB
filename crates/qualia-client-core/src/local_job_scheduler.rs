@@ -146,7 +146,18 @@ impl LocalJobScheduler {
             .clone()
     }
 
-    pub fn spawn_global_worker() {
+    /// Spawn the background worker that processes queued jobs. The worker must run on a Tokio runtime;
+    /// pass a `Handle` when calling from outside a runtime context (e.g. from a Tauri `setup` callback,
+    /// which runs synchronously and is NOT inside `tokio::spawn`'s implicit runtime). When called from
+    /// within a runtime context, `None` falls back to `tokio::spawn`.
+    pub fn spawn_global_worker_with_runtime(runtime: tokio::runtime::Handle) {
+        Self::spawn_global_worker(Some(runtime));
+    }
+
+    /// Spawn the background worker. Uses `tokio::spawn` — only call this from within a Tokio runtime
+    /// context. For callers outside a runtime (e.g. Tauri's `setup` hook), use
+    /// [`spawn_global_worker_with_runtime`] with an explicit handle.
+    pub fn spawn_global_worker(runtime: Option<tokio::runtime::Handle>) {
         let scheduler = Self::global();
         if scheduler
             .inner
@@ -157,9 +168,17 @@ impl LocalJobScheduler {
             return;
         }
         let worker = scheduler.clone();
-        tokio::spawn(async move {
+        let task = async move {
             worker.worker_loop().await;
-        });
+        };
+        match runtime {
+            Some(handle) => {
+                handle.spawn(task);
+            }
+            None => {
+                tokio::spawn(task);
+            }
+        }
         // Kick the loop so jobs queued before first notify are processed.
         scheduler.inner.notify.notify_one();
     }

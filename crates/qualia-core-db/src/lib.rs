@@ -1510,17 +1510,17 @@ mod tests {
     fn qualia_spatial_val() {
         use crate::domains::geospatial::spatial::{embed_h3_context, SpatiotemporalQuadTree};
 
-        let h3_index = 0x8a2a1072b59ffff; // Mock H3 cell index
-        let context_val = embed_h3_context(h3_index);
+        let h3_index = 0x000a1072b59ffff; // Mock H3 cell index payload
+        let context_val = embed_h3_context(h3_index, 10, 42);
+        let expected_context = ((10u64 & 0x0F) << 59)
+            | ((42u64 & 0x7F) << 52)
+            | (h3_index & 0x000F_FFFF_FFFF_FFFF);
         assert_eq!(
-            context_val, h3_index,
+            context_val, expected_context,
             "Failed to embed H3 index into context"
         );
 
-        let quad_tree = SpatiotemporalQuadTree {
-            root_bounds: (0.0, 0.0, 100.0, 100.0),
-            elements: vec![],
-        };
+        let quad_tree = SpatiotemporalQuadTree::new((0.0, 0.0, 100.0, 100.0));
 
         let results = quad_tree.query_region(10.0, 10.0, 20.0, 20.0, 0, 0);
         // We expect it to be empty since it's a structural mock

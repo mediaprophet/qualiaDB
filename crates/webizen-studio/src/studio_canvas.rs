@@ -1247,6 +1247,85 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
 
         style { "{theme_css}{qprime_elevation_css()}" }
 
+        // Template picker — shown when no app is selected (empty canvas)
+        {if app_id.is_none() && workspace.read().pages.iter().all(|p| p.panes.is_empty()) {
+            let templates: &[&'static str] = &[
+                "context-studio", "chat", "llm-harness", "lora-manager",
+                "agent-config", "inference-monitor", "model-lifecycle",
+                "ontology-builder", "sparql-explorer", "n3-logic-studio",
+                "rdf-star-editor", "solid-browser", "physics-sim",
+                "chemistry-modeler", "ode-lab", "matrix-lab", "stats-lab",
+                "bioinformatics-lab", "qpu-optimizer", "quantum-dft",
+                "qaoa-explorer", "qpu-providers", "health-vitals",
+                "clinical-risk", "dicom-viewer", "anatomy-browser",
+                "comorbidity", "portfolio", "risk-engine", "gbm-sim",
+                "tax-schema", "agreements", "key-vault", "zk-studio",
+                "deontic-editor", "shacl-validator", "wal-inspector",
+                "q42-volume", "provenance-graph", "storage-config",
+                "webtorrent", "p2p-dashboard", "ebpf-filter",
+                "acoustic-ble", "mcp-inspector", "benchmark",
+                "cli-bridge", "extension-bus", "nexus",
+            ];
+            rsx! {
+                div {
+                    style: "flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;padding:2rem;max-width:1100px;margin:0 auto;",
+                    h1 { style: "font-size:1.6rem;margin:0;", "QApp Studio" }
+                    p { style: "color:var(--qualia-text-muted,#888);margin:0;", "Select a template to start building, or create a blank canvas." }
+                    div {
+                        style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.75rem;width:100%;",
+                        for tmpl in templates.iter() {
+                            {let tmpl = tmpl.to_string();
+                            rsx! {
+                                button {
+                                    key: "{tmpl}",
+                                    r#type: "button",
+                                    onclick: {
+                                        let mut ws = workspace.clone();
+                                        move |_| {
+                                            let name = app_display_name(&tmpl).to_string();
+                                            let panes = default_panes_for_app(&tmpl);
+                                            let mut new_ws = new_workspace_shell(name, panes);
+                                            if let Some(page) = new_ws.pages.first_mut() {
+                                                page.presentation_mode = default_presentation_mode(Some(&tmpl));
+                                            }
+                                            ws.set(new_ws);
+                                        }
+                                    },
+                                    style: "padding:1rem;border:1px solid var(--qualia-border,#333);border-radius:10px;background:var(--qualia-surface,#1a1a1a);cursor:pointer;text-align:left;transition:border-color 0.2s;",
+                                    onmouseenter: move |e| e.stop_propagation(),
+                                    div {
+                                        style: "font-size:0.9rem;font-weight:600;margin-bottom:0.25rem;",
+                                        {app_display_name(&tmpl)}
+                                    }
+                                    div {
+                                        style: "font-size:0.75rem;color:var(--qualia-text-muted,#888);",
+                                        "{tmpl}"
+                                    }
+                                }
+                            }}
+                        }
+                    }
+                    button {
+                        r#type: "button",
+                        onclick: {
+                            let mut ws = workspace.clone();
+                            move |_| {
+                                let mut new_ws = new_workspace_shell("Blank Canvas".to_string(), vec![]);
+                                if let Some(page) = new_ws.pages.first_mut() {
+                                    page.presentation_mode = PresentationMode::GridBound;
+                                }
+                                ws.set(new_ws);
+                            }
+                        },
+                        style: "padding:0.6rem 1.5rem;border:1px dashed var(--qualia-border,#555);border-radius:8px;background:transparent;color:var(--qualia-text-muted,#aaa);cursor:pointer;",
+                        "+ Blank Canvas"
+                    }
+                }
+            }
+        } else {
+            rsx! {}
+        }}
+
         div {
             class: "{join_theme_classes(\"webizen-studio-shell\", &app_theme)}",
             "data-theme-scope": "app",

@@ -1220,6 +1220,52 @@ pub fn financial_model(args: &[u8]) -> Result<String, McpSystemError> {
         .to_string());
     }
 
+    if op == "bond" {
+        use crate::specialized_libs::computational_economics::fixed_income::coupon_bond_price;
+        let face = json_f64(&v, "face", 100.0);
+        let c_rate = json_f64(&v, "coupon_rate", 0.05);
+        let y = json_f64(&v, "yield", 0.06);
+        let n = v.get("periods").and_then(Value::as_u64).unwrap_or(5) as u32;
+        let price = coupon_bond_price(face, c_rate, y, n as f64, 1).unwrap_or(f64::NAN);
+        return Ok(json!({
+            "op": "bond",
+            "price": price,
+            "face": face,
+            "yield": y,
+            "assumptions": "flat yield, actual/actual-ish periods, no daycount, no credit risk (fixed_income kernel)",
+            "data_sufficiency": "synthetic schedule; supply cash flows for real use"
+        }).to_string());
+    }
+    if op == "forensic_demo" {
+        use crate::specialized_libs::computational_economics::forensic_economics::{
+            generate_synthetic_persona_trace, HealthWelfareState, NquinVector,
+        };
+        let steps = v.get("steps").and_then(Value::as_u64).unwrap_or(20) as usize;
+        let mut states = [HealthWelfareState::Stable; 64];
+        let mut nqs = [NquinVector::ZERO; 64];
+        let shocks: Vec<f64> = v.get("shocks").and_then(Value::as_array).map(|a| a.iter().filter_map(Value::as_f64).collect()).unwrap_or_else(|| vec![-0.05; steps]);
+        let _ = generate_synthetic_persona_trace(4242, steps.min(64), 0.4, &shocks, &mut states, &mut nqs);
+        let final_l1 = nqs[steps.min(64) - 1].l1_norm();
+        return Ok(json!({
+            "op": "forensic_demo",
+            "final_harm_l1": final_l1,
+            "absorbing": states[steps.min(64) - 1] as u8 == 4,
+            "assumptions": "synthetic WellFair-style persona, memory effects, 5-dim nquin, deterministic seed 4242",
+            "evidence": "none (demo); real use requires user-sovereign event stream + consent/provenance"
+        }).to_string());
+    }
+
+    if op == "welfare" {
+        use crate::specialized_libs::computational_economics::welfare::gini_coefficient;
+        let inc: Vec<f64> = v.get("incomes").and_then(Value::as_array).map(|a| a.iter().filter_map(Value::as_f64).collect()).unwrap_or_default();
+        let g = gini_coefficient(&inc).unwrap_or(f64::NAN);
+        return Ok(json!({
+            "op": "welfare",
+            "gini": g,
+            "assumptions": "gini from incomes list; pair with deontic review"
+        }).to_string());
+    }
+
     let option_type = if json_str(&v, "option_type", "call") == "put" {
         OptionType::Put
     } else {
@@ -1243,7 +1289,8 @@ pub fn financial_model(args: &[u8]) -> Result<String, McpSystemError> {
         "gamma": r.result.gamma,
         "theta": r.result.theta,
         "vega": r.result.vega,
-        "rho": r.result.rho
+        "rho": r.result.rho,
+        "assumptions": "European exercise, Black-Scholes-Merton, constant vol, no dividends (computational_economics::derivatives fallback)"
     })
     .to_string())
 }

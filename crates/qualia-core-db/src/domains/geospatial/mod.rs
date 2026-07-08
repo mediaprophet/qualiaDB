@@ -12,6 +12,7 @@ pub mod dem;
 pub mod geodetic;
 pub mod reference_frame;
 pub mod render_surface;
+pub mod scale_continuum;
 pub mod spatial;
 pub mod spatial_sync;
 pub mod steward;

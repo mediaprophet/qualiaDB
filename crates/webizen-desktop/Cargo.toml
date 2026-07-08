@@ -49,6 +49,15 @@ chrono = "0.4"
 crossbeam-channel = "0.5.15"
 pollster = "0.4.0"
 fast_qr = { version = "0.13.1", features = ["svg"] }
+raw-window-handle = "0.6"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61", features = [
+    "Win32_Graphics_Gdi",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Foundation",
+    "Win32_System_LibraryLoader",
+] }
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

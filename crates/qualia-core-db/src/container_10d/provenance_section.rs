@@ -32,13 +32,13 @@ use bytemuck::{bytes_of, pod_read_unaligned, Pod, Zeroable};
 use crate::container_10d::crc32c::crc32c;
 
 /// Section payload mini-header size in bytes.
-pub const PROVENANCE_MINI_HEADER_SIZE: usize = 32;
+pub const PROVENANCE_MINI_HEADER_SIZE: usize = 80;
 
 /// Magic tag at the head of a provenance-section payload (`b"PRV1"`, LE).
 pub const PROVENANCE_MAGIC: u32 = u32::from_le_bytes(*b"PRV1");
 
 /// Provenance-section payload version.
-pub const PROVENANCE_SECTION_VERSION: u16 = 1;
+pub const PROVENANCE_SECTION_VERSION: u16 = 2;
 
 /// `flags` bit 0: a verifiable credential is present (`vc_len` must be > 0).
 pub const FLAG_HAS_VC: u16 = 0x0001;
@@ -48,7 +48,7 @@ pub const FLAG_HAS_VC: u16 = 0x0001;
 /// string, and a VC while staying well under the 42 MB Sentinel ceiling.
 pub const MAX_PROVENANCE_FIELD: usize = 16 * 1024 * 1024;
 
-/// The 32-byte ProvenanceSidecar-section mini-header. `repr(C)`, naturally
+/// The 80-byte ProvenanceSidecar-section mini-header. `repr(C)`, naturally
 /// aligned, no implicit padding.
 ///
 /// ```text
@@ -57,11 +57,15 @@ pub const MAX_PROVENANCE_FIELD: usize = 16 * 1024 * 1024;
 /// 4       2     version:u16        (PROVENANCE_SECTION_VERSION)
 /// 6       2     flags:u16          (bit 0 = a VC is present)
 /// 8       4     source_digest:u32  (CRC-32C over source_bytes — the gate anchor)
-/// 12      4     reserved_u32       (must be zero)
-/// 16      4     source_len:u32
-/// 20      4     media_len:u32      (source media-type utf8 length)
-/// 24      4     licence_len:u32
-/// 28      4     vc_len:u32
+/// 12      4     reserved_u32       (must be zero) - moves before u64 to align to 16
+/// 16      8     timestamp_epoch_s:u64 (Date of harvest/authoring)
+/// 24      32    version_hash:[u8; 32] (Cryptographic version control hash e.g., SHA256)
+/// 56      4     source_len:u32
+/// 60      4     media_len:u32      (source media-type utf8 length)
+/// 64      4     licence_len:u32
+/// 68      4     vc_len:u32
+/// 72      4     metadata_len:u32   (Schema.org / Dublin Core semantic JSON-LD length)
+/// 76      4     reserved_pad:u32   (padding for 80-byte alignment)
 /// ```
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Pod, Zeroable)]
@@ -71,10 +75,14 @@ pub struct ProvenanceMiniHeader {
     pub flags: u16,
     pub source_digest: u32,
     pub reserved_u32: u32,
+    pub timestamp_epoch_s: u64,
+    pub version_hash: [u8; 32],
     pub source_len: u32,
     pub media_len: u32,
     pub licence_len: u32,
     pub vc_len: u32,
+    pub metadata_len: u32,
+    pub reserved_pad: u32,
 }
 
 /// An owned provenance sidecar to bundle into a `.10d` — the source bytes an
@@ -92,6 +100,12 @@ pub struct ProvenanceSidecar {
     /// An optional verifiable credential (CBOR / JWT bytes) attesting the
     /// derivation chain. Empty = none.
     pub vc: Vec<u8>,
+    /// Schema.org / Dublin Core semantic CBOR-LD metadata payload.
+    pub semantic_metadata: Vec<u8>,
+    /// Creation or harvest timestamp (UNIX epoch seconds).
+    pub timestamp_epoch_s: u64,
+    /// Cryptographic version control hash (e.g., SHA256 of the git commit or asset).
+    pub version_hash: [u8; 32],
 }
 
 impl ProvenanceSidecar {
@@ -105,11 +119,21 @@ impl ProvenanceSidecar {
             source_media_type: source_media_type.into(),
             licence: licence.into(),
             vc: Vec::new(),
+            semantic_metadata: Vec::new(),
+            timestamp_epoch_s: 0,
+            version_hash: [0; 32],
         }
     }
 
     pub fn with_vc(mut self, vc: impl Into<Vec<u8>>) -> Self {
         self.vc = vc.into();
+        self
+    }
+
+    pub fn with_metadata(mut self, metadata: impl Into<Vec<u8>>, timestamp: u64, hash: [u8; 32]) -> Self {
+        self.semantic_metadata = metadata.into();
+        self.timestamp_epoch_s = timestamp;
+        self.version_hash = hash;
         self
     }
 
@@ -206,6 +230,7 @@ pub fn encoded_len(s: &ProvenanceSidecar) -> usize {
         + s.source_media_type.len()
         + s.licence.len()
         + s.vc.len()
+        + s.semantic_metadata.len()
 }
 
 /// Encode a provenance sidecar into a caller-supplied buffer. Returns the
@@ -229,6 +254,7 @@ pub fn encode_provenance_section(
     check("media_type", s.source_media_type.len())?;
     check("licence", s.licence.len())?;
     check("vc", s.vc.len())?;
+    check("semantic_metadata", s.semantic_metadata.len())?;
 
     let total = encoded_len(s);
     if out.len() < total {
@@ -245,10 +271,14 @@ pub fn encode_provenance_section(
         flags,
         source_digest: s.source_digest(),
         reserved_u32: 0,
+        timestamp_epoch_s: s.timestamp_epoch_s,
+        version_hash: s.version_hash,
         source_len: s.source_bytes.len() as u32,
         media_len: s.source_media_type.len() as u32,
         licence_len: s.licence.len() as u32,
         vc_len: s.vc.len() as u32,
+        metadata_len: s.semantic_metadata.len() as u32,
+        reserved_pad: 0,
     };
 
     let mut cursor = 0;
@@ -262,6 +292,8 @@ pub fn encode_provenance_section(
     cursor += s.licence.len();
     out[cursor..cursor + s.vc.len()].copy_from_slice(&s.vc);
     cursor += s.vc.len();
+    out[cursor..cursor + s.semantic_metadata.len()].copy_from_slice(&s.semantic_metadata);
+    cursor += s.semantic_metadata.len();
 
     debug_assert_eq!(cursor, total);
     Ok(total)
@@ -275,6 +307,7 @@ pub struct ProvenanceSidecarView<'a> {
     source_media_type: &'a str,
     licence: &'a str,
     vc: &'a [u8],
+    semantic_metadata: &'a [u8],
 }
 
 impl<'a> ProvenanceSidecarView<'a> {
@@ -301,6 +334,21 @@ impl<'a> ProvenanceSidecarView<'a> {
         } else {
             Some(self.vc)
         }
+    }
+    /// Schema.org / Dublin Core semantic CBOR-LD metadata payload.
+    #[inline]
+    pub fn semantic_metadata(&self) -> &'a [u8] {
+        self.semantic_metadata
+    }
+    /// Harvest or creation timestamp.
+    #[inline]
+    pub fn timestamp_epoch_s(&self) -> u64 {
+        self.header.timestamp_epoch_s
+    }
+    /// Cryptographic version control hash.
+    #[inline]
+    pub fn version_hash(&self) -> &[u8; 32] {
+        &self.header.version_hash
     }
     /// The declared source digest (CRC-32C over the source bytes).
     #[inline]
@@ -353,11 +401,13 @@ pub fn decode_provenance_section(
     let media_len = header.media_len as usize;
     let licence_len = header.licence_len as usize;
     let vc_len = header.vc_len as usize;
+    let metadata_len = header.metadata_len as usize;
     for (field, len) in [
         ("source", source_len),
         ("media_type", media_len),
         ("licence", licence_len),
         ("vc", vc_len),
+        ("semantic_metadata", metadata_len),
     ] {
         if len > MAX_PROVENANCE_FIELD {
             return Err(ProvenanceSectionError::FieldTooLarge {
@@ -368,7 +418,7 @@ pub fn decode_provenance_section(
         }
     }
 
-    let expected = PROVENANCE_MINI_HEADER_SIZE + source_len + media_len + licence_len + vc_len;
+    let expected = PROVENANCE_MINI_HEADER_SIZE + source_len + media_len + licence_len + vc_len + metadata_len;
     if payload.len() < expected {
         return Err(ProvenanceSectionError::PayloadTruncated {
             expected,
@@ -384,6 +434,8 @@ pub fn decode_provenance_section(
     let licence_raw = &payload[cursor..cursor + licence_len];
     cursor += licence_len;
     let vc = &payload[cursor..cursor + vc_len];
+    cursor += vc_len;
+    let metadata_raw = &payload[cursor..cursor + metadata_len];
 
     let source_media_type =
         std::str::from_utf8(media_raw).map_err(|_| ProvenanceSectionError::NonUtf8 {
@@ -391,6 +443,7 @@ pub fn decode_provenance_section(
         })?;
     let licence = std::str::from_utf8(licence_raw)
         .map_err(|_| ProvenanceSectionError::NonUtf8 { field: "licence" })?;
+    let semantic_metadata = metadata_raw;
 
     Ok(ProvenanceSidecarView {
         header,
@@ -398,6 +451,7 @@ pub fn decode_provenance_section(
         source_media_type,
         licence,
         vc,
+        semantic_metadata,
     })
 }
 
@@ -437,6 +491,7 @@ mod tests {
             "CC-BY-4.0",
         )
         .with_vc(b"{\"vc\":\"attested\"}".to_vec())
+        .with_metadata(b"\xA2\x68@context\x78\x1Dhttps://schema.org/\x65@type\x67Dataset".to_vec(), 1690000000, [0xAA; 32])
     }
 
     #[test]
@@ -451,6 +506,9 @@ mod tests {
         assert_eq!(view.source_media_type(), "model/gltf-binary");
         assert_eq!(view.licence(), "CC-BY-4.0");
         assert_eq!(view.vc(), Some(s.vc.as_slice()));
+        assert_eq!(view.semantic_metadata(), b"\xA2\x68@context\x78\x1Dhttps://schema.org/\x65@type\x67Dataset");
+        assert_eq!(view.timestamp_epoch_s(), 1690000000);
+        assert_eq!(view.version_hash(), &[0xAA; 32]);
         assert_eq!(view.source_digest(), crc32c(&s.source_bytes));
         // The gate passes for an authentic, licensed sidecar.
         validate_provenance(&view).unwrap();
@@ -570,10 +628,14 @@ mod tests {
             flags: 0,
             source_digest: 0,
             reserved_u32: 0,
+            timestamp_epoch_s: 0,
+            version_hash: [0; 32],
             source_len: 100,
             media_len: 0,
             licence_len: 0,
             vc_len: 0,
+            metadata_len: 0,
+            reserved_pad: 0,
         };
         buf.copy_from_slice(bytes_of(&bad));
         assert!(matches!(

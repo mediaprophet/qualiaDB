@@ -4,6 +4,7 @@ use super::chora_panel::WellfairChoraPanel;
 use super::library_panel::WellfairLibraryPanel;
 use super::agency_panel::WellfairAgencyPanel;
 use super::anatomy_panel::WellfairAnatomyPanel;
+use super::anatomy_3d_panel::WellfairAnatomy3dPanel;
 use super::safeguards_panel::WellfairSafeguardsPanel;
 use super::scorecard_panel::WellfairScorecardPanel;
 use super::assessment_panel::WellfairAssessmentPanel;
@@ -65,10 +66,12 @@ pub fn WellfairShell() -> Element {
     let mut active_area = use_signal(|| "Health".to_string());
 
     let vault_label = match snap.vault {
-        VaultLifecycle::Unconfigured => "Create owner vault",
-        VaultLifecycle::Locked => "Unlock vault",
-        VaultLifecycle::Unlocked => "Vault unlocked",
+        VaultLifecycle::Unconfigured => "No vault",
+        VaultLifecycle::Locked => "Locked",
+        VaultLifecycle::Unlocked => "Unlocked",
     };
+
+    let vault_unlocked = snap.vault == VaultLifecycle::Unlocked;
 
     let demo_banner = if snap.demo_mode {
         rsx! {
@@ -100,6 +103,7 @@ pub fn WellfairShell() -> Element {
         },
         "Anatomy" => rsx! {
             WellfairScorecardPanel {}
+            WellfairAnatomy3dPanel {}
             WellfairAnatomyPanel {}
         },
         "Library" => rsx! { WellfairLibraryPanel {} },
@@ -159,7 +163,11 @@ pub fn WellfairShell() -> Element {
                 div {
                     h1 { style: "margin:0 0 0.25rem;font-size:1.35rem;", "WellFair" }
                     p { style: "margin:0;font-size:0.85rem;color:var(--qualia-text-muted,#666);",
-                        "{snap.owner_label} · Host API v{snap.host_api_version}"
+                        {if vault_unlocked {
+                            rsx! { "{snap.owner_label} · Vault unlocked" }
+                        } else {
+                            rsx! { "Vault locked — unlock to access your data" }
+                        }}
                     }
                 }
                 div {
@@ -171,6 +179,42 @@ pub fn WellfairShell() -> Element {
                     }
                 }
             }
+
+            // Vault unlock / create card — shown when vault is not unlocked
+            {if !vault_unlocked {
+                rsx! {
+                    div {
+                        style: "padding:1.25rem;border:2px solid var(--qualia-accent,#2a6f97);border-radius:12px;background:var(--qualia-surface,#fafafa);text-align:center;",
+                        {match snap.vault {
+                            VaultLifecycle::Unconfigured => rsx! {
+                                div {
+                                    p { style: "margin:0 0 0.75rem;font-size:0.95rem;", "No sanctuary vault exists yet." }
+                                    button {
+                                        r#type: "button",
+                                        onclick: move |_| active_area.set("Sanctuary".to_string()),
+                                        style: "padding:0.5rem 1.25rem;border:none;border-radius:8px;background:var(--qualia-accent,#2a6f97);color:#fff;cursor:pointer;font-size:0.9rem;",
+                                        "Create Sanctuary Vault"
+                                    }
+                                }
+                            },
+                            VaultLifecycle::Locked => rsx! {
+                                div {
+                                    p { style: "margin:0 0 0.75rem;font-size:0.95rem;", "Your vault is locked. Enter your PIN to unlock." }
+                                    button {
+                                        r#type: "button",
+                                        onclick: move |_| active_area.set("Sanctuary".to_string()),
+                                        style: "padding:0.5rem 1.25rem;border:none;border-radius:8px;background:var(--qualia-accent,#2a6f97);color:#fff;cursor:pointer;font-size:0.9rem;",
+                                        "Unlock Vault"
+                                    }
+                                }
+                            },
+                            VaultLifecycle::Unlocked => rsx! {},
+                        }}
+                    }
+                }
+            } else {
+                rsx! {}
+            }}
 
             {demo_banner}
 

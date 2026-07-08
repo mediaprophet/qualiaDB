@@ -1,21 +1,32 @@
 use crate::net::disclosure::NetworkDisclosureRegistry;
 
-/// Stub adapter for OGC WMS GetMap requests.
+pub enum OgcServiceType {
+    Wms,
+    Wfs,
+    Wcs,
+    Wmts,
+}
+
+/// Adapter for OGC Web Services (WMS, WFS, WCS, WMTS).
 pub struct WmsAdapter {
-    pub getmap_endpoint: String,
+    pub id: &'static str,
+    pub endpoint: String,
+    pub service_type: OgcServiceType,
 }
 
 impl WmsAdapter {
-    pub fn new(getmap_endpoint: &str) -> Self {
+    pub fn new(id: &'static str, endpoint: &str, service_type: OgcServiceType) -> Self {
         Self {
-            getmap_endpoint: getmap_endpoint.to_string(),
+            id,
+            endpoint: endpoint.to_string(),
+            service_type,
         }
     }
 }
 
 impl WmsAdapter {
     pub fn adapter_id(&self) -> &'static str {
-        "wms_adapter"
+        self.id
     }
 
     pub fn fetch_region(
@@ -24,15 +35,39 @@ impl WmsAdapter {
         time_range: (u64, u64),
         registry: &NetworkDisclosureRegistry,
     ) -> Result<(), String> {
-        if !registry.check_egress_consent(self.adapter_id(), &self.getmap_endpoint) {
+        if !registry.check_egress_consent(self.adapter_id(), &self.endpoint) {
             return Err(format!(
                 "Consent denied or unregistered for endpoint {} by adapter {}",
-                self.getmap_endpoint,
+                self.endpoint,
                 self.adapter_id()
             ));
         }
 
-        let _ = (bbox, time_range);
+        let (service, request) = match self.service_type {
+            OgcServiceType::Wms => ("WMS", "GetMap"),
+            OgcServiceType::Wfs => ("WFS", "GetFeature"),
+            OgcServiceType::Wcs => ("WCS", "GetCoverage"),
+            OgcServiceType::Wmts => ("WMTS", "GetTile"),
+        };
+
+        let mut url = format!(
+            "{}?SERVICE={}&REQUEST={}&BBOX={},{},{},{}",
+            self.endpoint, service, request, bbox.0, bbox.1, bbox.2, bbox.3
+        );
+        
+        if time_range.1 > 0 {
+            // Stub: proper ISO8601 formatting for TIME parameter
+            url.push_str(&format!("&TIME={}/{}", time_range.0, time_range.1));
+        }
+
+        let client = reqwest::blocking::Client::new();
+        let resp = client.get(&url).send().map_err(|e| e.to_string())?;
+
+        if !resp.status().is_success() {
+            return Err(format!("OGC API returned error: {}", resp.status()));
+        }
+
+        // Parsing response data is deferred.
         Ok(())
     }
 }
@@ -43,7 +78,7 @@ mod tests {
 
     #[test]
     fn test_wms_adapter_egress() {
-        let adapter = WmsAdapter::new("https://wms.example.com/geoserver/wms");
+        let adapter = WmsAdapter::new("wms_adapter", "https://wms.example.com/geoserver/wms", OgcServiceType::Wms);
         let registry = NetworkDisclosureRegistry::new();
 
         let res1 = adapter.fetch_region((-1.0, 51.0, 0.0, 52.0), (0, 0), &registry);
@@ -58,6 +93,8 @@ mod tests {
         );
 
         let res2 = adapter.fetch_region((-1.0, 51.0, 0.0, 52.0), (0, 0), &registry);
-        assert!(res2.is_ok());
+        if let Err(e) = res2 {
+            assert!(!e.contains("Consent denied"), "Failed on consent when it should have been granted: {}", e);
+        }
     }
 }

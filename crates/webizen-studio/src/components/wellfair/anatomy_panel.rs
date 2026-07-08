@@ -6,7 +6,7 @@
 //! not a diagnosis or advice**; evidence provenance is disclosed. A clinician lens surfaces the same
 //! data as structural OSCE-Prac *considerations*. (The native 3D body replaces this surface in S5.)
 
-use super::host_client::{fetch_anatomy_view, AnatomyViewReportDto};
+use super::host_client::{fetch_anatomy_view, get_physiological_state, reset_physiological_state, set_physiological_state, AnatomyViewReportDto};
 use dioxus::prelude::*;
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -16,6 +16,11 @@ struct AnatomyUi {
     status: String,
     loaded: bool,
     expanded: Option<String>,
+    /// The person's declared physiological state (P6 — reproductive continuum). `None` = not yet
+    /// fetched; `Some(None)` = not declared (Baseline); `Some(Some(state))` = declared.
+    phys_state: Option<Option<serde_json::Value>>,
+    /// Whether the state picker is open.
+    state_picker_open: bool,
 }
 
 async fn load(mut ui: Signal<AnatomyUi>) {
@@ -29,6 +34,81 @@ async fn load(mut ui: Signal<AnatomyUi>) {
         Err(e) => ui.write().status = format!("Couldn't load the anatomy view: {e}"),
     }
     ui.write().loaded = true;
+}
+
+async fn load_phys_state(mut ui: Signal<AnatomyUi>) {
+    match get_physiological_state().await {
+        Ok(v) => {
+            let declared = v.get("declared").and_then(|d| d.as_bool()).unwrap_or(false);
+            let state = if declared {
+                v.get("state").cloned()
+            } else {
+                None
+            };
+            ui.write().phys_state = Some(state);
+        }
+        Err(e) => ui.write().status = format!("Couldn't load your physiological state: {e}"),
+    }
+}
+
+/// The human-readable label for a physiological state JSON value.
+fn state_label(state: &serde_json::Value) -> String {
+    // The PhysiologicalState enum serializes as either `"Baseline"` or
+    // `{ "Reproductive": <ReproductiveState> }` where ReproductiveState is either a string variant
+    // ("PreMenarche", "Postpartum", "Lactating", "Perimenopause", "PostMenopause") or
+    // `{ "Cycling": <CyclePhase> }` / `{ "Pregnant": <Trimester> }`.
+    if state.as_str() == Some("Baseline") || state.is_null() {
+        return "Baseline (not declared)".to_string();
+    }
+    let repro = state.get("Reproductive");
+    let Some(repro) = repro else { return "Unknown state".to_string(); };
+    if let Some(s) = repro.as_str() {
+        return match s {
+            "PreMenarche" => "Pre-menarche".to_string(),
+            "Postpartum" => "Postpartum".to_string(),
+            "Lactating" => "Lactating".to_string(),
+            "Perimenopause" => "Perimenopause".to_string(),
+            "PostMenopause" => "Post-menopause".to_string(),
+            _ => s.to_string(),
+        };
+    }
+    if let Some(cycling) = repro.get("Cycling").and_then(|c| c.as_str()) {
+        return match cycling {
+            "Menstrual" => "Cycling — menstrual phase".to_string(),
+            "Follicular" => "Cycling — follicular phase".to_string(),
+            "Ovulatory" => "Cycling — ovulatory phase".to_string(),
+            "Luteal" => "Cycling — luteal phase".to_string(),
+            _ => format!("Cycling — {cycling}"),
+        };
+    }
+    if let Some(tri) = repro.get("Pregnant").and_then(|t| t.as_str()) {
+        return match tri {
+            "First" => "Pregnant — first trimester".to_string(),
+            "Second" => "Pregnant — second trimester".to_string(),
+            "Third" => "Pregnant — third trimester".to_string(),
+            _ => format!("Pregnant — {tri}"),
+        };
+    }
+    "Unknown state".to_string()
+}
+
+/// The set of declarable states as `(json_string, label)` pairs.
+fn declarable_states() -> Vec<(String, String)> {
+    vec![
+        (r#""Baseline""#.to_string(), "Baseline".to_string()),
+        (r#"{"Reproductive":"PreMenarche"}"#.to_string(), "Pre-menarche".to_string()),
+        (r#"{"Reproductive":{"Cycling":"Menstrual"}}"#.to_string(), "Cycling — menstrual".to_string()),
+        (r#"{"Reproductive":{"Cycling":"Follicular"}}"#.to_string(), "Cycling — follicular".to_string()),
+        (r#"{"Reproductive":{"Cycling":"Ovulatory"}}"#.to_string(), "Cycling — ovulatory".to_string()),
+        (r#"{"Reproductive":{"Cycling":"Luteal"}}"#.to_string(), "Cycling — luteal".to_string()),
+        (r#"{"Reproductive":{"Pregnant":"First"}}"#.to_string(), "Pregnant — 1st trimester".to_string()),
+        (r#"{"Reproductive":{"Pregnant":"Second"}}"#.to_string(), "Pregnant — 2nd trimester".to_string()),
+        (r#"{"Reproductive":{"Pregnant":"Third"}}"#.to_string(), "Pregnant — 3rd trimester".to_string()),
+        (r#"{"Reproductive":"Postpartum"}"#.to_string(), "Postpartum".to_string()),
+        (r#"{"Reproductive":"Lactating"}"#.to_string(), "Lactating".to_string()),
+        (r#"{"Reproductive":"Perimenopause"}"#.to_string(), "Perimenopause".to_string()),
+        (r#"{"Reproductive":"PostMenopause"}"#.to_string(), "Post-menopause".to_string()),
+    ]
 }
 
 fn level_style(level: &str) -> &'static str {
@@ -53,10 +133,13 @@ pub fn WellfairAnatomyPanel() -> Element {
 
     use_effect(move || {
         spawn(load(ui));
+        spawn(load_phys_state(ui));
     });
 
     let state = ui();
     let is_person = state.lens != "clinician";
+    let declared_state = state.phys_state.clone().flatten();
+    let state_label_str = declared_state.as_ref().map(state_label).unwrap_or_else(|| "Baseline (not declared)".to_string());
 
     rsx! {
         section {
@@ -100,6 +183,78 @@ pub fn WellfairAnatomyPanel() -> Element {
                         spawn(load(ui));
                     },
                     "Clinician view"
+                }
+            }
+
+            // Physiological state selector (P6 — reproductive continuum).
+            div {
+                role: "group",
+                aria_label: "Physiological state",
+                style: "margin-bottom:0.7rem;padding:0.5rem 0.6rem;border:1px solid var(--qualia-border,#e2e2e2);border-radius:8px;background:#fff;",
+                div {
+                    style: "display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;",
+                    span {
+                        style: "font-size:0.82rem;font-weight:600;",
+                        "Where you are on the continuum:"
+                    }
+                    span {
+                        style: "font-size:0.82rem;color:var(--qualia-text-muted,#555);",
+                        "{state_label_str}"
+                    }
+                    button {
+                        type: "button",
+                        style: "margin-left:auto;padding:0.25rem 0.5rem;border:1px solid var(--qualia-border,#ccc);border-radius:6px;background:#f6f6f6;cursor:pointer;font-size:0.75rem;",
+                        onclick: move |_| {
+                            let open = ui.read().state_picker_open;
+                            ui.write().state_picker_open = !open;
+                        },
+                        if state.state_picker_open { "Close" } else { "Change" }
+                    }
+                }
+                if state.state_picker_open {
+                    p {
+                        style: "margin:0.4rem 0 0.25rem;font-size:0.74rem;color:var(--qualia-text-muted,#666);line-height:1.4;",
+                        "Your own statement of where your body is on the reproductive continuum. This is your inward knowledge (forum-internum, Sanctuary-class) — the score-card reads you at this life stage. You can change or clear it any time."
+                    }
+                    div {
+                        style: "display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.3rem;",
+                        for (json, label) in declarable_states() {
+                            button {
+                                key: "{json}",
+                                type: "button",
+                                style: "padding:0.3rem 0.55rem;border:1px solid var(--qualia-border,#ccc);border-radius:6px;background:#fff;cursor:pointer;font-size:0.75rem;",
+                                onclick: move |_| {
+                                    let json_clone = json.clone();
+                                    spawn(async move {
+                                        if let Err(e) = set_physiological_state(&json_clone).await {
+                                            ui.write().status = format!("Couldn't set state: {e}");
+                                        } else {
+                                            spawn(load_phys_state(ui));
+                                            spawn(load(ui));
+                                        }
+                                        ui.write().state_picker_open = false;
+                                    });
+                                },
+                                "{label}"
+                            }
+                        }
+                    }
+                    button {
+                        type: "button",
+                        style: "margin-top:0.4rem;padding:0.25rem 0.5rem;border:1px solid var(--qualia-border,#ccc);border-radius:6px;background:#f6f6f6;cursor:pointer;font-size:0.74rem;color:var(--qualia-text-muted,#666);",
+                        onclick: move |_| {
+                            spawn(async move {
+                                if let Err(e) = reset_physiological_state().await {
+                                    ui.write().status = format!("Couldn't clear state: {e}");
+                                } else {
+                                    spawn(load_phys_state(ui));
+                                    spawn(load(ui));
+                                }
+                                ui.write().state_picker_open = false;
+                            });
+                        },
+                        "Clear (back to baseline)"
+                    }
                 }
             }
 

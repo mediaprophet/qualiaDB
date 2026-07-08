@@ -1333,14 +1333,46 @@ pub fn execute_vm_frame(
                 );
             }
             SlgOpcode::NativeEconomics => {
-                let (mean, var) = crate::domains::financial::economics::run_monte_carlo_var(
-                    100.0, 0.05, 0.2, 1.0, 1000, 252,
-                );
-                vm_log!(
-                    "[Webizen] NativeEconomics. Mean: {:.2}, VaR95: {:.2}",
-                    mean,
-                    var
-                );
+                // Enhanced dispatch: use frame.object low bits as selector for demo kernels.
+                // Real usage will pass config via NQuin context / metadata.
+                let selector = (frame.object_reg & 0xF) as u8;
+                match selector {
+                    0 | 1 => {
+                        // Default / Monte Carlo VaR (legacy numbers preserved for tests)
+                        let (mean, var) = crate::domains::financial::economics::run_monte_carlo_var(
+                            100.0, 0.05, 0.2, 1.0, 1000, 252,
+                        );
+                        vm_log!(
+                            "[Webizen] NativeEconomics[VaR]. Mean: {:.2}, VaR95: {:.2}",
+                            mean,
+                            var
+                        );
+                        // write a result back
+                        frame.object_reg = mean.to_bits();
+                        frame.context_reg = var.to_bits(); // repurposed for second result in demo
+                    }
+                    2 => {
+                        // Simple fixed income: price a par bond using object bits as rough params
+                        use crate::specialized_libs::computational_economics::fixed_income::{
+                            coupon_bond_price,
+                        };
+                        let face = 100.0;
+                        let c = ((frame.object_reg >> 8) & 0xFF) as f64 * 0.001; // coupon rate rough
+                        let y = 0.05;
+                        let n = 5u32;
+                        let price = coupon_bond_price(face, c, y, n as f64, 1).unwrap_or(f64::NAN);
+                        vm_log!("[Webizen] NativeEconomics[Bond]. Price: {:.4}", price);
+                        frame.object_reg = price.to_bits();
+                    }
+                    _ => {
+                        // Fallback to GBM step via time_series
+                        let mut path = [0.0f64; 8];
+                        let _ = crate::specialized_libs::computational_economics::time_series::gbm_simulate_into(100.0, 0.05, 0.2, 1.0, 8, 42, &mut path);
+                        let last = path[7];
+                        vm_log!("[Webizen] NativeEconomics[GBM]. S_T: {:.2}", last);
+                        frame.object_reg = last.to_bits();
+                    }
+                }
             }
             // ── SHACL standard ────────────────────────────────────────────
             SlgOpcode::WarnOnly => {

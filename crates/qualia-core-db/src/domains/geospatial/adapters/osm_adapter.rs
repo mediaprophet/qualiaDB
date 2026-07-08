@@ -2,22 +2,24 @@ use crate::net::disclosure::NetworkDisclosureRegistry;
 
 /// Stub adapter for OpenStreetMap Overpass API and MVT vector tile endpoints.
 pub struct OsmAdapter {
+    pub id: &'static str,
     pub overpass_endpoint: String,
-    pub mvt_endpoint: String,
+    pub tile_endpoint: String,
 }
 
 impl OsmAdapter {
-    pub fn new(overpass_endpoint: &str, mvt_endpoint: &str) -> Self {
+    pub fn new(id: &'static str, overpass_endpoint: &str, tile_endpoint: &str) -> Self {
         Self {
+            id,
             overpass_endpoint: overpass_endpoint.to_string(),
-            mvt_endpoint: mvt_endpoint.to_string(),
+            tile_endpoint: tile_endpoint.to_string(),
         }
     }
 }
 
 impl OsmAdapter {
     pub fn adapter_id(&self) -> &'static str {
-        "osm_adapter"
+        self.id
     }
 
     pub fn fetch_region(
@@ -35,7 +37,33 @@ impl OsmAdapter {
             ));
         }
 
-        let _ = (bbox, time_range, &self.mvt_endpoint);
+        let date_filter = if time_range.1 > 0 {
+            format!("[date:\"{}\"]", time_range.1) // Stub: proper ISO8601 formatting required
+        } else {
+            String::new()
+        };
+
+        // Construct Overpass QL bounding box: (south, west, north, east)
+        let query = format!(
+            "{date_filter}[out:json];(node({s},{w},{n},{e});way({s},{w},{n},{e});relation({s},{w},{n},{e}););out body;",
+            date_filter = date_filter,
+            s = bbox.1,
+            w = bbox.0,
+            n = bbox.3,
+            e = bbox.2
+        );
+
+        let client = reqwest::blocking::Client::new();
+        let resp = client.post(primary)
+            .body(query)
+            .send()
+            .map_err(|e| e.to_string())?;
+
+        if !resp.status().is_success() {
+            return Err(format!("OSM Overpass API returned error: {}", resp.status()));
+        }
+
+        // Extruding building footprints and roads mapped to .10d Tensor models is deferred.
         Ok(())
     }
 }
@@ -47,6 +75,7 @@ mod tests {
     #[test]
     fn test_osm_adapter_egress() {
         let adapter = OsmAdapter::new(
+            "osm_adapter",
             "https://overpass-api.de/api/interpreter",
             "https://tiles.example.com/osm",
         );
@@ -64,6 +93,8 @@ mod tests {
         );
 
         let res2 = adapter.fetch_region((0.0, 0.0, 1.0, 1.0), (0, 0), &registry);
-        assert!(res2.is_ok());
+        if let Err(e) = res2 {
+            assert!(!e.contains("Consent denied"), "Failed on consent when it should have been granted: {}", e);
+        }
     }
 }

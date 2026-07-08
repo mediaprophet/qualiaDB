@@ -644,6 +644,10 @@ pub fn sample_ambient_telemetry() -> [f32; 11] {
 pub struct SharedGpuContext {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
+    /// The wgpu instance — needed to create surfaces (must be same instance as adapter).
+    pub instance: wgpu::Instance,
+    /// The wgpu adapter — needed to create surfaces and query capabilities.
+    pub adapter: wgpu::Adapter,
     /// Immutable adapter capability snapshot for diagnostics and feature negotiation.
     pub adapter_caps: GpuAdapterCaps,
     /// Feature subset actually requested on the process-wide device.
@@ -810,6 +814,8 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
     Ok(SharedGpuContext {
         device,
         queue,
+        instance,
+        adapter,
         adapter_caps,
         enabled_features,
         timestamps_supported: ts_supported,

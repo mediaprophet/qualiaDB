@@ -272,7 +272,15 @@ impl ShaclCompiler {
             ShaclConstraint::LanguageIn(_)
             | ShaclConstraint::UniqueLang
             | ShaclConstraint::Closed { .. }
-            | ShaclConstraint::QualifierValue { .. } => {}
+            | ShaclConstraint::QualifierValue { .. }
+            // Economics native extensions — pending real opcode wiring by the economics lane.
+            // Surfaced as no-op for now so the compiler stays total; the economics lane owner
+            // can replace these arms with real SlgOpcode emissions when the econ VM lands.
+            | ShaclConstraint::EconVaRPositive
+            | ShaclConstraint::EconConvergedModel
+            | ShaclConstraint::EconPositivePrice
+            | ShaclConstraint::EconRiskBelowThreshold { .. }
+            | ShaclConstraint::EconWelfareAboveFloor { .. } => {}
         }
     }
 

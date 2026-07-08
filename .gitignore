@@ -14,6 +14,7 @@ target-*
 target-chora*
 target-p*
 target-clean*
+target/
 
 # Private Development Documents, not for GitHub (do not publish on repo)
 .dev-docs/
@@ -188,3 +189,6 @@ docs/to-do/
 
 # W5b: full WordNet gloss corpus (derived from Princeton data.rdf; ~20MB) â€” sample is committed
 benchmarks/data/wordnet_glosses.txt
+
+# 3D Anatomy asset cache (user-triggered CCF/HRA GLB + compiled .10d — ~200-290 MB, not for git)
+assets/ccf/

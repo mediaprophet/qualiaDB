@@ -653,7 +653,7 @@ pub enum ScienceAction {
         #[command(subcommand)]
         action: ClinicalAction,
     },
-    /// Financial economics: GBM path, Monte Carlo VaR, macroeconomic flow
+    /// Financial economics: GBM, VaR, Macro, Bond, Paper, Welfare, Game
     Economics {
         #[command(subcommand)]
         action: EconomicsAction,
@@ -877,6 +877,34 @@ pub enum EconomicsAction {
         horizon: f64,
         #[arg(long, default_value = "100")]
         steps: usize,
+    },
+    /// Price a simple coupon bond (fixed income kernel)
+    Bond {
+        #[arg(long, default_value = "100.0")]
+        face: f64,
+        #[arg(long, default_value = "0.05")]
+        coupon_rate: f64,
+        #[arg(long, default_value = "0.06")]
+        yield_rate: f64,
+        #[arg(long, default_value = "5")]
+        periods: u32,
+    },
+    /// Demo paper trading fill simulation (no real execution)
+    Paper {
+        #[arg(long, default_value = "10.0")]
+        qty: f64,
+        #[arg(long, default_value = "100.5")]
+        last_price: f64,
+    },
+    /// Welfare metrics (gini, atkinson)
+    Welfare {
+        #[arg(long, default_value = "1,2,3,10")]
+        incomes: String,
+    },
+    /// Simple game theory (cournot duopoly profit)
+    Game {
+        #[arg(long, default_value = "100")]
+        market_a: f64,
     },
 }
 
@@ -3306,6 +3334,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     steps,
                 } => {
                     science::run_economics_macro(*m0, *p0, *velocity, *real_gdp, *horizon, *steps);
+                }
+                EconomicsAction::Bond {
+                    face,
+                    coupon_rate,
+                    yield_rate,
+                    periods,
+                } => {
+                    science::run_economics_bond(*face, *coupon_rate, *yield_rate, *periods);
+                }
+                EconomicsAction::Paper { qty, last_price } => {
+                    science::run_economics_paper(*qty, *last_price);
+                }
+                EconomicsAction::Welfare { incomes } => {
+                    science::run_economics_welfare(&incomes);
+                }
+                EconomicsAction::Game { market_a } => {
+                    science::run_economics_game(*market_a);
                 }
             },
         },

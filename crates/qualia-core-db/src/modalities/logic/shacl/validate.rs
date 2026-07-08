@@ -718,6 +718,11 @@ impl<'a> ShaclEngine<'a> {
             | ShaclConstraint::GraphConstraint { .. }
             | ShaclConstraint::ArgumentationConstraint { .. }
             | ShaclConstraint::DialecticalConstraint { .. }
+            | ShaclConstraint::EconVaRPositive
+            | ShaclConstraint::EconConvergedModel
+            | ShaclConstraint::EconPositivePrice
+            | ShaclConstraint::EconRiskBelowThreshold { .. }
+            | ShaclConstraint::EconWelfareAboveFloor { .. }
             | ShaclConstraint::AspConstraint { .. }
             | ShaclConstraint::DiffusionConstraint { .. }
             | ShaclConstraint::LinearLogicConstraint { .. }

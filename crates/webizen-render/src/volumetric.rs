@@ -23,6 +23,18 @@ impl VolumetricRenderer {
         })
     }
 
+    /// Create a **surface** renderer that draws directly to a window's GPU swapchain.
+    ///
+    /// This is the native desktop path — no PNG round-trip, no webview `<img>`.
+    /// The surface is created from a raw window handle (HWND on Windows).
+    /// Call `render()` to draw a frame; the swapchain present is automatic.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "qualia"))]
+    pub fn new_surface(hwnd: isize, width: u32, height: u32, particle_cap: usize) -> Result<Self, String> {
+        Ok(Self {
+            inner: PortalGpu::new_surface(hwnd, width, height, particle_cap)?,
+        })
+    }
+
     pub fn upload_tensor_buffer(&mut self, bytes: &[u8]) -> Result<u32, String> {
         self.inner.upload_tensor_buffer(bytes)
     }

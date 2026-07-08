@@ -14,7 +14,7 @@ default = ["profile_target_1024", "zk-culling", "gpu-runtime", "wgsl-forge", "pr
 # Science playground:               --features wasm-scientific
 # Browser model runtime:            --features wasm-llm
 # Full API explorer / playground:   --features wasm-full
-gpu-runtime = ["dep:wgpu"]
+gpu-runtime = ["dep:wgpu", "dep:raw-window-handle"]
 wgsl-forge = ["dep:naga", "dxc", "cuda"]
 cuda = ["dep:cudarc"]
 # W7 (ADR-pending): real NVIDIA GPU thermal/power telemetry via NVML (nvml-wrapper dlopens the
@@ -146,6 +146,7 @@ rand_distr = "0.6.0"
 fast_qr = { version = "0.13.1", features = ["svg"] }
 wgpu = { version = "29", features = ["webgpu"], optional = true }
 naga = { version = "29", features = ["wgsl-in", "spv-out"], optional = true }
+raw-window-handle = { version = "0.6", optional = true }
 cudarc = { version = "0.19", optional = true, features = ["cuda-13030"] }
 
 
@@ -187,6 +188,7 @@ web-sys = { version = "0.3", features = [
 # Feature-unification shim for stable fips20x/x25519 dependencies that still
 # consume rand_core 0.6/getrandom 0.2 on wasm32.
 getrandom_02 = { package = "getrandom", version = "0.2", features = ["js"] }
+getrandom_03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
 getrandom = { version = "0.4", features = ["wasm_js"] }
 serde-wasm-bindgen = "0.6.5"
 wasm-bindgen-futures = "0.4"
@@ -230,7 +232,7 @@ sysinfo = "0.39.3"
 # library at runtime (dlopen) — builds without the CUDA SDK; init fails gracefully on non-NVIDIA hosts.
 nvml-wrapper = { version = "0.10", optional = true }
 libp2p = { version = "0.56.0", features = ["tcp", "dns", "noise", "yamux", "request-response", "kad", "mdns", "macros", "tokio"] }
-reqwest = { version = "0.13.4", features = ["json", "rustls"] }
+reqwest = { version = "0.13.4", features = ["json", "rustls", "blocking"] }
 boringtun = "0.7.1"
 rcgen = "0.14.8"
 # DNSSEC and WireGuard dependencies for SocialWebNet bootstrapping

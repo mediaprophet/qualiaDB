@@ -1,5 +1,5 @@
 use qualia_client_core::api;
-use qualia_client_core::api::{CoinBalance, HardwareStatus, TokenEntry, TxRecord, WalletStatus};
+use qualia_client_core::api::{CoinBalance, HardwareStatus, SendPreview, TokenEntry, TxRecord, WalletStatus};
 use qualia_client_core::engine::{ingestion, llm_offload};
 use qualia_client_core::state::{Actor, AgentConfig, DelegationRule, FrontDoor, ProgressPayload};
 use qualia_core_db::ilp_dispatcher::DispatchResult;
@@ -64,7 +64,7 @@ fn ensure_lan_export_server(export_base: std::path::PathBuf, port: u16) {
         tauri::async_runtime::spawn(async move {
             use axum::{routing::get_service, Router};
             use tower_http::services::ServeDir;
-            let app = Router::new().nest_service("/", get_service(ServeDir::new(export_base)));
+            let app = Router::new().fallback_service(get_service(ServeDir::new(export_base)));
             let Ok(listener) = tokio::net::TcpListener::bind(("0.0.0.0", port)).await else {
                 eprintln!("LAN export server: failed to bind 0.0.0.0:{port}");
                 return;
@@ -1175,11 +1175,184 @@ pub fn wellfair_reset_weight_model(app: AppHandle) -> Result<String, String> {
     Ok("{\"reset\":true}".into())
 }
 
-// ── Accountability fabric (ADR 0011) — tamper-evident ledger + revocable consent credentials ──
+// ── Physiological state (P6 — the reproductive-continuum declaration) ──────────────────────────
 //
-// The desktop surface for the welfare/fairness accountability thread: grant a worker scoped access, record
-// how/why they acted (attributable, court-auditable), let the person revoke (crypto-enforced — access ends,
-// the conduct trail survives), all written into a signed hash-chained ledger the person's own key signs.
+// The person's own statement of where they are on the reproductive continuum. Forum-internum /
+// Sanctuary-class. The score-card is computed at this state so it reads them at their current life
+// stage, not a neutral baseline.
+
+/// The person's declared physiological state + whether they've declared one. Returns
+/// `{ state, declared }`. `state` is the `PhysiologicalState` JSON (Baseline if not declared).
+#[command]
+pub fn wellfair_get_physiological_state(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    serde_json::to_string(&serde_json::json!({
+        "state": host.get_physiological_state(),
+        "declared": host.physiological_state_is_declared(),
+    }))
+    .map_err(|e| e.to_string())
+}
+
+/// Set the person's declared physiological state (JSON = `PhysiologicalState`) — their own statement of
+/// where they are on the reproductive continuum. Forum-internum / Sanctuary-class.
+#[command]
+pub fn wellfair_set_physiological_state(app: AppHandle, state_json: String) -> Result<String, String> {
+    let state: wellfare_core::anatomy::PhysiologicalState =
+        serde_json::from_str(&state_json).map_err(|e| format!("invalid physiological state JSON: {e}"))?;
+    let app_state = app.state::<HostApiState>();
+    let guard = app_state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    host.set_physiological_state(&state)?;
+    Ok("{\"set\":true}".into())
+}
+
+/// Clear the declared physiological state — revert to the implicit Baseline. Idempotent.
+#[command]
+pub fn wellfair_reset_physiological_state(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    host.reset_physiological_state()?;
+    Ok("{\"reset\":true}".into())
+}
+
+// ── 3D Anatomy render surface (S5.7 — whole-body percept snapshot) ────────────────────────────
+
+/// Render the whole-body 3D Anatomy snapshot to a PNG (headless GPU via `webizen_render`), coloured by
+/// the person's accumulated burden at their declared physiological state. The orbit camera is driven by
+/// `azimuth` (0..360°) and `elevation` (-90..90°). The PNG is stored in [`AnatomyBodyState`] and served
+/// at `webizen://localhost/anatomy/body.png`; the Studio UI bumps its epoch query-string to refetch.
+/// Returns `{ "ok": true, "bytes": <len> }` on success.
+#[command]
+pub async fn wellfair_render_body_snapshot(
+    app: AppHandle,
+    azimuth: Option<f64>,
+    elevation: Option<f64>,
+    state: State<'_, AnatomyBodyState>,
+    host_state: State<'_, HostApiState>,
+) -> Result<String, String> {
+    let az = azimuth.unwrap_or(0.0);
+    let el = elevation.unwrap_or(10.0);
+    // Compute the scene while holding the host lock, then drop the guard before the await so the
+    // future stays `Send` (the MutexGuard is not Send).
+    let scene = {
+        let guard = host_state.0.lock().map_err(|e| e.to_string())?;
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.compute_body_scene(az, el)?
+    };
+
+    let png = tokio::task::spawn_blocking(move || -> Result<Vec<u8>, String> {
+        webizen_render::render_scene_png(&scene, 960, 540)
+            .ok_or_else(|| "GPU render_scene_png returned no frame".to_string())
+    })
+    .await
+    .map_err(|e| format!("render task join failed: {e}"))??;
+
+    let len = png.len();
+    if let Ok(mut slot) = state.png.lock() {
+        *slot = png;
+    }
+    let _ = app.emit("anatomy-body-ready", ());
+    serde_json::to_string(&serde_json::json!({ "ok": true, "bytes": len }))
+        .map_err(|e| e.to_string())
+}
+
+// ── 3D Anatomy asset cache (S5.8 — user-triggered real-mesh acquisition) ───────────────────────
+
+/// Whether the body assets for a model are cached + complete. `model` = `"male"` / `"female"`.
+/// Returns `{ model, cached, organ_count, total_ten_d_bytes, acquired_at_unix }`.
+#[command]
+pub fn wellfair_body_assets_status(
+    app: AppHandle,
+    model: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let status = host.body_assets_status(&model)?;
+    serde_json::to_string(&status).map_err(|e| e.to_string())
+}
+
+/// Acquire (download + compile + cache) the body assets for a model — **user-triggered**. Discovers the
+/// reference-organ manifest from the HRA SPARQL endpoint, fetches each GLB, compiles to `.10d`, caches
+/// both + a manifest. Emits `anatomy-acquire-progress` per organ and `anatomy-acquire-done` at the end.
+/// Returns the final `AcquireReport` JSON. Blocking network I/O runs on `spawn_blocking`.
+#[command]
+pub async fn wellfair_acquire_body_assets(
+    app: AppHandle,
+    model: String,
+    host_state: State<'_, HostApiState>,
+) -> Result<String, String> {
+    // Resolve the model + storage_root while holding the lock, then drop the guard before the await.
+    let (model_enum, storage_root) = {
+        let guard = host_state.0.lock().map_err(|e| e.to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let m = qualia_client_core::wellfair::api::parse_anatomy_model(&model)?;
+        (m, host.storage_root().to_path_buf())
+    };
+
+    let app_for_progress = app.clone();
+    let report = tokio::task::spawn_blocking(move || -> Result<qualia_client_core::wellfair::anatomy_assets::AcquireReport, String> {
+        qualia_client_core::wellfair::anatomy_assets::acquire_body_assets(
+            &storage_root,
+            model_enum,
+            |p| {
+                let _ = app_for_progress.emit("anatomy-acquire-progress", &p);
+            },
+        )
+    })
+    .await
+    .map_err(|e| format!("acquire task join failed: {e}"))??;
+
+    let _ = app.emit("anatomy-acquire-done", &report);
+    serde_json::to_string(&report).map_err(|e| e.to_string())
+}
+
+/// Load a cached `.10d` for one organ. Returns the raw container bytes as a Tauri IPC byte response
+/// (the browser portal's `load_10d_colored` consumes them). `model` = `"male"` / `"female"`.
+#[command]
+pub fn wellfair_load_cached_organ_10d(
+    app: AppHandle,
+    model: String,
+    organ_key: String,
+) -> Result<Vec<u8>, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    host.load_cached_organ_10d(&model, &organ_key)
+}
+
+/// The per-organ dual-modality percepts for the cached organ set — so the browser portal knows what
+/// colour to paint each organ (σ → RGBA via `paint_organs`). Returns `{ painted, unmapped }`.
+#[command]
+pub fn wellfair_cached_body_organ_percepts(
+    app: AppHandle,
+    model: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    let (painted, unmapped) = host.cached_body_organ_percepts(&model)?;
+    serde_json::to_string(&serde_json::json!({ "painted": painted, "unmapped": unmapped }))
+        .map_err(|e| e.to_string())
+}
+
+/// Clear the cache for a model (idempotent). The person can re-acquire later.
+#[command]
+pub fn wellfair_clear_body_cache(
+    app: AppHandle,
+    model: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    host.clear_body_cache(&model)?;
+    Ok("{\"ok\":true}".into())
+}
 
 /// Append a raw record to the person's tamper-evident accountability ledger (owner-signed).
 #[command]
@@ -2699,6 +2872,23 @@ pub fn save_tax_suite(suite: TaxRecipientSuite) -> Result<(), String> {
 #[command]
 pub fn dispatch_tax_payment(gross_amount_micro_cents: u64) -> Result<DispatchResult, String> {
     api::dispatch_tax_payment(gross_amount_micro_cents)
+}
+
+// ── Wallet send ───────────────────────────────────────────────────────────────
+
+#[command]
+pub fn build_send_xec(destination_address: String, amount_sats: i64) -> Result<SendPreview, String> {
+    api::build_send_xec(&destination_address, amount_sats)
+}
+
+#[command]
+pub fn confirm_send_xec(raw_hex: String) -> Result<String, String> {
+    api::confirm_send_xec(&raw_hex)
+}
+
+#[command]
+pub fn send_ecash_token(token_id: String, destination_address: String, amount: u64) -> Result<String, String> {
+    api::send_ecash_token(&token_id, &destination_address, amount)
 }
 
 // ── Vault / federated ─────────────────────────────────────────────────────────
@@ -4453,6 +4643,14 @@ pub struct PreviewState {
     pub node_positions: std::sync::Arc<std::sync::Mutex<Vec<(String, f64, f64, f64)>>>,
 }
 
+/// Shared slot holding the latest rendered 3D Anatomy body snapshot PNG. Served by the
+/// `webizen://localhost/anatomy/body.png` protocol handler. The Studio UI bumps the epoch (query-string
+/// cache-buster) after each `wellfair_render_body_snapshot` call so the webview refetches.
+#[derive(Default, Clone)]
+pub struct AnatomyBodyState {
+    pub png: std::sync::Arc<std::sync::Mutex<Vec<u8>>>,
+}
+
 /// Atomic flag controlling the render daemon loop.
 /// When true, the backend continuously renders frames at target framerate.
 /// When false, the loop stops, enabling energy-aware rendering.
@@ -5341,6 +5539,253 @@ pub fn evaluate_logic_rules(input: EvaluateLogicRulesInput) -> Result<EvaluateLo
     })
 }
 
+// ── 10D Container Browser commands ──────────────────────────────────────────
+
+#[derive(serde::Serialize)]
+pub struct TenDContainerEntry {
+    pub path: String,
+    pub filename: String,
+    pub size_bytes: u64,
+    pub section_count: u32,
+    pub has_mesh: bool,
+    pub has_tensor_nodes: bool,
+    pub has_provenance: bool,
+    pub category: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct TenDContainerInspection {
+    pub path: String,
+    pub filename: String,
+    pub size_bytes: u64,
+    pub header_flags: u16,
+    pub section_count: u32,
+    pub sections: Vec<TenDSectionInfo>,
+    pub crc_valid: bool,
+    pub mesh_vertex_count: Option<u32>,
+    pub mesh_triangle_count: Option<u32>,
+    pub provenance_source: Option<String>,
+    pub provenance_licence: Option<String>,
+    pub provenance_timestamp: Option<u64>,
+}
+
+#[derive(serde::Serialize)]
+pub struct TenDSectionInfo {
+    pub section_type: u8,
+    pub section_type_name: String,
+    pub byte_offset: u32,
+    pub byte_length: u32,
+}
+
+/// Scan the storage root for .10d container files.
+#[tauri::command]
+pub fn browse_10d_containers(_app: tauri::AppHandle) -> Result<Vec<TenDContainerEntry>, String> {
+    use qualia_core_db::container_10d::{header::Container10dHeader, section::SectionType};
+    use std::fs;
+
+    let storage_root = qualia_client_core::state::dirs_default_path();
+    let mut entries = Vec::new();
+
+    fn scan_dir(
+        dir: &std::path::Path,
+        base: &std::path::Path,
+        entries: &mut Vec<TenDContainerEntry>,
+    ) {
+        let Ok(read_dir) = fs::read_dir(dir) else {
+            return;
+        };
+        for entry in read_dir.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                scan_dir(&path, base, entries);
+            } else if path.extension().and_then(|e| e.to_str()) == Some("10d") {
+                let filename = path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("?")
+                    .to_string();
+                let size_bytes = entry.metadata().map(|m| m.len()).unwrap_or(0);
+
+                let (section_count, has_mesh, has_tensor_nodes, has_provenance) =
+                    if let Ok(bytes) = fs::read(&path) {
+                        if let Ok(header) = Container10dHeader::parse(&bytes) {
+                            let descs = qualia_core_db::container_10d::parse_section_table(
+                                &bytes, &header,
+                            );
+                            let (mut hm, mut ht, mut hp) = (false, false, false);
+                            if let Ok(ref descs) = descs {
+                                for d in descs.iter() {
+                                    if let Some(st) = SectionType::from_u8(d.section_type) {
+                                        match st {
+                                            SectionType::QuantizedMesh => hm = true,
+                                            SectionType::Tensor10DNodes => ht = true,
+                                            SectionType::ProvenanceSidecar => hp = true,
+                                            _ => {}
+                                        }
+                                    }
+                                }
+                            }
+                            (header.section_count, hm, ht, hp)
+                        } else {
+                            (0, false, false, false)
+                        }
+                    } else {
+                        (0, false, false, false)
+                    };
+
+                let relative = path
+                    .strip_prefix(base)
+                    .ok()
+                    .and_then(|p| p.to_str())
+                    .unwrap_or(&filename)
+                    .to_string();
+
+                let category = if relative.contains("ccf") || relative.contains("anatomy") {
+                    "Anatomy Assets".to_string()
+                } else if relative.contains("library") || relative.contains("user") {
+                    "User Library".to_string()
+                } else {
+                    "Other".to_string()
+                };
+
+                entries.push(TenDContainerEntry {
+                    path: relative,
+                    filename,
+                    size_bytes,
+                    section_count,
+                    has_mesh,
+                    has_tensor_nodes,
+                    has_provenance,
+                    category,
+                });
+            }
+        }
+    }
+
+    scan_dir(
+        std::path::Path::new(&storage_root),
+        std::path::Path::new(&storage_root),
+        &mut entries,
+    );
+
+    // Also scan the assets directory if it exists
+    let assets_dir = std::path::Path::new(&storage_root).join("assets");
+    if assets_dir.exists() {
+        scan_dir(&assets_dir, std::path::Path::new(&storage_root), &mut entries);
+    }
+
+    entries.sort_by(|a, b| a.category.cmp(&b.category).then(a.filename.cmp(&b.filename)));
+    Ok(entries)
+}
+
+/// Inspect a single .10d container file in detail.
+#[tauri::command]
+pub fn inspect_10d_container(path: String) -> Result<TenDContainerInspection, String> {
+    use qualia_core_db::container_10d::{
+        header::Container10dHeader,
+        section::SectionType,
+        mesh_section, provenance_section,
+    };
+
+    let storage_root = qualia_client_core::state::dirs_default_path();
+    let full_path = std::path::Path::new(&storage_root).join(&path);
+    let bytes = std::fs::read(&full_path)
+        .map_err(|e| format!("Failed to read {path}: {e}"))?;
+
+    let mut bytes_mut = bytes.clone();
+    let header = Container10dHeader::parse(&bytes_mut)
+        .map_err(|e| format!("Header parse: {e}"))?;
+
+    let crc_valid = qualia_core_db::container_10d::verify_whole_file_crc32c(&mut bytes_mut).is_ok();
+
+    let descs = qualia_core_db::container_10d::parse_section_table(&bytes_mut, &header)
+        .map_err(|e| format!("Section table: {e}"))?;
+
+    let mut sections = Vec::new();
+    let mut mesh_vertex_count = None;
+    let mut mesh_triangle_count = None;
+    let mut provenance_source = None;
+    let mut provenance_licence = None;
+    let mut provenance_timestamp = None;
+
+    for desc in descs.iter() {
+        let type_name = SectionType::from_u8(desc.section_type)
+            .map(|st| format!("{:?}", st))
+            .unwrap_or_else(|| format!("Unknown({})", desc.section_type));
+
+        sections.push(TenDSectionInfo {
+            section_type: desc.section_type,
+            section_type_name: type_name,
+            byte_offset: desc.byte_offset,
+            byte_length: desc.byte_length,
+        });
+
+        let off = desc.byte_offset as usize;
+        let len = desc.byte_length as usize;
+        let payload = &bytes_mut[off..off + len];
+
+        if let Some(st) = SectionType::from_u8(desc.section_type) {
+            match st {
+                SectionType::QuantizedMesh => {
+                    if let Ok(mesh) = mesh_section::decode_mesh_section(payload) {
+                        mesh_vertex_count = Some(mesh.positions.len() as u32);
+                        mesh_triangle_count = Some(mesh.triangles.len() as u32);
+                    }
+                }
+                SectionType::ProvenanceSidecar => {
+                    if let Ok(view) = provenance_section::decode_provenance_section(payload) {
+                        provenance_source = Some(
+                            String::from_utf8_lossy(view.source_bytes()).to_string(),
+                        );
+                        provenance_licence = Some(view.licence().to_string());
+                        provenance_timestamp = Some(view.timestamp_epoch_s());
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    let filename = std::path::Path::new(&path)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("?")
+        .to_string();
+
+    Ok(TenDContainerInspection {
+        path,
+        filename,
+        size_bytes: bytes.len() as u64,
+        header_flags: header.flags,
+        section_count: header.section_count,
+        sections,
+        crc_valid,
+        mesh_vertex_count,
+        mesh_triangle_count,
+        provenance_source,
+        provenance_licence,
+        provenance_timestamp,
+    })
+}
+
+/// Open a file picker for an arbitrary .10d file and return its path.
+#[tauri::command]
+pub async fn open_10d_file_picker(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let (tx, rx) = std::sync::mpsc::channel();
+    app.dialog()
+        .file()
+        .add_filter("10D Container", &["10d"])
+        .pick_file(move |path| {
+            let result = path.and_then(|p| p.into_path().ok()).map(|p| p.to_string_lossy().to_string());
+            let _ = tx.send(result);
+        });
+
+    rx.recv()
+        .map_err(|e| format!("File picker channel: {e}"))
+}
+
 
 
 pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
@@ -5420,6 +5865,15 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_get_weight_model,
         wellfair_set_weight_model,
         wellfair_reset_weight_model,
+        wellfair_get_physiological_state,
+        wellfair_set_physiological_state,
+        wellfair_reset_physiological_state,
+        wellfair_render_body_snapshot,
+        wellfair_body_assets_status,
+        wellfair_acquire_body_assets,
+        wellfair_load_cached_organ_10d,
+        wellfair_cached_body_organ_percepts,
+        wellfair_clear_body_cache,
         wellfair_ledger_append,
         wellfair_ledger_verify,
         wellfair_ledger_entries,
@@ -5521,6 +5975,9 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         get_tax_suite,
         save_tax_suite,
         dispatch_tax_payment,
+        build_send_xec,
+        confirm_send_xec,
+        send_ecash_token,
         accept_vault_handshake,
         receive_vault_job,
         ingest_pdf,
@@ -5650,5 +6107,18 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         calculate_quantum_dft,
         calculate_monte_carlo_var,
         submit_record,
+        // ── Native GPU surface commands ──────────────────────────────────
+        crate::native_surface::mount_gpu_surface,
+        crate::native_surface::set_gpu_scene,
+        crate::native_surface::set_gpu_camera,
+        crate::native_surface::upload_gpu_mesh,
+        crate::native_surface::upload_gpu_mesh_colored,
+        crate::native_surface::upload_gpu_10d_mesh,
+        crate::native_surface::load_gpu_10d_asset,
+        crate::native_surface::unmount_gpu_surface,
+        // ── 10D browser commands ─────────────────────────────────────────
+        browse_10d_containers,
+        inspect_10d_container,
+        open_10d_file_picker,
     ]
 }

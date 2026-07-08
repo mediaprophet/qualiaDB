@@ -1,5 +1,7 @@
 pub mod accessibility_prefs;
 pub mod anatomy_body;
+pub mod anatomy_render;
+pub mod anatomy_assets;
 pub mod anatomy_view;
 pub mod api;
 pub mod anatomy_dyad;
@@ -12,6 +14,7 @@ pub mod consent_store;
 pub mod export_package;
 pub mod graph_query;
 pub mod personal_profile;
+pub mod physiology_prefs;
 pub mod checkpoint_store;
 pub mod graph_store;
 pub mod host_state;

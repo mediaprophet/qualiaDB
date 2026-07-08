@@ -9,19 +9,13 @@ serde_json = "1.0.150"
 uuid = { version = "1.10", features = ["v4"] }
 futures-util = "0.3.30"
 base64 = "0.22.1"
-# Native (x86_64): "desktop" feature → native window, no webview, no WASM.
-# WASM (wasm32): "web" feature → browser/webview renderer.
-# Both include "router" for the 14-route Dioxus router.
-
-# reqwest — used on both platforms.
 reqwest = { version = "0.13.4", default-features = false, features = ["json"] }
 
-# ── Native-only dependencies ──────────────────────────────────────────────────
-# These give the native desktop build direct in-process access to the engine
-# and renderer. They are excluded from the WASM build (which talks to the
-# backend via the local web server on :8080).
+# ── Native-only dependencies (webizen-desktop uses webizen-studio as a library) ─
+# These give the native build access to the render pipeline types.
+# dioxus is included with "router" only (not "desktop") to avoid wry conflicts.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-dioxus = { version = "0.8.0-alpha.0", features = ["router", "desktop"] }
+dioxus = { version = "0.7.9", features = ["router"] }
 qualia-core-db = { version = "0.0.23", path = "../qualia-core-db" }
 webizen-render = { version = "0.0.23", path = "../webizen-render" }
 qualia-client-core = { version = "0.0.23", path = "../qualia-client-core" }
@@ -29,15 +23,13 @@ tokio = { version = "1", features = ["full"] }
 dirs-next = "2.0.0"
 
 # ── WASM-only dependencies ────────────────────────────────────────────────────
-# These are for the web-server build path (served from :8080) and the
-# browser-accessible Studio UI.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-dioxus = { version = "0.8.0-alpha.0", features = ["router", "web"] }
+dioxus = { version = "0.7.9", features = ["router", "web"] }
 uuid = { version = "1.10", features = ["v4", "js"] }
-wasm-bindgen = "0.2.123"
+wasm-bindgen = "0.2.100"
 js-sys = "0.3"
 web-sys = { version = "0.3.100", features = ["CanvasRenderingContext2d", "Document", "Element", "EventSource", "History", "HtmlCanvasElement", "ImageData", "MediaQueryList", "MessageEvent", "Response", "Storage", "WebSocket", "BinaryType", "Window"] }
-wasm-bindgen-futures = "0.4.75"
+wasm-bindgen-futures = "0.4.42"
 serde-wasm-bindgen = "0.6.5"
 console_error_panic_hook = "0.1.7"
 gloo-timers = { version = "0.4", features = ["futures"] }

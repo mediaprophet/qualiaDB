@@ -832,6 +832,175 @@ impl QualiaPortal {
         Ok(result.into())
     }
 
+    /// S5.8 — load the **whole body** as a set of per-organ `.10d` meshes, each painted its body-system's
+    /// σ-derived RGBA, accumulated into one combined GPU mesh. This is the real-mesh render path: the
+    /// host caches the CCF/HRA GLB set (compiled to `.10d`), the browser portal fetches each cached
+    /// `.10d` + its percept colour, and this method decodes + centres + scales each organ and uploads
+    /// them all as one mesh with per-vertex colours. Each organ is offset to its anatomical position
+    /// (approximate — the CCF ref organs are individually centred; a future pass can use real CCF
+    /// transforms). Same governance fail-closed per organ as `load_10d_colored`.
+    ///
+    /// `organs` is a JS `Array` of objects: `{ bytes: Uint8Array, r: f32, g: f32, b: f32, a: f32,
+    /// x: f32, y: f32, z: f32 }` where `(x,y,z)` is the organ's anatomical position offset (0..1
+    /// normalised body space, mapped to the orbit frame). Returns `{ organs_loaded, organs_refused,
+    /// total_triangles }`.
+    pub fn load_body_organs_colored(
+        &mut self,
+        organs: &Array,
+    ) -> Result<JsValue, JsValue> {
+        use crate::container_10d::{
+            self,
+            header::{Container10dHeader, FLAG_DEFAULT_DISPOSITION_REFUSE},
+        };
+
+        let mut all_positions: Vec<[f32; 3]> = Vec::new();
+        let mut all_colors: Vec<[f32; 4]> = Vec::new();
+        let mut all_indices: Vec<u32> = Vec::new();
+        let mut organs_loaded = 0u32;
+        let mut organs_refused = 0u32;
+        let mut total_triangles = 0u32;
+
+        for i in 0..organs.length() {
+            let organ = organs.get(i);
+            let bytes_val = Reflect::get(&organ, &JsValue::from_str("bytes"))
+                .map_err(|_| JsValue::from_str("organ.bytes missing"))?;
+            let bytes: Vec<u8> = js_sys::Uint8Array::new(&bytes_val).to_vec();
+            let r = Reflect::get(&organ, &JsValue::from_str("r"))
+                .map_err(|_| JsValue::from_str("organ.r missing"))?
+                .as_f64()
+                .unwrap_or(0.5) as f32;
+            let g = Reflect::get(&organ, &JsValue::from_str("g"))
+                .map_err(|_| JsValue::from_str("organ.g missing"))?
+                .as_f64()
+                .unwrap_or(0.6) as f32;
+            let b = Reflect::get(&organ, &JsValue::from_str("b"))
+                .map_err(|_| JsValue::from_str("organ.b missing"))?
+                .as_f64()
+                .unwrap_or(0.8) as f32;
+            let a = Reflect::get(&organ, &JsValue::from_str("a"))
+                .map_err(|_| JsValue::from_str("organ.a missing"))?
+                .as_f64()
+                .unwrap_or(1.0) as f32;
+            let ox = Reflect::get(&organ, &JsValue::from_str("x"))
+                .ok()
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.5) as f32;
+            let oy = Reflect::get(&organ, &JsValue::from_str("y"))
+                .ok()
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.5) as f32;
+            let oz = Reflect::get(&organ, &JsValue::from_str("z"))
+                .ok()
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.5) as f32;
+
+            let mut bytes_mut = bytes.clone();
+            let header = match Container10dHeader::parse(&bytes_mut) {
+                Ok(h) => h,
+                Err(_) => continue, // skip undecodable organs
+            };
+            if container_10d::verify_whole_file_crc32c(&mut bytes_mut).is_err() {
+                continue;
+            }
+            let descs = match container_10d::parse_section_table(&bytes_mut, &header) {
+                Ok(d) => d,
+                Err(_) => continue,
+            };
+
+            let mut mesh = None;
+            let mut has_attestation = false;
+            for desc in descs.iter() {
+                let st = match container_10d::SectionType::from_u8(desc.section_type) {
+                    Some(st) => st,
+                    None => continue,
+                };
+                let off = desc.byte_offset as usize;
+                let len = desc.byte_length as usize;
+                let payload = &bytes_mut[off..off + len];
+                match st {
+                    container_10d::SectionType::QuantizedMesh => {
+                        if let Ok(m) = container_10d::decode_mesh_section(payload) {
+                            mesh = Some(m);
+                        }
+                    }
+                    container_10d::SectionType::ProvenanceSidecar => {
+                        if let Ok(view) =
+                            container_10d::provenance_section::decode_provenance_section(payload)
+                        {
+                            if container_10d::provenance_section::validate_provenance(&view).is_ok() {
+                                has_attestation = true;
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            let Some(mesh) = mesh else { continue };
+            let governance_refused =
+                (header.flags & FLAG_DEFAULT_DISPOSITION_REFUSE) != 0 && !has_attestation;
+            if governance_refused {
+                organs_refused += 1;
+                continue;
+            }
+
+            // Centre + scale this organ to the orbit frame, then offset to its anatomical position.
+            // The body-space position (0..1) is mapped to [-1..1] in the orbit frame.
+            let c = mesh.centroid();
+            let ext = [
+                mesh.max[0] - mesh.min[0],
+                mesh.max[1] - mesh.min[1],
+                mesh.max[2] - mesh.min[2],
+            ];
+            let span = ext[0].max(ext[1]).max(ext[2]).max(1e-6);
+            // Organ-local scale: fit to ~0.15 of the orbit frame so organs don't overlap too much.
+            let s = 0.15 / span;
+            let base = all_positions.len() as u32;
+            for p in mesh.positions.iter() {
+                all_positions.push([
+                    (p[0] - c[0]) * s + (ox - 0.5) * 2.0,
+                    (p[1] - c[1]) * s + (oy - 0.5) * 2.0,
+                    (p[2] - c[2]) * s + (oz - 0.5) * 2.0,
+                ]);
+                all_colors.push([r, g, b, a]);
+            }
+            for t in mesh.triangles.iter() {
+                all_indices.push(base + t[0]);
+                all_indices.push(base + t[1]);
+                all_indices.push(base + t[2]);
+            }
+            total_triangles += mesh.triangles.len() as u32;
+            organs_loaded += 1;
+        }
+
+        if let Some(ref mut gpu) = self.gpu {
+            gpu.upload_mesh_colored(&all_positions, &all_colors, &all_indices);
+            self.tier = 2;
+        }
+
+        self.description = format!(
+            "{organs_loaded} organs · {total_triangles} triangles · {organs_refused} refused · coloured · T2"
+        );
+
+        let result = js_sys::Object::new();
+        Reflect::set(
+            &result,
+            &JsValue::from_str("organs_loaded"),
+            &JsValue::from_f64(organs_loaded as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("organs_refused"),
+            &JsValue::from_f64(organs_refused as f64),
+        )?;
+        Reflect::set(
+            &result,
+            &JsValue::from_str("total_triangles"),
+            &JsValue::from_f64(total_triangles as f64),
+        )?;
+        Ok(result.into())
+    }
+
     /// Phase 2 — drive the loaded mesh artefact with a kinematic joint (visible physics). `kind` is
     /// `"prismatic"` (slide) or anything else = `"revolute"` (spin); `(ax,ay,az)` is the axis
     /// (normalised here; defaults to +Y if zero); `rate` is rad/s (revolute) or units/s (prismatic).

@@ -20,6 +20,9 @@ pub mod advancing_front;
 #[cfg(test)]
 pub mod allocation_counter;
 mod alpha_shape;
+/// P13.8 - Anisotropic remeshing with crease/feature preservation and
+/// BVH-pruned surface projection.
+pub mod anisotropic_remesh;
 /// P12.6 — Radial sort and Weiler 3-D arrangement model.
 pub mod arrangement_3d;
 /// P11.8 — Arrangements, point-line duality, and topological sweep.
@@ -59,12 +62,14 @@ mod csr_adjacency;
 /// (union/intersection/difference/xor with boundary cycles + holes; Euler and
 /// area identities).
 pub mod dcel_overlay;
+pub mod ddg_operators;
 mod decimate_3;
 pub mod delaunay_2;
 mod delaunay_3;
 /// P13.2 — Delaunay refinement for PSLGs with Steiner points (Ruppert).
 pub mod delaunay_refine;
 mod determinism_corpus;
+pub mod deterministic_geometry;
 mod distance;
 /// P12.2 — Exact 2D arrangement with exact-construction intersection points.
 pub mod exact_arrangement;
@@ -72,10 +77,12 @@ mod exact_construct_3;
 mod exact_kernel;
 mod expansion;
 mod features;
+pub mod fem_certificate;
 /// P10.6 — Independent oracle and fixture licence registry (origin, licence,
 /// checksum, permitted use; rejects copyleft; textbook = invariant reference
 /// only, no copied material).
 pub mod fixture_registry;
+pub mod geometry_integration;
 /// P10.5 — Geometry workspace: caller-owned arenas with byte budgets,
 /// deterministic partition/reduction order, and cancellation.
 pub mod geometry_workspace;
@@ -100,10 +107,13 @@ mod kernel;
 /// in triangulated planar subdivisions.
 pub mod kirkpatrick;
 mod laplacian_3d;
+pub mod math_geometry;
 /// P13.1 — Mesh quality metrics (tri/tet min/max angle, radius-edge, aspect,
 /// scaled Jacobian, dihedral) and isotropic size / anisotropic metric fields.
 pub mod mesh_quality;
 mod minkowski_2;
+pub mod mixed_cell_topology;
+pub mod motion_planning;
 /// P12.7 — Arbitrary n-ary boolean-expression evaluator.
 pub mod nary_boolean;
 /// P12.1 — N-ary CSG operations on 2D polygons and 2D mesh co-refinement.
@@ -113,6 +123,7 @@ pub mod natural_neighbour;
 /// P8.6 — Nearest-neighbour inference query (radius + kNN).
 pub mod nn_query;
 mod orient3d;
+pub mod parametric_cad;
 /// P8.2 — Persistent homology: deterministic reduction → barcode.
 pub mod persistence;
 /// P11.6 — Point location in planar subdivisions (walking + slab decomposition).
@@ -135,6 +146,7 @@ pub mod range_trees;
 mod recon_section;
 mod reconstruct_3d;
 mod remesh_3;
+pub mod screened_poisson;
 /// P11.1 — Robust segment/line/ray primitives and exact intersections.
 pub mod segment_intersection_2;
 /// P12.8 — Coplanar-region simplification and topology-preserving snap rounding.
@@ -177,6 +189,10 @@ pub use advancing_front::{
 pub use alpha_shape::{
     alpha_shape_2d, alpha_shape_3d, alpha_shape_hash, max_triangles, AlphaEdge, AlphaShapeError,
     AlphaShapeReport, EdgeClass, TriangleClass,
+};
+pub use anisotropic_remesh::{
+    anisotropic_remesh, required_anisotropic_output_capacity, AnisotropicRemeshError,
+    AnisotropicRemeshOptions, AnisotropicRemeshReport, FeatureEdge,
 };
 pub use arrangement_3d::{
     build_arrangement_3d, radial_sort_around_edge, validate_arrangement, Arrangement3D,
@@ -238,6 +254,14 @@ pub use csr_adjacency::{
     required_face_offsets, required_vertex_neighbours, required_vertex_offsets, CsrError,
     CsrHeader, CsrSummary,
 };
+pub use ddg_operators::{
+    boundary_of_boundary_is_zero, boundary_of_simplex, cotangent_laplacian, curvature_angle_defect,
+    encode_ddg_operator_section, face_vector_areas, geodesic_distances_dijkstra,
+    harmonic_parameterize_disk, heat_step, hodge_decomposition_summary, mean_curvature_flow_step,
+    parallel_transport_angle, solve_poisson_jacobi, surface_area_gradient, vertex_normals,
+    ChainTerm, CurvatureSample, DdgError, DdgReport, DdgSectionHeader, HodgeSummary, SparseEntry,
+    DDG_SECTION_MAGIC, DDG_SECTION_VERSION,
+};
 pub use decimate_3::{
     decimate_qem, decimate_qem_with_kernel, required_triangles, required_vertices, DecimateError,
     DecimateOptions, DecimateReport,
@@ -255,6 +279,17 @@ pub use delaunay_refine::{
     RUPPERT_TERMINATION_BOUND_DEG,
 };
 pub use determinism_corpus::compute_corpus_hash;
+pub use deterministic_geometry::{
+    all_nearest_neighbours, beta_skeleton_graph, bichromatic_nearest_pair,
+    build_batch_dynamic_kd_tree, conflict_graph_pairs, deterministic_pack_u32,
+    deterministic_reduce_f64, deterministic_scan_u64, dynamic_kd_compact, dynamic_kd_delete,
+    dynamic_kd_insert, dynamic_kd_nearest, euclidean_mst, external_memory_nearest_tiles,
+    gabriel_graph, generate_spatial_points, greedy_spanner, knn_graph, list_rank_successors,
+    nearest_pair, reproducible_benchmark_report, reservation_batch_hull_2d,
+    seeded_incremental_order, smallest_enclosing_ball, tree_contract_roots, well_separated_pairs,
+    BatchDynamicKdTree, BenchmarkReport, ConflictEdge, DeterministicGeometryError, DynamicKdRecord,
+    EnclosingBall, NearestPair, SpatialGeneratorKind, WeightedEdge, WellSeparatedPair,
+};
 pub use distance::{
     distance_2d, distance_3d, distance_sq_2d, distance_sq_3d, point_line_distance_sq_2d,
     point_segment_distance_2d, point_segment_distance_sq_2d, point_segment_distance_sq_3d,
@@ -283,9 +318,23 @@ pub use expansion::{
 pub use features::{
     encode_topology_features_10d, encode_topology_features_10d_with_connectivity, FeatureError,
 };
+pub use fem_certificate::{
+    build_fem_certificate, decode_fem_certificate, encode_fem_certificate, BoundaryMarker,
+    FemCertificate, FemCertificateError, MaterialRegion, FEM_CERT_ENCODED_LEN, FEM_CERT_MAGIC,
+    FEM_CERT_VERSION,
+};
 pub use fixture_registry::{
     validate_records, FixtureOrigin, FixtureRecord, FixtureRegistry, FixtureRegistryError,
     LicenceKind, UsePermission, SEED_FIXTURES,
+};
+pub use geometry_integration::{
+    build_section_header, cancel_stream_at, closeout_summary, encode_section_header,
+    plan_stream_chunks, renderer_descriptor, schema_descriptor, validate_conformance,
+    validate_conformance_matrix, validate_operation_descriptor, GeometryBackendKind,
+    GeometryCloseoutRecord, GeometryConformanceMatrixRow, GeometryConformanceRecord,
+    GeometryEvidenceLevel, GeometryOperationDescriptor, GeometryRenderableDescriptor,
+    GeometrySchemaDescriptor, GeometrySchemaKind, GeometrySectionHeader, GeometryStreamChunk,
+    IntegrationError, GEOMETRY_SECTION_MAGIC,
 };
 pub use geometry_workspace::{
     deterministic_partition, deterministic_reduce, Cancellation, GeometryWorkspace, WorkspaceError,
@@ -332,6 +381,16 @@ pub use kirkpatrick::{KirkpatrickError, KirkpatrickHierarchy};
 pub use laplacian_3d::{
     cknn_laplacian_3d, cknn_laplacian_normalised_3d, verify_laplacian_properties, LaplacianError,
 };
+pub use math_geometry::{
+    barycentric_tetra, best_translation_registration, caratheodory_reduce_3d,
+    convexity_certificate_polyline, cross_ratio_1d, curve_differential, frame_to_world,
+    householder_reflect, hyperplane_eval, point_from_projective, project_points_to_plane,
+    projective_from_point, quaternion_normalize, quaternion_slerp, quaternion_to_matrix,
+    schur_complement_2x2, separating_plane_aabb, so3_exp, so3_log, solve_diagonal_quadratic,
+    surface_patch_differential, world_to_frame, AffineFrame3, ConvexityCertificate,
+    CurveDifferential, HomogeneousPoint3, Hyperplane3, MathGeometryError, QuadraticSolution,
+    Quaternion, SeparatingPlane, SurfaceDifferential,
+};
 pub use mesh_quality::{
     check_field_conformance_tet, check_field_conformance_tri, tet_mesh_quality_slice, tet_quality,
     tet_quality_points, tri_mesh_quality_2d, tri_quality, tri_quality_points, tri_signed_area_2d,
@@ -342,6 +401,19 @@ pub use minkowski_2::{
     minkowski_difference_2, minkowski_sum_2, minkowski_sum_brute_force, minkowski_sum_convex,
     minkowski_sum_non_convex, MinkowskiError,
 };
+pub use mixed_cell_topology::{
+    extract_boundary_faces, hex_to_tetrahedra, quad_to_triangles, tets_to_mixed,
+    triangles_to_mixed, validate_mixed_cells, BoundaryFace, MixedCell, MixedTopologyError,
+    MixedTopologyReport, CELL_KIND_HEX, CELL_KIND_QUAD, CELL_KIND_TETRA, CELL_KIND_TRIANGLE,
+};
+pub use motion_planning::{
+    belief_update_2d, configuration_obstacle_translate, continuous_segment_collision,
+    coverage_lawnmower, feedback_vector, forward_kinematics_2d, interpolate_pose2, jacobian_2d,
+    kinodynamic_propagate, multi_robot_conflict_free, normalize_pose, normalize_pose3,
+    pursuit_step, rrt_plan, seeded_roadmap, segment_collision_free, time_parameterize_path,
+    visibility_graph_path, BeliefState2, CollisionReport, Control2, Joint2, PlannedPath,
+    PlanningError, PolygonObstacle, Pose2, Pose3, TimedPose2,
+};
 pub use nary_boolean::{
     evaluate_expr, nary_boolean, BoolExpr, MeshInput, NaryBoolError, RegionMask, MAX_OPERANDS,
 };
@@ -350,6 +422,16 @@ pub use nary_csg::{
     NaryCsgError, NaryCsgResult, NaryOp, PolygonWithHoles as NaryPolygonWithHoles,
 };
 pub use orient3d::orient_3d;
+pub use parametric_cad::{
+    bezier_derivative_eval, bezier_eval, bspline_eval, bspline_insert_uniform_knot,
+    budgeted_evolution_optimize, classify_trim_uv, continuity_between_curves, helical_lattice,
+    latin_hypercube_samples, loft_profiles, nurbs_eval, offset_polyline, rbf_surrogate_predict,
+    revolve_profile, sdf_compose, sdf_eval, shape_distance, tensor_surface_eval,
+    tensor_surface_sample, tube_along_polyline, validate_parameters,
+    vascular_lattice_adapter_notice, CadError, ContinuityReport, DomainAdapterNotice,
+    NurbsControlPoint, OptimizationReport, ParameterConstraint, SdfOp, SdfPrimitive, ShapeDistance,
+    SurfaceSample, SurrogatePrediction,
+};
 pub use point_location::{
     build_slab_map, locate_point, point_in_triangle, point_strictly_in_triangle,
     triangulation_to_subdivision, walk_locate, LocateResult, PointLocationError, SlabMap,
@@ -389,6 +471,10 @@ pub use reconstruct_3d::{poisson_reconstruct_3d, ReconstructionError};
 pub use remesh_3::{
     isotropic_remesh, isotropic_remesh_with_kernel, required_output_capacity, RemeshError,
     RemeshOptions, RemeshReport,
+};
+pub use screened_poisson::{
+    required_screened_poisson_capacity, screened_poisson_reconstruct_3d, ScreenedPoissonError,
+    ScreenedPoissonOptions, ScreenedPoissonReport,
 };
 pub use segment_intersection_2::{
     classify_and_construct, classify_segment_intersection_2, line_segment_intersection_2,

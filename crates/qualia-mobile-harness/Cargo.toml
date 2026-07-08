@@ -65,8 +65,3 @@ crdt_dvv_eae = []
 websocket_streamer = []
 wasm_simd = []
 
-[profile.release]
-lto = true
-opt-level = 'z'
-codegen-units = 1
-

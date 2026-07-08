@@ -982,3 +982,80 @@ vs **statutory** (lawful, proportionately-required-by-law — accountable to per
 order; not self-sovereignty). NOT a rating weapon; dignity for the worker (its everyday job is exoneration).
 Locus determination = a `Hypothesis` proposal over evidence, never an automated verdict. ⚑ Timothy/legal:
 statutory model per jurisdiction, evidentiary standard, locus criteria, the anti-weapon line.
+
+
+---
+
+## 2026-07-08 — P6: physiological-state declaration + S5.7: render surface (interim visual) — **done (anatomy_view 11/11, physiology_prefs 2/2, anatomy_render 3/3; desktop + studio host/wasm compile clean)**
+
+**Why (the live priority).** The MASTER-EXECUTION-CHECKLIST had two anatomy items still open: (1) Anatomy P6 — cycle/pregnancy factors → score-card via ridge.rs (the reproductive-continuum declaration so the card reads the person at their current life stage, not a neutral baseline); (2) the render surface — a WebGPU body view so Timothy can *see* the body coloured by burden. Both are now done.
+
+**P6 — the physiological-state declaration.** The reproductive-continuum layer (P1, wellfare-core::anatomy::physiology) already models the continuum as whole-body states with a StateModulator that re-parameterises all body systems. What was missing was the **person's own declaration** of where they are on the continuum — their inward knowledge (forum-internum, Sanctuary-class) — and the score-card / anatomy view being computed *at that state*.
+
+- NEW qualia-client-core/src/wellfair/physiology_prefs.rs — prefs-style persistence (mirrors scorecard_prefs.rs): load/save/clear for the person's declared PhysiologicalState. Absence = not declared → caller falls back to Baseline, never an assumption. 2 tests (round-trip + every-continuum-state serde).
+- pi.rs — get_physiological_state / set_physiological_state / eset_physiological_state / physiological_state_is_declared. compute_scorecard and compute_anatomy_view now read the declared state and pass it through.
+- natomy_view.rs — uild_report and uild_scorecard_report[_with_weights][_from_journal] now take a PhysiologicalState. The state modulator is applied to the per-system burdens (via natomy::state_modulator(state).apply_to_burdens) so colour-by-load reflects the current life stage. The score-card is computed at the state. 2 new tests: third-trimester scales adverse load higher than baseline (renal engagement 130%) + circulatory burden scales with third-trimester engagement (140%).
+- 3 Tauri commands: wellfair_get_physiological_state / wellfair_set_physiological_state / wellfair_reset_physiological_state.
+- Studio host_client.rs — wasm fetch functions for the 3 commands.
+- Studio natomy_panel.rs — physiological-state selector UI ("Where you are on the continuum") with all 13 declarable states (Baseline, pre-menarche, 4 cycle phases, 3 trimesters, postpartum, lactating, perimenopause, post-menopause) + clear-to-baseline. Declaring a state re-loads the anatomy view so the person sees their body at the new life stage immediately.
+
+**S5.7 — the render surface (interim visual).** The progress log (S5.6) noted the blocker: the real 3D body needs ~200–290 MB of live CCF/HRA GLB downloads with no cache, and "the render surface — a WebGPU canvas that calls load_10d_colored per organ — lives in the desktop/Studio UI (Grok's lane, currently idle)." The suggested interim was "a headless whole-body percept snapshot (systems coloured by a sample burden set) as an interim visual." That interim is now built:
+
+- NEW qualia-client-core/src/wellfair/anatomy_render.rs — ody_scene(report, azimuth, elevation) builds a webizen_render::scene_contract::RenderScene representing the whole body as 17 coloured regions (one per body system) at anatomically meaningful positions on a normalised silhouette. Each region's colour is the σ-derived RGBA from AnatomyViewReport::system_percepts; radius grows with burden level (settled × 1.0, worth-watching × 1.5, under-strain × 2.2); under-strain systems pulse; distributed-overlay systems (ECS / ENS / glymphatic) render translucently over their host regions. The orbit camera (azimuth 0..360°, elevation -90..90°) circles the body centre. 3 tests (node-per-system + burden scaling + orbits, camera rotation, rgba→css).
+- pi.rs — compute_body_scene(azimuth, elevation) returns the RenderScene for the current records + declared state.
+- Desktop: AnatomyBodyState (PNG slot, mirrors PreviewState) + wellfair_render_body_snapshot Tauri command (headless webizen_render::render_scene_png at 960×540, stores PNG, emits natomy-body-ready). webizen://localhost/anatomy/body.png protocol handler serves it.
+- Studio: NEW natomy_3d_panel.rs — the 3D body view with orbit-camera sliders (rotate 0..360°, tilt -60..60°), re-render button, reset view. The PNG is displayed via webizen://localhost/anatomy/body.png?t={epoch} (cache-busted on each render). Mounted on the Anatomy tab above the text view.
+
+**Pre-existing build breaks fixed along the way (§13).** The qualia-core-db lib had two pre-existing compile breaks from the economics lane (no CLAIM in NOTICES): (1) shacl_compiler.rs — 5 new Econ* SHACL constraint variants were not covered by the push_constraint match (non-exhaustive); added them to the catch-all arm as no-ops (the economics lane owner can wire real SlgOpcode emissions when the econ VM lands). (2) solvers/statistics/mod.rs — a redundant pub use self::{adf_proxy, ljung_box}; conflicted with the local n ljung_box / n adf_proxy definitions (E0255); removed the redundant re-import.
+
+**Measured results.** cargo test -p qualia-client-core --lib wellfair:: → **174 passed, 0 failed, 4 ignored**. cargo test -p wellfare-core --lib anatomy:: → **80 passed, 0 failed**. New tests: natomy_view 11/11 (incl. 2 new P6 tests), physiology_prefs 2/2, natomy_render 3/3. cargo check -p webizen-desktop --bin webizen-desktop → clean. cargo check -p webizen-studio --lib --target wasm32-unknown-unknown → clean (7 pre-existing warnings only). The render surface is **compile-verified only** — the GPU render path (ender_scene_png) is native-only and not runtime-tested here (it needs the desktop host + a vault unlock); the scene construction + orbit camera + burden-to-colour logic are unit-tested.
+
+**⚑ Where I need the human.** (1) The render surface is the **interim visual** — a silhouette with coloured regions, not the real 3D organ meshes. The real body (CCF/HRA GLBs → .10d → load_10d_colored in the browser) needs an asset cache (the harness re-downloads ~200–290 MB each run) + the WebGPU canvas path. Is the interim visual enough for now, or should the asset cache + real mesh path be the next step? (2) The physiological-state declaration is the person's own statement — the UI offers 13 states. Are those the right set, and are the labels right? (3) The pre-existing economics-lane build breaks (SHACL Econ* variants + ljung_box duplicate) are now fixed as minimal no-op/redundant-import fixes; the economics lane owner should wire real opcodes when the econ VM lands.
+
+**Next step.** Either the asset cache + real 3D mesh path (if Timothy wants the real body), or pivot to the next MASTER-EXECUTION-CHECKLIST item (reproductive-continuum P5 — reproductive-data rights enforcement, Sanctuary class end-to-end).
+
+---
+
+## 2026-07-08 — S5.8: asset cache + real-mesh path (user-triggered download) — **done (anatomy_assets 5/5; desktop + studio host/wasm compile clean; portal load_body_organs_colored compiles clean on native + wasm)**
+
+**Why (the live priority).** Timothy directed: "the asset cache + real mesh path should be next, but it should be generated by the user." The interim visual (S5.7) rendered a coloured silhouette because the real 3D body needs ~200–290 MB of CCF/HRA GLB downloads with no cache. S5.8 is the user-triggered acquisition + cache + real-mesh render path — the person clicks "Download body assets", the host fetches + compiles + caches, and the browser portal renders the real organ meshes coloured by burden.
+
+**What was built.**
+
+- NEW qualia-client-core/src/wellfair/anatomy_assets.rs — the asset cache module:
+  - Cache layout: {storage_root}/assets/ccf/{model}/glb/{organ_key} (raw GLB) + {model}/10d/{organ_key}.10d (compiled sealed container) + {model}/manifest.json (provenance: source URL, sizes, timestamp).
+  - cquire_body_assets(storage_root, model, progress) — user-triggered: discovers the reference-organ manifest from the HRA SPARQL endpoint, fetches each GLB from its CDN URL, compiles to .10d via natomy_body::compile_body, caches both + a manifest. Progress reported per organ (discover/fetch/compile/done stages). Failed fetches/compiles reported, never silently dropped. An existing cache is refreshed (re-fetched + re-compiled). 5 tests (paths namespaced by model, is_cached false/true, missing .10d detected, clear idempotent, manifest serde round-trip).
+  - status(storage_root, model) → BodyAssetsStatus { cached, organ_count, total_ten_d_bytes, acquired_at_unix } — cached = manifest present + every referenced .10d on disk.
+  - load_cached_10d, cached_organ_keys, clear_cache (idempotent).
+
+- pi.rs — host API methods: ody_assets_status, cached_organ_keys, load_cached_organ_10d, cached_body_organ_percepts (paints the cached organ set via AnatomyViewReport::paint_organs), clear_body_cache. New public storage_root() accessor + parse_anatomy_model() helper.
+
+- Desktop commands (webizen-desktop/src/commands/mod.rs):
+  - wellfair_body_assets_status — check if cached.
+  - wellfair_acquire_body_assets — user-triggered download (spawn_blocking, emits natomy-acquire-progress per organ + natomy-acquire-done at the end).
+  - wellfair_load_cached_organ_10d — load one cached .10d (byte response for the portal).
+  - wellfair_cached_body_organ_percepts — per-organ percepts JSON for the portal.
+  - wellfair_clear_body_cache — clear the cache.
+
+- Protocol handlers (webizen-desktop/src/main.rs):
+  - webizen://localhost/anatomy/body.json — per-organ percepts + organ keys (so the portal knows what colour to paint each organ).
+  - webizen://localhost/anatomy/10d/{model}/{organ_key} — one cached .10d file.
+
+- Browser portal real-mesh render path:
+  - NEW QualiaPortal::load_body_organs_colored(organs) in ender/portal/mod.rs — takes a JS Array of { bytes, r, g, b, a, x, y, z }, decodes each .10d, centres + scales each organ, offsets to its anatomical position (0..1 body space → [-1..1] orbit frame), accumulates all positions+colors+indices into one combined GPU mesh, uploads via gpu.upload_mesh_colored. Per-organ governance fail-closed (skips refused organs). Returns { organs_loaded, organs_refused, total_triangles }.
+  - NEW JS bridge in design-studio-app.js — loadAnatomyBody(model): fetches ody.json + each .10d from the desktop host, pairs each with its percept colour + anatomical position, calls portal.load_body_organs_colored(organs). Listens for postMessage({ type: "anatomy-load-body", model }) from the Studio parent iframe. Signals back { type: "anatomy-body-loaded" } / { type: "anatomy-body-error" }.
+
+- Studio UI (natomy_3d_panel.rs):
+  - Model selector (male/female) + cache status display.
+  - "Download body assets" button → triggers wellfair_acquire_body_assets (shows progress message).
+  - "Clear cache" button when cached.
+  - When cache is ready, switches from the interim PNG to the real-mesh portal iframe (portal_design_studio_url). A use_effect postMessages { type: "anatomy-load-body", model } to the iframe (retries for ~10s while the portal WASM boots).
+  - Orbit camera sliders (rotate/tilt) drive both views.
+
+- .gitignore — added ssets/ccf/ (the cache is the person's own, ~200–290 MB, not for git).
+
+**Measured results.** cargo test -p qualia-client-core --lib wellfair::anatomy → **24 passed, 0 failed, 3 ignored** (live network). New: natomy_assets 5/5. cargo check -p webizen-desktop --bin webizen-desktop → clean. cargo check -p webizen-studio --lib --target wasm32-unknown-unknown → clean (7 pre-existing warnings only). cargo check -p qualia-core-db --lib (native) → clean. cargo check -p qualia-core-db --lib --target wasm32-unknown-unknown --no-default-features --features wasm-full → pre-existing errors only (missing geometry_wasm file, kv_dict_runtime, eqwest on wasm — NOT in ender/portal/mod.rs; my load_body_organs_colored compiles clean on both targets). The real-mesh render path is **compile-verified only** — the portal wasm+GPU path is not runtime-tested here (it needs the desktop host + a vault unlock + a real WebGPU browser).
+
+**⚑ Where I need the human.** (1) The real-mesh path is wired end-to-end but **not runtime-tested** — the portal WASM build has pre-existing breaks (missing geometry_wasm file, kv_dict_runtime not found on wasm) that need the CI build script to patch. Once the portal WASM builds, the full flow (download → cache → portal loads .10d → load_body_organs_colored → WebGPU render) can be runtime-tested. (2) The anatomical positions are approximate (each CCF ref organ is individually centred, then offset to its body region by system ID). A future pass can use real CCF spatial transforms for precise organ placement. (3) The ody.json endpoint currently defaults to "male" — a future pass can read the model from a query param so the portal can render either body.
+
+**Next step.** Either runtime-test the real-mesh path once the portal WASM build is fixed, or pivot to the next MASTER-EXECUTION-CHECKLIST item (reproductive-continuum P5 — reproductive-data rights enforcement, Sanctuary class end-to-end).

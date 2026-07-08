@@ -180,6 +180,109 @@ impl PortalGpu {
         ))
     }
 
+    /// Build a native **surface** renderer that draws directly to a window's GPU swapchain.
+    ///
+    /// This is the native desktop path — no PNG round-trip, no webview `<img>`. The surface
+    /// is created from a raw window handle (HWND on Windows) and frames are presented directly
+    /// to the OS swapchain.
+    ///
+    /// The surface format is chosen from the adapter's capabilities (sRGB preferred).
+    /// Call [`Self::render`] to draw a frame; the swapchain present is automatic.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+    pub fn new_surface(
+        hwnd: isize,
+        width: u32,
+        height: u32,
+        particle_cap: usize,
+    ) -> Result<Self, String> {
+        use raw_window_handle::{RawDisplayHandle, RawWindowHandle, Win32WindowHandle, WindowsDisplayHandle};
+
+        // Create a DEDICATED instance/adapter/device for the surface renderer.
+        // The shared GPU context is optimised for compute (LLM inference) and its
+        // adapter may not support presentation to an HWND (e.g. Vulkan without a
+        // VkSurfaceKHR, or a compute-only adapter). A dedicated instance ensures
+        // the surface, adapter, and device are all from the same wgpu instance and
+        // the adapter is picked with surface compatibility.
+        let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
+        desc.backends = wgpu::Backends::all();
+        let instance = wgpu::Instance::new(desc);
+
+        let win32_handle = Win32WindowHandle::new(
+            std::num::NonZeroIsize::new(hwnd).ok_or("invalid HWND (zero)")?,
+        );
+        let raw_window = RawWindowHandle::Win32(win32_handle);
+        let raw_display = RawDisplayHandle::Windows(WindowsDisplayHandle::new());
+
+        let surface = unsafe {
+            instance
+                .create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
+                    raw_display_handle: Some(raw_display),
+                    raw_window_handle: raw_window,
+                })
+                .map_err(|e| format!("create_surface from HWND: {e:?}"))?
+        };
+
+        // Request an adapter that supports the surface
+        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::HighPerformance,
+            compatible_surface: Some(&surface),
+            ..Default::default()
+        }))
+        .map_err(|e| format!("Failed to find wgpu adapter for surface: {e}"))?;
+
+        let caps = surface.get_capabilities(&adapter);
+        if caps.formats.is_empty() {
+            return Err(format!(
+                "Surface supports no formats — adapter backend {:?} may not support presentation to HWND",
+                adapter.get_info().backend
+            ));
+        }
+        let format = caps
+            .formats
+            .iter()
+            .copied()
+            .find(|f| f.is_srgb())
+            .unwrap_or(caps.formats[0]);
+
+        let (device, queue) = pollster::block_on(adapter.request_device(
+            &wgpu::DeviceDescriptor {
+                label: Some("Webizen GPU Surface"),
+                required_features: wgpu::Features::empty(),
+                required_limits: wgpu::Limits::downlevel_defaults(),
+                memory_hints: wgpu::MemoryHints::default(),
+                ..Default::default()
+            },
+        ))
+        .map_err(|e| format!("Failed to request device for surface: {e}"))?;
+
+        let device = Arc::new(device);
+        let queue = Arc::new(queue);
+
+        let config = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format,
+            width: width.max(1),
+            height: height.max(1),
+            present_mode: wgpu::PresentMode::Fifo,
+            alpha_mode: caps.alpha_modes.first().copied().unwrap_or(wgpu::CompositeAlphaMode::Auto),
+            view_formats: vec![],
+            desired_maximum_frame_latency: 2,
+        };
+
+        surface.configure(&device, &config);
+
+        pollster::block_on(Self::from_device(
+            device,
+            queue,
+            width.max(1),
+            height.max(1),
+            format,
+            Some(surface),
+            Some(config),
+            particle_cap,
+        ))
+    }
+
     /// Async WebGPU init — awaits `request_adapter` / `request_device` (the browser main thread
     /// cannot block). Native callers use the `try_new` wrapper above.
     #[cfg(all(target_arch = "wasm32", feature = "portal"))]

@@ -170,7 +170,7 @@ pub fn run_bio_minhash(sequence: &str, k: usize, sketch_size: usize) {
 
 pub fn run_geo_embed_h3(index: u64) {
     use qualia_core_db::domains::geospatial::spatial::embed_h3_context;
-    let context = embed_h3_context(index);
+    let context = embed_h3_context(index, 0, 0);
     println!("H3 index embedding:");
     println!("  Input  : 0x{index:016x}");
     println!("  Context: 0x{context:016x}");
@@ -376,5 +376,71 @@ pub fn run_economics_macro(m0: f64, p0: f64, velocity: f64, real_gdp: f64, horiz
         println!("  M(T) = {:.4}", state.values[0]);
         println!("  P(T) = {:.4}", state.values[1]);
         println!("  Implied Q = {:.4}", (state.values[0] * velocity) / state.values[1]);
+    }
+}
+
+pub fn run_economics_bond(face: f64, coupon_rate: f64, y: f64, n: u32) {
+    use qualia_core_db::specialized_libs::computational_economics::fixed_income::coupon_bond_price;
+    match coupon_bond_price(face, coupon_rate, y, n as f64, 1) {
+        Ok(p) => {
+            println!("Coupon bond price (face={face}, c={coupon_rate}, y={y}, n={n}): {p:.4}");
+            println!("  (clean price, par=100 equivalent would be face)");
+        }
+        Err(_) => println!("Bond pricing failed (invalid inputs)."),
+    }
+}
+
+pub fn run_economics_paper(qty: f64, last: f64) {
+    use qualia_core_db::specialized_libs::computational_economics::paper_trading::{
+        submit_paper_order, simulate_fills_against_snapshots, Fill, MarketSnapshot, OrderType, PaperOrder, Side,
+    };
+    let mut book: [PaperOrder; 8] = [PaperOrder {
+        id: 0,
+        side: Side::Buy,
+        order_type: OrderType::Market,
+        qty: 0.0,
+        limit_price: 0.0,
+        stop_price: 0.0,
+        filled_qty: 0.0,
+        avg_fill_price: 0.0,
+        status: 0,
+    }; 8];
+    let mut next_id = 1u64;
+    if submit_paper_order(&mut book, &mut next_id, Side::Buy, OrderType::Market, qty, 0.0, 0.0).is_ok() {
+        let snaps = [MarketSnapshot { bid: last-0.1, ask: last+0.1, last, volume: 500.0 }];
+        let mut fills: [Fill; 8] = [Fill { order_id: 0, qty: 0.0, price: 0.0, fee: 0.0 }; 8];
+        let _ = simulate_fills_against_snapshots(&mut book, &snaps, 0.001, &mut fills);
+        println!("Paper trade demo: market buy {qty} @~{last}");
+        println!("  (simulation only; no real execution or ledger mutation)");
+    } else {
+        println!("Paper order submit failed.");
+    }
+}
+
+pub fn run_economics_welfare(incomes_str: &str) {
+    use qualia_core_db::specialized_libs::computational_economics::welfare::{gini_coefficient, atkinson_inequality};
+    let incomes: Vec<f64> = incomes_str.split(',').filter_map(|s| s.trim().parse().ok()).collect();
+    if incomes.is_empty() {
+        println!("Invalid incomes");
+        return;
+    }
+    if let Ok(g) = gini_coefficient(&incomes) {
+        println!("Gini: {g:.4}");
+    }
+    if let Ok(a) = atkinson_inequality(&incomes, 1.0) {
+        println!("Atkinson (eps=1): {a:.4}");
+    }
+}
+
+pub fn run_economics_game(a: f64) {
+    use qualia_core_db::specialized_libs::computational_economics::game_theory::cournot_duopoly;
+    match cournot_duopoly(a, 1.0, 1.0, 1.0) {
+        Ok((q1, q2, p)) => {
+            // Profits: pi_i = (p - c_i) * q_i, with c1 = c2 = 1.0.
+            let pi1 = (p - 1.0) * q1;
+            let pi2 = (p - 1.0) * q2;
+            println!("Cournot duopoly (a={a}): q1={q1:.2} q2={q2:.2} p={p:.2} pi1={pi1:.2} pi2={pi2:.2}");
+        }
+        Err(e) => println!("Cournot duopoly (a={a}): no equilibrium ({e:?})"),
     }
 }

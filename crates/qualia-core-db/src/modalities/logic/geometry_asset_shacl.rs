@@ -13,6 +13,9 @@
 use crate::governance::webizen::SlgOpcode;
 use crate::q_hash;
 
+/// Predicate hash for `geo:license` in the SHACL ontology.
+pub const P_LICENCE: u64 = crate::q_hash("geo:license");
+
 /// The `.10d` container's `MAX_VERTEX_COUNT` / `MAX_TRIANGLE_COUNT` (2²²) — the malicious-size guard.
 pub const MAX_GEOMETRY_COUNT: u32 = 1 << 22;
 

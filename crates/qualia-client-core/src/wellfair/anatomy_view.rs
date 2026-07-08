@@ -245,12 +245,20 @@ pub fn record_refs_from_journal(
     refs
 }
 
-/// Build a report from already-normalized record refs and a lens.
-pub fn build_report(records: Vec<RecordRef>, lens: Lens, convergence_threshold: usize) -> AnatomyViewReport {
+/// Build a report from already-normalized record refs and a lens, at a physiological state. The state
+/// modulator is applied to the per-system burdens so the colour-by-load reflects the person's current life
+/// stage (e.g. a nephrotoxic med is a bigger ask on the kidneys in the third trimester).
+pub fn build_report(
+    records: Vec<RecordRef>,
+    lens: Lens,
+    convergence_threshold: usize,
+    state: PhysiologicalState,
+) -> AnatomyViewReport {
     let total_records = records.len();
     let kb = host_knowledge_base();
     let bridge = anatomy::records_to_factors(&records, &kb);
-    let burdens = anatomy::accumulate(&bridge.factors);
+    let raw_burdens = anatomy::accumulate(&bridge.factors);
+    let burdens = anatomy::state_modulator(state).apply_to_burdens(&raw_burdens);
     let view = anatomy::build_view(&bridge.factors, lens, convergence_threshold);
     AnatomyViewReport {
         view,
@@ -266,16 +274,17 @@ pub fn build_report(records: Vec<RecordRef>, lens: Lens, convergence_threshold: 
     }
 }
 
-/// One-shot: journal entries → report for a lens.
+/// One-shot: journal entries → report for a lens, at a physiological state.
 pub fn build_report_from_journal(
     conditions: &[JournalEntry],
     medications: &[JournalEntry],
     diet: &[JournalEntry],
     lens: Lens,
     convergence_threshold: usize,
+    state: PhysiologicalState,
 ) -> AnatomyViewReport {
     let refs = record_refs_from_journal(conditions, medications, diet);
-    build_report(refs, lens, convergence_threshold)
+    build_report(refs, lens, convergence_threshold, state)
 }
 
 /// Honest note for the score-card surface: it is the person's inward, forum-internum self-assessment — a
@@ -309,6 +318,7 @@ pub fn build_scorecard_report_with_weights(
     records: Vec<RecordRef>,
     convergence_threshold: usize,
     weight_model: &anatomy::WeightModel,
+    state: PhysiologicalState,
 ) -> WellbeingScorecardReport {
     let total_records = records.len();
     let kb = host_knowledge_base();
@@ -316,7 +326,7 @@ pub fn build_scorecard_report_with_weights(
     let scorecard = anatomy::score_card(
         &bridge.factors,
         convergence_threshold,
-        PhysiologicalState::Baseline,
+        state,
         weight_model,
     );
     let implications = anatomy::systemic_implications(&bridge.factors, convergence_threshold);
@@ -333,25 +343,27 @@ pub fn build_scorecard_report_with_weights(
 }
 
 /// Compute the score-card with the **seed** weight model — the *suggested* starting interpretation, used when
-/// the person has not (yet) authored their own. The physiological state defaults to
-/// [`PhysiologicalState::Baseline`] until the person declares one.
+/// the person has not (yet) authored their own. The physiological state is passed through so the card reads
+/// the person at their current life stage.
 pub fn build_scorecard_report(
     records: Vec<RecordRef>,
     convergence_threshold: usize,
+    state: PhysiologicalState,
 ) -> WellbeingScorecardReport {
-    build_scorecard_report_with_weights(records, convergence_threshold, &anatomy::seed_weight_model())
+    build_scorecard_report_with_weights(records, convergence_threshold, &anatomy::seed_weight_model(), state)
 }
 
-/// One-shot: journal entries → score-card report, with the person's own weight model.
+/// One-shot: journal entries → score-card report, with the person's own weight model and declared state.
 pub fn build_scorecard_report_from_journal_with_weights(
     conditions: &[JournalEntry],
     medications: &[JournalEntry],
     diet: &[JournalEntry],
     convergence_threshold: usize,
     weight_model: &anatomy::WeightModel,
+    state: PhysiologicalState,
 ) -> WellbeingScorecardReport {
     let refs = record_refs_from_journal(conditions, medications, diet);
-    build_scorecard_report_with_weights(refs, convergence_threshold, weight_model)
+    build_scorecard_report_with_weights(refs, convergence_threshold, weight_model, state)
 }
 
 /// One-shot with the seed (suggested) weights.
@@ -360,9 +372,10 @@ pub fn build_scorecard_report_from_journal(
     medications: &[JournalEntry],
     diet: &[JournalEntry],
     convergence_threshold: usize,
+    state: PhysiologicalState,
 ) -> WellbeingScorecardReport {
     let refs = record_refs_from_journal(conditions, medications, diet);
-    build_scorecard_report(refs, convergence_threshold)
+    build_scorecard_report(refs, convergence_threshold, state)
 }
 
 fn summary_value(entry: &JournalEntry) -> Option<serde_json::Value> {
@@ -380,6 +393,7 @@ fn summary_bool(entry: &JournalEntry, field: &str) -> Option<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use wellfare_core::anatomy::{Aspect, ReproductiveState, Trimester};
 
     fn je(id: &str, kind: &str, summary: serde_json::Value) -> JournalEntry {
         JournalEntry {
@@ -419,7 +433,7 @@ mod tests {
             "condition",
             serde_json::json!({"label": "Hypertension"}),
         )];
-        let report = build_report_from_journal(&conditions, &[], &[], Lens::Person, 2);
+        let report = build_report_from_journal(&conditions, &[], &[], Lens::Person, 2, PhysiologicalState::Baseline);
         let percepts = report.system_percepts();
         // One percept per accumulated burden — nothing silently dropped.
         assert_eq!(percepts.len(), report.burdens.len());
@@ -439,7 +453,7 @@ mod tests {
             "condition",
             serde_json::json!({"label": "Hypertension"}),
         )];
-        let report = build_report_from_journal(&conditions, &[], &[], Lens::Person, 2);
+        let report = build_report_from_journal(&conditions, &[], &[], Lens::Person, 2, PhysiologicalState::Baseline);
         // A VH_Male organ set: a burdened organ (blood-vasculature → circulatory), an unburdened one
         // (lung → respiratory), and one not in the curated map.
         let (painted, unmapped) = report.paint_organs(&[
@@ -510,7 +524,7 @@ mod tests {
             serde_json::json!({"description": "Beer", "meal_type": "drink"}),
         )];
 
-        let report = build_report_from_journal(&conditions, &meds, &diet, Lens::Person, 1);
+        let report = build_report_from_journal(&conditions, &meds, &diet, Lens::Person, 1, PhysiologicalState::Baseline);
         // Hypertension → circulatory; Beer → digestive+urinary (seed). Made-Up + Warfarin(no seed) unmapped.
         assert!(report.burdens.iter().any(|b| b.system_id == "circulatory"));
         assert!(report.burdens.iter().any(|b| b.system_id == "digestive"));
@@ -540,16 +554,64 @@ mod tests {
             je("c1", "condition", serde_json::json!({"label": "Hypertension"})),
             je("c2", "condition", serde_json::json!({"label": "Atrial Fibrillation"})),
         ];
-        let report = build_report_from_journal(&conditions, &[], &[], Lens::Clinician, 2);
+        let report = build_report_from_journal(&conditions, &[], &[], Lens::Clinician, 2, PhysiologicalState::Baseline);
         assert!(report.view.systems.iter().any(|s| s.system_id == "circulatory"));
         assert!(report.view.boundary.contains("not a diagnosis"));
     }
 
     #[test]
     fn report_serde_round_trips() {
-        let report = build_report(vec![], Lens::Person, 2);
+        let report = build_report(vec![], Lens::Person, 2, PhysiologicalState::Baseline);
         let json = serde_json::to_string(&report).unwrap();
         let back: AnatomyViewReport = serde_json::from_str(&json).unwrap();
         assert_eq!(report, back);
+    }
+
+    #[test]
+    fn scorecard_at_third_trimester_scales_adverse_load_higher_than_baseline() {
+        // Use a condition that maps to urinary (renal) in the seed KB — a known adverse renal load.
+        let refs = vec![RecordRef::new("r:renal-load", "condition", "Chronic Kidney Disease")];
+        let baseline_report = build_scorecard_report(refs.clone(), 1, PhysiologicalState::Baseline);
+        let preg_report = build_scorecard_report(
+            refs,
+            1,
+            PhysiologicalState::Reproductive(ReproductiveState::Pregnant(Trimester::Third)),
+        );
+        // The systemic-load aspect is computed over the state-modulated burdens. In the third trimester,
+        // the renal (urinary) engagement is 130% → the same adverse load lands harder.
+        let baseline_load = baseline_report.scorecard.aspect(Aspect::SystemicLoad).unwrap().score_milli;
+        let preg_load = preg_report.scorecard.aspect(Aspect::SystemicLoad).unwrap().score_milli;
+        assert!(
+            preg_load >= baseline_load,
+            "third-trimester renal engagement scales the load up or equal: {preg_load} vs {baseline_load}"
+        );
+        // The physiological-demand aspect is non-zero in pregnancy (whole-body engagement) and zero at baseline.
+        let baseline_demand = baseline_report.scorecard.aspect(Aspect::PhysiologicalDemand).unwrap().score_milli;
+        let preg_demand = preg_report.scorecard.aspect(Aspect::PhysiologicalDemand).unwrap().score_milli;
+        assert_eq!(baseline_demand, 0, "baseline has no physiological demand");
+        assert!(preg_demand > 0, "pregnancy engages the whole body → demand > 0");
+    }
+
+    #[test]
+    fn anatomy_view_at_third_trimester_scales_circulatory_burden() {
+        // Hypertension → circulatory burden. In the third trimester, circulatory engagement is 140%.
+        let conditions = vec![je(
+            "did:wf:me:condition:1",
+            "condition",
+            serde_json::json!({"label": "Hypertension"}),
+        )];
+        let baseline_report = build_report_from_journal(
+            &conditions, &[], &[], Lens::Person, 2, PhysiologicalState::Baseline,
+        );
+        let preg_report = build_report_from_journal(
+            &conditions, &[], &[], Lens::Person, 2,
+            PhysiologicalState::Reproductive(ReproductiveState::Pregnant(Trimester::Third)),
+        );
+        let baseline_circ = baseline_report.burdens.iter().find(|b| b.system_id == "circulatory").unwrap().net_milli;
+        let preg_circ = preg_report.burdens.iter().find(|b| b.system_id == "circulatory").unwrap().net_milli;
+        assert!(
+            preg_circ > baseline_circ,
+            "third-trimester circulatory engagement (140%) scales hypertension higher: {preg_circ} > {baseline_circ}"
+        );
     }
 }

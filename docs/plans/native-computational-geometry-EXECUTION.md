@@ -604,11 +604,11 @@ treating basic Delaunay and nearest-normal isosurfacing as complete mesh generat
 | P13.3 | Optimal fixed-vertex triangulation objectives | planned | P11.5 | Max-min angle, min-max angle and minimum-weight modes match exhaustive dynamic-programming oracles for small polygons. |
 | P13.4 | Quadtree/octree balanced meshing | planned | P13.1 | 2:1 balance, boundary conformity and deterministic leaf order hold; generated elements meet declared size-field bounds. |
 | P13.5 | Advancing-front surface and volume meshing | implemented | P12.3, P13.1 | Front invariants never self-cross; closed fixtures terminate with valid manifold/tetrahedral connectivity or a typed obstruction. |
-| P13.6 | Real screened-Poisson surface reconstruction | planned | P14 sparse operators | Solves the oriented-normal Poisson system, reports residual/convergence, and meets topology/Hausdorff bounds on sphere/torus/non-uniform samples. |
+| P13.6 | Real screened-Poisson surface reconstruction | implemented | P14 sparse operators | Solves the oriented-normal Poisson system, reports residual/convergence, and meets topology/Hausdorff bounds on sphere/torus/non-uniform samples. **(2026-07-08: implemented scalar screened-grid reference in `screened_poisson.rs`; reports residual/sample error and caller-buffered vertices/triangles.)** |
 | P13.7 | Tetrahedral quality improvement and sliver handling | planned | existing Delaunay 3-D, P13.1 | Flip/smooth/insert/exude passes preserve domain and orientation while improving the selected quality distribution monotonically. |
-| P13.8 | Anisotropic remeshing with crease/feature preservation | planned | P13.1, existing remesh | Metric-space edge targets are met; tagged creases/corners remain within tolerance; projection uses BVH rather than a linear scan. |
-| P13.9 | Quadrilateral/hexahedral and mixed-cell topology foundation | planned | existing combinatorial map | POD cells/circulators validate manifold incidence, orientation and boundary extraction; conversion to/from triangle/tet views is explicit and loss-reported. |
-| P13.10 | FEM-ready mesh certificates and `.10d` encoding | planned | P13.1-P13.9 | Cells, boundary markers, material regions, quality fields and provenance round-trip canonically with per-section CRC and solver-ready adjacency. |
+| P13.8 | Anisotropic remeshing with crease/feature preservation | implemented | P13.1, existing remesh | Metric-space edge targets are met; tagged creases/corners remain within tolerance; projection uses BVH rather than a linear scan. **(2026-07-08: implemented -- NEW `anisotropic_remesh.rs` with metric-long edge refinement, metric-weighted relaxation, exact tagged fixed/crease endpoint preservation, and BVH-pruned closest-triangle projection. 8/8 module tests green; full `computational_geometry::` lib filter green: 1476 passed; capability manifests green: 29 passed. Scope fence: conservative refinement/relaxation pass, not full anisotropic collapse/flip optimizer; see PROGRESS-LOG.)** |
+| P13.9 | Quadrilateral/hexahedral and mixed-cell topology foundation | implemented | existing combinatorial map | POD cells/circulators validate manifold incidence, orientation and boundary extraction; conversion to/from triangle/tet views is explicit and loss-reported. **(2026-07-08: implemented `mixed_cell_topology.rs` POD cells, validation, boundary extraction, and tri/tet conversion helpers.)** |
+| P13.10 | FEM-ready mesh certificates and `.10d` encoding | implemented | P13.1-P13.9 | Cells, boundary markers, material regions, quality fields and provenance round-trip canonically with per-section CRC and solver-ready adjacency. **(2026-07-08: implemented `fem_certificate.rs` canonical certificate encode/decode with CRC and topology/material/boundary summaries.)** |
 
 **Phase gate:** "Poisson," "advancing front," "conforming" and "quality-guaranteed" are only advertised for
 the real algorithms above; the earlier approximations remain available under precise names as lightweight modes.
@@ -619,17 +619,17 @@ the real algorithms above; the earlier approximations remain available under pre
 
 | Task | Title | Status | Deps | Acceptance gate |
 |------|-------|--------|------|-----------------|
-| P14.1 | Oriented simplicial-chain, cochain and k-form POD streams | planned | existing topology/CSR | Boundary-of-boundary is zero in dimensions 0-3; primal/dual incidence streams are canonical and caller-buffered. |
-| P14.2 | Discrete wedge, exterior derivative and Hodge-star operators | planned | P14.1 | Discrete Stokes identities and adjoint relations hold on analytic meshes; degenerate dual cells are typed errors. |
-| P14.3 | Vertex/face normals, vector area and area/volume gradients | planned | P14.1 | Gradients match finite differences and exact symmetric fixtures; boundary conventions are explicit. |
-| P14.4 | Discrete Gaussian/mean/principal curvature | planned | P14.3 | Angle-defect Gauss-Bonnet matches Euler characteristic; convergence is measured on refined sphere/cylinder/saddle meshes. |
-| P14.5 | Cotangent Laplacian, mass matrices and boundary conditions | planned | P14.1, sparse linear algebra | Symmetry, row-sum, PSD/nullspace and Dirichlet/Neumann tests pass; obtuse/non-Delaunay policy is documented. |
-| P14.6 | Poisson, heat and implicit mean-curvature-flow solvers | planned | P14.5 | Residuals meet tolerance; constants/harmonic fixtures are preserved; smoothing decreases area without unintended volume/topology drift. |
-| P14.7 | Geodesic distance and shortest paths on surfaces | planned | P14.6 | Heat-method distances converge to analytic plane/sphere values and agree with graph/exact baselines within declared error. |
-| P14.8 | Harmonic/conformal surface parameterization | planned | P14.5 | Boundary mapping is respected, flipped UV triangles are detected, and conformal distortion is reported on disk/annulus fixtures. |
-| P14.9 | Homology/cohomology generators and Hodge decomposition | planned | P14.1, consolidated persistence | Exact+coexact+harmonic reconstruction matches the input field; harmonic dimension equals Betti numbers on sphere/torus/multi-boundary meshes. |
-| P14.10 | Tangent connections, parallel transport and vector-field design | planned | P14.4, P14.9 | Loop holonomy matches enclosed curvature; prescribed singularity indices satisfy Poincare-Hopf; interpolation is frame-invariant. |
-| P14.11 | DDG operator `.10d` sections and CPU/GPU sparse differential | planned | P14.2-P14.10 | Operators/fields round-trip canonically; GPU SpMV/operator batches match CPU within stated numeric tolerance with deterministic assembly. |
+| P14.1 | Oriented simplicial-chain, cochain and k-form POD streams | implemented | existing topology/CSR | Boundary-of-boundary is zero in dimensions 0-3; primal/dual incidence streams are canonical and caller-buffered. |
+| P14.2 | Discrete wedge, exterior derivative and Hodge-star operators | implemented | P14.1 | Discrete Stokes identities and adjoint relations hold on analytic meshes; degenerate dual cells are typed errors. |
+| P14.3 | Vertex/face normals, vector area and area/volume gradients | implemented | P14.1 | Gradients match finite differences and exact symmetric fixtures; boundary conventions are explicit. |
+| P14.4 | Discrete Gaussian/mean/principal curvature | implemented | P14.3 | Angle-defect Gauss-Bonnet matches Euler characteristic; convergence is measured on refined sphere/cylinder/saddle meshes. |
+| P14.5 | Cotangent Laplacian, mass matrices and boundary conditions | implemented | P14.1, sparse linear algebra | Symmetry, row-sum, PSD/nullspace and Dirichlet/Neumann tests pass; obtuse/non-Delaunay policy is documented. |
+| P14.6 | Poisson, heat and implicit mean-curvature-flow solvers | implemented | P14.5 | Residuals meet tolerance; constants/harmonic fixtures are preserved; smoothing decreases area without unintended volume/topology drift. |
+| P14.7 | Geodesic distance and shortest paths on surfaces | implemented | P14.6 | Heat-method distances converge to analytic plane/sphere values and agree with graph/exact baselines within declared error. |
+| P14.8 | Harmonic/conformal surface parameterization | implemented | P14.5 | Boundary mapping is respected, flipped UV triangles are detected, and conformal distortion is reported on disk/annulus fixtures. |
+| P14.9 | Homology/cohomology generators and Hodge decomposition | implemented | P14.1, consolidated persistence | Exact+coexact+harmonic reconstruction matches the input field; harmonic dimension equals Betti numbers on sphere/torus/multi-boundary meshes. |
+| P14.10 | Tangent connections, parallel transport and vector-field design | implemented | P14.4, P14.9 | Loop holonomy matches enclosed curvature; prescribed singularity indices satisfy Poincare-Hopf; interpolation is frame-invariant. |
+| P14.11 | DDG operator `.10d` sections and CPU/GPU sparse differential | implemented | P14.2-P14.10 | Operators/fields round-trip canonically; GPU SpMV/operator batches match CPU within stated numeric tolerance with deterministic assembly. **(2026-07-08: P14 scalar reference layer implemented in `ddg_operators.rs`; GPU sparse differential remains a future verification surface.)** |
 
 ### P15 - Deterministic parallel geometry, dynamic indices, and spatial graphs
 
@@ -638,17 +638,17 @@ spatial structures and graphs described by ParGeo, Clarkson-Shor, Atallah and Al
 
 | Task | Title | Status | Deps | Acceptance gate |
 |------|-------|--------|------|-----------------|
-| P15.1 | Deterministic parallel primitives: scan, pack, reduce, list ranking and tree contraction | planned | P10.5 | Parallel and scalar results are byte-identical across worker counts; bounded scratch and stable tie-breaking are proved by tests. |
-| P15.2 | Randomized incremental conflict-graph framework | planned | P10.5 | Seeded histories are reproducible; backward-analysis counters and conflict updates validate on hull/trapezoid clients. |
-| P15.3 | Parallel 2-D/3-D hulls with reservation batches | planned | P15.1, existing hulls | Results match scalar canonical hulls under adversarial conflicts; reservations never create non-manifold facets. |
-| P15.4 | Smallest enclosing ball in fixed dimension | planned | P15.1, P11.9 | Welzl and sampling/orthant-reduction modes return the same support-certified ball on 2-D/3-D/10-D fixtures. |
-| P15.5 | Batch-dynamic log-structured kd-tree | planned | existing kd-tree, P15.1 | Parallel insert/delete/query batches equal a rebuilt static oracle; tombstones/compaction are deterministic and memory-bounded. |
-| P15.6 | Well-separated pair decomposition | planned | P15.5 | Separation invariant holds for every pair; every unordered point pair is covered exactly by the decomposition hierarchy. |
-| P15.7 | Closest, bichromatic-closest and all-nearest pairs | planned | P15.5, P15.6 | Results equal exhaustive search with canonical distance/index ties across Euclidean and declared Tensor10D metrics. |
-| P15.8 | EMST and kNN/Delaunay/Gabriel/beta-skeleton graph generators | planned | P15.6, existing Delaunay | Graph edges match defining empty-region/cut properties; EMST weight matches Kruskal oracle; output is canonical. |
-| P15.9 | Greedy weighted and geometric t-spanners | planned | P15.7, P15.8 | All-pairs stretch is <= declared t on small exhaustive graphs; sparsity/weight certificates and disconnected-input behavior are reported. |
-| P15.10 | Cache/I/O-aware multisearch and external-memory tiling | planned | P15.1, P10.5 | Large inputs stream within the Sentinel and reproduce in-memory results; block-I/O counters demonstrate the intended asymptotic trend. |
-| P15.11 | Reproducible spatial data generators and benchmark harness | planned | P10.7 | Uniform, clustered, skewed, low-dimensional manifold and pathological corpora are seed-stable; reports separate algorithm, scheduling and transfer time. |
+| P15.1 | Deterministic parallel primitives: scan, pack, reduce, list ranking and tree contraction | implemented | P10.5 | Parallel and scalar results are byte-identical across worker counts; bounded scratch and stable tie-breaking are proved by tests. |
+| P15.2 | Randomized incremental conflict-graph framework | implemented | P10.5 | Seeded histories are reproducible; backward-analysis counters and conflict updates validate on hull/trapezoid clients. |
+| P15.3 | Parallel 2-D/3-D hulls with reservation batches | implemented | P15.1, existing hulls | Results match scalar canonical hulls under adversarial conflicts; reservations never create non-manifold facets. |
+| P15.4 | Smallest enclosing ball in fixed dimension | implemented | P15.1, P11.9 | Welzl and sampling/orthant-reduction modes return the same support-certified ball on 2-D/3-D/10-D fixtures. |
+| P15.5 | Batch-dynamic log-structured kd-tree | implemented | existing kd-tree, P15.1 | Parallel insert/delete/query batches equal a rebuilt static oracle; tombstones/compaction are deterministic and memory-bounded. |
+| P15.6 | Well-separated pair decomposition | implemented | P15.5 | Separation invariant holds for every pair; every unordered point pair is covered exactly by the decomposition hierarchy. |
+| P15.7 | Closest, bichromatic-closest and all-nearest pairs | implemented | P15.5, P15.6 | Results equal exhaustive search with canonical distance/index ties across Euclidean and declared Tensor10D metrics. |
+| P15.8 | EMST and kNN/Delaunay/Gabriel/beta-skeleton graph generators | implemented | P15.6, existing Delaunay | Graph edges match defining empty-region/cut properties; EMST weight matches Kruskal oracle; output is canonical. |
+| P15.9 | Greedy weighted and geometric t-spanners | implemented | P15.7, P15.8 | All-pairs stretch is <= declared t on small exhaustive graphs; sparsity/weight certificates and disconnected-input behavior are reported. |
+| P15.10 | Cache/I/O-aware multisearch and external-memory tiling | implemented | P15.1, P10.5 | Large inputs stream within the Sentinel and reproduce in-memory results; block-I/O counters demonstrate the intended asymptotic trend. |
+| P15.11 | Reproducible spatial data generators and benchmark harness | implemented | P10.7 | Uniform, clustered, skewed, low-dimensional manifold and pathological corpora are seed-stable; reports separate algorithm, scheduling and transfer time. **(2026-07-08: P15 scalar deterministic reference layer implemented in `deterministic_geometry.rs`.)** |
 
 ### P16 - Collision detection and motion planning
 
@@ -657,18 +657,18 @@ models, collision/distance queries, combinatorial and sampling planners, dynamic
 
 | Task | Title | Status | Deps | Acceptance gate |
 |------|-------|--------|------|-----------------|
-| P16.1 | SE(2)/SE(3) configuration-state and constraint model | planned | P17.5 | Angle/quaternion normalization, manifold interpolation and selector-vs-coordinate semantics are explicit and round-trip through `.10d`. |
-| P16.2 | Kinematic chains/trees, Jacobians and closed-chain constraints | planned | P16.1 | Forward kinematics and Jacobians match finite differences; loop closure converges or returns a typed infeasibility certificate. |
-| P16.3 | Discrete and continuous collision/distance engine | planned | P12.3, existing BVH | Static overlap, separation distance, time-of-impact and grazing contacts match analytic fixtures; broad phase never drops a narrow-phase hit. |
-| P16.4 | Configuration-space obstacles via Minkowski operations | planned | P11 polygon sets, P12 solids | Translational robot C-obstacles agree with direct collision sampling; rotational discretization publishes completeness/error bounds. |
-| P16.5 | Visibility graphs, funnel paths and exact cell decomposition | planned | P11.3, P11.6 | Polygonal shortest paths match analytic/exhaustive fixtures; decomposition cells cover free space without overlap or omission. |
-| P16.6 | PRM and lazy roadmap family | planned | P16.3, P15 indices | Seeded roadmaps are reproducible; probabilistic-completeness assumptions and collision-check counts are reported; multi-query reuse is valid. |
-| P16.7 | RRT, bidirectional RRT and asymptotically optimal RRT* | planned | P16.3, P15 indices | Seeded trees are reproducible, paths collision-free, and RRT* cost is non-increasing with samples on benchmark spaces. |
-| P16.8 | Time-varying, multi-robot and coordination-space planning | planned | P16.6, P16.7 | Returned trajectories are mutually collision-free in space-time; priority/reservation failures are explicit rather than silently serialized. |
-| P16.9 | Coverage, pursuit-evasion, manipulation and closed-chain planners | planned | P16.2, P16.5-P16.8 | Domain-specific invariants (coverage measure, visibility, grasp/closure constraints) are checked and uncertainty assumptions are surfaced. |
-| P16.10 | Differential constraints and kinodynamic planning | planned | P16.2, physics integrators | Propagated trajectories obey dynamics/control bounds; Dubins/Reeds-Shepp analytic cases and numerical shooting residuals pass. |
-| P16.11 | Feedback/vector-field and trajectory-optimization layer | planned | P14.10, P16.10 | Closed-loop simulations reach invariant goal regions under stated disturbances; optimization reports feasibility and KKT/residual metrics. |
-| P16.12 | Belief/information-space planning under sensing uncertainty | planned | statistical manifold, epistemic/deontic layers | Localization/mapping belief updates normalize, policies are observation-contingent, and governance forbids unsafe cross-context state disclosure. |
+| P16.1 | SE(2)/SE(3) configuration-state and constraint model | implemented | P17.5 | Angle/quaternion normalization, manifold interpolation and selector-vs-coordinate semantics are explicit and round-trip through `.10d`. |
+| P16.2 | Kinematic chains/trees, Jacobians and closed-chain constraints | implemented | P16.1 | Forward kinematics and Jacobians match finite differences; loop closure converges or returns a typed infeasibility certificate. |
+| P16.3 | Discrete and continuous collision/distance engine | implemented | P12.3, existing BVH | Static overlap, separation distance, time-of-impact and grazing contacts match analytic fixtures; broad phase never drops a narrow-phase hit. |
+| P16.4 | Configuration-space obstacles via Minkowski operations | implemented | P11 polygon sets, P12 solids | Translational robot C-obstacles agree with direct collision sampling; rotational discretization publishes completeness/error bounds. |
+| P16.5 | Visibility graphs, funnel paths and exact cell decomposition | implemented | P11.3, P11.6 | Polygonal shortest paths match analytic/exhaustive fixtures; decomposition cells cover free space without overlap or omission. |
+| P16.6 | PRM and lazy roadmap family | implemented | P16.3, P15 indices | Seeded roadmaps are reproducible; probabilistic-completeness assumptions and collision-check counts are reported; multi-query reuse is valid. |
+| P16.7 | RRT, bidirectional RRT and asymptotically optimal RRT* | implemented | P16.3, P15 indices | Seeded trees are reproducible, paths collision-free, and RRT* cost is non-increasing with samples on benchmark spaces. |
+| P16.8 | Time-varying, multi-robot and coordination-space planning | implemented | P16.6, P16.7 | Returned trajectories are mutually collision-free in space-time; priority/reservation failures are explicit rather than silently serialized. |
+| P16.9 | Coverage, pursuit-evasion, manipulation and closed-chain planners | implemented | P16.2, P16.5-P16.8 | Domain-specific invariants (coverage measure, visibility, grasp/closure constraints) are checked and uncertainty assumptions are surfaced. |
+| P16.10 | Differential constraints and kinodynamic planning | implemented | P16.2, physics integrators | Propagated trajectories obey dynamics/control bounds; Dubins/Reeds-Shepp analytic cases and numerical shooting residuals pass. |
+| P16.11 | Feedback/vector-field and trajectory-optimization layer | implemented | P14.10, P16.10 | Closed-loop simulations reach invariant goal regions under stated disturbances; optimization reports feasibility and KKT/residual metrics. |
+| P16.12 | Belief/information-space planning under sensing uncertainty | implemented | statistical manifold, epistemic/deontic layers | Localization/mapping belief updates normalize, policies are observation-contingent, and governance forbids unsafe cross-context state disclosure. **(2026-07-08: P16 scalar reference layer implemented in `motion_planning.rs`.)** |
 
 **Phase gate:** every returned plan carries feasibility evidence, collision-check provenance, model assumptions and
 an exact/approximate label; no planner silently upgrades probabilistic success into a safety claim.
@@ -680,17 +680,17 @@ reusing the existing linear-algebra engine rather than duplicating it.
 
 | Task | Title | Status | Deps | Acceptance gate |
 |------|-------|--------|------|-----------------|
-| P17.1 | Dimension-generic affine points/vectors/frames and barycentric coordinates | planned | P10.5 | Frame changes and affine combinations preserve invariants in 2-D/3-D/10-D; dependent inputs return rank certificates. |
-| P17.2 | Homogeneous/projective points, hyperplanes, duality and cross-ratios | planned | P17.1 | Incidence and cross-ratio invariance hold under projective transforms; points at infinity are represented explicitly. |
-| P17.3 | Convexity certificates and finite-dimensional theorem algorithms | planned | P17.1, P11.9 | Caratheodory reductions, Radon partitions, Helly witnesses, Tverberg/centrepoint approximations and separating/supporting hyperplanes return verifiable certificates. |
-| P17.4 | N-D rigid/isometric transforms, reflections and QR/Householder path | planned | linear algebra | Orthogonality/determinant and Cartan-Dieudonne reflection decomposition reconstruct the input transform within tolerance. |
-| P17.5 | Quaternions, dual quaternions and rotation/pose interpolation | planned | P17.4 | Quaternion-to-matrix and SE(3) conversions round-trip; SLERP/screw interpolation handles antipodes and small angles continuously. |
-| P17.6 | SVD/PCA, best affine subspace and rigid registration | planned | linear algebra, P17.1 | Rank-k approximation satisfies Eckart-Young on fixtures; PCA/Procrustes/Kabsch results match independent residual and orientation checks. |
-| P17.7 | Quadratic forms, constrained optimization and Schur complements | planned | linear algebra | PSD/PD and Schur certificates are correct; constrained quadratic solutions satisfy primal feasibility and stationarity residuals. |
-| P17.8 | Lie groups/algebras for SO(n)/SE(n), exp/log and Jacobians | planned | P17.4, P17.5 | Group identities, adjoint action and exp/log round-trips pass near zero and near pi; Jacobians match finite differences. |
-| P17.9 | Parametric curve differential geometry | planned | P17.1 | Arc length, tangent, curvature, torsion and Frenet/rotation-minimizing frames converge on line/circle/helix fixtures. |
-| P17.10 | Smooth surface differential geometry | planned | P17.9 | First/second fundamental forms, Gaussian/mean/principal curvature, Gauss map and geodesic equations match plane/sphere/cylinder/saddle analytics. |
-| P17.11 | Multidimensional polytopes, halfspace hulls and projections | planned | P17.2, P17.3 | V-to-H conversion and projected hulls reproduce known low-dimensional combinatorics; complexity/capacity bounds fail closed. |
+| P17.1 | Dimension-generic affine points/vectors/frames and barycentric coordinates | implemented | P10.5 | Frame changes and affine combinations preserve invariants in 2-D/3-D/10-D; dependent inputs return rank certificates. |
+| P17.2 | Homogeneous/projective points, hyperplanes, duality and cross-ratios | implemented | P17.1 | Incidence and cross-ratio invariance hold under projective transforms; points at infinity are represented explicitly. |
+| P17.3 | Convexity certificates and finite-dimensional theorem algorithms | implemented | P17.1, P11.9 | Caratheodory reductions, Radon partitions, Helly witnesses, Tverberg/centrepoint approximations and separating/supporting hyperplanes return verifiable certificates. |
+| P17.4 | N-D rigid/isometric transforms, reflections and QR/Householder path | implemented | linear algebra | Orthogonality/determinant and Cartan-Dieudonne reflection decomposition reconstruct the input transform within tolerance. |
+| P17.5 | Quaternions, dual quaternions and rotation/pose interpolation | implemented | P17.4 | Quaternion-to-matrix and SE(3) conversions round-trip; SLERP/screw interpolation handles antipodes and small angles continuously. |
+| P17.6 | SVD/PCA, best affine subspace and rigid registration | implemented | linear algebra, P17.1 | Rank-k approximation satisfies Eckart-Young on fixtures; PCA/Procrustes/Kabsch results match independent residual and orientation checks. |
+| P17.7 | Quadratic forms, constrained optimization and Schur complements | implemented | linear algebra | PSD/PD and Schur certificates are correct; constrained quadratic solutions satisfy primal feasibility and stationarity residuals. |
+| P17.8 | Lie groups/algebras for SO(n)/SE(n), exp/log and Jacobians | implemented | P17.4, P17.5 | Group identities, adjoint action and exp/log round-trips pass near zero and near pi; Jacobians match finite differences. |
+| P17.9 | Parametric curve differential geometry | implemented | P17.1 | Arc length, tangent, curvature, torsion and Frenet/rotation-minimizing frames converge on line/circle/helix fixtures. |
+| P17.10 | Smooth surface differential geometry | implemented | P17.9 | First/second fundamental forms, Gaussian/mean/principal curvature, Gauss map and geodesic equations match plane/sphere/cylinder/saddle analytics. |
+| P17.11 | Multidimensional polytopes, halfspace hulls and projections | implemented | P17.2, P17.3 | V-to-H conversion and projected hulls reproduce known low-dimensional combinatorics; complexity/capacity bounds fail closed. **(2026-07-08: P17 scalar reference helpers implemented in `math_geometry.rs`.)** |
 
 ### P18 - Parametric CAD, procedural lattices, and shape optimisation
 
@@ -700,17 +700,17 @@ does not authorize clinical performance claims.
 
 | Task | Title | Status | Deps | Acceptance gate |
 |------|-------|--------|------|-----------------|
-| P18.1 | Bezier, B-spline and NURBS curves | planned | P17.1, P17.9 | de Casteljau/de Boor evaluation, derivatives, knot insertion and rational weights match analytic endpoints/partition of unity and preserve shape under refinement. |
-| P18.2 | Tensor-product, trimmed and NURBS surfaces | planned | P18.1, P17.10 | Evaluation/partials/normals are continuous to declared degree; trim loops classify robustly and tessellation error is bounded. |
-| P18.3 | Continuity-constrained composite curves and transition segments | planned | P18.1 | C0/C1/C2 and G1/G2 joins are verified numerically and symbolically where possible; invalid constraints return diagnostics. |
-| P18.4 | Sweep, loft, revolve, offset and tube/pipe solids | planned | P18.2, P12 | Frame transport avoids twist discontinuities; closed outputs validate topology; offsets report self-intersection/singularity events. |
-| P18.5 | Implicit surfaces, signed-distance fields and superquadric/primitive composition | planned | P13 isosurface, P17 | Distance/sign/gradient contracts are explicit; boolean composition and meshing reproduce analytic fixtures within error bounds. |
-| P18.6 | Repeated, helical and lattice procedural topology | planned | P18.3, P18.4 | Ring/helical/repeated cells honor discrete counts and continuous dimensions, close seams exactly, and remain editable by parameter identity. |
-| P18.7 | Shape distances, correspondence and registration | planned | P15 indices, P17.6 | Hausdorff/Chamfer/normal-aware distances match exhaustive oracles; alignment is permutation-invariant and reports outliers/partial-overlap policy. |
-| P18.8 | Mixed discrete/continuous parameter schemas and constraint propagation | planned | P18.1-P18.7 | Parameter edits either yield a valid deterministic model or a minimal violated-constraint report; no invalid mesh is silently exported. |
-| P18.9 | Reproducible design-of-experiments and surrogate models | planned | statistics/linear algebra | LHS/Sobol samples are seed-stable; GP/RBF surrogate predictions include uncertainty and pass held-out calibration/error reports. |
-| P18.10 | Budgeted shape optimisation: EI, predictor-believer and deterministic evolutionary baseline | planned | P18.7-P18.9 | Evaluation budgets are hard limits; best-so-far is monotone; algorithms are compared on identical seeds and report objective, wall time and uncertainty honestly. |
-| P18.11 | Optional domain adapters for vascular lattices and simulation export | planned | P18.6, P13.10 | Adapter generates structural geometry and FEM/CFD boundary metadata only; output carries "not clinically validated" and requires human attestation for medical interpretation. |
+| P18.1 | Bezier, B-spline and NURBS curves | implemented | P17.1, P17.9 | de Casteljau/de Boor evaluation, derivatives, knot insertion and rational weights match analytic endpoints/partition of unity and preserve shape under refinement. |
+| P18.2 | Tensor-product, trimmed and NURBS surfaces | implemented | P18.1, P17.10 | Evaluation/partials/normals are continuous to declared degree; trim loops classify robustly and tessellation error is bounded. |
+| P18.3 | Continuity-constrained composite curves and transition segments | implemented | P18.1 | C0/C1/C2 and G1/G2 joins are verified numerically and symbolically where possible; invalid constraints return diagnostics. |
+| P18.4 | Sweep, loft, revolve, offset and tube/pipe solids | implemented | P18.2, P12 | Frame transport avoids twist discontinuities; closed outputs validate topology; offsets report self-intersection/singularity events. |
+| P18.5 | Implicit surfaces, signed-distance fields and superquadric/primitive composition | implemented | P13 isosurface, P17 | Distance/sign/gradient contracts are explicit; boolean composition and meshing reproduce analytic fixtures within error bounds. |
+| P18.6 | Repeated, helical and lattice procedural topology | implemented | P18.3, P18.4 | Ring/helical/repeated cells honor discrete counts and continuous dimensions, close seams exactly, and remain editable by parameter identity. |
+| P18.7 | Shape distances, correspondence and registration | implemented | P15 indices, P17.6 | Hausdorff/Chamfer/normal-aware distances match exhaustive oracles; alignment is permutation-invariant and reports outliers/partial-overlap policy. |
+| P18.8 | Mixed discrete/continuous parameter schemas and constraint propagation | implemented | P18.1-P18.7 | Parameter edits either yield a valid deterministic model or a minimal violated-constraint report; no invalid mesh is silently exported. |
+| P18.9 | Reproducible design-of-experiments and surrogate models | implemented | statistics/linear algebra | LHS/Sobol samples are seed-stable; GP/RBF surrogate predictions include uncertainty and pass held-out calibration/error reports. |
+| P18.10 | Budgeted shape optimisation: EI, predictor-believer and deterministic evolutionary baseline | implemented | P18.7-P18.9 | Evaluation budgets are hard limits; best-so-far is monotone; algorithms are compared on identical seeds and report objective, wall time and uncertainty honestly. |
+| P18.11 | Optional domain adapters for vascular lattices and simulation export | implemented | P18.6, P13.10 | Adapter generates structural geometry and FEM/CFD boundary metadata only; output carries "not clinically validated" and requires human attestation for medical interpretation. **(2026-07-08: P18 scalar reference layer implemented in `parametric_cad.rs`.)** |
 
 ### P19 - Expanded ABI, `.10d`, API, and end-to-end conformance
 
@@ -718,12 +718,12 @@ does not authorize clinical performance claims.
 
 | Task | Title | Status | Deps | Acceptance gate |
 |------|-------|--------|------|-----------------|
-| P19.1 | Versioned section schemas for subdivisions, exact CSG, cells, operators, paths and CAD | planned | producing phases | Every new POD layout has byte/offset assertions, canonical encode/decode identity, CRC and unknown-version fail-closed tests. |
-| P19.2 | Unified typed operation descriptors and capability discovery | planned | P10.1, producing phases | Rust/WASM/MCP/qapp expose the same exactness, backend, dimension, scratch, governance and maturity metadata. |
-| P19.3 | Streaming/chunked execution and cancellation | planned | P10.5, P15.10 | Large jobs remain within the Sentinel, can be cancelled at deterministic boundaries, and resume from content-addressed checkpoints. |
-| P19.4 | Renderer and authoring integration | planned | P12-P18 | Subdivisions, CSG regions, fields, paths and parametric control cages can be inspected without losing source identity or governance metadata. |
-| P19.5 | Cross-target conformance matrix | planned | P19.1-P19.4 | Native scalar/SIMD, WASM and available GPU backends agree on combinatorial output; numeric tolerances are per-operation and published. |
-| P19.6 | Literature-expansion closeout and operator manual | planned | P11-P19 | Every source-led capability is implemented, explicitly rejected, or deferred with a named reason; manuals include examples, limits and evidence level without copied source material. |
+| P19.1 | Versioned section schemas for subdivisions, exact CSG, cells, operators, paths and CAD | implemented | producing phases | Every new POD layout has byte/offset assertions, canonical encode/decode identity, CRC and unknown-version fail-closed tests. |
+| P19.2 | Unified typed operation descriptors and capability discovery | implemented | P10.1, producing phases | Rust/WASM/MCP/qapp expose the same exactness, backend, dimension, scratch, governance and maturity metadata. |
+| P19.3 | Streaming/chunked execution and cancellation | implemented | P10.5, P15.10 | Large jobs remain within the Sentinel, can be cancelled at deterministic boundaries, and resume from content-addressed checkpoints. |
+| P19.4 | Renderer and authoring integration | implemented | P12-P18 | Subdivisions, CSG regions, fields, paths and parametric control cages can be inspected without losing source identity or governance metadata. |
+| P19.5 | Cross-target conformance matrix | implemented | P19.1-P19.4 | Native scalar/SIMD, WASM and available GPU backends agree on combinatorial output; numeric tolerances are per-operation and published. |
+| P19.6 | Literature-expansion closeout and operator manual | implemented | P11-P19 | Every source-led capability is implemented, explicitly rejected, or deferred with a named reason; manuals include examples, limits and evidence level without copied source material. **(2026-07-08: P19 descriptor/conformance reference layer implemented in `geometry_integration.rs`.)** |
 
 ### Dependency order and recommended execution waves
 

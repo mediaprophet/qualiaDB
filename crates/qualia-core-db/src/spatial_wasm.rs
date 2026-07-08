@@ -14,6 +14,11 @@ use crate::tensor::Tensor10D;
 use crate::{q_hash, NQuin};
 
 #[cfg(target_arch = "wasm32")]
+pub mod geometry_wasm;
+#[cfg(target_arch = "wasm32")]
+pub use geometry_wasm::*;
+
+#[cfg(target_arch = "wasm32")]
 const MAX_ENCODE_VERTICES: usize = 8192;
 
 #[cfg(target_arch = "wasm32")]
