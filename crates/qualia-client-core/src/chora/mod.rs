@@ -5,6 +5,8 @@
 
 pub mod api;
 pub mod flagship_worlds;
+pub mod layers;
+pub mod asset_pipeline;
 
 pub use crate::canvas_state;
 pub use crate::canvas_store;
