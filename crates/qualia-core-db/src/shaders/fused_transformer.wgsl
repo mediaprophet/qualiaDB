@@ -320,8 +320,11 @@ var<workgroup> coop_partial: array<f32, 256>;
 // 256× per block per thread. Here 8 threads decode it once into shared memory and all 256 threads
 // reuse it, collapsing the per-block header ALU ~32× (256→8 decodes) — the measured Q4_K GEMM
 // bottleneck (F16 1264µs → Q4_K 2727µs/call; dequant ≈54% of the kernel).
-var<workgroup> coop_q4k_dsub: array<f32, 8>; // d * sub_scale   per 32-element sub-block
-var<workgroup> coop_q4k_msub: array<f32, 8>; // dmin * sub_min  per 32-element sub-block
+// Ping-pong header slots (2 × 8 sub-block pairs). Even/odd superblocks write alternate slots so
+// the trailing barrier that used to guard overwrite can be dropped — one barrier per block instead
+// of two (measured Q4_K GEMV bottleneck: dequant + barriers).
+var<workgroup> coop_q4k_dsub: array<f32, 16>; // d * sub_scale
+var<workgroup> coop_q4k_msub: array<f32, 16>; // dmin * sub_min
 
 // Shared accumulation: thread `t`'s partial dot-product of weight row `row` with the activation at
 // `in_base`. Owns the block-cooperative Q4_K dequant (header decoded once per superblock into shared
@@ -361,7 +364,7 @@ fn coop_row_dot(row: u32, t: u32, in_base: u32) -> f32 {
         }
     } else if params.weight_ggml_type == GGML_TYPE_Q4_K && (params.n_in % BLOCK_Q4K_ELEMS) == 0u {
         // Block-cooperative Q4_K path: workgroup step b == superblock b; thread t == element t.
-        // Header decoded once (8 threads) into shared memory; reused by all 256 threads.
+        // Header decoded once (8 threads) into a ping-pong shared slot; reused by all 256 threads.
         let row_base = row * weight_row_bytes();
         let n_blocks = params.n_in / BLOCK_Q4K_ELEMS;
         let sub = t / 32u;     // which 32-element sub-block this thread's element belongs to
@@ -369,21 +372,18 @@ fn coop_row_dot(row: u32, t: u32, in_base: u32) -> f32 {
         let local = t % 64u;
         for (var b = 0u; b < n_blocks; b = b + 1u) {
             let block_base = row_base + b * BLOCK_Q4K_BYTES;
-            // Cooperative header decode (8 threads) — d/dmin re-read per sub-thread is trivial vs
-            // the 256× redundancy it replaces. Writes the 8 (d·scale, dmin·min) sub-block pairs.
-            // Word-aligned f16 d/dmin load (one u32 each) instead of four byte loads.
+            let slot = (b & 1u) * 8u; // ping-pong: even → 0..7, odd → 8..15
+            // Cooperative header decode (8 threads). Word-aligned f16 d/dmin load.
             if t < 8u {
-                let d_word = weight_words[block_base >> 2u]; // d | dmin as two f16 in one word when aligned
-                // block_base is always 144-byte aligned (Q4_K) and page-aligned rows → 4-byte aligned.
+                let d_word = weight_words[block_base >> 2u];
                 let d = f16_to_f32(d_word & 0xFFFFu);
                 let dmin = f16_to_f32(d_word >> 16u);
                 let sm = get_scale_min_k4(t, block_base + 4u);
-                coop_q4k_dsub[t] = d * f32(sm.x);
-                coop_q4k_msub[t] = dmin * f32(sm.y);
+                coop_q4k_dsub[slot + t] = d * f32(sm.x);
+                coop_q4k_msub[slot + t] = dmin * f32(sm.y);
             }
             workgroupBarrier();
             // Each thread dequantizes its own element t of this superblock from its nibble.
-            // Word-coalesced qs load: 8 nibbles per u32 when local is nibble-index within group.
             let qs_base = block_base + 16u;
             let q_off = group * 32u;
             var nib: u32;
@@ -398,10 +398,9 @@ fn coop_row_dot(row: u32, t: u32, in_base: u32) -> f32 {
                 let shift = (byte_i & 3u) * 8u;
                 nib = ((word >> shift) & 0xFFu) >> 4u;
             }
-            let w = coop_q4k_dsub[sub] * f32(nib) - coop_q4k_msub[sub];
+            let w = coop_q4k_dsub[slot + sub] * f32(nib) - coop_q4k_msub[slot + sub];
             acc = acc + w * input[in_base + b * BLOCK_Q4K_ELEMS + t];
-            // Barrier before the next iteration's 8 threads overwrite the shared header.
-            workgroupBarrier();
+            // No trailing barrier: next block writes the *other* ping-pong slot.
         }
     } else {
         // Generic strided path (other quant types / non-256-aligned K).

@@ -312,3 +312,37 @@ None — try `llm optimize` on a model and chat on the `.f16.p64`.
 ### ⚑ Human
 None for convert path. For coherent Gemma-4 chat: authorise the gemma4 decoder graph as the next lane (this is a real architecture port, not a config tweak).
 
+
+---
+
+## 2026-07-09 — Prioritize pipeline optim; Gemma deferred (Grok)
+
+### Status
+**direction locked by Timothy:** finish remaining **optim plan** first (pipeline still too slow). **Gemma-4 decoder graph last** (forge can help there later). Convert/fail-closed for gemma stays as-is.
+
+### Honest baselines (A2000 12GB, DX12, p64, resident single-fence)
+| Model | tok/s | ms/tok | Path |
+|-------|------:|-------:|------|
+| smollm2-360m **f16.p64** | **18.3** | 54.7 | 1 fence/tok, COMPUTE-BOUND |
+| llama-3.2-3b **Q4_K_M.p64** (before) | **2.01** | 498 | same |
+| llama-3.2-3b Q4_K_M (after Q4_K ping-pong barrier) | **2.31** | 433 | ~+15% |
+
+Ollama/llama.cpp CUDA same-class GGUF was ~**70 tok/s** on this machine earlier → still ~**30×** on 3B. SmolLM ~18 tok/s is compute-bound WGSL, not fence-bound.
+
+### This slice shipped
+- Q4_K coop GEMV: **ping-pong shared header** (1 barrier/block instead of 2) in `fused_transformer.wgsl` — modest +15% on 3B, not the 30× gap.
+
+### Optim backlog (ordered for tok/s — Gemma NOT in this list)
+1. **SoA Q4_K convert layout** + layout-aware GEMV (plan W-K3 / convert-time layout #3)
+2. **Wire forge CUDA WMMA into prefill heavy GEMMs** (W-K1/W-K2) — CUDA 13.3 present; `gemm_f32_tc` still soft-falls to plain in unit tests without full NVRTC product wire
+3. **Persistent engine worker** — every `infer` rebuilds `QTensorEngine` (TTFT pain; multi-turn pays full plan rebuild)
+4. **Decode-proxy passport** (rank by short tok/s, not only GEMV µs)
+5. **Ternary FFN productize** when ΔPPL gate holds
+6. **f16 A/B** on models that fit VRAM (smollm already has f16.p64)
+
+### Deferred (last)
+- Gemma-4 graph: dual head_dim/SWA, PLE, shared KV, QK/post-norms, variable FFN, softcap — after optim path is no longer “terribly slow” on supported models.
+
+### ⚑ Human
+None this step. Direction: optim → then Gemma. Next build session should start **SoA Q4_K** or **CUDA prefill wire** (CUDA toolkit is installed).
+
