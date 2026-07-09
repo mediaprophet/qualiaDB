@@ -209,27 +209,171 @@ impl QTensorEngine {
         self.gpu_queue()
             .write_buffer(input_buf, 0, bytemuck::cast_slice(&hidden[..n_in]));
 
-        let mut cand_offset = 0usize;
-
-        for chunk_idx in 0..full_chunks {
-            let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
-            let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
-
-            let (weight_resource, weight_byte_len) = if let Some(buf) = resident_logits {
-                if !(ggml_gpu_gemm_supported(info.ggml_type)
-                    && n_in <= MAX_STACK_GEMM_IN
-                    && chunk_rows <= self.gemm_max_out_dim as usize)
-                {
+        // Fast path: resident logits → ONE submit for all vocab chunks (no per-chunk fence).
+        // Shared uniform buffers force multi-submit when weights must be re-uploaded each chunk.
+        if let Some(res_buf) = resident_logits {
+            if !(ggml_gpu_gemm_supported(info.ggml_type) && n_in <= MAX_STACK_GEMM_IN) {
+                return None;
+            }
+            // 256-byte aligned slots (wgpu min uniform offset) for per-chunk params.
+            const SLOT: usize = 256;
+            let gemm_slot = std::mem::size_of::<GemmGpuParams>().max(32);
+            let mut gemm_slab = vec![0u8; full_chunks * SLOT];
+            let mut topk_slab = vec![0u8; full_chunks * SLOT];
+            let mut chunk_meta: Vec<(u32, u32, u32)> = Vec::with_capacity(full_chunks); // rows, weight_bytes, n_blocks
+            for chunk_idx in 0..full_chunks {
+                let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
+                let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
+                if chunk_rows > self.gemm_max_out_dim as usize {
                     return None;
                 }
+                let weight_byte_len = (chunk_rows as u64 * resident_row_bytes) as u32;
+                let gparams = GemmGpuParams {
+                    n_in: n_in as u32,
+                    n_out: chunk_rows as u32,
+                    weight_ggml_type: info.ggml_type,
+                    weight_row_elems: info.dims[0] as u32,
+                    weight_byte_len,
+                    n_batch: 1,
+                    in_row_stride: 0,
+                    out_row_stride: 0,
+                };
+                let gp = bytemuck::bytes_of(&gparams);
+                let go = chunk_idx * SLOT;
+                gemm_slab[go..go + gemm_slot.min(gp.len())].copy_from_slice(&gp[..gemm_slot.min(gp.len())]);
+                let tparams = crate::topk::topk_params_bytes(chunk_rows as u32, 1, block_size as u32);
+                topk_slab[go..go + tparams.len()].copy_from_slice(&tparams);
+                let num_blocks = chunk_rows.div_ceil(block_size) as u32;
+                chunk_meta.push((chunk_rows as u32, weight_byte_len, num_blocks));
+            }
+            // Upload slabs once; bind with per-chunk offsets via dedicated per-chunk param buffers
+            // (auto layouts rarely allow dynamic offsets). Reuse gemm_params / topk_params only for
+            // the first slot write pattern: create a single multi-slot buffer pair for the fused pass.
+            let gemm_multi = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+                label: Some("Top1GemmParamsMulti"),
+                size: gemm_slab.len() as u64,
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+            let topk_multi = self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
+                label: Some("Top1TopkParamsMulti"),
+                size: topk_slab.len() as u64,
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+            self.gpu_queue()
+                .write_buffer(&gemm_multi, 0, &gemm_slab);
+            self.gpu_queue()
+                .write_buffer(&topk_multi, 0, &topk_slab);
+
+            let mut encoder =
+                self.device()
+                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("Top1FusedEncoder"),
+                    });
+            let mut cand_offset = 0usize;
+            for (chunk_idx, &(chunk_rows, _wlen, num_blocks)) in chunk_meta.iter().enumerate() {
+                let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
                 let byte_len = chunk_rows as u64 * resident_row_bytes;
-                let res = wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                    buffer: buf,
+                let weight_resource = wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    buffer: res_buf,
                     offset: row_start as u64 * resident_row_bytes,
                     size: std::num::NonZeroU64::new(byte_len),
                 });
-                (res, byte_len as u32)
-            } else {
+                let go = (chunk_idx * SLOT) as u64;
+                let gsize = std::num::NonZeroU64::new(std::mem::size_of::<GemmGpuParams>() as u64);
+                let tsize = std::num::NonZeroU64::new(16);
+                let gemm_bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("Top1GemmBindFused"),
+                    layout: &gemm_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: input_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: weight_resource,
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 2,
+                            resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                                buffer: &gemm_multi,
+                                offset: go,
+                                size: gsize,
+                            }),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 3,
+                            resource: output_buf.as_entire_binding(),
+                        },
+                    ],
+                });
+                let topk_bind_c = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("Top1TopkBindFused"),
+                    layout: topk_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: output_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                                buffer: &topk_multi,
+                                offset: go,
+                                size: tsize,
+                            }),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 2,
+                            resource: cand_val.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 3,
+                            resource: cand_idx.as_entire_binding(),
+                        },
+                    ],
+                });
+                {
+                    let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                        label: Some("Top1GemmPass"),
+                        timestamp_writes: None,
+                    });
+                    cpass.set_pipeline(gemm_pipeline);
+                    cpass.set_bind_group(0, &gemm_bind, &[]);
+                    if use_coop {
+                        cpass.dispatch_workgroups(chunk_rows, 1, 1);
+                    } else {
+                        cpass.dispatch_workgroups((chunk_rows + 63) / 64, 1, 1);
+                    }
+                }
+                {
+                    let mut tpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                        label: Some("Top1ReducePass"),
+                        timestamp_writes: None,
+                    });
+                    tpass.set_pipeline(topk_pipeline);
+                    tpass.set_bind_group(0, &topk_bind_c, &[]);
+                    tpass.dispatch_workgroups(num_blocks, 1, 1);
+                }
+                let cand_count = num_blocks as usize;
+                let cand_bytes = (cand_count * 4) as wgpu::BufferAddress;
+                let val_dst = (cand_offset * 4) as wgpu::BufferAddress;
+                let idx_dst = ((total_cands + cand_offset) * 4) as wgpu::BufferAddress;
+                encoder.copy_buffer_to_buffer(cand_val, 0, staging, val_dst, cand_bytes);
+                encoder.copy_buffer_to_buffer(cand_idx, 0, staging, idx_dst, cand_bytes);
+                cand_offset += cand_count;
+            }
+            crate::llm_gpu_profiler::resolve(&mut encoder);
+            self.gpu_queue().submit(Some(encoder.finish()));
+            crate::llm_gpu_profiler::accumulate(crate::llm_gpu_profiler::Phase::OutputTopk);
+        } else {
+            // Legacy: per-chunk upload + submit (shared weight staging buffer).
+            let mut cand_offset = 0usize;
+            for chunk_idx in 0..full_chunks {
+                let row_start = chunk_idx * VOCAB_CHUNK_ROWS;
+                let chunk_rows = VOCAB_CHUNK_ROWS.min(vocab_size - row_start);
                 let raw = crate::ggml_quants::fetch_tensor_row_range_bytes(
                     mmap,
                     index.tensor_data_start,
@@ -246,31 +390,39 @@ impl QTensorEngine {
                     return None;
                 }
                 let byte_len = raw.len() as u32;
-                self.write_weight_words(raw, self.max_tensor_bytes);
-                (weight_buf.as_entire_binding(), byte_len)
-            };
+                let resident = if crate::llm_bench::resident_weights_enabled() {
+                    self.resident_weight_buffer(raw.as_ptr() as u64, raw)
+                } else {
+                    None
+                };
+                let weight_binding: &wgpu::Buffer = match resident.as_ref() {
+                    Some(r) => r,
+                    None => {
+                        self.write_weight_words(raw, self.max_tensor_bytes);
+                        weight_buf
+                    }
+                };
 
-            let gparams = GemmGpuParams {
-                n_in: n_in as u32,
-                n_out: chunk_rows as u32,
-                weight_ggml_type: info.ggml_type,
-                weight_row_elems: info.dims[0] as u32,
-                weight_byte_len,
-                n_batch: 1,
-                in_row_stride: 0,
-                out_row_stride: 0,
-            };
-            self.gpu_queue()
-                .write_buffer(params_buf, 0, bytemuck::bytes_of(&gparams));
-            let tparams = crate::topk::topk_params_bytes(chunk_rows as u32, 1, block_size as u32);
-            self.gpu_queue().write_buffer(topk_params_buf, 0, &tparams);
+                let gparams = GemmGpuParams {
+                    n_in: n_in as u32,
+                    n_out: chunk_rows as u32,
+                    weight_ggml_type: info.ggml_type,
+                    weight_row_elems: info.dims[0] as u32,
+                    weight_byte_len: byte_len,
+                    n_batch: 1,
+                    in_row_stride: 0,
+                    out_row_stride: 0,
+                };
+                self.gpu_queue()
+                    .write_buffer(params_buf, 0, bytemuck::bytes_of(&gparams));
+                let tparams =
+                    crate::topk::topk_params_bytes(chunk_rows as u32, 1, block_size as u32);
+                self.gpu_queue().write_buffer(topk_params_buf, 0, &tparams);
 
-            let num_blocks = chunk_rows.div_ceil(block_size);
-            let cand_count = num_blocks;
+                let num_blocks = chunk_rows.div_ceil(block_size);
+                let cand_count = num_blocks;
 
-            let gemm_bind = self
-                .gpu_device()
-                .create_bind_group(&wgpu::BindGroupDescriptor {
+                let gemm_bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
                     label: Some("Top1GemmBind"),
                     layout: &gemm_layout,
                     entries: &[
@@ -280,7 +432,7 @@ impl QTensorEngine {
                         },
                         wgpu::BindGroupEntry {
                             binding: 1,
-                            resource: weight_resource,
+                            resource: weight_binding.as_entire_binding(),
                         },
                         wgpu::BindGroupEntry {
                             binding: 2,
@@ -292,42 +444,43 @@ impl QTensorEngine {
                         },
                     ],
                 });
-            let mut encoder =
-                self.device()
-                    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                        label: Some("Top1Encoder"),
+                let mut encoder =
+                    self.device()
+                        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                            label: Some("Top1Encoder"),
+                        });
+                {
+                    let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                        label: Some("Top1GemmPass"),
+                        timestamp_writes: crate::llm_gpu_profiler::pass_writes_begin(),
                     });
-            {
-                let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: Some("Top1GemmPass"),
-                    timestamp_writes: crate::llm_gpu_profiler::pass_writes_begin(),
-                });
-                cpass.set_pipeline(gemm_pipeline);
-                cpass.set_bind_group(0, &gemm_bind, &[]);
-                if use_coop {
-                    cpass.dispatch_workgroups(chunk_rows as u32, 1, 1);
-                } else {
-                    cpass.dispatch_workgroups((chunk_rows as u32 + 63) / 64, 1, 1);
+                    cpass.set_pipeline(gemm_pipeline);
+                    cpass.set_bind_group(0, &gemm_bind, &[]);
+                    if use_coop {
+                        cpass.dispatch_workgroups(chunk_rows as u32, 1, 1);
+                    } else {
+                        cpass.dispatch_workgroups((chunk_rows as u32 + 63) / 64, 1, 1);
+                    }
                 }
+                {
+                    let mut tpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                        label: Some("Top1ReducePass"),
+                        timestamp_writes: crate::llm_gpu_profiler::pass_writes_end(),
+                    });
+                    tpass.set_pipeline(topk_pipeline);
+                    tpass.set_bind_group(0, &topk_bind, &[]);
+                    tpass.dispatch_workgroups(num_blocks as u32, 1, 1);
+                }
+                let cand_bytes = (cand_count * 4) as wgpu::BufferAddress;
+                let val_dst = (cand_offset * 4) as wgpu::BufferAddress;
+                let idx_dst = ((total_cands + cand_offset) * 4) as wgpu::BufferAddress;
+                encoder.copy_buffer_to_buffer(cand_val, 0, staging, val_dst, cand_bytes);
+                encoder.copy_buffer_to_buffer(cand_idx, 0, staging, idx_dst, cand_bytes);
+                crate::llm_gpu_profiler::resolve(&mut encoder);
+                self.gpu_queue().submit(Some(encoder.finish()));
+                crate::llm_gpu_profiler::accumulate(crate::llm_gpu_profiler::Phase::OutputTopk);
+                cand_offset += cand_count;
             }
-            {
-                let mut tpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: Some("Top1ReducePass"),
-                    timestamp_writes: crate::llm_gpu_profiler::pass_writes_end(),
-                });
-                tpass.set_pipeline(topk_pipeline);
-                tpass.set_bind_group(0, &topk_bind, &[]);
-                tpass.dispatch_workgroups(num_blocks as u32, 1, 1);
-            }
-            let cand_bytes = (cand_count * 4) as wgpu::BufferAddress;
-            let val_dst = (cand_offset * 4) as wgpu::BufferAddress;
-            let idx_dst = ((total_cands + cand_offset) * 4) as wgpu::BufferAddress;
-            encoder.copy_buffer_to_buffer(cand_val, 0, staging, val_dst, cand_bytes);
-            encoder.copy_buffer_to_buffer(cand_idx, 0, staging, idx_dst, cand_bytes);
-            crate::llm_gpu_profiler::resolve(&mut encoder);
-            self.gpu_queue().submit(Some(encoder.finish()));
-            crate::llm_gpu_profiler::accumulate(crate::llm_gpu_profiler::Phase::OutputTopk);
-            cand_offset += cand_count;
         }
 
         let map_bytes = (total_cands * 8) as wgpu::BufferAddress;

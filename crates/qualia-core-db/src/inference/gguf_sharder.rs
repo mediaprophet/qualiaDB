@@ -980,13 +980,14 @@ impl GgufTokenizer {
         Some(tok)
     }
 
-    /// Phase 4 v3: serialize the tokenizer into a compact, contiguous P64 section (no page
-    /// alignment needed). Only the source fields are written (vocab / merges / bos / eos / add_bos /
-    /// pre); the derived maps are rebuilt by [`from_p64_section`]. Heap use here is load-time only.
+    /// Phase 4 v3 / v2: serialize the tokenizer into a compact, contiguous P64 section (no page
+    /// alignment needed). Fields: vocab / merges / bos / eos / add_bos / pre, plus (v2) the
+    /// stop-token set so decode does not re-guess chat ends. Derived maps are rebuilt by
+    /// [`from_p64_section`]. Heap use here is load-time only.
     pub fn to_p64_section(&self) -> Vec<u8> {
         let mut out = Vec::with_capacity(1 << 20);
         out.extend_from_slice(b"Q42T");
-        out.extend_from_slice(&1u16.to_le_bytes()); // section version
+        out.extend_from_slice(&2u16.to_le_bytes()); // section version (v2 = stop tokens)
         out.extend_from_slice(&0u16.to_le_bytes()); // flags
         out.extend_from_slice(&self.bos_token_id.to_le_bytes());
         out.extend_from_slice(&self.eos_token_id.to_le_bytes());
@@ -1005,6 +1006,12 @@ impl GgufTokenizer {
         for (l, r) in &self.merge_pairs {
             put_str(&mut out, l);
             put_str(&mut out, r);
+        }
+        // v2: stop-token set (eos + chat ends). Fixed 8 slots, count in first byte.
+        out.push(self.stop_token_count);
+        out.extend_from_slice(&[0u8; 3]);
+        for id in &self.stop_token_ids {
+            out.extend_from_slice(&id.to_le_bytes());
         }
         out
     }
@@ -1039,7 +1046,7 @@ impl GgufTokenizer {
         if take(&mut p, 4)? != b"Q42T" {
             return None;
         }
-        let _ver = u16::from_le_bytes(take(&mut p, 2)?.try_into().ok()?);
+        let ver = u16::from_le_bytes(take(&mut p, 2)?.try_into().ok()?);
         let _flags = take(&mut p, 2)?;
         let bos = take_u32(&mut p)?;
         let eos = take_u32(&mut p)?;
@@ -1063,6 +1070,17 @@ impl GgufTokenizer {
             let l = take_str(&mut p)?;
             let r = take_str(&mut p)?;
             merge_pairs.push((l, r));
+        }
+        // v2 optional trailer: stop_count + pad3 + 8×u32. v1 rebuilds from vocab specials.
+        let mut stored_stops: Option<([u32; MAX_STOP_TOKEN_IDS], u8)> = None;
+        if ver >= 2 && p + 4 + MAX_STOP_TOKEN_IDS * 4 <= data.len() {
+            let count = take(&mut p, 1)?[0].min(MAX_STOP_TOKEN_IDS as u8);
+            let _ = take(&mut p, 3)?;
+            let mut ids = [0u32; MAX_STOP_TOKEN_IDS];
+            for i in 0..MAX_STOP_TOKEN_IDS {
+                ids[i] = take_u32(&mut p)?;
+            }
+            stored_stops = Some((ids, count));
         }
         // Rebuild the derived maps exactly as `try_parse` does, so encode/decode are identical.
         let mut t2id: Vec<(String, u32)> = vocab
@@ -1093,7 +1111,16 @@ impl GgufTokenizer {
             stop_token_ids: [0; MAX_STOP_TOKEN_IDS],
             stop_token_count: 0,
         };
-        tok.rebuild_stop_token_ids();
+        if let Some((ids, count)) = stored_stops {
+            tok.stop_token_ids = ids;
+            tok.stop_token_count = count;
+            // Always ensure eos is present even if a stale helper omitted it.
+            if !tok.is_stop_token(eos) {
+                tok.rebuild_stop_token_ids();
+            }
+        } else {
+            tok.rebuild_stop_token_ids();
+        }
         Some(tok)
     }
 

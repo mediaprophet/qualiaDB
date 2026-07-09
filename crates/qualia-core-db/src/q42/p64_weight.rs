@@ -257,7 +257,23 @@ fn p64_tensor_name(role: u16, layer: u16, source_name_hash: u64) -> String {
     }
 }
 
-/// Compile a GGUF image into the cache-line-native P64 container.
+/// Conversion-time weight layout policy for [`compile_gguf_to_p64_with_layout`].
+///
+/// The designed product path is: import GGUF once → store GPU-friendly bytes in `.p64`.
+/// [`P64ConvertLayout::Verbatim`] is the historical byte-preserving container swap
+/// (same kernels, same speed). [`P64ConvertLayout::F16Expand`] dequantizes 2-D weight
+/// matrices to IEEE f16 so decode can use the fast `unpack2x16float` path.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum P64ConvertLayout {
+    /// Copy GGML quant blocks byte-for-byte (no speed change vs running the GGUF).
+    #[default]
+    Verbatim,
+    /// Expand 2-D matrices (attn/FFN/embd/output) to f16; leave 1-D norms as source.
+    /// Rejected if the result would exceed the 4 GiB u32-offset container limit.
+    F16Expand,
+}
+
+/// Compile a GGUF image into the cache-line-native P64 container (verbatim layout).
 ///
 /// Every GGUF tensor is retained. Known inference tensors receive a semantic
 /// role/layer; unknown tensors receive [`P64_ROLE_UNKNOWN`] but retain their
@@ -265,6 +281,15 @@ fn p64_tensor_name(role: u16, layer: u16, source_name_hash: u64) -> String {
 /// page boundary and has an in-band CRC-32C. The metadata, tokenizer and 10D
 /// manifold table share a separate CRC, validated before any blob is exposed.
 pub fn compile_gguf_to_p64(input: &[u8], page_log2: u16) -> Result<Vec<u8>, String> {
+    compile_gguf_to_p64_with_layout(input, page_log2, P64ConvertLayout::Verbatim)
+}
+
+/// Like [`compile_gguf_to_p64`] but selects a conversion-time layout policy.
+pub fn compile_gguf_to_p64_with_layout(
+    input: &[u8],
+    page_log2: u16,
+    layout: P64ConvertLayout,
+) -> Result<Vec<u8>, String> {
     let index = GgufTensorIndex::from_gguf(input);
     if index.tensor_data_start == 0 || index.entries.is_empty() {
         return Err("p64: GGUF parse yielded no tensors".to_string());
@@ -375,20 +400,45 @@ pub fn compile_gguf_to_p64(input: &[u8], page_log2: u16) -> Result<Vec<u8>, Stri
     let blob_region_offset = align_up(checksum_offset + checksum_bytes, page);
 
     let mut entries = Vec::with_capacity(planned.len());
+    // Parallel to `entries`: true when this blob is an f16 expand (not a source copy).
+    let mut expand_f16: Vec<bool> = Vec::with_capacity(planned.len());
     let mut cursor = blob_region_offset;
     for (position, (role, layer, name_hash, info)) in planned.iter().enumerate() {
-        let blob_size = crate::ggml_quants::tensor_byte_len(info)
+        let source_blob_size = crate::ggml_quants::tensor_byte_len(info)
             .ok_or_else(|| format!("p64: unsupported GGML type {}", info.ggml_type))?;
-        cursor = align_up(cursor, page);
         let source_start = tensor_data_start
             .checked_add(info.byte_offset as usize)
             .ok_or("p64: source tensor offset overflow")?;
         let source_end = source_start
-            .checked_add(blob_size)
+            .checked_add(source_blob_size)
             .ok_or("p64: source tensor length overflow")?;
         if source_end > input.len() {
             return Err(format!("p64: source tensor {position} is out of bounds"));
         }
+
+        let do_f16 = matches!(layout, P64ConvertLayout::F16Expand)
+            && p64_role_is_weight_matrix(*role)
+            && info.n_dims >= 2
+            && info.ggml_type != crate::ggml_quants::GGML_TYPE_F16
+            && info.ggml_type != crate::ggml_quants::GGML_TYPE_F32;
+        let (out_dtype, blob_size) = if do_f16 {
+            let n0 = info.dims[0] as usize;
+            let n1 = info.dims[1] as usize;
+            let elems = n0
+                .checked_mul(n1)
+                .ok_or("p64: f16 expand element count overflow")?;
+            let bytes = elems
+                .checked_mul(2)
+                .ok_or("p64: f16 expand byte count overflow")?;
+            (crate::ggml_quants::GGML_TYPE_F16 as u16, bytes)
+        } else {
+            (
+                u16::try_from(info.ggml_type).map_err(|_| "p64: GGML type exceeds u16")?,
+                source_blob_size,
+            )
+        };
+
+        cursor = align_up(cursor, page);
         let mut dimensions = [0u32; 4];
         for (target, source) in dimensions.iter_mut().zip(info.dims) {
             *target = u32::try_from(source).map_err(|_| "p64: tensor dimension exceeds u32")?;
@@ -401,7 +451,7 @@ pub fn compile_gguf_to_p64(input: &[u8], page_log2: u16) -> Result<Vec<u8>, Stri
         entries.push(P64TensorEntry {
             name_offset: name_offsets[position],
             role_id: *role,
-            dtype: u16::try_from(info.ggml_type).map_err(|_| "p64: GGML type exceeds u16")?,
+            dtype: out_dtype,
             manifold_idx,
             rank: info.n_dims,
             dimensions,
@@ -411,6 +461,7 @@ pub fn compile_gguf_to_p64(input: &[u8], page_log2: u16) -> Result<Vec<u8>, Stri
             source_name_hash: *name_hash,
             reserved: [0; 8],
         });
+        expand_f16.push(do_f16);
         cursor = cursor
             .checked_add(blob_size)
             .ok_or("p64: container size overflow")?;
@@ -469,11 +520,21 @@ pub fn compile_gguf_to_p64(input: &[u8], page_log2: u16) -> Result<Vec<u8>, Stri
     output[tokenizer_offset..tokenizer_offset + tokenizer.len()].copy_from_slice(&tokenizer);
 
     for (position, entry) in entries.iter().enumerate() {
-        let source_start = tensor_data_start + entry.source_offset as usize;
-        let source_end = source_start + entry.blob_size as usize;
         let target_start = entry.blob_offset as usize;
         let target_end = target_start + entry.blob_size as usize;
-        output[target_start..target_end].copy_from_slice(&input[source_start..source_end]);
+        if expand_f16[position] {
+            let info = &planned[position].3;
+            let source_blob_size = crate::ggml_quants::tensor_byte_len(info)
+                .ok_or("p64: f16 expand missing source size")?;
+            let source_start = tensor_data_start + entry.source_offset as usize;
+            let source_end = source_start + source_blob_size;
+            let raw = &input[source_start..source_end];
+            expand_tensor_to_f16_blob(raw, info, &mut output[target_start..target_end])?;
+        } else {
+            let source_start = tensor_data_start + entry.source_offset as usize;
+            let source_end = source_start + entry.blob_size as usize;
+            output[target_start..target_end].copy_from_slice(&input[source_start..source_end]);
+        }
         let crc = crc32c(&output[target_start..target_end]);
         let crc_start = checksum_offset + 4 + position * 4;
         output[crc_start..crc_start + 4].copy_from_slice(&crc.to_le_bytes());
@@ -481,6 +542,53 @@ pub fn compile_gguf_to_p64(input: &[u8], page_log2: u16) -> Result<Vec<u8>, Stri
     let metadata_crc = crc32c(&output[..checksum_offset]);
     output[checksum_offset..checksum_offset + 4].copy_from_slice(&metadata_crc.to_le_bytes());
     Ok(output)
+}
+
+/// Roles that are 2-D weight matrices (eligible for f16 expand). Norms stay source dtype.
+#[inline]
+fn p64_role_is_weight_matrix(role: u16) -> bool {
+    matches!(
+        role,
+        P64_ROLE_ATTN_K
+            | P64_ROLE_ATTN_V
+            | P64_ROLE_ATTN_Q
+            | P64_ROLE_ATTN_OUTPUT
+            | P64_ROLE_FFN_GATE
+            | P64_ROLE_FFN_UP
+            | P64_ROLE_FFN_DOWN
+            | P64_ROLE_TOKEN_EMBD
+            | P64_ROLE_OUTPUT
+    )
+}
+
+/// Dequantize a full 2-D GGUF tensor into a row-major f16 blob (`out` length = n0*n1*2).
+fn expand_tensor_to_f16_blob(
+    raw: &[u8],
+    info: &GgufTensorInfo,
+    out: &mut [u8],
+) -> Result<(), String> {
+    let n0 = info.dims[0] as usize; // cols (in)
+    let n1 = info.dims[1] as usize; // rows (out)
+    let need = n0
+        .checked_mul(n1)
+        .and_then(|e| e.checked_mul(2))
+        .ok_or("p64: f16 expand size overflow")?;
+    if out.len() < need {
+        return Err("p64: f16 expand output buffer too small".into());
+    }
+    let mut row_f32 = vec![0f32; n0];
+    for r in 0..n1 {
+        crate::ggml_quants::dequant_matrix_row_into(raw, info, r, &mut row_f32)
+            .map_err(|e| format!("p64: f16 expand dequant row {r}: {e:?}"))?;
+        let row_off = r * n0 * 2;
+        for (c, &v) in row_f32.iter().enumerate() {
+            let bits = half::f16::from_f32(v).to_le_bytes();
+            let o = row_off + c * 2;
+            out[o] = bits[0];
+            out[o + 1] = bits[1];
+        }
+    }
+    Ok(())
 }
 
 /// Compile a flat GGUF byte image into a P64 LLM-weight container.

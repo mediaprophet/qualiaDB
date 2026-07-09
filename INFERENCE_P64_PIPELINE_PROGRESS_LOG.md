@@ -42,3 +42,33 @@ None this step.
 ### W-K1 honest status (not claimed done as product)
 - **Exists:** single-tile WMMA 16×16, tiled WMMA CUDA source, tiled WGSL coopmat emit (probe-gated), subgroup GEMV on decode.
 - **Missing:** decode/prefill path still does not dispatch forge CUDA MatMul; closing the Ollama gap requires that wiring + conversion-time layouts.
+
+---
+
+## 2026-07-09 — Continue: f16 layout, fused top1, kernel, Q42T v2 (Grok)
+
+### Status
+**done** for this slice.
+
+### What was built
+| Item | Detail |
+|------|--------|
+| **F16 convert layout** | `P64ConvertLayout::{Verbatim,F16Expand}` + `compile_gguf_to_p64_with_layout`; CLI `--layout f16` expands 2-D weights to IEEE half for `unpack2x16float` GEMV |
+| **Q42T v2** | Tokenizer section writes/reads stop-token set (chat ends survive p64 round-trip) |
+| **Fused output top-1** | When logits are VRAM-resident: **one submit** for all vocab chunks (was per-chunk submit) |
+| **Kernel** | `coop_row_dot` f16 fast path; Q4_K d/dmin word-aligned load + word-local nibble extract |
+| CLI | `qualia-cli llm convert … --layout f16` writes `*.f16.p64` + helper |
+
+### Measured
+- Unit stop-tokens still **ok**
+- `cargo check -p qualia-core-db --lib` Finished
+- Live f16 convert of smollm2 / tok/s delta: **not measured this step** (next: convert + short decode A/B)
+
+### ⚑ Human
+None. Optional: run f16 convert on smollm2 and compare tok/s vs verbatim p64.
+
+### Next
+1. Measure f16 vs Q8/Q4 decode on A2000
+2. Wire forge CUDA WMMA into prefill dense matmuls when dims allow
+3. SoA Q4_K re-layout at convert time
+4. Prefer sibling `.p64` in vault scanner

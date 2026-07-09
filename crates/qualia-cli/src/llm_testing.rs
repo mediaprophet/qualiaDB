@@ -250,6 +250,7 @@ pub fn run_convert_gguf_to_p64(
     input: &Path,
     out_dir: &Path,
     page_log2: u16,
+    layout: &str,
 ) -> Result<(), String> {
     if !input.is_file() {
         return Err(format!("input not found: {}", input.display()));
@@ -264,6 +265,15 @@ pub fn run_convert_gguf_to_p64(
             "only .gguf import is supported in this command (got .{ext}); safetensors path is a follow-up"
         ));
     }
+    let layout = match layout.trim().to_ascii_lowercase().as_str() {
+        "verbatim" | "raw" | "copy" => qualia_core_db::p64_weight::P64ConvertLayout::Verbatim,
+        "f16" | "fp16" | "half" => qualia_core_db::p64_weight::P64ConvertLayout::F16Expand,
+        other => {
+            return Err(format!(
+                "unknown --layout '{other}' (expected verbatim|f16)"
+            ))
+        }
+    };
 
     std::fs::create_dir_all(out_dir)
         .map_err(|e| format!("create out dir {}: {e}", out_dir.display()))?;
@@ -273,7 +283,8 @@ pub fn run_convert_gguf_to_p64(
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("├─ Input:  {}", input.display());
     println!("├─ Out:    {}", out_dir.display());
-    println!("└─ page_log2: {page_log2}");
+    println!("├─ page_log2: {page_log2}");
+    println!("└─ layout: {layout:?}");
 
     let t0 = std::time::Instant::now();
     let mmap = {
@@ -284,13 +295,19 @@ pub fn run_convert_gguf_to_p64(
     let src_bytes = mmap.len();
     println!("├─ Source size: {:.1} MiB", src_bytes as f64 / (1024.0 * 1024.0));
 
-    let p64 = qualia_core_db::p64_weight::compile_gguf_to_p64(&mmap, page_log2)
-        .map_err(|e| format!("compile_gguf_to_p64: {e}"))?;
+    let p64 = qualia_core_db::p64_weight::compile_gguf_to_p64_with_layout(
+        &mmap, page_log2, layout,
+    )
+    .map_err(|e| format!("compile_gguf_to_p64: {e}"))?;
     let stem = input
         .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("model");
-    let p64_path = out_dir.join(format!("{stem}.p64"));
+    let suffix = match layout {
+        qualia_core_db::p64_weight::P64ConvertLayout::Verbatim => "",
+        qualia_core_db::p64_weight::P64ConvertLayout::F16Expand => ".f16",
+    };
+    let p64_path = out_dir.join(format!("{stem}{suffix}.p64"));
     std::fs::write(&p64_path, &p64).map_err(|e| format!("write p64: {e}"))?;
 
     // q42 helper: behavioural metadata the engine should not re-guess from GGUF.
@@ -305,6 +322,7 @@ pub fn run_convert_gguf_to_p64(
         "source_gguf": input.display().to_string(),
         "p64": p64_path.display().to_string(),
         "page_log2": page_log2,
+        "layout": format!("{layout:?}"),
         "converted_unix_ms": std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_millis() as u64)
@@ -319,12 +337,12 @@ pub fn run_convert_gguf_to_p64(
             "vocab_len": tok.vocab_len(),
         },
         "notes": [
-            "p64 currently preserves GGML quant blocks (layout-identical kernels).",
-            "Future convert steps: SoA Q4_K, f16 pages, upload descriptors.",
+            "verbatim = GGML quant blocks preserved (same speed as GGUF kernels).",
+            "f16 = 2-D weights expanded to IEEE half for unpack2x16float GEMV.",
             "Activate the .p64 path; keep GGUF as import-only archive."
         ]
     });
-    let q42_path = out_dir.join(format!("{stem}.q42.json"));
+    let q42_path = out_dir.join(format!("{stem}{suffix}.q42.json"));
     std::fs::write(
         &q42_path,
         serde_json::to_string_pretty(&meta).map_err(|e| e.to_string())?,

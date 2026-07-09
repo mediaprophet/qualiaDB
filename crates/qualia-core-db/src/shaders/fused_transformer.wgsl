@@ -318,7 +318,22 @@ var<workgroup> coop_q4k_msub: array<f32, 8>; // dmin * sub_min  per 32-element s
 // Contains `workgroupBarrier()` — must be called from uniform workgroup control flow (both callers do).
 fn coop_row_dot(row: u32, t: u32, in_base: u32) -> f32 {
     var acc = 0.0;
-    if params.weight_ggml_type == GGML_TYPE_Q4_K && (params.n_in % BLOCK_Q4K_ELEMS) == 0u {
+    if params.weight_ggml_type == GGML_TYPE_F16 {
+        // Conversion-time f16 pages (p64 --layout f16): one u32 load yields two weights via
+        // unpack2x16float — far fewer memory ops than Q4_K nibble extract.
+        let row_base = row * params.weight_row_elems; // linear half index of row start
+        var j = t;
+        loop {
+            if j >= params.n_in {
+                break;
+            }
+            let elem = row_base + j;
+            let pair = unpack2x16float(weight_words[elem >> 1u]);
+            let w = select(pair.x, pair.y, (elem & 1u) == 1u);
+            acc = acc + w * input[in_base + j];
+            j = j + COOP_WG;
+        }
+    } else if params.weight_ggml_type == GGML_TYPE_Q4_K && (params.n_in % BLOCK_Q4K_ELEMS) == 0u {
         // Block-cooperative Q4_K path: workgroup step b == superblock b; thread t == element t.
         // Header decoded once (8 threads) into shared memory; reused by all 256 threads.
         let row_base = row * weight_row_bytes();
@@ -330,22 +345,32 @@ fn coop_row_dot(row: u32, t: u32, in_base: u32) -> f32 {
             let block_base = row_base + b * BLOCK_Q4K_BYTES;
             // Cooperative header decode (8 threads) — d/dmin re-read per sub-thread is trivial vs
             // the 256× redundancy it replaces. Writes the 8 (d·scale, dmin·min) sub-block pairs.
+            // Word-aligned f16 d/dmin load (one u32 each) instead of four byte loads.
             if t < 8u {
-                let d = f16_to_f32(read_u8_weight(block_base) | (read_u8_weight(block_base + 1u) << 8u));
-                let dmin = f16_to_f32(read_u8_weight(block_base + 2u) | (read_u8_weight(block_base + 3u) << 8u));
+                let d_word = weight_words[block_base >> 2u]; // d | dmin as two f16 in one word when aligned
+                // block_base is always 144-byte aligned (Q4_K) and page-aligned rows → 4-byte aligned.
+                let d = f16_to_f32(d_word & 0xFFFFu);
+                let dmin = f16_to_f32(d_word >> 16u);
                 let sm = get_scale_min_k4(t, block_base + 4u);
                 coop_q4k_dsub[t] = d * f32(sm.x);
                 coop_q4k_msub[t] = dmin * f32(sm.y);
             }
             workgroupBarrier();
             // Each thread dequantizes its own element t of this superblock from its nibble.
+            // Word-coalesced qs load: 8 nibbles per u32 when local is nibble-index within group.
             let qs_base = block_base + 16u;
             let q_off = group * 32u;
             var nib: u32;
             if local < 32u {
-                nib = read_u8_weight(qs_base + q_off + local) & 0xFu;
+                let byte_i = qs_base + q_off + local;
+                let word = weight_words[byte_i >> 2u];
+                let shift = (byte_i & 3u) * 8u;
+                nib = (word >> shift) & 0xFu;
             } else {
-                nib = read_u8_weight(qs_base + q_off + (local - 32u)) >> 4u;
+                let byte_i = qs_base + q_off + (local - 32u);
+                let word = weight_words[byte_i >> 2u];
+                let shift = (byte_i & 3u) * 8u;
+                nib = ((word >> shift) & 0xFFu) >> 4u;
             }
             let w = coop_q4k_dsub[sub] * f32(nib) - coop_q4k_msub[sub];
             acc = acc + w * input[in_base + b * BLOCK_Q4K_ELEMS + t];
