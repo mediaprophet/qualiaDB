@@ -379,3 +379,26 @@ None this step. Direction: optim → then Gemma. Next build session should start
 ### ⚑ Human
 None. Prefer `llm convert … --layout soa` (or auto) for Q4 models that cannot fit f16.
 
+
+---
+
+## 2026-07-09 — Sticky infer engine pool (Grok)
+
+### Status
+**done** — multi-prompt no longer rebuilds `QTensorEngine` each turn.
+
+### Mechanism
+- Size-1 rayon pool (`qualia-infer-0`) + `thread_local` engine keyed by model path
+- Same-path jobs reuse pipelines/resident plan; path change reloads
+- Sentinel still runs on the calling thread (SPSC rings unchanged)
+
+### Observed
+- comprehensive-test: **one** `engine-init` for 5 prompts (was per-prompt)
+- Paris still correct on `.soa.p64`
+- Steady decode still ~2.6 tok/s (a0 profile); multi-prompt wall-clock no longer pays full pipeline rebuild each turn
+
+### Remaining optim
+- CUDA WMMA prefill wire
+- Decode-proxy passport
+- Kernel path to close remaining ×10–30 vs llama.cpp
+

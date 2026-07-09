@@ -21,6 +21,58 @@ use crate::{q_hash, NQuin};
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 
+// ─── Sticky 1-thread infer pool (native) ────────────────────────────────────
+// Every `infer` previously did `thread::spawn` + `QTensorEngine::new()` which
+// rebuilds wgpu pipelines (~seconds) even when the mmap is already resident.
+// A size-1 rayon pool keeps a dedicated OS thread whose `thread_local` engine
+// survives across jobs; same-path multi-turn / multi-prompt reuses the engine.
+#[cfg(not(target_arch = "wasm32"))]
+mod sticky_infer {
+    use crate::gguf_bridge::QTensorEngine;
+    use std::cell::RefCell;
+    use std::sync::OnceLock;
+
+    pub struct StickyEngine {
+        pub path: String,
+        pub engine: QTensorEngine,
+    }
+
+    thread_local! {
+        static ENGINE: RefCell<Option<StickyEngine>> = const { RefCell::new(None) };
+    }
+
+    pub fn pool() -> &'static rayon::ThreadPool {
+        static POOL: OnceLock<rayon::ThreadPool> = OnceLock::new();
+        POOL.get_or_init(|| {
+            rayon::ThreadPoolBuilder::new()
+                .num_threads(1)
+                .thread_name(|i| format!("qualia-infer-{i}"))
+                .build()
+                .expect("qualia sticky infer pool")
+        })
+    }
+
+    /// Borrow-or-reload the sticky engine for `path`, then run `f`.
+    pub fn with_engine<R>(path: &str, mut load: impl FnMut(&mut QTensorEngine), f: impl FnOnce(&mut QTensorEngine) -> R) -> R {
+        ENGINE.with(|cell| {
+            let mut slot = cell.borrow_mut();
+            let reload = match slot.as_ref() {
+                Some(s) => s.path != path,
+                None => true,
+            };
+            if reload {
+                let mut engine = QTensorEngine::new();
+                load(&mut engine);
+                *slot = Some(StickyEngine {
+                    path: path.to_string(),
+                    engine,
+                });
+            }
+            f(&mut slot.as_mut().expect("sticky engine just loaded").engine)
+        })
+    }
+}
+
 // ─── Constants ──────────────────────────────────────────────────────────────
 /// Hard memory ceiling for the LLM runtime within the 512MB system floor.
 /// Leaves the remaining 384MB for the Webizen VM, SLG Arena, and WASM stack.
@@ -780,7 +832,6 @@ impl LocalLlmAgent {
             use crate::gguf_bridge::{QTensor, QTensorEngine};
             use crate::gguf_sharder::GgufTokenizer;
             use rtrb::RingBuffer;
-            use std::thread;
 
             let model_path = match &self.backend {
                 AgentBackend::Local { model_path, .. } => model_path.clone(),
@@ -843,9 +894,34 @@ impl LocalLlmAgent {
             // Move the (optional) LoRA adapter into the inference thread.
             let lora_for_thread = lora_active_adapter;
 
-            // ── LLM engine thread ────────────────────────────────────────────
-            let h = thread::spawn(move || -> (String, u32, Option<NQuin>, bool) {
-                // Initialize Tokio runtime for the thread to prevent panics in async components
+            // Sticky pool thread owns the engine (thread_local); caller runs Sentinel.
+            let (done_tx, done_rx) =
+                std::sync::mpsc::sync_channel::<(String, u32, Option<NQuin>, bool)>(1);
+
+            // ── LLM engine job (sticky 1-thread pool) ────────────────────────
+            sticky_infer::pool().spawn(move || {
+                let result = sticky_infer::with_engine(
+                    model_path.as_str(),
+                    |engine| {
+                        // Load only on cache miss / path change.
+                        if let Some(mmap) =
+                            crate::resident_model::resident_mmap_for_path(model_path.as_str())
+                        {
+                            let is_p64 = crate::p64_weight::has_p64_magic(&mmap[..]);
+                            let adopted = if is_p64 {
+                                engine.adopt_resident_p64_mmap(mmap).is_ok()
+                            } else {
+                                engine.adopt_resident_mmap(mmap).is_ok()
+                            };
+                            if !adopted {
+                                engine.load_model(&model_path);
+                            }
+                        } else {
+                            engine.load_model(&model_path);
+                        }
+                    },
+                    |engine: &mut QTensorEngine| {
+                // Initialize Tokio runtime for the sticky thread (once per job; cheap if already warm).
                 let rt = tokio::runtime::Builder::new_current_thread()
                     .enable_all()
                     .build()
@@ -870,26 +946,6 @@ impl LocalLlmAgent {
                 let lora_adapter = lora_for_thread;
                 let sieve_spec = sieve_spec;
                 let sieve_lex_path = sieve_lex_path;
-                // Build the GPU engine and memory-map the GGUF inside the thread to
-                // avoid Send constraints on the DirectML / wgpu device handles.
-                let mut engine = QTensorEngine::new();
-                if let Some(mmap) =
-                    crate::resident_model::resident_mmap_for_path(model_path.as_str())
-                {
-                    // P64 boots through its synthetic index + resident 2-bit
-                    // ternary FFN adoption path.
-                    let is_p64 = crate::p64_weight::has_p64_magic(&mmap[..]);
-                    let adopted = if is_p64 {
-                        engine.adopt_resident_p64_mmap(mmap).is_ok()
-                    } else {
-                        engine.adopt_resident_mmap(mmap).is_ok()
-                    };
-                    if !adopted {
-                        engine.load_model(&model_path);
-                    }
-                } else {
-                    engine.load_model(&model_path);
-                }
 
                 // Tokenizer + tensor index come from the matching on-disk
                 // format. P64 carries a Q42T tokenizer section and a manifest;
@@ -1207,7 +1263,7 @@ impl LocalLlmAgent {
                     }
 
                     let draft_step = try_accept_topology_draft(
-                        &mut engine,
+                        engine,
                         tensor_idx.as_ref(),
                         &draft_mapper,
                         &mut ctx,
@@ -1596,7 +1652,10 @@ impl LocalLlmAgent {
                     tok.decode(&out_ids)
                 };
                 (text, out_ids.len() as u32, semantic_quin, sieve_failed)
-            });
+                    }, // sticky_infer::with_engine f
+                ); // sticky_infer::with_engine
+                let _ = done_tx.send(result);
+            }); // sticky pool spawn
 
             // ── Webizen Sentinel (calling thread) ────────────────────────────
             let mut drain_tokens = || {
@@ -1623,7 +1682,7 @@ impl LocalLlmAgent {
             drain_tokens();
 
             let (text, tokens, semantic_quin, sieve_failed) =
-                h.join().unwrap_or_else(|_| (String::new(), 0, None, false));
+                done_rx.recv().unwrap_or_else(|_| (String::new(), 0, None, false));
             let mut prov = vec![prov_hash];
             if prov_hash == 0 {
                 prov.push(q_hash("qualia:grounded"));
@@ -1856,7 +1915,7 @@ impl LocalLlmAgent {
 
                     let on_token_sink = on_token.as_mut().map(|cb| cb as &mut dyn FnMut(String));
                     let draft_step = try_accept_topology_draft(
-                        &mut engine,
+                        engine,
                         tensor_idx.as_ref(),
                         &draft_mapper,
                         &mut ctx,
