@@ -53,6 +53,7 @@ var<workgroup> enc_rhs: array<f32, MAX_K>;
 const BLOCK_Q6K_BYTES: u32 = 210u;
 const BLOCK_Q6K_ELEMS: u32 = 256u;
 const BLOCK_Q4K_BYTES: u32 = 144u;
+const BLOCK_Q4K_SOA_BYTES: u32 = 160u;
 const BLOCK_Q4K_ELEMS: u32 = 256u;
 const BLOCK_Q4_0_BYTES: u32 = 18u;
 const BLOCK_Q4_0_ELEMS: u32 = 32u;
@@ -66,6 +67,7 @@ const GGML_TYPE_Q4_0: u32 = 2u;
 const GGML_TYPE_Q5_0: u32 = 6u;
 const GGML_TYPE_Q8_0: u32 = 8u;
 const GGML_TYPE_Q4_K: u32 = 12u;
+const GGML_TYPE_Q4_K_SOA: u32 = 112u;
 const GGML_TYPE_Q6_K: u32 = 14u;
 const MAX_HEAD_DIM: u32 = 512u;
 const NEG_INF: f32 = -1e30;
@@ -127,6 +129,9 @@ fn weight_row_bytes() -> u32 {
     }
     if params.weight_ggml_type == GGML_TYPE_Q4_K {
         return (params.weight_row_elems / BLOCK_Q4K_ELEMS) * BLOCK_Q4K_BYTES;
+    }
+    if params.weight_ggml_type == GGML_TYPE_Q4_K_SOA {
+        return (params.weight_row_elems / BLOCK_Q4K_ELEMS) * BLOCK_Q4K_SOA_BYTES;
     }
     if params.weight_ggml_type == GGML_TYPE_F16
         || params.weight_ggml_type == GGML_TYPE_BF16
@@ -312,10 +317,37 @@ fn dequant_weight(row: u32, col: u32) -> f32 {
     if params.weight_ggml_type == GGML_TYPE_Q4_K {
         return dequant_q4_k_weight(row, col);
     }
+    if params.weight_ggml_type == GGML_TYPE_Q4_K_SOA {
+        return dequant_q4_k_soa_weight(row, col);
+    }
     if params.weight_ggml_type == GGML_TYPE_Q6_K {
         return dequant_q6_k_weight(row, col);
     }
     return 0.0;
+}
+
+// Convert-time SoA Q4_K: qs@0, d_sub f16[8]@128, m_sub f16[8]@144.
+fn dequant_q4_k_soa_weight(row: u32, col: u32) -> f32 {
+    let row_bytes = weight_row_bytes();
+    let block = col / BLOCK_Q4K_ELEMS;
+    let elem = col % BLOCK_Q4K_ELEMS;
+    let block_base = row * row_bytes + block * BLOCK_Q4K_SOA_BYTES;
+    let sub = elem / 32u;
+    let group = elem / 64u;
+    let local = elem % 64u;
+    let d_off = block_base + 128u + sub * 2u;
+    let m_off = block_base + 144u + sub * 2u;
+    let dsub = f16_to_f32(read_u8_weight(d_off) | (read_u8_weight(d_off + 1u) << 8u));
+    let msub = f16_to_f32(read_u8_weight(m_off) | (read_u8_weight(m_off + 1u) << 8u));
+    let qs_base = block_base;
+    let q_off = group * 32u;
+    var nib: u32;
+    if local < 32u {
+        nib = read_u8_weight(qs_base + q_off + local) & 0xFu;
+    } else {
+        nib = (read_u8_weight(qs_base + q_off + (local - 32u)) >> 4u) & 0xFu;
+    }
+    return dsub * f32(nib) - msub;
 }
 
 fn gemm_row(row: u32, token_in_batch: u32) -> f32 {

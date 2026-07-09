@@ -272,6 +272,9 @@ pub fn run_convert_gguf_to_p64(
     let layout = match layout.trim().to_ascii_lowercase().as_str() {
         "verbatim" | "raw" | "copy" => qualia_core_db::p64_weight::P64ConvertLayout::Verbatim,
         "f16" | "fp16" | "half" => qualia_core_db::p64_weight::P64ConvertLayout::F16Expand,
+        "soa" | "q4k-soa" | "q4k_soa" | "soa-q4k" => {
+            qualia_core_db::p64_weight::P64ConvertLayout::Q4kSoa
+        }
         "auto" | "best" | "remarkable" => {
             let rec =
                 qualia_core_db::p64_weight::recommend_convert_layout(src_len, DEFAULT_VRAM_BUDGET);
@@ -280,7 +283,7 @@ pub fn run_convert_gguf_to_p64(
         }
         other => {
             return Err(format!(
-                "unknown --layout '{other}' (expected verbatim|f16|auto)"
+                "unknown --layout '{other}' (expected verbatim|f16|soa|auto)"
             ))
         }
     };
@@ -316,6 +319,7 @@ pub fn run_convert_gguf_to_p64(
     let suffix = match layout {
         qualia_core_db::p64_weight::P64ConvertLayout::Verbatim => "",
         qualia_core_db::p64_weight::P64ConvertLayout::F16Expand => ".f16",
+        qualia_core_db::p64_weight::P64ConvertLayout::Q4kSoa => ".soa",
     };
     let p64_path = out_dir.join(format!("{stem}{suffix}.p64"));
     std::fs::write(&p64_path, &p64).map_err(|e| format!("write p64: {e}"))?;
@@ -402,9 +406,10 @@ pub fn run_optimize_pipeline(
         .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("model");
-    // auto may produce .f16.p64 or .p64 — list what we wrote
+    // auto may produce .f16.p64 / .soa.p64 / .p64 — list what we wrote
     let candidates = [
         out_dir.join(format!("{stem}.f16.p64")),
+        out_dir.join(format!("{stem}.soa.p64")),
         out_dir.join(format!("{stem}.p64")),
     ];
     let p64 = candidates.iter().find(|p| p.is_file());

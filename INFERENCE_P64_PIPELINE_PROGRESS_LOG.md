@@ -346,3 +346,36 @@ Ollama/llama.cpp CUDA same-class GGUF was ~**70 tok/s** on this machine earlier 
 ### ⚑ Human
 None this step. Direction: optim → then Gemma. Next build session should start **SoA Q4_K** or **CUDA prefill wire** (CUDA toolkit is installed).
 
+
+---
+
+## 2026-07-09 — SoA Q4_K convert + GEMV (Grok)
+
+### Status
+**done** for SoA layout product path.
+
+### What shipped
+| Piece | Detail |
+|-------|--------|
+| `GGML_TYPE_Q4_K_SOA=112` | 160 B/superblock: qs[128] + f16 d_sub[8] + f16 m_sub[8] |
+| Convert | `P64ConvertLayout::Q4kSoa`; CLI `--layout soa`; **auto** picks SoA when f16 does not fit and source >256 MiB |
+| WGSL | Barrier-free coop GEMV SoA path + attention/generic dequant |
+| CPU dequant | Round-trip test vs stock Q4_K |
+
+### Measured (A2000 DX12, resident 1-fence)
+| Container | tok/s | size |
+|-----------|------:|-----:|
+| llama-3.2-3b Q4 verbatim p64 | ~2.3 | 1925 MiB |
+| llama-3.2-3b **.soa.p64** | **~2.63** | 2069 MiB (~+7.5%) |
+| Quality | **Paris** + eot | coherent |
+
+~+14% vs post-ping-pong Q4; ~+31% vs pre-optim ~2.0. Still ~**27×** under Ollama ~70. COMPUTE-BOUND.
+
+### Next optim
+1. Persistent engine worker (every infer rebuilds QTensorEngine — kills multi-prompt TPS)
+2. CUDA WMMA prefill wire (toolkit present)
+3. Further kernel work (tiled GEMV / better occupancy)
+
+### ⚑ Human
+None. Prefer `llm convert … --layout soa` (or auto) for Q4 models that cannot fit f16.
+

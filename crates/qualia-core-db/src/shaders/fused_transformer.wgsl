@@ -20,6 +20,7 @@ struct GemmParams {
 const BLOCK_Q6K_BYTES: u32 = 210u;
 const BLOCK_Q6K_ELEMS: u32 = 256u;
 const BLOCK_Q4K_BYTES: u32 = 144u;
+const BLOCK_Q4K_SOA_BYTES: u32 = 160u;
 const BLOCK_Q4K_ELEMS: u32 = 256u;
 const BLOCK_Q4_0_BYTES: u32 = 18u;
 const BLOCK_Q4_0_ELEMS: u32 = 32u;
@@ -31,6 +32,7 @@ const GGML_TYPE_Q4_0: u32 = 2u;
 const GGML_TYPE_Q5_0: u32 = 6u;
 const GGML_TYPE_Q8_0: u32 = 8u;
 const GGML_TYPE_Q4_K: u32 = 12u;
+const GGML_TYPE_Q4_K_SOA: u32 = 112u;
 const GGML_TYPE_Q6_K: u32 = 14u;
 const GGML_TYPE_F16: u32 = 1u;
 const GGML_TYPE_BF16: u32 = 30u;
@@ -75,6 +77,9 @@ fn weight_row_bytes() -> u32 {
     }
     if params.weight_ggml_type == GGML_TYPE_Q4_K {
         return (params.weight_row_elems / BLOCK_Q4K_ELEMS) * BLOCK_Q4K_BYTES;
+    }
+    if params.weight_ggml_type == GGML_TYPE_Q4_K_SOA {
+        return (params.weight_row_elems / BLOCK_Q4K_ELEMS) * BLOCK_Q4K_SOA_BYTES;
     }
     if params.weight_ggml_type == GGML_TYPE_F16 || params.weight_ggml_type == GGML_TYPE_BF16 {
         return params.weight_row_elems * 2u;
@@ -260,10 +265,39 @@ fn dequant_weight(row: u32, col: u32) -> f32 {
     if params.weight_ggml_type == GGML_TYPE_Q4_K {
         return dequant_q4_k_weight(row, col);
     }
+    if params.weight_ggml_type == GGML_TYPE_Q4_K_SOA {
+        return dequant_q4_k_soa_weight(row, col);
+    }
     if params.weight_ggml_type == GGML_TYPE_Q6_K {
         return dequant_q6_k_weight(row, col);
     }
     return 0.0;
+}
+
+// SoA Q4_K (convert-time): qs at block+0 (128 B), d_sub f16[8] at +128, m_sub f16[8] at +144.
+fn dequant_q4_k_soa_weight(row: u32, col: u32) -> f32 {
+    let row_bytes = weight_row_bytes();
+    let block = col / BLOCK_Q4K_ELEMS;
+    let elem = col % BLOCK_Q4K_ELEMS;
+    let block_base = row * row_bytes + block * BLOCK_Q4K_SOA_BYTES;
+    let sub = elem / 32u;
+    let group = elem / 64u;
+    let local = elem % 64u;
+    let d_off = block_base + 128u + sub * 2u;
+    let m_off = block_base + 144u + sub * 2u;
+    let d_bits = read_u8_weight(d_off) | (read_u8_weight(d_off + 1u) << 8u);
+    let m_bits = read_u8_weight(m_off) | (read_u8_weight(m_off + 1u) << 8u);
+    let dsub = f16_to_f32(d_bits);
+    let msub = f16_to_f32(m_bits);
+    let qs_base = block_base;
+    let q_off = group * 32u;
+    var nib: u32;
+    if local < 32u {
+        nib = read_u8_weight(qs_base + q_off + local) & 0xFu;
+    } else {
+        nib = (read_u8_weight(qs_base + q_off + (local - 32u)) >> 4u) & 0xFu;
+    }
+    return dsub * f32(nib) - msub;
 }
 
 @compute @workgroup_size(64)
@@ -361,6 +395,42 @@ fn coop_row_dot(row: u32, t: u32, in_base: u32) -> f32 {
             let w = bitcast<f32>(bits16 << 16u);
             acc = acc + w * input[in_base + j];
             j = j + COOP_WG;
+        }
+    } else if params.weight_ggml_type == GGML_TYPE_Q4_K_SOA
+        && (params.n_in % BLOCK_Q4K_ELEMS) == 0u
+    {
+        // Convert-time SoA: pre-expanded f16 sub-scales at block+128/+144. Each thread loads its
+        // own sub's scales (no shared header, **no barrier**) — the decode Q4_K lever.
+        let row_base = row * weight_row_bytes();
+        let n_blocks = params.n_in / BLOCK_Q4K_ELEMS;
+        let sub = t / 32u;
+        let group = t / 64u;
+        let local = t % 64u;
+        for (var b = 0u; b < n_blocks; b = b + 1u) {
+            let block_base = row_base + b * BLOCK_Q4K_SOA_BYTES;
+            let d_off = block_base + 128u + sub * 2u;
+            let m_off = block_base + 144u + sub * 2u;
+            // Word-aligned when sub is even; fall back to byte path for odd sub.
+            let d_bits = read_u8_weight(d_off) | (read_u8_weight(d_off + 1u) << 8u);
+            let m_bits = read_u8_weight(m_off) | (read_u8_weight(m_off + 1u) << 8u);
+            let dsub = f16_to_f32(d_bits);
+            let msub = f16_to_f32(m_bits);
+            let qs_base = block_base;
+            let q_off = group * 32u;
+            var nib: u32;
+            if local < 32u {
+                let byte_i = qs_base + q_off + local;
+                let word = weight_words[byte_i >> 2u];
+                let shift = (byte_i & 3u) * 8u;
+                nib = (word >> shift) & 0xFu;
+            } else {
+                let byte_i = qs_base + q_off + (local - 32u);
+                let word = weight_words[byte_i >> 2u];
+                let shift = (byte_i & 3u) * 8u;
+                nib = ((word >> shift) & 0xFFu) >> 4u;
+            }
+            let w = dsub * f32(nib) - msub;
+            acc = acc + w * input[in_base + b * BLOCK_Q4K_ELEMS + t];
         }
     } else if params.weight_ggml_type == GGML_TYPE_Q4_K && (params.n_in % BLOCK_Q4K_ELEMS) == 0u {
         // Block-cooperative Q4_K path: workgroup step b == superblock b; thread t == element t.

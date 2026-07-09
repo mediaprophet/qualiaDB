@@ -1261,7 +1261,7 @@ pub enum LlmAction {
         /// Page alignment log2 for the p64 container (default 14 = 16 KiB pages)
         #[arg(long, default_value_t = 14)]
         page_log2: u16,
-        /// Weight layout: `verbatim` | `f16` | `auto` (f16 when it fits a 12 GiB-class budget).
+        /// Weight layout: `verbatim` | `f16` | `soa` (Q4_K SoA) | `auto` (f16 if fits 12 GiB budget, else soa for large Q4).
         #[arg(long, default_value = "auto")]
         layout: String,
     },

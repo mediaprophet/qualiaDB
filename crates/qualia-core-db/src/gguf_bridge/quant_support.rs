@@ -19,12 +19,14 @@ pub(crate) fn ggml_gpu_quant_supported(ggml_type: u32) -> bool {
                 | crate::ggml_quants::GGML_TYPE_Q5_0
                 | crate::ggml_quants::GGML_TYPE_Q8_0
                 | crate::ggml_quants::GGML_TYPE_Q4_K
+                | crate::ggml_quants::GGML_TYPE_Q4_K_SOA
                 | crate::ggml_quants::GGML_TYPE_Q6_K
         )
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
         ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K
+            || ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA
             || ggml_type == crate::ggml_quants::GGML_TYPE_Q6_K
     }
 }
@@ -44,6 +46,7 @@ pub(crate) fn ggml_gpu_attention_shader_supported(ggml_type: u32) -> bool {
             | crate::ggml_quants::GGML_TYPE_Q5_0
             | crate::ggml_quants::GGML_TYPE_Q8_0
             | crate::ggml_quants::GGML_TYPE_Q4_K
+            | crate::ggml_quants::GGML_TYPE_Q4_K_SOA
             | crate::ggml_quants::GGML_TYPE_Q6_K
     )
 }
@@ -64,6 +67,7 @@ pub(crate) fn ggml_gpu_gemm_supported(ggml_type: u32) -> bool {
             | crate::ggml_quants::GGML_TYPE_Q5_0
             | crate::ggml_quants::GGML_TYPE_Q8_0
             | crate::ggml_quants::GGML_TYPE_Q4_K
+            | crate::ggml_quants::GGML_TYPE_Q4_K_SOA
             | crate::ggml_quants::GGML_TYPE_Q6_K
     )
 }

@@ -17,6 +17,19 @@ pub const GGML_TYPE_Q6_K: u32 = 14;
 /// Brain float16 (1 sign / 8 exp / 7 mantissa) — used by Gemma-4 and other modern GGUFs
 /// for norms / residual scales alongside Q4_K weights (`ggml_type` enum value 30).
 pub const GGML_TYPE_BF16: u32 = 30;
+/// Qualia conversion-time **SoA Q4_K** (not a stock GGML type).
+///
+/// Per 256-weight superblock (160 bytes, vs 144 AoS):
+/// - `[0..128)`: qs nibbles (same layout as Q4_K)
+/// - `[128..144)`: 8× f16 `d * sub_scale` (pre-expanded)
+/// - `[144..160)`: 8× f16 `dmin * sub_min` (pre-expanded)
+///
+/// Decode GEMV loads scales directly (no 6-bit scale unpack, no shared-header
+/// barriers). Type id 112 is outside the stock ggml enum range.
+pub const GGML_TYPE_Q4_K_SOA: u32 = 112;
+/// Bytes per SoA superblock (256 weights).
+pub const BLOCK_Q4K_SOA_BYTES: usize = 160;
+pub const BLOCK_Q4K_SOA_ELEMS: usize = 256;
 
 /// GGML `block_q6_K` — 210 bytes, 256 weights. Mirrors WGSL `BlockQ6K` layout.
 #[repr(C)]
@@ -56,6 +69,10 @@ pub fn ggml_block_layout(ggml_type: u32) -> Option<GgmlBlockLayout> {
         GGML_TYPE_Q4_K => Some(GgmlBlockLayout {
             block_elems: 256,
             block_bytes: 144,
+        }),
+        GGML_TYPE_Q4_K_SOA => Some(GgmlBlockLayout {
+            block_elems: BLOCK_Q4K_SOA_ELEMS,
+            block_bytes: BLOCK_Q4K_SOA_BYTES,
         }),
         GGML_TYPE_Q6_K => Some(GgmlBlockLayout {
             block_elems: 256,
@@ -234,9 +251,116 @@ pub fn dequantize_row_into(
         GGML_TYPE_Q5_0 => dequant_q5_0(raw, n_elems, out),
         GGML_TYPE_Q8_0 => dequant_q8_0(raw, n_elems, out),
         GGML_TYPE_Q4_K => dequant_q4_k(raw, n_elems, out),
+        GGML_TYPE_Q4_K_SOA => dequant_q4_k_soa(raw, n_elems, out),
         GGML_TYPE_Q6_K => dequant_q6_k(raw, n_elems, out),
         _ => Err(GgmlDequantError::UnsupportedType),
     }
+}
+
+/// Convert one stock Q4_K superblock (144 B) → SoA superblock (160 B).
+///
+/// Pre-expands the 8 sub-block `(d·scale, dmin·min)` pairs to f16 so the GPU
+/// GEMV never runs `get_scale_min_k4` / shared-header decode.
+#[inline]
+pub fn q4k_block_to_soa(src: &[u8], dst: &mut [u8]) -> Result<(), GgmlDequantError> {
+    if src.len() < 144 || dst.len() < BLOCK_Q4K_SOA_BYTES {
+        return Err(GgmlDequantError::TruncatedInput);
+    }
+    // qs first (same nibble layout as stock Q4_K).
+    dst[..128].copy_from_slice(&src[16..144]);
+    let d = half::f16::from_le_bytes([src[0], src[1]]).to_f32();
+    let dmin = half::f16::from_le_bytes([src[2], src[3]]).to_f32();
+    let scales: [u8; 12] = src[4..16].try_into().unwrap_or([0; 12]);
+    for j in 0..8 {
+        let mut sc = 0u8;
+        let mut m = 0u8;
+        get_scale_min_k4(j, &scales, &mut sc, &mut m);
+        let d_bits = half::f16::from_f32(d * sc as f32).to_le_bytes();
+        let m_bits = half::f16::from_f32(dmin * m as f32).to_le_bytes();
+        let o = 128 + j * 2;
+        dst[o] = d_bits[0];
+        dst[o + 1] = d_bits[1];
+        let om = 144 + j * 2;
+        dst[om] = m_bits[0];
+        dst[om + 1] = m_bits[1];
+    }
+    Ok(())
+}
+
+/// Expand a full Q4_K tensor blob (row-major superblocks) into SoA layout.
+/// `n_row_elems` = dims[0] (weights per row). `n_rows` = dims[1].
+pub fn expand_q4k_tensor_to_soa(
+    raw: &[u8],
+    n_row_elems: usize,
+    n_rows: usize,
+    out: &mut [u8],
+) -> Result<(), GgmlDequantError> {
+    let src_row = ggml_row_bytes(GGML_TYPE_Q4_K, n_row_elems).ok_or(GgmlDequantError::UnsupportedType)?;
+    let dst_row = ggml_row_bytes(GGML_TYPE_Q4_K_SOA, n_row_elems).ok_or(GgmlDequantError::UnsupportedType)?;
+    let need = dst_row.checked_mul(n_rows).ok_or(GgmlDequantError::TruncatedInput)?;
+    if out.len() < need || raw.len() < src_row.saturating_mul(n_rows) {
+        return Err(GgmlDequantError::TruncatedInput);
+    }
+    let n_blocks = n_row_elems.div_ceil(256);
+    for r in 0..n_rows {
+        let src_base = r * src_row;
+        let dst_base = r * dst_row;
+        for b in 0..n_blocks {
+            let s = src_base + b * 144;
+            let d = dst_base + b * BLOCK_Q4K_SOA_BYTES;
+            if s + 144 > raw.len() || d + BLOCK_Q4K_SOA_BYTES > out.len() {
+                return Err(GgmlDequantError::TruncatedInput);
+            }
+            q4k_block_to_soa(&raw[s..s + 144], &mut out[d..d + BLOCK_Q4K_SOA_BYTES])?;
+        }
+    }
+    Ok(())
+}
+
+fn dequant_q4_k_soa(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, GgmlDequantError> {
+    let n_blocks = n_elems.div_ceil(BLOCK_Q4K_SOA_ELEMS);
+    if raw.len() < n_blocks * BLOCK_Q4K_SOA_BYTES {
+        return Err(GgmlDequantError::TruncatedInput);
+    }
+    let mut out_idx = 0usize;
+    for b in 0..n_blocks {
+        let block = &raw[b * BLOCK_Q4K_SOA_BYTES..(b + 1) * BLOCK_Q4K_SOA_BYTES];
+        let qs = &block[0..128];
+        // Pre-expanded scales.
+        let mut d_sub = [0f32; 8];
+        let mut m_sub = [0f32; 8];
+        for j in 0..8 {
+            let o = 128 + j * 2;
+            d_sub[j] = half::f16::from_le_bytes([block[o], block[o + 1]]).to_f32();
+            let om = 144 + j * 2;
+            m_sub[j] = half::f16::from_le_bytes([block[om], block[om + 1]]).to_f32();
+        }
+        // Same element order as stock Q4_K: for each of 4 groups of 64:
+        //   32 low nibbles (sub 2g), then 32 high nibbles (sub 2g+1).
+        let mut q_off = 0usize;
+        for g in 0..4 {
+            let sub0 = g * 2;
+            let sub1 = g * 2 + 1;
+            for l in 0..32 {
+                if out_idx >= n_elems {
+                    return Ok(out_idx);
+                }
+                let nib = (qs[q_off + l] & 0xF) as f32;
+                out[out_idx] = d_sub[sub0] * nib - m_sub[sub0];
+                out_idx += 1;
+            }
+            for l in 0..32 {
+                if out_idx >= n_elems {
+                    return Ok(out_idx);
+                }
+                let nib = (qs[q_off + l] >> 4) as f32;
+                out[out_idx] = d_sub[sub1] * nib - m_sub[sub1];
+                out_idx += 1;
+            }
+            q_off += 32;
+        }
+    }
+    Ok(out_idx.min(n_elems))
 }
 
 fn dequant_f32(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, GgmlDequantError> {
@@ -477,6 +601,39 @@ fn dequant_q6_k(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, Gg
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn q4k_soa_roundtrip_matches_aos_dequant() {
+        // Build one synthetic Q4_K superblock and check SoA dequant ≈ stock dequant.
+        let mut aos = [0u8; 144];
+        // d = 1.0 f16, dmin = 0.1 f16
+        aos[0..2].copy_from_slice(&half::f16::from_f32(1.0).to_le_bytes());
+        aos[2..4].copy_from_slice(&half::f16::from_f32(0.1).to_le_bytes());
+        // scales: all 1 for sc, 0 for m (low 6 bits)
+        for i in 0..4 {
+            aos[4 + i] = 1;
+            aos[8 + i] = 0;
+        }
+        for i in 0..4 {
+            aos[12 + i] = 0;
+        }
+        // qs: low nibble = 3, high nibble = 5
+        for i in 16..144 {
+            aos[i] = 0x53;
+        }
+        let mut soa = [0u8; BLOCK_Q4K_SOA_BYTES];
+        q4k_block_to_soa(&aos, &mut soa).unwrap();
+        let mut out_aos = [0f32; 256];
+        let mut out_soa = [0f32; 256];
+        dequant_q4_k(&aos, 256, &mut out_aos).unwrap();
+        dequant_q4_k_soa(&soa, 256, &mut out_soa).unwrap();
+        for i in 0..256 {
+            let d = (out_aos[i] - out_soa[i]).abs();
+            assert!(d < 1e-3, "elem {i}: aos={} soa={} δ={d}", out_aos[i], out_soa[i]);
+        }
+        assert_eq!(ggml_row_bytes(GGML_TYPE_Q4_K_SOA, 256), Some(160));
+        assert_eq!(ggml_row_bytes(GGML_TYPE_Q4_K_SOA, 512), Some(320));
+    }
 
     #[test]
     fn bf16_row_bytes_and_dequant() {

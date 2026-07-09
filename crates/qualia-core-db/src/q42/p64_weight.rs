@@ -285,6 +285,8 @@ fn p64_tensor_name(role: u16, layer: u16, source_name_hash: u64) -> String {
 /// [`P64ConvertLayout::Verbatim`] is the historical byte-preserving container swap
 /// (same kernels, same speed). [`P64ConvertLayout::F16Expand`] dequantizes 2-D weight
 /// matrices to IEEE f16 so decode can use the fast `unpack2x16float` path.
+/// [`P64ConvertLayout::Q4kSoa`] rewrites Q4_K matrices to a 160 B/superblock SoA with
+/// pre-expanded f16 sub-scales (decode GEMV skips scale unpack + header barriers).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum P64ConvertLayout {
     /// Copy GGML quant blocks byte-for-byte (no speed change vs running the GGUF).
@@ -293,6 +295,9 @@ pub enum P64ConvertLayout {
     /// Expand 2-D matrices (attn/FFN/embd/output) to f16; leave 1-D norms as source.
     /// Rejected if the result would exceed the 4 GiB u32-offset container limit.
     F16Expand,
+    /// Convert 2-D Q4_K weight matrices to [`crate::ggml_quants::GGML_TYPE_Q4_K_SOA`].
+    /// Other tensors stay verbatim. ~11% larger than Q4_K; aimed at 3B-class decode.
+    Q4kSoa,
 }
 
 /// Compile a GGUF image into the cache-line-native P64 container (verbatim layout).
@@ -422,8 +427,14 @@ pub fn compile_gguf_to_p64_with_layout(
     let blob_region_offset = align_up(checksum_offset + checksum_bytes, page);
 
     let mut entries = Vec::with_capacity(planned.len());
-    // Parallel to `entries`: true when this blob is an f16 expand (not a source copy).
-    let mut expand_f16: Vec<bool> = Vec::with_capacity(planned.len());
+    // Parallel to `entries`: conversion kind for the blob write pass.
+    #[derive(Clone, Copy)]
+    enum BlobKind {
+        Copy,
+        F16Expand,
+        Q4kSoa,
+    }
+    let mut blob_kind: Vec<BlobKind> = Vec::with_capacity(planned.len());
     let mut cursor = blob_region_offset;
     for (position, (role, layer, name_hash, info)) in planned.iter().enumerate() {
         let source_blob_size = crate::ggml_quants::tensor_byte_len(info)
@@ -443,7 +454,11 @@ pub fn compile_gguf_to_p64_with_layout(
             && info.n_dims >= 2
             && info.ggml_type != crate::ggml_quants::GGML_TYPE_F16
             && info.ggml_type != crate::ggml_quants::GGML_TYPE_F32;
-        let (out_dtype, blob_size) = if do_f16 {
+        let do_soa = matches!(layout, P64ConvertLayout::Q4kSoa)
+            && p64_role_is_weight_matrix(*role)
+            && info.n_dims >= 2
+            && info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K;
+        let (out_dtype, blob_size, kind) = if do_f16 {
             let n0 = info.dims[0] as usize;
             let n1 = info.dims[1] as usize;
             let elems = n0
@@ -452,11 +467,30 @@ pub fn compile_gguf_to_p64_with_layout(
             let bytes = elems
                 .checked_mul(2)
                 .ok_or("p64: f16 expand byte count overflow")?;
-            (crate::ggml_quants::GGML_TYPE_F16 as u16, bytes)
+            (
+                crate::ggml_quants::GGML_TYPE_F16 as u16,
+                bytes,
+                BlobKind::F16Expand,
+            )
+        } else if do_soa {
+            let n0 = info.dims[0] as usize;
+            let n1 = info.dims[1].max(1) as usize;
+            let bytes = crate::ggml_quants::ggml_row_bytes(
+                crate::ggml_quants::GGML_TYPE_Q4_K_SOA,
+                n0,
+            )
+            .and_then(|r| r.checked_mul(n1))
+            .ok_or("p64: Q4_K SoA size overflow")?;
+            (
+                crate::ggml_quants::GGML_TYPE_Q4_K_SOA as u16,
+                bytes,
+                BlobKind::Q4kSoa,
+            )
         } else {
             (
                 u16::try_from(info.ggml_type).map_err(|_| "p64: GGML type exceeds u16")?,
                 source_blob_size,
+                BlobKind::Copy,
             )
         };
 
@@ -483,7 +517,7 @@ pub fn compile_gguf_to_p64_with_layout(
             source_name_hash: *name_hash,
             reserved: [0; 8],
         });
-        expand_f16.push(do_f16);
+        blob_kind.push(kind);
         cursor = cursor
             .checked_add(blob_size)
             .ok_or("p64: container size overflow")?;
@@ -551,18 +585,38 @@ pub fn compile_gguf_to_p64_with_layout(
     for (position, entry) in entries.iter().enumerate() {
         let target_start = entry.blob_offset as usize;
         let target_end = target_start + entry.blob_size as usize;
-        if expand_f16[position] {
-            let info = &planned[position].3;
-            let source_blob_size = crate::ggml_quants::tensor_byte_len(info)
-                .ok_or("p64: f16 expand missing source size")?;
-            let source_start = tensor_data_start + entry.source_offset as usize;
-            let source_end = source_start + source_blob_size;
-            let raw = &input[source_start..source_end];
-            expand_tensor_to_f16_blob(raw, info, &mut output[target_start..target_end])?;
-        } else {
-            let source_start = tensor_data_start + entry.source_offset as usize;
-            let source_end = source_start + entry.blob_size as usize;
-            output[target_start..target_end].copy_from_slice(&input[source_start..source_end]);
+        match blob_kind[position] {
+            BlobKind::F16Expand => {
+                let info = &planned[position].3;
+                let source_blob_size = crate::ggml_quants::tensor_byte_len(info)
+                    .ok_or("p64: f16 expand missing source size")?;
+                let source_start = tensor_data_start + entry.source_offset as usize;
+                let source_end = source_start + source_blob_size;
+                let raw = &input[source_start..source_end];
+                expand_tensor_to_f16_blob(raw, info, &mut output[target_start..target_end])?;
+            }
+            BlobKind::Q4kSoa => {
+                let info = &planned[position].3;
+                let source_blob_size = crate::ggml_quants::tensor_byte_len(info)
+                    .ok_or("p64: Q4_K SoA missing source size")?;
+                let source_start = tensor_data_start + entry.source_offset as usize;
+                let source_end = source_start + source_blob_size;
+                let raw = &input[source_start..source_end];
+                let n0 = info.dims[0] as usize;
+                let n1 = info.dims[1].max(1) as usize;
+                crate::ggml_quants::expand_q4k_tensor_to_soa(
+                    raw,
+                    n0,
+                    n1,
+                    &mut output[target_start..target_end],
+                )
+                .map_err(|e| format!("p64: Q4_K SoA expand: {e:?}"))?;
+            }
+            BlobKind::Copy => {
+                let source_start = tensor_data_start + entry.source_offset as usize;
+                let source_end = source_start + entry.blob_size as usize;
+                output[target_start..target_end].copy_from_slice(&input[source_start..source_end]);
+            }
         }
         let crc = crc32c(&output[target_start..target_end]);
         let crc_start = checksum_offset + 4 + position * 4;
@@ -1669,16 +1723,20 @@ impl IntegrityMode {
 
 /// Recommend convert layout from source size (bytes on disk) and a VRAM headroom budget.
 ///
-/// Heuristic: F16Expand expands quant matrices toward ~2 B/param. Treat `source_bytes * 4` as
-/// a conservative upper bound for Q4→f16; if that stays under `vram_budget_bytes * 0.55`
-/// (leave room for KV + activations on a 12 GB class card), pick F16Expand — the GPU
-/// `unpack2x16float` path is the remarkable decode lever for small/mid models.
+/// Heuristic:
+/// 1. **F16Expand** when Q4→f16 estimate (`source * 4`) fits under `vram * 0.55` and the
+///    4 GiB p64 offset cap — best decode path for small/mid models.
+/// 2. Else **Q4kSoa** for mid/large Q4 containers (SoA is ~11% larger than Q4_K; always
+///    under the f16 budget). Decode GEMV drops scale-unpack barriers.
+/// 3. Else **Verbatim**.
 pub fn recommend_convert_layout(source_bytes: u64, vram_budget_bytes: u64) -> P64ConvertLayout {
     let est_f16 = source_bytes.saturating_mul(4);
     let room = (vram_budget_bytes as f64 * 0.55) as u64;
     if est_f16 > 0 && est_f16 < room && est_f16 < (4u64 << 30) {
-        // Also respect the 4 GiB p64 u32-offset container hard cap.
         P64ConvertLayout::F16Expand
+    } else if source_bytes > 256 * 1024 * 1024 {
+        // >256 MiB: almost certainly Q4-class weights where SoA pays off.
+        P64ConvertLayout::Q4kSoa
     } else {
         P64ConvertLayout::Verbatim
     }
