@@ -72,3 +72,23 @@ None. Optional: run f16 convert on smollm2 and compare tok/s vs verbatim p64.
 2. Wire forge CUDA WMMA into prefill dense matmuls when dims allow
 3. SoA Q4_K re-layout at convert time
 4. Prefer sibling `.p64` in vault scanner
+
+---
+
+## 2026-07-09 — Model helper is CBOR-LD, not JSON (Grok)
+
+### Status
+**done.**
+
+### What was built
+- NEW `q42/model_helper.rs`: typed `ModelHelper` + `ModelHelperTokenizer`
+- Encode: **self-describe CBOR** (tag `0xd9d9f7`) + embedded `@context` / `@type` (CBOR-LD document shape)
+- Extension: **`.q42.cbor-ld`** (no `.json`)
+- CLI convert writes helper via `write_beside_p64`; round-trip self-check on convert
+- Load API: `ModelHelper::load_beside_p64` for engine activation later
+
+### Measured
+- Unit: `model_helper` **3/3** passed
+
+### ⚑ Human
+None. Old `.q42.json` files from prior converts (if any) are obsolete — re-convert.

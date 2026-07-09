@@ -240,12 +240,11 @@ pub fn run_comprehensive_llm_test(
     Ok(())
 }
 
-/// Convert a GGUF import file to native `.p64` + `.q42.json` helper metadata.
+/// Convert a GGUF import file to native `.p64` + `.q42.cbor-ld` helper metadata.
 ///
 /// Design: GGUF/safetensors are import formats only. Steady-state activation should
 /// prefer the converted container (see `docs/plans/native-inference-p64-pipeline-remediation.md`).
-/// Today's p64 is still a byte-preserving layout (same GPU kernels); conversion still
-/// productizes the path and records stop/chat metadata the engine needs.
+/// The helper is **CBOR-LD** (self-describe CBOR), never JSON.
 pub fn run_convert_gguf_to_p64(
     input: &Path,
     out_dir: &Path,
@@ -310,49 +309,41 @@ pub fn run_convert_gguf_to_p64(
     let p64_path = out_dir.join(format!("{stem}{suffix}.p64"));
     std::fs::write(&p64_path, &p64).map_err(|e| format!("write p64: {e}"))?;
 
-    // q42 helper: behavioural metadata the engine should not re-guess from GGUF.
+    // q42 helper (CBOR-LD): behavioural metadata the engine should not re-guess from GGUF.
     let tok = qualia_core_db::gguf_sharder::GgufTokenizer::from_gguf(&mmap);
     let stop_ids: Vec<u32> = tok.stop_tokens().to_vec();
     let stop_names: Vec<String> = stop_ids
         .iter()
         .filter_map(|&id| tok.vocab.get(id as usize).cloned())
         .collect();
-    let meta = serde_json::json!({
-        "format": "qualia.q42.model-helper.v1",
-        "source_gguf": input.display().to_string(),
-        "p64": p64_path.display().to_string(),
-        "page_log2": page_log2,
-        "layout": format!("{layout:?}"),
-        "converted_unix_ms": std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_millis() as u64)
-            .unwrap_or(0),
-        "tokenizer": {
-            "bos_token_id": tok.bos_token_id,
-            "eos_token_id": tok.eos_token_id,
-            "add_bos_token": tok.add_bos_token,
-            "chat_family": format!("{:?}", tok.chat_family()),
-            "stop_token_ids": stop_ids,
-            "stop_token_strings": stop_names,
-            "vocab_len": tok.vocab_len(),
+    let helper = qualia_core_db::model_helper::ModelHelper::new(
+        input.display().to_string(),
+        p64_path.display().to_string(),
+        page_log2,
+        format!("{layout:?}"),
+        qualia_core_db::model_helper::ModelHelperTokenizer {
+            bos_token_id: tok.bos_token_id,
+            eos_token_id: tok.eos_token_id,
+            add_bos_token: tok.add_bos_token,
+            chat_family: format!("{:?}", tok.chat_family()),
+            stop_token_ids: stop_ids,
+            stop_token_strings: stop_names,
+            vocab_len: tok.vocab_len(),
         },
-        "notes": [
-            "verbatim = GGML quant blocks preserved (same speed as GGUF kernels).",
-            "f16 = 2-D weights expanded to IEEE half for unpack2x16float GEMV.",
-            "Activate the .p64 path; keep GGUF as import-only archive."
-        ]
-    });
-    let q42_path = out_dir.join(format!("{stem}{suffix}.q42.json"));
-    std::fs::write(
-        &q42_path,
-        serde_json::to_string_pretty(&meta).map_err(|e| e.to_string())?,
-    )
-    .map_err(|e| format!("write q42 helper: {e}"))?;
+    );
+    let q42_path = helper
+        .write_beside_p64(&p64_path)
+        .map_err(|e| format!("write q42.cbor-ld helper: {e}"))?;
 
     // Validate the container can be indexed (fail closed if we wrote garbage).
     let index = qualia_core_db::p64_weight::P64TensorIndex::from_p64(&p64)
         .map_err(|e| format!("p64 self-check failed: {e}"))?;
     let n_tensors = index.entries.len();
+    // Round-trip the helper so a bad encode fails the convert command.
+    let _ = qualia_core_db::model_helper::ModelHelper::from_cbor_ld(
+        &std::fs::read(&q42_path).map_err(|e| format!("re-read helper: {e}"))?,
+    )
+    .map_err(|e| format!("helper self-check failed: {e}"))?;
 
     let elapsed = t0.elapsed();
     println!();
@@ -363,7 +354,7 @@ pub fn run_convert_gguf_to_p64(
         p64.len() as f64 / (1024.0 * 1024.0),
         n_tensors
     );
-    println!("  └─ {}", q42_path.display());
+    println!("  └─ {} (CBOR-LD)", q42_path.display());
     println!(
         "     chat_family={:?} stop_ids={:?}",
         tok.chat_family(),

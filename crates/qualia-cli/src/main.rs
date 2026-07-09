@@ -1255,7 +1255,7 @@ pub enum LlmAction {
     Convert {
         /// Path to a `.gguf` source file
         input: PathBuf,
-        /// Output directory (created if missing). Writes `<stem>.p64` + `<stem>.q42.json`.
+        /// Output directory (created if missing). Writes `<stem>.p64` + `<stem>.q42.cbor-ld`.
         #[arg(short, long)]
         out: PathBuf,
         /// Page alignment log2 for the p64 container (default 14 = 16 KiB pages)

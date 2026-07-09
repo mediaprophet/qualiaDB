@@ -182,6 +182,7 @@ pub mod lora;
 // --- q42/ category (reorg) ---
 pub mod q42;
 pub use q42::design_encode;
+pub use q42::model_helper;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub use q42::p64_weight;
 /// Backward-compatible module name retained for existing inference and
