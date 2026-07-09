@@ -31,6 +31,7 @@ wgpu `Auto` (static-DXC → PATH-DXC → FXC). `dxil.dll` must sit alongside `dx
 | `QUALIA_LLM_PREPROJECT_ATTN` | on | K/V projection through the cooperative GEMV, reusing the attention shader only for RoPE + KV-cache writes. |
 | `QUALIA_LLM_FUSE_ATTN_O` | on | Q-attention writes to a GPU buffer that o_proj consumes in the same encoder — one fewer round-trip per layer. |
 | `QUALIA_LLM_GPU_TOPK` | on | Output projection + GPU block argmax (top-1) with a tiny candidate readback, vs a full-vocab logit readback + CPU argmax. |
+| `QUALIA_LLM_FFN_F16` | **off** | Promote FFN gate/up/down quant→f16 in VRAM at plan build. Opt-in: on A2000 full 3B, f16 FFN was **slower** than Q4 SoA (bandwidth). Try on higher-BW GPUs. |
 
 ## Opt-in / correctness paths (default OFF)
 

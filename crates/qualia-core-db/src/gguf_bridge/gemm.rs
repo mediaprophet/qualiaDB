@@ -2,7 +2,61 @@
 //! Split from gguf_bridge/mod.rs (structural refactor; no behaviour change).
 use super::*;
 
+/// XOR into the resident-weight key so f16-promoted FFN blobs never alias quant blobs.
+const F16_PROMOTE_KEY_TAG: u64 = 0xF16E_F16E_0000_00F1;
+
 impl QTensorEngine {
+    /// Promote a 2-D quant weight (Q4_K / SoA / Q6_K / Q8_0) to a resident **f16** buffer
+    /// for the fast coop GEMV path. Returns `(buffer, ggml_type=F16, byte_len, row_elems)`.
+    /// `None` when disabled, unsupported type, or OOM/dequant failure — caller keeps quant.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) fn promote_matrix_to_f16_resident(
+        &self,
+        info: &GgufTensorInfo,
+        raw: &[u8],
+    ) -> Option<(wgpu::Buffer, u32, u32, u32)> {
+        if !crate::llm_bench::ffn_f16_enabled() {
+            return None;
+        }
+        use crate::ggml_quants::{
+            dequant_matrix_row_into, GGML_TYPE_F16, GGML_TYPE_Q4_K, GGML_TYPE_Q4_K_SOA,
+            GGML_TYPE_Q6_K, GGML_TYPE_Q8_0,
+        };
+        if !matches!(
+            info.ggml_type,
+            GGML_TYPE_Q4_K | GGML_TYPE_Q4_K_SOA | GGML_TYPE_Q6_K | GGML_TYPE_Q8_0
+        ) {
+            return None;
+        }
+        if info.n_dims < 2 || info.dims[0] == 0 || info.dims[1] == 0 {
+            return None;
+        }
+        let n0 = info.dims[0] as usize; // in (row width)
+        let n1 = info.dims[1] as usize; // out (rows)
+        let nbytes = n0.checked_mul(n1)?.checked_mul(2)?;
+        // Skip absurd expansions (e.g. accidental full-model promote) — FFN matrices are
+        // typically ≤ ~200 MiB each on 3B-class models.
+        if nbytes > 512 * 1024 * 1024 {
+            return None;
+        }
+        let mut f16_bytes = vec![0u8; nbytes];
+        let mut row = vec![0f32; n0];
+        for r in 0..n1 {
+            if dequant_matrix_row_into(raw, info, r, &mut row).is_err() {
+                return None;
+            }
+            let base = r * n0 * 2;
+            for (c, &v) in row.iter().enumerate() {
+                let bits = half::f16::from_f32(v).to_le_bytes();
+                f16_bytes[base + c * 2] = bits[0];
+                f16_bytes[base + c * 2 + 1] = bits[1];
+            }
+        }
+        let key = (raw.as_ptr() as u64) ^ F16_PROMOTE_KEY_TAG;
+        let buf = self.resident_weight_buffer(key, &f16_bytes)?;
+        Some((buf, GGML_TYPE_F16, nbytes as u32, n0 as u32))
+    }
+
     pub(crate) fn write_weight_words(&self, raw: &[u8], max_bytes: usize) {
         let weight_buf = self.gemm_weight_buf.as_ref().expect("gemm weight buf");
         let upload = if raw.len() <= max_bytes {

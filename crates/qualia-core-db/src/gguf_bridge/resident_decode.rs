@@ -662,17 +662,20 @@ impl QTensorEngine {
             })
         };
 
-        let gemm_params =
-            |info: &GgufTensorInfo, n_in: usize, n_out: usize, raw_len: usize| GemmGpuParams {
-                n_in: n_in as u32,
-                n_out: n_out as u32,
-                weight_ggml_type: info.ggml_type,
-                weight_row_elems: info.dims[0] as u32,
-                weight_byte_len: raw_len as u32,
-                n_batch: 1,
-                in_row_stride: 0,
-                out_row_stride: 0,
-            };
+        let gemm_params = |ggml_type: u32,
+                           n_in: usize,
+                           n_out: usize,
+                           row_elems: u32,
+                           raw_len: usize| GemmGpuParams {
+            n_in: n_in as u32,
+            n_out: n_out as u32,
+            weight_ggml_type: ggml_type,
+            weight_row_elems: row_elems,
+            weight_byte_len: raw_len as u32,
+            n_batch: 1,
+            in_row_stride: 0,
+            out_row_stride: 0,
+        };
 
         let mut layers = Vec::with_capacity(n_layer as usize);
         let mut layer_protos = Vec::with_capacity(n_layer as usize);
@@ -729,7 +732,30 @@ impl QTensorEngine {
             );
             let res = |raw: &[u8]| self.resident_weight_buffer(raw.as_ptr() as u64, raw);
             let (q_w, k_w, v_w) = (res(q_raw)?, res(k_raw)?, res(v_raw)?);
-            let (o_w, g_w, u_w, d_w) = (res(o_raw)?, res(g_raw)?, res(u_raw)?, res(d_raw)?);
+            let o_w = res(o_raw)?;
+            // FFN quant→f16 promotion: bind f16 for gate/up/down when eligible (fast coop path).
+            let ffn_bind = |info: &GgufTensorInfo, raw: &[u8]| -> Option<(wgpu::Buffer, u32, u32, u32)> {
+                if let Some(p) = self.promote_matrix_to_f16_resident(info, raw) {
+                    return Some(p);
+                }
+                let b = res(raw)?;
+                Some((b, info.ggml_type, raw.len() as u32, info.dims[0] as u32))
+            };
+            let (g_w, g_ty, g_blen, g_row) = ffn_bind(&gate_info, g_raw)?;
+            let (u_w, u_ty, u_blen, u_row) = ffn_bind(&up_info, u_raw)?;
+            let (d_w, d_ty, d_blen, d_row) = ffn_bind(&down_info, d_raw)?;
+            if l == 0
+                && (g_ty == crate::ggml_quants::GGML_TYPE_F16
+                    || u_ty == crate::ggml_quants::GGML_TYPE_F16
+                    || d_ty == crate::ggml_quants::GGML_TYPE_F16)
+            {
+                log::info!(
+                    "LLM_LOAD|ffn-f16|promoted gate/up/down (types g={} u={} d={})",
+                    g_ty,
+                    u_ty,
+                    d_ty
+                );
+            }
 
             if !upload_norm(2 * l as u64, &attn_norm) || !upload_norm(2 * l as u64 + 1, &ffn_norm) {
                 return None;
@@ -737,13 +763,31 @@ impl QTensorEngine {
 
             // Static GEMM param slots for this layer: K,V,O,gate,up,down.
             let gbase = l as u64 * GEMM_SLOTS_PER_LAYER;
-            for (i, (info, n_in, n_out, raw_len)) in [
-                (&k_info, n_embd, kv_dim, k_raw.len()),
-                (&v_info, n_embd, kv_dim, v_raw.len()),
-                (&o_info, q_dim, n_embd, o_raw.len()),
-                (&gate_info, n_embd, n_ffn, g_raw.len()),
-                (&up_info, n_embd, n_ffn, u_raw.len()),
-                (&down_info, n_ffn, n_embd, d_raw.len()),
+            for (i, (ggml_type, n_in, n_out, row_elems, raw_len)) in [
+                (
+                    k_info.ggml_type,
+                    n_embd,
+                    kv_dim,
+                    k_info.dims[0] as u32,
+                    k_raw.len(),
+                ),
+                (
+                    v_info.ggml_type,
+                    n_embd,
+                    kv_dim,
+                    v_info.dims[0] as u32,
+                    v_raw.len(),
+                ),
+                (
+                    o_info.ggml_type,
+                    q_dim,
+                    n_embd,
+                    o_info.dims[0] as u32,
+                    o_raw.len(),
+                ),
+                (g_ty, n_embd, n_ffn, g_row, g_blen as usize),
+                (u_ty, n_embd, n_ffn, u_row, u_blen as usize),
+                (d_ty, n_ffn, n_embd, d_row, d_blen as usize),
             ]
             .into_iter()
             .enumerate()
@@ -751,7 +795,7 @@ impl QTensorEngine {
                 queue.write_buffer(
                     &static_arena,
                     (gbase + i as u64) * SLOT,
-                    bytemuck::bytes_of(&gemm_params(info, n_in, n_out, raw_len)),
+                    bytemuck::bytes_of(&gemm_params(ggml_type, n_in, n_out, row_elems, raw_len)),
                 );
             }
 
@@ -922,7 +966,13 @@ impl QTensorEngine {
             queue.write_buffer(
                 &static_arena,
                 gemm_slot * SLOT,
-                bytemuck::bytes_of(&gemm_params(&logits_info, n_embd, rows, byte_len as usize)),
+                bytemuck::bytes_of(&gemm_params(
+                    logits_info.ggml_type,
+                    n_embd,
+                    rows,
+                    logits_info.dims[0] as u32,
+                    byte_len as usize,
+                )),
             );
             let tparams = crate::topk::topk_params_bytes(rows as u32, 1, block_size as u32);
             queue.write_buffer(&static_arena, topk_base + c as u64 * SLOT, &tparams);

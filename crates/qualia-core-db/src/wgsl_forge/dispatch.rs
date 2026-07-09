@@ -50,6 +50,53 @@ use super::oracle::{dft_cpu, gemm_cpu, gemv_cpu};
 use super::ForgeError;
 use super::ForgeRuntime;
 
+/// Prepend `CUDA_PATH/bin/x64` (and `bin`) to `PATH` so cudarc can dlopen NVRTC.
+/// CUDA 12+/13 ships `nvrtc64_*.dll` under `bin\x64`, not `bin` — without this,
+/// `gemm_f32_tc` always soft-falls to plain f32 even when the toolkit is installed.
+/// Idempotent; safe to call from any thread (best-effort env mutation).
+pub fn ensure_cuda_runtime_path() {
+    static ONCE: OnceLock<()> = OnceLock::new();
+    ONCE.get_or_init(|| {
+        let cuda = match std::env::var_os("CUDA_PATH") {
+            Some(p) => std::path::PathBuf::from(p),
+            None => {
+                // Common Windows default when CUDA_PATH is unset.
+                let guess = std::path::PathBuf::from(
+                    r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.3",
+                );
+                if guess.is_dir() {
+                    guess
+                } else {
+                    return;
+                }
+            }
+        };
+        let mut prepend = Vec::new();
+        let x64 = cuda.join("bin").join("x64");
+        let bin = cuda.join("bin");
+        if x64.is_dir() {
+            prepend.push(x64);
+        }
+        if bin.is_dir() {
+            prepend.push(bin);
+        }
+        if prepend.is_empty() {
+            return;
+        }
+        let old = std::env::var_os("PATH").unwrap_or_default();
+        let mut parts: Vec<std::path::PathBuf> = prepend;
+        parts.extend(std::env::split_paths(&old));
+        if let Ok(joined) = std::env::join_paths(parts) {
+            // SAFETY: process-global PATH update before any cudarc dlopen; single-threaded init.
+            std::env::set_var("PATH", joined);
+            log::info!(
+                "cuda_path|ensured|{}\\bin\\x64 prepended for NVRTC",
+                cuda.display()
+            );
+        }
+    });
+}
+
 /// Problem-size threshold (in `m * n * k` multiply-adds) below which GEMM stays on
 /// the CPU regardless of available accelerators. Small GEMMs are dominated by
 /// dispatch/transfer overhead, so the GPU path only earns its keep above this size.
@@ -97,6 +144,8 @@ pub fn caps() -> ComputeCaps {
 }
 
 fn probe_caps() -> ComputeCaps {
+    // Make NVRTC discoverable before the CUDA probe (CUDA 13: bin\x64).
+    ensure_cuda_runtime_path();
     // wgpu: build a throwaway context. If it constructs, the WGSL GPU path is live,
     // and its constraints carry the coopmat/rt hardware bits.
     let (wgpu, coopmat, rt) = match WgpuComputeContext::new(PROBE_CAPACITY_BYTES) {
@@ -473,6 +522,7 @@ pub fn gemm_f32_tc(
     b: &[f32],
 ) -> Result<Vec<f32>, ForgeError> {
     validate_dims(m, k, n, a.len(), b.len())?;
+    ensure_cuda_runtime_path();
 
     // Tier 1: WGSL coopmat — the *portable* wgpu tensor-core path (f32), gated on the
     // runtime probe `coopmat_usable()`. On wgpu 29.0.3 the coopmat multiply returns zeros

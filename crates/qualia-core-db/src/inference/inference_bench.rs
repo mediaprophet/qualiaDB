@@ -496,6 +496,29 @@ pub fn ffn_fusion_enabled() -> bool {
     }
 }
 
+// ── FFN quant → f16 promotion (opt-in; bandwidth vs dequant trade-off) ─
+// Default OFF. Microbench on small GEMMs favoured f16, but full Llama-3.2-3B on
+// A2000 12GB measured **slower** with FFN f16 (~2.1 tok/s) than Q4_K SoA (~2.6)
+// — 4× weight traffic outweighs dequant savings when memory-bound. Opt in with
+// `QUALIA_LLM_FFN_F16=1` on higher-bandwidth GPUs / smaller FFN dims.
+static FFN_F16: AtomicBool = AtomicBool::new(false);
+
+/// Enable/disable FFN quant→f16 promotion at resident-plan build (`QUALIA_LLM_FFN_F16`).
+#[inline]
+pub fn set_ffn_f16(on: bool) {
+    FFN_F16.store(on, Ordering::Relaxed);
+}
+
+/// Whether FFN weights should be promoted to f16 in VRAM for decode/prefill GEMV.
+#[inline]
+pub fn ffn_f16_enabled() -> bool {
+    match std::env::var("QUALIA_LLM_FFN_F16").ok().as_deref() {
+        Some("0") | Some("false") => false,
+        Some("1") | Some("true") => true,
+        _ => FFN_F16.load(Ordering::Relaxed),
+    }
+}
+
 // ── 0.0.21: cooperative GEMV kernel toggle ────────────────────────────────────
 // Default ON (native), verified. Routes native GEMV work through the cooperative
 // one-workgroup-per-row kernel (`coop_gemv`: coalesced reads + per-thread dequant +

@@ -550,17 +550,20 @@ impl QTensorEngine {
         };
 
         // Prototype GEMM params (batched-tight: in/out row strides default to n_in/n_out).
-        let gemm_proto =
-            |info: &GgufTensorInfo, n_in: usize, n_out: usize, raw_len: usize| GemmGpuParams {
-                n_in: n_in as u32,
-                n_out: n_out as u32,
-                weight_ggml_type: info.ggml_type,
-                weight_row_elems: info.dims[0] as u32,
-                weight_byte_len: raw_len as u32,
-                n_batch: 1,
-                in_row_stride: 0,
-                out_row_stride: 0,
-            };
+        let gemm_proto = |ggml_type: u32,
+                          n_in: usize,
+                          n_out: usize,
+                          row_elems: u32,
+                          raw_len: usize| GemmGpuParams {
+            n_in: n_in as u32,
+            n_out: n_out as u32,
+            weight_ggml_type: ggml_type,
+            weight_row_elems: row_elems,
+            weight_byte_len: raw_len as u32,
+            n_batch: 1,
+            in_row_stride: 0,
+            out_row_stride: 0,
+        };
         let elem_proto = |n: usize, op: u32| ElemGpuParams {
             n: n as u32,
             batch: 1,
@@ -629,7 +632,17 @@ impl QTensorEngine {
             );
             let res = |raw: &[u8]| self.resident_weight_buffer(raw.as_ptr() as u64, raw);
             let (q_w, k_w, v_w) = (res(q_raw)?, res(k_raw)?, res(v_raw)?);
-            let (o_w, g_w, u_w, d_w) = (res(o_raw)?, res(g_raw)?, res(u_raw)?, res(d_raw)?);
+            let o_w = res(o_raw)?;
+            let ffn_bind = |info: &GgufTensorInfo, raw: &[u8]| -> Option<(wgpu::Buffer, u32, u32, u32)> {
+                if let Some(p) = self.promote_matrix_to_f16_resident(info, raw) {
+                    return Some(p);
+                }
+                let b = res(raw)?;
+                Some((b, info.ggml_type, raw.len() as u32, info.dims[0] as u32))
+            };
+            let (g_w, g_ty, g_blen, g_row) = ffn_bind(&gate_info, g_raw)?;
+            let (u_w, u_ty, u_blen, u_row) = ffn_bind(&up_info, u_raw)?;
+            let (d_w, d_ty, d_blen, d_row) = ffn_bind(&down_info, d_raw)?;
 
             if !upload_norm(2 * l as u64, &attn_norm) || !upload_norm(2 * l as u64 + 1, &ffn_norm) {
                 return None;
@@ -684,12 +697,30 @@ impl QTensorEngine {
 
             protos.push(PrefillLayerProtos {
                 gemm: [
-                    gemm_proto(&k_info, n_embd, kv_dim, k_raw.len()),
-                    gemm_proto(&v_info, n_embd, kv_dim, v_raw.len()),
-                    gemm_proto(&o_info, q_dim, n_embd, o_raw.len()),
-                    gemm_proto(&gate_info, n_embd, n_ffn, g_raw.len()),
-                    gemm_proto(&up_info, n_embd, n_ffn, u_raw.len()),
-                    gemm_proto(&down_info, n_ffn, n_embd, d_raw.len()),
+                    gemm_proto(
+                        k_info.ggml_type,
+                        n_embd,
+                        kv_dim,
+                        k_info.dims[0] as u32,
+                        k_raw.len(),
+                    ),
+                    gemm_proto(
+                        v_info.ggml_type,
+                        n_embd,
+                        kv_dim,
+                        v_info.dims[0] as u32,
+                        v_raw.len(),
+                    ),
+                    gemm_proto(
+                        o_info.ggml_type,
+                        q_dim,
+                        n_embd,
+                        o_info.dims[0] as u32,
+                        o_raw.len(),
+                    ),
+                    gemm_proto(g_ty, n_embd, n_ffn, g_row, g_blen as usize),
+                    gemm_proto(u_ty, n_embd, n_ffn, u_row, u_blen as usize),
+                    gemm_proto(d_ty, n_ffn, n_embd, d_row, d_blen as usize),
                 ],
                 attn: [k_p, v_p, q_p],
                 elem: [

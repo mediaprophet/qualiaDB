@@ -402,3 +402,34 @@ None. Prefer `llm convert … --layout soa` (or auto) for Q4 models that cannot 
 - Decode-proxy passport
 - Kernel path to close remaining ×10–30 vs llama.cpp
 
+
+---
+
+## 2026-07-09 — CUDA NVRTC path + FFN f16 promote (honest) (Grok)
+
+### Status
+**partial awesome** — CUDA tensor cores **live** once NVRTC is on PATH; FFN f16 promote wired but **default off** after A/B.
+
+### CUDA WMMA
+| Item | Result |
+|------|--------|
+| Root cause | CUDA 13.3 puts `nvrtc64_*.dll` in `bin\x64`, not `bin` — cudarc never found it |
+| Fix | `ensure_cuda_runtime_path()` prepends `CUDA_PATH/bin/x64` (+ `bin`); called from `caps()` probe + `gemm_f32_tc` |
+| Certify | `wmma_matmul_certifies_on_cuda_tensor_cores` **PASS** with path fix |
+| Product | Forge TC tier is no longer dead on this machine; full prefill-on-CUDA still needs device-unified path (host round-trip would thrash) |
+
+### FFN quant→f16 promote (`QUALIA_LLM_FFN_F16`)
+| Item | Result |
+|------|--------|
+| Mechanism | At resident/prefill plan build, dequant gate/up/down once → f16 VRAM, bind as type 1 |
+| A2000 + llama SoA | promote **works** (types g=u=d=1) but decode **~2.1 tok/s** vs SoA Q4 **~2.6** |
+| Verdict | Bandwidth-bound: f16 is ~4× Q4 traffic; default **OFF**, opt-in for fat-memory GPUs |
+
+### Best stack today (this machine)
+SoA Q4 p64 + sticky engine + coop GEMV ≈ **2.6 tok/s** decode on 3B (was ~2.0). Still ~25× under Ollama CUDA.
+
+### Next
+- Device-unified CUDA prefill (no wgpu↔host thrash), or attention/SoA further
+- Passport decode-proxy
+- Gemma graph (deferred)
+
