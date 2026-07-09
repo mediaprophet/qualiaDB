@@ -196,3 +196,35 @@ cargo test -p qualia-core-db --lib toolkit_probe -- --nocapture
 ### ⚑ Human
 - Re-run `llm convert` on smollm2 so `.q42.cbor-ld` attaches (probe saw helper=None).
 - Optional: install CUDA NVRTC so forge TC can actually run (today soft-falls to f32).
+
+---
+
+## 2026-07-09 — Plan continue: integrity modes, single parse, reconvert (Grok)
+
+### Status
+**done** for this slice.
+
+### What was built
+| Item | Detail |
+|------|--------|
+| **IntegrityMode** | `Full` / `Metadata` / `Structure` via `QUALIA_P64_INTEGRITY` |
+| **Measured** | SmolLM2 from_p64: **Full 2410 ms** vs **Metadata 9.0 ms** (~268×) |
+| **Single parse** | Decode path: one `from_p64` for tokenizer + tensor index (was 2× full CRC) |
+| **Passport** | Stores `preferred_inference_backend` + `probe_gemv_n`; env hint also suggests `QUALIA_P64_INTEGRITY=metadata` |
+| **Re-convert** | smollm2 → `.p64` + **`.q42.cbor-ld`** (680 B, ChatMl, 3.9 s) |
+
+### Operator knobs (plan toolkit)
+```powershell
+$env:QUALIA_P64_INTEGRITY='metadata'   # fast activate after trusted convert
+$env:QUALIA_WGPU_BACKEND='dx12'        # or from llm passport --apply-env-hint
+```
+
+### Still open in plan
+1. Wire forge TC into prefill product path (needs NVRTC for real CUDA win)
+2. SoA Q4_K convert layout
+3. Ternary FFN productize + ΔPPL
+4. Decode-proxy passport (rank by short tok/s, not only GEMV)
+5. f16 layout A/B measure on real Q4/Q8 models
+
+### ⚑ Human
+None this step. For everyday use after convert: `QUALIA_P64_INTEGRITY=metadata`.

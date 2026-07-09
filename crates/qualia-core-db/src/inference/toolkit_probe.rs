@@ -301,6 +301,7 @@ mod tests {
 
     #[test]
     fn stage8_live_p64_and_helper_if_present() {
+        use crate::p64_weight::IntegrityMode;
         use std::path::Path;
 
         let live = Path::new(r"C:\LLM_Models\P64\smollm2-360m-instruct-q8_0.p64");
@@ -310,13 +311,29 @@ mod tests {
         }
         let bytes = std::fs::read(live).unwrap();
         assert!(crate::p64_weight::has_p64_magic(&bytes));
-        let t0 = Instant::now();
-        let idx = crate::p64_weight::P64TensorIndex::from_p64(&bytes).unwrap();
-        let ms = t0.elapsed().as_secs_f64() * 1e3;
+
+        let t_full = Instant::now();
+        let idx = crate::p64_weight::P64TensorIndex::from_p64_with_integrity(
+            &bytes,
+            IntegrityMode::Full,
+        )
+        .unwrap();
+        let ms_full = t_full.elapsed().as_secs_f64() * 1e3;
+
+        let t_meta = Instant::now();
+        let idx_m = crate::p64_weight::P64TensorIndex::from_p64_with_integrity(
+            &bytes,
+            IntegrityMode::Metadata,
+        )
+        .unwrap();
+        let ms_meta = t_meta.elapsed().as_secs_f64() * 1e3;
+        assert_eq!(idx.entries.len(), idx_m.entries.len());
+
         let helper = crate::model_helper::ModelHelper::load_beside_p64(live).unwrap();
         eprintln!(
-            "[stage8 live] from_p64 {:.1}ms tensors={} helper={:?}",
-            ms,
+            "[stage8 live] Full CRC {:.1}ms | Metadata-only {:.1}ms tensors={} helper={:?}",
+            ms_full,
+            ms_meta,
             idx.entries.len(),
             helper.as_ref().map(|h| (
                 h.layout.as_str(),
@@ -326,6 +343,13 @@ mod tests {
         );
         if helper.is_none() {
             eprintln!("[stage8] ⚑ re-convert to attach .q42.cbor-ld");
+        }
+        // Metadata mode must be materially faster on multi-hundred-MB models.
+        if ms_full > 500.0 {
+            assert!(
+                ms_meta < ms_full * 0.5,
+                "metadata integrity should cut activate cost; full={ms_full} meta={ms_meta}"
+            );
         }
     }
 

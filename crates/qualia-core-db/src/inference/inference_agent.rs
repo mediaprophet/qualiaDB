@@ -899,35 +899,39 @@ impl LocalLlmAgent {
                     .as_ref()
                     .map(|m| crate::p64_weight::has_p64_magic(&m[..]))
                     .unwrap_or(false);
-                let mut tok = engine
-                    .gguf_mmap
-                    .as_ref()
-                    .map(|m| {
-                        if is_p64_mmap {
-                            crate::p64_weight::P64TensorIndex::from_p64(m)
-                                .ok()
-                                .and_then(|qi| {
-                                    GgufTokenizer::from_p64_section(qi.tokenizer_bytes(m))
-                                })
-                                .unwrap_or_default()
-                        } else {
-                            GgufTokenizer::from_gguf(m)
-                        }
-                    })
-                    .unwrap_or_default();
+                // Parse P64 **once** (tokenizer + tensor index share the same index).
+                // Integrity policy: QUALIA_P64_INTEGRITY=metadata|full|structure (default full).
+                let p64_index = if is_p64_mmap {
+                    engine
+                        .gguf_mmap
+                        .as_ref()
+                        .and_then(|m| crate::p64_weight::P64TensorIndex::from_p64(m).ok())
+                } else {
+                    None
+                };
+                let mut tok = if let (Some(qi), Some(m)) =
+                    (p64_index.as_ref(), engine.gguf_mmap.as_ref())
+                {
+                    GgufTokenizer::from_p64_section(qi.tokenizer_bytes(m)).unwrap_or_default()
+                } else {
+                    engine
+                        .gguf_mmap
+                        .as_ref()
+                        .map(|m| GgufTokenizer::from_gguf(m))
+                        .unwrap_or_default()
+                };
                 // Sibling `.q42.cbor-ld` helper (convert-time stop set / chat metadata).
                 apply_model_helper_stops(&model_path, &mut tok);
 
-                // Parse tensor-info section → real embedding lookup.
-                let tensor_idx = engine.gguf_mmap.as_ref().and_then(|m| {
-                    if is_p64_mmap {
-                        crate::p64_weight::P64TensorIndex::from_p64(m)
-                            .map(|qi| qi.to_gguf_index())
-                            .ok()
-                    } else {
-                        Some(crate::gguf_sharder::GgufTensorIndex::from_gguf(m))
-                    }
-                });
+                // Tensor index: reuse single p64 parse; GGUF path parses once here.
+                let tensor_idx = if let Some(qi) = p64_index {
+                    Some(qi.to_gguf_index())
+                } else {
+                    engine
+                        .gguf_mmap
+                        .as_ref()
+                        .map(|m| crate::gguf_sharder::GgufTensorIndex::from_gguf(m))
+                };
 
                 let mut ctx = tok.encode_chat_prompt(&prompt_owned);
                 // Keep `eos` for draft/topology APIs that still take a single id; decode
@@ -1721,35 +1725,35 @@ impl LocalLlmAgent {
                     .as_ref()
                     .map(|m| crate::p64_weight::has_p64_magic(&m[..]))
                     .unwrap_or(false);
-
-                let mut tok = engine
-                    .gguf_mmap
-                    .as_ref()
-                    .map(|m| {
-                        if is_p64_mmap {
-                            crate::p64_weight::P64TensorIndex::from_p64(m)
-                                .ok()
-                                .and_then(|index| {
-                                    GgufTokenizer::from_p64_section(index.tokenizer_bytes(m))
-                                })
-                                .unwrap_or_default()
-                        } else {
-                            GgufTokenizer::from_gguf(m)
-                        }
-                    })
-                    .unwrap_or_default();
+                let p64_index = if is_p64_mmap {
+                    engine
+                        .gguf_mmap
+                        .as_ref()
+                        .and_then(|m| crate::p64_weight::P64TensorIndex::from_p64(m).ok())
+                } else {
+                    None
+                };
+                let mut tok = if let (Some(qi), Some(m)) =
+                    (p64_index.as_ref(), engine.gguf_mmap.as_ref())
+                {
+                    GgufTokenizer::from_p64_section(qi.tokenizer_bytes(m)).unwrap_or_default()
+                } else {
+                    engine
+                        .gguf_mmap
+                        .as_ref()
+                        .map(|m| GgufTokenizer::from_gguf(m))
+                        .unwrap_or_default()
+                };
                 apply_model_helper_stops(&model_path, &mut tok);
 
-                // Parse tensor-info section → real embedding lookup.
-                let tensor_idx = engine.gguf_mmap.as_ref().and_then(|m| {
-                    if is_p64_mmap {
-                        crate::p64_weight::P64TensorIndex::from_p64(m)
-                            .map(|index| index.to_gguf_index())
-                            .ok()
-                    } else {
-                        Some(crate::gguf_sharder::GgufTensorIndex::from_gguf(m))
-                    }
-                });
+                let tensor_idx = if let Some(qi) = p64_index {
+                    Some(qi.to_gguf_index())
+                } else {
+                    engine
+                        .gguf_mmap
+                        .as_ref()
+                        .map(|m| crate::gguf_sharder::GgufTensorIndex::from_gguf(m))
+                };
 
                 let mut ctx = tok.encode_chat_prompt(&prompt_owned);
                 let eos = tok.eos_token_id;

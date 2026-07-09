@@ -373,8 +373,8 @@ pub fn run_hardware_passport(
     apply_env_hint: bool,
 ) -> Result<(), String> {
     use qualia_core_db::hardware_passport::{
-        default_cache_path, load_or_probe, write_passport, HardwarePassport, PASSPORT_VERSION,
-        topology_key,
+        backend_env_token, default_cache_path, load_or_probe, write_passport, HardwarePassport,
+        PASSPORT_VERSION, topology_key,
     };
     use qualia_core_db::device_benchmark::benchmark_devices;
     use qualia_core_db::host_topology::probe_host_topology;
@@ -395,11 +395,17 @@ pub fn run_hardware_passport(
         let key = topology_key(&topology);
         println!("├─ Probing circuits (this takes a few seconds)…");
         let matrix = benchmark_devices(gemv_n);
+        let preferred = matrix
+            .best()
+            .and_then(|c| backend_env_token(&c.backend))
+            .map(str::to_string);
         let fresh = HardwarePassport {
             version: PASSPORT_VERSION,
             key,
             topology,
             matrix,
+            preferred_inference_backend: preferred,
+            probe_gemv_n: gemv_n,
         };
         write_passport(&fresh, &path)?;
         (fresh, false)
@@ -418,26 +424,29 @@ pub fn run_hardware_passport(
     println!("├─ Key: {}", passport.key);
     println!("{}", passport.matrix.summary());
 
+    if let Some(ref pref) = passport.preferred_inference_backend {
+        println!("├─ Preferred inference backend (stored): {pref}");
+    }
     if let Some(best) = passport.matrix.best() {
         println!("Selected inference circuit (measured):");
         println!(
             "  └─ {} [{}] {:.3} ms/GEMV  {:.1} GFLOP/s",
             best.label, best.backend, best.ms_per_gemv, best.gflops
         );
-        let hint = match best.backend.to_ascii_lowercase().as_str() {
-            s if s.contains("dx12") || s.contains("d3d12") => Some("dx12"),
-            s if s.contains("vulkan") => Some("vulkan"),
-            s if s.contains("metal") => Some("metal"),
-            s if s.contains("gl") => Some("gl"),
-            _ => None, // CPU-only — leave GPU env alone
-        };
+        let hint = passport
+            .preferred_inference_backend
+            .clone()
+            .or_else(|| backend_env_token(&best.backend).map(str::to_string));
         if let Some(h) = hint {
             println!("  └─ Hint: set QUALIA_WGPU_BACKEND={h} to pin this backend");
+            println!("  └─ Fast P64 activate: QUALIA_P64_INTEGRITY=metadata (after trusted convert)");
             if apply_env_hint {
-                // Persist a small sidecar the app can read next to the passport.
                 let hint_path = path.with_extension("env");
-                std::fs::write(&hint_path, format!("QUALIA_WGPU_BACKEND={h}\n"))
-                    .map_err(|e| format!("write env hint: {e}"))?;
+                std::fs::write(
+                    &hint_path,
+                    format!("QUALIA_WGPU_BACKEND={h}\nQUALIA_P64_INTEGRITY=metadata\n"),
+                )
+                .map_err(|e| format!("write env hint: {e}"))?;
                 println!("  └─ Wrote {}", hint_path.display());
             }
         } else {

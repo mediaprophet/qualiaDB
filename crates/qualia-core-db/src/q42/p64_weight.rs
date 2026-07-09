@@ -1584,11 +1584,50 @@ pub struct P64TensorIndex {
 
 pub type Q42TensorIndex = P64TensorIndex;
 
+/// How thoroughly [`P64TensorIndex::from_p64`] verifies integrity.
+///
+/// Full tensor CRCs over a 360M–3B container dominate activate latency (toolkit probe:
+/// ~3 s after table CRC optim, previously ~42 s table-less). Convert and audit use
+/// [`IntegrityMode::Full`]; hot activate may use [`IntegrityMode::Metadata`] after a
+/// trusted convert wrote the container on this machine.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum IntegrityMode {
+    /// Metadata CRC + every tensor blob CRC (default, safest).
+    #[default]
+    Full,
+    /// Metadata CRC only; still bounds-checks tensor ranges (fast activate).
+    Metadata,
+    /// Structure checks only — no CRC. Prefer only for tests / trusted mmap.
+    Structure,
+}
+
+impl IntegrityMode {
+    /// `QUALIA_P64_INTEGRITY=full|metadata|structure` (default full).
+    pub fn from_env() -> Self {
+        match std::env::var("QUALIA_P64_INTEGRITY")
+            .ok()
+            .as_deref()
+            .map(str::trim)
+            .map(|s| s.to_ascii_lowercase())
+            .as_deref()
+        {
+            Some("metadata") | Some("meta") | Some("fast") => Self::Metadata,
+            Some("structure") | Some("struct") | Some("skip") | Some("none") => Self::Structure,
+            _ => Self::Full,
+        }
+    }
+}
+
 impl P64TensorIndex {
     pub fn from_q42(data: &[u8]) -> Result<Self, String> {
         Self::from_p64(data)
     }
     pub fn from_p64(data: &[u8]) -> Result<Self, String> {
+        Self::from_p64_with_integrity(data, IntegrityMode::from_env())
+    }
+
+    /// Parse a P64 container with an explicit integrity policy.
+    pub fn from_p64_with_integrity(data: &[u8], integrity: IntegrityMode) -> Result<Self, String> {
         let header = P64WeightHeader::read_le(data)?;
         if header.magic != P64_MAGIC {
             return Err("p64: invalid magic".to_string());
@@ -1656,16 +1695,19 @@ impl P64TensorIndex {
         if manifold_table_start % 64 != 0 {
             return Err("p64: manifold table is not cache-line aligned".to_string());
         }
-        let stored_metadata_crc =
-            u32::from_le_bytes(data[checksum_start..checksum_start + 4].try_into().unwrap());
-        if crc32c(&data[..checksum_start]) != stored_metadata_crc {
-            return Err("p64: metadata CRC-32C mismatch".to_string());
+        if !matches!(integrity, IntegrityMode::Structure) {
+            let stored_metadata_crc =
+                u32::from_le_bytes(data[checksum_start..checksum_start + 4].try_into().unwrap());
+            if crc32c(&data[..checksum_start]) != stored_metadata_crc {
+                return Err("p64: metadata CRC-32C mismatch".to_string());
+            }
         }
 
         let mut entries = Vec::with_capacity(tensor_count);
         let mut cursor = header.tensor_table_offset as usize;
         let blob_floor = align_up(checksum_end, page);
         let mut previous_blob_end = blob_floor;
+        let verify_tensor_crc = matches!(integrity, IntegrityMode::Full);
         for tensor_index in 0..tensor_count {
             if cursor + P64_TENSOR_ENTRY_BYTES > data.len() {
                 return Err("p64: truncated tensor table".to_string());
@@ -1712,10 +1754,13 @@ impl P64TensorIndex {
                     "p64: tensor {tensor_index} is unaligned, overlapping, or out of bounds"
                 ));
             }
-            let crc_start = checksum_start + 4 + tensor_index * 4;
-            let stored_crc = u32::from_le_bytes(data[crc_start..crc_start + 4].try_into().unwrap());
-            if crc32c(&data[blob_start..blob_end]) != stored_crc {
-                return Err(format!("p64: tensor {tensor_index} CRC-32C mismatch"));
+            if verify_tensor_crc {
+                let crc_start = checksum_start + 4 + tensor_index * 4;
+                let stored_crc =
+                    u32::from_le_bytes(data[crc_start..crc_start + 4].try_into().unwrap());
+                if crc32c(&data[blob_start..blob_end]) != stored_crc {
+                    return Err(format!("p64: tensor {tensor_index} CRC-32C mismatch"));
+                }
             }
             previous_blob_end = blob_end;
             entries.push(entry);

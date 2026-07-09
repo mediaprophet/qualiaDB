@@ -35,6 +35,13 @@ pub struct HardwarePassport {
     pub key: String,
     pub topology: HostTopology,
     pub matrix: CapabilityMatrix,
+    /// Best GPU backend token for inference (`dx12` / `vulkan` / `metal` / `gl`), if any.
+    /// Derived from the measured matrix; used when `QUALIA_WGPU_BACKEND` is unset.
+    #[serde(default)]
+    pub preferred_inference_backend: Option<String>,
+    /// GEMV n used for the matrix (for operator honesty).
+    #[serde(default)]
+    pub probe_gemv_n: usize,
 }
 
 /// Stable key from the discovered adapter identifiers (sorted `vendor:device`). Identifiers (handles),
@@ -85,11 +92,17 @@ pub fn load_or_probe(path: &Path, gemv_n: usize) -> (HardwarePassport, bool) {
     }
 
     let matrix = benchmark_devices(gemv_n);
+    let preferred = matrix
+        .best()
+        .and_then(|c| backend_env_token(&c.backend))
+        .map(str::to_string);
     let fresh = HardwarePassport {
         version: PASSPORT_VERSION,
         key: current_key,
         topology,
         matrix,
+        preferred_inference_backend: preferred,
+        probe_gemv_n: gemv_n,
     };
     let _ = write_passport(&fresh, path);
     (fresh, false)
@@ -106,6 +119,10 @@ pub fn load_or_probe_default() -> (HardwarePassport, bool) {
 pub fn cached_preferred_wgpu_backend() -> Option<String> {
     let path = default_cache_path();
     let passport = read_passport(&path)?;
+    // Prefer the stored token when present (stable across schema evolution).
+    if let Some(ref t) = passport.preferred_inference_backend {
+        return Some(t.clone());
+    }
     let best = passport.matrix.best()?;
     // CPU-only win → do not pin a GPU backend.
     if matches!(best.kind, crate::device_benchmark::CircuitKind::Cpu) {
@@ -194,6 +211,8 @@ mod tests {
             key: topology_key(&topology),
             topology,
             matrix,
+            preferred_inference_backend: Some("dx12".into()),
+            probe_gemv_n: 2048,
         }
     }
 
