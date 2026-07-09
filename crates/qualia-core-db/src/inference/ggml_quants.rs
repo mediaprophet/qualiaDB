@@ -14,6 +14,9 @@ pub const GGML_TYPE_Q5_0: u32 = 6;
 pub const GGML_TYPE_Q8_0: u32 = 8;
 pub const GGML_TYPE_Q4_K: u32 = 12;
 pub const GGML_TYPE_Q6_K: u32 = 14;
+/// Brain float16 (1 sign / 8 exp / 7 mantissa) — used by Gemma-4 and other modern GGUFs
+/// for norms / residual scales alongside Q4_K weights (`ggml_type` enum value 30).
+pub const GGML_TYPE_BF16: u32 = 30;
 
 /// GGML `block_q6_K` — 210 bytes, 256 weights. Mirrors WGSL `BlockQ6K` layout.
 #[repr(C)]
@@ -66,7 +69,7 @@ pub fn ggml_block_layout(ggml_type: u32) -> Option<GgmlBlockLayout> {
 pub fn ggml_row_bytes(ggml_type: u32, n_elems: usize) -> Option<usize> {
     match ggml_type {
         GGML_TYPE_F32 => Some(n_elems.checked_mul(4)?),
-        GGML_TYPE_F16 => Some(n_elems.checked_mul(2)?),
+        GGML_TYPE_F16 | GGML_TYPE_BF16 => Some(n_elems.checked_mul(2)?),
         _ => {
             let layout = ggml_block_layout(ggml_type)?;
             if n_elems == 0 {
@@ -226,6 +229,7 @@ pub fn dequantize_row_into(
     match ggml_type {
         GGML_TYPE_F32 => dequant_f32(raw, n_elems, out),
         GGML_TYPE_F16 => dequant_f16(raw, n_elems, out),
+        GGML_TYPE_BF16 => dequant_bf16(raw, n_elems, out),
         GGML_TYPE_Q4_0 => dequant_q4_0(raw, n_elems, out),
         GGML_TYPE_Q5_0 => dequant_q5_0(raw, n_elems, out),
         GGML_TYPE_Q8_0 => dequant_q8_0(raw, n_elems, out),
@@ -254,6 +258,19 @@ fn dequant_f16(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, Ggm
     for i in 0..n_elems {
         out[i] =
             half::f16::from_le_bytes(raw[i * 2..i * 2 + 2].try_into().unwrap_or([0; 2])).to_f32();
+    }
+    Ok(n_elems)
+}
+
+/// BF16 → f32: shift 16-bit code into the high half of an f32 bit pattern.
+fn dequant_bf16(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, GgmlDequantError> {
+    let need = n_elems * 2;
+    if raw.len() < need {
+        return Err(GgmlDequantError::TruncatedInput);
+    }
+    for i in 0..n_elems {
+        let bits = u16::from_le_bytes(raw[i * 2..i * 2 + 2].try_into().unwrap_or([0; 2]));
+        out[i] = f32::from_bits((bits as u32) << 16);
     }
     Ok(n_elems)
 }
@@ -460,6 +477,25 @@ fn dequant_q6_k(raw: &[u8], n_elems: usize, out: &mut [f32]) -> Result<usize, Gg
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bf16_row_bytes_and_dequant() {
+        // Gemma-4 norms/scales use ggml_type 30 (BF16): 2 bytes/elem.
+        assert_eq!(ggml_row_bytes(GGML_TYPE_BF16, 1024), Some(2048));
+        // 1.0_bf16 = 0x3F80, -2.0_bf16 = 0xC000
+        let raw: [u8; 4] = [0x80, 0x3F, 0x00, 0xC0];
+        let mut out = [0.0f32; 2];
+        assert_eq!(dequantize_row_into(&raw, GGML_TYPE_BF16, 2, &mut out), Ok(2));
+        assert!((out[0] - 1.0).abs() < 1e-6, "got {}", out[0]);
+        assert!((out[1] + 2.0).abs() < 1e-6, "got {}", out[1]);
+        let info = GgufTensorInfo {
+            dims: [128, 1, 0, 0],
+            n_dims: 2,
+            ggml_type: GGML_TYPE_BF16,
+            byte_offset: 0,
+        };
+        assert_eq!(tensor_byte_len(&info), Some(256));
+    }
 
     #[test]
     fn q4_0_row_bytes_stride() {

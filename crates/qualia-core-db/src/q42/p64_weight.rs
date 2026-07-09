@@ -122,7 +122,15 @@ pub struct P64HParams {
     pub vocab_size: u32,
     pub rope_freq_base: f32,
     pub rope_scale: f32,
-    pub reserved: [u8; 36], // Pad exactly to 64 bytes
+    /// Explicit head dim (`0` = derive n_embd/n_head). Occupies former reserved[0..4].
+    pub head_dim: u32,
+    pub head_dim_swa: u32,
+    pub sliding_window: u32,
+    pub shared_kv_layers: u32,
+    pub logit_softcap: f32,
+    pub architecture: u32,
+    pub arch_flags: u32,
+    pub reserved: [u8; 8], // Pad exactly to 64 bytes
 }
 
 // Layouts are exact multiples of 64 for Cache-Line DOD perfection.
@@ -195,7 +203,14 @@ impl P64HParams {
             vocab_size: u32a(16),
             rope_freq_base: f32a(20),
             rope_scale: f32a(24),
-            reserved: [0; 36],
+            head_dim: u32a(28),
+            head_dim_swa: u32a(32),
+            sliding_window: u32a(36),
+            shared_kv_layers: u32a(40),
+            logit_softcap: f32a(44),
+            architecture: u32a(48),
+            arch_flags: u32a(52),
+            reserved: [0; 8],
         })
     }
 
@@ -209,6 +224,13 @@ impl P64HParams {
         out[16..20].copy_from_slice(&self.vocab_size.to_le_bytes());
         out[20..24].copy_from_slice(&self.rope_freq_base.to_le_bytes());
         out[24..28].copy_from_slice(&self.rope_scale.to_le_bytes());
+        out[28..32].copy_from_slice(&self.head_dim.to_le_bytes());
+        out[32..36].copy_from_slice(&self.head_dim_swa.to_le_bytes());
+        out[36..40].copy_from_slice(&self.sliding_window.to_le_bytes());
+        out[40..44].copy_from_slice(&self.shared_kv_layers.to_le_bytes());
+        out[44..48].copy_from_slice(&self.logit_softcap.to_le_bytes());
+        out[48..52].copy_from_slice(&self.architecture.to_le_bytes());
+        out[52..56].copy_from_slice(&self.arch_flags.to_le_bytes());
     }
 }
 
@@ -494,7 +516,14 @@ pub fn compile_gguf_to_p64_with_layout(
         vocab_size: index.vocab_dim() as u32,
         rope_freq_base: index.hyperparams.effective_rope_freq_base(),
         rope_scale: index.hyperparams.effective_rope_scale(),
-        reserved: [0; 36],
+        head_dim: index.hyperparams.head_dim,
+        head_dim_swa: index.hyperparams.head_dim_swa,
+        sliding_window: index.hyperparams.sliding_window,
+        shared_kv_layers: index.hyperparams.shared_kv_layers,
+        logit_softcap: index.hyperparams.logit_softcap,
+        architecture: index.hyperparams.architecture,
+        arch_flags: index.hyperparams.arch_flags,
+        reserved: [0; 8],
     };
 
     let mut output = vec![0u8; total_size];
@@ -772,9 +801,16 @@ fn compile_gguf_to_p64_legacy(input: &[u8], page_log2: u16) -> Result<Vec<u8>, S
     out[h_off + 4..h_off + 8].copy_from_slice(&hparams.n_embd.to_le_bytes());
     out[h_off + 8..h_off + 12].copy_from_slice(&hparams.n_head.to_le_bytes());
     out[h_off + 12..h_off + 16].copy_from_slice(&hparams.n_kv_head.to_le_bytes());
-    out[h_off + 16..h_off + 20].copy_from_slice(&0u32.to_le_bytes());
+    out[h_off + 16..h_off + 20].copy_from_slice(&0u32.to_le_bytes()); // vocab_size (filled later if known)
     out[h_off + 20..h_off + 24].copy_from_slice(&hparams.rope_freq_base.to_le_bytes());
     out[h_off + 24..h_off + 28].copy_from_slice(&hparams.rope_scale.to_le_bytes());
+    out[h_off + 28..h_off + 32].copy_from_slice(&hparams.head_dim.to_le_bytes());
+    out[h_off + 32..h_off + 36].copy_from_slice(&hparams.head_dim_swa.to_le_bytes());
+    out[h_off + 36..h_off + 40].copy_from_slice(&hparams.sliding_window.to_le_bytes());
+    out[h_off + 40..h_off + 44].copy_from_slice(&hparams.shared_kv_layers.to_le_bytes());
+    out[h_off + 44..h_off + 48].copy_from_slice(&hparams.logit_softcap.to_le_bytes());
+    out[h_off + 48..h_off + 52].copy_from_slice(&hparams.architecture.to_le_bytes());
+    out[h_off + 52..h_off + 56].copy_from_slice(&hparams.arch_flags.to_le_bytes());
 
     // 2b. Manifold Table
     let mt_off = manifold_table_offset as usize;
@@ -1414,7 +1450,14 @@ fn transcode_safetensor_with_policy<W: std::io::Write>(
         vocab_size: 0,
         rope_freq_base: 0.0,
         rope_scale: 0.0,
-        reserved: [0; 36],
+        head_dim: 0,
+        head_dim_swa: 0,
+        sliding_window: 0,
+        shared_kv_layers: 0,
+        logit_softcap: 0.0,
+        architecture: 0,
+        arch_flags: 0,
+        reserved: [0; 8],
     };
 
     let mut metadata = vec![0u8; checksum_offset + checksum_bytes];
@@ -1804,6 +1847,13 @@ impl P64TensorIndex {
             n_kv_head: self.hparams.n_kv_head,
             rope_freq_base: self.hparams.rope_freq_base,
             rope_scale: self.hparams.rope_scale,
+            head_dim: self.hparams.head_dim,
+            head_dim_swa: self.hparams.head_dim_swa,
+            sliding_window: self.hparams.sliding_window,
+            shared_kv_layers: self.hparams.shared_kv_layers,
+            logit_softcap: self.hparams.logit_softcap,
+            architecture: self.hparams.architecture,
+            arch_flags: self.hparams.arch_flags,
         }
     }
 

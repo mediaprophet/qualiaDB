@@ -61,6 +61,7 @@ const BLOCK_Q5_0_ELEMS: u32 = 32u;
 const BLOCK_Q8_0_BYTES: u32 = 34u;
 const BLOCK_Q8_0_ELEMS: u32 = 32u;
 const GGML_TYPE_F16: u32 = 1u;
+const GGML_TYPE_BF16: u32 = 30u;
 const GGML_TYPE_Q4_0: u32 = 2u;
 const GGML_TYPE_Q5_0: u32 = 6u;
 const GGML_TYPE_Q8_0: u32 = 8u;
@@ -127,7 +128,9 @@ fn weight_row_bytes() -> u32 {
     if params.weight_ggml_type == GGML_TYPE_Q4_K {
         return (params.weight_row_elems / BLOCK_Q4K_ELEMS) * BLOCK_Q4K_BYTES;
     }
-    if params.weight_ggml_type == GGML_TYPE_F16 {
+    if params.weight_ggml_type == GGML_TYPE_F16
+        || params.weight_ggml_type == GGML_TYPE_BF16
+    {
         return params.weight_row_elems * 2u;
     }
     return (params.weight_row_elems / BLOCK_Q6K_ELEMS) * BLOCK_Q6K_BYTES;
@@ -281,9 +284,21 @@ fn dequant_f16_weight(row: u32, col: u32) -> f32 {
     return select(pair.x, pair.y, (elem & 1u) == 1u);
 }
 
+// bf16 (Gemma-4 norms / residual scales): promote by shifting into f32 high half.
+// Mirrors fused_transformer.wgsl::dequant_bf16_weight.
+fn dequant_bf16_weight(row: u32, col: u32) -> f32 {
+    let elem = row * params.weight_row_elems + col;
+    let word = weight_words[elem >> 1u];
+    let bits16 = select(word & 0xFFFFu, word >> 16u, (elem & 1u) == 1u);
+    return bitcast<f32>(bits16 << 16u);
+}
+
 fn dequant_weight(row: u32, col: u32) -> f32 {
     if params.weight_ggml_type == GGML_TYPE_F16 {
         return dequant_f16_weight(row, col);
+    }
+    if params.weight_ggml_type == GGML_TYPE_BF16 {
+        return dequant_bf16_weight(row, col);
     }
     if params.weight_ggml_type == GGML_TYPE_Q4_0 {
         return dequant_q4_0_weight(row, col);

@@ -40,6 +40,10 @@ impl QTensorEngine {
             log::error!("LLM_LOAD|failed|1.00|{}", msg);
             return Err(msg);
         }
+        if let Err(msg) = index.hyperparams.decode_supported() {
+            log::error!("LLM_LOAD|failed|1.00|{}", msg);
+            return Err(msg);
+        }
 
         self.tensor_data_offset = index.tensor_data_start;
         self.hyperparams = index.hyperparams;
@@ -187,6 +191,10 @@ impl QTensorEngine {
         let hp = index.hyperparams;
         if hp.n_layer == 0 || hp.n_embd == 0 {
             return Err("P64: missing hyperparameters in header".to_string());
+        }
+        if let Err(msg) = hp.decode_supported() {
+            log::error!("LLM_LOAD|failed|1.00|{}", msg);
+            return Err(msg);
         }
         self.hyperparams = hp;
         self.tensor_data_offset = 0; // P64 blob offsets are absolute

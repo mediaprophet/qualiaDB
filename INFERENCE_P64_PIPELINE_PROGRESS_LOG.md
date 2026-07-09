@@ -268,3 +268,47 @@ qualia-cli llm optimize C:\LLM_Models\GGUF\smollm2-360m-instruct-q8_0.gguf --out
 
 ### ⚑ Human
 None — try `llm optimize` on a model and chat on the `.f16.p64`.
+
+---
+
+## 2026-07-09 — Gemma-4 E2B convert + BF16 + arch gate (Grok)
+
+### Status
+**partial (honest)** — convert/product path done for Gemma-4; coherent decode **not** (architecture is not Llama-shaped). Bigger **working** model proved on Llama-3.2-3B p64.
+
+### What shipped
+| Change | Detail |
+|--------|--------|
+| **BF16 (ggml type 30)** | CPU dequant + GEMM/attention WGSL + quant gates — unblocks Gemma GGUF convert |
+| **Gemma-4 → p64** | `gemma-4-E2B-it-Q4_K_M.p64` 3269.9 MiB, 601 tensors, 18–45 s; helper **chat_family=Gemma4** stop_ids `[1,106,212]` |
+| **Gemma4 chat template** | `<\|turn>…<turn\|>` family (not classic `<start_of_turn>`) |
+| **Arch hyperparams in P64** | head_dim / head_dim_swa / SWA / shared_kv / softcap / architecture / arch_flags |
+| **Fail-closed gemma4** | Activate refuses with PLE+SWA+shared-KV+QK-norm missing list (override `QUALIA_LLM_FORCE_UNSUPPORTED_ARCH=1`) |
+| **Llama-3.2-3B p64 smoke** | convert 13.6 s → 1924.9 MiB; "capital of France" → **Paris** + `<\|eot_id\|>` |
+
+### Measured (RTX A2000 12GB, DX12)
+| Run | Result |
+|-----|--------|
+| Gemma convert | Verbatim layout (too large for f16 expand on 12 GiB budget) |
+| Gemma decode (pre-gate) | ~2.6 tok/s wall, **garbage** multilingual (wrong head_dim/PLE/SWA) |
+| Gemma activate (post-gate) | **ERR** architecture gemma4 not supported — correct |
+| Llama-3.2-3B known fact | **"The capital of France is Paris."** load 3.8 s |
+| Llama open prompts | Still quiz-attractor (known sampling/template issue on bare CLI) |
+
+### Gemma-4 arch facts (why it is not "just bigger SmolLM")
+- `general.architecture=gemma4`, n_embd=1536, n_head=8, n_kv=1
+- head_dim **512** global / **256** SWA (not n_embd/n_head=192)
+- PLE: `per_layer_token_embd` (~half params), inp_gate/proj per layer
+- Shared KV last 20 layers; variable FFN 6144 vs 12288; QK-norm; logit softcap 30
+
+### Next (gemma4 graph workstream — not optional polish)
+1. Dual head_dim per-layer SWA pattern + RoPE bases
+2. PLE inject (per_layer_token_embd + proj/inp_gate)
+3. Shared KV reuse for last N layers
+4. QK-norm + post_attention/post_ffw norms
+5. Variable FFN width in resident plan
+6. Softcap logits
+
+### ⚑ Human
+None for convert path. For coherent Gemma-4 chat: authorise the gemma4 decoder graph as the next lane (this is a real architecture port, not a config tweak).
+

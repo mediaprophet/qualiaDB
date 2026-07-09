@@ -92,6 +92,24 @@ pub struct GgufTensorInfo {
 /// Default RoPE base for Llama 3 / SmolLM2 when GGUF omits `llama.rope.freq_base`.
 pub const DEFAULT_ROPE_FREQ_BASE: f32 = 100_000.0;
 
+/// Architecture id (stored in P64 hparams + used for support gating).
+pub const ARCH_UNKNOWN: u32 = 0;
+pub const ARCH_LLAMA: u32 = 1;
+pub const ARCH_GEMMA: u32 = 2;
+pub const ARCH_GEMMA2: u32 = 3;
+pub const ARCH_GEMMA3: u32 = 4;
+/// Gemma 4 (E2B/E4B/…): dual head-dim SWA+global, PLE, shared KV — **not** standard Llama-shape.
+pub const ARCH_GEMMA4: u32 = 5;
+pub const ARCH_QWEN2: u32 = 6;
+pub const ARCH_OTHER: u32 = 255;
+
+/// Feature flags on [`GgufHyperparams::arch_flags`].
+pub const ARCH_FLAG_HAS_PLE: u32 = 1 << 0;
+pub const ARCH_FLAG_HAS_SWA: u32 = 1 << 1;
+pub const ARCH_FLAG_HAS_SHARED_KV: u32 = 1 << 2;
+pub const ARCH_FLAG_HAS_QK_NORM: u32 = 1 << 3;
+pub const ARCH_FLAG_HAS_SOFTCAP: u32 = 1 << 4;
+
 /// Architecture hyper-parameters parsed from the GGUF KV section.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct GgufHyperparams {
@@ -104,6 +122,20 @@ pub struct GgufHyperparams {
     pub rope_freq_base: f32,
     /// Linear RoPE scale from `llama.rope.scale_linear` / `llama.rope.scaling.factor`; `0` → `1.0`.
     pub rope_scale: f32,
+    /// Explicit head dim (`*.attention.key_length`); `0` → derive `n_embd / n_head`.
+    pub head_dim: u32,
+    /// SWA / local-attention head dim (`*.attention.key_length_swa`); `0` → same as `head_dim`.
+    pub head_dim_swa: u32,
+    /// Sliding-window size in tokens; `0` → full context attention only.
+    pub sliding_window: u32,
+    /// Last N layers share KV from the last non-shared layer of the same type (Gemma 4).
+    pub shared_kv_layers: u32,
+    /// Final logit softcapping (Gemma 2+); `0` → disabled.
+    pub logit_softcap: f32,
+    /// [`ARCH_*`] id from `general.architecture` (and tensor-feature refinement).
+    pub architecture: u32,
+    /// [`ARCH_FLAG_*`] bitmask.
+    pub arch_flags: u32,
 }
 
 impl GgufHyperparams {
@@ -124,10 +156,20 @@ impl GgufHyperparams {
         }
     }
     pub fn head_dim(&self) -> u32 {
-        if self.n_head == 0 {
+        if self.head_dim > 0 {
+            self.head_dim
+        } else if self.n_head == 0 {
             0
         } else {
             self.n_embd / self.n_head
+        }
+    }
+
+    pub fn head_dim_swa_or(&self) -> u32 {
+        if self.head_dim_swa > 0 {
+            self.head_dim_swa
+        } else {
+            self.head_dim()
         }
     }
 
@@ -146,6 +188,76 @@ impl GgufHyperparams {
         } else {
             (self.n_head / kv).max(1)
         }
+    }
+
+    /// Human-readable architecture name for logs / errors.
+    pub fn architecture_name(&self) -> &'static str {
+        match self.architecture {
+            ARCH_LLAMA => "llama",
+            ARCH_GEMMA => "gemma",
+            ARCH_GEMMA2 => "gemma2",
+            ARCH_GEMMA3 => "gemma3",
+            ARCH_GEMMA4 => "gemma4",
+            ARCH_QWEN2 => "qwen2",
+            ARCH_OTHER => "other",
+            _ => "unknown",
+        }
+    }
+
+    /// Whether the native decode path can run this architecture coherently.
+    ///
+    /// Gemma 4 (E2B/E4B) requires PLE, dual-RoPE SWA/global head dims, QK-norm, post-norms,
+    /// variable FFN width, and shared KV — none of which the Llama-shaped decode path implements.
+    /// Running it produces multilingual garbage (measured 2026-07-09 on gemma-4-E2B-it-Q4_K_M).
+    /// Override with `QUALIA_LLM_FORCE_UNSUPPORTED_ARCH=1` only for bring-up.
+    pub fn decode_supported(&self) -> Result<(), String> {
+        if std::env::var_os("QUALIA_LLM_FORCE_UNSUPPORTED_ARCH").is_some() {
+            return Ok(());
+        }
+        if self.architecture == ARCH_GEMMA4
+            || (self.arch_flags & ARCH_FLAG_HAS_PLE) != 0
+            || (self.arch_flags & ARCH_FLAG_HAS_SHARED_KV) != 0
+        {
+            let mut missing = Vec::new();
+            if (self.arch_flags & ARCH_FLAG_HAS_PLE) != 0 {
+                missing.push("per-layer embeddings (PLE)");
+            }
+            if (self.arch_flags & ARCH_FLAG_HAS_SWA) != 0 {
+                missing.push("sliding-window + dual head_dim");
+            }
+            if (self.arch_flags & ARCH_FLAG_HAS_SHARED_KV) != 0 {
+                missing.push("shared KV layers");
+            }
+            if (self.arch_flags & ARCH_FLAG_HAS_QK_NORM) != 0 {
+                missing.push("QK-norm");
+            }
+            if missing.is_empty() {
+                missing.push("gemma4 decoder graph");
+            }
+            return Err(format!(
+                "architecture '{}' is not supported by the native Llama-shaped decode path yet \
+                 (missing: {}). Convert/activate to p64 still works; coherent inference needs the \
+                 gemma4 graph. Set QUALIA_LLM_FORCE_UNSUPPORTED_ARCH=1 to force (will be garbage).",
+                self.architecture_name(),
+                missing.join(", ")
+            ));
+        }
+        Ok(())
+    }
+}
+
+/// Map `general.architecture` GGUF string → [`ARCH_*`].
+pub fn parse_architecture_id(name: &str) -> u32 {
+    let n = name.trim().to_ascii_lowercase();
+    match n.as_str() {
+        "llama" | "llama2" | "llama3" => ARCH_LLAMA,
+        "gemma" => ARCH_GEMMA,
+        "gemma2" => ARCH_GEMMA2,
+        "gemma3" => ARCH_GEMMA3,
+        "gemma4" => ARCH_GEMMA4,
+        "qwen2" | "qwen2vl" | "qwen3" => ARCH_QWEN2,
+        "" => ARCH_UNKNOWN,
+        _ => ARCH_OTHER,
     }
 }
 
@@ -260,7 +372,20 @@ impl GgufTensorIndex {
         pos: &mut usize,
     ) -> GgufHyperparams {
         let mut patch = GgufHyperparams::default();
-        if key.ends_with("rope.freq_base") {
+        // general.architecture = STRING
+        if key == "general.architecture" && vtype == 8 {
+            if *pos + 8 <= mmap.len() {
+                let n = u64::from_le_bytes(mmap[*pos..*pos + 8].try_into().unwrap_or([0; 8])) as usize;
+                *pos += 8;
+                if *pos + n <= mmap.len() {
+                    let s = std::str::from_utf8(&mmap[*pos..*pos + n]).unwrap_or("");
+                    patch.architecture = parse_architecture_id(s);
+                    *pos += n;
+                }
+            }
+            return patch;
+        }
+        if key.ends_with("rope.freq_base") && !key.contains("swa") {
             match vtype {
                 6 if *pos + 4 <= mmap.len() => {
                     let bits =
@@ -273,6 +398,33 @@ impl GgufTensorIndex {
                         u64::from_le_bytes(mmap[*pos..*pos + 8].try_into().unwrap_or([0; 8]));
                     *pos += 8;
                     patch.rope_freq_base = f64::from_bits(bits) as f32;
+                }
+                _ => {
+                    let _ = gguf_skip_value(mmap, pos, vtype);
+                }
+            }
+            return patch;
+        }
+        if key.ends_with("final_logit_softcapping") || key.ends_with("attention.logit_softcapping")
+        {
+            match vtype {
+                6 if *pos + 4 <= mmap.len() => {
+                    let bits =
+                        u32::from_le_bytes(mmap[*pos..*pos + 4].try_into().unwrap_or([0; 4]));
+                    *pos += 4;
+                    patch.logit_softcap = f32::from_bits(bits);
+                    if patch.logit_softcap > 0.0 {
+                        patch.arch_flags |= ARCH_FLAG_HAS_SOFTCAP;
+                    }
+                }
+                12 if *pos + 8 <= mmap.len() => {
+                    let bits =
+                        u64::from_le_bytes(mmap[*pos..*pos + 8].try_into().unwrap_or([0; 8]));
+                    *pos += 8;
+                    patch.logit_softcap = f64::from_bits(bits) as f32;
+                    if patch.logit_softcap > 0.0 {
+                        patch.arch_flags |= ARCH_FLAG_HAS_SOFTCAP;
+                    }
                 }
                 _ => {
                     let _ = gguf_skip_value(mmap, pos, vtype);
@@ -323,6 +475,31 @@ impl GgufTensorIndex {
             patch.n_head = v;
         } else if key.contains("head_count_kv") || key.contains("n_kv_head") {
             patch.n_kv_head = v;
+        } else if key.ends_with("attention.key_length_swa")
+            || key.ends_with("attention.value_length_swa")
+        {
+            // Prefer key_length_swa; value_length_swa is the same for Gemma 4.
+            if patch.head_dim_swa == 0 {
+                patch.head_dim_swa = v;
+            }
+            if v > 0 {
+                patch.arch_flags |= ARCH_FLAG_HAS_SWA;
+            }
+        } else if key.ends_with("attention.key_length") || key.ends_with("attention.value_length")
+        {
+            if !key.contains("swa") && patch.head_dim == 0 {
+                patch.head_dim = v;
+            }
+        } else if key.ends_with("attention.sliding_window") {
+            patch.sliding_window = v;
+            if v > 0 {
+                patch.arch_flags |= ARCH_FLAG_HAS_SWA;
+            }
+        } else if key.ends_with("attention.shared_kv_layers") {
+            patch.shared_kv_layers = v;
+            if v > 0 {
+                patch.arch_flags |= ARCH_FLAG_HAS_SHARED_KV;
+            }
         }
         patch
     }
@@ -372,6 +549,25 @@ impl GgufTensorIndex {
             if patch.rope_scale > 0.0 {
                 hyperparams.rope_scale = patch.rope_scale;
             }
+            if patch.head_dim != 0 {
+                hyperparams.head_dim = patch.head_dim;
+            }
+            if patch.head_dim_swa != 0 {
+                hyperparams.head_dim_swa = patch.head_dim_swa;
+            }
+            if patch.sliding_window != 0 {
+                hyperparams.sliding_window = patch.sliding_window;
+            }
+            if patch.shared_kv_layers != 0 {
+                hyperparams.shared_kv_layers = patch.shared_kv_layers;
+            }
+            if patch.logit_softcap > 0.0 {
+                hyperparams.logit_softcap = patch.logit_softcap;
+            }
+            if patch.architecture != 0 {
+                hyperparams.architecture = patch.architecture;
+            }
+            hyperparams.arch_flags |= patch.arch_flags;
         }
 
         let mut entries = Vec::with_capacity(tensor_count.min(4096) as usize);
@@ -452,6 +648,18 @@ impl GgufTensorIndex {
             .map(|(_, i)| *i);
         if hyperparams.n_embd == 0 {
             hyperparams.n_embd = token_embd.map(|t| t.dims[0] as u32).unwrap_or(0);
+        }
+        // Tensor-feature refinement (PLE / QK-norm) — catches gemma4 even if arch string missed.
+        let ple_hash = gguf_name_hash(b"per_layer_token_embd.weight");
+        if entries.iter().any(|(h, _)| *h == ple_hash) {
+            hyperparams.arch_flags |= ARCH_FLAG_HAS_PLE;
+            if hyperparams.architecture == ARCH_UNKNOWN || hyperparams.architecture == ARCH_OTHER {
+                hyperparams.architecture = ARCH_GEMMA4;
+            }
+        }
+        let qk_norm_hash = gguf_name_hash(b"blk.0.attn_q_norm.weight");
+        if entries.iter().any(|(h, _)| *h == qk_norm_hash) {
+            hyperparams.arch_flags |= ARCH_FLAG_HAS_QK_NORM;
         }
         Some(Self {
             entries,
@@ -833,8 +1041,10 @@ pub enum ChatFamily {
     ChatMl,
     /// `<|start_header_id|>role<|end_header_id|>\n\n…<|eot_id|>` — Llama-3.x.
     Llama3,
-    /// `<start_of_turn>role\n…<end_of_turn>` — Gemma (no system role).
+    /// `<start_of_turn>role\n…<end_of_turn>` — Gemma 1/2/3 (no system role).
     Gemma,
+    /// `<|turn>role\n…<turn|>` — Gemma 4 instruct (also uses `<|channel>` tool channel).
+    Gemma4,
     /// No recognised chat specials — the raw prompt is used unchanged.
     None,
 }
@@ -1147,6 +1357,7 @@ impl GgufTokenizer {
             "<|eot_id|>",
             "<|im_end|>",
             "<end_of_turn>",
+            "<turn|>", // Gemma 4 turn close
             "<|end_of_text|>",
             "</s>",
             "<|end|>",
@@ -1237,6 +1448,11 @@ impl GgufTokenizer {
             ChatFamily::ChatMl
         } else if self.token_to_id_map.contains_key("<|start_header_id|>") {
             ChatFamily::Llama3
+        } else if self.token_to_id_map.contains_key("<|turn>")
+            || self.token_to_id_map.contains_key("<turn|>")
+        {
+            // Gemma 4 (before classic Gemma — classic uses <start_of_turn>).
+            ChatFamily::Gemma4
         } else if self.token_to_id_map.contains_key("<start_of_turn>") {
             ChatFamily::Gemma
         } else {
@@ -1283,6 +1499,18 @@ impl GgufTokenizer {
                 }
                 s.push_str(user);
                 s.push_str("<end_of_turn>\n<start_of_turn>model\n");
+                s
+            }
+            ChatFamily::Gemma4 => {
+                // Gemma 4 instruct: paired <|turn>…<turn|> markers (see GGUF chat_template).
+                // No dedicated system role — fold system into the user turn. BOS is added by encode.
+                let mut s = String::from("<|turn>user\n");
+                if let Some(sys) = system {
+                    s.push_str(sys);
+                    s.push_str("\n\n");
+                }
+                s.push_str(user);
+                s.push_str("<turn|><|turn>model\n");
                 s
             }
             ChatFamily::None => user.to_string(),
@@ -1761,10 +1989,32 @@ mod tests {
             "<start_of_turn>user\nhi<end_of_turn>\n<start_of_turn>model\n"
         );
 
+        // Gemma 4: <|turn> / <turn|> paired markers.
+        let mut g4 = GgufTokenizer::default();
+        g4.token_to_id_map.insert("<|turn>".into(), 105);
+        g4.token_to_id_map.insert("<turn|>".into(), 106);
+        assert_eq!(g4.chat_family(), ChatFamily::Gemma4);
+        assert_eq!(
+            g4.apply_chat_template(None, "hi"),
+            "<|turn>user\nhi<turn|><|turn>model\n"
+        );
+
         // No recognised chat specials → raw prompt unchanged.
         let none = GgufTokenizer::default();
         assert_eq!(none.chat_family(), ChatFamily::None);
         assert_eq!(none.apply_chat_template(None, "hi"), "hi");
+    }
+
+    #[test]
+    fn gemma4_decode_supported_fails_closed() {
+        let mut h = GgufHyperparams::default();
+        h.architecture = ARCH_GEMMA4;
+        h.arch_flags = ARCH_FLAG_HAS_PLE | ARCH_FLAG_HAS_SWA | ARCH_FLAG_HAS_SHARED_KV;
+        // Ensure force env is not set for this test.
+        std::env::remove_var("QUALIA_LLM_FORCE_UNSUPPORTED_ARCH");
+        let err = h.decode_supported().unwrap_err();
+        assert!(err.contains("gemma4"), "{err}");
+        assert!(err.contains("PLE") || err.contains("per-layer"), "{err}");
     }
 
     #[test]

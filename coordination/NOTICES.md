@@ -1,3 +1,23 @@
+2026-07-09 | Grok | CLAIM | **Finish inference plan on Gemma-4 E2B** — convert/optimize, measure, remaining plan items (stops, integrity, wire). | C:/LLM_Models/GGUF/lmstudio-community/gemma-4-E2B-it-GGUF, p64, convert, decode
+
+2026-07-09 | Grok | RELEASE (LOCAL) | **Remarkable path:** default metadata integrity, engine p64 cache, convert --layout auto (default), llm optimize CLI. Live: smollm2 ? 693MB f16.p64 in 19s + CBOR-LD. Commit c4872920.
+
+2026-07-09 | Grok | CLAIM | **Make inference remarkable** — auto best-layout convert, default fast P64 activate, engine p64 index cache, stop-token fix, optimize CLI. | p64_weight, inference_agent, gguf_bridge, llm_testing, convert
+
+2026-07-09 | Grok | RELEASE (LOCAL) | P64 IntegrityMode (metadata ~9ms vs full ~2.4s); single from_p64 on decode; passport preferred_backend; reconverted smollm2 + .q42.cbor-ld. Commit ea79d4a6. Remaining: forge TC wire, SoA Q4_K, ternary productize, decode-proxy passport, f16 A/B.
+
+2026-07-09 | Grok | CLAIM | **Inference plan continue** — re-convert + helper; from_p64/CRC/passport decode-proxy; wire forge GEMM where safe; ternary/layout if clear. | p64, model_helper, gguf_bridge, passport, convert CLI
+
+2026-07-09 | Grok | CLAIM | **Inference toolkit probe** — stage-by-stage simple tests of library functions on the inference path; note novel-rep opportunities. | wgsl_forge, p64, device_benchmark, model_helper, ggml, gemm
+
+2026-07-09 | Grok | RELEASE (LOCAL) | Vault prefers .p64 over .gguf; mount format-neutral; decode applies .q42.cbor-ld stop set. | model_lifecycle, api, resident_model, inference_agent, model_helper
+
+2026-07-09 | Grok | CLAIM | **Inference pipeline continue** — vault prefer .p64, activate ModelHelper (.q42.cbor-ld), wire helper stops into decode; next hot-path if clear. | model_lifecycle, inference_agent, model_helper, gguf_bridge
+
+2026-07-09 | Grok | RELEASE (LOCAL) | **Continue inference pipeline:** F16Expand p64 layout (CLI --layout f16); Q42T v2 stop ids in tokenizer section; fused single-submit output top-1 when logits resident; coop_gemv f16 path + word-aligned Q4_K loads. Commit 8285ac65. Still open: decode?CUDA WMMA wire, SoA Q4_K, vault prefers .p64, measure f16 tok/s A/B. | p64_weight, gguf_sharder, fused_transformer.wgsl, output.rs, llm_testing, main.rs
+
+2026-07-09 | Grok | CLAIM | **Inference p64 pipeline continued** — W-K wire heavy GEMM/prefill to forge MatMul where possible; convert-time layout hook; passport/stop polish. Lane: gguf_bridge, wgsl_forge, p64_weight, inference. | crates/qualia-core-db/src/{gguf_bridge,wgsl_forge,q42,inference}/
+
 2026-07-09 | Grok | RELEASE (LOCAL) | **W0+W1+W2+W4 landed.** Metric: CLI uses tokens_generated not provenance len. Multi-stop: eot_id/im_end on decode. Convert: qualia-cli llm convert ? p64+q42 (smollm2 6.3s, 290 tensors). Passport: per-backend GEMV rank; A2000 Dx12 0.110ms wins over Vulkan; gpu_context reads cached passport. Tiled WMMA exists in forge — decode wire is next (W-K). | inference_agent, gguf_sharder, llm_testing, device_benchmark, hardware_passport, gpu_context/caps, main.rs, INFERENCE_P64_PIPELINE_PROGRESS_LOG.md, docs/plans/native-inference-p64-pipeline-remediation.md
 
 2026-07-09 | Grok | CLAIM | **Native inference p64 pipeline remediation EXECUTION** — W0 metric honesty, W1 multi-stop, W2 convert CLI, W4 passport, W-K1 tiled WMMA. Lane: inference_agent, gguf_sharder, gguf_bridge, p64_weight, qualia-cli, device_benchmark, wgsl_forge emit/cuda. | crates/qualia-core-db/src/inference/, crates/qualia-core-db/src/gguf_bridge/, crates/qualia-cli/, docs/plans/native-inference-p64-pipeline-remediation.md
@@ -780,3 +800,5 @@ Timothy corrected: the 10D manifold / computational geometry / PGA work was mean
 2026-07-08 | Devin (GLM-5.2 High) | RELEASE | Completed full platform functionality audit ï¿½ PLATFORM_AUDIT.md (913 lines, 24 sections). Catalogued all 19 crates, 300+ Tauri commands, 150+ QApp components, 43 WellFair panels, 10D engine, GPU pipeline, computational geometry (80+ modules), computational economics (38 submodules), 30+ logic modalities, wallet, chat/mesh, cooperative projects, Chora, companion gateway, network layer, inference pipeline, identity/crypto, 9+ specialized libraries, 6 domain libraries. Identified critical bugs (WellFair use_effect infinite loop, mocked LLM, disabled solvers) and architecture gaps (monolithic WASM, no QApp isolation, no cross-platform GPU surface). This is the foundation for building the proper desktop application. | PLATFORM_AUDIT.md
 
 2026-07-08 | Devin (GLM-5.2 High) | CLAIM | Building proper native desktop application. Track A: fix WellFair use_effect infinite loop (36 panels) + disabled solvers. Track B: native Tauri shell (menu bar, tab strip, QApp loader for separate WASM modules, GPU surface integration, status bar). Architecture plan at DESKTOP_ARCHITECTURE_PLAN.md. Starting with A1 (WellFair fix) + B1 (native shell) in parallel. | PLATFORM_AUDIT.md, DESKTOP_ARCHITECTURE_PLAN.md, crates/webizen-desktop/src/shell/ (new), crates/webizen-studio/src/components/wellfair/
+2026-07-09 | Grok | CLAIM | **Gemma-4 E2B convert + BF16 attention** â€” finish BF16 attention dequant, convert gemma-4-E2B-it-Q4_K_M to p64+helper, smoke decode. | fused_attention.wgsl, ggml_quants, convert CLI, C:/LLM_Models/P64
+2026-07-09 | Grok | RELEASE (LOCAL) | **BF16 + Gemma-4 convert + arch fail-closed + Llama-3.2-3B smoke.** Gemma p64 3.3GiB (Gemma4 chat/stops); activate refuses gemma4 (PLE/SWA/shared-KV). Llama-3.2-3B p64: Paris. | ggml_quants, fused_*_wgsl, gguf_sharder, p64_weight, load.rs

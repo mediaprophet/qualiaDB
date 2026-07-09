@@ -33,6 +33,7 @@ const GGML_TYPE_Q8_0: u32 = 8u;
 const GGML_TYPE_Q4_K: u32 = 12u;
 const GGML_TYPE_Q6_K: u32 = 14u;
 const GGML_TYPE_F16: u32 = 1u;
+const GGML_TYPE_BF16: u32 = 30u;
 
 fn read_u8_weight(abs_byte: u32) -> u32 {
     let word = abs_byte >> 2u;
@@ -75,7 +76,7 @@ fn weight_row_bytes() -> u32 {
     if params.weight_ggml_type == GGML_TYPE_Q4_K {
         return (params.weight_row_elems / BLOCK_Q4K_ELEMS) * BLOCK_Q4K_BYTES;
     }
-    if params.weight_ggml_type == GGML_TYPE_F16 {
+    if params.weight_ggml_type == GGML_TYPE_F16 || params.weight_ggml_type == GGML_TYPE_BF16 {
         return params.weight_row_elems * 2u;
     }
     return (params.weight_row_elems / BLOCK_Q6K_ELEMS) * BLOCK_Q6K_BYTES;
@@ -232,9 +233,20 @@ fn dequant_f16_weight(row: u32, col: u32) -> f32 {
     return select(pair.x, pair.y, (elem & 1u) == 1u);
 }
 
+// bf16: 1 sign / 8 exp / 7 mantissa — promote by shifting into f32 high half.
+fn dequant_bf16_weight(row: u32, col: u32) -> f32 {
+    let elem = row * params.weight_row_elems + col;
+    let word = weight_words[elem >> 1u];
+    let bits16 = select(word & 0xFFFFu, word >> 16u, (elem & 1u) == 1u);
+    return bitcast<f32>(bits16 << 16u);
+}
+
 fn dequant_weight(row: u32, col: u32) -> f32 {
     if params.weight_ggml_type == GGML_TYPE_F16 {
         return dequant_f16_weight(row, col);
+    }
+    if params.weight_ggml_type == GGML_TYPE_BF16 {
+        return dequant_bf16_weight(row, col);
     }
     if params.weight_ggml_type == GGML_TYPE_Q4_0 {
         return dequant_q4_0_weight(row, col);
@@ -330,6 +342,20 @@ fn coop_row_dot(row: u32, t: u32, in_base: u32) -> f32 {
             let elem = row_base + j;
             let pair = unpack2x16float(weight_words[elem >> 1u]);
             let w = select(pair.x, pair.y, (elem & 1u) == 1u);
+            acc = acc + w * input[in_base + j];
+            j = j + COOP_WG;
+        }
+    } else if params.weight_ggml_type == GGML_TYPE_BF16 {
+        let row_base = row * params.weight_row_elems;
+        var j = t;
+        loop {
+            if j >= params.n_in {
+                break;
+            }
+            let elem = row_base + j;
+            let word = weight_words[elem >> 1u];
+            let bits16 = select(word & 0xFFFFu, word >> 16u, (elem & 1u) == 1u);
+            let w = bitcast<f32>(bits16 << 16u);
             acc = acc + w * input[in_base + j];
             j = j + COOP_WG;
         }
