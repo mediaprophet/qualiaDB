@@ -391,7 +391,7 @@ pub fn run_optimize_pipeline(
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
     if !skip_passport {
-        let _ = run_hardware_passport(true, 512, None, true);
+        let _ = run_hardware_passport(true, 512, None, true, None, 16);
     }
 
     let out_dir = out.unwrap_or_else(|| {
@@ -430,14 +430,19 @@ pub fn run_optimize_pipeline(
 }
 
 /// Probe / load HardwarePassport and print the ranked circuit matrix.
+///
+/// `decode_proxy`: `None` = skip; `Some(None)` = auto-find smollm; `Some(Some(path))` = use path.
 pub fn run_hardware_passport(
     reprobe: bool,
     gemv_n: usize,
     cache: Option<PathBuf>,
     apply_env_hint: bool,
+    decode_proxy: Option<Option<PathBuf>>,
+    decode_proxy_tokens: u32,
 ) -> Result<(), String> {
     use qualia_core_db::hardware_passport::{
-        backend_env_token, default_cache_path, load_or_probe, write_passport, HardwarePassport,
+        attach_decode_proxy_via_subprocess, backend_env_token, default_cache_path,
+        default_decode_proxy_model, load_or_probe, write_passport, HardwarePassport,
         PASSPORT_VERSION, topology_key,
     };
     use qualia_core_db::device_benchmark::benchmark_devices;
@@ -451,7 +456,7 @@ pub fn run_hardware_passport(
     println!("├─ GEMV n: {gemv_n}");
     println!("└─ Reprobe: {reprobe}");
 
-    let (passport, was_cached) = if reprobe {
+    let (mut passport, was_cached) = if reprobe {
         if path.exists() {
             let _ = std::fs::remove_file(&path);
         }
@@ -470,12 +475,48 @@ pub fn run_hardware_passport(
             matrix,
             preferred_inference_backend: preferred,
             probe_gemv_n: gemv_n,
+            decode_proxy_model: None,
+            decode_proxy_tokens: 0,
         };
         write_passport(&fresh, &path)?;
         (fresh, false)
     } else {
         load_or_probe(&path, gemv_n)
     };
+
+    // Optional decode-proxy ranking (subprocess per backend — shared_gpu is process-wide).
+    if let Some(model_opt) = decode_proxy {
+        let model = match model_opt {
+            Some(p) => p,
+            None => default_decode_proxy_model().ok_or_else(|| {
+                "no decode-proxy model: pass --decode-proxy <path> or set QUALIA_LLM_PROFILE_MODEL / place smollm under C:/LLM_Models/P64".to_string()
+            })?,
+        };
+        if !model.is_file() {
+            return Err(format!("decode-proxy model not found: {}", model.display()));
+        }
+        let exe = std::env::current_exe().map_err(|e| format!("current_exe: {e}"))?;
+        println!(
+            "├─ Decode-proxy: {} ({} tokens, child process per GPU backend)…",
+            model.display(),
+            decode_proxy_tokens
+        );
+        attach_decode_proxy_via_subprocess(
+            &mut passport.matrix,
+            &model,
+            decode_proxy_tokens,
+            &exe,
+        );
+        passport.decode_proxy_model = Some(model.display().to_string());
+        passport.decode_proxy_tokens = decode_proxy_tokens;
+        passport.preferred_inference_backend = passport
+            .matrix
+            .best()
+            .and_then(|c| backend_env_token(&c.backend))
+            .map(str::to_string);
+        write_passport(&passport, &path)?;
+        println!("├─ Decode-proxy ranking applied + cache updated");
+    }
 
     println!(
         "├─ Source: {}",
@@ -486,6 +527,12 @@ pub fn run_hardware_passport(
         }
     );
     println!("├─ Key: {}", passport.key);
+    if let Some(ref m) = passport.decode_proxy_model {
+        println!(
+            "├─ Decode-proxy model: {m} ({} tokens)",
+            passport.decode_proxy_tokens
+        );
+    }
     println!("{}", passport.matrix.summary());
 
     if let Some(ref pref) = passport.preferred_inference_backend {
@@ -494,8 +541,14 @@ pub fn run_hardware_passport(
     if let Some(best) = passport.matrix.best() {
         println!("Selected inference circuit (measured):");
         println!(
-            "  └─ {} [{}] {:.3} ms/GEMV  {:.1} GFLOP/s",
-            best.label, best.backend, best.ms_per_gemv, best.gflops
+            "  └─ {} [{}] {:.3} ms/GEMV  {:.1} GFLOP/s{}",
+            best.label,
+            best.backend,
+            best.ms_per_gemv,
+            best.gflops,
+            best.decode_proxy_tok_s
+                .map(|t| format!("  {t:.2} tok/s decode-proxy"))
+                .unwrap_or_default()
         );
         let hint = passport
             .preferred_inference_backend
@@ -517,6 +570,20 @@ pub fn run_hardware_passport(
             println!("  └─ Best circuit is CPU — keep GPU default; no QUALIA_WGPU_BACKEND pin");
         }
     }
+    Ok(())
+}
+
+/// Short resident decode for passport child processes. Machine-readable line on stdout.
+pub fn run_decode_proxy(model: &Path, tokens: u32) -> Result<(), String> {
+    use qualia_core_db::hardware_passport::measure_decode_proxy_tok_s;
+    if !model.is_file() {
+        return Err(format!("model not found: {}", model.display()));
+    }
+    let backend = std::env::var("QUALIA_WGPU_BACKEND").unwrap_or_else(|_| "auto".into());
+    let tok_s = measure_decode_proxy_tok_s(model, tokens)
+        .ok_or_else(|| "decode-proxy measurement failed (see RUST_LOG)".to_string())?;
+    // Stable line for parent parser (`parse_decode_proxy_line`).
+    println!("DECODE_PROXY tok_s={tok_s:.4} backend={backend} tokens={tokens}");
     Ok(())
 }
 

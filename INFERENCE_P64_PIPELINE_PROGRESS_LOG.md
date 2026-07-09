@@ -433,3 +433,38 @@ SoA Q4 p64 + sticky engine + coop GEMV ≈ **2.6 tok/s** decode on 3B (was ~2.0)
 - Passport decode-proxy
 - Gemma graph (deferred)
 
+
+---
+
+## 2026-07-09 — Decode-proxy passport ranking (Grok)
+
+### Status
+**done**
+
+### What shipped
+| Piece | Detail |
+|-------|--------|
+| Passport v2 | `decode_proxy_tok_s` per circuit; `decode_proxy_model` / tokens on passport |
+| Ranking | When any discrete GPU has a decode proxy, rank by **tok/s** (not GEMV µs) |
+| CLI | `llm decode-proxy <model> --tokens N` → `DECODE_PROXY tok_s=…` |
+| CLI | `llm passport --decode-proxy [path] --decode-proxy-tokens 16` (subprocess per backend) |
+| Isolation | Child process per `QUALIA_WGPU_BACKEND` (shared_gpu is process-wide) |
+| iGPU honesty | Decode proxy only on **DiscreteGpu** rows (no false iGPU inheritance) |
+
+### Measured (A2000 + smollm f16.p64, 12 decode tokens)
+| Backend | Decode-proxy tok/s |
+|---------|-------------------:|
+| **Vulkan** | **29.53** |
+| Dx12 | 26.53 |
+
+Passport selected **vulkan** after ranking. GEMV also favoured Vulkan (0.119 vs 0.138 ms).
+
+### Operator
+```powershell
+qualia-cli llm passport --reprobe --decode-proxy C:\LLM_Models\P64\smollm2-360m-instruct-q8_0.f16.p64 --apply-env-hint
+# → QUALIA_WGPU_BACKEND=vulkan (on this host)
+```
+
+### ⚑ Human
+Ready for your pre-Gemma discussion. Gemma still deferred.
+

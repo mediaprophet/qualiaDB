@@ -200,6 +200,7 @@ mod tests {
                 gflops: 1.0,
                 upload_gbps: 1.0,
                 rel_score: 1.0,
+                decode_proxy_tok_s: None,
             }]
         }
     }

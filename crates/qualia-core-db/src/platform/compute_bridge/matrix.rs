@@ -150,6 +150,7 @@ impl ProbeableBackend for CpuBackend {
             gflops: 0.0, // throughput proxy not derived here; ranking uses ms
             upload_gbps: f64::INFINITY, // data already in the CPU pool — no transfer
             rel_score: 1.0,
+            decode_proxy_tok_s: None,
         }]
     }
 }

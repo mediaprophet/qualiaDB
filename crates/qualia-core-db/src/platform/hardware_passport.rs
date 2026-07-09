@@ -16,13 +16,15 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use crate::device_benchmark::{benchmark_devices, CapabilityMatrix};
+use crate::device_benchmark::{benchmark_devices, CapabilityMatrix, CircuitKind};
 use crate::host_topology::{probe_host_topology, HostTopology};
+use std::path::Path;
 
 /// Bump when the passport layout changes (older blobs are then ignored → re-probe).
-pub const PASSPORT_VERSION: u32 = 1;
+/// v2: optional `decode_proxy_tok_s` per circuit + ranking by real decode when measured.
+pub const PASSPORT_VERSION: u32 = 2;
 
 /// Default representative GEMV side length for the cached benchmark.
 pub const PASSPORT_GEMV_N: usize = 2048;
@@ -42,6 +44,12 @@ pub struct HardwarePassport {
     /// GEMV n used for the matrix (for operator honesty).
     #[serde(default)]
     pub probe_gemv_n: usize,
+    /// Model path used for decode-proxy ranking (if any).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decode_proxy_model: Option<String>,
+    /// Decode tokens used for the proxy (0 = none).
+    #[serde(default)]
+    pub decode_proxy_tokens: u32,
 }
 
 /// Stable key from the discovered adapter identifiers (sorted `vendor:device`). Identifiers (handles),
@@ -103,9 +111,166 @@ pub fn load_or_probe(path: &Path, gemv_n: usize) -> (HardwarePassport, bool) {
         matrix,
         preferred_inference_backend: preferred,
         probe_gemv_n: gemv_n,
+        decode_proxy_model: None,
+        decode_proxy_tokens: 0,
     };
     let _ = write_passport(&fresh, path);
     (fresh, false)
+}
+
+/// Default small-model candidates for decode-proxy ranking (first existing wins).
+pub fn default_decode_proxy_model() -> Option<std::path::PathBuf> {
+    if let Ok(p) = std::env::var("QUALIA_LLM_PROFILE_MODEL") {
+        let pb = std::path::PathBuf::from(p);
+        if pb.is_file() {
+            return Some(pb);
+        }
+    }
+    const CANDIDATES: &[&str] = &[
+        r"C:\LLM_Models\P64\smollm2-360m-instruct-q8_0.f16.p64",
+        r"C:\LLM_Models\P64\smollm2-360m-instruct-q8_0.p64",
+        r"C:\LLM_Models\GGUF\smollm2-360m-instruct-q8_0.gguf",
+        r"C:\LLM_Models\GGUF\lmstudio-community\smollm2-360m-instruct-q8_0.gguf",
+    ];
+    CANDIDATES
+        .iter()
+        .map(std::path::PathBuf::from)
+        .find(|p| p.is_file())
+}
+
+/// Run a short resident decode on `model` under the **current** process backend.
+/// Returns tok/s (engine decode metrics) or `None` on failure.
+///
+/// Safe from CLI (which already owns a Tokio multi-thread runtime): nested
+/// `block_on` panics, so we hop to a fresh OS thread for the measurement.
+pub fn measure_decode_proxy_tok_s(model: &Path, n_tokens: u32) -> Option<f64> {
+    crate::wgsl_forge::dispatch::ensure_cuda_runtime_path();
+    let n = n_tokens.max(8).min(64);
+    let path = model.to_path_buf();
+    // Greedy, bounded — comparable across backends.
+    crate::llm_bench::set_sampler_config(None);
+    let path_str = path.to_str()?.to_string();
+    let join = std::thread::Builder::new()
+        .name("decode-proxy".into())
+        .spawn(move || {
+            crate::llm_bench::decode_with_metrics_blocking(
+                &path_str,
+                "The capital of France is",
+                n,
+            )
+        })
+        .ok()?
+        .join();
+    match join {
+        Ok(Ok((_text, tok_s))) if tok_s > 0.0 => Some(tok_s),
+        Ok(Ok(_)) => None,
+        Ok(Err(e)) => {
+            log::warn!("decode_proxy|fail|{e}");
+            None
+        }
+        Err(_) => {
+            log::warn!("decode_proxy|thread_panic");
+            None
+        }
+    }
+}
+
+/// Attach decode-proxy tok/s to GPU circuits by spawning a child process per backend
+/// (shared_gpu is process-wide OnceLock — cannot switch backends in-process).
+///
+/// `self_exe` should be the current CLI binary (`std::env::current_exe()`).
+/// Child runs: `llm decode-proxy <model> --tokens N` with `QUALIA_WGPU_BACKEND` set.
+pub fn attach_decode_proxy_via_subprocess(
+    matrix: &mut CapabilityMatrix,
+    model: &Path,
+    n_tokens: u32,
+    self_exe: &Path,
+) {
+    use std::process::Command;
+    let n = n_tokens.max(8).min(64);
+    // Measure only **discrete** GPU rows (iGPU would inherit a false tok/s if we
+    // keyed only by backend token — wgpu picks the discrete card under QUALIA_WGPU_BACKEND).
+    let mut seen_tokens = std::collections::HashSet::<String>::new();
+    for c in matrix.circuits.iter_mut() {
+        if c.kind != CircuitKind::DiscreteGpu {
+            continue;
+        }
+        let Some(token) = backend_env_token(&c.backend) else {
+            continue;
+        };
+        if !seen_tokens.insert(token.to_string()) {
+            continue;
+        }
+        let output = Command::new(self_exe)
+            .args([
+                "llm",
+                "decode-proxy",
+                &model.display().to_string(),
+                "--tokens",
+                &n.to_string(),
+            ])
+            .env("QUALIA_WGPU_BACKEND", token)
+            .env("QUALIA_P64_INTEGRITY", "metadata")
+            .env("RUST_LOG", "error")
+            .output();
+        let tok_s = match output {
+            Ok(o) if o.status.success() => {
+                let stdout = String::from_utf8_lossy(&o.stdout);
+                parse_decode_proxy_line(&stdout)
+            }
+            Ok(o) => {
+                log::warn!(
+                    "decode_proxy|child_fail|backend={token}|{}",
+                    String::from_utf8_lossy(&o.stderr)
+                );
+                None
+            }
+            Err(e) => {
+                log::warn!("decode_proxy|spawn_fail|backend={token}|{e}");
+                None
+            }
+        };
+        c.decode_proxy_tok_s = tok_s;
+        if let Some(t) = tok_s {
+            log::info!("decode_proxy|ok|backend={token}|{t:.2} tok/s");
+        }
+    }
+    // Copy to other discrete rows that share the same backend token only.
+    let mut by_token: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
+    for c in &matrix.circuits {
+        if c.kind != CircuitKind::DiscreteGpu {
+            continue;
+        }
+        if let (Some(tok), Some(t)) = (backend_env_token(&c.backend), c.decode_proxy_tok_s) {
+            by_token.insert(tok.to_string(), t);
+        }
+    }
+    for c in matrix.circuits.iter_mut() {
+        if c.kind != CircuitKind::DiscreteGpu || c.decode_proxy_tok_s.is_some() {
+            continue;
+        }
+        if let Some(tok) = backend_env_token(&c.backend) {
+            if let Some(&t) = by_token.get(tok) {
+                c.decode_proxy_tok_s = Some(t);
+            }
+        }
+    }
+    matrix.apply_decode_proxy_ranking();
+}
+
+/// Parse `DECODE_PROXY tok_s=12.34 backend=dx12` from child stdout.
+pub fn parse_decode_proxy_line(stdout: &str) -> Option<f64> {
+    for line in stdout.lines() {
+        let line = line.trim();
+        if let Some(rest) = line.strip_prefix("DECODE_PROXY ") {
+            for part in rest.split_whitespace() {
+                if let Some(v) = part.strip_prefix("tok_s=") {
+                    return v.parse().ok();
+                }
+            }
+        }
+    }
+    None
 }
 
 /// Convenience: fast-boot against the default cache path + GEMV size.
@@ -192,6 +357,7 @@ mod tests {
                     gflops: 19.5,
                     upload_gbps: 3.3,
                     rel_score: 1.0,
+                    decode_proxy_tok_s: Some(18.0),
                 },
                 CircuitBench {
                     label: "CPU native".into(),
@@ -201,6 +367,7 @@ mod tests {
                     gflops: 0.4,
                     upload_gbps: f64::INFINITY, // in-pool — must survive the round-trip
                     rel_score: 0.02,
+                    decode_proxy_tok_s: None,
                 },
             ],
             gemv_n: 2048,
@@ -213,6 +380,8 @@ mod tests {
             matrix,
             preferred_inference_backend: Some("dx12".into()),
             probe_gemv_n: 2048,
+            decode_proxy_model: None,
+            decode_proxy_tokens: 0,
         }
     }
 
@@ -254,6 +423,46 @@ mod tests {
             read_passport(&path).is_none(),
             "stale version must be rejected → re-probe"
         );
+    }
+
+    #[test]
+    fn parse_decode_proxy_line_extracts_tok_s() {
+        let s = "noise\nDECODE_PROXY tok_s=12.50 backend=dx12\nmore\n";
+        assert!((parse_decode_proxy_line(s).unwrap() - 12.5).abs() < 1e-9);
+        assert!(parse_decode_proxy_line("nope").is_none());
+    }
+
+    #[test]
+    fn decode_proxy_ranking_prefers_higher_tok_s() {
+        let mut matrix = CapabilityMatrix {
+            circuits: vec![
+                CircuitBench {
+                    label: "fast gemv slow decode".into(),
+                    kind: CircuitKind::DiscreteGpu,
+                    backend: "Vulkan".into(),
+                    ms_per_gemv: 0.1,
+                    gflops: 50.0,
+                    upload_gbps: 4.0,
+                    rel_score: 1.0,
+                    decode_proxy_tok_s: Some(5.0),
+                },
+                CircuitBench {
+                    label: "slower gemv fast decode".into(),
+                    kind: CircuitKind::DiscreteGpu,
+                    backend: "Dx12".into(),
+                    ms_per_gemv: 0.2,
+                    gflops: 25.0,
+                    upload_gbps: 4.0,
+                    rel_score: 0.5,
+                    decode_proxy_tok_s: Some(18.0),
+                },
+            ],
+            gemv_n: 512,
+            npu_probed: false,
+        };
+        matrix.apply_decode_proxy_ranking();
+        assert_eq!(matrix.best().unwrap().backend, "Dx12");
+        assert!((matrix.best().unwrap().rel_score - 1.0).abs() < 1e-9);
     }
 
     /// Real fast-boot path: first call probes + caches (was_cached=false); second loads (true).

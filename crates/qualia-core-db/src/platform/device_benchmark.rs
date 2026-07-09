@@ -56,8 +56,13 @@ pub struct CircuitBench {
     /// signal); `f64::INFINITY` for the CPU (data is already in its pool — no transfer). Decode that
     /// streams weights to a device pays this every token; in-pool compute does not.
     pub upload_gbps: f64,
-    /// Relative score in [0,1]: fastest circuit = 1.0, others = fastest_ms / this_ms.
+    /// Relative score in [0,1]: fastest circuit = 1.0, others = fastest_ms / this_ms
+    /// (or highest decode_proxy_tok_s when decode ranking is active).
     pub rel_score: f64,
+    /// Optional real-decode proxy (tok/s) from a short resident decode on a small model.
+    /// When present for ≥1 GPU circuit, passport ranking prefers this over GEMV µs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decode_proxy_tok_s: Option<f64>,
 }
 
 /// The measured capability matrix — circuits sorted fastest-first. This IS the priority order.
@@ -87,8 +92,12 @@ impl CapabilityMatrix {
             } else {
                 format!("{:.1} GB/s up", c.upload_gbps)
             };
+            let decode = match c.decode_proxy_tok_s {
+                Some(t) => format!("{t:.2} tok/s"),
+                None => "—".into(),
+            };
             s.push_str(&format!(
-                "  {}. {:<28} [{:?}/{}] {:>8.3} ms  {:>7.1} GFLOP/s  {:>12}  score {:.3}\n",
+                "  {}. {:<28} [{:?}/{}] {:>8.3} ms  {:>7.1} GFLOP/s  {:>12}  decode {:>10}  score {:.3}\n",
                 i + 1,
                 c.label,
                 c.kind,
@@ -96,10 +105,50 @@ impl CapabilityMatrix {
                 c.ms_per_gemv,
                 c.gflops,
                 upload,
+                decode,
                 c.rel_score,
             ));
         }
         s
+    }
+
+    /// Re-rank circuits: prefer higher `decode_proxy_tok_s` when present on any GPU row;
+    /// otherwise keep GEMV ranking. CPU rows without decode stay at the bottom of GPU ranking.
+    pub fn apply_decode_proxy_ranking(&mut self) {
+        let any_decode = self
+            .circuits
+            .iter()
+            .any(|c| c.decode_proxy_tok_s.is_some() && c.kind != CircuitKind::Cpu);
+        if !any_decode {
+            return;
+        }
+        self.circuits.sort_by(|a, b| {
+            let ta = a.decode_proxy_tok_s.unwrap_or(-1.0);
+            let tb = b.decode_proxy_tok_s.unwrap_or(-1.0);
+            // Higher tok/s first; unmeasured (-1) after measured.
+            match tb.partial_cmp(&ta).unwrap_or(std::cmp::Ordering::Equal) {
+                std::cmp::Ordering::Equal => a
+                    .ms_per_gemv
+                    .partial_cmp(&b.ms_per_gemv)
+                    .unwrap_or(std::cmp::Ordering::Equal),
+                o => o,
+            }
+        });
+        if let Some(best_t) = self
+            .circuits
+            .iter()
+            .filter_map(|c| c.decode_proxy_tok_s)
+            .fold(None, |acc: Option<f64>, t| {
+                Some(acc.map(|a| a.max(t)).unwrap_or(t))
+            })
+        {
+            for c in &mut self.circuits {
+                c.rel_score = match c.decode_proxy_tok_s {
+                    Some(t) if best_t > 0.0 => t / best_t,
+                    _ => 0.0,
+                };
+            }
+        }
     }
 }
 
@@ -330,6 +379,7 @@ pub fn benchmark_devices(n: usize) -> CapabilityMatrix {
             gflops: gflops(n, ms),
             upload_gbps,
             rel_score: 1.0, // filled after sort
+            decode_proxy_tok_s: None,
         });
     }
 
@@ -343,6 +393,7 @@ pub fn benchmark_devices(n: usize) -> CapabilityMatrix {
         gflops: gflops(n, cpu_ms),
         upload_gbps: f64::INFINITY, // data already in the CPU's pool — no transfer
         rel_score: 1.0,
+        decode_proxy_tok_s: None,
     });
 
     // Rank fastest-first and fill relative scores.

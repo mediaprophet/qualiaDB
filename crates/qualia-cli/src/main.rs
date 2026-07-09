@@ -1292,6 +1292,21 @@ pub enum LlmAction {
         /// If set, write `QUALIA_WGPU_BACKEND=<best>` hint line for shells
         #[arg(long)]
         apply_env_hint: bool,
+        /// Run a short real decode on this model (or auto-find smollm) per GPU backend and
+        /// re-rank the passport by measured tok/s (subprocess per backend).
+        #[arg(long)]
+        decode_proxy: Option<Option<PathBuf>>,
+        /// Decode tokens for --decode-proxy (default 16)
+        #[arg(long, default_value_t = 16)]
+        decode_proxy_tokens: u32,
+    },
+    /// Short resident decode; prints `DECODE_PROXY tok_s=… backend=…` (for passport child probes).
+    DecodeProxy {
+        /// Model path (.p64 preferred)
+        model: PathBuf,
+        /// Decode token budget (default 16)
+        #[arg(long, default_value_t = 16)]
+        tokens: u32,
     },
 }
 
@@ -1534,13 +1549,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     gemv_n,
                     cache,
                     apply_env_hint,
+                    decode_proxy,
+                    decode_proxy_tokens,
                 } => {
                     llm_testing::run_hardware_passport(
                         *reprobe,
                         *gemv_n,
                         cache.clone(),
                         *apply_env_hint,
+                        decode_proxy.clone(),
+                        *decode_proxy_tokens,
                     )?;
+                }
+                LlmAction::DecodeProxy { model, tokens } => {
+                    llm_testing::run_decode_proxy(model, *tokens)?;
                 }
             }
         }

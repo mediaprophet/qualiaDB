@@ -194,6 +194,7 @@ mod tests {
                 5.0
             },
             rel_score: 1.0,
+            decode_proxy_tok_s: None,
         }
     }
 
