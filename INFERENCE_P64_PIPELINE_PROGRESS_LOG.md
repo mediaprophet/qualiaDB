@@ -118,6 +118,37 @@ None. Old `.q42.json` files from prior converts (if any) are obsolete — re-con
 None.
 
 ### Next
-1. Measure f16 vs quant tok/s
-2. CUDA/WMMA on prefill product path
+1. Measure f16 vs quant tok/s **using** `a0_decode_profile` + passport (not ad-hoc)
+2. CUDA/WMMA on prefill product path **via** forge `gemm_f32_tc` / certify — not a new dispatch stack
 3. SoA Q4_K convert layout
+4. Use full toolkit map in remediation plan §0-A
+
+---
+
+## 2026-07-09 — Principal steer: use the in-repo optimization toolkit (Grok)
+
+### Status
+**noted and written into the plan** (no new kernel this entry).
+
+### What was recorded
+Timothy pointed at `docs/manuals/qualia_db_functionality_manual.md` as the reminder that Qualia
+already has a large optim stack. The thin overview manual is the map; the *operating* optim
+docs are:
+
+- `p64-q42-inference-pipeline.md` — P64 path + **Forge boundary** (certify ≠ own decode)
+- `wgsl-forge.md` — generate / validate / certify / tune / auto-tune-all
+- `inference-tuning.md` — resident decode/weights, FFN fusion, coop GEMV, GPU top-k, smoke gates
+- `model-compression.md` — PTQ/prune independent of GGUF
+- `acceleration-integration-map.md` + `WGPU_UPSTREAM_TRACKING.md` — migration + tensor cores
+
+Remediation plan gained **§0-A Optimization toolkit** with a composition rule:
+measure with harness + passport; certify with forge; convert-time layouts; engine owns decode
+until a toggle-swapped certified kernel lands.
+
+### ⚑ Human
+None — steer locked.
+
+### Next execution slice (when go)
+1. `llm passport` + `a0_decode_profile` on **p64** smollm2 (and f16 if present) for honest baseline
+2. Wire one prefill matmul through `dispatch::gemm_f32_tc` behind toggle, certify on A2000
+3. Only then SoA Q4_K layout work
