@@ -415,6 +415,30 @@ fn push_decode_stream_delta(
     let _ = tx.send(delta);
 }
 
+/// Load sibling `.q42.cbor-ld` (if present) and merge its stop-token set into `tok`.
+/// Also tries preferring a sibling `.p64` path's helper when `model_path` is a GGUF
+/// that has already been converted beside it.
+fn apply_model_helper_stops(model_path: &str, tok: &mut crate::gguf_sharder::GgufTokenizer) {
+    let path = std::path::Path::new(model_path);
+    // Direct: path is already .p64 (or any path with a sibling helper).
+    if let Ok(Some(h)) = crate::model_helper::ModelHelper::load_beside_p64(path) {
+        h.apply_stops_to_tokenizer(tok);
+        return;
+    }
+    // Prefer converted sibling: foo.gguf → foo.p64 + foo.q42.cbor-ld
+    if path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.eq_ignore_ascii_case("gguf"))
+        .unwrap_or(false)
+    {
+        let p64 = path.with_extension("p64");
+        if let Ok(Some(h)) = crate::model_helper::ModelHelper::load_beside_p64(&p64) {
+            h.apply_stops_to_tokenizer(tok);
+        }
+    }
+}
+
 /// Outcome of one topology-draft accept attempt (B3.1d).
 enum TopologyDraftStep {
     NoDraft,
@@ -875,7 +899,7 @@ impl LocalLlmAgent {
                     .as_ref()
                     .map(|m| crate::p64_weight::has_p64_magic(&m[..]))
                     .unwrap_or(false);
-                let tok = engine
+                let mut tok = engine
                     .gguf_mmap
                     .as_ref()
                     .map(|m| {
@@ -891,6 +915,8 @@ impl LocalLlmAgent {
                         }
                     })
                     .unwrap_or_default();
+                // Sibling `.q42.cbor-ld` helper (convert-time stop set / chat metadata).
+                apply_model_helper_stops(&model_path, &mut tok);
 
                 // Parse tensor-info section → real embedding lookup.
                 let tensor_idx = engine.gguf_mmap.as_ref().and_then(|m| {
@@ -1696,7 +1722,7 @@ impl LocalLlmAgent {
                     .map(|m| crate::p64_weight::has_p64_magic(&m[..]))
                     .unwrap_or(false);
 
-                let tok = engine
+                let mut tok = engine
                     .gguf_mmap
                     .as_ref()
                     .map(|m| {
@@ -1712,6 +1738,7 @@ impl LocalLlmAgent {
                         }
                     })
                     .unwrap_or_default();
+                apply_model_helper_stops(&model_path, &mut tok);
 
                 // Parse tensor-info section → real embedding lookup.
                 let tensor_idx = engine.gguf_mmap.as_ref().and_then(|m| {

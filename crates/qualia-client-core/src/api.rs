@@ -2138,28 +2138,46 @@ pub async fn discover_models() -> Result<Vec<llm_offload::ModelInfo>, String> {
             .file_name()
             .map(|n| n.to_string_lossy().to_string())
             .unwrap_or_default();
-        if !path.extension().map(|e| e == "gguf").unwrap_or(false)
-            || name.to_ascii_lowercase().contains("mmproj")
-        {
+        let ext = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        if (ext != "gguf" && ext != "p64") || name.to_ascii_lowercase().contains("mmproj") {
             return;
         }
-        let key = path.to_string_lossy().to_ascii_lowercase();
+        // Prefer converted p64 when listing a GGUF that has a sibling container.
+        let effective: PathBuf = if ext == "gguf" {
+            let p64 = path.with_extension("p64");
+            if p64.is_file() {
+                p64
+            } else {
+                path.to_path_buf()
+            }
+        } else {
+            path.to_path_buf()
+        };
+        let name = effective
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or(name);
+        let key = effective.to_string_lossy().to_ascii_lowercase();
         if !seen.insert(key) {
             return;
         }
-        let display_name = if path.starts_with(&models_dir) {
+        let display_name = if effective.starts_with(&models_dir) {
             name
         } else {
-            path.to_string_lossy().into_owned()
+            effective.to_string_lossy().into_owned()
         };
         let is_active = active_path
             .as_ref()
-            .map(|active| paths_refer_to_same_file(active, path))
+            .map(|active| paths_refer_to_same_file(active, &effective))
             .unwrap_or(false);
         models.push(llm_offload::ModelInfo {
             name: display_name,
             is_active,
-            avatar_type: if path.starts_with(&models_dir) {
+            avatar_type: if effective.starts_with(&models_dir) {
                 "installed".to_string()
             } else {
                 "local".to_string()
@@ -2170,12 +2188,10 @@ pub async fn discover_models() -> Result<Vec<llm_offload::ModelInfo>, String> {
     if let Ok(entries) = std::fs::read_dir(&models_dir) {
         for entry in entries.filter_map(Result::ok) {
             let path = entry.path();
-            if path.extension().map(|e| e == "gguf").unwrap_or(false) {
+            let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+            if ext == "gguf" || ext == "p64" {
                 push_model(&path);
-            } else if path
-                .extension()
-                .map(|e| e == "json")
-                .unwrap_or(false)
+            } else if ext == "json"
                 && path
                     .file_name()
                     .and_then(|n| n.to_str())
@@ -2396,6 +2412,255 @@ pub fn run_chat_inference_detailed(
 
 pub fn cancel_chat_inference() {
     crate::chat_inference::request_cancel_inference();
+}
+
+// ── Agent roster (software agents defined UNDER the principal) ─────────────────
+//
+// The chat-graph is human-first; a software agent is invoked into a conversation as the person's
+// instrument. Every agent is defined under the principal, with a backend that is either the native
+// local engine or a remote provider reached over MCP. Local is preferred; remote is opt-in + gated.
+
+fn agent_roster_storage() -> Result<String, String> {
+    let state = crate::state::APP_STATE.get().ok_or("Application not initialized")?;
+    let storage = state
+        .config
+        .lock()
+        .map_err(|e| e.to_string())?
+        .storage_path
+        .clone();
+    Ok(storage)
+}
+
+pub fn agent_roster_list() -> Result<serde_json::Value, String> {
+    let storage = agent_roster_storage()?;
+    let roster = crate::agent_registry::load_roster(Path::new(&storage));
+    serde_json::to_value(roster).map_err(|e| e.to_string())
+}
+
+pub fn agent_roster_get(slug: String) -> Result<serde_json::Value, String> {
+    let storage = agent_roster_storage()?;
+    match crate::agent_registry::get_agent(Path::new(&storage), &slug) {
+        Some(a) => serde_json::to_value(a).map_err(|e| e.to_string()),
+        None => Ok(serde_json::Value::Null),
+    }
+}
+
+pub fn agent_roster_upsert(agent_json: String) -> Result<(), String> {
+    let storage = agent_roster_storage()?;
+    let agent: crate::agent_registry::AgentDefinition =
+        serde_json::from_str(&agent_json).map_err(|e| format!("invalid agent JSON: {e}"))?;
+    crate::agent_registry::upsert_agent(Path::new(&storage), agent)
+}
+
+pub fn agent_roster_remove(slug: String) -> Result<(), String> {
+    let storage = agent_roster_storage()?;
+    crate::agent_registry::remove_agent(Path::new(&storage), &slug)
+}
+
+/// Convenience: create/update a REMOTE-MCP agent from primitives so the UI never hand-builds the
+/// backend enum. `transport_kind` ∈ `"tcp"` | `"http"` | `"stdio"`; `endpoint` is `host:port` / a URL /
+/// a command line respectively.
+pub fn agent_roster_add_remote(
+    slug: String,
+    display_name: String,
+    transport_kind: String,
+    endpoint: String,
+    infer_tool: Option<String>,
+    model: Option<String>,
+    system_prompt: Option<String>,
+) -> Result<(), String> {
+    use crate::agent_registry::{AgentBackendSpec, McpTransport};
+    if slug.trim().is_empty() {
+        return Err("agent slug is required".to_string());
+    }
+    let transport = match transport_kind.to_lowercase().as_str() {
+        "tcp" => {
+            let (host, port) = endpoint
+                .rsplit_once(':')
+                .ok_or_else(|| "TCP endpoint must be host:port".to_string())?;
+            let port: u16 = port
+                .trim()
+                .parse()
+                .map_err(|_| "invalid TCP port".to_string())?;
+            McpTransport::Tcp {
+                host: host.trim().to_string(),
+                port,
+            }
+        }
+        "http" => McpTransport::Http {
+            url: endpoint.trim().to_string(),
+        },
+        "stdio" => {
+            let mut parts = endpoint.split_whitespace().map(|s| s.to_string());
+            let command = parts
+                .next()
+                .ok_or_else(|| "stdio endpoint needs a command".to_string())?;
+            McpTransport::Stdio {
+                command,
+                args: parts.collect(),
+            }
+        }
+        other => return Err(format!("unknown transport '{other}' (use tcp|http|stdio)")),
+    };
+    let backend = AgentBackendSpec::RemoteMcp {
+        endpoint: endpoint.trim().to_string(),
+        transport,
+        infer_tool: infer_tool.filter(|s| !s.trim().is_empty()),
+        model: model.filter(|s| !s.trim().is_empty()),
+    };
+    let mut agent = crate::agent_registry::AgentDefinition::new(
+        slug,
+        display_name,
+        "Remote agent reached over MCP.".to_string(),
+        backend,
+        system_prompt.unwrap_or_default(),
+    );
+    agent.enabled = true;
+    let storage = agent_roster_storage()?;
+    crate::agent_registry::upsert_agent(Path::new(&storage), agent)
+}
+
+/// Backend kind of a roster agent: `"local"` | `"remote"` (unknown/empty slug → `"local"`).
+pub fn agent_backend_kind(slug: Option<String>) -> Result<String, String> {
+    let slug = match slug {
+        Some(s) if !s.is_empty() => s,
+        _ => return Ok("local".to_string()),
+    };
+    let storage = agent_roster_storage()?;
+    match crate::agent_registry::get_agent(Path::new(&storage), &slug) {
+        Some(a) => Ok(match a.backend {
+            crate::agent_registry::AgentBackendSpec::LocalEngine { .. } => "local".to_string(),
+            crate::agent_registry::AgentBackendSpec::RemoteMcp { .. } => "remote".to_string(),
+        }),
+        None => Ok("local".to_string()),
+    }
+}
+
+/// Run one turn against a REMOTE-MCP agent from the roster (native-only). Privacy-gated via the job
+/// router (Classified/sanctuary never leaves the device), then issues an MCP `tools/call` to the
+/// provider and appends the reply as an agent message. Returns a ChatInferenceResult-shaped JSON.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn run_remote_agent_turn(
+    session_id: String,
+    slug: String,
+    prompt: String,
+) -> Result<serde_json::Value, String> {
+    use crate::agent_registry::AgentBackendSpec;
+    let storage = agent_roster_storage()?;
+    let agent = crate::agent_registry::get_agent(Path::new(&storage), &slug)
+        .ok_or_else(|| format!("no agent '{slug}' in roster"))?;
+    if !agent.enabled {
+        return Ok(remote_turn_blocked(&format!(
+            "agent '{}' is disabled",
+            agent.display_name
+        )));
+    }
+    let (transport, infer_tool, model) = match &agent.backend {
+        AgentBackendSpec::RemoteMcp {
+            transport,
+            infer_tool,
+            model,
+            ..
+        } => (transport.clone(), infer_tool.clone(), model.clone()),
+        AgentBackendSpec::LocalEngine { .. } => {
+            return Err("agent is local — use the local inference path".to_string())
+        }
+    };
+
+    // Privacy-first placement: a configured remote agent implies consent, but sanctuary/Classified
+    // context must never leave the device.
+    let local_active = crate::model_lifecycle::lifecycle_label(
+        crate::model_lifecycle::get_model_lifecycle_state(),
+    ) == "Active";
+    let inputs = crate::job_router::RoutingInputs {
+        sensitivity: wellfare_core::record::SensitivityClass::Restricted,
+        local_available: local_active,
+        external_consented: true,
+        requires_capability: None,
+        local_has_capability: false,
+        estimated_cost_microcents: 0,
+    };
+    match crate::job_router::route_job(&inputs, &crate::job_router::RoutingPolicy::default()) {
+        crate::job_router::RoutingDecision::Blocked { reason }
+        | crate::job_router::RoutingDecision::NeedsConsent { reason } => {
+            return Ok(remote_turn_blocked(&reason));
+        }
+        _ => {}
+    }
+
+    let system = if agent.system_prompt.trim().is_empty() {
+        None
+    } else {
+        Some(agent.system_prompt.as_str())
+    };
+    let text = crate::remote_mcp::remote_mcp_infer(
+        &transport,
+        infer_tool.as_deref(),
+        model.as_deref(),
+        system,
+        &prompt,
+    )?;
+    if !text.trim().is_empty() {
+        let _ = append_chat_message(session_id, "agent".to_string(), text.clone());
+    }
+    Ok(serde_json::json!({
+        "text": text,
+        "committed": true,
+        "block_reason": serde_json::Value::Null,
+        "agent_backend": "remote",
+        "model_id": model,
+        "provenance_hashes": [],
+        "citations": [],
+        "tokens_generated": 0,
+        "inference_duration_ms": 0,
+    }))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn remote_turn_blocked(reason: &str) -> serde_json::Value {
+    serde_json::json!({
+        "text": "",
+        "committed": false,
+        "block_reason": reason,
+        "agent_backend": "remote",
+    })
+}
+
+/// Store a chat turn's inline CML context (`#project:` / `#topic:` / `#task:` / `[[concept]]`) into the
+/// person's inforg (their private library). No-op if the message has no tags. Returns concepts stored.
+pub fn ingest_chat_cml(session_id: String, text: String) -> Result<usize, String> {
+    let storage = agent_roster_storage()?;
+    crate::cml_context::ingest_turn(Path::new(&storage), &session_id, &text).map(|v| v.len())
+}
+
+// ── Local job scheduler — chat-curated background jobs (local-first, MCP-routed) ─────
+
+/// Schedule one agent turn as a background job (queued, off the chat thread). Routed local-first; a
+/// remote-MCP agent's turn is sent out over MCP. Returns the created job as JSON.
+pub fn schedule_agent_job(
+    session_id: String,
+    agent_slug: Option<String>,
+    prompt: String,
+) -> Result<serde_json::Value, String> {
+    let job = crate::local_job_scheduler::LocalJobScheduler::global().enqueue(
+        crate::local_job_scheduler::LocalJobKind::AgentTurn {
+            session_id,
+            agent_slug,
+            prompt,
+        },
+    )?;
+    serde_json::to_value(job).map_err(|e| e.to_string())
+}
+
+/// Snapshot of the local job queue (jobs + status counts).
+pub fn list_local_jobs() -> Result<serde_json::Value, String> {
+    let snap = crate::local_job_scheduler::LocalJobScheduler::global().snapshot()?;
+    serde_json::to_value(snap).map_err(|e| e.to_string())
+}
+
+/// Cancel a job by id (queued → cancelled; running → cooperative cancel).
+pub fn cancel_local_job(id: String) -> Result<bool, String> {
+    crate::local_job_scheduler::LocalJobScheduler::global().cancel(&id)
 }
 
 pub fn ensure_chat_session() -> Result<String, String> {
@@ -3036,6 +3301,9 @@ pub fn create_agreement(
             })
             .collect(),
         stage: crate::agreements::FormationStage::Draft,
+        jurisdiction: None,
+        intents: Vec::new(),
+        artifact_context: None,
         created_at: now,
         updated_at: now,
     };

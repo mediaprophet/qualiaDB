@@ -124,6 +124,14 @@ impl ModelHelper {
             std::fs::read(&helper_path).map_err(|e| format!("read {}: {e}", helper_path.display()))?;
         Ok(Some(Self::from_cbor_ld(&bytes)?))
     }
+
+    /// Merge stop-token ids from this helper into a loaded tokenizer.
+    ///
+    /// Used at activate time so decode stops on the convert-time stop set even
+    /// when the embedded Q42T section is v1 (eos-only) or incomplete.
+    pub fn apply_stops_to_tokenizer(&self, tok: &mut crate::gguf_sharder::GgufTokenizer) {
+        tok.merge_stop_token_ids(&self.tokenizer.stop_token_ids);
+    }
 }
 
 /// `{dir}/{stem}.q42.cbor-ld` for a given `.p64` path (preserves `.f16` in stem if present).

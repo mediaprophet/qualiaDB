@@ -35,33 +35,16 @@ fn slot() -> &'static Arc<Mutex<Option<ResidentModelSlot>>> {
 }
 
 /// Memory-map `path` and retain until [`clear_resident_model`].
+///
+/// Accepts **GGUF or P64** (sniffed by magic). Prefer calling
+/// [`mount_resident_model`]; this name remains for callers that still say "gguf".
 #[cfg(not(target_arch = "wasm32"))]
 pub fn mount_resident_gguf(
     model_id: u64,
     path: &str,
     mlock: bool,
 ) -> Result<GgufLoadReport, String> {
-    clear_resident_model();
-    let mut engine = tokio::task::block_in_place(|| {
-        tokio::runtime::Handle::current().block_on(QTensorEngine::try_new())
-    })?;
-    let report = engine.load_gguf_checked(path)?;
-    let mmap = engine
-        .gguf_mmap
-        .take()
-        .ok_or_else(|| "Internal error: GGUF mmap missing after load".to_string())?;
-    apply_mlock(&mmap, mlock);
-    let normalized = Path::new(path)
-        .canonicalize()
-        .map(|p| p.to_string_lossy().into_owned())
-        .unwrap_or_else(|_| path.to_string());
-    *slot().lock().map_err(|e| e.to_string())? = Some(ResidentModelSlot {
-        model_id,
-        gguf_path: normalized,
-        mmap,
-        report,
-    });
-    Ok(report)
+    mount_resident_model(model_id, path, mlock)
 }
 
 #[cfg(target_arch = "wasm32")]

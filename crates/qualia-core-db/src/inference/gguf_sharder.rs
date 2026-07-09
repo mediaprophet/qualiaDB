@@ -1186,6 +1186,28 @@ impl GgufTokenizer {
         &self.stop_token_ids[..self.stop_token_count as usize]
     }
 
+    /// Merge extra stop ids (e.g. from a `.q42.cbor-ld` helper) into the stop set.
+    /// Does not allocate; drops overflow past [`MAX_STOP_TOKEN_IDS`].
+    pub fn merge_stop_token_ids(&mut self, extra: &[u32]) {
+        let mut n = self.stop_token_count as usize;
+        for &id in extra {
+            if n >= MAX_STOP_TOKEN_IDS {
+                break;
+            }
+            if self.stop_token_ids[..n].contains(&id) {
+                continue;
+            }
+            self.stop_token_ids[n] = id;
+            n += 1;
+        }
+        // Always keep eos.
+        if !self.stop_token_ids[..n].contains(&self.eos_token_id) && n < MAX_STOP_TOKEN_IDS {
+            self.stop_token_ids[n] = self.eos_token_id;
+            n += 1;
+        }
+        self.stop_token_count = n as u8;
+    }
+
     /// Tokenize `text`, prepending [`bos_token_id`] when [`add_bos_token`] is set and absent.
     pub fn encode_prompt(&self, text: &str) -> Vec<u32> {
         let mut ids = self.encode(text);
@@ -1683,6 +1705,17 @@ mod tests {
         assert!(tok.is_stop_token(151645), "ChatML im_end must stop");
         assert!(!tok.is_stop_token(42), "ordinary id must not stop");
         assert!(tok.stop_tokens().len() >= 3);
+    }
+
+    #[test]
+    fn merge_stop_token_ids_from_helper() {
+        let mut tok = GgufTokenizer::default();
+        tok.eos_token_id = 2;
+        tok.rebuild_stop_token_ids();
+        tok.merge_stop_token_ids(&[128009, 2, 151645]);
+        assert!(tok.is_stop_token(128009));
+        assert!(tok.is_stop_token(151645));
+        assert!(tok.is_stop_token(2));
     }
 
     #[test]

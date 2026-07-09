@@ -520,13 +520,17 @@ fn sanitize_local_model_id(stem: &str) -> String {
     }
 }
 
-/// Discovered GGUF in a vault directory (CLI / lifecycle tooling).
+/// Discovered weight container in a vault directory (CLI / lifecycle tooling).
+///
+/// Name retained for API stability; entries may be `.gguf` **or** preferred `.p64`.
 #[derive(Debug, Clone, Serialize)]
 pub struct VaultGgufEntry {
     pub name: String,
     pub path: String,
     pub profile_id: u64,
     pub size_bytes: u64,
+    /// `p64` | `gguf` — engine prefers `p64` when both exist for the same stem.
+    pub container: String,
 }
 
 /// Exact duplicate GGUF files, grouped by content rather than filename.
@@ -548,7 +552,11 @@ impl VaultDuplicateGroup {
     }
 }
 
-/// Recursively scan `vault_dir` for `.gguf` files.
+/// Recursively scan `vault_dir` for `.p64` and `.gguf` weight containers.
+///
+/// When both exist for the same stem (e.g. `foo.p64` + `foo.gguf`), **only the
+/// `.p64` is listed** — GGUF is import-only once converted. `.f16.p64` keeps a
+/// distinct stem and is listed separately.
 pub fn scan_vault_gguf(vault_dir: &Path) -> Result<Vec<VaultGgufEntry>, std::io::Error> {
     if !vault_dir.is_dir() {
         return Err(std::io::Error::new(
@@ -556,10 +564,29 @@ pub fn scan_vault_gguf(vault_dir: &Path) -> Result<Vec<VaultGgufEntry>, std::io:
             format!("Vault directory not found: {}", vault_dir.display()),
         ));
     }
-    let mut out = Vec::new();
-    collect_vault_gguf(vault_dir, &mut out)?;
+    let mut raw = Vec::new();
+    collect_vault_models(vault_dir, &mut raw)?;
+    // Prefer p64: drop gguf when a p64 with the same base stem exists.
+    let p64_stems: std::collections::HashSet<String> = raw
+        .iter()
+        .filter(|e| e.container == "p64")
+        .map(|e| vault_stem_key(&e.path))
+        .collect();
+    let mut out: Vec<VaultGgufEntry> = raw
+        .into_iter()
+        .filter(|e| e.container == "p64" || !p64_stems.contains(&vault_stem_key(&e.path)))
+        .collect();
     out.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(out)
+}
+
+/// Stem key for prefer-p64 dedup: `foo.gguf` / `foo.p64` → `foo`; `foo.f16.p64` → `foo.f16`.
+fn vault_stem_key(path: &str) -> String {
+    Path::new(path)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("")
+        .to_string()
 }
 
 /// Hash only same-sized GGUF candidates and report byte-identical duplicates.
@@ -632,17 +659,24 @@ pub fn audit_vault_duplicates(
     Ok(groups)
 }
 
-fn collect_vault_gguf(dir: &Path, out: &mut Vec<VaultGgufEntry>) -> Result<(), std::io::Error> {
+fn collect_vault_models(dir: &Path, out: &mut Vec<VaultGgufEntry>) -> Result<(), std::io::Error> {
     for entry in std::fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
         if path.is_dir() {
-            collect_vault_gguf(&path, out)?;
+            collect_vault_models(&path, out)?;
             continue;
         }
-        if path.extension().and_then(|e| e.to_str()) != Some("gguf") {
-            continue;
-        }
+        let ext = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        let container = match ext.as_str() {
+            "p64" => "p64",
+            "gguf" => "gguf",
+            _ => continue,
+        };
         let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("model");
         let model_id = sanitize_local_model_id(stem);
         let size_bytes = entry.metadata()?.len();
@@ -654,25 +688,43 @@ fn collect_vault_gguf(dir: &Path, out: &mut Vec<VaultGgufEntry>) -> Result<(), s
             path: path.to_string_lossy().into_owned(),
             profile_id: q_hash(&format!("profile:local:{model_id}")),
             size_bytes,
+            container: container.into(),
         });
     }
     Ok(())
 }
 
 /// Resolve a model reference (filename, stem, or path) inside `vault_dir`.
+///
+/// Preference order: exact path → `.p64` → `.gguf` → vault scan (p64 preferred).
 pub fn resolve_vault_model(vault_dir: &Path, model_ref: &str) -> Result<PathBuf, ModelError> {
     let direct = PathBuf::from(model_ref);
     if direct.is_file() {
+        // If operator points at a GGUF that has a converted sibling .p64, prefer p64.
+        if let Some(p64) = prefer_p64_sibling(&direct) {
+            return Ok(p64);
+        }
         return Ok(direct);
     }
     let in_vault = vault_dir.join(model_ref);
     if in_vault.is_file() {
+        if let Some(p64) = prefer_p64_sibling(&in_vault) {
+            return Ok(p64);
+        }
         return Ok(in_vault);
     }
-    if !model_ref.ends_with(".gguf") {
-        let with_ext = vault_dir.join(format!("{model_ref}.gguf"));
-        if with_ext.is_file() {
-            return Ok(with_ext);
+    // Prefer p64 extension first (designed runtime format).
+    if !model_ref.ends_with(".p64") && !model_ref.ends_with(".gguf") {
+        let with_p64 = vault_dir.join(format!("{model_ref}.p64"));
+        if with_p64.is_file() {
+            return Ok(with_p64);
+        }
+        let with_gguf = vault_dir.join(format!("{model_ref}.gguf"));
+        if with_gguf.is_file() {
+            if let Some(p64) = prefer_p64_sibling(&with_gguf) {
+                return Ok(p64);
+            }
+            return Ok(with_gguf);
         }
     }
     for entry in scan_vault_gguf(vault_dir).map_err(ModelError::Io)? {
@@ -689,33 +741,62 @@ pub fn resolve_vault_model(vault_dir: &Path, model_ref: &str) -> Result<PathBuf,
         }
     }
     Err(ModelError::NotFound(format!(
-        "No GGUF matching `{model_ref}` under {}",
+        "No p64/GGUF matching `{model_ref}` under {}",
         vault_dir.display()
     )))
 }
 
-/// Map and activate a GGUF from disk without catalog install (CLI lifecycle tests).
+/// If `path` is a `.gguf` and `{stem}.p64` exists beside it, return the p64.
+fn prefer_p64_sibling(path: &Path) -> Option<PathBuf> {
+    let is_gguf = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.eq_ignore_ascii_case("gguf"))
+        .unwrap_or(false);
+    if !is_gguf {
+        return None;
+    }
+    let p64 = path.with_extension("p64");
+    if p64.is_file() {
+        Some(p64)
+    } else {
+        None
+    }
+}
+
+/// Map and activate a vault weight file (`.p64` preferred, or `.gguf`) without catalog install.
 pub async fn activate_vault_gguf(gguf_path: &Path) -> Result<ActiveModelRecord, ModelError> {
-    if !gguf_path.is_file() {
+    let path = prefer_p64_sibling(gguf_path).unwrap_or_else(|| gguf_path.to_path_buf());
+    if !path.is_file() {
         return Err(ModelError::Io(std::io::Error::new(
             std::io::ErrorKind::NotFound,
-            format!("GGUF not found: {}", gguf_path.display()),
+            format!("Model not found: {}", path.display()),
         )));
     }
-    let stem = gguf_path
+    let stem = path
         .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("local-model");
     let model_id = sanitize_local_model_id(stem);
-    let path_str = gguf_path.to_string_lossy().into_owned();
+    let path_str = path.to_string_lossy().into_owned();
     let profile_id = q_hash(&format!("profile:local:{model_id}"));
+    let quant = if path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.eq_ignore_ascii_case("p64"))
+        .unwrap_or(false)
+    {
+        "p64"
+    } else {
+        "vault"
+    };
 
     let agent = LocalLlmAgent::with_local_backend(
         format!("did:qualia:cli-vault:{profile_id}"),
         AgentBackend::Local {
             model_path: path_str.clone(),
             context_window: 4096,
-            quantization: "vault".to_string(),
+            quantization: quant.to_string(),
             vision_projector_path: None,
             modality: "text".to_string(),
             architecture: None,
@@ -728,7 +809,7 @@ pub async fn activate_vault_gguf(gguf_path: &Path) -> Result<ActiveModelRecord, 
         model_id,
         gguf_path: path_str,
         profile_id,
-        quantization: "vault".to_string(),
+        quantization: quant.to_string(),
         lifecycle_state: lifecycle_label(lifecycle).to_string(),
         modality: "text".to_string(),
         architecture: None,
@@ -978,6 +1059,46 @@ mod tests {
         assert_eq!(groups[0].duplicate_paths.len(), 1);
         assert!(groups[0].duplicate_paths[0].ends_with("copy.gguf"));
         assert_eq!(groups[0].reclaimable_bytes(), 16);
+
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn vault_scan_prefers_p64_over_gguf_same_stem() {
+        let root = std::env::temp_dir().join(format!(
+            "qualia-vault-p64-{}-{}",
+            std::process::id(),
+            unix_now()
+        ));
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("smollm.gguf"), b"gguf-bytes").unwrap();
+        std::fs::write(root.join("smollm.p64"), b"p64\0bytes").unwrap();
+        std::fs::write(root.join("other.gguf"), b"only-gguf").unwrap();
+
+        let entries = scan_vault_gguf(&root).unwrap();
+        let names: Vec<_> = entries.iter().map(|e| e.name.as_str()).collect();
+        assert!(
+            names.iter().any(|n| *n == "smollm.p64"),
+            "p64 should be listed: {names:?}"
+        );
+        assert!(
+            !names.iter().any(|n| *n == "smollm.gguf"),
+            "gguf should be hidden when p64 exists: {names:?}"
+        );
+        assert!(names.iter().any(|n| *n == "other.gguf"));
+
+        let resolved = resolve_vault_model(&root, "smollm").unwrap();
+        assert!(
+            resolved.extension().and_then(|e| e.to_str()) == Some("p64"),
+            "resolve stem should pick p64: {}",
+            resolved.display()
+        );
+        let via_gguf = resolve_vault_model(&root, "smollm.gguf").unwrap();
+        assert!(
+            via_gguf.extension().and_then(|e| e.to_str()) == Some("p64"),
+            "resolve gguf name should still prefer sibling p64: {}",
+            via_gguf.display()
+        );
 
         std::fs::remove_dir_all(root).unwrap();
     }

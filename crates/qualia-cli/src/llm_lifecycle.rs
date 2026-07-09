@@ -94,23 +94,27 @@ pub fn init_log_stream(enable_telemetry: bool) {
 pub fn run_list(vault_path: &Path) -> Result<(), String> {
     let entries = model_lifecycle::scan_vault_gguf(vault_path).map_err(|e| e.to_string())?;
     if entries.is_empty() {
-        println!("No `.gguf` files under {}", vault_path.display());
+        println!("No `.p64` / `.gguf` files under {}", vault_path.display());
         return Ok(());
     }
     println!(
-        "{:<32} {:>12}  {:>18}  {}",
-        "NAME", "SIZE (MiB)", "PROFILE_ID", "PATH"
+        "{:<32} {:>6} {:>12}  {:>18}  {}",
+        "NAME", "KIND", "SIZE (MiB)", "PROFILE_ID", "PATH"
     );
-    println!("{}", "-".repeat(96));
+    println!("{}", "-".repeat(100));
     for VaultGgufEntry {
         name,
         path,
         profile_id,
         size_bytes,
+        container,
     } in entries
     {
         let mib = size_bytes as f64 / (1024.0 * 1024.0);
-        println!("{:<32} {:>12.1}  0x{profile_id:016x}  {path}", name, mib,);
+        println!(
+            "{:<32} {:>6} {:>12.1}  0x{profile_id:016x}  {path}",
+            name, container, mib,
+        );
     }
     Ok(())
 }

@@ -92,3 +92,32 @@ None. Optional: run f16 convert on smollm2 and compare tok/s vs verbatim p64.
 
 ### ⚑ Human
 None. Old `.q42.json` files from prior converts (if any) are obsolete — re-convert.
+
+---
+
+## 2026-07-09 — Vault prefers p64 + helper stops on activate (Grok)
+
+### Status
+**done.**
+
+### What was built
+| Item | Detail |
+|------|--------|
+| Vault scan | Lists `.p64` + `.gguf`; **hides GGUF when same-stem `.p64` exists** |
+| Resolve | Stem / gguf name → sibling `.p64` preferred |
+| Activate | `activate_vault_gguf` + `mount_resident_gguf` accept p64 (format-neutral mount) |
+| Discover (app) | `discover_models` lists p64; GGUF with sibling p64 surfaces as p64 |
+| Helper on decode | `apply_model_helper_stops` loads `.q42.cbor-ld` beside model path and merges stop ids |
+| CLI list | Shows KIND column (`p64` / `gguf`) |
+
+### Measured
+- `vault_scan_prefers_p64_over_gguf_same_stem` **ok**
+- `merge_stop_token_ids_from_helper` **ok**
+
+### ⚑ Human
+None.
+
+### Next
+1. Measure f16 vs quant tok/s
+2. CUDA/WMMA on prefill product path
+3. SoA Q4_K convert layout
