@@ -1084,6 +1084,12 @@ pub struct QTensorEngine {
     /// Resident P64 container bytes.
     #[cfg(target_arch = "wasm32")]
     pub p64_resident: Option<Arc<[u8]>>,
+    /// Cached P64 index after `adopt_resident_p64_*` — decode must not re-CRC the container.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub p64_index: Option<crate::p64_weight::P64TensorIndex>,
+    /// Cached synthetic GGUF index built from `p64_index` (or from GGUF parse).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub tensor_index_cache: Option<crate::gguf_sharder::GgufTensorIndex>,
 
     /// Byte offset into the mmap where tensor data begins.
     pub tensor_data_offset: u64,

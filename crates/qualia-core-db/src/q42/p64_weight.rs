@@ -1576,6 +1576,7 @@ fn p64_role_suffix(role_id: u16) -> Option<&'static [u8]> {
 /// Runtime reader: parses a P64 container's header + manifest in microseconds. Tensor blobs
 /// stay in the caller's byte slice (zero-copy); only the small manifest is materialized. The
 /// `role`/`layer`/`blob_offset` fields map directly to the resident WebGPU weight arenas.
+#[derive(Clone)]
 pub struct P64TensorIndex {
     pub header: P64WeightHeader,
     pub hparams: P64HParams,
@@ -1592,17 +1593,21 @@ pub type Q42TensorIndex = P64TensorIndex;
 /// trusted convert wrote the container on this machine.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum IntegrityMode {
-    /// Metadata CRC + every tensor blob CRC (default, safest).
-    #[default]
+    /// Metadata CRC + every tensor blob CRC (safest; slow on large models).
     Full,
-    /// Metadata CRC only; still bounds-checks tensor ranges (fast activate).
+    /// Metadata CRC only; still bounds-checks tensor ranges (**default activate**).
+    #[default]
     Metadata,
     /// Structure checks only — no CRC. Prefer only for tests / trusted mmap.
     Structure,
 }
 
 impl IntegrityMode {
-    /// `QUALIA_P64_INTEGRITY=full|metadata|structure` (default full).
+    /// `QUALIA_P64_INTEGRITY=full|metadata|structure`.
+    ///
+    /// **Default is [`Metadata`]** (bounds + metadata CRC only): convert already sealed
+    /// per-tensor CRCs, and full re-scan dominated activate (~2.4 s → ~9 ms on SmolLM2).
+    /// Use `full` for audit / untrusted download; `structure` for tests only.
     pub fn from_env() -> Self {
         match std::env::var("QUALIA_P64_INTEGRITY")
             .ok()
@@ -1611,10 +1616,28 @@ impl IntegrityMode {
             .map(|s| s.to_ascii_lowercase())
             .as_deref()
         {
-            Some("metadata") | Some("meta") | Some("fast") => Self::Metadata,
+            Some("full") | Some("strict") | Some("all") => Self::Full,
             Some("structure") | Some("struct") | Some("skip") | Some("none") => Self::Structure,
-            _ => Self::Full,
+            Some("metadata") | Some("meta") | Some("fast") | None => Self::Metadata,
+            Some(_) => Self::Metadata,
         }
+    }
+}
+
+/// Recommend convert layout from source size (bytes on disk) and a VRAM headroom budget.
+///
+/// Heuristic: F16Expand expands quant matrices toward ~2 B/param. Treat `source_bytes * 4` as
+/// a conservative upper bound for Q4→f16; if that stays under `vram_budget_bytes * 0.55`
+/// (leave room for KV + activations on a 12 GB class card), pick F16Expand — the GPU
+/// `unpack2x16float` path is the remarkable decode lever for small/mid models.
+pub fn recommend_convert_layout(source_bytes: u64, vram_budget_bytes: u64) -> P64ConvertLayout {
+    let est_f16 = source_bytes.saturating_mul(4);
+    let room = (vram_budget_bytes as f64 * 0.55) as u64;
+    if est_f16 > 0 && est_f16 < room && est_f16 < (4u64 << 30) {
+        // Also respect the 4 GiB p64 u32-offset container hard cap.
+        P64ConvertLayout::F16Expand
+    } else {
+        P64ConvertLayout::Verbatim
     }
 }
 
@@ -2491,15 +2514,31 @@ mod p64_validation_tests {
     fn p64_rejects_metadata_and_tensor_corruption() {
         let gguf = synthetic_gguf();
         let p64 = compile_gguf_to_p64(&gguf, 12).expect("compile");
-        let index = P64TensorIndex::from_p64(&p64).expect("baseline");
+        let index =
+            P64TensorIndex::from_p64_with_integrity(&p64, IntegrityMode::Full).expect("baseline");
 
         let mut metadata_corrupt = p64.clone();
         metadata_corrupt[index.header.tensor_table_offset as usize + 12] ^= 1;
-        assert!(P64TensorIndex::from_p64(&metadata_corrupt).is_err());
+        assert!(P64TensorIndex::from_p64_with_integrity(
+            &metadata_corrupt,
+            IntegrityMode::Metadata
+        )
+        .is_err());
 
         let mut tensor_corrupt = p64;
         tensor_corrupt[index.entries[0].blob_offset as usize] ^= 1;
-        assert!(P64TensorIndex::from_p64(&tensor_corrupt).is_err());
+        // Tensor CRC is only checked in Full mode.
+        assert!(P64TensorIndex::from_p64_with_integrity(
+            &tensor_corrupt,
+            IntegrityMode::Full
+        )
+        .is_err());
+        // Metadata mode still accepts (bounds ok) — intentional fast-activate tradeoff.
+        assert!(P64TensorIndex::from_p64_with_integrity(
+            &tensor_corrupt,
+            IntegrityMode::Metadata
+        )
+        .is_ok());
     }
 
     #[test]

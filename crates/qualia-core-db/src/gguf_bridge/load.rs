@@ -50,6 +50,8 @@ impl QTensorEngine {
         self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
         self.ensure_kv_cache(&index.hyperparams);
         self.gguf_mmap = Some(Arc::new(mmap));
+        self.p64_index = None;
+        self.tensor_index_cache = Some(index.clone());
 
         let kv_cache_bytes = self.kv_cache_bytes();
         log::info!(
@@ -198,6 +200,9 @@ impl QTensorEngine {
             return Err("P64: KV cache allocation failed".to_string());
         }
         self.gguf_mmap = Some(mmap);
+        // Cache index so decode never re-validates hundreds of MB of tensor CRCs.
+        self.p64_index = Some(q.clone());
+        self.tensor_index_cache = Some(index.clone());
         if !self.mc8_upload_resident_logits(&index) {
             log::info!("LLM_LOAD|p64-logits|0.70|skipped — per-token upload fallback");
         }
@@ -275,6 +280,8 @@ impl QTensorEngine {
         self.ensure_gemm_buffers(staging, MAX_STACK_GEMM_OUT as u32);
         self.ensure_kv_cache(&index.hyperparams);
         self.gguf_mmap = Some(mmap);
+        self.p64_index = None;
+        self.tensor_index_cache = Some(index.clone());
         // A1a step-2: make the output/logits projection resident (upload once) so the per-token
         // top-k decode binds per-chunk 256-aligned sub-ranges instead of re-uploading the whole
         // ~47 MB matrix every token (the documented decode throughput killer). Fail-soft: a false

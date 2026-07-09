@@ -228,3 +228,43 @@ $env:QUALIA_WGPU_BACKEND='dx12'        # or from llm passport --apply-env-hint
 
 ### ⚑ Human
 None this step. For everyday use after convert: `QUALIA_P64_INTEGRITY=metadata`.
+
+---
+
+## 2026-07-09 — Make it remarkable (Grok)
+
+### Status
+**done** — product path is now a composed toolkit story, not a pile of half-wires.
+
+### What shipped
+| Change | Why it's remarkable |
+|--------|---------------------|
+| **Default integrity = Metadata** | Activate ~9 ms vs ~2.4 s Full CRC on SmolLM2 (still bounds-check) |
+| **Engine caches P64 + tensor index** | Adopt once → decode never re-parses |
+| **`llm convert --layout auto`** (default) | Picks F16Expand when it fits 12 GiB budget |
+| **`llm optimize`** | Passport optional + auto convert + prints activate knobs |
+| **Live f16 package** | smollm2 Q8 → **693 MiB F16Expand p64 in 19 s** + CBOR-LD helper |
+
+### Operator path (the remarkable one-liner)
+```powershell
+qualia-cli llm optimize C:\LLM_Models\GGUF\smollm2-360m-instruct-q8_0.gguf --out C:\LLM_Models\P64
+# → .f16.p64 + .q42.cbor-ld
+# activate with default metadata integrity (or set QUALIA_P64_INTEGRITY=full for audit)
+```
+
+### Measured
+| Metric | Value |
+|--------|-------|
+| F16Expand convert | 19.0 s, 693.3 MiB, 290 tensors |
+| Full vs Metadata from_p64 | ~2.4 s vs ~10 ms |
+| Helper present | F16Expand / ChatMl |
+
+### Still open (honest, for next go)
+1. Forge TC on prefill (NVRTC)
+2. SoA Q4_K for models too big for f16
+3. Ternary FFN productize + ΔPPL
+4. Decode-proxy passport ranking
+5. Chat end stop still eos-only on this SmolLM vocab probe (`stops=[2]`) — dig vocab specials further
+
+### ⚑ Human
+None — try `llm optimize` on a model and chat on the `.f16.p64`.

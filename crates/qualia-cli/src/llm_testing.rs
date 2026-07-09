@@ -264,12 +264,23 @@ pub fn run_convert_gguf_to_p64(
             "only .gguf import is supported in this command (got .{ext}); safetensors path is a follow-up"
         ));
     }
+    let src_len = std::fs::metadata(input)
+        .map(|m| m.len())
+        .unwrap_or(0);
+    // 12 GB class card default budget when auto-selecting f16 expand.
+    const DEFAULT_VRAM_BUDGET: u64 = 12u64 * 1024 * 1024 * 1024;
     let layout = match layout.trim().to_ascii_lowercase().as_str() {
         "verbatim" | "raw" | "copy" => qualia_core_db::p64_weight::P64ConvertLayout::Verbatim,
         "f16" | "fp16" | "half" => qualia_core_db::p64_weight::P64ConvertLayout::F16Expand,
+        "auto" | "best" | "remarkable" => {
+            let rec =
+                qualia_core_db::p64_weight::recommend_convert_layout(src_len, DEFAULT_VRAM_BUDGET);
+            println!("├─ auto layout → {rec:?} (source {src_len} B, 12 GiB VRAM budget)");
+            rec
+        }
         other => {
             return Err(format!(
-                "unknown --layout '{other}' (expected verbatim|f16)"
+                "unknown --layout '{other}' (expected verbatim|f16|auto)"
             ))
         }
     };
@@ -362,6 +373,54 @@ pub fn run_convert_gguf_to_p64(
     );
     println!();
     println!("Activate with a Local backend path pointing at the .p64 file.");
+    Ok(())
+}
+
+/// Remarkable one-shot: optional passport + auto-layout convert + activate knobs.
+pub fn run_optimize_pipeline(
+    input: &Path,
+    out: Option<PathBuf>,
+    skip_passport: bool,
+) -> Result<(), String> {
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("REMARKABLE PATH — passport + convert + activate knobs");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+    if !skip_passport {
+        let _ = run_hardware_passport(true, 512, None, true);
+    }
+
+    let out_dir = out.unwrap_or_else(|| {
+        input
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| PathBuf::from("."))
+    });
+    run_convert_gguf_to_p64(input, &out_dir, 14, "auto")?;
+
+    let stem = input
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("model");
+    // auto may produce .f16.p64 or .p64 — list what we wrote
+    let candidates = [
+        out_dir.join(format!("{stem}.f16.p64")),
+        out_dir.join(format!("{stem}.p64")),
+    ];
+    let p64 = candidates.iter().find(|p| p.is_file());
+    println!();
+    println!("Activate (fast path):");
+    println!("  $env:QUALIA_P64_INTEGRITY='metadata'");
+    if let Some(p) = p64 {
+        println!("  # model path: {}", p.display());
+        if let Ok(Some(h)) = qualia_core_db::model_helper::ModelHelper::load_beside_p64(p) {
+            println!(
+                "  # helper: layout={} family={} stops={:?}",
+                h.layout, h.tokenizer.chat_family, h.tokenizer.stop_token_ids
+            );
+        }
+    }
+    println!("  qualia-cli llm load <stem-or-path>   # vault prefers .p64");
     Ok(())
 }
 

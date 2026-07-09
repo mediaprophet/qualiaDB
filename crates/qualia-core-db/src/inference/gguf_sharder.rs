@@ -165,6 +165,7 @@ pub struct LayerTensors {
 
 /// Lookup table from tensor-name hash → `GgufTensorInfo`, built by walking the
 /// GGUF tensor-info section that immediately follows the KV metadata section.
+#[derive(Clone)]
 pub struct GgufTensorIndex {
     pub(crate) entries: Vec<(u64, GgufTensorInfo)>, // (name_hash, info)
     /// Absolute byte offset in the mmap where tensor payload data begins.
@@ -1155,18 +1156,27 @@ impl GgufTokenizer {
                 push(id);
             }
         }
-        // Also scan special_tokens: some GGUF vocabs store chat specials under
-        // SentencePiece-style names that still *contain* the end marker substring,
-        // or only appear in the special list (map key mismatch after decode).
+        // Also scan special_tokens + full token_to_id_map for end-of-turn markers
+        // (SentencePiece / BPE may store them with leading space or ▁ prefixes).
+        let looks_like_chat_end = |n: &str| -> bool {
+            let l = n.to_ascii_lowercase();
+            l == "<|im_end|>"
+                || l == "<|eot_id|>"
+                || l == "<end_of_turn>"
+                || l == "</s>"
+                || l.ends_with("im_end|>")
+                || l.ends_with("eot_id|>")
+                || l.contains("end_of_turn")
+                || l.contains("im_end")
+                || l.contains("eot_id")
+        };
         for (name, id) in &self.special_tokens {
-            let n = name.as_str();
-            if n == "<|im_end|>"
-                || n == "<|eot_id|>"
-                || n == "<end_of_turn>"
-                || n.ends_with("im_end|>")
-                || n.ends_with("eot_id|>")
-                || n.contains("end_of_turn")
-            {
+            if looks_like_chat_end(name) {
+                push(*id);
+            }
+        }
+        for (name, id) in &self.token_to_id_map {
+            if looks_like_chat_end(name) {
                 push(*id);
             }
         }

@@ -1261,10 +1261,21 @@ pub enum LlmAction {
         /// Page alignment log2 for the p64 container (default 14 = 16 KiB pages)
         #[arg(long, default_value_t = 14)]
         page_log2: u16,
-        /// Weight layout: `verbatim` (default, same bytes as GGUF) or `f16` (expand 2-D
-        /// matrices to IEEE f16 for the fast GPU unpack path; larger; ≤4 GiB container).
-        #[arg(long, default_value = "verbatim")]
+        /// Weight layout: `verbatim` | `f16` | `auto` (f16 when it fits a 12 GiB-class budget).
+        #[arg(long, default_value = "auto")]
         layout: String,
+    },
+    /// One-shot remarkable path: passport probe + convert (auto layout) + env hints.
+    /// Writes `.p64` + `.q42.cbor-ld` and prints activate knobs.
+    Optimize {
+        /// Path to a `.gguf` source file
+        input: PathBuf,
+        /// Output directory for `.p64` + helper (default: same dir as input)
+        #[arg(short, long)]
+        out: Option<PathBuf>,
+        /// Skip hardware passport re-probe
+        #[arg(long)]
+        skip_passport: bool,
     },
     /// Probe host GPUs/CPU, rank by measured GEMV throughput, cache HardwarePassport.
     /// Use this to pick DX12 vs Vulkan vs CPU for this machine (env override still wins).
@@ -1510,6 +1521,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     layout,
                 } => {
                     llm_testing::run_convert_gguf_to_p64(input, out, *page_log2, layout)?;
+                }
+                LlmAction::Optimize {
+                    input,
+                    out,
+                    skip_passport,
+                } => {
+                    llm_testing::run_optimize_pipeline(input, out.clone(), *skip_passport)?;
                 }
                 LlmAction::Passport {
                     reprobe,
