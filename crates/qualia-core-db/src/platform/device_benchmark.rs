@@ -280,15 +280,14 @@ fn backend_rank(b: wgpu::Backend) -> u8 {
 
 /// Benchmark every available compute circuit and return the ranked capability matrix.
 ///
-/// `n` is the GEMV side length (representative shape; 2048 is a good fast default). Each physical
-/// GPU is benchmarked once (deduped across backends). The software/WARP "CPU" wgpu adapter is
-/// skipped — the native `rayon` path is the honest CPU number.
+/// `n` is the GEMV side length (representative shape; 2048 is a good fast default).
+/// **Each (vendor, device, backend) triple is benchmarked separately** so DX12 vs Vulkan
+/// (same physical GPU) can rank against each other — the whole point of the passport.
+/// The software/WARP "CPU" wgpu adapter is skipped — the native `rayon` path is the honest CPU number.
 pub fn benchmark_devices(n: usize) -> CapabilityMatrix {
     let mut circuits: Vec<CircuitBench> = Vec::new();
 
-    // ── GPUs / iGPU via wgpu (dedup physical device across backends) ──
-    // `wgpu::Adapter` is not `Clone`, so dedup by sorting candidates by backend rank then keeping
-    // the first (best) occurrence per (vendor, device). Skip software CPU adapters + GL phantoms.
+    // ── GPUs / iGPU via wgpu — one circuit row per backend that can open the device ──
     let instance = wgpu::Instance::default();
     let mut cand: Vec<(u8, wgpu::Adapter, wgpu::AdapterInfo)> = Vec::new();
     for adapter in pollster::block_on(instance.enumerate_adapters(wgpu::Backends::all())) {
@@ -299,10 +298,12 @@ pub fn benchmark_devices(n: usize) -> CapabilityMatrix {
         cand.push((backend_rank(info.backend), adapter, info));
     }
     cand.sort_by_key(|(r, _, _)| *r);
-    let mut seen: std::collections::HashSet<(u32, u32)> = std::collections::HashSet::new();
+    // Dedup exact (vendor, device, backend) only — keep Metal+DX12+Vulkan rows for the same card.
+    let mut seen: std::collections::HashSet<(u32, u32, u32)> = std::collections::HashSet::new();
     let mut chosen: Vec<(wgpu::Adapter, wgpu::AdapterInfo)> = Vec::new();
     for (_, adapter, info) in cand {
-        if seen.insert((info.vendor, info.device)) {
+        let backend_id = info.backend as u32;
+        if seen.insert((info.vendor, info.device, backend_id)) {
             chosen.push((adapter, info));
         }
     }
@@ -310,13 +311,19 @@ pub fn benchmark_devices(n: usize) -> CapabilityMatrix {
         let Some((device, queue)) =
             pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default())).ok()
         else {
-            log::warn!("device_benchmark|skip|{}|request_device failed", info.name);
+            log::warn!(
+                "device_benchmark|skip|{}|{:?}|request_device failed",
+                info.name,
+                info.backend
+            );
             continue;
         };
+        // Guard: if a backend hangs the probe, the process may stick — operators can
+        // QUALIA_WGPU_BACKEND-pin. We still attempt each backend; hang isolation is W-K5.
         let ms = bench_gpu_gemv(&device, &queue, n);
-        let upload_gbps = bench_upload_gbps(&device, &queue, 128 * 1024 * 1024);
+        let upload_gbps = bench_upload_gbps(&device, &queue, 16 * 1024 * 1024);
         circuits.push(CircuitBench {
-            label: info.name.clone(),
+            label: format!("{} ({:?})", info.name, info.backend),
             kind: CircuitKind::from_wgpu(info.device_type),
             backend: format!("{:?}", info.backend),
             ms_per_gemv: ms,

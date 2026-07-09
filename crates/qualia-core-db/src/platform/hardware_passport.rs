@@ -100,6 +100,36 @@ pub fn load_or_probe_default() -> (HardwarePassport, bool) {
     load_or_probe(&default_cache_path(), PASSPORT_GEMV_N)
 }
 
+/// Best measured GPU backend name from a cached passport, if any (`"Dx12"`, `"Vulkan"`, `"Metal"`…).
+/// Does **not** re-probe. Used by `gpu_context` when `QUALIA_WGPU_BACKEND` is unset so the
+/// machine's measured ranking (not a static Windows→DX12 rule alone) selects the path.
+pub fn cached_preferred_wgpu_backend() -> Option<String> {
+    let path = default_cache_path();
+    let passport = read_passport(&path)?;
+    let best = passport.matrix.best()?;
+    // CPU-only win → do not pin a GPU backend.
+    if matches!(best.kind, crate::device_benchmark::CircuitKind::Cpu) {
+        return None;
+    }
+    Some(best.backend.clone())
+}
+
+/// Map a passport `backend` string (`"Dx12"`, `"Vulkan"`, …) to a `QUALIA_WGPU_BACKEND` env value.
+pub fn backend_env_token(backend: &str) -> Option<&'static str> {
+    let s = backend.to_ascii_lowercase();
+    if s.contains("dx12") || s.contains("d3d12") {
+        Some("dx12")
+    } else if s.contains("vulkan") {
+        Some("vulkan")
+    } else if s.contains("metal") {
+        Some("metal")
+    } else if s.contains("gl") {
+        Some("gl")
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

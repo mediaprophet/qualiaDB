@@ -1250,6 +1250,34 @@ pub enum LlmAction {
         #[arg(long)]
         format: Option<String>,
     },
+    /// Convert a GGUF (import format) to native `.p64` + `.q42` helper metadata.
+    /// Engine steady-state should run the converted container, not the source GGUF.
+    Convert {
+        /// Path to a `.gguf` source file
+        input: PathBuf,
+        /// Output directory (created if missing). Writes `<stem>.p64` + `<stem>.q42.json`.
+        #[arg(short, long)]
+        out: PathBuf,
+        /// Page alignment log2 for the p64 container (default 14 = 16 KiB pages)
+        #[arg(long, default_value_t = 14)]
+        page_log2: u16,
+    },
+    /// Probe host GPUs/CPU, rank by measured GEMV throughput, cache HardwarePassport.
+    /// Use this to pick DX12 vs Vulkan vs CPU for this machine (env override still wins).
+    Passport {
+        /// Force re-probe even if a cached passport matches this host
+        #[arg(long)]
+        reprobe: bool,
+        /// GEMV side length for the probe (default 2048)
+        #[arg(long, default_value_t = 2048)]
+        gemv_n: usize,
+        /// Optional path for the CBOR cache (default: OS temp / qualia_hardware_passport.cbor)
+        #[arg(long)]
+        cache: Option<PathBuf>,
+        /// If set, write `QUALIA_WGPU_BACKEND=<best>` hint line for shells
+        #[arg(long)]
+        apply_env_hint: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -1469,6 +1497,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         vault_path.clone(),
                         output.clone(),
                         format.clone(),
+                    )?;
+                }
+                LlmAction::Convert {
+                    input,
+                    out,
+                    page_log2,
+                } => {
+                    llm_testing::run_convert_gguf_to_p64(input, out, *page_log2)?;
+                }
+                LlmAction::Passport {
+                    reprobe,
+                    gemv_n,
+                    cache,
+                    apply_env_hint,
+                } => {
+                    llm_testing::run_hardware_passport(
+                        *reprobe,
+                        *gemv_n,
+                        cache.clone(),
+                        *apply_env_hint,
                     )?;
                 }
             }

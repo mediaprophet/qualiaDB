@@ -794,6 +794,9 @@ fn gpt2_byte_to_unicode(byte: u8) -> char {
     })[byte as usize]
 }
 
+/// Max stop-token ids kept on the tokenizer (eos + chat-end family + extras).
+pub const MAX_STOP_TOKEN_IDS: usize = 8;
+
 /// Vocabulary and BOS/EOS metadata extracted from a GGUF KV section.
 /// Used by `infer_local_model()` to encode prompts and decode output token IDs.
 pub struct GgufTokenizer {
@@ -813,6 +816,26 @@ pub struct GgufTokenizer {
     special_tokens: Vec<(String, u32)>,
     /// (token_string, token_id) sorted by descending byte length — legacy greedy fallback.
     token_to_id: Vec<(String, u32)>,
+    /// Decode stop set: always includes `eos_token_id`, plus chat-end specials when
+    /// present in vocab (`<|eot_id|>`, `<|im_end|>`, `<end_of_turn>`, …). Fixed array
+    /// so the hot path does not allocate.
+    stop_token_ids: [u32; MAX_STOP_TOKEN_IDS],
+    stop_token_count: u8,
+}
+
+/// Chat-template family, detected from the special tokens a model's vocab carries. Instruct models
+/// must have their prompt wrapped in this template (with an assistant-turn cue) or they degenerate
+/// (emit EOS immediately, or repeat) — a raw prompt gives the model no "your turn to answer" signal.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ChatFamily {
+    /// `<|im_start|>role\n…<|im_end|>` — Qwen2 / SmolLM2 / many instruct models.
+    ChatMl,
+    /// `<|start_header_id|>role<|end_header_id|>\n\n…<|eot_id|>` — Llama-3.x.
+    Llama3,
+    /// `<start_of_turn>role\n…<end_of_turn>` — Gemma (no system role).
+    Gemma,
+    /// No recognised chat specials — the raw prompt is used unchanged.
+    None,
 }
 
 impl Default for GgufTokenizer {
@@ -836,7 +859,7 @@ impl Default for GgufTokenizer {
         t2id.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
         let token_to_id_map: HashMap<String, u32> =
             t2id.iter().map(|(s, id)| (s.clone(), *id)).collect();
-        Self {
+        let mut tok = Self {
             vocab,
             bos_token_id: 1,
             eos_token_id: 2,
@@ -846,7 +869,11 @@ impl Default for GgufTokenizer {
             token_to_id_map,
             special_tokens: Vec::new(),
             token_to_id: t2id,
-        }
+            stop_token_ids: [0; MAX_STOP_TOKEN_IDS],
+            stop_token_count: 0,
+        };
+        tok.rebuild_stop_token_ids();
+        tok
     }
 }
 
@@ -936,7 +963,7 @@ impl GgufTokenizer {
             .collect();
         special_tokens.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
         let merge_pairs = Self::parse_merge_pairs(merges_raw.as_deref());
-        Some(Self {
+        let mut tok = Self {
             vocab: v,
             bos_token_id: bos,
             eos_token_id: eos,
@@ -946,7 +973,11 @@ impl GgufTokenizer {
             token_to_id_map,
             special_tokens,
             token_to_id: t2id,
-        })
+            stop_token_ids: [0; MAX_STOP_TOKEN_IDS],
+            stop_token_count: 0,
+        };
+        tok.rebuild_stop_token_ids();
+        Some(tok)
     }
 
     /// Phase 4 v3: serialize the tokenizer into a compact, contiguous P64 section (no page
@@ -1049,7 +1080,7 @@ impl GgufTokenizer {
             .map(|(i, s)| (s.clone(), i as u32))
             .collect();
         special_tokens.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
-        Some(Self {
+        let mut tok = Self {
             vocab,
             bos_token_id: bos,
             eos_token_id: eos,
@@ -1059,7 +1090,73 @@ impl GgufTokenizer {
             token_to_id_map,
             special_tokens,
             token_to_id: t2id,
-        })
+            stop_token_ids: [0; MAX_STOP_TOKEN_IDS],
+            stop_token_count: 0,
+        };
+        tok.rebuild_stop_token_ids();
+        Some(tok)
+    }
+
+    /// Rebuild the decode stop set from `eos_token_id` + known chat-end specials in vocab.
+    /// Call after any mutation of eos / token_to_id_map (load paths do this automatically).
+    pub fn rebuild_stop_token_ids(&mut self) {
+        let mut ids = [0u32; MAX_STOP_TOKEN_IDS];
+        let mut n = 0usize;
+        let mut push = |id: u32| {
+            if n >= MAX_STOP_TOKEN_IDS {
+                return;
+            }
+            if ids[..n].contains(&id) {
+                return;
+            }
+            ids[n] = id;
+            n += 1;
+        };
+        push(self.eos_token_id);
+        // Chat / instruct end-of-turn tokens. Missing from vocab → no-op.
+        // Without these, Llama-3 keeps past <|eot_id|> into pretraining-style continuation.
+        const CHAT_ENDS: &[&str] = &[
+            "<|eot_id|>",
+            "<|im_end|>",
+            "<end_of_turn>",
+            "<|end_of_text|>",
+            "</s>",
+            "<|end|>",
+        ];
+        for s in CHAT_ENDS {
+            if let Some(&id) = self.token_to_id_map.get(*s) {
+                push(id);
+            }
+        }
+        // Also scan special_tokens: some GGUF vocabs store chat specials under
+        // SentencePiece-style names that still *contain* the end marker substring,
+        // or only appear in the special list (map key mismatch after decode).
+        for (name, id) in &self.special_tokens {
+            let n = name.as_str();
+            if n == "<|im_end|>"
+                || n == "<|eot_id|>"
+                || n == "<end_of_turn>"
+                || n.ends_with("im_end|>")
+                || n.ends_with("eot_id|>")
+                || n.contains("end_of_turn")
+            {
+                push(*id);
+            }
+        }
+        self.stop_token_ids = ids;
+        self.stop_token_count = n as u8;
+    }
+
+    /// Whether `id` is a generation stop token (eos and/or chat end-of-turn).
+    #[inline]
+    pub fn is_stop_token(&self, id: u32) -> bool {
+        let n = self.stop_token_count as usize;
+        self.stop_token_ids[..n].contains(&id)
+    }
+
+    /// Slice of active stop-token ids (for logging / q42 export).
+    pub fn stop_tokens(&self) -> &[u32] {
+        &self.stop_token_ids[..self.stop_token_count as usize]
     }
 
     /// Tokenize `text`, prepending [`bos_token_id`] when [`add_bos_token`] is set and absent.
@@ -1073,6 +1170,72 @@ impl GgufTokenizer {
         } else {
             ids
         }
+    }
+
+    /// Detect this model's chat-template family from the special tokens present in its vocab.
+    pub fn chat_family(&self) -> ChatFamily {
+        if self.token_to_id_map.contains_key("<|im_start|>") {
+            ChatFamily::ChatMl
+        } else if self.token_to_id_map.contains_key("<|start_header_id|>") {
+            ChatFamily::Llama3
+        } else if self.token_to_id_map.contains_key("<start_of_turn>") {
+            ChatFamily::Gemma
+        } else {
+            ChatFamily::None
+        }
+    }
+
+    /// Wrap a user prompt (and optional system message) in the model's chat template, cueing the
+    /// assistant turn so an instruct model answers instead of degenerating. The tokenizer BOS is
+    /// still prepended by [`encode_prompt`]; it is NOT embedded here (avoids a double BOS). Returns
+    /// the raw prompt unchanged when no chat family is recognised.
+    pub fn apply_chat_template(&self, system: Option<&str>, user: &str) -> String {
+        match self.chat_family() {
+            ChatFamily::ChatMl => {
+                let mut s = String::new();
+                if let Some(sys) = system {
+                    s.push_str("<|im_start|>system\n");
+                    s.push_str(sys);
+                    s.push_str("<|im_end|>\n");
+                }
+                s.push_str("<|im_start|>user\n");
+                s.push_str(user);
+                s.push_str("<|im_end|>\n<|im_start|>assistant\n");
+                s
+            }
+            ChatFamily::Llama3 => {
+                let mut s = String::new();
+                if let Some(sys) = system {
+                    s.push_str("<|start_header_id|>system<|end_header_id|>\n\n");
+                    s.push_str(sys);
+                    s.push_str("<|eot_id|>");
+                }
+                s.push_str("<|start_header_id|>user<|end_header_id|>\n\n");
+                s.push_str(user);
+                s.push_str("<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n");
+                s
+            }
+            ChatFamily::Gemma => {
+                // Gemma has no system role; fold any system text into the user turn.
+                let mut s = String::from("<start_of_turn>user\n");
+                if let Some(sys) = system {
+                    s.push_str(sys);
+                    s.push_str("\n\n");
+                }
+                s.push_str(user);
+                s.push_str("<end_of_turn>\n<start_of_turn>model\n");
+                s
+            }
+            ChatFamily::None => user.to_string(),
+        }
+    }
+
+    /// Apply the model's chat template (if any), then tokenize (+BOS per `add_bos_token`). This is
+    /// the path for interactive chat/instruct inference; [`encode_prompt`] stays the raw-completion
+    /// path. Chat models without a recognised family fall back to the raw prompt.
+    pub fn encode_chat_prompt(&self, user: &str) -> Vec<u32> {
+        let templated = self.apply_chat_template(None, user);
+        self.encode_prompt(&templated)
     }
 
     /// Format token IDs for diagnostic logging (MC3f).
@@ -1479,6 +1642,59 @@ mod tests {
         let ids = tok.encode_prompt("hi");
         assert_eq!(ids.first(), Some(&42));
         assert!(ids.len() >= 2);
+    }
+
+    #[test]
+    fn stop_tokens_include_chat_end_specials() {
+        let mut tok = GgufTokenizer::default();
+        tok.eos_token_id = 2;
+        tok.token_to_id_map.insert("<|eot_id|>".into(), 128009);
+        tok.token_to_id_map.insert("<|im_end|>".into(), 151645);
+        tok.rebuild_stop_token_ids();
+        assert!(tok.is_stop_token(2), "eos must stop");
+        assert!(tok.is_stop_token(128009), "Llama-3 eot_id must stop");
+        assert!(tok.is_stop_token(151645), "ChatML im_end must stop");
+        assert!(!tok.is_stop_token(42), "ordinary id must not stop");
+        assert!(tok.stop_tokens().len() >= 3);
+    }
+
+    #[test]
+    fn chat_template_family_detection_and_rendering() {
+        // ChatML (SmolLM2 / Qwen2): <|im_start|> present in the vocab.
+        let mut chatml = GgufTokenizer::default();
+        chatml.token_to_id_map.insert("<|im_start|>".into(), 100);
+        assert_eq!(chatml.chat_family(), ChatFamily::ChatMl);
+        assert_eq!(
+            chatml.apply_chat_template(None, "hi"),
+            "<|im_start|>user\nhi<|im_end|>\n<|im_start|>assistant\n"
+        );
+        assert_eq!(
+            chatml.apply_chat_template(Some("be brief"), "hi"),
+            "<|im_start|>system\nbe brief<|im_end|>\n<|im_start|>user\nhi<|im_end|>\n<|im_start|>assistant\n"
+        );
+
+        // Llama-3.x: <|start_header_id|> present.
+        let mut l3 = GgufTokenizer::default();
+        l3.token_to_id_map.insert("<|start_header_id|>".into(), 100);
+        assert_eq!(l3.chat_family(), ChatFamily::Llama3);
+        assert_eq!(
+            l3.apply_chat_template(None, "hi"),
+            "<|start_header_id|>user<|end_header_id|>\n\nhi<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+        );
+
+        // Gemma: <start_of_turn> present (no system role — folded into the user turn).
+        let mut g = GgufTokenizer::default();
+        g.token_to_id_map.insert("<start_of_turn>".into(), 100);
+        assert_eq!(g.chat_family(), ChatFamily::Gemma);
+        assert_eq!(
+            g.apply_chat_template(None, "hi"),
+            "<start_of_turn>user\nhi<end_of_turn>\n<start_of_turn>model\n"
+        );
+
+        // No recognised chat specials → raw prompt unchanged.
+        let none = GgufTokenizer::default();
+        assert_eq!(none.chat_family(), ChatFamily::None);
+        assert_eq!(none.apply_chat_template(None, "hi"), "hi");
     }
 
     #[test]

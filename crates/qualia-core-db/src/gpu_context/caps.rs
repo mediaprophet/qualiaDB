@@ -199,26 +199,52 @@ fn push_flag(out: &mut String, label: &str, enabled: bool) {
 
 // ── Inference-pipeline (GPU backend) selection — the "which pipeline for this machine" checker ──
 
-/// An explicit GPU-backend override for the inference device, from `QUALIA_WGPU_BACKEND`
-/// (`vulkan` | `dx12` | `metal` | `gl` | `primary` | `all`). `None` ⇒ use wgpu's default selection
-/// (which still honors wgpu's own `WGPU_BACKEND`). This is what lets a machine be pinned to the
-/// **vendor-neutral Vulkan** path (AMD/Intel/NVIDIA/ARM/Linux) rather than whatever wgpu picks.
+/// An explicit GPU-backend override for the inference device.
+///
+/// Priority:
+/// 1. `QUALIA_WGPU_BACKEND` env (`vulkan` | `dx12` | `metal` | `gl` | `primary` | `all`)
+/// 2. Cached [`crate::hardware_passport`] best GPU circuit (from `qualia-cli llm passport`)
+/// 3. `None` → platform default in `init_shared_gpu_async` (Windows → DX12; else wgpu pick)
+///
+/// This is what lets a machine be pinned by measurement rather than a static hierarchy.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn qualia_backend_override() -> Option<wgpu::Backends> {
-    let raw = std::env::var("QUALIA_WGPU_BACKEND").ok()?;
-    let v = raw.trim().to_ascii_lowercase();
-    Some(match v.as_str() {
-        "vulkan" | "vk" => wgpu::Backends::VULKAN,
-        "dx12" | "d3d12" | "directx12" => wgpu::Backends::DX12,
-        "metal" | "mtl" => wgpu::Backends::METAL,
-        "gl" | "opengl" | "gles" => wgpu::Backends::GL,
-        "primary" => wgpu::Backends::PRIMARY,
-        "all" => wgpu::Backends::all(),
-        other => {
-            log::warn!("QUALIA_WGPU_BACKEND='{other}' unrecognized — using wgpu default selection");
-            return None;
+    if let Ok(raw) = std::env::var("QUALIA_WGPU_BACKEND") {
+        let v = raw.trim().to_ascii_lowercase();
+        return match v.as_str() {
+            "vulkan" | "vk" => Some(wgpu::Backends::VULKAN),
+            "dx12" | "d3d12" | "directx12" => Some(wgpu::Backends::DX12),
+            "metal" | "mtl" => Some(wgpu::Backends::METAL),
+            "gl" | "opengl" | "gles" => Some(wgpu::Backends::GL),
+            "primary" => Some(wgpu::Backends::PRIMARY),
+            "all" => Some(wgpu::Backends::all()),
+            other => {
+                log::warn!(
+                    "QUALIA_WGPU_BACKEND='{other}' unrecognized — trying passport / default"
+                );
+                None
+            }
         }
-    })
+        .or_else(passport_backend_override);
+    }
+    passport_backend_override()
+}
+
+/// Prefer the measured HardwarePassport GPU backend when no env pin is set.
+#[cfg(not(target_arch = "wasm32"))]
+fn passport_backend_override() -> Option<wgpu::Backends> {
+    let backend = crate::hardware_passport::cached_preferred_wgpu_backend()?;
+    let token = crate::hardware_passport::backend_env_token(&backend)?;
+    log::info!(
+        "shared_gpu|backend_from_passport|{backend}|token={token}"
+    );
+    match token {
+        "vulkan" => Some(wgpu::Backends::VULKAN),
+        "dx12" => Some(wgpu::Backends::DX12),
+        "metal" => Some(wgpu::Backends::METAL),
+        "gl" => Some(wgpu::Backends::GL),
+        _ => None,
+    }
 }
 
 /// Capability-aware recommendation for which GPU backend this machine *should* run inference on

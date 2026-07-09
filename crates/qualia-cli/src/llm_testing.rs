@@ -135,6 +135,12 @@ pub fn run_comprehensive_llm_test(
     println!("STEP 3: Inference Tests");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     
+    // Sample (temperature / top-p / repeat-penalty) rather than greedy argmax, so instruct models
+    // produce varied, on-topic text instead of collapsing into repetition / a fixed attractor.
+    qualia_core_db::llm_bench::set_sampler_config(Some(
+        qualia_core_db::sampler::SamplerConfig::chat_default(),
+    ));
+
     let test_prompts = vec![
         ("Basic Knowledge", "What is the capital of France?", 50),
         ("System Awareness", "What is QualiaDB and what are its main features?", 100),
@@ -154,10 +160,12 @@ pub fn run_comprehensive_llm_test(
         
         let started = std::time::Instant::now();
         
-        // Use actual inference with block_in_place to handle tokio runtime
-        let (response, token_ids, _step_count, _provenance) = tokio::task::block_in_place(|| {
+        // Return layout: (text, provenance_hashes, tokens_generated, semantic_quin).
+        // BUGFIX: the second field is provenance (often len=1), NOT token ids — using
+        // `.len()` reported Tokens:1 and ~100× low tok/s. The third field is the count.
+        let (response, _provenance, tokens_generated, _quin) = tokio::task::block_in_place(|| {
             agent.infer_local_model_streaming::<fn(String)>(
-            prompt,
+                prompt,
                 "graph_context:cli_test",
                 None,
             )
@@ -169,7 +177,15 @@ pub fn run_comprehensive_llm_test(
         // Estimate TTFT as ~10% of total time (rough approximation without streaming)
         let ttft = elapsed_ms / 10;
         
-        let token_count = token_ids.len() as u64;
+        let token_count = tokens_generated as u64;
+        // Prefer decoded-token estimate when the engine returns 0 but produced text
+        // (defensive — should not happen on a healthy path).
+        let token_count = if token_count == 0 && !response.is_empty() {
+            // Rough BPE estimate: ~4 chars/token for Latin text.
+            (response.chars().count() as u64 / 4).max(1)
+        } else {
+            token_count
+        };
         let tps = if elapsed_ms > 0 {
             (token_count as f64 * 1000.0) / elapsed_ms as f64
         } else {
@@ -178,8 +194,8 @@ pub fn run_comprehensive_llm_test(
         
         println!("├─ TTFT: {}ms (estimated)", ttft);
         println!("├─ Total Time: {}ms", elapsed_ms);
-        println!("├─ Tokens: {}", token_count);
-        println!("├─ TPS: {:.2}", tps);
+        println!("├─ Tokens: {} (decode)", token_count);
+        println!("├─ TPS: {:.2} (wall-clock / decode tokens)", tps);
         
         total_tokens += token_count;
         total_time_ms += elapsed_ms;
@@ -219,7 +235,206 @@ pub fn run_comprehensive_llm_test(
     
     println!();
     println!("Note: Metrics include orchestration overhead (Webizen validation, etc.).");
+    println!("Note: Token counts use engine tokens_generated (not provenance-hash vec length).");
     
+    Ok(())
+}
+
+/// Convert a GGUF import file to native `.p64` + `.q42.json` helper metadata.
+///
+/// Design: GGUF/safetensors are import formats only. Steady-state activation should
+/// prefer the converted container (see `docs/plans/native-inference-p64-pipeline-remediation.md`).
+/// Today's p64 is still a byte-preserving layout (same GPU kernels); conversion still
+/// productizes the path and records stop/chat metadata the engine needs.
+pub fn run_convert_gguf_to_p64(
+    input: &Path,
+    out_dir: &Path,
+    page_log2: u16,
+) -> Result<(), String> {
+    if !input.is_file() {
+        return Err(format!("input not found: {}", input.display()));
+    }
+    let ext = input
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    if ext != "gguf" {
+        return Err(format!(
+            "only .gguf import is supported in this command (got .{ext}); safetensors path is a follow-up"
+        ));
+    }
+
+    std::fs::create_dir_all(out_dir)
+        .map_err(|e| format!("create out dir {}: {e}", out_dir.display()))?;
+
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("GGUF → p64 + q42 convert");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("├─ Input:  {}", input.display());
+    println!("├─ Out:    {}", out_dir.display());
+    println!("└─ page_log2: {page_log2}");
+
+    let t0 = std::time::Instant::now();
+    let mmap = {
+        let f = std::fs::File::open(input).map_err(|e| format!("open: {e}"))?;
+        // SAFETY: file is read-only; we do not write through the mapping.
+        unsafe { memmap2::Mmap::map(&f).map_err(|e| format!("mmap: {e}"))? }
+    };
+    let src_bytes = mmap.len();
+    println!("├─ Source size: {:.1} MiB", src_bytes as f64 / (1024.0 * 1024.0));
+
+    let p64 = qualia_core_db::p64_weight::compile_gguf_to_p64(&mmap, page_log2)
+        .map_err(|e| format!("compile_gguf_to_p64: {e}"))?;
+    let stem = input
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("model");
+    let p64_path = out_dir.join(format!("{stem}.p64"));
+    std::fs::write(&p64_path, &p64).map_err(|e| format!("write p64: {e}"))?;
+
+    // q42 helper: behavioural metadata the engine should not re-guess from GGUF.
+    let tok = qualia_core_db::gguf_sharder::GgufTokenizer::from_gguf(&mmap);
+    let stop_ids: Vec<u32> = tok.stop_tokens().to_vec();
+    let stop_names: Vec<String> = stop_ids
+        .iter()
+        .filter_map(|&id| tok.vocab.get(id as usize).cloned())
+        .collect();
+    let meta = serde_json::json!({
+        "format": "qualia.q42.model-helper.v1",
+        "source_gguf": input.display().to_string(),
+        "p64": p64_path.display().to_string(),
+        "page_log2": page_log2,
+        "converted_unix_ms": std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0),
+        "tokenizer": {
+            "bos_token_id": tok.bos_token_id,
+            "eos_token_id": tok.eos_token_id,
+            "add_bos_token": tok.add_bos_token,
+            "chat_family": format!("{:?}", tok.chat_family()),
+            "stop_token_ids": stop_ids,
+            "stop_token_strings": stop_names,
+            "vocab_len": tok.vocab_len(),
+        },
+        "notes": [
+            "p64 currently preserves GGML quant blocks (layout-identical kernels).",
+            "Future convert steps: SoA Q4_K, f16 pages, upload descriptors.",
+            "Activate the .p64 path; keep GGUF as import-only archive."
+        ]
+    });
+    let q42_path = out_dir.join(format!("{stem}.q42.json"));
+    std::fs::write(
+        &q42_path,
+        serde_json::to_string_pretty(&meta).map_err(|e| e.to_string())?,
+    )
+    .map_err(|e| format!("write q42 helper: {e}"))?;
+
+    // Validate the container can be indexed (fail closed if we wrote garbage).
+    let index = qualia_core_db::p64_weight::P64TensorIndex::from_p64(&p64)
+        .map_err(|e| format!("p64 self-check failed: {e}"))?;
+    let n_tensors = index.entries.len();
+
+    let elapsed = t0.elapsed();
+    println!();
+    println!("✅ Convert complete in {:.1}s", elapsed.as_secs_f64());
+    println!("  └─ {}", p64_path.display());
+    println!(
+        "     size {:.1} MiB, tensors {}",
+        p64.len() as f64 / (1024.0 * 1024.0),
+        n_tensors
+    );
+    println!("  └─ {}", q42_path.display());
+    println!(
+        "     chat_family={:?} stop_ids={:?}",
+        tok.chat_family(),
+        tok.stop_tokens()
+    );
+    println!();
+    println!("Activate with a Local backend path pointing at the .p64 file.");
+    Ok(())
+}
+
+/// Probe / load HardwarePassport and print the ranked circuit matrix.
+pub fn run_hardware_passport(
+    reprobe: bool,
+    gemv_n: usize,
+    cache: Option<PathBuf>,
+    apply_env_hint: bool,
+) -> Result<(), String> {
+    use qualia_core_db::hardware_passport::{
+        default_cache_path, load_or_probe, write_passport, HardwarePassport, PASSPORT_VERSION,
+        topology_key,
+    };
+    use qualia_core_db::device_benchmark::benchmark_devices;
+    use qualia_core_db::host_topology::probe_host_topology;
+
+    let path = cache.unwrap_or_else(default_cache_path);
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("HardwarePassport");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("├─ Cache: {}", path.display());
+    println!("├─ GEMV n: {gemv_n}");
+    println!("└─ Reprobe: {reprobe}");
+
+    let (passport, was_cached) = if reprobe {
+        if path.exists() {
+            let _ = std::fs::remove_file(&path);
+        }
+        let topology = probe_host_topology();
+        let key = topology_key(&topology);
+        println!("├─ Probing circuits (this takes a few seconds)…");
+        let matrix = benchmark_devices(gemv_n);
+        let fresh = HardwarePassport {
+            version: PASSPORT_VERSION,
+            key,
+            topology,
+            matrix,
+        };
+        write_passport(&fresh, &path)?;
+        (fresh, false)
+    } else {
+        load_or_probe(&path, gemv_n)
+    };
+
+    println!(
+        "├─ Source: {}",
+        if was_cached {
+            "cache hit (fast-boot)"
+        } else {
+            "fresh probe"
+        }
+    );
+    println!("├─ Key: {}", passport.key);
+    println!("{}", passport.matrix.summary());
+
+    if let Some(best) = passport.matrix.best() {
+        println!("Selected inference circuit (measured):");
+        println!(
+            "  └─ {} [{}] {:.3} ms/GEMV  {:.1} GFLOP/s",
+            best.label, best.backend, best.ms_per_gemv, best.gflops
+        );
+        let hint = match best.backend.to_ascii_lowercase().as_str() {
+            s if s.contains("dx12") || s.contains("d3d12") => Some("dx12"),
+            s if s.contains("vulkan") => Some("vulkan"),
+            s if s.contains("metal") => Some("metal"),
+            s if s.contains("gl") => Some("gl"),
+            _ => None, // CPU-only — leave GPU env alone
+        };
+        if let Some(h) = hint {
+            println!("  └─ Hint: set QUALIA_WGPU_BACKEND={h} to pin this backend");
+            if apply_env_hint {
+                // Persist a small sidecar the app can read next to the passport.
+                let hint_path = path.with_extension("env");
+                std::fs::write(&hint_path, format!("QUALIA_WGPU_BACKEND={h}\n"))
+                    .map_err(|e| format!("write env hint: {e}"))?;
+                println!("  └─ Wrote {}", hint_path.display());
+            }
+        } else {
+            println!("  └─ Best circuit is CPU — keep GPU default; no QUALIA_WGPU_BACKEND pin");
+        }
+    }
     Ok(())
 }
 

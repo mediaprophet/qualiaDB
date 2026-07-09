@@ -514,7 +514,7 @@ fn try_accept_topology_draft(
                 cb(delta);
             }
         }
-        if *ctx.last().unwrap_or(&eos) == eos {
+        if tok.is_stop_token(id) || *ctx.last().unwrap_or(&eos) == eos {
             break;
         }
     }
@@ -903,7 +903,9 @@ impl LocalLlmAgent {
                     }
                 });
 
-                let mut ctx = tok.encode_prompt(&prompt_owned);
+                let mut ctx = tok.encode_chat_prompt(&prompt_owned);
+                // Keep `eos` for draft/topology APIs that still take a single id; decode
+                // termination uses the full stop set (eos + chat end-of-turn specials).
                 let eos = tok.eos_token_id;
                 let vlen = tok.vocab_len().max(1);
 
@@ -1158,7 +1160,7 @@ impl LocalLlmAgent {
                                                 let _ = tx.send(delta);
                                             }
                                         }
-                                        if next == eos || out_ids.len() >= gen_budget {
+                                        if tok.is_stop_token(next) || out_ids.len() >= gen_budget {
                                             stop = true;
                                             break;
                                         }
@@ -1540,7 +1542,8 @@ impl LocalLlmAgent {
                                 let _ = tx.send(delta);
                             }
                         }
-                        if next == eos {
+                        // Stop on eos AND chat end-of-turn (e.g. <|eot_id|>, <|im_end|>).
+                        if tok.is_stop_token(next) {
                             break;
                         }
                     }
@@ -1721,7 +1724,7 @@ impl LocalLlmAgent {
                     }
                 });
 
-                let mut ctx = tok.encode_prompt(&prompt_owned);
+                let mut ctx = tok.encode_chat_prompt(&prompt_owned);
                 let eos = tok.eos_token_id;
                 let vlen = tok.vocab_len().max(1);
 
@@ -2000,7 +2003,7 @@ impl LocalLlmAgent {
                                 cb(delta);
                             }
                         }
-                        if next == eos {
+                        if tok.is_stop_token(next) {
                             break;
                         }
                     }
