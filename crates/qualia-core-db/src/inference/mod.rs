@@ -33,6 +33,9 @@ pub mod ambient_orchestration;
 pub mod compute_universe;
 #[cfg(target_os = "windows")]
 pub mod directml_bridge;
+/// Stage-by-stage library probe tests for the inference optim toolkit.
+#[cfg(test)]
+pub mod toolkit_probe;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod ggml_quants;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]

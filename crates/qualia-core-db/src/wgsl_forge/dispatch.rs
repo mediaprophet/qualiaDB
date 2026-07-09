@@ -494,13 +494,20 @@ pub fn gemm_f32_tc(
     }
 
     // Tier 2: CUDA WMMA (genuine NVIDIA tensor cores, f16-input precision).
+    // cudarc may *panic* (not Err) when NVRTC/CUDA DLLs are missing — catch that so
+    // the plain f32 floor always remains reachable (toolkit probe found this 2026-07-09).
     #[cfg(feature = "cuda")]
     {
         if caps().cuda && m % 16 == 0 && n % 16 == 0 && k % 16 == 0 && m.min(n).min(k) > 0 {
-            if let Ok(out) = gemm_tc_cuda(m, k, n, a, b) {
-                return Ok(out);
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                gemm_tc_cuda(m, k, n, a, b)
+            }));
+            match result {
+                Ok(Ok(out)) => return Ok(out),
+                Ok(Err(_)) | Err(_) => {
+                    // Missing toolkit / NVRTC / launch failure → exact floor.
+                }
             }
-            // Tensor-core path eligible but errored — fall through to the exact floor.
         }
     }
     gemm_f32(m, k, n, a, b)

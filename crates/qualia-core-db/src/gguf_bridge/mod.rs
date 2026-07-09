@@ -1016,7 +1016,8 @@ mod rope_stem_parity_tests {
 }
 
 /// Zero-heap CPU GEMM: `out[i] = dot(weight_row(i), input)` with per-row dequant.
-fn stack_gemm_quant(
+/// `pub(crate)` so toolkit/parity probes can exercise the same kernel as the hot path.
+pub(crate) fn stack_gemm_quant(
     raw: &[u8],
     info: &GgufTensorInfo,
     input: &[f32],

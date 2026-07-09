@@ -152,3 +152,47 @@ None — steer locked.
 1. `llm passport` + `a0_decode_profile` on **p64** smollm2 (and f16 if present) for honest baseline
 2. Wire one prefill matmul through `dispatch::gemm_f32_tc` behind toggle, certify on A2000
 3. Only then SoA Q4_K layout work
+
+---
+
+## 2026-07-09 — Stage-by-stage toolkit probe + two library fixes (Grok)
+
+### Status
+**done** — probe suite + CRC table optim + CUDA soft-fail.
+
+### Method
+For each inference-pipeline stage, exercise **existing library functions** with simple
+tests (not full decode), print timings, then improve from findings.
+
+| Stage | Library surface | Result |
+|-------|-----------------|--------|
+| 1 Convert | `compile_gguf_to_p64_with_layout` Verbatim/F16Expand | ~1–4 ms synthetic; works |
+| 2 Helper | `ModelHelper` CBOR-LD + `apply_stops_to_tokenizer` | 611 B, merge stops ok |
+| 3 Dequant/GEMV | `stack_gemm_quant` ≡ substrate `matvec` | max_err 9.5e-7; stack path **0.5 ms** vs naive dequant+matvec **1.5 s** (f64 matvec cold) |
+| 4 Forge GEMM | `gemm_f32` / `gemm_f32_tc` | **bug found**: missing NVRTC panics; fixed soft-fail → floor |
+| 5 Top-k | `topk_cpu` | k=8/4096 ok |
+| 6 Ternary | `ternary_blob` / `ternary_gemm_cpu` | **ratio ~0.05** vs f32 (real novel rep; product via p64 ternary FFN) |
+| 7 Passport | `benchmark_devices` + `load_or_probe` | A2000 Vulkan microbench wins at n=256; cached passport still Dx12@0.11ms |
+| 8 Live p64 | `P64TensorIndex::from_p64` on SmolLM2 | **was ~42.5 s**, after CRC table **~3.0 s** (~14×); helper still None (re-convert) |
+
+### Improvements shipped from findings
+1. **CRC-32C slice table** (`container_10d/crc32c.rs`) — bit-identical to table-less; p64 validate much faster.
+2. **`gemm_f32_tc` soft-fail** — `catch_unwind` around CUDA/NVRTC so missing toolkit does not abort decode/tooling.
+
+### Novel representation opportunities (not yet product-wired)
+| Idea | Evidence | Next |
+|------|----------|------|
+| Ternary FFN p64 | 5% of f32 bytes, GEMV real in-tree | `llm convert` ternary policy + `QUALIA_LLM_TERNARY_FFN` + ΔPPL gate |
+| F16 expand | GPU unpack path ready; synthetic F32→F16 size flat (source already dense) | Measure on Q4/Q8 360M/3B |
+| Skip re-CRC on trusted activate | 3s still in validate | parse-once + optional `--trust-crc` after convert |
+| Passport microbench vs decode | Vulkan faster on small GEMV; Dx12 better for large decode | decode-proxy microbench in passport |
+| Forge TC on product path | floor works; CUDA needs NVRTC on PATH | install toolkit or ship runtime; then wire prefill |
+
+### How to re-run
+```powershell
+cargo test -p qualia-core-db --lib toolkit_probe -- --nocapture
+```
+
+### ⚑ Human
+- Re-run `llm convert` on smollm2 so `.q42.cbor-ld` attaches (probe saw helper=None).
+- Optional: install CUDA NVRTC so forge TC can actually run (today soft-falls to f32).
