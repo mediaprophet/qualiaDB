@@ -20,7 +20,6 @@ jobs:
   build-desktop-windows:
     name: Desktop (Windows Webizen)
     runs-on: windows-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -95,7 +94,6 @@ jobs:
   build-desktop-macos-metal:
     name: Desktop (macOS Apple Silicon / Metal)
     runs-on: macos-14
-    continue-on-error: true
     env:
       WGPU_BACKEND: metal
       WGPU_POWER_PREF: high
