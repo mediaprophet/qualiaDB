@@ -2025,7 +2025,7 @@ impl LocalLlmAgent {
 
                     let on_token_sink = on_token.as_mut().map(|cb| cb as &mut dyn FnMut(String));
                     let draft_step = try_accept_topology_draft(
-                        engine,
+                        &mut engine,
                         tensor_idx.as_ref(),
                         &draft_mapper,
                         &mut ctx,

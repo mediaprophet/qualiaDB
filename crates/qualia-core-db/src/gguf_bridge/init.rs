@@ -1220,12 +1220,19 @@ impl QTensorEngine {
             ffn_fused_pipeline,
             #[cfg(not(target_arch = "wasm32"))]
             ffn_fused_coop_pipeline,
+            #[cfg(not(target_arch = "wasm32"))]
             ffn_fused_mr_pipeline,
+            #[cfg(not(target_arch = "wasm32"))]
             ffn_fused_warp_pipeline,
+            #[cfg(not(target_arch = "wasm32"))]
             dual_gemv_pipeline,
+            #[cfg(not(target_arch = "wasm32"))]
             dual_gemv_mr_pipeline,
+            #[cfg(not(target_arch = "wasm32"))]
             dual_gemv_bind_layout,
+            #[cfg(not(target_arch = "wasm32"))]
             triple_gemv_pipeline,
+            #[cfg(not(target_arch = "wasm32"))]
             triple_gemv_bind_layout,
             mc8_logits_resident_buf: None,
             mc8_logits_row_bytes: 0,

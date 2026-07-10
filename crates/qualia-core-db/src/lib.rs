@@ -133,6 +133,8 @@ pub use inference::inference_awq as llm_awq;
 pub use inference::inference_bench;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::inference_bench as llm_bench;
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm"))]
+pub use inference::inference_bench_wasm as llm_bench;
 pub use inference::inference_modes;
 pub use inference::inference_modes::{
     active_inference_mode, apply_mode_toggles, bootstrap_inference_mode, fast_verify_html_default,
@@ -198,6 +200,8 @@ pub use inference::inference_kernel_parity as llm_kernel_parity;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::kv_capture;
 #[cfg(not(target_arch = "wasm32"))]
+pub use inference::kv_dict;
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm"))]
 pub use inference::kv_dict;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::kv_dict_runtime;

@@ -306,6 +306,11 @@ pub fn log_adversarial_conduct(
 ///
 /// This ensures every rule evaluation is durable, replayable, and auditable —
 /// the general-purpose event API complement to `log_adversarial_conduct`.
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub fn log_rule_evaluation(
     input_quin: &NQuin,
     results: &[crate::modalities::logic::rules::RuleResult],

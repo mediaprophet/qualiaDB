@@ -1,4 +1,4 @@
-use crate::domains::geospatial::adapters::DataAdapter;
+use crate::domains::geospatial::adapters::{AdapterHttpRequest, DataAdapter};
 use crate::net::disclosure::NetworkDisclosureRegistry;
 
 /// Adapter for SpatioTemporal Asset Catalog (STAC) API endpoints.
@@ -24,12 +24,12 @@ impl DataAdapter for StacAdapter {
         self.id
     }
 
-    fn fetch_region(
+    fn build_fetch_request(
         &self,
         bbox: (f64, f64, f64, f64),
         time_range: (u64, u64),
         registry: &NetworkDisclosureRegistry,
-    ) -> Result<(), String> {
+    ) -> Result<AdapterHttpRequest, String> {
         if !registry.check_egress_consent(self.adapter_id(), &self.endpoint) {
             return Err(format!(
                 "Consent denied or unregistered for STAC endpoint {}",
@@ -46,15 +46,7 @@ impl DataAdapter for StacAdapter {
             url.push_str(&format!("&collections={}", c));
         }
 
-        let client = reqwest::blocking::Client::new();
-        let resp = client.get(&url).send().map_err(|e| e.to_string())?;
-
-        if !resp.status().is_success() {
-            return Err(format!("STAC API returned error: {}", resp.status()));
-        }
-
-        // Parsing JSON items and extracting Cloud-Optimized GeoTIFF (COG) or Zarr URLs is deferred.
-        Ok(())
+        Ok(AdapterHttpRequest::get(url, "STAC"))
     }
 
     fn primary_endpoint(&self) -> &str {

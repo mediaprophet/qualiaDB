@@ -1,3 +1,4 @@
+use crate::domains::geospatial::adapters::AdapterHttpRequest;
 use crate::net::disclosure::NetworkDisclosureRegistry;
 
 pub struct DemAdapter {
@@ -17,12 +18,12 @@ impl DemAdapter {
         self.id
     }
 
-    pub fn fetch_region(
+    pub fn build_fetch_request(
         &self,
         bbox: (f64, f64, f64, f64),
         _time_range: (u64, u64),
         registry: &NetworkDisclosureRegistry,
-    ) -> Result<(), String> {
+    ) -> Result<AdapterHttpRequest, String> {
         if !registry.check_egress_consent(self.adapter_id(), &self.endpoint) {
             return Err(format!(
                 "Consent denied or unregistered for endpoint {} by adapter {}",
@@ -37,13 +38,17 @@ impl DemAdapter {
             self.endpoint, bbox.0, bbox.2, bbox.1, bbox.3
         );
 
-        let client = reqwest::blocking::Client::new();
-        let resp = client.get(&query).send().map_err(|e| e.to_string())?;
+        Ok(AdapterHttpRequest::get(query, "DEM"))
+    }
 
-        if !resp.status().is_success() {
-            return Err(format!("DEM API returned error: {}", resp.status()));
-        }
-
+    pub fn fetch_region(
+        &self,
+        bbox: (f64, f64, f64, f64),
+        time_range: (u64, u64),
+        registry: &NetworkDisclosureRegistry,
+    ) -> Result<(), String> {
+        let request = self.build_fetch_request(bbox, time_range, registry)?;
+        super::execute_http_request_status(&request)?;
         // 2. Stream elevation data from endpoint is verified.
         // 3. Piping elevation heightfield into the Marching Cubes / QEM LOD engine to output .10d meshes is deferred.
         Ok(())

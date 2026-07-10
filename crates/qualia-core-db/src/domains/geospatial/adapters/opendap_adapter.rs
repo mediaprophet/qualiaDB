@@ -1,4 +1,4 @@
-use crate::domains::geospatial::adapters::DataAdapter;
+use crate::domains::geospatial::adapters::{AdapterHttpRequest, DataAdapter};
 use crate::net::disclosure::NetworkDisclosureRegistry;
 
 /// Adapter for Open-source Project for a Network Data Access Protocol (OPeNDAP) endpoints.
@@ -24,12 +24,12 @@ impl DataAdapter for OpendapAdapter {
         self.id
     }
 
-    fn fetch_region(
+    fn build_fetch_request(
         &self,
         _bbox: (f64, f64, f64, f64),
         _time_range: (u64, u64),
         registry: &NetworkDisclosureRegistry,
-    ) -> Result<(), String> {
+    ) -> Result<AdapterHttpRequest, String> {
         if !registry.check_egress_consent(self.adapter_id(), &self.endpoint) {
             return Err(format!(
                 "Consent denied or unregistered for OPeNDAP endpoint {}",
@@ -42,15 +42,7 @@ impl DataAdapter for OpendapAdapter {
         // Since we don't have the DDS to resolve indices here, we fetch the DDS endpoint to verify access.
         let dds_url = format!("{}.dds", self.endpoint);
 
-        let client = reqwest::blocking::Client::new();
-        let resp = client.get(&dds_url).send().map_err(|e| e.to_string())?;
-
-        if !resp.status().is_success() {
-            return Err(format!("OPeNDAP API returned error: {}", resp.status()));
-        }
-
-        // Translation of regional search into constraint expressions via DDS parsing is deferred.
-        Ok(())
+        Ok(AdapterHttpRequest::get(dds_url, "OPeNDAP"))
     }
 
     fn primary_endpoint(&self) -> &str {

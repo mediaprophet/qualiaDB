@@ -1,3 +1,4 @@
+use crate::domains::geospatial::adapters::AdapterHttpRequest;
 use crate::net::disclosure::NetworkDisclosureRegistry;
 
 pub enum OgcServiceType {
@@ -29,12 +30,12 @@ impl WmsAdapter {
         self.id
     }
 
-    pub fn fetch_region(
+    pub fn build_fetch_request(
         &self,
         bbox: (f64, f64, f64, f64),
         time_range: (u64, u64),
         registry: &NetworkDisclosureRegistry,
-    ) -> Result<(), String> {
+    ) -> Result<AdapterHttpRequest, String> {
         if !registry.check_egress_consent(self.adapter_id(), &self.endpoint) {
             return Err(format!(
                 "Consent denied or unregistered for endpoint {} by adapter {}",
@@ -60,13 +61,17 @@ impl WmsAdapter {
             url.push_str(&format!("&TIME={}/{}", time_range.0, time_range.1));
         }
 
-        let client = reqwest::blocking::Client::new();
-        let resp = client.get(&url).send().map_err(|e| e.to_string())?;
+        Ok(AdapterHttpRequest::get(url, "OGC"))
+    }
 
-        if !resp.status().is_success() {
-            return Err(format!("OGC API returned error: {}", resp.status()));
-        }
-
+    pub fn fetch_region(
+        &self,
+        bbox: (f64, f64, f64, f64),
+        time_range: (u64, u64),
+        registry: &NetworkDisclosureRegistry,
+    ) -> Result<(), String> {
+        let request = self.build_fetch_request(bbox, time_range, registry)?;
+        super::execute_http_request_status(&request)?;
         // Parsing response data is deferred.
         Ok(())
     }

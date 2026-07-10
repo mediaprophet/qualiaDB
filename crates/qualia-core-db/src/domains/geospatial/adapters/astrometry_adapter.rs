@@ -1,4 +1,4 @@
-use crate::domains::geospatial::adapters::DataAdapter;
+use crate::domains::geospatial::adapters::{AdapterHttpRequest, DataAdapter};
 use crate::net::disclosure::NetworkDisclosureRegistry;
 
 /// Adapter for Trajectory & Ephemeris REST APIs (e.g., NASA JPL Horizons, NeoWs, MPC).
@@ -21,12 +21,12 @@ impl DataAdapter for AstrometryAdapter {
         self.id
     }
 
-    fn fetch_region(
+    fn build_fetch_request(
         &self,
         _bbox: (f64, f64, f64, f64),
         time_range: (u64, u64),
         registry: &NetworkDisclosureRegistry,
-    ) -> Result<(), String> {
+    ) -> Result<AdapterHttpRequest, String> {
         if !registry.check_egress_consent(self.adapter_id(), &self.endpoint) {
             return Err(format!(
                 "Consent denied or unregistered for astrometry endpoint {}",
@@ -39,15 +39,7 @@ impl DataAdapter for AstrometryAdapter {
             self.endpoint, time_range.0, time_range.1
         );
 
-        let client = reqwest::blocking::Client::new();
-        let resp = client.get(&url).send().map_err(|e| e.to_string())?;
-
-        if !resp.status().is_success() {
-            return Err(format!("Astrometry API returned error: {}", resp.status()));
-        }
-
-        // Parsing into NQuins is deferred.
-        Ok(())
+        Ok(AdapterHttpRequest::get(url, "Astrometry"))
     }
 
     fn primary_endpoint(&self) -> &str {

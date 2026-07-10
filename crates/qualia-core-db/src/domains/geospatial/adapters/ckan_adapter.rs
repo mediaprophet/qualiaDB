@@ -1,3 +1,4 @@
+use crate::domains::geospatial::adapters::AdapterHttpRequest;
 use crate::net::disclosure::NetworkDisclosureRegistry;
 
 /// Adapter for dynamically discovering and fetching datasets from CKAN federated portals.
@@ -20,12 +21,12 @@ impl super::DataAdapter for CkanAdapter {
         self.id
     }
 
-    fn fetch_region(
+    fn build_fetch_request(
         &self,
         bbox: (f64, f64, f64, f64),
         _time_range: (u64, u64),
         registry: &NetworkDisclosureRegistry,
-    ) -> Result<(), String> {
+    ) -> Result<AdapterHttpRequest, String> {
         let search_endpoint = format!("{}/action/package_search", self.api_endpoint);
         
         if !registry.check_egress_consent(self.adapter_id(), &search_endpoint) {
@@ -41,15 +42,15 @@ impl super::DataAdapter for CkanAdapter {
             search_endpoint, bbox.0, bbox.1, bbox.2, bbox.3
         );
 
-        let client = reqwest::blocking::Client::new();
-        let resp = client.get(&query).send().map_err(|e| e.to_string())?;
+        Ok(AdapterHttpRequest::get(query, "CKAN"))
+    }
 
-        if !resp.status().is_success() {
-            return Err(format!("CKAN API returned error: {}", resp.status()));
-        }
+    fn needs_fetch_body(&self) -> bool {
+        true
+    }
 
-        let body_text = resp.text().map_err(|e| e.to_string())?;
-        let json: serde_json::Value = serde_json::from_str(&body_text).map_err(|e| e.to_string())?;
+    fn handle_fetch_body(&self, body: &str) -> Result<(), String> {
+        let json: serde_json::Value = serde_json::from_str(body).map_err(|e| e.to_string())?;
 
         let results = json.get("result")
             .and_then(|r| r.get("results"))

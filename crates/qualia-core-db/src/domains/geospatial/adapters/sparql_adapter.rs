@@ -1,4 +1,4 @@
-use crate::domains::geospatial::adapters::DataAdapter;
+use crate::domains::geospatial::adapters::{AdapterHttpRequest, DataAdapter};
 use crate::net::disclosure::NetworkDisclosureRegistry;
 
 /// Adapter for Semantic Web RDF / SPARQL endpoints (e.g. Wikidata).
@@ -21,12 +21,12 @@ impl DataAdapter for SparqlAdapter {
         self.id
     }
 
-    fn fetch_region(
+    fn build_fetch_request(
         &self,
         bbox: (f64, f64, f64, f64),
         _time_range: (u64, u64),
         registry: &NetworkDisclosureRegistry,
-    ) -> Result<(), String> {
+    ) -> Result<AdapterHttpRequest, String> {
         if !registry.check_egress_consent(self.adapter_id(), &self.endpoint) {
             return Err(format!(
                 "Consent denied or unregistered for SPARQL endpoint {}",
@@ -51,17 +51,7 @@ impl DataAdapter for SparqlAdapter {
 
         let url = format!("{}?query={}&format=json", self.endpoint, urlencoding::encode(&sparql_query));
 
-        let client = reqwest::blocking::Client::new();
-        let resp = client.get(&url)
-            .send()
-            .map_err(|e| e.to_string())?;
-
-        if !resp.status().is_success() {
-            return Err(format!("SPARQL API returned error: {}", resp.status()));
-        }
-
-        // Translation of SPARQL response into NQuins is deferred.
-        Ok(())
+        Ok(AdapterHttpRequest::get(url, "SPARQL"))
     }
 
     fn primary_endpoint(&self) -> &str {

@@ -19,6 +19,13 @@ pub mod assets;
     feature = "wasm-full"
 ))]
 pub mod authoring;
+/// Validate-before-render barrier needs full `modalities::logic::geometry_asset_shacl`
+/// (not modalities_lite / wasm-ontology-only).
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub mod barrier;
 pub mod camera;
 pub mod derivation;
@@ -82,10 +89,9 @@ pub mod telemetry;
 
 /// LOD chain (P5.8): author mesh → decimate N LODs → serialize to `.10d` →
 /// renderer parses each level → `plan_view` selects the expected LOD. Gated
-/// like `authoring` (needs `crate::modalities` for deontic gates).
+/// like the scientific geometry stack (needs `crate::specialized_libs`).
 #[cfg(any(
     not(target_arch = "wasm32"),
-    feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"
 ))]

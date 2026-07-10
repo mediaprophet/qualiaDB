@@ -1,4 +1,4 @@
-use crate::domains::geospatial::adapters::DataAdapter;
+use crate::domains::geospatial::adapters::{AdapterHttpRequest, DataAdapter};
 use crate::net::disclosure::NetworkDisclosureRegistry;
 
 pub struct Ogc3dTilesAdapter {
@@ -20,12 +20,12 @@ impl DataAdapter for Ogc3dTilesAdapter {
         self.id
     }
 
-    fn fetch_region(
+    fn build_fetch_request(
         &self,
         _bbox: (f64, f64, f64, f64),
         _time_range: (u64, u64),
         registry: &NetworkDisclosureRegistry,
-    ) -> Result<(), String> {
+    ) -> Result<AdapterHttpRequest, String> {
         if !registry.check_egress_consent(self.adapter_id(), &self.endpoint) {
             return Err("Consent denied for OGC 3D Tiles fetch".into());
         }
@@ -36,15 +36,7 @@ impl DataAdapter for Ogc3dTilesAdapter {
             format!("{}/tileset.json", self.endpoint.trim_end_matches('/'))
         };
 
-        let client = reqwest::blocking::Client::new();
-        let resp = client.get(&url).send().map_err(|e| e.to_string())?;
-
-        if !resp.status().is_success() {
-            return Err(format!("OGC 3D Tiles API returned error: {}", resp.status()));
-        }
-
-        // Streaming HLODs based on bbox is deferred.
-        Ok(())
+        Ok(AdapterHttpRequest::get(url, "OGC 3D Tiles"))
     }
 
     fn primary_endpoint(&self) -> &str {

@@ -30,19 +30,165 @@ pub use stac_adapter::StacAdapter;
 pub use wms_adapter::WmsAdapter;
 pub use ckan_adapter::CkanAdapter;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AdapterHttpMethod {
+    Get,
+    Post,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AdapterHttpRequest {
+    pub method: AdapterHttpMethod,
+    pub url: String,
+    pub body: Option<String>,
+    pub content_type: Option<&'static str>,
+    pub service_label: &'static str,
+}
+
+impl AdapterHttpRequest {
+    pub fn get(url: String, service_label: &'static str) -> Self {
+        Self {
+            method: AdapterHttpMethod::Get,
+            url,
+            body: None,
+            content_type: None,
+            service_label,
+        }
+    }
+
+    pub fn post_form(url: String, body: String, service_label: &'static str) -> Self {
+        Self {
+            method: AdapterHttpMethod::Post,
+            url,
+            body: Some(body),
+            content_type: Some("application/x-www-form-urlencoded"),
+            service_label,
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn execute_http_request_text(request: &AdapterHttpRequest) -> Result<String, String> {
+    let client = reqwest::blocking::Client::new();
+    let mut builder = match request.method {
+        AdapterHttpMethod::Get => client.get(&request.url),
+        AdapterHttpMethod::Post => client.post(&request.url),
+    };
+    if let Some(content_type) = request.content_type {
+        builder = builder.header("Content-Type", content_type);
+    }
+    if let Some(body) = &request.body {
+        builder = builder.body(body.clone());
+    }
+
+    let resp = builder.send().map_err(|e| e.to_string())?;
+    if !resp.status().is_success() {
+        return Err(format!("{} API returned error: {}", request.service_label, resp.status()));
+    }
+    resp.text().map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn execute_http_request_status(request: &AdapterHttpRequest) -> Result<(), String> {
+    execute_http_request_text(request).map(|_| ())
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn execute_http_request_text_async(request: &AdapterHttpRequest) -> Result<String, String> {
+    let client = reqwest::Client::new();
+    let mut builder = match request.method {
+        AdapterHttpMethod::Get => client.get(&request.url),
+        AdapterHttpMethod::Post => client.post(&request.url),
+    };
+    if let Some(content_type) = request.content_type {
+        builder = builder.header("Content-Type", content_type);
+    }
+    if let Some(body) = &request.body {
+        builder = builder.body(body.clone());
+    }
+
+    let resp = builder.send().await.map_err(|e| e.to_string())?;
+    let status = resp.status();
+    if !status.is_success() {
+        return Err(format!("{} API returned error: {status}", request.service_label));
+    }
+    resp.text().await.map_err(|e| e.to_string())
+}
+
+#[cfg(target_arch = "wasm32")]
+fn execute_http_request_status(_request: &AdapterHttpRequest) -> Result<(), String> {
+    Err(
+        "Synchronous geospatial HTTP is unavailable on wasm32; call fetch_region_async instead"
+            .to_string(),
+    )
+}
+
+#[cfg(target_arch = "wasm32")]
+fn execute_http_request_text(_request: &AdapterHttpRequest) -> Result<String, String> {
+    Err(
+        "Synchronous geospatial HTTP is unavailable on wasm32; call fetch_region_async instead"
+            .to_string(),
+    )
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn fetch_region_async(
+    adapter: &dyn DataAdapter,
+    bbox: (f64, f64, f64, f64),
+    time_range: (u64, u64),
+    registry: &NetworkDisclosureRegistry,
+) -> Result<(), String> {
+    let request = adapter.build_fetch_request(bbox, time_range, registry)?;
+    if adapter.needs_fetch_body() {
+        let body = execute_http_request_text_async(&request).await?;
+        adapter.handle_fetch_body(&body)
+    } else {
+        execute_http_request_text_async(&request).await.map(|_| ())
+    }
+}
+
 pub trait DataAdapter {
     /// Returns the unique identifier for this adapter (e.g., "dem_adapter")
     fn adapter_id(&self) -> &'static str;
 
-    /// Initiate fetching for a spatial bounding box [x1, y1, x2, y2]
+    /// Build the outbound request for a spatial bounding box [x1, y1, x2, y2]
     /// and temporal range [t0, t1]. Implementations must check `NetworkDisclosureRegistry`
-    /// before initiating actual network calls.
+    /// before returning an actual network request.
+    fn build_fetch_request(
+        &self,
+        bbox: (f64, f64, f64, f64),
+        time_range: (u64, u64),
+        registry: &NetworkDisclosureRegistry,
+    ) -> Result<AdapterHttpRequest, String>;
+
+    /// Initiate fetching through the native blocking transport. Browser WASM
+    /// cannot legally block on network I/O, so wasm callers use `fetch_region_async`.
     fn fetch_region(
         &self,
         bbox: (f64, f64, f64, f64),
         time_range: (u64, u64),
         registry: &NetworkDisclosureRegistry,
-    ) -> Result<(), String>;
+    ) -> Result<(), String> {
+        let request = self.build_fetch_request(bbox, time_range, registry)?;
+        if self.needs_fetch_body() {
+            let body = execute_http_request_text(&request)?;
+            self.handle_fetch_body(&body)
+        } else {
+            execute_http_request_status(&request)
+        }
+    }
+
+    /// Whether the adapter consumes the response body instead of only checking
+    /// that the endpoint accepted the request.
+    fn needs_fetch_body(&self) -> bool {
+        false
+    }
+
+    /// Parse or enqueue the fetched body. Most adapters currently only verify
+    /// access; CKAN consumes JSON discovery results here.
+    fn handle_fetch_body(&self, _body: &str) -> Result<(), String> {
+        Ok(())
+    }
 
     /// Primary egress endpoint for disclosure checks and fetch reports.
     fn primary_endpoint(&self) -> &str;
@@ -56,13 +202,13 @@ impl DataAdapter for DemAdapter {
         "dem_adapter"
     }
 
-    fn fetch_region(
+    fn build_fetch_request(
         &self,
         bbox: (f64, f64, f64, f64),
         time_range: (u64, u64),
         registry: &NetworkDisclosureRegistry,
-    ) -> Result<(), String> {
-        DemAdapter::fetch_region(self, bbox, time_range, registry)
+    ) -> Result<AdapterHttpRequest, String> {
+        DemAdapter::build_fetch_request(self, bbox, time_range, registry)
     }
 
     fn primary_endpoint(&self) -> &str {
@@ -79,13 +225,13 @@ impl DataAdapter for OsmAdapter {
         "osm_adapter"
     }
 
-    fn fetch_region(
+    fn build_fetch_request(
         &self,
         bbox: (f64, f64, f64, f64),
         time_range: (u64, u64),
         registry: &NetworkDisclosureRegistry,
-    ) -> Result<(), String> {
-        OsmAdapter::fetch_region(self, bbox, time_range, registry)
+    ) -> Result<AdapterHttpRequest, String> {
+        OsmAdapter::build_fetch_request(self, bbox, time_range, registry)
     }
 
     fn primary_endpoint(&self) -> &str {
@@ -103,13 +249,13 @@ impl DataAdapter for WmsAdapter {
         "wms_adapter"
     }
 
-    fn fetch_region(
+    fn build_fetch_request(
         &self,
         bbox: (f64, f64, f64, f64),
         time_range: (u64, u64),
         registry: &NetworkDisclosureRegistry,
-    ) -> Result<(), String> {
-        WmsAdapter::fetch_region(self, bbox, time_range, registry)
+    ) -> Result<AdapterHttpRequest, String> {
+        WmsAdapter::build_fetch_request(self, bbox, time_range, registry)
     }
 
     fn primary_endpoint(&self) -> &str {
@@ -127,13 +273,13 @@ impl DataAdapter for GbifAdapter {
         "gbif_adapter"
     }
 
-    fn fetch_region(
+    fn build_fetch_request(
         &self,
         bbox: (f64, f64, f64, f64),
         time_range: (u64, u64),
         registry: &NetworkDisclosureRegistry,
-    ) -> Result<(), String> {
-        GbifAdapter::fetch_region(self, bbox, time_range, registry)
+    ) -> Result<AdapterHttpRequest, String> {
+        GbifAdapter::build_fetch_request(self, bbox, time_range, registry)
     }
 
     fn primary_endpoint(&self) -> &str {

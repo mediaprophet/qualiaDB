@@ -1,4 +1,4 @@
-use crate::domains::geospatial::adapters::DataAdapter;
+use crate::domains::geospatial::adapters::{AdapterHttpRequest, DataAdapter};
 use crate::net::disclosure::NetworkDisclosureRegistry;
 
 /// Adapter for IVOA Table Access Protocol (TAP) endpoints using ADQL.
@@ -24,12 +24,12 @@ impl DataAdapter for IvoaTapAdapter {
         self.id
     }
 
-    fn fetch_region(
+    fn build_fetch_request(
         &self,
         bbox: (f64, f64, f64, f64),
         _time_range: (u64, u64),
         registry: &NetworkDisclosureRegistry,
-    ) -> Result<(), String> {
+    ) -> Result<AdapterHttpRequest, String> {
         if !registry.check_egress_consent(self.adapter_id(), &self.endpoint) {
             return Err(format!(
                 "Consent denied or unregistered for IVOA TAP endpoint {}",
@@ -49,19 +49,11 @@ impl DataAdapter for IvoaTapAdapter {
 
         let body = format!("REQUEST=doQuery&LANG=ADQL&QUERY={}", urlencoding::encode(&adql_query));
 
-        let client = reqwest::blocking::Client::new();
-        let resp = client.post(&self.endpoint)
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(body)
-            .send()
-            .map_err(|e| e.to_string())?;
-
-        if !resp.status().is_success() {
-            return Err(format!("IVOA TAP API returned error: {}", resp.status()));
-        }
-
-        // Parsing astrometry into .10d nodes is deferred.
-        Ok(())
+        Ok(AdapterHttpRequest::post_form(
+            self.endpoint.clone(),
+            body,
+            "IVOA TAP",
+        ))
     }
 
     fn primary_endpoint(&self) -> &str {

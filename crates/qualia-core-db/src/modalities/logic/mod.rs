@@ -89,6 +89,11 @@ pub use shacl_extensions::{
 
 // ─── SHACL Extensions for Specialized Libraries ─────────────────────────────────
 
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub mod geometry_asset_shacl;
 #[cfg(any(
     not(target_arch = "wasm32"),
@@ -96,6 +101,11 @@ pub mod geometry_asset_shacl;
     feature = "wasm-full"
 ))]
 pub mod specialized_libs_shacl;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub use geometry_asset_shacl::{
     validate_geometry_manifest, GeometryAssetConfiguration, GeometryConstraintViolation,
     GeometryManifestFacts, MAX_GEOMETRY_COUNT,
@@ -285,7 +295,17 @@ pub mod owl;
 
 // ─── Rules ─────────────────────────────────────────────────────────────────────
 
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub mod rules;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub use rules::{RuleEngine, RuleSet, GUARDIANSHIP_RULESET};
 
 // ─── Opcodes ─────────────────────────────────────────────────────────────────

@@ -415,6 +415,7 @@ impl QTensorEngine {
         // reconstructs them. `dict_k = 0` ⇒ the untouched f32/int8 paths below.
         let dict_k = layout.dict_k as usize;
         let dict_mode = dict_k > 0;
+        #[cfg(not(target_arch = "wasm32"))]
         let (k_dict, v_dict) = if dict_mode {
             match proj_kind {
                 1 => (
@@ -433,6 +434,9 @@ impl QTensorEngine {
         } else {
             (None, None)
         };
+        #[cfg(target_arch = "wasm32")]
+        let (k_dict, v_dict): (Option<crate::kv_dict::KvDictionary>, Option<crate::kv_dict::KvDictionary>) =
+            (None, None);
 
         let mut proj = [0f32; MAX_STACK_GEMM_OUT];
         let mut norm_tok = [0f32; MAX_HIDDEN_DIM];
@@ -503,6 +507,7 @@ impl QTensorEngine {
                     } else {
                         // Phase 4a certify path: reconstruct-on-write (f32 store); no-op unless the dict
                         // runtime is enabled on the f32 layout.
+                        #[cfg(not(target_arch = "wasm32"))]
                         crate::kv_dict_runtime::reconstruct_kv(
                             layer as usize,
                             true,
@@ -556,6 +561,7 @@ impl QTensorEngine {
                             }
                         }
                     } else {
+                        #[cfg(not(target_arch = "wasm32"))]
                         crate::kv_dict_runtime::reconstruct_kv(
                             layer as usize,
                             false,

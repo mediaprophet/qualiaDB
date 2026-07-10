@@ -11,14 +11,18 @@ pub mod inference_awq;
 pub use inference_awq as llm_awq; // transitional alias
 #[cfg(not(target_arch = "wasm32"))]
 pub mod inference_bench;
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm"))]
+pub mod inference_bench_wasm;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod kv_capture;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod kv_dict;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod kv_dict_runtime;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference_bench as llm_bench; // transitional alias
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm"))]
+pub use inference_bench_wasm as llm_bench; // transitional alias
 pub mod inference_eval;
 pub use inference_eval as llm_eval; // transitional alias
 #[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]

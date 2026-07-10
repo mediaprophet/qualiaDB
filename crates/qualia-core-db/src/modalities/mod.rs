@@ -165,5 +165,15 @@ pub use temporal_ltl::{
     evaluate_ltl_trace, LtlFormula, OP_LTL_FINALLY, OP_LTL_GLOBALLY, OP_LTL_NEXT, OP_LTL_RELEASE,
     OP_LTL_UNTIL,
 };
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub mod manifold;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub use manifold::project_10d_to_quaternion;
