@@ -41,10 +41,9 @@ pub fn spawn_ui_motion_loop(mut on_frame: impl FnMut(f64) + 'static) {
     use std::rc::Rc;
 
     use gloo_timers::callback::Interval;
-    use wasm_bindgen::prelude::*;
 
     let last = Rc::new(RefCell::new(0.0f64));
-    Interval::new(16, move || {
+    let interval = Interval::new(16, move || {
         let now = js_sys::Date::now();
         let mut prev = last.borrow_mut();
         let dt = if *prev > 0.0 {
@@ -55,6 +54,7 @@ pub fn spawn_ui_motion_loop(mut on_frame: impl FnMut(f64) + 'static) {
         *prev = now;
         on_frame(dt);
     });
+    interval.forget();
 }
 
 #[cfg(not(target_arch = "wasm32"))]

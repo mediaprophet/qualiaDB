@@ -23,11 +23,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
@@ -41,23 +36,20 @@ jobs:
           key: ${{ runner.os }}-cargo-desktop-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-desktop-
 
-      - name: Build webizen-studio dist
+      - name: Verify packaged webizen-studio dist
         shell: pwsh
         run: |
-          Write-Host "Building webizen-studio wasm frontend (Dioxus)..."
-          cargo install dioxus-cli --locked --force
-          Push-Location crates/webizen-studio
-          dx build --release --web
-          Pop-Location
-          $fresh = "target/dx/webizen-studio/release/web/public"
-          if (Test-Path $fresh/index.html) {
-            New-Item -ItemType Directory -Force -Path crates/webizen-studio/dist/assets | Out-Null
-            Copy-Item $fresh/index.html crates/webizen-studio/dist/index.html -Force
-            Copy-Item -Recurse $fresh/assets/* crates/webizen-studio/dist/assets/ -Force
+          $dist = "crates/webizen-studio/dist"
+          if (-not (Test-Path "$dist/index.html")) {
+            throw "$dist/index.html missing"
           }
-          if (-not (Test-Path crates/webizen-studio/dist/index.html)) {
-            throw "crates/webizen-studio/dist/index.html missing after build"
+          if (-not (Get-ChildItem "$dist/assets" -Filter "*.js" -File -ErrorAction SilentlyContinue)) {
+            throw "$dist/assets is missing a JavaScript bundle"
           }
+          if (-not (Get-ChildItem "$dist/assets" -Filter "*.wasm" -File -ErrorAction SilentlyContinue)) {
+            throw "$dist/assets is missing a WASM bundle"
+          }
+          Get-ChildItem $dist, "$dist/assets"
 
       - name: Build webizen-desktop (release)
         run: cargo build --release -p webizen-desktop
@@ -101,11 +93,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -121,19 +108,14 @@ jobs:
           key: ${{ runner.os }}-cargo-desktop-metal-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-desktop-metal-
 
-      - name: Build webizen-studio dist
+      - name: Verify packaged webizen-studio dist
         shell: bash
         run: |
-          echo "Building webizen-studio wasm frontend (Dioxus)..."
-          cargo install dioxus-cli --locked --force
-          (cd crates/webizen-studio && dx build --release --web)
-          fresh="target/dx/webizen-studio/release/web/public"
-          if [ -f "$fresh/index.html" ]; then
-            mkdir -p crates/webizen-studio/dist/assets
-            cp "$fresh/index.html" crates/webizen-studio/dist/index.html
-            cp -R "$fresh/assets/." crates/webizen-studio/dist/assets/
-          fi
-          test -f crates/webizen-studio/dist/index.html
+          dist="crates/webizen-studio/dist"
+          test -f "$dist/index.html"
+          find "$dist/assets" -maxdepth 1 -type f -name '*.js' | grep -q .
+          find "$dist/assets" -maxdepth 1 -type f -name '*.wasm' | grep -q .
+          ls -lah "$dist" "$dist/assets"
 
       - name: Build webizen-desktop for Apple Silicon
         shell: bash
