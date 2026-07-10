@@ -13,9 +13,12 @@ use crate::tensor::Tensor10D;
 #[cfg(target_arch = "wasm32")]
 use crate::{q_hash, NQuin};
 
-#[cfg(target_arch = "wasm32")]
+// geometry_wasm.rs lives at the crate root (sibling of this file), not under spatial_wasm/.
+// Needs `specialized_libs` (wasm-scientific / native) — not available on portal-slim.
+#[cfg(all(target_arch = "wasm32", feature = "wasm-scientific"))]
+#[path = "geometry_wasm.rs"]
 pub mod geometry_wasm;
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", feature = "wasm-scientific"))]
 pub use geometry_wasm::*;
 
 #[cfg(target_arch = "wasm32")]

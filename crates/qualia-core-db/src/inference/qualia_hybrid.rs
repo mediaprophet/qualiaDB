@@ -291,20 +291,47 @@ pub fn publish_grounding_obligation(prompt: &str) -> Option<NQuin> {
     let party = q_hash("q42:inference-principal");
     let property = q_hash(crate::quant_graph_grounding::P_CAPITAL_OF);
     let contract = q_hash(crate::quant_graph_grounding::CTX_GROUNDING);
-    let quin = crate::modalities::logic::deontic::compile_norm_quin(
-        party,
-        crate::modalities::logic::deontic::OP_OBLIGATE,
-        property,
-        object,
-        contract,
-        0, // no expiry
-        false,
-    );
-    log::info!(
-        "qualia_hybrid|deontic_obligate|reason={:?}|object={object:#x}",
-        g.reason
-    );
-    Some(quin)
+    // Portal-only WASM lacks `crate::modalities`; obligation Quins need native/full stack.
+    #[cfg(any(
+        not(target_arch = "wasm32"),
+        feature = "wasm-ontology",
+        feature = "wasm-logic",
+        feature = "wasm-scientific",
+        feature = "wasm-full"
+    ))]
+    {
+        let quin = crate::modalities::logic::deontic::compile_norm_quin(
+            party,
+            crate::modalities::logic::deontic::OP_OBLIGATE,
+            property,
+            object,
+            contract,
+            0, // no expiry
+            false,
+        );
+        log::info!(
+            "qualia_hybrid|deontic_obligate|reason={:?}|object={object:#x}",
+            g.reason
+        );
+        Some(quin)
+    }
+    #[cfg(all(
+        target_arch = "wasm32",
+        not(any(
+            feature = "wasm-ontology",
+            feature = "wasm-logic",
+            feature = "wasm-scientific",
+            feature = "wasm-full"
+        ))
+    ))]
+    {
+        let _ = (party, property, object, contract);
+        log::info!(
+            "qualia_hybrid|deontic_obligate_skipped|portal_wasm|reason={:?}|object={object:#x}",
+            g.reason
+        );
+        None
+    }
 }
 
 /// Prefer fact draft when quant-graph; else prompt-lookup n-gram draft.

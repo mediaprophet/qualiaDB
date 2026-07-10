@@ -129,6 +129,7 @@ impl ModelHelper {
     ///
     /// Used at activate time so decode stops on the convert-time stop set even
     /// when the embedded Q42T section is v1 (eos-only) or incomplete.
+    #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
     pub fn apply_stops_to_tokenizer(&self, tok: &mut crate::gguf_sharder::GgufTokenizer) {
         tok.merge_stop_token_ids(&self.tokenizer.stop_token_ids);
     }

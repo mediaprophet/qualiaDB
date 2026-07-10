@@ -15,7 +15,13 @@
 use std::sync::atomic::{AtomicU8, Ordering};
 
 use crate::inference_modes::{set_inference_mode, InferenceMode};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::llm_bench::{set_decode_budget_override, set_inference_timeout_override_ms};
+
+#[cfg(target_arch = "wasm32")]
+fn set_decode_budget_override(_n: u32) {}
+#[cfg(target_arch = "wasm32")]
+fn set_inference_timeout_override_ms(_ms: u64) {}
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
