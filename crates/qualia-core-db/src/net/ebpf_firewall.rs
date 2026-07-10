@@ -546,7 +546,7 @@ impl EbpfFirewall {
         &self,
         fd: i32,
         program_id: u32,
-        _program_type: ProgramType,
+        program_type: ProgramType,
     ) -> Result<(), EbpfError> {
         #[cfg(target_os = "linux")]
         {
@@ -558,6 +558,7 @@ impl EbpfFirewall {
         }
         #[cfg(not(target_os = "linux"))]
         {
+            let _ = program_type;
             return Err(EbpfError::AttachError(format!(
                 "Cannot attach program {} to socket fd {}: eBPF is Linux-only.",
                 program_id, fd

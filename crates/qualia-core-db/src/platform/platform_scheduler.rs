@@ -109,7 +109,7 @@ pub fn bind_background_thread() {
 // macOS implementation
 // ──────────────────────────────────────────────────────────────────────────────
 
-fn bind_macos(_class: QosClass) -> Result<(), SchedulerError> {
+fn bind_macos(class: QosClass) -> Result<(), SchedulerError> {
     #[cfg(target_os = "macos")]
     {
         use darwin_qos::*;
@@ -137,7 +137,7 @@ fn bind_macos(_class: QosClass) -> Result<(), SchedulerError> {
 // Linux implementation — core_affinity for asymmetric multiprocessing
 // ──────────────────────────────────────────────────────────────────────────────
 
-fn bind_linux(_class: QosClass) -> Result<(), SchedulerError> {
+fn bind_linux(class: QosClass) -> Result<(), SchedulerError> {
     #[cfg(target_os = "linux")]
     {
         use core_affinity::CoreId;

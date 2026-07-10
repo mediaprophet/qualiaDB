@@ -4,9 +4,7 @@ use wasm_bindgen::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[cfg(target_arch = "wasm32")]
-use crate::specialized_libs::computational_geometry::primitives::Point2;
-#[cfg(target_arch = "wasm32")]
-use crate::specialized_libs::computational_geometry::hull::convex_hull_indices_2;
+use crate::specialized_libs::computational_geometry::{convex_hull_indices_2, Point2};
 #[cfg(target_arch = "wasm32")]
 use crate::specialized_libs::computational_geometry::delaunay_2::delaunay_triangulation_2;
 

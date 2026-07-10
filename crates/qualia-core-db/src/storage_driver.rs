@@ -372,7 +372,7 @@ impl StorageDriver for MmapApfsDriver {
 
     fn snapshot(&self, snapshot_id: &str) -> Result<(), StorageError> {
         let src = &self.inner.root;
-        let _dst = snap_dir(src, snapshot_id);
+        let dst = snap_dir(src, snapshot_id);
 
         #[cfg(target_os = "macos")]
         {
@@ -386,7 +386,10 @@ impl StorageDriver for MmapApfsDriver {
         }
 
         #[cfg(not(target_os = "macos"))]
-        self.inner.snapshot(snapshot_id)
+        {
+            let _ = dst;
+            self.inner.snapshot(snapshot_id)
+        }
     }
 
     fn flush(&self) -> Result<(), StorageError> {
