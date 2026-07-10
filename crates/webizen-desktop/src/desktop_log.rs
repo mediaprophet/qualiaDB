@@ -15,6 +15,7 @@ pub struct DesktopLogEntry {
 
 static LOG_PATH: OnceLock<PathBuf> = OnceLock::new();
 static RECENT: OnceLock<Mutex<VecDeque<DesktopLogEntry>>> = OnceLock::new();
+static PANIC_HOOK_INSTALLED: OnceLock<()> = OnceLock::new();
 
 fn default_log_path() -> PathBuf {
     if let Ok(path) = std::env::var("WEBIZEN_DESKTOP_LOG") {
@@ -40,6 +41,35 @@ pub fn init() -> PathBuf {
         format!("Webizen desktop logging to {}", path.display()),
     );
     path
+}
+
+pub fn install_panic_hook() {
+    let _ = PANIC_HOOK_INSTALLED.get_or_init(|| {
+        let previous_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |panic_info| {
+            let current_thread = std::thread::current();
+            let thread_name = current_thread.name().unwrap_or("unnamed");
+            let payload = panic_info
+                .payload()
+                .downcast_ref::<&str>()
+                .map(|s| (*s).to_string())
+                .or_else(|| panic_info.payload().downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "non-string panic payload".to_string());
+            let location = panic_info
+                .location()
+                .map(|loc| format!("{}:{}:{}", loc.file(), loc.line(), loc.column()))
+                .unwrap_or_else(|| "unknown location".to_string());
+            let backtrace = std::backtrace::Backtrace::force_capture();
+
+            record(
+                "panic",
+                format!("panic on thread '{thread_name}' at {location}: {payload}"),
+            );
+            record("panic", format!("backtrace:\n{backtrace}"));
+            eprintln!("Webizen desktop panic on thread '{thread_name}' at {location}: {payload}");
+            previous_hook(panic_info);
+        }));
+    });
 }
 
 pub fn log_path() -> PathBuf {

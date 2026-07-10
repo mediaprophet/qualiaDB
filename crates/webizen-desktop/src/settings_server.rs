@@ -107,7 +107,35 @@ fn find_open_port(host: &str, start: u16) -> u16 {
 }
 
 fn static_portal_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("static/portal")
+    if let Ok(dir) = std::env::var("WEBIZEN_STATIC_PORTAL_DIR") {
+        let path = PathBuf::from(dir);
+        if path.is_dir() {
+            return path;
+        }
+        crate::desktop_log::record(
+            "warn",
+            format!(
+                "WEBIZEN_STATIC_PORTAL_DIR does not exist: {}",
+                path.display()
+            ),
+        );
+    }
+
+    let dev_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("static/portal");
+    let mut candidates = Vec::new();
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            candidates.push(dir.join("portal"));
+            candidates.push(dir.join("static").join("portal"));
+            candidates.push(dir.join("portal-dist"));
+        }
+    }
+    candidates.push(dev_dir.clone());
+
+    candidates
+        .into_iter()
+        .find(|path| path.is_dir())
+        .unwrap_or(dev_dir)
 }
 
 fn studio_dist_dir() -> PathBuf {
@@ -204,10 +232,18 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
     let static_root = state.static_root.clone();
     let studio_root = studio_wasm_dir();
     if !static_root.is_dir() {
-        return Err(format!(
-            "Settings static dir missing: {}",
-            static_root.display()
-        ));
+        crate::desktop_log::record(
+            "error",
+            format!(
+                "Settings portal static dir missing; API server will still start: {}",
+                static_root.display()
+            ),
+        );
+    } else {
+        crate::desktop_log::record(
+            "info",
+            format!("Settings portal static dir: {}", static_root.display()),
+        );
     }
     if !studio_root.is_dir() {
         crate::desktop_log::record(
@@ -220,6 +256,9 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
     }
 
     let app = Router::new()
+        .route("/", get(portal_index_handler))
+        .route("/design-studio", get(design_studio_handler))
+        .route("/design-studio.html", get(design_studio_handler))
         .route("/health", get(health_handler))
         .route("/shell", get(shell_handler))
         .route("/logs", get(logs_page_handler))
@@ -287,6 +326,42 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
     axum::serve(listener, app)
         .await
         .map_err(|e| format!("settings server: {e}"))
+}
+
+async fn portal_index_handler(State(state): State<SettingsServerState>) -> Response {
+    portal_file_response(&state.static_root, "index.html", "text/html; charset=utf-8").await
+}
+
+async fn design_studio_handler(State(state): State<SettingsServerState>) -> Response {
+    portal_file_response(
+        &state.static_root,
+        "design-studio.html",
+        "text/html; charset=utf-8",
+    )
+    .await
+}
+
+async fn portal_file_response(
+    root: &PathBuf,
+    relative_path: &str,
+    content_type: &'static str,
+) -> Response {
+    let path = root.join(relative_path);
+    match tokio::fs::read(&path).await {
+        Ok(bytes) => ([(header::CONTENT_TYPE, content_type)], bytes).into_response(),
+        Err(err) => {
+            crate::desktop_log::record(
+                "error",
+                format!("failed to serve portal file {}: {err}", path.display()),
+            );
+            (
+                StatusCode::NOT_FOUND,
+                [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+                format!("Portal asset not found: {}", path.display()),
+            )
+                .into_response()
+        }
+    }
 }
 
 async fn logs_json_handler() -> Json<serde_json::Value> {

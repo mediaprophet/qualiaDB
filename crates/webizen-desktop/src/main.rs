@@ -12,14 +12,11 @@ use tauri_plugin_updater::UpdaterExt;
 
 use webizen_desktop::{
     commands::{self, PreviewState, RenderLoopState},
-    desktop_log,
+    desktop_log, mcp_server,
     med_reminder_notifier::{self, MedReminderNotifierState},
     native_surface::NativeSurfaceState,
     runtime::{spawn_runtime, RuntimeHandle},
-    settings_server,
-    telemetry_bridge,
-    telemetry_hooks,
-    mcp_server,
+    settings_server, telemetry_bridge, telemetry_hooks,
 };
 
 use qualia_client_core::qapp_registry::QAPPS_DIR;
@@ -135,11 +132,7 @@ fn anatomy_body_json_response(app: &tauri::AppHandle) -> ProtocolResponse {
 
 /// `webizen://localhost/anatomy/10d/{model}/{organ_key}` — one cached `.10d` file for the browser
 /// portal's `load_body_organs_colored`.
-fn anatomy_10d_response(
-    app: &tauri::AppHandle,
-    model: &str,
-    organ_key: &str,
-) -> ProtocolResponse {
+fn anatomy_10d_response(app: &tauri::AppHandle, model: &str, organ_key: &str) -> ProtocolResponse {
     let host_state = match app.try_state::<commands::HostApiState>() {
         Some(s) => s,
         None => return protocol_response(503, None, Vec::new()),
@@ -176,9 +169,7 @@ fn webizen_protocol_response(
         ["render", "preview.png"] => render_preview_response(app),
         ["anatomy", "body.png"] => anatomy_body_response(app),
         ["anatomy", "body.json"] => anatomy_body_json_response(app),
-        ["anatomy", "10d", model, organ_key] => {
-            anatomy_10d_response(app, model, organ_key)
-        }
+        ["anatomy", "10d", model, organ_key] => anatomy_10d_response(app, model, organ_key),
         _ => protocol_response(404, None, Vec::new()),
     }
 }
@@ -193,6 +184,7 @@ fn show_main_window(app: &tauri::AppHandle) {
 
 fn main() {
     let log_path = desktop_log::init();
+    desktop_log::install_panic_hook();
     desktop_log::record("info", "Webizen desktop starting");
     eprintln!("Webizen desktop log: {}", log_path.display());
 
