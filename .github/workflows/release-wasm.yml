@@ -1,9 +1,14 @@
-name: Cross-Platform Release
+name: WASM Release
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to upload assets to, for example v0.0.24"
+        required: true
 
 permissions:
   contents: write
@@ -11,84 +16,18 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
-# ── Job 1: qualia-cli ─────────────────────────────────────────────────────────
 jobs:
-  build-cli:
-    name: CLI (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-22.04
-            artifact: target/release/qualia-cli
-            asset_name: qualia-cli-linux-x86_64
-          - os: windows-latest
-            artifact: target/release/qualia-cli.exe
-            asset_name: qualia-cli-windows-x86_64.exe
-          - os: macos-14
-            artifact: target/release/qualia-cli
-            asset_name: qualia-cli-macos-aarch64
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-cli-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-cli-
-
-      - name: Linux system dependencies
-        if: matrix.os == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libssl-dev pkg-config
-
-      - name: Build qualia-cli
-        run: cargo build --release -p qualia-cli
-
-      - name: Rename artifact
-        shell: bash
-        run: cp ${{ matrix.artifact }} ${{ matrix.asset_name }}
-
-      - name: Upload to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ${{ matrix.asset_name }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload DirectML.dll (Windows CLI)
-        if: matrix.os == 'windows-latest'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: vendor/directml/bin/x64-win/DirectML.dll
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-# ── Job 2: WASM smoke-check (portal feature — spatial / design-studio) ────────
   check-wasm:
     name: WASM smoke-check
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
+
       - name: Cache Cargo
         uses: actions/cache@v4
         with:
@@ -98,12 +37,22 @@ jobs:
             target
           key: wasm-check-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: wasm-check-cargo-
+
       - name: WASM smoke-check (portal slim)
         run: |
           cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
             --no-default-features --features portal
 
-# ── Job 3: Qualia Portal WASM (design-studio / spatial / 0.0.18 docs kit) ─────
+      - name: WASM capability profile checks
+        run: |
+          cargo check -q --target wasm32-unknown-unknown -p webizen-lite-wasm
+          cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
+            --no-default-features --features wasm-logic
+          cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
+            --no-default-features --features wasm-scientific
+          cargo check -q --target wasm32-unknown-unknown -p qualia-core-db \
+            --no-default-features --features wasm-llm
+
   build-portal-wasm:
     needs: check-wasm
     name: WASM (Qualia Portal)
@@ -137,8 +86,6 @@ jobs:
 
       - name: Build Qualia portal WASM (viewport + acoustic, slim)
         env:
-          # Slim viewport+acoustic bundle (matches pages.yml, under the size budget below). The browser
-          # LLM ships in the wasm-full playground bundle (build-playground-wasm), not the portal.
           RUSTFLAGS: "-C target-feature=+simd128"
         run: |
           wasm-pack build crates/qualia-core-db \
@@ -157,6 +104,15 @@ jobs:
       - name: Portal WASM size budget
         run: node docs/tests/wasm-size-check.mjs docs/pkg/qualia/qualia_bg.wasm
 
+      - name: Build ontology MCP WASM
+        run: |
+          wasm-pack build crates/webizen-lite-wasm \
+            --target web \
+            --release \
+            --out-dir ../../docs/pkg/webizen-lite
+          node docs/tests/wasm-size-check.mjs \
+            docs/pkg/webizen-lite/webizen_lite_wasm_bg.wasm 524288 204800
+
       - name: Phenomenal viewport contract checklist
         run: node docs/tests/phenomenal-verify.mjs --wasm-api docs/pkg/qualia/qualia.d.ts
 
@@ -168,20 +124,22 @@ jobs:
           cp docs/pkg/qualia/qualia.d.ts release-assets/qualia-portal/
           cp docs/pkg/qualia/package.json release-assets/qualia-portal/
           tar -czf qualia-portal-wasm.tar.gz -C release-assets qualia-portal
+          tar -czf webizen-lite-wasm.tar.gz -C docs/pkg webizen-lite
 
       - name: Upload Qualia Portal WASM to release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           files: |
             qualia-portal-wasm.tar.gz
             docs/pkg/qualia/qualia.js
             docs/pkg/qualia/qualia_bg.wasm
             docs/pkg/qualia/qualia.d.ts
             docs/pkg/qualia/package.json
+            webizen-lite-wasm.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-# ── Job 4: Full playground WASM (API explorer / wasm-full) ────────────────────
   build-playground-wasm:
     needs: check-wasm
     name: WASM (playground wasm-full)
@@ -215,7 +173,6 @@ jobs:
 
       - name: Build full playground WASM
         env:
-          # wasm-full includes wasm-llm → needs the 8 MB stack / 4 GB max-memory like the portal build.
           RUSTFLAGS: "-C target-feature=+simd128 -C link-arg=-zstack-size=8388608 -C link-arg=--max-memory=4294967296"
         run: |
           wasm-pack build crates/qualia-core-db \
@@ -237,6 +194,7 @@ jobs:
       - name: Upload playground WASM to release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           files: |
             qualia-core-wasm.tar.gz
             qualia-core-wasm-pages.tar.gz
@@ -244,64 +202,3 @@ jobs:
             docs/playground/qualia_core_db_bg.wasm
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-# ── Job 5: Princeton WordNet dataset (release asset, not git/LFS) ───────────────
-  build-datasets:
-    name: Datasets (Princeton WordNet)
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-datasets-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-datasets-
-
-      - name: Linux system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libssl-dev pkg-config curl
-
-      - name: Download Princeton WordNet RDF (optional)
-        id: rdf
-        env:
-          WORDNET_RDF_URL: ${{ secrets.WORDNET_RDF_URL }}
-        run: |
-          mkdir -p .wordnet_build
-          if [[ -n "$WORDNET_RDF_URL" ]]; then
-            echo "Downloading RDF from WORDNET_RDF_URL secret..."
-            curl -fL --progress-bar -o .wordnet_build/wordnet.rdf "$WORDNET_RDF_URL"
-            echo "path=.wordnet_build/wordnet.rdf" >> "$GITHUB_OUTPUT"
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "WORDNET_RDF_URL not set — skipping dataset build."
-            echo "Upload princeton.q42 manually or set the repository secret."
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Build princeton.q42
-        if: steps.rdf.outputs.ready == 'true'
-        env:
-          QUALIA_PRINCETON_RDF: ${{ steps.rdf.outputs.path }}
-        run: |
-          bash scripts/ingest_princeton_wordnet.sh
-          ls -lh docs/data/wordnet/princeton.q42
-
-      - name: Upload princeton.q42 to release
-        if: steps.rdf.outputs.ready == 'true'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: docs/data/wordnet/princeton.q42
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-# Desktop tray host: crates/webizen-desktop (Tauri). Package separately when ready.
-# Flutter desktop deprecated — 0.0.18 docs kit uses GitHub Pages + :8080 settings portal.

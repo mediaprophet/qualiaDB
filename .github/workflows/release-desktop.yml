@@ -1,0 +1,171 @@
+name: Desktop Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to upload assets to, for example v0.0.24"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build-desktop-windows:
+    name: Desktop (Windows Webizen)
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-desktop-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-desktop-
+
+      - name: Build webizen-studio dist
+        shell: pwsh
+        run: |
+          Write-Host "Building webizen-studio wasm frontend (Dioxus)..."
+          cargo install dioxus-cli --locked --force
+          Push-Location crates/webizen-studio
+          dx build --release --web
+          Pop-Location
+          $fresh = "target/dx/webizen-studio/release/web/public"
+          if (Test-Path $fresh/index.html) {
+            New-Item -ItemType Directory -Force -Path crates/webizen-studio/dist/assets | Out-Null
+            Copy-Item $fresh/index.html crates/webizen-studio/dist/index.html -Force
+            Copy-Item -Recurse $fresh/assets/* crates/webizen-studio/dist/assets/ -Force
+          }
+          if (-not (Test-Path crates/webizen-studio/dist/index.html)) {
+            throw "crates/webizen-studio/dist/index.html missing after build"
+          }
+
+      - name: Build webizen-desktop (release)
+        run: cargo build --release -p webizen-desktop
+
+      - name: Stage desktop bundle
+        shell: pwsh
+        run: |
+          $out = "release-assets/webizen-desktop-windows-x64"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          Copy-Item target/release/webizen-desktop.exe $out/
+          if (Test-Path vendor/directml/bin/x64-win/DirectML.dll) {
+            Copy-Item vendor/directml/bin/x64-win/DirectML.dll $out/
+          }
+          if (Test-Path vendor/dxc/bin/x64-win/dxcompiler.dll) {
+            Copy-Item vendor/dxc/bin/x64-win/dxcompiler.dll $out/
+            Copy-Item vendor/dxc/bin/x64-win/dxil.dll $out/ -ErrorAction SilentlyContinue
+          }
+          if (Test-Path crates/webizen-studio/dist) {
+            Copy-Item -Recurse crates/webizen-studio/dist $out/studio-dist
+          }
+          tar -a -cf webizen-desktop-windows-x64.zip -C release-assets webizen-desktop-windows-x64
+          Get-ChildItem $out, webizen-desktop-windows-x64.zip
+
+      - name: Upload desktop to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          files: |
+            webizen-desktop-windows-x64.zip
+            target/release/webizen-desktop.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-desktop-macos-metal:
+    name: Desktop (macOS Apple Silicon / Metal)
+    runs-on: macos-14
+    continue-on-error: true
+    env:
+      WGPU_BACKEND: metal
+      WGPU_POWER_PREF: high
+      RUSTFLAGS: "-C target-cpu=apple-m1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-desktop-metal-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-desktop-metal-
+
+      - name: Build webizen-studio dist
+        shell: bash
+        run: |
+          echo "Building webizen-studio wasm frontend (Dioxus)..."
+          cargo install dioxus-cli --locked --force
+          (cd crates/webizen-studio && dx build --release --web)
+          fresh="target/dx/webizen-studio/release/web/public"
+          if [ -f "$fresh/index.html" ]; then
+            mkdir -p crates/webizen-studio/dist/assets
+            cp "$fresh/index.html" crates/webizen-studio/dist/index.html
+            cp -R "$fresh/assets/." crates/webizen-studio/dist/assets/
+          fi
+          test -f crates/webizen-studio/dist/index.html
+
+      - name: Build webizen-desktop for Apple Silicon
+        shell: bash
+        run: |
+          cargo build --release -p webizen-desktop --target aarch64-apple-darwin
+
+      - name: Stage macOS Metal desktop bundle
+        shell: bash
+        run: |
+          out="release-assets/webizen-desktop-macos-aarch64-metal"
+          rm -rf "$out"
+          mkdir -p "$out"
+          cp target/aarch64-apple-darwin/release/webizen-desktop "$out/"
+          cp -R crates/webizen-studio/dist "$out/studio-dist"
+          cat > "$out/README.txt" <<'EOF'
+          Webizen Desktop for macOS Apple Silicon (M1 or newer)
+
+          This build targets aarch64-apple-darwin with wgpu's native Metal backend.
+          Run ./webizen-desktop from this directory so the packaged studio-dist sidecar is available.
+          EOF
+          chmod +x "$out/webizen-desktop"
+          ditto -c -k --keepParent "$out" webizen-desktop-macos-aarch64-metal.zip
+          ls -lah "$out" webizen-desktop-macos-aarch64-metal.zip
+
+      - name: Upload macOS Metal desktop to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          files: |
+            webizen-desktop-macos-aarch64-metal.zip
+            target/aarch64-apple-darwin/release/webizen-desktop
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
