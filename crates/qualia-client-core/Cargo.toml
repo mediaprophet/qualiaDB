@@ -12,6 +12,7 @@ sysinfo = "0.39.3"
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "stream", "blocking"] }
 qualia-core-db = { path = "../qualia-core-db", features = ["sanctuary-crypto"] }
+qualia-solid-bridge = { path = "../qualia-solid-bridge" }
 wellfare-core = { path = "../wellfare-core" }
 webizen-render = { path = "../webizen-render" }
 qualia-cooperative-core = { path = "../qualia-cooperative-core" }

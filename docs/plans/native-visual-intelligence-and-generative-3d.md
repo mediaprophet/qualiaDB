@@ -1,9 +1,9 @@
 # Native Visual Intelligence and Generative 3D for QualiaDB
 
-**Status:** proposed implementation plan for review  
-**Date:** 2026-07-03 (harmonized 2026-07-04)  
+**Status:** in progress — Phase 1 ABI + CPU reference landed (`crates/qualia-vision`)  
+**Date:** 2026-07-03 (harmonized 2026-07-04; Phase-1 start 2026-07-10)  
 **Target branch:** `0.0.24`  
-**Primary new crate:** `crates/qualia-vision`  
+**Primary new crate:** `crates/qualia-vision` (workspace member; `cargo test -p qualia-vision`)  
 **Auditory companion:** [`native-auditory-language-and-music-intelligence.md`](native-auditory-language-and-music-intelligence.md)  
 **3D capability manual:** [`../manuals/computational-3d-assets-and-digital-twins.md`](../manuals/computational-3d-assets-and-digital-twins.md)
 **Computational-geometry substrate:** [`native-computational-geometry.md`](native-computational-geometry.md)

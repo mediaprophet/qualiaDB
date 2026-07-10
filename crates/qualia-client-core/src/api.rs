@@ -370,6 +370,10 @@ pub fn save_config(new_config: AgentConfig) -> Result<(), String> {
     std::fs::write(config_file_path(), json).map_err(|e| e.to_string())?;
     // Ensure data directories exist under the new path
     init_data_directories(&new_config.storage_path);
+    // Mirror inference_backend string into structured settings (Local/Remote/Hybrid/Ollama).
+    let mut ib = crate::inference_backend::load_inference_backend_settings();
+    ib.apply_agent_config_backend_string(&new_config.inference_backend);
+    let _ = crate::inference_backend::save_inference_backend_settings(&ib);
     *state.config.lock().unwrap() = new_config;
     Ok(())
 }
@@ -903,6 +907,83 @@ pub async fn export_to_solid(
     qualia_core_db::solid_ldp::SolidExporter::export_to_solid_pod(&input_q42_path, &output_dir_path)
         .map(|_| format!("Exported to {}", output_dir_path))
         .map_err(|e| e.to_string())
+}
+
+/// Consumer: fetch a Solid LDP resource and return status + Turtle body + Quin count.
+pub async fn fetch_from_solid_pod(
+    url: String,
+    bearer_token: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let r = qualia_solid_bridge::fetch_resource(&url, bearer_token.as_deref())
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({
+        "url": r.url,
+        "status": r.status,
+        "content_type": r.content_type,
+        "quin_count": r.quin_count,
+        "body": r.body,
+    }))
+}
+
+/// Consumer: PUT a local Turtle/file to a Solid resource URL (sync-to-pod).
+pub async fn put_to_solid_pod(
+    url: String,
+    body: Vec<u8>,
+    content_type: Option<String>,
+    bearer_token: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let ct = content_type.unwrap_or_else(|| "text/turtle".into());
+    let status = qualia_solid_bridge::put_resource(
+        &url,
+        &body,
+        &ct,
+        bearer_token.as_deref(),
+    )
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({ "ok": true, "status": status, "url": url }))
+}
+
+/// Sync: if `body_or_path` is a path to an existing file, upload it; else treat as Turtle body.
+pub async fn sync_to_solid_pod(
+    pod_url: String,
+    body_or_path: Option<String>,
+    bearer_token: Option<String>,
+) -> Result<String, String> {
+    let (bytes, ct) = if let Some(ref p) = body_or_path {
+        let path = std::path::Path::new(p);
+        if path.is_file() {
+            let b = std::fs::read(path).map_err(|e| e.to_string())?;
+            let ct = if p.ends_with(".json") || p.ends_with(".jsonld") {
+                "application/ld+json"
+            } else {
+                "text/turtle"
+            };
+            (b, ct.to_string())
+        } else {
+            (p.as_bytes().to_vec(), "text/turtle".into())
+        }
+    } else {
+        // Minimal deposit marker when UI only passes a URL
+        let body = format!(
+            "@prefix dcterms: <http://purl.org/dc/terms/> .\n<> dcterms:description \"Qualia sync {}\" .\n",
+            chrono::Utc::now().to_rfc3339()
+        );
+        (body.into_bytes(), "text/turtle".into())
+    };
+    let status = qualia_solid_bridge::put_resource(
+        &pod_url,
+        &bytes,
+        &ct,
+        bearer_token.as_deref(),
+    )
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(format!(
+        "Synced to Solid Pod {pod_url} (HTTP {status}, {} bytes)",
+        bytes.len()
+    ))
 }
 
 pub async fn ingest_image(file_path: String) -> Result<serde_json::Value, String> {
@@ -3784,6 +3865,34 @@ pub fn save_inference_backend_settings(
     settings: crate::inference_backend::InferenceBackendSettings,
 ) -> Result<(), String> {
     crate::inference_backend::save_inference_backend_settings(&settings)
+}
+
+/// Probe the configured Ollama endpoint (tags + reachability).
+pub fn probe_ollama_status() -> crate::ollama_harness::OllamaStatus {
+    crate::ollama_harness::probe_configured_ollama()
+}
+
+pub async fn probe_ollama_status_async() -> crate::ollama_harness::OllamaStatus {
+    crate::ollama_harness::probe_configured_ollama_async().await
+}
+
+/// List models on the configured Ollama host (empty vec if unreachable).
+pub fn list_ollama_models() -> Vec<crate::ollama_harness::OllamaModelInfo> {
+    crate::ollama_harness::probe_configured_ollama().models
+}
+
+/// One-shot Ollama generate using persisted settings (for smoke / ETL hooks).
+pub fn ollama_generate(system: String, prompt: String) -> Result<crate::ollama_harness::OllamaGenerateResult, String> {
+    crate::ollama_harness::OllamaHarness::from_loaded_settings().generate(&system, &prompt)
+}
+
+pub async fn ollama_generate_async(
+    system: String,
+    prompt: String,
+) -> Result<crate::ollama_harness::OllamaGenerateResult, String> {
+    crate::ollama_harness::OllamaHarness::from_loaded_settings()
+        .generate_async(&system, &prompt)
+        .await
 }
 
 pub fn get_model_preferences() -> crate::model_preferences::ModelPreferences {

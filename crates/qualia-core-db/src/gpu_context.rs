@@ -728,6 +728,13 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
     if let Some(backends) = caps::qualia_backend_override() {
         log::info!("shared_gpu|backend_override|QUALIA_WGPU_BACKEND={backends:?}");
         desc.backends = backends;
+    } else if cfg!(target_os = "windows") {
+        // Windows default = DX12. It is the verified-reliable native path: the DXC compiler fix
+        // builds the fused-attention shader, and DX12 decodes Q4_K_M / large models (e.g.
+        // llama-3.2-3b) that the Vulkan/SPIR-V path currently HANGS on (tracked bug). Vulkan is
+        // still the default off-Windows and remains selectable anywhere via QUALIA_WGPU_BACKEND=vulkan.
+        desc.backends = wgpu::Backends::DX12;
+        log::info!("shared_gpu|backend_default|windows->dx12 (override with QUALIA_WGPU_BACKEND=vulkan)");
     }
     let instance = wgpu::Instance::new(desc);
     let adapter = instance

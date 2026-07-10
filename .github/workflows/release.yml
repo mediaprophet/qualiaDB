@@ -324,5 +324,78 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-# Desktop tray host: crates/webizen-desktop (Tauri). Package separately when ready.
-# Flutter desktop deprecated — 0.0.18 docs kit uses GitHub Pages + :8080 settings portal.
+# ── Job 6: Webizen Desktop (Windows host) — best-effort asset on the tag release ─
+# Studio dist is gitignored; this job builds it when possible. Does not fail the
+# overall tag release if the desktop path is blocked (CLI + WASM jobs still ship).
+# Flutter desktop remains deprecated in favour of Webizen + GitHub Pages.
+  build-desktop-windows:
+    name: Desktop (Windows Webizen)
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-desktop-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-desktop-
+
+      - name: Ensure studio dist exists
+        shell: pwsh
+        run: |
+          if (-not (Test-Path crates/webizen-studio/dist/index.html)) {
+            Write-Host "Building webizen-studio wasm frontend (dioxus 0.8 alpha)..."
+            cargo install dioxus-cli --locked --force
+            Push-Location crates/webizen-studio
+            dx build --release --web
+            Pop-Location
+          }
+          if (-not (Test-Path crates/webizen-studio/dist/index.html)) {
+            throw "crates/webizen-studio/dist/index.html missing after build"
+          }
+
+      - name: Build webizen-desktop (release)
+        run: cargo build --release -p webizen-desktop
+
+      - name: Stage desktop bundle
+        shell: pwsh
+        run: |
+          $out = "release-assets/webizen-desktop-windows-x64"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          Copy-Item target/release/webizen-desktop.exe $out/
+          if (Test-Path vendor/directml/bin/x64-win/DirectML.dll) {
+            Copy-Item vendor/directml/bin/x64-win/DirectML.dll $out/
+          }
+          if (Test-Path vendor/dxc/bin/x64-win/dxcompiler.dll) {
+            Copy-Item vendor/dxc/bin/x64-win/dxcompiler.dll $out/
+            Copy-Item vendor/dxc/bin/x64-win/dxil.dll $out/ -ErrorAction SilentlyContinue
+          }
+          if (Test-Path crates/webizen-studio/dist) {
+            Copy-Item -Recurse crates/webizen-studio/dist $out/studio-dist
+          }
+          Compress-Archive -Path "$out/*" -DestinationPath webizen-desktop-windows-x64.zip -Force
+          Get-ChildItem $out, webizen-desktop-windows-x64.zip
+
+      - name: Upload desktop to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            webizen-desktop-windows-x64.zip
+            target/release/webizen-desktop.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# Flutter desktop deprecated — 0.0.18+ uses Webizen (Tauri) + GitHub Pages.

@@ -1,5 +1,5 @@
 {
-  "version": "0.0.23",
+  "version": "0.0.24",
   "brand": {
     "name": "QualiaDB",
     "tagline": "Human-Centric Semantic Engine",
@@ -10,6 +10,13 @@
       "label": "Home",
       "href": "index.html",
       "icon": "fa-house",
+      "group": "Core"
+    },
+    {
+      "label": "0.0.24 Progress",
+      "href": "progress-0.0.24.html",
+      "icon": "fa-heart-pulse",
+      "highlight": true,
       "group": "Core"
     },
     {

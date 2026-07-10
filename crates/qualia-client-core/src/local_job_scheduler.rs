@@ -46,6 +46,15 @@ pub enum LocalJobKind {
     },
     WorkbenchDaemonSync,
     DaemonGraphReload,
+    /// Run one agent turn as a background job — the native agent processes it locally, or (when the
+    /// chosen agent's backend is remote-MCP) routes it out over MCP. Curated from chat by the person
+    /// (or, with confirmation, by their agent). Runs off the chat thread; the reply lands in the session.
+    AgentTurn {
+        session_id: String,
+        #[serde(default)]
+        agent_slug: Option<String>,
+        prompt: String,
+    },
 }
 
 impl LocalJobKind {
@@ -493,6 +502,34 @@ async fn execute_job(
                 "storage_path": storage_path,
                 "daemon_graph": "reloaded"
             }))
+        }
+        LocalJobKind::AgentTurn {
+            session_id,
+            agent_slug,
+            prompt,
+        } => {
+            check_cancel(&cancel)?;
+            // Route by the chosen agent's backend (local-first). A remote-MCP agent runs its turn out
+            // over MCP (native only); otherwise the native engine runs it and appends the reply.
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                let backend = crate::api::agent_backend_kind(agent_slug.clone())
+                    .unwrap_or_else(|_| "local".to_string());
+                if backend == "remote" {
+                    let slug = agent_slug.clone().unwrap_or_default();
+                    return crate::api::run_remote_agent_turn(session_id.clone(), slug, prompt.clone());
+                }
+            }
+            let result =
+                crate::chat_inference::run_chat_inference_with_options(session_id, prompt, None);
+            if result.committed && !result.text.trim().is_empty() {
+                let _ = crate::api::append_chat_message(
+                    session_id.clone(),
+                    "agent".to_string(),
+                    result.text.clone(),
+                );
+            }
+            serde_json::to_value(&result).map_err(|e| e.to_string())
         }
     }
 }

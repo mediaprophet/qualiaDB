@@ -157,6 +157,13 @@ fn contribution_from_summary(id: String, summary: &str, occurred_at_unix: u32) -
             .to_string(),
         description: String::new(),
         effort_minutes: v.get("effort_minutes").and_then(|x| x.as_u64()).unwrap_or(0) as u32,
+        capital_cents: v.get("capital_cents").and_then(|x| x.as_u64()).unwrap_or(0),
+        roi_multiplier: v
+            .get("roi_multiplier")
+            .and_then(|x| x.as_f64())
+            .map(|f| f as f32)
+            .unwrap_or(1.0),
+        privacy_level: Default::default(),
         occurred_at_unix,
         predecessor_id: None,
     })

@@ -1060,12 +1060,28 @@ pub struct QTensorEngine {
     #[cfg(not(target_arch = "wasm32"))]
     pipeline_bind_layout: wgpu::BindGroupLayout,
     /// 0.0.21: cooperative GEMV (one workgroup per output row, shared-memory reduction). Same shader
-    /// MODULE as `pipeline`, entry point `coop_gemv`. Selected per-call when
+    /// MODULE as `pipeline`, entry point `coop_gemv` / `coop_gemv_sg`. Selected per-call when
     /// `llm_bench::coop_gemv_enabled()`. Native only (the wasm decode path is the MC8 arena).
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) coop_gemv_pipeline: wgpu::ComputePipeline,
     #[cfg(not(target_arch = "wasm32"))]
     coop_gemv_bind_layout: wgpu::BindGroupLayout,
+    /// Multi-row coop GEMV (8 rows/WG) for Q4_K_SOA large n_out — see `coop_gemv_mr`.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) coop_gemv_mr_pipeline: wgpu::ComputePipeline,
+    /// GEMV + residual add in one dispatch (O-proj / down-proj in resident mega-pass).
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) coop_gemv_residual_pipeline: wgpu::ComputePipeline,
+    #[cfg(not(target_arch = "wasm32"))]
+    coop_gemv_residual_bind_layout: wgpu::BindGroupLayout,
+    /// Multi-row residual GEMV for Q4_K_SOA.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) coop_gemv_residual_mr_pipeline: wgpu::ComputePipeline,
+    /// Warp GEMV (32 thr/row) for Q4_K_SOA.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) coop_gemv_warp_pipeline: wgpu::ComputePipeline,
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) coop_gemv_residual_warp_pipeline: wgpu::ComputePipeline,
     /// Legacy f32×f32 mock block for offset-0 `QTensor` fallback (no mmap).
     mock_pipeline: wgpu::ComputePipeline,
     /// GPU-side Q6_K embedding dequant + matmul (zero CPU dequant).
@@ -1175,6 +1191,34 @@ pub struct QTensorEngine {
     mc8_ffn_fused_bind_layout: wgpu::BindGroupLayout,
     #[cfg(target_arch = "wasm32")]
     mc8_ffn_fused_pipeline: wgpu::ComputePipeline,
+    /// Native T-A1: same fused FFN expansion, static uniform (resident mega-pass).
+    #[cfg(not(target_arch = "wasm32"))]
+    ffn_fused_bind_layout: wgpu::BindGroupLayout,
+    /// Naive 64-thread/row fused expansion (wasm-style; fallback).
+    #[cfg(not(target_arch = "wasm32"))]
+    ffn_fused_pipeline: wgpu::ComputePipeline,
+    /// T-A1b: coop 256-thread/row fused expansion (preferred when coop GEMV is on).
+    #[cfg(not(target_arch = "wasm32"))]
+    ffn_fused_coop_pipeline: wgpu::ComputePipeline,
+    /// Multi-row fused FFN (4 rows/WG) for Q4_K_SOA.
+    #[cfg(not(target_arch = "wasm32"))]
+    ffn_fused_mr_pipeline: wgpu::ComputePipeline,
+    /// Warp fused FFN (32 thr/row) for Q4_K_SOA.
+    #[cfg(not(target_arch = "wasm32"))]
+    ffn_fused_warp_pipeline: wgpu::ComputePipeline,
+    /// Dual K+V GEMV (shared act) for resident mega-pass.
+    #[cfg(not(target_arch = "wasm32"))]
+    dual_gemv_pipeline: wgpu::ComputePipeline,
+    /// Dual multi-row (4 rows/WG) — default for SoA K+V.
+    #[cfg(not(target_arch = "wasm32"))]
+    dual_gemv_mr_pipeline: wgpu::ComputePipeline,
+    #[cfg(not(target_arch = "wasm32"))]
+    dual_gemv_bind_layout: wgpu::BindGroupLayout,
+    /// Triple Q+K+V GEMV (shared act, GQA-safe) — one dispatch replaces dual+Q.
+    #[cfg(not(target_arch = "wasm32"))]
+    triple_gemv_pipeline: wgpu::ComputePipeline,
+    #[cfg(not(target_arch = "wasm32"))]
+    triple_gemv_bind_layout: wgpu::BindGroupLayout,
     /// Phase 5.3: the output/logits projection (tied `token_embd`, ~50 MB) uploaded to VRAM
     /// once at init so the per-token argmax binds resident sub-ranges instead of re-uploading
     /// the whole matrix every token (the decode throughput killer). A1a step-2 ports this to the

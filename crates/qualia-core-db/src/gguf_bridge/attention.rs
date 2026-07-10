@@ -804,6 +804,44 @@ impl QTensorEngine {
             &mut norm_w_attn,
         );
 
+        // CUDA residual path: Q/K/V on sticky multi-weight slab (one x upload for three GEMVs),
+        // then host RoPE + KV write + SDPA, then O-proj via CUDA GEMV.
+        #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+        if crate::prefer_tensor_core_gemm()
+            && q_info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA
+            && k_info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA
+            && v_info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA
+        {
+            let kv_dim = n_kv * head_dim;
+            if q_dim <= scratch_a.len()
+                && kv_dim <= scratch_b.len()
+                && self.try_cuda_soa_attention_layer(
+                    hidden_input,
+                    n_embd,
+                    q_dim,
+                    kv_dim,
+                    n_head,
+                    n_kv,
+                    head_dim,
+                    &layout,
+                    layer,
+                    token_idx,
+                    &h,
+                    q_raw,
+                    k_raw,
+                    v_raw,
+                    tensors.attn_output.as_ref(),
+                    mmap,
+                    index.tensor_data_start,
+                    scratch_a,
+                    scratch_b,
+                )
+            {
+                // O-proj lands in scratch_a; size is emb_dim for standard Llama.
+                return Some(n_embd.min(emb_dim).min(scratch_a.len()));
+            }
+        }
+
         #[cfg(not(target_arch = "wasm32"))]
         if crate::llm_bench::attention_preproject_enabled()
             && self.dispatch_attention_kv_preproject_fused(
@@ -1093,5 +1131,272 @@ impl QTensorEngine {
             return false;
         }
         self.dispatch_ffn_block_pre_norm(index, hidden, emb_dim, &tensors, scratch_a, scratch_b)
+    }
+
+    /// CUDA residual attention: prefer **P4 device SDPA/KV** (one D2H); else sticky
+    /// Q/K/V GEMV → host RoPE/KV/SDPA → CUDA O-proj.
+    /// Returns true when `scratch_a[..emb_dim]` holds the attention residual delta.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+    fn try_cuda_soa_attention_layer(
+        &self,
+        hidden_input: &[f32],
+        n_embd: usize,
+        q_dim: usize,
+        kv_dim: usize,
+        n_head: usize,
+        n_kv: usize,
+        head_dim: usize,
+        layout: &KvCacheLayout,
+        layer: u32,
+        token_idx: u32,
+        h: &crate::gguf_sharder::GgufHyperparams,
+        q_raw: &[u8],
+        k_raw: &[u8],
+        v_raw: &[u8],
+        out_info: Option<&GgufTensorInfo>,
+        mmap: &[u8],
+        tensor_data_start: u64,
+        scratch_a: &mut [f32],
+        scratch_b: &mut [f32],
+    ) -> bool {
+        if head_dim == 0 || n_head == 0 || n_kv == 0 {
+            return false;
+        }
+        if q_dim + kv_dim * 2 > scratch_a.len() + scratch_b.len() {
+            // Need space: use scratch_a for Q and attn_out, scratch_b for K then V sequentially.
+        }
+        // Layout: scratch_b holds K then we overwrite with V after writing K to cache;
+        // scratch_a holds Q for SDPA then O result.
+        if q_dim > scratch_a.len() || kv_dim > scratch_b.len() {
+            return false;
+        }
+
+        // P4: device-side RoPE + KV + SDPA + O-proj — no mid-chain QKV readback.
+        // Only f32 (non-int8 / non-dict) layouts match the CUDA KV index formula.
+        if !layout.int8
+            && layout.dict_k == 0
+            && n_embd <= scratch_a.len()
+        {
+            if let Some(out_info) = out_info {
+                if out_info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA {
+                    let (o_in, o_out) = Self::matmul_dims(out_info);
+                    if o_in == q_dim && o_out == n_embd {
+                        if let Ok(o_raw) = crate::ggml_quants::fetch_tensor_bytes(
+                            mmap,
+                            tensor_data_start,
+                            out_info,
+                        ) {
+                            // Ensure device KV once (no-op if already matching).
+                            let _ = crate::ensure_device_kv_cache(
+                                layout.max_context,
+                                layout.n_layer,
+                                layout.n_kv_head,
+                                layout.head_dim,
+                                layout.slot_kv_elems,
+                                layout.layer_stride,
+                                layout.total_f32_elems,
+                            );
+                            // No host dual-write: device KV is authoritative on this path.
+                            // Avoids two extra D2H fences per layer (P4 fence budget).
+                            if crate::try_q4k_soa_attention_device(
+                                n_embd,
+                                n_head,
+                                n_kv,
+                                head_dim,
+                                layer,
+                                token_idx,
+                                layout.max_context,
+                                layout.layer_stride,
+                                layout.slot_kv_elems,
+                                h.effective_rope_freq_base(),
+                                h.effective_rope_scale(),
+                                &hidden_input[..n_embd],
+                                q_raw,
+                                k_raw,
+                                v_raw,
+                                o_raw,
+                                None,
+                                &mut scratch_a[..n_embd],
+                            ) {
+                                static DEVICE_ATTN_LOGGED: std::sync::atomic::AtomicBool =
+                                    std::sync::atomic::AtomicBool::new(false);
+                                if !DEVICE_ATTN_LOGGED.swap(
+                                    true,
+                                    std::sync::atomic::Ordering::Relaxed,
+                                ) {
+                                    log::info!(
+                                        "cuda_attn|device_sdpa|first_hit|layer={layer}|tok={token_idx}|kv_ready={}",
+                                        crate::device_kv_ready()
+                                    );
+                                }
+                                return true;
+                            } else {
+                                static DEVICE_ATTN_MISS: std::sync::atomic::AtomicU32 =
+                                    std::sync::atomic::AtomicU32::new(0);
+                                let n = DEVICE_ATTN_MISS.fetch_add(
+                                    1,
+                                    std::sync::atomic::Ordering::Relaxed,
+                                );
+                                if n < 3 {
+                                    log::warn!(
+                                        "cuda_attn|device_sdpa|miss|layer={layer}|tok={token_idx}|kv_ready={}|o_in={o_in}|o_out={o_out}|q_dim={q_dim}|n_embd={n_embd}",
+                                        crate::device_kv_ready()
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut q_proj = vec![0f32; q_dim];
+        let mut k_proj = vec![0f32; kv_dim];
+        let mut v_proj = vec![0f32; kv_dim];
+        if !crate::try_q4k_soa_qkv(
+            n_embd,
+            q_dim,
+            kv_dim,
+            &hidden_input[..n_embd],
+            q_raw,
+            k_raw,
+            v_raw,
+            &mut q_proj,
+            &mut k_proj,
+            &mut v_proj,
+        ) {
+            return false;
+        }
+
+        let base_freq = h.effective_rope_freq_base();
+        let rope_scale = h.effective_rope_scale();
+        let q_heads_per_kv = h.q_heads_per_kv() as usize;
+        let scale = 1.0f32 / (head_dim as f32).sqrt();
+        let slot = layout.ring_slot(token_idx);
+        let pos = token_idx as usize;
+        if pos >= MAX_CONTEXT_WINDOW as usize {
+            return false;
+        }
+
+        // RoPE K + write KV cache
+        rope_inplace(
+            &mut k_proj,
+            n_kv,
+            head_dim,
+            token_idx,
+            base_freq,
+            rope_scale,
+        );
+        let Some(kv) = self.kv_cache_cpu.as_ref() else {
+            return false;
+        };
+        // SAFETY: exclusive decode thread; layout indices are bounds-checked below.
+        let kv = unsafe {
+            core::slice::from_raw_parts_mut(kv.as_ptr() as *mut f32, kv.len())
+        };
+        for kvh in 0..n_kv {
+            for d in 0..head_dim {
+                let idx = layout.k_index(layer, slot, kvh as u32, d as u32);
+                if idx >= kv.len() {
+                    return false;
+                }
+                kv[idx] = k_proj[kvh * head_dim + d];
+            }
+        }
+        for kvh in 0..n_kv {
+            for d in 0..head_dim {
+                let idx = layout.v_index(layer, slot, kvh as u32, d as u32);
+                if idx >= kv.len() {
+                    return false;
+                }
+                kv[idx] = v_proj[kvh * head_dim + d];
+            }
+        }
+
+        // RoPE Q + SDPA → scratch_b[..q_dim]
+        rope_inplace(
+            &mut q_proj,
+            n_head,
+            head_dim,
+            token_idx,
+            base_freq,
+            rope_scale,
+        );
+        let attn_out = &mut scratch_b[..q_dim];
+        attn_out.fill(0.0);
+        let mut att_scores = [0f32; MAX_CONTEXT_WINDOW as usize];
+        for q_h in 0..n_head {
+            let kv_h = q_h / q_heads_per_kv.max(1);
+            let q_head = &q_proj[q_h * head_dim..(q_h + 1) * head_dim];
+            let out_head = &mut attn_out[q_h * head_dim..(q_h + 1) * head_dim];
+            let mut max_score = f32::NEG_INFINITY;
+            for past_pos in 0..=pos {
+                let past_slot = layout.ring_slot(past_pos as u32);
+                let mut dot = 0.0f32;
+                for d in 0..head_dim {
+                    let k_idx = layout.k_index(layer, past_slot, kv_h as u32, d as u32);
+                    if k_idx >= kv.len() {
+                        return false;
+                    }
+                    dot += q_head[d] * kv[k_idx];
+                }
+                let score = dot * scale;
+                att_scores[past_pos] = score;
+                if score > max_score {
+                    max_score = score;
+                }
+            }
+            let mut sum_exp = 0.0f32;
+            for past_pos in 0..=pos {
+                let e = (att_scores[past_pos] - max_score).exp();
+                att_scores[past_pos] = e;
+                sum_exp += e;
+            }
+            if sum_exp == 0.0 {
+                return false;
+            }
+            for past_pos in 0..=pos {
+                let prob = att_scores[past_pos] / sum_exp;
+                let past_slot = layout.ring_slot(past_pos as u32);
+                for d in 0..head_dim {
+                    let v_idx = layout.v_index(layer, past_slot, kv_h as u32, d as u32);
+                    if v_idx >= kv.len() {
+                        return false;
+                    }
+                    out_head[d] += kv[v_idx] * prob;
+                }
+            }
+        }
+
+        // O-projection via CUDA GEMV
+        let Some(out_info) = out_info else {
+            let n = q_dim.min(n_embd);
+            scratch_a[..n].copy_from_slice(&attn_out[..n]);
+            return true;
+        };
+        let (o_in, o_out) = Self::matmul_dims(out_info);
+        if o_in > q_dim || o_out > scratch_a.len() {
+            return false;
+        }
+        let Ok(o_raw) =
+            crate::ggml_quants::fetch_tensor_bytes(mmap, tensor_data_start, out_info)
+        else {
+            return false;
+        };
+        if out_info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA {
+            if crate::try_q4k_soa_gemv(o_in, o_out, &attn_out[..o_in], o_raw, &mut scratch_a[..o_out])
+            {
+                return true;
+            }
+        }
+        // Fallback: stack gemm for O
+        stack_gemm_quant(
+            o_raw,
+            out_info,
+            &attn_out[..o_in],
+            &mut scratch_a[..o_out],
+            o_in,
+            o_out,
+        )
     }
 }

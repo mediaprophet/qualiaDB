@@ -278,26 +278,43 @@ pub fn build_inference_packet(
     user_prompt: &str,
     catalog: &ResourceCatalog,
 ) -> Result<InferenceContextPacket, BindError> {
-    let active = load_active_model_record().ok_or_else(|| {
-        BindError::Compile("No active model — activate one in LLM Hub first".to_string())
-    })?;
+    let use_ollama = crate::inference_backend::use_ollama_harness();
+    let active = load_active_model_record();
 
-    if !std::path::Path::new(&active.gguf_path).is_file() {
-        return Err(BindError::Compile(format!(
-            "GGUF missing at {}",
-            active.gguf_path
-        )));
-    }
-
-    let llm = catalog.find_llm(&active.model_id);
-    let active_profile = llm.map(|m| {
-        m.to_capability_profile_with_projector(&active.gguf_path, active.mmproj_path.as_deref())
-    });
+    let (active_profile, model_path) = if use_ollama {
+        // Optional Ollama path: no GGUF activation required. model_path is a label only.
+        let ib = crate::inference_backend::load_inference_backend_settings();
+        let label = format!("ollama:{}", ib.ollama_model);
+        (None, label)
+    } else {
+        let active = active.ok_or_else(|| {
+            BindError::Compile(
+                "No active model — activate one in LLM Hub, or set Inference Backend to Ollama in Settings"
+                    .to_string(),
+            )
+        })?;
+        if !std::path::Path::new(&active.gguf_path).is_file() {
+            return Err(BindError::Compile(format!(
+                "GGUF missing at {}",
+                active.gguf_path
+            )));
+        }
+        let llm = catalog.find_llm(&active.model_id);
+        let active_profile = llm.map(|m| {
+            m.to_capability_profile_with_projector(&active.gguf_path, active.mmproj_path.as_deref())
+        });
+        (active_profile, active.gguf_path.clone())
+    };
 
     let graph_context_json = serde_json::to_string(env)?;
+    let backend_note = if use_ollama {
+        "\n[inference_backend: ollama — optional HTTP harness; Qualia retrieval/routing still apply]\n"
+    } else {
+        ""
+    };
     let augmented_prompt = format!(
-        "{}\n\n---\nUser: {}\n---",
-        env.capability_briefing, user_prompt
+        "{}\n{}---\nUser: {}\n---",
+        env.capability_briefing, backend_note, user_prompt
     );
 
     Ok(InferenceContextPacket {
@@ -308,7 +325,7 @@ pub fn build_inference_packet(
         routed_ontology_ids: Vec::new(),
         routing_brief: String::new(),
         active_profile,
-        model_path: active.gguf_path.clone(),
+        model_path,
         axiom_bounds: env.axiom_bounds.clone(),
     })
 }

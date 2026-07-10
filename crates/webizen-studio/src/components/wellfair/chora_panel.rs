@@ -22,8 +22,8 @@ pub fn WellfairChoraPanel() -> Element {
     let mut status = use_signal(String::new);
     let mut temporal_t = use_signal(|| 1_750_000_000f64);
     let mut layers = use_signal(Vec::<serde_json::Value>::new);
-    let downloading = use_signal(|| false);
-    let camera_mode = use_signal(|| "earth".to_string());
+    let _downloading = use_signal(|| false);
+    let _camera_mode = use_signal(|| "earth".to_string());
 
     let refresh = move || {
         spawn(async move {

@@ -563,12 +563,32 @@ pub fn gemm_f32_tc(
     gemm_f32(m, k, n, a, b)
 }
 
+/// Capacity for the process-wide CUDA WMMA slab (weights + C tile + dims).
+#[cfg(feature = "cuda")]
+const CUDA_TC_SLAB_BYTES: usize = 64 * 1024 * 1024;
+
+/// Process-wide CUDA context for WMMA GEMM — avoids full driver re-init on every call.
+#[cfg(feature = "cuda")]
+static CUDA_TC_CTX: OnceLock<Mutex<Option<crate::wgsl_forge::execute::CudaComputeContext>>> =
+    OnceLock::new();
+
+#[cfg(feature = "cuda")]
+fn cuda_tc_ctx_cell(
+) -> &'static Mutex<Option<crate::wgsl_forge::execute::CudaComputeContext>> {
+    CUDA_TC_CTX.get_or_init(|| Mutex::new(None))
+}
+
 /// **Tensor-core** GEMM via the tiled CUDA WMMA kernel: row-major `C[m×n] = A[m×k]·B[k×n]`,
 /// with `A`/`B` rounded to **f16** and accumulated in **f32** on NVIDIA tensor cores. This
 /// is the genuine reduced-precision tensor-core path — the throughput win that the plain
 /// f32 GEMM cannot get — exposed as an **opt-in** (`MatMul.tc`) because it trades f32
 /// precision for speed. `m`, `n`, `k` must be non-zero multiples of 16 (the WMMA tile);
 /// callers with other shapes pad or fall back to the plain path.
+///
+/// Uses a **persistent** CUDA context (process-wide) so hot calls do not re-init the
+/// driver. NVRTC compile is still per-first-use of the pipeline on that context (slab
+/// cleared between calls). Still host-round-trips dense f32 tiles — not a full
+/// llama.cpp-class Q4 decode lane (`InferenceMode::CudaTc` follow-up).
 ///
 /// f32 inputs are converted to f16 bit patterns host-side and uploaded as `u16`; the
 /// `dims = [m, n, k]` storage buffer drives the kernel's tiling. Returns `m*n` f32 outputs.
@@ -589,6 +609,7 @@ pub fn gemm_tc_cuda(
         )));
     }
     validate_dims(m, k, n, a.len(), b.len())?;
+    ensure_cuda_runtime_path();
 
     let a_bits: Vec<u16> = a
         .iter()
@@ -599,7 +620,16 @@ pub fn gemm_tc_cuda(
         .map(|&x| half::f16::from_f32(x).to_bits())
         .collect();
 
-    let mut ctx = CudaComputeContext::new(64 * 1024 * 1024)?;
+    let mut guard = cuda_tc_ctx_cell()
+        .lock()
+        .map_err(|_| ForgeError::GpuUnavailable("CUDA TC mutex poisoned".into()))?;
+    if guard.is_none() {
+        *guard = Some(CudaComputeContext::new(CUDA_TC_SLAB_BYTES)?);
+        log::info!("cuda_tc|context|initialized|slab={CUDA_TC_SLAB_BYTES}");
+    }
+    let ctx = guard.as_mut().unwrap();
+    ctx.clear_transient_allocations();
+
     let view_a = ctx.allocate_and_write(bytemuck::cast_slice(&a_bits), 0, 0)?;
     let view_b = ctx.allocate_and_write(bytemuck::cast_slice(&b_bits), 1, 0)?;
     let zeros = vec![0.0f32; m * n];
@@ -609,13 +639,13 @@ pub fn gemm_tc_cuda(
 
     let buffers = vec![view_a, view_b, view_c, view_dims];
     let num_tiles = (m / 16) * (n / 16);
-    // workgroup_size 32 (one warp/tile) → element_count = num_tiles*32 gives num_tiles blocks.
     let schedule = super::Schedule {
         workgroup_size: 32,
         ..Default::default()
     };
-    let pipeline = CudaPipeline::compile_cuda_c_source(
-        &ctx,
+    // Cached NVRTC PTX (process-wide) + persistent context — only load_module+launch per call.
+    let pipeline = CudaPipeline::compile_cuda_c_source_cached(
+        ctx,
         WMMA_GEMM_TILED_SRC,
         WMMA_GEMM_TILED_ENTRY,
         &[0, 1, 2, 3],
@@ -623,6 +653,7 @@ pub fn gemm_tc_cuda(
     pipeline.dispatch(&buffers, &schedule, num_tiles * 32)?;
     let mut out = ctx.read_buffer_f32(&view_c)?;
     out.truncate(m * n);
+    ctx.clear_transient_allocations();
     Ok(out)
 }
 

@@ -105,7 +105,7 @@ impl Default for ContributionPrivacy {
 /// A single immutable unit of contributed effort. Never mutated; a correction is a
 /// new entry linked via `predecessor_id`, so `id` is a stable content anchor for dedup
 /// and the entries form an append-only author chain.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Contribution {
     pub id: String,
     pub project_id: String,
@@ -231,39 +231,35 @@ pub fn derive_obligations(contributions: &[Contribution]) -> Vec<Obligation> {
     let unique = merge_contributions(contributions, &[]);
     let mut obligations: Vec<Obligation> = Vec::new();
     for c in &unique {
+        // Base-rate logic: (effort minutes + capital cents) scaled by the ROI multiplier.
+        let score = (c.effort_minutes as f64 + c.capital_cents as f64) * c.roi_multiplier as f64;
         match obligations
             .iter_mut()
             .find(|o| o.project_id == c.project_id && o.contributor_did == c.contributor_did)
         {
             Some(ob) => {
                 ob.total_effort_minutes += u64::from(c.effort_minutes);
+                ob.total_capital_cents += c.capital_cents;
+                ob.resolved_obligation_score += score;
                 ob.contribution_count += 1;
             }
             None => obligations.push(Obligation {
                 project_id: c.project_id.clone(),
                 contributor_did: c.contributor_did.clone(),
-                total_effort_minutes: 0,
-                total_capital_cents: 0,
-                resolved_obligation_score: 0.0,
-                contribution_count: 0,
-            });
-        entry.total_effort_minutes += c.effort_minutes as u64;
-        entry.total_capital_cents += c.capital_cents;
-        // Base rate logic: effort minutes * rate + capital * roi
-        let effort_score = (c.effort_minutes as f64) * c.roi_multiplier as f64;
-        let capital_score = (c.capital_cents as f64) * c.roi_multiplier as f64;
-        entry.resolved_obligation_score += effort_score + capital_score;
-        entry.contribution_count += 1;
+                total_effort_minutes: u64::from(c.effort_minutes),
+                total_capital_cents: c.capital_cents,
+                resolved_obligation_score: score,
+                contribution_count: 1,
+            }),
+        }
     }
-
-    let mut result: Vec<_> = agg.into_values().collect();
-    // Sort for determinism
-    result.sort_by(|a, b| {
+    // Sort for determinism (independent of input order).
+    obligations.sort_by(|a, b| {
         a.project_id
             .cmp(&b.project_id)
-            .then(a.contributor_did.cmp(&b.contributor_did))
+            .then_with(|| a.contributor_did.cmp(&b.contributor_did))
     });
-    result
+    obligations
 }
 
 // ---------------------------------------------------------------------------
@@ -412,6 +408,9 @@ mod tests {
             contributor_did: contributor.into(),
             description: format!("work-{id}"),
             effort_minutes: minutes,
+            capital_cents: 0,
+            roi_multiplier: 1.0,
+            privacy_level: ContributionPrivacy::default(),
             occurred_at_unix: at,
             predecessor_id: None,
         }
@@ -419,7 +418,7 @@ mod tests {
 
     #[test]
     fn project_envelope_is_restricted_and_kind_correct() {
-        let p = Project::new("Community Garden", "Shared beds", 1_700_000_000);
+        let p = Project::new("Community Garden", "Shared beds", vec![], 1_700_000_000);
         let env = build_project_envelope(&p, "did:wf:coop", "did:wf:steward", 10, None);
         assert!(env.id.contains(":project:"));
         assert_eq!(env.sensitivity, SensitivityClass::Restricted);
@@ -436,9 +435,13 @@ mod tests {
 
     #[test]
     fn contribution_envelope_kind_and_chain() {
-        let first = Contribution::new("proj-1", "did:wf:bob", "dig beds", 60, 100);
-        let second = Contribution::new("proj-1", "did:wf:bob", "plant seeds", 30, 200)
-            .following(&first);
+        let first = Contribution::new(
+            "proj-1", "did:wf:bob", "dig beds", 60, 0, 1.0, ContributionPrivacy::default(), 100,
+        );
+        let second = Contribution::new(
+            "proj-1", "did:wf:bob", "plant seeds", 30, 0, 1.0, ContributionPrivacy::default(), 200,
+        )
+        .following(&first);
         let env = build_contribution_envelope(&second, "did:wf:coop", "did:wf:bob", 250, None);
         assert!(env.id.contains(":contribution:"));
         assert_eq!(env.sensitivity, SensitivityClass::Restricted);
@@ -536,7 +539,7 @@ mod tests {
 
     #[test]
     fn summaries_include_primary_fields() {
-        let p = Project::new("Repair Cafe", "Fix things together", 1_700_000_000);
+        let p = Project::new("Repair Cafe", "Fix things together", vec![], 1_700_000_000);
         let ps = project_summary(&p);
         assert!(ps.contains("Repair Cafe"));
         assert!(ps.contains("Fix things together"));

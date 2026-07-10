@@ -16,6 +16,8 @@ struct GemmParams {
 @group(0) @binding(1) var<storage, read> weight_words: array<u32>;
 @group(0) @binding(2) var<uniform> params: GemmParams;
 @group(0) @binding(3) var<storage, read_write> output: array<f32>;
+// Optional residual stream for `coop_gemv_residual` (binding ignored by other entries).
+@group(0) @binding(4) var<storage, read> residual: array<f32>;
 
 const BLOCK_Q6K_BYTES: u32 = 210u;
 const BLOCK_Q6K_ELEMS: u32 = 256u;
@@ -275,6 +277,7 @@ fn dequant_weight(row: u32, col: u32) -> f32 {
 }
 
 // SoA Q4_K (convert-time): qs at block+0 (128 B), d_sub f16[8] at +128, m_sub f16[8] at +144.
+// block_base is always 4-byte aligned (160 B blocks) → word loads for scales (A2000 INT4 path).
 fn dequant_q4_k_soa_weight(row: u32, col: u32) -> f32 {
     let row_bytes = weight_row_bytes();
     let block = col / BLOCK_Q4K_ELEMS;
@@ -283,19 +286,26 @@ fn dequant_q4_k_soa_weight(row: u32, col: u32) -> f32 {
     let sub = elem / 32u;
     let group = elem / 64u;
     let local = elem % 64u;
-    let d_off = block_base + 128u + sub * 2u;
-    let m_off = block_base + 144u + sub * 2u;
-    let d_bits = read_u8_weight(d_off) | (read_u8_weight(d_off + 1u) << 8u);
-    let m_bits = read_u8_weight(m_off) | (read_u8_weight(m_off + 1u) << 8u);
+    // d_sub[8] f16 packed as 4 u32 words at +128; m_sub at +144.
+    let d_word = weight_words[(block_base + 128u + (sub & ~1u) * 2u) >> 2u];
+    let m_word = weight_words[(block_base + 144u + (sub & ~1u) * 2u) >> 2u];
+    let d_bits = select(d_word & 0xFFFFu, d_word >> 16u, (sub & 1u) == 1u);
+    let m_bits = select(m_word & 0xFFFFu, m_word >> 16u, (sub & 1u) == 1u);
     let dsub = f16_to_f32(d_bits);
     let msub = f16_to_f32(m_bits);
     let qs_base = block_base;
     let q_off = group * 32u;
     var nib: u32;
     if local < 32u {
-        nib = read_u8_weight(qs_base + q_off + local) & 0xFu;
+        let byte_i = qs_base + q_off + local;
+        let word = weight_words[byte_i >> 2u];
+        let shift = (byte_i & 3u) * 8u;
+        nib = (word >> shift) & 0xFu;
     } else {
-        nib = (read_u8_weight(qs_base + q_off + (local - 32u)) >> 4u) & 0xFu;
+        let byte_i = qs_base + q_off + (local - 32u);
+        let word = weight_words[byte_i >> 2u];
+        let shift = (byte_i & 3u) * 8u;
+        nib = ((word >> shift) & 0xFFu) >> 4u;
     }
     return dsub * f32(nib) - msub;
 }
@@ -346,7 +356,15 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 // Dispatched as (n_out, 1, 1) workgroups; decode batch = 1 (m = 0). n_out ≤ 10240
 // (MAX_STACK_GEMM_OUT) < 65535 → one workgroup per row is within dispatch limits.
 const COOP_WG: u32 = 256u;
+const COOP_FULL_ACT_MAX: u32 = 4096u;
 var<workgroup> coop_partial: array<f32, 256>;
+// Shared activation tile for one Q4 superblock (256 elems). Loaded once per block so dequant
+// threads hit LDS instead of re-reading global `input` (A2000 INT4 bandwidth lever).
+// Ping-pong pair: one barrier per superblock instead of two (load/compute overlap).
+var<workgroup> coop_act: array<f32, 256>;
+var<workgroup> coop_act_b: array<f32, 256>;
+// Full activation for barrier-free Q4 paths (n_in ≤ 4096).
+var<workgroup> coop_full_act: array<f32, 4096>;
 // Q4_K cooperative block-header cache (0.0.21 dequant optimization). A Q4_K superblock is 256
 // elements == COOP_WG, so one workgroup step processes exactly one superblock. The block header
 // (super-scale `d`, super-min `dmin`, and the 8 6-bit sub-block scale/min pairs) is CONSTANT across
@@ -399,61 +417,77 @@ fn coop_row_dot(row: u32, t: u32, in_base: u32) -> f32 {
     } else if params.weight_ggml_type == GGML_TYPE_Q4_K_SOA
         && (params.n_in % BLOCK_Q4K_ELEMS) == 0u
     {
-        // Convert-time SoA: pre-expanded f16 sub-scales at block+128/+144. Each thread loads its
-        // own sub's scales (no shared header, **no barrier**) — the decode Q4_K lever.
+        // SoA Q4_K single-row: each thread owns lane `t` of every superblock.
+        // Activation is one f32 per thread per block → load from global, **no LDS, no
+        // barrier** in the FMA loop. Full-act LDS (16 KiB) was A/B'd and lost occupancy
+        // on A2000 (~8.5 vs ~9.1 tok/s). Multi-row still uses shared act tiles separately.
         let row_base = row * weight_row_bytes();
         let n_blocks = params.n_in / BLOCK_Q4K_ELEMS;
         let sub = t / 32u;
         let group = t / 64u;
         let local = t % 64u;
+        let scale_pair = sub >> 1u;
+        let scale_hi = (sub & 1u) == 1u;
+        let q_off = group * 32u;
         for (var b = 0u; b < n_blocks; b = b + 1u) {
             let block_base = row_base + b * BLOCK_Q4K_SOA_BYTES;
-            let d_off = block_base + 128u + sub * 2u;
-            let m_off = block_base + 144u + sub * 2u;
-            // Word-aligned when sub is even; fall back to byte path for odd sub.
-            let d_bits = read_u8_weight(d_off) | (read_u8_weight(d_off + 1u) << 8u);
-            let m_bits = read_u8_weight(m_off) | (read_u8_weight(m_off + 1u) << 8u);
-            let dsub = f16_to_f32(d_bits);
-            let msub = f16_to_f32(m_bits);
-            let qs_base = block_base;
-            let q_off = group * 32u;
+            let d_word = weight_words[(block_base + 128u) / 4u + scale_pair];
+            let m_word = weight_words[(block_base + 144u) / 4u + scale_pair];
+            let dsub = f16_to_f32(select(d_word & 0xFFFFu, d_word >> 16u, scale_hi));
+            let msub = f16_to_f32(select(m_word & 0xFFFFu, m_word >> 16u, scale_hi));
             var nib: u32;
             if local < 32u {
-                let byte_i = qs_base + q_off + local;
-                let word = weight_words[byte_i >> 2u];
-                let shift = (byte_i & 3u) * 8u;
-                nib = (word >> shift) & 0xFu;
+                let byte_i = block_base + q_off + local;
+                nib = (weight_words[byte_i >> 2u] >> ((byte_i & 3u) * 8u)) & 0xFu;
             } else {
-                let byte_i = qs_base + q_off + (local - 32u);
-                let word = weight_words[byte_i >> 2u];
-                let shift = (byte_i & 3u) * 8u;
-                nib = ((word >> shift) & 0xFFu) >> 4u;
+                let byte_i = block_base + q_off + (local - 32u);
+                nib = ((weight_words[byte_i >> 2u] >> ((byte_i & 3u) * 8u)) & 0xFFu) >> 4u;
             }
-            let w = dsub * f32(nib) - msub;
-            acc = acc + w * input[in_base + b * BLOCK_Q4K_ELEMS + t];
+            let x = input[in_base + b * BLOCK_Q4K_ELEMS + t];
+            acc = acc + (dsub * f32(nib) - msub) * x;
         }
     } else if params.weight_ggml_type == GGML_TYPE_Q4_K && (params.n_in % BLOCK_Q4K_ELEMS) == 0u {
-        // Block-cooperative Q4_K path: workgroup step b == superblock b; thread t == element t.
-        // Header decoded once (8 threads) into a ping-pong shared slot; reused by all 256 threads.
+        // Block-cooperative Q4_K + ping-pong act; header still 8-thread decode.
         let row_base = row * weight_row_bytes();
         let n_blocks = params.n_in / BLOCK_Q4K_ELEMS;
-        let sub = t / 32u;     // which 32-element sub-block this thread's element belongs to
-        let group = t / 64u;   // Q4_K nibble layout: 4 groups of 64, low/high nibble at ±32
+        let sub = t / 32u;
+        let group = t / 64u;
         let local = t % 64u;
-        for (var b = 0u; b < n_blocks; b = b + 1u) {
-            let block_base = row_base + b * BLOCK_Q4K_BYTES;
-            let slot = (b & 1u) * 8u; // ping-pong: even → 0..7, odd → 8..15
-            // Cooperative header decode (8 threads). Word-aligned f16 d/dmin load.
+        if n_blocks > 0u {
+            coop_act[t] = input[in_base + t];
             if t < 8u {
+                let block_base = row_base;
                 let d_word = weight_words[block_base >> 2u];
                 let d = f16_to_f32(d_word & 0xFFFFu);
                 let dmin = f16_to_f32(d_word >> 16u);
                 let sm = get_scale_min_k4(t, block_base + 4u);
-                coop_q4k_dsub[slot + t] = d * f32(sm.x);
-                coop_q4k_msub[slot + t] = dmin * f32(sm.y);
+                coop_q4k_dsub[t] = d * f32(sm.x);
+                coop_q4k_msub[t] = dmin * f32(sm.y);
             }
-            workgroupBarrier();
-            // Each thread dequantizes its own element t of this superblock from its nibble.
+        }
+        workgroupBarrier();
+        for (var b = 0u; b < n_blocks; b = b + 1u) {
+            let use_a = (b & 1u) == 0u;
+            let slot = (b & 1u) * 8u;
+            let next_slot = ((b + 1u) & 1u) * 8u;
+            if b + 1u < n_blocks {
+                let nxt = input[in_base + (b + 1u) * BLOCK_Q4K_ELEMS + t];
+                if use_a {
+                    coop_act_b[t] = nxt;
+                } else {
+                    coop_act[t] = nxt;
+                }
+                if t < 8u {
+                    let nb = row_base + (b + 1u) * BLOCK_Q4K_BYTES;
+                    let d_word = weight_words[nb >> 2u];
+                    let d = f16_to_f32(d_word & 0xFFFFu);
+                    let dmin = f16_to_f32(d_word >> 16u);
+                    let sm = get_scale_min_k4(t, nb + 4u);
+                    coop_q4k_dsub[next_slot + t] = d * f32(sm.x);
+                    coop_q4k_msub[next_slot + t] = dmin * f32(sm.y);
+                }
+            }
+            let block_base = row_base + b * BLOCK_Q4K_BYTES;
             let qs_base = block_base + 16u;
             let q_off = group * 32u;
             var nib: u32;
@@ -468,9 +502,23 @@ fn coop_row_dot(row: u32, t: u32, in_base: u32) -> f32 {
                 let shift = (byte_i & 3u) * 8u;
                 nib = ((word >> shift) & 0xFFu) >> 4u;
             }
+            let x = select(coop_act_b[t], coop_act[t], use_a);
             let w = coop_q4k_dsub[slot + sub] * f32(nib) - coop_q4k_msub[slot + sub];
-            acc = acc + w * input[in_base + b * BLOCK_Q4K_ELEMS + t];
-            // No trailing barrier: next block writes the *other* ping-pong slot.
+            acc = acc + w * x;
+            workgroupBarrier();
+        }
+    } else if params.weight_ggml_type == GGML_TYPE_Q6_K
+        && (params.n_in % BLOCK_Q6K_ELEMS) == 0u
+    {
+        // Q6_K block-coop (logits): one element per thread per superblock + shared act.
+        let row_base = row * weight_row_bytes();
+        let n_blocks = params.n_in / BLOCK_Q6K_ELEMS;
+        for (var b = 0u; b < n_blocks; b = b + 1u) {
+            coop_act[t] = input[in_base + b * BLOCK_Q6K_ELEMS + t];
+            workgroupBarrier();
+            let col = b * BLOCK_Q6K_ELEMS + t;
+            acc = acc + dequant_q6_k_weight(row, col) * coop_act[t];
+            workgroupBarrier();
         }
     } else {
         // Generic strided path (other quant types / non-256-aligned K).
@@ -525,5 +573,510 @@ fn coop_gemv(
     }
     if t == 0u {
         output[out_base + row] = coop_partial[0];
+    }
+}
+
+// Warp GEMV (32 threads/row): each lane owns 8 columns per 256-block → ~8× more
+// FMA/thread than 256-wide coop, and reduce is only 5 steps (or subgroupAdd).
+// Preferred for Q4_K_SOA decode on discrete GPUs (dispatch still n_out WGs).
+const WARP_WG: u32 = 32u;
+
+fn warp_q4soa_row_dot(row: u32, t: u32, in_base: u32) -> f32 {
+    var acc = 0.0;
+    let row_base = row * weight_row_bytes();
+    let n_blocks = params.n_in / BLOCK_Q4K_ELEMS;
+    for (var b = 0u; b < n_blocks; b = b + 1u) {
+        let block_base = row_base + b * BLOCK_Q4K_SOA_BYTES;
+        // 8 columns per thread within the 256-elem superblock.
+        for (var k = 0u; k < 8u; k = k + 1u) {
+            let local_col = t + k * WARP_WG;
+            let sub = local_col / 32u; // = k
+            let group = local_col / 64u;
+            let local = local_col % 64u;
+            let scale_pair = sub >> 1u;
+            let scale_hi = (sub & 1u) == 1u;
+            let d_word = weight_words[(block_base + 128u) / 4u + scale_pair];
+            let m_word = weight_words[(block_base + 144u) / 4u + scale_pair];
+            let d_bits = select(d_word & 0xFFFFu, d_word >> 16u, scale_hi);
+            let m_bits = select(m_word & 0xFFFFu, m_word >> 16u, scale_hi);
+            let dsub = f16_to_f32(d_bits);
+            let msub = f16_to_f32(m_bits);
+            let q_off = group * 32u;
+            var nib: u32;
+            if local < 32u {
+                let byte_i = block_base + q_off + local;
+                let word = weight_words[byte_i >> 2u];
+                let shift = (byte_i & 3u) * 8u;
+                nib = (word >> shift) & 0xFu;
+            } else {
+                let byte_i = block_base + q_off + (local - 32u);
+                let word = weight_words[byte_i >> 2u];
+                let shift = (byte_i & 3u) * 8u;
+                nib = ((word >> shift) & 0xFFu) >> 4u;
+            }
+            let x = input[in_base + b * BLOCK_Q4K_ELEMS + local_col];
+            acc = acc + (dsub * f32(nib) - msub) * x;
+        }
+    }
+    return acc;
+}
+
+fn warp_tree_reduce_32(t: u32) -> f32 {
+    // coop_partial[0..32) holds lane partials; returns sum (valid on all lanes after).
+    workgroupBarrier();
+    if t < 16u { coop_partial[t] = coop_partial[t] + coop_partial[t + 16u]; }
+    workgroupBarrier();
+    if t < 8u { coop_partial[t] = coop_partial[t] + coop_partial[t + 8u]; }
+    workgroupBarrier();
+    if t < 4u { coop_partial[t] = coop_partial[t] + coop_partial[t + 4u]; }
+    workgroupBarrier();
+    if t < 2u { coop_partial[t] = coop_partial[t] + coop_partial[t + 2u]; }
+    workgroupBarrier();
+    if t < 1u { coop_partial[t] = coop_partial[t] + coop_partial[t + 1u]; }
+    workgroupBarrier();
+    return coop_partial[0];
+}
+
+@compute @workgroup_size(32)
+fn coop_gemv_warp(
+    @builtin(workgroup_id) wg_id: vec3<u32>,
+    @builtin(local_invocation_id) lid: vec3<u32>,
+) {
+    let m = wg_id.y;
+    let batch = max(params.n_batch, 1u);
+    if m >= batch { return; }
+    let row = wg_id.x;
+    if row >= params.n_out { return; }
+    let t = lid.x;
+    let in_stride = select(params.n_in, params.in_row_stride, params.in_row_stride > 0u);
+    let out_stride = select(params.n_out, params.out_row_stride, params.out_row_stride > 0u);
+    let in_base = m * in_stride;
+    let out_base = m * out_stride;
+
+    var acc = 0.0;
+    if params.weight_ggml_type == GGML_TYPE_Q4_K_SOA
+        && (params.n_in % BLOCK_Q4K_ELEMS) == 0u
+    {
+        acc = warp_q4soa_row_dot(row, t, in_base);
+    } else {
+        // Generic: stride-32 over n_in.
+        var j = t;
+        loop {
+            if j >= params.n_in { break; }
+            acc = acc + dequant_weight(row, j) * input[in_base + j];
+            j = j + WARP_WG;
+        }
+    }
+    coop_partial[t] = acc;
+    let total = warp_tree_reduce_32(t);
+    if t == 0u {
+        output[out_base + row] = total;
+    }
+}
+
+@compute @workgroup_size(32)
+fn coop_gemv_residual_warp(
+    @builtin(workgroup_id) wg_id: vec3<u32>,
+    @builtin(local_invocation_id) lid: vec3<u32>,
+) {
+    let m = wg_id.y;
+    let batch = max(params.n_batch, 1u);
+    if m >= batch { return; }
+    let row = wg_id.x;
+    if row >= params.n_out { return; }
+    let t = lid.x;
+    let in_stride = select(params.n_in, params.in_row_stride, params.in_row_stride > 0u);
+    let out_stride = select(params.n_out, params.out_row_stride, params.out_row_stride > 0u);
+    let in_base = m * in_stride;
+    let out_base = m * out_stride;
+
+    var acc = 0.0;
+    if params.weight_ggml_type == GGML_TYPE_Q4_K_SOA
+        && (params.n_in % BLOCK_Q4K_ELEMS) == 0u
+    {
+        acc = warp_q4soa_row_dot(row, t, in_base);
+    } else {
+        var j = t;
+        loop {
+            if j >= params.n_in { break; }
+            acc = acc + dequant_weight(row, j) * input[in_base + j];
+            j = j + WARP_WG;
+        }
+    }
+    coop_partial[t] = acc;
+    let total = warp_tree_reduce_32(t);
+    if t == 0u {
+        output[out_base + row] = residual[out_base + row] + total;
+    }
+}
+
+// GEMV + residual: output[i] = residual[i] + W[i]·x  (eliminates a separate add dispatch).
+// Same 0..3 bindings as coop_gemv; binding 4 = residual stream (must not alias output).
+@compute @workgroup_size(256)
+fn coop_gemv_residual(
+    @builtin(workgroup_id) wg_id: vec3<u32>,
+    @builtin(local_invocation_id) lid: vec3<u32>,
+) {
+    let m = wg_id.y;
+    let batch = max(params.n_batch, 1u);
+    if m >= batch {
+        return;
+    }
+    let row = wg_id.x;
+    if row >= params.n_out {
+        return;
+    }
+    let t = lid.x;
+    let in_stride = select(params.n_in, params.in_row_stride, params.in_row_stride > 0u);
+    let out_stride = select(params.n_out, params.out_row_stride, params.out_row_stride > 0u);
+    let in_base = m * in_stride;
+    let out_base = m * out_stride;
+
+    coop_partial[t] = coop_row_dot(row, t, in_base);
+    workgroupBarrier();
+    var stride = COOP_WG >> 1u;
+    loop {
+        if stride == 0u {
+            break;
+        }
+        if t < stride {
+            coop_partial[t] = coop_partial[t] + coop_partial[t + stride];
+        }
+        workgroupBarrier();
+        stride = stride >> 1u;
+    }
+    if t == 0u {
+        output[out_base + row] = residual[out_base + row] + coop_partial[0];
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Multi-row cooperative GEMV (dramatic 3B lever).
+//
+// Single-row `coop_gemv` launches n_out workgroups; each reloads the full
+// activation from global memory. For Llama-3.2-3B FFN (n_out=8192, n_in=3072)
+// that is ~100 MB of *repeated* act traffic per gate/up alone — 8× the weight
+// stream. Multi-row packs COOP_ROWS consecutive outputs into one WG:
+//
+//   1. Cooperative load of the full activation into LDS (once).
+//   2. Barrier-free Q4_K(_SOA) per-block FMA (each thread only needs its lane).
+//   3. Tree-reduce + write for each of the R rows, reusing the LDS act.
+//
+// Dispatch: (ceil(n_out / COOP_ROWS), batch, 1). Same group-0 bindings as coop_gemv.
+// Falls back to sequential single-row `coop_row_dot` when n_in > COOP_FULL_ACT_MAX.
+const COOP_ROWS: u32 = 8u;
+
+// Dot product against LDS-resident activation (no global act reload, no per-block barrier).
+// Assumes `coop_full_act` already holds the activation (loaded by caller).
+fn coop_row_dot_lds(row: u32, t: u32) -> f32 {
+    var acc = 0.0;
+    if params.weight_ggml_type == GGML_TYPE_F16 {
+        let row_base = row * params.weight_row_elems;
+        var j = t;
+        loop {
+            if j >= params.n_in { break; }
+            let elem = row_base + j;
+            let pair = unpack2x16float(weight_words[elem >> 1u]);
+            let w = select(pair.x, pair.y, (elem & 1u) == 1u);
+            acc = acc + w * coop_full_act[j];
+            j = j + COOP_WG;
+        }
+    } else if params.weight_ggml_type == GGML_TYPE_BF16 {
+        let row_base = row * params.weight_row_elems;
+        var j = t;
+        loop {
+            if j >= params.n_in { break; }
+            let elem = row_base + j;
+            let word = weight_words[elem >> 1u];
+            let bits16 = select(word & 0xFFFFu, word >> 16u, (elem & 1u) == 1u);
+            let w = bitcast<f32>(bits16 << 16u);
+            acc = acc + w * coop_full_act[j];
+            j = j + COOP_WG;
+        }
+    } else if params.weight_ggml_type == GGML_TYPE_Q4_K_SOA
+        && (params.n_in % BLOCK_Q4K_ELEMS) == 0u
+    {
+        let row_base = row * weight_row_bytes();
+        let n_blocks = params.n_in / BLOCK_Q4K_ELEMS;
+        let sub = t / 32u;
+        let group = t / 64u;
+        let local = t % 64u;
+        let scale_pair = sub >> 1u;
+        let scale_hi = (sub & 1u) == 1u;
+        for (var b = 0u; b < n_blocks; b = b + 1u) {
+            let block_base = row_base + b * BLOCK_Q4K_SOA_BYTES;
+            let d_word = weight_words[(block_base + 128u) / 4u + scale_pair];
+            let m_word = weight_words[(block_base + 144u) / 4u + scale_pair];
+            let d_bits = select(d_word & 0xFFFFu, d_word >> 16u, scale_hi);
+            let m_bits = select(m_word & 0xFFFFu, m_word >> 16u, scale_hi);
+            let dsub = f16_to_f32(d_bits);
+            let msub = f16_to_f32(m_bits);
+            let qs_base = block_base;
+            let q_off = group * 32u;
+            var nib: u32;
+            if local < 32u {
+                let byte_i = qs_base + q_off + local;
+                let word = weight_words[byte_i >> 2u];
+                let shift = (byte_i & 3u) * 8u;
+                nib = (word >> shift) & 0xFu;
+            } else {
+                let byte_i = qs_base + q_off + (local - 32u);
+                let word = weight_words[byte_i >> 2u];
+                let shift = (byte_i & 3u) * 8u;
+                nib = ((word >> shift) & 0xFFu) >> 4u;
+            }
+            let x = coop_full_act[b * BLOCK_Q4K_ELEMS + t];
+            acc = acc + (dsub * f32(nib) - msub) * x;
+        }
+    } else if params.weight_ggml_type == GGML_TYPE_Q4_K
+        && (params.n_in % BLOCK_Q4K_ELEMS) == 0u
+    {
+        // Header decode per block into registers (thread-private); no shared header needed
+        // because each thread's sub-scale is constant for its lane within a block.
+        let row_base = row * weight_row_bytes();
+        let n_blocks = params.n_in / BLOCK_Q4K_ELEMS;
+        let sub = t / 32u;
+        let group = t / 64u;
+        let local = t % 64u;
+        for (var b = 0u; b < n_blocks; b = b + 1u) {
+            let block_base = row_base + b * BLOCK_Q4K_BYTES;
+            let d_word = weight_words[block_base >> 2u];
+            let d = f16_to_f32(d_word & 0xFFFFu);
+            let dmin = f16_to_f32(d_word >> 16u);
+            let sm = get_scale_min_k4(sub, block_base + 4u);
+            let dsub = d * f32(sm.x);
+            let msub = dmin * f32(sm.y);
+            let qs_base = block_base + 16u;
+            let q_off = group * 32u;
+            var nib: u32;
+            if local < 32u {
+                let byte_i = qs_base + q_off + local;
+                let word = weight_words[byte_i >> 2u];
+                let shift = (byte_i & 3u) * 8u;
+                nib = (word >> shift) & 0xFu;
+            } else {
+                let byte_i = qs_base + q_off + (local - 32u);
+                let word = weight_words[byte_i >> 2u];
+                let shift = (byte_i & 3u) * 8u;
+                nib = ((word >> shift) & 0xFFu) >> 4u;
+            }
+            let x = coop_full_act[b * BLOCK_Q4K_ELEMS + t];
+            acc = acc + (dsub * f32(nib) - msub) * x;
+        }
+    } else {
+        var j = t;
+        loop {
+            if j >= params.n_in { break; }
+            acc = acc + dequant_weight(row, j) * coop_full_act[j];
+            j = j + COOP_WG;
+        }
+    }
+    return acc;
+}
+
+fn coop_tree_reduce_write(t: u32, out_idx: u32, resid: f32) {
+    // Assumes coop_partial[t] already holds the lane partial.
+    workgroupBarrier();
+    var stride = COOP_WG >> 1u;
+    loop {
+        if stride == 0u { break; }
+        if t < stride {
+            coop_partial[t] = coop_partial[t] + coop_partial[t + stride];
+        }
+        workgroupBarrier();
+        stride = stride >> 1u;
+    }
+    if t == 0u {
+        output[out_idx] = resid + coop_partial[0];
+    }
+}
+
+// One K-sweep for COOP_ROWS rows (Q4_K_SOA, n_in multiple of 256, n_in ≤ 4096).
+// Returns false if the fast path does not apply (caller uses serial fallback).
+fn coop_mr_q4soa_fused_accum(
+    row0: u32,
+    t: u32,
+    in_base: u32,
+    acc: ptr<function, array<f32, 8>>,
+) -> bool {
+    // Multi-row with 256-elem act tile only (low LDS → high occupancy).
+    // Each superblock: load act once, FMA into all COOP_ROWS (weight reuse).
+    // Works for any n_in multiple of 256 (including down proj n_in=8192).
+    if params.weight_ggml_type != GGML_TYPE_Q4_K_SOA {
+        return false;
+    }
+    if (params.n_in % BLOCK_Q4K_ELEMS) != 0u || params.n_in == 0u {
+        return false;
+    }
+    let sub = t / 32u;
+    let group = t / 64u;
+    let local = t % 64u;
+    let scale_pair = sub >> 1u;
+    let scale_hi = (sub & 1u) == 1u;
+    let q_off = group * 32u;
+    let rb = weight_row_bytes();
+    let n_blocks = params.n_in / BLOCK_Q4K_ELEMS;
+    for (var r = 0u; r < COOP_ROWS; r = r + 1u) {
+        (*acc)[r] = 0.0;
+    }
+    for (var b = 0u; b < n_blocks; b = b + 1u) {
+        coop_act[t] = input[in_base + b * BLOCK_Q4K_ELEMS + t];
+        workgroupBarrier();
+        let x = coop_act[t];
+        let col_base = b * BLOCK_Q4K_SOA_BYTES;
+        for (var r = 0u; r < COOP_ROWS; r = r + 1u) {
+            let row = row0 + r;
+            if row >= params.n_out {
+                continue;
+            }
+            let block_base = row * rb + col_base;
+            let d_word = weight_words[(block_base + 128u) / 4u + scale_pair];
+            let m_word = weight_words[(block_base + 144u) / 4u + scale_pair];
+            let dsub = f16_to_f32(select(d_word & 0xFFFFu, d_word >> 16u, scale_hi));
+            let msub = f16_to_f32(select(m_word & 0xFFFFu, m_word >> 16u, scale_hi));
+            var nib: u32;
+            if local < 32u {
+                let byte_i = block_base + q_off + local;
+                nib = (weight_words[byte_i >> 2u] >> ((byte_i & 3u) * 8u)) & 0xFu;
+            } else {
+                let byte_i = block_base + q_off + (local - 32u);
+                nib = ((weight_words[byte_i >> 2u] >> ((byte_i & 3u) * 8u)) & 0xFFu) >> 4u;
+            }
+            (*acc)[r] = (*acc)[r] + (dsub * f32(nib) - msub) * x;
+        }
+        workgroupBarrier();
+    }
+    return true;
+}
+
+fn coop_mr_reduce_write_rows(
+    t: u32,
+    row0: u32,
+    out_base: u32,
+    acc: ptr<function, array<f32, 8>>,
+    add_residual: bool,
+) {
+    // Parallel multi-accumulator tree: one barrier ladder for all COOP_ROWS.
+    // Pack partials into coop_partial slots via multi-pass using coop_act as row r scratch
+    // for r>0 would need more LDS; instead: sequential rows but only one write barrier
+    // between — still better than 8 full trees if we use register exchange:
+    // Store all 8 lane partials into coop_full_act[r*256+t] (2 KiB used of 16).
+    for (var r = 0u; r < COOP_ROWS; r = r + 1u) {
+        coop_full_act[r * COOP_WG + t] = (*acc)[r];
+    }
+    workgroupBarrier();
+    var stride = COOP_WG >> 1u;
+    loop {
+        if stride == 0u {
+            break;
+        }
+        if t < stride {
+            for (var r = 0u; r < COOP_ROWS; r = r + 1u) {
+                let base = r * COOP_WG;
+                coop_full_act[base + t] =
+                    coop_full_act[base + t] + coop_full_act[base + t + stride];
+            }
+        }
+        workgroupBarrier();
+        stride = stride >> 1u;
+    }
+    if t < COOP_ROWS {
+        let row = row0 + t;
+        if row < params.n_out {
+            var v = coop_full_act[t * COOP_WG];
+            if add_residual {
+                v = residual[out_base + row] + v;
+            }
+            output[out_base + row] = v;
+        }
+    }
+}
+
+@compute @workgroup_size(256)
+fn coop_gemv_mr(
+    @builtin(workgroup_id) wg_id: vec3<u32>,
+    @builtin(local_invocation_id) lid: vec3<u32>,
+) {
+    let m = wg_id.y;
+    let batch = max(params.n_batch, 1u);
+    if m >= batch { return; }
+    let row0 = wg_id.x * COOP_ROWS;
+    if row0 >= params.n_out { return; }
+    let t = lid.x;
+    let in_stride = select(params.n_in, params.in_row_stride, params.in_row_stride > 0u);
+    let out_stride = select(params.n_out, params.out_row_stride, params.out_row_stride > 0u);
+    let in_base = m * in_stride;
+    let out_base = m * out_stride;
+
+    var acc: array<f32, 8>;
+    // Q4_K_SOA tiled multi-row (owns act loads; works for n_in > 4096).
+    if coop_mr_q4soa_fused_accum(row0, t, in_base, &acc) {
+        coop_mr_reduce_write_rows(t, row0, out_base, &acc, false);
+        return;
+    }
+    // Other quants: load act once when it fits, else serial coop_row_dot.
+    let use_full = params.n_in <= COOP_FULL_ACT_MAX && params.n_in > 0u;
+    if use_full {
+        var j = t;
+        loop {
+            if j >= params.n_in { break; }
+            coop_full_act[j] = input[in_base + j];
+            j = j + COOP_WG;
+        }
+        workgroupBarrier();
+        for (var r = 0u; r < COOP_ROWS; r = r + 1u) {
+            acc[r] = select(0.0, coop_row_dot_lds(row0 + r, t), row0 + r < params.n_out);
+        }
+        coop_mr_reduce_write_rows(t, row0, out_base, &acc, false);
+    } else {
+        for (var r = 0u; r < COOP_ROWS; r = r + 1u) {
+            let row = row0 + r;
+            acc[r] = select(0.0, coop_row_dot(row, t, in_base), row < params.n_out);
+        }
+        coop_mr_reduce_write_rows(t, row0, out_base, &acc, false);
+    }
+}
+
+// Multi-row residual: output[row] = residual[row] + W[row]·x
+@compute @workgroup_size(256)
+fn coop_gemv_residual_mr(
+    @builtin(workgroup_id) wg_id: vec3<u32>,
+    @builtin(local_invocation_id) lid: vec3<u32>,
+) {
+    let m = wg_id.y;
+    let batch = max(params.n_batch, 1u);
+    if m >= batch { return; }
+    let row0 = wg_id.x * COOP_ROWS;
+    if row0 >= params.n_out { return; }
+    let t = lid.x;
+    let in_stride = select(params.n_in, params.in_row_stride, params.in_row_stride > 0u);
+    let out_stride = select(params.n_out, params.out_row_stride, params.out_row_stride > 0u);
+    let in_base = m * in_stride;
+    let out_base = m * out_stride;
+
+    var acc: array<f32, 8>;
+    if coop_mr_q4soa_fused_accum(row0, t, in_base, &acc) {
+        coop_mr_reduce_write_rows(t, row0, out_base, &acc, true);
+        return;
+    }
+    let use_full = params.n_in <= COOP_FULL_ACT_MAX && params.n_in > 0u;
+    if use_full {
+        var j = t;
+        loop {
+            if j >= params.n_in { break; }
+            coop_full_act[j] = input[in_base + j];
+            j = j + COOP_WG;
+        }
+        workgroupBarrier();
+        for (var r = 0u; r < COOP_ROWS; r = r + 1u) {
+            acc[r] = select(0.0, coop_row_dot_lds(row0 + r, t), row0 + r < params.n_out);
+        }
+        coop_mr_reduce_write_rows(t, row0, out_base, &acc, true);
+    } else {
+        for (var r = 0u; r < COOP_ROWS; r = r + 1u) {
+            let row = row0 + r;
+            acc[r] = select(0.0, coop_row_dot(row, t, in_base), row < params.n_out);
+        }
+        coop_mr_reduce_write_rows(t, row0, out_base, &acc, true);
     }
 }

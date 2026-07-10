@@ -2,6 +2,8 @@
 name = "qualia-solid-bridge"
 version = "0.0.23"
 edition = "2021"
+description = "W3C Solid personal pod server + consumer agent for Webizen/Qualia"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 qualia-core-db = { path = "../qualia-core-db" }
@@ -11,13 +13,17 @@ bytes = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 core_affinity = "0.8"
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
 
 [dev-dependencies]
 dhat = "0.3"
 # warp's in-process test harness (warp::test) for the bridge-route gating tests.
 warp = { version = "0.4", features = ["test"] }
+tokio = { version = "1.0", features = ["full", "test-util", "macros"] }
 
 [features]
+default = []
+# Historical compile-time flag: also forces demo OIDC on. Prefer runtime
+# `BridgeConfig.demo_oidc` / QUALIA_SOLID_DEMO_OIDC=1 for local personal pods.
 demo = []
 dhat-heap = []
-

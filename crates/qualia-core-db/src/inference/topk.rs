@@ -26,12 +26,18 @@ pub const TOPK_BLOCK_SIZE: usize = 1024;
 /// Largest K the host paths support (kept generous; the kernel itself is K-agnostic per round).
 pub const TOPK_MAX_K: usize = 64;
 
-/// 16-byte `Params` uniform: `n, k, block_size, _pad`.
+/// 16-byte `Params` uniform: `n, k, block_size, cand_base` (cand_base=0 for single-chunk).
 pub fn topk_params_bytes(n: u32, k: u32, block_size: u32) -> [u8; 16] {
+    topk_params_bytes_with_base(n, k, block_size, 0)
+}
+
+/// Like [`topk_params_bytes`] with a non-zero candidate write base for multi-chunk mega-pass.
+pub fn topk_params_bytes_with_base(n: u32, k: u32, block_size: u32, cand_base: u32) -> [u8; 16] {
     let mut b = [0u8; 16];
     b[0..4].copy_from_slice(&n.to_le_bytes());
     b[4..8].copy_from_slice(&k.to_le_bytes());
     b[8..12].copy_from_slice(&block_size.to_le_bytes());
+    b[12..16].copy_from_slice(&cand_base.to_le_bytes());
     b
 }
 

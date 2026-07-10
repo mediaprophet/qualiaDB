@@ -222,6 +222,9 @@ mod tests {
             }],
             consents: vec![],
             stage: FormationStage::Draft,
+            jurisdiction: None,
+            intents: Vec::new(),
+            artifact_context: None,
             created_at: 1_700_000_000,
             updated_at: 1_700_000_000,
         }

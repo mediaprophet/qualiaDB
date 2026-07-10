@@ -45,10 +45,45 @@ pub fn set_decode_budget_override(n: u32) {
     DECODE_BUDGET_OVERRIDE.store(n, Ordering::Relaxed);
 }
 
+/// When budget override is active, ignore EOS so A/B runs a fixed token count
+/// (prevents early-stop from inflating/deflating tok/s on short prompts).
+#[inline]
+pub fn decode_budget_fixed_tokens() -> bool {
+    DECODE_BUDGET_OVERRIDE.load(Ordering::Relaxed) > 0
+}
+
 /// Current decode-budget override (0 = none).
 #[inline]
 pub fn decode_budget_override() -> u32 {
     DECODE_BUDGET_OVERRIDE.load(Ordering::Relaxed)
+}
+
+// ── Wall-clock inference timeout override (batch / overnight jobs) ────────────
+// 0 = use production `INFERENCE_TIMEOUT_MS` (30s interactive). Batch profile may
+// raise this to hours for multi-system health differential analysis overnight.
+static INFERENCE_TIMEOUT_OVERRIDE_MS: AtomicU64 = AtomicU64::new(0);
+
+/// Set wall-clock decode timeout in ms (0 = production default 30_000).
+#[inline]
+pub fn set_inference_timeout_override_ms(ms: u64) {
+    INFERENCE_TIMEOUT_OVERRIDE_MS.store(ms, Ordering::Relaxed);
+}
+
+/// Effective timeout: override if non-zero, else env `QUALIA_INFERENCE_TIMEOUT_MS`, else 30s.
+#[inline]
+pub fn inference_timeout_ms() -> u64 {
+    let o = INFERENCE_TIMEOUT_OVERRIDE_MS.load(Ordering::Relaxed);
+    if o > 0 {
+        return o;
+    }
+    if let Ok(s) = std::env::var("QUALIA_INFERENCE_TIMEOUT_MS") {
+        if let Ok(v) = s.parse::<u64>() {
+            if v > 0 {
+                return v;
+            }
+        }
+    }
+    30_000
 }
 
 // ── A1a GPU top-k toggle (D18) ────────────────────────────────────────────────
@@ -496,6 +531,20 @@ pub fn ffn_fusion_enabled() -> bool {
     }
 }
 
+/// Set when a resident decode plan was built with `fused_ffn.wgsl` in the mega-pass (T-A1).
+static FFN_FUSION_IN_RESIDENT: AtomicBool = AtomicBool::new(false);
+
+#[inline]
+pub fn set_ffn_fusion_in_resident(on: bool) {
+    FFN_FUSION_IN_RESIDENT.store(on, Ordering::Relaxed);
+}
+
+/// True when the last-built resident plan wires fused FFN expansion (not just the flag).
+#[inline]
+pub fn ffn_fusion_in_resident() -> bool {
+    FFN_FUSION_IN_RESIDENT.load(Ordering::Relaxed)
+}
+
 // ── FFN quant → f16 promotion (opt-in; bandwidth vs dequant trade-off) ─
 // Default OFF. Microbench on small GEMMs favoured f16, but full Llama-3.2-3B on
 // A2000 12GB measured **slower** with FFN f16 (~2.1 tok/s) than Q4_K SoA (~2.6)
@@ -545,6 +594,16 @@ pub fn coop_gemv_enabled() -> bool {
         Some("1") | Some("true") => true,
         _ => COOP_GEMV.load(Ordering::Relaxed),
     }
+}
+
+/// Rows per workgroup for multi-row coop GEMV (`coop_gemv_mr` in fused_transformer.wgsl).
+/// Must stay in lock-step with WGSL `COOP_ROWS`.
+pub const COOP_GEMV_ROWS: u32 = 8;
+
+/// Workgroup count for coop GEMV dispatch: `ceil(n_out / COOP_GEMV_ROWS)`.
+#[inline]
+pub fn coop_gemv_workgroups(n_out: u32) -> u32 {
+    n_out.div_ceil(COOP_GEMV_ROWS).max(1)
 }
 
 // ── W8: coopmat (tensor-core) GEMM selection seam ─────────────────────────────

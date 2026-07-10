@@ -1,0 +1,49 @@
+LOCK-IN SUMMARY (dramatic push 2026-07-10)
+  Diagnosis: 3B at ~7 tok/s is ~20x off memory roofline (~140 tok/s ideal for ~1.6GB Q4 weights @ 288GB/s).
+  Bottleneck: weight-bound Q4 GEMV dequant + 317 dispatches/token; not host sync (1 fence/token already).
+  CUDA_DECODE path: 0.96 tok/s (worse) — keep resident mega-pass.
+  Tried this session:
+    - Multi-row coop (8 rows/WG, full-act LDS): FLAT / slight regression (serial reduce cost).
+    - Barrier-free FFN Q4 SoA (full act LDS): FLAT on 3B (~6.7).
+    - Warp GEMV (32 thr/row): infrastructure landed, opt-in QUALIA_LLM_WARP_GEMV=1 (needs 5-slot BGs).
+  Honest measured (A2000 Vulkan, fixed-token):
+    3B Q4 SoA cuda+resident: ~6.8 tok/s
+    smol Q8 portable:        ~27 tok/s
+    smol fast-verify:        ~60+ tok/s
+    Ollama 3B (prior):       ~72 tok/s  ? still ~10x A-gap
+  Next levers for order-of-magnitude:
+    1. True multi-row fused FFN (one K-sweep, R register accs) with shared BGL end-to-end
+    2. CUDA full residual-on-device layer stack (not per-GEMV host round-trip)
+    3. Logits Q6_K dedicated kernel (3B logits are Q6_K @ 2520 B/row, not SoA)
+    4. Fewer dispatches/layer (fuse QKV + RMS into fewer kernels)
+
+## A/B 2026-07-10 (post multi-row fused FFN)
+3B Q4 SoA cuda resident fixed-token 16:
+  ffn_mr=1 (4 rows/WG one K-sweep):  6.67 tok/s
+  ffn_warp=1 (32 thr/row):            6.47 tok/s
+  baseline 256-coop fused:            6.71 tok/s
+Conclusion: FFN tiling variants do not move the needle — weight dequant GEMV bound.
+Default: ffn_mr/warp OPT-IN only. Next real lever = fewer global barriers (full-layer kernel) or CUDA residual-on-device full stack.
+
+## Sequence progress 2026-07-10 (mega-kernel + CUDA residual)
+
+### Shipped
+1. **Dual K+V GEMV** (WGSL dual_gemv.wgsl): 317 ? **289 passes/token** on 3B SoA.
+2. **CUDA multi-row Q4 GEMV** (R=4, act once/group) + residual down kernel.
+3. **try_q4k_soa_ffn_block_residual** — device-side residual fuse for non-resident FFN path.
+
+### Measured (A2000, fixed-token)
+| config | tok/s | notes |
+|--------|------:|-------|
+| 3B cuda+resident dual-KV | **6.65** | 289 passes/token |
+| 3B CUDA_DECODE | **0.91** | still host-RT bound |
+| smol FV | **63.3** | ok |
+
+### Honest conclusion
+Dispatch fusion (317?289) is real infrastructure but **does not unlock 10×** — still weight dequant bound.
+CUDA multi-row does not help resident (resident uses WGSL). CUDA_DECODE still ~1 tok/s.
+**Remaining true levers:** full CUDA attention+layer residual chain, or llama.cpp-class Q4 matvec (vectorized).
+
+### Apply
+  QUALIA_INFERENCE_MODE=cuda  (resident default ON)
+  Do NOT set QUALIA_LLM_CUDA_DECODE=1 for speed

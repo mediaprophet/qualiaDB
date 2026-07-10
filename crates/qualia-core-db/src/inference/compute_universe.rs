@@ -663,22 +663,12 @@ pub fn pop_topology_draft() -> Option<TopologyDraftBatch> {
 
 /// Phase-8 Sentinel gate for U1→U0 topology drafts (B3.1d polish).
 ///
-/// Mirrors the logit-stream anachronism check: any proposed draft token whose
-/// little-endian first byte is `0x99` is rejected before `verify_topology_draft_batch`.
+/// Empty drafts are rejected. The previous `0x99` first-byte filter on token ids /
+/// concept hashes was a false positive (~1/256 legitimate tokens) and is removed.
+/// Real governance signals must use an explicit flag / quin rule, not a random byte.
 #[inline]
 pub fn sentinel_allows_topology_draft(batch: &TopologyDraftBatch) -> bool {
-    if batch.draft_len == 0 {
-        return false;
-    }
-    for i in 0..batch.draft_len as usize {
-        if batch.draft_ids[i].to_le_bytes()[0] == 0x99 {
-            return false;
-        }
-        if (batch.concept_hashes[i] as u8) == 0x99 {
-            return false;
-        }
-    }
-    true
+    batch.draft_len > 0
 }
 
 /// Extrapolate γ concept hashes from kNN trajectory (B3.1b); optional `TopologyDraftMapper` (B3.1c).
@@ -851,7 +841,7 @@ mod tests {
     }
 
     #[test]
-    fn sentinel_rejects_anachronistic_draft_token() {
+    fn sentinel_allows_nonempty_drafts_including_former_false_positives() {
         let clean = TopologyDraftBatch {
             draft_len: 1,
             _pad: [0; 7],
@@ -860,21 +850,22 @@ mod tests {
         };
         assert!(sentinel_allows_topology_draft(&clean));
 
-        let bad_id = TopologyDraftBatch {
+        // Token id / hash low byte 0x99 is legitimate (~1/256) — no longer rejected.
+        let former_false_positive = TopologyDraftBatch {
             draft_len: 1,
             _pad: [0; 7],
             draft_ids: [0x99, 0, 0, 0, 0, 0, 0, 0],
-            concept_hashes: [7, 0, 0, 0, 0, 0, 0, 0],
-        };
-        assert!(!sentinel_allows_topology_draft(&bad_id));
-
-        let bad_hash = TopologyDraftBatch {
-            draft_len: 1,
-            _pad: [0; 7],
-            draft_ids: [42, 0, 0, 0, 0, 0, 0, 0],
             concept_hashes: [0x99, 0, 0, 0, 0, 0, 0, 0],
         };
-        assert!(!sentinel_allows_topology_draft(&bad_hash));
+        assert!(sentinel_allows_topology_draft(&former_false_positive));
+
+        let empty = TopologyDraftBatch {
+            draft_len: 0,
+            _pad: [0; 7],
+            draft_ids: [0; 8],
+            concept_hashes: [0; 8],
+        };
+        assert!(!sentinel_allows_topology_draft(&empty));
     }
 
     #[test]

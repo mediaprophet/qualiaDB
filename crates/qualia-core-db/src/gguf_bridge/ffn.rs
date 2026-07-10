@@ -214,6 +214,48 @@ impl QTensorEngine {
         // AWQ calibration hook (no-op in production) — same as the per-GEMM path.
         crate::llm_awq::record_ffn_input(&ffn_input[..gate_in]);
 
+        // T-A2 CUDA FFN block (Q4_K SoA): fused SwiGLU + down on-device — one x upload,
+        // mid never leaves the slab, one residual readback.
+        #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+        if crate::prefer_tensor_core_gemm()
+            && gate_info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA
+            && up_info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA
+            && down_info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA
+            && dn_out == emb_dim
+            && gate_in == emb_dim
+        {
+            // Residual fused on device: out = hidden + FFN(normed) — one readback.
+            if crate::try_q4k_soa_ffn_block_residual(
+                emb_dim,
+                n_ffn,
+                &ffn_input[..emb_dim],
+                &hidden[..emb_dim],
+                gate_raw,
+                up_raw,
+                down_raw,
+                &mut scratch_a[..emb_dim],
+            ) {
+                hidden[..emb_dim].copy_from_slice(&scratch_a[..emb_dim]);
+                return true;
+            }
+            if crate::try_q4k_soa_ffn_block(
+                emb_dim,
+                n_ffn,
+                &ffn_input[..emb_dim],
+                gate_raw,
+                up_raw,
+                down_raw,
+                &mut scratch_a[..emb_dim],
+            ) {
+                add_residual_inplace(
+                    &mut hidden[..emb_dim],
+                    &scratch_a[..emb_dim],
+                    emb_dim,
+                );
+                return true;
+            }
+        }
+
         // Resident weight buffers (Phase 2). Bail to the per-GEMM path if any is unavailable.
         let rg = match self.resident_weight_buffer(gate_raw.as_ptr() as u64, gate_raw) {
             Some(b) => b,
@@ -353,6 +395,10 @@ impl QTensorEngine {
                     binding: 3,
                     resource: g_buf.as_entire_binding(),
                 },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: in_buf.as_entire_binding(),
+                },
             ],
         });
         let up_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -374,6 +420,10 @@ impl QTensorEngine {
                 wgpu::BindGroupEntry {
                     binding: 3,
                     resource: u_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: in_buf.as_entire_binding(),
                 },
             ],
         });
@@ -423,6 +473,10 @@ impl QTensorEngine {
                     binding: 3,
                     resource: d_buf.as_entire_binding(),
                 },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: s_buf.as_entire_binding(),
+                },
             ],
         });
 
@@ -431,6 +485,8 @@ impl QTensorEngine {
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("FfnFusedEncoder"),
             });
+        // Multi-row dispatch only when the GEMM path itself selected mr (Q4 SoA large).
+        // FFN split path uses single-row coop count by default; gemm_raw handles mr.
         let gate_groups = if use_coop {
             n_ffn as u32
         } else {

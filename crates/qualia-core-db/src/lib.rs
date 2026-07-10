@@ -133,6 +133,60 @@ pub use inference::inference_awq as llm_awq;
 pub use inference::inference_bench;
 #[cfg(not(target_arch = "wasm32"))]
 pub use inference::inference_bench as llm_bench;
+pub use inference::inference_modes;
+pub use inference::inference_modes::{
+    active_inference_mode, apply_mode_toggles, bootstrap_inference_mode, fast_verify_html_default,
+    post_turn_verify_enabled, prefer_tensor_core_gemm, quant_graph_grounding_enabled,
+    rights_mode_enabled, sentinel_mid_decode_enabled, set_inference_mode, InferenceMode,
+};
+pub use inference::post_turn_verify;
+pub use inference::post_turn_verify::{
+    maybe_verify_turn, return_html_as_text, verify_and_heal_turn, VerifiedTurn, VerifyCheck,
+};
+pub use inference::application_profile;
+pub use inference::application_profile::{
+    active_application_profile, apply_application_profile, bootstrap_application_profile,
+    set_application_profile, ApplicationProfile,
+};
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::lab;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::lab::{
+    append_run_csv, audit_hot_path, calibrate_device_roof, default_search_space,
+    format_lockin_summary, run_ablation_matrix, run_auto_improve, run_decode_timeline,
+    run_q4k_soa_microbench, AblationRow, AutoImproveConfig, DecodeTimeline, DeviceRoof,
+    ExperimentRun, HotPathAudit, LabConfig, LockInPackage, MicrobenchResult, TrialResult,
+    CSV_HEADER,
+};
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::inference_path_selector;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::inference_path_selector::{
+    apply_inference_path_plan, bootstrap_optimal_inference_path, format_path_plan,
+    last_inference_path_plan, path_auto_enabled, resolve_inference_path_plan, run_path_select_cli,
+    ComputeLane, InferencePathPlan, QuantProfile,
+};
+pub use inference::quant_graph_grounding;
+pub use inference::quant_graph_grounding::{
+    export_fact_quins, fact_count, ground_generation, load_facts_from_tsv, lookup_capital_object,
+    maybe_ground_generation, register_capital_fact, register_fact, reset_fact_store_to_defaults,
+    seed_facts_from_bundled, GroundingFact, GroundingResult, CTX_GROUNDING, P_CAPITAL_OF,
+};
+pub use inference::qualia_hybrid;
+pub use inference::qualia_hybrid::{
+    apply_graph_logit_bias, force_fact_tokens, graph_force_enabled, prepare_hybrid_decode,
+    propose_best_draft, propose_fact_draft, publish_graph_route_from_prompt,
+    publish_grounding_obligation, publish_prompt_query_tensor, GRAPH_LOGIT_BIAS,
+};
+#[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+pub use inference::cuda_lane::{
+    cache_dense_weight, clear_weight_cache, dense_weight_cached, device_kv_ready,
+    ensure_device_kv_cache, preload_q4k_soa_weights, q4k_device_weight_count, try_cuda_batch_gemv,
+    try_cuda_batch_gemv_cached, try_cuda_batch_gemv_cached_only, try_q4k_soa_attention_device,
+    try_q4k_soa_ffn_block, try_q4k_soa_ffn_block_residual, try_q4k_soa_fused_swiglu,
+    try_q4k_soa_gemv, try_q4k_soa_qkv, warm_cuda_context, weight_cache_len, weight_fingerprint,
+    MAX_DENSE_ELEMS,
+};
 pub use inference::inference_eval;
 pub use inference::inference_eval as llm_eval;
 #[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]

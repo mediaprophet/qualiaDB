@@ -1,0 +1,13 @@
+# Qualia quant-graph grounding facts (TSV)
+# columns: reason | prompt_needles (;) | answer_ok (;) | repair | place_iri | city_iri
+# Loaded into NQuin fact graph at seed. Extend freely — not a closed world.
+capital_france	capital;france	paris	The capital of France is Paris.	https://example.org/place/France	https://example.org/place/Paris
+capital_australia	capital;australia	canberra	The capital of Australia is Canberra.	https://example.org/place/Australia	https://example.org/place/Canberra
+capital_japan	capital;japan	tokyo	The capital of Japan is Tokyo.	https://example.org/place/Japan	https://example.org/place/Tokyo
+capital_germany	capital;germany	berlin	The capital of Germany is Berlin.	https://example.org/place/Germany	https://example.org/place/Berlin
+capital_canada	capital;canada	ottawa	The capital of Canada is Ottawa.	https://example.org/place/Canada	https://example.org/place/Ottawa
+capital_italy	capital;italy	rome	The capital of Italy is Rome.	https://example.org/place/Italy	https://example.org/place/Rome
+capital_spain	capital;spain	madrid	The capital of Spain is Madrid.	https://example.org/place/Spain	https://example.org/place/Madrid
+capital_uk	capital;united kingdom	london	The capital of the United Kingdom is London.	https://example.org/place/UnitedKingdom	https://example.org/place/London
+capital_uk2	capital;uk	london	The capital of the UK is London.	https://example.org/place/UnitedKingdom	https://example.org/place/London
+capital_brazil	capital;brazil	brasília;brasilia	The capital of Brazil is Brasília.	https://example.org/place/Brazil	https://example.org/place/Brasilia

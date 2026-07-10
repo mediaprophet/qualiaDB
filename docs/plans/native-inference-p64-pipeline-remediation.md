@@ -1,3 +1,7 @@
+> **Direction update (2026-07-09):** active decision architecture is
+> [
+ative-inference-explorer-eval-plan.md](native-inference-explorer-eval-plan.md)
+> (executor vs explorer + evaluation programme). This file remains the workstream ledger.
 # Native Inference Pipeline Remediation Plan
 
 **Status:** plan (ready to execute)  

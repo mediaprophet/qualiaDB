@@ -1,0 +1,1 @@
+run_id,utc,git_sha,host_passport_key,adapter,backend,model_id,model_hash,layout,mode,profile,toggles_json,qualia_decode_tok_s,ollama_decode_tok_s,a_gap,prefill_tok_s,phase_ns_json,n_ulp_max,c_score,notes

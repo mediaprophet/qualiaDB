@@ -90,12 +90,22 @@ pub fn WebBrowserPane() -> Element {
         spawn(async move {
             let res = invoke_tauri("submit_omnibox_query", json!({ "query": query })).await;
             if let Ok(new_url) = res {
-                let current_id = active_tab_id.read().clone();
-                let mut t = tabs.write();
-                if let Some(tab) = t.iter_mut().find(|t| t.id == current_id) {
-                    tab.navigate(new_url.clone());
+                // External web pages (http/https) can't render in the in-pane <iframe> —
+                // most major sites send X-Frame-Options that forbid framing. Open them in a
+                // native Webizen browser window (a top-level navigation, not subject to
+                // framing rules). See docs/plans/webizen-browser-and-trust.md (P0).
+                if new_url.starts_with("http://") || new_url.starts_with("https://") {
+                    let _ = invoke_json("open_web_url", json!({ "url": new_url.clone() })).await;
+                    omnibox_input.set(new_url);
+                } else {
+                    // qualia:// / webizen:// semantic content renders in-pane.
+                    let current_id = active_tab_id.read().clone();
+                    let mut t = tabs.write();
+                    if let Some(tab) = t.iter_mut().find(|t| t.id == current_id) {
+                        tab.navigate(new_url.clone());
+                    }
+                    omnibox_input.set(new_url);
                 }
-                omnibox_input.set(new_url);
             }
         });
     };
@@ -317,6 +327,9 @@ pub fn DialecticalSidebarPane(active_url: String) -> Element {
     // Chat-Graph tracking
     let mut thread_target = use_signal(|| active_url.clone());
     let mut annotations = use_signal(|| Vec::<serde_json::Value>::new());
+    // On the host build the invoke/interaction blocks are cfg'd out; keep these signals "used".
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = (&mut message, &mut permission, &mut status, &mut target_fragment, &mut auth_uri, &mut show_cml, &mut thread_target, &mut annotations);
 
     // Sync if active_url changes from outside
     use_effect({
@@ -330,12 +343,11 @@ pub fn DialecticalSidebarPane(active_url: String) -> Element {
     use_effect(move || {
         let target = thread_target().clone();
         if target.is_empty() { return; }
+        #[cfg(target_arch = "wasm32")]
         spawn(async move {
-            if let Ok(res) = crate::components::wellfair::host_client::invoke_tauri("wellfair_search_library", serde_json::json!({ "facet": "target", "value": target })).await {
-                if let Some(s) = res.as_str() {
-                    if let Ok(data) = serde_json::from_str::<Vec<serde_json::Value>>(s) {
-                        annotations.set(data);
-                    }
+            if let Ok(res) = invoke_tauri("wellfair_search_library", serde_json::json!({ "facet": "target", "value": target })).await {
+                if let Ok(data) = serde_json::from_str::<Vec<serde_json::Value>>(&res) {
+                    annotations.set(data);
                 }
             }
         });
@@ -347,13 +359,16 @@ pub fn DialecticalSidebarPane(active_url: String) -> Element {
         let target_uri = thread_target().clone();
         let fragment = target_fragment().clone();
         let auth = auth_uri().clone();
-        
+        #[cfg(not(target_arch = "wasm32"))]
+        let _ = (&perm, &target_uri, &fragment);
+
         if text.trim().is_empty() && auth.trim().is_empty() { return; }
 
+        #[cfg(target_arch = "wasm32")]
         spawn(async move {
             use crate::components::wellfair::host_client::IngestFacets;
             let manual = IngestFacets {
-                occurred_at: Some(chrono::Utc::now().timestamp()),
+                occurred_at: Some((js_sys::Date::now() / 1000.0) as i64),
                 place_label: None, lat: None, lon: None,
                 project: None,
                 purpose: Some(format!("web-annotation ({})", perm)),
@@ -389,7 +404,7 @@ pub fn DialecticalSidebarPane(active_url: String) -> Element {
 
             let payload_str = serde_json::to_string_pretty(&payload).unwrap_or_default();
             
-            let annotation_uri = format!("urn:q42:cml:{}", chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
+            let annotation_uri = format!("urn:q42:cml:{}", js_sys::Date::now() as i64);
 
             // Treat the message as a web-annotation JSON-LD document
             match crate::components::wellfair::host_client::ingest_document(
@@ -524,17 +539,20 @@ pub fn CognitiveMonitorPane() -> Element {
     let mut topic_density = use_signal(|| std::collections::HashMap::<String, usize>::new());
     let mut total_annotations = use_signal(|| 0);
     let mut max_density = use_signal(|| 0);
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = (&mut topic_density, &mut total_annotations, &mut max_density);
 
     use_effect(move || {
+        #[cfg(target_arch = "wasm32")]
         spawn(async move {
-            let end = chrono::Utc::now().timestamp();
+            let end = (js_sys::Date::now() / 1000.0) as i64;
             let start = end - (30 * 24 * 60 * 60); // Last 30 days
             
-            if let Ok(res) = crate::components::wellfair::host_client::invoke_tauri(
+            if let Ok(res) = invoke_tauri(
                 "wellfair_search_library_time", 
                 serde_json::json!({ "start": start, "end": end })
             ).await {
-                if let Some(s) = res.as_str() {
+                { let s: &str = &res;
                     if let Ok(data) = serde_json::from_str::<Vec<serde_json::Value>>(s) {
                         let mut counts = std::collections::HashMap::new();
                         let mut total = 0;
@@ -586,15 +604,22 @@ pub fn CognitiveMonitorPane() -> Element {
                             rsx! {
                                 div { class: "flex flex-col gap-2",
                                     for (topic, count) in sorted {
-                                        div { class: "flex items-center gap-3 w-full",
-                                            span { class: "text-xs w-32 truncate text-right", "{topic}" }
-                                            div { class: "flex-1 bg-black/20 h-4 rounded overflow-hidden flex",
-                                                div {
-                                                    class: "h-full bg-primary transition-all duration-1000",
-                                                    style: "width: {if *max_density.read() > 0 { (count as f32 / *max_density.read() as f32) * 100.0 } else { 0.0 }}%; opacity: {if count > 10 { 1.0 } else { 0.6 }};",
+                                        {
+                                            let md = *max_density.read();
+                                            let width = if md > 0 { (count as f32 / md as f32) * 100.0 } else { 0.0 };
+                                            let opacity = if count > 10 { 1.0 } else { 0.6 };
+                                            rsx! {
+                                                div { class: "flex items-center gap-3 w-full",
+                                                    span { class: "text-xs w-32 truncate text-right", "{topic}" }
+                                                    div { class: "flex-1 bg-black/20 h-4 rounded overflow-hidden flex",
+                                                        div {
+                                                            class: "h-full bg-primary transition-all duration-1000",
+                                                            style: "width: {width}%; opacity: {opacity};",
+                                                        }
+                                                    }
+                                                    span { class: "text-xs w-8 text-accent text-right font-mono", "{count}" }
                                                 }
                                             }
-                                            span { class: "text-xs w-8 text-accent text-right font-mono", "{count}" }
                                         }
                                     }
                                 }

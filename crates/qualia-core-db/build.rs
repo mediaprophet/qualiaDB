@@ -1,50 +1,41 @@
 use std::env;
+use std::path::{Path, PathBuf};
 
 fn main() {
-    // Retrieve the target operating system from Cargo's build environment
     let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
-
     println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-env-changed=QUALIA_BUILD_VERBOSE");
+    println!("cargo:rerun-if-env-changed=DIRECTML_LIB_PATH");
+    println!("cargo:rerun-if-env-changed=QUALIA_DXC_PATH");
 
     match target_os.as_str() {
         "android" => {
-            // Target: Google Tensor (Edge TPU) & Qualcomm Hexagon NPUs
-            // Link the Android Neural Networks API (NNAPI)
             println!("cargo:rustc-link-lib=dylib=neuralnetworks");
-            println!("cargo:warning=Qualia-DB Compiling for Android: NNAPI Linked.");
+            build_info("Android: NNAPI linked");
         }
         "macos" | "ios" => {
-            // Target: Apple Silicon (M-Series / A-Series)
-            // Link Metal for zero-copy UMA compute and Accelerate for the AMX coprocessor
             println!("cargo:rustc-link-lib=framework=Metal");
             println!("cargo:rustc-link-lib=framework=Accelerate");
             println!("cargo:rustc-link-lib=framework=CoreML");
             println!("cargo:rustc-link-lib=framework=Security");
-            println!("cargo:warning=Qualia-DB Compiling for Apple Silicon: Metal, Accelerate, CoreML & Security Linked.");
+            build_info("Apple: Metal + Accelerate + CoreML + Security linked");
         }
         "windows" => {
-            // Target: ARM-based Surface devices, Intel NPUs, AMD Ryzen AI
-            // D3D12 is always present on Windows 10+.
             println!("cargo:rustc-link-lib=dylib=d3d12");
             println!("cargo:rustc-link-lib=dylib=dxgi");
 
-            // DirectML 1.15 — shipped in vendor/directml/ (checked into repo).
-            // Falls back to DIRECTML_LIB_PATH env var for CI environments that
-            // supply their own SDK copy.
-            let manifest = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default();
-            let vendor = std::path::PathBuf::from(&manifest)
+            let manifest = env::var("CARGO_MANIFEST_DIR").unwrap_or_default();
+            let vendor_dml = PathBuf::from(&manifest)
                 .join("..")
                 .join("..")
                 .join("vendor")
                 .join("directml")
                 .join("bin")
                 .join("x64-win");
-            let env_path = std::env::var("DIRECTML_LIB_PATH")
-                .ok()
-                .map(std::path::PathBuf::from);
+            let env_path = env::var("DIRECTML_LIB_PATH").ok().map(PathBuf::from);
 
-            let lib_dir = if vendor.join("DirectML.lib").exists() {
-                Some(vendor)
+            let lib_dir = if vendor_dml.join("DirectML.lib").exists() {
+                Some(vendor_dml)
             } else {
                 env_path.filter(|p| p.join("DirectML.lib").exists())
             };
@@ -53,29 +44,28 @@ fn main() {
                 println!("cargo:rustc-link-search=native={}", dir.display());
                 println!("cargo:rustc-link-lib=dylib=DirectML");
                 println!("cargo:rustc-cfg=feature=\"directml\"");
-                println!(
-                    "cargo:warning=Qualia-DB: DirectML 1.15 linked from {}.",
-                    dir.display()
-                );
+                // Runtime: Windows loads DirectML.dll from the exe/module directory first.
+                // Previously only DXC was copied — missing DLL caused load failures or stale
+                // system DirectML, and PowerShell treated cargo:warning success spam as errors.
+                // Always stage release DLL. Debug-layer DLL only when present (dev machines).
+                copy_runtime_dlls(&dir, &["DirectML.dll", "DirectML.Debug.dll"]);
+                build_info(&format!("DirectML linked + DLL staged from {}", dir.display()));
             } else {
-                println!("cargo:warning=Qualia-DB: vendor/directml not found and DIRECTML_LIB_PATH unset. \
-                          GPU inference will fall back to wgpu-only path.");
+                // Real problem only — keep as cargo warning.
+                println!(
+                    "cargo:warning=Qualia-DB: vendor/directml not found and DIRECTML_LIB_PATH unset. \
+                     GPU inference will fall back to wgpu-only path."
+                );
             }
 
-            // DXC (DirectX Shader Compiler) — shipped in vendor/dxc/ (checked into repo). Unlike
-            // DirectML this is NOT link-time: `dxcompiler.dll` is loaded at RUNTIME by wgpu to compile
-            // WGSL→DXIL for the DX12 backend (DX12's legacy FXC cannot compile `fused_attention.wgsl`).
-            // We copy the two DLLs next to the built binaries so the OS loader finds them from the
-            // exe's own directory → wgpu's default `Auto` compiler uses DXC with no env var (turnkey
-            // DX12). `QUALIA_DXC_PATH` still overrides for a bespoke DXC location. `dxil.dll` must sit
-            // beside `dxcompiler.dll` (DXIL signing).
-            let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
+            // DXC — runtime load by wgpu for WGSL→DXIL on DX12 (FXC cannot compile attention).
+            let arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
             let dxc_sub = if arch == "aarch64" {
                 "arm64-win"
             } else {
                 "x64-win"
             };
-            let dxc_dir = std::path::PathBuf::from(&manifest)
+            let dxc_dir = PathBuf::from(&manifest)
                 .join("..")
                 .join("..")
                 .join("vendor")
@@ -85,11 +75,8 @@ fn main() {
             let dxc_dll = dxc_dir.join("dxcompiler.dll");
             let dxil_dll = dxc_dir.join("dxil.dll");
             if dxc_dll.exists() && dxil_dll.exists() {
-                // OUT_DIR = target/<profile>/build/<crate>-<hash>/out → the profile dir is 3 ancestors up.
-                if let Ok(out_dir) = std::env::var("OUT_DIR") {
-                    if let Some(profile_dir) = std::path::Path::new(&out_dir).ancestors().nth(3) {
-                        // binaries live in <profile>/ (qualia-cli) and <profile>/deps/ (test exes);
-                        // Windows loads a DLL from the loading module's own directory first.
+                if let Ok(out_dir) = env::var("OUT_DIR") {
+                    if let Some(profile_dir) = Path::new(&out_dir).ancestors().nth(3) {
                         for dst_dir in [profile_dir.to_path_buf(), profile_dir.join("deps")] {
                             let _ = std::fs::create_dir_all(&dst_dir);
                             let _ = std::fs::copy(&dxc_dll, dst_dir.join("dxcompiler.dll"));
@@ -97,43 +84,62 @@ fn main() {
                         }
                         println!("cargo:rerun-if-changed={}", dxc_dll.display());
                         println!("cargo:rerun-if-changed={}", dxil_dll.display());
-                        println!(
-                            "cargo:warning=Qualia-DB: DXC ({dxc_sub}) copied beside binaries — DX12 uses DXC (turnkey)."
-                        );
+                        build_info(&format!("DXC ({dxc_sub}) staged beside binaries"));
                     }
                 }
             } else {
-                println!("cargo:warning=Qualia-DB: vendor/dxc/{dxc_sub} not found — DX12 will fall back to \
-                          FXC (which cannot compile the attention shader). Set QUALIA_DXC_PATH or vendor DXC.");
+                println!(
+                    "cargo:warning=Qualia-DB: vendor/dxc/{dxc_sub} not found — DX12 will fall back to \
+                     FXC (which cannot compile the attention shader). Set QUALIA_DXC_PATH or vendor DXC."
+                );
             }
         }
         "linux" => {
-            // Target: Raw Linux Environments / Bare-metal Servers
-            //
-            // wgpu selects Vulkan automatically on Linux — it picks up the
-            // system Vulkan ICD (NVIDIA, AMD RADV, Intel ANV) without any
-            // explicit link directive here.  All WGSL shaders in
-            // `src/shaders/` execute via Vulkan on Linux without changes.
-            //
-            // NVIDIA CUDA (cuBLAS) path — optional, ~10 % faster than Vulkan
-            // for Q4_K GEMM on large tensors.  Enable by building with:
-            //   QUALIA_CUDA=1 cargo build --release
-            // and add `cudarc = "0.11"` to Cargo.toml.
-            if std::env::var("QUALIA_CUDA").is_ok() {
+            if env::var("QUALIA_CUDA").is_ok() {
                 println!("cargo:rustc-cfg=feature=\"cuda\"");
-                println!(
-                    "cargo:warning=Qualia-DB Linux: QUALIA_CUDA set — stub ready for cudarc GEMM."
-                );
+                build_info("Linux: QUALIA_CUDA set — cudarc path enabled");
             } else {
-                println!(
-                    "cargo:warning=Qualia-DB Linux: Vulkan via wgpu (covers NVIDIA/AMD/Intel). \
-                          Set QUALIA_CUDA=1 for explicit cuBLAS path."
-                );
+                build_info("Linux: Vulkan via wgpu (set QUALIA_CUDA=1 for explicit CUDA)");
             }
         }
         _ => {
-            // Fallback for unsupported OS (Standard CPU Triad only)
-            println!("cargo:warning=Qualia-DB: No native NPU/GPU accelerator defined for this OS. Defaulting to CPU Triad.");
+            println!(
+                "cargo:warning=Qualia-DB: No native NPU/GPU accelerator defined for this OS. Defaulting to CPU Triad."
+            );
+        }
+    }
+}
+
+/// Success/info for build — only printed when `QUALIA_BUILD_VERBOSE=1`.
+/// Using `cargo:warning=` for success caused PowerShell to treat builds as failed (stderr).
+fn build_info(msg: &str) {
+    if env::var("QUALIA_BUILD_VERBOSE").ok().as_deref() == Some("1") {
+        println!("cargo:warning=Qualia-DB: {msg}");
+    }
+}
+
+/// Copy vendor DLLs next to `target/<profile>/` and `deps/` so the OS loader finds them.
+fn copy_runtime_dlls(src_dir: &Path, names: &[&str]) {
+    let Ok(out_dir) = env::var("OUT_DIR") else {
+        return;
+    };
+    let Some(profile_dir) = Path::new(&out_dir).ancestors().nth(3) else {
+        return;
+    };
+    for name in names {
+        let src = src_dir.join(name);
+        if !src.exists() {
+            continue;
+        }
+        println!("cargo:rerun-if-changed={}", src.display());
+        for dst_dir in [profile_dir.to_path_buf(), profile_dir.join("deps")] {
+            let _ = std::fs::create_dir_all(&dst_dir);
+            if let Err(e) = std::fs::copy(&src, dst_dir.join(name)) {
+                println!(
+                    "cargo:warning=Qualia-DB: failed to stage {name} → {}: {e}",
+                    dst_dir.display()
+                );
+            }
         }
     }
 }

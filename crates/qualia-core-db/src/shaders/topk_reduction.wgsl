@@ -20,7 +20,8 @@ struct Params {
     n: u32,           // total number of logits
     k: u32,           // top-K per block (caller guarantees k >= 1)
     block_size: u32,  // elements per workgroup (<= MAX_BLOCK)
-    _pad: u32,
+    /// Base index into cand_val/cand_idx for this chunk (multi-chunk mega-pass).
+    cand_base: u32,
 };
 
 @group(0) @binding(0) var<storage, read> logits: array<f32>;
@@ -99,7 +100,7 @@ fn topk_block(
         // Thread 0 emits the winner (global index) and masks it for the next round.
         if (tid == 0u) {
             let widx = r_idx[0];
-            let out = blk * params.k + round;
+            let out = params.cand_base + blk * params.k + round;
             cand_val[out] = r_val[0];
             cand_idx[out] = base + widx;
             s_val[widx] = NEG_INF;

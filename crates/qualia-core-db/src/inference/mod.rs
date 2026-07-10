@@ -64,6 +64,65 @@ pub mod ternary_gpu;
 pub mod topk;
 // W2: exact CPU sampling chain (pure, wasm-safe — no GPU, no `rand`, no file I/O).
 pub mod sampler;
+// Multi-mode inference (portable / cuda-tc / quant-graph) — coexisting approaches.
+pub mod inference_modes;
+pub use inference_modes::{
+    active_inference_mode, apply_mode_toggles, bootstrap_inference_mode, fast_verify_html_default,
+    post_turn_verify_enabled, prefer_tensor_core_gemm, quant_graph_grounding_enabled,
+    rights_mode_enabled, sentinel_mid_decode_enabled, set_inference_mode, InferenceMode,
+};
+// Application profiles: interactive / live-fast / batch-overnight (no Ollama).
+pub mod application_profile;
+pub use application_profile::{
+    active_application_profile, apply_application_profile, bootstrap_application_profile,
+    set_application_profile, ApplicationProfile,
+};
+// Inference superiority lab (plan: inference-superiority-lab-and-toolset-plan.md).
+#[cfg(not(target_arch = "wasm32"))]
+pub mod lab;
+// Post-turn verify / self-heal (FastVerify path).
+pub mod post_turn_verify;
+pub use post_turn_verify::{
+    maybe_verify_turn, return_html_as_text, verify_and_heal_turn, VerifiedTurn, VerifyCheck,
+};
+// Device-optimal path: passport benchmark → pick dx12/vulkan/metal/cuda lane + quant.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod inference_path_selector;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference_path_selector::{
+    apply_inference_path_plan, bootstrap_optimal_inference_path, format_path_plan,
+    last_inference_path_plan, path_auto_enabled, resolve_inference_path_plan, run_path_select_cli,
+    ComputeLane, InferencePathPlan, QuantProfile,
+};
+// QuantGraph: selective fact grounding / repair after LLM proposal.
+pub mod quant_graph_grounding;
+pub use quant_graph_grounding::{
+    export_fact_quins, fact_count, ground_generation, load_facts_from_tsv, lookup_capital_object,
+    maybe_ground_generation, register_capital_fact, register_fact, reset_fact_store_to_defaults,
+    seed_facts_from_bundled, GroundingFact, GroundingResult, CTX_GROUNDING, P_CAPITAL_OF,
+};
+// Qualia-unique hybrid: graph route mask + fact draft + 10D query + deontic gate.
+pub mod qualia_hybrid;
+pub use qualia_hybrid::{
+    apply_graph_logit_bias, force_fact_tokens, graph_force_enabled, prepare_hybrid_decode,
+    propose_best_draft, propose_fact_draft, publish_graph_route_from_prompt,
+    publish_grounding_obligation, publish_prompt_query_tensor, GRAPH_LOGIT_BIAS,
+};
+// CUDA dense batch GEMM lane (mode=cuda); stub when feature off.
+#[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+pub mod cuda_lane;
+#[cfg(any(target_arch = "wasm32", not(feature = "cuda")))]
+pub mod cuda_lane_stub;
+#[cfg(any(target_arch = "wasm32", not(feature = "cuda")))]
+pub use cuda_lane_stub as cuda_lane;
+#[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+pub use cuda_lane::{
+    cache_dense_weight, clear_weight_cache, dense_weight_cached, device_kv_ready,
+    ensure_device_kv_cache, q4k_device_weight_count, try_cuda_batch_gemv, try_cuda_batch_gemv_cached,
+    try_cuda_batch_gemv_cached_only, try_q4k_soa_attention_device, try_q4k_soa_ffn_block,
+    try_q4k_soa_ffn_block_residual, try_q4k_soa_fused_swiglu, try_q4k_soa_gemv, try_q4k_soa_qkv,
+    warm_cuda_context, weight_cache_len, weight_fingerprint, MAX_DENSE_ELEMS,
+};
 // W6a: prompt-lookup speculative decoding proposer (pure, wasm-safe).
 pub mod prompt_lookup;
 #[cfg(not(target_arch = "wasm32"))]

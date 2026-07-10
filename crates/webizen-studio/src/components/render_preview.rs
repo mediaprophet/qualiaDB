@@ -12,6 +12,7 @@ use crate::components::native_gpu_viewport::NativeGpuViewport;
 use dioxus::prelude::*;
 
 /// Camera state for zero-heap compliance (all Copy types)
+#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 struct RenderCameraState {
     eye_x: f64,
@@ -26,6 +27,7 @@ struct RenderCameraState {
     fov: f64,
 }
 
+#[allow(dead_code)]
 impl RenderCameraState {
     fn default_camera() -> Self {
         Self {

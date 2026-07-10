@@ -669,6 +669,9 @@ mod tests {
             undertakings: vec![],
             consents: vec![],
             stage: crate::agreements::FormationStage::Draft,
+            jurisdiction: None,
+            intents: Vec::new(),
+            artifact_context: None,
             created_at: 0,
             updated_at: 0,
         }

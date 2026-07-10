@@ -81,6 +81,23 @@ impl SamplerConfig {
     pub fn from_cbor(bytes: &[u8]) -> Option<Self> {
         ciborium::from_reader(bytes).ok()
     }
+
+    /// A sensible default for interactive chat / instruct generation: enough randomness to avoid the
+    /// greedy repetition-collapse, plus a light repeat penalty, while staying reproducible (fixed
+    /// seed). Benchmarks and determinism tests must NOT install this — the unconfigured global stays
+    /// greedy, preserving the bit-exact a1a/a6a guarantees.
+    pub fn chat_default() -> Self {
+        Self {
+            temperature: 0.7,
+            top_k: 40,
+            top_p: 0.95,
+            repeat_penalty: 1.1,
+            freq_penalty: 0.0,
+            presence_penalty: 0.0,
+            penalty_window: 64,
+            seed: 0,
+        }
+    }
 }
 
 /// Stateful sampler: owns the PRNG stream so successive tokens advance it deterministically.
@@ -424,5 +441,21 @@ mod tests {
         // id0 logit 5, id1 logit 4. presence -1.5 to id0 (appears 3x, once applied) → 3.5 < 4 → id1.
         let mut l = logits(&[5.0, 4.0, 0.0]);
         assert_eq!(s.sample(&mut l, &[0, 0, 0]), 1);
+    }
+
+    #[test]
+    fn t10_chat_default_is_non_greedy_reproducible() {
+        let cfg = SamplerConfig::chat_default();
+        assert!(!cfg.is_greedy(), "chat default must sample, not fall back to greedy");
+        assert!(cfg.temperature > 0.0 && cfg.top_p <= 1.0 && cfg.repeat_penalty > 1.0);
+        // Seeded ⇒ reproducible: the same config reproduces the same draw sequence.
+        let base = [2.0f32, 1.0, 0.5, 3.0, 0.2, 1.5];
+        let run = || {
+            let mut s = SamplerState::new(SamplerConfig::chat_default());
+            (0..50)
+                .map(|_| s.sample(&mut base.to_vec(), &[]))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(run(), run(), "chat default must be reproducible for a fixed seed");
     }
 }

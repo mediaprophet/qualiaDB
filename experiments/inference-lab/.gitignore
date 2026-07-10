@@ -1,0 +1,11 @@
+*.p64
+*.gguf
+*.bin
+*.csv
+!schema.csv
+runs/
+*.json
+!README.md
+# Lock-in package is local evidence (reproducible via `lab auto`)
+lockin/*
+!lockin/.gitkeep

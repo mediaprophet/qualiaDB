@@ -190,6 +190,19 @@ impl QualiaSlabAllocator {
     pub fn clear(&mut self) {
         self.read_count = self.write_count;
     }
+
+    /// Snapshot of the write cursor (absolute, not modulo capacity).
+    pub fn write_checkpoint(&self) -> u64 {
+        self.write_count
+    }
+
+    /// Rewind write/read heads to a prior checkpoint so later transient allocations
+    /// reuse the same slab region **without** overwriting earlier persistent views
+    /// (device bytes below the checkpoint remain intact). Sync before calling.
+    pub fn restore_checkpoint(&mut self, write_count: u64) {
+        self.write_count = write_count;
+        self.read_count = write_count;
+    }
 }
 
 fn align_up(value: u64, alignment: u64) -> u64 {

@@ -22,6 +22,8 @@
 use crate::gguf_sharder::{GgufHyperparams, GgufTensorIndex, GgufTensorInfo};
 
 pub const P64_MAGIC: [u8; 4] = *b"p64\0";
+/// Container format version written by the canonical compiler.
+/// Keep in lock-step with `docs/manuals/standards/p64-weight-container-standard.md`.
 pub const P64_VERSION: u16 = 4;
 
 /// Return `true` only for the canonical four-byte P64 container magic.
@@ -42,7 +44,49 @@ pub const P64_TENSOR_ENTRY_BYTES: usize = 64;
 /// 64-byte stride and prevents neighbouring coordinates from sharing a cache
 /// line or a WASM SIMD fetch.
 pub const P64_MANIFOLD_ENTRY_BYTES: usize = 64;
-pub const P64_FLAG_LITTLE_ENDIAN: u16 = 1;
+
+// ── Header flags (bits of `P64WeightHeader::flags`) ─────────────────────────
+pub const P64_FLAG_LITTLE_ENDIAN: u16 = 1 << 0;
+// Bits 1–2: see `FORMAT_FLAG_RAW_TRANSCODE` / `FORMAT_FLAG_TERNARY` below (aliases kept
+// for historical call sites).
+/// At least one 2-D weight matrix was converted to `GGML_TYPE_Q4_K_SOA` (112).
+pub const P64_FLAG_Q4K_SOA: u16 = 1 << 3;
+/// Tensor blob region is **layer-major** (known roles ordered by layer, then role).
+/// Decode residency / CUDA slab fill SHOULD walk entries in table order.
+pub const P64_FLAG_LAYER_MAJOR: u16 = 1 << 4;
+/// Blobs use **layer-pack** alignment: page-align at layer boundaries only; 256 B within layer.
+pub const P64_FLAG_LAYER_PACK: u16 = 1 << 5;
+/// `role_table_offset` points at a layer schedule table (`P64LayerScheduleEntry` × n_layer).
+pub const P64_FLAG_LAYER_SCHEDULE: u16 = 1 << 6;
+
+/// One row of the optional layer schedule table (64 B, cache-line DOD).
+/// Written when [`P64_FLAG_LAYER_SCHEDULE`] is set; offset in `role_table_offset`.
+#[repr(C, align(64))]
+#[derive(Clone, Copy, Debug)]
+pub struct P64LayerScheduleEntry {
+    pub layer: u32,
+    /// Inclusive start of first blob in this layer (file offset).
+    pub blob_begin: u32,
+    /// Exclusive end of last blob in this layer.
+    pub blob_end: u32,
+    pub tensor_count: u16,
+    /// Bit i set if role_id `i` (0..14) appears in this layer.
+    pub roles_mask: u16,
+    pub reserved: [u8; 48],
+}
+impl Default for P64LayerScheduleEntry {
+    fn default() -> Self {
+        Self {
+            layer: 0,
+            blob_begin: 0,
+            blob_end: 0,
+            tensor_count: 0,
+            roles_mask: 0,
+            reserved: [0; 48],
+        }
+    }
+}
+const _: () = assert!(core::mem::size_of::<P64LayerScheduleEntry>() == 64);
 
 // Tensor roles.
 pub const P64_ROLE_ATTN_K: u16 = 0;
@@ -166,7 +210,11 @@ impl P64WeightHeader {
             manifold_table_offset: u32a(32),
             tensor_count: u32a(36),
             page_size: u32a(40),
-            reserved: [0; 20],
+            reserved: {
+                let mut r = [0u8; 20];
+                r.copy_from_slice(&data[44..64]);
+                r
+            },
         })
     }
 
@@ -185,6 +233,7 @@ impl P64WeightHeader {
         out[32..36].copy_from_slice(&self.manifold_table_offset.to_le_bytes());
         out[36..40].copy_from_slice(&self.tensor_count.to_le_bytes());
         out[40..44].copy_from_slice(&self.page_size.to_le_bytes());
+        out[44..64].copy_from_slice(&self.reserved);
     }
 }
 
@@ -387,7 +436,17 @@ pub fn compile_gguf_to_p64_with_layout(
             planned.push((P64_ROLE_UNKNOWN, P64_LAYER_GLOBAL, *name_hash, *info));
         }
     }
-    planned.sort_by_key(|(_, _, _, info)| info.byte_offset);
+    // Keep **layer-major** order for known roles (built above). Sorting by GGUF
+    // source offset used to destroy sequential layer packing and hurt residency.
+    // Unknown tensors trail, ordered by source offset for stable CRC layout only.
+    let mut unknowns: Vec<_> = planned
+        .iter()
+        .copied()
+        .filter(|(role, _, _, _)| *role == P64_ROLE_UNKNOWN)
+        .collect();
+    unknowns.sort_by_key(|(_, _, _, info)| info.byte_offset);
+    planned.retain(|(role, _, _, _)| *role != P64_ROLE_UNKNOWN);
+    planned.extend(unknowns);
 
     let mut string_table = vec![0u8];
     let mut name_offsets = Vec::with_capacity(planned.len());
@@ -407,7 +466,13 @@ pub fn compile_gguf_to_p64_with_layout(
         .ok_or("p64: manifold count overflow")? as usize;
 
     let hparams_offset = P64_WEIGHT_HEADER_BYTES;
-    let tensor_table_offset = align_up(hparams_offset + 64, 64);
+    let n_layer_u = index.hyperparams.n_layer as usize;
+    // Layer schedule sits immediately after hparams (pipeline residency map).
+    let schedule_offset = align_up(hparams_offset + 64, 64);
+    let schedule_bytes = n_layer_u
+        .checked_mul(core::mem::size_of::<P64LayerScheduleEntry>())
+        .ok_or("p64: schedule overflow")?;
+    let tensor_table_offset = align_up(schedule_offset + schedule_bytes, 64);
     let tensor_table_bytes = planned
         .len()
         .checked_mul(P64_TENSOR_ENTRY_BYTES)
@@ -494,7 +559,20 @@ pub fn compile_gguf_to_p64_with_layout(
             )
         };
 
-        cursor = align_up(cursor, page);
+        // Pipeline packing: page-align only at **layer boundaries** (and first blob).
+        // Within a layer, 256-byte align — cuts ~page waste × tensors/layer (decode residency
+        // and CUDA multi-weight fill walk contiguous layer ranges).
+        let pack_align = if position == 0 {
+            page
+        } else {
+            let prev_layer = planned[position - 1].1;
+            if *layer != prev_layer {
+                page
+            } else {
+                256
+            }
+        };
+        cursor = align_up(cursor, pack_align);
         let mut dimensions = [0u32; 4];
         for (target, source) in dimensions.iter_mut().zip(info.dims) {
             *target = u32::try_from(source).map_err(|_| "p64: tensor dimension exceeds u32")?;
@@ -527,11 +605,46 @@ pub fn compile_gguf_to_p64_with_layout(
         return Err("p64: 32-bit relative-offset container exceeds 4 GiB".to_string());
     }
 
+    let mut flags = P64_FLAG_LITTLE_ENDIAN
+        | P64_FLAG_LAYER_MAJOR
+        | P64_FLAG_LAYER_PACK
+        | P64_FLAG_LAYER_SCHEDULE;
+    if matches!(layout, P64ConvertLayout::Q4kSoa)
+        && blob_kind.iter().any(|k| matches!(k, BlobKind::Q4kSoa))
+    {
+        flags |= P64_FLAG_Q4K_SOA;
+    }
+    // Build per-layer blob ranges for the schedule table (decode/CUDA residency).
+    let mut schedule = vec![P64LayerScheduleEntry::default(); n_layer_u];
+    for (i, s) in schedule.iter_mut().enumerate() {
+        s.layer = i as u32;
+        s.blob_begin = u32::MAX;
+        s.blob_end = 0;
+    }
+    for e in &entries {
+        let li = e.manifold_idx as usize;
+        if li >= n_layer_u {
+            continue; // globals
+        }
+        let s = &mut schedule[li];
+        s.blob_begin = s.blob_begin.min(e.blob_offset);
+        s.blob_end = s.blob_end.max(e.blob_offset.saturating_add(e.blob_size));
+        s.tensor_count = s.tensor_count.saturating_add(1);
+        if e.role_id < 16 {
+            s.roles_mask |= 1u16 << e.role_id;
+        }
+    }
+    for s in &mut schedule {
+        if s.blob_begin == u32::MAX {
+            s.blob_begin = 0;
+            s.blob_end = 0;
+        }
+    }
     let header = P64WeightHeader {
         magic: P64_MAGIC,
         version: P64_VERSION,
-        flags: P64_FLAG_LITTLE_ENDIAN,
-        role_table_offset: 0,
+        flags,
+        role_table_offset: schedule_offset as u32, // layer schedule (not a role string table)
         tensor_table_offset: tensor_table_offset as u32,
         tokenizer_offset: tokenizer_offset as u32,
         hparams_offset: hparams_offset as u32,
@@ -563,6 +676,16 @@ pub fn compile_gguf_to_p64_with_layout(
     let mut output = vec![0u8; total_size];
     header.write_le(&mut output[..P64_WEIGHT_HEADER_BYTES]);
     hp.write_le(&mut output[hparams_offset..hparams_offset + 64]);
+    for (i, s) in schedule.iter().enumerate() {
+        let start = schedule_offset + i * core::mem::size_of::<P64LayerScheduleEntry>();
+        let dest = &mut output[start..start + 64];
+        dest.fill(0);
+        dest[0..4].copy_from_slice(&s.layer.to_le_bytes());
+        dest[4..8].copy_from_slice(&s.blob_begin.to_le_bytes());
+        dest[8..12].copy_from_slice(&s.blob_end.to_le_bytes());
+        dest[12..14].copy_from_slice(&s.tensor_count.to_le_bytes());
+        dest[14..16].copy_from_slice(&s.roles_mask.to_le_bytes());
+    }
     for (position, entry) in entries.iter().enumerate() {
         let start = tensor_table_offset + position * P64_TENSOR_ENTRY_BYTES;
         write_tensor_entry(entry, &mut output[start..start + P64_TENSOR_ENTRY_BYTES]);
@@ -1243,10 +1366,14 @@ pub fn compile_gguf_to_q42_ffn_quant_awq(
 /// P64) — tensors are verbatim high-fidelity blobs not yet mapped to engine GEMM roles, and the
 /// GGUF hyperparameter block is absent. (Distinguishes it from a `compile_gguf_to_p64` container.)
 pub const FORMAT_FLAG_RAW_TRANSCODE: u16 = 1 << 1;
+/// Alias of [`FORMAT_FLAG_RAW_TRANSCODE`] (header-flag naming).
+pub const P64_FLAG_RAW_TRANSCODE: u16 = FORMAT_FLAG_RAW_TRANSCODE;
 /// `format_flags` bit: tensors were **ternary-quantized (BitNet 1.58b)** during transcode — each
 /// blob is `[scale: f32][packed trits]` (`ggml_type = ternary::GGML_TYPE_TERNARY_158`); decode via
 /// `ternary::dequantize_blob`.
 pub const FORMAT_FLAG_TERNARY: u16 = 1 << 2;
+/// Alias of [`FORMAT_FLAG_TERNARY`] (header-flag naming).
+pub const P64_FLAG_TERNARY: u16 = FORMAT_FLAG_TERNARY;
 
 /// Decode a high-fidelity source tensor's bytes (`F32`/`F16`/`BF16`) to `f32` into `out` (cleared
 /// and refilled). Cold-path (ingest) helper for the ternary transcode.
@@ -2506,6 +2633,36 @@ mod p64_validation_tests {
         assert!(!has_p64_magic(b"GGUFpayload"));
     }
 
+    #[test]
+    fn p64_layer_major_flag_and_header_reserved_round_trip() {
+        let gguf = synthetic_gguf();
+        let p64 = compile_gguf_to_p64(&gguf, 12).expect("compile");
+        let index = P64TensorIndex::from_p64(&p64).expect("parse");
+        assert_eq!(index.header.version, P64_VERSION);
+        assert_ne!(index.header.flags & P64_FLAG_LAYER_MAJOR, 0);
+        assert_eq!(index.header.flags & P64_FLAG_LITTLE_ENDIAN, P64_FLAG_LITTLE_ENDIAN);
+        // Verbatim F32 synth has no Q4_K_SOA.
+        assert_eq!(index.header.flags & P64_FLAG_Q4K_SOA, 0);
+        // Known roles: layer tensors before globals (layer-major).
+        let roles: Vec<u16> = index.entries.iter().map(|e| e.role_id).collect();
+        let q_pos = roles.iter().position(|&r| r == P64_ROLE_ATTN_Q);
+        let emb_pos = roles.iter().position(|&r| r == P64_ROLE_TOKEN_EMBD);
+        assert!(q_pos.is_some() && emb_pos.is_some());
+        assert!(
+            q_pos.unwrap() < emb_pos.unwrap(),
+            "layer-major: attn_q must precede token_embd, roles={roles:?}"
+        );
+        // Reserved I/O: write non-zero reserved, re-read.
+        let mut hdr = index.header;
+        hdr.reserved[0] = 0xAB;
+        hdr.reserved[19] = 0xCD;
+        let mut bytes = [0u8; 64];
+        hdr.write_le(&mut bytes);
+        let back = P64WeightHeader::read_le(&bytes).expect("read header");
+        assert_eq!(back.reserved[0], 0xAB);
+        assert_eq!(back.reserved[19], 0xCD);
+    }
+
     fn put_kv_u32(out: &mut Vec<u8>, key: &str, value: u32) {
         out.extend_from_slice(&(key.len() as u64).to_le_bytes());
         out.extend_from_slice(key.as_bytes());
@@ -2603,8 +2760,12 @@ mod p64_validation_tests {
         assert_eq!(report.tensor_bytes, 96);
         assert_eq!(report.manifold_count, 2);
         assert_eq!(index.header.manifold_table_offset as usize % 64, 0);
+        assert_ne!(index.header.flags & P64_FLAG_LAYER_PACK, 0);
+        assert_ne!(index.header.flags & P64_FLAG_LAYER_SCHEDULE, 0);
+        // Layer-pack: first blob page-aligned; within-layer only needs 256 B.
+        assert_eq!(index.entries[0].blob_offset as usize % 4096, 0);
         for entry in &index.entries {
-            assert_eq!(entry.blob_offset as usize % 4096, 0);
+            assert_eq!(entry.blob_offset as usize % 256, 0);
             assert_eq!(
                 (index.header.manifold_table_offset as usize
                     + entry.manifold_idx as usize * P64_MANIFOLD_ENTRY_BYTES)

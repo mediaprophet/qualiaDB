@@ -166,30 +166,59 @@ impl QTensorEngine {
             &self.pipeline
         };
         let gemm_layout = self.native_gemm_bind_layout(use_coop).clone();
-        let gemm_bg = self
-            .gpu_device()
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("FusedTailOProjBG"),
-                layout: &gemm_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: input_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: o_weight.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: gemm_params_buf.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 3,
-                        resource: o_out_buf.as_entire_binding(),
-                    },
-                ],
-            });
+        let gemm_bg = if use_coop {
+            self.gpu_device()
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("FusedTailOProjBG"),
+                    layout: &gemm_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: input_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: o_weight.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 2,
+                            resource: gemm_params_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 3,
+                            resource: o_out_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 4,
+                            resource: input_buf.as_entire_binding(),
+                        },
+                    ],
+                })
+        } else {
+            self.gpu_device()
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("FusedTailOProjBG"),
+                    layout: &gemm_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: input_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: o_weight.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 2,
+                            resource: gemm_params_buf.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 3,
+                            resource: o_out_buf.as_entire_binding(),
+                        },
+                    ],
+                })
+        };
 
         let mut encoder = self
             .device()

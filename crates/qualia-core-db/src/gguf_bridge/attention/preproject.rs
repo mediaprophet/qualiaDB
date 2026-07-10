@@ -198,6 +198,10 @@ impl QTensorEngine {
                     binding: 3,
                     resource: proj_buf.as_entire_binding(),
                 },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: input_buf.as_entire_binding(),
+                },
             ],
         });
         let v_gemm_bg = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -219,6 +223,10 @@ impl QTensorEngine {
                 wgpu::BindGroupEntry {
                     binding: 3,
                     resource: proj_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: input_buf.as_entire_binding(),
                 },
             ],
         });

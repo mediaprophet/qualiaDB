@@ -1,7 +1,16 @@
 #![allow(non_snake_case)]
 use crate::components::shoelace::*;
 use dioxus::prelude::*;
-use crate::commands::invoke;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
+
+// The engine runs NATIVELY; this wasm UI only reads its telemetry over the Tauri invoke bridge.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
+    async fn invoke(cmd: &str, args: wasm_bindgen::JsValue) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
+}
 
 #[component]
 pub fn LlmHarness() -> Element {
@@ -11,6 +20,9 @@ pub fn LlmHarness() -> Element {
     let mut loaded_model = use_signal(|| String::new());
 
     use_future(move || async move {
+        #[cfg(not(target_arch = "wasm32"))]
+        let _ = (&mut tokens_per_sec, &mut vram_usage_gb, &mut vram_total_gb, &mut loaded_model);
+        #[cfg(target_arch = "wasm32")]
         loop {
             if let Ok(response) = invoke("wellfair_get_llm_telemetry", serde_wasm_bindgen::to_value(&()).unwrap()).await {
                 if let Ok(telemetry) = serde_wasm_bindgen::from_value::<serde_json::Value>(response) {
@@ -20,7 +32,7 @@ pub fn LlmHarness() -> Element {
                     if let Some(model) = telemetry["loaded_model"].as_str() { loaded_model.set(model.to_string()); }
                 }
             }
-            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+            gloo_timers::future::TimeoutFuture::new(500).await;
         }
     });
 

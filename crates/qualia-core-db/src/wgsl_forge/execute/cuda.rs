@@ -14,7 +14,7 @@
 //! failure.
 
 #[cfg(feature = "cuda")]
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, OnceLock};
 
 #[cfg(feature = "cuda")]
 use super::compute::QualiaCompute;
@@ -138,6 +138,28 @@ impl CudaComputeContext {
         Ok(view)
     }
 
+    /// Overwrite an existing device view with host bytes (no new allocation).
+    /// `data.len()` must be ≤ `view.length_bytes`.
+    pub fn write_view(&mut self, view: &BufferView, data: &[u8]) -> Result<(), ForgeError> {
+        if data.len() > view.length_bytes {
+            return Err(ForgeError::GpuValidation(format!(
+                "write_view overflow: {} > {}",
+                data.len(),
+                view.length_bytes
+            )));
+        }
+        if data.is_empty() {
+            return Ok(());
+        }
+        let mut dst = self
+            .slab
+            .slice_mut(view.offset..view.offset + data.len());
+        self.stream
+            .memcpy_htod(data, &mut dst)
+            .map_err(|e| ForgeError::GpuValidation(format!("H2D write_view failed: {:?}", e)))?;
+        Ok(())
+    }
+
     pub fn allocate_transient(
         &mut self,
         size_bytes: usize,
@@ -158,6 +180,16 @@ impl CudaComputeContext {
 
     pub fn clear_transient_allocations(&mut self) {
         self.allocator.clear();
+    }
+
+    /// See [`QualiaSlabAllocator::write_checkpoint`].
+    pub fn write_checkpoint(&self) -> u64 {
+        self.allocator.write_checkpoint()
+    }
+
+    /// See [`QualiaSlabAllocator::restore_checkpoint`].
+    pub fn restore_checkpoint(&mut self, write_count: u64) {
+        self.allocator.restore_checkpoint(write_count);
     }
 
     pub fn read_buffer_f32(&self, view: &BufferView) -> Result<Vec<f32>, ForgeError> {
@@ -259,10 +291,21 @@ impl<'a> CudaPipeline<'a> {
         entry_point: &str,
         spec: KernelSpec,
     ) -> Result<Self, ForgeError> {
-        let ptx = nvrtc_compile_to_ptx(context, source)?;
+        let ptx = nvrtc_compile_to_ptx_cached(context, source)?;
+        Self::from_ptx(context, &ptx, entry_point, spec)
+    }
+
+    /// Load a pipeline from already-compiled PTX (no NVRTC). Used by the process-wide
+    /// WMMA cache path so hot GEMM calls only pay `load_module`.
+    pub fn from_ptx(
+        context: &'a CudaComputeContext,
+        ptx: &cudarc::nvrtc::Ptx,
+        entry_point: &str,
+        spec: KernelSpec,
+    ) -> Result<Self, ForgeError> {
         let module = context
             .ctx
-            .load_module(ptx)
+            .load_module(ptx.clone())
             .map_err(|e| ForgeError::GpuValidation(format!("Failed to load module: {:?}", e)))?;
         let func = module
             .load_function(entry_point)
@@ -275,6 +318,38 @@ impl<'a> CudaPipeline<'a> {
             _module: module,
         })
     }
+
+    /// Compile (or reuse cached PTX for) raw CUDA-C and load — same as
+    /// [`compile_cuda_c_source`] but shares the process NVRTC cache when `source`
+    /// matches a previously compiled kernel body.
+    pub fn compile_cuda_c_source_cached(
+        context: &'a CudaComputeContext,
+        source: &str,
+        entry_point: &str,
+        storage_buffer_bindings: &[u32],
+    ) -> Result<Self, ForgeError> {
+        let buffers: Vec<BufferSpec> = storage_buffer_bindings
+            .iter()
+            .map(|&binding| BufferSpec {
+                group: 0,
+                binding,
+                name: format!("buf{binding}"),
+                element: BufferElement::Scalar(ScalarType::F32),
+                access: BufferAccess::StorageReadWrite,
+            })
+            .collect();
+        let spec = KernelSpec {
+            id: entry_point.to_string(),
+            semantic_version: 1,
+            entry_point: entry_point.to_string(),
+            description: "raw CUDA-C kernel (cached PTX)".to_string(),
+            buffers,
+            ops: Vec::new(),
+            shared_memory: Vec::new(),
+        };
+        let ptx = nvrtc_compile_to_ptx_cached(context, source)?;
+        Self::from_ptx(context, &ptx, entry_point, spec)
+    }
 }
 
 /// Compiles a CUDA-C source string to a driver-loadable PTX module via NVRTC,
@@ -282,8 +357,30 @@ impl<'a> CudaPipeline<'a> {
 /// headers resolvable. NVRTC's default `--include-path` search list is empty, so
 /// tensor-core kernels (`#include <mma.h>`) need the toolkit include dir passed
 /// explicitly — without it NVRTC fails with "could not open source file mma.h".
+/// Process-wide cache: (source_hash, arch, ptx_text) so NVRTC runs once per kernel/arch.
 #[cfg(feature = "cuda")]
-fn nvrtc_compile_to_ptx(
+static NVRTC_PTX_CACHE: OnceLock<Mutex<std::collections::HashMap<(u64, String), String>>> =
+    OnceLock::new();
+
+#[cfg(feature = "cuda")]
+fn nvrtc_ptx_cache() -> &'static Mutex<std::collections::HashMap<(u64, String), String>> {
+    NVRTC_PTX_CACHE.get_or_init(|| Mutex::new(std::collections::HashMap::new()))
+}
+
+/// Hash of CUDA-C source body (FNV-1a 64) for cache keys — no heap string key.
+#[cfg(feature = "cuda")]
+fn fnv1a64_bytes(data: &[u8]) -> u64 {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for &b in data {
+        h ^= b as u64;
+        h = h.wrapping_mul(0x0100_0000_01b3);
+    }
+    h
+}
+
+/// Compile CUDA-C → PTX with process-wide cache (key = source FNV + compute arch).
+#[cfg(feature = "cuda")]
+pub(crate) fn nvrtc_compile_to_ptx_cached(
     context: &CudaComputeContext,
     source: &str,
 ) -> Result<cudarc::nvrtc::Ptx, ForgeError> {
@@ -291,6 +388,15 @@ fn nvrtc_compile_to_ptx(
     let (major, minor) = context.ctx.compute_capability().map_err(|e| {
         ForgeError::GpuUnavailable(format!("compute-capability query failed: {:?}", e))
     })?;
+    let arch = arch_for_capability(major, minor).to_string();
+    let key = (fnv1a64_bytes(source.as_bytes()), arch.clone());
+
+    if let Ok(guard) = nvrtc_ptx_cache().lock() {
+        if let Some(text) = guard.get(&key) {
+            return Ok(cudarc::nvrtc::Ptx::from_src(text.clone()));
+        }
+    }
+
     let mut include_paths = Vec::new();
     if let Ok(cuda_path) = std::env::var("CUDA_PATH") {
         include_paths.push(format!("{cuda_path}/include"));
@@ -305,9 +411,16 @@ fn nvrtc_compile_to_ptx(
     // The installed nvrtc can be newer than the driver, which then rejects the PTX
     // ISA version. Our kernels use only long-stable instructions (incl. the stable
     // WMMA `mma.sync`), so rewrite `.version` down to one the driver supports.
-    Ok(cudarc::nvrtc::Ptx::from_src(downgrade_ptx_isa(
-        &compiled.to_src(),
-    )))
+    let text = downgrade_ptx_isa(&compiled.to_src());
+    if let Ok(mut guard) = nvrtc_ptx_cache().lock() {
+        guard.insert(key, text.clone());
+        log::info!(
+            "cuda_nvrtc|cache_store|arch={arch}|src_hash={:#x}|ptx_bytes={}",
+            fnv1a64_bytes(source.as_bytes()),
+            text.len()
+        );
+    }
+    Ok(cudarc::nvrtc::Ptx::from_src(text))
 }
 
 /// Maps a CUDA compute capability to the `--gpu-architecture=compute_XX` virtual
@@ -351,12 +464,26 @@ fn downgrade_ptx_isa(ptx: &str) -> String {
 }
 
 #[cfg(feature = "cuda")]
-impl<'a> QualiaCompute for CudaPipeline<'a> {
-    fn dispatch(
+impl<'a> CudaPipeline<'a> {
+    /// Launch without a host fence. Same-stream kernels stay ordered; the next
+    /// `read_buffer_*` / `synchronize` is the completion barrier. Used by the
+    /// P4 decode attention chain to avoid one PCIe-class fence per micro-kernel.
+    pub fn dispatch_async(
         &self,
         buffers: &[BufferView],
         schedule: &Schedule,
         element_count: usize,
+    ) -> Result<(), ForgeError> {
+        self.launch_inner(buffers, schedule, element_count, false)
+            .map(|_| ())
+    }
+
+    fn launch_inner(
+        &self,
+        buffers: &[BufferView],
+        schedule: &Schedule,
+        element_count: usize,
+        sync: bool,
     ) -> Result<u64, ForgeError> {
         let dispatch_x = schedule.dispatch_workgroups(element_count);
         let cfg = LaunchConfig {
@@ -418,14 +545,28 @@ impl<'a> QualiaCompute for CudaPipeline<'a> {
                 .map_err(|e| ForgeError::GpuValidation(format!("CUDA launch failed: {:?}", e)))?;
         }
 
-        // A post-launch synchronize failure is a device-level fault; surface it as
-        // the unified DeviceLost rather than a generic validation error (plan §7).
-        self.context
-            .stream
-            .synchronize()
-            .map_err(|e| ForgeError::DeviceLost(format!("CUDA sync failed: {:?}", e)))?;
+        if sync {
+            // A post-launch synchronize failure is a device-level fault; surface it as
+            // the unified DeviceLost rather than a generic validation error (plan §7).
+            self.context
+                .stream
+                .synchronize()
+                .map_err(|e| ForgeError::DeviceLost(format!("CUDA sync failed: {:?}", e)))?;
+        }
 
         Ok(start.elapsed().as_nanos().min(u64::MAX as u128) as u64)
+    }
+}
+
+#[cfg(feature = "cuda")]
+impl<'a> QualiaCompute for CudaPipeline<'a> {
+    fn dispatch(
+        &self,
+        buffers: &[BufferView],
+        schedule: &Schedule,
+        element_count: usize,
+    ) -> Result<u64, ForgeError> {
+        self.launch_inner(buffers, schedule, element_count, true)
     }
 }
 

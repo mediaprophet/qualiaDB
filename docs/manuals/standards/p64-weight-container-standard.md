@@ -1,11 +1,15 @@
 # P64 Weight Container Standard
 
-**Document version:** 0.1  
-**Container version:** 3  
-**Date:** 2026-07-02  
-**Status:** Internal Draft Standard  
+**Document version:** 0.2  
+**Container version:** 4  
+**Date:** 2026-07-10  
+**Status:** Internal Draft Standard (living — update when layout/decode gaps are found)  
 **Canonical extension:** `.p64`  
-**Normative implementation:** `crates/qualia-core-db/src/q42/p64_weight.rs`
+**Normative implementation:** `crates/qualia-core-db/src/q42/p64_weight.rs`  
+**Upgrade plan:** [`docs/plans/p64-decode-upgrade-plan.md`](../../plans/p64-decode-upgrade-plan.md)
+
+> **Living draft rule.** If implementers find container or decode-profile improvements, update
+> this standard **and** the upgrade plan in the same change set. Do not leave gaps only in chat.
 
 ## Abstract
 
@@ -113,7 +117,7 @@ The header occupies exactly 64 bytes.
 | Byte range | Type | Field | v3 requirement |
 |---:|---:|---|---|
 | `0..3` | `u8[4]` | `magic` | MUST equal `70 36 34 00` (`p64\0`) |
-| `4..5` | `u16` | `version` | MUST equal `3` |
+| `4..5` | `u16` | `version` | MUST equal `4` (historical readers may accept `3` as a soft alias) |
 | `6..7` | `u16` | `flags` | Format flags; bit 0 MUST be set |
 | `8..11` | `u32` | `role_table_offset` | MUST be zero in the current v3 profile |
 | `12..15` | `u32` | `tensor_table_offset` | Start of 64-byte tensor entries |
@@ -133,11 +137,16 @@ The header occupies exactly 64 bytes.
 | 0 | `P64_FLAG_LITTLE_ENDIAN` | Required. Numeric fields use little-endian encoding. |
 | 1 | `FORMAT_FLAG_RAW_TRANSCODE` | Source was streamed from a high-fidelity tensor container without a complete GGUF model profile. |
 | 2 | `FORMAT_FLAG_TERNARY` | One or more tensors use P64's BitNet-1.58b ternary encoding. |
-| 3..15 | reserved | Writers MUST clear these bits. |
+| 3 | `P64_FLAG_Q4K_SOA` | At least one 2-D weight matrix uses `dtype = 112` (Q4_K_SOA). |
+| 4 | `P64_FLAG_LAYER_MAJOR` | Known-role tensor blobs are stored in layer-major table order (see §7.3). |
+| 5 | `P64_FLAG_LAYER_PACK` | Page-align only at layer boundaries; 256-byte align within a layer (decode/CUDA residency). |
+| 6 | `P64_FLAG_LAYER_SCHEDULE` | `role_table_offset` points at `P64LayerScheduleEntry[n_layer]` (64 B each). |
+| 7..15 | reserved | Writers MUST clear these bits until allocated in a later draft. |
 
 The raw-transcode flag permits zero-valued model hyperparameters and an empty
-tokenizer section. The ternary flag is a container-level hint; each tensor's
-`dtype` remains authoritative.
+tokenizer section. The ternary and Q4_K_SOA flags are container-level hints;
+each tensor's `dtype` remains authoritative. Readers that care about residency
+order SHOULD prefer files with `P64_FLAG_LAYER_MAJOR` set.
 
 ## 6. P64HParams
 
@@ -227,11 +236,64 @@ current engine explicitly supports these common codes:
 | 12 | Q4_K |
 | 14 | Q6_K |
 | 30 | BF16 |
+| **112** | **Q4_K_SOA** (Qualia decode-profile layout; not a stock GGML type) |
 | 1158 | P64 BitNet-1.58b ternary |
 
 Other source type codes MAY be preserved when the producer and consumer both
 support them. Consumers MUST NOT infer a tensor encoding solely from the
-container-level ternary flag.
+container-level ternary or SoA flags.
+
+### 7.2.1 Q4_K_SOA (`dtype = 112`)
+
+Produced by convert layout `P64ConvertLayout::Q4kSoa` from source Q4_K matrices.
+Each 256-element superblock is **160 bytes**:
+
+```text
+qs[128]           // nibble payload (same element order as stock Q4_K)
+d_sub[8] × f16    // pre-expanded (d * sub_scale) for 8 groups
+m_sub[8] × f16    // pre-expanded (dmin * sub_min) for 8 groups
+```
+
+Purpose: GEMV kernels read scales without re-decoding packed 6-bit headers.
+When any tensor uses this dtype, writers MUST set `P64_FLAG_Q4K_SOA`.
+
+### 7.3 Layer-major blob order
+
+When `P64_FLAG_LAYER_MAJOR` is set, the tensor table and blob region for
+**known roles** MUST be ordered as:
+
+```text
+for layer in 0..n_layer:
+  attn_norm, attn_q, attn_k, attn_v, attn_output,
+  ffn_norm, ffn_gate, ffn_up, ffn_down
+then globals: token_embd, output, output_norm
+then P64_ROLE_UNKNOWN tensors (stable by source_offset)
+```
+
+Writers MUST NOT re-sort known-role entries by the original GGUF source offset.
+Decode residency and CUDA multi-weight fill SHOULD walk the table in order.
+
+### 7.4 Layer-pack alignment and schedule table
+
+When `P64_FLAG_LAYER_PACK` is set:
+
+- The **first** tensor blob and the **first tensor of each new layer** (and globals
+  after layers) MUST start at a multiple of `page_size`.
+- Subsequent tensors **within the same layer** MUST start at a multiple of **256**.
+
+When `P64_FLAG_LAYER_SCHEDULE` is set, `role_table_offset` is the start of
+`n_layer` consecutive `P64LayerScheduleEntry` records (exactly 64 bytes each):
+
+| Byte range | Type | Field |
+|---:|---:|---|
+| `0..3` | `u32` | `layer` |
+| `4..7` | `u32` | `blob_begin` (inclusive file offset of first blob) |
+| `8..11` | `u32` | `blob_end` (exclusive end of last blob) |
+| `12..13` | `u16` | `tensor_count` |
+| `14..15` | `u16` | `roles_mask` (bit `i` ⇒ role_id `i` present) |
+| `16..63` | `u8[48]` | reserved, zero |
+
+Runtimes MAY `mmap` or bulk-upload `[blob_begin, blob_end)` as one residency unit per layer.
 
 The ternary payload is:
 

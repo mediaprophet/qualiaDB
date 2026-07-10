@@ -63,6 +63,12 @@ impl QTensorEngine {
         let _queue = &shared.queue;
         #[cfg(not(target_arch = "wasm32"))]
         log::info!("LLM_LOAD|gpu-device|0.35|Reusing process-wide wgpu device");
+        // NVIDIA: create CUDA multi-weight context early so the GPU leaves idle clocks
+        // even for portable/FastVerify resident decode (measured 3B ~1.5 → ~7 tok/s).
+        #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+        {
+            let _ = crate::warm_cuda_context();
+        }
 
         #[cfg(target_arch = "wasm32")]
         let (wasm_device, wasm_queue) = {
@@ -92,6 +98,83 @@ impl QTensorEngine {
                 include_str!("../shaders/fused_transformer.wgsl").into(),
             ),
         });
+
+        // Shared explicit 5-slot layout (bindings 0-3 + residual 4). Module-scope
+        // `residual` in fused_transformer.wgsl requires binding 4 on every entry point.
+        // Plain GEMV call sites bind a dummy residual (often the input buffer).
+        #[cfg(not(target_arch = "wasm32"))]
+        let coop_gemv_residual_bind_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("CoopGemvBGL"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 4,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                ],
+            });
+        #[cfg(not(target_arch = "wasm32"))]
+        let coop_gemv_bind_layout = coop_gemv_residual_bind_layout.clone();
+        #[cfg(not(target_arch = "wasm32"))]
+        let coop_gemv_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("CoopGemvPL"),
+                bind_group_layouts: &[Some(&coop_gemv_bind_layout)],
+                immediate_size: 0,
+            });
+        #[cfg(not(target_arch = "wasm32"))]
+        let coop_gemv_residual_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("CoopGemvResidualPL"),
+                bind_group_layouts: &[Some(&coop_gemv_residual_bind_layout)],
+                immediate_size: 0,
+            });
 
         #[cfg(target_arch = "wasm32")]
         let mc8_gemm_bind_layout =
@@ -175,38 +258,98 @@ impl QTensorEngine {
         // subgroup. Identical group-0 bindings + (n_out,1,1) dispatch → a drop-in for this field, so
         // every call site and the derived `coop_gemv_bind_layout` pick it up transparently. Adapters
         // without subgroups (and wasm) keep the universal shared-memory `coop_gemv`.
+        // All coop GEMV entry points share the explicit 5-slot CoopGemvBGL so bind
+        // groups are interchangeable across single-row / multi-row / residual / warp
+        // (no exclusive-pipeline auto-layout traps).
         #[cfg(not(target_arch = "wasm32"))]
-        let coop_gemv_pipeline = if device.features().contains(wgpu::Features::SUBGROUP) {
-            // NB: naga (wgpu 29.0.3) does not accept the WGSL `enable subgroups;` directive ("not yet
-            // supported"), but it DOES accept subgroup builtins/operations gated on the device's
-            // SUBGROUP capability — so we concatenate without the directive.
-            let sg_src = format!(
-                "{}\n{}",
-                include_str!("../shaders/fused_transformer.wgsl"),
-                include_str!("../shaders/coop_gemv_subgroup.wgsl"),
-            );
-            let sg_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Coop GEMV Subgroup Shader"),
-                source: wgpu::ShaderSource::Wgsl(sg_src.into()),
-            });
+        let (coop_gemv_pipeline, coop_gemv_residual_pipeline) =
+            if device.features().contains(wgpu::Features::SUBGROUP) {
+                // Note: do NOT inject `enable subgroups;` — naga/wgpu 29 rejects it.
+                let sg_src = format!(
+                    "{}\n{}",
+                    include_str!("../shaders/fused_transformer.wgsl"),
+                    include_str!("../shaders/coop_gemv_subgroup.wgsl"),
+                );
+                let sg_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                    label: Some("Coop GEMV Subgroup Shader"),
+                    source: wgpu::ShaderSource::Wgsl(sg_src.into()),
+                });
+                let gemv = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                    label: Some("Coop GEMV SG Pipeline"),
+                    layout: Some(&coop_gemv_pipeline_layout),
+                    module: &sg_module,
+                    entry_point: Some("coop_gemv_sg"),
+                    compilation_options: Default::default(),
+                    cache: native_pipeline_cache.as_ref(),
+                });
+                let resid = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                    label: Some("Coop GEMV Residual SG Pipeline"),
+                    layout: Some(&coop_gemv_residual_pipeline_layout),
+                    module: &sg_module,
+                    entry_point: Some("coop_gemv_residual_sg"),
+                    compilation_options: Default::default(),
+                    cache: native_pipeline_cache.as_ref(),
+                });
+                (gemv, resid)
+            } else {
+                let gemv = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                    label: Some("Coop GEMV Pipeline"),
+                    layout: Some(&coop_gemv_pipeline_layout),
+                    module: &shader,
+                    entry_point: Some("coop_gemv"),
+                    compilation_options: Default::default(),
+                    cache: native_pipeline_cache.as_ref(),
+                });
+                let resid = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                    label: Some("Coop GEMV Residual Pipeline"),
+                    layout: Some(&coop_gemv_residual_pipeline_layout),
+                    module: &shader,
+                    entry_point: Some("coop_gemv_residual"),
+                    compilation_options: Default::default(),
+                    cache: native_pipeline_cache.as_ref(),
+                });
+                (gemv, resid)
+            };
+        #[cfg(not(target_arch = "wasm32"))]
+        let coop_gemv_mr_pipeline =
             device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("Coop GEMV SG Pipeline"),
-                layout: None,
-                module: &sg_module,
-                entry_point: Some("coop_gemv_sg"),
-                compilation_options: Default::default(),
-                cache: native_pipeline_cache.as_ref(),
-            })
-        } else {
-            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some("Coop GEMV Pipeline"),
-                layout: None,
+                label: Some("Coop GEMV Multi-Row Pipeline"),
+                layout: Some(&coop_gemv_pipeline_layout),
                 module: &shader,
-                entry_point: Some("coop_gemv"),
+                entry_point: Some("coop_gemv_mr"),
                 compilation_options: Default::default(),
                 cache: native_pipeline_cache.as_ref(),
-            })
-        };
+            });
+        #[cfg(not(target_arch = "wasm32"))]
+        let coop_gemv_residual_mr_pipeline =
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("Coop GEMV Residual Multi-Row Pipeline"),
+                layout: Some(&coop_gemv_residual_pipeline_layout),
+                module: &shader,
+                entry_point: Some("coop_gemv_residual_mr"),
+                compilation_options: Default::default(),
+                cache: native_pipeline_cache.as_ref(),
+            });
+        #[cfg(not(target_arch = "wasm32"))]
+        let coop_gemv_warp_pipeline =
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("Coop GEMV Warp Pipeline"),
+                layout: Some(&coop_gemv_pipeline_layout),
+                module: &shader,
+                entry_point: Some("coop_gemv_warp"),
+                compilation_options: Default::default(),
+                cache: native_pipeline_cache.as_ref(),
+            });
+        #[cfg(not(target_arch = "wasm32"))]
+        let coop_gemv_residual_warp_pipeline =
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("Coop GEMV Residual Warp Pipeline"),
+                layout: Some(&coop_gemv_residual_pipeline_layout),
+                module: &shader,
+                entry_point: Some("coop_gemv_residual_warp"),
+                compilation_options: Default::default(),
+                cache: native_pipeline_cache.as_ref(),
+            });
 
         let mock_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Mock Fused Contraction Shader"),
@@ -553,31 +696,387 @@ impl QTensorEngine {
             })
         };
 
+        // Native T-A1 — same fused_ffn.wgsl, static uniform (no dynamic offset).
+        // Wired into resident_decode mega-pass when gate/up share a supported quant type.
+        #[cfg(not(target_arch = "wasm32"))]
+        let ffn_fused_bind_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("NativeFfnFusedBGL"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: std::num::NonZeroU64::new(std::mem::size_of::<
+                                GemmGpuParams,
+                            >(
+                            )
+                                as u64),
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 4,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                ],
+            });
+        #[cfg(not(target_arch = "wasm32"))]
+        let (ffn_fused_pipeline, ffn_fused_coop_pipeline, ffn_fused_mr_pipeline, ffn_fused_warp_pipeline) = {
+            let tpl = include_str!("../shaders/dequant_template.wgsl");
+            let gate_fns = tpl.replace("$W", "gate_words").replace("$S", "_gate");
+            let up_fns = tpl.replace("$W", "up_words").replace("$S", "_up");
+            let base = include_str!("../shaders/fused_ffn.wgsl");
+            let src = base.replace("// @@DEQUANT_FUNCTIONS@@", &format!("{gate_fns}\n{up_fns}"));
+            let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("NativeFusedFFNExpansion"),
+                source: wgpu::ShaderSource::Wgsl(src.into()),
+            });
+            let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("NativeFfnFusedPL"),
+                bind_group_layouts: &[Some(&ffn_fused_bind_layout)],
+                immediate_size: 0,
+            });
+            let naive = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("NativeFusedFFNExpansionPipeline"),
+                layout: Some(&layout),
+                module: &module,
+                entry_point: Some("fused_ffn_expansion"),
+                compilation_options: Default::default(),
+                cache: native_pipeline_cache.as_ref(),
+            });
+            // Prefer subgroup reduction when available (same as coop_gemv_sg).
+            let coop_ep = if device.features().contains(wgpu::Features::SUBGROUP) {
+                "coop_fused_ffn_sg"
+            } else {
+                "coop_fused_ffn_expansion"
+            };
+            let coop = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("NativeCoopFusedFFNExpansionPipeline"),
+                layout: Some(&layout),
+                module: &module,
+                entry_point: Some(coop_ep),
+                compilation_options: Default::default(),
+                cache: native_pipeline_cache.as_ref(),
+            });
+            // Multi-row fused FFN (4 rows/WG, one K-sweep) — Q4_K_SOA 3B lever.
+            let coop_mr = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("NativeCoopFusedFFNMultiRowPipeline"),
+                layout: Some(&layout),
+                module: &module,
+                entry_point: Some("coop_fused_ffn_mr"),
+                compilation_options: Default::default(),
+                cache: native_pipeline_cache.as_ref(),
+            });
+            // Warp fused FFN (32 thr/row, 8 cols/lane).
+            let coop_warp = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("NativeCoopFusedFFNWarpPipeline"),
+                layout: Some(&layout),
+                module: &module,
+                entry_point: Some("coop_fused_ffn_warp"),
+                compilation_options: Default::default(),
+                cache: native_pipeline_cache.as_ref(),
+            });
+            log::info!("LLM_LOAD|fused_ffn|coop_entry={coop_ep}|mr=coop_fused_ffn_mr|warp=coop_fused_ffn_warp");
+            (naive, coop, coop_mr, coop_warp)
+        };
+
+        // Dual K+V GEMV (shared act) — mega-kernel slice for resident decode.
+        #[cfg(not(target_arch = "wasm32"))]
+        let dual_gemv_bind_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("DualGemvBGL"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 4,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 5,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                ],
+            });
+        #[cfg(not(target_arch = "wasm32"))]
+        let (dual_gemv_pipeline, dual_gemv_mr_pipeline) = {
+            let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("Dual GEMV Shader"),
+                source: wgpu::ShaderSource::Wgsl(
+                    include_str!("../shaders/dual_gemv.wgsl").into(),
+                ),
+            });
+            let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("DualGemvPL"),
+                bind_group_layouts: &[Some(&dual_gemv_bind_layout)],
+                immediate_size: 0,
+            });
+            let dual = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("Dual GEMV Pipeline"),
+                layout: Some(&layout),
+                module: &module,
+                entry_point: Some("coop_gemv_dual"),
+                compilation_options: Default::default(),
+                cache: native_pipeline_cache.as_ref(),
+            });
+            let dual_mr = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("Dual GEMV Multi-Row Pipeline"),
+                layout: Some(&layout),
+                module: &module,
+                entry_point: Some("coop_gemv_dual_mr"),
+                compilation_options: Default::default(),
+                cache: native_pipeline_cache.as_ref(),
+            });
+            (dual, dual_mr)
+        };
+
+        // Triple Q+K+V GEMV (shared act, GQA) — resident mega-pass: 3 dispatches → 1.
+        #[cfg(not(target_arch = "wasm32"))]
+        let triple_gemv_bind_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("TripleGemvBGL"),
+                entries: &[
+                    // 0 input, 1 Wq, 2 params, 3 out_q, 4 Wk, 5 out_k, 6 Wv, 7 out_v
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 4,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 5,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 6,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 7,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: false },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                ],
+            });
+        #[cfg(not(target_arch = "wasm32"))]
+        let triple_gemv_pipeline = {
+            let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("Triple GEMV Shader"),
+                source: wgpu::ShaderSource::Wgsl(
+                    include_str!("../shaders/triple_gemv.wgsl").into(),
+                ),
+            });
+            let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("TripleGemvPL"),
+                bind_group_layouts: &[Some(&triple_gemv_bind_layout)],
+                immediate_size: 0,
+            });
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("Triple GEMV Pipeline"),
+                layout: Some(&layout),
+                module: &module,
+                entry_point: Some("coop_gemv_triple"),
+                compilation_options: Default::default(),
+                cache: native_pipeline_cache.as_ref(),
+            })
+        };
+
+        // DirectML is a *second* D3D12 device next to wgpu. Always-on init competed for
+        // A2000 VRAM and added driver overhead while the resident decode path uses wgpu.
+        // Opt in with QUALIA_DIRECTML=1 (or QUALIA_LLM_DIRECTML=1). Default: wgpu-only.
         #[cfg(target_os = "windows")]
-        let dml_status = match crate::directml_bridge::DmlDevice::new() {
-            Ok(device) => {
+        let dml_status = {
+            let want = matches!(
+                std::env::var("QUALIA_DIRECTML")
+                    .or_else(|_| std::env::var("QUALIA_LLM_DIRECTML"))
+                    .ok()
+                    .as_deref(),
+                Some("1") | Some("true") | Some("on")
+            );
+            if !want {
                 log::info!(
-                    "DirectML device initialization: Ok({})",
-                    device.adapter_desc
+                    "LLM_LOAD|gpu-backend|0.45|DirectML deferred (set QUALIA_DIRECTML=1 to enable second D3D12 device)"
                 );
-                log::info!(
-                    "LLM_LOAD|gpu-backend|0.45|DirectML ready on {}",
-                    device.adapter_desc
-                );
-                log::info!(
-                    "LLM_LOAD|gpu-route|0.48|Streaming weights through DirectML with {:.1} GiB VRAM free",
-                    bytes_to_gib(
-                        device
-                            .local_budget_bytes
-                            .saturating_sub(device.local_usage_bytes)
-                    )
-                );
-                Some(device)
-            }
-            Err(err) => {
-                log::warn!("DirectML device initialization failed: {:?}", err);
-                log::info!("LLM_LOAD|gpu-backend|0.45|DirectML unavailable; using wgpu fallback");
                 None
+            } else {
+                match crate::directml_bridge::DmlDevice::new() {
+                    Ok(device) => {
+                        log::info!(
+                            "DirectML device initialization: Ok({})",
+                            device.adapter_desc
+                        );
+                        log::info!(
+                            "LLM_LOAD|gpu-backend|0.45|DirectML ready on {}",
+                            device.adapter_desc
+                        );
+                        log::info!(
+                            "LLM_LOAD|gpu-route|0.48|Streaming weights through DirectML with {:.1} GiB VRAM free",
+                            bytes_to_gib(
+                                device
+                                    .local_budget_bytes
+                                    .saturating_sub(device.local_usage_bytes)
+                            )
+                        );
+                        Some(device)
+                    }
+                    Err(err) => {
+                        log::warn!("DirectML device initialization failed: {:?}", err);
+                        log::info!(
+                            "LLM_LOAD|gpu-backend|0.45|DirectML unavailable; using wgpu fallback"
+                        );
+                        None
+                    }
+                }
             }
         };
 
@@ -588,8 +1087,8 @@ impl QTensorEngine {
 
         #[cfg(not(target_arch = "wasm32"))]
         let pipeline_bind_layout = pipeline.get_bind_group_layout(0);
-        #[cfg(not(target_arch = "wasm32"))]
-        let coop_gemv_bind_layout = coop_gemv_pipeline.get_bind_group_layout(0);
+        // Keep the explicit non-exclusive CoopGemvBGL (created above). Do NOT replace with
+        // pipeline.get_bind_group_layout — that yields exclusive layouts and breaks multi-row.
         #[cfg(not(target_arch = "wasm32"))]
         let embedding_bind_layout = embedding_pipeline.get_bind_group_layout(0);
         #[cfg(not(target_arch = "wasm32"))]
@@ -625,6 +1124,18 @@ impl QTensorEngine {
             coop_gemv_pipeline,
             #[cfg(not(target_arch = "wasm32"))]
             coop_gemv_bind_layout,
+            #[cfg(not(target_arch = "wasm32"))]
+            coop_gemv_mr_pipeline,
+            #[cfg(not(target_arch = "wasm32"))]
+            coop_gemv_residual_pipeline,
+            #[cfg(not(target_arch = "wasm32"))]
+            coop_gemv_residual_bind_layout,
+            #[cfg(not(target_arch = "wasm32"))]
+            coop_gemv_residual_mr_pipeline,
+            #[cfg(not(target_arch = "wasm32"))]
+            coop_gemv_warp_pipeline,
+            #[cfg(not(target_arch = "wasm32"))]
+            coop_gemv_residual_warp_pipeline,
             mock_pipeline,
             embedding_pipeline,
             #[cfg(not(target_arch = "wasm32"))]
@@ -703,6 +1214,19 @@ impl QTensorEngine {
             mc8_ffn_fused_bind_layout,
             #[cfg(target_arch = "wasm32")]
             mc8_ffn_fused_pipeline,
+            #[cfg(not(target_arch = "wasm32"))]
+            ffn_fused_bind_layout,
+            #[cfg(not(target_arch = "wasm32"))]
+            ffn_fused_pipeline,
+            #[cfg(not(target_arch = "wasm32"))]
+            ffn_fused_coop_pipeline,
+            ffn_fused_mr_pipeline,
+            ffn_fused_warp_pipeline,
+            dual_gemv_pipeline,
+            dual_gemv_mr_pipeline,
+            dual_gemv_bind_layout,
+            triple_gemv_pipeline,
+            triple_gemv_bind_layout,
             mc8_logits_resident_buf: None,
             mc8_logits_row_bytes: 0,
             #[cfg(not(target_arch = "wasm32"))]

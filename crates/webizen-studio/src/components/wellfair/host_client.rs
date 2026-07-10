@@ -1219,6 +1219,10 @@ pub struct ObligationDto {
     pub project_id: String,
     pub contributor_did: String,
     pub total_effort_minutes: u64,
+    #[serde(default)]
+    pub total_capital_cents: u64,
+    #[serde(default)]
+    pub resolved_obligation_score: f64,
     pub contribution_count: usize,
 }
 

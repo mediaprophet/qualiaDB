@@ -140,7 +140,7 @@ pub enum Commands {
         #[command(subcommand)]
         action: WebizenAction,
     },
-    /// Exports a .q42 Graph into a W3C Solid LDP Basic Container
+    /// Exports a .q42 Graph into a W3C Solid LDP Basic Container (file export)
     ExportSolid {
         /// The path to the .q42 binary distribution file
         #[arg(long)]
@@ -148,6 +148,11 @@ pub enum Commands {
         /// The output directory for the Solid Container
         #[arg(long)]
         output: PathBuf,
+    },
+    /// Solid bridge: personal pod server (LDP) + consumer fetch/put (Solid-OutPost agent side)
+    Solid {
+        #[command(subcommand)]
+        action: SolidAction,
     },
     /// Runs detailed per-scenario benchmark actions (rss-scan, lazy-inference, etc). Requires path to .q42 dataset.
     /// For the LLM harness / CI use `benchmark --suite full` (alias `bench`) instead.
@@ -254,6 +259,69 @@ pub enum Commands {
     Science {
         #[command(subcommand)]
         action: ScienceAction,
+    },
+}
+
+/// Solid personal pod + consumer agent (hackathon / Solid-OutPost path).
+#[derive(Subcommand, Debug, Clone)]
+pub enum SolidAction {
+    /// Run the personal Solid LDP pod server (default http://127.0.0.1:4243)
+    Serve {
+        /// Listen address host
+        #[arg(long, default_value = "127.0.0.1")]
+        host: String,
+        /// Listen port
+        #[arg(long, default_value = "4243")]
+        port: u16,
+        /// Pod filesystem root (LDP resources)
+        #[arg(long)]
+        data_root: Option<PathBuf>,
+        /// Public base URL advertised in WebID / OIDC discovery
+        #[arg(long)]
+        public_base: Option<String>,
+        /// Enable demo Solid-OIDC-shaped routes (local smoke only; NOT production identity)
+        #[arg(long, default_value_t = true)]
+        demo_oidc: bool,
+        /// Disable demo OIDC even if --demo-oidc was defaulted on
+        #[arg(long, default_value_t = false)]
+        no_demo_oidc: bool,
+    },
+    /// Consumer: GET a Solid resource (Turtle) and report parsed Quin count
+    Fetch {
+        /// Resource URL (e.g. http://127.0.0.1:4243/public/deposit.ttl)
+        url: String,
+        /// Optional Bearer token
+        #[arg(long)]
+        token: Option<String>,
+        /// Write body to this file
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+    /// Consumer: PUT Turtle/bytes to a Solid resource URL (sync-to-pod)
+    Put {
+        /// Target resource URL
+        url: String,
+        /// Local file to upload
+        file: PathBuf,
+        /// Content-Type (default text/turtle)
+        #[arg(long, default_value = "text/turtle")]
+        content_type: String,
+        /// Optional Bearer token
+        #[arg(long)]
+        token: Option<String>,
+    },
+    /// Consumer: POST into an LDP container (create resource)
+    Post {
+        /// Container URL (trailing slash recommended)
+        container: String,
+        /// Local file body
+        file: PathBuf,
+        #[arg(long, default_value = "text/turtle")]
+        content_type: String,
+        #[arg(long)]
+        slug: Option<String>,
+        #[arg(long)]
+        token: Option<String>,
     },
 }
 
@@ -1308,6 +1376,109 @@ pub enum LlmAction {
         #[arg(long, default_value_t = 16)]
         tokens: u32,
     },
+    /// Show or set multi-mode inference approach (portable | cuda | quant-graph).
+    /// Modes coexist — they do not dump the portable pipeline.
+    /// See `docs/plans/inference-multi-mode-and-compression.md`.
+    Mode {
+        /// Optional mode name to set; omit to list modes + active
+        name: Option<String>,
+    },
+    /// Resolve the fastest inference path for this machine (passport + policy) and
+    /// optionally apply it. Picks wgpu backend (dx12/vulkan/metal), compute lane
+    /// (portable-resident vs cuda), and quant profile (INT4 SoA + INT8 KV ± graph).
+    PathSelect {
+        /// Re-run GEMV passport probe first
+        #[arg(long)]
+        reprobe: bool,
+        /// Apply env/toggles for this process (and soft-set QUALIA_WGPU_BACKEND)
+        #[arg(long)]
+        apply: bool,
+    },
+    /// Application profile: interactive | live-fast | batch (overnight / email-ready).
+    /// Batch = long token budget + 8h timeout + HTML post-verify — multi-system eval.
+    Profile {
+        /// Profile name to set; omit to list
+        name: Option<String>,
+    },
+    /// Inference superiority lab (instruments for beating Ollama by evidence).
+    /// See docs/plans/inference-superiority-lab-and-toolset-plan.md
+    Lab {
+        /// audit-path | roof | micro | timeline | ablate | auto
+        action: String,
+        /// Model path for timeline/ablate/auto
+        #[arg(long)]
+        model: Option<PathBuf>,
+        /// Tokens for timeline/ablate/auto (default 4 / 8 / 16)
+        #[arg(long, default_value_t = 0)]
+        tokens: u32,
+        /// Microbench n_in (default 256)
+        #[arg(long, default_value_t = 256)]
+        n_in: usize,
+        /// Microbench n_out (default 64)
+        #[arg(long, default_value_t = 64)]
+        n_out: usize,
+        /// Roof GEMV N (default 512)
+        #[arg(long, default_value_t = 512)]
+        gemv_n: usize,
+        /// CSV output for ablate; lock-in dir for auto
+        #[arg(long)]
+        out: Option<PathBuf>,
+        /// Wall-clock budget hours for `lab auto` (default 2)
+        #[arg(long, default_value_t = 2.0)]
+        hours: f64,
+        /// Max search generations for `lab auto` (default 8)
+        #[arg(long, default_value_t = 8)]
+        max_generations: u32,
+        /// Optional Ollama model tag for A-gap yardstick (omit or empty to skip)
+        #[arg(long)]
+        ollama_model: Option<String>,
+        /// Ollama base URL (default http://127.0.0.1:11434)
+        #[arg(long, default_value = "http://127.0.0.1:11434")]
+        ollama_url: String,
+        /// Skip Ollama probe even if --ollama-model set
+        #[arg(long, default_value_t = false)]
+        no_ollama: bool,
+    },
+    /// Quant-graph dry-run: check/repair a prompt+answer against the fact graph.
+    Ground {
+        /// User prompt (e.g. "What is the capital of France?")
+        prompt: String,
+        /// Model answer to check
+        answer: String,
+    },
+    /// Re-load bundled/grounding/facts.tsv (or QUALIA_GROUNDING_FACTS) into the fact graph.
+    SeedGrounding,
+    /// Dense CUDA WMMA GEMM microbench (persistent context + PTX cache).
+    CudaTcBench {
+        /// Matrix side length (rounded up to multiple of 16; default 256)
+        #[arg(long, default_value_t = 256)]
+        side: usize,
+    },
+    /// Rank convert layouts by real decode-proxy tok/s (explorer Phase 0).
+    /// Writes `{stem}.explore-report.json` and prints the winner.
+    /// See `docs/plans/native-inference-explorer-eval-plan.md`.
+    Explore {
+        /// Path to a `.gguf` (convert+measure) or existing `.p64` (measure + siblings)
+        input: PathBuf,
+        /// Directory for converted `.p64` / report (default: same dir as input)
+        #[arg(short, long)]
+        out: Option<PathBuf>,
+        /// Decode tokens per candidate (default 16)
+        #[arg(long, default_value_t = 16)]
+        tokens: u32,
+        /// Comma-separated layouts: `auto` | `verbatim` | `f16` | `soa` (default `auto`)
+        #[arg(long, default_value = "auto")]
+        layouts: String,
+        /// Do not convert missing layouts; only measure existing `.p64` files
+        #[arg(long)]
+        skip_convert: bool,
+        /// Also A/B `QUALIA_LLM_FFN_F16` on/off for each layout
+        #[arg(long)]
+        sweep_ffn_f16: bool,
+        /// Comma-separated modes to matrix (e.g. `portable,cuda,quant-graph`)
+        #[arg(long)]
+        modes: Option<String>,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -1564,6 +1735,72 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 LlmAction::DecodeProxy { model, tokens } => {
                     llm_testing::run_decode_proxy(model, *tokens)?;
                 }
+                LlmAction::Mode { name } => {
+                    llm_testing::run_inference_mode(name.as_deref())?;
+                }
+                LlmAction::PathSelect { reprobe, apply } => {
+                    llm_testing::run_path_select(*reprobe, *apply)?;
+                }
+                LlmAction::Profile { name } => {
+                    llm_testing::run_app_profile(name.as_deref())?;
+                }
+                LlmAction::Lab {
+                    action,
+                    model,
+                    tokens,
+                    n_in,
+                    n_out,
+                    gemv_n,
+                    out,
+                    hours,
+                    max_generations,
+                    ollama_model,
+                    ollama_url,
+                    no_ollama,
+                } => {
+                    llm_testing::run_lab(
+                        action,
+                        model.as_deref(),
+                        *tokens,
+                        *n_in,
+                        *n_out,
+                        *gemv_n,
+                        out.as_deref(),
+                        *hours,
+                        *max_generations,
+                        ollama_model.as_deref(),
+                        ollama_url,
+                        *no_ollama,
+                    )?;
+                }
+                LlmAction::Ground { prompt, answer } => {
+                    llm_testing::run_ground_check(prompt, answer)?;
+                }
+                LlmAction::SeedGrounding => {
+                    llm_testing::run_seed_grounding()?;
+                }
+                LlmAction::CudaTcBench { side } => {
+                    llm_testing::run_cuda_tc_microbench(*side)?;
+                }
+                LlmAction::Explore {
+                    input,
+                    out,
+                    tokens,
+                    layouts,
+                    skip_convert,
+                    sweep_ffn_f16,
+                    modes,
+                } => {
+                    llm_testing::run_explore_pipeline(
+                        input,
+                        out.clone(),
+                        *tokens,
+                        layouts,
+                        *skip_convert,
+                        *sweep_ffn_f16,
+                        modes.as_deref(),
+                    )?;
+                }
             }
         }
         Commands::Shader { action } => {
@@ -1762,6 +1999,107 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Err(e) => {
                     eprintln!("❌ Export Failed: {}", e);
                 }
+            }
+        }
+        Commands::Solid { action } => {
+            // Clone so we own the payload (outer match may borrow `cli`).
+            let action = action.clone();
+            match action {
+                SolidAction::Serve {
+                    host,
+                    port,
+                    data_root,
+                    public_base,
+                    demo_oidc,
+                    no_demo_oidc,
+                } => {
+                    let data_root = data_root.unwrap_or_else(|| {
+                        std::env::var("QUALIA_SOLID_POD_ROOT")
+                            .map(PathBuf::from)
+                            .unwrap_or_else(|_| std::env::temp_dir().join("qualia-solid-pod"))
+                    });
+                    let public_base =
+                        public_base.unwrap_or_else(|| format!("http://{host}:{port}"));
+                    let cfg = qualia_solid_bridge::BridgeConfig {
+                        listen: format!("{host}:{port}")
+                            .parse()
+                            .expect("invalid host:port"),
+                        data_root,
+                        public_base,
+                        demo_oidc: demo_oidc && !no_demo_oidc,
+                    };
+                    qualia_solid_bridge::run_bridge(cfg).await;
+                }
+                SolidAction::Fetch { url, token, out } => {
+                    match qualia_solid_bridge::fetch_resource(&url, token.as_deref()).await {
+                        Ok(r) => {
+                            println!("status        : {}", r.status);
+                            println!("content-type  : {}", r.content_type);
+                            println!("quin_count    : {}", r.quin_count);
+                            println!("url           : {}", r.url);
+                            if let Some(path) = out {
+                                if let Err(e) = std::fs::write(&path, r.body.as_bytes()) {
+                                    eprintln!("write {}: {e}", path.display());
+                                } else {
+                                    println!("wrote         : {}", path.display());
+                                }
+                            } else {
+                                let preview: String = r.body.chars().take(800).collect();
+                                println!("--- body (preview) ---\n{preview}");
+                            }
+                        }
+                        Err(e) => eprintln!("solid fetch failed: {e}"),
+                    }
+                }
+                SolidAction::Put {
+                    url,
+                    file,
+                    content_type,
+                    token,
+                } => match std::fs::read(&file) {
+                    Ok(body) => {
+                        match qualia_solid_bridge::put_resource(
+                            &url,
+                            &body,
+                            &content_type,
+                            token.as_deref(),
+                        )
+                        .await
+                        {
+                            Ok(status) => println!("PUT ok status={status} url={url}"),
+                            Err(e) => eprintln!("solid put failed: {e}"),
+                        }
+                    }
+                    Err(e) => eprintln!("read {}: {e}", file.display()),
+                },
+                SolidAction::Post {
+                    container,
+                    file,
+                    content_type,
+                    slug,
+                    token,
+                } => match std::fs::read(&file) {
+                    Ok(body) => {
+                        match qualia_solid_bridge::post_to_container(
+                            &container,
+                            &body,
+                            &content_type,
+                            slug.as_deref(),
+                            token.as_deref(),
+                        )
+                        .await
+                        {
+                            Ok((status, loc)) => {
+                                println!("POST ok status={status}");
+                                if let Some(l) = loc {
+                                    println!("location={l}");
+                                }
+                            }
+                            Err(e) => eprintln!("solid post failed: {e}"),
+                        }
+                    }
+                    Err(e) => eprintln!("read {}: {e}", file.display()),
+                },
             }
         }
         Commands::Ingest { format } => match format {

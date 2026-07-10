@@ -76,6 +76,10 @@ __pycache__/
 *.pyd
 *.py,cover
 
+# Local legislation ETL smoke packages (not for Pages / not for release)
+tools/legislation-etl/_smoke*/
+tools/legislation-etl/**/batch_manifest.json
+
 # Python virtualenvs, test caches, and packaging outputs
 .python-version
 .venv/
@@ -190,5 +194,5 @@ docs/to-do/
 # W5b: full WordNet gloss corpus (derived from Princeton data.rdf; ~20MB) â€” sample is committed
 benchmarks/data/wordnet_glosses.txt
 
-# 3D Anatomy asset cache (user-triggered CCF/HRA GLB + compiled .10d — ~200-290 MB, not for git)
+# 3D Anatomy asset cache (user-triggered CCF/HRA GLB + compiled .10d ï¿½ ~200-290 MB, not for git)
 assets/ccf/

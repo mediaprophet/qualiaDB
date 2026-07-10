@@ -573,6 +573,272 @@ pub fn run_hardware_passport(
     Ok(())
 }
 
+/// Quant-graph dry-run: ground a prompt+answer pair (forces mode logic via unconditional ground).
+pub fn run_ground_check(prompt: &str, answer: &str) -> Result<(), String> {
+    use qualia_core_db::{fact_count, ground_generation, active_inference_mode};
+    let g = ground_generation(prompt, answer);
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Quant-graph grounding check");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("├─ active mode: {}", active_inference_mode().as_str());
+    println!("├─ fact_count:  {}", fact_count());
+    println!("├─ repaired:    {}", g.repaired);
+    println!("├─ reason:      {:?}", g.reason);
+    println!("├─ object_hash: {:?}", g.object_hash.map(|h| format!("{h:#x}")));
+    println!("└─ text:        {}", g.text);
+    Ok(())
+}
+
+/// Seed quant-graph facts from bundled TSV / QUALIA_GROUNDING_FACTS.
+pub fn run_seed_grounding() -> Result<(), String> {
+    let n = qualia_core_db::seed_facts_from_bundled();
+    println!("seeded {n} grounding facts (fact_count={})", qualia_core_db::fact_count());
+    Ok(())
+}
+
+/// Dense CUDA WMMA microbench (mode-independent; reports whether TC path is live).
+pub fn run_cuda_tc_microbench(side: usize) -> Result<(), String> {
+    use std::time::Instant;
+    let n = side.max(16);
+    // Pad to multiple of 16 for WMMA tile.
+    let n = ((n + 15) / 16) * 16;
+    let k = n;
+    let m = n;
+    let a = vec![1.0f32; m * k];
+    let b = vec![1.0f32; k * n];
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("CUDA TC microbench  C[{m}×{n}] = A[{m}×{k}]·B[{k}×{n}]");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    // Warm + timed
+    let _ = qualia_core_db::wgsl_forge::dispatch::ensure_cuda_runtime_path();
+    let t0 = Instant::now();
+    let r1 = qualia_core_db::wgsl_forge::dispatch::gemm_f32_tc(m, k, n, &a, &b)
+        .map_err(|e| format!("gemm_f32_tc: {e:?}"))?;
+    let warm_ms = t0.elapsed().as_secs_f64() * 1000.0;
+    let t1 = Instant::now();
+    let r2 = qualia_core_db::wgsl_forge::dispatch::gemm_f32_tc(m, k, n, &a, &b)
+        .map_err(|e| format!("gemm_f32_tc: {e:?}"))?;
+    let hot_ms = t1.elapsed().as_secs_f64() * 1000.0;
+    let caps = qualia_core_db::wgsl_forge::dispatch::caps();
+    println!("├─ caps: wgpu={} cuda={} coopmat={}", caps.wgpu, caps.cuda, caps.coopmat);
+    println!("├─ warm: {warm_ms:.2} ms (includes NVRTC/context first use)");
+    println!("├─ hot:  {hot_ms:.2} ms");
+    println!("├─ C[0]={:.1} (expect ~{n}.0 for all-ones)", r2.first().copied().unwrap_or(0.0));
+    println!("└─ ok:   r1_len={} r2_len={}", r1.len(), r2.len());
+    Ok(())
+}
+
+/// Print or set multi-mode inference approach (portable / cuda / quant-graph).
+pub fn run_inference_mode(set: Option<&str>) -> Result<(), String> {
+    use qualia_core_db::{
+        active_inference_mode, set_inference_mode, InferenceMode,
+    };
+    if let Some(name) = set {
+        let m = InferenceMode::parse(name).ok_or_else(|| {
+            format!(
+                "unknown mode '{name}' (expected: portable | cuda | quant-graph | fast-verify)"
+            )
+        })?;
+        set_inference_mode(m);
+        // Also pin env so child processes (decode-proxy) inherit.
+        std::env::set_var("QUALIA_INFERENCE_MODE", m.as_str());
+        println!("MODE set={}", m.as_str());
+        println!("  {}", m.description());
+        println!("  (shell: $env:QUALIA_INFERENCE_MODE='{}')", m.as_str());
+        return Ok(());
+    }
+    let active = active_inference_mode();
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Inference modes (coexisting approaches — not replacements)");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("Active: {} — {}", active.as_str(), active.description());
+    println!();
+    for m in InferenceMode::ALL {
+        let mark = if m == active { "*" } else { " " };
+        println!("  [{mark}] {:12}  {}", m.as_str(), m.description());
+    }
+    println!();
+    println!("Set:  qualia-cli llm mode <portable|cuda|quant-graph>");
+    println!("Env:  QUALIA_INFERENCE_MODE");
+    println!("Plan: docs/plans/inference-multi-mode-and-compression.md");
+    Ok(())
+}
+
+/// Inference superiority lab instruments.
+pub fn run_lab(
+    action: &str,
+    model: Option<&std::path::Path>,
+    tokens: u32,
+    n_in: usize,
+    n_out: usize,
+    gemv_n: usize,
+    out: Option<&std::path::Path>,
+    hours: f64,
+    max_generations: u32,
+    ollama_model: Option<&str>,
+    ollama_url: &str,
+    no_ollama: bool,
+) -> Result<(), String> {
+    use qualia_core_db::lab::{
+        ablate::format_ablation_report, audit_hot_path, calibrate_device_roof, format_lockin_summary,
+        run_ablation_matrix, run_auto_improve, run_decode_timeline, run_q4k_soa_microbench,
+        AutoImproveConfig,
+    };
+    match action.trim().to_ascii_lowercase().as_str() {
+        "audit-path" | "audit" => {
+            print!("{}", audit_hot_path().format_report());
+            Ok(())
+        }
+        "roof" | "device-roof" => {
+            print!("{}", calibrate_device_roof(gemv_n).format_report());
+            let (g, i) = qualia_core_db::lab::device_roof::cpu_q4_intensity_probe(1024, 32);
+            println!("  cpu_q4_probe: {g:.2} GFLOP/s  intensity={i:.3} FLOP/B");
+            Ok(())
+        }
+        "micro" | "microbench" => {
+            print!(
+                "{}",
+                run_q4k_soa_microbench(n_in, n_out).format_report()
+            );
+            Ok(())
+        }
+        "timeline" => {
+            let m = model.ok_or("timeline requires --model <path.p64>")?;
+            let t = if tokens == 0 { 4 } else { tokens };
+            print!("{}", run_decode_timeline(m, t).format_report());
+            Ok(())
+        }
+        "ablate" | "ablation" => {
+            let m = model.ok_or("ablate requires --model <path.p64>")?;
+            let t = if tokens == 0 { 8 } else { tokens };
+            let csv = out.or_else(|| {
+                Some(std::path::Path::new("experiments/inference-lab/runs.csv"))
+            });
+            let rows = run_ablation_matrix(m, t, csv);
+            print!("{}", format_ablation_report(&rows));
+            if let Some(p) = csv {
+                println!("CSV appended: {}", p.display());
+            }
+            Ok(())
+        }
+        "auto" | "auto-improve" | "lockin" | "self-improve" => {
+            let m = model.ok_or(
+                "lab auto requires --model <path.p64> (e.g. smollm2 or Llama-3.2-3B .p64)",
+            )?;
+            let t = if tokens == 0 { 16 } else { tokens };
+            let hours = if hours <= 0.0 { 2.0 } else { hours };
+            let out_dir = out
+                .map(|p| p.to_path_buf())
+                .unwrap_or_else(|| {
+                    std::path::PathBuf::from("experiments/inference-lab/lockin")
+                });
+            let ollama = if no_ollama {
+                None
+            } else {
+                match ollama_model {
+                    Some(s) if s.is_empty() || s.eq_ignore_ascii_case("none") => None,
+                    Some(s) => Some(s.to_string()),
+                    None => Some("qualia-smol-q8:latest".into()),
+                }
+            };
+            let cfg = AutoImproveConfig {
+                model: m.to_path_buf(),
+                tokens: t,
+                max_duration: std::time::Duration::from_secs_f64(hours * 3600.0),
+                out_dir,
+                ollama_model: ollama,
+                ollama_url: ollama_url.to_string(),
+                elite_resample: 3,
+                plateau_rel: 0.02,
+                plateau_gens: 2,
+                max_generations: max_generations.max(1),
+            };
+            println!("lab auto — recursive measure → search → lock-in");
+            println!("  model:      {}", cfg.model.display());
+            println!("  tokens:     {}", cfg.tokens);
+            println!("  hours:      {hours}");
+            println!("  gens:       {}", cfg.max_generations);
+            println!("  out:        {}", cfg.out_dir.display());
+            println!(
+                "  ollama:     {}",
+                cfg.ollama_model.as_deref().unwrap_or("(skipped)")
+            );
+            println!("  (wall clock budget; plateau or gens may finish earlier)");
+            let pkg = run_auto_improve(&cfg)?;
+            print!("{}", format_lockin_summary(&pkg));
+            println!("Lock-in package written to: {}", pkg.out_dir.display());
+            println!("  BEST_CONFIG.json  METHODOLOGY.md  apply-best.ps1  runs.csv  LOCKIN_SUMMARY.txt");
+            Ok(())
+        }
+        "help" | _ => {
+            println!("qualia-cli llm lab <action>");
+            println!("  audit-path              hot-path wiring audit");
+            println!("  roof [--gemv-n N]       device roof calibration");
+            println!("  micro [--n-in N --n-out M]  Q4 SoA GEMV microbench");
+            println!("  timeline --model P [--tokens T]  decode phase timeline");
+            println!("  ablate --model P [--tokens T] [--out runs.csv]");
+            println!("  auto --model P [--hours H] [--tokens T] [--out lockin-dir]");
+            println!("       [--max-generations N] [--ollama-model TAG] [--no-ollama]");
+            println!("       multi-hour recursive search → lock-in package");
+            println!("Plan: docs/plans/inference-superiority-lab-and-toolset-plan.md");
+            if action != "help" && !action.is_empty() && action != "_" {
+                return Err(format!("unknown lab action '{action}'"));
+            }
+            Ok(())
+        }
+    }
+}
+
+/// Show / set application profile (interactive | live-fast | batch).
+pub fn run_app_profile(set: Option<&str>) -> Result<(), String> {
+    use qualia_core_db::{
+        active_application_profile, set_application_profile, ApplicationProfile,
+    };
+    if let Some(name) = set {
+        let p = ApplicationProfile::parse(name).ok_or_else(|| {
+            format!("unknown profile '{name}' (expected: interactive | live-fast | batch)")
+        })?;
+        set_application_profile(p);
+        std::env::set_var("QUALIA_APP_PROFILE", p.as_str());
+        println!("PROFILE set={}", p.as_str());
+        println!("  {}", p.description());
+        if matches!(p, ApplicationProfile::BatchOvernight) {
+            println!("  → overnight multi-system eval: 2048 tok, 8h wall-clock, HTML verify");
+            println!("  → result is local HTML/CML (pipe to mailer if you want email)");
+        }
+        return Ok(());
+    }
+    let active = active_application_profile();
+    println!("Application profiles (use case — not GPU backend)");
+    println!("Active: {} — {}", active.as_str(), active.description());
+    for p in ApplicationProfile::ALL {
+        let mark = if p == active { "*" } else { " " };
+        println!(" {mark} {:12}  {}", p.as_str(), p.description());
+    }
+    println!();
+    println!("Env: QUALIA_APP_PROFILE=interactive|live-fast|batch");
+    println!("No Ollama — all profiles are in-process Qualia native.");
+    Ok(())
+}
+
+/// Print (and optionally apply) the device-optimal inference path plan.
+pub fn run_path_select(reprobe: bool, apply: bool) -> Result<(), String> {
+    let plan = qualia_core_db::inference_path_selector::run_path_select_cli(reprobe, apply);
+    print!(
+        "{}",
+        qualia_core_db::inference_path_selector::format_path_plan(&plan)
+    );
+    println!("path_auto={}", qualia_core_db::inference_path_selector::path_auto_enabled());
+    println!("applied_this_run={apply}");
+    println!();
+    println!("Operator:");
+    println!("  1) qualia-cli llm passport --reprobe --decode-proxy <model.p64> --apply-env-hint");
+    println!("  2) qualia-cli llm path-select --apply");
+    println!("  Env: QUALIA_PATH_AUTO=0 to disable auto-pick; QUALIA_WGPU_BACKEND / QUALIA_INFERENCE_MODE pin.");
+    println!("  Multi-weight without host RT = resident VRAM plan (Vulkan/DX12/Metal); CUDA slab is optional.");
+    Ok(())
+}
+
 /// Short resident decode for passport child processes. Machine-readable line on stdout.
 pub fn run_decode_proxy(model: &Path, tokens: u32) -> Result<(), String> {
     use qualia_core_db::hardware_passport::measure_decode_proxy_tok_s;
@@ -585,6 +851,435 @@ pub fn run_decode_proxy(model: &Path, tokens: u32) -> Result<(), String> {
     // Stable line for parent parser (`parse_decode_proxy_line`).
     println!("DECODE_PROXY tok_s={tok_s:.4} backend={backend} tokens={tokens}");
     Ok(())
+}
+
+/// One explore-row: layout (+ optional toggle label) → measured decode-proxy tok/s.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ExploreCandidateResult {
+    pub layout: String,
+    pub path: String,
+    pub tok_s: Option<f64>,
+    pub error: Option<String>,
+    /// Extra axis, e.g. `ffn_f16=off` / `ffn_f16=on`.
+    pub toggle: String,
+    pub bytes: u64,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ExploreReport {
+    pub version: u32,
+    pub source: String,
+    pub out_dir: String,
+    pub tokens: u32,
+    pub backend: String,
+    /// Active multi-mode approach (`portable` | `cuda` | `quant-graph`).
+    pub inference_mode: String,
+    pub candidates: Vec<ExploreCandidateResult>,
+    pub winner_path: Option<String>,
+    pub winner_layout: Option<String>,
+    pub winner_tok_s: Option<f64>,
+}
+
+/// Phase-0 explorer: convert missing layouts if source is GGUF, measure decode-proxy, rank, write JSON.
+///
+/// This is the decision engine for “which approach to go with” on a given host/model —
+/// not a second decoder. See `docs/plans/native-inference-explorer-eval-plan.md`.
+pub fn run_explore_pipeline(
+    input: &Path,
+    out: Option<PathBuf>,
+    tokens: u32,
+    layouts_csv: &str,
+    skip_convert: bool,
+    sweep_ffn_f16: bool,
+    modes_csv: Option<&str>,
+) -> Result<(), String> {
+    use std::io::Write;
+    use qualia_core_db::{set_inference_mode, InferenceMode};
+
+    if !input.exists() {
+        return Err(format!("input not found: {}", input.display()));
+    }
+
+    // Optional mode matrix: for each mode, run explore once and write per-mode reports.
+    if let Some(csv) = modes_csv {
+        let modes: Vec<InferenceMode> = csv
+            .split(',')
+            .filter_map(|s| InferenceMode::parse(s.trim()))
+            .collect();
+        if modes.is_empty() {
+            return Err(
+                "no valid modes in --modes (expected portable,cuda,quant-graph)".into(),
+            );
+        }
+        println!("EXPLORE × MODE matrix: {}", modes.iter().map(|m| m.as_str()).collect::<Vec<_>>().join(", "));
+        for m in modes {
+            set_inference_mode(m);
+            std::env::set_var("QUALIA_INFERENCE_MODE", m.as_str());
+            println!();
+            println!("════════ mode={} ════════", m.as_str());
+            run_explore_pipeline(
+                input,
+                out.clone(),
+                tokens,
+                layouts_csv,
+                skip_convert,
+                sweep_ffn_f16,
+                None,
+            )?;
+        }
+        return Ok(());
+    }
+
+    let backend = std::env::var("QUALIA_WGPU_BACKEND").unwrap_or_else(|_| "auto".into());
+    let tokens = tokens.max(8).min(64);
+
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("EXPLORE — measure candidates → rank by decode-proxy tok/s");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("├─ Input:   {}", input.display());
+    println!("├─ Tokens:  {tokens}");
+    println!("├─ Backend: {backend} (process QUALIA_WGPU_BACKEND)");
+    println!(
+        "├─ Mode:    {}",
+        qualia_core_db::active_inference_mode().as_str()
+    );
+    println!("└─ Plan:    docs/plans/native-inference-explorer-eval-plan.md");
+
+    let ext = input
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+
+    let out_dir = out.unwrap_or_else(|| {
+        input
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| PathBuf::from("."))
+    });
+    std::fs::create_dir_all(&out_dir)
+        .map_err(|e| format!("create out dir {}: {e}", out_dir.display()))?;
+
+    // Resolve stem for sibling naming.
+    let (stem, is_gguf) = if ext == "gguf" {
+        let stem = input
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("model")
+            .to_string();
+        (stem, true)
+    } else if ext == "p64" {
+        let name = input
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("model");
+        // strip .f16 / .soa intermediate stems: model.f16.p64 → stem model.f16 → strip to model
+        let stem = name
+            .strip_suffix(".f16")
+            .or_else(|| name.strip_suffix(".soa"))
+            .unwrap_or(name)
+            .to_string();
+        (stem, false)
+    } else {
+        return Err(format!(
+            "explore expects .gguf or .p64 (got .{ext})"
+        ));
+    };
+
+    let layouts = parse_explore_layouts(layouts_csv, is_gguf, input)?;
+    println!("├─ Layouts: {}", layouts.join(", "));
+
+    // Materialise paths: convert from GGUF when needed.
+    let mut paths: Vec<(String, PathBuf)> = Vec::new();
+    for layout in &layouts {
+        let suffix = match layout.as_str() {
+            "verbatim" => "",
+            "f16" => ".f16",
+            "soa" => ".soa",
+            other => {
+                return Err(format!("internal: unexpected layout token '{other}'"));
+            }
+        };
+        let p64_path = out_dir.join(format!("{stem}{suffix}.p64"));
+        if p64_path.is_file() {
+            println!("├─ reuse {}", p64_path.display());
+            paths.push((layout.clone(), p64_path));
+            continue;
+        }
+        if !is_gguf {
+            println!("├─ skip {layout} (no sibling {}, and source is not GGUF)", p64_path.display());
+            continue;
+        }
+        if skip_convert {
+            println!("├─ skip {layout} (--skip-convert and missing)");
+            continue;
+        }
+        println!("├─ convert layout={layout} → {}", p64_path.display());
+        run_convert_gguf_to_p64(input, &out_dir, 14, layout)?;
+        if !p64_path.is_file() {
+            return Err(format!("convert did not produce {}", p64_path.display()));
+        }
+        paths.push((layout.clone(), p64_path));
+    }
+
+    if paths.is_empty() {
+        return Err(
+            "no candidates to measure (convert failed, or --skip-convert with no existing .p64)"
+                .into(),
+        );
+    }
+
+    // Also measure the input .p64 itself if it was not already in the list.
+    if !is_gguf {
+        let input_pb = input.to_path_buf();
+        if !paths.iter().any(|(_, p)| p == &input_pb) {
+            let layout_guess = if input_pb.to_string_lossy().contains(".soa.") {
+                "soa"
+            } else if input_pb.to_string_lossy().contains(".f16.") {
+                "f16"
+            } else {
+                "verbatim"
+            };
+            paths.push((layout_guess.into(), input_pb));
+        }
+    }
+
+    let mut results: Vec<ExploreCandidateResult> = Vec::new();
+    // Measure each candidate in a **child process** (shared_gpu is process-wide;
+    // in-process model switches corrupt bind groups / VRAM on large Q4).
+    let self_exe = std::env::current_exe().map_err(|e| format!("current_exe: {e}"))?;
+    let backend_env = std::env::var("QUALIA_WGPU_BACKEND").ok();
+
+    for (layout, path) in &paths {
+        let bytes = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+        let toggles: Vec<(&str, Option<bool>)> = if sweep_ffn_f16 {
+            vec![("ffn_f16=off", Some(false)), ("ffn_f16=on", Some(true))]
+        } else {
+            vec![("baseline", None)]
+        };
+        for (toggle_label, ffn) in toggles {
+            print!("├─ measure layout={layout} toggle={toggle_label} … ");
+            let _ = std::io::stdout().flush();
+            let t0 = std::time::Instant::now();
+            let mut cmd = std::process::Command::new(&self_exe);
+            cmd.args([
+                "llm",
+                "decode-proxy",
+                &path.display().to_string(),
+                "--tokens",
+                &tokens.to_string(),
+            ])
+            .env("QUALIA_P64_INTEGRITY", "metadata")
+            .env("RUST_LOG", "error");
+            if let Some(ref b) = backend_env {
+                cmd.env("QUALIA_WGPU_BACKEND", b);
+            }
+            match ffn {
+                Some(true) => {
+                    cmd.env("QUALIA_LLM_FFN_F16", "1");
+                }
+                Some(false) => {
+                    cmd.env("QUALIA_LLM_FFN_F16", "0");
+                }
+                None => {
+                    // Inherit ambient so operator can pin; label is still baseline.
+                }
+            }
+            let output = cmd.output();
+            let wall = t0.elapsed().as_secs_f64();
+            match output {
+                Ok(o) if o.status.success() => {
+                    let stdout = String::from_utf8_lossy(&o.stdout);
+                    match qualia_core_db::hardware_passport::parse_decode_proxy_line(&stdout) {
+                        Some(tok_s) => {
+                            println!("{tok_s:.2} tok/s ({wall:.1}s wall)");
+                            results.push(ExploreCandidateResult {
+                                layout: layout.clone(),
+                                path: path.display().to_string(),
+                                tok_s: Some(tok_s),
+                                error: None,
+                                toggle: toggle_label.into(),
+                                bytes,
+                            });
+                        }
+                        None => {
+                            println!("FAIL parse ({wall:.1}s wall)");
+                            results.push(ExploreCandidateResult {
+                                layout: layout.clone(),
+                                path: path.display().to_string(),
+                                tok_s: None,
+                                error: Some(format!(
+                                    "no DECODE_PROXY line in child stdout: {}",
+                                    stdout.chars().take(200).collect::<String>()
+                                )),
+                                toggle: toggle_label.into(),
+                                bytes,
+                            });
+                        }
+                    }
+                }
+                Ok(o) => {
+                    let stderr = String::from_utf8_lossy(&o.stderr);
+                    let snip: String = stderr.chars().take(240).collect();
+                    println!("FAIL status={} ({wall:.1}s wall)", o.status);
+                    results.push(ExploreCandidateResult {
+                        layout: layout.clone(),
+                        path: path.display().to_string(),
+                        tok_s: None,
+                        error: Some(format!("child failed: {snip}")),
+                        toggle: toggle_label.into(),
+                        bytes,
+                    });
+                }
+                Err(e) => {
+                    println!("FAIL spawn ({wall:.1}s wall): {e}");
+                    results.push(ExploreCandidateResult {
+                        layout: layout.clone(),
+                        path: path.display().to_string(),
+                        tok_s: None,
+                        error: Some(format!("spawn: {e}")),
+                        toggle: toggle_label.into(),
+                        bytes,
+                    });
+                }
+            }
+        }
+    }
+
+    // Rank: higher tok/s first; failures last.
+    results.sort_by(|a, b| {
+        match (a.tok_s, b.tok_s) {
+            (Some(x), Some(y)) => y.partial_cmp(&x).unwrap_or(std::cmp::Ordering::Equal),
+            (Some(_), None) => std::cmp::Ordering::Less,
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            (None, None) => std::cmp::Ordering::Equal,
+        }
+    });
+
+    let winner = results.iter().find(|r| r.tok_s.is_some());
+    let inference_mode = qualia_core_db::active_inference_mode().as_str().to_string();
+    let report = ExploreReport {
+        version: 1,
+        source: input.display().to_string(),
+        out_dir: out_dir.display().to_string(),
+        tokens,
+        backend,
+        inference_mode: inference_mode.clone(),
+        candidates: results.clone(),
+        winner_path: winner.map(|w| w.path.clone()),
+        winner_layout: winner.map(|w| w.layout.clone()),
+        winner_tok_s: winner.and_then(|w| w.tok_s),
+    };
+
+    let report_path = out_dir.join(format!("{stem}.explore-report.json"));
+    let json = serde_json::to_string_pretty(&report)
+        .map_err(|e| format!("serialize report: {e}"))?;
+    std::fs::write(&report_path, json).map_err(|e| format!("write report: {e}"))?;
+
+    println!();
+    println!("Ranked candidates (decode-proxy tok/s):");
+    println!("┌──────────┬────────────┬─────────────┬────────────────────────────────────────────");
+    println!("│ layout   │ toggle     │ tok/s       │ path");
+    println!("├──────────┼────────────┼─────────────┼────────────────────────────────────────────");
+    for r in &results {
+        let ts = r
+            .tok_s
+            .map(|v| format!("{v:7.2}"))
+            .unwrap_or_else(|| "  FAIL ".into());
+        println!(
+            "│ {:<8} │ {:<10} │ {ts} │ {}",
+            r.layout,
+            r.toggle,
+            r.path
+        );
+    }
+    println!("└──────────┴────────────┴─────────────┴────────────────────────────────────────────");
+
+    if let Some(w) = winner {
+        println!();
+        println!(
+            "WINNER: layout={} toggle={}  {:.2} tok/s",
+            w.layout,
+            w.toggle,
+            w.tok_s.unwrap_or(0.0)
+        );
+        println!("  {}", w.path);
+        println!("  report: {}", report_path.display());
+        println!();
+        println!("Next:");
+        println!("  # pin backend if not already:");
+        println!("  qualia-cli llm passport --reprobe --decode-proxy \"{}\" --apply-env-hint", w.path);
+        println!("  # activate: QUALIA_P64_INTEGRITY=metadata + vault load of winner path");
+    } else {
+        println!();
+        println!("No successful measurements — see errors above.");
+        println!("  report: {}", report_path.display());
+    }
+
+    Ok(())
+}
+
+fn parse_explore_layouts(
+    layouts_csv: &str,
+    is_gguf: bool,
+    input: &Path,
+) -> Result<Vec<String>, String> {
+    let raw = layouts_csv.trim();
+    if raw.is_empty() || raw.eq_ignore_ascii_case("auto") {
+        // Default catalogue: prefer bandwidth layouts first for large Q4; still measure all present.
+        if is_gguf {
+            let src_len = std::fs::metadata(input).map(|m| m.len()).unwrap_or(0);
+            const BUDGET: u64 = 12u64 * 1024 * 1024 * 1024;
+            let rec = qualia_core_db::p64_weight::recommend_convert_layout(src_len, BUDGET);
+            let primary = match rec {
+                qualia_core_db::p64_weight::P64ConvertLayout::F16Expand => "f16",
+                qualia_core_db::p64_weight::P64ConvertLayout::Q4kSoa => "soa",
+                qualia_core_db::p64_weight::P64ConvertLayout::Verbatim => "verbatim",
+            };
+            // Always include primary + the other two for A/B (skip missing only if convert fails).
+            let mut v = vec![primary.to_string()];
+            for extra in ["soa", "f16", "verbatim"] {
+                if !v.iter().any(|x| x == extra) {
+                    v.push(extra.to_string());
+                }
+            }
+            return Ok(v);
+        }
+        // p64 source: discover siblings by naming convention.
+        return Ok(vec![
+            "soa".into(),
+            "f16".into(),
+            "verbatim".into(),
+        ]);
+    }
+    let mut out = Vec::new();
+    for part in raw.split(',') {
+        let t = part.trim().to_ascii_lowercase();
+        if t.is_empty() {
+            continue;
+        }
+        let layout = match t.as_str() {
+            "verbatim" | "raw" | "copy" => "verbatim",
+            "f16" | "fp16" | "half" => "f16",
+            "soa" | "q4k-soa" | "q4k_soa" => "soa",
+            "auto" | "best" => {
+                // expand auto inside a list: insert defaults
+                continue;
+            }
+            other => {
+                return Err(format!(
+                    "unknown layout '{other}' in --layouts (expected verbatim|f16|soa|auto)"
+                ));
+            }
+        };
+        if !out.iter().any(|x| x == layout) {
+            out.push(layout.to_string());
+        }
+    }
+    if out.is_empty() {
+        return parse_explore_layouts("auto", is_gguf, input);
+    }
+    Ok(out)
 }
 
 /// Test a single model

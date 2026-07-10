@@ -103,9 +103,12 @@ impl QTensorEngine {
                     cache: self.native_pipeline_cache_ref(),
                 });
         let pipeline_layout = pipeline.get_bind_group_layout(0);
-        // Worst case: a full vocab chunk's blocks × max K candidates.
-        let max_blocks = (VOCAB_CHUNK_ROWS / crate::topk::TOPK_BLOCK_SIZE).max(1);
-        let cand_bytes = ((max_blocks * crate::topk::TOPK_MAX_K).max(1) * 4) as wgpu::BufferAddress;
+        // Multi-chunk mega-pass: hold candidates for a full large-vocab sweep (≤256k ids),
+        // k=1 → one cand per block; oversize for TOPK_MAX_K headroom on smaller vocabs.
+        const MAX_VOCAB_RESIDENT: usize = 262_144;
+        let max_blocks = (MAX_VOCAB_RESIDENT / crate::topk::TOPK_BLOCK_SIZE).max(1);
+        let cand_bytes =
+            ((max_blocks * crate::topk::TOPK_MAX_K).max(1) * 4) as wgpu::BufferAddress;
         self.topk_cand_val_buf = Some(self.gpu_device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("TopkCandVal"),
             size: cand_bytes,
@@ -162,7 +165,11 @@ impl QTensorEngine {
         let mmap = self.gguf_mmap.as_deref()?;
 
         let use_coop = crate::llm_bench::coop_gemv_enabled();
-        let gemm_pipeline: &wgpu::ComputePipeline = if use_coop {
+        let use_mr = use_coop
+            && info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA;
+        let gemm_pipeline: &wgpu::ComputePipeline = if use_mr {
+            &self.coop_gemv_mr_pipeline
+        } else if use_coop {
             &self.coop_gemv_pipeline
         } else {
             &self.pipeline
@@ -283,31 +290,38 @@ impl QTensorEngine {
                 let go = (chunk_idx * SLOT) as u64;
                 let gsize = std::num::NonZeroU64::new(std::mem::size_of::<GemmGpuParams>() as u64);
                 let tsize = std::num::NonZeroU64::new(16);
+                let mut gemm_entries = vec![
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: input_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: weight_resource,
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                            buffer: &gemm_multi,
+                            offset: go,
+                            size: gsize,
+                        }),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: output_buf.as_entire_binding(),
+                    },
+                ];
+                if use_coop {
+                    gemm_entries.push(wgpu::BindGroupEntry {
+                        binding: 4,
+                        resource: input_buf.as_entire_binding(),
+                    });
+                }
                 let gemm_bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
                     label: Some("Top1GemmBindFused"),
                     layout: &gemm_layout,
-                    entries: &[
-                        wgpu::BindGroupEntry {
-                            binding: 0,
-                            resource: input_buf.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 1,
-                            resource: weight_resource,
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 2,
-                            resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-                                buffer: &gemm_multi,
-                                offset: go,
-                                size: gsize,
-                            }),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 3,
-                            resource: output_buf.as_entire_binding(),
-                        },
-                    ],
+                    entries: &gemm_entries,
                 });
                 let topk_bind_c = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
                     label: Some("Top1TopkBindFused"),
@@ -342,7 +356,13 @@ impl QTensorEngine {
                     });
                     cpass.set_pipeline(gemm_pipeline);
                     cpass.set_bind_group(0, &gemm_bind, &[]);
-                    if use_coop {
+                    if use_mr {
+                        cpass.dispatch_workgroups(
+                            crate::llm_bench::coop_gemv_workgroups(chunk_rows),
+                            1,
+                            1,
+                        );
+                    } else if use_coop {
                         cpass.dispatch_workgroups(chunk_rows, 1, 1);
                     } else {
                         cpass.dispatch_workgroups((chunk_rows + 63) / 64, 1, 1);
@@ -422,27 +442,34 @@ impl QTensorEngine {
                 let num_blocks = chunk_rows.div_ceil(block_size);
                 let cand_count = num_blocks;
 
+                let mut gemm_entries = vec![
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: input_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: weight_binding.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: params_buf.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: output_buf.as_entire_binding(),
+                    },
+                ];
+                if use_coop {
+                    gemm_entries.push(wgpu::BindGroupEntry {
+                        binding: 4,
+                        resource: input_buf.as_entire_binding(),
+                    });
+                }
                 let gemm_bind = self.gpu_device().create_bind_group(&wgpu::BindGroupDescriptor {
                     label: Some("Top1GemmBind"),
                     layout: &gemm_layout,
-                    entries: &[
-                        wgpu::BindGroupEntry {
-                            binding: 0,
-                            resource: input_buf.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 1,
-                            resource: weight_binding.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 2,
-                            resource: params_buf.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 3,
-                            resource: output_buf.as_entire_binding(),
-                        },
-                    ],
+                    entries: &gemm_entries,
                 });
                 let mut encoder =
                     self.device()
@@ -456,7 +483,13 @@ impl QTensorEngine {
                     });
                     cpass.set_pipeline(gemm_pipeline);
                     cpass.set_bind_group(0, &gemm_bind, &[]);
-                    if use_coop {
+                    if use_mr {
+                        cpass.dispatch_workgroups(
+                            crate::llm_bench::coop_gemv_workgroups(chunk_rows as u32),
+                            1,
+                            1,
+                        );
+                    } else if use_coop {
                         cpass.dispatch_workgroups(chunk_rows as u32, 1, 1);
                     } else {
                         cpass.dispatch_workgroups((chunk_rows as u32 + 63) / 64, 1, 1);
@@ -572,7 +605,11 @@ impl QTensorEngine {
         let block_size = crate::topk::TOPK_BLOCK_SIZE;
         let full_chunks = vocab_size.div_ceil(VOCAB_CHUNK_ROWS);
         let use_coop = crate::llm_bench::coop_gemv_enabled();
-        let gemm_pipeline: &wgpu::ComputePipeline = if use_coop {
+        let use_mr = use_coop
+            && info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA;
+        let gemm_pipeline: &wgpu::ComputePipeline = if use_mr {
+            &self.coop_gemv_mr_pipeline
+        } else if use_coop {
             &self.coop_gemv_pipeline
         } else {
             &self.pipeline
@@ -674,29 +711,36 @@ impl QTensorEngine {
             let num_blocks = chunk_rows.div_ceil(block_size);
             let cand_count = num_blocks * k;
 
+            let mut gemm_entries = vec![
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: input_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: weight_resource,
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: params_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: output_buf.as_entire_binding(),
+                },
+            ];
+            if use_coop {
+                gemm_entries.push(wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: input_buf.as_entire_binding(),
+                });
+            }
             let gemm_bind = self
                 .gpu_device()
                 .create_bind_group(&wgpu::BindGroupDescriptor {
                     label: Some("TopkGemmBind"),
                     layout: &gemm_layout,
-                    entries: &[
-                        wgpu::BindGroupEntry {
-                            binding: 0,
-                            resource: input_buf.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 1,
-                            resource: weight_resource,
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 2,
-                            resource: params_buf.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 3,
-                            resource: output_buf.as_entire_binding(),
-                        },
-                    ],
+                    entries: &gemm_entries,
                 });
             let mut encoder =
                 self.device()
@@ -710,7 +754,13 @@ impl QTensorEngine {
                 });
                 cpass.set_pipeline(gemm_pipeline);
                 cpass.set_bind_group(0, &gemm_bind, &[]);
-                if use_coop {
+                if use_mr {
+                    cpass.dispatch_workgroups(
+                        crate::llm_bench::coop_gemv_workgroups(chunk_rows as u32),
+                        1,
+                        1,
+                    );
+                } else if use_coop {
                     cpass.dispatch_workgroups(chunk_rows as u32, 1, 1);
                 } else {
                     cpass.dispatch_workgroups((chunk_rows as u32 + 63) / 64, 1, 1);

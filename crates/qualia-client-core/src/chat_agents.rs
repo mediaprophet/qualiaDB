@@ -14,10 +14,15 @@ use crate::chat_session::{self, ChatMessage, Role, SessionKind};
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum AgentBackendKind {
+    /// Native in-process GGUF / wgpu Qualia engine (primary).
     #[default]
     Local,
+    /// Remote provider path (Nym / MCP); consent + metering.
     Remote,
+    /// Local first; optional remote or Ollama fallback per settings.
     Hybrid,
+    /// Optional Ollama HTTP harness (opt-in; not the primary Qualia engine).
+    Ollama,
 }
 
 impl AgentBackendKind {
@@ -26,6 +31,7 @@ impl AgentBackendKind {
             AgentBackendKind::Local => "local",
             AgentBackendKind::Remote => "remote",
             AgentBackendKind::Hybrid => "hybrid",
+            AgentBackendKind::Ollama => "ollama",
         }
     }
 
@@ -33,6 +39,7 @@ impl AgentBackendKind {
         match s.to_lowercase().as_str() {
             "remote" => AgentBackendKind::Remote,
             "hybrid" => AgentBackendKind::Hybrid,
+            "ollama" => AgentBackendKind::Ollama,
             _ => AgentBackendKind::Local,
         }
     }

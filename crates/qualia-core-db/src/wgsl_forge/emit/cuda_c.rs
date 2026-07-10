@@ -143,6 +143,572 @@ extern "C" __global__ void wmma_gemm_tiled(const __half *A,
     wmma::store_matrix_sync(c_tile, c_frag, N, wmma::mem_row_major);
 }"#;
 
+/// Entry point of [`Q4K_SOA_GEMV_SRC`] — on-device dequant · vector for Qualia SoA Q4_K.
+pub const Q4K_SOA_GEMV_ENTRY: &str = "q4k_soa_gemv";
+
+/// Device-side **Q4_K SoA multi-row coop dequant-GEMV**.
+///
+/// Each CUDA block owns `Q4K_SOA_GEMV_ROWS` consecutive output rows, loads the
+/// activation **once** per K-superblock, and FMA-s into all live rows (3B lever:
+/// gate/up n_out=8192 reloaded act 8192× under 1-row-per-block).
+///
+/// Layout: per 256-weight superblock = 160 B: qs[128] | d_sub f16[8] | m_sub f16[8].
+/// Bindings: `x` f32[n_in], `W` uchar[n_out * row_bytes], `y` f32[n_out],
+/// `dims` uint[3] = {n_in, n_out, row_bytes}.
+///
+/// Dispatch: `grid = ceil(n_out / Q4K_SOA_GEMV_ROWS)`, `block = 256`.
+/// 16 rows/block amortizes act loads vs serial 1-row (3B FFN n_out=8192).
+pub const Q4K_SOA_GEMV_ROWS: u32 = 16;
+
+pub const Q4K_SOA_GEMV_SRC: &str = r#"
+#define Q4K_ROWS 16u
+__device__ __forceinline__ float q4k_f16_to_f32(unsigned short h) {
+    unsigned sign = (h >> 15) & 1u;
+    unsigned exp  = (h >> 10) & 0x1fu;
+    unsigned mant = h & 0x3ffu;
+    unsigned fbits;
+    if (exp == 0) {
+        if (mant == 0) {
+            fbits = sign << 31;
+        } else {
+            exp = 127 - 15 + 1;
+            while ((mant & 0x400u) == 0) { mant <<= 1; exp--; }
+            mant &= 0x3ffu;
+            fbits = (sign << 31) | (exp << 23) | (mant << 13);
+        }
+    } else if (exp == 31) {
+        fbits = (sign << 31) | 0x7f800000u | (mant << 13);
+    } else {
+        fbits = (sign << 31) | ((exp + (127 - 15)) << 23) | (mant << 13);
+    }
+    return __int_as_float(fbits);
+}
+
+// Multi-row coop GEMV: blockIdx.x = row_group, threadIdx.x = 0..255 column partial.
+// Parallel multi-accumulator reduce (one barrier ladder for all Q4K_ROWS).
+extern "C" __global__ void q4k_soa_gemv(const float *x,
+                                        const unsigned char *W,
+                                        float *y,
+                                        const unsigned *dims) {
+    unsigned n_in = dims[0];
+    unsigned n_out = dims[1];
+    unsigned row_bytes = dims[2];
+    unsigned row0 = blockIdx.x * Q4K_ROWS;
+    unsigned t = threadIdx.x;
+    if (row0 >= n_out) return;
+
+    __shared__ float act[256];
+    // 16 * 256 = 16 KiB — fits SM shared; parallel reduce needs this layout.
+    __shared__ float red[Q4K_ROWS * 256u];
+    float acc[Q4K_ROWS];
+    #pragma unroll
+    for (unsigned r = 0u; r < Q4K_ROWS; r++) acc[r] = 0.0f;
+
+    unsigned n_blocks = n_in / 256u;
+    for (unsigned b = 0u; b < n_blocks; b++) {
+        act[t] = x[b * 256u + t];
+        __syncthreads();
+        unsigned sub = t / 32u;
+        unsigned group = t / 64u;
+        unsigned local = t % 64u;
+        unsigned d_off = 128u + sub * 2u;
+        unsigned m_off = 144u + sub * 2u;
+        unsigned q_off = group * 32u;
+        float xv = act[t];
+        #pragma unroll
+        for (unsigned r = 0u; r < Q4K_ROWS; r++) {
+            unsigned row = row0 + r;
+            if (row >= n_out) continue;
+            const unsigned char *blk =
+                W + (size_t)row * (size_t)row_bytes + (size_t)b * 160u;
+            unsigned short dh = (unsigned short)(blk[d_off] | (blk[d_off + 1u] << 8));
+            unsigned short mh = (unsigned short)(blk[m_off] | (blk[m_off + 1u] << 8));
+            float dsub = q4k_f16_to_f32(dh);
+            float msub = q4k_f16_to_f32(mh);
+            float nib = (local < 32u)
+                ? (float)(blk[q_off + local] & 0xFu)
+                : (float)(blk[q_off + (local - 32u)] >> 4);
+            acc[r] += (dsub * nib - msub) * xv;
+        }
+        __syncthreads();
+    }
+
+    #pragma unroll
+    for (unsigned r = 0u; r < Q4K_ROWS; r++) {
+        red[r * 256u + t] = acc[r];
+    }
+    __syncthreads();
+    for (unsigned stride = 128u; stride > 0u; stride >>= 1u) {
+        if (t < stride) {
+            #pragma unroll
+            for (unsigned r = 0u; r < Q4K_ROWS; r++) {
+                red[r * 256u + t] += red[r * 256u + t + stride];
+            }
+        }
+        __syncthreads();
+    }
+    if (t < Q4K_ROWS) {
+        unsigned row = row0 + t;
+        if (row < n_out) y[row] = red[t * 256u];
+    }
+}
+"#;
+
+/// Fused Q/K/V projection from one activation (GQA-safe: n_q ≥ n_kv).
+/// One shared act load; Q written for all rows, K/V only when `row < n_kv`.
+///
+/// Bindings: x, Wq, Wk, Wv, yq, yk, yv, dims={n_in, n_q, n_kv, row_bytes}.
+/// Dispatch: `grid = ceil(n_q / Q4K_SOA_GEMV_ROWS)`, `block = 256`.
+pub const Q4K_SOA_QKV_ENTRY: &str = "q4k_soa_qkv";
+pub const Q4K_SOA_QKV_SRC: &str = r#"
+#define Q4K_ROWS 16u
+__device__ __forceinline__ float q4k_f16_to_f32_qkv(unsigned short h) {
+    unsigned sign = (h >> 15) & 1u;
+    unsigned exp  = (h >> 10) & 0x1fu;
+    unsigned mant = h & 0x3ffu;
+    unsigned fbits;
+    if (exp == 0) {
+        if (mant == 0) fbits = sign << 31;
+        else {
+            exp = 127 - 15 + 1;
+            while ((mant & 0x400u) == 0) { mant <<= 1; exp--; }
+            mant &= 0x3ffu;
+            fbits = (sign << 31) | (exp << 23) | (mant << 13);
+        }
+    } else if (exp == 31) fbits = (sign << 31) | 0x7f800000u | (mant << 13);
+    else fbits = (sign << 31) | ((exp + (127 - 15)) << 23) | (mant << 13);
+    return __int_as_float(fbits);
+}
+__device__ __forceinline__ float q4k_row_partial(
+    const unsigned char *W, unsigned row, unsigned row_bytes,
+    unsigned b, unsigned t, float xv
+) {
+    const unsigned char *blk = W + (size_t)row * (size_t)row_bytes + (size_t)b * 160u;
+    unsigned sub = t / 32u;
+    unsigned group = t / 64u;
+    unsigned local = t % 64u;
+    unsigned d_off = 128u + sub * 2u;
+    unsigned m_off = 144u + sub * 2u;
+    unsigned short dh = (unsigned short)(blk[d_off] | (blk[d_off + 1u] << 8));
+    unsigned short mh = (unsigned short)(blk[m_off] | (blk[m_off + 1u] << 8));
+    float dsub = q4k_f16_to_f32_qkv(dh);
+    float msub = q4k_f16_to_f32_qkv(mh);
+    unsigned q_off = group * 32u;
+    float nib = (local < 32u)
+        ? (float)(blk[q_off + local] & 0xFu)
+        : (float)(blk[q_off + (local - 32u)] >> 4);
+    return (dsub * nib - msub) * xv;
+}
+__device__ __forceinline__ void q4k_reduce_write(
+    float *red, unsigned t, unsigned row0, unsigned n_lim, float *y, float *acc
+) {
+    #pragma unroll
+    for (unsigned r = 0u; r < Q4K_ROWS; r++) red[r * 256u + t] = acc[r];
+    __syncthreads();
+    for (unsigned s = 128u; s > 0u; s >>= 1u) {
+        if (t < s) {
+            #pragma unroll
+            for (unsigned r = 0u; r < Q4K_ROWS; r++)
+                red[r * 256u + t] += red[r * 256u + t + s];
+        }
+        __syncthreads();
+    }
+    if (t < Q4K_ROWS) {
+        unsigned row = row0 + t;
+        if (row < n_lim) y[row] = red[t * 256u];
+    }
+    __syncthreads();
+}
+extern "C" __global__ void q4k_soa_qkv(
+    const float *x,
+    const unsigned char *Wq,
+    const unsigned char *Wk,
+    const unsigned char *Wv,
+    float *yq,
+    float *yk,
+    float *yv,
+    const unsigned *dims
+) {
+    unsigned n_in = dims[0];
+    unsigned n_q = dims[1];
+    unsigned n_kv = dims[2];
+    unsigned row_bytes = dims[3];
+    unsigned row0 = blockIdx.x * Q4K_ROWS;
+    unsigned t = threadIdx.x;
+    if (row0 >= n_q) return;
+
+    __shared__ float act[256];
+    __shared__ float red[Q4K_ROWS * 256u];
+    float acc_q[Q4K_ROWS], acc_k[Q4K_ROWS], acc_v[Q4K_ROWS];
+    #pragma unroll
+    for (unsigned r = 0u; r < Q4K_ROWS; r++) {
+        acc_q[r] = 0.0f; acc_k[r] = 0.0f; acc_v[r] = 0.0f;
+    }
+    unsigned n_blocks = n_in / 256u;
+    for (unsigned b = 0u; b < n_blocks; b++) {
+        act[t] = x[b * 256u + t];
+        __syncthreads();
+        float xv = act[t];
+        #pragma unroll
+        for (unsigned r = 0u; r < Q4K_ROWS; r++) {
+            unsigned row = row0 + r;
+            if (row < n_q)
+                acc_q[r] += q4k_row_partial(Wq, row, row_bytes, b, t, xv);
+            if (row < n_kv) {
+                acc_k[r] += q4k_row_partial(Wk, row, row_bytes, b, t, xv);
+                acc_v[r] += q4k_row_partial(Wv, row, row_bytes, b, t, xv);
+            }
+        }
+        __syncthreads();
+    }
+    q4k_reduce_write(red, t, row0, n_q, yq, acc_q);
+    q4k_reduce_write(red, t, row0, n_kv, yk, acc_k);
+    q4k_reduce_write(red, t, row0, n_kv, yv, acc_v);
+}
+"#;
+
+/// Residual fused GEMV: `y[i] = residual[i] + W[i]·x`. Same multi-row geometry.
+/// Bindings: x, W, y, dims, residual. Dispatch: ceil(n_out / Q4K_SOA_GEMV_ROWS) × 256.
+pub const Q4K_SOA_GEMV_RESID_ENTRY: &str = "q4k_soa_gemv_resid";
+pub const Q4K_SOA_GEMV_RESID_SRC: &str = r#"
+#define Q4K_ROWS 16u
+__device__ __forceinline__ float q4k_f16_to_f32_r(unsigned short h) {
+    unsigned sign = (h >> 15) & 1u;
+    unsigned exp  = (h >> 10) & 0x1fu;
+    unsigned mant = h & 0x3ffu;
+    unsigned fbits;
+    if (exp == 0) {
+        if (mant == 0) fbits = sign << 31;
+        else {
+            exp = 127 - 15 + 1;
+            while ((mant & 0x400u) == 0) { mant <<= 1; exp--; }
+            mant &= 0x3ffu;
+            fbits = (sign << 31) | (exp << 23) | (mant << 13);
+        }
+    } else if (exp == 31) fbits = (sign << 31) | 0x7f800000u | (mant << 13);
+    else fbits = (sign << 31) | ((exp + (127 - 15)) << 23) | (mant << 13);
+    return __int_as_float(fbits);
+}
+extern "C" __global__ void q4k_soa_gemv_resid(const float *x,
+                                              const unsigned char *W,
+                                              float *y,
+                                              const unsigned *dims,
+                                              const float *residual) {
+    unsigned n_in = dims[0];
+    unsigned n_out = dims[1];
+    unsigned row_bytes = dims[2];
+    unsigned row0 = blockIdx.x * Q4K_ROWS;
+    unsigned t = threadIdx.x;
+    if (row0 >= n_out) return;
+    __shared__ float act[256];
+    __shared__ float red[Q4K_ROWS * 256u];
+    float acc[Q4K_ROWS];
+    #pragma unroll
+    for (unsigned r = 0u; r < Q4K_ROWS; r++) acc[r] = 0.0f;
+    unsigned n_blocks = n_in / 256u;
+    for (unsigned b = 0u; b < n_blocks; b++) {
+        act[t] = x[b * 256u + t];
+        __syncthreads();
+        unsigned sub = t / 32u;
+        unsigned group = t / 64u;
+        unsigned local = t % 64u;
+        unsigned d_off = 128u + sub * 2u;
+        unsigned m_off = 144u + sub * 2u;
+        unsigned q_off = group * 32u;
+        float xv = act[t];
+        #pragma unroll
+        for (unsigned r = 0u; r < Q4K_ROWS; r++) {
+            unsigned row = row0 + r;
+            if (row >= n_out) continue;
+            const unsigned char *blk =
+                W + (size_t)row * (size_t)row_bytes + (size_t)b * 160u;
+            unsigned short dh = (unsigned short)(blk[d_off] | (blk[d_off + 1u] << 8));
+            unsigned short mh = (unsigned short)(blk[m_off] | (blk[m_off + 1u] << 8));
+            float dsub = q4k_f16_to_f32_r(dh);
+            float msub = q4k_f16_to_f32_r(mh);
+            float nib = (local < 32u)
+                ? (float)(blk[q_off + local] & 0xFu)
+                : (float)(blk[q_off + (local - 32u)] >> 4);
+            acc[r] += (dsub * nib - msub) * xv;
+        }
+        __syncthreads();
+    }
+    #pragma unroll
+    for (unsigned r = 0u; r < Q4K_ROWS; r++) red[r * 256u + t] = acc[r];
+    __syncthreads();
+    for (unsigned stride = 128u; stride > 0u; stride >>= 1u) {
+        if (t < stride) {
+            #pragma unroll
+            for (unsigned r = 0u; r < Q4K_ROWS; r++)
+                red[r * 256u + t] += red[r * 256u + t + stride];
+        }
+        __syncthreads();
+    }
+    if (t < Q4K_ROWS) {
+        unsigned row = row0 + t;
+        if (row < n_out) y[row] = residual[row] + red[t * 256u];
+    }
+}
+"#;
+
+/// Entry: fused SwiGLU expansion on two sticky Q4_K SoA weight matrices.
+/// `silu(gate·x) * (up·x)` → `y[n_out]`. Bindings: x, W_gate, W_up, y, dims={n_in,n_out,row_bytes}.
+pub const Q4K_SOA_FUSED_SWIGLU_ENTRY: &str = "q4k_soa_fused_swiglu";
+
+/// Dual-weight coop fused FFN expansion (T-A2 slice): one block per output row, shared act,
+/// both matrices dequant-FMA, silu·mul in registers. Weights stay in the multi-weight slab.
+pub const Q4K_SOA_FUSED_SWIGLU_SRC: &str = r#"
+__device__ __forceinline__ float q4k_f16_to_f32_sw(unsigned short h) {
+    unsigned sign = (h >> 15) & 1u;
+    unsigned exp  = (h >> 10) & 0x1fu;
+    unsigned mant = h & 0x3ffu;
+    unsigned fbits;
+    if (exp == 0) {
+        if (mant == 0) { fbits = sign << 31; }
+        else {
+            exp = 127 - 15 + 1;
+            while ((mant & 0x400u) == 0) { mant <<= 1; exp--; }
+            mant &= 0x3ffu;
+            fbits = (sign << 31) | (exp << 23) | (mant << 13);
+        }
+    } else if (exp == 31) {
+        fbits = (sign << 31) | 0x7f800000u | (mant << 13);
+    } else {
+        fbits = (sign << 31) | ((exp + (127 - 15)) << 23) | (mant << 13);
+    }
+    return __int_as_float(fbits);
+}
+
+extern "C" __global__ void q4k_soa_fused_swiglu(const float *x,
+                                                const unsigned char *W_gate,
+                                                const unsigned char *W_up,
+                                                float *y,
+                                                const unsigned *dims) {
+    unsigned n_in = dims[0];
+    unsigned n_out = dims[1];
+    unsigned row_bytes = dims[2];
+    unsigned row = blockIdx.x;
+    unsigned t = threadIdx.x;
+    if (row >= n_out) return;
+
+    const unsigned char *g_row = W_gate + (size_t)row * (size_t)row_bytes;
+    const unsigned char *u_row = W_up + (size_t)row * (size_t)row_bytes;
+    __shared__ float partial_g[256];
+    __shared__ float partial_u[256];
+    __shared__ float act[256];
+    float acc_g = 0.0f;
+    float acc_u = 0.0f;
+    unsigned n_blocks = n_in / 256u;
+    for (unsigned b = 0u; b < n_blocks; b++) {
+        act[t] = x[b * 256u + t];
+        __syncthreads();
+        const unsigned char *gb = g_row + b * 160u;
+        const unsigned char *ub = u_row + b * 160u;
+        unsigned sub = t / 32u;
+        unsigned group = t / 64u;
+        unsigned local = t % 64u;
+        unsigned d_off = 128u + sub * 2u;
+        unsigned m_off = 144u + sub * 2u;
+        float gd = q4k_f16_to_f32_sw((unsigned short)(gb[d_off] | (gb[d_off + 1u] << 8)));
+        float gm = q4k_f16_to_f32_sw((unsigned short)(gb[m_off] | (gb[m_off + 1u] << 8)));
+        float ud = q4k_f16_to_f32_sw((unsigned short)(ub[d_off] | (ub[d_off + 1u] << 8)));
+        float um = q4k_f16_to_f32_sw((unsigned short)(ub[m_off] | (ub[m_off + 1u] << 8)));
+        unsigned q_off = group * 32u;
+        float gnib, unib;
+        if (local < 32u) {
+            gnib = (float)(gb[q_off + local] & 0xFu);
+            unib = (float)(ub[q_off + local] & 0xFu);
+        } else {
+            gnib = (float)(gb[q_off + (local - 32u)] >> 4);
+            unib = (float)(ub[q_off + (local - 32u)] >> 4);
+        }
+        float ax = act[t];
+        acc_g += (gd * gnib - gm) * ax;
+        acc_u += (ud * unib - um) * ax;
+        __syncthreads();
+    }
+    partial_g[t] = acc_g;
+    partial_u[t] = acc_u;
+    __syncthreads();
+    for (unsigned stride = 128u; stride > 0u; stride >>= 1u) {
+        if (t < stride) {
+            partial_g[t] += partial_g[t + stride];
+            partial_u[t] += partial_u[t + stride];
+        }
+        __syncthreads();
+    }
+    if (t == 0u) {
+        float g = partial_g[0];
+        float u = partial_u[0];
+        // silu(g) = g / (1 + exp(-g))
+        float sg = g / (1.0f + expf(-g));
+        y[row] = sg * u;
+    }
+}
+"#;
+
+/// Interleaved RoPE (Llama / SmolLM GGUF): rotate adjacent pairs `(2i, 2i+1)`.
+/// Bindings: `vec` f32[n_heads*head_dim], `params` u32[5] =
+/// `{n_heads, head_dim, pos, base_bits, scale_bits}` (base/scale as f32 bit patterns).
+/// Dispatch: `grid = ceil(n_heads * (head_dim/2) / 256)`, `block = 256`.
+pub const ROPE_INTERLEAVED_ENTRY: &str = "rope_interleaved";
+pub const ROPE_INTERLEAVED_SRC: &str = r#"
+extern "C" __global__ void rope_interleaved(float *vec, const unsigned *params) {
+    unsigned n_heads = params[0];
+    unsigned head_dim = params[1];
+    unsigned pos = params[2];
+    float base = __int_as_float((int)params[3]);
+    float scale = __int_as_float((int)params[4]);
+    unsigned half = head_dim / 2u;
+    if (half == 0u) return;
+    if (!(scale > 0.0f) || !isfinite(scale)) scale = 1.0f;
+    unsigned n_pairs = n_heads * half;
+    unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (gid >= n_pairs) return;
+    unsigned head = gid / half;
+    unsigned i = gid % half;
+    float scaled_pos = (float)pos / scale;
+    float theta = scaled_pos * powf(base, -2.0f * (float)i / (float)head_dim);
+    float s = sinf(theta);
+    float c = cosf(theta);
+    unsigned off = head * head_dim + 2u * i;
+    float x0 = vec[off];
+    float x1 = vec[off + 1u];
+    vec[off] = x0 * c - x1 * s;
+    vec[off + 1u] = x0 * s + x1 * c;
+}
+"#;
+
+/// Write one token's K (or V) head stack into the permanent device KV cache.
+/// Layout matches `KvCacheLayout::k_index` / `v_index` (f32, non-int8, non-dict):
+/// `base = layer*layer_stride + slot*slot_kv_elems*2 + stream_off + kv_h*head_dim + d`
+/// where `stream_off = 0` for K and `n_kv_head*head_dim` for V.
+/// Bindings: `src` f32[n_kv*head_dim], `kv` f32[total], `params` u32[7] =
+/// `{n_kv, head_dim, layer, slot, layer_stride, slot_kv_elems, is_v}`.
+/// Dispatch: `grid = ceil(n_kv*head_dim / 256)`, `block = 256`.
+pub const KV_SLOT_WRITE_ENTRY: &str = "kv_slot_write";
+pub const KV_SLOT_WRITE_SRC: &str = r#"
+extern "C" __global__ void kv_slot_write(
+    const float *src,
+    float *kv,
+    const unsigned *params
+) {
+    unsigned n_kv = params[0];
+    unsigned head_dim = params[1];
+    unsigned layer = params[2];
+    unsigned slot = params[3];
+    unsigned layer_stride = params[4];
+    unsigned slot_kv_elems = params[5];
+    unsigned is_v = params[6];
+    unsigned n = n_kv * head_dim;
+    unsigned gid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (gid >= n) return;
+    unsigned kv_h = gid / head_dim;
+    unsigned d = gid % head_dim;
+    unsigned stream_off = is_v ? (n_kv * head_dim) : 0u;
+    unsigned base = layer * layer_stride + slot * slot_kv_elems * 2u + stream_off;
+    kv[base + kv_h * head_dim + d] = src[gid];
+}
+"#;
+
+/// Single-token GQA causal SDPA over device KV (decode).
+/// One block per Q head. Scores past positions `0..=pos` against the matching KV head.
+/// Bindings: `q` f32[n_head*head_dim] (already RoPE'd), `kv` f32[total],
+/// `out` f32[n_head*head_dim], `params` u32[9] =
+/// `{n_head, n_kv, head_dim, layer, pos, max_context, layer_stride, slot_kv_elems, q_heads_per_kv}`,
+/// `scale_bits` u32[1] = f32 scale bit pattern (`1/sqrt(head_dim)`).
+/// Dispatch: `grid = n_head`, `block = 256` (coop-reduce dots along head_dim).
+/// Caps: `head_dim ≤ 256`, `pos < 1024`, `max_context ≤ 1024` (engine MAX_CONTEXT_WINDOW).
+pub const SDPA_DECODE_ENTRY: &str = "sdpa_decode_gqa";
+pub const SDPA_DECODE_SRC: &str = r#"
+extern "C" __global__ void sdpa_decode_gqa(
+    const float *q,
+    const float *kv,
+    float *out,
+    const unsigned *params,
+    const unsigned *scale_bits
+) {
+    unsigned n_head = params[0];
+    unsigned n_kv = params[1];
+    unsigned head_dim = params[2];
+    unsigned layer = params[3];
+    unsigned pos = params[4];
+    unsigned max_context = params[5];
+    unsigned layer_stride = params[6];
+    unsigned slot_kv_elems = params[7];
+    unsigned q_per_kv = params[8];
+    if (q_per_kv == 0u) q_per_kv = 1u;
+    float scale = __int_as_float((int)scale_bits[0]);
+    unsigned q_h = blockIdx.x;
+    unsigned t = threadIdx.x;
+    if (q_h >= n_head) return;
+    unsigned kv_h = q_h / q_per_kv;
+    if (kv_h >= n_kv) return;
+    if (head_dim > 256u || pos >= 1024u || max_context == 0u || max_context > 1024u) return;
+
+    __shared__ float q_sh[256];
+    __shared__ float red[256];
+    __shared__ float scores[1024];
+    __shared__ float max_sh;
+    __shared__ float sum_sh;
+
+    if (t < head_dim) q_sh[t] = q[q_h * head_dim + t];
+    __syncthreads();
+
+    // Phase 1: scores[past] = (q · K[past]) * scale
+    for (unsigned past = 0u; past <= pos; past++) {
+        unsigned past_slot = past % max_context;
+        unsigned k_base = layer * layer_stride
+            + past_slot * slot_kv_elems * 2u
+            + kv_h * head_dim;
+        float partial = 0.0f;
+        if (t < head_dim) partial = q_sh[t] * kv[k_base + t];
+        red[t] = (t < head_dim) ? partial : 0.0f;
+        __syncthreads();
+        for (unsigned s = 128u; s > 0u; s >>= 1u) {
+            if (t < s) red[t] += red[t + s];
+            __syncthreads();
+        }
+        if (t == 0u) scores[past] = red[0] * scale;
+        __syncthreads();
+    }
+
+    // Phase 2: max + softmax (thread 0; broadcast via shared)
+    if (t == 0u) {
+        float mx = scores[0];
+        for (unsigned past = 1u; past <= pos; past++) {
+            if (scores[past] > mx) mx = scores[past];
+        }
+        max_sh = mx;
+        float sum = 0.0f;
+        for (unsigned past = 0u; past <= pos; past++) {
+            float e = expf(scores[past] - mx);
+            scores[past] = e;
+            sum += e;
+        }
+        if (sum == 0.0f) sum = 1.0f;
+        for (unsigned past = 0u; past <= pos; past++) scores[past] /= sum;
+        sum_sh = sum;
+    }
+    __syncthreads();
+    (void)sum_sh;
+
+    // Phase 3: out = sum_p softmax[p] * V[p]
+    if (t < head_dim) {
+        float acc = 0.0f;
+        for (unsigned past = 0u; past <= pos; past++) {
+            unsigned past_slot = past % max_context;
+            unsigned v_base = layer * layer_stride
+                + past_slot * slot_kv_elems * 2u
+                + n_kv * head_dim
+                + kv_h * head_dim;
+            acc += kv[v_base + t] * scores[past];
+        }
+        out[q_h * head_dim + t] = acc;
+    }
+}
+"#;
+
 /// Native double-precision dense GEMM entry point. WGSL has no `f64` (only
 /// f32/f16/i32/u32), so an exact-double GEMM has no WGSL/IR analogue; PTX/CUDA-C,
 /// by contrast, has native `double` and `fma.rn.f64`, which is why the f64

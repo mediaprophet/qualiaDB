@@ -3,6 +3,10 @@
 //! These sources provide an offline fallback for essential ontologies whose
 //! catalog URLs may be unavailable at runtime. They are also seeded into
 //! `{storage}/Index/` on startup so readiness checks can treat them as present.
+//!
+//! **Solid stack** (from Timothy's W3C ns archive + Solid Terms vocab):
+//! `ldp`, `acl`, `solid-terms`, `solid-oidc`, `pim-space`, `foaf` under
+//! `bundled/ontologies/w3c-archives/`.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -14,13 +18,50 @@ struct BundledOntologySpec {
     rel_path: &'static str,
 }
 
-const BUNDLED_ONTOLOGIES: &[BundledOntologySpec] = &[BundledOntologySpec {
-    id: "shacl",
-    rel_path: "bundled/ontologies/shacl.ttl",
-}];
+const BUNDLED_ONTOLOGIES: &[BundledOntologySpec] = &[
+    BundledOntologySpec {
+        id: "shacl",
+        rel_path: "bundled/ontologies/shacl.ttl",
+    },
+    // Solid-OutPost / personal pod essentials (w3c-ns archive)
+    BundledOntologySpec {
+        id: "ldp",
+        rel_path: "bundled/ontologies/w3c-archives/ldp.ttl",
+    },
+    BundledOntologySpec {
+        id: "acl",
+        rel_path: "bundled/ontologies/w3c-archives/auth-acl.ttl",
+    },
+    BundledOntologySpec {
+        id: "solid-terms",
+        rel_path: "bundled/ontologies/w3c-archives/solid-terms.ttl",
+    },
+    BundledOntologySpec {
+        id: "solid-oidc",
+        rel_path: "bundled/ontologies/w3c-archives/solid-oidc.ttl",
+    },
+    BundledOntologySpec {
+        id: "pim-space",
+        rel_path: "bundled/ontologies/w3c-archives/pim-space.ttl",
+    },
+    BundledOntologySpec {
+        id: "foaf",
+        rel_path: "bundled/ontologies/w3c-archives/foaf.ttl",
+    },
+];
 
 /// Ontologies seeded into local storage when absent.
-pub const DEFAULT_BUNDLED_ONTOLOGIES: &[&str] = &["shacl"];
+///
+/// SHACL (validation) + Solid LDP stack for the hackathon personal pod / consumer path.
+pub const DEFAULT_BUNDLED_ONTOLOGIES: &[&str] = &[
+    "shacl",
+    "ldp",
+    "acl",
+    "solid-terms",
+    "solid-oidc",
+    "pim-space",
+    "foaf",
+];
 
 fn exe_dir() -> Option<PathBuf> {
     std::env::current_exe()
@@ -46,7 +87,12 @@ pub fn resolve_bundled_ontology_source(id: &str) -> Option<PathBuf> {
 
     if let Ok(extra) = std::env::var("QUALIA_BUNDLED_ONTOLOGIES_DIR") {
         let file_name = Path::new(spec.rel_path).file_name()?;
-        let candidate = PathBuf::from(extra).join(file_name);
+        let candidate = PathBuf::from(&extra).join(file_name);
+        if candidate.is_file() {
+            return Some(candidate);
+        }
+        // Also accept w3c-archives/ subdir under the override root.
+        let candidate = PathBuf::from(extra).join("w3c-archives").join(file_name);
         if candidate.is_file() {
             return Some(candidate);
         }
@@ -88,7 +134,18 @@ fn seed_bundled_ontology_if_missing(
         .ok_or_else(|| format!("Bundled ontology source not found for {ontology_id}"))?;
 
     let catalog = crate::api::load_workspace_catalog();
-    let ont = catalog.find_ontology(ontology_id);
+    // Prefer short id; fall back to w3c-arch-* catalog ids used in w3c-archives/catalog.json
+    let ont = catalog
+        .find_ontology(ontology_id)
+        .or_else(|| catalog.find_ontology(&format!("w3c-arch-{ontology_id}")))
+        .or_else(|| {
+            // acl → w3c-arch-auth-acl
+            if ontology_id == "acl" {
+                catalog.find_ontology("w3c-arch-auth-acl")
+            } else {
+                None
+            }
+        });
     resource_import::ingest_local_rdf(&source, ontology_id, storage_path, ont)
         .map_err(|e| e.to_string())?;
     Ok(true)
@@ -131,6 +188,17 @@ mod tests {
         if tracked.is_file() {
             let src = resolve_bundled_ontology_source("shacl");
             assert!(src.is_some(), "expected bundled SHACL path");
+        }
+    }
+
+    #[test]
+    fn solid_stack_sources_resolve() {
+        for id in ["ldp", "acl", "solid-terms", "solid-oidc", "pim-space", "foaf"] {
+            let src = resolve_bundled_ontology_source(id);
+            assert!(
+                src.is_some(),
+                "expected bundled solid-stack ontology {id} under w3c-archives"
+            );
         }
     }
 }

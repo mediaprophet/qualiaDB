@@ -139,7 +139,11 @@ pub fn default_decode_proxy_model() -> Option<std::path::PathBuf> {
 }
 
 /// Run a short resident decode on `model` under the **current** process backend.
-/// Returns tok/s (engine decode metrics) or `None` on failure.
+/// Returns tok/s (engine **decode-phase** metrics) or `None` on failure.
+///
+/// Warm-up: one short decode builds pipelines / resident plan so the timed
+/// measurement is not dominated by first-token cold cost (explore was reporting
+/// ~half of sticky a0 rates for that reason).
 ///
 /// Safe from CLI (which already owns a Tokio multi-thread runtime): nested
 /// `block_on` panics, so we hop to a fresh OS thread for the measurement.
@@ -153,11 +157,10 @@ pub fn measure_decode_proxy_tok_s(model: &Path, n_tokens: u32) -> Option<f64> {
     let join = std::thread::Builder::new()
         .name("decode-proxy".into())
         .spawn(move || {
-            crate::llm_bench::decode_with_metrics_blocking(
-                &path_str,
-                "The capital of France is",
-                n,
-            )
+            let prompt = "The capital of France is";
+            // Warm: compile shaders + resident plan (discard rate).
+            let _ = crate::llm_bench::decode_with_metrics_blocking(&path_str, prompt, 4);
+            crate::llm_bench::decode_with_metrics_blocking(&path_str, prompt, n)
         })
         .ok()?
         .join();

@@ -4,7 +4,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
 use std::thread;
 
-pub fn spawn_mcp_tcp_server(app_state: AppState) {
+pub fn spawn_mcp_tcp_server(_app_state: std::sync::Arc<AppState>) {
     thread::spawn(move || {
         let listener = match TcpListener::bind("127.0.0.1:4245") {
             Ok(l) => l,

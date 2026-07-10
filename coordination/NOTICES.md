@@ -1,28 +1,66 @@
-2026-07-09 | Grok | CLAIM | **Finish inference plan on Gemma-4 E2B** — convert/optimize, measure, remaining plan items (stops, integrity, wire). | C:/LLM_Models/GGUF/lmstudio-community/gemma-4-E2B-it-GGUF, p64, convert, decode
+2026-07-10 | Grok | CLAIM | **Awesome Qualia-unique path:** multi-weight CUDA residency + graph-guided KV mask + mid-decode grounding inject. | cuda_lane, quant_graph, attention mask, inference_agent
+
+2026-07-10 | Grok | RELEASE (LOCAL) | **M2b Q4_K SoA CUDA dequant-GEMV:** on-device kernel + sticky weight + GEMM wire; CPU differential PASS. Full decode still fence-bound vs resident. | cuda_c, cuda_lane, gemm
+
+2026-07-10 | Grok | CLAIM | **M2b on-device Q4_K CUDA dequant-GEMV** — kernel + wire mode=cuda. | emit/cuda_c, cuda_lane, gemm, dispatch
+
+2026-07-10 | Grok | RELEASE (LOCAL) | **CUDA densify/prewarm:** parallel Q4?dense cache, cache-first TC GEMM, plan prewarm (cuda_weights=N), QUALIA_LLM_CUDA_DECODE opt-in. | cuda_lane, gemm, resident_decode, inference_modes
+
+2026-07-10 | Grok | CLAIM | **M2b + resident CUDA route:** Q4 CUDA dequant-GEMV starter + mode=cuda resident FFN/O path. | cuda_lane, resident_decode, gemm, emit/cuda
+
+2026-07-10 | Grok | RELEASE (LOCAL) | **Multi-mode package close:** cuda_lane weight-cache TC GEMM (mode=cuda); bundled grounding facts.tsv + seed CLI; GEMM hook. M2b fused Q4 CUDA still open. | cuda_lane, gemm, quant_graph, bundled/grounding
+
+2026-07-10 | Grok | CLAIM | **Close multi-mode remaining:** CUDA prefill TC denser path + fact-graph seed file + explore matrix polish. | cuda prefill, quant_graph, bundled facts
+
+2026-07-10 | Grok | RELEASE (LOCAL) | **Multi-mode finish slice:** NQuin fact graph + llm ground; CUDA TC microbench live (A2000 hot 128^3 ~13.5ms); explore --modes matrix. Plan M0/M1/M4 starter done. | quant_graph_grounding, llm_testing, main, plan
+
+2026-07-10 | Grok | CLAIM | **Finish multi-mode depth:** graph-backed quant-graph facts, explore x mode matrix, CUDA path progress. | quant_graph_grounding, llm_testing, dispatch, inference
+
+2026-07-09 | Grok | RELEASE (LOCAL) | **NVRTC PTX cache + quant-graph grounding.** Cached compile for WMMA; quant-graph repairs known fact misses (capitals); explore reports mode. Paris OK. | cuda.rs, quant_graph_grounding, inference_agent, llm_testing
+
+2026-07-09 | Grok | CLAIM | **Continue multi-mode depth:** CUDA TC denser wire + quant-graph verify hook + mode-aware explore. | inference_modes, dispatch, inference_agent, prefill, llm_testing
+
+2026-07-09 | Grok | RELEASE (LOCAL) | **Multi-mode inference + CUDA TC context.** Modes: portable|cuda|quant-graph (CLI llm mode, QUALIA_INFERENCE_MODE). Portable pipeline kept. Persistent CUDA WMMA slab. Plan: inference-multi-mode-and-compression.md. | inference_modes, dispatch, main, plan
+
+2026-07-09 | Grok | CLAIM | **CUDA decode/prefill wire + multi-mode scaffold** (portable|cuda|quant-graph). Lane: wgsl_forge/dispatch, gguf_bridge prefill/gemm, inference mode. | dispatch.rs, prefill*, gemm, inference
+
+2026-07-09 | Grok | CLAIM | **R1 continue:** prefill true GEMM + sampler-compatible resident decode (+ measure). Lane: prefill_arena, prefill_async, resident_decode, inference_agent. | gguf_bridge/prefill*, resident_decode, inference_agent
+
+2026-07-09 | Grok | RELEASE (LOCAL) | **R1 Q-preproject + Sentinel fix.** Resident decode: Q via coop GEMV (proj_row_stride). Sentinel 0x99 false-positive removed (no cur+1 garbage). a0 3B soa ~2.91 tok/s; Paris OK. Decode-proxy warm. Next: prefill GEMM/CUDA. | resident_decode, inference_agent, compute_universe, hardware_passport
+
+2026-07-09 | Grok | CLAIM | **R1 inference wins:** Sentinel 0x99 fix + Q-projection decouple + measure. Lane: inference_agent, resident_decode, fused_attention.wgsl. Aligns with Fable plan; not duplicating passport/explore. | inference_agent.rs, resident_decode.rs, fused_attention.wgsl
+
+2026-07-09 | Grok | RELEASE (LOCAL) | **Explorer plan + llm explore Phase 0.** Plan: docs/plans/native-inference-explorer-eval-plan.md. CLI explore ranks layouts by decode-proxy (subprocess). smollm: f16 28.0 > verbatim 20.9. llama-3B needs dx12 (vulkan device-lost). Next: Phase 2 MatMul wire. Gemma deferred. | llm_testing, main, plan, progress log
+
+2026-07-09 | Fable (claude-fable-5) | PROGRESS | **Inference remediation plan delivered** â†’ docs/plans/inference-remediation-plan.md (analysisâ†’directions; implementation to be allocated by Timothy). Review verdicts: (1) **NO regression/sabotage** â€” engine never exceeded 4.01 tok/s on 3B (repo log 2026-06-27; llama.cpp 60.9 same box documented then as ~17Ã— gap); "18.8" was SmolLM2-360M. (2) **Kernel-bound**: ~9 GB/s effective = 3% of roofline on both backends; fences 1%. (3) R1 confirmed: coop-GEMV live BUT **Q-projection never decoupled** (resident_decode sets proj_row_stride for K/V, not Q; attention = 66% of forward), **RMSNorm = 57 single-thread dispatches/token**, CUDA WMMA certified-on-this-A2000 but zero inference wiring, coopmat dormant (wgpu #9741). (4) **Installing a sampler disables the W1 resident single-fence path** â†’ chat runs the legacy ~107-fence forward. (5) Quality stack: **Sentinel 0x99 detector injects garbage token cur+1 on ~1/256 tokens** (prime quiz suspect, deterministic at seed 0); no system turn; repeat-penalty suppresses <|eot_id|>; SmolLM-regex pretokenizer for all models; eos hypothesis DISCONFIRMED (GGUF eos = 128009). Plan Â§0.5 reconciles with Grok's landed commits (engine pool, SoA layout, metadata-integrity activate, f16 convert, optimize CLI, passport ranking, NVRTC fix) â€” no duplication; biggest unclaimed wins = Q-decouple, RMSNorm, Sentinel fix, sampler-compatible resident decode, prefill GEMM, auto-tuner full build, v5 container, forge LoRA trainer. NOT touching Grok's claimed lanes (llm_testing.rs, main.rs, convert/Gemma). | docs/plans/inference-remediation-plan.md, docs/reports/inference-performance-analysis-for-fable.md
+
+2026-07-09 | Grok | CLAIM | **Explorer + eval plan** ï¿½ plan doc + Phase 0 `llm explore` harness (measure layouts ? rank ? report). Gemma still deferred. | docs/plans/native-inference-explorer-eval-plan.md, llm_testing.rs, main.rs
+
+2026-07-09 | Grok | CLAIM | **Finish inference plan on Gemma-4 E2B** ï¿½ convert/optimize, measure, remaining plan items (stops, integrity, wire). | C:/LLM_Models/GGUF/lmstudio-community/gemma-4-E2B-it-GGUF, p64, convert, decode
 
 2026-07-09 | Grok | RELEASE (LOCAL) | **Remarkable path:** default metadata integrity, engine p64 cache, convert --layout auto (default), llm optimize CLI. Live: smollm2 ? 693MB f16.p64 in 19s + CBOR-LD. Commit c4872920.
 
-2026-07-09 | Grok | CLAIM | **Make inference remarkable** — auto best-layout convert, default fast P64 activate, engine p64 index cache, stop-token fix, optimize CLI. | p64_weight, inference_agent, gguf_bridge, llm_testing, convert
+2026-07-09 | Grok | CLAIM | **Make inference remarkable** ï¿½ auto best-layout convert, default fast P64 activate, engine p64 index cache, stop-token fix, optimize CLI. | p64_weight, inference_agent, gguf_bridge, llm_testing, convert
 
 2026-07-09 | Grok | RELEASE (LOCAL) | P64 IntegrityMode (metadata ~9ms vs full ~2.4s); single from_p64 on decode; passport preferred_backend; reconverted smollm2 + .q42.cbor-ld. Commit ea79d4a6. Remaining: forge TC wire, SoA Q4_K, ternary productize, decode-proxy passport, f16 A/B.
 
-2026-07-09 | Grok | CLAIM | **Inference plan continue** — re-convert + helper; from_p64/CRC/passport decode-proxy; wire forge GEMM where safe; ternary/layout if clear. | p64, model_helper, gguf_bridge, passport, convert CLI
+2026-07-09 | Grok | CLAIM | **Inference plan continue** ï¿½ re-convert + helper; from_p64/CRC/passport decode-proxy; wire forge GEMM where safe; ternary/layout if clear. | p64, model_helper, gguf_bridge, passport, convert CLI
 
-2026-07-09 | Grok | CLAIM | **Inference toolkit probe** — stage-by-stage simple tests of library functions on the inference path; note novel-rep opportunities. | wgsl_forge, p64, device_benchmark, model_helper, ggml, gemm
+2026-07-09 | Grok | CLAIM | **Inference toolkit probe** ï¿½ stage-by-stage simple tests of library functions on the inference path; note novel-rep opportunities. | wgsl_forge, p64, device_benchmark, model_helper, ggml, gemm
 
 2026-07-09 | Grok | RELEASE (LOCAL) | Vault prefers .p64 over .gguf; mount format-neutral; decode applies .q42.cbor-ld stop set. | model_lifecycle, api, resident_model, inference_agent, model_helper
 
-2026-07-09 | Grok | CLAIM | **Inference pipeline continue** — vault prefer .p64, activate ModelHelper (.q42.cbor-ld), wire helper stops into decode; next hot-path if clear. | model_lifecycle, inference_agent, model_helper, gguf_bridge
+2026-07-09 | Grok | CLAIM | **Inference pipeline continue** ï¿½ vault prefer .p64, activate ModelHelper (.q42.cbor-ld), wire helper stops into decode; next hot-path if clear. | model_lifecycle, inference_agent, model_helper, gguf_bridge
 
 2026-07-09 | Grok | RELEASE (LOCAL) | **Continue inference pipeline:** F16Expand p64 layout (CLI --layout f16); Q42T v2 stop ids in tokenizer section; fused single-submit output top-1 when logits resident; coop_gemv f16 path + word-aligned Q4_K loads. Commit 8285ac65. Still open: decode?CUDA WMMA wire, SoA Q4_K, vault prefers .p64, measure f16 tok/s A/B. | p64_weight, gguf_sharder, fused_transformer.wgsl, output.rs, llm_testing, main.rs
 
-2026-07-09 | Grok | CLAIM | **Inference p64 pipeline continued** — W-K wire heavy GEMM/prefill to forge MatMul where possible; convert-time layout hook; passport/stop polish. Lane: gguf_bridge, wgsl_forge, p64_weight, inference. | crates/qualia-core-db/src/{gguf_bridge,wgsl_forge,q42,inference}/
+2026-07-09 | Grok | CLAIM | **Inference p64 pipeline continued** ï¿½ W-K wire heavy GEMM/prefill to forge MatMul where possible; convert-time layout hook; passport/stop polish. Lane: gguf_bridge, wgsl_forge, p64_weight, inference. | crates/qualia-core-db/src/{gguf_bridge,wgsl_forge,q42,inference}/
 
-2026-07-09 | Grok | RELEASE (LOCAL) | **W0+W1+W2+W4 landed.** Metric: CLI uses tokens_generated not provenance len. Multi-stop: eot_id/im_end on decode. Convert: qualia-cli llm convert ? p64+q42 (smollm2 6.3s, 290 tensors). Passport: per-backend GEMV rank; A2000 Dx12 0.110ms wins over Vulkan; gpu_context reads cached passport. Tiled WMMA exists in forge — decode wire is next (W-K). | inference_agent, gguf_sharder, llm_testing, device_benchmark, hardware_passport, gpu_context/caps, main.rs, INFERENCE_P64_PIPELINE_PROGRESS_LOG.md, docs/plans/native-inference-p64-pipeline-remediation.md
+2026-07-09 | Grok | RELEASE (LOCAL) | **W0+W1+W2+W4 landed.** Metric: CLI uses tokens_generated not provenance len. Multi-stop: eot_id/im_end on decode. Convert: qualia-cli llm convert ? p64+q42 (smollm2 6.3s, 290 tensors). Passport: per-backend GEMV rank; A2000 Dx12 0.110ms wins over Vulkan; gpu_context reads cached passport. Tiled WMMA exists in forge ï¿½ decode wire is next (W-K). | inference_agent, gguf_sharder, llm_testing, device_benchmark, hardware_passport, gpu_context/caps, main.rs, INFERENCE_P64_PIPELINE_PROGRESS_LOG.md, docs/plans/native-inference-p64-pipeline-remediation.md
 
-2026-07-09 | Grok | CLAIM | **Native inference p64 pipeline remediation EXECUTION** — W0 metric honesty, W1 multi-stop, W2 convert CLI, W4 passport, W-K1 tiled WMMA. Lane: inference_agent, gguf_sharder, gguf_bridge, p64_weight, qualia-cli, device_benchmark, wgsl_forge emit/cuda. | crates/qualia-core-db/src/inference/, crates/qualia-core-db/src/gguf_bridge/, crates/qualia-cli/, docs/plans/native-inference-p64-pipeline-remediation.md
+2026-07-09 | Grok | CLAIM | **Native inference p64 pipeline remediation EXECUTION** ï¿½ W0 metric honesty, W1 multi-stop, W2 convert CLI, W4 passport, W-K1 tiled WMMA. Lane: inference_agent, gguf_sharder, gguf_bridge, p64_weight, qualia-cli, device_benchmark, wgsl_forge emit/cuda. | crates/qualia-core-db/src/inference/, crates/qualia-core-db/src/gguf_bridge/, crates/qualia-cli/, docs/plans/native-inference-p64-pipeline-remediation.md
 
-2026-07-09 | Grok | RELEASE (PLAN) | **Native inference p64 pipeline remediation plan** — no more investigation theatre. Grounded plan: GGUF/safetensors import-only ? forge convert to p64+q42 (+10d alignment option); subgroups already on decode; tensor-core = single-tile WMMA only (tiled P4c + decode wiring REQUIRED); CUDA forge executor exists but decode never reaches it; productize convert CLI/vault; multi-stop eot_id; metric honesty; HardwarePassport auto-select (Win DX12/Vulkan/CUDA, Apple Metal, mobile arch, Linux secondary); forge LoRA trainer; novel levers. | docs/plans/native-inference-p64-pipeline-remediation.md
+2026-07-09 | Grok | RELEASE (PLAN) | **Native inference p64 pipeline remediation plan** ï¿½ no more investigation theatre. Grounded plan: GGUF/safetensors import-only ? forge convert to p64+q42 (+10d alignment option); subgroups already on decode; tensor-core = single-tile WMMA only (tiled P4c + decode wiring REQUIRED); CUDA forge executor exists but decode never reaches it; productize convert CLI/vault; multi-stop eot_id; metric honesty; HardwarePassport auto-select (Win DX12/Vulkan/CUDA, Apple Metal, mobile arch, Linux secondary); forge LoRA trainer; novel levers. | docs/plans/native-inference-p64-pipeline-remediation.md
 
 2026-07-09 | Claude (Opus 4.8) | PROGRESS | **Honest baseline vs Ollama + analysis brief for Fable.** Same RTX A2000 12GB + same GGUF (llama-3.2-3b-q4_K_M): Ollama (llama.cpp/CUDA) **~70 tok/s**, coherent + instruction-following + admits ignorance; OURS (wgpu/DX12) **~4â€“5 tok/s** decode / ~9 tok/s prefill, correct-on-facts but hallucinates a "quiz" on open prompts; self-metric BROKEN (reports 0.03â€“0.07, ~100Ã— off â€” `token_ids.len()==1`). Gap â‰ˆ **15Ã— decode / 30Ã— prefill** + quality. Vulkan still hangs on llama-3b-q4 (0 tok/600 s). Brief for Fable â†’ `docs/reports/inference-performance-analysis-for-fable.md` (baseline, what's-fixed, severity-ranked problems, arch map, ranked perf hypotheses, the ask). App now testable (DX12 default, coherent on known facts). | docs/reports/inference-performance-analysis-for-fable.md
 
@@ -802,3 +840,157 @@ Timothy corrected: the 10D manifold / computational geometry / PGA work was mean
 2026-07-08 | Devin (GLM-5.2 High) | CLAIM | Building proper native desktop application. Track A: fix WellFair use_effect infinite loop (36 panels) + disabled solvers. Track B: native Tauri shell (menu bar, tab strip, QApp loader for separate WASM modules, GPU surface integration, status bar). Architecture plan at DESKTOP_ARCHITECTURE_PLAN.md. Starting with A1 (WellFair fix) + B1 (native shell) in parallel. | PLATFORM_AUDIT.md, DESKTOP_ARCHITECTURE_PLAN.md, crates/webizen-desktop/src/shell/ (new), crates/webizen-studio/src/components/wellfair/
 2026-07-09 | Grok | CLAIM | **Gemma-4 E2B convert + BF16 attention** â€” finish BF16 attention dequant, convert gemma-4-E2B-it-Q4_K_M to p64+helper, smoke decode. | fused_attention.wgsl, ggml_quants, convert CLI, C:/LLM_Models/P64
 2026-07-09 | Grok | RELEASE (LOCAL) | **BF16 + Gemma-4 convert + arch fail-closed + Llama-3.2-3B smoke.** Gemma p64 3.3GiB (Gemma4 chat/stops); activate refuses gemma4 (PLE/SWA/shared-KV). Llama-3.2-3B p64: Paris. | ggml_quants, fused_*_wgsl, gguf_sharder, p64_weight, load.rs
+2026-07-09 | Grok | CLAIM | **Inference perf first (Gemma deferred)** â€” close remaining optim plan (decode/prefill speed); gemma4 graph AFTER pipeline optim. | gguf_bridge, wgsl_forge, p64, passport, decode
+2026-07-09 | Grok | CLAIM | **SoA Q4_K convert + GEMV** â€” optim track (Gemma deferred). Layout at convert, WGSL coop path, measure llama-3b. | p64_weight, fused_transformer.wgsl, ggml_quants, convert CLI
+2026-07-09 | Grok | CLAIM | **CUDA WMMA prefill wire** â€” forge gemm_f32_tc into prefill heavy matmuls; measure; Gemma still deferred. | wgsl_forge, gguf_bridge/prefill*, gemm, dispatch
+2026-07-09 | Grok | CLAIM | **Optim continue (pre-Gemma)** â€” decode-proxy passport + remaining perf; Gemma held for Timothy discussion. | hardware_passport, device_benchmark, inference_bench, prefill
+
+## 2026-07-10 | Grok | RELEASE (LOCAL) | **Qualia-unique hybrid inference** â€” multi-weight sticky CUDA Q4 SoA residency (512MiB permanent slab); new `qualia_hybrid` (graph AttentionRouteMask + Tensor10D query + fact speculative draft + QUALIA_GRAPH_FORCE + mid-decode logit bias + deontic OP_OBLIGATE on fact match). Wired into inference_agent prepare/decode/sample. Tests: qualia_hybrid 4/4. | crates/qualia-core-db/src/inference/{qualia_hybrid.rs,cuda_lane.rs,inference_agent.rs,mod.rs} + lib.rs + progress log
+
+
+## 2026-07-10 | Grok | RELEASE (LOCAL) | **DirectML fix + A2000 INT4** â€” stage DirectML.dll next to binaries; quiet build success (no cargo:warning spam); DirectML second D3D12 device opt-in only (QUALIA_DIRECTML=1); Q4_K SoA scale word-loads in coop GEMV. Hybrid/graph path unchanged. | build.rs, init.rs, fused_transformer.wgsl, inference_modes.rs
+
+
+## 2026-07-10 | Grok | CLAIM | **Rights-grade multi-track** â€” (1) consumer inference honesty+path, (2) full-release readiness (desktop binaries in CI), (3) GH Pages progress update, (4) start native-visual-intelligence (qualia-vision Phase-1). Not competing lanes: vision crate new; release.yml additive; docs only. | docs/plans/*, crates/qualia-vision (new), .github/workflows/release.yml, docs/*
+
+
+## 2026-07-10 | Grok | RELEASE (LOCAL) | **Rights-grade multi-track start** â€” program doc consumer-human-rights-release-program.md; qualia-vision Phase-1 (API+CPU ref+epistemic quins) 3/3 tests; QUALIA_RIGHTS_MODE bootstrap; release.yml Windows desktop job; pages.yml also deploys 0.0.24; docs progress-0.0.24.html + menu/index/edge-llm honesty. Vision full pipeline not done; inference still not llama.cpp-class. | crates/qualia-vision, docs/plans/*, docs/progress-0.0.24.html, .github/workflows/{release,pages}.yml, inference_modes.rs
+
+
+## 2026-07-10 | Grok | CLAIM | **Revolutionise decode path selection + 5 perf tracks** â€” device benchmark picks fastest backend (dx12/vulkan/cuda/metal/cpu); kernel GEMV + fewer dispatches + multi-weight residency no host RT + prefill/decode policy + quant/quality. Lane: hardware_passport, device_benchmark, inference_modes, cuda_lane, resident_decode, gemm, progress log. | crates/qualia-core-db/src/{platform/hardware_passport.rs,inference/*,gguf_bridge/*}
+
+
+## 2026-07-10 | Grok | RELEASE (LOCAL) | **Path selector + fused resident dispatches** â€” inference_path_selector (passport â†’ dx12/vulkan/metal + lane + quant); auto on bootstrap (QUALIA_PATH_AUTO); CLI `llm path-select`; resident_decode ONE compute pass/layer (was 15) + fused logits GEMV+topk; multi-weight clarified (wgpu VRAM sticky = no host RT; CUDA still per-GEMV readback). Tests path_selector 2/2. | inference_path_selector.rs, resident_decode.rs, inference_modes, cli path-select
+
+
+## 2026-07-10 | Grok | CLAIM | **Rest of decode + FastThenVerify** â€” finish open path items; new mode: full-speed decode (no mid-token sentinel tax) then CML/ontology self-heal before turn finalise. Lane: inference_modes, inference_agent, quant_graph, cml if present, path_selector. | crates/qualia-core-db/src/inference/*, qualia-client-core cml if needed
+
+
+## 2026-07-10 | Grok | RELEASE (LOCAL) | **FastVerify + post-turn CML/HTML self-heal** â€” new InferenceMode::FastVerify (ollama-like uninterrupted decode: skip mid-token Logit ring + DenyRollback); post_turn_verify (quant-graph heal + HTML + CML Turtle); QUALIA_RIGHTS_MODE defaults to FastVerify; CLI mode fast-verify. Honest: GPU GEMV still main gap vs Ollama, not Sentinel. Tests post_turn_verify 2/2, inference_modes 3/3. | post_turn_verify.rs, inference_modes, inference_agent, path_selector, llm_testing
+
+
+## 2026-07-10 | Grok | CLAIM | **Kernel + application profiles** â€” GEMV/Q4 improvements; CUDA residency chain; Batch/overnight mode for high-stakes multi-system eval (no Ollama). Lane: fused_transformer.wgsl, cuda_lane, inference_modes, post_turn_verify. | crates/qualia-core-db/src/{shaders,inference,gguf_bridge}
+
+
+## 2026-07-10 | Grok | RELEASE (LOCAL) | **App profiles + Q4 GEMV kernel LDS act tile** â€” ApplicationProfile interactive|live-fast|batch (8h/2048 tok/HTML for overnight multi-system); coop_gemv Q4_K(+SoA) shared activation tile; timeout override; CLI `llm profile`; no Ollama. CUDA multi-weight sticky weights kept (host act RT honest). | application_profile.rs, fused_transformer.wgsl, inference_bench timeout, inference_agent, cli
+
+
+## 2026-07-10 | Grok | CLAIM | **Awesome surface pack** â€” llm doctor/ready, signature verify HTML, batch showcase demo, pages polish. Surprise quality pass. | inference post_turn_verify, cli llm_testing/main, docs/progress
+
+
+## 2026-07-10 | Grok | CLAIM | **Inference pipeline awesome** â€” real decode speed (kernels, residency, fusion, path). No presentation fluff. Measure if model present. | resident_decode, fused_transformer, gemm, attention, cuda_lane, path
+
+
+## 2026-07-10 | Grok | RELEASE (LOCAL) | **Inference pipeline: mega-pass + measured** â€” ONE compute pass for entire token (all layers+norm+single-chunk logits); skip inactive KV-mask upload; Q4 LDS act tile; CUDA Q4 SoA rewritten as coop 256-thread/row. Measured A2000: smollm Q8 **27.6 tok/s**, F16 **38.1 tok/s**; Llama-3.2-3B soa **1.71 dx12 / 1.57 vulkan**. 3B still compute-bound on GEMV (honest). No Ollama. | resident_decode.rs, fused_transformer.wgsl, cuda_c.rs Q4K_SOA_GEMV, cuda_lane dispatch
+
+
+## 2026-07-10 | Grok | RELEASE (DOC) | **Inference superiority lab plan** â€” full review of qualia_db_functionality_manual + src capability map; defined complete toolset plan (L0 charter, L1 instruments, L2 Arena A tracks, L3 B/C format+eval, L4 lock) to go far beyond Ollama by evidence. | docs/plans/inference-superiority-lab-and-toolset-plan.md
+
+
+## 2026-07-10 | Grok | CLAIM | **Implement superiority lab** â€” WP0 charter + WP1 instruments (lab timeline/roof/micro/ablate/audit) + CLI llm lab + wire timestamps; Arena A hooks. Plan: docs/plans/inference-superiority-lab-and-toolset-plan.md | crates/qualia-core-db/src/inference/lab/, cli, resident_decode, experiments/inference-lab/
+
+
+## 2026-07-10 | Grok | RELEASE (LOCAL) | **Superiority lab L0+L1 shipped** â€” experiments/inference-lab; inference/lab (audit-path, roof, micro, timeline, ablate, CSV); `qualia-cli llm lab`; TIMESTAMP on resident mega-pass (FusedBlock). Live audit: ffn_fusion in resident = NO (T-A1 open). Micro: CUDA Q4 SoA max_abs=0 max_ulp=0. | inference/lab/*, cli lab, resident_decode timestamps, experiments/inference-lab/
+
+
+## 2026-07-10 | Grok | CLAIM | **Autonomous lab self-improve** â€” recursive multi-hour experiment loop; lock-in package (best config + CSV + methodology). | inference/lab/auto_improve.rs, cli lab auto, experiments/inference-lab/lockin/
+
+
+## 2026-07-10 | Grok | PROGRESS | **Autonomous lab auto-improve** â€” auto_improve.rs exported; CLI `llm lab auto --hours N --model`; lock-in package (BEST_CONFIG/METHODOLOGY/apply-best/runs.csv); scripts/lab-auto-improve.ps1. | inference/lab/auto_improve.rs, llm_testing, main Lab args, experiments/inference-lab/lockin/
+
+## 2026-07-10 | Grok | RELEASE (LOCAL) | **Autonomous lab self-improve + lock-in** ï¿½?" `llm lab auto --hours N` recursive config search; emits BEST_CONFIG.json / apply-best.ps1 / METHODOLOGY.md / runs.csv. Smoke A2000 smollm: best **64.1 tok/s** (fast-verify+resident+coop+kv+vulkan), 22 trials / 5 min budget. | auto_improve.rs, cli, scripts/lab-auto-improve.ps1
+
+## 2026-07-10 | Grok | CLAIM | **T-A1 fused FFN in resident mega-pass** â€” wire fused_ffn.wgsl into resident_decode layer sequence (gate+up+silu â†’ one dispatch); ULP/smoke + short lab re-lock. Lane: resident_decode, ffn, fused_ffn, lab audit. | crates/qualia-core-db/src/gguf_bridge/resident_decode.rs, ffn.rs, init.rs
+
+## 2026-07-10 | Grok | RELEASE (LOCAL) | **T-A1 fused FFN in resident mega-pass** â€” native fused_ffn.wgsl pipeline; resident_decode dispatches fused expansion when gate/up share supported quant (Q8_0/Q4_K/â€¦); 13 vs 15 passes/layer. Smoke smollm: fused_ffn=true, 427 passes/token. Honest: naive fused body may lag coop GEMV on Q8 â€” next is kernel body, not wiring. | resident_decode, init ffn_fused_*, audit_path
+
+## 2026-07-10 | Grok | CLAIM | **T-A1b coop fused FFN kernel** â€” workgroup-shared act tile + dual gate/up reduce + silu; wire as resident fused path; A/B vs split coop. | shaders/fused_ffn.wgsl, init, resident_decode
+
+## 2026-07-10 | Grok | RELEASE (LOCAL) | **T-A1b coop fused FFN** â€” `coop_fused_ffn_expansion` (256 thr/row, shared act, dual reduce); resident uses coop pipeline when coop GEMV on. Smol Q8 A/B: fused **27.4** vs split **27.1** tok/s (was naive fused 23.8). Fast-verify ~63. | fused_ffn.wgsl, init ffn_fused_coop, resident_decode
+
+## 2026-07-10 | Grok | CLAIM | **Full remaining decode stack** â€” T-A1c Q4_K header cache + Q4_K_SOA in coop fused FFN; T-A2 CUDA hidden-on-device progress; measure smol + 3B if present. | fused_ffn.wgsl, cuda_lane, resident_decode
+
+## 2026-07-10 | Grok | RELEASE (LOCAL) | **Full remaining stack (T-A1c + T-A2 partial)** â€” coop fused Q4_K header cache + Q4_K_SOA; CUDA sticky_x + fused SwiGLU kernel wired in FFN. Measured: smol fused~27; 3B SoA fused_ffn=true **1.58** vs split 1.56; fast-verify smol **63.8**. Full CUDA residual-on-device still open. | fused_ffn.wgsl, cuda_lane, ffn.rs
+
+## 2026-07-10 | Grok | CLAIM | **Close remaining A-gap path** â€” CUDA residual sticky chain where feasible; logits/attn hot-path; 3B measure + lab auto re-lock. Lane: cuda_lane, resident_decode, gemm, lab. | crates/qualia-core-db/src/{inference/cuda_lane.rs,gguf_bridge/*}
+
+## 2026-07-10 | Grok | RELEASE (LOCAL) | **Mega-pass logits + fused SG + CUDA binding fix** â€” multi-chunk topk cand_base in one pass; coop_fused_ffn_sg; CUDA fused SwiGLU bindings remapped. Measured: smol FV **63.5**; 3B portable **1.55**; **3B CUDA ~7.0** tok/s (~4x portable). Lab auto 3B running â†’ experiments/inference-lab/lockin-3b. A-gap to Ollama still large. | topk, resident_decode, fused_ffn, cuda_lane
+
+## 2026-07-10 | Grok | CLAIM | **Awesome decode push** â€” CUDA residual-on-device layer chain; Q4 matvec strength; 3B re-measure + lockin. | cuda_lane, gemm, ffn, resident_decode, lab lockin-3b
+
+## 2026-07-10 | Grok | RELEASE (LOCAL) | **Awesome pass** â€” CUDA FFN block (device mid, one readback); CUDA warm at engine init; default FastVerify; fixed-token bench (ignore EOS under budget override). Honest: 3B cuda ~7 tok/s, smol FV ~63; Ollama 3B ~72 still ahead. Lockin: experiments/inference-lab/lockin-awesome/. | cuda_lane ffn_block, init warm, inference_agent budget, modes default
+
+## 2026-07-10 | Grok | CLAIM | **Dramatic decode push** â€” find order-of-magnitude wins on 3B path (dispatch fusion, logits, CUDA/resident hybrid, kernel). | resident_decode, fused_transformer, cuda_lane, logits topk, agent
+
+## 2026-07-10 | Grok | CLAIM | **Multi-row coop GEMV** — act-once / many weight rows (3B bandwidth win). Lane: fused_transformer.wgsl, resident_decode dispatch, init pipelines. | shaders, init, resident_decode
+
+## 2026-07-10 | Grok | RELEASE (LOCAL) | **Dramatic push diagnosis + infrastructure** — multirow/warp/barrier-free FFN landed; 3B still ~6.8 tok/s (honest weight-bound). Warp/multirow opt-in. | fused_transformer, fused_ffn, resident_decode, init, lockin-dramatic
+
+## 2026-07-10 | Grok | RELEASE (LOCAL) | **FFN multi-row/warp A/B** — mr 6.67 / warp 6.47 / base 6.71; flat; opt-in only. | fused_ffn.wgsl, resident_decode, init
+
+## 2026-07-10 | Grok | CLAIM | **Full-layer mega-kernel + CUDA residual-on-device** — sequence (1) fuse layer dispatch in resident mega-pass (2) CUDA sticky hidden full token. Lane: resident_decode, fused_transformer/ffn, cuda_lane, ffn, init. | inference decode stack
+
+## 2026-07-10 | Grok | PROGRESS | **Dual K+V + CUDA multirow/resid FFN** — 289 passes/token, 3B still ~6.65 tok/s. | dual_gemv.wgsl, cuda_c, cuda_lane, resident_decode, ffn
+
+## 2026-07-10 | Grok | CLAIM | **CUDA full residual-on-device decode** — sticky hidden layer stack, device GEMV chain, ffn residual, wire non-resident/hybrid. Lane: cuda_lane, cuda_c, ffn, forward/attention, resident_decode. | inference decode
+
+## 2026-07-10 | Grok | RELEASE (LOCAL) | **Excellence CUDA residual** — sticky in-place, 2GiB slab, QKV CUDA path; 3B resident ~6.6; CUDA_DECODE lab ~0.75. | cuda_lane, cuda.rs write_view, attention try_cuda_soa
+
+## 2026-07-10 | Grok | CLAIM | **Native decode performance (honest)** — no external benchmark framing; CUDA on-device attn + residual chain for .soa.p64 path. Model under test: llama-3.2-3b-instruct-q4_k_m.soa.p64 + smollm2-360m Q8. | cuda_lane, attention, decode
+
+## 2026-07-10 | Grok | RELEASE (LOCAL) | **Honest metrics** — models named; 3B soa.p64 ~6.6 tok/s resident; smol FV ~60; no external target framing. | experiments/inference-lab/lockin-dramatic/HONEST_METRICS.md
+
+## 2026-07-10 18:44 | Grok | CLAIM | **Cost-path instrumentation run** — audit-path + roof + micro + timeline on llama-3.2-3b-instruct-q4_k_m.soa.p64; honest cost diagnosis (not marketing). Lane: lab instruments read-only measure. | experiments/inference-lab, llm lab
+
+## 2026-07-10 18:48 | Grok | RELEASE | **Cost-path instrumentation** — timeline+audit+roof+micro on 3B soa.p64; fused_block ~95% GPU; decode_forward~100% host decode; ~6.9 tok/s; ~5% bandwidth util vs Ollama class ~70. Report: experiments/inference-lab/cost-path-*/COST_PATH_REPORT.md |
+
+## 2026-07-10 18:51 | Grok | CLAIM | **Full decode optimise to beat Ollama-class on P64** — cut 289-dispatch tax, Q4 SoA large-tile/bandwidth, measure 3B soa.p64 tok/s. Lane: resident_decode, fused_transformer, fused_ffn, dual_gemv, init. | crates/qualia-core-db/src/gguf_bridge, shaders
+
+## 2026-07-10 19:36 | Grok | RELEASE | **Decode opt pass (honest)** — P64/Q42/D10 path studied; residual_sg + shared CoopGemvBGL; multirow A/B still lose (~6.4 vs ~6.7); default multirow OFF; 3B soa.p64 ~6.74 tok/s. Ollama-class needs CUDA-native layer/token kernels not more WGSL dispatch glue. Report: experiments/inference-lab/lockin-dramatic/OPT_PASS_HONEST.md |
+
+## 2026-07-10 19:39 | Grok | CLAIM | **P64 upgrade plan + implement** — assess draft P64 layout; write living upgrade plan (container+decode); implement first phases; plan self-updates on new opportunities. Lane: p64_weight, plans, decode path. | docs/plans, docs/manuals/standards, q42/p64_weight, inference
+
+## 2026-07-10 19:45 | Grok | RELEASE | **P64 upgrade plan P0+P1** — living plan (must update on new opportunities); layer-major blob order; Q4K_SOA+LAYER_MAJOR flags; reserved I/O; standard v0.2/container v4. P3 next: CUDA layer chain. | docs/plans/p64-decode-upgrade-plan.md, p64_weight.rs, standard
+
+## 2026-07-10 19:46 | Grok | CLAIM | **P64 pipeline-opt + CUDA layer decode (P2–P5)** — redesign P64 for residency/CUDA; implement CUDA native layer chain; measure 3B soa. Lane: p64_weight, cuda_lane, resident_decode, plan. | crates/qualia-core-db
+
+## 2026-07-10 20:11 | Grok | RELEASE | **P64 pipeline-opt + CUDA partial** — layer-pack+schedule+flags; CUDA 16-row GEMV+preload 168 weights; resident 3B ~6.8 tok/s; CUDA_DECODE still ~0.74 (host SDPA). Plan updated living. | p64_weight, cuda_c, cuda_lane, standard, plan
+2026-07-10 | Grok | CLAIM | **P4 only:** device-side SDPA/KV + fewer H2D/D2H on CUDA_DECODE. | cuda_lane, cuda_c, attention, plan p64-decode-upgrade
+2026-07-10 | Grok | RELEASE (LOCAL) | **P4 partial:** device RoPE/KV/SDPA + async CUDA launch + f32 KV for CUDA_DECODE. 3B still ~0.72 tok/s lab; resident ~6.7 default. E3/E4 open. | cuda_lane, cuda_c, attention, plan p64-decode-upgrade
+2026-07-10 | Grok | CLAIM | **P4 continue:** sticky residual full-token CUDA chain (sample-only D2H) — make decode better. | cuda_lane, attention, ffn, forward
+2026-07-10 | Grok | RELEASE (LOCAL) | **Default decode ~6.7?~8.9 tok/s:** parallel RMSNorm + no CUDA weight double-buffer. Triple-QKV opt-in only (A/B lost). | wasm_elementwise, resident_decode, plan
+2026-07-10 | Grok | CLAIM | **Continue decode wins:** E3 logits + fused_block density; architecture free (no users). | resident_decode, output, shaders, plan
+2026-07-10 | Grok | RELEASE (LOCAL) | **Decode ~9.0 tok/s (3B):** dual_gemv subgroup + full-vocab logits E3. FFN multirow still opt-in. fused_block remains the wall. | dual_gemv, resident_decode, plan
+2026-07-10 | Grok | CLAIM | **Continue fused_block density:** attention/SDPA/GEMV hot path. | fused_attention, dual_gemv, resident_decode, plan
+2026-07-10 | Grok | RELEASE (LOCAL) | **E4 prefill:** 1 compute pass/chunk + residual O/down + fused FFN + dual_kv (was 15 passes/op). Decode holds ~9 tok/s. | prefill_arena, plan
+2026-07-10 | Grok | CLAIM | **Continue ~9?higher:** true batched prefill GEMM + decode fused_block density. | prefill, gemm, coop_gemv, plan
+2026-07-10 | Grok | RELEASE (LOCAL) | dual multi-row A/B lose (~8.75); default stays ~9.1 dual 1-row. Prefill E4 single-pass kept. | dual_gemv, resident_decode, plan
+2026-07-10 | Grok | CLAIM | **fused_block focus:** denser FFN/GEMV kernels (not multirow packing). | fused_ffn, fused_transformer, resident_decode
+
+2026-07-10 | Grok | CLAIM | **fused_block density:** barrier-free global-act Q4_SOA GEMV/FFN/dual (drop full-act LDS). | fused_transformer, dual_gemv, fused_ffn, resident_decode
+
+2026-07-10 | Grok | RELEASE (LOCAL) | **fused_block barrier-free global-act Q4_SOA:** GEMV/dual/FFN no full-act LDS. 3B SoA decode **9.70â€“9.86 tok/s** (was ~9.13; full-act A/B 8.51 lose). | fused_transformer, dual_gemv, fused_ffn, plan, progress log
+
+2026-07-10 | Grok | RELEASE (PLAN) | **p64-decode-upgrade-plan rewrite:** progress scoreboard (~9.8 vs Ollama ~70), G0-G5 bars, R/H/M/L worklist to beat Ollama, P5-P8 phases, next-5 actions. | docs/plans/p64-decode-upgrade-plan.md, P64_DECODE_UPGRADE_PROGRESS_LOG.md
+
+2026-07-10 | Grok | CLAIM | **Solid bridge hackathon path:** consumer fetch + personal pod server + demo OIDC wire for webizen-desktop/CLI. | qualia-solid-bridge, qualia-cli, client-core, desktop commands
+
+2026-07-10 | Grok | RELEASE (LOCAL) | **Solid bridge working path:** personal pod LDP+demo OIDC (solid serve), consumer fetch/put/post, desktop sync/fetch no longer stubs. Smoke PUT/GET/OIDC/profile OK. Plan: docs/plans/solid-outpost-hackathon-bridge.md | qualia-solid-bridge, qualia-cli, client-core, desktop
+
+2026-07-10 | Grok | PROGRESS | **Solid ontologies from W3C ns archive:** ldp, acl, solid-oidc, pim-space (+ solid-terms, foaf) synced into bundled/w3c-archives; startup seed + pod /public/ontologies/; vocab.rs IRIs. | bundled/ontologies, solid-bridge, client-core
+
+2026-07-10 | Grok | CLAIM | **Full-impl warning fix (not delete):** wire prewarm_cuda_weight + QualiaCompute dispatch + cuda_warm log in core-db; sample sibling repos. | cuda_lane, gemm, resident_decode
+
+2026-07-10 | Grok | RELEASE (LOCAL) | **Full-impl warning/error pass:** core-db clean (wire prewarm_cuda_weight + QualiaCompute fenced dispatch + dense_weight_cached); webizen-browser studio Mesh/Scene/NativeRenderer + RuntimeSnapshotRecord implemented not deleted; solid stack already green. Legacy qualiaDB 96 warns left (non-primary). | qualia-core-db, webizen-browser
+
+2026-07-11 | Grok | CLAIM | **Zero warnings webizen-browser:** full-impl wire unused scene/telemetry/capability APIs (not delete). | webizen-browser studio+desktop
+
+2026-07-11 | Grok | RELEASE (LOCAL) | **webizen-browser 0 err / 0 crate warn:** log+env_logger desktop init; forge_status mut wire; DICOM W/L presets+sliders+zoom/pan/measure; default_studio_scene SemanticScene overlay; PublicWeb env surface; TensorBufferView full API in render_stack_revision. | webizen-desktop, webizen-studio
+
+2026-07-11 | Grok | CLAIM | **Optional Ollama harness + settings UI:** opt-in inference backend (not Qualia primary); options page; wire AgentBackend path. | llm_agent, client-core, flutter/desktop settings
+
+2026-07-11 | Grok | RELEASE (LOCAL) | **Optional Ollama harness + Settings UI:** ollama_harness (tags/generate/chat/embed), InferenceBackendSettings+Ollama backend kind, chat_inference Ollama path (Qualia retrieval retained), Tauri probe/save cmds, Settings Ollama panel. Plan: docs/plans/optional-ollama-harness.md | client-core, webizen-desktop, webizen-studio
+
+2026-07-11 | Grok | CLAIM | **AU legis ETL + COF/CML:** land legis2cml + batch runner; HTML+RDFa COF vocab; Ollama page classify; ns.webcivics-style packages for 20260630_AU-FED-LEGISLATION. | tools/legislation-etl, webcivics tools, cof.n3
+
+2026-07-11 | Grok | RELEASE (LOCAL) | **AU legis ETL + COF:** tools/legislation-etl (legis2cml + batch + cof.n3); HTML+RDFa COF profile over CML; smoke C2004A00601 83p/297 secs --no-llm. Plan docs/plans/cof-html-rdfa-etl.md. Ollama for full classify. | tools/legislation-etl, webcivics tools

@@ -6,6 +6,67 @@ use super::*;
 const F16_PROMOTE_KEY_TAG: u64 = 0xF16E_F16E_0000_00F1;
 
 impl QTensorEngine {
+    /// Dequant full 2-D weight to dense f32 (row-major n_out × n_in) for CUDA TC path.
+    /// Parallel over rows (rayon) — Q4 densify is cold-path once, then cached.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+    pub(crate) fn dequant_weight_dense_f32(
+        info: &GgufTensorInfo,
+        raw: &[u8],
+        n_in: usize,
+        n_out: usize,
+    ) -> Option<Vec<f32>> {
+        use crate::ggml_quants::dequant_matrix_row_into;
+        use rayon::prelude::*;
+        let total = n_out.checked_mul(n_in)?;
+        if total > crate::inference::cuda_lane::MAX_DENSE_ELEMS {
+            return None;
+        }
+        let mut dense = vec![0.0f32; total];
+        let ok = dense
+            .par_chunks_mut(n_in)
+            .enumerate()
+            .map(|(r, row)| dequant_matrix_row_into(raw, info, r, row).is_ok())
+            .all(|b| b);
+        if ok {
+            Some(dense)
+        } else {
+            None
+        }
+    }
+
+    /// Pre-densify and cache a weight for mode=cuda / TC GEMM (no thrash on first token).
+    ///
+    /// Used by the CUDA_DECODE plan path to fill the host dense-weight cache so
+    /// `try_cuda_batch_gemv` can hit without a cold dequant on first use. Skips
+    /// when already cached, dims too small for WMMA pad-16, or densify fails.
+    #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+    pub(crate) fn prewarm_cuda_weight(
+        info: &GgufTensorInfo,
+        raw: &[u8],
+        n_in: usize,
+        n_out: usize,
+    ) -> bool {
+        if !crate::prefer_tensor_core_gemm() {
+            return false;
+        }
+        if n_in < 16 || n_out < 16 {
+            return false;
+        }
+        // Cap densify cost: one matrix ≤ ~64 MiB f32 (fits 3B FFN rows on A2000 headroom).
+        if n_in.saturating_mul(n_out).saturating_mul(4) > 64 * 1024 * 1024 {
+            return false;
+        }
+        let key = crate::weight_fingerprint(raw, n_in, n_out);
+        if crate::dense_weight_cached(key) {
+            return true;
+        }
+        let Some(dense) = Self::dequant_weight_dense_f32(info, raw, n_in, n_out) else {
+            return false;
+        };
+        crate::cache_dense_weight(key, n_in, n_out, dense);
+        true
+    }
+
     /// Promote a 2-D quant weight (Q4_K / SoA / Q6_K / Q8_0) to a resident **f16** buffer
     /// for the fast coop GEMV path. Returns `(buffer, ggml_type=F16, byte_len, row_elems)`.
     /// `None` when disabled, unsupported type, or OOM/dequant failure — caller keeps quant.
@@ -105,6 +166,47 @@ impl QTensorEngine {
             return false;
         }
 
+        // Mode=cuda acceleration (fail closed → wgpu path below).
+        #[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+        {
+            if crate::prefer_tensor_core_gemm() {
+                // M2b: on-device Q4_K SoA dequant-GEMV (no host densify) — preferred for .soa.p64.
+                if info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA
+                    && crate::try_q4k_soa_gemv(n_in, n_out, &input[..n_in], raw, &mut out[..n_out])
+                {
+                    return true;
+                }
+                // Dense densify+WMMA cache for other types / fallback.
+                if n_in >= 16
+                    && n_out >= 16
+                    && n_in.saturating_mul(n_out) <= crate::inference::cuda_lane::MAX_DENSE_ELEMS
+                {
+                    let key = crate::weight_fingerprint(raw, n_in, n_out);
+                    if crate::try_cuda_batch_gemv_cached_only(
+                        key,
+                        &input[..n_in],
+                        1,
+                        &mut out[..n_out],
+                    ) {
+                        return true;
+                    }
+                    if let Some(dense) = Self::dequant_weight_dense_f32(info, raw, n_in, n_out) {
+                        if crate::try_cuda_batch_gemv_cached(
+                            key,
+                            &input[..n_in],
+                            1,
+                            n_in,
+                            n_out,
+                            &dense,
+                            &mut out[..n_out],
+                        ) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
         let weight_bytes = raw.len();
         // GEMM shader supports a wider quant set than the legacy `ggml_gpu_quant_supported` (Q4_K/Q6_K)
         // — notably Q8_0, which was silently falling back to the CPU `stack_gemm_quant` below (the FFN
@@ -168,42 +270,80 @@ impl QTensorEngine {
             #[cfg(target_arch = "wasm32")]
             let use_coop = false;
             #[cfg(not(target_arch = "wasm32"))]
-            let active_pipeline: &wgpu::ComputePipeline = if use_coop {
+            let use_mr = use_coop
+                && info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA
+                && n_out >= 512;
+            #[cfg(not(target_arch = "wasm32"))]
+            let active_pipeline: &wgpu::ComputePipeline = if use_mr {
+                &self.coop_gemv_mr_pipeline
+            } else if use_coop {
                 &self.coop_gemv_pipeline
             } else {
                 &self.pipeline
             };
             #[cfg(target_arch = "wasm32")]
             let active_pipeline: &wgpu::ComputePipeline = &self.pipeline;
+            #[cfg(target_arch = "wasm32")]
+            let use_mr = false;
 
             #[cfg(not(target_arch = "wasm32"))]
             let bind_layout = self.native_gemm_bind_layout(use_coop).clone();
             #[cfg(target_arch = "wasm32")]
             let bind_layout = active_pipeline.get_bind_group_layout(0);
-            let bind_group = self
-                .gpu_device()
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some("LayerGemmBindGroup"),
-                    layout: &bind_layout,
-                    entries: &[
-                        wgpu::BindGroupEntry {
-                            binding: 0,
-                            resource: input_buf.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 1,
-                            resource: weight_binding.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 2,
-                            resource: params_buf.as_entire_binding(),
-                        },
-                        wgpu::BindGroupEntry {
-                            binding: 3,
-                            resource: output_buf.as_entire_binding(),
-                        },
-                    ],
-                });
+            // CoopGemvBGL is 5-slot (binding 4 = residual). Dummy residual = input.
+            let bind_group = if use_coop {
+                self.gpu_device()
+                    .create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: Some("LayerGemmBindGroup"),
+                        layout: &bind_layout,
+                        entries: &[
+                            wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: input_buf.as_entire_binding(),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 1,
+                                resource: weight_binding.as_entire_binding(),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 2,
+                                resource: params_buf.as_entire_binding(),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 3,
+                                resource: output_buf.as_entire_binding(),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 4,
+                                resource: input_buf.as_entire_binding(),
+                            },
+                        ],
+                    })
+            } else {
+                self.gpu_device()
+                    .create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: Some("LayerGemmBindGroup"),
+                        layout: &bind_layout,
+                        entries: &[
+                            wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: input_buf.as_entire_binding(),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 1,
+                                resource: weight_binding.as_entire_binding(),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 2,
+                                resource: params_buf.as_entire_binding(),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 3,
+                                resource: output_buf.as_entire_binding(),
+                            },
+                        ],
+                    })
+            };
 
             let mut encoder =
                 self.device()
@@ -217,9 +357,13 @@ impl QTensorEngine {
                 });
                 cpass.set_pipeline(active_pipeline);
                 cpass.set_bind_group(0, &bind_group, &[]);
-                if use_coop {
-                    // One workgroup per output row (decode batch = 1). n_out ≤ MAX_STACK_GEMM_OUT
-                    // (10240) < 65535, guarded above, so this is within the dispatch limit.
+                if use_mr {
+                    cpass.dispatch_workgroups(
+                        crate::llm_bench::coop_gemv_workgroups(n_out as u32),
+                        1,
+                        1,
+                    );
+                } else if use_coop {
                     cpass.dispatch_workgroups(n_out as u32, 1, 1);
                 } else {
                     cpass.dispatch_workgroups((n_out as u32 + 63) / 64, 1, 1);

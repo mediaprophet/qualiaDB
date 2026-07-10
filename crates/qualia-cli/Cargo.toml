@@ -16,6 +16,7 @@ mock-agent = []
 clap = { version = "4.6.1", features = ["derive"] }
 qualia-core-db = { path = "../qualia-core-db" }
 qualia-client-core = { path = "../qualia-client-core" }
+qualia-solid-bridge = { path = "../qualia-solid-bridge" }
 tokio = { version = "1.35", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["std"] }

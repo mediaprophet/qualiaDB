@@ -42,48 +42,54 @@ use super::*;
 
 /// 256-byte uniform slot stride (WebGPU min uniform offset alignment).
 const SLOT: wgpu::BufferAddress = 256;
-/// Uniform slots per layer: 6 GEMM + 3 attention + 5 elementwise.
-const SLOTS_PER_LAYER: u64 = 14;
+/// Uniform slots per layer: 7 GEMM (K/V/Q/O/gate/up/down) + 3 attention + 5 elementwise.
+const SLOTS_PER_LAYER: u64 = 15;
 // Slot indices within a layer.
 const S_GEMM_K: u64 = 0;
 const S_GEMM_V: u64 = 1;
-const S_GEMM_O: u64 = 2;
-const S_GEMM_GATE: u64 = 3;
-const S_GEMM_UP: u64 = 4;
-const S_GEMM_DOWN: u64 = 5;
-const S_ATTN_KW: u64 = 6;
-const S_ATTN_VW: u64 = 7;
-const S_ATTN_Q: u64 = 8;
-const S_ELEM_RMS_ATTN: u64 = 9;
-const S_ELEM_ADD1: u64 = 10;
-const S_ELEM_RMS_FFN: u64 = 11;
-const S_ELEM_SILU: u64 = 12;
-const S_ELEM_ADD2: u64 = 13;
+const S_GEMM_Q: u64 = 2;
+const S_GEMM_O: u64 = 3;
+const S_GEMM_GATE: u64 = 4;
+const S_GEMM_UP: u64 = 5;
+const S_GEMM_DOWN: u64 = 6;
+const S_ATTN_KW: u64 = 7;
+const S_ATTN_VW: u64 = 8;
+const S_ATTN_Q: u64 = 9;
+const S_ELEM_RMS_ATTN: u64 = 10;
+const S_ELEM_ADD1: u64 = 11;
+const S_ELEM_RMS_FFN: u64 = 12;
+const S_ELEM_SILU: u64 = 13;
+const S_ELEM_ADD2: u64 = 14;
 
 /// One transformer layer's pre-built bind groups (encode order).
 struct PrefillLayerBinds {
     rms_attn: wgpu::BindGroup,
+    /// Dual K+V when SoA (shared act); else use k_gemm/v_gemm.
+    dual_kv: Option<wgpu::BindGroup>,
     k_gemm: wgpu::BindGroup,
     k_write: wgpu::BindGroup,
     v_gemm: wgpu::BindGroup,
     v_write: wgpu::BindGroup,
+    q_gemm: wgpu::BindGroup,
     q: wgpu::BindGroup,
-    o: wgpu::BindGroup,
-    add1: wgpu::BindGroup,
+    /// O-proj + residual → hidden_b (coop residual GEMV); drops separate add1.
+    o_resid: wgpu::BindGroup,
     rms_ffn: wgpu::BindGroup,
+    /// T-A1 fused SwiGLU when present; else gate/up/silu.
+    fused_ffn: Option<wgpu::BindGroup>,
     gate: wgpu::BindGroup,
     up: wgpu::BindGroup,
     silu: wgpu::BindGroup,
-    down: wgpu::BindGroup,
-    add2: wgpu::BindGroup,
+    /// Down-proj + residual → hidden_a; drops separate add2.
+    down_resid: wgpu::BindGroup,
 }
 
 /// Per-layer prototype params: everything set except the per-call batch fields
 /// (`n_batch`/`batch`/`num_tokens_in_batch`/`batch_start_token_idx`).
 struct PrefillLayerProtos {
-    /// K, V, O, gate, up, down.
-    gemm: [GemmGpuParams; 6],
-    /// k_write, v_write, q.
+    /// K, V, Q, O, gate, up, down.
+    gemm: [GemmGpuParams; 7],
+    /// k_write, v_write, q-sdpa.
     attn: [AttentionGpuParams; 3],
     /// rms_attn, add1, rms_ffn, silu, add2.
     elem: [ElemGpuParams; 5],
@@ -94,6 +100,7 @@ pub(crate) struct PrefillArenaPlan {
     n_embd: usize,
     n_ffn: usize,
     kv_dim: usize,
+    q_dim: usize,
     n_head: u32,
     n_kv_head: u32,
     layout: KvCacheLayout,
@@ -223,6 +230,7 @@ impl QTensorEngine {
                 for (i, slot) in [
                     S_GEMM_K,
                     S_GEMM_V,
+                    S_GEMM_Q,
                     S_GEMM_O,
                     S_GEMM_GATE,
                     S_GEMM_UP,
@@ -274,52 +282,112 @@ impl QTensorEngine {
         } else {
             &self.pipeline
         };
+        let gemv_resid = if plan.use_coop {
+            &self.coop_gemv_residual_pipeline
+        } else {
+            &self.pipeline
+        };
         let rms = self.elem_gpu_pipeline(ELEM_OP_RMS_NORM)?;
-        let add = self.elem_gpu_pipeline(ELEM_OP_ADD_RESIDUAL)?;
         let silu = &self.elem_silu_mul_pipeline;
         let attn = &self.attention_pipeline;
+        let fused_pipe = if plan.use_coop {
+            &self.ffn_fused_coop_pipeline
+        } else {
+            &self.ffn_fused_pipeline
+        };
 
         let gemv_wg = |n_out: u32| {
             if plan.use_coop {
-                n_out
+                n_out // prefill keeps single-row coop (batch axis is y)
             } else {
                 n_out.div_ceil(64)
             }
         };
         let elem_wg = |n: u32| n.div_ceil(64);
         let (n_embd_u, n_ffn_u, kv_dim_u) = (n_embd as u32, plan.n_ffn as u32, plan.kv_dim as u32);
+        let q_dim_u = plan.q_dim as u32;
         let kv_pairs = plan.n_kv_head.max(1) * bu;
 
-        for lb in plan.layers.iter().take(limit as usize) {
-            // (pipeline, bind_group, wg_x, wg_y): wg_y is the batch axis (rows).
-            let seq: [(&wgpu::ComputePipeline, &wgpu::BindGroup, u32, u32); 14] = [
-                (rms, &lb.rms_attn, 1, bu),
-                (gemv, &lb.k_gemm, gemv_wg(kv_dim_u), bu),
-                (attn, &lb.k_write, kv_pairs, 1),
-                (gemv, &lb.v_gemm, gemv_wg(kv_dim_u), bu),
-                (attn, &lb.v_write, kv_pairs, 1),
-                (attn, &lb.q, plan.n_head.max(1), bu),
-                (gemv, &lb.o, gemv_wg(n_embd_u), bu),
-                (add, &lb.add1, elem_wg(n_embd_u), bu),
-                (rms, &lb.rms_ffn, 1, bu),
-                (gemv, &lb.gate, gemv_wg(n_ffn_u), bu),
-                (gemv, &lb.up, gemv_wg(n_ffn_u), bu),
-                (silu, &lb.silu, elem_wg(n_ffn_u), bu),
-                (gemv, &lb.down, gemv_wg(n_embd_u), bu),
-                (add, &lb.add2, elem_wg(n_embd_u), bu),
-            ];
-            for (pipe, bg, wg_x, wg_y) in seq {
-                let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: None,
-                    timestamp_writes: None,
-                });
-                cpass.set_pipeline(pipe);
-                cpass.set_bind_group(0, bg, &[]);
-                cpass.dispatch_workgroups(wg_x, wg_y, 1);
+        // ONE compute pass for the whole chunk (all layers). Previously each of the
+        // 15 ops/layer opened its own begin_compute_pass — ~420 driver passes/chunk
+        // and catastrophic TTFT. Mirror resident_decode: one pass, many dispatches.
+        {
+            let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("ResidentPrefillChunk"),
+                timestamp_writes: None,
+            });
+            for lb in plan.layers.iter().take(limit as usize) {
+                // ~11–13 dispatches/layer with residual-fused O/down (+ optional fused FFN).
+                let dispatch = |cpass: &mut wgpu::ComputePass,
+                                pipe: &wgpu::ComputePipeline,
+                                bg: &wgpu::BindGroup,
+                                wg_x: u32,
+                                wg_y: u32| {
+                    cpass.set_pipeline(pipe);
+                    cpass.set_bind_group(0, bg, &[]);
+                    cpass.dispatch_workgroups(wg_x, wg_y, 1);
+                };
+                dispatch(&mut cpass, rms, &lb.rms_attn, 1, bu);
+                if let Some(ref dual) = lb.dual_kv {
+                    // Match decode: dual multi-row is opt-in (A/B lost on A2000).
+                    let dual_mr = matches!(
+                        std::env::var("QUALIA_LLM_DUAL_MR").ok().as_deref(),
+                        Some("1") | Some("true")
+                    );
+                    const DUAL_ROWS: u32 = 4;
+                    if dual_mr {
+                        dispatch(
+                            &mut cpass,
+                            &self.dual_gemv_mr_pipeline,
+                            dual,
+                            gemv_wg(kv_dim_u).div_ceil(DUAL_ROWS).max(1),
+                            bu,
+                        );
+                    } else {
+                        dispatch(
+                            &mut cpass,
+                            &self.dual_gemv_pipeline,
+                            dual,
+                            gemv_wg(kv_dim_u),
+                            bu,
+                        );
+                    }
+                } else {
+                    dispatch(&mut cpass, gemv, &lb.k_gemm, gemv_wg(kv_dim_u), bu);
+                    dispatch(&mut cpass, gemv, &lb.v_gemm, gemv_wg(kv_dim_u), bu);
+                }
+                dispatch(&mut cpass, attn, &lb.k_write, kv_pairs, 1);
+                dispatch(&mut cpass, attn, &lb.v_write, kv_pairs, 1);
+                dispatch(&mut cpass, gemv, &lb.q_gemm, gemv_wg(q_dim_u), bu);
+                dispatch(&mut cpass, attn, &lb.q, plan.n_head.max(1), bu);
+                // O·attn + residual(hidden_a) → hidden_b
+                dispatch(
+                    &mut cpass,
+                    gemv_resid,
+                    &lb.o_resid,
+                    gemv_wg(n_embd_u),
+                    bu,
+                );
+                dispatch(&mut cpass, rms, &lb.rms_ffn, 1, bu);
+                if let Some(ref fbg) = lb.fused_ffn {
+                    dispatch(&mut cpass, fused_pipe, fbg, gemv_wg(n_ffn_u), bu);
+                } else {
+                    dispatch(&mut cpass, gemv, &lb.gate, gemv_wg(n_ffn_u), bu);
+                    dispatch(&mut cpass, gemv, &lb.up, gemv_wg(n_ffn_u), bu);
+                    dispatch(&mut cpass, silu, &lb.silu, elem_wg(n_ffn_u), bu);
+                }
+                // Down·mid + residual(hidden_b) → hidden_a
+                dispatch(
+                    &mut cpass,
+                    gemv_resid,
+                    &lb.down_resid,
+                    gemv_wg(n_embd_u),
+                    bu,
+                );
             }
         }
 
-        // 4) ONE submit, ONE fence — the KV cache is populated as a side effect.
+        // ONE submit, ONE fence — the KV cache is populated as a side effect.
         queue.submit(Some(encoder.finish()));
         self.poll_wait();
         Some(())
@@ -383,8 +451,11 @@ impl QTensorEngine {
         let hidden_b = mk_storage("PrefillHiddenB", bmax * n_embd);
         let normed = mk_storage("PrefillNormed", bmax * n_embd);
         let attn_out = mk_storage("PrefillAttnOut", bmax * q_dim.max(n_embd));
-        let delta = mk_storage("PrefillDelta", bmax * n_embd);
-        let kv_proj = mk_storage("PrefillKvProj", bmax * kv_dim);
+        // Residual is fused into O/down GEMV — no separate delta buffer.
+        // Separate K/V proj slots so dual GEMV can write both in one dispatch.
+        let k_proj = mk_storage("PrefillKProj", bmax * kv_dim);
+        let v_proj = mk_storage("PrefillVProj", bmax * kv_dim);
+        let q_proj = mk_storage("PrefillQProj", bmax * q_dim);
         let gate_buf = mk_storage("PrefillGate", bmax * n_ffn);
         let up_buf = mk_storage("PrefillUp", bmax * n_ffn);
         let silu_buf = mk_storage("PrefillSilu", bmax * n_ffn);
@@ -422,9 +493,7 @@ impl QTensorEngine {
         let gemm_layout = self.native_gemm_bind_layout(use_coop).clone();
         let attn_layout = self.attention_bind_layout.clone();
         let rms_pipe = self.elem_gpu_pipeline(ELEM_OP_RMS_NORM)?.clone();
-        let add_pipe = self.elem_gpu_pipeline(ELEM_OP_ADD_RESIDUAL)?.clone();
         let rms_layout = rms_pipe.get_bind_group_layout(0);
-        let add_layout = add_pipe.get_bind_group_layout(0);
         let silu_layout = self.elem_silu_mul_bind_layout.clone();
         let mask_buf = self.attention_mask_buf.as_ref()?.clone();
         let kv_buf = self.kv_cache_gpu.as_ref()?.clone();
@@ -482,7 +551,9 @@ impl QTensorEngine {
         let mk_gemm_bg = |input: &wgpu::Buffer,
                           weight: wgpu::BindingResource,
                           p_off: wgpu::BufferAddress,
-                          out: &wgpu::Buffer| {
+                          out: &wgpu::Buffer,
+                          residual: &wgpu::Buffer| {
+            // CoopGemvBGL: binding 4 = residual (dummy = input for non-residual GEMVs).
             device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("PrefillGemmBG"),
                 layout: &gemm_layout,
@@ -502,6 +573,10 @@ impl QTensorEngine {
                     wgpu::BindGroupEntry {
                         binding: 3,
                         resource: out.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 4,
+                        resource: residual.as_entire_binding(),
                     },
                 ],
             })
@@ -599,13 +674,16 @@ impl QTensorEngine {
                     return None;
                 }
             }
+            let (q_in, q_out) = Self::matmul_dims(&q_info);
             let (k_in, k_out) = Self::matmul_dims(&k_info);
             let (v_in, v_out) = Self::matmul_dims(&v_info);
             let (o_in, o_out) = Self::matmul_dims(&o_info);
             let (g_in, g_out) = Self::matmul_dims(&gate_info);
             let (u_in, u_out) = Self::matmul_dims(&up_info);
             let (d_in, d_out) = Self::matmul_dims(&down_info);
-            if k_in != n_embd
+            if q_in != n_embd
+                || q_out != q_dim
+                || k_in != n_embd
                 || v_in != n_embd
                 || k_out != kv_dim
                 || v_out != kv_dim
@@ -679,8 +757,8 @@ impl QTensorEngine {
                 0,
             );
             v_p.proj_row_stride = kv_dim as u32;
-            // Q: in-shader projection over `normed` (proj_row_stride = 0), output stride = q_dim.
-            let q_p = Self::attention_gpu_params(
+            // Q: coop GEMV preprojects into `q_proj`; SDPA reads with proj_row_stride = q_dim.
+            let mut q_p = Self::attention_gpu_params(
                 &h,
                 &layout,
                 l,
@@ -694,6 +772,7 @@ impl QTensorEngine {
                 0,
                 q_dim as u32,
             );
+            q_p.proj_row_stride = q_dim as u32;
 
             protos.push(PrefillLayerProtos {
                 gemm: [
@@ -710,6 +789,13 @@ impl QTensorEngine {
                         kv_dim,
                         v_info.dims[0] as u32,
                         v_raw.len(),
+                    ),
+                    gemm_proto(
+                        q_info.ggml_type,
+                        n_embd,
+                        q_dim,
+                        q_info.dims[0] as u32,
+                        q_raw.len(),
                     ),
                     gemm_proto(
                         o_info.ggml_type,
@@ -733,6 +819,85 @@ impl QTensorEngine {
             });
 
             let lu = l as u64;
+            // Fused SwiGLU when gate/up share a supported quant (same gate as resident_decode).
+            let fused_ok = crate::llm_bench::ffn_fusion_enabled()
+                && g_ty == u_ty
+                && matches!(
+                    g_ty,
+                    crate::ggml_quants::GGML_TYPE_Q4_0
+                        | crate::ggml_quants::GGML_TYPE_Q5_0
+                        | crate::ggml_quants::GGML_TYPE_Q8_0
+                        | crate::ggml_quants::GGML_TYPE_Q4_K
+                        | crate::ggml_quants::GGML_TYPE_Q4_K_SOA
+                        | crate::ggml_quants::GGML_TYPE_Q6_K
+                );
+            let fused_ffn = if fused_ok {
+                Some(device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("PrefillFusedFfn"),
+                    layout: &self.ffn_fused_bind_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: normed.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: g_w.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 2,
+                            resource: u_w.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 3,
+                            resource: ubind(&param_arena, slot_off(lu, S_GEMM_GATE), gp_sz),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 4,
+                            resource: silu_buf.as_entire_binding(),
+                        },
+                    ],
+                }))
+            } else {
+                None
+            };
+            let dual_kv = if k_info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA
+                && v_info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA
+                && use_coop
+            {
+                Some(device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("PrefillDualKv"),
+                    layout: &self.dual_gemv_bind_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: normed.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: k_w.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 2,
+                            resource: ubind(&param_arena, slot_off(lu, S_GEMM_K), gp_sz),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 3,
+                            resource: k_proj.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 4,
+                            resource: v_w.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 5,
+                            resource: v_proj.as_entire_binding(),
+                        },
+                    ],
+                }))
+            } else {
+                None
+            };
             layers.push(PrefillLayerBinds {
                 rms_attn: mk_elem_bg(
                     &rms_layout,
@@ -741,33 +906,39 @@ impl QTensorEngine {
                     &normed,
                     slot_off(lu, S_ELEM_RMS_ATTN),
                 ),
+                dual_kv,
                 k_gemm: mk_gemm_bg(
                     &normed,
                     k_w.as_entire_binding(),
                     slot_off(lu, S_GEMM_K),
-                    &kv_proj,
+                    &k_proj,
+                    &normed,
                 ),
-                k_write: mk_attn_bg(&kv_proj, &k_w, slot_off(lu, S_ATTN_KW), l, &attn_out),
+                k_write: mk_attn_bg(&k_proj, &k_w, slot_off(lu, S_ATTN_KW), l, &attn_out),
                 v_gemm: mk_gemm_bg(
                     &normed,
                     v_w.as_entire_binding(),
                     slot_off(lu, S_GEMM_V),
-                    &kv_proj,
+                    &v_proj,
+                    &normed,
                 ),
-                v_write: mk_attn_bg(&kv_proj, &v_w, slot_off(lu, S_ATTN_VW), l, &attn_out),
-                q: mk_attn_bg(&normed, &q_w, slot_off(lu, S_ATTN_Q), l, &attn_out),
-                o: mk_gemm_bg(
+                v_write: mk_attn_bg(&v_proj, &v_w, slot_off(lu, S_ATTN_VW), l, &attn_out),
+                q_gemm: mk_gemm_bg(
+                    &normed,
+                    q_w.as_entire_binding(),
+                    slot_off(lu, S_GEMM_Q),
+                    &q_proj,
+                    &normed,
+                ),
+                // hidden = precomputed Q; weight unused when proj_row_stride != 0.
+                q: mk_attn_bg(&q_proj, &q_w, slot_off(lu, S_ATTN_Q), l, &attn_out),
+                // O·attn + residual(hidden_a) → hidden_b
+                o_resid: mk_gemm_bg(
                     &attn_out,
                     o_w.as_entire_binding(),
                     slot_off(lu, S_GEMM_O),
-                    &delta,
-                ),
-                add1: mk_elem_bg(
-                    &add_layout,
-                    hidden_a.as_entire_binding(),
-                    delta.as_entire_binding(),
                     &hidden_b,
-                    slot_off(lu, S_ELEM_ADD1),
+                    &hidden_a,
                 ),
                 rms_ffn: mk_elem_bg(
                     &rms_layout,
@@ -776,17 +947,20 @@ impl QTensorEngine {
                     &normed,
                     slot_off(lu, S_ELEM_RMS_FFN),
                 ),
+                fused_ffn,
                 gate: mk_gemm_bg(
                     &normed,
                     g_w.as_entire_binding(),
                     slot_off(lu, S_GEMM_GATE),
                     &gate_buf,
+                    &normed,
                 ),
                 up: mk_gemm_bg(
                     &normed,
                     u_w.as_entire_binding(),
                     slot_off(lu, S_GEMM_UP),
                     &up_buf,
+                    &normed,
                 ),
                 silu: mk_elem_bg(
                     &silu_layout,
@@ -795,32 +969,44 @@ impl QTensorEngine {
                     &silu_buf,
                     slot_off(lu, S_ELEM_SILU),
                 ),
-                down: mk_gemm_bg(
+                // Down·mid + residual(hidden_b) → hidden_a
+                down_resid: mk_gemm_bg(
                     &silu_buf,
                     d_w.as_entire_binding(),
                     slot_off(lu, S_GEMM_DOWN),
-                    &delta,
-                ),
-                add2: mk_elem_bg(
-                    &add_layout,
-                    hidden_b.as_entire_binding(),
-                    delta.as_entire_binding(),
                     &hidden_a,
-                    slot_off(lu, S_ELEM_ADD2),
+                    &hidden_b,
                 ),
             });
         }
 
+        let use_fused = layers.iter().any(|l| l.fused_ffn.is_some());
+        let use_dual = layers.iter().any(|l| l.dual_kv.is_some());
+        // 11 with fused; -1 for dual K+V vs separate.
+        let passes = if use_fused {
+            if use_dual {
+                10
+            } else {
+                11
+            }
+        } else if use_dual {
+            12
+        } else {
+            13
+        };
         log::info!(
-            "LLM_PREFILL|resident-arena|built: {} layers, {} passes/chunk, 1 fence/chunk",
+            "LLM_PREFILL|resident-arena|built: {} layers, {} dispatches/layer (1 compute pass/chunk), fused_ffn={} dual_kv={}",
             n_layer,
-            n_layer as usize * 14,
+            passes,
+            use_fused,
+            use_dual,
         );
         Some(Box::new(PrefillArenaPlan {
             key,
             n_embd,
             n_ffn,
             kv_dim,
+            q_dim,
             n_head: n_head as u32,
             n_kv_head: n_kv as u32,
             layout,

@@ -115,7 +115,43 @@ pub async fn handle(action: &McpAction, qpu_enabled: bool) {
                 eprintln!("MCP doctor failed: {err}");
             }
         }
+        McpAction::DesktopProxy => {
+            if let Err(err) = run_desktop_proxy() {
+                eprintln!("MCP desktop proxy failed: {err}");
+            }
+        }
     }
+}
+
+/// Proxy MCP stdio ↔ the Webizen Desktop GUI's TCP MCP server (127.0.0.1:4245). An external MCP
+/// client that speaks stdio (e.g. an editor agent) can drive the desktop app's tool surface through
+/// this bridge: each stdin JSON-RPC line is forwarded to the desktop server and its reply written to
+/// stdout.
+fn run_desktop_proxy() -> Result<(), String> {
+    let stream = TcpStream::connect("127.0.0.1:4245")
+        .map_err(|e| format!("connect desktop MCP (127.0.0.1:4245): {e}"))?;
+    let mut tcp_writer = stream.try_clone().map_err(|e| e.to_string())?;
+    let mut tcp_reader = BufReader::new(stream);
+    let stdin = std::io::stdin();
+    let stdout = std::io::stdout();
+    let mut reply = String::new();
+    for req in stdin.lock().lines() {
+        let req = req.map_err(|e| e.to_string())?;
+        if req.trim().is_empty() {
+            continue;
+        }
+        tcp_writer.write_all(req.as_bytes()).map_err(|e| e.to_string())?;
+        tcp_writer.write_all(b"\n").map_err(|e| e.to_string())?;
+        tcp_writer.flush().ok();
+        reply.clear();
+        if tcp_reader.read_line(&mut reply).map_err(|e| e.to_string())? == 0 {
+            break;
+        }
+        let mut out = stdout.lock();
+        out.write_all(reply.as_bytes()).map_err(|e| e.to_string())?;
+        out.flush().ok();
+    }
+    Ok(())
 }
 
 async fn serve_tcp(bind: &str, qpu_enabled: bool) -> Result<(), String> {

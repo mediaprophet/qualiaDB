@@ -107,8 +107,22 @@ const TEST_VOCAB_CHUNK_CAP: u32 = 4;
 #[cfg(not(test))]
 const TEST_VOCAB_CHUNK_CAP: u32 = 0;
 
-/// Maximum milliseconds for a local inference call before timeout.
+/// Default maximum milliseconds for a local inference call (interactive).
+/// Batch/overnight profile raises this via `llm_bench::inference_timeout_ms()`.
 pub const INFERENCE_TIMEOUT_MS: u64 = 30_000;
+
+/// Effective timeout: batch profile / env may extend (e.g. 8h overnight jobs).
+#[inline]
+fn effective_inference_timeout_ms() -> u64 {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        return crate::llm_bench::inference_timeout_ms();
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        INFERENCE_TIMEOUT_MS
+    }
+}
 
 // ─── AgentBackend ────────────────────────────────────────────────────────────
 /// Describes where inference actually runs.
@@ -776,8 +790,9 @@ impl LocalLlmAgent {
     /// On native targets: loads the GGUF model, tokenises the prompt, and runs an
     /// autoregressive decode loop via `QTensorEngine::dispatch_fused_transformer_block`.
     /// Logit summaries flow from the LLM engine thread to the Webizen Sentinel (this
-    /// thread) over a wait-free SPSC ring; the Sentinel injects `DenyRollback` when
-    /// it detects the 0x99 anachronism byte in the top-logit's bit pattern.
+    /// thread) over a wait-free SPSC ring. The Sentinel may inject `DenyRollback`
+    /// for real governance signals; the old IEEE-754 `0x99` mantissa check was
+    /// removed (it fired randomly ~1/256 tokens and corrupted the stream).
     ///
     /// On WASM / non-local backends: falls through to the original mock path.
     /// Run local inference, optionally streaming decoded text deltas to `on_token`.
@@ -845,6 +860,9 @@ impl LocalLlmAgent {
                 }
             };
             let prompt_owned = prompt.to_string();
+
+            // Multi-mode: portable | cuda | quant-graph (`QUALIA_INFERENCE_MODE`).
+            let _mode = crate::inference_modes::bootstrap_inference_mode();
 
             // ── LoRA context detection (before thread spawn) ─────────────────
             // Detect the prompt domain and pre-load the matching LoRA adapter.
@@ -1125,6 +1143,9 @@ impl LocalLlmAgent {
                     crate::tensor::Tensor10D::default(),
                     0,
                 );
+                // Qualia-unique hybrid: graph route mask + 10D query + deontic obligation.
+                // Must run *after* the default query publish so it is not wiped.
+                crate::qualia_hybrid::prepare_hybrid_decode(&prompt_owned);
 
                 let t_decode = std::time::Instant::now();
                 // A1a: GPU top-1 decode path toggle (default-on; QUALIA_LLM_GPU_TOPK / set_gpu_topk).
@@ -1161,6 +1182,35 @@ impl LocalLlmAgent {
                     reserved: [0; 40],
                 };
 
+                // QUALIA_GRAPH_FORCE=1: emit grounded repair tokens without model decode.
+                let mut graph_force_emitted = false;
+                #[cfg(not(target_arch = "wasm32"))]
+                if let Some(forced) = crate::qualia_hybrid::force_fact_tokens(&prompt_owned, &|s| {
+                    tok.encode(s)
+                }) {
+                    for &tid in &forced {
+                        let next = tid % vlen.max(1);
+                        out_ids.push(next);
+                        ctx.push(next);
+                        if let Some(ref tx) = stream_tx_thread {
+                            let full = tok.decode(&out_ids);
+                            if full.len() > streamed_len {
+                                let delta = full[streamed_len..].to_string();
+                                streamed_len = full.len();
+                                let _ = tx.send(delta);
+                            }
+                        }
+                        let fixed = crate::llm_bench::decode_budget_fixed_tokens();
+                        if out_ids.len() >= gen_budget
+                            || (!fixed && tok.is_stop_token(next))
+                        {
+                            break;
+                        }
+                    }
+                    graph_force_emitted = true;
+                }
+
+                if !graph_force_emitted {
                 for step in 0..gen_budget {
                     crate::gpu_context::record_llm_decode_step();
 
@@ -1168,7 +1218,7 @@ impl LocalLlmAgent {
                     // the old post-hoc check in infer() that let a no-EOS run continue for minutes.
                     // t_decode starts at decode entry (post-prefill); INFERENCE_TIMEOUT_MS bounds the
                     // generation phase so the call never appears frozen.
-                    if t_decode.elapsed().as_millis() as u64 >= INFERENCE_TIMEOUT_MS {
+                    if t_decode.elapsed().as_millis() as u64 >= effective_inference_timeout_ms() {
                         break;
                     }
 
@@ -1181,23 +1231,24 @@ impl LocalLlmAgent {
                         crate::inference::thermal_telemetry::thermal_tick();
                     }
 
-                    // W6a — prompt-lookup speculative decode (default OFF, exact-output). Draft the
-                    // next few tokens by n-gram lookup, verify them in ONE batched forward, and emit
-                    // the longest greedily-agreeing prefix + the model's own correction token. Only
-                    // when no sieve/sampler/route is active and the full model runs (unit-test layer
-                    // cap keeps per-layer semantics). Bit-identical to greedy (a6a). Falls through to
-                    // the normal path on any ineligibility.
+                    // W6a — prompt-lookup / graph fact speculative decode (default OFF, exact-output).
+                    // Prefer quant-graph fact draft when mode=quant-graph; else n-gram prompt-lookup.
+                    // FastVerify: skip mid-decode fact draft (post-turn heal only) for Ollama-like speed.
+                    // Verify drafts in ONE batched forward. Bit-identical to greedy when accepted.
                     #[cfg(not(target_arch = "wasm32"))]
-                    if crate::llm_bench::spec_decode_enabled()
+                    if (crate::llm_bench::spec_decode_enabled()
+                        || (crate::inference_modes::quant_graph_grounding_enabled()
+                            && crate::inference_modes::sentinel_mid_decode_enabled()))
                         && sieve.is_none()
                         && sampler.is_none()
                         && TEST_TRANSFORMER_LAYER_CAP == 0
                     {
                         if let Some(idx) = tensor_idx.as_ref() {
                             let cur = *ctx.last().unwrap_or(&tok.bos_token_id);
-                            let draft = crate::prompt_lookup::propose(
+                            let draft = crate::qualia_hybrid::propose_best_draft(
+                                &prompt_owned,
                                 &ctx,
-                                crate::prompt_lookup::MAX_DRAFT,
+                                &|s| tok.encode(s),
                             );
                             if draft.len > 0 {
                                 // inputs = [cur, d0..d_{m-1}] at positions [pos, pos+m], pos = ctx.len()-1.
@@ -1222,20 +1273,15 @@ impl LocalLlmAgent {
                                     crate::llm_bench::record_spec_step(m as u64, k as u64);
                                     let mut stop = false;
                                     for i in 0..=k {
-                                        let (tokn, logv) = if i < k {
+                                        let (tokn, _logv) = if i < k {
                                             (draft.tokens[i], alog[i])
                                         } else {
                                             (amax[k], alog[k])
                                         };
-                                        // Sentinel: anomaly flag from the top logit's IEEE-754 bytes.
-                                        let anomaly = if logv.to_le_bytes()[0] == 0x99 {
-                                            0x99u8
-                                        } else {
-                                            0x01u8
-                                        };
+                                        // anomaly 0x01 = normal. Do not use random mantissa bytes.
                                         let _ = lp.push(LlmMsg::Logit(LogitSummary {
                                             _top_id: tokn,
-                                            anomaly,
+                                            anomaly: 0x01u8,
                                         }));
                                         let next = tokn % vlen;
                                         out_ids.push(next);
@@ -1248,7 +1294,10 @@ impl LocalLlmAgent {
                                                 let _ = tx.send(delta);
                                             }
                                         }
-                                        if tok.is_stop_token(next) || out_ids.len() >= gen_budget {
+                                        let fixed = crate::llm_bench::decode_budget_fixed_tokens();
+                                        if out_ids.len() >= gen_budget
+                                            || (!fixed && tok.is_stop_token(next))
+                                        {
                                             stop = true;
                                             break;
                                         }
@@ -1295,8 +1344,12 @@ impl LocalLlmAgent {
 
                     drain_tensor_context_inject();
                     let _attention_mask = crate::compute_universe::attention_route_mask();
-                    // Check ControlStream for a DenyRollback injected in the previous step.
-                    let mut rollback = cc.pop().is_ok();
+                    // FastVerify: skip ControlStream — no mid-decode DenyRollback tax.
+                    let mut rollback = if crate::inference_modes::sentinel_mid_decode_enabled() {
+                        cc.pop().is_ok()
+                    } else {
+                        false
+                    };
                     if matches!(draft_step, TopologyDraftStep::Denied) {
                         rollback = true;
                     }
@@ -1335,36 +1388,63 @@ impl LocalLlmAgent {
                             // was produced and the KV cache was written; `None` falls through to
                             // the legacy per-layer path unchanged (non-sieve, full-depth only —
                             // the unit-test 2-layer cap keeps its per-layer semantics).
+                            // Resident single-fence forward:
+                            //   • greedy → GPU top-1 inside the encoder
+                            //   • sampler → same layer stack, read back post-norm hidden, then
+                            //     full logits + CPU sample (chat no longer pays ~107 fences/token)
                             #[cfg(not(target_arch = "wasm32"))]
-                            let resident_hit = if gpu_topk_enabled
-                                && sieve_mask.is_none()
-                                && sampler.is_none()
+                            let (resident_hit, resident_hidden_ok) = if sieve_mask.is_none()
                                 && TEST_TRANSFORMER_LAYER_CAP == 0
                             {
                                 let t_res = std::time::Instant::now();
-                                let hit = engine.dispatch_token_forward_resident(
-                                    idx,
-                                    &emb_buf[..emb_dim],
-                                    token_idx,
-                                );
-                                if hit.is_some() {
-                                    crate::llm_bench::add_decode_forward_ns(
-                                        t_res.elapsed().as_nanos() as u64,
+                                if sampler.is_some() {
+                                    // Sampling does not need GPU top-1; resident still wins.
+                                    // Copy embedding input aside so out_hidden can reuse emb_buf.
+                                    scratch_a[..emb_dim].copy_from_slice(&emb_buf[..emb_dim]);
+                                    let ok = engine.dispatch_token_forward_resident_hidden(
+                                        idx,
+                                        &scratch_a[..emb_dim],
+                                        token_idx,
+                                        &mut emb_buf[..emb_dim],
                                     );
-                                    crate::llm_bench::record_resident_hit();
+                                    if ok {
+                                        crate::llm_bench::add_decode_forward_ns(
+                                            t_res.elapsed().as_nanos() as u64,
+                                        );
+                                        crate::llm_bench::record_resident_hit();
+                                        (None, true)
+                                    } else {
+                                        crate::llm_bench::record_resident_fallback();
+                                        (None, false)
+                                    }
+                                } else if gpu_topk_enabled {
+                                    let hit = engine.dispatch_token_forward_resident(
+                                        idx,
+                                        &emb_buf[..emb_dim],
+                                        token_idx,
+                                    );
+                                    if hit.is_some() {
+                                        crate::llm_bench::add_decode_forward_ns(
+                                            t_res.elapsed().as_nanos() as u64,
+                                        );
+                                        crate::llm_bench::record_resident_hit();
+                                    } else {
+                                        crate::llm_bench::record_resident_fallback();
+                                    }
+                                    (hit, false)
                                 } else {
-                                    crate::llm_bench::record_resident_fallback();
+                                    (None, false)
                                 }
-                                hit
                             } else {
-                                None
+                                (None, false)
                             };
                             #[cfg(target_arch = "wasm32")]
-                            let resident_hit: Option<
-                                crate::gguf_bridge::StreamingArgmaxResult,
-                            > = None;
+                            let (resident_hit, resident_hidden_ok): (
+                                Option<crate::gguf_bridge::StreamingArgmaxResult>,
+                                bool,
+                            ) = (None, false);
 
-                            if resident_hit.is_none() {
+                            if resident_hit.is_none() && !resident_hidden_ok {
                                 // Decode-profiler: time the 32-layer forward (legacy path).
                                 let t_fwd = std::time::Instant::now();
                                 let _layers = engine.dispatch_transformer_forward(
@@ -1414,8 +1494,17 @@ impl LocalLlmAgent {
                                         &mut sampler_logits[..vocab],
                                     );
                                     if written == vocab {
-                                        let tok = s.sample(&mut sampler_logits[..vocab], &ctx);
-                                        Some((tok as usize, sampler_logits[tok as usize]))
+                                        // Neuro-symbolic: soft-boost graph answer tokens before sample.
+                                        let _ = crate::qualia_hybrid::apply_graph_logit_bias(
+                                            &prompt_owned,
+                                            &mut sampler_logits[..vocab],
+                                            &|s| {
+                                                let ids = tok.encode(s);
+                                                ids.first().copied()
+                                            },
+                                        );
+                                        let tid = s.sample(&mut sampler_logits[..vocab], &ctx);
+                                        Some((tid as usize, sampler_logits[tid as usize]))
                                     } else {
                                         None
                                     }
@@ -1549,14 +1638,6 @@ impl LocalLlmAgent {
                         )
                     };
 
-                    // Anomaly flag: 0x99 as the first byte of the top logit's IEEE-754
-                    // representation is the sentinel value for an anachronistic token.
-                    let anomaly = if top_v.to_le_bytes()[0] == 0x99 {
-                        0x99u8
-                    } else {
-                        0x01u8
-                    };
-
                     // #48 diagnostic: reveal eos vs argmax for the first step (gated, native).
                     if step == 0 && std::env::var("QUALIA_LLM_DEBUG_DECODE").is_ok() {
                         eprintln!(
@@ -1587,22 +1668,27 @@ impl LocalLlmAgent {
                         }
                     }
 
-                    // Push logit summary; non-blocking — drops silently if ring is full.
-                    let _ = lp.push(LlmMsg::Logit(LogitSummary {
-                        _top_id: top_i as u32,
-                        anomaly,
-                    }));
+                    // FastVerify: skip per-token Logit ring push (only Eos ends the turn).
+                    if crate::inference_modes::sentinel_mid_decode_enabled() {
+                        // anomaly 0x01 = normal. Removed IEEE mantissa 0x99 check (random ~1/256 fire).
+                        let _ = lp.push(LlmMsg::Logit(LogitSummary {
+                            _top_id: top_i as u32,
+                            anomaly: 0x01u8,
+                        }));
+                    }
 
-                    // On DenyRollback, substitute a safe neighbour token instead of argmax.
                     if sieve_failed {
                         break;
                     }
 
-                    let next = if rollback {
-                        cur.wrapping_add(1) % vlen
-                    } else {
-                        (top_i as u32) % vlen
-                    };
+                    // DenyRollback must never inject sequential garbage (cur+1).
+                    if rollback {
+                        log::warn!(
+                            "LLM_DECODE|sentinel-deny-rollback|keeping argmax token {} (no cur+1)",
+                            top_i
+                        );
+                    }
+                    let next = (top_i as u32) % vlen;
 
                     if let Some(ref mut s) = sieve {
                         match s.apply_token(next) {
@@ -1630,12 +1716,16 @@ impl LocalLlmAgent {
                                 let _ = tx.send(delta);
                             }
                         }
-                        // Stop on eos AND chat end-of-turn (e.g. <|eot_id|>, <|im_end|>).
-                        if tok.is_stop_token(next) {
+                        // Stop on eos AND chat end-of-turn — unless fixed-token bench override.
+                        let fixed = crate::llm_bench::decode_budget_fixed_tokens();
+                        if out_ids.len() >= gen_budget
+                            || (!fixed && tok.is_stop_token(next))
+                        {
                             break;
                         }
                     }
                 }
+                } // end else: normal decode (not QUALIA_GRAPH_FORCE)
 
                 // Phase boundary: decode loop complete.
                 crate::llm_bench::record_decode(
@@ -1649,7 +1739,20 @@ impl LocalLlmAgent {
                 } else if sieve_failed {
                     String::from("[sieve-misaligned]")
                 } else {
-                    tok.decode(&out_ids)
+                    let raw = tok.decode(&out_ids);
+                    // Post-turn path (FastVerify / QuantGraph): generate full draft at
+                    // full speed, then graph/CML self-heal + optional HTML surface.
+                    if crate::inference_modes::post_turn_verify_enabled() {
+                        let v = crate::post_turn_verify::verify_and_heal_turn(&prompt_owned, &raw);
+                        if crate::post_turn_verify::return_html_as_text() {
+                            v.display_html
+                        } else {
+                            v.final_text
+                        }
+                    } else {
+                        crate::quant_graph_grounding::maybe_ground_generation(&prompt_owned, &raw)
+                            .text
+                    }
                 };
                 (text, out_ids.len() as u32, semantic_quin, sieve_failed)
                     }, // sticky_infer::with_engine f
@@ -1658,6 +1761,9 @@ impl LocalLlmAgent {
             }); // sticky pool spawn
 
             // ── Webizen Sentinel (calling thread) ────────────────────────────
+            // FastVerify: still drain stream + wait for Eos, but ignore anomaly mid-decode
+            // (no DenyRollback) so generation is uninterrupted like Ollama.
+            let mid_sentinel = crate::inference_modes::sentinel_mid_decode_enabled();
             let mut drain_tokens = || {
                 if let (Some((_, ref rx)), Some(cb)) = (&stream_pair, on_token.as_mut()) {
                     while let Ok(delta) = rx.try_recv() {
@@ -1671,7 +1777,7 @@ impl LocalLlmAgent {
                 match lc.pop() {
                     Ok(LlmMsg::Eos) => break,
                     Ok(LlmMsg::Logit(s)) => {
-                        if s.anomaly == 0x99 {
+                        if mid_sentinel && s.anomaly == 0x99 {
                             let _ = cp.push(SentMsg::DenyRollback);
                         }
                     }
@@ -1727,6 +1833,9 @@ impl LocalLlmAgent {
                 return (String::new(), vec![prov_hash], 0, None);
             }
             let prompt_owned = prompt.to_string();
+
+            // Multi-mode: portable | cuda | quant-graph (`QUALIA_INFERENCE_MODE`).
+            let _mode = crate::inference_modes::bootstrap_inference_mode();
 
             // ── LoRA context detection (before thread spawn) ─────────────────
             // Detect the prompt domain and pre-load the matching LoRA adapter.
@@ -1909,6 +2018,7 @@ impl LocalLlmAgent {
                     crate::tensor::Tensor10D::default(),
                     0,
                 );
+                crate::qualia_hybrid::prepare_hybrid_decode(&prompt_owned);
 
                 for step in 0..gen_budget {
                     crate::gpu_context::record_llm_decode_step();
@@ -2045,29 +2155,22 @@ impl LocalLlmAgent {
                         )
                     };
 
-                    // Anomaly flag: 0x99 as the first byte of the top logit's IEEE-754
-                    // representation is the sentinel value for an anachronistic token.
-                    let anomaly = if top_v.to_le_bytes()[0] == 0x99 {
-                        0x99u8
-                    } else {
-                        0x01u8
-                    };
+                    // anomaly 0x01 = normal. Removed IEEE mantissa 0x99 check (random ~1/256 fire).
+                    let anomaly = 0x01u8;
+                    let _ = anomaly; // reserved for real governance signals
 
-                    // Inline Sentinel Check
-                    if anomaly == 0x99 {
-                        rollback = true;
-                    }
-
-                    // On DenyRollback, substitute a safe neighbour token instead of argmax.
                     if sieve_failed {
                         break;
                     }
 
-                    let next = if rollback {
-                        cur.wrapping_add(1) % vlen
-                    } else {
-                        (top_i as u32) % vlen
-                    };
+                    // DenyRollback must never inject sequential garbage (cur+1).
+                    if rollback {
+                        log::warn!(
+                            "LLM_DECODE|sentinel-deny-rollback|keeping argmax token {} (no cur+1)",
+                            top_i
+                        );
+                    }
+                    let next = (top_i as u32) % vlen;
 
                     if let Some(ref mut s) = sieve {
                         match s.apply_token(next) {
@@ -2095,7 +2198,10 @@ impl LocalLlmAgent {
                                 cb(delta);
                             }
                         }
-                        if tok.is_stop_token(next) {
+                        let fixed = crate::llm_bench::decode_budget_fixed_tokens();
+                        if out_ids.len() >= gen_budget
+                            || (!fixed && tok.is_stop_token(next))
+                        {
                             break;
                         }
                     }
@@ -2106,7 +2212,18 @@ impl LocalLlmAgent {
                 } else if sieve_failed {
                     String::from("[sieve-misaligned]")
                 } else {
-                    tok.decode(&out_ids)
+                    let raw = tok.decode(&out_ids);
+                    if crate::inference_modes::post_turn_verify_enabled() {
+                        let v = crate::post_turn_verify::verify_and_heal_turn(&prompt_owned, &raw);
+                        if crate::post_turn_verify::return_html_as_text() {
+                            v.display_html
+                        } else {
+                            v.final_text
+                        }
+                    } else {
+                        crate::quant_graph_grounding::maybe_ground_generation(&prompt_owned, &raw)
+                            .text
+                    }
                 };
 
                 // Return engine to global instance
@@ -2294,7 +2411,7 @@ impl AgentRuntime for LocalLlmAgent {
         }
 
         // Timeout guard (production: run in a separate thread with channel)
-        let deadline = Duration::from_millis(INFERENCE_TIMEOUT_MS);
+        let deadline = Duration::from_millis(effective_inference_timeout_ms());
         let (text, provenance, tokens, semantic_quin) =
             self.infer_local_model(prompt, graph_context);
         if t0.elapsed() > deadline {

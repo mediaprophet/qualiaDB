@@ -208,7 +208,7 @@ impl HypermediaContainer {
 
 /// The same 60-bit FNV-1a subject hash `render/assets.rs` uses — so a container's reference to a mesh asset
 /// resolves to the *identical* subject that asset's own `mesh_to_nquins` manifest emits (one identity space).
-pub(crate) fn fnv60(bytes: &[u8]) -> u64 {
+pub fn fnv60(bytes: &[u8]) -> u64 {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
     for &b in bytes {
         h ^= b as u64;
