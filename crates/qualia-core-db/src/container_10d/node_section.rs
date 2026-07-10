@@ -218,7 +218,9 @@ pub fn write_node_section_aos(
     out[..NODE_MINI_HEADER_SIZE].copy_from_slice(header_bytes);
     let mut off = NODE_MINI_HEADER_SIZE;
     for t in tensors {
-        let tb: &[u8; TENSOR10D_SIZE] = bytemuck::cast_ref(t);
+        // bytemuck only Pod-implements [u8; N] for N<=32; use bytes_of for 40-byte Tensor10D.
+        let tb = bytemuck::bytes_of(t);
+        debug_assert_eq!(tb.len(), TENSOR10D_SIZE);
         out[off..off + TENSOR10D_SIZE].copy_from_slice(tb);
         off += TENSOR10D_SIZE;
     }

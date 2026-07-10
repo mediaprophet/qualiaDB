@@ -91,12 +91,18 @@ pub const CIE_D65_Z: f32 = 1.08883;
 
 /// Spectral Power Distribution: radiant power at 41 wavelength samples
 /// (380–780 nm, 10 nm steps). POD, zero-heap, stack-allocated.
+///
+/// Manual `Pod`/`Zeroable`: bytemuck only auto-implements `[f32; N]` for N ≤ 32.
 #[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, Pod, Zeroable)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Spd {
     /// Power values at 380, 390, ..., 780 nm.
     pub samples: [f32; SPD_SAMPLES],
 }
+
+// SAFETY: `Spd` is `repr(C)` with only `f32` fields; every bit pattern is valid.
+unsafe impl Zeroable for Spd {}
+unsafe impl Pod for Spd {}
 
 impl Default for Spd {
     #[inline]
