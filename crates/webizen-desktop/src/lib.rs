@@ -2,6 +2,7 @@
 
 pub mod commands;
 pub mod companion_gateway;
+pub mod desktop_log;
 pub mod webrtc_manager;
 pub mod med_reminder_notifier;
 pub mod native_surface;

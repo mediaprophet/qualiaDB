@@ -14,58 +14,93 @@ pub enum HostSurface {
 
 /// Base URL of the local Webizen daemon HTTP server (manifest, telemetry).
 pub const DAEMON_HTTP: &str = "http://127.0.0.1:8080";
+const DEFAULT_DAEMON_PORT: u16 = 8080;
 /// Local native-LLM / handshake WebSocket.
 pub const NATIVE_WS: &str = "ws://127.0.0.1:4242";
 /// Custom web-module sandbox RPC socket.
 pub const MODULE_RPC_WS: &str = "ws://127.0.0.1:9001";
 
 /// `{DAEMON_HTTP}/manifest` — workspace manifest GET/POST.
+pub fn daemon_http() -> String {
+    format!("http://127.0.0.1:{}", settings_port())
+}
+
+#[cfg(target_arch = "wasm32")]
+fn settings_port() -> u16 {
+    js_sys::Reflect::get(
+        &js_sys::global(),
+        &wasm_bindgen::JsValue::from_str("__WEBIZEN_SETTINGS_PORT"),
+    )
+    .ok()
+    .and_then(|v| v.as_f64())
+    .map(|v| v as u16)
+    .filter(|port| *port > 0)
+    .unwrap_or(DEFAULT_DAEMON_PORT)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn settings_port() -> u16 {
+    DEFAULT_DAEMON_PORT
+}
+
 pub fn manifest_url() -> String {
-    format!("{DAEMON_HTTP}/manifest")
+    format!("{}/manifest", daemon_http())
 }
 
 /// `{DAEMON_HTTP}/manifest/history` — Quin WAL deploy checkpoints.
 pub fn manifest_history_url() -> String {
-    format!("{DAEMON_HTTP}/manifest/history")
+    format!("{}/manifest/history", daemon_http())
 }
 
 /// Live Qualia Portal design studio (T2 WASM stack).
 pub fn portal_design_studio_url() -> String {
-    format!("{DAEMON_HTTP}/design-studio.html")
+    format!("{}/design-studio.html", daemon_http())
 }
 
 pub fn assets_catalog_url() -> String {
-    format!("{DAEMON_HTTP}/api/assets/catalog")
+    format!("{}/api/assets/catalog", daemon_http())
 }
 
 pub fn assets_enqueue_url() -> String {
-    format!("{DAEMON_HTTP}/api/assets/enqueue")
+    format!("{}/api/assets/enqueue", daemon_http())
 }
 
 pub fn job_url(job_id: &str) -> String {
-    format!("{DAEMON_HTTP}/api/jobs/{job_id}")
+    format!("{}/api/jobs/{job_id}", daemon_http())
 }
 
 pub fn manifest_replay_url(revision: u64) -> String {
-    format!("{DAEMON_HTTP}/manifest/replay/{revision}")
+    format!("{}/manifest/replay/{revision}", daemon_http())
 }
 
 /// `{DAEMON_HTTP}/generate_pane` — keyword/domain pane layout planner.
 pub fn generate_pane_url() -> String {
-    format!("{DAEMON_HTTP}/generate_pane")
+    format!("{}/generate_pane", daemon_http())
 }
 
 pub fn manifest_undo_chain_url() -> String {
-    format!("{DAEMON_HTTP}/manifest/undo-chain")
+    format!("{}/manifest/undo-chain", daemon_http())
 }
 
 pub fn manifest_undo_frame_url(stack_index: u16) -> String {
-    format!("{DAEMON_HTTP}/manifest/undo-frame?stack_index={stack_index}")
+    format!("{}/manifest/undo-frame?stack_index={stack_index}", daemon_http())
 }
 
 /// `{DAEMON_HTTP}/telemetry` — server-sent telemetry stream.
 pub fn telemetry_url() -> String {
-    format!("{DAEMON_HTTP}/telemetry")
+    format!("{}/telemetry", daemon_http())
+}
+
+pub fn status_url() -> String {
+    format!("{}/api/status", daemon_http())
+}
+
+pub fn logs_url() -> String {
+    format!("{}/api/logs", daemon_http())
+}
+
+pub fn logs_page_url() -> String {
+    format!("{}/logs", daemon_http())
 }
 
 /// Native LLM / handshake WebSocket endpoint (desktop daemon).

@@ -13,6 +13,7 @@ pub mod telemetry;
 pub mod theme_engine;
 
 use dioxus::prelude::*;
+use serde::Deserialize;
 use studio_canvas::DynamicPage;
 use theme_engine::ResolvedTheme;
 #[cfg(target_arch = "wasm32")]
@@ -28,6 +29,13 @@ extern "C" {
         event: &str,
         handler: &js_sys::Function,
     ) -> Result<js_sys::Function, wasm_bindgen::JsValue>;
+}
+
+#[cfg(target_arch = "wasm32")]
+fn event_payload_string(event: &JsValue) -> Option<String> {
+    js_sys::Reflect::get(event, &JsValue::from_str("payload"))
+        .ok()
+        .and_then(|payload| payload.as_string())
 }
 
 fn main() {
@@ -57,6 +65,9 @@ pub enum Route {
 
     #[route("/settings")]
     SettingsRoute {},
+
+    #[route("/logs")]
+    LogsRoute {},
 
     #[route("/about")]
     AboutRoute {},
@@ -334,6 +345,11 @@ fn SettingsRoute() -> Element {
 }
 
 #[component]
+fn LogsRoute() -> Element {
+    rsx! { DesktopLogsPage {} }
+}
+
+#[component]
 fn AboutRoute() -> Element {
     rsx! { components::about_page::AboutPage {} }
 }
@@ -341,15 +357,206 @@ fn AboutRoute() -> Element {
 const INTER_FONT: &str =
     "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap";
 
+#[derive(Clone, Debug, Default, PartialEq, Deserialize)]
+struct JobQueueCounts {
+    queued: usize,
+    running: usize,
+    completed: usize,
+    failed: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+struct DesktopStatus {
+    settings_port: u16,
+    graph_daemon_port: u16,
+    graph_daemon_reachable: bool,
+    graph_engine_version: Option<String>,
+    qapps_protocol_port: u16,
+    storage_path: String,
+    inference_backend: String,
+    daemon_running_flag: bool,
+    job_queue: JobQueueCounts,
+}
+
+impl Default for DesktopStatus {
+    fn default() -> Self {
+        Self {
+            settings_port: 8080,
+            graph_daemon_port: 4242,
+            graph_daemon_reachable: false,
+            graph_engine_version: None,
+            qapps_protocol_port: 0,
+            storage_path: "local node".to_string(),
+            inference_backend: "local".to_string(),
+            daemon_running_flag: false,
+            job_queue: JobQueueCounts::default(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Deserialize)]
+struct DesktopLogEntry {
+    ts: String,
+    level: String,
+    message: String,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Deserialize)]
+struct DesktopLogsResponse {
+    log_file: String,
+    entries: Vec<DesktopLogEntry>,
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn fetch_desktop_status() -> Result<DesktopStatus, String> {
+    reqwest::get(crate::endpoints::status_url())
+        .await
+        .map_err(|e| e.to_string())?
+        .json::<DesktopStatus>()
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn fetch_desktop_logs() -> Result<DesktopLogsResponse, String> {
+    reqwest::get(crate::endpoints::logs_url())
+        .await
+        .map_err(|e| e.to_string())?
+        .json::<DesktopLogsResponse>()
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+async fn fetch_desktop_status() -> Result<DesktopStatus, String> {
+    Ok(DesktopStatus::default())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+async fn fetch_desktop_logs() -> Result<DesktopLogsResponse, String> {
+    Ok(DesktopLogsResponse::default())
+}
+
+fn status_chip(status: &DesktopStatus) -> (&'static str, &'static str) {
+    if status.graph_daemon_reachable {
+        ("Online", "#10b981")
+    } else if status.daemon_running_flag {
+        ("Starting", "#f59e0b")
+    } else {
+        ("Local only", "#94a3b8")
+    }
+}
+
+fn log_level_color(level: &str) -> &'static str {
+    match level {
+        "error" => "#f87171",
+        "warn" => "#fbbf24",
+        _ => "#86efac",
+    }
+}
+
+fn refresh_desktop_logs(
+    mut logs: Signal<DesktopLogsResponse>,
+    mut status: Signal<String>,
+) {
+    spawn(async move {
+        match fetch_desktop_logs().await {
+            Ok(next) => {
+                status.set(format!("{} entries", next.entries.len()));
+                logs.set(next);
+            }
+            Err(err) => status.set(format!("Log fetch failed: {err}")),
+        }
+    });
+}
+
+#[component]
+fn DesktopLogsPage() -> Element {
+    let logs = use_signal(DesktopLogsResponse::default);
+    let status = use_signal(|| "Loading desktop logs".to_string());
+
+    use_effect(move || {
+        refresh_desktop_logs(logs, status);
+        #[cfg(target_arch = "wasm32")]
+        {
+            let mut logs = logs;
+            let mut status = status;
+            spawn(async move {
+                loop {
+                    gloo_timers::future::sleep(std::time::Duration::from_secs(3)).await;
+                    match fetch_desktop_logs().await {
+                        Ok(next) => {
+                            status.set(format!("{} entries", next.entries.len()));
+                            logs.set(next);
+                        }
+                        Err(err) => status.set(format!("Log fetch failed: {err}")),
+                    }
+                }
+            });
+        }
+    });
+
+    let response = logs();
+    let raw_url = crate::endpoints::logs_page_url().replace("/logs", "/api/logs/text");
+
+    rsx! {
+        div {
+            style: "width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column; padding: 1.25rem; gap: 1rem;",
+            div {
+                style: "display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;",
+                div {
+                    h1 { style: "margin: 0 0 0.25rem; font-size: 1.15rem; font-weight: 700; color: var(--qualia-text);", "Desktop Logs" }
+                    p { style: "margin: 0; color: var(--qualia-text-muted); font-size: 0.78rem; max-width: 760px;", "{response.log_file}" }
+                }
+                div {
+                    style: "display: flex; align-items: center; gap: 0.5rem;",
+                    span { style: "color: var(--qualia-text-muted); font-size: 0.75rem;", "{status()}" }
+                    button {
+                        onclick: move |_| refresh_desktop_logs(logs, status),
+                        style: "border: 1px solid var(--qualia-border); background: var(--qualia-surface); color: var(--qualia-text); border-radius: 8px; padding: 0.55rem 0.8rem; cursor: pointer;",
+                        "Refresh"
+                    }
+                    a {
+                        href: "{raw_url}",
+                        target: "_blank",
+                        style: "border: 1px solid var(--qualia-border); background: rgba(128,128,128,0.08); color: var(--qualia-text); border-radius: 8px; padding: 0.55rem 0.8rem; text-decoration: none;",
+                        "Raw"
+                    }
+                }
+            }
+            div {
+                style: "flex: 1; min-height: 0; overflow: auto; background: rgba(0,0,0,0.24); border: 1px solid var(--qualia-border); border-radius: 10px; padding: 0.75rem; font-family: ui-monospace, SFMono-Regular, Consolas, monospace;",
+                if response.entries.is_empty() {
+                    div { style: "color: var(--qualia-text-muted); font-size: 0.82rem;", "No log entries yet." }
+                } else {
+                    for entry in response.entries.iter().rev() {
+                        div {
+                            key: "{entry.ts}-{entry.message}",
+                            style: "display: grid; grid-template-columns: 190px 72px minmax(0,1fr); gap: 0.75rem; padding: 0.35rem 0.4rem; border-bottom: 1px solid rgba(128,128,128,0.08); color: var(--qualia-text); font-size: 0.76rem; line-height: 1.45;",
+                            span { style: "color: var(--qualia-text-muted); white-space: nowrap;", "{entry.ts}" }
+                            span {
+                                style: "font-weight: 700; color: {log_level_color(&entry.level)};",
+                                "{entry.level}"
+                            }
+                            span { style: "white-space: pre-wrap; overflow-wrap: anywhere;", "{entry.message}" }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[component]
 fn AppLayout() -> Element {
     let theme_state = consume_context::<Signal<ResolvedTheme>>();
     let navigator = use_navigator();
-    let settings_listener_started = use_signal(|| false);
+    let native_menu_listener_started = use_signal(|| false);
+    let host_status = use_signal(DesktopStatus::default);
     #[cfg(not(target_arch = "wasm32"))]
     let _ = navigator;
     #[cfg(not(target_arch = "wasm32"))]
-    let _ = settings_listener_started;
+    let _ = native_menu_listener_started;
     let t = theme_state();
     let accent = t
         .tokens
@@ -370,25 +577,43 @@ fn AppLayout() -> Element {
     use_effect(move || {
         #[cfg(target_arch = "wasm32")]
         {
+            let mut host_status = host_status;
+            spawn(async move {
+                loop {
+                    if crate::endpoints::is_native_host() {
+                        if let Ok(next) = fetch_desktop_status().await {
+                            host_status.set(next);
+                        }
+                    }
+                    gloo_timers::future::sleep(std::time::Duration::from_secs(4)).await;
+                }
+            });
+        }
+    });
+
+    use_effect(move || {
+        #[cfg(target_arch = "wasm32")]
+        {
             if crate::endpoints::current_host_surface()
                 != crate::endpoints::HostSurface::DesktopWebview
-                || settings_listener_started()
+                || native_menu_listener_started()
             {
                 return;
             }
 
-            let mut settings_listener_started = settings_listener_started;
-            settings_listener_started.set(true);
+            let mut native_menu_listener_started = native_menu_listener_started;
+            native_menu_listener_started.set(true);
             let navigator = navigator;
 
             wasm_bindgen_futures::spawn_local(async move {
-                let callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                    let _ = navigator.push(Route::SettingsRoute {});
+                let settings_nav = navigator.clone();
+                let settings_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                    let _ = settings_nav.push(Route::SettingsRoute {});
                 }));
 
-                match tauri_listen("open-settings", callback.as_ref().unchecked_ref()).await {
+                match tauri_listen("open-settings", settings_callback.as_ref().unchecked_ref()).await {
                     Ok(_unlisten) => {
-                        callback.forget();
+                        settings_callback.forget();
                     }
                     Err(err) => {
                         web_sys::console::error_1(
@@ -396,9 +621,288 @@ fn AppLayout() -> Element {
                         );
                     }
                 }
+
+                let menu_nav = navigator.clone();
+                let menu_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |event| {
+                    let Some(target) = event_payload_string(&event) else {
+                        return;
+                    };
+                    let _ = match target.as_str() {
+                        "dashboard" => menu_nav.push(Route::DashboardRoute {}),
+                        "wellfair" => menu_nav.push(Route::WellfairRoute {}),
+                        "chora" => menu_nav.push(Route::ChoraRoute {}),
+                        "browser" => menu_nav.push(Route::BrowserRoute {}),
+                        "10d-browser" => menu_nav.push(Route::TenDBrowserRoute {}),
+                        "settings" => menu_nav.push(Route::SettingsRoute {}),
+                        "library" => menu_nav.push(Route::LibraryRoute {}),
+                        "wallet" | "identity" => menu_nav.push(Route::IdentityRoute {}),
+                        "qapp-studio" => menu_nav.push(Route::StudioRoute {}),
+                        "qapps" => menu_nav.push(Route::QAppsRoute {}),
+                        "render-preview" => menu_nav.push(Route::RenderPreviewRoute {}),
+                        "anatomy" => menu_nav.push(Route::AnatomyRoute {}),
+                        "health" => menu_nav.push(Route::HealthRoute {}),
+                        "tools" => menu_nav.push(Route::ToolsRoute {}),
+                        "sanctuary" => menu_nav.push(Route::SanctuaryRoute {}),
+                        "logs" => menu_nav.push(Route::LogsRoute {}),
+                        _ => menu_nav.push(Route::DashboardRoute {}),
+                    };
+                }));
+
+                match tauri_listen("shell-navigate", menu_callback.as_ref().unchecked_ref()).await {
+                    Ok(_unlisten) => {
+                        menu_callback.forget();
+                    }
+                    Err(err) => {
+                        web_sys::console::error_1(
+                            &format!("native menu listener failed: {err:?}").into(),
+                        );
+                    }
+                }
+
+                let diagnostics_nav = navigator.clone();
+                let diagnostics_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                    let _ = diagnostics_nav.push(Route::ToolsRoute {});
+                }));
+
+                match tauri_listen(
+                    "diagnostics-result",
+                    diagnostics_callback.as_ref().unchecked_ref(),
+                )
+                .await
+                {
+                    Ok(_unlisten) => {
+                        diagnostics_callback.forget();
+                    }
+                    Err(err) => {
+                        web_sys::console::error_1(
+                            &format!("diagnostics listener failed: {err:?}").into(),
+                        );
+                    }
+                }
+
+                let health_nav = navigator.clone();
+                let med_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                    let _ = health_nav.push(Route::HealthRoute {});
+                }));
+
+                match tauri_listen("open-med-reminders", med_callback.as_ref().unchecked_ref()).await
+                {
+                    Ok(_unlisten) => {
+                        med_callback.forget();
+                    }
+                    Err(err) => {
+                        web_sys::console::error_1(
+                            &format!("med reminders listener failed: {err:?}").into(),
+                        );
+                    }
+                }
+
+                let sanctuary_nav = navigator.clone();
+                let sanctuary_callback =
+                    Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                        let _ = sanctuary_nav.push(Route::SanctuaryRoute {});
+                    }));
+
+                match tauri_listen(
+                    "open-sanctuary-unlock",
+                    sanctuary_callback.as_ref().unchecked_ref(),
+                )
+                .await
+                {
+                    Ok(_unlisten) => {
+                        sanctuary_callback.forget();
+                    }
+                    Err(err) => {
+                        web_sys::console::error_1(
+                            &format!("sanctuary listener failed: {err:?}").into(),
+                        );
+                    }
+                }
+
+                let backup_nav = navigator.clone();
+                let backup_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                    let _ = backup_nav.push(Route::ToolsRoute {});
+                }));
+
+                match tauri_listen("open-backup", backup_callback.as_ref().unchecked_ref()).await {
+                    Ok(_unlisten) => {
+                        backup_callback.forget();
+                    }
+                    Err(err) => {
+                        web_sys::console::error_1(
+                            &format!("backup listener failed: {err:?}").into(),
+                        );
+                    }
+                }
+
+                let sync_nav = navigator.clone();
+                let sync_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                    let _ = sync_nav.push(Route::ToolsRoute {});
+                }));
+
+                match tauri_listen("open-sync-inbox", sync_callback.as_ref().unchecked_ref()).await {
+                    Ok(_unlisten) => {
+                        sync_callback.forget();
+                    }
+                    Err(err) => {
+                        web_sys::console::error_1(
+                            &format!("sync inbox listener failed: {err:?}").into(),
+                        );
+                    }
+                }
+
+                let import_nav = navigator.clone();
+                let import_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                    let _ = import_nav.push(Route::ToolsRoute {});
+                }));
+
+                match tauri_listen("shell-import-samsung", import_callback.as_ref().unchecked_ref())
+                    .await
+                {
+                    Ok(_unlisten) => {
+                        import_callback.forget();
+                    }
+                    Err(err) => {
+                        web_sys::console::error_1(
+                            &format!("import listener failed: {err:?}").into(),
+                        );
+                    }
+                }
+
+                let view_logs_callback =
+                    Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                        if let Some(window) = web_sys::window() {
+                            let _ = window.open_with_url("/logs");
+                        }
+                    }));
+
+                match tauri_listen("shell-view-logs", view_logs_callback.as_ref().unchecked_ref())
+                    .await
+                {
+                    Ok(_unlisten) => {
+                        view_logs_callback.forget();
+                    }
+                    Err(err) => {
+                        web_sys::console::error_1(
+                            &format!("view logs listener failed: {err:?}").into(),
+                        );
+                    }
+                }
+
+                let close_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                    web_sys::console::debug_1(&"close tab requested; Studio uses single-window routing".into());
+                }));
+                if tauri_listen("shell-close-tab", close_callback.as_ref().unchecked_ref())
+                    .await
+                    .is_ok()
+                {
+                    close_callback.forget();
+                }
+
+                let new_window_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                    web_sys::console::debug_1(&"new window requested; not implemented yet".into());
+                }));
+                if tauri_listen("shell-new-window", new_window_callback.as_ref().unchecked_ref())
+                    .await
+                    .is_ok()
+                {
+                    new_window_callback.forget();
+                }
+
+                let gpu_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                    web_sys::console::debug_1(&"GPU toggle requested from native menu".into());
+                }));
+                if tauri_listen("shell-toggle-gpu", gpu_callback.as_ref().unchecked_ref())
+                    .await
+                    .is_ok()
+                {
+                    gpu_callback.forget();
+                }
+
+                let reload_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                    if let Some(window) = web_sys::window() {
+                        let _ = window.location().reload();
+                    }
+                }));
+                if tauri_listen("shell-nav-reload", reload_callback.as_ref().unchecked_ref())
+                    .await
+                    .is_ok()
+                {
+                    reload_callback.forget();
+                }
+
+                let back_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                    if let Some(window) = web_sys::window() {
+                        let _ = window.history().and_then(|history| history.back());
+                    }
+                }));
+                if tauri_listen("shell-nav-back", back_callback.as_ref().unchecked_ref())
+                    .await
+                    .is_ok()
+                {
+                    back_callback.forget();
+                }
+
+                let forward_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                    if let Some(window) = web_sys::window() {
+                        let _ = window.history().and_then(|history| history.forward());
+                    }
+                }));
+                if tauri_listen("shell-nav-forward", forward_callback.as_ref().unchecked_ref())
+                    .await
+                    .is_ok()
+                {
+                    forward_callback.forget();
+                }
+
+                let zoom_in_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                    web_sys::console::debug_1(&"zoom in requested".into());
+                }));
+                if tauri_listen("shell-zoom-in", zoom_in_callback.as_ref().unchecked_ref())
+                    .await
+                    .is_ok()
+                {
+                    zoom_in_callback.forget();
+                }
+
+                let zoom_out_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                    web_sys::console::debug_1(&"zoom out requested".into());
+                }));
+                if tauri_listen("shell-zoom-out", zoom_out_callback.as_ref().unchecked_ref())
+                    .await
+                    .is_ok()
+                {
+                    zoom_out_callback.forget();
+                }
+
+                let reset_zoom_callback =
+                    Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                        web_sys::console::debug_1(&"reset zoom requested".into());
+                    }));
+                if tauri_listen("shell-reset-zoom", reset_zoom_callback.as_ref().unchecked_ref())
+                    .await
+                    .is_ok()
+                {
+                    reset_zoom_callback.forget();
+                }
             });
         }
     });
+
+    let host_snapshot = host_status();
+    let (host_label, host_color) = status_chip(&host_snapshot);
+    let jobs_label = format!(
+        "{} running / {} queued",
+        host_snapshot.job_queue.running, host_snapshot.job_queue.queued
+    );
+    let backend_label = if host_snapshot.graph_daemon_reachable {
+        host_snapshot
+            .graph_engine_version
+            .clone()
+            .unwrap_or_else(|| format!("Graph :{}", host_snapshot.graph_daemon_port))
+    } else {
+        format!("{} backend", host_snapshot.inference_backend)
+    };
 
     rsx! {
         div {
@@ -484,6 +988,13 @@ fn AppLayout() -> Element {
                     "Settings"
                 }
                 Link {
+                    to: Route::LogsRoute {},
+                    class: "nav-item",
+                    style: "color: {text_muted};",
+                    sl-icon { "name": "terminal", style: "font-size: 0.9rem;" }
+                    "Logs"
+                }
+                Link {
                     to: Route::AboutRoute {},
                     class: "nav-item",
                     style: "color: {text_muted};",
@@ -512,8 +1023,13 @@ fn AppLayout() -> Element {
 
                     div {
                         style: "display: flex; align-items: center; gap: 0.875rem;",
-                        div { style: "width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981;" }
-                        span { style: "font-size: 0.775rem; color: var(--qualia-text-muted);", "Local Network" }
+                        div {
+                            style: "display: flex; align-items: center; gap: 0.45rem; border: 1px solid var(--qualia-border); background: rgba(128,128,128,0.08); border-radius: 999px; padding: 0.35rem 0.65rem;",
+                            div { style: "width: 7px; height: 7px; border-radius: 50%; background: {host_color}; box-shadow: 0 0 8px {host_color};" }
+                            span { style: "font-size: 0.735rem; color: var(--qualia-text); font-weight: 650;", "{host_label}" }
+                        }
+                        span { style: "font-size: 0.735rem; color: var(--qualia-text-muted); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;", "{backend_label}" }
+                        span { style: "font-size: 0.735rem; color: var(--qualia-text-muted);", "{jobs_label}" }
                         div {
                             style: "width: 30px; height: 30px; border-radius: 50%; background: {accent}; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: white; cursor: pointer;",
                             "W"

@@ -12,6 +12,7 @@ use tauri_plugin_updater::UpdaterExt;
 
 use webizen_desktop::{
     commands::{self, PreviewState, RenderLoopState},
+    desktop_log,
     med_reminder_notifier::{self, MedReminderNotifierState},
     native_surface::NativeSurfaceState,
     runtime::{spawn_runtime, RuntimeHandle},
@@ -191,6 +192,10 @@ fn show_main_window(app: &tauri::AppHandle) {
 }
 
 fn main() {
+    let log_path = desktop_log::init();
+    desktop_log::record("info", "Webizen desktop starting");
+    eprintln!("Webizen desktop log: {}", log_path.display());
+
     let app_state = init_app_state();
     let default_config = app_state.config.lock().unwrap().clone();
     let daemon_flag = app_state.daemon_running.clone();
@@ -327,10 +332,12 @@ fn main() {
                 .show_menu_on_left_click(false)
                 .on_menu_event(move |app, event| match event.id().as_ref() {
                     // ── Window ─────────────────────────────────────────────────
-                    "show" => show_main_window(app),
-                    "settings" => {
+                    "show" => {
                         show_main_window(app);
-                        let _ = app.emit("open-settings", "settings");
+                        webizen_desktop::shell::menu::navigate_main_to(app, "dashboard");
+                    }
+                    "settings" => {
+                        webizen_desktop::shell::menu::navigate_main_to(app, "settings");
                     }
 
                     // ── Sanctuary ──────────────────────────────────────────────
@@ -373,21 +380,31 @@ fn main() {
                         let _ = app.emit("open-backup", ());
                     }
                     "health_diagnostics" => {
-                        match commands::wellfair_diagnostics(app.clone()) {
-                            Ok(json) => {
-                                show_main_window(app);
-                                let _ = app.emit("diagnostics-result", json);
+                        let app_handle = app.clone();
+                        tauri::async_runtime::spawn_blocking(move || {
+                            match commands::wellfair_diagnostics(app_handle.clone()) {
+                                Ok(json) => {
+                                    show_main_window(&app_handle);
+                                    let _ = app_handle.emit("diagnostics-result", json);
+                                    desktop_log::record("info", "diagnostics completed from tray");
+                                }
+                                Err(e) => desktop_log::record(
+                                    "error",
+                                    format!("diagnostics via tray failed: {e}"),
+                                ),
                             }
-                            Err(e) => eprintln!("Diagnostics via tray failed: {e}"),
-                        }
+                        });
                     }
 
                     // ── Sync ──────────────────────────────────────────────────
                     "sync_relay" => {
-                        match commands::wellfair_sync_with_relay(app.clone(), "http://127.0.0.1:4242".to_string(), 0) {
-                            Ok(msg) => eprintln!("Sync relay via tray: {msg}"),
-                            Err(e) => eprintln!("Sync relay via tray failed: {e}"),
-                        }
+                        let app_handle = app.clone();
+                        tauri::async_runtime::spawn_blocking(move || {
+                            match commands::wellfair_sync_with_relay(app_handle, "http://127.0.0.1:4242".to_string(), 0) {
+                                Ok(msg) => desktop_log::record("info", format!("sync relay via tray: {msg}")),
+                                Err(e) => desktop_log::record("error", format!("sync relay via tray failed: {e}")),
+                            }
+                        });
                     }
                     "sync_inbox" => {
                         show_main_window(app);
@@ -441,9 +458,9 @@ fn main() {
                             }
                         });
                     }
-                    "help_logs" => show_main_window(app),
+                    "help_logs" => webizen_desktop::shell::menu::navigate_main_to(app, "logs"),
                     "help_portal" => {
-                        let _ = open::that("http://127.0.0.1:8080/");
+                        webizen_desktop::shell::menu::open_settings_portal("");
                     }
 
                     // ── Quit ──────────────────────────────────────────────────
@@ -462,9 +479,25 @@ fn main() {
                 })
                 .build(app)?;
 
-            let runtime_handle = spawn_runtime(handle.clone(), app_state.clone())
-                .map_err(|err| -> Box<dyn std::error::Error> { err.into() })?;
-            app.manage(runtime_handle);
+            let runtime_init_handle = handle.clone();
+            let runtime_init_state = app_state.clone();
+            tauri::async_runtime::spawn_blocking(move || {
+                desktop_log::record("info", "starting Webizen WGPU runtime in background");
+                match spawn_runtime(runtime_init_handle.clone(), runtime_init_state) {
+                    Ok(runtime_handle) => {
+                        runtime_init_handle.manage(runtime_handle);
+                        let _ = runtime_init_handle.emit("webizen-runtime-ready", ());
+                        desktop_log::record("info", "Webizen WGPU runtime ready");
+                    }
+                    Err(err) => {
+                        let _ = runtime_init_handle.emit("webizen-runtime-failed", err.clone());
+                        desktop_log::record(
+                            "error",
+                            format!("Webizen WGPU runtime failed to start: {err}"),
+                        );
+                    }
+                }
+            });
 
             if let Err(e) = qualia_client_core::api::start_qualia_protocol() {
                 eprintln!("Qapp loopback asset server failed to start: {e}");
@@ -474,22 +507,49 @@ fn main() {
                 Some(tauri::async_runtime::handle().inner().clone()),
             );
 
-            if let Ok(kv) = app_state.key_vault.lock() {
-                if !kv.is_locked() {
-                    let key_bytes = kv.get_master_key_bytes();
-                    let signing_key = ed25519_dalek::SigningKey::from_bytes(&key_bytes);
-                    let author_did_hash = qualia_core_db::q_hash("did:q42:local");
-                    let owner_did = "did:q42:wellfair:owner".to_string();
-                    let author_did = owner_did.clone();
-                    let storage_root = std::path::PathBuf::from(
-                        app_state.config.lock().unwrap().storage_path.clone(),
-                    );
-                    let wal_path = storage_root.join("qualia_global.wal");
-                    if let Ok(vault) = qualia_client_core::wellfair::vault::VaultService::open(
-                        &wal_path,
-                        &storage_root,
-                        author_did_hash,
-                    ) {
+            let host_api_init_state = app_state.clone();
+            let host_api_init_slot = host_api_state.clone();
+            let host_api_init_handle = handle.clone();
+            tauri::async_runtime::spawn_blocking(move || {
+                desktop_log::record("info", "initialising WellFair host API in background");
+                let key_bytes = match host_api_init_state.key_vault.lock() {
+                    Ok(kv) if !kv.is_locked() => kv.get_master_key_bytes(),
+                    Ok(_) => {
+                        desktop_log::record("warn", "WellFair host API deferred: vault is locked");
+                        return;
+                    }
+                    Err(err) => {
+                        desktop_log::record(
+                            "error",
+                            format!("WellFair host API failed: key vault lock poisoned: {err}"),
+                        );
+                        return;
+                    }
+                };
+
+                let storage_root = match host_api_init_state.config.lock() {
+                    Ok(config) => std::path::PathBuf::from(config.storage_path.clone()),
+                    Err(err) => {
+                        desktop_log::record(
+                            "error",
+                            format!("WellFair host API failed: config lock poisoned: {err}"),
+                        );
+                        return;
+                    }
+                };
+
+                let signing_key = ed25519_dalek::SigningKey::from_bytes(&key_bytes);
+                let author_did_hash = qualia_core_db::q_hash("did:q42:local");
+                let owner_did = "did:q42:wellfair:owner".to_string();
+                let author_did = owner_did.clone();
+                let wal_path = storage_root.join("qualia_global.wal");
+
+                match qualia_client_core::wellfair::vault::VaultService::open(
+                    &wal_path,
+                    &storage_root,
+                    author_did_hash,
+                ) {
+                    Ok(vault) => {
                         let policy =
                             qualia_client_core::wellfair::policy::PolicyDecisionService::new();
                         let host_api = qualia_client_core::wellfair::api::WebizenHostApi::new(
@@ -498,14 +558,32 @@ fn main() {
                             signing_key,
                             owner_did,
                             author_did,
-                            storage_root.clone(),
+                            storage_root,
                         );
-                        if let Ok(mut host_guard) = host_api_state.lock() {
-                            *host_guard = Some(host_api);
-                        };
+                        match host_api_init_slot.lock() {
+                            Ok(mut host_guard) => {
+                                *host_guard = Some(host_api);
+                                let _ = host_api_init_handle.emit("webizen-host-api-ready", ());
+                                desktop_log::record("info", "WellFair host API ready");
+                            }
+                            Err(err) => desktop_log::record(
+                                "error",
+                                format!("WellFair host API slot lock poisoned: {err}"),
+                            ),
+                        }
+                    }
+                    Err(err) => {
+                        let _ = host_api_init_handle.emit(
+                            "webizen-host-api-failed",
+                            format!("{err}"),
+                        );
+                        desktop_log::record(
+                            "error",
+                            format!("WellFair host API failed to open vault: {err}"),
+                        );
                     }
                 }
-            }
+            });
 
             // Store the app handle for the settings server's invoke proxy
             let _ = settings_server::APP_HANDLE.set(app.handle().clone());
@@ -517,11 +595,19 @@ fn main() {
                 "Settings + companion gateway ready at http://127.0.0.1:{settings_port}/ (LAN ws://<host>:{settings_port}/mobile/stream)"
             );
 
-            // ── Navigate main window to the native shell ───────────────────
+            // Keep the main window on the bundled Tauri Studio app.
             if let Some(window) = app.get_webview_window("main") {
-                let shell_url = format!("http://127.0.0.1:{settings_port}/shell");
-                let _ = window.eval(&format!("window.location.href = '{shell_url}'"));
-                eprintln!("Main window navigated to shell at {shell_url}");
+                let _ = window.eval(&format!(
+                    "window.__WEBIZEN_SETTINGS_PORT = {}; window.dispatchEvent(new CustomEvent('webizen-settings-ready', {{ detail: {} }}));",
+                    settings_port, settings_port
+                ));
+                let _ = window.set_focus();
+                desktop_log::record(
+                    "info",
+                    format!(
+                        "Main window loaded bundled Tauri Studio; settings portal is http://127.0.0.1:{settings_port}/"
+                    ),
+                );
             }
 
             // Cold-path essentials: seed bundled ontologies when the queue is idle.
