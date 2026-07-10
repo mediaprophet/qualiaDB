@@ -1,0 +1,67 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix cml:     <https://ns.webcivics.net/cml/> .
+@prefix cof:     <https://ns.webcivics.net/cof/> .
+
+# ===========================================================================
+# COF — Context Optimisation Format
+# HTML+RDFa *profile* for agent context windows (not presentation HTML).
+#
+# Relationship to CML (Context Markup Language):
+#   CML  = TEXT → CONCEPT → LOGIC graph (N3/TTL/JSON-LD; NQuin context ownership)
+#   COF  = how that same graph is *serialised for LLM/agent attention* as
+#          constrained HTML+RDFa with inline attributes (ref, page, confidence)
+#          and almost zero layout tokens.
+#
+# Design rules:
+#   1. No CSS classes required for machine meaning (classes are human-only).
+#   2. Meaning lives in RDFa: typeof / about / property / resource / rel.
+#   3. Prefer short property IRIs under cof: for structural scaffolding.
+#   4. Domain semantics stay on cml: / values: / skos: (do not re-mint).
+#   5. Machine layers are cml:Proposed until human cml:Attested.
+# ===========================================================================
+
+cof:Document a rdfs:Class ;
+    rdfs:label "COF document"@en ;
+    rdfs:comment "Root of an agent-optimised HTML+RDFa payload. One source instrument."@en ;
+    rdfs:subClassOf cml:Concept .
+
+cof:Section a rdfs:Class ;
+    rdfs:label "COF section"@en ;
+    rdfs:comment "Nestable structural unit (part, division, page-group, or provision)."@en .
+
+cof:Page a rdfs:Class ;
+    rdfs:label "Source page"@en ;
+    rdfs:comment "Spatial unit when PDF coordinates are unavailable; page number is honest."@en .
+
+cof:Block a rdfs:Class ;
+    rdfs:label "Atomic text block"@en ;
+    rdfs:comment "Paragraph / provision body; may carry data-page or coords when known."@en .
+
+cof:Claim a rdfs:Class ;
+    rdfs:label "Claim span"@en ;
+    rdfs:comment "Inline or block assertion weighted for agent attention; bind to cml:asserts."@en .
+
+cof:Entity a rdfs:Class ;
+    rdfs:label "Named entity span"@en ;
+    rdfs:comment "Inline mention of a graph node (org, person, instrument, place)."@en .
+
+cof:hasSection a rdf:Property ; rdfs:domain cof:Document ; rdfs:range cof:Section .
+cof:hasPage a rdf:Property ; rdfs:range cof:Page .
+cof:hasBlock a rdf:Property ; rdfs:range cof:Block .
+cof:hasClaim a rdf:Property ; rdfs:range cof:Claim .
+cof:title a rdf:Property ; rdfs:subPropertyOf dcterms:title .
+cof:body a rdf:Property .
+cof:pageNumber a rdf:Property ; rdfs:range xsd:integer .
+cof:profile a rdf:Property ; rdfs:range xsd:anyURI ;
+    rdfs:comment "URI of the COF HTML+RDFa profile this document conforms to."@en .
+cof:ref a rdf:Property ;
+    rdfs:comment "Shorthand object reference (nquin / concept IRI) on an entity or claim."@en .
+
+# Profile identifier used in <meta name="cof-profile">
+cof:profileHtmlRdfa1 a cof:Document ;
+    dcterms:identifier "https://ns.webcivics.net/cof/profile/html-rdfa-1" ;
+    rdfs:comment "HTML5 + RDFa Lite/Core using cof:/cml:/values: prefixes; no style semantics."@en .

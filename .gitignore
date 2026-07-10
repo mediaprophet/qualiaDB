@@ -25,6 +25,7 @@ target/
 *.q42
 *.n3
 !bundled/qapps/**/*.n3
+!tools/**/*.n3
 
 # Princeton WordNet — full graph is a GitHub Release asset (see docs/data/wordnet/README.md)
 docs/data/wordnet/*.q42
@@ -188,6 +189,10 @@ fix_quotes.py
 # Plan Files
 /docs/plans/*
 !/docs/plans/native-computational-economics.md
+!/docs/plans/cof-html-rdfa-etl.md
+!/docs/plans/optional-ollama-harness.md
+!/docs/plans/solid-outpost-hackathon-bridge.md
+!/docs/plans/p64-decode-upgrade-plan.md
 /docs/manuals/planning/
 docs/to-do/
 
