@@ -28,6 +28,7 @@
   "bundle": {
     "active": true,
     "category": "DeveloperTool",
+    "createUpdaterArtifacts": true,
     "copyright": "",
     "linux": {
       "deb": {
@@ -44,7 +45,10 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": [],
+    "resources": {
+      "../webizen-studio/dist": "studio-dist",
+      "static/portal": "portal"
+    },
     "windows": {
       "allowDowngrades": true,
       "nsis": {
@@ -56,7 +60,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE0MEEzMzI1RjZGMDcyNUYKUldSZmN2RDJKVE1LRksyN0tyZG8vQ29TbTQwOUZhM2RFRngxaEYxdnphR1NnQjVQMW9lZDFiVkIK",
       "endpoints": [
-        "https://mediaprophet.github.io/webizen-browser/releases/latest.json"
+        "https://github.com/mediaprophet/qualiaDB/releases/latest/download/webizen-latest.json"
       ]
     }
   }

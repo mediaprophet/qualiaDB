@@ -25,6 +25,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU16, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use tauri::Manager;
 use tower_http::{cors::CorsLayer, services::ServeDir};
 use webizen_render::scene_contract::SystemTelemetry;
 
@@ -123,6 +124,13 @@ fn static_portal_dir() -> PathBuf {
 
     let dev_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("static/portal");
     let mut candidates = Vec::new();
+    if let Some(resource_dir) = APP_HANDLE
+        .get()
+        .and_then(|app| app.path().resource_dir().ok())
+    {
+        candidates.push(resource_dir.join("portal"));
+        candidates.push(resource_dir.join("static").join("portal"));
+    }
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
             candidates.push(dir.join("portal"));
@@ -139,6 +147,15 @@ fn static_portal_dir() -> PathBuf {
 }
 
 fn studio_dist_dir() -> PathBuf {
+    if let Some(resource_dir) = APP_HANDLE
+        .get()
+        .and_then(|app| app.path().resource_dir().ok())
+    {
+        let bundled = resource_dir.join("studio-dist");
+        if bundled.is_dir() {
+            return bundled;
+        }
+    }
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
             let sidecar = dir.join("studio-dist");

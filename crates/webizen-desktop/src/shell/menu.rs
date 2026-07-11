@@ -1,6 +1,6 @@
 use tauri::menu::{MenuBuilder, MenuItem, SubmenuBuilder};
-use tauri::{AppHandle, Emitter, Manager};
 use tauri::webview::WebviewWindowBuilder;
+use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_dialog::DialogExt;
 
 fn show_main_window(app: &AppHandle) {
@@ -59,6 +59,80 @@ pub fn open_settings_portal(path: &str) {
     let _ = open::that(url);
 }
 
+fn check_for_updates(app: AppHandle) {
+    tauri::async_runtime::spawn(async move {
+        use tauri_plugin_updater::UpdaterExt;
+        match app.updater() {
+            Ok(updater) => match updater.check().await {
+                Ok(Some(update)) => {
+                    let version = update.version.clone();
+                    crate::desktop_log::record(
+                        "info",
+                        format!("Update available: {version}; downloading installer"),
+                    );
+                    let _ = app.dialog().message(format!(
+                        "Webizen {version} is available. The updater will download and install it now."
+                    ));
+                    let result = update
+                        .download_and_install(
+                            |downloaded, total| {
+                                if let Some(total) = total {
+                                    crate::desktop_log::record(
+                                        "info",
+                                        format!(
+                                            "Update download progress: {downloaded}/{total} bytes"
+                                        ),
+                                    );
+                                }
+                            },
+                            || {
+                                crate::desktop_log::record(
+                                    "info",
+                                    "Update download finished; installing",
+                                );
+                            },
+                        )
+                        .await;
+                    match result {
+                        Ok(_) => {
+                            crate::desktop_log::record(
+                                "info",
+                                format!("Update {version} installed"),
+                            );
+                            let _ = app.dialog().message(
+                                "Update installed. Restart Webizen to run the new version.",
+                            );
+                        }
+                        Err(e) => {
+                            crate::desktop_log::record(
+                                "error",
+                                format!("Update install failed: {e}"),
+                            );
+                            let _ = app.dialog().message(format!(
+                                "Webizen update failed before it could be installed:\n\n{e}"
+                            ));
+                        }
+                    }
+                }
+                Ok(None) => {
+                    crate::desktop_log::record("info", "No updates available");
+                    let _ = app.dialog().message("Webizen is up to date.");
+                }
+                Err(e) => {
+                    crate::desktop_log::record("warn", format!("Update check failed: {e}"));
+                    let _ = app.dialog().message(format!("Update check failed:\n\n{e}"));
+                }
+            },
+            Err(e) => {
+                crate::desktop_log::record("warn", format!("Updater not available: {e}"));
+                let _ = app
+                    .dialog()
+                    .message(format!("Updater is not available:\n\n{e}"));
+            }
+        }
+    });
+}
+
 fn eval_main(app: &AppHandle, script: &str) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.eval(script);
@@ -80,10 +154,7 @@ fn reset_zoom(app: &AppHandle) {
 }
 
 fn open_new_studio_window(app: &AppHandle) {
-    let label = format!(
-        "webizen-studio-{}",
-        chrono::Utc::now().timestamp_millis()
-    );
+    let label = format!("webizen-studio-{}", chrono::Utc::now().timestamp_millis());
     match WebviewWindowBuilder::new(app, label, tauri::WebviewUrl::App("index.html".into()))
         .title("Webizen")
         .inner_size(1200.0, 800.0)
@@ -145,7 +216,7 @@ pub fn build_app_menu(
     let qapp_manager = MenuItem::with_id(
         app,
         "open_qapp_manager",
-        "Manage QApps…",
+        "Manage QApps...",
         true,
         None::<&str>,
     )?;
@@ -161,7 +232,7 @@ pub fn build_app_menu(
         .item(&qapp_manager)
         .build()?;
 
-    let settings = MenuItem::with_id(app, "open_settings", "Settings…", true, Some("Ctrl+,"))?;
+    let settings = MenuItem::with_id(app, "open_settings", "Settings...", true, Some("Ctrl+,"))?;
     let diagnostics =
         MenuItem::with_id(app, "open_diagnostics", "Diagnostics", true, None::<&str>)?;
     let library = MenuItem::with_id(
@@ -180,14 +251,19 @@ pub fn build_app_menu(
         .item(&library)
         .item(&wallet)
         .separator()
-        .text("import_samsung", "Import Samsung Health…")
+        .text("import_samsung", "Import Samsung Health...")
         .text("sync_relay", "Sync with Relay")
-        .text("backup", "Backup…")
+        .text("backup", "Backup...")
         .build()?;
 
     let about = MenuItem::with_id(app, "help_about", "About Webizen", true, None::<&str>)?;
-    let check_updates =
-        MenuItem::with_id(app, "help_update", "Check for Updates…", true, None::<&str>)?;
+    let check_updates = MenuItem::with_id(
+        app,
+        "help_update",
+        "Check for Updates...",
+        true,
+        None::<&str>,
+    )?;
     let view_logs = MenuItem::with_id(app, "help_logs", "View Logs", true, None::<&str>)?;
     let open_portal = MenuItem::with_id(
         app,
@@ -279,8 +355,8 @@ pub fn handle_menu_event(app: &AppHandle, event: &tauri::menu::MenuEvent) {
         "open_settings" => navigate_main_to(app, "settings"),
         "open_diagnostics" => {
             let app_handle = app.clone();
-            tauri::async_runtime::spawn_blocking(move || {
-                match crate::commands::wellfair_diagnostics(app_handle.clone()) {
+            tauri::async_runtime::spawn_blocking(
+                move || match crate::commands::wellfair_diagnostics(app_handle.clone()) {
                     Ok(json) => {
                         navigate_main_to(&app_handle, "tools");
                         let _ = app_handle.emit("diagnostics-result", json);
@@ -290,8 +366,8 @@ pub fn handle_menu_event(app: &AppHandle, event: &tauri::menu::MenuEvent) {
                         "error",
                         format!("diagnostics from menu failed: {err}"),
                     ),
-                }
-            });
+                },
+            );
         }
         "open_library" => navigate_main_to(app, "library"),
         "open_wallet" => navigate_main_to(app, "wallet"),
@@ -318,29 +394,11 @@ pub fn handle_menu_event(app: &AppHandle, event: &tauri::menu::MenuEvent) {
         "help_about" => {
             let version = env!("CARGO_PKG_VERSION");
             let _ = app.dialog().message(format!(
-                "Webizen Desktop — v{version}\n\nThe human-centric internet platform.\n\nLocal crates: qualia-core-db, qualia-client-core, wellfare-core, qualia-cooperative-core, webizen-runtime, webizen-render, webizen-studio, qualia-semantic-library"
+                "Webizen Desktop - v{version}\n\nThe human-centric internet platform.\n\nLocal crates: qualia-core-db, qualia-client-core, wellfare-core, qualia-cooperative-core, webizen-runtime, webizen-render, webizen-studio, qualia-semantic-library"
             ));
         }
         "help_update" => {
-            let upd_h = app.clone();
-            tauri::async_runtime::spawn(async move {
-                use tauri_plugin_updater::UpdaterExt;
-                match upd_h.updater() {
-                    Ok(updater) => match updater.check().await {
-                        Ok(Some(update)) => {
-                            eprintln!("Update available: {} — downloading…", update.version);
-                            let _ = update.download_and_install(|_, _| {}, || {}).await;
-                        }
-                        Ok(None) => crate::desktop_log::record("info", "No updates available"),
-                        Err(e) => {
-                            crate::desktop_log::record("warn", format!("Update check failed: {e}"))
-                        }
-                    },
-                    Err(e) => {
-                        crate::desktop_log::record("warn", format!("Updater not available: {e}"))
-                    }
-                }
-            });
+            check_for_updates(app.clone());
         }
         "help_logs" => navigate_main_to(app, "logs"),
         "help_portal" => open_settings_portal(""),
