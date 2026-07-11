@@ -16,6 +16,7 @@ use super::host_client::{
     acquire_body_assets, body_assets_status, render_body_snapshot, BodyAssetsStatus,
 };
 use dioxus::prelude::*;
+use dioxus::document::eval;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 struct Anatomy3dUi {
@@ -157,214 +158,274 @@ pub fn WellfairAnatomy3dPanel() -> Element {
     rsx! {
         section {
             aria_label: "3D Anatomy body view",
-            style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);margin-top:0.85rem;",
-            h2 { style: "margin:0 0 0.35rem;font-size:1rem;", "Your body in 3D" }
-            p {
-                style: "margin:0 0 0.6rem;font-size:0.78rem;color:var(--qualia-text-muted,#666);",
-                "A whole-body picture coloured by how the things you've logged seem to add up across your body systems. Each region is a body system; a bigger, redder, pulsing region means more accumulated strain. This is a general guide to explore with a clinician, not a diagnosis."
+            style: "
+                position: relative;
+                padding: 1.5rem;
+                border: 1px solid var(--qualia-border, rgba(255, 255, 255, 0.1));
+                border-radius: 16px;
+                background: var(--qualia-surface, rgba(10, 15, 30, 0.6));
+                backdrop-filter: blur(24px);
+                -webkit-backdrop-filter: blur(24px);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+                color: var(--qualia-text, #fff);
+                margin-top: 1rem;
+                overflow: hidden;
+            ",
+            // Subtle animated gradient background behind the glass
+            div {
+                style: "
+                    position: absolute;
+                    inset: -50%;
+                    background: radial-gradient(circle at 50% 50%, rgba(42, 111, 151, 0.15), transparent 60%);
+                    animation: pulse-bg 8s ease-in-out infinite alternate;
+                    pointer-events: none;
+                    z-index: -1;
+                "
+            }
+            // CSS for the background pulse
+            style {
+                "@keyframes pulse-bg {{ 0% {{ transform: scale(1); opacity: 0.8; }} 100% {{ transform: scale(1.1); opacity: 1; }} }}"
+                ".anatomy-btn {{ transition: all 0.2s; }}"
+                ".anatomy-btn:hover {{ background: rgba(255, 255, 255, 0.15) !important; }}"
+            }
+
+            div {
+                style: "display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.2rem;",
+                div {
+                    h2 { 
+                        style: "margin: 0 0 0.4rem; font-size: 1.4rem; font-weight: 600; letter-spacing: -0.02em; text-shadow: 0 2px 4px rgba(0,0,0,0.5);", 
+                        "Your Physical State" 
+                    }
+                    p {
+                        style: "margin: 0; font-size: 0.85rem; color: var(--qualia-text-muted, #a0aec0); max-width: 500px; line-height: 1.5;",
+                        "A holistic structural projection. Regions pulse indicating accumulated physiological load."
+                    }
+                }
             }
 
             if !native {
-                p {
-                    style: "margin:0 0 0.5rem;padding:0.5rem 0.65rem;background:#2a6f9711;border:1px solid #2a6f9733;border-radius:8px;font-size:0.8rem;",
-                    "The 3D body view requires the Webizen desktop host (it uses the desktop GPU to render)."
+                div {
+                    style: "margin: 1rem 0; padding: 1rem; background: rgba(229, 62, 62, 0.1); border: 1px solid rgba(229, 62, 62, 0.3); border-radius: 12px; font-size: 0.9rem; color: #fc8181; display: flex; align-items: center; gap: 0.75rem;",
+                    span { style: "font-size: 1.2rem;", "⚠️" }
+                    span { "The 3D body view requires the native Webizen desktop engine for GPU acceleration." }
                 }
             } else {
-                // ── Asset cache controls (S5.8) ──────────────────────────────────────────────
-                div {
-                    style: "padding:0.55rem 0.65rem;background:#f6f8fa;border:1px solid var(--qualia-border,#e0e0e0);border-radius:8px;margin-bottom:0.6rem;",
-                    div {
-                        style: "display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.35rem;",
-                        label {
-                            for: "anatomy-model",
-                            style: "font-size:0.82rem;",
-                            "Body model:"
-                        }
-                        select {
-                            id: "anatomy-model",
-                            style: "padding:0.2rem 0.4rem;border:1px solid var(--qualia-border,#ccc);border-radius:6px;font-size:0.8rem;",
-                            value: "{state.model}",
-                            onchange: move |evt| {
-                                ui.write().model = evt.value();
-                                ui.write().cache_status = None;
-                                ui.write().cache_checked = false;
-                                spawn(refresh_cache_status(ui));
-                            },
-                            option { value: "male", "Male (XY)" }
-                            option { value: "female", "Female (XX)" }
-                        }
-                        if let Some(c) = cache {
-                            span {
-                                style: "font-size:0.78rem;color:var(--qualia-text-muted,#666);",
-                                if c.cached {
-                                    "Cached: {c.organ_count} organs · {c.total_ten_d_bytes / 1_000_000} MB"
-                                } else {
-                                    "Not cached"
-                                }
-                            }
-                        } else if state.cache_checked {
-                            span { style: "font-size:0.78rem;color:var(--qualia-text-muted,#666);", "Checking…" }
-                        }
-                    }
-                    div {
-                        style: "display:flex;gap:0.4rem;flex-wrap:wrap;",
-                        button {
-                            r#type: "button",
-                            style: "padding:0.3rem 0.6rem;border:1px solid var(--qualia-border,#ccc);border-radius:6px;background:#fff;cursor:pointer;font-size:0.78rem;",
-                            disabled: state.acquiring,
-                            onclick: move |_| {
-                                spawn(acquire_assets(ui));
-                            },
-                            if state.acquiring { "Downloading…" } else if cache.map(|c| c.cached).unwrap_or(false) { "Re-download" } else { "Download body assets" }
-                        }
-                        if cache.map(|c| c.cached).unwrap_or(false) {
-                            button {
-                                r#type: "button",
-                                style: "padding:0.3rem 0.6rem;border:1px solid var(--qualia-border,#ccc);border-radius:6px;background:#f6f6f6;cursor:pointer;font-size:0.78rem;",
-                                disabled: state.acquiring,
-                                onclick: move |_| {
-                                    spawn(async move {
-                                        let model = ui.read().model.clone();
-                                        let _ = super::host_client::clear_body_cache(&model).await;
-                                        ui.write().cache_status = None;
-                                        spawn(refresh_cache_status(ui));
-                                    });
-                                },
-                                "Clear cache"
-                            }
-                        }
-                    }
-                    if !state.acquire_message.is_empty() {
-                        p {
-                            style: "margin:0.35rem 0 0;font-size:0.76rem;color:var(--qualia-text-muted,#555);line-height:1.4;",
-                            "{state.acquire_message}"
-                        }
-                    }
-                    p {
-                        style: "margin:0.3rem 0 0;font-size:0.72rem;color:var(--qualia-text-muted,#888);line-height:1.4;",
-                        "Downloads the Human Reference Atlas reference-organ set (~200–290 MB) from the live HRA endpoint and caches it on your machine. You only do this once per model; subsequent runs load the cached body instantly."
-                    }
-                }
-
                 // ── The rendered body (real-mesh portal OR interim PNG) ───────────────────────
                 div {
-                    style: "position:relative;width:100%;min-height:360px;background:#0a0f14;border:1px solid var(--qualia-border,#333);border-radius:8px;overflow:hidden;margin-bottom:0.6rem;",
+                    style: "
+                        position: relative;
+                        width: 100%;
+                        height: 500px;
+                        background: radial-gradient(circle at center, #111827, #030712);
+                        border: 1px solid rgba(255, 255, 255, 0.05);
+                        border-radius: 12px;
+                        overflow: hidden;
+                        margin-bottom: 1.2rem;
+                        box-shadow: inset 0 2px 10px rgba(0,0,0,0.8);
+                    ",
                     if real_mesh_ready {
-                        iframe {
-                            id: "anatomy-portal-iframe",
-                            src: "{portal_src}",
-                            title: "3D Anatomy — real organ meshes (WebGPU portal)",
-                            style: "position:absolute;inset:0;width:100%;height:100%;border:0;display:block;",
+                        div {
+                            id: "anatomy-portal-webview",
+                            style: "position: absolute; inset: 0; width: 100%; height: 100%;",
+                            onmounted: move |_| {
+                                let url = portal_src.clone();
+                                spawn(async move {
+                                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                                    let script = format!(r#"
+                                        const container = document.getElementById('anatomy-portal-webview');
+                                        if (container && window.__TAURI__) {{
+                                            const invoke = window.__TAURI__.core.invoke;
+                                            const r = container.getBoundingClientRect();
+                                            const id = 'anatomy-portal';
+                                            
+                                            invoke('spawn_native_webview', {{
+                                                id: id, url: '{}', x: r.left, y: r.top, width: r.width, height: r.height
+                                            }}).then(() => {{
+                                                invoke('show_native_webview', {{ id }});
+                                                invoke('resize_native_webview', {{ id, x: r.left, y: r.top, width: r.width, height: r.height }});
+                                            }}).catch(console.error);
+
+                                            if (!window.anatomyWebviewObserver) {{
+                                                window.anatomyWebviewObserver = new ResizeObserver(() => {{
+                                                    const r2 = container.getBoundingClientRect();
+                                                    invoke('resize_native_webview', {{ 
+                                                        id: 'anatomy-portal', 
+                                                        x: r2.left, y: r2.top, width: r2.width, height: r2.height 
+                                                    }}).catch(console.error);
+                                                }});
+                                                window.anatomyWebviewObserver.observe(container);
+                                            }}
+                                        }}
+                                    "#, url);
+                                    let _ = eval(&script);
+                                });
+                            }
                         }
                     } else if has_frame {
                         img {
                             src: "{frame_src}",
                             alt: "Whole-body 3D anatomy snapshot, coloured by accumulated burden",
-                            style: "position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;",
+                            style: "position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; mix-blend-mode: screen;",
                         }
                     } else {
                         div {
-                            style: "position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--qualia-text-muted,#888);font-size:0.85rem;",
+                            style: "position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--qualia-accent, #63b3ed); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 2px;",
+                            div {
+                                style: "width: 40px; height: 40px; border: 3px solid rgba(99, 179, 237, 0.2); border-top-color: #63b3ed; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1rem;"
+                            }
                             "{state.status}"
                         }
                     }
-                }
 
-                // ── Orbit camera controls (drive both views) ─────────────────────────────────
-                div {
-                    role: "group",
-                    aria_label: "Orbit camera",
-                    style: "display:flex;flex-direction:column;gap:0.5rem;margin-bottom:0.6rem;",
+                    // Floating Glass Overlay Controls
                     div {
-                        style: "display:flex;align-items:center;gap:0.5rem;",
-                        label {
-                            for: "anatomy-azimuth",
-                            style: "font-size:0.82rem;flex:0 0 auto;",
-                            "Rotate:"
-                        }
-                        input {
-                            id: "anatomy-azimuth",
-                            r#type: "range",
-                            min: "0",
-                            max: "360",
-                            step: "5",
-                            value: "{state.azimuth}",
-                            style: "flex:1 1 auto;",
-                            oninput: move |evt| {
-                                ui.write().azimuth = evt.value().parse().unwrap_or(0.0);
-                            },
-                            onchange: move |_| {
-                                if !real_mesh_ready { spawn(render_frame(ui)); }
-                            },
-                        }
-                        span {
-                            style: "font-size:0.78rem;color:var(--qualia-text-muted,#666);flex:0 0 auto;width:3.5rem;text-align:right;",
-                            "{state.azimuth:.0}°"
-                        }
-                    }
-                    div {
-                        style: "display:flex;align-items:center;gap:0.5rem;",
-                        label {
-                            for: "anatomy-elevation",
-                            style: "font-size:0.82rem;flex:0 0 auto;",
-                            "Tilt:"
-                        }
-                        input {
-                            id: "anatomy-elevation",
-                            r#type: "range",
-                            min: "-60",
-                            max: "60",
-                            step: "5",
-                            value: "{state.elevation}",
-                            style: "flex:1 1 auto;",
-                            oninput: move |evt| {
-                                ui.write().elevation = evt.value().parse().unwrap_or(0.0);
-                            },
-                            onchange: move |_| {
-                                if !real_mesh_ready { spawn(render_frame(ui)); }
-                            },
-                        }
-                        span {
-                            style: "font-size:0.78rem;color:var(--qualia-text-muted,#666);flex:0 0 auto;width:3.5rem;text-align:right;",
-                            "{state.elevation:.0}°"
-                        }
-                    }
-                    if !real_mesh_ready {
+                        style: "
+                            position: absolute;
+                            bottom: 1rem;
+                            left: 1rem;
+                            right: 1rem;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: flex-end;
+                            pointer-events: none;
+                        ",
+                        // Left: Orbit Controls
                         div {
-                            style: "display:flex;gap:0.4rem;",
-                            button {
-                                r#type: "button",
-                                style: "padding:0.3rem 0.6rem;border:1px solid var(--qualia-border,#ccc);border-radius:6px;background:#fff;cursor:pointer;font-size:0.78rem;",
-                                disabled: state.rendering,
-                                onclick: move |_| {
-                                    spawn(render_frame(ui));
-                                },
-                                if state.rendering { "Rendering…" } else { "Re-render" }
+                            style: "
+                                pointer-events: auto;
+                                background: rgba(10, 15, 30, 0.7);
+                                backdrop-filter: blur(16px);
+                                -webkit-backdrop-filter: blur(16px);
+                                padding: 1rem;
+                                border-radius: 12px;
+                                border: 1px solid rgba(255, 255, 255, 0.08);
+                                display: flex;
+                                flex-direction: column;
+                                gap: 0.8rem;
+                                min-width: 200px;
+                            ",
+                            div {
+                                style: "display: flex; align-items: center; justify-content: space-between; gap: 1rem;",
+                                label { style: "font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #a0aec0;", "Azimuth" }
+                                span { style: "font-family: monospace; font-size: 0.8rem; color: #e2e8f0;", "{state.azimuth:.0}°" }
                             }
-                            button {
-                                r#type: "button",
-                                style: "padding:0.3rem 0.6rem;border:1px solid var(--qualia-border,#ccc);border-radius:6px;background:#f6f6f6;cursor:pointer;font-size:0.78rem;",
-                                onclick: move |_| {
-                                    ui.write().azimuth = 0.0;
-                                    ui.write().elevation = 10.0;
-                                    if !real_mesh_ready { spawn(render_frame(ui)); }
-                                },
-                                "Reset view"
+                            input {
+                                r#type: "range", min: "0", max: "360", step: "5", value: "{state.azimuth}",
+                                oninput: move |evt| { ui.write().azimuth = evt.value().parse().unwrap_or(0.0); },
+                                onchange: move |_| { if !real_mesh_ready { spawn(render_frame(ui)); } },
+                                style: "accent-color: var(--qualia-accent, #63b3ed); cursor: pointer;"
+                            }
+                            div {
+                                style: "display: flex; align-items: center; justify-content: space-between; gap: 1rem;",
+                                label { style: "font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #a0aec0;", "Elevation" }
+                                span { style: "font-family: monospace; font-size: 0.8rem; color: #e2e8f0;", "{state.elevation:.0}°" }
+                            }
+                            input {
+                                r#type: "range", min: "-60", max: "60", step: "5", value: "{state.elevation}",
+                                oninput: move |evt| { ui.write().elevation = evt.value().parse().unwrap_or(0.0); },
+                                onchange: move |_| { if !real_mesh_ready { spawn(render_frame(ui)); } },
+                                style: "accent-color: var(--qualia-accent, #63b3ed); cursor: pointer;"
                             }
                         }
-                    }
-                }
 
-                if !state.status.is_empty() && !state.rendering {
-                    p { style: "margin:0 0 0.4rem;font-size:0.8rem;", "{state.status}" }
-                }
-
-                p {
-                    style: "margin:0;font-size:0.72rem;color:var(--qualia-text-muted,#888);line-height:1.4;",
-                    if real_mesh_ready {
-                        "Showing the real 3D organ meshes (Human Reference Atlas) in the WebGPU portal. Set your physiological state on the text view to see the body at your current life stage."
-                    } else {
-                        "Interim visual: body systems as coloured regions on a silhouette. Download the body assets above to see the real 3D organ meshes. Set your physiological state on the text view to see the body at your current life stage."
+                        // Right: Asset Cache Controls
+                        div {
+                            style: "
+                                pointer-events: auto;
+                                background: rgba(10, 15, 30, 0.7);
+                                backdrop-filter: blur(16px);
+                                -webkit-backdrop-filter: blur(16px);
+                                padding: 1rem;
+                                border-radius: 12px;
+                                border: 1px solid rgba(255, 255, 255, 0.08);
+                                display: flex;
+                                flex-direction: column;
+                                align-items: flex-end;
+                                gap: 0.8rem;
+                            ",
+                            div {
+                                style: "display: flex; align-items: center; gap: 0.75rem;",
+                                select {
+                                    style: "
+                                        background: rgba(255, 255, 255, 0.1);
+                                        border: 1px solid rgba(255, 255, 255, 0.2);
+                                        color: #fff;
+                                        padding: 0.4rem 0.8rem;
+                                        border-radius: 8px;
+                                        font-size: 0.8rem;
+                                        outline: none;
+                                        cursor: pointer;
+                                    ",
+                                    value: "{state.model}",
+                                    onchange: move |evt| {
+                                        ui.write().model = evt.value();
+                                        ui.write().cache_status = None;
+                                        ui.write().cache_checked = false;
+                                        spawn(refresh_cache_status(ui));
+                                    },
+                                    option { value: "male", style: "background: #111;", "XY Form" }
+                                    option { value: "female", style: "background: #111;", "XX Form" }
+                                }
+                                if let Some(c) = cache {
+                                    div {
+                                        style: "font-size: 0.75rem; padding: 0.4rem 0.8rem; border-radius: 8px; background: rgba(255,255,255,0.05); color: #cbd5e1;",
+                                        if c.cached {
+                                            "Loaded: {c.organ_count} organs · {c.total_ten_d_bytes / 1_000_000} MB"
+                                        } else {
+                                            "No local meshes"
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            div {
+                                style: "display: flex; gap: 0.5rem;",
+                                button {
+                                    style: "
+                                        padding: 0.5rem 1rem;
+                                        border: none;
+                                        border-radius: 8px;
+                                        background: var(--qualia-accent, #3182ce);
+                                        color: #fff;
+                                        font-size: 0.8rem;
+                                        font-weight: 600;
+                                        cursor: pointer;
+                                        transition: all 0.2s;
+                                        animation: glow-btn 2s infinite alternate;
+                                    ",
+                                    disabled: state.acquiring,
+                                    onclick: move |_| { spawn(acquire_assets(ui)); },
+                                    if state.acquiring { "Acquiring..." } else if cache.map(|c| c.cached).unwrap_or(false) { "Update Meshes" } else { "Download HD Meshes" }
+                                }
+                                if cache.map(|c| c.cached).unwrap_or(false) {
+                                    button {
+                                        style: "
+                                            padding: 0.5rem 1rem;
+                                            border: 1px solid rgba(255, 255, 255, 0.2);
+                                            border-radius: 8px;
+                                            background: transparent;
+                                            color: #e2e8f0;
+                                            font-size: 0.8rem;
+                                            cursor: pointer;
+                                            transition: all 0.2s;
+                                        ",
+                                        disabled: state.acquiring,
+                                        onclick: move |_| {
+                                            spawn(async move {
+                                                let model = ui.read().model.clone();
+                                                let _ = super::host_client::clear_body_cache(&model).await;
+                                                ui.write().cache_status = None;
+                                                spawn(refresh_cache_status(ui));
+                                            });
+                                        },
+                                        "Purge Cache"
+                                    }
+                                }
+                            }
+                            if !state.acquire_message.is_empty() {
+                                div { style: "font-size: 0.75rem; color: #90cdf4; max-width: 250px; text-align: right;", "{state.acquire_message}" }
+                            }
+                        }
                     }
                 }
             }

@@ -134,85 +134,147 @@ pub fn TenDBrowser() -> Element {
 
     rsx! {
         div {
-            style: "display:flex;flex-direction:column;gap:1rem;padding:1.25rem;max-width:1400px;margin:0 auto;width:100%;height:calc(100vh - 60px);",
+            style: "
+                display: flex;
+                flex-direction: column;
+                gap: 1.5rem;
+                padding: 2rem;
+                max-width: 1600px;
+                margin: 0 auto;
+                width: 100%;
+                height: calc(100vh - 60px);
+                background: linear-gradient(180deg, #050510 0%, #0a0a1a 100%);
+                color: #e2e8f0;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            ",
+
+            // Global CSS keyframes for this view
+            style {
+                "@keyframes cyber-scan {{ 0% {{ background-position: 0% 0%; }} 100% {{ background-position: 100% 100%; }} }}"
+                "@keyframes glow-text {{ 0% {{ text-shadow: 0 0 5px rgba(235, 111, 146, 0.5); }} 100% {{ text-shadow: 0 0 15px rgba(235, 111, 146, 0.9); }} }}"
+                ".tree-btn {{ transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }}"
+                ".tree-btn:hover {{ background: rgba(235, 111, 146, 0.1) !important; border-color: rgba(235, 111, 146, 0.4) !important; transform: translateX(4px); }}"
+            }
 
             // Header
             header {
-                style: "display:flex;align-items:center;justify-content:space-between;gap:1rem;",
+                style: "display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid rgba(235, 111, 146, 0.2); padding-bottom: 1.5rem;",
                 div {
-                    h1 { style: "margin:0;font-size:1.35rem;", "10D Browser" }
+                    h1 { 
+                        style: "margin: 0 0 0.5rem; font-size: 1.8rem; font-weight: 700; letter-spacing: 0.05em; color: #eb6f92; animation: glow-text 2s infinite alternate;", 
+                        "10D INFOSPHERE BROWSER" 
+                    }
                     p {
-                        style: "margin:0;font-size:0.85rem;color:var(--qualia-text-muted,#888);",
-                        "Browse and inspect .10d container files"
+                        style: "margin: 0; font-size: 0.9rem; color: #a0aec0; letter-spacing: 0.02em;",
+                        "Inspect and verify deep structural .10d manifold containers"
                     }
                 }
                 div {
-                    style: "display:flex;gap:0.5rem;",
+                    style: "display: flex; gap: 1rem;",
                     button {
                         r#type: "button",
                         onclick: refresh,
-                        style: "padding:0.4rem 0.8rem;border:1px solid var(--qualia-border,#333);border-radius:6px;background:var(--qualia-surface,#1a1a1a);color:var(--qualia-text,#eee);cursor:pointer;",
-                        if *loading.read() { "Scanning..." } else { "Refresh" }
+                        style: "
+                            padding: 0.6rem 1.2rem;
+                            border: 1px solid rgba(235, 111, 146, 0.4);
+                            border-radius: 8px;
+                            background: rgba(235, 111, 146, 0.05);
+                            color: #eb6f92;
+                            font-weight: 600;
+                            font-size: 0.85rem;
+                            letter-spacing: 0.05em;
+                            text-transform: uppercase;
+                            cursor: pointer;
+                            transition: all 0.2s;
+                            box-shadow: 0 0 10px rgba(235, 111, 146, 0.1);
+                        ",
+                        if *loading.read() { "Scanning Matrix..." } else { "Refresh Matrix" }
                     }
                     button {
                         r#type: "button",
                         onclick: open_file,
-                        style: "padding:0.4rem 0.8rem;border:1px solid var(--qualia-border,#333);border-radius:6px;background:var(--qualia-surface,#1a1a1a);color:var(--qualia-text,#eee);cursor:pointer;",
-                        "Open File..."
+                        style: "
+                            padding: 0.6rem 1.2rem;
+                            border: 1px solid rgba(160, 174, 192, 0.3);
+                            border-radius: 8px;
+                            background: rgba(255, 255, 255, 0.05);
+                            color: #e2e8f0;
+                            font-weight: 600;
+                            font-size: 0.85rem;
+                            letter-spacing: 0.05em;
+                            text-transform: uppercase;
+                            cursor: pointer;
+                            transition: all 0.2s;
+                        ",
+                        "Manual Uplink..."
                     }
                 }
             }
 
-            // Error
+            // Error Overlay
             if let Some(err) = error_msg.read().as_ref() {
                 div {
-                    style: "padding:0.5rem 0.75rem;border:1px solid #c0392b;background:#c0392b22;border-radius:8px;font-size:0.8rem;color:#e74c3c;",
+                    style: "padding: 1rem; border: 1px solid #fc8181; background: rgba(252, 129, 129, 0.1); border-radius: 8px; font-size: 0.85rem; color: #fc8181; display: flex; align-items: center; gap: 0.75rem;",
+                    span { style: "font-weight: bold;", "CRITICAL ERROR:" }
                     "{err}"
                 }
             }
 
             // Main content — split view
             div {
-                style: "display:grid;grid-template-columns:320px 1fr;gap:1rem;flex:1;overflow:hidden;",
+                style: "display: grid; grid-template-columns: 360px 1fr; gap: 1.5rem; flex: 1; overflow: hidden;",
 
                 // Left: file tree
                 div {
-                    style: "border:1px solid var(--qualia-border,#333);border-radius:10px;background:var(--qualia-surface,#111);overflow-y:auto;padding:0.5rem;",
+                    style: "
+                        border: 1px solid rgba(255, 255, 255, 0.1);
+                        border-radius: 12px;
+                        background: rgba(10, 15, 30, 0.5);
+                        backdrop-filter: blur(12px);
+                        -webkit-backdrop-filter: blur(12px);
+                        overflow-y: auto;
+                        padding: 1rem;
+                        box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+                    ",
 
                     if containers.read().is_empty() && !*loading.read() {
                         div {
-                            style: "padding:2rem;text-align:center;color:var(--qualia-text-muted,#888);font-size:0.85rem;",
-                            "No .10d files found. Click Refresh to scan."
+                            style: "padding: 3rem 1rem; text-align: center; color: #4a5568; font-size: 0.9rem;",
+                            "Matrix empty. Initialize scan."
                         }
                     }
 
                     for (cat_name, entries) in categories.iter() {
                         div {
                             key: "{cat_name}",
-                            style: "margin-bottom:0.75rem;",
+                            style: "margin-bottom: 1.5rem;",
                             div {
-                                style: "font-size:0.75rem;font-weight:600;text-transform:uppercase;color:var(--qualia-text-muted,#888);padding:0.25rem 0.5rem;",
-                                "{cat_name} ({entries.len()})"
+                                style: "font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #eb6f92; padding: 0.5rem; border-bottom: 1px solid rgba(235, 111, 146, 0.2); margin-bottom: 0.5rem;",
+                                "{cat_name} [{entries.len()}]"
                             }
                             for entry in entries.iter() {
                                 button {
                                     key: "{entry.path}",
+                                    class: "tree-btn",
                                     r#type: "button",
                                     onclick: {
                                         let path = entry.path.clone();
                                         move |_| inspect(path.clone())
                                     },
                                     style: if selected_path.read().as_deref() == Some(&entry.path) {
-                                        "display:block;width:100%;padding:0.4rem 0.5rem;border:none;border-radius:6px;background:var(--qualia-accent,#2a6f97);color:#fff;cursor:pointer;text-align:left;font-size:0.8rem;"
+                                        "display: block; width: 100%; padding: 0.75rem; border: 1px solid rgba(235, 111, 146, 0.5); border-radius: 8px; background: rgba(235, 111, 146, 0.15); color: #fff; cursor: pointer; text-align: left; margin-bottom: 0.5rem; box-shadow: 0 0 15px rgba(235, 111, 146, 0.2);"
                                     } else {
-                                        "display:block;width:100%;padding:0.4rem 0.5rem;border:none;border-radius:6px;background:transparent;color:var(--qualia-text,#ddd);cursor:pointer;text-align:left;font-size:0.8rem;"
+                                        "display: block; width: 100%; padding: 0.75rem; border: 1px solid transparent; border-radius: 8px; background: rgba(255, 255, 255, 0.03); color: #cbd5e0; cursor: pointer; text-align: left; margin-bottom: 0.5rem;"
                                     },
-                                    div { style: "font-weight:500;", "{entry.filename}" }
+                                    div { style: "font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;", "{entry.filename}" }
                                     div {
-                                        style: "font-size:0.7rem;opacity:0.7;",
-                                        "{format_size(entry.size_bytes)} · {entry.section_count} sections"
-                                        if entry.has_mesh { " · mesh" }
-                                        if entry.has_provenance { " · prov" }
+                                        style: "font-size: 0.7rem; font-family: monospace; color: #718096; display: flex; gap: 0.5rem; flex-wrap: wrap;",
+                                        span { "{format_size(entry.size_bytes)}" }
+                                        span { "·" }
+                                        span { "{entry.section_count} sec" }
+                                        if entry.has_mesh { span { style: "color: #9f7aea;", "MESH" } }
+                                        if entry.has_tensor_nodes { span { style: "color: #38b2ac;", "TENSOR" } }
+                                        if entry.has_provenance { span { style: "color: #ecc94b;", "PROV" } }
                                     }
                                 }
                             }
@@ -220,85 +282,116 @@ pub fn TenDBrowser() -> Element {
                     }
                 }
 
-                // Right: inspector
+                // Right: inspector dashboard
                 div {
-                    style: "border:1px solid var(--qualia-border,#333);border-radius:10px;background:var(--qualia-surface,#111);overflow-y:auto;padding:1rem;",
+                    style: "
+                        border: 1px solid rgba(235, 111, 146, 0.2);
+                        border-radius: 12px;
+                        background: rgba(5, 5, 16, 0.7);
+                        backdrop-filter: blur(24px);
+                        -webkit-backdrop-filter: blur(24px);
+                        overflow-y: auto;
+                        padding: 2rem;
+                        box-shadow: 0 0 30px rgba(0,0,0,0.8), inset 0 0 50px rgba(235, 111, 146, 0.05);
+                        position: relative;
+                    ",
+
+                    // decorative scanner line
+                    div {
+                        style: "position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, rgba(235, 111, 146, 0.8), transparent); animation: cyber-scan 3s infinite linear; opacity: 0.5;"
+                    }
 
                     if let Some(info) = &selected_info {
                         div {
-                            style: "display:flex;flex-direction:column;gap:0.75rem;",
+                            style: "display: flex; flex-direction: column; gap: 1.5rem;",
 
                             // File header
                             div {
-                                h2 { style: "margin:0 0 0.25rem;font-size:1.1rem;", "{info.filename}" }
-                                p {
-                                    style: "margin:0;font-size:0.8rem;color:var(--qualia-text-muted,#888);",
-                                    "{info.path} · {format_size(info.size_bytes)}"
-                                }
-                            }
-
-                            // CRC status
-                            div {
-                                style: if info.crc_valid {
-                                    "padding:0.4rem 0.75rem;border:1px solid #27ae60;background:#27ae6022;border-radius:6px;font-size:0.8rem;color:#2ecc71;"
-                                } else {
-                                    "padding:0.4rem 0.75rem;border:1px solid #c0392b;background:#c0392b22;border-radius:6px;font-size:0.8rem;color:#e74c3c;"
-                                },
-                                if info.crc_valid { "CRC32C: Valid" } else { "CRC32C: INVALID" }
-                            }
-
-                            // Header info
-                            div {
-                                style: "padding:0.75rem;border:1px solid var(--qualia-border,#333);border-radius:8px;",
-                                h3 { style: "margin:0 0 0.5rem;font-size:0.9rem;", "Header" }
-                                div { style: "font-size:0.8rem;color:var(--qualia-text-muted,#aaa);", "Flags: {flags_hex.as_deref().unwrap_or(\"\")}" }
-                                div { style: "font-size:0.8rem;color:var(--qualia-text-muted,#aaa);", "Sections: {info.section_count}" }
-                            }
-
-                            // Mesh stats
-                            if let (Some(vtx), Some(tri)) = (info.mesh_vertex_count, info.mesh_triangle_count) {
+                                style: "display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 1rem;",
                                 div {
-                                    style: "padding:0.75rem;border:1px solid var(--qualia-border,#333);border-radius:8px;",
-                                    h3 { style: "margin:0 0 0.5rem;font-size:0.9rem;", "Mesh" }
-                                    div { style: "font-size:0.8rem;color:var(--qualia-text-muted,#aaa);", "Vertices: {vtx}" }
-                                    div { style: "font-size:0.8rem;color:var(--qualia-text-muted,#aaa);", "Triangles: {tri}" }
-                                }
-                            }
-
-                            // Provenance
-                            if let Some(src) = &info.provenance_source {
-                                div {
-                                    style: "padding:0.75rem;border:1px solid var(--qualia-border,#333);border-radius:8px;",
-                                    h3 { style: "margin:0 0 0.5rem;font-size:0.9rem;", "Provenance" }
-                                    div { style: "font-size:0.8rem;color:var(--qualia-text-muted,#aaa);", "Source: {src}" }
-                                    if let Some(lic) = &info.provenance_licence {
-                                        div { style: "font-size:0.8rem;color:var(--qualia-text-muted,#aaa);", "Licence: {lic}" }
+                                    h2 { style: "margin: 0 0 0.5rem; font-size: 1.5rem; color: #fff; font-weight: 300;", "{info.filename}" }
+                                    p {
+                                        style: "margin: 0; font-size: 0.8rem; font-family: monospace; color: #718096;",
+                                        "{info.path}"
                                     }
-                                    if let Some(ts) = info.provenance_timestamp {
-                                        div { style: "font-size:0.8rem;color:var(--qualia-text-muted,#aaa);", "Timestamp: {ts}" }
+                                }
+                                div {
+                                    style: "text-align: right;",
+                                    div { style: "font-size: 1.2rem; font-weight: 700; color: #eb6f92;", "{format_size(info.size_bytes)}" }
+                                    div {
+                                        style: if info.crc_valid {
+                                            "display: inline-block; margin-top: 0.5rem; padding: 0.25rem 0.75rem; border: 1px solid #38a169; background: rgba(56, 161, 105, 0.1); border-radius: 4px; font-size: 0.75rem; font-weight: 600; color: #48bb78; text-transform: uppercase;"
+                                        } else {
+                                            "display: inline-block; margin-top: 0.5rem; padding: 0.25rem 0.75rem; border: 1px solid #e53e3e; background: rgba(229, 62, 62, 0.1); border-radius: 4px; font-size: 0.75rem; font-weight: 600; color: #fc8181; text-transform: uppercase;"
+                                        },
+                                        if info.crc_valid { "CRC32C Valid" } else { "CRC32C INVALID" }
+                                    }
+                                }
+                            }
+
+                            // Stats Grid
+                            div {
+                                style: "display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;",
+                                
+                                // Header Stats
+                                div {
+                                    style: "padding: 1rem; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); border-radius: 8px;",
+                                    div { style: "font-size: 0.75rem; text-transform: uppercase; color: #a0aec0; margin-bottom: 0.5rem; letter-spacing: 0.05em;", "Header Metadata" }
+                                    div { style: "font-family: monospace; font-size: 0.9rem; color: #e2e8f0; margin-bottom: 0.25rem;", "FLAGS: ", span { style: "color: #eb6f92;", "{flags_hex.as_deref().unwrap_or(\"\")}" } }
+                                    div { style: "font-family: monospace; font-size: 0.9rem; color: #e2e8f0;", "SECTIONS: {info.section_count}" }
+                                }
+
+                                // Mesh Stats
+                                if let (Some(vtx), Some(tri)) = (info.mesh_vertex_count, info.mesh_triangle_count) {
+                                    div {
+                                        style: "padding: 1rem; border: 1px solid rgba(159, 122, 234, 0.2); background: rgba(159, 122, 234, 0.05); border-radius: 8px;",
+                                        div { style: "font-size: 0.75rem; text-transform: uppercase; color: #b794f4; margin-bottom: 0.5rem; letter-spacing: 0.05em;", "Mesh Geometry" }
+                                        div { style: "font-family: monospace; font-size: 0.9rem; color: #e2e8f0; margin-bottom: 0.25rem;", "VERTICES: {vtx}" }
+                                        div { style: "font-family: monospace; font-size: 0.9rem; color: #e2e8f0;", "TRIANGLES: {tri}" }
+                                    }
+                                }
+
+                                // Provenance
+                                if let Some(src) = &info.provenance_source {
+                                    div {
+                                        style: "padding: 1rem; border: 1px solid rgba(236, 201, 75, 0.2); background: rgba(236, 201, 75, 0.05); border-radius: 8px; grid-column: 1 / -1;",
+                                        div { style: "font-size: 0.75rem; text-transform: uppercase; color: #f6e05e; margin-bottom: 0.5rem; letter-spacing: 0.05em;", "Cryptographic Provenance" }
+                                        div { style: "font-family: monospace; font-size: 0.85rem; color: #e2e8f0; margin-bottom: 0.25rem;", "SOURCE: ", span { style: "color: #f6e05e;", "{src}" } }
+                                        if let Some(lic) = &info.provenance_licence {
+                                            div { style: "font-family: monospace; font-size: 0.85rem; color: #e2e8f0; margin-bottom: 0.25rem;", "LICENCE: {lic}" }
+                                        }
+                                        if let Some(ts) = info.provenance_timestamp {
+                                            div { style: "font-family: monospace; font-size: 0.85rem; color: #e2e8f0;", "TIMESTAMP: {ts}" }
+                                        }
                                     }
                                 }
                             }
 
                             // Section table
                             div {
-                                style: "padding:0.75rem;border:1px solid var(--qualia-border,#333);border-radius:8px;",
-                                h3 { style: "margin:0 0 0.5rem;font-size:0.9rem;", "Sections ({info.sections.len()})" }
-                                table {
-                                    style: "width:100%;border-collapse:collapse;font-size:0.78rem;",
-                                    thead {
-                                        tr {
-                                            th { style: "text-align:left;padding:0.25rem;border-bottom:1px solid var(--qualia-border,#333);", "Type" }
-                                            th { style: "text-align:right;padding:0.25rem;border-bottom:1px solid var(--qualia-border,#333);", "Offset" }
-                                            th { style: "text-align:right;padding:0.25rem;border-bottom:1px solid var(--qualia-border,#333);", "Size" }
+                                style: "margin-top: 1rem;",
+                                h3 { style: "margin: 0 0 1rem; font-size: 1rem; color: #eb6f92; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;", "Manifold Sections [{info.sections.len()}]" }
+                                div {
+                                    style: "border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; overflow: hidden;",
+                                    table {
+                                        style: "width: 100%; border-collapse: collapse; font-size: 0.85rem; font-family: monospace;",
+                                        thead {
+                                            tr {
+                                                style: "background: rgba(255,255,255,0.05);",
+                                                th { style: "text-align: left; padding: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1); color: #a0aec0;", "TYPE_NAME" }
+                                                th { style: "text-align: right; padding: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1); color: #a0aec0;", "OFFSET" }
+                                                th { style: "text-align: right; padding: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1); color: #a0aec0;", "SIZE" }
+                                            }
                                         }
-                                    }
-                                    tbody {
-                                        for sec in info.sections.iter() {
-                                            tr { key: "{sec.byte_offset}",
-                                                td { style: "padding:0.25rem;", "{sec.section_type_name}" }
-                                                td { style: "padding:0.25rem;text-align:right;color:var(--qualia-text-muted,#888);", "{format_size(sec.byte_offset as u64)}" }
-                                                td { style: "padding:0.25rem;text-align:right;color:var(--qualia-text-muted,#888);", "{format_size(sec.byte_length as u64)}" }
+                                        tbody {
+                                            for (i, sec) in info.sections.iter().enumerate() {
+                                                tr { 
+                                                    key: "{sec.byte_offset}",
+                                                    style: if i % 2 == 0 { "background: transparent;" } else { "background: rgba(255,255,255,0.02);" },
+                                                    td { style: "padding: 0.75rem; color: #90cdf4;", "{sec.section_type_name}" }
+                                                    td { style: "padding: 0.75rem; text-align: right; color: #718096;", "0x{sec.byte_offset:08X}" }
+                                                    td { style: "padding: 0.75rem; text-align: right; color: #cbd5e0;", "{format_size(sec.byte_length as u64)}" }
+                                                }
                                             }
                                         }
                                     }
@@ -307,8 +400,9 @@ pub fn TenDBrowser() -> Element {
                         }
                     } else {
                         div {
-                            style: "display:flex;align-items:center;justify-content:center;height:100%;color:var(--qualia-text-muted,#888);font-size:0.9rem;",
-                            "Select a .10d file to inspect"
+                            style: "display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #4a5568;",
+                            div { style: "font-size: 4rem; opacity: 0.2; margin-bottom: 1rem;", "⬡" }
+                            div { style: "font-size: 1.1rem; font-weight: 300; letter-spacing: 0.05em;", "AWAITING MANIFOLD SELECTION" }
                         }
                     }
                 }

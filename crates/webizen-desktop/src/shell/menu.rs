@@ -1,7 +1,7 @@
 use tauri::menu::{MenuBuilder, MenuItem, SubmenuBuilder};
 use tauri::webview::WebviewWindowBuilder;
 use tauri::{AppHandle, Emitter, Manager};
-use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 
 fn show_main_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
@@ -29,6 +29,7 @@ fn qapp_route(qapp_id: &str) -> &str {
         "tools" => "/tools",
         "sanctuary" => "/sanctuary",
         "logs" => "/logs",
+        "gpu-viewport" => "/gpu-viewport",
         _ => "/",
     }
 }
@@ -36,14 +37,13 @@ fn qapp_route(qapp_id: &str) -> &str {
 pub fn navigate_main_to(app: &AppHandle, qapp_id: &str) {
     show_main_window(app);
     let route = qapp_route(qapp_id);
-    if let Some(window) = app.get_webview_window("main") {
-        let script = format!(
-            "try {{ window.history.pushState(null, '', '{}'); window.dispatchEvent(new PopStateEvent('popstate')); }} catch (e) {{ console.error('native menu route failed', e); }}",
-            route
+    if let Err(err) = app.emit("shell-navigate", qapp_id) {
+        crate::desktop_log::record(
+            "error",
+            format!("desktop route dispatch failed for {qapp_id}: {err}"),
         );
-        let _ = window.eval(&script);
+        return;
     }
-    let _ = app.emit("shell-navigate", qapp_id);
     crate::desktop_log::record("info", format!("desktop route -> {qapp_id} ({route})"));
 }
 
@@ -59,7 +59,7 @@ pub fn open_settings_portal(path: &str) {
     let _ = open::that(url);
 }
 
-fn check_for_updates(app: AppHandle) {
+pub fn check_for_updates(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
         use tauri_plugin_updater::UpdaterExt;
         match app.updater() {
@@ -70,9 +70,32 @@ fn check_for_updates(app: AppHandle) {
                         "info",
                         format!("Update available: {version}; downloading installer"),
                     );
-                    let _ = app.dialog().message(format!(
-                        "Webizen {version} is available. The updater will download and install it now."
-                    ));
+                    let accepted = {
+                        let dialog_app = app.clone();
+                        let prompt_version = version.clone();
+                        tauri::async_runtime::spawn_blocking(move || {
+                            dialog_app
+                                .dialog()
+                                .message(format!(
+                                    "Webizen {prompt_version} is available. Download and install it now?"
+                                ))
+                                .title("Webizen Update")
+                                .buttons(MessageDialogButtons::OkCancelCustom(
+                                    "Download and Install".to_string(),
+                                    "Later".to_string(),
+                                ))
+                                .blocking_show()
+                        })
+                        .await
+                        .unwrap_or(false)
+                    };
+                    if !accepted {
+                        crate::desktop_log::record(
+                            "info",
+                            format!("Update {version} postponed by user"),
+                        );
+                        return;
+                    }
                     let result = update
                         .download_and_install(
                             |downloaded, total| {
@@ -99,35 +122,48 @@ fn check_for_updates(app: AppHandle) {
                                 "info",
                                 format!("Update {version} installed"),
                             );
-                            let _ = app.dialog().message(
-                                "Update installed. Restart Webizen to run the new version.",
-                            );
+                            app.dialog()
+                                .message(
+                                    "Update installed. Restart Webizen to run the new version.",
+                                )
+                                .title("Webizen Update")
+                                .show(|_| {});
                         }
                         Err(e) => {
                             crate::desktop_log::record(
                                 "error",
                                 format!("Update install failed: {e}"),
                             );
-                            let _ = app.dialog().message(format!(
-                                "Webizen update failed before it could be installed:\n\n{e}"
-                            ));
+                            app.dialog()
+                                .message(format!(
+                                    "Webizen update failed before it could be installed:\n\n{e}"
+                                ))
+                                .title("Webizen Update Failed")
+                                .show(|_| {});
                         }
                     }
                 }
                 Ok(None) => {
                     crate::desktop_log::record("info", "No updates available");
-                    let _ = app.dialog().message("Webizen is up to date.");
+                    app.dialog()
+                        .message("Webizen is up to date.")
+                        .title("Webizen Update")
+                        .show(|_| {});
                 }
                 Err(e) => {
                     crate::desktop_log::record("warn", format!("Update check failed: {e}"));
-                    let _ = app.dialog().message(format!("Update check failed:\n\n{e}"));
+                    app.dialog()
+                        .message(format!("Update check failed:\n\n{e}"))
+                        .title("Webizen Update Failed")
+                        .show(|_| {});
                 }
             },
             Err(e) => {
                 crate::desktop_log::record("warn", format!("Updater not available: {e}"));
-                let _ = app
-                    .dialog()
-                    .message(format!("Updater is not available:\n\n{e}"));
+                app.dialog()
+                    .message(format!("Updater is not available:\n\n{e}"))
+                    .title("Webizen Update Unavailable")
+                    .show(|_| {});
             }
         }
     });
@@ -174,16 +210,11 @@ fn open_new_studio_window(app: &AppHandle) {
 pub fn build_app_menu(
     app: &AppHandle,
 ) -> Result<tauri::menu::Menu<tauri::Wry>, Box<dyn std::error::Error>> {
-    let new_tab = MenuItem::with_id(app, "new_tab", "New Tab", true, Some("Ctrl+T"))?;
-    let close_tab = MenuItem::with_id(app, "close_tab", "Close Tab", true, Some("Ctrl+W"))?;
     let new_window =
         MenuItem::with_id(app, "new_window", "New Window", true, Some("Ctrl+Shift+N"))?;
     let quit = MenuItem::with_id(app, "quit_app", "Quit Webizen", true, Some("Ctrl+Q"))?;
 
     let file_menu = SubmenuBuilder::new(app, "File")
-        .item(&new_tab)
-        .item(&close_tab)
-        .separator()
         .item(&new_window)
         .separator()
         .item(&quit)
@@ -292,117 +323,172 @@ pub fn build_app_menu(
     Ok(menu)
 }
 
-pub fn handle_menu_event(app: &AppHandle, event: &tauri::menu::MenuEvent) {
-    match event.id().as_ref() {
-        "new_tab" => {
-            navigate_main_to(app, "dashboard");
-        }
-        "close_tab" => {
-            navigate_main_to(app, "dashboard");
-            crate::desktop_log::record("info", "close tab requested; returned to dashboard");
-        }
-        "new_window" => {
+pub fn dispatch_shell_action(app: &AppHandle, action: crate::shell::action::ShellAction) {
+    use crate::shell::action::ShellAction;
+    match action {
+        ShellAction::NewWindow => {
             open_new_studio_window(app);
         }
-        "quit_app" => app.exit(0),
+        ShellAction::Quit => app.exit(0),
 
-        "nav_back" => {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.eval("history.back()");
-            }
+        ShellAction::NavBack => {
             let _ = app.emit("shell-nav-back", ());
         }
-        "nav_forward" => {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.eval("history.forward()");
-            }
+        ShellAction::NavForward => {
             let _ = app.emit("shell-nav-forward", ());
         }
-        "nav_reload" => {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.eval("location.reload()");
-            }
+        ShellAction::NavReload => {
             let _ = app.emit("shell-nav-reload", ());
         }
 
-        "toggle_gpu" => {
-            navigate_main_to(app, "gpu-viewport");
+        ShellAction::Navigate(route) => {
+            navigate_main_to(app, &route);
         }
-        "toggle_ambient" => {
+
+        ShellAction::ToggleAmbient => {
             if let Some(bridge) = app.try_state::<crate::telemetry_bridge::TelemetryBridge>() {
                 bridge.toggle();
             }
         }
 
-        "zoom_in" => {
+        ShellAction::ZoomIn => {
             set_zoom(app, 0.1);
         }
-        "zoom_out" => {
+        ShellAction::ZoomOut => {
             set_zoom(app, -0.1);
         }
-        "reset_zoom" => {
+        ShellAction::ResetZoom => {
             reset_zoom(app);
         }
 
-        "open_wellfair" => navigate_main_to(app, "wellfair"),
-        "open_chora" => navigate_main_to(app, "chora"),
-        "open_browser" => navigate_main_to(app, "browser"),
-        "open_10d" => navigate_main_to(app, "10d-browser"),
-        "open_dashboard" => navigate_main_to(app, "dashboard"),
-        "open_qapp_studio" => navigate_main_to(app, "qapp-studio"),
-        "open_qapp_manager" => navigate_main_to(app, "qapps"),
-
-        "open_settings" => navigate_main_to(app, "settings"),
-        "open_diagnostics" => {
+        ShellAction::OpenDiagnostics => {
             let app_handle = app.clone();
-            tauri::async_runtime::spawn_blocking(
-                move || match crate::commands::wellfair_diagnostics(app_handle.clone()) {
+            tauri::async_runtime::spawn(async move {
+                match crate::commands::wellfair_diagnostics(app_handle.clone()) {
                     Ok(json) => {
                         navigate_main_to(&app_handle, "tools");
                         let _ = app_handle.emit("diagnostics-result", json);
-                        crate::desktop_log::record("info", "diagnostics completed from menu");
+                        crate::desktop_log::record("info", "diagnostics completed from menu/tray");
                     }
                     Err(err) => crate::desktop_log::record(
                         "error",
-                        format!("diagnostics from menu failed: {err}"),
-                    ),
-                },
-            );
-        }
-        "open_library" => navigate_main_to(app, "library"),
-        "open_wallet" => navigate_main_to(app, "wallet"),
-
-        "import_samsung" => {
-            let _ = app.emit("shell-import-samsung", ());
-        }
-        "sync_relay" => {
-            let app_handle = app.clone();
-            tauri::async_runtime::spawn_blocking(move || {
-                match crate::commands::wellfair_sync_with_relay(app_handle, String::new(), 0) {
-                    Ok(msg) => crate::desktop_log::record("info", format!("relay sync: {msg}")),
-                    Err(err) => crate::desktop_log::record(
-                        "error",
-                        format!("relay sync failed from menu: {err}"),
+                        format!("diagnostics from menu/tray failed: {err}"),
                     ),
                 }
             });
         }
-        "backup" => {
-            let _ = app.emit("shell-backup", ());
+
+        ShellAction::ImportSamsung => {
+            let _ = app.emit("shell-import-samsung", ());
+        }
+        ShellAction::SyncRelay => {
+            let app_handle = app.clone();
+            tauri::async_runtime::spawn(async move {
+                match crate::commands::wellfair_sync_with_relay(app_handle, "http://127.0.0.1:4242".to_string(), 0) {
+                    Ok(msg) => crate::desktop_log::record("info", format!("sync relay via tray: {msg}")),
+                    Err(e) => crate::desktop_log::record("error", format!("sync relay via tray failed: {e}")),
+                }
+            });
+        }
+        ShellAction::Backup => {
+            show_main_window(app);
+            let _ = app.emit("open-backup", ());
         }
 
-        "help_about" => {
+        ShellAction::HelpAbout => {
             let version = env!("CARGO_PKG_VERSION");
-            let _ = app.dialog().message(format!(
-                "Webizen Desktop - v{version}\n\nThe human-centric internet platform.\n\nLocal crates: qualia-core-db, qualia-client-core, wellfare-core, qualia-cooperative-core, webizen-runtime, webizen-render, webizen-studio, qualia-semantic-library"
-            ));
+            app.dialog()
+                .message(format!(
+                    "Webizen Desktop - v{version}\n\nThe human-centric internet platform.\n\nLocal crates: qualia-core-db, qualia-client-core, wellfare-core, qualia-cooperative-core, webizen-runtime, webizen-render, webizen-studio, qualia-semantic-library"
+                ))
+                .title("About Webizen")
+                .show(|_| {});
         }
-        "help_update" => {
+        ShellAction::HelpUpdate => {
             check_for_updates(app.clone());
         }
-        "help_logs" => navigate_main_to(app, "logs"),
-        "help_portal" => open_settings_portal(""),
+        ShellAction::HelpPortal => open_settings_portal(""),
 
-        _ => {}
+        ShellAction::SanctuaryLock => {
+            match crate::commands::wellfair_lock_sanctuary(app.clone()) {
+                Ok(_) => {
+                    let _ = app.emit("sanctuary-locked", ());
+                    eprintln!("Sanctuary locked via tray");
+                }
+                Err(e) => eprintln!("Sanctuary lock via tray failed: {e}"),
+            }
+        }
+        ShellAction::SanctuaryUnlock => {
+            show_main_window(app);
+            let _ = app.emit("open-sanctuary-unlock", ());
+        }
+        ShellAction::SanctuaryStatus => {
+            show_main_window(app);
+            let _ = app.emit("open-sanctuary-status", ());
+        }
+
+        ShellAction::DaemonRestart => {
+            if let Some(tx) = app.try_state::<tokio::sync::mpsc::Sender<String>>() {
+                let _ = tx.try_send("RESTART".to_string());
+                eprintln!("Daemon restart requested via tray");
+            }
+        }
+        ShellAction::DaemonStop => {
+            if let Some(tx) = app.try_state::<tokio::sync::mpsc::Sender<String>>() {
+                let _ = tx.try_send("STOP".to_string());
+                eprintln!("Daemon stop requested via tray");
+            }
+        }
+        ShellAction::RevokeSessions => {
+            if let Some(tx) = app.try_state::<tokio::sync::mpsc::Sender<String>>() {
+                let _ = tx.try_send("REVOKE".to_string());
+            }
+        }
+
+        ShellAction::OpenMedReminders => {
+            show_main_window(app);
+            let _ = app.emit("open-med-reminders", ());
+        }
+        ShellAction::OpenSyncInbox => {
+            show_main_window(app);
+            let _ = app.emit("open-sync-inbox", ());
+        }
+    }
+}
+
+pub fn handle_menu_event(app: &AppHandle, event: &tauri::menu::MenuEvent) {
+    if let Some(action) = crate::shell::action::ShellAction::from_id(event.id().as_ref()) {
+        dispatch_shell_action(app, action);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::qapp_route;
+
+    #[test]
+    fn every_native_destination_has_an_explicit_route() {
+        let expected = [
+            ("dashboard", "/"),
+            ("wellfair", "/wellfair"),
+            ("chora", "/chora"),
+            ("browser", "/browser"),
+            ("10d-browser", "/10d-browser"),
+            ("settings", "/settings"),
+            ("library", "/library"),
+            ("wallet", "/identity"),
+            ("qapp-studio", "/qapp-studio"),
+            ("qapps", "/qapps"),
+            ("render-preview", "/render-preview"),
+            ("anatomy", "/anatomy"),
+            ("health", "/health"),
+            ("tools", "/tools"),
+            ("sanctuary", "/sanctuary"),
+            ("logs", "/logs"),
+            ("gpu-viewport", "/gpu-viewport"),
+        ];
+        for (destination, route) in expected {
+            assert_eq!(qapp_route(destination), route, "destination {destination}");
+        }
     }
 }

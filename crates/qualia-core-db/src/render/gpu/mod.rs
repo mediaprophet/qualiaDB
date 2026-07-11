@@ -156,6 +156,11 @@ pub struct PortalGpu {
     tensor_raw_buf: Option<wgpu::Buffer>,
     tensor_node_count: u32,
     particle_count: u32,
+    /// Whether the ambient particle field is drawn. **Off by default** — the field is a random
+    /// decorative cloud (`generate_particles`, `epistemic_q = 0`) unless a Tensor10D is uploaded,
+    /// which sets this true because the particles then ARE the epistemic nodes. The mixer's "ambient"
+    /// channel toggles it explicitly.
+    ambient_enabled: bool,
     width: u32,
     height: u32,
 }
@@ -838,9 +843,17 @@ impl PortalGpu {
             tensor_raw_buf: None,
             tensor_node_count: 0,
             particle_count: particle_count as u32,
+            ambient_enabled: false,
             width,
             height,
         })
+    }
+
+    /// Enable/disable the ambient particle field draw. Off by default (a plain mesh/anatomy view has
+    /// no use for the decorative random cloud); a Tensor10D upload turns it on since the particles then
+    /// encode epistemic nodes. The mixer's "ambient" channel drives this.
+    pub fn set_ambient_enabled(&mut self, on: bool) {
+        self.ambient_enabled = on;
     }
 
     pub fn upload_tensor_buffer(&mut self, bytes: &[u8]) -> Result<u32, String> {
@@ -917,6 +930,8 @@ impl PortalGpu {
         self.tensor_raw_buf = Some(tensor_raw_buf);
         self.tensor_node_count = count;
         self.particle_count = instance_count.max(1);
+        // The particle field now carries real tensor nodes (not the decorative random cloud) — show it.
+        self.ambient_enabled = true;
 
         Ok(count)
     }
@@ -1395,7 +1410,7 @@ impl PortalGpu {
                 pass.set_pipeline(ambient_hdr);
                 pass.set_bind_group(0, &self.ambient_bind_group, &[]);
                 let ambient_draw = ambient_draw_instances(self.particle_count);
-                if ambient_draw > 0 {
+                if self.ambient_enabled && ambient_draw > 0 {
                     pass.draw(0..6, 0..ambient_draw);
                 }
             }
@@ -1455,7 +1470,7 @@ impl PortalGpu {
             pass.set_pipeline(&self.ambient_pipeline);
             pass.set_bind_group(0, &self.ambient_bind_group, &[]);
             let ambient_draw = ambient_draw_instances(self.particle_count);
-            if ambient_draw > 0 {
+            if self.ambient_enabled && ambient_draw > 0 {
                 pass.draw(0..6, 0..ambient_draw);
             }
         }

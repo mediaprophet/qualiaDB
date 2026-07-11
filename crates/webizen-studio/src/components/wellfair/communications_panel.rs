@@ -58,58 +58,117 @@ pub fn WellfairCommunicationsPanel() -> Element {
     rsx! {
         section {
             aria_label: "WellFair communications",
-            style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);",
-            h2 { style: "margin:0 0 0.35rem;font-size:1rem;", "Live share consent" }
-            p {
-                style: "margin:0 0 0.75rem;font-size:0.74rem;color:var(--qualia-text-muted,#666);",
-                "Companion requested access — you choose minimum projection. Nothing is shared until you approve."
+            style: "
+                position: relative;
+                padding: 1.5rem;
+                border: 1px solid var(--qualia-border, rgba(43, 108, 176, 0.15));
+                border-radius: 16px;
+                background: var(--qualia-surface, rgba(254, 254, 255, 0.85));
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                box-shadow: 0 4px 24px rgba(43, 108, 176, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+                color: var(--qualia-text, #1a202c);
+                min-height: 400px;
+            ",
+            // CSS keyframes
+            style {
+                "@keyframes slide-up {{ from {{ opacity: 0; transform: translateY(10px); }} to {{ opacity: 1; transform: translateY(0); }} }}"
+                "@keyframes gentle-pulse {{ 0% {{ opacity: 0.5; }} 100% {{ opacity: 1; }} }}"
+                ".comm-card {{ transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }}"
+                ".comm-card:hover {{ transform: translateY(-2px); box-shadow: 0 8px 24px rgba(43, 108, 176, 0.12); border-color: rgba(43, 108, 176, 0.3) !important; }}"
             }
-            p { style: "margin:0 0 0.65rem;font-size:0.76rem;", "{ui().status}" }
-            button {
-                style: "margin-bottom:0.75rem;padding:0.35rem 0.65rem;border-radius:8px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.78rem;cursor:pointer;",
-                onclick: move |_| reload(),
-                "Reload"
+
+            div {
+                style: "display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(43, 108, 176, 0.1); padding-bottom: 1rem; margin-bottom: 1.5rem;",
+                div {
+                    h2 { 
+                        style: "margin: 0 0 0.4rem; font-size: 1.4rem; font-weight: 600; letter-spacing: -0.01em; color: #2b6cb0;", 
+                        "Live Share Consent" 
+                    }
+                    p {
+                        style: "margin: 0; font-size: 0.85rem; color: #718096; max-width: 500px;",
+                        "Your companion requested temporary access to your life-state projections. Review and approve the minimum required scope below."
+                    }
+                }
+                button {
+                    style: "
+                        padding: 0.5rem 1rem;
+                        border-radius: 8px;
+                        border: 1px solid rgba(43, 108, 176, 0.2);
+                        background: rgba(43, 108, 176, 0.05);
+                        color: #2b6cb0;
+                        font-size: 0.85rem;
+                        font-weight: 500;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                    ",
+                    onclick: move |_| reload(),
+                    span { style: "font-size: 1.1rem;", "↻" }
+                    "Refresh Inbox"
+                }
+            }
+
+            div {
+                style: "margin-bottom: 1.5rem; font-size: 0.85rem; color: #4a5568; display: flex; align-items: center; gap: 0.5rem;",
+                if !ui().requests.is_empty() {
+                    div { style: "width: 8px; height: 8px; border-radius: 50%; background: #38a169; animation: gentle-pulse 2s infinite alternate;" }
+                }
+                "{ui().status}"
             }
 
             if ui().requests.is_empty() {
-                p {
-                    style: "font-size:0.78rem;color:var(--qualia-text-muted,#666);",
-                    "When your phone companion asks for a live section preview, it will appear here for your decision."
+                div {
+                    style: "display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; background: rgba(247, 250, 252, 0.5); border-radius: 12px; border: 1px dashed rgba(203, 213, 224, 0.8);",
+                    div { style: "font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;", "📬" }
+                    p {
+                        style: "font-size: 0.95rem; color: #718096; margin: 0; text-align: center; max-width: 400px;",
+                        "Inbox zero. When your phone companion asks for a live section preview, it will appear here for your explicit authorization."
+                    }
                 }
             } else {
                 ul {
-                    style: "margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:0.75rem;",
-                    for req in ui().requests.clone() {
+                    style: "margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 1rem;",
+                    for (i, req) in ui().requests.clone().into_iter().enumerate() {
                         li {
                             key: "{req.id}",
-                            style: "padding:0.65rem;border:1px solid var(--qualia-border,#e0e0e0);border-radius:8px;background:#fff;",
+                            class: "comm-card",
+                            style: format!("
+                                padding: 1.25rem;
+                                border: 1px solid rgba(226, 232, 240, 0.8);
+                                border-radius: 12px;
+                                background: #ffffff;
+                                animation: slide-up 0.4s ease-out forwards;
+                                animation-delay: {}ms;
+                                opacity: 0;
+                            ", i * 100),
+                            
                             div {
-                                style: "display:flex;flex-wrap:wrap;gap:0.35rem 0.75rem;margin-bottom:0.5rem;font-size:0.74rem;",
-                                span {
-                                    style: "padding:0.15rem 0.45rem;border-radius:6px;background:#2a6f9722;color:#1d5570;",
-                                    "Device {req.device_id}"
-                                }
-                                span {
-                                    style: "padding:0.15rem 0.45rem;border-radius:6px;background:#e9c46a22;color:#7a5f12;",
-                                    "TTL {req.ttl_seconds}s"
-                                }
-                            }
-                            p {
-                                style: "margin:0 0 0.35rem;font-size:0.8rem;font-weight:600;",
-                                "{req.purpose}"
-                            }
-                            p {
-                                style: "margin:0 0 0.5rem;font-size:0.72rem;color:var(--qualia-text-muted,#666);",
-                                "Request {req.id}"
-                            }
-                            fieldset {
-                                style: "margin:0 0 0.5rem;padding:0.45rem;border:1px dashed var(--qualia-border,#ddd);border-radius:6px;",
-                                legend {
-                                    style: "font-size:0.72rem;padding:0 0.25rem;",
-                                    "Minimum projection (uncheck to withhold)"
+                                style: "display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;",
+                                div {
+                                    p { style: "margin: 0 0 0.25rem; font-size: 1.05rem; font-weight: 600; color: #2d3748;", "{req.purpose}" }
+                                    p { style: "margin: 0; font-size: 0.75rem; font-family: monospace; color: #a0aec0;", "REQ_ID: {req.id}" }
                                 }
                                 div {
-                                    style: "display:flex;flex-wrap:wrap;gap:0.5rem;",
+                                    style: "display: flex; gap: 0.5rem; font-size: 0.75rem; font-weight: 500;",
+                                    span {
+                                        style: "padding: 0.25rem 0.6rem; border-radius: 20px; background: rgba(49, 151, 149, 0.1); color: #285e61; border: 1px solid rgba(49, 151, 149, 0.2);",
+                                        "Device: {req.device_id}"
+                                    }
+                                    span {
+                                        style: "padding: 0.25rem 0.6rem; border-radius: 20px; background: rgba(221, 107, 32, 0.1); color: #9c4221; border: 1px solid rgba(221, 107, 32, 0.2);",
+                                        "TTL: {req.ttl_seconds}s"
+                                    }
+                                }
+                            }
+                            
+                            div {
+                                style: "padding: 1rem; background: rgba(247, 250, 252, 0.8); border-radius: 8px; margin-bottom: 1.25rem; border: 1px solid rgba(226, 232, 240, 0.5);",
+                                p { style: "margin: 0 0 0.5rem; font-size: 0.8rem; font-weight: 600; color: #4a5568;", "Requested Projections" }
+                                div {
+                                    style: "display: flex; flex-wrap: wrap; gap: 0.75rem;",
                                     for kind in req.requested_kinds.clone() {
                                         {
                                             let req_id = req.id.clone();
@@ -122,10 +181,15 @@ pub fn WellfairCommunicationsPanel() -> Element {
                                             rsx! {
                                                 label {
                                                     key: "{req_id}-{kind_label}",
-                                                    style: "display:flex;align-items:center;gap:0.3rem;font-size:0.74rem;cursor:pointer;",
+                                                    style: if checked {
+                                                        "display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.8rem; background: rgba(43, 108, 176, 0.08); border: 1px solid rgba(43, 108, 176, 0.3); border-radius: 6px; font-size: 0.8rem; color: #2b6cb0; cursor: pointer; transition: all 0.2s; font-weight: 500;"
+                                                    } else {
+                                                        "display: flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.8rem; background: #fff; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 0.8rem; color: #718096; cursor: pointer; transition: all 0.2s;"
+                                                    },
                                                     input {
                                                         r#type: "checkbox",
                                                         checked: checked,
+                                                        style: "accent-color: #2b6cb0; width: 14px; height: 14px; margin: 0; cursor: pointer;",
                                                         onchange: move |e| {
                                                             let mut map = ui.write().selected_kinds.clone();
                                                             let entry = map
@@ -148,88 +212,73 @@ pub fn WellfairCommunicationsPanel() -> Element {
                                     }
                                 }
                             }
+                            
                             div {
-                                style: "display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;",
-                                button {
-                                    style: "padding:0.4rem 0.75rem;border-radius:8px;border:none;background:var(--qualia-accent,#2a6f97);color:#fff;font-size:0.8rem;cursor:pointer;",
-                                    onclick: {
-                                        let req_id = req.id.clone();
-                                        move |_| {
-                                            let id = req_id.clone();
-                                            let kinds = ui()
-                                                .selected_kinds
-                                                .get(&req_id)
-                                                .cloned()
-                                                .unwrap_or_default();
-                                            if kinds.is_empty() {
-                                                ui.write().status =
-                                                    "Select at least one projection kind to approve.".into();
-                                                return;
-                                            }
-                                            spawn(async move {
-                                                ui.write().status = format!(
-                                                    "Approving {id} with {} kind(s)…",
-                                                    kinds.len()
-                                                );
-                                                match approve_live_share(&id, &kinds).await {
-                                                    Ok(()) => {
-                                                        ui.write().status = format!(
-                                                            "Approved {id} — companion receives only selected projection."
-                                                        );
-                                                        reload();
-                                                    }
-                                                    Err(e) => {
-                                                        ui.write().status =
-                                                            format!("Approve failed: {e}")
-                                                    }
-                                                }
-                                            });
-                                        }
-                                    },
-                                    "Approve"
-                                }
-                                label {
-                                    style: "flex:1;min-width:160px;display:flex;flex-direction:column;gap:0.2rem;font-size:0.72rem;",
-                                    "Deny reason (optional)"
+                                style: "display: flex; justify-content: space-between; align-items: center; gap: 1rem; border-top: 1px dashed rgba(226, 232, 240, 0.8); padding-top: 1rem;",
+                                div {
+                                    style: "flex: 1; display: flex; align-items: center; gap: 0.5rem;",
                                     input {
                                         value: "{ui().deny_reason}",
-                                        placeholder: "e.g. not now",
+                                        placeholder: "Optional denial reason (e.g., 'Not right now')",
                                         oninput: move |e| ui.write().deny_reason = e.value(),
-                                        style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.74rem;",
+                                        style: "flex: 1; max-width: 300px; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid #cbd5e0; font-size: 0.8rem; background: #fff; outline: none;",
                                     }
                                 }
-                                button {
-                                    style: "padding:0.4rem 0.75rem;border-radius:8px;border:1px solid #e76f51;background:#e76f5118;color:#9c3d2e;font-size:0.8rem;cursor:pointer;",
-                                    onclick: {
-                                        let req_id = req.id.clone();
-                                        move |_| {
-                                            let id = req_id.clone();
-                                            let draft = ui.read().deny_reason.clone();
-                                            let reason = draft.trim();
-                                            let reason = if reason.is_empty() {
-                                                "owner declined".to_string()
-                                            } else {
-                                                reason.to_string()
-                                            };
-                                            spawn(async move {
-                                                ui.write().status =
-                                                    format!("Denying {id}…");
-                                                match deny_live_share(&id, &reason).await {
-                                                    Ok(()) => {
-                                                        ui.write().status =
-                                                            format!("Denied {id} — no data shared.");
-                                                        ui.write().deny_reason.clear();
-                                                        reload();
+                                div {
+                                    style: "display: flex; gap: 0.75rem;",
+                                    button {
+                                        style: "padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #fc8181; background: rgba(254, 215, 215, 0.3); color: #c53030; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: background 0.2s;",
+                                        onclick: {
+                                            let req_id = req.id.clone();
+                                            move |_| {
+                                                let id = req_id.clone();
+                                                let draft = ui.read().deny_reason.clone();
+                                                let reason = draft.trim();
+                                                let reason = if reason.is_empty() {
+                                                    "owner declined".to_string()
+                                                } else {
+                                                    reason.to_string()
+                                                };
+                                                spawn(async move {
+                                                    ui.write().status = format!("Denying {id}…");
+                                                    match deny_live_share(&id, &reason).await {
+                                                        Ok(()) => {
+                                                            ui.write().status = format!("Denied {id} — no data shared.");
+                                                            ui.write().deny_reason.clear();
+                                                            reload();
+                                                        }
+                                                        Err(e) => ui.write().status = format!("Deny failed: {e}")
                                                     }
-                                                    Err(e) => {
-                                                        ui.write().status =
-                                                            format!("Deny failed: {e}")
-                                                    }
+                                                });
+                                            }
+                                        },
+                                        "Deny Access"
+                                    }
+                                    button {
+                                        style: "padding: 0.5rem 1.25rem; border-radius: 8px; border: none; background: linear-gradient(135deg, #3182ce, #2b6cb0); color: #fff; font-size: 0.85rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 10px rgba(43, 108, 176, 0.3); transition: transform 0.1s, box-shadow 0.2s;",
+                                        onclick: {
+                                            let req_id = req.id.clone();
+                                            move |_| {
+                                                let id = req_id.clone();
+                                                let kinds = ui().selected_kinds.get(&req_id).cloned().unwrap_or_default();
+                                                if kinds.is_empty() {
+                                                    ui.write().status = "Select at least one projection kind to approve.".into();
+                                                    return;
                                                 }
-                                            });
-                                        }
-                                    },
-                                    "Deny"
+                                                spawn(async move {
+                                                    ui.write().status = format!("Approving {id} with {} kind(s)…", kinds.len());
+                                                    match approve_live_share(&id, &kinds).await {
+                                                        Ok(()) => {
+                                                            ui.write().status = format!("Approved {id} — companion receives only selected projection.");
+                                                            reload();
+                                                        }
+                                                        Err(e) => ui.write().status = format!("Approve failed: {e}")
+                                                    }
+                                                });
+                                            }
+                                        },
+                                        "Authorize Selection"
+                                    }
                                 }
                             }
                         }

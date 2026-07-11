@@ -2,9 +2,18 @@ pub mod accessibility_prefs;
 pub mod anatomy_body;
 pub mod anatomy_render;
 pub mod anatomy_assets;
+/// Producer for a curated `.qualia` anatomy asset pack (ships in the release /
+/// web demo). Native-only (blocking network I/O against the HRA endpoints).
+pub mod anatomy_pack;
 pub mod anatomy_view;
 pub mod api;
 pub mod anatomy_dyad;
+/// Ingest BodyParts3D (FMA-keyed, CC-BY-SA) — the muscles/bones/glands/nerves that complete the body
+/// CCF/HRA (viscera-only) cannot. Pure part-of→system mapping + a native fetch/pack producer.
+pub mod bodyparts3d_resolver;
+/// The BodyParts3D anatomy ONTOLOGY emitter → `.q42` (OBO FMA IRIs + house aliases, is-a + part-of +
+/// system + geometry). The addressable semantic backbone the `.10d` mesh library is cited by.
+pub mod bodyparts3d_ontology;
 pub mod ccf_resolver;
 pub mod fetal_stages;
 pub mod backup;

@@ -287,6 +287,121 @@ export class QualiaPortal {
         return ret;
     }
     /**
+     * P9.2 — Load a `.10d` container asset: parse the section table, extract
+     * the QuantizedMesh and Tensor10DNodes (provenance) sections, upload the
+     * mesh to the GPU, and report node/triangle counts.
+     *
+     * **Governance fail-closed:** if the header carries
+     * `FLAG_DEFAULT_DISPOSITION_REFUSE` (bit 0) and no attestation section is
+     * present, the mesh is loaded for display but `description` marks it as
+     * governance-refused — not citable as provenance until attested.
+     *
+     * Returns a JS object `{ vertex_count, triangle_count, provenance_mu, tier }`.
+     * @param {Uint8Array} bytes
+     * @returns {any}
+     */
+    load_10d(bytes) {
+        const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.qualiaportal_load_10d(this.__wbg_ptr, ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    }
+    /**
+     * S5.1 colour-by-load — like [`load_10d`] but paints the whole organ mesh a single uniform linear
+     * RGBA. The host resolves each organ's body-system percept
+     * (`qualia-client-core … AnatomyViewReport::paint_organs`) and passes that system's σ-derived colour
+     * (`OrganPercept.percept.rgba`) here, so the 3D body is coloured by accumulated burden. Same
+     * governance fail-closed as `load_10d`. (Deliberately parallels `load_10d` rather than sharing a
+     * refactored helper: the portal path is wasm+GPU-only and not runtime-testable here, so the proven
+     * `load_10d` is left untouched — unify them in the browser-test pass when the anatomy GLBs land.)
+     * @param {Uint8Array} bytes
+     * @param {number} r
+     * @param {number} g
+     * @param {number} b
+     * @param {number} a
+     * @returns {any}
+     */
+    load_10d_colored(bytes, r, g, b, a) {
+        const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.qualiaportal_load_10d_colored(this.__wbg_ptr, ptr0, len0, r, g, b, a);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    }
+    /**
+     * S5.8 (web) — load the whole body directly from a `.qualia` **anatomy pack**
+     * bundle (see [`crate::bundle`]). Parses the bundle with the *shared* Rust
+     * reader (the same code the native host uses — "one reader, both channels"),
+     * reads each organ's sealed `.10d` plus its
+     * [`AnatomyOrganMeta`](crate::render::anatomy_pack::AnatomyOrganMeta) (system
+     * colour + anatomical position), and hands them to
+     * [`Self::load_body_organs_colored`]. This is the pure-web render path — no
+     * Tauri host / `webizen://` needed: the browser fetches one `.qualia` file and
+     * renders the real body. Returns the same `{organs_loaded, organs_refused,
+     * total_triangles}` summary.
+     * @param {Uint8Array} bytes
+     * @returns {any}
+     */
+    load_body_from_qualia_bundle(bytes) {
+        const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.qualiaportal_load_body_from_qualia_bundle(this.__wbg_ptr, ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    }
+    /**
+     * Like [`Self::load_body_from_qualia_bundle`] but honours the **mixer's per-body-system
+     * channels**: `system_levels` is a JS object `{ <system_id>: <level 0..1> }`. An organ whose
+     * system level is ≤ 0 is omitted (muted); otherwise its colour alpha is scaled by the level.
+     * (The mesh pipeline is currently opaque, so a nonzero level acts as show; smooth opacity lands
+     * when the mesh pipeline gains alpha blending — mixer plan P2.) An absent/empty map shows every
+     * system at full — so `load_body_from_qualia_bundle` is exactly this with no mixer applied.
+     * @param {Uint8Array} bytes
+     * @param {any} system_levels
+     * @param {any} disabled_parts
+     * @returns {any}
+     */
+    load_body_from_qualia_bundle_mixed(bytes, system_levels, disabled_parts) {
+        const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.qualiaportal_load_body_from_qualia_bundle_mixed(this.__wbg_ptr, ptr0, len0, system_levels, disabled_parts);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    }
+    /**
+     * S5.8 — load the **whole body** as a set of per-organ `.10d` meshes, each painted its body-system's
+     * σ-derived RGBA, accumulated into one combined GPU mesh. This is the real-mesh render path.
+     *
+     * The CCF/HRA reference organs are authored in ONE shared body coordinate space (a brain's vertices
+     * sit at the head, a bladder's at the pelvis, skin envelops the whole body), so this **preserves
+     * each organ's TRUE position and relative size**: it accumulates the whole-body bounds across all
+     * organs and applies **one global centre + scale**, rather than normalising each organ separately
+     * (which would flatten proportions and shrink the full-body skin mesh to a dot). Governance
+     * fail-closed per organ, as in `load_10d_colored`.
+     *
+     * `organs` is a JS `Array` of objects: `{ bytes: Uint8Array, r: f32, g: f32, b: f32, a: f32 }`
+     * (per-organ colour). Any `x/y/z` fields are ignored — the mesh already carries its position.
+     * Returns `{ organs_loaded, organs_refused, total_triangles }`.
+     * @param {Array<any>} organs
+     * @returns {any}
+     */
+    load_body_organs_colored(organs) {
+        const ret = wasm.qualiaportal_load_body_organs_colored(this.__wbg_ptr, organs);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    }
+    /**
      * @param {string} json
      * @returns {any}
      */
@@ -366,6 +481,23 @@ export class QualiaPortal {
     operational_mode() {
         const ret = wasm.qualiaportal_operational_mode(this.__wbg_ptr);
         return ret;
+    }
+    /**
+     * Read a `.qualia` pack's **manifest** without rendering — the list of parts the UI builds its
+     * dynamic system + part selectors from. Returns a JS array of `{ key, label, system, systems }`
+     * (one per `.10d` entry), so the demo can offer per-system *and* per-part select/deselect driven by
+     * what is actually in the loaded pack, not a hardcoded list. Read-only.
+     * @param {Uint8Array} bytes
+     * @returns {any}
+     */
+    pack_manifest(bytes) {
+        const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.qualiaportal_pack_manifest(this.__wbg_ptr, ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
     }
     /**
      * Returns selected tensor index, or `-1` if none / pick still pending.
@@ -465,6 +597,15 @@ export class QualiaPortal {
         wasm.qualiaportal_set_acoustic_enabled(this.__wbg_ptr, enabled);
     }
     /**
+     * Enable/disable the **ambient particle field** — the mixer's "ambient" channel. Off by default
+     * (a plain mesh/anatomy view has no use for the decorative random cloud); a Tensor10D upload
+     * turns it on automatically because the particles then encode epistemic nodes.
+     * @param {boolean} on
+     */
+    set_ambient_enabled(on) {
+        wasm.qualiaportal_set_ambient_enabled(this.__wbg_ptr, on);
+    }
+    /**
      * Orbit camera IPC from the UI shell (yaw/pitch in radians, zoom = eye distance).
      * @param {number} yaw
      * @param {number} pitch
@@ -517,6 +658,13 @@ export class QualiaPortal {
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
+    }
+    /**
+     * @param {number} t_slice
+     * @param {number} t_window
+     */
+    set_temporal_slice(t_slice, t_window) {
+        wasm.qualiaportal_set_temporal_slice(this.__wbg_ptr, t_slice, t_window);
     }
     /**
      * @returns {number}
@@ -1147,6 +1295,11 @@ function __wbg_get_imports() {
             const ret = arg0.WorkerGlobalScope;
             return ret;
         },
+        __wbg___wbindgen_boolean_get_fa956cfa2d1bd751: function(arg0) {
+            const v = arg0;
+            const ret = typeof(v) === 'boolean' ? v : undefined;
+            return isLikeNone(ret) ? 0xFFFFFF : ret ? 1 : 0;
+        },
         __wbg___wbindgen_debug_string_c25d447a39f5578f: function(arg0, arg1) {
             const ret = debugString(arg1);
             const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
@@ -1173,6 +1326,10 @@ function __wbg_get_imports() {
         },
         __wbg___wbindgen_is_undefined_c05833b95a3cf397: function(arg0) {
             const ret = arg0 === undefined;
+            return ret;
+        },
+        __wbg___wbindgen_jsval_loose_eq_db4c3b15f63fc170: function(arg0, arg1) {
+            const ret = arg0 == arg1;
             return ret;
         },
         __wbg___wbindgen_number_get_394265ed1e1b84ee: function(arg0, arg1) {
@@ -1220,6 +1377,10 @@ function __wbg_get_imports() {
             const ret = arg0.byteLength;
             return ret;
         },
+        __wbg_call_8a2dd23819f8a60a: function() { return handleError(function (arg0, arg1) {
+            const ret = arg0.call(arg1);
+            return ret;
+        }, arguments); },
         __wbg_call_a6e5c5dce5018821: function() { return handleError(function (arg0, arg1, arg2) {
             const ret = arg0.call(arg1, arg2);
             return ret;
@@ -1290,6 +1451,10 @@ function __wbg_get_imports() {
             const ret = arg0.document;
             return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
         },
+        __wbg_done_89b2b13e91a60321: function(arg0) {
+            const ret = arg0.done;
+            return ret;
+        },
         __wbg_drawIndexed_cc7c04c1088cafad: function(arg0, arg1, arg2, arg3, arg4, arg5) {
             arg0.drawIndexed(arg1 >>> 0, arg2 >>> 0, arg3 >>> 0, arg4, arg5 >>> 0);
         },
@@ -1298,6 +1463,10 @@ function __wbg_get_imports() {
         },
         __wbg_end_d49513b309f4ca43: function(arg0) {
             arg0.end();
+        },
+        __wbg_entries_015dc610cd81ede0: function(arg0) {
+            const ret = Object.entries(arg0);
+            return ret;
         },
         __wbg_error_744744ff0c9861e6: function(arg0) {
             console.error(arg0);
@@ -1377,6 +1546,10 @@ function __wbg_get_imports() {
         __wbg_getRandomValues_cc7f052a444bb2ce: function() { return handleError(function (arg0, arg1) {
             globalThis.crypto.getRandomValues(getArrayU8FromWasm0(arg0, arg1));
         }, arguments); },
+        __wbg_get_507a50627bffa49b: function(arg0, arg1) {
+            const ret = arg0[arg1 >>> 0];
+            return ret;
+        },
         __wbg_get_78f252d074a84d0b: function() { return handleError(function (arg0, arg1) {
             const ret = Reflect.get(arg0, arg1);
             return ret;
@@ -1385,6 +1558,10 @@ function __wbg_get_imports() {
             const ret = arg0[arg1 >>> 0];
             return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
         },
+        __wbg_get_c7eb1f358a7654df: function() { return handleError(function (arg0, arg1) {
+            const ret = Reflect.get(arg0, arg1);
+            return ret;
+        }, arguments); },
         __wbg_get_unchecked_6e0ad6d2a41b06f6: function(arg0, arg1) {
             const ret = arg0[arg1 >>> 0];
             return ret;
@@ -1395,6 +1572,16 @@ function __wbg_get_imports() {
         },
         __wbg_height_6eec812c213259a1: function(arg0) {
             const ret = arg0.height;
+            return ret;
+        },
+        __wbg_instanceof_ArrayBuffer_4480b9e0068a8adb: function(arg0) {
+            let result;
+            try {
+                result = arg0 instanceof ArrayBuffer;
+            } catch (_) {
+                result = false;
+            }
+            const ret = result;
             return ret;
         },
         __wbg_instanceof_Blob_c6523f92a32c8695: function(arg0) {
@@ -1555,6 +1742,10 @@ function __wbg_get_imports() {
             const ret = Array.isArray(arg0);
             return ret;
         },
+        __wbg_iterator_6f722e4a93058b71: function() {
+            const ret = Symbol.iterator;
+            return ret;
+        },
         __wbg_label_9a8583e3a20fafc7: function(arg0, arg1) {
             const ret = arg1.label;
             const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
@@ -1638,7 +1829,7 @@ function __wbg_get_imports() {
                     const a = state0.a;
                     state0.a = 0;
                     try {
-                        return wasm_bindgen__convert__closures_____invoke__h39bad9493cebb510(a, state0.b, arg0, arg1);
+                        return wasm_bindgen__convert__closures_____invoke__h5ba0b4cdb98325a4(a, state0.b, arg0, arg1);
                     } finally {
                         state0.a = a;
                     }
@@ -1657,6 +1848,14 @@ function __wbg_get_imports() {
             const ret = new Uint8Array(arg0 >>> 0);
             return ret;
         },
+        __wbg_next_6dbf2c0ac8cde20f: function(arg0) {
+            const ret = arg0.next;
+            return ret;
+        },
+        __wbg_next_71f2aa1cb3d1e37e: function() { return handleError(function (arg0) {
+            const ret = arg0.next();
+            return ret;
+        }, arguments); },
         __wbg_onSubmittedWorkDone_5f36409816d68e04: function(arg0) {
             const ret = arg0.onSubmittedWorkDone();
             return ret;
@@ -2307,6 +2506,10 @@ function __wbg_get_imports() {
         __wbg_unmap_817a2e3248a553fb: function(arg0) {
             arg0.unmap();
         },
+        __wbg_value_a5d5488a9589444a: function(arg0) {
+            const ret = arg0.value;
+            return ret;
+        },
         __wbg_width_6d9315ecc7140ff6: function(arg0) {
             const ret = arg0.width;
             return ret;
@@ -2319,13 +2522,13 @@ function __wbg_get_imports() {
             return ret;
         }, arguments); },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 178, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h01e70aad0a806b4b);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 211, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h002473f6c3b08354);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 220, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__he28403b51550e204);
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 258, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__he1f02ece8b02fc97);
             return ret;
         },
         __wbindgen_cast_0000000000000003: function(arg0) {
@@ -2369,19 +2572,19 @@ function __wbg_get_imports() {
     };
 }
 
-function wasm_bindgen__convert__closures_____invoke__h01e70aad0a806b4b(arg0, arg1, arg2) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h01e70aad0a806b4b(arg0, arg1, arg2);
+function wasm_bindgen__convert__closures_____invoke__h002473f6c3b08354(arg0, arg1, arg2) {
+    wasm.wasm_bindgen__convert__closures_____invoke__h002473f6c3b08354(arg0, arg1, arg2);
 }
 
-function wasm_bindgen__convert__closures_____invoke__he28403b51550e204(arg0, arg1, arg2) {
-    const ret = wasm.wasm_bindgen__convert__closures_____invoke__he28403b51550e204(arg0, arg1, arg2);
+function wasm_bindgen__convert__closures_____invoke__he1f02ece8b02fc97(arg0, arg1, arg2) {
+    const ret = wasm.wasm_bindgen__convert__closures_____invoke__he1f02ece8b02fc97(arg0, arg1, arg2);
     if (ret[1]) {
         throw takeFromExternrefTable0(ret[0]);
     }
 }
 
-function wasm_bindgen__convert__closures_____invoke__h39bad9493cebb510(arg0, arg1, arg2, arg3) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h39bad9493cebb510(arg0, arg1, arg2, arg3);
+function wasm_bindgen__convert__closures_____invoke__h5ba0b4cdb98325a4(arg0, arg1, arg2, arg3) {
+    wasm.wasm_bindgen__convert__closures_____invoke__h5ba0b4cdb98325a4(arg0, arg1, arg2, arg3);
 }
 
 

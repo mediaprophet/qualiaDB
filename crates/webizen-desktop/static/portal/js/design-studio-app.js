@@ -549,8 +549,12 @@ async function loadAnatomyBody(model) {
     return;
   }
   try {
-    // Fetch the percepts manifest.
-    const resp = await fetch("webizen://localhost/anatomy/body.json", { cache: "no-store" });
+    // Fetch the percepts manifest for the selected chromosomal reference model (XY→male / XX→female),
+    // so the organ-key list matches the .10d files we then fetch at /anatomy/10d/{model}/{organ_key}.
+    const resp = await fetch(
+      `webizen://localhost/anatomy/body.json?model=${encodeURIComponent(model)}`,
+      { cache: "no-store" },
+    );
     if (!resp.ok) {
       console.warn("anatomy: body.json not available", resp.status);
       return;

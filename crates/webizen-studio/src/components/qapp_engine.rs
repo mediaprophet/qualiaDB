@@ -32,17 +32,34 @@ mod imp {
 mod imp {
     use serde_json::Value;
 
-    /// Native invoke — calls the local settings server's REST API.
-    /// The settings server on :8080 proxies all Tauri commands.
+    /// Native invoke — routes to specific typed REST portals on the local
+    /// settings server. The generic `/api/invoke/{cmd}` proxy has been removed
+    /// to lock down the control plane.
     pub async fn tauri_invoke(
         cmd: &str,
         args: serde_json::Value,
     ) -> Result<serde_json::Value, String> {
-        let url = format!("http://127.0.0.1:8080/api/invoke/{cmd}");
+        let (method, endpoint) = match cmd {
+            "get_supervisor_state" => ("GET", "/api/status".to_string()),
+            "get_config" => ("GET", "/api/config".to_string()),
+            "save_config" => ("POST", "/api/config".to_string()),
+            "list_jobs" => ("GET", "/api/jobs".to_string()),
+            "enqueue_job" => ("POST", "/api/jobs".to_string()),
+            "system_telemetry" => ("GET", "/api/telemetry".to_string()),
+            "execute_sparql_query" => ("POST", "/api/sparql/query".to_string()),
+            _ => return Err(format!("Command '{cmd}' is not exposed via typed REST portals")),
+        };
+
+        let url = format!("http://127.0.0.1:8080{endpoint}");
         let client = reqwest::Client::new();
-        let resp = client
-            .post(&url)
-            .json(&args)
+        
+        let req = if method == "GET" {
+            client.get(&url)
+        } else {
+            client.post(&url).json(&args)
+        };
+
+        let resp = req
             .send()
             .await
             .map_err(|e| format!("invoke {cmd}: {e}"))?;

@@ -101,6 +101,66 @@ export class QualiaPortal {
     encode_geometry(json: string): any;
     epistemic_q(): number;
     last_parsed(): any | undefined;
+    /**
+     * P9.2 — Load a `.10d` container asset: parse the section table, extract
+     * the QuantizedMesh and Tensor10DNodes (provenance) sections, upload the
+     * mesh to the GPU, and report node/triangle counts.
+     *
+     * **Governance fail-closed:** if the header carries
+     * `FLAG_DEFAULT_DISPOSITION_REFUSE` (bit 0) and no attestation section is
+     * present, the mesh is loaded for display but `description` marks it as
+     * governance-refused — not citable as provenance until attested.
+     *
+     * Returns a JS object `{ vertex_count, triangle_count, provenance_mu, tier }`.
+     */
+    load_10d(bytes: Uint8Array): any;
+    /**
+     * S5.1 colour-by-load — like [`load_10d`] but paints the whole organ mesh a single uniform linear
+     * RGBA. The host resolves each organ's body-system percept
+     * (`qualia-client-core … AnatomyViewReport::paint_organs`) and passes that system's σ-derived colour
+     * (`OrganPercept.percept.rgba`) here, so the 3D body is coloured by accumulated burden. Same
+     * governance fail-closed as `load_10d`. (Deliberately parallels `load_10d` rather than sharing a
+     * refactored helper: the portal path is wasm+GPU-only and not runtime-testable here, so the proven
+     * `load_10d` is left untouched — unify them in the browser-test pass when the anatomy GLBs land.)
+     */
+    load_10d_colored(bytes: Uint8Array, r: number, g: number, b: number, a: number): any;
+    /**
+     * S5.8 (web) — load the whole body directly from a `.qualia` **anatomy pack**
+     * bundle (see [`crate::bundle`]). Parses the bundle with the *shared* Rust
+     * reader (the same code the native host uses — "one reader, both channels"),
+     * reads each organ's sealed `.10d` plus its
+     * [`AnatomyOrganMeta`](crate::render::anatomy_pack::AnatomyOrganMeta) (system
+     * colour + anatomical position), and hands them to
+     * [`Self::load_body_organs_colored`]. This is the pure-web render path — no
+     * Tauri host / `webizen://` needed: the browser fetches one `.qualia` file and
+     * renders the real body. Returns the same `{organs_loaded, organs_refused,
+     * total_triangles}` summary.
+     */
+    load_body_from_qualia_bundle(bytes: Uint8Array): any;
+    /**
+     * Like [`Self::load_body_from_qualia_bundle`] but honours the **mixer's per-body-system
+     * channels**: `system_levels` is a JS object `{ <system_id>: <level 0..1> }`. An organ whose
+     * system level is ≤ 0 is omitted (muted); otherwise its colour alpha is scaled by the level.
+     * (The mesh pipeline is currently opaque, so a nonzero level acts as show; smooth opacity lands
+     * when the mesh pipeline gains alpha blending — mixer plan P2.) An absent/empty map shows every
+     * system at full — so `load_body_from_qualia_bundle` is exactly this with no mixer applied.
+     */
+    load_body_from_qualia_bundle_mixed(bytes: Uint8Array, system_levels: any): any;
+    /**
+     * S5.8 — load the **whole body** as a set of per-organ `.10d` meshes, each painted its body-system's
+     * σ-derived RGBA, accumulated into one combined GPU mesh. This is the real-mesh render path: the
+     * host caches the CCF/HRA GLB set (compiled to `.10d`), the browser portal fetches each cached
+     * `.10d` + its percept colour, and this method decodes + centres + scales each organ and uploads
+     * them all as one mesh with per-vertex colours. Each organ is offset to its anatomical position
+     * (approximate — the CCF ref organs are individually centred; a future pass can use real CCF
+     * transforms). Same governance fail-closed per organ as `load_10d_colored`.
+     *
+     * `organs` is a JS `Array` of objects: `{ bytes: Uint8Array, r: f32, g: f32, b: f32, a: f32,
+     * x: f32, y: f32, z: f32 }` where `(x,y,z)` is the organ's anatomical position offset (0..1
+     * normalised body space, mapped to the orbit frame). Returns `{ organs_loaded, organs_refused,
+     * total_triangles }`.
+     */
+    load_body_organs_colored(organs: Array<any>): any;
     load_json_scene(json: string): any;
     load_q42(bytes: Uint8Array): any;
     mount_qapp(root_id: string): void;
@@ -146,6 +206,12 @@ export class QualiaPortal {
      */
     set_acoustic_enabled(enabled: boolean): void;
     /**
+     * Enable/disable the **ambient particle field** — the mixer's "ambient" channel. Off by default
+     * (a plain mesh/anatomy view has no use for the decorative random cloud); a Tensor10D upload
+     * turns it on automatically because the particles then encode epistemic nodes.
+     */
+    set_ambient_enabled(on: boolean): void;
+    /**
      * Orbit camera IPC from the UI shell (yaw/pitch in radians, zoom = eye distance).
      */
     set_camera(yaw: number, pitch: number, zoom: number): void;
@@ -159,6 +225,7 @@ export class QualiaPortal {
      */
     set_standpoint(standpoint_class: number, epistemic_q: number, t_slice: number, t_window: number, identifier_did: string): void;
     set_telemetry(floats: Float32Array): void;
+    set_temporal_slice(t_slice: number, t_window: number): void;
     sonic_token_pending(): number;
     spatial_encode(json: string): any;
     standpoint_class(): number;
@@ -339,12 +406,45 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
-    readonly estimate_browser_storage: () => any;
-    readonly is_opfs_block_cached: (a: number) => any;
-    readonly pack_quins_into_superblock: (a: bigint, b: bigint, c: number, d: number) => [number, number, number];
-    readonly read_opfs_block: (a: number) => any;
-    readonly verify_superblock_ecc: (a: number, b: number) => [number, number];
-    readonly write_opfs_block: (a: number, b: number, c: number) => any;
+    readonly __wbg_federatednodemanager_free: (a: number, b: number) => void;
+    readonly __wbg_get_wasmoffloadintent_opcode: (a: number) => number;
+    readonly __wbg_get_wasmoffloadintent_payload_size: (a: number) => number;
+    readonly __wbg_get_wasmoffloadintent_priority: (a: number) => number;
+    readonly __wbg_set_wasmoffloadintent_opcode: (a: number, b: number) => void;
+    readonly __wbg_set_wasmoffloadintent_payload_size: (a: number, b: number) => void;
+    readonly __wbg_set_wasmoffloadintent_priority: (a: number, b: number) => void;
+    readonly __wbg_wasmoffloadintent_free: (a: number, b: number) => void;
+    readonly design_encode_wasm: (a: number, b: number) => [number, number, number];
+    readonly enforce_rights_ontology: (a: bigint) => number;
+    readonly export_tensor_buffer_wasm: (a: number, b: number) => [number, number, number];
+    readonly export_tensor_slice_wasm: (a: number) => [number, number, number];
+    readonly federatednodemanager_discover_capabilities: (a: number) => number;
+    readonly federatednodemanager_new: () => number;
+    readonly federatednodemanager_offload_intent: (a: number, b: number) => [number, number, number, number];
+    readonly geosparql_operation_wasm: (a: number, b: number) => [number, number, number];
+    readonly intercept_computational_opcode: (a: number, b: number) => number;
+    readonly intercept_pharmacogenomics_intent: (a: number, b: number) => number;
+    readonly sample_browser_telemetry_wasm: () => [number, number, number];
+    readonly serialize_float64_array: (a: number, b: number) => any;
+    readonly serialize_float_array: (a: number, b: number) => any;
+    readonly spatial_encode_wasm: (a: number, b: number) => [number, number, number];
+    readonly wasmoffloadintent_new: (a: number, b: number, c: number) => number;
+    readonly wasmoffloadintent_with_string_payload: (a: number, b: number, c: number, d: number) => number;
+    readonly webizen_poll_agreements: () => [number, number];
+    readonly webizen_propose_agreement: (a: any, b: number, c: number, d: number, e: number, f: number) => bigint;
+    readonly webizen_sign_agreement: (a: bigint, b: number, c: number) => void;
+    readonly prune_and_validate_mesh: (a: bigint) => number;
+    readonly parse_cbor_ld_wasm: (a: number, b: number) => any;
+    readonly parse_json_wasm: (a: number, b: number) => any;
+    readonly __wbg_webengine_free: (a: number, b: number) => void;
+    readonly create_canvas: (a: number, b: number) => [number, number, number];
+    readonly webengine_last_parsed: (a: number) => any;
+    readonly webengine_load_json_scene: (a: number, b: number, c: number) => [number, number, number];
+    readonly webengine_load_q42: (a: number, b: number, c: number) => [number, number, number];
+    readonly webengine_mount_qapp: (a: number, b: number, c: number) => [number, number];
+    readonly webengine_new: () => [number, number, number];
+    readonly webengine_render_to_canvas: (a: number) => [number, number];
+    readonly init_panic_hook: () => void;
     readonly __wbg_qualiaportal_free: (a: number, b: number) => void;
     readonly portal_init_webgpu: (a: any) => any;
     readonly qualiaportal_acoustic_enabled: (a: number) => number;
@@ -370,6 +470,11 @@ export interface InitOutput {
     readonly qualiaportal_encode_geometry: (a: number, b: number, c: number) => [number, number, number];
     readonly qualiaportal_epistemic_q: (a: number) => number;
     readonly qualiaportal_last_parsed: (a: number) => any;
+    readonly qualiaportal_load_10d: (a: number, b: number, c: number) => [number, number, number];
+    readonly qualiaportal_load_10d_colored: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number];
+    readonly qualiaportal_load_body_from_qualia_bundle: (a: number, b: number, c: number) => [number, number, number];
+    readonly qualiaportal_load_body_from_qualia_bundle_mixed: (a: number, b: number, c: number, d: any) => [number, number, number];
+    readonly qualiaportal_load_body_organs_colored: (a: number, b: any) => [number, number, number];
     readonly qualiaportal_load_json_scene: (a: number, b: number, c: number) => [number, number, number];
     readonly qualiaportal_load_q42: (a: number, b: number, c: number) => [number, number, number];
     readonly qualiaportal_mount_qapp: (a: number, b: number, c: number) => [number, number];
@@ -386,10 +491,12 @@ export interface InitOutput {
     readonly qualiaportal_sample_telemetry: (a: number) => [number, number, number];
     readonly qualiaportal_select_node_at: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly qualiaportal_set_acoustic_enabled: (a: number, b: number) => void;
+    readonly qualiaportal_set_ambient_enabled: (a: number, b: number) => void;
     readonly qualiaportal_set_camera: (a: number, b: number, c: number, d: number) => [number, number];
     readonly qualiaportal_set_display_mode: (a: number, b: number, c: number) => [number, number];
     readonly qualiaportal_set_standpoint: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
     readonly qualiaportal_set_telemetry: (a: number, b: number, c: number) => [number, number];
+    readonly qualiaportal_set_temporal_slice: (a: number, b: number, c: number) => void;
     readonly qualiaportal_sonic_token_pending: (a: number) => number;
     readonly qualiaportal_spatial_encode: (a: number, b: number, c: number) => [number, number, number];
     readonly qualiaportal_standpoint_class: (a: number) => number;
@@ -401,48 +508,15 @@ export interface InitOutput {
     readonly qualiaportal_upload_mesh_asset: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly qualiaportal_upload_tensor_buffer: (a: number, b: number, c: number) => [number, number];
     readonly qualiaportal_selected_node_index: (a: number) => number;
-    readonly __wbg_webengine_free: (a: number, b: number) => void;
-    readonly create_canvas: (a: number, b: number) => [number, number, number];
-    readonly webengine_last_parsed: (a: number) => any;
-    readonly webengine_load_json_scene: (a: number, b: number, c: number) => [number, number, number];
-    readonly webengine_load_q42: (a: number, b: number, c: number) => [number, number, number];
-    readonly webengine_mount_qapp: (a: number, b: number, c: number) => [number, number];
-    readonly webengine_new: () => [number, number, number];
-    readonly webengine_render_to_canvas: (a: number) => [number, number];
-    readonly init_panic_hook: () => void;
-    readonly design_encode_wasm: (a: number, b: number) => [number, number, number];
-    readonly export_tensor_buffer_wasm: (a: number, b: number) => [number, number, number];
-    readonly export_tensor_slice_wasm: (a: number) => [number, number, number];
-    readonly geosparql_operation_wasm: (a: number, b: number) => [number, number, number];
-    readonly sample_browser_telemetry_wasm: () => [number, number, number];
-    readonly spatial_encode_wasm: (a: number, b: number) => [number, number, number];
-    readonly __wbg_federatednodemanager_free: (a: number, b: number) => void;
-    readonly __wbg_get_wasmoffloadintent_opcode: (a: number) => number;
-    readonly __wbg_get_wasmoffloadintent_payload_size: (a: number) => number;
-    readonly __wbg_get_wasmoffloadintent_priority: (a: number) => number;
-    readonly __wbg_set_wasmoffloadintent_opcode: (a: number, b: number) => void;
-    readonly __wbg_set_wasmoffloadintent_payload_size: (a: number, b: number) => void;
-    readonly __wbg_set_wasmoffloadintent_priority: (a: number, b: number) => void;
-    readonly __wbg_wasmoffloadintent_free: (a: number, b: number) => void;
-    readonly enforce_rights_ontology: (a: bigint) => number;
-    readonly federatednodemanager_discover_capabilities: (a: number) => number;
-    readonly federatednodemanager_new: () => number;
-    readonly federatednodemanager_offload_intent: (a: number, b: number) => [number, number, number, number];
-    readonly intercept_computational_opcode: (a: number, b: number) => number;
-    readonly intercept_pharmacogenomics_intent: (a: number, b: number) => number;
-    readonly parse_cbor_ld_wasm: (a: number, b: number) => any;
-    readonly parse_json_wasm: (a: number, b: number) => any;
-    readonly serialize_float64_array: (a: number, b: number) => any;
-    readonly serialize_float_array: (a: number, b: number) => any;
-    readonly wasmoffloadintent_new: (a: number, b: number, c: number) => number;
-    readonly wasmoffloadintent_with_string_payload: (a: number, b: number, c: number, d: number) => number;
-    readonly webizen_poll_agreements: () => [number, number];
-    readonly webizen_propose_agreement: (a: any, b: number, c: number, d: number, e: number, f: number) => bigint;
-    readonly webizen_sign_agreement: (a: bigint, b: number, c: number) => void;
-    readonly prune_and_validate_mesh: (a: bigint) => number;
-    readonly wasm_bindgen__convert__closures_____invoke__he28403b51550e204: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h39bad9493cebb510: (a: number, b: number, c: any, d: any) => void;
-    readonly wasm_bindgen__convert__closures_____invoke__h01e70aad0a806b4b: (a: number, b: number, c: any) => void;
+    readonly estimate_browser_storage: () => any;
+    readonly is_opfs_block_cached: (a: number) => any;
+    readonly pack_quins_into_superblock: (a: bigint, b: bigint, c: number, d: number) => [number, number, number];
+    readonly read_opfs_block: (a: number) => any;
+    readonly verify_superblock_ecc: (a: number, b: number) => [number, number];
+    readonly write_opfs_block: (a: number, b: number, c: number) => any;
+    readonly wasm_bindgen__convert__closures_____invoke__he1f02ece8b02fc97: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h5ba0b4cdb98325a4: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__h002473f6c3b08354: (a: number, b: number, c: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;

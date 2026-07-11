@@ -331,6 +331,10 @@ pub mod audio;
 /// task. Available to browser/WASM builds (P0.8 parity target). See
 /// `docs/plans/native-computational-geometry-EXECUTION.md` P0.1.
 pub mod container_10d;
+/// `.qualia` — a transparent container-of-files bundle for shipping a set of
+/// sealed assets (`.10d` / `.q42` / `.p64`) as one attestable unit. Available to
+/// both native and WASM builds (native adds the zero-copy `BundleMmap`).
+pub mod bundle;
 pub mod tensor;
 // geometric_algebra moved into solvers/ (it is a math solver, not a logic modality);
 // re-exported here so `crate::geometric_algebra::*` paths keep resolving. Gated to match the

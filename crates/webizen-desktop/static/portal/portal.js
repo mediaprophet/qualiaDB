@@ -55,7 +55,7 @@ function kindLabel(kind) {
 
 function renderJobs(snapshot) {
   const body = $("jobs-body");
-  const jobs = (snapshot.jobs || []).slice().reverse();
+  const jobs = (snapshot.jobs || []).slice().reverse().slice(0, 12);
   if (!jobs.length) {
     body.innerHTML = '<tr><td colspan="5">No jobs yet.</td></tr>';
     return;

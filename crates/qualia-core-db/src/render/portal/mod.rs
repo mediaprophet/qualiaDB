@@ -431,6 +431,18 @@ impl QualiaPortal {
         Ok(())
     }
 
+    /// Enable/disable the **ambient particle field** — the mixer's "ambient" channel. Off by default
+    /// (a plain mesh/anatomy view has no use for the decorative random cloud); a Tensor10D upload
+    /// turns it on automatically because the particles then encode epistemic nodes.
+    pub fn set_ambient_enabled(&mut self, on: bool) {
+        #[cfg(target_arch = "wasm32")]
+        if let Some(ref mut gpu) = self.gpu {
+            gpu.set_ambient_enabled(on);
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        let _ = on;
+    }
+
     /// Orbit camera IPC from the UI shell (yaw/pitch in radians, zoom = eye distance).
     pub fn set_camera(&mut self, yaw: f32, pitch: f32, zoom: f32) -> Result<(), JsValue> {
         self.camera = CameraState { yaw, pitch, zoom }.clamped();
@@ -833,17 +845,18 @@ impl QualiaPortal {
     }
 
     /// S5.8 — load the **whole body** as a set of per-organ `.10d` meshes, each painted its body-system's
-    /// σ-derived RGBA, accumulated into one combined GPU mesh. This is the real-mesh render path: the
-    /// host caches the CCF/HRA GLB set (compiled to `.10d`), the browser portal fetches each cached
-    /// `.10d` + its percept colour, and this method decodes + centres + scales each organ and uploads
-    /// them all as one mesh with per-vertex colours. Each organ is offset to its anatomical position
-    /// (approximate — the CCF ref organs are individually centred; a future pass can use real CCF
-    /// transforms). Same governance fail-closed per organ as `load_10d_colored`.
+    /// σ-derived RGBA, accumulated into one combined GPU mesh. This is the real-mesh render path.
     ///
-    /// `organs` is a JS `Array` of objects: `{ bytes: Uint8Array, r: f32, g: f32, b: f32, a: f32,
-    /// x: f32, y: f32, z: f32 }` where `(x,y,z)` is the organ's anatomical position offset (0..1
-    /// normalised body space, mapped to the orbit frame). Returns `{ organs_loaded, organs_refused,
-    /// total_triangles }`.
+    /// The CCF/HRA reference organs are authored in ONE shared body coordinate space (a brain's vertices
+    /// sit at the head, a bladder's at the pelvis, skin envelops the whole body), so this **preserves
+    /// each organ's TRUE position and relative size**: it accumulates the whole-body bounds across all
+    /// organs and applies **one global centre + scale**, rather than normalising each organ separately
+    /// (which would flatten proportions and shrink the full-body skin mesh to a dot). Governance
+    /// fail-closed per organ, as in `load_10d_colored`.
+    ///
+    /// `organs` is a JS `Array` of objects: `{ bytes: Uint8Array, r: f32, g: f32, b: f32, a: f32 }`
+    /// (per-organ colour). Any `x/y/z` fields are ignored — the mesh already carries its position.
+    /// Returns `{ organs_loaded, organs_refused, total_triangles }`.
     pub fn load_body_organs_colored(
         &mut self,
         organs: &Array,
@@ -859,6 +872,10 @@ impl QualiaPortal {
         let mut organs_loaded = 0u32;
         let mut organs_refused = 0u32;
         let mut total_triangles = 0u32;
+        // Whole-body bounds accumulated across all organs (they share one coordinate space), so a single
+        // global centre + scale can be applied after decoding.
+        let mut gmin = [f32::INFINITY; 3];
+        let mut gmax = [f32::NEG_INFINITY; 3];
 
         for i in 0..organs.length() {
             let organ = organs.get(i);
@@ -866,33 +883,21 @@ impl QualiaPortal {
                 .map_err(|_| JsValue::from_str("organ.bytes missing"))?;
             let bytes: Vec<u8> = js_sys::Uint8Array::new(&bytes_val).to_vec();
             let r = Reflect::get(&organ, &JsValue::from_str("r"))
-                .map_err(|_| JsValue::from_str("organ.r missing"))?
-                .as_f64()
+                .ok()
+                .and_then(|v| v.as_f64())
                 .unwrap_or(0.5) as f32;
             let g = Reflect::get(&organ, &JsValue::from_str("g"))
-                .map_err(|_| JsValue::from_str("organ.g missing"))?
-                .as_f64()
+                .ok()
+                .and_then(|v| v.as_f64())
                 .unwrap_or(0.6) as f32;
             let b = Reflect::get(&organ, &JsValue::from_str("b"))
-                .map_err(|_| JsValue::from_str("organ.b missing"))?
-                .as_f64()
+                .ok()
+                .and_then(|v| v.as_f64())
                 .unwrap_or(0.8) as f32;
             let a = Reflect::get(&organ, &JsValue::from_str("a"))
-                .map_err(|_| JsValue::from_str("organ.a missing"))?
-                .as_f64()
+                .ok()
+                .and_then(|v| v.as_f64())
                 .unwrap_or(1.0) as f32;
-            let ox = Reflect::get(&organ, &JsValue::from_str("x"))
-                .ok()
-                .and_then(|v| v.as_f64())
-                .unwrap_or(0.5) as f32;
-            let oy = Reflect::get(&organ, &JsValue::from_str("y"))
-                .ok()
-                .and_then(|v| v.as_f64())
-                .unwrap_or(0.5) as f32;
-            let oz = Reflect::get(&organ, &JsValue::from_str("z"))
-                .ok()
-                .and_then(|v| v.as_f64())
-                .unwrap_or(0.5) as f32;
 
             let mut bytes_mut = bytes.clone();
             let header = match Container10dHeader::parse(&bytes_mut) {
@@ -944,24 +949,19 @@ impl QualiaPortal {
                 continue;
             }
 
-            // Centre + scale this organ to the orbit frame, then offset to its anatomical position.
-            // The body-space position (0..1) is mapped to [-1..1] in the orbit frame.
-            let c = mesh.centroid();
-            let ext = [
-                mesh.max[0] - mesh.min[0],
-                mesh.max[1] - mesh.min[1],
-                mesh.max[2] - mesh.min[2],
-            ];
-            let span = ext[0].max(ext[1]).max(ext[2]).max(1e-6);
-            // Organ-local scale: fit to ~0.15 of the orbit frame so organs don't overlap too much.
-            let s = 0.15 / span;
+            // Keep the organ's TRUE coordinates; grow the whole-body bounds. Placement happens once,
+            // globally, after every organ is decoded.
+            for k in 0..3 {
+                if mesh.min[k] < gmin[k] {
+                    gmin[k] = mesh.min[k];
+                }
+                if mesh.max[k] > gmax[k] {
+                    gmax[k] = mesh.max[k];
+                }
+            }
             let base = all_positions.len() as u32;
             for p in mesh.positions.iter() {
-                all_positions.push([
-                    (p[0] - c[0]) * s + (ox - 0.5) * 2.0,
-                    (p[1] - c[1]) * s + (oy - 0.5) * 2.0,
-                    (p[2] - c[2]) * s + (oz - 0.5) * 2.0,
-                ]);
+                all_positions.push([p[0], p[1], p[2]]);
                 all_colors.push([r, g, b, a]);
             }
             for t in mesh.triangles.iter() {
@@ -971,6 +971,26 @@ impl QualiaPortal {
             }
             total_triangles += mesh.triangles.len() as u32;
             organs_loaded += 1;
+        }
+
+        // One global centre + scale — preserves true anatomical positions and relative organ sizes, and
+        // fits whatever subset is present (skin on or off) to ~1.7 of the orbit frame.
+        if organs_loaded > 0 {
+            let gc = [
+                (gmin[0] + gmax[0]) * 0.5,
+                (gmin[1] + gmax[1]) * 0.5,
+                (gmin[2] + gmax[2]) * 0.5,
+            ];
+            let gspan = (gmax[0] - gmin[0])
+                .max(gmax[1] - gmin[1])
+                .max(gmax[2] - gmin[2])
+                .max(1e-6);
+            let s = 1.7 / gspan;
+            for p in all_positions.iter_mut() {
+                p[0] = (p[0] - gc[0]) * s;
+                p[1] = (p[1] - gc[1]) * s;
+                p[2] = (p[2] - gc[2]) * s;
+            }
         }
 
         if let Some(ref mut gpu) = self.gpu {
@@ -999,6 +1019,120 @@ impl QualiaPortal {
             &JsValue::from_f64(total_triangles as f64),
         )?;
         Ok(result.into())
+    }
+
+    /// S5.8 (web) — load the whole body directly from a `.qualia` **anatomy pack**
+    /// bundle (see [`crate::bundle`]). Parses the bundle with the *shared* Rust
+    /// reader (the same code the native host uses — "one reader, both channels"),
+    /// reads each organ's sealed `.10d` plus its
+    /// [`AnatomyOrganMeta`](crate::render::anatomy_pack::AnatomyOrganMeta) (system
+    /// colour + anatomical position), and hands them to
+    /// [`Self::load_body_organs_colored`]. This is the pure-web render path — no
+    /// Tauri host / `webizen://` needed: the browser fetches one `.qualia` file and
+    /// renders the real body. Returns the same `{organs_loaded, organs_refused,
+    /// total_triangles}` summary.
+    pub fn load_body_from_qualia_bundle(&mut self, bytes: &[u8]) -> Result<JsValue, JsValue> {
+        self.load_body_from_qualia_bundle_mixed(bytes, JsValue::UNDEFINED, JsValue::UNDEFINED)
+    }
+
+    /// Read a `.qualia` pack's **manifest** without rendering — the list of parts the UI builds its
+    /// dynamic system + part selectors from. Returns a JS array of `{ key, label, system, systems }`
+    /// (one per `.10d` entry), so the demo can offer per-system *and* per-part select/deselect driven by
+    /// what is actually in the loaded pack, not a hardcoded list. Read-only.
+    pub fn pack_manifest(&self, bytes: &[u8]) -> Result<JsValue, JsValue> {
+        use crate::bundle::BundleReader;
+        use crate::render::anatomy_pack::AnatomyOrganMeta;
+
+        let reader = BundleReader::parse(bytes)
+            .map_err(|e| JsValue::from_str(&format!("qualia bundle: {e}")))?;
+        let parts = js_sys::Array::new();
+        for entry in reader.entries() {
+            if entry.kind != "10d" {
+                continue;
+            }
+            let Some(meta) = entry.meta.as_deref().and_then(AnatomyOrganMeta::from_cbor) else {
+                continue;
+            };
+            let obj = js_sys::Object::new();
+            Reflect::set(&obj, &JsValue::from_str("key"), &JsValue::from_str(&entry.key))?;
+            let label = if meta.label.is_empty() { entry.key.as_str() } else { meta.label.as_str() };
+            Reflect::set(&obj, &JsValue::from_str("label"), &JsValue::from_str(label))?;
+            Reflect::set(&obj, &JsValue::from_str("system"), &JsValue::from_str(&meta.system))?;
+            let systems = js_sys::Array::new();
+            if meta.systems.is_empty() {
+                systems.push(&JsValue::from_str(&meta.system));
+            } else {
+                for s in &meta.systems {
+                    systems.push(&JsValue::from_str(s));
+                }
+            }
+            Reflect::set(&obj, &JsValue::from_str("systems"), &systems)?;
+            parts.push(&obj);
+        }
+        Ok(parts.into())
+    }
+
+    /// Like [`Self::load_body_from_qualia_bundle`] but honours the **mixer's per-body-system
+    /// channels**: `system_levels` is a JS object `{ <system_id>: <level 0..1> }`. An organ whose
+    /// system level is ≤ 0 is omitted (muted); otherwise its colour alpha is scaled by the level.
+    /// (The mesh pipeline is currently opaque, so a nonzero level acts as show; smooth opacity lands
+    /// when the mesh pipeline gains alpha blending — mixer plan P2.) An absent/empty map shows every
+    /// system at full — so `load_body_from_qualia_bundle` is exactly this with no mixer applied.
+    pub fn load_body_from_qualia_bundle_mixed(
+        &mut self,
+        bytes: &[u8],
+        system_levels: JsValue,
+        disabled_parts: JsValue,
+    ) -> Result<JsValue, JsValue> {
+        use crate::bundle::BundleReader;
+        use crate::render::anatomy_pack::AnatomyOrganMeta;
+
+        let levels: std::collections::HashMap<String, f32> =
+            serde_wasm_bindgen::from_value(system_levels).unwrap_or_default();
+        // Individually deselected parts (by entry key) — the parts-list checkboxes. Absent/empty = none.
+        let disabled: std::collections::HashSet<String> =
+            serde_wasm_bindgen::from_value(disabled_parts).unwrap_or_default();
+
+        let reader = BundleReader::parse(bytes)
+            .map_err(|e| JsValue::from_str(&format!("qualia bundle: {e}")))?;
+
+        let organs = js_sys::Array::new();
+        for entry in reader.entries() {
+            if entry.kind != "10d" {
+                continue;
+            }
+            if disabled.contains(&entry.key) {
+                continue; // this specific part deselected in the parts list
+            }
+            let Some(meta) = entry.meta.as_deref().and_then(AnatomyOrganMeta::from_cbor) else {
+                continue;
+            };
+            let level = levels.get(&meta.system).copied().unwrap_or(1.0);
+            if level <= 0.0 {
+                continue; // system muted by the mixer
+            }
+            let Some(organ_bytes) = reader.get(&entry.key) else {
+                continue;
+            };
+            let u8 = js_sys::Uint8Array::new_with_length(organ_bytes.len() as u32);
+            u8.copy_from(organ_bytes);
+            let obj = js_sys::Object::new();
+            Reflect::set(&obj, &JsValue::from_str("bytes"), &u8)?;
+            Reflect::set(&obj, &JsValue::from_str("r"), &JsValue::from_f64(meta.rgba[0] as f64))?;
+            Reflect::set(&obj, &JsValue::from_str("g"), &JsValue::from_f64(meta.rgba[1] as f64))?;
+            Reflect::set(&obj, &JsValue::from_str("b"), &JsValue::from_f64(meta.rgba[2] as f64))?;
+            Reflect::set(
+                &obj,
+                &JsValue::from_str("a"),
+                &JsValue::from_f64((meta.rgba[3] * level) as f64),
+            )?;
+            Reflect::set(&obj, &JsValue::from_str("x"), &JsValue::from_f64(meta.position[0] as f64))?;
+            Reflect::set(&obj, &JsValue::from_str("y"), &JsValue::from_f64(meta.position[1] as f64))?;
+            Reflect::set(&obj, &JsValue::from_str("z"), &JsValue::from_f64(meta.position[2] as f64))?;
+            organs.push(&obj);
+        }
+
+        self.load_body_organs_colored(&organs)
     }
 
     /// Phase 2 — drive the loaded mesh artefact with a kinematic joint (visible physics). `kind` is

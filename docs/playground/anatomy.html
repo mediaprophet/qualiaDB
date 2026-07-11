@@ -129,6 +129,78 @@
             z-index: 20;
             transform: translate(-50%, -150%);
         }
+
+        #status {
+            position: absolute;
+            left: 16px;
+            bottom: 14px;
+            max-width: calc(100% - 32px);
+            background: rgba(0, 0, 0, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-left: 3px solid var(--accent);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.82rem;
+            line-height: 1.4;
+            z-index: 20;
+        }
+        #status.ok { border-left-color: #38e08a; }
+        #status.error { border-left-color: #ff6b6b; color: #ffd9d9; }
+
+        .mixer-systems { display: flex; flex-direction: column; gap: 7px; margin-top: 6px; }
+        .mixer-row { display: flex; align-items: center; gap: 10px; }
+        .mixer-label { flex: 0 0 118px; font-size: 0.78rem; color: #ccc; line-height: 1.2; }
+        .mixer-fader { flex: 1; accent-color: var(--accent); cursor: pointer; }
+        .mixer-fader:disabled { opacity: 0.35; cursor: not-allowed; }
+        .mixer-row-overlay .mixer-label { color: var(--text-dim); font-style: italic; }
+        .mixer-note { margin-top: 10px; font-size: 0.72rem; color: var(--text-dim); line-height: 1.35; }
+        .mixer-note em { color: #bcd; font-style: italic; }
+
+        #parts-count { font-weight: normal; color: var(--text-dim); font-size: 0.78rem; }
+        .parts-search { width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.12); color: var(--text-main); border-radius: 6px; padding: 6px 8px; font-size: 0.82rem; }
+        .parts-buttons { display: flex; gap: 8px; margin: 8px 0; }
+        .parts-btn { flex: 1; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; padding: 5px; }
+        .parts-list { max-height: 240px; overflow-y: auto; margin-top: 2px; }
+        .parts-group > summary { cursor: pointer; font-size: 0.82rem; color: var(--accent); padding: 3px 0; list-style: revert; }
+        .part-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: #ccc; padding: 2px 0 2px 12px; cursor: pointer; }
+        .part-row input { accent-color: var(--accent); cursor: pointer; }
+
+        #attribution {
+            position: absolute;
+            right: 16px;
+            bottom: 14px;
+            max-width: 470px;
+            background: rgba(0, 0, 0, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--text-dim);
+            padding: 6px 11px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.72rem;
+            line-height: 1.5;
+            z-index: 20;
+        }
+        #attribution > summary {
+            cursor: pointer;
+            color: #bcd;
+            list-style: none;
+            text-align: right;
+            user-select: none;
+        }
+        #attribution > summary::-webkit-details-marker { display: none; }
+        #attribution[open] > summary {
+            margin-bottom: 6px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        #attribution-body { text-align: left; display: flex; flex-direction: column; gap: 7px; }
+        #attribution .src { color: #fff; }
+        #attribution .scope { color: var(--text-dim); }
+        #attribution .note { color: var(--text-dim); font-style: italic; margin-top: 3px; }
+        #attribution a { color: var(--accent); text-decoration: none; }
+        #attribution a:hover { text-decoration: underline; }
     </style>
     <script src="../js/menu-loader.js"></script></head>
 <body>
@@ -140,42 +212,66 @@
         </div>
 
         <div class="control-group">
-            <h3>Reference Body (Sex)</h3>
+            <h3>Reference Body</h3>
             <div class="toggle-container">
                 <button id="btn-male" class="toggle-btn active" onclick="setSex('male')">Male (VHM)</button>
                 <button id="btn-female" class="toggle-btn" onclick="setSex('female')">Female (VHF)</button>
             </div>
+            <button id="btn-complete" class="toggle-btn" style="margin-top:8px;width:100%;border:1px solid rgba(255,255,255,0.15);border-radius:6px;" onclick="setSex('complete')">Complete — every muscle, bone, gland &amp; nerve</button>
+            <div style="font-size:0.68rem;color:var(--text-dim);margin-top:6px;line-height:1.35;">The complete BodyParts3D body (CC BY-SA) is a large download fetched from the release, rendered in its own coordinate space.</div>
         </div>
 
         <div class="control-group">
-            <h3>Anatomical Systems</h3>
+            <h3>Mixer — Attention</h3>
             <label class="checkbox-label">
-                <input type="checkbox" id="sys-nervous" onchange="updateRender()" checked> Nervous System
+                <input type="checkbox" id="ch-ambient" onchange="onAmbient(this.checked)"> Ambient σ field
             </label>
-            <label class="checkbox-label">
-                <input type="checkbox" id="sys-cardio" onchange="updateRender()" checked> Cardiovascular
-            </label>
-            <label class="checkbox-label">
-                <input type="checkbox" id="sys-respiratory" onchange="updateRender()" checked> Respiratory
-            </label>
-            <label class="checkbox-label">
-                <input type="checkbox" id="sys-urinary" onchange="updateRender()" checked> Urinary System
-            </label>
+            <div id="mixer-systems" class="mixer-systems"></div>
+            <div class="mixer-note">Compose which body systems you attend to — the faders are built from the systems this body actually contains. Drag a fader to 0 to mute a system. Systems marked <em>·overlay</em> (ECS / ENS / glymphatic) are distributed networks with no single organ — evaluated and painted as an overlay on their host organs, so they're listed but not shown/hidden here.</div>
         </div>
-        
+
+        <div class="control-group">
+            <h3>Parts <span id="parts-count"></span></h3>
+            <input id="parts-search" type="text" placeholder="Search parts…" oninput="onPartSearch(this.value)" class="parts-search" />
+            <div class="parts-buttons">
+                <button class="toggle-btn parts-btn" onclick="setAllParts(true)">Select all</button>
+                <button class="toggle-btn parts-btn" onclick="setAllParts(false)">Deselect all</button>
+            </div>
+            <div id="parts-list" class="parts-list"></div>
+            <div class="mixer-note">Every individual structure this body contains, grouped by system. Untick a part to hide just that structure. Search to find one (the complete body has ~900).</div>
+        </div>
+
         <div style="flex-grow: 1;"></div>
         <div style="font-size: 0.8rem; color: var(--text-dim); line-height: 1.4;">
-            Renders strictly via <b>Spatiotemporal Routing (0b11)</b> parsing HuBMAP Common Coordinate Framework JSON-LD Linked Data.
+            Real HuBMAP/CCF reference-organ meshes, compiled to sealed <b>.10d</b> and shipped in one transparent <b>.qualia</b> bundle, rendered by the Qualia engine on <b>WebGPU</b> — the same renderer that runs natively on the desktop.
         </div>
     </div>
 
     <div id="canvas-container">
         <div id="tooltip"></div>
+        <div id="status" class="status">Starting…</div>
+        <details id="attribution" class="attribution">
+            <summary>ⓘ Sources &amp; licences</summary>
+            <div id="attribution-body"></div>
+        </details>
     </div>
 
-    <!-- Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="anatomy.js"></script>
+    <!-- Fallback diagnostic: a plain (non-module) script that always runs. If the ES module never
+         executes — e.g. the page was opened as a file:// instead of served over HTTP, or module/WASM
+         loading is blocked — the status stays "Starting…". Replace it with an actionable message. -->
+    <script>
+      setTimeout(function () {
+        var s = document.getElementById('status');
+        if (s && s.textContent.trim().indexOf('Starting') === 0) {
+          s.className = 'status error';
+          s.textContent = (location.protocol === 'file:')
+            ? 'This demo must be SERVED over HTTP, not opened as a file. Start a local server in docs/ and open http://localhost:PORT/playground/anatomy.html in Chrome or Edge (WebGPU).'
+            : 'The renderer module did not load. It needs a WebGPU browser (Chrome/Edge) over HTTP. Open the console (F12) for the specific error.';
+        }
+      }, 8000);
+    </script>
+
+    <!-- Real Qualia WebGPU renderer (ES module) -->
+    <script type="module" src="anatomy.js"></script>
 </body>
 </html>

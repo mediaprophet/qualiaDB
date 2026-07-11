@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use dioxus::document::eval;
 use serde_json::json;
 use uuid::Uuid;
 
@@ -151,6 +152,44 @@ pub fn WebBrowserPane() -> Element {
 
     let mut show_sidebar = use_signal(|| false);
 
+    use_effect(move || {
+        let active_id = active_tab_id.read().clone();
+        let tabs_data = tabs.read().clone();
+        
+        let tabs_json = serde_json::json!(
+            tabs_data.iter().map(|t| serde_json::json!({"id": t.id.clone(), "url": t.url.clone()})).collect::<Vec<_>>()
+        ).to_string();
+
+        spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            let script = format!(r#"
+                const activeId = "{}";
+                const tabs = {};
+                const container = document.getElementById('webview-container');
+                if (!container || !window.__TAURI__) return;
+                const rect = container.getBoundingClientRect();
+                const invoke = window.__TAURI__.core.invoke;
+                
+                window.activeWebviewId = activeId;
+                
+                for (let tab of tabs) {{
+                    if (tab.id === activeId) {{
+                        invoke('spawn_native_webview', {{
+                            id: tab.id, url: tab.url, x: rect.left, y: rect.top, width: rect.width, height: rect.height
+                        }}).then(() => {{
+                            invoke('resize_native_webview', {{ id: tab.id, x: rect.left, y: rect.top, width: rect.width, height: rect.height }});
+                            invoke('show_native_webview', {{ id: tab.id }});
+                        }}).catch(console.error);
+                    }} else {{
+                        invoke('hide_native_webview', {{ id: tab.id }}).catch(console.error);
+                    }}
+                }}
+            "#, active_id, tabs_json);
+            
+            let _ = eval(&script);
+        });
+    });
+
     // Get current tab's navigation state
     let (can_back, can_fwd) = {
         let current_id = active_tab_id.read().clone();
@@ -296,14 +335,32 @@ pub fn WebBrowserPane() -> Element {
             // Iframe viewport & Sidebar
             div { class: "flex-1 flex flex-row overflow-hidden",
                 div {
+                    id: "webview-container",
                     class: "flex-1 relative bg-white overflow-hidden",
-                    for tab in tabs.read().iter() {
-                        iframe {
-                            src: "{tab.url}",
-                            class: "w-full h-full border-none absolute top-0 left-0",
-                            style: if *active_tab_id.read() == tab.id { "display: block;" } else { "display: none;" },
-                            "sandbox": "allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-popups-to-escape-sandbox",
-                        }
+                    // The iframes have been removed. We now spawn native Tauri Child Webviews via IPC.
+                    // The Native webviews will be perfectly positioned over this container.
+                    onmounted: move |_e| {
+                        // This ensures we get the initial layout
+                        spawn(async move {
+                            // Let the DOM settle
+                            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                            let script = r#"
+                                const container = document.getElementById('webview-container');
+                                if (container && !window.webviewObserver) {
+                                    window.webviewObserver = new ResizeObserver(() => {
+                                        if (window.activeWebviewId && window.__TAURI__) {
+                                            const r = container.getBoundingClientRect();
+                                            window.__TAURI__.core.invoke('resize_native_webview', { 
+                                                id: window.activeWebviewId, 
+                                                x: r.left, y: r.top, width: r.width, height: r.height 
+                                            }).catch(console.error);
+                                        }
+                                    });
+                                    window.webviewObserver.observe(container);
+                                }
+                            "#;
+                            let _ = eval(script);
+                        });
                     }
                 }
                 if show_sidebar() {

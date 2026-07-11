@@ -208,7 +208,10 @@ pub fn host_knowledge_base() -> KnowledgeBase {
         citation: None,
         imported_at: None,
     };
-    if let Ok(res) = anatomy::import_condition_map(BUNDLED_CONDITION_MAP, prov) {
+    // Resolve condition→system through the default (seeded 17) registry. When the app carries an
+    // extended taxonomy (ontology/pack-registered systems), pass that registry here instead so a
+    // condition mapping to an extension system is evaluated, not dropped.
+    if let Ok(res) = anatomy::import_condition_map(BUNDLED_CONDITION_MAP, prov, anatomy::default_registry()) {
         for entry in res.entries {
             kb.insert(entry);
         }

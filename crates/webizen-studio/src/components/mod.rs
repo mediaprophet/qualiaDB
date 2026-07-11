@@ -59,6 +59,7 @@ pub mod ode_solver;
 pub mod p2p_dashboard;
 pub mod physics_simulator;
 pub mod portfolio_analyzer;
+pub mod problems_pane;
 pub mod provenance_graph;
 pub mod q42_volume_manager;
 pub mod qaoa_explorer;

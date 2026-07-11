@@ -186,6 +186,7 @@ static ORGAN_SYSTEMS: &[(&str, &str)] = &[
     ("pelvis", "skeletal"),
     // Muscular
     ("muscle", "muscular"),
+    ("diaphragm", "muscular"), // a muscle (primary) that is also the engine of respiration (secondary)
     // Endocrine
     ("thyroid-gland", "endocrine"),
     ("thyroid", "endocrine"),
@@ -211,15 +212,54 @@ static ORGAN_SYSTEMS: &[(&str, &str)] = &[
     ("placenta-full-term", "reproductive"),
 ];
 
-/// The body-system id for an HRA/CCF organ (after [`normalize_organ_key`]), or `None` if the organ is
-/// not in the curated map. Returned ids are guaranteed valid (a test asserts every entry resolves via
-/// [`body_system`](crate::anatomy::systems::body_system)).
+/// The **primary** body-system id for an HRA/CCF organ (after [`normalize_organ_key`]), or `None` if the
+/// organ is not in the curated map. An organ is a *building block that participates in several systems*
+/// (the pancreas is digestive **and** endocrine); this returns its primary macroscopic home — the one
+/// used for default colour/placement. Use [`system_memberships_for_organ`] for the full set.
 pub fn body_system_for_organ(organ: &str) -> Option<&'static str> {
     let key = normalize_organ_key(organ);
     ORGAN_SYSTEMS
         .iter()
         .find(|(o, _)| *o == key)
         .map(|(_, sys)| *sys)
+}
+
+/// An organ's **additional** system memberships beyond its primary — the dual/multi-role structures. An
+/// organ is a building block shared across systems: the pancreas secretes digestive enzymes *and* insulin
+/// (endocrine); the kidney filters blood *and* makes hormones (renin/EPO/vit-D); skin is a barrier that
+/// also senses and secretes. Curation-grade (well-established textbook roles), extensible. Every id here
+/// is a real body system (a test asserts it). This is the data behind organ→**many** systems.
+static ORGAN_SECONDARY_SYSTEMS: &[(&str, &str)] = &[
+    ("pancreas", "endocrine"),    // islets of Langerhans → insulin/glucagon
+    ("pancreas", "exocrine"),     // acinar cells → digestive enzymes via ducts
+    ("liver", "endocrine"),       // IGF-1, angiotensinogen, thrombopoietin, hormone metabolism
+    ("liver", "exocrine"),        // bile secreted via the biliary ducts
+    ("kidney", "endocrine"),      // renin, erythropoietin, calcitriol activation
+    ("ovary", "endocrine"),       // oestrogen / progesterone
+    ("testis", "endocrine"),      // testosterone
+    ("bone", "immune_lymphatic"), // red marrow → haematopoiesis of immune cells
+    ("skin", "sensory"),          // cutaneous mechano/thermo/nociceptors
+    ("skin", "exocrine"),         // sweat + sebaceous glands
+    ("mammary-gland", "exocrine"),// milk secreted via ducts
+    ("diaphragm", "respiratory"), // the principal muscle of ventilation
+];
+
+/// All body systems an organ participates in, as `(system_id, is_primary)` — the primary first, then any
+/// additional memberships. Empty if the organ is unmapped. This is what makes an organ a shared building
+/// block rather than a leaf of one system: a caller can colour by the primary (default) **or** blend across
+/// all memberships, and a person's condition on any member system lights the organ.
+pub fn system_memberships_for_organ(organ: &str) -> Vec<(&'static str, bool)> {
+    let key = normalize_organ_key(organ);
+    let mut out: Vec<(&'static str, bool)> = Vec::new();
+    if let Some((_, sys)) = ORGAN_SYSTEMS.iter().find(|(o, _)| *o == key) {
+        out.push((*sys, true));
+    }
+    for (o, sys) in ORGAN_SECONDARY_SYSTEMS {
+        if *o == key && !out.iter().any(|(s, _)| s == sys) {
+            out.push((*sys, false));
+        }
+    }
+    out
 }
 
 /// How a body system is rendered on the 3D body.
@@ -320,6 +360,35 @@ mod tests {
         assert_eq!(body_system_for_organ("3d-vh-m-urinary-bladder.glb"), Some("urinary"));
         // Unknown → reported as None, never guessed.
         assert_eq!(body_system_for_organ("3d-vh-m-flux-capacitor.glb"), None);
+    }
+
+    #[test]
+    fn organs_participate_in_multiple_systems() {
+        use crate::anatomy::systems::body_system;
+        // The pancreas is a building block of THREE systems — primary digestive, plus endocrine + exocrine.
+        let m = system_memberships_for_organ("3d-vh-m-pancreas.glb");
+        assert_eq!(m[0], ("digestive", true), "primary comes first");
+        let ids: Vec<&str> = m.iter().map(|(s, _)| *s).collect();
+        assert!(ids.contains(&"endocrine") && ids.contains(&"exocrine"), "pancreas multi-system: {ids:?}");
+        // The primary agrees with body_system_for_organ.
+        assert_eq!(body_system_for_organ("pancreas"), Some("digestive"));
+        // Skin: a barrier (primary integumentary) that also senses and secretes.
+        let skin: Vec<&str> = system_memberships_for_organ("skin").iter().map(|(s, _)| *s).collect();
+        assert!(
+            skin.contains(&"integumentary") && skin.contains(&"sensory") && skin.contains(&"exocrine"),
+            "skin memberships: {skin:?}"
+        );
+        // A single-system organ has exactly one membership (the primary).
+        assert_eq!(system_memberships_for_organ("heart"), vec![("circulatory", true)]);
+        // The diaphragm is now a muscle (primary) that is also respiratory.
+        let dia: Vec<&str> = system_memberships_for_organ("diaphragm").iter().map(|(s, _)| *s).collect();
+        assert_eq!(dia, vec!["muscular", "respiratory"]);
+        // Every secondary membership names a real body system (no typo silently colouring nothing).
+        for (organ, sys) in ORGAN_SECONDARY_SYSTEMS {
+            assert!(body_system(sys).is_some(), "organ {organ} secondary → unknown system {sys}");
+        }
+        // An unknown organ has no memberships (reported, not guessed).
+        assert!(system_memberships_for_organ("flux-capacitor").is_empty());
     }
 
     #[test]

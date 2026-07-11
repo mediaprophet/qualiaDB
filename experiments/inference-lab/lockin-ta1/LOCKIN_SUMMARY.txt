@@ -1,0 +1,9 @@
+LOCK-IN SUMMARY
+  out_dir:     experiments/inference-lab/lockin-ta1
+  trials:      13
+  generations: 1
+  elapsed_s:   189.8
+  best_tok_s:  Some(62.98300088806031)
+  best_label:  r1_c1_k1_fast-verify_auto
+  ollama_tok_s:None
+  a_gap:       None

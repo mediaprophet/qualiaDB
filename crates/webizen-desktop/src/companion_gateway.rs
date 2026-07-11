@@ -12,7 +12,7 @@ use qualia_client_core::wellfair::api::WebizenHostApi;
 use rand::Rng;
 use serde::Deserialize;
 use serde_json::Value;
-use std::sync::{Arc, Mutex};
+
 use wellfare_core::companion_pairing::{
     CompanionAuthResult, CompanionChallenge, CompanionPairingResponse, COMPANION_PAIRING_CONTEXT,
     MSG_PAIRING_RESPONSE,
@@ -28,7 +28,52 @@ pub struct WebRtcSignal {
     pub payload: Value,
 }
 
-pub type HostApiHandle = Arc<Mutex<Option<WebizenHostApi>>>;
+type HostClosure = Box<dyn FnOnce(&mut Option<WebizenHostApi>) + Send + 'static>;
+
+#[derive(Clone)]
+pub struct HostApiHandle {
+    sender: tokio::sync::mpsc::Sender<HostClosure>,
+}
+
+impl HostApiHandle {
+    pub fn new(initial_host: Option<WebizenHostApi>) -> Self {
+        let (tx, mut rx) = tokio::sync::mpsc::channel::<HostClosure>(128);
+        let mut host_state = initial_host;
+        tokio::task::spawn_blocking(move || {
+            while let Some(closure) = rx.blocking_recv() {
+                closure(&mut host_state);
+            }
+        });
+        Self { sender: tx }
+    }
+
+    pub async fn execute<T: Send + 'static>(
+        &self,
+        f: impl FnOnce(&mut Option<WebizenHostApi>) -> T + Send + 'static,
+    ) -> Result<T, String> {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        self.sender
+            .send(Box::new(move |host| {
+                let _ = tx.send(f(host));
+            }))
+            .await
+            .map_err(|_| "HostService actor is dead".to_string())?;
+        rx.await.map_err(|_| "HostService dropped the request".to_string())
+    }
+
+    pub fn execute_sync<T: Send + 'static>(
+        &self,
+        f: impl FnOnce(&mut Option<WebizenHostApi>) -> T + Send + 'static,
+    ) -> Result<T, String> {
+        let (tx, rx) = std::sync::mpsc::channel();
+        self.sender
+            .blocking_send(Box::new(move |host| {
+                let _ = tx.send(f(host));
+            }))
+            .map_err(|_| "HostService actor is dead".to_string())?;
+        rx.recv().map_err(|_| "HostService dropped the request".to_string())
+    }
+}
 
 pub const DEFAULT_COMPANION_PORT: u16 = 8080;
 
@@ -149,49 +194,69 @@ fn verify_pairing_response(
         .map_err(|_| "signature verification failed".to_string())
 }
 
-fn register_usage_agreement_json(host_api: &HostApiHandle, agreement: &UsageAgreement) -> Result<(), String> {
-    let guard = host_api.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    host.register_usage_agreement(agreement)
+async fn register_usage_agreement_json(host_api: &HostApiHandle, agreement: UsageAgreement) -> Result<(), String> {
+    host_api.execute(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.register_usage_agreement(&agreement)
+    }).await?
 }
 
-fn submit_live_share_request_json(
+async fn submit_live_share_request_json(
     host_api: &HostApiHandle,
-    request: &LiveSectionRequest,
+    request: LiveSectionRequest,
 ) -> Result<String, String> {
-    let guard = host_api.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let entry = host.submit_live_share_request(request)?;
-    Ok(entry.id)
+    host_api.execute(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let entry = host.submit_live_share_request(&request)?;
+        Ok(entry.id)
+    }).await?
 }
 
-fn ingest_bundle_json(host_api: &HostApiHandle, bundle_json: &str) -> Result<IngestAck, String> {
-    let bundle: wellfare_core::companion_sync::CompanionHealthBundle =
-        serde_json::from_str(bundle_json).map_err(|e| format!("invalid bundle JSON: {e}"))?;
-    let mut guard = host_api.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let report = host.ingest_companion_health_bundle(&bundle);
-    Ok(IngestAck {
-        ok: report.errors.is_empty(),
-        records_committed: report.records_committed,
-        records_skipped: report.records_skipped,
-        errors: report.errors,
-    })
+async fn ingest_bundle_json(host_api: &HostApiHandle, bundle_json: String) -> Result<IngestAck, String> {
+    host_api.execute(move |guard| {
+        let bundle: wellfare_core::companion_sync::CompanionHealthBundle =
+            serde_json::from_str(&bundle_json).map_err(|e| format!("invalid bundle JSON: {e}"))?;
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let report = host.ingest_companion_health_bundle(&bundle);
+        Ok(IngestAck {
+            ok: report.errors.is_empty(),
+            records_committed: report.records_committed,
+            records_skipped: report.records_skipped,
+            errors: report.errors,
+        })
+    }).await?
 }
 
 pub async fn companion_ingest_post(
     State(host_api): State<HostApiHandle>,
     body: String,
 ) -> Result<Json<IngestAck>, (axum::http::StatusCode, String)> {
-    ingest_bundle_json(&host_api, &body)
+    ingest_bundle_json(&host_api, body)
+        .await
         .map(Json)
         .map_err(|e| (axum::http::StatusCode::BAD_REQUEST, e))
+}
+
+pub async fn companion_pairing_route() -> Json<CompanionPairingInfo> {
+    let port = companion_listen_port();
+    Json(companion_pairing_info(port))
+}
+
+pub async fn companion_qr_route() -> impl IntoResponse {
+    let port = companion_listen_port();
+    let info = companion_pairing_info(port);
+    let svg = companion_qr_svg(&info.ws_url);
+    (
+        axum::http::StatusCode::OK,
+        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
+        svg,
+    )
 }
 
 pub async fn companion_ws_upgrade(
@@ -284,7 +349,7 @@ async fn companion_ws_session(mut socket: WebSocket, host_api: HostApiHandle) {
         if let Ok(wire) = serde_json::from_str::<HealthBundleWire>(&text) {
             if wire.msg_type == "HEALTH_BUNDLE" {
                 let bundle_json = wire.bundle.to_string();
-                let ack = match ingest_bundle_json(&host_api, &bundle_json) {
+                let ack = match ingest_bundle_json(&host_api, bundle_json).await {
                     Ok(ack) => serde_json::json!({
                         "type": "HEALTH_BUNDLE_ACK",
                         "ok": ack.ok,
@@ -311,7 +376,7 @@ async fn companion_ws_session(mut socket: WebSocket, host_api: HostApiHandle) {
 
         if let Ok(agreement) = serde_json::from_str::<UsageAgreement>(&text) {
             if agreement.msg_type == MSG_USAGE_AGREEMENT {
-                let ack = match register_usage_agreement_json(&host_api, &agreement) {
+                let ack = match register_usage_agreement_json(&host_api, agreement.clone()).await {
                     Ok(()) => serde_json::json!({
                         "type": "USAGE_AGREEMENT_ACK",
                         "ok": true,
@@ -332,7 +397,7 @@ async fn companion_ws_session(mut socket: WebSocket, host_api: HostApiHandle) {
 
         if let Ok(request) = serde_json::from_str::<LiveSectionRequest>(&text) {
             if request.msg_type == MSG_LIVE_SECTION_REQUEST {
-                let ack = match submit_live_share_request_json(&host_api, &request) {
+                let ack = match submit_live_share_request_json(&host_api, request.clone()).await {
                     Ok(journal_id) => serde_json::json!({
                         "type": "LIVE_SECTION_REQUEST_ACK",
                         "ok": true,

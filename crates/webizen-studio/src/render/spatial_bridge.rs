@@ -4,6 +4,7 @@
 //! Public web demo: informative fallback until portal wasm is bundled for GH Pages.
 
 use dioxus::prelude::*;
+use dioxus::document::eval;
 use crate::canvas_model::Page;
 
 #[cfg(target_arch = "wasm32")]
@@ -223,10 +224,42 @@ pub fn SpatialBridgeCanvas(page: Page) -> Element {
             style: "position: relative; width: 100%; height: 100%; min-height: 500px; background: var(--qualia-bg, #050510); border: 1px solid var(--qualia-border, #333); border-radius: 12px; overflow: hidden;",
 
             if show_live {
-                iframe {
-                    src: "{portal_src}",
-                    title: "Qualia Portal Design Studio",
-                    style: "position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block;",
+                div {
+                    id: "spatial-bridge-webview",
+                    style: "position:absolute;inset:0;width:100%;height:100%;",
+                    onmounted: move |_| {
+                        let url = portal_src.clone();
+                        spawn(async move {
+                            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                            let script = format!(r#"
+                                const container = document.getElementById('spatial-bridge-webview');
+                                if (container && window.__TAURI__) {{
+                                    const invoke = window.__TAURI__.core.invoke;
+                                    const r = container.getBoundingClientRect();
+                                    const id = 'spatial-bridge-portal';
+                                    
+                                    invoke('spawn_native_webview', {{
+                                        id: id, url: '{}', x: r.left, y: r.top, width: r.width, height: r.height
+                                    }}).then(() => {{
+                                        invoke('show_native_webview', {{ id }});
+                                        invoke('resize_native_webview', {{ id, x: r.left, y: r.top, width: r.width, height: r.height }});
+                                    }}).catch(console.error);
+
+                                    if (!window.spatialWebviewObserver) {{
+                                        window.spatialWebviewObserver = new ResizeObserver(() => {{
+                                            const r2 = container.getBoundingClientRect();
+                                            invoke('resize_native_webview', {{ 
+                                                id: 'spatial-bridge-portal', 
+                                                x: r2.left, y: r2.top, width: r2.width, height: r2.height 
+                                            }}).catch(console.error);
+                                        }});
+                                        window.spatialWebviewObserver.observe(container);
+                                    }}
+                                }}
+                            "#, url);
+                            let _ = eval(&script);
+                        });
+                    }
                 }
             } else if has_frame {
                 img {

@@ -6,9 +6,8 @@
 use std::path::PathBuf;
 use tauri::menu::{MenuBuilder, MenuItem, SubmenuBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{Emitter, Manager};
-use tauri_plugin_dialog::DialogExt;
-use tauri_plugin_updater::UpdaterExt;
+use tauri::{Manager, Emitter};
+
 
 use webizen_desktop::{
     commands::{self, PreviewState, RenderLoopState},
@@ -16,7 +15,9 @@ use webizen_desktop::{
     med_reminder_notifier::{self, MedReminderNotifierState},
     native_surface::NativeSurfaceState,
     runtime::{spawn_runtime, RuntimeHandle},
-    settings_server, telemetry_bridge, telemetry_hooks,
+    settings_server,
+    supervisor::DesktopSupervisor,
+    telemetry_bridge, telemetry_hooks,
 };
 
 use qualia_client_core::qapp_registry::QAPPS_DIR;
@@ -87,46 +88,66 @@ fn anatomy_body_response(app: &tauri::AppHandle) -> ProtocolResponse {
     }
 }
 
-/// `webizen://localhost/anatomy/body.json` — the per-organ percepts + organ keys for the cached body,
-/// so the browser portal can paint each organ. Returns `{ model, cached, organ_count, percepts,
+/// Extract a single query-string parameter value (first match) from a raw `key=val&key2=val2` query.
+/// Our values are simple ASCII tokens (`model=female`), so no percent-decoding is needed.
+fn query_param(query: Option<&str>, key: &str) -> Option<String> {
+    query?.split('&').find_map(|pair| {
+        let mut it = pair.splitn(2, '=');
+        match (it.next(), it.next()) {
+            (Some(k), Some(v)) if k == key => Some(v.to_string()),
+            _ => None,
+        }
+    })
+}
+
+/// `webizen://localhost/anatomy/body.json?model=male|female` — the per-organ percepts + organ keys for the
+/// cached body, so the browser portal can paint each organ. Returns `{ model, cached, organ_count, percepts,
 /// unmapped }` (percepts = `[{ organ_key, system_id, percept: { system_id, sigma, rgba, frequency_hz }
-/// }]`). The model defaults to "male" if not specified.
-fn anatomy_body_json_response(app: &tauri::AppHandle) -> ProtocolResponse {
+/// }]`). The `model` selects the chromosomal reference set (XY→male / XX→female).
+fn anatomy_body_json_response(app: &tauri::AppHandle, model: Option<String>) -> ProtocolResponse {
     let host_state = match app.try_state::<commands::HostApiState>() {
         Some(s) => s,
         None => return protocol_response(503, None, Vec::new()),
     };
-    let guard = match host_state.0.lock() {
-        Ok(g) => g,
-        Err(_) => return protocol_response(503, None, Vec::new()),
-    };
-    let host = match guard.as_ref() {
-        Some(h) => h,
-        None => return protocol_response(503, None, Vec::new()),
-    };
-    // Default to male; a future pass can read the model from a query param.
-    let model = "male";
-    let status = match host.body_assets_status(model) {
-        Ok(s) => s,
-        Err(_) => return protocol_response(500, None, Vec::new()),
-    };
-    if !status.cached {
-        return protocol_response(404, None, Vec::new());
-    }
-    let (painted, unmapped) = match host.cached_body_organ_percepts(model) {
-        Ok(p) => p,
-        Err(_) => return protocol_response(500, None, Vec::new()),
-    };
-    let body = serde_json::json!({
-        "model": status.model,
-        "cached": status.cached,
-        "organ_count": status.organ_count,
-        "percepts": painted,
-        "unmapped": unmapped,
-    });
-    match serde_json::to_vec(&body) {
-        Ok(bytes) => protocol_response(200, Some("application/json"), bytes),
-        Err(_) => protocol_response(500, None, Vec::new()),
+    // Honour the requested chromosomal reference model, validated through the canonical closed enum. Fall
+    // back to the male reference set only when the caller supplies nothing parseable, so an unparameterised
+    // request still renders a body. (A future pass reads the person's persisted `karyotype_prefs` here
+    // instead of defaulting — see docs/plans/first-run-setup-and-inforg-onboarding.md, P1.)
+    let model = model
+        .and_then(|m| wellfare_core::anatomy::AnatomyModel::parse(&m))
+        .unwrap_or(wellfare_core::anatomy::AnatomyModel::Male)
+        .as_str()
+        .to_string();
+    match host_state.0.execute_sync(move |guard| {
+        let host = match guard.as_ref() {
+            Some(h) => h,
+            None => return Ok::<_, String>(protocol_response(503, None, Vec::new())),
+        };
+        let status = match host.body_assets_status(&model) {
+            Ok(s) => s,
+            Err(_) => return Ok::<_, String>(protocol_response(500, None, Vec::new())),
+        };
+        if !status.cached {
+            return Ok::<_, String>(protocol_response(404, None, Vec::new()));
+        }
+        let (painted, unmapped) = match host.cached_body_organ_percepts(&model) {
+            Ok(p) => p,
+            Err(_) => return Ok::<_, String>(protocol_response(500, None, Vec::new())),
+        };
+        let body = serde_json::json!({
+            "model": status.model,
+            "cached": status.cached,
+            "organ_count": status.organ_count,
+            "percepts": painted,
+            "unmapped": unmapped,
+        });
+        match serde_json::to_vec(&body) {
+            Ok(bytes) => Ok::<_, String>(protocol_response(200, Some("application/json"), bytes)),
+            Err(_) => Ok::<_, String>(protocol_response(500, None, Vec::new())),
+        }
+    }) {
+        Ok(Ok(resp)) => resp,
+        _ => protocol_response(503, None, Vec::new()),
     }
 }
 
@@ -137,17 +158,22 @@ fn anatomy_10d_response(app: &tauri::AppHandle, model: &str, organ_key: &str) ->
         Some(s) => s,
         None => return protocol_response(503, None, Vec::new()),
     };
-    let guard = match host_state.0.lock() {
-        Ok(g) => g,
-        Err(_) => return protocol_response(503, None, Vec::new()),
-    };
-    let host = match guard.as_ref() {
-        Some(h) => h,
-        None => return protocol_response(503, None, Vec::new()),
-    };
-    match host.load_cached_organ_10d(model, organ_key) {
-        Ok(bytes) => protocol_response(200, Some("application/octet-stream"), bytes),
-        Err(_) => protocol_response(404, None, Vec::new()),
+    // `execute_sync` boxes the closure and hands it to the host actor thread, so it must be
+    // `'static`; own the path segments instead of borrowing the function parameters.
+    let model = model.to_string();
+    let organ_key = organ_key.to_string();
+    match host_state.0.execute_sync(move |guard| {
+        let host = match guard.as_ref() {
+            Some(h) => h,
+            None => return Ok::<_, String>(protocol_response(503, None, Vec::new())),
+        };
+        match host.load_cached_organ_10d(&model, &organ_key) {
+            Ok(bytes) => Ok::<_, String>(protocol_response(200, Some("application/octet-stream"), bytes)),
+            Err(_) => Ok::<_, String>(protocol_response(404, None, Vec::new())),
+        }
+    }) {
+        Ok(Ok(resp)) => resp,
+        _ => protocol_response(503, None, Vec::new()),
     }
 }
 
@@ -168,7 +194,9 @@ fn webizen_protocol_response(
         },
         ["render", "preview.png"] => render_preview_response(app),
         ["anatomy", "body.png"] => anatomy_body_response(app),
-        ["anatomy", "body.json"] => anatomy_body_json_response(app),
+        ["anatomy", "body.json"] => {
+            anatomy_body_json_response(app, query_param(request.uri().query(), "model"))
+        }
         ["anatomy", "10d", model, organ_key] => anatomy_10d_response(app, model, organ_key),
         _ => protocol_response(404, None, Vec::new()),
     }
@@ -194,10 +222,10 @@ fn main() {
 
     let vault_for_daemon = app_state.key_vault.clone();
 
+    let host_api_state = webizen_desktop::companion_gateway::HostApiHandle::new(None);
+    let desktop_supervisor = DesktopSupervisor::default();
+
     let (tx, mut rx) = tokio::sync::mpsc::channel::<String>(100);
-    let host_api_state: std::sync::Arc<
-        std::sync::Mutex<Option<qualia_client_core::wellfair::api::WebizenHostApi>>,
-    > = std::sync::Arc::new(std::sync::Mutex::new(None));
 
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -242,8 +270,11 @@ fn main() {
         .manage(commands::MeshState::default())
         .manage(MedReminderNotifierState::default())
         .manage(std::sync::Arc::new(NativeSurfaceState::default()))
+        .manage(desktop_supervisor.clone())
+        .manage(tx.clone())
         .setup(move |app| {
             let handle = app.handle();
+            tauri::async_runtime::spawn(webizen_desktop::updater_service::start_updater_service(handle.clone()));
             med_reminder_notifier::spawn_med_reminder_poller(handle.clone());
 
             // ── Native application menu bar ──────────────────────────────────
@@ -314,7 +345,6 @@ fn main() {
                 .text("quit", "Quit")
                 .build()?;
 
-            let tx_for_tray = tx.clone();
             let tray_icon = tauri::image::Image::from_bytes(include_bytes!("../icons/32x32.png"))
                 .expect("failed to load tray icon");
             TrayIconBuilder::with_id("main")
@@ -322,142 +352,10 @@ fn main() {
                 .tooltip("Webizen Desktop")
                 .menu(&tray_menu)
                 .show_menu_on_left_click(false)
-                .on_menu_event(move |app, event| match event.id().as_ref() {
-                    // ── Window ─────────────────────────────────────────────────
-                    "show" => {
-                        show_main_window(app);
-                        webizen_desktop::shell::menu::navigate_main_to(app, "dashboard");
+                .on_menu_event(move |app, event| {
+                    if let Some(action) = webizen_desktop::shell::action::ShellAction::from_id(event.id().as_ref()) {
+                        webizen_desktop::shell::menu::dispatch_shell_action(app, action);
                     }
-                    "settings" => {
-                        webizen_desktop::shell::menu::navigate_main_to(app, "settings");
-                    }
-
-                    // ── Sanctuary ──────────────────────────────────────────────
-                    "sanctuary_lock" => {
-                        match commands::wellfair_lock_sanctuary(app.clone()) {
-                            Ok(_) => {
-                                let _ = app.emit("sanctuary-locked", ());
-                                eprintln!("Sanctuary locked via tray");
-                            }
-                            Err(e) => eprintln!("Sanctuary lock via tray failed: {e}"),
-                        }
-                    }
-                    "sanctuary_unlock" => {
-                        // Unlock requires a PIN — open the window and let the UI handle it.
-                        show_main_window(app);
-                        let _ = app.emit("open-sanctuary-unlock", ());
-                    }
-                    "sanctuary_status" => {
-                        show_main_window(app);
-                        let _ = app.emit("open-sanctuary-status", ());
-                    }
-
-                    // ── Daemon ─────────────────────────────────────────────────
-                    "daemon_restart" => {
-                        let _ = tx_for_tray.try_send("RESTART".to_string());
-                        eprintln!("Daemon restart requested via tray");
-                    }
-                    "daemon_stop" => {
-                        let _ = tx_for_tray.try_send("STOP".to_string());
-                        eprintln!("Daemon stop requested via tray");
-                    }
-
-                    // ── Health ────────────────────────────────────────────────
-                    "health_med_reminders" => {
-                        show_main_window(app);
-                        let _ = app.emit("open-med-reminders", ());
-                    }
-                    "health_backup" => {
-                        show_main_window(app);
-                        let _ = app.emit("open-backup", ());
-                    }
-                    "health_diagnostics" => {
-                        let app_handle = app.clone();
-                        tauri::async_runtime::spawn_blocking(move || {
-                            match commands::wellfair_diagnostics(app_handle.clone()) {
-                                Ok(json) => {
-                                    show_main_window(&app_handle);
-                                    let _ = app_handle.emit("diagnostics-result", json);
-                                    desktop_log::record("info", "diagnostics completed from tray");
-                                }
-                                Err(e) => desktop_log::record(
-                                    "error",
-                                    format!("diagnostics via tray failed: {e}"),
-                                ),
-                            }
-                        });
-                    }
-
-                    // ── Sync ──────────────────────────────────────────────────
-                    "sync_relay" => {
-                        let app_handle = app.clone();
-                        tauri::async_runtime::spawn_blocking(move || {
-                            match commands::wellfair_sync_with_relay(app_handle, "http://127.0.0.1:4242".to_string(), 0) {
-                                Ok(msg) => desktop_log::record("info", format!("sync relay via tray: {msg}")),
-                                Err(e) => desktop_log::record("error", format!("sync relay via tray failed: {e}")),
-                            }
-                        });
-                    }
-                    "sync_inbox" => {
-                        show_main_window(app);
-                        let _ = app.emit("open-sync-inbox", ());
-                    }
-
-                    // ── Ambient ───────────────────────────────────────────────
-                    "toggle_ambient" => {
-                        if let Some(bridge) =
-                            app.try_state::<telemetry_bridge::TelemetryBridge>()
-                        {
-                            let new_state = bridge.toggle();
-                            eprintln!(
-                                "Ambient visualization: {}",
-                                if new_state { "enabled" } else { "disabled" }
-                            );
-                        }
-                    }
-
-                    // ── Sessions ──────────────────────────────────────────────
-                    "revoke" => {
-                        let _ = tx_for_tray.try_send("REVOKE".to_string());
-                    }
-
-                    // ── Help ──────────────────────────────────────────────────
-                    "help_about" => {
-                        let version = env!("CARGO_PKG_VERSION");
-                        let _ = app.dialog().message(
-                            format!(
-                                "Webizen Desktop — v{version}\n\nThe flagship local desktop application for the QualiaDB / Webizen / WellFair ecosystem.\n\nLocal crates: qualia-core-db, qualia-client-core, wellfare-core, qualia-cooperative-core, webizen-runtime, webizen-render, webizen-studio, qualia-semantic-library"
-                            ),
-                        );
-                    }
-                    "help_update" => {
-                        let upd_h = app.clone();
-                        tauri::async_runtime::spawn(async move {
-                            match upd_h.updater() {
-                                Ok(updater) => {
-                                    match updater.check().await {
-                                        Ok(Some(update)) => {
-                                            eprintln!("Update available: {} — downloading…", update.version);
-                                            let _ = update.download_and_install(|_, _| {}, || {}).await;
-                                        }
-                                        Ok(None) => {
-                                            eprintln!("No updates available");
-                                        }
-                                        Err(e) => eprintln!("Update check failed: {e}"),
-                                    }
-                                }
-                                Err(e) => eprintln!("Updater not available: {e}"),
-                            }
-                        });
-                    }
-                    "help_logs" => webizen_desktop::shell::menu::navigate_main_to(app, "logs"),
-                    "help_portal" => {
-                        webizen_desktop::shell::menu::open_settings_portal("");
-                    }
-
-                    // ── Quit ──────────────────────────────────────────────────
-                    "quit" => app.exit(0),
-                    _ => {}
                 })
                 .on_tray_icon_event(|tray, event| {
                     if let TrayIconEvent::Click {
@@ -473,15 +371,19 @@ fn main() {
 
             let runtime_init_handle = handle.clone();
             let runtime_init_state = app_state.clone();
+            let runtime_supervisor = desktop_supervisor.clone();
+            runtime_supervisor.service_starting("runtime", "initialising WGPU runtime");
             tauri::async_runtime::spawn_blocking(move || {
                 desktop_log::record("info", "starting Webizen WGPU runtime in background");
                 match spawn_runtime(runtime_init_handle.clone(), runtime_init_state) {
                     Ok(runtime_handle) => {
                         runtime_init_handle.manage(runtime_handle);
+                        runtime_supervisor.service_ready("runtime", "WGPU runtime ready");
                         let _ = runtime_init_handle.emit("webizen-runtime-ready", ());
                         desktop_log::record("info", "Webizen WGPU runtime ready");
                     }
                     Err(err) => {
+                        runtime_supervisor.service_failed("runtime", err.clone());
                         let _ = runtime_init_handle.emit("webizen-runtime-failed", err.clone());
                         desktop_log::record(
                             "error",
@@ -502,15 +404,22 @@ fn main() {
             let host_api_init_state = app_state.clone();
             let host_api_init_slot = host_api_state.clone();
             let host_api_init_handle = handle.clone();
+            let host_supervisor = desktop_supervisor.clone();
+            host_supervisor.service_starting("host_api", "opening WellFair host API");
             tauri::async_runtime::spawn_blocking(move || {
                 desktop_log::record("info", "initialising WellFair host API in background");
                 let key_bytes = match host_api_init_state.key_vault.lock() {
                     Ok(kv) if !kv.is_locked() => kv.get_master_key_bytes(),
                     Ok(_) => {
+                        host_supervisor.service_degraded(
+                            "host_api",
+                            "vault locked; unlock required before host API can open",
+                        );
                         desktop_log::record("warn", "WellFair host API deferred: vault is locked");
                         return;
                     }
                     Err(err) => {
+                        host_supervisor.service_failed("host_api", err.to_string());
                         desktop_log::record(
                             "error",
                             format!("WellFair host API failed: key vault lock poisoned: {err}"),
@@ -552,9 +461,12 @@ fn main() {
                             author_did,
                             storage_root,
                         );
-                        match host_api_init_slot.lock() {
-                            Ok(mut host_guard) => {
-                                *host_guard = Some(host_api);
+                        match host_api_init_slot.execute_sync(move |host_guard| {
+                            *host_guard = Some(host_api);
+                            Ok::<_, String>(())
+                        }) {
+                            Ok(_) => {
+                                host_supervisor.service_ready("host_api", "WellFair host API ready");
                                 let _ = host_api_init_handle.emit("webizen-host-api-ready", ());
                                 desktop_log::record("info", "WellFair host API ready");
                             }
@@ -565,6 +477,7 @@ fn main() {
                         }
                     }
                     Err(err) => {
+                        host_supervisor.service_failed("host_api", err.to_string());
                         let _ = host_api_init_handle.emit(
                             "webizen-host-api-failed",
                             format!("{err}"),
@@ -582,6 +495,17 @@ fn main() {
 
             let settings_port =
                 settings_server::spawn_settings_server(app_state.clone(), host_api_state.clone());
+            desktop_supervisor.service_starting(
+                "settings_api",
+                format!("loopback control plane on 127.0.0.1:{settings_port}"),
+            );
+            desktop_supervisor.service_starting(
+                "companion_gateway",
+                format!(
+                    "paired LAN gateway on port {}",
+                    webizen_desktop::companion_gateway::companion_listen_port()
+                ),
+            );
             mcp_server::spawn_mcp_tcp_server(app_state.clone());
             eprintln!(
                 "Settings + companion gateway ready at http://127.0.0.1:{settings_port}/ (LAN ws://<host>:{settings_port}/mobile/stream)"
@@ -741,24 +665,6 @@ fn main() {
                 let _ = daemon_status_for_runtime.set_text("Daemon: stopped");
             });
 
-            // ── Auto-update check ─────────────────────────────────────────────
-            let upd_h = handle.clone();
-            tauri::async_runtime::spawn(async move {
-                let updater = match upd_h.updater() {
-                    Ok(updater) => updater,
-                    Err(error) => {
-                        eprintln!("Update check skipped: {error}");
-                        return;
-                    }
-                };
-                match updater.check().await {
-                    Ok(Some(update)) => {
-                        let _ = update.download_and_install(|_, _| {}, || {}).await;
-                    }
-                    Err(error) => eprintln!("Update check skipped: {error}"),
-                    _ => {}
-                }
-            });
 
             Ok(())
         })

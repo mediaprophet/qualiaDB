@@ -480,6 +480,25 @@ impl UnifiedVolumeBuilder {
     }
 
     pub fn finish(self, path: &Path) -> io::Result<()> {
+        let bytes = self.finish_to_bytes();
+        let out = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(path)?;
+        let mut w = BufWriter::new(out);
+        w.write_all(&bytes)?;
+        w.flush()?;
+        Ok(())
+    }
+
+    /// Serialise the unified v3 `.q42` volume to an in-memory byte buffer.
+    ///
+    /// Byte-for-byte the same volume [`finish`](Self::finish) writes to disk, but
+    /// returned as bytes for callers that embed a `.q42` *inside another container*
+    /// — e.g. a [`crate::bundle`] `.qualia` pack — or ship it over the wire without
+    /// touching the filesystem. `finish` is exactly this plus a file write.
+    pub fn finish_to_bytes(self) -> Vec<u8> {
         let bidx_bytes = encode_bidx(&self.block_ranges);
         let block_count = self.block_ranges.len() as u64;
 
@@ -540,24 +559,26 @@ impl UnifiedVolumeBuilder {
             _reserved: [0; 80],
         };
 
-        let out = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(path)?;
-        let mut w = BufWriter::new(out);
-        w.write_all(&header_to_bytes(&header))?;
-        w.write_all(&self.lex_bytes)?;
-        w.write_all(&bidx_bytes)?;
+        let mut out = Vec::with_capacity(
+            HEADER_SIZE
+                + self.lex_bytes.len()
+                + bidx_bytes.len()
+                + block_dir_length as usize
+                + self.data_blob.len()
+                + dag_bytes.len(),
+        );
+        out.extend_from_slice(&header_to_bytes(&header));
+        out.extend_from_slice(&self.lex_bytes);
+        out.extend_from_slice(&bidx_bytes);
         for entry in &self.dir_entries {
-            entry.write_to(&mut w)?;
+            // Writing to a `Vec<u8>` is infallible.
+            entry.write_to(&mut out).expect("Vec<u8> write cannot fail");
         }
-        w.write_all(&self.data_blob)?;
+        out.extend_from_slice(&self.data_blob);
         if !dag_bytes.is_empty() {
-            w.write_all(&dag_bytes)?;
+            out.extend_from_slice(&dag_bytes);
         }
-        w.flush()?;
-        Ok(())
+        out
     }
 }
 
@@ -851,6 +872,35 @@ doc:article-1 a values:Undertaking ;
             lex.lookup_hash(generate_60bit_token(undertaking.as_bytes())),
             Some(undertaking)
         );
+    }
+
+    /// `finish_to_bytes` must yield the same recoverable volume as `finish` writes to disk —
+    /// the in-memory path used to embed a `.q42` inside a `.qualia` bundle.
+    #[test]
+    fn finish_to_bytes_matches_a_readable_on_disk_volume() {
+        let (q1, mut lex) = sample_quin("Heart", "geo:bodySystem", "circulatory");
+        let (q2, lex2) = sample_quin("Lung", "geo:bodySystem", "respiratory");
+        lex.extend(lex2);
+        let mut blocks = vec![vec![q1], vec![q2]];
+        blocks.sort_by_key(|c| c[0].object);
+
+        let mut builder = UnifiedVolumeBuilder::with_lex_map(&lex);
+        for (seq, chunk) in blocks.iter().enumerate() {
+            builder.push_block(seq as u64, chunk);
+        }
+        let bytes = builder.finish_to_bytes();
+
+        assert!(bytes.starts_with(&Q42_MAGIC), "bytes are a Q42 volume");
+        // The bytes open as a valid unified volume with every fact recoverable.
+        let tmp = NamedTempFile::new().unwrap();
+        std::fs::write(tmp.path(), &bytes).unwrap();
+        let vol = Q42Volume::open(tmp.path()).unwrap();
+        assert_eq!(vol.block_count(), 2);
+        let quins = vol.read_all_quins().unwrap();
+        assert_eq!(quins.len(), 2);
+        let lexv = vol.lex_view().unwrap();
+        let vals: Vec<&str> = quins.iter().filter_map(|q| lexv.lookup_hash(q.object)).collect();
+        assert!(vals.contains(&"circulatory") && vals.contains(&"respiratory"));
     }
 
     #[test]

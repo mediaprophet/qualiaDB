@@ -28,6 +28,7 @@ mod lens;
 mod model;
 mod pathway;
 mod physiology;
+mod registry;
 mod scorecard;
 mod systems;
 mod temporal;
@@ -43,8 +44,8 @@ pub use bridge::{
 pub use factor::{Effect, EvidenceTier, Factor, FactorKind, FactorTarget};
 pub use lens::{build_view, burden_to_sigma, AnatomyView, Lens, SystemView, WellbeingLevel};
 pub use model::{
-    body_system_for_organ, normalize_organ_key, overlay_host_systems, system_representation,
-    AnatomyModel, Karyotype, SystemRepresentation,
+    body_system_for_organ, normalize_organ_key, overlay_host_systems, system_memberships_for_organ,
+    system_representation, AnatomyModel, Karyotype, SystemRepresentation,
 };
 pub use physiology::{
     state_modulator, whole_body_profile, CyclePhase, EngagementLevel, PhysiologicalState,
@@ -69,6 +70,10 @@ pub use scorecard::{
 pub use knowledge::{
     import_condition_map, import_entries, seed_knowledge_base, FactorKnowledge, ImportResult,
     KnowledgeBase, KnowledgeSource, KnowledgeTarget, Provenance,
+};
+pub use registry::{
+    default_registry, SystemDef, SystemProvenance, SystemRegistry, SystemRelation,
+    SystemRelationKind, SystemTier, NEUTRAL_SYSTEM_RGBA,
 };
 pub use systems::{body_system, body_system_by_label, BodySystem, BODY_SYSTEMS};
 pub use temporal::{

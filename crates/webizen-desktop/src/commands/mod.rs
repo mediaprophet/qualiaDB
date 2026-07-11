@@ -227,30 +227,32 @@ pub fn wellfair_host_snapshot(
     app_state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
     host_state: State<'_, HostApiState>,
 ) -> Result<String, String> {
-    let kv = app_state.key_vault.lock().map_err(|e| e.to_string())?;
-    let mut guard = host_state.0.lock().map_err(|e| e.to_string())?;
-    let owner_label = api::read_identity()
-        .and_then(|v| {
-            v.get("display_name")
-                .and_then(|n| n.as_str())
-                .map(|s| s.to_string())
-        })
-        .unwrap_or_else(|| "Owner vault".to_string());
-    let storage_root = std::path::PathBuf::from(
-        app_state.config.lock().map_err(|e| e.to_string())?.storage_path.clone(),
-    );
-    let snapshot = if let Some(host) = guard.as_mut() {
-        host.build_snapshot(&kv, &owner_label)
-    } else {
-        qualia_client_core::wellfair::snapshot::build_host_snapshot_with_storage(
-            &kv,
-            false,
-            &owner_label,
-            false,
-            Some(&storage_root),
-        )
-    };
-    serde_json::to_string(&snapshot).map_err(|e| e.to_string())
+    let app_state_arc = std::sync::Arc::clone(&*app_state);
+    host_state.0.execute_sync(move |guard| {
+        let kv = app_state_arc.key_vault.lock().map_err(|e| e.to_string())?;
+        let owner_label = api::read_identity()
+            .and_then(|v| {
+                v.get("display_name")
+                    .and_then(|n| n.as_str())
+                    .map(|s| s.to_string())
+            })
+            .unwrap_or_else(|| "Owner vault".to_string());
+        let storage_root = std::path::PathBuf::from(
+            app_state_arc.config.lock().map_err(|e| e.to_string())?.storage_path.clone(),
+        );
+        let snapshot = if let Some(host) = guard.as_mut() {
+            host.build_snapshot(&kv, &owner_label)
+        } else {
+            qualia_client_core::wellfair::snapshot::build_host_snapshot_with_storage(
+                &kv,
+                false,
+                &owner_label,
+                false,
+                Some(&storage_root),
+            )
+        };
+        serde_json::to_string(&snapshot).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -261,12 +263,13 @@ pub fn wellfair_save_accessibility(
     let prefs: qualia_client_core::wellfair::host_state::AccessibilityPreferences =
         serde_json::from_str(&prefs_json).map_err(|e| format!("invalid prefs JSON: {e}"))?;
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    host.save_accessibility(&prefs)?;
-    serde_json::to_string(&prefs).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.save_accessibility(&prefs)?;
+        serde_json::to_string(&prefs).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -275,23 +278,25 @@ pub fn wellfair_list_health_records(
     limit: Option<usize>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let records = host.list_health_records(limit.unwrap_or(64))?;
-    serde_json::to_string(&records).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let records = host.list_health_records(limit.unwrap_or(64))?;
+        serde_json::to_string(&records).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
 pub fn wellfair_list_receipts(app: AppHandle, limit: Option<usize>) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let receipts = host.list_receipts(limit.unwrap_or(32))?;
-    serde_json::to_string(&receipts).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let receipts = host.list_receipts(limit.unwrap_or(32))?;
+        serde_json::to_string(&receipts).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -300,16 +305,17 @@ pub fn wellfair_export_health_package(
     limit: Option<usize>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let (package, receipt) = host.export_health_package(limit.unwrap_or(256))?;
-    serde_json::to_string(&serde_json::json!({
-        "package": package,
-        "receipt": receipt,
-    }))
-    .map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let (package, receipt) = host.export_health_package(limit.unwrap_or(256))?;
+        serde_json::to_string(&serde_json::json!({
+            "package": package,
+            "receipt": receipt,
+        }))
+        .map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -318,12 +324,13 @@ pub fn wellfair_import_samsung_folder(
     folder_path: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let report = host.import_samsung_health_folder(std::path::Path::new(&folder_path));
-    serde_json::to_string(&report).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let report = host.import_samsung_health_folder(std::path::Path::new(&folder_path));
+        serde_json::to_string(&report).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -341,12 +348,13 @@ pub fn wellfair_ingest_companion_health(
     let bundle: wellfare_core::companion_sync::CompanionHealthBundle =
         serde_json::from_str(&bundle_json).map_err(|e| format!("invalid bundle JSON: {e}"))?;
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let report = host.ingest_companion_health_bundle(&bundle);
-    serde_json::to_string(&report).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let report = host.ingest_companion_health_bundle(&bundle);
+        serde_json::to_string(&report).map_err(|e| e.to_string())
+    })?
 }
 
 fn parse_sensitivity(s: &str) -> wellfare_core::record::SensitivityClass {
@@ -377,14 +385,15 @@ pub fn wellfair_evaluate_policy(
     let sens = parse_sensitivity(&sensitivity);
     let ep = parse_epistemic(&epistemic);
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let decision = if let Some(host) = guard.as_ref() {
-        host.evaluate_policy(&qapp_id, &scope, sens, ep)?
-    } else {
-        let svc = qualia_client_core::wellfair::policy::PolicyDecisionService::new();
-        svc.evaluate_access(&qapp_id, &scope, sens, ep, &[], 0, false).to_dto()
-    };
-    serde_json::to_string(&decision).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let decision = if let Some(host) = guard.as_ref() {
+            host.evaluate_policy(&qapp_id, &scope, sens, ep)?
+        } else {
+            let svc = qualia_client_core::wellfair::policy::PolicyDecisionService::new();
+            svc.evaluate_access(&qapp_id, &scope, sens, ep, &[], 0, false).to_dto()
+        };
+        serde_json::to_string(&decision).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -396,34 +405,37 @@ pub fn wellfair_grant_consent(
     let draft: qualia_client_core::wellfair::host_state::ConsentGrantDraft =
         serde_json::from_str(&draft_json).map_err(|e| format!("invalid consent draft: {e}"))?;
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let grant = host.grant_consent(&draft, &scope)?;
-    serde_json::to_string(&grant).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let grant = host.grant_consent(&draft, &scope)?;
+        serde_json::to_string(&grant).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
 pub fn wellfair_revoke_consent(app: AppHandle, grant_id: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let revoked = host.revoke_consent(&grant_id)?;
-    serde_json::to_string(&serde_json::json!({ "revoked": revoked })).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let revoked = host.revoke_consent(&grant_id)?;
+        serde_json::to_string(&serde_json::json!({ "revoked": revoked })).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
 pub fn wellfair_list_consents(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let grants = host.list_consents()?;
-    serde_json::to_string(&grants).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let grants = host.list_consents()?;
+        serde_json::to_string(&grants).map_err(|e| e.to_string())
+    })?
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -455,12 +467,13 @@ pub fn wellfair_add_condition(app: AppHandle, report_json: String) -> Result<Str
         .filter(|s| !s.trim().is_empty())
         .map(|s| s.trim().to_string());
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let entry = host.add_condition(&report)?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let entry = host.add_condition(&report)?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -481,12 +494,13 @@ pub fn wellfair_add_allergy(app: AppHandle, report_json: String) -> Result<Strin
         .filter(|s| !s.trim().is_empty())
         .map(|s| s.trim().to_string());
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let entry = host.add_allergy(&report)?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let entry = host.add_allergy(&report)?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -519,12 +533,13 @@ pub fn wellfair_add_disputed_diagnosis(
     report.dispute_reason = input.dispute_reason.filter(|s| !s.trim().is_empty());
     report.supporting_notes = input.supporting_notes.filter(|s| !s.trim().is_empty());
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let entry = host.add_disputed_diagnosis(&report)?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let entry = host.add_disputed_diagnosis(&report)?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -552,34 +567,38 @@ pub fn wellfair_add_housing_safety(
     report.location_notes = input.location_notes.filter(|s| !s.trim().is_empty());
     report.notes = input.notes.filter(|s| !s.trim().is_empty());
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let entry = host.add_housing_safety(&report)?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let entry = host.add_housing_safety(&report)?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
 pub fn wellfair_med_reminder_prefs(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    serde_json::to_string(&host.med_reminder_prefs()).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        serde_json::to_string(&host.med_reminder_prefs()).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
 pub fn wellfair_grant_med_reminder_permission(app: AppHandle) -> Result<String, String> {
+    let app_clone = app.clone();
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let prefs = host.grant_med_reminder_permission()?;
-    let _ = crate::med_reminder_notifier::request_os_notification_permission(&app);
-    serde_json::to_string(&prefs).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let prefs = host.grant_med_reminder_permission()?;
+        let _ = crate::med_reminder_notifier::request_os_notification_permission(&app_clone);
+        serde_json::to_string(&prefs).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -588,12 +607,13 @@ pub fn wellfair_set_med_reminders_enabled(
     enabled: bool,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let prefs = host.set_med_reminders_enabled(enabled)?;
-    serde_json::to_string(&prefs).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let prefs = host.set_med_reminders_enabled(enabled)?;
+        serde_json::to_string(&prefs).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -602,12 +622,13 @@ pub fn wellfair_list_due_med_reminders(
     window_minutes: Option<i32>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let due = host.list_due_med_reminders(window_minutes.unwrap_or(30))?;
-    serde_json::to_string(&due).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let due = host.list_due_med_reminders(window_minutes.unwrap_or(30))?;
+        serde_json::to_string(&due).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -616,22 +637,24 @@ pub fn wellfair_query_graph_coverage(
     limit: Option<usize>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let rows = host.query_graph_coverage(limit.unwrap_or(64))?;
-    serde_json::to_string(&rows).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let rows = host.query_graph_coverage(limit.unwrap_or(64))?;
+        serde_json::to_string(&rows).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
 pub fn wellfair_sanctuary_prefs(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    serde_json::to_string(&host.sanctuary_prefs()).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        serde_json::to_string(&host.sanctuary_prefs()).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -641,34 +664,37 @@ pub fn wellfair_setup_sanctuary(
     decoy_pin: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let prefs = host.setup_sanctuary(&real_pin, &decoy_pin)?;
-    serde_json::to_string(&prefs).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let prefs = host.setup_sanctuary(&real_pin, &decoy_pin)?;
+        serde_json::to_string(&prefs).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
 pub fn wellfair_lock_sanctuary(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let prefs = host.lock_sanctuary()?;
-    serde_json::to_string(&prefs).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let prefs = host.lock_sanctuary()?;
+        serde_json::to_string(&prefs).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
 pub fn wellfair_unlock_sanctuary(app: AppHandle, pin: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let prefs = host.unlock_sanctuary(&pin)?;
-    serde_json::to_string(&prefs).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let prefs = host.unlock_sanctuary(&pin)?;
+        serde_json::to_string(&prefs).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -676,12 +702,13 @@ pub fn wellfair_add_life_event(app: AppHandle, report_json: String) -> Result<St
     let report: wellfare_core::life_records::LifeEventReport =
         serde_json::from_str(&report_json).map_err(|e| format!("invalid life event JSON: {e}"))?;
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let entry = host.add_life_event(&report)?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let entry = host.add_life_event(&report)?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -689,12 +716,13 @@ pub fn wellfair_add_welfare_case(app: AppHandle, report_json: String) -> Result<
     let report: wellfare_core::life_records::WelfareCaseReport =
         serde_json::from_str(&report_json).map_err(|e| format!("invalid welfare case JSON: {e}"))?;
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let entry = host.add_welfare_case(&report)?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let entry = host.add_welfare_case(&report)?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -702,12 +730,13 @@ pub fn wellfair_add_case_task(app: AppHandle, report_json: String) -> Result<Str
     let report: wellfare_core::life_records::CaseTaskReport =
         serde_json::from_str(&report_json).map_err(|e| format!("invalid case task JSON: {e}"))?;
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let entry = host.add_case_task(&report)?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let entry = host.add_case_task(&report)?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 fn wellfair_now_unix() -> u32 {
@@ -726,30 +755,32 @@ pub fn wellfair_add_ledger_entry(
     category: Option<String>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let mut entry = wellfare_core::finance::LedgerEntry::new(
-        description,
-        amount_cents.round() as i64,
-        currency,
-        wellfair_now_unix(),
-    );
-    entry.category = category.filter(|s| !s.is_empty());
-    let committed = host.add_ledger_entry(&entry)?;
-    serde_json::to_string(&committed).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let mut entry = wellfare_core::finance::LedgerEntry::new(
+            description,
+            amount_cents.round() as i64,
+            currency,
+            wellfair_now_unix(),
+        );
+        entry.category = category.filter(|s| !s.is_empty());
+        let committed = host.add_ledger_entry(&entry)?;
+        serde_json::to_string(&committed).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
 pub fn wellfair_ledger_balance(app: AppHandle, limit: usize) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let balance = host.ledger_balance(limit)?;
-    serde_json::to_string(&balance).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let balance = host.ledger_balance(limit)?;
+        serde_json::to_string(&balance).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -760,13 +791,14 @@ pub fn wellfair_add_project(
     licensing_ontologies: Vec<String>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let project = wellfare_core::projects::Project::new(name, description, licensing_ontologies, wellfair_now_unix());
-    let committed = host.add_project(&project)?;
-    serde_json::to_string(&committed).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let project = wellfare_core::projects::Project::new(name, description, licensing_ontologies, wellfair_now_unix());
+        let committed = host.add_project(&project)?;
+        serde_json::to_string(&committed).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -781,41 +813,43 @@ pub fn wellfair_add_contribution(
     privacy_level: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
     
-    let privacy = match privacy_level.as_str() {
-        "Private" => wellfare_core::projects::ContributionPrivacy::Private,
-        "Permissive" => wellfare_core::projects::ContributionPrivacy::Permissive,
-        _ => wellfare_core::projects::ContributionPrivacy::Public,
-    };
+        let privacy = match privacy_level.as_str() {
+            "Private" => wellfare_core::projects::ContributionPrivacy::Private,
+            "Permissive" => wellfare_core::projects::ContributionPrivacy::Permissive,
+            _ => wellfare_core::projects::ContributionPrivacy::Public,
+        };
 
-    let contribution = wellfare_core::projects::Contribution::new(
-        project_id,
-        contributor_did,
-        description,
-        effort_minutes,
-        capital_cents,
-        roi_multiplier,
-        privacy,
-        wellfair_now_unix(),
-    );
-    let committed = host.add_contribution(&contribution)?;
-    serde_json::to_string(&committed).map_err(|e| e.to_string())
+        let contribution = wellfare_core::projects::Contribution::new(
+            project_id,
+            contributor_did,
+            description,
+            effort_minutes,
+            capital_cents,
+            roi_multiplier,
+            privacy,
+            wellfair_now_unix(),
+        );
+        let committed = host.add_contribution(&contribution)?;
+        serde_json::to_string(&committed).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
 pub fn wellfair_project_obligations(app: AppHandle, limit: usize) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    // Includes validated inbound contributions (replay-safe cross-node convergence).
-    let obligations = host.synced_project_obligations(limit)?;
-    serde_json::to_string(&obligations).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        // Includes validated inbound contributions (replay-safe cross-node convergence).
+        let obligations = host.synced_project_obligations(limit)?;
+        serde_json::to_string(&obligations).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -830,31 +864,33 @@ pub fn wellfair_add_credential(
     let claims: Vec<(String, String)> = serde_json::from_str(&claims_json)
         .map_err(|e| format!("invalid claims JSON (expected [[key,value],…]): {e}"))?;
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let mut cred = wellfare_core::credentials::CredentialRecord::new(
-        issuer_did,
-        subject_did,
-        credential_type,
-        wellfair_now_unix(),
-    );
-    cred.claims = claims;
-    cred.expires_at_unix = expires_at_unix;
-    let committed = host.add_credential(&cred)?;
-    serde_json::to_string(&committed).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let mut cred = wellfare_core::credentials::CredentialRecord::new(
+            issuer_did,
+            subject_did,
+            credential_type,
+            wellfair_now_unix(),
+        );
+        cred.claims = claims;
+        cred.expires_at_unix = expires_at_unix;
+        let committed = host.add_credential(&cred)?;
+        serde_json::to_string(&committed).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
 pub fn wellfair_get_credential(app: AppHandle, record_id: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let cred = host.get_credential(&record_id)?;
-    serde_json::to_string(&cred).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let cred = host.get_credential(&record_id)?;
+        serde_json::to_string(&cred).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -866,12 +902,13 @@ pub fn wellfair_present_credential(
     let keys: Vec<String> = serde_json::from_str(&selected_keys_json)
         .map_err(|e| format!("invalid selected keys JSON: {e}"))?;
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let presentation = host.present_credential(&record_id, &keys)?;
-    serde_json::to_string(&presentation).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let presentation = host.present_credential(&record_id, &keys)?;
+        serde_json::to_string(&presentation).map_err(|e| e.to_string())
+    })?
 }
 
 fn parse_work_item_type(s: &str) -> qualia_cooperative_core::work_item::WorkItemType {
@@ -904,18 +941,19 @@ pub fn wellfair_add_work_item(
     title: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let item = qualia_cooperative_core::work_item::WorkItem::new(
-        project_id,
-        parse_work_item_type(&item_type),
-        title,
-        wellfair_now_unix(),
-    );
-    let entry = host.add_work_item(&item)?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let item = qualia_cooperative_core::work_item::WorkItem::new(
+            project_id,
+            parse_work_item_type(&item_type),
+            title,
+            wellfair_now_unix(),
+        );
+        let entry = host.add_work_item(&item)?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -925,17 +963,18 @@ pub fn wellfair_add_work_item_status(
     status: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let event = qualia_cooperative_core::work_item::WorkItemStatusEvent::new(
-        work_item_id,
-        parse_work_item_status(&status),
-        wellfair_now_unix(),
-    );
-    let entry = host.add_work_item_status(&event)?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let event = qualia_cooperative_core::work_item::WorkItemStatusEvent::new(
+            work_item_id,
+            parse_work_item_status(&status),
+            wellfair_now_unix(),
+        );
+        let entry = host.add_work_item_status(&event)?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -945,12 +984,13 @@ pub fn wellfair_work_item_board(
     limit: usize,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let board = host.work_item_board(&project_id, limit)?;
-    serde_json::to_string(&board).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let board = host.work_item_board(&project_id, limit)?;
+        serde_json::to_string(&board).map_err(|e| e.to_string())
+    })?
 }
 
 // --- Agency layer: supported-agency delegations (ADR §7–§10) ---------------------------------
@@ -959,22 +999,24 @@ pub fn wellfair_work_item_board(
 #[command]
 pub fn wellfair_list_agency_domains(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    serde_json::to_string(&host.list_agency_domains()).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        serde_json::to_string(&host.list_agency_domains()).map_err(|e| e.to_string())
+    })?
 }
 
 /// Current delegations (latest version per delegation id).
 #[command]
 pub fn wellfair_list_agency_delegations(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    serde_json::to_string(&host.list_agency_delegations(256)?).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        serde_json::to_string(&host.list_agency_delegations(256)?).map_err(|e| e.to_string())
+    })?
 }
 
 /// Create a delegation. `agent_dids` is a comma-separated DID list; `precedence` is
@@ -990,24 +1032,25 @@ pub fn wellfair_create_agency_delegation(
     consent: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let agents: Vec<String> = agent_dids
-        .split(',')
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .collect();
-    let d = host.create_agency_delegation(
-        &principal_did,
-        &domain,
-        &values_anchor,
-        agents,
-        &precedence,
-        &consent,
-    )?;
-    serde_json::to_string(&d).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let agents: Vec<String> = agent_dids
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+        let d = host.create_agency_delegation(
+            &principal_did,
+            &domain,
+            &values_anchor,
+            agents,
+            &precedence,
+            &consent,
+        )?;
+        serde_json::to_string(&d).map_err(|e| e.to_string())
+    })?
 }
 
 /// Update a delegation's consent state (`granted|withdrawn|pending|not_required`).
@@ -1019,13 +1062,14 @@ pub fn wellfair_set_agency_delegation_consent(
 ) -> Result<String, String> {
     use qualia_client_core::wellfair::api::agency_consent_from_str;
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let parsed = agency_consent_from_str(&consent)?;
-    let entry = host.set_agency_delegation_consent(&delegation_id, parsed)?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let parsed = agency_consent_from_str(&consent)?;
+        let entry = host.set_agency_delegation_consent(&delegation_id, parsed)?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 /// Revoke a delegation (monotonic; appends a superseding revoked version).
@@ -1035,12 +1079,13 @@ pub fn wellfair_revoke_agency_delegation(
     delegation_id: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let entry = host.revoke_agency_delegation(&delegation_id)?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let entry = host.revoke_agency_delegation(&delegation_id)?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 /// Evaluate the fail-closed ABAC for a delegation. `action` is `read|write|decide`. Returns
@@ -1053,18 +1098,19 @@ pub fn wellfair_evaluate_agency_access(
     data_class: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let decision = host.evaluate_agency_access(&delegation_id, &action, &data_class)?;
-    let (permit, reason) = match decision {
-        qualia_cooperative_core::agency_delegation::AccessDecision::Permit => {
-            (true, String::new())
-        }
-        qualia_cooperative_core::agency_delegation::AccessDecision::Deny(r) => (false, r),
-    };
-    Ok(serde_json::json!({ "permit": permit, "reason": reason }).to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let decision = host.evaluate_agency_access(&delegation_id, &action, &data_class)?;
+        let (permit, reason) = match decision {
+            qualia_cooperative_core::agency_delegation::AccessDecision::Permit => {
+                (true, String::new())
+            }
+            qualia_cooperative_core::agency_delegation::AccessDecision::Deny(r) => (false, r),
+        };
+        Ok(serde_json::json!({ "permit": permit, "reason": reason }).to_string())
+    })?
 }
 
 // --- Sync transport (T3.1): sync against an HTTP relay -----------------------------------------
@@ -1079,19 +1125,20 @@ pub fn wellfair_sync_with_relay(
     since: u64,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let (pushed, report) = host.sync_with_http_relay(&base_url, since)?;
-    Ok(serde_json::json!({
-        "pushed": pushed,
-        "pulled": report.pulled,
-        "validated": report.validated,
-        "duplicate": report.duplicate,
-        "rejected": report.rejected,
-    })
-    .to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let (pushed, report) = host.sync_with_http_relay(&base_url, since)?;
+        Ok(serde_json::json!({
+            "pushed": pushed,
+            "pulled": report.pulled,
+            "validated": report.validated,
+            "duplicate": report.duplicate,
+            "rejected": report.rejected,
+        })
+        .to_string())
+    })?
 }
 
 // --- Backup / restore (T3.3) -----------------------------------------------------------------
@@ -1100,35 +1147,38 @@ pub fn wellfair_sync_with_relay(
 #[command]
 pub fn wellfair_export_backup(app: AppHandle, path: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let report = host.export_backup_to_path(&path)?;
-    Ok(serde_json::json!({ "files": report.files, "bytes": report.bytes }).to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let report = host.export_backup_to_path(&path)?;
+        Ok(serde_json::json!({ "files": report.files, "bytes": report.bytes }).to_string())
+    })?
 }
 
 /// Restore a backup archive from `path` into this node's storage. Returns `{ "files": n, "bytes": n }`.
 #[command]
 pub fn wellfair_import_backup(app: AppHandle, path: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let report = host.import_backup_from_path(&path)?;
-    Ok(serde_json::json!({ "files": report.files, "bytes": report.bytes }).to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let report = host.import_backup_from_path(&path)?;
+        Ok(serde_json::json!({ "files": report.files, "bytes": report.bytes }).to_string())
+    })?
 }
 
 /// A node health/status snapshot (records, sync queues, data footprint, Sanctuary state, version).
 #[command]
 pub fn wellfair_diagnostics(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    serde_json::to_string(&host.diagnostics_report()?).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        serde_json::to_string(&host.diagnostics_report()?).map_err(|e| e.to_string())
+    })?
 }
 
 // --- Wellbeing self-assessment instruments (T2.2; PHQ-9 / GAD-7) -----------------------------
@@ -1137,11 +1187,12 @@ pub fn wellfair_diagnostics(app: AppHandle) -> Result<String, String> {
 #[command]
 pub fn wellfair_list_assessment_instruments(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    serde_json::to_string(&host.list_assessment_instruments()).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        serde_json::to_string(&host.list_assessment_instruments()).map_err(|e| e.to_string())
+    })?
 }
 
 /// 3D Anatomy Qapp — compute the whole-person systemic view for a lens (`"person"` / `"clinician"`).
@@ -1154,12 +1205,13 @@ pub fn wellfair_compute_anatomy_view(
     threshold: Option<usize>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let report = host.compute_anatomy_view(&lens, threshold.unwrap_or(2))?;
-    serde_json::to_string(&report).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let report = host.compute_anatomy_view(&lens, threshold.unwrap_or(2))?;
+        serde_json::to_string(&report).map_err(|e| e.to_string())
+    })?
 }
 
 /// 3D Anatomy Qapp — the accumulative, traceable **score-card** + investigable hypotheses over the person's
@@ -1171,12 +1223,13 @@ pub fn wellfair_compute_scorecard(
     threshold: Option<usize>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let report = host.compute_scorecard(threshold.unwrap_or(2))?;
-    serde_json::to_string(&report).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let report = host.compute_scorecard(threshold.unwrap_or(2))?;
+        serde_json::to_string(&report).map_err(|e| e.to_string())
+    })?
 }
 
 /// The person's own score-card weight model (how their body is read) + the seed suggestion + whether they've
@@ -1184,14 +1237,15 @@ pub fn wellfair_compute_scorecard(
 #[command]
 pub fn wellfair_get_weight_model(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    serde_json::to_string(&serde_json::json!({
-        "model": host.get_weight_model(),
-        "seed": host.seed_weight_model(),
-        "authored": host.weight_model_is_authored(),
-    }))
-    .map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        serde_json::to_string(&serde_json::json!({
+            "model": host.get_weight_model(),
+            "seed": host.seed_weight_model(),
+            "authored": host.weight_model_is_authored(),
+        }))
+        .map_err(|e| e.to_string())
+    })?
 }
 
 /// Set the person's own weight model (JSON = `WeightModel`) — their authorship of how the card reads them.
@@ -1200,20 +1254,22 @@ pub fn wellfair_set_weight_model(app: AppHandle, model_json: String) -> Result<S
     let model: wellfare_core::anatomy::WeightModel =
         serde_json::from_str(&model_json).map_err(|e| format!("invalid weight model JSON: {e}"))?;
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    host.set_weight_model(&model)?;
-    Ok("{\"set\":true}".into())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.set_weight_model(&model)?;
+        Ok("{\"set\":true}".into())
+    })?
 }
 
 /// Reset the weight model to the seed suggestion (clears the person's authored model).
 #[command]
 pub fn wellfair_reset_weight_model(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    host.reset_weight_model()?;
-    Ok("{\"reset\":true}".into())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.reset_weight_model()?;
+        Ok("{\"reset\":true}".into())
+    })?
 }
 
 // ── Physiological state (P6 — the reproductive-continuum declaration) ──────────────────────────
@@ -1227,13 +1283,14 @@ pub fn wellfair_reset_weight_model(app: AppHandle) -> Result<String, String> {
 #[command]
 pub fn wellfair_get_physiological_state(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    serde_json::to_string(&serde_json::json!({
-        "state": host.get_physiological_state(),
-        "declared": host.physiological_state_is_declared(),
-    }))
-    .map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        serde_json::to_string(&serde_json::json!({
+            "state": host.get_physiological_state(),
+            "declared": host.physiological_state_is_declared(),
+        }))
+        .map_err(|e| e.to_string())
+    })?
 }
 
 /// Set the person's declared physiological state (JSON = `PhysiologicalState`) — their own statement of
@@ -1243,20 +1300,22 @@ pub fn wellfair_set_physiological_state(app: AppHandle, state_json: String) -> R
     let state: wellfare_core::anatomy::PhysiologicalState =
         serde_json::from_str(&state_json).map_err(|e| format!("invalid physiological state JSON: {e}"))?;
     let app_state = app.state::<HostApiState>();
-    let guard = app_state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    host.set_physiological_state(&state)?;
-    Ok("{\"set\":true}".into())
+    app_state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.set_physiological_state(&state)?;
+        Ok("{\"set\":true}".into())
+    })?
 }
 
 /// Clear the declared physiological state — revert to the implicit Baseline. Idempotent.
 #[command]
 pub fn wellfair_reset_physiological_state(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    host.reset_physiological_state()?;
-    Ok("{\"reset\":true}".into())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.reset_physiological_state()?;
+        Ok("{\"reset\":true}".into())
+    })?
 }
 
 // ── 3D Anatomy render surface (S5.7 — whole-body percept snapshot) ────────────────────────────
@@ -1279,11 +1338,12 @@ pub async fn wellfair_render_body_snapshot(
     // Compute the scene while holding the host lock, then drop the guard before the await so the
     // future stays `Send` (the MutexGuard is not Send).
     let scene = {
-        let guard = host_state.0.lock().map_err(|e| e.to_string())?;
-        let host = guard
-            .as_ref()
-            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-        host.compute_body_scene(az, el)?
+        host_state.0.execute_sync(move |guard| {
+            let host = guard
+                .as_ref()
+                .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+            host.compute_body_scene(az, el).map_err(|e| e.to_string())
+        })??
     };
 
     let png = tokio::task::spawn_blocking(move || -> Result<Vec<u8>, String> {
@@ -1312,10 +1372,11 @@ pub fn wellfair_body_assets_status(
     model: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let status = host.body_assets_status(&model)?;
-    serde_json::to_string(&status).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let status = host.body_assets_status(&model)?;
+        serde_json::to_string(&status).map_err(|e| e.to_string())
+    })?
 }
 
 /// Acquire (download + compile + cache) the body assets for a model — **user-triggered**. Discovers the
@@ -1330,10 +1391,11 @@ pub async fn wellfair_acquire_body_assets(
 ) -> Result<String, String> {
     // Resolve the model + storage_root while holding the lock, then drop the guard before the await.
     let (model_enum, storage_root) = {
-        let guard = host_state.0.lock().map_err(|e| e.to_string())?;
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-        let m = qualia_client_core::wellfair::api::parse_anatomy_model(&model)?;
-        (m, host.storage_root().to_path_buf())
+        host_state.0.execute_sync(move |guard| {
+            let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+            let m = qualia_client_core::wellfair::api::parse_anatomy_model(&model).map_err(|e| e.to_string())?;
+            Ok::<_, String>((m, host.storage_root().to_path_buf()))
+        })??
     };
 
     let app_for_progress = app.clone();
@@ -1362,9 +1424,10 @@ pub fn wellfair_load_cached_organ_10d(
     organ_key: String,
 ) -> Result<Vec<u8>, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    host.load_cached_organ_10d(&model, &organ_key)
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.load_cached_organ_10d(&model, &organ_key)
+    })?
 }
 
 /// The per-organ dual-modality percepts for the cached organ set — so the browser portal knows what
@@ -1375,11 +1438,12 @@ pub fn wellfair_cached_body_organ_percepts(
     model: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let (painted, unmapped) = host.cached_body_organ_percepts(&model)?;
-    serde_json::to_string(&serde_json::json!({ "painted": painted, "unmapped": unmapped }))
-        .map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let (painted, unmapped) = host.cached_body_organ_percepts(&model)?;
+        serde_json::to_string(&serde_json::json!({ "painted": painted, "unmapped": unmapped }))
+            .map_err(|e| e.to_string())
+    })?
 }
 
 /// Clear the cache for a model (idempotent). The person can re-acquire later.
@@ -1389,10 +1453,11 @@ pub fn wellfair_clear_body_cache(
     model: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    host.clear_body_cache(&model)?;
-    Ok("{\"ok\":true}".into())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.clear_body_cache(&model)?;
+        Ok("{\"ok\":true}".into())
+    })?
 }
 
 /// Append a raw record to the person's tamper-evident accountability ledger (owner-signed).
@@ -1403,37 +1468,40 @@ pub fn wellfair_ledger_append(
     payload_json: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let entry = host.ledger_append(&kind, &payload_json)?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let entry = host.ledger_append(&kind, &payload_json)?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 /// Verify the whole ledger chain. Returns `{ "ok": bool, "tamper": <detail|null> }`.
 #[command]
 pub fn wellfair_ledger_verify(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let tamper = host.ledger_verify()?;
-    serde_json::to_string(&serde_json::json!({ "ok": tamper.is_none(), "tamper": tamper }))
-        .map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let tamper = host.ledger_verify()?;
+        serde_json::to_string(&serde_json::json!({ "ok": tamper.is_none(), "tamper": tamper }))
+            .map_err(|e| e.to_string())
+    })?
 }
 
 /// The most-recent ledger entries (newest first), capped to `limit` (default 64).
 #[command]
 pub fn wellfair_ledger_entries(app: AppHandle, limit: Option<usize>) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let entries = host.ledger_entries(limit.unwrap_or(64))?;
-    serde_json::to_string(&entries).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let entries = host.ledger_entries(limit.unwrap_or(64))?;
+        serde_json::to_string(&entries).map_err(|e| e.to_string())
+    })?
 }
 
 /// Grant a consent credential to an agent over a committed payload (subject = vault owner).
@@ -1449,19 +1517,20 @@ pub fn wellfair_grant_consent_credential(
     expiry_unix: Option<u64>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let cred = host.grant_consent_credential(
-        &agent_did,
-        &scope,
-        &purpose,
-        &commitment_hex,
-        &wrapped_key_hex,
-        expiry_unix,
-    )?;
-    serde_json::to_string(&cred).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let cred = host.grant_consent_credential(
+            &agent_did,
+            &scope,
+            &purpose,
+            &commitment_hex,
+            &wrapped_key_hex,
+            expiry_unix,
+        )?;
+        serde_json::to_string(&cred).map_err(|e| e.to_string())
+    })?
 }
 
 /// Revoke a consent credential — crypto-enforced (the wrapped key is destroyed). `{ "revoked": bool }`.
@@ -1471,24 +1540,26 @@ pub fn wellfair_revoke_consent_credential(
     credential_id: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let revoked = host.revoke_consent_credential(&credential_id)?;
-    serde_json::to_string(&serde_json::json!({ "revoked": revoked })).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let revoked = host.revoke_consent_credential(&credential_id)?;
+        serde_json::to_string(&serde_json::json!({ "revoked": revoked })).map_err(|e| e.to_string())
+    })?
 }
 
 /// List stored consent credentials (active and revoked — revoked rows remain as the audit anchor).
 #[command]
 pub fn wellfair_list_consent_credentials(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let creds = host.list_consent_credentials()?;
-    serde_json::to_string(&creds).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let creds = host.list_consent_credentials()?;
+        serde_json::to_string(&creds).map_err(|e| e.to_string())
+    })?
 }
 
 /// Record an agent's conduct under a credential — signed, into the durable trail + tamper-evident ledger.
@@ -1502,12 +1573,13 @@ pub fn wellfair_record_conduct(
     commitment_hex: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let record = host.record_conduct(&agent_did, &credential_id, &action, &reason, &commitment_hex)?;
-    serde_json::to_string(&record).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let record = host.record_conduct(&agent_did, &credential_id, &action, &reason, &commitment_hex)?;
+        serde_json::to_string(&record).map_err(|e| e.to_string())
+    })?
 }
 
 /// The audit view — every conduct record taken under one credential (survives its revocation).
@@ -1517,12 +1589,13 @@ pub fn wellfair_conduct_audit_trail(
     credential_id: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let trail = host.conduct_audit_trail(&credential_id)?;
-    serde_json::to_string(&trail).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let trail = host.conduct_audit_trail(&credential_id)?;
+        serde_json::to_string(&trail).map_err(|e| e.to_string())
+    })?
 }
 
 // ── Hypermedia asset library: ingest a document → find it by meaning ──
@@ -1544,18 +1617,19 @@ pub fn wellfair_ingest_document(
     purpose: Option<String>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let manual = qualia_client_core::wellfair::api::ManualFacets {
-        occurred_at,
-        place_label,
-        lat,
-        lon,
-        projects: project.into_iter().filter(|s| !s.trim().is_empty()).collect(),
-        purposes: purpose.into_iter().filter(|s| !s.trim().is_empty()).collect(),
-    };
-    let summary = host.ingest_document_annotated(&uri, &media_type, &text, &manual, guardian_did)?;
-    serde_json::to_string(&summary).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let manual = qualia_client_core::wellfair::api::ManualFacets {
+            occurred_at,
+            place_label,
+            lat,
+            lon,
+            projects: project.into_iter().filter(|s| !s.trim().is_empty()).collect(),
+            purposes: purpose.into_iter().filter(|s| !s.trim().is_empty()).collect(),
+        };
+        let summary = host.ingest_document_annotated(&uri, &media_type, &text, &manual, guardian_did)?;
+        serde_json::to_string(&summary).map_err(|e| e.to_string())
+    })?
 }
 
 /// Ingest a **binary asset** (photo / audio) whose bytes are passed hex-encoded. A photo's EXIF capture-time
@@ -1570,40 +1644,44 @@ pub fn wellfair_ingest_file_hex(
     guardian_did: Option<String>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let summary = host.ingest_file_hex(&uri, &media_type, &bytes_hex, &caption, guardian_did)?;
-    serde_json::to_string(&summary).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let summary = host.ingest_file_hex(&uri, &media_type, &bytes_hex, &caption, guardian_did)?;
+        serde_json::to_string(&summary).map_err(|e| e.to_string())
+    })?
 }
 
 /// Search the library by facet (`topic` | `depicts` | `place` | `project` | `purpose`).
 #[command]
 pub fn wellfair_search_library(app: AppHandle, facet: String, value: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let results = host.search_library(&facet, &value)?;
-    serde_json::to_string(&results).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let results = host.search_library(&facet, &value)?;
+        serde_json::to_string(&results).map_err(|e| e.to_string())
+    })?
 }
 
 /// The timeline query — entries whose event instant falls within `[start, end]` (unix seconds).
 #[command]
 pub fn wellfair_search_library_time(app: AppHandle, start: i64, end: i64) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let results = host.search_library_time(start, end)?;
-    serde_json::to_string(&results).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let results = host.search_library_time(start, end)?;
+        serde_json::to_string(&results).map_err(|e| e.to_string())
+    })?
 }
 
 /// Everything in the library (newest first).
 #[command]
 pub fn wellfair_list_library(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let results = host.list_library()?;
-    serde_json::to_string(&results).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let results = host.list_library()?;
+        serde_json::to_string(&results).map_err(|e| e.to_string())
+    })?
 }
 
 // --- Chora spatio-temporal canvas ---
@@ -1611,66 +1689,74 @@ pub fn wellfair_list_library(app: AppHandle) -> Result<String, String> {
 #[command]
 pub fn chora_list_worlds(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    serde_json::to_string(&host.list_canvas_worlds()?).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        serde_json::to_string(&host.list_canvas_worlds()?).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
 pub fn chora_get_world(app: AppHandle, world_id: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let v = host.get_canvas_world(&world_id)?;
-    serde_json::to_string(&v).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let v = host.get_canvas_world(&world_id)?;
+        serde_json::to_string(&v).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
 pub fn chora_save_world(app: AppHandle, config_json: String) -> Result<(), String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    host.save_canvas_world(&config_json)
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.save_canvas_world(&config_json)
+    })?
 }
 
 #[command]
 pub fn chora_delete_world(app: AppHandle, world_id: String) -> Result<bool, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    host.delete_canvas_world(&world_id)
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.delete_canvas_world(&world_id)
+    })?
 }
 
 #[command]
 pub fn chora_seed_demo(app: AppHandle) -> Result<bool, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    host.seed_canvas_demo()
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.seed_canvas_demo()
+    })?
 }
 
 #[command]
 pub fn chora_navigation(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    Ok(host.canvas_navigation_state().to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        Ok(host.canvas_navigation_state().to_string())
+    })?
 }
 
 #[command]
 pub fn chora_set_temporal(app: AppHandle, t_value: f64) -> Result<(), String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    host.set_temporal_slice(t_value)
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.set_temporal_slice(t_value)
+    })?
 }
 
 #[command]
 pub fn chora_set_active_world(app: AppHandle, world_id: String) -> Result<(), String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    host.set_active_canvas_world(&world_id)
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.set_active_canvas_world(&world_id)
+    })?
 }
 
 #[command]
@@ -1682,10 +1768,11 @@ pub fn chora_query_region(
     y2: f64,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let hits = host.query_canvas_region(x1, y1, x2, y2)?;
-    serde_json::to_string(&hits).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let hits = host.query_canvas_region(x1, y1, x2, y2)?;
+        serde_json::to_string(&hits).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -1693,19 +1780,21 @@ pub fn chora_publish_asset(app: AppHandle, asset_json: String) -> Result<(), Str
     use qualia_core_db::domains::geospatial::spatial_sync::PlantedAsset;
 
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let asset: PlantedAsset = serde_json::from_str(&asset_json).map_err(|e| e.to_string())?;
-    host.publish_planted_asset(asset)
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let asset: PlantedAsset = serde_json::from_str(&asset_json).map_err(|e| e.to_string())?;
+        host.publish_planted_asset(asset)
+    })?
 }
 
 #[command]
 pub fn chora_pull_assets(app: AppHandle, cell_id: u64) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let assets = host.pull_spatial_assets(cell_id)?;
-    serde_json::to_string(&assets).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let assets = host.pull_spatial_assets(cell_id)?;
+        serde_json::to_string(&assets).map_err(|e| e.to_string())
+    })?
 }
 
 // --- Chora layer library + asset download pipeline ---
@@ -1776,12 +1865,13 @@ pub fn chora_load_layer_to_gpu(
 #[command]
 pub fn wellfair_owner_envelope_public(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    serde_json::to_string(&serde_json::json!({ "public_hex": host.owner_envelope_public_hex() }))
-        .map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        serde_json::to_string(&serde_json::json!({ "public_hex": host.owner_envelope_public_hex() }))
+            .map_err(|e| e.to_string())
+    })?
 }
 
 /// Seal a real plaintext payload and grant a consent credential over it (real envelope encryption).
@@ -1799,31 +1889,33 @@ pub fn wellfair_seal_and_grant_credential(
     expiry_unix: Option<u64>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let cred = host.seal_and_grant_consent_credential(
-        &agent_did,
-        &agent_public_hex,
-        &scope,
-        &purpose,
-        &plaintext,
-        expiry_unix,
-    )?;
-    serde_json::to_string(&cred).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let cred = host.seal_and_grant_consent_credential(
+            &agent_did,
+            &agent_public_hex,
+            &scope,
+            &purpose,
+            &plaintext,
+            expiry_unix,
+        )?;
+        serde_json::to_string(&cred).map_err(|e| e.to_string())
+    })?
 }
 
 /// Open an owner-sealed payload through a credential (works while live; fails once revoked).
 #[command]
 pub fn wellfair_open_owner_payload(app: AppHandle, credential_id: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let plaintext = host.open_owner_payload(&credential_id)?;
-    serde_json::to_string(&serde_json::json!({ "plaintext": plaintext })).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let plaintext = host.open_owner_payload(&credential_id)?;
+        serde_json::to_string(&serde_json::json!({ "plaintext": plaintext })).map_err(|e| e.to_string())
+    })?
 }
 
 // ── Safeguard switches (ADR 0011 D6/D7): dead-man + incapacity ──
@@ -1860,20 +1952,22 @@ pub fn wellfair_arm_dead_mans_switch(
         fired_unix: None,
     };
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    host.arm_dead_mans_switch(switch)?;
-    Ok("{\"armed\":true}".into())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.arm_dead_mans_switch(switch)?;
+        Ok("{\"armed\":true}".into())
+    })?
 }
 
 /// Touch the heartbeat / un-fire a dead-man switch (the "I'm alive" action).
 #[command]
 pub fn wellfair_dead_mans_alive(app: AppHandle, commitment_hex: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let found = host.dead_mans_alive(&commitment_hex)?;
-    serde_json::to_string(&serde_json::json!({ "found": found })).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let found = host.dead_mans_alive(&commitment_hex)?;
+        serde_json::to_string(&serde_json::json!({ "found": found })).map_err(|e| e.to_string())
+    })?
 }
 
 /// Record a party attestation toward a dead-man switch. `kind` = `no_contact` | `believed_dead` | `abandon`.
@@ -1892,30 +1986,33 @@ pub fn wellfair_attest_dead_mans(
     };
     let attestation = PartyAttestation { party_did, kind, time_unix: wellfair_now_unix() as u64 };
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let found = host.attest_dead_mans(&commitment_hex, attestation)?;
-    serde_json::to_string(&serde_json::json!({ "found": found })).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let found = host.attest_dead_mans(&commitment_hex, attestation)?;
+        serde_json::to_string(&serde_json::json!({ "found": found })).map_err(|e| e.to_string())
+    })?
 }
 
 /// Enact a dead-man switch if triggerable — returns the disposition (or null).
 #[command]
 pub fn wellfair_enact_dead_mans(app: AppHandle, commitment_hex: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let disposition = host.enact_dead_mans(&commitment_hex)?;
-    serde_json::to_string(&serde_json::json!({ "disposition": disposition })).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let disposition = host.enact_dead_mans(&commitment_hex)?;
+        serde_json::to_string(&serde_json::json!({ "disposition": disposition })).map_err(|e| e.to_string())
+    })?
 }
 
 /// List armed dead-man switches (with attestations).
 #[command]
 pub fn wellfair_list_dead_mans_switches(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let list = host.list_dead_mans_switches()?;
-    serde_json::to_string(&list).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let list = host.list_dead_mans_switches()?;
+        serde_json::to_string(&list).map_err(|e| e.to_string())
+    })?
 }
 
 /// Enact a dead-man switch AND release the keys to the disposition parties. `party_keys` = `[did, pubkey_hex]`
@@ -1927,10 +2024,11 @@ pub fn wellfair_enact_dead_mans_release(
     party_keys: Vec<(String, String)>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let result = host.enact_dead_mans_release(&commitment_hex, party_keys)?;
-    serde_json::to_string(&result).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let result = host.enact_dead_mans_release(&commitment_hex, party_keys)?;
+        serde_json::to_string(&result).map_err(|e| e.to_string())
+    })?
 }
 
 /// Split a payload's DEK into Shamir social-recovery shares (`threshold`-of-`parties.len()`). Returns the
@@ -1943,10 +2041,11 @@ pub fn wellfair_split_dek_recovery(
     parties: Vec<String>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let result = host.split_dek_recovery(&commitment_hex, threshold, parties)?;
-    serde_json::to_string(&result).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let result = host.split_dek_recovery(&commitment_hex, threshold, parties)?;
+        serde_json::to_string(&result).map_err(|e| e.to_string())
+    })?
 }
 
 /// Social-recovery enactment: reconstruct the DEK from a quorum of friends' shares and release (no owner key).
@@ -1959,10 +2058,11 @@ pub fn wellfair_reconstruct_and_release(
     party_keys: Vec<(String, String)>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let result = host.reconstruct_and_release(&commitment_hex, shares, party_keys)?;
-    serde_json::to_string(&result).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let result = host.reconstruct_and_release(&commitment_hex, shares, party_keys)?;
+        serde_json::to_string(&result).map_err(|e| e.to_string())
+    })?
 }
 
 /// Publish a peer's envelope (X25519) public key into their peer record (remote-key distribution).
@@ -1973,10 +2073,11 @@ pub fn wellfair_set_peer_envelope_key(
     pubkey_hex: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    host.set_peer_envelope_key(&did, &pubkey_hex)?;
-    Ok("{\"set\":true}".into())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.set_peer_envelope_key(&did, &pubkey_hex)?;
+        Ok("{\"set\":true}".into())
+    })?
 }
 
 /// Enact + release resolving the disposition parties' keys from the peer store. Returns
@@ -1987,10 +2088,11 @@ pub fn wellfair_enact_dead_mans_release_via_peers(
     commitment_hex: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let result = host.enact_dead_mans_release_via_peers(&commitment_hex)?;
-    serde_json::to_string(&result).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let result = host.enact_dead_mans_release_via_peers(&commitment_hex)?;
+        serde_json::to_string(&result).map_err(|e| e.to_string())
+    })?
 }
 
 /// Arm an incapacity switch from primitive fields. `kind` = `involuntary_psychiatric` | `serious_injury` |
@@ -2020,10 +2122,11 @@ pub fn wellfair_arm_incapacity_switch(
         active_since_unix: None,
     };
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    host.arm_incapacity_switch(switch)?;
-    Ok("{\"armed\":true}".into())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.arm_incapacity_switch(switch)?;
+        Ok("{\"armed\":true}".into())
+    })?
 }
 
 /// Activate advocacy on a validated incapacity trigger.
@@ -2035,30 +2138,33 @@ pub fn wellfair_activate_incapacity(
     official_instrument: Option<String>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let activated = host.activate_incapacity(&principal_did, attesting_parties, official_instrument)?;
-    serde_json::to_string(&serde_json::json!({ "activated": activated })).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let activated = host.activate_incapacity(&principal_did, attesting_parties, official_instrument)?;
+        serde_json::to_string(&serde_json::json!({ "activated": activated })).map_err(|e| e.to_string())
+    })?
 }
 
 /// Regain capacity — the advocate stands down (reversibility).
 #[command]
 pub fn wellfair_regain_capacity(app: AppHandle, principal_did: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let found = host.regain_capacity(&principal_did)?;
-    serde_json::to_string(&serde_json::json!({ "found": found })).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let found = host.regain_capacity(&principal_did)?;
+        serde_json::to_string(&serde_json::json!({ "found": found })).map_err(|e| e.to_string())
+    })?
 }
 
 /// List armed incapacity switches.
 #[command]
 pub fn wellfair_list_incapacity_switches(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let list = host.list_incapacity_switches()?;
-    serde_json::to_string(&list).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let list = host.list_incapacity_switches()?;
+        serde_json::to_string(&list).map_err(|e| e.to_string())
+    })?
 }
 
 // ── Disclosure traceability (ADR 0011 D5) + duty of inquiry (D8) ──
@@ -2072,10 +2178,11 @@ pub fn wellfair_record_transparency_cc(
     purpose: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    host.record_transparency_cc(&credential_id, &informed_authority_did, &purpose)?;
-    Ok("{\"recorded\":true}".into())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.record_transparency_cc(&credential_id, &informed_authority_did, &purpose)?;
+        Ok("{\"recorded\":true}".into())
+    })?
 }
 
 /// Record a disclosure event (access, or onward-share if `onward_to` set). Returns the event (incl. its
@@ -2090,50 +2197,55 @@ pub fn wellfair_record_disclosure(
     onward_to: Option<String>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let event = host.record_disclosure(&commitment_hex, &credential_id, &recipient_did, acting_delegate_did, onward_to)?;
-    serde_json::to_string(&event).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let event = host.record_disclosure(&commitment_hex, &credential_id, &recipient_did, acting_delegate_did, onward_to)?;
+        serde_json::to_string(&event).map_err(|e| e.to_string())
+    })?
 }
 
 /// The disclosure chain for a payload.
 #[command]
 pub fn wellfair_disclosure_chain(app: AppHandle, commitment_hex: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let chain = host.disclosure_chain(&commitment_hex)?;
-    serde_json::to_string(&chain).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let chain = host.disclosure_chain(&commitment_hex)?;
+        serde_json::to_string(&chain).map_err(|e| e.to_string())
+    })?
 }
 
 /// The distinct actors who had access to a payload (the leak-suspect set).
 #[command]
 pub fn wellfair_actors_with_access(app: AppHandle, commitment_hex: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let actors = host.actors_with_access(&commitment_hex)?;
-    serde_json::to_string(&actors).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let actors = host.actors_with_access(&commitment_hex)?;
+        serde_json::to_string(&actors).map_err(|e| e.to_string())
+    })?
 }
 
 /// Trace a leak by fingerprint (hex) → the disclosure + accountable actor (or null).
 #[command]
 pub fn wellfair_trace_leak(app: AppHandle, fingerprint_hex: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let event = host.trace_leak(&fingerprint_hex)?;
-    serde_json::to_string(&serde_json::json!({ "event": event })).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let event = host.trace_leak(&fingerprint_hex)?;
+        serde_json::to_string(&serde_json::json!({ "event": event })).map_err(|e| e.to_string())
+    })?
 }
 
 /// List transparency cc records.
 #[command]
 pub fn wellfair_list_transparency_ccs(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let ccs = host.list_transparency_ccs()?;
-    serde_json::to_string(&ccs).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let ccs = host.list_transparency_ccs()?;
+        serde_json::to_string(&ccs).map_err(|e| e.to_string())
+    })?
 }
 
 /// Assess a duty of inquiry (JSON = `DutyOfInquiry`, `ConductAgainstDuty`) → the verdict.
@@ -2148,10 +2260,11 @@ pub fn wellfair_assess_duty_of_inquiry(
     let conduct: qualia_client_core::duty_of_inquiry::ConductAgainstDuty =
         serde_json::from_str(&conduct_json).map_err(|e| format!("invalid conduct JSON: {e}"))?;
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let verdict = host.assess_duty_of_inquiry(duty, conduct);
-    serde_json::to_string(&serde_json::json!({ "verdict": verdict })).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let verdict = host.assess_duty_of_inquiry(duty, conduct);
+        serde_json::to_string(&serde_json::json!({ "verdict": verdict })).map_err(|e| e.to_string())
+    })?
 }
 
 /// Score + record a sitting. `responses` is a comma-separated list of ordinal values (one per item,
@@ -2169,23 +2282,25 @@ pub fn wellfair_record_assessment(
         .collect();
     let parsed = parsed.map_err(|e| format!("invalid responses: {e}"))?;
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let result = host.record_assessment(&instrument_id, parsed)?;
-    serde_json::to_string(&result).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let result = host.record_assessment(&instrument_id, parsed)?;
+        serde_json::to_string(&result).map_err(|e| e.to_string())
+    })?
 }
 
 /// Past assessment results (newest-first).
 #[command]
 pub fn wellfair_list_assessments(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    serde_json::to_string(&host.list_assessments(64)?).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        serde_json::to_string(&host.list_assessments(64)?).map_err(|e| e.to_string())
+    })?
 }
 
 // --- Guardianship approval escrow (M-of-N co-signature for proxy actions; T1.5) --------------
@@ -2199,13 +2314,14 @@ pub fn wellfair_propose_proxy_condition(
     label: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let report = wellfare_core::conditions::ConditionReport::new(label);
-    let outcome = host.propose_proxy_condition(&proxy_did, &report)?;
-    serde_json::to_string(&outcome).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let report = wellfare_core::conditions::ConditionReport::new(label);
+        let outcome = host.propose_proxy_condition(&proxy_did, &report)?;
+        serde_json::to_string(&outcome).map_err(|e| e.to_string())
+    })?
 }
 
 /// Pending and resolved guardianship proposals for the approval tray.
@@ -2215,12 +2331,13 @@ pub fn wellfair_list_guardianship_proposals(
     limit: usize,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let proposals = host.list_guardianship_proposals(limit)?;
-    serde_json::to_string(&proposals).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let proposals = host.list_guardianship_proposals(limit)?;
+        serde_json::to_string(&proposals).map_err(|e| e.to_string())
+    })?
 }
 
 /// A guardian co-signs (approve) or objects (deny). On ratification the escrowed record commits.
@@ -2233,12 +2350,13 @@ pub fn wellfair_vote_guardianship_proposal(
     reason: Option<String>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let view = host.vote_guardianship_proposal(&proposal_id, &guardian_did, approve, reason)?;
-    serde_json::to_string(&view).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let view = host.vote_guardianship_proposal(&proposal_id, &guardian_did, approve, reason)?;
+        serde_json::to_string(&view).map_err(|e| e.to_string())
+    })?
 }
 
 fn parse_clinical_report_type(s: &str) -> wellfare_core::clinical::ClinicalReportType {
@@ -2283,23 +2401,24 @@ pub fn wellfair_add_clinical_report(
     author_label: Option<String>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let observed = if observed_at_unix == 0 {
-        wellfair_now_unix()
-    } else {
-        observed_at_unix
-    };
-    let entry = host.add_clinical_report(
-        &title,
-        parse_clinical_report_type(&report_type),
-        observed,
-        &body,
-        author_label,
-    )?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let observed = if observed_at_unix == 0 {
+            wellfair_now_unix()
+        } else {
+            observed_at_unix
+        };
+        let entry = host.add_clinical_report(
+            &title,
+            parse_clinical_report_type(&report_type),
+            observed,
+            &body,
+            author_label,
+        )?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 fn guess_media_type(filename: &str) -> String {
@@ -2338,12 +2457,13 @@ pub fn wellfair_add_clinical_attachment_from_path(
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| guess_media_type(&filename));
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let entry = host.add_clinical_attachment(&filename, &media, &bytes)?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let entry = host.add_clinical_attachment(&filename, &media, &bytes)?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -2353,15 +2473,16 @@ pub fn wellfair_export_attachment(
     dest_path: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let bytes = host
-        .attachment_bytes(&record_id)?
-        .ok_or_else(|| "attachment not found".to_string())?;
-    std::fs::write(&dest_path, &bytes).map_err(|e| format!("cannot write {dest_path}: {e}"))?;
-    Ok(serde_json::json!({ "written": bytes.len(), "path": dest_path }).to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let bytes = host
+            .attachment_bytes(&record_id)?
+            .ok_or_else(|| "attachment not found".to_string())?;
+        std::fs::write(&dest_path, &bytes).map_err(|e| format!("cannot write {dest_path}: {e}"))?;
+        Ok(serde_json::json!({ "written": bytes.len(), "path": dest_path }).to_string())
+    })?
 }
 
 /// Convert a dialog `FilePath` into an absolute path string.
@@ -2427,20 +2548,21 @@ pub fn wellfair_publish_qapp_pwa(
     wasm_filename: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let written = host.publish_qapp_pwa(
-        &target_dir,
-        &id,
-        &name,
-        &kind,
-        &description,
-        &capabilities,
-        &wasm_filename,
-    )?;
-    serde_json::to_string(&written).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let written = host.publish_qapp_pwa(
+            &target_dir,
+            &id,
+            &name,
+            &kind,
+            &description,
+            &capabilities,
+            &wasm_filename,
+        )?;
+        serde_json::to_string(&written).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -2453,12 +2575,13 @@ pub fn wellfair_add_government_letter_attachment_from_path(
 ) -> Result<String, String> {
     let bytes = std::fs::read(&path).map_err(|e| format!("cannot read {path}: {e}"))?;
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let entry = host.add_government_letter_attachment(&sender, &subject, action_required, &bytes)?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let entry = host.add_government_letter_attachment(&sender, &subject, action_required, &bytes)?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -2469,12 +2592,13 @@ pub fn wellfair_add_assistance_need(
     urgency: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let entry = host.add_assistance_need(&category, &description, parse_urgency(&urgency))?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let entry = host.add_assistance_need(&category, &description, parse_urgency(&urgency))?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -2485,12 +2609,13 @@ pub fn wellfair_add_welfare_stream(
     status: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let entry = host.add_welfare_stream(&program_name, reference, parse_stream_status(&status))?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let entry = host.add_welfare_stream(&program_name, reference, parse_stream_status(&status))?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -2501,33 +2626,36 @@ pub fn wellfair_add_government_letter(
     action_required: bool,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let entry = host.add_government_letter(&sender, &subject, action_required)?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let entry = host.add_government_letter(&sender, &subject, action_required)?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
 pub fn wellfair_list_sync_inbox(app: AppHandle, limit: usize) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let inbox = host.list_sync_inbox(limit)?;
-    serde_json::to_string(&inbox).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let inbox = host.list_sync_inbox(limit)?;
+        serde_json::to_string(&inbox).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
 pub fn wellfair_sanctuary_vault_configured(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    Ok(serde_json::json!({ "configured": host.sanctuary_vault_configured() }).to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        Ok(serde_json::json!({ "configured": host.sanctuary_vault_configured() }).to_string())
+    })?
 }
 
 #[command]
@@ -2537,12 +2665,13 @@ pub fn wellfair_setup_sanctuary_vault(
     decoy_pin: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    host.setup_sanctuary_vault(&real_pin, &decoy_pin)?;
-    Ok(serde_json::json!({ "configured": true }).to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.setup_sanctuary_vault(&real_pin, &decoy_pin)?;
+        Ok(serde_json::json!({ "configured": true }).to_string())
+    })?
 }
 
 #[command]
@@ -2552,23 +2681,25 @@ pub fn wellfair_sanctuary_vault_add_note(
     body: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let lane = host.add_sanctuary_vault_note(&pin, &body)?;
-    Ok(serde_json::json!({ "lane": lane }).to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let lane = host.add_sanctuary_vault_note(&pin, &body)?;
+        Ok(serde_json::json!({ "lane": lane }).to_string())
+    })?
 }
 
 #[command]
 pub fn wellfair_sanctuary_vault_list_notes(app: AppHandle, pin: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let (lane, notes) = host.list_sanctuary_vault_notes(&pin)?;
-    Ok(serde_json::json!({ "lane": lane, "notes": notes }).to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let (lane, notes) = host.list_sanctuary_vault_notes(&pin)?;
+        Ok(serde_json::json!({ "lane": lane, "notes": notes }).to_string())
+    })?
 }
 
 // --- T1.2: OS-keychain vault wrapping (opt-in, off by default; recovery-gated) ---
@@ -2576,11 +2707,12 @@ pub fn wellfair_sanctuary_vault_list_notes(app: AppHandle, pin: String) -> Resul
 #[command]
 pub fn wellfair_sanctuary_vault_is_keychain_wrapped(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    Ok(serde_json::json!({ "wrapped": host.sanctuary_vault_is_keychain_wrapped() }).to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        Ok(serde_json::json!({ "wrapped": host.sanctuary_vault_is_keychain_wrapped() }).to_string())
+    })?
 }
 
 /// Create a keychain-wrapped vault; returns the one-time recovery code the user MUST record.
@@ -2591,12 +2723,13 @@ pub fn wellfair_setup_sanctuary_vault_wrapped(
     decoy_pin: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let recovery_code = host.setup_sanctuary_vault_wrapped(&real_pin, &decoy_pin)?;
-    Ok(serde_json::json!({ "configured": true, "recovery_code": recovery_code }).to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let recovery_code = host.setup_sanctuary_vault_wrapped(&real_pin, &decoy_pin)?;
+        Ok(serde_json::json!({ "configured": true, "recovery_code": recovery_code }).to_string())
+    })?
 }
 
 #[command]
@@ -2606,12 +2739,13 @@ pub fn wellfair_sanctuary_vault_unlock_with_recovery(
     recovery_code: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let lane = host.sanctuary_vault_unlock_with_recovery(&pin, &recovery_code)?;
-    Ok(serde_json::json!({ "lane": lane }).to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let lane = host.sanctuary_vault_unlock_with_recovery(&pin, &recovery_code)?;
+        Ok(serde_json::json!({ "lane": lane }).to_string())
+    })?
 }
 
 // --- Vault v2 (S6): per-session decoy audit, real→decoy curation, real-lane review, retention ---
@@ -2626,12 +2760,13 @@ pub fn wellfair_sanctuary_vault_add_note_in_session(
     session_ref: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let lane = host.add_sanctuary_vault_note_in_session(&pin, &body, &session_ref)?;
-    Ok(serde_json::json!({ "lane": lane }).to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let lane = host.add_sanctuary_vault_note_in_session(&pin, &body, &session_ref)?;
+        Ok(serde_json::json!({ "lane": lane }).to_string())
+    })?
 }
 
 /// Curate the decoy from a real session — seed a plausible note into the decoy lane without the
@@ -2643,12 +2778,13 @@ pub fn wellfair_curate_decoy_note(
     body: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    host.curate_sanctuary_decoy_note(&real_pin, &body)?;
-    Ok(serde_json::json!({ "curated": true }).to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.curate_sanctuary_decoy_note(&real_pin, &body)?;
+        Ok(serde_json::json!({ "curated": true }).to_string())
+    })?
 }
 
 /// Review decoy activity from the real lane: decrypt + verify the sealed trail, advance head
@@ -2656,12 +2792,13 @@ pub fn wellfair_curate_decoy_note(
 #[command]
 pub fn wellfair_review_decoy_activity(app: AppHandle, real_pin: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let report = host.review_sanctuary_decoy_activity(&real_pin)?;
-    serde_json::to_string(&report).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let report = host.review_sanctuary_decoy_activity(&real_pin)?;
+        serde_json::to_string(&report).map_err(|e| e.to_string())
+    })?
 }
 
 /// Read the decoy-audit retention policy (real-session-only; ADR §8). Returns `{ "mode": "..." }`.
@@ -2669,12 +2806,13 @@ pub fn wellfair_review_decoy_activity(app: AppHandle, real_pin: String) -> Resul
 #[command]
 pub fn wellfair_get_decoy_retention_mode(app: AppHandle, real_pin: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let mode = host.get_sanctuary_decoy_retention_mode(&real_pin)?;
-    Ok(serde_json::json!({ "mode": mode }).to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let mode = host.get_sanctuary_decoy_retention_mode(&real_pin)?;
+        Ok(serde_json::json!({ "mode": mode }).to_string())
+    })?
 }
 
 /// Set the decoy-audit retention policy (real-session-only; ADR §8). `mode` is `"auto_archive"` or
@@ -2687,13 +2825,14 @@ pub fn wellfair_set_decoy_retention_mode(
 ) -> Result<String, String> {
     use qualia_client_core::wellfair::api::sanctuary_retention_mode_from_str;
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let parsed = sanctuary_retention_mode_from_str(&mode)?;
-    host.set_sanctuary_decoy_retention_mode(&real_pin, parsed)?;
-    Ok(serde_json::json!({ "mode": mode }).to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let parsed = sanctuary_retention_mode_from_str(&mode)?;
+        host.set_sanctuary_decoy_retention_mode(&real_pin, parsed)?;
+        Ok(serde_json::json!({ "mode": mode }).to_string())
+    })?
 }
 
 #[command]
@@ -2704,12 +2843,13 @@ pub fn wellfair_add_wellbeing_observation(
     let report: wellfare_core::mental_wellbeing::WellbeingObservation =
         serde_json::from_str(&report_json).map_err(|e| format!("invalid wellbeing JSON: {e}"))?;
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let entry = host.add_wellbeing_observation(&report)?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let entry = host.add_wellbeing_observation(&report)?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -2717,12 +2857,13 @@ pub fn wellfair_add_therapy_note(app: AppHandle, report_json: String) -> Result<
     let report: wellfare_core::mental_wellbeing::TherapyNote =
         serde_json::from_str(&report_json).map_err(|e| format!("invalid therapy note JSON: {e}"))?;
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let entry = host.add_therapy_note(&report)?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let entry = host.add_therapy_note(&report)?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 
@@ -2738,22 +2879,23 @@ struct LiveShareRequestDto {
 #[command]
 pub fn wellfair_list_pending_live_shares(app: AppHandle, limit: usize) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let pending = host.list_pending_live_shares(limit)?;
-    let dtos: Vec<LiveShareRequestDto> = pending
-        .into_iter()
-        .map(|r| LiveShareRequestDto {
-            id: r.id,
-            device_id: r.device_id,
-            purpose: r.purpose,
-            requested_kinds: r.requested_kinds,
-            ttl_seconds: r.ttl_seconds,
-        })
-        .collect();
-    serde_json::to_string(&dtos).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let pending = host.list_pending_live_shares(limit)?;
+        let dtos: Vec<LiveShareRequestDto> = pending
+            .into_iter()
+            .map(|r| LiveShareRequestDto {
+                id: r.id,
+                device_id: r.device_id,
+                purpose: r.purpose,
+                requested_kinds: r.requested_kinds,
+                ttl_seconds: r.ttl_seconds,
+            })
+            .collect();
+        serde_json::to_string(&dtos).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -2765,17 +2907,18 @@ pub fn wellfair_decide_live_share(
     reason: Option<String>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let entry = host.decide_live_share_request(
-        &request_id,
-        approved,
-        if approved { &projection_kinds } else { &[] },
-        reason.as_deref(),
-    )?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let entry = host.decide_live_share_request(
+            &request_id,
+            approved,
+            if approved { &projection_kinds } else { &[] },
+            reason.as_deref(),
+        )?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 fn parse_administration_status(s: &str) -> wellfare_core::medication::AdministrationStatus {
@@ -2795,17 +2938,18 @@ pub fn wellfair_add_medication(
     schedule: String,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let times: Vec<String> = schedule
-        .split(',')
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .collect();
-    let entry = host.add_medication(&name, &dose, &route, times)?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let times: Vec<String> = schedule
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+        let entry = host.add_medication(&name, &dose, &route, times)?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -2817,13 +2961,14 @@ pub fn wellfair_record_administration(
     notes: Option<String>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let st = parse_administration_status(&status);
-    let entry = host.record_administration(&medication_id, &medication_name, st, notes)?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let st = parse_administration_status(&status);
+        let entry = host.record_administration(&medication_id, &medication_name, st, notes)?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -2834,24 +2979,26 @@ pub fn wellfair_add_diet_entry(
     calories_kcal: Option<u32>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let mut guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_mut()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let entry = host.add_diet_entry(&description, &meal_type, calories_kcal)?;
-    serde_json::to_string(&entry).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let entry = host.add_diet_entry(&description, &meal_type, calories_kcal)?;
+        serde_json::to_string(&entry).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
 pub fn wellfair_sleep_analytics(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let (debt, heatmap) = host.default_sleep_analytics()?;
-    let out = serde_json::json!({ "debt": debt, "heatmap": heatmap });
-    serde_json::to_string(&out).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let (debt, heatmap) = host.default_sleep_analytics()?;
+        let out = serde_json::json!({ "debt": debt, "heatmap": heatmap });
+        serde_json::to_string(&out).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
@@ -2863,23 +3010,25 @@ pub fn wellfair_add_emergency_contact(
     email: Option<String>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let contact = host.add_emergency_contact(&display_name, &relationship, phone, email, None)?;
-    serde_json::to_string(&contact).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let contact = host.add_emergency_contact(&display_name, &relationship, phone, email, None)?;
+        serde_json::to_string(&contact).map_err(|e| e.to_string())
+    })?
 }
 
 #[command]
 pub fn wellfair_list_emergency_contacts(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
-    let guard = state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-    let contacts = host.list_emergency_contacts()?;
-    serde_json::to_string(&contacts).map_err(|e| e.to_string())
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let contacts = host.list_emergency_contacts()?;
+        serde_json::to_string(&contacts).map_err(|e| e.to_string())
+    })?
 }
 
 // ── Wallet / identity ─────────────────────────────────────────────────────────
@@ -3987,21 +4136,22 @@ pub async fn save_qlink(
     let combined_text = format!("Bookmark: {}\nURL: {}\nDescription: {}\nStructured Data:\n{}", final_title, url, description, extracted_content);
     
     let state = app.state::<crate::HostApiState>();
+    let url_clone = url.clone();
+    let combined_text_clone = combined_text.clone();
     let ingested_result = {
-        if let Ok(guard) = state.0.lock() {
+        state.0.execute_sync(move |guard| {
             if let Some(host) = guard.as_ref() {
                 let manual = qualia_client_core::wellfair::api::ManualFacets {
                     occurred_at: Some(chrono::Utc::now().timestamp()),
                     place_label: None, lat: None, lon: None, projects: vec![],
                     purposes: vec!["bookmark".to_string()],
                 };
-                host.ingest_document_annotated(&url, "text/html", &combined_text, &manual, None)
+                host.ingest_document_annotated(&url_clone, "text/html", &combined_text_clone, &manual, None)
+                    .map_err(|e| e.to_string())
             } else {
                 Err("Host API not initialized".to_string())
             }
-        } else {
-            Err("Lock failed".to_string())
-        }
+        })
     };
     
     let config_path = config_file_path();
@@ -4199,7 +4349,7 @@ fn qapp_slug(s: &str) -> String {
 // ── Webizen Host API (qApp Message Bus) ──────────────────────────────────────
 
 pub struct HostApiState(
-    pub std::sync::Arc<std::sync::Mutex<Option<qualia_client_core::wellfair::api::WebizenHostApi>>>,
+    pub crate::companion_gateway::HostApiHandle,
 );
 
 #[tauri::command]
@@ -4210,13 +4360,13 @@ pub fn submit_record(
     source: String,
 ) -> Result<usize, String> {
     let state = app.state::<HostApiState>();
-    let mut api_guard = state.0.lock().map_err(|e| e.to_string())?;
-
-    if let Some(host_api) = api_guard.as_mut() {
-        host_api.submit_record(&qapp_id, envelope, &source)
-    } else {
-        Err("Host API not initialized".into())
-    }
+    state.0.execute_sync(move |api_guard| {
+        if let Some(host_api) = api_guard.as_mut() {
+            host_api.submit_record(&qapp_id, envelope, &source)
+        } else {
+            Err("Host API not initialized".into())
+        }
+    })?
 }
 
 fn qapp_evidence_score(key: &str, value: &str) -> f32 {
@@ -6586,5 +6736,56 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         browse_10d_containers,
         inspect_10d_container,
         open_10d_file_picker,
+        // ── Updater commands ─────────────────────────────────────────────
+        updater_check,
+        updater_download_and_install,
+        updater_restart,
     ]
 }
+
+#[derive(Clone, serde::Serialize)]
+struct UpdaterProgressPayload {
+    downloaded: u64,
+    total: u64,
+}
+
+#[tauri::command]
+pub async fn updater_check(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    use tauri_plugin_updater::UpdaterExt;
+    let updater = app.updater().map_err(|e| format!("Failed to get updater: {}", e))?;
+    match updater.check().await {
+        Ok(Some(update)) => Ok(Some(update.version.clone())),
+        Ok(None) => Ok(None),
+        Err(e) => Err(format!("Update check error: {}", e)),
+    }
+}
+
+#[tauri::command]
+pub async fn updater_download_and_install(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri_plugin_updater::UpdaterExt;
+    use tauri::Emitter;
+    let updater = app.updater().map_err(|e| format!("Failed to get updater: {}", e))?;
+    let update = updater.check().await.map_err(|e| e.to_string())?
+        .ok_or_else(|| "No update available".to_string())?;
+
+    let app_clone = app.clone();
+    let mut downloaded = 0;
+    update.download_and_install(
+        move |chunk_length, content_length| {
+            downloaded += chunk_length as u64;
+            let _ = app_clone.emit("updater-progress", UpdaterProgressPayload {
+                downloaded,
+                total: content_length.unwrap_or(0),
+            });
+        },
+        || {}
+    ).await.map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn updater_restart(app: tauri::AppHandle) -> Result<(), String> {
+    app.restart();
+}
+

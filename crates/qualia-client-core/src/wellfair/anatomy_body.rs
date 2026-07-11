@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use qualia_core_db::hypermedia::{
     container_to_nquins, descriptors_to_nquins, AssetRef, AssetRole, Descriptors, HypermediaContainer,
 };
+use qualia_core_db::container_10d::ProvenanceSidecar;
 use qualia_core_db::render::compile_10d::{compile_organ_asset, CompiledAsset};
 use qualia_core_db::NQuin;
 use wellfare_core::anatomy::{body_system_for_organ, AnatomyModel};
@@ -62,7 +63,23 @@ pub fn compile_body(model: AnatomyModel, organs: &[(String, Vec<u8>)]) -> BodyCo
         };
         let fmt = format_of(organ_key);
         let uri = format!("urn:qualia:anatomy:{}:{organ_key}", model.as_str());
-        match compile_organ_asset(bytes, Some(fmt), &uri, fmt, Some(system_id), Some(model.as_str())) {
+        // Attest each organ with its HRA/CCF provenance (CC-BY-4.0) so the sealed `.10d` is citable and
+        // passes the renderer's fail-closed governance gate. A compact source reference identifies the CCF
+        // asset without embedding the multi-MB GLB into the container.
+        let provenance = ProvenanceSidecar::new(
+            format!("urn:hra:ccf:{organ_key}").into_bytes(),
+            "model/gltf-binary",
+            "CC-BY-4.0",
+        );
+        match compile_organ_asset(
+            bytes,
+            Some(fmt),
+            &uri,
+            fmt,
+            Some(system_id),
+            Some(model.as_str()),
+            Some(&provenance),
+        ) {
             Ok(asset) => compiled.push(CompiledOrgan {
                 organ_key: organ_key.clone(),
                 system_id: system_id.to_string(),

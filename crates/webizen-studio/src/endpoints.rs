@@ -12,8 +12,7 @@ pub enum HostSurface {
     DesktopWebview,
 }
 
-/// Base URL of the local Webizen daemon HTTP server (manifest, telemetry).
-pub const DAEMON_HTTP: &str = "http://127.0.0.1:8080";
+
 const DEFAULT_DAEMON_PORT: u16 = 8080;
 /// Local native-LLM / handshake WebSocket.
 pub const NATIVE_WS: &str = "ws://127.0.0.1:4242";
@@ -91,13 +90,7 @@ pub fn telemetry_url() -> String {
     format!("{}/telemetry", daemon_http())
 }
 
-pub fn status_url() -> String {
-    format!("{}/api/status", daemon_http())
-}
 
-pub fn logs_url() -> String {
-    format!("{}/api/logs", daemon_http())
-}
 
 pub fn logs_page_url() -> String {
     format!("{}/logs", daemon_http())

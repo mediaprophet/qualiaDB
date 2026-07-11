@@ -3,104 +3,127 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Webizen Desktop Portal</title>
+  <title>Webizen</title>
   <link rel="stylesheet" href="portal.css" />
 </head>
 <body>
-  <main class="shell">
-    <header class="hero">
-      <div>
-        <p class="eyebrow">Local desktop control plane</p>
-        <h1>Webizen Desktop Portal</h1>
-        <p class="lede">Runtime status, Studio diagnostics, local jobs, and recovery logs at <code id="origin-label">127.0.0.1:8080</code>.</p>
-      </div>
-      <nav class="quick-actions" aria-label="Primary tools">
-        <a class="action primary" href="/studio/">Open Studio</a>
-        <a class="action" href="/design-studio.html">Design Studio</a>
-        <a class="action" href="/logs">Logs</a>
-        <a class="action" href="/api/status" target="_blank" rel="noopener">Status JSON</a>
-      </nav>
-    </header>
+  <header class="topbar">
+    <a class="brand" href="/"><span class="brand-mark">Q</span><span>Webizen</span></a>
+    <nav aria-label="Workspace">
+      <a class="active" href="/">Home</a>
+      <a href="/dashboard">Studio</a>
+      <a href="/design-studio.html">Design Studio</a>
+      <a href="/qapps">QApps</a>
+    </nav>
+    <span class="connection"><span class="connection-dot"></span>Local and private</span>
+  </header>
 
-    <section class="cards" id="status-cards" aria-live="polite">
-      <article class="card"><h2>Settings server</h2><p id="st-settings">Loading...</p></article>
-      <article class="card"><h2>Graph daemon</h2><p id="st-daemon">Loading...</p></article>
-      <article class="card"><h2>QApps protocol</h2><p id="st-qapps">Loading...</p></article>
-      <article class="card"><h2>Job queue</h2><p id="st-jobs">Loading...</p></article>
+  <main class="shell">
+    <section class="welcome-band">
+      <div>
+        <p class="eyebrow">Your local workspace</p>
+        <h1>Welcome to Webizen</h1>
+        <p class="lede">Create, explore, and manage your knowledge without sending it to a remote service.</p>
+      </div>
+      <a class="action primary" href="/dashboard">Open Studio</a>
     </section>
 
-    <section class="panel">
+    <section class="workspace-grid" aria-label="Things you can do">
+      <a class="workspace-item" href="/design-studio.html">
+        <span class="item-icon design-icon">D</span>
+        <span><strong>Design a product</strong><small>Describe an idea and turn it into a connected parts graph.</small></span>
+        <span class="arrow">&gt;</span>
+      </a>
+      <a class="workspace-item" href="/qapps">
+        <span class="item-icon apps-icon">Q</span>
+        <span><strong>Browse QApps</strong><small>Open tools for health, knowledge, identity, work, and creativity.</small></span>
+        <span class="arrow">&gt;</span>
+      </a>
+      <a class="workspace-item" href="/library">
+        <span class="item-icon library-icon">L</span>
+        <span><strong>Open your library</strong><small>Find local resources, models, and saved knowledge.</small></span>
+        <span class="arrow">&gt;</span>
+      </a>
+      <a class="workspace-item" href="/tools">
+        <span class="item-icon sync-icon">S</span>
+        <span><strong>Backup and sync</strong><small>Import data, create backups, or connect a trusted relay.</small></span>
+        <span class="arrow">&gt;</span>
+      </a>
+    </section>
+
+    <section class="activity-panel">
       <div class="section-heading">
-        <div>
-          <h2>Local Job Queue</h2>
-          <p class="lede">Cold-path processing for ontology import, bundled seeds, daemon graph reload, and workbench sync.</p>
-        </div>
+        <div><h2>Recent activity</h2><p>Imports, resource updates, and other background work.</p></div>
         <button type="button" id="refresh-jobs">Refresh</button>
       </div>
-      <form id="job-form" class="job-form">
-        <label>Job type
-          <select name="job_kind" id="job-kind">
-            <option value="ontology_catalog_import">Import catalog ontology</option>
-            <option value="ontology_uri_import">Import ontology from URI</option>
-            <option value="bundled_ontology_seed">Seed bundled ontologies</option>
-            <option value="workbench_daemon_sync">Sync workbench to daemon</option>
-            <option value="daemon_graph_reload">Reload daemon graph</option>
-          </select>
-        </label>
-        <label id="job-ontology-wrap">Ontology ID <input name="ontology_id" type="text" placeholder="shacl, snomedct-us" /></label>
-        <label id="job-uri-wrap" hidden>Source URI <input name="uri" type="url" placeholder="https://example.test/ontology.ttl" /></label>
-        <div class="actions">
-          <button type="submit">Enqueue job</button>
-        </div>
-      </form>
       <div class="job-table-wrap">
         <table class="job-table" id="jobs-table">
-          <thead>
-            <tr><th>Status</th><th>Kind</th><th>Message</th><th>Progress</th><th></th></tr>
-          </thead>
+          <thead><tr><th>Status</th><th>Activity</th><th>Details</th><th>Progress</th><th></th></tr></thead>
           <tbody id="jobs-body"><tr><td colspan="5">Loading...</td></tr></tbody>
         </table>
       </div>
     </section>
 
-    <section class="panel">
-      <h2>Agent Configuration</h2>
-      <form id="config-form" class="config-grid">
-        <label>Storage path <input name="storage_path" type="text" required /></label>
-        <label>Storage quota (GB) <input name="storage_quota_gb" type="number" min="1" /></label>
-        <label>Daemon host <input name="daemon_host" type="text" /></label>
-        <label>Daemon port <input name="daemon_port" type="number" min="1024" max="65535" /></label>
-        <label>Inference backend
-          <select name="inference_backend">
-            <option value="local">local</option>
-            <option value="hybrid">hybrid</option>
-            <option value="remote">remote</option>
-          </select>
-        </label>
-        <label>Base connectivity cost (ILP microcents) <input name="base_connectivity_cost_ilp" type="number" min="0" /></label>
-        <div class="actions full-row">
-          <button type="submit">Save configuration</button>
-          <span id="save-msg" role="status"></span>
-        </div>
-      </form>
-    </section>
+    <details class="advanced-panel">
+      <summary>Advanced settings and diagnostics</summary>
+      <div class="advanced-content">
+        <section class="cards" id="status-cards" aria-live="polite">
+          <article class="card"><h2>Desktop service</h2><p id="st-settings">Loading...</p></article>
+          <article class="card"><h2>Knowledge engine</h2><p id="st-daemon">Loading...</p></article>
+          <article class="card"><h2>QApps service</h2><p id="st-qapps">Loading...</p></article>
+          <article class="card"><h2>Background work</h2><p id="st-jobs">Loading...</p></article>
+        </section>
 
-    <section class="panel two-column">
-      <div>
-        <h2>Telemetry Stream</h2>
-        <pre id="telemetry-log" class="log">Connecting...</pre>
+        <section class="panel">
+          <h2>Start background work</h2>
+          <form id="job-form" class="job-form">
+            <label>Activity
+              <select name="job_kind" id="job-kind">
+                <option value="ontology_catalog_import">Install knowledge pack</option>
+                <option value="ontology_uri_import">Import knowledge from a URL</option>
+                <option value="bundled_ontology_seed">Restore bundled knowledge packs</option>
+                <option value="workbench_daemon_sync">Sync workbench</option>
+                <option value="daemon_graph_reload">Reload knowledge graph</option>
+              </select>
+            </label>
+            <label id="job-ontology-wrap">Knowledge pack ID <input name="ontology_id" type="text" placeholder="shacl" /></label>
+            <label id="job-uri-wrap" hidden>Source URL <input name="uri" type="url" placeholder="https://example.test/ontology.ttl" /></label>
+            <div class="actions"><button type="submit">Start</button></div>
+          </form>
+        </section>
+
+        <section class="panel">
+          <h2>Local configuration</h2>
+          <form id="config-form" class="config-grid">
+            <label>Storage location <input name="storage_path" type="text" required /></label>
+            <label>Storage limit (GB) <input name="storage_quota_gb" type="number" min="1" /></label>
+            <label>Knowledge engine host <input name="daemon_host" type="text" /></label>
+            <label>Knowledge engine port <input name="daemon_port" type="number" min="1024" max="65535" /></label>
+            <label>Inference mode
+              <select name="inference_backend"><option value="local">Local</option><option value="hybrid">Hybrid</option><option value="remote">Remote</option></select>
+            </label>
+            <label>Connectivity cost <input name="base_connectivity_cost_ilp" type="number" min="0" /></label>
+            <div class="actions full-row"><button type="submit">Save settings</button><span id="save-msg" role="status"></span></div>
+          </form>
+        </section>
+
+        <section class="panel two-column">
+          <div><h2>Live service events</h2><pre id="telemetry-log" class="log">Connecting...</pre></div>
+          <div class="links">
+            <h2>Diagnostic tools</h2>
+            <ul>
+              <li><a href="/logs">Readable desktop logs</a></li>
+              <li><a id="link-daemon-health" href="#" target="_blank" rel="noopener">Knowledge engine health</a></li>
+              <li><a href="/health" target="_blank" rel="noopener">Desktop service health</a></li>
+              <li><a href="/api/status" target="_blank" rel="noopener">Full status report</a></li>
+              <li><a href="/api/logs/text" target="_blank" rel="noopener">Raw desktop log</a></li>
+            </ul>
+            <p class="origin">Control plane: <code id="origin-label">127.0.0.1:8080</code></p>
+          </div>
+        </section>
       </div>
-      <div class="links">
-        <h2>Diagnostics</h2>
-        <ul>
-          <li><a id="link-daemon-health" href="#" target="_blank" rel="noopener">Graph daemon health</a></li>
-          <li><a href="/health" target="_blank" rel="noopener">Settings server health</a></li>
-          <li><a href="/manifest" target="_blank" rel="noopener">Studio manifest</a></li>
-          <li><a href="/api/logs/text" target="_blank" rel="noopener">Raw desktop log</a></li>
-        </ul>
-      </div>
-    </section>
+    </details>
   </main>
-  <script src="portal.js"></script>
+  <script src="portal.js?v=2"></script>
 </body>
 </html>

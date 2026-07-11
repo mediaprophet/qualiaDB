@@ -1,20 +1,27 @@
 use serde::Serialize;
 use std::collections::VecDeque;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::mpsc::{sync_channel, SyncSender, TrySendError};
 use std::sync::{Mutex, OnceLock};
 
 const MAX_RECENT_LINES: usize = 500;
+const LOG_CHANNEL_CAPACITY: usize = 2_048;
+const MAX_LOG_BYTES: u64 = 8 * 1024 * 1024;
 
 #[derive(Clone, Debug, Serialize)]
 pub struct DesktopLogEntry {
     pub ts: String,
     pub level: String,
     pub message: String,
+    pub session_id: String,
+    pub thread: String,
 }
 
 static LOG_PATH: OnceLock<PathBuf> = OnceLock::new();
 static RECENT: OnceLock<Mutex<VecDeque<DesktopLogEntry>>> = OnceLock::new();
+static LOG_SENDER: OnceLock<SyncSender<DesktopLogEntry>> = OnceLock::new();
+static SESSION_ID: OnceLock<String> = OnceLock::new();
 static PANIC_HOOK_INSTALLED: OnceLock<()> = OnceLock::new();
 
 fn default_log_path() -> PathBuf {
@@ -30,12 +37,73 @@ fn default_log_path() -> PathBuf {
     std::env::temp_dir().join("webizen-desktop.log")
 }
 
+fn session_id() -> &'static str {
+    SESSION_ID
+        .get_or_init(|| uuid::Uuid::new_v4().to_string())
+        .as_str()
+}
+
+fn ensure_writer() -> &'static SyncSender<DesktopLogEntry> {
+    LOG_SENDER.get_or_init(|| {
+        let path = log_path();
+        let (tx, rx) = sync_channel::<DesktopLogEntry>(LOG_CHANNEL_CAPACITY);
+        let spawn_result = std::thread::Builder::new()
+            .name("webizen-log-writer".to_string())
+            .spawn(move || {
+                if let Some(parent) = path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                let mut file = open_log_file(&path);
+                while let Ok(entry) = rx.recv() {
+                    if should_rotate(&path) {
+                        file.take();
+                        rotate_log(&path);
+                        file = open_log_file(&path);
+                    }
+                    if file.is_none() {
+                        file = open_log_file(&path);
+                    }
+                    if let Some(writer) = file.as_mut() {
+                        let _ = writeln!(
+                            writer,
+                            "{} [{}] [{}] [{}] {}",
+                            entry.ts, entry.level, entry.session_id, entry.thread, entry.message
+                        );
+                    }
+                }
+            });
+        if let Err(error) = spawn_result {
+            eprintln!("Webizen could not start the log writer: {error}");
+        }
+        tx
+    })
+}
+
+fn open_log_file(path: &Path) -> Option<std::fs::File> {
+    std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+        .ok()
+}
+
+fn should_rotate(path: &Path) -> bool {
+    path.metadata()
+        .map(|metadata| metadata.len() >= MAX_LOG_BYTES)
+        .unwrap_or(false)
+}
+
+fn rotate_log(path: &Path) {
+    let rotated = path.with_extension("log.1");
+    let _ = std::fs::remove_file(&rotated);
+    let _ = std::fs::rename(path, rotated);
+}
+
 pub fn init() -> PathBuf {
-    let path = LOG_PATH.get_or_init(default_log_path).clone();
+    let path = log_path();
     let _ = RECENT.get_or_init(|| Mutex::new(VecDeque::with_capacity(MAX_RECENT_LINES)));
-    if let Some(parent) = path.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
+    let _ = session_id();
+    let _ = ensure_writer();
     record(
         "info",
         format!("Webizen desktop logging to {}", path.display()),
@@ -59,17 +127,35 @@ pub fn install_panic_hook() {
                 .location()
                 .map(|loc| format!("{}:{}:{}", loc.file(), loc.line(), loc.column()))
                 .unwrap_or_else(|| "unknown location".to_string());
-            let backtrace = std::backtrace::Backtrace::force_capture();
+            let summary = format!("panic on thread '{thread_name}' at {location}: {payload}");
 
-            record(
-                "panic",
-                format!("panic on thread '{thread_name}' at {location}: {payload}"),
-            );
-            record("panic", format!("backtrace:\n{backtrace}"));
-            eprintln!("Webizen desktop panic on thread '{thread_name}' at {location}: {payload}");
+            record("panic", &summary);
+            write_crash_marker(&summary);
+            eprintln!("Webizen desktop {summary}");
             previous_hook(panic_info);
         }));
     });
+}
+
+fn write_crash_marker(summary: &str) {
+    let path = log_path().with_extension("crash");
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+    {
+        let _ = writeln!(
+            file,
+            "{} [{}] {}",
+            chrono::Utc::now().to_rfc3339(),
+            session_id(),
+            summary
+        );
+        let _ = file.flush();
+    }
 }
 
 pub fn log_path() -> PathBuf {
@@ -77,10 +163,17 @@ pub fn log_path() -> PathBuf {
 }
 
 pub fn record(level: impl Into<String>, message: impl Into<String>) {
+    let current_thread = std::thread::current();
+    let thread = current_thread
+        .name()
+        .map(str::to_string)
+        .unwrap_or_else(|| format!("{:?}", current_thread.id()));
     let entry = DesktopLogEntry {
         ts: chrono::Utc::now().to_rfc3339(),
         level: level.into(),
         message: message.into(),
+        session_id: session_id().to_string(),
+        thread,
     };
 
     let recent = RECENT.get_or_init(|| Mutex::new(VecDeque::with_capacity(MAX_RECENT_LINES)));
@@ -91,16 +184,16 @@ pub fn record(level: impl Into<String>, message: impl Into<String>) {
         guard.push_back(entry.clone());
     }
 
-    let path = log_path();
-    if let Some(parent) = path.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
-    if let Ok(mut file) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(path)
-    {
-        let _ = writeln!(file, "{} [{}] {}", entry.ts, entry.level, entry.message);
+    match ensure_writer().try_send(entry) {
+        Ok(()) => {}
+        Err(TrySendError::Full(entry)) => eprintln!(
+            "Webizen log queue full; dropped [{}] {}",
+            entry.level, entry.message
+        ),
+        Err(TrySendError::Disconnected(entry)) => eprintln!(
+            "Webizen log writer stopped; dropped [{}] {}",
+            entry.level, entry.message
+        ),
     }
 }
 
@@ -117,7 +210,28 @@ pub fn recent_text() -> String {
     let path = log_path();
     lines.push(format!("log_file={}", path.display()));
     for entry in recent_entries() {
-        lines.push(format!("{} [{}] {}", entry.ts, entry.level, entry.message));
+        lines.push(format!(
+            "{} [{}] [{}] [{}] {}",
+            entry.ts, entry.level, entry.session_id, entry.thread, entry.message
+        ));
     }
     lines.join("\n")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn recent_entries_include_session_and_thread_context() {
+        let _ = init();
+        record("info", "logger context test");
+        let entry = recent_entries()
+            .into_iter()
+            .rev()
+            .find(|entry| entry.message == "logger context test")
+            .expect("test log entry");
+        assert!(!entry.session_id.is_empty());
+        assert!(!entry.thread.is_empty());
+    }
 }

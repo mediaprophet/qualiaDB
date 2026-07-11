@@ -1,237 +1,455 @@
-// Qualia-DB 3D Anatomy Renderer (HuBMAP CCF JSON-LD Parser)
+// Qualia 3D anatomy demo — renders a REAL HRA/CCF reference body from a `.qualia`
+// asset pack via the native Qualia renderer compiled to WebGPU/WASM
+// (`QualiaPortal`) — the same renderer that runs natively on the desktop.
+//
+// Includes the first slice of the ATTENTION MIXER (docs/plans/attention-mixer.md):
+// an ambient-field channel (off by default) and a per-body-system channel row, so
+// the viewer composes what they attend to rather than an algorithm deciding it.
 
-const ONTOLOGY_GRAPH = {
-  "@context": "https://hubmapconsortium.github.io/hubmap-ontology/ccf-context.jsonld",
-  "@graph": [
-    // --- NERVOUS SYSTEM (Brain) ---
-    {
-      "@id": "ccf:VHM_Brain", "name": "VHM Brain", "system": "nervous", "sex": "male", "color": 0xbd93f9,
-      "ccf:x_dimension": 140, "ccf:y_dimension": 150, "ccf:z_dimension": 160,
-      "ccf:placement": { "ccf:x_translation": 0, "ccf:y_translation": 700, "ccf:z_translation": 0 }
-    },
-    {
-      "@id": "ccf:VHF_Brain", "name": "VHF Brain", "system": "nervous", "sex": "female", "color": 0xbd93f9,
-      "ccf:x_dimension": 130, "ccf:y_dimension": 140, "ccf:z_dimension": 150,
-      "ccf:placement": { "ccf:x_translation": 0, "ccf:y_translation": 660, "ccf:z_translation": 0 }
-    },
-    
-    // --- CARDIOVASCULAR (Heart) ---
-    {
-      "@id": "ccf:VHM_Heart", "name": "VHM Heart", "system": "cardio", "sex": "male", "color": 0xff5555,
-      "ccf:x_dimension": 90, "ccf:y_dimension": 100, "ccf:z_dimension": 80,
-      "ccf:placement": { "ccf:x_translation": 0, "ccf:y_translation": 450, "ccf:z_translation": 20 }
-    },
-    {
-      "@id": "ccf:VHF_Heart", "name": "VHF Heart", "system": "cardio", "sex": "female", "color": 0xff5555,
-      "ccf:x_dimension": 80, "ccf:y_dimension": 90, "ccf:z_dimension": 70,
-      "ccf:placement": { "ccf:x_translation": 0, "ccf:y_translation": 430, "ccf:z_translation": 20 }
-    },
+import { loadQualiaPortal } from "../js/qualia-shell.js";
 
-    // --- RESPIRATORY (Lungs) ---
-    {
-      "@id": "ccf:VHM_Left_Lung", "name": "VHM Left Lung", "system": "respiratory", "sex": "male", "color": 0x8be9fd,
-      "ccf:x_dimension": 110, "ccf:y_dimension": 220, "ccf:z_dimension": 130,
-      "ccf:placement": { "ccf:x_translation": -70, "ccf:y_translation": 450, "ccf:z_translation": 0 }
-    },
-    {
-      "@id": "ccf:VHM_Right_Lung", "name": "VHM Right Lung", "system": "respiratory", "sex": "male", "color": 0x8be9fd,
-      "ccf:x_dimension": 110, "ccf:y_dimension": 220, "ccf:z_dimension": 130,
-      "ccf:placement": { "ccf:x_translation": 70, "ccf:y_translation": 450, "ccf:z_translation": 0 }
-    },
-    {
-      "@id": "ccf:VHF_Left_Lung", "name": "VHF Left Lung", "system": "respiratory", "sex": "female", "color": 0x8be9fd,
-      "ccf:x_dimension": 100, "ccf:y_dimension": 200, "ccf:z_dimension": 120,
-      "ccf:placement": { "ccf:x_translation": -65, "ccf:y_translation": 430, "ccf:z_translation": 0 }
-    },
-    {
-      "@id": "ccf:VHF_Right_Lung", "name": "VHF Right Lung", "system": "respiratory", "sex": "female", "color": 0x8be9fd,
-      "ccf:x_dimension": 100, "ccf:y_dimension": 200, "ccf:z_dimension": 120,
-      "ccf:placement": { "ccf:x_translation": 65, "ccf:y_translation": 430, "ccf:z_translation": 0 }
-    },
+const container = document.getElementById("canvas-container");
+const statusEl = document.getElementById("status");
 
-    // --- URINARY (Kidneys) ---
-    {
-      "@id": "ccf:VHM_Left_Kidney", "name": "VHM Left Kidney", "system": "urinary", "sex": "male", "color": 0xf1fa8c,
-      "ccf:x_dimension": 63.5, "ccf:y_dimension": 113.8, "ccf:z_dimension": 55.2,
-      "ccf:placement": { "ccf:x_translation": -51.0, "ccf:y_translation": 250, "ccf:z_translation": -30 }
-    },
-    {
-      "@id": "ccf:VHM_Right_Kidney", "name": "VHM Right Kidney", "system": "urinary", "sex": "male", "color": 0xf1fa8c,
-      "ccf:x_dimension": 63.5, "ccf:y_dimension": 113.8, "ccf:z_dimension": 55.2,
-      "ccf:placement": { "ccf:x_translation": 51.0, "ccf:y_translation": 250, "ccf:z_translation": -30 }
-    },
-    {
-      "@id": "ccf:VHF_Left_Kidney", "name": "VHF Left Kidney", "system": "urinary", "sex": "female", "color": 0xf1fa8c,
-      "ccf:x_dimension": 58.0, "ccf:y_dimension": 105.0, "ccf:z_dimension": 50.0,
-      "ccf:placement": { "ccf:x_translation": -48.0, "ccf:y_translation": 230, "ccf:z_translation": -25 }
-    },
-    {
-      "@id": "ccf:VHF_Right_Kidney", "name": "VHF Right Kidney", "system": "urinary", "sex": "female", "color": 0xf1fa8c,
-      "ccf:x_dimension": 58.0, "ccf:y_dimension": 105.0, "ccf:z_dimension": 50.0,
-      "ccf:placement": { "ccf:x_translation": 48.0, "ccf:y_translation": 230, "ccf:z_translation": -25 }
+let portal = null;
+let canvas = null;
+let currentBody = "male";
+let lastT = 0;
+let bodyBytes = null; // the loaded .qualia pack bytes, cached for mixer re-renders
+// The loaded pack's manifest — [{ key, label, system, systems }] per part — read from the pack itself
+// (not hardcoded), so the mixer + parts list are DYNAMIC: they reflect exactly what this body contains.
+let packParts = [];
+// Parts individually deselected (by entry key) via the parts list — hidden on the next render.
+const disabledParts = new Set();
+const cam = { yaw: 0.5, pitch: 0.12, zoom: 2.4 };
+
+// Mixer: per-body-system level 0..1 (absent = full). v1 is mute/show (the mesh
+// pipeline is opaque); smooth opacity lands with alpha blending (mixer plan v2).
+const systemLevels = {};
+// The full body-system taxonomy — all 17, mirroring wellfare-core's system registry (the seed the
+// evaluation engine uses). The third field marks a DISTRIBUTED network (ECS / ENS / glymphatic): it has
+// no standalone organ mesh, so it is evaluated and — in the app — painted as an overlay on its host
+// organs, rather than shown/hidden as a discrete mesh here. A discrete system with no mesh in the loaded
+// pack is still listed (you can attend to it) but has nothing to show/hide until that mesh ships.
+const SYSTEMS = [
+  ["circulatory", "Circulatory", false],
+  ["respiratory", "Respiratory", false],
+  ["digestive", "Digestive", false],
+  ["nervous", "Nervous", false],
+  ["muscular", "Muscular", false],
+  ["skeletal", "Skeletal", false],
+  ["endocrine", "Endocrine", false],
+  ["immune_lymphatic", "Immune / Lymphatic", false],
+  ["integumentary", "Skin", false],
+  ["urinary", "Urinary", false],
+  ["reproductive", "Reproductive", false],
+  ["sensory", "Sensory", false],
+  ["vestibular", "Vestibular", false],
+  ["exocrine", "Exocrine", false],
+  ["ecs", "Endocannabinoid (ECS)", true],
+  ["ens", "Enteric (ENS)", true],
+  ["glymphatic", "Glymphatic", true],
+];
+// Systems muted by default: opaque skin would occlude everything, so the mixer starts
+// with it peeled off — turn the Skin fader up to wrap the body (translucent skin = v2).
+const DEFAULT_MUTED = new Set(["integumentary"]);
+
+// CC-BY attribution for the 3D assets, per body. The CCF male/female bodies are permissive CC-BY-4.0;
+// the BodyParts3D "complete" body is CC-BY-SA-2.1-JP (share-alike) and requires the exact attribution +
+// citation the database's terms specify.
+const CCF_SOURCE = {
+  what: "3D reference-organ meshes",
+  creator: "Human Reference Atlas (CCF) / HuBMAP",
+  url: "https://humanatlas.io",
+  licence: "CC BY 4.0",
+  licenceUrl: "https://creativecommons.org/licenses/by/4.0/",
+  scope: "organ mesh geometry only",
+};
+const BP3D_SOURCE = {
+  what: "Complete anatomy meshes + FMA ontology (muscles, bones, glands, nerves)",
+  creator: "BodyParts3D, © The Database Center for Life Science licensed under CC Attribution-Share Alike 2.1 Japan",
+  url: "https://lifesciencedb.jp/bp3d/",
+  licence: "CC BY-SA 2.1 JP",
+  licenceUrl: "https://creativecommons.org/licenses/by-sa/2.1/jp/deed.en",
+  scope: "3D mesh geometry + FMA anatomy ontology",
+  cite: "Mitsuhashi et al., Nucleic Acids Res. 2009 (doi:10.1093/nar/gkn613) · data doi:10.18908/lsdba.nbdc00837-000",
+};
+// The sources that apply to the body currently loaded.
+function sourcesForBody() {
+  return currentBody === "complete" ? [BP3D_SOURCE] : [CCF_SOURCE];
+}
+
+// The BodyParts3D complete pack is large (exceeds GitHub Pages' 100 MB/file limit), so it ships as a
+// GitHub Release asset and is fetched on demand. `latest/download` always resolves the newest release.
+const RELEASE_BASE = "https://github.com/mediaprophet/qualiaDB/releases/latest/download";
+function bodyUrl(key) {
+  return key === "complete" ? `${RELEASE_BASE}/anatomy-bodyparts3d.qualia` : `anatomy-${key}.qualia`;
+}
+
+// The body's full provenance/semantics `.q42` graph — a byte-identical sidecar beside the bundle
+// (anatomy-<body>.q42), directly linkable. For CCF it carries organ→system + provenance; for the
+// complete body it is the FMA ontology (OBO IRIs + is-a + part-of + system + geometry) the meshes cite.
+function provenanceQ42Url() {
+  return currentBody === "complete" ? `${RELEASE_BASE}/anatomy-bodyparts3d.q42` : `anatomy-${currentBody}.q42`;
+}
+
+function renderAttribution() {
+  const el = document.getElementById("attribution-body");
+  if (!el) return;
+  const rows = sourcesForBody()
+    .map(
+      (s) =>
+        `<div><span class="src">${s.what}</span> — ` +
+        `<a href="${s.url}" target="_blank" rel="noopener">${s.creator}</a> · ` +
+        `<a href="${s.licenceUrl}" target="_blank" rel="noopener">${s.licence}</a>` +
+        (s.scope ? ` <span class="scope">— applies to: ${s.scope}</span>` : "") +
+        (s.cite ? `<div class="scope">Cite: ${s.cite}</div>` : "") +
+        `</div>`,
+    )
+    .join("");
+  const prov =
+    `<div><a href="${provenanceQ42Url()}" rel="noopener" download>` +
+    `Full provenance &amp; semantics — .q42 graph volume ↓</a></div>`;
+  const note =
+    `<div class="note">The Qualia engine and the .10d / .qualia container formats are separate works; ` +
+    `no rights are claimed over the source datasets beyond the attribution each licence requires.</div>`;
+  el.innerHTML = rows + prov + note;
+}
+
+function setStatus(msg, cls) {
+  if (statusEl) {
+    statusEl.textContent = msg;
+    statusEl.className = "status" + (cls ? " " + cls : "");
+  }
+  console.log("[anatomy]", msg);
+}
+
+function onResize() {
+  if (portal && portal.resize) {
+    try {
+      portal.resize(canvas, container.clientWidth, container.clientHeight);
+    } catch (_) {}
+  }
+}
+
+async function boot() {
+  renderAttribution();
+  // A canvas that fills the container — the old demo's canvas had no CSS size, so
+  // the renderer sized to 0×0 and drew nothing. `100%` fixes that.
+  canvas = document.createElement("canvas");
+  canvas.style.cssText = "width:100%;height:100%;display:block;touch-action:none";
+  container.appendChild(canvas);
+
+  // Build the attention mixer first — the full 17-system taxonomy is meaningful (and inspectable) even
+  // when the body itself can't render. The faders are inert until a body loads (applyMixer is guarded).
+  buildMixer();
+
+  if (!navigator.gpu) {
+    setStatus(
+      "This browser has no WebGPU. The real 3D body needs a WebGPU-capable browser (Chrome/Edge, or Firefox Nightly). The system mixer below still lists what the engine evaluates.",
+      "error",
+    );
+    return;
+  }
+
+  setStatus("Loading the Qualia renderer (WASM · WebGPU)…");
+  let res;
+  try {
+    res = await loadQualiaPortal(canvas);
+  } catch (e) {
+    setStatus("Renderer failed to load: " + e, "error");
+    return;
+  }
+  portal = res.portal;
+  window.__portal = portal; // debug handle
+  if (!portal) {
+    setStatus("WebGPU portal unavailable (source: " + res.source + ").", "error");
+    return;
+  }
+  if (typeof portal.load_body_from_qualia_bundle_mixed !== "function") {
+    setStatus("The loaded renderer is stale — rebuild docs/pkg/qualia from current source.", "error");
+    return;
+  }
+
+  new ResizeObserver(onResize).observe(container);
+  window.addEventListener("resize", onResize);
+  setupOrbit();
+  startLoop();
+  await loadBody(currentBody);
+}
+
+function bodyLabel(key) {
+  return key === "complete" ? "complete (BodyParts3D)" : key === "male" ? "XY" : "XX";
+}
+
+async function loadBody(key) {
+  // The provenance link + attribution are per-body — refresh them for the current body.
+  renderAttribution();
+  setStatus(
+    key === "complete"
+      ? "Fetching the complete BodyParts3D body from the release — this is a large download…"
+      : `Fetching ${bodyLabel(key)} reference body…`,
+  );
+  let resp;
+  try {
+    resp = await fetch(bodyUrl(key), { cache: "no-store" });
+  } catch (e) {
+    setStatus("Body pack fetch failed: " + e, "error");
+    return;
+  }
+  if (!resp.ok) {
+    setStatus(
+      key === "complete"
+        ? `Complete body not found (HTTP ${resp.status}). The BodyParts3D pack ships as a GitHub Release asset — cut a release to produce it.`
+        : `Body pack not found (HTTP ${resp.status}). The .qualia packs ship as build artifacts — produce them with the build_anatomy_pack tool.`,
+      "error",
+    );
+    return;
+  }
+  bodyBytes = new Uint8Array(await resp.arrayBuffer());
+  // Read the pack's OWN manifest → the mixer + parts list are built from what this body actually
+  // contains (dynamic), not a hardcoded list. Falls back to the fixed taxonomy if the renderer is older.
+  try {
+    packParts = typeof portal.pack_manifest === "function" ? Array.from(portal.pack_manifest(bodyBytes) || []) : [];
+  } catch (e) {
+    packParts = [];
+  }
+  disabledParts.clear();
+  buildMixer();
+  buildPartsList();
+  applyMixer();
+}
+
+// Re-render the cached body with the current mixer settings.
+function applyMixer() {
+  if (!portal || !bodyBytes) return;
+  const noun = currentBody === "complete" ? "structures" : "organs";
+  try {
+    const r = portal.load_body_from_qualia_bundle_mixed(bodyBytes, systemLevels, Array.from(disabledParts));
+    window.__lastRender = r;
+    const organs = r && r.organs_loaded != null ? r.organs_loaded : "?";
+    const tris = r && r.total_triangles != null ? Number(r.total_triangles).toLocaleString() : "?";
+    setStatus(`${bodyLabel(currentBody)} body · ${organs} ${noun} · ${tris} triangles · drag to orbit`, "ok");
+  } catch (e) {
+    setStatus("Render error: " + e, "error");
+  }
+}
+
+// The set of systems the loaded pack actually contains (from the manifest).
+function systemsInPack() {
+  const s = new Set();
+  for (const p of packParts) {
+    const list = p.systems && p.systems.length ? p.systems : [p.system];
+    for (const sys of list) if (sys) s.add(sys);
+  }
+  return s;
+}
+
+// Build the mixer channel rows — DYNAMIC: with a pack loaded, only the systems it actually contains
+// (plus the mesh-less overlay networks, which are evaluated everywhere). Before a pack loads, the full
+// 17-system taxonomy. A fader at 0 mutes that system; >0 shows it.
+function buildMixer() {
+  const host = document.getElementById("mixer-systems");
+  if (!host) return;
+  host.innerHTML = "";
+  const present = systemsInPack();
+  const havePack = packParts.length > 0;
+  const overlayTip =
+    "A distributed network with no standalone organ mesh — evaluated and painted as an overlay on its host organs (ENS→gut, glymphatic→brain, ECS→whole-body), not shown/hidden as a discrete mesh here.";
+  for (const [id, label, overlay] of SYSTEMS) {
+    // With a body loaded, hide systems that body has no meshes for (keep overlay networks, always).
+    if (havePack && !overlay && !present.has(id)) continue;
+    const muted = DEFAULT_MUTED.has(id);
+    systemLevels[id] = muted ? 0 : 1.0;
+    const row = document.createElement("div");
+    row.className = "mixer-row" + (overlay ? " mixer-row-overlay" : "");
+    const name = document.createElement("span");
+    name.className = "mixer-label";
+    name.textContent = overlay ? label + " ·overlay" : label;
+    const fader = document.createElement("input");
+    fader.type = "range";
+    fader.min = "0";
+    fader.max = "100";
+    fader.value = muted ? "0" : "100";
+    fader.className = "mixer-fader";
+    if (overlay) {
+      // No discrete mesh to show/hide. Keep the row so the taxonomy is complete (you can see the system
+      // is evaluated), but make plain the fader isn't adjustable here — overlay rendering is a later slice.
+      fader.disabled = true;
+      name.title = overlayTip;
+      fader.title = overlayTip;
+    } else {
+      // Update the level live while dragging; re-render on release (a re-render
+      // re-uploads the body, so we don't do it every drag tick).
+      fader.addEventListener("input", () => {
+        systemLevels[id] = fader.value / 100;
+      });
+      fader.addEventListener("change", () => {
+        systemLevels[id] = fader.value / 100;
+        applyMixer();
+      });
     }
-  ]
+    row.appendChild(name);
+    row.appendChild(fader);
+    host.appendChild(row);
+  }
+}
+
+// The human label for a system id (from the taxonomy), or the id itself.
+function systemLabel(id) {
+  const s = SYSTEMS.find((e) => e[0] === id);
+  return s ? s[1] : id;
+}
+
+// Build the selectable PARTS list from the pack manifest — every individual structure, grouped by its
+// primary system in a collapsible section, each a checkbox (checked = shown). Unchecking a part hides
+// just that structure on the next render. Searchable (essential for the ~900-part complete body).
+function buildPartsList() {
+  const host = document.getElementById("parts-list");
+  const count = document.getElementById("parts-count");
+  if (!host) return;
+  host.innerHTML = "";
+  if (!packParts.length) {
+    host.innerHTML = `<div class="mixer-note">Load a body to list its parts. (Older packs without a manifest show none.)</div>`;
+    if (count) count.textContent = "";
+    return;
+  }
+  if (count) count.textContent = `${packParts.length} parts`;
+  const bySys = new Map();
+  for (const p of packParts) {
+    const sys = p.system || "other";
+    if (!bySys.has(sys)) bySys.set(sys, []);
+    bySys.get(sys).push(p);
+  }
+  for (const [sys, parts] of [...bySys.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    parts.sort((a, b) => (a.label || a.key).localeCompare(b.label || b.key));
+    const det = document.createElement("details");
+    det.className = "parts-group";
+    const sum = document.createElement("summary");
+    sum.textContent = `${systemLabel(sys)} (${parts.length})`;
+    det.appendChild(sum);
+    for (const p of parts) {
+      const label = p.label || p.key;
+      const row = document.createElement("label");
+      row.className = "part-row";
+      row.dataset.q = label.toLowerCase();
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = !disabledParts.has(p.key);
+      cb.addEventListener("change", () => {
+        if (cb.checked) disabledParts.delete(p.key);
+        else disabledParts.add(p.key);
+        applyMixer();
+      });
+      const span = document.createElement("span");
+      span.textContent = label;
+      row.appendChild(cb);
+      row.appendChild(span);
+      det.appendChild(row);
+    }
+    host.appendChild(det);
+  }
+}
+
+// Filter the parts list by name; open groups that have a match.
+window.onPartSearch = (q) => {
+  q = (q || "").trim().toLowerCase();
+  const host = document.getElementById("parts-list");
+  if (!host) return;
+  host.querySelectorAll(".parts-group").forEach((det) => {
+    let any = false;
+    det.querySelectorAll(".part-row").forEach((row) => {
+      const match = !q || row.dataset.q.includes(q);
+      row.style.display = match ? "" : "none";
+      if (match) any = true;
+    });
+    det.style.display = any ? "" : "none";
+    det.open = q ? any : false;
+  });
 };
 
-let currentSex = 'male';
-let scene, camera, renderer, controls;
-let organMeshes = [];
-const tooltip = document.getElementById('tooltip');
-
-function initThreeJS() {
-    const container = document.getElementById('canvas-container');
-
-    scene = new THREE.Scene();
-    
-    // Setup Camera
-    camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 3000);
-    camera.position.set(0, 400, 800);
-
-    // Setup Renderer
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    container.appendChild(renderer.domElement);
-
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-    scene.add(ambientLight);
-    
-    const pointLight = new THREE.PointLight(0x00f0ff, 1);
-    pointLight.position.set(200, 500, 300);
-    scene.add(pointLight);
-
-    const backLight = new THREE.PointLight(0xff00ff, 0.8);
-    backLight.position.set(-200, 200, -300);
-    scene.add(backLight);
-
-    // Controls
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.target.set(0, 400, 0);
-
-    // Grid helper
-    const gridHelper = new THREE.GridHelper(1000, 20, 0x00f0ff, 0x333333);
-    gridHelper.material.opacity = 0.2;
-    gridHelper.material.transparent = true;
-    scene.add(gridHelper);
-
-    // Raycaster for tooltips
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-
-    container.addEventListener('mousemove', (event) => {
-        const rect = container.getBoundingClientRect();
-        mouse.x = ((event.clientX - rect.left) / container.clientWidth) * 2 - 1;
-        mouse.y = -((event.clientY - rect.top) / container.clientHeight) * 2 + 1;
-
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(organMeshes);
-
-        if (intersects.length > 0) {
-            const mesh = intersects[0].object;
-            tooltip.style.display = 'block';
-            tooltip.style.left = event.clientX + 'px';
-            tooltip.style.top = event.clientY + 'px';
-            tooltip.innerHTML = `<strong>${mesh.userData.name}</strong><br>ID: ${mesh.userData.id}<br>Routing: Spatiotemporal (0b11)`;
-        } else {
-            tooltip.style.display = 'none';
-        }
-    });
-
-    window.addEventListener('resize', () => {
-        camera.aspect = container.clientWidth / container.clientHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(container.clientWidth, container.clientHeight);
-    });
-
-    animate();
-    updateRender();
-}
-
-function buildMaterial(colorHex) {
-    return new THREE.MeshPhysicalMaterial({
-        color: colorHex,
-        metalness: 0.1,
-        roughness: 0.1,
-        transparent: true,
-        opacity: 0.6,
-        transmission: 0.5,
-        clearcoat: 1.0,
-        emissive: colorHex,
-        emissiveIntensity: 0.2
-    });
-}
-
-function updateRender() {
-    // Clear old meshes
-    organMeshes.forEach(mesh => {
-        scene.remove(mesh);
-        mesh.geometry.dispose();
-        mesh.material.dispose();
-    });
-    organMeshes = [];
-
-    // Check UI states
-    const activeSystems = {
-        nervous: document.getElementById('sys-nervous').checked,
-        cardio: document.getElementById('sys-cardio').checked,
-        respiratory: document.getElementById('sys-respiratory').checked,
-        urinary: document.getElementById('sys-urinary').checked
-    };
-
-    // Filter ontology graph
-    const renderTargets = ONTOLOGY_GRAPH["@graph"].filter(node => {
-        return node.sex === currentSex && activeSystems[node.system];
-    });
-
-    // Generate meshes
-    renderTargets.forEach(node => {
-        const geometry = new THREE.BoxGeometry(
-            node["ccf:x_dimension"], 
-            node["ccf:y_dimension"], 
-            node["ccf:z_dimension"]
-        );
-        
-        const material = buildMaterial(node.color);
-        const mesh = new THREE.Mesh(geometry, material);
-        
-        const edges = new THREE.EdgesGeometry(geometry);
-        const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: node.color, transparent: true, opacity: 0.8 }));
-        mesh.add(line);
-
-        mesh.position.set(
-            node["ccf:placement"]["ccf:x_translation"],
-            node["ccf:placement"]["ccf:y_translation"],
-            node["ccf:placement"]["ccf:z_translation"]
-        );
-
-        mesh.userData = { id: node["@id"], name: node.name };
-        scene.add(mesh);
-        organMeshes.push(mesh);
-    });
-}
-
-window.setSex = function(sex) {
-    currentSex = sex;
-    document.getElementById('btn-male').classList.toggle('active', sex === 'male');
-    document.getElementById('btn-female').classList.toggle('active', sex === 'female');
-    updateRender();
+// Select or deselect every part at once (respects the current search filter → visible parts only).
+window.setAllParts = (on) => {
+  const host = document.getElementById("parts-list");
+  if (!host) return;
+  host.querySelectorAll(".part-row").forEach((row) => {
+    if (row.style.display === "none") return; // only the visible (filtered) parts
+    const cb = row.querySelector("input");
+    const p = packParts.find((x) => (x.label || x.key).toLowerCase() === row.dataset.q);
+    if (!cb || !p) return;
+    cb.checked = on;
+    if (on) disabledParts.delete(p.key);
+    else disabledParts.add(p.key);
+  });
+  applyMixer();
 };
 
-function animate() {
-    requestAnimationFrame(animate);
-    controls.update();
-    
-    // Gentle floating animation
-    const time = Date.now() * 0.001;
-    organMeshes.forEach((mesh, i) => {
-        mesh.position.y += Math.sin(time + i) * 0.2;
-    });
+// Ambient σ field channel (off by default).
+window.onAmbient = (checked) => {
+  if (portal) portal.set_ambient_enabled(!!checked);
+};
 
-    renderer.render(scene, camera);
+function startLoop() {
+  const frame = (t) => {
+    const dt = lastT ? t - lastT : 16;
+    lastT = t;
+    try {
+      portal.tick(canvas, dt);
+    } catch (_) {}
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
 }
 
-// Initialize
-initThreeJS();
+function applyCam() {
+  try {
+    portal.set_camera(cam.yaw, cam.pitch, cam.zoom);
+  } catch (_) {}
+}
+
+function setupOrbit() {
+  applyCam();
+  let dragging = false;
+  let lx = 0;
+  let ly = 0;
+  canvas.addEventListener("pointerdown", (e) => {
+    dragging = true;
+    lx = e.clientX;
+    ly = e.clientY;
+    canvas.setPointerCapture?.(e.pointerId);
+  });
+  const stop = () => {
+    dragging = false;
+  };
+  canvas.addEventListener("pointerup", stop);
+  canvas.addEventListener("pointercancel", stop);
+  canvas.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    cam.yaw += (e.clientX - lx) * 0.008;
+    cam.pitch = Math.max(-1.4, Math.min(1.4, cam.pitch + (e.clientY - ly) * 0.008));
+    lx = e.clientX;
+    ly = e.clientY;
+    applyCam();
+  });
+  canvas.addEventListener(
+    "wheel",
+    (e) => {
+      e.preventDefault();
+      cam.zoom = Math.max(0.8, Math.min(6, cam.zoom * (1 + Math.sign(e.deltaY) * 0.1)));
+      applyCam();
+    },
+    { passive: false },
+  );
+}
+
+// Sidebar body selector (CCF XY / XX, or the complete BodyParts3D body). Mixer settings persist.
+window.setSex = (key) => {
+  if (key === currentBody || !portal) return;
+  currentBody = key;
+  document.getElementById("btn-male")?.classList.toggle("active", key === "male");
+  document.getElementById("btn-female")?.classList.toggle("active", key === "female");
+  document.getElementById("btn-complete")?.classList.toggle("active", key === "complete");
+  loadBody(key);
+};
+
+boot().catch((e) => setStatus("Boot failed: " + e, "error"));

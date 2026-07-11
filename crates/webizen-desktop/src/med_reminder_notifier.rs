@@ -82,11 +82,12 @@ fn slot_key(due: &DueMedReminder) -> String {
 
 pub fn poll_and_notify(app: &AppHandle) -> Result<usize, String> {
     let host_state = app.try_state::<HostApiState>().ok_or("HostApiState missing")?;
-    let guard = host_state.0.lock().map_err(|e| e.to_string())?;
-    let host = guard
-        .as_ref()
-        .ok_or_else(|| "Host API not initialized".to_string())?;
-    let due_list = host.list_due_med_reminders(15)?;
+    let due_list = host_state.0.execute_sync(|guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized".to_string())?;
+        host.list_due_med_reminders(15).map_err(|e| e.to_string())
+    })??;
     if due_list.is_empty() {
         return Ok(0);
     }

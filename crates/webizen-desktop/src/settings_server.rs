@@ -5,7 +5,7 @@
 
 use axum::{
     extract::{Path, Query, State},
-    http::{header, HeaderMap, StatusCode},
+    http::{header, HeaderMap, HeaderValue, Method, StatusCode},
     response::{
         sse::{Event, KeepAlive, Sse},
         IntoResponse, Response,
@@ -26,7 +26,10 @@ use std::sync::atomic::{AtomicU16, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::Manager;
-use tower_http::{cors::CorsLayer, services::ServeDir};
+use tower_http::{
+    cors::{AllowOrigin, CorsLayer},
+    services::ServeDir,
+};
 use webizen_render::scene_contract::SystemTelemetry;
 
 pub const DEFAULT_SETTINGS_PORT: u16 = 8080;
@@ -80,6 +83,7 @@ struct HealthResponse {
 #[derive(Serialize)]
 struct StatusResponse {
     settings_port: u16,
+    companion_port: u16,
     graph_daemon_port: u16,
     graph_daemon_reachable: bool,
     graph_engine_version: Option<String>,
@@ -88,6 +92,8 @@ struct StatusResponse {
     inference_backend: String,
     daemon_running_flag: bool,
     job_queue: JobQueueCounts,
+    services: Vec<crate::supervisor::ServiceSnapshot>,
+    operations: Vec<crate::supervisor::OperationSnapshot>,
 }
 
 #[derive(Serialize)]
@@ -207,22 +213,30 @@ pub fn spawn_settings_server(
     host_api: crate::companion_gateway::HostApiHandle,
 ) -> u16 {
     // Use the user-configured port from AgentConfig, or auto-find if set to 0
-    let configured_port = app_state.config.lock().unwrap().settings_port;
+    let configured_port = app_state
+        .config
+        .lock()
+        .map(|config| config.settings_port)
+        .unwrap_or(DEFAULT_SETTINGS_PORT);
     let port = if configured_port > 0 {
         // Try the user-specified port; if it's taken, fall back to auto-find
-        if std::net::TcpListener::bind(("0.0.0.0", configured_port)).is_ok() {
+        if std::net::TcpListener::bind(("127.0.0.1", configured_port)).is_ok() {
             configured_port
         } else {
             eprintln!(
                 "Settings port {} is in use, auto-finding an open port...",
                 configured_port
             );
-            find_open_port("0.0.0.0", DEFAULT_SETTINGS_PORT)
+            find_open_port("127.0.0.1", DEFAULT_SETTINGS_PORT)
         }
     } else {
-        find_open_port("0.0.0.0", DEFAULT_SETTINGS_PORT)
+        find_open_port("127.0.0.1", DEFAULT_SETTINGS_PORT)
     };
-    let storage_path = app_state.config.lock().unwrap().storage_path.clone();
+    let storage_path = app_state
+        .config
+        .lock()
+        .map(|config| config.storage_path.clone())
+        .unwrap_or_else(|_| qualia_client_core::state::dirs_default_path());
     CURRENT_SETTINGS_PORT.store(port, Ordering::Relaxed);
     crate::desktop_log::record("info", format!("settings server selected port {port}"));
     let initial_manifest = load_persisted_manifest(&storage_path);
@@ -234,11 +248,30 @@ pub fn spawn_settings_server(
         host_api: host_api.clone(),
     };
 
-    crate::companion_gateway::set_companion_listen_port(port);
+    let companion_port = find_open_port("0.0.0.0", port.saturating_add(1));
+    crate::companion_gateway::set_companion_listen_port(companion_port);
 
+    let companion_host_api = host_api;
     tauri::async_runtime::spawn(async move {
         if let Err(err) = run_settings_server(state, port).await {
-            eprintln!("Settings portal failed: {err}");
+            if let Some(supervisor) = APP_HANDLE
+                .get()
+                .and_then(|app| app.try_state::<crate::supervisor::DesktopSupervisor>())
+            {
+                supervisor.service_failed("settings_api", err.clone());
+            }
+            crate::desktop_log::record("error", format!("Settings portal failed: {err}"));
+        }
+    });
+    tauri::async_runtime::spawn(async move {
+        if let Err(err) = run_companion_server(companion_host_api, companion_port).await {
+            if let Some(supervisor) = APP_HANDLE
+                .get()
+                .and_then(|app| app.try_state::<crate::supervisor::DesktopSupervisor>())
+            {
+                supervisor.service_failed("companion_gateway", err.clone());
+            }
+            crate::desktop_log::record("error", format!("Companion gateway failed: {err}"));
         }
     });
 
@@ -274,6 +307,28 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
 
     let app = Router::new()
         .route("/", get(portal_index_handler))
+        .route("/dashboard", get(studio_index_handler))
+        .route("/qapps", get(studio_index_handler))
+        .route("/library", get(studio_index_handler))
+        .route("/tools", get(studio_index_handler))
+        .route("/nexus", get(studio_index_handler))
+        .route("/communications", get(studio_index_handler))
+        .route("/identity", get(studio_index_handler))
+        .route("/agency", get(studio_index_handler))
+        .route("/sanctuary", get(studio_index_handler))
+        .route("/work", get(studio_index_handler))
+        .route("/anatomy", get(studio_index_handler))
+        .route("/clinical", get(studio_index_handler))
+        .route("/chora", get(studio_index_handler))
+        .route("/context-studio", get(studio_index_handler))
+        .route("/qapp-studio", get(studio_index_handler))
+        .route("/qapp-studio/{app_id}", get(studio_index_handler))
+        .route("/10d-browser", get(studio_index_handler))
+        .route("/gpu-viewport", get(studio_index_handler))
+        .route("/render-preview", get(studio_index_handler))
+        .route("/scene-interaction", get(studio_index_handler))
+        .route("/about", get(studio_index_handler))
+        .route("/settings", get(studio_index_handler))
         .route("/design-studio", get(design_studio_handler))
         .route("/design-studio.html", get(design_studio_handler))
         .route("/health", get(health_handler))
@@ -311,14 +366,6 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/api/assets/recommend", post(assets_recommend_handler))
         .route("/api/assets/enqueue", post(assets_enqueue_handler))
         .route("/generate_pane", post(generate_pane_handler))
-        .route("/wellfair/companion/ingest", post(companion_ingest_route))
-        .route("/mobile/stream", get(companion_ws_route))
-        .route("/mobile/qr", get(companion_qr_route))
-        .route(
-            "/api/wellfair/companion/pairing",
-            get(companion_pairing_route),
-        )
-        .route("/api/invoke/{cmd}", post(invoke_command_handler))
         // Studio WASM build — browser-accessible Studio UI at /studio/
         .nest_service("/assets", ServeDir::new(studio_root.join("assets")))
         .nest_service(
@@ -326,23 +373,83 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
             ServeDir::new(studio_root).append_index_html_on_directories(true),
         )
         .fallback_service(ServeDir::new(static_root).append_index_html_on_directories(true))
-        .layer(CorsLayer::permissive())
+        .layer(control_plane_cors(port))
         .with_state(state);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let listener = tokio::net::TcpListener::bind(addr)
         .await
-        .map_err(|e| format!("bind 0.0.0.0:{port}: {e}"))?;
-    println!(
-        "Qualia settings + companion gateway on http://127.0.0.1:{port}/ (LAN ws://<host>:{port}/mobile/stream)"
-    );
+        .map_err(|e| format!("bind 127.0.0.1:{port}: {e}"))?;
+    if let Some(supervisor) = APP_HANDLE
+        .get()
+        .and_then(|app| app.try_state::<crate::supervisor::DesktopSupervisor>())
+    {
+        supervisor.service_ready(
+            "settings_api",
+            format!("loopback control plane ready on 127.0.0.1:{port}"),
+        );
+    }
     crate::desktop_log::record(
         "info",
-        format!("settings + companion gateway listening on http://127.0.0.1:{port}/"),
+        format!("settings control plane listening on http://127.0.0.1:{port}/"),
     );
     axum::serve(listener, app)
         .await
         .map_err(|e| format!("settings server: {e}"))
+}
+
+fn control_plane_cors(port: u16) -> CorsLayer {
+    let mut origins = vec![
+        HeaderValue::from_static("http://tauri.localhost"),
+        HeaderValue::from_static("https://tauri.localhost"),
+        HeaderValue::from_static("tauri://localhost"),
+    ];
+    for origin in [
+        format!("http://127.0.0.1:{port}"),
+        format!("http://localhost:{port}"),
+    ] {
+        if let Ok(value) = HeaderValue::from_str(&origin) {
+            origins.push(value);
+        }
+    }
+
+    CorsLayer::new()
+        .allow_origin(AllowOrigin::list(origins))
+        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+        .allow_headers([header::ACCEPT, header::CONTENT_TYPE])
+}
+
+async fn run_companion_server(
+    host_api: crate::companion_gateway::HostApiHandle,
+    port: u16,
+) -> Result<(), String> {
+    let app = Router::new()
+        .route("/mobile/stream", get(companion_ws_route))
+        .route("/wellfair/companion/ingest", post(crate::companion_gateway::companion_ingest_post))
+        .route("/mobile/qr", get(crate::companion_gateway::companion_qr_route))
+        .route("/api/wellfair/companion/pairing", get(crate::companion_gateway::companion_pairing_route))
+        .layer(axum::extract::DefaultBodyLimit::max(10 * 1024 * 1024))
+        .with_state(host_api);
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    let listener = tokio::net::TcpListener::bind(addr)
+        .await
+        .map_err(|e| format!("bind companion gateway 0.0.0.0:{port}: {e}"))?;
+    if let Some(supervisor) = APP_HANDLE
+        .get()
+        .and_then(|app| app.try_state::<crate::supervisor::DesktopSupervisor>())
+    {
+        supervisor.service_ready(
+            "companion_gateway",
+            format!("paired LAN gateway ready on port {port}"),
+        );
+    }
+    crate::desktop_log::record(
+        "info",
+        format!("paired companion gateway listening on ws://0.0.0.0:{port}/mobile/stream"),
+    );
+    axum::serve(listener, app)
+        .await
+        .map_err(|e| format!("companion gateway: {e}"))
 }
 
 async fn portal_index_handler(State(state): State<SettingsServerState>) -> Response {
@@ -356,6 +463,10 @@ async fn design_studio_handler(State(state): State<SettingsServerState>) -> Resp
         "text/html; charset=utf-8",
     )
     .await
+}
+
+async fn studio_index_handler() -> Response {
+    portal_file_response(&studio_wasm_dir(), "index.html", "text/html; charset=utf-8").await
 }
 
 async fn portal_file_response(
@@ -459,98 +570,6 @@ async fn shell_handler() -> Response {
         .unwrap()
 }
 
-/// Generic command invocation proxy — allows the native Studio (and any
-/// browser client) to call any Tauri command via REST.
-///
-/// POST /api/invoke/{cmd} with JSON body → command result as JSON
-///
-/// This dispatches through the webview's `on_message` IPC handler, which
-/// routes to the same `generate_handler!` registry that the webview uses.
-async fn invoke_command_handler(
-    _state: State<SettingsServerState>,
-    Path(cmd): Path<String>,
-    Json(body): Json<serde_json::Value>,
-) -> Response {
-    use tauri::Manager;
-
-    let app = APP_HANDLE.get();
-    let Some(handle) = app else {
-        return (
-            StatusCode::SERVICE_UNAVAILABLE,
-            "App handle not initialised",
-        )
-            .into_response();
-    };
-
-    // Get the main webview — commands are dispatched through it
-    let webview = match handle.get_webview_window("main") {
-        Some(w) => w,
-        None => {
-            return (StatusCode::SERVICE_UNAVAILABLE, "Main webview not found").into_response();
-        }
-    };
-
-    // Build the IPC request — use the actual invoke key from the app handle
-    let invoke_key = handle.invoke_key().to_string();
-    let url = if cfg!(windows) || cfg!(target_os = "android") {
-        "http://tauri.localhost"
-    } else {
-        "tauri://localhost"
-    };
-    let request = tauri::webview::InvokeRequest {
-        cmd: cmd.clone(),
-        body: tauri::ipc::InvokeBody::Json(body),
-        headers: Default::default(),
-        url: url
-            .parse()
-            .unwrap_or_else(|_| "http://tauri.localhost".parse().unwrap()),
-        invoke_key,
-        callback: tauri::ipc::CallbackFn(0),
-        error: tauri::ipc::CallbackFn(1),
-    };
-
-    // Dispatch through the webview's on_message handler.
-    // Use a tokio oneshot channel so we can await the result without blocking
-    // the async runtime — on_message schedules the callback on the event loop.
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    webview.on_message(
-        request,
-        Box::new(move |_window, _cmd, response, _callback, _error| {
-            let _ = tx.send(response);
-        }),
-    );
-
-    // Await the result with a 10-second timeout
-    let result = tokio::time::timeout(std::time::Duration::from_secs(10), rx).await;
-    match result {
-        Ok(Ok(tauri::ipc::InvokeResponse::Ok(body))) => {
-            let json = match body {
-                tauri::ipc::InvokeResponseBody::Json(s) => {
-                    serde_json::from_str::<serde_json::Value>(&s).unwrap_or(serde_json::Value::Null)
-                }
-                tauri::ipc::InvokeResponseBody::Raw(bytes) => {
-                    serde_json::from_slice::<serde_json::Value>(&bytes)
-                        .unwrap_or(serde_json::Value::Null)
-                }
-            };
-            Json(json).into_response()
-        }
-        Ok(Ok(tauri::ipc::InvokeResponse::Err(e))) => {
-            let err_val = e.0;
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(err_val)).into_response()
-        }
-        Ok(Err(_)) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Command '{cmd}' channel closed"),
-        )
-            .into_response(),
-        Err(_) => (
-            StatusCode::REQUEST_TIMEOUT,
-            format!("Command '{cmd}' timed out (10s)"),
-        )
-            .into_response(),
-    }
-}
 
 pub static APP_HANDLE: std::sync::OnceLock<tauri::AppHandle> = std::sync::OnceLock::new();
 
@@ -569,9 +588,15 @@ async fn status_handler(State(state): State<SettingsServerState>) -> Json<Status
             completed: 0,
             failed: 0,
         });
+    let (services, operations) = APP_HANDLE
+        .get()
+        .and_then(|app| app.try_state::<crate::supervisor::DesktopSupervisor>())
+        .map(|supervisor| (supervisor.services(), supervisor.operations()))
+        .unwrap_or_default();
 
     Json(StatusResponse {
         settings_port,
+        companion_port: crate::companion_gateway::companion_listen_port(),
         graph_daemon_port: graph_port,
         graph_daemon_reachable: reachable,
         graph_engine_version: engine_version,
@@ -585,6 +610,8 @@ async fn status_handler(State(state): State<SettingsServerState>) -> Json<Status
             completed: jobs.completed,
             failed: jobs.failed,
         },
+        services,
+        operations,
     })
 }
 
@@ -1083,37 +1110,8 @@ async fn assets_enqueue_handler(
 }
 
 async fn companion_ws_route(
-    State(state): State<SettingsServerState>,
+    State(host_api): State<crate::companion_gateway::HostApiHandle>,
     ws: axum::extract::ws::WebSocketUpgrade,
 ) -> impl IntoResponse {
-    crate::companion_gateway::companion_ws_upgrade(State(state.host_api), ws).await
-}
-
-async fn companion_ingest_route(
-    State(state): State<SettingsServerState>,
-    Json(bundle): Json<wellfare_core::companion_sync::CompanionHealthBundle>,
-) -> Result<Json<crate::companion_gateway::IngestAck>, (StatusCode, String)> {
-    let json =
-        serde_json::to_string(&bundle).map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
-    crate::companion_gateway::companion_ingest_post(State(state.host_api), json)
-        .await
-        .map_err(|(code, msg)| (code, msg))
-}
-
-async fn companion_pairing_route(
-    State(state): State<SettingsServerState>,
-) -> Json<crate::companion_gateway::CompanionPairingInfo> {
-    let port = *state.listen_port.lock().unwrap();
-    Json(crate::companion_gateway::companion_pairing_info(port))
-}
-
-async fn companion_qr_route(State(state): State<SettingsServerState>) -> impl IntoResponse {
-    let port = *state.listen_port.lock().unwrap();
-    let info = crate::companion_gateway::companion_pairing_info(port);
-    let svg = crate::companion_gateway::companion_qr_svg(&info.ws_url);
-    (
-        StatusCode::OK,
-        [(header::CONTENT_TYPE, "image/svg+xml")],
-        svg,
-    )
+    crate::companion_gateway::companion_ws_upgrade(State(host_api), ws).await
 }

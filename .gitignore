@@ -109,6 +109,12 @@ gemma-4-E4B-it-GGUF/
 
 # wasm-pack output (copied to docs/playground/ manually or by pages.yml)
 crates/qualia-core-db/pkg/
+# wasm-pack scratch out-dirs for the portal facade (local builds)
+crates/qualia-core-db/pkg-qualia/
+crates/qualia-core-db/target/portal-wasm/
+# Anatomy .qualia asset packs — build artifacts produced by the build_anatomy_pack
+# tool (at CI/build time); never committed (tens of MB of CC-BY-4.0 HRA meshes).
+docs/playground/*.qualia
 
 # Generated Rust API docs staged for Jekyll (CI only)
 docs/rustdoc/
@@ -201,3 +207,7 @@ benchmarks/data/wordnet_glosses.txt
 
 # 3D Anatomy asset cache (user-triggered CCF/HRA GLB + compiled .10d � ~200-290 MB, not for git)
 assets/ccf/
+
+# Desktop release build artifacts (produced by release-desktop.yml) — never commit
+/release-assets/
+/webizen-desktop-*.zip

@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use super::factor::{Effect, EvidenceTier, Factor, FactorKind, FactorTarget};
-use super::systems::body_system_by_label;
+use super::registry::SystemRegistry;
 use super::temporal::{FactorEvent, Kinetics};
 
 /// Where a knowledge datum came from. Imported offline; never a live fetch.
@@ -274,21 +274,28 @@ pub struct ImportResult {
 }
 
 /// Import the bundled `condition-map.json` (condition → primary system label). Each condition becomes a
-/// chronic clinical [`FactorKnowledge`] targeting its primary system. Unresolvable system labels are
-/// skipped with a warning rather than silently dropped.
-pub fn import_condition_map(json: &str, provenance: Provenance) -> Result<ImportResult, String> {
+/// chronic clinical [`FactorKnowledge`] targeting its primary system, resolved through `systems` — so a
+/// condition that maps to a **registered extension** system (beyond the seeded 17) resolves and is
+/// evaluated, not silently dropped. A label that resolves to no *registered* system is still skipped
+/// with a warning (you can't map to a system nobody has defined) — register it first. Pass
+/// [`super::registry::default_registry`] for just the seeded 17, or an extended registry.
+pub fn import_condition_map(
+    json: &str,
+    provenance: Provenance,
+    systems: &SystemRegistry,
+) -> Result<ImportResult, String> {
     let file: ConditionMapFile =
         serde_json::from_str(json).map_err(|e| format!("condition-map.json parse error: {e}"))?;
     let mut entries = Vec::new();
     let mut warnings = Vec::new();
     for (name, entry) in file.conditions {
-        match body_system_by_label(&entry.primary_system) {
+        match systems.get_by_label(&entry.primary_system) {
             Some(sys) => {
                 let key = format!("cond:{}", super::slugify(&name));
                 entries.push(
                     FactorKnowledge::new(key, FactorKind::Condition, name, provenance.clone())
                         .targeting(
-                            sys.id,
+                            sys.id.clone(),
                             Effect::Adverse,
                             EvidenceTier::ClinicalEvidence,
                             500,
@@ -298,7 +305,8 @@ pub fn import_condition_map(json: &str, provenance: Provenance) -> Result<Import
                 );
             }
             None => warnings.push(format!(
-                "condition '{name}': primary system '{}' did not resolve to a known body system",
+                "condition '{name}': primary system '{}' is not a registered body system (register it \
+                 to evaluate conditions that map to it)",
                 entry.primary_system
             )),
         }
@@ -491,12 +499,52 @@ mod tests {
             citation: None,
             imported_at: None,
         };
-        let res = import_condition_map(json, prov).unwrap();
+        let res = import_condition_map(json, prov, &SystemRegistry::seed()).unwrap();
         assert_eq!(res.entries.len(), 1);
         assert_eq!(res.entries[0].key, "cond:hypertension");
         assert_eq!(res.entries[0].targets[0].system_id, "circulatory");
         assert!(res.entries[0].integrity_ok());
         assert_eq!(res.warnings.len(), 1, "the imaginary system is reported, not silently dropped");
+    }
+
+    #[test]
+    fn condition_mapping_to_a_registered_extension_system_is_not_dropped() {
+        use super::super::registry::{SystemDef, SystemProvenance, SystemTier};
+        use super::super::model::SystemRepresentation;
+        // A person's record maps a condition to a system beyond the seeded 17. With only the seed it is
+        // warned + skipped; once that system is REGISTERED, the same import resolves and evaluates it —
+        // the honest "supports evaluation of it all" guarantee, made real for a new system.
+        let json = r#"{ "conditions": { "Plantar Fasciitis": { "primarySystem": "Fascial System" } } }"#;
+        let prov = Provenance {
+            source_id: "clinical-reference".into(),
+            source_title: "condition-map".into(),
+            citation: None,
+            imported_at: None,
+        };
+
+        // Seed only → the fascial system is unknown → skipped with a warning (nothing invented).
+        let seed_only = import_condition_map(json, prov.clone(), &SystemRegistry::seed()).unwrap();
+        assert!(seed_only.entries.is_empty());
+        assert_eq!(seed_only.warnings.len(), 1);
+
+        // Register the fascial system, then the same record resolves and is evaluated.
+        let mut reg = SystemRegistry::seed();
+        reg.register(SystemDef {
+            id: "fascial".into(),
+            label: "Fascial System".into(),
+            plain_label: "connective tissue".into(),
+            representation: SystemRepresentation::DistributedOverlay,
+            overlay_hosts: vec!["muscular".into(), "skeletal".into()],
+            color_rgba: [0.70, 0.78, 0.66, 1.0],
+            tier: SystemTier::CrossCutting,
+            parent: None,
+            relations: Vec::new(),
+            provenance: SystemProvenance::User,
+        });
+        let extended = import_condition_map(json, prov, &reg).unwrap();
+        assert_eq!(extended.entries.len(), 1, "the registered system now resolves");
+        assert!(extended.warnings.is_empty());
+        assert_eq!(extended.entries[0].targets[0].system_id, "fascial");
     }
 
     #[test]

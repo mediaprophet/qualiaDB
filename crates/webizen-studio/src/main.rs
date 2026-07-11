@@ -1,8 +1,8 @@
 #![allow(non_snake_case)]
 
-pub mod canvas_model;
 pub mod canvas_editor;
 pub mod canvas_graph;
+pub mod canvas_model;
 pub mod components;
 mod endpoints;
 mod pane_generator;
@@ -52,7 +52,10 @@ fn main() {
 pub enum Route {
     #[layout(AppLayout)]
     #[route("/")]
-    DashboardRoute {}, // Temporarily revert to test basic functionality
+    DashboardRoute {},
+
+    #[route("/dashboard")]
+    DashboardAliasRoute {},
 
     #[route("/anatomy-test")]
     AnatomyTestRoute {}, // Access via /anatomy-test route
@@ -126,6 +129,9 @@ pub enum Route {
     #[route("/chora")]
     ChoraRoute {},
 
+    #[route("/supervisor")]
+    SupervisorRoute {},
+
     #[route("/10d-browser")]
     TenDBrowserRoute {},
 
@@ -144,6 +150,11 @@ fn AnatomyTestRoute() -> Element {
 
 #[component]
 fn DashboardRoute() -> Element {
+    rsx! { components::dashboard::Dashboard {} }
+}
+
+#[component]
+fn DashboardAliasRoute() -> Element {
     rsx! { components::dashboard::Dashboard {} }
 }
 
@@ -350,6 +361,11 @@ fn LogsRoute() -> Element {
 }
 
 #[component]
+fn SupervisorRoute() -> Element {
+    rsx! { components::problems_pane::ProblemsPane {} }
+}
+
+#[component]
 fn AboutRoute() -> Element {
     rsx! { components::about_page::AboutPage {} }
 }
@@ -407,35 +423,6 @@ struct DesktopLogsResponse {
     entries: Vec<DesktopLogEntry>,
 }
 
-#[cfg(target_arch = "wasm32")]
-async fn fetch_desktop_status() -> Result<DesktopStatus, String> {
-    reqwest::get(crate::endpoints::status_url())
-        .await
-        .map_err(|e| e.to_string())?
-        .json::<DesktopStatus>()
-        .await
-        .map_err(|e| e.to_string())
-}
-
-#[cfg(target_arch = "wasm32")]
-async fn fetch_desktop_logs() -> Result<DesktopLogsResponse, String> {
-    reqwest::get(crate::endpoints::logs_url())
-        .await
-        .map_err(|e| e.to_string())?
-        .json::<DesktopLogsResponse>()
-        .await
-        .map_err(|e| e.to_string())
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-async fn fetch_desktop_status() -> Result<DesktopStatus, String> {
-    Ok(DesktopStatus::default())
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-async fn fetch_desktop_logs() -> Result<DesktopLogsResponse, String> {
-    Ok(DesktopLogsResponse::default())
-}
 
 fn status_chip(status: &DesktopStatus) -> (&'static str, &'static str) {
     if status.graph_daemon_reachable {
@@ -455,10 +442,11 @@ fn log_level_color(level: &str) -> &'static str {
     }
 }
 
-fn refresh_desktop_logs(
-    mut logs: Signal<DesktopLogsResponse>,
-    mut status: Signal<String>,
-) {
+async fn fetch_desktop_logs() -> Result<DesktopLogsResponse, String> {
+    Ok(DesktopLogsResponse::default())
+}
+
+fn refresh_desktop_logs(mut logs: Signal<DesktopLogsResponse>, mut status: Signal<String>) {
     spawn(async move {
         match fetch_desktop_logs().await {
             Ok(next) => {
@@ -563,12 +551,17 @@ fn AppLayout() -> Element {
         .get("accent")
         .cloned()
         .unwrap_or("#e07a5f".to_string());
+    let accent_glow = t
+        .tokens
+        .get("accent-glow")
+        .cloned()
+        .unwrap_or("rgba(224, 122, 95, 0.2)".to_string());
     let text = t
         .tokens
         .get("text")
         .cloned()
         .unwrap_or("#2d2824".to_string());
-    let text_muted = t
+    let _text_muted = t
         .tokens
         .get("text-muted")
         .cloned()
@@ -607,11 +600,14 @@ fn AppLayout() -> Element {
 
             wasm_bindgen_futures::spawn_local(async move {
                 let settings_nav = navigator.clone();
-                let settings_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                    let _ = settings_nav.push(Route::SettingsRoute {});
-                }));
+                let settings_callback =
+                    Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                        let _ = settings_nav.push(Route::SettingsRoute {});
+                    }));
 
-                match tauri_listen("open-settings", settings_callback.as_ref().unchecked_ref()).await {
+                match tauri_listen("open-settings", settings_callback.as_ref().unchecked_ref())
+                    .await
+                {
                     Ok(_unlisten) => {
                         settings_callback.forget();
                     }
@@ -644,6 +640,7 @@ fn AppLayout() -> Element {
                         "tools" => menu_nav.push(Route::ToolsRoute {}),
                         "sanctuary" => menu_nav.push(Route::SanctuaryRoute {}),
                         "logs" => menu_nav.push(Route::LogsRoute {}),
+                        "gpu-viewport" => menu_nav.push(Route::GpuViewportRoute {}),
                         _ => menu_nav.push(Route::DashboardRoute {}),
                     };
                 }));
@@ -660,9 +657,10 @@ fn AppLayout() -> Element {
                 }
 
                 let diagnostics_nav = navigator.clone();
-                let diagnostics_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                    let _ = diagnostics_nav.push(Route::ToolsRoute {});
-                }));
+                let diagnostics_callback =
+                    Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                        let _ = diagnostics_nav.push(Route::ToolsRoute {});
+                    }));
 
                 match tauri_listen(
                     "diagnostics-result",
@@ -685,7 +683,8 @@ fn AppLayout() -> Element {
                     let _ = health_nav.push(Route::HealthRoute {});
                 }));
 
-                match tauri_listen("open-med-reminders", med_callback.as_ref().unchecked_ref()).await
+                match tauri_listen("open-med-reminders", med_callback.as_ref().unchecked_ref())
+                    .await
                 {
                     Ok(_unlisten) => {
                         med_callback.forget();
@@ -720,9 +719,10 @@ fn AppLayout() -> Element {
                 }
 
                 let backup_nav = navigator.clone();
-                let backup_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                    let _ = backup_nav.push(Route::ToolsRoute {});
-                }));
+                let backup_callback =
+                    Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                        let _ = backup_nav.push(Route::ToolsRoute {});
+                    }));
 
                 match tauri_listen("open-backup", backup_callback.as_ref().unchecked_ref()).await {
                     Ok(_unlisten) => {
@@ -740,7 +740,8 @@ fn AppLayout() -> Element {
                     let _ = sync_nav.push(Route::ToolsRoute {});
                 }));
 
-                match tauri_listen("open-sync-inbox", sync_callback.as_ref().unchecked_ref()).await {
+                match tauri_listen("open-sync-inbox", sync_callback.as_ref().unchecked_ref()).await
+                {
                     Ok(_unlisten) => {
                         sync_callback.forget();
                     }
@@ -752,12 +753,16 @@ fn AppLayout() -> Element {
                 }
 
                 let import_nav = navigator.clone();
-                let import_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                    let _ = import_nav.push(Route::ToolsRoute {});
-                }));
+                let import_callback =
+                    Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                        let _ = import_nav.push(Route::ToolsRoute {});
+                    }));
 
-                match tauri_listen("shell-import-samsung", import_callback.as_ref().unchecked_ref())
-                    .await
+                match tauri_listen(
+                    "shell-import-samsung",
+                    import_callback.as_ref().unchecked_ref(),
+                )
+                .await
                 {
                     Ok(_unlisten) => {
                         import_callback.forget();
@@ -776,8 +781,11 @@ fn AppLayout() -> Element {
                         }
                     }));
 
-                match tauri_listen("shell-view-logs", view_logs_callback.as_ref().unchecked_ref())
-                    .await
+                match tauri_listen(
+                    "shell-view-logs",
+                    view_logs_callback.as_ref().unchecked_ref(),
+                )
+                .await
                 {
                     Ok(_unlisten) => {
                         view_logs_callback.forget();
@@ -789,41 +797,12 @@ fn AppLayout() -> Element {
                     }
                 }
 
-                let close_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                    web_sys::console::debug_1(&"close tab requested; Studio uses single-window routing".into());
-                }));
-                if tauri_listen("shell-close-tab", close_callback.as_ref().unchecked_ref())
-                    .await
-                    .is_ok()
-                {
-                    close_callback.forget();
-                }
-
-                let new_window_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                    web_sys::console::debug_1(&"new window requested; not implemented yet".into());
-                }));
-                if tauri_listen("shell-new-window", new_window_callback.as_ref().unchecked_ref())
-                    .await
-                    .is_ok()
-                {
-                    new_window_callback.forget();
-                }
-
-                let gpu_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                    web_sys::console::debug_1(&"GPU toggle requested from native menu".into());
-                }));
-                if tauri_listen("shell-toggle-gpu", gpu_callback.as_ref().unchecked_ref())
-                    .await
-                    .is_ok()
-                {
-                    gpu_callback.forget();
-                }
-
-                let reload_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                    if let Some(window) = web_sys::window() {
-                        let _ = window.location().reload();
-                    }
-                }));
+                let reload_callback =
+                    Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                        if let Some(window) = web_sys::window() {
+                            let _ = window.location().reload();
+                        }
+                    }));
                 if tauri_listen("shell-nav-reload", reload_callback.as_ref().unchecked_ref())
                     .await
                     .is_ok()
@@ -843,21 +822,26 @@ fn AppLayout() -> Element {
                     back_callback.forget();
                 }
 
-                let forward_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                    if let Some(window) = web_sys::window() {
-                        let _ = window.history().and_then(|history| history.forward());
-                    }
-                }));
-                if tauri_listen("shell-nav-forward", forward_callback.as_ref().unchecked_ref())
-                    .await
-                    .is_ok()
+                let forward_callback =
+                    Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                        if let Some(window) = web_sys::window() {
+                            let _ = window.history().and_then(|history| history.forward());
+                        }
+                    }));
+                if tauri_listen(
+                    "shell-nav-forward",
+                    forward_callback.as_ref().unchecked_ref(),
+                )
+                .await
+                .is_ok()
                 {
                     forward_callback.forget();
                 }
 
-                let zoom_in_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                    web_sys::console::debug_1(&"zoom in requested".into());
-                }));
+                let zoom_in_callback =
+                    Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                        web_sys::console::debug_1(&"zoom in requested".into());
+                    }));
                 if tauri_listen("shell-zoom-in", zoom_in_callback.as_ref().unchecked_ref())
                     .await
                     .is_ok()
@@ -865,9 +849,10 @@ fn AppLayout() -> Element {
                     zoom_in_callback.forget();
                 }
 
-                let zoom_out_callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
-                    web_sys::console::debug_1(&"zoom out requested".into());
-                }));
+                let zoom_out_callback =
+                    Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
+                        web_sys::console::debug_1(&"zoom out requested".into());
+                    }));
                 if tauri_listen("shell-zoom-out", zoom_out_callback.as_ref().unchecked_ref())
                     .await
                     .is_ok()
@@ -879,9 +864,12 @@ fn AppLayout() -> Element {
                     Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |_event| {
                         web_sys::console::debug_1(&"reset zoom requested".into());
                     }));
-                if tauri_listen("shell-reset-zoom", reset_zoom_callback.as_ref().unchecked_ref())
-                    .await
-                    .is_ok()
+                if tauri_listen(
+                    "shell-reset-zoom",
+                    reset_zoom_callback.as_ref().unchecked_ref(),
+                )
+                .await
+                .is_ok()
                 {
                     reset_zoom_callback.forget();
                 }
@@ -906,142 +894,120 @@ fn AppLayout() -> Element {
 
     rsx! {
         div {
-            style: "display: flex; flex-direction: row; height: 100vh; width: 100%; overflow: hidden;",
+            style: "display: flex; flex-direction: column; height: 100vh; width: 100%; overflow: hidden; background: transparent;",
 
-            // ── Left sidebar ──────────────────────────────────────────────
-            nav {
-                style: "width: 196px; flex-shrink: 0; height: 100vh; background: var(--qualia-surface); border-right: 1px solid var(--qualia-border); backdrop-filter: blur(20px); display: flex; flex-direction: column; padding: 1.25rem 0.75rem 1rem; gap: 0.2rem; transition: all 0.4s ease;",
+            // ── Top Title & TabBar (QTabs) ──────────────────────────────────────────────
+            div {
+                style: "display: flex; align-items: flex-end; padding: 0.6rem 1rem 0; background: rgba(10, 15, 30, 0.4); border-bottom: 1px solid var(--qualia-border); backdrop-filter: blur(24px); gap: 1rem; flex-shrink: 0;",
 
                 // Logo
-                div {
-                    style: "display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.6rem; margin-bottom: 1.25rem;",
-                    a {
-                        href: "/",
-                        style: "display: flex; align-items: center; gap: 0.6rem; text-decoration: none;",
-                        div {
-                            style: "width: 30px; height: 30px; border-radius: 8px; background: {accent}; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; color: white; flex-shrink: 0;",
-                            "⬡"
-                        }
-                        span { style: "font-weight: 700; font-size: 0.9rem; color: {text};", "Webizen" }
+                Link {
+                    to: Route::DashboardRoute {},
+                    style: "display: flex; align-items: center; gap: 0.5rem; text-decoration: none; padding-bottom: 0.6rem; cursor: pointer;",
+                    div {
+                        style: "width: 28px; height: 28px; border-radius: 8px; background: {accent}; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: white; flex-shrink: 0; box-shadow: 0 0 12px {accent_glow};",
+                        "⬡"
                     }
+                    span { style: "font-weight: 800; font-size: 1rem; color: {text}; letter-spacing: 0.5px;", "Webizen" }
                 }
 
-                // ── Personal Utility ──
-                div { style: "font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: {text_muted}; margin: 1rem 0.6rem 0.2rem; font-weight: 700; opacity: 0.7;", "Personal Utility" }
-                Link { to: Route::DashboardRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "grid-1x2", style: "font-size: 0.9rem;" } "Dashboard" }
-                Link { to: Route::NexusRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "people", style: "font-size: 0.9rem;" } "Nexus" }
-                Link { to: Route::CommunicationsRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "chat-dots", style: "font-size: 0.9rem;" } "Communications" }
-                Link { to: Route::LibraryRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "journal-richtext", style: "font-size: 0.9rem;" } "Library" }
+                // Tabs (Mocked as standard navigation links for now, styled as browser tabs)
+                div {
+                    style: "display: flex; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: none;",
+                    
+                    Link {
+                        to: Route::DashboardRoute {},
+                        class: "qtab",
+                        sl-icon { "name": "house", style: "font-size: 0.9rem;" }
+                        "Home"
+                    }
+                    
+                    if crate::endpoints::supports_browser_pane() {
+                        Link {
+                            to: Route::BrowserRoute {},
+                            class: "qtab",
+                            sl-icon { "name": "globe2", style: "font-size: 0.9rem;" }
+                            "Browser"
+                        }
+                    }
 
-                // ── Health & Body ──
-                div { style: "font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: {text_muted}; margin: 1rem 0.6rem 0.2rem; font-weight: 700; opacity: 0.7;", "Health & Body" }
-                Link { to: Route::HealthRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "heart-pulse", style: "font-size: 0.9rem;" } "Health & Wellbeing" }
-                Link { to: Route::AnatomyRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "person", style: "font-size: 0.9rem;" } "Anatomy" }
-                Link { to: Route::ClinicalRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "file-medical", style: "font-size: 0.9rem;" } "Clinical & Life" }
+                    Link {
+                        to: Route::HealthRoute {},
+                        class: "qtab",
+                        sl-icon { "name": "heart-pulse", style: "font-size: 0.9rem;" }
+                        "Health Vault"
+                    }
 
-                // ── Identity & Agency ──
-                div { style: "font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: {text_muted}; margin: 1rem 0.6rem 0.2rem; font-weight: 700; opacity: 0.7;", "Identity & Agency" }
-                Link { to: Route::IdentityRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "fingerprint", style: "font-size: 0.9rem;" } "Identity" }
-                Link { to: Route::AgencyRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "shield-check", style: "font-size: 0.9rem;" } "Agency & Safeguards" }
-                Link { to: Route::SanctuaryRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "safe", style: "font-size: 0.9rem;" } "Sanctuary" }
+                    Link {
+                        to: Route::AnatomyRoute {},
+                        class: "qtab",
+                        sl-icon { "name": "person", style: "font-size: 0.9rem;" }
+                        "Anatomy"
+                    }
 
-                // ── Work & Assets ──
-                div { style: "font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: {text_muted}; margin: 1rem 0.6rem 0.2rem; font-weight: 700; opacity: 0.7;", "Work & Assets" }
-                Link { to: Route::WorkRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "briefcase", style: "font-size: 0.9rem;" } "Work & Finance" }
-                
-                // ── System Tools ──
-                div { style: "font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: {text_muted}; margin: 1rem 0.6rem 0.2rem; font-weight: 700; opacity: 0.7;", "System Tools" }
-                Link { to: Route::ToolsRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "tools", style: "font-size: 0.9rem;" } "Settings & Sync" }
-                Link { to: Route::QAppsRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "grid", style: "font-size: 0.9rem;" } "QApps" }
-                if crate::endpoints::supports_browser_pane() {
-                    Link { to: Route::BrowserRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "globe2", style: "font-size: 0.9rem;" } "Browser" }
-                }
-                Link { to: Route::ChoraRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "globe-americas", style: "font-size: 0.9rem;" } "Chora" }
-                Link { to: Route::StudioRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "layers", style: "font-size: 0.9rem;" } "QApp Studio" }
-                Link { to: Route::ContextStudioRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "diagram-3", style: "font-size: 0.9rem;" } "Context Studio" }
-                Link { to: Route::TenDBrowserRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "box", style: "font-size: 0.9rem;" } "10D Browser" }
-                Link { to: Route::GpuViewportRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "gpu-card", style: "font-size: 0.9rem;" } "GPU Viewport" }
-                Link { to: Route::AnatomyTestRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "activity", style: "font-size: 0.9rem;" } "Anatomy Test" }
-                Link { to: Route::WellfairRoute {}, class: "nav-item", style: "color: {text_muted};", sl-icon { "name": "heart-pulse", style: "font-size: 0.9rem;" } "Wellfair (Legacy)" }
-                Link {
-                    to: Route::RenderPreviewRoute {},
-                    class: "nav-item",
-                    style: "color: {text_muted};",
-                    sl-icon { "name": "eye", style: "font-size: 0.9rem;" }
-                    "Render Preview"
-                }
-                Link {
-                    to: Route::SceneInteractionRoute {},
-                    class: "nav-item",
-                    style: "color: {text_muted};",
-                    sl-icon { "name": "cursor", style: "font-size: 0.9rem;" }
-                    "Scene Interaction"
-                }
+                    Link {
+                        to: Route::NexusRoute {},
+                        class: "qtab",
+                        sl-icon { "name": "people", style: "font-size: 0.9rem;" }
+                        "Social Nexus"
+                    }
 
-                div { style: "flex: 1;" }
+                    Link {
+                        to: Route::QAppsRoute {},
+                        class: "qtab",
+                        sl-icon { "name": "grid", style: "font-size: 0.9rem;" }
+                        "QApps"
+                    }
+                    
+                    Link {
+                        to: Route::ToolsRoute {},
+                        class: "qtab",
+                        sl-icon { "name": "gear", style: "font-size: 0.9rem;" }
+                        "Settings"
+                    }
 
-                Link {
-                    to: Route::SettingsRoute {},
-                    class: "nav-item",
-                    style: "color: {text_muted};",
-                    sl-icon { "name": "gear", style: "font-size: 0.9rem;" }
-                    "Settings"
-                }
-                Link {
-                    to: Route::LogsRoute {},
-                    class: "nav-item",
-                    style: "color: {text_muted};",
-                    sl-icon { "name": "terminal", style: "font-size: 0.9rem;" }
-                    "Logs"
-                }
-                Link {
-                    to: Route::AboutRoute {},
-                    class: "nav-item",
-                    style: "color: {text_muted};",
-                    sl-icon { "name": "person-circle", style: "font-size: 0.9rem;" }
-                    "About"
+                    Link {
+                        to: Route::SupervisorRoute {},
+                        class: "qtab",
+                        sl-icon { "name": "activity", style: "font-size: 0.9rem;" }
+                        "Operations"
+                    }
                 }
             }
 
-            // ── Right: topbar + content ───────────────────────────────────
+            // ── Omnibox Command Palette ───────────────────────────────────
             div {
-                style: "flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; min-width: 0;",
+                style: "padding: 0.75rem 1.5rem; background: var(--qualia-surface); border-bottom: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(16px); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 10;",
 
-                // Top bar
+                // Unified Address / Command Bar
                 div {
-                    style: "padding: 0.75rem 1.5rem; background: var(--qualia-surface); border-bottom: 1px solid var(--qualia-border); backdrop-filter: blur(16px); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; transition: all 0.4s ease;",
-
-                    div {
-                        style: "display: flex; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.05); border: 1px solid var(--qualia-border); border-radius: 10px; padding: 0.45rem 0.875rem; width: 240px;",
-                        sl-icon { "name": "search", style: "font-size: 0.8rem; color: var(--qualia-text-muted);" }
-                        input {
-                            r#type: "text",
-                            placeholder: "Search...",
-                            style: "background: transparent; border: none; outline: none; color: var(--qualia-text); font-size: 0.825rem; width: 100%; font-family: 'Inter', sans-serif;",
-                        }
+                    style: "display: flex; align-items: center; gap: 0.8rem; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0.6rem 1.2rem; flex: 1; max-width: 800px; margin: 0 auto; transition: border-color 0.2s ease, box-shadow 0.2s ease;",
+                    sl-icon { "name": "search", style: "font-size: 1rem; color: {accent};" }
+                    input {
+                        r#type: "text",
+                        placeholder: "Search the web, query the semantic graph, or chat with your agent...",
+                        style: "background: transparent; border: none; outline: none; color: var(--qualia-text); font-size: 0.95rem; width: 100%; font-family: 'Inter', sans-serif;",
                     }
-
-                    div {
-                        style: "display: flex; align-items: center; gap: 0.875rem;",
-                        div {
-                            style: "display: flex; align-items: center; gap: 0.45rem; border: 1px solid var(--qualia-border); background: rgba(128,128,128,0.08); border-radius: 999px; padding: 0.35rem 0.65rem;",
-                            div { style: "width: 7px; height: 7px; border-radius: 50%; background: {host_color}; box-shadow: 0 0 8px {host_color};" }
-                            span { style: "font-size: 0.735rem; color: var(--qualia-text); font-weight: 650;", "{host_label}" }
-                        }
-                        span { style: "font-size: 0.735rem; color: var(--qualia-text-muted); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;", "{backend_label}" }
-                        span { style: "font-size: 0.735rem; color: var(--qualia-text-muted);", "{jobs_label}" }
-                        div {
-                            style: "width: 30px; height: 30px; border-radius: 50%; background: {accent}; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: white; cursor: pointer;",
-                            "W"
-                        }
-                    }
+                    sl-icon { "name": "mic", style: "font-size: 1.1rem; color: var(--qualia-text-muted); cursor: pointer;" }
                 }
 
-                // Route content
+                // Telemetry / Status Widgets
                 div {
-                    style: "flex: 1; overflow: hidden; display: flex;",
-                    Outlet::<Route> {}
+                    style: "display: flex; align-items: center; gap: 1rem; position: absolute; right: 1.5rem;",
+                    div {
+                        style: "display: flex; align-items: center; gap: 0.5rem; border: 1px solid var(--qualia-border); background: rgba(255,255,255,0.03); border-radius: 999px; padding: 0.4rem 0.8rem;",
+                        div { style: "width: 8px; height: 8px; border-radius: 50%; background: {host_color}; box-shadow: 0 0 10px {host_color};" }
+                        span { style: "font-size: 0.75rem; color: var(--qualia-text); font-weight: 600;", "{host_label}" }
+                    }
+                    span { style: "font-size: 0.75rem; color: var(--qualia-text-muted); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;", "{backend_label}" }
+                    span { style: "font-size: 0.75rem; color: var(--qualia-text-muted); background: rgba(255,255,255,0.05); padding: 0.3rem 0.6rem; border-radius: 6px;", "{jobs_label}" }
                 }
+            }
+
+            // Route content (The active QTab)
+            div {
+                style: "flex: 1; overflow: hidden; display: flex; position: relative;",
+                Outlet::<Route> {}
             }
         }
     }
@@ -1141,6 +1107,39 @@ fn App() -> Element {
                 cursor: pointer;
             }}
             .nav-item:hover {{ background: rgba(128,128,128,0.10); }}
+            
+            .qtab {{
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 16px;
+                background: rgba(255,255,255,0.03);
+                border: 1px solid transparent;
+                border-radius: 10px 10px 0 0;
+                color: var(--qualia-text-muted);
+                font-size: 0.85rem;
+                font-weight: 600;
+                text-decoration: none;
+                transition: all 0.2s ease;
+                cursor: pointer;
+                border-bottom: none;
+                position: relative;
+                margin-bottom: -1px;
+            }}
+            .qtab:hover {{
+                background: rgba(255,255,255,0.06);
+                color: var(--qualia-text);
+            }}
+            /* Active tab styling could be done via router matching, but for now we provide the hover/active base */
+            .qtab[aria-current=page] {{
+                background: var(--qualia-surface);
+                color: var(--qualia-accent);
+                border-color: var(--qualia-border);
+                border-bottom-color: var(--qualia-surface);
+                z-index: 2;
+                box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+            }}
+
             .panel-card {{ transition: box-shadow 0.2s ease, transform 0.2s ease; }}
             .panel-card:hover {{ transform: translateY(-2px); box-shadow: 0 20px 48px rgba(0,0,0,0.13) !important; }}
             input[type=color] {{

@@ -211,7 +211,7 @@ pub fn compile_asset(
     asset_uri: &str,
     source_format: &str,
 ) -> Result<CompiledAsset, Compile10dError> {
-    compile_organ_asset(source_bytes, hint, asset_uri, source_format, None, None)
+    compile_organ_asset(source_bytes, hint, asset_uri, source_format, None, None, None)
 }
 
 /// Like [`compile_asset`] but also binds the compiled asset to a 3D-body organ: its `body_system`
@@ -227,9 +227,13 @@ pub fn compile_organ_asset(
     source_format: &str,
     body_system: Option<&str>,
     anatomy_model: Option<&str>,
+    provenance: Option<&ProvenanceSidecar>,
 ) -> Result<CompiledAsset, Compile10dError> {
     let mesh = import_asset(source_bytes, hint).map_err(Compile10dError::Import)?;
-    let container_10d = compile_mesh_to_10d(&mesh)?;
+    // When provenance is supplied it is sealed into the `.10d` as a ProvenanceSidecar section, so the
+    // asset is attested (the renderer's fail-closed governance gate treats an unattested asset with the
+    // default-refuse disposition as REFUSE).
+    let container_10d = compile_mesh_to_10d_with_provenance(&mesh, provenance)?;
     let compiled = compiled_digest(&container_10d);
     let source = crc32c(source_bytes);
     let (quins, lexicon) = mesh_to_nquins_with_meta(
@@ -459,6 +463,7 @@ mod tests {
             "obj",
             Some("respiratory"),
             Some("male"),
+            None,
         )
         .unwrap();
         // Same geometry → identical container + digests; only the manifest gains the anatomy facts.
@@ -474,7 +479,7 @@ mod tests {
         assert!(vals.contains(&"respiratory"), "bodySystem fact present");
         assert!(vals.contains(&"male"), "anatomyModel fact present");
         // None/None path is exactly compile_asset — no phantom facts.
-        let none = compile_organ_asset(TRI_OBJ, Some("obj"), "urn:asset:organ", "obj", None, None)
+        let none = compile_organ_asset(TRI_OBJ, Some("obj"), "urn:asset:organ", "obj", None, None, None)
             .unwrap();
         assert_eq!(none.quins.len(), plain.quins.len());
     }
