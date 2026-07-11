@@ -37,9 +37,10 @@ function Find-SignedArtifact {
       continue
     }
     $name = $file.Name.ToLowerInvariant()
+    $haystack = "$($file.FullName) $($file.Name)".ToLowerInvariant()
     $matchedPlatform = $false
     foreach ($pattern in $NamePatterns) {
-      if ($name -match $pattern) {
+      if ($haystack -match $pattern) {
         $matchedPlatform = $true
         break
       }
@@ -91,7 +92,7 @@ if ($null -ne $windowsArtifact) {
 $macArtifact = Find-SignedArtifact `
   -Files $files `
   -Platform "darwin-aarch64" `
-  -NamePatterns @("darwin", "macos", "aarch64", "apple", "metal") `
+  -NamePatterns @("darwin", "macos", "aarch64", "apple", "metal", "app\.tar\.gz") `
   -PreferredSuffixes @(".app.tar.gz", ".tar.gz", ".zip", ".dmg")
 if ($null -ne $macArtifact) {
   $selected += $macArtifact
