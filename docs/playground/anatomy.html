@@ -218,7 +218,13 @@
                 <button id="btn-female" class="toggle-btn" onclick="setSex('female')">Female (VHF)</button>
             </div>
             <button id="btn-complete" class="toggle-btn" style="margin-top:8px;width:100%;border:1px solid rgba(255,255,255,0.15);border-radius:6px;" onclick="setSex('complete')">Complete — every muscle, bone, gland &amp; nerve</button>
-            <div style="font-size:0.68rem;color:var(--text-dim);margin-top:6px;line-height:1.35;">The complete BodyParts3D body (CC BY-SA) is a large download fetched from the release, rendered in its own coordinate space.</div>
+            <div id="complete-loader" style="display:none;margin-top:8px;font-size:0.7rem;color:var(--text-dim);line-height:1.4;">
+                The complete BodyParts3D body (CC BY-SA) is a large pack. Browsers can't fetch GitHub-release assets cross-origin, so:
+                <div style="margin-top:6px;"><a id="complete-dl" href="#" rel="noopener" download>↓ Download anatomy-bodyparts3d.qualia</a></div>
+                <div style="margin-top:6px;">then load the file:</div>
+                <input id="complete-file" type="file" accept=".qualia" onchange="onCompleteFile(this.files[0])" style="margin-top:4px;width:100%;font-size:0.68rem;color:var(--text-dim);" />
+                <div style="margin-top:6px;">The desktop app loads it directly — no download step.</div>
+            </div>
         </div>
 
         <div class="control-group">

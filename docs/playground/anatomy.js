@@ -80,8 +80,10 @@ function sourcesForBody() {
 }
 
 // The BodyParts3D complete pack is large (exceeds GitHub Pages' 100 MB/file limit), so it ships as a
-// GitHub Release asset and is fetched on demand. `latest/download` always resolves the newest release.
-const RELEASE_BASE = "https://github.com/mediaprophet/qualiaDB/releases/latest/download";
+// GitHub Release asset. NOTE: release assets are NOT fetchable cross-origin (no CORS) — this URL is used
+// for a DOWNLOAD link (navigation bypasses CORS), then the user loads the local file. Pinned to the tag
+// the packs are uploaded to.
+const RELEASE_BASE = "https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24";
 function bodyUrl(key) {
   return key === "complete" ? `${RELEASE_BASE}/anatomy-bodyparts3d.qualia` : `anatomy-${key}.qualia`;
 }
@@ -182,33 +184,10 @@ function bodyLabel(key) {
   return key === "complete" ? "complete (BodyParts3D)" : key === "male" ? "XY" : "XX";
 }
 
-async function loadBody(key) {
-  // The provenance link + attribution are per-body — refresh them for the current body.
-  renderAttribution();
-  setStatus(
-    key === "complete"
-      ? "Fetching the complete BodyParts3D body from the release — this is a large download…"
-      : `Fetching ${bodyLabel(key)} reference body…`,
-  );
-  let resp;
-  try {
-    resp = await fetch(bodyUrl(key), { cache: "no-store" });
-  } catch (e) {
-    setStatus("Body pack fetch failed: " + e, "error");
-    return;
-  }
-  if (!resp.ok) {
-    setStatus(
-      key === "complete"
-        ? `Complete body not found (HTTP ${resp.status}). The BodyParts3D pack ships as a GitHub Release asset — cut a release to produce it.`
-        : `Body pack not found (HTTP ${resp.status}). The .qualia packs ship as build artifacts — produce them with the build_anatomy_pack tool.`,
-      "error",
-    );
-    return;
-  }
-  bodyBytes = new Uint8Array(await resp.arrayBuffer());
-  // Read the pack's OWN manifest → the mixer + parts list are built from what this body actually
-  // contains (dynamic), not a hardcoded list. Falls back to the fixed taxonomy if the renderer is older.
+// Render a body from its raw .qualia bytes (shared by the same-origin fetch and the local-file load).
+// Reads the pack's OWN manifest → the mixer + parts list are DYNAMIC (built from what the body contains).
+function renderPackBytes(bytes) {
+  bodyBytes = bytes;
   try {
     packParts = typeof portal.pack_manifest === "function" ? Array.from(portal.pack_manifest(bodyBytes) || []) : [];
   } catch (e) {
@@ -219,6 +198,66 @@ async function loadBody(key) {
   buildPartsList();
   applyMixer();
 }
+
+// Show/hide the complete-body loader (download link + local-file picker) and point the link at the pack.
+function showCompleteLoader(show) {
+  const el = document.getElementById("complete-loader");
+  if (el) el.style.display = show ? "block" : "none";
+  const dl = document.getElementById("complete-dl");
+  if (dl) dl.href = `${RELEASE_BASE}/anatomy-bodyparts3d.qualia`;
+}
+
+async function loadBody(key) {
+  // The provenance link + attribution are per-body — refresh them for the current body.
+  renderAttribution();
+  showCompleteLoader(key === "complete");
+
+  if (key === "complete") {
+    // GitHub Release assets are NOT fetchable cross-origin (no Access-Control-Allow-Origin), and the
+    // pack is far larger than GitHub Pages' 100 MB/file limit — so the browser can't fetch it. The web
+    // path is: download the pack (a navigation download bypasses CORS), then load the local file below.
+    // The native desktop app reads the pack directly — no CORS, no download step.
+    setStatus(
+      "The complete body is a large pack. Browsers can't fetch GitHub-release assets cross-origin, so download it below and load the file — or open it in the desktop app, which loads it directly.",
+      "error",
+    );
+    return;
+  }
+
+  // CCF male/female ship same-origin on Pages, so a normal fetch works.
+  setStatus(`Fetching ${bodyLabel(key)} reference body…`);
+  let resp;
+  try {
+    resp = await fetch(bodyUrl(key), { cache: "no-store" });
+  } catch (e) {
+    setStatus("Body pack fetch failed: " + e, "error");
+    return;
+  }
+  if (!resp.ok) {
+    setStatus(
+      `Body pack not found (HTTP ${resp.status}). The .qualia packs ship as build artifacts — produce them with the build_anatomy_pack tool.`,
+      "error",
+    );
+    return;
+  }
+  renderPackBytes(new Uint8Array(await resp.arrayBuffer()));
+}
+
+// Load the complete body from a .qualia file the user downloaded (local read — no CORS).
+window.onCompleteFile = (file) => {
+  if (!file || !portal) return;
+  setStatus(`Loading ${file.name} (${(file.size / 1e6).toFixed(0)} MB)…`);
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      renderPackBytes(new Uint8Array(reader.result));
+    } catch (e) {
+      setStatus("Render error: " + e, "error");
+    }
+  };
+  reader.onerror = () => setStatus("Could not read the file.", "error");
+  reader.readAsArrayBuffer(file);
+};
 
 // Re-render the cached body with the current mixer settings.
 function applyMixer() {
