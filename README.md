@@ -49,7 +49,7 @@ DID-based identity with Verifiable Credentials, SocialWebNet peer-to-peer networ
 
 **Live playground (no install):** [mediaprophet.github.io/qualiaDB/playground/](https://mediaprophet.github.io/qualiaDB/playground/index.html)
 
-**Desktop app (Flutter — Windows, macOS, Linux):** Download from [Releases](https://github.com/mediaprophet/qualiaDB/releases).
+**Desktop app (Webizen — Windows, macOS, Linux; Tauri + Dioxus, native GPU dispatch, signed installer/updater):** Download from [Releases](https://github.com/mediaprophet/qualiaDB/releases).
 
 **CLI:**
 ```bash
@@ -65,13 +65,15 @@ Full build instructions, CLI reference, and benchmark guide: [docs/manuals/DEVEL
 
 ## Current status
 
-**v0.0.18-dev** — active development, pre-release.
+**0.0.24 (active branch)** — active development, pre-release.
 
-This branch includes: in-process LLM inference with GPU dispatch; **browser-native WASM + WebGPU LLM decode at ~5.9 tok/s** (SmolLM2-360M, coherent, zero-heap hot loop) booting from a self-contained P64 AOT container cached in OPFS; SPARQL 1.1 + RDF-Star engine; full deontic / epistemic / LTL / paraconsistent modality stack; SHACL biosciences, chemistry, and biomedical extensions; DID Verifiable Credentials; SocialWebNet DNSSEC peer bootstrap; W3C Solid export; 539+ tests.
+The engine includes: native in-process LLM inference with GPU dispatch (Vulkan/DX12/Metal via `wgpu`, no Ollama/llama.cpp/Python at runtime); **browser-native WASM + WebGPU LLM decode at ~5.9 tok/s** (SmolLM2-360M, coherent, zero-heap hot loop) booting from a self-contained P64 AOT container cached in OPFS; SPARQL 1.1 + RDF-Star engine; full deontic / epistemic / LTL / paraconsistent modality stack plus a growing library of further logic modalities; SHACL biosciences, chemistry, and biomedical extensions; DID Verifiable Credentials; SocialWebNet DNSSEC peer bootstrap; W3C Solid/LDP interoperability; a signed desktop installer and updater; and 2,000+ automated tests as of the most recent count in [CHANGELOG.md](CHANGELOG.md) (growing — treat that file as the source of truth for the current figure).
 
-The browser engine is pure Rust→WASM (no Ollama / llama.cpp / Python). Live demos: [`online-llm-demo.html`](https://mediaprophet.github.io/qualiaDB/online-llm-demo.html) · [`llmdemo`](https://mediaprophet.github.io/qualiaDB/llmdemo/). See [`WASM_LLM_ROADMAP.md`](WASM_LLM_ROADMAP.md).
+Also shipping, still maturing: **WellFair**, a personal health & welfare vault with 3D anatomy visualization, clinical/medication/finance/guardianship records, and cooperative work coordination for people supporting each other — built on the same fiduciary and provenance guarantees as the rest of the engine, not a bolted-on app.
 
-Known gaps before v0.1.0: ML-DSA-65 (FIPS 204) signing is now **real** (via `fips204`), but VC-issuance wiring and multi-Quin storage of the large signatures remain; full ZK proof backend (currently commitment-only, not real zk-SNARKs). See [CRYPTO_IMPLEMENTATION_PLAN.md](CRYPTO_IMPLEMENTATION_PLAN.md), [docs/CRYPTO_STATUS_2026-06-15.md](docs/CRYPTO_STATUS_2026-06-15.md), and [TODO.md](TODO.md).
+The browser LLM engine is pure Rust→WASM. Live demos: [`online-llm-demo.html`](https://mediaprophet.github.io/qualiaDB/online-llm-demo.html) · [`llmdemo`](https://mediaprophet.github.io/qualiaDB/llmdemo/).
+
+Known gaps before v0.1.0: ML-DSA-65 (FIPS 204) signing is **real** (via `fips204`), but VC-issuance wiring and multi-Quin storage of the large signatures remain. Zero-knowledge proofs are split across two paths: a real Groth16 zk-SNARK backend (`crypto/zk_proofs.rs`, verified) exists alongside an older commitment-only placeholder in the general cryptographic library — the two should not be conflated, and callers need to be pointed at the real one. A handful of CLI subcommands (`llm test` / `llm validate` / `llm benchmark`) are still honest placeholders rather than working checks. See [CHANGELOG.md](CHANGELOG.md) for the full, dated history of what's landed.
 
 Full release history: [CHANGELOG.md](CHANGELOG.md).
 
@@ -82,10 +84,10 @@ Full release history: [CHANGELOG.md](CHANGELOG.md).
 | Document | Purpose |
 |---|---|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Full technical architecture — Quin bit layout, all modalities, inference stack, every module |
+| [docs/manuals/qualia_db_functionality_manual.md](docs/manuals/qualia_db_functionality_manual.md) | Per-crate functionality manual — what each part of the workspace actually does today |
 | [docs/manuals/DEVELOPMENT.md](docs/manuals/DEVELOPMENT.md) | Build, test, benchmark, CLI reference, cross-compilation |
 | [docs/release-targets.md](docs/release-targets.md) | Feature status across all five release targets (Browser, Mobile PWA, CLI, Desktop, Mobile Native) |
-| [docs/manuals/qapp-vault-developer-guide.md](docs/manuals/qapp-vault-developer-guide.md) | Build qapps for the Webizen Qapp Vault |
-| [docs/manuals/flutter-api-reference.md](docs/manuals/flutter-api-reference.md) | Flutter FRB API reference |
+| [docs/manuals/qapps_specification.md](docs/manuals/qapps_specification.md) | QApp manifest spec — build apps for the Webizen platform |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
 | [AGENTS.md](AGENTS.md) / [CLAUDE.md](CLAUDE.md) | AI agent orientation for contributors |
 
