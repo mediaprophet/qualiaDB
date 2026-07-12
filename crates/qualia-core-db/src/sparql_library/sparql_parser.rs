@@ -250,7 +250,94 @@ fn parse_where_clause(
         .trim_start_matches('{')
         .trim();
     let inner = inner.trim_end_matches('}').trim();
-    parse_triple_patterns(inner, ctx, prefixes)
+
+    // Pull FILTER(...) clauses out of the group before the triple-pattern split
+    // (their `(...)` and operators would otherwise confuse the `.`-splitter).
+    // The real expression grammar lives in `sparql_grammar`; the executor already
+    // evaluates the resulting `Pattern::Filter`. (Nested groups / OPTIONAL / UNION
+    // are the next grammar slice; this handles a flat WHERE with FILTERs.)
+    let (triples_text, filter_exprs) = extract_filters(inner)?;
+
+    let mut root = parse_triple_patterns(&triples_text, ctx, prefixes)?;
+    for expr_src in filter_exprs {
+        let toks = crate::sparql_library::sparql_grammar::tokenize(&expr_src)?;
+        let expr_id = crate::sparql_library::sparql_grammar::parse_expression(&toks, ctx, prefixes)?;
+        root = ctx.alloc_pattern(Pattern::Filter {
+            pattern: root,
+            expression: expr_id,
+        })?;
+    }
+    Ok(root)
+}
+
+/// Split a (brace-stripped) group's text into its triple-pattern text and the
+/// source text of each `FILTER ( … )` expression, matching balanced parentheses.
+/// Case-insensitive on the `FILTER` keyword; requires a word boundary so an IRI
+/// or literal containing "filter" is not mistaken for the keyword.
+fn extract_filters(inner: &str) -> Result<(String, Vec<String>), String> {
+    let bytes = inner.as_bytes();
+    let n = bytes.len();
+    let mut triples: Vec<u8> = Vec::with_capacity(n);
+    let mut filters: Vec<String> = Vec::new();
+    let mut i = 0usize;
+    while i < n {
+        if keyword_at(bytes, i, b"FILTER") {
+            let mut j = i + 6;
+            while j < n && (bytes[j] as char).is_ascii_whitespace() {
+                j += 1;
+            }
+            if j < n && bytes[j] == b'(' {
+                let start = j + 1;
+                let mut depth = 1i32;
+                let mut k = start;
+                while k < n {
+                    match bytes[k] {
+                        b'(' => depth += 1,
+                        b')' => {
+                            depth -= 1;
+                            if depth == 0 {
+                                break;
+                            }
+                        }
+                        _ => {}
+                    }
+                    k += 1;
+                }
+                if depth != 0 {
+                    return Err("unbalanced parentheses in FILTER".to_string());
+                }
+                filters.push(inner[start..k].to_string());
+                i = k + 1; // skip past the closing ')'
+                continue;
+            }
+        }
+        triples.push(bytes[i]);
+        i += 1;
+    }
+    let triples_text =
+        String::from_utf8(triples).map_err(|_| "non-utf8 in WHERE clause".to_string())?;
+    Ok((triples_text, filters))
+}
+
+/// True if the ASCII keyword `kw` (case-insensitive) starts at byte `i` with a
+/// word boundary on both sides.
+fn keyword_at(bytes: &[u8], i: usize, kw: &[u8]) -> bool {
+    if i + kw.len() > bytes.len() {
+        return false;
+    }
+    for (k, &kb) in kw.iter().enumerate() {
+        if !bytes[i + k].eq_ignore_ascii_case(&kb) {
+            return false;
+        }
+    }
+    let before_ok = i == 0 || !is_word_byte_ascii(bytes[i - 1]);
+    let after = i + kw.len();
+    let after_ok = after >= bytes.len() || !is_word_byte_ascii(bytes[after]);
+    before_ok && after_ok
+}
+
+fn is_word_byte_ascii(b: u8) -> bool {
+    b.is_ascii_alphanumeric() || b == b'_'
 }
 
 fn parse_triple_patterns(

@@ -238,6 +238,23 @@ mod tests {
     }
 
     #[test]
+    fn sparql_filter_numeric_prunes_rows() {
+        // End-to-end: a real FILTER clause is now parsed (grammar slice 1) and
+        // evaluated by the existing executor. alice(age 20) passes `?o >= 18`,
+        // bob(age 10) is pruned.
+        let s_alice = q_hash("alice");
+        let s_bob = q_hash("bob");
+        let pred = crate::lexicon::generate_60bit_token(b"age");
+        let graph = vec![
+            synthetic_binding_quin(s_alice, pred, 20),
+            synthetic_binding_quin(s_bob, pred, 10),
+        ];
+        let query = "SELECT ?s WHERE { ?s <age> ?o . FILTER(?o >= 18) }";
+        let (_, results) = execute_sparql_on_graph(query, &graph).expect("filter query");
+        assert_eq!(results.len(), 1, "FILTER should prune bob (age 10)");
+    }
+
+    #[test]
     fn sparql_star_annotation_query() {
         let s = q_hash("alice");
         let p = q_hash("knows");
