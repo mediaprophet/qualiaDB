@@ -1749,18 +1749,48 @@ pub fn evaluate_modality(args: &[u8]) -> Result<String, McpSystemError> {
             Ok(json!({"modality": "ltl", "result": ok}).to_string())
         }
         "asp" => {
-            use crate::modalities::asp::enumerate_stable_models;
-            let mut base = NQuin::default();
-            if let Some(b) = v.get("base") {
-                base = parse_quin(b)?;
+            // Real answer-set (stable-model) semantics via the Gelfond-Lifschitz
+            // reduct, NOT the legacy context-bifurcation heuristic. Input is a
+            // normal logic program: `atoms` (the Herbrand base as u64 atom ids)
+            // and `rules`, each `{ "head": u64, "pos": [u64..], "neg": [u64..] }`
+            // encoding `head :- pos.., not neg..`. `head == 0` encodes an
+            // integrity constraint `:- pos.., not neg..`.
+            use crate::modalities::asp::{compute_answer_sets, AspRule, ASP_MAX_ATOMS};
+            let u64_array = |val: Option<&serde_json::Value>| -> Vec<u64> {
+                val.and_then(|a| a.as_array())
+                    .map(|arr| arr.iter().filter_map(|x| x.as_u64()).collect())
+                    .unwrap_or_default()
+            };
+            let atoms = u64_array(v.get("atoms"));
+            let mut rules: Vec<AspRule> = Vec::new();
+            if let Some(arr) = v.get("rules").and_then(|r| r.as_array()) {
+                for r in arr {
+                    let head = r.get("head").and_then(|h| h.as_u64()).unwrap_or(0);
+                    let pos = u64_array(r.get("pos"));
+                    let neg = u64_array(r.get("neg"));
+                    rules.push(AspRule::new(head, &pos, &neg));
+                }
             }
-            let rules = parse_quin_slice(&v, "rules").unwrap_or_default();
-            let mut worlds = [0u64; 8];
-            let n = enumerate_stable_models(&base, &rules, &mut worlds);
+            let mut out = [0u64; 64];
+            let count = compute_answer_sets(&atoms, &rules, &mut out);
+            // Decode each answer-set bitmask (bit i ⇔ atoms[i] present) into the
+            // atom ids it contains. Bounded to ASP_MAX_ATOMS to avoid shift OOB.
+            let answer_sets: Vec<Vec<u64>> = out[..count]
+                .iter()
+                .map(|&mask| {
+                    atoms
+                        .iter()
+                        .take(ASP_MAX_ATOMS)
+                        .enumerate()
+                        .filter(|(i, _)| mask & (1u64 << i) != 0)
+                        .map(|(_, &a)| a)
+                        .collect()
+                })
+                .collect();
             Ok(json!({
                 "modality": "asp",
-                "stable_model_count": n,
-                "world_contexts": &worlds[..n]
+                "answer_set_count": count,
+                "answer_sets": answer_sets
             })
             .to_string())
         }
@@ -2232,5 +2262,55 @@ mod tests {
         let parsed: Value = serde_json::from_str(&out).expect("json");
         let r = parsed["result"].as_array().unwrap();
         assert!((r[2].as_f64().unwrap() - 1.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn asp_arm_computes_real_answer_sets() {
+        // Classic even loop: permitted :- not forbidden; forbidden :- not permitted.
+        // Real Gelfond-Lifschitz semantics yield exactly TWO answer sets
+        // ({permitted}, {forbidden}); the legacy context-bifurcation heuristic
+        // this arm used to call could not.
+        let args = json!({
+            "modality": "asp",
+            "atoms": [1u64, 2u64],
+            "rules": [
+                {"head": 1u64, "neg": [2u64]},
+                {"head": 2u64, "neg": [1u64]}
+            ]
+        });
+        let out = evaluate_modality(args.to_string().as_bytes()).expect("ok");
+        let parsed: Value = serde_json::from_str(&out).expect("json");
+        assert_eq!(parsed["answer_set_count"], 2, "even loop has 2 answer sets: {out}");
+        let mut singles: Vec<u64> = parsed["answer_sets"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|s| {
+                let a = s.as_array().unwrap();
+                assert_eq!(a.len(), 1, "each answer set is a singleton");
+                a[0].as_u64().unwrap()
+            })
+            .collect();
+        singles.sort();
+        assert_eq!(singles, vec![1, 2]);
+    }
+
+    #[test]
+    fn asp_arm_integrity_constraint_prunes() {
+        // Add `:- forbidden` (head == 0): forbids any model containing atom 2,
+        // pruning the {forbidden} answer set and leaving only {permitted}.
+        let args = json!({
+            "modality": "asp",
+            "atoms": [1u64, 2u64],
+            "rules": [
+                {"head": 1u64, "neg": [2u64]},
+                {"head": 2u64, "neg": [1u64]},
+                {"head": 0u64, "pos": [2u64]}
+            ]
+        });
+        let out = evaluate_modality(args.to_string().as_bytes()).expect("ok");
+        let parsed: Value = serde_json::from_str(&out).expect("json");
+        assert_eq!(parsed["answer_set_count"], 1, "constraint prunes to 1: {out}");
+        assert_eq!(parsed["answer_sets"][0][0], 1u64, "only {{permitted}} survives");
     }
 }
