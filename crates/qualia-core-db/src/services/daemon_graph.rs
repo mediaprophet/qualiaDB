@@ -264,6 +264,14 @@ pub fn init_daemon_graph(storage_path: &str) {
 
 /// Initialise or refresh the daemon graph with explicit seeding policy.
 pub fn init_daemon_graph_with_options(storage_path: &str, opts: InitGraphOptions) {
+    // A durable snapshot (written after each committed SPARQL Update) is the
+    // authoritative last full state — prefer it so updates survive a restart.
+    if let Ok(n) = load_graph_snapshot(storage_path) {
+        if n > 0 {
+            bump_graph_revision();
+            return;
+        }
+    }
     let lock = graph_lock();
     if let Ok(mut guard) = lock.write() {
         guard.clear();
@@ -364,6 +372,83 @@ pub fn apply_sparql_update(
         deleted: deleted.len() as u64,
         persisted,
     })
+}
+
+/// Path of the durable full-state snapshot under a storage directory.
+fn snapshot_path(storage_path: &str) -> std::path::PathBuf {
+    Path::new(storage_path).join("daemon_graph.snapshot")
+}
+
+/// Write the current full graph state to a flat-quin snapshot file. Called after
+/// a persisted SPARQL Update so the change survives a restart. Returns the quin
+/// count written.
+pub fn persist_graph_snapshot(storage_path: &str) -> std::io::Result<usize> {
+    let lock = graph_lock();
+    let guard = lock
+        .read()
+        .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "daemon graph poisoned"))?;
+    let bytes: &[u8] = bytemuck::cast_slice(guard.as_slice());
+    let path = snapshot_path(storage_path);
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    std::fs::write(&path, bytes)?;
+    Ok(guard.len())
+}
+
+/// Load the durable snapshot into the graph, if present. Returns the quin count
+/// loaded (0 if there is no snapshot). This is the authoritative last full state
+/// (defaults + index + committed updates) when it exists.
+pub fn load_graph_snapshot(storage_path: &str) -> std::io::Result<usize> {
+    let path = snapshot_path(storage_path);
+    if !path.exists() {
+        return Ok(0);
+    }
+    let bytes = std::fs::read(&path)?;
+    if bytes.is_empty() {
+        return Ok(0);
+    }
+    replace_graph_from_flat_bytes(&bytes)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+}
+
+/// Apply a SPARQL Update **durably and signed**: each net change is stamped and
+/// signed to the WAL (the append-only audit trail) with the caller's **real**
+/// ed25519 key, then the full graph state is snapshotted for restart durability.
+/// This is the production write path; the key must come from the identity /
+/// key-vault layer — never a placeholder.
+#[allow(clippy::too_many_arguments)]
+pub fn apply_sparql_update_durable(
+    op: &crate::sparql_library::sparql_update::UpdateOperation,
+    ctx: &crate::sparql_ast::SparqlQueryContext,
+    signing_key: &ed25519_dalek::SigningKey,
+    principal_did_hash: u64,
+    agent_did_hash: u64,
+    wal_path: &str,
+    storage_path: &str,
+) -> Result<UpdateOutcome, String> {
+    let mut wal = crate::wal::WriteAheadLog::open(wal_path).map_err(|e| e.to_string())?;
+    let mut suspended = crate::crdt::SuspendedTransactionQueue::new();
+    let mut cb = |inserted: &[NQuin], deleted: &[NQuin]| -> Result<(), String> {
+        // Record every mutation (insert and delete) as a signed WAL entry — the
+        // tamper-evident audit trail. Restart state comes from the snapshot.
+        for q in inserted.iter().chain(deleted.iter()) {
+            let mut qm = *q;
+            crate::wal::commit_semantic_mutation(
+                &mut wal,
+                &mut qm,
+                principal_did_hash,
+                agent_did_hash,
+                signing_key,
+                &mut suspended,
+            )
+            .map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    };
+    let outcome = apply_sparql_update(op, ctx, Some(&mut cb))?;
+    persist_graph_snapshot(storage_path).map_err(|e| e.to_string())?;
+    Ok(outcome)
 }
 
 /// Extend the live graph with ontology quins from `qualia-core-db::ontology_loader`.
@@ -560,6 +645,37 @@ mod tests {
         assert!(!out.persisted, "no signer callback → ephemeral, not persisted");
         assert_eq!(graph_quin_count(), before + 1);
         assert!(graph_revision() > rev_before, "revision bumped for subscribers");
+        reset_graph_for_test();
+    }
+
+    #[test]
+    #[serial]
+    fn update_snapshot_survives_reinit() {
+        reset_graph_for_test();
+        let dir = std::env::temp_dir().join(format!("qdb_snap_{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&dir);
+        let storage = dir.to_string_lossy().to_string();
+        let _ = std::fs::remove_file(snapshot_path(&storage));
+
+        // Apply an update and snapshot the full state.
+        let (ctx, op) =
+            parse_upd("INSERT DATA { <http://q.test/durable> <http://q.test/p> <http://q.test/o> }");
+        apply_sparql_update(&op, &ctx, None).unwrap();
+        let count = graph_quin_count();
+        assert!(count > 0);
+        persist_graph_snapshot(&storage).unwrap();
+
+        // Wipe the in-memory graph, then re-init — the snapshot must restore it.
+        reset_graph_for_test();
+        assert_eq!(graph_quin_count(), 0);
+        init_daemon_graph_with_options(&storage, InitGraphOptions::default());
+        assert_eq!(
+            graph_quin_count(),
+            count,
+            "the durable snapshot must restore the updated graph on restart"
+        );
+
+        let _ = std::fs::remove_file(snapshot_path(&storage));
         reset_graph_for_test();
     }
 
