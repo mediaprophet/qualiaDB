@@ -190,6 +190,31 @@ pub trait DataAdapter {
         Ok(())
     }
 
+    /// Parse a fetched response body into provenance `NQuin`s (title / license /
+    /// created / source / lat / long, hashed with the same `generate_60bit_token`
+    /// the SPARQL layer uses, so the results are queryable). Adapters that can
+    /// interpret their response format override this — GBIF, OSM/Overpass, STAC,
+    /// OGC 3D Tiles and SPARQL-results do — and the default yields none. This is
+    /// how a fetched response becomes graph data rather than being discarded.
+    fn parse_response(&self, _body: &str) -> Result<Vec<crate::NQuin>, String> {
+        Ok(Vec::new())
+    }
+
+    /// Native fetch that returns the parsed provenance `NQuin`s: build the
+    /// consent-gated request, execute it, and run `parse_response` on the body.
+    /// A caller can then route the quins into the graph. (WASM callers fetch via
+    /// `fetch_region_async` and call `parse_response` on the returned body.)
+    fn fetch_region_features(
+        &self,
+        bbox: (f64, f64, f64, f64),
+        time_range: (u64, u64),
+        registry: &NetworkDisclosureRegistry,
+    ) -> Result<Vec<crate::NQuin>, String> {
+        let request = self.build_fetch_request(bbox, time_range, registry)?;
+        let body = execute_http_request_text(&request)?;
+        self.parse_response(&body)
+    }
+
     /// Primary egress endpoint for disclosure checks and fetch reports.
     fn primary_endpoint(&self) -> &str;
 
