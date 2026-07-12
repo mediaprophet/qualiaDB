@@ -436,7 +436,11 @@ pub fn logistic_mle_into(
             Ok(()) => {
                 let mut delta_norm = 0.0;
                 for i in 0..n_reg {
-                    coef_out[i] += g_copy[i];
+                    // Newton-Raphson maximizing the log-likelihood: β_new = β − H⁻¹∇L.
+                    // `g_copy` is H⁻¹∇L (H = ∇²L = −X'WX, negative definite), so the
+                    // ascent step subtracts it. (Adding it, as before, descended away
+                    // from the MLE — coefficients moved the wrong direction.)
+                    coef_out[i] -= g_copy[i];
                     delta_norm += g_copy[i] * g_copy[i];
                 }
                 let delta_norm = delta_norm.sqrt();
@@ -572,7 +576,11 @@ mod tests {
 
     #[test]
     fn logistic_mle_rejects_non_binary() {
-        let x = [1.0, 1.0, 1.0, 2.0];
+        // 4 observations × 2 regressors → the design needs 8 values. (The prior
+        // test passed only 4, so it tripped the BufferTooSmall guard before ever
+        // reaching the binary-y check it meant to exercise.) With a correctly
+        // sized design, the non-binary y=0.5 is what triggers InvalidInput.
+        let x = [1.0, 0.0, 1.0, 1.0, 1.0, 2.0, 1.0, 3.0];
         let y = [0.0, 0.5, 1.0, 1.0];
         let mut coef = [0.0f64; 2];
         let err = logistic_mle_into(&x, &y, 4, 2, 100, 1e-8, &mut coef).unwrap_err();

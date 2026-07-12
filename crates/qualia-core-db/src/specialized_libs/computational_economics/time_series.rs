@@ -751,8 +751,12 @@ mod tests {
 
     #[test]
     fn autocorrelation_white_noise_near_zero() {
-        // Series with no lag-1 correlation (mean 0) -> acf exactly 0.
-        let values = [1.0, 0.0, -1.0, 0.0, 1.0, 0.0];
+        // A genuinely zero-mean series with no lag-1 correlation: deviations
+        // [1,0,0,-1] give numerator Σ dₜ·dₜ₊₁ = 0 exactly, so acf₁ = 0.
+        // (The prior series [1,0,-1,0,1,0] was NOT mean-zero — its mean is 1/6
+        // and its true acf₁ ≈ −0.0098, so the old assertion was mathematically
+        // wrong, not a code fault.)
+        let values = [1.0, 0.0, 0.0, -1.0];
         let acf = autocorrelation(&values, 1).unwrap();
         assert!(acf.abs() < 1e-12);
     }

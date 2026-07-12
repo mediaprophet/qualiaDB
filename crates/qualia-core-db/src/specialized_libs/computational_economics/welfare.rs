@@ -457,6 +457,10 @@ pub fn net_present_value(
     }
     let one_plus_r = 1.0 + discount_rate;
     let mut npv = 0.0f64;
+    // Documented convention: NPV = Σ_{t=0}^{n-1} (B_t − C_t)/(1+r)^t, so period 0
+    // is undiscounted ((1+r)^0 = 1) and each later period divides by another
+    // (1+r). (The prior code *multiplied* by (1+r) each period, computing a
+    // future value — the opposite of a present value.)
     let mut discount = 1.0f64; // (1+r)^0
     for t in 0..n_periods {
         let b = benefits[t];
@@ -465,7 +469,7 @@ pub fn net_present_value(
             return Err(WelfareError::NonFinite);
         }
         npv += (b - c) * discount;
-        discount *= one_plus_r;
+        discount /= one_plus_r;
     }
     if !npv.is_finite() {
         return Err(WelfareError::NonFinite);
@@ -928,7 +932,10 @@ mod tests {
         let costs = [5.0, 5.0];
         let r = 0.1;
         let npv = net_present_value(&benefits, &costs, r, 2).unwrap();
-        let expected = 5.0 / 1.1 + 5.0 / 1.21;
+        // Documented convention (period 0 undiscounted): 5/(1.1)^0 + 5/(1.1)^1.
+        // (The prior expected value 5/1.1 + 5/1.21 discounted period 0 too, which
+        // contradicts both the doc comment and `npv_period_zero_not_discounted`.)
+        let expected = 5.0 + 5.0 / 1.1;
         assert!(approx(npv, expected));
     }
 

@@ -59,9 +59,17 @@ pub fn eigenvector_centrality_into(
     let mut next = [0.0f64; MAX_NODES];
     let mut last_residual = f64::INFINITY;
     for round in 0..max_iterations {
-        // next = A * out
+        // next = (A + I) * out.
+        //
+        // The identity shift is essential for bipartite graphs (chains, trees,
+        // rings of even length): there the spectrum is symmetric about 0, so the
+        // dominant eigenvalue +λ is tied in magnitude by −λ and plain power
+        // iteration on A oscillates and never converges. (A + I) shifts every
+        // eigenvalue up by 1, making the principal eigenvalue uniquely largest in
+        // magnitude while leaving the eigenVECTORS — hence the centralities —
+        // unchanged. This is the standard remedy and does not alter the ranking.
         for i in 0..n {
-            let mut acc = 0.0;
+            let mut acc = out[i];
             for j in 0..n {
                 acc += adjacency[i * n + j] * out[j];
             }

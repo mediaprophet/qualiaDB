@@ -6690,9 +6690,11 @@ mod tests {
         let data = b"Hello, World!";
         let signature = library.sign_data("test_key_private", data).unwrap();
 
-        // Verify signature
+        // Verify signature. `generate_mldsa_key_pair` stores the keys under
+        // `<id>_private` and `<id>_public`; verification takes the public key id
+        // (the prior test passed the bare `test_key`, which is not a stored key).
         let is_valid = library
-            .verify_signature("test_key", &signature.result, data)
+            .verify_signature("test_key_public", &signature.result, data)
             .unwrap();
         assert!(is_valid.result);
 

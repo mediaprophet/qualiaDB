@@ -400,8 +400,13 @@ pub fn compute_narrative_divergence(
         sum_diff.agency += d_agn;
         sum_diff.temporal += d_tmp;
 
-        // Cost is positive when fantasy overstated wellbeing (led to worse decisions)
-        let local = (d_phys + d_psy + d_soc + d_agn + d_tmp).max(0.0);
+        // Cost is positive when fantasy overstated wellbeing (led to worse
+        // decisions): that is when fantasy > factual, i.e. (fantasy − factual) > 0,
+        // which is −(d) since d = factual − fantasy. (The prior code summed d
+        // itself, so an overstating fantasy gave a negative sum → clamped to 0 →
+        // no cost, the opposite of the intent.)
+        let overstatement = -(d_phys + d_psy + d_soc + d_agn + d_tmp);
+        let local = overstatement.max(0.0);
         cost += local;
     }
     Ok(NarrativeDivergence {
