@@ -437,7 +437,7 @@ fn all_points(g: &Geometry) -> Vec<Coord> {
 
 fn segments(g: &Geometry) -> Vec<(Coord, Coord)> {
     let mut out = Vec::new();
-    let mut ring_segs = |cs: &[Coord], out: &mut Vec<(Coord, Coord)>| {
+    let ring_segs = |cs: &[Coord], out: &mut Vec<(Coord, Coord)>| {
         for w in cs.windows(2) {
             out.push((w[0], w[1]));
         }

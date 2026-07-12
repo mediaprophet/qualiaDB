@@ -13,7 +13,9 @@
 pub mod expr;
 pub mod pattern;
 pub mod tokenizer;
+pub mod update;
 
 pub use expr::parse_expression;
 pub use pattern::parse_where_group;
 pub use tokenizer::{tokenize, Token};
+pub use update::{is_update, parse_update};
