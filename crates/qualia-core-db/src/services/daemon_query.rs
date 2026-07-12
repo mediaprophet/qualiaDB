@@ -238,6 +238,19 @@ mod tests {
     }
 
     #[test]
+    fn sparql_local_service_executes_inner() {
+        // End-to-end: `SERVICE <local:…> { … }` (grammar slice 3) runs the inner
+        // pattern against the local graph via the executor's Service operator.
+        let s = q_hash("alice");
+        let p = crate::lexicon::generate_60bit_token(b"knows");
+        let o = q_hash("bob");
+        let graph = vec![synthetic_binding_quin(s, p, o)];
+        let query = "SELECT ?s WHERE { SERVICE <local:graph> { ?s <knows> ?o } }";
+        let (_, results) = execute_sparql_on_graph(query, &graph).expect("service query");
+        assert_eq!(results.len(), 1, "local SERVICE should run the inner pattern");
+    }
+
+    #[test]
     fn sparql_union_combines_both_branches() {
         // End-to-end: `{ … } UNION { … }` now parses (grammar slice 2) and the
         // executor's Union operator returns rows from both branches.

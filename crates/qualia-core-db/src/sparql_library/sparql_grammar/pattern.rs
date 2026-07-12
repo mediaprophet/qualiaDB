@@ -64,6 +64,7 @@ enum ChildSpec {
     Optional(PatternId),
     Union(PatternId, PatternId),
     Minus(PatternId),
+    Service { endpoint: u64, inner: PatternId },
 }
 
 struct PatternParser<'a> {
@@ -141,6 +142,16 @@ impl<'a> PatternParser<'a> {
                     self.pos += 1;
                     let inner = self.parse_group()?;
                     specs.push(ChildSpec::Minus(inner));
+                }
+                Some(Token::Word(w)) if w.eq_ignore_ascii_case("SERVICE") => {
+                    self.pos += 1;
+                    // Optional SILENT keyword.
+                    if self.peek_word_ci("SILENT") {
+                        self.pos += 1;
+                    }
+                    let endpoint = self.service_endpoint()?;
+                    let inner = self.parse_group()?;
+                    specs.push(ChildSpec::Service { endpoint, inner });
                 }
                 Some(Token::Word(w)) if w.eq_ignore_ascii_case("FILTER") => {
                     self.pos += 1;
@@ -223,6 +234,12 @@ impl<'a> PatternParser<'a> {
                 ChildSpec::Minus(inner) => {
                     self.ctx.alloc_pattern(Pattern::Minus { inner })?;
                 }
+                ChildSpec::Service { endpoint, inner } => {
+                    self.ctx.alloc_pattern(Pattern::Service {
+                        endpoint_did_id: endpoint,
+                        inner_pattern: inner,
+                    })?;
+                }
             }
         }
         if len == 1 {
@@ -278,6 +295,48 @@ impl<'a> PatternParser<'a> {
         }
         let o = self.term()?;
         Ok(ChildSpec::Triple { s, p, o })
+    }
+
+    /// Resolve a SERVICE endpoint. Local endpoints (`local:` / `qualia:` / a
+    /// `did:` IRI) get the executor's `0x8` DID prefix so its `Service` operator
+    /// runs the inner pattern against the local graph. A remote `http(s)`
+    /// endpoint is rejected with an honest error — real network egress is a
+    /// governance decision and is intentionally not wired (see the plan). A
+    /// variable endpoint (dynamic SERVICE) is likewise deferred.
+    fn service_endpoint(&mut self) -> Result<u64, String> {
+        const DID_PREFIX: u64 = 0x8000_0000_0000_0000;
+        let tok = self
+            .tokens
+            .get(self.pos)
+            .ok_or_else(|| "expected SERVICE endpoint".to_string())?
+            .clone();
+        self.pos += 1;
+        let iri = match tok {
+            Token::Iri(iri) => iri,
+            Token::Prefixed(prefix, local) => match self.prefixes.get(&prefix) {
+                Some(base) => format!("{base}{local}"),
+                None => format!("{prefix}:{local}"),
+            },
+            Token::Var(_) => {
+                return Err(
+                    "dynamic SERVICE endpoint (a variable) is not supported yet".to_string(),
+                )
+            }
+            other => return Err(format!("invalid SERVICE endpoint token: {other:?}")),
+        };
+        let lower = iri.to_ascii_lowercase();
+        if lower.starts_with("local:") || lower.starts_with("qualia:") || lower.starts_with("did:")
+        {
+            Ok(crate::lexicon::generate_60bit_token(iri.as_bytes()) | DID_PREFIX)
+        } else if lower.starts_with("http://") || lower.starts_with("https://") {
+            Err(format!(
+                "remote SERVICE endpoint <{iri}> is not supported — network egress is \
+                 governance-gated; use a local: or qualia: endpoint"
+            ))
+        } else {
+            // Unknown scheme: treat as a local/opaque endpoint (local execution).
+            Ok(crate::lexicon::generate_60bit_token(iri.as_bytes()) | DID_PREFIX)
+        }
     }
 
     fn parse_star_triple(&mut self) -> Result<ChildSpec, String> {
@@ -437,6 +496,24 @@ mod tests {
     fn parses_plain_bgp() {
         let (_ctx, pat) = root_pattern("{ ?s ?p ?o . ?a ?b ?c }");
         assert!(matches!(pat, Pattern::Group { len: 2, .. }));
+    }
+
+    #[test]
+    fn parses_local_service() {
+        let (_ctx, pat) = root_pattern("{ SERVICE <local:health> { ?s ?p ?o } }");
+        assert!(matches!(pat, Pattern::Service { .. }), "got {pat:?}");
+    }
+
+    #[test]
+    fn remote_service_is_rejected() {
+        let mut ctx = SparqlQueryContext::new();
+        let err = parse_where_group(
+            "{ SERVICE <https://dbpedia.org/sparql> { ?s ?p ?o } }",
+            &mut ctx,
+            &HashMap::new(),
+        )
+        .unwrap_err();
+        assert!(err.contains("egress"), "got {err}");
     }
 
     #[test]
