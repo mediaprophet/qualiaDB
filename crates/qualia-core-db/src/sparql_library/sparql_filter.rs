@@ -218,8 +218,11 @@ impl ExpressionEvaluator {
                 predicate,
                 object,
             } => {
-                // Evaluate embedded triple - return hash representation
-                let triple_hash = *subject ^ *predicate ^ *object;
+                // Evaluate embedded triple → the SAME virtual id the ingest path
+                // mints (generate_embedded_triple_id: FNV-1a over the 24 LE bytes
+                // of [s,p,o] | TAG_EMBEDDED). A prior `s ^ p ^ o` XOR never matched
+                // a stored quoted triple (order-insensitive, no tag bit).
+                let triple_hash = crate::lexicon::generate_embedded_triple_id(*subject, *predicate, *object);
                 Ok(EvalResult::Numeric(triple_hash))
             }
         }
@@ -503,8 +506,10 @@ impl ExpressionEvaluator {
                             EvalResult::Numeric(p),
                             EvalResult::Numeric(o),
                         ) => {
-                            // Return a hash representing the embedded triple
-                            let triple_hash = s ^ p ^ o; // Simplified hash
+                            // Mint the SAME virtual id the ingest path uses, so a
+                            // TRIPLE(...)-constructed id matches a stored quoted
+                            // triple (was `s ^ p ^ o`, which never matched).
+                            let triple_hash = crate::lexicon::generate_embedded_triple_id(s, p, o);
                             Ok(EvalResult::Numeric(triple_hash))
                         }
                         _ => Err("TRIPLE requires numeric arguments".to_string()),

@@ -166,7 +166,21 @@ pub fn serialize_to_jsonld<W: Write>(writer: &mut W, quins: &[NQuin]) -> Result<
     Ok(())
 }
 
-/// Format a hash as a placeholder IRI (in practice, you'd use lexicon lookup)
+/// Resolve a term hash to its IRI, lexicon-first — mirroring
+/// `resolver::write_iri_term`. The N-Triples/N-Quads paths already resolve via
+/// the resolver; Turtle/TriG/N3/JSON-LD previously emitted an opaque
+/// `urn:hash:{hex}` for every term instead of looking it up. The `urn:hash`
+/// form is now only the last-resort fallback for a genuinely unresolvable hash.
+/// (Object-position inline literals are still emitted as IRIs by these
+/// grouped serializers — resolving those to typed literals is a separate,
+/// position-aware refinement; the N-Triples path via `write_object_term` does
+/// handle them.)
 fn format_hash(hash: u64) -> String {
-    format!("urn:hash:{:x}", hash)
+    if let Some(bytes) = crate::resolver::resolve_hash(hash) {
+        String::from_utf8_lossy(bytes).into_owned()
+    } else if (hash & crate::resolver::MSB_FLAG) != 0 {
+        format!("did:q42:ptr/{:016x}", hash & !crate::resolver::MSB_FLAG)
+    } else {
+        format!("urn:hash:{:x}", hash)
+    }
 }

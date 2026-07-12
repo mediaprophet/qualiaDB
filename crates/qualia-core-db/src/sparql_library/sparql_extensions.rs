@@ -403,14 +403,19 @@ pub fn create_builtin_registry() -> ExtensionRegistry {
     let _ = registry.register(0x4D415F4249545241_u64, ext_ma_bitrate);
     let _ = registry.register(0x4D415F4652414D45_u64, ext_ma_framerate);
 
-    // Register C2PA functions
-    let _ = registry.register(0x433250415F435245_u64, ext_c2pa_credential);
-    let _ = registry.register(0x433250415F495356_u64, ext_c2pa_is_verified);
-    let _ = registry.register(0x433250415F564552_u64, ext_c2pa_verification_status);
-    let _ = registry.register(0x433250415F435245_u64, ext_c2pa_created_at);
-    let _ = registry.register(0x433250415F435245_u64, ext_c2pa_created_by);
-    let _ = registry.register(0x433250415F564552_u64, ext_c2pa_verify_signature);
-    let _ = registry.register(0x433250415F444552_u64, ext_c2pa_derived_from);
+    // Register C2PA functions. NOTE: these keys are hand-written ASCII-prefix
+    // placeholders (see the module note above; the canonical scheme is
+    // q_hash(iri), assigned when the executor wires this registry). Three of
+    // them previously reused "C2PA_CRE"/"C2PA_VER", so created_at, created_by,
+    // and verify_signature silently failed to register (register() rejects a
+    // duplicate key). Each now has a distinct key so all seven land.
+    let _ = registry.register(0x433250415F435245_u64, ext_c2pa_credential); // "C2PA_CRE"
+    let _ = registry.register(0x433250415F495356_u64, ext_c2pa_is_verified); // "C2PA_ISV"
+    let _ = registry.register(0x433250415F564552_u64, ext_c2pa_verification_status); // "C2PA_VER"
+    let _ = registry.register(0x433250415F434154_u64, ext_c2pa_created_at); // "C2PA_CAT"
+    let _ = registry.register(0x433250415F434259_u64, ext_c2pa_created_by); // "C2PA_CBY"
+    let _ = registry.register(0x433250415F565347_u64, ext_c2pa_verify_signature); // "C2PA_VSG"
+    let _ = registry.register(0x433250415F444552_u64, ext_c2pa_derived_from); // "C2PA_DER"
 
     registry
 }

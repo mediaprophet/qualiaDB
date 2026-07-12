@@ -313,6 +313,39 @@ impl TurtleStarParser {
 
         Ok((virtual_id, [subject, predicate, object]))
     }
+
+    /// Parse a full Turtle-Star annotation statement: `<< s p o >> annP annO [.]`.
+    ///
+    /// Returns `(virtual_id, [s,p,o], Option<(ann_predicate, ann_object)>)`. Unlike
+    /// `parse_embedded_triple` (which stops at `>>` and drops everything after),
+    /// this captures the outer predicate/object when present, so the caller can
+    /// emit the linking statement `virtual_id annP annO` — reaching parity with
+    /// the N-Quads-Star parser. A single parse pass handles both the annotated
+    /// and the bare-embedded-triple cases (the latter yields `None` for the
+    /// annotation), so there is no stateful re-parse of the same line.
+    fn parse_star_annotation(
+        &mut self,
+        input: &[u8],
+    ) -> Result<(u64, [u64; 3], Option<(u64, u64)>), RdfStarParseError> {
+        let mut pos = 0;
+        while pos < input.len() && input[pos].is_ascii_whitespace() {
+            pos += 1;
+        }
+        if pos + 1 < input.len() && input[pos] == b'<' && input[pos + 1] == b'<' {
+            pos += 2;
+        } else {
+            return Err(RdfStarParseError::MalformedEmbeddedTriple);
+        }
+        let (virtual_id, components) = self.parse_embedded_triple_internal(input, &mut pos)?;
+        // Outer predicate + object are optional: a line may be a bare `<< s p o >>`.
+        let annotation = match self.parse_token(input, &mut pos)? {
+            Some(ann_predicate) => self
+                .parse_token(input, &mut pos)?
+                .map(|ann_object| (ann_predicate, ann_object)),
+            None => None,
+        };
+        Ok((virtual_id, components, annotation))
+    }
 }
 
 impl RdfStarParser for TurtleStarParser {
@@ -428,9 +461,29 @@ pub fn parse_turtle_star_into<R: Read, S: crate::sparql_library::quin_sink::Quin
 
         // Check if line contains embedded triple marker
         if l.contains("<<") {
-            // Parse embedded triple using stack-based parser
-            if let Ok((_virtual_id, components)) = parser.parse_embedded_triple(bytes) {
-                // Emit the embedded triple as a Quin
+            // Parse the full annotation form `<< s p o >> annP annO` in one pass.
+            if let Ok((virtual_id, components, annotation)) = parser.parse_star_annotation(bytes) {
+                // Linking statement: the quoted triple's virtual id is the subject
+                // of the outer annotation (parity with the N-Quads-Star parser).
+                // This is what lets `lookup_embedded_triple` — and hence the
+                // result serializer — resolve `<<s p o>>` instead of falling back
+                // to a raw `<<{hex}>>` placeholder. Bare `<< s p o >>` lines with
+                // no outer predicate/object yield `None` and just emit the inner
+                // triple, as before.
+                if let Some((ann_predicate, ann_object)) = annotation {
+                    sink.push(NQuin {
+                        subject: virtual_id,
+                        predicate: ann_predicate,
+                        object: ann_object,
+                        context: context_hash,
+                        metadata: 0b10 << 61,
+                        parity: 0,
+                    })?;
+                    count += 1;
+                }
+
+                // Inner triple (its components), so the quoted triple is itself
+                // a real, queryable statement in the graph.
                 sink.push(NQuin {
                     subject: components[0],
                     predicate: components[1],
@@ -441,9 +494,11 @@ pub fn parse_turtle_star_into<R: Read, S: crate::sparql_library::quin_sink::Quin
                 })?;
                 count += 1;
 
-                // TODO: Write embedded triple data to lexicon (24-byte [u64; 3])
-                // This requires integration with the lexicon writing layer
-                // The lexicon entry will be: virtual_id -> 24-byte [subject, predicate, object]
+                // NOTE: the durable `virtual_id -> [s,p,o]` lexicon entry
+                // (`LexiconEntry::EmbeddedTriple`) is written by the volume
+                // builder (`q42/q42_volume.rs`), which now sees the virtual id via
+                // the linking statement above; the streaming sink itself has no
+                // embedded-entry channel yet (a future expansion).
             }
         } else {
             // Parse regular triple
@@ -541,6 +596,51 @@ mod tests {
 
         // Verify stack was properly managed
         assert_eq!(parser.stack.depth(), 0);
+    }
+
+    struct VecSink(Vec<NQuin>);
+    impl crate::sparql_library::quin_sink::QuinSink for VecSink {
+        fn push(&mut self, q: NQuin) -> std::io::Result<()> {
+            self.0.push(q);
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn parse_star_annotation_captures_outer_predicate_object() {
+        let mut parser = TurtleStarParser::new(0);
+        let (virtual_id, components, ann) = parser
+            .parse_star_annotation(b"<< Alice knows Bob >> certainty high")
+            .unwrap();
+        assert_eq!(
+            virtual_id,
+            generate_embedded_triple_id(components[0], components[1], components[2])
+        );
+        let (ann_p, ann_o) = ann.expect("outer annotation predicate/object");
+        assert_ne!(ann_p, 0);
+        assert_ne!(ann_o, 0);
+        assert_eq!(parser.stack.depth(), 0);
+    }
+
+    #[test]
+    fn parse_turtle_star_into_emits_linking_statement_and_inner_triple() {
+        let mut sink = VecSink(Vec::new());
+        let count =
+            parse_turtle_star_into(&b"<< Alice knows Bob >> certainty high\n"[..], 0, &mut sink)
+                .unwrap();
+        assert_eq!(count, 2, "expected outer linking statement + inner triple");
+        // sink[0] is the outer statement; its subject must be the virtual id of
+        // the inner triple (sink[1]) so lookup_embedded_triple can resolve it.
+        let inner = sink.0[1];
+        let vid = generate_embedded_triple_id(inner.subject, inner.predicate, inner.object);
+        assert_eq!(sink.0[0].subject, vid);
+    }
+
+    #[test]
+    fn parse_turtle_star_into_bare_embedded_triple_emits_only_inner() {
+        let mut sink = VecSink(Vec::new());
+        let count = parse_turtle_star_into(&b"<< Alice knows Bob >>\n"[..], 0, &mut sink).unwrap();
+        assert_eq!(count, 1, "bare embedded triple → just the inner triple");
     }
 
     #[test]

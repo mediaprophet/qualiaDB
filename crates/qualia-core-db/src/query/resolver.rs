@@ -194,6 +194,89 @@ pub(crate) fn write_iri_term<W: io::Write>(val: u64, out: &mut W) -> io::Result<
     write!(out, "<quin:hash/{val:016x}>")
 }
 
+/// An inline-typed literal decoded from a Quin field value's tag bits (60-62).
+/// Allocation-free; the caller formats the lexical/datatype form it needs
+/// (N-Triples surface syntax, SPARQL-Results JSON/XML, etc.).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum InlineLiteral {
+    /// `xsd:integer` (already 60-bit sign-extended to i64).
+    Integer(i64),
+    /// `xsd:decimal` — fixed-point, the value is `raw × 10⁻⁶` (raw sign-extended).
+    Decimal(i64),
+    /// `xsd:boolean`.
+    Boolean(bool),
+    /// `xsd:float` (decoded from the lower 32 bits as IEEE-754 f32).
+    Float(f32),
+}
+
+impl InlineLiteral {
+    /// The XSD datatype IRI (without angle brackets) for this literal.
+    pub fn datatype_iri(&self) -> &'static str {
+        match self {
+            InlineLiteral::Integer(_) => "http://www.w3.org/2001/XMLSchema#integer",
+            InlineLiteral::Decimal(_) => "http://www.w3.org/2001/XMLSchema#decimal",
+            InlineLiteral::Boolean(_) => "http://www.w3.org/2001/XMLSchema#boolean",
+            InlineLiteral::Float(_) => "http://www.w3.org/2001/XMLSchema#float",
+        }
+    }
+}
+
+impl std::fmt::Display for InlineLiteral {
+    /// The canonical lexical form (the string that goes between the quotes).
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            InlineLiteral::Integer(n) => write!(f, "{n}"),
+            InlineLiteral::Decimal(raw) => {
+                let neg = raw < 0;
+                let abs = raw.unsigned_abs();
+                let whole = abs / 1_000_000;
+                let frac = abs % 1_000_000;
+                if neg {
+                    write!(f, "-{whole}.{frac:06}")
+                } else {
+                    write!(f, "{whole}.{frac:06}")
+                }
+            }
+            InlineLiteral::Boolean(b) => write!(f, "{b}"),
+            InlineLiteral::Float(x) => write!(f, "{x}"),
+        }
+    }
+}
+
+/// Classify a Quin field value as an inline-typed literal, or `None` if it is
+/// not one (an IRI hash / did:q42 pointer / lexicon entry).
+///
+/// IMPORTANT: `INLINE_TAG_INTEGER` and `TAG_EMBEDDED` are the *same* bit pattern
+/// (`0b001 << 60`). A caller that also handles SPARQL-Star embedded triples must
+/// try its embedded-triple lexicon lookup **before** calling this — a resolvable
+/// embedded-triple virtual id would otherwise be reported here as an integer.
+#[inline]
+pub fn classify_inline_literal(val: u64) -> Option<InlineLiteral> {
+    // A value with the MSB set is a topological pointer, never an inline literal.
+    if (val & MSB_FLAG) != 0 {
+        return None;
+    }
+    match val & INLINE_TAG_MASK {
+        INLINE_TAG_INTEGER => {
+            let mut n = (val & INLINE_VALUE_MASK) as i64;
+            if (n & (1i64 << 59)) != 0 {
+                n |= !((1i64 << 60) - 1);
+            }
+            Some(InlineLiteral::Integer(n))
+        }
+        INLINE_TAG_DECIMAL => {
+            let mut raw = (val & INLINE_VALUE_MASK) as i64;
+            if (raw & (1i64 << 59)) != 0 {
+                raw |= !((1i64 << 60) - 1);
+            }
+            Some(InlineLiteral::Decimal(raw))
+        }
+        INLINE_TAG_BOOLEAN => Some(InlineLiteral::Boolean((val & 1) != 0)),
+        INLINE_TAG_FLOAT => Some(InlineLiteral::Float(f32::from_bits((val & 0xFFFF_FFFF) as u32))),
+        _ => None,
+    }
+}
+
 /// Write an object term, applying inline-type detection on bits 60-62.
 ///
 /// Priority order (same lexicon-first reasoning as `write_iri_term`):
@@ -217,48 +300,11 @@ pub(crate) fn write_object_term<W: io::Write>(val: u64, out: &mut W) -> io::Resu
     // 3. Inline-type detection (only reached for values NOT in the lexicon).
     //    The ingest layer encodes typed literals with explicit tag bits, so
     //    there is no ambiguity with normalised IRI hashes in a live database.
-    match val & INLINE_TAG_MASK {
-        INLINE_TAG_INTEGER => {
-            let mut n = (val & INLINE_VALUE_MASK) as i64;
-            // Sign-extend 60-bit two's complement to 64-bit
-            if (n & (1i64 << 59)) != 0 {
-                n |= !((1i64 << 60) - 1);
-            }
-            write!(out, "\"{n}\"^^<http://www.w3.org/2001/XMLSchema#integer>")
-        }
-        INLINE_TAG_DECIMAL => {
-            // Fixed-point: lower 60 bits encode value × 10⁶.
-            let mut raw = (val & INLINE_VALUE_MASK) as i64;
-            // Sign-extend 60-bit two's complement to 64-bit
-            if (raw & (1i64 << 59)) != 0 {
-                raw |= !((1i64 << 60) - 1);
-            }
-            let is_negative = raw < 0;
-            let abs_raw = raw.abs();
-            let whole = abs_raw / 1_000_000;
-            let frac = abs_raw % 1_000_000;
-            if is_negative {
-                write!(
-                    out,
-                    "\"-{whole}.{frac:06}\"^^<http://www.w3.org/2001/XMLSchema#decimal>"
-                )
-            } else {
-                write!(
-                    out,
-                    "\"{whole}.{frac:06}\"^^<http://www.w3.org/2001/XMLSchema#decimal>"
-                )
-            }
-        }
-        INLINE_TAG_BOOLEAN => {
-            let lit = if (val & 1) != 0 { "true" } else { "false" };
-            write!(out, "\"{lit}\"^^<http://www.w3.org/2001/XMLSchema#boolean>")
-        }
-        INLINE_TAG_FLOAT => {
-            // Lower 32 bits are raw IEEE-754 f32 bits (see pack_float_object).
-            let f = f32::from_bits((val & 0xFFFF_FFFF) as u32);
-            write!(out, "\"{f}\"^^<http://www.w3.org/2001/XMLSchema#float>")
-        }
-        _ => write!(out, "<quin:hash/{val:016x}>"),
+    //    Shares one decoder with `classify_inline_literal` so the (error-prone)
+    //    sign-extension / f32 decode lives in exactly one place.
+    match classify_inline_literal(val) {
+        Some(lit) => write!(out, "\"{lit}\"^^<{}>", lit.datatype_iri()),
+        None => write!(out, "<quin:hash/{val:016x}>"),
     }
 }
 
