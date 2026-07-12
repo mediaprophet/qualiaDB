@@ -321,6 +321,7 @@ pub fn spawn_loopback_server(
                         get(tensor_dev_signing_key_handler).options(preflight_handler),
                     )
                     .route("/query", post(query_handler).options(preflight_handler))
+                    .route("/update", post(update_handler).options(preflight_handler))
                     .route("/cache", post(cache_handler))
                     .route("/proxy/fetch", get(proxy_fetch_handler).options(preflight_handler))
                     .route("/api/v1/system/storage/selfhood", get(storage_selfhood_handler))
@@ -896,6 +897,124 @@ async fn bridge_handler(
             }
         }
     })
+}
+
+#[derive(Deserialize)]
+struct UpdateRequest {
+    update: String,
+}
+
+/// `POST /update` — apply a SPARQL 1.1 Update to the resident graph.
+///
+/// Same token auth as `/query`. The mutation is signed with a **real** key
+/// derived from the daemon's key vault (never a placeholder) and persisted
+/// durably (snapshot + signed WAL audit trail) via
+/// `daemon_graph::apply_sparql_update_durable`. Loopback-only, like `/query`.
+async fn update_handler(
+    State(state): State<Arc<WebizenState>>,
+    headers: HeaderMap,
+    Json(request): Json<UpdateRequest>,
+) -> impl IntoResponse {
+    // Auth: mirror /query (token required unless dev mode).
+    if !state.dev {
+        let token = headers
+            .get("x-qualia-token")
+            .and_then(|v| v.to_str().ok())
+            .map(|s| s.to_string());
+        let ok = token
+            .as_ref()
+            .map(|t| {
+                let vault = state.vault.lock().unwrap();
+                vault.verify_qapp_token(t, "localhost").is_ok() || Some(t) == state.token.as_ref()
+            })
+            .unwrap_or(false);
+        if !ok {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "unauthorized"})),
+            )
+                .into_response();
+        }
+    }
+
+    let src = request.update.trim();
+    if src.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "empty update"})),
+        )
+            .into_response();
+    }
+    if src.len() as u64 > QUERY_PAYLOAD_LIMIT_BYTES {
+        return (
+            StatusCode::PAYLOAD_TOO_LARGE,
+            Json(json!({"error": "update too large", "limit_bytes": QUERY_PAYLOAD_LIMIT_BYTES})),
+        )
+            .into_response();
+    }
+    if !crate::sparql_library::sparql_grammar::is_update(src) {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "not a SPARQL Update (use /query for reads)"})),
+        )
+            .into_response();
+    }
+
+    let mut ctx = crate::sparql_ast::SparqlQueryContext::new();
+    let prefixes = std::collections::HashMap::new();
+    let op = match crate::sparql_library::sparql_grammar::parse_update(src, &mut ctx, &prefixes) {
+        Ok(op) => op,
+        Err(e) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": format!("update parse error: {e}")})),
+            )
+                .into_response()
+        }
+    };
+
+    // Real signing key from the daemon key vault — never a placeholder.
+    let signing_key = {
+        let vault = match state.vault.lock() {
+            Ok(v) => v,
+            Err(_) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({"error": "vault_unavailable"})),
+                )
+                    .into_response()
+            }
+        };
+        vault.derive_key("sparql-update")
+    };
+    let principal = crate::q_hash("did:qualia:sparql-update-principal");
+    let agent = crate::q_hash("did:qualia:sparql-update-agent");
+    let wal_path = format!("{}/sparql_update.wal", state.storage_path);
+
+    match crate::daemon_graph::apply_sparql_update_durable(
+        &op,
+        &ctx,
+        &signing_key,
+        principal,
+        agent,
+        &wal_path,
+        &state.storage_path,
+    ) {
+        Ok(outcome) => (
+            StatusCode::OK,
+            Json(json!({
+                "inserted": outcome.inserted,
+                "deleted": outcome.deleted,
+                "persisted": outcome.persisted,
+            })),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": format!("update failed: {e}")})),
+        )
+            .into_response(),
+    }
 }
 
 async fn query_handler(
