@@ -1,4 +1,5 @@
 pub mod external_sort;
+pub mod geosparql;
 pub mod parsers;
 pub mod quin_sink;
 pub mod rdf_formats;
