@@ -4502,6 +4502,14 @@ impl ADMEPrediction {
         &self.excretion_model
     }
 
+    /// Returns the absorption model's **stored** `bioavailability` parameter.
+    ///
+    /// HONESTY: this is a model *parameter*, not a compound-specific computed
+    /// prediction. `AbsorptionModel::new()` seeds it with a neutral `0.5`
+    /// placeholder; nothing in this module computes a real per-compound
+    /// bioavailability (that needs a genuine PBPK / first-pass-metabolism
+    /// model). Do not surface this as a prediction — it will read `0.5` for
+    /// every compound until the field is set from real data or a real model.
     pub fn overall_bioavailability(&self) -> f64 {
         self.absorption_model.bioavailability
     }
