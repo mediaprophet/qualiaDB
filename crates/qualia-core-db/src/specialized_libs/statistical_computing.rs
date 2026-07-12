@@ -2030,6 +2030,488 @@ impl StatisticalComputingLibrary {
         })
     }
 
+    // ========================================================================
+    // Wired capability methods.
+    //
+    // Each declared `StatisticalOperation` is a genuine, MCP-reachable
+    // computation. Every method below marshals the caller's dataset into a
+    // slice and delegates to the canonical numeric kernels in
+    // `crate::solvers` (Modality-First Composition — no inline re-derivation);
+    // the descriptive/correlation/regression/hypothesis kernels live in
+    // `solvers::statistics`, the learning models in `solvers::learning`, and
+    // polynomial least-squares in `solvers::interpolation`.
+    // ========================================================================
+
+    /// Extract one numeric column as an owned `Vec<f64>` (Integer widened,
+    /// Null rows skipped). Errors on unknown column, non-numeric cell, or empty.
+    fn numeric_column(&self, dataset_id: &str, column: &str) -> Result<Vec<f64>, StatisticalError> {
+        let dataset = self.data_storage.get_dataset(dataset_id)?;
+        let idx = dataset
+            .column_names
+            .iter()
+            .position(|n| n == column)
+            .ok_or_else(|| StatisticalError::InvalidColumn(column.to_string()))?;
+        let mut out = Vec::with_capacity(dataset.data.len());
+        for row in &dataset.data {
+            match &row[idx] {
+                DataValue::Float(v) => out.push(*v),
+                DataValue::Integer(v) => out.push(*v as f64),
+                DataValue::Null => continue,
+                _ => {
+                    return Err(StatisticalError::InvalidOperation(
+                        "Non-numeric data in column".to_string(),
+                    ))
+                }
+            }
+        }
+        if out.is_empty() {
+            return Err(StatisticalError::InvalidData(
+                "No valid data in column".to_string(),
+            ));
+        }
+        Ok(out)
+    }
+
+    /// Extract several numeric columns row-aligned into a row-major `n × p`
+    /// matrix, skipping any row where one of the requested cells is Null (so
+    /// every returned row is complete). Returns `(data, n, p)`.
+    fn numeric_matrix(
+        &self,
+        dataset_id: &str,
+        columns: &[&str],
+    ) -> Result<(Vec<f64>, usize, usize), StatisticalError> {
+        let dataset = self.data_storage.get_dataset(dataset_id)?;
+        let p = columns.len();
+        if p == 0 {
+            return Err(StatisticalError::InvalidOperation(
+                "no columns given".to_string(),
+            ));
+        }
+        let mut idxs = Vec::with_capacity(p);
+        for c in columns {
+            idxs.push(
+                dataset
+                    .column_names
+                    .iter()
+                    .position(|n| n == c)
+                    .ok_or_else(|| StatisticalError::InvalidColumn((*c).to_string()))?,
+            );
+        }
+        let mut data = Vec::with_capacity(dataset.data.len() * p);
+        let mut n = 0;
+        'rows: for row in &dataset.data {
+            let mut tmp = [0.0f64; 0].to_vec();
+            tmp.reserve(p);
+            for &ix in &idxs {
+                match &row[ix] {
+                    DataValue::Float(v) => tmp.push(*v),
+                    DataValue::Integer(v) => tmp.push(*v as f64),
+                    DataValue::Null => continue 'rows,
+                    _ => {
+                        return Err(StatisticalError::InvalidOperation(
+                            "Non-numeric data in column".to_string(),
+                        ))
+                    }
+                }
+            }
+            data.extend_from_slice(&tmp);
+            n += 1;
+        }
+        if n == 0 {
+            return Err(StatisticalError::InvalidData(
+                "No complete rows across the requested columns".to_string(),
+            ));
+        }
+        Ok((data, n, p))
+    }
+
+    /// Split feature columns + a trailing label column into `(x, y, n, p)`,
+    /// row-aligned (rows with a Null in any of them are dropped together).
+    fn features_and_label(
+        &self,
+        dataset_id: &str,
+        feature_columns: &[&str],
+        label_column: &str,
+    ) -> Result<(Vec<f64>, Vec<f64>, usize, usize), StatisticalError> {
+        let mut cols: Vec<&str> = feature_columns.to_vec();
+        cols.push(label_column);
+        let (mat, n, p_all) = self.numeric_matrix(dataset_id, &cols)?;
+        let p = p_all - 1;
+        let mut x = Vec::with_capacity(n * p);
+        let mut y = Vec::with_capacity(n);
+        for r in 0..n {
+            x.extend_from_slice(&mat[r * p_all..r * p_all + p]);
+            y.push(mat[r * p_all + p]);
+        }
+        Ok((x, y, n, p))
+    }
+
+    fn scalar_result(&self, value: f64, n: usize) -> StatisticalAnalysisResult<f64> {
+        StatisticalAnalysisResult {
+            result: value,
+            execution_time: 0,
+            memory_usage: 0,
+            sample_size: n,
+            confidence_level: 0.95,
+            privacy_preserved: false,
+            privacy_cost: 0.0,
+        }
+    }
+
+    /// Standard deviation (`sample = true` → Bessel-corrected).
+    pub fn standard_deviation(
+        &self,
+        dataset_id: &str,
+        column: &str,
+        sample: bool,
+    ) -> Result<StatisticalAnalysisResult<f64>, StatisticalError> {
+        let v = self.numeric_column(dataset_id, column)?;
+        let sd = crate::solvers::statistics::std_dev(&v, sample)
+            .ok_or_else(|| StatisticalError::InvalidData("empty column".to_string()))?;
+        Ok(self.scalar_result(sd, v.len()))
+    }
+
+    /// Sample skewness (Fisher-Pearson).
+    pub fn skewness(
+        &self,
+        dataset_id: &str,
+        column: &str,
+    ) -> Result<StatisticalAnalysisResult<f64>, StatisticalError> {
+        let v = self.numeric_column(dataset_id, column)?;
+        let s = crate::solvers::statistics::skewness(&v)
+            .ok_or_else(|| StatisticalError::InvalidData("skewness undefined".to_string()))?;
+        Ok(self.scalar_result(s, v.len()))
+    }
+
+    /// Excess kurtosis.
+    pub fn kurtosis(
+        &self,
+        dataset_id: &str,
+        column: &str,
+    ) -> Result<StatisticalAnalysisResult<f64>, StatisticalError> {
+        let v = self.numeric_column(dataset_id, column)?;
+        let k = crate::solvers::statistics::kurtosis(&v)
+            .ok_or_else(|| StatisticalError::InvalidData("kurtosis undefined".to_string()))?;
+        Ok(self.scalar_result(k, v.len()))
+    }
+
+    /// Modal value + its frequency.
+    pub fn mode(&self, dataset_id: &str, column: &str) -> Result<ModeResult, StatisticalError> {
+        let mut v = self.numeric_column(dataset_id, column)?;
+        let n = v.len();
+        let (value, count) = crate::solvers::statistics::mode_in_place(&mut v)
+            .ok_or_else(|| StatisticalError::InvalidData("empty column".to_string()))?;
+        Ok(ModeResult {
+            value,
+            count,
+            sample_size: n,
+        })
+    }
+
+    /// The `q`-quantile (`q ∈ [0,1]`) via linear interpolation between order
+    /// statistics. `percentile` is the same with `p ∈ [0,100]`.
+    pub fn quantile(
+        &self,
+        dataset_id: &str,
+        column: &str,
+        q: f64,
+    ) -> Result<StatisticalAnalysisResult<f64>, StatisticalError> {
+        let mut v = self.numeric_column(dataset_id, column)?;
+        let n = v.len();
+        let val = crate::solvers::statistics::quantile_in_place(&mut v, q).ok_or_else(|| {
+            StatisticalError::InvalidOperation("quantile requires q in [0,1]".to_string())
+        })?;
+        Ok(self.scalar_result(val, n))
+    }
+
+    /// Covariance between two columns (`sample = true` → divide by n-1).
+    pub fn covariance(
+        &self,
+        dataset_id: &str,
+        column_x: &str,
+        column_y: &str,
+        sample: bool,
+    ) -> Result<StatisticalAnalysisResult<f64>, StatisticalError> {
+        let (mat, n, _p) = self.numeric_matrix(dataset_id, &[column_x, column_y])?;
+        let x: Vec<f64> = (0..n).map(|r| mat[r * 2]).collect();
+        let y: Vec<f64> = (0..n).map(|r| mat[r * 2 + 1]).collect();
+        let cov = crate::solvers::statistics::covariance(&x, &y, sample)
+            .ok_or_else(|| StatisticalError::InvalidData("covariance undefined".to_string()))?;
+        Ok(self.scalar_result(cov, n))
+    }
+
+    /// Ordinary-least-squares simple linear regression `y ~ x` with full
+    /// inferential statistics (slope/intercept, R², standard errors, t, p).
+    pub fn linear_regression(
+        &self,
+        dataset_id: &str,
+        column_x: &str,
+        column_y: &str,
+    ) -> Result<crate::solvers::statistics::LinearRegression, StatisticalError> {
+        let (mat, n, _p) = self.numeric_matrix(dataset_id, &[column_x, column_y])?;
+        let x: Vec<f64> = (0..n).map(|r| mat[r * 2]).collect();
+        let y: Vec<f64> = (0..n).map(|r| mat[r * 2 + 1]).collect();
+        crate::solvers::statistics::simple_linear_regression(&x, &y)
+            .ok_or_else(|| StatisticalError::InvalidData("regression undefined (n<3 or zero variance in x)".to_string()))
+    }
+
+    /// Polynomial regression `y ~ poly(x, degree)` by least squares (normal
+    /// equations). Returns ascending-power coefficients and in-sample R².
+    pub fn polynomial_regression(
+        &self,
+        dataset_id: &str,
+        column_x: &str,
+        column_y: &str,
+        degree: usize,
+    ) -> Result<PolynomialFit, StatisticalError> {
+        let (mat, n, _p) = self.numeric_matrix(dataset_id, &[column_x, column_y])?;
+        let x: Vec<f64> = (0..n).map(|r| mat[r * 2]).collect();
+        let y: Vec<f64> = (0..n).map(|r| mat[r * 2 + 1]).collect();
+        let coeffs = crate::solvers::interpolation::least_squares::poly_fit(&x, &y, degree)
+            .map_err(|e| StatisticalError::InvalidOperation(format!("poly_fit: {:?}", e)))?;
+        // In-sample R² from the fitted coefficients.
+        let y_mean = crate::solvers::statistics::mean(&y).unwrap_or(0.0);
+        let mut ss_res = 0.0;
+        let mut ss_tot = 0.0;
+        for i in 0..n {
+            let yhat = crate::solvers::interpolation::least_squares::poly_eval(&coeffs, x[i]);
+            ss_res += (y[i] - yhat) * (y[i] - yhat);
+            ss_tot += (y[i] - y_mean) * (y[i] - y_mean);
+        }
+        let r_squared = if ss_tot > 0.0 { 1.0 - ss_res / ss_tot } else { 0.0 };
+        Ok(PolynomialFit {
+            degree,
+            coefficients: coeffs,
+            r_squared,
+            n,
+        })
+    }
+
+    /// Binary logistic regression by IRLS (`label` in {0,1}), with Wald
+    /// standard errors, z-statistics and p-values on the coefficients.
+    pub fn logistic_regression(
+        &self,
+        dataset_id: &str,
+        feature_columns: &[&str],
+        label_column: &str,
+        fit_intercept: bool,
+    ) -> Result<crate::solvers::learning::glm::GlmModel, StatisticalError> {
+        let (x, y, n, p) = self.features_and_label(dataset_id, feature_columns, label_column)?;
+        crate::solvers::learning::glm::fit_logistic(&x, &y, n, p, fit_intercept)
+            .map_err(|e| StatisticalError::InvalidOperation(format!("logistic: {:?}", e)))
+    }
+
+    /// One-way ANOVA across the named columns (each column is a group). Groups
+    /// may have unequal lengths; Null cells are dropped per column.
+    pub fn anova(
+        &self,
+        dataset_id: &str,
+        group_columns: &[&str],
+    ) -> Result<crate::solvers::statistics::AnovaResult, StatisticalError> {
+        if group_columns.len() < 2 {
+            return Err(StatisticalError::InvalidOperation(
+                "ANOVA needs at least two groups".to_string(),
+            ));
+        }
+        let groups: Vec<Vec<f64>> = group_columns
+            .iter()
+            .map(|c| self.numeric_column(dataset_id, c))
+            .collect::<Result<_, _>>()?;
+        let refs: Vec<&[f64]> = groups.iter().map(|g| g.as_slice()).collect();
+        crate::solvers::statistics::one_way_anova(&refs)
+            .ok_or_else(|| StatisticalError::InvalidData("ANOVA undefined for these groups".to_string()))
+    }
+
+    /// Chi-square goodness-of-fit test: observed counts vs. expected counts.
+    /// If `expected_column` is `None`, a uniform expectation is used.
+    pub fn chi_square_gof(
+        &self,
+        dataset_id: &str,
+        observed_column: &str,
+        expected_column: Option<&str>,
+    ) -> Result<crate::solvers::statistics::ChiSquareResult, StatisticalError> {
+        let observed = self.numeric_column(dataset_id, observed_column)?;
+        let expected = match expected_column {
+            Some(c) => self.numeric_column(dataset_id, c)?,
+            None => {
+                let total: f64 = observed.iter().sum();
+                let u = total / observed.len() as f64;
+                vec![u; observed.len()]
+            }
+        };
+        crate::solvers::statistics::chi_square_gof(&observed, &expected)
+            .ok_or_else(|| StatisticalError::InvalidOperation("chi-square GoF undefined".to_string()))
+    }
+
+    /// Chi-square test of independence over a contingency table whose columns
+    /// are the named columns (each row of the table is one dataset row).
+    pub fn chi_square_independence(
+        &self,
+        dataset_id: &str,
+        columns: &[&str],
+    ) -> Result<crate::solvers::statistics::ChiSquareResult, StatisticalError> {
+        let (mat, n, p) = self.numeric_matrix(dataset_id, columns)?;
+        let rows: Vec<&[f64]> = (0..n).map(|r| &mat[r * p..(r + 1) * p]).collect();
+        crate::solvers::statistics::chi_square_independence(&rows).ok_or_else(|| {
+            StatisticalError::InvalidOperation("chi-square independence undefined".to_string())
+        })
+    }
+
+    /// Autocorrelation of a column at the given lag (biased estimator).
+    pub fn autocorrelation(
+        &self,
+        dataset_id: &str,
+        column: &str,
+        lag: usize,
+    ) -> Result<StatisticalAnalysisResult<f64>, StatisticalError> {
+        let v = self.numeric_column(dataset_id, column)?;
+        let r = crate::solvers::statistics::autocorrelation(&v, lag).ok_or_else(|| {
+            StatisticalError::InvalidOperation(
+                "autocorrelation undefined (lag>=n or constant series)".to_string(),
+            )
+        })?;
+        Ok(self.scalar_result(r, v.len()))
+    }
+
+    /// Simple moving average of a column with the given window.
+    pub fn moving_average(
+        &self,
+        dataset_id: &str,
+        column: &str,
+        window: usize,
+    ) -> Result<Vec<f64>, StatisticalError> {
+        let v = self.numeric_column(dataset_id, column)?;
+        if window == 0 || window > v.len() {
+            return Err(StatisticalError::InvalidOperation(
+                "window must be in 1..=n".to_string(),
+            ));
+        }
+        let mut out = vec![0.0; v.len() - window + 1];
+        crate::solvers::statistics::moving_average_into(&v, window, &mut out)
+            .ok_or_else(|| StatisticalError::InvalidOperation("moving average failed".to_string()))?;
+        Ok(out)
+    }
+
+    /// Single exponential smoothing of a column with factor `alpha ∈ (0,1]`.
+    pub fn exponential_smoothing(
+        &self,
+        dataset_id: &str,
+        column: &str,
+        alpha: f64,
+    ) -> Result<Vec<f64>, StatisticalError> {
+        let v = self.numeric_column(dataset_id, column)?;
+        let mut out = vec![0.0; v.len()];
+        crate::solvers::statistics::exponential_smoothing_into(&v, alpha, &mut out).ok_or_else(
+            || StatisticalError::InvalidOperation("alpha must be in (0,1]".to_string()),
+        )?;
+        Ok(out)
+    }
+
+    /// K-means clustering over the named feature columns. Returns the fitted
+    /// model (centroids, per-point labels, inertia, convergence).
+    pub fn kmeans(
+        &self,
+        dataset_id: &str,
+        feature_columns: &[&str],
+        k: usize,
+        max_iter: usize,
+        seed: u64,
+    ) -> Result<crate::solvers::learning::clustering::kmeans::KMeansModel, StatisticalError> {
+        let (x, n, p) = self.numeric_matrix(dataset_id, feature_columns)?;
+        crate::solvers::learning::clustering::kmeans::fit(&x, n, p, k, max_iter, seed)
+            .map_err(|e| StatisticalError::InvalidOperation(format!("kmeans: {:?}", e)))
+    }
+
+    /// Soft-margin linear SVM over the named feature columns with a boolean
+    /// `label` column (non-zero = positive class). Returns a fit summary with
+    /// support-vector count and in-sample accuracy.
+    pub fn linear_svm(
+        &self,
+        dataset_id: &str,
+        feature_columns: &[&str],
+        label_column: &str,
+        c: f64,
+    ) -> Result<SvmFitResult, StatisticalError> {
+        let (x, y, n, p) = self.features_and_label(dataset_id, feature_columns, label_column)?;
+        let labels: Vec<bool> = y.iter().map(|&v| v != 0.0).collect();
+        let model = crate::solvers::learning::classification::svm::fit(
+            &x,
+            &labels,
+            n,
+            p,
+            c,
+            crate::solvers::learning::classification::svm::Kernel::Linear,
+            100,
+            1e-3,
+        )
+        .map_err(|e| StatisticalError::InvalidOperation(format!("svm: {:?}", e)))?;
+        let mut correct = 0usize;
+        for i in 0..n {
+            if model.predict_row(&x[i * p..(i + 1) * p]) == labels[i] {
+                correct += 1;
+            }
+        }
+        Ok(SvmFitResult {
+            n_support_vectors: model.n_support_vectors(),
+            train_accuracy: correct as f64 / n as f64,
+            n,
+            n_features: p,
+        })
+    }
+
+    /// Random-forest fit over the named feature columns and a target column.
+    /// `classifier = true` fits a classification forest (integer labels) and
+    /// reports in-sample accuracy; otherwise a regression forest reporting R².
+    pub fn random_forest(
+        &self,
+        dataset_id: &str,
+        feature_columns: &[&str],
+        target_column: &str,
+        n_trees: usize,
+        classifier: bool,
+        seed: u64,
+    ) -> Result<RandomForestFitResult, StatisticalError> {
+        use crate::solvers::learning::trees::decision_tree::TreeParams;
+        use crate::solvers::learning::trees::random_forest::RandomForest;
+        let (x, y, n, p) = self.features_and_label(dataset_id, feature_columns, target_column)?;
+        let params = TreeParams::default();
+        let (metric, model_predict): (f64, Vec<f64>) = if classifier {
+            let labels: Vec<usize> = y.iter().map(|&v| v.round().max(0.0) as usize).collect();
+            let rf = RandomForest::fit_classifier(&x, &labels, n, p, n_trees, params, seed)
+                .map_err(|e| StatisticalError::InvalidOperation(format!("forest: {:?}", e)))?;
+            let mut correct = 0usize;
+            for i in 0..n {
+                if rf.predict_class(&x[i * p..(i + 1) * p]) == labels[i] {
+                    correct += 1;
+                }
+            }
+            (correct as f64 / n as f64, vec![])
+        } else {
+            let rf = RandomForest::fit_regressor(&x, &y, n, p, n_trees, params, seed)
+                .map_err(|e| StatisticalError::InvalidOperation(format!("forest: {:?}", e)))?;
+            let preds: Vec<f64> = (0..n)
+                .map(|i| rf.predict_row(&x[i * p..(i + 1) * p]))
+                .collect();
+            let y_mean = crate::solvers::statistics::mean(&y).unwrap_or(0.0);
+            let mut ss_res = 0.0;
+            let mut ss_tot = 0.0;
+            for i in 0..n {
+                ss_res += (y[i] - preds[i]) * (y[i] - preds[i]);
+                ss_tot += (y[i] - y_mean) * (y[i] - y_mean);
+            }
+            let r2 = if ss_tot > 0.0 { 1.0 - ss_res / ss_tot } else { 0.0 };
+            (r2, preds)
+        };
+        let _ = model_predict;
+        Ok(RandomForestFitResult {
+            n_trees,
+            classifier,
+            train_metric: metric,
+            n,
+            n_features: p,
+        })
+    }
+
     /// Get performance statistics
     pub fn get_performance_stats(&self) -> SystemMetrics {
         self.performance_monitor.get_system_metrics()
@@ -4468,6 +4950,45 @@ pub struct HistogramResult {
     pub bin_width: f64,
 }
 
+/// Modal value of a column, with the frequency of that value.
+#[derive(Debug, Clone)]
+pub struct ModeResult {
+    pub value: f64,
+    pub count: usize,
+    pub sample_size: usize,
+}
+
+/// Fitted polynomial-regression model: coefficients (ascending powers, so
+/// `coefficients[0]` is the constant term) plus the coefficient of determination.
+#[derive(Debug, Clone)]
+pub struct PolynomialFit {
+    pub degree: usize,
+    pub coefficients: Vec<f64>,
+    pub r_squared: f64,
+    pub n: usize,
+}
+
+/// Summary of a fitted soft-margin SVM (the model's internals stay in the solver).
+#[derive(Debug, Clone)]
+pub struct SvmFitResult {
+    pub n_support_vectors: usize,
+    pub train_accuracy: f64,
+    pub n: usize,
+    pub n_features: usize,
+}
+
+/// Summary of a fitted random forest, with the in-sample fit metric
+/// (R² for a regression forest, classification accuracy for a classifier).
+#[derive(Debug, Clone)]
+pub struct RandomForestFitResult {
+    pub n_trees: usize,
+    pub classifier: bool,
+    /// R² (regressor) or accuracy in `[0,1]` (classifier), measured in-sample.
+    pub train_metric: f64,
+    pub n: usize,
+    pub n_features: usize,
+}
+
 /// Statistical error types
 #[derive(Debug, Clone)]
 pub enum StatisticalError {
@@ -5391,5 +5912,210 @@ mod tests {
         assert!(plan.operations.is_empty());
         assert!((plan.estimated_cost - 0.0).abs() < 1e-12);
         assert_eq!(plan.estimated_rows, 0);
+    }
+
+    // ---- wired capability methods: known-value tests --------------------------
+
+    /// Build a single-column dataset of floats named `col`.
+    fn one_col(lib: &mut StatisticalComputingLibrary, id: &str, col: &str, vals: &[f64]) {
+        let data: Vec<Vec<DataValue>> = vals.iter().map(|&v| vec![DataValue::Float(v)]).collect();
+        lib.create_dataset(
+            id.to_string(),
+            data,
+            vec![col.to_string()],
+            vec![DataType::Float64],
+            PrivacyLevel::Public,
+        )
+        .unwrap();
+    }
+
+    /// Build a two-column dataset of floats.
+    fn two_col(
+        lib: &mut StatisticalComputingLibrary,
+        id: &str,
+        xs: &[f64],
+        ys: &[f64],
+    ) {
+        let data: Vec<Vec<DataValue>> = xs
+            .iter()
+            .zip(ys)
+            .map(|(&x, &y)| vec![DataValue::Float(x), DataValue::Float(y)])
+            .collect();
+        lib.create_dataset(
+            id.to_string(),
+            data,
+            vec!["x".to_string(), "y".to_string()],
+            vec![DataType::Float64, DataType::Float64],
+            PrivacyLevel::Public,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn test_std_skew_kurtosis_wired() {
+        let mut lib = StatisticalComputingLibrary::new();
+        lib.initialize().unwrap();
+        one_col(&mut lib, "d", "col", &[2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0]);
+        // Population std of this classic set is 2.0.
+        let sd = lib.standard_deviation("d", "col", false).unwrap();
+        assert!((sd.result - 2.0).abs() < 1e-9, "sd={}", sd.result);
+        // Symmetric-ish set: skewness finite; just assert it computes.
+        assert!(lib.skewness("d", "col").is_ok());
+        assert!(lib.kurtosis("d", "col").is_ok());
+    }
+
+    #[test]
+    fn test_mode_and_quantile_wired() {
+        let mut lib = StatisticalComputingLibrary::new();
+        lib.initialize().unwrap();
+        one_col(&mut lib, "d", "col", &[1.0, 2.0, 2.0, 3.0, 3.0, 3.0, 4.0]);
+        let m = lib.mode("d", "col").unwrap();
+        assert_eq!(m.value, 3.0);
+        assert_eq!(m.count, 3);
+        // Median (0.5 quantile) of [1..=7 subset sorted] = 3.0.
+        let q = lib.quantile("d", "col", 0.5).unwrap();
+        assert!((q.result - 3.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_covariance_wired() {
+        let mut lib = StatisticalComputingLibrary::new();
+        lib.initialize().unwrap();
+        two_col(&mut lib, "d", &[1.0, 2.0, 3.0, 4.0], &[2.0, 4.0, 6.0, 8.0]);
+        // Sample covariance of x=[1,2,3,4], y=2x: var(x)_sample=1.6667, cov=3.3333.
+        let c = lib.covariance("d", "x", "y", true).unwrap();
+        assert!((c.result - 10.0 / 3.0).abs() < 1e-9, "cov={}", c.result);
+    }
+
+    #[test]
+    fn test_linear_regression_wired() {
+        let mut lib = StatisticalComputingLibrary::new();
+        lib.initialize().unwrap();
+        two_col(&mut lib, "d", &[1.0, 2.0, 3.0, 4.0, 5.0], &[3.0, 5.0, 7.0, 9.0, 11.0]);
+        // y = 2x + 1 exactly.
+        let r = lib.linear_regression("d", "x", "y").unwrap();
+        assert!((r.slope - 2.0).abs() < 1e-9, "slope={}", r.slope);
+        assert!((r.intercept - 1.0).abs() < 1e-9, "intercept={}", r.intercept);
+        assert!((r.r_squared - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_polynomial_regression_wired() {
+        let mut lib = StatisticalComputingLibrary::new();
+        lib.initialize().unwrap();
+        // y = x^2 exactly.
+        two_col(&mut lib, "d", &[-2.0, -1.0, 0.0, 1.0, 2.0, 3.0], &[4.0, 1.0, 0.0, 1.0, 4.0, 9.0]);
+        let f = lib.polynomial_regression("d", "x", "y", 2).unwrap();
+        assert_eq!(f.coefficients.len(), 3);
+        assert!((f.coefficients[0]).abs() < 1e-6, "c0={}", f.coefficients[0]);
+        assert!((f.coefficients[1]).abs() < 1e-6, "c1={}", f.coefficients[1]);
+        assert!((f.coefficients[2] - 1.0).abs() < 1e-6, "c2={}", f.coefficients[2]);
+        assert!((f.r_squared - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_anova_wired() {
+        let mut lib = StatisticalComputingLibrary::new();
+        lib.initialize().unwrap();
+        // Three identical-spread groups with different means → large F.
+        let data: Vec<Vec<DataValue>> = (0..4)
+            .map(|i| {
+                vec![
+                    DataValue::Float(1.0 + i as f64 * 0.0 + [0.0, 1.0, 0.0, 1.0][i]),
+                    DataValue::Float(10.0 + [0.0, 1.0, 0.0, 1.0][i]),
+                    DataValue::Float(20.0 + [0.0, 1.0, 0.0, 1.0][i]),
+                ]
+            })
+            .collect();
+        lib.create_dataset(
+            "d".to_string(),
+            data,
+            vec!["g1".to_string(), "g2".to_string(), "g3".to_string()],
+            vec![DataType::Float64, DataType::Float64, DataType::Float64],
+            PrivacyLevel::Public,
+        )
+        .unwrap();
+        let a = lib.anova("d", &["g1", "g2", "g3"]).unwrap();
+        assert!(a.f_statistic > 10.0, "F={}", a.f_statistic);
+        assert!(a.p_value < 0.001, "p={}", a.p_value);
+        assert!((a.df_between - 2.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_chi_square_gof_wired() {
+        let mut lib = StatisticalComputingLibrary::new();
+        lib.initialize().unwrap();
+        // Observed exactly equal to a uniform expectation → statistic 0.
+        one_col(&mut lib, "d", "col", &[10.0, 10.0, 10.0, 10.0]);
+        let r = lib.chi_square_gof("d", "col", None).unwrap();
+        assert!(r.statistic.abs() < 1e-9, "chi2={}", r.statistic);
+        assert!((r.dof - 3.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_logistic_regression_wired() {
+        let mut lib = StatisticalComputingLibrary::new();
+        lib.initialize().unwrap();
+        // Clear upward trend, non-separable so the MLE is finite.
+        let xs = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+        let ys = [0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 1.0, 1.0];
+        two_col(&mut lib, "d", &xs, &ys);
+        let m = lib.logistic_regression("d", &["x"], "y", true).unwrap();
+        // Positive slope on the single predictor (coefficients[1] with intercept).
+        assert!(m.coefficients[1] > 0.0, "beta={}", m.coefficients[1]);
+    }
+
+    #[test]
+    fn test_timeseries_wired() {
+        let mut lib = StatisticalComputingLibrary::new();
+        lib.initialize().unwrap();
+        one_col(&mut lib, "d", "col", &[1.0, 2.0, 3.0, 4.0, 5.0]);
+        let ac = lib.autocorrelation("d", "col", 1).unwrap();
+        assert!((ac.result - 0.4).abs() < 1e-9, "acf1={}", ac.result);
+        let ma = lib.moving_average("d", "col", 2).unwrap();
+        assert_eq!(ma, vec![1.5, 2.5, 3.5, 4.5]);
+        let es = lib.exponential_smoothing("d", "col", 0.5).unwrap();
+        assert!((es[0] - 1.0).abs() < 1e-9 && (es[1] - 1.5).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_kmeans_wired() {
+        let mut lib = StatisticalComputingLibrary::new();
+        lib.initialize().unwrap();
+        // Two well-separated clusters in 1-D.
+        one_col(&mut lib, "d", "col", &[0.0, 0.1, 0.2, 10.0, 10.1, 10.2]);
+        let m = lib.kmeans("d", &["col"], 2, 50, 42).unwrap();
+        assert_eq!(m.k, 2);
+        // The two low points and two high points must not share a label boundary:
+        // points 0..3 share one label, points 3..6 share another.
+        assert_eq!(m.labels[0], m.labels[1]);
+        assert_eq!(m.labels[3], m.labels[4]);
+        assert_ne!(m.labels[0], m.labels[3]);
+    }
+
+    #[test]
+    fn test_svm_wired() {
+        let mut lib = StatisticalComputingLibrary::new();
+        lib.initialize().unwrap();
+        // Linearly separable: x<0 negative, x>0 positive.
+        let xs = [-3.0, -2.0, -1.0, 1.0, 2.0, 3.0];
+        let ys = [0.0, 0.0, 0.0, 1.0, 1.0, 1.0];
+        two_col(&mut lib, "d", &xs, &ys);
+        let r = lib.linear_svm("d", &["x"], "y", 1.0).unwrap();
+        assert!((r.train_accuracy - 1.0).abs() < 1e-9, "acc={}", r.train_accuracy);
+        assert!(r.n_support_vectors >= 1);
+    }
+
+    #[test]
+    fn test_random_forest_wired() {
+        let mut lib = StatisticalComputingLibrary::new();
+        lib.initialize().unwrap();
+        // Monotone target the forest can fit in-sample.
+        let xs = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let ys = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        two_col(&mut lib, "d", &xs, &ys);
+        let r = lib.random_forest("d", &["x"], "y", 16, false, 7).unwrap();
+        assert_eq!(r.n_trees, 16);
+        assert!(r.train_metric > 0.8, "R2={}", r.train_metric);
     }
 }

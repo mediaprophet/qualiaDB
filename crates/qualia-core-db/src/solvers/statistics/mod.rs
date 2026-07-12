@@ -23,11 +23,13 @@ pub mod hypothesis;
 pub mod information;
 pub mod regression;
 pub mod robust;
+pub mod timeseries;
 
 pub use correlation::{correlation_p_value, kendall, pearson, rank_into, spearman};
+pub use timeseries::{autocorrelation, exponential_smoothing_into, moving_average_into};
 pub use descriptive::{
-    covariance, kurtosis, max, mean, median_in_place, median_sorted, min, quantile_in_place,
-    quantile_sorted, skewness, std_dev, sum, variance,
+    covariance, kurtosis, max, mean, median_in_place, median_sorted, min, mode_in_place,
+    quantile_in_place, quantile_sorted, skewness, std_dev, sum, variance,
 };
 pub use histogram::{histogram_into, HistRange};
 

@@ -199,11 +199,66 @@ pub fn quantile_in_place(values: &mut [f64], q: f64) -> Option<f64> {
     quantile_sorted(values, q)
 }
 
+/// Mode — the most frequently occurring value, with its count.
+///
+/// Sorts the caller's buffer in place (non-allocating) and scans for the
+/// longest run of bit-equal values. On a tie the smallest such value wins
+/// (deterministic, from the sorted order). `None` for an empty slice.
+///
+/// Floating-point mode compares exact equality, so it is meaningful for
+/// discrete/quantised data; for genuinely continuous data every value is
+/// typically unique and the count is 1 (the caller decides whether that is
+/// useful). `NaN` values sort to one end via `partial_cmp` and are grouped
+/// among themselves.
+pub fn mode_in_place(values: &mut [f64]) -> Option<(f64, usize)> {
+    if values.is_empty() {
+        return None;
+    }
+    values.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap_or(core::cmp::Ordering::Equal));
+    let mut best_val = values[0];
+    let mut best_count = 1usize;
+    let mut cur_val = values[0];
+    let mut cur_count = 1usize;
+    let mut i = 1;
+    while i < values.len() {
+        if values[i] == cur_val {
+            cur_count += 1;
+        } else {
+            cur_val = values[i];
+            cur_count = 1;
+        }
+        if cur_count > best_count {
+            best_count = cur_count;
+            best_val = cur_val;
+        }
+        i += 1;
+    }
+    Some((best_val, best_count))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     const EPS: f64 = 1e-12;
+
+    #[test]
+    fn mode_picks_most_frequent() {
+        let mut v = [1.0, 2.0, 2.0, 3.0, 3.0, 3.0, 4.0];
+        assert_eq!(mode_in_place(&mut v), Some((3.0, 3)));
+    }
+
+    #[test]
+    fn mode_tie_picks_smallest() {
+        let mut v = [5.0, 5.0, 1.0, 1.0, 9.0];
+        assert_eq!(mode_in_place(&mut v), Some((1.0, 2)));
+    }
+
+    #[test]
+    fn mode_empty_none() {
+        let mut v: [f64; 0] = [];
+        assert_eq!(mode_in_place(&mut v), None);
+    }
 
     #[test]
     fn empty_returns_none() {
