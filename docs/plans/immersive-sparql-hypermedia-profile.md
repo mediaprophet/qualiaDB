@@ -169,6 +169,7 @@ Every endpoint advertises one or more independent conformance classes:
 - `qisp:AsyncJobs`
 - `qisp:CredentialBoundRelations`
 - `qisp:MaterializedSpatialViews`
+- `qisp:StreamingSparql` (RSP-QL-aligned continuous/windowed queries — see §15d)
 
 An implementation must not claim the parent profile merely because one extension function
 is registered. Publish a machine-readable capability graph and a human-readable profile.
@@ -1233,6 +1234,75 @@ computed by an oracle-certified kernel that runs native *and* in-browser; disclo
 zero-knowledge proof rather than raw data; authorized against actual human-rights logic; answerable
 in natural language; rendered to colour *or sound*; over provable, commons-aware history. No RDF
 store combines these, and every piece is real (or one bridge away) in the tree.
+
+---
+
+## 15d. Streaming / continuous SPARQL (missing entirely from v0.2 — add as a capability + phase)
+
+An immersive, spatio-temporal system is inherently a *streaming* one: sensor/health telemetry,
+live geo layers (NASA GIBS, active-fire/weather feeds), agent trajectories, and the person's own
+edits all arrive continuously. v0.2 has request/response query, async jobs (§7.2), materialized
+views (§9), and SSE change-notification — but **no streaming SPARQL**: no standing continuous
+queries, no window operators, no incremental result deltas.
+
+**Current state (honest).** Continuous/windowed stream reasoning (RSP-QL / C-SPARQL / CQELS) is
+**not implemented** — the only "window" is a `WindowType::Tumbling` *data structure* in the
+decorative `sparql_mm.rs`, unrelated to continuous graph query. Result *streaming* is **partial**:
+`sparql_websocket.rs` chunks results, but only *after* the executor has eagerly materialized a
+`Vec<BindingRow>` — there is no lazy/backpressured evaluation. So both senses of "streaming SPARQL"
+are open.
+
+**Standards baseline.** SPARQL 1.1/1.2 do not standardize streaming; the reference work is the W3C
+RDF Stream Processing (RSP) Community Group — **RSP-QL** (a unifying model over C-SPARQL and
+CQELS-QL), with time-based/triple-based **windows** (tumbling/sliding), **stream sources**, and
+**continuous evaluation** producing result *streams* (RStream/IStream/DStream — full result,
+inserted deltas, deleted deltas). QISP should implement an RSP-QL-aligned extension, advertised as
+a distinct draft conformance class — never conflated with stable SPARQL query conformance, and
+degrading cleanly (a non-streaming client still runs the one-shot form).
+
+**Reuse (no forks, per §10.2).** SSE graph revisions (`subscribe_graph_revisions`) as the
+continuous re-evaluation trigger; the materialized-view dependency-keying and invalidation (§9) as
+incremental-maintenance machinery; the WAL/DAG temporal substrate and `AS OF` parsing for window
+bounds; `sparql_websocket.rs`'s subscription bookkeeping and chunking for transport; async jobs
+(§7.2) for long-lived registered queries; and the daemon telemetry broadcast + geo adapters as
+first stream sources.
+
+**Requirements to add (candidate `QISP-R24`–`QISP-R28`):**
+
+- **R24 — Standing queries are explicit, authenticated, and revisioned.** A `REGISTER`-style
+  continuous query is a first-class resource (register / status / deregister), scoped to a
+  principal, with its stream sources, window spec, output policy, and lifecycle recorded — reusing
+  the job-resource state machine (§7.2), not a new silo.
+- **R25 — Windows are bounded and declared.** Time-based (`RANGE`/`STEP`) and triple-count windows,
+  tumbling or sliding, with a hard cap on window size and retained tuples. A window can never grow
+  unbounded; over-budget is an error, not silent truncation.
+- **R26 — Output is incremental and honest.** Emit RStream/IStream/DStream (full / inserted /
+  deleted) deltas; a consumer is told whether it is receiving a full re-materialization or a delta.
+  Deltas are provenance-stamped and monotonic per window instant.
+- **R27 — Continuous evaluation is bounded, snapshot-consistent, and backpressured.** Each
+  evaluation runs against one pinned dataset revision (§6.2), within per-tick byte/row/invocation
+  budgets; a slow consumer applies backpressure (drop-oldest with a reported gap, or bounded
+  buffer) rather than growing memory. Evaluation must not allocate on the hot path.
+- **R28 — Streaming honours authorization, privacy, and the commons boundary continuously.** Policy
+  (§8), sensitivity lanes, licence obligations (§15b), and revocation are re-checked as the stream
+  advances; a credential/policy change or expiry stops emission. A denied or private tuple never
+  reaches a stream, cache, or materialized view — the §14 laundering non-goal applies per tick.
+
+**Architectural note.** True streaming needs the executor to evaluate *incrementally* rather than
+returning `Result<Vec<BindingRow>>`. Options: (a) an iterator/generator execution mode that yields
+bindings lazily; (b) incremental view maintenance driven by graph-revision deltas (compute only the
+change, not the whole answer). (b) fits the existing materialized-view + SSE-revision machinery best
+and avoids a second executor. Either way, hot evaluation stays caller-buffered and zero-heap.
+
+**Phase placement.** Slot as **Phase 8b — Streaming / continuous SPARQL** (after §9 materialized
+views and the async job service, whose infrastructure it reuses). Conformance class:
+`qisp:StreamingSparql`. Gate (`QISP-R24`–`QISP-R28`): a registered windowed query over a live stream
+emits correct incremental deltas under backpressure and budget, stops on policy/credential change,
+and never leaks a private/denied tuple; the one-shot `/sparql` path is unaffected.
+
+**Non-goal (add to §14):** unbounded windows, silent buffer growth, at-most-once/at-least-once
+ambiguity presented as exactly-once, and any streamed result that outruns its authorization,
+licence, or snapshot without saying so.
 
 ---
 

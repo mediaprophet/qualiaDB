@@ -103,6 +103,10 @@ pub struct MediaFragment {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WindowType {
     Tumbling { size_ms: u64 },
+    // NOTE: this WindowType is a SPARQL-MM media-fragment window, NOT a
+    // continuous-query (RSP-QL/C-SPARQL) stream window over the graph. Streaming
+    // SPARQL is planned but unimplemented — see
+    // docs/plans/immersive-sparql-hypermedia-profile.md §15d.
     Sliding { size_ms: u64, slide_ms: u64 },
     Session { gap_ms: u64 },
 }
