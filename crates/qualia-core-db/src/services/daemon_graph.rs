@@ -6,6 +6,7 @@
 //! by `/query` no longer relies on `Vec` or `HashSet`.
 
 use crate::{q_hash, NQuin};
+use std::collections::HashMap;
 use std::ops::Index;
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -216,6 +217,61 @@ fn seed_anatomy_health_graph(store: &mut DaemonGraphStore) {
     }
 }
 
+/// Merged literal lexicon (`hash -> text`) for the resident graph, built from
+/// the `.q42` volumes' lexicon segments at load. Lets the SPARQL evaluator
+/// resolve ingested literal *text* (for `geof:*`/text extension functions and
+/// correct literal serialisation) rather than only opaque hashes.
+static GRAPH_LEXICON: RwLock<Option<HashMap<u64, String>>> = RwLock::new(None);
+
+fn reset_graph_lexicon() {
+    if let Ok(mut g) = GRAPH_LEXICON.write() {
+        *g = Some(HashMap::new());
+    }
+}
+
+fn merge_graph_lexicon(entries: HashMap<u64, String>) {
+    if let Ok(mut g) = GRAPH_LEXICON.write() {
+        let map = g.get_or_insert_with(HashMap::new);
+        for (k, v) in entries {
+            map.entry(k).or_insert(v);
+        }
+    }
+}
+
+/// Resolve a term hash to its literal text via the resident graph's lexicon.
+/// Used by the query path as the ingested-data resolver for `TextResolver`.
+pub fn graph_lexicon_lookup(hash: u64) -> Option<String> {
+    GRAPH_LEXICON
+        .read()
+        .ok()
+        .and_then(|g| g.as_ref().and_then(|m| m.get(&hash).cloned()))
+}
+
+/// Load and merge the lexicon segments of all `.q42` volumes under
+/// `{storage_path}/Index` into the resident graph lexicon.
+fn load_graph_lexicon_from_index(storage_path: &str) {
+    let index = Path::new(storage_path).join("Index");
+    let Ok(entries) = std::fs::read_dir(&index) else {
+        return;
+    };
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("q42") {
+            continue;
+        }
+        if path
+            .file_name()
+            .map(|n| n.to_string_lossy().contains(".meta."))
+            .unwrap_or(false)
+        {
+            continue;
+        }
+        if let Ok(lex) = crate::q42_lex::Q42Lexicon::load_for_q42(&path) {
+            merge_graph_lexicon(lex.entries);
+        }
+    }
+}
+
 fn try_load_index_dir(store: &mut DaemonGraphStore, storage_path: &str) {
     let index = Path::new(storage_path).join("Index");
     let Ok(entries) = std::fs::read_dir(&index) else {
@@ -264,6 +320,12 @@ pub fn init_daemon_graph(storage_path: &str) {
 
 /// Initialise or refresh the daemon graph with explicit seeding policy.
 pub fn init_daemon_graph_with_options(storage_path: &str, opts: InitGraphOptions) {
+    // Always (re)load the literal lexicon from the Index volumes so the query
+    // path can resolve ingested literal text — independent of whether the quins
+    // come from the snapshot or a fresh seed below.
+    reset_graph_lexicon();
+    load_graph_lexicon_from_index(storage_path);
+
     // A durable snapshot (written after each committed SPARQL Update) is the
     // authoritative last full state — prefer it so updates survive a restart.
     if let Ok(n) = load_graph_snapshot(storage_path) {
@@ -646,6 +708,20 @@ mod tests {
         assert_eq!(graph_quin_count(), before + 1);
         assert!(graph_revision() > rev_before, "revision bumped for subscribers");
         reset_graph_for_test();
+    }
+
+    #[test]
+    #[serial]
+    fn graph_lexicon_merge_and_lookup() {
+        // The resident graph lexicon (merged from .q42 volumes) is what the query
+        // path hands the geo/text resolver for ingested-data literal text.
+        reset_graph_lexicon();
+        let mut m = std::collections::HashMap::new();
+        m.insert(42u64, "POINT(1 2)".to_string());
+        merge_graph_lexicon(m);
+        assert_eq!(graph_lexicon_lookup(42), Some("POINT(1 2)".to_string()));
+        assert_eq!(graph_lexicon_lookup(999), None);
+        reset_graph_lexicon();
     }
 
     #[test]

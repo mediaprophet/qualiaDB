@@ -109,10 +109,11 @@ pub fn execute_sparql_on_graph(
         sparql_parser::parse_sparql_full(trimmed).map_err(|e| QueryExecError::ParseError(e))?;
     let plan =
         QueryPlanner::plan(&sparql_query, &ctx).map_err(|e| QueryExecError::ParseError(e))?;
-    // A text resolver carrying the query's literal constants lets `geof:*`/text
-    // extension functions resolve constant geometry/strings. (Ingested-variable
-    // geometry additionally needs a lexicon-carrying path — `with_lexicon`.)
-    let resolver = crate::sparql_ast::TextResolver::new(&literals);
+    // A text resolver carrying the query's literal constants PLUS the resident
+    // graph's ingested lexicon, so `geof:*`/text functions resolve both constant
+    // geometry and variable geometry bound from ingested data.
+    let lex_closure = |h: u64| crate::daemon_graph::graph_lexicon_lookup(h);
+    let resolver = crate::sparql_ast::TextResolver::with_lexicon(&literals, &lex_closure);
     let executor = QueryExecutor::with_resolver(graph, resolver);
 
     let stats = ExecutionStats {
