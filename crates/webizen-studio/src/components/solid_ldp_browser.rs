@@ -20,7 +20,9 @@ pub fn SolidLdpBrowser() -> Element {
                     validation_status.set(if is_valid { "Graph Valid".to_string() } else { "Invalid Shape".to_string() });
                 }
             } else {
-                validation_status.set("Error".to_string());
+                // The backend fails closed until a shape-registry lookup exists
+                // (it will not fabricate "Graph Valid" against an empty shape).
+                validation_status.set("Validation unavailable (shape registry not implemented)".to_string());
             }
         });
     };

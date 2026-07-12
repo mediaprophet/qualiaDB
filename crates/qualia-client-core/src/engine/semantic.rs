@@ -2,7 +2,6 @@ use qualia_core_db::daemon_graph::graph_read_guard;
 use qualia_core_db::sparql_library::sparql_executor::QueryExecutor;
 use qualia_core_db::sparql_library::sparql_parser::parse_sparql;
 use qualia_core_db::sparql_library::sparql_planner::QueryPlanner;
-use qualia_core_db::sparql_library::sparql_shacl::ShaclValidator;
 
 /// Executes a SPARQL query against the local in-memory NQuin graph.
 pub fn execute_local_sparql(query: &str) -> Result<Vec<(String, String, String)>, String> {
@@ -28,28 +27,22 @@ pub fn execute_local_sparql(query: &str) -> Result<Vec<(String, String, String)>
 }
 
 /// Validates a node against a SHACL shape within the local graph.
-pub fn validate_local_shacl(node: u64, shape_uri: u64) -> Result<bool, String> {
-    let guard = graph_read_guard();
-    let quins = guard.as_slice();
-    
-    let mut validator = ShaclValidator::new(quins);
-    
-    let shape = qualia_core_db::sparql_library::sparql_shacl::ShaclShape {
-        shape_iri: shape_uri,
-        target_class: None,
-        target_node: Some(node),
-        constraints: [0; 32],
-        constraint_count: 0,
-    };
-    
-    if let Err(e) = validator.add_shape(shape) {
-        return Err(e);
-    }
-
-    match validator.validate_node(node, &shape) {
-        Ok(result) => Ok(result.conforms),
-        Err(e) => Err(e),
-    }
+///
+/// HONESTY / fail-closed: there is no shape registry yet that resolves a
+/// `shape_uri` to real SHACL constraints. The former implementation built a
+/// shape with `constraint_count: 0` and validated against it — an empty
+/// constraint set trivially "conforms", so this returned `Ok(true)` for ANY
+/// node and graph, lighting up the UI's "Graph Valid" unconditionally (a
+/// false green light). Until shape resolution exists we refuse rather than
+/// fabricate a conformance verdict. The real `ShaclValidator` /
+/// `sparql_shacl::run` engine is genuine — the missing piece is the
+/// `shape_uri → constraints` lookup that would feed it.
+pub fn validate_local_shacl(_node: u64, shape_uri: u64) -> Result<bool, String> {
+    Err(format!(
+        "SHACL validation unavailable: no constraints resolved for shape {shape_uri:#018x} \
+         (shape-registry lookup is not implemented). Refusing to report conformance against \
+         an empty shape."
+    ))
 }
 
 /// Executes an SLG computational VM frame locally.
