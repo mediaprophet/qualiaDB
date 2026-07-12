@@ -90,6 +90,17 @@ capability:
 Before Phase 0 exits, convert this table into a versioned implementation inventory with links to
 tests. Any `Partial` capability remains visibly partial in the service description.
 
+**Known current-state divergence to fix (recorded here so it is not lost):** as of the completed
+full-SPARQL work, `sparql_filter.rs`'s expression evaluator has a catch-all arm
+(`_ => Ok(EvalResult::Boolean(true))`) for builtin functions that are not yet implemented — it
+silently returns *true* rather than raising an expression error. This directly violates §4.3
+("SPARQL expression errors must not silently become `false`" — here it is silently `true`, which
+is worse: an unimplemented predicate passes every row). The GeoSPARQL `Function::Custom` dispatch
+added in the same work is honest (it errors when a geometry literal can't be resolved), but the
+builtin catch-all must be changed to a proper expression error before QISP relies on FILTER
+semantics. Small and self-contained; do it in Phase 1's error-semantics work (`QISP-R06`) or
+sooner.
+
 ---
 
 ## 2. Standards baseline
