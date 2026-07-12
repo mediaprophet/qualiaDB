@@ -66,8 +66,11 @@ pub enum PhysicalOperatorType {
     },
     /// Union operator
     Union { left: OperatorId, right: OperatorId },
-    /// Optional operator
+    /// Optional operator (SPARQL 1.1 left-join)
     Optional { left: OperatorId, right: OperatorId },
+    /// Anti-join operator (SPARQL 1.1 MINUS): keep a left solution unless a
+    /// right solution is compatible with it AND shares a bound variable.
+    AntiJoin { left: OperatorId, right: OperatorId },
     /// Distinct operator
     Distinct { input: OperatorId },
     /// GroupBy operator with Aggregates
@@ -402,22 +405,59 @@ impl QueryPlanner {
             }
             Pattern::Minus { inner } => Self::plan_pattern(*inner, ctx, plan),
             Pattern::Group { start_idx, len } => {
-                // Plan all patterns in the group and join them
+                // Plan the group's children left-to-right. Plain children join
+                // (natural join — the nested-loop operator checks compatibility
+                // across all bound slots). OPTIONAL children become a real
+                // left-join and MINUS children a real anti-join against the
+                // accumulated result, rather than being folded into a plain join
+                // (which would make OPTIONAL required and MINUS behave like an
+                // intersection — both wrong).
                 let mut current_op: Option<OperatorId> = None;
                 for i in *start_idx..(*start_idx + *len) {
-                    let pattern_op = Self::plan_pattern(i, ctx, plan)?;
-                    if let Some(curr) = current_op {
-                        // Join with current
-                        current_op = Some(plan.add_operator(
-                            PhysicalOperatorType::NestedLoopJoin {
-                                left: curr,
-                                right: pattern_op,
-                                join_var: 0, // TODO: Determine join variable
-                            },
-                            0,
-                        )?);
-                    } else {
-                        current_op = Some(pattern_op);
+                    let child = ctx
+                        .patterns
+                        .get(i as usize)
+                        .ok_or("Pattern ID out of bounds")?;
+                    match child {
+                        Pattern::Optional { inner } => {
+                            let right = Self::plan_pattern(*inner, ctx, plan)?;
+                            current_op = Some(match current_op {
+                                Some(left) => plan.add_operator(
+                                    PhysicalOperatorType::Optional { left, right },
+                                    0,
+                                )?,
+                                // A leading OPTIONAL has no required left side —
+                                // its solutions stand alone.
+                                None => right,
+                            });
+                        }
+                        Pattern::Minus { inner } => {
+                            let right = Self::plan_pattern(*inner, ctx, plan)?;
+                            current_op = Some(match current_op {
+                                Some(left) => plan.add_operator(
+                                    PhysicalOperatorType::AntiJoin { left, right },
+                                    0,
+                                )?,
+                                // MINUS with nothing to subtract from is
+                                // degenerate (malformed SPARQL); nothing is
+                                // removed, so fall back to the inner solutions.
+                                None => right,
+                            });
+                        }
+                        _ => {
+                            let pattern_op = Self::plan_pattern(i, ctx, plan)?;
+                            current_op = Some(match current_op {
+                                Some(curr) => plan.add_operator(
+                                    PhysicalOperatorType::NestedLoopJoin {
+                                        left: curr,
+                                        right: pattern_op,
+                                        join_var: 0,
+                                    },
+                                    0,
+                                )?,
+                                None => pattern_op,
+                            });
+                        }
                     }
                 }
                 current_op.ok_or("Empty group pattern".to_string())

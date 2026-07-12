@@ -191,6 +191,9 @@ impl<'a> QueryExecutor<'a> {
             PhysicalOperatorType::Optional { left, right } => {
                 self.execute_optional(left, right, plan, ctx, row, results)
             }
+            PhysicalOperatorType::AntiJoin { left, right } => {
+                self.execute_anti_join(left, right, plan, ctx, row, results)
+            }
             PhysicalOperatorType::Distinct { input } => {
                 self.execute_distinct(input, plan, ctx, row, results)
             }
@@ -729,6 +732,51 @@ impl<'a> QueryExecutor<'a> {
             } else {
                 // Right pattern didn't match - keep left result with NULL for right variables
                 results.push(left_result);
+            }
+        }
+
+        Ok(!results.is_empty())
+    }
+
+    /// SPARQL 1.1 MINUS (anti-join). Both sides are evaluated; a left solution
+    /// is removed iff some right solution is **compatible** with it AND the two
+    /// **share at least one bound variable** (the domain-intersection rule that
+    /// distinguishes MINUS from NOT EXISTS — MINUS over disjoint domains removes
+    /// nothing).
+    fn execute_anti_join(
+        &self,
+        left: OperatorId,
+        right: OperatorId,
+        plan: &ExecutionPlan,
+        ctx: &SparqlQueryContext,
+        row: &mut BindingRow,
+        results: &mut Vec<BindingRow>,
+    ) -> Result<bool, String> {
+        let mut left_results = Vec::new();
+        self.execute_operator(left, plan, ctx, row, &mut left_results)?;
+
+        // The right side is evaluated independently (fresh bindings).
+        let mut right_results = Vec::new();
+        let mut right_row = BindingRow::new();
+        self.execute_operator(right, plan, ctx, &mut right_row, &mut right_results)?;
+
+        for l in left_results {
+            let excluded = right_results.iter().any(|r| {
+                let mut compatible = true;
+                let mut shares = false;
+                for k in 0..MAX_BINDINGS {
+                    if let (Some(a), Some(b)) = (l.slots[k], r.slots[k]) {
+                        shares = true;
+                        if a != b {
+                            compatible = false;
+                            break;
+                        }
+                    }
+                }
+                compatible && shares
+            });
+            if !excluded {
+                results.push(l);
             }
         }
 

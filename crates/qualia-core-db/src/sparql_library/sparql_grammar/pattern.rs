@@ -15,11 +15,12 @@
 //! flattened into the parent (group nesting is join-associative), which also
 //! sidesteps the contiguity problem for them.
 //!
-//! ## Known engine simplifications (not parser bugs)
-//! The planner currently lowers `Optional` to a plain join and `Minus` to its
-//! inner (see `sparql_planner`), so left-join / anti-join *semantics* are an
-//! engine TODO. This parser produces the correct `Pattern` nodes; when the
-//! planner is upgraded, they will gain full semantics with no parser change.
+//! ## Engine semantics
+//! An `OPTIONAL` group child lowers to a real left-join and a `MINUS` child to a
+//! real anti-join (SPARQL 1.1: a left solution survives MINUS unless a right
+//! solution is compatible with it *and* shares a bound variable). Filter/BIND
+//! scoping over a group is simplified (both apply over the whole group's join
+//! result — see below), which is the remaining deliberate simplification here.
 
 use std::collections::HashMap;
 

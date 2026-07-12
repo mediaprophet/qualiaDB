@@ -314,6 +314,87 @@ mod sparql_tests {
         }
     }
 
+    // ===== OPTIONAL / MINUS semantics end-to-end =====
+
+    fn run_query(
+        query: &str,
+        quins: &[crate::NQuin],
+    ) -> (SparqlQueryContext, Vec<BindingRow>) {
+        let (q, ctx) = parse_sparql(query).unwrap();
+        let plan = QueryPlanner::plan(&q, &ctx).unwrap();
+        let rows = QueryExecutor::new(quins).execute(&plan, &ctx).unwrap();
+        (ctx, rows)
+    }
+
+    fn var_of(ctx: &SparqlQueryContext, name: &[u8]) -> u8 {
+        ctx.variable_hashes
+            .iter()
+            .position(|h| *h == crate::lexicon::generate_60bit_token(name))
+            .unwrap() as u8
+    }
+
+    fn mk_quin(s: u64, p: u64, o: u64) -> crate::NQuin {
+        crate::NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        }
+    }
+
+    #[test]
+    fn test_optional_keeps_unmatched_left_rows() {
+        let tok = |b: &[u8]| crate::lexicon::generate_60bit_token(b);
+        let (name, age) = (tok(b"http://ex/name"), tok(b"http://ex/age"));
+        let (s1, s2) = (tok(b"http://ex/s1"), tok(b"http://ex/s2"));
+        // s1 has a name AND an age; s2 has only a name.
+        let quins = vec![
+            mk_quin(s1, name, 100),
+            mk_quin(s1, age, 42),
+            mk_quin(s2, name, 200),
+        ];
+        let (ctx, rows) = run_query(
+            "SELECT ?s ?age WHERE { ?s <http://ex/name> ?n . OPTIONAL { ?s <http://ex/age> ?age } }",
+            &quins,
+        );
+        let (sv, av) = (var_of(&ctx, b"?s"), var_of(&ctx, b"?age"));
+        let mut got: Vec<(u64, Option<u64>)> =
+            rows.iter().map(|r| (r.get(sv).unwrap(), r.get(av))).collect();
+        got.sort();
+        assert!(got.contains(&(s1, Some(42))), "s1 should carry ?age; got {got:?}");
+        assert!(
+            got.contains(&(s2, None)),
+            "s2 must be kept with ?age unbound (OPTIONAL is a left-join); got {got:?}"
+        );
+        assert_eq!(got.len(), 2, "OPTIONAL must not drop the unmatched row; got {got:?}");
+    }
+
+    #[test]
+    fn test_minus_subtracts_matching_left_rows() {
+        let tok = |b: &[u8]| crate::lexicon::generate_60bit_token(b);
+        let (name, excl) = (tok(b"http://ex/name"), tok(b"http://ex/excluded"));
+        let (s1, s2) = (tok(b"http://ex/s1"), tok(b"http://ex/s2"));
+        // Both have names; only s2 is excluded.
+        let quins = vec![
+            mk_quin(s1, name, 100),
+            mk_quin(s2, name, 200),
+            mk_quin(s2, excl, 1),
+        ];
+        let (ctx, rows) = run_query(
+            "SELECT ?s WHERE { ?s <http://ex/name> ?n . MINUS { ?s <http://ex/excluded> ?e } }",
+            &quins,
+        );
+        let sv = var_of(&ctx, b"?s");
+        let got: Vec<u64> = rows.iter().map(|r| r.get(sv).unwrap()).collect();
+        assert_eq!(
+            got,
+            vec![s1],
+            "MINUS must remove the excluded subject (s2) and keep s1; got {got:?}"
+        );
+    }
+
     // ===== Extension Registry Tests =====
 
     #[test]
