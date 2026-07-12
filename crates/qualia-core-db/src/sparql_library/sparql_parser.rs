@@ -244,264 +244,13 @@ fn parse_where_clause(
     ctx: &mut SparqlQueryContext,
     prefixes: &HashMap<String, String>,
 ) -> Result<PatternId, String> {
-    let inner = input
-        .trim_start_matches("WHERE")
-        .trim()
-        .trim_start_matches('{')
-        .trim();
-    let inner = inner.trim_end_matches('}').trim();
-
-    // Pull FILTER(...) clauses out of the group before the triple-pattern split
-    // (their `(...)` and operators would otherwise confuse the `.`-splitter).
-    // The real expression grammar lives in `sparql_grammar`; the executor already
-    // evaluates the resulting `Pattern::Filter`. (Nested groups / OPTIONAL / UNION
-    // are the next grammar slice; this handles a flat WHERE with FILTERs.)
-    let (triples_text, filter_exprs) = extract_filters(inner)?;
-
-    let mut root = parse_triple_patterns(&triples_text, ctx, prefixes)?;
-    for expr_src in filter_exprs {
-        let toks = crate::sparql_library::sparql_grammar::tokenize(&expr_src)?;
-        let expr_id = crate::sparql_library::sparql_grammar::parse_expression(&toks, ctx, prefixes)?;
-        root = ctx.alloc_pattern(Pattern::Filter {
-            pattern: root,
-            expression: expr_id,
-        })?;
-    }
-    Ok(root)
-}
-
-/// Split a (brace-stripped) group's text into its triple-pattern text and the
-/// source text of each `FILTER ( … )` expression, matching balanced parentheses.
-/// Case-insensitive on the `FILTER` keyword; requires a word boundary so an IRI
-/// or literal containing "filter" is not mistaken for the keyword.
-fn extract_filters(inner: &str) -> Result<(String, Vec<String>), String> {
-    let bytes = inner.as_bytes();
-    let n = bytes.len();
-    let mut triples: Vec<u8> = Vec::with_capacity(n);
-    let mut filters: Vec<String> = Vec::new();
-    let mut i = 0usize;
-    while i < n {
-        if keyword_at(bytes, i, b"FILTER") {
-            let mut j = i + 6;
-            while j < n && (bytes[j] as char).is_ascii_whitespace() {
-                j += 1;
-            }
-            if j < n && bytes[j] == b'(' {
-                let start = j + 1;
-                let mut depth = 1i32;
-                let mut k = start;
-                while k < n {
-                    match bytes[k] {
-                        b'(' => depth += 1,
-                        b')' => {
-                            depth -= 1;
-                            if depth == 0 {
-                                break;
-                            }
-                        }
-                        _ => {}
-                    }
-                    k += 1;
-                }
-                if depth != 0 {
-                    return Err("unbalanced parentheses in FILTER".to_string());
-                }
-                filters.push(inner[start..k].to_string());
-                i = k + 1; // skip past the closing ')'
-                continue;
-            }
-        }
-        triples.push(bytes[i]);
-        i += 1;
-    }
-    let triples_text =
-        String::from_utf8(triples).map_err(|_| "non-utf8 in WHERE clause".to_string())?;
-    Ok((triples_text, filters))
-}
-
-/// True if the ASCII keyword `kw` (case-insensitive) starts at byte `i` with a
-/// word boundary on both sides.
-fn keyword_at(bytes: &[u8], i: usize, kw: &[u8]) -> bool {
-    if i + kw.len() > bytes.len() {
-        return false;
-    }
-    for (k, &kb) in kw.iter().enumerate() {
-        if !bytes[i + k].eq_ignore_ascii_case(&kb) {
-            return false;
-        }
-    }
-    let before_ok = i == 0 || !is_word_byte_ascii(bytes[i - 1]);
-    let after = i + kw.len();
-    let after_ok = after >= bytes.len() || !is_word_byte_ascii(bytes[after]);
-    before_ok && after_ok
-}
-
-fn is_word_byte_ascii(b: u8) -> bool {
-    b.is_ascii_alphanumeric() || b == b'_'
-}
-
-fn parse_triple_patterns(
-    input: &str,
-    ctx: &mut SparqlQueryContext,
-    prefixes: &HashMap<String, String>,
-) -> Result<PatternId, String> {
-    let start_idx = ctx.pattern_count as u16;
-    let mut count = 0u16;
-    let mut last_id = 0u16;
-
-    for triple_str in split_triple_patterns(input) {
-        let triple_str = triple_str.trim();
-        if triple_str.is_empty() {
-            continue;
-        }
-        last_id = if triple_str.starts_with("<<") {
-            parse_star_triple_pattern(triple_str, ctx, prefixes)?
-        } else {
-            let parts: Vec<&str> = triple_str.split_whitespace().collect();
-            if parts.len() < 3 {
-                continue;
-            }
-            let subject = parse_term(parts[0], ctx, prefixes)?;
-            let predicate = parse_term(parts[1], ctx, prefixes)?;
-            let object = parse_term(parts[2], ctx, prefixes)?;
-            ctx.alloc_pattern(Pattern::Triple {
-                subject,
-                predicate,
-                object,
-            })?
-        };
-        count += 1;
-    }
-
-    if count == 0 {
-        return Err("No triple patterns found".to_string());
-    }
-    if count == 1 {
-        return Ok(last_id);
-    }
-    ctx.alloc_pattern(Pattern::Group {
-        start_idx,
-        len: count,
-    })
-}
-
-fn split_triple_patterns(input: &str) -> Vec<String> {
-    let mut parts = Vec::new();
-    let mut current = String::new();
-    // A `.` only terminates a triple at angle-depth 0 and outside a quoted literal.
-    // Tracking single-`<…>` IRI depth (not just `<<…>>`) is essential: IRIs such as
-    // `<https://ns.webcivics.net/values/Undertaking>` contain dots that would
-    // otherwise be mistaken for pattern terminators, shattering the BGP.
-    let mut angle_depth: i32 = 0;
-    let mut in_quote = false;
-    for ch in input.chars() {
-        match ch {
-            '"' => {
-                in_quote = !in_quote;
-                current.push(ch);
-            }
-            '<' if !in_quote => {
-                angle_depth += 1;
-                current.push(ch);
-            }
-            '>' if !in_quote => {
-                if angle_depth > 0 {
-                    angle_depth -= 1;
-                }
-                current.push(ch);
-            }
-            '.' if angle_depth == 0 && !in_quote => {
-                if !current.trim().is_empty() {
-                    parts.push(current.trim().to_string());
-                }
-                current.clear();
-            }
-            _ => current.push(ch),
-        }
-    }
-    if !current.trim().is_empty() {
-        parts.push(current.trim().to_string());
-    }
-    parts
-}
-
-fn parse_star_triple_pattern(
-    input: &str,
-    ctx: &mut SparqlQueryContext,
-    prefixes: &HashMap<String, String>,
-) -> Result<PatternId, String> {
-    let start = input.find("<<").ok_or("Malformed RDF-Star pattern")?;
-    let end = input.find(">>").ok_or("Malformed RDF-Star pattern")?;
-    let inner = input[start + 2..end].trim();
-    let outer = input[end + 2..].trim();
-    let inner_parts: Vec<&str> = inner.split_whitespace().collect();
-    if inner_parts.len() < 3 {
-        return Err("Malformed RDF-Star inner triple".to_string());
-    }
-    let outer_parts: Vec<&str> = outer.split_whitespace().collect();
-    if outer_parts.len() < 2 {
-        return Err("Malformed RDF-Star outer triple".to_string());
-    }
-    let inner_subject = parse_term(inner_parts[0], ctx, prefixes)?;
-    let inner_predicate = parse_term(inner_parts[1], ctx, prefixes)?;
-    let inner_object = parse_term(inner_parts[2], ctx, prefixes)?;
-    let outer_predicate = parse_term(outer_parts[0], ctx, prefixes)?;
-    let outer_object = parse_term(outer_parts[1], ctx, prefixes)?;
-    ctx.alloc_pattern(Pattern::StarTriple {
-        inner_subject,
-        inner_predicate,
-        inner_object,
-        outer_predicate,
-        outer_object,
-    })
-}
-
-fn parse_term(
-    term: &str,
-    ctx: &mut SparqlQueryContext,
-    prefixes: &HashMap<String, String>,
-) -> Result<u64, String> {
-    let term = term.trim();
-
-    if term.starts_with('?') || term.starts_with('$') {
-        let var_id = ctx.register_variable(term)?;
-        Ok(var_id as u64)
-    } else if term == "a" {
-        // Turtle `a` shorthand for rdf:type — must hash to the same expanded IRI the
-        // ingest parser (turtle_doc) stores, so `?s a ?o` matches type triples.
-        Ok(crate::lexicon::generate_60bit_token(
-            b"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-        ))
-    } else if term.starts_with('<') {
-        let iri = term.trim_start_matches('<').trim_end_matches('>');
-        Ok(crate::lexicon::generate_60bit_token(iri.as_bytes()))
-    } else if let Some((prefix, local)) = term.split_once(':') {
-        if let Some(base) = prefixes.get(prefix) {
-            let iri = format!("{base}{local}");
-            Ok(crate::lexicon::generate_60bit_token(iri.as_bytes()))
-        } else {
-            Ok(crate::lexicon::generate_60bit_token(term.as_bytes()))
-        }
-    } else if term.starts_with('"') {
-        // Literal string
-        let lit = term.trim_start_matches("\"").trim_end_matches("\"");
-        Ok(crate::lexicon::generate_60bit_token(lit.as_bytes()))
-    } else if term.starts_with('\'') {
-        // Literal string (single quotes)
-        let lit = term.trim_start_matches("'").trim_end_matches("'");
-        Ok(crate::lexicon::generate_60bit_token(lit.as_bytes()))
-    } else if term == "true" || term == "false" {
-        // Boolean literal
-        Ok(crate::lexicon::generate_60bit_token(term.as_bytes()))
-    } else {
-        // Try to parse as number
-        if let Ok(num) = term.parse::<u64>() {
-            Ok(num)
-        } else {
-            // Treat as IRI
-            Ok(crate::lexicon::generate_60bit_token(term.as_bytes()))
-        }
-    }
+    // Delegate to the recursive-descent group-graph-pattern parser in
+    // `sparql_grammar`: FILTER / OPTIONAL / UNION / MINUS / nested groups /
+    // quoted triples, producing the `Pattern` arena the planner + executor
+    // already run. (`input` begins with `WHERE { … }`; the grammar consumes the
+    // balanced braces and ignores any trailing solution modifiers, which the
+    // caller parses separately.)
+    crate::sparql_library::sparql_grammar::parse_where_group(input, ctx, prefixes)
 }
 
 fn parse_integer(input: &str) -> Option<u64> {
@@ -574,36 +323,19 @@ fn temporal_is_leap(y: u64) -> bool {
 mod tests {
     use super::*;
 
-    /// Regression: dots *inside* a `<…>` IRI must not be treated as triple
-    /// terminators. Before the fix, `<https://ns.webcivics.net/values/Undertaking>`
-    /// (and any dotted IRI) shattered the BGP, yielding "No triple patterns found".
+    /// Regression: dots *inside* a `<…>` IRI or a `"…"` literal must not be
+    /// treated as triple terminators. The tokenizer handles this structurally
+    /// (whole-IRI / whole-string tokens), so these now parse end-to-end.
     #[test]
-    fn split_keeps_dotted_iris_intact() {
-        let bgp = "?a <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> \
-                   <https://ns.webcivics.net/values/Undertaking>";
-        let parts = split_triple_patterns(bgp);
-        assert_eq!(
-            parts.len(),
-            1,
-            "a single dotted-IRI triple must stay one pattern"
-        );
+    fn dotted_iris_and_literals_do_not_break_bgp() {
+        let two = "SELECT ?a WHERE { ?a <https://ns.webcivics.net/values/partOf> <https://ns.webcivics.net/values/x#Instrument> . \
+                   ?a <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ns.webcivics.net/values/Undertaking> }";
+        assert!(parse_sparql(two).is_ok(), "two dotted-IRI triples must parse");
 
-        // Two real triples (terminated by `.`) split into exactly two — the `.`
-        // separator still works at angle-depth 0, dots inside IRIs do not.
-        let two = "?a <https://ns.webcivics.net/values/partOf> <https://ns.webcivics.net/values/x#Instrument> . \
-                   ?a <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://ns.webcivics.net/values/Undertaking>";
-        assert_eq!(
-            split_triple_patterns(two).len(),
-            2,
-            "the `.` between triples still splits"
-        );
-
-        // A dot inside a quoted literal is also not a terminator.
-        let lit = "?a <https://ns.webcivics.net/values/originalText> \"Art. 3 applies.\"";
-        assert_eq!(
-            split_triple_patterns(lit).len(),
-            1,
-            "dots in quoted literals are not terminators"
+        let lit = "SELECT ?a WHERE { ?a <https://ns.webcivics.net/values/originalText> \"Art. 3 applies.\" }";
+        assert!(
+            parse_sparql(lit).is_ok(),
+            "a dotted literal must not break the BGP"
         );
     }
 

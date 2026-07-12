@@ -11,7 +11,9 @@
 //! built in verified slices (see `docs/plans/sparql-full-implementation.md`).
 
 pub mod expr;
+pub mod pattern;
 pub mod tokenizer;
 
 pub use expr::parse_expression;
+pub use pattern::parse_where_group;
 pub use tokenizer::{tokenize, Token};

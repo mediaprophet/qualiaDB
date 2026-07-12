@@ -238,6 +238,25 @@ mod tests {
     }
 
     #[test]
+    fn sparql_union_combines_both_branches() {
+        // End-to-end: `{ … } UNION { … }` now parses (grammar slice 2) and the
+        // executor's Union operator returns rows from both branches.
+        let s_alice = q_hash("alice");
+        let s_bob = q_hash("bob");
+        let p_knows = crate::lexicon::generate_60bit_token(b"knows");
+        let p_likes = crate::lexicon::generate_60bit_token(b"likes");
+        let o = q_hash("carol");
+        let graph = vec![
+            synthetic_binding_quin(s_alice, p_knows, o),
+            synthetic_binding_quin(s_bob, p_likes, o),
+        ];
+        let query =
+            "SELECT ?s WHERE { { ?s <knows> ?o } UNION { ?s <likes> ?o } }";
+        let (_, results) = execute_sparql_on_graph(query, &graph).expect("union query");
+        assert_eq!(results.len(), 2, "UNION should return rows from both branches");
+    }
+
+    #[test]
     fn sparql_filter_numeric_prunes_rows() {
         // End-to-end: a real FILTER clause is now parsed (grammar slice 1) and
         // evaluated by the existing executor. alice(age 20) passes `?o >= 18`,
