@@ -144,6 +144,14 @@ pub enum Pattern {
         pattern: PatternId,
         expression: ExpressionId,
     },
+    /// BIND(expr AS ?var) — extends each solution of `pattern` with `var`
+    /// bound to the value of `expression` (SPARQL 1.1 Extend). If the
+    /// expression errors, `var` is left unbound and the row is kept.
+    Bind {
+        pattern: PatternId,
+        var: VariableId,
+        expression: ExpressionId,
+    },
     /// MINUS pattern
     Minus { inner: PatternId },
     /// Group graph pattern - references range in child array

@@ -37,6 +37,14 @@ pub enum PhysicalOperatorType {
         input: OperatorId,
         expression: ExpressionId,
     },
+    /// Bind operator — extends each input row with `var` = eval(`expression`)
+    /// (SPARQL 1.1 Extend). Never drops rows; an expression error leaves the
+    /// variable unbound.
+    Bind {
+        input: OperatorId,
+        var: VariableId,
+        expression: ExpressionId,
+    },
     /// Projection operator
     Project {
         input: OperatorId,
@@ -372,6 +380,21 @@ impl QueryPlanner {
                 plan.add_operator(
                     PhysicalOperatorType::Filter {
                         input: inner_op,
+                        expression: *expression,
+                    },
+                    0,
+                )
+            }
+            Pattern::Bind {
+                pattern: inner_pattern,
+                var,
+                expression,
+            } => {
+                let inner_op = Self::plan_pattern(*inner_pattern, ctx, plan)?;
+                plan.add_operator(
+                    PhysicalOperatorType::Bind {
+                        input: inner_op,
+                        var: *var,
                         expression: *expression,
                     },
                     0,

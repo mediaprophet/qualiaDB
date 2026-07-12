@@ -103,7 +103,9 @@ implemented via the same borrowed `TextResolver` the GeoSPARQL dispatch uses:
 - **Still deferred, each for a concrete reason (all now honest errors, not silent `true`):** the
   string-*producing* builtins (`CONCAT`/`SUBSTR`/`UCASE`/`LCASE`/`STRBEFORE`/`STRAFTER`/
   `ENCODE_FOR_URI`) are blocked by the arena's `EvalResult` having no string-return channel (a new
-  value would need interning — same root cause as `BIND`); `COALESCE` needs real unbound/optional
+  value would need interning — this same channel gap blocks a string-*producing* `BIND`, though
+  **value-producing `BIND` is now implemented 2026-07-12** as a real Extend operator); `COALESCE`
+  needs real unbound/optional
   semantics (the current model collapses an unbound variable to `0`, so it can't detect the
   unboundness `COALESCE` branches on); and the date/time (`NOW`/`YEAR`/…), `UUID`/`STRUUID`, `RAND`,
   `IRI`/`URI`/`BNODE` construction, `STRLANG`/`STRDT`, and `LANGMATCHES` builtins need supporting

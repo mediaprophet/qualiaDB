@@ -23,7 +23,7 @@
 
 use std::collections::HashMap;
 
-use crate::sparql_ast::{ExpressionId, Pattern, PatternId, SparqlQueryContext};
+use crate::sparql_ast::{ExpressionId, Pattern, PatternId, SparqlQueryContext, VariableId};
 use crate::sparql_library::sparql_grammar::expr::parse_expression;
 use crate::sparql_library::sparql_grammar::tokenizer::{tokenize, Token};
 
@@ -103,10 +103,19 @@ impl<'a> PatternParser<'a> {
     /// Parse `{ … }` and return a single `PatternId`.
     fn parse_group(&mut self) -> Result<PatternId, String> {
         self.expect_punct('{')?;
-        let (specs, filters) = self.parse_group_body()?;
-        let root = self.materialize(specs)?;
-        // Filters wrap the whole group (scoping is simplified — see module doc).
-        let mut root = root;
+        let (specs, filters, binds) = self.parse_group_body()?;
+        let mut root = self.materialize(specs)?;
+        // BINDs wrap the group first (in parse order — innermost = first), so a
+        // later BIND and any FILTER can see an earlier BIND's variable. Scoping
+        // is simplified the same way FILTER is (see module doc): both apply over
+        // the whole group's join result.
+        for (expr_id, var) in binds {
+            root = self.ctx.alloc_pattern(Pattern::Bind {
+                pattern: root,
+                var,
+                expression: expr_id,
+            })?;
+        }
         for expr_id in filters {
             root = self.ctx.alloc_pattern(Pattern::Filter {
                 pattern: root,
@@ -119,9 +128,13 @@ impl<'a> PatternParser<'a> {
     /// Parse the body of a group up to (and consuming) the closing `}`.
     /// Returns the direct-child specs and any FILTER expression ids (hoisted to
     /// the group). Plain nested groups are flattened in.
-    fn parse_group_body(&mut self) -> Result<(Vec<ChildSpec>, Vec<ExpressionId>), String> {
+    #[allow(clippy::type_complexity)]
+    fn parse_group_body(
+        &mut self,
+    ) -> Result<(Vec<ChildSpec>, Vec<ExpressionId>, Vec<(ExpressionId, VariableId)>), String> {
         let mut specs: Vec<ChildSpec> = Vec::new();
         let mut filters: Vec<ExpressionId> = Vec::new();
+        let mut binds: Vec<(ExpressionId, VariableId)> = Vec::new();
 
         loop {
             match self.peek() {
@@ -159,10 +172,9 @@ impl<'a> PatternParser<'a> {
                     filters.push(expr_id);
                 }
                 Some(Token::Word(w)) if w.eq_ignore_ascii_case("BIND") => {
-                    return Err(
-                        "BIND requires engine support (no Bind pattern node yet) — deferred"
-                            .to_string(),
-                    );
+                    self.pos += 1;
+                    let (expr_id, var_id) = self.parse_bind()?;
+                    binds.push((expr_id, var_id));
                 }
                 Some(Token::Punct('{')) => {
                     // A nested group: either the left side of `{ } UNION { }`, or
@@ -177,7 +189,7 @@ impl<'a> PatternParser<'a> {
                         // group (group nesting is join-associative). Any inner
                         // FILTER is hoisted to this group's filter list — filter
                         // scoping is thereby simplified (see module doc).
-                        self.flatten_group_into(left, &mut specs, &mut filters);
+                        self.flatten_group_into(left, &mut specs, &mut filters, &mut binds);
                     }
                 }
                 Some(Token::StarOpen) => {
@@ -190,7 +202,7 @@ impl<'a> PatternParser<'a> {
                 }
             }
         }
-        Ok((specs, filters))
+        Ok((specs, filters, binds))
     }
 
     /// Allocate the direct-child specs as a contiguous arena batch and return a
@@ -283,6 +295,60 @@ impl<'a> PatternParser<'a> {
         parse_expression(expr_tokens, self.ctx, self.prefixes)
     }
 
+    /// Parse `BIND ( expr AS ?var )` → (expression id, target variable id).
+    ///
+    /// The value-producing case — numeric / boolean / term / already-interned
+    /// string results (`?a + ?b`, `STRLEN(?x)`, `IF(...)`, `?x`) — binds a real
+    /// `u64`. A string-*producing* expression (`CONCAT`/`SUBSTR`/…) evaluates to
+    /// an error at runtime because the zero-heap arena has no channel to intern
+    /// a new string; per SPARQL, that error leaves the variable unbound rather
+    /// than failing the query.
+    fn parse_bind(&mut self) -> Result<(ExpressionId, VariableId), String> {
+        if !matches!(self.peek(), Some(Token::Punct('('))) {
+            return Err("expected '(' after BIND".to_string());
+        }
+        // Collect the balanced-paren span (same approach as parse_filter_expr).
+        let start = self.pos + 1;
+        let mut depth = 0i32;
+        let mut i = self.pos;
+        while i < self.tokens.len() {
+            match &self.tokens[i] {
+                Token::Punct('(') => depth += 1,
+                Token::Punct(')') => {
+                    depth -= 1;
+                    if depth == 0 {
+                        break;
+                    }
+                }
+                _ => {}
+            }
+            i += 1;
+        }
+        if depth != 0 {
+            return Err("unbalanced parentheses in BIND".to_string());
+        }
+        let span = &self.tokens[start..i];
+        self.pos = i + 1; // past ')'
+
+        // Split on the top-level `AS` keyword: `expr AS ?var`.
+        let as_pos = span
+            .iter()
+            .position(|t| matches!(t, Token::Word(w) if w.eq_ignore_ascii_case("AS")))
+            .ok_or("BIND requires the form `BIND(expr AS ?var)`")?;
+        let expr_tokens = &span[..as_pos];
+        let var_tokens = &span[as_pos + 1..];
+        if expr_tokens.is_empty() {
+            return Err("BIND has no expression before AS".to_string());
+        }
+        let var_name = match var_tokens {
+            [Token::Var(name)] => name.clone(),
+            _ => return Err("BIND target must be a single ?variable".to_string()),
+        };
+        let expr_id = parse_expression(expr_tokens, self.ctx, self.prefixes)?;
+        let var_id = self.ctx.register_variable(&var_name)?;
+        Ok((expr_id, var_id))
+    }
+
     fn parse_triple(&mut self) -> Result<ChildSpec, String> {
         let s = self.term()?;
         let p = self.term()?;
@@ -369,12 +435,13 @@ impl<'a> PatternParser<'a> {
         id: PatternId,
         specs: &mut Vec<ChildSpec>,
         filters: &mut Vec<ExpressionId>,
+        binds: &mut Vec<(ExpressionId, VariableId)>,
     ) {
         let pat = self.ctx.patterns[id as usize];
         match pat {
             Pattern::Group { start_idx, len } => {
                 for i in start_idx..(start_idx + len) {
-                    self.flatten_group_into(i, specs, filters);
+                    self.flatten_group_into(i, specs, filters, binds);
                 }
             }
             Pattern::Filter {
@@ -382,7 +449,15 @@ impl<'a> PatternParser<'a> {
                 expression,
             } => {
                 filters.push(expression);
-                self.flatten_group_into(pattern, specs, filters);
+                self.flatten_group_into(pattern, specs, filters, binds);
+            }
+            Pattern::Bind {
+                pattern,
+                var,
+                expression,
+            } => {
+                binds.push((expression, var));
+                self.flatten_group_into(pattern, specs, filters, binds);
             }
             Pattern::Triple {
                 subject,
@@ -517,10 +592,29 @@ mod tests {
     }
 
     #[test]
-    fn bind_is_deferred_with_clear_error() {
+    fn parses_bind_into_bind_node() {
+        let (ctx, pat) =
+            root_pattern("{ ?s ?p ?o . BIND(?o AS ?x) }");
+        // BIND wraps the group in a Pattern::Bind whose target var is registered.
+        match pat {
+            Pattern::Bind { var, .. } => {
+                // ?x is the last variable registered (?s ?p ?o then ?x).
+                let x = ctx
+                    .variable_hashes
+                    .iter()
+                    .position(|h| *h == crate::lexicon::generate_60bit_token(b"?x"))
+                    .unwrap();
+                assert_eq!(var as usize, x);
+            }
+            other => panic!("expected Pattern::Bind, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn bind_requires_as_var_form() {
         let mut ctx = SparqlQueryContext::new();
-        let err = parse_where_group("{ ?s ?p ?o . BIND(?o AS ?x) }", &mut ctx, &HashMap::new())
+        let err = parse_where_group("{ ?s ?p ?o . BIND(?o) }", &mut ctx, &HashMap::new())
             .unwrap_err();
-        assert!(err.contains("BIND"), "got {err}");
+        assert!(err.contains("AS"), "got {err}");
     }
 }

@@ -6,7 +6,7 @@ use crate::lexicon::generate_embedded_triple_id;
 use crate::rdf_star::is_virtual_id;
 use crate::sparql_aggregates::{AggregationContext, GroupKey};
 use crate::sparql_ast::*;
-use crate::sparql_filter::ExpressionEvaluator;
+use crate::sparql_filter::{EvalResult, ExpressionEvaluator};
 use crate::sparql_planner::*;
 use crate::NQuin;
 
@@ -155,6 +155,11 @@ impl<'a> QueryExecutor<'a> {
             PhysicalOperatorType::Filter { input, expression } => {
                 self.execute_filter(input, expression, plan, ctx, row, results)
             }
+            PhysicalOperatorType::Bind {
+                input,
+                var,
+                expression,
+            } => self.execute_bind(input, var, expression, plan, ctx, row, results),
             PhysicalOperatorType::Project {
                 input,
                 vars,
@@ -550,6 +555,46 @@ impl<'a> QueryExecutor<'a> {
             if eval_result.as_bool() {
                 results.push(input_row);
             }
+        }
+
+        Ok(!results.is_empty())
+    }
+
+    fn execute_bind(
+        &self,
+        input: OperatorId,
+        var: VariableId,
+        expression: ExpressionId,
+        plan: &ExecutionPlan,
+        ctx: &SparqlQueryContext,
+        row: &mut BindingRow,
+        results: &mut Vec<BindingRow>,
+    ) -> Result<bool, String> {
+        let mut input_results = Vec::new();
+        self.execute_operator(input, plan, ctx, row, &mut input_results)?;
+
+        for mut input_row in input_results {
+            // SPARQL 1.1 Extend: bind `var` to the value of the expression,
+            // keeping every row. If the expression raises an error (e.g. a
+            // not-yet-implemented string-producing builtin, or a type error),
+            // the variable is simply left UNBOUND rather than failing the whole
+            // query. Value-producing results (numeric / term / boolean /
+            // already-interned string) map to the row's u64 slot.
+            match ExpressionEvaluator::evaluate_with_resolver(
+                expression,
+                ctx,
+                &input_row,
+                self.resolver,
+            ) {
+                Ok(EvalResult::Numeric(n)) | Ok(EvalResult::Iri(n)) | Ok(EvalResult::String(n)) => {
+                    input_row.set(var, n);
+                }
+                Ok(EvalResult::Boolean(b)) => {
+                    input_row.set(var, b as u64);
+                }
+                Err(_) => { /* expression error → leave `var` unbound */ }
+            }
+            results.push(input_row);
         }
 
         Ok(!results.is_empty())

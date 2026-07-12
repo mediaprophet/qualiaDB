@@ -267,6 +267,53 @@ mod sparql_tests {
         assert!(result.is_ok());
     }
 
+    // ===== BIND (Extend) end-to-end =====
+
+    #[test]
+    fn test_bind_end_to_end_binds_computed_value() {
+        // One triple in the graph; run a query that BINDs a copy of ?o and a
+        // numeric expression, and confirm both are bound in the result rows.
+        let s = crate::lexicon::generate_60bit_token(b"http://ex/s");
+        let p = crate::lexicon::generate_60bit_token(b"http://ex/p");
+        let o = 21u64;
+        let quins = vec![crate::NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        }];
+
+        let query =
+            "SELECT ?o ?copy ?double WHERE { ?s ?p ?o . BIND(?o AS ?copy) . BIND(?o + ?o AS ?double) }";
+        let (sparql_query, ctx) = parse_sparql(query).unwrap();
+        let plan = QueryPlanner::plan(&sparql_query, &ctx).unwrap();
+        let executor = QueryExecutor::new(&quins);
+        let rows = executor.execute(&plan, &ctx).unwrap();
+
+        assert!(!rows.is_empty(), "expected at least one solution row");
+
+        let var = |name: &[u8]| -> u8 {
+            ctx.variable_hashes
+                .iter()
+                .position(|h| *h == crate::lexicon::generate_60bit_token(name))
+                .unwrap_or_else(|| panic!("variable {} not registered", String::from_utf8_lossy(name)))
+                as u8
+        };
+        let o_var = var(b"?o");
+        let copy_var = var(b"?copy");
+        let double_var = var(b"?double");
+
+        for row in &rows {
+            assert_eq!(row.get(o_var), Some(o));
+            // BIND(?o AS ?copy) copies the value.
+            assert_eq!(row.get(copy_var), Some(o), "?copy should equal ?o");
+            // BIND(?o + ?o AS ?double) computes a real numeric value.
+            assert_eq!(row.get(double_var), Some(o + o), "?double should be ?o + ?o");
+        }
+    }
+
     // ===== Extension Registry Tests =====
 
     #[test]
