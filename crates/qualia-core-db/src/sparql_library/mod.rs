@@ -11,6 +11,7 @@ pub mod sparql_executor;
 pub mod sparql_extensions;
 pub mod sparql_federated;
 pub mod sparql_filter;
+pub mod sparql_grammar;
 pub mod sparql_mm;
 pub mod sparql_parser;
 pub mod sparql_planner;
