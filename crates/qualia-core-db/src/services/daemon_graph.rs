@@ -287,6 +287,85 @@ pub fn graph_read_guard() -> std::sync::RwLockReadGuard<'static, DaemonGraphStor
     graph_lock().read().expect("daemon graph poisoned")
 }
 
+/// Outcome of applying a SPARQL Update to the daemon graph.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct UpdateOutcome {
+    /// Number of quins added to the graph.
+    pub inserted: u64,
+    /// Number of quins removed from the graph.
+    pub deleted: u64,
+    /// Whether the change was signed and persisted to the WAL (true only when a
+    /// real signer callback was supplied). `false` = ephemeral, in-memory only.
+    pub persisted: bool,
+}
+
+/// Apply a parsed SPARQL Update to the resident daemon graph.
+///
+/// The mutation is applied under a single write guard (copy → run
+/// `UpdateExecutor` → write back), then the graph revision is bumped so
+/// subscribers (e.g. WebSocket sessions) are notified.
+///
+/// `on_change`, if supplied, receives the `(inserted, deleted)` quin sets so the
+/// caller can sign and persist them to the WAL with a **real** key (see
+/// `wal::commit_semantic_mutation`); `persisted` is then `true`. If it is
+/// `None`, the change is applied in memory only (ephemeral) and `persisted` is
+/// `false`. A signature is **never fabricated here** — durable, signed mutation
+/// requires the caller to supply a real signer, so an irreversible delete can
+/// never be committed under a placeholder key.
+pub fn apply_sparql_update(
+    op: &crate::sparql_library::sparql_update::UpdateOperation,
+    ctx: &crate::sparql_ast::SparqlQueryContext,
+    on_change: Option<&mut dyn FnMut(&[NQuin], &[NQuin]) -> Result<(), String>>,
+) -> Result<UpdateOutcome, String> {
+    use crate::sparql_library::sparql_update::UpdateExecutor;
+
+    let lock = graph_lock();
+    let mut guard = lock.write().map_err(|_| "daemon graph poisoned".to_string())?;
+
+    let before: Vec<NQuin> = guard.as_slice().to_vec();
+    let mut working = before.clone();
+    UpdateExecutor::new(&mut working).execute(op, ctx)?;
+
+    // Delta by semantic identity (subject/predicate/object/context), ignoring
+    // parity/metadata noise.
+    let same = |a: &NQuin, b: &NQuin| {
+        a.subject == b.subject
+            && a.predicate == b.predicate
+            && a.object == b.object
+            && a.context == b.context
+    };
+    let inserted: Vec<NQuin> = working
+        .iter()
+        .filter(|w| !before.iter().any(|b| same(w, b)))
+        .copied()
+        .collect();
+    let deleted: Vec<NQuin> = before
+        .iter()
+        .filter(|b| !working.iter().any(|w| same(w, b)))
+        .copied()
+        .collect();
+
+    guard.clear();
+    guard.extend_from_slice(&working);
+    drop(guard);
+    bump_graph_revision();
+
+    let persisted = if let Some(cb) = on_change {
+        // The graph is already updated; the callback makes it durable. If it
+        // fails, the in-memory change stands but is reported as not persisted.
+        cb(&inserted, &deleted).map_err(|e| format!("persist failed: {e}"))?;
+        true
+    } else {
+        false
+    };
+
+    Ok(UpdateOutcome {
+        inserted: inserted.len() as u64,
+        deleted: deleted.len() as u64,
+        persisted,
+    })
+}
+
 /// Extend the live graph with ontology quins from `qualia-core-db::ontology_loader`.
 pub fn extend_with_ontology_quins(quins: Vec<crate::NQuin>) {
     extend_with_ontology_quins_slice(&quins);
@@ -454,6 +533,57 @@ mod tests {
         let bytes = bytemuck::bytes_of(&quin);
         replace_graph_from_flat_bytes(bytes).expect("load flat quin");
         assert!(graph_revision() > before);
+        reset_graph_for_test();
+    }
+
+    fn parse_upd(src: &str) -> (crate::sparql_ast::SparqlQueryContext, crate::sparql_library::sparql_update::UpdateOperation) {
+        let mut ctx = crate::sparql_ast::SparqlQueryContext::new();
+        let op = crate::sparql_library::sparql_grammar::parse_update(
+            src,
+            &mut ctx,
+            &std::collections::HashMap::new(),
+        )
+        .unwrap();
+        (ctx, op)
+    }
+
+    #[test]
+    #[serial]
+    fn apply_update_insert_grows_graph_ephemeral() {
+        reset_graph_for_test();
+        let (ctx, op) =
+            parse_upd("INSERT DATA { <http://q.test/s1> <http://q.test/p1> <http://q.test/o1> }");
+        let before = graph_quin_count();
+        let rev_before = graph_revision();
+        let out = apply_sparql_update(&op, &ctx, None).unwrap();
+        assert_eq!(out.inserted, 1);
+        assert!(!out.persisted, "no signer callback → ephemeral, not persisted");
+        assert_eq!(graph_quin_count(), before + 1);
+        assert!(graph_revision() > rev_before, "revision bumped for subscribers");
+        reset_graph_for_test();
+    }
+
+    #[test]
+    #[serial]
+    fn apply_update_delete_removes_and_signer_sees_delta() {
+        reset_graph_for_test();
+        let (ictx, iop) =
+            parse_upd("INSERT DATA { <http://q.test/s2> <http://q.test/p2> <http://q.test/o2> }");
+        apply_sparql_update(&iop, &ictx, None).unwrap();
+        let seeded = graph_quin_count();
+
+        let (dctx, dop) =
+            parse_upd("DELETE DATA { <http://q.test/s2> <http://q.test/p2> <http://q.test/o2> }");
+        let mut captured_deleted = 0usize;
+        let mut cb = |_ins: &[NQuin], del: &[NQuin]| -> Result<(), String> {
+            captured_deleted = del.len();
+            Ok(())
+        };
+        let out = apply_sparql_update(&dop, &dctx, Some(&mut cb)).unwrap();
+        assert_eq!(out.deleted, 1);
+        assert!(out.persisted, "signer callback supplied → persisted");
+        assert_eq!(captured_deleted, 1, "callback received the deleted quin");
+        assert_eq!(graph_quin_count(), seeded - 1);
         reset_graph_for_test();
     }
 }
