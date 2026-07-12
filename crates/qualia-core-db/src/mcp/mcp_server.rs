@@ -7,7 +7,7 @@ extern crate std;
 mod mcp_format_impls;
 #[path = "mcp_stub_impls.rs"]
 mod mcp_stub_impls;
-#[path = "mcp_tool_impls.rs"]
+#[path = "mcp_tool_impls/mod.rs"]
 mod mcp_tool_impls;
 
 use crate::wal::append_mutation;
