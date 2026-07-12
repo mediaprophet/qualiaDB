@@ -3461,8 +3461,7 @@ impl StatisticalPrivacyEngine {
         let epsilon = 1.0;
         let scale = sensitivity / epsilon;
 
-        // Generate Laplace noise (simplified)
-        let noise = self.generate_laplace_noise(scale);
+        let noise = self.generate_laplace_noise(scale)?;
         let noisy_value = value + noise;
 
         // Update privacy budget
@@ -3481,7 +3480,7 @@ impl StatisticalPrivacyEngine {
 
         let mut noisy_counts = Vec::with_capacity(counts.len());
         for &count in counts {
-            let noise = self.generate_laplace_noise(scale);
+            let noise = self.generate_laplace_noise(scale)?;
             let noisy_count = (count as f64 + noise).max(0.0) as u32;
             noisy_counts.push(noisy_count);
         }
@@ -3492,19 +3491,37 @@ impl StatisticalPrivacyEngine {
         Ok((noisy_counts, epsilon))
     }
 
-    fn generate_laplace_noise(&self, scale: f64) -> f64 {
-        // Simplified Laplace noise generation
-        use std::sync::atomic::{AtomicU64, Ordering};
-        static COUNTER: AtomicU64 = AtomicU64::new(1);
-        let random = COUNTER.fetch_add(1, Ordering::SeqCst) as f64;
-
-        // Generate Laplace noise using exponential distribution
-        let u = (random as u64 % 1000) as f64 / 1000.0;
-        if u < 0.5 {
-            scale * (1.0 + u).ln()
-        } else {
-            -scale * (1.0 - u).ln()
-        }
+    /// Sample real Laplace(0, `scale`) noise via inverse-CDF transform over OS
+    /// entropy.
+    ///
+    /// SECURITY / CORRECTNESS: a former implementation drew from a global
+    /// monotonic `AtomicU64` counter, so the "noise" was fully deterministic
+    /// and predictable — which **voids** the differential-privacy guarantee
+    /// (an observer who knows the call sequence can subtract the exact noise
+    /// and recover the raw value). The old transform was also not a Laplace
+    /// sample. This uses real OS entropy (`getrandom`, native + wasm) and the
+    /// correct inverse CDF, and **fails closed** (returns `PrivacyError`, no
+    /// output) when entropy is unavailable rather than degrade to weak noise.
+    ///
+    /// Note: `epsilon` is fixed at 1.0 by the callers and the budget is a
+    /// simple per-query decrement — this is a valid fixed-ε mechanism, but it
+    /// does not enforce ε-composition across many queries (that lives in the
+    /// separate `PrivacyAccountant`). Per-query noise is now genuinely random.
+    fn generate_laplace_noise(&self, scale: f64) -> Result<f64, StatisticalError> {
+        let mut bytes = [0u8; 8];
+        getrandom::fill(&mut bytes).map_err(|e| {
+            StatisticalError::PrivacyError(format!(
+                "no OS entropy for differential-privacy noise: {e}"
+            ))
+        })?;
+        // Map the random u64 to the OPEN interval (0,1) so that ln(1 - 2|u|)
+        // stays finite: (x + 0.5) / 2^64 is never exactly 0 or 1.
+        let x = u64::from_le_bytes(bytes) as f64;
+        let r = (x + 0.5) / (u64::MAX as f64 + 1.0);
+        // u ~ Uniform(-1/2, 1/2); Laplace inverse CDF:
+        //   X = -scale * sgn(u) * ln(1 - 2|u|)
+        let u = r - 0.5;
+        Ok(-scale * u.signum() * (1.0 - 2.0 * u.abs()).ln())
     }
 
     /// Encrypt (seal) a statistical result using the fiduciary crypto system.
@@ -4641,6 +4658,22 @@ mod tests {
         assert!((result.result - 1.0).abs() < 1e-10);
         assert_eq!(result.sample_size, 4);
         assert!(!result.privacy_preserved);
+    }
+
+    #[test]
+    fn laplace_noise_is_random_not_a_counter() {
+        // Regression: DP noise was a deterministic AtomicU64 ramp, which voids
+        // the guarantee (predictable noise can be subtracted off). Two draws
+        // over identical (value, sensitivity) must differ now that real OS
+        // entropy backs the inverse-CDF sampler.
+        let mut eng = StatisticalPrivacyEngine::new();
+        let (a, eps) = eng.add_laplace_noise(100.0, 1.0).unwrap();
+        let (b, _) = eng.add_laplace_noise(100.0, 1.0).unwrap();
+        assert_eq!(eps, 1.0);
+        assert_ne!(
+            a, b,
+            "differential-privacy noise must be random, not deterministic"
+        );
     }
 
     #[test]
