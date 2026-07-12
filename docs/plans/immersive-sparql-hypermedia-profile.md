@@ -170,6 +170,7 @@ Every endpoint advertises one or more independent conformance classes:
 - `qisp:CredentialBoundRelations`
 - `qisp:MaterializedSpatialViews`
 - `qisp:StreamingSparql` (RSP-QL-aligned continuous/windowed queries — see §15d)
+- `qisp:WebRtcTransport` (browser peer-to-peer federation/streaming — see §15e)
 
 An implementation must not claim the parent profile merely because one extension function
 is registered. Publish a machine-readable capability graph and a human-readable profile.
@@ -1303,6 +1304,61 @@ and never leaks a private/denied tuple; the one-shot `/sparql` path is unaffecte
 **Non-goal (add to §14):** unbounded windows, silent buffer growth, at-most-once/at-least-once
 ambiguity presented as exactly-once, and any streamed result that outruns its authorization,
 licence, or snapshot without saying so.
+
+---
+
+## 15e. Peer-to-peer transport: SPARQL/QISP over WebRTC (add as a transport binding)
+
+v0.2 assumes a client↔server `/sparql` endpoint and HTTP-style federation (§7.3). It has no
+**peer-to-peer** transport — yet Qualia's thesis is *personal platform provider, no operator*
+(the social-network plan: connection-identifier rendezvous → mutual-auth → WireGuard
+SocialWebNet mesh). A person's browser should be able to federate directly with a peer's browser
+graph, with no server in the middle. WebRTC is the browser-native way to do that, and it pairs with
+the web-portable immersive layer (WGSL/WebGPU) and with §15d streaming (SCTP data channels give
+ordered/unordered delivery + backpressure — ideal for streaming result deltas to a peer).
+
+**This is a transport binding, not a new query language.** "QISP over WebRTC data channels" carries
+the *same* federation semantics (§7.3), streaming semantics (§15d), authorization (§8), and
+commons/private boundary (§15b) — over a peer connection instead of an HTTP endpoint.
+
+**Current state (honest).** Not implemented. The native P2P transport is WireGuard (`boringtun`
+present but unused; shells to `wg`); the only WebRTC in the tree is a self-labelled **mock**
+`BenchmarkAction::P2pSwarm` peer. Greenfield.
+
+**Reuse (no fork, per §10.2).** Signaling (SDP offer/answer + ICE candidate exchange) reuses the
+**connection-identifier / tiered-rendezvous** fabric already designed in the social-network plan —
+do **not** stand up a new signaling server. Peer identity reuses the **mutual-auth
+challenge-response** ("it's actually Bob"); DTLS encrypts the channel but does not authorize.
+Query/stream semantics reuse §7.3 and §15d. WireGuard remains the *native-peer* binding; WebRTC is
+the *browser-peer* binding — both behind one transport-agnostic federation layer.
+
+**Requirements to add (candidate `QISP-R29`–`QISP-R33`):**
+
+- **R29 — A data channel is network egress; govern it like remote `SERVICE`.** Opening a peer
+  channel and shipping/answering a query is an egress act subject to the same policy gate; it is not
+  enabled by default and never carries a process-local handle or pointer (§2.2 point 5).
+- **R30 — Authenticate the peer before any query; DTLS ≠ authorization.** The mutual-auth
+  challenge-response must succeed (both directions) before a query/update/subscription is accepted,
+  and every operation is still VC/policy-scoped per §8 — a verified channel is not a trusted grant.
+- **R31 — Signaling must not leak the social graph.** Rendezvous exchanges only what ICE needs;
+  it must not disclose a peer's contact list, presence, or graph contents, and it degrades to the
+  offline/mailbox path when no direct route exists.
+- **R32 — Relay and address-exposure privacy is first-class.** STUN reveals IPs and TURN relays see
+  traffic patterns — a metadata leak that matters for an anti-surveillance system. Offer a
+  metadata-private path (the **Nym opt-in** from the social-network plan) and never force a
+  third-party TURN relay without disclosing it; a relay never sees authorization plaintext.
+- **R33 — The commons/private boundary and licence obligations travel P2P.** A private or denied
+  tuple never crosses a peer channel; commons assets carry their licence/attribution (§15b) to the
+  peer; the §14 laundering non-goal applies per peer exchange.
+
+**Placement.** A transport binding under §7.3 (federation) and §15d (streaming), delivered alongside
+the async/streaming work (Phase 8b) once mutual-auth and rendezvous have stable contracts.
+Conformance/transport label: `qisp:WebRtcTransport` (browser P2P) beside an implied
+`qisp:WireGuardTransport` (native P2P), both advertised in the service description.
+
+**Non-goal (add to §14):** an unauthenticated or default-on peer query surface; signaling that
+discloses the social graph; a TURN relay presented as end-to-end private; and any P2P exchange that
+outruns its authorization, licence, or snapshot without saying so.
 
 ---
 
