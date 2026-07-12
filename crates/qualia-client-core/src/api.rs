@@ -1582,7 +1582,10 @@ pub fn get_coin_balances() -> Vec<CoinBalance> {
         CoinBalance {
             coin: "Monero".into(),
             ticker: "XMR".into(),
-            address: addr("monero_xmr"),
+            // XMR derivation is not implemented (see derive_wallets_from_seed).
+            // Show an explicit non-address so it can't be mistaken for a real
+            // receive address — never a fabricated "4..." string.
+            address: "(not yet supported)".into(),
             balance: 0.0,
             balance_display: zero_display.into(),
             fiat_usd: 0.0,
@@ -1806,8 +1809,14 @@ pub async fn derive_wallets_from_seed(seed: String) -> Result<serde_json::Value,
     let xec_addr = xec_payload.address;
     let xec_hash160 = xec_payload.pubkey_hash;
 
-    // We leave XMR mocked as before since it requires separate ed25519 derivation
-    let xmr_hex = to_hex(&seed_bytes[48..56]);
+    // Monero is deliberately NOT derived here. It uses ed25519 (not the
+    // secp256k1 BIP32 path above), Keccak-256 key derivation, and its own
+    // base58 address format. Emitting a plausible-looking "4..." string with
+    // no keys behind it is dangerous: any XMR sent to a keyless address is
+    // permanently lost. So we report it empty rather than fabricate an
+    // address. Real, test-vector-verified ed25519/Keccak/base58 derivation is
+    // tracked as follow-up work (needs an authoritative seed→address vector to
+    // verify against before it can be trusted).
     let hex_seed = to_hex(&seed_bytes[0..16]);
 
     Ok(serde_json::json!({
@@ -1817,7 +1826,7 @@ pub async fn derive_wallets_from_seed(seed: String) -> Result<serde_json::Value,
         "ecash_hash160": xec_hash160,
         "ethereum": eth_addr,
         "bitcoin_btc": btc_addr,
-        "monero_xmr": format!("4{}...", &xmr_hex[0..xmr_hex.len().min(16)])
+        "monero_xmr": "" // not derived — never a fabricated address (see above)
     }))
 }
 
