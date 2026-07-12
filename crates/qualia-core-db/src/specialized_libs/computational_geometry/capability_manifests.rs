@@ -245,7 +245,7 @@ pub const GEOMETRY_OP_MANIFESTS: &[OpManifest] = &[
     // ── P1 — Predicates (exact sign decisions; hot zero-heap) ──
     OpManifest {
         op: "orientation_2",
-        description: "Robust 2-D orientation predicate (filtered → exact fallback).",
+        description: "Robust 2-D orientation predicate (filtered → FMA-compensated residual; no exact-expansion fallback, unlike orient_3d/incircle/insphere).",
         backends: &[Backend::Scalar, Backend::Exact, Backend::Wasm],
         determinism: DeterminismClass::BitExact,
         limits: ResourceLimits {
@@ -1251,7 +1251,7 @@ pub const GEOMETRY_OP_MANIFESTS: &[OpManifest] = &[
     // ── P12.1 — N-ary CSG on 2D polygons + 2D mesh co-refinement ──
     OpManifest {
         op: "nary_csg_2d",
-        description: "N-ary CSG operations (union/intersection/difference/symmetric-difference) on N 2D polygons via chained DCEL overlays. 2D mesh co-refinement: split two triangle meshes at edge-edge intersections for compatible boundaries.",
+        description: "N-ary CSG operations (union/intersection/difference/symmetric-difference) on N 2D polygons via Sutherland-Hodgman convex-polygon clipping (not DCEL overlays). 2D mesh co-refinement: split two triangle meshes at edge-edge intersections for compatible boundaries.",
         backends: &[Backend::Scalar, Backend::Wasm, Backend::Exact],
         determinism: DeterminismClass::BitExact,
         limits: ResourceLimits {
@@ -1377,7 +1377,7 @@ pub const GEOMETRY_OP_MANIFESTS: &[OpManifest] = &[
     // ── P12.7 — Arbitrary n-ary boolean-expression evaluator ──
     OpManifest {
         op: "nary_boolean",
-        description: "N-ary boolean-expression evaluator: supports union, intersection, difference, xor, and complement over expression trees with 2+ mesh operands. Uses pairwise reduction of binary boolean_3 operations. Region classification via bitmask (u64, up to 64 operands). Deterministic bottom-up evaluation.",
+        description: "N-ary boolean-expression evaluator: supports union, intersection, difference, xor, and complement over expression trees with 2+ mesh operands. Uses pairwise reduction of binary boolean_3 operations — which use f64 intersection points, so this op is ApproximateMetric, not ExactConstruction, despite reducing over topology-critical booleans. Region classification via bitmask (u64, up to 64 operands). Deterministic bottom-up evaluation.",
         backends: &[Backend::Scalar, Backend::Exact],
         determinism: DeterminismClass::BitExact,
         limits: ResourceLimits {
@@ -1386,9 +1386,14 @@ pub const GEOMETRY_OP_MANIFESTS: &[OpManifest] = &[
             max_memory_bytes: 256 * 1024 * 1024,
             max_time_us: 0,
         },
-        topology_critical: true,
+        // Reduces over binary boolean_3, which is itself topology_critical:false
+        // + ApproximateMetric — nary_boolean is no more topology-critical than
+        // the f64 booleans it composes, and has no exact fallback to justify the
+        // stricter flag. (Was topology_critical:true + ExactConstruction, which
+        // overstated both: it neither guarantees topology nor constructs exactly.)
+        topology_critical: false,
         maturity: Maturity::Implemented,
-        exactness: ExactnessClass::ExactConstruction,
+        exactness: ExactnessClass::ApproximateMetric,
         allocation: AllocationClass::ColdBounded,
         dimensionality: Dimensionality::D3,
     },
@@ -2397,6 +2402,10 @@ mod tests {
             "boolean_union",
             "boolean_intersect",
             "boolean_difference",
+            // nary_boolean reduces over binary boolean_3 (f64 intersections),
+            // so it inherits ApproximateMetric — it must never claim exact
+            // construction just because it operates on topology-critical meshes.
+            "nary_boolean",
         ];
         for op in f64_intersection_ops {
             let m = GEOMETRY_OP_MANIFESTS

@@ -1,8 +1,10 @@
 //! Batched box-intersection spatial join.
 //!
 //! Given two sets of AABBs (A and B), find all overlapping pairs (a, b) where
-//! a ∈ A, b ∈ B, and a.overlaps(b). Uses the sweep-and-prune (SAP) algorithm
-//! with Morton-ordered sorting for determinism.
+//! a ∈ A, b ∈ B, and a.overlaps(b). Uses BVH-accelerated traversal — a BVH is
+//! built over set B (see `super::bvh`) and queried once per box in set A —
+//! with Morton-ordered BVH construction for determinism. (This is not a
+//! sweep-and-prune implementation.)
 //!
 //! ## Determinism
 //!

@@ -184,12 +184,12 @@ pub fn brute_force_red_blue_intersections(
 ///
 /// ## Implementation note
 ///
-/// This is a simplified version that collects all potential intersection
-/// events by checking adjacent segments in the sweep-line status. For
-/// production use with very large inputs, a full balanced-BST
-/// implementation would be needed. The current implementation is correct
-/// (matches the oracle) and demonstrates the O((n+k) log n) trend on
-/// typical inputs.
+/// This is a simplified version: at each event batch it checks all pairs
+/// among the active set (O(active²) per event), not the adjacent-only swaps a
+/// true O((n+k) log n) sweep performs against a balanced-BST status structure.
+/// It is therefore correct on all inputs (verified against the brute-force
+/// oracle) but does *not* achieve the textbook O((n+k) log n) bound — a full
+/// balanced-BST implementation would be needed for that.
 pub fn bentley_ottmann_intersections(segments: &[(Point2, Point2)]) -> Vec<Point2> {
     if segments.is_empty() {
         return Vec::new();

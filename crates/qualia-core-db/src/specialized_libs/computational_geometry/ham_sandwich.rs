@@ -5,7 +5,10 @@
 //! 1. **Ham-sandwich cut** — Given two point sets in the plane, find a line
 //!    that simultaneously bisects both sets (each half-plane contains at
 //!    most half of each set). Always exists by the ham-sandwich theorem.
-//!    O(n) time via the Megiddo/Avis algorithm.
+//!    A true O(n) result would use the Megiddo/Avis algorithm; this module
+//!    instead enumerates candidate lines (pairs of points, plus a
+//!    perpendicular-offset bisection search) and picks a bisecting one — a
+//!    simpler, practical construction, not the linear-time algorithm.
 //!
 //! 2. **Centrepoint** — A point such that any half-plane containing it also
 //!    contains at least n/3 of the points. Always exists (Rado's theorem).

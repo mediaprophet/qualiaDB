@@ -1,7 +1,10 @@
 //! Static BVH (Bounding Volume Hierarchy) / AABB-tree builder and traversal.
 //!
-//! Provides a deterministic, caller-buffered BVH over 3D AABBs using the
-//! Surface Area Heuristic (SAH) with Morton-code-based spatial sorting.
+//! Provides a deterministic, caller-buffered BVH over 3D AABBs built by
+//! Morton-code spatial sorting followed by a median split. (This is not a
+//! Surface Area Heuristic build — no per-split surface-area cost is evaluated;
+//! see `build_recursive`, which splits each range at its Morton-sorted median.
+//! A true SAH build remains a possible future improvement.)
 //! The tree is built once and queried many times — suitable for static scenes.
 //!
 //! ## Layout
@@ -13,7 +16,8 @@
 //! ## Determinism
 //!
 //! The builder sorts primitives by Morton code, then recursively partitions
-//! using SAH. Two builds from the same input produce byte-identical node arrays.
+//! each range at its median. Two builds from the same input produce
+//! byte-identical node arrays.
 
 use bytemuck::{Pod, Zeroable};
 

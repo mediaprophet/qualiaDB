@@ -2217,7 +2217,12 @@ pub async fn get_decoy_retention_mode(real_pin: &str) -> Result<String, String> 
 
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn get_decoy_retention_mode(_real_pin: &str) -> Result<String, String> {
-    Ok("auto_archive".into())
+    // Fail closed like every other wrapper in this file: never fabricate a
+    // security-relevant duress-audit-retention value off the desktop host. A
+    // false "auto_archive" here would tell the caller a policy is in effect
+    // when none was read — the exact false-success signal the sanctuary vault
+    // is built to avoid.
+    Err("Decoy-retention mode requires the Tauri desktop host".into())
 }
 
 /// Saves the decoy-retention mode ("auto_archive" | "manual_triage"). Requires the real PIN.
@@ -2236,7 +2241,10 @@ pub async fn set_decoy_retention_mode(real_pin: &str, mode: &str) -> Result<(), 
 
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn set_decoy_retention_mode(_real_pin: &str, _mode: &str) -> Result<(), String> {
-    Ok(())
+    // Fail closed like every other mutating wrapper in this file: never report
+    // a security-relevant duress-audit-retention write as succeeding when
+    // nothing was written.
+    Err("Decoy-retention mode requires the Tauri desktop host".into())
 }
 
 // --- Decoy activity review + curation (vault v2 S6; real-session-only) ---

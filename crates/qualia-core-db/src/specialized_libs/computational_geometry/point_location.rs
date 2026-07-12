@@ -3,10 +3,13 @@
 //! Given a planar subdivision (e.g., a triangulation), point location answers
 //! the query: "which face contains this point?" Two algorithms are provided:
 //!
-//! 1. **Walking location** (`walk_locate`): Start at a triangle and walk
-//!    towards the query point by crossing edges. O(√n) expected for
-//!    uniformly distributed queries, O(n) worst case. Very practical —
-//!    commonly used in finite-element and mesh-processing codes.
+//! 1. **Walking location** (`walk_locate`): Start at a triangle (an optional
+//!    caller hint) and locate the face containing the query. The classic
+//!    edge-crossing walk is O(√n) expected for uniform queries *given triangle
+//!    adjacency* — but this triangulation carries no adjacency, so the current
+//!    implementation falls back to a linear scan (O(n)) that stops early on a
+//!    hit (see the note on `walk_locate`). Threading adjacency through would
+//!    restore the true walk.
 //!
 //! 2. **Slab decomposition** (`SlabMap`): Preprocess the subdivision into
 //!    horizontal slabs. Each slab stores the edges crossing it, sorted by x.
