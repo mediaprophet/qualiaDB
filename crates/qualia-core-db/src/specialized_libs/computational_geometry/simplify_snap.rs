@@ -231,18 +231,39 @@ pub fn simplify_coplanar_regions(
                         && orient_3d(ref_a, ref_b, ref_c, n_b) == Sign::Zero
                         && orient_3d(ref_a, ref_b, ref_c, n_c) == Sign::Zero
                 } else {
-                    // Float tolerance fallback.
+                    // Float-tolerance fallback: all three neighbour vertices must
+                    // lie within `tol` (perpendicular distance) of the reference
+                    // plane through (ref_a, ref_b, ref_c). The previous body was
+                    // dead — it ignored `tol` and tested only `n_a` for *exact*
+                    // coplanarity, which the exact branch above already does; it
+                    // never accepted a near-coplanar (but not exactly coplanar)
+                    // neighbour, so `use_exact_coplanarity: false` behaved
+                    // identically to `true` (minus the n_b/n_c checks).
                     let tol = 1e-10;
-                    orient_3d(ref_a, ref_b, ref_c, n_a) != Sign::Positive
-                        && orient_3d(ref_a, ref_b, ref_c, n_a) != Sign::Negative
-                        && {
-                            // Simplified: just check the sign is not strongly positive/negative.
-                            let s = orient_3d(ref_a, ref_b, ref_c, n_a);
-                            s == Sign::Zero || {
-                                let _ = tol;
-                                false
-                            }
-                        }
+                    // Plane normal = (ref_b − ref_a) × (ref_c − ref_a).
+                    let e1 = (ref_b.x - ref_a.x, ref_b.y - ref_a.y, ref_b.z - ref_a.z);
+                    let e2 = (ref_c.x - ref_a.x, ref_c.y - ref_a.y, ref_c.z - ref_a.z);
+                    let nrm = (
+                        e1.1 * e2.2 - e1.2 * e2.1,
+                        e1.2 * e2.0 - e1.0 * e2.2,
+                        e1.0 * e2.1 - e1.1 * e2.0,
+                    );
+                    let nlen = (nrm.0 * nrm.0 + nrm.1 * nrm.1 + nrm.2 * nrm.2).sqrt();
+                    if nlen == 0.0 {
+                        // Degenerate reference triangle — fall back to the exact test.
+                        orient_3d(ref_a, ref_b, ref_c, n_a) == Sign::Zero
+                            && orient_3d(ref_a, ref_b, ref_c, n_b) == Sign::Zero
+                            && orient_3d(ref_a, ref_b, ref_c, n_c) == Sign::Zero
+                    } else {
+                        let dist = |p: Point3| {
+                            ((p.x - ref_a.x) * nrm.0
+                                + (p.y - ref_a.y) * nrm.1
+                                + (p.z - ref_a.z) * nrm.2)
+                                .abs()
+                                / nlen
+                        };
+                        dist(n_a) < tol && dist(n_b) < tol && dist(n_c) < tol
+                    }
                 };
 
                 if coplanar {
@@ -472,6 +493,70 @@ mod tests {
         // A square has 4 boundary vertices → 2 fan triangles.
         assert_eq!(result.triangles.len(), 2);
         assert_eq!(result.region_labels, vec![0, 0]);
+    }
+
+    // A unit square fanned around a centre vertex (4). Corner 3's z is the knob:
+    // merging all 4 triangles eliminates the interior vertex, dropping 4 → 2
+    // triangles (merged_count = 2), which is observable — unlike a 2-triangle
+    // quad, whose fan is also 2 triangles.
+    fn centred_square_with_corner_z(z3: f64) -> (Vec<Point3>, Vec<[u32; 3]>, Vec<u32>) {
+        let vertices = vec![
+            p(0.0, 0.0, 0.0),
+            p(1.0, 0.0, 0.0),
+            p(1.0, 1.0, 0.0),
+            p(0.0, 1.0, z3),
+            p(0.5, 0.5, 0.0),
+        ];
+        let triangles = vec![[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4]];
+        let labels = vec![0u32; 4];
+        (vertices, triangles, labels)
+    }
+
+    #[test]
+    fn simplify_tolerance_branch_merges_near_coplanar() {
+        // Corner 3 is 1e-12 off the z=0 plane — inside the 1e-10 tolerance.
+        // Exercises the previously-dead `use_exact_coplanarity: false` branch.
+        let (vertices, triangles, labels) = centred_square_with_corner_z(1e-12);
+        let tol_opts = SimplifyOptions {
+            use_exact_coplanarity: false,
+            ..SimplifyOptions::default()
+        };
+        let merged =
+            simplify_coplanar_regions(&vertices, &triangles, &labels, &tol_opts).unwrap();
+        assert!(
+            merged.merged_count > 0 && merged.triangles.len() == 2,
+            "near-coplanar patch should merge under float tolerance (got {} tris, merged {})",
+            merged.triangles.len(),
+            merged.merged_count
+        );
+
+        // The exact test must reject the 1e-12 offset, so the two triangles that
+        // touch corner 3 do not merge → the interior vertex is NOT eliminated.
+        let exact =
+            simplify_coplanar_regions(&vertices, &triangles, &labels, &SimplifyOptions::default())
+                .unwrap();
+        assert!(
+            exact.triangles.len() > 2,
+            "exact coplanarity must not fully merge the perturbed patch (got {} tris)",
+            exact.triangles.len()
+        );
+    }
+
+    #[test]
+    fn simplify_tolerance_branch_rejects_beyond_tolerance() {
+        // Corner 3 is 1e-6 off the plane — well beyond the 1e-10 tolerance.
+        let (vertices, triangles, labels) = centred_square_with_corner_z(1e-6);
+        let tol_opts = SimplifyOptions {
+            use_exact_coplanarity: false,
+            ..SimplifyOptions::default()
+        };
+        let result =
+            simplify_coplanar_regions(&vertices, &triangles, &labels, &tol_opts).unwrap();
+        assert!(
+            result.triangles.len() > 2,
+            "a corner beyond tolerance must not fully merge (got {} tris)",
+            result.triangles.len()
+        );
     }
 
     #[test]

@@ -4025,19 +4025,22 @@ impl FluidAnalyzer {
 
     pub fn analyze(
         &mut self,
-        _model: &EngineeringModel,
-        _analysis_type: AnalysisType,
+        model: &EngineeringModel,
+        analysis_type: AnalysisType,
     ) -> Result<AnalysisResults, EngineeringError> {
-        // NOT IMPLEMENTED — it must say so, never fabricate. The previous body returned a default
-        // AnalysisResults (empty fields + a hardcoded safety_factor) while ignoring the model.
-        // Real mechanical / thermal / fluid analysis over an arbitrary model needs a finite-element
-        // / finite-volume solver (mesh assembly + solve), not yet built. (Axial structural analysis
-        // IS implemented — see StructuralAnalyzer::analyze.)
-        Err(EngineeringError::NotImplemented(
-            "this analysis requires a finite-element/finite-volume solver over the model \
-             (mesh assembly + solve), which is not implemented"
-                .to_string(),
-        ))
+        // Runs the real 2-D incompressible Navier–Stokes solver in `cfd.rs`
+        // (LBM/D2Q9, Chorin-consistent) over the model's [Lx, Ly] domain. This
+        // used to return NotImplemented even though `cfd::run_cfd` was fully
+        // built and tested — the solver was disconnected from its own entry
+        // point. Defaults are the lid-driven cavity (`CfdBc::default`) at the
+        // library-default Reynolds number on a bounded 32×32 grid; a caller
+        // needing other physics can drive `cfd::run_cfd` directly with its own
+        // boundary conditions / solver config.
+        self.validate_model(model)?;
+        let bc = cfd::CfdBc::default();
+        let cfg = cfd::SolverConfig::default();
+        let solution = cfd::run_cfd(model, bc, cfg, 32, 32)?;
+        Ok(cfd::cfd_to_analysis_results(&solution, model, analysis_type))
     }
 }
 
@@ -5212,6 +5215,30 @@ mod tests {
     }
 
     #[test]
+    fn fluid_analyzer_runs_real_cfd_not_notimplemented() {
+        // Regression: FluidAnalyzer::analyze used to return NotImplemented even
+        // though cfd::run_cfd was fully built and tested. It must now run the
+        // solver and return finite fields (which also catches solver blow-up).
+        let mut analyzer = FluidAnalyzer::new();
+        let mut model = EngineeringModel::new();
+        model.geometry.dimensions = vec![1.0, 1.0]; // [Lx, Ly]
+        let mut mat = Material::new();
+        mat.material_properties.density = 1.0; // water-like
+        model.materials.insert("fluid".to_string(), mat);
+
+        let result = analyzer
+            .analyze(&model, AnalysisType::LinearStatic)
+            .expect("CFD analyze should run the solver, not return NotImplemented");
+        assert_eq!(result.displacement_field.len(), 32 * 32);
+        assert_eq!(result.stress_field.len(), 32 * 32);
+        assert!(
+            result.displacement_field.iter().all(|x| x.is_finite()),
+            "velocity field must be finite (no solver blow-up)"
+        );
+        assert!(result.stress_field.iter().all(|x| x.is_finite()));
+    }
+
+    #[test]
     fn test_structural_analysis() {
         let mut library = EngineeringAnalysisLibrary::new();
         library.initialize().unwrap();
@@ -5347,10 +5374,28 @@ mod tests {
         let mut library = EngineeringAnalysisLibrary::new();
         library.initialize().unwrap();
 
-        let model = EngineeringModel::new();
-        // HONEST: fluid (CFD) analysis isn't implemented → NotImplemented, not a fake result.
-        let result = library.perform_fluid_analysis(model, AnalysisType::LinearStatic);
-        assert!(matches!(result, Err(EngineeringError::NotImplemented(_))));
+        // Real CFD now runs through the library routing (cfd::run_cfd, LBM/D2Q9)
+        // — a proper fluid model yields finite fields, not NotImplemented.
+        let mut model = EngineeringModel::new();
+        model.geometry.dimensions = vec![1.0, 1.0];
+        let mut mat = Material::new();
+        mat.material_properties.density = 1.0;
+        model.materials.insert("fluid".to_string(), mat);
+        let result = library
+            .perform_fluid_analysis(model, AnalysisType::LinearStatic)
+            .expect("real CFD solve");
+        assert!(!result.result.displacement_field.is_empty());
+        assert!(result
+            .result
+            .displacement_field
+            .iter()
+            .all(|x| x.is_finite()));
+
+        // A model with no geometry dimensions must be refused, not faked.
+        let bare = EngineeringModel::new();
+        assert!(library
+            .perform_fluid_analysis(bare, AnalysisType::LinearStatic)
+            .is_err());
     }
 
     #[test]

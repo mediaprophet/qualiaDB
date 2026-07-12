@@ -151,14 +151,24 @@ pub fn ham_sandwich_cut(set_a: &[Point2], set_b: &[Point2]) -> Option<HamSandwic
         }
     }
 
-    // Fallback: return a vertical line through the median x of A.
+    // Fallback: a vertical line through the median x of A bisects A. Return it
+    // ONLY if it also bisects B — otherwise this simplified brute-force search
+    // did not find the (ham-sandwich-theorem-guaranteed) cut, and the honest
+    // answer is None rather than a line that fails to bisect B. The previous
+    // code returned this line unconditionally, so a caller could receive a
+    // "cut" that splits B arbitrarily.
     let mut xs: Vec<f64> = set_a.iter().map(|p| p.x).collect();
     xs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(core::cmp::Ordering::Equal));
     let med_x = xs[na / 2];
-    Some(HamSandwichCut {
-        point: Point2::new(med_x, 0.0),
-        dir: Point2::new(0.0, 1.0),
-    })
+    let point = Point2::new(med_x, 0.0);
+    let dir = Point2::new(0.0, 1.0);
+    let (la, ra, _) = count_sides(set_a, point, dir);
+    let (lb, rb, _) = count_sides(set_b, point, dir);
+    if la <= half_a && ra <= half_a && lb <= half_b && rb <= half_b {
+        Some(HamSandwichCut { point, dir })
+    } else {
+        None
+    }
 }
 
 /// Count points on each side of a directed line.
@@ -567,6 +577,42 @@ mod tests {
             lb,
             rb
         );
+    }
+
+    #[test]
+    fn ham_sandwich_returned_cut_always_bisects_both() {
+        // Core invariant: whenever a cut is returned it must bisect BOTH sets.
+        // Guards the fallback, which previously returned a median-x line that
+        // bisects A but was never checked against B (so it could hand back a
+        // non-bisecting "cut"). Several asymmetric configs stress that path.
+        let configs: Vec<(Vec<Point2>, Vec<Point2>)> = vec![
+            (
+                vec![pt(0.0, 0.0), pt(1.0, 0.1), pt(2.0, -0.1)],
+                vec![pt(0.5, 5.0), pt(1.5, 5.0), pt(2.5, 5.0)],
+            ),
+            (
+                vec![pt(0.0, 0.0), pt(0.1, 0.0), pt(0.2, 0.0), pt(10.0, 0.0), pt(10.1, 0.0)],
+                vec![pt(5.0, 1.0), pt(5.0, -1.0), pt(5.0, 3.0)],
+            ),
+            (
+                vec![pt(-3.0, 2.0), pt(3.0, 2.0), pt(0.0, -2.0)],
+                vec![pt(-3.0, -2.0), pt(3.0, -2.0), pt(0.0, 2.0), pt(0.0, 0.0)],
+            ),
+        ];
+        for (i, (a, b)) in configs.iter().enumerate() {
+            if let Some(cut) = ham_sandwich_cut(a, b) {
+                let (la, ra, _) = count_sides(a, cut.point, cut.dir);
+                let (lb, rb, _) = count_sides(b, cut.point, cut.dir);
+                assert!(
+                    la <= a.len() / 2 && ra <= a.len() / 2,
+                    "config {i}: A not bisected (l={la}, r={ra})"
+                );
+                assert!(
+                    lb <= b.len() / 2 && rb <= b.len() / 2,
+                    "config {i}: returned cut does NOT bisect B (l={lb}, r={rb})"
+                );
+            }
+        }
     }
 
     #[test]

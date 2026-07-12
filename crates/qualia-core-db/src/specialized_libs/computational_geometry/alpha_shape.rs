@@ -385,11 +385,13 @@ pub fn alpha_shape_3d(
                     continue;
                 }
                 let [ja, jb, jc, jd] = tetrahedra[t2];
-                let mut faces2 = [
-                    [ja.min(jb), ja.max(jb), jc], // wrong — need proper face extraction
-                ];
-                // Actually, let's just check all 4 faces of t2.
-                for &(u2, v2, w2) in &[(ja, jb, jc), (ja, jc, jd), (ja, jd, jb), (jb, jd, ic)] {
+                // The 4 faces of t2, same orientation pattern as t above. The
+                // fourth face previously read `(jb, jd, ic)` — `ic` is a vertex
+                // of the OUTER tetrahedron t, a copy-paste slip: it made a
+                // genuinely shared face fail to match, so a real interior face
+                // was misclassified as a boundary face. (Unexercised before now
+                // because every fixture used a single tetrahedron.)
+                for &(u2, v2, w2) in &[(ja, jb, jc), (ja, jc, jd), (ja, jd, jb), (jb, jd, jc)] {
                     let mut f2 = [u2, v2, w2];
                     f2.sort_unstable();
                     if f2 == face {
@@ -400,7 +402,6 @@ pub fn alpha_shape_3d(
                 if shared {
                     break;
                 }
-                let _ = &mut faces2; // suppress warning
             }
             if !shared {
                 out_boundary_tris[tri_count] = face;
@@ -773,5 +774,34 @@ mod tests {
             "tetrahedron should be exterior with small alpha"
         );
         assert_eq!(bc, 0, "no boundary faces with small alpha");
+    }
+
+    #[test]
+    fn alpha_shape_3d_two_tets_exclude_shared_face() {
+        // Triangular bipyramid: two tetrahedra sharing face (0,1,2). The shared
+        // face must be recognised as interior and excluded from both tets, so
+        // the boundary is the 6 outer faces (8 face-instances − 2 for the
+        // shared face). This is the case the copy-paste bug got wrong (it
+        // misclassified the shared face as boundary → would report 8).
+        let pts = vec![
+            Point3::new(0.0, 0.0, 0.0),
+            Point3::new(1.0, 0.0, 0.0),
+            Point3::new(0.0, 1.0, 0.0),
+            Point3::new(0.0, 0.0, 1.0),
+            Point3::new(0.0, 0.0, -1.0),
+        ];
+        let tetras = vec![[0u32, 1, 2, 3], [0u32, 1, 2, 4]];
+        let mut classes = vec![false; 2];
+        let mut boundary = vec![[0u32; 3]; 8];
+
+        let (tc, bc) = alpha_shape_3d(&pts, 100.0, &tetras, &mut classes, &mut boundary).unwrap();
+        assert_eq!(tc, 2);
+        assert!(classes[0] && classes[1], "both tets interior with large alpha");
+        assert_eq!(bc, 6, "shared face excluded → 6 boundary faces, not 8");
+        // The shared face {0,1,2} must NOT be among the boundary triangles.
+        assert!(
+            !boundary[..bc].contains(&[0, 1, 2]),
+            "shared interior face {{0,1,2}} must not be a boundary face"
+        );
     }
 }
