@@ -105,11 +105,15 @@ pub fn execute_sparql_on_graph(
         return Err(QueryExecError::EmptyQuery);
     }
 
-    let (sparql_query, ctx) =
-        sparql_parser::parse_sparql(trimmed).map_err(|e| QueryExecError::ParseError(e))?;
+    let (sparql_query, ctx, literals) =
+        sparql_parser::parse_sparql_full(trimmed).map_err(|e| QueryExecError::ParseError(e))?;
     let plan =
         QueryPlanner::plan(&sparql_query, &ctx).map_err(|e| QueryExecError::ParseError(e))?;
-    let executor = QueryExecutor::new(graph);
+    // A text resolver carrying the query's literal constants lets `geof:*`/text
+    // extension functions resolve constant geometry/strings. (Ingested-variable
+    // geometry additionally needs a lexicon-carrying path — `with_lexicon`.)
+    let resolver = crate::sparql_ast::TextResolver::new(&literals);
+    let executor = QueryExecutor::with_resolver(graph, resolver);
 
     let stats = ExecutionStats {
         match_count: 0,
@@ -235,6 +239,76 @@ mod tests {
         let (_, results) = execute_sparql_on_graph(query, &graph).expect("sparql");
         assert!(!results.is_empty());
         assert_eq!(results[0].subject, s);
+    }
+
+    #[test]
+    fn sparql_geo_filter_constant_geometry() {
+        // End-to-end GeoSPARQL: a FILTER over geof:distance with constant WKT
+        // literals — parsed to Function::Custom, resolved via the query-literal
+        // table, and computed by the real haversine engine. (0,0)→(0,1) ≈ 111 km.
+        let s = q_hash("place1");
+        let p = q_hash("hasLoc");
+        let o = q_hash("loc1");
+        let graph = vec![synthetic_binding_quin(s, p, o)];
+
+        let pass = "SELECT ?s WHERE { ?s ?p ?o . \
+                    FILTER(geof:distance(\"POINT(0 0)\", \"POINT(0 1)\") < 200000) }";
+        let (_, r) = execute_sparql_on_graph(pass, &graph).expect("geo distance filter");
+        assert_eq!(r.len(), 1, "~111 km < 200 km → row passes");
+
+        let fail = "SELECT ?s WHERE { ?s ?p ?o . \
+                    FILTER(geof:distance(\"POINT(0 0)\", \"POINT(0 1)\") > 200000) }";
+        let (_, r2) = execute_sparql_on_graph(fail, &graph).expect("geo distance filter");
+        assert_eq!(r2.len(), 0, "~111 km not > 200 km → row pruned");
+    }
+
+    #[test]
+    fn sparql_geo_variable_geometry_via_lexicon() {
+        // The common GeoSPARQL pattern: FILTER(geof:sfWithin(?loc, <const polygon>))
+        // where ?loc binds to an ingested geometry literal. Proves the variable
+        // side resolves through a lexicon closure (as a Q42LexMmap would supply).
+        use crate::sparql_executor::QueryExecutor;
+        use crate::sparql_planner::QueryPlanner;
+
+        let place = q_hash("place");
+        let has_loc = crate::lexicon::generate_60bit_token(b"hasLoc");
+        // The object is the geometry-literal hash; the lexicon maps it to WKT.
+        let loc_hash = crate::lexicon::generate_60bit_token(b"POINT(2 2)");
+        let graph = vec![synthetic_binding_quin(place, has_loc, loc_hash)];
+
+        let query = "SELECT ?s WHERE { ?s <hasLoc> ?loc . \
+            FILTER(geof:sfWithin(?loc, \"POLYGON((0 0, 4 0, 4 4, 0 4, 0 0))\")) }";
+        let (sparql_query, ctx, literals) =
+            crate::sparql_parser::parse_sparql_full(query).expect("parse");
+        let plan = QueryPlanner::plan(&sparql_query, &ctx).expect("plan");
+
+        let lex = |h: u64| -> Option<String> {
+            if h == loc_hash {
+                Some("POINT(2 2)".to_string())
+            } else {
+                None
+            }
+        };
+        let resolver = crate::sparql_ast::TextResolver::with_lexicon(&literals, &lex);
+        let executor = QueryExecutor::with_resolver(&graph, resolver);
+        let bindings = executor.execute(&plan, &ctx).expect("execute");
+        assert_eq!(bindings.len(), 1, "point (2,2) is within the square → 1 row");
+    }
+
+    #[test]
+    fn sparql_geo_sfwithin_constant_geometry() {
+        // geof:sfWithin over two constant geometries: a point inside a polygon.
+        let s = q_hash("place2");
+        let graph = vec![synthetic_binding_quin(s, q_hash("p"), q_hash("o"))];
+        let inside = "SELECT ?s WHERE { ?s ?p ?o . \
+            FILTER(geof:sfWithin(\"POINT(2 2)\", \"POLYGON((0 0, 4 0, 4 4, 0 4, 0 0))\")) }";
+        let (_, r) = execute_sparql_on_graph(inside, &graph).expect("sfWithin");
+        assert_eq!(r.len(), 1, "point (2,2) is within the square");
+
+        let outside = "SELECT ?s WHERE { ?s ?p ?o . \
+            FILTER(geof:sfWithin(\"POINT(9 9)\", \"POLYGON((0 0, 4 0, 4 4, 0 4, 0 0))\")) }";
+        let (_, r2) = execute_sparql_on_graph(outside, &graph).expect("sfWithin");
+        assert_eq!(r2.len(), 0, "point (9,9) is outside the square");
     }
 
     #[test]

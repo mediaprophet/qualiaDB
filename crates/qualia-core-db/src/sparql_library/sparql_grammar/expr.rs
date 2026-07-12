@@ -13,10 +13,36 @@
 //! exactly the same term encoding the triple-pattern parser (`parse_term`) uses
 //! — so `?x = <iri>` / `?name = "Alice"` / `?age >= 18` all compare correctly.
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 
-use crate::sparql_ast::{BinaryOp, Expression, ExpressionId, Function, SparqlQueryContext, UnaryOp};
+use crate::sparql_ast::{
+    BinaryOp, Expression, ExpressionId, Function, LiteralTable, SparqlQueryContext, UnaryOp,
+};
 use crate::sparql_library::sparql_grammar::tokenizer::Token;
+
+thread_local! {
+    /// Literal text (`hash -> string`) collected while parsing the current query,
+    /// so `geof:*`/text functions can recover it. SPARQL parsing is single-
+    /// threaded and non-reentrant here, so a thread-local avoids threading a
+    /// `&mut LiteralTable` through every parser function. `parse_sparql` resets
+    /// it before and takes it after a parse.
+    static PARSE_LITERALS: RefCell<LiteralTable> = RefCell::new(LiteralTable::new());
+}
+
+/// Clear the parse-time literal table (call before parsing a query).
+pub fn reset_parse_literals() {
+    PARSE_LITERALS.with(|l| *l.borrow_mut() = LiteralTable::new());
+}
+
+/// Take the literal table collected during the last parse.
+pub fn take_parse_literals() -> LiteralTable {
+    PARSE_LITERALS.with(|l| std::mem::take(&mut *l.borrow_mut()))
+}
+
+fn record_parse_literal(hash: u64, text: &str) {
+    PARSE_LITERALS.with(|l| l.borrow_mut().intern(hash, text));
+}
 
 /// Parse a full expression from `tokens`, allocating nodes into `ctx`.
 /// Returns the root `ExpressionId`. Errors on malformed syntax or arena overflow.
@@ -217,19 +243,25 @@ impl<'a> ExprParser<'a> {
             Token::Bool(b) => self.alloc(Expression::Literal(if b { 1 } else { 0 })),
             Token::Str { value, .. } => {
                 let h = crate::lexicon::generate_60bit_token(value.as_bytes());
+                // Record the text so literal-text functions (geof:*, …) can
+                // recover it from the hash at evaluation time.
+                record_parse_literal(h, &value);
                 self.alloc(Expression::Literal(h))
             }
             Token::Iri(iri) => {
+                // An IRI directly followed by `(` is an extension function call.
+                if matches!(self.peek(), Some(Token::Punct('('))) {
+                    return self.parse_custom_call(&iri);
+                }
                 let h = crate::lexicon::generate_60bit_token(iri.as_bytes());
                 self.alloc(Expression::Literal(h))
             }
             Token::Prefixed(prefix, local) => {
-                // A prefixed name followed by `(` is an extension function call
-                // (deferred to the registry slice); otherwise a constant IRI.
+                // A prefixed name followed by `(` is an extension function call;
+                // otherwise a constant IRI.
                 if matches!(self.peek(), Some(Token::Punct('('))) {
-                    return Err(
-                        "extension-function calls are not yet wired (registry slice)".to_string(),
-                    );
+                    let iri = self.expand_function_iri(&prefix, &local);
+                    return self.parse_custom_call(&iri);
                 }
                 let expanded = match self.prefixes.get(&prefix) {
                     Some(base) => format!("{base}{local}"),
@@ -265,6 +297,53 @@ impl<'a> ExprParser<'a> {
 
         // Copy arg ids into the ctx.function_args table; the Function node stores
         // (args_start, args_len) into it.
+        let args_start = self.ctx.function_arg_count as u16;
+        for id in &arg_ids {
+            if (self.ctx.function_arg_count as usize) >= self.ctx.function_args.len() {
+                return Err("too many function arguments (arena full)".to_string());
+            }
+            self.ctx.function_args[self.ctx.function_arg_count as usize] = *id;
+            self.ctx.function_arg_count += 1;
+        }
+        self.alloc(Expression::Function {
+            func,
+            args_start,
+            args_len: arg_ids.len() as u16,
+        })
+    }
+
+    /// Expand a prefixed function name to its IRI. Known extension prefixes with
+    /// no declared mapping fall back to their standard base (currently `geof:`),
+    /// so `geof:sfWithin(...)` works even without a `PREFIX geof:` declaration.
+    fn expand_function_iri(&self, prefix: &str, local: &str) -> String {
+        if let Some(base) = self.prefixes.get(prefix) {
+            return format!("{base}{local}");
+        }
+        if prefix == "geof" {
+            if let Some(iri) = crate::sparql_library::geosparql::geo_function_iri(local) {
+                return iri.to_string();
+            }
+            return format!("http://www.opengis.net/def/function/geosparql/{local}");
+        }
+        format!("{prefix}:{local}")
+    }
+
+    /// Parse an extension-function call `IRI ( args )` into
+    /// `Expression::Function { func: Function::Custom(q_hash(iri)), … }`.
+    fn parse_custom_call(&mut self, iri: &str) -> Result<ExpressionId, String> {
+        let func = Function::Custom(crate::lexicon::generate_60bit_token(iri.as_bytes()));
+        self.expect_punct('(')?;
+        let mut arg_ids: Vec<ExpressionId> = Vec::new();
+        if !matches!(self.peek(), Some(Token::Punct(')'))) {
+            loop {
+                arg_ids.push(self.parse_or()?);
+                if self.eat_punct(',') {
+                    continue;
+                }
+                break;
+            }
+        }
+        self.expect_punct(')')?;
         let args_start = self.ctx.function_arg_count as u16;
         for id in &arg_ids {
             if (self.ctx.function_arg_count as usize) >= self.ctx.function_args.len() {

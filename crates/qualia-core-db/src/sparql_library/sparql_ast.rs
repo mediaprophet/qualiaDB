@@ -358,6 +358,78 @@ pub struct SparqlQueryContext {
     pub function_arg_count: usize,
 }
 
+/// Query-scoped table of literal text (`hash -> string`) built by the parser for
+/// string/geometry constants. It lives **outside** the zero-heap
+/// `SparqlQueryContext` — it is a cold parse/eval-time structure — so functions
+/// that need literal text (`geof:*`, `STR`, `REGEX`, …) can recover it without
+/// putting `String`/`Vec` on the zero-heap execution hot path (CLAUDE.md §6).
+#[derive(Debug, Default, Clone)]
+pub struct LiteralTable {
+    entries: Vec<(u64, String)>,
+}
+
+impl LiteralTable {
+    pub fn new() -> Self {
+        Self::default()
+    }
+    /// Record the text for a literal hash (idempotent).
+    pub fn intern(&mut self, hash: u64, text: &str) {
+        if self.resolve(hash).is_none() {
+            self.entries.push((hash, text.to_string()));
+        }
+    }
+    pub fn resolve(&self, hash: u64) -> Option<&str> {
+        self.entries
+            .iter()
+            .find(|(h, _)| *h == hash)
+            .map(|(_, s)| s.as_str())
+    }
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+}
+
+/// Borrowed text resolver threaded into expression evaluation. Resolves a term
+/// hash to its literal text via, in order: the query-scoped `LiteralTable`
+/// (query constants), an optional ingested-data lexicon closure (e.g. wrapping a
+/// `Q42LexMmap::lookup_hash`), and finally the global demo lexicon. All borrowed
+/// — no per-query heap in the evaluator, so the §6 hot-path invariant holds.
+#[derive(Clone, Copy)]
+pub struct TextResolver<'a> {
+    pub literals: &'a LiteralTable,
+    pub lexicon: Option<&'a dyn Fn(u64) -> Option<String>>,
+}
+
+impl<'a> TextResolver<'a> {
+    pub fn new(literals: &'a LiteralTable) -> Self {
+        Self {
+            literals,
+            lexicon: None,
+        }
+    }
+    pub fn with_lexicon(literals: &'a LiteralTable, lexicon: &'a dyn Fn(u64) -> Option<String>) -> Self {
+        Self {
+            literals,
+            lexicon: Some(lexicon),
+        }
+    }
+    /// Resolve a term hash to its literal text, if known.
+    pub fn resolve_text(&self, hash: u64) -> Option<String> {
+        if let Some(s) = self.literals.resolve(hash) {
+            return Some(s.to_string());
+        }
+        if let Some(f) = self.lexicon {
+            if let Some(s) = f(hash) {
+                return Some(s);
+            }
+        }
+        crate::resolver::resolve_hash(hash).and_then(|b| String::from_utf8(b.to_vec()).ok())
+    }
+}
+
 impl SparqlQueryContext {
     pub fn new() -> Self {
         Self {

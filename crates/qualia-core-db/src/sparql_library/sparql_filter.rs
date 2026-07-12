@@ -169,24 +169,36 @@ impl ProvenanceFilter {
 pub struct ExpressionEvaluator;
 
 impl ExpressionEvaluator {
-    /// Evaluate an expression against a binding row
+    /// Evaluate an expression against a binding row (no text resolver).
     pub fn evaluate(
         expr_id: ExpressionId,
         ctx: &SparqlQueryContext,
         row: &BindingRow,
     ) -> Result<EvalResult, String> {
+        Self::evaluate_with_resolver(expr_id, ctx, row, None)
+    }
+
+    /// Evaluate with an optional [`TextResolver`], which lets literal-text
+    /// functions (`geof:*`, and in future `STR`/`REGEX`/…) recover the text
+    /// behind a term hash. Passing `None` behaves exactly like `evaluate`.
+    pub fn evaluate_with_resolver(
+        expr_id: ExpressionId,
+        ctx: &SparqlQueryContext,
+        row: &BindingRow,
+        resolver: Option<crate::sparql_ast::TextResolver>,
+    ) -> Result<EvalResult, String> {
         let expr = ctx
             .expressions
             .get(expr_id as usize)
             .ok_or("Expression ID out of bounds")?;
-
-        Self::evaluate_expression(expr, ctx, row)
+        Self::evaluate_expression(expr, ctx, row, resolver)
     }
 
     fn evaluate_expression(
         expr: &Expression,
         ctx: &SparqlQueryContext,
         row: &BindingRow,
+        resolver: Option<crate::sparql_ast::TextResolver>,
     ) -> Result<EvalResult, String> {
         match expr {
             Expression::Variable(var_id) => {
@@ -196,22 +208,30 @@ impl ExpressionEvaluator {
             Expression::Literal(value) => Ok(EvalResult::Numeric(*value)),
             Expression::Iri(value) => Ok(EvalResult::Iri(*value)),
             Expression::UnaryOp { op, expr: inner_id } => {
-                let inner =
-                    Self::evaluate_expression(&ctx.expressions[*inner_id as usize], ctx, row)?;
+                let inner = Self::evaluate_expression(
+                    &ctx.expressions[*inner_id as usize],
+                    ctx,
+                    row,
+                    resolver,
+                )?;
                 Self::evaluate_unary_op(*op, inner)
             }
             Expression::BinaryOp { op, left, right } => {
                 let left_val =
-                    Self::evaluate_expression(&ctx.expressions[*left as usize], ctx, row)?;
-                let right_val =
-                    Self::evaluate_expression(&ctx.expressions[*right as usize], ctx, row)?;
+                    Self::evaluate_expression(&ctx.expressions[*left as usize], ctx, row, resolver)?;
+                let right_val = Self::evaluate_expression(
+                    &ctx.expressions[*right as usize],
+                    ctx,
+                    row,
+                    resolver,
+                )?;
                 Self::evaluate_binary_op(*op, left_val, right_val)
             }
             Expression::Function {
                 func,
                 args_start,
                 args_len,
-            } => Self::evaluate_function(*func, *args_start, *args_len, ctx, row),
+            } => Self::evaluate_function(*func, *args_start, *args_len, ctx, row, resolver),
             Expression::Subquery { query_id } => Self::evaluate_subquery(*query_id, ctx, row),
             Expression::EmbeddedTriple {
                 subject,
@@ -310,6 +330,7 @@ impl ExpressionEvaluator {
         args_len: u16,
         ctx: &SparqlQueryContext,
         row: &BindingRow,
+        resolver: Option<crate::sparql_ast::TextResolver>,
     ) -> Result<EvalResult, String> {
         match func {
             Function::Bound => {
@@ -518,6 +539,50 @@ impl ExpressionEvaluator {
                     Err("TRIPLE requires at least three arguments".to_string())
                 }
             }
+            Function::Custom(iri_hash) => {
+                // Extension functions dispatched by function-IRI hash. Currently
+                // the GeoSPARQL predicates (geof:distance / sfContains / sfWithin
+                // / sfIntersects / sfTouches). Each needs its two geometry
+                // arguments as WKT *text*, recovered from term hashes via the
+                // resolver (query constants + ingested lexicon). Without a
+                // resolver, or if a literal can't be resolved, we return an
+                // honest error rather than a fabricated result.
+                use crate::sparql_library::geosparql;
+                match geosparql::geo_fn_for_hash(iri_hash) {
+                    Some(geo_fn) => {
+                        if args_len < 2 {
+                            return Err("geo function requires two geometry arguments".to_string());
+                        }
+                        let resolver = resolver.ok_or_else(|| {
+                            "geo functions require a text resolver (no lexicon available)"
+                                .to_string()
+                        })?;
+                        let a_id = ctx.function_args[args_start as usize];
+                        let b_id = ctx.function_args[args_start as usize + 1];
+                        let a_hash = match Self::evaluate_with_resolver(a_id, ctx, row, Some(resolver))? {
+                            EvalResult::Numeric(h) | EvalResult::Iri(h) => h,
+                            _ => return Err("geo argument is not a term".to_string()),
+                        };
+                        let b_hash = match Self::evaluate_with_resolver(b_id, ctx, row, Some(resolver))? {
+                            EvalResult::Numeric(h) | EvalResult::Iri(h) => h,
+                            _ => return Err("geo argument is not a term".to_string()),
+                        };
+                        let a_wkt = resolver
+                            .resolve_text(a_hash)
+                            .ok_or("could not resolve first geometry literal")?;
+                        let b_wkt = resolver
+                            .resolve_text(b_hash)
+                            .ok_or("could not resolve second geometry literal")?;
+                        let ga = geosparql::parse_wkt(&a_wkt).map_err(|e| format!("geo arg 1: {e}"))?;
+                        let gb = geosparql::parse_wkt(&b_wkt).map_err(|e| format!("geo arg 2: {e}"))?;
+                        match geosparql::eval_geo_fn(geo_fn, &ga, &gb) {
+                            geosparql::GeoValue::Bool(b) => Ok(EvalResult::Boolean(b)),
+                            geosparql::GeoValue::Number(n) => Ok(EvalResult::Numeric(n as u64)),
+                        }
+                    }
+                    None => Err(format!("unknown extension function (hash {iri_hash:#018x})")),
+                }
+            }
             _ => {
                 // Placeholder for other functions including SPARQL-Star
                 Ok(EvalResult::Boolean(true))
@@ -611,7 +676,7 @@ mod tests {
         row.set(var_id, 42);
 
         let result =
-            ExpressionEvaluator::evaluate_function(Function::Bound, 0, 1, &ctx, &row).unwrap();
+            ExpressionEvaluator::evaluate_function(Function::Bound, 0, 1, &ctx, &row, None).unwrap();
 
         assert_eq!(result, EvalResult::Boolean(true));
     }

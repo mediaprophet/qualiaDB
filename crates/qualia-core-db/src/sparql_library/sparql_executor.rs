@@ -38,11 +38,29 @@ fn bind_var(row: &mut BindingRow, term: u64, value: u64, ctx: &SparqlQueryContex
 /// Query executor
 pub struct QueryExecutor<'a> {
     pub quins: &'a [NQuin],
+    /// Optional text resolver for literal-text functions (`geof:*`, …). `None`
+    /// on the plain slice path; supplied when a lexicon / query-literal table is
+    /// available so extension functions can recover geometry/string text.
+    resolver: Option<crate::sparql_ast::TextResolver<'a>>,
 }
 
 impl<'a> QueryExecutor<'a> {
     pub fn new(quins: &'a [NQuin]) -> Self {
-        Self { quins }
+        Self {
+            quins,
+            resolver: None,
+        }
+    }
+
+    /// Executor with a text resolver, enabling `geof:*`/text extension functions.
+    pub fn with_resolver(
+        quins: &'a [NQuin],
+        resolver: crate::sparql_ast::TextResolver<'a>,
+    ) -> Self {
+        Self {
+            quins,
+            resolver: Some(resolver),
+        }
     }
 
     /// Execute a query plan and return results
@@ -528,7 +546,7 @@ impl<'a> QueryExecutor<'a> {
 
         // Filter results based on expression evaluation
         for input_row in input_results {
-            let eval_result = ExpressionEvaluator::evaluate(expression, ctx, &input_row)?;
+            let eval_result = ExpressionEvaluator::evaluate_with_resolver(expression, ctx, &input_row, self.resolver)?;
             if eval_result.as_bool() {
                 results.push(input_row);
             }
@@ -601,9 +619,9 @@ impl<'a> QueryExecutor<'a> {
                 let expr = order_by[i];
                 let asc = ascending[i];
 
-                let val_a = ExpressionEvaluator::evaluate(expr, ctx, a)
+                let val_a = ExpressionEvaluator::evaluate_with_resolver(expr, ctx, a, self.resolver)
                     .unwrap_or(crate::sparql_filter::EvalResult::Numeric(0));
-                let val_b = ExpressionEvaluator::evaluate(expr, ctx, b)
+                let val_b = ExpressionEvaluator::evaluate_with_resolver(expr, ctx, b, self.resolver)
                     .unwrap_or(crate::sparql_filter::EvalResult::Numeric(0));
 
                 let cmp = val_a.cmp(&val_b);
@@ -766,7 +784,7 @@ impl<'a> QueryExecutor<'a> {
 
         // Filter results based on HAVING expression
         for result in all_results {
-            let eval_result = ExpressionEvaluator::evaluate(expression, ctx, &result)?;
+            let eval_result = ExpressionEvaluator::evaluate_with_resolver(expression, ctx, &result, self.resolver)?;
             if eval_result.as_bool() {
                 results.push(result);
             }
@@ -931,9 +949,11 @@ impl<'a> QueryExecutor<'a> {
             return Ok(false);
         }
 
-        // Create a temporary executor with graph-filtered quins
+        // Create a temporary executor with graph-filtered quins, propagating the
+        // text resolver so nested GRAPH/geo functions still resolve.
         let temp_executor = QueryExecutor {
             quins: &graph_quins,
+            resolver: self.resolver,
         };
 
         // Execute inner pattern with graph-filtered quins

@@ -207,7 +207,7 @@ mod sparql_tests {
     #[test]
     fn test_executor_triple_scan() {
         let quins = create_test_quins();
-        let _executor = QueryExecutor { quins: &quins };
+        let _executor = QueryExecutor::new(&quins);
 
         let mut _row = BindingRow::new();
         let mut _results: Vec<BindingRow> = Vec::new();

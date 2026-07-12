@@ -6,28 +6,37 @@
 use crate::sparql_ast::*;
 use std::collections::HashMap;
 
-/// Parse a SPARQL SELECT query string into an AST
+/// Parse a SPARQL query into an AST (discarding the collected literal table).
 pub fn parse_sparql(query: &str) -> Result<(SparqlQuery, SparqlQueryContext), String> {
+    let (q, ctx, _lits) = parse_sparql_full(query)?;
+    Ok((q, ctx))
+}
+
+/// Parse a SPARQL query and also return the [`LiteralTable`] of string/geometry
+/// constants collected during the parse — needed by the executor to resolve
+/// literal text for `geof:*`/text extension functions.
+pub fn parse_sparql_full(
+    query: &str,
+) -> Result<(SparqlQuery, SparqlQueryContext, LiteralTable), String> {
+    crate::sparql_library::sparql_grammar::expr::reset_parse_literals();
     let mut ctx = SparqlQueryContext::new();
     let (query, prefixes) = strip_prefix_declarations(query.trim());
     let query = query.as_str();
 
-    // Check for SELECT query
-    if query.starts_with("SELECT") {
-        let select_query = parse_select_query(query, &mut ctx, &prefixes)?;
-        return Ok((SparqlQuery::Select(select_query), ctx));
+    let parsed = if query.starts_with("SELECT") {
+        parse_select_query(query, &mut ctx, &prefixes).map(SparqlQuery::Select)
     } else if query.starts_with("ASK") {
-        let ask_query = parse_ask_query(query, &mut ctx, &prefixes)?;
-        return Ok((SparqlQuery::Ask(ask_query), ctx));
+        parse_ask_query(query, &mut ctx, &prefixes).map(SparqlQuery::Ask)
     } else if query.starts_with("CONSTRUCT") {
-        let construct_query = parse_construct_query(query, &mut ctx, &prefixes)?;
-        return Ok((SparqlQuery::Construct(construct_query), ctx));
+        parse_construct_query(query, &mut ctx, &prefixes).map(SparqlQuery::Construct)
     } else if query.starts_with("DESCRIBE") {
-        let describe_query = parse_describe_query(query, &mut ctx, &prefixes)?;
-        return Ok((SparqlQuery::Describe(describe_query), ctx));
+        parse_describe_query(query, &mut ctx, &prefixes).map(SparqlQuery::Describe)
     } else {
         Err("Unsupported query form".to_string())
-    }
+    }?;
+
+    let literals = crate::sparql_library::sparql_grammar::expr::take_parse_literals();
+    Ok((parsed, ctx, literals))
 }
 
 fn strip_prefix_declarations(query: &str) -> (String, HashMap<String, String>) {

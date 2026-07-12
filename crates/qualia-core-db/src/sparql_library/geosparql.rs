@@ -16,6 +16,88 @@
 /// Mean Earth radius (WGS-84), metres — used by the haversine distance.
 const EARTH_RADIUS_M: f64 = 6_371_008.8;
 
+/// The GeoSPARQL extension functions this engine implements.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GeoFn {
+    Distance,
+    Contains,
+    Within,
+    Intersects,
+    Touches,
+}
+
+/// Canonical function IRIs, keyed by `GeoFn`. Parser and evaluator agree on
+/// these so a `geof:<local>` call hashes to the same `Function::Custom` id both
+/// sides compute.
+pub const GEO_FUNCTION_IRIS: &[(&str, GeoFn)] = &[
+    (
+        "http://www.opengis.net/def/function/geosparql/distance",
+        GeoFn::Distance,
+    ),
+    (
+        "http://www.opengis.net/def/function/geosparql/sfContains",
+        GeoFn::Contains,
+    ),
+    (
+        "http://www.opengis.net/def/function/geosparql/sfWithin",
+        GeoFn::Within,
+    ),
+    (
+        "http://www.opengis.net/def/function/geosparql/sfIntersects",
+        GeoFn::Intersects,
+    ),
+    (
+        "http://www.opengis.net/def/function/geosparql/sfTouches",
+        GeoFn::Touches,
+    ),
+];
+
+/// Canonical IRI for a `geof:<local>` function name, if recognised. Lets the
+/// parser expand a `geof:` call to the standard IRI even when the query did not
+/// declare the prefix.
+pub fn geo_function_iri(local: &str) -> Option<&'static str> {
+    let want = match local {
+        "distance" => GeoFn::Distance,
+        "sfContains" => GeoFn::Contains,
+        "sfWithin" => GeoFn::Within,
+        "sfIntersects" => GeoFn::Intersects,
+        "sfTouches" => GeoFn::Touches,
+        _ => return None,
+    };
+    GEO_FUNCTION_IRIS
+        .iter()
+        .find(|(_, k)| *k == want)
+        .map(|(iri, _)| *iri)
+}
+
+/// Map a function-IRI hash back to a `GeoFn` (used by the evaluator to dispatch
+/// a `Function::Custom(hash)`).
+pub fn geo_fn_for_hash(hash: u64) -> Option<GeoFn> {
+    GEO_FUNCTION_IRIS
+        .iter()
+        .find(|(iri, _)| crate::lexicon::generate_60bit_token(iri.as_bytes()) == hash)
+        .map(|(_, k)| *k)
+}
+
+/// Result of a GeoSPARQL predicate: a boolean (sf* topology) or a metric.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum GeoValue {
+    Bool(bool),
+    /// Distance in metres.
+    Number(f64),
+}
+
+/// Evaluate a `GeoFn` over two already-parsed geometries.
+pub fn eval_geo_fn(func: GeoFn, a: &Geometry, b: &Geometry) -> GeoValue {
+    match func {
+        GeoFn::Distance => GeoValue::Number(distance_metres(a, b)),
+        GeoFn::Contains => GeoValue::Bool(contains(a, b)),
+        GeoFn::Within => GeoValue::Bool(within(a, b)),
+        GeoFn::Intersects => GeoValue::Bool(intersects(a, b)),
+        GeoFn::Touches => GeoValue::Bool(touches(a, b)),
+    }
+}
+
 /// A parsed WKT geometry. Coordinates are `(x, y)` = `(longitude, latitude)`
 /// for geographic data.
 #[derive(Debug, Clone, PartialEq)]
