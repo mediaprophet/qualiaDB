@@ -1589,6 +1589,327 @@ impl ChemistryModelingLibrary {
     pub fn get_molecule_info(&self, molecule_id: &str) -> Option<Molecule> {
         self.molecular_simulator.get_molecule(molecule_id)
     }
+
+    // ─── Exact structural / mass properties ────────────────────────────────
+    //
+    // These are computed directly from atomic data (standard atomic weights,
+    // nuclear charges) and the molecular geometry using their exact closed-form
+    // definitions — no electronic-structure approximation, no fitted parameters,
+    // nothing fabricated. Where a definition requires an eigen-decomposition
+    // (the inertia tensor) it reuses the tested `scf::jacobi_diagonalization`
+    // rather than re-deriving one. Each has a known-value test.
+
+    /// Total molecular mass in amu, summed from IUPAC standard atomic weights by
+    /// element (falling back to the atom's own declared `mass` when the element
+    /// is outside the built-in table). Reproducible and independent of whatever
+    /// per-atom `mass` the caller happened to set.
+    pub fn molecular_mass(&self, molecule: &Molecule) -> f64 {
+        molecule
+            .atoms
+            .iter()
+            .map(|a| standard_atomic_weight(&a.element).unwrap_or(a.mass))
+            .sum()
+    }
+
+    /// Molecular formula in Hill notation: carbon first, then hydrogen, then all
+    /// remaining elements in alphabetical order, each with its count (count of 1
+    /// omitted). E.g. water → `H2O`, methane → `CH4`, ethanol → `C2H6O`.
+    pub fn molecular_formula(&self, molecule: &Molecule) -> String {
+        use std::collections::BTreeMap;
+        let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+        for a in &molecule.atoms {
+            *counts.entry(a.element.clone()).or_insert(0) += 1;
+        }
+        let mut out = String::new();
+        let mut push = |el: &str, n: usize| {
+            out.push_str(el);
+            if n > 1 {
+                out.push_str(&n.to_string());
+            }
+        };
+        // Hill system: C and H lead only when carbon is present.
+        if let Some(&c) = counts.get("C") {
+            push("C", c);
+            counts.remove("C");
+            if let Some(&h) = counts.get("H") {
+                push("H", h);
+                counts.remove("H");
+            }
+        }
+        // Remaining elements alphabetical (BTreeMap iterates in sorted order).
+        for (el, n) in &counts {
+            push(el, *n);
+        }
+        out
+    }
+
+    /// Nuclear repulsion energy E_nn = Σ_{i<j} Z_i·Z_j / r_ij.
+    ///
+    /// This is the exact classical Coulomb repulsion between the point nuclei; it
+    /// is returned in atomic units (Hartree) when the atom `coordinates` are in
+    /// bohr. A single atom (or none) has no nuclear pairs and returns `0.0`.
+    /// Refuses (rather than inventing a value) when any atom has a zero nuclear
+    /// charge, a malformed coordinate vector, or two nuclei coincide.
+    pub fn nuclear_repulsion_energy(&self, molecule: &Molecule) -> Result<f64, ChemistryError> {
+        let atoms = &molecule.atoms;
+        for (i, a) in atoms.iter().enumerate() {
+            if a.coordinates.len() != 3 {
+                return Err(ChemistryError::InsufficientData(format!(
+                    "nuclear repulsion: atom {} ('{}') has {} coordinates; 3 are required",
+                    i,
+                    a.atom_id,
+                    a.coordinates.len()
+                )));
+            }
+            if a.atomic_number == 0 {
+                return Err(ChemistryError::InsufficientData(format!(
+                    "nuclear repulsion: atom {} ('{}', element '{}') has atomic number 0; \
+                     a nuclear charge is required — refusing to invent one",
+                    i, a.atom_id, a.element
+                )));
+            }
+        }
+        let mut e = 0.0;
+        for i in 0..atoms.len() {
+            for j in (i + 1)..atoms.len() {
+                let ci = &atoms[i].coordinates;
+                let cj = &atoms[j].coordinates;
+                let dx = ci[0] - cj[0];
+                let dy = ci[1] - cj[1];
+                let dz = ci[2] - cj[2];
+                let r = (dx * dx + dy * dy + dz * dz).sqrt();
+                if r <= 0.0 {
+                    return Err(ChemistryError::ValidationError(format!(
+                        "nuclear repulsion: atoms {} and {} are coincident (r = 0); \
+                         the Coulomb term is singular",
+                        i, j
+                    )));
+                }
+                e += (atoms[i].atomic_number as f64) * (atoms[j].atomic_number as f64) / r;
+            }
+        }
+        Ok(e)
+    }
+
+    /// Bond length (Euclidean distance) between atoms `i` and `j`, in the same
+    /// length unit as the coordinates.
+    pub fn bond_length(
+        &self,
+        molecule: &Molecule,
+        i: usize,
+        j: usize,
+    ) -> Result<f64, ChemistryError> {
+        let a = atom_coords(molecule, i)?;
+        let b = atom_coords(molecule, j)?;
+        let dx = a[0] - b[0];
+        let dy = a[1] - b[1];
+        let dz = a[2] - b[2];
+        Ok((dx * dx + dy * dy + dz * dz).sqrt())
+    }
+
+    /// Bond angle i–j–k in radians, with `j` the vertex. Computed from the exact
+    /// dot-product definition θ = acos((u·v)/(|u||v|)), u = r_i−r_j, v = r_k−r_j.
+    pub fn bond_angle(
+        &self,
+        molecule: &Molecule,
+        i: usize,
+        j: usize,
+        k: usize,
+    ) -> Result<f64, ChemistryError> {
+        let ri = atom_coords(molecule, i)?;
+        let rj = atom_coords(molecule, j)?;
+        let rk = atom_coords(molecule, k)?;
+        let u = [ri[0] - rj[0], ri[1] - rj[1], ri[2] - rj[2]];
+        let v = [rk[0] - rj[0], rk[1] - rj[1], rk[2] - rj[2]];
+        let nu = (u[0] * u[0] + u[1] * u[1] + u[2] * u[2]).sqrt();
+        let nv = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+        if nu <= 0.0 || nv <= 0.0 {
+            return Err(ChemistryError::ValidationError(
+                "bond angle: a bonding vector has zero length (coincident atoms)".to_string(),
+            ));
+        }
+        let cos = ((u[0] * v[0] + u[1] * v[1] + u[2] * v[2]) / (nu * nv)).clamp(-1.0, 1.0);
+        Ok(cos.acos())
+    }
+
+    /// Center of mass, mass-weighted by standard atomic weights (falling back to
+    /// the atom's declared `mass`). Same length unit as the coordinates.
+    pub fn center_of_mass(&self, molecule: &Molecule) -> Result<[f64; 3], ChemistryError> {
+        if molecule.atoms.is_empty() {
+            return Err(ChemistryError::InsufficientData(
+                "center of mass: the molecule has no atoms".to_string(),
+            ));
+        }
+        let mut m_total = 0.0;
+        let mut com = [0.0; 3];
+        for (idx, a) in molecule.atoms.iter().enumerate() {
+            let c = atom_coords(molecule, idx)?;
+            let m = standard_atomic_weight(&a.element).unwrap_or(a.mass);
+            m_total += m;
+            for d in 0..3 {
+                com[d] += m * c[d];
+            }
+        }
+        if m_total <= 0.0 {
+            return Err(ChemistryError::InsufficientData(
+                "center of mass: total mass is non-positive".to_string(),
+            ));
+        }
+        for d in 0..3 {
+            com[d] /= m_total;
+        }
+        Ok(com)
+    }
+
+    /// Principal moments of inertia (ascending), in amu·(length unit)². Builds the
+    /// exact inertia tensor about the center of mass and diagonalizes it with the
+    /// tested `scf::jacobi_diagonalization` (real symmetric 3×3).
+    pub fn principal_moments_of_inertia(
+        &self,
+        molecule: &Molecule,
+    ) -> Result<[f64; 3], ChemistryError> {
+        let com = self.center_of_mass(molecule)?;
+        let mut tensor = crate::specialized_libs::shared::zero_heap_algebra::ZeroHeapMatrix::<
+            f64,
+            3,
+            3,
+        >::zeros();
+        let mut ixx = 0.0;
+        let mut iyy = 0.0;
+        let mut izz = 0.0;
+        let mut ixy = 0.0;
+        let mut ixz = 0.0;
+        let mut iyz = 0.0;
+        for (idx, a) in molecule.atoms.iter().enumerate() {
+            let c = atom_coords(molecule, idx)?;
+            let m = standard_atomic_weight(&a.element).unwrap_or(a.mass);
+            let x = c[0] - com[0];
+            let y = c[1] - com[1];
+            let z = c[2] - com[2];
+            ixx += m * (y * y + z * z);
+            iyy += m * (x * x + z * z);
+            izz += m * (x * x + y * y);
+            ixy -= m * x * y;
+            ixz -= m * x * z;
+            iyz -= m * y * z;
+        }
+        tensor.set(0, 0, ixx);
+        tensor.set(1, 1, iyy);
+        tensor.set(2, 2, izz);
+        tensor.set(0, 1, ixy);
+        tensor.set(1, 0, ixy);
+        tensor.set(0, 2, ixz);
+        tensor.set(2, 0, ixz);
+        tensor.set(1, 2, iyz);
+        tensor.set(2, 1, iyz);
+        let (evals, _) = scf::jacobi_diagonalization(&tensor).map_err(|_| {
+            ChemistryError::ConvergenceError(
+                "principal moments of inertia: inertia-tensor diagonalization did not converge"
+                    .to_string(),
+            )
+        })?;
+        // jacobi_diagonalization returns eigenvalues in ascending order.
+        Ok([evals[0], evals[1], evals[2]])
+    }
+
+    /// Aggregate the exact structural / mass properties into one result. The
+    /// nuclear repulsion energy is only meaningful when the coordinates are in
+    /// bohr; it is included here as `Some` when computable and `None` (with the
+    /// reason discarded) when the geometry cannot support it.
+    pub fn structural_properties(
+        &self,
+        molecule: &Molecule,
+    ) -> Result<StructuralProperties, ChemistryError> {
+        if molecule.atoms.is_empty() {
+            return Err(ChemistryError::InsufficientData(
+                "structural properties: the molecule has no atoms".to_string(),
+            ));
+        }
+        Ok(StructuralProperties {
+            molecular_mass: self.molecular_mass(molecule),
+            formula: self.molecular_formula(molecule),
+            atom_count: molecule.atoms.len(),
+            nuclear_repulsion_energy: self.nuclear_repulsion_energy(molecule).ok(),
+            center_of_mass: self.center_of_mass(molecule)?,
+            principal_moments_of_inertia: self.principal_moments_of_inertia(molecule)?,
+        })
+    }
+}
+
+/// Return the atom's 3-coordinate array, validating length. Shared by the exact
+/// structural-property methods above.
+fn atom_coords(molecule: &Molecule, i: usize) -> Result<[f64; 3], ChemistryError> {
+    let a = molecule.atoms.get(i).ok_or_else(|| {
+        ChemistryError::ValidationError(format!(
+            "atom index {} out of range ({} atoms)",
+            i,
+            molecule.atoms.len()
+        ))
+    })?;
+    if a.coordinates.len() != 3 {
+        return Err(ChemistryError::InsufficientData(format!(
+            "atom {} ('{}') has {} coordinates; 3 are required",
+            i,
+            a.atom_id,
+            a.coordinates.len()
+        )));
+    }
+    Ok([a.coordinates[0], a.coordinates[1], a.coordinates[2]])
+}
+
+/// IUPAC standard atomic weight (amu) for common elements. Conventional values
+/// (IUPAC 2021). Returns `None` for elements outside the table so callers can
+/// fall back to a declared per-atom mass rather than receive a fabricated one.
+pub fn standard_atomic_weight(element: &str) -> Option<f64> {
+    let w = match element {
+        "H" => 1.008,
+        "He" => 4.002602,
+        "Li" => 6.94,
+        "Be" => 9.0121831,
+        "B" => 10.81,
+        "C" => 12.011,
+        "N" => 14.007,
+        "O" => 15.999,
+        "F" => 18.998403163,
+        "Ne" => 20.1797,
+        "Na" => 22.98976928,
+        "Mg" => 24.305,
+        "Al" => 26.9815385,
+        "Si" => 28.085,
+        "P" => 30.973761998,
+        "S" => 32.06,
+        "Cl" => 35.45,
+        "Ar" => 39.948,
+        "K" => 39.0983,
+        "Ca" => 40.078,
+        "Fe" => 55.845,
+        "Cu" => 63.546,
+        "Zn" => 65.38,
+        "Br" => 79.904,
+        "I" => 126.90447,
+        _ => return None,
+    };
+    Some(w)
+}
+
+/// Exact structural / mass properties of a molecule (see the methods on
+/// [`ChemistryModelingLibrary`]). Every field is computed from a closed-form
+/// definition over atomic data and geometry, not an approximation or fit.
+#[derive(Debug, Clone)]
+pub struct StructuralProperties {
+    /// Total molecular mass (amu), from standard atomic weights.
+    pub molecular_mass: f64,
+    /// Molecular formula in Hill notation.
+    pub formula: String,
+    /// Number of atoms.
+    pub atom_count: usize,
+    /// Nuclear repulsion energy Σ Z_i Z_j / r_ij (Hartree when coords are in
+    /// bohr); `None` when the geometry/charges cannot support it.
+    pub nuclear_repulsion_energy: Option<f64>,
+    /// Center of mass (same length unit as the coordinates).
+    pub center_of_mass: [f64; 3],
+    /// Principal moments of inertia, ascending (amu·length²).
+    pub principal_moments_of_inertia: [f64; 3],
 }
 
 // Supporting implementations
@@ -2845,14 +3166,35 @@ impl QuantumCalculator {
         _method: QuantumMethodType,
     ) -> Result<QuantumProperties, ChemistryError> {
         // NOT IMPLEMENTED — it must say so, never fabricate. The previous body returned a default
-        // `QuantumProperties` (hardcoded energies / HOMO-LUMO) without solving anything. Real
-        // quantum-chemistry properties require an actual electronic-structure method (Hartree-Fock
-        // or DFT: integral evaluation + SCF) and a basis set — a major numerical subsystem with
-        // reference data. Refusing rather than emitting fabricated molecular energies.
+        // `QuantumProperties` (hardcoded energies / HOMO-LUMO) without solving anything.
+        //
+        // These electronic-structure observables (total SCF energy, HOMO/LUMO orbital energies and
+        // gap, dipole moment, Mulliken charges) require a genuine ab-initio pipeline. Auditing the
+        // shipped submodules, three specific pieces are missing and must be built (a numerical
+        // subsystem, not wiring — flagged rather than faked):
+        //   1. One-electron KINETIC and NUCLEAR-ATTRACTION integrals. `integrals.rs` implements
+        //      only overlap and the two-electron ERI (its header lists Kinetic/Nuclear but no such
+        //      routine exists), so no real core Hamiltonian H = T + V can be assembled.
+        //   2. A real 4-index ERI Fock contraction. `scf::solve_rhf_scf` is a genuine DIIS/Jacobi
+        //      SCF driver, but its Fock build contracts a documented MOCK 2D ERI collapse
+        //      (`eri.get((mu+lam)%N, (nu+sig)%N)`), not the true (μν|λσ) tensor from
+        //      `integrals::evaluate_eri`. Feeding it real matrices still yields a non-physical
+        //      energy until that contraction is real.
+        //   3. Post-SCF property steps (dipole from the density + dipole integrals; Mulliken from
+        //      P·S) which depend on (1) and (2).
+        //
+        // Until those land, this refuses. The EXACT structural/mass observables that ARE genuinely
+        // computable from the geometry are available now via `nuclear_repulsion_energy`,
+        // `molecular_mass`, `molecular_formula`, `bond_length`, `bond_angle`, `center_of_mass`,
+        // `principal_moments_of_inertia`, and `structural_properties`.
         Err(ChemistryError::NotImplemented(
             "quantum property calculation (calculate_quantum_properties): requires a real \
-             electronic-structure method (Hartree-Fock/DFT, SCF) and a basis set, which are \
-             not implemented."
+             electronic-structure pipeline. Missing from the shipped core: (1) kinetic + \
+             nuclear-attraction one-electron integrals in integrals.rs (only overlap + ERI exist), \
+             (2) a real 4-index ERI Fock contraction in scf.rs (the current one is a documented \
+             mock 2D collapse), (3) post-SCF dipole/Mulliken steps. Exact structural properties \
+             (nuclear_repulsion_energy, molecular_mass/formula, bond_length/angle, \
+             center_of_mass, principal_moments_of_inertia) are available instead."
                 .to_string(),
         ))
     }
@@ -4838,5 +5180,178 @@ mod tests {
         }
         // When no ZNS device is available the library must still work without
         // dependencies attached (covered by the other tests above).
+    }
+
+    // ─── Exact structural / mass property tests (known values) ─────────────
+
+    /// Build an atom with a real element, Z, and coordinates. Mass is taken from
+    /// the standard-weight table so the helper stays honest.
+    fn atom(id: &str, element: &str, z: usize, coords: [f64; 3]) -> Atom {
+        Atom {
+            atom_id: id.to_string(),
+            element: element.to_string(),
+            atomic_number: z,
+            mass: standard_atomic_weight(element).unwrap_or(0.0),
+            charge: 0.0,
+            coordinates: coords.to_vec(),
+        }
+    }
+
+    fn molecule(atoms: Vec<Atom>) -> Molecule {
+        Molecule {
+            molecule_id: "test".to_string(),
+            formula: String::new(),
+            atoms,
+            bonds: Vec::new(),
+            coordinates: Vec::new(),
+            properties: MolecularProperties::new(),
+        }
+    }
+
+    #[test]
+    fn test_molecular_mass_water() {
+        let lib = ChemistryModelingLibrary::new();
+        let h2o = molecule(vec![
+            atom("O", "O", 8, [0.0, 0.0, 0.0]),
+            atom("H1", "H", 1, [0.757, 0.586, 0.0]),
+            atom("H2", "H", 1, [-0.757, 0.586, 0.0]),
+        ]);
+        // 15.999 + 2·1.008 = 18.015 amu (standard atomic weights).
+        let m = lib.molecular_mass(&h2o);
+        assert!((m - 18.015).abs() < 1e-9, "H2O mass = {}", m);
+    }
+
+    #[test]
+    fn test_molecular_formula_hill() {
+        let lib = ChemistryModelingLibrary::new();
+        // Water: no carbon → alphabetical H, O.
+        let h2o = molecule(vec![
+            atom("O", "O", 8, [0.0, 0.0, 0.0]),
+            atom("H1", "H", 1, [1.0, 0.0, 0.0]),
+            atom("H2", "H", 1, [0.0, 1.0, 0.0]),
+        ]);
+        assert_eq!(lib.molecular_formula(&h2o), "H2O");
+        // Ethanol C2H6O: carbon first, then hydrogen, then O.
+        let mut atoms = vec![
+            atom("C1", "C", 6, [0.0, 0.0, 0.0]),
+            atom("C2", "C", 6, [1.5, 0.0, 0.0]),
+            atom("O", "O", 8, [2.0, 1.0, 0.0]),
+        ];
+        for i in 0..6 {
+            atoms.push(atom(&format!("H{i}"), "H", 1, [i as f64, 2.0, 0.0]));
+        }
+        assert_eq!(lib.molecular_formula(&molecule(atoms)), "C2H6O");
+    }
+
+    #[test]
+    fn test_nuclear_repulsion_diatomic() {
+        let lib = ChemistryModelingLibrary::new();
+        // HeH: Z=2, Z=1 at r = 2.0 bohr → E_nn = 2·1/2 = 1.0 Hartree.
+        let heh = molecule(vec![
+            atom("He", "He", 2, [0.0, 0.0, 0.0]),
+            atom("H", "H", 1, [2.0, 0.0, 0.0]),
+        ]);
+        let e = lib.nuclear_repulsion_energy(&heh).unwrap();
+        assert!((e - 1.0).abs() < 1e-12, "E_nn(HeH, r=2) = {}", e);
+
+        // H2 at r = 1.4 bohr → 1·1/1.4.
+        let h2 = molecule(vec![
+            atom("Ha", "H", 1, [0.0, 0.0, 0.0]),
+            atom("Hb", "H", 1, [1.4, 0.0, 0.0]),
+        ]);
+        let e2 = lib.nuclear_repulsion_energy(&h2).unwrap();
+        assert!((e2 - 1.0 / 1.4).abs() < 1e-12, "E_nn(H2, r=1.4) = {}", e2);
+
+        // Single atom: no pairs → 0.
+        let he = molecule(vec![atom("He", "He", 2, [0.0, 0.0, 0.0])]);
+        assert_eq!(lib.nuclear_repulsion_energy(&he).unwrap(), 0.0);
+
+        // Zero nuclear charge must be refused, not faked.
+        let bad = molecule(vec![
+            atom("X", "X", 0, [0.0, 0.0, 0.0]),
+            atom("H", "H", 1, [1.0, 0.0, 0.0]),
+        ]);
+        assert!(matches!(
+            lib.nuclear_repulsion_energy(&bad),
+            Err(ChemistryError::InsufficientData(_))
+        ));
+    }
+
+    #[test]
+    fn test_bond_length_and_angle() {
+        let lib = ChemistryModelingLibrary::new();
+        // Right angle at the origin: A=(1,0,0), vertex=(0,0,0), C=(0,1,0).
+        let m = molecule(vec![
+            atom("A", "H", 1, [1.0, 0.0, 0.0]),
+            atom("V", "O", 8, [0.0, 0.0, 0.0]),
+            atom("C", "H", 1, [0.0, 1.0, 0.0]),
+        ]);
+        let d = lib.bond_length(&m, 0, 1).unwrap();
+        assert!((d - 1.0).abs() < 1e-12, "bond length = {}", d);
+        let theta = lib.bond_angle(&m, 0, 1, 2).unwrap();
+        assert!(
+            (theta - std::f64::consts::FRAC_PI_2).abs() < 1e-12,
+            "angle = {} rad",
+            theta
+        );
+
+        // 3-4-5 triangle leg gives a length of 5.
+        let m2 = molecule(vec![
+            atom("A", "H", 1, [0.0, 0.0, 0.0]),
+            atom("B", "H", 1, [3.0, 4.0, 0.0]),
+        ]);
+        assert!((lib.bond_length(&m2, 0, 1).unwrap() - 5.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_center_of_mass_and_inertia() {
+        let lib = ChemistryModelingLibrary::new();
+        // Two equal H masses on the x-axis at ±d/2, d = 2.0 → COM at origin.
+        let d = 2.0;
+        let m = molecule(vec![
+            atom("Ha", "H", 1, [-d / 2.0, 0.0, 0.0]),
+            atom("Hb", "H", 1, [d / 2.0, 0.0, 0.0]),
+        ]);
+        let com = lib.center_of_mass(&m).unwrap();
+        assert!(com.iter().all(|c| c.abs() < 1e-12), "COM = {:?}", com);
+
+        // Inertia about the molecular (x) axis is 0; the two perpendicular axes
+        // are each 2·m·(d/2)² with m = 1.008.
+        let mass = standard_atomic_weight("H").unwrap();
+        let i_perp = 2.0 * mass * (d / 2.0) * (d / 2.0);
+        let moments = lib.principal_moments_of_inertia(&m).unwrap();
+        assert!(moments[0].abs() < 1e-9, "I_axial = {}", moments[0]);
+        assert!(
+            (moments[1] - i_perp).abs() < 1e-9 && (moments[2] - i_perp).abs() < 1e-9,
+            "I_perp = ({}, {}), expected {}",
+            moments[1],
+            moments[2],
+            i_perp
+        );
+    }
+
+    #[test]
+    fn test_structural_properties_aggregate() {
+        let lib = ChemistryModelingLibrary::new();
+        let h2 = molecule(vec![
+            atom("Ha", "H", 1, [0.0, 0.0, 0.0]),
+            atom("Hb", "H", 1, [1.4, 0.0, 0.0]),
+        ]);
+        let props = lib.structural_properties(&h2).unwrap();
+        assert_eq!(props.formula, "H2");
+        assert_eq!(props.atom_count, 2);
+        assert!((props.molecular_mass - 2.0 * 1.008).abs() < 1e-9);
+        assert!((props.nuclear_repulsion_energy.unwrap() - 1.0 / 1.4).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_quantum_properties_honest_not_implemented() {
+        // The electronic-structure observables remain honestly NotImplemented
+        // (the shipped core lacks kinetic/nuclear integrals and a real ERI Fock
+        // build). This guards against a future regression that fabricates them.
+        let mut calc = QuantumCalculator::new();
+        let m = molecule(vec![atom("H", "H", 1, [0.0, 0.0, 0.0])]);
+        let r = calc.calculate_properties(&m, QuantumMethodType::HartreeFock);
+        assert!(matches!(r, Err(ChemistryError::NotImplemented(_))));
     }
 }

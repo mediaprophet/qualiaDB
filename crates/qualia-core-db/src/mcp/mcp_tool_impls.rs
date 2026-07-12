@@ -836,6 +836,197 @@ pub fn ode_solve(args: &[u8]) -> Result<String, McpSystemError> {
     lib.initialize()
         .map_err(|_| McpSystemError::InvalidParameters)?;
 
+    // Newly-wired analytic/ODE-backed simulations. Each marshals JSON params
+    // into the library method (which delegates to the canonical solvers) and
+    // returns the salient results. Array inputs are read as JSON number arrays.
+    let f64_array = |key: &str| -> Vec<f64> {
+        v.get(key)
+            .and_then(Value::as_array)
+            .map(|a| a.iter().filter_map(Value::as_f64).collect())
+            .unwrap_or_default()
+    };
+    let samples = v.get("num_samples").and_then(Value::as_u64).unwrap_or(64) as usize;
+    let sim_total_time = json_f64(&v, "total_time", 1.0);
+    match sim_type {
+        "projectile" | "particle" => {
+            let r = lib
+                .run_projectile_motion(
+                    json_f64(&v, "v0", 10.0),
+                    json_f64(&v, "angle_rad", std::f64::consts::FRAC_PI_4),
+                    json_f64(&v, "g", 9.81),
+                    json_f64(&v, "drag", 0.0),
+                    samples,
+                    json_f64(&v, "max_time", 10.0),
+                )
+                .map_err(|_| McpSystemError::InvalidParameters)?;
+            return Ok(json!({
+                "type": "projectile", "range": r.range, "max_height": r.max_height,
+                "time_of_flight": r.time_of_flight, "landed": r.landed,
+                "steps_accepted": r.steps_accepted
+            })
+            .to_string());
+        }
+        "harmonic_oscillator" | "structural_dynamics" => {
+            let r = lib
+                .run_harmonic_oscillator(
+                    json_f64(&v, "mass", 1.0),
+                    json_f64(&v, "k_spring", 1.0),
+                    json_f64(&v, "x0", 1.0),
+                    json_f64(&v, "v0", 0.0),
+                    sim_total_time,
+                    samples,
+                )
+                .map_err(|_| McpSystemError::InvalidParameters)?;
+            return Ok(json!({
+                "type": "harmonic_oscillator", "analytic_period": r.analytic_period,
+                "measured_period": r.measured_period, "energy_initial": r.energy_initial,
+                "energy_final": r.energy_final, "max_energy_drift": r.max_energy_drift
+            })
+            .to_string());
+        }
+        "pendulum" => {
+            let r = lib
+                .run_pendulum(
+                    json_f64(&v, "length", 1.0),
+                    json_f64(&v, "g", 9.81),
+                    json_f64(&v, "theta0", 0.2),
+                    json_f64(&v, "omega0", 0.0),
+                    sim_total_time,
+                    samples,
+                )
+                .map_err(|_| McpSystemError::InvalidParameters)?;
+            return Ok(json!({
+                "type": "pendulum", "small_angle_period": r.small_angle_period,
+                "measured_period": r.measured_period, "energy_initial": r.energy_initial,
+                "energy_final": r.energy_final
+            })
+            .to_string());
+        }
+        "nbody" | "astrophysics" | "gravitation" => {
+            let r = lib
+                .run_nbody_gravitation(
+                    f64_array("masses"),
+                    f64_array("positions"),
+                    f64_array("velocities"),
+                    json_f64(&v, "g", 1.0),
+                    json_f64(&v, "softening", 1e-3),
+                    sim_total_time,
+                    samples,
+                )
+                .map_err(|_| McpSystemError::InvalidParameters)?;
+            return Ok(json!({
+                "type": "nbody", "num_bodies": r.num_bodies,
+                "energy_initial": r.energy_initial, "energy_final": r.energy_final,
+                "energy_drift_rel": r.energy_drift_rel,
+                "final_positions": r.final_positions
+            })
+            .to_string());
+        }
+        "heat_diffusion" | "heat_transfer" => {
+            let r = lib
+                .run_heat_diffusion_1d(
+                    f64_array("initial"),
+                    json_f64(&v, "alpha", 1.0),
+                    json_f64(&v, "dx", 0.1),
+                    sim_total_time,
+                    samples,
+                )
+                .map_err(|_| McpSystemError::InvalidParameters)?;
+            return Ok(json!({
+                "type": "heat_diffusion", "initial_mean": r.initial_mean,
+                "final_mean": r.final_mean, "max_deviation_from_mean": r.max_deviation_from_mean,
+                "final_temperature": r.final_temperature
+            })
+            .to_string());
+        }
+        "wave" | "cem" => {
+            let r = lib
+                .run_wave_equation_1d(
+                    f64_array("initial_displacement"),
+                    f64_array("initial_velocity"),
+                    json_f64(&v, "c", 1.0),
+                    json_f64(&v, "dx", 0.1),
+                    sim_total_time,
+                    samples,
+                )
+                .map_err(|_| McpSystemError::InvalidParameters)?;
+            return Ok(json!({
+                "type": "wave", "energy_initial": r.energy_initial,
+                "energy_final": r.energy_final, "final_displacement": r.final_displacement
+            })
+            .to_string());
+        }
+        "quantum" | "quantum_mechanics" => {
+            let r = lib
+                .run_quantum_stationary_states_1d(
+                    f64_array("potential"),
+                    json_f64(&v, "dx", 0.1),
+                    json_f64(&v, "mass", 1.0),
+                    json_f64(&v, "hbar", 1.0),
+                    v.get("num_levels").and_then(Value::as_u64).unwrap_or(3) as usize,
+                )
+                .map_err(|_| McpSystemError::InvalidParameters)?;
+            return Ok(json!({
+                "type": "quantum", "eigenvalues": r.eigenvalues,
+                "num_grid_points": r.num_grid_points
+            })
+            .to_string());
+        }
+        "logistic_growth" | "biophysics" => {
+            let r = lib
+                .run_logistic_growth(
+                    json_f64(&v, "n0", 1.0),
+                    json_f64(&v, "growth_rate", 0.5),
+                    json_f64(&v, "carrying_capacity", 100.0),
+                    sim_total_time,
+                    samples,
+                )
+                .map_err(|_| McpSystemError::InvalidParameters)?;
+            return Ok(json!({
+                "type": "logistic_growth", "population": r.population,
+                "carrying_capacity": r.carrying_capacity, "growth_rate": r.growth_rate
+            })
+            .to_string());
+        }
+        "advection_diffusion" | "multiphysics" => {
+            let r = lib
+                .run_advection_diffusion_1d(
+                    f64_array("initial"),
+                    json_f64(&v, "advection_velocity", 1.0),
+                    json_f64(&v, "diffusion_coeff", 0.1),
+                    json_f64(&v, "dx", 0.1),
+                    sim_total_time,
+                    samples,
+                )
+                .map_err(|_| McpSystemError::InvalidParameters)?;
+            return Ok(json!({
+                "type": "advection_diffusion", "initial_total": r.initial_total,
+                "final_total": r.final_total, "final_field": r.final_field
+            })
+            .to_string());
+        }
+        "molecular_dynamics" if v.get("positions").is_some() => {
+            let r = lib
+                .run_molecular_dynamics(
+                    f64_array("positions"),
+                    f64_array("velocities"),
+                    json_f64(&v, "epsilon", 1.0),
+                    json_f64(&v, "sigma", 1.0),
+                    json_f64(&v, "mass", 1.0),
+                    sim_total_time,
+                    samples,
+                )
+                .map_err(|_| McpSystemError::InvalidParameters)?;
+            return Ok(json!({
+                "type": "molecular_dynamics", "num_particles": r.num_particles,
+                "energy_initial": r.energy_initial, "energy_final": r.energy_final,
+                "energy_drift_rel": r.energy_drift_rel, "temperature": r.temperature
+            })
+            .to_string());
+        }
+        _ => {}
+    }
+
     let nx = v.get("nx").and_then(Value::as_u64).unwrap_or(10) as usize;
     let ny = v.get("ny").and_then(Value::as_u64).unwrap_or(10) as usize;
     let dx = json_f64(&v, "dx", 0.1);
@@ -900,6 +1091,56 @@ pub fn chemical_analysis(args: &[u8]) -> Result<String, McpSystemError> {
     let mut lib = ChemistryModelingLibrary::new();
     lib.initialize()
         .map_err(|_| McpSystemError::InvalidParameters)?;
+
+    // Exact structural properties (mass, Hill formula, nuclear-repulsion energy,
+    // centre of mass, principal moments of inertia) from an explicit atom list:
+    // [{ "element": "O", "atomic_number": 8, "x":.., "y":.., "z":.. }, ...].
+    if json_str(&v, "op", "") == "structure" {
+        if let Some(atoms_json) = v.get("atoms").and_then(Value::as_array) {
+            let mut atoms = Vec::with_capacity(atoms_json.len());
+            let mut coords = Vec::with_capacity(atoms_json.len());
+            for (i, a) in atoms_json.iter().enumerate() {
+                let element = a
+                    .get("element")
+                    .and_then(Value::as_str)
+                    .unwrap_or("X")
+                    .to_string();
+                let c = vec![json_f64(a, "x", 0.0), json_f64(a, "y", 0.0), json_f64(a, "z", 0.0)];
+                atoms.push(Atom {
+                    atom_id: format!("a{}", i),
+                    element,
+                    atomic_number: a.get("atomic_number").and_then(Value::as_u64).unwrap_or(0)
+                        as usize,
+                    mass: json_f64(a, "mass", 0.0),
+                    charge: 0.0,
+                    coordinates: c.clone(),
+                });
+                coords.push(c);
+            }
+            let mut m = Molecule::new();
+            m.molecule_id = v
+                .get("molecule_id")
+                .and_then(Value::as_str)
+                .unwrap_or("mcp_mol")
+                .to_string();
+            m.atoms = atoms;
+            m.coordinates = coords;
+            let props = lib
+                .structural_properties(&m)
+                .map_err(|_| McpSystemError::InvalidParameters)?;
+            return Ok(json!({
+                "op": "structure",
+                "molecular_mass": props.molecular_mass,
+                "formula": props.formula,
+                "atom_count": props.atom_count,
+                "nuclear_repulsion_energy": props.nuclear_repulsion_energy,
+                "center_of_mass": props.center_of_mass,
+                "principal_moments_of_inertia": props.principal_moments_of_inertia
+            })
+            .to_string());
+        }
+        return Err(McpSystemError::InvalidParameters);
+    }
 
     let molecule = if let Some(smiles) = v.get("smiles").and_then(Value::as_str) {
         use crate::domains::chemical::organic_chemistry::{compute_descriptors, parse_smiles};
@@ -1548,6 +1789,71 @@ pub fn medical_score(args: &[u8]) -> Result<String, McpSystemError> {
     lib.initialize()
         .map_err(|_| McpSystemError::InvalidParameters)?;
 
+    // Genuinely-computable clinical metrics (published deterministic formulas).
+    // Selected by the `metric` field; each delegates to the real library method.
+    if let Some(metric) = v.get("metric").and_then(Value::as_str) {
+        use crate::specialized_libs::medical_computing::Gender;
+        let g = |key: &str| -> Gender {
+            match v.get(key).and_then(Value::as_str).unwrap_or("unknown") {
+                "male" | "m" => Gender::Male,
+                "female" | "f" => Gender::Female,
+                "other" => Gender::Other,
+                _ => Gender::Unknown,
+            }
+        };
+        let f = |key: &str| json_f64(&v, key, 0.0);
+        let val: f64 = match metric {
+            "bmi" => lib.bmi(f("weight_kg"), f("height_m")),
+            "bsa_mosteller" => lib.bsa_mosteller(f("weight_kg"), f("height_cm")),
+            "bsa_du_bois" => lib.bsa_du_bois(f("weight_kg"), f("height_cm")),
+            "ideal_body_weight" => lib.ideal_body_weight_devine(f("height_cm"), g("sex")),
+            "egfr_ckd_epi" => lib.egfr_ckd_epi_2021(f("scr_mg_dl"), f("age_years"), g("sex")),
+            "egfr_mdrd" => lib.egfr_mdrd(
+                f("scr_mg_dl"),
+                f("age_years"),
+                g("sex"),
+                json_bool(&v, "is_black", false),
+            ),
+            "creatinine_clearance" => lib.creatinine_clearance_cockcroft_gault(
+                f("age_years"),
+                f("weight_kg"),
+                f("scr_mg_dl"),
+                g("sex"),
+            ),
+            "mean_arterial_pressure" => lib.mean_arterial_pressure(f("systolic"), f("diastolic")),
+            "anion_gap" => Ok(lib.anion_gap(f("na"), f("cl"), f("hco3"))),
+            "corrected_calcium" => lib.corrected_calcium(f("measured_ca_mg_dl"), f("albumin_g_dl")),
+            "winters_pco2" => lib.winters_expected_pco2(f("hco3")),
+            "half_life" => lib.half_life_from_rate_constant(f("rate_constant")),
+            "elimination_rate_constant" => lib.elimination_rate_constant(f("half_life")),
+            "clearance" => lib.clearance(f("rate_constant"), f("volume_of_distribution")),
+            "volume_of_distribution" => {
+                lib.volume_of_distribution(f("dose"), f("initial_concentration"))
+            }
+            "steady_state_concentration" => {
+                lib.steady_state_concentration(f("infusion_rate"), f("clearance"))
+            }
+            "weight_based_dose" => lib.weight_based_dose(f("dose_per_kg"), f("weight_kg")),
+            "cha2ds2_vasc" => {
+                let s = lib.cha2ds2_vasc_score(
+                    json_bool(&v, "chf", false),
+                    json_bool(&v, "hypertension", false),
+                    f("age_years") as u32,
+                    json_bool(&v, "diabetes", false),
+                    json_bool(&v, "prior_stroke", false),
+                    json_bool(&v, "vascular_disease", false),
+                    g("sex"),
+                );
+                return Ok(json!({"metric": "cha2ds2_vasc", "score": s,
+                    "note": "deterministic point sum (0-9), not a risk probability"})
+                .to_string());
+            }
+            _ => return Err(McpSystemError::InvalidParameters),
+        }
+        .map_err(|_| McpSystemError::InvalidParameters)?;
+        return Ok(json!({"metric": metric, "value": val}).to_string());
+    }
+
     let patient: Patient = if let Some(p) = v.get("patient") {
         serde_json::from_value(p.clone()).map_err(|_| McpSystemError::InvalidParameters)?
     } else {
@@ -1653,6 +1959,7 @@ pub fn engineering_analysis(args: &[u8]) -> Result<String, McpSystemError> {
     let analysis_type = match analysis {
         "thermal" => AnalysisType::Thermal,
         "dynamic" => AnalysisType::LinearDynamic,
+        "buckling" => AnalysisType::Buckling,
         _ => AnalysisType::LinearStatic,
     };
     model.model_type = match analysis {
@@ -2277,6 +2584,46 @@ mod tests {
         // An unknown stat is a clean parameter error, not a panic.
         let bad = r#"{"dataset_id":"d","columns":["x","y"],"rows":[[1,3]],"stat":"nonesuch"}"#;
         assert!(statistical_analysis(bad.as_bytes()).is_err());
+    }
+
+    #[test]
+    fn physics_ode_solve_tool_projectile_known_range() {
+        // v0=10 m/s at 45°, no drag → range = v²·sin(2θ)/g = 100/9.81 ≈ 10.19 m.
+        let body = r#"{"type":"projectile","v0":10.0,"angle_rad":0.7853981633974483,"g":9.81,"drag":0.0,"num_samples":200,"max_time":5.0}"#;
+        let out = ode_solve(body.as_bytes()).expect("ok");
+        let p: Value = serde_json::from_str(&out).expect("json");
+        assert_eq!(p["type"], "projectile");
+        assert!((p["range"].as_f64().unwrap() - 10.19).abs() < 0.1, "range={}", p["range"]);
+    }
+
+    #[test]
+    fn medical_score_tool_bmi_known_value() {
+        // 70 kg / 1.75 m → BMI 22.857.
+        let body = r#"{"metric":"bmi","weight_kg":70.0,"height_m":1.75}"#;
+        let out = medical_score(body.as_bytes()).expect("ok");
+        let p: Value = serde_json::from_str(&out).expect("json");
+        assert!((p["value"].as_f64().unwrap() - 22.857).abs() < 1e-2, "bmi={}", p["value"]);
+
+        // The diagnosis path stays honest — not a fabricated result.
+        let diag = r#"{"score":"diagnosis"}"#;
+        assert!(matches!(
+            medical_score(diag.as_bytes()),
+            Err(McpSystemError::ToolNotReady)
+        ));
+    }
+
+    #[test]
+    fn chemical_analysis_tool_structure_water_mass() {
+        // H2O structural properties: mass ≈ 18.015, Hill formula "H2O".
+        let body = r#"{"op":"structure","atoms":[
+            {"element":"O","atomic_number":8,"x":0.0,"y":0.0,"z":0.0},
+            {"element":"H","atomic_number":1,"x":0.757,"y":0.586,"z":0.0},
+            {"element":"H","atomic_number":1,"x":-0.757,"y":0.586,"z":0.0}]}"#;
+        let out = chemical_analysis(body.as_bytes()).expect("ok");
+        let p: Value = serde_json::from_str(&out).expect("json");
+        assert_eq!(p["formula"], "H2O");
+        assert!((p["molecular_mass"].as_f64().unwrap() - 18.015).abs() < 0.01, "mass={}", p["molecular_mass"]);
+        assert_eq!(p["atom_count"], 3);
     }
 
     #[test]

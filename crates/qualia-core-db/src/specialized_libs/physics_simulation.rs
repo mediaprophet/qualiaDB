@@ -8,6 +8,11 @@
 
 use super::linear_algebra::AccessPattern;
 use crate::acoustic_ble_mesh::{MeshNetworkManager, MessagePriority, NetworkStatus};
+// Real, tested numeric solvers reused for the physics simulations below. No numerical
+// algorithm is re-derived inline here — every integration/eigen step delegates to these.
+use crate::solvers::calculus::ode_adaptive::{integrate_dopri5, AdaptiveOdeConfig, OdeError};
+use crate::solvers::calculus::ode_advanced::{integrate_symplectic, SymplecticMethod};
+use crate::solvers::linear_algebra::eigen::symmetric_eigen;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -2208,6 +2213,941 @@ impl PhysicsSimulationLibrary {
                 io_utilization: 0.0,
                 parallel_efficiency: 0.0,
             },
+        })
+    }
+}
+
+// ============================================================================
+// Genuine simulations for the declared `SimulationType` domains.
+//
+// Every method below marshals an initial state into slices and hands the actual
+// time-integration / eigenproblem to a tested solver in `crate::solvers`:
+//   * `integrate_dopri5`     — adaptive Dormand–Prince RK45 (vector ODE systems)
+//   * `integrate_symplectic` — Störmer–Verlet / Ruth / Yoshida (separable Hamiltonians)
+//   * `symmetric_eigen`      — cyclic-Jacobi symmetric eigensolver
+// The physics (forces, Laplacians, Hamiltonians) is set up here; the numerics are not.
+// ============================================================================
+
+/// Trajectory + landing diagnostics for `run_projectile_motion` (ParticlePhysics).
+#[derive(Debug, Clone)]
+pub struct ProjectileResult {
+    /// Sampled `[t, x, y, vx, vy]` rows along the flight.
+    pub trajectory: Vec<[f64; 5]>,
+    /// Horizontal distance at ground return (interpolated y=0). No-drag: v0²·sin(2θ)/g.
+    pub range: f64,
+    /// Peak height reached.
+    pub max_height: f64,
+    /// Time of flight to ground return (interpolated).
+    pub time_of_flight: f64,
+    /// Whether the projectile returned to y=0 within `max_time`.
+    pub landed: bool,
+    pub steps_accepted: u32,
+    pub steps_rejected: u32,
+}
+
+/// Result of `run_harmonic_oscillator` (StructuralDynamics / spring–mass), symplectic.
+#[derive(Debug, Clone)]
+pub struct OscillatorResult {
+    pub times: Vec<f64>,
+    pub positions: Vec<f64>,
+    pub velocities: Vec<f64>,
+    /// Analytic period 2π·√(m/k).
+    pub analytic_period: f64,
+    /// Period measured from the integrated trajectory (mean crossing interval).
+    pub measured_period: f64,
+    pub energy_initial: f64,
+    pub energy_final: f64,
+    /// Max |E−E₀| over the run — the bounded symplectic energy drift.
+    pub max_energy_drift: f64,
+}
+
+/// Result of `run_pendulum` (nonlinear rigid-body dynamics).
+#[derive(Debug, Clone)]
+pub struct PendulumResult {
+    pub times: Vec<f64>,
+    pub angles: Vec<f64>,
+    pub angular_velocities: Vec<f64>,
+    /// Small-angle period 2π·√(L/g).
+    pub small_angle_period: f64,
+    pub measured_period: f64,
+    pub energy_initial: f64,
+    pub energy_final: f64,
+    pub steps_accepted: u32,
+    pub steps_rejected: u32,
+}
+
+/// Result of `run_nbody_gravitation` (Astrophysics), direct-sum Newtonian gravity.
+#[derive(Debug, Clone)]
+pub struct NBodyResult {
+    pub num_bodies: usize,
+    pub times: Vec<f64>,
+    /// Position snapshots; each is the flat `[x0,y0,x1,y1,…]` vector at that time.
+    pub position_snapshots: Vec<Vec<f64>>,
+    pub final_positions: Vec<f64>,
+    pub final_velocities: Vec<f64>,
+    pub energy_initial: f64,
+    pub energy_final: f64,
+    /// |E_final − E_initial| / |E_initial|.
+    pub energy_drift_rel: f64,
+    pub angular_momentum_initial: f64,
+    pub angular_momentum_final: f64,
+    pub steps_accepted: u32,
+    pub steps_rejected: u32,
+}
+
+/// Result of `run_heat_diffusion_1d` (HeatTransfer), insulated (Neumann) ends.
+#[derive(Debug, Clone)]
+pub struct HeatDiffusionResult {
+    pub times: Vec<f64>,
+    pub snapshots: Vec<Vec<f64>>,
+    pub final_temperature: Vec<f64>,
+    pub initial_mean: f64,
+    pub final_mean: f64,
+    /// max_i |u_i − mean| in the final field (→ 0 as the profile relaxes).
+    pub max_deviation_from_mean: f64,
+    pub steps_accepted: u32,
+    pub steps_rejected: u32,
+}
+
+/// Result of `run_wave_equation_1d` (CEM — 1D scalar wave / plane-wave field), fixed ends.
+#[derive(Debug, Clone)]
+pub struct WaveResult {
+    pub times: Vec<f64>,
+    /// Displacement (field) snapshots.
+    pub snapshots: Vec<Vec<f64>>,
+    pub final_displacement: Vec<f64>,
+    pub energy_initial: f64,
+    pub energy_final: f64,
+    pub steps_accepted: u32,
+    pub steps_rejected: u32,
+}
+
+/// Result of `run_molecular_dynamics` (MolecularDynamics), Lennard-Jones in 2D.
+#[derive(Debug, Clone)]
+pub struct MolecularDynamicsResult {
+    pub num_particles: usize,
+    pub times: Vec<f64>,
+    pub final_positions: Vec<f64>,
+    pub final_velocities: Vec<f64>,
+    pub energy_initial: f64,
+    pub energy_final: f64,
+    pub energy_drift_rel: f64,
+    /// Instantaneous kinetic temperature (reduced units, kB=1): 2·KE/dof.
+    pub temperature: f64,
+    pub steps_accepted: u32,
+    pub steps_rejected: u32,
+}
+
+/// Result of `run_quantum_stationary_states_1d` (QuantumMechanics), finite-difference
+/// time-independent Schrödinger eigenproblem solved by `symmetric_eigen`.
+#[derive(Debug, Clone)]
+pub struct QuantumSpectrumResult {
+    /// Lowest `num_levels` energy eigenvalues, ascending.
+    pub eigenvalues: Vec<f64>,
+    pub num_grid_points: usize,
+    pub dx: f64,
+}
+
+/// Result of `run_logistic_growth` (Biophysics — population dynamics).
+#[derive(Debug, Clone)]
+pub struct PopulationDynamicsResult {
+    pub times: Vec<f64>,
+    pub population: Vec<f64>,
+    pub carrying_capacity: f64,
+    pub growth_rate: f64,
+    pub steps_accepted: u32,
+    pub steps_rejected: u32,
+}
+
+/// Result of `run_advection_diffusion_1d` (MultiPhysics — coupled transport + diffusion).
+#[derive(Debug, Clone)]
+pub struct AdvectionDiffusionResult {
+    pub times: Vec<f64>,
+    pub snapshots: Vec<Vec<f64>>,
+    pub final_field: Vec<f64>,
+    pub advection_velocity: f64,
+    pub diffusion_coeff: f64,
+    /// Σ_i u_i·dx at t=0 and t=end (conserved under the periodic scheme).
+    pub initial_total: f64,
+    pub final_total: f64,
+    pub steps_accepted: u32,
+    pub steps_rejected: u32,
+}
+
+/// Estimate a period from a sampled oscillatory signal by timing successive upward
+/// crossings of its mean. Pure post-hoc analysis of the integrated result — not an
+/// integrator. Returns 0.0 if fewer than two crossings were captured.
+fn estimate_period_from_crossings(times: &[f64], values: &[f64]) -> f64 {
+    if values.is_empty() {
+        return 0.0;
+    }
+    let mean = values.iter().sum::<f64>() / values.len() as f64;
+    let mut crossings: Vec<f64> = Vec::new();
+    for i in 1..values.len() {
+        let a = values[i - 1] - mean;
+        let b = values[i] - mean;
+        if a <= 0.0 && b > 0.0 {
+            let denom = b - a;
+            let frac = if denom.abs() > f64::MIN_POSITIVE {
+                -a / denom
+            } else {
+                0.0
+            };
+            crossings.push(times[i - 1] + frac * (times[i] - times[i - 1]));
+        }
+    }
+    if crossings.len() >= 2 {
+        let total: f64 = crossings
+            .windows(2)
+            .map(|w| w[1] - w[0])
+            .sum();
+        total / (crossings.len() - 1) as f64
+    } else {
+        0.0
+    }
+}
+
+impl PhysicsSimulationLibrary {
+    /// Integrate a first-order vector ODE `dy/dt = f(t, y)` from t=0 to `t_final`,
+    /// delegating each sub-interval to the tested adaptive `integrate_dopri5`. Returns
+    /// `(times, snapshots, accepted_steps, rejected_steps)` where `snapshots[k]` is the
+    /// full state at `times[k]` (index 0 is the initial state).
+    fn integrate_ode_samples<F>(
+        &self,
+        mut state: Vec<f64>,
+        t_final: f64,
+        num_samples: usize,
+        deriv: F,
+    ) -> Result<(Vec<f64>, Vec<Vec<f64>>, u32, u32), PhysicsError>
+    where
+        F: Fn(f64, &[f64], &mut [f64]) -> Result<(), OdeError>,
+    {
+        let dim = state.len();
+        if dim == 0 {
+            return Err(PhysicsError::InvalidConfiguration(
+                "empty initial state".to_string(),
+            ));
+        }
+        if !(t_final > 0.0) || !t_final.is_finite() {
+            return Err(PhysicsError::InvalidConfiguration(
+                "t_final must be a positive finite number".to_string(),
+            ));
+        }
+        let num_samples = num_samples.max(1);
+        let mut workspace = vec![0.0f64; dim * 8];
+        let mut times: Vec<f64> = Vec::with_capacity(num_samples + 1);
+        let mut snapshots: Vec<Vec<f64>> = Vec::with_capacity(num_samples + 1);
+        times.push(0.0);
+        snapshots.push(state.clone());
+
+        let mut accepted = 0u32;
+        let mut rejected = 0u32;
+        let dt_sample = t_final / num_samples as f64;
+        let mut t0 = 0.0f64;
+        for i in 0..num_samples {
+            let t1 = if i + 1 == num_samples {
+                t_final
+            } else {
+                (i + 1) as f64 * dt_sample
+            };
+            let mut cfg = AdaptiveOdeConfig::default();
+            let span = t1 - t0;
+            cfg.maximum_step = span.max(cfg.minimum_step);
+            cfg.initial_step = (span / 100.0).clamp(cfg.minimum_step, cfg.maximum_step);
+            let res = integrate_dopri5(&deriv, &mut state, t0, t1, cfg, &mut workspace)
+                .map_err(|e| PhysicsError::SolverError(format!("dopri5 integration: {:?}", e)))?;
+            accepted += res.accepted_steps;
+            rejected += res.rejected_steps;
+            times.push(t1);
+            snapshots.push(state.clone());
+            t0 = t1;
+        }
+        Ok((state, snapshots, accepted, rejected))
+    }
+
+    /// ParticlePhysics — 2D projectile / ballistic motion with optional quadratic drag.
+    ///
+    /// State `[x, y, vx, vy]`; `dvx = -k·|v|·vx`, `dvy = -g - k·|v|·vy` where `k = drag`
+    /// (drag per unit mass). Integrated by `integrate_dopri5`. With `drag = 0` the range
+    /// recovers the analytic `v0²·sin(2θ)/g`.
+    pub fn run_projectile_motion(
+        &self,
+        v0: f64,
+        angle_rad: f64,
+        g: f64,
+        drag: f64,
+        num_samples: usize,
+        max_time: f64,
+    ) -> Result<ProjectileResult, PhysicsError> {
+        if !(v0.is_finite() && angle_rad.is_finite() && g > 0.0) {
+            return Err(PhysicsError::InvalidConfiguration(
+                "require finite v0, angle and g > 0".to_string(),
+            ));
+        }
+        let state = vec![0.0, 0.0, v0 * angle_rad.cos(), v0 * angle_rad.sin()];
+        let deriv = move |_t: f64, y: &[f64], dy: &mut [f64]| -> Result<(), OdeError> {
+            let (vx, vy) = (y[2], y[3]);
+            let speed = (vx * vx + vy * vy).sqrt();
+            dy[0] = vx;
+            dy[1] = vy;
+            dy[2] = -drag * speed * vx;
+            dy[3] = -g - drag * speed * vy;
+            Ok(())
+        };
+        let (_final_state, snapshots, accepted, rejected) =
+            self.integrate_ode_samples(state, max_time, num_samples, deriv)?;
+
+        // Sample times are uniform across [0, max_time].
+        let n = snapshots.len();
+        let mut trajectory: Vec<[f64; 5]> = Vec::with_capacity(n);
+        for (k, s) in snapshots.iter().enumerate() {
+            let t = max_time * k as f64 / (n - 1).max(1) as f64;
+            trajectory.push([t, s[0], s[1], s[2], s[3]]);
+        }
+        let max_height = trajectory.iter().map(|r| r[2]).fold(f64::MIN, f64::max);
+
+        // Landing: first downward crossing of y = 0 after launch (skip the launch point).
+        let mut landed = false;
+        let mut range = trajectory.last().map(|r| r[1]).unwrap_or(0.0);
+        let mut time_of_flight = max_time;
+        for w in trajectory.windows(2) {
+            let (a, b) = (w[0], w[1]);
+            if a[0] > 0.0 && a[2] >= 0.0 && b[2] < 0.0 {
+                let frac = a[2] / (a[2] - b[2]); // linear interp to y=0
+                range = a[1] + frac * (b[1] - a[1]);
+                time_of_flight = a[0] + frac * (b[0] - a[0]);
+                landed = true;
+                break;
+            }
+        }
+        Ok(ProjectileResult {
+            trajectory,
+            range,
+            max_height,
+            time_of_flight,
+            landed,
+            steps_accepted: accepted,
+            steps_rejected: rejected,
+        })
+    }
+
+    /// StructuralDynamics — 1D spring–mass harmonic oscillator, integrated by the
+    /// symplectic `integrate_symplectic` (Störmer–Verlet). Hamiltonian
+    /// `H = p²/(2m) + ½k·q²`, so `dq/dt = p/m`, `dp/dt = -k·q`. Reports both the analytic
+    /// period `2π√(m/k)` and the one measured from the integrated trajectory, plus the
+    /// bounded energy drift that is the hallmark of a symplectic integrator.
+    pub fn run_harmonic_oscillator(
+        &self,
+        mass: f64,
+        k_spring: f64,
+        x0: f64,
+        v0: f64,
+        total_time: f64,
+        num_samples: usize,
+    ) -> Result<OscillatorResult, PhysicsError> {
+        if !(mass > 0.0 && k_spring > 0.0 && total_time > 0.0) {
+            return Err(PhysicsError::InvalidConfiguration(
+                "require mass > 0, k_spring > 0, total_time > 0".to_string(),
+            ));
+        }
+        let num_samples = num_samples.max(1);
+        let omega = (k_spring / mass).sqrt();
+        let analytic_period = 2.0 * std::f64::consts::PI / omega;
+        // Micro-step fine enough to resolve the period (~400 steps/period).
+        let h_target = analytic_period / 400.0;
+
+        let force = move |q: f64| -k_spring * q; // dp/dt
+        let kinetic_velocity = move |p: f64| p / mass; // dq/dt
+        let hamiltonian =
+            move |q: f64, p: f64| 0.5 * p * p / mass + 0.5 * k_spring * q * q;
+
+        let mut q = x0;
+        let mut p = mass * v0;
+        let energy_initial = hamiltonian(q, p);
+        let mut times: Vec<f64> = Vec::with_capacity(num_samples + 1);
+        let mut positions: Vec<f64> = Vec::with_capacity(num_samples + 1);
+        let mut velocities: Vec<f64> = Vec::with_capacity(num_samples + 1);
+        times.push(0.0);
+        positions.push(q);
+        velocities.push(p / mass);
+
+        let dt_sample = total_time / num_samples as f64;
+        let mut max_drift = 0.0f64;
+        for i in 0..num_samples {
+            let steps = (dt_sample / h_target).ceil().max(1.0) as u64;
+            let h = dt_sample / steps as f64;
+            let res = integrate_symplectic(
+                q,
+                p,
+                h,
+                steps,
+                &force,
+                &kinetic_velocity,
+                &hamiltonian,
+                SymplecticMethod::Yoshida4,
+            );
+            q = res.q;
+            p = res.p;
+            if res.max_energy_drift > max_drift {
+                max_drift = res.max_energy_drift;
+            }
+            times.push((i + 1) as f64 * dt_sample);
+            positions.push(q);
+            velocities.push(p / mass);
+        }
+        let energy_final = hamiltonian(q, p);
+        let measured_period = estimate_period_from_crossings(&times, &positions);
+        Ok(OscillatorResult {
+            times,
+            positions,
+            velocities,
+            analytic_period,
+            measured_period,
+            energy_initial,
+            energy_final,
+            max_energy_drift: max_drift,
+        })
+    }
+
+    /// Nonlinear rigid-body dynamics — a simple gravity pendulum (point mass on a rigid
+    /// rod). State `[θ, ω]`; `dθ/dt = ω`, `dω/dt = -(g/L)·sin θ`. Integrated by
+    /// `integrate_dopri5`. Energy `E = ½L²ω² + gL(1−cos θ)` (unit mass) is conserved; the
+    /// small-angle period is `2π√(L/g)`.
+    pub fn run_pendulum(
+        &self,
+        length: f64,
+        g: f64,
+        theta0: f64,
+        omega0: f64,
+        total_time: f64,
+        num_samples: usize,
+    ) -> Result<PendulumResult, PhysicsError> {
+        if !(length > 0.0 && g > 0.0 && total_time > 0.0) {
+            return Err(PhysicsError::InvalidConfiguration(
+                "require length > 0, g > 0, total_time > 0".to_string(),
+            ));
+        }
+        let l = length;
+        let energy = move |theta: f64, omega: f64| {
+            0.5 * l * l * omega * omega + g * l * (1.0 - theta.cos())
+        };
+        let energy_initial = energy(theta0, omega0);
+        let state = vec![theta0, omega0];
+        let deriv = move |_t: f64, y: &[f64], dy: &mut [f64]| -> Result<(), OdeError> {
+            dy[0] = y[1];
+            dy[1] = -(g / l) * y[0].sin();
+            Ok(())
+        };
+        let (final_state, snapshots, accepted, rejected) =
+            self.integrate_ode_samples(state, total_time, num_samples, deriv)?;
+        let n = snapshots.len();
+        let times: Vec<f64> = (0..n)
+            .map(|k| total_time * k as f64 / (n - 1).max(1) as f64)
+            .collect();
+        let angles: Vec<f64> = snapshots.iter().map(|s| s[0]).collect();
+        let angular_velocities: Vec<f64> = snapshots.iter().map(|s| s[1]).collect();
+        let energy_final = energy(final_state[0], final_state[1]);
+        let measured_period = estimate_period_from_crossings(&times, &angles);
+        Ok(PendulumResult {
+            times,
+            angles,
+            angular_velocities,
+            small_angle_period: 2.0 * std::f64::consts::PI * (l / g).sqrt(),
+            measured_period,
+            energy_initial,
+            energy_final,
+            steps_accepted: accepted,
+            steps_rejected: rejected,
+        })
+    }
+
+    /// Astrophysics — Newtonian N-body gravitation in 2D by direct force summation.
+    ///
+    /// `positions` and `velocities` are flat `[x0,y0,x1,y1,…]` (length `2·N`), `masses`
+    /// length `N`. Accelerations `aᵢ = Σⱼ G·mⱼ·(rⱼ−rᵢ)/(|rⱼ−rᵢ|²+ε²)^{3/2}` are assembled
+    /// here; the time integration is `integrate_dopri5`. Total energy and angular momentum
+    /// are reported for conservation checks.
+    pub fn run_nbody_gravitation(
+        &self,
+        masses: Vec<f64>,
+        positions: Vec<f64>,
+        velocities: Vec<f64>,
+        g: f64,
+        softening: f64,
+        total_time: f64,
+        num_samples: usize,
+    ) -> Result<NBodyResult, PhysicsError> {
+        let n = masses.len();
+        if n == 0 || positions.len() != 2 * n || velocities.len() != 2 * n {
+            return Err(PhysicsError::InvalidConfiguration(
+                "masses length N, positions/velocities length 2N required".to_string(),
+            ));
+        }
+        let eps2 = softening * softening;
+        let masses_e = masses.clone();
+        // Layout: [pos(2N), vel(2N)].
+        let mut state = Vec::with_capacity(4 * n);
+        state.extend_from_slice(&positions);
+        state.extend_from_slice(&velocities);
+
+        let energy = |st: &[f64]| -> (f64, f64) {
+            let mut ke = 0.0;
+            let mut pe = 0.0;
+            let mut angmom = 0.0;
+            for i in 0..n {
+                let (vx, vy) = (st[2 * n + 2 * i], st[2 * n + 2 * i + 1]);
+                ke += 0.5 * masses[i] * (vx * vx + vy * vy);
+                let (x, y) = (st[2 * i], st[2 * i + 1]);
+                angmom += masses[i] * (x * vy - y * vx);
+                for j in (i + 1)..n {
+                    let dx = st[2 * j] - x;
+                    let dy = st[2 * j + 1] - y;
+                    let r = (dx * dx + dy * dy + eps2).sqrt();
+                    pe -= g * masses[i] * masses[j] / r;
+                }
+            }
+            (ke + pe, angmom)
+        };
+        let (energy_initial, angmom_initial) = energy(&state);
+
+        let deriv = move |_t: f64, y: &[f64], dy: &mut [f64]| -> Result<(), OdeError> {
+            // Positions' derivative = velocities.
+            for i in 0..(2 * n) {
+                dy[i] = y[2 * n + i];
+            }
+            // Velocities' derivative = accelerations (direct sum).
+            for i in 0..n {
+                let (xi, yi) = (y[2 * i], y[2 * i + 1]);
+                let mut ax = 0.0;
+                let mut ay = 0.0;
+                for j in 0..n {
+                    if j == i {
+                        continue;
+                    }
+                    let dx = y[2 * j] - xi;
+                    let dyj = y[2 * j + 1] - yi;
+                    let r2 = dx * dx + dyj * dyj + eps2;
+                    let inv_r3 = 1.0 / (r2 * r2.sqrt());
+                    ax += g * masses_e[j] * dx * inv_r3;
+                    ay += g * masses_e[j] * dyj * inv_r3;
+                }
+                dy[2 * n + 2 * i] = ax;
+                dy[2 * n + 2 * i + 1] = ay;
+            }
+            Ok(())
+        };
+        let (final_state, snapshots, accepted, rejected) =
+            self.integrate_ode_samples(state, total_time, num_samples, deriv)?;
+        let (energy_final, angmom_final) = energy(&final_state);
+        let position_snapshots: Vec<Vec<f64>> = snapshots
+            .iter()
+            .map(|s| s[..2 * n].to_vec())
+            .collect();
+        let n_pts = snapshots.len();
+        let times: Vec<f64> = (0..n_pts)
+            .map(|k| total_time * k as f64 / (n_pts - 1).max(1) as f64)
+            .collect();
+        let energy_drift_rel = if energy_initial.abs() > f64::MIN_POSITIVE {
+            (energy_final - energy_initial).abs() / energy_initial.abs()
+        } else {
+            (energy_final - energy_initial).abs()
+        };
+        Ok(NBodyResult {
+            num_bodies: n,
+            times,
+            position_snapshots,
+            final_positions: final_state[..2 * n].to_vec(),
+            final_velocities: final_state[2 * n..].to_vec(),
+            energy_initial,
+            energy_final,
+            energy_drift_rel,
+            angular_momentum_initial: angmom_initial,
+            angular_momentum_final: angmom_final,
+            steps_accepted: accepted,
+            steps_rejected: rejected,
+        })
+    }
+
+    /// HeatTransfer — 1D heat/diffusion equation `u_t = α·u_xx` on a grid with insulated
+    /// (Neumann) ends, so total heat is conserved and the profile relaxes toward its mean.
+    /// The spatial Laplacian is assembled here; time integration is `integrate_dopri5`.
+    pub fn run_heat_diffusion_1d(
+        &self,
+        initial: Vec<f64>,
+        alpha: f64,
+        dx: f64,
+        total_time: f64,
+        num_samples: usize,
+    ) -> Result<HeatDiffusionResult, PhysicsError> {
+        let n = initial.len();
+        if n < 3 || !(alpha > 0.0 && dx > 0.0 && total_time > 0.0) {
+            return Err(PhysicsError::InvalidConfiguration(
+                "require grid length >= 3, alpha > 0, dx > 0, total_time > 0".to_string(),
+            ));
+        }
+        let initial_mean = initial.iter().sum::<f64>() / n as f64;
+        let inv_dx2 = 1.0 / (dx * dx);
+        let deriv = move |_t: f64, u: &[f64], du: &mut [f64]| -> Result<(), OdeError> {
+            // Conservative flux form: du_i = α·(F_{i+1/2} − F_{i-1/2})/dx² with
+            // F_{i+1/2} = u_{i+1} − u_i, and zero flux at both insulated ends. Summing over
+            // i telescopes to α·(F_{n-1/2} − F_{-1/2})/dx² = 0, so total heat is conserved.
+            for i in 0..n {
+                let flux_left = if i == 0 { 0.0 } else { u[i] - u[i - 1] };
+                let flux_right = if i == n - 1 { 0.0 } else { u[i + 1] - u[i] };
+                du[i] = alpha * (flux_right - flux_left) * inv_dx2;
+            }
+            Ok(())
+        };
+        let (final_temp, snapshots, accepted, rejected) =
+            self.integrate_ode_samples(initial, total_time, num_samples, deriv)?;
+        let n_pts = snapshots.len();
+        let times: Vec<f64> = (0..n_pts)
+            .map(|k| total_time * k as f64 / (n_pts - 1).max(1) as f64)
+            .collect();
+        let final_mean = final_temp.iter().sum::<f64>() / n as f64;
+        let max_deviation_from_mean = final_temp
+            .iter()
+            .map(|&v| (v - final_mean).abs())
+            .fold(0.0, f64::max);
+        Ok(HeatDiffusionResult {
+            times,
+            snapshots,
+            final_temperature: final_temp,
+            initial_mean,
+            final_mean,
+            max_deviation_from_mean,
+            steps_accepted: accepted,
+            steps_rejected: rejected,
+        })
+    }
+
+    /// CEM — 1D scalar wave equation `u_tt = c²·u_xx` (a plane-wave field component) on a
+    /// grid with fixed (Dirichlet) ends. Posed as the first-order system `u_t = v`,
+    /// `v_t = c²·u_xx` and integrated by `integrate_dopri5`. Total wave energy is reported.
+    pub fn run_wave_equation_1d(
+        &self,
+        initial_displacement: Vec<f64>,
+        initial_velocity: Vec<f64>,
+        c: f64,
+        dx: f64,
+        total_time: f64,
+        num_samples: usize,
+    ) -> Result<WaveResult, PhysicsError> {
+        let n = initial_displacement.len();
+        if n < 3 || initial_velocity.len() != n || !(c > 0.0 && dx > 0.0 && total_time > 0.0) {
+            return Err(PhysicsError::InvalidConfiguration(
+                "require matching grids length >= 3, c > 0, dx > 0, total_time > 0".to_string(),
+            ));
+        }
+        let c2 = c * c;
+        let inv_dx2 = 1.0 / (dx * dx);
+        let mut state = Vec::with_capacity(2 * n);
+        state.extend_from_slice(&initial_displacement);
+        state.extend_from_slice(&initial_velocity);
+        // Ends are pinned to zero.
+        state[0] = 0.0;
+        state[n - 1] = 0.0;
+        state[n] = 0.0;
+        state[2 * n - 1] = 0.0;
+
+        let energy = |st: &[f64]| -> f64 {
+            let mut e = 0.0;
+            for i in 0..n {
+                let v = st[n + i];
+                e += 0.5 * v * v * dx;
+            }
+            for i in 0..n - 1 {
+                let grad = (st[i + 1] - st[i]) / dx;
+                e += 0.5 * c2 * grad * grad * dx;
+            }
+            e
+        };
+        let energy_initial = energy(&state);
+
+        let deriv = move |_t: f64, y: &[f64], dy: &mut [f64]| -> Result<(), OdeError> {
+            for i in 0..n {
+                if i == 0 || i == n - 1 {
+                    dy[i] = 0.0; // pinned displacement
+                    dy[n + i] = 0.0; // pinned velocity
+                } else {
+                    dy[i] = y[n + i]; // u_t = v
+                    dy[n + i] = c2 * (y[i + 1] - 2.0 * y[i] + y[i - 1]) * inv_dx2; // v_t = c² u_xx
+                }
+            }
+            Ok(())
+        };
+        let (final_state, snapshots, accepted, rejected) =
+            self.integrate_ode_samples(state, total_time, num_samples, deriv)?;
+        let energy_final = energy(&final_state);
+        let disp_snapshots: Vec<Vec<f64>> =
+            snapshots.iter().map(|s| s[..n].to_vec()).collect();
+        let n_pts = snapshots.len();
+        let times: Vec<f64> = (0..n_pts)
+            .map(|k| total_time * k as f64 / (n_pts - 1).max(1) as f64)
+            .collect();
+        Ok(WaveResult {
+            times,
+            snapshots: disp_snapshots,
+            final_displacement: final_state[..n].to_vec(),
+            energy_initial,
+            energy_final,
+            steps_accepted: accepted,
+            steps_rejected: rejected,
+        })
+    }
+
+    /// MolecularDynamics — 2D Lennard-Jones particles. `positions`/`velocities` flat
+    /// `[x0,y0,…]` (length `2·N`). Pair potential `U(r)=4ε[(σ/r)¹²−(σ/r)⁶]`, force
+    /// magnitude `24ε(2(σ/r)¹²−(σ/r)⁶)/r` assembled here; integrated by `integrate_dopri5`.
+    /// Total energy is conserved; kinetic temperature reported in reduced units (kB=1).
+    pub fn run_molecular_dynamics(
+        &self,
+        positions: Vec<f64>,
+        velocities: Vec<f64>,
+        epsilon: f64,
+        sigma: f64,
+        mass: f64,
+        total_time: f64,
+        num_samples: usize,
+    ) -> Result<MolecularDynamicsResult, PhysicsError> {
+        if positions.len() < 2 || positions.len() % 2 != 0 {
+            return Err(PhysicsError::InvalidConfiguration(
+                "positions must be a non-empty flat 2D array (length 2N)".to_string(),
+            ));
+        }
+        let n = positions.len() / 2;
+        if velocities.len() != 2 * n || !(epsilon > 0.0 && sigma > 0.0 && mass > 0.0 && total_time > 0.0)
+        {
+            return Err(PhysicsError::InvalidConfiguration(
+                "velocities length 2N; epsilon, sigma, mass, total_time > 0".to_string(),
+            ));
+        }
+        let mut state = Vec::with_capacity(4 * n);
+        state.extend_from_slice(&positions);
+        state.extend_from_slice(&velocities);
+
+        let pair_potential = move |r: f64| -> f64 {
+            let sr6 = (sigma / r).powi(6);
+            4.0 * epsilon * (sr6 * sr6 - sr6)
+        };
+        let energy = |st: &[f64]| -> (f64, f64) {
+            let mut ke = 0.0;
+            for i in 0..n {
+                let vx = st[2 * n + 2 * i];
+                let vy = st[2 * n + 2 * i + 1];
+                ke += 0.5 * mass * (vx * vx + vy * vy);
+            }
+            let mut pe = 0.0;
+            for i in 0..n {
+                for j in (i + 1)..n {
+                    let dx = st[2 * j] - st[2 * i];
+                    let dy = st[2 * j + 1] - st[2 * i + 1];
+                    let r = (dx * dx + dy * dy).sqrt();
+                    if r > 0.0 {
+                        pe += pair_potential(r);
+                    }
+                }
+            }
+            (ke, pe)
+        };
+        let (ke0, pe0) = energy(&state);
+        let energy_initial = ke0 + pe0;
+
+        let deriv = move |_t: f64, y: &[f64], dy: &mut [f64]| -> Result<(), OdeError> {
+            for i in 0..(2 * n) {
+                dy[i] = y[2 * n + i];
+            }
+            for i in 0..n {
+                let (xi, yi) = (y[2 * i], y[2 * i + 1]);
+                let mut fx = 0.0;
+                let mut fy = 0.0;
+                for j in 0..n {
+                    if j == i {
+                        continue;
+                    }
+                    let dx = xi - y[2 * j];
+                    let dyj = yi - y[2 * j + 1];
+                    let r2 = dx * dx + dyj * dyj;
+                    if r2 <= 0.0 {
+                        continue;
+                    }
+                    let r = r2.sqrt();
+                    let sr6 = (sigma / r).powi(6);
+                    // Repulsive force magnitude/r along the separation vector.
+                    let f_over_r = 24.0 * epsilon * (2.0 * sr6 * sr6 - sr6) / r2;
+                    fx += f_over_r * dx;
+                    fy += f_over_r * dyj;
+                }
+                dy[2 * n + 2 * i] = fx / mass;
+                dy[2 * n + 2 * i + 1] = fy / mass;
+            }
+            Ok(())
+        };
+        let (final_state, _snapshots, accepted, rejected) =
+            self.integrate_ode_samples(state, total_time, num_samples, deriv)?;
+        let (ke_final, pe_final) = energy(&final_state);
+        let energy_final = ke_final + pe_final;
+        let energy_drift_rel = if energy_initial.abs() > f64::MIN_POSITIVE {
+            (energy_final - energy_initial).abs() / energy_initial.abs()
+        } else {
+            (energy_final - energy_initial).abs()
+        };
+        // 2D kinetic temperature (reduced units, kB = 1): 2·KE / dof, dof = 2N.
+        let temperature = 2.0 * ke_final / (2 * n) as f64;
+        Ok(MolecularDynamicsResult {
+            num_particles: n,
+            times: (0..=num_samples.max(1))
+                .map(|k| total_time * k as f64 / num_samples.max(1) as f64)
+                .collect(),
+            final_positions: final_state[..2 * n].to_vec(),
+            final_velocities: final_state[2 * n..].to_vec(),
+            energy_initial,
+            energy_final,
+            energy_drift_rel,
+            temperature,
+            steps_accepted: accepted,
+            steps_rejected: rejected,
+        })
+    }
+
+    /// QuantumMechanics — 1D time-independent Schrödinger equation
+    /// `[-ħ²/(2m)·d²/dx² + V(x)]·ψ = E·ψ` discretised by second-order finite differences
+    /// (Dirichlet walls). The resulting symmetric tridiagonal Hamiltonian is diagonalised
+    /// by the tested `symmetric_eigen`; the lowest `num_levels` energies are returned.
+    pub fn run_quantum_stationary_states_1d(
+        &self,
+        potential: Vec<f64>,
+        dx: f64,
+        mass: f64,
+        hbar: f64,
+        num_levels: usize,
+    ) -> Result<QuantumSpectrumResult, PhysicsError> {
+        let n = potential.len();
+        if n < 2 || !(dx > 0.0 && mass > 0.0 && hbar > 0.0) {
+            return Err(PhysicsError::InvalidConfiguration(
+                "require potential length >= 2, dx > 0, mass > 0, hbar > 0".to_string(),
+            ));
+        }
+        // Kinetic coupling t = ħ²/(2m·dx²). Diagonal 2t + V_i; off-diagonal -t.
+        let t = hbar * hbar / (2.0 * mass * dx * dx);
+        let mut a = vec![0.0f64; n * n];
+        for i in 0..n {
+            a[i * n + i] = 2.0 * t + potential[i];
+            if i + 1 < n {
+                a[i * n + (i + 1)] = -t;
+                a[(i + 1) * n + i] = -t;
+            }
+        }
+        let mut eigvecs = vec![0.0f64; n * n];
+        symmetric_eigen(n, &mut a, &mut eigvecs)
+            .map_err(|e| PhysicsError::SolverError(format!("symmetric_eigen: {:?}", e)))?;
+        let mut eigenvalues: Vec<f64> = (0..n).map(|i| a[i * n + i]).collect();
+        eigenvalues.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
+        eigenvalues.truncate(num_levels.min(n).max(1));
+        Ok(QuantumSpectrumResult {
+            eigenvalues,
+            num_grid_points: n,
+            dx,
+        })
+    }
+
+    /// Biophysics — logistic population dynamics `dN/dt = r·N·(1 − N/K)`, integrated by
+    /// `integrate_dopri5`. Matches the analytic logistic curve
+    /// `N(t) = K / (1 + ((K−N₀)/N₀)·e^{−r·t})`.
+    pub fn run_logistic_growth(
+        &self,
+        n0: f64,
+        growth_rate: f64,
+        carrying_capacity: f64,
+        total_time: f64,
+        num_samples: usize,
+    ) -> Result<PopulationDynamicsResult, PhysicsError> {
+        if !(n0 >= 0.0 && carrying_capacity > 0.0 && total_time > 0.0) {
+            return Err(PhysicsError::InvalidConfiguration(
+                "require n0 >= 0, carrying_capacity > 0, total_time > 0".to_string(),
+            ));
+        }
+        let r = growth_rate;
+        let k = carrying_capacity;
+        let deriv = move |_t: f64, y: &[f64], dy: &mut [f64]| -> Result<(), OdeError> {
+            dy[0] = r * y[0] * (1.0 - y[0] / k);
+            Ok(())
+        };
+        let (_final, snapshots, accepted, rejected) =
+            self.integrate_ode_samples(vec![n0], total_time, num_samples, deriv)?;
+        let n_pts = snapshots.len();
+        let times: Vec<f64> = (0..n_pts)
+            .map(|kk| total_time * kk as f64 / (n_pts - 1).max(1) as f64)
+            .collect();
+        let population: Vec<f64> = snapshots.iter().map(|s| s[0]).collect();
+        Ok(PopulationDynamicsResult {
+            times,
+            population,
+            carrying_capacity: k,
+            growth_rate: r,
+            steps_accepted: accepted,
+            steps_rejected: rejected,
+        })
+    }
+
+    /// MultiPhysics — coupled 1D advection–diffusion `u_t + c·u_x = α·u_xx` on a periodic
+    /// grid: a prescribed flow (fluid transport) coupled to diffusion (thermal spreading).
+    /// First-order upwind advection + central diffusion assembled here; integrated by
+    /// `integrate_dopri5`. The periodic scheme conserves `Σ u_i·dx`; the pure-diffusion
+    /// limit (`c = 0`) relaxes toward the mean.
+    pub fn run_advection_diffusion_1d(
+        &self,
+        initial: Vec<f64>,
+        advection_velocity: f64,
+        diffusion_coeff: f64,
+        dx: f64,
+        total_time: f64,
+        num_samples: usize,
+    ) -> Result<AdvectionDiffusionResult, PhysicsError> {
+        let n = initial.len();
+        if n < 3 || !(dx > 0.0 && total_time > 0.0) || diffusion_coeff < 0.0 {
+            return Err(PhysicsError::InvalidConfiguration(
+                "require grid length >= 3, dx > 0, total_time > 0, diffusion_coeff >= 0"
+                    .to_string(),
+            ));
+        }
+        let c = advection_velocity;
+        let alpha = diffusion_coeff;
+        let inv_dx = 1.0 / dx;
+        let inv_dx2 = 1.0 / (dx * dx);
+        let initial_total = initial.iter().sum::<f64>() * dx;
+        let deriv = move |_t: f64, u: &[f64], du: &mut [f64]| -> Result<(), OdeError> {
+            for i in 0..n {
+                let ip1 = (i + 1) % n;
+                let im1 = (i + n - 1) % n;
+                // First-order upwind advection (stable for either sign of c).
+                let adv = if c >= 0.0 {
+                    -c * (u[i] - u[im1]) * inv_dx
+                } else {
+                    -c * (u[ip1] - u[i]) * inv_dx
+                };
+                let diff = alpha * (u[ip1] - 2.0 * u[i] + u[im1]) * inv_dx2;
+                du[i] = adv + diff;
+            }
+            Ok(())
+        };
+        let (final_field, snapshots, accepted, rejected) =
+            self.integrate_ode_samples(initial, total_time, num_samples, deriv)?;
+        let n_pts = snapshots.len();
+        let times: Vec<f64> = (0..n_pts)
+            .map(|k| total_time * k as f64 / (n_pts - 1).max(1) as f64)
+            .collect();
+        let final_total = final_field.iter().sum::<f64>() * dx;
+        Ok(AdvectionDiffusionResult {
+            times,
+            snapshots,
+            final_field,
+            advection_velocity: c,
+            diffusion_coeff: alpha,
+            initial_total,
+            final_total,
+            steps_accepted: accepted,
+            steps_rejected: rejected,
         })
     }
 }
@@ -5157,6 +6097,341 @@ mod tests {
         assert!(pressure
             .iter()
             .all(|&p| p.is_finite() && p <= 101_325.0 + 1e-6));
+    }
+
+    // ── Genuine physics simulations wired to solvers/ — known-value tests ──────────
+
+    #[test]
+    fn projectile_no_drag_matches_analytic_range() {
+        // Range = v0²·sin(2θ)/g. v0=20, θ=45°, g=9.81 → ~40.7747 m; flight ~2.884 s.
+        let lib = PhysicsSimulationLibrary::new();
+        let v0 = 20.0;
+        let theta = std::f64::consts::FRAC_PI_4;
+        let g = 9.81;
+        let t_flight = 2.0 * v0 * theta.sin() / g;
+        let res = lib
+            .run_projectile_motion(v0, theta, g, 0.0, 4000, t_flight * 1.05)
+            .unwrap();
+        assert!(res.landed);
+        let analytic_range = v0 * v0 * (2.0 * theta).sin() / g;
+        assert!(
+            (res.range - analytic_range).abs() < 0.05,
+            "range {} vs analytic {}",
+            res.range,
+            analytic_range
+        );
+        // Max height = (v0·sinθ)²/(2g) ≈ 10.19 m.
+        let analytic_h = (v0 * theta.sin()).powi(2) / (2.0 * g);
+        assert!((res.max_height - analytic_h).abs() < 0.05);
+        assert!((res.time_of_flight - t_flight).abs() < 0.02);
+    }
+
+    #[test]
+    fn projectile_drag_reduces_range() {
+        let lib = PhysicsSimulationLibrary::new();
+        let (v0, theta, g) = (30.0, std::f64::consts::FRAC_PI_4, 9.81);
+        let no_drag = lib
+            .run_projectile_motion(v0, theta, g, 0.0, 4000, 10.0)
+            .unwrap();
+        let with_drag = lib
+            .run_projectile_motion(v0, theta, g, 0.02, 4000, 10.0)
+            .unwrap();
+        assert!(with_drag.landed && no_drag.landed);
+        assert!(
+            with_drag.range < no_drag.range,
+            "drag range {} should be < no-drag range {}",
+            with_drag.range,
+            no_drag.range
+        );
+    }
+
+    #[test]
+    fn harmonic_oscillator_conserves_energy_and_period() {
+        // m=1, k=4 → ω=2, T=π≈3.14159. Symplectic drift must stay tiny.
+        let lib = PhysicsSimulationLibrary::new();
+        let res = lib
+            .run_harmonic_oscillator(1.0, 4.0, 1.0, 0.0, 20.0, 4000)
+            .unwrap();
+        assert!(
+            (res.analytic_period - std::f64::consts::PI).abs() < 1e-9,
+            "analytic period {}",
+            res.analytic_period
+        );
+        assert!(
+            (res.measured_period - res.analytic_period).abs() < 0.05,
+            "measured {} vs analytic {}",
+            res.measured_period,
+            res.analytic_period
+        );
+        // Energy at t=0 is ½k x0² = 2.0; drift bounded (symplectic property).
+        assert!((res.energy_initial - 2.0).abs() < 1e-9);
+        assert!(
+            res.max_energy_drift < 1e-3,
+            "energy drift {} not bounded",
+            res.max_energy_drift
+        );
+        assert!((res.energy_final - res.energy_initial).abs() < 1e-3);
+    }
+
+    #[test]
+    fn pendulum_small_angle_period_and_energy() {
+        // L=1, g=9.81, θ0=0.05 rad (small) → period ≈ 2π√(L/g) ≈ 2.0064 s.
+        let lib = PhysicsSimulationLibrary::new();
+        let res = lib.run_pendulum(1.0, 9.81, 0.05, 0.0, 12.0, 6000).unwrap();
+        assert!(
+            (res.measured_period - res.small_angle_period).abs() < 0.02,
+            "measured {} vs small-angle {}",
+            res.measured_period,
+            res.small_angle_period
+        );
+        // Energy conserved along the trajectory.
+        assert!(
+            (res.energy_final - res.energy_initial).abs() < 1e-4,
+            "pendulum energy drift {}",
+            (res.energy_final - res.energy_initial).abs()
+        );
+    }
+
+    #[test]
+    fn two_body_circular_orbit_stays_circular() {
+        // Circular orbit: a heavy body at the origin, a light satellite at radius r with
+        // the circular speed v = √(G·M/r). Choose G so that G·M_heavy = 1 with r = 1.
+        let lib = PhysicsSimulationLibrary::new();
+        let r = 1.0f64;
+        let m_heavy = 1000.0f64;
+        let gg = 1.0 / m_heavy; // → gg·M_heavy = 1
+        let vsat = (gg * m_heavy / r).sqrt(); // = 1.0
+        // Body 0 = heavy (near-fixed), body 1 = satellite on a circular orbit.
+        let masses = vec![m_heavy, 1e-6];
+        let positions = vec![0.0, 0.0, r, 0.0];
+        let velocities = vec![0.0, 0.0, 0.0, vsat];
+        let period = 2.0 * std::f64::consts::PI * r / vsat; // ≈ 6.283
+        let res = lib
+            .run_nbody_gravitation(masses, positions, velocities, gg, 1e-6, period, 400)
+            .unwrap();
+        // Radius of the satellite (body 1) about the heavy body stays ~r over one orbit.
+        for snap in &res.position_snapshots {
+            let rx = snap[2] - snap[0];
+            let ry = snap[3] - snap[1];
+            let radius = (rx * rx + ry * ry).sqrt();
+            assert!(
+                (radius - r).abs() < 0.02,
+                "orbit radius drifted to {}",
+                radius
+            );
+        }
+        // Energy and angular momentum conserved.
+        assert!(
+            res.energy_drift_rel < 1e-3,
+            "energy drift {}",
+            res.energy_drift_rel
+        );
+        assert!(
+            (res.angular_momentum_final - res.angular_momentum_initial).abs() < 1e-6,
+            "L drift {}",
+            (res.angular_momentum_final - res.angular_momentum_initial).abs()
+        );
+    }
+
+    #[test]
+    fn heat_diffusion_relaxes_toward_mean_and_conserves_heat() {
+        // Insulated bar: total heat conserved, profile flattens toward the mean.
+        let lib = PhysicsSimulationLibrary::new();
+        let n = 21;
+        let dx = 1.0 / (n as f64 - 1.0);
+        // Initial: a sine bump (mean ≈ nonzero) with clear spatial variation.
+        let initial: Vec<f64> = (0..n)
+            .map(|i| 1.0 + (std::f64::consts::PI * i as f64 * dx).sin())
+            .collect();
+        let init_max_dev = {
+            let mean = initial.iter().sum::<f64>() / n as f64;
+            initial.iter().map(|&v| (v - mean).abs()).fold(0.0, f64::max)
+        };
+        let res = lib
+            .run_heat_diffusion_1d(initial, 1.0, dx, 0.5, 50)
+            .unwrap();
+        // Total heat conserved (Neumann BC).
+        assert!(
+            (res.final_mean - res.initial_mean).abs() < 1e-6,
+            "mean changed: {} -> {}",
+            res.initial_mean,
+            res.final_mean
+        );
+        // Profile relaxed substantially toward the mean.
+        assert!(
+            res.max_deviation_from_mean < 0.4 * init_max_dev,
+            "deviation {} did not relax from {}",
+            res.max_deviation_from_mean,
+            init_max_dev
+        );
+    }
+
+    #[test]
+    fn wave_equation_conserves_energy() {
+        let lib = PhysicsSimulationLibrary::new();
+        let n = 41;
+        let dx = 1.0 / (n as f64 - 1.0);
+        // Plucked string: sine mode, at rest.
+        let u0: Vec<f64> = (0..n)
+            .map(|i| (std::f64::consts::PI * i as f64 * dx).sin())
+            .collect();
+        let v0 = vec![0.0; n];
+        let res = lib
+            .run_wave_equation_1d(u0, v0, 1.0, dx, 0.5, 40)
+            .unwrap();
+        assert!(res.energy_initial > 0.0);
+        let rel = (res.energy_final - res.energy_initial).abs() / res.energy_initial;
+        assert!(rel < 0.05, "wave energy drift {}", rel);
+        // Ends stay pinned.
+        assert!(res.final_displacement[0].abs() < 1e-9);
+        assert!(res.final_displacement[n - 1].abs() < 1e-9);
+    }
+
+    #[test]
+    fn molecular_dynamics_conserves_energy() {
+        // Two LJ particles released slightly inside the minimum (r0 = 2^(1/6)·σ) oscillate;
+        // total energy must be conserved.
+        let lib = PhysicsSimulationLibrary::new();
+        let sigma = 1.0;
+        let r_min = 2f64.powf(1.0 / 6.0) * sigma;
+        let r_start = 0.95 * r_min; // compressed → will oscillate
+        let positions = vec![0.0, 0.0, r_start, 0.0];
+        let velocities = vec![0.0, 0.0, 0.0, 0.0];
+        let res = lib
+            .run_molecular_dynamics(positions, velocities, 1.0, sigma, 1.0, 2.0, 200)
+            .unwrap();
+        assert_eq!(res.num_particles, 2);
+        assert!(
+            res.energy_drift_rel < 1e-3,
+            "MD energy drift {}",
+            res.energy_drift_rel
+        );
+    }
+
+    #[test]
+    fn molecular_dynamics_rest_at_potential_minimum() {
+        // At r = r_min the pair force is zero → particles at rest stay (nearly) put.
+        let lib = PhysicsSimulationLibrary::new();
+        let sigma = 1.0;
+        let r_min = 2f64.powf(1.0 / 6.0) * sigma;
+        let positions = vec![0.0, 0.0, r_min, 0.0];
+        let velocities = vec![0.0, 0.0, 0.0, 0.0];
+        let res = lib
+            .run_molecular_dynamics(positions, velocities, 1.0, sigma, 1.0, 1.0, 50)
+            .unwrap();
+        let sep = res.final_positions[2] - res.final_positions[0];
+        assert!(
+            (sep - r_min).abs() < 1e-6,
+            "separation drifted to {} from r_min {}",
+            sep,
+            r_min
+        );
+    }
+
+    #[test]
+    fn quantum_infinite_well_matches_discrete_spectrum() {
+        // Infinite square well, n interior points, walls implicit at the ends. The FD
+        // Hamiltonian's exact eigenvalues are E_k = 2t·(1 − cos(kπ/(n+1))), t=ħ²/(2m dx²).
+        let lib = PhysicsSimulationLibrary::new();
+        let n = 100usize;
+        let width = 1.0f64;
+        let dx = width / (n as f64 + 1.0); // walls at 0 and width
+        let (mass, hbar) = (1.0, 1.0);
+        let potential = vec![0.0f64; n];
+        let res = lib
+            .run_quantum_stationary_states_1d(potential, dx, mass, hbar, 3)
+            .unwrap();
+        let t = hbar * hbar / (2.0 * mass * dx * dx);
+        for k in 1..=3usize {
+            let exact = 2.0 * t * (1.0 - (k as f64 * std::f64::consts::PI / (n as f64 + 1.0)).cos());
+            let got = res.eigenvalues[k - 1];
+            assert!(
+                (got - exact).abs() < 1e-6 * exact,
+                "level {}: got {} vs exact-discrete {}",
+                k,
+                got,
+                exact
+            );
+        }
+        // Ground state also close to the continuum value E_1 = π²ħ²/(2mL²) ≈ 4.9348.
+        let continuum_e1 =
+            std::f64::consts::PI.powi(2) * hbar * hbar / (2.0 * mass * width * width);
+        assert!(
+            (res.eigenvalues[0] - continuum_e1).abs() / continuum_e1 < 0.01,
+            "ground state {} vs continuum {}",
+            res.eigenvalues[0],
+            continuum_e1
+        );
+        // Eigenvalues must be ascending.
+        assert!(res.eigenvalues[0] < res.eigenvalues[1]);
+        assert!(res.eigenvalues[1] < res.eigenvalues[2]);
+    }
+
+    #[test]
+    fn logistic_growth_matches_analytic() {
+        // N(t) = K / (1 + ((K-N0)/N0)·e^{-r t}).
+        let lib = PhysicsSimulationLibrary::new();
+        let (n0, r, k, total) = (1.0, 0.8, 100.0, 15.0);
+        let res = lib.run_logistic_growth(n0, r, k, total, 60).unwrap();
+        for (i, &t) in res.times.iter().enumerate() {
+            let analytic = k / (1.0 + ((k - n0) / n0) * (-r * t).exp());
+            assert!(
+                (res.population[i] - analytic).abs() < 1e-4 * k.max(1.0),
+                "t={}: got {} vs analytic {}",
+                t,
+                res.population[i],
+                analytic
+            );
+        }
+        // Approaches carrying capacity.
+        assert!((res.population.last().unwrap() - k).abs() < 0.1);
+    }
+
+    #[test]
+    fn advection_diffusion_pure_diffusion_relaxes_and_conserves() {
+        // c = 0 → pure diffusion on a periodic ring: total conserved, profile → mean.
+        let lib = PhysicsSimulationLibrary::new();
+        let n = 32;
+        let dx = 1.0 / n as f64;
+        let initial: Vec<f64> = (0..n)
+            .map(|i| (2.0 * std::f64::consts::PI * i as f64 / n as f64).sin())
+            .collect();
+        let res = lib
+            .run_advection_diffusion_1d(initial, 0.0, 0.05, dx, 1.0, 40)
+            .unwrap();
+        // Conservation of Σ u·dx.
+        assert!(
+            (res.final_total - res.initial_total).abs() < 1e-9,
+            "total drifted: {} -> {}",
+            res.initial_total,
+            res.final_total
+        );
+        // Sine mean is ~0; after diffusion the field amplitude shrinks toward 0.
+        let final_amp = res.final_field.iter().map(|v| v.abs()).fold(0.0, f64::max);
+        assert!(final_amp < 0.5, "amplitude {} did not decay", final_amp);
+    }
+
+    #[test]
+    fn advection_diffusion_transports_and_conserves() {
+        // Pure advection (c>0, alpha small) on a ring: total conserved, profile moves.
+        let lib = PhysicsSimulationLibrary::new();
+        let n = 64;
+        let dx = 1.0 / n as f64;
+        let initial: Vec<f64> = (0..n)
+            .map(|i| (2.0 * std::f64::consts::PI * i as f64 / n as f64).sin())
+            .collect();
+        let res = lib
+            .run_advection_diffusion_1d(initial.clone(), 1.0, 1e-4, dx, 0.25, 20)
+            .unwrap();
+        assert!((res.final_total - res.initial_total).abs() < 1e-9);
+        // Field actually changed (transport occurred).
+        let moved: f64 = res
+            .final_field
+            .iter()
+            .zip(initial.iter())
+            .map(|(a, b)| (a - b).abs())
+            .sum();
+        assert!(moved > 1e-3, "profile did not move under advection");
     }
 
     #[test]

@@ -110,6 +110,83 @@ fn normal_cdf(x: f64) -> f64 {
     0.5 * (1.0 + erf)
 }
 
+/// Solve the undamped free-vibration generalized eigenproblem `K φ = ω² M φ` for a
+/// symmetric stiffness matrix `stiffness` (row-major `n×n`) and a **lumped
+/// (diagonal)** mass matrix given by its `n` positive diagonal entries `mass_diag`.
+/// Returns `(ω, φ)` pairs sorted by ascending natural angular frequency ω (rad/s).
+///
+/// Method (mass pre/post-scaling to standard form): let `M^{-1/2}` be the diagonal
+/// matrix of `1/√mᵢ`. Then `Ã = M^{-1/2} K M^{-1/2}` is symmetric and
+/// `Ã ψ = ω² ψ` with `ψ = M^{1/2} φ`. The standard symmetric eigenproblem is solved
+/// by the crate's Jacobi eigensolver
+/// (`solvers::linear_algebra::eigen::symmetric_eigen`) — **no eigen algorithm is
+/// re-derived here** — and the physical mode is recovered as `φ = M^{-1/2} ψ`.
+/// Eigenvalues that come out marginally negative from round-off are clamped to 0
+/// before the square root. Mode shapes are scaled to unit maximum component.
+fn solve_modal_eigen(
+    stiffness: &[f64],
+    mass_diag: &[f64],
+    n: usize,
+) -> Result<Vec<(f64, Vec<f64>)>, EngineeringError> {
+    if n == 0 {
+        return Err(EngineeringError::InsufficientData(
+            "system has zero degrees of freedom".to_string(),
+        ));
+    }
+    if stiffness.len() != n * n {
+        return Err(EngineeringError::ValidationError(format!(
+            "stiffness must have n*n = {} entries, got {}",
+            n * n,
+            stiffness.len()
+        )));
+    }
+    if mass_diag.len() != n {
+        return Err(EngineeringError::ValidationError(format!(
+            "mass diagonal must have n = {} entries, got {}",
+            n,
+            mass_diag.len()
+        )));
+    }
+    if mass_diag.iter().any(|&m| !(m > 0.0)) {
+        return Err(EngineeringError::ValidationError(
+            "all lumped masses must be positive".to_string(),
+        ));
+    }
+
+    // Ã = M^{-1/2} K M^{-1/2}.
+    let inv_sqrt_m: Vec<f64> = mass_diag.iter().map(|&m| 1.0 / m.sqrt()).collect();
+    let mut a = vec![0.0_f64; n * n];
+    for i in 0..n {
+        for j in 0..n {
+            a[i * n + j] = stiffness[i * n + j] * inv_sqrt_m[i] * inv_sqrt_m[j];
+        }
+    }
+
+    let mut eigvecs = vec![0.0_f64; n * n];
+    crate::solvers::linear_algebra::eigen::symmetric_eigen(n, &mut a, &mut eigvecs).map_err(
+        |e| EngineeringError::SolverError(format!("symmetric eigensolver failed: {:?}", e)),
+    )?;
+
+    // Diagonal of the transformed matrix now holds the eigenvalues λ = ω²; column
+    // `j` of `eigvecs` is the corresponding ψ.
+    let mut modes: Vec<(f64, Vec<f64>)> = Vec::with_capacity(n);
+    for j in 0..n {
+        let lambda = a[j * n + j];
+        let omega = lambda.max(0.0).sqrt();
+        // Physical mode φ = M^{-1/2} ψ (column j of eigvecs).
+        let mut phi: Vec<f64> = (0..n).map(|i| eigvecs[i * n + j] * inv_sqrt_m[i]).collect();
+        let max_abs = phi.iter().fold(0.0_f64, |m, &v| m.max(v.abs()));
+        if max_abs > 0.0 {
+            for v in phi.iter_mut() {
+                *v /= max_abs;
+            }
+        }
+        modes.push((omega, phi));
+    }
+    modes.sort_by(|x, y| x.0.partial_cmp(&y.0).unwrap_or(core::cmp::Ordering::Equal));
+    Ok(modes)
+}
+
 /// Real 1-D steady-state heat-conduction solver (Fourier's law, finite-difference
 /// + tridiagonal Thomas algorithm) backing `perform_thermal_analysis`. Split into
 /// its own library submodule (PROJECT RULE §11); carries its own correctness tests
@@ -2248,17 +2325,67 @@ impl StructuralAnalyzer {
             0.0 // no yield strength supplied ⇒ no defined margin
         };
 
-        Ok(AnalysisResults {
-            results_id: "structural_axial".to_string(),
-            analysis_type,
-            displacement_field: vec![displacement],
-            stress_field: vec![stress],
-            strain_field: vec![strain],
-            reaction_forces: vec![-force], // static equilibrium reaction
-            safety_factor,
-            temperature_field: Vec::new(), // mechanical analysis — no thermal output
-            heat_flux_field: Vec::new(),
-        })
+        match analysis_type {
+            AnalysisType::LinearStatic => Ok(AnalysisResults {
+                results_id: "structural_axial".to_string(),
+                analysis_type,
+                displacement_field: vec![displacement],
+                stress_field: vec![stress],
+                strain_field: vec![strain],
+                reaction_forces: vec![-force], // static equilibrium reaction
+                safety_factor,
+                temperature_field: Vec::new(), // mechanical analysis — no thermal output
+                heat_flux_field: Vec::new(),
+            }),
+            AnalysisType::Buckling => {
+                // Euler elastic critical buckling of the same prismatic member,
+                // weak-axis second moment of area I = min(b·h³, h·b³)/12 from the
+                // two cross-section dimensions, pinned–pinned effective length K=1:
+                //   P_cr = π²·E·I / (K·L)².
+                // The reported `safety_factor` is the buckling LOAD FACTOR
+                // λ = P_cr / |P_applied| — the multiplier on the axial load at
+                // which the member buckles (this is exactly the physical margin
+                // against buckling, so it fits the `safety_factor` field). The
+                // critical load itself is exposed via
+                // `BucklingAnalysis::analyze_from_model`.
+                let b = dims[0];
+                let h = dims[1];
+                let i_weak = (b * h * h * h).min(h * b * b * b) / 12.0;
+                let k_factor = 1.0_f64;
+                let le = k_factor * length;
+                let p_cr = std::f64::consts::PI.powi(2) * e * i_weak / (le * le);
+                let load_factor = if force.abs() > 0.0 {
+                    p_cr / force.abs()
+                } else {
+                    f64::INFINITY
+                };
+                Ok(AnalysisResults {
+                    results_id: "structural_buckling_euler".to_string(),
+                    analysis_type,
+                    displacement_field: vec![displacement],
+                    stress_field: vec![stress],
+                    strain_field: vec![strain],
+                    reaction_forces: vec![-force],
+                    safety_factor: load_factor,
+                    temperature_field: Vec::new(),
+                    heat_flux_field: Vec::new(),
+                })
+            }
+            // Modal/dynamic results cannot be represented in the scalar-field
+            // `AnalysisResults` shape — they are eigenmodes, not a stress/
+            // displacement field. They are genuinely computed, but through the
+            // dedicated methods that return the right result types:
+            //   Vibration           → VibrationAnalysis::analyze_free / ModalAnalysis::analyze_modal
+            //   Thermal             → ThermalAnalyzer::analyze
+            //   Nonlinear/Dynamic   → require a full FE time/nonlinear solver (not built)
+            _ => Err(EngineeringError::NotImplemented(format!(
+                "structural {:?} is not available through the AnalysisResults facade; \
+                 use VibrationAnalysis::analyze_free / ModalAnalysis::analyze_modal for \
+                 modal & free-vibration results, ThermalAnalyzer for thermal, and a full \
+                 finite-element solver for nonlinear/dynamic response",
+                analysis_type
+            ))),
+        }
     }
 
     pub fn list_analysis_types(&self) -> Vec<String> {
@@ -3004,6 +3131,36 @@ impl ModalAnalysis {
     pub fn modal_parameters_mut(&mut self) -> &mut ModalParameters {
         &mut self.modal_parameters
     }
+
+    /// Undamped modal analysis: solves the generalized eigenproblem
+    /// `K φ = ω² M φ` for a symmetric stiffness matrix `stiffness` (row-major
+    /// `num_dofs × num_dofs`) and a lumped (diagonal) mass matrix `mass_diag`
+    /// (`num_dofs` positive entries), wired to the crate's symmetric Jacobi
+    /// eigensolver via [`solve_modal_eigen`]. Returns one [`ModeShape`] per DOF,
+    /// ordered by ascending **natural angular frequency ω (rad/s)** (stored in
+    /// `ModeShape::natural_frequency`), with zero damping (undamped) and the
+    /// mass-normalized mode-shape vector (unit maximum component). The result is
+    /// also cached in `self.mode_shapes`.
+    pub fn analyze_modal(
+        &mut self,
+        stiffness: &[f64],
+        mass_diag: &[f64],
+        num_dofs: usize,
+    ) -> Result<Vec<ModeShape>, EngineeringError> {
+        let modes = solve_modal_eigen(stiffness, mass_diag, num_dofs)?;
+        let shapes: Vec<ModeShape> = modes
+            .into_iter()
+            .enumerate()
+            .map(|(i, (omega, phi))| ModeShape {
+                mode_number: (i + 1) as u32,
+                natural_frequency: omega,
+                damping_ratio: 0.0,
+                mode_shape_vector: phi,
+            })
+            .collect();
+        self.mode_shapes = shapes.clone();
+        Ok(shapes)
+    }
 }
 
 impl EigenvalueSolver {
@@ -3175,6 +3332,93 @@ impl BucklingAnalysis {
     pub fn nonlinear_buckling_mut(&mut self) -> &mut NonlinearBuckling {
         &mut self.nonlinear_buckling
     }
+
+    /// Euler elastic critical buckling loads of a prismatic column:
+    /// `P_cr,n = n²·π²·E·I / (K·L)²` for modes `n = 1..=num_modes`, where `K` is
+    /// the effective-length factor (pinned–pinned = 1.0, fixed–free = 2.0,
+    /// fixed–fixed = 0.5, fixed–pinned ≈ 0.699). Genuine closed-form column
+    /// stability — not a fabricated value. Fills and returns [`EigenvalueBuckling`]:
+    /// `critical_loads` ascending, each [`BucklingMode`] carrying the exact
+    /// buckling half-wave `sin(nπx/L)` sampled at 11 equally-spaced stations.
+    pub fn analyze_euler(
+        &mut self,
+        youngs_modulus: f64,
+        moment_of_inertia: f64,
+        length: f64,
+        effective_length_factor: f64,
+        num_modes: usize,
+    ) -> Result<EigenvalueBuckling, EngineeringError> {
+        if youngs_modulus <= 0.0 || moment_of_inertia <= 0.0 {
+            return Err(EngineeringError::InsufficientData(
+                "Young's modulus and moment of inertia must be positive".to_string(),
+            ));
+        }
+        if length <= 0.0 || effective_length_factor <= 0.0 {
+            return Err(EngineeringError::ValidationError(
+                "length and effective-length factor must be positive".to_string(),
+            ));
+        }
+        if num_modes == 0 {
+            return Err(EngineeringError::InsufficientData(
+                "num_modes must be at least 1".to_string(),
+            ));
+        }
+        let le = effective_length_factor * length;
+        let base = std::f64::consts::PI.powi(2) * youngs_modulus * moment_of_inertia / (le * le);
+        const STATIONS: usize = 11;
+        let mut critical_loads = Vec::with_capacity(num_modes);
+        let mut buckling_modes = Vec::with_capacity(num_modes);
+        for n in 1..=num_modes {
+            let p_cr = (n as f64).powi(2) * base;
+            let shape: Vec<f64> = (0..STATIONS)
+                .map(|s| {
+                    let x = length * s as f64 / (STATIONS as f64 - 1.0);
+                    (n as f64 * std::f64::consts::PI * x / length).sin()
+                })
+                .collect();
+            critical_loads.push(p_cr);
+            buckling_modes.push(BucklingMode {
+                mode_number: n as u32,
+                critical_load: p_cr,
+                mode_shape: shape,
+            });
+        }
+        let eb = EigenvalueBuckling {
+            critical_loads,
+            buckling_modes,
+        };
+        self.eigenvalue_buckling = eb.clone();
+        Ok(eb)
+    }
+
+    /// Euler critical buckling of the member described by `model`: uses the first
+    /// material's Young's modulus, the weak-axis second moment of area of the
+    /// rectangular cross-section `I = min(b·h³, h·b³)/12` from the first two
+    /// geometry dimensions `[b, h]`, the third dimension as the member length `L`,
+    /// and a pinned–pinned effective-length factor `K = 1.0`. Returns the first
+    /// `num_modes` critical loads. Missing/degenerate inputs → `InsufficientData`.
+    pub fn analyze_from_model(
+        &mut self,
+        model: &EngineeringModel,
+        num_modes: usize,
+    ) -> Result<EigenvalueBuckling, EngineeringError> {
+        let material = model.materials.values().next().ok_or_else(|| {
+            EngineeringError::InsufficientData(
+                "model has no material; cannot compute buckling load".to_string(),
+            )
+        })?;
+        let e = material.material_properties.youngs_modulus;
+        let dims = &model.geometry.dimensions;
+        if dims.len() < 3 || dims.iter().take(3).any(|&d| !(d > 0.0)) {
+            return Err(EngineeringError::InsufficientData(
+                "geometry needs three positive dimensions [b, h, L] for column buckling"
+                    .to_string(),
+            ));
+        }
+        let (b, h, l) = (dims[0], dims[1], dims[2]);
+        let i_weak = (b * h * h * h).min(h * b * b * b) / 12.0;
+        self.analyze_euler(e, i_weak, l, 1.0, num_modes)
+    }
 }
 
 impl EigenvalueBuckling {
@@ -3236,6 +3480,112 @@ impl VibrationAnalysis {
     /// Mutably borrow the random-vibration sub-component.
     pub fn random_vibration_mut(&mut self) -> &mut RandomVibration {
         &mut self.random_vibration
+    }
+
+    /// Undamped free-vibration analysis of an `num_dofs`-DOF lumped-mass system.
+    /// Delegates to the same generalized eigenproblem as modal analysis
+    /// (`K φ = ω² M φ`, wired to `symmetric_eigen` via [`solve_modal_eigen`]) and
+    /// packs the result into [`FreeVibration`]: `natural_frequencies` are the
+    /// **natural angular frequencies ω (rad/s), ascending**, with their mass-
+    /// normalized mode shapes and zero damping ratios (undamped). Cached into
+    /// `self.free_vibration`.
+    pub fn analyze_free(
+        &mut self,
+        stiffness: &[f64],
+        mass_diag: &[f64],
+        num_dofs: usize,
+    ) -> Result<FreeVibration, EngineeringError> {
+        let modes = solve_modal_eigen(stiffness, mass_diag, num_dofs)?;
+        let mut natural_frequencies = Vec::with_capacity(modes.len());
+        let mut mode_shapes = Vec::with_capacity(modes.len());
+        for (i, (omega, phi)) in modes.into_iter().enumerate() {
+            natural_frequencies.push(omega);
+            mode_shapes.push(ModeShape {
+                mode_number: (i + 1) as u32,
+                natural_frequency: omega,
+                damping_ratio: 0.0,
+                mode_shape_vector: phi,
+            });
+        }
+        let damping_ratios = vec![0.0; natural_frequencies.len()];
+        let fv = FreeVibration {
+            natural_frequencies,
+            mode_shapes,
+            damping_ratios,
+        };
+        self.free_vibration = fv.clone();
+        Ok(fv)
+    }
+
+    /// Single-DOF undamped natural angular frequency `ω = √(k/m)` (rad/s).
+    pub fn natural_frequency_sdof(
+        &self,
+        stiffness: f64,
+        mass: f64,
+    ) -> Result<f64, EngineeringError> {
+        if mass <= 0.0 {
+            return Err(EngineeringError::ValidationError(
+                "mass must be positive".to_string(),
+            ));
+        }
+        if stiffness < 0.0 {
+            return Err(EngineeringError::ValidationError(
+                "stiffness must be non-negative".to_string(),
+            ));
+        }
+        Ok((stiffness / mass).sqrt())
+    }
+
+    /// Steady-state harmonic (forced-vibration) response of a damped single-DOF
+    /// oscillator `m·ẍ + c·ẋ + k·x = F₀·sin(ωt)`. For each excitation angular
+    /// frequency ω (rad/s) in `excitation_freqs`, returns the response amplitude
+    /// `X(ω) = F₀ / √((k − m·ω²)² + (c·ω)²)` and the phase lag
+    /// `φ(ω) = atan2(c·ω, k − m·ω²)` (rad). Genuine closed-form frequency-response
+    /// function; no fabricated values. Fills and returns [`ForcedVibration`].
+    pub fn analyze_harmonic_sdof(
+        &mut self,
+        mass: f64,
+        damping: f64,
+        stiffness: f64,
+        force_amplitude: f64,
+        excitation_freqs: &[f64],
+    ) -> Result<ForcedVibration, EngineeringError> {
+        if mass <= 0.0 {
+            return Err(EngineeringError::ValidationError(
+                "mass must be positive".to_string(),
+            ));
+        }
+        if damping < 0.0 || stiffness < 0.0 {
+            return Err(EngineeringError::ValidationError(
+                "damping and stiffness must be non-negative".to_string(),
+            ));
+        }
+        if excitation_freqs.is_empty() {
+            return Err(EngineeringError::InsufficientData(
+                "no excitation frequencies supplied".to_string(),
+            ));
+        }
+        let mut response_amplitudes = Vec::with_capacity(excitation_freqs.len());
+        let mut phase_angles = Vec::with_capacity(excitation_freqs.len());
+        for &w in excitation_freqs {
+            let re = stiffness - mass * w * w;
+            let im = damping * w;
+            let denom = (re * re + im * im).sqrt();
+            let amp = if denom > 0.0 {
+                force_amplitude / denom
+            } else {
+                f64::INFINITY
+            };
+            response_amplitudes.push(amp);
+            phase_angles.push(im.atan2(re));
+        }
+        let fv = ForcedVibration {
+            excitation_frequencies: excitation_freqs.to_vec(),
+            response_amplitudes,
+            phase_angles,
+        };
+        self.forced_vibration = fv.clone();
+        Ok(fv)
     }
 }
 
@@ -6118,5 +6468,222 @@ mod tests {
             .analyze(&model, AnalysisType::LinearStatic)
             .unwrap();
         assert!(result.results_id.contains("rel_model"));
+    }
+
+    // ---- Modal / free-vibration eigenproblem (wired to symmetric_eigen) --------
+
+    #[test]
+    fn modal_sdof_natural_frequency() {
+        // Single DOF: k = 100, m = 1 ⇒ ω = √(k/m) = 10 rad/s.
+        let mut modal = ModalAnalysis::new();
+        let modes = modal.analyze_modal(&[100.0], &[1.0], 1).unwrap();
+        assert_eq!(modes.len(), 1);
+        assert!(
+            (modes[0].natural_frequency - 10.0).abs() < 1e-9,
+            "ω = {}",
+            modes[0].natural_frequency
+        );
+        assert_eq!(modes[0].mode_number, 1);
+    }
+
+    #[test]
+    fn modal_two_dof_known_eigenvalues() {
+        // K = [[2,-1],[-1,2]], M = I. Eigenvalues of K are 1 and 3
+        // ⇒ ω = {1, √3}. Mode shapes: [1,1] (in-phase) and [1,-1] (out-of-phase).
+        let mut modal = ModalAnalysis::new();
+        let k = [2.0, -1.0, -1.0, 2.0];
+        let m = [1.0, 1.0];
+        let modes = modal.analyze_modal(&k, &m, 2).unwrap();
+        assert_eq!(modes.len(), 2);
+        assert!(
+            (modes[0].natural_frequency - 1.0).abs() < 1e-9,
+            "ω1 = {}",
+            modes[0].natural_frequency
+        );
+        assert!(
+            (modes[1].natural_frequency - 3.0_f64.sqrt()).abs() < 1e-9,
+            "ω2 = {}",
+            modes[1].natural_frequency
+        );
+        // First mode: components equal (ratio +1). Second: opposite (ratio -1).
+        let r0 = modes[0].mode_shape_vector[0] / modes[0].mode_shape_vector[1];
+        let r1 = modes[1].mode_shape_vector[0] / modes[1].mode_shape_vector[1];
+        assert!((r0 - 1.0).abs() < 1e-6, "mode1 ratio = {}", r0);
+        assert!((r1 + 1.0).abs() < 1e-6, "mode2 ratio = {}", r1);
+    }
+
+    #[test]
+    fn free_vibration_matches_modal() {
+        let mut vib = VibrationAnalysis::new();
+        let k = [2.0, -1.0, -1.0, 2.0];
+        let m = [1.0, 1.0];
+        let fv = vib.analyze_free(&k, &m, 2).unwrap();
+        assert_eq!(fv.natural_frequencies.len(), 2);
+        assert!((fv.natural_frequencies[0] - 1.0).abs() < 1e-9);
+        assert!((fv.natural_frequencies[1] - 3.0_f64.sqrt()).abs() < 1e-9);
+        assert_eq!(fv.damping_ratios, vec![0.0, 0.0]);
+    }
+
+    #[test]
+    fn modal_rejects_bad_dimensions() {
+        let mut modal = ModalAnalysis::new();
+        // 2 DOFs claimed, but stiffness has only 1 entry.
+        assert!(matches!(
+            modal.analyze_modal(&[1.0], &[1.0, 1.0], 2),
+            Err(EngineeringError::ValidationError(_))
+        ));
+        // Non-positive mass.
+        assert!(matches!(
+            modal.analyze_modal(&[1.0], &[0.0], 1),
+            Err(EngineeringError::ValidationError(_))
+        ));
+    }
+
+    #[test]
+    fn sdof_natural_frequency_helper() {
+        let vib = VibrationAnalysis::new();
+        assert!((vib.natural_frequency_sdof(400.0, 4.0).unwrap() - 10.0).abs() < 1e-12);
+        assert!(matches!(
+            vib.natural_frequency_sdof(100.0, 0.0),
+            Err(EngineeringError::ValidationError(_))
+        ));
+    }
+
+    // ---- Forced harmonic response (closed-form FRF) ---------------------------
+
+    #[test]
+    fn forced_harmonic_response_known_values() {
+        // m=1, c=2, k=100, F0=10.
+        let mut vib = VibrationAnalysis::new();
+        // ω=0 (static): X = F0/k = 0.1, phase 0.
+        // ω=10 (=ωn): denom = √(0 + (2·10)²) = 20 ⇒ X = 0.5, phase = π/2.
+        let fv = vib
+            .analyze_harmonic_sdof(1.0, 2.0, 100.0, 10.0, &[0.0, 10.0])
+            .unwrap();
+        assert!((fv.response_amplitudes[0] - 0.1).abs() < 1e-12);
+        assert!((fv.phase_angles[0] - 0.0).abs() < 1e-12);
+        assert!(
+            (fv.response_amplitudes[1] - 0.5).abs() < 1e-12,
+            "resonant X = {}",
+            fv.response_amplitudes[1]
+        );
+        assert!(
+            (fv.phase_angles[1] - std::f64::consts::FRAC_PI_2).abs() < 1e-12,
+            "resonant phase = {}",
+            fv.phase_angles[1]
+        );
+    }
+
+    // ---- Euler buckling (closed form) ----------------------------------------
+
+    #[test]
+    fn euler_buckling_known_critical_load() {
+        // E = 200e9 Pa, I = 1e-6 m⁴, L = 2 m, K = 1 (pinned–pinned).
+        // P_cr = π²·E·I / (K·L)² = π²·200e9·1e-6 / 4.
+        let mut buck = BucklingAnalysis::new();
+        let eb = buck.analyze_euler(200.0e9, 1.0e-6, 2.0, 1.0, 3).unwrap();
+        let expected = std::f64::consts::PI.powi(2) * 200.0e9 * 1.0e-6 / 4.0;
+        assert!(
+            (eb.critical_loads[0] - expected).abs() < 1e-3,
+            "P_cr = {} (expected {})",
+            eb.critical_loads[0],
+            expected
+        );
+        // Higher modes scale as n².
+        assert!((eb.critical_loads[1] - 4.0 * expected).abs() < 1e-3);
+        assert!((eb.critical_loads[2] - 9.0 * expected).abs() < 1e-3);
+        // Mode-shape endpoints of a half-sine are ~0.
+        assert!(eb.buckling_modes[0].mode_shape.first().unwrap().abs() < 1e-9);
+        assert!(eb.buckling_modes[0].mode_shape.last().unwrap().abs() < 1e-9);
+    }
+
+    #[test]
+    fn euler_buckling_from_model() {
+        // b = h = 0.1 m, L = 2 m, steel E = 200000 (default MaterialProperties).
+        // I = 0.1·0.1³/12 = 8.3333e-6 m⁴, P_cr = π²·E·I / L².
+        let mut model = EngineeringModel::new();
+        model.geometry.dimensions = vec![0.1, 0.1, 2.0];
+        model
+            .materials
+            .insert("steel".to_string(), Material::new());
+        let mut buck = BucklingAnalysis::new();
+        let eb = buck.analyze_from_model(&model, 1).unwrap();
+        let i_weak = 0.1 * 0.1_f64.powi(3) / 12.0;
+        let expected = std::f64::consts::PI.powi(2) * 200000.0 * i_weak / 4.0;
+        assert!(
+            (eb.critical_loads[0] - expected).abs() < 1e-6,
+            "P_cr = {} (expected {})",
+            eb.critical_loads[0],
+            expected
+        );
+    }
+
+    #[test]
+    fn euler_buckling_rejects_bad_inputs() {
+        let mut buck = BucklingAnalysis::new();
+        assert!(matches!(
+            buck.analyze_euler(0.0, 1.0e-6, 2.0, 1.0, 1),
+            Err(EngineeringError::InsufficientData(_))
+        ));
+        assert!(matches!(
+            buck.analyze_euler(200.0e9, 1.0e-6, 0.0, 1.0, 1),
+            Err(EngineeringError::ValidationError(_))
+        ));
+    }
+
+    // ---- Structural AnalysisResults facade dispatch --------------------------
+
+    #[test]
+    fn structural_buckling_dispatch_load_factor() {
+        // b=h=0.1, L=2, steel; axial load 1000 N.
+        // λ = P_cr / P_applied.
+        let mut library = EngineeringAnalysisLibrary::new();
+        library.initialize().unwrap();
+        let mut model = EngineeringModel::new();
+        model.geometry.dimensions = vec![0.1, 0.1, 2.0];
+        model
+            .materials
+            .insert("steel".to_string(), Material::new());
+        model.loads.push(Load {
+            load_id: "P".to_string(),
+            load_type: LoadType::Force,
+            load_magnitude: 1000.0,
+            load_direction: vec![1.0, 0.0, 0.0],
+            application_point: vec![0.0, 0.0, 0.0],
+        });
+        let res = library
+            .perform_structural_analysis(model, AnalysisType::Buckling)
+            .unwrap();
+        let i_weak = 0.1 * 0.1_f64.powi(3) / 12.0;
+        let p_cr = std::f64::consts::PI.powi(2) * 200000.0 * i_weak / 4.0;
+        let expected_lambda = p_cr / 1000.0;
+        assert!(
+            (res.result.safety_factor - expected_lambda).abs() < 1e-6,
+            "λ = {} (expected {})",
+            res.result.safety_factor,
+            expected_lambda
+        );
+    }
+
+    #[test]
+    fn structural_vibration_facade_is_honest_not_implemented() {
+        // Modal results don't fit the scalar-field AnalysisResults shape — the
+        // facade returns an honest NotImplemented pointing to the real method.
+        let mut library = EngineeringAnalysisLibrary::new();
+        library.initialize().unwrap();
+        let mut model = EngineeringModel::new();
+        model.geometry.dimensions = vec![1.0, 1.0, 2.0];
+        model
+            .materials
+            .insert("steel".to_string(), Material::new());
+        model.loads.push(Load {
+            load_id: "F".to_string(),
+            load_type: LoadType::Force,
+            load_magnitude: 50.0,
+            load_direction: vec![1.0, 0.0, 0.0],
+            application_point: vec![0.0, 0.0, 0.0],
+        });
+        let res = library.perform_structural_analysis(model, AnalysisType::Vibration);
+        assert!(matches!(res, Err(EngineeringError::NotImplemented(_))));
     }
 }
