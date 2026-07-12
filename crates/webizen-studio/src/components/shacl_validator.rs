@@ -42,10 +42,17 @@ pub fn ShaclValidator() -> Element {
                     h3 { style: "margin-top: 0; color: #E6EDF3;", "Validation Report" }
 
                     if *is_validating.read() {
+                        // HONESTY: this panel is not wired to a real validator.
+                        // It previously rendered a hardcoded green "Conforms:
+                        // True" for ANY input — a fabricated verdict. The shape
+                        // parser + shape registry that would evaluate the
+                        // definition on the left do not exist yet, so we show an
+                        // explicit not-implemented state rather than a pass we
+                        // never computed.
                         div {
-                            style: "padding: 1rem; background: rgba(35, 134, 54, 0.1); border-left: 4px solid #238636; border-radius: 4px; color: #3FB950;",
-                            h4 { style: "margin: 0 0 0.5rem 0;", "Conforms: True" }
-                            p { style: "margin: 0; font-size: 0.9rem;", "The target graph conforms to the provided SHACL shapes." }
+                            style: "padding: 1rem; background: rgba(210, 153, 34, 0.1); border-left: 4px solid #D29922; border-radius: 4px; color: #D29922;",
+                            h4 { style: "margin: 0 0 0.5rem 0;", "Validation not available" }
+                            p { style: "margin: 0; font-size: 0.9rem;", "This panel does not yet run real SHACL validation — the shape parser and registry that would evaluate the definition on the left aren't implemented. It will not report a conformance verdict it hasn't computed." }
                         }
                     } else {
                         div {
