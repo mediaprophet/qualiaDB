@@ -90,16 +90,24 @@ capability:
 Before Phase 0 exits, convert this table into a versioned implementation inventory with links to
 tests. Any `Partial` capability remains visibly partial in the service description.
 
-**Known current-state divergence to fix (recorded here so it is not lost):** as of the completed
-full-SPARQL work, `sparql_filter.rs`'s expression evaluator has a catch-all arm
-(`_ => Ok(EvalResult::Boolean(true))`) for builtin functions that are not yet implemented — it
-silently returns *true* rather than raising an expression error. This directly violates §4.3
-("SPARQL expression errors must not silently become `false`" — here it is silently `true`, which
-is worse: an unimplemented predicate passes every row). The GeoSPARQL `Function::Custom` dispatch
-added in the same work is honest (it errors when a geometry literal can't be resolved), but the
-builtin catch-all must be changed to a proper expression error before QISP relies on FILTER
-semantics. Small and self-contained; do it in Phase 1's error-semantics work (`QISP-R06`) or
-sooner.
+**Current-state divergence — RESOLVED 2026-07-12.** The `sparql_filter.rs` evaluator previously had a
+catch-all arm (`_ => Ok(EvalResult::Boolean(true))`) that silently returned *true* for any
+unimplemented builtin (and an identical fabrication in the EXISTS/sub-SELECT evaluator) — worse than
+§4.3's forbidden silent-`false`, since an unimplemented predicate passed every row. Both now **fail
+closed with a named, honest error**. Beyond the honesty fix, the common builtins are now genuinely
+implemented via the same borrowed `TextResolver` the GeoSPARQL dispatch uses:
+- **Implemented (resolver-backed, unit-tested):** `REGEX` (with `i`/`s`/`m`/`x` flags via
+  `regex::RegexBuilder`), `CONTAINS`, `STRSTARTS`, `STRENDS`, `STRLEN`, plus the resolver-free
+  `SAMETERM` (typed term equality) and `IF` (control flow). Without a resolver they error, never
+  fabricate.
+- **Still deferred, each for a concrete reason (all now honest errors, not silent `true`):** the
+  string-*producing* builtins (`CONCAT`/`SUBSTR`/`UCASE`/`LCASE`/`STRBEFORE`/`STRAFTER`/
+  `ENCODE_FOR_URI`) are blocked by the arena's `EvalResult` having no string-return channel (a new
+  value would need interning — same root cause as `BIND`); `COALESCE` needs real unbound/optional
+  semantics (the current model collapses an unbound variable to `0`, so it can't detect the
+  unboundness `COALESCE` branches on); and the date/time (`NOW`/`YEAR`/…), `UUID`/`STRUUID`, `RAND`,
+  `IRI`/`URI`/`BNODE` construction, `STRLANG`/`STRDT`, and `LANGMATCHES` builtins need supporting
+  infrastructure. These remain the residual `QISP-R06` work.
 
 ---
 

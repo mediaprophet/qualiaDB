@@ -539,6 +539,103 @@ impl ExpressionEvaluator {
                     Err("TRIPLE requires at least three arguments".to_string())
                 }
             }
+            // ── String predicates (resolver-backed) ────────────────────────
+            // Each recovers argument text via the TextResolver (query literals
+            // + ingested lexicon), exactly like the geo functions. Without a
+            // resolver, or if a term can't be resolved, they return an honest
+            // error — never a fabricated boolean.
+            Function::Contains => {
+                let hay = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "CONTAINS")?;
+                let needle =
+                    Self::arg_text(1, args_start, args_len, ctx, row, resolver, "CONTAINS")?;
+                Ok(EvalResult::Boolean(hay.contains(&needle)))
+            }
+            Function::VarStarts => {
+                let hay = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "STRSTARTS")?;
+                let needle =
+                    Self::arg_text(1, args_start, args_len, ctx, row, resolver, "STRSTARTS")?;
+                Ok(EvalResult::Boolean(hay.starts_with(&needle)))
+            }
+            Function::VarEnds => {
+                let hay = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "STRENDS")?;
+                let needle =
+                    Self::arg_text(1, args_start, args_len, ctx, row, resolver, "STRENDS")?;
+                Ok(EvalResult::Boolean(hay.ends_with(&needle)))
+            }
+            Function::Strlen => {
+                let s = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "STRLEN")?;
+                Ok(EvalResult::Numeric(s.chars().count() as u64))
+            }
+            Function::Regex => {
+                let text = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "REGEX")?;
+                let pattern = Self::arg_text(1, args_start, args_len, ctx, row, resolver, "REGEX")?;
+                // Optional third arg = flags (i/s/m/x), XPath/SPARQL semantics.
+                let flags = if args_len >= 3 {
+                    Self::arg_text(2, args_start, args_len, ctx, row, resolver, "REGEX")?
+                } else {
+                    String::new()
+                };
+                let mut builder = regex::RegexBuilder::new(&pattern);
+                for f in flags.chars() {
+                    match f {
+                        'i' => {
+                            builder.case_insensitive(true);
+                        }
+                        's' => {
+                            builder.dot_matches_new_line(true);
+                        }
+                        'm' => {
+                            builder.multi_line(true);
+                        }
+                        'x' => {
+                            builder.ignore_whitespace(true);
+                        }
+                        other => return Err(format!("REGEX: unsupported flag '{other}'")),
+                    }
+                }
+                let re = builder
+                    .build()
+                    .map_err(|e| format!("REGEX: invalid pattern: {e}"))?;
+                Ok(EvalResult::Boolean(re.is_match(&text)))
+            }
+            // ── Term equality / control flow (no text needed) ──────────────
+            Function::SameTerm => {
+                if args_len < 2 {
+                    return Err("SAMETERM requires two arguments".to_string());
+                }
+                let a = Self::evaluate_with_resolver(
+                    ctx.function_args[args_start as usize],
+                    ctx,
+                    row,
+                    resolver,
+                )?;
+                let b = Self::evaluate_with_resolver(
+                    ctx.function_args[args_start as usize + 1],
+                    ctx,
+                    row,
+                    resolver,
+                )?;
+                // Terms are typed (Iri/Numeric/String/Boolean) — sameTerm is
+                // true iff both the type tag and the value hash agree.
+                Ok(EvalResult::Boolean(a == b))
+            }
+            Function::If => {
+                if args_len < 3 {
+                    return Err("IF requires three arguments".to_string());
+                }
+                let cond = Self::evaluate_with_resolver(
+                    ctx.function_args[args_start as usize],
+                    ctx,
+                    row,
+                    resolver,
+                )?;
+                let branch = if cond.as_bool() {
+                    ctx.function_args[args_start as usize + 1]
+                } else {
+                    ctx.function_args[args_start as usize + 2]
+                };
+                Self::evaluate_with_resolver(branch, ctx, row, resolver)
+            }
             Function::Custom(iri_hash) => {
                 // Extension functions dispatched by function-IRI hash. Currently
                 // the GeoSPARQL predicates (geof:distance / sfContains / sfWithin
@@ -616,6 +713,37 @@ impl ExpressionEvaluator {
              refusing to fabricate a passing result"
             .to_string())
     }
+
+    /// Recover the text behind function argument `idx` (0-based) through the
+    /// [`TextResolver`] — query-literal constants plus the ingested lexicon.
+    /// Returns an honest error when there is no resolver, the argument is
+    /// missing, the term is not a resolvable string term, or the text can't be
+    /// found; never fabricates. Shared by the string-predicate FILTER builtins.
+    fn arg_text(
+        idx: usize,
+        args_start: u16,
+        args_len: u16,
+        ctx: &SparqlQueryContext,
+        row: &BindingRow,
+        resolver: Option<crate::sparql_ast::TextResolver>,
+        fname: &str,
+    ) -> Result<String, String> {
+        if (idx as u16) >= args_len {
+            return Err(format!("{fname} is missing a required argument"));
+        }
+        let resolver = resolver
+            .ok_or_else(|| format!("{fname} requires a text resolver (no lexicon available)"))?;
+        let expr_id = ctx.function_args[args_start as usize + idx];
+        let hash = match Self::evaluate_with_resolver(expr_id, ctx, row, Some(resolver))? {
+            EvalResult::Numeric(h) | EvalResult::Iri(h) | EvalResult::String(h) => h,
+            EvalResult::Boolean(_) => {
+                return Err(format!("{fname} argument is not a string term"))
+            }
+        };
+        resolver
+            .resolve_text(hash)
+            .ok_or_else(|| format!("{fname}: could not resolve string-literal text"))
+    }
 }
 
 /// Evaluation result
@@ -688,6 +816,140 @@ mod tests {
             ExpressionEvaluator::evaluate_function(Function::Bound, 0, 1, &ctx, &row, None).unwrap();
 
         assert_eq!(result, EvalResult::Boolean(true));
+    }
+
+    // ── Resolver-backed string / control-flow FILTER builtins ────────────────
+
+    #[test]
+    fn test_contains_strstarts_strends_strlen_via_resolver() {
+        let mut ctx = SparqlQueryContext::new();
+        let hay = 0xA1u64;
+        let needle = 0xB2u64;
+        let hay_expr = ctx.alloc_expression(Expression::Literal(hay)).unwrap();
+        let needle_expr = ctx.alloc_expression(Expression::Literal(needle)).unwrap();
+        ctx.function_args[0] = hay_expr;
+        ctx.function_args[1] = needle_expr;
+        ctx.function_arg_count = 2;
+
+        let mut literals = LiteralTable::new();
+        literals.intern(hay, "hello world");
+        literals.intern(needle, "world");
+        let resolver = TextResolver::new(&literals);
+        let row = BindingRow::new();
+
+        let contains = ExpressionEvaluator::evaluate_function(
+            Function::Contains, 0, 2, &ctx, &row, Some(resolver),
+        )
+        .unwrap();
+        assert_eq!(contains, EvalResult::Boolean(true));
+
+        let starts = ExpressionEvaluator::evaluate_function(
+            Function::VarStarts, 0, 2, &ctx, &row, Some(resolver),
+        )
+        .unwrap();
+        assert_eq!(starts, EvalResult::Boolean(false)); // "hello world" !startsWith "world"
+
+        let ends = ExpressionEvaluator::evaluate_function(
+            Function::VarEnds, 0, 2, &ctx, &row, Some(resolver),
+        )
+        .unwrap();
+        assert_eq!(ends, EvalResult::Boolean(true)); // ends with "world"
+
+        let len = ExpressionEvaluator::evaluate_function(
+            Function::Strlen, 0, 1, &ctx, &row, Some(resolver),
+        )
+        .unwrap();
+        assert_eq!(len, EvalResult::Numeric(11)); // "hello world"
+    }
+
+    #[test]
+    fn test_regex_flags_via_resolver() {
+        let mut ctx = SparqlQueryContext::new();
+        let (text, pat, flags) = (0xC3u64, 0xD4u64, 0xE5u64);
+        let t = ctx.alloc_expression(Expression::Literal(text)).unwrap();
+        let p = ctx.alloc_expression(Expression::Literal(pat)).unwrap();
+        let f = ctx.alloc_expression(Expression::Literal(flags)).unwrap();
+        ctx.function_args[0] = t;
+        ctx.function_args[1] = p;
+        ctx.function_args[2] = f;
+        ctx.function_arg_count = 3;
+
+        let mut literals = LiteralTable::new();
+        literals.intern(text, "Hello World");
+        literals.intern(pat, "^hello");
+        literals.intern(flags, "i");
+        let resolver = TextResolver::new(&literals);
+        let row = BindingRow::new();
+
+        // Case-insensitive flag: ^hello matches "Hello World".
+        let with_i = ExpressionEvaluator::evaluate_function(
+            Function::Regex, 0, 3, &ctx, &row, Some(resolver),
+        )
+        .unwrap();
+        assert_eq!(with_i, EvalResult::Boolean(true));
+
+        // Without the flag arg, ^hello does NOT match "Hello World".
+        let no_flag = ExpressionEvaluator::evaluate_function(
+            Function::Regex, 0, 2, &ctx, &row, Some(resolver),
+        )
+        .unwrap();
+        assert_eq!(no_flag, EvalResult::Boolean(false));
+    }
+
+    #[test]
+    fn test_string_filter_without_resolver_errors_never_fabricates() {
+        // The whole point of the honesty fix: no resolver => honest error,
+        // NOT a fabricated `true`.
+        let mut ctx = SparqlQueryContext::new();
+        let a = ctx.alloc_expression(Expression::Literal(1)).unwrap();
+        let b = ctx.alloc_expression(Expression::Literal(2)).unwrap();
+        ctx.function_args[0] = a;
+        ctx.function_args[1] = b;
+        ctx.function_arg_count = 2;
+        let row = BindingRow::new();
+
+        for func in [Function::Contains, Function::Regex, Function::Strlen] {
+            let r = ExpressionEvaluator::evaluate_function(func, 0, 2, &ctx, &row, None);
+            assert!(r.is_err(), "{func:?} must error without a resolver, not fabricate");
+        }
+    }
+
+    #[test]
+    fn test_sameterm_and_if_control_flow() {
+        let mut ctx = SparqlQueryContext::new();
+        let five_a = ctx.alloc_expression(Expression::Literal(5)).unwrap();
+        let five_b = ctx.alloc_expression(Expression::Literal(5)).unwrap();
+        let nine = ctx.alloc_expression(Expression::Literal(9)).unwrap();
+        let row = BindingRow::new();
+
+        // SAMETERM(5, 5) => true (same type tag + value).
+        ctx.function_args[0] = five_a;
+        ctx.function_args[1] = five_b;
+        ctx.function_arg_count = 2;
+        let same = ExpressionEvaluator::evaluate_function(
+            Function::SameTerm, 0, 2, &ctx, &row, None,
+        )
+        .unwrap();
+        assert_eq!(same, EvalResult::Boolean(true));
+
+        // IF(cond=5 (truthy), then=9, else=5) => 9.
+        ctx.function_args[0] = five_a;
+        ctx.function_args[1] = nine;
+        ctx.function_args[2] = five_b;
+        ctx.function_arg_count = 3;
+        let chosen =
+            ExpressionEvaluator::evaluate_function(Function::If, 0, 3, &ctx, &row, None).unwrap();
+        assert_eq!(chosen, EvalResult::Numeric(9));
+    }
+
+    #[test]
+    fn test_unimplemented_filter_builtin_still_errors() {
+        // A builtin with no handler (e.g. CONCAT — needs a string-return
+        // channel) must fail closed, not fabricate true.
+        let ctx = SparqlQueryContext::new();
+        let row = BindingRow::new();
+        let r = ExpressionEvaluator::evaluate_function(Function::Concat, 0, 0, &ctx, &row, None);
+        assert!(r.is_err(), "unimplemented builtin must error, not fabricate true");
     }
 
     // ── PROV-O filter tests ──────────────────────────────────────────────────
