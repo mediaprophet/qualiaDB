@@ -246,7 +246,9 @@ impl QuantumLattice {
         if let Some(prop) = self.propositions.get_mut(&prop_id) {
             match prop.truth_value {
                 QuantumTruthValue::Superposed => {
-                    // Collapse to definite state with 50% probability
+                    // Deterministic collapse on proposition-id parity (NOT a
+                    // probabilistic 50/50 measurement — this is a toy
+                    // orthomodular-logic model, not a physical simulator).
                     prop.truth_value = if (prop.id % 2) == 0 {
                         QuantumTruthValue::True
                     } else {

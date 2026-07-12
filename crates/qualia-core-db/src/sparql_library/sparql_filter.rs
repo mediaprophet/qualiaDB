@@ -583,10 +583,17 @@ impl ExpressionEvaluator {
                     None => Err(format!("unknown extension function (hash {iri_hash:#018x})")),
                 }
             }
-            _ => {
-                // Placeholder for other functions including SPARQL-Star
-                Ok(EvalResult::Boolean(true))
-            }
+            // Any builtin without a real handler above MUST NOT silently
+            // evaluate to `true` — a FILTER that fabricates a pass returns
+            // wrong rows (e.g. `FILTER(REGEX(?n,"x"))` would match everything).
+            // Fail closed with an honest, named error instead. Implementing
+            // these (REGEX/CONTAINS/STR* predicates via the resolver, plus the
+            // date/UUID/constructor builtins) is tracked in
+            // docs/plans/immersive-sparql-hypermedia-profile.md.
+            other => Err(format!(
+                "SPARQL FILTER function {other:?} is not implemented; \
+                 refusing to fabricate a passing result"
+            )),
         }
     }
 
@@ -600,12 +607,14 @@ impl ExpressionEvaluator {
             .get(query_id as usize)
             .ok_or("Subquery ID out of bounds")?;
 
-        // Simplified: return true if subquery would return results
-        // Full implementation would:
-        // 1. Plan the subquery
-        // 2. Execute it with current bindings
-        // 3. Return the result (e.g., EXISTS, count, etc.)
-        Ok(EvalResult::Boolean(true))
+        // EXISTS / sub-SELECT evaluation is not wired yet. A real
+        // implementation would plan the subquery, execute it against the
+        // current bindings, and return EXISTS/NOT EXISTS/count. Until then we
+        // fail closed rather than fabricate `true` (which would let every row
+        // pass a `FILTER EXISTS { ... }`). Tracked in the QISP plan.
+        Err("SPARQL FILTER subquery (EXISTS/sub-SELECT) is not implemented; \
+             refusing to fabricate a passing result"
+            .to_string())
     }
 }
 

@@ -44,7 +44,10 @@ impl CanvasRightsModel {
         // In a permissive-commons scenario, some areas might be public.
         // For owned regions, we require a placement_right quin.
         let mut has_right = false;
-        let mut is_owned = false; // Mock flag indicating if location is privately owned
+        // True once we see a placement_right quin for this location — i.e. the
+        // location is under private/owned governance rather than open commons.
+        // Derived from the arena quins below, not a mock.
+        let mut is_owned = false;
         
         for quin in arena_quins {
             if quin.predicate == placement_right && quin.subject == location_hash {
