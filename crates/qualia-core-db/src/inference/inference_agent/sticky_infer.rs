@@ -21,6 +21,16 @@ pub fn pool() -> &'static rayon::ThreadPool {
     POOL.get_or_init(|| {
         rayon::ThreadPoolBuilder::new()
             .num_threads(1)
+            // The decode path is deliberately zero-heap (§6): it holds large
+            // buffers on the stack — e.g. `[0f32; PREFILL_CHUNK_STACK_FLOATS]`
+            // (2560·64 floats ≈ 640 KB) — and runs a full transformer forward
+            // pass whose (debug-unoptimised) call chain adds several MB more.
+            // rayon's default worker stack (~2 MB) overflows on the real decode
+            // path (the `qualia-infer-0` STACK_OVERFLOW), on device as much as in
+            // tests. Reserve a generous stack for this single dedicated worker;
+            // on 64-bit the reservation is address space only (committed on
+            // demand), so it costs nothing until touched.
+            .stack_size(64 * 1024 * 1024)
             .thread_name(|i| format!("qualia-infer-{i}"))
             .build()
             .expect("qualia sticky infer pool")

@@ -285,10 +285,27 @@ impl QTensorEngine {
         self.gpu_queue()
             .write_buffer(&params_buf, 0, bytemuck::bytes_of(&gemm_params));
 
+        // The bind group MUST be built from the SAME pipeline it is dispatched
+        // under (below). Both `pipeline` (Fused Transformer) and `mock_pipeline`
+        // (Mock Fused Contraction) are created with `layout: None`, i.e. wgpu
+        // *exclusive* auto-derived layouts — a bind group from one is rejected by
+        // a dispatch that set the other ("exclusive pipelines don't match"). The
+        // real path (`gguf_mmap.is_some()`) dispatches `self.pipeline`; the mock
+        // path (no model, i.e. tests) dispatches `self.mock_pipeline`, so it must
+        // take the mock pipeline's own group-0 layout.
+        let use_mock = self.gguf_mmap.is_none();
         #[cfg(not(target_arch = "wasm32"))]
-        let bind_group_layout = self.pipeline_bind_layout.clone();
+        let bind_group_layout = if use_mock {
+            self.mock_pipeline.get_bind_group_layout(0)
+        } else {
+            self.pipeline_bind_layout.clone()
+        };
         #[cfg(target_arch = "wasm32")]
-        let bind_group_layout = self.pipeline.get_bind_group_layout(0);
+        let bind_group_layout = if use_mock {
+            self.mock_pipeline.get_bind_group_layout(0)
+        } else {
+            self.pipeline.get_bind_group_layout(0)
+        };
         let bind_group = self
             .gpu_device()
             .create_bind_group(&wgpu::BindGroupDescriptor {
@@ -322,7 +339,8 @@ impl QTensorEngine {
                 label: None,
                 timestamp_writes: crate::llm_gpu_profiler::pass_writes_both(),
             });
-            let pipeline = if self.gguf_mmap.is_none() {
+            // Same selector as the bind-group layout above — they must agree.
+            let pipeline = if use_mock {
                 &self.mock_pipeline
             } else {
                 &self.pipeline

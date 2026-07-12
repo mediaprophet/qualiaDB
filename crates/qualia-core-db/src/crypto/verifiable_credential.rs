@@ -144,7 +144,11 @@ pub fn decode_credential(bytes: &[u8]) -> Result<Credential, VcError> {
     for i in 0..claims_len {
         let start = 28 + i * 48;
         let b = &bytes[start..start + 48];
-        let q: NQuin = *bytemuck::from_bytes(b);
+        // Claims sit at offset 28 + i*48 in the byte stream, so `b` is only
+        // 4-aligned while NQuin (6×u64) needs 8-alignment — `from_bytes` would
+        // panic (TargetAlignmentGreaterAndInputNotAligned) on any real decode.
+        // `pod_read_unaligned` copies the 48 bytes with no alignment requirement.
+        let q: NQuin = bytemuck::pod_read_unaligned(b);
         claims.push(q);
     }
     Ok(Credential {
