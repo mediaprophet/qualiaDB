@@ -1,0 +1,412 @@
+use super::*;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+/// Medical imaging
+pub struct MedicalImaging {
+    image_acquisition: ImageAcquisition,
+    image_processing: ImageProcessing,
+    image_analysis: ImageAnalysis,
+    image_storage: ImageStorage,
+}
+
+/// Image acquisition
+pub struct ImageAcquisition {
+    acquisition_protocols: HashMap<String, AcquisitionProtocol>,
+    quality_control: QualityControl,
+}
+
+/// Acquisition protocols
+#[derive(Debug, Clone)]
+pub struct AcquisitionProtocol {
+    pub protocol_id: String,
+    pub protocol_name: String,
+    pub imaging_modality: ImagingModality,
+    pub parameters: AcquisitionParameters,
+}
+
+/// Imaging modalities
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ImagingModality {
+    XRay,
+    CT,
+    MRI,
+    Ultrasound,
+    PET,
+    SPECT,
+    Mammography,
+}
+
+/// Acquisition parameters
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AcquisitionParameters {
+    pub resolution: String,
+    pub slice_thickness: f64,
+    pub field_of_view: String,
+    pub acquisition_time: u32,
+}
+
+/// Quality control
+pub struct QualityControl {
+    quality_metrics: HashMap<String, QualityMetric>,
+    quality_standards: HashMap<String, QualityStandard>,
+}
+
+/// Quality metrics
+#[derive(Debug, Clone)]
+pub struct QualityMetric {
+    pub metric_id: String,
+    pub metric_name: String,
+    pub metric_type: QualityMetricType,
+    pub acceptable_range: (f64, f64),
+}
+
+/// Quality metric types
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum QualityMetricType {
+    SignalToNoise,
+    Contrast,
+    Resolution,
+    ArtifactLevel,
+}
+
+/// Quality standards
+#[derive(Debug, Clone)]
+pub struct QualityStandard {
+    pub standard_id: String,
+    pub standard_name: String,
+    pub standard_type: QualityStandardType,
+    pub requirements: Vec<QualityRequirement>,
+}
+
+/// Quality standard types
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum QualityStandardType {
+    ACR,
+    FDA,
+    CE,
+    ISO,
+}
+
+/// Quality requirements
+#[derive(Debug, Clone)]
+pub struct QualityRequirement {
+    pub requirement_id: String,
+    pub requirement_name: String,
+    pub requirement_value: f64,
+    pub tolerance: f64,
+}
+
+/// Image processing
+pub struct ImageProcessing {
+    preprocessing_algorithms: HashMap<String, PreprocessingAlgorithm>,
+    enhancement_techniques: HashMap<String, EnhancementTechnique>,
+}
+
+/// Preprocessing algorithms
+#[derive(Debug, Clone)]
+pub struct PreprocessingAlgorithm {
+    pub algorithm_id: String,
+    pub algorithm_name: String,
+    pub algorithm_type: PreprocessingAlgorithmType,
+}
+
+/// Preprocessing algorithm types
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum PreprocessingAlgorithmType {
+    NoiseReduction,
+    Normalization,
+    Registration,
+    Segmentation,
+}
+
+/// Enhancement techniques
+#[derive(Debug, Clone)]
+pub struct EnhancementTechnique {
+    pub technique_id: String,
+    pub technique_name: String,
+    pub technique_type: EnhancementTechniqueType,
+}
+
+/// Enhancement technique types
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum EnhancementTechniqueType {
+    ContrastEnhancement,
+    EdgeEnhancement,
+    Sharpening,
+    Filtering,
+}
+
+/// Image analysis
+pub struct ImageAnalysis {
+    analysis_algorithms: HashMap<String, AnalysisAlgorithm>,
+    detection_methods: HashMap<String, DetectionMethod>,
+}
+
+/// Analysis algorithms
+#[derive(Debug, Clone)]
+pub struct AnalysisAlgorithm {
+    pub algorithm_id: String,
+    pub algorithm_name: String,
+    pub algorithm_type: AnalysisAlgorithmType,
+}
+
+/// Analysis algorithm types
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum AnalysisAlgorithmType {
+    PatternRecognition,
+    FeatureExtraction,
+    Classification,
+    Segmentation,
+}
+
+/// Detection methods
+#[derive(Debug, Clone)]
+pub struct DetectionMethod {
+    pub method_id: String,
+    pub method_name: String,
+    pub method_type: DetectionMethodType,
+}
+
+/// Detection method types
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum DetectionMethodType {
+    AnomalyDetection,
+    LesionDetection,
+    TumorDetection,
+    FractureDetection,
+}
+
+/// Image storage
+pub struct ImageStorage {
+    storage_systems: HashMap<String, StorageSystem>,
+    compression_methods: HashMap<String, CompressionMethod>,
+}
+
+/// Storage systems
+#[derive(Debug, Clone)]
+pub struct StorageSystem {
+    pub system_id: String,
+    pub system_name: String,
+    pub system_type: StorageSystemType,
+    pub capacity: u64,
+}
+
+/// Storage system types
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum StorageSystemType {
+    Local,
+    Network,
+    Cloud,
+    Archive,
+}
+
+/// Compression methods
+#[derive(Debug, Clone)]
+pub struct CompressionMethod {
+    pub method_id: String,
+    pub method_name: String,
+    pub method_type: CompressionMethodType,
+}
+
+/// Compression method types
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum CompressionMethodType {
+    Lossless,
+    Lossy,
+    Hybrid,
+}
+
+impl MedicalImaging {
+    pub fn new() -> Self {
+        Self {
+            image_acquisition: ImageAcquisition::new(),
+            image_processing: ImageProcessing::new(),
+            image_analysis: ImageAnalysis::new(),
+            image_storage: ImageStorage::new(),
+        }
+    }
+
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
+        self.image_acquisition.initialize()?;
+        self.image_processing.initialize()?;
+        self.image_analysis.initialize()?;
+        self.image_storage.initialize()?;
+        Ok(())
+    }
+
+    pub fn validate_image(&self, image: &MedicalImage) -> Result<(), MedicalError> {
+        if image.image_id.is_empty() {
+            return Err(MedicalError::ValidationError(
+                "Image ID cannot be empty".to_string(),
+            ));
+        }
+        Ok(())
+    }
+
+    pub fn process_image(
+        &mut self,
+        _image: &MedicalImage,
+        _processing_type: ImageProcessingType,
+    ) -> Result<ProcessedImage, MedicalError> {
+        // NOT IMPLEMENTED — it must say so, never fabricate. Previously this returned a default
+        // `ProcessedImage::new()` without touching the input image: a medical-image "analysis"
+        // that analysed nothing. Real implementation requires an actual imaging pipeline
+        // (reconstruction / enhancement / segmentation) and, for any diagnostic readout, a
+        // validated model. See the to-do register.
+        Err(MedicalError::NotImplemented(
+            "medical image processing (process_medical_image): no imaging pipeline is \
+             implemented; refusing to return an unprocessed image as if analysed."
+                .to_string(),
+        ))
+    }
+}
+
+impl ImageAcquisition {
+    pub fn new() -> Self {
+        Self {
+            acquisition_protocols: HashMap::new(),
+            quality_control: QualityControl::new(),
+        }
+    }
+
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
+        Ok(())
+    }
+
+    pub fn add_acquisition_protocol(&mut self, protocol: AcquisitionProtocol) {
+        self.acquisition_protocols
+            .insert(protocol.protocol_id.clone(), protocol);
+    }
+
+    pub fn get_acquisition_protocol(&self, protocol_id: &str) -> Option<&AcquisitionProtocol> {
+        self.acquisition_protocols.get(protocol_id)
+    }
+
+    pub fn quality_control(&self) -> &QualityControl {
+        &self.quality_control
+    }
+}
+
+impl QualityControl {
+    pub fn new() -> Self {
+        Self {
+            quality_metrics: HashMap::new(),
+            quality_standards: HashMap::new(),
+        }
+    }
+
+    pub fn add_quality_metric(&mut self, metric: QualityMetric) {
+        self.quality_metrics
+            .insert(metric.metric_id.clone(), metric);
+    }
+
+    pub fn get_quality_metric(&self, metric_id: &str) -> Option<&QualityMetric> {
+        self.quality_metrics.get(metric_id)
+    }
+
+    pub fn add_quality_standard(&mut self, standard: QualityStandard) {
+        self.quality_standards
+            .insert(standard.standard_id.clone(), standard);
+    }
+
+    pub fn get_quality_standard(&self, standard_id: &str) -> Option<&QualityStandard> {
+        self.quality_standards.get(standard_id)
+    }
+}
+
+impl ImageProcessing {
+    pub fn new() -> Self {
+        Self {
+            preprocessing_algorithms: HashMap::new(),
+            enhancement_techniques: HashMap::new(),
+        }
+    }
+
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
+        Ok(())
+    }
+
+    pub fn add_preprocessing_algorithm(&mut self, algorithm: PreprocessingAlgorithm) {
+        self.preprocessing_algorithms
+            .insert(algorithm.algorithm_id.clone(), algorithm);
+    }
+
+    pub fn get_preprocessing_algorithm(
+        &self,
+        algorithm_id: &str,
+    ) -> Option<&PreprocessingAlgorithm> {
+        self.preprocessing_algorithms.get(algorithm_id)
+    }
+
+    pub fn add_enhancement_technique(&mut self, technique: EnhancementTechnique) {
+        self.enhancement_techniques
+            .insert(technique.technique_id.clone(), technique);
+    }
+
+    pub fn get_enhancement_technique(&self, technique_id: &str) -> Option<&EnhancementTechnique> {
+        self.enhancement_techniques.get(technique_id)
+    }
+}
+
+impl ImageAnalysis {
+    pub fn new() -> Self {
+        Self {
+            analysis_algorithms: HashMap::new(),
+            detection_methods: HashMap::new(),
+        }
+    }
+
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
+        Ok(())
+    }
+
+    pub fn add_analysis_algorithm(&mut self, algorithm: AnalysisAlgorithm) {
+        self.analysis_algorithms
+            .insert(algorithm.algorithm_id.clone(), algorithm);
+    }
+
+    pub fn get_analysis_algorithm(&self, algorithm_id: &str) -> Option<&AnalysisAlgorithm> {
+        self.analysis_algorithms.get(algorithm_id)
+    }
+
+    pub fn add_detection_method(&mut self, method: DetectionMethod) {
+        self.detection_methods
+            .insert(method.method_id.clone(), method);
+    }
+
+    pub fn get_detection_method(&self, method_id: &str) -> Option<&DetectionMethod> {
+        self.detection_methods.get(method_id)
+    }
+}
+
+impl ImageStorage {
+    pub fn new() -> Self {
+        Self {
+            storage_systems: HashMap::new(),
+            compression_methods: HashMap::new(),
+        }
+    }
+
+    pub fn initialize(&mut self) -> Result<(), MedicalError> {
+        Ok(())
+    }
+
+    pub fn add_storage_system(&mut self, system: StorageSystem) {
+        self.storage_systems
+            .insert(system.system_id.clone(), system);
+    }
+
+    pub fn get_storage_system(&self, system_id: &str) -> Option<&StorageSystem> {
+        self.storage_systems.get(system_id)
+    }
+
+    pub fn add_compression_method(&mut self, method: CompressionMethod) {
+        self.compression_methods
+            .insert(method.method_id.clone(), method);
+    }
+
+    pub fn get_compression_method(&self, method_id: &str) -> Option<&CompressionMethod> {
+        self.compression_methods.get(method_id)
+    }
+}
