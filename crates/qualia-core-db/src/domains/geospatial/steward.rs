@@ -50,14 +50,22 @@ pub fn validate_steward_unlock(
     let unlock_path = q_hash("q42:stewardUnlock");
     let stewards_pred = q_hash("q42:stewards");
 
+    // `compile_norm_quin` stores the property-path in predicate bits [8..62]
+    // via `(path << 8) & !DEFEATER_BIT` (opcode byte low, defeater bit high).
+    // Compare within that same window — the old `(predicate >> 8)` readback
+    // dropped the high bits and compared against the full 64-bit hash, so a
+    // real `q_hash` path never matched and unlock could NEVER be granted.
+    const PATH_WINDOW: u64 = 0x7FFF_FFFF_FFFF_FF00;
+    let expected_path_bits = (unlock_path << 8) & PATH_WINDOW;
+
     let mut has_permit = false;
     for quin in arena_quins {
         if extract_deontic_opcode(quin.predicate) != OP_PERMIT {
             continue;
         }
-        let path = (quin.predicate >> 8) & !crate::frame_layout::DEFEATER_BIT;
+        let path_bits = quin.predicate & PATH_WINDOW;
         if quin.subject == contract.steward_did_hash
-            && path == unlock_path
+            && path_bits == expected_path_bits
             && quin.object == contract.asset_hash
             && quin.context == contract.scope
         {

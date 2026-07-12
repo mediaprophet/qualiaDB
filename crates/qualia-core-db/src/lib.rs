@@ -827,6 +827,12 @@ pub const CAPABILITY_DESCRIPTORS: &[CapabilityDescriptor] = &[
     CapabilityDescriptor {
         name: "MachineLearning",
         domain: "machine-learning",
+        // NOTE: these classical-ML operations are implemented in the
+        // `solvers::learning` tree (60+ files), NOT in
+        // `specialized_libs::machine_learning`, which the `ml_inference`
+        // tool below routes to (that file serves the GGUF-load + MLP-forward
+        // inference path, plus int8 quant/prune/distill). Per the field doc
+        // above, listing an operation here does not imply an MCP route to it.
         operations: &[
             "linear/ridge/lasso/Bayesian regression",
             "KNN/naive Bayes/SVM/discriminant classification",
