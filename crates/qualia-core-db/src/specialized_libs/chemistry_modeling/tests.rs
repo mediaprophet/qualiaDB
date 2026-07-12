@@ -86,13 +86,28 @@
         let mut library = ChemistryModelingLibrary::new();
         library.initialize().unwrap();
 
-        let molecule = Molecule::new();
-        let method = QuantumMethodType::HartreeFock;
+        // REAL: the full library facade runs an RHF/STO-3G calculation for H2 at
+        // R = 1.4 bohr and returns a genuine SCF energy (ref ≈ −1.1167 Hartree).
+        let h2 = molecule(vec![
+            atom("Ha", "H", 1, [0.0, 0.0, 0.0]),
+            atom("Hb", "H", 1, [1.4, 0.0, 0.0]),
+        ]);
+        let result = library
+            .calculate_quantum_properties(h2, QuantumMethodType::HartreeFock)
+            .expect("H2 quantum properties should be computed");
+        assert!(
+            (result.result.total_energy - (-1.1167)).abs() < 1e-3,
+            "facade H2 SCF energy = {}",
+            result.result.total_energy
+        );
 
-        // HONEST: no real electronic-structure method, so it reports NotImplemented rather than
-        // returning fabricated molecular energies.
-        let result = library.calculate_quantum_properties(molecule, method);
-        assert!(matches!(result, Err(ChemistryError::NotImplemented(_))));
+        // HONEST: an element beyond H/He (Molecule::new() is a carbon atom) still
+        // reports NotImplemented rather than fabricating an energy.
+        let unsupported = library.calculate_quantum_properties(
+            Molecule::new(),
+            QuantumMethodType::HartreeFock,
+        );
+        assert!(matches!(unsupported, Err(ChemistryError::NotImplemented(_))));
     }
 
     #[test]
@@ -555,12 +570,81 @@
     }
 
     #[test]
-    fn test_quantum_properties_honest_not_implemented() {
-        // The electronic-structure observables remain honestly NotImplemented
-        // (the shipped core lacks kinetic/nuclear integrals and a real ERI Fock
-        // build). This guards against a future regression that fabricates them.
+    fn test_rhf_h2_sto3g_energy() {
+        // REAL RHF/STO-3G on H2 at the equilibrium bond length R = 1.4 bohr.
+        // The energy falls out of a genuine SCF over analytical integrals; the
+        // textbook reference is E ≈ −1.1167 Hartree (Szabo & Ostlund).
         let mut calc = QuantumCalculator::new();
-        let m = molecule(vec![atom("H", "H", 1, [0.0, 0.0, 0.0])]);
-        let r = calc.calculate_properties(&m, QuantumMethodType::HartreeFock);
-        assert!(matches!(r, Err(ChemistryError::NotImplemented(_))));
+        let h2 = molecule(vec![
+            atom("Ha", "H", 1, [0.0, 0.0, 0.0]),
+            atom("Hb", "H", 1, [1.4, 0.0, 0.0]),
+        ]);
+        let p = calc
+            .calculate_properties(&h2, QuantumMethodType::HartreeFock)
+            .expect("H2 RHF should converge");
+        assert!(
+            (p.total_energy - (-1.1167)).abs() < 1e-3,
+            "H2 SCF energy = {} (ref -1.1167)",
+            p.total_energy
+        );
+        // A real bonding→antibonding HOMO/LUMO gap, with a bound HOMO.
+        assert!(p.gap > 0.0, "H2 HOMO-LUMO gap not positive: {}", p.gap);
+        assert!(p.homo_energy < 0.0, "H2 HOMO should be bound: {}", p.homo_energy);
+        assert!(
+            p.lumo_energy > p.homo_energy,
+            "LUMO {} must sit above HOMO {}",
+            p.lumo_energy,
+            p.homo_energy
+        );
+        // Neutral, symmetric: Mulliken charges vanish and sum to ~0.
+        let sum: f64 = p.mulliken_charges.iter().sum();
+        assert!(sum.abs() < 1e-6, "Mulliken charges sum = {} (should be ~0)", sum);
+        for q in &p.mulliken_charges {
+            assert!(q.abs() < 1e-6, "H2 atom charge should be ~0 by symmetry: {}", q);
+        }
+        // Homonuclear diatomic ⇒ zero dipole moment.
+        assert!(
+            p.dipole_moment < 1e-6,
+            "H2 dipole should vanish by symmetry: {}",
+            p.dipole_moment
+        );
+    }
+
+    #[test]
+    fn test_rhf_he_sto3g_energy() {
+        // REAL RHF/STO-3G on the He atom; textbook reference E ≈ −2.8077 Hartree.
+        let mut calc = QuantumCalculator::new();
+        let he = molecule(vec![atom("He", "He", 2, [0.0, 0.0, 0.0])]);
+        let p = calc
+            .calculate_properties(&he, QuantumMethodType::HartreeFock)
+            .expect("He RHF should converge");
+        assert!(
+            (p.total_energy - (-2.8077)).abs() < 1e-3,
+            "He SCF energy = {} (ref -2.8077)",
+            p.total_energy
+        );
+        assert!(p.homo_energy < 0.0, "He 1s should be bound: {}", p.homo_energy);
+        // Neutral atom: Mulliken population = Z, charge ~0.
+        let sum: f64 = p.mulliken_charges.iter().sum();
+        assert!(sum.abs() < 1e-6, "He Mulliken charge sum = {}", sum);
+        // Isolated atom ⇒ no dipole.
+        assert!(p.dipole_moment < 1e-9, "He dipole = {}", p.dipole_moment);
+    }
+
+    #[test]
+    fn test_rhf_unsupported_returns_not_implemented() {
+        // Elements beyond H/He need p/d shells — honest NotImplemented, never a
+        // fabricated energy. This is the regression guard replacing the old stub.
+        let mut calc = QuantumCalculator::new();
+        let c = molecule(vec![atom("C", "C", 6, [0.0, 0.0, 0.0])]);
+        assert!(matches!(
+            calc.calculate_properties(&c, QuantumMethodType::HartreeFock),
+            Err(ChemistryError::NotImplemented(_))
+        ));
+        // Odd electron count (a single H) is open-shell ⇒ NotImplemented (RHF only).
+        let h = molecule(vec![atom("H", "H", 1, [0.0, 0.0, 0.0])]);
+        assert!(matches!(
+            calc.calculate_properties(&h, QuantumMethodType::HartreeFock),
+            Err(ChemistryError::NotImplemented(_))
+        ));
     }

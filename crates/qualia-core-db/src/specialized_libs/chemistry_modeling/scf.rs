@@ -361,6 +361,197 @@ pub fn solve_rhf_scf<const N: usize>(
     Err(ScfError::ConvergenceFailed)
 }
 
+/// Converged RHF result: the electronic energy plus everything a caller needs to
+/// compute post-SCF observables (orbital energies for HOMO/LUMO, the density and
+/// overlap-consistent MO coefficients for Mulliken populations and the dipole).
+#[derive(Debug, Clone, Copy)]
+pub struct RhfResult<const N: usize> {
+    /// Electronic energy E_elec = ½ Σ_μν P_μν (H_μν + F_μν), in Hartree.
+    pub electronic_energy: f64,
+    /// Orbital (eigen)energies ε, ascending. `orbital_energies[0..num_occ]` are
+    /// occupied, the rest virtual.
+    pub orbital_energies: [f64; N],
+    /// Converged density matrix P_μν = 2 Σ_a^occ C_μa C_νa.
+    pub density: ZeroHeapMatrix<f64, N, N>,
+    /// MO coefficients C in the original (non-orthogonal) AO basis.
+    pub coefficients: ZeroHeapMatrix<f64, N, N>,
+    /// Number of doubly-occupied orbitals.
+    pub num_occ: usize,
+    /// SCF iterations taken to converge.
+    pub iterations: usize,
+}
+
+/// Full Restricted Hartree-Fock SCF with a REAL 4-index two-electron contraction
+/// and DIIS acceleration.
+///
+/// The Fock build is the genuine
+///   G_μν = Σ_λσ P_λσ [ (μν|λσ) − ½ (μσ|λν) ]
+/// over the supplied 4-index ERI tensor `eri[μ][ν][λ][σ] = (μν|λσ)` in chemists'
+/// notation — not the 2-D index-collapse mock used by [`solve_rhf_scf`]. The core
+/// Hamiltonian `h_core = T + V_nuc`, overlap `s`, and the ERI tensor must all be
+/// assembled from real molecular integrals by the caller.
+///
+/// Returns the converged [`RhfResult`] (electronic energy only — add the nuclear
+/// repulsion for the total). Requires an even electron count (closed shell).
+pub fn solve_rhf_scf_4index<const N: usize>(
+    h_core: &ZeroHeapMatrix<f64, N, N>,
+    s: &ZeroHeapMatrix<f64, N, N>,
+    eri: &[[[[f64; N]; N]; N]; N],
+    num_electrons: usize,
+) -> Result<RhfResult<N>, ScfError> {
+    let x = orthogonalization_matrix(s)?;
+    let x_t = transpose(&x);
+    let mut density = ZeroHeapMatrix::<f64, N, N>::zeros();
+    let mut old_energy = 0.0;
+    let num_occ = num_electrons / 2;
+
+    let mut error_vectors = [ZeroHeapMatrix::<f64, N, N>::zeros(); DIIS_SUBSPACE_SIZE];
+    let mut fock_history = [ZeroHeapMatrix::<f64, N, N>::zeros(); DIIS_SUBSPACE_SIZE];
+    let mut diis_count = 0;
+    let mut diis_index = 0;
+
+    for iter in 0..MAX_SCF_ITERATIONS {
+        // 1. Build the Fock matrix F = H + G(P) with the TRUE 4-index contraction.
+        let mut fock = *h_core;
+        for mu in 0..N {
+            for nu in 0..N {
+                let mut g = 0.0;
+                for lam in 0..N {
+                    for sig in 0..N {
+                        // Coulomb (μν|λσ) minus half exchange (μσ|λν).
+                        let coulomb = eri[mu][nu][lam][sig];
+                        let exchange = eri[mu][sig][lam][nu];
+                        g += density.get(lam, sig) * (coulomb - 0.5 * exchange);
+                    }
+                }
+                fock.set(mu, nu, fock.get(mu, nu) + g);
+            }
+        }
+
+        // 2. DIIS error vector e = FDS − SDF, transformed to the orthogonal basis.
+        let fds = fock * density * (*s);
+        let sdf = (*s) * density * fock;
+        let mut err_vec = ZeroHeapMatrix::<f64, N, N>::zeros();
+        for i in 0..N {
+            for j in 0..N {
+                err_vec.set(i, j, fds.get(i, j) - sdf.get(i, j));
+            }
+        }
+        let err_ortho = x_t * err_vec * x;
+        let mut max_err: f64 = 0.0;
+        for i in 0..N {
+            for j in 0..N {
+                max_err = max_err.max(err_ortho.get(i, j).abs());
+            }
+        }
+
+        // 3. DIIS extrapolation of the Fock matrix.
+        fock_history[diis_index] = fock;
+        error_vectors[diis_index] = err_ortho;
+        if diis_count < DIIS_SUBSPACE_SIZE {
+            diis_count += 1;
+        }
+        diis_index = (diis_index + 1) % DIIS_SUBSPACE_SIZE;
+
+        let mut fock_extrapolated = fock;
+        if diis_count > 1 {
+            let mut b_matrix = ZeroHeapMatrix::<
+                f64,
+                { DIIS_SUBSPACE_SIZE + 1 },
+                { DIIS_SUBSPACE_SIZE + 1 },
+            >::zeros();
+            for i in 0..diis_count {
+                for j in 0..diis_count {
+                    let mut dot = 0.0;
+                    for mu in 0..N {
+                        for nu in 0..N {
+                            dot += error_vectors[i].get(mu, nu) * error_vectors[j].get(mu, nu);
+                        }
+                    }
+                    b_matrix.set(i, j, dot);
+                }
+                b_matrix.set(i, diis_count, -1.0);
+                b_matrix.set(diis_count, i, -1.0);
+            }
+            b_matrix.set(diis_count, diis_count, 0.0);
+
+            let mut rhs = [0.0; DIIS_SUBSPACE_SIZE + 1];
+            rhs[diis_count] = -1.0;
+
+            if let Ok(c) = gaussian_elimination(b_matrix, rhs) {
+                fock_extrapolated = ZeroHeapMatrix::<f64, N, N>::zeros();
+                for i in 0..diis_count {
+                    for mu in 0..N {
+                        for nu in 0..N {
+                            fock_extrapolated.set(
+                                mu,
+                                nu,
+                                fock_extrapolated.get(mu, nu) + c[i] * fock_history[i].get(mu, nu),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. F' = X^T F X, diagonalize, back-transform C = X C'.
+        let f_prime = x_t * fock_extrapolated * x;
+        let (evals, c_prime) = jacobi_diagonalization(&f_prime)?;
+        let c = x * c_prime;
+
+        // 5. New density P = 2 Σ_a^occ C_μa C_νa.
+        let mut new_density = ZeroHeapMatrix::<f64, N, N>::zeros();
+        for mu in 0..N {
+            for nu in 0..N {
+                let mut sum = 0.0;
+                for a in 0..num_occ {
+                    sum += c.get(mu, a) * c.get(nu, a);
+                }
+                new_density.set(mu, nu, 2.0 * sum);
+            }
+        }
+
+        // 6. Electronic energy E = ½ Σ P_μν (H_μν + F_μν) using the UN-extrapolated
+        //    consistent Fock for the current density.
+        let mut fock_for_energy = *h_core;
+        for mu in 0..N {
+            for nu in 0..N {
+                let mut g = 0.0;
+                for lam in 0..N {
+                    for sig in 0..N {
+                        let coulomb = eri[mu][nu][lam][sig];
+                        let exchange = eri[mu][sig][lam][nu];
+                        g += new_density.get(lam, sig) * (coulomb - 0.5 * exchange);
+                    }
+                }
+                fock_for_energy.set(mu, nu, fock_for_energy.get(mu, nu) + g);
+            }
+        }
+        let mut energy = 0.0;
+        for mu in 0..N {
+            for nu in 0..N {
+                energy +=
+                    0.5 * new_density.get(mu, nu) * (h_core.get(mu, nu) + fock_for_energy.get(mu, nu));
+            }
+        }
+
+        if iter > 0 && (energy - old_energy).abs() < SCF_CONVERGENCE_THRESHOLD && max_err < 1e-6 {
+            return Ok(RhfResult {
+                electronic_energy: energy,
+                orbital_energies: evals,
+                density: new_density,
+                coefficients: c,
+                num_occ,
+                iterations: iter + 1,
+            });
+        }
+        old_energy = energy;
+        density = new_density;
+    }
+
+    Err(ScfError::ConvergenceFailed)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

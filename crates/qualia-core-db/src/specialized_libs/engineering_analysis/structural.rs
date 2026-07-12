@@ -524,6 +524,7 @@ impl StructuralAnalyzer {
         let mp = &material.material_properties;
         let e = mp.youngs_modulus;
         let sy = mp.yield_strength;
+        let density = mp.density;
 
         let dims = &model.geometry.dimensions;
         if dims.len() < 2 || dims.iter().take(2).any(|&d| !(d > 0.0)) {
@@ -603,21 +604,167 @@ impl StructuralAnalyzer {
                     heat_flux_field: Vec::new(),
                 })
             }
-            // Modal/dynamic results cannot be represented in the scalar-field
-            // `AnalysisResults` shape — they are eigenmodes, not a stress/
-            // displacement field. They are genuinely computed, but through the
-            // dedicated methods that return the right result types:
-            //   Vibration           → VibrationAnalysis::analyze_free / ModalAnalysis::analyze_modal
-            //   Thermal             → ThermalAnalyzer::analyze
-            //   Nonlinear/Dynamic   → require a full FE time/nonlinear solver (not built)
-            _ => Err(EngineeringError::NotImplemented(format!(
-                "structural {:?} is not available through the AnalysisResults facade; \
-                 use VibrationAnalysis::analyze_free / ModalAnalysis::analyze_modal for \
-                 modal & free-vibration results, ThermalAnalyzer for thermal, and a full \
-                 finite-element solver for nonlinear/dynamic response",
-                analysis_type
-            ))),
+            AnalysisType::NonlinearStatic => {
+                // Geometrically-nonlinear axial member (Green–Lagrange strain), fixed–
+                // free, solved by Newton–Raphson (`fem::GeoNonlinearBar`). Reduces to
+                // the linear δ = F·L/(A·E) for small loads and stiffens geometrically
+                // for large loads. Real assembly + iterative solve — no closed form.
+                let ea = e * area;
+                let bar = fem::GeoNonlinearBar { ea, length };
+                let u = bar.solve_static(force, 1e-10, 200)?;
+                let eps = bar.strain(u); // Green–Lagrange axial strain
+                let sigma = e * eps;
+                let sf = if sigma.abs() > 0.0 && sy > 0.0 {
+                    sy / sigma.abs()
+                } else if sigma.abs() == 0.0 {
+                    f64::INFINITY
+                } else {
+                    0.0
+                };
+                Ok(AnalysisResults {
+                    results_id: "structural_nonlinear_static_geom_bar".to_string(),
+                    analysis_type,
+                    displacement_field: vec![u],
+                    stress_field: vec![sigma],
+                    strain_field: vec![eps],
+                    reaction_forces: vec![-bar.internal_force(u)],
+                    safety_factor: sf,
+                    temperature_field: Vec::new(),
+                    heat_flux_field: Vec::new(),
+                })
+            }
+            AnalysisType::LinearDynamic => {
+                // Transient response of the axial member (SDOF: stiffness k = EA/L,
+                // lumped free-node mass m = ½ρAL) to a SUDDENLY-APPLIED constant axial
+                // load, integrated by Newmark-β (avg-acceleration). The reported field
+                // is the PEAK dynamic displacement over the response — for an undamped
+                // step load this is the classic dynamic amplification (→ 2× static).
+                if !(density > 0.0) {
+                    return Err(EngineeringError::InsufficientData(
+                        "dynamic analysis needs a positive material density".to_string(),
+                    ));
+                }
+                let k = e * area / length;
+                let m = density * area * length / 2.0;
+                let omega = (k / m).sqrt();
+                let period = 2.0 * std::f64::consts::PI / omega;
+                let dt = period / 200.0;
+                let nsteps = 260; // > half a period, captures the peak at ωt = π
+                let res = fem::newmark_linear(
+                    &[m],
+                    &[0.0],
+                    &[k],
+                    1,
+                    |_t| vec![force],
+                    &[0.0],
+                    &[0.0],
+                    dt,
+                    nsteps,
+                    0.25,
+                    0.5,
+                )?;
+                let u_peak = res.peak_abs(0);
+                let sigma = e * (u_peak / length); // peak axial stress
+                let sf = if sigma.abs() > 0.0 && sy > 0.0 {
+                    sy / sigma.abs()
+                } else if sigma.abs() == 0.0 {
+                    f64::INFINITY
+                } else {
+                    0.0
+                };
+                Ok(AnalysisResults {
+                    results_id: "structural_linear_dynamic_newmark".to_string(),
+                    analysis_type,
+                    displacement_field: vec![u_peak],
+                    stress_field: vec![sigma],
+                    strain_field: vec![u_peak / length],
+                    reaction_forces: vec![-k * u_peak], // peak base reaction
+                    safety_factor: sf,
+                    temperature_field: Vec::new(),
+                    heat_flux_field: Vec::new(),
+                })
+            }
+            AnalysisType::NonlinearDynamic => {
+                // As LinearDynamic, but the member is the geometrically-nonlinear bar,
+                // integrated by Newmark-β with an inner Newton–Raphson iteration each
+                // step (`fem::newmark_nonlinear`). Reports the peak dynamic response.
+                if !(density > 0.0) {
+                    return Err(EngineeringError::InsufficientData(
+                        "dynamic analysis needs a positive material density".to_string(),
+                    ));
+                }
+                let ea = e * area;
+                let bar = fem::GeoNonlinearBar { ea, length };
+                let k0 = ea / length; // small-strain stiffness for the period estimate
+                let m = density * area * length / 2.0;
+                let omega = (k0 / m).sqrt();
+                let period = 2.0 * std::f64::consts::PI / omega;
+                let dt = period / 200.0;
+                let nsteps = 260;
+                let res = fem::newmark_nonlinear(
+                    &[m],
+                    &[0.0],
+                    1,
+                    |u| vec![bar.internal_force(u[0])],
+                    |u| vec![bar.tangent(u[0])],
+                    |_t| vec![force],
+                    &[0.0],
+                    &[0.0],
+                    dt,
+                    nsteps,
+                    0.25,
+                    0.5,
+                    1e-10,
+                    100,
+                )?;
+                let u_peak = res.peak_abs(0);
+                let eps = bar.strain(u_peak);
+                let sigma = e * eps;
+                let sf = if sigma.abs() > 0.0 && sy > 0.0 {
+                    sy / sigma.abs()
+                } else if sigma.abs() == 0.0 {
+                    f64::INFINITY
+                } else {
+                    0.0
+                };
+                Ok(AnalysisResults {
+                    results_id: "structural_nonlinear_dynamic_newmark_newton".to_string(),
+                    analysis_type,
+                    displacement_field: vec![u_peak],
+                    stress_field: vec![sigma],
+                    strain_field: vec![eps],
+                    reaction_forces: vec![-bar.internal_force(u_peak)],
+                    safety_factor: sf,
+                    temperature_field: Vec::new(),
+                    heat_flux_field: Vec::new(),
+                })
+            }
+            // Modal/thermal results cannot be represented in the scalar-field
+            // `AnalysisResults` shape — they are eigenmodes / temperature fields, not a
+            // structural stress/displacement response. They are genuinely computed, but
+            // through the dedicated methods that return the right result types:
+            //   Vibration → VibrationAnalysis::analyze_free / ModalAnalysis::analyze_modal
+            //   Thermal   → ThermalAnalyzer::analyze
+            AnalysisType::Vibration | AnalysisType::Thermal => {
+                Err(EngineeringError::NotImplemented(format!(
+                    "structural {:?} is not available through the AnalysisResults facade; \
+                     use VibrationAnalysis::analyze_free / ModalAnalysis::analyze_modal for \
+                     modal & free-vibration results and ThermalAnalyzer for thermal response",
+                    analysis_type
+                )))
+            }
         }
+    }
+
+    /// Real finite-element linear-static solve of an explicit [`fem::FeModel`]
+    /// (assemble `K u = F`, apply displacement BCs, solve via LU, recover reactions
+    /// and element axial forces). This is the direct FE entry point (the abstract
+    /// `analyze` facade interprets a prismatic member; this takes a full mesh).
+    pub fn fem_static(
+        &self,
+        model: &fem::FeModel,
+    ) -> Result<fem::FeStaticResult, EngineeringError> {
+        fem::solve_static(model)
     }
 
     pub fn list_analysis_types(&self) -> Vec<String> {
@@ -625,6 +772,8 @@ impl StructuralAnalyzer {
             "LinearStatic".to_string(),
             "NonlinearStatic".to_string(),
             "LinearDynamic".to_string(),
+            "NonlinearDynamic".to_string(),
+            "Buckling".to_string(),
         ]
     }
 

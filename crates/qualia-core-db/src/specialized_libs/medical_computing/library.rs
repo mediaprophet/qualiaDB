@@ -93,6 +93,54 @@ impl MedicalComputingLibrary {
         })
     }
 
+    /// Real transparent Bayesian differential over a caller-supplied, non-authoritative
+    /// knowledge base. Returns a ranked epistemic proposal (never a diagnosis); the honest
+    /// label lives in `DifferentialProposal::epistemic_status`.
+    pub fn analyze_differential(
+        &mut self,
+        observed_findings: &[String],
+        knowledge_base: &DiagnosticKnowledgeBase,
+    ) -> Result<MedicalOperationResult<DifferentialProposal>, MedicalError> {
+        let start_time = std::time::Instant::now();
+        let proposal = self
+            .clinical_analyzer
+            .analyze_differential(observed_findings, knowledge_base)?;
+        let execution_time = start_time.elapsed().as_millis() as u64;
+        Ok(MedicalOperationResult {
+            result: proposal,
+            execution_time,
+            privacy_score: None,
+            compliance_status: ComplianceStatus::Compliant,
+            audit_trail: Vec::new(),
+        })
+    }
+
+    /// Real 2-D DSP over a caller-provided intensity grid (statistics, histogram,
+    /// window/level, threshold segmentation, Sobel edge magnitude). The result is
+    /// honestly labeled signal processing, never a diagnosis.
+    pub fn analyze_medical_image_grid(
+        &mut self,
+        data: &[f64],
+        width: usize,
+        height: usize,
+        bins: usize,
+        threshold: SegmentationThreshold,
+        window: Option<(f64, f64)>,
+    ) -> Result<MedicalOperationResult<ImageAnalysisResult>, MedicalError> {
+        let start_time = std::time::Instant::now();
+        let result = self
+            .medical_imaging
+            .analyze_grid(data, width, height, bins, threshold, window)?;
+        let execution_time = start_time.elapsed().as_millis() as u64;
+        Ok(MedicalOperationResult {
+            result,
+            execution_time,
+            privacy_score: None,
+            compliance_status: ComplianceStatus::Compliant,
+            audit_trail: Vec::new(),
+        })
+    }
+
     /// Process medical image
     pub fn process_medical_image(
         &mut self,
@@ -120,19 +168,25 @@ impl MedicalComputingLibrary {
         })
     }
 
-    /// Screen compounds
+    /// Screen compounds by rule-based filtering + Tanimoto similarity ranking.
+    /// `query_smiles` is an optional reference structure for similarity ranking. The
+    /// result is honestly labeled (see `ScreeningProposal::epistemic_status`) — it is
+    /// NOT a binding-affinity or efficacy prediction.
     pub fn screen_compounds(
         &mut self,
         compounds: Vec<Compound>,
         target: DrugTarget,
-    ) -> Result<MedicalOperationResult<ScreeningResults>, MedicalError> {
+        query_smiles: Option<&str>,
+    ) -> Result<MedicalOperationResult<ScreeningProposal>, MedicalError> {
         let start_time = std::time::Instant::now();
 
         // Validate compounds
         self.drug_discovery.validate_compounds(&compounds)?;
 
         // Screen compounds
-        let results = self.drug_discovery.screen_compounds(&compounds, &target)?;
+        let results = self
+            .drug_discovery
+            .screen_compounds(&compounds, &target, query_smiles)?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 

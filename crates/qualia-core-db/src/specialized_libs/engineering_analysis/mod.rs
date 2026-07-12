@@ -199,6 +199,13 @@ pub mod thermal_conduction;
 /// tests (lid-driven cavity, channel flow, pressure outlet).
 pub mod cfd;
 
+/// Real finite-element subsystem (element library, global assembly, static solve,
+/// Newmark-β time integration, Newton–Raphson nonlinear solve). Backs the structural
+/// `NonlinearStatic` / `LinearDynamic` / `NonlinearDynamic` analysis types. Split into
+/// its own library submodule (PROJECT RULE §11); carries its own reference tests
+/// (cantilever tip deflection, axial/two-bar truss, SDOF Newmark, cubic-spring Newton).
+pub mod fem;
+
 // ── Library-ized submodules (PROJECT RULE §11: mechanical code-motion split of a
 // ~6.7k-line mod.rs into single-purpose siblings; no logic/signature change). Each
 // submodule uses `use super::*` for shared types and helper fns; `mod.rs` re-exports

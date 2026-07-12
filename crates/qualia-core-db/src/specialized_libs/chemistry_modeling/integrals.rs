@@ -85,6 +85,82 @@ impl IntegralEngine {
         Self::os_overlap(a, b)
     }
 
+    /// Bare s-type overlap `(a|b)` between two primitive Gaussians, INCLUDING the
+    /// primitives' `coefficient` factors. Exact closed form (Szabo & Ostlund,
+    /// appendix A):
+    ///   S_ab = (π/p)^{3/2} · exp(−μ·|A−B|²) · c_a · c_b,
+    /// with p = α+β and μ = αβ/p. Valid for s-type (l = 0); the STO-3G H/He
+    /// validation set contains only s primitives.
+    pub fn overlap_s(a: &GtoPrimitive, b: &GtoPrimitive) -> f64 {
+        let (p, mu, ab2) = Self::gauss_product(a, b);
+        (PI / p).powf(1.5) * f64::exp(-mu * ab2) * a.coefficient * b.coefficient
+    }
+
+    /// Kinetic-energy integral `(a|−½∇²|b)` for two s-type primitives, INCLUDING
+    /// the `coefficient` factors. Exact closed form:
+    ///   T_ab = μ·(3 − 2μ·|A−B|²) · S_ab,   μ = αβ/(α+β),
+    /// where S_ab is the bare s overlap above (Szabo & Ostlund, appendix A).
+    pub fn kinetic_s(a: &GtoPrimitive, b: &GtoPrimitive) -> f64 {
+        let (p, mu, ab2) = Self::gauss_product(a, b);
+        let s_bare = (PI / p).powf(1.5) * f64::exp(-mu * ab2);
+        mu * (3.0 - 2.0 * mu * ab2) * s_bare * a.coefficient * b.coefficient
+    }
+
+    /// Nuclear-attraction integral `(a|−Z/|r−C||b)` for two s-type primitives and
+    /// one nucleus of charge `z` at `center`, INCLUDING the `coefficient` factors.
+    /// Exact closed form via the Boys function F₀:
+    ///   V_ab^C = −Z · (2π/p) · exp(−μ·|A−B|²) · F₀(p·|P−C|²),
+    /// with p = α+β, μ = αβ/p and P the Gaussian-product center (Szabo & Ostlund,
+    /// appendix A). The total one-electron nuclear attraction is the sum over all
+    /// nuclei.
+    pub fn nuclear_s(a: &GtoPrimitive, b: &GtoPrimitive, center: [f64; 3], z: f64) -> f64 {
+        let (p, mu, ab2) = Self::gauss_product(a, b);
+        let alpha = a.exponent;
+        let beta = b.exponent;
+        let pcenter = [
+            (alpha * a.origin[0] + beta * b.origin[0]) / p,
+            (alpha * a.origin[1] + beta * b.origin[1]) / p,
+            (alpha * a.origin[2] + beta * b.origin[2]) / p,
+        ];
+        let pc2 = (pcenter[0] - center[0]).powi(2)
+            + (pcenter[1] - center[1]).powi(2)
+            + (pcenter[2] - center[2]).powi(2);
+        let k = f64::exp(-mu * ab2);
+        let f0 = Self::boys_function(0, p * pc2);
+        -z * (2.0 * PI / p) * k * f0 * a.coefficient * b.coefficient
+    }
+
+    /// Cartesian dipole-moment integrals `(a|x|b)`, `(a|y|b)`, `(a|z|b)` for two
+    /// s-type primitives, INCLUDING the `coefficient` factors, measured about the
+    /// global coordinate origin. Exact closed form: the first moment of the
+    /// product Gaussian is its center P, so `(a|w|b) = P_w · S_ab`.
+    pub fn dipole_s(a: &GtoPrimitive, b: &GtoPrimitive) -> [f64; 3] {
+        let (p, mu, ab2) = Self::gauss_product(a, b);
+        let alpha = a.exponent;
+        let beta = b.exponent;
+        let s = (PI / p).powf(1.5) * f64::exp(-mu * ab2) * a.coefficient * b.coefficient;
+        let pcenter = [
+            (alpha * a.origin[0] + beta * b.origin[0]) / p,
+            (alpha * a.origin[1] + beta * b.origin[1]) / p,
+            (alpha * a.origin[2] + beta * b.origin[2]) / p,
+        ];
+        [pcenter[0] * s, pcenter[1] * s, pcenter[2] * s]
+    }
+
+    /// Shared Gaussian-product quantities for a primitive pair: returns
+    /// `(p, μ, |A−B|²)` with p = α+β and μ = αβ/p.
+    #[inline]
+    fn gauss_product(a: &GtoPrimitive, b: &GtoPrimitive) -> (f64, f64, f64) {
+        let alpha = a.exponent;
+        let beta = b.exponent;
+        let p = alpha + beta;
+        let mu = (alpha * beta) / p;
+        let dx = a.origin[0] - b.origin[0];
+        let dy = a.origin[1] - b.origin[1];
+        let dz = a.origin[2] - b.origin[2];
+        (p, mu, dx * dx + dy * dy + dz * dz)
+    }
+
     /// Evaluates the Two-Electron Repulsion Integrals (ERI).
     /// Since ERIs are 4-center (N x N x N x N), we return a specific slice or compute on demand.
     /// For this engine, we evaluate a single (ab|cd) primitive set.

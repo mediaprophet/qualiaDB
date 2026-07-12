@@ -1128,3 +1128,78 @@
         let res = library.perform_structural_analysis(model, AnalysisType::Vibration);
         assert!(matches!(res, Err(EngineeringError::NotImplemented(_))));
     }
+
+    // ---- FE-backed facade dispatch (real assembly + solve) -------------------
+
+    fn prismatic_model(load: f64) -> EngineeringModel {
+        // b=h=0.1 (area 0.01), L=2, steel (E=200000, rho=7850, yield 250).
+        let mut model = EngineeringModel::new();
+        model.geometry.dimensions = vec![0.1, 0.1, 2.0];
+        model.materials.insert("steel".to_string(), Material::new());
+        model.loads.push(Load {
+            load_id: "F".to_string(),
+            load_type: LoadType::Force,
+            load_magnitude: load,
+            load_direction: vec![1.0, 0.0, 0.0],
+            application_point: vec![0.0, 0.0, 0.0],
+        });
+        model
+    }
+
+    #[test]
+    fn structural_linear_dynamic_facade_dynamic_amplification() {
+        // Suddenly-applied constant axial load ⇒ undamped SDOF peak = 2x static (DAF=2).
+        let mut library = EngineeringAnalysisLibrary::new();
+        library.initialize().unwrap();
+        let stat = library
+            .perform_structural_analysis(prismatic_model(200.0), AnalysisType::LinearStatic)
+            .unwrap()
+            .result
+            .displacement_field[0];
+        let dyn_peak = library
+            .perform_structural_analysis(prismatic_model(200.0), AnalysisType::LinearDynamic)
+            .unwrap()
+            .result
+            .displacement_field[0];
+        // static axial u = F*L/(A*E) = 200*2/(0.01*200000) = 0.2.
+        assert!((stat - 0.2).abs() < 1e-9, "static = {stat}");
+        let daf = dyn_peak / stat;
+        assert!((daf - 2.0).abs() < 0.02, "dynamic amplification factor = {daf} (expected ~2)");
+    }
+
+    #[test]
+    fn structural_nonlinear_static_facade_stiffens() {
+        // Geometric-nonlinear bar: real Newton–Raphson solve, tip disp below the
+        // linear estimate (Green-strain stiffening) but finite and positive.
+        let mut library = EngineeringAnalysisLibrary::new();
+        library.initialize().unwrap();
+        let res = library
+            .perform_structural_analysis(prismatic_model(200.0), AnalysisType::NonlinearStatic)
+            .unwrap()
+            .result;
+        let u = res.displacement_field[0];
+        let lin = 0.2; // linear axial estimate
+        assert!(u.is_finite() && u > 0.0 && u < lin, "nonlinear u = {u} (linear {lin})");
+        // Green-strain stiffening is real but modest for this load (u/L ≈ 0.09).
+        assert!(u > 0.15, "stiffening should be modest for a mild load: u = {u}");
+        assert!(res.safety_factor.is_finite() && res.safety_factor > 0.0);
+    }
+
+    #[test]
+    fn structural_nonlinear_dynamic_facade_runs_and_amplifies() {
+        // Newmark + inner Newton: real transient, peak exceeds the nonlinear static tip.
+        let mut library = EngineeringAnalysisLibrary::new();
+        library.initialize().unwrap();
+        let stat = library
+            .perform_structural_analysis(prismatic_model(200.0), AnalysisType::NonlinearStatic)
+            .unwrap()
+            .result
+            .displacement_field[0];
+        let dyn_peak = library
+            .perform_structural_analysis(prismatic_model(200.0), AnalysisType::NonlinearDynamic)
+            .unwrap()
+            .result
+            .displacement_field[0];
+        assert!(dyn_peak.is_finite() && dyn_peak > stat, "peak {dyn_peak} vs static {stat}");
+        assert!(dyn_peak < 2.1 * stat, "nonlinear DAF should not exceed ~2: {}", dyn_peak / stat);
+    }

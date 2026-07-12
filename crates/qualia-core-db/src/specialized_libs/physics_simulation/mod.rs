@@ -55,15 +55,9 @@ pub use metrics::*;
 pub use domain_model::*;
 pub use results::*;
 pub use errors::*;
-pub use library_core::*;
-pub use cfd::*;
-pub use ode::*;
-pub use mechanics::*;
-pub use nbody::*;
-pub use fields::*;
-pub use molecular_dynamics::*;
-pub use quantum::*;
-pub use population::*;
+// The kernel submodules (library_core/cfd/ode/mechanics/nbody/fields/
+// molecular_dynamics/quantum/population) contribute `impl PhysicsSimulationLibrary`
+// blocks and tree-internal helpers only — no free items to re-export.
 
 #[cfg(test)]
 mod tests;

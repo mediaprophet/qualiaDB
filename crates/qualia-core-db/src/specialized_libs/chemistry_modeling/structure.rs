@@ -1,4 +1,3 @@
-use super::*;
 
 /// IUPAC standard atomic weight (amu) for common elements. Conventional values
 /// (IUPAC 2021). Returns `None` for elements outside the table so callers can

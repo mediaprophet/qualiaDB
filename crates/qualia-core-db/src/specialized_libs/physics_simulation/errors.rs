@@ -1,4 +1,3 @@
-use super::*;
 
 /// Physics error types
 #[derive(Debug, Clone)]

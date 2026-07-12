@@ -244,21 +244,91 @@ impl MedicalImaging {
         Ok(())
     }
 
+    /// Real 2-D DSP over a caller-provided intensity grid (delegates to
+    /// [`super::analyze_intensity_grid`]). Returns metrics + masks + Sobel map, each
+    /// honestly labeled as signal processing, never a diagnosis.
+    pub fn analyze_grid(
+        &self,
+        data: &[f64],
+        width: usize,
+        height: usize,
+        bins: usize,
+        threshold: super::SegmentationThreshold,
+        window: Option<(f64, f64)>,
+    ) -> Result<super::ImageAnalysisResult, MedicalError> {
+        super::analyze_intensity_grid(data, width, height, bins, threshold, window)
+    }
+
+    /// Process a `MedicalImage` by real DSP. The raw `image_data` bytes are decoded as
+    /// row-major grayscale intensities; the grid dimensions are inferred as a square
+    /// (`sqrt(len)`), since `MedicalImage` carries no width/height metadata. If the byte
+    /// count is not a perfect square this fails closed with `InsufficientData` rather than
+    /// guessing. The returned `ProcessedImage` carries the window/level-normalized bytes
+    /// plus honestly-labeled DSP metrics in `processing_metadata` — it is NOT a diagnosis.
     pub fn process_image(
         &mut self,
-        _image: &MedicalImage,
-        _processing_type: ImageProcessingType,
+        image: &MedicalImage,
+        processing_type: ImageProcessingType,
     ) -> Result<ProcessedImage, MedicalError> {
-        // NOT IMPLEMENTED — it must say so, never fabricate. Previously this returned a default
-        // `ProcessedImage::new()` without touching the input image: a medical-image "analysis"
-        // that analysed nothing. Real implementation requires an actual imaging pipeline
-        // (reconstruction / enhancement / segmentation) and, for any diagnostic readout, a
-        // validated model. See the to-do register.
-        Err(MedicalError::NotImplemented(
-            "medical image processing (process_medical_image): no imaging pipeline is \
-             implemented; refusing to return an unprocessed image as if analysed."
-                .to_string(),
-        ))
+        let n = image.image_data.len();
+        if n == 0 {
+            return Err(MedicalError::ValidationError(
+                "process_image: image_data is empty".to_string(),
+            ));
+        }
+        let side = (n as f64).sqrt() as usize;
+        if side * side != n {
+            return Err(MedicalError::InsufficientData(format!(
+                "process_image: image_data length {n} is not a perfect square and MedicalImage \
+                 carries no width/height metadata; use analyze_grid(data,width,height,..) with \
+                 explicit dimensions"
+            )));
+        }
+        let data: Vec<f64> = image.image_data.iter().map(|&b| b as f64).collect();
+        let result = super::analyze_intensity_grid(
+            &data,
+            side,
+            side,
+            64,
+            super::SegmentationThreshold::Otsu,
+            None,
+        )?;
+
+        // Window/level-normalized bytes (real processed output, not the input echoed back).
+        let processed_data: Vec<u8> = result
+            .windowed
+            .iter()
+            .map(|&w| (w * 255.0).round().clamp(0.0, 255.0) as u8)
+            .collect();
+
+        let mut processing_metadata = HashMap::new();
+        processing_metadata.insert(
+            "epistemic_status".to_string(),
+            result.epistemic_status.to_string(),
+        );
+        processing_metadata.insert("width".to_string(), side.to_string());
+        processing_metadata.insert("height".to_string(), side.to_string());
+        processing_metadata.insert("min".to_string(), result.min.to_string());
+        processing_metadata.insert("max".to_string(), result.max.to_string());
+        processing_metadata.insert("mean".to_string(), result.mean.to_string());
+        processing_metadata.insert("std_dev".to_string(), result.std_dev.to_string());
+        processing_metadata.insert("otsu_threshold".to_string(), result.threshold.to_string());
+        processing_metadata.insert(
+            "segmented_area".to_string(),
+            result.segmented_area.to_string(),
+        );
+        processing_metadata.insert(
+            "segmented_mean_intensity".to_string(),
+            result.segmented_mean_intensity.to_string(),
+        );
+
+        Ok(ProcessedImage {
+            processed_image_id: format!("processed_{}", image.image_id),
+            original_image_id: image.image_id.clone(),
+            processing_type,
+            processed_data,
+            processing_metadata,
+        })
     }
 }
 

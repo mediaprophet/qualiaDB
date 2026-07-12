@@ -17,8 +17,11 @@ mod clinical_formulas;
 mod records;
 mod privacy;
 mod diagnosis;
+mod differential;
 mod imaging;
+mod image_dsp;
 mod drug_discovery;
+mod cheminformatics;
 mod compliance;
 
 pub use types::*;
@@ -28,8 +31,11 @@ pub use clinical_formulas::*;
 pub use records::*;
 pub use privacy::*;
 pub use diagnosis::*;
+pub use differential::*;
 pub use imaging::*;
+pub use image_dsp::*;
 pub use drug_discovery::*;
+pub use cheminformatics::*;
 pub use compliance::*;
 
 #[cfg(test)]

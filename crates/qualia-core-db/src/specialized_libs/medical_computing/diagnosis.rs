@@ -320,24 +320,36 @@ impl ClinicalAnalyzer {
         Ok(())
     }
 
+    /// Patient-only convenience entry point. The real differential engine
+    /// ([`Self::analyze_differential`]) requires a CALLER-SUPPLIED knowledge base
+    /// (priors + per-finding likelihoods); this overload is handed no such KB, so it
+    /// fails closed with `InsufficientData` rather than fabricating a diagnosis or a
+    /// confidence. Supply findings + a knowledge base via `analyze_differential` to get
+    /// a real, ranked, honestly-labeled proposal.
     pub fn analyze_data(
         &mut self,
         _patient: &Patient,
         _data_type: ClinicalDataType,
     ) -> Result<ClinicalAnalysis, MedicalError> {
-        // NOT IMPLEMENTED — and it must say so, never fabricate. No diagnostic reasoning is
-        // wired here (the `diagnostic_algorithms` registry is empty). Previously this returned
-        // `ClinicalAnalysis::new()` (confidence_score 0.95, empty findings), and that fake 95%
-        // confidence was surfaced through the `medical_compute` MCP tool as the confidence on a
-        // clinical diagnosis — a dangerous, deceptive output. Real implementation requires a
-        // VALIDATED diagnostic model plus a curated clinical ontology / knowledge base; until
-        // those are supplied this capability cannot produce a result. See the to-do register.
-        Err(MedicalError::NotImplemented(
-            "clinical diagnostic analysis (analyze_clinical_data): requires a validated \
-             diagnostic model and a curated clinical ontology/knowledge base, which are not \
-             present. Refusing to emit a fabricated diagnosis or confidence."
+        Err(MedicalError::InsufficientData(
+            "clinical diagnostic analysis (analyze_clinical_data): no knowledge base was \
+             supplied through the patient-only path. Use analyze_differential(findings, \
+             knowledge_base) with a caller-supplied, non-authoritative KB to obtain a ranked \
+             epistemic proposal. Refusing to emit a fabricated diagnosis or confidence."
                 .to_string(),
         ))
+    }
+
+    /// Real transparent Bayesian differential over a **caller-supplied, non-authoritative**
+    /// knowledge base. Delegates to [`super::analyze_differential`]. Returns a ranked
+    /// epistemic proposal (never a diagnosis); the honest label lives in
+    /// `DifferentialProposal::epistemic_status`.
+    pub fn analyze_differential(
+        &self,
+        observed_findings: &[String],
+        kb: &super::DiagnosticKnowledgeBase,
+    ) -> Result<super::DifferentialProposal, MedicalError> {
+        super::analyze_differential(observed_findings, kb)
     }
 }
 

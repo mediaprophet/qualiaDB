@@ -1,4 +1,3 @@
-use super::*;
 
 /// Chemistry error types
 #[derive(Debug, Clone)]

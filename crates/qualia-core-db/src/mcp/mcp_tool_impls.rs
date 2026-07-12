@@ -1092,6 +1092,57 @@ pub fn chemical_analysis(args: &[u8]) -> Result<String, McpSystemError> {
     lib.initialize()
         .map_err(|_| McpSystemError::InvalidParameters)?;
 
+    // Real ab-initio RHF/STO-3G electronic structure (H/He, closed-shell) from an
+    // explicit atom list with coordinates in BOHR:
+    // [{ "element":"H", "atomic_number":1, "x":0.0,"y":0,"z":0 }, ...].
+    // Returns real SCF total energy (Hartree), HOMO/LUMO/gap, dipole, Mulliken charges.
+    if json_str(&v, "op", "") == "quantum" {
+        use crate::specialized_libs::chemistry_modeling::QuantumMethodType;
+        let atoms_json = v
+            .get("atoms")
+            .and_then(Value::as_array)
+            .ok_or(McpSystemError::InvalidParameters)?;
+        let mut atoms = Vec::with_capacity(atoms_json.len());
+        let mut coords = Vec::with_capacity(atoms_json.len());
+        for (i, a) in atoms_json.iter().enumerate() {
+            let c = vec![json_f64(a, "x", 0.0), json_f64(a, "y", 0.0), json_f64(a, "z", 0.0)];
+            atoms.push(Atom {
+                atom_id: format!("a{}", i),
+                element: a.get("element").and_then(Value::as_str).unwrap_or("X").to_string(),
+                atomic_number: a.get("atomic_number").and_then(Value::as_u64).unwrap_or(0) as usize,
+                mass: json_f64(a, "mass", 0.0),
+                charge: 0.0,
+                coordinates: c.clone(),
+            });
+            coords.push(c);
+        }
+        let mut m = Molecule::new();
+        m.molecule_id = v.get("molecule_id").and_then(Value::as_str).unwrap_or("mcp_mol").to_string();
+        m.atoms = atoms;
+        m.coordinates = coords;
+        let method = match json_str(&v, "method", "hartree_fock") {
+            "ab_initio" => QuantumMethodType::AbInitio,
+            _ => QuantumMethodType::HartreeFock,
+        };
+        // A model-dependent / out-of-scope system (heavier than He, open-shell,
+        // non-HF method) fails closed as ToolNotReady — never a fabricated energy.
+        let r = lib.calculate_quantum_properties(m, method).map_err(|e| {
+            use crate::specialized_libs::chemistry_modeling::ChemistryError;
+            match e {
+                ChemistryError::NotImplemented(_) => McpSystemError::ToolNotReady,
+                _ => McpSystemError::InvalidParameters,
+            }
+        })?;
+        let p = r.result;
+        return Ok(json!({
+            "op": "quantum", "method": "RHF/STO-3G",
+            "total_energy_hartree": p.total_energy, "homo_energy": p.homo_energy,
+            "lumo_energy": p.lumo_energy, "gap": p.gap, "dipole_moment": p.dipole_moment,
+            "mulliken_charges": p.mulliken_charges
+        })
+        .to_string());
+    }
+
     // Exact structural properties (mass, Hill formula, nuclear-repulsion energy,
     // centre of mass, principal moments of inertia) from an explicit atom list:
     // [{ "element": "O", "atomic_number": 8, "x":.., "y":.., "z":.. }, ...].
@@ -1789,6 +1840,94 @@ pub fn medical_score(args: &[u8]) -> Result<String, McpSystemError> {
     lib.initialize()
         .map_err(|_| McpSystemError::InvalidParameters)?;
 
+    // Real image DSP over a caller-provided intensity grid (signal-processing
+    // metrics only — the result is explicitly NOT a diagnosis).
+    // { "op":"image", "data":[...], "width":W, "height":H, "bins":B, "threshold":T? }
+    if json_str(&v, "op", "") == "image" {
+        use crate::specialized_libs::medical_computing::SegmentationThreshold;
+        let data: Vec<f64> = v
+            .get("data")
+            .and_then(Value::as_array)
+            .map(|a| a.iter().filter_map(Value::as_f64).collect())
+            .unwrap_or_default();
+        let width = v.get("width").and_then(Value::as_u64).unwrap_or(0) as usize;
+        let height = v.get("height").and_then(Value::as_u64).unwrap_or(0) as usize;
+        let bins = v.get("bins").and_then(Value::as_u64).unwrap_or(16) as usize;
+        let threshold = match v.get("threshold").and_then(Value::as_f64) {
+            Some(t) => SegmentationThreshold::Fixed(t),
+            None => SegmentationThreshold::Otsu,
+        };
+        let r = lib
+            .analyze_medical_image_grid(&data, width, height, bins, threshold, None)
+            .map_err(|_| McpSystemError::InvalidParameters)?;
+        let im = r.result;
+        return Ok(json!({
+            "op": "image", "epistemic_status": im.epistemic_status,
+            "min": im.min, "max": im.max, "mean": im.mean, "std_dev": im.std_dev,
+            "segmented_area": im.segmented_area, "segmented_mean_intensity": im.segmented_mean_intensity
+        })
+        .to_string());
+    }
+
+    // Transparent naive-Bayes differential over a CALLER-SUPPLIED knowledge base.
+    // Returns a ranked epistemic PROPOSAL, explicitly NOT a diagnosis.
+    // { "op":"differential", "findings":["fever",...],
+    //   "knowledge_base":[{ "condition_id":"flu", "prior":0.6,
+    //     "likelihoods":{"fever":0.9,"cough":0.8} }, ...],
+    //   "unlisted_finding_likelihood": 0.5 }
+    if json_str(&v, "op", "") == "differential" {
+        use crate::specialized_libs::medical_computing::{
+            ConditionModel, DiagnosticKnowledgeBase,
+        };
+        use std::collections::HashMap;
+        let findings: Vec<String> = v
+            .get("findings")
+            .and_then(Value::as_array)
+            .map(|a| a.iter().filter_map(|x| x.as_str().map(str::to_string)).collect())
+            .unwrap_or_default();
+        let conditions: Vec<ConditionModel> = v
+            .get("knowledge_base")
+            .and_then(Value::as_array)
+            .map(|a| {
+                a.iter()
+                    .filter_map(|c| {
+                        let mut likelihoods = HashMap::new();
+                        if let Some(m) = c.get("likelihoods").and_then(Value::as_object) {
+                            for (k, val) in m {
+                                if let Some(p) = val.as_f64() {
+                                    likelihoods.insert(k.clone(), p);
+                                }
+                            }
+                        }
+                        Some(ConditionModel {
+                            condition_id: c.get("condition_id").and_then(Value::as_str)?.to_string(),
+                            prior: c.get("prior").and_then(Value::as_f64)?,
+                            likelihoods,
+                        })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        let kb = DiagnosticKnowledgeBase {
+            conditions,
+            unlisted_finding_likelihood: json_f64(&v, "unlisted_finding_likelihood", 0.5),
+        };
+        let r = lib
+            .analyze_differential(&findings, &kb)
+            .map_err(|_| McpSystemError::InvalidParameters)?;
+        let prop = r.result;
+        let ranked: Vec<Value> = prop
+            .ranked
+            .iter()
+            .map(|c| json!({"condition_id": c.condition_id, "prior": c.prior, "posterior": c.posterior}))
+            .collect();
+        return Ok(json!({
+            "op": "differential", "epistemic_status": prop.epistemic_status,
+            "observed_findings": prop.observed_findings, "ranked": ranked
+        })
+        .to_string());
+    }
+
     // Genuinely-computable clinical metrics (published deterministic formulas).
     // Selected by the `metric` field; each delegates to the real library method.
     if let Some(metric) = v.get("metric").and_then(Value::as_str) {
@@ -1958,7 +2097,9 @@ pub fn engineering_analysis(args: &[u8]) -> Result<String, McpSystemError> {
 
     let analysis_type = match analysis {
         "thermal" => AnalysisType::Thermal,
-        "dynamic" => AnalysisType::LinearDynamic,
+        "dynamic" | "linear_dynamic" => AnalysisType::LinearDynamic,
+        "nonlinear_static" => AnalysisType::NonlinearStatic,
+        "nonlinear_dynamic" => AnalysisType::NonlinearDynamic,
         "buckling" => AnalysisType::Buckling,
         _ => AnalysisType::LinearStatic,
     };
@@ -2610,6 +2751,46 @@ mod tests {
             medical_score(diag.as_bytes()),
             Err(McpSystemError::ToolNotReady)
         ));
+    }
+
+    #[test]
+    fn chemical_analysis_tool_quantum_h2_scf_energy() {
+        // H2 at R=1.4 bohr → real RHF/STO-3G total energy ≈ -1.1167 Hartree.
+        let body = r#"{"op":"quantum","atoms":[
+            {"element":"H","atomic_number":1,"x":0.0,"y":0.0,"z":0.0},
+            {"element":"H","atomic_number":1,"x":0.0,"y":0.0,"z":1.4}]}"#;
+        let out = chemical_analysis(body.as_bytes()).expect("ok");
+        let p: Value = serde_json::from_str(&out).expect("json");
+        assert!(
+            (p["total_energy_hartree"].as_f64().unwrap() - (-1.1167)).abs() < 1e-3,
+            "E={}",
+            p["total_energy_hartree"]
+        );
+        assert!(p["gap"].as_f64().unwrap() > 0.0);
+    }
+
+    #[test]
+    fn medical_score_tool_image_and_differential() {
+        // Image: 4x4 step edge (left cols 0, right cols 100), fixed threshold 50.
+        // 8 pixels >= 50, region mean 100, overall mean 50.
+        let img = r#"{"op":"image","width":4,"height":4,"bins":4,"threshold":50.0,
+            "data":[0,0,100,100, 0,0,100,100, 0,0,100,100, 0,0,100,100]}"#;
+        let out = medical_score(img.as_bytes()).expect("ok");
+        let p: Value = serde_json::from_str(&out).expect("json");
+        assert!((p["mean"].as_f64().unwrap() - 50.0).abs() < 1e-9);
+        assert_eq!(p["segmented_area"], 8);
+        assert!((p["segmented_mean_intensity"].as_f64().unwrap() - 100.0).abs() < 1e-9);
+
+        // Differential: hand-computed posteriors 0.9 / 0.1, flu ranked first.
+        let diff = r#"{"op":"differential","findings":["fever","cough"],
+            "knowledge_base":[
+              {"condition_id":"flu","prior":0.6,"likelihoods":{"fever":0.9,"cough":0.8}},
+              {"condition_id":"cold","prior":0.4,"likelihoods":{"fever":0.2,"cough":0.6}}]}"#;
+        let out2 = medical_score(diff.as_bytes()).expect("ok");
+        let p2: Value = serde_json::from_str(&out2).expect("json");
+        let ranked = p2["ranked"].as_array().unwrap();
+        assert_eq!(ranked[0]["condition_id"], "flu");
+        assert!((ranked[0]["posterior"].as_f64().unwrap() - 0.9).abs() < 1e-9);
     }
 
     #[test]

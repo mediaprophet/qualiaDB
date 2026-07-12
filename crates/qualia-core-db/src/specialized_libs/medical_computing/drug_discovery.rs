@@ -452,20 +452,18 @@ impl DrugDiscovery {
         Ok(())
     }
 
+    /// Real rule-based screening (delegates to [`super::screen_compounds_rulebased`]):
+    /// computes molecular descriptors from each compound's structure, applies Lipinski
+    /// and Veber filters, and ranks by Tanimoto similarity to an optional query SMILES.
+    /// Returns an honestly-labeled [`super::ScreeningProposal`] — rule-based filtering /
+    /// similarity ranking, NOT a binding-affinity or efficacy prediction.
     pub fn screen_compounds(
         &mut self,
-        _compounds: &[Compound],
-        _target: &DrugTarget,
-    ) -> Result<ScreeningResults, MedicalError> {
-        // NOT IMPLEMENTED — it must say so, never fabricate. Previously this returned a default
-        // `ScreeningResults::new()` (hit_rate 0.05, no compounds actually screened) regardless
-        // of the inputs — a fabricated drug-screening result. Real implementation requires
-        // structure/affinity models and compound/target reference data. See the to-do register.
-        Err(MedicalError::NotImplemented(
-            "virtual compound screening (screen_compounds): requires binding-affinity / \
-             structure models and compound/target reference data, which are not present."
-                .to_string(),
-        ))
+        compounds: &[Compound],
+        target: &DrugTarget,
+        query_smiles: Option<&str>,
+    ) -> Result<super::ScreeningProposal, MedicalError> {
+        super::screen_compounds_rulebased(compounds, target, query_smiles)
     }
 }
 

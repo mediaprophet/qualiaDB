@@ -87,7 +87,6 @@ pub use scheduler::*;
 pub use accelerator::*;
 pub use privacy::*;
 pub use analytics::*;
-pub use library::*;
 pub use errors::*;
 
 #[cfg(test)]

@@ -23,17 +23,48 @@
 
     #[test]
     fn test_clinical_analysis() {
+        use std::collections::HashMap;
         let mut library = MedicalComputingLibrary::new();
         library.initialize().unwrap();
 
-        // HONEST: no diagnostic backend is implemented, so clinical analysis fails closed
-        // rather than emitting a fabricated diagnosis/confidence (it previously returned a
-        // hardcoded confidence_score 0.95 with empty findings).
-        let result = library.analyze_clinical_data("patient_1", ClinicalDataType::Diagnosis);
-        assert!(
-            result.is_err(),
-            "clinical analysis must fail closed, not fabricate a diagnosis/confidence"
-        );
+        // The patient-only path has no knowledge base → still fails closed (no fabricated
+        // diagnosis/confidence) rather than inventing one.
+        assert!(library
+            .analyze_clinical_data("patient_1", ClinicalDataType::Diagnosis)
+            .is_err());
+
+        // REAL transparent naive-Bayes over an ILLUSTRATIVE, NON-AUTHORITATIVE caller KB.
+        // unnorm(flu)=0.6*0.9*0.8=0.432 ; unnorm(cold)=0.4*0.2*0.6=0.048 ; sum=0.48
+        // post(flu)=0.432/0.48=0.9 ; post(cold)=0.048/0.48=0.1
+        let mut flu = HashMap::new();
+        flu.insert("fever".to_string(), 0.9);
+        flu.insert("cough".to_string(), 0.8);
+        let mut cold = HashMap::new();
+        cold.insert("fever".to_string(), 0.2);
+        cold.insert("cough".to_string(), 0.6);
+        let kb = DiagnosticKnowledgeBase {
+            conditions: vec![
+                ConditionModel {
+                    condition_id: "influenza_like".to_string(),
+                    prior: 0.6,
+                    likelihoods: flu,
+                },
+                ConditionModel {
+                    condition_id: "common_cold".to_string(),
+                    prior: 0.4,
+                    likelihoods: cold,
+                },
+            ],
+            unlisted_finding_likelihood: 0.5,
+        };
+        let obs = vec!["fever".to_string(), "cough".to_string()];
+        let out = library.analyze_differential(&obs, &kb).unwrap();
+        let p = &out.result;
+        // Honest label — explicitly NOT a diagnosis.
+        assert!(p.epistemic_status.contains("NOT a diagnosis"));
+        assert_eq!(p.ranked[0].condition_id, "influenza_like");
+        approx(p.ranked[0].posterior, 0.9, 1e-9);
+        approx(p.ranked[1].posterior, 0.1, 1e-9);
     }
 
     #[test]
@@ -41,11 +72,27 @@
         let mut library = MedicalComputingLibrary::new();
         library.initialize().unwrap();
 
-        let image = MedicalImage::new();
-        // HONEST: no imaging pipeline is implemented, so this reports NotImplemented rather
-        // than returning an unprocessed image as if it had been analysed.
-        let result = library.process_medical_image(image, ImageProcessingType::Enhancement);
-        assert!(matches!(result, Err(MedicalError::NotImplemented(_))));
+        // REAL DSP on a 4x4 step edge: left two cols = 0, right two cols = 100.
+        let data: Vec<f64> = (0..16)
+            .map(|i| if i % 4 >= 2 { 100.0 } else { 0.0 })
+            .collect();
+        let out = library
+            .analyze_medical_image_grid(&data, 4, 4, 8, SegmentationThreshold::Fixed(50.0), None)
+            .unwrap();
+        let r = &out.result;
+        // Honest label — signal-processing metrics only.
+        assert!(r.epistemic_status.contains("NOT a diagnosis"));
+        // Hand values: mean 50, population std 50 (half the pixels 0, half 100).
+        approx(r.mean, 50.0, 1e-9);
+        approx(r.std_dev, 50.0, 1e-9);
+        // Fixed threshold 50 → foreground = the 8 bright pixels; region mean 100.
+        assert_eq!(r.segmented_area, 8);
+        approx(r.segmented_mean_intensity, 100.0, 1e-9);
+        // Sobel magnitude peaks at the vertical edge (|G| = 400) and is 0 in flat columns.
+        let peak = r.sobel_magnitude.iter().cloned().fold(f64::MIN, f64::max);
+        approx(peak, 400.0, 1e-9);
+        approx(r.sobel_magnitude[0], 0.0, 1e-9); // col 0 (flat)
+        approx(r.sobel_magnitude[3], 0.0, 1e-9); // col 3 (flat)
     }
 
     #[test]
@@ -53,13 +100,37 @@
         let mut library = MedicalComputingLibrary::new();
         library.initialize().unwrap();
 
-        let compounds = vec![Compound::new()];
-        let target = DrugTarget::new();
+        // Ethanol: small, drug-like → passes Lipinski (0 violations).
+        let mut ethanol = Compound::new();
+        ethanol.compound_id = "eth".to_string();
+        ethanol.chemical_structure = "CCO".to_string();
+        // A 40-carbon alkane: MW > 500 → violates Lipinski (flagged).
+        let mut alkane = Compound::new();
+        alkane.compound_id = "alk".to_string();
+        alkane.chemical_structure = "C".repeat(40);
 
-        // HONEST: no screening models / reference data, so this reports NotImplemented rather
-        // than fabricating a hit_rate from compounds it never actually screened.
-        let result = library.screen_compounds(compounds, target);
-        assert!(matches!(result, Err(MedicalError::NotImplemented(_))));
+        let target = DrugTarget::new();
+        // Rank by Tanimoto similarity to an ethanol query structure.
+        let out = library
+            .screen_compounds(vec![ethanol, alkane], target, Some("CCO"))
+            .unwrap();
+        let p = &out.result;
+        // Honest label — rule-based filter + similarity, NOT an affinity/efficacy prediction.
+        assert!(p.epistemic_status.contains("NOT a"));
+
+        // Ethanol is identical to the query → Tanimoto 1.0 → ranked first.
+        assert_eq!(p.ranked[0].compound_id, "eth");
+        approx(p.ranked[0].tanimoto_to_query, 1.0, 1e-12);
+
+        let eth = p.ranked.iter().find(|r| r.compound_id == "eth").unwrap();
+        let alk = p.ranked.iter().find(|r| r.compound_id == "alk").unwrap();
+        // Descriptors came from the real parsed structure, not a fallback.
+        assert!(eth.descriptors_from_structure);
+        // Ethanol passes the rule-of-five; the big alkane is flagged (MW > 500).
+        assert!(eth.passes_lipinski);
+        assert_eq!(eth.lipinski_violations, 0);
+        assert!(alk.molecular_weight > 500.0);
+        assert!(alk.lipinski_violations >= 1);
     }
 
     #[test]
