@@ -39,11 +39,14 @@ impl HostApiHandle {
     pub fn new(initial_host: Option<WebizenHostApi>) -> Self {
         let (tx, mut rx) = tokio::sync::mpsc::channel::<HostClosure>(128);
         let mut host_state = initial_host;
-        tokio::task::spawn_blocking(move || {
-            while let Some(closure) = rx.blocking_recv() {
-                closure(&mut host_state);
-            }
-        });
+        std::thread::Builder::new()
+            .name("webizen-host-api".to_string())
+            .spawn(move || {
+                while let Some(closure) = rx.blocking_recv() {
+                    closure(&mut host_state);
+                }
+            })
+            .expect("failed to start Webizen host API actor");
         Self { sender: tx }
     }
 
@@ -442,6 +445,19 @@ mod tests {
     use super::*;
     use ed25519_dalek::Signer;
     use ed25519_dalek::SigningKey;
+
+    #[test]
+    fn host_api_handle_starts_without_a_tokio_runtime() {
+        let handle = HostApiHandle::new(None);
+        let value = handle
+            .execute_sync(|host| {
+                assert!(host.is_none());
+                42
+            })
+            .expect("host API actor should execute a synchronous request");
+
+        assert_eq!(value, 42);
+    }
 
     #[test]
     fn verify_valid_pairing_response() {
