@@ -56,15 +56,29 @@ are staged honestly, not faked.
   closed; residual RAND/lang-tag builtins fail closed).
 - **Whole `sparql_library` suite: 292 tests pass, 0 failed.**
 
+### Update 2026-07-13 (later) — float channel + tensor predicate execution
+
+Two documented residuals were closed rather than left as follow-ups:
+
+- **`EvalResult::Float(f64)` channel added.** `RAND` is now a real double in `[0,1)`
+  (query-stable, per-occurrence-salted); comparison/arithmetic mix integers and reals
+  (exact `Numeric/Numeric` term-hash paths preserved — not routed through `f64`). Adding
+  the variant meant dropping the `Eq/Ord/Hash` derives on `EvalResult` (nothing
+  sorts/hashes/set-keys it) — verified.
+- **Tensor10D predicates execute inline.** `qispf:tensorDistance` (→ `Float`) and
+  `qispf:tensorWithin` (→ `Boolean`) now run end-to-end in a FILTER from inline Tensor10D
+  literals (ten finite values), through the resident-substrate metric — no longer just
+  "admitted". Malformed literals fail closed.
+
 ### Honest residual (NOT fabricated — genuine infrastructure gaps)
 
-- `RAND` — needs a float-valued `EvalResult` channel (the enum carries `u64` bits only).
 - `LANG` / `LANGMATCHES` / `STRLANG` / `STRDT` — need a per-term language/datatype tag
-  model the engine does not carry. All fail closed with a named error today.
-- Phase-4 **execution** over QISP-owned mesh/tensor predicates inline (e.g. `qispf:volume`,
-  `qispf:tensorDistance` in a FILTER) needs terms to resolve to `DenseAssetRef` →
-  Tensor10D/mesh payloads (an ingestion path). The typed descriptor is registered and
-  *admitted*; execution is the next Phase-4 increment. Returns an honest error meanwhile.
+  model the engine does not carry. Fail closed with a named error today.
+- Phase-4 **execution** over QISP-owned **mesh/volumetric** predicates inline (e.g.
+  `qispf:volume`, `qispf:intersectionGeometry`) needs terms to resolve to a
+  `DenseAssetRef` → mesh payload (an ingestion path). Those descriptors are registered and
+  *admitted*; execution is a later increment. Returns an honest error meanwhile. (Tensor
+  predicates no longer fall here — they execute from inline literals, above.)
 
 ### ⚑ Where the human (Timothy) is needed
 

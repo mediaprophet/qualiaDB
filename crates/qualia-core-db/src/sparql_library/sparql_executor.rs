@@ -595,6 +595,10 @@ impl<'a> QueryExecutor<'a> {
                 Ok(EvalResult::Boolean(b)) => {
                     input_row.set(var, b as u64);
                 }
+                Ok(EvalResult::Float(f)) => {
+                    // BIND of a real value: store the IEEE-754 bit pattern in the u64 slot.
+                    input_row.set(var, f.to_bits());
+                }
                 Err(_) => { /* expression error → leave `var` unbound */ }
             }
             results.push(input_row);
@@ -672,7 +676,7 @@ impl<'a> QueryExecutor<'a> {
                 let val_b = ExpressionEvaluator::evaluate_with_resolver(expr, ctx, b, self.resolver)
                     .unwrap_or(crate::sparql_filter::EvalResult::Numeric(0));
 
-                let cmp = val_a.cmp(&val_b);
+                let cmp = val_a.total_cmp(&val_b);
                 if cmp != std::cmp::Ordering::Equal {
                     return if asc { cmp } else { cmp.reverse() };
                 }

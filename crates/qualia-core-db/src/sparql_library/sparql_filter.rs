@@ -276,41 +276,76 @@ impl ExpressionEvaluator {
                 (EvalResult::Boolean(l), EvalResult::Boolean(r)) => Ok(EvalResult::Boolean(l && r)),
                 _ => Err("AND operator requires boolean operands".to_string()),
             },
-            BinaryOp::Equal => Ok(EvalResult::Boolean(left == right)),
-            BinaryOp::NotEqual => Ok(EvalResult::Boolean(left != right)),
+            BinaryOp::Equal => match (left, right) {
+                (EvalResult::Numeric(_), EvalResult::Numeric(_)) => {
+                    Ok(EvalResult::Boolean(left == right))
+                }
+                (l, r) if matches!(l, EvalResult::Float(_)) || matches!(r, EvalResult::Float(_)) => {
+                    match (l.as_f64(), r.as_f64()) {
+                        (Some(a), Some(b)) => Ok(EvalResult::Boolean(a == b)),
+                        _ => Ok(EvalResult::Boolean(false)),
+                    }
+                }
+                _ => Ok(EvalResult::Boolean(left == right)),
+            },
+            BinaryOp::NotEqual => match Self::evaluate_binary_op(BinaryOp::Equal, left, right)? {
+                EvalResult::Boolean(b) => Ok(EvalResult::Boolean(!b)),
+                other => Ok(other),
+            },
             BinaryOp::LessThan => match (left, right) {
                 (EvalResult::Numeric(l), EvalResult::Numeric(r)) => Ok(EvalResult::Boolean(l < r)),
-                _ => Err("LESS THAN operator requires numeric operands".to_string()),
+                (l, r) => match (l.as_f64(), r.as_f64()) {
+                    (Some(a), Some(b)) => Ok(EvalResult::Boolean(a < b)),
+                    _ => Err("LESS THAN operator requires numeric operands".to_string()),
+                },
             },
             BinaryOp::LessThanOrEqual => match (left, right) {
                 (EvalResult::Numeric(l), EvalResult::Numeric(r)) => Ok(EvalResult::Boolean(l <= r)),
-                _ => Err("LESS THAN OR EQUAL operator requires numeric operands".to_string()),
+                (l, r) => match (l.as_f64(), r.as_f64()) {
+                    (Some(a), Some(b)) => Ok(EvalResult::Boolean(a <= b)),
+                    _ => Err("LESS THAN OR EQUAL operator requires numeric operands".to_string()),
+                },
             },
             BinaryOp::GreaterThan => match (left, right) {
                 (EvalResult::Numeric(l), EvalResult::Numeric(r)) => Ok(EvalResult::Boolean(l > r)),
-                _ => Err("GREATER THAN operator requires numeric operands".to_string()),
+                (l, r) => match (l.as_f64(), r.as_f64()) {
+                    (Some(a), Some(b)) => Ok(EvalResult::Boolean(a > b)),
+                    _ => Err("GREATER THAN operator requires numeric operands".to_string()),
+                },
             },
             BinaryOp::GreaterThanOrEqual => match (left, right) {
                 (EvalResult::Numeric(l), EvalResult::Numeric(r)) => Ok(EvalResult::Boolean(l >= r)),
-                _ => Err("GREATER THAN OR EQUAL operator requires numeric operands".to_string()),
+                (l, r) => match (l.as_f64(), r.as_f64()) {
+                    (Some(a), Some(b)) => Ok(EvalResult::Boolean(a >= b)),
+                    _ => Err("GREATER THAN OR EQUAL operator requires numeric operands".to_string()),
+                },
             },
             BinaryOp::Add => match (left, right) {
                 (EvalResult::Numeric(l), EvalResult::Numeric(r)) => {
                     Ok(EvalResult::Numeric(l.wrapping_add(r)))
                 }
-                _ => Err("ADD operator requires numeric operands".to_string()),
+                (l, r) => match (l.as_f64(), r.as_f64()) {
+                    (Some(a), Some(b)) => Ok(EvalResult::Float(a + b)),
+                    _ => Err("ADD operator requires numeric operands".to_string()),
+                },
             },
             BinaryOp::Subtract => match (left, right) {
                 (EvalResult::Numeric(l), EvalResult::Numeric(r)) => {
                     Ok(EvalResult::Numeric(l.wrapping_sub(r)))
                 }
-                _ => Err("SUBTRACT operator requires numeric operands".to_string()),
+                (l, r) => match (l.as_f64(), r.as_f64()) {
+                    (Some(a), Some(b)) => Ok(EvalResult::Float(a - b)),
+                    _ => Err("SUBTRACT operator requires numeric operands".to_string()),
+                },
             },
             BinaryOp::Multiply => match (left, right) {
                 (EvalResult::Numeric(l), EvalResult::Numeric(r)) => {
                     Ok(EvalResult::Numeric(l.wrapping_mul(r)))
                 }
-                _ => Err("MULTIPLY operator requires numeric operands".to_string()),
+                (l, r) => match (l.as_f64(), r.as_f64()) {
+                    (Some(a), Some(b)) => Ok(EvalResult::Float(a * b)),
+                    _ => Err("MULTIPLY operator requires numeric operands".to_string()),
+                },
             },
             BinaryOp::Divide => match (left, right) {
                 (EvalResult::Numeric(l), EvalResult::Numeric(r)) => {
@@ -670,15 +705,41 @@ impl ExpressionEvaluator {
                             return Self::run_geo_fn(geo_fn, args_start, args_len, ctx, row, resolver);
                         }
                     }
-                    // QISP-owned mesh/tensor/higher-D predicate: the typed descriptor is
-                    // registered and admitted, but executing it inline needs a Tensor10D/
-                    // mesh asset resolved from the term (the Phase-4 execution increment).
-                    // Fail closed with an honest, named error — never fabricate.
-                    return Err(format!(
-                        "QISP function <{}> is registered and type-admitted but not yet \
-                         executable inline (needs Tensor10D/mesh asset resolution)",
-                        entry.iri
-                    ));
+                    // QISP-owned predicate. The Tensor10D predicates EXECUTE inline now,
+                    // from inline Tensor10D literals (ten finite values), through the
+                    // resident-substrate metric (plan Phase 4 step 5). Mesh/volumetric
+                    // predicates still need a geometry asset resolved from the term (a
+                    // later Phase-4 increment) → honest, named error, never fabricated.
+                    let local = entry.iri.rsplit('#').next().unwrap_or("");
+                    match local {
+                        "tensorDistance" | "tensorWithin" => {
+                            use crate::sparql_library::immersive::functions::{
+                                tensor_distance, tensor_within,
+                            };
+                            let ta = Self::arg_tensor10d(
+                                0, args_start, args_len, ctx, row, resolver, entry.iri,
+                            )?;
+                            let tb = Self::arg_tensor10d(
+                                1, args_start, args_len, ctx, row, resolver, entry.iri,
+                            )?;
+                            if local == "tensorDistance" {
+                                let d = tensor_distance(&ta, &tb).map_err(|e| e.to_string())?;
+                                Ok(EvalResult::Float(d as f64))
+                            } else {
+                                let radius = Self::arg_f64(
+                                    2, args_start, args_len, ctx, row, resolver, entry.iri,
+                                )?;
+                                let within = tensor_within(&ta, &tb, radius as f32)
+                                    .map_err(|e| e.to_string())?;
+                                Ok(EvalResult::Boolean(within))
+                            }
+                        }
+                        _ => Err(format!(
+                            "QISP function <{}> is registered and type-admitted but not yet \
+                             executable inline (needs geometry/mesh asset resolution)",
+                            entry.iri
+                        )),
+                    }
                 }
 
                 // 3. Unknown to both engines.
@@ -877,18 +938,24 @@ impl ExpressionEvaluator {
                     None => Err("BNODE produces a term but no string sink is available".to_string()),
                 }
             }
-            // Genuinely-blocked builtins fail closed with an honest, named error —
-            // never a fabricated pass. The residual is bounded by real infrastructure
-            // gaps, NOT laziness (see docs/plans/immersive-sparql-hypermedia-profile.md
-            // §1.1, QISP-R06):
-            //   • RAND — needs a float-valued EvalResult channel (the enum carries u64
-            //     bits only; a fake integer would not be a SPARQL double);
-            //   • LANG / LANGMATCHES / STRLANG / STRDT — need a per-term language/
-            //     datatype tag model the engine does not yet carry.
+            // RAND() → a real double in [0, 1) via the EvalResult::Float channel.
+            // Query-stable + per-occurrence-salted (plan §4.4): the same RAND() site
+            // yields the same value within a query, distinct sites differ. Without a
+            // query-stable seed it fails closed rather than fabricate.
+            Function::Rand => {
+                let seed = resolver.map(|r| r.seed).unwrap_or(0);
+                if seed == 0 {
+                    return Err("RAND requires a query-stable seed; none supplied".to_string());
+                }
+                Ok(EvalResult::Float(Self::deterministic_unit_f64(seed, args_start as u64)))
+            }
+            // The only genuinely-blocked builtins remaining fail closed with an honest,
+            // named error — never fabricate. Real infra gap, NOT laziness: LANG /
+            // LANGMATCHES / STRLANG / STRDT need a per-term language/datatype tag model
+            // the engine does not yet carry.
             other => Err(format!(
-                "SPARQL FILTER function {other:?} is not implemented (residual QISP-R06: \
-                 needs a float-return channel or a per-term lang/datatype model); \
-                 refusing to fabricate a passing result"
+                "SPARQL FILTER function {other:?} is not implemented (residual: needs a \
+                 per-term language/datatype tag model); refusing to fabricate a result"
             )),
         }
     }
@@ -935,7 +1002,7 @@ impl ExpressionEvaluator {
         let expr_id = ctx.function_args[args_start as usize + idx];
         let hash = match Self::evaluate_with_resolver(expr_id, ctx, row, Some(resolver))? {
             EvalResult::Numeric(h) | EvalResult::Iri(h) | EvalResult::String(h) => h,
-            EvalResult::Boolean(_) => {
+            EvalResult::Boolean(_) | EvalResult::Float(_) => {
                 return Err(format!("{fname} argument is not a string term"))
             }
         };
@@ -1075,16 +1142,101 @@ impl ExpressionEvaluator {
             u[0], u[1], u[2], u[3], u[4], u[5], u[6], u[7], u[8], u[9], u[10], u[11], u[12], u[13], u[14], u[15]
         )
     }
+
+    /// Deterministic double in `[0, 1)` from `(seed, salt)` — the `RAND` channel.
+    /// Query-stable (same key → same value) via splitmix64, top 53 bits → mantissa.
+    fn deterministic_unit_f64(seed: u64, salt: u64) -> f64 {
+        let mut x = seed ^ salt.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+        x = x.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        let mut z = x;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^= z >> 31;
+        (z >> 11) as f64 / (1u64 << 53) as f64
+    }
+
+    /// Evaluate function argument `idx` to an `f64` — accepts a `Float` result, a
+    /// numeric literal term whose resolved text parses as a number, or a raw
+    /// `Numeric` hash as a fallback. Used for the `tensorWithin` radius.
+    fn arg_f64(
+        idx: usize,
+        args_start: u16,
+        args_len: u16,
+        ctx: &SparqlQueryContext,
+        row: &BindingRow,
+        resolver: Option<crate::sparql_ast::TextResolver>,
+        fname: &str,
+    ) -> Result<f64, String> {
+        if (idx as u16) >= args_len {
+            return Err(format!("{fname} is missing a required numeric argument"));
+        }
+        let expr_id = ctx.function_args[args_start as usize + idx];
+        match Self::evaluate_with_resolver(expr_id, ctx, row, resolver)? {
+            EvalResult::Float(f) => Ok(f),
+            EvalResult::Numeric(n) => {
+                if let Some(r) = resolver {
+                    if let Some(t) = r.resolve_text(n) {
+                        if let Ok(v) = t.trim().parse::<f64>() {
+                            return Ok(v);
+                        }
+                    }
+                }
+                Ok(n as f64)
+            }
+            _ => Err(format!("{fname} argument is not numeric")),
+        }
+    }
+
+    /// Parse an inline Tensor10D literal — exactly ten finite values separated by
+    /// commas/whitespace (optional surrounding brackets/parens) — into a
+    /// [`Tensor10D`](crate::tensor::Tensor10D), reusing the profile's arity+finiteness
+    /// validation (plan §3.6). Honest error on wrong arity / non-finite / bad number.
+    fn parse_inline_tensor10d(text: &str) -> Result<crate::tensor::Tensor10D, String> {
+        let vals: Vec<f64> = text
+            .split(|c: char| {
+                c == ',' || c.is_whitespace() || c == '[' || c == ']' || c == '(' || c == ')'
+            })
+            .filter(|s| !s.is_empty())
+            .map(|s| s.parse::<f64>())
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Tensor10D literal parse error: {e}"))?;
+        let v = crate::sparql_library::immersive::validate_inline_tensor10d(&vals)
+            .map_err(|e| e.to_string())?;
+        Ok(crate::tensor::Tensor10D::new(
+            v[0] as f32, v[1] as f32, v[2] as f32, v[3] as f32, v[4] as f32, v[5] as f32,
+            v[6] as f32, v[7] as f32, v[8] as f32, v[9] as f32,
+        ))
+    }
+
+    /// Resolve function argument `idx` as an inline Tensor10D literal.
+    fn arg_tensor10d(
+        idx: usize,
+        args_start: u16,
+        args_len: u16,
+        ctx: &SparqlQueryContext,
+        row: &BindingRow,
+        resolver: Option<crate::sparql_ast::TextResolver>,
+        fname: &str,
+    ) -> Result<crate::tensor::Tensor10D, String> {
+        let text = Self::arg_text(idx, args_start, args_len, ctx, row, resolver, fname)?;
+        Self::parse_inline_tensor10d(&text)
+    }
 }
 
-/// Evaluation result
+/// Evaluation result.
+///
+/// `Float(f64)` is the real-valued measurement / random channel (`RAND`,
+/// `qispf:tensorDistance`). Adding it drops `Eq`/`Ord`/`Hash` (f64 has no total
+/// equality/order/hash) — sound because nothing sorts/hashes/set-keys an `EvalResult`;
+/// every consumer pattern-matches it or compares via `evaluate_binary_op`.
 #[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum EvalResult {
     Numeric(u64),
     Boolean(bool),
     Iri(u64),
     String(u64), // Hash of string
+    Float(f64),  // Real-valued measurement / random channel
 }
 
 impl EvalResult {
@@ -1092,7 +1244,46 @@ impl EvalResult {
         match self {
             EvalResult::Boolean(b) => *b,
             EvalResult::Numeric(n) => *n != 0,
+            EvalResult::Float(f) => *f != 0.0,
             _ => false,
+        }
+    }
+
+    /// Numeric view for comparison/arithmetic: `Numeric(n)` → `n as f64`,
+    /// `Float(f)` → `f`, else `None`.
+    pub fn as_f64(&self) -> Option<f64> {
+        match self {
+            EvalResult::Numeric(n) => Some(*n as f64),
+            EvalResult::Float(f) => Some(*f),
+            _ => None,
+        }
+    }
+
+    /// Total order for ORDER BY. Replaces the derived `Ord` (dropped because
+    /// `Float(f64)` has no total `Ord`): numeric values (`Numeric`/`Float`) sort by
+    /// value via `f64::total_cmp`; otherwise a stable per-variant rank then the inner
+    /// hash/bool. This is a *sort* order, not SPARQL value equality.
+    pub fn total_cmp(&self, other: &EvalResult) -> core::cmp::Ordering {
+        use core::cmp::Ordering;
+        if let (Some(a), Some(b)) = (self.as_f64(), other.as_f64()) {
+            return a.total_cmp(&b);
+        }
+        fn rank(e: &EvalResult) -> u8 {
+            match e {
+                EvalResult::Numeric(_) | EvalResult::Float(_) => 0,
+                EvalResult::Boolean(_) => 1,
+                EvalResult::Iri(_) => 2,
+                EvalResult::String(_) => 3,
+            }
+        }
+        match rank(self).cmp(&rank(other)) {
+            Ordering::Equal => match (self, other) {
+                (EvalResult::Boolean(a), EvalResult::Boolean(b)) => a.cmp(b),
+                (EvalResult::Iri(a), EvalResult::Iri(b)) => a.cmp(b),
+                (EvalResult::String(a), EvalResult::String(b)) => a.cmp(b),
+                _ => Ordering::Equal,
+            },
+            ord => ord,
         }
     }
 
@@ -1537,6 +1728,110 @@ mod tests {
         assert!(
             ExpressionEvaluator::evaluate_function(vol, 0, 1, &ctx, &row, Some(resolver)).is_err(),
             "qispf:volume needs asset resolution → honest error, not fabricated"
+        );
+    }
+
+    #[test]
+    fn test_qisp_tensor_predicates_execute_inline() {
+        use crate::sparql_ast::StringSink;
+        let mut ctx = SparqlQueryContext::new();
+        let (ha, hb, hr5, hr4) = (0x7A1u64, 0x7B2u64, 0x7C3u64, 0x7D4u64);
+        let ea = ctx.alloc_expression(Expression::Literal(ha)).unwrap();
+        let eb = ctx.alloc_expression(Expression::Literal(hb)).unwrap();
+        let er5 = ctx.alloc_expression(Expression::Literal(hr5)).unwrap();
+        let er4 = ctx.alloc_expression(Expression::Literal(hr4)).unwrap();
+        let mut lits = LiteralTable::new();
+        // a at origin, b offset (Δx=3, Δy=4) → euclidean distance 5 (v=0).
+        lits.intern(ha, "0,0,0,0,0,0,0,0,0,0");
+        lits.intern(hb, "0,0,0,3,4,0,0,0,0,0");
+        lits.intern(hr5, "5.0");
+        lits.intern(hr4, "4.0");
+        let sink = StringSink::new();
+        let resolver = TextResolver::new(&lits).with_sink(&sink);
+        let row = BindingRow::new();
+
+        // tensorDistance(a, b) → Float(5.0), through the resident substrate metric.
+        ctx.function_args[0] = ea;
+        ctx.function_args[1] = eb;
+        ctx.function_arg_count = 2;
+        let dist_iri = Function::Custom(crate::q_hash(
+            "https://webizen.org/immersive/function/0.1#tensorDistance",
+        ));
+        match ExpressionEvaluator::evaluate_function(dist_iri, 0, 2, &ctx, &row, Some(resolver)).unwrap() {
+            EvalResult::Float(d) => assert!((d - 5.0).abs() < 1e-5, "distance {d} != 5"),
+            other => panic!("tensorDistance must be Float, got {other:?}"),
+        }
+
+        // tensorWithin(a, b, 5.0) → true; radius 4.0 → false.
+        ctx.function_args[2] = er5;
+        ctx.function_arg_count = 3;
+        let within_iri = Function::Custom(crate::q_hash(
+            "https://webizen.org/immersive/function/0.1#tensorWithin",
+        ));
+        let w5 = ExpressionEvaluator::evaluate_function(within_iri, 0, 3, &ctx, &row, Some(resolver)).unwrap();
+        assert_eq!(w5, EvalResult::Boolean(true), "distance 5 is within radius 5");
+        ctx.function_args[2] = er4;
+        let w4 = ExpressionEvaluator::evaluate_function(within_iri, 0, 3, &ctx, &row, Some(resolver)).unwrap();
+        assert_eq!(w4, EvalResult::Boolean(false), "distance 5 is NOT within radius 4");
+
+        // A malformed tensor literal (wrong arity) fails closed, never fabricates.
+        let mut ctx2 = SparqlQueryContext::new();
+        let bad = 0x7E5u64;
+        let ebad = ctx2.alloc_expression(Expression::Literal(bad)).unwrap();
+        let eb2 = ctx2.alloc_expression(Expression::Literal(hb)).unwrap();
+        ctx2.function_args[0] = ebad;
+        ctx2.function_args[1] = eb2;
+        ctx2.function_arg_count = 2;
+        let mut lits2 = LiteralTable::new();
+        lits2.intern(bad, "1,2,3"); // only 3 values
+        lits2.intern(hb, "0,0,0,3,4,0,0,0,0,0");
+        let sink2 = StringSink::new();
+        let resolver2 = TextResolver::new(&lits2).with_sink(&sink2);
+        assert!(
+            ExpressionEvaluator::evaluate_function(dist_iri, 0, 2, &ctx2, &BindingRow::new(), Some(resolver2)).is_err(),
+            "a 3-value tensor literal must fail closed, not fabricate a distance"
+        );
+    }
+
+    #[test]
+    fn test_rand_and_float_channel() {
+        let ctx = SparqlQueryContext::new();
+        let lits = LiteralTable::new();
+        let sink = crate::sparql_ast::StringSink::new();
+        let resolver = TextResolver::new(&lits).with_sink(&sink).with_env(0, 0xABCDEF);
+        let row = BindingRow::new();
+
+        // RAND is a real double in [0,1), query-stable per site, distinct per site.
+        let r1 = ExpressionEvaluator::evaluate_function(Function::Rand, 0, 0, &ctx, &row, Some(resolver)).unwrap();
+        let r1b = ExpressionEvaluator::evaluate_function(Function::Rand, 0, 0, &ctx, &row, Some(resolver)).unwrap();
+        assert_eq!(r1, r1b, "RAND is stable at the same site within a query");
+        match r1 {
+            EvalResult::Float(v) => assert!((0.0..1.0).contains(&v), "RAND {v} not in [0,1)"),
+            other => panic!("RAND must be Float, got {other:?}"),
+        }
+        let r2 = ExpressionEvaluator::evaluate_function(Function::Rand, 4, 0, &ctx, &row, Some(resolver)).unwrap();
+        assert_ne!(r1, r2, "distinct RAND sites differ");
+
+        // Without a query-stable seed, RAND fails closed (never fabricates).
+        let no_seed = TextResolver::new(&lits);
+        assert!(
+            ExpressionEvaluator::evaluate_function(Function::Rand, 0, 0, &ctx, &row, Some(no_seed)).is_err(),
+            "RAND without a seed must fail closed"
+        );
+
+        // Float participates in comparison + arithmetic, mixing with integer terms.
+        assert_eq!(
+            ExpressionEvaluator::evaluate_binary_op(BinaryOp::LessThan, EvalResult::Float(5.0), EvalResult::Numeric(6)),
+            Ok(EvalResult::Boolean(true))
+        );
+        assert_eq!(
+            ExpressionEvaluator::evaluate_binary_op(BinaryOp::Add, EvalResult::Float(2.5), EvalResult::Numeric(1)),
+            Ok(EvalResult::Float(3.5))
+        );
+        // Exact term-hash equality (Numeric/Numeric) is preserved, not routed through f64.
+        assert_eq!(
+            ExpressionEvaluator::evaluate_binary_op(BinaryOp::Equal, EvalResult::Numeric(42), EvalResult::Numeric(42)),
+            Ok(EvalResult::Boolean(true))
         );
     }
 
