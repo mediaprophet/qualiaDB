@@ -11,24 +11,24 @@ export const N3_RULE_ARROWS = [
 ];
 
 export const N3_PRESETS = {
-    strict: `@prefix q42: <https://qualia.network/q42#> .
+    strict: `@prefix q42: <https://webizen.org/q42#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 
 { ?x a foaf:Person } => { ?x a q42:Mortal } .
 :socrates a foaf:Person .`,
-    defeasible: `@prefix q42: <https://qualia.network/q42#> .
+    defeasible: `@prefix q42: <https://webizen.org/q42#> .
 
 { ?agent q42:role q42:Guardian } ~> { ?agent q42:may q42:accessRecords } .
 { ?agent q42:role q42:Minor } ~> { ?agent q42:mayNot q42:accessRecords } .`,
-    defeater: `@prefix q42: <https://qualia.network/q42#> .
+    defeater: `@prefix q42: <https://webizen.org/q42#> .
 
 { ?party q42:signed q42:Agreement } ~> { ?party q42:may q42:shareData } .
 { ?party q42:revoked q42:Consent } ^> { ?party q42:may q42:shareData } .`,
-    linear: `@prefix q42: <https://qualia.network/q42#> .
+    linear: `@prefix q42: <https://webizen.org/q42#> .
 
 { ?token q42:status q42:Active } -o { ?token q42:status q42:Consumed } .
 :sessionToken q42:status q42:Active .`,
-    deontic: `@prefix q42: <https://qualia.network/q42#> .
+    deontic: `@prefix q42: <https://webizen.org/q42#> .
 
 { ?g q42:hasRole q42:Guardian ; q42:must q42:obtainConsent } => { ?g q42:obligated q42:consentFlow } .
 { ?g q42:hasRole q42:Guardian } ~> { ?g q42:may q42:viewHealthRecord } .

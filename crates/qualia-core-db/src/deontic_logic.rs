@@ -20,17 +20,17 @@ pub mod vc_roles {
     use crate::q_hash;
 
     /// Any authenticated principal — no further VC attributes required.
-    pub const AUTHENTICATED:      u64 = q_hash("urn:qualia:role:authenticated");
+    pub const AUTHENTICATED: u64 = q_hash("urn:qualia:role:authenticated");
     /// Professional context (e.g., organisation employee with NDA).
-    pub const PROFESSIONAL:       u64 = q_hash("urn:qualia:role:professional");
+    pub const PROFESSIONAL: u64 = q_hash("urn:qualia:role:professional");
     /// Legal practitioner with privileged access to legal subgraph.
     pub const LEGAL_PRACTITIONER: u64 = q_hash("urn:qualia:role:legal-practitioner");
     /// Registered medical professional.
     pub const MEDICAL_PROFESSIONAL: u64 = q_hash("urn:qualia:role:medical-professional");
     /// Fiduciary duty holder (financial advisor, trustee, etc.).
-    pub const FIDUCIARY:          u64 = q_hash("urn:qualia:role:fiduciary");
+    pub const FIDUCIARY: u64 = q_hash("urn:qualia:role:fiduciary");
     /// Qualia node operator — administrative role.
-    pub const NODE_OPERATOR:      u64 = q_hash("urn:qualia:role:node-operator");
+    pub const NODE_OPERATOR: u64 = q_hash("urn:qualia:role:node-operator");
 }
 
 /// Predicate hash for VC role claims (`urn:qualia:vc:hasRole`).
@@ -48,11 +48,11 @@ const MAX_ROLES: usize = 8;
 /// Extracted from the agent's NQuin slice via `VcAttributes::from_quins()`.
 #[derive(Debug, Clone, Copy)]
 pub struct VcAttributes {
-    pub did_hash:         u64,
-    pub roles:            [u64; MAX_ROLES],
-    pub role_count:       u8,
+    pub did_hash: u64,
+    pub roles: [u64; MAX_ROLES],
+    pub role_count: u8,
     /// Numeric clearance level (0=public … 4=fiduciary). Sourced from `vc:clearanceLevel`.
-    pub clearance_level:  u8,
+    pub clearance_level: u8,
     /// Hash of the VC issuer's DID — must be in the trusted-issuer set.
     pub credential_issuer: u64,
 }
@@ -105,7 +105,10 @@ pub enum DeonticResult {
     /// Policy passed — the derived `SubgraphKey` can be released to the agent.
     KeyRelease(SubgraphKey),
     /// Policy denied. The key is not returned.
-    AccessDenied { layer: SubgraphLayer, reason: &'static str },
+    AccessDenied {
+        layer: SubgraphLayer,
+        reason: &'static str,
+    },
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -166,28 +169,33 @@ pub fn evaluate_vc_for_subgraph_key_release(
             vc.clearance_level >= 3 || vc.has_role(vc_roles::MEDICAL_PROFESSIONAL)
         }
 
-        SubgraphLayer::Fiduciary => {
-            vc.clearance_level >= 4 || vc.has_role(vc_roles::FIDUCIARY)
-        }
+        SubgraphLayer::Fiduciary => vc.clearance_level >= 4 || vc.has_role(vc_roles::FIDUCIARY),
     };
 
     if policy_passed {
         DeonticResult::KeyRelease(vault.generate_layer_key(layer))
     } else {
-        DeonticResult::AccessDenied { layer, reason: "insufficient VC clearance or role" }
+        DeonticResult::AccessDenied {
+            layer,
+            reason: "insufficient VC clearance or role",
+        }
     }
 }
 
-/// Convenience: evaluate which layers the agent can access and return all permitted keys.
+/// Convenience: evaluate which layers the agent can access and write the permitted
+/// keys into `out`, in ascending layer order.
 ///
-/// Returns `(SubgraphLayer, SubgraphKey)` pairs in ascending layer order.
-/// At most 5 entries (one per layer). This function is not on a hot path.
+/// Zero-heap: writes at most `out.len().min(5)` `(SubgraphLayer, SubgraphKey)` entries
+/// (one per layer) into the caller-supplied slice and returns the count written.
+/// `SubgraphKey` is move-only (it zeroizes on drop), so `out` is a slice of `Option<…>`;
+/// written entries are `Some`. This function is not on a hot path.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn evaluate_accessible_layers(
     vault: &KeyVault,
     vc: &VcAttributes,
     trusted_issuers: &[u64],
-) -> Vec<(SubgraphLayer, SubgraphKey)> {
+    out: &mut [Option<(SubgraphLayer, SubgraphKey)>],
+) -> usize {
     let layers = [
         SubgraphLayer::Public,
         SubgraphLayer::Professional,
@@ -195,15 +203,19 @@ pub fn evaluate_accessible_layers(
         SubgraphLayer::Medical,
         SubgraphLayer::Fiduciary,
     ];
-    let mut result = Vec::with_capacity(layers.len());
+    let mut n = 0usize;
     for layer in layers {
         if let DeonticResult::KeyRelease(key) =
             evaluate_vc_for_subgraph_key_release(vault, vc, layer, trusted_issuers)
         {
-            result.push((layer, key));
+            if n >= out.len() {
+                break;
+            }
+            out[n] = Some((layer, key));
+            n += 1;
         }
     }
-    result
+    n
 }
 
 /// Build the NQuins that record a VC credential claim for an agent, for insertion
@@ -220,38 +232,43 @@ pub fn write_vc_claim_quins(
 ) -> [crate::NQuin; 3] {
     const VC_CONTEXT: u64 = q_hash("urn:qualia:context:vc");
 
-    let role_hash = if roles.is_empty() { vc_roles::AUTHENTICATED } else { roles[0] };
+    let role_hash = if roles.is_empty() {
+        vc_roles::AUTHENTICATED
+    } else {
+        roles[0]
+    };
 
     [
         crate::NQuin {
-            subject:   agent_did,
+            subject: agent_did,
             predicate: P_HAS_ROLE,
-            object:    role_hash,
-            context:   VC_CONTEXT,
-            metadata:  ts & 0xFFFF_FFFF,
-            parity:    agent_did ^ P_HAS_ROLE ^ role_hash ^ VC_CONTEXT,
+            object: role_hash,
+            context: VC_CONTEXT,
+            metadata: ts & 0xFFFF_FFFF,
+            parity: agent_did ^ P_HAS_ROLE ^ role_hash ^ VC_CONTEXT,
         },
         crate::NQuin {
-            subject:   agent_did,
+            subject: agent_did,
             predicate: P_CLEARANCE_LEVEL,
-            object:    clearance as u64,
-            context:   VC_CONTEXT,
-            metadata:  ts & 0xFFFF_FFFF,
-            parity:    agent_did ^ P_CLEARANCE_LEVEL ^ (clearance as u64) ^ VC_CONTEXT,
+            object: clearance as u64,
+            context: VC_CONTEXT,
+            metadata: ts & 0xFFFF_FFFF,
+            parity: agent_did ^ P_CLEARANCE_LEVEL ^ (clearance as u64) ^ VC_CONTEXT,
         },
         crate::NQuin {
-            subject:   agent_did,
+            subject: agent_did,
             predicate: P_ISSUED_BY,
-            object:    issuer_did,
-            context:   VC_CONTEXT,
-            metadata:  ts & 0xFFFF_FFFF,
-            parity:    agent_did ^ P_ISSUED_BY ^ issuer_did ^ VC_CONTEXT,
+            object: issuer_did,
+            context: VC_CONTEXT,
+            metadata: ts & 0xFFFF_FFFF,
+            parity: agent_did ^ P_ISSUED_BY ^ issuer_did ^ VC_CONTEXT,
         },
     ]
 }
 
-use crate::modalities::logic::n3_parser::{Rule, RuleType, Term};
-use crate::modalities::logic::deontic::{OP_OBLIGATE, OP_PERMIT, OP_FORBID, DEFEATER_BIT};
+use crate::modalities::logic::deontic::{DEFEATER_BIT, OP_FORBID, OP_OBLIGATE, OP_PERMIT};
+use crate::modalities::logic::n3_compiler::CompiledRule;
+use crate::modalities::logic::n3_parser::RuleType;
 
 /// Compile an N3 rule into a norm Quin (or a defeater Quin if rule_type is Defeater).
 ///
@@ -263,27 +280,24 @@ use crate::modalities::logic::deontic::{OP_OBLIGATE, OP_PERMIT, OP_FORBID, DEFEA
 ///   conclusion.triples[0].subject → contract context hash
 ///
 /// Returns None if the rule does not have the expected triple structure.
-pub fn compile_n3_rule_to_norm(rule: &Rule, contract_hash: u64, expiry_unix32: u32) -> Option<crate::NQuin> {
-    if rule.premise.triples.is_empty() || rule.conclusion.triples.is_empty() {
+pub fn compile_n3_rule_to_norm(
+    rule: &CompiledRule,
+    contract_hash: u64,
+    expiry_unix32: u32,
+) -> Option<crate::NQuin> {
+    if rule.premise.len == 0 || rule.conclusion.len == 0 {
         return None;
     }
 
     let premise_triple = &rule.premise.triples[0];
     let conclusion_triple = &rule.conclusion.triples[0];
 
-    // Helper to extract string from Term
-    let extract_str = |t: &Term| -> String {
-        match t {
-            Term::Uri(s) | Term::Variable(s) | Term::Literal(s) => s.clone(),
-        }
-    };
+    let party_did_hash = premise_triple.subject.as_u64();
+    let property_path_hash = premise_triple.predicate.as_u64();
+    let action_object_hash = premise_triple.object.as_u64();
 
-    let party_did_hash = q_hash(&extract_str(&premise_triple.subject));
-    let property_path_hash = q_hash(&extract_str(&premise_triple.predicate));
-    let action_object_hash = q_hash(&extract_str(&premise_triple.object));
-    
     let mapped_contract_hash = if contract_hash == 0 {
-        q_hash(&extract_str(&conclusion_triple.subject))
+        conclusion_triple.subject.as_u64()
     } else {
         contract_hash
     };
@@ -291,18 +305,37 @@ pub fn compile_n3_rule_to_norm(rule: &Rule, contract_hash: u64, expiry_unix32: u
     let mut opcode = OP_PERMIT;
     let mut is_defeater = false;
 
-    let predicate_str = extract_str(&premise_triple.predicate).to_lowercase();
+    let p_hash = property_path_hash;
+
+    let is_obligate = [
+        crate::q_hash("q42:obligate"),
+        crate::q_hash("q42:must"),
+        crate::q_hash("q42:shall"),
+    ]
+    .contains(&p_hash);
+    let is_permit = [
+        crate::q_hash("q42:permit"),
+        crate::q_hash("q42:may"),
+        crate::q_hash("q42:can"),
+    ]
+    .contains(&p_hash);
+    let is_forbid = [
+        crate::q_hash("q42:forbid"),
+        crate::q_hash("q42:not"),
+        crate::q_hash("q42:prohibit"),
+    ]
+    .contains(&p_hash);
 
     match rule.rule_type {
         RuleType::Strict => {
-            if predicate_str.contains("obligate") || predicate_str.contains("must") || predicate_str.contains("shall") {
+            if is_obligate {
                 opcode = OP_OBLIGATE;
             }
         }
         RuleType::Defeasible => {
-            if predicate_str.contains("permit") || predicate_str.contains("may") || predicate_str.contains("can") {
+            if is_permit {
                 opcode = OP_PERMIT;
-            } else if predicate_str.contains("forbid") || predicate_str.contains("not") || predicate_str.contains("prohibit") {
+            } else if is_forbid {
                 opcode = OP_FORBID;
             }
         }
@@ -311,7 +344,7 @@ pub fn compile_n3_rule_to_norm(rule: &Rule, contract_hash: u64, expiry_unix32: u
             is_defeater = true;
         }
         RuleType::Linear => {
-            if predicate_str.contains("obligate") {
+            if is_obligate {
                 opcode = OP_OBLIGATE;
             }
         }
@@ -319,14 +352,15 @@ pub fn compile_n3_rule_to_norm(rule: &Rule, contract_hash: u64, expiry_unix32: u
 
     let mut quin = crate::NQuin::default();
     quin.subject = party_did_hash;
-    
+
     // Predicate: opcode in lower 8 bits, property hash shifted left 8 bits (masked to 55 bits), and DEFEATER_BIT if needed
-    let mut predicate_packed = ((property_path_hash & 0x007F_FFFF_FFFF_FFFF) << 8) | (opcode as u64);
+    let mut predicate_packed =
+        ((property_path_hash & 0x007F_FFFF_FFFF_FFFF) << 8) | (opcode as u64);
     if is_defeater {
         predicate_packed |= DEFEATER_BIT;
     }
     quin.predicate = predicate_packed;
-    
+
     quin.object = action_object_hash;
     quin.context = mapped_contract_hash;
     quin.metadata = expiry_unix32 as u64;
@@ -345,7 +379,7 @@ mod tests {
     }
 
     const ISSUER: u64 = 0x1550_0000_0000_CAFE;
-    const AGENT:  u64 = 0xA6E4_7777_0000_0001;
+    const AGENT: u64 = 0xA6E4_7777_0000_0001;
 
     fn vc_with_role(role: u64, clearance: u8) -> VcAttributes {
         let mut vc = VcAttributes::unauthenticated(AGENT);
@@ -370,15 +404,33 @@ mod tests {
 
         // No role, no clearance → deny.
         let no_vc = VcAttributes::unauthenticated(AGENT);
-        assert!(!evaluate_vc_for_subgraph_key_release(&vault, &no_vc, SubgraphLayer::Professional, &[]).is_permitted());
+        assert!(!evaluate_vc_for_subgraph_key_release(
+            &vault,
+            &no_vc,
+            SubgraphLayer::Professional,
+            &[]
+        )
+        .is_permitted());
 
         // Professional role → permit.
         let pro = vc_with_role(vc_roles::PROFESSIONAL, 0);
-        assert!(evaluate_vc_for_subgraph_key_release(&vault, &pro, SubgraphLayer::Professional, &[]).is_permitted());
+        assert!(evaluate_vc_for_subgraph_key_release(
+            &vault,
+            &pro,
+            SubgraphLayer::Professional,
+            &[]
+        )
+        .is_permitted());
 
         // Clearance 1 → permit.
         let cleared = vc_with_role(0, 1);
-        assert!(evaluate_vc_for_subgraph_key_release(&vault, &cleared, SubgraphLayer::Professional, &[]).is_permitted());
+        assert!(evaluate_vc_for_subgraph_key_release(
+            &vault,
+            &cleared,
+            SubgraphLayer::Professional,
+            &[]
+        )
+        .is_permitted());
     }
 
     #[test]
@@ -386,13 +438,28 @@ mod tests {
         let vault = test_vault();
 
         let low = vc_with_role(vc_roles::PROFESSIONAL, 0);
-        assert!(!evaluate_vc_for_subgraph_key_release(&vault, &low, SubgraphLayer::Medical, &[]).is_permitted());
+        assert!(
+            !evaluate_vc_for_subgraph_key_release(&vault, &low, SubgraphLayer::Medical, &[])
+                .is_permitted()
+        );
 
         let med_role = vc_with_role(vc_roles::MEDICAL_PROFESSIONAL, 0);
-        assert!(evaluate_vc_for_subgraph_key_release(&vault, &med_role, SubgraphLayer::Medical, &[]).is_permitted());
+        assert!(evaluate_vc_for_subgraph_key_release(
+            &vault,
+            &med_role,
+            SubgraphLayer::Medical,
+            &[]
+        )
+        .is_permitted());
 
         let cleared = vc_with_role(0, 3);
-        assert!(evaluate_vc_for_subgraph_key_release(&vault, &cleared, SubgraphLayer::Medical, &[]).is_permitted());
+        assert!(evaluate_vc_for_subgraph_key_release(
+            &vault,
+            &cleared,
+            SubgraphLayer::Medical,
+            &[]
+        )
+        .is_permitted());
     }
 
     #[test]
@@ -400,10 +467,16 @@ mod tests {
         let vault = test_vault();
 
         let med = vc_with_role(vc_roles::MEDICAL_PROFESSIONAL, 3);
-        assert!(!evaluate_vc_for_subgraph_key_release(&vault, &med, SubgraphLayer::Fiduciary, &[]).is_permitted());
+        assert!(
+            !evaluate_vc_for_subgraph_key_release(&vault, &med, SubgraphLayer::Fiduciary, &[])
+                .is_permitted()
+        );
 
         let fid = vc_with_role(vc_roles::FIDUCIARY, 0);
-        assert!(evaluate_vc_for_subgraph_key_release(&vault, &fid, SubgraphLayer::Fiduciary, &[]).is_permitted());
+        assert!(
+            evaluate_vc_for_subgraph_key_release(&vault, &fid, SubgraphLayer::Fiduciary, &[])
+                .is_permitted()
+        );
     }
 
     #[test]
@@ -413,10 +486,22 @@ mod tests {
 
         let mut vc = vc_with_role(vc_roles::FIDUCIARY, 4);
         vc.credential_issuer = 0xBAD_CAFE; // wrong issuer
-        assert!(!evaluate_vc_for_subgraph_key_release(&vault, &vc, SubgraphLayer::Fiduciary, &trusted).is_permitted());
+        assert!(!evaluate_vc_for_subgraph_key_release(
+            &vault,
+            &vc,
+            SubgraphLayer::Fiduciary,
+            &trusted
+        )
+        .is_permitted());
 
         vc.credential_issuer = ISSUER; // correct issuer
-        assert!(evaluate_vc_for_subgraph_key_release(&vault, &vc, SubgraphLayer::Fiduciary, &trusted).is_permitted());
+        assert!(evaluate_vc_for_subgraph_key_release(
+            &vault,
+            &vc,
+            SubgraphLayer::Fiduciary,
+            &trusted
+        )
+        .is_permitted());
     }
 
     #[test]
@@ -424,9 +509,22 @@ mod tests {
         let vault = test_vault();
         // clearance 2 → Public + Professional + Legal, not Medical or Fiduciary.
         let vc = vc_with_role(0, 2);
-        let accessible = evaluate_accessible_layers(&vault, &vc, &[]);
-        let layers: Vec<SubgraphLayer> = accessible.iter().map(|(l, _)| *l).collect();
-        assert_eq!(layers, vec![SubgraphLayer::Public, SubgraphLayer::Professional, SubgraphLayer::Legal]);
+        let mut out: [Option<(SubgraphLayer, SubgraphKey)>; 5] = [None, None, None, None, None];
+        let count = evaluate_accessible_layers(&vault, &vc, &[], &mut out);
+        assert_eq!(count, 3);
+        let layers = [
+            out[0].as_ref().unwrap().0,
+            out[1].as_ref().unwrap().0,
+            out[2].as_ref().unwrap().0,
+        ];
+        assert_eq!(
+            layers,
+            [
+                SubgraphLayer::Public,
+                SubgraphLayer::Professional,
+                SubgraphLayer::Legal
+            ]
+        );
     }
 
     #[test]
@@ -441,9 +539,9 @@ mod tests {
 
     #[test]
     fn test_child_medical_data_egress_violation() {
+        use crate::mini_parser::{OP_END, OP_EVAL_PERMIT};
         use crate::webizen_bytecode::{execute_program, GuardianshipContext, VmError};
-        use crate::mini_parser::{OP_EVAL_PERMIT, OP_END};
-        
+
         let child_did = crate::q_hash("did:q42:child");
         let medical_data = crate::q_hash("MedicalData");
         let share_data = crate::q_hash("q42:shareData");
@@ -458,67 +556,102 @@ mod tests {
         // Program just has OP_EVAL_PERMIT then OP_END
         prog[0] = OP_EVAL_PERMIT;
         prog[1] = OP_END;
-        
+
         let mut out = [crate::NQuin::default(); 10];
-        
+
         let context = GuardianshipContext {
             principal_did: child_did,
             guardian_did: None, // No active guardian signature
         };
-        
+
         let result = execute_program(&prog, &db, &mut out, Some(&context));
         assert_eq!(result, Err(VmError::HaltViolation));
     }
 
     #[test]
     fn test_compile_n3_rule_to_norm() {
-        use crate::modalities::logic::n3_parser::{Rule, RuleType, Formula, Triple, Term};
-        
-        let make_rule = |rt: RuleType, pred: &str| -> Rule {
-            Rule {
-                id: None,
+        use crate::modalities::logic::n3_parser::RuleType;
+
+        use crate::modalities::logic::n3_compiler::{
+            CompiledFormula, CompiledTerm, CompiledTriple,
+        };
+        let make_rule = |rt: RuleType, pred: &str| -> CompiledRule {
+            let mut premise_triples = [CompiledTriple {
+                subject: CompiledTerm::Uri(0),
+                predicate: CompiledTerm::Uri(0),
+                object: CompiledTerm::Uri(0),
+            }; 8];
+            premise_triples[0] = CompiledTriple {
+                subject: CompiledTerm::Uri(crate::q_hash("did:party")),
+                predicate: CompiledTerm::Uri(crate::q_hash(pred)),
+                object: CompiledTerm::Uri(crate::q_hash("did:target")),
+            };
+            let mut conclusion_triples = [CompiledTriple {
+                subject: CompiledTerm::Uri(0),
+                predicate: CompiledTerm::Uri(0),
+                object: CompiledTerm::Uri(0),
+            }; 8];
+            conclusion_triples[0] = CompiledTriple {
+                subject: CompiledTerm::Uri(crate::q_hash("urn:contract")),
+                predicate: CompiledTerm::Uri(crate::q_hash("q42:boundBy")),
+                object: CompiledTerm::Uri(crate::q_hash("did:party")),
+            };
+            CompiledRule {
+                id_hash: None,
                 rule_type: rt,
                 weight: None,
-                premise: Formula {
-                    triples: vec![Triple {
-                        subject: Term::Uri("did:party".to_string()),
-                        predicate: Term::Uri(pred.to_string()),
-                        object: Term::Uri("did:target".to_string()),
-                    }],
+                premise: CompiledFormula {
+                    triples: premise_triples,
+                    len: 1,
                 },
-                conclusion: Formula {
-                    triples: vec![Triple {
-                        subject: Term::Uri("urn:contract".to_string()),
-                        predicate: Term::Uri("q42:boundBy".to_string()),
-                        object: Term::Uri("did:party".to_string()),
-                    }],
+                conclusion: CompiledFormula {
+                    triples: conclusion_triples,
+                    len: 1,
                 },
             }
         };
 
         let contract_hash = 12345;
-        
+
         // 1. Defeater
         let defeater_rule = make_rule(RuleType::Defeater, "q42:permit");
         let q = compile_n3_rule_to_norm(&defeater_rule, contract_hash, 0).unwrap();
-        assert_eq!(q.predicate & 0xFF, crate::modalities::logic::deontic::OP_PERMIT as u64);
-        assert_ne!(q.predicate & crate::modalities::logic::deontic::DEFEATER_BIT, 0);
+        assert_eq!(
+            q.predicate & 0xFF,
+            crate::modalities::logic::deontic::OP_PERMIT as u64
+        );
+        assert_ne!(
+            q.predicate & crate::modalities::logic::deontic::DEFEATER_BIT,
+            0
+        );
 
         // 2. Defeasible Permit
         let permit_rule = make_rule(RuleType::Defeasible, "q42:permit");
         let q2 = compile_n3_rule_to_norm(&permit_rule, contract_hash, 0).unwrap();
-        assert_eq!(q2.predicate & 0xFF, crate::modalities::logic::deontic::OP_PERMIT as u64);
-        assert_eq!(q2.predicate & crate::modalities::logic::deontic::DEFEATER_BIT, 0);
+        assert_eq!(
+            q2.predicate & 0xFF,
+            crate::modalities::logic::deontic::OP_PERMIT as u64
+        );
+        assert_eq!(
+            q2.predicate & crate::modalities::logic::deontic::DEFEATER_BIT,
+            0
+        );
 
         // 3. Strict Obligate
         let obligate_rule = make_rule(RuleType::Strict, "q42:obligate");
         let q3 = compile_n3_rule_to_norm(&obligate_rule, contract_hash, 0).unwrap();
-        assert_eq!(q3.predicate & 0xFF, crate::modalities::logic::deontic::OP_OBLIGATE as u64);
-        assert_eq!(q3.predicate & crate::modalities::logic::deontic::DEFEATER_BIT, 0);
+        assert_eq!(
+            q3.predicate & 0xFF,
+            crate::modalities::logic::deontic::OP_OBLIGATE as u64
+        );
+        assert_eq!(
+            q3.predicate & crate::modalities::logic::deontic::DEFEATER_BIT,
+            0
+        );
 
         // 4. Malformed
         let mut malformed = make_rule(RuleType::Strict, "q42:obligate");
-        malformed.premise.triples.clear();
+        malformed.premise.len = 0;
         assert!(compile_n3_rule_to_norm(&malformed, contract_hash, 0).is_none());
     }
 }

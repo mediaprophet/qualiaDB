@@ -1,0 +1,348 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix dc:      <http://purl.org/dc/terms/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix values:  <https://ns.webcivics.net/values/> .
+@prefix cml:     <https://ns.webcivics.net/cml/> .
+@prefix concept: <https://ns.webcivics.net/concept/> .
+@prefix doc:     <https://ns.webcivics.net/values/united-nations-standard-minimum-rules-administration-juvenile#> .
+
+# ============================================================
+# CML concept layer (LOGIC) — United Nations Standard Minimum Rules for the Administration of Juvenile Justice (The Beijing Rules)
+# MACHINE-DERIVED from the TEXT layer (un-instruments) — cml:Proposed,
+# values:HeuristicDerived. Pending human attestation (cml:Attested / exactMatch).
+# One cml:Concept per provision; cml:realizedBy the provision; cml:asserts the
+# deontic norm. R1 universalisation materialised for duties borne by every Agent.
+# ============================================================
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-1 a cml:Concept ;
+    skos:prefLabel "Rule 1"@en ;
+    cml:realizedBy doc:rule-1 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-administration-juvenile> ;
+    dc:date "29 November 1985" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-standard-minimum-rules-administration-juvenile-rule-1-norm .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-1-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-standard-minimum-rules-administration-juvenile-rule-1 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-2 a cml:Concept ;
+    skos:prefLabel "Rule 2"@en ;
+    cml:realizedBy doc:rule-2 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-administration-juvenile> ;
+    dc:date "29 November 1985" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-standard-minimum-rules-administration-juvenile-rule-2-norm .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-2-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-standard-minimum-rules-administration-juvenile-rule-2 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-3 a cml:Concept ;
+    skos:prefLabel "Rule 3"@en ;
+    cml:realizedBy doc:rule-3 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-administration-juvenile> ;
+    dc:date "29 November 1985" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-standard-minimum-rules-administration-juvenile-rule-3-norm .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-3-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-standard-minimum-rules-administration-juvenile-rule-3 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-5 a cml:Concept ;
+    skos:prefLabel "Rule 5"@en ;
+    cml:realizedBy doc:rule-5 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-administration-juvenile> ;
+    dc:date "29 November 1985" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-standard-minimum-rules-administration-juvenile-rule-5-norm .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-5-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-standard-minimum-rules-administration-juvenile-rule-5 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-7 a cml:Concept ;
+    skos:prefLabel "Rule 7"@en ;
+    cml:realizedBy doc:rule-7 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-administration-juvenile> ;
+    dc:date "29 November 1985" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-standard-minimum-rules-administration-juvenile-rule-7-norm .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-7-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-standard-minimum-rules-administration-juvenile-rule-7 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-8 a cml:Concept ;
+    skos:prefLabel "Rule 8"@en ;
+    cml:realizedBy doc:rule-8 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-administration-juvenile> ;
+    dc:date "29 November 1985" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-standard-minimum-rules-administration-juvenile-rule-8-norm .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-8-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-standard-minimum-rules-administration-juvenile-rule-8 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-9 a cml:Concept ;
+    skos:prefLabel "Rule 9"@en ;
+    cml:realizedBy doc:rule-9 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-administration-juvenile> ;
+    dc:date "29 November 1985" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-standard-minimum-rules-administration-juvenile-rule-9-norm .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-9-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-standard-minimum-rules-administration-juvenile-rule-9 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-10 a cml:Concept ;
+    skos:prefLabel "Rule 10"@en ;
+    cml:realizedBy doc:rule-10 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-administration-juvenile> ;
+    dc:date "29 November 1985" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-standard-minimum-rules-administration-juvenile-rule-10-norm .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-10-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-standard-minimum-rules-administration-juvenile-rule-10 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-11 a cml:Concept ;
+    skos:prefLabel "Rule 11"@en ;
+    cml:realizedBy doc:rule-11 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-administration-juvenile> ;
+    dc:date "29 November 1985" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-standard-minimum-rules-administration-juvenile-rule-11-norm .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-11-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-standard-minimum-rules-administration-juvenile-rule-11 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-12 a cml:Concept ;
+    skos:prefLabel "Rule 12"@en ;
+    cml:realizedBy doc:rule-12 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-administration-juvenile> ;
+    dc:date "29 November 1985" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-standard-minimum-rules-administration-juvenile-rule-12-norm .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-12-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-standard-minimum-rules-administration-juvenile-rule-12 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-13 a cml:Concept ;
+    skos:prefLabel "Rule 13"@en ;
+    cml:realizedBy doc:rule-13 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-administration-juvenile> ;
+    dc:date "29 November 1985" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-standard-minimum-rules-administration-juvenile-rule-13-norm .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-13-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-standard-minimum-rules-administration-juvenile-rule-13 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-15 a cml:Concept ;
+    skos:prefLabel "Rule 15"@en ;
+    cml:realizedBy doc:rule-15 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-administration-juvenile> ;
+    dc:date "29 November 1985" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-standard-minimum-rules-administration-juvenile-rule-15-norm .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-15-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-standard-minimum-rules-administration-juvenile-rule-15 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-17 a cml:Concept ;
+    skos:prefLabel "Rule 17"@en ;
+    cml:realizedBy doc:rule-17 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-administration-juvenile> ;
+    dc:date "29 November 1985" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-standard-minimum-rules-administration-juvenile-rule-17-norm .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-17-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-standard-minimum-rules-administration-juvenile-rule-17 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-18 a cml:Concept ;
+    skos:prefLabel "Rule 18"@en ;
+    cml:realizedBy doc:rule-18 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-administration-juvenile> ;
+    dc:date "29 November 1985" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-standard-minimum-rules-administration-juvenile-rule-18-norm .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-18-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-standard-minimum-rules-administration-juvenile-rule-18 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-19 a cml:Concept ;
+    skos:prefLabel "Rule 19"@en ;
+    cml:realizedBy doc:rule-19 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-administration-juvenile> ;
+    dc:date "29 November 1985" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-standard-minimum-rules-administration-juvenile-rule-19-norm .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-19-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-standard-minimum-rules-administration-juvenile-rule-19 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-25 a cml:Concept ;
+    skos:prefLabel "Rule 25"@en ;
+    cml:realizedBy doc:rule-25 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-administration-juvenile> ;
+    dc:date "29 November 1985" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-standard-minimum-rules-administration-juvenile-rule-25-norm .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-25-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-standard-minimum-rules-administration-juvenile-rule-25 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-26 a cml:Concept ;
+    skos:prefLabel "Rule 26"@en ;
+    cml:realizedBy doc:rule-26 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-administration-juvenile> ;
+    dc:date "29 November 1985" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-standard-minimum-rules-administration-juvenile-rule-26-norm .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-26-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-standard-minimum-rules-administration-juvenile-rule-26 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-27 a cml:Concept ;
+    skos:prefLabel "Rule 27"@en ;
+    cml:realizedBy doc:rule-27 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-administration-juvenile> ;
+    dc:date "29 November 1985" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-standard-minimum-rules-administration-juvenile-rule-27-norm .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-27-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-standard-minimum-rules-administration-juvenile-rule-27 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-30 a cml:Concept ;
+    skos:prefLabel "Rule 30"@en ;
+    cml:realizedBy doc:rule-30 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-standard-minimum-rules-administration-juvenile> ;
+    dc:date "29 November 1985" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-standard-minimum-rules-administration-juvenile-rule-30-norm .
+
+concept:united-nations-standard-minimum-rules-administration-juvenile-rule-30-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-standard-minimum-rules-administration-juvenile-rule-30 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .

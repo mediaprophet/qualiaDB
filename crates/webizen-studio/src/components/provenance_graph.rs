@@ -1,7 +1,30 @@
 use dioxus::prelude::*;
 
+use crate::components::qapp_engine::invoke_json;
+
 #[component]
 pub fn ProvenanceGraph() -> Element {
+    let mut nodes = use_signal(Vec::<(String, String)>::new);
+    let mut edges = use_signal(Vec::<(String, String, String)>::new);
+
+    use_effect(move || {
+        spawn(async move {
+            let query = "SELECT ?s ?p ?o WHERE { ?s ?p ?o . FILTER(?p = <urn:prov:wasGeneratedBy> || ?p = <urn:prov:wasAssociatedWith>) }";
+            let args = serde_json::json!({"query": query});
+            if let Ok(res) = invoke_json("execute_sparql_query", args).await {
+                if let Ok(triples) = serde_json::from_value::<Vec<(String, String, String)>>(res) {
+                    let mut n = Vec::new();
+                    for t in triples.iter() {
+                        if !n.contains(&(t.0.clone(), "Entity".to_string())) { n.push((t.0.clone(), "Entity".to_string())); }
+                        if !n.contains(&(t.2.clone(), "Target".to_string())) { n.push((t.2.clone(), "Target".to_string())); }
+                    }
+                    nodes.set(n);
+                    edges.set(triples);
+                }
+            }
+        });
+    });
+
     rsx! {
         div { style: "height: 100vh; display: flex; flex-direction: column; background: #18181b; color: #fafafa; font-family: sans-serif;",
             div { style: "padding: 16px; border-bottom: 1px solid #27272a; display: flex; justify-content: space-between; align-items: center;",
@@ -12,24 +35,16 @@ pub fn ProvenanceGraph() -> Element {
                 }
             }
             div { style: "flex: 1; position: relative; overflow: hidden; background: radial-gradient(circle, #27272a 1px, transparent 1px); background-size: 20px 20px;",
-                // Mock nodes
-                div { style: "position: absolute; top: 20%; left: 30%; background: #0284c7; padding: 10px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.5); z-index: 10;",
-                    div { style: "font-size: 12px; opacity: 0.8;", "Entity" }
-                    div { style: "font-weight: bold;", "ClinicalReport_v1.pdf" }
+                for (i, (id, typ)) in nodes.read().iter().enumerate() {
+                    div { 
+                        key: "{id}",
+                        style: "position: absolute; top: {20 + i * 15}%; left: {30 + i * 15}%; background: #0284c7; padding: 10px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.5); z-index: 10;",
+                        div { style: "font-size: 12px; opacity: 0.8;", "{typ}" }
+                        div { style: "font-weight: bold;", "{id}" }
+                    }
                 }
-                div { style: "position: absolute; top: 50%; left: 50%; background: #16a34a; padding: 10px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.5); z-index: 10;",
-                    div { style: "font-size: 12px; opacity: 0.8;", "Activity" }
-                    div { style: "font-weight: bold;", "MedicalLLM_Inference" }
-                }
-                div { style: "position: absolute; top: 80%; left: 70%; background: #d97706; padding: 10px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.5); z-index: 10;",
-                    div { style: "font-weight: bold; font-size: 12px; text-align: center;", "Agent: Dr. Smith" }
-                }
-                // Mock SVG lines
-                svg { style: "position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5;",
-                    line { x1: "35%", y1: "25%", x2: "52%", y2: "52%", stroke: "#71717a", "stroke-width": "2", "stroke-dasharray": "5,5" }
-                    line { x1: "55%", y1: "55%", x2: "72%", y2: "82%", stroke: "#71717a", "stroke-width": "2" }
-                    text { x: "42%", y: "40%", fill: "#a1a1aa", "font-size": "12", "wasGeneratedBy" }
-                    text { x: "65%", y: "65%", fill: "#a1a1aa", "font-size": "12", "wasAssociatedWith" }
+                if nodes.read().is_empty() {
+                    div { style: "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #71717a;", "No provenance data found." }
                 }
             }
         }

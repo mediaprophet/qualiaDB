@@ -2,8 +2,8 @@
 //!
 //! This module defines the biological entity types and their quantum computation requirements.
 
-use crate::NQuin;
 use super::quantum_state::QuantumState;
+use crate::NQuin;
 
 /// Biological Entity mapped to 48-byte Super-Quin
 #[repr(C)]

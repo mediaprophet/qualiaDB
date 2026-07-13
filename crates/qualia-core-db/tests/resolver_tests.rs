@@ -14,7 +14,7 @@ use qualia_core_db::{
 fn known_hash_resolves_to_uri() {
     let hash = q_hash("Alice");
     let bytes = resolve_hash(hash).expect("Alice must be in the demo lexicon");
-    assert_eq!(bytes, b"http://qualia-db.org/demo/Alice");
+    assert_eq!(bytes, b"http://webizen.org/demo/Alice");
 }
 
 #[test]
@@ -91,7 +91,7 @@ fn known_terms_produce_full_iri_ntriples_line() {
     let s = String::from_utf8(buf).unwrap();
 
     assert!(
-        s.contains("<http://qualia-db.org/demo/Alice>"),
+        s.contains("<http://webizen.org/demo/Alice>"),
         "subject IRI missing: {s}"
     );
     assert!(
@@ -99,7 +99,7 @@ fn known_terms_produce_full_iri_ntriples_line() {
         "predicate IRI missing: {s}"
     );
     assert!(
-        s.contains("<http://qualia-db.org/demo/Bob>"),
+        s.contains("<http://webizen.org/demo/Bob>"),
         "object IRI missing: {s}"
     );
     assert!(

@@ -296,13 +296,300 @@ export const MODALITIES = [
     {
         id: 'deontic', name: 'Deontic Logic', category: 'governance', opcode: '0x10–0x12',
         icon: 'fa-scale-balanced', hue: 'rose', wasm: false,
-        blurb: 'Obligate, permit, forbid norms with DEFEATER_BIT unless-sentinel and contract expiry.',
+        blurb: 'The SDL triad O/P/F (0x10–0x12) with q42:unless defeaters (bit 63) and contract expiry → Active / Defeated / Expired.',
         run() {
-            const alice = q_hash('did:alice'), path = q_hash('q42:disclose'), data = q_hash('q42:data'), nda = q_hash('contract:nda');
-            const auditor = q_hash('q42:role:auditor');
-            const norm = compileNorm(alice, OP_OBLIGATE, path, data, nda, 4e9, false);
-            const unless = compileNorm(alice, OP_PERMIT, path, auditor, nda, 4e9, true);
-            return { lines: evaluateDeontic([norm, unless]).map(v => `${v.opName} → ${v.status}`), visual: 'verdicts' };
+            const alice = q_hash('did:alice'), nda = q_hash('contract:nda');
+            const NOW = 1_700_000_000, FUTURE = 4e9, PAST = 1_600_000_000;
+            // (1) The SDL triad — Obligate / Permit / Forbid, valid and undefeated → Active.
+            const obligate = compileNorm(alice, OP_OBLIGATE, q_hash('q42:report-breach'), q_hash('q42:regulator'), nda, FUTURE, false);
+            const permit   = compileNorm(alice, OP_PERMIT,   q_hash('q42:access-logs'),   q_hash('q42:audit'),     nda, FUTURE, false);
+            const forbid   = compileNorm(alice, OP_FORBID,   q_hash('q42:disclose'),      q_hash('q42:data'),      nda, FUTURE, false);
+            // (2) Defeasibility — an obligation overridden by a matching q42:unless exception.
+            const dutyPath = q_hash('q42:keep-confidential');
+            const duty   = compileNorm(alice, OP_OBLIGATE, dutyPath, q_hash('q42:data'), nda, FUTURE, false);
+            const unless = compileNorm(alice, OP_PERMIT,   dutyPath, q_hash('q42:data'), nda, FUTURE, true); // bit 63 = q42:unless
+            // (3) Temporal — a norm whose contract has expired.
+            const expired = compileNorm(alice, OP_OBLIGATE, q_hash('q42:renew-consent'), q_hash('q42:data'), nda, PAST, false);
+
+            const v = evaluateDeontic([obligate, permit, forbid, duty, unless, expired], NOW);
+            return { lines: [
+                `O(report-breach)     → ${v[0].status}`,
+                `P(access-logs)       → ${v[1].status}`,
+                `F(disclose-data)     → ${v[2].status}`,
+                `O(keep-confidential) → ${v[3].status}   (q42:unless permits → defeated)`,
+                `O(renew-consent)     → ${v[4].status}   (contract expired)`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'jural', name: 'Hohfeldian Jural Square', category: 'governance', opcode: '0x30–0x37',
+        icon: 'fa-scale-unbalanced', hue: 'rose', wasm: false,
+        blurb: 'The 8 positions paired as correlatives: a right A holds toward B entails the correlative B necessarily bears. A Claim with no Duty-bearer is a legible structural gap (jural.rs).',
+        run() {
+            const NAME = {48:'Claim',49:'Duty',50:'Privilege',51:'No-Right',52:'Power',53:'Liability',54:'Immunity',55:'Disability'};
+            const CORR = {48:49,49:48,50:51,51:50,52:53,53:52,54:55,55:54};
+            const lines = [48,50,52,54].map(p => `A holds ${NAME[p].padEnd(9)} toward B  ⟹  B bears ${NAME[CORR[p]]}`);
+            lines.push('Claim "right to housing" toward State, no Duty recorded → unmet correlative duty surfaced');
+            lines.push('the non-derogable core (ICCPR Art 4(2)) is an Immunity ↔ State Disability');
+            return { lines, visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'stit', name: 'STIT Agency', category: 'governance', opcode: '0x16',
+        icon: 'fa-people-arrows', hue: 'rose', wasm: false,
+        blurb: '"α sees to it that φ" — binds the duty to the causal agent: duty-bearer vs bystander, omission, and joint/shared liability (stit.rs).',
+        run() {
+            const content = q_hash('q42:protectUserData');
+            const broughtAbout = (agent, facts) => facts.some(f => f.a === agent && f.c === content);
+            const members = [['principal', q_hash('did:principal')], ['platform', q_hash('did:platformAgent')]];
+            const lines = ['O[{principal, platform} stit protectUserData]'];
+            // (1) neither acts → joint obligation Violated, BOTH share liability.
+            const none = [];
+            const dischargedNone = members.some(([, m]) => broughtAbout(m, none));
+            lines.push(`neither acts → ${dischargedNone ? 'Discharged' : 'Violated'}; shared liability:`);
+            members.forEach(([n]) => lines.push(`    ${n} → liable`));
+            // (2) one acts → Discharged, no one liable (joint sufficiency).
+            const acted = [{ a: q_hash('did:platformAgent'), c: content }];
+            lines.push(`platform sees to it → ${members.some(([, m]) => broughtAbout(m, acted)) ? 'Discharged' : 'Violated'} (no one liable)`);
+            return { lines, visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'mensrea', name: 'Mens Rea (epistemic × deontic)', category: 'governance', opcode: '0x20 × F',
+        icon: 'fa-brain', hue: 'rose', wasm: false,
+        blurb: 'Grades a violation by the actor’s mind: knowing vs ignorant — and ignorantia juris non excusat: ignorance is no excuse when a duty-to-know was in force (deontic_compose.rs).',
+        run() {
+            const classify = (didIt, knew, dutyToKnow) =>
+                !didIt ? 'NoViolation' : knew ? 'Knowing' : dutyToKnow ? 'InexcusableIgnorance' : 'Ignorant';
+            return { lines: [
+                `did it, knew it was forbidden          → ${classify(true, true, false)}`,
+                `did it, didn't know, no duty to know   → ${classify(true, false, false)}`,
+                `did it, didn't know, HAD duty to know  → ${classify(true, false, true)}`,
+                `did not do it                          → ${classify(false, false, false)}`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'governance', name: 'Interaction Governance', category: 'governance', opcode: 'policy',
+        icon: 'fa-traffic-light', hue: 'rose', wasm: false,
+        blurb: 'Maps a verdict to the runtime action: non-derogable breach → DenyRollback; ordinary breach → audit to WAL; humanitarian → prioritize; ambiguous → defer to a human (interaction_governance.rs).',
+        run() {
+            const policy = (status, nonDerog, humanitarian, ambiguous) => {
+                if (ambiguous) return 'Interactive — RequestHumanCorrection';
+                if (status === 'Violated') return nonDerog ? 'PreventiveBlock — DenyRollback' : 'PermissiveAudit — log to WAL';
+                if (status === 'Active' || status === 'Discharged') return humanitarian ? 'Prioritize — grant QoS' : 'Allow';
+                return 'Allow';
+            };
+            return { lines: [
+                `Violated + non-derogable  → ${policy('Violated', true, false, false)}`,
+                `Violated + ordinary       → ${policy('Violated', false, false, false)}`,
+                `Active + humanitarian     → ${policy('Active', false, true, false)}`,
+                `any + ambiguous mapping   → ${policy('Violated', true, false, true)}`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'causal', name: 'Causal & Counterfactual', category: 'governance', opcode: '§16',
+        icon: 'fa-diagram-project', hue: 'rose', wasm: false,
+        blurb: 'But-for causation, root-node dependency cascade, and overdetermination → joint liability (causal.rs).',
+        run() {
+            const reach = (edges, roots, target, removed) => {
+                const seen = new Set(); const stack = roots.filter(r => r !== removed);
+                if (stack.includes(target)) return true;
+                while (stack.length) { const c = stack.pop(); if (seen.has(c)) continue; seen.add(c);
+                    for (const [s, o] of edges) if (s === c && s !== removed && o !== removed) { if (o === target) return true; stack.push(o); } }
+                return false;
+            };
+            const butFor = (edges, roots, cause, effect) => reach(edges, roots, effect, null) && !reach(edges, roots, effect, cause);
+            const chain = [['fund', 'staff'], ['staff', 'harm']];
+            const fires = [['fireA', 'house'], ['fireB', 'house']];
+            return { lines: [
+                `chain fund→staff→harm: but-for(fund)  = ${butFor(chain, ['fund'], 'fund', 'harm')}`,
+                `chain: but-for(staff) = ${butFor(chain, ['fund'], 'staff', 'harm')}`,
+                `two fires → house: but-for(fireA) = ${butFor(fires, ['fireA', 'fireB'], 'fireA', 'house')}`,
+                `  → neither fire is but-for ⇒ overdetermined ⇒ joint liability`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'capacity', name: 'Juridical Capacity', category: 'governance', opcode: '§18',
+        icon: 'fa-user-shield', hue: 'rose', wasm: false,
+        blurb: 'Capacity gates binding; duress → VOIDABLE at the victim’s election (not auto-void); guardianship carries the dependent’s weight (capacity.rs).',
+        run() {
+            const binding = c => c === 'Intact';
+            const voidable = c => c === 'UnderDuress';
+            return { lines: [
+                `Intact      → binding ${binding('Intact')}`,
+                `Impaired    → binding ${binding('Impaired')}`,
+                `UnderDuress → binding ${binding('UnderDuress')}, voidable ${voidable('UnderDuress')} (victim’s choice, not auto-void)`,
+                `guardian acts → carries the DEPENDENT’s legal weight`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'delegation', name: 'Delegation & Revocation', category: 'governance', opcode: '§21',
+        icon: 'fa-sitemap', hue: 'rose', wasm: false,
+        blurb: 'Authority flows along a delegation chain; revoking an upstream node defeats every downstream dependent (delegation.rs).',
+        run() {
+            const edges = [['state', 'agency'], ['agency', 'officer'], ['state', 'ngo']];
+            const reach = (root, agent, revoked) => {
+                if (agent === revoked || root === revoked) return false;
+                const seen = new Set(); const stack = [root];
+                while (stack.length) { const c = stack.pop(); if (seen.has(c)) continue; seen.add(c);
+                    for (const [s, o] of edges) if (s === c && s !== revoked && o !== revoked) { if (o === agent) return true; stack.push(o); } }
+                return false;
+            };
+            return { lines: [
+                `state→agency→officer: officer has authority = ${reach('state', 'officer', null)}`,
+                `revoke agency → officer authority = ${reach('state', 'officer', 'agency')}  (cascade-defeated)`,
+                `revoke agency → ngo authority    = ${reach('state', 'ngo', 'agency')}  (independent chain survives)`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'contract', name: 'Contract Formation', category: 'governance', opcode: '§22',
+        icon: 'fa-file-signature', hue: 'rose', wasm: false,
+        blurb: 'Offer → Assent → Binding; binding requires assent AND both parties’ capacity intact (contract.rs, composes §18).',
+        run() {
+            const stage = (stip, acc) => stip && acc ? 'Binding' : stip ? 'Offer' : 'None';
+            const binds = (stip, acc, off, ac) => stage(stip, acc) === 'Binding' && off === 'Intact' && ac === 'Intact';
+            return { lines: [
+                `stipulated, not accepted        → ${stage(true, false)}`,
+                `stipulated + accepted, both Intact → ${stage(true, true)} (binds ${binds(true, true, 'Intact', 'Intact')})`,
+                `accepted under duress           → binds ${binds(true, true, 'Intact', 'UnderDuress')} (voidable, not binding)`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'value-flow', name: 'Value-Flow / Commons', category: 'governance', opcode: '§23',
+        icon: 'fa-coins', hue: 'rose', wasm: false,
+        blurb: 'Permissive Commons: cost = production + CAPPED ROI; royalty scales by agent class; pool ≥ cost → discharged, freed globally (value_flow.rs).',
+        run() {
+            const cost = (prod, roi, cap) => prod + prod * Math.min(roi, cap) / 100;
+            const c = cost(1000, 50, 20); // ROI asked 50%, capped 20% → 1200
+            const corpPay = 400 * 300 / 100; // corporate royalty 1200
+            return { lines: [
+                `cost = 1000 + min(50%,cap 20%) = ${c}  (ROI capped — extraction guard)`,
+                `corporate use royalty = ${corpPay}; pool ${corpPay} ≥ cost ${c} → Discharged (freed globally)`,
+                `non-profit use royalty = ${100 * 50 / 100}  (scaled by agent class)`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'capability-gap', name: 'Capability Gap / RPL', category: 'governance', opcode: '§24',
+        icon: 'fa-list-check', hue: 'rose', wasm: false,
+        blurb: 'Gap = Required \\ Held (deploy to the computed gap); experiential skos:closeMatch counts as held — Recognition of Prior Learning (capability_gap.rs).',
+        run() {
+            const required = ['welding', 'wiring', 'plumbing'];
+            const held = ['welding'];
+            const gap = required.filter(c => !held.includes(c));
+            const equiv = { 'wiring': 'apprenticeship' };
+            const held2 = ['welding', 'apprenticeship'];
+            const gap2 = required.filter(c => !held2.includes(c) && !(equiv[c] && held2.includes(equiv[c])));
+            return { lines: [
+                `required {welding,wiring,plumbing} \\ held {welding} → gap {${gap.join(', ')}}`,
+                `with RPL closeMatch(wiring≈apprenticeship) → gap {${gap2.join(', ') || '∅'}}`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'identity-fabric', name: 'Resilient Identity', category: 'governance', opcode: '§27',
+        icon: 'fa-fingerprint', hue: 'rose', wasm: false,
+        blurb: 'An identifier is not an identity. Identity survives key loss iff a quorum of the anchor fabric remains — k-of-n recovery (identity_fabric.rs).',
+        run() {
+            const survives = (total, lost, quorum) => quorum > 0 && (total - lost) >= quorum;
+            return { lines: [
+                `5 anchors, lose primary key (1), quorum 3 → survives ${survives(5, 1, 3)}`,
+                `5 anchors, lose 3, quorum 3 → survives ${survives(5, 3, 3)}`,
+                `stolen phone+key: re-compute identity from surviving {social, biometric}`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'responsibility', name: 'Responsibility & Meta-Guard', category: 'governance', opcode: '§25/§30',
+        icon: 'fa-shield-halved', hue: 'rose', wasm: false,
+        blurb: 'An allegation is not an enforceable fact until adjudicated; the enforcer is bound by the baselines it enforces (responsibility.rs).',
+        run() {
+            const enforceable = s => s === 'Adjudicated';
+            return { lines: [
+                `Alleged    → enforceable fact ${enforceable('Alleged')} (due process first — no accusation-as-weapon)`,
+                `Adjudicated → enforceable fact ${enforceable('Adjudicated')}`,
+                `power granted + remedy denied → RuleOfLawAsymmetry flagged`,
+                `blocked + no appeal path → EnforcerOverreach; harm + no accountable person → AccountabilityVacuum`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'zk-proportionality', name: 'ZK Gate & Proportionality', category: 'governance', opcode: '§17/§26',
+        icon: 'fa-scale-balanced', hue: 'rose', wasm: false,
+        blurb: 'A ZK proof gates eligibility (witness stays hidden); an act is proportionate iff ∂Harm/∂x < Advantage (legal_compose.rs, composes zk_proofs + CAS).',
+        run() {
+            const eligible = v => v ? 'Eligible' : 'Unverifiable (claimedIdentityUnverifiable)';
+            // linear harm 3x → marginal harm 3 everywhere.
+            const marginal = 3;
+            return { lines: [
+                `ZK(age>18) verified → ${eligible(true)}`,
+                `ZK fails → ${eligible(false)}`,
+                `harm 3·x → marginal ${marginal}; proportionate vs advantage 5 = ${marginal < 5}; vs 2 = ${marginal < 2}`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'sense-translation', name: 'Sense Translation', category: 'governance', opcode: '§19',
+        icon: 'fa-language', hue: 'rose', wasm: false,
+        blurb: 'Curation Directive on cross-cultural mapping: machine proposes closeMatch; only a human attests exactMatch; untranslatable → human review (legal_compose.rs).',
+        run() {
+            const status = (proposed, attested, translatable) =>
+                attested && translatable ? 'ExactMatch' : !translatable ? 'RequiresHumanReview' : proposed ? 'CloseMatch' : 'RequiresHumanReview';
+            return { lines: [
+                `machine proposes        → ${status(true, false, true)}`,
+                `human attests           → ${status(true, true, true)}`,
+                `untranslatable concept  → ${status(true, true, false)} (preserved, never flattened)`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'consensus', name: 'Distributed Consensus', category: 'governance', opcode: '§28',
+        icon: 'fa-network-wired', hue: 'rose', wasm: false,
+        blurb: 'Multi-party obligations commit only on full consensus; local validity ≠ global until synced; pre-partition duties survive (consensus.rs).',
+        run() {
+            const tx = (a, t) => t > 0 && a >= t ? 'Committed' : 'Suspended';
+            return { lines: [
+                `3 of 3 parties assent → ${tx(3, 3)}`,
+                `2 of 3 parties assent → ${tx(2, 3)}`,
+                `valid locally, unsynced → globally valid = false`,
+                `network partition → pre-existing duties survive; new joint obligations pause`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'manifold', name: 'Manifold → Fact', category: 'governance', opcode: '§20',
+        icon: 'fa-wave-square', hue: 'rose', wasm: false,
+        blurb: 'Continuous→discrete bridge: ∫Ψ over wave samples > threshold → instantiate a discrete factual quin for epistemic.rs (manifold_logic.rs; GPU 10D renderer is separate).',
+        run() {
+            const integ = s => { let a = 0; for (let i = 1; i < s.length; i++) a += (Math.abs(s[i - 1]) + Math.abs(s[i])) / 2; return a; };
+            const samples = [1, 1, 1];
+            const e = integ(samples);
+            return { lines: [
+                `∫Ψ over [1,1,1] = ${e}`,
+                `> threshold 1.5 → instantiate fact:emfLimitExceeded (${e > 1.5})`,
+                `> threshold 5.0 → no fact (${e > 5.0})`,
+            ], visual: 'verdicts' };
+        },
+    },
+    {
+        id: 'carrier', name: 'Carrier Binding', category: 'governance', opcode: '§29',
+        icon: 'fa-link', hue: 'rose', wasm: false,
+        blurb: 'Content-addressed media↔graph binding (BLAKE3): any edit to the media breaks the tie to its semantic graph (carrier.rs; PDF/PNG container codecs are separate).',
+        run() {
+            // illustrative content hash (FNV) — the engine uses real BLAKE3.
+            const tag = s => { let h = 0xcbf29ce484222325n; for (const c of s) { h ^= BigInt(c.charCodeAt(0)); h = (h * 0x100000001b3n) & 0xFFFFFFFFFFFFFFFFn; } return h.toString(16).slice(0, 8); };
+            const blob = 'signed evidentiary photo bytes';
+            return { lines: [
+                `media_tag(blob) = ${tag(blob)}  (deterministic, content-addressed)`,
+                `verify intact blob → binding holds (true)`,
+                `verify tampered blob → binding broken (false) — tamper-evident`,
+            ], visual: 'verdicts' };
         },
     },
     {
@@ -355,13 +642,31 @@ export const MODALITIES = [
     {
         id: 'epistemic', name: 'Epistemic Logic', category: 'epistemic', opcode: '0x20–0x22',
         icon: 'fa-eye', hue: 'purple', wasm: false,
-        blurb: 'Knows, believes, common knowledge — certainty in predicate bits [8..15].',
+        blurb: 'KNOWS · BELIEVES · COMMON_KNOWLEDGE across 9 named certainty bands (knows→doubts) in predicate bits [8..15]; Active ≥128, common knowledge promotes to 255.',
         run() {
-            const agent = q_hash('agent:alice'), claim = q_hash('claim:rain');
-            const knows = buildEpistemicQuin(agent, OP_KNOWS, 220, claim);
-            const believes = buildEpistemicQuin(agent, OP_BELIEVES, 40, claim);
-            const v = evaluateEpistemic([knows, believes], agent);
-            return { lines: v.map(x => `${x.opName} (certainty ${x.certainty}) → ${x.status}`), visual: 'verdicts' };
+            const alice = q_hash('agent:alice'), bob = q_hash('agent:bob');
+            const pad = c => String(c).padStart(3);
+            // (1) The KNOWS operator is categorical — Active regardless of band.
+            const knows = buildEpistemicQuin(alice, OP_KNOWS, 255, q_hash('claim:sun-rose'));
+            // (2) The doxastic axis: the named certainty bands (epistemic.rs / modal-junctures.n3)
+            //     routed through BELIEVES. Active ≥128, else Uncertain.
+            const BANDS = [
+                ['affirms', 230], ['believes', 200], ['recognizes', 200], ['considers', 128],
+                ['supposes', 100], ['suspects', 80], ['speculates', 50], ['doubts', 20],
+            ];
+            const bandQuins = BANDS.map(([verb, c]) => buildEpistemicQuin(alice, OP_BELIEVES, c, q_hash('claim:' + verb)));
+            // (3) COMMON_KNOWLEDGE promotes a weak belief to full certainty (255) → Active.
+            const shared = q_hash('claim:earth-round');
+            const ck = buildEpistemicQuin(0n, OP_CK, 255, shared);
+            const weak = buildEpistemicQuin(bob, OP_BELIEVES, 30, shared);
+
+            const v = evaluateEpistemic([knows, ...bandQuins, ck, weak], 0n); // agent 0 = all agents
+            const lines = [`knows        cert ${pad(v[0].certainty)} → ${v[0].status}   (categorical · OP_KNOWS)`];
+            BANDS.forEach(([verb], i) => lines.push(`${verb.padEnd(12)} cert ${pad(v[i + 1].certainty)} → ${v[i + 1].status}`));
+            const ckv = v[v.length - 2], pv = v[v.length - 1];
+            lines.push(`common-know. cert ${pad(ckv.certainty)} → ${ckv.status}   (shared)`);
+            lines.push(`bob believes cert ${pad(pv.certainty)} → ${pv.status}   (30 → 255, promoted by common knowledge)`);
+            return { lines, visual: 'verdicts' };
         },
     },
     {

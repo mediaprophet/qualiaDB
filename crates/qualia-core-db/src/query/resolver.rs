@@ -1,0 +1,586 @@
+//! Zero-allocation Lexicon Resolver.
+//!
+//! Maps 64-bit Quin field values back to human-readable `&[u8]` slices for
+//! serialisation into N-Triples or JSON-LD surface syntaxes.
+//!
+//! # Bit layout of a Quin field value
+//!
+//! ```text
+//! Bit 63  │ Bits 60-63   │ Bits 0-59     │ Interpretation
+//! ────────┼──────────────┼───────────────┼──────────────────────────────────────
+//!   1     │ any          │ payload       │ did:q42 topological pointer (identifier module)
+//!   0     │ 0b0000       │ FNV-1a hash   │ IRI / blank-node → lexicon lookup
+//!   0     │ 0b0001       │ integer       │ Inline xsd:integer literal
+//!   0     │ 0b0010       │ scaled × 10⁶  │ Inline xsd:decimal literal
+//!   0     │ 0b0011       │ 0 or 1        │ Inline xsd:boolean literal
+//!   0     │ 0b001        │ embedded hash │ SPARQL-Star embedded triple <<s p o>>
+//!   0     │ 0b1000       │ webizen id    │ Person-controlled WebID agent identifier
+//!   0     │ 0b0101       │ f32 bits      │ Inline xsd:float literal (computed values)
+//!   0     │ 0b0110–0b0111│ reserved      │ Treated as IRI hash (future use)
+//! ```
+//!
+//! NOTE: `0b0101` (`INLINE_TAG_FLOAT`) was formally allocated to inline `xsd:float`
+//! in 0.0.19 to resolve the float-vs-integer tag clash — computed f32 values used to
+//! squat on the `0b0001` integer tag. The Webizen VM, `frame_layout`, and this
+//! resolver now agree on `0b0101`. See `AGENTS.md §4-D` and `ALGEBRA_MANIFOLD_PLAN.md`.
+//!
+//! The inline-type encoding is applied by the ingest layer, which masks
+//! FNV-1a hash values to 60 bits before storing them so there is no
+//! ambiguity with the type-tag bits.
+//!
+//! # Zero-allocation guarantee
+//! `format_ntriples_to` writes directly to any `impl io::Write` sink and
+//! never touches the heap.  Callers own the output buffer.
+
+use crate::NQuin;
+use std::io;
+
+// ---------------------------------------------------------------------------
+// Bit-layout constants
+// ---------------------------------------------------------------------------
+
+pub const MSB_FLAG: u64 = 1u64 << 63;
+pub const INLINE_TAG_MASK: u64 = 0b111u64 << 60; // bits 60-62 (only when MSB=0)
+pub const INLINE_TAG_INTEGER: u64 = 0b001u64 << 60;
+pub const INLINE_TAG_DECIMAL: u64 = 0b010u64 << 60;
+pub const INLINE_TAG_BOOLEAN: u64 = 0b011u64 << 60;
+/// Inline `xsd:float` literal: bits 0-31 are raw IEEE-754 f32 bits. Allocated 0.0.19 to
+/// end the float-vs-integer clash (formerly squatted on `INLINE_TAG_INTEGER`). Canonical
+/// home for this tag; `frame_layout` re-exports it.
+pub const INLINE_TAG_FLOAT: u64 = 0b101u64 << 60;
+/// SPARQL-Star embedded triple tag: indicates the value is a Virtual ID for <<s p o>>
+pub const TAG_EMBEDDED: u64 = 0b001u64 << 60;
+/// Webizen identity tag: indicates the value is a person-controlled WebID agent identifier
+/// Uses 0x8 prefix for instant identification without dictionary lookup
+pub const TAG_WEBIZEN: u64 = 0b1000u64 << 60;
+/// Mask over bits 0-59 — the value payload when an inline tag is present.
+pub const INLINE_VALUE_MASK: u64 = !(MSB_FLAG | INLINE_TAG_MASK);
+
+// ---------------------------------------------------------------------------
+// Demo lexicon
+// ---------------------------------------------------------------------------
+// In production this static table is replaced by a memory-mapped `.q42`
+// dictionary shard with entries sorted by hash for O(log n) binary search.
+// For the current phase a linear scan over this small table is sufficient.
+//
+// Entries are (fnv1a_hash, iri_bytes).  Hashes are computed at compile time
+// via `q_hash`, which is `const fn`.
+
+static DEMO_LEXICON: &[(u64, &[u8])] = &[
+    (crate::q_hash("Alice"), b"http://webizen.org/demo/Alice"),
+    (crate::q_hash("Bob"), b"http://webizen.org/demo/Bob"),
+    (crate::q_hash("Carol"), b"http://webizen.org/demo/Carol"),
+    (crate::q_hash("knows"), b"http://schema.org/knows"),
+    (crate::q_hash("likes"), b"http://schema.org/likes"),
+    (
+        crate::q_hash("type"),
+        b"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+    ),
+    (
+        crate::q_hash("label"),
+        b"http://www.w3.org/2000/01/rdf-schema#label",
+    ),
+    (crate::q_hash("Person"), b"http://schema.org/Person"),
+    (crate::q_hash("name"), b"http://schema.org/name"),
+    (
+        crate::q_hash("guardian"),
+        b"http://webizen.org/vocab#guardian",
+    ),
+    (crate::q_hash("ward"), b"http://webizen.org/vocab#ward"),
+    (
+        crate::q_hash("has_symptom"),
+        b"http://webizen.org/medical#hasSymptom",
+    ),
+    (crate::q_hash("Fever"), b"http://snomed.info/id/386661006"),
+    (
+        crate::q_hash("income"),
+        b"http://webizen.org/finance#income",
+    ),
+    (
+        crate::q_hash("balance"),
+        b"http://webizen.org/finance#balance",
+    ),
+];
+
+// ---------------------------------------------------------------------------
+// Lexicon struct
+// ---------------------------------------------------------------------------
+
+/// Wraps the persistent dictionary block used for hash → IRI resolution.
+///
+/// In production this struct holds a raw pointer into a memory-mapped `.q42`
+/// dictionary shard and resolves lookups via a binary search over the
+/// sorted `(hash, byte_offset)` index — zero copies, zero allocations.
+///
+/// For the current phase it wraps the compile-time `DEMO_LEXICON` table.
+pub struct Lexicon {
+    entries: &'static [(u64, &'static [u8])],
+}
+
+impl Lexicon {
+    pub const fn new() -> Self {
+        Self {
+            entries: DEMO_LEXICON,
+        }
+    }
+
+    /// Look up `hash` in the dictionary.
+    ///
+    /// Production upgrade: sort `entries` by hash and replace the linear scan
+    /// with `entries.binary_search_by_key(&hash, |&(h, _)| h)`.
+    #[inline]
+    pub fn resolve(&self, hash: u64) -> Option<&'static [u8]> {
+        for &(h, bytes) in self.entries {
+            if h == hash {
+                return Some(bytes);
+            }
+        }
+        None
+    }
+}
+
+const LEXICON: Lexicon = Lexicon::new();
+
+// ---------------------------------------------------------------------------
+// Public resolution API
+// ---------------------------------------------------------------------------
+
+/// Resolve a 64-bit Quin field value to its original URI bytes.
+///
+/// Returns `None` when:
+/// - the value has MSB=1 (topological pointer — not a lexicon entry), or
+/// - the hash is genuinely absent from the dictionary.
+pub fn resolve_hash(hash: u64) -> Option<&'static [u8]> {
+    // Topological pointers (MSB=1 and NOT in the lexicon) are not dictionary
+    // entries.  Check the lexicon first so that hashes whose FNV-1a value
+    // naturally has bit 63 set are still resolved correctly.
+    if let Some(uri) = LEXICON.resolve(hash) {
+        return Some(uri);
+    }
+    if (hash & MSB_FLAG) != 0 {
+        return None; // confirmed topological pointer
+    }
+    None
+}
+
+// ---------------------------------------------------------------------------
+// Term formatters  (all write to impl io::Write — no heap allocation)
+// ---------------------------------------------------------------------------
+
+/// Write a subject or predicate term.
+/// These positions hold only IRI hashes or did:q42 topological pointers —
+/// no inline-typed literals.
+///
+/// **Lexicon takes priority over bit-flag detection.**
+/// A hash stored in the dictionary is always rendered as an IRI, regardless of
+/// which bits happen to be set by FNV-1a.  Only values that are absent from the
+/// lexicon AND have MSB=1 are interpreted as `did:q42` topological pointers.
+/// This correctly handles terms like `q_hash("knows")` whose FNV-1a output
+/// naturally has bit 63 set.
+#[inline]
+pub(crate) fn write_iri_term<W: io::Write>(val: u64, out: &mut W) -> io::Result<()> {
+    // 1. Lexicon lookup — exact value, no bit-stripping.
+    if let Some(uri) = LEXICON.resolve(val) {
+        out.write_all(b"<")?;
+        out.write_all(uri)?;
+        return out.write_all(b">");
+    }
+    // 2. Not in lexicon + MSB set → did:q42 topological pointer.
+    if (val & MSB_FLAG) != 0 {
+        let ptr = val & !MSB_FLAG;
+        return write!(out, "<did:q42:ptr/{ptr:016x}>");
+    }
+    // 3. Unknown hash — hex fallback.
+    write!(out, "<quin:hash/{val:016x}>")
+}
+
+/// An inline-typed literal decoded from a Quin field value's tag bits (60-62).
+/// Allocation-free; the caller formats the lexical/datatype form it needs
+/// (N-Triples surface syntax, SPARQL-Results JSON/XML, etc.).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum InlineLiteral {
+    /// `xsd:integer` (already 60-bit sign-extended to i64).
+    Integer(i64),
+    /// `xsd:decimal` — fixed-point, the value is `raw × 10⁻⁶` (raw sign-extended).
+    Decimal(i64),
+    /// `xsd:boolean`.
+    Boolean(bool),
+    /// `xsd:float` (decoded from the lower 32 bits as IEEE-754 f32).
+    Float(f32),
+}
+
+impl InlineLiteral {
+    /// The XSD datatype IRI (without angle brackets) for this literal.
+    pub fn datatype_iri(&self) -> &'static str {
+        match self {
+            InlineLiteral::Integer(_) => "http://www.w3.org/2001/XMLSchema#integer",
+            InlineLiteral::Decimal(_) => "http://www.w3.org/2001/XMLSchema#decimal",
+            InlineLiteral::Boolean(_) => "http://www.w3.org/2001/XMLSchema#boolean",
+            InlineLiteral::Float(_) => "http://www.w3.org/2001/XMLSchema#float",
+        }
+    }
+}
+
+impl std::fmt::Display for InlineLiteral {
+    /// The canonical lexical form (the string that goes between the quotes).
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            InlineLiteral::Integer(n) => write!(f, "{n}"),
+            InlineLiteral::Decimal(raw) => {
+                let neg = raw < 0;
+                let abs = raw.unsigned_abs();
+                let whole = abs / 1_000_000;
+                let frac = abs % 1_000_000;
+                if neg {
+                    write!(f, "-{whole}.{frac:06}")
+                } else {
+                    write!(f, "{whole}.{frac:06}")
+                }
+            }
+            InlineLiteral::Boolean(b) => write!(f, "{b}"),
+            InlineLiteral::Float(x) => write!(f, "{x}"),
+        }
+    }
+}
+
+/// Classify a Quin field value as an inline-typed literal, or `None` if it is
+/// not one (an IRI hash / did:q42 pointer / lexicon entry).
+///
+/// IMPORTANT: `INLINE_TAG_INTEGER` and `TAG_EMBEDDED` are the *same* bit pattern
+/// (`0b001 << 60`). A caller that also handles SPARQL-Star embedded triples must
+/// try its embedded-triple lexicon lookup **before** calling this — a resolvable
+/// embedded-triple virtual id would otherwise be reported here as an integer.
+#[inline]
+pub fn classify_inline_literal(val: u64) -> Option<InlineLiteral> {
+    // A value with the MSB set is a topological pointer, never an inline literal.
+    if (val & MSB_FLAG) != 0 {
+        return None;
+    }
+    match val & INLINE_TAG_MASK {
+        INLINE_TAG_INTEGER => {
+            let mut n = (val & INLINE_VALUE_MASK) as i64;
+            if (n & (1i64 << 59)) != 0 {
+                n |= !((1i64 << 60) - 1);
+            }
+            Some(InlineLiteral::Integer(n))
+        }
+        INLINE_TAG_DECIMAL => {
+            let mut raw = (val & INLINE_VALUE_MASK) as i64;
+            if (raw & (1i64 << 59)) != 0 {
+                raw |= !((1i64 << 60) - 1);
+            }
+            Some(InlineLiteral::Decimal(raw))
+        }
+        INLINE_TAG_BOOLEAN => Some(InlineLiteral::Boolean((val & 1) != 0)),
+        INLINE_TAG_FLOAT => Some(InlineLiteral::Float(f32::from_bits((val & 0xFFFF_FFFF) as u32))),
+        _ => None,
+    }
+}
+
+/// Write an object term, applying inline-type detection on bits 60-62.
+///
+/// Priority order (same lexicon-first reasoning as `write_iri_term`):
+/// 1. Lexicon match → IRI
+/// 2. MSB=1 and not in lexicon → did:q42 pointer
+/// 3. Bits 60-62 match a known inline tag → typed literal
+/// 4. Fallback → hex placeholder
+#[inline]
+pub(crate) fn write_object_term<W: io::Write>(val: u64, out: &mut W) -> io::Result<()> {
+    // 1. Lexicon first — a known IRI hash wins over any bit-pattern check.
+    if let Some(uri) = LEXICON.resolve(val) {
+        out.write_all(b"<")?;
+        out.write_all(uri)?;
+        return out.write_all(b">");
+    }
+    // 2. MSB=1 → topological pointer.
+    if (val & MSB_FLAG) != 0 {
+        let ptr = val & !MSB_FLAG;
+        return write!(out, "<did:q42:ptr/{ptr:016x}>");
+    }
+    // 3. Inline-type detection (only reached for values NOT in the lexicon).
+    //    The ingest layer encodes typed literals with explicit tag bits, so
+    //    there is no ambiguity with normalised IRI hashes in a live database.
+    //    Shares one decoder with `classify_inline_literal` so the (error-prone)
+    //    sign-extension / f32 decode lives in exactly one place.
+    match classify_inline_literal(val) {
+        Some(lit) => write!(out, "\"{lit}\"^^<{}>", lit.datatype_iri()),
+        None => write!(out, "<quin:hash/{val:016x}>"),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Public streaming formatter
+// ---------------------------------------------------------------------------
+
+/// Serialise `quins` as N-Triples, writing each line directly to `out`.
+///
+/// The function itself performs **no heap allocation** — it writes bytes
+/// directly to the caller-supplied `W` sink.  Callers that need an in-memory
+/// buffer should pass `&mut Vec<u8>`.
+///
+/// Subject values are written via `write_iri_term` (which accounts for the
+/// MSB / did:q42 flag).  Object values additionally check bits 60-62 for
+/// inline-typed literals.
+pub fn format_ntriples_to<W: io::Write>(quins: &[NQuin], out: &mut W) -> io::Result<()> {
+    for q in quins {
+        write_ntriple_line(q, out)?;
+    }
+    Ok(())
+}
+
+/// N-Quads lines with graph context (zero-heap).
+pub fn format_nquads_to<W: io::Write>(quins: &[NQuin], out: &mut W) -> io::Result<()> {
+    for q in quins {
+        write_iri_term(q.subject, out)?;
+        out.write_all(b" ")?;
+        write_iri_term(q.predicate, out)?;
+        out.write_all(b" ")?;
+        write_object_term(q.object, out)?;
+        out.write_all(b" ")?;
+        write_iri_term(q.context, out)?;
+        out.write_all(b" .\n")?;
+    }
+    Ok(())
+}
+
+/// RDF-Star N-Triples line (`<<<...>>>` subject when virtual id).
+pub fn format_ntriples_star_to<W: io::Write>(quins: &[NQuin], out: &mut W) -> io::Result<()> {
+    for q in quins {
+        write_ntriples_star_line(q, out)?;
+    }
+    Ok(())
+}
+
+#[inline]
+fn write_ntriple_line<W: io::Write>(q: &NQuin, out: &mut W) -> io::Result<()> {
+    write_iri_term(q.subject, out)?;
+    out.write_all(b" ")?;
+    write_iri_term(q.predicate, out)?;
+    out.write_all(b" ")?;
+    write_object_term(q.object, out)?;
+    out.write_all(b" .\n")
+}
+
+#[inline]
+fn write_ntriples_star_line<W: io::Write>(q: &NQuin, out: &mut W) -> io::Result<()> {
+    if crate::rdf_star::is_virtual_id(q.subject) {
+        out.write_all(b"<<<")?;
+        write_iri_term(q.subject, out)?;
+        out.write_all(b">>> ")?;
+    } else {
+        write_iri_term(q.subject, out)?;
+        out.write_all(b" ")?;
+    }
+    write_iri_term(q.predicate, out)?;
+    out.write_all(b" ")?;
+    write_object_term(q.object, out)?;
+    out.write_all(b" .\n")
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn quin(s: u64, p: u64, o: u64) -> NQuin {
+        NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        }
+    }
+
+    fn render(quins: &[NQuin]) -> String {
+        let mut buf = Vec::new();
+        format_ntriples_to(quins, &mut buf).unwrap();
+        String::from_utf8(buf).unwrap()
+    }
+
+    // --- resolve_hash -------------------------------------------------------
+
+    #[test]
+    fn known_hash_resolves_to_uri() {
+        let hash = crate::q_hash("Alice");
+        let result = resolve_hash(hash).unwrap();
+        assert_eq!(result, b"http://webizen.org/demo/Alice");
+    }
+
+    #[test]
+    fn unknown_hash_returns_none() {
+        assert!(resolve_hash(0xDEAD_BEEF_1234_5678).is_none());
+    }
+
+    #[test]
+    fn topological_pointer_returns_none() {
+        let ptr = crate::q_hash("z6Mk") | (1u64 << 63);
+        assert!(resolve_hash(ptr).is_none());
+    }
+
+    // --- write_iri_term / write_object_term ---------------------------------
+
+    #[test]
+    fn known_iri_rendered_with_angle_brackets() {
+        let mut buf = Vec::new();
+        write_iri_term(crate::q_hash("Alice"), &mut buf).unwrap();
+        assert_eq!(buf, b"<http://webizen.org/demo/Alice>");
+    }
+
+    #[test]
+    fn unknown_hash_fallback_is_hex() {
+        let mut buf = Vec::new();
+        write_iri_term(0x00_00_00_00_00_00_00_2A, &mut buf).unwrap();
+        // value 42 decimal = 0x2a hex
+        assert_eq!(buf, b"<quin:hash/000000000000002a>");
+    }
+
+    #[test]
+    fn topological_pointer_renders_as_did_q42_ptr() {
+        let val = 42u64 | (1u64 << 63);
+        let mut buf = Vec::new();
+        write_iri_term(val, &mut buf).unwrap();
+        let s = String::from_utf8(buf).unwrap();
+        assert!(s.starts_with("<did:q42:ptr/"), "got: {s}");
+    }
+
+    #[test]
+    fn inline_integer_object() {
+        let val = INLINE_TAG_INTEGER | 99;
+        let mut buf = Vec::new();
+        write_object_term(val, &mut buf).unwrap();
+        let s = String::from_utf8(buf).unwrap();
+        assert_eq!(s, "\"99\"^^<http://www.w3.org/2001/XMLSchema#integer>");
+    }
+
+    #[test]
+    fn inline_boolean_true() {
+        let val = INLINE_TAG_BOOLEAN | 1;
+        let mut buf = Vec::new();
+        write_object_term(val, &mut buf).unwrap();
+        assert_eq!(
+            String::from_utf8(buf).unwrap(),
+            "\"true\"^^<http://www.w3.org/2001/XMLSchema#boolean>"
+        );
+    }
+
+    #[test]
+    fn inline_boolean_false() {
+        let val = INLINE_TAG_BOOLEAN | 0;
+        let mut buf = Vec::new();
+        write_object_term(val, &mut buf).unwrap();
+        assert_eq!(
+            String::from_utf8(buf).unwrap(),
+            "\"false\"^^<http://www.w3.org/2001/XMLSchema#boolean>"
+        );
+    }
+
+    #[test]
+    fn inline_decimal_object() {
+        // Encode 3.141592 → raw = 3_141_592
+        let val = INLINE_TAG_DECIMAL | 3_141_592u64;
+        let mut buf = Vec::new();
+        write_object_term(val, &mut buf).unwrap();
+        assert_eq!(
+            String::from_utf8(buf).unwrap(),
+            "\"3.141592\"^^<http://www.w3.org/2001/XMLSchema#decimal>"
+        );
+    }
+
+    #[test]
+    fn inline_float_object() {
+        // Computed f32 values carry the 0b101 FLOAT tag (formerly squatted on INTEGER).
+        let val = INLINE_TAG_FLOAT | (3.5f32.to_bits() as u64);
+        let mut buf = Vec::new();
+        write_object_term(val, &mut buf).unwrap();
+        assert_eq!(
+            String::from_utf8(buf).unwrap(),
+            "\"3.5\"^^<http://www.w3.org/2001/XMLSchema#float>"
+        );
+        // Round-trips through the FrameLayout packer too.
+        let packed = crate::frame_layout::pack_float_object(3.5);
+        assert_eq!(
+            packed & crate::frame_layout::INLINE_TAG_MASK,
+            INLINE_TAG_FLOAT
+        );
+    }
+
+    #[test]
+    fn inline_negative_integer_object() {
+        let num = -42i64;
+        let unsigned = (num as u64) & INLINE_VALUE_MASK;
+        let val = INLINE_TAG_INTEGER | unsigned;
+        let mut buf = Vec::new();
+        write_object_term(val, &mut buf).unwrap();
+        assert_eq!(
+            String::from_utf8(buf).unwrap(),
+            "\"-42\"^^<http://www.w3.org/2001/XMLSchema#integer>"
+        );
+    }
+
+    #[test]
+    fn inline_negative_decimal_object() {
+        let num_f64 = -3.141592f64;
+        let num = (num_f64 * 1_000_000.0).round() as i64;
+        let unsigned = (num as u64) & INLINE_VALUE_MASK;
+        let val = INLINE_TAG_DECIMAL | unsigned;
+        let mut buf = Vec::new();
+        write_object_term(val, &mut buf).unwrap();
+        assert_eq!(
+            String::from_utf8(buf).unwrap(),
+            "\"-3.141592\"^^<http://www.w3.org/2001/XMLSchema#decimal>"
+        );
+    }
+
+    // --- format_ntriples_to -------------------------------------------------
+
+    #[test]
+    fn empty_slice_writes_nothing() {
+        assert_eq!(render(&[]), "");
+    }
+
+    #[test]
+    fn known_terms_resolve_to_iris() {
+        let q = quin(
+            crate::q_hash("Alice"),
+            crate::q_hash("knows"),
+            crate::q_hash("Bob"),
+        );
+        let out = render(&[q]);
+        assert!(
+            out.contains("<http://webizen.org/demo/Alice>"),
+            "got: {out}"
+        );
+        assert!(out.contains("<http://schema.org/knows>"), "got: {out}");
+        assert!(out.contains("<http://webizen.org/demo/Bob>"), "got: {out}");
+        assert!(out.ends_with(" .\n"));
+    }
+
+    #[test]
+    fn unknown_terms_use_hex_fallback() {
+        let q = quin(1, 2, 3);
+        let out = render(&[q]);
+        assert!(out.contains("<quin:hash/0000000000000001>"), "got: {out}");
+        assert!(out.contains("<quin:hash/0000000000000002>"), "got: {out}");
+        assert!(out.contains("<quin:hash/0000000000000003>"), "got: {out}");
+    }
+
+    #[test]
+    fn multiple_quins_produce_multiple_lines() {
+        let qs = [quin(1, 2, 3), quin(4, 5, 6)];
+        let out = render(&qs);
+        assert_eq!(out.lines().count(), 2);
+    }
+
+    #[test]
+    fn subject_msb_renders_as_topological_pointer() {
+        // A subject with MSB=1 is a did:q42 coordinate — not a nested-hash lookup.
+        let q = quin((1u64 << 63) | 42, 2, 3);
+        let out = render(&[q]);
+        assert!(out.starts_with("<did:q42:ptr/"), "got: {out}");
+    }
+}

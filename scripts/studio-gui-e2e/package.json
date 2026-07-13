@@ -1,0 +1,13 @@
+{
+  "name": "qualia-studio-gui-e2e",
+  "private": true,
+  "version": "0.0.23",
+  "description": "Playwright GUI smoke for Qualia settings portal (Phase 5)",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0"
+  }
+}

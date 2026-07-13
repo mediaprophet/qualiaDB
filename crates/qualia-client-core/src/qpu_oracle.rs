@@ -1,4 +1,4 @@
-//! Sovereign QPU Oracle — BYOK remote quantum offload for NP-hard tasks.
+//! Person-controlled QPU Oracle — BYOK remote quantum offload for NP-hard tasks.
 //!
 //! API keys are encrypted at rest via KeyVault-derived material. Only anonymized
 //! numeric matrices (QUBO / VQE parameter vectors) may egress; classified data
@@ -306,6 +306,11 @@ fn update_state<F: FnOnce(&mut QpuOracleState)>(f: F) -> Result<QpuOracleState, 
 /// Accepts both the plain English text and the base64 form.
 pub fn verify_commitment(input: &str) -> bool {
     let trimmed = input.trim();
+    // An empty (or whitespace-only) input is never a valid affirmation — guard it explicitly so a
+    // buggy decode fallback can never treat "" as a match (a false-accept in a rights-affirmation gate).
+    if trimmed.is_empty() {
+        return false;
+    }
     if trimmed.eq_ignore_ascii_case(COMMITMENT_TEXT) {
         return true;
     }

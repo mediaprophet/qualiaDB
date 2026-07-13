@@ -6,7 +6,7 @@
 // ─── Severity ─────────────────────────────────────────────────────────────────
 
 /// Maps to `sh:severity` in SHACL shapes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub enum ShaclSeverity {
     /// `sh:Violation` — halt ingestion, write rejection audit Quin.
     Violation,
@@ -94,13 +94,13 @@ pub enum ShaclTarget {
 
 // ─── Validation Report ───────────────────────────────────────────────────────
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct ValidationReport {
     pub conforms: bool,
     pub results: Vec<ValidationResult>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct ValidationResult {
     pub severity: ShaclSeverity,
     pub focus_node: String,
@@ -195,10 +195,32 @@ pub enum ShaclConstraint {
         policy_id: String,
         obligation: String,
     },
-    /// Epistemic logic constraint
+    /// Deontic obligation constraint — validates that a Quin encodes a valid active obligation
+    DeonticObligate,
+    /// Deontic permission constraint — validates that a Quin encodes a valid permit
+    DeonticPermit,
+    /// Deontic prohibition constraint — validates that a Quin encodes a valid forbiddal
+    DeonticForbid,
+    /// Deontic expiry constraint — validates that a norm has not expired
+    DeonticNotExpired {
+        now_unix: u32,
+    },
+    /// Epistemic logic constraint (generic — any epistemic opcode)
     EpistemicConstraint {
         certainty_threshold: f32,
     },
+    /// Epistemic knowledge constraint — validates that an agent holds a knowledge claim (OP_KNOWS)
+    /// with certainty >= min_certainty
+    EpistemicKnowledge {
+        min_certainty: u8,
+    },
+    /// Epistemic belief constraint — validates that an agent holds a belief claim (OP_BELIEVES)
+    /// with certainty >= min_certainty
+    EpistemicBelief {
+        min_certainty: u8,
+    },
+    /// Common knowledge constraint — validates that a claim is common knowledge (OP_COMMON_KNOWLEDGE)
+    CommonKnowledge,
     /// Temporal LTL constraint
     LtlConstraint {
         formula: String,
@@ -225,6 +247,12 @@ pub enum ShaclConstraint {
     DialecticalConstraint {
         synthesis_type: String,
     },
+    // ── Economics native extensions (for computational_economics) ───────────
+    EconVaRPositive,
+    EconConvergedModel,
+    EconPositivePrice,
+    EconRiskBelowThreshold { max_risk: f64 },
+    EconWelfareAboveFloor { min_welfare: f64 },
     /// ASP constraint
     AspConstraint {
         stable_model_limit: u32,
@@ -267,7 +295,11 @@ pub struct CompiledShape {
 }
 
 impl CompiledShape {
-    pub fn new(shape_class: String, constraints: Vec<ShaclConstraint>, severity: ShaclSeverity) -> Self {
+    pub fn new(
+        shape_class: String,
+        constraints: Vec<ShaclConstraint>,
+        severity: ShaclSeverity,
+    ) -> Self {
         Self {
             shape_class,
             constraints,
@@ -278,7 +310,7 @@ impl CompiledShape {
             name: None,
         }
     }
-    
+
     pub fn is_empty(&self) -> bool {
         self.constraints.is_empty()
     }

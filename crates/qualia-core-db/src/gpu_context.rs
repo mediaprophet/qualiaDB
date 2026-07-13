@@ -13,6 +13,19 @@ use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::OnceLock;
 
+// `caps` reports wgpu adapter capabilities, so it only compiles where the wgpu
+// dependency is present: native always, or wasm with the `gpu-runtime` feature.
+// Without this gate the module fails the `wasm-logic` build (no wgpu crate).
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+mod caps;
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+pub(crate) use caps::{experimental_features_allowed, requested_native_llm_features};
+#[cfg(not(target_arch = "wasm32"))]
+pub use caps::{
+    qualia_backend_override, recommend_inference_backend, GpuAdapterCaps, GpuFeatureCaps,
+    GpuLimitCaps,
+};
+
 /// Desktop / portal operational mode (thermal + VRAM driven).
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -47,6 +60,14 @@ impl OperationalMode {
 
     #[inline]
     pub fn bloom_enabled(self) -> bool {
+        matches!(self, Self::Full)
+    }
+
+    /// Whether this tier can render the full 3D scene. Only [`Self::Full`] does; `Eco`
+    /// (VRAM-conservation) and `Reserve` (engine-only) degrade 3D → 2D — the affordability rail.
+    /// Single source of the Phase-5 budget rule, shared by `render::authoring` and the portal.
+    #[inline]
+    pub fn supports_3d(self) -> bool {
         matches!(self, Self::Full)
     }
 }
@@ -151,7 +172,8 @@ impl VramByteRange {
     /// True when `[offset, offset+size)` lies entirely inside this partition pin.
     #[inline]
     pub fn contains(&self, alloc_offset: u64, alloc_size: u64) -> bool {
-        alloc_size == 0 || alloc_offset >= self.offset && alloc_offset.saturating_add(alloc_size) <= self.end()
+        alloc_size == 0
+            || alloc_offset >= self.offset && alloc_offset.saturating_add(alloc_size) <= self.end()
     }
 }
 
@@ -248,7 +270,11 @@ impl UniverseOrchestrator {
 
     /// Global mode mapped per universe — LLM (U0) wins under pressure.
     #[inline]
-    pub fn effective_mode(&self, universe: ComputeUniverse, global: OperationalMode) -> OperationalMode {
+    pub fn effective_mode(
+        &self,
+        universe: ComputeUniverse,
+        global: OperationalMode,
+    ) -> OperationalMode {
         match global {
             OperationalMode::Full => OperationalMode::Full,
             OperationalMode::Eco => match universe {
@@ -258,7 +284,9 @@ impl UniverseOrchestrator {
             OperationalMode::Reserve => match universe {
                 ComputeUniverse::LlmInference => OperationalMode::Full,
                 ComputeUniverse::Tensor10D => OperationalMode::Eco,
-                ComputeUniverse::Viewport | ComputeUniverse::AcousticPlane => OperationalMode::Reserve,
+                ComputeUniverse::Viewport | ComputeUniverse::AcousticPlane => {
+                    OperationalMode::Reserve
+                }
             },
         }
     }
@@ -344,9 +372,9 @@ impl VramLedger {
         };
         match slot {
             VramLedgerSlot::LlmKvCache => self.kv_cache_bytes.store(bytes, Ordering::Relaxed),
-            VramLedgerSlot::LlmWeightStaging => {
-                self.llm_weight_staging_bytes.store(bytes, Ordering::Relaxed)
-            }
+            VramLedgerSlot::LlmWeightStaging => self
+                .llm_weight_staging_bytes
+                .store(bytes, Ordering::Relaxed),
             VramLedgerSlot::Tensor10D => self.tensor_bytes.store(bytes, Ordering::Relaxed),
             VramLedgerSlot::Viewport => self.render_bytes.store(bytes, Ordering::Relaxed),
         }
@@ -402,18 +430,14 @@ impl VramLedger {
         if used.saturating_add(extra_bytes) > part.vram_budget_bytes {
             return false;
         }
-        part.ledger_range.contains(
-            part.ledger_range.offset.saturating_add(used),
-            extra_bytes,
-        ) && self.can_allocate(extra_bytes)
+        part.ledger_range
+            .contains(part.ledger_range.offset.saturating_add(used), extra_bytes)
+            && self.can_allocate(extra_bytes)
     }
 
     /// Map a ledger slot to its pinned byte offset inside the adapter ledger.
     #[inline]
-    pub fn slot_byte_offset(
-        orchestrator: &UniverseOrchestrator,
-        slot: VramLedgerSlot,
-    ) -> u64 {
+    pub fn slot_byte_offset(orchestrator: &UniverseOrchestrator, slot: VramLedgerSlot) -> u64 {
         let universe = match slot {
             VramLedgerSlot::LlmKvCache | VramLedgerSlot::LlmWeightStaging => {
                 ComputeUniverse::LlmInference
@@ -423,7 +447,10 @@ impl VramLedger {
         };
         let used_before = match slot {
             VramLedgerSlot::LlmWeightStaging => {
-                orchestrator.partition(ComputeUniverse::LlmInference).ledger_range.offset
+                orchestrator
+                    .partition(ComputeUniverse::LlmInference)
+                    .ledger_range
+                    .offset
                     + global_vram_ledger().used_in_slot(VramLedgerSlot::LlmKvCache)
             }
             _ => orchestrator.partition(universe).ledger_range.offset,
@@ -457,7 +484,11 @@ impl VramLedger {
 
     #[inline]
     pub fn record_kv_cache(&self, bytes: u64) {
-        self.record_universe(ComputeUniverse::LlmInference, VramLedgerSlot::LlmKvCache, bytes);
+        self.record_universe(
+            ComputeUniverse::LlmInference,
+            VramLedgerSlot::LlmKvCache,
+            bytes,
+        );
     }
 
     #[inline]
@@ -618,6 +649,19 @@ pub fn sample_ambient_telemetry() -> [f32; 11] {
 pub struct SharedGpuContext {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
+    /// The wgpu instance — needed to create surfaces (must be same instance as adapter).
+    pub instance: wgpu::Instance,
+    /// The wgpu adapter — needed to create surfaces and query capabilities.
+    pub adapter: wgpu::Adapter,
+    /// Immutable adapter capability snapshot for diagnostics and feature negotiation.
+    pub adapter_caps: GpuAdapterCaps,
+    /// Feature subset actually requested on the process-wide device.
+    pub enabled_features: GpuFeatureCaps,
+    /// Whether `TIMESTAMP_QUERY` was negotiated on this device (adapter-dependent).
+    /// When false, the LLM GPU profiler degrades to a no-op (CPU wall-clock only).
+    pub timestamps_supported: bool,
+    /// Nanoseconds per timestamp tick (`Queue::get_timestamp_period`); 0.0 when unsupported.
+    pub timestamp_period_ns: f32,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -639,16 +683,90 @@ impl SharedGpuContext {
 #[cfg(not(target_arch = "wasm32"))]
 static SHARED_GPU: OnceLock<SharedGpuContext> = OnceLock::new();
 
+/// Choose the DX12 shader compiler. DX12's legacy FXC compiler cannot compile our flash-attention
+/// shader (`fused_attention.wgsl`, X4026) — DXC (the modern compiler) can. Resolution order:
+///   1. `QUALIA_DXC_PATH` → `DynamicDxc` at that explicit `dxcompiler.dll` (bespoke override).
+///   2. `dxcompiler.dll` beside the current executable (where `build.rs` copies the vendored
+///      `vendor/dxc/` DLLs) → `DynamicDxc` at that path (turnkey — no env var needed).
+///   3. Otherwise `Auto` (static-DXC → PATH-DXC → FXC) — graceful fallback (Vulkan stays default).
+#[cfg(not(target_arch = "wasm32"))]
+fn resolve_dx12_compiler() -> wgpu::Dx12Compiler {
+    if let Ok(p) = std::env::var("QUALIA_DXC_PATH") {
+        if !p.trim().is_empty() {
+            log::info!("shared_gpu|dx12_compiler|DynamicDxc(env)={p}");
+            return wgpu::Dx12Compiler::DynamicDxc { dxc_path: p };
+        }
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            let dll = dir.join("dxcompiler.dll");
+            if dll.exists() {
+                log::info!(
+                    "shared_gpu|dx12_compiler|DynamicDxc(vendored)={}",
+                    dll.display()
+                );
+                return wgpu::Dx12Compiler::DynamicDxc {
+                    dxc_path: dll.to_string_lossy().into_owned(),
+                };
+            }
+        }
+    }
+    wgpu::Dx12Compiler::Auto
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
-    let instance = wgpu::Instance::default();
+    // Inference-pipeline (GPU backend) selection. Default = wgpu's own pick; `QUALIA_WGPU_BACKEND`
+    // pins it (e.g. =vulkan for the vendor-neutral path). The capability checker then reports what
+    // was actually selected + the recommendation, so "which pipeline is this machine on" is visible.
+    // DX12 shader compiler: the legacy FXC (D3DCompile) compiler CANNOT compile our flash-attention
+    // shader (`fused_attention.wgsl` — barriers after a per-thread varying-length SDPA loop; FXC
+    // error X4026), which is what the long-mislabelled "DX12 decode deadlock" actually was. DXC (the
+    // modern DirectX Shader Compiler) compiles it correctly. wgpu's own default is `Auto`
+    // (static-DXC → DXC-on-PATH → FXC), so DX12 silently falls back to FXC unless `dxcompiler.dll`
+    // is discoverable. `QUALIA_DXC_PATH` points wgpu straight at a `dxcompiler.dll` (with `dxil.dll`
+    // alongside it, for DXIL signing) so DX12 uses DXC without needing it on PATH. Absent the var we
+    // keep `Auto` (Vulkan stays the working default backend regardless).
+    let dx12_compiler = resolve_dx12_compiler();
+    let mut desc = wgpu::InstanceDescriptor::new_without_display_handle();
+    desc.backend_options.dx12.shader_compiler = dx12_compiler;
+    if let Some(backends) = caps::qualia_backend_override() {
+        log::info!("shared_gpu|backend_override|QUALIA_WGPU_BACKEND={backends:?}");
+        desc.backends = backends;
+    } else if cfg!(target_os = "windows") {
+        // Windows default = DX12. It is the verified-reliable native path: the DXC compiler fix
+        // builds the fused-attention shader, and DX12 decodes Q4_K_M / large models (e.g.
+        // llama-3.2-3b) that the Vulkan/SPIR-V path currently HANGS on (tracked bug). Vulkan is
+        // still the default off-Windows and remains selectable anywhere via QUALIA_WGPU_BACKEND=vulkan.
+        desc.backends = wgpu::Backends::DX12;
+        log::info!("shared_gpu|backend_default|windows->dx12 (override with QUALIA_WGPU_BACKEND=vulkan)");
+    }
+    let instance = wgpu::Instance::new(desc);
     let adapter = instance
         .request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
             ..Default::default()
         })
         .await
-        .ok_or_else(|| "Failed to find wgpu adapter".to_string())?;
+        .map_err(|e| format!("Failed to find wgpu adapter: {e}"))?;
+    let adapter_caps = GpuAdapterCaps::from_adapter(&adapter);
+    log::info!(
+        "shared_gpu|adapter|{}|{}",
+        adapter_caps.summary_line(),
+        adapter_caps.llm_feature_line()
+    );
+    log::info!(
+        "shared_gpu|inference_backend|{}|recommend: {}",
+        adapter_caps.backend_label(),
+        caps::recommend_inference_backend(&adapter_caps)
+    );
+    if adapter_caps.is_integrated_gpu()
+        && std::env::var("QUALIA_LLM_ALLOW_IGPU").ok().as_deref() != Some("1")
+    {
+        log::warn!(
+            "shared_gpu|adapter|integrated_gpu_selected|set QUALIA_LLM_ALLOW_IGPU=1 to acknowledge this for native LLM runs"
+        );
+    }
 
     #[cfg(target_os = "windows")]
     if let Ok(memory) = crate::directml_bridge::probe_best_adapter_memory() {
@@ -661,12 +779,72 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
         }
     }
 
+    // Request only features the adapter advertises, and keep the selector in the caps module so
+    // native feature policy stays visible. Today only timestamps are used by default; f16,
+    // subgroup, pipeline-cache/statistics, and cooperative matrix are enabled for the optimized
+    // native shader variants that follow.
+    let required_features = requested_native_llm_features(adapter.features());
+    let enabled_features = GpuFeatureCaps::from_features(required_features);
+    log::info!(
+        "shared_gpu|enabled_features|{}",
+        enabled_features.compact_flags()
+    );
+    if adapter_caps.features.cooperative_matrix && !enabled_features.cooperative_matrix {
+        log::info!(
+            "shared_gpu|cooperative_matrix_supported_but_disabled|set QUALIA_WGPU_EXPERIMENTAL_FEATURES=1 to request it"
+        );
+    }
+    let ts_supported = enabled_features.timestamp_query;
+    // Modern weight tensors blow past the wgpu DEFAULTS (max_buffer_size = 256 MiB,
+    // max_storage_buffer_binding_size = 128 MiB): the all-F16 Llama-3.2-3B tied lm_head
+    // (token_embd, 3072×128256×2 = 751 MiB) is a single resident buffer that the defaults reject
+    // ("Buffer size 788004864 > maximum buffer size 268435456"). Raise both caps to the adapter's
+    // reported maximum — always valid for request_device, so this never fails on weaker GPUs (they
+    // simply get their own, smaller, max). Vendor-neutral: pure wgpu limits, no CUDA / no extra
+    // device feature. Other limits stay at the conservative defaults.
+    let adapter_limits = adapter.limits();
+    let required_limits = wgpu::Limits {
+        max_buffer_size: adapter_limits.max_buffer_size,
+        max_storage_buffer_binding_size: adapter_limits.max_storage_buffer_binding_size,
+        ..wgpu::Limits::default()
+    };
+    let experimental_features = if required_features.intersects(
+        wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX
+            | wgpu::Features::EXPERIMENTAL_RAY_QUERY,
+    ) {
+        // Safety: experimental capabilities are requested only after intersecting
+        // with the selected adapter's advertised feature set. Callers must also
+        // explicitly opt in through QUALIA_WGPU_EXPERIMENTAL_FEATURES.
+        unsafe { wgpu::ExperimentalFeatures::enabled() }
+    } else {
+        wgpu::ExperimentalFeatures::disabled()
+    };
     let (device, queue) = adapter
-        .request_device(&wgpu::DeviceDescriptor::default(), None)
+        .request_device(&wgpu::DeviceDescriptor {
+            required_features,
+            required_limits,
+            experimental_features,
+            ..Default::default()
+        })
         .await
         .map_err(|e| e.to_string())?;
 
-    Ok(SharedGpuContext { device, queue })
+    let timestamp_period_ns = if ts_supported {
+        queue.get_timestamp_period()
+    } else {
+        0.0
+    };
+
+    Ok(SharedGpuContext {
+        device,
+        queue,
+        instance,
+        adapter,
+        adapter_caps,
+        enabled_features,
+        timestamps_supported: ts_supported,
+        timestamp_period_ns,
+    })
 }
 
 /// Process-wide wgpu device + queue (lazy init, reused by QTensorEngine + render).
@@ -691,6 +869,26 @@ pub fn shared_gpu() -> &'static SharedGpuContext {
 mod tests {
     use super::*;
 
+    /// Reports which GPU backend the engine's shared device actually selected for inference on this
+    /// machine (default, or pinned by `QUALIA_WGPU_BACKEND`). Run default vs `QUALIA_WGPU_BACKEND=vulkan`
+    /// in separate processes to confirm the override drives the real device.
+    #[test]
+    #[serial_test::serial(gpu)]
+    fn report_inference_backend() {
+        if !crate::wgsl_forge::test_gpu_available() {
+            return;
+        }
+        let g = shared_gpu();
+        eprintln!(
+            "[inference-backend] selected = {} | recommend: {}",
+            g.adapter_caps.backend_label(),
+            recommend_inference_backend(&g.adapter_caps),
+        );
+        eprintln!("[inference-backend] {}", g.adapter_caps.summary_line());
+        // The device must really exist (a backend was selected and an adapter acquired).
+        assert!(!g.adapter_caps.backend_label().is_empty());
+    }
+
     #[test]
     fn pressure_triggers_eco_and_reserve() {
         let ledger = VramLedger::new(1000);
@@ -707,15 +905,23 @@ mod tests {
         let orch = UniverseOrchestrator::from_total_budget_full(10_000);
         let sum: u64 = orch.partitions.iter().map(|p| p.vram_budget_bytes).sum();
         assert!(sum <= 10_000);
-        assert_eq!(orch.partition(ComputeUniverse::LlmInference).vram_budget_bytes, 5500);
+        assert_eq!(
+            orch.partition(ComputeUniverse::LlmInference)
+                .vram_budget_bytes,
+            5500
+        );
     }
 
     #[test]
     fn reserve_mode_caps_u2_at_ten_percent() {
         let orch = UniverseOrchestrator::from_total_budget(10_000, OperationalMode::Reserve);
-        assert_eq!(orch.partition(ComputeUniverse::Viewport).vram_budget_bytes, 1_000);
         assert_eq!(
-            orch.partition(ComputeUniverse::LlmInference).vram_budget_bytes,
+            orch.partition(ComputeUniverse::Viewport).vram_budget_bytes,
+            1_000
+        );
+        assert_eq!(
+            orch.partition(ComputeUniverse::LlmInference)
+                .vram_budget_bytes,
             4_500
         );
         assert_eq!(orch.active_mode, OperationalMode::Reserve);
@@ -757,15 +963,37 @@ mod tests {
 
     #[test]
     fn ambient_draw_instant_step_by_mode() {
-        let orch = UniverseOrchestrator::from_total_budget(6 * 1024 * 1024 * 1024, OperationalMode::Full);
-        assert_eq!(orch.max_particles(ComputeUniverse::Viewport, OperationalMode::Full), 50_000);
-        assert_eq!(orch.max_particles(ComputeUniverse::Viewport, OperationalMode::Eco), 8_000);
-        assert_eq!(orch.max_particles(ComputeUniverse::Viewport, OperationalMode::Reserve), 0);
+        let orch =
+            UniverseOrchestrator::from_total_budget(6 * 1024 * 1024 * 1024, OperationalMode::Full);
+        assert_eq!(
+            orch.max_particles(ComputeUniverse::Viewport, OperationalMode::Full),
+            50_000
+        );
+        assert_eq!(
+            orch.max_particles(ComputeUniverse::Viewport, OperationalMode::Eco),
+            8_000
+        );
+        assert_eq!(
+            orch.max_particles(ComputeUniverse::Viewport, OperationalMode::Reserve),
+            0
+        );
 
         let resident = 50_000_u32;
-        assert_eq!(ambient_draw_instances_for_mode(resident, OperationalMode::Full), 50_000);
-        assert_eq!(ambient_draw_instances_for_mode(resident, OperationalMode::Eco), 8_000);
-        assert_eq!(ambient_draw_instances_for_mode(resident, OperationalMode::Reserve), 0);
-        assert_eq!(ambient_draw_instances_for_mode(3_000, OperationalMode::Eco), 3_000);
+        assert_eq!(
+            ambient_draw_instances_for_mode(resident, OperationalMode::Full),
+            50_000
+        );
+        assert_eq!(
+            ambient_draw_instances_for_mode(resident, OperationalMode::Eco),
+            8_000
+        );
+        assert_eq!(
+            ambient_draw_instances_for_mode(resident, OperationalMode::Reserve),
+            0
+        );
+        assert_eq!(
+            ambient_draw_instances_for_mode(3_000, OperationalMode::Eco),
+            3_000
+        );
     }
 }

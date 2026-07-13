@@ -46,12 +46,7 @@ impl Default for QuboProblem {
 }
 
 impl QuboProblem {
-    pub fn add_coefficient(
-        &mut self,
-        i: usize,
-        j: usize,
-        coeff: f32,
-    ) -> Result<(), GsrError> {
+    pub fn add_coefficient(&mut self, i: usize, j: usize, coeff: f32) -> Result<(), GsrError> {
         if self.coefficient_count >= self.coefficients.len() {
             return Err(GsrError::CoefficientCapacityExceeded);
         }
@@ -179,7 +174,8 @@ impl GroundStateResolver {
         let mut winning_context = 0.0f32;
         let mut saw_term = false;
 
-        for &(_, weight) in request.problem.linear_terms[..request.problem.linear_term_count].iter() {
+        for &(_, weight) in request.problem.linear_terms[..request.problem.linear_term_count].iter()
+        {
             let magnitude = weight.abs();
             if !saw_term || magnitude > winning_context {
                 winning_context = magnitude;
@@ -332,11 +328,9 @@ impl GroundStateResolver {
     }
 
     fn store_result(&mut self, result: GsrResult) -> Result<(), GsrError> {
-        if let Some(entry) = self
-            .results_cache
-            .iter_mut()
-            .find(|entry| matches!(entry, Some(existing) if existing.problem_id == result.problem_id))
-        {
+        if let Some(entry) = self.results_cache.iter_mut().find(
+            |entry| matches!(entry, Some(existing) if existing.problem_id == result.problem_id),
+        ) {
             *entry = Some(result);
             return Ok(());
         }

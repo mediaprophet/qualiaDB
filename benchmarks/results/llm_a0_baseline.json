@@ -1,0 +1,74 @@
+[
+  {
+    "label": "SmolLM2-360M Q8",
+    "model_path": "../../docs/models/smollm2-360m-instruct-q8_0.gguf",
+    "quantization": "Q8_0",
+    "model": {
+      "n_layer": 32,
+      "n_head": 15,
+      "n_kv_head": 5,
+      "mapped_bytes": 386404992,
+      "kv_cache_bytes": 83886080,
+      "directml_enabled": true
+    },
+    "gpu": {
+      "adapter": "NVIDIA RTX A2000 12GB",
+      "backend": "vulkan",
+      "device_type": "discrete",
+      "adapter_feature_flags": "ts=1 ts-pass=1 stats=1 cache=1 f16=1 i64=1 subgroup=1 subgroup-barrier=1 coop-matrix=1 ray-query=1",
+      "enabled_feature_flags": "ts=1 ts-pass=1 stats=1 cache=1 f16=1 i64=0 subgroup=1 subgroup-barrier=1 coop-matrix=0 ray-query=0",
+      "subgroup_min_size": 32,
+      "subgroup_max_size": 32,
+      "cooperative_matrix_tiles": 6
+    },
+    "prompt_tokens": 5,
+    "output_tokens": 64,
+    "cold_ttft_ms": 1020.9520000000001,
+    "cold_total_ms": 11458.847199999998,
+    "warm_ttft_ms": 812.8253666666666,
+    "warm_total_ms": 4283.7527,
+    "load_ms": 366.87373333333335,
+    "prefill_ms": 386.3572,
+    "prefill_tok_s": 10.353113647163816,
+    "decode_ms": 3465.014966666667,
+    "decode_tok_s": 18.47033868992716,
+    "gpu_timestamp_supported": true,
+    "note": ""
+  },
+  {
+    "label": "SmolLM2-360M Q4_K_M",
+    "model_path": "../../docs/models/SmolLM2-360M-Instruct-Q4_K_M.gguf",
+    "quantization": "Q4_K_M",
+    "model": {
+      "n_layer": 32,
+      "n_head": 15,
+      "n_kv_head": 5,
+      "mapped_bytes": 270590880,
+      "kv_cache_bytes": 83886080,
+      "directml_enabled": true
+    },
+    "gpu": {
+      "adapter": "NVIDIA RTX A2000 12GB",
+      "backend": "vulkan",
+      "device_type": "discrete",
+      "adapter_feature_flags": "ts=1 ts-pass=1 stats=1 cache=1 f16=1 i64=1 subgroup=1 subgroup-barrier=1 coop-matrix=1 ray-query=1",
+      "enabled_feature_flags": "ts=1 ts-pass=1 stats=1 cache=1 f16=1 i64=0 subgroup=1 subgroup-barrier=1 coop-matrix=0 ray-query=0",
+      "subgroup_min_size": 32,
+      "subgroup_max_size": 32,
+      "cooperative_matrix_tiles": 6
+    },
+    "prompt_tokens": 5,
+    "output_tokens": 64,
+    "cold_ttft_ms": 932.763,
+    "cold_total_ms": 7787.5616,
+    "warm_ttft_ms": 809.0588333333334,
+    "warm_total_ms": 4481.575833333333,
+    "load_ms": 373.26326666666665,
+    "prefill_ms": 374.7797666666667,
+    "prefill_tok_s": 10.672934762664616,
+    "decode_ms": 3688.3071,
+    "decode_tok_s": 17.352134262355758,
+    "gpu_timestamp_supported": true,
+    "note": ""
+  }
+]

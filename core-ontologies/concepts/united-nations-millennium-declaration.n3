@@ -1,0 +1,647 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix dc:      <http://purl.org/dc/terms/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix values:  <https://ns.webcivics.net/values/> .
+@prefix cml:     <https://ns.webcivics.net/cml/> .
+@prefix concept: <https://ns.webcivics.net/concept/> .
+@prefix doc:     <https://ns.webcivics.net/values/united-nations-millennium-declaration#> .
+
+# ============================================================
+# CML concept layer (LOGIC) — United Nations Millennium Declaration
+# MACHINE-DERIVED from the TEXT layer (un-instruments) — cml:Proposed,
+# values:HeuristicDerived. Pending human attestation (cml:Attested / exactMatch).
+# One cml:Concept per provision; cml:realizedBy the provision; cml:asserts the
+# deontic norm. R1 universalisation materialised for duties borne by every Agent.
+# ============================================================
+
+concept:united-nations-millennium-declaration-paragraph-1 a cml:Concept ;
+    skos:prefLabel "Paragraph 1"@en ;
+    cml:realizedBy doc:paragraph-1 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-1-norm .
+
+concept:united-nations-millennium-declaration-paragraph-1-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-1 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-2 a cml:Concept ;
+    skos:prefLabel "Paragraph 2"@en ;
+    cml:realizedBy doc:paragraph-2 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-2-norm .
+
+concept:united-nations-millennium-declaration-paragraph-2-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-2 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-3 a cml:Concept ;
+    skos:prefLabel "Paragraph 3"@en ;
+    cml:realizedBy doc:paragraph-3 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-3-norm .
+
+concept:united-nations-millennium-declaration-paragraph-3-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-3 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-4 a cml:Concept ;
+    skos:prefLabel "Paragraph 4"@en ;
+    cml:realizedBy doc:paragraph-4 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-4-norm .
+
+concept:united-nations-millennium-declaration-paragraph-4-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-4 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-5 a cml:Concept ;
+    skos:prefLabel "Paragraph 5"@en ;
+    cml:realizedBy doc:paragraph-5 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-5-norm .
+
+concept:united-nations-millennium-declaration-paragraph-5-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-5 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-6 a cml:Concept ;
+    skos:prefLabel "Paragraph 6"@en ;
+    cml:realizedBy doc:paragraph-6 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-6-norm .
+
+concept:united-nations-millennium-declaration-paragraph-6-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-6 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-7 a cml:Concept ;
+    skos:prefLabel "Paragraph 7"@en ;
+    cml:realizedBy doc:paragraph-7 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-7-norm .
+
+concept:united-nations-millennium-declaration-paragraph-7-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-7 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-8 a cml:Concept ;
+    skos:prefLabel "Paragraph 8"@en ;
+    cml:realizedBy doc:paragraph-8 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-8-norm .
+
+concept:united-nations-millennium-declaration-paragraph-8-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-8 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-9 a cml:Concept ;
+    skos:prefLabel "Paragraph 9"@en ;
+    cml:realizedBy doc:paragraph-9 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-9-norm .
+
+concept:united-nations-millennium-declaration-paragraph-9-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-9 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-10 a cml:Concept ;
+    skos:prefLabel "Paragraph 10"@en ;
+    cml:realizedBy doc:paragraph-10 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-10-norm .
+
+concept:united-nations-millennium-declaration-paragraph-10-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-10 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-11 a cml:Concept ;
+    skos:prefLabel "Paragraph 11"@en ;
+    cml:realizedBy doc:paragraph-11 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-11-norm .
+
+concept:united-nations-millennium-declaration-paragraph-11-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-11 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-12 a cml:Concept ;
+    skos:prefLabel "Paragraph 12"@en ;
+    cml:realizedBy doc:paragraph-12 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-12-norm .
+
+concept:united-nations-millennium-declaration-paragraph-12-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-12 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-13 a cml:Concept ;
+    skos:prefLabel "Paragraph 13"@en ;
+    cml:realizedBy doc:paragraph-13 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-13-norm .
+
+concept:united-nations-millennium-declaration-paragraph-13-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-13 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-14 a cml:Concept ;
+    skos:prefLabel "Paragraph 14"@en ;
+    cml:realizedBy doc:paragraph-14 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-14-norm .
+
+concept:united-nations-millennium-declaration-paragraph-14-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-14 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-15 a cml:Concept ;
+    skos:prefLabel "Paragraph 15"@en ;
+    cml:realizedBy doc:paragraph-15 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-15-norm .
+
+concept:united-nations-millennium-declaration-paragraph-15-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-15 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-16 a cml:Concept ;
+    skos:prefLabel "Paragraph 16"@en ;
+    cml:realizedBy doc:paragraph-16 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-16-norm .
+
+concept:united-nations-millennium-declaration-paragraph-16-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-16 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-17 a cml:Concept ;
+    skos:prefLabel "Paragraph 17"@en ;
+    cml:realizedBy doc:paragraph-17 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-17-norm .
+
+concept:united-nations-millennium-declaration-paragraph-17-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-17 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-18 a cml:Concept ;
+    skos:prefLabel "Paragraph 18"@en ;
+    cml:realizedBy doc:paragraph-18 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-18-norm .
+
+concept:united-nations-millennium-declaration-paragraph-18-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-18 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-19 a cml:Concept ;
+    skos:prefLabel "Paragraph 19"@en ;
+    cml:realizedBy doc:paragraph-19 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-19-norm .
+
+concept:united-nations-millennium-declaration-paragraph-19-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-19 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-20 a cml:Concept ;
+    skos:prefLabel "Paragraph 20"@en ;
+    cml:realizedBy doc:paragraph-20 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-20-norm .
+
+concept:united-nations-millennium-declaration-paragraph-20-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-20 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-21 a cml:Concept ;
+    skos:prefLabel "Paragraph 21"@en ;
+    cml:realizedBy doc:paragraph-21 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-21-norm .
+
+concept:united-nations-millennium-declaration-paragraph-21-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-21 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-22 a cml:Concept ;
+    skos:prefLabel "Paragraph 22"@en ;
+    cml:realizedBy doc:paragraph-22 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-22-norm .
+
+concept:united-nations-millennium-declaration-paragraph-22-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-22 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-23 a cml:Concept ;
+    skos:prefLabel "Paragraph 23"@en ;
+    cml:realizedBy doc:paragraph-23 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-23-norm .
+
+concept:united-nations-millennium-declaration-paragraph-23-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-23 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-24 a cml:Concept ;
+    skos:prefLabel "Paragraph 24"@en ;
+    cml:realizedBy doc:paragraph-24 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-24-norm .
+
+concept:united-nations-millennium-declaration-paragraph-24-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-24 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-25 a cml:Concept ;
+    skos:prefLabel "Paragraph 25"@en ;
+    cml:realizedBy doc:paragraph-25 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-25-norm .
+
+concept:united-nations-millennium-declaration-paragraph-25-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-25 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-26 a cml:Concept ;
+    skos:prefLabel "Paragraph 26"@en ;
+    cml:realizedBy doc:paragraph-26 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-26-norm .
+
+concept:united-nations-millennium-declaration-paragraph-26-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-26 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-27 a cml:Concept ;
+    skos:prefLabel "Paragraph 27"@en ;
+    cml:realizedBy doc:paragraph-27 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-27-norm .
+
+concept:united-nations-millennium-declaration-paragraph-27-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-27 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-28 a cml:Concept ;
+    skos:prefLabel "Paragraph 28"@en ;
+    cml:realizedBy doc:paragraph-28 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-28-norm .
+
+concept:united-nations-millennium-declaration-paragraph-28-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-28 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-29 a cml:Concept ;
+    skos:prefLabel "Paragraph 29"@en ;
+    cml:realizedBy doc:paragraph-29 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-29-norm .
+
+concept:united-nations-millennium-declaration-paragraph-29-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-29 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-30 a cml:Concept ;
+    skos:prefLabel "Paragraph 30"@en ;
+    cml:realizedBy doc:paragraph-30 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-30-norm .
+
+concept:united-nations-millennium-declaration-paragraph-30-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-30 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-31 a cml:Concept ;
+    skos:prefLabel "Paragraph 31"@en ;
+    cml:realizedBy doc:paragraph-31 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-31-norm .
+
+concept:united-nations-millennium-declaration-paragraph-31-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-31 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-32 a cml:Concept ;
+    skos:prefLabel "Paragraph 32"@en ;
+    cml:realizedBy doc:paragraph-32 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-32-norm .
+
+concept:united-nations-millennium-declaration-paragraph-32-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-32 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-33 a cml:Concept ;
+    skos:prefLabel "Paragraph 33"@en ;
+    cml:realizedBy doc:paragraph-33 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-33-norm .
+
+concept:united-nations-millennium-declaration-paragraph-33-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-33 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-34 a cml:Concept ;
+    skos:prefLabel "Paragraph 34"@en ;
+    cml:realizedBy doc:paragraph-34 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-34-norm .
+
+concept:united-nations-millennium-declaration-paragraph-34-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-34 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-35 a cml:Concept ;
+    skos:prefLabel "Paragraph 35"@en ;
+    cml:realizedBy doc:paragraph-35 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-35-norm .
+
+concept:united-nations-millennium-declaration-paragraph-35-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-35 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-36 a cml:Concept ;
+    skos:prefLabel "Paragraph 36"@en ;
+    cml:realizedBy doc:paragraph-36 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-36-norm .
+
+concept:united-nations-millennium-declaration-paragraph-36-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-36 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-37 a cml:Concept ;
+    skos:prefLabel "Paragraph 37"@en ;
+    cml:realizedBy doc:paragraph-37 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-37-norm .
+
+concept:united-nations-millennium-declaration-paragraph-37-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-37 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-38 a cml:Concept ;
+    skos:prefLabel "Paragraph 38"@en ;
+    cml:realizedBy doc:paragraph-38 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-38-norm .
+
+concept:united-nations-millennium-declaration-paragraph-38-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-38 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-millennium-declaration-paragraph-39 a cml:Concept ;
+    skos:prefLabel "Paragraph 39"@en ;
+    cml:realizedBy doc:paragraph-39 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    cml:asserts concept:united-nations-millennium-declaration-paragraph-39-norm .
+
+concept:united-nations-millennium-declaration-paragraph-39-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-millennium-declaration-paragraph-39 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .

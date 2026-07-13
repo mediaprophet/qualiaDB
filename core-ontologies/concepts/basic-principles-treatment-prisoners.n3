@@ -1,0 +1,34 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix dc:      <http://purl.org/dc/terms/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix values:  <https://ns.webcivics.net/values/> .
+@prefix cml:     <https://ns.webcivics.net/cml/> .
+@prefix concept: <https://ns.webcivics.net/concept/> .
+@prefix doc:     <https://ns.webcivics.net/values/basic-principles-treatment-prisoners#> .
+
+# ============================================================
+# CML concept layer (LOGIC) — Basic Principles for the Treatment of Prisoners
+# MACHINE-DERIVED from the TEXT layer (un-instruments) — cml:Proposed,
+# values:HeuristicDerived. Pending human attestation (cml:Attested / exactMatch).
+# One cml:Concept per provision; cml:realizedBy the provision; cml:asserts the
+# deontic norm. R1 universalisation materialised for duties borne by every Agent.
+# ============================================================
+
+concept:basic-principles-treatment-prisoners-paragraph-1 a cml:Concept ;
+    skos:prefLabel "Paragraph 1"@en ;
+    cml:realizedBy doc:paragraph-1 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/basic-principles-treatment-prisoners> ;
+    dc:date "14 December 1990" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:basic-principles-treatment-prisoners-paragraph-1-norm .
+
+concept:basic-principles-treatment-prisoners-paragraph-1-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:basic-principles-treatment-prisoners-paragraph-1 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .

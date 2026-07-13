@@ -12,35 +12,35 @@ use crate::webizen::SlgOpcode;
 /// `q42:BiologicalDomainConfiguration` — validates biological domain parameters
 #[derive(Debug, Clone)]
 pub struct BiologicalDomainConfiguration {
-    pub max_sequence_length: u32,      // Maximum DNA/RNA/protein sequence length
-    pub max_gene_count: u32,            // Maximum number of genes in analysis
+    pub max_sequence_length: u32, // Maximum DNA/RNA/protein sequence length
+    pub max_gene_count: u32,      // Maximum number of genes in analysis
     pub allowed_sequence_types: Vec<String>, // ["dna", "rna", "protein"]
-    pub require_quality_score: bool,    // Require sequence quality validation
+    pub require_quality_score: bool, // Require sequence quality validation
 }
 
 /// `q42:ChemicalDomainConfiguration` — validates chemical domain parameters
 #[derive(Debug, Clone)]
 pub struct ChemicalDomainConfiguration {
-    pub max_molecular_weight: f64,      // Maximum molecular weight (Da)
-    pub max_atom_count: u32,            // Maximum atoms per molecule
+    pub max_molecular_weight: f64,          // Maximum molecular weight (Da)
+    pub max_atom_count: u32,                // Maximum atoms per molecule
     pub allowed_element_types: Vec<String>, // Periodic table symbols
-    pub require_valence_validation: bool, // Require chemical valence checks
+    pub require_valence_validation: bool,   // Require chemical valence checks
 }
 
 /// `q42:PhysicalDomainConfiguration` — validates physical domain parameters
 #[derive(Debug, Clone)]
 pub struct PhysicalDomainConfiguration {
-    pub max_temperature_kelvin: f64,    // Maximum temperature (K)
-    pub max_pressure_pascal: f64,       // Maximum pressure (Pa)
-    pub allowed_energy_units: Vec<String>, // ["joule", "electron_volt", "calorie"]
+    pub max_temperature_kelvin: f64,           // Maximum temperature (K)
+    pub max_pressure_pascal: f64,              // Maximum pressure (Pa)
+    pub allowed_energy_units: Vec<String>,     // ["joule", "electron_volt", "calorie"]
     pub require_dimensional_consistency: bool, // Require unit consistency
 }
 
 /// `q42:FinancialDomainConfiguration` — validates financial domain parameters
 #[derive(Debug, Clone)]
 pub struct FinancialDomainConfiguration {
-    pub max_transaction_value: f64,     // Maximum transaction value
-    pub max_portfolio_size: f64,        // Maximum portfolio value
+    pub max_transaction_value: f64,      // Maximum transaction value
+    pub max_portfolio_size: f64,         // Maximum portfolio value
     pub allowed_currencies: Vec<String>, // Currency codes
     pub require_compliance_check: bool,  // Require regulatory compliance
 }
@@ -48,19 +48,19 @@ pub struct FinancialDomainConfiguration {
 /// `q42:MathematicalDomainConfiguration` — validates mathematical domain parameters
 #[derive(Debug, Clone)]
 pub struct MathematicalDomainConfiguration {
-    pub max_precision_bits: u8,         // Maximum precision (bits)
+    pub max_precision_bits: u8,            // Maximum precision (bits)
     pub allowed_number_types: Vec<String>, // ["integer", "float", "complex", "rational"]
-    pub max_expression_depth: u8,       // Maximum expression nesting depth
-    pub require_well_formedness: bool,  // Require well-formed expressions
+    pub max_expression_depth: u8,          // Maximum expression nesting depth
+    pub require_well_formedness: bool,     // Require well-formed expressions
 }
 
 /// `q42:GeospatialDomainConfiguration` — validates geospatial domain parameters
 #[derive(Debug, Clone)]
 pub struct GeospatialDomainConfiguration {
-    pub max_coordinate_precision: u8,   // Decimal places for coordinates
+    pub max_coordinate_precision: u8, // Decimal places for coordinates
     pub allowed_coordinate_systems: Vec<String>, // ["wgs84", "utm", "mercator"]
-    pub max_area_sq_km: f64,            // Maximum area in square kilometers
-    pub require_valid_geometry: bool,    // Require valid geometric shapes
+    pub max_area_sq_km: f64,          // Maximum area in square kilometers
+    pub require_valid_geometry: bool, // Require valid geometric shapes
 }
 
 // ── Obfuscation Constraints ─────────────────────────────────────────────────
@@ -68,42 +68,42 @@ pub struct GeospatialDomainConfiguration {
 /// `q42:ObfuscationConfiguration` — validates obfuscation parameters
 #[derive(Debug, Clone)]
 pub struct ObfuscationConfiguration {
-    pub max_obfuscation_depth: u8,      // Maximum obfuscation transformation depth
+    pub max_obfuscation_depth: u8, // Maximum obfuscation transformation depth
     pub allowed_obfuscation_methods: Vec<String>, // ["polynomial", "semantic", "domain"]
-    pub require_reversibility: bool,    // Require reversible transformations
-    pub min_entropy_bits: u8,           // Minimum entropy after obfuscation
+    pub require_reversibility: bool, // Require reversible transformations
+    pub min_entropy_bits: u8,      // Minimum entropy after obfuscation
 }
 
 /// `q42:PolynomialObfuscationConfiguration` — validates polynomial obfuscation parameters
 #[derive(Debug, Clone)]
 pub struct PolynomialObfuscationConfiguration {
-    pub max_polynomial_degree: u8,      // Maximum polynomial degree
+    pub max_polynomial_degree: u8,              // Maximum polynomial degree
     pub allowed_coefficient_types: Vec<String>, // ["integer", "float", "rational"]
-    pub require_irreducibility: bool,   // Require irreducible polynomials
+    pub require_irreducibility: bool,           // Require irreducible polynomials
 }
 
 /// `q42:SemanticStripperConfiguration` — validates semantic stripping parameters
 #[derive(Debug, Clone)]
 pub struct SemanticStripperConfiguration {
-    pub max_context_depth: u8,          // Maximum context stripping depth
+    pub max_context_depth: u8,              // Maximum context stripping depth
     pub allowed_context_types: Vec<String>, // ["clinical", "financial", "personal"]
-    pub require_anonymity: bool,        // Require complete anonymity
+    pub require_anonymity: bool,            // Require complete anonymity
 }
 
 /// `q42:DomainTransformerConfiguration` — validates domain transformation parameters
 #[derive(Debug, Clone)]
 pub struct DomainTransformerConfiguration {
     pub allowed_target_domains: Vec<String>, // Target transformation domains
-    pub max_transformation_chain_length: u8,  // Maximum chain of transformations
-    pub require_preservation: bool,     // Require mathematical structure preservation
+    pub max_transformation_chain_length: u8, // Maximum chain of transformations
+    pub require_preservation: bool,          // Require mathematical structure preservation
 }
 
 /// `q42:HybridStateConfiguration` — validates hybrid state management parameters
 #[derive(Debug, Clone)]
 pub struct HybridStateConfiguration {
-    pub max_state_size_bytes: u32,      // Maximum state size in bytes
+    pub max_state_size_bytes: u32,          // Maximum state size in bytes
     pub allowed_state_domains: Vec<String>, // ["classical", "quantum", "hybrid"]
-    pub require_synchronization: bool,  // Require state synchronization
+    pub require_synchronization: bool,      // Require state synchronization
 }
 
 // ── Solver Constraints ─────────────────────────────────────────────────────
@@ -111,33 +111,33 @@ pub struct HybridStateConfiguration {
 /// `q42:SolverConfiguration` — validates general solver parameters
 #[derive(Debug, Clone)]
 pub struct SolverConfiguration {
-    pub max_iterations: u32,            // Maximum solver iterations
-    pub convergence_tolerance: f64,     // Convergence threshold
-    pub max_step_size: f64,             // Maximum step size
-    pub min_step_size: f64,             // Minimum step size
+    pub max_iterations: u32,               // Maximum solver iterations
+    pub convergence_tolerance: f64,        // Convergence threshold
+    pub max_step_size: f64,                // Maximum step size
+    pub min_step_size: f64,                // Minimum step size
     pub allowed_solver_types: Vec<String>, // ["calculus", "linear_algebra", "optimization"]
 }
 
 /// `q42:CalculusSolverConfiguration` — validates calculus solver parameters
 #[derive(Debug, Clone)]
 pub struct CalculusSolverConfiguration {
-    pub max_ode_order: u8,             // Maximum ODE order
+    pub max_ode_order: u8,                // Maximum ODE order
     pub allowed_integrators: Vec<String>, // ["runge_kutta", "simpsons", "shooting"]
-    pub require_stability_check: bool,  // Require numerical stability check
+    pub require_stability_check: bool,    // Require numerical stability check
 }
 
 /// `q42:LinearAlgebraSolverConfiguration` — validates linear algebra solver parameters
 #[derive(Debug, Clone)]
 pub struct LinearAlgebraSolverConfiguration {
-    pub max_matrix_dimension: u16,      // Maximum matrix dimension
-    pub allowed_decompositions: Vec<String>, // ["lu", "qr", "svd", "eigen"]
+    pub max_matrix_dimension: u16,            // Maximum matrix dimension
+    pub allowed_decompositions: Vec<String>,  // ["lu", "qr", "svd", "eigen"]
     pub require_condition_number_check: bool, // Require condition number validation
 }
 
 /// `q42:OptimizationSolverConfiguration` — validates optimization solver parameters
 #[derive(Debug, Clone)]
 pub struct OptimizationSolverConfiguration {
-    pub max_variables: u32,            // Maximum number of variables
+    pub max_variables: u32,              // Maximum number of variables
     pub allowed_algorithms: Vec<String>, // ["nelder_mead", "newton_raphson", "levenberg_marquardt"]
     pub require_convexity_check: bool,   // Require convexity validation
 }
@@ -145,16 +145,16 @@ pub struct OptimizationSolverConfiguration {
 /// `q42:QuantumOptimizerConfiguration` — validates quantum optimizer parameters
 #[derive(Debug, Clone)]
 pub struct QuantumOptimizerConfiguration {
-    pub max_qubits: u16,                // Maximum number of qubits
+    pub max_qubits: u16,                 // Maximum number of qubits
     pub allowed_algorithms: Vec<String>, // ["qaoa", "spsa", "variational"]
-    pub require_error_correction: bool, // Require error correction
+    pub require_error_correction: bool,  // Require error correction
 }
 
 /// `q42:SymbolicLogicSolverConfiguration` — validates symbolic logic solver parameters
 #[derive(Debug, Clone)]
 pub struct SymbolicLogicSolverConfiguration {
-    pub max_clause_count: u32,          // Maximum number of clauses
-    pub max_variable_count: u32,       // Maximum number of variables
+    pub max_clause_count: u32,            // Maximum number of clauses
+    pub max_variable_count: u32,          // Maximum number of variables
     pub allowed_logic_types: Vec<String>, // ["defeasible", "classical", "modal"]
 }
 
@@ -163,9 +163,9 @@ pub struct SymbolicLogicSolverConfiguration {
 /// `q42:GeometricAlgebraConfiguration` — validates geometric algebra parameters
 #[derive(Debug, Clone)]
 pub struct GeometricAlgebraConfiguration {
-    pub max_dimension: u8,              // Maximum geometric algebra dimension (3D, 4D, etc.)
-    pub allowed_algebras: Vec<String>,  // ["pga", "cga", "conformal"]
-    pub require_normalization: bool,    // Require multivector normalization
+    pub max_dimension: u8, // Maximum geometric algebra dimension (3D, 4D, etc.)
+    pub allowed_algebras: Vec<String>, // ["pga", "cga", "conformal"]
+    pub require_normalization: bool, // Require multivector normalization
 }
 
 // ── Opcode Generation Functions ───────────────────────────────────────────────
@@ -235,7 +235,9 @@ impl ObfuscationConfiguration {
 
 impl PolynomialObfuscationConfiguration {
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
-        vec![SlgOpcode::CheckMaxInclusive(self.max_polynomial_degree as f64)]
+        vec![SlgOpcode::CheckMaxInclusive(
+            self.max_polynomial_degree as f64,
+        )]
     }
 }
 
@@ -247,13 +249,17 @@ impl SemanticStripperConfiguration {
 
 impl DomainTransformerConfiguration {
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
-        vec![SlgOpcode::CheckMaxInclusive(self.max_transformation_chain_length as f64)]
+        vec![SlgOpcode::CheckMaxInclusive(
+            self.max_transformation_chain_length as f64,
+        )]
     }
 }
 
 impl HybridStateConfiguration {
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
-        vec![SlgOpcode::CheckMaxInclusive(self.max_state_size_bytes as f64)]
+        vec![SlgOpcode::CheckMaxInclusive(
+            self.max_state_size_bytes as f64,
+        )]
     }
 }
 
@@ -276,7 +282,9 @@ impl CalculusSolverConfiguration {
 
 impl LinearAlgebraSolverConfiguration {
     pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
-        vec![SlgOpcode::CheckMaxInclusive(self.max_matrix_dimension as f64)]
+        vec![SlgOpcode::CheckMaxInclusive(
+            self.max_matrix_dimension as f64,
+        )]
     }
 }
 
@@ -312,7 +320,7 @@ impl GeometricAlgebraConfiguration {
 /// Returns comprehensive SHACL TTL vocabulary for domains, obfuscation, and solvers
 pub fn get_infrastructure_shacl_ttl() -> &'static str {
     r#"
-@prefix q42: <https://qualia.network/q42#> .
+@prefix q42: <https://webizen.org/q42#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 

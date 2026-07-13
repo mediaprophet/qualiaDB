@@ -9,17 +9,11 @@ use crate::sparql_ast::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PhysicalOperatorType {
     /// Scan all quins matching a subject
-    SubjectScan {
-        subject: u64,
-    },
+    SubjectScan { subject: u64 },
     /// Scan all quins matching a predicate
-    PredicateScan {
-        predicate: u64,
-    },
+    PredicateScan { predicate: u64 },
     /// Scan all quins matching an object
-    ObjectScan {
-        object: u64,
-    },
+    ObjectScan { object: u64 },
     /// Triple pattern scan with all three components
     TripleScan {
         subject: u64,
@@ -43,6 +37,14 @@ pub enum PhysicalOperatorType {
         input: OperatorId,
         expression: ExpressionId,
     },
+    /// Bind operator — extends each input row with `var` = eval(`expression`)
+    /// (SPARQL 1.1 Extend). Never drops rows; an expression error leaves the
+    /// variable unbound.
+    Bind {
+        input: OperatorId,
+        var: VariableId,
+        expression: ExpressionId,
+    },
     /// Projection operator
     Project {
         input: OperatorId,
@@ -63,19 +65,17 @@ pub enum PhysicalOperatorType {
         ascending: [bool; MAX_ORDER_CONDITIONS],
     },
     /// Union operator
-    Union {
-        left: OperatorId,
-        right: OperatorId,
-    },
-    /// Optional operator
-    Optional {
-        left: OperatorId,
-        right: OperatorId,
-    },
+    Union { left: OperatorId, right: OperatorId },
+    /// Optional operator (SPARQL 1.1 left-join)
+    Optional { left: OperatorId, right: OperatorId },
+    /// Anti-join operator (SPARQL 1.1 MINUS): keep a left solution unless a
+    /// right solution is compatible with it AND shares a bound variable.
+    AntiJoin { left: OperatorId, right: OperatorId },
     /// Distinct operator
-    Distinct {
-        input: OperatorId,
-    },
+    Distinct { input: OperatorId },
+    /// Sub-SELECT: evaluate stored subquery `query_id` independently and join
+    /// its projected solutions with the enclosing bindings.
+    SubSelect { query_id: u16 },
     /// GroupBy operator with Aggregates
     GroupBy {
         input: OperatorId,
@@ -160,7 +160,11 @@ impl ExecutionPlan {
         }
     }
 
-    pub fn add_operator(&mut self, op: PhysicalOperatorType, cardinality: u64) -> Result<OperatorId, String> {
+    pub fn add_operator(
+        &mut self,
+        op: PhysicalOperatorType,
+        cardinality: u64,
+    ) -> Result<OperatorId, String> {
         if self.operator_count >= 64 {
             return Err("Operator overflow".to_string());
         }
@@ -194,21 +198,30 @@ impl QueryPlanner {
         }
     }
 
-    fn plan_select(select: &SelectQuery, ctx: &SparqlQueryContext) -> Result<ExecutionPlan, String> {
+    fn plan_select(
+        select: &SelectQuery,
+        ctx: &SparqlQueryContext,
+    ) -> Result<ExecutionPlan, String> {
         let mut plan = ExecutionPlan::new();
-        
+
         // Plan the WHERE clause
         let root_op = Self::plan_pattern(select.root_pattern, ctx, &mut plan)?;
-        
+
         // Apply GroupBy/Aggregates
         let group_op = if select.group_by_count > 0 || select.aggregate_count > 0 {
             let mut group_vars = [0u8; MAX_VARIABLES];
             if select.group_by_count > 0 {
-                group_vars[..select.group_by_count as usize].copy_from_slice(&select.group_by[..select.group_by_count as usize]);
+                group_vars[..select.group_by_count as usize]
+                    .copy_from_slice(&select.group_by[..select.group_by_count as usize]);
             }
-            let mut aggregates = [crate::sparql_planner::AggregateSpec { func: 0, input_var: 0, output_var: 0 }; 16];
+            let mut aggregates = [crate::sparql_planner::AggregateSpec {
+                func: 0,
+                input_var: 0,
+                output_var: 0,
+            }; 16];
             if select.aggregate_count > 0 {
-                aggregates[..select.aggregate_count as usize].copy_from_slice(&select.aggregates[..select.aggregate_count as usize]);
+                aggregates[..select.aggregate_count as usize]
+                    .copy_from_slice(&select.aggregates[..select.aggregate_count as usize]);
             }
             plan.add_operator(
                 PhysicalOperatorType::GroupBy {
@@ -227,7 +240,8 @@ impl QueryPlanner {
         // Apply projection
         let project_op = if select.var_count > 0 {
             let mut vars = [0u8; MAX_VARIABLES];
-            vars[..select.var_count as usize].copy_from_slice(&select.variables[..select.var_count as usize]);
+            vars[..select.var_count as usize]
+                .copy_from_slice(&select.variables[..select.var_count as usize]);
             plan.add_operator(
                 PhysicalOperatorType::Project {
                     input: group_op,
@@ -239,7 +253,20 @@ impl QueryPlanner {
         } else {
             root_op
         };
-        
+
+        // Apply DISTINCT / REDUCED — dedup the projected solutions. (Previously
+        // the `distinct` flag was parsed but never planned, so `SELECT DISTINCT`
+        // silently returned duplicates.) Eliminating all duplicates is also a
+        // conformant realisation of REDUCED.
+        let distinct_op = if select.distinct || select.reduced {
+            plan.add_operator(
+                PhysicalOperatorType::Distinct { input: project_op },
+                0,
+            )?
+        } else {
+            project_op
+        };
+
         // Apply sorting
         let sort_op = if select.order_by_count > 0 {
             let mut order_by = [0u16; MAX_ORDER_CONDITIONS];
@@ -250,7 +277,7 @@ impl QueryPlanner {
             }
             plan.add_operator(
                 PhysicalOperatorType::Sort {
-                    input: project_op,
+                    input: distinct_op,
                     order_by,
                     order_count: select.order_by_count,
                     ascending,
@@ -258,9 +285,9 @@ impl QueryPlanner {
                 0,
             )?
         } else {
-            project_op
+            distinct_op
         };
-        
+
         // Apply limit/offset
         let final_op = if select.limit.is_some() || select.offset > 0 {
             plan.add_operator(
@@ -274,7 +301,7 @@ impl QueryPlanner {
         } else {
             sort_op
         };
-        
+
         plan.root_operator = final_op;
         Ok(plan)
     }
@@ -286,14 +313,20 @@ impl QueryPlanner {
         Ok(plan)
     }
 
-    fn plan_construct(construct: &ConstructQuery, ctx: &SparqlQueryContext) -> Result<ExecutionPlan, String> {
+    fn plan_construct(
+        construct: &ConstructQuery,
+        ctx: &SparqlQueryContext,
+    ) -> Result<ExecutionPlan, String> {
         let mut plan = ExecutionPlan::new();
         let root_op = Self::plan_pattern(construct.root_pattern, ctx, &mut plan)?;
         plan.root_operator = root_op;
         Ok(plan)
     }
 
-    fn plan_describe(describe: &DescribeQuery, ctx: &SparqlQueryContext) -> Result<ExecutionPlan, String> {
+    fn plan_describe(
+        describe: &DescribeQuery,
+        ctx: &SparqlQueryContext,
+    ) -> Result<ExecutionPlan, String> {
         let mut plan = ExecutionPlan::new();
         if let Some(pattern_id) = describe.root_pattern {
             let root_op = Self::plan_pattern(pattern_id, ctx, &mut plan)?;
@@ -302,39 +335,45 @@ impl QueryPlanner {
         Ok(plan)
     }
 
-    pub(crate) fn plan_pattern(pattern_id: PatternId, ctx: &SparqlQueryContext, plan: &mut ExecutionPlan) -> Result<OperatorId, String> {
-        let pattern = ctx.patterns.get(pattern_id as usize)
+    pub(crate) fn plan_pattern(
+        pattern_id: PatternId,
+        ctx: &SparqlQueryContext,
+        plan: &mut ExecutionPlan,
+    ) -> Result<OperatorId, String> {
+        let pattern = ctx
+            .patterns
+            .get(pattern_id as usize)
             .ok_or("Pattern ID out of bounds")?;
-        
+
         match pattern {
-            Pattern::Triple { subject, predicate, object } => {
-                plan.add_operator(
-                    PhysicalOperatorType::TripleScan {
-                        subject: *subject,
-                        predicate: *predicate,
-                        object: *object,
-                    },
-                    0,
-                )
-            }
+            Pattern::Triple {
+                subject,
+                predicate,
+                object,
+            } => plan.add_operator(
+                PhysicalOperatorType::TripleScan {
+                    subject: *subject,
+                    predicate: *predicate,
+                    object: *object,
+                },
+                0,
+            ),
             Pattern::StarTriple {
                 inner_subject,
                 inner_predicate,
                 inner_object,
                 outer_predicate,
                 outer_object,
-            } => {
-                plan.add_operator(
-                    PhysicalOperatorType::StarTripleScan {
-                        inner_subject: *inner_subject,
-                        inner_predicate: *inner_predicate,
-                        inner_object: *inner_object,
-                        outer_predicate: *outer_predicate,
-                        outer_object: *outer_object,
-                    },
-                    0,
-                )
-            }
+            } => plan.add_operator(
+                PhysicalOperatorType::StarTripleScan {
+                    inner_subject: *inner_subject,
+                    inner_predicate: *inner_predicate,
+                    inner_object: *inner_object,
+                    outer_predicate: *outer_predicate,
+                    outer_object: *outer_object,
+                },
+                0,
+            ),
             Pattern::Optional { inner } => {
                 let inner_op = Self::plan_pattern(*inner, ctx, plan)?;
                 // For now, just return the inner operator (simplified)
@@ -352,7 +391,10 @@ impl QueryPlanner {
                 )
             }
 
-            Pattern::Filter { pattern: inner_pattern, expression } => {
+            Pattern::Filter {
+                pattern: inner_pattern,
+                expression,
+            } => {
                 let inner_op = Self::plan_pattern(*inner_pattern, ctx, plan)?;
                 plan.add_operator(
                     PhysicalOperatorType::Filter {
@@ -362,41 +404,102 @@ impl QueryPlanner {
                     0,
                 )
             }
-            Pattern::Minus { inner } => {
-                Self::plan_pattern(*inner, ctx, plan)
-            }
-            Pattern::Group { start_idx, len } => {
-                // Plan all patterns in the group and join them
-                let mut current_op: Option<OperatorId> = None;
-                for i in *start_idx..(*start_idx + *len) {
-                    let pattern_op = Self::plan_pattern(i, ctx, plan)?;
-                    if let Some(curr) = current_op {
-                        // Join with current
-                        current_op = Some(plan.add_operator(
-                            PhysicalOperatorType::NestedLoopJoin {
-                                left: curr,
-                                right: pattern_op,
-                                join_var: 0, // TODO: Determine join variable
-                            },
-                            0,
-                        )?);
-                    } else {
-                        current_op = Some(pattern_op);
-                    }
-                }
-                current_op.ok_or("Empty group pattern".to_string())
-            }
-            Pattern::PropertyPath { subject, path, object } => {
+            Pattern::Bind {
+                pattern: inner_pattern,
+                var,
+                expression,
+            } => {
+                let inner_op = Self::plan_pattern(*inner_pattern, ctx, plan)?;
                 plan.add_operator(
-                    PhysicalOperatorType::PropertyPath {
-                        subject: *subject,
-                        path_id: *path,
-                        object: *object,
+                    PhysicalOperatorType::Bind {
+                        input: inner_op,
+                        var: *var,
+                        expression: *expression,
                     },
                     0,
                 )
             }
-            Pattern::Graph { graph_var_or_id, inner } => {
+            Pattern::Minus { inner } => Self::plan_pattern(*inner, ctx, plan),
+            Pattern::Group { start_idx, len } => {
+                // Plan the group's children left-to-right. Plain children join
+                // (natural join — the nested-loop operator checks compatibility
+                // across all bound slots). OPTIONAL children become a real
+                // left-join and MINUS children a real anti-join against the
+                // accumulated result, rather than being folded into a plain join
+                // (which would make OPTIONAL required and MINUS behave like an
+                // intersection — both wrong).
+                let mut current_op: Option<OperatorId> = None;
+                for i in *start_idx..(*start_idx + *len) {
+                    let child = ctx
+                        .patterns
+                        .get(i as usize)
+                        .ok_or("Pattern ID out of bounds")?;
+                    match child {
+                        Pattern::Optional { inner } => {
+                            let right = Self::plan_pattern(*inner, ctx, plan)?;
+                            current_op = Some(match current_op {
+                                Some(left) => plan.add_operator(
+                                    PhysicalOperatorType::Optional { left, right },
+                                    0,
+                                )?,
+                                // A leading OPTIONAL has no required left side —
+                                // its solutions stand alone.
+                                None => right,
+                            });
+                        }
+                        Pattern::Minus { inner } => {
+                            let right = Self::plan_pattern(*inner, ctx, plan)?;
+                            current_op = Some(match current_op {
+                                Some(left) => plan.add_operator(
+                                    PhysicalOperatorType::AntiJoin { left, right },
+                                    0,
+                                )?,
+                                // MINUS with nothing to subtract from is
+                                // degenerate (malformed SPARQL); nothing is
+                                // removed, so fall back to the inner solutions.
+                                None => right,
+                            });
+                        }
+                        _ => {
+                            let pattern_op = Self::plan_pattern(i, ctx, plan)?;
+                            current_op = Some(match current_op {
+                                Some(curr) => plan.add_operator(
+                                    PhysicalOperatorType::NestedLoopJoin {
+                                        left: curr,
+                                        right: pattern_op,
+                                        join_var: 0,
+                                    },
+                                    0,
+                                )?,
+                                None => pattern_op,
+                            });
+                        }
+                    }
+                }
+                current_op.ok_or("Empty group pattern".to_string())
+            }
+            Pattern::PropertyPath {
+                subject,
+                path,
+                object,
+            } => plan.add_operator(
+                PhysicalOperatorType::PropertyPath {
+                    subject: *subject,
+                    path_id: *path,
+                    object: *object,
+                },
+                0,
+            ),
+            Pattern::SubSelect { query_id } => plan.add_operator(
+                PhysicalOperatorType::SubSelect {
+                    query_id: *query_id,
+                },
+                0,
+            ),
+            Pattern::Graph {
+                graph_var_or_id,
+                inner,
+            } => {
                 let inner_op = Self::plan_pattern(*inner, ctx, plan)?;
                 plan.add_operator(
                     PhysicalOperatorType::Graph {
@@ -406,7 +509,10 @@ impl QueryPlanner {
                     0,
                 )
             }
-            Pattern::Service { endpoint_did_id, inner_pattern } => {
+            Pattern::Service {
+                endpoint_did_id,
+                inner_pattern,
+            } => {
                 let inner_op = Self::plan_pattern(*inner_pattern, ctx, plan)?;
                 plan.add_operator(
                     PhysicalOperatorType::Service {
@@ -416,7 +522,11 @@ impl QueryPlanner {
                     0,
                 )
             }
-            Pattern::AsOf { inner, timestamp_ms, mode } => {
+            Pattern::AsOf {
+                inner,
+                timestamp_ms,
+                mode,
+            } => {
                 let inner_op = Self::plan_pattern(*inner, ctx, plan)?;
                 plan.add_operator(
                     PhysicalOperatorType::AsOf {
@@ -459,9 +569,10 @@ mod tests {
             object: 3,
         };
         let pattern_id = ctx.alloc_pattern(pattern).unwrap();
-        
+
         let mut plan = ExecutionPlan::new();
         let op_id = QueryPlanner::plan_pattern(pattern_id, &ctx, &mut plan).unwrap();
+        assert_eq!(op_id, 0);
         assert_eq!(plan.operator_count, 1);
     }
 }

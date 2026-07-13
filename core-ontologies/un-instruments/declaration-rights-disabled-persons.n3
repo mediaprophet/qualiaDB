@@ -1,0 +1,69 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix doc:    <https://ns.webcivics.net/values/declaration-rights-disabled-persons#> .
+
+# ============================================================
+# Declaration on the Rights of Disabled Persons
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Declaration on the Rights of Disabled Persons"@en ;
+    dc:date "09 December 1975" ;
+    values:category "Persons with disabilities" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-rights-disabled-persons> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:paragraph-1 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 1"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Mindful of the pledge made by Member States, under the Charter of the United Nations to take joint and separate action in co-operation with the Organization to promote higher standards of living, full employment and conditions of economic and social progress and development,"@en .
+
+doc:paragraph-2 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 2"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Reaffirming its faith in human rights and fundamental freedoms and in the principles of peace, of the dignity and worth of the human person and of social justice proclaimed in the Charter,"@en .
+
+doc:paragraph-3 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 3"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Recalling the principles of the Universal Declaration of Human Rights, the International Covenants on Human Rights, the Declaration of the Rights of the Child and the Declaration on the Rights of Mentally Retarded Persons, as well as the standards already set for social progress in the constitutions, conventions, recommendations and resolutions of the International Labour Organisation, the United Nations Educational, Scientific and Cultural Organization, the World Health Organization, the United Nations Children's Fund and other organizations concerned,"@en .
+
+doc:paragraph-4 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 4"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Emphasizing that the Declaration on Social Progress and Development has proclaimed the necessity of protecting the rights and assuring the welfare and rehabilitation of the physically and mentally disadvantaged,"@en .
+
+doc:paragraph-5 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 5"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Bearing in mind the necessity of preventing physical and mental disabilities and of assisting disabled persons to develop their abilities in the most varied fields of activities and of promoting their integration as far as possible in normal life,"@en .
+
+doc:paragraph-6 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 6"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Aware that certain countries, at their present stage of development, can devote only limited efforts to this end,"@en .
+
+doc:paragraph-7 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 7"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Proclaims this Declaration on the Rights of Disabled Persons and calls for national and international action to ensure that it will be used as a common basis and frame of reference for the protection of these rights:"@en .
+
+doc:paragraph-8 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 8"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The term \"disabled person\" means any person unable to ensure by himself or herself, wholly or partly, the necessities of a normal individual and/or social life, as a result of deficiency, either congenital or not, in his or her physical or mental capabilities. Disabled persons shall enjoy all the rights set forth in this Declaration. These rights shall be granted to all disabled persons without any exception whatsoever and without distinction or discrimination on the basis of race, colour, sex, language, religion, political or other opinions, national or social origin, state of wealth, birth or any other situation applying either to the disabled person himself or herself or to his or her family. Disabled persons have the inherent right to respect for their human dignity. Disabled persons, whatever the origin, nature and seriousness of their handicaps and disabilities, have the same fundamental rights as their fellow-citizens of the same age, which implies first and foremost the right to enjoy a decent life, as normal and full as possible. Disabled persons have the same civil and political rights as other human beings; paragraph 7 of the Declaration on the Rights of Mentally Retarded Persons applies to any possible limitation or suppression of those rights for mentally disabled persons. Disabled persons are entitled to the measures designed to enable them to become as self-reliant as possible. Disabled persons have the right to medical, psychological and functional treatment, including prosthetic and orthetic appliances, to medical and social rehabilitation, education, vocational training and rehabilitation, aid, counselling, placement services and other services which will enable them to develop their capabilities and skills to the maximum and will hasten the processes of their social integration or reintegration. Disabled persons have the right to economic and social security and to a decent level of living. They have the right, according to their capabilities, to secure and retain employment or to engage in a useful, productive and remunerative occupation and to join trade unions. Disabled persons are entitled to have their special needs taken into consideration at all stages of economic and social planning. Disabled persons have the right to live with their families or with foster parents and to participate in all social, creative or recreational activities. No disabled person shall be subjected, as far as his or her residence is concerned, to differential treatment other than that required by his or her condition or by the improvement which he or she may derive therefrom. If the stay of a disabled person in a specialized establishment is indispensable, the environment and living conditions therein shall be as close as possible to those of the normal life of a person of his or her age. Disabled persons shall be protected against all exploitation, all regulations and all treatment of a discriminatory, abusive or degrading nature. Disabled persons shall be able to avail themselves of qualified legal aid when such aid proves indispensable for the protection of their persons and property. If judicial proceedings are instituted against them, the legal procedure applied shall take their physical and mental condition fully into account. Organizations of disabled persons may be usefully consulted in all matters regarding the rights of disabled persons. Disabled persons, their families and communities shall be fully informed, by all appropriate means, of the rights contained in this Declaration."@en .

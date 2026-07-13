@@ -106,7 +106,7 @@ fn vertex_main(
     let heat_color = vec3<f32>(1.0, 1.0, 1.0) * telemetry.llm_heat;
 
     // Logic flashes add brief bright bursts
-    let flash = step(0.9, sin(t * 10.0 + instance_index as f32 * 0.1)) * telemetry.logic_flashes;
+    let flash = step(0.9, sin(t * 10.0 + f32(instance_index) * 0.1)) * telemetry.logic_flashes;
     let flash_color = vec3<f32>(1.0, 0.9, 0.7) * flash;
 
     // Combine colors

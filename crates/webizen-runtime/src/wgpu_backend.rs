@@ -151,9 +151,11 @@ impl<'a> WgpuDiffusionBackend<'a> {
                 power_preference,
                 compatible_surface: None,
                 force_fallback_adapter: false,
+                // wgpu 30 added `apply_limit_buckets`; take the crate default.
+                ..Default::default()
             })
             .await
-            .ok_or(RuntimeError::AdapterUnavailable)?;
+            .map_err(|_| RuntimeError::AdapterUnavailable)?;
 
         let adapter_info = adapter.get_info();
         log::info!(
@@ -163,14 +165,12 @@ impl<'a> WgpuDiffusionBackend<'a> {
         );
 
         let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: Some("webizen-runtime-device"),
-                    required_features: wgpu::Features::empty(),
-                    required_limits: wgpu::Limits::downlevel_defaults(),
-                },
-                None,
-            )
+            .request_device(&wgpu::DeviceDescriptor {
+                label: Some("webizen-runtime-device"),
+                required_features: wgpu::Features::empty(),
+                required_limits: wgpu::Limits::downlevel_defaults(),
+                ..Default::default()
+            })
             .await
             .map_err(|err| RuntimeError::DeviceRequestFailed(err.to_string()))?;
 
@@ -219,15 +219,17 @@ impl<'a> WgpuDiffusionBackend<'a> {
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("webizen-diffusion-pipeline-layout"),
-            bind_group_layouts: &[&bind_group_layout],
-            push_constant_ranges: &[],
+            bind_group_layouts: &[Some(&bind_group_layout)],
+            immediate_size: 0,
         });
 
         let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some("webizen-diffusion-pipeline"),
             layout: Some(&pipeline_layout),
             module: &shader,
-            entry_point: "main",
+            entry_point: Some("main"),
+            compilation_options: Default::default(),
+            cache: None,
         });
 
         let (uniform_buffer, state_buffers, bind_groups, staging_buffer, frames) =
@@ -271,7 +273,7 @@ impl<'a> WgpuDiffusionBackend<'a> {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("webizen-render-pipeline-layout"),
             bind_group_layouts: &[],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
 
         Some(
@@ -280,8 +282,10 @@ impl<'a> WgpuDiffusionBackend<'a> {
                 layout: Some(&pipeline_layout),
                 vertex: wgpu::VertexState {
                     module: &shader,
-                    entry_point: "vertex_main",
-                    buffers: &[wgpu::VertexBufferLayout {
+                    entry_point: Some("vertex_main"),
+                    compilation_options: Default::default(),
+                    // wgpu 30: VertexState::buffers is &[Option<VertexBufferLayout>].
+                    buffers: &[Some(wgpu::VertexBufferLayout {
                         array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
                         step_mode: wgpu::VertexStepMode::Vertex,
                         attributes: &[
@@ -296,11 +300,12 @@ impl<'a> WgpuDiffusionBackend<'a> {
                                 format: wgpu::VertexFormat::Float32x4,
                             },
                         ],
-                    }],
+                    })],
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &shader,
-                    entry_point: "fragment_main",
+                    entry_point: Some("fragment_main"),
+                    compilation_options: Default::default(),
                     targets: &[Some(wgpu::ColorTargetState {
                         format: wgpu::TextureFormat::Bgra8UnormSrgb,
                         blend: Some(wgpu::BlendState::REPLACE),
@@ -322,7 +327,8 @@ impl<'a> WgpuDiffusionBackend<'a> {
                     mask: !0,
                     alpha_to_coverage_enabled: false,
                 },
-                multiview: None,
+                multiview_mask: None,
+                cache: None,
             }),
         )
     }
@@ -433,11 +439,11 @@ impl<'a> WgpuDiffusionBackend<'a> {
             let _ = tx.send(result);
         });
 
-        self.device.poll(wgpu::Maintain::Wait);
+        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
         let map_result = rx.recv().map_err(|_| RuntimeError::ChannelClosed)?;
         map_result.map_err(|err| RuntimeError::BufferMapFailed(err.to_string()))?;
 
-        let mapped = slice.get_mapped_range();
+        let mapped = slice.get_mapped_range().expect("wgpu buffer map_range failed");
         let hash = compute_state_hash(&mapped);
         let field = bytemuck::cast_slice::<u8, f32>(&mapped);
         let _ = self.frames.overwrite_slot(slot, |rgba| {
@@ -488,7 +494,7 @@ impl<'a> ComputeBackend for WgpuDiffusionBackend<'a> {
             self.config.raw_byte_len(),
         );
         self.queue.submit(Some(encoder.finish()));
-        self.device.poll(wgpu::Maintain::Wait);
+        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
 
         let state_hash = self.readback_snapshot_data(write_index)?;
         self.read_index = write_index;

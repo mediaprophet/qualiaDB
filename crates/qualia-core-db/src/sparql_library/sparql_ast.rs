@@ -62,7 +62,11 @@ impl Default for SelectQuery {
             root_pattern: 0,
             group_by: [0; MAX_VARIABLES],
             group_by_count: 0,
-            aggregates: [crate::sparql_planner::AggregateSpec { func: 0, input_var: 0, output_var: 0 }; 16],
+            aggregates: [crate::sparql_planner::AggregateSpec {
+                func: 0,
+                input_var: 0,
+                output_var: 0,
+            }; 16],
             aggregate_count: 0,
             having: None,
             order_by: [OrderCondition::default(); MAX_ORDER_CONDITIONS],
@@ -111,7 +115,7 @@ pub struct DescribeQuery {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TemporalMode {
     /// Assertion-time snapshot: include quins with `prov:generatedAtTime ≤ timestamp_ms`.
-    AsOf   = 0,
+    AsOf = 0,
     /// Valid-time point: include quins where `startedAtTime ≤ t ≤ endedAtTime`.
     AtTime = 1,
 }
@@ -127,14 +131,9 @@ pub enum Pattern {
         object: u64,
     },
     /// OPTIONAL pattern - references inner pattern by ID
-    Optional {
-        inner: PatternId,
-    },
+    Optional { inner: PatternId },
     /// UNION pattern - references left and right by IDs
-    Union {
-        left: PatternId,
-        right: PatternId,
-    },
+    Union { left: PatternId, right: PatternId },
     /// GRAPH pattern - references graph var/IRI and inner pattern
     Graph {
         graph_var_or_id: u64,
@@ -145,15 +144,18 @@ pub enum Pattern {
         pattern: PatternId,
         expression: ExpressionId,
     },
+    /// BIND(expr AS ?var) — extends each solution of `pattern` with `var`
+    /// bound to the value of `expression` (SPARQL 1.1 Extend). If the
+    /// expression errors, `var` is left unbound and the row is kept.
+    Bind {
+        pattern: PatternId,
+        var: VariableId,
+        expression: ExpressionId,
+    },
     /// MINUS pattern
-    Minus {
-        inner: PatternId,
-    },
+    Minus { inner: PatternId },
     /// Group graph pattern - references range in child array
-    Group {
-        start_idx: u16,
-        len: u16,
-    },
+    Group { start_idx: u16, len: u16 },
     /// Property path pattern (SPARQL 1.1)
     PropertyPath {
         subject: u64,
@@ -182,6 +184,13 @@ pub enum Pattern {
         outer_predicate: u64,
         outer_object: u64,
     },
+    /// Sub-`SELECT` `{ SELECT … WHERE { … } }` — an independently-evaluated
+    /// nested query (index into `SparqlQueryContext::subqueries`) whose projected
+    /// solutions join with the enclosing group. Only the sub-select's SELECT
+    /// variables are visible outside it.
+    SubSelect {
+        query_id: u16,
+    },
 }
 
 /// Property path (SPARQL 1.1)
@@ -193,15 +202,9 @@ pub enum Path {
     /// Inverse predicate (^pred)
     Inverse(PathId),
     /// Sequence (pred1/pred2)
-    Sequence {
-        left: PathId,
-        right: PathId,
-    },
+    Sequence { left: PathId, right: PathId },
     /// Alternation (pred1|pred2)
-    Alternative {
-        left: PathId,
-        right: PathId,
-    },
+    Alternative { left: PathId, right: PathId },
     /// Zero or more (pred*)
     ZeroOrMore(PathId),
     /// One or more (pred+)
@@ -223,10 +226,7 @@ pub enum Expression {
     /// IRI reference
     Iri(u64),
     /// Unary operation
-    UnaryOp {
-        op: UnaryOp,
-        expr: ExpressionId,
-    },
+    UnaryOp { op: UnaryOp, expr: ExpressionId },
     /// Binary operation
     BinaryOp {
         op: BinaryOp,
@@ -248,6 +248,15 @@ pub enum Expression {
         subject: u64,
         predicate: u64,
         object: u64,
+    },
+    /// `EXISTS { … }` / `NOT EXISTS { … }` — true iff the inner group graph
+    /// pattern has ≥1 solution when the current row's bindings are substituted
+    /// in. `negated` flips the result (NOT EXISTS). Evaluated by the executor
+    /// (it needs graph access), not the pure value evaluator; it is only valid
+    /// in a FILTER/HAVING boolean position.
+    Exists {
+        pattern: PatternId,
+        negated: bool,
     },
 }
 
@@ -373,10 +382,292 @@ pub struct SparqlQueryContext {
     pub function_arg_count: usize,
 }
 
+/// Query-scoped table of literal text (`hash -> string`) built by the parser for
+/// string/geometry constants. It lives **outside** the zero-heap
+/// `SparqlQueryContext` — it is a cold parse/eval-time structure — so functions
+/// that need literal text (`geof:*`, `STR`, `REGEX`, …) can recover it without
+/// putting `String`/`Vec` on the zero-heap execution hot path (CLAUDE.md §6).
+/// Canonical hash for a literal term, distinguishing a plain literal from a
+/// language-tagged or datatype-tagged one (`"x"`, `"x"@en`, and `"x"^^:t` are three
+/// distinct RDF terms). The parser and the [`StringSink`] both use this so a produced
+/// `STRLANG`/`STRDT` term round-trips its tag.
+pub fn literal_term_hash(text: &str, lang: Option<&str>, datatype: Option<&str>) -> u64 {
+    match (lang, datatype) {
+        (None, None) => crate::lexicon::generate_60bit_token(text.as_bytes()),
+        (Some(l), _) => crate::lexicon::generate_60bit_token(format!("{text}@{l}").as_bytes()),
+        (None, Some(d)) => crate::lexicon::generate_60bit_token(format!("{text}^^{d}").as_bytes()),
+    }
+}
+
+/// Query-scoped table of literal text + optional language tag / datatype IRI,
+/// `hash -> (text, lang?, datatype?)`, built by the parser for string/geometry/typed
+/// constants. Lives **outside** the zero-heap `SparqlQueryContext` — a cold
+/// parse/eval-time structure — so builtins (`STR`/`LANG`/`DATATYPE`/`geof:*`/…) recover
+/// what they need without heap on the §6 hot path.
+#[derive(Debug, Default, Clone)]
+pub struct LiteralTable {
+    entries: Vec<(u64, String, Option<String>, Option<String>)>,
+}
+
+impl LiteralTable {
+    pub fn new() -> Self {
+        Self::default()
+    }
+    /// Record the text for a plain literal hash (idempotent, no lang/datatype).
+    pub fn intern(&mut self, hash: u64, text: &str) {
+        self.intern_tagged(hash, text, None, None);
+    }
+    /// Record a literal with an optional language tag and/or datatype IRI.
+    pub fn intern_tagged(
+        &mut self,
+        hash: u64,
+        text: &str,
+        lang: Option<&str>,
+        datatype: Option<&str>,
+    ) {
+        if self.entries.iter().any(|(h, ..)| *h == hash) {
+            return;
+        }
+        self.entries.push((
+            hash,
+            text.to_string(),
+            lang.map(str::to_string),
+            datatype.map(str::to_string),
+        ));
+    }
+    pub fn resolve(&self, hash: u64) -> Option<&str> {
+        self.entries
+            .iter()
+            .find(|(h, ..)| *h == hash)
+            .map(|(_, s, ..)| s.as_str())
+    }
+    /// The language tag of an interned literal, if it has one.
+    pub fn lang(&self, hash: u64) -> Option<&str> {
+        self.entries
+            .iter()
+            .find(|(h, ..)| *h == hash)
+            .and_then(|(_, _, l, _)| l.as_deref())
+    }
+    /// The datatype IRI of an interned literal, if it was tagged with one.
+    pub fn datatype(&self, hash: u64) -> Option<&str> {
+        self.entries
+            .iter()
+            .find(|(h, ..)| *h == hash)
+            .and_then(|(_, _, _, d)| d.as_deref())
+    }
+    /// Whether this hash names a known (interned) literal.
+    pub fn contains(&self, hash: u64) -> bool {
+        self.entries.iter().any(|(h, ..)| *h == hash)
+    }
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+}
+
+/// Query-scoped sink for strings **produced** by expression evaluation — the result
+/// of `CONCAT`/`SUBSTR`/`UCASE`/…, an `xsd:dateTime` lexical from `NOW`, a `UUID`
+/// string, or a value-producing `BIND`. `EvalResult` only carries a `u64` hash, so a
+/// produced string must be interned somewhere its hash can be resolved again; this is
+/// that table.
+///
+/// It uses interior mutability (`RefCell`) so it can be carried by the `Copy`
+/// [`TextResolver`] and written during evaluation **without** threading `&mut` through
+/// the recursive evaluator. This is the *cold* expression-eval tier (which already
+/// allocates `String`s for text builtins), not the §6 zero-heap hot path, so a small
+/// interning table here does not violate the hot-path invariant.
+#[derive(Debug, Default)]
+pub struct StringSink {
+    produced: std::cell::RefCell<Vec<(u64, String, Option<String>, Option<String>)>>,
+}
+
+impl StringSink {
+    pub fn new() -> Self {
+        Self::default()
+    }
+    /// Intern a produced plain string, returning its stable content-derived token.
+    /// Deterministic (same text → same token), so repeated/​reordered evaluation of a
+    /// pure builtin is referentially transparent (plan §4.4, QISP-R06).
+    pub fn intern(&self, text: &str) -> u64 {
+        self.intern_tagged(text, None, None)
+    }
+    /// Intern a produced string carrying an optional language tag / datatype IRI
+    /// (`STRLANG`/`STRDT`). The token distinguishes `"x"`, `"x"@en`, `"x"^^:t` via
+    /// [`literal_term_hash`], so `LANG`/`DATATYPE` can read the tag back.
+    pub fn intern_tagged(&self, text: &str, lang: Option<&str>, datatype: Option<&str>) -> u64 {
+        let hash = literal_term_hash(text, lang, datatype);
+        let mut v = self.produced.borrow_mut();
+        if !v.iter().any(|(h, ..)| *h == hash) {
+            v.push((
+                hash,
+                text.to_string(),
+                lang.map(str::to_string),
+                datatype.map(str::to_string),
+            ));
+        }
+        hash
+    }
+    /// Resolve a previously-interned produced string.
+    pub fn resolve(&self, hash: u64) -> Option<String> {
+        self.produced
+            .borrow()
+            .iter()
+            .find(|(h, ..)| *h == hash)
+            .map(|(_, s, ..)| s.clone())
+    }
+    /// The language tag of a produced string term, if any.
+    pub fn lang(&self, hash: u64) -> Option<String> {
+        self.produced
+            .borrow()
+            .iter()
+            .find(|(h, ..)| *h == hash)
+            .and_then(|(_, _, l, _)| l.clone())
+    }
+    /// The datatype IRI of a produced string term, if any.
+    pub fn datatype(&self, hash: u64) -> Option<String> {
+        self.produced
+            .borrow()
+            .iter()
+            .find(|(h, ..)| *h == hash)
+            .and_then(|(_, _, _, d)| d.clone())
+    }
+}
+
+/// Borrowed text resolver threaded into expression evaluation. Resolves a term
+/// hash to its literal text via, in order: the query-scoped `LiteralTable`
+/// (query constants), a [`StringSink`] of values produced during this query, an
+/// optional ingested-data lexicon closure (e.g. wrapping a `Q42LexMmap::lookup_hash`),
+/// and finally the global demo lexicon. Also carries the query-stable `now_ms` clock
+/// and `seed` used by the temporal / `UUID` / `RAND` builtins so their results are
+/// referentially transparent within one query snapshot (plan §4.4). All borrowed — no
+/// per-query heap in the evaluator, so the §6 hot-path invariant holds.
+#[derive(Clone, Copy)]
+pub struct TextResolver<'a> {
+    pub literals: &'a LiteralTable,
+    pub lexicon: Option<&'a dyn Fn(u64) -> Option<String>>,
+    /// Interner for strings produced by evaluation (`CONCAT`, `NOW`, `UUID`, …).
+    pub sink: Option<&'a StringSink>,
+    /// Query-stable wall clock, ms since the Unix epoch. `0` = unset (temporal
+    /// builtins then fail closed rather than fabricate a non-deterministic time).
+    pub now_ms: u64,
+    /// Query-stable RNG seed for `UUID`/`STRUUID`. `0` = unset.
+    pub seed: u64,
+}
+
+impl<'a> TextResolver<'a> {
+    pub fn new(literals: &'a LiteralTable) -> Self {
+        Self {
+            literals,
+            lexicon: None,
+            sink: None,
+            now_ms: 0,
+            seed: 0,
+        }
+    }
+    pub fn with_lexicon(literals: &'a LiteralTable, lexicon: &'a dyn Fn(u64) -> Option<String>) -> Self {
+        Self {
+            literals,
+            lexicon: Some(lexicon),
+            sink: None,
+            now_ms: 0,
+            seed: 0,
+        }
+    }
+    /// Attach a [`StringSink`] so value-producing builtins can intern their results.
+    pub fn with_sink(mut self, sink: &'a StringSink) -> Self {
+        self.sink = Some(sink);
+        self
+    }
+    /// Set the query-stable clock (ms since epoch) and RNG seed used by `NOW`/date
+    /// and `UUID`/`STRUUID`. Both must be query-stable for referential transparency.
+    pub fn with_env(mut self, now_ms: u64, seed: u64) -> Self {
+        self.now_ms = now_ms;
+        self.seed = seed;
+        self
+    }
+    /// Resolve a term hash to its literal text, if known.
+    pub fn resolve_text(&self, hash: u64) -> Option<String> {
+        if let Some(s) = self.literals.resolve(hash) {
+            return Some(s.to_string());
+        }
+        if let Some(sink) = self.sink {
+            if let Some(s) = sink.resolve(hash) {
+                return Some(s);
+            }
+        }
+        if let Some(f) = self.lexicon {
+            if let Some(s) = f(hash) {
+                return Some(s);
+            }
+        }
+        crate::resolver::resolve_hash(hash).and_then(|b| String::from_utf8(b.to_vec()).ok())
+    }
+
+    /// The language tag of a literal term (`LANG`). A plain, non-tagged literal has the
+    /// empty tag `""` (correct SPARQL default); `None` only for a term that is not a
+    /// known literal at all.
+    pub fn lang_of(&self, hash: u64) -> Option<String> {
+        if let Some(l) = self.literals.lang(hash) {
+            return Some(l.to_string());
+        }
+        if let Some(sink) = self.sink {
+            if let Some(l) = sink.lang(hash) {
+                return Some(l);
+            }
+        }
+        // A known/resolvable literal with no lang tag → "".
+        if self.literals.contains(hash)
+            || self.sink.map(|s| s.resolve(hash).is_some()).unwrap_or(false)
+            || crate::resolver::classify_inline_literal(hash).is_some()
+        {
+            return Some(String::new());
+        }
+        None
+    }
+
+    /// The datatype IRI of a literal term (`DATATYPE`): an explicit tag, else
+    /// `rdf:langString` for a lang-tagged literal, else the inline-encoded XSD type
+    /// (integer/decimal/double/boolean), else `xsd:string` for a plain known literal.
+    /// `None` for a term that is not a known/typed literal.
+    pub fn datatype_of(&self, hash: u64) -> Option<String> {
+        const XSD_STRING: &str = "http://www.w3.org/2001/XMLSchema#string";
+        const RDF_LANGSTRING: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
+        if let Some(dt) = self.literals.datatype(hash) {
+            return Some(dt.to_string());
+        }
+        if let Some(sink) = self.sink {
+            if let Some(dt) = sink.datatype(hash) {
+                return Some(dt);
+            }
+            if sink.lang(hash).is_some() {
+                return Some(RDF_LANGSTRING.to_string());
+            }
+        }
+        if self.literals.lang(hash).is_some() {
+            return Some(RDF_LANGSTRING.to_string());
+        }
+        if let Some(lit) = crate::resolver::classify_inline_literal(hash) {
+            return Some(lit.datatype_iri().to_string());
+        }
+        if self.literals.contains(hash)
+            || self.sink.map(|s| s.resolve(hash).is_some()).unwrap_or(false)
+        {
+            return Some(XSD_STRING.to_string());
+        }
+        None
+    }
+}
+
 impl SparqlQueryContext {
     pub fn new() -> Self {
         Self {
-            patterns: [Pattern::Triple { subject: 0, predicate: 0, object: 0 }; MAX_PATTERNS],
+            patterns: [Pattern::Triple {
+                subject: 0,
+                predicate: 0,
+                object: 0,
+            }; MAX_PATTERNS],
             pattern_count: 0,
             expressions: [Expression::Variable(0); MAX_EXPRESSIONS],
             expression_count: 0,
@@ -390,10 +681,17 @@ impl SparqlQueryContext {
                 root_pattern: 0,
                 group_by: [0; MAX_VARIABLES],
                 group_by_count: 0,
-                aggregates: [crate::sparql_planner::AggregateSpec { func: 0, input_var: 0, output_var: 0 }; 16],
+                aggregates: [crate::sparql_planner::AggregateSpec {
+                    func: 0,
+                    input_var: 0,
+                    output_var: 0,
+                }; 16],
                 aggregate_count: 0,
                 having: None,
-                order_by: [OrderCondition { expr: 0, ascending: true }; MAX_ORDER_CONDITIONS],
+                order_by: [OrderCondition {
+                    expr: 0,
+                    ascending: true,
+                }; MAX_ORDER_CONDITIONS],
                 order_by_count: 0,
                 limit: None,
                 offset: 0,
@@ -537,13 +835,13 @@ mod tests {
     #[test]
     fn test_query_context_allocation() {
         let mut ctx = SparqlQueryContext::new();
-        
+
         let pattern = Pattern::Triple {
             subject: 1,
             predicate: 2,
             object: 3,
         };
-        
+
         let id = ctx.alloc_pattern(pattern).unwrap();
         assert_eq!(id, 0);
         assert_eq!(ctx.pattern_count, 1);
@@ -552,10 +850,10 @@ mod tests {
     #[test]
     fn test_variable_registration() {
         let mut ctx = SparqlQueryContext::new();
-        
+
         let id1 = ctx.register_variable("?x").unwrap();
         let id2 = ctx.register_variable("?y").unwrap();
-        
+
         assert_eq!(id1, 0);
         assert_eq!(id2, 1);
         assert_eq!(ctx.variable_count, 2);
@@ -564,10 +862,10 @@ mod tests {
     #[test]
     fn test_variable_duplicate() {
         let mut ctx = SparqlQueryContext::new();
-        
+
         let id1 = ctx.register_variable("?x").unwrap();
         let id2 = ctx.register_variable("?x").unwrap();
-        
+
         assert_eq!(id1, id2);
         assert_eq!(ctx.variable_count, 1);
     }
@@ -575,7 +873,7 @@ mod tests {
     #[test]
     fn test_binding_row() {
         let mut row = BindingRow::new();
-        
+
         row.set(0, 42);
         assert_eq!(row.get(0), Some(42));
         assert_eq!(row.get(1), None);
@@ -584,17 +882,17 @@ mod tests {
     #[test]
     fn test_optional_pattern_index() {
         let mut ctx = SparqlQueryContext::new();
-        
+
         let inner = Pattern::Triple {
             subject: 1,
             predicate: 2,
             object: 3,
         };
         let inner_id = ctx.alloc_pattern(inner).unwrap();
-        
+
         let optional = Pattern::Optional { inner: inner_id };
         let optional_id = ctx.alloc_pattern(optional).unwrap();
-        
+
         assert_eq!(ctx.pattern_count, 2);
         if let Pattern::Optional { inner } = ctx.patterns[optional_id as usize] {
             assert_eq!(inner, inner_id);
@@ -606,7 +904,7 @@ mod tests {
     #[test]
     fn test_union_pattern_index() {
         let mut ctx = SparqlQueryContext::new();
-        
+
         let left = Pattern::Triple {
             subject: 1,
             predicate: 2,
@@ -617,16 +915,16 @@ mod tests {
             predicate: 5,
             object: 6,
         };
-        
+
         let left_id = ctx.alloc_pattern(left).unwrap();
         let right_id = ctx.alloc_pattern(right).unwrap();
-        
+
         let union = Pattern::Union {
             left: left_id,
             right: right_id,
         };
         let union_id = ctx.alloc_pattern(union).unwrap();
-        
+
         assert_eq!(ctx.pattern_count, 3);
         if let Pattern::Union { left, right } = ctx.patterns[union_id as usize] {
             assert_eq!(left, left_id);

@@ -32,7 +32,7 @@
         .spinbtn:hover { background: rgba(16, 185, 129, 0.3); }
         .spinbtn:disabled { opacity: 0.4; cursor: not-allowed; }
         #canvas-container { border-radius: 16px; overflow: hidden; position: relative; }
-        #ambient-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; cursor: grab; }
+        #ambient-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; cursor: grab; background:#000; }
         .telem-slider::-webkit-slider-thumb { background: #34d399; }
     </style>
     <link rel="stylesheet" href="css/site-nav.css">
@@ -45,6 +45,10 @@
     })();
     </script>
     <script src="js/menu-loader.js"></script>
+    <!-- WebGPU limit shim: drops removed limits (e.g. maxInterStageShaderComponents) before the
+         WASM engine's requestDevice, so the GPU 3D path (PortalGpu) works on current Chrome.
+         Classic script → patches GPUAdapter before the deferred module scripts run. -->
+    <script src="js/webgpu-limits-shim.js"></script>
     <!-- COOP/COEP for SharedArrayBuffer + U3 zero-copy acoustic plane -->
     <script>
     (function () {
@@ -159,6 +163,12 @@
             <!-- 3D Viewer + ambient telemetry field (Webizen contract, Qualia data) -->
             <div class="lg:col-span-2 glass-strong rounded-3xl overflow-hidden" style="height: 520px;" id="canvas-container">
                 <canvas id="ambient-canvas"></canvas>
+                <!-- Phase 1.4: 2D shadow of the SAME manifold projection driving the 3D scene -->
+                <div style="position:absolute; bottom:12px; right:12px; z-index:10; display:flex; flex-direction:column; align-items:flex-end; gap:4px; pointer-events:none;">
+                    <span class="text-[9px] text-emerald-400/80" style="background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px;">2D shadow · one project()</span>
+                    <canvas id="plane2d-canvas" width="160" height="160"
+                            style="width:160px; height:160px; border-radius:8px; border:1px solid rgba(52,211,153,0.3); background:rgba(0,0,0,0.6);"></canvas>
+                </div>
             </div>
 
             <!-- Controls -->
@@ -216,6 +226,24 @@
                     <button onclick="encodeToQuins()" class="spinbtn w-full" id="encode-btn">
                         <i class="fas fa-microchip mr-2"></i>Encode to Quins (WASM)
                     </button>
+
+                    <input type="file" id="mesh-file" accept=".obj,.stl,.glb,.gltf" class="hidden">
+                    <button type="button" onclick="document.getElementById('mesh-file').click()"
+                            class="spinbtn w-full mt-2" id="load-mesh-btn">
+                        <i class="fas fa-cube mr-2"></i>Load 3D Asset (OBJ/STL/GLB)
+                    </button>
+                    <p class="text-[10px] text-white/45 mt-1" id="mesh-status"></p>
+                    <label class="flex items-center gap-2 mt-2 text-xs text-white/70 cursor-pointer" id="animate-row">
+                        <input type="checkbox" id="animate-artefact"> Animate artefact <span class="text-white/40">(revolute joint · Phase 2 physics)</span>
+                    </label>
+                    <button type="button" class="spinbtn w-full mt-2" id="demo-refusal-btn">
+                        <i class="fas fa-shield-halved mr-2"></i>Demo refusal (slide → clamp at bound)
+                    </button>
+                    <p class="text-[10px] mt-1 text-white/45" id="refusal-status"></p>
+                    <label class="flex items-center gap-2 mt-3 text-xs text-white/70 cursor-pointer" id="lowtier-row">
+                        <input type="checkbox" id="lowtier-toggle"> Simulate low-tier device <span class="text-white/40">(Phase 5 budget · collapse 3D→2D)</span>
+                    </label>
+                    <p class="text-[10px] mt-1 text-white/45" id="lowtier-status"></p>
 
                     <div class="icp-chrome mt-4 border-t border-white/10 pt-4" id="icp-link-mount">
                         <div class="text-xs text-white/50 mb-2 font-semibold">Interface Control Plane</div>
@@ -397,7 +425,7 @@ parity:    XOR fold
                 Native Spatial Operations
             </h2>
             
-            <p class="text-white/70 mb-6">QualiaDB provides native WASM implementations of common spatial operations from CGAL and computational geometry libraries.</p>
+            <p class="text-white/70 mb-6">QualiaDB provides native WASM implementations of common computational-geometry operations, following the standard algorithms and correctness properties described in the computational-geometry literature (de Berg, Cheong, van Kreveld &amp; Overmars, <em>Computational Geometry: Algorithms and Applications</em>, 3rd ed.).</p>
             
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 <div class="glass-panel p-4 rounded-xl">

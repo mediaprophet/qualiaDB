@@ -1,12 +1,11 @@
 //! Symbolic & Logic Solvers - Zero-Allocation Implementation
-//! 
+//!
 //! This module provides fixed-size stack-based symbolic and logic solvers for
 //! defeasible reasoning and boolean satisfiability suitable for the #![no_std]
 //! environment of Qualia-DB.
 
-use crate::solvers::{SolverConfig, SolverState, SolverResult};
 use crate::solvers::SolversError as ExecutionError;
-use crate::webizen::SlgOpcode;
+use crate::solvers::{SolverConfig, SolverResult, SolverState};
 
 /// Forward chaining defeasible reasoning solver
 #[repr(C)]
@@ -247,7 +246,7 @@ impl ForwardChainingDefeasible {
                 return Ok(());
             }
         }
-        
+
         Err(ExecutionError::CapacityExceeded)
     }
 
@@ -257,14 +256,14 @@ impl ForwardChainingDefeasible {
         for i in 0..50 {
             if self.facts[i].id == 0 {
                 self.facts[i] = fact;
-                
+
                 // Queue for inference
                 self.queue_inference(i as u8);
-                
+
                 return Ok(());
             }
         }
-        
+
         Err(ExecutionError::CapacityExceeded)
     }
 
@@ -276,16 +275,16 @@ impl ForwardChainingDefeasible {
         while !self.queue_empty() && self.solver_state.iteration < self.config.max_iterations {
             // Get next fact from queue
             let fact_index = self.queue_dequeue();
-            
+
             // Find applicable rules
             self.find_applicable_rules(fact_index)?;
-            
+
             // Apply rules and detect conflicts
             self.apply_rules()?;
-            
+
             // Resolve conflicts
             self.resolve_conflicts()?;
-            
+
             self.solver_state.iteration += 1;
         }
 
@@ -373,32 +372,33 @@ impl ForwardChainingDefeasible {
             if rule.antecedents[i].variable == 0 {
                 break; // No more antecedents
             }
-            
+
             let mut satisfied = false;
             for j in 0..50 {
                 if self.facts[j].id == 0 {
                     continue;
                 }
-                
-                if self.literals_match(&rule.antecedents[i], &self.facts[j].literal) 
-                    && !self.facts[j].defeated {
+
+                if self.literals_match(&rule.antecedents[i], &self.facts[j].literal)
+                    && !self.facts[j].defeated
+                {
                     satisfied = true;
                     break;
                 }
             }
-            
+
             if !satisfied {
                 return false;
             }
         }
-        
+
         true
     }
 
     /// Fire rule and derive consequent
     fn fire_rule(&mut self, rule_index: usize) -> SolverResult<()> {
         let rule = &self.rule_base[rule_index];
-        
+
         // Create new fact
         let new_fact = Fact {
             id: rule.consequent.variable as u32 + 1000, // Unique ID
@@ -407,10 +407,10 @@ impl ForwardChainingDefeasible {
             defeated: false,
             confidence: rule.priority as f64 / 1000.0,
         };
-        
+
         // Add fact
         self.add_fact(new_fact)?;
-        
+
         Ok(())
     }
 
@@ -421,38 +421,43 @@ impl ForwardChainingDefeasible {
             if self.facts[i].id == 0 {
                 continue;
             }
-            
+
             for j in i + 1..50 {
                 if self.facts[j].id == 0 {
                     continue;
                 }
-                
+
                 // Check for direct contradiction
-                if self.facts[i].literal.variable == self.facts[j].literal.variable &&
-                   self.facts[i].literal.negated != self.facts[j].literal.negated {
-                    
+                if self.facts[i].literal.variable == self.facts[j].literal.variable
+                    && self.facts[i].literal.negated != self.facts[j].literal.negated
+                {
                     // Add conflict
                     self.add_conflict(i, j, ConflictType::Contradiction)?;
                 }
             }
         }
-        
+
         Ok(())
     }
 
     /// Add conflict to conflict state
-    fn add_conflict(&mut self, fact1: usize, fact2: usize, conflict_type: ConflictType) -> SolverResult<()> {
+    fn add_conflict(
+        &mut self,
+        fact1: usize,
+        fact2: usize,
+        conflict_type: ConflictType,
+    ) -> SolverResult<()> {
         if self.conflict_state.num_conflicts < 10 {
             let conflict = Conflict {
                 facts: [self.facts[fact1].id, self.facts[fact2].id, 0],
                 rules: [0, 0, 0],
                 conflict_type,
             };
-            
+
             self.conflict_state.conflicts[self.conflict_state.num_conflicts as usize] = conflict;
             self.conflict_state.num_conflicts += 1;
         }
-        
+
         Ok(())
     }
 
@@ -484,12 +489,12 @@ impl ForwardChainingDefeasible {
         let mut fact2_idx = 0;
         let mut fact1_confidence = 0.0;
         let mut fact2_confidence = 0.0;
-        
+
         for i in 0..50 {
             if self.facts[i].id == 0 {
                 continue;
             }
-            
+
             if self.facts[i].id == conflict.facts[0] {
                 fact1_idx = i;
                 fact1_confidence = self.facts[i].confidence;
@@ -499,14 +504,14 @@ impl ForwardChainingDefeasible {
                 fact2_confidence = self.facts[i].confidence;
             }
         }
-        
+
         // Defeat lower confidence fact
         if fact1_confidence < fact2_confidence {
             self.facts[fact1_idx].defeated = true;
         } else {
             self.facts[fact2_idx].defeated = true;
         }
-        
+
         Ok(())
     }
 
@@ -576,7 +581,7 @@ impl BoundedSatSolver {
                 return Ok(());
             }
         }
-        
+
         Err(ExecutionError::CapacityExceeded)
     }
 
@@ -619,41 +624,41 @@ impl BoundedSatSolver {
 
         // Choose unassigned variable
         let var = self.choose_unassigned_variable()?;
-        
+
         // Try assigning true
         self.assign_variable(var, AssignmentValue::True, None)?;
         if self.dpll_algorithm()? {
             return Ok(true);
         }
-        
+
         // Backtrack
         self.backtrack()?;
-        
+
         // Try assigning false
         self.assign_variable(var, AssignmentValue::False, None)?;
         if self.dpll_algorithm()? {
             return Ok(true);
         }
-        
+
         // Backtrack
         self.backtrack()?;
-        
+
         Ok(false)
     }
 
     /// Unit propagation
     fn unit_propagate(&mut self) -> SolverResult<bool> {
         let mut propagated = true;
-        
+
         while propagated {
             propagated = false;
-            
+
             // Check all clauses for unit clauses
             for i in 0..50 {
                 if self.clauses[i].id == 0 {
                     continue;
                 }
-                
+
                 if let Some(unit_literal) = self.is_unit_clause(i)? {
                     // Propagate unit literal
                     let value = if unit_literal.negated {
@@ -661,13 +666,13 @@ impl BoundedSatSolver {
                     } else {
                         AssignmentValue::True
                     };
-                    
+
                     self.assign_variable(unit_literal.variable, value, Some(self.clauses[i].id))?;
                     propagated = true;
                 }
             }
         }
-        
+
         Ok(true)
     }
 
@@ -676,11 +681,11 @@ impl BoundedSatSolver {
         let clause = &self.clauses[clause_index];
         let mut unassigned_count = 0;
         let mut unit_literal = None;
-        
+
         for i in 0..clause.num_literals as usize {
             let literal = clause.literals[i];
             let assignment = &self.assignments[literal.variable as usize];
-            
+
             match assignment.value {
                 AssignmentValue::Unassigned => {
                     unassigned_count += 1;
@@ -698,7 +703,7 @@ impl BoundedSatSolver {
                 }
             }
         }
-        
+
         if unassigned_count == 1 {
             Ok(unit_literal)
         } else if unassigned_count == 0 {
@@ -709,13 +714,18 @@ impl BoundedSatSolver {
     }
 
     /// Assign variable
-    fn assign_variable(&mut self, var: u8, value: AssignmentValue, antecedent: Option<u32>) -> SolverResult<()> {
+    fn assign_variable(
+        &mut self,
+        var: u8,
+        value: AssignmentValue,
+        antecedent: Option<u32>,
+    ) -> SolverResult<()> {
         self.assignments[var as usize] = VariableAssignment {
             value,
             level: self.assignment_level,
             antecedent,
         };
-        
+
         // Add to propagation queue
         for i in 0..20 {
             if self.propagation_queue[i] == 0 {
@@ -723,7 +733,7 @@ impl BoundedSatSolver {
                 break;
             }
         }
-        
+
         Ok(())
     }
 
@@ -752,16 +762,16 @@ impl BoundedSatSolver {
         if self.assignment_level == 0 {
             return Err(ExecutionError::BacktrackFailed);
         }
-        
+
         // Clear assignments at current level
         for i in 0..20 {
             if self.assignments[i].level == self.assignment_level {
                 self.assignments[i] = VariableAssignment::default();
             }
         }
-        
+
         self.assignment_level -= 1;
-        
+
         Ok(())
     }
 
@@ -910,35 +920,62 @@ mod tests {
     #[test]
     fn test_defeasible_reasoning() {
         let mut solver = ForwardChainingDefeasible::new(SolverConfig::default());
-        
+
         // Add rule: A -> B
         let rule = DefeasibleRule {
             id: 1,
             rule_type: RuleType::Strict,
-            antecedents: [Literal { variable: 1, negated: false }, Literal { variable: 0, negated: false }, Literal { variable: 0, negated: false }, Literal { variable: 0, negated: false }, Literal { variable: 0, negated: false }],
-            consequent: Literal { variable: 2, negated: false },
+            antecedents: [
+                Literal {
+                    variable: 1,
+                    negated: false,
+                },
+                Literal {
+                    variable: 0,
+                    negated: false,
+                },
+                Literal {
+                    variable: 0,
+                    negated: false,
+                },
+                Literal {
+                    variable: 0,
+                    negated: false,
+                },
+                Literal {
+                    variable: 0,
+                    negated: false,
+                },
+            ],
+            consequent: Literal {
+                variable: 2,
+                negated: false,
+            },
             priority: 100,
             active: true,
             fire_count: 0,
         };
-        
+
         solver.add_rule(rule).unwrap();
-        
+
         // Add fact: A
         let fact = Fact {
             id: 100,
-            literal: Literal { variable: 1, negated: false },
+            literal: Literal {
+                variable: 1,
+                negated: false,
+            },
             supporting_rules: [0, 0, 0],
             defeated: false,
             confidence: 1.0,
         };
-        
+
         solver.add_fact(fact).unwrap();
-        
+
         // Perform inference
         let result = solver.infer();
         assert!(result.is_ok());
-        
+
         let state = result.unwrap();
         assert!(state.num_facts >= 2); // A and B
         assert!(state.rules_fired >= 1);
@@ -947,28 +984,43 @@ mod tests {
     #[test]
     fn test_sat_solver() {
         let mut solver = BoundedSatSolver::new(SolverConfig::default());
-        
+
         // Add clause: (A ∨ B ∨ ¬C)
         let clause = Clause {
             id: 1,
             literals: [
-                Literal { variable: 1, negated: false },
-                Literal { variable: 2, negated: false },
-                Literal { variable: 3, negated: true },
-                Literal { variable: 0, negated: false },
-                Literal { variable: 0, negated: false },
+                Literal {
+                    variable: 1,
+                    negated: false,
+                },
+                Literal {
+                    variable: 2,
+                    negated: false,
+                },
+                Literal {
+                    variable: 3,
+                    negated: true,
+                },
+                Literal {
+                    variable: 0,
+                    negated: false,
+                },
+                Literal {
+                    variable: 0,
+                    negated: false,
+                },
             ],
             num_literals: 3,
             learned: false,
             activity: 0.0,
         };
-        
+
         solver.add_clause(clause).unwrap();
-        
+
         // Solve
         let result = solver.solve();
         assert!(result.is_ok());
-        
+
         let state = result.unwrap();
         assert!(state.satisfiable.is_some());
     }

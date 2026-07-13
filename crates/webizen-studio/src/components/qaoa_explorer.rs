@@ -1,7 +1,28 @@
+use crate::components::qapp_engine::invoke_json;
 use dioxus::prelude::*;
 
 #[component]
 pub fn QaoaExplorer() -> Element {
+    let mut is_loading = use_signal(|| false);
+    let mut result_text = use_signal(|| "Approximation Ratio: 0.87 (Mocked)".to_string());
+    
+    let optimize = move |_| {
+        is_loading.set(true);
+        spawn(async move {
+            let args = serde_json::json!({
+                "payload": [0, 1, 2, 3], // mock payload for SLG VM
+            });
+
+            if let Ok(res) = invoke_json("execute_computational_vm", args).await {
+                if let Ok(text) = serde_json::from_value::<String>(res) {
+                    result_text.set(format!("VM Result: {}", text));
+                }
+            } else {
+                result_text.set("Error running VM".to_string());
+            }
+            is_loading.set(false);
+        });
+    };
     rsx! {
         div {
             style: "padding: 20px; background: #1e1e2e; color: #cdd6f4; border-radius: 12px; font-family: monospace; display: flex; flex-direction: column; gap: 16px; height: 100%;",
@@ -37,11 +58,12 @@ pub fn QaoaExplorer() -> Element {
                 style: "display: flex; gap: 16px; align-items: center;",
                 button {
                     style: "background: #f38ba8; color: #11111b; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;",
-                    "Optimize Parameters"
+                    onclick: optimize,
+                    if is_loading() { "Running VM..." } else { "Optimize Parameters" }
                 }
                 div {
                     style: "color: #a6adc8; font-size: 14px;",
-                    "Approximation Ratio: 0.87 (Mocked)"
+                    "{result_text}"
                 }
             }
         }

@@ -60,21 +60,27 @@ cp crates/qualia-core-db/pkg-playground/qualia_core_db.{js,d.ts} docs/playground
 cp crates/qualia-core-db/pkg-playground/qualia_core_db_bg.wasm{,.d.ts} docs/playground/
 ```
 
-#### Browser LLM (`.q42` AOT, Phase 5)
+#### Browser LLM (P64 AOT)
 
-The browser engine compiles a GGUF **once** to a self-contained `.q42` container
-(`compileGgufToQ42`, OPFS-cached via `docs/js/opfs-model-cache.js::loadOrCompileQ42`) and then
-boots zero-parse from it — all inference runs from the `.q42`. Decode is ~5.9 tok/s on
-SmolLM2-360M (Q4_K_M). Key source: `gguf_bridge.rs`, `q42_weight.rs`, `shaders/fused_attention.wgsl`,
-`shaders/fused_transformer.wgsl`, `shaders/fused_ffn.wgsl`. Background:
-[`../../WASM_LLM_ROADMAP.md`](../../WASM_LLM_ROADMAP.md), [`../../WASM_LLM_ENDGAME.md`](../../WASM_LLM_ENDGAME.md).
+The browser compiles GGUF to canonical P64 v3 through
+`compileGgufToP64`, caches it with `loadOrCompileP64`, and boots the WebGPU
+engine from the validated container. GGUF remains a direct-load fallback.
+Historical Q42-named exports are retained as P64 aliases.
+
+The WASM target and full playground bundle build successfully. The remaining
+real-model WebGPU release checks are tracked in
+[`p64-q42-inference-pipeline.md`](p64-q42-inference-pipeline.md).
+
+Key sources are `gguf_bridge/`, `q42/p64_weight.rs`,
+`shaders/fused_attention.wgsl`, `shaders/fused_transformer.wgsl`, and
+`shaders/fused_ffn.wgsl`.
 
 **Headless verification harnesses** (Playwright + Chrome WebGPU):
 
 ```bash
 node agent-tools/wasm-mc2-test.mjs          # decode coherence + tok/s (wasm-llm-test.html)
 WASM_MODEL=models/smollm2-360m-instruct-q8_0.gguf node agent-tools/wasm-mc2-test.mjs  # quant check
-node agent-tools/llmdemo-test.mjs           # end-to-end llmdemo: GGUF→.q42→OPFS→generate
+node agent-tools/llmdemo-test.mjs           # intended end-to-end gate: GGUF→P64→OPFS→generate
 node agent-tools/gguf-types.mjs <model.gguf>  # dump per-tensor quant types
 ```
 
@@ -290,7 +296,7 @@ In-process LLM inference uses a platform-specific GPU backend selected at startu
 
 The backend selection is automatic and falls through in priority order: DirectML → Accelerate → wgpu. No configuration required.
 
-Model weights are loaded via `memmap2` zero-copy from a GGUF file on disk. The `LocalLlmAgent` runs a Phase 8 bifurcated autoregressive loop with a mid-generation Webizen Sentinel rollback channel. See `ARCHITECTURE.md §3` for the full inference pipeline description.
+Model weights are loaded through a resident GGUF or explicitly mounted P64 mmap. The `LocalLlmAgent` runs a Phase 8 bifurcated autoregressive loop with a mid-generation Webizen Sentinel rollback channel. See [`p64-q42-inference-pipeline.md`](p64-q42-inference-pipeline.md) for the full inference pipeline.
 
 ---
 

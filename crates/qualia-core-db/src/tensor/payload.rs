@@ -17,7 +17,7 @@ pub struct SpectralPayload {
 impl Default for SpectralPayload {
     fn default() -> Self {
         Self {
-            alpha: 1.0,  // Full confidence by default
+            alpha: 1.0, // Full confidence by default
             mu: 0.0,
             sigma: 0.0,
         }

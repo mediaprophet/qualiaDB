@@ -12,8 +12,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const defaultPath = resolve(__dirname, '../pkg/qualia/qualia_bg.wasm');
 const wasmPath = process.argv[2] ? resolve(process.argv[2]) : defaultPath;
 
-const MAX_RAW_BYTES = 2 * 1024 * 1024;   // 2 MB raw (portal slim target)
-const MAX_GZIP_BYTES = 800 * 1024;       // 800 KB gzip (well under 8 MB CI ceiling)
+const MAX_RAW_BYTES = process.argv[3]
+  ? Number(process.argv[3])
+  : 2 * 1024 * 1024;
+const MAX_GZIP_BYTES = process.argv[4]
+  ? Number(process.argv[4])
+  : 800 * 1024;
 
 if (!existsSync(wasmPath)) {
     console.error(`[wasm-size] missing: ${wasmPath}`);

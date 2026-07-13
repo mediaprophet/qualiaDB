@@ -1,48 +1,70 @@
-@prefix q42: <https://qualia.id/ns/> .
-@prefix sh: <http://www.w3.org/ns/shacl#> .
-@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix q42:  <https://ns.webcivics.net/> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix hcai: <http://www.w3.org/ns/hcai#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
 
-# ---------------------------------------------------------------------------
-# Agency alignment: a human being (Principal) may HAVE things but IS NOT a Thing.
-# Clinical / anatomical / imaging artefacts are q42:Thing subclasses.
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# Agency alignment — the human-centric PRIMITIVE.
+#
+#   A human being (Principal) may HAVE things but IS NOT a Thing.
+#
+# Grounding rationale (corrected 2026-06-21):
+#   The native Qualia vocabulary is grounded in **RDFS classes + SHACL shapes**,
+#   NOT in OWL. This is deliberate: in OWL, `owl:Thing` is the universal
+#   superclass — every `owl:Class` individual is implicitly an `owl:Thing`.
+#   Declaring a person as an `owl:Class`/`owl:Thing` therefore re-imports exactly
+#   the reduction this project exists to refuse (a natural person is not a
+#   "thing"; see HCAIO — http://www.w3.org/ns/hcai# — and the foundational
+#   ontology: personhood/custody/agency are not properties of owl:Thing).
+#   `owl:` appears below ONLY as a GUARD TARGET (`sh:not owl:Thing`) so that any
+#   externally-supplied/legacy OWL typing of a Principal is rejected on ingest.
+#   Incoming OWL vocabularies (RadLex, DICOM) are lowered to SHACL by owl.rs;
+#   OWL is an input format here, never the metamodel for persons.
+# ===========================================================================
 
-q42:Principal a owl:Class ;
-    rdfs:label "Principal (natural legal person)" ;
-    rdfs:comment "A human being acting with agency. Not a subclass of owl:Thing or q42:Thing." .
+# --- The Principal: a natural person with agency. Grounded in RDFS, aligned to HCAI. ---
+q42:Principal a rdfs:Class ;
+    rdfs:label "Principal (natural person with agency)" ;
+    rdfs:comment "A human being acting with agency. NOT a Thing: not a subclass of owl:Thing or q42:Thing, and not reducible to either. Aligned to hcai:NaturalPerson." ;
+    rdfs:seeAlso hcai:NaturalPerson .
 
-q42:Thing a owl:Class ;
+# --- Reifiable entities: the possessions a Principal HAS (never the person). ---
+q42:Thing a rdfs:Class ;
     rdfs:label "Reifiable entity" ;
-    rdfs:comment "Clinical findings, anatomical structures, imaging series, documents — possessions of a Principal." .
+    rdfs:comment "Clinical findings, anatomical structures, imaging series, documents, assets — possessions/objects related to a Principal. A Principal must never be typed as a q42:Thing." .
 
-q42:ClinicalEntity a owl:Class ;
+q42:ClinicalEntity a rdfs:Class ;
     rdfs:subClassOf q42:Thing ;
     rdfs:label "Clinical entity" .
 
-q42:ImagingEntity a owl:Class ;
+q42:ImagingEntity a rdfs:Class ;
     rdfs:subClassOf q42:Thing ;
     rdfs:label "DICOM information entity (study/series/image)" .
 
-q42:hasCondition a owl:ObjectProperty ;
+# --- Possession relations: the Principal HAS these; the Principal IS NOT these. ---
+q42:hasCondition a rdf:Property ;
     rdfs:domain q42:Principal ;
     rdfs:range q42:ClinicalEntity ;
     rdfs:comment "Principal possesses a condition; the Principal is not the condition." .
 
-q42:hasFinding a owl:ObjectProperty ;
+q42:hasFinding a rdf:Property ;
     rdfs:domain q42:Principal ;
     rdfs:range q42:ClinicalEntity .
 
-q42:hasImagingStudy a owl:ObjectProperty ;
+q42:hasImagingStudy a rdf:Property ;
     rdfs:domain q42:Principal ;
     rdfs:range q42:ImagingEntity .
 
-q42:hasDicomSeries a owl:ObjectProperty ;
+q42:hasDicomSeries a rdf:Property ;
     rdfs:domain q42:Principal ;
     rdfs:range q42:ImagingEntity .
 
 # --- SHACL gates (compiled by shacl_compiler.rs → Webizen VM) ---
+# These are the enforced, closed-world guards. `sh:not owl:Thing` / `sh:not q42:Thing`
+# reject any attempt — including from imported OWL data — to reduce a person to a thing.
 
 q42:PrincipalShape a sh:NodeShape ;
     sh:targetClass q42:Principal ;

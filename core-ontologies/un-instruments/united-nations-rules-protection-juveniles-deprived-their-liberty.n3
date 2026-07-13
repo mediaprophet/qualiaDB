@@ -1,0 +1,660 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix doc:    <https://ns.webcivics.net/values/united-nations-rules-protection-juveniles-deprived-their-liberty#> .
+
+# ============================================================
+# United Nations Rules for the Protection of Juveniles Deprived of their Liberty
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "United Nations Rules for the Protection of Juveniles Deprived of their Liberty"@en ;
+    dc:date "14 December 1990" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-protection-juveniles-deprived-their-liberty> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:paragraph-2 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 2"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "I. Fundamental perspectives II. Scope and application of the rules III. Juveniles under arrest or awaiting trial IV. The management of juvenile facilities - A. Records - B. Admission, registration, movement and transfer - C. Classification and placement - D. Physical environment and accommodation - E. Education, vocational training and work - F. Recreation - G. Religion - H. Medical care - I. Notification of illness, injury and death - J. Contacts with the wider community - K. Limitations of physical restraint and the use of force - L. Disciplinary procedures - M. Inspection and complaints - N. Return to the community V. Personnel I. Fundamental perspectives"@en .
+
+doc:paragraph-3 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 3"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The juvenile justice system should uphold the rights and safety and promote the physical and mental well-being of juveniles. Imprisonment should be used as a last resort."@en .
+
+doc:paragraph-4 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 4"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "2. Juveniles should only be deprived of their liberty in accordance with the principles and procedures set forth in these Rules and in the United Nations Standard Minimum Rules for the Administration of Juvenile Justice (The Beijing Rules). Deprivation of the liberty of a juvenile should be a disposition of last resort and for the minimum necessary period and should be limited to exceptional cases. The length of the sanction should be determined by the judicial authority, without precluding the possibility of his or her early release."@en .
+
+doc:paragraph-5 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 5"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "3. The Rules are intended to establish minimum standards accepted by the United Nations for the protection of juveniles deprived of their liberty in all forms, consistent with human rights and fundamental freedoms, and with a view to counteracting the detrimental effects of all types of detention and to fostering integration in society."@en .
+
+doc:paragraph-6 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 6"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "4. The Rules should be applied impartially, without discrimination of any kind as to race, colour, sex, age, language, religion, nationality, political or other opinion, cultural beliefs or practices, property, birth or family status, ethnic or social origin, and disability. The religious and cultural beliefs, practices and moral concepts of the juvenile should be respected."@en .
+
+doc:paragraph-7 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 7"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "5. The Rules are designed to serve as convenient standards of reference and to provide encouragement and guidance to professionals involved in the management of the juvenile justice system."@en .
+
+doc:paragraph-8 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 8"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "6. The Rules should be made readily available to juvenile justice personnel in their national languages. Juveniles who are not fluent in the language spoken by the personnel of the detention facility should have the right to the services of an interpreter free of charge whenever necessary, in particular during medical examinations and disciplinary proceedings."@en .
+
+doc:paragraph-9 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 9"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "7. Where appropriate, States should incorporate the Rules into their legislation or amend it accordingly and provide effective remedies for their breach, including compensation when injuries are inflicted on juveniles. States should also monitor the application of the Rules."@en .
+
+doc:paragraph-10 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 10"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "8. The competent authorities should constantly seek to increase the awareness of the public that the care of detained juveniles and preparation for their return to society is a social service of great importance, and to this end active steps should be taken to foster open contacts between the juveniles and the local community."@en .
+
+doc:paragraph-11 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 11"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "9. Nothing in the Rules should be interpreted as precluding the application of the relevant United Nations and human rights instruments and standards, recognized by the international community, that are more conducive to ensuring the rights, care and protection of juveniles, children and all young persons."@en .
+
+doc:paragraph-12 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 12"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "10. In the event that the practical application of particular Rules contained in sections II to V, inclusive, presents any conflict with the Rules contained in the present section, compliance with the latter shall be regarded as the predominant requirement."@en .
+
+doc:paragraph-13 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 13"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "II. Scope and application of the rules"@en .
+
+doc:paragraph-14 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 14"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "11. For the purposes of the Rules, the following definitions should apply:"@en .
+
+doc:paragraph-15 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 15"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "A juvenile is every person under the age of 18. The age limit below which it should not be permitted to deprive a child of his or her liberty should be determined by law; The deprivation of liberty means any form of detention or imprisonment or the placement of a person in a public or private custodial setting, from which this person is not permitted to leave at will, by order of any judicial, administrative or other public authority."@en .
+
+doc:paragraph-16 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 16"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "12. The deprivation of liberty should be effected in conditions and circumstances which ensure respect for the human rights of juveniles. Juveniles detained in facilities should be guaranteed the benefit of meaningful activities and programmes which would serve to promote and sustain their health and self-respect, to foster their sense of responsibility and encourage those attitudes and skills that will assist them in developing their potential as members of society."@en .
+
+doc:paragraph-17 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 17"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "13. Juveniles deprived of their liberty shall not for any reason related to their status be denied the civil, economic, political, social or cultural rights to which they are entitled under national or international law, and which are compatible with the deprivation of liberty."@en .
+
+doc:paragraph-18 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 18"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "14. The protection of the individual rights of juveniles with special regard to the legality of the execution of the detention measures shall be ensured by the competent authority, while the objectives of social integration should be secured by regular inspections and other means of control carried out, according to international standards, national laws and regulations, by a duly constituted body authorized to visit the juveniles and not belonging to the detention facility."@en .
+
+doc:paragraph-19 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 19"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "15. The Rules apply to all types and forms of detention facilities in which juveniles are deprived of their liberty. Sections I, II, IV and V of the Rules apply to all detention facilities and institutional settings in which juveniles are detained, and section III applies specifically to juveniles under arrest or awaiting trial."@en .
+
+doc:paragraph-20 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 20"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "16. The Rules shall be implemented in the context of the economic, social and cultural conditions prevailing in each Member State."@en .
+
+doc:paragraph-21 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 21"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "III. Juveniles under arrest or awaiting trial"@en .
+
+doc:paragraph-22 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 22"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "17. Juveniles who are detained under arrest or awaiting trial (\"untried\") are presumed innocent and shall be treated as such. Detention before trial shall be avoided to the extent possible and limited to exceptional circumstances. Therefore, all efforts shall be made to apply alternative measures. When preventive detention is nevertheless used, juvenile courts and investigative bodies shall give the highest priority to the most expeditious processing of such cases to ensure the shortest possible duration of detention. Untried detainees should be separated from convicted juveniles."@en .
+
+doc:paragraph-23 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 23"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "18. The conditions under which an untried juvenile is detained should be consistent with the rules set out below, with additional specific provisions as are necessary and appropriate, given the requirements of the presumption of innocence, the duration of the detention and the legal status and circumstances of the juvenile. These provisions would include, but not necessarily be restricted to, the following:"@en .
+
+doc:paragraph-24 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 24"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Juveniles should have the right of legal counsel and be enabled to apply for free legal aid, where such aid is available, and to communicate regularly with their legal advisers. Privacy and confidentiality shall be ensured for such communications; Juveniles should be provided, where possible, with opportunities to pursue work, with remuneration, and continue education or training, but should not be required to do so. Work, education or training should not cause the continuation of the detention; Juveniles should receive and retain materials for their leisure and recreation as are compatible with the interests of the administration of justice. IV. The management of juvenile facilities A. Records"@en .
+
+doc:paragraph-25 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 25"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "19. All reports, including legal records, medical records and records of disciplinary proceedings, and all other documents relating to the form, content and details of treatment, should be placed in a confidential individual file, which should be kept up to date, accessible only to authorized persons and classified in such a way as to be easily understood. Where possible, every juvenile should have the right to contest any fact or opinion contained in his or her file so as to permit rectification of inaccurate, unfounded or unfair statements. In order to exercise this right, there should be procedures that allow an appropriate third party to have access to and to consult the file on request. Upon release, the records of juveniles shall be sealed, and, at an appropriate time, expunged."@en .
+
+doc:paragraph-26 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 26"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "20. No juvenile should be received in any detention facility without a valid commitment order of a judicial, administrative or other public authority. The details of this order should be immediately entered in the register. No juvenile should be detained in any facility where there is no such register."@en .
+
+doc:paragraph-27 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 27"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "B. Admission, registration, movement and transfer"@en .
+
+doc:paragraph-28 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 28"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "21. In every place where juveniles are detained, a complete and secure record of the following information should be kept concerning each juvenile received:"@en .
+
+doc:paragraph-29 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 29"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Information on the identity of the juvenile; The fact of and reasons for commitment and the authority therefor; The day and hour of admission, transfer and release; Details of the notifications to parents and guardians on every admission, transfer or release of the juvenile in their care at the time of commitment; Details of known physical and mental health problems, including drug and alcohol abuse."@en .
+
+doc:paragraph-30 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 30"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "22. The information on admission, place, transfer and release should be provided without delay to the parents and guardians or closest relative of the juvenile concerned."@en .
+
+doc:paragraph-31 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 31"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "23. As soon as possible after reception, full reports and relevant information on the personal situation and circumstances of each juvenile should be drawn up and submitted to the administration."@en .
+
+doc:paragraph-32 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 32"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "24. On admission, all juveniles shall be given a copy of the rules governing the detention facility and a written description of their rights and obligations in a language they can understand, together with the address of the authorities competent to receive complaints, as well as the address of public or private agencies and organizations which provide legal assistance. For those juveniles who are illiterate or who cannot understand the language in the written form, the information should be conveyed in a manner enabling full comprehension."@en .
+
+doc:paragraph-33 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 33"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "25. All juveniles should be helped to understand the regulations governing the internal organization of the facility, the goals and methodology of the care provided, the disciplinary requirements and procedures, other authorized methods of seeking information and of making complaints and all such other matters as are necessary to enable them to understand fully their rights and obligations during detention."@en .
+
+doc:paragraph-34 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 34"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "26. The transport of juveniles should be carried out at the expense of the administration in conveyances with adequate ventilation and light, in conditions that should in no way subject them to hardship or indignity. Juveniles should not be transferred from one facility to another arbitrarily."@en .
+
+doc:paragraph-35 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 35"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "C. Classification and placement"@en .
+
+doc:paragraph-36 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 36"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "27. As soon as possible after the moment of admission, each juvenile should be interviewed, and a psychological and social report identifying any factors relevant to the specific type and level of care and programme required by the juvenile should be prepared. This report, together with the report prepared by a medical officer who has examined the juvenile upon admission, should be forwarded to the director for purposes of determining the most appropriate placement for the juvenile within the facility and the specific type and level of care and programme required and to be pursued. When special rehabilitative treatment is required, and the length of stay in the facility permits, trained personnel of the facility should prepare a written, individualized treatment plan specifying treatment objectives and time-frame and the means, stages and delays with which the objectives should be approached."@en .
+
+doc:paragraph-37 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 37"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "28. The detention of juveniles should only take place under conditions that take full account of their particular needs, status and special requirements according to their age, personality, sex and type of offence, as well as mental and physical health, and which ensure their protection from harmful influences and risk situations. The principal criterion for the separation of different categories of juveniles deprived of their liberty should be the provision of the type of care best suited to the particular needs of the individuals concerned and the protection of their physical, mental and moral integrity and well-being."@en .
+
+doc:paragraph-38 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 38"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "29. In all detention facilities juveniles should be separated from adults, unless they are members of the same family. Under controlled conditions, juveniles may be brought together with carefully selected adults as part of a special programme that has been shown to be beneficial for the juveniles concerned."@en .
+
+doc:paragraph-39 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 39"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "30. Open detention facilities for juveniles should be established. Open detention facilities are those with no or minimal security measures. The population in such detention facilities should be as small as possible. The number of juveniles detained in closed facilities should be small enough to enable individualized treatment. Detention facilities for juveniles should be decentralized and of such size as to facilitate access and contact between the juveniles and their families. Small-scale detention facilities should be established and integrated into the social, economic and cultural environment of the community."@en .
+
+doc:paragraph-40 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 40"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "D. Physical environment and accommodation"@en .
+
+doc:paragraph-41 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 41"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "31. Juveniles deprived of their liberty have the right to facilities and services that meet all the requirements of health and human dignity."@en .
+
+doc:paragraph-42 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 42"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "32. The design of detention facilities for juveniles and the physical environment should be in keeping with the rehabilitative aim of residential treatment, with due regard to the need of the juvenile for privacy, sensory stimuli, opportunities for association with peers and participation in sports, physical exercise and leisure-time activities. The design and structure of juvenile detention facilities should be such as to minimize the risk of fire and to ensure safe evacuation from the premises. There should be an effective alarm system in case of fire, as well as formal and drilled procedures to ensure the safety of the juveniles. Detention facilities should not be located in areas where there are known health or other hazards or risks."@en .
+
+doc:paragraph-43 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 43"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "33. Sleeping accommodation should normally consist of small group dormitories or individual bedrooms, while bearing in mind local standards. During sleeping hours there should be regular, unobtrusive supervision of all sleeping areas, including individual rooms and group dormitories, in order to ensure the protection of each juvenile. Every juvenile should, in accordance with local or national standards, be provided with separate and sufficient bedding, which should be clean when issued, kept in good order and changed often enough to ensure cleanliness."@en .
+
+doc:paragraph-44 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 44"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "34. Sanitary installations should be so located and of a sufficient standard to enable every juvenile to comply, as required, with their physical needs in privacy and in a clean and decent manner."@en .
+
+doc:paragraph-45 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 45"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "35. The possession of personal effects is a basic element of the right to privacy and essential to the psychological well-being of the juvenile. The right of every juvenile to possess personal effects and to have adequate storage facilities for them should be fully recognized and respected. Personal effects that the juvenile does not choose to retain or that are confiscated should be placed in safe custody. An inventory thereof should be signed by the juvenile. Steps should be taken to keep them in good condition. All such articles and money should be returned to the juvenile on release, except in so far as he or she has been authorized to spend money or send such property out of the facility. If a juvenile receives or is found in possession of any medicine, the medical officer should decide what use should be made of it."@en .
+
+doc:paragraph-46 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 46"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "36. To the extent possible juveniles should have the right to use their own clothing. Detention facilities should ensure that each juvenile has personal clothing suitable for the climate and adequate to ensure good health, and which should in no manner be degrading or humiliating. Juveniles removed from or leaving a facility for any purpose should be allowed to wear their own clothing."@en .
+
+doc:paragraph-47 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 47"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "37. Every detention facility shall ensure that every juvenile receives food that is suitably prepared and presented at normal meal times and of a quality and quantity to satisfy the standards of dietetics, hygiene and health and, as far as possible, religious and cultural requirements. Clean drinking water should be available to every juvenile at any time."@en .
+
+doc:paragraph-48 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 48"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "E. Education, vocational training and work"@en .
+
+doc:paragraph-49 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 49"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "38. Every juvenile of compulsory school age has the right to education suited to his or her needs and abilities and designed to prepare him or her for return to society. Such education should be provided outside the detention facility in community schools wherever possible and, in any case, by qualified teachers through programmes integrated with the education system of the country so that, after release, juveniles may continue their education without difficulty. Special attention should be given by the administration of the detention facilities to the education of juveniles of foreign origin or with particular cultural or ethnic needs. Juveniles who are illiterate or have cognitive or learning difficulties should have the right to special education."@en .
+
+doc:paragraph-50 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 50"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "39. Juveniles above compulsory school age who wish to continue their education should be permitted and encouraged to do so, and every effort should be made to provide them with access to appropriate educational programmes."@en .
+
+doc:paragraph-51 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 51"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "40. Diplomas or educational certificates awarded to juveniles while in detention should not indicate in any way that the juvenile has been institutionalized."@en .
+
+doc:paragraph-52 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 52"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "41. Every detention facility should provide access to a library that is adequately stocked with both instructional and recreational books and periodicals suitable for the juveniles, who should be encouraged and enabled to make full use of it."@en .
+
+doc:paragraph-53 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 53"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "42. Every juvenile should have the right to receive vocational training in occupations likely to prepare him or her for future employment."@en .
+
+doc:paragraph-54 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 54"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "43. With due regard to proper vocational selection and to the requirements of institutional administration, juveniles should be able to choose the type of work they wish to perform."@en .
+
+doc:paragraph-55 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 55"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "44. All protective national and international standards applicable to child labour and young workers should apply to juveniles deprived of their liberty."@en .
+
+doc:paragraph-56 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 56"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "45. Wherever possible, juveniles should be provided with the opportunity to perform remunerated labour, if possible within the local community, as a complement to the vocational training provided in order to enhance the possibility of finding suitable employment when they return to their communities. The type of work should be such as to provide appropriate training that will be of benefit to the juveniles following release. The organization and methods of work offered in detention facilities should resemble as closely as possible those of similar work in the community, so as to prepare juveniles for the conditions of normal occupational life."@en .
+
+doc:paragraph-57 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 57"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "46. Every juvenile who performs work should have the right to an equitable remuneration. The interests of the juveniles and of their vocational training should not be subordinated to the purpose of making a profit for the detention facility or a third party. Part of the earnings of a juvenile should normally be set aside to constitute a savings fund to be handed over to the juvenile on release. The juvenile should have the right to use the remainder of those earnings to purchase articles for his or her own use or to indemnify the victim injured by his or her offence or to send it to his or her family or other persons outside the detention facility."@en .
+
+doc:paragraph-58 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 58"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "47. Every juvenile should have the right to a suitable amount of time for daily free exercise, in the open air whenever weather permits, during which time appropriate recreational and physical training should normally be provided. Adequate space, installations and equipment should be provided for these activities. Every juvenile should have additional time for daily leisure activities, part of which should be devoted, if the juvenile so wishes, to arts and crafts skill development. The detention facility should ensure that each juvenile is physically able to participate in the available programmes of physical education. Remedial physical education and therapy should be offered, under medical supervision, to juveniles needing it."@en .
+
+doc:paragraph-59 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 59"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "48. Every juvenile should be allowed to satisfy the needs of his or her religious and spiritual life, in particular by attending the services or meetings provided in the detention facility or by conducting his or her own services and having possession of the necessary books or items of religious observance and instruction of his or her denomination. If a detention facility contains a sufficient number of juveniles of a given religion, one or more qualified representatives of that religion should be appointed or approved and allowed to hold regular services and to pay pastoral visits in private to juveniles at their request. Every juvenile should have the right to receive visits from a qualified representative of any religion of his or her choice, as well as the right not to participate in religious services and freely to decline religious education, counselling or indoctrination."@en .
+
+doc:paragraph-60 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 60"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "49. Every juvenile shall receive adequate medical care, both preventive and remedial, including dental, ophthalmological and mental health care, as well as pharmaceutical products and special diets as medically indicated. All such medical care should, where possible, be provided to detained juveniles through the appropriate health facilities and services of the community in which the detention facility is located, in order to prevent stigmatization of the juvenile and promote self-respect and integration into the community."@en .
+
+doc:paragraph-61 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 61"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "50. Every juvenile has a right to be examined by a physician immediately upon admission to a detention facility, for the purpose of recording any evidence of prior ill-treatment and identifying any physical or mental condition requiring medical attention."@en .
+
+doc:paragraph-62 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 62"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "51. The medical services provided to juveniles should seek to detect and should treat any physical or mental illness, substance abuse or other condition that may hinder the integration of the juvenile into society. Every detention facility for juveniles should have immediate access to adequate medical facilities and equipment appropriate to the number and requirements of its residents and staff trained in preventive health care and the handling of medical emergencies. Every juvenile who is ill, who complains of illness or who demonstrates symptoms of physical or mental difficulties, should be examined promptly by a medical officer."@en .
+
+doc:paragraph-63 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 63"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "52. Any medical officer who has reason to believe that the physical or mental health of a juvenile has been or will be injuriously affected by continued detention, a hunger strike or any condition of detention should report this fact immediately to the director of the detention facility in question and to the independent authority responsible for safeguarding the well-being of the juvenile."@en .
+
+doc:paragraph-64 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 64"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "53. A juvenile who is suffering from mental illness should be treated in a specialized institution under independent medical management. Steps should be taken, by arrangement with appropriate agencies, to ensure any necessary continuation of mental health care after release."@en .
+
+doc:paragraph-65 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 65"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "54. Juvenile detention facilities should adopt specialized drug abuse prevention and rehabilitation programmes administered by qualified personnel. These programmes should be adapted to the age, sex and other requirements of the juveniles concerned, and detoxification facilities and services staffed by trained personnel should be available to drug- or alcohol-dependent juveniles."@en .
+
+doc:paragraph-66 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 66"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "55. Medicines should be administered only for necessary treatment on medical grounds and, when possible, after having obtained the informed consent of the juvenile concerned. In particular, they must not be administered with a view to eliciting information or a confession, as a punishment or as a means of restraint. Juveniles shall never be testees in the experimental use of drugs and treatment. The administration of any drug should always be authorized and carried out by qualified medical personnel."@en .
+
+doc:paragraph-67 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 67"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "I. Notification of illness, injury and death"@en .
+
+doc:paragraph-68 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 68"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "56. The family or guardian of a juvenile and any other person designated by the juvenile have the right to be informed of the state of health of the juvenile on request and in the event of any important changes in the health of the juvenile. The director of the detention facility should notify immediately the family or guardian of the juvenile concerned, or other designated person, in case of death, illness requiring transfer of the juvenile to an outside medical facility, or a condition requiring clinical care within the detention facility for more than 48 hours. Notification should also be given to the consular authorities of the State of which a foreign juvenile is a citizen."@en .
+
+doc:paragraph-69 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 69"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "57. Upon the death of a juvenile during the period of deprivation of liberty, the nearest relative should have the right to inspect the death certificate, see the body and determine the method of disposal of the body. Upon the death of a juvenile in detention, there should be an independent inquiry into the causes of death, the report of which should be made accessible to the nearest relative. This inquiry should also be made when the death of a juvenile occurs within six months from the date of his or her release from the detention facility and there is reason to believe that the death is related to the period of detention."@en .
+
+doc:paragraph-70 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 70"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "58. A juvenile should be informed at the earliest possible time of the death, serious illness or injury of any immediate family member and should be provided with the opportunity to attend the funeral of the deceased or go to the bedside of a critically ill relative."@en .
+
+doc:paragraph-71 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 71"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "J. Contacts with the wider community"@en .
+
+doc:paragraph-72 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 72"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "59. Every means should be provided to ensure that juveniles have adequate communication with the outside world, which is an integral part of the right to fair and humane treatment and is essential to the preparation of juveniles for their return to society. Juveniles should be allowed to communicate with their families, friends and other persons or representatives of reputable outside organizations, to leave detention facilities for a visit to their and family and to receive special permission to leave the detention facility for educational, vocational or other important reasons. Should the juvenile be serving a sentence, the time spent outside a detention facility should be counted as part of the period of sentence."@en .
+
+doc:paragraph-73 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 73"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "60. Every juvenile should have the right to receive regular and frequent visits, in principle once a week and not less than once a month, in circumstances that respect the need of the juvenile for privacy, contact and unrestricted communication with the family and the defence counsel."@en .
+
+doc:paragraph-74 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 74"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "61. Every juvenile should have the right to communicate in writing or by telephone at least twice a week with the person of his or her choice, unless legally restricted, and should be assisted as necessary in order effectively to enjoy this right. Every juvenile should have the right to receive correspondence."@en .
+
+doc:paragraph-75 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 75"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "62. Juveniles should have the opportunity to keep themselves informed regularly of the news by reading newspapers, periodicals and other publications, through access to radio and television programmes and motion pictures, and through the visits of the representatives of any lawful club or organization in which the juvenile is interested."@en .
+
+doc:paragraph-76 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 76"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "K. Limitations of physical restraint and the use of force"@en .
+
+doc:paragraph-77 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 77"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "63. Recourse to instruments of restraint and to force for any purpose should be prohibited, except as set forth in rule 64 below."@en .
+
+doc:paragraph-78 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 78"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "64. Instruments of restraint and force can only be used in exceptional cases, where all other control methods have been exhausted and failed, and only as explicitly authorized and specified by law and regulation. They should not cause humiliation or degradation, and should be used restrictively and only for the shortest possible period of time. By order of the director of the administration, such instruments might be resorted to in order to prevent the juvenile from inflicting self-injury, injuries to others or serious destruction of property. In such instances, the director should at once consult medical and other relevant personnel and report to the higher administrative authority."@en .
+
+doc:paragraph-79 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 79"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "65. The carrying and use of weapons by personnel should be prohibited in any facility where juveniles are detained."@en .
+
+doc:paragraph-80 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 80"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "66. Any disciplinary measures and procedures should maintain the interest of safety and an ordered community life and should be consistent with the upholding of the inherent dignity of the juvenile and the fundamental objective of institutional care, namely, instilling a sense of justice, self-respect and respect for the basic rights of every person."@en .
+
+doc:paragraph-81 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 81"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "67. All disciplinary measures constituting cruel, inhuman or degrading treatment shall be strictly prohibited, including corporal punishment, placement in a dark cell, closed or solitary confinement or any other punishment that may compromise the physical or mental health of the juvenile concerned. The reduction of diet and the restriction or denial of contact with family members should be prohibited for any purpose. Labour should always be viewed as an educational tool and a means of promoting the self-respect of the juvenile in preparing him or her for return to the community and should not be imposed as a disciplinary sanction. No juvenile should be sanctioned more than once for the same disciplinary infraction. Collective sanctions should be prohibited."@en .
+
+doc:paragraph-82 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 82"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "68. Legislation or regulations adopted by the competent administrative authority should establish norms concerning the following, taking full account of the fundamental characteristics, needs and rights of juveniles:"@en .
+
+doc:paragraph-83 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 83"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Conduct constituting a disciplinary offence; Type and duration of disciplinary sanctions that may be inflicted; The authority competent to impose such sanctions; The authority competent to consider appeals."@en .
+
+doc:paragraph-84 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 84"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "69. A report of misconduct should be presented promptly to the competent authority, which should decide on it without undue delay. The competent authority should conduct a thorough examination of the case."@en .
+
+doc:paragraph-85 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 85"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "70. No juvenile should be disciplinarily sanctioned except in strict accordance with the terms of the law and regulations in force. No juvenile should be sanctioned unless he or she has been informed of the alleged infraction in a manner appropriate to the full understanding of the juvenile, and given a proper opportunity of presenting his or her defence, including the right of appeal to a competent impartial authority. Complete records should be kept of all disciplinary proceedings."@en .
+
+doc:paragraph-86 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 86"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "71. No juveniles should be responsible for disciplinary functions except in the supervision of specified social, educational or sports activities or in self-government programmes."@en .
+
+doc:paragraph-87 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 87"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "72. Qualified inspectors or an equivalent duly constituted authority not belonging to the administration of the facility should be empowered to conduct inspections on a regular basis and to undertake unannounced inspections on their own initiative, and should enjoy full guarantees of independence in the exercise of this function. Inspectors should have unrestricted access to all persons employed by or working in any facility where juveniles are or may be deprived of their liberty, to all juveniles and to all records of such facilities."@en .
+
+doc:paragraph-88 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 88"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "73. Qualified medical officers attached to the inspecting authority or the public health service should participate in the inspections, evaluating compliance with the rules concerning the physical environment, hygiene, accommodation, food, exercise and medical services, as well as any other aspect or conditions of institutional life that affect the physical and mental health of juveniles. Every juvenile should have the right to talk in confidence to any inspecting officer."@en .
+
+doc:paragraph-89 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 89"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "74. After completing the inspection, the inspector should be required to submit a report on the findings. The report should include an evaluation of the compliance of the detention facilities with the present rules and relevant provisions of national law, and recommendations regarding any steps considered necessary to ensure compliance with them. Any facts discovered by an inspector that appear to indicate that a violation of legal provisions concerning the rights of juveniles or the operation of a juvenile detention facility has occurred should be communicated to the competent authorities for investigation and prosecution."@en .
+
+doc:paragraph-90 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 90"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "75. Every juvenile should have the opportunity of making requests or complaints to the director of the detention facility and to his or her authorized representative."@en .
+
+doc:paragraph-91 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 91"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "76. Every juvenile should have the right to make a request or complaint, without censorship as to substance, to the central administration, the judicial authority or other proper authorities through approved channels, and to be informed of the response without delay."@en .
+
+doc:paragraph-92 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 92"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "77. Efforts should be made to establish an independent office (ombudsman) to receive and investigate complaints made by juveniles deprived of their liberty and to assist in the achievement of equitable settlements."@en .
+
+doc:paragraph-93 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 93"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "78. Every juvenile should have the right to request assistance from family members, legal counsellors, humanitarian groups or others where possible, in order to make a complaint. Illiterate juveniles should be provided with assistance should they need to use the services of public or private agencies and organizations which provide legal counsel or which are competent to receive complaints."@en .
+
+doc:paragraph-94 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 94"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "79. All juveniles should benefit from arrangements designed to assist them in returning to society, family life, education or employment after release. Procedures, including early release, and special courses should be devised to this end."@en .
+
+doc:paragraph-95 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 95"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "80. Competent authorities should provide or ensure services to assist juveniles in re-establishing themselves in society and to lessen prejudice against such juveniles. These services should ensure, to the extent possible, that the juvenile is provided with suitable residence, employment, clothing, and sufficient means to maintain himself or herself upon release in order to facilitate successful reintegration. The representatives of agencies providing such services should be consulted and should have access to juveniles while detained, with a view to assisting them in their return to the community."@en .
+
+doc:paragraph-96 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 96"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "81. Personnel should be qualified and include a sufficient number of specialists such as educators, vocational instructors, counsellors, social workers, psychiatrists and psychologists. These and other specialist staff should normally be employed on a permanent basis. This should not preclude part-time or volunteer workers when the level of support and training they can provide is appropriate and beneficial. Detention facilities should make use of all remedial, educational, moral, spiritual, and other resources and forms of assistance that are appropriate and available in the community, according to the individual needs and problems of detained juveniles."@en .
+
+doc:paragraph-97 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 97"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "82. The administration should provide for the careful selection and recruitment of every grade and type of personnel, since the proper management of detention facilities depends on their integrity, humanity, ability and professional capacity to deal with juveniles, as well as personal suitability for the work."@en .
+
+doc:paragraph-98 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 98"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "83. To secure the foregoing ends, personnel should be appointed as professional officers with adequate remuneration to attract and retain suitable women and men. The personnel of juvenile detention facilities should be continually encouraged to fulfil their duties and obligations in a humane, committed, professional, fair and efficient manner, to conduct themselves at all times in such a way as to deserve and gain the respect of the juveniles, and to provide juveniles with a positive role model and perspective."@en .
+
+doc:paragraph-99 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 99"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "84. The administration should introduce forms of organization and management that facilitate communications between different categories of staff in each detention facility so as to enhance cooperation between the various services engaged in the care of juveniles, as well as between staff and the administration, with a view to ensuring that staff directly in contact with juveniles are able to function in conditions favourable to the efficient fulfilment of their duties."@en .
+
+doc:paragraph-100 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 100"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "85. The personnel should receive such training as will enable them to carry out their responsibilities effectively, in particular training in child psychology, child welfare and international standards and norms of human rights and the rights of the child, including the present Rules. The personnel should maintain and improve their knowledge and professional capacity by attending courses of in-service training, to be organized at suitable intervals throughout their career."@en .
+
+doc:paragraph-101 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 101"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "86. The director of a facility should be adequately qualified for his or her task, with administrative ability and suitable training and experience, and should carry out his or her duties on a full-time basis."@en .
+
+doc:paragraph-102 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 102"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "87. In the performance of their duties, personnel of detention facilities should respect and protect the human dignity and fundamental human rights of all juveniles, in particular, as follows:"@en .
+
+doc:paragraph-103 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 103"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "No member of the detention facility or institutional personnel may inflict, instigate or tolerate any act of torture or any form of harsh, cruel, inhuman or degrading treatment, punishment, correction or discipline under any pretext or circumstance whatsoever; All personnel should rigorously oppose and combat any act of corruption, reporting it without delay to the competent authorities; All personnel should respect the present Rules. Personnel who have reason to believe that a serious violation of the present Rules has occurred or is about to occur should report the matter to their superior authorities or organs vested with reviewing or remedial power; All personnel should ensure the full protection of the physical and mental health of juveniles, including protection from physical, sexual and emotional abuse and exploitation, and should take immediate action to secure medical attention whenever required; All personnel should respect the right of the juvenile to privacy, and, in particular, should safeguard all confidential matters concerning juveniles or their families learned as a result of their professional capacity; All personnel should seek to minimize any differences between life inside and outside the detention facility which tend to lessen due respect for the dignity of juveniles as human beings."@en .

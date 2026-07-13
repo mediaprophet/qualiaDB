@@ -4,38 +4,279 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use zeroize::Zeroize;
 
+#[cfg(all(
+    target_arch = "wasm32",
+    feature = "wasm-ontology",
+    any(
+        feature = "portal",
+        feature = "wasm-logic",
+        feature = "wasm-scientific",
+        feature = "wasm-llm",
+        feature = "wasm-playground",
+        feature = "wasm-full"
+    )
+))]
+compile_error!(
+    "wasm-ontology is an exclusive lite profile; build heavier WASM products separately"
+);
+
+// --- services/ category (reorg) ---
+pub mod services;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod chat_relay_daemon;
+pub use services::chat_relay_daemon;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod comorbidity_eval;
+pub use services::daemon;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod dicom;
+pub use services::daemon_graph;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod dicom_ingest;
+pub use services::daemon_query;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod ingest;
+pub use services::daemon_swarm;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod local_scheduler;
+pub use services::daemon_tensor;
+#[cfg(not(target_arch = "wasm32"))]
+pub use services::ilp_dispatcher;
+#[cfg(not(target_arch = "wasm32"))]
+pub use services::rpc;
+pub use services::solid_ldp;
+#[cfg(not(target_arch = "wasm32"))]
+pub use services::webizen_server;
+#[cfg(not(target_arch = "wasm32"))]
+pub use services::webtorrent_routes;
+#[cfg(not(target_arch = "wasm32"))]
+pub use services::webtorrent_seeder;
+// --- medical/ category (reorg) ---
+pub mod medical;
+#[cfg(not(target_arch = "wasm32"))]
+pub use medical::comorbidity_eval;
+#[cfg(not(target_arch = "wasm32"))]
+pub use medical::dicom;
+#[cfg(not(target_arch = "wasm32"))]
+pub use medical::dicom_ingest;
+// --- query/ category (reorg) ---
+pub mod query;
+pub use query::cbor_compiler;
+pub use query::graph_index;
+pub use query::indexing;
+#[cfg(not(target_arch = "wasm32"))]
+pub use query::ingest;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+pub use query::ingestion;
+pub use query::lexicon;
+pub use query::mini_parser;
+#[cfg(not(target_arch = "wasm32"))]
+pub use query::ontology_loader;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+pub use query::query_compiler;
+pub use query::query_engine;
+pub use query::rdf_star;
+pub use query::resolve;
+pub use query::resolver;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-ontology",
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+pub use query::shacl_compiler;
+pub use query::temporal_graph;
+pub use query::spawn_decay;
+pub use query::temporal_scrub;
+// --- platform/ category (reorg) ---
+pub mod platform;
+#[cfg(not(target_arch = "wasm32"))]
+pub use platform::device_benchmark;
+pub use platform::git_bridge;
+#[cfg(not(target_arch = "wasm32"))]
+pub use platform::hardware_passport;
+#[cfg(target_os = "android")]
+pub use platform::jni_bridge;
+pub use platform::kml_bridge;
+#[cfg(not(target_arch = "wasm32"))]
+pub use platform::local_scheduler;
+#[cfg(not(target_arch = "wasm32"))]
+pub use platform::npu_ffi;
+#[cfg(not(target_arch = "wasm32"))]
+pub use platform::platform_scheduler;
+pub use platform::tee_ffi;
+// --- inference/ category (reorg) ---
+pub mod inference;
+// Inference-runtime components (honest names); `llm_*` retained as transitional aliases.
+pub use inference::agent;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::ambient_orchestration;
+pub use inference::compute_universe;
+#[cfg(target_os = "windows")]
+pub use inference::directml_bridge;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod llm_agent;
+pub use inference::ggml_quants;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::gguf_sharder;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::inference_agent;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::inference_agent as llm_agent;
+pub use inference::inference_awq;
+pub use inference::inference_awq as llm_awq;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::inference_bench;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::inference_bench as llm_bench;
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm"))]
+pub use inference::inference_bench_wasm as llm_bench;
+pub use inference::inference_modes;
+pub use inference::inference_modes::{
+    active_inference_mode, apply_mode_toggles, bootstrap_inference_mode, fast_verify_html_default,
+    post_turn_verify_enabled, prefer_tensor_core_gemm, quant_graph_grounding_enabled,
+    rights_mode_enabled, sentinel_mid_decode_enabled, set_inference_mode, InferenceMode,
+};
+pub use inference::post_turn_verify;
+pub use inference::post_turn_verify::{
+    maybe_verify_turn, return_html_as_text, verify_and_heal_turn, VerifiedTurn, VerifyCheck,
+};
+pub use inference::application_profile;
+pub use inference::application_profile::{
+    active_application_profile, apply_application_profile, bootstrap_application_profile,
+    set_application_profile, ApplicationProfile,
+};
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::lab;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::lab::{
+    append_run_csv, audit_hot_path, calibrate_device_roof, default_search_space,
+    format_lockin_summary, run_ablation_matrix, run_auto_improve, run_decode_timeline,
+    run_q4k_soa_microbench, AblationRow, AutoImproveConfig, DecodeTimeline, DeviceRoof,
+    ExperimentRun, HotPathAudit, LabConfig, LockInPackage, MicrobenchResult, TrialResult,
+    CSV_HEADER,
+};
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::inference_path_selector;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::inference_path_selector::{
+    apply_inference_path_plan, bootstrap_optimal_inference_path, format_path_plan,
+    last_inference_path_plan, path_auto_enabled, resolve_inference_path_plan, run_path_select_cli,
+    ComputeLane, InferencePathPlan, QuantProfile,
+};
+pub use inference::quant_graph_grounding;
+pub use inference::quant_graph_grounding::{
+    export_fact_quins, fact_count, ground_generation, load_facts_from_tsv, lookup_capital_object,
+    maybe_ground_generation, register_capital_fact, register_fact, reset_fact_store_to_defaults,
+    seed_facts_from_bundled, GroundingFact, GroundingResult, CTX_GROUNDING, P_CAPITAL_OF,
+};
+pub use inference::qualia_hybrid;
+pub use inference::qualia_hybrid::{
+    apply_graph_logit_bias, force_fact_tokens, graph_force_enabled, prepare_hybrid_decode,
+    propose_best_draft, propose_fact_draft, publish_graph_route_from_prompt,
+    publish_grounding_obligation, publish_prompt_query_tensor, GRAPH_LOGIT_BIAS,
+};
+#[cfg(all(not(target_arch = "wasm32"), feature = "cuda"))]
+pub use inference::cuda_lane::{
+    cache_dense_weight, clear_weight_cache, dense_weight_cached, device_kv_ready,
+    ensure_device_kv_cache, preload_q4k_soa_weights, q4k_device_weight_count, try_cuda_batch_gemv,
+    try_cuda_batch_gemv_cached, try_cuda_batch_gemv_cached_only, try_q4k_soa_attention_device,
+    try_q4k_soa_ffn_block, try_q4k_soa_ffn_block_residual, try_q4k_soa_fused_swiglu,
+    try_q4k_soa_gemv, try_q4k_soa_qkv, warm_cuda_context, weight_cache_len, weight_fingerprint,
+    MAX_DENSE_ELEMS,
+};
+pub use inference::inference_eval;
+pub use inference::inference_eval as llm_eval;
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+pub use inference::inference_gpu_profiler;
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+pub use inference::inference_gpu_profiler as llm_gpu_profiler;
+pub use inference::inference_kernel_parity;
+pub use inference::inference_kernel_parity as llm_kernel_parity;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::kv_capture;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::kv_dict;
+#[cfg(all(target_arch = "wasm32", feature = "wasm-llm"))]
+pub use inference::kv_dict;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::kv_dict_runtime;
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+pub use inference::metal_bridge;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::neuro_symbolic_sieve;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::orchestrator;
+pub use inference::prompt_lookup;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::residency_planner;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::resident_model;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::safetensor;
+pub use inference::sampler;
+pub use inference::semantic_culler;
+pub use inference::spatial_sieve;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::tensor_roles;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::ternary;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::ternary_gpu;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use inference::topk;
+// W7: GPU thermal/power telemetry + auto-cap governor (native-only). Exposes the UI-reachable mode
+// switch (`set_gpu_auto_cap` / `gpu_auto_cap_enabled`) and `sample_gpu_thermal()` telemetry.
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::thermal_telemetry;
+#[cfg(not(target_arch = "wasm32"))]
+pub use inference::topk_gpu;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod lora;
-pub mod yaml_ld_q42;
-pub mod extension_manifest;
+// --- q42/ category (reorg) ---
+pub mod q42;
+pub use q42::design_encode;
+pub use q42::model_helper;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use q42::p64_weight;
+/// Backward-compatible module name retained for existing inference and
+/// transcode harnesses while the on-disk magic/API is P64.
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use q42::p64_weight as q42_weight;
+#[cfg(not(target_arch = "wasm32"))]
+pub use q42::q42_lexicon;
+#[cfg(not(target_arch = "wasm32"))]
+pub use q42::q42_reader;
+#[cfg(not(target_arch = "wasm32"))]
+pub use q42::q42_volume;
+pub use q42::yaml_ld_q42;
+// --- extensions/ category (reorg) ---
+pub mod extensions;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"
 ))]
-pub mod extension_bus;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-logic",
-    feature = "wasm-scientific",
-    feature = "wasm-full"
+pub use extensions::extension_bus;
+pub use extensions::extension_manifest;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
+pub use extensions::resource_catalog;
+#[cfg(all(
+    target_arch = "wasm32",
+    feature = "wasm-ontology",
+    not(any(
+        feature = "wasm-logic",
+        feature = "wasm-scientific",
+        feature = "wasm-full"
+    ))
 ))]
-pub mod shacl_compiler;
+#[path = "modalities_lite/mod.rs"]
+pub mod modalities;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-logic",
@@ -43,27 +284,82 @@ pub mod shacl_compiler;
     feature = "wasm-full"
 ))]
 pub mod modalities;
+// --- identity/ category (reorg) ---
+pub mod identity;
+pub use identity::agency;
+pub use identity::identifier;
+#[cfg(not(target_arch = "wasm32"))]
+pub use identity::key_vault;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod neuro_symbolic_sieve;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod profiles;
+pub use identity::profiles;
+pub use identity::vault_manifest;
+pub use identity::webizen_identifiers;
 pub mod gpu_context;
 pub mod shaders;
-pub mod compute_universe;
+#[cfg(all(not(target_arch = "wasm32"), feature = "wgsl-forge"))]
+pub mod wgsl_forge;
+// --- foundation/ category (reorg) ---
+pub mod foundation;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+pub use foundation::crdt;
+pub use foundation::frame_layout;
+pub use foundation::fuzz_testing;
+pub use foundation::telemetry;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod topology_draft;
-pub mod sonic_token;
+pub use foundation::topology_draft;
+// --- net/ category (reorg) ---
+pub mod net;
+#[cfg(not(target_arch = "wasm32"))]
+pub use net::acoustic_ble_mesh;
+#[cfg(not(target_arch = "wasm32"))]
+pub use net::ebpf_filter;
+#[cfg(not(target_arch = "wasm32"))]
+pub use net::ebpf_firewall;
+#[cfg(not(target_arch = "wasm32"))]
+pub use net::host_topology;
+#[cfg(not(target_arch = "wasm32"))]
+pub use net::nym_adapter;
+pub use net::sonic_token;
 pub mod audio;
+/// `.10d` living-container v1 — normative header, axis-role taxonomy, and
+/// metric-completeness descriptor for the 10-D tensor substrate. P0.1 barrier
+/// task. Available to browser/WASM builds (P0.8 parity target). See
+/// `docs/plans/native-computational-geometry-EXECUTION.md` P0.1.
+pub mod container_10d;
+/// `.qualia` — a transparent container-of-files bundle for shipping a set of
+/// sealed assets (`.10d` / `.q42` / `.p64`) as one attestable unit. Available to
+/// both native and WASM builds (native adds the zero-copy `BundleMmap`).
+pub mod bundle;
 pub mod tensor;
-pub mod design_encode;
-pub mod geometric_algebra;
-pub mod rdf_star;
-pub mod webizen_validator;
-pub mod webizen_identifiers;
+// geometric_algebra moved into solvers/ (it is a math solver, not a logic modality);
+// re-exported here so `crate::geometric_algebra::*` paths keep resolving. Gated to match the
+// `solvers` module below — on wasm32 it only exists under the `wasm-scientific` feature.
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use crate::solvers::geometric_algebra;
+// --- governance/ category (reorg) ---
+pub mod governance;
+pub use governance::illocution;
+pub use governance::modal_kind;
+pub use governance::provenance;
+#[cfg(not(target_arch = "wasm32"))]
+pub use governance::web_civics;
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
+pub use governance::webizen;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    any(feature = "wasm-scientific", feature = "wasm-logic")
+))]
+pub use governance::webizen_bytecode;
+#[cfg(not(target_arch = "wasm32"))]
+pub use governance::webizen_sync;
+pub use governance::webizen_validator;
 pub mod sparql_library;
 pub use sparql_library::*;
-pub mod semantic_culler;
-
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod q42_lex;
@@ -73,14 +369,26 @@ pub mod q42_lex {
         _marker: std::marker::PhantomData<&'a ()>,
     }
     impl<'a> Q42LexMmap<'a> {
-        pub fn from_bytes(_data: &'a [u8]) -> Result<Self, String> { Err("Not supported on WASM".to_string()) }
-        pub fn lookup_embedded_triple(&self, _id: u64) -> Option<[u64; 3]> { None }
-        pub fn lookup_hash(&self, _id: u64) -> Option<&'a str> { None }
+        pub fn from_bytes(_data: &'a [u8]) -> Result<Self, String> {
+            Err("Not supported on WASM".to_string())
+        }
+        pub fn lookup_embedded_triple(&self, _id: u64) -> Option<[u64; 3]> {
+            None
+        }
+        pub fn lookup_hash(&self, _id: u64) -> Option<&'a str> {
+            None
+        }
     }
     pub struct Q42LexFile {}
     impl Q42LexFile {
-        pub fn open(_p: &std::path::Path) -> Result<Self, String> { Err("Not supported on WASM".to_string()) }
-        pub fn view(&self) -> Q42LexMmap<'_> { Q42LexMmap { _marker: std::marker::PhantomData } }
+        pub fn open(_p: &std::path::Path) -> Result<Self, String> {
+            Err("Not supported on WASM".to_string())
+        }
+        pub fn view(&self) -> Q42LexMmap<'_> {
+            Q42LexMmap {
+                _marker: std::marker::PhantomData,
+            }
+        }
     }
 }
 #[cfg(not(target_arch = "wasm32"))]
@@ -92,20 +400,26 @@ pub mod clinical_engine {
         pub log2_fold_change: f64,
         pub is_significant: bool,
     }
-    pub fn evaluate_gene_expression(_gene_id: u64, _baseline: f64, _treatment: f64, _fc_threshold: f64) -> GeneExpressionResult {
-        GeneExpressionResult { fold_change: 0.0, log2_fold_change: 0.0, is_significant: false }
+    pub fn evaluate_gene_expression(
+        _gene_id: u64,
+        _baseline: f64,
+        _treatment: f64,
+        _fc_threshold: f64,
+    ) -> GeneExpressionResult {
+        GeneExpressionResult {
+            fold_change: 0.0,
+            log2_fold_change: 0.0,
+            is_significant: false,
+        }
     }
 }
-#[cfg(not(target_arch = "wasm32"))]
-pub mod q42_lexicon;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod q42_reader;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod q42_volume;
-pub mod query_engine;
+/// Hypermedia semantic library — asset ⊕ analytics ⊕ related-assets bound as a semantic graph (not a
+/// directory). See `docs/plans/hypermedia-semantic-library.md`.
+pub mod hypermedia;
 pub mod qubo_compiler;
-pub mod solid_ldp;
-pub mod vault_manifest;
+pub mod render;
+#[cfg(all(target_arch = "wasm32", feature = "portal"))]
+pub mod spatial_wasm;
 #[cfg(all(
     target_arch = "wasm32",
     any(
@@ -116,38 +430,25 @@ pub mod vault_manifest;
     )
 ))]
 pub mod wasm_bridge;
-#[cfg(all(target_arch = "wasm32", feature = "portal", not(any(
-    feature = "wasm-logic",
-    feature = "wasm-scientific",
-    feature = "wasm-full",
-    feature = "wasm-playground"
-))))]
-pub mod wasm_bridge_core;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod wasm_bridge;
-pub mod portal_telemetry;
-pub mod portal_standpoint;
-pub mod portal_camera;
-pub mod portal_navigation;
-pub mod portal_pga;
-pub mod portal_phenomenal_contract;
-pub mod portal_spectral;
-pub mod portal_acoustic;
-pub mod portal_control;
-#[cfg(all(target_arch = "wasm32", feature = "portal"))]
-pub mod portal_gpu;
-#[cfg(all(target_arch = "wasm32", feature = "portal"))]
-pub mod portal;
-#[cfg(all(target_arch = "wasm32", feature = "portal"))]
-pub mod portal_wasm;
+#[cfg(all(
+    target_arch = "wasm32",
+    feature = "portal",
+    not(any(
+        feature = "wasm-logic",
+        feature = "wasm-scientific",
+        feature = "wasm-full",
+        feature = "wasm-playground"
+    ))
+))]
+pub mod wasm_bridge_core;
 #[cfg(all(target_arch = "wasm32", feature = "wasm-llm"))]
 pub mod wasm_llm;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
-pub mod spatial_wasm;
+pub use render::portal::QualiaPortal;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
-pub use portal::QualiaPortal;
-#[cfg(all(target_arch = "wasm32", feature = "portal"))]
-pub use portal_wasm::{create_canvas, init_panic_hook, WebEngine};
+pub use render::portal_wasm::{create_canvas, init_panic_hook, WebEngine};
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]
 pub use spatial_wasm::{
     design_encode_wasm, export_tensor_buffer_wasm, export_tensor_slice_wasm,
@@ -162,69 +463,55 @@ pub use spatial_wasm::{
         feature = "wasm-playground"
     )
 ))]
-pub use wasm_bridge::{
-    parse_cbor_ld_wasm, parse_json_wasm, parse_n3logic_wasm, parse_turtle_wasm,
-};
-#[cfg(all(target_arch = "wasm32", feature = "portal", not(any(
-    feature = "wasm-logic",
-    feature = "wasm-scientific",
-    feature = "wasm-full",
-    feature = "wasm-playground"
-))))]
+pub use wasm_bridge::{parse_cbor_ld_wasm, parse_json_wasm, parse_n3logic_wasm, parse_turtle_wasm};
+#[cfg(all(
+    target_arch = "wasm32",
+    feature = "portal",
+    not(any(
+        feature = "wasm-logic",
+        feature = "wasm-scientific",
+        feature = "wasm-full",
+        feature = "wasm-playground"
+    ))
+))]
 pub use wasm_bridge_core::{parse_cbor_ld_wasm, parse_json_wasm};
-#[cfg(all(target_arch = "wasm32", any(feature = "wasm-playground", feature = "wasm-full")))]
+pub mod storage_driver;
+#[cfg(all(
+    target_arch = "wasm32",
+    any(feature = "wasm-playground", feature = "wasm-full")
+))]
 pub mod wasm_playground;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod zns_storage;
-pub mod storage_driver;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod platform_scheduler;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod ebpf_filter;
+// --- crypto/ category (reorg) ---
+pub mod crypto;
+#[cfg(feature = "zk-culling")]
+pub use crypto::deontic_circuit;
+pub use crypto::fiduciary_crypto;
+#[cfg(feature = "pq-kem")]
+pub use crypto::pq_kem_shim;
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(feature = "sanctuary-crypto")]
-pub mod sanctuary_crypto;
-pub mod fiduciary_crypto;
-#[cfg(feature = "pq-kem")]
-pub mod pq_kem_shim;
-#[cfg(feature = "zk-culling")]
-pub mod deontic_circuit;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod ebpf_firewall;
+pub use crypto::sanctuary_crypto;
+pub use crypto::verifiable_credential;
+pub use crypto::zk_proofs;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod csd_storage;
-pub mod zk_proofs;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod ambient_orchestration;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod acoustic_ble_mesh;
-#[cfg(not(target_arch = "wasm32"))]
 // pub mod clinical_engine; // Temporarily disabled
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod specialized_libs;
 
 // pub use specialized_libs::linear_algebra;
-#[cfg(not(target_arch = "wasm32"))]
 // pub use specialized_libs::statistical_computing;
-#[cfg(not(target_arch = "wasm32"))]
 // // pub use specialized_libs::cryptographic_library;
-#[cfg(not(target_arch = "wasm32"))]
 // pub use specialized_libs::physics_simulation;
-#[cfg(not(target_arch = "wasm32"))]
 // pub use specialized_libs::machine_learning;
-#[cfg(not(target_arch = "wasm32"))]
 // pub use specialized_libs::financial_modeling;
-#[cfg(not(target_arch = "wasm32"))]
 // pub use specialized_libs::chemistry_modeling;
-#[cfg(not(target_arch = "wasm32"))]
 // pub use specialized_libs::medical_computing; // Temporarily disabled
-#[cfg(not(target_arch = "wasm32"))]
 // pub use specialized_libs::engineering_analysis;
 
-#[cfg(not(target_arch = "wasm32"))]
-pub mod webtorrent_routes;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod webtorrent_seeder;
+pub mod wasm_capabilities;
 
 /// The Global Capability Registry exposes which features are compiled into the
 /// current qualia-core-db binary. This allows the CLI to dynamically self-document
@@ -232,26 +519,506 @@ pub mod webtorrent_seeder;
 /// Crate semver baked in at compile time — shared by daemon `/health`, CLI, and WASM `get_engine_version()`.
 pub const ENGINE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub const CAPABILITY_REGISTRY: &[&str] = &[
-    "SHACL",
-    "Memory",
-    "Database",
-    "Migration",
-    "DeonticLogic",
-    "EpistemicLogic",
-    "ParaconsistentLogic",
-    "DialecticalLogic",
-    "TemporalLTL",
-    "Bioinformatics",
-    "OrganicChemistry",
-    "Economics",
-    "DicomImaging",
-    "ComorbidityEval",
-    "CogAI",
-    "N3Compiler",
-    "Calculus",
-    "GeometricAlgebra",
-    "SIMDKernel",
+/// Canonical description of an inference capability and the MCP tools that
+/// execute it. Chat prompting and MCP registration both consume this table, so
+/// STEM solvers are exposed as tools rather than reimplemented in the LLM layer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CapabilityDescriptor {
+    pub name: &'static str,
+    pub domain: &'static str,
+    /// Concrete operations implemented by this capability family. This is
+    /// discovery metadata, not a promise that every operation has an MCP route.
+    pub operations: &'static [&'static str],
+    pub mcp_tools: &'static [&'static str],
+    /// `stable`, `partial`, `experimental`, or `fail-closed`.
+    pub maturity: &'static str,
+    /// Surfaces that can currently execute the capability.
+    pub surfaces: &'static [&'static str],
+}
+
+pub const CAPABILITY_DESCRIPTORS: &[CapabilityDescriptor] = &[
+    CapabilityDescriptor {
+        name: "CapabilityDiscovery",
+        domain: "runtime",
+        operations: &[
+            "list capability families",
+            "inspect operations",
+            "inspect maturity",
+            "inspect runtime surfaces",
+        ],
+        mcp_tools: &["list_capabilities"],
+        maturity: "stable",
+        surfaces: &["native", "wasm", "mcp", "cli", "chat"],
+    },
+    CapabilityDescriptor {
+        name: "SHACL",
+        domain: "ontology",
+        operations: &[
+            "validate shapes",
+            "route decentralized shapes",
+            "credential gate",
+            "degrade violations",
+        ],
+        mcp_tools: &["validate_shacl", "shacl_route"],
+        maturity: "stable",
+        surfaces: &["native", "wasm-logic", "mcp", "webizen"],
+    },
+    CapabilityDescriptor {
+        name: "GraphDatabase",
+        domain: "ontology",
+        operations: &[
+            "graph query",
+            "SPARQL query",
+            "identifier resolution",
+            "ontology ingest",
+            "RDF parse and serialize",
+        ],
+        mcp_tools: &["query_graph", "query_sparql", "graph_resolve"],
+        maturity: "stable",
+        surfaces: &["native", "wasm-ontology", "mcp"],
+    },
+    CapabilityDescriptor {
+        name: "DeonticLogic",
+        domain: "logic",
+        operations: &[
+            "obligation",
+            "permission",
+            "prohibition",
+            "defeaters",
+            "expiry",
+            "jural correlation",
+            "policy governance",
+        ],
+        mcp_tools: &["evaluate_modality", "deontic_govern", "jural_correlate"],
+        maturity: "stable",
+        surfaces: &["native", "wasm-logic", "mcp", "webizen"],
+    },
+    CapabilityDescriptor {
+        name: "EpistemicLogic",
+        domain: "logic",
+        operations: &[
+            "knowledge",
+            "belief",
+            "common knowledge",
+            "certainty",
+            "possible-world filtering",
+        ],
+        mcp_tools: &["evaluate_modality"],
+        maturity: "stable",
+        surfaces: &["native", "wasm-logic", "mcp", "webizen"],
+    },
+    CapabilityDescriptor {
+        name: "ParaconsistentLogic",
+        domain: "logic",
+        operations: &[
+            "contradiction detection",
+            "context isolation",
+            "non-explosive merge",
+        ],
+        mcp_tools: &["evaluate_modality"],
+        maturity: "stable",
+        surfaces: &["native", "wasm-logic", "mcp", "webizen"],
+    },
+    CapabilityDescriptor {
+        name: "TemporalAndDescriptionLogic",
+        domain: "logic",
+        operations: &[
+            "LTL globally/finally/next/until/release",
+            "CTL path operators",
+            "description-logic subsumption",
+            "interval reasoning",
+        ],
+        mcp_tools: &["evaluate_modality"],
+        maturity: "partial",
+        surfaces: &["native", "wasm-logic", "mcp"],
+    },
+    CapabilityDescriptor {
+        name: "SymbolicAndDefeasibleLogic",
+        domain: "logic",
+        operations: &[
+            "bounded SAT",
+            "defeasible forward chaining",
+            "ASP stable models",
+            "argumentation semantics",
+            "abductive reasoning",
+        ],
+        mcp_tools: &["symbolic_logic_infer", "evaluate_modality"],
+        maturity: "partial",
+        surfaces: &["native", "mcp", "webizen"],
+    },
+    CapabilityDescriptor {
+        name: "SymbolicAlgebra",
+        domain: "mathematics",
+        operations: &[
+            "parse/evaluate expressions",
+            "simplify",
+            "expand",
+            "differentiate",
+            "symbolic integration",
+            "limits",
+            "assumptions",
+            "trigonometric simplification",
+            "Taylor series",
+            "polynomial roots",
+            "symbolic ODE/PDE",
+        ],
+        mcp_tools: &["cas", "algebra_solve_polynomial"],
+        maturity: "partial",
+        surfaces: &["native", "mcp"],
+    },
+    CapabilityDescriptor {
+        name: "LinearAlgebra",
+        domain: "mathematics",
+        operations: &[
+            "matrix multiply",
+            "transpose",
+            "inverse",
+            "linear solve",
+            "determinant",
+            "LU",
+            "QR",
+            "Cholesky",
+            "SVD",
+            "general eigenvalues",
+            "symmetric eigensystem",
+            "tensor contraction",
+        ],
+        mcp_tools: &["matrix_operation", "algebra_matrix_analyze"],
+        maturity: "stable",
+        surfaces: &["native", "mcp", "webizen"],
+    },
+    CapabilityDescriptor {
+        name: "NumericalCalculus",
+        domain: "mathematics",
+        operations: &[
+            "RK4",
+            "BDF1/BDF2",
+            "Verlet/Ruth/Yoshida symplectic integration",
+            "shooting BVP",
+            "Simpson/trapezoid integration",
+            "sensitivity analysis",
+            "interpolation",
+            "splines",
+            "least-squares polynomial fit",
+        ],
+        mcp_tools: &[],
+        maturity: "stable",
+        surfaces: &["native", "library", "webizen"],
+    },
+    CapabilityDescriptor {
+        name: "Optimization",
+        domain: "mathematics",
+        operations: &[
+            "Nelder-Mead",
+            "bounded Newton-Raphson",
+            "Levenberg-Marquardt",
+            "hill climbing",
+            "simulated annealing",
+            "artificial bee colony",
+        ],
+        mcp_tools: &[],
+        maturity: "stable",
+        surfaces: &["native", "library"],
+    },
+    CapabilityDescriptor {
+        name: "GeometricAlgebra",
+        domain: "mathematics",
+        operations: &[
+            "dot/cross/angle",
+            "geometric product",
+            "outer product",
+            "rotors",
+            "translators",
+            "multivectors",
+            "SIMD kernels",
+        ],
+        mcp_tools: &["geometric_algebra_op"],
+        maturity: "partial",
+        surfaces: &["native", "mcp", "webizen"],
+    },
+    CapabilityDescriptor {
+        name: "ComputationalGeometry",
+        domain: "geometry",
+        operations: &[
+            "robust geometric predicates",
+            "convex hulls",
+            "half-edge topology graphs",
+            "10D geometry feature encoding",
+            ".10d quantized mesh geometry",
+            "Delaunay triangulation",
+            "Voronoi diagrams",
+            "nearest-site query",
+            "primitive generation (box, sphere, cylinder, plane)",
+            "T·R·S transform composition",
+            "scene graph assembly",
+            ".10d asset export with μ provenance",
+            "VR filtration + persistent homology",
+            "CkNN graph Laplacian",
+            "natural-neighbour interpolation",
+        ],
+        mcp_tools: &["computational_geometry", "geometry_manifests"],
+        maturity: "partial",
+        surfaces: &["native", "wasm-scientific", "mcp", "webizen", "renderer"],
+    },
+    CapabilityDescriptor {
+        name: "NumberTheory",
+        domain: "mathematics",
+        operations: &[
+            "primality",
+            "factorization",
+            "divisors",
+            "GCD/LCM",
+            "modular powers/inverses",
+            "Chinese remainder theorem",
+            "totient",
+            "Mobius",
+            "partitions",
+            "Stirling numbers",
+            "Catalan numbers",
+        ],
+        mcp_tools: &[],
+        maturity: "stable",
+        surfaces: &["native", "library"],
+    },
+    CapabilityDescriptor {
+        name: "SpecialFunctionsAndTransforms",
+        domain: "mathematics",
+        operations: &[
+            "Bessel",
+            "Airy",
+            "zeta",
+            "Legendre",
+            "Chebyshev",
+            "Hermite",
+            "Laguerre",
+            "DFT/IDFT",
+            "Laplace transform",
+            "Z-transform",
+            "unit conversion",
+            "dimensional analysis",
+            "vector calculus",
+        ],
+        mcp_tools: &[],
+        maturity: "stable",
+        surfaces: &["native", "library"],
+    },
+    CapabilityDescriptor {
+        name: "Statistics",
+        domain: "statistics",
+        operations: &[
+            "descriptive statistics",
+            "robust statistics",
+            "Pearson/Spearman/Kendall correlation",
+            "histograms",
+            "linear regression",
+            "normal/t/chi-square/F distributions",
+            "t-tests",
+            "ANOVA",
+            "chi-square tests",
+            "non-parametric tests",
+            "multiple testing",
+            "anomaly detection",
+            "entropy/KL/mutual information",
+        ],
+        mcp_tools: &["statistical_analysis"],
+        maturity: "partial",
+        surfaces: &["native", "mcp", "library"],
+    },
+    CapabilityDescriptor {
+        name: "MachineLearning",
+        domain: "machine-learning",
+        // NOTE: these classical-ML operations are implemented in the
+        // `solvers::learning` tree (60+ files), NOT in
+        // `specialized_libs::machine_learning`, which the `ml_inference`
+        // tool below routes to (that file serves the GGUF-load + MLP-forward
+        // inference path, plus int8 quant/prune/distill). Per the field doc
+        // above, listing an operation here does not imply an MCP route to it.
+        operations: &[
+            "linear/ridge/lasso/Bayesian regression",
+            "KNN/naive Bayes/SVM/discriminant classification",
+            "k-means/GMM/hierarchical clustering",
+            "decision trees/random forests/boosting/BART",
+            "PCA/SOM",
+            "Gaussian processes",
+            "HMM/Kalman",
+            "survival analysis",
+            "MCMC/variational inference",
+            "resampling",
+            "active learning",
+            "bandits",
+            "knowledge-graph embeddings",
+        ],
+        mcp_tools: &["ml_inference"],
+        maturity: "fail-closed",
+        surfaces: &["native", "library"],
+    },
+    CapabilityDescriptor {
+        name: "PhysicsAndODE",
+        domain: "physics",
+        operations: &[
+            "thermodynamics",
+            "CFD",
+            "molecular dynamics",
+            "RK4 ODE",
+            "Thomas-Fermi DFT",
+            "PINN binding affinity",
+            "distributed simulation",
+        ],
+        mcp_tools: &["ode_solve", "qpu_dft"],
+        maturity: "partial",
+        surfaces: &["native", "mcp", "webizen"],
+    },
+    CapabilityDescriptor {
+        name: "Bioinformatics",
+        domain: "bioscience",
+        operations: &[
+            "Smith-Waterman",
+            "Needleman-Wunsch",
+            "DNA/protein alignment",
+            "k-mer frequencies",
+            "MinHash/Jaccard",
+            "UPGMA",
+            "FASTA validation",
+            "DNA translation",
+            "isoelectric point",
+            "peptide cleavage",
+            "fingerprint similarity",
+        ],
+        mcp_tools: &["bioinformatics_align"],
+        maturity: "partial",
+        surfaces: &["native", "mcp", "webizen"],
+    },
+    CapabilityDescriptor {
+        name: "OrganicChemistry",
+        domain: "chemistry",
+        operations: &[
+            "SMILES/InChI validation",
+            "formula and molecular weight",
+            "LogP/TPSA",
+            "Lipinski/Veber/Ghose/Egan",
+            "functional groups",
+            "pKa",
+            "chiral centers",
+            "circular fingerprints",
+            "reaction kinetics",
+            "equilibrium",
+            "green metrics",
+            "BBB permeation",
+            "isotope distributions",
+        ],
+        mcp_tools: &["chemical_analysis", "chemical_descriptors"],
+        maturity: "partial",
+        surfaces: &["native", "mcp", "webizen"],
+    },
+    CapabilityDescriptor {
+        name: "ClinicalRisk",
+        domain: "clinical",
+        operations: &[
+            "Framingham",
+            "CHA2DS2-VASc",
+            "SCORE2",
+            "SOFA",
+            "eGFR/creatinine clearance",
+            "drug interactions",
+            "contraindications",
+            "FHIR validation",
+            "longitudinal trends",
+            "gene expression",
+            "one-compartment pharmacokinetics",
+        ],
+        mcp_tools: &["medical_score", "clinical_risk"],
+        maturity: "partial",
+        surfaces: &["native", "mcp", "webizen"],
+    },
+    CapabilityDescriptor {
+        name: "FinancialModeling",
+        domain: "economics",
+        operations: &[
+            "Black-Scholes option pricing and Greeks",
+            "portfolio VaR",
+            "Sharpe/Sortino",
+            "maximum drawdown",
+            "Monte Carlo risk",
+        ],
+        mcp_tools: &["financial_model"],
+        maturity: "partial",
+        surfaces: &["native", "mcp", "webizen"],
+    },
+    CapabilityDescriptor {
+        name: "EngineeringAnalysis",
+        domain: "engineering",
+        operations: &[
+            "structural analysis",
+            "thermal conduction",
+            "linear dynamics",
+            "stress/displacement",
+            "fatigue",
+            "fluid analysis",
+        ],
+        mcp_tools: &["engineering_analysis_op"],
+        maturity: "partial",
+        surfaces: &["native", "mcp"],
+    },
+    CapabilityDescriptor {
+        name: "CausalFuzzyAndControl",
+        domain: "reasoning",
+        operations: &[
+            "causal reachability",
+            "but-for and overdetermined cause",
+            "do-intervention",
+            "counterfactuals",
+            "fuzzy t-norms/conorms",
+            "Mamdani/Sugeno inference",
+            "type-2 fuzzy sets",
+            "PID/control feedback",
+        ],
+        mcp_tools: &[],
+        maturity: "stable",
+        surfaces: &["native", "library", "webizen"],
+    },
+    CapabilityDescriptor {
+        name: "ContractsIdentityAndConsensus",
+        domain: "governance",
+        operations: &[
+            "contract formation",
+            "capacity",
+            "delegation/revocation",
+            "responsibility",
+            "jural chains",
+            "value flow",
+            "identity fabric",
+            "BFT quorum",
+            "Lamport/vector clocks",
+            "legal composition",
+        ],
+        mcp_tools: &[
+            "values_check",
+            "values_evaluate",
+            "jural_correlate",
+            "deontic_govern",
+            "mcp_cooperate",
+        ],
+        maturity: "partial",
+        surfaces: &["native", "wasm-logic", "mcp", "webizen"],
+    },
+    CapabilityDescriptor {
+        name: "QuantumAndCryptographic",
+        domain: "quantum-security",
+        operations: &[
+            "QUBO formulation",
+            "classical pre-solve",
+            "QAOA/SPSA",
+            "QPU job dispatch",
+            "DFT bridge",
+            "sign/encrypt/verify",
+            "ML-DSA credentials",
+            "zero-knowledge proof plumbing",
+            "quantum biology orchestration",
+        ],
+        mcp_tools: &["qpu_optimize", "qpu_dft", "qpu_status"],
+        maturity: "experimental",
+        surfaces: &["native", "mcp", "webizen"],
+    },
 ];
 
 /// Bare-metal 40-byte continuous statement container for the Qualia engine.
@@ -347,28 +1114,29 @@ impl NQuin {
         self.context |= (sensitivity as u64) << 56;
     }
 
-    // ── Quin Type (bits [63:60]) ─────────────────────────────────────────────
-
-    /// Read the 4-bit Quin Type nibble from bits [63:60].
-    /// Note: bits [62:61] within this nibble are also the routing lane.
+    // ── Quin Type (bits [63:60], via the FrameLayout ABI) ────────────────────
+    // Canonical home: `frame_layout::{quin_type, with_quin_type}`. Bits [62:61] of
+    // this nibble double as the permissive-routing lane on routed quins (an
+    // intentional, role-exclusive overlay documented in frame_layout). It is NOT
+    // relocated lower — every lower slot lands inside the tensor-bake clock [32:60].
     #[inline(always)]
     pub fn get_quin_type(&self) -> u8 {
-        ((self.metadata >> 60) & 0xF) as u8
+        crate::frame_layout::quin_type(self.metadata)
     }
 
     /// Write the 4-bit Quin Type nibble into bits [63:60], preserving all other bits.
     #[inline(always)]
     pub fn set_quin_type(&mut self, quin_type: u8) {
-        self.metadata = (self.metadata & !(0xFu64 << 60)) | ((quin_type as u64 & 0xF) << 60);
+        self.metadata = crate::frame_layout::with_quin_type(self.metadata, quin_type);
     }
 
     // ── Sensitivity tier (bits [59:56]) — ODRL layer ─────────────────────────
 
-    pub const SENSITIVITY_TIER_PUBLIC:       u8 = 0x00;
+    pub const SENSITIVITY_TIER_PUBLIC: u8 = 0x00;
     pub const SENSITIVITY_TIER_PROFESSIONAL: u8 = 0x01;
-    pub const SENSITIVITY_TIER_LEGAL:        u8 = 0x02;
-    pub const SENSITIVITY_TIER_MEDICAL:      u8 = 0x03;
-    pub const SENSITIVITY_TIER_FIDUCIARY:    u8 = 0x04;
+    pub const SENSITIVITY_TIER_LEGAL: u8 = 0x02;
+    pub const SENSITIVITY_TIER_MEDICAL: u8 = 0x03;
+    pub const SENSITIVITY_TIER_FIDUCIARY: u8 = 0x04;
 
     /// Read the 4-bit ODRL sensitivity tier from bits [59:56].
     #[inline(always)]
@@ -407,20 +1175,37 @@ impl NQuin {
     /// XOR parity over the five semantic fields. Store in `parity` at creation time;
     /// call `verify_ecc_parity()` to confirm integrity.
     #[inline(always)]
-    pub fn calculate_parity(subject: u64, predicate: u64, object: u64, context: u64, metadata: u64) -> u64 {
+    pub fn calculate_parity(
+        subject: u64,
+        predicate: u64,
+        object: u64,
+        context: u64,
+        metadata: u64,
+    ) -> u64 {
         subject ^ predicate ^ object ^ context ^ metadata
     }
 
     #[inline(always)]
     pub fn verify_ecc_parity(&self) -> bool {
-        self.parity == Self::calculate_parity(self.subject, self.predicate, self.object, self.context, self.metadata)
+        self.parity
+            == Self::calculate_parity(
+                self.subject,
+                self.predicate,
+                self.object,
+                self.context,
+                self.metadata,
+            )
     }
 
     /// Recalculate and store ECC parity after mutating any field.
     #[inline(always)]
     pub fn recalculate_parity(&mut self) {
         self.parity = Self::calculate_parity(
-            self.subject, self.predicate, self.object, self.context, self.metadata,
+            self.subject,
+            self.predicate,
+            self.object,
+            self.context,
+            self.metadata,
         );
     }
 
@@ -432,7 +1217,13 @@ impl NQuin {
         let len = core::cmp::min(reason.len(), 8);
         obj_bytes[..len].copy_from_slice(&reason[..len]);
         quin.object = u64::from_le_bytes(obj_bytes);
-        quin.parity = Self::calculate_parity(quin.subject, quin.predicate, quin.object, quin.context, quin.metadata);
+        quin.parity = Self::calculate_parity(
+            quin.subject,
+            quin.predicate,
+            quin.object,
+            quin.context,
+            quin.metadata,
+        );
         quin
     }
 }
@@ -663,28 +1454,15 @@ impl Drop for QualiaSuperBlock {
     }
 }
 
-pub mod agency;
-pub mod cbor_compiler;
+// mcp_* modules now live in mcp/ (see MODULE_REORG_PLAN.md). The `pub mod mcp;`
+// declaration + path-preserving re-exports are below, near the old mcp_server line.
+// (asset_bridge moved to render::assets in Phase 0.2a)
 #[cfg(any(
     not(target_arch = "wasm32"),
-    feature = "wasm-logic",
     feature = "wasm-scientific",
     feature = "wasm-full"
 ))]
-pub mod crdt;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod daemon;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod daemon_graph;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod daemon_tensor;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod daemon_query;
-pub mod fuzz_testing;
-pub mod git_bridge;
-pub mod kml_bridge;
-pub mod temporal_graph;
-pub mod provenance;
+pub mod deontic_logic;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-logic",
@@ -692,50 +1470,9 @@ pub mod provenance;
     feature = "wasm-full"
 ))]
 pub mod epistemic;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-logic",
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
-pub mod deontic_logic;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod ontology_loader;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod ilp_dispatcher;
-pub mod indexing;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-logic",
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
-pub mod ingestion;
-pub mod lexicon;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod npu_ffi;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod nym_adapter;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod orchestrator;
-#[cfg(any(
-    not(target_arch = "wasm32"),
-    feature = "wasm-logic",
-    feature = "wasm-scientific",
-    feature = "wasm-full"
-))]
-pub mod query_compiler;
-pub mod resolver;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod resident_model;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod rpc;
-pub mod spatial_sieve;
 pub mod storage;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod sync;
-pub mod tee_ffi;
-pub mod telemetry;
 #[cfg(any(
     not(target_arch = "wasm32"),
     feature = "wasm-logic",
@@ -743,44 +1480,51 @@ pub mod telemetry;
     feature = "wasm-full"
 ))]
 pub mod wal;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
-pub mod webizen;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod webizen_server;
 
-
-#[cfg(not(target_arch = "wasm32"))]
-pub mod daemon_swarm;
-#[cfg(target_os = "windows")]
-pub mod directml_bridge;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod ggml_quants;
+// The model-inference runtime: reads GGUF weight files and runs the tensor program on the GPU.
+// It is a *runtime*, not an "engine" — the mathematics it executes lives in `crate::solvers`
+// (GEMM, activations/softmax/normalization, attention, RoPE, FFN), each proven equal to the
+// kernels here. `inference_runtime` is the honest name; `gguf_bridge` is retained (the directory
+// rename is deferred — it is a shared performance lane — but the honest name is available).
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
 pub mod gguf_bridge;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod gguf_sharder;
-/// Phase 4: AOT GGUF → `.q42` LLM-weight container compiler.
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod q42_weight;
-pub mod identifier;
+pub use gguf_bridge as inference_runtime;
+/// Phase 4: AOT GGUF → P64 LLM-weight container compiler.
+/// Phase 6 / task #12: safetensor (+ MLX) source parsing + dtype gate for the streaming transcoder.
+/// Task #12 / STELLAR §A: BitNet b1.58 ternary quantization codec (compression during transcode).
+/// Task #12 / STELLAR §A: tensor-name → engine GEMM-role mapping + the ternary (FFN-only) policy.
+/// Task #12 / STELLAR §A: native GPU dispatch of the ternary GEMM kernel + on-device parity test.
+/// STELLAR §A A1a: GPU top-K reduction — CPU oracle + host merge + the WGSL kernel.
+/// STELLAR §A A1a: native GPU dispatch of the top-K reduction + on-device parity test.
+/// STELLAR §A AH-track H0: host topology + capability sensor (enumerate all adapters; discrete vs unified).
+/// STELLAR §A AH-track H1(a): cross-circuit GEMV benchmark → measured capability matrix (CPU/iGPU/GPU).
+/// STELLAR §A AH-track H2: residency + device-priority planner (discovery → employment plan, D31).
+/// STELLAR §A AH-track H1(a) cache: CBOR hardware passport (cache discovery, fast-boot skip, D26).
+/// STELLAR §A A0 (D17/D22): shared native LLM benchmark harness — the one measurement
+/// surface for the existing F16/Q8 path and the future ternary/top-k paths.
+/// STELLAR §A W2 (D17): per-kernel GPU timestamp profiler for the LLM forward/decode path.
+/// STELLAR §A W3: in-project GPU↔CPU kernel-parity oracle (error metrics + synthetic quant weights).
+/// STELLAR §A W1: in-project quality oracle (perplexity / KL / coherence + the quant quality gate).
+/// STELLAR §A AWQ: activation-statistics capture (the AWQ forward hook) for calibrated quantization.
+// mcp/ category (moved from crate root). Re-exports keep crate::mcp_server and
+// crate::mcp_cooperation paths stable for qualia-cli and intra-crate callers.
+pub mod mcp;
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-logic",
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+pub use mcp::mcp_cooperation;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod mcp_server;
-#[cfg(any(target_os = "macos", target_os = "ios"))]
-pub mod metal_bridge;
-pub mod mini_parser;
+pub use mcp::mcp_server;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod ode_solver;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod qpu_ingress;
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod quantum_dft;
-#[cfg(any(not(target_arch = "wasm32"), feature = "wasm-llm"))]
-pub mod resource_catalog;
-#[cfg(any(not(target_arch = "wasm32"), any(feature = "wasm-scientific", feature = "wasm-logic")))]
-pub mod webizen_bytecode;
-
-#[cfg(target_os = "android")]
-pub mod jni_bridge;
 
 #[cfg(target_arch = "wasm32")]
 pub mod wasm_edge;
@@ -789,7 +1533,13 @@ pub mod wasm_edge;
 pub mod wasm_storage;
 
 /// A zero-allocation compile-time hashing function for Q-Turtle macros.
-/// Uses the FNV-1a algorithm to hash strings into 64-bit Quin vectors natively.
+/// Uses FNV-1a, then truncates to 60 bits so the result is a pure IDENTIFIER:
+/// the top 4 bits [60..63] are reserved as the role-keyed type/modality/tag
+/// overlay (inline datatype tags in the Object register, the deontic
+/// DEFEATER_BIT in the Predicate, etc.). This is the ONE canonical term-identity
+/// hash — it MUST stay bit-for-bit identical to `lexicon::generate_60bit_token`
+/// (same FNV constants + the same 0x0FFF_FFFF_FFFF_FFFF mask) so compile-time-baked
+/// URIs and runtime-parsed/ingested URIs share a single hash space and JOIN.
 pub const fn q_hash(s: &str) -> u64 {
     let mut hash: u64 = 0xcbf29ce484222325;
     let bytes = s.as_bytes();
@@ -799,7 +1549,8 @@ pub const fn q_hash(s: &str) -> u64 {
         hash = hash.wrapping_mul(0x100000001b3);
         i += 1;
     }
-    hash
+    // Truncate to 60 bits (top 4 reserved for the type/modality/tag overlay).
+    hash & 0x0FFF_FFFF_FFFF_FFFF
 }
 
 /// Advanced 2026 Q-Turtle Macro
@@ -828,18 +1579,19 @@ mod tests {
     fn qualia_spatial_val() {
         use crate::domains::geospatial::spatial::{embed_h3_context, SpatiotemporalQuadTree};
 
-        let h3_index = 0x8a2a1072b59ffff; // Mock H3 cell index
-        let context_val = embed_h3_context(h3_index);
+        let h3_index = 0x000a1072b59ffff; // Mock H3 cell index payload
+        let context_val = embed_h3_context(h3_index, 10, 42);
+        let expected_context = ((10u64 & 0x0F) << 59)
+            | ((42u64 & 0x7F) << 52)
+            | (h3_index & 0x000F_FFFF_FFFF_FFFF);
         assert_eq!(
-            context_val, h3_index,
+            context_val, expected_context,
             "Failed to embed H3 index into context"
         );
 
-        let quad_tree = SpatiotemporalQuadTree {
-            root_bounds: (0.0, 0.0, 100.0, 100.0),
-        };
+        let quad_tree = SpatiotemporalQuadTree::new((0.0, 0.0, 100.0, 100.0));
 
-        let results = quad_tree.query_region(10.0, 10.0, 20.0, 20.0);
+        let results = quad_tree.query_region(10.0, 10.0, 20.0, 20.0, 0, 0);
         // We expect it to be empty since it's a structural mock
         assert_eq!(
             results.len(),
@@ -850,7 +1602,7 @@ mod tests {
 
     #[test]
     fn qualia_logic_val() {
-        use crate::modalities::logic::core::{WebizenCompiler, WebizenOpcode, WebizenVM};
+        use crate::modalities::logic::core::{WebizenCompiler, WebizenVM};
         let q = NQuin {
             subject: 0,
             predicate: 100,
@@ -924,7 +1676,9 @@ mod tests {
 
     #[test]
     fn qualia_vector_density() {
-        use crate::domains::mathematical::geometric::{extract_spatial_projection, BoundingHull, VectorSectorMap};
+        use crate::domains::mathematical::geometric::{
+            extract_spatial_projection, VectorSectorMap,
+        };
         let q = NQuin {
             subject: 0,
             predicate: 0,
@@ -1012,24 +1766,60 @@ mod tests {
         // Routing lane = bits[62:61]; Lamport clock = bits[31:0] (v3 layout).
         // Values set in bits[31:0] are the Lamport clock; routing lane bits stay in [62:61].
 
-        let q1 = NQuin { subject: 0, predicate: 0, object: 0, context: 0,
-            metadata: 0b00u64 << 61 | 12345, parity: 0 };
-        assert_eq!(q1.identify_routing_lane(), PermissiveRoutingLane::PassthroughStandard);
+        let q1 = NQuin {
+            subject: 0,
+            predicate: 0,
+            object: 0,
+            context: 0,
+            metadata: 0b00u64 << 61 | 12345,
+            parity: 0,
+        };
+        assert_eq!(
+            q1.identify_routing_lane(),
+            PermissiveRoutingLane::PassthroughStandard
+        );
         assert_eq!(q1.extract_lamport_clock(), 12345);
 
-        let q2 = NQuin { subject: 0, predicate: 0, object: 0, context: 0,
-            metadata: 0b01u64 << 61 | 67890, parity: 0 };
-        assert_eq!(q2.identify_routing_lane(), PermissiveRoutingLane::EnforcePermissiveCommons);
+        let q2 = NQuin {
+            subject: 0,
+            predicate: 0,
+            object: 0,
+            context: 0,
+            metadata: 0b01u64 << 61 | 67890,
+            parity: 0,
+        };
+        assert_eq!(
+            q2.identify_routing_lane(),
+            PermissiveRoutingLane::EnforcePermissiveCommons
+        );
         assert_eq!(q2.extract_lamport_clock(), 67890);
 
-        let q3 = NQuin { subject: 0, predicate: 0, object: 0, context: 0,
-            metadata: 0b10u64 << 61 | 42, parity: 0 };
-        assert_eq!(q3.identify_routing_lane(), PermissiveRoutingLane::EnforceBilateralMicroCommons);
+        let q3 = NQuin {
+            subject: 0,
+            predicate: 0,
+            object: 0,
+            context: 0,
+            metadata: 0b10u64 << 61 | 42,
+            parity: 0,
+        };
+        assert_eq!(
+            q3.identify_routing_lane(),
+            PermissiveRoutingLane::EnforceBilateralMicroCommons
+        );
         assert_eq!(q3.extract_lamport_clock(), 42);
 
-        let q4 = NQuin { subject: 0, predicate: 0, object: 0, context: 0,
-            metadata: 0b11u64 << 61 | 999, parity: 0 };
-        assert_eq!(q4.identify_routing_lane(), PermissiveRoutingLane::SpatiotemporalAmbiguous);
+        let q4 = NQuin {
+            subject: 0,
+            predicate: 0,
+            object: 0,
+            context: 0,
+            metadata: 0b11u64 << 61 | 999,
+            parity: 0,
+        };
+        assert_eq!(
+            q4.identify_routing_lane(),
+            PermissiveRoutingLane::SpatiotemporalAmbiguous
+        );
         assert_eq!(q4.extract_lamport_clock(), 999);
     }
 
@@ -1041,7 +1831,10 @@ mod tests {
         q.set_quin_type(0b1001);
         assert_eq!(q.get_quin_type(), 0b1001);
         // Routing lane reads bits[62:61] = bits 2:1 of the nibble = 0b00 (from 0b1001)
-        assert_eq!(q.identify_routing_lane(), PermissiveRoutingLane::PassthroughStandard);
+        assert_eq!(
+            q.identify_routing_lane(),
+            PermissiveRoutingLane::PassthroughStandard
+        );
 
         // Sensitivity tier
         q.set_sensitivity_tier(NQuin::SENSITIVITY_TIER_MEDICAL);
@@ -1069,16 +1862,7 @@ mod tests {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub mod key_vault;
-
-#[cfg(not(target_arch = "wasm32"))]
 pub mod p2p;
-
-#[cfg(not(target_arch = "wasm32"))]
-pub mod webizen_sync;
-
-#[cfg(not(target_arch = "wasm32"))]
-pub mod web_civics;
 
 #[cfg(any(not(target_arch = "wasm32"), feature = "wasm-scientific"))]
 pub mod domains;

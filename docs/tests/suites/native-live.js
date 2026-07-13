@@ -10,10 +10,10 @@ export const MODES = ['native', 'both'];
 export function register(runner, ctx) {
     runner.describe('Native: Query Pipeline', () => {
 
-        runner.it('wildcard query @context vocab is https://qualia-db.org/vocab#', async () => {
+        runner.it('wildcard query @context vocab is https://webizen.org/vocab#', async () => {
             if (!ctx.native) return;
             const { body } = await ctx.native.query('?s ?p ?o');
-            runner.expect(body['@context']['@vocab']).toBe('https://qualia-db.org/vocab#');
+            runner.expect(body['@context']['@vocab']).toBe('https://webizen.org/vocab#');
         });
 
         runner.it('match_count is always a non-negative integer', async () => {

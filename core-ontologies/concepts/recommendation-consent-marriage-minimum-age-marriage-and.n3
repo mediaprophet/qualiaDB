@@ -1,0 +1,70 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix dc:      <http://purl.org/dc/terms/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix values:  <https://ns.webcivics.net/values/> .
+@prefix cml:     <https://ns.webcivics.net/cml/> .
+@prefix concept: <https://ns.webcivics.net/concept/> .
+@prefix doc:     <https://ns.webcivics.net/values/recommendation-consent-marriage-minimum-age-marriage-and#> .
+
+# ============================================================
+# CML concept layer (LOGIC) — Recommendation on Consent to Marriage, Minimum Age for Marriage and Registration of Marriages
+# MACHINE-DERIVED from the TEXT layer (un-instruments) — cml:Proposed,
+# values:HeuristicDerived. Pending human attestation (cml:Attested / exactMatch).
+# One cml:Concept per provision; cml:realizedBy the provision; cml:asserts the
+# deontic norm. R1 universalisation materialised for duties borne by every Agent.
+# ============================================================
+
+concept:recommendation-consent-marriage-minimum-age-marriage-and-principle-1 a cml:Concept ;
+    skos:prefLabel "Principle 1"@en ;
+    cml:realizedBy doc:principle-1 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/recommendation-consent-marriage-minimum-age-marriage-and> ;
+    dc:date "01 November 1965" ;
+    values:category "Marriage & family" ;
+    cml:asserts concept:recommendation-consent-marriage-minimum-age-marriage-and-principle-1-norm .
+
+concept:recommendation-consent-marriage-minimum-age-marriage-and-principle-1-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:recommendation-consent-marriage-minimum-age-marriage-and-principle-1 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:recommendation-consent-marriage-minimum-age-marriage-and-principle-2 a cml:Concept ;
+    skos:prefLabel "Principle 2"@en ;
+    cml:realizedBy doc:principle-2 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/recommendation-consent-marriage-minimum-age-marriage-and> ;
+    dc:date "01 November 1965" ;
+    values:category "Marriage & family" ;
+    cml:asserts concept:recommendation-consent-marriage-minimum-age-marriage-and-principle-2-norm .
+
+concept:recommendation-consent-marriage-minimum-age-marriage-and-principle-2-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:recommendation-consent-marriage-minimum-age-marriage-and-principle-2 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:recommendation-consent-marriage-minimum-age-marriage-and-principle-3 a cml:Concept ;
+    skos:prefLabel "Principle 3"@en ;
+    cml:realizedBy doc:principle-3 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/recommendation-consent-marriage-minimum-age-marriage-and> ;
+    dc:date "01 November 1965" ;
+    values:category "Marriage & family" ;
+    cml:asserts concept:recommendation-consent-marriage-minimum-age-marriage-and-principle-3-norm .
+
+concept:recommendation-consent-marriage-minimum-age-marriage-and-principle-3-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:recommendation-consent-marriage-minimum-age-marriage-and-principle-3 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .

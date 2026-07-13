@@ -1,6 +1,7 @@
 use crossbeam_channel::{bounded, Receiver, Sender, TrySendError};
 use qualia_client_core::state::AppState;
 
+#[allow(unused_imports)]
 use qualia_core_db::{q_hash, NQuin};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -8,7 +9,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Manager};
+#[allow(unused_imports)]
+use tauri::{AppHandle, Emitter, Manager};
 use webizen_runtime::{
     DiffusionConfig, FrameHandle, LedgerRecord, LedgerSink, RuntimeCommand, SharedFrameBuffer,
     SimulationKernel, WgpuDiffusionBackend,
@@ -263,7 +265,7 @@ pub fn spawn_runtime(
                                 *latest = Some(record.clone());
                             }
 
-                            let _ = app_handle_thread.emit_all("diffusion-epoch-ready", record);
+                            let _ = app_handle_thread.emit("diffusion-epoch-ready", record);
                         }
                     }
                 }
@@ -272,7 +274,7 @@ pub fn spawn_runtime(
                 if next_fingerprint != last_ledger_fingerprint {
                     last_ledger_fingerprint = next_fingerprint;
                     let _ = app_handle_thread
-                        .emit_all(LEDGER_EVENT_NAME, ledger_metrics_thread.snapshot());
+                        .emit(LEDGER_EVENT_NAME, ledger_metrics_thread.snapshot());
                 }
 
                 thread::sleep(DEFAULT_LOOP_SLEEP);
@@ -407,7 +409,7 @@ fn spawn_persistence_worker(
 }
 
 fn emit_ledger_health(app_handle: &AppHandle, metrics: &LedgerMetrics) -> Result<(), tauri::Error> {
-    app_handle.emit_all(LEDGER_EVENT_NAME, metrics.snapshot())
+    app_handle.emit(LEDGER_EVENT_NAME, metrics.snapshot())
 }
 
 fn diffusion_wal_path(storage_path: &Path) -> PathBuf {

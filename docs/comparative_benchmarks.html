@@ -174,7 +174,7 @@
             <div class="max-w-3xl">
                 <div class="mb-5 inline-flex items-center gap-x-2 rounded-3xl border border-blue-900/50 bg-blue-950/40 px-5 py-1.5 text-xs font-semibold tracking-[1.2px] text-blue-400">
                     <i class="fa-solid fa-flask"></i>
-                    <span>COMPARATIVE HARNESS v2 • 512 MB SOVEREIGN EDGE</span>
+                    <span>COMPARATIVE HARNESS v2 • 512 MB ON-DEVICE EDGE</span>
                 </div>
 
                 <h1 class="font-display text-[72px] leading-[1.05] font-semibold tracking-[-3.8px]">
@@ -743,13 +743,15 @@
                 const isQualia = isQualiaEngineKey(engine.engine);
 
                 const row = document.createElement('div');
-                row.className = 'flex items-center gap-x-4 text-sm';
+                row.className = 'grid min-w-0 grid-cols-[minmax(0,7rem)_minmax(0,1fr)_5rem] items-center gap-x-4 text-sm';
                 row.innerHTML = `
-                    <div class="w-28 flex-shrink-0 text-right text-xs text-slate-400 truncate">${label}</div>
-                    <div class="flex-1 bg-slate-800 rounded-full p-px">
-                        <div class="bar ${isQualia ? 'bar-qualia' : ''}" style="width: ${pct}%;"></div>
+                    <div class="min-w-0 text-right text-xs text-slate-400 truncate">${label}</div>
+                    <div class="min-w-0 overflow-hidden">
+                        <div class="w-full overflow-hidden rounded-full bg-slate-800 p-px">
+                            <div class="bar ${isQualia ? 'bar-qualia' : ''}" style="width: ${pct}%; max-width: 100%;"></div>
+                        </div>
                     </div>
-                    <div class="w-20 flex-shrink-0 text-right font-mono text-xs">${labelFn(engine, val)}</div>
+                    <div class="text-right font-mono text-xs whitespace-nowrap">${labelFn(engine, val)}</div>
                 `;
                 container.appendChild(row);
             });

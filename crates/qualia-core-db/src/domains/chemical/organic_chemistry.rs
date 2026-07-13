@@ -1379,6 +1379,133 @@ pub fn henderson_hasselbalch(pka: f64, conc_base: f64, conc_acid: f64) -> f64 {
     pka + (conc_base / conc_acid).log10()
 }
 
+// ─── Decentralized synthesis: urea pathway, catalyst decay, off-grid kinetics ────
+//
+// The resilience-chemistry scope: domestic production of critical compounds at the
+// edge. These build on the Arrhenius / equilibrium primitives above. Honest scope —
+// the engine carries the reaction arithmetic; the attested thermodynamic data
+// (ΔG°, Ea, A) is supplied by the caller, not invented here.
+
+/// Equilibrium extent ξ of the Bosch–Meiser urea synthesis
+/// `2 NH₃ + CO₂ ⇌ (NH₂)₂CO + H₂O`, solved from the equilibrium constant (via the
+/// caller-supplied ΔG° at `temp_k`) and the initial NH₃/CO₂ partial pressures, by
+/// bisection on the reaction quotient `Q(ξ) = ξ² / ((p_NH₃−2ξ)²·(p_CO₂−ξ))` (strictly
+/// increasing in ξ). Returns ξ in the same units as the input pressures. Simplified
+/// gas-phase model (industrial urea is liquid-phase/high-P — that shifts the numbers,
+/// not the method). Demonstrates Le Chatelier: higher reactant pressure ⇒ higher ξ.
+pub fn urea_equilibrium_extent(delta_g_j_mol: f64, temp_k: f64, p_nh3_0: f64, p_co2_0: f64) -> f64 {
+    let k_eq = equilibrium_constant(delta_g_j_mol, temp_k);
+    let xi_max = (p_nh3_0 / 2.0).min(p_co2_0).max(0.0);
+    if xi_max <= 0.0 {
+        return 0.0;
+    }
+    let quotient = |xi: f64| -> f64 {
+        let nh3 = p_nh3_0 - 2.0 * xi;
+        let co2 = p_co2_0 - xi;
+        if nh3 <= 0.0 || co2 <= 0.0 {
+            return f64::INFINITY;
+        }
+        (xi * xi) / (nh3 * nh3 * co2)
+    };
+    let (mut lo, mut hi) = (0.0f64, xi_max * (1.0 - 1e-9));
+    for _ in 0..100 {
+        let mid = 0.5 * (lo + hi);
+        if quotient(mid) < k_eq {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    0.5 * (lo + hi)
+}
+
+/// Catalyst activity at time `t` under first-order deactivation: `a(t) = a₀·exp(−k_d·t)`.
+/// Models the degradation that limits sustained yield on small decentralized nodes.
+pub fn catalyst_activity(initial_activity: f64, deactivation_rate_per_s: f64, time_s: f64) -> f64 {
+    let a = initial_activity * (-deactivation_rate_per_s * time_s).exp();
+    a.clamp(0.0, initial_activity.max(0.0))
+}
+
+/// Effective reaction rate accounting for catalyst decay: `r_eff = r_base · a(t)/a₀`.
+pub fn deactivated_reaction_rate(
+    base_rate: f64,
+    initial_activity: f64,
+    deactivation_rate_per_s: f64,
+    time_s: f64,
+) -> f64 {
+    if initial_activity <= 0.0 {
+        return 0.0;
+    }
+    base_rate * catalyst_activity(initial_activity, deactivation_rate_per_s, time_s)
+        / initial_activity
+}
+
+/// Total fractional conversion of a first-order reaction under a *variable* temperature
+/// profile — e.g. fluctuating off-grid power driving a fluctuating reactor temperature.
+/// Integrates `dX/dt = k(T)·(1−X)` across `temp_profile_k` (k from the Arrhenius rate,
+/// explicit-Euler steps of `dt_s`), returning the final conversion `X ∈ [0,1]`. Zero-heap
+/// (the profile is a caller slice).
+pub fn conversion_under_variable_temperature(
+    pre_exponential_a: f64,
+    activation_energy_j_mol: f64,
+    temp_profile_k: &[f64],
+    dt_s: f64,
+) -> f64 {
+    let mut x = 0.0f64;
+    for &t_k in temp_profile_k {
+        let k = arrhenius_rate(pre_exponential_a, activation_energy_j_mol, t_k);
+        x += k * (1.0 - x) * dt_s;
+        x = x.clamp(0.0, 1.0);
+    }
+    x
+}
+
+#[cfg(test)]
+mod resilience_chem_tests {
+    use super::*;
+
+    #[test]
+    fn urea_extent_tracks_equilibrium_favorability() {
+        // Product-favoured (ΔG° = −10 kJ/mol at 400 K → K ≈ 20): with p_NH3=2, p_CO2=1
+        // the equilibrium extent ξ ≈ 0.8 (Q(0.8)=0.64/(0.16·0.2)=20).
+        let xi = urea_equilibrium_extent(-10_000.0, 400.0, 2.0, 1.0);
+        assert!(xi > 0.7 && xi < 0.9, "favourable extent ~0.8, got {xi}");
+        // Strongly unfavourable (ΔG° = +60 kJ/mol → K ≈ 0): almost no conversion.
+        let xi_bad = urea_equilibrium_extent(60_000.0, 400.0, 2.0, 1.0);
+        assert!(xi_bad < 0.01, "unfavourable extent ~0, got {xi_bad}");
+        // Le Chatelier: more reactant pressure ⇒ more product.
+        let xi_lo = urea_equilibrium_extent(-10_000.0, 400.0, 1.0, 0.5);
+        let xi_hi = urea_equilibrium_extent(-10_000.0, 400.0, 4.0, 2.0);
+        assert!(
+            xi_hi > xi_lo,
+            "higher reactant pressure should raise the extent"
+        );
+    }
+
+    #[test]
+    fn catalyst_decays_and_throttles_rate() {
+        let a0 = 1.0;
+        assert!((catalyst_activity(a0, 0.1, 0.0) - a0).abs() < 1e-12);
+        let later = catalyst_activity(a0, 0.1, 10.0);
+        assert!(later < a0 && later > 0.0);
+        // r_eff = base · e^{-1} ≈ 0.368 · base after k_d·t = 1.
+        let r = deactivated_reaction_rate(10.0, a0, 0.1, 10.0);
+        assert!((r - 10.0 * (-1.0f64).exp()).abs() < 1e-9);
+    }
+
+    #[test]
+    fn hotter_profile_gives_more_conversion() {
+        let (a, ea, dt) = (1e6, 50_000.0, 1.0);
+        let cold = conversion_under_variable_temperature(a, ea, &[300.0, 300.0, 300.0], dt);
+        let hot = conversion_under_variable_temperature(a, ea, &[350.0, 350.0, 350.0], dt);
+        assert!(
+            hot > cold,
+            "higher temperature ⇒ faster kinetics ⇒ more conversion"
+        );
+        assert!((0.0..=1.0).contains(&hot) && (0.0..=1.0).contains(&cold));
+    }
+}
+
 /// Degree of ionisation α at a given pH for a monoprotic acid.
 pub fn ionisation_fraction(ph: f64, pka: f64) -> f64 {
     1.0 / (1.0 + 10f64.powf(pka - ph))
@@ -1599,6 +1726,16 @@ mod tests {
         assert!(mol.is_valid);
         assert_eq!(mol.atoms.iter().filter(|a| a.element == "C").count(), 2);
         assert_eq!(mol.atoms.iter().filter(|a| a.element == "O").count(), 1);
+    }
+
+    #[test]
+    fn smiles_parse_paracetamol_methane() {
+        let p = paracetamol();
+        assert!(p.is_valid);
+        assert_eq!(p.atoms.iter().filter(|a| a.element == "C").count(), 8);
+        let m = methane();
+        assert!(m.is_valid);
+        assert_eq!(m.atoms.iter().filter(|a| a.element == "C").count(), 1);
     }
 
     #[test]

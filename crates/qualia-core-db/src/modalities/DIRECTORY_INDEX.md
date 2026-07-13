@@ -1,0 +1,635 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# modalities Index
+
+## Functionality Overview
+Comprehensive index of functionality for `modalities`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Subdirectories
+- 📁 `[abductive](abductive/DIRECTORY_INDEX.md)`
+- 📁 `[argumentation](argumentation/DIRECTORY_INDEX.md)`
+- 📁 `[calculus](calculus/DIRECTORY_INDEX.md)`
+- 📁 `[control_feedback](control_feedback/DIRECTORY_INDEX.md)`
+- 📁 `[likeliness](likeliness/DIRECTORY_INDEX.md)`
+- 📁 `[logic](logic/DIRECTORY_INDEX.md)`
+
+### Files & Exported Functionality
+- 📄 `asp.rs`
+  - `fn enumerate_stable_models`
+  - `struct AspRule`
+  - `impl AspRule`
+  - `fn new`
+  - `fn fact`
+  - `fn constraint`
+  - `fn compute_answer_sets`
+  - `fn atom_index`
+  - `fn body_holds`
+  - `fn ground_rule`
+  - `struct WeakConstraint`
+  - `impl WeakConstraint`
+  - `fn model_penalty`
+  - `fn optimal_answer_set`
+  - `fn cautious_consequences`
+  - *(...and 9 more)*
+- 📄 `capability_gap.rs`
+  - `fn holds`
+  - `fn capability_gap`
+  - `fn requirements_met`
+  - `fn meets_competency_level`
+  - `fn learning_path_cost`
+  - `fn estimate_capability`
+  - `fn competency_levels_and_bayesian_estimate`
+  - `fn a_star_finds_the_shortest_learning_path`
+  - `fn gap_is_the_set_difference`
+  - `fn experiential_equivalence_closes_the_gap`
+- 📄 `capacity.rs`
+  - `enum CapacityStatus`
+  - `fn stipulation_binding`
+  - `fn stipulation_voidable`
+  - `fn effective_principal`
+  - `fn posthumous_standing`
+  - `fn meets_age_of_majority`
+  - `fn capacity_from_age`
+  - `fn detect_duress`
+  - `fn capacity_under_pressure`
+  - `fn decayed_impairment`
+  - `fn transient_capacity`
+  - `fn guardianship_authorized`
+  - `fn effective_principal_scoped`
+  - `fn delegation_attenuates`
+  - `fn authorized_after_revocation`
+  - *(...and 10 more)*
+- 📄 `carrier.rs`
+  - `fn media_tag`
+  - `fn verify_binding`
+  - `fn extract_payload`
+  - `fn merkle_node`
+  - `fn verify_merkle_node`
+  - `struct StreamHasher`
+  - `impl StreamHasher`
+  - `fn new`
+  - `fn update`
+  - `fn finalize`
+  - `fn multisig_satisfied`
+  - `fn redaction_preserves_root`
+  - `fn quin`
+  - `fn media_tag_is_deterministic_and_content_addressed`
+  - `fn binding_is_tamper_evident`
+  - *(...and 4 more)*
+- 📄 `causal.rs`
+  - `fn cause_predicate`
+  - `fn caused_internal`
+  - `fn caused`
+  - `fn but_for_cause`
+  - `fn is_voided_by`
+  - `fn dependents_voided`
+  - `fn is_overdetermined`
+  - `fn do_intervene`
+  - `fn is_exogenous`
+  - `fn is_endogenous`
+  - `fn counterfactual_absent`
+  - `fn backdoor_satisfied`
+  - `fn edge`
+  - `fn but_for_along_a_chain`
+  - `fn overdetermination_is_joint_not_but_for`
+  - *(...and 3 more)*
+- 📄 `consensus.rs`
+  - `enum TxStatus`
+  - `fn transaction_status`
+  - `fn is_globally_valid`
+  - `fn survives_partition`
+  - `fn can_form_joint_during_partition`
+  - `fn bft_max_faults`
+  - `fn bft_quorum`
+  - `fn bft_committed`
+  - `fn lamport_tick`
+  - `fn lamport_recv`
+  - `fn vc_happens_before`
+  - `fn vc_concurrent`
+  - `fn vc_merge`
+  - `fn is_active_validator`
+  - `fn is_equivocation`
+  - *(...and 8 more)*
+- 📄 `contract.rs`
+  - `enum FormationStage`
+  - `fn formation_stage`
+  - `fn is_binding_contract`
+  - `fn incorporates_by_reference`
+  - `fn terms_respect_limits`
+  - `enum ContractState`
+  - `fn contract_state`
+  - `fn performance_ratio`
+  - `fn performance_met`
+  - `fn liable_party`
+  - `fn terms_cannot_contract_out_of_baselines`
+  - `fn breach_state_machine`
+  - `fn performance_metrics_and_oracle`
+  - `fn sub_contract_liability_tracing`
+  - `fn formation_progresses_offer_to_binding`
+  - *(...and 2 more)*
+- 📄 `ctl.rs`
+  - `fn satisfies`
+  - `fn exists_finally`
+  - `fn always_globally`
+  - `fn exists_next`
+  - `fn always_next`
+  - `fn exists_until`
+  - `fn reachable_states`
+  - `fn idx_of`
+  - `fn exists_globally`
+  - `fn all_finally`
+  - `fn all_until`
+  - `fn alive_reaches_self`
+  - `fn fair_globally`
+  - `fn t`
+  - `fn label`
+  - *(...and 3 more)*
+- 📄 `defeasible.rs`
+  - `enum DefeasibleStatus`
+  - `enum DefeasibleError`
+  - `struct DefeasibleVerdict`
+  - `fn evaluate_defeasible_frame`
+  - `fn holds_by_default`
+  - `enum RuleKind`
+  - `struct DefeasibleRule`
+  - `enum AmbiguityMode`
+  - `enum Conclusion`
+  - `fn rules_conflict`
+  - `fn is_superior`
+  - `fn polarity`
+  - `fn can_conclude`
+  - `fn resolve_conflict`
+  - `fn grounded_justified_rules`
+  - *(...and 6 more)*
+- 📄 `delegation.rs`
+  - `fn delegates_predicate`
+  - `fn reaches`
+  - `fn has_delegated_authority`
+  - `fn authority_after_revocation`
+  - `fn revoked_descendants`
+  - `fn attenuates`
+  - `fn is_revoked`
+  - `fn authority_after_crl`
+  - `fn delegation_in_force`
+  - `fn delegation_in_region`
+  - `fn edge`
+  - `fn authority_flows_along_the_chain`
+  - `fn revocation_cascades_to_descendants`
+  - `fn attenuation_never_broadens_authority`
+  - `fn crl_excises_every_revoked_node`
+  - *(...and 1 more)*
+- 📄 `deontic_compose.rs`
+  - `fn obligation_globally`
+  - `fn obligation_until`
+  - `enum MensRea`
+  - `fn agent_knows`
+  - `fn classify_mens_rea`
+  - `fn discharge_obligation`
+  - `fn obligation_applies_in`
+  - `fn norm_survives_conflict`
+  - `fn fulfilment_degree`
+  - `fn obligation_fuzzily_met`
+  - `fn trust_gate`
+  - `fn remedy_scenarios`
+  - `fn diagnose_breach`
+  - `fn composition_preserves_right`
+  - `fn zk_wrapped_composition`
+  - *(...and 16 more)*
+- 📄 `dialectical.rs`
+  - `fn do_intervention`
+  - `fn counterfactual_query`
+  - `fn find_causal_paths`
+  - `fn dfs_find_paths`
+  - `fn are_confounded`
+  - `fn adjust_for_confounding`
+  - `fn compute_conditional_probability`
+  - `fn synthesize_dialectical`
+  - `fn reachable_avoiding`
+  - `fn is_necessary_cause`
+  - `fn is_dialectical_contradiction`
+  - `enum IbisNode`
+  - `fn ibis_position_favoured`
+  - `fn synthesis_coherence`
+  - `fn edge`
+  - *(...and 8 more)*
+- 📄 `diffusion.rs`
+  - `fn trigger_diffusion`
+  - `fn execute_diffusion_pass`
+  - `fn diffuse_step`
+  - `fn inject_energy`
+  - `fn anneal_accept`
+  - `fn cool`
+  - `fn cpu_belief_diffusion_moves_toward_neighbours`
+  - `fn energy_injection_and_annealing`
+  - `fn test_execute_diffusion_pass`
+- 📄 `dl.rs`
+  - `fn check_subsumption_quin`
+  - `fn concepts_disjoint`
+  - `fn abox_clash`
+  - `fn role_subsumes`
+  - `fn is_transitive_role`
+  - `fn count_qualified_fillers`
+  - `fn min_cardinality_met`
+  - `fn max_cardinality_met`
+  - `fn is_nominal_instance`
+  - `fn test_check_subsumption_quin`
+  - `fn multiple_inheritance_dag`
+  - `fn disjointness_clash_detection`
+  - `fn roles_cardinality_nominals`
+- 📄 `epistemic.rs`
+  - `enum EpistemicStatus`
+  - `enum EpistemicError`
+  - `struct EpistemicVerdict`
+  - `fn evaluate_epistemic_frame`
+  - `fn check_node_locks`
+  - `fn everyone_knows`
+  - `fn distributed_knowledge`
+  - `fn common_knowledge_via_announcement`
+  - `fn positive_introspection`
+  - `fn negative_introspection`
+  - `fn muddy_child_knows`
+  - `fn test_epistemic_evaluation`
+  - `fn epistemic_strength_bands_map_to_active_or_uncertain`
+  - `fn test_namespace_lock_blocks_node_lock`
+  - `fn multi_agent_operators_and_introspection`
+  - *(...and 2 more)*
+- 📄 `epistemic_boundaries.rs`
+  - `struct SocraticDegradation`
+  - `enum DegradationVector`
+  - `fn identify_degradation_vector`
+  - `fn degrade_claim_to_socratic`
+  - `enum ReferralDomain`
+  - `struct ReferralTrigger`
+  - `fn detect_referral_trigger`
+  - `fn detect_referral_by_severity`
+  - `fn forbids_definitive_classification`
+  - `fn requires_physiological_quarantine`
+  - `fn claim`
+  - `fn degradation_matrix_softens_definitive_claims`
+  - `fn acute_harm_triggers_overriding_medical_referral`
+  - `fn imminent_jeopardy_triggers_overriding_legal_referral`
+  - `fn severity_escalates_analytical_vectors_only_above_the_floor`
+  - *(...and 2 more)*
+- 📄 `fuzzy.rs`
+  - `fn t_norm_godel`
+  - `fn t_norm_lukasiewicz`
+  - `fn t_conorm_godel`
+  - `fn degree`
+  - `fn conjunction`
+  - `fn t_conorm_lukasiewicz`
+  - `fn t_norm_product`
+  - `fn t_conorm_product`
+  - `fn t_norm_drastic`
+  - `fn t_conorm_drastic`
+  - `fn fuzzy_not`
+  - `fn disjunction`
+  - `fn hedge_very`
+  - `fn hedge_extremely`
+  - `fn hedge_more_or_less`
+  - *(...and 17 more)*
+- 📄 `fuzzy_quantifiers.rs`
+  - `struct RelativeQuantifier`
+  - `impl RelativeQuantifier`
+  - `fn ramp`
+  - `fn most_example`
+  - `fn apply`
+  - `fn fuzzy_proportion`
+  - `fn evaluate`
+  - `fn ramp_endpoints_and_interpolation`
+  - `fn most_of_a_concurring_group_is_true`
+  - `fn proportion_is_sigma_count`
+  - `fn crisp_threshold_quantifier`
+- 📄 `fuzzy_rdf_schema.rs`
+  - `fn subclass_closure`
+  - `fn type_entailment`
+  - `fn entailed_types`
+  - `fn transitive_degree_composes_by_product`
+  - `fn best_path_wins`
+  - `fn type_entailment_propagates`
+  - `fn type_entailment_pairwise`
+- 📄 `fuzzy_type2.rs`
+  - `struct IntervalType2`
+  - `impl IntervalType2`
+  - `fn new`
+  - `fn crisp`
+  - `fn footprint`
+  - `fn meet`
+  - `fn join`
+  - `fn complement`
+  - `fn type_reduce`
+  - `fn karnik_mendel`
+  - `fn km_endpoint`
+  - `fn footprint_and_crisp_degenerate`
+  - `fn meet_join_reduce_to_type1_on_crisp`
+  - `fn meet_widens_or_preserves_uncertainty_sensibly`
+  - `fn karnik_mendel_brackets_the_centroid`
+  - *(...and 1 more)*
+- 📄 `graph_theory.rs`
+  - `enum GraphAnalysisError`
+  - `struct CommunitySpan`
+  - `struct TopNodeScore`
+  - `struct MotifRecord`
+  - `struct SubgraphPattern`
+  - `impl SubgraphPattern`
+  - `fn new`
+  - `fn with_edge`
+  - `struct SubgraphMatch`
+  - `struct BoundedGraphAnalysisSummary`
+  - `struct BoundedQualiaGraph`
+  - `impl BoundedQualiaGraph`
+  - `fn from_quins`
+  - `fn get_or_insert_node`
+  - `fn calculate_betweenness_centrality`
+  - *(...and 35 more)*
+- 📄 `identity_fabric.rs`
+  - `fn identity_survives_loss`
+  - `fn surviving_anchors`
+  - `fn recompute_fabric`
+  - `fn enumerated_identity_confidence`
+  - `fn m_add`
+  - `fn m_sub`
+  - `fn m_mul`
+  - `fn m_pow`
+  - `fn m_inv`
+  - `fn poly_eval`
+  - `fn shamir_split`
+  - `fn shamir_reconstruct`
+  - `fn zkp_capability_granted`
+  - `fn web_of_trust_confidence`
+  - `fn shamir_k_of_n_recovers_the_secret`
+  - *(...and 3 more)*
+- 📄 `interaction_governance.rs`
+  - `enum PolicyMode`
+  - `struct Governance`
+  - `fn map_policy`
+  - `fn govern_verdict`
+  - `fn permits_execution`
+  - `fn apply_emergency_override`
+  - `fn threshold_authorized`
+  - `fn circuit_breaker`
+  - `fn restriction_proportionate`
+  - `fn g`
+  - `fn non_derogable_violation_is_preventive_block`
+  - `fn ordinary_violation_is_permissive_audit`
+  - `fn humanitarian_in_force_is_prioritized`
+  - `fn ambiguity_always_defers_to_a_human`
+  - `fn non_binding_statuses_allow`
+  - *(...and 4 more)*
+- 📄 `interval_reasoning.rs`
+  - `struct TemporalInterval`
+  - `impl TemporalInterval`
+  - `fn new`
+  - `fn contains`
+  - `fn overlaps`
+  - `fn intersection`
+  - `fn union`
+  - `fn gap`
+  - `enum AllenRelation`
+  - `struct IntervalCSP`
+  - `impl IntervalCSP`
+  - `fn add_interval`
+  - `fn add_constraint`
+  - `fn satisfies_relation`
+  - `fn solve`
+  - *(...and 23 more)*
+- 📄 `jural.rs`
+  - `fn compile_jural_quin`
+  - `fn correlative_quin`
+  - `fn jural_correlativity_holds`
+  - `fn find_unmet_correlatives`
+  - `fn personhood_category_error`
+  - `fn jural_chain_links`
+  - `fn jural_chain_pivot`
+  - `fn jural_chain_valid`
+  - `enum CollisionResolution`
+  - `fn jural_collision`
+  - `fn resolve_collision`
+  - `fn correlatives_are_involutive_and_paired`
+  - `fn claim_implies_correlative_duty`
+  - `fn correlativity_holds_when_duty_is_present`
+  - `fn unmet_correlative_duty_is_made_legible`
+  - *(...and 3 more)*
+- 📄 `legal_compose.rs`
+  - `enum Eligibility`
+  - `fn zk_eligibility`
+  - `fn selective_disclosure`
+  - `fn marginal_harm`
+  - `fn proportionality_met`
+  - `enum MatchStatus`
+  - `fn translation_status`
+  - `fn composition_valid`
+  - `fn anchored_to_instrument`
+  - `enum Translation`
+  - `fn translate_via_matrix`
+  - `fn composition_binds_to_instrument_and_proportionality`
+  - `fn translation_matrix_honours_the_curation_directive`
+  - `fn zk_gate_and_selective_disclosure`
+  - `fn proportionality_composes_the_cas`
+  - *(...and 1 more)*
+- 📄 `linear.rs`
+  - `fn consume_quin`
+  - `fn is_consumed`
+  - `enum Connective`
+  - `impl Connective`
+  - `fn dual`
+  - `fn is_multiplicative`
+  - `fn is_additive`
+  - `fn is_exponential`
+  - `fn is_reusable`
+  - `fn can_consume`
+  - `fn tensor_consume`
+  - `enum StructuralRule`
+  - `fn structural_rule_licensed`
+  - `fn structural_derivation_valid`
+  - `fn pn_find`
+  - *(...and 10 more)*
+- 📄 `manifold.rs`
+  - `struct ManifoldCoordinate10D`
+  - `impl ManifoldCoordinate10D`
+  - `fn as_f32_array`
+  - `fn from_p64_bytes`
+  - `fn as_array`
+  - `fn from_sequential_layer`
+  - `enum ManifoldDimension`
+  - `impl ManifoldDimension`
+  - `fn from_u8`
+  - `fn value`
+  - `struct ManifoldState10D`
+  - `fn pack_f32_pair`
+  - `fn unpack_f32_pair`
+  - `fn quin_with_parity`
+  - `fn encode_manifold_state`
+  - *(...and 11 more)*
+- 📄 `manifold_logic.rs`
+  - `struct WaveCoord`
+  - `fn wave_eval`
+  - `fn integrate_abs`
+  - `fn continuous_to_fact`
+  - `fn uf_find`
+  - `fn uf_union`
+  - `fn vietoris_rips_b0`
+  - `fn persistent_h0`
+  - `fn bridge_dimensions`
+  - `fn vietoris_rips_and_persistent_h0`
+  - `fn dimension_bridging_zero_pads`
+  - `fn wave_eval_at_origin_peak`
+  - `fn continuous_signal_crosses_into_a_fact`
+- 📄 `meta_deontic.rs`
+  - `fn breach_predicate`
+  - `fn build_breach_record`
+  - `fn breach_provenance`
+  - `fn record_breach_to_wal`
+  - `fn endorsement_credential`
+  - `struct EvidencePackage`
+  - `fn compile_evidence_package`
+  - `fn translate_norm_across_jurisdictions`
+  - `fn violated_verdict`
+  - `fn breach_record_only_for_violations_and_anchors_provenance`
+  - `fn breach_record_persists_to_wal`
+  - `fn endorsement_is_a_real_signed_credential`
+  - `fn evidence_package_compiles_only_for_violations`
+  - `fn cross_jurisdictional_translation_honours_attestation`
+- 📄 `mod.rs`
+- 📄 `modal.rs`
+  - `fn possible`
+  - `fn necessary`
+  - `fn edge`
+  - `fn is_reflexive`
+  - `fn is_serial`
+  - `fn is_symmetric`
+  - `fn is_transitive`
+  - `fn is_euclidean`
+  - `enum ModalSystem`
+  - `fn validates`
+  - `fn knows`
+  - `fn everyone_knows`
+  - `struct Belief`
+  - `impl Belief`
+  - `fn negate`
+  - *(...and 10 more)*
+- 📄 `paraconsistent.rs`
+  - `enum ParaconsistentError`
+  - `enum ContradictionStatus`
+  - `fn route_paraconsistent`
+  - `enum Belnap`
+  - `impl Belnap`
+  - `fn from_evidence`
+  - `fn evidence`
+  - `fn is_contradiction`
+  - `fn negate`
+  - `fn and`
+  - `fn or`
+  - `fn global_saturation`
+  - `fn local_saturation`
+  - `fn is_saturated`
+  - `fn belnap_four_valued_tables`
+  - *(...and 2 more)*
+- 📄 `probabilistic.rs`
+  - `fn evaluate_threshold`
+  - `struct BayesianNode`
+  - `impl Default`
+  - `fn default`
+  - `struct BayesianNetwork`
+  - `impl BayesianNetwork`
+  - `fn new`
+  - `fn add_node`
+  - `fn extract_weight`
+  - `fn update_beliefs`
+  - `fn markov_blanket`
+  - `fn node_cpt`
+  - `fn gibbs_conditional`
+  - `fn gibbs_estimate`
+  - `fn next_unit`
+  - *(...and 6 more)*
+- 📄 `responsibility.rs`
+  - `enum ResponsibilityStatus`
+  - `fn adjudicate`
+  - `fn is_enforceable_fact`
+  - `fn rule_of_law_asymmetry`
+  - `fn enforcer_overreach`
+  - `fn accountability_vacuum`
+  - `enum MoralAppraisal`
+  - `fn appraise`
+  - `fn degree_of_responsibility`
+  - `fn responsibility_shares`
+  - `fn double_effect_permissible`
+  - `fn moral_appraisal_blame_praise_excuse`
+  - `fn causal_contribution_vectors`
+  - `fn double_effect_requires_all_four_conditions`
+  - `fn allegation_is_not_a_fact_until_adjudicated`
+  - *(...and 1 more)*
+- 📄 `spatio_temporal.rs`
+  - `enum TemporalOp`
+  - `enum Rcc8Relation`
+  - `struct SpatialRegion`
+  - `impl SpatialRegion`
+  - `fn new`
+  - `fn compute_centroid`
+  - `fn compute_area`
+  - `fn contains_point`
+  - `fn intersects`
+  - `fn get_bounding_box`
+  - `fn evaluate_rcc8`
+  - `fn check_boundary_touch`
+  - `fn pack_point`
+  - `fn unpack_point`
+  - `fn bbox`
+  - *(...and 24 more)*
+- 📄 `stit.rs`
+  - `fn brought_about`
+  - `fn is_duty_bearer`
+  - `fn agentive_status`
+  - `fn joint_discharged`
+  - `fn joint_liable_members`
+  - `fn is_settled`
+  - `fn chellas_stit`
+  - `fn deliberative_stit`
+  - `fn could_have_prevented`
+  - `fn fact`
+  - `fn duty_bearer_vs_bystander`
+  - `fn obligation_brought_about_is_discharged_else_omission`
+  - `fn forbidden_act_brought_about_is_violation`
+  - `fn joint_action_shared_liability`
+  - `fn cstit_dstit_and_counterfactual_prevention`
+- 📄 `temporal_ltl.rs`
+  - `enum LtlFormula`
+  - `enum TemporalError`
+  - `fn evaluate_lock_lease`
+  - `fn evaluate_ltl_trace`
+  - `fn holds_within`
+  - `fn holds_globally_within`
+  - `fn evaluate_once`
+  - `fn evaluate_historically`
+  - `fn evaluate_since`
+  - `struct SafetyMonitor`
+  - `impl SafetyMonitor`
+  - `fn new`
+  - `fn step`
+  - `fn is_safe`
+  - `fn predicate_interval`
+  - *(...and 11 more)*
+- 📄 `value_flow.rs`
+  - `fn commons_cost`
+  - `fn royalty`
+  - `fn pool_after`
+  - `fn is_commons_discharged`
+  - `fn outstanding`
+  - `fn eroi`
+  - `fn eroi_viable`
+  - `fn ancestor_royalty`
+  - `fn royalty_tree_total`
+  - `fn convert_currency`
+  - `fn apply_tax`
+  - `fn liquidity_step`
+  - `fn liquidity_after`
+  - `fn usury_ceiling`
+  - `fn is_usurious`
+  - *(...and 10 more)*
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

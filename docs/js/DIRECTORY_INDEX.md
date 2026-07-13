@@ -1,0 +1,560 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# js Index
+
+## Functionality Overview
+Comprehensive index of functionality for `js`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Files & Exported Functionality
+- 📄 `ambient-viz.js`
+  - `const TELEMETRY_KEYS`
+  - `function defaultTelemetry`
+  - `function clamp01`
+  - `function lerp`
+  - `function hash`
+  - `const x`
+  - `class AmbientViz`
+  - `const u`
+  - `const v`
+  - `const w`
+  - `const r`
+  - `const theta`
+  - `const phi`
+  - `const y`
+  - `const z`
+  - *(...and 46 more)*
+- 📄 `asset-recommendations.js`
+  - `function detectBrowserDevice`
+  - `const nav`
+  - `const ram_gb`
+  - `const cpu_cores`
+  - `function probeWebGpu`
+  - `const adapter`
+  - `function inferDomains`
+  - `const lower`
+  - `const rules`
+  - `const out`
+  - `function llmFits`
+  - `function recommendFromCatalog`
+  - `const domains`
+  - `const llms`
+  - `const need`
+  - *(...and 15 more)*
+- 📄 `benchmark-environment.js`
+  - `function detectHostClass`
+  - `const ua`
+  - `const platform`
+  - `function probeWasmSimd`
+  - `const bytes`
+  - `function collectDeviceManifest`
+  - `const simd`
+  - `function collectBrowserExecutionEnvironment`
+  - `const device_manifest`
+  - `const base`
+  - `const d`
+  - `function formatTopologySummary`
+  - `const t`
+  - `const cells`
+  - `const mode`
+  - *(...and 9 more)*
+- 📄 `benchmark-live.js`
+  - `const local`
+  - `const clean`
+  - `const parts`
+  - `const tail`
+  - `const parent`
+  - `function median`
+  - `const sorted`
+  - `const mid`
+  - `function percentile`
+  - `function stats`
+  - `const mean`
+  - `function fmtMs`
+  - `function fmtOps`
+  - `function shortHash`
+  - `const hex`
+  - *(...and 267 more)*
+- 📄 `benchmark-shared.js`
+  - `const PLATFORM_METRIC_GROUPS`
+  - `const METRIC_LABELS`
+  - `function formatMs`
+  - `const n`
+  - `function formatMicros`
+  - `const us`
+  - `function formatMetricName`
+  - `function fetchJson`
+  - `const res`
+  - `function renderPlatformSuite`
+  - `const metrics`
+  - `const stats`
+  - `const scaling`
+  - `const env`
+  - `const updated`
+  - *(...and 5 more)*
+- 📄 `coi-serviceworker.js`
+  - `const r`
+  - `const request`
+  - `const newHeaders`
+  - `const reloadedBySelf`
+  - `const coepDegrading`
+  - `const coi`
+  - `const n`
+  - `const controlling`
+  - `const coepHasFailed`
+  - `const reloadToDegrade`
+- 📄 `cors-fetch.js`
+  - `const DAEMON_PROXY_BASE`
+  - `const ALLORIGINS_RAW`
+  - `function formatBytes`
+  - `function rewriteToCorsFriendlyUrl`
+  - `const parsed`
+  - `const rawMatch`
+  - `const blobMatch`
+  - `function fetchWithProgress`
+  - `const response`
+  - `const contentType`
+  - `const total`
+  - `const text`
+  - `const reader`
+  - `const chunks`
+  - `const pct`
+  - *(...and 11 more)*
+- 📄 `design-studio-app.js`
+  - `const STORAGE_KEY`
+  - `const DESIGN_TYPE`
+  - `const DESIGN_VERSION`
+  - `function telemetryToFloats`
+  - `const base`
+  - `const merged`
+  - `function showLoading`
+  - `function showError`
+  - `function updateWasmBadge`
+  - `const dot`
+  - `const text`
+  - `const badge`
+  - `const tier`
+  - `const labels`
+  - `function updateHud`
+  - *(...and 63 more)*
+- 📄 `logic-demos.js`
+  - `const N3_RULE_ARROWS`
+  - `const N3_PRESETS`
+  - `const SHACL_WASM_CONSTRAINTS`
+  - `const SHACL_QUALIA_EXTENSIONS`
+  - `const FORWARD_CHAIN_PRESETS`
+  - `function detectN3Rules`
+  - `const rules`
+  - `const re`
+  - `const arrow`
+  - `const meta`
+  - `function validateShaclConstraint`
+  - `function runForwardChain`
+  - `function parseN3Triples`
+  - `const out`
+  - `function esc`
+- 📄 `logic-showcase-app.js`
+  - `function loadEngine`
+  - `const wasmUrl`
+  - `const resp`
+  - `const CHIP_STYLE`
+  - `const GROUP_COLOR`
+  - `function renderN3Chips`
+  - `const host`
+  - `function renderShaclSelect`
+  - `const sel`
+  - `function renderExtensionsGrid`
+  - `const grid`
+  - `function analyzeN3`
+  - `const text`
+  - `const out`
+  - `const rules`
+  - *(...and 13 more)*
+- 📄 `menu-loader.js`
+  - `function docsRootFromScript`
+  - `const script`
+  - `const src`
+  - `const pagesBase`
+  - `const base`
+  - `function ensureSiteNavCss`
+  - `const root`
+  - `const link`
+  - `function resolveHref`
+  - `function normalizeIcon`
+  - `function pageMatchesHref`
+  - `const target`
+  - `const targetUrl`
+  - `const leaf`
+  - `const path`
+  - *(...and 27 more)*
+- 📄 `modalities-showcase-app.js`
+  - `const HUE`
+  - `const HUE_BTN`
+  - `function loadWasm`
+  - `const mod`
+  - `function filteredModalities`
+  - `function renderCategoryPills`
+  - `const host`
+  - `const counts`
+  - `function renderGrid`
+  - `const grid`
+  - `const list`
+  - `const active`
+  - `const wasmBadge`
+  - `function drawIntervals`
+  - `const ctx`
+  - *(...and 25 more)*
+- 📄 `modality-engine.js`
+  - `const OP_OBLIGATE`
+  - `const DEFEATER_BIT`
+  - `function compileNorm`
+  - `const q`
+  - `function defeaterFp`
+  - `function evaluateDeontic`
+  - `const defeaters`
+  - `const verdicts`
+  - `const opcode`
+  - `const expiry`
+  - `const opName`
+  - `const OP_KNOWS`
+  - `const CERT_SHIFT`
+  - `function buildEpistemicQuin`
+  - `const predicate`
+  - *(...and 134 more)*
+- 📄 `ontology-app.js`
+  - `const engine`
+  - `const UI_PROFILES`
+  - `const SPARQL_TEMPLATES`
+  - `function datasetUiHints`
+  - `const ds`
+  - `const base`
+  - `function w3cSparqlTemplates`
+  - `const term`
+  - `const iri`
+  - `const fullIri`
+  - `function ui`
+  - `function setStatus`
+  - `const el`
+  - `function setLoading`
+  - `const overlay`
+  - *(...and 80 more)*
+- 📄 `ontology-engine.js`
+  - `const DOCS_ROOT`
+  - `const PLAYGROUND`
+  - `const HEADER_BYTES`
+  - `const CONCURRENCY`
+  - `const REL_PROFILES`
+  - `const CATEGORY_SAMPLES`
+  - `function getU64`
+  - `function esc`
+  - `function classifyPredicate`
+  - `const rules`
+  - `const lower`
+  - `function guessPos`
+  - `const text`
+  - `function parseSparqlBgp`
+  - `const m`
+  - *(...and 69 more)*
+- 📄 `opfs-model-cache.js`
+  - `function safeName`
+  - `function opfsRoot`
+  - `function readHandle`
+  - `const file`
+  - `function bufferedFetch`
+  - `const resp`
+  - `const bytes`
+  - `function loadGgufCached`
+  - `const safe`
+  - `const part`
+  - `const root`
+  - `const fh`
+  - `const total`
+  - `const partHandle`
+  - `const writable`
+  - *(...and 15 more)*
+- 📄 `qualia-audio-worklet.js`
+  - `const PREVIEW_BINS`
+  - `const UNIFORM_FLOATS`
+  - `const SAB_MAGIC`
+  - `const SAB_FLOAT_MIRROR_OFFSET`
+  - `const GRAIN_SAMPLES`
+  - `const GRAIN_OVERLAP`
+  - `const DELAY_LEN`
+  - `function fractSigma`
+  - `function sigmaToWavelengthNm`
+  - `function sigmaToCenterFrequencyHz`
+  - `const lambda`
+  - `const t`
+  - `function hann`
+  - `function unpackUniform`
+  - `const bins`
+  - *(...and 40 more)*
+- 📄 `qualia-coi.js`
+  - `function ensureCrossOriginIsolation`
+  - `const existing`
+  - `const s`
+  - `const isolated`
+  - `function isCrossOriginIsolated`
+- 📄 `qualia-debug.js`
+  - `const PREFIX`
+  - `function queryFlag`
+  - `const q`
+  - `function storageFlag`
+  - `function isQualiaDebugEnabled`
+  - `function setQualiaDebug`
+  - `function debugLog`
+  - `function debugWarn`
+  - `function debugError`
+  - `function debugGroup`
+  - `function debugGroupAsync`
+  - `function debugTime`
+  - `const key`
+  - `function debugEnv`
+  - `const sw`
+  - *(...and 1 more)*
+- 📄 `qualia-icp-context.js`
+  - `const TENSOR_HEADER_BYTES`
+  - `const TENSOR_STRIDE`
+  - `const TENSOR_MAGIC`
+  - `function buildContextFrame`
+  - `const frame`
+  - `const json`
+  - `function defaultIcpHints`
+  - `function defaultMenus`
+  - `function defaultSliders`
+  - `function buildGraphLensFromTensor`
+  - `const nodes`
+  - `function parseTensorNodes`
+  - `const view`
+  - `const nodeCount`
+  - `const stride`
+  - *(...and 27 more)*
+- 📄 `qualia-icp-host.js`
+  - `function mountIcpHost`
+  - `const session`
+  - `const relay`
+  - `const cleanups`
+  - `function setStatus`
+  - `function showLinkPanel`
+  - `const jsonEl`
+  - `const copyBtn`
+  - `function pushContext`
+  - `const frame`
+  - `function pushGraph`
+  - `const buf`
+  - `const lens`
+  - `function pushHello`
+  - `function applyRemoteCommand`
+  - *(...and 7 more)*
+- 📄 `qualia-icp-local.js`
+  - `const ICP_OP`
+  - `const ICP_MAGIC`
+  - `const STANDPOINT_T_SLICE`
+  - `const MENU_HOME`
+  - `function packControlCommand`
+  - `function coerceControlRaw`
+  - `function packCameraDelta`
+  - `const ya`
+  - `const pi`
+  - `const zo`
+  - `function pushControl`
+  - `function mountLocalIcp`
+  - `const cleanups`
+  - `const onKey`
+  - `const onWheel`
+  - *(...and 7 more)*
+- 📄 `qualia-icp-phone.js`
+  - `const MENU_HOME`
+  - `function mountIcpPhone`
+  - `const cleanups`
+  - `function updateBadge`
+  - `function refreshVaultUi`
+  - `const status`
+  - `const q`
+  - `const quotaLine`
+  - `function ensurePortal`
+  - `const loaded`
+  - `function initVaultFlow`
+  - `function publishCommand`
+  - `const controlHandlers`
+  - `const kind`
+  - `const delta`
+  - *(...and 18 more)*
+- 📄 `qualia-icp-profile.js`
+  - `const ICP_BREAKPOINTS`
+  - `function queryPointerFine`
+  - `function queryPointerCoarse`
+  - `function detectIcpProfile`
+  - `const width`
+  - `const standalone`
+  - `const fine`
+  - `const coarse`
+  - `const override`
+  - `const urlProfile`
+  - `function watchIcpProfile`
+  - `const emit`
+  - `function getCachedIcpProfile`
+- 📄 `qualia-icp-relay.js`
+  - `const ICP_ROLE`
+  - `const PATH_CANDIDATES`
+  - `function trimBase`
+  - `function nowUnix`
+  - `function createIcpRelay`
+  - `const base`
+  - `const sessionId`
+  - `const authorDid`
+  - `const authorName`
+  - `const listeners`
+  - `function resolvePaths`
+  - `const url`
+  - `const res`
+  - `function nextLamport`
+  - `function buildEnvelope`
+  - *(...and 14 more)*
+- 📄 `qualia-icp-rules.js`
+  - `const ICP_INTERFACE`
+  - `function shouldShow`
+  - `function pickDefaultInterface`
+  - `function applyIcpLayoutClasses`
+- 📄 `qualia-icp-session.js`
+  - `const PAIRING_STORAGE_KEY`
+  - `const PAIRING_VERSION`
+  - `const DEFAULT_PAIR_TTL_SEC`
+  - `const DEFAULT_RELAY_PORT`
+  - `function defaultRelayBase`
+  - `const host`
+  - `function randomHex`
+  - `const buf`
+  - `function randomSessionId`
+  - `function createConsoleSession`
+  - `const origin`
+  - `const relay`
+  - `const sessionId`
+  - `const expUnix`
+  - `function parsePairingPayload`
+  - *(...and 20 more)*
+- 📄 `qualia-icp-vault.js`
+  - `const STANDPOINT_SPECTATOR`
+  - `const STANDPOINT_EPHEMERAL`
+  - `const STANDPOINT_IDENTIFIER`
+  - `const STANDPOINT_VAULT`
+  - `const PAIRING_OPFS_PATH`
+  - `const VAULT_MANIFEST_PATH`
+  - `const IDB_NAME`
+  - `const IDB_STORE`
+  - `const IDB_KEY_VAULT_DIR`
+  - `const ICP_DIR`
+  - `function opfsSupported`
+  - `function getIcpDir`
+  - `const root`
+  - `function writeOpfsText`
+  - `const dir`
+  - *(...and 39 more)*
+- 📄 `qualia-shell.js`
+  - `const DAEMON_DEFAULT_PORT`
+  - `const DAEMON_BASE`
+  - `const DaemonLinkState`
+  - `const STANDPOINT_IDENTIFIER`
+  - `const TENSOR_HEADER_BYTES`
+  - `const TENSOR_MAGIC`
+  - `const daemonLinkListeners`
+  - `const REFRESH_DEBOUNCE_MS`
+  - `const signingKeyCache`
+  - `function formatCanonicalF32`
+  - `const s`
+  - `function canonicalTensorSlicePayload`
+  - `function generateSessionNonce`
+  - `const bytes`
+  - `function getSessionNonce`
+  - *(...and 94 more)*
+- 📄 `qualia-wasm-runtime.js`
+  - `function resolvePaths`
+  - `const siteRoot`
+  - `const portalJs`
+  - `const portalWasm`
+  - `const jsUrl`
+  - `const wasmUrl`
+  - `function initQualiaWasm`
+  - `const paths`
+  - `const tryInit`
+  - `const module`
+  - `const response`
+  - `function readVersion`
+  - `function readInfo`
+  - `const raw`
+  - `const version`
+  - *(...and 8 more)*
+- 📄 `qualia-ws-client.js`
+  - `const DEFAULT_HTTP_BASE`
+  - `function wsBaseFromHttp`
+  - `class QualiaWsClient`
+  - `const ws`
+  - `const timer`
+  - `const id`
+  - `const handlers`
+  - `const frame`
+- 📄 `spatial-demo.js`
+  - `const TENSOR_HEADER_BYTES`
+  - `const TENSOR_STRIDE`
+  - `const TENSOR_MAGIC`
+  - `function qHashFnv`
+  - `function packCoord`
+  - `const xi`
+  - `const yi`
+  - `const zi`
+  - `function parsePointWkt`
+  - `const m`
+  - `function parsePolygonWkt`
+  - `function pointInPolygon`
+  - `const xj`
+  - `const intersect`
+  - `function geometryPayload`
+  - *(...and 122 more)*
+- 📄 `wasm-llm-benchmarks.js`
+  - `const TRANSFORMERS_CDN`
+  - `const WEBLLM_CDN`
+  - `const DEFAULT_PROMPT`
+  - `const ENGINE_DEFS`
+  - `const dom`
+  - `const state`
+  - `function escapeHtml`
+  - `function formatMs`
+  - `function formatHeapDelta`
+  - `function estimateTokens`
+  - `const trimmed`
+  - `function readHeapMb`
+  - `const heapBytes`
+  - `function toneClass`
+  - `function log`
+  - *(...and 81 more)*
+- 📄 `webgpu-limits-shim.js`
+  - `const proto`
+  - `const originalRequestDevice`
+  - `const supported`
+  - `const filtered`
+  - `const value`
+- 📄 `wordnet-app.js`
+  - `const engine`
+  - `const SPARQL_TEMPLATES`
+  - `function setStatus`
+  - `const el`
+  - `function setLoading`
+  - `const overlay`
+  - `const label`
+  - `function renderRelationTags`
+  - `const blocks`
+  - `const map`
+  - `const items`
+  - `const tags`
+  - `const more`
+  - `function shortLabel`
+  - `const tail`
+  - *(...and 33 more)*
+- 📄 `wordnet-engine.js`
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

@@ -32,10 +32,10 @@ export function register(runner, ctx) {
             runner.expect(body['@context']).toHaveProperty('@vocab');
         });
 
-        runner.it('@vocab is https://qualia-db.org/vocab#', async () => {
+        runner.it('@vocab is https://webizen.org/vocab#', async () => {
             if (!ctx.native) return;
             const { body } = await ctx.native.query('?s ?p ?o', 'json-ld');
-            runner.expect(body['@context']['@vocab']).toBe('https://qualia-db.org/vocab#');
+            runner.expect(body['@context']['@vocab']).toBe('https://webizen.org/vocab#');
         });
 
         runner.it('response has @graph array', async () => {

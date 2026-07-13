@@ -1,5 +1,5 @@
 {
-  "version": "0.0.17",
+  "version": "0.0.23",
   "brand": {
     "name": "QualiaDB",
     "tagline": "Human-Centric Semantic Engine",
@@ -34,6 +34,12 @@
       "label": "Benchmark Hub",
       "href": "benchmark.html",
       "icon": "fa-gauge-high",
+      "group": "Benchmarks"
+    },
+    {
+      "label": "Browser LLM",
+      "href": "benchmark.html#llm",
+      "icon": "fa-robot",
       "group": "Benchmarks"
     },
     {
@@ -82,6 +88,20 @@
       "label": "Sci Computing",
       "href": "scientific-computing.html",
       "icon": "fa-calculator",
+      "group": "Sciences"
+    },
+    {
+      "label": "Computational Engine",
+      "href": "compute-engine.html",
+      "icon": "fa-calculator",
+      "highlight": true,
+      "group": "Sciences"
+    },
+    {
+      "label": "WGSL Forge",
+      "href": "forge-showcase.html",
+      "icon": "fa-hammer",
+      "highlight": true,
       "group": "Sciences"
     },
     {
@@ -150,6 +170,19 @@
       "label": "Logic Showcase",
       "href": "logic-showcase.html",
       "icon": "fa-gavel",
+      "group": "Tools"
+    },
+    {
+      "label": "Values Credentials",
+      "href": "values-credentials.html",
+      "icon": "fa-scale-balanced",
+      "highlight": true,
+      "group": "Tools"
+    },
+    {
+      "label": "CML Studio",
+      "href": "cml-studio.html",
+      "icon": "fa-diagram-project",
       "group": "Tools"
     },
     {

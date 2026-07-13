@@ -136,7 +136,7 @@ export function register(runner) {
         });
 
         runner.it('buildQchk / parseQchk round-trips JSON-LD payload', () => {
-            const payload = '{"@context":"https://qualia.social/ns/","profile":"health"}';
+            const payload = '{"@context":"https://webizen.org/ns/","profile":"health"}';
             const bytes   = buildQchk(PROFILE_IDS.health, payload);
             const parsed  = parseQchk(bytes);
             runner.expect(parsed.payload).toBe(payload);
@@ -231,7 +231,7 @@ export function register(runner) {
 
         runner.it('WASM profile compile does not throw on valid JSON-LD (if present)', () => {
             if (!mod?.profile_compile_wasm) return;
-            const jsonLd = JSON.stringify({ '@context': 'https://qualia.social/ns/', profile: 'general' });
+            const jsonLd = JSON.stringify({ '@context': 'https://webizen.org/ns/', profile: 'general' });
             runner.expect(() => mod.profile_compile_wasm(jsonLd)).not.toThrow();
         });
 

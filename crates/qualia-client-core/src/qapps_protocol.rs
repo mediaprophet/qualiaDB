@@ -96,17 +96,23 @@ pub fn start_qualia_protocol() -> Result<u16, String> {
             match std::fs::read(&file_path) {
                 Ok(data) => {
                     let mime = guess_mime(&file_path);
-                    let _ = request.respond(
-                        tiny_http::Response::from_data(data)
-                            .with_status_code(200)
-                            .with_header(
-                                tiny_http::Header::from_bytes(
-                                    &b"Content-Type"[..],
-                                    mime.as_bytes(),
-                                )
-                                .unwrap(),
-                            ),
+                    let mut response = tiny_http::Response::from_data(data).with_status_code(200);
+                    response.add_header(
+                        tiny_http::Header::from_bytes(&b"Content-Type"[..], mime.as_bytes()).unwrap(),
                     );
+                    response.add_header(
+                        tiny_http::Header::from_bytes(
+                            &b"Content-Security-Policy"[..],
+                            &b"default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data: ws: wss: http://127.0.0.1:8080 http://localhost:8080;"[..]
+                        ).unwrap(),
+                    );
+                    response.add_header(
+                        tiny_http::Header::from_bytes(&b"X-Content-Type-Options"[..], &b"nosniff"[..]).unwrap(),
+                    );
+                    response.add_header(
+                        tiny_http::Header::from_bytes(&b"Referrer-Policy"[..], &b"no-referrer"[..]).unwrap(),
+                    );
+                    let _ = request.respond(response);
                 }
                 Err(_) => {
                     let _ = request.respond(tiny_http::Response::empty(404));

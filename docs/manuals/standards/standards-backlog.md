@@ -312,10 +312,13 @@ Each of those should become its own draft with its own conformance language.
   sign-and-verify negotiation handshake, and the WebRTC session binding. The one
   genuine multi-party interoperability surface carved out of the WebAI
   Orchestration Layer (`devnotes/orchastration-webai.md`).
-- Why it is a candidate (not yet submittable): the identifier substrate and DNS
-  resolution exist, but the negotiation/binding layer (`dns_frontdoor.rs`,
-  `hcai_agreement.rs`) is proposed, not implemented, and no non-QualiaDB party
-  has completed a conformant negotiation yet.
+- Why it is a candidate (not yet submittable): the identifier substrate, **DNS Front Door
+  discovery** (`qualia-client-core/src/dns_resolver.rs::verify_front_door_did_via_dns`), and the
+  **Front Door identity + invite** flow (`state::FrontDoor`; `api::generate_front_door` /
+  `generate_front_door_invite` / `generate_connect_invite`, surfaced as `webizen-desktop` commands)
+  **exist** (`webizen-browser` repo for the desktop surface). What remains is the signed
+  agreement-negotiation **handshake** + WebRTC session binding (the `hcai_agreement` layer), and no
+  non-QualiaDB party has completed a conformant negotiation yet.
 - First doc to write here: `hcai-agreement-negotiation-protocol.md` ✅ **DRAFTED (2026-06-13)**
 - Primary SDO: W3C (agreement vocabulary + `did:web` Frontdoor); secondary IETF /
   DNS-AID (service-type registration)
@@ -329,27 +332,92 @@ Each of those should become its own draft with its own conformance language.
   local defensive mechanisms (inference scheduling, anti-siphoning, billing
   interdiction), which are Node-side implementation, not interop.
 - Exit criteria before submission:
-  - [ ] negotiation layer implemented (`dns_frontdoor.rs`, `hcai_agreement.rs`)
+  - [~] Front Door discovery + DNS DID verify + identity/invites implemented
+    (`dns_resolver.rs::verify_front_door_did_via_dns`, `state::FrontDoor`, `api::generate_front_door*`);
+    **remaining:** the signed agreement-negotiation handshake + WebRTC binding (`hcai_agreement` layer)
   - [ ] agreement vocabulary namespace frozen and published
   - [ ] canonicalisation + signature suite pinned with test vectors
   - [ ] at least one non-QualiaDB agent completes a conformant negotiation
   - [ ] privacy review against the Front Door DID isolation model
 
+## 13. Webizen N-Dimensional Renderer SDK
+
+- Scope: the renderer's SDK surface — the manifold→projection→view model
+  (`qualia_core_db::render::projection`), the PGA semantic-motor oracle (`render::pga`), the
+  zero-heap GPU ABI (Motor 64 B / RenderQuin 64 B / Tensor10D 40 B / uniforms), the neutral
+  serde **scene contract** (`webizen_render::scene_contract`), the device renderer
+  (`WgpuRenderer` — offscreen → PNG/data-URI, scene draw, picking, orbit camera), and the
+  semantic/epistemic layer (standpoint gating, σ vision+audio parity, deontic culling, VRAM
+  ledger). Two deployment profiles: **WASM** (`QualiaPortal` portal facade) and **native /
+  webizen-browser** (`webizen-render` + the engine).
+- Why it is a candidate: the projection model, ABI, scene contract, offscreen render, and
+  semantic layer are implemented + tested; it is intended to be **employable as an SDK** in WASM
+  or the webizen-browser, so the contract is specified independently of backend completeness.
+- First doc to write here: `webizen-renderer-sdk-spec.md` ✅ **DRAFTED (2026-06-30, v0.2)**
+- Primary SDO: internal first (the projection/ABI/scene contract); a future render-interop note
+  is possible once the volumetric path and packaging settle.
+- Recommended format: internal SDK specification with a conformance section (parity oracle,
+  binding coverage, ABI sizes, σ determinism, offscreen image contract).
+- Exit criteria before external submission / "fully implemented":
+  - [x] **Cross-platform volumetric 3D draw** wired into `webizen-render` (depth buffer +
+        `Tensor10D` SOA upload + `projector.wgsl` + bloom), with native caller-buffered RGBA8
+        readback on the engine's shared wgpu 29 device (2026-06-30).
+  - [x] `scene_contract::spectral_to_color` unified onto the engine
+        `render::spectral::sigma_to_display_rgb` path so embedder + GPU colors agree by construction
+  - [ ] deontic/temporal culling promoted to a named pipeline stage with its own conformance test
+  - [~] `webizen-render` / `webizen-desktop` / `webizen-studio` / `webizen-web` brought into the
+        default workspace. `webizen-render` tests and `webizen-studio` check pass; desktop
+        verification awaits uncached Tauri dependencies (network unavailable in this session).
+  - [ ] Phase 0.2b: lift `qualia_core_db::render` to a standalone `qualia-render` crate (resolves the
+        dangling `RENDERER_IMPLEMENTATION_PLAN.md` reference)
+  - [ ] SDK packaging: published `webizen-render` crate + a wasm bundle entry with an embedding example
+  - [~] ⚑ **Out-of-band (Timothy):** decommission / clearly mark the legacy `C:\Projects\webizen-browser`
+        copies so the renderer has one source of truth (it was pulled into qualiaDB to unify the engine;
+        the external checkout still holds parallel copies building against an older qualiaDB checkout)
+
 ## Suggested file backlog for this folder
 
-- [x] `q42-format-internal-draft.md`
+> **Reconciliation (2026-06-30)** — statuses verified against on-disk reality + current code.
+> Two specs previously marked done actually live under `docs/manuals/query-engine/`, not this
+> folder (now cross-linked from `standards/index.html`); several real specs were untracked and
+> are added; `webizen-protocol-split.md` was the planned name for what shipped as
+> `webizen-protocol-rfc.md`.
+
+Done (in `standards/`):
+
+- [x] `p64-weight-container-standard.md` - byte-accurate P64 v3 weight-container standard
+  (header, tensor manifest, 10D manifold table, tokenizer, CRC-32C, producer profiles,
+  and fail-closed reader validation; 2026-07-02)
+- [x] `q42-format-internal-draft.md` — v3 volume + separate `.p64` weight container (refreshed 2026-06-30)
 - [x] `did-q42-method-draft.md`
 - [x] `qualia-vault-manifest.md`
-- [x] `qualia-sync-protocol.md`
-- [ ] `qualia-shacl-extensions.md`
+- [x] `qualia-sync-protocol.md` — CBOR-LD §13 now implemented in `p2p::protocol::qcborld`
+  (lossless, lexicon-compacted, round-trip tested). **Follow-up:** the codec uses a transient
+  per-frame `ciborium::Value`; a hand-rolled streaming zero-allocation CBOR-LD encoder/decoder is
+  still to write (§13 claim 3 is honestly marked partial until then).
 - [x] `qualia-qapp-loopback-protocol.md`
-- [x] `sparql-temporal-extension.md`
-- [ ] `solid-webizen-bridge-profile.md`
+- [x] `hcai-agreement-negotiation-protocol.md` — draft (negotiation layer not yet implemented)
+- [x] `yaml-ld-q42-specification.md`
+- [x] `CBOR_LD_SDO_Update_Summary.md` — notes / changelog
+- [x] `AGENT_INTENT_LOGGING_SPEC.md`, `SEMANTIC_HEADER_SCHEMA.md`, `MULTI_AGENT_PROTOCOL.md` —
+  multi-agent transparency family; coordination opcodes `0x70–0x72` + the operand-stack VM +
+  Darwinian law implemented 2026-06-30 (`governance::coordination`)
+- [x] `webizen-protocol-rfc.md` — the broad protocol RFC (the file the backlog earlier planned
+  as `webizen-protocol-split.md`)
+- [x] `webizen-renderer-sdk-spec.md` — N-Dimensional Renderer SDK draft (v0.2, 2026-06-30);
+  projection model + ABI + scene contract + native/WASM volumetric render + semantic layer ✅
+
+Done, but living under `docs/manuals/query-engine/` (cross-linked from `standards/index.html`):
+
+- [x] `query-engine/qualia-shacl-extensions.html` — + Computational Mathematics Constraints (2026-06-30)
+- [x] `query-engine/sparql-temporal-extension.md`
+
+Genuinely outstanding (file absent on disk — accurate):
+
+- [ ] `solid-webizen-bridge-profile.md` — a Solid-bridge ADR exists at `../adr/006-zero-allocation-solid-bridge.md`
 - [ ] `qchk-capability-profile.md`
 - [ ] `mcp-fiduciary-mediation-explainer.md`
-- [ ] `webizen-protocol-split.md`
 - [ ] `webizen-execution-model.md`
-- [x] `hcai-agreement-negotiation-protocol.md`
 
 ## Recommended order of work
 
@@ -367,10 +435,16 @@ Each of those should become its own draft with its own conformance language.
 
 ## Notes for the q42 draft
 
-The `q42-format-internal-draft.md` was revised 2026-06-09 to reflect
-implemented v2 unified volumes. Remaining doc/code alignment:
+The `q42-format-internal-draft.md` was refreshed 2026-06-30 to reflect implemented **v3**
+unified volumes and the separate **`.p64`** LLM-weight container. Resolved since the earlier
+v2 note:
 
-- WASM playground VFS still legacy
-- `.c.q42` deprecated but retained as copy alias
-- object-hash BIDX is normative; subject-hash prose in older docs is stale
-- `q42` / `qla` naming drift in older storage comments
+- object-hash BIDX is normative — the doc honors it (no subject-hash contradiction remains)
+- the stale `Q42W` weight-container section was rewritten to `.p64` (`Q42W` is superseded;
+  retained only as migration fixtures)
+
+Still open:
+
+- WASM playground VFS still legacy (or document the build-time translation)
+- `.c.q42` deprecated but retained as a copy alias
+- propose content-type names + publish worked v3 test vectors (Priority-1 item 1 exit criteria)

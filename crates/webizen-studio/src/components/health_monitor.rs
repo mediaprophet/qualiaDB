@@ -20,7 +20,7 @@ pub fn HealthVitalMonitor() -> Element {
                         h4 { "Clinical Timeline" }
                         SlDetails { summary: "Recent Events",
                             ul {
-                                li { "Event A: Vitals synchronized via Sovereign Edge." }
+                                li { "Event A: Vitals synchronized via On-Device Edge." }
                                 li { "Event B: LTL constraint check passed." }
                             }
                         }

@@ -1,9 +1,28 @@
+pub mod anatomy;
+pub mod assessment;
+pub mod authority_attestation;
+pub mod companion_pairing;
+pub mod companion_sync;
+pub mod clinical;
+pub mod credentials;
+pub mod live_share;
+pub mod conditions;
+pub mod finance;
+pub mod guardianship;
+pub mod life_records;
+pub mod projects;
+pub mod mental_wellbeing;
+pub mod personal_records;
+pub mod medication;
 pub mod models;
+pub mod record;
+pub mod sleep_analytics;
 pub mod parser;
 pub mod rdf;
 pub mod store;
 pub mod shapes;
 pub mod webizen;
+pub mod welfare_support;
 pub mod n3_rules;
 pub mod qualia_bindings;
 #[cfg(target_arch = "wasm32")]
@@ -12,7 +31,7 @@ pub mod wasm;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use models::*;
+    
     use parser::*;
     use rdf::*;
     use chrono::Timelike;

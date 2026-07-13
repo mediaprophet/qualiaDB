@@ -1,0 +1,203 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# services Index
+
+## Functionality Overview
+Comprehensive index of functionality for `services`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Subdirectories
+- 📁 `[swarm](swarm/DIRECTORY_INDEX.md)`
+
+### Files & Exported Functionality
+- 📄 `chat_relay_daemon.rs`
+  - `struct RelayEnvelope`
+  - `struct RelayPullResponse`
+  - `struct ChatState`
+  - `fn relay_root`
+  - `fn inbox_path`
+  - `fn append_inbox`
+  - `fn read_inbox`
+  - `fn publish_handler`
+  - `fn pull_handler`
+  - `fn chat_relay_routes`
+- 📄 `daemon.rs`
+  - `fn proxy_target_allowed`
+  - `fn ip_is_restricted`
+  - `fn ws_query_error_json`
+  - `fn decode_bench_load_b64`
+  - `struct DaemonTopology`
+  - `fn configure_daemon_topology`
+  - `fn current_topology`
+  - `fn execution_environment_json`
+  - `struct DaemonSecurity`
+  - `struct NativeQueryRequest`
+  - `enum OutputFormat`
+  - `fn negotiate_format`
+  - `fn start_local_daemon`
+  - `fn start_local_daemon_with_options`
+  - `struct PeerLedger`
+- 📄 `daemon_graph.rs`
+  - `struct DaemonGraphStore`
+  - `impl DaemonGraphStore`
+  - `fn len`
+  - `fn is_empty`
+  - `fn as_slice`
+  - `fn clear`
+  - `fn push`
+  - `fn extend_from_slice`
+  - `fn contains_subject_predicate_context`
+  - `fn push_unique`
+  - `impl Default`
+  - `fn default`
+  - `impl Index`
+  - `fn index`
+  - `fn graph_lock`
+  - *(...and 24 more)*
+- 📄 `daemon_query.rs`
+  - `enum QueryExecError`
+  - `enum QueryEngine`
+  - `struct SparqlQueryStats`
+  - `fn detect_query_engine`
+  - `fn execute_query_on_graph`
+  - `fn execute_ntriples_pattern_on_graph`
+  - `fn execute_sparql_on_graph`
+  - `fn execute_ntriples_metrics`
+  - `fn bindings_to_quins`
+  - `fn synthetic_binding_quin`
+  - `fn filter_classified`
+  - `fn make_star_annotation`
+  - `fn detects_sparql_select_engine`
+  - `fn detects_ntriples_pattern_engine`
+  - `fn sparql_select_returns_bindings`
+  - *(...and 1 more)*
+- 📄 `daemon_swarm.rs`
+  - `struct DnssecSemanticPayload`
+  - `struct SocialWebNetPeer`
+  - `struct DnssecResolver`
+  - `struct SocialWebNetInterface`
+  - `struct WorkerCell`
+  - `impl WorkerCell`
+  - `fn new`
+  - `fn init_dnssec_resolver`
+  - `fn init_wireguard_interface`
+  - `fn init_q42_lexicon`
+  - `fn resolve_peer_dnssec`
+  - `fn perform_dnssec_lookup`
+  - `fn extract_cbor_from_dnssec_response`
+  - `fn parse_cbor_ld_to_quin`
+  - `fn parse_cbor_ld_to_quin_legacy`
+  - *(...and 18 more)*
+- 📄 `daemon_tensor.rs`
+  - `enum TensorSliceLane`
+  - `impl TensorSliceLane`
+  - `fn from_header`
+  - `struct TensorSliceRequest`
+  - `impl Default`
+  - `fn default`
+  - `impl TensorSliceRequest`
+  - `fn clamp_max_nodes`
+  - `fn temporal_passes`
+  - `fn requires_identifier_auth`
+  - `enum TensorSliceError`
+  - `enum TensorSliceAuthError`
+  - `fn canonical_tensor_slice_payload`
+  - `fn format_canonical_f32`
+  - `fn verify_tensor_slice_signature`
+  - *(...and 12 more)*
+- 📄 `ilp_dispatcher.rs`
+  - `enum PaymentStatus`
+  - `struct PaymentReceipt`
+  - `struct DispatchResult`
+  - `trait IlpTransport`
+  - `fn send`
+  - `struct HttpIlpTransport`
+  - `impl IlpTransport`
+  - `fn resolve_payment_pointer`
+  - `struct MockTransport`
+  - `struct IlpDispatcher`
+  - `fn new`
+  - `fn dispatch`
+  - `fn system_time_ms`
+  - `fn generate_energy_of_logic_invoice`
+  - `fn make_suite`
+  - *(...and 6 more)*
+- 📄 `mod.rs`
+- 📄 `rpc.rs`
+  - `struct ComputeCostReceipt`
+  - `impl ComputeCostReceipt`
+  - `fn generate`
+  - `fn to_json`
+  - `fn test_rpc_receipt_generation`
+  - `struct TaxRecipient`
+  - `struct TaxRecipientSuite`
+  - `impl TaxRecipientSuite`
+  - `fn validate`
+  - `fn default_cooperative`
+  - `struct MicropaymentInstruction`
+  - `struct TaxDispatchPlan`
+  - `fn route_tax_payment`
+  - `struct ProviderTermsRequest`
+  - `enum NegotiationStatus`
+  - *(...and 9 more)*
+- 📄 `solid_ldp.rs`
+  - `struct SolidExporter`
+  - `impl SolidExporter`
+  - `fn export_to_solid_pod`
+  - `fn quin_to_turtle`
+  - `struct SolidLdpFacade`
+  - `impl SolidLdpFacade`
+  - `fn serialize_to_rdf_star`
+  - `fn test_allocation_firewall`
+- 📄 `webizen_server.rs`
+  - `struct WebizenState`
+  - `struct NativeQueryRequest`
+  - `enum OutputFormat`
+  - `fn not_acceptable_format_response`
+  - `fn negotiate_format`
+  - `fn ws_query_error_json`
+  - `fn decode_bench_load_b64`
+  - `fn spawn_loopback_server`
+  - `fn pna_middleware`
+  - `fn preflight_handler`
+  - `struct TensorSliceQuery`
+  - `fn header_parse_f32`
+  - `fn header_parse_u32`
+  - `fn header_str`
+  - `fn tensor_slice_handler`
+  - *(...and 28 more)*
+- 📄 `webtorrent_routes.rs`
+  - `struct TorrentState`
+  - `fn parse_range`
+  - `fn telemetry_handler`
+  - `fn register_handler`
+  - `fn unseed_handler`
+  - `fn policy_get_handler`
+  - `fn policy_set_handler`
+  - `fn sync_handler`
+  - `fn webseed_handler`
+  - `fn webtorrent_routes`
+- 📄 `webtorrent_seeder.rs`
+  - `struct SeederBandwidthPolicy`
+  - `impl Default`
+  - `fn default`
+  - `struct SeedRecord`
+  - `struct RegisterSeedRequest`
+  - `struct UnregisterSeedRequest`
+  - `fn registry`
+  - `fn policy_lock`
+  - `fn normalize_info_hash`
+  - `fn build_magnet_uri`
+  - `fn ensure_magnet_webseed`
+  - `fn sha1_file`
+  - `fn set_bandwidth_policy`
+  - `fn get_bandwidth_policy`
+  - `fn register_seed`
+  - *(...and 11 more)*
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

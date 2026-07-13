@@ -199,7 +199,9 @@ export class AmbientViz {
         const t = this.time;
         const crystal = tlm.baking_crystallization;
 
-        ctx.fillStyle = 'rgba(8, 12, 18, 0.22)';
+        // Pure-black, stronger per-frame fade: clears the additive ('lighter') particle
+        // accumulation to a black background instead of letting warm hues build into a pink wash.
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillRect(0, 0, w, h);
 
         const points = [];

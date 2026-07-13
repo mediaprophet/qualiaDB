@@ -17,14 +17,35 @@ This document describes the comprehensive SHACL (Shapes Constraint Language) ext
 
 **Constraints:**
 - `MatrixConfiguration` - Matrix storage and computation validation
-- `MatrixOperation` - Matrix operation parameter validation
+- `MatrixOperation` - Matrix operation parameter validation (ops now incl. determinant / eigen / svd)
 - `EigenDecomposition` - Eigenvalue decomposition validation
+- `PolynomialSolveConfiguration` - Polynomial root-finding (degree ≤ 256; quadratic_closed_form / durand_kerner / companion) *(added 0.0.19)*
+- `SvdConfiguration` - Singular value decomposition parameters *(added 0.0.19)*
+- `DeterminantConfiguration` - Determinant computation (lu / cofactor) *(added 0.0.19)*
 
 **Key Validations:**
 - Matrix size limits (1 to 1,000,000)
 - Zone capacity limits (1KB to 1TB)
 - Numerical stability (condition number limits)
 - Precision mode enforcement (f32, f64, f128)
+
+### 1b. Symbolic Algebra (CAS) Library *(added 0.0.19)*
+**Purpose:** Computer-algebra system — symbolic expressions, differentiation, simplification,
+factoring, and equation solving. Distinct from `solvers/symbolic_logic` (SAT / defeasible logic).
+
+**Constraints:**
+- `SymbolicExpressionConfiguration` - Expression-tree structure (depth, variable count,
+  operators ∈ {add, sub, mul, div, pow, neg, sqrt})
+- `SymbolicOperationConfiguration` - Operation request (op ∈ {differentiate, simplify, expand,
+  evaluate, solve, factor})
+
+**Key Validations:**
+- Expression depth bound (1–1024)
+- Supported-operator allow-list
+- Operation-type allow-list
+
+See also the [Q42 Symbolic Algebra Encoding standard](manuals/standards/q42-symbolic-algebra-encoding.md)
+for the `Expr` ↔ `NQuin` serialisation and the MCP tool surface.
 
 ### 2. Machine Learning Library
 **Purpose:** Edge AI and neural network computing with hardware acceleration

@@ -114,10 +114,10 @@ const ENGINE_DEFS = [
     {
         id: 'qualia',
         label: 'Qualia',
-        family: 'GGUF→.q42 / WebGPU (native)',
+        family: 'GGUF→P64 / WebGPU (native)',
         live: true,
         kind: 'ready',
-        description: 'Qualia native WASM + WebGPU engine. AOT-compiles GGUF→.q42 (16KB page-aligned, OPFS-cached, version-keyed) and boots zero-parse from the Q42W container, or boots a GGUF directly. Greedy/argmax decode (temperature ignored); fixed decode budget.',
+        description: 'Qualia native WASM + WebGPU engine. AOT-compiles GGUF→P64 v3 (16KB page-aligned, OPFS-cached, version-keyed) or boots GGUF directly. Greedy/argmax decode (temperature ignored); fixed decode budget.',
         controls: [
             {
                 key: 'model',
@@ -132,7 +132,7 @@ const ENGINE_DEFS = [
                 type: 'select',
                 value: 'q42',
                 options: [
-                    { value: 'q42', label: '.q42 (AOT, OPFS-cached)' },
+                    { value: 'p64', label: 'P64 (AOT, OPFS-cached)' },
                     { value: 'gguf', label: 'GGUF (direct)' },
                 ],
             },
@@ -607,7 +607,7 @@ class QualiaAdapter {
     async ensureLoaded(hooks) {
         const mod = await this.loadModules();
         const url = this.engine.config.model || 'models/SmolLM2-360M-Instruct-Q4_K_M.gguf';
-        const format = this.engine.config.format || 'q42';
+        const format = this.engine.config.format || 'p64';
         const key = `${url}|${format}`;
         let loadMs = 0;
         let source = 'resident';
@@ -618,10 +618,10 @@ class QualiaAdapter {
             const name = url.split('/').pop();
             const t0 = performance.now();
             let bytes;
-            if (format === 'q42') {
-                const r = await this.cache.loadOrCompileQ42(url, name, {
-                    compile: mod.compileGgufToQ42,
-                    formatVersion: mod.q42FormatVersion(),
+            if (format === 'p64' || format === 'q42') {
+                const r = await this.cache.loadOrCompileP64(url, name, {
+                    compile: mod.compileGgufToP64,
+                    formatVersion: mod.p64FormatVersion(),
                     onProgress: (loaded, total, phase) =>
                         hooks.progress(phase === 'download' && total ? `download ${Math.round((100 * loaded) / total)}%` : phase),
                 });
@@ -664,7 +664,9 @@ class QualiaAdapter {
         const approxTokens = estimateTokens(outputText);
         const generationMs = end - start;
         const ttftMs = firstAt === null ? generationMs : firstAt - start;
-        const fmt = prepared.format === 'q42' ? `.q42 AOT (${prepared.source})` : `GGUF (${prepared.source})`;
+        const fmt = prepared.format === 'p64' || prepared.format === 'q42'
+            ? `P64 AOT (${prepared.source})`
+            : `GGUF (${prepared.source})`;
         return {
             loadMs: prepared.loadMs,
             ttftMs,

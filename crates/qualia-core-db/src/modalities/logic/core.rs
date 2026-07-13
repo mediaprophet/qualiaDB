@@ -121,8 +121,9 @@ impl WebizenVM {
     pub fn execute_constraint(&mut self, quin: &NQuin) -> bool {
         let mut condition_flag = true;
 
-        // Extract 5th Metadata Vector for Stochastic/Fuzzy logic weight (bottom 16 bits as probability 0.0 - 1.0)
-        let _stochastic_weight = (quin.metadata & 0xFFFF) as f32 / 65535.0;
+        // Stochastic/Fuzzy confidence weight via the canonical FrameLayout ABI
+        // (shared encoding with fuzzy/probabilistic — was a divergent 16-bit form).
+        let _stochastic_weight = crate::frame_layout::truth_degree(quin.metadata);
 
         for op in self.bytecode_buffer.iter().flatten() {
             crate::telemetry::VM_CYCLES_COUNT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -213,7 +214,7 @@ impl WebizenVM {
                         .map_or(false, |stress| stress == *stress_threshold as f32);
                 }
                 WebizenOpcode::YieldConfidence(threshold) => {
-                    let stochastic_weight = (quin.metadata & 0xFFFF) as f32 / 65535.0;
+                    let stochastic_weight = crate::frame_layout::truth_degree(quin.metadata);
                     if stochastic_weight < *threshold {
                         condition_flag = false; // For raw constraints, it fails the assertion
                     }
@@ -372,8 +373,8 @@ impl WebizenVM {
                         let mut resulting_quin = NQuin {
                             subject: s,
                             predicate: *predicate,
-                            // Tag the object as float (0x1 << 60) and pack f32
-                            object: (0x1 << 60) | (calc_val.to_bits() as u64),
+                            // Tag the object as a canonical inline float (FrameLayout).
+                            object: crate::frame_layout::pack_float_object(calc_val),
                             context: c,
                             metadata: quin.metadata,
                             parity: 0,
@@ -390,7 +391,7 @@ impl WebizenVM {
                     }
                 }
                 WebizenOpcode::YieldConfidence(threshold) => {
-                    let stochastic_weight = (quin.metadata & 0xFFFF) as f32 / 65535.0;
+                    let stochastic_weight = crate::frame_layout::truth_degree(quin.metadata);
                     if stochastic_weight < *threshold {
                         defeasible_tag = true;
                     }
@@ -412,14 +413,11 @@ impl WebizenVM {
 
     /// Extracts a tagged floating point value from a given 64-bit Quin vector.
     ///
-    /// Uses top 4 bits as a type tag.  Within `core.rs` the float tag is `0x1 << 60`
-    /// (the same bit pattern that `EmitCalculatedQuin` writes and that the test encodes).
-    ///
-    /// NOTE: `resolver.rs` treats `0b001 << 60` as `xsd:integer` (see AGENTS.md §4-D).
-    /// This convention conflict is known and must not be "fixed" unilaterally — the
-    /// `extract_float` tag here is deliberately kept as `0x1` to match the rest of
-    /// `core.rs` (the EmitCalculatedQuin opcode and the float-logic test).  Any
-    /// cross-module alignment belongs in a coordinated change touching resolver.rs.
+    /// Uses the canonical inline datatype tag (`frame_layout::INLINE_TAG_FLOAT`,
+    /// `0b101 << 60`). This resolves the previously-deferred conflict where `core.rs`
+    /// tagged f32s with `0x1` — the same bits `resolver` uses for `xsd:integer`. The
+    /// alignment now lives in the FrameLayout ABI (the coordinating module), so the
+    /// float tag no longer collides with the integer tag.
     #[inline(always)]
     fn extract_float(quin: &NQuin, vector_id: u8) -> Option<f32> {
         let val = match vector_id {
@@ -430,8 +428,7 @@ impl WebizenVM {
             _ => return None,
         };
 
-        let tag = val >> 60;
-        if tag == 0x1 {
+        if val & crate::frame_layout::INLINE_TAG_MASK == crate::frame_layout::INLINE_TAG_FLOAT {
             Some(extract_inline_float(val))
         } else {
             None
@@ -682,9 +679,9 @@ mod tests {
     #[test]
     fn test_webizen_float_logic() {
         let mut vm = WebizenVM::new();
-        // Pack 3.14 as a float tag (0x1 << 60)
+        // Pack 3.14 as a canonical inline float (FrameLayout INLINE_TAG_FLOAT).
         let float_val = 3.14_f32;
-        let tagged_object = (0x1 << 60) | (float_val.to_bits() as u64);
+        let tagged_object = crate::frame_layout::pack_float_object(float_val);
 
         let q = NQuin {
             subject: 0,
@@ -783,7 +780,13 @@ mod tests {
             metadata: 0,
             parity: 0,
         };
-        let inputs = [trigger, NQuin { subject: 456, ..trigger }];
+        let inputs = [
+            trigger,
+            NQuin {
+                subject: 456,
+                ..trigger
+            },
+        ];
         let mut out = [NQuin::default(); 1];
 
         let result = execute_differential_diagnostics(&inputs, &mut out);

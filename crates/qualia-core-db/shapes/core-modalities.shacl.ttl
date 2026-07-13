@@ -1,4 +1,4 @@
-@prefix q42: <https://qualia.network/q42#> .
+@prefix q42: <https://webizen.org/q42#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .

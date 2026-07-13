@@ -1,0 +1,297 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix doc:    <https://ns.webcivics.net/values/convention-relating-status-stateless-persons#> .
+
+# ============================================================
+# Convention relating to the Status of Stateless Persons
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Convention relating to the Status of Stateless Persons"@en ;
+    dc:date "28 September 1954" ;
+    values:category "Refugees & statelessness" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-relating-status-stateless-persons> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:preamble a values:Undertaking ; values:partOf doc:Instrument ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Preamble Chapter I - GENERAL PROVISIONS Articles Chapter II - JURIDICAL STATUS Articles Chapter III - GAINFUL EMPLOYMENT Articles Chapter IV - WELFARE Article Chapter V - ADMINISTRATIVE MEASURES Article Chapter VI - FINAL CLAUSES Article Entry into force: 6 June 1960, in accordance with article 39 Preamble The High Contracting Parties, Considering that the Charter of the United Nations and the Universal Declaration of Human Rights approved on 10 December 1948 by the General Assembly of the United Nations have affirmed the principle that human beings shall enjoy fundamental rights and freedoms without discrimination, Considering that the United Nations has, on various occasions, manifested its profound concern for stateless persons and endeavoured to assure stateless persons the widest possible exercise of these fundamental rights and freedoms, Considering that only those stateless persons who are also refugees are covered by the Convention relating to the Status of Refugees of 28 July 1951, and that there are many stateless persons who are not covered by that Convention, Considering that it is desirable to regulate and improve the status of stateless persons by an international agreement, Have agreed as follows: Chapter I GENERAL PROVISIONS"@en .
+
+doc:article-1 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 1"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "For the purpose of this Convention, the term \"stateless person\" means a person who is not considered as a national by any State under the operation of its law. This Convention shall not apply: They have committed a crime against peace, a war crime, or a crime against humanity, as defined in the international instruments drawn up to make provisions in respect of such crimes; They have committed a serious non-political crime outside the country of their residence prior to their admission to that country; They have been guilty of acts contrary to the purposes and principles of the United Nations."@en .
+
+doc:article-2 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 2"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Every stateless person has duties to the country in which he finds himself, which require in particular that he conform to its laws and regulations as well as to measures taken for the maintenance of public order."@en .
+
+doc:article-3 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 3"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Contracting States shall apply the provisions of this Convention to stateless persons without discrimination as to race, religion or country of origin."@en .
+
+doc:article-4 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 4"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Contracting States shall accord to stateless persons within their territories treatment at least as favourable as that accorded to their nationals with respect to freedom to practise their religion and freedom as regards the religious education of their children."@en .
+
+doc:article-5 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 5"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Nothing in this Convention shall be deemed to impair any rights and benefits granted by a Contracting State to stateless persons apart from this Convention."@en .
+
+doc:article-6 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 6"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "For the purpose of this Convention, the term \"in the same circumstances\" implies that any requirements (including requirements as to length and conditions of sojourn or residence) which the particular individual would have to fulfil for the enjoyment of the right in question, if he were not a stateless person, must be fulfilled by him, with the exception of requirements which by their nature a stateless person is incapable of fulfilling."@en .
+
+doc:article-7 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 7"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Except where this Convention contains more favourable provisions, a Contracting State shall accord to stateless persons the same treatment as is accorded to aliens generally. After a period of three years' residence, all stateless persons shall enjoy exemption from legislative reciprocity in the territory of the Contracting States. Each Contracting State shall continue to accord to stateless persons the rights and benefits to which they were already entitled, in the absence of reciprocity, at the date of entry into force of this Convention for that State. The Contracting States shall consider favourably the possibility of according to stateless persons, in the absence of reciprocity, rights and benefits beyond those to which they are entitled according to paragraphs 2 and 3, and to extending exemption from reciprocity to stateless persons who do not fulfil the conditions provided for in paragraphs 2 and 3. The provisions of paragraphs 2 and 3 apply both to the rights and benefits referred to in articles 13, 18, 19, 21 and 22 of this Convention and to rights and benefits for which this Convention does not provide."@en .
+
+doc:article-8 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 8"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "With regard to exceptional measures which may be taken against the person, property or interests of nationals or former nationals of a foreign State, the Contracting States shall not apply such measures to a stateless person solely on account of his having previously possessed the nationality of the foreign State in question. Contracting States which, under their legislation, are prevented from applying the general principle expressed in this article shall, in appropriate cases, grant exemptions in favour of such stateless persons."@en .
+
+doc:article-9 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 9"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Nothing in this Convention shall prevent a Contracting State, in time of war or other grave and exceptional circumstances, from taking provisionally measures which it considers to be essential to the national security in the case of a particular person, pending a determination by the Contracting State that that person is in fact a stateless person and that the continuance of such measures is necessary in his case in the interests of national security."@en .
+
+doc:article-10 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 10"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Where a stateless person has been forcibly displaced during the Second World War and removed to the territory of a Contracting State, and is resident there, the period of such enforced sojourn shall be considered to have been lawful residence within that territory. Where a stateless person has been forcibly displaced during the Second World War from the territory of a Contracting State and has, prior to the date of entry into force of this Convention, returned there for the purpose of taking up residence, the period of residence before and after such enforced displacement shall be regarded as one uninterrupted period for any purposes for which uninterrupted residence is required."@en .
+
+doc:article-11 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 11"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "In the case of stateless persons regularly serving as crew members on board a ship flying the flag of a Contracting State, that State shall give sympathetic consideration to their establishment on its territory and the issue of travel documents to them or their temporary admission to its territory particularly with a view to facilitating their establishment in another country. Chapter II JURIDICAL STATUS"@en .
+
+doc:article-12 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 12"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The personal status of a stateless person shall be governed by the law of the country of his domicile or, if he has no domicile, by the law of the country of his residence. Rights previously acquired by a stateless person and dependent on personal status, more particularly rights attaching to marriage, shall be respected by a Contracting State, subject to compliance, if this be necessary, with the formalities required by the law of that State, provided that the right in question is one which would have been recognized by the law of that State had he not become stateless."@en .
+
+doc:article-13 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 13"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Contracting States shall accord to a stateless person treatment as favourable as possible and, in any event, not less favourable than that accorded to aliens generally in the same circumstances, as regards the acquisition of movable and immovable property and other rights pertaining thereto, and to leases and other contracts relating to movable and immovable property."@en .
+
+doc:article-14 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 14"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "In respect of the protection of industrial property, such as inventions, designs or models, trade marks, trade names, and of rights in literary, artistic and scientific works, a stateless person shall be accorded in the country in which he has his habitual residence the same protection as is accorded to nationals of that country. In the territory of any other Contracting State, he shall be accorded the same protection as is accorded in that territory to nationals of the country in which he has his habitual residence."@en .
+
+doc:article-15 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 15"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "As regards non-political and non-profit-making associations and trade unions the Contracting States shall accord to stateless persons lawfully staying in their territory treatment as favourable as possible, and in any event, not less favourable than that accorded to aliens generally in the same circumstances."@en .
+
+doc:article-16 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 16"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "A stateless person shall have free access to the courts of law on the territory of all Contracting States. A stateless person shall enjoy in the Contracting State in which he has his habitual residence the same treatment as a national in matters pertaining to access to the courts, including legal assistance and exemption from cautio judicatum solvi . A stateless person shall be accorded in the matters referred to in paragraph 2 in countries other than that in which he has his habitual residence the treatment granted to a national of the country of his habitual residence. Chapter III GAINFUL EMPLOYMENT"@en .
+
+doc:article-17 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 17"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Contracting States shall accord to stateless persons lawfully staying in their territory treatment as favourable as possible and, in any event, not less favourable that that accorded to aliens generally in the same circumstances, as regards the right to engage in wage-earning employment. The Contracting States shall give sympathetic consideration to assimilating the rights of all stateless persons with regard to wage-earning employment to those of nationals, and in particular of those stateless persons who have entered their territory pursuant to programmes of labour recruitment or under immigration schemes."@en .
+
+doc:article-18 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 18"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Contracting States shall accord to a stateless person lawfully in their territory treatment as favourable as possible and, in any event, not less favourable than that accorded to aliens generally in the same circumstances, as regards the right to engage on his own account in agriculture, industry, handicrafts and commerce and to establish commercial and industrial companies."@en .
+
+doc:article-19 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 19"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Each Contracting State shall accord to stateless persons lawfully staying in their territory who hold diplomas recognized by the competent authorities of that State, and who are desirous of practising a liberal profession, treatment as favourable as possible and, in any event, not less favourable than that accorded to aliens generally in the same circumstances. Chapter IV WELFARE"@en .
+
+doc:article-20 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 20"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Where a rationing system exists, which applies to the population at large and regulates the general distribution of products in short supply, stateless persons shall be accorded the same treatment as nationals."@en .
+
+doc:article-21 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 21"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "As regards housing, the Contracting States, in so far as the matter is regulated by laws or regulations or is subject to the control of public authorities, shall accord to stateless persons lawfully staying in their territory treatment as favourable as possible and, in any event, not less favourable than that accorded to aliens generally in the same circumstances."@en .
+
+doc:article-22 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 22"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Contracting States shall accord to stateless persons the same treatment as is accorded to nationals with respect to elementary education. The Contracting States shall accord to stateless persons treatment as favourable as possible and, in any event, not less favourable than that accorded to aliens generally in the same circumstances, with respect to education other than elementary education and, in particular, as regards access to studies, the recognition of foreign school certificates, diplomas and degrees, the remission of fees and charges and the award of scholarships."@en .
+
+doc:article-23 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 23"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Contracting States shall accord to stateless persons lawfully staying in their territory the same treatment with respect to public relief and assistance as is accorded to their nationals."@en .
+
+doc:article-24 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 24"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Contracting States shall accord to stateless persons lawfully staying in their territory the same treatment as is accorded to nationals in respect of the following matters: In so far as such matters are governed by laws or regulations or are subject to the control of administrative authorities; remuneration, including family allowances where these form part of remuneration, hours of work, overtime arrangements, holidays with pay, restrictions on work, minimum age of employment, apprenticeship and training, women's work and the work of young persons, and the enjoyment of the benefits of collective bargaining; Social security (legal provisions in respect of employment injury, occupational diseases, maternity, sickness, disability, old age, death, unemployment, family responsibilities and any other contingency which, according to national laws or regulations, is covered by a social security scheme), subject to the following limitations: The right to compensation for the death of a stateless person resulting from employment injury or from occupational disease shall not be affected by the fact that the residence of the beneficiary is outside the territory of the Contracting State. The Contracting States shall extend to stateless persons the benefits of agreements concluded between them, or which may be concluded between them in the future, concerning the maintenance of acquired rights and rights in the process of acquisition in regard to social security, subject only to the conditions which apply to nationals of the States signatory to the agreements in question. The Contracting States will give sympathetic consideration to extending to stateless persons so far as possible the benefits of similar agreements which may at any time be in force between such Contracting States and non-contracting States. Chapter V ADMINISTRATIVE MEASURES"@en .
+
+doc:article-25 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 25"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "When the exercise of a right by a stateless person would normally require the assistance of authorities of a foreign country to whom he cannot have recourse, the Contracting State in whose territory he is residing shall arrange that such assistance be afforded to him by their own authorities. The authority or authorities mentioned in paragraph 1 shall deliver or cause to be delivered under their supervision to stateless persons such documents or certifications as would normally be delivered to aliens by or through their national authorities. Documents or certifications so delivered shall stand in the stead of the official instruments delivered to aliens by or through their national authorities and shall be given credence in the absence of proof to the contrary. Subject to such exceptional treatment as may be granted to indigent persons, fees may be charged for the services mentioned herein, but such fees shall be moderate and commensurate with those charged to nationals for similar services. The provisions of this article shall be without prejudice to articles 27 and 28."@en .
+
+doc:article-26 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 26"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Each Contracting State shall accord to stateless persons lawfully in its territory the right to choose their place of residence and to move freely within its territory, subject to any regulations applicable to aliens generally in the same circumstances."@en .
+
+doc:article-27 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 27"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Contracting States shall issue identity papers to any stateless person in their territory who does not possess a valid travel document."@en .
+
+doc:article-28 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 28"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Contracting States shall issue to stateless persons lawfully staying in their territory travel documents for the purpose of travel outside their territory, unless compelling reasons of national security or public order otherwise require, and the provisions of the schedule to this Convention shall apply with respect to such documents. The Contracting States may issue such a travel document to any other stateless person in their territory; they shall in particular give sympathetic consideration to the issue of such a travel document to stateless persons in their territory who are unable to obtain a travel document from the country of their lawful residence."@en .
+
+doc:article-29 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 29"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Contracting States shall not impose upon stateless persons duties, charges or taxes, of any description whatsoever, other or higher than those which are or may be levied on their nationals in similar situations. Nothing in the above paragraph shall prevent the application to stateless persons of the laws and regulations concerning charges in respect of the issue to aliens of administrative documents including identity papers."@en .
+
+doc:article-30 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 30"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "A Contracting State shall, in conformity with its laws and regulations, permit stateless persons to transfer assets which they have brought into its territory, to another country where they have been admitted for the purposes of resettlement. A Contracting State shall give sympathetic consideration to the application of stateless persons for permission to transfer assets wherever they may be and which are necessary for their resettlement in another country to which they have been admitted."@en .
+
+doc:article-31 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 31"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Contracting States shall not expel a stateless person lawfully in their territory save on grounds of national security or public order. The expulsion of such a stateless person shall be only in pursuance of a decision reached in accordance with due process of law. Except where compelling reasons of national security otherwise require, the stateless person shall be allowed to submit evidence to clear himself, and to appeal to and be represented for the purpose before competent authority or a person or persons specially designated by the competent authority. The Contracting States shall allow such a stateless person a reasonable period within which to seek legal admission into another country. The Contracting States reserve the right to apply during that period such internal measures as they may deem necessary."@en .
+
+doc:article-32 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 32"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Contracting States shall as far as possible facilitate the assimilation and naturalization of stateless persons. They shall in particular make every effort to expedite naturalization proceedings and to reduce as far as possible the charges and costs of such proceedings. Chapter VI FINAL CLAUSES"@en .
+
+doc:article-33 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 33"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Contracting States shall communicate to the Secretary-General of the United Nations the laws and regulations which they may adopt to ensure the application of this Convention."@en .
+
+doc:article-34 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 34"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Any dispute between Parties to this Convention relating to its interpretation or application, which cannot be settled by other means, shall be referred to the International Court of Justice at the request of any one of the parties to the dispute."@en .
+
+doc:article-35 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 35"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "This Convention shall be open for signature at the Headquarters of the United Nations until 31 December 1955. It shall be open for signature on behalf of: Any State Member of the United Nations; Any other State invited to attend the United Nations Conference on the Status of Stateless Persons; and Any State to which an invitation to sign or to accede may be addressed by the General Assembly of the United Nations. It shall be ratified and the instruments of ratification shall be deposited with the Secretary-General of the United Nations. It shall be open for accession by the States referred to in paragraph 2 of this article. Accession shall be effected by the deposit of an instrument of accession with the Secretary-General of the United Nations."@en .
+
+doc:article-36 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 36"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Any State may, at the time of signature, ratification or accession, declare that this Convention shall extend to all or any of the territories for the international relations of which it is responsible. Such a declaration shall take effect when the Convention enters into force for the State concerned. At any time thereafter any such extension shall be made by notification addressed to the Secretary-General of the United Nations and shall take effect as from the ninetieth day after the day of receipt by the Secretary-General of the United Nations of this notification, or as from the date of entry into force of the Convention for the State concerned, whichever is the later. With respect to those territories to which this Convention is not extended at the time of signature, ratification or accession, each State concerned shall consider the possibility of taking the necessary steps in order to extend the application of this Convention to such territories, subject, where necessary for constitutional reasons, to the consent of the Governments of such territories."@en .
+
+doc:article-37 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 37"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "In the case of a Federal or non-unitary State, the following provisions shall apply With respect to those articles of this Convention that come within the legislative jurisdiction of the federal legislative authority, the obligations of the Federal Government shall to this extent be the same as those of Parties which are not Federal States; With respect to those articles of this Convention that come within the legislative jurisdiction of constituent States, provinces or cantons which are not, under the constitutional system of the Federation, bound to take legislative action, the Federal Government shall bring such articles with a favourable recommendation to the notice of the appropriate authorities of States, provinces or cantons at the earliest possible moment; A Federal State Party to this Convention shall, at the request of any other Contracting State transmitted through the Secretary-General of the United Nations, supply a statement of the law and practice of the Federation and its constituent units in regard to any particular provision of the Convention showing the extent to which effect has been given to that provision by legislative or other action."@en .
+
+doc:article-38 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 38"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "At the time of signature, ratification or accession, any State may make reservations to articles of the Convention other than to articles 1, 3, 4, 16 (1) and 33 to 42 inclusive. Any State making a reservation in accordance with paragraph 1 of this article may at any time withdraw the reservation by a communication to that effect addressed to the Secretary-General of the United Nations."@en .
+
+doc:article-39 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 39"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "This Convention shall come into force on the ninetieth day following the day of deposit of the sixth instrument of ratification or accession. For each State ratifying or acceding to the Convention after the deposit of the sixth instrument of ratification or accession, the Convention shall enter into force on the ninetieth day following the date of deposit by such State of its instrument of ratification or accession."@en .
+
+doc:article-40 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 40"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Any Contracting State may denounce this Convention at any time by a notification addressed to the Secretary-General of the United Nations. Such denunciation shall take effect for the Contracting State concerned one year from the date upon which it is received by the Secretary-General of the United Nations. Any State which has made a declaration or notification under article 36 may, at any time thereafter, by a notification to the Secretary-General of the United Nations, declare that the Convention shall cease to extend to such territory one year after the date of receipt of the notification by the Secretary-General."@en .
+
+doc:article-41 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 41"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Any Contracting State may request revision of this Convention at any time by a notification addressed to the Secretary-General of the United Nations. The General Assembly of the United Nations shall recommend the steps, if any, to be taken in respect of such request."@en .
+
+doc:article-42 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 42"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Secretary-General of the United Nations shall inform all Members of the United Nations and non-member States referred to in article 35: Of signatures, ratifications and accessions in accordance with article 35; Of declarations and notifications in accordance with article 36; Of reservations and withdrawals in accordance with article 38; Of the date on which this Convention will come into force in accordance with article 39; Of denunciations and notifications in accordance with article 40; Of request for revision in accordance with article 41. In faith whereof the undersigned, duly authorized, have signed this Convention on behalf of their respective Governments. Done at New York, this twenty-eighth day of September, one thousand nine hundred and fifty-four, in a single copy, of which the English, French and Spanish texts are equally authentic and which shall remain deposited in the archives of the United Nations, and certified true copies of which shall be delivered to all Members of the United Nations and to the non-member States referred to in article 35."@en .

@@ -1,0 +1,11 @@
+VERSION "1.2"
+PREFIX qisp:  <https://webizen.org/immersive/0.1#>
+PREFIX qispf: <https://webizen.org/immersive/function/0.1#>
+
+SELECT ?agent ?zone
+WHERE {
+  ?agent qisp:activeSpatialAsset ?agentAsset .
+  ?zone  a qisp:SpatialZone ;
+         qisp:hasDenseRepresentation ?zoneAsset .
+  FILTER(qispf:intersects(?agentAsset, ?zoneAsset, qisp:Exact))
+}

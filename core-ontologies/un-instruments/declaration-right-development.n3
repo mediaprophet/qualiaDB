@@ -1,0 +1,88 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix doc:    <https://ns.webcivics.net/values/declaration-right-development#> .
+
+# ============================================================
+# Declaration on the Right to Development
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Declaration on the Right to Development"@en ;
+    dc:date "04 December 1986" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-right-development> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:article-1 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 1"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The right to development is an inalienable human right by virtue of which every human person and all peoples are entitled to participate in, contribute to, and enjoy economic, social, cultural and political development, in which all human rights and fundamental freedoms can be fully realized. The human right to development also implies the full realization of the right of peoples to self-determination, which includes, subject to the relevant provisions of both International Covenants on Human Rights, the exercise of their inalienable right to full sovereignty over all their natural wealth and resources."@en .
+
+doc:article-2 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 2"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The human person is the central subject of development and should be the active participant and beneficiary of the right to development. All human beings have a responsibility for development, individually and collectively, taking into account the need for full respect for their human rights and fundamental freedoms as well as their duties to the community, which alone can ensure the free and complete fulfilment of the human being, and they should therefore promote and protect an appropriate political, social and economic order for development. States have the right and the duty to formulate appropriate national development policies that aim at the constant improvement of the well-being of the entire population and of all individuals, on the basis of their active, free and meaningful participation in development and in the fair distribution of the benefits resulting therefrom."@en .
+
+doc:article-3 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 3"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "States have the primary responsibility for the creation of national and international conditions favourable to the realization of the right to development. The realization of the right to development requires full respect for the principles of international law concerning friendly relations and co-operation among States in accordance with the Charter of the United Nations. States have the duty to co-operate with each other in ensuring development and eliminating obstacles to development. States should realize their rights and fulfil their duties in such a manner as to promote a new international economic order based on sovereign equality, interdependence, mutual interest and co-operation among all States, as well as to encourage the observance and realization of human rights."@en .
+
+doc:article-4 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 4"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "States have the duty to take steps, individually and collectively, to formulate international development policies with a view to facilitating the full realization of the right to development. Sustained action is required to promote more rapid development of developing countries. As a complement to the efforts of developing countries, effective international co-operation is essential in providing these countries with appropriate means and facilities to foster their comprehensive development."@en .
+
+doc:article-5 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 5"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "States shall take resolute steps to eliminate the massive and flagrant violations of the human rights of peoples and human beings affected by situations such as those resulting from apartheid , all forms of racism and racial discrimination, colonialism, foreign domination and occupation, aggression, foreign interference and threats against national sovereignty, national unity and territorial integrity, threats of war and refusal to recognize the fundamental right of peoples to self-determination."@en .
+
+doc:article-6 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 6"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "All States should co-operate with a view to promoting, encouraging and strengthening universal respect for and observance of all human rights and fundamental freedoms for all without any distinction as to race, sex, language or religion. All human rights and fundamental freedoms are indivisible and interdependent; equal attention and urgent consideration should be given to the implementation, promotion and protection of civil, political, economic, social and cultural rights. States should take steps to eliminate obstacles to development resulting from failure to observe civil and political rights, as well as economic social and cultural rights."@en .
+
+doc:article-7 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 7"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "All States should promote the establishment, maintenance and strengthening of international peace and security and, to that end, should do their utmost to achieve general and complete disarmament under effective international control, as well as to ensure that the resources released by effective disarmament measures are used for comprehensive development, in particular that of the developing countries."@en .
+
+doc:article-8 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 8"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "States should undertake, at the national level, all necessary measures for the realization of the right to development and shall ensure, inter alia , equality of opportunity for all in their access to basic resources, education, health services, food, housing, employment and the fair distribution of income. Effective measures should be undertaken to ensure that women have an active role in the development process. Appropriate economic and social reforms should be carried out with a view to eradicating all social injustices. States should encourage popular participation in all spheres as an important factor in development and in the full realization of all human rights."@en .
+
+doc:article-9 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 9"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "All the aspects of the right to development set forth in the present Declaration are indivisible and interdependent and each of them should be considered in the context of the whole. Nothing in the present Declaration shall be construed as being contrary to the purposes and principles of the United Nations, or as implying that any State, group or person has a right to engage in any activity or to perform any act aimed at the violation of the rights set forth in the Universal Declaration of Human Rights and in the International Covenants on Human Rights."@en .
+
+doc:article-10 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 10"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The General Assembly, Bearing in mind the purposes and principles of the Charter of the United Nations relating to the achievement of international co-operation in solving international problems of an economic, social, cultural or humanitarian nature, and in promoting and encouraging respect for human rights and fundamental freedoms for all without distinction as to race, sex, language or religion, Recognizing that development is a comprehensive economic, social, cultural and political process, which aims at the constant improvement of the well-being of the entire population and of all individuals on the basis of their active, free and meaningful participation in development and in the fair distribution of benefits resulting therefrom, Considering that under the provisions of the Universal Declaration of Human Rights everyone is entitled to a social and international order in which the rights and freedoms set forth in that Declaration can be fully realized, Recalling the provisions of the International Covenant on Economic, Social and Cultural Rights and of the International Covenant on Civil and Political Rights, Recalling further the relevant agreements, conventions, resolutions, recommendations and other instruments of the United Nations and its specialized agencies concerning the integral development of the human being, economic and social progress and development of all peoples, including those instruments concerning decolonization, the prevention of discrimination, respect for and observance of human rights and fundamental freedoms, the maintenance of international peace and security and the further promotion of friendly relations and co-operation among States in accordance with the Charter, Recalling the right of peoples to self-determination, by virtue of which they have the right freely to determine their political status and to pursue their economic, social and cultural development, Recalling also the right of peoples to exercise, subject to the relevant provisions of both International Covenants on Human Rights, full and complete sovereignty over all their natural wealth and resources, Mindful of the obligation of States under the Charter to promote universal respect for and observance of human rights and fundamental freedoms for all without distinction of any kind such as race, colour, sex, language, religion, political or other opinion, national or social origin, property, birth or other status, Considering that the elimination of the massive and flagrant violations of the human rights of the peoples and individuals affected by situations such as those resulting from colonialism, neo-colonialism, apartheid , all forms of racism and racial discrimination, foreign domination and occupation, aggression and threats against national sovereignty, national unity and territorial integrity and threats of war would contribute to the establishment of circumstances propitious to the development of a great part of mankind, Concerned at the existence of serious obstacles to development, as well as to the complete fulfilment of human beings and of peoples, constituted, inter alia , by the denial of civil, political, economic, social and cultural rights, and considering that all human rights and fundamental freedoms are indivisible and interdependent and that, in order to promote development, equal attention and urgent consideration should be given to the implementation, promotion and protection of civil, political, economic, social and cultural rights and that, accordingly, the promotion of, respect for and enjoyment of certain human rights and fundamental freedoms cannot justify the denial of other human rights and fundamental freedoms, Considering that international peace and security are essential elements for the realization of the right to development, Reaffirming that there is a close relationship between disarmament and development and that progress in the field of disarmament would considerably promote progress in the field of development and that resources released through disarmament measures should be devoted to the economic and social development and well-being of all peoples and, in particular, those of the developing countries, Recognizing that the human person is the central subject of the development process and that development policy should therefore make the human being the main participant and beneficiary of development, Recognizing that the creation of conditions favourable to the development of peoples and individuals is the primary responsibility of their States, Aware that efforts at the international level to promote and protect human rights should be accompanied by efforts to establish a new international economic order, Confirming that the right to development is an inalienable human right and that equality of opportunity for development is a prerogative both of nations and of individuals who make up nations, Proclaims the following Declaration on the Right to Development:"@en .

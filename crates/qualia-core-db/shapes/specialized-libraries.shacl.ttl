@@ -1,4 +1,4 @@
-@prefix q42: <https://qualia.network/q42#> .
+@prefix q42: <https://webizen.org/q42#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
@@ -104,6 +104,101 @@ q42:EigenDecompositionShape a sh:NodeShape ;
         sh:path q42:algorithmType ;
         sh:in ("qr" "power" "jacobi" "lanczos") ;
         sh:message "Algorithm type must be supported" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:PolynomialSolveShape a sh:NodeShape ;
+    rdfs:label "Polynomial Solve Shape" ;
+    rdfs:comment "Validates polynomial root-finding parameters (quadratics through general degree)" ;
+    sh:targetClass q42:PolynomialSolve ;
+    sh:property [
+        sh:path q42:maxDegree ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 256 ;
+        sh:message "Polynomial degree must be between 1 and 256" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:method ;
+        sh:in ("quadratic_closed_form" "durand_kerner" "companion") ;
+        sh:message "Root-finding method must be supported" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:SingularValueDecompositionShape a sh:NodeShape ;
+    rdfs:label "Singular Value Decomposition Shape" ;
+    rdfs:comment "Validates SVD parameters" ;
+    sh:targetClass q42:SingularValueDecomposition ;
+    sh:property [
+        sh:path q42:maxDimension ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000 ;
+        sh:message "SVD dimension must be between 1 and 100,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:method ;
+        sh:in ("ata_eigen" "golub_reinsch") ;
+        sh:message "SVD method must be supported" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:DeterminantShape a sh:NodeShape ;
+    rdfs:label "Determinant Shape" ;
+    rdfs:comment "Validates determinant computation parameters" ;
+    sh:targetClass q42:Determinant ;
+    sh:property [
+        sh:path q42:maxDimension ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000 ;
+        sh:message "Determinant dimension must be between 1 and 100,000" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:method ;
+        sh:in ("lu" "cofactor") ;
+        sh:message "Determinant method must be supported" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:SymbolicExpressionShape a sh:NodeShape ;
+    rdfs:label "Symbolic Expression Shape" ;
+    rdfs:comment "Validates symbolic (CAS) expression-tree structure" ;
+    sh:targetClass q42:SymbolicExpression ;
+    sh:property [
+        sh:path q42:maxDepth ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1024 ;
+        sh:message "Symbolic expression depth must be between 1 and 1024" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path q42:maxVariables ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:maxInclusive 1024 ;
+        sh:message "Distinct variable count must be between 0 and 1024" ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedOperators ;
+        sh:in ("add" "sub" "mul" "div" "pow" "neg" "sqrt") ;
+        sh:message "Operator must be a supported CAS operator" ;
+        sh:severity sh:Violation ;
+    ] .
+
+q42:SymbolicOperationShape a sh:NodeShape ;
+    rdfs:label "Symbolic Operation Shape" ;
+    rdfs:comment "Validates a symbolic algebra (CAS) operation request" ;
+    sh:targetClass q42:SymbolicOperation ;
+    sh:property [
+        sh:path q42:operationType ;
+        sh:in ("differentiate" "simplify" "expand" "evaluate" "solve" "factor") ;
+        sh:message "Symbolic operation must be supported" ;
         sh:severity sh:Violation ;
     ] .
 

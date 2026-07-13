@@ -1,0 +1,56 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix doc:    <https://ns.webcivics.net/values/principles-medical-ethics-relevant-role-health-personnel#> .
+
+# ============================================================
+# Principles of Medical Ethics relevant to the Role of Health Personnel, particularly Physicians, in the Protection of Prisoners and Detainees against Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Principles of Medical Ethics relevant to the Role of Health Personnel, particularly Physicians, in the Protection of Prisoners and Detainees against Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment"@en ;
+    dc:date "18 December 1982" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-medical-ethics-relevant-role-health-personnel> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:principle-1 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Principle 1"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Health personnel, particularly physicians, charged with the medical care of prisoners and detainees have a duty to provide them with protection of their physical and mental health and treatment of disease of the same quality and standard as is afforded to those who are not imprisoned or detained."@en .
+
+doc:principle-2 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Principle 2"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "It is a gross contravention of medical ethics, as well as an offence under applicable international instruments, for health personnel, particularly physicians, to engage, actively or passively, in acts which constitute participation in, complicity in, incitement to or attempts to commit torture or other cruel, inhuman or degrading treatment or punishment."@en .
+
+doc:principle-3 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Principle 3"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "It is a contravention of medical ethics for health personnel, particularly physicians, to be involved in any professional relationship with prisoners or detainees the purpose of which is not solely to evaluate, protect or improve their physical and mental health."@en .
+
+doc:principle-4 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Principle 4"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "It is a contravention of medical ethics for health personnel, particularly physicians: (a) To apply their knowledge and skills in order to assist in the interrogation of prisoners and detainees in a manner that may adversely affect the physical or mental health or condition of such prisoners or detainees and which is not in accordance with the relevant international instruments; 2 (b) To certify, or to participate in the certification of, the fitness of prisoners or detainees for any form of treatment or punishment that may adversely affect their physical or mental health and which is not in accordance with the relevant international instruments, or to participate in any way in the infliction of any such treatment or punishment which is not in accordance with the relevant international instruments."@en .
+
+doc:principle-5 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Principle 5"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "It is a contravention of medical ethics for health personnel, particularly physicians, to participate in any procedure for restraining a prisoner or detainee unless such a procedure is determined in accordance with purely medical criteria as being necessary for the protection of the physical or mental health or the safety of the prisoner or detainee himself, of his fellow prisoners or detainees, or of his guardians, and presents no hazard to his physical or mental health."@en .
+
+doc:principle-6 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Principle 6"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "There may be no derogation from the foregoing principles on any ground whatsoever, including public emergency."@en .

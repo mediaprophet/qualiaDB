@@ -24,6 +24,7 @@ pub mod mapper;
 pub mod csv_mapper;
 pub mod json_mapper;
 pub mod writer;
+pub mod agent_intent;
 
 #[derive(Debug)]
 pub enum IngestError {
@@ -343,6 +344,72 @@ pub fn ingest_kml(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn st
     })
 }
 
+/// Ingest a 3D asset (OBJ / STL / GLB) into a `.q42` volume via `asset_bridge`.
+///
+/// The geometry is parsed to a bounding-boxed `Mesh`; `mesh_to_nquins` emits the *semantic* quins
+/// (type, vertex/triangle counts, bounding box, centroid, source format) which are written to the
+/// volume — the artefact is *semantically known*, not just drawn. (Raw vertex/index buffers feed
+/// the GPU renderer separately — Phase 1.2, RENDERER_IMPLEMENTATION_PLAN.)
+pub fn ingest_asset(input: &Path, output: &Path) -> Result<IngestStats, Box<dyn std::error::Error>> {
+    let file = File::open(input)?;
+    let file_size = file.metadata()?.len();
+    if file_size > 256 * 1024 * 1024 {
+        return Err(format!(
+            "asset input is {} MB — exceeds 256 MB guard. Split into smaller files.",
+            file_size / (1024 * 1024)
+        )
+        .into());
+    }
+    // Safety: file size checked above; OS maps pages on-demand, no heap copy.
+    let mmap = unsafe { memmap2::Mmap::map(&file)? };
+    let bytes: &[u8] = &mmap;
+
+    let hint = input.extension().and_then(|e| e.to_str());
+    let mesh = qualia_core_db::render::assets::import_asset(bytes, hint)
+        .map_err(|e| format!("asset parse error: {e}"))?;
+
+    let asset_uri = format!(
+        "urn:qualia:asset:{}",
+        input.file_name().and_then(|s| s.to_str()).unwrap_or("mesh")
+    );
+    let (quins, str_lex) =
+        qualia_core_db::render::assets::mesh_to_nquins(&mesh, &asset_uri, hint.unwrap_or("mesh"));
+
+    // Convert the string lexicon into `LexiconEntry::String` entries.
+    let lex: HashMap<u64, qualia_core_db::q42_lex::LexiconEntry> = str_lex
+        .into_iter()
+        .map(|(k, v)| (k, qualia_core_db::q42_lex::LexiconEntry::String(v)))
+        .collect();
+
+    let mut all_quins = quins;
+    all_quins.sort_unstable_by_key(|q| q.object);
+
+    let mut blocks: Vec<Vec<NQuin>> = Vec::new();
+    let mut block_ranges: Vec<(u64, u64)> = Vec::new();
+    for chunk in all_quins.chunks(QUINS_PER_BLOCK) {
+        let min_hash = chunk.iter().map(|q| q.object).min().unwrap_or(0);
+        let max_hash = chunk.iter().map(|q| q.object).max().unwrap_or(0);
+        block_ranges.push((min_hash, max_hash));
+        blocks.push(chunk.to_vec());
+    }
+
+    let triples_ingested = all_quins.len() as u64;
+    let block_seq = blocks.len() as u64;
+    let lex_entries = lex.len() as u64;
+
+    qualia_core_db::q42_volume::write_unified_volume_with_entries(
+        output, &lex, &block_ranges, &blocks,
+    )?;
+
+    Ok(IngestStats {
+        triples_ingested,
+        blocks_written: block_seq,
+        lex_entries,
+        lines_skipped: 0,
+        bidx_written: true,
+    })
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Phase 2: wrappers for core-db RDF-Star parsers (all streaming via ExternalSorter)
 // ──────────────────────────────────────────────────────────────────────────────
@@ -379,7 +446,7 @@ stream_ingest!(ingest_nquads_star,
     "qualia_sort_nqs");
 
 stream_ingest!(ingest_turtle,
-    qualia_core_db::parsers::turtle_star::parse_turtle_star_stream,
+    qualia_core_db::parsers::turtle_doc::parse_turtle_doc_stream,
     "qualia_sort_ttl");
 
 stream_ingest!(ingest_trig,
@@ -391,7 +458,7 @@ stream_ingest!(ingest_trig_star,
     "qualia_sort_trigs");
 
 stream_ingest!(ingest_n3,
-    qualia_core_db::parsers::n3_star::parse_n3_star_stream,
+    qualia_core_db::parsers::turtle_doc::parse_turtle_doc_stream,
     "qualia_sort_n3");
 
 stream_ingest!(ingest_json_ld,
@@ -440,8 +507,10 @@ pub fn ingest_auto(
         detect::SemanticFormat::RdfXml       => ingest_rdf_xml(input, output)?,
         detect::SemanticFormat::JsonLd       => ingest_json_ld(input, output)?,
         detect::SemanticFormat::JsonLdStar   => ingest_json_ld_star(input, output)?,
+        detect::SemanticFormat::AgentIntentJsonl => agent_intent::ingest_agent_intent(input, output)?,
         detect::SemanticFormat::CborLd       => ingest_cbor(input, output)?,
         detect::SemanticFormat::Kml          => ingest_kml(input, output)?,
+        detect::SemanticFormat::Mesh         => ingest_asset(input, output)?,
         detect::SemanticFormat::Chk          => ingest_chk(input, output)?,
         detect::SemanticFormat::Q42          => return Err(
             "Q42 vaults are already in native format — no ingestion needed.".into()

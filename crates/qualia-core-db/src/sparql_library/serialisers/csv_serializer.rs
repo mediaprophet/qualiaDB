@@ -34,27 +34,36 @@ pub fn serialize_quins_to_csv<W: Write>(
         .map_err(|e| format!("Failed to write CSV headers: {}", e))?;
 
     // Group quins by subject (assuming each subject represents a row)
-    let mut subjects: std::collections::HashMap<u64, Vec<&NQuin>> = std::collections::HashMap::new();
+    let mut subjects: std::collections::HashMap<u64, Vec<&NQuin>> =
+        std::collections::HashMap::new();
     for quin in quins {
-        subjects.entry(quin.subject).or_insert_with(Vec::new).push(quin);
+        subjects
+            .entry(quin.subject)
+            .or_insert_with(Vec::new)
+            .push(quin);
     }
 
     // Write data rows
     for (_subject, row_quins) in subjects {
         let mut row_values = Vec::with_capacity(profile.headers.len());
-        
+
         for (i, &pred_hash) in profile.predicate_hashes.iter().enumerate() {
-            let datatype = profile.datatypes.get(i).copied().unwrap_or(CsvDatatype::StringRef);
-            
+            let datatype = profile
+                .datatypes
+                .get(i)
+                .copied()
+                .unwrap_or(CsvDatatype::StringRef);
+
             // Find quin with matching predicate
-            let value = row_quins.iter()
+            let value = row_quins
+                .iter()
                 .find(|q| q.predicate == pred_hash)
                 .map(|quin| format_quin_value(quin, datatype))
                 .unwrap_or(String::new());
-            
+
             row_values.push(value);
         }
-        
+
         writeln!(writer, "{}", row_values.join(","))
             .map_err(|e| format!("Failed to write CSV row: {}", e))?;
     }
@@ -68,7 +77,7 @@ fn format_quin_value(quin: &NQuin, datatype: CsvDatatype) -> String {
         CsvDatatype::Integer => {
             let val = quin.object & 0x0FFF_FFFF_FFFF_FFFF; // Remove type tag
             val.to_string()
-        },
+        }
         CsvDatatype::Float => {
             let tag = quin.object & 0xF000_0000_0000_0000;
             if tag == (0b010 << 60) {
@@ -78,7 +87,7 @@ fn format_quin_value(quin: &NQuin, datatype: CsvDatatype) -> String {
             } else {
                 String::new()
             }
-        },
+        }
         CsvDatatype::DateTime => {
             let tag = quin.object & 0xF000_0000_0000_0000;
             if tag == (0b011 << 60) {
@@ -88,7 +97,7 @@ fn format_quin_value(quin: &NQuin, datatype: CsvDatatype) -> String {
             } else {
                 String::new()
             }
-        },
+        }
         CsvDatatype::StringRef => {
             // For strings, we just output the hash (in practice, you'd want lexicon lookup)
             format!("{:x}", quin.object)

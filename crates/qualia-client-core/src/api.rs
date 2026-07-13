@@ -219,45 +219,69 @@ pub fn generate_qapp_credential(qapp_name: String) -> String {
 
 pub fn verify_and_install_qapp(target_path: String) -> Result<String, String> {
     let state = crate::state::APP_STATE.get().unwrap();
-    let path = std::path::PathBuf::from(&target_path);
-    let manifest_path = resolve_package_manifest_path(&path)
-        .ok_or_else(|| "qapp.json not found in directory".to_string())?;
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let storage_path = std::path::PathBuf::from(&storage);
 
-    let content = std::fs::read_to_string(&manifest_path).map_err(|e| e.to_string())?;
-    let manifest: qapp_registry::QappPackageManifest = serde_json::from_str(&content)
-        .map_err(|e| format!("Invalid qapp package manifest: {e}"))?;
+    if let Ok(port) = target_path.parse::<u16>() {
+        return Err(format!(
+            "Dev proxy port registration ({port}) requires a package directory path, not a bare port"
+        ));
+    }
 
+    let source_dir = std::path::PathBuf::from(&target_path);
+    if !source_dir.is_dir() {
+        return Err(format!("Qapp source directory not found: {target_path}"));
+    }
+
+    let entry = crate::qapp_install::install_package_atomic(
+        &storage_path,
+        &source_dir,
+        crate::qapp_install::InstallPolicy::Development,
+        None,
+    )
+    .map_err(|e| e.to_string())?;
+
+    let package_dir = crate::qapp_paths::resolve_active_package_dir(&storage_path, &entry.package_id);
+    let manifest = load_qapp_package_from_dir(&package_dir)?;
     let qapp_did = format!(
         "did:qualia:qapp:{}",
         manifest.name.to_lowercase().replace(" ", "-")
     );
 
-    let target = if let Ok(port) = target_path.parse::<u16>() {
-        qapp_registry::QappTarget::LocalProxyPort(port)
-    } else {
-        qapp_registry::QappTarget::LocalDevDirectory(path)
-    };
-
     let registered_qapp = qapp_registry::RegisteredQapp {
         did: qapp_did.clone(),
-        manifest,
-        target,
+        manifest: manifest.clone(),
+        target: qapp_registry::QappTarget::IsolatedVault(entry.package_id.clone()),
     };
 
-    let qapp_id_hash = crate::qapp_manifest::install_qapp_capabilities(&registered_qapp.manifest)
+    let qapp_id_hash = crate::qapp_manifest::install_qapp_capabilities(&manifest)
         .map_err(|e| format!("Qapp capability compile failed: {e:?}"))?;
 
-    state.installed_qapps.lock().unwrap().push(registered_qapp);
+    {
+        let mut installed = state.installed_qapps.lock().unwrap();
+        installed.retain(|q| {
+            q.manifest.name != entry.package_id && q.did != qapp_did
+        });
+        installed.push(registered_qapp);
+    }
     save_directory_state();
 
-    Ok(format!("{qapp_did} (hash={qapp_id_hash})"))
+    Ok(format!(
+        "{qapp_did} v{} hash={} content={}",
+        entry.active_version, qapp_id_hash, entry.content_hash
+    ))
 }
 
 #[derive(Serialize)]
 pub struct WalletStatus {
-    lightning_sats: u64,
-    ilp_microcents: u64,
-    nym_connected: bool,
+    /// XEC balance in satoshis (live from Chronik when identity is set).
+    pub xec_sats: i64,
+    /// Total ILP micro-cents dispatched (from persistent ledger).
+    pub ilp_dispatched_microcents: u64,
+    /// Whether the Nym mixnet relay is active.
+    pub nym_connected: bool,
+    /// Sync status: "synced" | "offline" | "no_identity".
+    pub sync_status: String,
 }
 
 pub fn get_wallet_status() -> WalletStatus {
@@ -265,10 +289,46 @@ pub fn get_wallet_status() -> WalletStatus {
         .get()
         .map(|s| s.nym_relay_active.load(Ordering::Relaxed))
         .unwrap_or(false);
+
+    let state = crate::state::APP_STATE.get();
+    let storage_path = state
+        .map(|s| s.config.lock().unwrap().storage_path.clone())
+        .unwrap_or_default();
+
+    // Read ILP dispatched total from persistent ledger
+    let ilp_dispatched = crate::wallet::ledger::total_ilp_sent_micro_cents(
+        &std::path::Path::new(&storage_path),
+    );
+
+    // Query live XEC balance from Chronik if identity is set
+    let id = read_identity();
+    let (xec_sats, sync_status) = match id
+        .as_ref()
+        .and_then(|v| v.get("ecash_hash160"))
+        .and_then(|v| v.as_str())
+    {
+        Some(hash160) => {
+            let client = crate::wallet::chronik::ChronikClient::new("https://chronik.be.cash");
+            match client.fetch_utxos_p2pkh(hash160) {
+                Ok(utxos) => {
+                    let sats: i64 = utxos
+                        .iter()
+                        .filter(|u| u.slp_meta.is_none())
+                        .map(|u| u.value)
+                        .sum();
+                    (sats, "synced".to_string())
+                }
+                Err(_) => (0, "offline".to_string()),
+            }
+        }
+        None => (0, "no_identity".to_string()),
+    };
+
     WalletStatus {
-        lightning_sats: 450000,
-        ilp_microcents: 1250000,
+        xec_sats,
+        ilp_dispatched_microcents: ilp_dispatched,
         nym_connected,
+        sync_status,
     }
 }
 
@@ -310,6 +370,10 @@ pub fn save_config(new_config: AgentConfig) -> Result<(), String> {
     std::fs::write(config_file_path(), json).map_err(|e| e.to_string())?;
     // Ensure data directories exist under the new path
     init_data_directories(&new_config.storage_path);
+    // Mirror inference_backend string into structured settings (Local/Remote/Hybrid/Ollama).
+    let mut ib = crate::inference_backend::load_inference_backend_settings();
+    ib.apply_agent_config_backend_string(&new_config.inference_backend);
+    let _ = crate::inference_backend::save_inference_backend_settings(&ib);
     *state.config.lock().unwrap() = new_config;
     Ok(())
 }
@@ -845,6 +909,83 @@ pub async fn export_to_solid(
         .map_err(|e| e.to_string())
 }
 
+/// Consumer: fetch a Solid LDP resource and return status + Turtle body + Quin count.
+pub async fn fetch_from_solid_pod(
+    url: String,
+    bearer_token: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let r = qualia_solid_bridge::fetch_resource(&url, bearer_token.as_deref())
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({
+        "url": r.url,
+        "status": r.status,
+        "content_type": r.content_type,
+        "quin_count": r.quin_count,
+        "body": r.body,
+    }))
+}
+
+/// Consumer: PUT a local Turtle/file to a Solid resource URL (sync-to-pod).
+pub async fn put_to_solid_pod(
+    url: String,
+    body: Vec<u8>,
+    content_type: Option<String>,
+    bearer_token: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let ct = content_type.unwrap_or_else(|| "text/turtle".into());
+    let status = qualia_solid_bridge::put_resource(
+        &url,
+        &body,
+        &ct,
+        bearer_token.as_deref(),
+    )
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({ "ok": true, "status": status, "url": url }))
+}
+
+/// Sync: if `body_or_path` is a path to an existing file, upload it; else treat as Turtle body.
+pub async fn sync_to_solid_pod(
+    pod_url: String,
+    body_or_path: Option<String>,
+    bearer_token: Option<String>,
+) -> Result<String, String> {
+    let (bytes, ct) = if let Some(ref p) = body_or_path {
+        let path = std::path::Path::new(p);
+        if path.is_file() {
+            let b = std::fs::read(path).map_err(|e| e.to_string())?;
+            let ct = if p.ends_with(".json") || p.ends_with(".jsonld") {
+                "application/ld+json"
+            } else {
+                "text/turtle"
+            };
+            (b, ct.to_string())
+        } else {
+            (p.as_bytes().to_vec(), "text/turtle".into())
+        }
+    } else {
+        // Minimal deposit marker when UI only passes a URL
+        let body = format!(
+            "@prefix dcterms: <http://purl.org/dc/terms/> .\n<> dcterms:description \"Qualia sync {}\" .\n",
+            chrono::Utc::now().to_rfc3339()
+        );
+        (body.into_bytes(), "text/turtle".into())
+    };
+    let status = qualia_solid_bridge::put_resource(
+        &pod_url,
+        &bytes,
+        &ct,
+        bearer_token.as_deref(),
+    )
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(format!(
+        "Synced to Solid Pod {pod_url} (HTTP {status}, {} bytes)",
+        bytes.len()
+    ))
+}
+
 pub async fn ingest_image(file_path: String) -> Result<serde_json::Value, String> {
     ingest_image_typed(file_path, "Generic Asset".to_string()).await
 }
@@ -998,7 +1139,37 @@ pub fn save_tokens_to_disk(storage_path: &str, tokens: &[TokenEntry]) -> Result<
 pub fn get_tokens() -> Vec<TokenEntry> {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage_path = state.config.lock().unwrap().storage_path.clone();
-    load_tokens_from_disk(&storage_path)
+    let mut tokens = load_tokens_from_disk(&storage_path);
+    
+    let id = read_identity();
+    if let Some(hash160) = id.as_ref().and_then(|v| v.get("ecash_hash160")).and_then(|v| v.as_str()) {
+        let client = crate::wallet::chronik::ChronikClient::new("https://chronik.be.cash");
+        if let Ok(utxos) = client.fetch_utxos_p2pkh(hash160) {
+            let mut balances: std::collections::HashMap<String, u64> = std::collections::HashMap::new();
+            for utxo in utxos {
+                if let Some(meta) = utxo.slp_meta {
+                    if let Some(token) = utxo.slp_token {
+                        if let Ok(amount) = token.amount.parse::<u64>() {
+                            *balances.entry(meta.token_id).or_insert(0) += amount;
+                        }
+                    }
+                }
+            }
+            
+            for t in tokens.iter_mut() {
+                if t.chain == "eCash" {
+                    // Extract token ID from contract e.g. "slp:0x123..."
+                    let token_id = t.contract.split("0x").nth(1).unwrap_or("").to_string();
+                    if let Some(&amt) = balances.get(&token_id.to_lowercase()) {
+                        let float_amt = amt as f64 / 10f64.powi(t.decimals as i32);
+                        t.balance = format!("{:.2}", float_amt);
+                    }
+                }
+            }
+        }
+    }
+    
+    tokens
 }
 
 pub fn add_token(
@@ -1019,7 +1190,6 @@ pub fn add_token(
     {
         return Err("Token already in wallet".to_string());
     }
-
     let slug: String = contract
         .chars()
         .rev()
@@ -1048,6 +1218,257 @@ pub fn add_token(
     save_tokens_to_disk(&storage_path, &tokens)?;
     Ok(entry)
 }
+
+pub fn send_ecash_token(token_id: &str, destination_address: &str, amount: u64) -> Result<String, String> {
+    use crate::wallet::transaction::{Transaction, TxIn, TxOut};
+    use crate::wallet::signer::{sign_p2pkh_input, hash160};
+    use crate::wallet::coin_select;
+    use bip32::XPrv;
+    use std::str::FromStr;
+
+    let id = read_identity().ok_or("No identity set — generate a seed first")?;
+    let hash160_hex = id.get("ecash_hash160")
+        .and_then(|v| v.as_str())
+        .ok_or("No ecash_hash160 in identity")?;
+
+    // Derive the private key from stored seed
+    let mnemonic_str = load_mnemonic_from_vault()?;
+    let mnemonic = bip39::Mnemonic::parse_in(bip39::Language::English, &mnemonic_str)
+        .map_err(|_| "Invalid stored mnemonic")?;
+    let seed_bytes = mnemonic.to_seed("");
+    let master = XPrv::new(&seed_bytes).map_err(|e| e.to_string())?;
+    let xec_path = bip32::DerivationPath::from_str("m/44'/899'/0'/0/0").map_err(|e| e.to_string())?;
+    let mut child = master.clone();
+    for c in xec_path.iter() {
+        child = child.derive_child(c).map_err(|e| e.to_string())?;
+    }
+
+    // Fetch UTXOs
+    let client = crate::wallet::chronik::ChronikClient::new("https://chronik.be.cash");
+    let utxos = client.fetch_utxos_p2pkh(hash160_hex)?;
+
+    // Select token UTXOs + funding UTXOs
+    let (token_utxos, xec_selection) = coin_select::select_token_utxos(&utxos, token_id, amount)?;
+
+    // Build the transaction
+    let mut tx = Transaction::new();
+
+    // Add token inputs
+    for utxo in &token_utxos {
+        tx.inputs.push(TxIn {
+            prev_txid: utxo.outpoint.txid.clone(),
+            prev_out_idx: utxo.outpoint.out_idx,
+            signature_script: Vec::new(),
+            sequence: 0xFFFFFFFF,
+        });
+    }
+    // Add funding inputs
+    for utxo in &xec_selection.selected {
+        tx.inputs.push(TxIn {
+            prev_txid: utxo.outpoint.txid.clone(),
+            prev_out_idx: utxo.outpoint.out_idx,
+            signature_script: Vec::new(),
+            sequence: 0xFFFFFFFF,
+        });
+    }
+
+    // Output 0: OP_RETURN with SLP SEND
+    let op_return_script = crate::wallet::semantic_tokens::generate_slp_send_op_return(token_id, &[amount]);
+    tx.outputs.push(TxOut {
+        value: 0,
+        pk_script: op_return_script,
+    });
+
+    // Output 1: Token recipient (dust amount)
+    let dest_pubkey_hash = decode_ecash_address(destination_address)?;
+    let mut p2pkh_script = vec![0x76, 0xa9, 0x14];
+    p2pkh_script.extend_from_slice(&dest_pubkey_hash);
+    p2pkh_script.extend_from_slice(&[0x88, 0xac]);
+    tx.outputs.push(TxOut {
+        value: coin_select::DUST_THRESHOLD_SATS as u64,
+        pk_script: p2pkh_script,
+    });
+
+    // Output 2: Change (if any)
+    if xec_selection.change_sats > 0 {
+        let own_pubkey_hash = hash160(&child.public_key().to_bytes());
+        let mut change_script = vec![0x76, 0xa9, 0x14];
+        change_script.extend_from_slice(&own_pubkey_hash);
+        change_script.extend_from_slice(&[0x88, 0xac]);
+        tx.outputs.push(TxOut {
+            value: xec_selection.change_sats as u64,
+            pk_script: change_script,
+        });
+    }
+
+    // Sign all inputs
+    let all_utxos: Vec<&crate::wallet::chronik::ChronikUtxo> = token_utxos.iter()
+        .chain(xec_selection.selected.iter())
+        .collect();
+    for (i, utxo) in all_utxos.iter().enumerate() {
+        let script_sig = sign_p2pkh_input(&tx, i, utxo.value as u64, &child);
+        tx.inputs[i].signature_script = script_sig;
+    }
+
+    // Broadcast
+    let raw_hex = hex::encode(tx.serialize());
+    let txid = client.broadcast_tx(&raw_hex)?;
+
+    // Record in ledger
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let _ = crate::wallet::ledger::append_entry(
+        std::path::Path::new(&storage),
+        &crate::wallet::ledger::new_entry(crate::wallet::ledger::LedgerEntryKind::TxBroadcast {
+            chain: "XEC".into(),
+            txid: txid.clone(),
+            amount_sats: amount,
+            direction: "out".into(),
+        }),
+    );
+
+    Ok(txid)
+}
+
+/// Build a native XEC send transaction (preview only — does not broadcast).
+/// Returns the raw transaction hex and a fee estimate for user confirmation.
+#[derive(Serialize, Clone)]
+pub struct SendPreview {
+    pub raw_hex: String,
+    pub fee_sats: i64,
+    pub total_input_sats: i64,
+    pub change_sats: i64,
+    pub target_sats: i64,
+}
+
+pub fn build_send_xec(destination_address: &str, amount_sats: i64) -> Result<SendPreview, String> {
+    use crate::wallet::transaction::{Transaction, TxIn, TxOut};
+    use crate::wallet::signer::{sign_p2pkh_input, hash160};
+    use crate::wallet::coin_select;
+    use bip32::XPrv;
+    use std::str::FromStr;
+
+    if amount_sats <= 0 {
+        return Err("Amount must be positive".into());
+    }
+
+    let id = read_identity().ok_or("No identity set — generate a seed first")?;
+    let hash160_hex = id.get("ecash_hash160")
+        .and_then(|v| v.as_str())
+        .ok_or("No ecash_hash160 in identity")?;
+
+    let mnemonic_str = load_mnemonic_from_vault()?;
+    let mnemonic = bip39::Mnemonic::parse_in(bip39::Language::English, &mnemonic_str)
+        .map_err(|_| "Invalid stored mnemonic")?;
+    let seed_bytes = mnemonic.to_seed("");
+    let master = XPrv::new(&seed_bytes).map_err(|e| e.to_string())?;
+    let xec_path = bip32::DerivationPath::from_str("m/44'/899'/0'/0/0").map_err(|e| e.to_string())?;
+    let mut child = master.clone();
+    for c in xec_path.iter() {
+        child = child.derive_child(c).map_err(|e| e.to_string())?;
+    }
+
+    let client = crate::wallet::chronik::ChronikClient::new("https://chronik.be.cash");
+    let utxos = client.fetch_utxos_p2pkh(hash160_hex)?;
+    let selection = coin_select::select_utxos(&utxos, amount_sats)?;
+
+    let mut tx = Transaction::new();
+    for utxo in &selection.selected {
+        tx.inputs.push(TxIn {
+            prev_txid: utxo.outpoint.txid.clone(),
+            prev_out_idx: utxo.outpoint.out_idx,
+            signature_script: Vec::new(),
+            sequence: 0xFFFFFFFF,
+        });
+    }
+
+    // Recipient output
+    let dest_pubkey_hash = decode_ecash_address(destination_address)?;
+    let mut p2pkh_script = vec![0x76, 0xa9, 0x14];
+    p2pkh_script.extend_from_slice(&dest_pubkey_hash);
+    p2pkh_script.extend_from_slice(&[0x88, 0xac]);
+    tx.outputs.push(TxOut {
+        value: amount_sats as u64,
+        pk_script: p2pkh_script,
+    });
+
+    // Change output
+    if selection.change_sats > 0 {
+        let own_pubkey_hash = hash160(&child.public_key().to_bytes());
+        let mut change_script = vec![0x76, 0xa9, 0x14];
+        change_script.extend_from_slice(&own_pubkey_hash);
+        change_script.extend_from_slice(&[0x88, 0xac]);
+        tx.outputs.push(TxOut {
+            value: selection.change_sats as u64,
+            pk_script: change_script,
+        });
+    }
+
+    // Sign
+    for (i, utxo) in selection.selected.iter().enumerate() {
+        let script_sig = sign_p2pkh_input(&tx, i, utxo.value as u64, &child);
+        tx.inputs[i].signature_script = script_sig;
+    }
+
+    let raw_hex = hex::encode(tx.serialize());
+    Ok(SendPreview {
+        raw_hex,
+        fee_sats: selection.fee_sats,
+        total_input_sats: selection.total_input_sats,
+        change_sats: selection.change_sats,
+        target_sats: amount_sats,
+    })
+}
+
+/// Broadcast a previously built transaction.
+pub fn confirm_send_xec(raw_hex: &str) -> Result<String, String> {
+    let client = crate::wallet::chronik::ChronikClient::new("https://chronik.be.cash");
+    let txid = client.broadcast_tx(raw_hex)?;
+
+    // Record in ledger
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let _ = crate::wallet::ledger::append_entry(
+        std::path::Path::new(&storage),
+        &crate::wallet::ledger::new_entry(crate::wallet::ledger::LedgerEntryKind::TxBroadcast {
+            chain: "XEC".into(),
+            txid: txid.clone(),
+            amount_sats: 0, // Amount is in the raw tx; we don't parse it back here
+            direction: "out".into(),
+        }),
+    );
+
+    Ok(txid)
+}
+
+/// Decode an eCash address to its 20-byte pubkey hash.
+/// Supports both `ecash:q...` (CashAddr) and legacy base58 formats.
+fn decode_ecash_address(addr: &str) -> Result<Vec<u8>, String> {
+    // Strip ecash: prefix if present
+    let stripped = if let Some(a) = addr.strip_prefix("ecash:") {
+        a
+    } else {
+        addr
+    };
+    // Try base58 decode (legacy format)
+    let decoded = bs58::decode(stripped).into_vec().map_err(|e| format!("Invalid address: {}", e))?;
+    if decoded.len() < 21 {
+        return Err("Address too short".into());
+    }
+    // Skip version byte, take 20-byte hash
+    Ok(decoded[1..21].to_vec())
+}
+
+/// Load the stored mnemonic from the vault (identity file stores derivation result,
+/// the mnemonic itself is stored separately for security).
+fn load_mnemonic_from_vault() -> Result<String, String> {
+    let mnemonic_path = app_meta_dir().join("mnemonic.enc");
+    std::fs::read_to_string(&mnemonic_path).map_err(|_| {
+        "No mnemonic stored — please save your seed phrase via the identity setup flow".to_string()
+    })
+}
+
+
 
 pub fn remove_token(id: String) -> Result<(), String> {
     let state = crate::state::APP_STATE.get().unwrap();
@@ -1103,25 +1524,48 @@ pub fn get_coin_balances() -> Vec<CoinBalance> {
             .unwrap_or("")
             .to_string()
     };
-    let status: String = if has_identity {
-        "unsynced".into()
+    let no_adapter_status: String = if has_identity {
+        "no_adapter".into()
     } else {
         "awaiting_identity".into()
     };
-    let zero_display = if has_identity { "0" } else { "—" };
+    let zero_display = if has_identity { "0" } else { "\u{2014}" };
+
+    let mut xec_balance = 0.0;
+    let mut xec_status = if has_identity { "no_adapter".to_string() } else { "awaiting_identity".to_string() };
+    let mut xec_display = zero_display.to_string();
+
+    if has_identity {
+        if let Some(hash160) = id.as_ref().and_then(|v| v.get("ecash_hash160")).and_then(|v| v.as_str()) {
+            let client = crate::wallet::chronik::ChronikClient::new("https://chronik.be.cash");
+            if let Ok(utxos) = client.fetch_utxos_p2pkh(hash160) {
+                let mut sats = 0;
+                for utxo in utxos {
+                    if utxo.slp_meta.is_none() {
+                        sats += utxo.value;
+                    }
+                }
+                xec_balance = sats as f64 / 100.0; // XEC is 2 decimals (100 sats)
+                xec_display = format!("{:.2}", xec_balance);
+                xec_status = "synced".into();
+            } else {
+                xec_status = "offline".into();
+            }
+        }
+    }
 
     let mut balances = vec![
         CoinBalance {
             coin: "eCash".into(),
             ticker: "XEC".into(),
             address: addr("ecash_xec"),
-            balance: 0.0,
-            balance_display: zero_display.into(),
+            balance: xec_balance,
+            balance_display: xec_display,
             fiat_usd: 0.0,
             price_usd: 0.0,
             change_24h: 0.0,
             network: "eCash".into(),
-            status: status.clone(),
+            status: xec_status,
         },
         CoinBalance {
             coin: "Bitcoin".into(),
@@ -1133,19 +1577,22 @@ pub fn get_coin_balances() -> Vec<CoinBalance> {
             price_usd: 0.0,
             change_24h: 0.0,
             network: "Bitcoin".into(),
-            status: status.clone(),
+            status: no_adapter_status.clone(),
         },
         CoinBalance {
             coin: "Monero".into(),
             ticker: "XMR".into(),
-            address: addr("monero_xmr"),
+            // XMR derivation is not implemented (see derive_wallets_from_seed).
+            // Show an explicit non-address so it can't be mistaken for a real
+            // receive address — never a fabricated "4..." string.
+            address: "(not yet supported)".into(),
             balance: 0.0,
             balance_display: zero_display.into(),
             fiat_usd: 0.0,
             price_usd: 0.0,
             change_24h: 0.0,
             network: "Monero".into(),
-            status: status.clone(),
+            status: no_adapter_status.clone(),
         },
         CoinBalance {
             coin: "Ethereum".into(),
@@ -1157,7 +1604,7 @@ pub fn get_coin_balances() -> Vec<CoinBalance> {
             price_usd: 0.0,
             change_24h: 0.0,
             network: "Ethereum".into(),
-            status: status.clone(),
+            status: no_adapter_status.clone(),
         },
     ];
 
@@ -1172,7 +1619,7 @@ pub fn get_coin_balances() -> Vec<CoinBalance> {
             price_usd: 0.0,
             change_24h: 0.0,
             network: "Nyx Chain".into(),
-            status,
+            status: no_adapter_status,
         });
     }
 
@@ -1180,141 +1627,134 @@ pub fn get_coin_balances() -> Vec<CoinBalance> {
 }
 
 pub fn get_transaction_history(ticker: String) -> Vec<TxRecord> {
-    let all = vec![
-        TxRecord {
-            txid: "7a9b4f2e1c3d…4c1f".into(),
-            ticker: "XEC".into(),
-            direction: "out".into(),
-            amount: "0.0001".into(),
-            label: "Mint ALP Token".into(),
-            timestamp: "2026-06-05 14:32".into(),
-            status: "confirmed".into(),
-            confirmations: 142,
-            fee: "0.00001 XEC".into(),
-            counterparty: "eCash Burn Address".into(),
-        },
-        TxRecord {
-            txid: "99a1bcd4ef56…bb2c".into(),
-            ticker: "NYM".into(),
-            direction: "out".into(),
-            amount: "100.00".into(),
-            label: "Mixnet Staking".into(),
-            timestamp: "2026-06-04 09:12".into(),
-            status: "confirmed".into(),
-            confirmations: 320,
-            fee: "0.01 NYM".into(),
-            counterparty: "mixGateway1".into(),
-        },
-        TxRecord {
-            txid: "4cc288ab12dc…11a9".into(),
-            ticker: "XEC".into(),
-            direction: "in".into(),
-            amount: "50,000.00".into(),
-            label: "Received XEC".into(),
-            timestamp: "2026-06-03 17:45".into(),
-            status: "confirmed".into(),
-            confirmations: 580,
-            fee: "".into(),
-            counterparty: "ecash:qsender7x…".into(),
-        },
-        TxRecord {
-            txid: "b8f1234abc99…de45".into(),
-            ticker: "ETH".into(),
-            direction: "out".into(),
-            amount: "0.05".into(),
-            label: "Smart Contract Interaction".into(),
-            timestamp: "2026-06-02 11:20".into(),
-            status: "confirmed".into(),
-            confirmations: 1280,
-            fee: "0.002 ETH".into(),
-            counterparty: "0xContract4f2…".into(),
-        },
-        TxRecord {
-            txid: "c2d4567ef890…ab12".into(),
-            ticker: "BTC".into(),
-            direction: "in".into(),
-            amount: "0.00100000".into(),
-            label: "Received BTC".into(),
-            timestamp: "2026-06-01 08:55".into(),
-            status: "confirmed".into(),
-            confirmations: 2100,
-            fee: "".into(),
-            counterparty: "bc1qsender9a…".into(),
-        },
-        TxRecord {
-            txid: "e1f23456789a…cd34".into(),
-            ticker: "XEC".into(),
-            direction: "out".into(),
-            amount: "1,000.00".into(),
-            label: "ALP Token Transfer".into(),
-            timestamp: "2026-05-31 16:30".into(),
-            status: "confirmed".into(),
-            confirmations: 3400,
-            fee: "0.00001 XEC".into(),
-            counterparty: "ecash:qrecipient3b…".into(),
-        },
-        TxRecord {
-            txid: "a9b0c1d2e3f4…5678".into(),
-            ticker: "XMR".into(),
-            direction: "in".into(),
-            amount: "2.00000000".into(),
-            label: "Received XMR".into(),
-            timestamp: "2026-05-30 14:10".into(),
-            status: "confirmed".into(),
-            confirmations: 4800,
-            fee: "".into(),
-            counterparty: "4xmrSender8b…".into(),
-        },
-        TxRecord {
-            txid: "f8e7d6c5b4a3…2109".into(),
-            ticker: "NYM".into(),
-            direction: "in".into(),
-            amount: "500.00".into(),
-            label: "Staking Reward".into(),
-            timestamp: "2026-05-29 10:00".into(),
-            status: "confirmed".into(),
-            confirmations: 5200,
-            fee: "".into(),
-            counterparty: "Nym Gateway Reward".into(),
-        },
-        TxRecord {
-            txid: "1a2b3c4d5e6f…7890".into(),
-            ticker: "XEC".into(),
-            direction: "in".into(),
-            amount: "250,000.00".into(),
-            label: "Initial Funding".into(),
-            timestamp: "2026-05-25 08:00".into(),
-            status: "confirmed".into(),
-            confirmations: 9100,
-            fee: "".into(),
-            counterparty: "ecash:qfunding2a…".into(),
-        },
-        TxRecord {
-            txid: "0f1e2d3c4b5a…6789".into(),
-            ticker: "ETH".into(),
-            direction: "in".into(),
-            amount: "1.42000000".into(),
-            label: "ETH Transfer In".into(),
-            timestamp: "2026-05-20 12:00".into(),
-            status: "confirmed".into(),
-            confirmations: 12400,
-            fee: "".into(),
-            counterparty: "0xSender7c4…".into(),
-        },
-    ];
-    let nym_enabled = nym_mixnet_opted_in();
-    let filtered: Vec<TxRecord> = all
-        .into_iter()
-        .filter(|tx| nym_enabled || tx.ticker != "NYM")
-        .collect();
-    if ticker.is_empty() || ticker == "ALL" {
-        filtered
+    // For XEC: query live transaction history from Chronik.
+    // For other chains: return empty (no adapter yet).
+    let id = read_identity();
+
+    let xec_history: Vec<TxRecord> = if ticker.is_empty() || ticker == "ALL" || ticker == "XEC" {
+        fetch_xec_tx_history(&id).unwrap_or_default()
     } else {
-        filtered
+        Vec::new()
+    };
+
+    if ticker.is_empty() || ticker == "ALL" {
+        xec_history
+    } else {
+        xec_history
             .into_iter()
             .filter(|tx| tx.ticker == ticker)
             .collect()
     }
+}
+
+/// Fetch real XEC transaction history from Chronik.
+fn fetch_xec_tx_history(id: &Option<serde_json::Value>) -> Result<Vec<TxRecord>, String> {
+    let hash160 = id
+        .as_ref()
+        .and_then(|v| v.get("ecash_hash160"))
+        .and_then(|v| v.as_str())
+        .ok_or("No ecash_hash160 in identity")?;
+
+    let own_script_suffix = hash160.to_lowercase();
+
+    let client = crate::wallet::chronik::ChronikClient::new("https://chronik.be.cash");
+    let page = client.fetch_tx_history_p2pkh(hash160, 0, 25)?;
+
+    let mut records = Vec::new();
+    for tx in page.txs {
+        // Determine direction by checking if our address appears in inputs
+        let is_outgoing = tx.inputs.iter().any(|inp| {
+            inp.output_script.to_lowercase().contains(&own_script_suffix)
+        });
+
+        // Calculate net amount
+        let own_output_sats: i64 = tx.outputs.iter()
+            .filter(|o| o.output_script.to_lowercase().contains(&own_script_suffix))
+            .map(|o| o.value)
+            .sum();
+
+        let own_input_sats: i64 = if is_outgoing {
+            tx.inputs.iter()
+                .filter(|i| i.output_script.to_lowercase().contains(&own_script_suffix))
+                .map(|i| i.value)
+                .sum()
+        } else {
+            0
+        };
+
+        let (direction, amount_sats, label) = if is_outgoing {
+            let sent = own_input_sats - own_output_sats; // net outflow
+            ("out", sent, "Sent XEC")
+        } else {
+            ("in", own_output_sats, "Received XEC")
+        };
+
+        let xec_amount = amount_sats as f64 / 100.0;
+        let amount_str = format!("{:.2}", xec_amount);
+
+        // Determine confirmation status
+        let (status_str, confirmations) = match &tx.block {
+            Some(block) => {
+                // Rough confirmation count (we don't know current height, so show block height)
+                ("confirmed".to_string(), block.height as u32)
+            }
+            None => ("pending".to_string(), 0),
+        };
+
+        // Timestamp from block or first-seen
+        let timestamp = if let Some(ref block) = tx.block {
+            format_unix_timestamp(block.timestamp)
+        } else if tx.time_first_seen > 0 {
+            format_unix_timestamp(tx.time_first_seen)
+        } else {
+            "—".to_string()
+        };
+
+        // Counterparty: for outgoing, the first non-own output address; for incoming, first input
+        let counterparty = if is_outgoing {
+            tx.outputs.iter()
+                .find(|o| !o.output_script.to_lowercase().contains(&own_script_suffix) && o.value > 0)
+                .map(|o| format!("script:{}", &o.output_script[..o.output_script.len().min(16)]))
+                .unwrap_or_else(|| "self".to_string())
+        } else {
+            tx.inputs.first()
+                .map(|i| format!("script:{}", &i.output_script[..i.output_script.len().min(16)]))
+                .unwrap_or_else(|| "coinbase".to_string())
+        };
+
+        // Truncate txid for display
+        let txid_display = if tx.txid.len() > 16 {
+            format!("{}…{}", &tx.txid[..8], &tx.txid[tx.txid.len()-4..])
+        } else {
+            tx.txid.clone()
+        };
+
+        records.push(TxRecord {
+            txid: txid_display,
+            ticker: "XEC".into(),
+            direction: direction.into(),
+            amount: amount_str,
+            label: label.into(),
+            timestamp,
+            status: status_str,
+            confirmations,
+            fee: "".into(), // Chronik doesn't return fee directly
+            counterparty,
+        });
+    }
+
+    Ok(records)
+}
+
+/// Format a Unix timestamp to a human-readable string.
+fn format_unix_timestamp(ts: i64) -> String {
+    let secs = ts as u64;
+    let days = secs / 86400;
+    let remaining = secs % 86400;
+    let hours = remaining / 3600;
+    let minutes = (remaining % 3600) / 60;
+    let (y, m, d) = crate::wallet::ledger::epoch_days_to_date_pub(days);
+    format!("{:04}-{:02}-{:02} {:02}:{:02}", y, m, d, hours, minutes)
 }
 
 pub fn is_first_run() -> bool {
@@ -1359,24 +1799,34 @@ pub async fn derive_wallets_from_seed(seed: String) -> Result<serde_json::Value,
         Err(_) => return Err("Invalid 12-word seed phrase.".to_string()),
     };
 
-    // Deterministically generate keys based on the secure seed
     let seed_bytes = mnemonic.to_seed("");
+    let wallet = crate::wallet::HdWallet::from_seed(&seed_bytes)?;
 
-    // Mock derivation by hex-encoding slices of the master seed
+    let btc_addr = wallet.derive_address("BTC", "m/44'/0'/0'/0/0")?.address;
+    let eth_addr = wallet.derive_address("ETH", "m/44'/60'/0'/0/0")?.address;
+    let nym_addr = wallet.derive_address("NYM", "m/44'/118'/0'/0/0")?.address;
+    let xec_payload = wallet.derive_address("XEC", "m/44'/899'/0'/0/0")?;
+    let xec_addr = xec_payload.address;
+    let xec_hash160 = xec_payload.pubkey_hash;
+
+    // Monero is deliberately NOT derived here. It uses ed25519 (not the
+    // secp256k1 BIP32 path above), Keccak-256 key derivation, and its own
+    // base58 address format. Emitting a plausible-looking "4..." string with
+    // no keys behind it is dangerous: any XMR sent to a keyless address is
+    // permanently lost. So we report it empty rather than fabricate an
+    // address. Real, test-vector-verified ed25519/Keccak/base58 derivation is
+    // tracked as follow-up work (needs an authoritative seed→address vector to
+    // verify against before it can be trusted).
     let hex_seed = to_hex(&seed_bytes[0..16]);
-    let xec_hex = to_hex(&seed_bytes[16..24]);
-    let eth_hex = to_hex(&seed_bytes[24..32]);
-    let nym_hex = to_hex(&seed_bytes[32..40]);
-    let btc_hex = to_hex(&seed_bytes[40..48]);
-    let xmr_hex = to_hex(&seed_bytes[48..56]);
 
     Ok(serde_json::json!({
         "qualia_root": format!("did:qualia:0x{}", hex_seed),
-        "nym_mixnet": format!("n1{}...", nym_hex),
-        "ecash_xec": format!("ecash:q{}...", xec_hex),
-        "ethereum": format!("0x{}...", eth_hex),
-        "bitcoin_btc": format!("bc1q{}...", &btc_hex[0..btc_hex.len().min(16)]),
-        "monero_xmr": format!("4{}...", &xmr_hex[0..xmr_hex.len().min(16)])
+        "nym_mixnet": nym_addr,
+        "ecash_xec": xec_addr,
+        "ecash_hash160": xec_hash160,
+        "ethereum": eth_addr,
+        "bitcoin_btc": btc_addr,
+        "monero_xmr": "" // not derived — never a fabricated address (see above)
     }))
 }
 
@@ -1385,42 +1835,144 @@ pub async fn generate_front_door_invite() -> Result<String, String> {
     Ok(invite.invite_json)
 }
 
-pub async fn mint_semantic_token(_asset_id: String) -> Result<String, String> {
-    // Phase 12 Mock: Mint ALP eToken with eMPP / RDF metadata payload
-    Ok(format!("alp:0x{:04X}...", 45672_u32))
+pub async fn mint_semantic_token(asset_id: String) -> Result<String, String> {
+    use crate::wallet::transaction::{Transaction, TxIn, TxOut};
+    use crate::wallet::signer::{sign_p2pkh_input, hash160};
+    use crate::wallet::coin_select;
+    use bip32::XPrv;
+    use std::str::FromStr;
+
+    let id = read_identity().ok_or("No identity set — generate a seed first")?;
+    let hash160_hex = id.get("ecash_hash160")
+        .and_then(|v| v.as_str())
+        .ok_or("No ecash_hash160 in identity")?;
+
+    let mnemonic_str = load_mnemonic_from_vault()?;
+    let mnemonic = bip39::Mnemonic::parse_in(bip39::Language::English, &mnemonic_str)
+        .map_err(|_| "Invalid stored mnemonic")?;
+    let seed_bytes = mnemonic.to_seed("");
+    let master = XPrv::new(&seed_bytes).map_err(|e| e.to_string())?;
+    let xec_path = bip32::DerivationPath::from_str("m/44'/899'/0'/0/0").map_err(|e| e.to_string())?;
+    let mut child = master.clone();
+    for c in xec_path.iter() {
+        child = child.derive_child(c).map_err(|e| e.to_string())?;
+    }
+
+    // Parse asset_id as JSON metadata or use default
+    let metadata = crate::wallet::semantic_tokens::SemanticTokenMetadata {
+        token_ticker: asset_id.clone(),
+        token_name: format!("Qualia Semantic Token: {}", asset_id),
+        token_document_url: format!("https://qualia.io/tokens/{}", asset_id.to_lowercase()),
+        token_document_hash: format!("{:064x}", 0u128), // Placeholder hash
+        decimals: 0,
+    };
+
+    let client = crate::wallet::chronik::ChronikClient::new("https://chronik.be.cash");
+    let utxos = client.fetch_utxos_p2pkh(hash160_hex)?;
+
+    // Need enough XEC to cover: OP_RETURN (0) + mint output (546) + change + fee
+    let min_needed = coin_select::DUST_THRESHOLD_SATS + coin_select::BASE_FEE_SATS;
+    let selection = coin_select::select_utxos(&utxos, min_needed)?;
+
+    let mut tx = Transaction::new();
+    for utxo in &selection.selected {
+        tx.inputs.push(TxIn {
+            prev_txid: utxo.outpoint.txid.clone(),
+            prev_out_idx: utxo.outpoint.out_idx,
+            signature_script: Vec::new(),
+            sequence: 0xFFFFFFFF,
+        });
+    }
+
+    // Output 0: OP_RETURN GENESIS
+    let op_return = crate::wallet::semantic_tokens::generate_slp_op_return(&metadata);
+    tx.outputs.push(TxOut { value: 0, pk_script: op_return });
+
+    // Output 1: Mint receiver (self)
+    let own_pubkey_hash = hash160(&child.public_key().to_bytes());
+    let mut mint_script = vec![0x76, 0xa9, 0x14];
+    mint_script.extend_from_slice(&own_pubkey_hash);
+    mint_script.extend_from_slice(&[0x88, 0xac]);
+    tx.outputs.push(TxOut {
+        value: coin_select::DUST_THRESHOLD_SATS as u64,
+        pk_script: mint_script,
+    });
+
+    // Output 2: Change
+    if selection.change_sats > 0 {
+        let mut change_script = vec![0x76, 0xa9, 0x14];
+        change_script.extend_from_slice(&own_pubkey_hash);
+        change_script.extend_from_slice(&[0x88, 0xac]);
+        tx.outputs.push(TxOut {
+            value: selection.change_sats as u64,
+            pk_script: change_script,
+        });
+    }
+
+    // Sign
+    for (i, utxo) in selection.selected.iter().enumerate() {
+        let script_sig = sign_p2pkh_input(&tx, i, utxo.value as u64, &child);
+        tx.inputs[i].signature_script = script_sig;
+    }
+
+    // Broadcast
+    let raw_hex = hex::encode(tx.serialize());
+    let txid = client.broadcast_tx(&raw_hex)?;
+
+    // Record in ledger
+    let state = crate::state::APP_STATE.get().unwrap();
+    let storage = state.config.lock().unwrap().storage_path.clone();
+    let _ = crate::wallet::ledger::append_entry(
+        std::path::Path::new(&storage),
+        &crate::wallet::ledger::new_entry(crate::wallet::ledger::LedgerEntryKind::TokenMint {
+            chain: "XEC".into(),
+            txid: txid.clone(),
+            token_id: txid.clone(), // For SLP, the token_id IS the genesis txid
+            symbol: asset_id,
+        }),
+    );
+
+    Ok(txid)
 }
 
 pub async fn fetch_wallet_portfolio() -> Result<serde_json::Value, String> {
-    // Phase 13 Mock: Return diverse portfolio of tokens
-    Ok(serde_json::json!([
-        {
-            "name": "Lion Rampant (Heraldry)",
-            "tokenId": "alp:0x1A2B...",
-            "ticker": "LION",
-            "balance": "1.00",
-            "rdf": "urn:concept:heraldry",
-            "network": "eCash",
-            "type": "ALP"
-        },
-        {
-            "name": "Eye of Horus (Artifact)",
-            "tokenId": "alp:0x9B4C...",
-            "ticker": "HORUS",
-            "balance": "50.00",
-            "rdf": "urn:concept:egyptian",
-            "network": "eCash",
-            "type": "ALP"
-        },
-        {
-            "name": "Early Beta Meme Coin",
-            "tokenId": "slp:0x44F1...",
-            "ticker": "MEME",
-            "balance": "150000.00",
-            "rdf": "Legacy Metadata",
-            "network": "eCash",
-            "type": "SLP"
-        }
-    ]))
+    // Compose real portfolio from live coin balances + token registry
+    let balances = get_coin_balances();
+    let tokens = get_tokens();
+
+    let mut portfolio = Vec::new();
+
+    // Add native coin entries
+    for b in &balances {
+        portfolio.push(serde_json::json!({
+            "name": b.coin,
+            "tokenId": "",
+            "ticker": b.ticker,
+            "balance": b.balance_display,
+            "rdf": "",
+            "network": b.network,
+            "type": "native",
+            "status": b.status,
+            "address": b.address,
+            "fiat_usd": b.fiat_usd,
+        }));
+    }
+
+    // Add token entries
+    for t in &tokens {
+        portfolio.push(serde_json::json!({
+            "name": t.name,
+            "tokenId": t.contract,
+            "ticker": t.symbol,
+            "balance": t.balance,
+            "rdf": "",
+            "network": t.chain,
+            "type": t.token_type,
+            "status": "loaded",
+        }));
+    }
+
+    Ok(serde_json::Value::Array(portfolio))
 }
 
 pub async fn import_external_seed(
@@ -1428,29 +1980,32 @@ pub async fn import_external_seed(
     seed: String,
     _label: String,
 ) -> Result<String, String> {
-    // Phase 14 Mock: Multi-Seed Account Import
     // Validate seed format
     if seed.split_whitespace().count() < 12 {
-        return Err("Invalid seed phrase".to_string());
+        return Err("Invalid seed phrase — must be at least 12 words".to_string());
     }
 
-    // Hash seed to deterministically generate a mock address based on network
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
-    let mut hasher = DefaultHasher::new();
-    format!("{}-{}", seed, network).hash(&mut hasher);
-    let mock_hash = format!("{:x}", hasher.finish());
+    // Derive real addresses using the existing HD wallet pipeline
+    let mnemonic = bip39::Mnemonic::parse_in(bip39::Language::English, &seed)
+        .map_err(|_| "Invalid BIP-39 mnemonic".to_string())?;
+    let seed_bytes = mnemonic.to_seed("");
+    let wallet = crate::wallet::HdWallet::from_seed(&seed_bytes)?;
 
-    let address = match network.as_str() {
-        "eCash (XEC)" => format!("ecash:q{}...", &mock_hash[0..8]),
-        "Bitcoin (BTC)" => format!("bc1q{}...", &mock_hash[0..8]),
-        "Nym (NYM) - Nyx Chain" => format!("n1{}...", &mock_hash[0..8]),
-        "Monero (XMR)" => format!("4{}...", &mock_hash[0..12]),
-        "Ethereum (EVM)" => format!("0x{}...", &mock_hash[0..10]),
-        _ => format!("0x{}...", &mock_hash[0..10]),
+    let (net_code, path) = match network.as_str() {
+        "eCash (XEC)" | "XEC" => ("XEC", "m/44'/899'/0'/0/0"),
+        "Bitcoin (BTC)" | "BTC" => ("BTC", "m/44'/0'/0'/0/0"),
+        "Nym (NYM) - Nyx Chain" | "NYM" => ("NYM", "m/44'/118'/0'/0/0"),
+        "Ethereum (EVM)" | "ETH" => ("ETH", "m/44'/60'/0'/0/0"),
+        "Monero (XMR)" | "XMR" => {
+            // Monero uses ed25519, not secp256k1 — still mock for now
+            let xmr_hex = to_hex(&seed_bytes[48..56]);
+            return Ok(format!("4{}...", &xmr_hex[0..xmr_hex.len().min(16)]));
+        }
+        _ => return Err(format!("Unsupported network: {}", network)),
     };
 
-    Ok(address)
+    let payload = wallet.derive_address(net_code, path)?;
+    Ok(payload.address)
 }
 
 pub async fn toggle_nym_relay() -> Result<bool, String> {
@@ -1673,28 +2228,46 @@ pub async fn discover_models() -> Result<Vec<llm_offload::ModelInfo>, String> {
             .file_name()
             .map(|n| n.to_string_lossy().to_string())
             .unwrap_or_default();
-        if !path.extension().map(|e| e == "gguf").unwrap_or(false)
-            || name.to_ascii_lowercase().contains("mmproj")
-        {
+        let ext = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        if (ext != "gguf" && ext != "p64") || name.to_ascii_lowercase().contains("mmproj") {
             return;
         }
-        let key = path.to_string_lossy().to_ascii_lowercase();
+        // Prefer converted p64 when listing a GGUF that has a sibling container.
+        let effective: PathBuf = if ext == "gguf" {
+            let p64 = path.with_extension("p64");
+            if p64.is_file() {
+                p64
+            } else {
+                path.to_path_buf()
+            }
+        } else {
+            path.to_path_buf()
+        };
+        let name = effective
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or(name);
+        let key = effective.to_string_lossy().to_ascii_lowercase();
         if !seen.insert(key) {
             return;
         }
-        let display_name = if path.starts_with(&models_dir) {
+        let display_name = if effective.starts_with(&models_dir) {
             name
         } else {
-            path.to_string_lossy().into_owned()
+            effective.to_string_lossy().into_owned()
         };
         let is_active = active_path
             .as_ref()
-            .map(|active| paths_refer_to_same_file(active, path))
+            .map(|active| paths_refer_to_same_file(active, &effective))
             .unwrap_or(false);
         models.push(llm_offload::ModelInfo {
             name: display_name,
             is_active,
-            avatar_type: if path.starts_with(&models_dir) {
+            avatar_type: if effective.starts_with(&models_dir) {
                 "installed".to_string()
             } else {
                 "local".to_string()
@@ -1705,12 +2278,10 @@ pub async fn discover_models() -> Result<Vec<llm_offload::ModelInfo>, String> {
     if let Ok(entries) = std::fs::read_dir(&models_dir) {
         for entry in entries.filter_map(Result::ok) {
             let path = entry.path();
-            if path.extension().map(|e| e == "gguf").unwrap_or(false) {
+            let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+            if ext == "gguf" || ext == "p64" {
                 push_model(&path);
-            } else if path
-                .extension()
-                .map(|e| e == "json")
-                .unwrap_or(false)
+            } else if ext == "json"
                 && path
                     .file_name()
                     .and_then(|n| n.to_str())
@@ -1933,6 +2504,255 @@ pub fn cancel_chat_inference() {
     crate::chat_inference::request_cancel_inference();
 }
 
+// ── Agent roster (software agents defined UNDER the principal) ─────────────────
+//
+// The chat-graph is human-first; a software agent is invoked into a conversation as the person's
+// instrument. Every agent is defined under the principal, with a backend that is either the native
+// local engine or a remote provider reached over MCP. Local is preferred; remote is opt-in + gated.
+
+fn agent_roster_storage() -> Result<String, String> {
+    let state = crate::state::APP_STATE.get().ok_or("Application not initialized")?;
+    let storage = state
+        .config
+        .lock()
+        .map_err(|e| e.to_string())?
+        .storage_path
+        .clone();
+    Ok(storage)
+}
+
+pub fn agent_roster_list() -> Result<serde_json::Value, String> {
+    let storage = agent_roster_storage()?;
+    let roster = crate::agent_registry::load_roster(Path::new(&storage));
+    serde_json::to_value(roster).map_err(|e| e.to_string())
+}
+
+pub fn agent_roster_get(slug: String) -> Result<serde_json::Value, String> {
+    let storage = agent_roster_storage()?;
+    match crate::agent_registry::get_agent(Path::new(&storage), &slug) {
+        Some(a) => serde_json::to_value(a).map_err(|e| e.to_string()),
+        None => Ok(serde_json::Value::Null),
+    }
+}
+
+pub fn agent_roster_upsert(agent_json: String) -> Result<(), String> {
+    let storage = agent_roster_storage()?;
+    let agent: crate::agent_registry::AgentDefinition =
+        serde_json::from_str(&agent_json).map_err(|e| format!("invalid agent JSON: {e}"))?;
+    crate::agent_registry::upsert_agent(Path::new(&storage), agent)
+}
+
+pub fn agent_roster_remove(slug: String) -> Result<(), String> {
+    let storage = agent_roster_storage()?;
+    crate::agent_registry::remove_agent(Path::new(&storage), &slug)
+}
+
+/// Convenience: create/update a REMOTE-MCP agent from primitives so the UI never hand-builds the
+/// backend enum. `transport_kind` ∈ `"tcp"` | `"http"` | `"stdio"`; `endpoint` is `host:port` / a URL /
+/// a command line respectively.
+pub fn agent_roster_add_remote(
+    slug: String,
+    display_name: String,
+    transport_kind: String,
+    endpoint: String,
+    infer_tool: Option<String>,
+    model: Option<String>,
+    system_prompt: Option<String>,
+) -> Result<(), String> {
+    use crate::agent_registry::{AgentBackendSpec, McpTransport};
+    if slug.trim().is_empty() {
+        return Err("agent slug is required".to_string());
+    }
+    let transport = match transport_kind.to_lowercase().as_str() {
+        "tcp" => {
+            let (host, port) = endpoint
+                .rsplit_once(':')
+                .ok_or_else(|| "TCP endpoint must be host:port".to_string())?;
+            let port: u16 = port
+                .trim()
+                .parse()
+                .map_err(|_| "invalid TCP port".to_string())?;
+            McpTransport::Tcp {
+                host: host.trim().to_string(),
+                port,
+            }
+        }
+        "http" => McpTransport::Http {
+            url: endpoint.trim().to_string(),
+        },
+        "stdio" => {
+            let mut parts = endpoint.split_whitespace().map(|s| s.to_string());
+            let command = parts
+                .next()
+                .ok_or_else(|| "stdio endpoint needs a command".to_string())?;
+            McpTransport::Stdio {
+                command,
+                args: parts.collect(),
+            }
+        }
+        other => return Err(format!("unknown transport '{other}' (use tcp|http|stdio)")),
+    };
+    let backend = AgentBackendSpec::RemoteMcp {
+        endpoint: endpoint.trim().to_string(),
+        transport,
+        infer_tool: infer_tool.filter(|s| !s.trim().is_empty()),
+        model: model.filter(|s| !s.trim().is_empty()),
+    };
+    let mut agent = crate::agent_registry::AgentDefinition::new(
+        slug,
+        display_name,
+        "Remote agent reached over MCP.".to_string(),
+        backend,
+        system_prompt.unwrap_or_default(),
+    );
+    agent.enabled = true;
+    let storage = agent_roster_storage()?;
+    crate::agent_registry::upsert_agent(Path::new(&storage), agent)
+}
+
+/// Backend kind of a roster agent: `"local"` | `"remote"` (unknown/empty slug → `"local"`).
+pub fn agent_backend_kind(slug: Option<String>) -> Result<String, String> {
+    let slug = match slug {
+        Some(s) if !s.is_empty() => s,
+        _ => return Ok("local".to_string()),
+    };
+    let storage = agent_roster_storage()?;
+    match crate::agent_registry::get_agent(Path::new(&storage), &slug) {
+        Some(a) => Ok(match a.backend {
+            crate::agent_registry::AgentBackendSpec::LocalEngine { .. } => "local".to_string(),
+            crate::agent_registry::AgentBackendSpec::RemoteMcp { .. } => "remote".to_string(),
+        }),
+        None => Ok("local".to_string()),
+    }
+}
+
+/// Run one turn against a REMOTE-MCP agent from the roster (native-only). Privacy-gated via the job
+/// router (Classified/sanctuary never leaves the device), then issues an MCP `tools/call` to the
+/// provider and appends the reply as an agent message. Returns a ChatInferenceResult-shaped JSON.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn run_remote_agent_turn(
+    session_id: String,
+    slug: String,
+    prompt: String,
+) -> Result<serde_json::Value, String> {
+    use crate::agent_registry::AgentBackendSpec;
+    let storage = agent_roster_storage()?;
+    let agent = crate::agent_registry::get_agent(Path::new(&storage), &slug)
+        .ok_or_else(|| format!("no agent '{slug}' in roster"))?;
+    if !agent.enabled {
+        return Ok(remote_turn_blocked(&format!(
+            "agent '{}' is disabled",
+            agent.display_name
+        )));
+    }
+    let (transport, infer_tool, model) = match &agent.backend {
+        AgentBackendSpec::RemoteMcp {
+            transport,
+            infer_tool,
+            model,
+            ..
+        } => (transport.clone(), infer_tool.clone(), model.clone()),
+        AgentBackendSpec::LocalEngine { .. } => {
+            return Err("agent is local — use the local inference path".to_string())
+        }
+    };
+
+    // Privacy-first placement: a configured remote agent implies consent, but sanctuary/Classified
+    // context must never leave the device.
+    let local_active = crate::model_lifecycle::lifecycle_label(
+        crate::model_lifecycle::get_model_lifecycle_state(),
+    ) == "Active";
+    let inputs = crate::job_router::RoutingInputs {
+        sensitivity: wellfare_core::record::SensitivityClass::Restricted,
+        local_available: local_active,
+        external_consented: true,
+        requires_capability: None,
+        local_has_capability: false,
+        estimated_cost_microcents: 0,
+    };
+    match crate::job_router::route_job(&inputs, &crate::job_router::RoutingPolicy::default()) {
+        crate::job_router::RoutingDecision::Blocked { reason }
+        | crate::job_router::RoutingDecision::NeedsConsent { reason } => {
+            return Ok(remote_turn_blocked(&reason));
+        }
+        _ => {}
+    }
+
+    let system = if agent.system_prompt.trim().is_empty() {
+        None
+    } else {
+        Some(agent.system_prompt.as_str())
+    };
+    let text = crate::remote_mcp::remote_mcp_infer(
+        &transport,
+        infer_tool.as_deref(),
+        model.as_deref(),
+        system,
+        &prompt,
+    )?;
+    if !text.trim().is_empty() {
+        let _ = append_chat_message(session_id, "agent".to_string(), text.clone());
+    }
+    Ok(serde_json::json!({
+        "text": text,
+        "committed": true,
+        "block_reason": serde_json::Value::Null,
+        "agent_backend": "remote",
+        "model_id": model,
+        "provenance_hashes": [],
+        "citations": [],
+        "tokens_generated": 0,
+        "inference_duration_ms": 0,
+    }))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn remote_turn_blocked(reason: &str) -> serde_json::Value {
+    serde_json::json!({
+        "text": "",
+        "committed": false,
+        "block_reason": reason,
+        "agent_backend": "remote",
+    })
+}
+
+/// Store a chat turn's inline CML context (`#project:` / `#topic:` / `#task:` / `[[concept]]`) into the
+/// person's inforg (their private library). No-op if the message has no tags. Returns concepts stored.
+pub fn ingest_chat_cml(session_id: String, text: String) -> Result<usize, String> {
+    let storage = agent_roster_storage()?;
+    crate::cml_context::ingest_turn(Path::new(&storage), &session_id, &text).map(|v| v.len())
+}
+
+// ── Local job scheduler — chat-curated background jobs (local-first, MCP-routed) ─────
+
+/// Schedule one agent turn as a background job (queued, off the chat thread). Routed local-first; a
+/// remote-MCP agent's turn is sent out over MCP. Returns the created job as JSON.
+pub fn schedule_agent_job(
+    session_id: String,
+    agent_slug: Option<String>,
+    prompt: String,
+) -> Result<serde_json::Value, String> {
+    let job = crate::local_job_scheduler::LocalJobScheduler::global().enqueue(
+        crate::local_job_scheduler::LocalJobKind::AgentTurn {
+            session_id,
+            agent_slug,
+            prompt,
+        },
+    )?;
+    serde_json::to_value(job).map_err(|e| e.to_string())
+}
+
+/// Snapshot of the local job queue (jobs + status counts).
+pub fn list_local_jobs() -> Result<serde_json::Value, String> {
+    let snap = crate::local_job_scheduler::LocalJobScheduler::global().snapshot()?;
+    serde_json::to_value(snap).map_err(|e| e.to_string())
+}
+
+/// Cancel a job by id (queued → cancelled; running → cooperative cancel).
+pub fn cancel_local_job(id: String) -> Result<bool, String> {
+    crate::local_job_scheduler::LocalJobScheduler::global().cancel(&id)
+}
+
 pub fn ensure_chat_session() -> Result<String, String> {
     if let Some(id) = get_last_chat_session_id() {
         let state = crate::state::APP_STATE.get().unwrap();
@@ -2042,6 +2862,574 @@ pub fn accept_connect_invite(input: String) -> Result<serde_json::Value, String>
 pub fn list_chat_contacts() -> Result<serde_json::Value, String> {
     let contacts = crate::social_connect::list_chat_contacts();
     serde_json::to_value(contacts).map_err(|e| e.to_string())
+}
+
+// ── Personal directory (AD-like): categorised addressbook + agreement slots ─────
+
+/// The unified, categorised personal directory — the addressbook (Parties joined across the directory-actor
+/// + chat-contact stores by DID) grouped into categories, with a per-entry slot for the agreements
+/// governing that relationship. See `docs/plans/rights-aware-peer-agreement-addressbook.md`.
+pub fn list_directory() -> Result<serde_json::Value, String> {
+    let actors = get_directory_actors()?;
+    let contacts = crate::social_connect::list_chat_contacts();
+    let view = crate::directory::build_view(&actors, &contacts);
+    serde_json::to_value(view).map_err(|e| e.to_string())
+}
+
+/// The directory categories (built-in + user-created).
+pub fn list_directory_categories() -> Result<serde_json::Value, String> {
+    serde_json::to_value(crate::directory::list_categories()).map_err(|e| e.to_string())
+}
+
+/// Create a custom directory category. Returns the new category.
+pub fn create_directory_category(label: String) -> Result<serde_json::Value, String> {
+    let cat = crate::directory::create_category(&label)?;
+    serde_json::to_value(cat).map_err(|e| e.to_string())
+}
+
+/// Set the categories a directory entry (by DID) belongs to; returns the refreshed directory.
+pub fn set_directory_entry_categories(
+    did: String,
+    categories: Vec<String>,
+) -> Result<serde_json::Value, String> {
+    crate::directory::set_entry_categories(&did, categories)?;
+    list_directory()
+}
+
+/// Faceted + concept-aware search over the directory. `query` is meaning-aware (a token expands across a
+/// concept cluster, so "doctor" finds a "clinician"); `facets_json` is a JSON object of
+/// `{facet_id: [selected values]}` (AND across facets, OR within). Returns ranked entries + drill-down
+/// facet counts. Both empty → the whole directory with all facet counts.
+pub fn search_directory(query: String, facets_json: String) -> Result<serde_json::Value, String> {
+    let selected: std::collections::BTreeMap<String, Vec<String>> = if facets_json.trim().is_empty() {
+        std::collections::BTreeMap::new()
+    } else {
+        serde_json::from_str(&facets_json).map_err(|e| format!("bad facets json: {e}"))?
+    };
+    let actors = get_directory_actors()?;
+    let contacts = crate::social_connect::list_chat_contacts();
+    let result = crate::directory::search(&actors, &contacts, &query, &selected);
+    serde_json::to_value(result).map_err(|e| e.to_string())
+}
+
+// ── Domains & semantic mail/address stack (the foundation) ──────────────────────
+
+fn mail_now_unix() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+fn agent_type_from_token(t: &str) -> crate::domains::AgentType {
+    use crate::domains::AgentType::*;
+    match t {
+        "org" | "organization" => Organization,
+        "ai" | "agent" => AiAgent,
+        "service" | "humanitarian" => HumanitarianService,
+        "content" => ContentProvider,
+        "group" => Group,
+        _ => NaturalPerson,
+    }
+}
+
+/// The person's context-domains (personal/work/projects/…), each an agent with a front-door DID.
+pub fn list_mail_domains() -> Result<serde_json::Value, String> {
+    serde_json::to_value(crate::domains::list_domains()).map_err(|e| e.to_string())
+}
+
+/// Add a context-domain (single-owner). `agent_type` is a token: person/org/ai/service/content/group.
+pub fn add_mail_domain(
+    name: String,
+    agent_type: String,
+    front_door_did: String,
+    label: String,
+    parent: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let owner = crate::domains::DomainOwner::Personal { did: front_door_did.clone() };
+    let d = crate::domains::make_domain(
+        &name,
+        agent_type_from_token(&agent_type),
+        owner,
+        &front_door_did,
+        &label,
+        parent,
+        mail_now_unix(),
+    )?;
+    crate::domains::upsert_domain(d)?;
+    list_mail_domains()
+}
+
+/// Built-in purpose-inbox presets (frontdoor/junkmail/mygov/newsletters).
+pub fn purpose_inbox_presets() -> Result<serde_json::Value, String> {
+    serde_json::to_value(crate::domains::purpose_presets()).map_err(|e| e.to_string())
+}
+
+/// Addresses (optionally filtered to one domain).
+pub fn list_mail_addresses(domain: Option<String>) -> Result<serde_json::Value, String> {
+    serde_json::to_value(crate::domains::list_addresses(domain.as_deref()))
+        .map_err(|e| e.to_string())
+}
+
+/// Mint a purpose inbox (`frontdoor@`, `junkmail@`, …). `rules_json` is a `MailRules` object (or empty).
+pub fn mint_purpose_inbox(
+    domain: String,
+    local: String,
+    rules_json: String,
+) -> Result<serde_json::Value, String> {
+    let rules: crate::domains::MailRules = if rules_json.trim().is_empty() {
+        crate::domains::MailRules::default()
+    } else {
+        serde_json::from_str(&rules_json).map_err(|e| format!("bad rules json: {e}"))?
+    };
+    let a = crate::domains::make_purpose_address(&domain, &local, rules, mail_now_unix())?;
+    crate::domains::upsert_address(a)?;
+    list_mail_addresses(Some(domain))
+}
+
+/// Mint a per-relationship (pairwise) address bound to a relationship DID.
+pub fn mint_relationship_address(
+    domain: String,
+    local: String,
+    relationship_did: String,
+) -> Result<serde_json::Value, String> {
+    let a = crate::domains::make_relationship_address(&domain, &local, &relationship_did, mail_now_unix())?;
+    crate::domains::upsert_address(a)?;
+    list_mail_addresses(Some(domain))
+}
+
+/// Enable/disable an address (the surgical per-relationship revoke). Returns the refreshed list.
+pub fn set_mail_address_enabled(
+    address: String,
+    enabled: bool,
+) -> Result<serde_json::Value, String> {
+    crate::domains::set_address_enabled(&address, enabled)?;
+    list_mail_addresses(None)
+}
+
+/// The QDP front-door forms for a domain — the **DNS TXT** (no-hosting anchor), the DNS record name, and
+/// the rich profile in **Turtle + JSON-LD** (served by the local HTTP server over the mesh when hosting).
+pub fn front_door_forms(domain: String) -> Result<serde_json::Value, String> {
+    let d = crate::domains::list_domains()
+        .into_iter()
+        .find(|d| d.name == domain)
+        .ok_or_else(|| format!("unknown domain '{domain}'"))?;
+    // Any eCash address minted as a service could be attached here later; start from the domain identity.
+    let rec = crate::front_door::FrontDoorRecord {
+        domain: d.name.clone(),
+        agent_type: d.agent_type.clone(),
+        front_door_did: d.front_door_did.clone(),
+        name: if d.label.is_empty() { None } else { Some(d.label.clone()) },
+        webid: None,
+        services: vec![],
+        identity_pubkey_hex: None,
+        wireguard_pubkey_hex: None,
+        overlay_addr: None,
+        profile_url: None,
+    };
+    Ok(serde_json::json!({
+        "dns_name": crate::front_door::dns_record_name(&d.name),
+        "dns_txt": rec.to_dns_txt(),
+        "turtle": rec.to_turtle(),
+        "jsonld": rec.to_json_ld(),
+    }))
+}
+
+/// Build a QDP front-door record from a stored domain's identity (shared by publish/serve).
+fn build_front_door_record(domain: &str) -> Result<crate::front_door::FrontDoorRecord, String> {
+    let d = crate::domains::list_domains()
+        .into_iter()
+        .find(|d| d.name == domain)
+        .ok_or_else(|| format!("unknown domain '{domain}'"))?;
+    Ok(crate::front_door::FrontDoorRecord {
+        domain: d.name.clone(),
+        agent_type: d.agent_type.clone(),
+        front_door_did: d.front_door_did.clone(),
+        name: if d.label.is_empty() { None } else { Some(d.label.clone()) },
+        webid: None,
+        services: vec![],
+        identity_pubkey_hex: None,
+        wireguard_pubkey_hex: None,
+        overlay_addr: None,
+        profile_url: None,
+    })
+}
+
+/// Verify a Cloudflare API token (the easy-install front-door publishing path).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn cf_verify_token(token: String) -> Result<serde_json::Value, String> {
+    crate::cloudflare::verify_token(&token)?;
+    Ok(serde_json::json!({ "ok": true }))
+}
+
+/// List the Cloudflare zones (domains) the token can manage.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn cf_list_zones(token: String) -> Result<serde_json::Value, String> {
+    let zones = crate::cloudflare::list_zones(&token)?;
+    Ok(serde_json::json!(zones
+        .into_iter()
+        .map(|(id, name)| serde_json::json!({ "id": id, "name": name }))
+        .collect::<Vec<_>>()))
+}
+
+/// Publish the domain's `_qdp` TXT front-door record to Cloudflare (no hosting needed).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn cf_publish_front_door(
+    token: String,
+    zone_id: String,
+    domain: String,
+) -> Result<serde_json::Value, String> {
+    let rec = build_front_door_record(&domain)?;
+    let cfg = crate::cloudflare::CfConfig { api_token: token, zone_id };
+    let id = crate::cloudflare::publish_front_door(&cfg, &rec)?;
+    Ok(serde_json::json!({
+        "record_id": id,
+        "dns_name": crate::front_door::dns_record_name(&domain),
+        "dns_txt": rec.to_dns_txt(),
+    }))
+}
+
+/// Provision a Cloudflare R2 bucket.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn cf_provision_r2_bucket(
+    token: String,
+    account_id: String,
+    bucket_name: String,
+) -> Result<serde_json::Value, String> {
+    crate::cloudflare::provision_r2_bucket(&token, &account_id, &bucket_name)?;
+    Ok(serde_json::json!({ "ok": true, "bucket": bucket_name }))
+}
+
+/// Provision a Cloudflare Worker using the local vendor JS file.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn cf_provision_worker(
+    token: String,
+    account_id: String,
+    script_name: String,
+) -> Result<serde_json::Value, String> {
+    let script_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../vendor/cloudflare-worker/worker.js");
+    let script_content = std::fs::read_to_string(&script_path)
+        .map_err(|e| format!("Failed to read worker.js: {e}"))?;
+        
+    crate::cloudflare::provision_worker(&token, &account_id, &script_name, &script_content)?;
+    Ok(serde_json::json!({ "ok": true, "script": script_name }))
+}
+
+/// Provision a Cloudflare Tunnel.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn cf_provision_tunnel(
+    token: String,
+    account_id: String,
+    tunnel_name: String,
+    tunnel_secret: String,
+) -> Result<serde_json::Value, String> {
+    let tunnel_id = crate::cloudflare::provision_tunnel(&token, &account_id, &tunnel_name, &tunnel_secret)?;
+    Ok(serde_json::json!({ "ok": true, "tunnel_id": tunnel_id }))
+}
+
+/// Route a Cloudflare Tunnel in DNS.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn cf_route_tunnel_dns(
+    token: String,
+    zone_id: String,
+    record_name: String,
+    tunnel_id: String,
+) -> Result<serde_json::Value, String> {
+    let record_id = crate::cloudflare::route_tunnel_dns(&token, &zone_id, &record_name, &tunnel_id)?;
+    Ok(serde_json::json!({ "ok": true, "record_id": record_id }))
+}
+
+/// Verify a GitHub PAT.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn github_verify_token(token: String) -> Result<serde_json::Value, String> {
+    let login = crate::github::verify_github_token(&token).map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({ "ok": true, "login": login }))
+}
+
+/// Create a GitHub repository and push static site files.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn github_deploy_static_site(
+    token: String,
+    repo_name: String,
+    files: std::collections::HashMap<String, String>,
+) -> Result<serde_json::Value, String> {
+    let full_name = crate::github::create_repository(&token, &repo_name).map_err(|e| e.to_string())?;
+    crate::github::push_static_site(&token, &full_name, files).map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({ "ok": true, "full_name": full_name }))
+}
+
+/// Provision a Cloudflare Pages project linked to a GitHub repo.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn cf_provision_pages_project(
+    token: String,
+    account_id: String,
+    project_name: String,
+    github_repo: String,
+) -> Result<serde_json::Value, String> {
+    crate::cloudflare::provision_pages_project(&token, &account_id, &project_name, &github_repo)?;
+    Ok(serde_json::json!({ "ok": true, "project": project_name }))
+}
+
+/// Start serving `/.well-known/QDP` for a domain from a local HTTP server (self-host over the mesh).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn start_qdp_server(domain: String, bind_addr: String) -> Result<serde_json::Value, String> {
+    let rec = build_front_door_record(&domain)?;
+    let addr = bind_addr.clone();
+    std::thread::spawn(move || {
+        let _ = crate::qdp_http::serve_blocking(rec, &addr);
+    });
+    Ok(serde_json::json!({ "serving": bind_addr, "path": crate::qdp_server::WELL_KNOWN_QDP_PATH }))
+}
+
+/// Parse a magic link (deep link / https / bare `qcx1_…`) into the connection identifier it carries.
+pub fn parse_magic_link(link: String) -> Result<serde_json::Value, String> {
+    let id = crate::magic_link::from_link(&link)?;
+    serde_json::to_value(id).map_err(|e| e.to_string())
+}
+
+/// Send mail via SMTP. `smtp_json` = `SmtpConfig`, `mail_json` = `OutgoingMail`.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn mail_send(smtp_json: String, mail_json: String) -> Result<serde_json::Value, String> {
+    let cfg: crate::mail_transport::SmtpConfig =
+        serde_json::from_str(&smtp_json).map_err(|e| format!("bad smtp config: {e}"))?;
+    let mail: crate::mail_transport::OutgoingMail =
+        serde_json::from_str(&mail_json).map_err(|e| format!("bad mail: {e}"))?;
+    crate::mail_transport::send(&cfg, &mail)?;
+    Ok(serde_json::json!({ "sent": true }))
+}
+
+/// Fetch unseen mail via IMAP and apply each recipient address's rules — enforcing the structural
+/// spam-kill: mail to an un-minted or disabled address is rejected, never delivered.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn mail_fetch(imap_json: String, mailbox: String) -> Result<serde_json::Value, String> {
+    let cfg: crate::mail_transport::ImapConfig =
+        serde_json::from_str(&imap_json).map_err(|e| format!("bad imap config: {e}"))?;
+    let msgs = crate::mail_transport::fetch_unseen(&cfg, &mailbox)?;
+    let addresses = crate::domains::list_addresses(None);
+    let evaluated: Vec<serde_json::Value> = msgs
+        .into_iter()
+        .map(|m| match crate::domains::resolve(&addresses, &m.to_address) {
+            Some(a) if a.enabled => {
+                let verdict = crate::mail_rules::evaluate(&a.rules, &m);
+                serde_json::json!({ "message": m, "verdict": verdict })
+            }
+            Some(_) => serde_json::json!({ "message": m, "verdict": { "deliver": false, "rejected": "address disabled" } }),
+            None => serde_json::json!({ "message": m, "verdict": { "deliver": false, "rejected": "no such address (unsolicited)" } }),
+        })
+        .collect();
+    Ok(serde_json::json!(evaluated))
+}
+
+// ── Connection flow: magic link → verify → SocialWebNet peer ────────────────────
+
+#[cfg(not(target_arch = "wasm32"))]
+fn resolve_front_door_did(front_door_did: &str) -> Result<String, String> {
+    if !front_door_did.is_empty() {
+        return Ok(front_door_did.to_string());
+    }
+    crate::domains::list_domains()
+        .first()
+        .map(|d| d.front_door_did.clone())
+        .ok_or_else(|| "no domain yet — create one in Domains & Mail first".to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn build_signed_identifier(
+    front_door_did: String,
+    relation_type: String,
+    domain: &str,
+) -> Result<crate::connection_identifier::ConnectionIdentifier, String> {
+    let id = crate::node_identity::NodeIdentity::load_or_create()?;
+    let fdd = resolve_front_door_did(&front_door_did)?;
+    let rendezvous = if domain.is_empty() {
+        vec![]
+    } else {
+        vec![crate::connection_identifier::RendezvousHint { kind: "domain".into(), value: domain.to_string() }]
+    };
+    let now = mail_now_unix();
+    let mut ci = crate::connection_identifier::ConnectionIdentifier {
+        version: crate::connection_identifier::CI_VERSION,
+        front_door_did: fdd,
+        identity_pubkey_hex: String::new(),
+        wireguard_pubkey_hex: id.wireguard_pubkey_hex(),
+        overlay_addr: id.overlay_addr(),
+        rendezvous,
+        relation_type,
+        display_name: crate::user_profile::load_profile().display_name,
+        created_at: now,
+        expires_at: now + 7 * 24 * 3600,
+        nonce: uuid::Uuid::new_v4().to_string(),
+        signature_hex: String::new(),
+    };
+    ci.sign(&id.signing_key());
+    Ok(ci)
+}
+
+/// A signed connection identifier for this node (self-certifying front-door DID + WireGuard peering).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn generate_connection_identifier(
+    front_door_did: String,
+    relation_type: String,
+) -> Result<serde_json::Value, String> {
+    let ci = build_signed_identifier(front_door_did, relation_type, "")?;
+    serde_json::to_value(ci).map_err(|e| e.to_string())
+}
+
+/// A magic link (deep link + https + mailto) carrying this node's connection identifier.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn generate_magic_link(
+    front_door_did: String,
+    relation_type: String,
+    domain: String,
+) -> Result<serde_json::Value, String> {
+    let ci = build_signed_identifier(front_door_did, relation_type, &domain)?;
+    let deep = crate::magic_link::to_deep_link(&ci)?;
+    let https = if domain.is_empty() {
+        String::new()
+    } else {
+        crate::magic_link::to_https_link(&ci, &domain)?
+    };
+    let mailto = crate::magic_link::to_mailto(&ci, "Connect with me on Webizen")?;
+    Ok(serde_json::json!({ "deep_link": deep, "https_link": https, "mailto": mailto }))
+}
+
+/// Accept a magic link: parse + **verify** the identifier (self-certifying), then register the sender as a
+/// SocialWebNet peer (their WireGuard peering material). Half of the mutual peering; the return handshake
+/// completes it.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn accept_connection(link: String) -> Result<serde_json::Value, String> {
+    let ci = crate::magic_link::from_link(&link)?;
+    ci.verify()?;
+    if ci.is_expired(mail_now_unix()) {
+        return Err("this connection link has expired".into());
+    }
+    let peer = crate::social_peers::SocialPeer {
+        did: ci.front_door_did.clone(),
+        display_name: ci.display_name.clone(),
+        wireguard_pubkey_hex: ci.wireguard_pubkey_hex.clone(),
+        overlay_addr: ci.overlay_addr.clone(),
+        endpoint: ci
+            .rendezvous
+            .iter()
+            .find(|r| r.kind == "domain" || r.kind == "edge")
+            .map(|r| r.value.clone()),
+        relation_type: ci.relation_type.clone(),
+        added_at: mail_now_unix(),
+        active: true,
+        // Set separately once the peer publishes their envelope key (or via the handshake, later).
+        envelope_pubkey_hex: None,
+    };
+    crate::social_peers::register_peer(peer.clone())?;
+    serde_json::to_value(peer).map_err(|e| e.to_string())
+}
+
+/// The SocialWebNet peers (accepted connections).
+pub fn list_social_peers() -> Result<serde_json::Value, String> {
+    serde_json::to_value(crate::social_peers::list_peers()).map_err(|e| e.to_string())
+}
+
+/// Enable/disable a peer (the socially-defined revoke).
+pub fn set_social_peer_active(did: String, active: bool) -> Result<serde_json::Value, String> {
+    crate::social_peers::set_peer_active(&did, active)?;
+    list_social_peers()
+}
+
+/// Per-peer mesh dialability — which accepted peers can form a SocialWebNet tunnel now, which must
+/// wait for the peer to reach us (roaming), and which are missing key material. Pure/read-only.
+pub fn mesh_dialability() -> Result<serde_json::Value, String> {
+    let peers = crate::social_peers::list_peers();
+    serde_json::to_value(crate::social_mesh::dialability(&peers)).map_err(|e| e.to_string())
+}
+
+/// Answer a connection challenge — prove this node controls its identity key ("it's actually me").
+#[cfg(not(target_arch = "wasm32"))]
+pub fn answer_connection_challenge(
+    challenge_json: String,
+    my_did: String,
+) -> Result<serde_json::Value, String> {
+    let challenge: crate::handshake::Challenge =
+        serde_json::from_str(&challenge_json).map_err(|e| format!("bad challenge: {e}"))?;
+    let id = crate::node_identity::NodeIdentity::load_or_create()?;
+    let resp = crate::handshake::answer_challenge(&challenge, &my_did, &id.signing_key());
+    serde_json::to_value(resp).map_err(|e| e.to_string())
+}
+
+// ── Peer agreements (the terms of a relationship, grounded in values-credentials) ──
+
+/// All peer agreements.
+pub fn list_agreements() -> Result<serde_json::Value, String> {
+    serde_json::to_value(crate::agreements::list_agreements()).map_err(|e| e.to_string())
+}
+
+/// Agreements a DID is party to (or that govern its relationship) — fills the directory's agreement slot.
+pub fn agreements_for(did: String) -> Result<serde_json::Value, String> {
+    serde_json::to_value(crate::agreements::agreements_for(&did)).map_err(|e| e.to_string())
+}
+
+/// Create a new **draft** agreement for a relationship, grounded in the non-derogable values floor
+/// (defaults to UDHR), with a pending consent for each party. Returns the created agreement.
+pub fn create_agreement(
+    title: String,
+    relationship_did: String,
+    parties: Vec<String>,
+) -> Result<serde_json::Value, String> {
+    let now = mail_now_unix();
+    let a = crate::agreements::Agreement {
+        id: uuid::Uuid::new_v4().to_string(),
+        title,
+        relationship_did,
+        parties: parties.clone(),
+        values_anchors: vec!["urn:qualia:values:udhr".to_string()],
+        undertakings: vec![],
+        consents: parties
+            .into_iter()
+            .map(|did| crate::agreements::PartyConsent {
+                did,
+                consent: crate::agreements::ConsentState::Pending,
+                signature_hex: None,
+            })
+            .collect(),
+        stage: crate::agreements::FormationStage::Draft,
+        jurisdiction: None,
+        intents: Vec::new(),
+        artifact_context: None,
+        created_at: now,
+        updated_at: now,
+    };
+    crate::agreements::upsert_agreement(a.clone())?;
+    serde_json::to_value(a).map_err(|e| e.to_string())
+}
+
+/// Persist a full agreement (JSON) — for edits (undertakings, stage, etc.). Returns the refreshed list.
+pub fn save_agreement(agreement_json: String) -> Result<serde_json::Value, String> {
+    let a: crate::agreements::Agreement =
+        serde_json::from_str(&agreement_json).map_err(|e| format!("bad agreement: {e}"))?;
+    crate::agreements::upsert_agreement(a)?;
+    list_agreements()
+}
+
+/// Set a party's consent on an agreement (`state`: pending / granted / withdrawn).
+pub fn set_agreement_consent(
+    id: String,
+    did: String,
+    state: String,
+) -> Result<serde_json::Value, String> {
+    let mut all = crate::agreements::list_agreements();
+    let a = all
+        .iter_mut()
+        .find(|a| a.id == id)
+        .ok_or_else(|| format!("unknown agreement '{id}'"))?;
+    let cs = match state.to_lowercase().as_str() {
+        "granted" => crate::agreements::ConsentState::Granted,
+        "withdrawn" => crate::agreements::ConsentState::Withdrawn,
+        _ => crate::agreements::ConsentState::Pending,
+    };
+    crate::agreements::set_consent(a, &did, cs);
+    a.updated_at = mail_now_unix();
+    let updated = a.clone();
+    crate::agreements::upsert_agreement(updated)?;
+    list_agreements()
 }
 
 pub fn get_chat_graph(session_id: String) -> Result<serde_json::Value, String> {
@@ -2488,6 +3876,34 @@ pub fn save_inference_backend_settings(
     crate::inference_backend::save_inference_backend_settings(&settings)
 }
 
+/// Probe the configured Ollama endpoint (tags + reachability).
+pub fn probe_ollama_status() -> crate::ollama_harness::OllamaStatus {
+    crate::ollama_harness::probe_configured_ollama()
+}
+
+pub async fn probe_ollama_status_async() -> crate::ollama_harness::OllamaStatus {
+    crate::ollama_harness::probe_configured_ollama_async().await
+}
+
+/// List models on the configured Ollama host (empty vec if unreachable).
+pub fn list_ollama_models() -> Vec<crate::ollama_harness::OllamaModelInfo> {
+    crate::ollama_harness::probe_configured_ollama().models
+}
+
+/// One-shot Ollama generate using persisted settings (for smoke / ETL hooks).
+pub fn ollama_generate(system: String, prompt: String) -> Result<crate::ollama_harness::OllamaGenerateResult, String> {
+    crate::ollama_harness::OllamaHarness::from_loaded_settings().generate(&system, &prompt)
+}
+
+pub async fn ollama_generate_async(
+    system: String,
+    prompt: String,
+) -> Result<crate::ollama_harness::OllamaGenerateResult, String> {
+    crate::ollama_harness::OllamaHarness::from_loaded_settings()
+        .generate_async(&system, &prompt)
+        .await
+}
+
 pub fn get_model_preferences() -> crate::model_preferences::ModelPreferences {
     let state = crate::state::APP_STATE.get().unwrap();
     let storage = state.config.lock().unwrap().storage_path.clone();
@@ -2833,7 +4249,14 @@ pub fn issue_qapp_session_token(qapp_name: &str) -> Result<String, String> {
         manifest.name.to_lowercase().replace(' ', "-")
     );
     let vault = state.key_vault.lock().unwrap();
-    vault.issue_qapp_token(&qapp_did, manifest.required_shapes.clone())
+    vault.issue_qapp_token(
+        &qapp_did,
+        "localhost",
+        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() + 86400,
+        &uuid::Uuid::new_v4().to_string(),
+        manifest.required_shapes.clone(),
+        qualia_core_db::identity::key_vault::SubgraphLayer::Professional,
+    )
 }
 
 // ── Qapp launcher ─────────────────────────────────────────────────────────────
@@ -3476,9 +4899,13 @@ pub fn launch_installed_qapp_with_context(
 ) -> Result<String, String> {
     let state = crate::state::APP_STATE.get().unwrap();
     let data_dir = state.config.lock().unwrap().storage_path.clone();
-    let qapp_dir = qapps_dir(&data_dir).join(&qapp_name);
+    let storage_path = std::path::PathBuf::from(&data_dir);
+    if crate::qapp_install::is_package_revoked(&storage_path, &qapp_name) {
+        return Err(format!("Qapp package revoked: {qapp_name}"));
+    }
+    let qapp_dir = crate::qapp_paths::resolve_active_package_dir(&storage_path, &qapp_name);
 
-    if !qapp_dir.exists() {
+    if !qapp_dir.join(crate::qapp_registry::QAPP_PACKAGE_MANIFEST).is_file() {
         return Err(format!("Qapp directory not found: {qapp_name}"));
     }
 

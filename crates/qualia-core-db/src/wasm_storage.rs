@@ -57,7 +57,9 @@ pub fn pack_quins_into_superblock(
     raw_quin_bytes: &[u8],
 ) -> Result<Uint8Array, JsValue> {
     if raw_quin_bytes.len() % 48 != 0 {
-        return Err(JsValue::from_str("raw_quin_bytes length must be a multiple of 48"));
+        return Err(JsValue::from_str(
+            "raw_quin_bytes length must be a multiple of 48",
+        ));
     }
     let n_quins = raw_quin_bytes.len() / 48;
     if n_quins > QUINS_PER_BLOCK {
@@ -70,12 +72,12 @@ pub fn pack_quins_into_superblock(
     let mut block = [0u8; BLOCK_MULTIPLIER_SIZE];
 
     // ── Header (little-endian, matches QualiaSuperBlock repr(C) layout) ──────
-    block[0..8].copy_from_slice(&seq_id.to_le_bytes());   // block_sequence_id
+    block[0..8].copy_from_slice(&seq_id.to_le_bytes()); // block_sequence_id
     block[8..16].copy_from_slice(&owner_did.to_le_bytes()); // storage_owner_did
     block[16..24].copy_from_slice(&(n_quins as u64).to_le_bytes()); // active_quin_count
-    // [24..28] validation_checksum  = 0
-    // [28..32] hardware_profile_flags = 0
-    // [32..160] layout_padding        = 0 (already zeroed)
+                                                                    // [24..28] validation_checksum  = 0
+                                                                    // [28..32] hardware_profile_flags = 0
+                                                                    // [32..160] layout_padding        = 0 (already zeroed)
 
     // ── Quin ledger — ECC parity computed per-quin ────────────────────────────
     let ledger = &mut block[HEADER_SIZE..];
@@ -130,7 +132,11 @@ pub fn verify_superblock_ecc(block_bytes: &[u8]) -> String {
     }
 
     let valid = bad.is_empty();
-    let bad_str = bad.iter().map(|i| i.to_string()).collect::<Vec<_>>().join(",");
+    let bad_str = bad
+        .iter()
+        .map(|i| i.to_string())
+        .collect::<Vec<_>>()
+        .join(",");
     format!(r#"{{"valid":{valid},"total":{n_quins},"bad":[{bad_str}]}}"#)
 }
 
@@ -145,9 +151,9 @@ pub fn verify_superblock_ecc(block_bytes: &[u8]) -> String {
 pub async fn estimate_browser_storage() -> Result<JsValue, JsValue> {
     let win = window().ok_or_else(|| JsValue::from_str("no window context"))?;
     let sm = win.navigator().storage();
-    let estimate_promise = sm
-        .estimate()
-        .map_err(|_| JsValue::from_str("StorageManager.estimate() unavailable — requires HTTPS or localhost"))?;
+    let estimate_promise = sm.estimate().map_err(|_| {
+        JsValue::from_str("StorageManager.estimate() unavailable — requires HTTPS or localhost")
+    })?;
     let se: web_sys::StorageEstimate = JsFuture::from(estimate_promise).await?.dyn_into()?;
 
     let quota = js_sys::Reflect::get(&se, &JsValue::from_str("quota"))
@@ -196,12 +202,7 @@ pub async fn write_opfs_block(block_index: u32, block_bytes: &[u8]) -> Result<()
 
     // write_with_u8_array takes &mut [u8] — copy is unavoidable here
     let mut buf = block_bytes.to_vec();
-    JsFuture::from(
-        writable
-            .write_with_u8_array(&mut buf)
-            .map_err(|e| e)?,
-    )
-    .await?;
+    JsFuture::from(writable.write_with_u8_array(&mut buf).map_err(|e| e)?).await?;
     JsFuture::from(writable.close()).await?;
 
     Ok(())
@@ -218,11 +219,10 @@ pub async fn read_opfs_block(block_index: u32) -> Result<JsValue, JsValue> {
     let file_name = block_file_name(block_index);
 
     // Return null on cache miss without propagating the NotFoundError
-    let fh: FileSystemFileHandle =
-        match JsFuture::from(root.get_file_handle(&file_name)).await {
-            Ok(v) => v.dyn_into()?,
-            Err(_) => return Ok(JsValue::NULL),
-        };
+    let fh: FileSystemFileHandle = match JsFuture::from(root.get_file_handle(&file_name)).await {
+        Ok(v) => v.dyn_into()?,
+        Err(_) => return Ok(JsValue::NULL),
+    };
 
     let file: web_sys::File = JsFuture::from(fh.get_file()).await?.dyn_into()?;
     // array_buffer() is on Blob (File extends Blob); the cast lets us call it.

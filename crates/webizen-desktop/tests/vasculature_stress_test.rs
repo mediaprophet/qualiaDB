@@ -2,20 +2,18 @@
 ///
 /// Tests zero-copy GLB ingestion and memory profiling without requiring Tauri IPC
 /// Validates chunk isolation, semantic extraction, and coordinate extraction
-use std::path::PathBuf;
 
-#[path = "../src/commands/glb_ingest.rs"]
-mod glb_ingest;
 
-#[path = "../src/commands/binary_registry.rs"]
-mod binary_registry;
-
-#[path = "../src/commands/mod.rs"]
-mod commands;
+// Uses the compiled `webizen_desktop` library API rather than re-including the source
+// (a `#[path]` re-include compiled `commands/mod.rs` a second time inside this test binary,
+// where its `crate::companion_gateway` / `crate::med_reminder_notifier` references — valid in
+// the library crate root — could not resolve).
 
 fn main() -> Result<(), String> {
-    use binary_registry::BinaryNodeRegistry;
-    use glb_ingest::{GLBIngestionManager, SemanticExtractor, Tensor10DMapping};
+    use webizen_desktop::commands::binary_registry::BinaryNodeRegistry;
+    use webizen_desktop::commands::glb_ingest::{
+        GLBIngestionManager, SemanticExtractor, Tensor10DMapping,
+    };
     use std::time::Instant;
 
     println!("=== Blood Vasculature Stress Test (18MB) ===");

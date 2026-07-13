@@ -92,7 +92,7 @@ function buildRunner(mode) {
 
 // Result rendering
 
-let _totPassed = 0, _totFailed = 0, _totTests = 0;
+let _totPassed = 0, _totFailed = 0, _totSkipped = 0, _totTests = 0;
 let _suiteEls = new Map();
 
 function getOrCreateSuiteEl(name, category) {
@@ -108,6 +108,7 @@ function getOrCreateSuiteEl(name, category) {
             <span class="suite-name">${esc(name)}</span>
             <span class="suite-stats">
                 <span class="suite-pass">0 passed</span>
+                <span class="suite-skip">0 skipped</span>
                 <span class="suite-fail">0 failed</span>
             </span>
         </div>
@@ -116,7 +117,7 @@ function getOrCreateSuiteEl(name, category) {
     bindSuiteCardToggle(el);
 
     container.appendChild(el);
-    const state = { el, passCount: 0, failCount: 0 };
+    const state = { el, passCount: 0, failCount: 0, skipCount: 0 };
     _suiteEls.set(name, state);
     return state;
 }
@@ -265,26 +266,34 @@ function renderCatalog(mode) {
     }
 }
 
-function addTestRow(suiteName, testName, passed, error, ms) {
+function addTestRow(suiteName, testName, status, detail, ms) {
+    // status: 'pass' | 'fail' | 'skip'. `detail` is an Error (fail) or reason string (skip).
     const cat = suiteCategory(suiteName);
     const state = getOrCreateSuiteEl(suiteName, cat);
     const li = document.createElement('li');
-    li.className = `test-row ${passed ? 'pass' : 'fail'}`;
-    const errHtml = error
-        ? `<div class="test-error">${esc(error.message || String(error))}</div>`
-        : '';
+    li.className = `test-row ${status}`;
+    const icon = status === 'pass' ? 'OK' : status === 'skip' ? '—' : 'X';
+    let extraHtml = '';
+    if (status === 'fail' && detail) {
+        extraHtml = `<div class="test-error">${esc(detail.message || String(detail))}</div>`;
+    } else if (status === 'skip' && detail) {
+        extraHtml = `<div class="test-error" style="color:rgba(250,204,21,.7)">skipped: ${esc(detail)}</div>`;
+    }
     li.innerHTML = `
-        <span class="test-icon">${passed ? 'OK' : 'X'}</span>
+        <span class="test-icon">${icon}</span>
         <span class="test-name">${esc(testName)}</span>
         <span class="test-ms">${ms < 1 ? '<1' : Math.round(ms)}ms</span>
-        ${errHtml}`;
+        ${extraHtml}`;
     state.el.querySelector('.suite-tests').appendChild(li);
 
-    if (passed) state.passCount++; else state.failCount++;
+    if (status === 'pass') state.passCount++;
+    else if (status === 'skip') state.skipCount++;
+    else state.failCount++;
     state.el.querySelector('.suite-pass').textContent = `${state.passCount} passed`;
+    state.el.querySelector('.suite-skip').textContent = `${state.skipCount} skipped`;
     state.el.querySelector('.suite-fail').textContent = `${state.failCount} failed`;
 
-    if (!passed && !state.el.classList.contains('open')) {
+    if (status === 'fail' && !state.el.classList.contains('open')) {
         state.el.classList.add('open');
         state.el.querySelector('.suite-toggle').textContent = 'v';
     }
@@ -294,6 +303,8 @@ function addTestRow(suiteName, testName, passed, error, ms) {
 function updateSummary() {
     const pct = _totTests ? Math.round((_totPassed / _totTests) * 100) : 0;
     $id('summary-passed').textContent = _totPassed;
+    const skipEl = $id('summary-skipped');
+    if (skipEl) skipEl.textContent = _totSkipped;
     $id('summary-failed').textContent = _totFailed;
     $id('summary-total').textContent = _totTests;
     $id('progress-bar').style.width = `${pct}%`;
@@ -307,6 +318,7 @@ export async function runAll(mode = appMode) {
     renderCatalog(mode);
     _totPassed = 0;
     _totFailed = 0;
+    _totSkipped = 0;
     _totTests = 0;
     $id('suite-list').innerHTML = '';
     _suiteEls.clear();
@@ -319,18 +331,23 @@ export async function runAll(mode = appMode) {
         if (evt.type === 'pass') {
             _totPassed++;
             _totTests++;
-            addTestRow(evt.suite.name, evt.name, true, null, evt.ms);
+            addTestRow(evt.suite.name, evt.name, 'pass', null, evt.ms);
         } else if (evt.type === 'fail') {
             _totFailed++;
             _totTests++;
-            addTestRow(evt.suite.name, evt.name, false, evt.error, evt.ms);
+            addTestRow(evt.suite.name, evt.name, 'fail', evt.error, evt.ms);
+        } else if (evt.type === 'skip') {
+            _totSkipped++;
+            _totTests++;
+            addTestRow(evt.suite.name, evt.name, 'skip', evt.reason, evt.ms);
         }
         updateSummary();
     });
 
+    const skipNote = _totSkipped ? `, ${_totSkipped} skipped` : '';
     $id('status-label').textContent = _totFailed === 0
-        ? `All ${_totPassed} tests passed`
-        : `${_totFailed} failed / ${_totTests} total`;
+        ? `${_totPassed} passed${skipNote} (${_totTests} total)`
+        : `${_totFailed} failed, ${_totPassed} passed${skipNote} / ${_totTests} total`;
 
     const coverage = detected.wasmCoverage;
     if ((mode === 'wasm' || mode === 'both') && coverage?.partial && _totFailed === 0) {

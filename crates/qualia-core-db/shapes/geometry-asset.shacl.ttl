@@ -1,0 +1,189 @@
+@prefix geo: <urn:qualia:geometry:> .
+@prefix sh:  <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+# ── Geometry-asset SHACL surface ─────────────────────────────────────────────────
+# The machine-checkable half of docs/manuals/standards/geometry-asset-ontology.md (§5).
+# Targets the `urn:qualia:geometry:*` namespace that render/assets.rs actually emits
+# (C_MESH = urn:qualia:geometry:Mesh, P_VERTEX_COUNT = urn:qualia:geometry:vertexCount, …),
+# so these shapes validate the real q42 manifest facts, not a parallel vocabulary.
+# Runtime enforcement is via a geometry_asset_shacl.rs Configuration→to_opcodes shim (the
+# specialized_libs_shacl.rs pattern); this .ttl is the normative declarative source.
+# MAX = the .10d container's MAX_VERTEX_COUNT / MAX_TRIANGLE_COUNT = 2^22 = 4194304.
+
+# ── Mesh (the compiled-asset manifest node) ──────────────────────────────────────
+
+geo:MeshShape a sh:NodeShape ;
+    rdfs:label "Geometry Mesh Asset Shape" ;
+    rdfs:comment "Validates the q42 manifest of a compiled mesh asset that references a .10d container." ;
+    sh:targetClass geo:Mesh ;
+
+    sh:property [
+        sh:path geo:vertexCount ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 4194304 ;
+        sh:minCount 1 ;
+        sh:message "vertexCount must be present and in [1, 2^22] (.10d MAX_VERTEX_COUNT — malicious-size guard)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:triangleCount ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 4194304 ;
+        sh:minCount 1 ;
+        sh:message "triangleCount must be present and in [1, 2^22] (.10d MAX_TRIANGLE_COUNT)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:sourceFormat ;
+        sh:datatype xsd:string ;
+        sh:in ( "obj" "stl" "glb" "gltf" ) ;
+        sh:minCount 1 ;
+        sh:message "sourceFormat must be one of obj/stl/glb/gltf" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:sourceDigest ;
+        sh:minCount 1 ;
+        sh:message "sourceDigest (content hash of the immutable source asset) is required for provenance" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:compiledDigest ;
+        sh:minCount 1 ;
+        sh:message "compiledDigest (the .10d whole-file CRC-32C) is required — the manifest must cite the container it describes" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:unit ;
+        sh:datatype xsd:string ;
+        sh:in ( "metre" "millimetre" "centimetre" "inch" "dimensionless" ) ;
+        sh:minCount 1 ;
+        sh:message "unit is required — no unit-less geometry may enter a solver" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:handedness ;
+        sh:datatype xsd:string ;
+        sh:in ( "right" "left" ) ;
+        sh:message "handedness must be right or left" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:upAxis ;
+        sh:datatype xsd:string ;
+        sh:in ( "x" "y" "z" "-x" "-y" "-z" ) ;
+        sh:message "upAxis must be a signed principal axis" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:fidelityTier ;
+        sh:datatype xsd:string ;
+        sh:in ( "F0" "F1" "F2" "F3" "F4" ) ;
+        sh:message "fidelityTier must be F0..F4 (independent of assurance — a heavy mesh is never auto-validated)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:assuranceClass ;
+        sh:datatype xsd:string ;
+        sh:in ( "A0" "A1" "A2" "A3" "A4" ) ;
+        sh:message "assuranceClass must be A0..A4" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:sensitivityClass ;
+        sh:datatype xsd:string ;
+        sh:in ( "Public" "Restricted" "Classified" "Sanctuary" ) ;
+        sh:message "sensitivityClass — absent is treated fail-closed as most-restrictive; health-derived anatomy geometry MUST carry it" ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path geo:licence ;
+        sh:datatype xsd:string ;
+        sh:in ( "CC0" "CC-BY" "CC-BY-SA" "ODC-PDDL" "MIT" "Apache-2.0" ) ;
+        sh:minCount 1 ;
+        sh:message "licence must be one of the explicitly permitted commons licences" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:creator ;
+        sh:datatype xsd:string ;
+        sh:message "creator identity or signature reference" ;
+        sh:severity sh:Warning ;
+    ] ;
+    sh:property [
+        sh:path geo:validFrom ;
+        sh:datatype xsd:integer ;
+        sh:message "validFrom epoch timestamp (if temporally bounded)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:validUntil ;
+        sh:datatype xsd:integer ;
+        sh:message "validUntil epoch timestamp (if temporally bounded)" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── LOD level (a decimated QuantizedMesh section, from decimate_3) ────────────────
+
+geo:LodShape a sh:NodeShape ;
+    rdfs:label "Geometry LOD Shape" ;
+    rdfs:comment "A level-of-detail entry: a decimated mesh with its error certificate." ;
+    sh:targetClass geo:Lod ;
+    sh:property [
+        sh:path geo:lodLevel ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:minCount 1 ;
+        sh:message "lodLevel is a non-negative integer (0 = full resolution)" ;
+        sh:severity sh:Violation ;
+    ] ;
+    sh:property [
+        sh:path geo:lodError ;
+        sh:datatype xsd:float ;
+        sh:minInclusive 0.0 ;
+        sh:minCount 1 ;
+        sh:message "lodError (measured quadric/Hausdorff error certificate) is required — an LOD without a bound is not usable" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Vertex attribute ─────────────────────────────────────────────────────────────
+
+geo:VertexAttributeShape a sh:NodeShape ;
+    rdfs:label "Vertex Attribute Shape" ;
+    sh:targetClass geo:VertexAttribute ;
+    sh:property [
+        sh:path geo:attributeSemantic ;
+        sh:datatype xsd:string ;
+        sh:in ( "position" "normal" "tangent" "uv" "color" "jointWeights" ) ;
+        sh:minCount 1 ;
+        sh:message "attributeSemantic must be a known glTF-derived attribute" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Topology feature (which .10d topology/spatial-index sections are present) ─────
+
+geo:TopologyFeatureShape a sh:NodeShape ;
+    rdfs:label "Topology Feature Shape" ;
+    sh:targetClass geo:TopologyFeature ;
+    sh:property [
+        sh:path geo:featureKind ;
+        sh:datatype xsd:string ;
+        sh:in ( "halfEdge" "bvh" "kdTree" "meshlet" "adjacency" ) ;
+        sh:minCount 1 ;
+        sh:message "featureKind must name a supported .10d topology/spatial-index section" ;
+        sh:severity sh:Violation ;
+    ] .
+
+# ── Cross-property constraints NOT expressible in plain SHACL (enforced in the shim):
+#   • bboxMin{X,Y,Z} <= bboxMax{X,Y,Z}                (finite, non-inverted box)
+#   • every triangle index < vertexCount               (index-in-bounds)
+#   • valid NQuin parity on every emitted fact         (subject^predicate^object^context)
+#   • compiledDigest == the .10d whole-file CRC-32C     (manifest cites its real container)
+#   • sensitivity high-water-mark: a derived asset inherits its inputs' most-restrictive class
+#   • validFrom <= validUntil                         (temporal validity non-inverted)
+# These belong in geometry_asset_shacl.rs (the SLG-VM opcode path), documented in §5 of the spec.

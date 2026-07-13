@@ -2,8 +2,8 @@
 
 use bytemuck::{Pod, Zeroable};
 
-use super::Tensor10D;
 use super::resident_substrate::{global_resident_substrate, MAX_KNN_HITS, MAX_RESIDENT_NODES};
+use super::Tensor10D;
 
 pub const TENSOR_VOLUME_STRIDE_FLOATS: u32 = 10;
 
@@ -40,7 +40,9 @@ impl TensorVolumeGpu {
             label: Some("TensorVolumePipeline"),
             layout: None,
             module: &shader,
-            entry_point: "main",
+            entry_point: Some("main"),
+            compilation_options: Default::default(),
+            cache: None,
         });
         let max_nodes = MAX_RESIDENT_NODES as u32;
         let node_floats = max_nodes * TENSOR_VOLUME_STRIDE_FLOATS;
@@ -73,7 +75,11 @@ impl TensorVolumeGpu {
             count_buf: device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("TensorVolumeHitCount"),
                 size: 4,
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+                // COPY_DST: reset to 0 each cycle via queue.write_buffer (line ~145);
+                // COPY_SRC: copied to staging_count for readback; STORAGE: shader binding.
+                usage: wgpu::BufferUsages::STORAGE
+                    | wgpu::BufferUsages::COPY_SRC
+                    | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }),
             staging_hits: device.create_buffer(&wgpu::BufferDescriptor {
@@ -94,7 +100,7 @@ impl TensorVolumeGpu {
 
     fn upload_nodes(&self, queue: &wgpu::Queue, node_count: u32) -> bool {
         let substrate = global_resident_substrate();
-        let count = node_count.min(substrate.node_count());
+        let count = node_count.min(substrate.node_count()).min(self.max_nodes);
         if count == 0 {
             return false;
         }
@@ -114,8 +120,13 @@ impl TensorVolumeGpu {
                 flat[base + 9] = t.sigma;
             }
         }
-        let bytes = (count as usize * TENSOR_VOLUME_STRIDE_FLOATS as usize * 4) as wgpu::BufferAddress;
-        queue.write_buffer(&self.nodes_buf, 0, bytemuck::cast_slice(&flat[..count as usize * 10]));
+        let bytes =
+            (count as usize * TENSOR_VOLUME_STRIDE_FLOATS as usize * 4) as wgpu::BufferAddress;
+        queue.write_buffer(
+            &self.nodes_buf,
+            0,
+            bytemuck::cast_slice(&flat[..count as usize * 10]),
+        );
         let _ = bytes;
         true
     }
@@ -129,7 +140,7 @@ impl TensorVolumeGpu {
         max_distance: f32,
         out: &mut [usize],
     ) -> usize {
-        let node_count = global_resident_substrate().node_count();
+        let node_count = global_resident_substrate().node_count().min(self.max_nodes);
         if node_count == 0 || out.is_empty() || !self.upload_nodes(queue, node_count) {
             return 0;
         }
@@ -184,21 +195,27 @@ impl TensorVolumeGpu {
             pass.set_bind_group(0, &bind, &[]);
             pass.dispatch_workgroups(wg, 1, 1);
         }
-        encoder.copy_buffer_to_buffer(&self.hits_buf, 0, &self.staging_hits, 0, (MAX_KNN_HITS * 4) as u64);
+        encoder.copy_buffer_to_buffer(
+            &self.hits_buf,
+            0,
+            &self.staging_hits,
+            0,
+            (MAX_KNN_HITS * 4) as u64,
+        );
         encoder.copy_buffer_to_buffer(&self.count_buf, 0, &self.staging_count, 0, 4);
         queue.submit(Some(encoder.finish()));
 
-        device.poll(wgpu::Maintain::Wait);
+        let _ = device.poll(wgpu::PollType::wait_indefinitely());
         let count_slice = self.staging_count.slice(..4);
         let (tx, rx) = std::sync::mpsc::channel();
         count_slice.map_async(wgpu::MapMode::Read, move |r| {
             let _ = tx.send(r);
         });
-        device.poll(wgpu::Maintain::Wait);
+        let _ = device.poll(wgpu::PollType::wait_indefinitely());
         if rx.recv().ok().and_then(|r| r.ok()).is_none() {
             return 0;
         }
-        let count_data = count_slice.get_mapped_range();
+        let count_data = count_slice.get_mapped_range().expect("wgpu buffer map_range failed");
         let total = u32::from_le_bytes(count_data[..4].try_into().unwrap_or([0; 4])) as usize;
         drop(count_data);
         self.staging_count.unmap();
@@ -208,11 +225,11 @@ impl TensorVolumeGpu {
         hits_slice.map_async(wgpu::MapMode::Read, move |r| {
             let _ = tx2.send(r);
         });
-        device.poll(wgpu::Maintain::Wait);
+        let _ = device.poll(wgpu::PollType::wait_indefinitely());
         if rx2.recv().ok().and_then(|r| r.ok()).is_none() {
             return 0;
         }
-        let hits_data = hits_slice.get_mapped_range();
+        let hits_data = hits_slice.get_mapped_range().expect("wgpu buffer map_range failed");
         let indices: &[u32] = bytemuck::cast_slice(&hits_data);
         let n = total.min(out.len()).min(indices.len());
         for i in 0..n {
@@ -259,4 +276,87 @@ pub fn try_gpu_tensor_search_into(
     _out: &mut [usize],
 ) -> Option<usize> {
     None
+}
+
+/// CPU reference for the GPU tensor-volume search (ALGEBRA_MANIFOLD_PLAN.md Phase 4.2).
+///
+/// A plain linear scan using the CANONICAL `Tensor10D::full_distance` metric — the same
+/// metric `shaders/tensor_volume.wgsl` now ports (chosen by the QUERY's `v` topology
+/// class: euclidean / cyclic / hyperbolic / boundary). All three paths — GPU, this
+/// reference, and the substrate CPU fallback — therefore agree for ALL `v`. Makes the
+/// 10D manifold search testable without a GPU.
+///
+/// Semantics match the shader: a node is a hit iff `distance <= max_distance`; indices
+/// are written into `out` up to its capacity, and the FULL match count is returned
+/// (which may exceed `out.len()`, exactly like the shader's `hit_count`).
+pub fn cpu_tensor_search_into(
+    query: &Tensor10D,
+    nodes: &[Tensor10D],
+    max_distance: f32,
+    out: &mut [usize],
+) -> usize {
+    let mut matches = 0usize;
+    for (idx, node) in nodes.iter().enumerate() {
+        if query.full_distance(node) <= max_distance {
+            if matches < out.len() {
+                out[matches] = idx;
+            }
+            matches += 1;
+        }
+    }
+    matches
+}
+
+#[cfg(test)]
+mod cpu_reference_tests {
+    use super::*;
+
+    #[test]
+    fn cpu_tensor_search_matches_metric() {
+        // Nodes vary along single dimensions; query is the origin tensor. The metric
+        // uses x,y,z,t,alpha,mu,sigma and ignores q,v,w.
+        let zeros = Tensor10D::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        let nodes = [
+            zeros,                                                            // 0: dist 0
+            Tensor10D::new(0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0), // 1: x=1 → dist 1
+            Tensor10D::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3.0), // 2: sigma=3 → dist 3
+            // q,v,w set but METRIC-IRRELEVANT → still dist 0, must be a hit.
+            Tensor10D::new(9.0, 9.0, 9.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0), // 3: dist 0
+        ];
+        let mut out = [usize::MAX; 8];
+
+        // radius 1.5 → nodes 0,1,3 (not 2 at dist 3).
+        let n = cpu_tensor_search_into(&zeros, &nodes, 1.5, &mut out);
+        assert_eq!(n, 3);
+        let hits: std::collections::BTreeSet<usize> = out[..n].iter().copied().collect();
+        assert_eq!(hits, [0, 1, 3].into_iter().collect());
+
+        // radius 5 → all four.
+        assert_eq!(cpu_tensor_search_into(&zeros, &nodes, 5.0, &mut out), 4);
+        // radius 0 → only the exact matches (nodes 0 and 3).
+        assert_eq!(cpu_tensor_search_into(&zeros, &nodes, 0.0, &mut out), 2);
+    }
+
+    #[test]
+    fn cpu_tensor_search_honors_topology_class() {
+        // Proves the v-switched metric unification (§4.1). A CYCLIC query (v == 1) wraps
+        // x modulo 1, so x=0 and x=0.9 are 0.1 apart — NOT 0.9 as under euclidean.
+        // new(q, v, w, x, y, z, t, alpha, mu, sigma)
+        let query = Tensor10D::new(0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        let near_wrap = Tensor10D::new(0.0, 1.0, 0.0, 0.9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        let mut out = [usize::MAX; 4];
+        // radius 0.2: cyclic distance 0.1 → HIT (euclidean 0.9 would miss).
+        assert_eq!(
+            cpu_tensor_search_into(&query, &[near_wrap], 0.2, &mut out),
+            1,
+            "cyclic metric must wrap x; node should be within 0.2"
+        );
+        // Same geometry under a euclidean query (v == 0) → MISS at radius 0.2.
+        let euclid_query = Tensor10D::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        let euclid_node = Tensor10D::new(0.0, 0.0, 0.0, 0.9, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        assert_eq!(
+            cpu_tensor_search_into(&euclid_query, &[euclid_node], 0.2, &mut out),
+            0
+        );
+    }
 }

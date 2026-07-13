@@ -3,10 +3,10 @@
 //! Provides HTTP endpoint for SPARQL queries (/sparql)
 
 use crate::sparql_ast::*;
-use crate::sparql_parser;
-use crate::sparql_planner::*;
 use crate::sparql_executor::*;
 use crate::sparql_library::serialisers::sparql_results::ResultFormatter;
+use crate::sparql_parser;
+use crate::sparql_planner::*;
 use crate::NQuin;
 
 /// SPARQL HTTP endpoint handler
@@ -23,14 +23,14 @@ impl<'a> SparqlEndpoint<'a> {
     pub fn handle_query(&self, query: &str, format: &str) -> Result<String, String> {
         // Parse query
         let (sparql_query, ctx) = sparql_parser::parse_sparql(query)?;
-        
+
         // Plan query
         let plan = QueryPlanner::plan(&sparql_query, &ctx)?;
-        
+
         // Execute query
         let executor = QueryExecutor::new(&self.quins);
         let results = executor.execute(&plan, &ctx)?;
-        
+
         // Format results
         match format.to_lowercase().as_str() {
             "xml" => {
@@ -41,7 +41,8 @@ impl<'a> SparqlEndpoint<'a> {
                     }
                     _ => vec![],
                 };
-                ResultFormatter::format_xml(&mut output, &vars, &results, &ctx, None).map_err(|e| e.to_string())?;
+                ResultFormatter::format_xml(&mut output, &vars, &results, &ctx, None)
+                    .map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             "json" => {
@@ -52,7 +53,8 @@ impl<'a> SparqlEndpoint<'a> {
                     }
                     _ => vec![],
                 };
-                ResultFormatter::format_json(&mut output, &vars, &results, &ctx, None).map_err(|e| e.to_string())?;
+                ResultFormatter::format_json(&mut output, &vars, &results, &ctx, None)
+                    .map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             "tsv" => {
@@ -63,7 +65,8 @@ impl<'a> SparqlEndpoint<'a> {
                     }
                     _ => vec![],
                 };
-                ResultFormatter::format_tsv(&mut output, &vars, &results, &ctx, None).map_err(|e| e.to_string())?;
+                ResultFormatter::format_tsv(&mut output, &vars, &results, &ctx, None)
+                    .map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             "csv" => {
@@ -74,7 +77,8 @@ impl<'a> SparqlEndpoint<'a> {
                     }
                     _ => vec![],
                 };
-                ResultFormatter::format_csv(&mut output, &vars, &results, &ctx, None).map_err(|e| e.to_string())?;
+                ResultFormatter::format_csv(&mut output, &vars, &results, &ctx, None)
+                    .map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             _ => Err("Unsupported format. Use: xml, json, tsv, or csv".to_string()),
@@ -92,12 +96,14 @@ impl<'a> SparqlEndpoint<'a> {
         match format.to_lowercase().as_str() {
             "xml" => {
                 let mut output = Vec::new();
-                ResultFormatter::format_ask_xml(&mut output, has_results).map_err(|e| e.to_string())?;
+                ResultFormatter::format_ask_xml(&mut output, has_results)
+                    .map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             "json" => {
                 let mut output = Vec::new();
-                ResultFormatter::format_ask_json(&mut output, has_results).map_err(|e| e.to_string())?;
+                ResultFormatter::format_ask_json(&mut output, has_results)
+                    .map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             _ => Err("Unsupported format for ASK. Use: xml or json".to_string()),
@@ -108,28 +114,36 @@ impl<'a> SparqlEndpoint<'a> {
     pub fn handle_construct(&self, query: &str, format: &str) -> Result<String, String> {
         let (sparql_query, ctx) = sparql_parser::parse_sparql(query)?;
 
+        let template_pattern = match &sparql_query {
+            SparqlQuery::Construct(c) => c.template_pattern,
+            _ => return Err("Query is not a CONSTRUCT".to_string()),
+        };
+
         let plan = QueryPlanner::plan(&sparql_query, &ctx)?;
         let executor = QueryExecutor::new(&self.quins);
-        let results = executor.execute_construct(&plan, &ctx)?;
+        // Rows are the instantiated template triples (slots 0/1/2 = s/p/o).
+        let results = executor.execute_construct(&plan, &ctx, template_pattern)?;
 
-        // For now, format as SELECT results (simplified - no template variables)
         match format.to_lowercase().as_str() {
             "ntriples" => {
                 let mut output = Vec::new();
-                ResultFormatter::format_ntriples(&mut output, &results).map_err(|e| e.to_string())?;
+                ResultFormatter::format_ntriples(&mut output, &results)
+                    .map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             "xml" => {
                 let mut output = Vec::new();
                 // Use default variables for CONSTRUCT
                 let vars = vec![0u8, 1u8, 2u8]; // subject, predicate, object
-                ResultFormatter::format_xml(&mut output, &vars, &results, &ctx, None).map_err(|e| e.to_string())?;
+                ResultFormatter::format_xml(&mut output, &vars, &results, &ctx, None)
+                    .map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             "json" => {
                 let mut output = Vec::new();
                 let vars = vec![0u8, 1u8, 2u8];
-                ResultFormatter::format_json(&mut output, &vars, &results, &ctx, None).map_err(|e| e.to_string())?;
+                ResultFormatter::format_json(&mut output, &vars, &results, &ctx, None)
+                    .map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             _ => Err("Unsupported format. Use: ntriples, xml, or json".to_string()),
@@ -140,15 +154,21 @@ impl<'a> SparqlEndpoint<'a> {
     pub fn handle_describe(&self, query: &str, format: &str) -> Result<String, String> {
         let (sparql_query, ctx) = sparql_parser::parse_sparql(query)?;
 
+        let describe = match &sparql_query {
+            SparqlQuery::Describe(d) => *d,
+            _ => return Err("Query is not a DESCRIBE".to_string()),
+        };
+
         let plan = QueryPlanner::plan(&sparql_query, &ctx)?;
         let executor = QueryExecutor::new(&self.quins);
-        let results = executor.execute_describe(&plan, &ctx)?;
+        // Rows are the Concise Bounded Description triples (slots 0/1/2 = s/p/o).
+        let results = executor.execute_describe(&plan, &ctx, &describe)?;
 
-        // For now, format as SELECT results (simplified)
         match format.to_lowercase().as_str() {
             "ntriples" => {
                 let mut output = Vec::new();
-                ResultFormatter::format_ntriples(&mut output, &results).map_err(|e| e.to_string())?;
+                ResultFormatter::format_ntriples(&mut output, &results)
+                    .map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             "xml" => {
@@ -164,7 +184,8 @@ impl<'a> SparqlEndpoint<'a> {
                     }
                     _ => vec![],
                 };
-                ResultFormatter::format_xml(&mut output, &vars, &results, &ctx, None).map_err(|e| e.to_string())?;
+                ResultFormatter::format_xml(&mut output, &vars, &results, &ctx, None)
+                    .map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             "json" => {
@@ -179,7 +200,8 @@ impl<'a> SparqlEndpoint<'a> {
                     }
                     _ => vec![],
                 };
-                ResultFormatter::format_json(&mut output, &vars, &results, &ctx, None).map_err(|e| e.to_string())?;
+                ResultFormatter::format_json(&mut output, &vars, &results, &ctx, None)
+                    .map_err(|e| e.to_string())?;
                 Ok(String::from_utf8(output).unwrap())
             }
             _ => Err("Unsupported format. Use: ntriples, xml, or json".to_string()),
@@ -219,13 +241,19 @@ impl<'a> SparqlProtocolHandler<'a> {
     }
 
     /// Handle SPARQL protocol request
-    pub fn handle_request(&self, query: Option<&str>, accept: Option<&str>) -> Result<String, String> {
+    pub fn handle_request(
+        &self,
+        query: Option<&str>,
+        accept: Option<&str>,
+    ) -> Result<String, String> {
         let query = query.ok_or("No query provided")?;
-        let format = accept.map(|a| Self::parse_accept_header(a)).unwrap_or_else(|| "json".to_string());
-        
+        let format = accept
+            .map(|a| Self::parse_accept_header(a))
+            .unwrap_or_else(|| "json".to_string());
+
         // Check query type and dispatch
         let query_upper = query.trim().to_uppercase();
-        
+
         if query_upper.starts_with("ASK") {
             self.endpoint.handle_ask(query, &format)
         } else if query_upper.starts_with("CONSTRUCT") {
@@ -245,11 +273,29 @@ mod tests {
 
     #[test]
     fn test_parse_accept_header() {
-        assert_eq!(SparqlProtocolHandler::parse_accept_header("application/sparql-results+xml"), "xml");
-        assert_eq!(SparqlProtocolHandler::parse_accept_header("application/sparql-results+json"), "json");
-        assert_eq!(SparqlProtocolHandler::parse_accept_header("text/tab-separated-values"), "tsv");
-        assert_eq!(SparqlProtocolHandler::parse_accept_header("text/csv"), "csv");
-        assert_eq!(SparqlProtocolHandler::parse_accept_header("application/n-triples"), "ntriples");
-        assert_eq!(SparqlProtocolHandler::parse_accept_header("application/n-quads"), "ntriples");
+        assert_eq!(
+            SparqlProtocolHandler::parse_accept_header("application/sparql-results+xml"),
+            "xml"
+        );
+        assert_eq!(
+            SparqlProtocolHandler::parse_accept_header("application/sparql-results+json"),
+            "json"
+        );
+        assert_eq!(
+            SparqlProtocolHandler::parse_accept_header("text/tab-separated-values"),
+            "tsv"
+        );
+        assert_eq!(
+            SparqlProtocolHandler::parse_accept_header("text/csv"),
+            "csv"
+        );
+        assert_eq!(
+            SparqlProtocolHandler::parse_accept_header("application/n-triples"),
+            "ntriples"
+        );
+        assert_eq!(
+            SparqlProtocolHandler::parse_accept_header("application/n-quads"),
+            "ntriples"
+        );
     }
 }

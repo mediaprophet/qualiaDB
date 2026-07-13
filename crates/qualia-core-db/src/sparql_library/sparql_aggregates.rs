@@ -41,7 +41,7 @@ impl AggregateAccumulator {
 
     pub fn add_value(&mut self, value: u64) {
         self.count += 1;
-        
+
         match self.func {
             AggregateFunction::Count => {
                 // Count just increments count
@@ -140,7 +140,10 @@ pub struct AggregationContext {
 }
 
 impl AggregationContext {
-    pub fn new(aggregates_spec: &[crate::sparql_planner::AggregateSpec], aggregate_count: u8) -> Self {
+    pub fn new(
+        aggregates_spec: &[crate::sparql_planner::AggregateSpec],
+        aggregate_count: u8,
+    ) -> Self {
         let mut default_accumulators = [AggregateAccumulator::new(AggregateFunction::Count); 16];
         for i in 0..aggregate_count as usize {
             let func = match aggregates_spec[i].func {
@@ -153,17 +156,19 @@ impl AggregationContext {
             };
             default_accumulators[i] = AggregateAccumulator::new(func);
         }
-        
-        let mut specs = [crate::sparql_planner::AggregateSpec { func: 0, input_var: 0, output_var: 0 }; 16];
+
+        let mut specs = [crate::sparql_planner::AggregateSpec {
+            func: 0,
+            input_var: 0,
+            output_var: 0,
+        }; 16];
         if aggregate_count > 0 {
-            specs[..aggregate_count as usize].copy_from_slice(&aggregates_spec[..aggregate_count as usize]);
+            specs[..aggregate_count as usize]
+                .copy_from_slice(&aggregates_spec[..aggregate_count as usize]);
         }
 
         Self {
-            groups: [(
-                GroupKey::new(),
-                default_accumulators,
-            ); 64],
+            groups: [(GroupKey::new(), default_accumulators); 64],
             group_count: 0,
             aggregates_spec: specs,
             aggregate_count,
@@ -177,11 +182,11 @@ impl AggregationContext {
                 return Ok(i);
             }
         }
-        
+
         if self.group_count >= 64 {
             return Err("Group overflow".to_string());
         }
-        
+
         let idx = self.group_count as usize;
         let mut accumulators = [AggregateAccumulator::new(AggregateFunction::Count); 16];
         for i in 0..self.aggregate_count as usize {
@@ -223,7 +228,7 @@ mod tests {
         agg.add_value(1);
         agg.add_value(2);
         agg.add_value(3);
-        
+
         assert_eq!(agg.get_result(), Some(3));
     }
 
@@ -233,7 +238,7 @@ mod tests {
         agg.add_value(1);
         agg.add_value(2);
         agg.add_value(3);
-        
+
         assert_eq!(agg.get_result(), Some(6));
     }
 
@@ -243,7 +248,7 @@ mod tests {
         agg.add_value(1);
         agg.add_value(2);
         agg.add_value(3);
-        
+
         assert_eq!(agg.get_result(), Some(2));
     }
 
@@ -253,7 +258,7 @@ mod tests {
         agg.add_value(5);
         agg.add_value(2);
         agg.add_value(8);
-        
+
         assert_eq!(agg.get_result(), Some(2));
     }
 
@@ -263,7 +268,7 @@ mod tests {
         agg.add_value(5);
         agg.add_value(2);
         agg.add_value(8);
-        
+
         assert_eq!(agg.get_result(), Some(8));
     }
 
@@ -272,7 +277,7 @@ mod tests {
         let mut key = GroupKey::new();
         key.set(0, 42);
         key.set(1, 43);
-        
+
         assert_eq!(key.values[0], 42);
         assert_eq!(key.values[1], 43);
         assert_eq!(key.var_count, 2);
@@ -280,16 +285,20 @@ mod tests {
 
     #[test]
     fn test_aggregation_context() {
-        let spec = [crate::sparql_planner::AggregateSpec { func: 0, input_var: 0, output_var: 1 }];
+        let spec = [crate::sparql_planner::AggregateSpec {
+            func: 0,
+            input_var: 0,
+            output_var: 1,
+        }];
         let mut ctx = AggregationContext::new(&spec, 1);
         let mut key = GroupKey::new();
         key.set(0, 42);
-        
+
         let idx = ctx.find_or_create_group(key).unwrap();
         let row = BindingRow::new();
         ctx.add_values_to_group(idx, &row);
         ctx.add_values_to_group(idx, &row);
-        
+
         assert_eq!(ctx.groups[idx].1[0].get_result(), Some(2));
     }
 }

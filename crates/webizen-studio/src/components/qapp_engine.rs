@@ -1,252 +1,187 @@
-//! QApp ↔ QualiaDB analysis contract.
-//!
-//! This is the bridge the discipline QApps were missing: a single, typed request/
-//! response shape plus one `analyze` entry point that resolves to a **real**
-//! QualiaDB call when running inside the Tauri desktop app, and to a deterministic
-//! **stub** in the plain-browser demo (so the demo stays fully interactive without
-//! a daemon).
-//!
-//! Wire a discipline up by rendering [`EnginePanel`] at the bottom of its QApp and
-//! passing the current field values. The native side is the Tauri command
-//! `qapp_analyze` (see `webizen-desktop/src/commands`).
-
 use dioxus::prelude::*;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+
+// ── Dual-mode Tauri invoke ───────────────────────────────────────────────────
+//
+// On WASM (web build): calls `window.__TAURI__.core.invoke()` via wasm_bindgen.
+// On native (desktop build): calls the local settings server's REST API on
+//   http://127.0.0.1:8080/api/invoke/{cmd} — the settings server proxies all
+//   Tauri commands through a single REST endpoint.
+//
+// This allows the same component code to work in both builds without change.
 
 #[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
+mod imp {
+    use wasm_bindgen::prelude::*;
 
-/// A discipline analysis request: the field selections plus free-text notes.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct AnalysisRequest {
-    pub discipline: String,
-    pub fields: Vec<(String, String)>,
-    pub notes: String,
-}
-
-/// The engine's response: a short summary, derived assertions, a provenance hash,
-/// and which engine produced it (`qualia-core-db` or `stub`).
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
-pub struct AnalysisResult {
-    pub summary: String,
-    pub assertions: Vec<String>,
-    pub provenance_hash: String,
-    pub engine: String,
-}
-
-/// Resolve an analysis request to the best available engine.
-///
-/// - Tauri desktop webview → real `qapp_analyze` Tauri command (QualiaDB).
-/// - Plain browser / native fallback → deterministic [`stub_analyze`].
-pub async fn analyze(req: AnalysisRequest) -> Result<AnalysisResult, String> {
-    #[cfg(target_arch = "wasm32")]
-    {
-        if crate::endpoints::is_native_host() {
-            return invoke_native(req).await;
-        }
-        Ok(stub_analyze(&req))
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        Ok(stub_analyze(&req))
+    #[wasm_bindgen::prelude::wasm_bindgen]
+    extern "C" {
+        #[wasm_bindgen(
+            js_namespace = ["window", "__TAURI__", "core"],
+            js_name = invoke,
+            catch
+        )]
+        pub async fn tauri_invoke(
+            cmd: &str,
+            args: wasm_bindgen::JsValue,
+        ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
     }
 }
 
-#[cfg(target_arch = "wasm32")]
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
-    async fn tauri_invoke(cmd: &str, args: JsValue) -> Result<JsValue, JsValue>;
-}
+#[cfg(not(target_arch = "wasm32"))]
+mod imp {
+    use serde_json::Value;
 
-#[cfg(target_arch = "wasm32")]
-async fn invoke_native(req: AnalysisRequest) -> Result<AnalysisResult, String> {
-    let args = serde_wasm_bindgen::to_value(&serde_json::json!({ "request": req }))
-        .map_err(|e| e.to_string())?;
-    let value = tauri_invoke("qapp_analyze", args)
-        .await
-        .map_err(|e| format!("qapp_analyze failed: {e:?}"))?;
-    serde_wasm_bindgen::from_value(value).map_err(|e| e.to_string())
-}
-
-/// Deterministic offline analysis used by the web demo. Produces a stable
-/// provenance hash and a few plausible assertions from the supplied fields so the
-/// UI behaves identically (minus real graph persistence) to the native path.
-pub fn stub_analyze(req: &AnalysisRequest) -> AnalysisResult {
-    let mut assertions: Vec<String> = req
-        .fields
-        .iter()
-        .filter(|(_, v)| !v.trim().is_empty())
-        .map(|(k, v)| format!("{} :{} \"{}\" .", req.discipline, slug(k), v))
-        .collect();
-    if !req.notes.trim().is_empty() {
-        assertions.push(format!(
-            "{} :hasNote \"{}\" .",
-            req.discipline,
-            truncate(req.notes.trim(), 80)
-        ));
-    }
-
-    let hash = provenance_hash(req);
-    AnalysisResult {
-        summary: format!(
-            "{} analysis assembled {} assertion(s) for the epistemic graph (offline preview).",
-            req.discipline,
-            assertions.len()
-        ),
-        assertions,
-        provenance_hash: format!("q42:{hash:016x}"),
-        engine: "stub".to_string(),
-    }
-}
-
-/// FNV-1a 64-bit over the canonical request encoding — stable across runs and
-/// platforms, mirroring how the native side derives a `q_hash` provenance stamp.
-fn provenance_hash(req: &AnalysisRequest) -> u64 {
-    let mut h: u64 = 0xcbf29ce484222325;
-    let mut feed = |s: &str| {
-        for b in s.as_bytes() {
-            h ^= *b as u64;
-            h = h.wrapping_mul(0x100000001b3);
-        }
-        h ^= 0xff;
-        h = h.wrapping_mul(0x100000001b3);
-    };
-    feed(&req.discipline);
-    for (k, v) in &req.fields {
-        feed(k);
-        feed(v);
-    }
-    feed(&req.notes);
-    h
-}
-
-fn slug(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for ch in s.chars() {
-        if ch.is_ascii_alphanumeric() {
-            out.push(ch.to_ascii_lowercase());
-        } else if !out.ends_with('_') {
-            out.push('_');
-        }
-    }
-    out.trim_matches('_').to_string()
-}
-
-fn truncate(s: &str, max: usize) -> String {
-    if s.chars().count() <= max {
-        s.to_string()
-    } else {
-        let mut t: String = s.chars().take(max).collect();
-        t.push('…');
-        t
-    }
-}
-
-/// Reusable "Commit to QualiaDB" panel. Drop into any discipline QApp, passing the
-/// live field values; it calls [`analyze`] and renders the engine's response.
-#[component]
-pub fn EnginePanel(discipline: String, fields: Vec<(String, String)>, notes: String) -> Element {
-    let mut result = use_signal(|| None::<AnalysisResult>);
-    let mut error = use_signal(|| None::<String>);
-    let mut busy = use_signal(|| false);
-
-    let on_run = move |_| {
-        if busy() {
-            return;
-        }
-        let req = AnalysisRequest {
-            discipline: discipline.clone(),
-            fields: fields.clone(),
-            notes: notes.clone(),
+    /// Native invoke — routes to specific typed REST portals on the local
+    /// settings server. The generic `/api/invoke/{cmd}` proxy has been removed
+    /// to lock down the control plane.
+    pub async fn tauri_invoke(
+        cmd: &str,
+        args: serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
+        let (method, endpoint) = match cmd {
+            "get_supervisor_state" => ("GET", "/api/status".to_string()),
+            "get_config" => ("GET", "/api/config".to_string()),
+            "save_config" => ("POST", "/api/config".to_string()),
+            "list_jobs" => ("GET", "/api/jobs".to_string()),
+            "enqueue_job" => ("POST", "/api/jobs".to_string()),
+            "system_telemetry" => ("GET", "/api/telemetry".to_string()),
+            "execute_sparql_query" => ("POST", "/api/sparql/query".to_string()),
+            _ => return Err(format!("Command '{cmd}' is not exposed via typed REST portals")),
         };
-        busy.set(true);
-        error.set(None);
+
+        let url = format!("http://127.0.0.1:8080{endpoint}");
+        let client = reqwest::Client::new();
+        
+        let req = if method == "GET" {
+            client.get(&url)
+        } else {
+            client.post(&url).json(&args)
+        };
+
+        let resp = req
+            .send()
+            .await
+            .map_err(|e| format!("invoke {cmd}: {e}"))?;
+
+        if resp.status().is_success() {
+            resp.json::<Value>()
+                .await
+                .map_err(|e| format!("invoke {cmd} parse: {e}"))
+        } else {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            Err(format!("invoke {cmd} failed: {status} — {body}"))
+        }
+    }
+}
+
+// Re-export the invoke function for both modes
+#[cfg(target_arch = "wasm32")]
+pub use imp::tauri_invoke;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub use imp::tauri_invoke;
+
+// ── Convenience wrapper for native mode ──────────────────────────────────────
+//
+// On native, tauri_invoke takes serde_json::Value and returns serde_json::Value.
+// On wasm, it takes wasm_bindgen::JsValue and returns wasm_bindgen::JsValue.
+// Components that use serde_json can use this helper on native:
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn invoke_json(cmd: &str, args: serde_json::Value) -> Result<serde_json::Value, String> {
+    tauri_invoke(cmd, args).await
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn invoke_json(cmd: &str, args: serde_json::Value) -> Result<serde_json::Value, String> {
+    let js_args = serde_wasm_bindgen::to_value(&args)
+        .map_err(|e| format!("serialize args: {e}"))?;
+    let result = tauri_invoke(cmd, js_args).await
+        .map_err(|e| format!("invoke {cmd}: {:?}", e))?;
+    serde_wasm_bindgen::from_value::<serde_json::Value>(result)
+        .map_err(|e| format!("deserialize result: {e}"))
+}
+
+#[derive(Props, Clone, PartialEq)]
+pub struct QAppEngineProps {
+    pub ontology_id: String,
+    pub title: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct ShaclProperty {
+    path: String,
+    datatype: Option<String>,
+    name: Option<String>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct ShaclShape {
+    #[serde(rename = "targetClass")]
+    target_class: String,
+    properties: Vec<ShaclProperty>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct OntologySchema {
+    domain: String,
+    shapes: Vec<ShaclShape>,
+}
+
+#[component]
+pub fn QAppEngine(props: QAppEngineProps) -> Element {
+    let mut schema = use_signal(|| None::<OntologySchema>);
+    let ontology_id = props.ontology_id.clone();
+
+    use_effect(move || {
+        let domain_id = ontology_id.clone();
         spawn(async move {
-            match analyze(req).await {
-                Ok(res) => {
-                    result.set(Some(res));
-                }
-                Err(e) => {
-                    error.set(Some(e));
-                    result.set(None);
+            let args = serde_json::json!({ "domainId": domain_id });
+            if let Ok(res) = invoke_json("fetch_domain_ontology", args).await {
+                if let Ok(parsed) = serde_json::from_value::<OntologySchema>(res) {
+                    schema.set(Some(parsed));
                 }
             }
-            busy.set(false);
         });
-    };
+    });
 
     rsx! {
-        div {
-            style: "margin-top: 12px; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--qualia-border); background: var(--qualia-surface); display: flex; flex-direction: column; gap: 10px;",
-            div {
-                style: "display: flex; align-items: center; justify-content: space-between; gap: 12px;",
-                span {
-                    style: "font-size: 0.8rem; color: var(--qualia-text-muted);",
-                    "QualiaDB epistemic analysis"
-                }
-                button {
-                    disabled: busy(),
-                    onclick: on_run,
-                    style: "padding: 6px 14px; border-radius: 6px; border: 1px solid var(--qualia-accent); background: var(--qualia-accent); color: white; font-weight: 600; font-size: 0.78rem; cursor: pointer;",
-                    if busy() { "Analyzing…" } else { "Commit to QualiaDB" }
-                }
-            }
+        div { class: "qapp-engine w-full h-full p-6 text-qualia-fg bg-qualia-bg",
+            h2 { class: "text-2xl font-bold mb-4", "{props.title}" }
 
-            if let Some(err) = error() {
-                div {
-                    style: "font-size: 0.78rem; color: #f87171;",
-                    "Engine error: {err}"
-                }
-            }
+            if let Some(s) = schema.read().as_ref() {
+                div { class: "ontology-viewer",
+                    div { class: "text-sm text-gray-400 mb-6", "Domain: {s.domain}" }
 
-            if let Some(res) = result() {
-                div {
-                    style: "display: flex; flex-direction: column; gap: 8px;",
-                    div { style: "font-size: 0.8rem; color: var(--qualia-text);", "{res.summary}" }
-                    div {
-                        style: "display: flex; flex-direction: column; gap: 4px;",
-                        for a in res.assertions.iter() {
-                            div {
-                                style: "font-size: 0.72rem; font-family: monospace; color: var(--qualia-text-muted); padding: 4px 8px; border-left: 2px solid var(--qualia-accent); background: var(--qualia-bg);",
-                                "{a}"
+                    for shape in s.shapes.iter() {
+                        div { class: "shape-form mb-8 p-4 border border-gray-700 rounded-lg",
+                            h3 { class: "text-xl font-semibold mb-4", "{shape.target_class}" }
+
+                            form { class: "flex flex-col gap-4",
+                                for prop in shape.properties.iter() {
+                                    div { class: "form-group flex flex-col",
+                                        label { class: "text-sm font-medium mb-1", "{prop.name.as_deref().unwrap_or(&prop.path)}" }
+                                        input {
+                                            class: "px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white focus:outline-none focus:border-blue-500",
+                                            placeholder: "Enter {prop.datatype.as_deref().unwrap_or(\"value\")}"
+                                        }
+                                        div { class: "text-xs text-gray-500 mt-1", "Path: {prop.path}" }
+                                    }
+                                }
+                                button {
+                                    class: "mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded",
+                                    type: "submit",
+                                    "Save Node"
+                                }
                             }
                         }
                     }
-                    div {
-                        style: "display: flex; gap: 12px; font-size: 0.68rem; color: var(--qualia-text-muted);",
-                        span { "provenance: {res.provenance_hash}" }
-                        span { "engine: {res.engine}" }
-                    }
                 }
+            } else {
+                div { class: "text-gray-400", "Loading domain ontology constraints..." }
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn stub_is_deterministic_and_filters_empty_fields() {
-        let req = AnalysisRequest {
-            discipline: "Anthropology".to_string(),
-            fields: vec![
-                ("Subfield".to_string(), "Cultural Anthropology".to_string()),
-                ("Field Site".to_string(), "".to_string()),
-            ],
-            notes: "  ".to_string(),
-        };
-        let a = stub_analyze(&req);
-        let b = stub_analyze(&req);
-        assert_eq!(a, b, "stub must be deterministic");
-        assert_eq!(a.engine, "stub");
-        assert_eq!(
-            a.assertions.len(),
-            1,
-            "empty field + blank notes are dropped"
-        );
-        assert!(a.provenance_hash.starts_with("q42:"));
     }
 }

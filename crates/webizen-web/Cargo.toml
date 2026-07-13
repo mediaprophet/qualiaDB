@@ -1,6 +1,6 @@
 [package]
 name = "qualia-wasm"
-version = "0.1.0"
+version = "0.0.23"
 edition = "2021"
 publish = false
 
@@ -34,7 +34,7 @@ wasm-opt = ["-Oz"]
 # we depend on it for the real .q42 / 10D tensor / ontology engine in WASM.
 # This makes webizen-web the single combined package (Qualia core + our web graphics glue).
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-qualia-core-db = { path = "../qualia-core-db", default-features = false, features = ["wasm_simd"] }
+qualia-core-db = { path = "../qualia-core-db", default-features = false, features = ["wasm-full"] }
 
 # Re-export some core WASM symbols from Qualia so the single package exposes them cleanly
 # (the final webizen-web.wasm will contain both the qualia engine + our web graphics glue)

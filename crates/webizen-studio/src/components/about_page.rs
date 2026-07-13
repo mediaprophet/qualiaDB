@@ -74,6 +74,42 @@ struct RuntimeLedgerHealth {
     degraded: bool,
 }
 
+#[allow(dead_code)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+struct QualiaComputeProfile {
+    engine_version: String,
+    forge_schema_version: u32,
+    wgpu_api_version: String,
+    naga_api_version: String,
+    cudarc_api_version: String,
+    backend_override: Option<String>,
+    adapter_name: String,
+    backend: String,
+    device_type: String,
+    vendor_hex: String,
+    device_hex: String,
+    driver: String,
+    driver_info: String,
+    recommendation: String,
+    preferred_forge_target: String,
+    active_forge_target: String,
+    fallback_note: Option<String>,
+    features: String,
+    enabled_features: String,
+    subgroup_range: String,
+    cooperative_matrix_tile_count: usize,
+    max_buffer_size_mib: u64,
+    max_storage_buffer_binding_size_mib: u64,
+    max_compute_workgroup_storage_size: u32,
+    max_compute_invocations_per_workgroup: u32,
+    max_compute_workgroup_size_x: u32,
+    max_compute_workgroups_per_dimension: u32,
+    timestamps_supported: bool,
+    timestamp_period_ns: f32,
+    q42_graph_bridge: bool,
+    available_modules: Vec<String>,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 struct RuntimeAboutState {
     daemon_status: String,
@@ -87,6 +123,7 @@ struct RuntimeAboutState {
     preview: Option<LocalPreviewProbe>,
     diffusion: Option<RuntimeSnapshotRecord>,
     ledger: Option<RuntimeLedgerHealth>,
+    compute: Option<QualiaComputeProfile>,
     status_note: String,
 }
 
@@ -104,6 +141,7 @@ impl Default for RuntimeAboutState {
             preview: None,
             diffusion: None,
             ledger: None,
+            compute: None,
             status_note: "Waiting for desktop runtime metadata...".to_string(),
         }
     }
@@ -217,6 +255,12 @@ pub fn AboutPage() -> Element {
                 )
                 .await
                 .ok();
+                let compute = invoke_tauri_json::<QualiaComputeProfile>(
+                    "get_qualia_compute_profile",
+                    json!({}),
+                )
+                .await
+                .ok();
                 let qualia_root = identity
                     .as_ref()
                     .and_then(|value| value.get("qualia_root"))
@@ -235,6 +279,7 @@ pub fn AboutPage() -> Element {
                     preview,
                     diffusion,
                     ledger,
+                    compute,
                     status_note:
                         "Desktop runtime metadata loaded from QualiaDB-backed native commands."
                             .to_string(),
@@ -346,6 +391,76 @@ pub fn AboutPage() -> Element {
         .qualia_root
         .clone()
         .unwrap_or_else(|| "Unavailable".to_string());
+    let compute_summary = runtime_snapshot
+        .compute
+        .as_ref()
+        .map(|profile| {
+            format!(
+                "{} / {} / {}",
+                profile.engine_version, profile.backend, profile.adapter_name
+            )
+        })
+        .unwrap_or_else(|| "Qualia compute profile unavailable".to_string());
+    let forge_summary = runtime_snapshot
+        .compute
+        .as_ref()
+        .map(|profile| {
+            let fallback = profile
+                .fallback_note
+                .as_ref()
+                .map(|note| format!(" ({note})"))
+                .unwrap_or_default();
+            format!(
+                "{} → {} / schema {}{}",
+                profile.preferred_forge_target,
+                profile.active_forge_target,
+                profile.forge_schema_version,
+                fallback
+            )
+        })
+        .unwrap_or_else(|| "Forge target unavailable".to_string());
+    let gpu_feature_summary = runtime_snapshot
+        .compute
+        .as_ref()
+        .map(|profile| {
+            format!(
+                "available [{}] / enabled [{}]",
+                profile.features, profile.enabled_features
+            )
+        })
+        .unwrap_or_else(|| "GPU feature caps unavailable".to_string());
+    let gpu_limit_summary = runtime_snapshot
+        .compute
+        .as_ref()
+        .map(|profile| {
+            format!(
+                "buffer {} MiB / storage binding {} MiB / wg {}",
+                profile.max_buffer_size_mib,
+                profile.max_storage_buffer_binding_size_mib,
+                profile.max_compute_workgroup_size_x
+            )
+        })
+        .unwrap_or_else(|| "GPU limits unavailable".to_string());
+    let gpu_driver_summary = runtime_snapshot
+        .compute
+        .as_ref()
+        .map(|profile| {
+            format!(
+                "{} {} / {} {} / subgroup {} / coop tiles {}",
+                profile.vendor_hex,
+                profile.device_hex,
+                profile.driver,
+                profile.driver_info,
+                profile.subgroup_range,
+                profile.cooperative_matrix_tile_count
+            )
+        })
+        .unwrap_or_else(|| "GPU driver unavailable".to_string());
+    let qualia_modules = runtime_snapshot
+        .compute
+        .as_ref()
+        .map(|profile| profile.available_modules.join(", "))
+        .unwrap_or_else(|| "Module inventory unavailable".to_string());
 
     rsx! {
         div { style: PAGE_STYLE,
@@ -433,6 +548,8 @@ pub fn AboutPage() -> Element {
                 InfoPill { label: "Host Surface", value: host_surface }
                 InfoPill { label: "Browser Pane", value: browser_pane_status }
                 InfoPill { label: "Inference", value: inference_backend.clone() }
+                InfoPill { label: "Qualia Engine", value: compute_summary.clone() }
+                InfoPill { label: "Forge Target", value: forge_summary.clone() }
                 InfoPill { label: "Preview", value: preview_summary.clone() }
                 InfoPill { label: "Diffusion", value: diffusion_summary.clone() }
             }
@@ -473,6 +590,12 @@ pub fn AboutPage() -> Element {
                         CopyRow { label: "Preview", value: preview_summary }
                         CopyRow { label: "Diffusion", value: diffusion_summary }
                         CopyRow { label: "Ledger", value: ledger_summary }
+                        CopyRow { label: "Compute", value: compute_summary }
+                        CopyRow { label: "Forge", value: forge_summary }
+                        CopyRow { label: "GPU Features", value: gpu_feature_summary }
+                        CopyRow { label: "GPU Limits", value: gpu_limit_summary }
+                        CopyRow { label: "GPU Driver", value: gpu_driver_summary }
+                        CopyRow { label: "Modules", value: qualia_modules }
                     }
                 }
 

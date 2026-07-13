@@ -84,3 +84,10 @@ fn vertex_main(input: VertexInput) -> VertexOutput {
     
     return output;
 }
+
+// Keep the projected vertex colour byte-for-byte; lighting and spectral
+// colouring are resolved by the engine before vertices reach this pipeline.
+@fragment
+fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
+    return input.color;
+}

@@ -5,8 +5,8 @@
 //! egress are now handled by `qualia-client-core::qpu_oracle` and
 //! `qualia-client-core::qpu_dispatcher`.
 
-pub mod pre_solver;
 pub mod dispatcher;
+pub mod pre_solver;
 
 use serde::{Deserialize, Serialize};
 
@@ -34,6 +34,7 @@ pub struct JobParameters {
     pub hamiltonian: Option<String>,
     /// Circuit JSON (gate-model problems)
     pub circuit: Option<String>,
+    pub circuit_depth: u32,
     pub shots: u32,
     pub extra: serde_json::Value,
 }
@@ -44,6 +45,7 @@ impl Default for JobParameters {
             num_qubits: 1,
             hamiltonian: None,
             circuit: None,
+            circuit_depth: 1,
             shots: 1000,
             extra: serde_json::Value::Null,
         }
@@ -147,7 +149,9 @@ impl std::fmt::Display for QpuError {
             Self::Network(s) => write!(f, "QPU network error: {}", s),
             Self::JobFailed(s) => write!(f, "QPU job failed: {}", s),
             Self::Timeout => write!(f, "QPU job timed out"),
-            Self::NotUnlocked => write!(f, "QPU Oracle not unlocked — affirm commitment in Settings"),
+            Self::NotUnlocked => {
+                write!(f, "QPU Oracle not unlocked — affirm commitment in Settings")
+            }
         }
     }
 }

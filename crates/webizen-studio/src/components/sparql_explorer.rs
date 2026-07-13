@@ -1,5 +1,7 @@
 use dioxus::prelude::*;
 
+use crate::components::qapp_engine::invoke_json;
+
 #[component]
 pub fn SparqlExplorer() -> Element {
     let mut query = use_signal(|| {
@@ -11,21 +13,22 @@ pub fn SparqlExplorer() -> Element {
 
     let run_query = move |_| {
         is_loading.set(true);
-        // Mock query execution
-        let mock_data = vec![
-            (
-                "did:q42:alice".to_string(),
-                "foaf:knows".to_string(),
-                "did:q42:bob".to_string(),
-            ),
-            (
-                "did:q42:bob".to_string(),
-                "foaf:name".to_string(),
-                "\"Bob\"".to_string(),
-            ),
-        ];
-        results.set(mock_data);
-        is_loading.set(false);
+        spawn(async move {
+            let args = serde_json::json!({
+                "query": query.read().clone(),
+            });
+
+            if let Ok(res) = invoke_json("execute_sparql_query", args).await {
+                if let Ok(data) = serde_json::from_value::<Vec<(String, String, String)>>(res) {
+                    results.set(data);
+                } else {
+                    results.set(vec![("Error parsing response".to_string(), "".to_string(), "".to_string())]);
+                }
+            } else {
+                results.set(vec![("Error executing query".to_string(), "".to_string(), "".to_string())]);
+            }
+            is_loading.set(false);
+        });
     };
 
     rsx! {

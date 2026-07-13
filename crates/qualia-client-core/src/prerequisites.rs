@@ -207,6 +207,7 @@ pub async fn install_prerequisite(kind: String) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]

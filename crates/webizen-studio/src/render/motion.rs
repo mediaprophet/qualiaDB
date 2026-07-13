@@ -65,3 +65,34 @@ impl Spring {
         (self.value - self.target).abs() < tolerance && self.velocity.abs() < tolerance
     }
 }
+
+/// Browser/OS reduced-motion preference (native builds always false here).
+#[cfg(target_arch = "wasm32")]
+pub fn prefers_reduced_motion() -> bool {
+    web_sys::window()
+        .and_then(|window| window.match_media("(prefers-reduced-motion: reduce)").ok())
+        .flatten()
+        .map(|query| query.matches())
+        .unwrap_or(false)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn prefers_reduced_motion() -> bool {
+    false
+}
+
+/// Build a timeline tick honoring sanctuary theme + OS reduced-motion.
+pub fn timeline_from_theme(
+    current_time: f64,
+    delta_t: f64,
+    theme_class: Option<&str>,
+) -> Timeline {
+    let sanctuary = theme_class
+        .map(|c| c.contains("sanctuary"))
+        .unwrap_or(false);
+    Timeline {
+        current_time,
+        delta_t,
+        reduced_motion: sanctuary || prefers_reduced_motion(),
+    }
+}

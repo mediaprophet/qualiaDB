@@ -1,0 +1,135 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# audio Index
+
+## Functionality Overview
+Comprehensive index of functionality for `audio`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Files & Exported Functionality
+- 📄 `acoustic_plane.rs`
+  - `struct AcousticUniform`
+  - `impl Default`
+  - `fn default`
+  - `fn apply_binaural_to_uniform`
+  - `struct AcousticParams`
+  - `impl AcousticParams`
+  - `fn from_tensor`
+  - `fn to_uniform`
+  - `fn to_phenomenal_uniform`
+  - `fn acoustic_params_from_tensor`
+  - `fn acoustic_enabled_for_mode`
+  - `fn acoustic_effective_mode`
+  - `struct SonicTokenRing`
+  - `impl SonicTokenRing`
+  - `fn len`
+  - *(...and 15 more)*
+- 📄 `acoustic_sab.rs`
+  - `struct AcousticSabHeader`
+  - `impl AcousticSabHeader`
+  - `fn parse`
+  - `fn init_acoustic_sab`
+  - `fn write_uniform_to_sab`
+  - `fn write_uniform_to_sab_with_mirror`
+  - `fn write_sab_header`
+  - `fn read_uniform_from_sab`
+  - `fn push_token_to_sab`
+  - `fn sab_header_pod_fits_slot`
+  - `fn sab_roundtrip_uniform`
+  - `fn sab_token_push`
+- 📄 `audio_sidecar_link.rs`
+  - `fn sidecar_content_hash`
+  - `enum SidecarBakeKind`
+  - `fn bake_audio_sidecar_into`
+  - `fn compile_spectral_sheet_quin`
+  - `fn format_sidecar_relpath`
+  - `fn link_tensor_audio_sidecar`
+  - `fn enrich_preview_from_sidecar`
+  - `fn write_sidecar_file`
+  - `fn hash_stable_for_same_preview`
+  - `fn link_emits_sheet_quin`
+  - `fn enrich_preview_from_baked_sidecar`
+- 📄 `audio_spectral_sheet.rs`
+  - `struct AudioSpectralSidecarHeader`
+  - `impl AudioSpectralSidecarHeader`
+  - `fn payload_bytes`
+  - `fn is_valid`
+  - `fn parse_sidecar_header`
+  - `struct AudioSpectralSheetView`
+  - `fn from_tensor_preview`
+  - `fn preview_bins_from_tensor`
+  - `fn sidecar_frame_view`
+  - `fn copy_sidecar_frame_to_preview_bins`
+  - `fn sidecar_header_size_and_magic`
+  - `fn preview_bins_len_fixed`
+  - `fn parse_header_rejects_short_slice`
+  - `fn parse_header_accepts_valid`
+- 📄 `cqt_bake.rs`
+  - `fn preview_to_cqt_frame`
+  - `fn bake_cqt_sidecar_from_preview`
+  - `fn forward_cqt`
+  - `fn hann`
+  - `fn cqt_to_preview`
+  - `fn bake_cqt_sidecar_from_samples`
+  - `fn cqt_header_kind_flag`
+  - `fn cqt_bins_log_spread_nonzero`
+  - `fn forward_cqt_tone_lands_on_expected_bin`
+  - `fn bake_cqt_from_samples_valid_header`
+  - `fn cqt_preview_passthrough_when_64_bins`
+- 📄 `dsp_kernel.rs`
+  - `struct ParametricVoiceState`
+  - `impl Default`
+  - `fn default`
+  - `fn epistemic_temperature_from_q`
+  - `fn epistemic_fm_index`
+  - `fn sigma_dominant_frequency`
+  - `fn parametric_sample`
+  - `fn configure_voice_from_tensor`
+  - `fn epistemic_temperature_monotonic`
+  - `fn parametric_sample_bounded`
+  - `fn sigma_frequency_in_audible_range`
+- 📄 `hrtf.rs`
+  - `enum HrtfProfile`
+  - `fn set_hrtf_profile`
+  - `fn hrtf_profile`
+  - `struct BinauralGains`
+  - `impl Default`
+  - `fn default`
+  - `fn head_relative_position`
+  - `fn lerp_table`
+  - `fn binaural_kemar_lite`
+  - `fn binaural_analytic`
+  - `fn binaural_from_position`
+  - `fn room_damp_from_manifold`
+  - `fn convolve_fir`
+  - `fn place_fractional_impulse`
+  - `fn one_pole_lowpass_in_place`
+  - *(...and 14 more)*
+- 📄 `mod.rs`
+- 📄 `stft.rs`
+  - `fn hann`
+  - `fn forward_stft`
+  - `fn fft_interleaved`
+  - `fn dft_interleaved_cpu`
+  - `fn stft_magnitudes`
+  - `fn magnitudes_to_preview`
+  - `fn bake_stft_sidecar_from_samples`
+  - `fn cosine_peaks_at_expected_bin`
+  - `fn frame_count_matches_formula`
+  - `fn rejects_non_power_of_two_frame`
+  - `fn magnitudes_are_one_sided`
+  - `fn bake_from_real_samples_produces_valid_stft_header`
+- 📄 `stft_bake.rs`
+  - `enum StftBakeError`
+  - `fn synthesize_stft_frame`
+  - `fn bake_stft_sidecar_from_preview`
+  - `fn bake_tensor_stft_sidecar`
+  - `fn bake_produces_valid_header`
+  - `fn frame_synthesis_nonzero`
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

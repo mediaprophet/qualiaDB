@@ -6,10 +6,108 @@
 //! fixed caller-supplied buffers.
 
 use crate::modalities::logic::n3_parser::{Formula, Rule, RuleType, Term, Triple};
+use crate::modalities::logic::shacl::{
+    CompiledShape, ShaclCompiler, ShaclConstraint, ShaclSeverity,
+};
 use crate::q_hash;
-use crate::modalities::logic::shacl::{CompiledShape, ShaclCompiler, ShaclConstraint, ShaclSeverity};
 use crate::webizen::{execute_vm_frame, SlgArena, SlgOpcode, VmFrame};
 use crate::NQuin;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CompiledTerm {
+    Uri(u64),
+    Variable(u64),
+    Literal(u64),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CompiledTriple {
+    pub subject: CompiledTerm,
+    pub predicate: CompiledTerm,
+    pub object: CompiledTerm,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CompiledFormula {
+    pub triples: [CompiledTriple; 8],
+    pub len: usize,
+}
+
+impl Default for CompiledFormula {
+    fn default() -> Self {
+        Self {
+            triples: [CompiledTriple {
+                subject: CompiledTerm::Uri(0),
+                predicate: CompiledTerm::Uri(0),
+                object: CompiledTerm::Uri(0),
+            }; 8],
+            len: 0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CompiledRule {
+    pub id_hash: Option<u64>,
+    pub rule_type: RuleType,
+    pub weight: Option<f32>,
+    pub premise: CompiledFormula,
+    pub conclusion: CompiledFormula,
+}
+
+impl CompiledTerm {
+    pub fn as_u64(&self) -> u64 {
+        match self {
+            CompiledTerm::Uri(h) => *h,
+            CompiledTerm::Variable(h) => *h,
+            CompiledTerm::Literal(h) => *h,
+        }
+    }
+
+    pub fn is_variable(&self) -> bool {
+        matches!(self, CompiledTerm::Variable(_))
+    }
+}
+
+pub fn compile_term(term: &Term<'_>) -> CompiledTerm {
+    let hash =
+        crate::modalities::logic::n3_parser::term_uri_hash(term).unwrap_or_else(|| match term {
+            Term::Variable(name) => q_hash(name),
+            _ => q_hash("?"),
+        });
+    match term {
+        Term::Variable(_) => CompiledTerm::Variable(hash),
+        Term::Literal(_) => CompiledTerm::Literal(hash),
+        _ => CompiledTerm::Uri(hash),
+    }
+}
+
+pub fn compile_triple(triple: &Triple<'_>) -> CompiledTriple {
+    CompiledTriple {
+        subject: compile_term(&triple.subject),
+        predicate: compile_term(&triple.predicate),
+        object: compile_term(&triple.object),
+    }
+}
+
+pub fn compile_formula(formula: &Formula<'_>) -> CompiledFormula {
+    let mut comp = CompiledFormula::default();
+    for (i, t) in formula.triples.iter().enumerate().take(8) {
+        comp.triples[i] = compile_triple(t);
+        comp.len += 1;
+    }
+    comp
+}
+
+pub fn compile_rule_to_zero_heap(rule: &Rule<'_>) -> CompiledRule {
+    CompiledRule {
+        id_hash: rule.id.map(q_hash),
+        rule_type: rule.rule_type,
+        weight: rule.weight,
+        premise: compile_formula(&rule.premise),
+        conclusion: compile_formula(&rule.conclusion),
+    }
+}
 
 pub const MAX_COMPILED_OPCODES: usize = 256;
 pub const MAX_COMPILED_QUINS: usize = 64;
@@ -69,40 +167,44 @@ pub struct AgentIntentFrame {
     pub context_namespaces: [u64; MAX_CONTEXT_NAMESPACE_SLOTS],
 }
 
-fn term_hash(term: &Term) -> Result<u64, N3CompileError> {
+fn term_hash(term: &Term<'_>) -> Result<u64, N3CompileError> {
     match term {
         Term::Uri(uri) => Ok(q_hash(uri)),
         Term::Literal(lit) => Ok(q_hash(lit)),
+        Term::Formula(s) => Ok(crate::modalities::logic::n3_parser::q_hash_formula(s)),
         Term::Variable(_) => Err(N3CompileError::MalformedTriple),
     }
 }
 
-fn triple_to_quin(triple: &Triple, context: u64) -> Result<NQuin, N3CompileError> {
+pub fn triple_to_quin(triple: &CompiledTriple, context: u64) -> Result<NQuin, N3CompileError> {
     let mut quin = NQuin::default();
-    quin.subject = term_hash(&triple.subject)?;
-    quin.predicate = term_hash(&triple.predicate)?;
-    quin.object = term_hash(&triple.object)?;
+    quin.subject = triple.subject.as_u64();
+    quin.predicate = triple.predicate.as_u64();
+    quin.object = triple.object.as_u64();
     quin.context = context;
     quin.parity = quin.subject ^ quin.predicate ^ quin.object ^ quin.context;
     Ok(quin)
 }
 
-fn first_triple(formula: &Formula) -> Result<&Triple, N3CompileError> {
-    formula
-        .triples
-        .first()
-        .ok_or(N3CompileError::MalformedTriple)
+fn first_triple<'a>(
+    f: &'a crate::modalities::logic::n3_compiler::CompiledFormula,
+) -> Result<&'a crate::modalities::logic::n3_compiler::CompiledTriple, N3CompileError> {
+    f.triples.first().ok_or(N3CompileError::MalformedTriple)
 }
 
 /// Returns true when every conclusion triple property path matches a compiled SHACL shape.
 pub fn validate_rule_against_shapes(
-    rule: &Rule,
+    rule: &Rule<'_>,
     shapes: &[&CompiledShape],
 ) -> Result<(), N3CompileError> {
     if shapes.is_empty() {
         return Ok(());
     }
-    let conclusion = first_triple(&rule.conclusion)?;
+    let conclusion = rule
+        .conclusion
+        .triples
+        .first()
+        .ok_or(N3CompileError::MalformedTriple)?;
     let property_hash = term_hash(&conclusion.predicate)?;
     let mut matched = false;
     for shape in shapes {
@@ -139,7 +241,7 @@ fn push_opcode(
 
 /// Lower one N3 rule into Sentinel opcodes (reuses SHACL terminal semantics).
 pub fn compile_rule_to_opcodes(
-    rule: &Rule,
+    rule: &CompiledRule,
     out: &mut [SlgOpcode],
 ) -> Result<usize, N3CompileError> {
     let mut count = 0usize;
@@ -170,11 +272,13 @@ pub fn compile_rule_to_opcodes(
 }
 
 pub fn compile_rule_to_quin(
-    rule: &Rule,
+    rule: &CompiledRule,
     contract_hash: u64,
     out: &mut [NQuin],
 ) -> Result<usize, N3CompileError> {
-    if let Some(norm) = crate::modalities::logic::deontic::compile_n3_rule_to_norm(rule, contract_hash, 0) {
+    if let Some(norm) =
+        crate::modalities::logic::deontic::compile_n3_rule_to_norm(rule, contract_hash, 0)
+    {
         if out.is_empty() {
             return Err(N3CompileError::QuinBufferFull);
         }
@@ -201,7 +305,7 @@ pub fn compile_rule_to_quin(
 
 /// SHACL-gated batch compile: validate each rule, then emit opcodes into a fixed buffer.
 pub fn compile_rules_with_shacl_gate(
-    rules: &[Rule],
+    rules: &[Rule<'_>],
     shapes: &[&CompiledShape],
     opcodes_out: &mut [SlgOpcode],
     quins_out: &mut [NQuin],
@@ -211,12 +315,20 @@ pub fn compile_rules_with_shacl_gate(
     let mut quin_offset = 0usize;
 
     for rule in rules {
+        // SHACL firewall: validate each rule against the routed shapes BEFORE compiling.
+        // `compile_term` hashes literals away ("12" -> u64), so a numeric range check is
+        // only possible here, on the Rule. Fail closed on any violation. Validation reads
+        // the existing Rule (no allocation); the compile step below is stack-only, so the
+        // gate itself remains zero-heap.
         validate_rule_against_shapes(rule, shapes)?;
-        let written = compile_rule_to_opcodes(rule, &mut opcodes_out[opcode_offset..])?;
+
+        let compiled = compile_rule_to_zero_heap(rule);
+
+        let written = compile_rule_to_opcodes(&compiled, &mut opcodes_out[opcode_offset..])?;
         opcode_offset += written;
 
         let quins_written =
-            compile_rule_to_quin(rule, contract_hash, &mut quins_out[quin_offset..])?;
+            compile_rule_to_quin(&compiled, contract_hash, &mut quins_out[quin_offset..])?;
         quin_offset += quins_written;
     }
 
@@ -254,7 +366,7 @@ mod tests {
     use super::*;
     use crate::modalities::logic::n3_parser::{Formula, Rule, RuleType, Triple};
 
-    fn sample_strict_rule() -> Rule {
+    fn sample_strict_rule() -> Rule<'static> {
         Rule {
             id: Some("hr-observation".into()),
             rule_type: RuleType::Strict,
@@ -279,7 +391,14 @@ mod tests {
     #[test]
     fn compiles_strict_rule_to_opcodes() {
         let mut opcodes = [SlgOpcode::Call; MAX_COMPILED_OPCODES];
-        let count = compile_rule_to_opcodes(&sample_strict_rule(), &mut opcodes).unwrap();
+        let count =
+            compile_rule_to_opcodes(
+                &crate::modalities::logic::n3_compiler::compile_rule_to_zero_heap(
+                    &sample_strict_rule(),
+                ),
+                &mut opcodes,
+            )
+            .unwrap();
         assert_eq!(count, 3);
         assert_eq!(opcodes[0], SlgOpcode::Unify);
         assert_eq!(opcodes[1], SlgOpcode::Call);
@@ -300,13 +419,15 @@ mod tests {
 
     #[test]
     fn zero_heap_compile_rules_with_shacl_gate() {
-        let _profiler = dhat::Profiler::builder().testing().build();
+        // Build inputs OUTSIDE the measured region: parser-owned `Rule`s carry heap Vecs;
+        // this test asserts the GATE ITSELF allocates nothing (validate + stack compile).
         let rules = [sample_strict_rule()];
         let shape = default_observation_shape();
         let shapes = [&shape];
         let mut opcodes = [SlgOpcode::Call; MAX_COMPILED_OPCODES];
         let mut quins = [NQuin::default(); MAX_COMPILED_QUINS];
 
+        let _profiler = dhat::Profiler::builder().testing().build();
         let result = compile_rules_with_shacl_gate(
             &rules,
             &shapes,

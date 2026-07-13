@@ -1,0 +1,51 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix doc:    <https://ns.webcivics.net/values/principles-international-co-operation-detection-arrest#> .
+
+# ============================================================
+# Principles of international co-operation in the detection, arrest, extradition and punishment of persons guilty of war crimes and crimes against humanity
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Principles of international co-operation in the detection, arrest, extradition and punishment of persons guilty of war crimes and crimes against humanity"@en ;
+    dc:date "03 December 1973" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-international-co-operation-detection-arrest> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:paragraph-1 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 1"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Recalling its resolutions 2583 (XXIV) of 15 December 1969, 2712 (XXV) of 15 December 1970, 2840 (XXVI) of 18 December 1971 and 3020 (XXVII) of 18 December 1972,"@en .
+
+doc:paragraph-2 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 2"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Taking into account the special need for international action in order to ensure the prosecution and punishment of persons guilty of war crimes and crimes against humanity,"@en .
+
+doc:paragraph-3 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 3"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Having considered the draft principles of international co-operation in the detection, arrest, extradition and punishment of persons guilty of war crimes and crimes against humanity,"@en .
+
+doc:paragraph-4 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 4"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Declares that the United Nations, in pursuance of the principles and purposes set forth in the Charter concerning the promotion of co-operation between peoples and the maintenance of international peace and security, proclaims the following principles of international co-operation in the detection, arrest, extradition and punishment of persons guilty of war crimes and crimes against humanity:"@en .
+
+doc:paragraph-5 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 5"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "War crimes and crimes against humanity, wherever they are committed, shall be subject to investigation and the persons against whom there is evidence that they have committed such crimes shall be subject to tracing, arrest, trial and, if found guilty, to punishment. Every State has the right to try its own nationals for war crimes against humanity. States shall co-operate with each other on a bilateral and multilateral basis with a view to halting and preventing war crimes and crimes against humanity, and shall take the domestic and international measures necessary for that purpose. States shall assist each other in detecting, arresting and bringing to trial persons suspected of having committed such crimes and, if they are found guilty, in punishing them. Persons against whom there is evidence that they have committed war crimes and crimes against humanity shall be subject to trial and, if found guilty, to punishment, as a general rule in the countries in which they committed those crimes. In that connection, States shall co-operate on questions of extraditing such persons. States shall co-operate with each other in the collection of information and evidence which would help to bring to trial the persons indicated in para-graph 5 above and shall exchange such information. In accordance with article 1 of the Declaration on Territorial Asylum of 14 December 1967, States shall not grant asylum to any person with respect to whom there are serious reasons for considering that he has committed a crime against peace, a war crime or a crime against humanity. States shall not take any legislative or other measures which may be prejudicial to the international obligations they have assumed in regard to the detection, arrest, extradition and punishment of persons guilty of war crimes and crimes against humanity. In co-operating with a view to the detection, arrest and extradition of persons against whom there is evidence that they have committed war crimes and crimes against humanity and, if found guilty, their punishment, States shall act in conformity with the provisions of the Charter of the United Nations and of the Declaration on Principles of International Law concerning Friendly Relations and Co-operation among States in accordance with the Charter of the United Nations."@en .

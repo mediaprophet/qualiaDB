@@ -12,152 +12,59 @@ struct NQuin {
     metadata: u64,
     parity: u64,
 }
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::closure::Closure;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
 use web_sys::{EventSource, MessageEvent};
 
+#[cfg(target_arch = "wasm32")]
+#[derive(Deserialize)]
+struct HardwareTelemetry {
+    cpu: String,
+    ram: String,
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "event"], js_name = listen, catch)]
+    async fn tauri_listen(
+        event: &str,
+        handler: &js_sys::Function,
+    ) -> Result<js_sys::Function, wasm_bindgen::JsValue>;
+}
+
+use crate::canvas_editor::{
+    clamp_pane_origin, clamp_pane_size, grid_metrics, new_workspace_shell, pixel_delta_to_grid,
+    qprime_elevation_css, snap_u16, CanvasEditorMode, PaneInteraction, WorkspaceHistory,
+};
+use crate::pane_generator;
+use crate::components::ontology_import_wizard::{
+    OntologyImportWizard, OntologyLayoutSuggestion,
+};
+use crate::components::selection_sidebar::SelectionSidebar;
+use crate::render::motion::Spring;
+use crate::render::motion_loop::{
+    spawn_ui_motion_loop, step_mode_pulse_spring, trigger_mode_pulse,
+};
 use crate::pane_registry::{
     builtin_pane_definitions, category_label, find_pane, PaneCategory, PaneDefinition,
 };
 use crate::theme_engine::{
     builtin_theme_catalog, collect_stylesheets, join_theme_classes, render_scope_tokens,
-    resolve_theme, ResolvedTheme, ThemeBinding, ThemeDefinition,
+    resolve_theme, theme_binding_provenance, theme_selection_pulse, ResolvedTheme, ThemeBinding,
 };
+use crate::theme_engine;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub enum LayoutStrategy {
-    PointGrid {
-        width_points: u16,
-        height_points: u16,
-        snap_step: u16,
-        gutter: u16,
-    },
-    CssGrid {
-        cols: u8,
-        rows: u8,
-        gap: u8,
-    },
-    FlexBox,
-    Masonry,
-}
-
-impl Default for LayoutStrategy {
-    fn default() -> Self {
-        Self::PointGrid {
-            width_points: 96,
-            height_points: 64,
-            snap_step: 2,
-            gutter: 2,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub enum PresentationMode {
-    GridBound,
-    NodeRelational,
-    Spatial,
-}
-
-impl Default for PresentationMode {
-    fn default() -> Self {
-        Self::GridBound
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub enum CoordinateSpace {
-    GlobalCartesian,
-    RelativeAnchored,
-}
-
-impl Default for CoordinateSpace {
-    fn default() -> Self {
-        Self::GlobalCartesian
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub enum UiMode {
-    NativeDioxus,
-    IFrameSandbox,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub enum LayerBehavior {
-    Docked,
-    FloatingOverlay,
-    ModalOverlay,
-    FullCanvas,
-}
-
-impl Default for LayerBehavior {
-    fn default() -> Self {
-        Self::Docked
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct PanePlacement {
-    pub component_id: String,
-    pub x: u16,
-    pub y: u16,
-    pub w: u16,
-    pub h: u16,
-    pub data_bindings: Vec<String>,
-    #[serde(default)]
-    pub binds_rpc: Option<String>,
-    #[serde(default)]
-    pub requires_capability: Vec<String>,
-    #[serde(default)]
-    pub ui_mode: Option<UiMode>,
-    #[serde(default)]
-    pub layer: LayerBehavior,
-    #[serde(default)]
-    pub anchor: Option<String>,
-    #[serde(default)]
-    pub min_w_points: u16,
-    #[serde(default)]
-    pub min_h_points: u16,
-    #[serde(default)]
-    pub supported_presentations: Vec<PresentationMode>,
-    #[serde(default)]
-    pub theme: ThemeBinding,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct Page {
-    pub url_path: String,
-    pub name: String,
-    #[serde(default)]
-    pub layout_strategy: LayoutStrategy,
-    pub panes: Vec<PanePlacement>,
-    #[serde(default)]
-    pub presentation_mode: PresentationMode,
-    #[serde(default)]
-    pub coordinate_space: CoordinateSpace,
-    #[serde(default)]
-    pub pan_and_zoom: bool,
-    #[serde(default)]
-    pub theme: ThemeBinding,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
-pub struct WebizenWorkspace {
-    pub pages: Vec<Page>,
-    #[serde(default)]
-    pub theme_tokens: std::collections::HashMap<String, String>,
-    #[serde(default)]
-    pub themes: Vec<ThemeDefinition>,
-    #[serde(default)]
-    pub environment_theme: ThemeBinding,
-    #[serde(default)]
-    pub app_theme: ThemeBinding,
-}
+pub use crate::canvas_model::{
+    CoordinateSpace, LayerBehavior, LayoutStrategy, Page, PanePlacement, PresentationMode,
+    UiMode, WebizenWorkspace,
+};
 
 // ─────────────────────────────────────────────────────────────
 // Default pane layouts for known QApps
@@ -541,8 +448,7 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
     });
 
     let app_id_init = app_id.clone();
-    let mut workspace = use_signal(move || {
-        let mut ws = WebizenWorkspace::default();
+    let initial_workspace = {
         let (name, panes) = match app_id_init.as_deref() {
             Some(aid) => (
                 app_display_name(aid).to_string(),
@@ -550,20 +456,195 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
             ),
             None => ("New Canvas".to_string(), vec![]),
         };
-        ws.pages.push(Page {
-            url_path: "/".to_string(),
-            name,
-            panes,
-            layout_strategy: LayoutStrategy::default(),
-            presentation_mode: default_presentation_mode(app_id_init.as_deref()),
-            coordinate_space: CoordinateSpace::default(),
-            pan_and_zoom: true,
-            theme: ThemeBinding::default(),
-        });
+        let mut ws = new_workspace_shell(name, panes);
+        if let Some(page) = ws.pages.first_mut() {
+            page.presentation_mode = default_presentation_mode(app_id_init.as_deref());
+        }
         ws
+    };
+    let mut workspace = use_signal({
+        let initial = initial_workspace.clone();
+        move || initial
+    });
+    let mut history = use_signal({
+        let initial = initial_workspace.clone();
+        move || WorkspaceHistory::new(initial)
     });
     let selected_pane_index = use_signal(|| None::<usize>);
+    let editor_mode = use_signal(|| CanvasEditorMode::Edit);
+    let pane_interaction = use_signal(|| None::<PaneInteraction>);
+    let drag_anchor = use_signal(|| (0.0_f64, 0.0_f64));
+    let canvas_extent = use_signal(|| (800.0_f64, 520.0_f64));
     let pane_palette = use_signal(builtin_pane_definitions);
+    let selection_spring = use_signal(|| Spring::new(0.0));
+    let selection_scale = use_signal(|| 1.0_f64);
+    let mode_pulse_spring = use_signal(|| Spring::new(0.0));
+    let mode_pulse_scale = use_signal(|| 0.0_f64);
+    let save_status = use_signal(|| String::new());
+    let mut deploy_revision = use_signal(|| Option::<u64>::None);
+    let mut deploy_history = use_signal(Vec::<DeployHistoryRow>::new);
+    let replay_status = use_signal(|| String::new());
+    let replaying_revision = use_signal(|| None::<u64>);
+    let mut motion_theme_class = use_signal(|| String::new());
+    let mut pane_prompt = use_signal(|| String::new());
+    let mut generate_status = use_signal(|| String::new());
+    let generate_nonce = use_signal(|| 0u32);
+    let mut telemetry_logs = use_signal(Vec::<String>::new);
+    let global_theme = consume_context::<Signal<ResolvedTheme>>();
+
+    use_effect(move || {
+        let global_class = global_theme().class_name.clone();
+        let ws = workspace.read().clone();
+        let catalog = if ws.themes.is_empty() {
+            builtin_theme_catalog()
+        } else {
+            ws.themes.clone()
+        };
+        let app = resolve_theme(Some(&ws.app_theme), &catalog);
+        let env = resolve_theme(Some(&ws.environment_theme), &catalog);
+        let class = global_class
+            .or(app.class_name)
+            .or(env.class_name)
+            .unwrap_or_else(|| "theme-fiduciary-dark".to_string());
+        motion_theme_class.set(class);
+    });
+
+    let generate_path = format!("/{}", path.join("/"));
+    use_effect({
+        let generate_path = generate_path.clone();
+        move || {
+        if generate_nonce() == 0 {
+            return;
+        }
+        let prompt = pane_prompt();
+        if prompt.trim().is_empty() {
+            generate_status.set("Describe a pane layout first.".to_string());
+            return;
+        }
+
+        let palette_snapshot = pane_palette.read().clone();
+        let palette_ids: Vec<String> = palette_snapshot
+            .iter()
+            .map(|d| d.component_id.clone())
+            .collect();
+        let path_for_apply = generate_path.clone();
+
+        let mut apply_plan = move |plan: pane_generator::PaneGenerationPlan| {
+            history.write().push(workspace.read().clone());
+            let mut ws = workspace.write();
+            if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == path_for_apply) {
+                page.panes = plan.panes;
+                page.presentation_mode = plan.presentation;
+            }
+            generate_status.set(plan.summary);
+        };
+
+        if crate::endpoints::is_native_host() {
+            generate_status.set("Generating layout…".to_string());
+            spawn(async move {
+                let plan = match pane_generator::fetch_plan_from_prompt(&prompt, &palette_ids).await
+                {
+                    Ok(plan) => plan,
+                    Err(_) => pane_generator::generate_panes_from_prompt(
+                        &prompt,
+                        &palette_snapshot,
+                    ),
+                };
+                apply_plan(plan);
+            });
+        } else {
+            let plan =
+                pane_generator::generate_panes_from_prompt(&prompt, &palette_snapshot);
+            apply_plan(plan);
+        }
+        }
+    });
+
+    use_effect(move || {
+        let mut selection_spring = selection_spring;
+        let mut selection_scale = selection_scale;
+        let mut mode_pulse_spring = mode_pulse_spring;
+        let mut mode_pulse_scale = mode_pulse_scale;
+        let selected_pane_index = selected_pane_index;
+        let motion_theme_class = motion_theme_class;
+        let global_theme = global_theme;
+        spawn_ui_motion_loop(move |dt| {
+            let theme_class = motion_theme_class.read().clone();
+            let theme_ref = if theme_class.is_empty() {
+                None
+            } else {
+                Some(theme_class.as_str())
+            };
+            let selected = selected_pane_index.read().is_some();
+            let scale = theme_selection_pulse(
+                &mut selection_spring.write(),
+                selected,
+                &global_theme(),
+            );
+            selection_scale.set(scale);
+            let pulse = step_mode_pulse_spring(&mut mode_pulse_spring.write(), theme_ref, dt);
+            mode_pulse_scale.set(pulse);
+        });
+    });
+
+    let mut spatial_contract_nodes =
+        use_signal(|| crate::render::render_stack_revision().saturating_sub(1));
+
+    #[cfg(not(target_arch = "wasm32"))]
+    use_effect({
+        let generate_path = generate_path.clone();
+        move || {
+        let ws = workspace.read().clone();
+        let page_path = generate_path.clone();
+        let page = ws
+            .pages
+            .iter()
+            .find(|p| p.url_path == page_path || page_path == "/")
+            .or_else(|| ws.pages.first());
+        if let Some(page) = page {
+            let contract = crate::render::render_contract_from_panes(&page.panes);
+            spatial_contract_nodes.set(contract.element_count());
+            let draw_count = crate::render::rasterize_scene_draw_count(&page.panes);
+            let (_tensor_count, opacity) = crate::render::tensor_buffer_digest(&[]);
+            telemetry_logs.write().push(format!(
+                "Spatial preview: {} elements, {draw_count} draw ops (tensor opacity {opacity:.2})",
+                contract.element_count()
+            ));
+            let panes_snapshot = page.panes.clone();
+            spawn(async move {
+                if let Some(png_len) =
+                    crate::render::native_headless_png_byte_len(&panes_snapshot, 960, 540).await
+                {
+                    telemetry_logs.write().push(format!(
+                        "Native GPU preview frame: {png_len} bytes"
+                    ));
+                }
+            });
+        }
+        }
+    });
+
+    #[cfg(not(target_arch = "wasm32"))]
+    use_effect(move || {
+        if !crate::endpoints::is_native_host() {
+            return;
+        }
+        for surface in crate::endpoints::all_host_surfaces() {
+            telemetry_logs.write().push(format!(
+                "Surface: {}",
+                crate::endpoints::host_surface_label(surface)
+            ));
+        }
+        spawn(async move {
+            if let Ok(resp) = reqwest::get(crate::endpoints::telemetry_url()).await {
+                if let Ok(txt) = resp.text().await {
+                    if !txt.trim().is_empty() {
+                        telemetry_logs.write().push(txt);
+                    }
+                }
+            }
+        });
+    });
 
     // ── Boot Rehydration ───────────────────────────────────
     // Only talk to the local daemon when one can exist (native / Tauri webview).
@@ -576,7 +657,34 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
             if let Ok(res) = reqwest::get(crate::endpoints::manifest_url()).await {
                 if let Ok(data) = res.json::<WebizenWorkspace>().await {
                     if !data.pages.is_empty() {
-                        workspace.set(data);
+                        workspace.set(data.clone());
+                        history.set(WorkspaceHistory::new(data));
+                    }
+                }
+            }
+            #[derive(Deserialize)]
+            struct UndoChainResponse {
+                manifests: Vec<WebizenWorkspace>,
+            }
+            if let Ok(res) = reqwest::get(crate::endpoints::manifest_undo_chain_url()).await {
+                if res.status().is_success() {
+                    if let Ok(chain) = res.json::<UndoChainResponse>().await {
+                        if let Some(h) = WorkspaceHistory::from_manifest_entries(chain.manifests)
+                        {
+                            let current = h.current().clone();
+                            workspace.set(current);
+                            history.set(h);
+                        }
+                    }
+                }
+            }
+            if let Ok(res) = reqwest::get(crate::endpoints::manifest_history_url()).await {
+                if res.status().is_success() {
+                    if let Ok(rows) = res.json::<Vec<DeployHistoryRow>>().await {
+                        if let Some(last) = rows.last() {
+                            deploy_revision.set(Some(last.revision));
+                        }
+                        deploy_history.set(rows);
                     }
                 }
             }
@@ -603,12 +711,17 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
 
     #[cfg(not(target_arch = "wasm32"))]
     use_effect(move || {
-        is_native_llm_active.set(true); // Always true on native build
+        let ws_url = crate::endpoints::native_handshake_ws();
+        let reachable = crate::endpoints::probe_native_handshake_port();
+        is_native_llm_active.set(reachable);
+        if !reachable {
+            telemetry_logs.write().push(format!(
+                "Native LLM handshake offline ({ws_url})"
+            ));
+        }
     });
 
     // 🔴🔴 Telemetry SSE 🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴
-    let mut telemetry_logs = use_signal(Vec::<String>::new);
-
     #[cfg(target_arch = "wasm32")]
     use_effect(move || {
         if !crate::endpoints::is_native_host() {
@@ -629,9 +742,31 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
         }
     });
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(target_arch = "wasm32")]
     use_effect(move || {
-        // Desktop natively polling or disabled for now to avoid web_sys panic
+        if !crate::endpoints::is_native_host() {
+            return;
+        }
+        wasm_bindgen_futures::spawn_local(async move {
+            let callback = Closure::<dyn FnMut(JsValue)>::wrap(Box::new(move |event: JsValue| {
+                let payload = js_sys::Reflect::get(&event, &JsValue::from_str("payload"));
+                if let Ok(payload) = payload {
+                    if let Ok(hw) = serde_wasm_bindgen::from_value::<HardwareTelemetry>(payload) {
+                        let line = format!("CPU {} | RAM {}", hw.cpu, hw.ram);
+                        telemetry_logs.write().push(line);
+                        if telemetry_logs.read().len() > 10 {
+                            telemetry_logs.write().remove(0);
+                        }
+                    }
+                }
+            }));
+            if tauri_listen("hardware-telemetry", callback.as_ref().unchecked_ref())
+                .await
+                .is_ok()
+            {
+                callback.forget();
+            }
+        });
     });
 
     // ── Drag-and-Drop: handle drop on the canvas ───────────
@@ -643,50 +778,15 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
             let dt = evt.data().data_transfer();
             if let Some(component_id) = dt.get_data("application/x-qualia-pane-id") {
                 if !component_id.is_empty() {
-                    // Look up default dimensions from the registry
-                    let (default_w, default_h) = find_pane(&component_id)
-                        .map(|p| (p.default_w, p.default_h))
-                        .unwrap_or((4, 2));
-
-                    let new_pane = PanePlacement {
-                        component_id: component_id.clone(),
-                        x: 4,
-                        y: 4 + (workspace
-                            .read()
-                            .pages
-                            .first()
-                            .map(|p| p.panes.len())
-                            .unwrap_or(0) as u16
-                            * 6),
-                        w: (default_w as u16).saturating_mul(6),
-                        h: (default_h as u16).saturating_mul(6),
-                        data_bindings: vec![],
-                        binds_rpc: if component_id == "custom-web-module" {
-                            Some(crate::endpoints::MODULE_RPC_WS.into())
-                        } else {
-                            None
-                        },
-                        requires_capability: vec![],
-                        ui_mode: if component_id == "custom-web-module" {
-                            Some(UiMode::IFrameSandbox)
-                        } else {
-                            None
-                        },
-                        layer: if component_id == "custom-web-module" {
-                            LayerBehavior::FloatingOverlay
-                        } else {
-                            LayerBehavior::Docked
-                        },
-                        anchor: None,
-                        min_w_points: (default_w as u16).saturating_mul(4),
-                        min_h_points: (default_h as u16).saturating_mul(4),
-                        supported_presentations: vec![PresentationMode::GridBound],
-                        theme: ThemeBinding::default(),
-                    };
-
+                    let snapshot = workspace.read().clone();
+                    history.write().push(snapshot);
                     let mut ws = workspace.write();
                     if let Some(page) = ws.pages.first_mut() {
-                        page.panes.push(new_pane);
+                        if let Some(new_pane) =
+                            build_pane_placement(&component_id, page.panes.len())
+                        {
+                            page.panes.push(new_pane);
+                        }
                     }
                 }
             }
@@ -697,22 +797,317 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
         evt.prevent_default();
     };
 
-    // ── Deploy handler ─────────────────────────────────────
-    let deploy_workspace = {
+    let record_workspace = {
+        let mut history = history.clone();
         let workspace = workspace.clone();
+        move || {
+            history.write().push(workspace.read().clone());
+            if crate::endpoints::is_native_host() {
+                let ws = workspace.read().clone();
+                let stack_index = history.read().stack_index();
+                spawn(async move {
+                    if let Ok(json) = serde_json::to_string(&ws) {
+                        let url = crate::endpoints::manifest_undo_frame_url(stack_index);
+                        let _ = reqwest::Client::new()
+                            .post(url)
+                            .header("Content-Type", "application/json")
+                            .body(json)
+                            .send()
+                            .await;
+                    }
+                });
+            }
+        }
+    };
+
+    let undo_workspace = {
+        let mut history = history.clone();
+        let mut workspace = workspace.clone();
         move |_| {
+            if let Some(ws) = history.write().undo() {
+                workspace.set(ws);
+            }
+        }
+    };
+
+    let redo_workspace = {
+        let mut history = history.clone();
+        let mut workspace = workspace.clone();
+        move |_| {
+            if let Some(ws) = history.write().redo() {
+                workspace.set(ws);
+            }
+        }
+    };
+
+    let toggle_editor_mode = {
+        let mut editor_mode = editor_mode.clone();
+        move |_| {
+            editor_mode.set(match editor_mode() {
+                CanvasEditorMode::Edit => CanvasEditorMode::Preview,
+                CanvasEditorMode::Preview => CanvasEditorMode::Edit,
+            });
+        }
+    };
+
+    let current_path_for_mode = format!("/{}", path.join("/"));
+    let pulse_toolbar = {
+        let mut mode_pulse_spring = mode_pulse_spring.clone();
+        move || trigger_mode_pulse(&mut mode_pulse_spring.write())
+    };
+    let switch_grid_mode = {
+        let mut workspace = workspace.clone();
+        let mut history = history.clone();
+        let current_path = current_path_for_mode.clone();
+        let mut pulse_toolbar = pulse_toolbar.clone();
+        move |_| {
+            pulse_toolbar();
+            history.write().push(workspace.read().clone());
+            let mut ws = workspace.write();
+            if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == current_path) {
+                page.presentation_mode = PresentationMode::GridBound;
+            }
+        }
+    };
+    let switch_node_mode = {
+        let mut workspace = workspace.clone();
+        let mut history = history.clone();
+        let current_path = current_path_for_mode.clone();
+        let mut pulse_toolbar = pulse_toolbar.clone();
+        move |_| {
+            pulse_toolbar();
+            history.write().push(workspace.read().clone());
+            let mut ws = workspace.write();
+            if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == current_path) {
+                page.presentation_mode = PresentationMode::NodeRelational;
+            }
+        }
+    };
+    let switch_spatial_mode = {
+        let mut workspace = workspace.clone();
+        let mut history = history.clone();
+        let current_path = current_path_for_mode;
+        let mut pulse_toolbar = pulse_toolbar.clone();
+        move |_| {
+            pulse_toolbar();
+            history.write().push(workspace.read().clone());
+            let mut ws = workspace.write();
+            if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == current_path) {
+                page.presentation_mode = PresentationMode::Spatial;
+            }
+        }
+    };
+
+    let finish_interaction = {
+        let mut pane_interaction = pane_interaction.clone();
+        let mut record_workspace = record_workspace.clone();
+        move || {
+            if pane_interaction().is_some() {
+                record_workspace();
+                pane_interaction.set(None);
+            }
+        }
+    };
+
+    let on_canvas_mousemove = {
+        let mut workspace = workspace.clone();
+        let pane_interaction = pane_interaction.clone();
+        let drag_anchor = drag_anchor.clone();
+        let canvas_extent = canvas_extent.clone();
+        let current_path = format!("/{}", path.join("/"));
+        move |evt: Event<MouseData>| {
+            if editor_mode() != CanvasEditorMode::Edit {
+                return;
+            }
+            let Some(interaction) = pane_interaction() else {
+                return;
+            };
+            let coords = evt.data().client_coordinates();
+            let (ax, ay) = drag_anchor();
+            let (cw, ch) = canvas_extent();
+            let mut ws = workspace.write();
+            let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == current_path) else {
+                return;
+            };
+            let (grid_w, grid_h, snap) = grid_metrics(page);
+            let (dx, dy) = pixel_delta_to_grid(
+                coords.x - ax,
+                coords.y - ay,
+                cw,
+                ch,
+                grid_w,
+                grid_h,
+            );
+            match interaction {
+                PaneInteraction::Drag { idx, orig_x, orig_y } => {
+                    if let Some(pane) = page.panes.get_mut(idx) {
+                        let (nx, ny) = clamp_pane_origin(
+                            orig_x as i32 + dx,
+                            orig_y as i32 + dy,
+                            pane.w,
+                            pane.h,
+                            grid_w,
+                            grid_h,
+                        );
+                        pane.x = snap_u16(nx, snap);
+                        pane.y = snap_u16(ny, snap);
+                    }
+                }
+                PaneInteraction::Resize { idx, orig_w, orig_h } => {
+                    if let Some(pane) = page.panes.get_mut(idx) {
+                        let (nw, nh) = clamp_pane_size(
+                            orig_w as i32 + dx,
+                            orig_h as i32 + dy,
+                            pane.x,
+                            pane.y,
+                            grid_w,
+                            grid_h,
+                        );
+                        pane.w = snap_u16(nw, snap);
+                        pane.h = snap_u16(nh, snap);
+                    }
+                }
+            }
+        }
+    };
+
+    let on_canvas_mouseup = {
+        let mut finish_interaction = finish_interaction.clone();
+        move |_: Event<MouseData>| {
+            finish_interaction();
+        }
+    };
+
+    // ── Persist workspace to local settings portal (survives restart) ──
+    let save_workspace = {
+        let workspace = workspace.clone();
+        let mut save_status = save_status.clone();
+        let mut deploy_revision = deploy_revision.clone();
+        let mut deploy_history = deploy_history.clone();
+        move |_| {
+            save_status.set("Saving…".to_string());
             spawn(async move {
                 let current_workspace = workspace.read().clone();
-                let payload = serde_json::to_string(&current_workspace).unwrap_or_default();
+                let payload = match serde_json::to_string(&current_workspace) {
+                    Ok(json) => json,
+                    Err(err) => {
+                        save_status.set(format!("Serialize failed: {err}"));
+                        return;
+                    }
+                };
 
                 let client = reqwest::Client::new();
-                let _ = client
+                match client
                     .post(crate::endpoints::manifest_url())
-                    .header("Content-Type", "application/yaml-ld-q42")
+                    .header("Content-Type", "application/json")
                     .body(payload)
                     .send()
-                    .await;
+                    .await
+                {
+                    Ok(res) if res.status().is_success() => {
+                        if let Ok(history_res) =
+                            client.get(crate::endpoints::manifest_history_url()).send().await
+                        {
+                            if history_res.status().is_success() {
+                                if let Ok(rows) = history_res.json::<Vec<DeployHistoryRow>>().await
+                                {
+                                    deploy_history.set(rows.clone());
+                                    if let Some(last) = rows.last() {
+                                        deploy_revision.set(Some(last.revision));
+                                        save_status.set(format!(
+                                            "Saved · WAL rev #{} ({} pane quins)",
+                                            last.revision, last.pane_count
+                                        ));
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                        save_status.set("Workspace saved locally.".to_string());
+                    }
+                    Ok(res) => {
+                        save_status.set(format!("Save failed ({})", res.status()));
+                    }
+                    Err(err) => {
+                        save_status.set(format!("Save unreachable: {err}"));
+                    }
+                }
             });
+        }
+    };
+
+    let apply_ontology_layout = {
+        let mut workspace = workspace.clone();
+        let mut history = history.clone();
+        let current_path = format!("/{}", path.join("/"));
+        move |suggestion: OntologyLayoutSuggestion| {
+            history.write().push(workspace.read().clone());
+            let mut ws = workspace.write();
+            if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == current_path) {
+                page.panes = suggestion.panes;
+                page.presentation_mode = suggestion.presentation;
+                page.name = suggestion.label;
+            }
+        }
+    };
+
+    let restore_deploy_revision = {
+        let mut workspace = workspace.clone();
+        let mut history = history.clone();
+        let mut replay_status = replay_status.clone();
+        let mut replaying_revision = replaying_revision.clone();
+        let mut deploy_revision = deploy_revision.clone();
+        move |revision: u64| {
+            replaying_revision.set(Some(revision));
+            replay_status.set(format!("Restoring WAL rev #{revision}…"));
+            spawn(async move {
+                let client = reqwest::Client::new();
+                let url = crate::endpoints::manifest_replay_url(revision);
+                match client.post(&url).send().await {
+                    Ok(res) if res.status().is_success() => {
+                        match res.json::<WebizenWorkspace>().await {
+                            Ok(data) => {
+                                workspace.set(data.clone());
+                                history.set(WorkspaceHistory::new(data));
+                                deploy_revision.set(Some(revision));
+                                replay_status.set(format!(
+                                    "Restored WAL rev #{revision} into the editor."
+                                ));
+                            }
+                            Err(err) => {
+                                replay_status.set(format!("Restore parse failed: {err}"));
+                            }
+                        }
+                    }
+                    Ok(res) => {
+                        replay_status.set(format!("Restore failed ({})", res.status()));
+                    }
+                    Err(err) => {
+                        replay_status.set(format!("Restore unreachable: {err}"));
+                    }
+                }
+                replaying_revision.set(None);
+            });
+        }
+    };
+
+    let select_pane_from_graph = {
+        let mut selected_pane_index = selected_pane_index.clone();
+        move |idx: usize| selected_pane_index.set(Some(idx))
+    };
+
+    let add_companion_pane = {
+        let mut workspace = workspace.clone();
+        let mut history = history.clone();
+        let current_path = format!("/{}", path.join("/"));
+        move |component_id: String| {
+            history.write().push(workspace.read().clone());
+            let mut ws = workspace.write();
+            if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == current_path) {
+                if let Some(pane) = build_pane_placement(&component_id, page.panes.len()) {
+                    page.panes.push(pane);
+                }
+            }
         }
     };
 
@@ -720,9 +1115,11 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
     let delete_selected_pane = {
         let mut workspace = workspace.clone();
         let mut selected_pane_index = selected_pane_index.clone();
+        let mut record_workspace = record_workspace.clone();
         move |_| {
             let idx_opt = *selected_pane_index.read();
             if let Some(idx) = idx_opt {
+                record_workspace();
                 let mut ws = workspace.write();
                 if let Some(page) = ws.pages.first_mut() {
                     if idx < page.panes.len() {
@@ -788,6 +1185,42 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
         }
     }
 
+    let can_undo = history.read().can_undo();
+    let can_redo = history.read().can_redo();
+    let undo_opacity = if can_undo { "1" } else { "0.4" };
+    let redo_opacity = if can_redo { "1" } else { "0.4" };
+    let edit_mode_bg = if editor_mode() == CanvasEditorMode::Edit {
+        "rgba(245,158,11,0.15)"
+    } else {
+        "var(--qualia-surface)"
+    };
+    let grid_mode_active = current_page
+        .as_ref()
+        .map(|p| p.presentation_mode == PresentationMode::GridBound)
+        .unwrap_or(false);
+    let node_mode_active = current_page
+        .as_ref()
+        .map(|p| p.presentation_mode == PresentationMode::NodeRelational)
+        .unwrap_or(false);
+    let spatial_mode_active = current_page
+        .as_ref()
+        .map(|p| p.presentation_mode == PresentationMode::Spatial)
+        .unwrap_or(false);
+    let mode_btn_style = |active: bool| {
+        if active {
+            "padding: 0.25rem 0.6rem; font-size: 0.68rem; border-radius: 999px; border: 1px solid var(--qualia-accent); background: rgba(245,158,11,0.12); color: var(--qualia-text); cursor: pointer;"
+        } else {
+            "padding: 0.25rem 0.6rem; font-size: 0.68rem; border-radius: 999px; border: 1px solid var(--qualia-border); background: transparent; color: var(--qualia-text); cursor: pointer;"
+        }
+    };
+    let grid_btn_style = mode_btn_style(grid_mode_active);
+    let node_btn_style = mode_btn_style(node_mode_active);
+    let spatial_btn_style = mode_btn_style(spatial_mode_active);
+    let toolbar_pulse_scale = 1.0 + mode_pulse_scale();
+    let toolbar_pulse_style = format!(
+        "transform: scale({toolbar_pulse_scale:.4}); transform-origin: right center;"
+    );
+
     // ── Create New Page ────────────────────────────────────
     let create_new_page = {
         let mut workspace = workspace.clone();
@@ -812,7 +1245,86 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
             document::Link { rel: "stylesheet", href: "{href}" }
         }
 
-        style { "{theme_css}" }
+        style { "{theme_css}{qprime_elevation_css()}" }
+
+        // Template picker — shown when no app is selected (empty canvas)
+        {if app_id.is_none() && workspace.read().pages.iter().all(|p| p.panes.is_empty()) {
+            let templates: &[&'static str] = &[
+                "context-studio", "chat", "llm-harness", "lora-manager",
+                "agent-config", "inference-monitor", "model-lifecycle",
+                "ontology-builder", "sparql-explorer", "n3-logic-studio",
+                "rdf-star-editor", "solid-browser", "physics-sim",
+                "chemistry-modeler", "ode-lab", "matrix-lab", "stats-lab",
+                "bioinformatics-lab", "qpu-optimizer", "quantum-dft",
+                "qaoa-explorer", "qpu-providers", "health-vitals",
+                "clinical-risk", "dicom-viewer", "anatomy-browser",
+                "comorbidity", "portfolio", "risk-engine", "gbm-sim",
+                "tax-schema", "agreements", "key-vault", "zk-studio",
+                "deontic-editor", "shacl-validator", "wal-inspector",
+                "q42-volume", "provenance-graph", "storage-config",
+                "webtorrent", "p2p-dashboard", "ebpf-filter",
+                "acoustic-ble", "mcp-inspector", "benchmark",
+                "cli-bridge", "extension-bus", "nexus",
+            ];
+            rsx! {
+                div {
+                    style: "flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;padding:2rem;max-width:1100px;margin:0 auto;",
+                    h1 { style: "font-size:1.6rem;margin:0;", "QApp Studio" }
+                    p { style: "color:var(--qualia-text-muted,#888);margin:0;", "Select a template to start building, or create a blank canvas." }
+                    div {
+                        style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.75rem;width:100%;",
+                        for tmpl in templates.iter() {
+                            {let tmpl = tmpl.to_string();
+                            rsx! {
+                                button {
+                                    key: "{tmpl}",
+                                    r#type: "button",
+                                    onclick: {
+                                        let mut ws = workspace.clone();
+                                        move |_| {
+                                            let name = app_display_name(&tmpl).to_string();
+                                            let panes = default_panes_for_app(&tmpl);
+                                            let mut new_ws = new_workspace_shell(name, panes);
+                                            if let Some(page) = new_ws.pages.first_mut() {
+                                                page.presentation_mode = default_presentation_mode(Some(&tmpl));
+                                            }
+                                            ws.set(new_ws);
+                                        }
+                                    },
+                                    style: "padding:1rem;border:1px solid var(--qualia-border,#333);border-radius:10px;background:var(--qualia-surface,#1a1a1a);cursor:pointer;text-align:left;transition:border-color 0.2s;",
+                                    onmouseenter: move |e| e.stop_propagation(),
+                                    div {
+                                        style: "font-size:0.9rem;font-weight:600;margin-bottom:0.25rem;",
+                                        {app_display_name(&tmpl)}
+                                    }
+                                    div {
+                                        style: "font-size:0.75rem;color:var(--qualia-text-muted,#888);",
+                                        "{tmpl}"
+                                    }
+                                }
+                            }}
+                        }
+                    }
+                    button {
+                        r#type: "button",
+                        onclick: {
+                            let mut ws = workspace.clone();
+                            move |_| {
+                                let mut new_ws = new_workspace_shell("Blank Canvas".to_string(), vec![]);
+                                if let Some(page) = new_ws.pages.first_mut() {
+                                    page.presentation_mode = PresentationMode::GridBound;
+                                }
+                                ws.set(new_ws);
+                            }
+                        },
+                        style: "padding:0.6rem 1.5rem;border:1px dashed var(--qualia-border,#555);border-radius:8px;background:transparent;color:var(--qualia-text-muted,#aaa);cursor:pointer;",
+                        "+ Blank Canvas"
+                    }
+                }
+            }
+        } else {
+            rsx! {}
+        }}
 
         div {
             class: "{join_theme_classes(\"webizen-studio-shell\", &app_theme)}",
@@ -851,6 +1363,10 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                     }
                 }
 
+                OntologyImportWizard {
+                    on_apply: apply_ontology_layout,
+                }
+
                 // Component Palette — draggable items grouped by category
                 div {
                     h3 {
@@ -887,29 +1403,91 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                         "data-theme-scope": "page",
                         "data-theme": "{page_theme.theme_key.clone().unwrap_or_default()}",
 
-                        // Page title and LLM Generation Bar (D2.1)
+                        // Editor toolbar + page title
                         div {
-                            style: "margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem;",
-                            h2 {
-                                style: "margin: 0; font-size: 1.1rem; color: var(--qualia-text, #eee); white-space: nowrap;",
-                                "{page.name}"
-                            }
-
-                            // D2.1: LLM-Driven Pane Maker Prompt Bar
+                            class: "webizen-canvas-toolbar",
+                            style: "margin-bottom: 0.75rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.6rem;",
                             div {
-                                style: "flex: 1; display: flex; gap: 0.5rem;",
-                                input {
-                                    type: "text",
-                                    placeholder: "Describe a pane to generate (e.g., 'Health tracker with chart and inputs')...",
-                                    style: "flex: 1; background: var(--qualia-surface, #222); border: 1px solid var(--qualia-border, #444); color: white; padding: 0.4rem 0.6rem; border-radius: 4px; font-size: 0.85rem;",
-                                    // Simple mock handling for now
-                                    onkeydown: |_evt| {
-                                        // if evt.key() == "Enter" { ... fetch /generate_pane ... }
-                                    }
+                                style: "display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;",
+                                h2 {
+                                    style: "margin: 0; font-size: 1.1rem; color: var(--qualia-text, #eee); white-space: nowrap;",
+                                    "{page.name}"
                                 }
                                 button {
-                                    style: "background: var(--qualia-accent, #0ff); color: black; border: none; padding: 0 1rem; border-radius: 4px; font-weight: bold; cursor: pointer;",
-                                    "Generate"
+                                    style: "padding: 0.25rem 0.55rem; font-size: 0.68rem; border-radius: 6px; border: 1px solid var(--qualia-border); background: var(--qualia-surface); color: var(--qualia-text); cursor: pointer; opacity: {undo_opacity};",
+                                    disabled: !can_undo,
+                                    onclick: undo_workspace,
+                                    "Undo"
+                                }
+                                button {
+                                    style: "padding: 0.25rem 0.55rem; font-size: 0.68rem; border-radius: 6px; border: 1px solid var(--qualia-border); background: var(--qualia-surface); color: var(--qualia-text); cursor: pointer; opacity: {redo_opacity};",
+                                    disabled: !can_redo,
+                                    onclick: redo_workspace,
+                                    "Redo"
+                                }
+                                button {
+                                    style: "padding: 0.25rem 0.65rem; font-size: 0.68rem; border-radius: 6px; border: 1px solid var(--qualia-accent); background: {edit_mode_bg}; color: var(--qualia-text); cursor: pointer;",
+                                    onclick: toggle_editor_mode,
+                                    if editor_mode() == CanvasEditorMode::Edit { "Edit mode" } else { "Preview mode" }
+                                }
+                            }
+                            div {
+                                style: "display: flex; gap: 0.35rem; flex-wrap: wrap; {toolbar_pulse_style}",
+                                button {
+                                    style: "{grid_btn_style}",
+                                    onclick: switch_grid_mode,
+                                    "Grid"
+                                }
+                                button {
+                                    style: "{node_btn_style}",
+                                    onclick: switch_node_mode,
+                                    "Nodes"
+                                }
+                                button {
+                                    style: "{spatial_btn_style}",
+                                    onclick: switch_spatial_mode,
+                                    "Spatial"
+                                }
+                            }
+                        }
+
+                        div {
+                            style: "margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem;",
+
+                            // D2.1: Keyword pane planner (prompt bar)
+                            div {
+                                style: "flex: 1; display: flex; flex-direction: column; gap: 0.35rem;",
+                                div {
+                                    style: "display: flex; gap: 0.5rem;",
+                                    input {
+                                        r#type: "text",
+                                        value: "{pane_prompt()}",
+                                        placeholder: "Describe a pane layout (e.g. 'Health tracker with chart and inputs')...",
+                                        style: "flex: 1; background: var(--qualia-surface, #222); border: 1px solid var(--qualia-border, #444); color: white; padding: 0.4rem 0.6rem; border-radius: 4px; font-size: 0.85rem;",
+                                        oninput: move |e: Event<FormData>| pane_prompt.set(e.value()),
+                                        onkeydown: {
+                                            let mut generate_nonce = generate_nonce.clone();
+                                            move |e: Event<KeyboardData>| {
+                                                if e.key() == Key::Enter {
+                                                    generate_nonce.set(generate_nonce() + 1);
+                                                }
+                                            }
+                                        },
+                                    }
+                                    button {
+                                        style: "background: var(--qualia-accent, #0ff); color: black; border: none; padding: 0 1rem; border-radius: 4px; font-weight: bold; cursor: pointer;",
+                                        onclick: {
+                                            let mut generate_nonce = generate_nonce.clone();
+                                            move |_| generate_nonce.set(generate_nonce() + 1)
+                                        },
+                                        "Generate"
+                                    }
+                                }
+                                if !generate_status.read().is_empty() {
+                                    span {
+                                        style: "font-size: 0.68rem; color: var(--qualia-accent);",
+                                        "{generate_status.read()}"
+                                    }
                                 }
                             }
 
@@ -939,56 +1517,76 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                                     "Pan/Zoom Ready"
                                 }
                             }
-                        }
-
-                        if !matches!(page.presentation_mode, PresentationMode::GridBound) {
-                            div {
-                                style: "margin-bottom: 0.9rem; padding: 0.65rem 0.8rem; border-radius: 10px; border: 1px solid var(--qualia-border, #333); background: rgba(255,255,255,0.03); color: var(--qualia-text-muted, #bbb); font-size: 0.78rem;",
-                                "{presentation_mode_label(&page.presentation_mode)} pages are declared for this route. The current renderer keeps them on the point-grid canvas until the dedicated adapter is mounted."
+                            if spatial_contract_nodes() > 0 {
+                                span {
+                                    style: "font-size: 0.68rem; color: var(--qualia-accent, #0ff); background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.35); padding: 0.2rem 0.55rem; border-radius: 999px;",
+                                    "{spatial_contract_nodes()} GPU elements"
+                                }
                             }
                         }
 
-                        // Workspace canvas
-                        div {
-                            style: "{canvas_container_style(&page)}",
-
-                            for (idx, pane) in page.panes.iter().enumerate().filter(|(_, pane)| matches!(pane.layer, LayerBehavior::Docked)) {
-                                {render_placed_pane(
-                                    &page,
-                                    pane,
-                                    idx,
-                                    &selected_pane_index,
-                                    pane_themes.get(idx).cloned().unwrap_or_default(),
-                                )}
-                            }
-
-                            if page.panes.iter().any(|pane| !matches!(pane.layer, LayerBehavior::Docked)) {
+                        match page.presentation_mode {
+                            PresentationMode::NodeRelational => rsx! {
+                                crate::render::node_graph::NodeGraphCanvas { page: page.clone() }
+                            },
+                            PresentationMode::Spatial => rsx! {
+                                crate::render::spatial_bridge::SpatialBridgeCanvas { page: page.clone() }
+                            },
+                            _ => rsx! {
+                                // Workspace canvas
                                 div {
-                                    style: "position: absolute; inset: 0; pointer-events: none;",
-                                    for (idx, pane) in page.panes.iter().enumerate().filter(|(_, pane)| !matches!(pane.layer, LayerBehavior::Docked)) {
+                                    style: "{canvas_container_style(&page)}",
+                                    onmousemove: on_canvas_mousemove,
+                                    onmouseup: on_canvas_mouseup,
+                                    onmouseleave: on_canvas_mouseup,
+
+                                    for (idx, pane) in page.panes.iter().enumerate().filter(|(_, pane)| matches!(pane.layer, LayerBehavior::Docked)) {
                                         {render_placed_pane(
                                             &page,
                                             pane,
                                             idx,
                                             &selected_pane_index,
                                             pane_themes.get(idx).cloned().unwrap_or_default(),
+                                            editor_mode(),
+                                            &pane_interaction,
+                                            &drag_anchor,
+                                            selection_scale(),
                                         )}
                                     }
-                                }
-                            }
 
-                            if page.panes.is_empty() {
-                                div {
-                                    style: "position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; min-height: 300px; border: 2px dashed var(--qualia-border, #333); border-radius: 12px; color: var(--qualia-text-muted, #555);",
-                                    "Drag components from the palette to build your app"
-                                }
-                            }
-                        }
+                                    if page.panes.iter().any(|pane| !matches!(pane.layer, LayerBehavior::Docked)) {
+                                        div {
+                                            style: "position: absolute; inset: 0; pointer-events: none;",
+                                            for (idx, pane) in page.panes.iter().enumerate().filter(|(_, pane)| !matches!(pane.layer, LayerBehavior::Docked)) {
+                                                {render_placed_pane(
+                                                    &page,
+                                                    pane,
+                                                    idx,
+                                                    &selected_pane_index,
+                                                    pane_themes.get(idx).cloned().unwrap_or_default(),
+                                                    editor_mode(),
+                                                    &pane_interaction,
+                                                    &drag_anchor,
+                                                    selection_scale(),
+                                                )}
+                                            }
+                                        }
+                                    }
 
-                        if page.panes.iter().any(|pane| pane.min_w_points > 0 || pane.min_h_points > 0) {
-                            div {
-                                style: "margin-top: 0.75rem; font-size: 0.73rem; color: var(--qualia-text-muted, #777);",
-                                "Point-grid panes can declare minimum working area and layered behavior independently of their current presentation mode."
+                                    if page.panes.is_empty() {
+                                        div {
+                                            style: "position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; min-height: 300px; border: 2px dashed var(--qualia-border, #333); border-radius: 12px; color: var(--qualia-text-muted, #555);",
+                                            "Drag components from the palette to build your app"
+                                        }
+                                    }
+                                }
+
+                                if page.panes.iter().any(|pane| pane.min_w_points > 0 || pane.min_h_points > 0) {
+                                    div {
+                                        style: "margin-top: 0.75rem; font-size: 0.73rem; color: var(--qualia-text-muted, #777);",
+                                        "Point-grid panes can declare minimum working area and layered behavior independently of their current presentation mode."
+                                    }
+                                }
                             }
                         }
                     }
@@ -1008,6 +1606,16 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
             div {
                 style: "background: var(--qualia-surface, #111); border-left: 1px solid var(--qualia-border, #333); padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem;",
 
+                if let Some(page) = current_page.clone() {
+                    SelectionSidebar {
+                        page: page.clone(),
+                        selected_idx: *selected_pane_index.read(),
+                        palette: pane_palette.read().clone(),
+                        on_select_pane: select_pane_from_graph,
+                        on_add_component: add_companion_pane,
+                    }
+                }
+
                 // Property Inspector
                 div {
                     h3 {
@@ -1026,14 +1634,266 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                                         span { style: "color: var(--qualia-accent, #0ff);", "{pane.component_id}" }
                                     }
                                     div {
-                                        style: "margin-bottom: 0.5rem;",
-                                        span { style: "color: var(--qualia-text-muted, #888);", "Position: " }
-                                        span { "({pane.x}, {pane.y}) — {pane.w}×{pane.h}" }
+                                        style: "display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.55rem;",
+                                        span {
+                                            style: "font-size: 0.62rem; padding: 0.12rem 0.45rem; border-radius: 999px; background: rgba(245,158,11,0.12); color: var(--qualia-accent); border: 1px solid rgba(245,158,11,0.25);",
+                                            "{theme_binding_provenance(&pane.theme)}"
+                                        }
+                                        if pane.binds_rpc.is_some() {
+                                            span {
+                                                style: "font-size: 0.62rem; padding: 0.12rem 0.45rem; border-radius: 999px; background: rgba(59,130,246,0.12); color: #93c5fd; border: 1px solid rgba(59,130,246,0.25);",
+                                                "Shared via RPC"
+                                            }
+                                        }
+                                        if !pane.data_bindings.is_empty() {
+                                            span {
+                                                style: "font-size: 0.62rem; padding: 0.12rem 0.45rem; border-radius: 999px; background: rgba(16,185,129,0.1); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.22);",
+                                                "Ontology bound"
+                                            }
+                                        }
                                     }
-                                    div {
-                                        style: "margin-bottom: 0.5rem;",
-                                        span { style: "color: var(--qualia-text-muted, #888);", "Layer: " }
-                                        span { "{layer_behavior_label(&pane.layer)}" }
+                                    if editor_mode() == CanvasEditorMode::Edit {
+                                        label {
+                                            style: "display: block; margin-bottom: 0.5rem; font-size: 0.68rem; color: var(--qualia-text-muted);",
+                                            "Theme preset"
+                                            select {
+                                                value: "{pane.theme.theme_id.clone().unwrap_or_default()}",
+                                                style: "width: 100%; margin-top: 0.15rem; background: var(--qualia-surface); border: 1px solid var(--qualia-border); color: var(--qualia-text); border-radius: 4px; padding: 0.25rem;",
+                                                onchange: {
+                                                    let mut workspace = workspace.clone();
+                                                    let mut record_workspace = record_workspace.clone();
+                                                    let path = current_path.clone();
+                                                    move |e: Event<FormData>| {
+                                                        record_workspace();
+                                                        let mut ws = workspace.write();
+                                                        if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == path) {
+                                                            if let Some(p) = page.panes.get_mut(idx) {
+                                                                let v = e.value();
+                                                                p.theme.theme_id = if v.is_empty() {
+                                                                    None
+                                                                } else {
+                                                                    Some(v)
+                                                                };
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                option { value: "", "Inherit workspace" }
+                                                for qid in theme_engine::QPRIME_PRESET_IDS {
+                                                    option {
+                                                        value: "{qid}",
+                                                        selected: pane.theme.theme_id.as_deref() == Some(*qid),
+                                                        "{theme_engine::theme_label(qid)}"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        div {
+                                            style: "display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; margin-bottom: 0.6rem;",
+                                            label {
+                                                style: "font-size: 0.68rem; color: var(--qualia-text-muted);",
+                                                "X"
+                                                input {
+                                                    r#type: "number",
+                                                    value: "{pane.x}",
+                                                    style: "width: 100%; margin-top: 0.15rem; background: var(--qualia-surface); border: 1px solid var(--qualia-border); color: var(--qualia-text); border-radius: 4px; padding: 0.2rem;",
+                                                    onchange: {
+                                                        let mut workspace = workspace.clone();
+                                                        let mut record_workspace = record_workspace.clone();
+                                                        let path = current_path.clone();
+                                                        move |e: Event<FormData>| {
+                                                            if let Ok(v) = e.value().parse::<u16>() {
+                                                                record_workspace();
+                                                                let mut ws = workspace.write();
+                                                                if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == path) {
+                                                                    if let Some(p) = page.panes.get_mut(idx) {
+                                                                        p.x = v;
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    },
+                                                }
+                                            }
+                                            label {
+                                                style: "font-size: 0.68rem; color: var(--qualia-text-muted);",
+                                                "Y"
+                                                input {
+                                                    r#type: "number",
+                                                    value: "{pane.y}",
+                                                    style: "width: 100%; margin-top: 0.15rem; background: var(--qualia-surface); border: 1px solid var(--qualia-border); color: var(--qualia-text); border-radius: 4px; padding: 0.2rem;",
+                                                    onchange: {
+                                                        let mut workspace = workspace.clone();
+                                                        let mut record_workspace = record_workspace.clone();
+                                                        let path = current_path.clone();
+                                                        move |e: Event<FormData>| {
+                                                            if let Ok(v) = e.value().parse::<u16>() {
+                                                                record_workspace();
+                                                                let mut ws = workspace.write();
+                                                                if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == path) {
+                                                                    if let Some(p) = page.panes.get_mut(idx) {
+                                                                        p.y = v;
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    },
+                                                }
+                                            }
+                                            label {
+                                                style: "font-size: 0.68rem; color: var(--qualia-text-muted);",
+                                                "W"
+                                                input {
+                                                    r#type: "number",
+                                                    value: "{pane.w}",
+                                                    style: "width: 100%; margin-top: 0.15rem; background: var(--qualia-surface); border: 1px solid var(--qualia-border); color: var(--qualia-text); border-radius: 4px; padding: 0.2rem;",
+                                                    onchange: {
+                                                        let mut workspace = workspace.clone();
+                                                        let mut record_workspace = record_workspace.clone();
+                                                        let path = current_path.clone();
+                                                        move |e: Event<FormData>| {
+                                                            if let Ok(v) = e.value().parse::<u16>() {
+                                                                record_workspace();
+                                                                let mut ws = workspace.write();
+                                                                if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == path) {
+                                                                    if let Some(p) = page.panes.get_mut(idx) {
+                                                                        p.w = v.max(4);
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    },
+                                                }
+                                            }
+                                            label {
+                                                style: "font-size: 0.68rem; color: var(--qualia-text-muted);",
+                                                "H"
+                                                input {
+                                                    r#type: "number",
+                                                    value: "{pane.h}",
+                                                    style: "width: 100%; margin-top: 0.15rem; background: var(--qualia-surface); border: 1px solid var(--qualia-border); color: var(--qualia-text); border-radius: 4px; padding: 0.2rem;",
+                                                    onchange: {
+                                                        let mut workspace = workspace.clone();
+                                                        let mut record_workspace = record_workspace.clone();
+                                                        let path = current_path.clone();
+                                                        move |e: Event<FormData>| {
+                                                            if let Ok(v) = e.value().parse::<u16>() {
+                                                                record_workspace();
+                                                                let mut ws = workspace.write();
+                                                                if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == path) {
+                                                                    if let Some(p) = page.panes.get_mut(idx) {
+                                                                        p.h = v.max(4);
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    },
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        div {
+                                            style: "margin-bottom: 0.5rem;",
+                                            span { style: "color: var(--qualia-text-muted, #888);", "Position: " }
+                                            span { "({pane.x}, {pane.y}) — {pane.w}×{pane.h}" }
+                                        }
+                                    }
+                                    if editor_mode() == CanvasEditorMode::Edit {
+                                        label {
+                                            style: "display: block; margin-bottom: 0.5rem; font-size: 0.68rem; color: var(--qualia-text-muted);",
+                                            "Layer"
+                                            select {
+                                                value: "{layer_behavior_value(&pane.layer)}",
+                                                style: "width: 100%; margin-top: 0.15rem; background: var(--qualia-surface); border: 1px solid var(--qualia-border); color: var(--qualia-text); border-radius: 4px; padding: 0.25rem;",
+                                                onchange: {
+                                                    let mut workspace = workspace.clone();
+                                                    let mut record_workspace = record_workspace.clone();
+                                                    let path = current_path.clone();
+                                                    move |e: Event<FormData>| {
+                                                        if let Some(layer) = layer_behavior_from_value(&e.value()) {
+                                                            record_workspace();
+                                                            let mut ws = workspace.write();
+                                                            if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == path) {
+                                                                if let Some(p) = page.panes.get_mut(idx) {
+                                                                    p.layer = layer;
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                option { value: "docked", "Docked" }
+                                                option { value: "floating", "Floating Overlay" }
+                                                option { value: "modal", "Modal Overlay" }
+                                                option { value: "full", "Full Canvas" }
+                                            }
+                                        }
+                                        label {
+                                            style: "display: block; margin-bottom: 0.5rem; font-size: 0.68rem; color: var(--qualia-text-muted);",
+                                            "Anchor (pane id)"
+                                            input {
+                                                r#type: "text",
+                                                value: "{pane.anchor.clone().unwrap_or_default()}",
+                                                placeholder: "e.g. sidebar-nav",
+                                                style: "width: 100%; margin-top: 0.15rem; background: var(--qualia-surface); border: 1px solid var(--qualia-border); color: var(--qualia-text); border-radius: 4px; padding: 0.2rem;",
+                                                onchange: {
+                                                    let mut workspace = workspace.clone();
+                                                    let mut record_workspace = record_workspace.clone();
+                                                    let path = current_path.clone();
+                                                    move |e: Event<FormData>| {
+                                                        record_workspace();
+                                                        let mut ws = workspace.write();
+                                                        if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == path) {
+                                                            if let Some(p) = page.panes.get_mut(idx) {
+                                                                let v = e.value().trim().to_string();
+                                                                p.anchor = if v.is_empty() { None } else { Some(v) };
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                            }
+                                        }
+                                        label {
+                                            style: "display: block; margin-bottom: 0.5rem; font-size: 0.68rem; color: var(--qualia-text-muted);",
+                                            "Data bindings (comma-separated)"
+                                            input {
+                                                r#type: "text",
+                                                value: "{pane.data_bindings.join(\", \")}",
+                                                placeholder: "sparql:…, n3:…",
+                                                style: "width: 100%; margin-top: 0.15rem; background: var(--qualia-surface); border: 1px solid var(--qualia-border); color: var(--qualia-text); border-radius: 4px; padding: 0.2rem;",
+                                                onchange: {
+                                                    let mut workspace = workspace.clone();
+                                                    let mut record_workspace = record_workspace.clone();
+                                                    let path = current_path.clone();
+                                                    move |e: Event<FormData>| {
+                                                        record_workspace();
+                                                        let mut ws = workspace.write();
+                                                        if let Some(page) = ws.pages.iter_mut().find(|p| p.url_path == path) {
+                                                            if let Some(p) = page.panes.get_mut(idx) {
+                                                                p.data_bindings = e
+                                                                    .value()
+                                                                    .split(',')
+                                                                    .map(|s| s.trim().to_string())
+                                                                    .filter(|s| !s.is_empty())
+                                                                    .collect();
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                            }
+                                        }
+                                    } else {
+                                        div {
+                                            style: "margin-bottom: 0.5rem;",
+                                            span { style: "color: var(--qualia-text-muted, #888);", "Layer: " }
+                                            span { "{layer_behavior_label(&pane.layer)}" }
+                                        }
+                                        if let Some(anchor) = &pane.anchor {
+                                            div {
+                                                style: "margin-bottom: 0.5rem;",
+                                                span { style: "color: var(--qualia-text-muted, #888);", "Anchor: " }
+                                                span { "{anchor}" }
+                                            }
+                                        }
                                     }
                                     if pane.min_w_points > 0 || pane.min_h_points > 0 {
                                         div {
@@ -1049,13 +1909,15 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                                             span { "{supported_presentations_summary(&pane.supported_presentations)}" }
                                         }
                                     }
-                                    div {
-                                        span { style: "color: var(--qualia-text-muted, #888);", "Bindings: " }
-                                        span {
-                                            if pane.data_bindings.is_empty() {
-                                                "None"
-                                            } else {
-                                                "{pane.data_bindings.join(\", \")}"
+                                    if editor_mode() != CanvasEditorMode::Edit {
+                                        div {
+                                            span { style: "color: var(--qualia-text-muted, #888);", "Bindings: " }
+                                            span {
+                                                if pane.data_bindings.is_empty() {
+                                                    "None"
+                                                } else {
+                                                    "{pane.data_bindings.join(\", \")}"
+                                                }
                                             }
                                         }
                                     }
@@ -1140,15 +2002,75 @@ pub fn DynamicPage(path: Vec<String>, #[props(default)] app_id: Option<String>) 
                     }
                 }
 
-                // Deploy Button
+                // Deploy WAL history + restore
+                if crate::endpoints::is_native_host() && !deploy_history.read().is_empty() {
+                    div {
+                        h3 {
+                            style: "font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--qualia-text-muted, #888); margin: 0 0 0.5rem 0;",
+                            "Deploy history"
+                        }
+                        div {
+                            style: "display: flex; flex-direction: column; gap: 0.35rem; max-height: 140px; overflow-y: auto;",
+                            for row in deploy_history.read().iter().rev().take(6) {
+                                div {
+                                    key: "rev-{row.revision}",
+                                    style: "display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; padding: 0.35rem 0.45rem; border-radius: 6px; border: 1px solid var(--qualia-border); background: var(--qualia-bg); font-size: 0.68rem;",
+                                    span {
+                                        style: "font-family: monospace; color: var(--qualia-text);",
+                                        title: "manifest #{row.manifest_hash:016x}",
+                                        "rev #{row.revision} · {row.pane_count} panes · ts {row.unix_ts}"
+                                    }
+                                    button {
+                                        style: "padding: 0.15rem 0.4rem; font-size: 0.6rem; border-radius: 5px; border: 1px solid var(--qualia-accent); background: rgba(245,158,11,0.08); color: var(--qualia-text); cursor: pointer;",
+                                        disabled: replaying_revision() == Some(row.revision),
+                                        onclick: {
+                                            let rev = row.revision;
+                                            let mut restore = restore_deploy_revision.clone();
+                                            move |_| restore(rev)
+                                        },
+                                        if replaying_revision() == Some(row.revision) { "…" } else { "Restore" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Save workspace (local settings portal + disk + Quin WAL)
+                if !save_status.read().is_empty() {
+                    p {
+                        style: "font-size: 0.72rem; color: var(--qualia-text-muted, #888); margin: 0;",
+                        "{save_status.read()}"
+                    }
+                }
+                if !replay_status.read().is_empty() {
+                    p {
+                        style: "font-size: 0.68rem; color: var(--qualia-accent); margin: 0;",
+                        "{replay_status.read()}"
+                    }
+                }
+                if let Some(rev) = *deploy_revision.read() {
+                    div {
+                        style: "font-size: 0.68rem; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid var(--qualia-border); color: var(--qualia-accent); background: rgba(245,158,11,0.06);",
+                        "Provenance: studio-workspace.wal rev #{rev}"
+                    }
+                }
                 button {
                     style: "margin-top: auto; width: 100%; padding: 0.6rem; background: linear-gradient(135deg, var(--qualia-accent, #0ff), var(--qualia-primary, #06f)); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85rem; letter-spacing: 0.05em; transition: opacity 0.2s;",
-                    onclick: deploy_workspace,
-                    "Deploy to Network"
+                    onclick: save_workspace,
+                    "Save Workspace"
                 }
             }
         }
     }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct DeployHistoryRow {
+    revision: u64,
+    unix_ts: u32,
+    pane_count: u16,
+    manifest_hash: u64,
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1228,6 +2150,25 @@ fn layer_behavior_label(layer: &LayerBehavior) -> &'static str {
     }
 }
 
+fn layer_behavior_value(layer: &LayerBehavior) -> &'static str {
+    match layer {
+        LayerBehavior::Docked => "docked",
+        LayerBehavior::FloatingOverlay => "floating",
+        LayerBehavior::ModalOverlay => "modal",
+        LayerBehavior::FullCanvas => "full",
+    }
+}
+
+fn layer_behavior_from_value(value: &str) -> Option<LayerBehavior> {
+    match value {
+        "docked" => Some(LayerBehavior::Docked),
+        "floating" => Some(LayerBehavior::FloatingOverlay),
+        "modal" => Some(LayerBehavior::ModalOverlay),
+        "full" => Some(LayerBehavior::FullCanvas),
+        _ => None,
+    }
+}
+
 fn supported_presentations_summary(modes: &[PresentationMode]) -> String {
     modes
         .iter()
@@ -1264,7 +2205,50 @@ fn canvas_container_style(page: &Page) -> String {
     }
 }
 
-fn pane_style_for_layout(page: &Page, pane: &PanePlacement, is_selected: bool) -> String {
+fn build_pane_placement(component_id: &str, existing_count: usize) -> Option<PanePlacement> {
+    if component_id.is_empty() {
+        return None;
+    }
+    let (default_w, default_h) = find_pane(component_id)
+        .map(|p| (p.default_w, p.default_h))
+        .unwrap_or((4, 2));
+    Some(PanePlacement {
+        component_id: component_id.to_string(),
+        x: 4,
+        y: 4 + (existing_count as u16).saturating_mul(6),
+        w: (default_w as u16).saturating_mul(6),
+        h: (default_h as u16).saturating_mul(6),
+        data_bindings: vec![],
+        binds_rpc: if component_id == "custom-web-module" {
+            Some(crate::endpoints::MODULE_RPC_WS.into())
+        } else {
+            None
+        },
+        requires_capability: vec![],
+        ui_mode: if component_id == "custom-web-module" {
+            Some(UiMode::IFrameSandbox)
+        } else {
+            None
+        },
+        layer: if component_id == "custom-web-module" {
+            LayerBehavior::FloatingOverlay
+        } else {
+            LayerBehavior::Docked
+        },
+        anchor: None,
+        min_w_points: (default_w as u16).saturating_mul(4),
+        min_h_points: (default_h as u16).saturating_mul(4),
+        supported_presentations: vec![PresentationMode::GridBound],
+        theme: ThemeBinding::default(),
+    })
+}
+
+fn pane_style_for_layout(
+    page: &Page,
+    pane: &PanePlacement,
+    is_selected: bool,
+    selection_scale: f64,
+) -> String {
     let border_color = if is_selected {
         "var(--qualia-accent, #0ff)"
     } else {
@@ -1280,10 +2264,15 @@ fn pane_style_for_layout(page: &Page, pane: &PanePlacement, is_selected: bool) -
     } else {
         "0 12px 26px rgba(0, 0, 0, 0.18)"
     };
+    let transform = if is_selected {
+        format!("transform: scale({selection_scale:.4}); transform-origin: center center;")
+    } else {
+        String::new()
+    };
 
     match (&page.layout_strategy, &pane.layer) {
         (LayoutStrategy::CssGrid { .. }, LayerBehavior::Docked) => format!(
-            "grid-column: {} / span {}; grid-row: {} / span {}; background: {}; border: 1px solid {}; border-radius: 10px; padding: 0.75rem; cursor: pointer; transition: border-color 0.2s, background 0.2s, transform 0.2s; display: flex; flex-direction: column; justify-content: space-between; min-height: 88px; box-shadow: {};",
+            "grid-column: {} / span {}; grid-row: {} / span {}; background: {}; border: 1px solid {}; border-radius: 10px; padding: 0.75rem; cursor: pointer; transition: border-color 0.2s, background 0.2s, transform 0.12s ease-out; display: flex; flex-direction: column; justify-content: space-between; min-height: 88px; box-shadow: {}; {transform}",
             pane.x.max(1),
             pane.w.max(1),
             pane.y.max(1),
@@ -1311,7 +2300,7 @@ fn pane_style_for_layout(page: &Page, pane: &PanePlacement, is_selected: bool) -
 
             match pane.layer {
                 LayerBehavior::Docked => format!(
-                    "position: absolute; left: {:.3}%; top: {:.3}%; width: calc({:.3}% - {}px); height: calc({:.3}% - {}px); min-width: {}px; min-height: {}px; background: {}; border: 1px solid {}; border-radius: 12px; padding: 0.75rem; cursor: pointer; transition: border-color 0.2s, background 0.2s, transform 0.2s; display: flex; flex-direction: column; justify-content: space-between; box-shadow: {}; overflow: hidden;",
+                    "position: absolute; left: {:.3}%; top: {:.3}%; width: calc({:.3}% - {}px); height: calc({:.3}% - {}px); min-width: {}px; min-height: {}px; background: {}; border: 1px solid {}; border-radius: 12px; padding: 0.75rem; cursor: pointer; transition: border-color 0.2s, background 0.2s, transform 0.12s ease-out; display: flex; flex-direction: column; justify-content: space-between; box-shadow: {}; overflow: hidden; {transform}",
                     left,
                     top,
                     width,
@@ -1361,19 +2350,26 @@ fn render_placed_pane(
     idx: usize,
     selected: &Signal<Option<usize>>,
     theme: ResolvedTheme,
+    editor_mode: CanvasEditorMode,
+    pane_interaction: &Signal<Option<PaneInteraction>>,
+    drag_anchor: &Signal<(f64, f64)>,
+    selection_scale: f64,
 ) -> Element {
     let is_selected = *selected.read() == Some(idx);
-
-    // Look up the display name from the registry
-    let _display_name = find_pane(&pane.component_id)
-        .map(|p| p.display_name)
-        .unwrap_or_else(|| pane.component_id.clone());
+    let scale = if is_selected { selection_scale } else { 1.0 };
+    let editing = editor_mode == CanvasEditorMode::Edit;
 
     let element_tag = find_pane(&pane.component_id)
         .map(|p| p.element_tag.clone())
         .unwrap_or_else(|| pane.component_id.clone());
 
     let mut selected = selected.clone();
+    let mut pane_interaction = pane_interaction.clone();
+    let mut drag_anchor = drag_anchor.clone();
+    let pane_x = pane.x;
+    let pane_y = pane.y;
+    let pane_w = pane.w;
+    let pane_h = pane.h;
 
     rsx! {
         div {
@@ -1381,14 +2377,52 @@ fn render_placed_pane(
             "data-theme-scope": "module",
             "data-theme": "{theme.theme_key.clone().unwrap_or_default()}",
             "data-pane-index": "{idx}",
-            style: "{pane_style_for_layout(page, pane, is_selected)}",
+            "data-selected": if is_selected { "true" } else { "false" },
+            style: "{pane_style_for_layout(page, pane, is_selected, scale)}",
             onclick: move |_| {
                 selected.set(Some(idx));
             },
 
-            // Dispatch actual QApp component
-            crate::components::qapp_dispatcher::QAppDispatcher {
-                element_tag: element_tag.clone(),
+            if editing {
+                div {
+                    style: "height: 14px; margin: -0.35rem -0.35rem 0.35rem; border-radius: 8px 8px 0 0; background: rgba(255,255,255,0.04); cursor: grab; display: flex; align-items: center; justify-content: center;",
+                    onmousedown: move |evt: Event<MouseData>| {
+                        evt.stop_propagation();
+                        let c = evt.data().client_coordinates();
+                        drag_anchor.set((c.x, c.y));
+                        pane_interaction.set(Some(PaneInteraction::Drag {
+                            idx,
+                            orig_x: pane_x,
+                            orig_y: pane_y,
+                        }));
+                    },
+                    span {
+                        style: "width: 28px; height: 3px; border-radius: 99px; background: var(--qualia-border); opacity: 0.8;",
+                    }
+                }
+            }
+
+            div {
+                style: if editing { "pointer-events: none; flex: 1; overflow: hidden;" } else { "flex: 1; overflow: hidden;" },
+                crate::components::qapp_dispatcher::QAppDispatcher {
+                    element_tag: element_tag.clone(),
+                }
+            }
+
+            if editing && is_selected {
+                div {
+                    style: "position: absolute; right: 6px; bottom: 6px; width: 12px; height: 12px; border-radius: 2px; border: 1px solid var(--qualia-accent); background: rgba(245,158,11,0.25); cursor: nwse-resize; z-index: 5;",
+                    onmousedown: move |evt: Event<MouseData>| {
+                        evt.stop_propagation();
+                        let c = evt.data().client_coordinates();
+                        drag_anchor.set((c.x, c.y));
+                        pane_interaction.set(Some(PaneInteraction::Resize {
+                            idx,
+                            orig_w: pane_w,
+                            orig_h: pane_h,
+                        }));
+                    },
+                }
             }
         }
     }

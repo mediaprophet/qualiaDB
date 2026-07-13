@@ -2,552 +2,309 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Context Markup Language and Definitions (CML/CMLD)</title>
+  <title>Context Markup Language &amp; Definitions (CML / CMLD)</title>
   <script src="https://w3c.github.io/respec/builds/respec-w3c.js" class="remove" async></script>
-    <script class="remove">
+  <script class="remove">
     var respecConfig = {
-      specStatus: "unofficial",
+      specStatus: "CG-DRAFT",
+      shortName: "cml-cmld",
       editors: [{
         name: "Timothy C. Holborn",
         company: "WebCivics",
-        url: "https://www.linkedin.com/in/ubiquitous/"},
-        {
-        name: "Grok 3",
-        company: "xAI",
-        url: "https://x.ai"
+        url: "https://www.linkedin.com/in/ubiquitous/"
       }],
-      processVersion: 2023,
-      shortName: "cmld",
-      edDraftURI: "https://example.com/cmld/",
-      github: "https://github.com/your-org/cmld",
+      github: "https://github.com/mediaprophet/qualiaDB",
+      edDraftURI: "https://ns.webcivics.net/cml/",
       includePermalinks: true,
       license: "w3c-software-doc",
+      processVersion: 2023,
       abstract: `
         <p>
-      The Context Markup Language (CML) and Context Markup Definitions (CMLD) provide mechanisms to embed and reference machine-readable semantic context within web content, enabling software agents, such as Large Language Models (LLMs), to disambiguate terms accurately. CML uses inline HTML elements and attributes, while CMLD defines an external JSON-based format, both leveraging URIs and Decentralized Identifiers (DIDs) to support Human-Centric AI (HCAI) principles of accuracy, transparency, fairness, and trust for natural persons.
-        </p>
-      `,
+          The <strong>Context Markup Language (CML)</strong> binds verbatim source text to
+          machine-readable <em>concepts</em> and the <em>logic</em> that governs them, so software
+          agents — including Large Language Models — infer meaning accurately rather than
+          probabilistically. CML's defining move is that <strong>a concept is a context hash</strong>:
+          a concept's identifier is hashed into the context field of a 48-byte binary record, and the
+          concept's sub-graph is every record sharing that hash.
+          <strong>Context Markup Language Definitions (CMLD)</strong> is the companion layer that maps
+          the surface terms people write onto those concepts. Both support Human-Centric AI (HCAI)
+          principles — accuracy, transparency, fairness, and trust for natural persons — and are
+          realised natively on the QualiaDB engine.
+        </p>`,
       sotd: `
         <p>
-      This is an unofficial draft specification for CML and CMLD, proposed for discussion within a W3C Community Group. It has not been endorsed by the W3C or any official standards body. Feedback is welcome via the associated Community Group repository or mailing list.
-        </p>
-      `
+          This is an unofficial Community-Group-style draft, proposed for discussion. It has not been
+          endorsed by the W3C or any standards body. This revision <strong>tracks the implemented
+          QualiaDB / WebCivics design</strong> (the axioms in <code>core-ontologies/cml.n3</code> and
+          the engine's context-hash model); where this document and the earlier pre-implementation
+          drafts differ, the implemented solution governs. The revision was produced with AI tooling
+          used as an instrument; the tool is not an author.
+        </p>`,
+      localBiblio: {
+        "DID-CORE": { title: "Decentralized Identifiers (DIDs) v1.0", href: "https://www.w3.org/TR/did-core/", publisher: "W3C", date: "2022" },
+        "SKOS": { title: "SKOS Simple Knowledge Organization System Reference", href: "https://www.w3.org/TR/skos-reference/", publisher: "W3C", date: "2009" },
+        "Web-Annotation": { title: "Web Annotation Data Model", href: "https://www.w3.org/TR/annotation-model/", publisher: "W3C", date: "2017" },
+        "PROV-O": { title: "PROV-O: The PROV Ontology", href: "https://www.w3.org/TR/prov-o/", publisher: "W3C", date: "2013" },
+        "ODRL": { title: "ODRL Information Model 2.2", href: "https://www.w3.org/TR/odrl-model/", publisher: "W3C", date: "2018" },
+        "SHACL": { title: "Shapes Constraint Language (SHACL)", href: "https://www.w3.org/TR/shacl/", publisher: "W3C", date: "2017" },
+        "CBOR-LD": { title: "CBOR-LD 1.0", href: "https://json-ld.github.io/cbor-ld-spec/", publisher: "W3C CCG", date: "2024" },
+        "RFC2119": { title: "Key words for use in RFCs to Indicate Requirement Levels", href: "https://tools.ietf.org/html/rfc2119", publisher: "IETF", date: "1997" },
+        "RFC5147": { title: "URI Fragment Identifiers for the text/plain Media Type", href: "https://tools.ietf.org/html/rfc5147", publisher: "IETF", date: "2008" },
+        "BCP47": { title: "Tags for Identifying Languages", href: "https://tools.ietf.org/html/bcp47", publisher: "IETF", date: "2009" },
+        "EU-AI-ACT": { title: "Artificial Intelligence Act", href: "https://digital-strategy.ec.europa.eu/en/policies/artificial-intelligence-act", publisher: "European Commission", date: "2024" }
+      }
     };
   </script>
-    <script src="js/menu-loader.js"></script></head>
+</head>
 <body>
   <section id="abstract">
     <p>
-      The Context Markup Language (CML) and Context Markup Definitions (CMLD) provide mechanisms to embed and reference machine-readable semantic context within web content, enabling software agents, such as Large Language Models (LLMs), to disambiguate terms accurately. CML uses inline HTML elements and attributes, while CMLD defines an external JSON-based format, both leveraging URIs and Decentralized Identifiers (DIDs) to support Human-Centric AI (HCAI) principles of accuracy, transparency, fairness, and trust for natural persons.
+      The Context Markup Language (CML) binds verbatim source text to machine-readable concepts and
+      the logic that governs them; Context Markup Language Definitions (CMLD) maps surface terms onto
+      those concepts. Both are realised natively on the QualiaDB engine and support Human-Centric AI.
     </p>
   </section>
 
-  <section id="sotd">
-    <p>
-      This is an unofficial draft specification for CML and CMLD, proposed for discussion within a W3C Community Group. It has not been endorsed by the W3C or any official standards body. Feedback is welcome via the associated Community Group repository or mailing list.
-    </p>
-  </section>
+  <section id="sotd"></section>
 
-  <section>
+  <section class="informative">
     <h2>Introduction</h2>
     <p>
-      Software agents, particularly LLMs, struggle to disambiguate terms with multiple meanings (e.g., "thongs" as footwear or underwear, "physician" as a person or place). Existing semantic web standards like RDFa and JSON-LD are complex for authors and not optimized for LLMs or HCAI. The Context Markup Language (CML) provides inline HTML markup, while Context Markup Definitions (CMLD) offers an external JSON-based format, both using URIs and DIDs to ensure precise context, supporting HCAI principles of accuracy, transparency, and fairness.
+      Software agents, particularly LLMs, struggle to disambiguate terms with multiple meanings
+      ("bank" the institution vs. the riverbank; "physician" the person vs. the practice). Existing
+      semantic-web forms (RDFa, JSON-LD) are author-heavy and not optimised for agent inference or for
+      Human-Centric AI [[EU-AI-ACT]]. CML provides <em>declarative, machine-readable context</em> so
+      meaning is <em>stated</em>, not guessed.
     </p>
     <p>
-      CML embeds context directly in HTML for fine-grained disambiguation, while CMLD enables reusable, maintainable context definitions referenced by multiple documents. This specification defines the syntax, processing models, and HTML integration for both, with examples for web authors and agent developers.
+      An earlier draft of CML proposed inline <code>&lt;cml:context&gt;</code> HTML elements and an
+      external <code>.ctx</code> JSON file (CMLD). The implemented system keeps that <em>purpose</em>
+      but realises it as a <strong>concept-graph layer native to the engine</strong>: the inline-element
+      and sidecar-file mechanisms are superseded by the concept-as-context-hash model defined here.
     </p>
   </section>
 
   <section>
     <h2>Terminology</h2>
     <p>
-      The key words <em>MUST</em>, <em>MUST NOT</em>, <em>REQUIRED</em>, <em>SHALL</em>, <em>SHALL NOT</em>, <em>SHOULD</em>, <em>SHOULD NOT</em>, <em>RECOMMENDED</em>, <em>MAY</em>, and <em>OPTIONAL</em> are to be interpreted as described in [[RFC2119]].
+      The key words <em>MUST</em>, <em>MUST NOT</em>, <em>REQUIRED</em>, <em>SHOULD</em>,
+      <em>SHOULD NOT</em>, <em>MAY</em>, and <em>OPTIONAL</em> are to be interpreted as in [[RFC2119]].
     </p>
     <dl>
-      <dt>CML</dt>
-      <dd>Context Markup Language, an inline HTML markup language for embedding semantic context.</dd>
-      <dt>CMLD</dt>
-      <dd>Context Markup Definitions, an external JSON-based format for context definitions.</dd>
-      <dt>Software Agent</dt>
-      <dd>A program, such as an LLM, that processes web content for tasks like disambiguation.</dd>
-      <dt>URI</dt>
-      <dd>A Uniform Resource Identifier, as defined in [[RFC3986]].</dd>
-      <dt>DID</dt>
-      <dd>A Decentralized Identifier, as defined in [[DID-CORE]].</dd>
-      <dt>Human-Centric AI (HCAI)</dt>
-      <dd>AI systems prioritizing the needs, rights, and well-being of natural persons, per [[EU-AI-ACT]].</dd>
+      <dt>CML</dt><dd>Context Markup Language — the concept-graph layer (a concept is a context hash).</dd>
+      <dt>CMLD</dt><dd>Context Markup Language Definitions — bindings of a surface term to a context DID (a concept).</dd>
+      <dt>Concept</dt><dd>A first-class node (<code>cml:Concept</code> ⊑ <code>skos:Concept</code>) realised as a context hash that owns a logic sub-graph.</dd>
+      <dt>Context hash</dt><dd>The 56-bit value (bits <code>[0..55]</code>) in the <code>context</code> field of the 48-byte Super-Quin; <code>q_hash(concept&nbsp;IRI)</code>.</dd>
+      <dt>Super-Quin / NQuin</dt><dd>The engine's 48-byte record: six <code>u64</code> vectors <code>[subject, predicate, object, context, metadata, parity]</code>.</dd>
+      <dt>Software agent</dt><dd>A program (e.g. an LLM) that processes content for tasks like disambiguation.</dd>
     </dl>
   </section>
 
   <section>
     <h2>Namespace</h2>
     <p>
-      The CML namespace is <code>https://w3c.github.io/context-markup/ns#</code>. CML elements and attributes <em>MUST</em> use this namespace to avoid conflicts with other vocabularies, including Chemical Markup Language. In HTML, CML elements are prefixed with <code>cml:</code> (e.g., <code>&lt;cml:context&gt;</code>).
+      The CML namespace (the term <em>identifiers</em>) is <code>https://ns.webcivics.net/cml/</code>
+      (prefix <code>cml:</code>); the published schema-definition ("sdo") documents resolve at
+      <code>https://sdo.webcivics.org/</code>. The authoritative machine axioms are published as
+      <code>core-ontologies/cml.n3</code>. CML composes — rather
+      than re-invents — established vocabularies: SKOS [[SKOS]], Web Annotation [[Web-Annotation]],
+      PROV-O [[PROV-O]], ODRL [[ODRL]], OWL-Time, GeoSPARQL, and the Security Vocabulary; plus the
+      WebCivics <code>values:</code> human-rights agent lattice.
+    </p>
+  </section>
+
+  <section>
+    <h2>The concept-as-context-hash model</h2>
+    <p>
+      CML's load-bearing idea: <strong>a concept <em>is</em> a context hash.</strong> A concept IRI is
+      hashed (<code>q_hash</code>) into the 56-bit context field (bits <code>[0..55]</code>) of the
+      Super-Quin (Vector 4). The concept's sub-graph is <em>every quin whose <code>context</code>
+      equals that hash</em>. This is the engine's native named-graph mechanism — <em>a document is a
+      query for all quins intersecting a context hash</em> — so logic libraries (deontic, temporal,
+      defeasible) run against a concept by <strong>masking on its context hash</strong>, without
+      loading the whole graph.
+    </p>
+    <p>
+      <code>cml:Concept</code> is <code>rdfs:subClassOf skos:Concept</code> and is modelled in
+      <strong>RDFS + SHACL, never OWL</strong>, for the given world (see
+      <a href="#owl-boundary">the modeling discipline</a>).
+    </p>
+  </section>
+
+  <section>
+    <h2>The three-layer model</h2>
+    <p>Nanopublication-aligned: an assertion graph (LOGIC) + a provenance graph (the realization) + pub-info (the curation signature).</p>
+    <ul>
+      <li><strong>TEXT</strong> — verbatim <code>originalText</code>, immutable (legal fidelity), stored cold in the <code>.q42</code> front-of-file lexicon and recoverable from the archive alone.</li>
+      <li><strong>CONCEPT</strong> — a context hash that owns a sub-graph; carries <code>skos:prefLabel</code>/<code>skos:definition</code>; related via SKOS. Linked to text by <code>cml:realizedBy</code> (a Web Annotation media-fragment selector + integrity hash). Many fragments — across instruments, languages, amended text — may realise one concept.</li>
+      <li><strong>LOGIC</strong> — per-concept modality sub-graphs evaluated by the deterministic Sentinel VM, masked on the concept's context hash. The deontic sub-graph compiles to native operators (Obligate / Permit / Forbid) with <code>q42:unless</code> defeaters.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>CML vocabulary</h2>
+    <table>
+      <tr><th>Term</th><th>Kind</th><th>Meaning</th></tr>
+      <tr><td><code>cml:Concept</code></td><td>class (⊑ <code>skos:Concept</code>)</td><td>A concept realised as a context hash owning a logic sub-graph.</td></tr>
+      <tr><td><code>cml:realizedBy</code></td><td>property</td><td>Concept ← a verbatim text span (an <code>oa:Annotation</code>: RFC&nbsp;5147 <code>#char=</code> + <code>oa:TextQuoteSelector</code> + integrity hash) [[RFC5147]].</td></tr>
+      <tr><td><code>cml:integrityHash</code></td><td>property</td><td>Hash of the span, verified against the recovered <code>originalText</code>.</td></tr>
+      <tr><td><code>cml:CurationStatus</code>, <code>cml:Proposed</code>, <code>cml:Attested</code></td><td>class / instances</td><td>Provisional (machine) vs confirmed (signed authoritative human).</td></tr>
+      <tr><td><code>cml:curationStatus</code>, <code>cml:proposedBy</code>, <code>cml:attestedBy</code>, <code>cml:confidence</code></td><td>properties</td><td>The curation record (who proposed / who ratified with a <code>sec:</code> proof / machine confidence ∈ [0,1]).</td></tr>
+      <tr><td><code>cml:RecognitionBasis</code>, <code>cml:recognitionBasis</code></td><td>class / property</td><td>Recognition of Prior Learning is first-class: <code>Formal</code> / <code>PriorLearning</code> / <code>Experiential</code> / <code>PeerAttested</code>.</td></tr>
+      <tr><td><code>cml:Modality</code>, <code>cml:asserts</code>, <code>cml:modality</code></td><td>class / properties</td><td>Binds a concept to a logic assertion in a modality sub-graph (<code>Deontic</code>/<code>Temporal</code>/<code>Defeasible</code>/<code>Argumentation</code>/<code>Spatial</code>/<code>Probabilistic</code>); the asserted quins carry <code>context = q_hash(concept&nbsp;IRI)</code>.</td></tr>
+      <tr><td><code>cml:schemaVersion</code>, <code>cml:generatedBy</code></td><td>properties</td><td>Per-generated-concept stamps for reproducibility and staleness detection.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>The Curation Prime Directive</h2>
+    <p>
+      <strong>Automated systems <em>MAY</em> assert only <code>skos:closeMatch</code> or
+      <code>skos:related</code>. Only a cryptographically-signed human action <em>MAY</em> assert
+      <code>skos:exactMatch</code>.</strong> Concept identity is curation-grade: auto-asserting
+      sameness from vector proximity would re-create the algorithmic flattening this system exists to
+      defeat. The machine <em>proposes</em> (<code>cml:Proposed</code>, with a confidence); a human
+      <em>disposes</em> (<code>cml:Attested</code>, with a <code>sec:</code> signature). This is enforced
+      closed-world by a SHACL [[SHACL]] shape (<code>cml:AttestedExactMatchShape</code>): a
+      machine-written <code>exactMatch</code> without a ratifying attestation is a conduct violation.
+    </p>
+    <pre class="example" title="cml:AttestedExactMatchShape (SHACL)">
+cml:AttestedExactMatchShape a sh:NodeShape ;
+    sh:targetSubjectsOf skos:exactMatch ;
+    sh:property [ sh:path cml:curationStatus ; sh:hasValue cml:Attested ; sh:minCount 1 ;
+                  sh:message "skos:exactMatch requires cml:Attested (a signed authoritative human action)." ] .</pre>
+  </section>
+
+  <section id="cmld">
+    <h2>CMLD — Context Markup Language Definitions</h2>
+    <p>
+      CMLD maps the surface terms people write onto concepts. A CMLD definition is a binding
+      <code>term → context DID</code>, where the context DID denotes a CML concept (its IRI hashes to
+      the concept's context hash). A "Context Markup <em>Document</em>" is the set of CMLD definitions
+      that give a body of content its declared meanings, layered over the immutable TEXT.
+    </p>
+    <ul>
+      <li><strong>Authoring:</strong> <code>upsert_cmld_definition(term, context_did)</code> records that <code>term</code> resolves to <code>context_did</code>.</li>
+      <li><strong>Resolution:</strong> on ingest, CML/CMLD URIs are resolved against the dynamic <em>Ontology Registry</em>; the term's <code>context_did</code> selects the concept's sub-graph, so the agent reads the intended meaning and the logic bound to it.</li>
+      <li><strong>One hash-space:</strong> because the definition's <code>context_did</code> <em>is</em> the concept's context hash, a CMLD definition joins directly into the concept graph — no separate index, no duplication.</li>
+    </ul>
+    <p>
+      CMLD definitions are CML-governed: a binding is <code>cml:Proposed</code> when machine-suggested
+      and <code>cml:Attested</code> only on a signed human action; a sameness binding
+      (<code>skos:exactMatch</code>) is subject to the Curation Prime Directive above.
     </p>
     <p class="note">
-      The namespace URI is a placeholder and will be finalized upon W3C Community Group adoption.
+      Implementation status: the registry API and ingest-time resolution exist as the engine surface;
+      full persistence and the document-ingest path are being wired. This section specifies the design
+      the implementation embodies, not a claim of end-to-end completeness.
     </p>
   </section>
 
-  <section>
-    <h2>CML Syntax</h2>
-    <p>
-      CML introduces two HTML elements and one attribute for inline context:
-    </p>
+  <section id="owl-boundary">
+    <h2>Modeling discipline — the OWL boundary &amp; SHACL firewall</h2>
     <ul>
-      <li><code>&lt;cml:context&gt;</code>: Defines a context block for a term or phrase.</li>
-      <li><code>&lt;cml:link&gt;</code>: References an external context resource.</li>
-      <li><code>cml:href</code>: Links to URIs or DIDs, used with <code>&lt;cml:link&gt;</code> or HTML elements.</li>
+      <li><strong>World of man (constructed)</strong> — legal persons, institutions, treaties, contracts, software agents, artifacts — <em>MAY</em> use OWL.</li>
+      <li><strong>Natural world, including humans (given)</strong> — natural persons, ecology, observations — <em>MUST</em> use RDFS + SHACL, never OWL. A person is not an <code>owl:Thing</code> to be classified into existence.</li>
+      <li><strong>External mappings carry reference, not ontological commitment</strong> — a <code>skos:closeMatch</code> to <code>schema:Physician</code> adopts the identifier for interop/disambiguation but never inherits its class axioms (never <code>Physician&nbsp;⊑&nbsp;Place</code>). The boundary is a bidirectional firewall.</li>
+      <li><strong>Two enforcement layers compose</strong> — the Deontic + Temporal VM answers <em>is this norm binding now?</em> (Active / Defeated / Expired); SHACL answers <em>does reality comply?</em>, and a shape is applicable only while its norm is Active. The VM adjudicates validity; SHACL enforces compliance.</li>
     </ul>
-
-    <section>
-      <h3><code>&lt;cml:context&gt;</code> Element</h3>
-      <p>
-        The <code>&lt;cml:context&gt;</code> element wraps a term and provides an RDF-like triple (subject, predicate, object).
-      </p>
-      <dl>
-        <dt>Attributes</dt>
-        <dd>
-          <ul>
-            <li><code>subject</code>: A URI or DID identifying the term’s concept (REQUIRED).</li>
-            <li><code>predicate</code>: A URI defining the relationship (REQUIRED).</li>
-            <li><code>object</code>: A literal or URI providing the context value (REQUIRED).</li>
-            <li><code>lang</code>: An optional language tag, per [[BCP47]].</li>
-          </ul>
-        </dd>
-      </dl>
-      <pre class="example" title="CML inline example for thongs">
-&lt;p&gt;
-  Wear &lt;cml:context subject="https://wikidata.org/entity/Q12955949" predicate="http://schema.org/definedAs" object="Flip-flops" lang="en"&gt;thongs&lt;/cml:context&gt; for a beach day.
-&lt;/p&gt;
-      </pre>
-    </section>
-
-    <section>
-      <h3><code>&lt;cml:link&gt;</code> Element and <code>cml:href</code> Attribute</h3>
-      <p>
-        The <code>&lt;cml:link&gt;</code> element or <code>cml:href</code> attribute references a context resource, as defined for link relations in [[HTML]].
-      </p>
-      <dl>
-        <dt>Attributes</dt>
-        <dd>
-          <ul>
-            <li><code>cml:href</code>: A URI or DID pointing to a context resource (REQUIRED).</li>
-            <li><code>rel</code>: An optional relationship type (e.g., <code>context</code>), per [[HTML]].</li>
-          </ul>
-        </dd>
-      </dl>
-      <pre class="example" title="CML link example for thongs">
-&lt;p&gt;
-  Buy our &lt;cml:link cml:href="https://wikidata.org/entity/Q380339" rel="context"&gt;thongs&lt;/cml:link&gt; for comfort.
-&lt;/p&gt;
-      </pre>
-    </section>
   </section>
 
   <section>
-    <h2>CMLD Syntax and File Extension</h2>
-    <p>
-      CMLD files are JSON documents with an array of context definitions, compatible with JSON-LD. They <em>MUST</em> use the <code>.ctx</code> extension for simplicity. Alternative extensions were considered:
-    </p>
+    <h2>Serialization, layered outputs &amp; the engine</h2>
     <ul>
-      <li><code>.cmlx</code>: Variation of CML, less concise.</li>
-      <li><code>.semx</code>: Emphasizes "semantic," risks confusion.</li>
-      <li><code>.kmf</code>: "Knowledge Markup File," less intuitive.</li>
-      <li><code>.ictf</code>: "Intelligent Context Tag File," overly specific.</li>
-      <li><code>.mdf</code>: "Meaning Definition File," risks confusion with other formats.</li>
-      <li><code>.cxf</code>: "Context exchange," less descriptive.</li>
-      <li><code>.sml</code>: "Semantic Markup Language," risks conflict with existing languages.</li>
-      <li><code>.cmd</code>: Rejected due to confusion with command files.</li>
+      <li><strong>SOURCE / interchange:</strong> RDF / N3 / Turtle (the <code>cml.n3</code> axioms and <code>concepts/*.n3</code>).</li>
+      <li><strong>Wire:</strong> CBOR-LD [[CBOR-LD]] is the primary transmission serialization (one hash-space; <code>@context</code> expansion).</li>
+      <li><strong>Execution:</strong> the unified <code>.q42</code> archive — header → lexicon → block index → block-dir → LZ4 40&nbsp;KB SuperBlocks — preserving a two-step range fetch (fetch the small index; one HTTP Range for the single block).</li>
     </ul>
-    <p class="note">
-      The <code>.ctx</code> extension is recommended, pending W3C Community Group finalization.
-    </p>
-    <pre class="example" title="CMLD file example">
-{
-  "@context": "https://w3c.github.io/context-markup/ns#",
-  "definitions": [
-    {
-      "id": "thongs-footwear",
-      "subject": "https://wikidata.org/entity/Q12955949",
-      "predicate": "http://schema.org/definedAs",
-      "object": "Flip-flops",
-      "lang": "en"
-    }
-  ]
-}
-    </pre>
-    <dl>
-      <dt><code>id</code></dt>
-      <dd>A unique identifier (REQUIRED).</dd>
-      <dt><code>subject</code></dt>
-      <dd>A URI or DID (REQUIRED).</dd>
-      <dt><code>predicate</code></dt>
-      <dd>A URI defining the relationship (REQUIRED).</dd>
-      <dt><code>object</code></dt>
-      <dd>A literal or URI (REQUIRED).</dd>
-      <dt><code>lang</code></dt>
-      <dd>An optional language tag, per [[BCP47]].</dd>
-    </dl>
-  </section>
-
-  <section>
-    <h2>HTML Integration</h2>
+    <p>Per source instrument the corpus emits three layers:</p>
+    <ol>
+      <li><code>*.n3</code> — foundational N3/Turtle + N3Logic rules + SHACL shapes (SOURCE, human-curated).</li>
+      <li><code>*.cml.html</code> — the CML-annotated human-readable rendering (GENERATED).</li>
+      <li><code>*.q42</code> — the engine-native compiled volume (GENERATED).</li>
+    </ol>
     <p>
-      CMLD files are referenced using a <code>&lt;link&gt;</code> element with a proposed <code>rel="context"</code> value. Terms are linked to definitions via a <code>data-cml-id</code> attribute, both custom extensions not in [[HTML]].
+      The generated concept layer is reproducible from SOURCE at a stamped <code>cml:schemaVersion</code>;
+      regeneration rewrites only the machine-<code>cml:Proposed</code> layer and never touches human
+      <code>cml:Attested</code> attestations — the property that lets the logic→CML pipeline be re-run
+      freely.
     </p>
-    <pre class="example" title="HTML referencing CMLD file">
-&lt;head&gt;
-  &lt;link rel="context" href="context.ctx" type="application/json"&gt;
-&lt;/head&gt;
-&lt;body&gt;
-  &lt;p&gt;Wear &lt;span data-cml-id="thongs-footwear"&gt;thongs&lt;/span&gt; for a beach day.&lt;/p&gt;
-&lt;/body&gt;
-    </pre>
-  </section>
-
-  <section>
-    <h2>Processing Model</h2>
-    <section>
-      <h3>CML Processing</h3>
-      <p>
-        Agents processing CML <em>MUST</em>:
-      </p>
-      <ol>
-        <li>Identify <code>&lt;cml:context&gt;</code> and <code>&lt;cml:link&gt;</code> elements or <code>cml:href</code> attributes in the HTML DOM.</li>
-        <li>Extract attributes (<code>subject</code>, <code>predicate</code>, <code>object</code>, <code>cml:href</code>) and map to RDF triples or JSON objects.</li>
-        <li>Resolve URIs or DIDs, per [[DID-CORE]].</li>
-        <li>Use context for disambiguation, aligning with HCAI principles.</li>
-      </ol>
-      <p>
-        Agents <em>SHOULD</em> handle malformed tags gracefully.
-      </p>
-    </section>
-    <section>
-      <h3>CMLD Processing</h3>
-      <p>
-        Agents processing CMLD <em>MUST</em>:
-      </p>
-      <ol>
-        <li>Load the CMLD file via <code>&lt;link rel="context"&gt;</code>.</li>
-        <li>Parse the JSON and extract definitions.</li>
-        <li>Match <code>data-cml-id</code> attributes to definition <code>id</code>s.</li>
-        <li>Map attributes to RDF triples or JSON objects.</li>
-        <li>Resolve URIs or DIDs, per [[DID-CORE]].</li>
-        <li>Use context for disambiguation, aligning with HCAI principles.</li>
-      </ol>
-      <p>
-        Agents <em>SHOULD</em> handle malformed files or unmatched IDs gracefully.
-      </p>
-    </section>
-  </section>
-
-  <section>
-    <h2>Integration with Semantic Web and DIDs</h2>
-    <p>
-      CML and CMLD map to RDF triples, ensuring interoperability with RDFa and JSON-LD. URIs reference ontologies like Schema.org or Wikidata (e.g., <code>https://schema.org/Physician</code>, <code>https://wikidata.org/entity/Q12955949</code>). DIDs (e.g., <code>did:example:123</code>) link to DID documents, per [[DID-CORE]], supporting decentralized context.
-    </p>
-  </section>
-
-  <section>
-    <h2>Human-Centric AI Alignment</h2>
-    <p>
-      CML and CMLD support HCAI principles, per [[EU-AI-ACT]]:
-    </p>
-    <ul>
-      <li><strong>Accurate Meaning Inference</strong>: Inline and external context (e.g., disambiguating "thongs") ensures accurate LLM inferences, reducing errors in commerce or healthcare.</li>
-      <li><strong>Transparency and Explainability</strong>: URI- and DID-linked context enables LLMs to cite sources, meeting HCAI’s explainability requirements.</li>
-      <li><strong>Fairness and Inclusivity</strong>: Multi-lingual context (via <code>lang</code>) and diverse URIs reduce bias, respecting cultural differences.</li>
-      <li><strong>User Trust</strong>: Mitigating false assumptions fosters trust in AI systems.</li>
-      <li><strong>Mitigation of False Assumptions</strong>: Explicit context prevents misinformation, discrimination, or harm, enhancing ethical AI outcomes.</li>
-    </ul>
   </section>
 
   <section>
     <h2>Examples</h2>
     <section>
-      <h3>Disambiguating "thongs"</h3>
-      <p>CML inline:</p>
-      <pre class="example" title="CML inline for thongs">
-&lt;p&gt;
-  Wear &lt;cml:context subject="https://wikidata.org/entity/Q12955949" predicate="http://schema.org/definedAs" object="Flip-flops" lang="en"&gt;
-    &lt;a cml:href="did:example:Footwear123" href="https://example.com/flipflops"&gt;thongs&lt;/a&gt;
-  &lt;/cml:context&gt; for a beach day.
-&lt;/p&gt;
-&lt;p&gt;
-  Our &lt;cml:context subject="https://wikidata.org/entity/Q380339" predicate="http://schema.org/definedAs" object="Underwear"&gt;
-    &lt;cml:link cml:href="https://example.com/underwear" rel="context"&gt;thongs&lt;/cml:link&gt;
-  &lt;/cml:context&gt; offer comfort.
-&lt;/p&gt;
-      </pre>
-      <p>CMLD file (<code>context.ctx</code>):</p>
-      <pre class="example" title="CMLD file for thongs">
-{
-  "@context": "https://w3c.github.io/context-markup/ns#",
-  "definitions": [
-    {
-      "id": "thongs-footwear",
-      "subject": "https://wikidata.org/entity/Q12955949",
-      "predicate": "http://schema.org/definedAs",
-      "object": "Flip-flops",
-      "lang": "en"
-    },
-    {
-      "id": "thongs-underwear",
-      "subject": "https://wikidata.org/entity/Q380339",
-      "predicate": "http://schema.org/definedAs",
-      "object": "Underwear"
-    }
-  ]
-}
-      </pre>
-      <p>CMLD HTML:</p>
-      <pre class="example" title="CMLD HTML for thongs">
-&lt;head&gt;
-  &lt;link rel="context" href="context.ctx" type="application/json"&gt;
-&lt;/head&gt;
-&lt;body&gt;
-  &lt;p&gt;Wear &lt;span data-cml-id="thongs-footwear"&gt;thongs&lt;/span&gt; for a beach day.&lt;/p&gt;
-  &lt;p&gt;Our &lt;span data-cml-id="thongs-underwear"&gt;thongs&lt;/span&gt; offer comfort.&lt;/p&gt;
-&lt;/body&gt;
-      </pre>
+      <h3>A concept with text, logic, and provenance</h3>
+      <p>The implemented pilot — a treaty duty as a concept that owns a deontic sub-graph:</p>
+      <pre class="example" title="concept:DutyToSuppressForcedLabour">
+# TEXT (immutable, recovered from the .q42 lexicon)
+&lt;…convention-105#article-1&gt; values:originalText
+  "Each Member … undertakes to suppress and not to make use of any form of forced or compulsory labour …" .
+
+# CONCEPT (context hash = q_hash("concept:DutyToSuppressForcedLabour"))
+concept:DutyToSuppressForcedLabour
+    a            cml:Concept ;
+    skos:prefLabel "duty to suppress forced labour"@en ;
+    cml:realizedBy [ a oa:Annotation ;
+                     oa:hasTarget [ oa:hasSource &lt;…convention-105#article-1&gt; ;
+                                    oa:hasSelector [ a oa:FragmentSelector ; rdf:value "char=0,87" ] ] ] ;
+    cml:curationStatus cml:Proposed ;
+    cml:asserts  [ a values:Obligation ; values:borneBy values:State ;
+                   values:requires act:suppressForcedLabour ] .   # → OP_OBLIGATE in context Cdsf</pre>
+      <p>Evaluating context <code>Cdsf</code>: an <strong>Active</strong> obligation borne by the
+      ratifying party; an <code>unless lawfully-authorised</code> defeater in the same sub-graph flips
+      it to <strong>Defeated</strong>.</p>
     </section>
     <section>
-      <h3>Disambiguating "physician"</h3>
-      <p>CML inline:</p>
-      <pre class="example" title="CML inline for physician">
-&lt;p&gt;
-  Dr. Smith, a &lt;cml:context subject="https://wikidata.org/entity/Q39631" predicate="http://schema.org/definedAs" object="Medical doctor" lang="en"&gt;
-    &lt;a cml:href="did:example:Doc123" href="https://example.com/dr-smith"&gt;physician&lt;/a&gt;
-  &lt;/cml:context&gt;, specializes in cardiology.
-&lt;/p&gt;
-&lt;p&gt;
-  Visit our &lt;cml:context subject="https://schema.org/Physician" predicate="http://schema.org/definedAs" object="Medical practice"&gt;
-    &lt;cml:link cml:href="https://example.com/clinic" rel="context"&gt;physician&lt;/cml:link&gt;
-  &lt;/cml:context&gt; at 123 Main St.
-&lt;/p&gt;
-      </pre>
-      <p>CMLD file excerpt:</p>
-      <pre class="example" title="CMLD file for physician">
-{
-  "definitions": [
-    {
-      "id": "physician-person",
-      "subject": "https://wikidata.org/entity/Q39631",
-      "predicate": "http://schema.org/definedAs",
-      "object": "Medical doctor",
-      "lang": "en"
-    },
-    {
-      "id": "physician-place",
-      "subject": "https://schema.org/Physician",
-      "predicate": "http://schema.org/definedAs",
-      "object": "Medical practice"
-    }
-  ]
-}
-      </pre>
-      <p>CMLD HTML:</p>
-      <pre class="example" title="CMLD HTML for physician">
-&lt;p&gt;Dr. Smith, a &lt;span data-cml-id="physician-person"&gt;physician&lt;/span&gt;, specializes in cardiology.&lt;/p&gt;
-&lt;p&gt;Visit our &lt;span data-cml-id="physician-place"&gt;physician&lt;/span&gt; at 123 Main St.&lt;/p&gt;
-      </pre>
-    </section>
-    <section>
-      <h3>Disambiguating "bank"</h3>
-      <p>CML inline:</p>
-      <pre class="example" title="CML inline for bank">
-&lt;p&gt;
-  Deposit money at the &lt;cml:context subject="https://wikidata.org/entity/Q22687" predicate="http://schema.org/definedAs" object="Financial institution" lang="en"&gt;
-    &lt;a cml:href="did:example:Bank123" href="https://example.com/bank"&gt;bank&lt;/a&gt;
-  &lt;/cml:context&gt; on Main St.
-&lt;/p&gt;
-&lt;p&gt;
-  Fish along the &lt;cml:context subject="https://wikidata.org/entity/Q319686" predicate="http://schema.org/definedAs" object="Riverbank"&gt;
-    &lt;cml:link cml:href="https://example.com/riverbank" rel="context"&gt;bank&lt;/cml:link&gt;
-  &lt;/cml:context&gt; of the river.
-&lt;/p&gt;
-      </pre>
-      <p>CMLD file excerpt:</p>
-      <pre class="example" title="CMLD file for bank">
-{
-  "definitions": [
-    {
-      "id": "bank-financial",
-      "subject": "https://wikidata.org/entity/Q22687",
-      "predicate": "http://schema.org/definedAs",
-      "object": "Financial institution",
-      "lang": "en"
-    },
-    {
-      "id": "bank-river",
-      "subject": "https://wikidata.org/entity/Q319686",
-      "predicate": "http://schema.org/definedAs",
-      "object": "Riverbank"
-    }
-  ]
-}
-      </pre>
-      <p>CMLD HTML:</p>
-      <pre class="example" title="CMLD HTML for bank">
-&lt;p&gt;Deposit money at the &lt;span data-cml-id="bank-financial"&gt;bank&lt;/span&gt; on Main St.&lt;/p&gt;
-&lt;p&gt;Fish along the &lt;span data-cml-id="bank-river"&gt;bank&lt;/span&gt; of the river.&lt;/p&gt;
-      </pre>
-    </section>
-    <section>
-      <h3>Disambiguating "apple"</h3>
-      <p>CML inline:</p>
-      <pre class="example" title="CML inline for apple">
-&lt;p&gt;
-  Eat an &lt;cml:context subject="https://wikidata.org/entity/Q89" predicate="http://schema.org/definedAs" object="Fruit" lang="en"&gt;
-    &lt;a cml:href="did:example:Fruit123" href="https://example.com/apple-fruit"&gt;apple&lt;/a&gt;
-  &lt;/cml:context&gt; for a healthy snack.
-&lt;/p&gt;
-&lt;p&gt;
-  The new &lt;cml:context subject="https://wikidata.org/entity/Q312" predicate="http://schema.org/definedAs" object="Technology company"&gt;
-    &lt;cml:link cml:href="https://example.com/apple-inc" rel="context"&gt;Apple&lt;/cml:link&gt;
-  &lt;/cml:context&gt; phone is innovative.
-&lt;/p&gt;
-      </pre>
-      <p>CMLD file excerpt:</p>
-      <pre class="example" title="CMLD file for apple">
-{
-  "definitions": [
-    {
-      "id": "apple-fruit",
-      "subject": "https://wikidata.org/entity/Q89",
-      "predicate": "http://schema.org/definedAs",
-      "object": "Fruit",
-      "lang": "en"
-    },
-    {
-      "id": "apple-company",
-      "subject": "https://wikidata.org/entity/Q312",
-      "predicate": "http://schema.org/definedAs",
-      "object": "Technology company"
-    }
-  ]
-}
-      </pre>
-      <p>CMLD HTML:</p>
-      <pre class="example" title="CMLD HTML for apple">
-&lt;p&gt;Eat an &lt;span data-cml-id="apple-fruit"&gt;apple&lt;/span&gt; for a healthy snack.&lt;/p&gt;
-&lt;p&gt;The new &lt;span data-cml-id="apple-company"&gt;Apple&lt;/span&gt; phone is innovative.&lt;/p&gt;
-      </pre>
+      <h3>A CMLD definition disambiguating a term</h3>
+      <pre class="example" title="term → concept (CMLD)">
+# upsert_cmld_definition("bank", "did:webizen:concept:FinancialInstitution")
+# resolves, at ingest, to the concept whose context hash = q_hash(that concept IRI):
+"bank"  skos:closeMatch  concept:FinancialInstitution ;   # machine-proposed
+        cml:curationStatus cml:Proposed .
+# a riverbank document would bind "bank" → concept:Riverbank instead.</pre>
     </section>
   </section>
 
   <section>
-    <h2>Implementation Considerations</h2>
-    <p>
-      CML and CMLD face adoption challenges:
-    </p>
+    <h2>Human-Centric AI alignment</h2>
     <ul>
-      <li><strong>Adoption</strong>: Developers may prefer RDFa or JSON-LD. CMS plugins and authoring tools can drive uptake.</li>
-      <li><strong>Scalability</strong>: URI and DID resolution requires governance. Collaboration with semantic web and DID communities is essential.</li>
-      <li><strong>Interoperability</strong>: Mapping to RDF ensures compatibility with existing standards.</li>
+      <li><strong>Accurate inference</strong> — declared concepts replace probabilistic guessing.</li>
+      <li><strong>Transparency / explainability</strong> — an agent can cite the concept, its realizing text span, and its provenance.</li>
+      <li><strong>Fairness / inclusivity</strong> — multi-lingual realizations and curated concepts reduce dominant-meaning bias; the man-made/natural boundary refuses to redefine the given world.</li>
+      <li><strong>Trust / accountability</strong> — the Curation Prime Directive makes sameness a signed human act, not a machine assertion.</li>
     </ul>
   </section>
 
   <section>
-    <h2>Security and Privacy Considerations</h2>
-    <p>
-      CML and CMLD introduce minimal security risks:
-    </p>
+    <h2>Security &amp; privacy considerations</h2>
     <ul>
-      <li>Agents <em>MUST</em> validate URIs and DIDs to prevent malicious redirects.</li>
-      <li>Authors <em>SHOULD</em> avoid sensitive information in <code>object</code> fields.</li>
-      <li><strong>Privacy</strong>: Inline CML and public CMLD files may expose author intent. Authors <em>SHOULD</em> anonymize definitions, and agents <em>MUST</em> secure DID resolutions per [[DID-CORE]].</li>
-      <li><strong>HCAI Compliance</strong>: Privacy protections align with HCAI requirements.</li>
+      <li>Agents <em>MUST</em> validate URIs and DIDs before resolution [[DID-CORE]].</li>
+      <li>Authors <em>SHOULD</em> avoid sensitive data in concept labels/definitions; personal data is modelled via credentials over a fabric of identifiers, not as public literals.</li>
+      <li>Sameness assertions (<code>skos:exactMatch</code>) <em>MUST</em> be human-attested with a <code>sec:</code> proof (the Prime Directive), preventing silent machine flattening.</li>
     </ul>
   </section>
 
   <section id="conformance">
     <p>
-      Conformance requirements use [[RFC2119]] terminology. Implementations <em>MUST</em> conform to the syntax and processing models defined in this specification.
+      Conformance requirements use [[RFC2119]] terminology. A conforming implementation <em>MUST</em>
+      realise concepts as context hashes, honour the three-layer separation (immutable TEXT), and
+      enforce the Curation Prime Directive (machine <code>closeMatch</code>; human-attested
+      <code>exactMatch</code>) via the SHACL firewall.
     </p>
+  </section>
+
+  <section id="qualia-engine-implementation" class="informative">
+    <h2>QualiaDB engine implementation note</h2>
+    <ul>
+      <li><strong>Serialization:</strong> RDF / RDF-star at the model layer; <strong>CBOR-LD</strong> on the wire; a 48-byte binary Super-Quin in the <code>.q42</code> archive for execution.</li>
+      <li><strong>Logic &amp; constraints:</strong> a native N3 streaming parser; explicit deontic operators (Obligate / Permit / Forbid) with <code>q42:unless</code> defeaters; SHACL for compliance.</li>
+      <li><strong>Conflict &amp; state:</strong> CRDT (Lamport-clock LWW) and paraconsistent routing manage temporally-bound state and contradictions (Allen interval / LTL) without system-wide failure.</li>
+    </ul>
   </section>
 
   <section id="acknowledgments">
-    <p>
-      Thanks to the W3C Semantic Web Community, Decentralized Identifier Working Group, and HCAI researchers for inspiration. Special acknowledgment to Wikidata and Schema.org for context resources.
-    </p>
-  </section>
-
-  <script>
-    var respecConfig = {
-      specStatus: "unofficial",
-      shortName: "cml-cmld",
-      editors: [{
-        name: "Your Name",
-        url: "https://example.com",
-        company: "Your Organization",
-        companyURL: "https://example.com"
-      }],
-      github: "https://github.com/your-repo/cml-cmld-spec",
-      license: "w3c-software-doc",
-      wg: "Context Markup Language Community Group",
-      wgURI: "https://www.w3.org/community/cml/",
-      wgPublicList: "public-cml",
-      publishDate: "2025-06-20",
-      edDraftURI: "https://your-repo.github.io/cml-cmld-spec/",
-      localBiblio: {
-        "DID-CORE": {
-          title: "Decentralized Identifiers (DIDs) v1.0",
-          href: "https://www.w3.org/TR/did-core/",
-          authors: ["Drummond Reed", "Manu Sporny", "Markus Sabadello"],
-          publisher: "W3C",
-          date: "2022"
-        },
-        "EU-AI-ACT": {
-          title: "Artificial Intelligence Act",
-          href: "https://digital-strategy.ec.europa.eu/en/policies/artificial-intelligence-act",
-          publisher: "European Commission",
-          date: "2024"
-        },
-        "HTML": {
-          title: "HTML Standard",
-          href: "https://html.spec.whatwg.org/multipage/",
-          authors: ["WHATWG"],
-          publisher: "WHATWG",
-          date: "2025"
-        },
-        "RFC2119": {
-          title: "Key words for use in RFCs to Indicate Requirement Levels",
-          href: "https://tools.ietf.org/html/rfc2119",
-          authors: ["S. Bradner"],
-          publisher: "IETF",
-          date: "1997"
-        },
-        "RFC3986": {
-          title: "Uniform Resource Identifier (URI): Generic Syntax",
-          href: "https://tools.ietf.org/html/rfc3986",
-          authors: ["T. Berners-Lee", "R. Fielding", "L. Masinter"],
-          publisher: "IETF",
-          date: "2005"
-        },
-        "BCP47": {
-          title: "Tags for Identifying Languages",
-          href: "https://tools.ietf.org/html/bcp47",
-          authors: ["A. Phillips", "M. Davis"],
-          publisher: "IETF",
-          date: "2009"
-        }
-      }
-    };
-  </script>
-
-  <section id="qualia-engine-implementation" class="informative">
-    <h2>QualiaDB Engine Technical Implementation Note</h2>
-    <p>
-      In practice, the technical realization of these standards relies on the <strong>QualiaDB engine architecture</strong> to ensure robust, hardware-accelerated, zero-allocation enforcement:
-    </p>
-    <ul>
-      <li><strong>Serialization:</strong> While the standards reference generic Semantic Web forms (RDF, RDF-star), QualiaDB converts these into a high-performance 48-byte binary Super-Quin structure (<code>.q42</code> file format) for execution. For data transmission across the wire, <strong>CBOR-LD</strong> is the primary serialization method.</li>
-      <li><strong>Logic & Constraints:</strong> Instead of generic validation, terms and constraints are parsed via a native <strong>N3 Streaming Parser</strong> and enforced using explicit <strong>Deontic Logic</strong> operators (Obligate, Permit, Forbid).</li>
-      <li><strong>Conflict & State Management:</strong> CRDT (Lamport Clock LWW) and Paraconsistent Logic routers are used to manage temporally bound states and contradictions (e.g., via Allen Interval Algebra and LTL Semantics) without system-wide failure.</li>
-    </ul>
+    <p>Thanks to the W3C Semantic Web, Decentralized Identifier, and Credentials communities, and to Wikidata and Schema.org as external reference vocabularies.</p>
   </section>
 </body>
-
 </html>

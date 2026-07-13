@@ -1,0 +1,92 @@
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:    <http://www.w3.org/ns/shacl#> .
+@prefix skos:  <http://www.w3.org/2004/02/skos/core#> .
+@prefix prov:  <http://www.w3.org/ns/prov#> .
+@prefix vcard: <http://www.w3.org/2006/vcard/ns#> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix self:  <https://ns.webcivics.net/self/> .
+@prefix spc:   <https://ns.webcivics.net/social-permissive-commons/> .
+@prefix dir:   <https://ns.webcivics.net/directory/> .
+
+# ===========================================================================
+# directory.n3 — the personal directory ("Active Directory"-like addressbook),
+# defined ONTOLOGICALLY by REUSE, not reinvention. Almost everything it needs
+# already exists:
+#   Party            = values:Agent            (values.n3 — NaturalPerson / LegalPerson /
+#                                                CorporatePerson / PublicAuthority / ArtificialAgent;
+#                                                a person is grounded in self:MoralFrame, NOT foaf/owl:Thing)
+#   Relationship     = spc:SocialRelation      (social-permissive-commons.n3 — a PEER agent<->agent
+#                                                consent envelope; NO platform provider at the base)
+#   Category         = skos:Concept            (aligned to spc:relationType — OPEN, extensible;
+#                                                skos:broader/narrower give a concept HIERARCHY, which is
+#                                                the basis for true concept-aware / semantic search)
+#   Terms/agreement  = spc:attachedRule + values:Undertaking + the contract route (agency.n3 / contract.rs)
+#   Exit behaviour   = spc:persistenceClass    (differentiated persistence of shared holdings on exit)
+#   Provenance/time  = prov: / sense:EffectivityInterval
+#
+# The thin `dir:` layer below is MACHINE-PROPOSED, HUMAN-ATTESTED (the values-credential
+# discipline): it only NAMES the directory + its default category scheme and ALIGNS categories to
+# existing concepts. New terms are marked `dir:curationStatus dir:Proposed` — Timothy ratifies the
+# vocabulary. Grounded RDFS + SHACL + N3 (NOT OWL — a person is not an owl:Thing; see values.n3/selfhood.n3).
+# ===========================================================================
+
+dir:Proposed a rdfs:Resource ; rdfs:comment "Machine-proposed, awaiting human attestation (curation)." .
+dir:curationStatus a rdf:Property ; rdfs:comment "Proposed | Attested (mirrors cml:curationStatus)." .
+
+# --- The directory (one per principal) ------------------------------------
+dir:Directory a rdfs:Class ; dir:curationStatus dir:Proposed ;
+    rdfs:label "Personal directory" ;
+    rdfs:comment "A principal's addressbook of the agents they know, with the relationships + agreements that govern each. No platform holds it (spc: foundation): the principal is their own controller." .
+dir:heldBy a rdf:Property ; rdfs:domain dir:Directory ; rdfs:range values:Agent ;
+    rdfs:comment "The principal whose directory this is." .
+
+# --- An entry = a known party + the relation(s) that govern the tie --------
+# An entry is NOT a new identity; it is the principal's view onto a values:Agent they know, plus the
+# spc:SocialRelation(s) between them. (Identifiers-not-identity; the party's DID is a pairwise identifier.)
+dir:Entry a rdfs:Class ; dir:curationStatus dir:Proposed ;
+    rdfs:label "Directory entry" ;
+    rdfs:comment "A party in the directory: a values:Agent, its contact detail (vcard), the SocialRelation(s) it stands in, and the categories it is filed under." .
+dir:inDirectory a rdf:Property ; rdfs:domain dir:Entry ; rdfs:range dir:Directory .
+dir:party       a rdf:Property ; rdfs:domain dir:Entry ; rdfs:range values:Agent ;
+    rdfs:comment "The agent this entry is about (a NaturalPerson / LegalPerson / ArtificialAgent)." .
+dir:relation    a rdf:Property ; rdfs:domain dir:Entry ; rdfs:range spc:SocialRelation ;
+    rdfs:comment "The peer relationship(s) with this party — the consent envelope carrying the agreed terms (spc:attachedRule) and the exit behaviour (spc:persistenceClass)." .
+dir:categorisedAs a rdf:Property ; rdfs:domain dir:Entry ; rdfs:range skos:Concept ;
+    rdfs:comment "The categories (facets) this entry is filed under — SKOS concepts, so search can follow skos:broader/narrower (meaning-aware, not string-only)." .
+dir:card a rdf:Property ; rdfs:domain dir:Entry ; rdfs:range vcard:Kind ;
+    rdfs:comment "Optional contact detail — reuse vCard (NOT for identity; a person's dignity is selfhood, see selfhood.n3)." .
+
+# --- The default category scheme (aligned to spc:relationType) -------------
+# Categories are skos:Concepts in this scheme; each aligns to the existing, open spc: relation-type
+# vocabulary (or types the party) rather than coining a parallel taxonomy. Extend freely (open vocab).
+dir:CategoryScheme a skos:ConceptScheme ; dir:curationStatus dir:Proposed ;
+    skos:prefLabel "Personal directory categories" .
+
+dir:People a skos:Concept ; skos:inScheme dir:CategoryScheme ; skos:prefLabel "People" ;
+    skos:definition "Catch-all: every entry. A directory:People party is a values:NaturalPerson unless typed otherwise." .
+dir:HealthPractitioners a skos:Concept ; skos:inScheme dir:CategoryScheme ; skos:prefLabel "Health practitioners" ;
+    skos:definition "A care relationship (patient <-> clinician) — consented, scoped, revocable (see human-centric-care-relationships)." ;
+    skos:relatedMatch spc:GuardianshipArrangement .
+dir:Cooperative a skos:Concept ; skos:inScheme dir:CategoryScheme ; skos:prefLabel "Cooperative" ;
+    skos:closeMatch spc:CommunityMembership ; skos:relatedMatch spc:Collaboration .
+dir:Organizations a skos:Concept ; skos:inScheme dir:CategoryScheme ; skos:prefLabel "Organizations" ;
+    skos:definition "The party is a values:LegalPerson (a party typing, not a relation type) — NEVER a values:Person (dignity); anti-conflation per values.n3." .
+dir:Agents a skos:Concept ; skos:inScheme dir:CategoryScheme ; skos:prefLabel "Agents" ;
+    skos:definition "The party is a values:ArtificialAgent (software/AI); duties transpose to its operator (agency.n3)." .
+dir:FamilyFriends a skos:Concept ; skos:inScheme dir:CategoryScheme ; skos:prefLabel "Family & friends" ;
+    skos:relatedMatch spc:Household , spc:Partnership .
+
+# ===========================================================================
+# SHACL — a usable entry names its party and files it under >=1 category
+# ===========================================================================
+dir:EntryShape a sh:NodeShape ;
+    sh:targetClass dir:Entry ;
+    sh:property [ sh:path dir:party ; sh:minCount 1 ; sh:class values:Agent ;
+        sh:message "A directory entry must be about a values:Agent (natural/legal/artificial), never a bare string." ] ;
+    sh:property [ sh:path dir:categorisedAs ; sh:minCount 1 ; sh:class skos:Concept ;
+        sh:message "An entry must be filed under at least one category (a SKOS concept, e.g. dir:People)." ] .
+
+# A person-party carries inherent dignity (values.n3) and is grounded in the moral frame (selfhood.n3);
+# an Organizations/Agents party never is. This is the anti-conflation guard applied to the addressbook.
+{ ?e a dir:Entry ; dir:party ?p . ?p a values:NaturalPerson } => { ?p values:inherentDignity true } .

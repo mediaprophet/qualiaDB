@@ -111,7 +111,7 @@
                 </a>
             </div>
             <div class="bg-black/50 p-6 rounded-2xl border border-white/10 font-mono text-xs text-rose-200">
-                @prefix q42: &lt;https://qualia.network/q42#&gt; .<br><br>
+                @prefix q42: &lt;https://webizen.org/q42#&gt; .<br><br>
                 { ?g q42:hasRole q42:Guardian } ~&gt;<br>
                 &nbsp;&nbsp;{ ?g q42:may q42:viewRecord } .<br><br>
                 { ?g q42:revoked q42:Consent } ^&gt;<br>
@@ -126,12 +126,12 @@
             <div class="glass-strong p-6 rounded-3xl">
                 <div class="text-purple-400 text-3xl mb-4"><i class="fas fa-brain"></i></div>
                 <h3 class="text-xl font-semibold mb-2">Zero-Copy LoRA Mux</h3>
-                <p class="text-white/70 text-sm">Dynamically swap 16+ LLM adapters with zero heap memory allocation using memmap2 weight projection and DirectML fused shaders.</p>
+                <p class="text-white/70 text-sm">Dynamically swap 16+ LLM adapters with zero heap memory allocation using memmap2 weight projection and fused WGSL shaders (wgpu, Vulkan default).</p>
             </div>
             <div class="glass-strong p-6 rounded-3xl">
                 <div class="text-rose-400 text-3xl mb-4"><i class="fas fa-gavel"></i></div>
                 <h3 class="text-xl font-semibold mb-2">Agent Fiduciary Engines</h3>
-                <p class="text-white/70 text-sm">Strict capability profiles (QCHK) and 7 core fiduciary rules govern what LLM agents can query or modify in the user's sovereign domain.</p>
+                <p class="text-white/70 text-sm">Strict capability profiles (QCHK) and 7 core fiduciary rules govern what LLM agents can query or modify in the user's own data domain.</p>
             </div>
             <div class="glass-strong p-6 rounded-3xl">
                 <div class="text-amber-400 text-3xl mb-4"><i class="fas fa-vial"></i></div>

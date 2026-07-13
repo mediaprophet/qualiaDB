@@ -1,0 +1,268 @@
+//! W5b Phase 4b — runtime KV-dictionary install + reconstruction, in CORE (engine-side, no forge dep).
+//!
+//! Holds the certified per-layer K/V dictionaries and, when enabled, reconstructs each K/V vector on the
+//! KV-cache **write** path (`reconstruct_kv`) so attention reads the dictionary-reconstructed vectors.
+//! This is the engine half of "forge produces, engine runs": the forge learns + certifies + packages a
+//! dictionary artifact; the engine [`load_certified`]s it (verifying the provenance gate) and installs
+//! it here. Reconstruct-on-write is quality-identical to a real compressed cache (store code, reconstruct
+//! on read) — the compressed GPU cache layout + shader reconstruction is the remaining Phase 4b work.
+//!
+//! Gated + zero-cost when off (one relaxed atomic load on the attention path).
+
+#![cfg(not(target_arch = "wasm32"))]
+
+use crate::kv_dict::KvDictionary;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Mutex, OnceLock};
+
+static ENABLED: AtomicBool = AtomicBool::new(false);
+
+struct Rt {
+    /// Per-layer K dictionaries (`None` = layer not certified / too few vectors → passthrough).
+    k: Vec<Option<KvDictionary>>,
+    v: Vec<Option<KvDictionary>>,
+    sparsity: usize,
+    /// head_dim (atom length) of the installed dictionaries; 0 if none installed.
+    head_dim: usize,
+    /// n_atoms of the installed dictionaries (from the first non-None dict).
+    n_atoms: usize,
+}
+
+fn rt() -> &'static Mutex<Option<Rt>> {
+    static R: OnceLock<Mutex<Option<Rt>>> = OnceLock::new();
+    R.get_or_init(|| Mutex::new(None))
+}
+
+/// The serialized dictionary artifact payload (what rides inside the framed `.q42art` after the
+/// provenance header). Shared by the forge packager and the engine loader — the one source of truth
+/// for the on-disk dictionary format.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct KvDictArtifact {
+    pub sparsity: usize,
+    pub head_dim: usize,
+    pub k: Vec<Option<KvDictionary>>,
+    pub v: Vec<Option<KvDictionary>>,
+}
+
+/// Install the per-layer dictionaries and turn reconstruction ON.
+pub fn enable(k: Vec<Option<KvDictionary>>, v: Vec<Option<KvDictionary>>, sparsity: usize) {
+    let first = k.iter().chain(v.iter()).flatten().next();
+    let head_dim = first.map(|d| d.dim).unwrap_or(0);
+    let n_atoms = first.map(|d| d.n_atoms).unwrap_or(0);
+    if let Ok(mut g) = rt().lock() {
+        *g = Some(Rt {
+            k,
+            v,
+            sparsity,
+            head_dim,
+            n_atoms,
+        });
+    }
+    ENABLED.store(true, Ordering::Relaxed);
+}
+
+/// Flatten the installed atoms into the arena layout `[layer][K atoms n_atoms×head_dim][V atoms …]`,
+/// with `(flat, n_atoms, head_dim)`; layers/streams with no dictionary are zero (never selected). The
+/// engine uploads this into the tail of each layer's KV-arena slice for the GPU shader to reconstruct.
+pub fn atoms_flat() -> Option<(Vec<f32>, usize, usize)> {
+    let g = rt().lock().ok()?;
+    let rt = g.as_ref()?;
+    if rt.head_dim == 0 || rt.n_atoms == 0 {
+        return None;
+    }
+    let (na, hd) = (rt.n_atoms, rt.head_dim);
+    let per_stream = na * hd;
+    let n_layer = rt.k.len().max(rt.v.len());
+    let mut out = vec![0f32; n_layer * 2 * per_stream];
+    for l in 0..n_layer {
+        let base = l * 2 * per_stream;
+        if let Some(Some(d)) = rt.k.get(l) {
+            let n = per_stream.min(d.atoms.len());
+            out[base..base + n].copy_from_slice(&d.atoms[..n]);
+        }
+        if let Some(Some(d)) = rt.v.get(l) {
+            let n = per_stream.min(d.atoms.len());
+            out[base + per_stream..base + per_stream + n].copy_from_slice(&d.atoms[..n]);
+        }
+    }
+    Some((out, na, hd))
+}
+
+/// The installed dictionary's `(sparsity, head_dim)`, or `None` if nothing is installed. The KV-cache
+/// layout consults this to size the dict-coded slots (Phase 4b step 3).
+pub fn installed_meta() -> Option<(usize, usize, usize)> {
+    let g = rt().lock().ok()?;
+    let rt = g.as_ref()?;
+    if rt.head_dim == 0 {
+        None
+    } else {
+        Some((rt.sparsity, rt.head_dim, rt.n_atoms))
+    }
+}
+
+/// The installed sparsity `k` (0 if nothing installed).
+pub fn sparsity() -> usize {
+    rt().lock()
+        .ok()
+        .and_then(|g| g.as_ref().map(|r| r.sparsity))
+        .unwrap_or(0)
+}
+
+/// Clone a layer's K (`k_not_v = true`) or V dictionary, or `None` if that layer/stream is passthrough.
+/// The dict-cache write (encode) and read (reconstruct) paths clone once per attention call and work
+/// against the local copy, avoiding a mutex lock per KV vector on the hot loop.
+pub fn clone_layer_dict(layer: usize, k_not_v: bool) -> Option<KvDictionary> {
+    let g = rt().lock().ok()?;
+    let rt = g.as_ref()?;
+    let dicts = if k_not_v { &rt.k } else { &rt.v };
+    dicts.get(layer).cloned().flatten()
+}
+
+pub fn disable() {
+    ENABLED.store(false, Ordering::Relaxed);
+}
+
+#[inline]
+pub fn is_enabled() -> bool {
+    ENABLED.load(Ordering::Relaxed)
+}
+
+/// Free the installed dictionaries.
+pub fn clear() {
+    if let Ok(mut g) = rt().lock() {
+        *g = None;
+    }
+}
+
+/// Metadata returned by [`load_certified`] on success — the gate numbers the artifact was certified at.
+#[derive(Debug, Clone)]
+pub struct CertInfo {
+    pub sparsity: usize,
+    pub head_dim: usize,
+    /// Certified ΔPPL fraction (e.g. 0.0065 = +0.65%).
+    pub delta_ppl: f64,
+    /// Layers with an installed K (resp. V) dictionary.
+    pub k_layers: usize,
+    pub v_layers: usize,
+}
+
+/// The frame magic written by the forge packager (`package::FRAME_MAGIC`). Duplicated here so the engine
+/// can read the format without the forge feature; kept in sync with `wgsl_forge::calibration::package`.
+const FRAME_MAGIC: &[u8; 8] = b"QCAL0001";
+
+/// Minimal read-side view of the provenance header — just the fields the engine gates on. Extra fields
+/// in the CBOR map are ignored; `#[serde(default)]` tolerates any this engine build doesn't know.
+#[derive(serde::Deserialize, Default)]
+struct MiniProvenance {
+    #[serde(default)]
+    kind: String,
+    #[serde(default)]
+    delta_ppl: f64,
+    #[serde(default)]
+    passed: bool,
+}
+
+/// Decode a dictionary artifact payload (CBOR [`KvDictArtifact`]) and install it. The payload is the
+/// bytes AFTER the provenance frame header — see [`load_certified`] for the full framed path.
+pub fn install_from_cbor(payload: &[u8]) -> Result<CertInfo, String> {
+    let art: KvDictArtifact =
+        ciborium::from_reader(payload).map_err(|e| format!("KvDictArtifact CBOR: {e}"))?;
+    let info = CertInfo {
+        sparsity: art.sparsity,
+        head_dim: art.head_dim,
+        delta_ppl: f64::NAN, // filled by load_certified from provenance; NaN when installed raw
+        k_layers: art.k.iter().filter(|d| d.is_some()).count(),
+        v_layers: art.v.iter().filter(|d| d.is_some()).count(),
+    };
+    if info.k_layers == 0 && info.v_layers == 0 {
+        return Err("artifact has no dictionaries".into());
+    }
+    enable(art.k, art.v, art.sparsity);
+    Ok(info)
+}
+
+/// Load a certified KV-dictionary artifact from a framed `.q42art` file, **verify its provenance gate**
+/// (kind == KvDictionary AND passed == true), and install it. Fail-closed: a bad frame, wrong artifact
+/// kind, or an artifact that did NOT pass its ΔPPL gate is refused — the engine only runs certified
+/// artifacts. Returns the certified gate numbers on success.
+pub fn load_certified(path: &std::path::Path) -> Result<CertInfo, String> {
+    let bytes = std::fs::read(path).map_err(|e| format!("read {path:?}: {e}"))?;
+    if bytes.len() < 12 || &bytes[..8] != FRAME_MAGIC {
+        return Err("bad frame magic (not a QCAL artifact)".into());
+    }
+    let prov_len = u32::from_le_bytes([bytes[8], bytes[9], bytes[10], bytes[11]]) as usize;
+    let payload_start = 12usize
+        .checked_add(prov_len)
+        .filter(|&e| e <= bytes.len())
+        .ok_or("provenance length out of range")?;
+    let prov: MiniProvenance = ciborium::from_reader(&bytes[12..payload_start])
+        .map_err(|e| format!("provenance CBOR: {e}"))?;
+    if prov.kind != "KvDictionary" {
+        return Err(format!(
+            "not a KV-dictionary artifact (kind={:?})",
+            prov.kind
+        ));
+    }
+    if !prov.passed {
+        return Err("artifact did NOT pass its ΔPPL gate — refusing (fail-closed)".into());
+    }
+    let mut info = install_from_cbor(&bytes[payload_start..])?;
+    info.delta_ppl = prov.delta_ppl;
+    Ok(info)
+}
+
+/// **User switch — ON.** Load a certified dictionary from `path` and turn the dict-coded KV cache on
+/// (`QUALIA_LLM_KV_DICT`). One call for "use the small KV cache". Fail-closed via [`load_certified`].
+/// Take effect at the NEXT model load (the cache layout is chosen then), like the int8 toggle.
+pub fn activate(path: &std::path::Path) -> Result<CertInfo, String> {
+    let info = load_certified(path)?;
+    crate::llm_bench::set_kv_dict(true);
+    Ok(info)
+}
+
+/// **User switch — OFF.** Turn the dict-coded KV cache off and drop the installed dictionaries; the next
+/// model load uses the default f32/int8 cache.
+pub fn deactivate() {
+    crate::llm_bench::set_kv_dict(false);
+    disable();
+    clear();
+}
+
+/// Whether the dict-coded KV cache is currently the active choice: the toggle is on AND a dictionary is
+/// installed. (`QUALIA_LLM_KV_DICT` / [`crate::llm_bench::set_kv_dict`] / this read-back = the 3-way
+/// user switch, mirroring speculative-decode and int8-KV.)
+pub fn dict_active() -> bool {
+    crate::llm_bench::kv_dict_enabled() && installed_meta().is_some()
+}
+
+/// Reconstruct each of the `n_kv` head vectors in `proj` (length ≥ `n_kv * head_dim`) through this
+/// layer's dictionary, in place. No-op (one atomic load) when disabled, when the layer has no
+/// dictionary, or on a head_dim mismatch — so the caller stores the original vector unchanged.
+#[inline]
+pub fn reconstruct_kv(layer: usize, k_not_v: bool, proj: &mut [f32], n_kv: usize, head_dim: usize) {
+    if !ENABLED.load(Ordering::Relaxed) || head_dim == 0 {
+        return;
+    }
+    let Ok(g) = rt().lock() else {
+        return;
+    };
+    let Some(rt) = g.as_ref() else {
+        return;
+    };
+    let dicts = if k_not_v { &rt.k } else { &rt.v };
+    let Some(Some(dict)) = dicts.get(layer) else {
+        return;
+    };
+    if dict.dim != head_dim {
+        return;
+    }
+    for h in 0..n_kv {
+        let s = h * head_dim;
+        if s + head_dim > proj.len() {
+            break;
+        }
+        let code = dict.encode(&proj[s..s + head_dim], rt.sparsity);
+        let recon = dict.reconstruct(&code);
+        proj[s..s + head_dim].copy_from_slice(&recon);
+    }
+}

@@ -1,7 +1,8 @@
 # ADR 0001: The 48-byte Qualia-Quin Alignment
 
 ## Status
-Accepted
+Accepted. The internal bit-allocation of the 6 `u64` fields (opcode, datatype tags,
+flags, clock, parity) is governed by [ADR 0008: FrameLayout ABI](0008-frame-layout-abi-and-inline-tags.md).
 
 ## Context
 Traditional graph databases rely heavily on dynamic heap allocations (pointers, linked lists, string references) to manage nodes and edges. While this provides maximum flexibility, it inevitably triggers cache misses and unpredictable garbage collection pauses, which destroy performance in resource-constrained edge environments.

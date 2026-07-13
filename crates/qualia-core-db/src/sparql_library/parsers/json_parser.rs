@@ -5,7 +5,7 @@
 
 use chrono::{DateTime, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use serde_json::{Deserializer, Value};
-use std::io::{BufReader, Read};
+use std::io::Read;
 
 use crate::mini_parser::hash_token;
 use crate::NQuin;
@@ -61,26 +61,38 @@ pub fn parse_json_to_quins<R: Read>(
                             object: parsed_int | (0b001 << 60), // INLINE_TAG_INTEGER
                             context: 0,
                             metadata: 0,
-                            parity: NQuin::calculate_parity(subject_hash, field.predicate_hash, parsed_int | (0b001 << 60), 0, 0),
+                            parity: NQuin::calculate_parity(
+                                subject_hash,
+                                field.predicate_hash,
+                                parsed_int | (0b001 << 60),
+                                0,
+                                0,
+                            ),
                         };
                         on_quin(quin);
-                    },
+                    }
                     JsonDatatype::Float => {
                         let parsed_float: f32 = val.as_f64().unwrap_or(0.0) as f32;
                         let float_bits: u32 = parsed_float.to_bits();
                         let inline_tag: u64 = 0b010 << 60;
                         let packed_object = inline_tag | (float_bits as u64);
-                        
+
                         let quin = NQuin {
                             subject: subject_hash,
                             predicate: field.predicate_hash,
                             object: packed_object,
                             context: 0,
                             metadata: 0,
-                            parity: NQuin::calculate_parity(subject_hash, field.predicate_hash, packed_object, 0, 0),
+                            parity: NQuin::calculate_parity(
+                                subject_hash,
+                                field.predicate_hash,
+                                packed_object,
+                                0,
+                                0,
+                            ),
                         };
                         on_quin(quin);
-                    },
+                    }
                     JsonDatatype::StringRef => {
                         if let Some(s) = val.as_str() {
                             let hash = hash_token(s);
@@ -90,7 +102,13 @@ pub fn parse_json_to_quins<R: Read>(
                                 object: hash,
                                 context: 0,
                                 metadata: 0,
-                                parity: NQuin::calculate_parity(subject_hash, field.predicate_hash, hash, 0, 0),
+                                parity: NQuin::calculate_parity(
+                                    subject_hash,
+                                    field.predicate_hash,
+                                    hash,
+                                    0,
+                                    0,
+                                ),
                             };
                             on_quin(quin);
                         }
@@ -107,7 +125,13 @@ pub fn parse_json_to_quins<R: Read>(
                             object: (0b011u64 << 60) | millis,
                             context: 0,
                             metadata: 0,
-                            parity: NQuin::calculate_parity(subject_hash, field.predicate_hash, (0b011u64 << 60) | millis, 0, 0),
+                            parity: NQuin::calculate_parity(
+                                subject_hash,
+                                field.predicate_hash,
+                                (0b011u64 << 60) | millis,
+                                0,
+                                0,
+                            ),
                         };
                         on_quin(quin);
                     }
@@ -115,7 +139,7 @@ pub fn parse_json_to_quins<R: Read>(
             }
         }
     }
-    
+
     Ok(())
 }
 
@@ -124,7 +148,11 @@ fn parse_datetime_millis(s: &str) -> Option<u64> {
     if let Ok(dt) = DateTime::parse_from_rfc3339(s) {
         return Some(dt.timestamp_millis() as u64);
     }
-    for fmt in &["%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%SZ"] {
+    for fmt in &[
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%dT%H:%M:%SZ",
+    ] {
         if let Ok(nd) = NaiveDateTime::parse_from_str(s, fmt) {
             return Some(Utc.from_utc_datetime(&nd).timestamp_millis() as u64);
         }

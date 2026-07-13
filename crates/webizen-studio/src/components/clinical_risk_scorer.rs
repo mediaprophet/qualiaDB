@@ -1,23 +1,58 @@
 use dioxus::prelude::*;
+use serde::Deserialize;
+
+use crate::components::qapp_engine::invoke_json;
+
+#[derive(Deserialize, Default, Clone)]
+struct ClinicalRiskProps {
+    risk_percent: f64,
+    category: String,
+}
 
 #[component]
 pub fn ClinicalRiskScorer() -> Element {
-    let mut age = use_signal(|| 45);
+    let mut age = use_signal(|| 45u8);
     let mut gender = use_signal(|| "Male".to_string());
-    let mut systolic_bp = use_signal(|| 120);
-    let mut total_cholesterol = use_signal(|| 200);
-    let mut hdl = use_signal(|| 50);
+    let mut systolic_bp = use_signal(|| 120.0f64);
+    let mut total_cholesterol = use_signal(|| 200.0f64);
+    let hdl = use_signal(|| 50.0f64);
     let mut smoker = use_signal(|| false);
     let mut diabetes = use_signal(|| false);
     let mut afib = use_signal(|| false);
     let mut bp_treated = use_signal(|| false);
 
-    // Mock calculations
-    let cvd_risk = if age() > 60 || smoker() {
-        "High (24%)"
+    let risk_resource = use_resource(move || {
+        let current_age = age.read().clone();
+        let current_sys = systolic_bp.read().clone();
+        let current_tot = total_cholesterol.read().clone();
+        let current_hdl = hdl.read().clone();
+        let current_smoker = smoker.read().clone();
+
+        async move {
+            let args = serde_json::json!({
+                "age": current_age,
+                "sys_bp": current_sys,
+                "tot_chol": current_tot,
+                "hdl_chol": current_hdl,
+                "smoker": current_smoker,
+            });
+            if let Ok(res) = invoke_json("calculate_framingham_risk", args).await {
+                if let Ok(parsed) = serde_json::from_value::<ClinicalRiskProps>(res) {
+                    return parsed;
+                }
+            }
+            ClinicalRiskProps::default()
+        }
+    });
+
+    let risk_props = risk_resource.read().clone().unwrap_or_default();
+    let cvd_risk_str = format!("{:.1}% ({})", risk_props.risk_percent, risk_props.category.replace("\"", ""));
+    let score_color = if risk_props.risk_percent > 20.0 {
+        "#ff4d4d"
     } else {
-        "Low (5%)"
+        "#4dff88"
     };
+
     let chad_score = (if age() >= 75 {
         2
     } else if age() >= 65 {
@@ -26,13 +61,7 @@ pub fn ClinicalRiskScorer() -> Element {
         0
     }) + (if gender() == "Female" { 1 } else { 0 })
         + (if diabetes() { 1 } else { 0 })
-        + 1; // Assuming hypertension
-
-    let score_color = if cvd_risk.contains("High") {
-        "#ff4d4d"
-    } else {
-        "#4dff88"
-    };
+        + (if bp_treated() { 1 } else { 2 }); // Treated vs untreated hypertension
 
     rsx! {
         div {
@@ -41,7 +70,7 @@ pub fn ClinicalRiskScorer() -> Element {
             div {
                 style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid #334155; padding-bottom: 1rem;",
                 h2 { style: "margin: 0; font-size: 1.8rem; font-weight: 600; background: -webkit-linear-gradient(#60a5fa, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;", "Clinical Risk Scorer" }
-                div { style: "font-size: 0.9rem; color: #94a3b8;", "Native Engine: qualia-core-db (Mocked)" }
+                div { style: "font-size: 0.9rem; color: #94a3b8;", "Native Engine: qualia-core-db" }
             }
 
             div {
@@ -107,6 +136,10 @@ pub fn ClinicalRiskScorer() -> Element {
                             input { type: "checkbox", checked: "{afib}", onchange: move |_| afib.set(!afib()), style: "accent-color: #3b82f6; width: 1.2rem; height: 1.2rem;" }
                             span { style: "font-size: 0.9rem;", "Atrial Fibrillation" }
                         }
+                        label { style: "display: flex; align-items: center; gap: 0.5rem; cursor: pointer;",
+                            input { type: "checkbox", checked: "{bp_treated}", onchange: move |_| bp_treated.set(!bp_treated()), style: "accent-color: #3b82f6; width: 1.2rem; height: 1.2rem;" }
+                            span { style: "font-size: 0.9rem;", "Hypertension (treated)" }
+                        }
                     }
                 }
 
@@ -119,7 +152,7 @@ pub fn ClinicalRiskScorer() -> Element {
                         h4 { style: "margin: 0 0 0.5rem 0; color: #93c5fd; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;", "Framingham 10-Year CVD Risk" }
                         div {
                             style: "display: flex; align-items: baseline; gap: 1rem;",
-                            span { style: "font-size: 2.5rem; font-weight: 700; color: {score_color};", "{cvd_risk}" }
+                            span { style: "font-size: 2.5rem; font-weight: 700; color: {score_color};", "{cvd_risk_str}" }
                             span { style: "color: #94a3b8; font-size: 0.9rem;", "Based on pooled cohort equations" }
                         }
                     }

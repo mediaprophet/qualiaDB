@@ -3,7 +3,7 @@
 //! Runs at ingest only (heap OK in caller buffer). Hot U3 reads mmap or preview bins.
 
 use crate::audio::audio_spectral_sheet::{
-    AudioSpectralSidecarHeader, SPECTRAL_PREVIEW_BINS, SPECTRAL_SIDECAR_MAGIC, SIDECAR_KIND_STFT,
+    AudioSpectralSidecarHeader, SIDECAR_KIND_STFT, SPECTRAL_PREVIEW_BINS, SPECTRAL_SIDECAR_MAGIC,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -47,8 +47,7 @@ pub fn bake_stft_sidecar_from_preview(
         frame_count,
         sample_rate,
     };
-    let need = std::mem::size_of::<AudioSpectralSidecarHeader>()
-        + header.payload_bytes();
+    let need = std::mem::size_of::<AudioSpectralSidecarHeader>() + header.payload_bytes();
     if out.len() < need {
         return Err(StftBakeError::OutputTooSmall);
     }
@@ -58,8 +57,7 @@ pub fn bake_stft_sidecar_from_preview(
     for f in 0..frame_count {
         let frame = synthesize_stft_frame(preview, f, frame_count);
         let off = payload_off + f as usize * SPECTRAL_PREVIEW_BINS * 4;
-        out[off..off + SPECTRAL_PREVIEW_BINS * 4]
-            .copy_from_slice(bytemuck::cast_slice(&frame));
+        out[off..off + SPECTRAL_PREVIEW_BINS * 4].copy_from_slice(bytemuck::cast_slice(&frame));
     }
     Ok(need)
 }
@@ -78,8 +76,8 @@ pub fn bake_tensor_stft_sidecar(
 mod tests {
     use super::*;
     use crate::audio::audio_spectral_sheet::parse_sidecar_header;
-    use crate::tensor::Tensor10D;
     use crate::audio::audio_spectral_sheet::preview_bins_from_tensor;
+    use crate::tensor::Tensor10D;
 
     #[test]
     fn bake_produces_valid_header() {

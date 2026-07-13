@@ -104,7 +104,7 @@ layout: null
                     <span class="font-medium text-emerald-400">MODEL AGNOSTIC • Q42 NATIVE</span>
                 </div>
                 <h1 class="font-display text-6xl font-semibold tracking-[-2.5px] leading-none">DocuQuin Pipeline</h1>
-                <p class="text-2xl text-white/70 mt-2 tracking-tight">Any model. Any document. Consistent sovereign knowledge.</p>
+                <p class="text-2xl text-white/70 mt-2 tracking-tight">Any model. Any document. Consistent, private knowledge.</p>
             </div>
             
             <div class="lg:text-right">
@@ -375,7 +375,7 @@ layout: null
             const purp = document.getElementById('purpose').value;
 
             lastQ42 = {
-                "@context": { "heraldry": "http://digitalheraldry.org/ontology/heraldry#", "qualia": "https://qualia.network/ns#" },
+                "@context": { "heraldry": "http://digitalheraldry.org/ontology/heraldry#", "qualia": "https://webizen.org/ns#" },
                 "@id": `qualia:heraldry:${currentSource}:${Date.now()}`,
                 "@type": "heraldry:CoatOfArms",
                 "heraldry:source": lastAnalysis.source,
@@ -386,7 +386,7 @@ layout: null
 
             document.getElementById('rdf-preview').innerHTML = `
                 <div class="text-emerald-400 mb-1">@prefix heraldry: <http://digitalheraldry.org/ontology/heraldry#> .</div>
-                <div class="text-emerald-400 mb-2">@prefix qualia: <https://qualia.network/ns#> .</div>
+                <div class="text-emerald-400 mb-2">@prefix qualia: <https://webizen.org/ns#> .</div>
                 :source a heraldry:CoatOfArms ;
                     heraldry:blazon "${lastQ42['heraldry:blazon']}" ;
                     qualia:spatiotemporalContext [ time:period "${time}" ; geo:region "${juris}" ] .

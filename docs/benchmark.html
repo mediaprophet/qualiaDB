@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qualia-DB â€¢ Benchmark Hub v0.0.18</title>
+    <title>Qualia-DB â€¢ Benchmark Hub v0.0.23</title>
     <link rel="stylesheet" href="css/tailwind-built.css">
     <link rel="stylesheet" href="css/site-nav.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -56,7 +56,7 @@
     <div class="text-center">
         <div class="loading-spinner mx-auto mb-4"></div>
         <div class="text-emerald-400 font-semibold">Loading QualiaDB WASM Engine...</div>
-        <div class="text-white/50 text-sm mt-2">Initializing benchmark suite v0.0.18</div>
+        <div class="text-white/50 text-sm mt-2">Initializing benchmark suite v0.0.23</div>
     </div>
 </div>
 
@@ -109,7 +109,7 @@
     <div class="text-center mb-10">
         <div class="inline-flex items-center gap-2 px-4 py-1 rounded-2xl bg-emerald-500/10 text-emerald-400 text-sm mb-4">
             <i class="fas fa-tachometer-alt"></i>
-            <span>WASM-only Â· Zero-Heap Â· v0.0.18</span>
+            <span>WASM-only Â· Zero-Heap Â· v0.0.23</span>
         </div>
         <h1 class="text-5xl font-semibold tracking-tighter mb-3">Benchmark Hub</h1>
         <p class="text-white/60 max-w-2xl mx-auto">CI platform suite (graph, Sentinel, streaming, ontology) plus interactive browser probes. Not graph-only anymore â€” see <a href="comparative_benchmarks.html" class="text-cyan-400 hover:underline">comparative benchmarks</a> for multi-engine graph shoot-outs.</p>
@@ -196,15 +196,15 @@
             </h3>
             <p class="text-white/60 text-sm mb-4">Core semantic graph operations â€” point lookup, two-hop traversal, predicate filtering, and ingestion performance.</p>
             <div class="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200/90">
-                <i class="fas fa-info-circle mr-1"></i> Live demo â€” graph parsed and queries compiled in-browser via <code>parse_turtle_wasm</code> + <code>compile_query_to_json</code> (timings measured here). For multi-engine graph comparisons use the <strong>CI Platform Suite</strong> tab or <a href="comparative_benchmarks.html" class="underline">comparative benchmarks</a>.
+                <i class="fas fa-info-circle mr-1"></i> Live demo - RDF graph loaded from NT/q42 and queried in-browser via <code>execute_ntriples_query</code> + <code>compile_query_to_json</code> (timings measured here). For multi-engine graph comparisons use the <strong>CI Platform Suite</strong> tab or <a href="comparative_benchmarks.html" class="underline">comparative benchmarks</a>.
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
                     <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">Dataset Profile</label>
                     <select id="graph-dataset" class="input-field" onchange="updateGraphDataset()">
+                        <option value="schemaorg-30" selected>Schema.org 30.0 (NT + q42)</option>
                         <option value="synthetic-10k">Synthetic 10K triples</option>
-                        <option value="schemaorg-30">Schema.org 30.0 (NT + q42)</option>
                         <option value="wikidata-sample">Wikidata Sample (100K)</option>
                     </select>
                 </div>
@@ -234,8 +234,8 @@
             <div class="code-block text-sm mb-4" id="graph-output">Ready to run benchmark...</div>
 
             <div class="glass-panel rounded-2xl p-4 mb-4">
-                <h4 class="text-sm font-semibold mb-3 text-emerald-400"><i class="fas fa-circle-nodes mr-1"></i>Live graph (parsed by <code>parse_turtle_wasm</code>) â€” drag nodes Â· scroll to zoom</h4>
-                <canvas id="graph-viz-canvas" style="width:100%;height:340px;max-height:340px;display:block"></canvas>
+                <h4 class="text-sm font-semibold mb-3 text-emerald-400"><i class="fas fa-circle-nodes mr-1"></i>Live RDF graph (queried by <code>execute_ntriples_query</code>) - drag nodes / scroll to zoom</h4>
+                <canvas id="graph-viz-canvas" style="width:100%;height:520px;max-height:520px;display:block"></canvas>
             </div>
 
             <div class="glass-panel rounded-2xl p-4 mb-4">
@@ -484,10 +484,9 @@
 
             <div class="mb-6">
                 <label class="block text-xs uppercase tracking-[2px] text-slate-500 mb-2">SPARQL Query</label>
-                <textarea id="sparql-query" class="input-field" rows="6" placeholder="Enter SPARQL query...">SELECT ?subject ?predicate ?object
+                <textarea id="sparql-query" class="input-field" rows="6" placeholder="Enter SPARQL query...">SELECT ?s ?o
 WHERE {
-  ?subject ?predicate ?object .
-  FILTER(?object > 100)
+  ?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> ?o .
 }
 LIMIT 100</textarea>
             </div>
@@ -508,7 +507,7 @@ LIMIT 100</textarea>
                     <h4 class="text-sm font-semibold text-emerald-400"><i class="fas fa-project-diagram mr-1"></i>Live query graph - measured matches</h4>
                     <div class="text-xs text-white/45">Click a node to inspect the measured subgraph.</div>
                 </div>
-                <canvas id="sparql-graph-canvas" style="width:100%;height:320px;max-height:340px;display:block"></canvas>
+                <canvas id="sparql-graph-canvas" style="width:100%;height:460px;max-height:460px;display:block"></canvas>
             </div>
 
             <div class="glass-panel rounded-2xl p-4 mb-4">
@@ -623,7 +622,7 @@ LIMIT 100</textarea>
 
     <!-- Footer -->
     <div class="text-center text-white/50 text-sm mt-12">
-        <p>QualiaDB v0.0.18 â€¢ Zero-Heap Semantic Graph Engine â€¢ Built for the Edge</p>
+        <p>QualiaDB v0.0.23 â€¢ Zero-Heap Semantic Graph Engine â€¢ Built for the Edge</p>
     </div>
 </div>
 
@@ -752,6 +751,65 @@ LIMIT 100</textarea>
             const meta = document.getElementById('graph-dataset-meta');
             if (meta) meta.textContent = `Dataset metadata unavailable: ${err.message}`;
         });
+    };
+
+    window.runSparqlBenchmark = function () {
+        ensureViewers();
+        const btn = document.getElementById('btn-sparql-run');
+        const output = document.getElementById('sparql-output');
+        if (btn) btn.disabled = true;
+        if (output) output.textContent = 'Running live SPARQL benchmark...';
+
+        setTimeout(async () => {
+            try {
+                const type = document.getElementById('sparql-type')?.value || 'select';
+                const complexity = document.getElementById('sparql-complexity')?.value || 'simple';
+                const query = document.getElementById('sparql-query')?.value || '';
+                const datasetId = document.getElementById('graph-dataset')?.value || 'schemaorg-30';
+                const inspectorTarget = document.getElementById('sparql-node-viewer');
+                const result = await runSparqlLive({
+                    wasm: window.qualiaWasm,
+                    charts: window.benchCharts,
+                    output,
+                    viewer: sparqlGraphViz,
+                    inspectorTarget,
+                    query,
+                    queryType: type,
+                    complexity,
+                    datasetId
+                });
+
+                if (result?.active) {
+                    const p50 = result.active.summary?.p50 ?? 0;
+                    const rowsPerSec = Math.round(((result.active.resultCount || 0) * 1000) / Math.max(p50, 0.001));
+                    window.updateMetrics?.(rowsPerSec, Number(p50.toFixed(3)), 0, 36);
+                }
+            } catch (e) {
+                if (output) output.textContent = 'Error: ' + (e?.message || e);
+            }
+            if (btn) btn.disabled = false;
+        }, 30);
+    };
+
+    window.resetSparqlBenchmark = function () {
+        ensureViewers();
+        const output = document.getElementById('sparql-output');
+        if (output) output.textContent = 'Ready to run SPARQL benchmark...';
+        const charts = window.benchCharts;
+        if (charts?.sparqlLatency) {
+            charts.sparqlLatency.data.labels = [];
+            charts.sparqlLatency.data.datasets[0].data = [];
+            charts.sparqlLatency.update();
+        }
+        if (charts?.sparqlComplexity) {
+            charts.sparqlComplexity.data.labels = [];
+            charts.sparqlComplexity.data.datasets[0].data = [];
+            charts.sparqlComplexity.update();
+        }
+        sparqlGraphViz?.setData({ nodes: [], edges: [] });
+        const inspector = document.getElementById('sparql-node-viewer');
+        if (inspector) inspector.innerHTML = '<div class="text-sm text-white/45">Run a SPARQL benchmark to inspect the measured query graph.</div>';
+        window.updateMetrics?.(0, 0, 0, 0);
     };
 
     async function loadCiSuite() {
@@ -1346,4 +1404,3 @@ LIMIT 100</textarea>
 </script>
 </body>
 </html>
-

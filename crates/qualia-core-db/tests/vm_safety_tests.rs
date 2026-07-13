@@ -61,7 +61,7 @@ fn test_output_buffer_full() {
 #[test]
 fn test_scalar_match_logic() {
     // We will test if the VM correctly evaluates the MATCH opcodes
-    let db = [
+    let _db = [
         make_quin(100, 200, 300),
         make_quin(100, 200, 400),
         make_quin(101, 201, 301),

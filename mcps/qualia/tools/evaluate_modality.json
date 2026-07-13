@@ -1,0 +1,13 @@
+{
+  "name": "evaluate_modality",
+  "description": "Run a lightweight modality-specific evaluator for diagnostics.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "modality": {
+        "type": "string",
+        "description": "Modality id, e.g. ltl, asp, dl, deontic"
+      }
+    }
+  }
+}

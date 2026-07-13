@@ -1,0 +1,42 @@
+[package]
+name = "qualia-semantic-library"
+version = "0.0.23"
+edition = "2021"
+description = "Rust-native semantic library: ingest a document corpus into .hmc hypermedia containers (original + derived HTML/CML/text/embeddings), route/dedup on an embedding manifold, reorganise the library, and feed CML into QualiaDB. Offline dev tool — external LLM reached over HTTP behind a swappable backend; not wired into core inference."
+license = "MIT OR Apache-2.0"
+
+[lib]
+name = "qualia_semantic_library"
+path = "src/lib.rs"
+
+[[bin]]
+name = "qsl"
+path = "src/bin/qsl.rs"
+
+[features]
+# Default keeps the build pure-Rust with no system libraries: pdf-extract for
+# text, the Ollama HTTP backend for embeddings/extraction. Heavier extractors are
+# opt-in so the tool always builds and runs degraded-but-functional.
+default = ["pdf", "llm-http"]
+pdf = ["dep:pdf-extract", "dep:lopdf"]
+llm-http = ["dep:reqwest"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+blake3 = "1"
+zip = { version = "8.6", default-features = false, features = ["deflate"] }
+walkdir = "2"
+anyhow = "1"
+thiserror = "2"
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
+clap = { version = "4", features = ["derive"] }
+html-escape = "0.2"
+
+# optional / feature-gated
+pdf-extract = { version = "0.12", optional = true }
+lopdf = { version = "0.43", optional = true }
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "json", "rustls"], optional = true }
+
+[dev-dependencies]
+tempfile = "3"

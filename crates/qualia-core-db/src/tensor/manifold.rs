@@ -35,7 +35,7 @@ impl ManifoldDomain {
             _ => ManifoldDomain::Medical, // Default fallback
         }
     }
-    
+
     pub fn to_index(&self) -> f32 {
         *self as u32 as f32
     }

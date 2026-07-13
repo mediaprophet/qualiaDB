@@ -4,12 +4,28 @@
 /crates/qualia-cli/target
 /crates/webizen-desktop/target
 /crates/webizen-studio/dist
+/crates/webizen-studio/dist/vendor/
+/crates/webizen-studio/assets/vendor/
+/crates/webizen-studio/.vendor-tmp/
+
+# Stray per-run target directories (e.g. from composer / isolated checks)
+target-*
+/target-*
+target-chora*
+target-p*
+target-clean*
+target/
+
+# Private Development Documents, not for GitHub (do not publish on repo)
+.dev-docs/
+
 *.rdf
 !bundled/ontologies/fibo/rdf/**/*.rdf
 *.wal
 *.q42
 *.n3
 !bundled/qapps/**/*.n3
+!tools/**/*.n3
 
 # Princeton WordNet — full graph is a GitHub Release asset (see docs/data/wordnet/README.md)
 docs/data/wordnet/*.q42
@@ -61,6 +77,10 @@ __pycache__/
 *.pyd
 *.py,cover
 
+# Local legislation ETL smoke packages (not for Pages / not for release)
+tools/legislation-etl/_smoke*/
+tools/legislation-etl/**/batch_manifest.json
+
 # Python virtualenvs, test caches, and packaging outputs
 .python-version
 .venv/
@@ -75,6 +95,8 @@ htmlcov/
 site/
 build/
 dist/
+!/crates/webizen-studio/dist/
+!/crates/webizen-studio/dist/.gitkeep
 *.egg-info/
 pip-wheel-metadata/
 
@@ -87,6 +109,12 @@ gemma-4-E4B-it-GGUF/
 
 # wasm-pack output (copied to docs/playground/ manually or by pages.yml)
 crates/qualia-core-db/pkg/
+# wasm-pack scratch out-dirs for the portal facade (local builds)
+crates/qualia-core-db/pkg-qualia/
+crates/qualia-core-db/target/portal-wasm/
+# Anatomy .qualia asset packs — build artifacts produced by the build_anatomy_pack
+# tool (at CI/build time); never committed (tens of MB of CC-BY-4.0 HRA meshes).
+docs/playground/*.qualia
 
 # Generated Rust API docs staged for Jekyll (CI only)
 docs/rustdoc/
@@ -111,14 +139,19 @@ keystore.bin
 
 # One-off migration scripts, old release binaries, debug artefacts
 scratch/
+scripts/
 
 # Build/debug error logs (PowerShell redirection output — UTF-16, not source)
 *_errors.json
 *_errors.txt
 compile_errors.txt
 cargo_err.txt
+error.log
 clippy.json
 clippy_report.md
+
+# Machine-specific Cargo config (local CUDA/DXC toolchain paths — not portable)
+/.cargo/config.toml
 
 # QPU internal functionality (undocumented, private)
 
@@ -128,6 +161,8 @@ private/
 # Local development files (completed planning, temporary docs, etc.)
 local/
 legacy/
+# Docs describing fully-implemented work, kept for reference but out of the tracked doc tree
+legacy-docs/
 ingest_raw.wal.tmp
 yago-tests/ 
 reports/
@@ -135,3 +170,50 @@ reports/
 # Local test GGUF models (not deployed)
 docs/models/
 models/
+
+# personal info
+provenance/
+
+# Track the authored core-ontologies spine (overrides the blanket *.n3 rule above)
+!core-ontologies/**/*.n3
+
+# Local caches / build artefacts / agent scratch — not for version control
+/.wordnet_build/
+/.w3c_mail_cache/
+/.qualia/
+/terminals/
+/agent-tools/
+/agent-intents/
+fix_quotes.py
+
+# Agent coordination feed is tracked at coordination/NOTICES.md (canonical tree: C:\Projects\qualia-27062026)
+/coordination/
+
+
+# Private Development Documents, not for GitHub (do not publish)
+
+# Plan Files
+/docs/plans/*
+!/docs/plans/native-computational-economics.md
+!/docs/plans/cof-html-rdfa-etl.md
+!/docs/plans/optional-ollama-harness.md
+!/docs/plans/solid-outpost-hackathon-bridge.md
+!/docs/plans/p64-decode-upgrade-plan.md
+/docs/manuals/planning/
+docs/to-do/
+
+# W5b: full WordNet gloss corpus (derived from Princeton data.rdf; ~20MB) — sample is committed
+benchmarks/data/wordnet_glosses.txt
+
+# 3D Anatomy asset cache (user-triggered CCF/HRA GLB + compiled .10d � ~200-290 MB, not for git)
+assets/ccf/
+
+# Desktop release build artifacts (produced by release-desktop.yml) — never commit
+/release-assets/
+/webizen-desktop-*.zip
+
+# Signing keys — private signing keys must NEVER be committed.
+# tauri_updater.key (the rsign/minisign secret key) was committed by mistake and
+# untracked here; the ACTIVE signing key lives only in GitHub Actions secrets.
+*.key
+tauri_updater.key.pub

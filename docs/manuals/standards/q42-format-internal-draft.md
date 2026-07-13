@@ -260,8 +260,13 @@ Properties:
 
 - `size == 40960`, `QUINS_PER_BLOCK == 850`
 - remaining ledger slots are zero-filled
+- `fea_mesh_index_id` is a reserved attachment point, not proof that dense geometry is stored
+  inside Q42. As of 2026-07-03, `q42_volume::encode_superblock()` leaves this field zero and the
+  OBJ/STL/GLB ingest path writes semantic mesh facts only. The planned computational-asset
+  compiler will either wire this field to a versioned analysis-mesh sidecar or supersede it with
+  an explicit Q42 relationship that can address multiple meshes and fidelity tiers.
 
-### Unified v2 volume layout
+### Unified v3 volume layout
 
 ```text
 [0..256)                  Q42VolumeHeader
@@ -330,42 +335,63 @@ Matches:
 - `crates/qualia-cli/src/ingest.rs`
 - `scripts/fetch_wordnet.sh` (outputs `wordnet.q42` only)
 
-### `.q42` weight container (AOT LLM — `Q42W`)
+### `.p64` weight container (AOT LLM)
 
-A **separate** artifact from the semantic graph `.q42` above (different magic — never collides):
-the Ahead-Of-Time-compiled home for an LLM, so the browser engine boots **zero-parse** instead of
-re-parsing a GGUF on every load. Produced by `compileGgufToQ42` (WASM) /
-`q42_weight::compile_gguf_to_q42`, cached in OPFS, consumed by `initialize_webgpu_engine` →
-`adopt_resident_q42`. All inference then runs from the `.q42`; the source GGUF is never re-touched.
+The byte-accurate normative layout, including all fixed-record offsets, flags,
+tokenizer encoding, manifold records, checksums, and reader validation rules,
+is specified separately in
+[`p64-weight-container-standard.md`](p64-weight-container-standard.md).
+
+A **separate** artifact from the semantic graph `.q42` above — it carries an **independent section
+magic** (`b"p64\0"`, never collides with `Q42\0`). It is the Ahead-Of-Time-compiled home for an LLM's
+weights, so the engine boots **zero-parse** instead of re-parsing a GGUF on every load. Produced by the
+AOT compiler `q42::p64_weight::compile_gguf_to_p64` (also reachable from WASM), cached in OPFS, and
+consumed by the resident-weight loader (`P64TensorIndex::from_p64` → GPU arenas). **Inference runs from
+the `.p64`; the source GGUF is never re-touched.**
+
+> **Producer / runtime boundary.** The **engine runs the `.p64`**. The WGSL *forge* transcodes
+> GGUF → `.p64` and certifies the GPU kernels against a CPU oracle — it does **not** run inference, and
+> throughput (tok/s) is the engine's, not the forge's.
+
+Unlike the semantic `.q42`, the weight container carries **no `NQuin` scaffold**: the 48-byte declarative
+`q42` quin manages truth/provenance, while the 64-byte-aligned `p64` manages pure mathematical inference
+with zero-copy relative (WASM-native) pointers.
 
 ```text
-Header (Q42WeightHeader, 144 B, #[repr(C, align(16))], little-endian)
-  magic            "Q42W"   u8[4]          — distinguishes from the semantic .q42
-  version          u16                     — gates format changes (q42FormatVersion())
-  page_log2        u16                     — tensor-blob page alignment exponent (14 = 16 KB)
-  n_tensors        u32
-  n_layers / n_embd / n_head / n_kv_head / vocab_size   u32 each   (model hyperparams)
-  rope_freq_base / rope_scale                            f32 each
-  manifest_offset / blob_offset / cold_offset / cold_len u64 each
-  tokenizer_offset / tokenizer_len                       u64 each
-  format_flags u32 ; header_crc u32        — CRC-32C over the header
-  arch_quin        NQuin (48 B, 16-aligned at offset 80) — architecture provenance
+P64WeightHeader (64 B, #[repr(C, align(64))], little-endian)
+  magic                 "p64\0"  u8[4]       — distinguishes from the semantic .q42 (Q42\0)
+  version               u16 = 3
+  flags                 u16                   — endianness (P64_FLAG_LITTLE_ENDIAN)
+  — 32-bit RELATIVE offsets (WASM-native; bytes from start of file) —
+  role_table_offset     u32                   — tensor → semantic role map
+  tensor_table_offset   u32                   — P64TensorEntry descriptor table
+  tokenizer_offset      u32                   — embedded tokenizer (self-contained; no GGUF needed)
+  hparams_offset        u32                   — model hyperparameters
+  string_table_offset   u32                   — centralized string pool
+  checksum_offset       u32                   — CRC-32C tamper-evidence
+  manifold_table_offset u32                   — 10-D ManifoldCoordinate10D table (64 B/entry)
+  tensor_count          u32
+  page_size             u32                   — blob alignment (default 16 KB; page_log2 = 14)
+  reserved              u8[20]                — pads to exactly 64 B
 
-Manifest (n_tensors × Q42TensorEntry, 80 B each)
-  role        u32   — AttnK/V/Q, OProj, Gate, Up, Down, norms, output (Q42_ROLE_*)
-  layer       u16   — or 0xFFFF (Q42_LAYER_GLOBAL) for non-layer tensors
-  ggml_type   u32 ; dim0 / dim1 u32 ; blob_offset / byte_len u64
-  scaffold_quin NQuin (48 B)   — per-tensor provenance / future deontic metadata bits
+Manifest               tensor_count × P64TensorEntry (64 B each)
+  role, dtype, rank, dims, relative blob offset/length. Roles (P64_ROLE_*):
+  ATTN_K 0, ATTN_V 1, ATTN_Q 2, ATTN_OUTPUT 3, FFN_GATE 4, FFN_UP 5, FFN_DOWN 6,
+  ATTN_NORM 7, FFN_NORM 8, TOKEN_EMBD 9, OUTPUT 10, OUTPUT_NORM 11;
+  UNKNOWN 0xFFFE (preserved byte-for-byte, unconsumed), LAYER_GLOBAL 0xFFFF (non-layer tensor).
 
-Tensor blobs      — opaque, contiguous, page-aligned (page_log2) for zero-copy WebGPU bind
-Tokenizer section — vocab + merges + special tokens (self-contained inference, no GGUF needed)
-Cold section      — reserved (cold_offset/cold_len) for a future CBOR-LD ontology header
+Tensor blobs           — opaque, contiguous, page-aligned (page_log2) quantized bytes for
+                         single-fetch mmap / zero-copy WebGPU bind.
 ```
 
-Matches `crates/qualia-core-db/src/q42_weight.rs` (`Q42WeightHeader`, `Q42TensorEntry`,
-`compile_gguf_to_q42`, `Q42TensorIndex::from_q42`). Integrity is table-less CRC-32C. The 16 KB page
-alignment lets the resident-weight upload map blobs straight into the GPU arenas. The semantic and
-weight `.q42` are siblings: both 16 KB-aligned, both NQuin-scaffolded, distinct magics.
+Matches `crates/qualia-core-db/src/q42/p64_weight.rs` (`P64WeightHeader`, `P64TensorEntry`,
+`compile_gguf_to_p64`, `P64TensorIndex::from_p64`, `P64_ROLE_*`). Integrity is table-less CRC-32C; the
+16 KB page alignment lets the resident-weight upload map blobs straight into the GPU arenas. The semantic
+`.q42` and the weight `.p64` are siblings: both cache-aligned, distinct magics, distinct jobs.
+
+> **Historical note.** A pre-P64 `Q42W` weight layout (144-byte `Q42WeightHeader`, NQuin-scaffolded,
+> magic `"Q42W"`) preceded this container; it is **superseded** by `.p64` and retained only as migration
+> test fixtures (`q42::p64_weight` tests).
 
 ### Embedded Q42LEX layout
 

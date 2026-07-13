@@ -198,6 +198,14 @@ struct ScreenVertex {
     color: [f32; 4],
 }
 
+/// Vertex for 3D projector pipeline
+#[repr(C)]
+#[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy)]
+struct ProjectorVertex {
+    position: [f32; 3],
+    color: [f32; 4],
+}
+
 /// Where the renderer draws each frame.
 enum RenderTarget<'a> {
     /// Windowed swapchain.
@@ -235,9 +243,9 @@ impl Frame {
 
     /// Presents the swapchain texture. No-op for offscreen targets (their
     /// contents persist in the texture and are read back on demand).
-    fn present(self) {
+    fn present(self, queue: &wgpu::Queue) {
         if let Frame::Surface { texture, .. } = self {
-            texture.present();
+            queue.present(texture);
         }
     }
 }
@@ -290,16 +298,26 @@ pub struct WgpuRenderer<'a> {
     viewport_size: (f64, f64),
     // Render pipeline for 2D screen-space rendering
     render_pipeline: wgpu::RenderPipeline,
+    #[allow(dead_code)]
+    projector_pipeline: Option<wgpu::RenderPipeline>,
     vertex_buffer: wgpu::Buffer,
+    #[allow(dead_code)]
+    projector_vertex_buffer: wgpu::Buffer,
     max_vertices: usize,
     // Track node positions for epistemic anchor coordination (zero-heap: binary indices)
     node_positions: Vec<(usize, ScreenPoint, f64)>, // (index, position, radius)
-    // Ambient visualization state
+    // Legacy ambient particle layer (standalone wgpu path without qualia volumetric).
+    #[cfg(not(feature = "qualia"))]
     ambient_config: AmbientConfig,
+    #[cfg(not(feature = "qualia"))]
     ambient_pipeline: Option<wgpu::RenderPipeline>,
+    #[cfg(not(feature = "qualia"))]
     particle_buffer: Option<wgpu::Buffer>,
+    #[cfg(not(feature = "qualia"))]
     ambient_uniform_buffer: Option<wgpu::Buffer>,
+    #[cfg(not(feature = "qualia"))]
     telemetry_buffer: Option<wgpu::Buffer>,
+    #[cfg(not(feature = "qualia"))]
     particle_count: usize,
 }
 
@@ -325,6 +343,7 @@ impl<'a> WgpuRenderer<'a> {
             height,
             present_mode: wgpu::PresentMode::Fifo,
             alpha_mode: surface_caps.alpha_modes[0],
+            color_space: wgpu::SurfaceColorSpace::Auto,
             view_formats: vec![],
             desired_maximum_frame_latency: 2,
         };
@@ -332,17 +351,19 @@ impl<'a> WgpuRenderer<'a> {
         surface.configure(&device, &surface_config);
 
         let render_pipeline = Self::create_render_pipeline(&device, surface_format);
-        let (vertex_buffer, max_vertices) = Self::create_vertex_buffer(&device);
+        let projector_pipeline = Self::create_projector_pipeline(&device, surface_format);
 
-        // Initialize ambient visualization
-        let ambient_config = AmbientConfig::default();
+        let (vertex_buffer, projector_vertex_buffer, max_vertices) = Self::create_vertex_buffer(&device);
+
+        #[cfg(not(feature = "qualia"))]
         let (
+            ambient_config,
             ambient_pipeline,
             particle_buffer,
             ambient_uniform_buffer,
             telemetry_buffer,
             particle_count,
-        ) = Self::init_ambient_visualization(&device, &ambient_config, width, height);
+        ) = Self::ambient_fields(&device, width, height);
 
         Ok(Self {
             device,
@@ -354,14 +375,22 @@ impl<'a> WgpuRenderer<'a> {
             camera: Camera::default(),
             viewport_size: (width as f64, height as f64),
             render_pipeline,
+            projector_pipeline: Some(projector_pipeline),
             vertex_buffer,
+            projector_vertex_buffer,
             max_vertices,
             node_positions: Vec::new(),
+            #[cfg(not(feature = "qualia"))]
             ambient_config,
+            #[cfg(not(feature = "qualia"))]
             ambient_pipeline,
+            #[cfg(not(feature = "qualia"))]
             particle_buffer,
+            #[cfg(not(feature = "qualia"))]
             ambient_uniform_buffer,
+            #[cfg(not(feature = "qualia"))]
             telemetry_buffer,
+            #[cfg(not(feature = "qualia"))]
             particle_count,
         })
     }
@@ -372,9 +401,17 @@ impl<'a> WgpuRenderer<'a> {
     /// (including CI and the dioxus/webview studio). Read the result with
     /// [`WgpuRenderer::read_pixels`].
     pub async fn new_offscreen(width: u32, height: u32) -> Result<WgpuRenderer<'static>, String> {
-        let instance = wgpu::Instance::default();
-
-        let (device, queue, _adapter) = Self::request_device(&instance, None).await?;
+        #[cfg(feature = "qualia")]
+        let (device, queue) = {
+            let shared = qualia_core_db::gpu_context::shared_gpu();
+            (shared.device.clone(), shared.queue.clone())
+        };
+        #[cfg(not(feature = "qualia"))]
+        let (device, queue) = {
+            let instance = wgpu::Instance::default();
+            let (device, queue, _adapter) = Self::request_device(&instance, None).await?;
+            (device, queue)
+        };
 
         // Linear (non-sRGB) Unorm: colors are authored as CSS sRGB strings and
         // parsed straight to 0..1, so we want byte-exact passthrough on store.
@@ -385,17 +422,19 @@ impl<'a> WgpuRenderer<'a> {
         let texture = Self::create_offscreen_texture(&device, format, width, height);
 
         let render_pipeline = Self::create_render_pipeline(&device, format);
-        let (vertex_buffer, max_vertices) = Self::create_vertex_buffer(&device);
+        let projector_pipeline = Self::create_projector_pipeline(&device, format);
 
-        // Initialize ambient visualization
-        let ambient_config = AmbientConfig::default();
+        let (vertex_buffer, projector_vertex_buffer, max_vertices) = Self::create_vertex_buffer(&device);
+
+        #[cfg(not(feature = "qualia"))]
         let (
+            ambient_config,
             ambient_pipeline,
             particle_buffer,
             ambient_uniform_buffer,
             telemetry_buffer,
             particle_count,
-        ) = Self::init_ambient_visualization(&device, &ambient_config, width, height);
+        ) = Self::ambient_fields(&device, width, height);
 
         Ok(WgpuRenderer {
             device,
@@ -409,16 +448,55 @@ impl<'a> WgpuRenderer<'a> {
             camera: Camera::default(),
             viewport_size: (width as f64, height as f64),
             render_pipeline,
+            projector_pipeline: Some(projector_pipeline),
             vertex_buffer,
+            projector_vertex_buffer,
             max_vertices,
             node_positions: Vec::new(),
+            #[cfg(not(feature = "qualia"))]
+            ambient_config,
+            #[cfg(not(feature = "qualia"))]
+            ambient_pipeline,
+            #[cfg(not(feature = "qualia"))]
+            particle_buffer,
+            #[cfg(not(feature = "qualia"))]
+            ambient_uniform_buffer,
+            #[cfg(not(feature = "qualia"))]
+            telemetry_buffer,
+            #[cfg(not(feature = "qualia"))]
+            particle_count,
+        })
+    }
+
+    #[cfg(not(feature = "qualia"))]
+    fn ambient_fields(
+        device: &wgpu::Device,
+        width: u32,
+        height: u32,
+    ) -> (
+        AmbientConfig,
+        Option<wgpu::RenderPipeline>,
+        Option<wgpu::Buffer>,
+        Option<wgpu::Buffer>,
+        Option<wgpu::Buffer>,
+        usize,
+    ) {
+        let ambient_config = AmbientConfig::default();
+        let (
+            ambient_pipeline,
+            particle_buffer,
+            ambient_uniform_buffer,
+            telemetry_buffer,
+            particle_count,
+        ) = Self::init_ambient_visualization(device, &ambient_config, width, height);
+        (
             ambient_config,
             ambient_pipeline,
             particle_buffer,
             ambient_uniform_buffer,
             telemetry_buffer,
             particle_count,
-        })
+        )
     }
 
     /// Request an adapter + device. `HighPerformance` selects the discrete GPU on
@@ -437,19 +515,18 @@ impl<'a> WgpuRenderer<'a> {
                 power_preference,
                 compatible_surface,
                 force_fallback_adapter: false,
+                apply_limit_buckets: false,
             })
             .await
-            .ok_or("Failed to find an appropriate adapter")?;
+            .map_err(|e| format!("Failed to find an appropriate adapter: {e}"))?;
 
         let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: Some("webizen-render-device"),
-                    required_features: wgpu::Features::empty(),
-                    required_limits: wgpu::Limits::downlevel_defaults(),
-                },
-                None,
-            )
+            .request_device(&wgpu::DeviceDescriptor {
+                label: Some("webizen-render-device"),
+                required_features: wgpu::Features::empty(),
+                required_limits: wgpu::Limits::downlevel_defaults(),
+                ..Default::default()
+            })
             .await
             .map_err(|e| format!("Failed to create device: {}", e))?;
 
@@ -478,7 +555,7 @@ impl<'a> WgpuRenderer<'a> {
         })
     }
 
-    fn create_vertex_buffer(device: &wgpu::Device) -> (wgpu::Buffer, usize) {
+    fn create_vertex_buffer(device: &wgpu::Device) -> (wgpu::Buffer, wgpu::Buffer, usize) {
         // Max 10000 vertices for immediate-mode rendering.
         let max_vertices = 10000;
         let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -487,7 +564,95 @@ impl<'a> WgpuRenderer<'a> {
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        (vertex_buffer, max_vertices)
+        let projector_vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("webizen-projector-vertex-buffer"),
+            size: (max_vertices * std::mem::size_of::<ProjectorVertex>()) as u64,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        (vertex_buffer, projector_vertex_buffer, max_vertices)
+    }
+
+    fn create_projector_pipeline(
+        device: &wgpu::Device,
+        target_format: wgpu::TextureFormat,
+    ) -> wgpu::RenderPipeline {
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("webizen-projector-shader"),
+            source: wgpu::ShaderSource::Wgsl(crate::shaders::PROJECTOR_WGSL.into()),
+        });
+
+        // The projector shader requires 3 bindings: view_projection (uniform), motors (storage), motor_index (uniform).
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("webizen-projector-bgl"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer { ty: wgpu::BufferBindingType::Uniform, has_dynamic_offset: false, min_binding_size: None },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer { ty: wgpu::BufferBindingType::Storage { read_only: true }, has_dynamic_offset: false, min_binding_size: None },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer { ty: wgpu::BufferBindingType::Uniform, has_dynamic_offset: false, min_binding_size: None },
+                    count: None,
+                },
+            ],
+        });
+
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("webizen-projector-pipeline-layout"),
+            bind_group_layouts: &[Some(&bind_group_layout)],
+            immediate_size: 0,
+        });
+
+        device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("webizen-projector-pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: Some("vertex_main"),
+                compilation_options: Default::default(),
+                buffers: &[Some(wgpu::VertexBufferLayout {
+                    array_stride: (std::mem::size_of::<[f32; 3]>() + std::mem::size_of::<[f32; 4]>()) as wgpu::BufferAddress,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &[
+                        wgpu::VertexAttribute { offset: 0, shader_location: 0, format: wgpu::VertexFormat::Float32x3 },
+                        wgpu::VertexAttribute { offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress, shader_location: 1, format: wgpu::VertexFormat::Float32x4 },
+                    ],
+                })],
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: Some("fragment_main"),
+                compilation_options: Default::default(),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: target_format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
+                unclipped_depth: false,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            multiview_mask: None,
+            cache: None,
+        })
     }
 
     fn create_render_pipeline(
@@ -502,7 +667,7 @@ impl<'a> WgpuRenderer<'a> {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("webizen-screen-pipeline-layout"),
             bind_group_layouts: &[],
-            push_constant_ranges: &[],
+            immediate_size: 0,
         });
 
         device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -510,8 +675,9 @@ impl<'a> WgpuRenderer<'a> {
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
-                entry_point: "vertex_main",
-                buffers: &[wgpu::VertexBufferLayout {
+                entry_point: Some("vertex_main"),
+                compilation_options: Default::default(),
+                buffers: &[Some(wgpu::VertexBufferLayout {
                     array_stride: std::mem::size_of::<ScreenVertex>() as wgpu::BufferAddress,
                     step_mode: wgpu::VertexStepMode::Vertex,
                     attributes: &[
@@ -526,11 +692,12 @@ impl<'a> WgpuRenderer<'a> {
                             format: wgpu::VertexFormat::Float32x4,
                         },
                     ],
-                }],
+                })],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
-                entry_point: "fragment_main",
+                entry_point: Some("fragment_main"),
+                compilation_options: Default::default(),
                 targets: &[Some(wgpu::ColorTargetState {
                     format: target_format,
                     blend: Some(wgpu::BlendState::ALPHA_BLENDING),
@@ -552,7 +719,8 @@ impl<'a> WgpuRenderer<'a> {
                 mask: !0,
                 alpha_to_coverage_enabled: false,
             },
-            multiview: None,
+            multiview_mask: None,
+            cache: None,
         })
     }
 
@@ -560,6 +728,7 @@ impl<'a> WgpuRenderer<'a> {
     ///
     /// Creates particle buffer with random 3D coordinates, uniform buffers,
     /// and render pipeline for GPU-driven ambient effects.
+    #[cfg(not(feature = "qualia"))]
     fn init_ambient_visualization(
         device: &wgpu::Device,
         config: &AmbientConfig,
@@ -640,10 +809,11 @@ impl<'a> WgpuRenderer<'a> {
     }
 
     /// Create ambient visualization render pipeline with additive blending
+    #[cfg(not(feature = "qualia"))]
     fn create_ambient_pipeline(
         device: &wgpu::Device,
-        width: u32,
-        height: u32,
+        _width: u32,
+        _height: u32,
     ) -> wgpu::RenderPipeline {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("ambient-shader"),
@@ -692,8 +862,8 @@ impl<'a> WgpuRenderer<'a> {
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("ambient-pipeline-layout"),
-            bind_group_layouts: &[&bind_group_layout],
-            push_constant_ranges: &[],
+            bind_group_layouts: &[Some(&bind_group_layout)],
+            immediate_size: 0,
         });
 
         device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -701,12 +871,14 @@ impl<'a> WgpuRenderer<'a> {
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
-                entry_point: "vertex_main",
+                entry_point: Some("vertex_main"),
+                compilation_options: Default::default(),
                 buffers: &[],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
-                entry_point: "fragment_main",
+                entry_point: Some("fragment_main"),
+                compilation_options: Default::default(),
                 targets: &[Some(wgpu::ColorTargetState {
                     format: wgpu::TextureFormat::Rgba8Unorm,
                     blend: Some(wgpu::BlendState {
@@ -739,7 +911,8 @@ impl<'a> WgpuRenderer<'a> {
                 mask: !0,
                 alpha_to_coverage_enabled: false,
             },
-            multiview: None,
+            multiview_mask: None,
+            cache: None,
         })
     }
 
@@ -747,9 +920,11 @@ impl<'a> WgpuRenderer<'a> {
     fn begin_frame(&self) -> Result<Frame, String> {
         match &self.target {
             RenderTarget::Surface { surface, .. } => {
-                let texture = surface
-                    .get_current_texture()
-                    .map_err(|e| format!("Failed to get next surface texture: {}", e))?;
+                let texture = match surface.get_current_texture() {
+                    wgpu::CurrentSurfaceTexture::Success(texture)
+                    | wgpu::CurrentSurfaceTexture::Suboptimal(texture) => texture,
+                    other => return Err(format!("Failed to get next surface texture: {other:?}")),
+                };
                 let view = texture
                     .texture
                     .create_view(&wgpu::TextureViewDescriptor::default());
@@ -792,15 +967,15 @@ impl<'a> WgpuRenderer<'a> {
                 label: Some("webizen-readback-encoder"),
             });
         encoder.copy_texture_to_buffer(
-            wgpu::ImageCopyTexture {
+            wgpu::TexelCopyTextureInfo {
                 texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
-            wgpu::ImageCopyBuffer {
+            wgpu::TexelCopyBufferInfo {
                 buffer: &readback,
-                layout: wgpu::ImageDataLayout {
+                layout: wgpu::TexelCopyBufferLayout {
                     offset: 0,
                     bytes_per_row: Some(padded_bytes_per_row),
                     rows_per_image: Some(height),
@@ -819,10 +994,10 @@ impl<'a> WgpuRenderer<'a> {
         slice.map_async(wgpu::MapMode::Read, move |r| {
             let _ = tx.send(r);
         });
-        self.device.poll(wgpu::Maintain::Wait);
+        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
         rx.recv().ok()?.ok()?;
 
-        let mapped = slice.get_mapped_range();
+        let mapped = slice.get_mapped_range().expect("wgpu buffer map_range failed");
         let mut out = Vec::with_capacity((unpadded_bytes_per_row * height) as usize);
         for row in 0..height {
             let start = (row * padded_bytes_per_row) as usize;
@@ -974,11 +1149,13 @@ impl<'a> WgpuRenderer<'a> {
     }
 
     /// Configure ambient visualization options
+    #[cfg(not(feature = "qualia"))]
     pub fn set_ambient_config(&mut self, config: AmbientConfig) {
         self.ambient_config = config;
     }
 
     /// Get current ambient configuration
+    #[cfg(not(feature = "qualia"))]
     pub fn get_ambient_config(&self) -> AmbientConfig {
         self.ambient_config
     }
@@ -1002,6 +1179,7 @@ impl<'a> WgpuRenderer<'a> {
                 label: Some("webizen-clear-pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: frame.view(),
+                    depth_slice: None,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
@@ -1016,11 +1194,12 @@ impl<'a> WgpuRenderer<'a> {
                 depth_stencil_attachment: None,
                 timestamp_writes: None,
                 occlusion_query_set: None,
+                multiview_mask: None,
             });
         }
 
         self.queue.submit(Some(encoder.finish()));
-        frame.present();
+        frame.present(&self.queue);
     }
 
     /// Project a world-space point to screen space
@@ -1230,6 +1409,7 @@ impl<'a> WgpuRenderer<'a> {
                 label: Some("webizen-render-pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: frame.view(),
+                    depth_slice: None,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Load,
@@ -1239,6 +1419,7 @@ impl<'a> WgpuRenderer<'a> {
                 depth_stencil_attachment: None,
                 timestamp_writes: None,
                 occlusion_query_set: None,
+                multiview_mask: None,
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
@@ -1247,7 +1428,7 @@ impl<'a> WgpuRenderer<'a> {
         }
 
         self.queue.submit(Some(encoder.finish()));
-        frame.present();
+        frame.present(&self.queue);
     }
 }
 
@@ -1298,11 +1479,6 @@ pub fn render_scene_png(
     render_scene_png_with_time(scene, width, height, 0.0)
 }
 
-/// Linear interpolation between two values
-fn lerp(a: f64, b: f64, t: f64) -> f64 {
-    a + (b - a) * t
-}
-
 /// Render scene with time parameter for animation effects.
 /// Time is in seconds, used for pulsing/glowing animations.
 pub fn render_scene_png_with_time(
@@ -1330,290 +1506,323 @@ pub fn render_scene_png_with_time_and_telemetry(
     time_seconds: f64,
     telemetry: &crate::scene_contract::SystemTelemetry,
 ) -> Option<Vec<u8>> {
-    let mut renderer = pollster::block_on(WgpuRenderer::new_offscreen(width, height)).ok()?;
-
-    let (w, h) = (width as f64, height as f64);
-
-    // Clear node positions tracking
-    renderer.clear_node_positions();
-
-    // Build a lookup map for previous positions if transition is active
-    let previous_positions_map: std::collections::HashMap<
-        String,
-        crate::scene_contract::ScenePoint,
-    > = if let Some(ref transition) = scene.transition_state {
-        transition.previous_positions.iter().cloned().collect()
-    } else {
-        std::collections::HashMap::new()
-    };
-
-    // Get transition progress (default to 1.0 if no transition)
-    let transition_progress = scene
-        .transition_state
-        .as_ref()
-        .map(|t| t.progress)
-        .unwrap_or(1.0);
-
-    // Begin single render pass for the entire frame
-    let frame = renderer.begin_frame().ok()?;
-    let frame_view = frame.view();
-
-    // Parse background color
-    let bg_rgba = WgpuRenderer::parse_color(&scene.background, 1.0);
-
-    let mut encoder = renderer
-        .device
-        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("scene-render-encoder"),
-        });
-
-    // Render ambient visualization first (background layer)
-    let ambient_bind_group = if renderer.ambient_config.enabled {
-        if let (
-            Some(ambient_pipeline),
-            Some(particle_buffer),
-            Some(ambient_uniform_buffer),
-            Some(telemetry_buffer),
-        ) = (
-            &renderer.ambient_pipeline,
-            &renderer.particle_buffer,
-            &renderer.ambient_uniform_buffer,
-            &renderer.telemetry_buffer,
-        ) {
-            // Update ambient uniforms
-            let uniforms = AmbientUniforms {
-                time: time_seconds as f32,
-                view_width: w as f32,
-                view_height: h as f32,
-                _padding: 0.0,
-            };
-            renderer
-                .queue
-                .write_buffer(ambient_uniform_buffer, 0, bytemuck::bytes_of(&uniforms));
-
-            // Update telemetry uniforms
-            renderer
-                .queue
-                .write_buffer(telemetry_buffer, 0, bytemuck::bytes_of(telemetry));
-
-            // Create bind group before render pass to avoid borrow checker issue
-            Some(
-                renderer
-                    .device
-                    .create_bind_group(&wgpu::BindGroupDescriptor {
-                        label: Some("ambient-bind-group"),
-                        layout: &ambient_pipeline.get_bind_group_layout(0),
-                        entries: &[
-                            wgpu::BindGroupEntry {
-                                binding: 0,
-                                resource: ambient_uniform_buffer.as_entire_binding(),
-                            },
-                            wgpu::BindGroupEntry {
-                                binding: 1,
-                                resource: telemetry_buffer.as_entire_binding(),
-                            },
-                            wgpu::BindGroupEntry {
-                                binding: 2,
-                                resource: particle_buffer.as_entire_binding(),
-                            },
-                        ],
-                    }),
-            )
-        } else {
-            None
-        }
-    } else {
-        None
-    };
-
+    #[cfg(feature = "qualia")]
     {
-        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("scene-render-pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: frame_view,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color {
-                        r: bg_rgba[0] as f64,
-                        g: bg_rgba[1] as f64,
-                        b: bg_rgba[2] as f64,
-                        a: bg_rgba[3] as f64,
-                    }),
-                    store: wgpu::StoreOp::Store,
-                },
-            })],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-        });
+        return crate::volumetric::render_scene_png(
+            scene,
+            width,
+            height,
+            time_seconds as f32,
+            telemetry,
+        )
+        .ok();
+    }
+
+    #[cfg(not(feature = "qualia"))]
+    {
+        #[inline]
+        fn lerp(a: f64, b: f64, t: f64) -> f64 {
+            a + (b - a) * t
+        }
+
+        let mut renderer = pollster::block_on(WgpuRenderer::new_offscreen(width, height)).ok()?;
+
+        let (w, h) = (width as f64, height as f64);
+
+        // Clear node positions tracking
+        renderer.clear_node_positions();
+
+        // Build a lookup map for previous positions if transition is active
+        let previous_positions_map: std::collections::HashMap<
+            String,
+            crate::scene_contract::ScenePoint,
+        > = if let Some(ref transition) = scene.transition_state {
+            transition.previous_positions.iter().cloned().collect()
+        } else {
+            std::collections::HashMap::new()
+        };
+
+        // Get transition progress (default to 1.0 if no transition)
+        let transition_progress = scene
+            .transition_state
+            .as_ref()
+            .map(|t| t.progress)
+            .unwrap_or(1.0);
+
+        // Begin single render pass for the entire frame
+        let frame = renderer.begin_frame().ok()?;
+        let frame_view = frame.view();
+
+        // Parse background color
+        let bg_rgba = WgpuRenderer::parse_color(&scene.background, 1.0);
+
+        let mut encoder = renderer
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("scene-render-encoder"),
+            });
 
         // Render ambient visualization first (background layer)
-        if let Some(ref bind_group) = ambient_bind_group {
-            if let Some(ambient_pipeline) = &renderer.ambient_pipeline {
-                render_pass.set_pipeline(ambient_pipeline);
-                render_pass.set_bind_group(0, bind_group, &[]);
-                render_pass.draw(0..6, 0..renderer.particle_count as u32);
-            }
-        }
-
-        // Render faces (filled polygons) first (background layer)
-        for face in &scene.faces {
-            let vertices: Vec<ScreenPoint> = face
-                .vertices
-                .iter()
-                .map(|v| {
-                    // Apply LERP interpolation to vertices if transition is active
-                    let interpolated = if let Some(ref prev_pos) =
-                        previous_positions_map.get(&format!(
-                            "face_{}",
-                            face.vertices.iter().position(|p| p == v).unwrap_or(0)
-                        )) {
-                        crate::scene_contract::ScenePoint {
-                            x: lerp(prev_pos.x, v.x, transition_progress),
-                            y: lerp(prev_pos.y, v.y, transition_progress),
-                            z: lerp(prev_pos.z, v.z, transition_progress),
-                        }
-                    } else {
-                        *v
-                    };
-                    ScreenPoint {
-                        x: interpolated.x * w,
-                        y: interpolated.y * h,
-                    }
-                })
-                .collect();
-
-            // Convert to clip space and render
-            let width_px = w as f32;
-            let height_px = h as f32;
-            let clip_vertices: Vec<ScreenVertex> = vertices
-                .iter()
-                .map(|p| {
-                    let x = ((p.x as f32 / width_px) * 2.0 - 1.0) * (width_px / height_px);
-                    let y = 1.0 - (p.y as f32 / height_px) * 2.0;
-                    let rgba = WgpuRenderer::parse_color(&face.color, face.alpha);
-                    ScreenVertex {
-                        position: [x, y],
-                        color: rgba,
-                    }
-                })
-                .collect();
-
-            if !clip_vertices.is_empty() && clip_vertices.len() <= renderer.max_vertices {
+        let ambient_bind_group = if renderer.ambient_config.enabled {
+            if let (
+                Some(ambient_pipeline),
+                Some(particle_buffer),
+                Some(ambient_uniform_buffer),
+                Some(telemetry_buffer),
+            ) = (
+                &renderer.ambient_pipeline,
+                &renderer.particle_buffer,
+                &renderer.ambient_uniform_buffer,
+                &renderer.telemetry_buffer,
+            ) {
+                // Update ambient uniforms
+                let uniforms = AmbientUniforms {
+                    time: time_seconds as f32,
+                    view_width: w as f32,
+                    view_height: h as f32,
+                    _padding: 0.0,
+                };
                 renderer.queue.write_buffer(
-                    &renderer.vertex_buffer,
+                    ambient_uniform_buffer,
                     0,
-                    bytemuck::cast_slice(&clip_vertices),
+                    bytemuck::bytes_of(&uniforms),
                 );
-                render_pass.set_pipeline(&renderer.render_pipeline);
-                render_pass.set_vertex_buffer(0, renderer.vertex_buffer.slice(..));
-                render_pass.draw(0..clip_vertices.len() as u32, 0..1);
+
+                // Update telemetry uniforms
+                renderer
+                    .queue
+                    .write_buffer(telemetry_buffer, 0, bytemuck::bytes_of(telemetry));
+
+                // Create bind group before render pass to avoid borrow checker issue
+                Some(
+                    renderer
+                        .device
+                        .create_bind_group(&wgpu::BindGroupDescriptor {
+                            label: Some("ambient-bind-group"),
+                            layout: &ambient_pipeline.get_bind_group_layout(0),
+                            entries: &[
+                                wgpu::BindGroupEntry {
+                                    binding: 0,
+                                    resource: ambient_uniform_buffer.as_entire_binding(),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 1,
+                                    resource: telemetry_buffer.as_entire_binding(),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 2,
+                                    resource: particle_buffer.as_entire_binding(),
+                                },
+                            ],
+                        }),
+                )
+            } else {
+                None
             }
-        }
+        } else {
+            None
+        };
 
-        // Render edges (lines)
-        for edge in &scene.edges {
-            let from_interpolated = if let Some(ref prev_pos) =
-                previous_positions_map.get(&format!("edge_from_{}", edge.from.x))
-            {
-                crate::scene_contract::ScenePoint {
-                    x: lerp(prev_pos.x, edge.from.x, transition_progress),
-                    y: lerp(prev_pos.y, edge.from.y, transition_progress),
-                    z: lerp(prev_pos.z, edge.from.z, transition_progress),
+        {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("scene-render-pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: frame_view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: bg_rgba[0] as f64,
+                            g: bg_rgba[1] as f64,
+                            b: bg_rgba[2] as f64,
+                            a: bg_rgba[3] as f64,
+                        }),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+
+            // Render ambient visualization first (background layer)
+            if let Some(ref bind_group) = ambient_bind_group {
+                if let Some(ambient_pipeline) = &renderer.ambient_pipeline {
+                    render_pass.set_pipeline(ambient_pipeline);
+                    render_pass.set_bind_group(0, bind_group, &[]);
+                    render_pass.draw(0..6, 0..renderer.particle_count as u32);
                 }
-            } else {
-                edge.from
-            };
+            }
 
-            let to_interpolated = if let Some(ref prev_pos) =
-                previous_positions_map.get(&format!("edge_to_{}", edge.to.x))
-            {
-                crate::scene_contract::ScenePoint {
-                    x: lerp(prev_pos.x, edge.to.x, transition_progress),
-                    y: lerp(prev_pos.y, edge.to.y, transition_progress),
-                    z: lerp(prev_pos.z, edge.to.z, transition_progress),
+            // Render faces (filled polygons) first (background layer)
+            for face in &scene.faces {
+                let vertices: Vec<ScreenPoint> = face
+                    .vertices
+                    .iter()
+                    .map(|v| {
+                        // Apply LERP interpolation to vertices if transition is active
+                        let interpolated = if let Some(ref prev_pos) =
+                            previous_positions_map.get(&format!(
+                                "face_{}",
+                                face.vertices.iter().position(|p| p == v).unwrap_or(0)
+                            )) {
+                            crate::scene_contract::ScenePoint {
+                                x: lerp(prev_pos.x, v.x, transition_progress),
+                                y: lerp(prev_pos.y, v.y, transition_progress),
+                                z: lerp(prev_pos.z, v.z, transition_progress),
+                            }
+                        } else {
+                            *v
+                        };
+                        ScreenPoint {
+                            x: interpolated.x * w,
+                            y: interpolated.y * h,
+                        }
+                    })
+                    .collect();
+
+                // Convert to clip space and render
+                let width_px = w as f32;
+                let height_px = h as f32;
+                let clip_vertices: Vec<ScreenVertex> = vertices
+                    .iter()
+                    .map(|p| {
+                        let x = ((p.x as f32 / width_px) * 2.0 - 1.0) * (width_px / height_px);
+                        let y = 1.0 - (p.y as f32 / height_px) * 2.0;
+                        let rgba = WgpuRenderer::parse_color(&face.color, face.alpha);
+                        ScreenVertex {
+                            position: [x, y],
+                            color: rgba,
+                        }
+                    })
+                    .collect();
+
+                if !clip_vertices.is_empty() && clip_vertices.len() <= renderer.max_vertices {
+                    renderer.queue.write_buffer(
+                        &renderer.vertex_buffer,
+                        0,
+                        bytemuck::cast_slice(&clip_vertices),
+                    );
+                    
+                    if let Some(projector) = &renderer.projector_pipeline {
+                        // TODO: Bind projector motor/telemetry uniforms here when ready
+                        render_pass.set_pipeline(projector);
+                        // Temporarily using the projector vertex buffer for the projector until the full 10D pipeline is passed
+                        render_pass.set_vertex_buffer(0, renderer.projector_vertex_buffer.slice(..));
+                    } else {
+                        render_pass.set_pipeline(&renderer.render_pipeline);
+                        render_pass.set_vertex_buffer(0, renderer.vertex_buffer.slice(..));
+                    }
+                    
+                    render_pass.draw(0..clip_vertices.len() as u32, 0..1);
                 }
-            } else {
-                edge.to
-            };
+            }
 
-            renderer.line(
-                ScreenPoint {
-                    x: from_interpolated.x * w,
-                    y: from_interpolated.y * h,
-                },
-                ScreenPoint {
-                    x: to_interpolated.x * w,
-                    y: to_interpolated.y * h,
-                },
-                &edge.color,
-                edge.width,
-                edge.alpha,
-            );
-        }
-
-        // Render nodes (vertices) last (foreground layer)
-        for (node_index, node) in scene.nodes.iter().enumerate() {
-            // Apply LERP interpolation to node position if transition is active
-            let interpolated_position =
-                if let Some(ref prev_pos) = previous_positions_map.get(&node.id) {
+            // Render edges (lines)
+            for edge in &scene.edges {
+                let from_interpolated = if let Some(ref prev_pos) =
+                    previous_positions_map.get(&format!("edge_from_{}", edge.from.x))
+                {
                     crate::scene_contract::ScenePoint {
-                        x: lerp(prev_pos.x, node.position.x, transition_progress),
-                        y: lerp(prev_pos.y, node.position.y, transition_progress),
-                        z: lerp(prev_pos.z, node.position.z, transition_progress),
+                        x: lerp(prev_pos.x, edge.from.x, transition_progress),
+                        y: lerp(prev_pos.y, edge.from.y, transition_progress),
+                        z: lerp(prev_pos.z, edge.from.z, transition_progress),
                     }
                 } else {
-                    node.position
+                    edge.from
                 };
 
-            // Check if this node is selected or hovered
-            let is_selected = scene.selected_node_index == Some(node_index);
-            let is_hovered = scene.hovered_node_index == Some(node_index);
+                let to_interpolated = if let Some(ref prev_pos) =
+                    previous_positions_map.get(&format!("edge_to_{}", edge.to.x))
+                {
+                    crate::scene_contract::ScenePoint {
+                        x: lerp(prev_pos.x, edge.to.x, transition_progress),
+                        y: lerp(prev_pos.y, edge.to.y, transition_progress),
+                        z: lerp(prev_pos.z, edge.to.z, transition_progress),
+                    }
+                } else {
+                    edge.to
+                };
 
-            // Apply pulse animation for inferencing nodes
-            let animated_radius = if node.is_inferencing && node.pulse_rate > 0.0 {
-                // Pulse: radius varies with time using sine wave
-                let pulse_phase = 2.0 * std::f64::consts::PI * node.pulse_rate * time_seconds;
-                let pulse_factor = 1.0 + 0.3 * pulse_phase.sin();
-                node.radius * pulse_factor.abs()
-            } else {
-                node.radius
-            };
+                renderer.line(
+                    ScreenPoint {
+                        x: from_interpolated.x * w,
+                        y: from_interpolated.y * h,
+                    },
+                    ScreenPoint {
+                        x: to_interpolated.x * w,
+                        y: to_interpolated.y * h,
+                    },
+                    &edge.color,
+                    edge.width,
+                    edge.alpha,
+                );
+            }
 
-            // Use spectral color from tensor if sigma > 0, otherwise use node color
-            let spectral_color = if node.tensor.sigma != 0.0 {
-                node.tensor.spectral_to_color()
-            } else {
-                node.color.clone()
-            };
+            // Render nodes (vertices) last (foreground layer)
+            for (node_index, node) in scene.nodes.iter().enumerate() {
+                // Apply LERP interpolation to node position if transition is active
+                let interpolated_position =
+                    if let Some(ref prev_pos) = previous_positions_map.get(&node.id) {
+                        crate::scene_contract::ScenePoint {
+                            x: lerp(prev_pos.x, node.position.x, transition_progress),
+                            y: lerp(prev_pos.y, node.position.y, transition_progress),
+                            z: lerp(prev_pos.z, node.position.z, transition_progress),
+                        }
+                    } else {
+                        node.position
+                    };
 
-            // Highlight selected and hovered nodes with visual feedback
-            let (final_radius, final_color) = if is_selected {
-                (animated_radius * 1.5, "#ffffff".to_string())
-            } else if is_hovered {
-                (animated_radius * 1.2, "#ffff00".to_string())
-            } else {
-                (animated_radius, spectral_color)
-            };
+                // Check if this node is selected or hovered
+                let is_selected = scene.selected_node_index == Some(node_index);
+                let is_hovered = scene.hovered_node_index == Some(node_index);
 
-            let screen_pos = ScreenPoint {
-                x: interpolated_position.x * w,
-                y: interpolated_position.y * h,
-            };
+                // Apply pulse animation for inferencing nodes
+                let animated_radius = if node.is_inferencing && node.pulse_rate > 0.0 {
+                    // Pulse: radius varies with time using sine wave
+                    let pulse_phase = 2.0 * std::f64::consts::PI * node.pulse_rate * time_seconds;
+                    let pulse_factor = 1.0 + 0.3 * pulse_phase.sin();
+                    node.radius * pulse_factor.abs()
+                } else {
+                    node.radius
+                };
 
-            renderer.point(screen_pos, final_radius, &final_color, node.alpha);
+                // Use spectral color from tensor if sigma > 0, otherwise use node color
+                let spectral_color = if node.tensor.sigma != 0.0 {
+                    node.tensor.spectral_to_color()
+                } else {
+                    node.color.clone()
+                };
 
-            // Track node position for epistemic anchor coordination (zero-heap: use binary index)
-            renderer
-                .node_positions
-                .push((node_index, screen_pos, final_radius));
-        }
-    } // render_pass dropped here
+                // Highlight selected and hovered nodes with visual feedback
+                let (final_radius, final_color) = if is_selected {
+                    (animated_radius * 1.5, "#ffffff".to_string())
+                } else if is_hovered {
+                    (animated_radius * 1.2, "#ffff00".to_string())
+                } else {
+                    (animated_radius, spectral_color)
+                };
 
-    renderer.queue.submit(Some(encoder.finish()));
-    frame.present();
+                let screen_pos = ScreenPoint {
+                    x: interpolated_position.x * w,
+                    y: interpolated_position.y * h,
+                };
 
-    renderer.read_png()
+                renderer.point(screen_pos, final_radius, &final_color, node.alpha);
+
+                // Track node position for epistemic anchor coordination (zero-heap: use binary index)
+                renderer
+                    .node_positions
+                    .push((node_index, screen_pos, final_radius));
+            }
+        } // render_pass dropped here
+
+        renderer.queue.submit(Some(encoder.finish()));
+        frame.present(&renderer.queue);
+
+        renderer.read_png()
+    }
 }
 
 /// Same as [`render_scene_png`], returned as a `data:image/png;base64,...`

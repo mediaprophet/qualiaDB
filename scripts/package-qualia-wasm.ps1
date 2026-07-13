@@ -1,7 +1,8 @@
 # Build unified Qualia WASM portal from qualia-core-db and publish to docs/pkg/qualia.
 param(
     [string]$CrateDir = "$PSScriptRoot\..\crates\qualia-core-db",
-    [string]$DocsPkg = "$PSScriptRoot\..\docs\pkg\qualia"
+    [string]$DocsPkg = "$PSScriptRoot\..\docs\pkg\qualia",
+    [string]$DesktopPortalPkg = "$PSScriptRoot\..\crates\webizen-desktop\static\portal\pkg\qualia"
 )
 
 $ErrorActionPreference = "Stop"
@@ -70,6 +71,12 @@ $ver = "0.0.18"
 } | ConvertTo-Json | Set-Content (Join-Path $DocsPkg "package.json") -Encoding UTF8
 
 Write-Host "Qualia WASM portal v$ver built from qualia-core-db -> $DocsPkg"
+
+if ($DesktopPortalPkg -and (Test-Path $DocsPkg)) {
+    New-Item -ItemType Directory -Force -Path $DesktopPortalPkg | Out-Null
+    Copy-Item -Path (Join-Path $DocsPkg "*") -Destination $DesktopPortalPkg -Recurse -Force
+    Write-Host "Synced portal WASM -> $DesktopPortalPkg"
+}
 
 $sync = Join-Path $PSScriptRoot "sync-portal-design-kit.ps1"
 if (Test-Path $sync) {

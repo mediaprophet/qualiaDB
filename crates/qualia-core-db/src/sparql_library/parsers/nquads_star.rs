@@ -1,27 +1,90 @@
+use crate::lexicon::{generate_60bit_token, generate_embedded_triple_id};
+use crate::rdf_star::{RdfStarParseError, RdfStarParser};
 /// N-Quads-Star Parser for QualiaDB
 ///
 /// Implements RDF-Star (SPARQL 1.2) parsing for N-Quads syntax with embedded triples.
 /// N-Quads-Star extends N-Triples-Star with a fourth component (graph/context).
 /// Format: `<subject> <predicate> <object> <graph> .`
-
 use crate::NQuin;
-use crate::lexicon::{generate_embedded_triple_id, generate_60bit_token};
-use crate::rdf_star::{RdfStarParser, RdfStarParseError};
+
+/// Human-readable term strings from the most recent successful parse.
+#[derive(Debug, Clone, Default)]
+pub struct NQuadsLineTerms {
+    pub subject: String,
+    pub predicate: String,
+    pub object: String,
+    pub graph: String,
+    pub outer_predicate: String,
+    pub outer_object: String,
+    pub outer_graph: String,
+}
 
 /// N-Quads-Star parser implementation
 pub struct NQuadsStarParser {
     /// Context hash for the current parsing session
     context_hash: u64,
+    last_terms: Option<NQuadsLineTerms>,
 }
 
 impl NQuadsStarParser {
     /// Create a new N-Quads-Star parser
     pub fn new(context_hash: u64) -> Self {
-        Self { context_hash }
+        Self {
+            context_hash,
+            last_terms: None,
+        }
+    }
+
+    /// Session default graph hash (used when a line omits an explicit graph).
+    pub fn session_context(&self) -> u64 {
+        self.context_hash
+    }
+
+    /// Term strings from the last successfully parsed line.
+    pub fn last_line_terms(&self) -> Option<&NQuadsLineTerms> {
+        self.last_terms.as_ref()
+    }
+
+    fn graph_hash_from_token(&self, graph: &str) -> u64 {
+        if graph.is_empty() {
+            self.context_hash
+        } else {
+            generate_60bit_token(graph.as_bytes())
+        }
+    }
+
+    fn store_regular_terms(
+        &mut self,
+        subject_str: &str,
+        predicate_str: &str,
+        object_str: &str,
+        graph_str: &str,
+    ) {
+        self.last_terms = Some(NQuadsLineTerms {
+            subject: subject_str.to_string(),
+            predicate: predicate_str.to_string(),
+            object: object_str.to_string(),
+            graph: graph_str.to_string(),
+            ..Default::default()
+        });
+    }
+
+    fn store_embedded_terms(
+        &mut self,
+        outer_predicate_str: &str,
+        outer_object_str: &str,
+        outer_graph_str: &str,
+    ) {
+        self.last_terms = Some(NQuadsLineTerms {
+            outer_predicate: outer_predicate_str.to_string(),
+            outer_object: outer_object_str.to_string(),
+            outer_graph: outer_graph_str.to_string(),
+            ..Default::default()
+        });
     }
 
     /// Parse an N-Quads line (subject, predicate, object, graph)
-    fn parse_line(&self, line: &str) -> Result<ParseResult, RdfStarParseError> {
+    fn parse_line(&mut self, line: &str) -> Result<ParseResult, RdfStarParseError> {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') {
             return Ok(ParseResult::Comment);
@@ -36,7 +99,7 @@ impl NQuadsStarParser {
     }
 
     /// Parse a regular N-Quads quad
-    fn parse_quad_line(&self, line: &str) -> Result<ParseResult, RdfStarParseError> {
+    fn parse_quad_line(&mut self, line: &str) -> Result<ParseResult, RdfStarParseError> {
         // Format: <subject> <predicate> <object> <graph> .
         let parts: Vec<&str> = line.split_whitespace().collect();
         if parts.len() < 5 {
@@ -57,39 +120,44 @@ impl NQuadsStarParser {
         let subject_hash = generate_60bit_token(subject.as_bytes());
         let predicate_hash = generate_60bit_token(predicate.as_bytes());
         let object_hash = generate_60bit_token(object.as_bytes());
-        let graph_hash = generate_60bit_token(graph.as_bytes());
+        let graph_hash = self.graph_hash_from_token(graph);
+        self.store_regular_terms(subject, predicate, object, graph);
 
         Ok(ParseResult::RegularQuad {
             subject: subject_hash,
             predicate: predicate_hash,
             object: object_hash,
             graph: graph_hash,
-            subject_str: subject.to_string(),
-            predicate_str: predicate.to_string(),
-            object_str: object.to_string(),
-            graph_str: graph.to_string(),
         })
     }
 
     /// Parse an embedded triple line with graph context
-    fn parse_embedded_triple_line(&self, line: &str) -> Result<ParseResult, RdfStarParseError> {
+    fn parse_embedded_triple_line(&mut self, line: &str) -> Result<ParseResult, RdfStarParseError> {
         // Format: <<<subject> <predicate> <object>>> <predicate> <object> <graph> .
-        
+
         // Find the closing >>> for the embedded triple
-        let end_embedded = line.find(">>>").ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
-        
+        let end_embedded = line
+            .find(">>>")
+            .ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
+
         // Extract the embedded triple part
         let embedded_part = &line[3..end_embedded]; // Skip <<<
-        
+
         // Parse the embedded triple components
         let embedded_parts: Vec<&str> = embedded_part.split_whitespace().collect();
         if embedded_parts.len() < 3 {
             return Err(RdfStarParseError::MalformedEmbeddedTriple);
         }
 
-        let subject = embedded_parts[0].trim_start_matches('<').trim_end_matches('>');
-        let predicate = embedded_parts[1].trim_start_matches('<').trim_end_matches('>');
-        let object = embedded_parts[2].trim_start_matches('<').trim_end_matches('>');
+        let subject = embedded_parts[0]
+            .trim_start_matches('<')
+            .trim_end_matches('>');
+        let predicate = embedded_parts[1]
+            .trim_start_matches('<')
+            .trim_end_matches('>');
+        let object = embedded_parts[2]
+            .trim_start_matches('<')
+            .trim_end_matches('>');
 
         let subject_hash = generate_60bit_token(subject.as_bytes());
         let predicate_hash = generate_60bit_token(predicate.as_bytes());
@@ -111,7 +179,8 @@ impl NQuadsStarParser {
 
         let outer_predicate_hash = generate_60bit_token(outer_predicate.as_bytes());
         let outer_object_hash = generate_60bit_token(outer_object.as_bytes());
-        let outer_graph_hash = generate_60bit_token(outer_graph.as_bytes());
+        let outer_graph_hash = self.graph_hash_from_token(outer_graph);
+        self.store_embedded_terms(outer_predicate, outer_object, outer_graph);
 
         Ok(ParseResult::EmbeddedQuad {
             virtual_id,
@@ -119,46 +188,58 @@ impl NQuadsStarParser {
             outer_predicate: outer_predicate_hash,
             outer_object: outer_object_hash,
             outer_graph: outer_graph_hash,
-            outer_predicate_str: outer_predicate.to_string(),
-            outer_object_str: outer_object.to_string(),
-            outer_graph_str: outer_graph.to_string(),
         })
     }
 }
 
 impl RdfStarParser for NQuadsStarParser {
-    fn parse_embedded_triple(&mut self, input: &[u8]) -> Result<(u64, [u64; 3]), RdfStarParseError> {
+    fn parse_embedded_triple(
+        &mut self,
+        input: &[u8],
+    ) -> Result<(u64, [u64; 3]), RdfStarParseError> {
         let line = std::str::from_utf8(input).map_err(|_| RdfStarParseError::InvalidUtf8)?;
-        
+
         match self.parse_line(line)? {
-            ParseResult::EmbeddedQuad { virtual_id, components, .. } => {
-                Ok((virtual_id, components))
-            }
+            ParseResult::EmbeddedQuad {
+                virtual_id,
+                components,
+                ..
+            } => Ok((virtual_id, components)),
             _ => Err(RdfStarParseError::MalformedEmbeddedTriple),
         }
     }
 
     fn parse_triple(&mut self, input: &[u8]) -> Result<(u64, u64, u64), RdfStarParseError> {
         let line = std::str::from_utf8(input).map_err(|_| RdfStarParseError::InvalidUtf8)?;
-        
+
         match self.parse_line(line)? {
-            ParseResult::RegularQuad { subject, predicate, object, .. } => {
-                Ok((subject, predicate, object))
-            }
+            ParseResult::RegularQuad {
+                subject,
+                predicate,
+                object,
+                ..
+            } => Ok((subject, predicate, object)),
             _ => Err(RdfStarParseError::InvalidSyntax),
         }
     }
 
     fn parse_quad(&mut self, input: &[u8]) -> Result<(u64, u64, u64, u64), RdfStarParseError> {
         let line = std::str::from_utf8(input).map_err(|_| RdfStarParseError::InvalidUtf8)?;
-        
+
         match self.parse_line(line)? {
-            ParseResult::RegularQuad { subject, predicate, object, graph, .. } => {
-                Ok((subject, predicate, object, graph))
-            }
-            ParseResult::EmbeddedQuad { outer_predicate, outer_object, outer_graph, .. } => {
-                Ok((0, outer_predicate, outer_object, outer_graph))
-            }
+            ParseResult::RegularQuad {
+                subject,
+                predicate,
+                object,
+                graph,
+                ..
+            } => Ok((subject, predicate, object, graph)),
+            ParseResult::EmbeddedQuad {
+                outer_predicate,
+                outer_object,
+                outer_graph,
+                ..
+            } => Ok((0, outer_predicate, outer_object, outer_graph)),
             _ => Err(RdfStarParseError::InvalidSyntax),
         }
     }
@@ -184,10 +265,6 @@ enum ParseResult {
         predicate: u64,
         object: u64,
         graph: u64,
-        subject_str: String,
-        predicate_str: String,
-        object_str: String,
-        graph_str: String,
     },
     EmbeddedQuad {
         virtual_id: u64,
@@ -195,9 +272,6 @@ enum ParseResult {
         outer_predicate: u64,
         outer_object: u64,
         outer_graph: u64,
-        outer_predicate_str: String,
-        outer_object_str: String,
-        outer_graph_str: String,
     },
 }
 
@@ -209,7 +283,7 @@ pub fn parse_nquads_star_into<R: std::io::Read, S: crate::sparql_library::quin_s
 ) -> Result<u64, Box<dyn std::error::Error>> {
     use std::io::BufRead;
 
-    let parser = NQuadsStarParser::new(context_hash);
+    let mut parser = NQuadsStarParser::new(context_hash);
     let mut count = 0;
     let buf_reader = BufReader::new(reader);
 
@@ -217,12 +291,18 @@ pub fn parse_nquads_star_into<R: std::io::Read, S: crate::sparql_library::quin_s
         let line = line?;
         match parser.parse_line(&line)? {
             ParseResult::Comment => continue,
-            ParseResult::RegularQuad { subject, predicate, object, graph, .. } => {
+            ParseResult::RegularQuad {
+                subject,
+                predicate,
+                object,
+                graph,
+                ..
+            } => {
                 sink.push(NQuin {
                     subject,
                     predicate,
                     object,
-                    context: graph,  // Use graph as context in NQuin
+                    context: graph, // Use graph as context in NQuin
                     metadata: 0b10 << 61,
                     parity: 0,
                 })?;
@@ -273,8 +353,8 @@ pub fn parse_nquads_star_stream<R: std::io::Read>(
 
 #[cfg(test)]
 mod tests {
-    use crate::rdf_star::{RdfStarParser, RdfStarSerializer};
     use super::*;
+    use crate::rdf_star::RdfStarParser;
 
     #[test]
     fn test_nquads_star_parser_creation() {

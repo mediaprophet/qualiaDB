@@ -13,6 +13,14 @@ use crate::tensor::Tensor10D;
 #[cfg(target_arch = "wasm32")]
 use crate::{q_hash, NQuin};
 
+// geometry_wasm.rs lives at the crate root (sibling of this file), not under spatial_wasm/.
+// Needs `specialized_libs` (wasm-scientific / native) — not available on portal-slim.
+#[cfg(all(target_arch = "wasm32", feature = "wasm-scientific"))]
+#[path = "geometry_wasm.rs"]
+pub mod geometry_wasm;
+#[cfg(all(target_arch = "wasm32", feature = "wasm-scientific"))]
+pub use geometry_wasm::*;
+
 #[cfg(target_arch = "wasm32")]
 const MAX_ENCODE_VERTICES: usize = 8192;
 
@@ -96,7 +104,11 @@ fn vertices_to_tensors(verts: &[[f32; 3]]) -> Vec<Tensor10D> {
         let t_coord = i as f32 / verts.len().max(1) as f32;
         // Demo manifold fan-out (w) and sandbox spin (q) for Phase 1 PGA validation.
         let w = (i % 5) as f32;
-        let q = if i % 4 == 0 { 0.0 } else { 0.12 + (i % 6) as f32 * 0.06 };
+        let q = if i % 4 == 0 {
+            0.0
+        } else {
+            0.12 + (i % 6) as f32 * 0.06
+        };
         // mu = 2 tags bilateral nodes for Phase 2c T_pull (EnforceBilateralMicroCommons).
         let mu = if i % 3 == 0 { 2.0 } else { 0.0 };
         // Phase 3 v-band demo: Euclidean / cyclic / hyperbolic / boundary clique mix.
@@ -148,7 +160,7 @@ pub fn spatial_encode_wasm(json: &str) -> Result<JsValue, JsValue> {
     let loaded = crate::tensor::resident_substrate::global_resident_substrate()
         .load_from_tensors(&tensors, geom_hash)
         .unwrap_or(0);
-    crate::tensor::kv_provenance::rebuild_prompt_provenance(loaded, loaded);
+    crate::tensor::kv_provenance::rebuild_prompt_provenance(loaded, loaded, 0);
     if let Some(anchor) = tensors.first() {
         crate::compute_universe::publish_query_tensor(*anchor, geom_hash);
     }
@@ -243,8 +255,7 @@ fn point_in_polygon(x: f64, y: f64, ring: &[(f64, f64)]) -> bool {
     for i in 0..ring.len() {
         let (xi, yi) = ring[i];
         let (xj, yj) = ring[j];
-        let intersect = (yi > y) != (yj > y)
-            && x < (xj - xi) * (y - yi) / (yj - yi + 1e-12) + xi;
+        let intersect = (yi > y) != (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi + 1e-12) + xi;
         if intersect {
             inside = !inside;
         }
@@ -425,7 +436,7 @@ pub fn design_encode_wasm(json: &str) -> Result<JsValue, JsValue> {
     let loaded = crate::tensor::resident_substrate::global_resident_substrate()
         .load_from_tensors(&tensors, geom_hash)
         .unwrap_or(0);
-    crate::tensor::kv_provenance::rebuild_prompt_provenance(loaded, loaded);
+    crate::tensor::kv_provenance::rebuild_prompt_provenance(loaded, loaded, 0);
     if let Some(anchor) = tensors.first() {
         crate::compute_universe::publish_query_tensor(*anchor, geom_hash);
     }

@@ -1,20 +1,25 @@
 # Release Targets — Feature Matrix
 
-_Branch: `0.0.12` | Updated: 2026-06-12 (cross-platform abstraction + specialized libs complete)_
+_Branch: `0.0.24` | Updated: 2026-07-10 (Webizen desktop CI + vision Phase-1)_
 
-Five release artefacts are built or planned from this repository:
+Release artefacts built or planned from this repository:
 
 | Artefact | Crate / Path | Delivery |
 |---|---|---|
-| **WASM (Browser)** | `qualia-core-wasm` (`wasm_bridge.rs`, `wasm_edge.rs`) | `qualia-core-wasm.tar.gz` — drop into any web project |
-| **WASM (Mobile PWA)** | `crates/qualia-mobile-harness/` (Dioxus WASM) | PWA — installed via "Add to Home Screen" on any mobile browser; QR-scan bootstrap from desktop |
-| **CLI** | `crates/qualia-cli/` | Binary: `qualia-cli`; built via `cargo build --release -p qualia-cli` |
-| **Desktop — Webizen Studio** | `crates/webizen-studio/` (Dioxus 0.5 + Shoelace) | Installer: Windows / macOS / Linux via GitHub Releases |
-| **Mobile Native** | TBA (likely Flutter mobile) | TBA — iOS / Android; planned for a future milestone |
+| **WASM (Browser / portal)** | `qualia-core-db` features `portal` / `wasm-full` | `qualia-portal-wasm.tar.gz`, playground WASM on GitHub Releases (`v*` tags) |
+| **WASM (Ontology MCP)** | `crates/webizen-lite-wasm/` | `webizen-lite-wasm.tar.gz` |
+| **WASM (Mobile PWA)** | `crates/qualia-mobile-harness/` | PWA — "Add to Home Screen"; optional daemon on :4242 |
+| **CLI** | `crates/qualia-cli/` | `qualia-cli-{linux,windows,macos}` on tag release |
+| **Desktop — Webizen** | `crates/webizen-desktop/` (Tauri 2) + `webizen-studio` dist | **Windows zip on `v*` tags** (`webizen-desktop-windows-x64.zip`); macOS/Linux bundling next |
+| **Vision (library)** | `crates/qualia-vision/` | Library in workspace; not a separate installer |
+| **Mobile Native** | TBA | TBA — iOS / Android |
 
-> **Note — WASM (Mobile PWA):** This is a Dioxus WASM PWA that can run standalone on a mobile device for local-first UI and lightweight client behavior, or connect back to the user's personal Webizen desktop daemon via WebSocket (port 4242) when native offload, deeper inference, or resident storage services are available. It provides pane-based UI rendering, QR-scan bootstrap, and DID challenge-response pairing across both modes. Phase C of the Webizen Studio plan (`webizen-platform-plan.md`).
+> **Note — WASM (Mobile PWA):** Dioxus WASM PWA for local-first UI; can connect to personal Webizen desktop daemon via WebSocket (port 4242).
 
-> **Note on Legacy Desktop Prototypes** (`crates/qualia-desktop/` and `crates/qualia-flutter/`): The Tauri/React/NodeJS prototypes are retained in-tree for reference only. The Flutter application is deprecated. All active desktop work has transitioned to the native Dioxus 0.5 / Shoelace target in `crates/webizen-studio/`.
+> **Note on Legacy Desktop Prototypes** (`qualia-desktop` / Flutter): deprecated. Active desktop = **webizen-desktop** + studio frontend.
+
+> **Program of record for consumer / rights readiness:**  
+> [`plans/consumer-human-rights-release-program.md`](plans/consumer-human-rights-release-program.md)
 
 ---
 

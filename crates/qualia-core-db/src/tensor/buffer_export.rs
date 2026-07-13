@@ -100,7 +100,7 @@ pub fn read_tensor_at(bytes: &[u8], index: usize) -> Result<Tensor10D, &'static 
 /// Pack σ / α / q into linear RGBA for viewport shaders (cold path).
 #[inline]
 pub fn tensor_render_color(t: &Tensor10D) -> [f32; 4] {
-    let rgb = crate::portal_spectral::sigma_to_linear_rgb(t.sigma);
+    let rgb = crate::render::spectral::sigma_to_linear_rgb(t.sigma);
     let alpha = (0.35 + t.alpha * 0.55).clamp(0.15, 1.0);
     [rgb[0], rgb[1], rgb[2], alpha]
 }
@@ -185,9 +185,9 @@ mod tests {
 
     #[test]
     fn write_tensor_q_at_collapses_epistemic_field() {
-        let tensors = [
-            Tensor10D::ground_truth(0.0, 0.0, 0.1, 0.2, 0.3, 0.0, 1.0, 0.0, 0.5),
-        ];
+        let tensors = [Tensor10D::ground_truth(
+            0.0, 0.0, 0.1, 0.2, 0.3, 0.0, 1.0, 0.0, 0.5,
+        )];
         let need = TensorBufferHeader::total_bytes(tensors.len());
         let mut buf = vec![0u8; need];
         write_tensor_buffer(&tensors, &mut buf).unwrap();

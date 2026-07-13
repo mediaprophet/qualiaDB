@@ -67,7 +67,8 @@ pub fn agent_epistemic_context(did_hash: u64) -> u64 {
 /// `q42ep:CryptoSensor` class hash — hardware-attested or cryptographically signed source.
 pub const C_CRYPTO_SENSOR: u64 = q_hash("urn:qualia:ontology:epistemic:CryptoSensor");
 /// `q42ep:SignedObjectiveEvent` class hash — notarized or DID-signed objective event.
-pub const C_SIGNED_OBJECTIVE_EVENT: u64 = q_hash("urn:qualia:ontology:epistemic:SignedObjectiveEvent");
+pub const C_SIGNED_OBJECTIVE_EVENT: u64 =
+    q_hash("urn:qualia:ontology:epistemic:SignedObjectiveEvent");
 /// `q42ep:AgentQuery` class hash — a query event is itself an epistemic event.
 pub const C_AGENT_QUERY: u64 = q_hash("urn:qualia:ontology:epistemic:AgentQuery");
 /// `q42ep:HearsayEvent` class hash — information from an unverified peer.
@@ -141,7 +142,10 @@ pub fn classify_epistemic_state(
         if q.subject != agent_did && q.subject != proposition_hash {
             continue;
         }
-        if q.object != proposition_hash && q.predicate != P_WAS_DERIVED_FROM && q.predicate != P_INFERS_FROM {
+        if q.object != proposition_hash
+            && q.predicate != P_WAS_DERIVED_FROM
+            && q.predicate != P_INFERS_FROM
+        {
             continue;
         }
 
@@ -160,9 +164,9 @@ fn higher(a: EpistemicState, b: EpistemicState) -> EpistemicState {
     use EpistemicState::*;
     match (a, b) {
         (ObjectiveKnowledge, _) | (_, ObjectiveKnowledge) => ObjectiveKnowledge,
-        (InferredBelief, _)    | (_, InferredBelief)     => InferredBelief,
-        (HearsayBelief, _)     | (_, HearsayBelief)      => HearsayBelief,
-        (Unknown, Unknown)                                => Unknown,
+        (InferredBelief, _) | (_, InferredBelief) => InferredBelief,
+        (HearsayBelief, _) | (_, HearsayBelief) => HearsayBelief,
+        (Unknown, Unknown) => Unknown,
     }
 }
 
@@ -196,9 +200,15 @@ pub fn assert_objective_knowledge(
 ) -> [NQuin; 3] {
     let ctx = agent_epistemic_context(agent_did);
     [
-        make_ep(agent_did,        P_KNOWS_DIRECTLY, proposition_hash, ctx, ts),
-        make_ep(agent_did,        P_COG_BELIEVES,   proposition_hash, ctx, ts),
-        make_ep(proposition_hash, P_WAS_GENERATED_BY, proof_hash,     OBJECTIVE_CONTEXT, ts),
+        make_ep(agent_did, P_KNOWS_DIRECTLY, proposition_hash, ctx, ts),
+        make_ep(agent_did, P_COG_BELIEVES, proposition_hash, ctx, ts),
+        make_ep(
+            proposition_hash,
+            P_WAS_GENERATED_BY,
+            proof_hash,
+            OBJECTIVE_CONTEXT,
+            ts,
+        ),
     ]
 }
 
@@ -217,9 +227,9 @@ pub fn assert_inferred_belief(
 ) -> [NQuin; 3] {
     let ctx = agent_epistemic_context(agent_did);
     [
-        make_ep(agent_did,        P_INFERS_FROM,    source_hash,      ctx, ts),
-        make_ep(agent_did,        P_COG_BELIEVES,   proposition_hash, ctx, ts),
-        make_ep(proposition_hash, P_WAS_DERIVED_FROM, source_hash,    ctx, ts),
+        make_ep(agent_did, P_INFERS_FROM, source_hash, ctx, ts),
+        make_ep(agent_did, P_COG_BELIEVES, proposition_hash, ctx, ts),
+        make_ep(proposition_hash, P_WAS_DERIVED_FROM, source_hash, ctx, ts),
     ]
 }
 
@@ -238,9 +248,9 @@ pub fn assert_hearsay_belief(
 ) -> [NQuin; 3] {
     let ctx = agent_epistemic_context(agent_did);
     [
-        make_ep(agent_did,        P_BELIEVES_VIA_HEARSAY, proposition_hash, ctx, ts),
-        make_ep(agent_did,        P_COG_BELIEVES,         proposition_hash, ctx, ts),
-        make_ep(proposition_hash, P_WAS_DERIVED_FROM,     informant_did,    ctx, ts),
+        make_ep(agent_did, P_BELIEVES_VIA_HEARSAY, proposition_hash, ctx, ts),
+        make_ep(agent_did, P_COG_BELIEVES, proposition_hash, ctx, ts),
+        make_ep(proposition_hash, P_WAS_DERIVED_FROM, informant_did, ctx, ts),
     ]
 }
 
@@ -252,44 +262,86 @@ pub fn assert_hearsay_belief(
 /// Callers should capture the returned `NQuin::object` (= `query_event_hash`) and pass
 /// it to `assert_inferred_belief` for agents who observe this query.
 pub fn record_query_observation(observer_did: u64, query_subject_hash: u64, ts: u64) -> NQuin {
-    make_ep(observer_did, P_COG_QUERIES, query_subject_hash, EPISTEMIC_CONTEXT, ts)
+    make_ep(
+        observer_did,
+        P_COG_QUERIES,
+        query_subject_hash,
+        EPISTEMIC_CONTEXT,
+        ts,
+    )
 }
 
 /// Record that `agent_did` typed `event_hash` as a `q42ep:CryptoSensor` result.
 /// Call this when wiring hardware-attested data into the objective context.
 pub fn register_crypto_sensor_output(proof_hash: u64, ts: u64) -> NQuin {
-    make_ep(proof_hash, P_RDF_TYPE, C_CRYPTO_SENSOR, OBJECTIVE_CONTEXT, ts)
+    make_ep(
+        proof_hash,
+        P_RDF_TYPE,
+        C_CRYPTO_SENSOR,
+        OBJECTIVE_CONTEXT,
+        ts,
+    )
 }
 
 /// Record that `agent_did` typed `event_hash` as a `q42ep:AgentQuery`.
 /// Call this alongside `record_query_observation` so SHACL shapes can validate it.
 pub fn register_query_event(query_event_hash: u64, querying_agent_did: u64, ts: u64) -> [NQuin; 2] {
     [
-        make_ep(query_event_hash, P_RDF_TYPE,           C_AGENT_QUERY,       EPISTEMIC_CONTEXT, ts),
-        make_ep(query_event_hash, P_WAS_ATTRIBUTED_TO,  querying_agent_did,  EPISTEMIC_CONTEXT, ts),
+        make_ep(
+            query_event_hash,
+            P_RDF_TYPE,
+            C_AGENT_QUERY,
+            EPISTEMIC_CONTEXT,
+            ts,
+        ),
+        make_ep(
+            query_event_hash,
+            P_WAS_ATTRIBUTED_TO,
+            querying_agent_did,
+            EPISTEMIC_CONTEXT,
+            ts,
+        ),
     ]
 }
 
 // ── Query helpers ─────────────────────────────────────────────────────────────
 
-/// Return all propositions that `agent_did` holds ObjectiveKnowledge of.
-pub fn objective_knowledge_of(quins: &[NQuin], agent_did: u64) -> Vec<u64> {
+/// Write the propositions that `agent_did` holds ObjectiveKnowledge of into `out`.
+///
+/// Zero-heap: scans `quins` and writes matching proposition hashes into the
+/// caller-supplied `out` slice (bounded by `out.len()`); returns the count written.
+/// Matches beyond `out.len()` are dropped.
+pub fn objective_knowledge_of(quins: &[NQuin], agent_did: u64, out: &mut [u64]) -> usize {
     let ctx = agent_epistemic_context(agent_did);
-    quins
-        .iter()
-        .filter(|q| q.context == ctx && q.subject == agent_did && q.predicate == P_KNOWS_DIRECTLY)
-        .map(|q| q.object)
-        .collect()
+    let mut n = 0usize;
+    for q in quins {
+        if q.context == ctx && q.subject == agent_did && q.predicate == P_KNOWS_DIRECTLY {
+            if n >= out.len() {
+                break;
+            }
+            out[n] = q.object;
+            n += 1;
+        }
+    }
+    n
 }
 
-/// Return all propositions that `agent_did` believes via any modality.
-pub fn all_beliefs_of(quins: &[NQuin], agent_did: u64) -> Vec<u64> {
+/// Write the propositions that `agent_did` believes via any modality into `out`.
+///
+/// Zero-heap: see [`objective_knowledge_of`]. Returns the count written.
+pub fn all_beliefs_of(quins: &[NQuin], agent_did: u64, out: &mut [u64]) -> usize {
     let ctx = agent_epistemic_context(agent_did);
-    quins
-        .iter()
-        .filter(|q| q.context == ctx && q.subject == agent_did && q.predicate == P_COG_BELIEVES)
-        .map(|q| q.object)
-        .collect()
+    let mut n = 0usize;
+    for q in quins {
+        if q.context == ctx && q.subject == agent_did && q.predicate == P_COG_BELIEVES {
+            if n >= out.len() {
+                break;
+            }
+            out[n] = q.object;
+            n += 1;
+        }
+    }
+    n
 }
 
 /// Return true if any quin in the slice classifies `proposition` as ObjectiveKnowledge
@@ -312,7 +364,7 @@ fn make_ep(subject: u64, predicate: u64, object: u64, context: u64, lamport: u64
         object,
         context,
         metadata: lamport & 0xFFFF_FFFF,
-        parity:   0,
+        parity: 0,
     }
 }
 
@@ -330,9 +382,9 @@ mod tests {
 
     #[test]
     fn agent_epistemic_contexts_are_distinct() {
-        let ctx_john  = agent_epistemic_context(JOHN);
+        let ctx_john = agent_epistemic_context(JOHN);
         let ctx_frank = agent_epistemic_context(FRANK);
-        let ctx_jane  = agent_epistemic_context(JANE);
+        let ctx_jane = agent_epistemic_context(JANE);
         assert_ne!(ctx_john, ctx_frank);
         assert_ne!(ctx_frank, ctx_jane);
         assert_ne!(ctx_john, ctx_jane);
@@ -354,8 +406,8 @@ mod tests {
     #[test]
     fn inferred_belief_does_not_collide_with_objective() {
         let frank_query = 0x9999_u64;
-        let obj_qs  = assert_objective_knowledge(JOHN, MATTER, SENSOR, 1000);
-        let inf_qs  = assert_inferred_belief(JANE, MATTER, frank_query, 2000);
+        let obj_qs = assert_objective_knowledge(JOHN, MATTER, SENSOR, 1000);
+        let inf_qs = assert_inferred_belief(JANE, MATTER, frank_query, 2000);
 
         let john_ctx = agent_epistemic_context(JOHN);
         let jane_ctx = agent_epistemic_context(JANE);
@@ -409,6 +461,25 @@ mod tests {
     }
 
     #[test]
+    fn objective_knowledge_and_beliefs_write_into_caller_buffer() {
+        let qs = assert_objective_knowledge(JOHN, MATTER, SENSOR, 1000);
+
+        let mut buf = [0u64; 8];
+        let n = objective_knowledge_of(&qs, JOHN, &mut buf);
+        assert_eq!(n, 1);
+        assert_eq!(buf[0], MATTER);
+
+        let mut bel = [0u64; 8];
+        let m = all_beliefs_of(&qs, JOHN, &mut bel);
+        assert_eq!(m, 1);
+        assert_eq!(bel[0], MATTER);
+
+        // Bounded by the caller buffer: a zero-length `out` writes nothing.
+        let mut empty: [u64; 0] = [];
+        assert_eq!(objective_knowledge_of(&qs, JOHN, &mut empty), 0);
+    }
+
+    #[test]
     fn john_frank_jane_scenario() {
         let mut all: Vec<NQuin> = Vec::new();
 
@@ -420,7 +491,12 @@ mod tests {
         let frank_query_hash = FRANK.wrapping_mul(0x9e37_79b9) ^ MATTER ^ 2000;
 
         // t₃-t₄: Jane infers from Frank's query
-        all.extend_from_slice(&assert_inferred_belief(JANE, MATTER, frank_query_hash, 3000));
+        all.extend_from_slice(&assert_inferred_belief(
+            JANE,
+            MATTER,
+            frank_query_hash,
+            3000,
+        ));
 
         // Check: John has ObjectiveKnowledge
         assert_eq!(

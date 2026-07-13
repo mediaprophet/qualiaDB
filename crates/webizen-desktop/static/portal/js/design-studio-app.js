@@ -520,4 +520,84 @@ async function boot() {
     .catch(console.warn);
 }
 
+// ── 3D Anatomy real-mesh bridge (S5.8) ────────────────────────────────────────────────────────
+//
+// When the Studio embeds this portal in an iframe for the 3D Anatomy view, it posts a message
+// { type: "anatomy-load-body", model: "male"|"female" } once the cache is ready. This bridge fetches
+// the per-organ percepts (body.json) + each cached .10d from the desktop host and calls
+// portal.load_body_organs_colored() to render the whole body as real organ meshes coloured by burden.
+//
+// The .10d + percepts are served at:
+//   webizen://localhost/anatomy/body.json  → { percepts: [...], organ_count, ... }
+//   webizen://localhost/anatomy/10d/{model}/{organ_key}  → .10d bytes
+//
+// Approximate anatomical positions (0..1 body space) per system — the CCF ref organs are individually
+// centred; this places each organ at its approximate body region. A future pass can use real CCF
+// transforms.
+const ANATOMY_SYSTEM_POSITIONS = {
+  nervous: [0.50, 0.12, 0.50], sensory: [0.50, 0.10, 0.55], endocrine: [0.50, 0.20, 0.50],
+  respiratory: [0.50, 0.28, 0.50], circulatory: [0.50, 0.30, 0.45], immune: [0.45, 0.32, 0.50],
+  digestive: [0.50, 0.45, 0.50], urinary: [0.50, 0.50, 0.55], reticuloendothelial: [0.55, 0.42, 0.50],
+  hematopoietic: [0.50, 0.50, 0.40], reproductive: [0.50, 0.58, 0.55], musculoskeletal: [0.50, 0.50, 0.50],
+  integumentary: [0.50, 0.50, 0.60], thermoregulatory: [0.50, 0.50, 0.62],
+  ens: [0.50, 0.45, 0.52], glymphatic: [0.50, 0.12, 0.52], ecs: [0.50, 0.50, 0.50],
+};
+
+async function loadAnatomyBody(model) {
+  if (!qualiaPortal || !wasm) {
+    console.warn("anatomy: portal not ready");
+    return;
+  }
+  try {
+    // Fetch the percepts manifest for the selected chromosomal reference model (XY→male / XX→female),
+    // so the organ-key list matches the .10d files we then fetch at /anatomy/10d/{model}/{organ_key}.
+    const resp = await fetch(
+      `webizen://localhost/anatomy/body.json?model=${encodeURIComponent(model)}`,
+      { cache: "no-store" },
+    );
+    if (!resp.ok) {
+      console.warn("anatomy: body.json not available", resp.status);
+      return;
+    }
+    const body = await resp.json();
+    if (!body.cached || !body.percepts || body.percepts.length === 0) {
+      console.warn("anatomy: body not cached or no percepts");
+      return;
+    }
+    // Fetch each organ's .10d + pair it with its percept colour + position.
+    const organs = [];
+    for (const p of body.percepts) {
+      const tenDResp = await fetch(
+        `webizen://localhost/anatomy/10d/${model}/${encodeURIComponent(p.organ_key)}`,
+        { cache: "no-store" }
+      );
+      if (!tenDResp.ok) continue;
+      const bytes = new Uint8Array(await tenDResp.arrayBuffer());
+      const pos = ANATOMY_SYSTEM_POSITIONS[p.system_id] || [0.5, 0.5, 0.5];
+      organs.push({
+        bytes,
+        r: p.percept.rgba[0], g: p.percept.rgba[1], b: p.percept.rgba[2], a: p.percept.rgba[3],
+        x: pos[0], y: pos[1], z: pos[2],
+      });
+    }
+    if (organs.length === 0) {
+      console.warn("anatomy: no organ .10d files fetched");
+      return;
+    }
+    const result = qualiaPortal.load_body_organs_colored(organs);
+    console.log("anatomy: body loaded", result);
+    // Signal back to the Studio that the body is rendered.
+    window.parent?.postMessage({ type: "anatomy-body-loaded", organs: organs.length }, "*");
+  } catch (e) {
+    console.error("anatomy: load failed", e);
+    window.parent?.postMessage({ type: "anatomy-body-error", error: String(e) }, "*");
+  }
+}
+
+window.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "anatomy-load-body") {
+    loadAnatomyBody(event.data.model || "male");
+  }
+});
+
 document.addEventListener("DOMContentLoaded", boot);

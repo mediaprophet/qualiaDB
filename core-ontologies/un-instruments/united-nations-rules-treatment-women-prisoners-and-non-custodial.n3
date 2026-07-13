@@ -1,0 +1,493 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix doc:    <https://ns.webcivics.net/values/united-nations-rules-treatment-women-prisoners-and-non-custodial#> .
+
+# ============================================================
+# United Nations Rules for the Treatment of Women Prisoners and Non-custodial Measures for Women Offenders (the Bangkok Rules)
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "United Nations Rules for the Treatment of Women Prisoners and Non-custodial Measures for Women Offenders (the Bangkok Rules)"@en ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:rule-1 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 1"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "In order for the principle of non‑discrimination embodied in rule 6 of the Standard Minimum Rules for the Treatment of Prisoners to be put into practice, account shall be taken of the distinctive needs of women prisoners in the application of the Rules. Providing for such needs in order to accomplish substantial gender equality shall not be regarded as discriminatory. 2. Admission"@en .
+
+doc:rule-2 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 2"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Adequate attention shall be paid to the admission procedures for women and children, due to their particular vulnerability at this time. Newly arrived women prisoners shall be provided with facilities to contact their relatives; access to legal advice; information about prison rules and regulations, the prison regime and where to seek help when in need in a language that they understand; and, in the case of foreign nationals, access to consular representatives as well. Prior to or on admission, women with caretaking responsibilities for children shall be permitted to make arrangements for those children, including the possibility of a reasonable suspension of detention, taking into account the best interests of the children. 3. Register [Supplements rule 7 of the Standard Minimum Rules for the Treatment of Prisoners]"@en .
+
+doc:rule-3 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 3"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The number and personal details of the children of a woman being admitted to prison shall be recorded at the time of admission. The records shall include, without prejudicing the rights of the mother, at least the names of the children, their ages and, if not accompanying the mother, their location and custody or guardianship status. All information relating to the children’s identity shall be kept confidential, and the use of such information shall always comply with the requirement to take into account the best interests of the children. 4. Allocation"@en .
+
+doc:rule-4 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 4"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Women prisoners shall be allocated, to the extent possible, to prisons close to their home or place of social rehabilitation, taking account of their caretaking responsibilities, as well as the individual woman’s preference and the availability of appropriate programmes and services. 5. Personal hygiene [Supplements rules 15 and 16 of the Standard Minimum Rules for the Treatment of Prisoners]"@en .
+
+doc:rule-5 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Rule 5"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The accommodation of women prisoners shall have facilities and materials required to meet women’s specific hygiene needs, including sanitary towels provided free of charge and a regular supply of water to be made available for the personal care of children and women, in particular women involved in cooking and those who are pregnant, breastfeeding or menstruating. 6. Health‑care services [Supplements rules 22 to 26 of the Standard Minimum Rules for the Treatment of Prisoners] (a) Medical screening on entry [Supplements rule 24 of the Standard Minimum Rules for the Treatment of Prisoners]"@en .
+
+doc:rule-6 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Rule 6"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The health screening of women prisoners shall include comprehensive screening to determine primary health‑care needs, and also shall determine: The presence of sexually transmitted diseases or blood‑borne diseases; and, depending on risk factors, women prisoners may also be offered testing for HIV, with pre‑ and post‑test counselling; Mental health‑care needs, including post‑traumatic stress disorder and risk of suicide and self‑harm; The reproductive health history of the woman prisoner, including current or recent pregnancies, childbirth and any related reproductive health issues; The existence of drug dependency; Sexual abuse and other forms of violence that may have been suffered prior to admission."@en .
+
+doc:rule-7 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Rule 7"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "If the existence of sexual abuse or other forms of violence before or during detention is diagnosed, the woman prisoner shall be informed of her right to seek recourse from judicial authorities. The woman prisoner should be fully informed of the procedures and steps involved. If the woman prisoner agrees to take legal action, appropriate staff shall be informed and immediately refer the case to the competent authority for investigation. Prison authorities shall help such women to access legal assistance. Whether or not the woman chooses to take legal action, prison authorities shall endeavour to ensure that she has immediate access to specialized psychological support or counselling. Specific measures shall be developed to avoid any form of retaliation against those making such reports or taking legal action."@en .
+
+doc:rule-8 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 8"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The right of women prisoners to medical confidentiality, including specifically the right not to share information and not to undergo screening in relation to their reproductive health history, shall be respected at all times."@en .
+
+doc:rule-9 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 9"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "If the woman prisoner is accompanied by a child, that child shall also undergo health screening, preferably by a child health specialist, to determine any treatment and medical needs. Suitable health care, at least equivalent to that in the community, shall be provided. (b) Gender‑specific health care"@en .
+
+doc:rule-10 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 10"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Gender‑specific health‑care services at least equivalent to those available in the community shall be provided to women prisoners. If a woman prisoner requests that she be examined or treated by a woman physician or nurse, a woman physician or nurse shall be made available, to the extent possible, except for situations requiring urgent medical intervention. If a male medical practitioner undertakes the examination contrary to the wishes of the woman prisoner, a woman staff member shall be present during the examination."@en .
+
+doc:rule-11 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 11"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Only medical staff shall be present during medical examinations unless the doctor is of the view that exceptional circumstances exist or the doctor requests a member of the prison staff to be present for security reasons or the woman prisoner specifically requests the presence of a member of staff as indicated in rule 10, paragraph 2, above. If it is necessary for non‑medical prison staff to be present during medical examinations, such staff should be women and examinations shall be carried out in a manner that safeguards privacy, dignity and confidentiality. (c) Mental health and care"@en .
+
+doc:rule-12 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 12"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Individualized, gender‑sensitive, trauma‑informed and comprehensive mental health care and rehabilitation programmes shall be made available for women prisoners with mental health‑care needs in prison or in non‑custodial settings."@en .
+
+doc:rule-13 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 13"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Prison staff shall be made aware of times when women may feel particular distress, so as to be sensitive to their situation and ensure that the women are provided appropriate support. (d) HIV prevention, treatment, care and support"@en .
+
+doc:rule-14 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 14"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "In developing responses to HIV/AIDS in penal institutions, programmes and services shall be responsive to the specific needs of women, including prevention of mother‑to‑child transmission. In this context, prison authorities shall encourage and support the development of initiatives on HIV prevention, treatment and care, such as peer‑based education. (e) Substance abuse treatment programmes"@en .
+
+doc:rule-15 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 15"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Prison health services shall provide or facilitate specialized treatment programmes designed for women substance abusers, taking into account prior victimization, the special needs of pregnant women and women with children, as well as their diverse cultural backgrounds. (f) Suicide and self‑harm prevention"@en .
+
+doc:rule-16 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 16"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Developing and implementing strategies, in consultation with mental health‑care and social welfare services, to prevent suicide and self‑harm among women prisoners and providing appropriate, gender‑specific and specialized support to those at risk shall be part of a comprehensive policy of mental health care in women’s prisons. (g) Preventive health‑care services"@en .
+
+doc:rule-17 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Rule 17"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Women prisoners shall receive education and information about preventive health‑care measures, including on HIV, sexually transmitted diseases and other blood‑borne diseases, as well as gender‑specific health conditions."@en .
+
+doc:rule-18 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 18"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Preventive health‑care measures of particular relevance to women, such as Papanicolaou tests and screening for breast and gynaecological cancer, shall be offered to women prisoners on an equal basis with women of the same age in the community. 7. Safety and security [Supplements rules 27 to 36 of the Standard Minimum Rules for the Treatment of Prisoners] (a) Searches"@en .
+
+doc:rule-19 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 19"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Effective measures shall be taken to ensure that women prisoners’ dignity and respect are protected during personal searches, which shall only be carried out by women staff who have been properly trained in appropriate searching methods and in accordance with established procedures."@en .
+
+doc:rule-20 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 20"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Alternative screening methods, such as scans, shall be developed to replace strip searches and invasive body searches, in order to avoid the harmful psychological and possible physical impact of invasive body searches."@en .
+
+doc:rule-21 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Rule 21"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Prison staff shall demonstrate competence, professionalism and sensitivity and shall preserve respect and dignity when searching both children in prison with their mother and children visiting prisoners. (b) Discipline and punishment [Supplements rules 27 to 32 of the Standard Minimum Rules for the Treatment of Prisoners]"@en .
+
+doc:rule-22 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 22"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Punishment by close confinement or disciplinary segregation shall not be applied to pregnant women, women with infants and breastfeeding mothers in prison."@en .
+
+doc:rule-23 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 23"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Disciplinary sanctions for women prisoners shall not include a prohibition of family contact, especially with children. (c) Instruments of restraint [Supplements rules 33 and 34 of the Standard Minimum Rules for the Treatment of Prisoners]"@en .
+
+doc:rule-24 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Rule 24"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Instruments of restraint shall never be used on women during labour, during birth and immediately after birth. (d) Information to and complaints by prisoners; inspections [Supplements rules 35 and 36 and, with regard to inspection, rule 55 of the Standard Minimum Rules for the Treatment of Prisoners]"@en .
+
+doc:rule-25 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 25"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Women prisoners who report abuse shall be provided immediate protection, support and counselling, and their claims shall be investigated by competent and independent authorities, with full respect for the principle of confidentiality. Protection measures shall take into account specifically the risks of retaliation. Women prisoners who have been subjected to sexual abuse, and especially those who have become pregnant as a result, shall receive appropriate medical advice and counselling and shall be provided with the requisite physical and mental health care, support and legal aid. In order to monitor the conditions of detention and treatment of women prisoners, inspectorates, visiting or monitoring boards or supervisory bodies shall include women members. 8. Contact with the outside world [Supplements rules 37 to 39 of the Standard Minimum Rules for the Treatment of Prisoners]"@en .
+
+doc:rule-26 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 26"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Women prisoners’ contact with their families, including their children, and their children’s guardians and legal representatives shall be encouraged and facilitated by all reasonable means. Where possible, measures shall be taken to counterbalance disadvantages faced by women detained in institutions located far from their homes."@en .
+
+doc:rule-27 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 27"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Where conjugal visits are allowed, women prisoners shall be able to exercise this right on an equal basis with men."@en .
+
+doc:rule-28 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 28"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Visits involving children shall take place in an environment that is conducive to a positive visiting experience, including with regard to staff attitudes, and shall allow open contact between mother and child. Visits involving extended contact with children should be encouraged, where possible. 9. Institutional personnel and training [Supplements rules 46 to 55 of the Standard Minimum Rules for the Treatment of Prisoners]"@en .
+
+doc:rule-29 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Rule 29"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Capacity‑building for staff employed in women’s prisons shall enable them to address the special social reintegration requirements of women prisoners and manage safe and rehabilitative facilities. Capacity‑building measures for women staff shall also include access to senior positions with key responsibility for the development of policies and strategies relating to the treatment and care of women prisoners."@en .
+
+doc:rule-30 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 30"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "There shall be a clear and sustained commitment at the managerial level in prison administrations to prevent and address gender‑based discrimination against women staff."@en .
+
+doc:rule-31 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 31"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Clear policies and regulations on the conduct of prison staff aimed at providing maximum protection for women prisoners from any gender‑based physical or verbal violence, abuse and sexual harassment shall be developed and implemented."@en .
+
+doc:rule-32 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Rule 32"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Women prison staff shall receive equal access to training as male staff, and all staff involved in the management of women’s prisons shall receive training on gender sensitivity and prohibition of discrimination and sexual harassment."@en .
+
+doc:rule-33 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 33"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "All staff assigned to work with women prisoners shall receive training relating to the gender‑specific needs and human rights of women prisoners. Basic training shall be provided for prison staff working in women’s prisons on the main issues relating to women’s health, in addition to first aid and basic medicine. Where children are allowed to stay with their mothers in prison, awareness‑raising on child development and basic training on the health care of children shall also be provided to prison staff, in order for them to respond appropriately in times of need and emergencies."@en .
+
+doc:rule-34 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 34"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Capacity‑building programmes on HIV shall be included as part of the regular training curricula of prison staff. In addition to HIV/AIDS prevention, treatment, care and support, issues such as gender and human rights, with a particular focus on their link to HIV, stigma and discrimination, shall also be part of the curriculum."@en .
+
+doc:rule-35 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 35"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Prison staff shall be trained to detect mental health‑care needs and risk of self‑harm and suicide among women prisoners and to offer assistance by providing support and referring such cases to specialists. 10. Juvenile female prisoners"@en .
+
+doc:rule-36 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Rule 36"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Prison authorities shall put in place measures to meet the protection needs of juvenile female prisoners."@en .
+
+doc:rule-37 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Rule 37"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Juvenile female prisoners shall have equal access to education and vocational training that are available to juvenile male prisoners."@en .
+
+doc:rule-38 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Rule 38"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Juvenile female prisoners shall have access to age‑ and gender‑specific programmes and services, such as counselling for sexual abuse or violence. They shall receive education on women’s health care and have regular access to gynaecologists, similar to adult female prisoners."@en .
+
+doc:rule-39 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 39"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Pregnant juvenile female prisoners shall receive support and medical care equivalent to that provided for adult female prisoners. Their health shall be monitored by a medical specialist, taking account of the fact that they may be at greater risk of health complications during pregnancy due to their age. II. Rules applicable to special categories A. Prisoners under sentence 1. Classification and individualization [Supplements rules 67 to 69 of the Standard Minimum Rules for the Treatment of Prisoners]"@en .
+
+doc:rule-40 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Rule 40"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Prison administrators shall develop and implement classification methods addressing the gender‑specific needs and circumstances of women prisoners to ensure appropriate and individualized planning and implementation towards those prisoners’ early rehabilitation, treatment and reintegration into society."@en .
+
+doc:rule-41 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Rule 41"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The gender‑sensitive risk assessment and classification of prisoners shall: Take into account the generally lower risk posed by women prisoners to others, as well as the particularly harmful effects that high‑security measures and increased levels of isolation can have on women prisoners; Enable essential information about women’s backgrounds, such as violence they may have experienced, history of mental disability and substance abuse, as well as parental and other caretaking responsibilities, to be taken into account in the allocation and sentence planning process; Ensure that women’s sentence plans include rehabilitative programmes and services that match their gender‑specific needs; Ensure that those with mental health‑care needs are housed in accommodation which is not restrictive, and at the lowest possible security level, and receive appropriate treatment, rather than being placed in higher security level facilities solely due to their mental health problems. 2. Prison regime [Supplements rules 65, 66 and 70 to 81 of the Standard Minimum Rules for the Treatment of Prisoners]"@en .
+
+doc:rule-42 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 42"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Women prisoners shall have access to a balanced and comprehensive programme of activities which take account of gender‑appropriate needs. The regime of the prison shall be flexible enough to respond to the needs of pregnant women, nursing mothers and women with children. Childcare facilities or arrangements shall be provided in prisons in order to enable women prisoners to participate in prison activities. Particular efforts shall be made to provide appropriate programmes for pregnant women, nursing mothers and women with children in prison. Particular efforts shall be made to provide appropriate services for women prisoners who have psychosocial support needs, especially those who have been subjected to physical, mental or sexual abuse. Social relations and aftercare [Supplements rules 79 to 81 of the Standard Minimum Rules for the Treatment of Prisoners]"@en .
+
+doc:rule-43 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Rule 43"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Prison authorities shall encourage and, where possible, also facilitate visits to women prisoners as an important prerequisite to ensuring their mental well‑being and social reintegration."@en .
+
+doc:rule-44 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 44"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "In view of women prisoners’ disproportionate experience of domestic violence, they shall be properly consulted as to who, including which family members, is allowed to visit them."@en .
+
+doc:rule-45 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Rule 45"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Prison authorities shall utilize options such as home leave, open prisons, halfway houses and community‑based programmes and services to the maximum possible extent for women prisoners, to ease their transition from prison to liberty, to reduce stigma and to re‑establish their contact with their families at the earliest possible stage."@en .
+
+doc:rule-46 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Rule 46"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Prison authorities, in cooperation with probation and/or social welfare services, local community groups and non‑governmental organizations, shall design and implement comprehensive pre‑ and post‑release reintegration programmes which take into account the gender‑specific needs of women."@en .
+
+doc:rule-47 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 47"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Additional support following release shall be provided to released women prisoners who need psychological, medical, legal and practical help to ensure their successful social reintegration, in cooperation with services in the community. 3. Pregnant women, breastfeeding mothers and mothers with children in prison [Supplements rule 23 of the Standard Minimum Rules for the Treatment of Prisoners]"@en .
+
+doc:rule-48 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 48"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Pregnant or breastfeeding women prisoners shall receive advice on their health and diet under a programme to be drawn up and monitored by a qualified health practitioner. Adequate and timely food, a healthy environment and regular exercise opportunities shall be provided free of charge for pregnant women, babies, children and breastfeeding mothers. Women prisoners shall not be discouraged from breastfeeding their children, unless there are specific health reasons to do so. The medical and nutritional needs of women prisoners who have recently given birth, but whose babies are not with them in prison, shall be included in treatment programmes."@en .
+
+doc:rule-49 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 49"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Decisions to allow children to stay with their mothers in prison shall be based on the best interests of the children. Children in prison with their mothers shall never be treated as prisoners."@en .
+
+doc:rule-50 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 50"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Women prisoners whose children are in prison with them shall be provided with the maximum possible opportunities to spend time with their children."@en .
+
+doc:rule-51 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 51"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Children living with their mothers in prison shall be provided with ongoing health‑care services and their development shall be monitored by specialists, in collaboration with community health services. The environment provided for such children’s upbringing shall be as close as possible to that of a child outside prison."@en .
+
+doc:rule-52 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 52"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Decisions as to when a child is to be separated from its mother shall be based on individual assessments and the best interests of the child within the scope of relevant national laws. The removal of the child from prison shall be undertaken with sensitivity, only when alternative care arrangements for the child have been identified and, in the case of foreign‑national prisoners, in consultation with consular officials. After children are separated from their mothers and placed with family or relatives or in other alternative care, women prisoners shall be given the maximum possible opportunity and facilities to meet with their children, when it is in the best interests of the children and when public safety is not compromised. 4. Foreign nationals [Supplements rule 38 of the Standard Minimum Rules for the Treatment of Prisoners]"@en .
+
+doc:rule-53 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 53"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Where relevant bilateral or multilateral agreements are in place, the transfer of non‑resident foreign‑national women prisoners to their home country, especially if they have children in their home country, shall be considered as early as possible during their imprisonment, following the application or informed consent of the woman concerned. Where a child living with a non‑resident foreign‑national woman prisoner is to be removed from prison, consideration should be given to relocation of the child to its home country, taking into account the best interests of the child and in consultation with the mother. 5. Minorities and indigenous peoples"@en .
+
+doc:rule-54 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 54"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Prison authorities shall recognize that women prisoners from different religious and cultural backgrounds have distinctive needs and may face multiple forms of discrimination in their access to gender‑ and culture‑relevant programmes and services. Accordingly, prison authorities shall provide comprehensive programmes and services that address these needs, in consultation with women prisoners themselves and the relevant groups."@en .
+
+doc:rule-55 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 55"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Pre‑ and post‑release services shall be reviewed to ensure that they are appropriate and accessible to indigenous women prisoners and to women prisoners from ethnic and racial groups, in consultation with the relevant groups. B. Prisoners under arrest or awaiting trial [Supplements rules 84 to 93 of the Standard Minimum Rules for the Treatment of Prisoners]"@en .
+
+doc:rule-56 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 56"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The particular risk of abuse that women face in pretrial detention shall be recognized by relevant authorities, which shall adopt appropriate measures in policies and practice to guarantee such women’s safety at this time. (See also rule 58 below, with regard to alternatives to pretrial detention.) III. Non‑custodial measures"@en .
+
+doc:rule-57 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 57"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The provisions of the Tokyo Rules shall guide the development and implementation of appropriate responses to women offenders. Gender‑specific options for diversionary measures and pretrial and sentencing alternatives shall be developed within Member States’ legal systems, taking account of the history of victimization of many women offenders and their caretaking responsibilities."@en .
+
+doc:rule-58 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 58"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Taking into account the provisions of rule 2.3 of the Tokyo Rules, women offenders shall not be separated from their families and communities without due consideration being given to their backgrounds and family ties. Alternative ways of managing women who commit offences, such as diversionary measures and pretrial and sentencing alternatives, shall be implemented wherever appropriate and possible."@en .
+
+doc:rule-59 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 59"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Generally, non‑custodial means of protection, for example in shelters managed by independent bodies, non‑governmental organizations or other community services, shall be used to protect women who need such protection. Temporary measures involving custody to protect a woman shall only be applied when necessary and expressly requested by the woman concerned and shall in all cases be supervised by judicial or other competent authorities. Such protective measures shall not be continued against the will of the woman concerned."@en .
+
+doc:rule-60 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 60"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Appropriate resources shall be made available to devise suitable alternatives for women offenders in order to combine non‑custodial measures with interventions to address the most common problems leading to women’s contact with the criminal justice system. These may include therapeutic courses and counselling for victims of domestic violence and sexual abuse; suitable treatment for those with mental disability; and educational and training programmes to improve employment prospects. Such programmes shall take account of the need to provide care for children and women‑only services."@en .
+
+doc:rule-61 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Rule 61"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "When sentencing women offenders, courts shall have the power to consider mitigating factors such as lack of criminal history and relative non‑severity and nature of the criminal conduct, in the light of women’s caretaking responsibilities and typical backgrounds."@en .
+
+doc:rule-62 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 62"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The provision of gender‑sensitive, trauma‑informed, women‑only substance abuse treatment programmes in the community and women’s access to such treatment shall be improved, for crime prevention as well as for diversion and alternative sentencing purposes. 1. Post‑sentencing dispositions"@en .
+
+doc:rule-63 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Rule 63"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Decisions regarding early conditional release (parole) shall favourably take into account women prisoners’ caretaking responsibilities, as well as their specific social reintegration needs. 2. Pregnant women and women with dependent children"@en .
+
+doc:rule-64 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 64"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Non‑custodial sentences for pregnant women and women with dependent children shall be preferred where possible and appropriate, with custodial sentences being considered when the offence is serious or violent or the woman represents a continuing danger, and after taking into account the best interests of the child or children, while ensuring that appropriate provision has been made for the care of such children. 3. Juvenile female offenders"@en .
+
+doc:rule-65 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 65"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Institutionalization of children in conflict with the law shall be avoided to the maximum extent possible. The gender‑based vulnerability of juvenile female offenders shall be taken into account in decision‑making. 4. Foreign nationals"@en .
+
+doc:rule-66 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 66"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Maximum effort shall be made to ratify the United Nations Convention against Transnational Organized Crime and the Protocol to Prevent, Suppress and Punish Trafficking in Persons, Especially Women and Children, supplementing the United Nations Convention against Transnational Organized Crime to fully implement their provisions so as to provide maximum protection to victims of trafficking in order to avoid secondary victimization of many foreign national women. IV. Research, planning, evaluation and public awareness‑raising 1. Research, planning and evaluation"@en .
+
+doc:rule-67 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 67"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Efforts shall be made to organize and promote comprehensive, result‑oriented research on the offences committed by women, the reasons that trigger women’s confrontation with the criminal justice system, the impact of secondary criminalization and imprisonment on women, the characteristics of women offenders, as well as programmes designed to reduce reoffending by women, as a basis for effective planning, programme development and policy formulation to respond to the social reintegration needs of women offenders."@en .
+
+doc:rule-68 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 68"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Efforts shall be made to organize and promote research on the number of children affected by their mothers’ confrontation with the criminal justice system, and imprisonment in particular, and the impact of this on the children, in order to contribute to policy formulation and programme development, taking into account the best interests of the children."@en .
+
+doc:rule-69 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 69"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Efforts shall be made to review, evaluate and make public periodically the trends, problems and factors associated with offending behaviour in women and the effectiveness in responding to the social reintegration needs of women offenders, as well as their children, in order to reduce the stigmatization and negative impact of those women’s confrontation with the criminal justice system on them. 2. Raising public awareness, sharing information and training"@en .
+
+doc:rule-70 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Rule 70"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The media and the public shall be informed about the reasons that lead to women’s entrapment in the criminal justice system and the most effective ways to respond to it, in order to enable women’s social reintegration, taking into account the best interests of their children. Publication and dissemination of research and good practice examples shall form comprehensive elements of policies that aim to improve the outcomes and the fairness to women and their children of criminal justice responses to women offenders. The media, the public and those with professional responsibility in matters concerning women prisoners and offenders shall be provided regularly with factual information about the matters covered in these rules and about their implementation. Training programmes on the present rules and the results of research shall be developed and implemented for relevant criminal justice officials to raise their awareness and sensitize them to their provisions contained therein."@en .

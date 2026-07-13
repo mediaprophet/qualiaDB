@@ -53,7 +53,7 @@ Successfully updated all SDO documentation to reflect the completed CBOR-LD with
 
 **Semantic Payload Structure:**
 {
-  "@context": "https://qualia.org/ld/context/v1",
+  "@context": "https://webizen.org/ld/context/v1",
   "@type": "Handshake" | "Sync" | "HandshakeAck" | "SyncAck",
   "did_q42": "did:q42:...",
   "semantic_context": 12345,
@@ -67,7 +67,7 @@ Successfully updated all SDO documentation to reflect the completed CBOR-LD with
 ```
 
 **Q42 Lexicon Integration:**
-- Embedded in v2 volumes (no external dependencies)
+- Embedded in v3 volumes (no external dependencies)
 - Zero-allocation term resolution (O(1) hash lookup)
 - Semantic validation against Q42 vocabulary
 - Full offline operation capability
@@ -90,16 +90,16 @@ Successfully updated all SDO documentation to reflect the completed CBOR-LD with
 
 **Full CBOR-LD Format:**
 {
-  "@context": "https://qualia.org/ld/vault/v1",
+  "@context": "https://webizen.org/ld/vault/v1",
   "@type": "VaultManifest",
   "id": "vault-123",
   "created": "2026-06-10T12:00:00Z",
   "modified": "2026-06-10T12:00:00Z",
   "vocabulary": {
-    "@context": "https://qualia.org/ld/vocab/",
-    "base_uri": "https://qualia.org/ld/vocab/",
+    "@context": "https://webizen.org/ld/vocab/",
+    "base_uri": "https://webizen.org/ld/vocab/",
     "prefixes": {
-      "qualia": "https://qualia.org/ld/vocab/",
+      "qualia": "https://webizen.org/ld/vocab/",
       "did": "https://www.w3.org/TR/did-core/",
       "sec": "https://w3id.org/security/"
     },
@@ -200,7 +200,7 @@ The Qualia Protocol Ecosystem is now ready for external standardization with a s
 ### **Semantic Interoperability:**
 - **Vocabulary Resolution**: Q42 lexicon provides embedded vocabulary
 - **Term Resolution**: O(1) hash lookup for semantic terms
-- **Context Management**: Simple lexicon lookup from embedded v2 volumes
+- **Context Management**: Simple lexicon lookup from embedded v3 volumes
 - **Validation**: Semantic validation against Q42 vocabulary
 
 ---

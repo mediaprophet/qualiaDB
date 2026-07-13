@@ -1,0 +1,186 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# query Index
+
+## Functionality Overview
+Comprehensive index of functionality for `query`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Files & Exported Functionality
+- 📄 `cbor_compiler.rs`
+  - `enum ParseError`
+  - `fn ingest_network_payload`
+  - `fn parse_cbor_ld_to_quin`
+  - `fn test_gatekeeper_rejects_json`
+  - `fn test_gatekeeper_rejects_turtle`
+  - `fn test_parse_cbor_ld_dictionary`
+  - `fn test_parse_cbor_buffer_overflow`
+- 📄 `graph_index.rs`
+  - `struct RevisionCache`
+  - `fn with`
+  - `fn default`
+  - `fn with_graph_index`
+  - `fn rebuilds_only_on_revision_change`
+- 📄 `indexing.rs`
+  - `struct QuinIndex`
+  - `impl QuinIndex`
+  - `fn from_slice`
+  - `fn new`
+  - `fn insert`
+  - `fn len`
+  - `fn is_empty`
+  - `fn by_subject`
+  - `fn by_predicate`
+  - `fn by_object`
+  - `fn by_context`
+  - `fn by_subject_and_predicate`
+  - `fn iter_by_subject`
+  - `fn iter_by_subject_and_predicate`
+  - `fn object_of`
+  - *(...and 11 more)*
+- 📄 `ingest.rs`
+  - `struct RawTriple`
+  - `fn streaming_import_rdf`
+  - `fn verify_integrity`
+- 📄 `ingestion.rs`
+  - `trait ZeroCopyStream`
+  - `fn stream_parse`
+  - `struct IngestionPipeline`
+  - `fn new`
+  - `fn parse_line`
+  - `fn test_n3logic_routing`
+  - `fn test_rdf_star_nesting`
+- 📄 `lexicon.rs`
+  - `enum SemanticModality`
+  - `fn generate_60bit_token`
+  - `fn generate_embedded_triple_id`
+  - `struct LexiconManager`
+  - `impl LexiconManager`
+  - `fn new`
+  - `fn tokenize_modal`
+  - `fn tokenize`
+  - `enum Intern`
+  - `struct LexiconInterner`
+  - `impl LexiconInterner`
+  - `fn intern_str`
+  - `fn intern`
+  - `fn is_collision`
+  - `fn resolve`
+  - *(...and 7 more)*
+- 📄 `mini_parser.rs`
+  - `enum ParseError`
+  - `fn compile_ntriples_to_bytecode`
+  - `fn hash_token`
+  - `fn compile_bound_triple`
+  - `fn compile_wildcard_subject`
+  - `fn compile_empty_fails`
+  - `fn hashes_strip_brackets`
+  - `fn did_q42_sets_msb_in_compiled_bytecode`
+  - `fn did_q42_in_object_position`
+- 📄 `mod.rs`
+- 📄 `ontology_loader.rs`
+  - `fn startup_ontology_catalog`
+  - `fn ontology_dir_path`
+  - `fn find_ontology_dir`
+  - `fn parse_ttl_to_quins`
+  - `fn load_q42_file`
+  - `fn load_startup_ontologies`
+  - `fn parse_ttl_minimal`
+  - `fn parse_ttl_missing_file_returns_empty`
+- 📄 `query_compiler.rs`
+  - `struct QueryCompiler`
+  - `impl QueryCompiler`
+  - `fn compile_to_quin`
+  - `fn compile_to_bytecode`
+  - `fn qualia_compile_geosparql_star`
+  - `fn qualia_compile_fts_extension`
+  - `fn qualia_compile_sparql_to_bytecode`
+- 📄 `query_engine.rs`
+  - `fn mmap_query_subject`
+  - `struct TelemetryHook`
+  - `fn lazy_superblock_query`
+  - `fn filter_by_context`
+  - `fn filter_by_contexts`
+  - `fn count_by_context`
+  - `fn unique_contexts`
+  - `fn filter_by_context_and_subject`
+  - `fn filter_by_context_and_predicate`
+  - `fn filter_by_context_and_object`
+  - `fn test_filter_by_context`
+  - `fn test_filter_by_context_wildcard`
+  - `fn test_count_by_context`
+  - `fn test_filter_by_context_and_subject`
+- 📄 `rdf_star.rs`
+  - `enum RdfStarParseError`
+  - `enum RdfStarSerializeError`
+  - `impl std`
+  - `fn fmt`
+  - `trait RdfStarParser`
+  - `fn parse_embedded_triple`
+  - `fn parse_triple`
+  - `fn parse_quad`
+  - `fn supports_quads`
+  - `fn supports_named_graphs`
+  - `fn format_name`
+  - `trait RdfStarSerializer`
+  - `fn serialize_embedded_triple`
+  - `fn serialize_triple`
+  - `fn serialize_quad`
+  - *(...and 9 more)*
+- 📄 `resolve.rs`
+  - `struct Resolved`
+  - `fn resolve_in_index`
+  - `fn resolve_in_slice`
+  - `fn related_in_slice`
+  - `fn rel`
+  - `fn resolves_kind_and_out_degree_over_slice`
+  - `fn index_and_slice_resolution_agree`
+  - `fn unkinded_identifier_has_none_kind`
+- 📄 `resolver.rs`
+  - `struct Lexicon`
+  - `impl Lexicon`
+  - `fn resolve`
+  - `fn resolve_hash`
+  - `fn format_ntriples_to`
+  - `fn format_nquads_to`
+  - `fn format_ntriples_star_to`
+  - `fn write_ntriple_line`
+  - `fn write_ntriples_star_line`
+  - `fn quin`
+  - `fn render`
+  - `fn known_hash_resolves_to_uri`
+  - `fn unknown_hash_returns_none`
+  - `fn topological_pointer_returns_none`
+  - `fn known_iri_rendered_with_angle_brackets`
+  - *(...and 14 more)*
+- 📄 `shacl_compiler.rs`
+  - `enum ShaclDatatype`
+  - `impl ShaclDatatype`
+  - `fn from_iri_hash`
+  - `enum ShaclConstraint`
+  - `fn validate_shacl_property`
+  - `fn deontic_not_expired`
+  - `fn deontic_quin_matches`
+  - `fn epistemic_quin_matches`
+  - `fn test_shacl_datatype_integer`
+  - `fn test_shacl_deontic_obligate`
+  - `fn test_shacl_epistemic_knowledge`
+  - `fn test_shacl_cardinality`
+- 📄 `temporal_graph.rs`
+  - `fn assert_temporal`
+  - `fn invalidate_entity`
+  - `fn register_agent`
+  - `fn write_goal`
+  - `fn write_belief`
+  - `fn make_temporal`
+  - `fn assert_temporal_all_fields`
+  - `fn assert_temporal_no_end_no_author`
+  - `fn cogai_belief_has_temporal_and_agent_context`
+  - `fn all_predicate_hashes_distinct`
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

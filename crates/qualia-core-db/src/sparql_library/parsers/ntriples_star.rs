@@ -1,31 +1,54 @@
-/// N-Triples-Star Parser for QualiaDB
-use std::io::BufReader;
+use crate::lexicon::{generate_60bit_token, generate_embedded_triple_id};
+use crate::rdf_star::{RdfStarParseError, RdfStarParser};
 ///
 /// Implements RDF-Star (SPARQL 1.2) parsing for N-Triples syntax with embedded triples.
 /// N-Triples-Star is a line-based format with strict syntax:
 /// - Regular triple: `<subject> <predicate> <object> .`
 /// - Embedded triple: `<<<subject> <predicate> <object>>> <predicate> <object> .`
-
 use crate::NQuin;
-use crate::lexicon::{generate_embedded_triple_id, generate_60bit_token};
-use crate::rdf_star::{RdfStarParser, RdfStarParseError};
+/// N-Triples-Star Parser for QualiaDB
+use std::io::BufReader;
+
+/// Human-readable term strings from the most recent successful parse.
+#[derive(Debug, Clone, Default)]
+pub struct NTriplesLineTerms {
+    pub subject: String,
+    pub predicate: String,
+    pub object: String,
+    pub outer_predicate: String,
+    pub outer_object: String,
+}
 
 /// N-Triples-Star parser implementation
 pub struct NTriplesStarParser {
     /// Context hash for the current parsing session
     context_hash: u64,
+    last_terms: Option<NTriplesLineTerms>,
 }
 
 impl NTriplesStarParser {
     /// Create a new N-Triples-Star parser
     pub fn new(context_hash: u64) -> Self {
-        Self { context_hash }
+        Self {
+            context_hash,
+            last_terms: None,
+        }
+    }
+
+    /// Session context hash stamped onto emitted quads.
+    pub fn session_context(&self) -> u64 {
+        self.context_hash
+    }
+
+    /// Term strings from the last successfully parsed line.
+    pub fn last_line_terms(&self) -> Option<&NTriplesLineTerms> {
+        self.last_terms.as_ref()
     }
 
     /// Parse an N-Triples line (subject, predicate, object)
-    /// 
+    ///
     /// Handles both regular triples and embedded triples
-    fn parse_line(&self, line: &str) -> Result<ParseResult, RdfStarParseError> {
+    fn parse_line(&mut self, line: &str) -> Result<ParseResult, RdfStarParseError> {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') {
             return Ok(ParseResult::Comment);
@@ -40,7 +63,7 @@ impl NTriplesStarParser {
     }
 
     /// Parse a regular N-Triples triple
-    fn parse_regular_triple_line(&self, line: &str) -> Result<ParseResult, RdfStarParseError> {
+    fn parse_regular_triple_line(&mut self, line: &str) -> Result<ParseResult, RdfStarParseError> {
         // Format: <subject> <predicate> <object> .
         let parts: Vec<&str> = line.split_whitespace().collect();
         if parts.len() < 4 {
@@ -59,37 +82,48 @@ impl NTriplesStarParser {
         let subject_hash = generate_60bit_token(subject.as_bytes());
         let predicate_hash = generate_60bit_token(predicate.as_bytes());
         let object_hash = generate_60bit_token(object.as_bytes());
+        self.last_terms = Some(NTriplesLineTerms {
+            subject: subject.to_string(),
+            predicate: predicate.to_string(),
+            object: object.to_string(),
+            ..Default::default()
+        });
 
         Ok(ParseResult::RegularTriple {
             subject: subject_hash,
             predicate: predicate_hash,
             object: object_hash,
-            subject_str: subject.to_string(),
-            predicate_str: predicate.to_string(),
-            object_str: object.to_string(),
         })
     }
 
     /// Parse an embedded triple line
-    fn parse_embedded_triple_line(&self, line: &str) -> Result<ParseResult, RdfStarParseError> {
+    fn parse_embedded_triple_line(&mut self, line: &str) -> Result<ParseResult, RdfStarParseError> {
         // Format: <<<subject> <predicate> <object>>> <predicate> <object> .
         // This is complex - need to find the closing >>> and then parse the outer triple
-        
+
         // Find the closing >>> for the embedded triple
-        let end_embedded = line.find(">>>").ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
-        
+        let end_embedded = line
+            .find(">>>")
+            .ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
+
         // Extract the embedded triple part
         let embedded_part = &line[3..end_embedded]; // Skip <<<
-        
+
         // Parse the embedded triple components
         let embedded_parts: Vec<&str> = embedded_part.split_whitespace().collect();
         if embedded_parts.len() < 3 {
             return Err(RdfStarParseError::MalformedEmbeddedTriple);
         }
 
-        let subject = embedded_parts[0].trim_start_matches('<').trim_end_matches('>');
-        let predicate = embedded_parts[1].trim_start_matches('<').trim_end_matches('>');
-        let object = embedded_parts[2].trim_start_matches('<').trim_end_matches('>');
+        let subject = embedded_parts[0]
+            .trim_start_matches('<')
+            .trim_end_matches('>');
+        let predicate = embedded_parts[1]
+            .trim_start_matches('<')
+            .trim_end_matches('>');
+        let object = embedded_parts[2]
+            .trim_start_matches('<')
+            .trim_end_matches('>');
 
         let subject_hash = generate_60bit_token(subject.as_bytes());
         let predicate_hash = generate_60bit_token(predicate.as_bytes());
@@ -110,37 +144,48 @@ impl NTriplesStarParser {
 
         let outer_predicate_hash = generate_60bit_token(outer_predicate.as_bytes());
         let outer_object_hash = generate_60bit_token(outer_object.as_bytes());
+        self.last_terms = Some(NTriplesLineTerms {
+            outer_predicate: outer_predicate.to_string(),
+            outer_object: outer_object.to_string(),
+            ..Default::default()
+        });
 
         Ok(ParseResult::EmbeddedTriple {
             virtual_id,
             components: [subject_hash, predicate_hash, object_hash],
             outer_predicate: outer_predicate_hash,
             outer_object: outer_object_hash,
-            outer_predicate_str: outer_predicate.to_string(),
-            outer_object_str: outer_object.to_string(),
         })
     }
 }
 
 impl RdfStarParser for NTriplesStarParser {
-    fn parse_embedded_triple(&mut self, input: &[u8]) -> Result<(u64, [u64; 3]), RdfStarParseError> {
+    fn parse_embedded_triple(
+        &mut self,
+        input: &[u8],
+    ) -> Result<(u64, [u64; 3]), RdfStarParseError> {
         let line = std::str::from_utf8(input).map_err(|_| RdfStarParseError::InvalidUtf8)?;
-        
+
         match self.parse_line(line)? {
-            ParseResult::EmbeddedTriple { virtual_id, components, .. } => {
-                Ok((virtual_id, components))
-            }
+            ParseResult::EmbeddedTriple {
+                virtual_id,
+                components,
+                ..
+            } => Ok((virtual_id, components)),
             _ => Err(RdfStarParseError::MalformedEmbeddedTriple),
         }
     }
 
     fn parse_triple(&mut self, input: &[u8]) -> Result<(u64, u64, u64), RdfStarParseError> {
         let line = std::str::from_utf8(input).map_err(|_| RdfStarParseError::InvalidUtf8)?;
-        
+
         match self.parse_line(line)? {
-            ParseResult::RegularTriple { subject, predicate, object, .. } => {
-                Ok((subject, predicate, object))
-            }
+            ParseResult::RegularTriple {
+                subject,
+                predicate,
+                object,
+                ..
+            } => Ok((subject, predicate, object)),
             _ => Err(RdfStarParseError::InvalidSyntax),
         }
     }
@@ -170,17 +215,12 @@ enum ParseResult {
         subject: u64,
         predicate: u64,
         object: u64,
-        subject_str: String,
-        predicate_str: String,
-        object_str: String,
     },
     EmbeddedTriple {
         virtual_id: u64,
         components: [u64; 3],
         outer_predicate: u64,
         outer_object: u64,
-        outer_predicate_str: String,
-        outer_object_str: String,
     },
 }
 
@@ -192,7 +232,7 @@ pub fn parse_ntriples_star_into<R: std::io::Read, S: crate::sparql_library::quin
 ) -> Result<u64, Box<dyn std::error::Error>> {
     use std::io::BufRead;
 
-    let parser = NTriplesStarParser::new(context_hash);
+    let mut parser = NTriplesStarParser::new(context_hash);
     let mut count = 0;
     let buf_reader = BufReader::new(reader);
 
@@ -200,7 +240,12 @@ pub fn parse_ntriples_star_into<R: std::io::Read, S: crate::sparql_library::quin
         let line = line?;
         match parser.parse_line(&line)? {
             ParseResult::Comment => continue,
-            ParseResult::RegularTriple { subject, predicate, object, .. } => {
+            ParseResult::RegularTriple {
+                subject,
+                predicate,
+                object,
+                ..
+            } => {
                 sink.push(NQuin {
                     subject,
                     predicate,
@@ -255,8 +300,8 @@ pub fn parse_ntriples_star_stream<R: std::io::Read>(
 
 #[cfg(test)]
 mod tests {
-    use crate::rdf_star::{RdfStarParser, RdfStarSerializer};
     use super::*;
+    use crate::rdf_star::RdfStarParser;
 
     #[test]
     fn test_ntriples_star_parser_creation() {
@@ -269,7 +314,8 @@ mod tests {
     #[test]
     fn test_parse_regular_triple() {
         let mut parser = NTriplesStarParser::new(0);
-        let input = b"<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> .";
+        let input =
+            b"<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> .";
         let result = parser.parse_triple(input);
         assert!(result.is_ok());
         let (s, p, o) = result.unwrap();

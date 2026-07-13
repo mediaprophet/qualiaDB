@@ -1,0 +1,190 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix doc:    <https://ns.webcivics.net/values/declaration-social-progress-and-development#> .
+
+# ============================================================
+# Declaration on Social Progress and Development
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Declaration on Social Progress and Development"@en ;
+    dc:date "11 December 1969" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-social-progress-and-development> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:article-1 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 1"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "All peoples and all human beings, without distinction as to race, colour, sex, language, religion, nationality, ethnic origin, family or social status, or political or other conviction, shall have the right to live in dignity and freedom and to enjoy the fruits of social progress and should, on their part, contribute to it."@en .
+
+doc:article-2 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 2"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Social progress and development shall be founded on respect for the dignity and value of the human person and shall ensure the promotion of human rights and social justice, which requires: (a) The immediate and final elimination of all forms of inequality, exploitation of peoples and individuals, colonialism and racism, including nazism and apartheid , and all other policies and ideologies opposed to the purposes and principles of the United Nations; (b) The recognition and effective implementation of civil and political rights as well as of economic, social and cultural rights without any discrimination."@en .
+
+doc:article-3 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 3"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The following are considered primary conditions of social progress and development: (a) National independence based on the right of peoples to self-determination; (b) The principle of non-interference in the internal affairs of States; (c) Respect for the sovereignty and territorial integrity of States; (d) Permanent sovereignty of each nation over its natural wealth and resources; (e) The right and responsibility of each State and, as far as they are concerned, each nation and people to determine freely its own objectives of social development, to set its own priorities and to decide in conformity with the principles of the Charter of the United Nations the means and methods of their achievement without any external interference; (f) Peaceful coexistence, peace, friendly relations and co-operation among States irrespective of differences in their social, economic or political systems."@en .
+
+doc:article-4 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 4"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The family as a basic unit of society and the natural environment for the growth and well-being of all its members, particularly children and youth, should be assisted and protected so that it may fully assume its responsibilities within the community. Parents have the exclusive right to determine freely and responsibly the number and spacing of their children."@en .
+
+doc:article-5 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 5"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Social progress and development require the full utilization of human resources, including, in particular: (a) The encouragement of creative initiative under conditions of enlightened public opinion; (b) The dissemination of national and international information for the purpose of making individuals aware of changes occurring in society as a whole; (c) The active participation of all elements of society, individually or through associations, in defining and in achieving the common goals of development with full respect for the fundamental freedoms embodied in the Universal Declaration of Human Rights; (d) The assurance to disadvantaged or marginal sectors of the population of equal opportunities for social and economic advancement in order to achieve an effectively integrated society."@en .
+
+doc:article-6 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 6"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Social development requires the assurance to everyone of the right to work and the free choice of employment. Social progress and development require the participation of all members of society in productive and socially useful labour and the establishment, in conformity with human rights and fundamental freedoms and with the principles of justice and the social function of property, of forms of ownership of land and of the means of production which preclude any kind of exploitation of man, ensure equal rights to property for all and create conditions leading to genuine equality among people."@en .
+
+doc:article-7 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 7"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The rapid expansion of national income and wealth and their equitable distribution among all members of society are fundamental to all social progress, and they should therefore be in the forefront of the preoccupations of every State and Government. The improvement in the position of the developing countries in international trade resulting among other things from the achievement of favourable terms of trade and of equitable and remunerative prices at which developing countries market their products is necessary in order to make it possible to increase national income and in order to advance social development."@en .
+
+doc:article-8 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 8"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Each Government has the primary role and ultimate responsibility of ensuring the social progress and well-being of its people, of planning social development measures as part of comprehensive development plans, of encouraging and co-ordinating or integrating all national efforts towards this end and of introducing necessary changes in the social structure. In planning social development measures, the diversity of the needs of developing and developed areas, and of urban and rural areas, within each country, shall be taken into due account."@en .
+
+doc:article-9 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 9"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Part II - OBJECTIVES Articles Part III - MEANS AND METHODS Articles The General Assembly , Mindful of the pledge of Members of the United Nations under the Charter to take joint and separate action in co-operation with the Organization to promote higher standards of living, full employment and conditions of economic and social progress and development, Reaffirming faith in human rights and fundamental freedoms and in the principles of peace, of the dignity and worth of the human person, and of social justice proclaimed in the Charter, Recalling the principles of the Universal Declaration of Human Rights, the International Covenants on Human Rights, the Declaration of the Rights of the Child, the Declaration on the Granting of Independence to Colonial Countries and Peoples, the International Convention on the Elimination of All Forms of Racial Discrimination, the United Nations Declaration on the Elimination of All Forms of Racial Discrimination, the Declaration on the Promotion among Youth of the Ideals of Peace, Mutual Respect and Understanding between Peoples, the Declaration on the Elimination of Discrimination against Women and of resolutions of the United Nations, Bearing in mind the standards already set for social progress in the constitutions, conventions, recommendations and resolutions of the International Labour Organisation, the Food and Agriculture Organization of the United Nations, the United Nations Educational, Scientific and Cultural Organization, the World Health Organization, the United Nations Children's Fund and of other organizations concerned, Convinced that man can achieve complete fulfilment of his aspirations only within a just social order and that it is consequently of cardinal importance to accelerate social and economic progress everywhere, thus contributing to international peace and solidarity, Convinced that international peace and security on the one hand, and social progress and economic development on the other, are closely interdependent and influence each other, Persuaded that social development can be promoted by peaceful coexistence, friendly relations and co-operation among States with different social, economic or political systems, Emphasizing the interdependence of economic and social development in the wider process of growth and change, as well as the importance of a strategy of integrated development which takes full account at all stages of its social aspects, Regretting the inadequate progress achieved in the world social situation despite the efforts of States and the international community, Recognizing that the primary responsibility for the development of the developing countries rests on those countries themselves and acknowledging the pressing need to narrow and eventually close the gap in the standards of living between economically more advanced and developing countries and, to that end, that Member States shall have the responsibility to pursue internal and external policies designed to promote social development throughout the world, and in particular to assist developing countries to accelerate their economic growth, Recognizing the urgency of devoting to works of peace and social progress resources being expended on armaments and wasted on conflict and destruction, Conscious of the contribution that science and technology can render towards meeting the needs common to all humanity, Believing that the primary task of all States and international organizations is to eliminate from the life of society all evils and obstacles to social progress, particularly such evils as inequality, exploitation, war, colonialism and racism, Desirous of promoting the progress of all mankind towards these goals and of overcoming all obstacles to their realization, Solemnly proclaims this Declaration on Social Progress and Development and calls for national and international action for its use as a common basis for social development policies: Part I — PRINCIPLES"@en .
+
+doc:article-10 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 10"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) The assurance at all levels of the right to work and the right of everyone to form trade unions and workers' associations and to bargain collectively; promotion of full productive employment and elimination of unemployment and under-employment; establishment of equitable and favourable conditions of work for all, including the improvement of health and safety conditions; assurance of just remuneration for labour without any discrimination as well as a sufficiently high minimum wage to ensure a decent standard of living; the protection of the consumer; (b) The elimination of hunger and malnutrition and the guarantee of the right to proper nutrition; (c) The elimination of poverty; the assurance of a steady improvement in levels of living and of a just and equitable distribution of income; (d) The achievement of the highest standards of health and the provision of health protection for the entire population, if possible free of charge; (e) The eradication of illiteracy and the assurance of the right to universal access to culture, to free compulsory education at the elementary level and to free education at all levels; the raising of the general level of life-long education; (f) The provision for all, particularly persons in low income groups and large families, of adequate housing and community services. Social progress and development shall aim equally at the progressive attainment of the following main goals:"@en .
+
+doc:article-11 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 11"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) The provision of comprehensive social security schemes and social welfare services; the establishment and improvement of social security and insurance schemes for all persons who, because of illness, disability or old age, are temporarily or permanently unable to earn a living, with a view to ensuring a proper standard of living for such persons and for their families and dependants; (b) The protection of the rights of the mother and child; concern for the upbringing and health of children; the provision of measures to safeguard the health and welfare of women and particularly of working mothers during pregnancy and the infancy of their children, as well as of mothers whose earnings are the sole source of livelihood for the family; the granting to women of pregnancy and maternity leave and allowances without loss of employment or wages; (c) The protection of the rights and the assuring of the welfare of children, the aged and the disabled; the provision of protection for the physically or mentally disadvantaged; (d) The education of youth in, and promotion among them of, the ideals of justice and peace, mutual respect and understanding among peoples; the promotion of full participation of youth in the process of national development; (e) The provision of social defence measures and the elimination of conditions leading to crime and delinquency, especially juvenile delinquency; (f) The guarantee that all individuals, without discrimination of any kind, are made aware of their rights and obligations and receive the necessary aid in the exercise and safeguarding of their rights. Social progress and development shall further aim at achieving the following main objectives:"@en .
+
+doc:article-12 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 12"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) The creation of conditions for rapid and sustained social and economic development, particularly in the developing countries; change in international economic relations; new and effective methods of international co-operation in which equality of opportunity should be as much a prerogative of nations as of individuals within a nation; (b) The elimination of all forms of discrimination and exploitation and all other practices and ideologies contrary to the purposes and principles of the Charter of the United Nations; (c) The elimination of all forms of foreign economic exploitation, particularly that practised by international monopolies, in order to enable the people of every country to enjoy in full the benefits of their national resources. Social progress and development shall finally aim at the attainment of the following main goals:"@en .
+
+doc:article-13 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 13"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) Equitable sharing of scientific and technological advances by developed and developing countries, and a steady increase in the use of science and technology for the benefit of the social development of society; (b) The establishment of a harmonious balance between scientific, technological and material progress and the intellectual, spiritual, cultural and moral advancement of humanity; (c) The protection and improvement of the human environment. Part III — MEANS AND METHODS On the basis of the principles set forth in this Declaration, the achievement of the objectives of social progress and development requires the mobilization of the necessary resources by national and international action, with particular attention to such means and methods as:"@en .
+
+doc:article-14 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 14"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) Planning for social progress and development as an integrated part of balanced overall development planning; (b) The establishment, where necessary, of national systems for framing and carrying out social policies and programmes, and the promotion by the countries concerned of planned regional development, taking into account differing regional conditions and needs, particularly the development of regions which are less favoured or under-developed by comparison with the rest of the country; (c) The promotion of basic and applied social research, particularly comparative international research applied to the planning and execution of social development programmes."@en .
+
+doc:article-15 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 15"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) The adoption of measures, to ensure the effective participation, as appropriate, of all the elements of society in the preparation and execution of national plans and programmes of economic and social development; (b) The adoption of measures for an increasing rate of popular participation in the economic, social, cultural and political life of countries through national governmental bodies, non-governmental organizations, co-operatives, rural associations, workers' and employers' organizations and women's and youth organizations, by such methods as national and regional plans for social and economic progress and community development, with a view to achieving a fully integrated national society, accelerating the process of social mobility and consolidating the democratic system; (c) Mobilization of public opinion, at both national and international levels, in support of the principles and objectives of social progress and development; (d) The dissemination of social information, at the national and the international level, to make people aware of changing circumstances in society as a whole, and to educate the consumer."@en .
+
+doc:article-16 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 16"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) Maximum mobilization of all national resources and their rational and efficient utilization; promotion of increased and accelerated productive investment in social and economic fields and of employment; orientation of society towards the development process; (b) Progressively increasing provision of the necessary budgetary and other resources required for financing the social aspects of development; (c) Achievement of equitable distribution of national income, utilizing, inter alia , the fiscal system and government spending as an instrument for the equitable distribution and redistribution of income in order to promote social progress; (d) The adoption of measures aimed at prevention of such an outflow of capital from developing countries as would be detrimental to their economic and social development."@en .
+
+doc:article-17 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 17"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) The adoption of measures to accelerate the process of industrialization, especially in developing countries, with due regard for its social aspects, in the interests of the entire population; development of an adequate organization and legal framework conducive to an uninterrupted and diversified growth of the industrial sector; measures to overcome the adverse social effects which may result from urban development and industrialization, including automation; maintenance of a proper balance between rural and urban development, and in particular, measures designed to ensure healthier living conditions, especially in large industrial centres; (b) Integrated planning to meet the problems of urbanization and urban development; (c) Comprehensive rural development schemes to raise the levels of living of the rural populations and to facilitate such urban-rural relationships and population distribution as will promote balanced national development and social progress; (d) Measures for appropriate supervision of the utilization of land in the interests of society. The achievement of the objectives of social progress and development equally requires the implementation of the following means and methods:"@en .
+
+doc:article-18 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 18"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) The adoption of appropriate legislative, administrative and other measures ensuring to everyone not only political and civil rights, but also the full realization of economic, social and cultural rights without any discrimination; (b) The promotion of democratically based social and institutional reforms and motivation for change basic to the elimination of all forms of discrimination and exploitation and conducive to high rates of economic and social progress, to include land reform, in which the ownership and use of land will be made to serve best the objectives of social justice and economic development; (c) The adoption of measures to boost and diversify agricultural production through, inter alia , the implementation of democratic agrarian reforms, to ensure an adequate and well-balanced supply of food, its equitable distribution among the whole population and the improvement of nutritional standards; (d) The adoption of measures to introduce, with the participation of the Government, low-cost housing programmes in both rural and urban areas; (e) Development and expansion of the system of transportation and communications, particularly in developing countries."@en .
+
+doc:article-19 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 19"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) The provision of free health services to the whole population and of adequate preventive and curative facilities and welfare medical services accessible to all; (b) The enactment and establishment of legislative measures and administrative regulations with a view to the implementation of comprehensive programmes of social security schemes and social welfare services and to the improvement and co-ordination of existing services; (c) The adoption of measures and the provision of social welfare services to migrant workers and their families, in conformity with the provisions of Convention No. 97 of the International Labour Organisation and other international instruments relating to migrant workers; (d) The institution of appropriate measures for the rehabilitation of mentally or physically disabled persons, especially children and youth, so as to enable them to the fullest possible extent to be useful members of society-these measures shall include the provision of treatment and technical appliances, education, vocational and social guidance, training and selective placement, and other assistance required-and the creation of social conditions in which the handicapped are not discriminated against because of their disabilities."@en .
+
+doc:article-20 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 20"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) The provision of full democratic freedoms to trade unions; freedom of association for all workers, including the right to bargain collectively and to strike; recognition of the right to form other organizations of working people; the provision for the growing participation of trade unions in economic and social development; effective participation of all members in trade unions in the deciding of economic and social issues which affect their interests; (b) The improvement of health and safety conditions for workers, by means of appropriate technological and legislative measures and the provision of the material prerequisites for the implementation of those measures, including the limitation of working hours; (c) The adoption of appropriate measures for the development of harmonious industrial relations."@en .
+
+doc:article-21 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 21"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) The training of national personnel and cadres, including administrative, executive, professional and technical personnel needed for social development and for overall development plans and policies; (b) The adoption of measures to accelerate the extension and improvement of general, vocational and technical education and of training and retraining, which should be provided free at all levels; (c) Raising the general level of education; development and expansion of national information media, and their rational and full use towards continuing education of the whole population and towards encouraging its participation in social development activities; the constructive use of leisure, particularly that of children and adolescents; (d) The formulation of national and international policies and measures to avoid the \"brain drain\" and obviate its adverse effects."@en .
+
+doc:article-22 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 22"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) The development and co-ordination of policies and measures designed to strengthen the essential functions of the family as a basic unit of society; (b) The formulation and establishment, as needed, of programmes in the field of population, within the framework of national demographic policies and as part of the welfare medical services, including education, training of personnel and the provision to families of the knowledge and means necessary to enable them to exercise their right to determine freely and responsibly the number and spacing of their children; (c) The establishment of appropriate child-care facilities in the interest of children and working parents. The achievement of the objectives of social progress and development finally requires the implementation of the following means and methods:"@en .
+
+doc:article-23 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 23"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) The laying down of economic growth rate targets for the developing countries within the United Nations policy for development, high enough to lead to a substantial acceleration of their rates of growth; (b) The provision of greater assistance on better terms; the implementation of the aid volume target of a minimum of 1 per cent of the gross national product at market prices of economically advanced countries; the general easing of the terms of lending to the developing countries through low interest rates on loans and long grace periods for the repayment of loans, and the assurance that the allocation of such loans will be based strictly on socio-economic criteria free of any political considerations; (c) The provision of technical, financial and material assistance, both bilateral and multilateral, to the fullest possible extent and on favourable terms, and improved co-ordination of international assistance for the achievement of the social objectives of national development plans; (d) The provision to the developing countries of technical, financial and material assistance and of favourable conditions to facilitate the direct exploitation of their national resources and natural wealth by those countries with a view to enabling the peoples of those countries to benefit fully from their national resources; (e) The expansion of international trade based on principles of equality and non-discrimination, the rectification of the position of developing countries in international trade by equitable terms of trade, a general non-reciprocal and non-discriminatory system of preferences for the exports of developing countries to the developed countries, the establishment and implementation of general and comprehensive commodity agreements, and the financing of reasonable buffer stocks by international institutions."@en .
+
+doc:article-24 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 24"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) Intensification of international co-operation with a view to ensuring the international exchange of information, knowledge and experience concerning social progress and development; (b) The broadest possible international technical, scientific and cultural co-operation and reciprocal utilization of the experience of countries with different economic and social systems and different levels of development, on the basis of mutual advantage and strict observance of and respect for national sovereignty; (c) Increased utilization of science and technology for social and economic development; arrangements for the transfer and exchange of technology, including know-how and patents, to the developing countries."@en .
+
+doc:article-25 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 25"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) The establishment of legal and administrative measures for the protection and improvement of the human environment, at both national and international level; (b) The use and exploitation, in accordance with the appropriate international regimes, of the resources of areas of the environment such as outer space and the sea-bed and ocean floor and the subsoil thereof, beyond the limits of national jurisdiction, in order to supplement national resources available for the achievement of economic and social progress and development in every country, irrespective of its geographical location, special consideration being given to the interests and needs of the developing countries."@en .
+
+doc:article-26 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 26"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Compensation for damages, be they social or economic in nature-including restitution and reparations-caused as a result of aggression and of illegal occupation of territory by the aggressor."@en .
+
+doc:article-27 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 27"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) The achievement of general and complete disarmament and the channelling of the progressively released resources to be used for economic and social progress for the welfare of people everywhere and, in particular, for the benefit of developing countries; (b) The adoption of measures contributing to disarmament, including, inter alia , the complete prohibition of tests of nuclear weapons, the prohibition of the development, production and stockpiling of chemical and bacteriological (biological) weapons and the prevention of the pollution of oceans and inland waters by nuclear wastes."@en .

@@ -150,7 +150,7 @@ function detectParts(prompt) {
       role: "housing",
       installer: installers.includes("electrician") ? "electrician" : "installer",
       components: [],
-      pos: [0, 0, 0],
+      pos: [-1.6, -0.25, 0],
       state: "active",
       intensity: 0.88,
       reasons: ["Fixed installation"],
@@ -161,7 +161,7 @@ function detectParts(prompt) {
       role: "smart-module",
       installer: installers.includes("user") ? "user" : "owner",
       components: components.length ? components : ["mcu"],
-      pos: [0, 0.45, 0],
+      pos: [1.2, 0.35, 0.2],
       state: "highlighted",
       intensity: 0.78,
       reasons: components.length ? components : ["User-swappable module"],
@@ -169,7 +169,7 @@ function detectParts(prompt) {
   }
 
   const segmentRe =
-    /(?:part|module|section|component|piece)\s+(?:called\s+)?["']?([a-z0-9][\w\s-]{1,40})/gi;
+    /(?:part|module|section|component|piece)\s+(?:called|named|labelled)\s+["']?([a-z0-9][\w\s-]{1,40})/gi;
   let match;
   while ((match = segmentRe.exec(prompt)) !== null) {
     const label = match[1].trim();
@@ -357,9 +357,9 @@ function layoutTensors(design) {
     return {
       id: p.id,
       label: p.label || p.id,
-      x: x / 10,
-      y: y / 10,
-      z: z / 10,
+      x: x / 4,
+      y: y / 4,
+      z: z / 4,
       alpha: p.intensity ?? 0.65,
       q: p.installer && p.installer !== "user" ? 0 : 0.12,
       state: p.state,
@@ -376,9 +376,9 @@ function layoutTensors(design) {
     nodes.push({
       id: `${rel.from}-${rel.type}-${rel.to}`,
       label: rel.type,
-      x: (a[0] + b[0]) / 20,
-      y: (a[1] + b[1]) / 20 + 0.025,
-      z: (a[2] + b[2]) / 20,
+      x: (a[0] + b[0]) / 8,
+      y: (a[1] + b[1]) / 8 + 0.06,
+      z: (a[2] + b[2]) / 8,
       alpha: 0.5,
       q: 0.18,
       state: "default",
@@ -460,9 +460,11 @@ function paintDesignFrame() {
       ctx.arc(p.px, p.py, p.radius + 4, 0, Math.PI * 2);
       ctx.stroke();
     }
-    ctx.fillStyle = "rgba(232,238,247,0.85)";
-    ctx.font = "11px system-ui";
-    ctx.fillText(n.label, p.px + p.radius + 4, p.py + 3);
+    if (n.kind === "part") {
+      ctx.fillStyle = "rgba(232,238,247,0.9)";
+      ctx.font = "11px system-ui";
+      ctx.fillText(n.label, p.px + p.radius + 5, p.py + 3);
+    }
   }
 
   if (hud()) {
@@ -569,7 +571,7 @@ function renderAssets(rec) {
 async function refreshRecommendations(prompt) {
   if (!portalLive) {
     document.getElementById("device-summary").textContent =
-      "Portal offline — open docs/design-studio.html for browser catalog scoring.";
+      "Resource suggestions become available when the Webizen desktop service is connected.";
     return;
   }
   try {

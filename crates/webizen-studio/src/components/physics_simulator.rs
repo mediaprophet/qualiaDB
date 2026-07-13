@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use serde::Deserialize;
 
 #[cfg(target_arch = "wasm32")]
 use std::cell::{Cell, RefCell};
@@ -11,6 +12,8 @@ use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsValue;
 #[cfg(target_arch = "wasm32")]
+use wasm_bindgen_futures::spawn_local;
+#[cfg(target_arch = "wasm32")]
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
 // 3D math, camera, projection, and the Canvas 2D draw backend now live in the
@@ -22,6 +25,43 @@ use crate::render::{Camera, Canvas2dRenderer, Renderer, ScreenPoint, Vec3};
 const CANVAS_ID: &str = "physics-engine-surface";
 const SURFACE_WIDTH: u32 = 960;
 const SURFACE_HEIGHT: u32 = 540;
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+struct ForgePhysicsCertification {
+    engine_version: String,
+    forge_schema_version: u32,
+    kernel: String,
+    backend: String,
+    particle_count: usize,
+    certified: bool,
+    max_abs_error: f32,
+    momentum_drift: f32,
+    elapsed_ms: f64,
+    q42_provenance: String,
+    sample_positions: Vec<[f32; 3]>,
+    note: String,
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen::prelude::wasm_bindgen]
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke, catch)]
+    async fn tauri_invoke(
+        cmd: &str,
+        args: wasm_bindgen::JsValue,
+    ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn invoke_forge_physics() -> Result<ForgePhysicsCertification, String> {
+    let args =
+        serde_wasm_bindgen::to_value(&serde_json::json!({})).map_err(|err| err.to_string())?;
+    let value = tauri_invoke("certify_forge_physics", args)
+        .await
+        .map_err(|err| format!("{err:?}"))?;
+    serde_wasm_bindgen::from_value(value).map_err(|err| err.to_string())
+}
 
 #[cfg(target_arch = "wasm32")]
 fn get_canvas_context() -> Result<(HtmlCanvasElement, CanvasRenderingContext2d), String> {
@@ -216,6 +256,10 @@ pub fn PhysicsSimulator() -> Element {
     let mut wireframe = use_signal(|| true);
     let mut paused = use_signal(|| false);
     let status = use_signal(|| "Booting spatial viewport...".to_string());
+    let mut forge_status =
+        use_signal(|| "Run the bounded native probe to certify the Forge kernel.".to_string());
+    let forge_running = use_signal(|| false);
+    let forge_result = use_signal(|| None::<ForgePhysicsCertification>);
     #[cfg(target_arch = "wasm32")]
     let animation_started = use_signal(|| false);
 
@@ -304,6 +348,8 @@ pub fn PhysicsSimulator() -> Element {
         "Filled terrain"
     };
     let status_text = status();
+    let forge_status_text = forge_status();
+    let forge_result_value = forge_result();
 
     rsx! {
         div {
@@ -318,7 +364,7 @@ pub fn PhysicsSimulator() -> Element {
                         style: "display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.8rem;",
                         div {
                             h2 { style: "margin: 0 0 0.28rem 0; font-size: 1.05rem; font-weight: 700; color: #f8fafc;", "Physics Simulator" }
-                            p { style: "margin: 0; font-size: 0.82rem; line-height: 1.5; color: rgba(226,232,240,0.72);", "The placeholder pane is replaced with a direct-rendered spatial surface: orbit camera, procedural mesh, energy pillars, and no pixel traffic through the Dioxus VDOM." }
+                            p { style: "margin: 0; font-size: 0.82rem; line-height: 1.5; color: rgba(226,232,240,0.72);", "A procedural manifold viewport paired with an explicit QualiaDB Forge kinematics certification probe. Preview pixels never cross the Dioxus VDOM." }
                         }
                         div {
                             style: "display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem; min-width: 140px;",
@@ -392,15 +438,84 @@ pub fn PhysicsSimulator() -> Element {
 
                 div {
                     style: "padding: 0.95rem 1rem; border-radius: 16px; border: 1px solid rgba(148,163,184,0.16); background: rgba(15,23,42,0.94);",
+                    div {
+                        style: "display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 0.7rem;",
+                        h3 { style: "margin: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(148,163,184,0.9);", "Forge Certification" }
+                        button {
+                            disabled: forge_running(),
+                            style: "padding: 0.5rem 0.7rem; border-radius: 10px; border: 1px solid rgba(103,232,249,0.28); background: rgba(8,47,73,0.72); color: #e0f2fe; font-size: 0.72rem; font-weight: 700; cursor: pointer;",
+                            onclick: move |_| {
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    let mut forge_running = forge_running;
+                                    let mut forge_status = forge_status;
+                                    let mut forge_result = forge_result;
+                                    forge_running.set(true);
+                                    forge_status.set("Dispatching the bounded Forge WGPU probe...".to_string());
+                                    spawn_local(async move {
+                                        match invoke_forge_physics().await {
+                                            Ok(result) => {
+                                                forge_status.set(result.note.clone());
+                                                forge_result.set(Some(result));
+                                            }
+                                            Err(err) => {
+                                                forge_status.set(format!("Native Forge probe unavailable: {err}"));
+                                            }
+                                        }
+                                        forge_running.set(false);
+                                    });
+                                }
+                                #[cfg(not(target_arch = "wasm32"))]
+                                {
+                                    forge_status.set("Forge certification is invoked by the desktop webview.".to_string());
+                                }
+                            },
+                            if forge_running() { "Running..." } else { "Certify step" }
+                        }
+                    }
+                    p {
+                        style: "margin: 0 0 0.7rem 0; color: rgba(226,232,240,0.76); font-size: 0.76rem; line-height: 1.5;",
+                        "{forge_status_text}"
+                    }
+                    if let Some(result) = forge_result_value.as_ref() {
+                        div {
+                            style: "display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.45rem; margin-bottom: 0.65rem;",
+                            {probe_metric("Result", if result.certified { "Certified".to_string() } else { "Oracle fallback".to_string() })}
+                            {probe_metric("Backend", result.backend.clone())}
+                            {probe_metric("Max |error|", format!("{:.3e}", result.max_abs_error))}
+                            {probe_metric("Momentum drift", format!("{:.3e}", result.momentum_drift))}
+                            {probe_metric("Particles", result.particle_count.to_string())}
+                            {probe_metric("Elapsed", format!("{:.2} ms", result.elapsed_ms))}
+                        }
+                        div {
+                            style: "padding: 0.55rem 0.65rem; border-radius: 10px; background: rgba(2,6,23,0.65); border: 1px solid rgba(148,163,184,0.12);",
+                            div { style: "font-size: 0.68rem; color: #67e8f9; margin-bottom: 0.25rem;", "{result.kernel} · QualiaDB {result.engine_version} · schema {result.forge_schema_version}" }
+                            code { style: "display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.65rem; color: rgba(226,232,240,0.62);", "{result.q42_provenance}" }
+                        }
+                    }
+                }
+
+                div {
+                    style: "padding: 0.95rem 1rem; border-radius: 16px; border: 1px solid rgba(148,163,184,0.16); background: rgba(15,23,42,0.94);",
                     h3 { style: "margin: 0 0 0.7rem 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(148,163,184,0.9);", "Execution Notes" }
                     ul {
                         style: "margin: 0; padding-left: 1.1rem; display: grid; gap: 0.45rem; color: rgba(226,232,240,0.78); font-size: 0.78rem; line-height: 1.5;",
-                        li { "Viewport raster is drawn straight into the canvas context, so scene pixels never become reactive component state." }
-                        li { "The mesh is procedurally sampled every frame, which gives you a real spatial proving ground while the heavier runtime substrate keeps maturing underneath." }
-                        li { "Controls only mutate camera and field parameters; the draw loop stays isolated from the rest of the studio shell." }
+                        li { "The viewport is a procedural examination surface; it is not presented as the N-body result." }
+                        li { "The native probe runs the 0.0.23 softened inverse-square kernel and compares WGPU output with its scalar CPU oracle." }
+                        li { "The bounded result is content-addressed as a Q42 provenance root; allocations stay at the explicit IPC/certification boundary." }
                     }
                 }
             }
+        }
+    }
+}
+
+fn probe_metric(label: &'static str, value: String) -> Element {
+    rsx! {
+        div {
+            style: "padding: 0.5rem 0.58rem; border-radius: 9px; background: rgba(2,6,23,0.58); border: 1px solid rgba(148,163,184,0.1);",
+            div { style: "font-size: 0.62rem; color: rgba(148,163,184,0.82); text-transform: uppercase; letter-spacing: 0.05em;", "{label}" }
+            div { style: "font-size: 0.75rem; color: #e2e8f0; margin-top: 0.18rem;", "{value}" }
         }
     }
 }

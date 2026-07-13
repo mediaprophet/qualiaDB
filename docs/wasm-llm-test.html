@@ -52,6 +52,7 @@
 </div>
 <div class="row">
   <button id="run" disabled>Run inference</button>
+  <button id="release" disabled>Release engine</button>
   <span class="stat" id="genstat"></span>
 </div>
 
@@ -62,12 +63,13 @@
 <script type="module">
 import init, {
   initialize_webgpu_engine, inferWasmAsync, inferWasmStreaming, isWebgpuEngineReady,
-  releaseWebgpuEngine, getEngineVersion, init_panic_hook, compileGgufToQ42, q42FormatVersion,
+  releaseWebgpuEngine, getEngineVersion, init_panic_hook, compileGgufToP64, p64FormatVersion,
 } from './playground/qualia_core_db.js';
-import { loadGgufCached, loadOrCompileQ42, clearAllOpfsModels } from './js/opfs-model-cache.js';
+import { loadGgufCached, loadOrCompileP64, clearAllOpfsModels } from './js/opfs-model-cache.js';
 
 const USE_ASYNC_GPU = new URLSearchParams(location.search).get('async') !== '0';
-const USE_Q42 = new URLSearchParams(location.search).get('q42') === '1';
+const params = new URLSearchParams(location.search);
+const USE_P64 = params.get('p64') === '1' || params.get('q42') === '1';
 
 const CACHE_NAME = 'qualia-gguf-v1';
 const $ = id => document.getElementById(id);
@@ -131,23 +133,23 @@ $('load').onclick = async () => {
   try {
     if (isWebgpuEngineReady()) { await releaseWebgpuEngine(); log('released previous engine', 'dim'); }
     let bytes;
-    if (USE_Q42) {
-      // Phase 4 AOT ingest: compile GGUF→.q42 once, cache the .q42 in OPFS, warm-boot from it.
+    if (USE_P64) {
+      // AOT ingest: compile GGUF→P64 once, cache P64 in OPFS, warm-boot from it.
       const tc = performance.now();
-      const { bytes: q42, source } = await loadOrCompileQ42(url, url.split('/').pop(), {
-        compile: compileGgufToQ42,
-        formatVersion: q42FormatVersion(),
+      const { bytes: p64, source } = await loadOrCompileP64(url, url.split('/').pop(), {
+        compile: compileGgufToP64,
+        formatVersion: p64FormatVersion(),
         onProgress: (loaded, total, phase) => {
           if (phase === 'download' && total) {
             $('loadstat').textContent = `downloading ${(loaded/1048576).toFixed(0)}/${(total/1048576).toFixed(0)} MB`;
           } else if (phase === 'compile') {
-            $('loadstat').textContent = 'compiling .q42…';
+            $('loadstat').textContent = 'compiling P64…';
           }
         },
       });
-      bytes = q42;
-      const tag = source === 'opfs-q42-hit' ? 'OPFS .q42 cache HIT (0 network, 0 compile)' : 'compiled + cached to OPFS';
-      log(`${tag} (${(q42.length/1048576).toFixed(1)} MB, ${Math.round(performance.now()-tc)} ms) — booting from Q42W`, 'ok');
+      bytes = p64;
+      const tag = source === 'opfs-p64-hit' ? 'OPFS P64 cache HIT (0 network, 0 compile)' : 'compiled + cached to OPFS';
+      log(`${tag} (${(p64.length/1048576).toFixed(1)} MB, ${Math.round(performance.now()-tc)} ms) — booting from p64\\0`, 'ok');
     } else {
       bytes = await getModelBytes(url, $('cache').checked);
     }
@@ -158,6 +160,7 @@ $('load').onclick = async () => {
     log(`engine ready=${ready} (init ${Math.round(performance.now()-t0)} ms)`, ready ? 'ok' : 'err');
     loaded = ready;
     $('run').disabled = !ready;
+    $('release').disabled = !ready;
     $('loadstat').textContent = ready ? 'loaded ✓' : 'init failed';
   } catch (e) {
     log('LOAD ERROR: ' + (e?.message ?? e), 'err');
@@ -170,6 +173,23 @@ $('clearcache').onclick = async () => {
   let n = 0;
   try { n = await clearAllOpfsModels(); } catch {}
   log(`cache cleared (Cache Storage + ${n} OPFS model file(s))`, 'warn');
+};
+
+$('release').onclick = async () => {
+  $('release').disabled = true;
+  $('run').disabled = true;
+  try {
+    if (isWebgpuEngineReady()) {
+      await releaseWebgpuEngine();
+      log('released engine', 'dim');
+    }
+    loaded = false;
+    $('loadstat').textContent = 'released';
+  } catch (e) {
+    log('RELEASE ERROR: ' + (e?.message ?? e), 'err');
+    $('release').disabled = !isWebgpuEngineReady();
+    $('run').disabled = !isWebgpuEngineReady();
+  }
 };
 
 function buildPrompt(tmpl, user) {

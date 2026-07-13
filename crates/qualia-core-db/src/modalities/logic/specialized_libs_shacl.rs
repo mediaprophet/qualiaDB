@@ -11,19 +11,19 @@ use crate::webizen::SlgOpcode;
 /// `q42:MatrixConfiguration` — validates matrix storage and computation configuration
 #[derive(Debug, Clone)]
 pub struct MatrixConfiguration {
-    pub max_matrix_size: u64,        // Maximum matrix dimension
-    pub max_zone_capacity: u64,      // Maximum zone capacity in bytes
+    pub max_matrix_size: u64,            // Maximum matrix dimension
+    pub max_zone_capacity: u64,          // Maximum zone capacity in bytes
     pub allowed_zone_types: Vec<String>, // ["Dense", "Sparse", "Structured", "Temporary"]
-    pub require_zero_copy: bool,     // Require zero-copy operations
+    pub require_zero_copy: bool,         // Require zero-copy operations
 }
 
 /// `q42:MatrixOperation` — validates matrix operation parameters
 #[derive(Debug, Clone)]
 pub struct MatrixOperation {
-    pub operation_type: String,     // "multiply", "add", "subtract", "invert", etc.
-    pub max_condition_number: f64,  // Maximum allowed condition number
+    pub operation_type: String, // "multiply", "add", "subtract", "invert", etc.
+    pub max_condition_number: f64, // Maximum allowed condition number
     pub require_numerical_stability: bool,
-    pub precision_mode: String,     // "f32", "f64", "f128"
+    pub precision_mode: String, // "f32", "f64", "f128"
 }
 
 /// `q42:EigenDecomposition` — validates eigenvalue decomposition parameters
@@ -31,8 +31,46 @@ pub struct MatrixOperation {
 pub struct EigenDecomposition {
     pub max_iterations: u32,
     pub convergence_tolerance: f64,
-    pub require_hermitian: bool,    // For real eigenvalues
-    pub algorithm_type: String,     // "qr", "power", "jacobi"
+    pub require_hermitian: bool, // For real eigenvalues
+    pub algorithm_type: String,  // "qr", "power", "jacobi"
+}
+
+/// `q42:PolynomialSolve` — validates polynomial root-finding parameters
+#[derive(Debug, Clone)]
+pub struct PolynomialSolveConfiguration {
+    pub max_degree: u32,     // Maximum polynomial degree
+    pub method: String,      // "quadratic_closed_form", "durand_kerner", "companion"
+    pub max_iterations: u32, // Iteration cap for iterative methods
+}
+
+/// `q42:SingularValueDecomposition` — validates SVD parameters
+#[derive(Debug, Clone)]
+pub struct SvdConfiguration {
+    pub max_dimension: u32,    // Maximum of m, n
+    pub compute_vectors: bool, // Whether U/V are returned
+    pub method: String,        // "ata_eigen", "golub_reinsch"
+}
+
+/// `q42:Determinant` — validates determinant computation parameters
+#[derive(Debug, Clone)]
+pub struct DeterminantConfiguration {
+    pub max_dimension: u32, // Maximum n for an n×n matrix
+    pub method: String,     // "lu", "cofactor"
+}
+
+/// `q42:SymbolicExpression` — validates symbolic (CAS) expression structure
+#[derive(Debug, Clone)]
+pub struct SymbolicExpressionConfiguration {
+    pub max_depth: u32,                 // Maximum expression-tree depth
+    pub max_variables: u32,             // Maximum distinct variables
+    pub allowed_operators: Vec<String>, // ["add","sub","mul","div","pow","neg","sqrt"]
+}
+
+/// `q42:SymbolicOperation` — validates a symbolic algebra operation request
+#[derive(Debug, Clone)]
+pub struct SymbolicOperationConfiguration {
+    pub operation_type: String, // "differentiate","simplify","expand","evaluate","solve","factor"
+    pub max_iterations: u32,    // Simplification fixpoint bound
 }
 
 // ── Machine Learning Constraints ─────────────────────────────────────────────
@@ -40,10 +78,10 @@ pub struct EigenDecomposition {
 /// `q42:ModelConfiguration` — validates ML model configuration
 #[derive(Debug, Clone)]
 pub struct ModelConfiguration {
-    pub max_model_size_mb: u64,     // Maximum model size in MB
-    pub max_parameters: u64,        // Maximum number of parameters
+    pub max_model_size_mb: u64,           // Maximum model size in MB
+    pub max_parameters: u64,              // Maximum number of parameters
     pub allowed_model_types: Vec<String>, // ["neural_network", "decision_tree", "svm", etc.]
-    pub require_quantization: bool, // Require model quantization
+    pub require_quantization: bool,       // Require model quantization
 }
 
 /// `q42:TrainingConfiguration` — validates training hyperparameters
@@ -74,7 +112,7 @@ pub struct SimulationConfiguration {
     pub max_spatial_resolution: u32,
     pub allowed_time_integrators: Vec<String>, // ["euler", "runge_kutta", "verlet"]
     pub require_energy_conservation: bool,
-    pub max_cfl_number: f64,       // Courant-Friedrichs-Lewy condition
+    pub max_cfl_number: f64, // Courant-Friedrichs-Lewy condition
 }
 
 /// `q42:BoundaryConditions` — validates boundary condition parameters
@@ -89,7 +127,7 @@ pub struct BoundaryConditions {
 #[derive(Debug, Clone)]
 pub struct MeshConfiguration {
     pub max_elements: u64,
-    pub min_element_quality: f64,  // Aspect ratio, skewness, etc.
+    pub min_element_quality: f64, // Aspect ratio, skewness, etc.
     pub allowed_element_types: Vec<String>, // ["triangle", "quad", "tetrahedron", "hexahedron"]
     pub require_manifold: bool,
 }
@@ -148,7 +186,7 @@ pub struct ClinicalDecisionConfiguration {
 #[derive(Debug, Clone)]
 pub struct MedicalImagingConfiguration {
     pub allowed_modalities: Vec<String>, // ["mri", "ct", "xray", "ultrasound"]
-    pub max_resolution: (u32, u32),    // (width, height)
+    pub max_resolution: (u32, u32),      // (width, height)
     pub require_dicom_compliance: bool,
     pub max_file_size_mb: u64,
 }
@@ -197,7 +235,7 @@ pub struct EngineeringSimulationConfiguration {
 #[derive(Debug, Clone)]
 pub struct MaterialProperties {
     pub allowed_material_types: Vec<String>, // ["metal", "polymer", "ceramic", "composite"]
-    pub require_standard_compliance: bool, // ASTM, ISO, etc.
+    pub require_standard_compliance: bool,   // ASTM, ISO, etc.
     pub max_temperature_kelvin: f64,
     pub min_safety_factor: f64,
 }
@@ -252,7 +290,7 @@ pub struct CryptographicConfiguration {
 /// `q42:KeyManagementConfiguration` — validates key management parameters
 #[derive(Debug, Clone)]
 pub struct KeyManagementConfiguration {
-    pub require_hsm: bool,                // Hardware Security Module
+    pub require_hsm: bool,              // Hardware Security Module
     pub allowed_key_types: Vec<String>, // ["symmetric", "asymmetric", "hash"]
     pub max_key_lifetime_days: u32,
     pub require_key_rotation: bool,
@@ -395,6 +433,28 @@ macro_rules! generate_simple_opcodes {
 }
 
 generate_simple_opcodes!(EigenDecomposition, max_iterations);
+generate_simple_opcodes!(SvdConfiguration, max_dimension);
+generate_simple_opcodes!(DeterminantConfiguration, max_dimension);
+generate_simple_opcodes!(SymbolicExpressionConfiguration, max_depth);
+
+impl PolynomialSolveConfiguration {
+    pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
+        vec![
+            SlgOpcode::CheckMaxInclusive(self.max_degree as f64),
+            SlgOpcode::CheckHasValue(crate::q_hash(&self.method)),
+            SlgOpcode::CheckMaxInclusive(self.max_iterations as f64),
+        ]
+    }
+}
+
+impl SymbolicOperationConfiguration {
+    pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
+        vec![
+            SlgOpcode::CheckHasValue(crate::q_hash(&self.operation_type)),
+            SlgOpcode::CheckMaxInclusive(self.max_iterations as f64),
+        ]
+    }
+}
 generate_simple_opcodes!(InferenceConfiguration, max_batch_size);
 generate_simple_opcodes!(BoundaryConditions, max_gradient);
 generate_simple_opcodes!(MeshConfiguration, max_elements);
@@ -417,14 +477,24 @@ generate_simple_opcodes!(DigitalSignatureConfiguration, max_signature_size_bytes
 generate_simple_opcodes!(QuantumCircuitConfiguration, max_gates);
 generate_simple_opcodes!(QuantumAnnealingConfiguration, max_annealing_time_us);
 generate_simple_opcodes!(BiomolecularConfiguration, max_atoms);
-generate_simple_opcodes!(QuantumBiologyCalculation, max_quantum_states);
+impl QuantumBiologyCalculation {
+    pub fn to_opcodes(&self) -> Vec<SlgOpcode> {
+        let mut ops = vec![SlgOpcode::CheckMaxInclusive(self.max_quantum_states as f64)];
+        if self.require_solvent_model {
+            ops.push(SlgOpcode::CheckHasValue(crate::q_hash(
+                "solvent_model_required",
+            )));
+        }
+        ops
+    }
+}
 
 // ── SHACL TTL Vocabulary for Specialized Libraries ─────────────────────────────
 
 /// Returns comprehensive SHACL TTL vocabulary for all specialized libraries
 pub fn get_specialized_libs_shacl_ttl() -> &'static str {
     r#"
-@prefix q42: <https://qualia.network/q42#> .
+@prefix q42: <https://webizen.org/q42#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
@@ -449,7 +519,7 @@ q42:MatrixConfigurationShape a sh:NodeShape ;
 q42:MatrixOperationShape a sh:NodeShape ;
     sh:property [
         sh:path q42:operationType ;
-        sh:in ("multiply" "add" "subtract" "invert" "transpose" "decompose") ;
+        sh:in ("multiply" "add" "subtract" "invert" "transpose" "decompose" "determinant" "eigen" "svd") ;
         sh:message "Operation type must be a valid matrix operation" ;
     ] ;
     sh:property [
@@ -458,6 +528,69 @@ q42:MatrixOperationShape a sh:NodeShape ;
         sh:minInclusive 1.0 ;
         sh:maxInclusive 1e15 ;
         sh:message "Condition number must be reasonable for numerical stability" ;
+    ] .
+
+q42:PolynomialSolveShape a sh:NodeShape ;
+    sh:property [
+        sh:path q42:maxDegree ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 256 ;
+        sh:message "Polynomial degree must be between 1 and 256" ;
+    ] ;
+    sh:property [
+        sh:path q42:method ;
+        sh:in ("quadratic_closed_form" "durand_kerner" "companion") ;
+        sh:message "Root-finding method must be supported" ;
+    ] .
+
+q42:SingularValueDecompositionShape a sh:NodeShape ;
+    sh:property [
+        sh:path q42:maxDimension ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000 ;
+        sh:message "SVD dimension must be between 1 and 100,000" ;
+    ] ;
+    sh:property [
+        sh:path q42:method ;
+        sh:in ("ata_eigen" "golub_reinsch") ;
+        sh:message "SVD method must be supported" ;
+    ] .
+
+q42:DeterminantShape a sh:NodeShape ;
+    sh:property [
+        sh:path q42:maxDimension ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 100000 ;
+        sh:message "Determinant dimension must be between 1 and 100,000" ;
+    ] ;
+    sh:property [
+        sh:path q42:method ;
+        sh:in ("lu" "cofactor") ;
+        sh:message "Determinant method must be supported" ;
+    ] .
+
+q42:SymbolicExpressionShape a sh:NodeShape ;
+    sh:property [
+        sh:path q42:maxDepth ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:maxInclusive 1024 ;
+        sh:message "Symbolic expression depth must be between 1 and 1024" ;
+    ] ;
+    sh:property [
+        sh:path q42:allowedOperators ;
+        sh:in ("add" "sub" "mul" "div" "pow" "neg" "sqrt") ;
+        sh:message "Operator must be a supported CAS operator" ;
+    ] .
+
+q42:SymbolicOperationShape a sh:NodeShape ;
+    sh:property [
+        sh:path q42:operationType ;
+        sh:in ("differentiate" "simplify" "expand" "evaluate" "solve" "factor") ;
+        sh:message "Symbolic operation must be supported" ;
     ] .
 
 # ── Machine Learning Constraints ─────────────────────────────────────────────
@@ -589,4 +722,62 @@ q42:QPUConfigurationShape a sh:NodeShape ;
         sh:message "QPU type must be supported" ;
     ] .
 "#
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn algebra_and_cas_shapes_present() {
+        // Every new algebra/CAS capability must have a SHACL NodeShape in the Rust
+        // vocabulary (full coverage — mirrors shapes/specialized-libraries.shacl.ttl).
+        let ttl = get_specialized_libs_shacl_ttl();
+        for shape in [
+            "q42:PolynomialSolveShape",
+            "q42:SingularValueDecompositionShape",
+            "q42:DeterminantShape",
+            "q42:SymbolicExpressionShape",
+            "q42:SymbolicOperationShape",
+        ] {
+            assert!(ttl.contains(shape), "missing SHACL shape: {shape}");
+        }
+    }
+
+    #[test]
+    fn algebra_and_cas_configs_generate_opcodes() {
+        assert!(!PolynomialSolveConfiguration {
+            max_degree: 8,
+            method: "durand_kerner".to_string(),
+            max_iterations: 500,
+        }
+        .to_opcodes()
+        .is_empty());
+        assert!(!SvdConfiguration {
+            max_dimension: 256,
+            compute_vectors: true,
+            method: "ata_eigen".to_string(),
+        }
+        .to_opcodes()
+        .is_empty());
+        assert!(!DeterminantConfiguration {
+            max_dimension: 256,
+            method: "lu".to_string(),
+        }
+        .to_opcodes()
+        .is_empty());
+        assert!(!SymbolicExpressionConfiguration {
+            max_depth: 32,
+            max_variables: 8,
+            allowed_operators: vec!["add".to_string(), "mul".to_string()],
+        }
+        .to_opcodes()
+        .is_empty());
+        assert!(!SymbolicOperationConfiguration {
+            operation_type: "differentiate".to_string(),
+            max_iterations: 16,
+        }
+        .to_opcodes()
+        .is_empty());
+    }
 }

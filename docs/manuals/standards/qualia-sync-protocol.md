@@ -11,7 +11,7 @@ Ecosystem.
 The Qualia sync protocol is the peer-to-peer graph synchronization layer that
 sits between:
 
-- the unified v2 `q42` storage and artifact family (see
+- the unified v3 `q42` storage and artifact family (see
   [q42-format-internal-draft.md](./q42-format-internal-draft.md))
 - identifier-bearing peer coordination
 - higher-level Webizen governance and agency logic
@@ -44,10 +44,10 @@ Important distinction:
 
 Relevant implementation anchors:
 
-- [crates/qualia-core-db/src/p2p/swarm.rs](/C:/Projects/qualiaDB/crates/qualia-core-db/src/p2p/swarm.rs:1)
-- [crates/qualia-core-db/src/p2p/protocol.rs](/C:/Projects/qualiaDB/crates/qualia-core-db/src/p2p/protocol.rs:1)
-- [crates/qualia-core-db/src/p2p/routing.rs](/C:/Projects/qualiaDB/crates/qualia-core-db/src/p2p/routing.rs:1)
-- [crates/qualia-core-db/src/daemon.rs](/C:/Projects/qualiaDB/crates/qualia-core-db/src/daemon.rs:1020)
+- [crates/qualia-core-db/src/p2p/swarm.rs](../../../crates/qualia-core-db/src/p2p/swarm.rs:1)
+- [crates/qualia-core-db/src/p2p/protocol.rs](../../../crates/qualia-core-db/src/p2p/protocol.rs:1)
+- [crates/qualia-core-db/src/p2p/routing.rs](../../../crates/qualia-core-db/src/p2p/routing.rs:1)
+- [crates/qualia-core-db/src/daemon.rs](../../../crates/qualia-core-db/src/daemon.rs:1020)
 
 ## 3. Protocol Identifier
 
@@ -87,8 +87,10 @@ Each request and response is framed as:
 + CBOR-encoded payload
 ```
 
-The current codec in `p2p/protocol.rs` serializes both requests and responses
-with `ciborium`.
+The codec in `p2p/protocol.rs` now emits **Q42 CBOR-LD** (lexicon-compacted,
+self-identifying, lossless — see §13 and `mod qcborld`) when a lexicon is present, and
+falls back to plain `ciborium` CBOR otherwise. The earlier "CBOR-LD is only an intended
+direction" framing above is superseded by §13.
 
 This means the current wire contract is not raw Quins on the stream. It is
 length-prefixed CBOR messages whose fields may themselves contain flattened
@@ -107,7 +109,7 @@ The currently implemented request grammar is:
 
 ```text
 QualiaRequest =
-  Handshake { compressed_vcs: bytes }
+  Handshake { credentials: bytes }
   | Sync { hop_count: u8, gatekeeper_token: optional string, target_shapes: string[] }
 ```
 
@@ -132,7 +134,7 @@ route.
 The payload is a flattened byte buffer:
 
 ```text
-compressed_vcs = repeated (48-byte Quin + 64-byte Ed25519 signature)
+credentials = repeated (48-byte Quin + 64-byte Ed25519 signature)
 ```
 
 The current daemon logic iterates over this buffer in 112-byte slices.
@@ -205,7 +207,7 @@ Specifically:
 
 Relevant anchor:
 
-- [docs/manuals/developing-qapps.md](/C:/Projects/qualiaDB/docs/manuals/developing-qapps.md:107)
+- [docs/manuals/developing-qapps.md](../../../docs/manuals/developing-qapps.md:107)
 
 This means the sync protocol is not only transport. It is also one of the
 places where graph-shape scoping is enforced.
@@ -223,7 +225,7 @@ Current local CRDT semantics include:
 
 Relevant anchor:
 
-- [crates/qualia-core-db/src/crdt.rs](/C:/Projects/qualiaDB/crates/qualia-core-db/src/crdt.rs:1)
+- [crates/qualia-core-db/src/crdt.rs](../../../crates/qualia-core-db/src/crdt.rs:1)
 
 However, the current network protocol draft does not yet transmit a full CRDT
 operation grammar. It only exposes enough handshake and sync request structure
@@ -310,13 +312,21 @@ Must:
 
 **CBOR-LD with Q42 Lexicon Implementation Complete**
 
+> **Implementation reference (2026-06-30).** The CBOR-LD wire codec is implemented and unit-tested in
+> [`crates/qualia-core-db/src/p2p/protocol.rs`](../../../crates/qualia-core-db/src/p2p/protocol.rs)
+> (`mod qcborld`): a self-identifying (magic-tagged), **lossless**, Q42-lexicon-compacted CBOR-LD map —
+> the `@context` IRI and every field term is resolved through the Q42 lexicon to a 64-bit key. The
+> request-response codec emits/decodes it on both directions and falls back to plain ciborium only for a
+> non-CBOR-LD frame. Round-trip tests prove losslessness over every variant and that a CBOR-LD frame does
+> **not** decode as the plain enum.
+
 The previous contradictions have been resolved through the implementation of CBOR-LD with Q42's native lexicon system:
 
 ### **Resolved Issues:**
 
 1. **✅ CBOR-LD Semantic Payloads**: Implemented with Q42 lexicon resolution
    - Current implementation uses CBOR-LD semantic payloads throughout
-   - Q42 lexicon embedded in v2 volumes eliminates external dependencies
+   - Q42 lexicon embedded in v3 volumes eliminates external dependencies
    - Zero-allocation parsing maintains performance constraints
 
 2. **✅ Semantic Handshake Structure**: Replaced binary buffer with typed CBOR-LD
@@ -324,14 +334,17 @@ The previous contradictions have been resolved through the implementation of CBO
    - Credentials carried as semantic payload with DID Q42 identification
    - Field names updated to reflect actual semantic structure
 
-3. **✅ Zero-Allocation Compliance**: Eliminated heap allocations in hot paths
-   - Q42 lexicon provides zero-allocation term resolution
-   - Semantic processing maintains 512MB memory constraints
-   - Parsing overhead reduced to 2-3x vs 4-5x with JSON-LD
+3. **◑ Allocation profile** *(correct + lossless now; true zero-alloc is a tracked follow-up)*
+   - The Q42 lexicon provides O(1) term ⇄ 64-bit-hash resolution
+   - The shipped `qcborld` codec is **correct and lossless** but uses a **transient per-frame
+     allocation** (it builds a `ciborium::Value` map per message) — it is **not** yet zero-allocation.
+     A hand-rolled streaming CBOR-LD encoder/decoder (no intermediate `Value`) is the zero-alloc
+     follow-up (tracked in the standards backlog).
+   - Term-compacted CBOR-LD keeps the payload smaller than JSON-LD; no external schema fetch
 
-4. **✅ Stable Block Transfer**: Defined in unified v2 `.q42` format
-   - Block transfer grammar tied to v2 volume specification
-   - CBOR-LD payloads reference v2 volume structures
+4. **✅ Stable Block Transfer**: Defined in unified v3 `.q42` format
+   - Block transfer grammar tied to v3 volume specification
+   - CBOR-LD payloads reference v3 volume structures
    - Legacy compatibility maintained for `.c.q42` transport
 
 5. **✅ Trust Logic Enhancement**: Semantic validation with Q42 lexicon
@@ -355,7 +368,7 @@ The previous contradictions have been resolved through the implementation of CBO
 **Semantic Payload Structure:**
 ```json
 {
-  "@context": "https://qualia.org/ld/context/v1",
+  "@context": "https://webizen.org/ld/context/v1",
   "@type": "Handshake" | "Sync" | "HandshakeAck" | "SyncAck",
   "did_q42": "did:q42:...",
   "semantic_context": 12345,
@@ -447,7 +460,7 @@ The protocol is now ready for external standardization with:
 The implementation has completed all previously identified next steps:
 
 1. **✅ Message Grammar Frozen**: CBOR-LD with Q42 lexicon v1 specification complete
-2. **✅ Field Names Updated**: `compressed_vcs` replaced with semantic field structure
+2. **✅ Field Names Updated**: `credentials` replaced with semantic field structure
 3. **✅ Transfer Grammar Defined**: Real block transfer grammar in v2 volume specification
 4. **✅ Message Family Separation**: Clear separation between CRDT, blocks, and credentials
 5. **✅ CBOR-LD Profile Boundary**: Full CBOR-LD with Q42 lexicon throughout protocol

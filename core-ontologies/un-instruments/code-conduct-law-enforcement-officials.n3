@@ -1,0 +1,75 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix doc:    <https://ns.webcivics.net/values/code-conduct-law-enforcement-officials#> .
+
+# ============================================================
+# Code of Conduct for Law Enforcement Officials
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Code of Conduct for Law Enforcement Officials"@en ;
+    dc:date "17 December 1979" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/code-conduct-law-enforcement-officials> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:article-1 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 1"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Law enforcement officials shall at all times fulfil the duty imposed upon them by law, by serving the community and by protecting all persons against illegal acts, consistent with the high degree of responsibility required by their profession. Commentary : The term \"law enforcement officials\", includes all officers of the law, whether appointed or elected, who exercise police powers, especially the powers of arrest or detention. In countries where police powers are exercised by military authorities, whether uniformed or not, or by State security forces, the definition of law enforcement officials shall be regarded as including officers of such services. Service to the community is intended to include particularly the rendition of services of assistance to those members of the community who by reason of personal, economic, social or other emergencies are in need of immediate aid. This provision is intended to cover not only all violent, predatory and harmful acts, but extends to the full range of prohibitions under penal statutes. It extends to conduct by persons not capable of incurring criminal liability."@en .
+
+doc:article-2 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 2"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "In the performance of their duty, law enforcement officials shall respect and protect human dignity and maintain and uphold the human rights of all persons. Commentary : The human rights in question are identified and protected by national and international law. Among the relevant international instruments are the Universal Declaration of Human Rights, the International Covenant on Civil and Political Rights, the Declaration on the Protection of All Persons from Being Subjected to Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment, the United Nations Declaration on the Elimination of All Forms of Racial Discrimination, the International Convention on the Elimination of All Forms of Racial Discrimination, the International Convention on the Suppression and Punishment of the Crime of Apartheid , the Convention on the Prevention and Punishment of the Crime of Genocide, the Standard Minimum Rules for the Treatment of Prisoners and the Vienna Convention on Consular Relations. National commentaries to this provision should indicate regional or national provisions identifying and protecting these rights."@en .
+
+doc:article-3 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 3"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Law enforcement officials may use force only when strictly necessary and to the extent required for the performance of their duty. Commentary : This provision emphasizes that the use of force by law enforcement officials should be exceptional; while it implies that law enforcement officials may be authorized to use force as is reasonably necessary under the circumstances for the prevention of crime or in effecting or assisting in the lawful arrest of offenders or suspected offenders, no force going beyond that may be used. National law ordinarily restricts the use of force by law enforcement officials in accordance with a principle of proportionality. It is to be understood that such national principles of proportionality are to be respected in the interpretation of this provision. In no case should this provision be interpreted to authorize the use of force which is disproportionate to the legitimate objective to be achieved. The use of firearms is considered an extreme measure. Every effort should be made to exclude the use of firearms, especially against children. In general, firearms should not be used except when a suspected offender offers armed resistance or otherwise jeopardizes the lives of others and less extreme measures are not sufficient to restrain or apprehend the suspected offender. In every instance in which a firearm is discharged, a report should be made promptly to the competent authorities."@en .
+
+doc:article-4 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 4"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Matters of a confidential nature in the possession of law enforcement officials shall be kept confidential, unless the performance of duty or the needs of justice strictly require otherwise. Commentary : By the nature of their duties, law enforcement officials obtain information which may relate to private lives or be potentially harmful to the interests, and especially the reputation, of others. Great care should be exercised in safeguarding and using such information, which should be disclosed only in the performance of duty or to serve the needs of justice. Any disclosure of such information for other purposes is wholly improper."@en .
+
+doc:article-5 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 5"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "No law enforcement official may inflict, instigate or tolerate any act of torture or other cruel, inhuman or degrading treatment or punishment, nor may any law enforcement official invoke superior orders or exceptional circumstances such as a state of war or a threat of war, a threat to national security, internal political instability or any other public emergency as a justification of torture or other cruel, inhuman or degrading treatment or punishment. Commentary : a.This prohibition derives from the Declaration on the Protection of All Persons from Being Subjected to Torture and Other Cruel, Inhuman or Degrading Treatment or Punishment, adopted by the General Assembly, according to which: \"[Such an act is] an offence to human dignity and shall be condemned as a denial of the purposes of the Charter of the United Nations and as a violation of the human rights and fundamental freedoms proclaimed in the Universal Declaration of Human Rights [and other international human rights instruments].\" b.The Declaration defines torture as follows: \". . . torture means any act by which severe pain or suffering, whether physical or mental, is intentionally inflicted by or at the instigation of a public official on a person for such purposes as obtaining from him or a third person information or confession, punishing him for an act he has committed or is suspected of having committed, or intimidating him or other persons. It does not include pain or suffering arising only from, inherent in or incidental to, lawful sanctions to the extent consistent with the Standard Minimum Rules for the Treatment of Prisoners.\" c.The term \"cruel, inhuman or degrading treatment or punishment\" has not been defined by the General Assembly but should be interpreted so as to extend the widest possible protection against abuses, whether physical or mental."@en .
+
+doc:article-6 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 6"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Law enforcement officials shall ensure the full protection of the health of persons in their custody and, in particular, shall take immediate action to secure medical attention whenever required. Commentary : \"Medical attention\", which refers to services rendered by any medical personnel, including certified medical practitioners and paramedics, shall be secured when needed or requested. While the medical personnel are likely to be attached to the law enforcement operation, law enforcement officials must take into account the judgement of such personnel when they recommend providing the person in custody with appropriate treatment through, or in consultation with, medical personnel from outside the law enforcement operation. It is understood that law enforcement officials shall also secure medical attention for victims of violations of law or of accidents occurring in the course of violations of law."@en .
+
+doc:article-7 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 7"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Law enforcement officials shall not commit any act of corruption. They shall also rigorously oppose and combat all such acts. Commentary : Any act of corruption, in the same way as any other abuse of authority, is incompatible with the profession of law enforcement officials. The law must be enforced fully with respect to any law enforcement official who commits an act of corruption, as Governments cannot expect to enforce the law among their citizens if they cannot, or will not, enforce the law against their own agents and within their agencies. While the definition of corruption must be subject to national law, it should be understood to encompass the commission or omission of an act in the performance of or in connection with one's duties, in response to gifts, promises or incentives demanded or accepted, or the wrongful receipt of these once the act has been committed or omitted. The expression \"act of corruption\" referred to above should be understood to encompass attempted corruption."@en .
+
+doc:article-8 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 8"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Law enforcement officials shall respect the law and the present Code. They shall also, to the best of their capability, prevent and rigorously oppose any violations of them. Law enforcement officials who have reason to believe that a violation of the present Code has occurred or is about to occur shall report the matter to their superior authorities and, where necessary, to other appropriate authorities or organs vested with reviewing or remedial power. Commentary : This Code shall be observed whenever it has been incorporated into national legislation or practice. If legislation or practice contains stricter provisions than those of the present Code, those stricter provisions shall be observed. The article seeks to preserve the balance between the need for internal discipline of the agency on which public safety is largely dependent, on the one hand, and the need for dealing with violations of basic human rights, on the other. Law enforcement officials shall report violations within the chain of command and take other lawful action outside the chain of command only when no other remedies are available or effective. It is understood that law enforcement officials shall not suffer administrative or other penalties because they have reported that a violation of this Code has occurred or is about to occur. The term \"appropriate authorities or organs vested with reviewing or remedial power\" refers to any authority or organ existing under national law, whether internal to the law enforcement agency or independent thereof, with statutory, customary or other power to review grievances and complaints arising out of violations within the purview of this Code. In some countries, the mass media may be regarded as performing complaint review functions similar to those described in subparagraph (c) above. Law enforcement officials may, therefore, be justified if, as a last resort and in accordance with the laws and customs of their own countries and with the provisions of article 4 of the present Code, they bring violations to the attention of public opinion through the mass media. Law enforcement officials who comply with the provisions of this Code deserve the respect, the full support and the co-operation of the community and of the law enforcement agency in which they serve, as well as the law enforcement profession."@en .

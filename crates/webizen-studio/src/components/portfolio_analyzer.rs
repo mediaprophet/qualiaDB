@@ -1,3 +1,4 @@
+use crate::components::qapp_engine::invoke_json;
 use dioxus::prelude::*;
 
 #[derive(Clone, PartialEq)]
@@ -36,6 +37,28 @@ pub fn PortfolioAnalyzer() -> Element {
             },
         ]
     });
+    
+    let mut is_loading = use_signal(|| false);
+    let mut backend_status = use_signal(|| "QualiaDB Mock Active".to_string());
+
+    let run_backend_analysis = move |_| {
+        is_loading.set(true);
+        backend_status.set("Analyzing...".to_string());
+        spawn(async move {
+            let args = serde_json::json!({
+                "payload": [5, 6, 7], // mock payload for SLG VM
+            });
+
+            if let Ok(res) = invoke_json("execute_computational_vm", args).await {
+                if let Ok(text) = serde_json::from_value::<String>(res) {
+                    backend_status.set(format!("VM: {}", text));
+                }
+            } else {
+                backend_status.set("Error".to_string());
+            }
+            is_loading.set(false);
+        });
+    };
 
     let add_asset = move |_| {
         let mut list = assets.write();
@@ -116,14 +139,12 @@ pub fn PortfolioAnalyzer() -> Element {
                     style: "margin: 0; font-size: 2.5rem; font-weight: 800; background: linear-gradient(to right, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;",
                     "Portfolio Analyzer"
                 }
-                div {
-                    style: "display: flex; gap: 1rem; align-items: center;",
-                    div {
-                        style: "background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.875rem; color: #38bdf8; display: flex; align-items: center; gap: 0.5rem;",
+                    button {
+                        style: "background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.875rem; color: #38bdf8; display: flex; align-items: center; gap: 0.5rem; cursor: pointer;",
+                        onclick: run_backend_analysis,
                         div { style: "width: 8px; height: 8px; border-radius: 50%; background: #38bdf8; box-shadow: 0 0 10px #38bdf8;" }
-                        "QualiaDB Mock Active"
+                        "{backend_status}"
                     }
-                }
             }
 
             div {

@@ -1,0 +1,91 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix doc:    <https://ns.webcivics.net/values/convention-non-applicability-statutory-limitations-war-crimes#> .
+
+# ============================================================
+# Convention on the Non-Applicability of Statutory Limitations to War Crimes and Crimes Against Humanity
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Convention on the Non-Applicability of Statutory Limitations to War Crimes and Crimes Against Humanity"@en ;
+    dc:date "26 November 1968" ;
+    values:category "International criminal justice" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-non-applicability-statutory-limitations-war-crimes> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:article-1 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 1"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "No statutory limitation shall apply to the following crimes, irrespective of the date of their commission: (a) War crimes as they are defined in the Charter of the International Military Tribunal, Nürnberg, of 8 August 1945 and confirmed by resolutions 3 (I) of 13 February 1946 and 95 (I) of 11 December 1946 of the General Assembly of the United Nations, particularly the \"grave breaches\" enumerated in the Geneva Conventions of 12 August 1949 for the protection of war victims; (b) Crimes against humanity whether committed in time of war or in time of peace as they are defined in the Charter of the International Military Tribunal, Nürnberg, of 8 August 1945 and confirmed by resolutions 3 (I) of 13 February 1946 and 95 (I) of 11 December 1946 of the General Assembly of the United Nations, eviction by armed attack or occupation and inhuman acts resulting from the policy of apartheid , and the crime of genocide as defined in the 1948 Convention on the Prevention and Punishment of the Crime of Genocide, even if such acts do not constitute a violation of the domestic law of the country in which they were committed."@en .
+
+doc:article-2 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 2"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "If any of the crimes mentioned in article I is committed, the provisions of this Convention shall apply to representatives of the State authority and private individuals who, as principals or accomplices, participate in or who directly incite others to the commission of any of those crimes, or who conspire to commit them, irrespective of the degree of completion, and to representatives of the State authority who tolerate their commission."@en .
+
+doc:article-3 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 3"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The States Parties to the present Convention undertake to adopt all necessary domestic measures, legislative or otherwise, with a view to making possible the extradition, in accordance with international law, of the persons referred to in article II of this Convention."@en .
+
+doc:article-4 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 4"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The States Parties to the present Convention undertake to adopt, in accordance with their respective constitutional processes, any legislative or other measures necessary to ensure that statutory or other limitations shall not apply to the prosecution and punishment of the crimes referred to in articles I and II of this Convention and that, where they exist, such limitations shall be abolished."@en .
+
+doc:article-5 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 5"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "This Convention shall, until 31 December 1969, be open for signature by any State Member of the United Nations or member of any of its specialized agencies or of the International Atomic Energy Agency, by any State Party to the Statute of the International Court of Justice, and by any other State which has been invited by the General Assembly of the United Nations to become a Party to this Convention."@en .
+
+doc:article-6 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 6"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "This Convention is subject to ratification. Instruments of ratification shall be deposited with the Secretary-General of the United Nations."@en .
+
+doc:article-7 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 7"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "This Convention shall be open to accession by any State referred to in article V. Instruments of accession shall be deposited with the Secretary-General of the United Nations."@en .
+
+doc:article-8 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 8"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. This Convention shall enter into force on the ninetieth day after the date of the deposit with the Secretary-General of the United Nations of the tenth instrument of ratification or accession. 2. For each State ratifying this Convention or acceding to it after the deposit of the tenth instrument of ratification or accession, the Convention shall enter into force on the ninetieth day after the date of the deposit of its own instrument of ratification or accession."@en .
+
+doc:article-9 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 9"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. After the expiry of a period of ten years from the date on which this Convention enters into force, a request for the revision of the Convention may be made at any time by any Contracting Party by means of a notification in writing addressed to the Secretary-General of the United Nations. 2. The General Assembly of the United Nations shall decide upon the steps, if any, to be taken in respect of such a request."@en .
+
+doc:article-10 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 10"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. This Convention shall be deposited with the Secretary-General of the United Nations. 2. The Secretary-General of the United Nations shall transmit certified copies of this Convention to all States referred to in article V. 3. The Secretary-General of the United Nations shall inform all States referred to in article V of the following particulars: (a) Signatures of this Convention, and instruments of ratification and accession deposited under articles V, VI and VII; (b) The date of entry into force of this Convention in accordance with article VIII; (c) Communications received under article IX."@en .
+
+doc:article-11 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 11"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Entry into force: 11 November 1970, in accordance with article VIII Preamble The States Parties to the present Convention , Recalling resolutions of the General Assembly of the United Nations 3 (I) of 13 February 1946 and 170 (II) of 31 October 1947 on the extradition and punishment of war criminals, resolution 95 (I) of 11 December 1946 affirming the principles of international law recognized by the Charter of the International Military Tribunal, Nürnberg, and the judgement of the Tribunal, and resolutions 2184 (XXI) of 12 December 1966 and 2202 (XXI) of 16 December 1966 which expressly condemned as crimes against humanity the violation of the economic and political rights of the indigenous population on the one hand and the policies of apartheid on the other, Recalling resolutions of the Economic and Social Council of the United Nations 1074 D (XXXIX) of 28 July 1965 and 1158 (XLI) of 5 August 1966 on the punishment of war criminals and of persons who have committed crimes against humanity, Noting that none of the solemn declarations, instruments or conventions relating to the prosecution and punishment of war crimes and crimes against humanity made provision for a period of limitation, Considering that war crimes and crimes against humanity are among the gravest crimes in international law, Convinced that the effective punishment of war crimes and crimes against humanity is an important element in the prevention of such crimes, the protection of human rights and fundamental freedoms, the encouragement of confidence, the furtherance of co-operation among peoples and the promotion of international peace and security, Noting that the application to war crimes and crimes against humanity of the rules of municipal law relating to the period of limitation for ordinary crimes is a matter of serious concern to world public opinion, since it prevents the prosecution and punishment of persons responsible for those crimes, Recognizing that it is necessary and timely to affirm in international law, through this Convention, the principle that there is no period of limitation for war crimes and crimes against humanity, and to secure its universal application, Have agreed as follows:"@en .

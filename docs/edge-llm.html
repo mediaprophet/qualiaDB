@@ -72,7 +72,8 @@
             <span>Your device · Your weights · No cloud required</span>
         </div>
         <h1 class="text-5xl font-semibold tracking-tighter mb-3">Edge LLM Hub</h1>
-        <p class="text-white/60 max-w-xl mx-auto">GGUF models mapped via <code class="text-cyan-400">memmap2</code> directly into the OS page cache. Phase 8 bifurcated compute on DirectML / Vulkan / Metal via <code class="text-cyan-400">wgpu</code>. Zero cloud egress.</p>
+        <p class="text-white/60 max-w-xl mx-auto">GGUF models mapped via <code class="text-cyan-400">memmap2</code> directly into the OS page cache. Phase 8 bifurcated compute via <code class="text-cyan-400">wgpu</code>. Zero cloud egress.</p>
+        <p class="text-amber-400/90 text-sm max-w-xl mx-auto mt-3">Honest: decode tok/s on consumer GPUs is still below hand-tuned engines. For rights-grade grounding use <code class="text-cyan-400">QUALIA_RIGHTS_MODE=1</code>. See <a class="underline text-cyan-400" href="progress-0.0.24.html">0.0.24 progress</a>.</p>
     </div>
 
     <!-- Daemon status banner -->
@@ -184,7 +185,7 @@
                     <div class="text-white/50 font-semibold mb-2">Handshake (server → client)</div>
                     <div class="code-block text-cyan-300">← { "type": "HANDSHAKE_SUCCESS",
      "payload": { "mode": "NATIVE",
-                  "version": "0.0.18" } }</div>
+                  "version": "0.0.23" } }</div>
                 </div>
                 <div>
                     <div class="text-white/50 font-semibold mb-2">Start inference (client → server)</div>
@@ -259,7 +260,7 @@ qualia-cli resources download qwen2.5-1.5b-instruct-q4km</div>
                     <div>
                         <div class="text-white/50 font-semibold mb-1">Load into memory</div>
                         <div class="code-block text-amber-300">qualia-cli llm load gemma-3-1b-it-q4_0
-# Maps GGUF via memmap2 → wgpu DirectML pipeline
+# Maps GGUF via memmap2 → wgpu pipeline (Vulkan default)
 # Prints profile_id + resident bytes</div>
                     </div>
                 </div>
@@ -288,7 +289,7 @@ qualia-cli llm eval "Explain NQuin" --orchestrated
                 <div class="text-white/50 leading-relaxed">
                     <code class="text-amber-300">GgufSharder</code> → parses GGUF header → NQuin pointer map (byte offsets in upper bits, modality flag <code>0b1001</code>)<br>
                     <code class="text-cyan-300">GgufBridge</code> → mmap weights into OS page cache via <code>memmap2</code> → zero heap allocation<br>
-                    <code class="text-emerald-300">fused_tensor_contraction.wgsl</code> → 64 threads/workgroup, 4096 FMA ops/thread → DirectML/Vulkan/Metal<br>
+                    <code class="text-emerald-300">fused_tensor_contraction.wgsl</code> → 64 threads/workgroup, 4096 FMA ops/thread → Vulkan/DX12/Metal<br>
                     <code class="text-violet-300">LocalLlmAgent</code> → Phase 8 bifurcated compute: LLM Engine ↔ Webizen Sentinel via SPSC ring buffers<br>
                     <code class="text-blue-300">Orchestrator</code> → N3Logic rights pre-flight → infer → provenance NQuin citation check
                 </div>
@@ -514,7 +515,7 @@ const DEMO_RESPONSES = {
     default: [
         "The NQuin is a 48-byte zero-copy semantic statement container. Each of its six `u64` fields encodes a different facet of a semantic assertion:\n\n• **subject** — FNV-1a hash of the subject IRI\n• **predicate** — hash of predicate IRI\n• **object** — hash of object or literal\n• **context** — named graph identifier\n• **metadata** — routing lane (bits 61–62), Lamport clock (bits 32–60)\n• **parity** — ECC checksum (set to `u64::MAX` to mark sector corrupt)\n\nAll six fields are packed into a `repr(C, align(16))` struct, enabling SIMD operations and direct memory-mapping without serialization.",
         "Phase 8 bifurcated compute splits the inference loop across two wait-free SPSC ring buffers:\n\n```\nLLM Engine thread  ──logits──►  LogitStream  ──►  Webizen Sentinel\n                   ◄─control──  ControlStream ◄──  (anomaly detection)\n```\n\nThe Sentinel reads logit vectors in real time. If it detects an anomaly (e.g., the `0x99` byte signature for temporal anachronism), it injects a `DenyRollback` into the ControlStream and the LLM recalculates **mid-generation** — not post-hoc. This is the governance mechanism, not optional middleware.",
-        "The `AgentBackend` enum has exactly three variants:\n\n• **Local** — GGUF on disk → wgpu → in-process. No outbound traffic. 128 MB RAM cap.\n• **Remote** — API call routed through the Nym mixnet, metered via ILP. Requires a signed VC from the Principal.\n• **Hybrid** — Local-first. Falls back to Remote only with explicit Principal consent.\n\nThe inference pipeline: `GgufSharder` parses the GGUF header → `GgufBridge` maps weights into the OS page cache via `memmap2` (zero heap allocation) → `fused_tensor_contraction.wgsl` runs on DirectML/Vulkan/Metal.",
+        "The `AgentBackend` enum has exactly three variants:\n\n• **Local** — GGUF on disk → wgpu → in-process. No outbound traffic. 128 MB RAM cap.\n• **Remote** — API call routed through the Nym mixnet, metered via ILP. Requires a signed VC from the Principal.\n• **Hybrid** — Local-first. Falls back to Remote only with explicit Principal consent.\n\nThe inference pipeline: `GgufSharder` parses the GGUF header → `GgufBridge` maps weights into the OS page cache via `memmap2` (zero heap allocation) → `fused_tensor_contraction.wgsl` runs on Vulkan/DX12/Metal.",
     ]
 };
 

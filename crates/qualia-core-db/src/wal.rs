@@ -9,8 +9,8 @@ use ed25519_dalek::{Signature, SigningKey};
 use crate::agency::{scrub_quin_volatile, sign_graph_mutation, stamp_fiduciary_metadata};
 use crate::crdt::SuspendedTransactionQueue;
 use crate::modalities::logic::core::WebizenOpcode;
-use crate::PermissiveRoutingLane;
 use crate::NQuin;
+use crate::PermissiveRoutingLane;
 
 // ── WAL file layout ──────────────────────────────────────────────────────────
 //
@@ -76,7 +76,10 @@ impl WriteAheadLog {
             [0u8; 32]
         };
 
-        Ok(Self { file, prev_dag_hash })
+        Ok(Self {
+            file,
+            prev_dag_hash,
+        })
     }
 
     /// Synchronously appends a NQuin to the log and flushes to disk.
@@ -108,8 +111,7 @@ impl WriteAheadLog {
 
         // Only read complete 48-byte chunks — partial chunks mean a mid-write crash; discard.
         for chunk in buffer.chunks_exact(quin_size) {
-            let quin: NQuin =
-                unsafe { std::ptr::read_unaligned(chunk.as_ptr() as *const NQuin) };
+            let quin: NQuin = unsafe { std::ptr::read_unaligned(chunk.as_ptr() as *const NQuin) };
             recovered.push(quin);
         }
 
@@ -181,22 +183,35 @@ impl WriteAheadLog {
 #[cfg(target_arch = "wasm32")]
 impl WriteAheadLog {
     pub fn open<P: AsRef<Path>>(_path: P) -> std::io::Result<Self> {
-        Ok(Self { file: Vec::new(), prev_dag_hash: [0; 32] })
+        Ok(Self {
+            file: Vec::new(),
+            prev_dag_hash: [0; 32],
+        })
     }
-    pub fn append_mutation(&mut self, _quin: &NQuin) -> std::io::Result<()> { Ok(()) }
+    pub fn append_mutation(&mut self, _quin: &NQuin) -> std::io::Result<()> {
+        Ok(())
+    }
     pub fn append_mutation_volatile(&mut self, quin: &mut NQuin) -> std::io::Result<()> {
         scrub_quin_volatile(quin);
         Ok(())
     }
-    pub fn recover(&mut self) -> std::io::Result<Vec<NQuin>> { Ok(Vec::new()) }
-    pub fn truncate(&mut self) -> std::io::Result<()> { Ok(()) }
+    pub fn recover(&mut self) -> std::io::Result<Vec<NQuin>> {
+        Ok(Vec::new())
+    }
+    pub fn truncate(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
     pub fn checkpoint_to_dag(
         &mut self,
         _dag_store: &mut crate::git_bridge::DagStore,
         _author_did: u64,
         _timestamp_ms: u64,
-    ) -> std::io::Result<[u8; 32]> { Ok(self.prev_dag_hash) }
-    pub fn buffered_count(&mut self) -> std::io::Result<usize> { Ok(0) }
+    ) -> std::io::Result<[u8; 32]> {
+        Ok(self.prev_dag_hash)
+    }
+    pub fn buffered_count(&mut self) -> std::io::Result<usize> {
+        Ok(0)
+    }
 }
 
 #[inline]
@@ -263,16 +278,62 @@ pub fn append_mutation(quin: &NQuin) -> io::Result<()> {
 }
 
 /// Logs an adversarial conduct violation to the WAL when the Sentinel VM halts execution.
-pub fn log_adversarial_conduct(intent_quin: &NQuin, violation_code: u8) -> io::Result<()> {
+pub fn log_adversarial_conduct(
+    intent_quin: &NQuin,
+    violation_code: u8,
+    vm_cycles: u64,
+) -> io::Result<()> {
     let violation_quin = NQuin {
         subject: intent_quin.subject,
         predicate: crate::q_hash("q42:conductViolation"),
         object: intent_quin.object,
         context: intent_quin.context,
-        metadata: violation_code as u64,
+        metadata: (violation_code as u64) | (vm_cycles << 8),
         parity: 0,
     };
     append_mutation(&violation_quin)
+}
+
+/// Logs a rule-evaluation audit event to the WAL.
+///
+/// For each `RuleResult` in `results`, appends a `q42:ruleEvaluation` Quin to the
+/// WAL with:
+/// - `subject`    = the evaluated Quin's subject
+/// - `predicate`  = `q_hash("q42:ruleEvaluation")`
+/// - `object`     = `q_hash(rule_name)` (the rule that was evaluated)
+/// - `context`    = the contract graph hash
+/// - `metadata`   = bit 0 = passed/failed; bits [8..15] = result count
+///
+/// This ensures every rule evaluation is durable, replayable, and auditable —
+/// the general-purpose event API complement to `log_adversarial_conduct`.
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+pub fn log_rule_evaluation(
+    input_quin: &NQuin,
+    results: &[crate::modalities::logic::rules::RuleResult],
+    contract_hash: u64,
+) -> io::Result<()> {
+    let eval_predicate = crate::modalities::logic::rules::RULE_EVAL_PREDICATE;
+    let result_count = results.len().min(255) as u64;
+    for (i, result) in results.iter().enumerate().take(255) {
+        let rule_hash = crate::q_hash(&result.rule_name);
+        let mut metadata = if result.passed { 1u64 } else { 0u64 };
+        metadata |= (i as u64) << 16;
+        metadata |= result_count << 8;
+        let eval_quin = NQuin {
+            subject: input_quin.subject,
+            predicate: eval_predicate,
+            object: rule_hash,
+            context: contract_hash,
+            metadata,
+            parity: 0,
+        };
+        append_mutation(&eval_quin)?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -281,7 +342,14 @@ mod tests {
     use tempfile::NamedTempFile;
 
     fn make_quin(subject: u64, object: u64) -> NQuin {
-        NQuin { subject, predicate: 2, object, context: 4, metadata: 0, parity: 0 }
+        NQuin {
+            subject,
+            predicate: 2,
+            object,
+            context: 4,
+            metadata: 0,
+            parity: 0,
+        }
     }
 
     #[test]

@@ -1,0 +1,155 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix doc:    <https://ns.webcivics.net/values/declaration-right-and-responsibility-individuals-groups-and#> .
+
+# ============================================================
+# Declaration on the Right and Responsibility of Individuals, Groups and Organs of Society to Promote and Protect Universally Recognized Human Rights and Fundamental Freedoms
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Declaration on the Right and Responsibility of Individuals, Groups and Organs of Society to Promote and Protect Universally Recognized Human Rights and Fundamental Freedoms"@en ;
+    dc:date "09 December 1998" ;
+    values:category "Human rights defenders & national institutions" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/declaration-right-and-responsibility-individuals-groups-and> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:article-1 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 1"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Everyone has the right, individually and in association with others, to promote and to strive for the protection and realization of human rights and fundamental freedoms at the national and international levels."@en .
+
+doc:article-2 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 2"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Each State has a prime responsibility and duty to protect, promote and implement all human rights and fundamental freedoms, inter alia , by adopting such steps as may be necessary to create all conditions necessary in the social, economic, political and other fields, as well as the legal guarantees required to ensure that all persons under its jurisdiction, individually and in association with others, are able to enjoy all those rights and freedoms in practice. Each State shall adopt such legislative, administrative and other steps as may be necessary to ensure that the rights and freedoms referred to in the present Declaration are effectively guaranteed."@en .
+
+doc:article-3 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 3"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Domestic law consistent with the Charter of the United Nations and other international obligations of the State in the field of human rights and fundamental freedoms is the juridical framework within which human rights and fundamental freedoms should be implemented and enjoyed and within which all activities referred to in the present Declaration for the promotion, protection and effective realization of those rights and freedoms should be conducted."@en .
+
+doc:article-4 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 4"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Nothing in the present Declaration shall be construed as impairing or contradicting the purposes and principles of the Charter of the United Nations or as restricting or derogating from the provisions of the Universal Declaration of Human Rights, the International Covenants on Human Rights and other international instruments and commitments applicable in this field."@en .
+
+doc:article-5 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 5"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "For the purpose of promoting and protecting human rights and fundamental freedoms, everyone has the right, individually and in association with others, at the national and international levels: To meet or assemble peacefully; To form, join and participate in non-governmental organizations, associations or groups; To communicate with non-governmental or intergovernmental organizations."@en .
+
+doc:article-6 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 6"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Everyone has the right, individually and in association with others: To know, seek, obtain, receive and hold information about all human rights and fundamental freedoms, including having access to information as to how those rights and freedoms are given effect in domestic legislative, judicial or administrative systems; As provided for in human rights and other applicable international instruments, freely to publish, impart or disseminate to others views, information and knowledge on all human rights and fundamental freedoms; To study, discuss, form and hold opinions on the observance, both in law and in practice, of all human rights and fundamental freedoms and, through these and other appropriate means, to draw public attention to those matters."@en .
+
+doc:article-7 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 7"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Everyone has the right, individually and in association with others, to develop and discuss new human rights ideas and principles and to advocate their acceptance."@en .
+
+doc:article-8 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 8"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Everyone has the right, individually and in association with others, to have effective access, on a non-discriminatory basis, to participation in the government of his or her country and in the conduct of public affairs. This includes, inter alia , the right, individually and in association with others, to submit to governmental bodies and agencies and organizations concerned with public affairs criticism and proposals for improving their functioning and to draw attention to any aspect of their work that may hinder or impede the promotion, protection and realization of human rights and fundamental freedoms."@en .
+
+doc:article-9 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 9"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "In the exercise of human rights and fundamental freedoms, including the promotion and protection of human rights as referred to in the present Declaration, everyone has the right, individually and in association with others, to benefit from an effective remedy and to be protected in the event of the violation of those rights. To this end, everyone whose rights or freedoms are allegedly violated has the right, either in person or through legally authorized representation, to complain to and have that complaint promptly reviewed in a public hearing before an independent, impartial and competent judicial or other authority established by law and to obtain from such an authority a decision, in accordance with law, providing redress, including any compensation due, where there has been a violation of that person's rights or freedoms, as well as enforcement of the eventual decision and award, all without undue delay. To the same end, everyone has the right, individually and in association with others, inter alia : To complain about the policies and actions of individual officials and governmental bodies with regard to violations of human rights and fundamental freedoms, by petition or other appropriate means, to competent domestic judicial, administrative or legislative authorities or any other competent authority provided for by the legal system of the State, which should render their decision on the complaint without undue delay; To attend public hearings, proceedings and trials so as to form an opinion on their compliance with national law and applicable international obligations and commitments; To offer and provide professionally qualified legal assistance or other relevant advice and assistance in defending human rights and fundamental freedoms. To the same end, and in accordance with applicable international instruments and procedures, everyone has the right, individually and in association with others, to unhindered access to and communication with international bodies with general or special competence to receive and consider communications on matters of human rights and fundamental freedoms. The State shall conduct a prompt and impartial investigation or ensure that an inquiry takes place whenever there is reasonable ground to believe that a violation of human rights and fundamental freedoms has occurred in any territory under its jurisdiction."@en .
+
+doc:article-10 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 10"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "No one shall participate, by act or by failure to act where required, in violating human rights and fundamental freedoms and no one shall be subjected to punishment or adverse action of any kind for refusing to do so."@en .
+
+doc:article-11 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 11"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Everyone has the right, individually and in association with others, to the lawful exercise of his or her occupation or profession. Everyone who, as a result of his or her profession, can affect the human dignity, human rights and fundamental freedoms of others should respect those rights and freedoms and comply with relevant national and international standards of occupational and professional conduct or ethics."@en .
+
+doc:article-12 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 12"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Everyone has the right, individually and in association with others, to participate in peaceful activities against violations of human rights and fundamental freedoms. The State shall take all necessary measures to ensure the protection by the competent authorities of everyone, individually and in association with others, against any violence, threats, retaliation, de facto or de jure adverse discrimination, pressure or any other arbitrary action as a consequence of his or her legitimate exercise of the rights referred to in the present Declaration. In this connection, everyone is entitled, individually and in association with others, to be protected effectively under national law in reacting against or opposing, through peaceful means, activities and acts, including those by omission, attributable to States that result in violations of human rights and fundamental freedoms, as well as acts of violence perpetrated by groups or individuals that affect the enjoyment of human rights and fundamental freedoms."@en .
+
+doc:article-13 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 13"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Everyone has the right, individually and in association with others, to solicit, receive and utilize resources for the express purpose of promoting and protecting human rights and fundamental freedoms through peaceful means, in accordance with article 3 of the present Declaration."@en .
+
+doc:article-14 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 14"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The State has the responsibility to take legislative, judicial, administrative or other appropriate measures to promote the understanding by all persons under its jurisdiction of their civil, political, economic, social and cultural rights. Such measures shall include, inter alia : The publication and widespread availability of national laws and regulations and of applicable basic international human rights instruments; Full and equal access to international documents in the field of human rights, including the periodic reports by the State to the bodies established by the international human rights treaties to which it is a party, as well as the summary records of discussions and the official reports of these bodies. The State shall ensure and support, where appropriate, the creation and development of further independent national institutions for the promotion and protection of human rights and fundamental freedoms in all territory under its jurisdiction, whether they be ombudsmen, human rights commissions or any other form of national institution."@en .
+
+doc:article-15 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 15"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The State has the responsibility to promote and facilitate the teaching of human rights and fundamental freedoms at all levels of education and to ensure that all those responsible for training lawyers, law enforcement officers, the personnel of the armed forces and public officials include appropriate elements of human rights teaching in their training programme."@en .
+
+doc:article-16 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 16"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Individuals, non-governmental organizations and relevant institutions have an important role to play in contributing to making the public more aware of questions relating to all human rights and fundamental freedoms through activities such as education, training and research in these areas to strengthen further, inter alia , understanding, tolerance, peace and friendly relations among nations and among all racial and religious groups, bearing in mind the various backgrounds of the societies and communities in which they carry out their activities."@en .
+
+doc:article-17 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 17"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "In the exercise of the rights and freedoms referred to in the present Declaration, everyone, acting individually and in association with others, shall be subject only to such limitations as are in accordance with applicable international obligations and are determined by law solely for the purpose of securing due recognition and respect for the rights and freedoms of others and of meeting the just requirements of morality, public order and the general welfare in a democratic society."@en .
+
+doc:article-18 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 18"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Everyone has duties towards and within the community, in which alone the free and full development of his or her personality is possible. Individuals, groups, institutions and non-governmental organizations have an important role to play and a responsibility in safeguarding democracy, promoting human rights and fundamental freedoms and contributing to the promotion and advancement of democratic societies, institutions and processes. Individuals, groups, institutions and non-governmental organizations also have an important role and a responsibility in contributing, as appropriate, to the promotion of the right of everyone to a social and international order in which the rights and freedoms set forth in the Universal Declaration of Human Rights and other human rights instruments can be fully realized."@en .
+
+doc:article-19 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 19"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Nothing in the present Declaration shall be interpreted as implying for any individual, group or organ of society or any State the right to engage in any activity or to perform any act aimed at the destruction of the rights and freedoms referred to in the present Declaration."@en .
+
+doc:article-20 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 20"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The General Assembly , Reaffirming the importance of the observance of the purposes and principles of the Charter of the United Nations for the promotion and protection of all human rights and fundamental freedoms for all persons in all countries of the world, Reaffirming also the importance of the Universal Declaration of Human Rights and the International Covenants on Human Rights as basic elements of international efforts to promote universal respect for and observance of human rights and fundamental freedoms and the importance of other human rights instruments adopted within the United Nations system, as well as those at the regional level, Stressing that all members of the international community shall fulfil, jointly and separately, their solemn obligation to promote and encourage respect for human rights and fundamental freedoms for all without distinction of any kind, including distinctions based on race, colour, sex, language, religion, political or other opinion, national or social origin, property, birth or other status, and reaffirming the particular importance of achieving international cooperation to fulfil this obligation according to the Charter, Acknowledging the important role of international cooperation for, and the valuable work of individuals, groups and associations in contributing to, the effective elimination of all violations of human rights and fundamental freedoms of peoples and individuals, including in relation to mass, flagrant or systematic violations such as those resulting from apartheid, all forms of racial discrimination, colonialism, foreign domination or occupation, aggression or threats to national sovereignty, national unity or territorial integrity and from the refusal to recognize the right of peoples to self-determination and the right of every people to exercise full sovereignty over its wealth and natural resources, Recognizing the relationship between international peace and security and the enjoyment of human rights and fundamental freedoms, and mindful that the absence of international peace and security does not excuse non-compliance, Reiterating that all human rights and fundamental freedoms are universal, indivisible, interdependent and interrelated and should be promoted and implemented in a fair and equitable manner, without prejudice to the implementation of each of those rights and freedoms, Stressing that the prime responsibility and duty to promote and protect human rights and fundamental freedoms lie with the State, Recognizing the right and the responsibility of individuals, groups and associations to promote respect for and foster knowledge of human rights and fundamental freedoms at the national and international levels, Declares :"@en .

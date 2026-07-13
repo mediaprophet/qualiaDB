@@ -164,6 +164,11 @@ jobs:
 
       # ── Persist results to the repo (so Pages picks them up) ──────────────────
       - name: Commit benchmark results
+        # Only persist results back to main. On any other ref (e.g. a
+        # workflow_dispatch against a feature branch) the benchmarks still run
+        # and upload artifacts, but MUST NOT push — pushing from a diverged
+        # branch would rebase that branch's commits onto main.
+        if: github.ref == 'refs/heads/main'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -261,6 +266,9 @@ jobs:
             --output docs/comparative_benchmark_results.schemaorg-30-current-https.json
 
       - name: Commit Schema.org benchmark results
+        # See the note above: only push results on main; never from a diverged
+        # dispatched branch.
+        if: github.ref == 'refs/heads/main'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

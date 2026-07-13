@@ -3,8 +3,8 @@
 **Version:** 0.1 (draft)  
 **Date:** 2026-06-17  
 **Status:** Internal draft — not submitted externally  
-**Branch:** `0.0.18-dev`  
-**Normative code:** `crates/qualia-core-db/src/audio/`, `sonic_token.rs`, `portal_acoustic.rs`
+**Branch:** `0.0.23`  
+**Normative code:** `crates/qualia-core-db/src/audio/`, `sonic_token.rs`, `audio/acoustic_plane.rs`
 
 ---
 
@@ -207,7 +207,7 @@ Implementations MUST:
 
 1. Keep hot-path audio APIs zero-heap (`&mut [T]` out buffers).
 2. Never store MP3/AAC as semantic truth — sheets + tokens only.
-3. Preserve σ parity formulas byte-identical to `portal_acoustic.rs` oracles.
+3. Preserve σ parity formulas byte-identical to `audio/acoustic_plane.rs` oracles.
 4. Reject SAB buffers whose `byteLength !== 1024`.
 
 ### Test vectors

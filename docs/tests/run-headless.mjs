@@ -59,6 +59,8 @@ async function main() {
     const runner = buildRunner(runMode);
     let passed = 0;
     let failed = 0;
+    let skipped = 0;
+    const skips = [];
 
     await runner.run(evt => {
         if (evt.type === 'pass') {
@@ -72,14 +74,24 @@ async function main() {
                 error: evt.error?.message || String(evt.error),
             });
             process.stdout.write('F');
+        } else if (evt.type === 'skip') {
+            skipped++;
+            skips.push({ suite: evt.suite?.name, test: evt.name, reason: evt.reason });
+            process.stdout.write('s');
         }
     });
 
     console.log('\n');
-    console.log(`Mode: ${runMode}`);
-    console.log(`Passed: ${passed}`);
-    console.log(`Failed: ${failed}`);
-    console.log(`Total:  ${passed + failed}`);
+    console.log(`Mode:    ${runMode}`);
+    console.log(`Passed:  ${passed}   (executed at least one assertion)`);
+    console.log(`Skipped: ${skipped}   (asserted nothing — daemon offline / WASM export absent / not run)`);
+    console.log(`Failed:  ${failed}`);
+    console.log(`Total:   ${passed + failed + skipped}`);
+
+    if (skipped && process.argv.includes('--show-skips')) {
+        console.log('\nSkipped:');
+        for (const s of skips) console.log(`  ${s.suite} › ${s.test}  — ${s.reason}`);
+    }
 
     if (failures.length) {
         console.log('\nFailures:');

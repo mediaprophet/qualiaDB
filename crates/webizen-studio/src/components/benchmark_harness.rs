@@ -16,6 +16,7 @@ use wasm_bindgen::JsValue;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures::JsFuture;
 
+#[cfg(target_arch = "wasm32")]
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 struct RuntimeSnapshotRecord {
     epoch: u64,
@@ -42,6 +43,29 @@ struct LocalPreviewProbe {
     reachable: bool,
     status_code: Option<u16>,
     detail: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+struct ForgeKernelProbe {
+    kernel: String,
+    shape: String,
+    output_elements: usize,
+    elapsed_ms: f64,
+    max_abs_error: f32,
+    certified: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+struct ForgeComputeProbe {
+    engine_version: String,
+    forge_schema_version: u32,
+    backend: String,
+    initialization_ms: f64,
+    total_kernel_ms: f64,
+    all_certified: bool,
+    q42_provenance: String,
+    kernels: Vec<ForgeKernelProbe>,
+    note: String,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -318,7 +342,7 @@ async fn run_benchmark_sweep() -> Result<BenchmarkReport, String> {
 
 #[component]
 pub fn BenchmarkHarness() -> Element {
-    let mut running = use_signal(|| false);
+    let running = use_signal(|| false);
     #[cfg(target_arch = "wasm32")]
     let mut status = use_signal(|| {
         if is_tauri() {
@@ -331,6 +355,10 @@ pub fn BenchmarkHarness() -> Element {
     let mut status =
         use_signal(|| "Benchmark harness is only active in the webview runtime.".to_string());
     let report = use_signal(|| None::<BenchmarkReport>);
+    let forge_running = use_signal(|| false);
+    let mut forge_status =
+        use_signal(|| "Ready to run bounded real-data Forge kernels.".to_string());
+    let forge_report = use_signal(|| None::<ForgeComputeProbe>);
 
     let run_benchmark = move |_| {
         #[cfg(target_arch = "wasm32")]
@@ -339,11 +367,11 @@ pub fn BenchmarkHarness() -> Element {
                 return;
             }
 
-            running.set(true);
-            status.set("Running local benchmark sweep...".to_string());
             let mut running = running;
             let mut status = status;
             let mut report = report;
+            running.set(true);
+            status.set("Running local benchmark sweep...".to_string());
 
             wasm_bindgen_futures::spawn_local(async move {
                 match run_benchmark_sweep().await {
@@ -367,8 +395,65 @@ pub fn BenchmarkHarness() -> Element {
         }
     };
 
+    let run_forge_probe = move |_| {
+        #[cfg(target_arch = "wasm32")]
+        {
+            if forge_running() {
+                return;
+            }
+            if !is_tauri() {
+                forge_status.set(
+                    "Forge compute probe requires the Webizen desktop app (Tauri).".to_string(),
+                );
+                return;
+            }
+
+            let mut forge_running = forge_running;
+            let mut forge_status = forge_status;
+            let mut forge_report = forge_report;
+            forge_running.set(true);
+            forge_status.set(
+                "Initializing ForgeRuntime and dispatching Top-K, GEMM, and FFT...".to_string(),
+            );
+
+            wasm_bindgen_futures::spawn_local(async move {
+                match invoke_tauri_json::<ForgeComputeProbe>("run_forge_compute_probe", json!({}))
+                    .await
+                {
+                    Ok(result) => {
+                        forge_status.set(if result.all_certified {
+                            "All real-data Forge kernels matched their CPU oracles.".to_string()
+                        } else {
+                            "One or more Forge kernels exceeded certification tolerance."
+                                .to_string()
+                        });
+                        forge_report.set(Some(result));
+                    }
+                    Err(err) => {
+                        forge_status.set(format!("Forge compute probe failed: {err}"));
+                        forge_report.set(None);
+                    }
+                }
+                forge_running.set(false);
+            });
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let _ = &forge_running;
+            forge_status.set("Forge compute probe is invoked by the desktop webview.".to_string());
+        }
+    };
+
     let run_status = status();
     let latest_report = report();
+    let forge_status_text = forge_status();
+    let latest_forge_report = forge_report();
+    let forge_badge = match latest_forge_report.as_ref() {
+        Some(probe) if probe.all_certified => "Certified",
+        Some(_) => "Needs review",
+        None => "Not run",
+    };
     let health_delta = latest_report.as_ref().map(|result| {
         (
             result
@@ -397,15 +482,28 @@ pub fn BenchmarkHarness() -> Element {
                         h1 { style: "margin: 0 0 0.35rem 0; font-size: 1.5rem; font-weight: 800; letter-spacing: 0.03em;", "Benchmark Harness" }
                         p { style: "margin: 0; color: rgba(226,232,240,0.74); line-height: 1.5; max-width: 760px;", "This sweep benchmarks the repaired native path: local Tauri command latency, runtime epoch cadence, resize acknowledgement, and whether the optional localhost preview server is really there." }
                     }
-                    button {
-                        style: if running() {
-                            "padding: 0.85rem 1.1rem; border-radius: 14px; border: 1px solid rgba(148,163,184,0.25); background: rgba(71,85,105,0.5); color: #cbd5e1; font-weight: 700; cursor: wait; min-width: 210px;"
-                        } else {
-                            "padding: 0.85rem 1.1rem; border-radius: 14px; border: 1px solid rgba(34,197,94,0.28); background: linear-gradient(135deg, rgba(22,163,74,0.95), rgba(5,150,105,0.95)); color: white; font-weight: 700; cursor: pointer; box-shadow: 0 16px 40px rgba(5,150,105,0.22); min-width: 210px;"
-                        },
-                        disabled: running(),
-                        onclick: run_benchmark,
-                        if running() { "Running sweep..." } else { "Run Local Runtime Sweep" }
+                    div {
+                        style: "display: flex; flex-direction: column; gap: 0.55rem; min-width: 220px;",
+                        button {
+                            style: if running() {
+                                "padding: 0.78rem 1rem; border-radius: 14px; border: 1px solid rgba(148,163,184,0.25); background: rgba(71,85,105,0.5); color: #cbd5e1; font-weight: 700; cursor: wait;"
+                            } else {
+                                "padding: 0.78rem 1rem; border-radius: 14px; border: 1px solid rgba(34,197,94,0.28); background: linear-gradient(135deg, rgba(22,163,74,0.95), rgba(5,150,105,0.95)); color: white; font-weight: 700; cursor: pointer; box-shadow: 0 16px 40px rgba(5,150,105,0.22);"
+                            },
+                            disabled: running(),
+                            onclick: run_benchmark,
+                            if running() { "Running sweep..." } else { "Run Local Runtime Sweep" }
+                        }
+                        button {
+                            style: if forge_running() {
+                                "padding: 0.78rem 1rem; border-radius: 14px; border: 1px solid rgba(148,163,184,0.25); background: rgba(71,85,105,0.5); color: #cbd5e1; font-weight: 700; cursor: wait;"
+                            } else {
+                                "padding: 0.78rem 1rem; border-radius: 14px; border: 1px solid rgba(56,189,248,0.3); background: linear-gradient(135deg, rgba(3,105,161,0.92), rgba(79,70,229,0.92)); color: white; font-weight: 700; cursor: pointer;"
+                            },
+                            disabled: forge_running(),
+                            onclick: run_forge_probe,
+                            if forge_running() { "Running Forge..." } else { "Run Forge Compute Probe" }
+                        }
                     }
                 }
 
@@ -413,6 +511,49 @@ pub fn BenchmarkHarness() -> Element {
                     style: "padding: 0.85rem 1rem; border-radius: 16px; border: 1px solid rgba(148,163,184,0.18); background: rgba(15,23,42,0.86); margin-bottom: 1rem;",
                     span { style: "font-size: 0.78rem; color: #93c5fd; text-transform: uppercase; letter-spacing: 0.08em;", "Status" }
                     div { style: "margin-top: 0.3rem; font-size: 0.95rem; color: #e2e8f0;", "{run_status}" }
+                }
+
+                div {
+                    style: "padding: 1rem; border-radius: 18px; border: 1px solid rgba(56,189,248,0.18); background: radial-gradient(circle at top right, rgba(59,130,246,0.12), transparent 38%), rgba(15,23,42,0.92); margin-bottom: 1rem;",
+                    div {
+                        style: "display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; margin-bottom: 0.75rem;",
+                        div {
+                            h2 { style: "margin: 0 0 0.25rem 0; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.08em; color: #7dd3fc;", "QualiaDB ForgeRuntime" }
+                            p { style: "margin: 0; color: rgba(226,232,240,0.72); font-size: 0.8rem; line-height: 1.45;", "A separate real-data correctness probe. Initialization time is reported apart from kernel calls and is not presented as application or LLM throughput." }
+                        }
+                        span {
+                            style: "padding: 0.28rem 0.55rem; border-radius: 999px; border: 1px solid rgba(56,189,248,0.2); background: rgba(2,132,199,0.12); color: #bae6fd; font-size: 0.68rem; white-space: nowrap;",
+                            "{forge_badge}"
+                        }
+                    }
+                    div { style: "font-size: 0.78rem; color: rgba(226,232,240,0.8); margin-bottom: 0.75rem;", "{forge_status_text}" }
+
+                    if let Some(probe) = latest_forge_report.as_ref() {
+                        div {
+                            style: "display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.65rem; margin-bottom: 0.75rem;",
+                            for kernel in probe.kernels.iter() {
+                                div {
+                                    style: "padding: 0.78rem; border-radius: 14px; border: 1px solid rgba(148,163,184,0.13); background: rgba(2,6,23,0.58);",
+                                    div { style: "display: flex; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.45rem;",
+                                        strong { style: "color: #e0f2fe; text-transform: uppercase; font-size: 0.76rem;", "{kernel.kernel}" }
+                                        span { style: if kernel.certified { "color: #4ade80; font-size: 0.68rem;" } else { "color: #f87171; font-size: 0.68rem;" }, if kernel.certified { "pass" } else { "fail" } }
+                                    }
+                                    {detail_row("Shape", kernel.shape.clone())}
+                                    {detail_row("Kernel call", format!("{:.2} ms", kernel.elapsed_ms))}
+                                    {detail_row("Max |error|", format!("{:.3e}", kernel.max_abs_error))}
+                                    {detail_row("Output", format!("{} elements", kernel.output_elements))}
+                                }
+                            }
+                        }
+                        {detail_row("Context initialization", format!("{:.2} ms", probe.initialization_ms))}
+                        {detail_row("Kernel call total", format!("{:.2} ms", probe.total_kernel_ms))}
+                        {detail_row("Runtime", format!("{} · QualiaDB {} · schema {}", probe.backend, probe.engine_version, probe.forge_schema_version))}
+                        div {
+                            style: "margin-top: 0.65rem; padding: 0.6rem 0.7rem; border-radius: 11px; background: rgba(2,6,23,0.6); border: 1px solid rgba(148,163,184,0.1);",
+                            code { style: "display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.68rem; color: #93c5fd;", "{probe.q42_provenance}" }
+                            p { style: "margin: 0.35rem 0 0 0; font-size: 0.72rem; color: rgba(226,232,240,0.62); line-height: 1.4;", "{probe.note}" }
+                        }
+                    }
                 }
 
                 if let Some(result) = latest_report.as_ref() {

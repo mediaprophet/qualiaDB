@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QualiaDB 0.0.24 — Honest Progress</title>
+  <link rel="stylesheet" href="css/tailwind-built.css">
+  <link rel="stylesheet" href="css/site-nav.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="js/menu-loader.js"></script>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+<nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+  <div class="max-w-screen-2xl mx-auto px-8">
+    <div class="flex items-center justify-between h-16">
+      <a href="index.html" class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+          <span class="text-black font-bold text-xl">Q</span>
+        </div>
+        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+      </a>
+      <div id="dynamic-nav" class="relative flex items-center text-sm"></div>
+    </div>
+  </div>
+</nav>
+
+<main class="max-w-3xl mx-auto px-6 py-12">
+  <p class="text-emerald-400 text-sm mb-2"><i class="fa-solid fa-shield-halved"></i> Human-rights infrastructure · consumer electronics · branch <code>0.0.24</code></p>
+  <h1 class="text-4xl font-semibold tracking-tight mb-4">Honest progress</h1>
+  <p class="text-white/70 mb-8">
+    This page is for operators and reviewers who need the truth, not a demo script.
+    QualiaDB is built so people can keep agency on <strong>their own devices</strong>.
+    Where we are not yet good enough for life-critical sole reliance, we say so.
+  </p>
+
+  <section class="mb-10 p-6 rounded-2xl border border-amber-500/30 bg-amber-500/5">
+    <h2 class="text-xl font-semibold text-amber-300 mb-2">Not good enough yet (as sole system)</h2>
+    <ul class="list-disc pl-5 text-white/80 space-y-1 text-sm">
+      <li>Local LLM decode on 3B-class models is still far slower than llama.cpp-class CUDA engines on the same A2000-class cards.</li>
+      <li>Do not use free-form generation alone for high-stakes legal/medical/safety decisions.</li>
+      <li>Vision/generative-3D is at Phase-1 ABI + CPU reference — not a production detector.</li>
+    </ul>
+  </section>
+
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-3">What is real today</h2>
+    <ul class="space-y-2 text-sm text-white/80">
+      <li><strong class="text-emerald-400">Semantic core</strong> — NQuin / Q42, WAL, modalities (deontic, epistemic, …), SPARQL paths.</li>
+      <li><strong class="text-emerald-400">Native inference stack</strong> — in-process GGUF/P64, wgpu resident decode, INT8 KV, Q4_K SoA, hybrid quant-graph grounding.</li>
+      <li><strong class="text-emerald-400">Rights-grade quality path</strong> — <code>QUALIA_RIGHTS_MODE=1</code> → quant-graph + fact seed + hybrid masks / deontic obligation on match.</li>
+      <li><strong class="text-emerald-400">Desktop host</strong> — <code>webizen-desktop</code> (Tauri 2) + studio; release CI now packages Windows zip on tags.</li>
+      <li><strong class="text-emerald-400">Vision crate</strong> — new <code>qualia-vision</code> Phase-1: caller-buffered detect API, epistemic observation quins, CPU reference backend.</li>
+    </ul>
+  </section>
+
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-3">WGSL Forge (clarified)</h2>
+    <p class="text-sm text-white/70">
+      Forge <strong>does not train LLMs</strong>. It generates, validates, certifies, and tunes
+      <em>compute kernels</em> (WGSL / CUDA C). Training or fine-tuning weights is a separate track.
+      Kernel automation helps decode only when a certified schedule is wired into the resident / CUDA path.
+    </p>
+  </section>
+
+  <section class="mb-10">
+    <h2 class="text-xl font-semibold mb-3">Program tracks</h2>
+    <ol class="list-decimal pl-5 text-sm text-white/80 space-y-2">
+      <li><strong>A Inference</strong> — device-resident activations, INT4 SoA, less host sync, forge-certified GEMV when it wins.</li>
+      <li><strong>B Desktop release</strong> — installable binaries on GitHub Releases.</li>
+      <li><strong>C Public honesty</strong> — this page + manuals.</li>
+      <li><strong>D Visual intelligence</strong> — plan
+        <a class="text-cyan-400 underline" href="https://github.com/mediaprophet/qualiaDB/blob/0.0.24/docs/plans/native-visual-intelligence-and-generative-3d.md">native-visual-intelligence-and-generative-3d.md</a>
+        · Phase-1 crate landed.</li>
+    </ol>
+    <p class="text-sm text-white/60 mt-3">Full program:
+      <a class="text-cyan-400 underline" href="https://github.com/mediaprophet/qualiaDB/blob/0.0.24/docs/plans/consumer-human-rights-release-program.md">consumer-human-rights-release-program.md</a>
+    </p>
+  </section>
+
+  <section class="mb-10 p-6 rounded-2xl border border-white/10 bg-white/5">
+    <h2 class="text-xl font-semibold mb-2">Consumer operator defaults</h2>
+    <pre class="text-xs overflow-x-auto text-emerald-300/90 bg-black/40 p-4 rounded-xl"># Rights-grade quality (graph hybrid)
+$env:QUALIA_RIGHTS_MODE = '1'
+
+# Optional high-stakes fact force
+# $env:QUALIA_GRAPH_FORCE = '1'
+
+# Prefer SoA INT4 models on limited VRAM
+# *.soa.p64 under your model vault
+
+# Do not enable second DirectML device unless experimenting
+# $env:QUALIA_DIRECTML = '1'</pre>
+  </section>
+
+  <p class="text-xs text-white/40">Updated 2026-07-10 · QualiaDB / Webizen · principal-directed engineering record</p>
+</main>
+</body>
+</html>

@@ -70,6 +70,29 @@ async function loadWasm() {
 let provider = null;
 let activeVfs = null;
 let dbBytes   = null;
+let mountBadgeFullText = 'No dataset mounted';
+
+function compactMountBadgeText(text, limit = 180) {
+  const normalized = String(text ?? '').trim();
+  if (normalized.length <= limit) return normalized;
+  return normalized.slice(0, limit - 3).trimEnd() + '...';
+}
+
+function refreshMountBadge(text, cls) {
+  const el = document.getElementById('mount-badge');
+  if (!el) return;
+  mountBadgeFullText = String(text ?? '');
+  el.textContent = compactMountBadgeText(mountBadgeFullText);
+  el.className = `badge ${cls} mount-badge`;
+  el.title = mountBadgeFullText;
+
+  const copyBtn = document.getElementById('mount-badge-copy');
+  if (copyBtn) {
+    const shouldShow = mountBadgeFullText.length > 96 || /\bfailed\b|\bboot\b/i.test(mountBadgeFullText);
+    copyBtn.hidden = !shouldShow;
+    copyBtn.title = shouldShow ? 'Copy full status message' : '';
+  }
+}
 
 async function loadManifest() {
   provider = await VFSProvider.fromManifest('./vfs-manifest.json');
@@ -511,9 +534,29 @@ window.startIngest = function startIngest() {
 function setBadge(id, text, cls) {
   const el = document.getElementById(id);
   if (!el) return;
+  if (id === 'mount-badge') {
+    refreshMountBadge(text, cls);
+    return;
+  }
   el.textContent = text;
   el.className   = `badge ${cls}`;
 }
+
+window.copyMountBadge = async function copyMountBadge() {
+  try {
+    await navigator.clipboard.writeText(mountBadgeFullText);
+    const copyBtn = document.getElementById('mount-badge-copy');
+    if (copyBtn) {
+      const previous = copyBtn.textContent;
+      copyBtn.textContent = 'Copied';
+      setTimeout(() => {
+        copyBtn.textContent = previous;
+      }, 1400);
+    }
+  } catch (error) {
+    console.warn('[WordNet] Clipboard copy failed:', error);
+  }
+};
 
 document.getElementById('dataset-select')
   .addEventListener('change', updateDatasetDescription);

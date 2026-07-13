@@ -4,11 +4,10 @@ mod collector;
 mod parse;
 mod serialize;
 
-pub use collector::{QuinCollector, MAX_RDF_QUINS};
 pub use crate::sparql_library::quin_sink::QuinSink;
+pub use collector::{QuinCollector, MAX_RDF_QUINS};
 pub use parse::{parse_rdf, RdfParseError};
 pub use serialize::{serialize_rdf, RdfSerializeError, RdfStarMode};
-
 
 /// Supported RDF surface syntaxes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -49,6 +48,9 @@ impl RdfFormat {
     }
 
     pub fn supports_quads(self) -> bool {
-        matches!(self, Self::NQuads | Self::TriG | Self::JsonLd | Self::CborLd)
+        matches!(
+            self,
+            Self::NQuads | Self::TriG | Self::JsonLd | Self::CborLd
+        )
     }
 }

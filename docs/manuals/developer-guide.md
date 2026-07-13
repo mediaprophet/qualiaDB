@@ -15,6 +15,7 @@ A Warren Abstract Machine (WAM) variant written in `#![no_std]` Rust.
 - **SLG Tabling**: Uses a 42 MB static ring-buffer (`SlgArena`) to memoize cyclic graph traversals. This prevents infinite stack overflows when querying complex recursive social networks.
 - **8 Modality Bridges**: Spatio-temporal, probabilistic, description logic (DL), answer set programming (ASP), linear logic, epistemic logic, paraconsistent logic, and linear temporal logic (LTL). All fully implemented and tested.
 - **Native Scientific Primitives**: `NativeThermodynamics`, `NativeOdeSolver`, `NativeQuantumDft`, `NativeBioinformatics`, `NativeClinicalRisk`, `NativeChemicalSynthesis` — all wired to real Rust implementations, not stubs.
+- **Algebra & Symbolic (CAS)**: `specialized_libs/linear_algebra.rs` (determinant/LU, symmetric + general eigenvalues, SVD, polynomial roots, stable quadratic, plus a fixed-point Groth16 ZK matrix-multiply) and `specialized_libs/symbolic_algebra.rs` (an `Expr` CAS: parse/simplify/differentiate/expand/factor/solve + lossless `Expr ↔ NQuin` encoding). Exposed via the `algebra_solve_polynomial`, `algebra_matrix_analyze`, and `cas` MCP tools. The CAS is distinct from `solvers/symbolic_logic` (SAT / defeasible logic).
 
 ### Core 2: The GPU Sieve
 Instead of relying on heavy CPU indexing (like B-Trees), Qualia-DB leverages the device GPU (or WebGPU in the browser) to perform massive bitwise SIMD scans over the raw data buffer in parallel.

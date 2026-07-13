@@ -1,15 +1,47 @@
+use crate::components::qapp_engine::invoke_json;
 use dioxus::prelude::*;
 
 #[component]
 pub fn ComorbidityAnalyzer() -> Element {
+    let mut is_loading = use_signal(|| false);
+    let mut backend_status = use_signal(|| "QualiaDB Local Analysis".to_string());
+
+    let run_analysis = move |_| {
+        is_loading.set(true);
+        backend_status.set("Analyzing...".to_string());
+        spawn(async move {
+            let args = serde_json::json!({
+                "payload": [10, 11, 12], // mock payload for SLG VM
+            });
+
+            if let Ok(res) = invoke_json("execute_computational_vm", args).await {
+                if let Ok(text) = serde_json::from_value::<String>(res) {
+                    backend_status.set(format!("VM: {}", text));
+                }
+            } else {
+                backend_status.set("Error".to_string());
+            }
+            is_loading.set(false);
+        });
+    };
     rsx! {
         div {
             style: "padding: 2rem; background: #0f172a; border-radius: 16px; color: #f8fafc; font-family: 'Inter', sans-serif; box-shadow: 0 10px 25px rgba(0,0,0,0.5);",
 
             div {
                 style: "margin-bottom: 2rem; border-bottom: 1px solid #334155; padding-bottom: 1rem;",
-                h2 { style: "margin: 0; font-size: 1.8rem; font-weight: 600; background: -webkit-linear-gradient(#f472b6, #db2777); -webkit-background-clip: text; -webkit-text-fill-color: transparent;", "Comorbidity Analyzer" }
-                div { style: "font-size: 0.9rem; color: #94a3b8; margin-top: 0.5rem;", "Cross-referencing QualiaDB native models (LOINC/FHIR/ICD-10)" }
+                div {
+                    style: "display: flex; justify-content: space-between; align-items: center;",
+                    div {
+                        h2 { style: "margin: 0; font-size: 1.8rem; font-weight: 600; background: -webkit-linear-gradient(#f472b6, #db2777); -webkit-background-clip: text; -webkit-text-fill-color: transparent;", "Comorbidity Analyzer" }
+                        div { style: "font-size: 0.9rem; color: #94a3b8; margin-top: 0.5rem;", "Cross-referencing QualiaDB native models (LOINC/FHIR/ICD-10)" }
+                    }
+                    button {
+                        style: "background: rgba(236, 72, 153, 0.1); border: 1px solid rgba(236, 72, 153, 0.3); padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.875rem; color: #ec4899; cursor: pointer;",
+                        onclick: run_analysis,
+                        "{backend_status}"
+                    }
+                }
             }
 
             div {

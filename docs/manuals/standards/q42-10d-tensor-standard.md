@@ -1,9 +1,14 @@
 # Q42 10D Volumetric Tensor Standard
 
-**Version:** 1.1  
-**Date:** 2026-06-17  
+**Version:** 1.2  
+**Date:** 2026-06-21 (rev; was 1.1 2026-06-17)  
 **Status:** Draft Standard  
-**Repository:** https://github.com/mediaprophet/qualiaDB/tree/0.0.18-dev
+**Repository:** https://github.com/mediaprophet/qualiaDB/tree/0.0.23
+
+**Changelog (1.2):** §4 made normative — the volume-search metric is selected by the
+**query's** `v` topology class, with an exact euclidean formula and a **GPU/CPU
+determinism requirement** (the GPU compute path MUST compute the identical metric as the
+CPU reference). Implements the metric-unification work in `ALGEBRA_MANIFOLD_PLAN.md` §4.
 
 ## Abstract
 
@@ -160,29 +165,62 @@ pub fn process_tensor(
 
 ## 4. Topological Distance Metrics
 
-### 4.1 Distance Calculation Formulas
+### 4.1 Metric selection (NORMATIVE)
 
-**Euclidean Distance (v = 0):**
+The volume-search distance between a **query** tensor `Q` and a **node** tensor `N` is
+selected by the **query's** topological class `⌊Q.v⌋` (the same class applies to every
+node in a given search — it is a property of the query, not of each node):
+
+| `⌊Q.v⌋` | Metric | Fields used |
+|---------|--------|-------------|
+| 0 | Euclidean | x, y, z, t, α, μ, σ |
+| 1 | Cyclic / toroidal | x, y, z (mod 1) |
+| 2 | Hyperbolic | x, y, z |
+| ≥ 3 | Boundary clique | v |
+
+This mirrors `Tensor10D::full_distance` (`crates/qualia-core-db/src/tensor/mod.rs`).
+
+**Euclidean (v = 0)** — the full 7-dimensional form (note: `q, v, w` are NOT part of the
+metric):
 ```
-distance = √((x2-x1)² + (y2-y1)² + (z2-z1)² + temporal² + spectral²)
+d = √( (Δx)² + (Δy)² + (Δz)² + (Δt)² + (Δα)² + (Δμ)² + (Δσ)² )
 ```
 
-**Cyclic Distance (v = 1):**
+**Cyclic (v = 1)** — toroidal wrap on each spatial axis:
 ```
-distance = min(|a-b|, 1.0 - |a-b|)  // Modulo arithmetic
-```
-
-**Hyperbolic Distance (v = 2):**
-```
-distance = ln(e^|dx| + e^|dy| + e^|dz|)  // Exponential hierarchy
+d = √( c(Δx)² + c(Δy)² + c(Δz)² ),   c(δ) = min(|δ|, 1 − |δ|)
 ```
 
-**Boundary Distance (v = 3+):**
+**Hyperbolic (v = 2)** — exponential hierarchy over the spatial axes:
 ```
-distance = 0 if same clique else 1  // Byte comparison
+d = ln( e^|Δx| + e^|Δy| + e^|Δz| )
 ```
 
-### 4.2 Topological Bifurcation
+**Boundary (v ≥ 3)** — clique membership:
+```
+d = 0 if Q.v == N.v else 1
+```
+
+A node `N` is a hit iff `d(Q, N) ≤ max_distance`.
+
+### 4.2 GPU/CPU determinism (NORMATIVE)
+
+A conforming implementation MUST compute the **identical** metric (§4.1) on every
+execution path — CPU SIMD, GPU, and any fallback — so a volume search returns the same
+hit set regardless of the hardware that runs it. In particular the GPU compute kernel MUST
+implement all four metrics and dispatch on `⌊Q.v⌋`; it MUST NOT silently restrict to
+euclidean.
+
+Reference implementation:
+- GPU kernel: `crates/qualia-core-db/src/shaders/tensor_volume.wgsl` (`metric_distance`).
+- CPU reference (GPU-independent ground truth): `tensor::volume_gpu::cpu_tensor_search_into`.
+- Substrate CPU fallback: `Q42TensorView::tensor_search_into` (uses `full_distance`).
+
+Earlier revisions only implemented the euclidean branch on the GPU, so results diverged
+from the CPU path for `v ≠ 0`; v1.2 closes this. (See `ALGEBRA_MANIFOLD_PLAN.md` §4.1 and
+the `cpu_tensor_search_honors_topology_class` test.)
+
+### 4.3 Topological Bifurcation
 
 Combined with manifold identifier (w), topological class (v) enables structural "wormholes" for cross-domain correlation:
 - Map topological shape from one w to correlated coordinate in another w

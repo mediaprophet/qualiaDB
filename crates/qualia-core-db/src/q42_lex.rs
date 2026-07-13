@@ -1,5 +1,4 @@
 //! Read `.q42.lex` reverse-lexicon sidecars (Q42LEX format from qualia-cli ingest).
-use crate::lexicon::TAG_EMBEDDED;
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -15,9 +14,63 @@ const HEADER_SIZE: usize = 32;
 const INDEX_ENTRY_SIZE: usize = 16;
 
 /// Type tags for lexicon entries (1-byte prefix in payload)
-const LEX_TAG_STRING: u8 = 0x01;      // UTF-8 string
-const LEX_TAG_EMBEDDED: u8 = 0x02;    // Embedded triple [u64; 3]
-const LEX_TAG_WEBIZEN: u8 = 0x03;     // Authoritative Webizen identity
+const LEX_TAG_STRING: u8 = 0x01; // UTF-8 string
+const LEX_TAG_EMBEDDED: u8 = 0x02; // Embedded triple [u64; 3]
+const LEX_TAG_WEBIZEN: u8 = 0x03; // Authoritative Webizen identity
+
+/// Serialize a hash → string map into the canonical `Q42LEX` byte layout that [`Q42LexMmap`] reads
+/// back (magic, sorted 16-byte index, tagged string blob). This is the **write** side of the lexicon:
+/// the RDF ingest calls it in lossless ("Complete") mode so every subject/predicate URI and every
+/// literal is recoverable via [`Q42LexMmap::lookup_hash`], instead of being hashed away.
+///
+/// Strings are stored as **UTF-8** (`LEX_TAG_STRING`), preserving the full Unicode range — this is
+/// essential, not cosmetic: a lexicon that only kept ASCII would silently erase most of the world's
+/// languages (WordNet alone carries Finnish, Thai, and dozens more). A string longer than the 16-bit
+/// length field can express is truncated at a UTF-8 **character boundary** (never mid-codepoint), so a
+/// multi-byte grapheme is never split into invalid bytes.
+///
+/// The map is keyed by the same value stored in the quin field (for objects that is the
+/// `OBJECT_HASH_MASK`-masked hash), so `lookup_hash(quin.object)` resolves directly. Entries are sorted
+/// by hash for the reader's binary search; the caller's map has already de-duplicated by hash.
+pub fn serialize_string_lexicon(entries: &HashMap<u64, String>) -> Vec<u8> {
+    let mut sorted: Vec<(&u64, &String)> = entries.iter().collect();
+    sorted.sort_unstable_by_key(|(h, _)| **h);
+    let entry_count = sorted.len() as u64;
+    let strings_offset = HEADER_SIZE as u64 + entry_count * INDEX_ENTRY_SIZE as u64;
+
+    let mut index: Vec<u8> = Vec::with_capacity(sorted.len() * INDEX_ENTRY_SIZE);
+    let mut blob: Vec<u8> = Vec::new();
+    for (hash, text) in &sorted {
+        let str_off = blob.len() as u64;
+        let s = utf8_prefix(text, u16::MAX as usize);
+        blob.push(LEX_TAG_STRING);
+        blob.extend_from_slice(&(s.len() as u16).to_le_bytes());
+        blob.extend_from_slice(s.as_bytes());
+        index.extend_from_slice(&hash.to_le_bytes());
+        index.extend_from_slice(&str_off.to_le_bytes());
+    }
+
+    let mut out = Vec::with_capacity(HEADER_SIZE + index.len() + blob.len());
+    out.extend_from_slice(MAGIC);
+    out.extend_from_slice(&entry_count.to_le_bytes());
+    out.extend_from_slice(&strings_offset.to_le_bytes());
+    out.extend_from_slice(&1u64.to_le_bytes()); // format version
+    out.extend_from_slice(&index);
+    out.extend_from_slice(&blob);
+    out
+}
+
+/// Largest UTF-8 prefix of `s` that fits in `max_bytes`, never splitting a codepoint.
+fn utf8_prefix(s: &str, max_bytes: usize) -> &str {
+    if s.len() <= max_bytes {
+        return s;
+    }
+    let mut end = max_bytes;
+    while end > 0 && !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    &s[..end]
+}
 
 /// Zero-allocation lexicon key for in-memory lookups
 pub enum LexiconKey<'a> {
@@ -107,6 +160,18 @@ impl<'a> Q42LexMmap<'a> {
         None
     }
 
+    /// The lexeme string of the `i`-th index entry (`0..entry_count`), if it is a UTF-8 string entry
+    /// (not an embedded-triple / Webizen entry). Enables iterating ALL lexicon strings without knowing
+    /// their hashes — e.g. to assemble a calibration corpus from a WordNet q42's gloss text.
+    pub fn string_at(&self, i: usize) -> Option<&'a str> {
+        if i >= self.entry_count {
+            return None;
+        }
+        let off = HEADER_SIZE + i * INDEX_ENTRY_SIZE;
+        let str_off = u64::from_le_bytes(self.data[off + 8..off + 16].try_into().ok()?) as usize;
+        Self::read_string_at(self.data, self.strings_offset, str_off)
+    }
+
     fn read_string_at(data: &[u8], blob_base: usize, rel_off: usize) -> Option<&str> {
         let start = blob_base.saturating_add(rel_off);
         if start + 3 > data.len() {
@@ -134,28 +199,54 @@ impl<'a> Q42LexMmap<'a> {
             let off = HEADER_SIZE + mid * INDEX_ENTRY_SIZE;
             let entry_hash = u64::from_le_bytes(self.data[off..off + 8].try_into().ok()?);
             match entry_hash.cmp(&hash) {
-                std::cmp::Ordering::Less    => lo = mid + 1,
+                std::cmp::Ordering::Less => lo = mid + 1,
                 std::cmp::Ordering::Greater => hi = mid,
-                std::cmp::Ordering::Equal   => {
-                    let str_off = u64::from_le_bytes(
-                        self.data[off + 8..off + 16].try_into().ok()?,
-                    ) as usize;
-                    return Self::read_embedded_triple_at(
-                        self.data, self.strings_offset, str_off,
-                    )
-                    .copied();
+                std::cmp::Ordering::Equal => {
+                    let str_off =
+                        u64::from_le_bytes(self.data[off + 8..off + 16].try_into().ok()?) as usize;
+                    return Self::read_embedded_triple_at(self.data, self.strings_offset, str_off)
+                        .copied();
                 }
             }
         }
         None
     }
 
+    /// Binary search for `hash`; returns the authoritative Webizen identity string.
+    pub fn lookup_webizen_identity(&self, hash: u64) -> Option<&'a str> {
+        let mut lo = 0usize;
+        let mut hi = self.entry_count;
+        while lo < hi {
+            let mid = lo + (hi - lo) / 2;
+            let off = HEADER_SIZE + mid * INDEX_ENTRY_SIZE;
+            let entry_hash = u64::from_le_bytes(self.data[off..off + 8].try_into().ok()?);
+            match entry_hash.cmp(&hash) {
+                std::cmp::Ordering::Less => lo = mid + 1,
+                std::cmp::Ordering::Greater => hi = mid,
+                std::cmp::Ordering::Equal => {
+                    let str_off =
+                        u64::from_le_bytes(self.data[off + 8..off + 16].try_into().ok()?) as usize;
+                    return Self::read_webizen_at(self.data, self.strings_offset, str_off);
+                }
+            }
+        }
+        None
+    }
+
+    fn read_webizen_at(data: &[u8], blob_base: usize, rel_off: usize) -> Option<&str> {
+        let start = blob_base.saturating_add(rel_off);
+        if start + 3 > data.len() || data[start] != LEX_TAG_WEBIZEN {
+            return None;
+        }
+        let len = u16::from_le_bytes(data[start + 1..start + 3].try_into().ok()?) as usize;
+        let text_start = start + 3;
+        let text_end = text_start.saturating_add(len).min(data.len());
+        std::str::from_utf8(&data[text_start..text_end]).ok()
+    }
+
     /// Reads a 24-byte embedded triple [u64; 3] at the given offset.
     ///
     /// Format: [TAG_EMBEDDED (1 byte)] + [24-byte triple]
-    /// This is used for SPARQL-Star embedded triples where the lexicon stores
-    /// the three component IDs (subject, predicate, object) as a fixed-size
-    /// binary tuple instead of a UTF-8 string.
     fn read_embedded_triple_at(data: &[u8], blob_base: usize, rel_off: usize) -> Option<&[u64; 3]> {
         let start = blob_base.saturating_add(rel_off);
         if start + 1 + 24 > data.len() {
@@ -209,15 +300,18 @@ impl Q42Lexicon {
         }
         Err(std::io::Error::new(
             std::io::ErrorKind::NotFound,
-            format!("no lexicon in {} or sidecar {}", q42_path.display(), sidecar.display()),
+            format!(
+                "no lexicon in {} or sidecar {}",
+                q42_path.display(),
+                sidecar.display()
+            ),
         ))
     }
 
     /// Build an in-memory lexicon from a Q42LEX byte slice (embedded or sidecar).
     pub fn load_from_lex_bytes(data: &[u8]) -> std::io::Result<Self> {
-        let view = Q42LexMmap::from_bytes(data).map_err(|e| {
-            std::io::Error::new(std::io::ErrorKind::InvalidData, format!("{e:?}"))
-        })?;
+        let view = Q42LexMmap::from_bytes(data)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, format!("{e:?}")))?;
         let mut entries = HashMap::with_capacity(view.entry_count());
         for i in 0..view.entry_count() {
             let off = HEADER_SIZE + i * INDEX_ENTRY_SIZE;
@@ -346,6 +440,56 @@ mod tests {
         assert_eq!(lex.lookup_hash(h1), Some("Patient"));
         assert_eq!(lex.lookup_hash(h2), Some("fever"));
         assert_eq!(lex.lookup_hash(0xDEAD), None);
+    }
+
+    /// The write side ([`serialize_string_lexicon`]) round-trips through the read side for the full
+    /// Unicode range — multilingual literals (non-Latin scripts, combining marks, emoji) come back
+    /// byte-identical. This is the property that makes lossless ingest actually lossless for the
+    /// world's languages, not just ASCII.
+    #[test]
+    fn serialize_lexicon_round_trips_unicode() {
+        let samples = [
+            "carefully",                        // ASCII (WordNet eng gloss word)
+            "välinpitämättömästi",              // Finnish (WordNet fin)
+            "อย่างสะเพร่า",                       // Thai
+            "不注意に",                         // Japanese
+            "بلا مبالاة",                         // Arabic (RTL)
+            "невнимательно",                    // Russian (Cyrillic)
+            "a definition — with em-dash & 😀", // punctuation + emoji (4-byte codepoint)
+        ];
+        let mut map = HashMap::new();
+        for s in samples {
+            map.insert(crate::q_hash(s), s.to_string());
+        }
+        let bytes = serialize_string_lexicon(&map);
+        let lex = Q42LexMmap::from_bytes(&bytes).unwrap();
+        assert_eq!(lex.entry_count(), samples.len());
+        for s in samples {
+            assert_eq!(
+                lex.lookup_hash(crate::q_hash(s)),
+                Some(s),
+                "multilingual lexeme must round-trip byte-identical: {s:?}"
+            );
+        }
+    }
+
+    /// A literal longer than the 16-bit length field is truncated at a char boundary, never
+    /// mid-codepoint — so the stored bytes are always valid UTF-8 and the reader returns `Some`.
+    #[test]
+    fn serialize_lexicon_truncates_on_char_boundary() {
+        // 22-000 three-byte codepoints ≈ 66 000 bytes > u16::MAX (65 535); the cut lands between
+        // codepoints, so from_utf8 on read still succeeds.
+        let long: String = "あ".repeat(22_000);
+        let h = crate::q_hash(&long);
+        let mut map = HashMap::new();
+        map.insert(h, long);
+        let bytes = serialize_string_lexicon(&map);
+        let lex = Q42LexMmap::from_bytes(&bytes).unwrap();
+        let got = lex
+            .lookup_hash(h)
+            .expect("truncated string still valid UTF-8");
+        assert!(got.len() <= u16::MAX as usize);
+        assert!(got.chars().all(|c| c == 'あ'));
     }
 
     #[test]

@@ -609,8 +609,66 @@ export function switchTab(tabId, btn, opts = {}) {
     }
 }
 
+/** Phase 1.4: paint the 2D shadow of the manifold — the SAME project() the 3D scene uses, target
+ *  Plane2D — onto the companion canvas, so one projection is visibly shown as two views. */
+let _plane2dRaf = 0;
+let _refusalDemoActive = false; // Phase 2: showing the deterministic-refusal demo
+function drawPlane2dShadow() {
+    const cv = document.getElementById('plane2d-canvas');
+    if (cv && qualiaPortal && typeof qualiaPortal.project_resident_plane2d === 'function') {
+        const ctx = cv.getContext('2d');
+        const W = cv.width, H = cv.height;
+        ctx.clearRect(0, 0, W, H);
+        let pts = null;
+        try { pts = qualiaPortal.project_resident_plane2d(performance.now() * 0.001); }
+        catch (_) { /* render loop held the portal this frame; retry next */ }
+        if (pts && pts.length) {
+            const sc = W * 0.40;
+            ctx.fillStyle = 'rgba(110,231,183,0.9)';
+            for (let i = 0; i + 1 < pts.length; i += 2) {
+                const x = W * 0.5 + pts[i] * sc;
+                const y = H * 0.5 - pts[i + 1] * sc; // y up
+                ctx.beginPath();
+                ctx.arc(x, y, 2.2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+    if (_refusalDemoActive && qualiaPortal && typeof qualiaPortal.artefact_refused === 'function') {
+        const rs = document.getElementById('refusal-status');
+        if (rs) {
+            let refused = false;
+            try { refused = qualiaPortal.artefact_refused(); } catch (_) { /* portal busy */ }
+            rs.textContent = refused
+                ? '● REFUSED — admission clamped the artefact at the world bound'
+                : '○ admitted — sliding toward the bound…';
+            rs.style.color = refused ? 'rgb(248,113,113)' : 'rgb(110,231,183)';
+        }
+    }
+    _plane2dRaf = requestAnimationFrame(drawPlane2dShadow);
+}
+
+/** Load an OBJ/STL/GLB file picked by the user and render it as a solid 3D surface (Phase 1.2). */
+export async function loadMeshAsset(file) {
+    const statusEl = document.getElementById('mesh-status');
+    if (!file) return;
+    if (!qualiaPortal || typeof qualiaPortal.upload_mesh_asset !== 'function') {
+        if (statusEl) statusEl.textContent = 'GPU viewer not ready (WebGPU required for mesh surfaces).';
+        return;
+    }
+    try {
+        const buf = new Uint8Array(await file.arrayBuffer());
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        const tris = qualiaPortal.upload_mesh_asset(buf, ext);
+        if (statusEl) statusEl.textContent = `${file.name}: ${Number(tris).toLocaleString()} triangles`;
+    } catch (e) {
+        if (statusEl) statusEl.textContent = 'Load failed: ' + ((e && (e.message || e)) || 'error');
+    }
+}
+
 if (typeof window !== 'undefined') {
     window.generateGeometry = generateGeometry;
+    window.loadMeshAsset = loadMeshAsset;
     window.updateDisplayMode = updateDisplayMode;
     window.encodeToQuins = encodeToQuins;
     window.runSpatialOp = runSpatialOp;
@@ -641,6 +699,10 @@ export async function bootSpatialPage() {
 
     const bootTimer = debugTime('bootSpatialPage');
     try {
+        // Make the viewer pane visible BEFORE GPU init: wgpu's `getContext('webgpu')` returns null
+        // on a canvas that isn't in the rendered tree, so the WebGPU surface must bind while the
+        // viewer tab is laid out (it's otherwise activated later, after init → canvas2d fallback).
+        switchTab('viewer', null, { silent: true });
         await initQualiaLayer();
         if (!wasm) {
             const module = await import('../playground/qualia_core_db.js');
@@ -652,6 +714,73 @@ export async function bootSpatialPage() {
             wasmSource = 'qualia-core-db';
         }
         await generateGeometry();
+        const meshInput = document.getElementById('mesh-file');
+        if (meshInput && !meshInput.dataset.bound) {
+            meshInput.dataset.bound = '1';
+            meshInput.addEventListener('change', (e) => {
+                loadMeshAsset(e.target.files && e.target.files[0]);
+                e.target.value = '';
+            });
+        }
+        const animateBox = document.getElementById('animate-artefact');
+        if (animateBox && !animateBox.dataset.bound) {
+            animateBox.dataset.bound = '1';
+            animateBox.addEventListener('change', (e) => {
+                if (!qualiaPortal) return;
+                _refusalDemoActive = false;
+                const rs = document.getElementById('refusal-status');
+                if (rs) rs.textContent = '';
+                if (e.target.checked && typeof qualiaPortal.animate_artefact === 'function') {
+                    qualiaPortal.animate_artefact('revolute', 0.0, 1.0, 0.0, 0.8); // Phase 2: spin about Y
+                } else if (typeof qualiaPortal.stop_artefact_animation === 'function') {
+                    qualiaPortal.stop_artefact_animation();
+                }
+            });
+        }
+        const refusalBtn = document.getElementById('demo-refusal-btn');
+        if (refusalBtn && !refusalBtn.dataset.bound) {
+            refusalBtn.dataset.bound = '1';
+            refusalBtn.addEventListener('click', () => {
+                if (!qualiaPortal || typeof qualiaPortal.demo_artefact_refusal !== 'function') return;
+                if (animateBox) animateBox.checked = false; // mutually exclusive with the spin
+                qualiaPortal.demo_artefact_refusal();
+                _refusalDemoActive = true;
+            });
+        }
+        const lowTier = document.getElementById('lowtier-toggle');
+        if (lowTier && !lowTier.dataset.bound) {
+            lowTier.dataset.bound = '1';
+            const canvas3d = document.getElementById('ambient-canvas');
+            const pane2d = document.getElementById('plane2d-canvas');
+            lowTier.addEventListener('change', (e) => {
+                const st = document.getElementById('lowtier-status');
+                // The ENGINE decides (Phase 5 budget rule): Eco (code 1) collapses 3D -> 2D.
+                const collapses = (qualiaPortal && typeof qualiaPortal.budget_collapses_3d === 'function')
+                    ? qualiaPortal.budget_collapses_3d(1)
+                    : true;
+                if (e.target.checked && collapses) {
+                    if (canvas3d) canvas3d.style.opacity = '0.06';
+                    if (pane2d) {
+                        if (pane2d.dataset.prevStyle === undefined) pane2d.dataset.prevStyle = pane2d.getAttribute('style') || '';
+                        pane2d.style.left = '50%';
+                        pane2d.style.top = '50%';
+                        pane2d.style.right = 'auto';
+                        pane2d.style.bottom = 'auto';
+                        pane2d.style.transform = 'translate(-50%, -50%) scale(2.2)';
+                        pane2d.style.zIndex = '20';
+                    }
+                    if (st) { st.textContent = '● low-tier: 3D scene collapsed to its 2D pane (engine budget rule)'; st.style.color = 'rgb(251,191,36)'; }
+                } else {
+                    if (canvas3d) canvas3d.style.opacity = '1';
+                    if (pane2d && pane2d.dataset.prevStyle !== undefined) {
+                        pane2d.setAttribute('style', pane2d.dataset.prevStyle);
+                        delete pane2d.dataset.prevStyle;
+                    }
+                    if (st) { st.textContent = ''; }
+                }
+            });
+        }
+        if (qualiaPortal && !_plane2dRaf) drawPlane2dShadow(); // Phase 1.4 companion 2D view
         activateSpatialTabFromHash();
 
         debugLog('bootSpatialPage wasm ready', { wasmSource, hasPortal: !!qualiaPortal });

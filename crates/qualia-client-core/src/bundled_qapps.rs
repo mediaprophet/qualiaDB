@@ -4,7 +4,6 @@
 //! Dev builds resolve `bundled/qapps/{Name}/`, then gitignored `app-development/{Name}/`.
 
 use std::fs;
-use std::io;
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
@@ -33,21 +32,6 @@ fn exe_dir() -> Option<PathBuf> {
     std::env::current_exe()
         .ok()
         .and_then(|p| p.parent().map(|d| d.to_path_buf()))
-}
-
-fn copy_dir_all(src: &Path, dst: &Path) -> io::Result<()> {
-    fs::create_dir_all(dst)?;
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
-        let file_type = entry.file_type()?;
-        let target = dst.join(entry.file_name());
-        if file_type.is_dir() {
-            copy_dir_all(&entry.path(), &target)?;
-        } else {
-            fs::copy(entry.path(), &target)?;
-        }
-    }
-    Ok(())
 }
 
 fn has_valid_manifest(dir: &Path) -> bool {
@@ -220,10 +204,13 @@ pub fn seed_qapp_if_missing(
     let source = resolve_bundled_qapp_source(qapp_name)
         .ok_or_else(|| format!("Bundled qapp source not found for {qapp_name}"))?;
 
-    if dest.exists() {
-        fs::remove_dir_all(&dest).map_err(|e| e.to_string())?;
-    }
-    copy_dir_all(&source, &dest).map_err(|e| format!("Failed to copy {qapp_name}: {e}"))?;
+    crate::qapp_install::install_package_atomic(
+        storage,
+        &source,
+        crate::qapp_install::InstallPolicy::Development,
+        None,
+    )
+    .map_err(|e| e.to_string())?;
     Ok(true)
 }
 
@@ -248,15 +235,16 @@ pub fn upgrade_qapp_from_source(
 
     let previous = installed_qapp_version(storage_path, qapp_name);
     let next = normalize_version_label(&manifest.version);
-    let dest = qapps_dir(storage_path).join(qapp_name);
-    let _ = ensure_qapps_dir(storage_path).map_err(|e| e.to_string())?;
-
-    if dest.exists() {
-        fs::remove_dir_all(&dest).map_err(|e| e.to_string())?;
-    }
-    copy_dir_all(source_dir, &dest).map_err(|e| format!("Failed to upgrade {qapp_name}: {e}"))?;
+    let entry = crate::qapp_install::install_package_atomic(
+        storage_path,
+        source_dir,
+        crate::qapp_install::InstallPolicy::Development,
+        None,
+    )
+    .map_err(|e| e.to_string())?;
 
     let _ = crate::qapp_manifest::install_qapp_capabilities(&manifest);
+    let _ = entry;
 
     Ok(match previous {
         Some(old) => format!("Upgraded {qapp_name} v{old} → v{next}"),
@@ -311,6 +299,7 @@ pub fn seed_bundled_qapps() -> Result<Vec<String>, String> {
     }
 
     register_default_capabilities(&storage_path);
+    let _ = crate::qapp_install::reconcile_registry_with_disk(&storage_path);
 
     for offer in list_bundled_qapp_updates(&storage_path) {
         if offer.update_available {

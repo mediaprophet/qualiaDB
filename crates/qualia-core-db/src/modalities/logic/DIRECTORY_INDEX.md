@@ -1,0 +1,200 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# logic Index
+
+## Functionality Overview
+Comprehensive index of functionality for `logic`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Subdirectories
+- 📁 `[owl](owl/DIRECTORY_INDEX.md)`
+- 📁 `[shacl](shacl/DIRECTORY_INDEX.md)`
+- 📁 `[shacl_extensions](shacl_extensions/DIRECTORY_INDEX.md)`
+
+### Files & Exported Functionality
+- 📄 `computational_maths_shacl.rs`
+  - `struct UnitsConfiguration`
+  - `struct NumberTheoryConfiguration`
+  - `struct SpecialFunctionConfiguration`
+  - `struct InterpolationConfiguration`
+  - `struct IntegralTransformConfiguration`
+  - `struct VectorCalculusConfiguration`
+  - `struct ExactArithmeticConfiguration`
+  - `struct SymbolicCalculusConfiguration`
+  - `struct AssumptionConfiguration`
+  - `struct NumericalMethodConfiguration`
+  - `impl UnitsConfiguration`
+  - `fn to_opcodes`
+  - `impl NumberTheoryConfiguration`
+  - `impl SpecialFunctionConfiguration`
+  - `impl InterpolationConfiguration`
+  - *(...and 9 more)*
+- 📄 `core.rs`
+  - `enum WebizenOpcode`
+  - `struct WebizenVM`
+  - `impl WebizenVM`
+  - `fn new`
+  - `fn with_scrubbing_lock`
+  - `fn load_bytecode`
+  - `fn flatten_to_suspended`
+  - `fn execute_constraint`
+  - `fn execute_implication`
+  - `fn extract_float`
+  - `fn prune_defeasible_claims`
+  - `fn extract_inline_float`
+  - `struct WebizenCompiler`
+  - `impl WebizenCompiler`
+  - `fn compile_mock_constraint`
+  - *(...and 9 more)*
+- 📄 `core_modalities_shacl.rs`
+  - `struct EpistemicConfiguration`
+  - `struct EpistemicQuery`
+  - `struct ParaconsistentConfiguration`
+  - `struct ContradictionHandling`
+  - `struct LTLConfiguration`
+  - `struct TemporalTrace`
+  - `struct SpatioTemporalConfiguration`
+  - `struct AllenIntervalConfiguration`
+  - `struct SpatialRegionConfiguration`
+  - `struct GraphConfiguration`
+  - `struct GraphAnalysisConfiguration`
+  - `struct GraphAlgorithmConfiguration`
+  - `struct CalculusConfiguration`
+  - `struct ODEConfiguration`
+  - `struct TensorProvenanceConfiguration`
+  - *(...and 35 more)*
+- 📄 `deontic.rs`
+  - `enum DeonticStatus`
+  - `enum DefeatKind`
+  - `struct DeonticVerdict`
+  - `enum DeonticError`
+  - `fn extract_deontic_opcode`
+  - `fn extract_expiry_unix32`
+  - `fn defeater_fingerprint`
+  - `fn harvest_defeater_fingerprints`
+  - `fn norm_has_active_defeater`
+  - `fn has_defeater`
+  - `fn defeater_kind_for`
+  - `fn evaluate_deontic_contract`
+  - `fn term_uri_hash`
+  - `fn opcode_from_predicate_hash`
+  - `fn compile_n3_rule_to_norm`
+  - *(...and 44 more)*
+- 📄 `infrastructure_shacl.rs`
+  - `struct BiologicalDomainConfiguration`
+  - `struct ChemicalDomainConfiguration`
+  - `struct PhysicalDomainConfiguration`
+  - `struct FinancialDomainConfiguration`
+  - `struct MathematicalDomainConfiguration`
+  - `struct GeospatialDomainConfiguration`
+  - `struct ObfuscationConfiguration`
+  - `struct PolynomialObfuscationConfiguration`
+  - `struct SemanticStripperConfiguration`
+  - `struct DomainTransformerConfiguration`
+  - `struct HybridStateConfiguration`
+  - `struct SolverConfiguration`
+  - `struct CalculusSolverConfiguration`
+  - `struct LinearAlgebraSolverConfiguration`
+  - `struct OptimizationSolverConfiguration`
+  - *(...and 23 more)*
+- 📄 `logic_modalities_shacl.rs`
+  - `fn get_logic_modalities_shacl_ttl`
+  - `fn every_modality_has_a_configuration_shape`
+  - `fn sdl_plus_deontic_stack_has_full_shacl_coverage`
+  - `fn epistemic_shape_covers_the_full_engine`
+  - `fn extended_legal_logic_16_30_has_full_shacl_coverage`
+- 📄 `mod.rs`
+- 📄 `n3_compiler.rs`
+  - `enum CompiledTerm`
+  - `struct CompiledTriple`
+  - `struct CompiledFormula`
+  - `impl Default`
+  - `fn default`
+  - `struct CompiledRule`
+  - `impl CompiledTerm`
+  - `fn as_u64`
+  - `fn is_variable`
+  - `fn compile_term`
+  - `fn compile_triple`
+  - `fn compile_formula`
+  - `fn compile_rule_to_zero_heap`
+  - `enum N3OutputMode`
+  - `enum N3CompileError`
+  - *(...and 17 more)*
+- 📄 `n3_parser.rs`
+  - `enum Term`
+  - `struct Triple`
+  - `struct Formula`
+  - `struct StackFormula`
+  - `fn new`
+  - `fn as_slice`
+  - `impl Default`
+  - `fn default`
+  - `enum RuleType`
+  - `struct Rule`
+  - `struct StackRule`
+  - `enum N3Event`
+  - `enum StackEvent`
+  - `struct N3ParserError`
+  - `impl fmt`
+  - *(...and 37 more)*
+- 📄 `n3logic.rs`
+  - `enum N3LogicError`
+  - `fn infer_logic_bindings`
+- 📄 `qubo.rs`
+  - `enum QuboCompileError`
+  - `struct QuboWeightEmit`
+  - `struct QuboMatrix`
+  - `impl Default`
+  - `fn default`
+  - `impl QuboMatrix`
+  - `fn map_var`
+  - `fn emit_linear`
+  - `fn emit_coupler`
+  - `fn wipe_index_map`
+  - `fn compile_quins_to_qubo`
+  - `fn emit_weight_from_quin`
+  - `fn decode_inline_weight`
+  - `fn penalty_from_predicate`
+  - `fn solve_classical`
+  - *(...and 6 more)*
+- 📄 `rules.rs`
+  - `struct RuleEngine`
+  - `struct RuleSet`
+  - `struct Rule`
+  - `impl RuleEngine`
+  - `fn new`
+  - `fn add_ruleset`
+  - `fn get_ruleset`
+  - `fn evaluate`
+  - `struct RuleResult`
+  - `impl Default`
+  - `fn default`
+  - `fn test_guardianship_ruleset_constant`
+  - `fn test_rule_engine_creation`
+  - `fn test_add_ruleset`
+  - `fn test_get_ruleset`
+- 📄 `specialized_libs_shacl.rs`
+  - `struct MatrixConfiguration`
+  - `struct MatrixOperation`
+  - `struct EigenDecomposition`
+  - `struct PolynomialSolveConfiguration`
+  - `struct SvdConfiguration`
+  - `struct DeterminantConfiguration`
+  - `struct SymbolicExpressionConfiguration`
+  - `struct SymbolicOperationConfiguration`
+  - `struct ModelConfiguration`
+  - `struct TrainingConfiguration`
+  - `struct InferenceConfiguration`
+  - `struct SimulationConfiguration`
+  - `struct BoundaryConditions`
+  - `struct MeshConfiguration`
+  - `struct MoleculeConfiguration`
+  - *(...and 35 more)*
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

@@ -44,12 +44,14 @@ pub fn run_deontic(dataset: &Path, contract_hash: u64) {
         Ok(v) => v,
         Err(e) => { eprintln!("KeyVault error: {e}"); return; }
     };
-    let permitted_layers = evaluate_accessible_layers(&vault, &vc, &[]);
+    let mut out: [Option<(qualia_core_db::key_vault::SubgraphLayer, qualia_core_db::key_vault::SubgraphKey)>; 5] =
+        [None, None, None, None, None];
+    let count = evaluate_accessible_layers(&vault, &vc, &[], &mut out);
     println!("Deontic evaluation for contract 0x{contract_hash:016x}:");
-    if permitted_layers.is_empty() {
+    if count == 0 {
         println!("  No permitted layers found.");
     }
-    for (layer, _key) in permitted_layers {
+    for (layer, _key) in out.iter().take(count).flatten() {
         println!("  Permitted layer: {layer:?}");
     }
 }
@@ -367,7 +369,7 @@ pub fn run_control_feedback(kp: f64, ki: f64, kd: f64, setpoint: f64, measuremen
 }
 
 pub fn run_neuro_symbolic() {
-    use qualia_core_db::neuro_symbolic_sieve::{SieveLexSpec, SieveState};
+    use qualia_core_db::neuro_symbolic_sieve::SieveLexSpec;
     use qualia_core_db::q_hash;
 
     // Demonstrate the grammar sieve spec — shows which NQuin hashes constrain token generation

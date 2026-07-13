@@ -8,17 +8,19 @@ use std::path::PathBuf;
 pub mod bench;
 mod benchmark_env;
 pub mod compress;
+pub mod daemon;
 pub mod evaluate;
 pub mod ingest;
 mod llm_lifecycle;
 mod llm_testing;
-pub mod daemon;
 pub mod mcp;
-mod service;
+pub mod mesh;
 pub mod qpu;
 pub mod query;
 pub mod resources;
 pub mod science;
+pub mod shader;
+mod service;
 pub mod solve;
 pub mod telemetry_server;
 
@@ -69,6 +71,16 @@ pub enum Commands {
     Llm {
         #[command(subcommand)]
         action: LlmAction,
+    },
+    /// Deterministically generate, validate, certify, and tune WGSL compute kernels.
+    Shader {
+        #[command(subcommand)]
+        action: shader::ShaderAction,
+    },
+    /// Two-machine SocialWebNet (userspace WireGuard) reachability probe.
+    MeshProbe {
+        #[command(subcommand)]
+        action: mesh::MeshAction,
     },
     /// Dynamically lists features and capabilities compiled into the engine
     Capabilities {
@@ -128,7 +140,7 @@ pub enum Commands {
         #[command(subcommand)]
         action: WebizenAction,
     },
-    /// Exports a .q42 Graph into a W3C Solid LDP Basic Container
+    /// Exports a .q42 Graph into a W3C Solid LDP Basic Container (file export)
     ExportSolid {
         /// The path to the .q42 binary distribution file
         #[arg(long)]
@@ -136,6 +148,11 @@ pub enum Commands {
         /// The output directory for the Solid Container
         #[arg(long)]
         output: PathBuf,
+    },
+    /// Solid bridge: personal pod server (LDP) + consumer fetch/put (Solid-OutPost agent side)
+    Solid {
+        #[command(subcommand)]
+        action: SolidAction,
     },
     /// Runs detailed per-scenario benchmark actions (rss-scan, lazy-inference, etc). Requires path to .q42 dataset.
     /// For the LLM harness / CI use `benchmark --suite full` (alias `bench`) instead.
@@ -164,12 +181,20 @@ pub enum Commands {
         #[arg(long)]
         dataset: PathBuf,
     },
-    /// Stream-ingests an RDF/XML file into a mathematically pure .q42 binary
+    /// Stream-ingests an RDF/XML file into a .q42 binary.
+    ///
+    /// By default the ingest is LOSSLESS: every URI and literal (full Unicode) is interned into the
+    /// volume's lexicon and is recoverable. Pass `--strip-literals` for the smaller, lossy,
+    /// structure-only form — that discards all human-readable text (the size reduction is data loss,
+    /// not compression) and is only appropriate when the term strings live elsewhere.
     Import {
         /// The input .rdf or .ttl file
         input: PathBuf,
         /// The output .q42 file
         output: PathBuf,
+        /// Discard URIs & literals, keeping only 48-byte structural quins (lossy, not reversible).
+        #[arg(long)]
+        strip_literals: bool,
     },
     /// Ingest and compile raw data into .q42 SuperBlocks
     Ingest {
@@ -234,6 +259,69 @@ pub enum Commands {
     Science {
         #[command(subcommand)]
         action: ScienceAction,
+    },
+}
+
+/// Solid personal pod + consumer agent (hackathon / Solid-OutPost path).
+#[derive(Subcommand, Debug, Clone)]
+pub enum SolidAction {
+    /// Run the personal Solid LDP pod server (default http://127.0.0.1:4243)
+    Serve {
+        /// Listen address host
+        #[arg(long, default_value = "127.0.0.1")]
+        host: String,
+        /// Listen port
+        #[arg(long, default_value = "4243")]
+        port: u16,
+        /// Pod filesystem root (LDP resources)
+        #[arg(long)]
+        data_root: Option<PathBuf>,
+        /// Public base URL advertised in WebID / OIDC discovery
+        #[arg(long)]
+        public_base: Option<String>,
+        /// Enable demo Solid-OIDC-shaped routes (local smoke only; NOT production identity)
+        #[arg(long, default_value_t = true)]
+        demo_oidc: bool,
+        /// Disable demo OIDC even if --demo-oidc was defaulted on
+        #[arg(long, default_value_t = false)]
+        no_demo_oidc: bool,
+    },
+    /// Consumer: GET a Solid resource (Turtle) and report parsed Quin count
+    Fetch {
+        /// Resource URL (e.g. http://127.0.0.1:4243/public/deposit.ttl)
+        url: String,
+        /// Optional Bearer token
+        #[arg(long)]
+        token: Option<String>,
+        /// Write body to this file
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
+    /// Consumer: PUT Turtle/bytes to a Solid resource URL (sync-to-pod)
+    Put {
+        /// Target resource URL
+        url: String,
+        /// Local file to upload
+        file: PathBuf,
+        /// Content-Type (default text/turtle)
+        #[arg(long, default_value = "text/turtle")]
+        content_type: String,
+        /// Optional Bearer token
+        #[arg(long)]
+        token: Option<String>,
+    },
+    /// Consumer: POST into an LDP container (create resource)
+    Post {
+        /// Container URL (trailing slash recommended)
+        container: String,
+        /// Local file body
+        file: PathBuf,
+        #[arg(long, default_value = "text/turtle")]
+        content_type: String,
+        #[arg(long)]
+        slug: Option<String>,
+        #[arg(long)]
+        token: Option<String>,
     },
 }
 
@@ -633,7 +721,7 @@ pub enum ScienceAction {
         #[command(subcommand)]
         action: ClinicalAction,
     },
-    /// Financial economics: GBM path, Monte Carlo VaR, macroeconomic flow
+    /// Financial economics: GBM, VaR, Macro, Bond, Paper, Welfare, Game
     Economics {
         #[command(subcommand)]
         action: EconomicsAction,
@@ -858,6 +946,34 @@ pub enum EconomicsAction {
         #[arg(long, default_value = "100")]
         steps: usize,
     },
+    /// Price a simple coupon bond (fixed income kernel)
+    Bond {
+        #[arg(long, default_value = "100.0")]
+        face: f64,
+        #[arg(long, default_value = "0.05")]
+        coupon_rate: f64,
+        #[arg(long, default_value = "0.06")]
+        yield_rate: f64,
+        #[arg(long, default_value = "5")]
+        periods: u32,
+    },
+    /// Demo paper trading fill simulation (no real execution)
+    Paper {
+        #[arg(long, default_value = "10.0")]
+        qty: f64,
+        #[arg(long, default_value = "100.5")]
+        last_price: f64,
+    },
+    /// Welfare metrics (gini, atkinson)
+    Welfare {
+        #[arg(long, default_value = "1,2,3,10")]
+        incomes: String,
+    },
+    /// Simple game theory (cournot duopoly profit)
+    Game {
+        #[arg(long, default_value = "100")]
+        market_a: f64,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -867,7 +983,7 @@ pub enum CompileAction {
 }
 
 #[derive(Subcommand, Debug)]
-enum ProfileAction {
+pub enum ProfileAction {
     /// Compile a JSON-LD capability profile source into a binary .qchk file.
     /// Usage: qualia-cli profile compile health.jsonld [--out health.qchk]
     Compile {
@@ -887,7 +1003,7 @@ enum ProfileAction {
 }
 
 #[derive(Subcommand, Debug)]
-enum MigrateAction {
+pub enum MigrateAction {
     /// Migrate a .q42 volume from v2 to v3 (Lamport clock bit-shift + v3 header).
     ///
     /// Rewrites the header in-place and shifts each quin's Lamport clock from bits [60:32]
@@ -1018,7 +1134,7 @@ pub enum QpuAction {
 }
 
 #[derive(Subcommand, Debug)]
-enum WebizenAction {
+pub enum WebizenAction {
     /// Initialize a bare git repository with a generated did:git agency identity
     Init {
         #[arg(help = "Path to the repository to initialize")]
@@ -1102,8 +1218,14 @@ pub enum IngestFormat {
 pub enum LlmAction {
     /// Scan a vault directory for `.gguf` models
     List {
-        /// Directory containing GGUF files (default: `QUALIA_LLM_VAULT` or `C:/llmmodels`)
+        /// Directory containing GGUF files (default: `QUALIA_LLM_VAULT`, `C:/LLM_Models`, or legacy `C:/llmmodels`)
         #[arg(short, long)]
+        vault_path: Option<PathBuf>,
+    },
+    /// Read-only SHA-256 audit for byte-identical GGUF files
+    Duplicates {
+        /// Directory containing GGUF files
+        #[arg(long)]
         vault_path: Option<PathBuf>,
     },
     /// Memory-map a GGUF via `memmap2` and transition lifecycle → Active
@@ -1146,7 +1268,7 @@ pub enum LlmAction {
         #[arg(long)]
         quantization: Option<String>,
         /// Enable verbose logging
-        #[arg(long)]
+        #[arg(long, id = "test_verbose")]
         verbose: bool,
     },
     /// Validate model compatibility and format
@@ -1166,7 +1288,7 @@ pub enum LlmAction {
         /// Model name to test
         model: String,
         /// Enable verbose logging
-        #[arg(long)]
+        #[arg(long, id = "comprehensive_verbose")]
         verbose: bool,
     },
     /// Benchmark model performance
@@ -1196,10 +1318,171 @@ pub enum LlmAction {
         #[arg(long)]
         format: Option<String>,
     },
+    /// Convert a GGUF (import format) to native `.p64` + `.q42` helper metadata.
+    /// Engine steady-state should run the converted container, not the source GGUF.
+    Convert {
+        /// Path to a `.gguf` source file
+        input: PathBuf,
+        /// Output directory (created if missing). Writes `<stem>.p64` + `<stem>.q42.cbor-ld`.
+        #[arg(short, long)]
+        out: PathBuf,
+        /// Page alignment log2 for the p64 container (default 14 = 16 KiB pages)
+        #[arg(long, default_value_t = 14)]
+        page_log2: u16,
+        /// Weight layout: `verbatim` | `f16` | `soa` (Q4_K SoA) | `auto` (f16 if fits 12 GiB budget, else soa for large Q4).
+        #[arg(long, default_value = "auto")]
+        layout: String,
+    },
+    /// One-shot remarkable path: passport probe + convert (auto layout) + env hints.
+    /// Writes `.p64` + `.q42.cbor-ld` and prints activate knobs.
+    Optimize {
+        /// Path to a `.gguf` source file
+        input: PathBuf,
+        /// Output directory for `.p64` + helper (default: same dir as input)
+        #[arg(short, long)]
+        out: Option<PathBuf>,
+        /// Skip hardware passport re-probe
+        #[arg(long)]
+        skip_passport: bool,
+    },
+    /// Probe host GPUs/CPU, rank by measured GEMV throughput, cache HardwarePassport.
+    /// Use this to pick DX12 vs Vulkan vs CPU for this machine (env override still wins).
+    Passport {
+        /// Force re-probe even if a cached passport matches this host
+        #[arg(long)]
+        reprobe: bool,
+        /// GEMV side length for the probe (default 2048)
+        #[arg(long, default_value_t = 2048)]
+        gemv_n: usize,
+        /// Optional path for the CBOR cache (default: OS temp / qualia_hardware_passport.cbor)
+        #[arg(long)]
+        cache: Option<PathBuf>,
+        /// If set, write `QUALIA_WGPU_BACKEND=<best>` hint line for shells
+        #[arg(long)]
+        apply_env_hint: bool,
+        /// Run a short real decode on this model (or auto-find smollm) per GPU backend and
+        /// re-rank the passport by measured tok/s (subprocess per backend).
+        #[arg(long)]
+        decode_proxy: Option<Option<PathBuf>>,
+        /// Decode tokens for --decode-proxy (default 16)
+        #[arg(long, default_value_t = 16)]
+        decode_proxy_tokens: u32,
+    },
+    /// Short resident decode; prints `DECODE_PROXY tok_s=… backend=…` (for passport child probes).
+    DecodeProxy {
+        /// Model path (.p64 preferred)
+        model: PathBuf,
+        /// Decode token budget (default 16)
+        #[arg(long, default_value_t = 16)]
+        tokens: u32,
+    },
+    /// Show or set multi-mode inference approach (portable | cuda | quant-graph).
+    /// Modes coexist — they do not dump the portable pipeline.
+    /// See `docs/plans/inference-multi-mode-and-compression.md`.
+    Mode {
+        /// Optional mode name to set; omit to list modes + active
+        name: Option<String>,
+    },
+    /// Resolve the fastest inference path for this machine (passport + policy) and
+    /// optionally apply it. Picks wgpu backend (dx12/vulkan/metal), compute lane
+    /// (portable-resident vs cuda), and quant profile (INT4 SoA + INT8 KV ± graph).
+    PathSelect {
+        /// Re-run GEMV passport probe first
+        #[arg(long)]
+        reprobe: bool,
+        /// Apply env/toggles for this process (and soft-set QUALIA_WGPU_BACKEND)
+        #[arg(long)]
+        apply: bool,
+    },
+    /// Application profile: interactive | live-fast | batch (overnight / email-ready).
+    /// Batch = long token budget + 8h timeout + HTML post-verify — multi-system eval.
+    Profile {
+        /// Profile name to set; omit to list
+        name: Option<String>,
+    },
+    /// Inference superiority lab (instruments for beating Ollama by evidence).
+    /// See docs/plans/inference-superiority-lab-and-toolset-plan.md
+    Lab {
+        /// audit-path | roof | micro | timeline | ablate | auto
+        action: String,
+        /// Model path for timeline/ablate/auto
+        #[arg(long)]
+        model: Option<PathBuf>,
+        /// Tokens for timeline/ablate/auto (default 4 / 8 / 16)
+        #[arg(long, default_value_t = 0)]
+        tokens: u32,
+        /// Microbench n_in (default 256)
+        #[arg(long, default_value_t = 256)]
+        n_in: usize,
+        /// Microbench n_out (default 64)
+        #[arg(long, default_value_t = 64)]
+        n_out: usize,
+        /// Roof GEMV N (default 512)
+        #[arg(long, default_value_t = 512)]
+        gemv_n: usize,
+        /// CSV output for ablate; lock-in dir for auto
+        #[arg(long)]
+        out: Option<PathBuf>,
+        /// Wall-clock budget hours for `lab auto` (default 2)
+        #[arg(long, default_value_t = 2.0)]
+        hours: f64,
+        /// Max search generations for `lab auto` (default 8)
+        #[arg(long, default_value_t = 8)]
+        max_generations: u32,
+        /// Optional Ollama model tag for A-gap yardstick (omit or empty to skip)
+        #[arg(long)]
+        ollama_model: Option<String>,
+        /// Ollama base URL (default http://127.0.0.1:11434)
+        #[arg(long, default_value = "http://127.0.0.1:11434")]
+        ollama_url: String,
+        /// Skip Ollama probe even if --ollama-model set
+        #[arg(long, default_value_t = false)]
+        no_ollama: bool,
+    },
+    /// Quant-graph dry-run: check/repair a prompt+answer against the fact graph.
+    Ground {
+        /// User prompt (e.g. "What is the capital of France?")
+        prompt: String,
+        /// Model answer to check
+        answer: String,
+    },
+    /// Re-load bundled/grounding/facts.tsv (or QUALIA_GROUNDING_FACTS) into the fact graph.
+    SeedGrounding,
+    /// Dense CUDA WMMA GEMM microbench (persistent context + PTX cache).
+    CudaTcBench {
+        /// Matrix side length (rounded up to multiple of 16; default 256)
+        #[arg(long, default_value_t = 256)]
+        side: usize,
+    },
+    /// Rank convert layouts by real decode-proxy tok/s (explorer Phase 0).
+    /// Writes `{stem}.explore-report.json` and prints the winner.
+    /// See `docs/plans/native-inference-explorer-eval-plan.md`.
+    Explore {
+        /// Path to a `.gguf` (convert+measure) or existing `.p64` (measure + siblings)
+        input: PathBuf,
+        /// Directory for converted `.p64` / report (default: same dir as input)
+        #[arg(short, long)]
+        out: Option<PathBuf>,
+        /// Decode tokens per candidate (default 16)
+        #[arg(long, default_value_t = 16)]
+        tokens: u32,
+        /// Comma-separated layouts: `auto` | `verbatim` | `f16` | `soa` (default `auto`)
+        #[arg(long, default_value = "auto")]
+        layouts: String,
+        /// Do not convert missing layouts; only measure existing `.p64` files
+        #[arg(long)]
+        skip_convert: bool,
+        /// Also A/B `QUALIA_LLM_FFN_F16` on/off for each layout
+        #[arg(long)]
+        sweep_ffn_f16: bool,
+        /// Comma-separated modes to matrix (e.g. `portable,cuda,quant-graph`)
+        #[arg(long)]
+        modes: Option<String>,
+    },
 }
 
 #[derive(Subcommand, Debug)]
-enum BenchmarkAction {
+pub enum BenchmarkAction {
     /// Evaluates SPARQL-Star nested graph queries
     SparqlStar { path: PathBuf },
     /// Simulates querying a percentage of the compressed graph and tracks peak RSS
@@ -1267,16 +1550,23 @@ fn run_sparql_query(vault: &std::path::Path, query_str: &str) {
         }
     };
 
-    // 3. Open vault (memmap, zero heap copy)
-    let vault_file = std::fs::File::open(vault).ok();
-    // Safety: read-only mapping of a .q42 vault written by the ingest pipeline.
-    let vault_mmap = vault_file
+    // 3. Open vault. A .q42 is a SuperBlock volume (LZ4-compressed, 160-byte block
+    //    headers) — NOT a flat array of 48-byte Quins. Decode via Q42Volume so the
+    //    headers are skipped and each block's live quin count is honoured. (Casting
+    //    the raw file bytes to &[NQuin] panics with OutputSliceWouldHaveSlop.)
+    let volume = match qualia_core_db::q42_volume::Q42Volume::open(vault) {
+        Ok(v) => Some(v),
+        Err(e) => {
+            eprintln!("Warning: could not open vault '{}': {e}", vault.display());
+            None
+        }
+    };
+    let quins: Vec<qualia_core_db::NQuin> = volume
         .as_ref()
-        .and_then(|f| unsafe { memmap2::Mmap::map(f).ok() });
-    let quins: &[qualia_core_db::NQuin] = vault_mmap
-        .as_deref()
-        .map(bytemuck::cast_slice)
-        .unwrap_or(&[]);
+        .map(|v| v.read_all_quins().unwrap_or_default())
+        .unwrap_or_default();
+    // Front-of-file Q42LEX → resolve term hashes back to their lexical strings.
+    let lex = volume.as_ref().and_then(|v| v.lex_view().ok());
 
     if quins.is_empty() {
         eprintln!(
@@ -1286,7 +1576,7 @@ fn run_sparql_query(vault: &std::path::Path, query_str: &str) {
     }
 
     // 4. Execute
-    let executor = QueryExecutor::new(quins);
+    let executor = QueryExecutor::new(&quins);
     match executor.execute(&plan, &ctx) {
         Err(e) => eprintln!("SPARQL execution error: {e}"),
         Ok(rows) => {
@@ -1295,7 +1585,11 @@ fn run_sparql_query(vault: &std::path::Path, query_str: &str) {
                 print!("[{i:>4}]");
                 for (slot_idx, slot) in row.slots.iter().enumerate() {
                     if let Some(v) = slot {
-                        print!("  ?v{}=0x{v:016x}", slot_idx);
+                        // Resolve via the embedded lexicon when available; fall back to the hash.
+                        match lex.as_ref().and_then(|l| l.lookup_hash(*v)) {
+                            Some(s) => print!("  ?v{slot_idx}={s}"),
+                            None => print!("  ?v{slot_idx}=0x{v:016x}"),
+                        }
                     }
                 }
                 println!();
@@ -1306,6 +1600,11 @@ fn run_sparql_query(vault: &std::path::Path, query_str: &str) {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    if std::env::var_os("QUALIA_DEVICE_BENCHMARK_OUTPUT").is_some() {
+        qualia_core_db::platform::device_benchmark::run_worker_from_env()
+            .map_err(std::io::Error::other)?;
+        return Ok(());
+    }
     let cli = Cli::parse();
 
     let log_level = match cli.verbose {
@@ -1330,6 +1629,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             match action {
                 LlmAction::List { vault_path } => {
                     llm_lifecycle::run_list(&vault(vault_path))?;
+                }
+                LlmAction::Duplicates { vault_path } => {
+                    llm_lifecycle::run_duplicate_audit(&vault(vault_path))?;
                 }
                 LlmAction::Load { model, vault_path } => {
                     llm_lifecycle::run_load(&vault(vault_path), model)?;
@@ -1403,15 +1705,127 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         format.clone(),
                     )?;
                 }
+                LlmAction::Convert {
+                    input,
+                    out,
+                    page_log2,
+                    layout,
+                } => {
+                    llm_testing::run_convert_gguf_to_p64(input, out, *page_log2, layout)?;
+                }
+                LlmAction::Optimize {
+                    input,
+                    out,
+                    skip_passport,
+                } => {
+                    llm_testing::run_optimize_pipeline(input, out.clone(), *skip_passport)?;
+                }
+                LlmAction::Passport {
+                    reprobe,
+                    gemv_n,
+                    cache,
+                    apply_env_hint,
+                    decode_proxy,
+                    decode_proxy_tokens,
+                } => {
+                    llm_testing::run_hardware_passport(
+                        *reprobe,
+                        *gemv_n,
+                        cache.clone(),
+                        *apply_env_hint,
+                        decode_proxy.clone(),
+                        *decode_proxy_tokens,
+                    )?;
+                }
+                LlmAction::DecodeProxy { model, tokens } => {
+                    llm_testing::run_decode_proxy(model, *tokens)?;
+                }
+                LlmAction::Mode { name } => {
+                    llm_testing::run_inference_mode(name.as_deref())?;
+                }
+                LlmAction::PathSelect { reprobe, apply } => {
+                    llm_testing::run_path_select(*reprobe, *apply)?;
+                }
+                LlmAction::Profile { name } => {
+                    llm_testing::run_app_profile(name.as_deref())?;
+                }
+                LlmAction::Lab {
+                    action,
+                    model,
+                    tokens,
+                    n_in,
+                    n_out,
+                    gemv_n,
+                    out,
+                    hours,
+                    max_generations,
+                    ollama_model,
+                    ollama_url,
+                    no_ollama,
+                } => {
+                    llm_testing::run_lab(
+                        action,
+                        model.as_deref(),
+                        *tokens,
+                        *n_in,
+                        *n_out,
+                        *gemv_n,
+                        out.as_deref(),
+                        *hours,
+                        *max_generations,
+                        ollama_model.as_deref(),
+                        ollama_url,
+                        *no_ollama,
+                    )?;
+                }
+                LlmAction::Ground { prompt, answer } => {
+                    llm_testing::run_ground_check(prompt, answer)?;
+                }
+                LlmAction::SeedGrounding => {
+                    llm_testing::run_seed_grounding()?;
+                }
+                LlmAction::CudaTcBench { side } => {
+                    llm_testing::run_cuda_tc_microbench(*side)?;
+                }
+                LlmAction::Explore {
+                    input,
+                    out,
+                    tokens,
+                    layouts,
+                    skip_convert,
+                    sweep_ffn_f16,
+                    modes,
+                } => {
+                    llm_testing::run_explore_pipeline(
+                        input,
+                        out.clone(),
+                        *tokens,
+                        layouts,
+                        *skip_convert,
+                        *sweep_ffn_f16,
+                        modes.as_deref(),
+                    )?;
+                }
             }
+        }
+        Commands::Shader { action } => {
+            shader::run(action)?;
+        }
+        Commands::MeshProbe { action } => {
+            mesh::run(action)?;
         }
         Commands::Capabilities { list } => {
             if *list {
                 println!("============================================================");
                 println!("🧠 QualiaDB Runtime Capability Registry");
                 println!("============================================================");
-                for cap in qualia_core_db::CAPABILITY_REGISTRY {
-                    println!("  - {}", cap);
+                for capability in qualia_core_db::CAPABILITY_DESCRIPTORS {
+                    println!(
+                        "  - {} [{}] -> {}",
+                        capability.name,
+                        capability.domain,
+                        capability.mcp_tools.join(", ")
+                    );
                 }
                 println!("============================================================");
             } else {
@@ -1592,6 +2006,107 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
+        Commands::Solid { action } => {
+            // Clone so we own the payload (outer match may borrow `cli`).
+            let action = action.clone();
+            match action {
+                SolidAction::Serve {
+                    host,
+                    port,
+                    data_root,
+                    public_base,
+                    demo_oidc,
+                    no_demo_oidc,
+                } => {
+                    let data_root = data_root.unwrap_or_else(|| {
+                        std::env::var("QUALIA_SOLID_POD_ROOT")
+                            .map(PathBuf::from)
+                            .unwrap_or_else(|_| std::env::temp_dir().join("qualia-solid-pod"))
+                    });
+                    let public_base =
+                        public_base.unwrap_or_else(|| format!("http://{host}:{port}"));
+                    let cfg = qualia_solid_bridge::BridgeConfig {
+                        listen: format!("{host}:{port}")
+                            .parse()
+                            .expect("invalid host:port"),
+                        data_root,
+                        public_base,
+                        demo_oidc: demo_oidc && !no_demo_oidc,
+                    };
+                    qualia_solid_bridge::run_bridge(cfg).await;
+                }
+                SolidAction::Fetch { url, token, out } => {
+                    match qualia_solid_bridge::fetch_resource(&url, token.as_deref()).await {
+                        Ok(r) => {
+                            println!("status        : {}", r.status);
+                            println!("content-type  : {}", r.content_type);
+                            println!("quin_count    : {}", r.quin_count);
+                            println!("url           : {}", r.url);
+                            if let Some(path) = out {
+                                if let Err(e) = std::fs::write(&path, r.body.as_bytes()) {
+                                    eprintln!("write {}: {e}", path.display());
+                                } else {
+                                    println!("wrote         : {}", path.display());
+                                }
+                            } else {
+                                let preview: String = r.body.chars().take(800).collect();
+                                println!("--- body (preview) ---\n{preview}");
+                            }
+                        }
+                        Err(e) => eprintln!("solid fetch failed: {e}"),
+                    }
+                }
+                SolidAction::Put {
+                    url,
+                    file,
+                    content_type,
+                    token,
+                } => match std::fs::read(&file) {
+                    Ok(body) => {
+                        match qualia_solid_bridge::put_resource(
+                            &url,
+                            &body,
+                            &content_type,
+                            token.as_deref(),
+                        )
+                        .await
+                        {
+                            Ok(status) => println!("PUT ok status={status} url={url}"),
+                            Err(e) => eprintln!("solid put failed: {e}"),
+                        }
+                    }
+                    Err(e) => eprintln!("read {}: {e}", file.display()),
+                },
+                SolidAction::Post {
+                    container,
+                    file,
+                    content_type,
+                    slug,
+                    token,
+                } => match std::fs::read(&file) {
+                    Ok(body) => {
+                        match qualia_solid_bridge::post_to_container(
+                            &container,
+                            &body,
+                            &content_type,
+                            slug.as_deref(),
+                            token.as_deref(),
+                        )
+                        .await
+                        {
+                            Ok((status, loc)) => {
+                                println!("POST ok status={status}");
+                                if let Some(l) = loc {
+                                    println!("location={l}");
+                                }
+                            }
+                            Err(e) => eprintln!("solid post failed: {e}"),
+                        }
+                    }
+                    Err(e) => eprintln!("read {}: {e}", file.display()),
+                },
+            }
+        }
         Commands::Ingest { format } => match format {
             IngestFormat::Semantic { file } => {
                 let out_path = file.with_extension("q42");
@@ -1654,15 +2169,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
-        Commands::Import { input, output } => {
+        Commands::Import {
+            input,
+            output,
+            strip_literals,
+        } => {
             println!("============================================================");
             println!("📥 QualiaDB Native RDF/XML Ingestion Pipeline");
             println!("============================================================");
 
             let in_path = input.to_string_lossy().to_string();
             let out_path = output.to_string_lossy().to_string();
+            let mode = if *strip_literals {
+                qualia_core_db::ingest::IngestMode::StripLiterals
+            } else {
+                qualia_core_db::ingest::IngestMode::Complete
+            };
 
-            match qualia_core_db::ingest::streaming_import_rdf(&in_path, &out_path) {
+            match qualia_core_db::ingest::streaming_import_rdf_with_mode(&in_path, &out_path, mode) {
                 Ok(quin_count) => {
                     println!("✨ Done! Wrote {quin_count} Super-Quins.");
                 }
@@ -2448,9 +2972,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     // 1. Generate Ed25519 Identity
                     use ed25519_dalek::SigningKey;
-                    use rand_core::OsRng;
-                    let mut csprng = OsRng;
-                    let signing_key = SigningKey::generate(&mut csprng);
+                    let mut secret = [0u8; 32];
+                    getrandom::fill(&mut secret)?;
+                    let signing_key = SigningKey::from_bytes(&secret);
                     let public_key = signing_key.verifying_key();
                     let pub_hex = public_key
                         .as_bytes()
@@ -3246,6 +3770,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     steps,
                 } => {
                     science::run_economics_macro(*m0, *p0, *velocity, *real_gdp, *horizon, *steps);
+                }
+                EconomicsAction::Bond {
+                    face,
+                    coupon_rate,
+                    yield_rate,
+                    periods,
+                } => {
+                    science::run_economics_bond(*face, *coupon_rate, *yield_rate, *periods);
+                }
+                EconomicsAction::Paper { qty, last_price } => {
+                    science::run_economics_paper(*qty, *last_price);
+                }
+                EconomicsAction::Welfare { incomes } => {
+                    science::run_economics_welfare(&incomes);
+                }
+                EconomicsAction::Game { market_a } => {
+                    science::run_economics_game(*market_a);
                 }
             },
         },

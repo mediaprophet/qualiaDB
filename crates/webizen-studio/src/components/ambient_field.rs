@@ -2,7 +2,6 @@
 //! Cheap particle cymatics driven by `SystemTelemetry` uniforms.
 
 use dioxus::prelude::*;
-#[cfg(target_arch = "wasm32")]
 use serde::Deserialize;
 #[cfg(target_arch = "wasm32")]
 use serde_json::json;
@@ -97,11 +96,13 @@ fn paint_ambient(
         let fi = i as f64;
         let lattice = bake * 0.15 * (fi * 0.04).sin();
         let px = w * 0.5
-            + w * 0.42 * compress
+            + w * 0.42
+                * compress
                 * (time * (0.32 + heat * 0.55) + fi * 0.011 + ripple * 2.2 + lattice).sin()
                 * (fi * 0.003 + quantum * 0.12).cos();
         let py = h * 0.5
-            + h * 0.42 * compress
+            + h * 0.42
+                * compress
                 * (time * (0.26 + logic * 0.45) + fi * 0.018).cos()
                 * (fi * 0.005 + ripple).sin();
         let (r, g, b) = sigma_rgb(((fi * 0.017 + spectral as f64) % 1.0) as f32);
@@ -110,7 +111,13 @@ fn paint_ambient(
             "rgba({r},{g},{b},{alpha:.2})"
         )));
         ctx.begin_path();
-        let _ = ctx.arc(px, py, 0.7 + (fi % 3.0) + heat * 2.2 + bake, 0.0, std::f64::consts::TAU);
+        let _ = ctx.arc(
+            px,
+            py,
+            0.7 + (fi % 3.0) + heat * 2.2 + bake,
+            0.0,
+            std::f64::consts::TAU,
+        );
         ctx.fill();
     }
 }
@@ -161,8 +168,9 @@ pub fn AmbientFieldCanvas(canvas_id: String, height_px: u32) -> Element {
                     canvas.set_height(h as u32);
                 }
                 let time = js_sys::Date::now() / 1000.0;
-                let cap = (800.0 + t.llm_heat as f64 * 4200.0 + t.baking_crystallization as f64 * 2000.0)
-                    as usize;
+                let cap = (800.0
+                    + t.llm_heat as f64 * 4200.0
+                    + t.baking_crystallization as f64 * 2000.0) as usize;
                 paint_ambient(&ctx, w, h, time, &t, cap.min(6000));
             });
         });

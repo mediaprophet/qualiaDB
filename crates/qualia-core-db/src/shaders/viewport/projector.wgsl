@@ -13,8 +13,10 @@ struct Camera {
     pitch: f32,
     zoom: f32,
     tensor_mode: u32,
-    // [0] = frame time (seconds); [1..4] = camera eye xyz for T_pull
-    _padding: array<f32, 12>,
+    // _padding0.x = frame time; _padding0.yzw = camera eye xyz for T_pull.
+    _padding0: vec4<f32>,
+    _padding1: vec4<f32>,
+    _padding2: vec4<f32>,
 };
 
 // Matches portal_telemetry::ObserverStandpoint (128 B). u64 fields as vec2<u32> LE.
@@ -27,7 +29,12 @@ struct ObserverStandpoint {
     deontic_lane: u32,
     standpoint_class: u32,
     fabric_gate: u32,
-    _padding: array<f32, 22>,
+    _padding0: vec2<f32>,
+    _padding1: vec4<f32>,
+    _padding2: vec4<f32>,
+    _padding3: vec4<f32>,
+    _padding4: vec4<f32>,
+    _padding5: vec4<f32>,
 };
 
 // Matches Tensor10D SOA stride (40 B).
@@ -61,7 +68,8 @@ struct VertexOutput {
     @location(2) epistemic_q: f32,
     @location(3) v_band: f32,
     @location(4) alpha_gain: f32,
-    @location(5) pick_id: u32,
+    // Dawn (WebGPU) rejects non-flat integral inter-stage outputs; naga (native) is lenient.
+    @location(5) @interpolate(flat) pick_id: u32,
 };
 
 const TWO_PI: f32 = 6.283185307;
@@ -299,12 +307,15 @@ fn vertex_main(
     );
 
     let tensor = tensors[instance_index];
-    let frame_time = camera._padding[0];
-    let camera_eye = vec3<f32>(camera._padding[1], camera._padding[2], camera._padding[3]);
+    let frame_time = camera._padding0.x;
+    let camera_eye = camera._padding0.yzw;
 
-    // Temporal scrub — discard vertices outside the observer's t_window band.
+    // Temporal scrub — smooth spawn/decay α ramp.
     let temporal_delta = abs(tensor.t - observer.t_slice);
-    let outside_time = temporal_delta > observer.t_window;
+    let ramp_width = observer.t_window * 0.2; // 20% fade on the edges
+    let time_dist_to_edge = observer.t_window - temporal_delta;
+    let alpha_fade = smoothstep(0.0, ramp_width, time_dist_to_edge);
+    let outside_time = alpha_fade <= 0.0;
 
     let local = vec3<f32>(tensor.x, tensor.y, tensor.z);
     let world_pos = apply_semantic_motor(local, tensor, frame_time, observer, camera_eye);
@@ -328,7 +339,7 @@ fn vertex_main(
     }
     output.local_uv = base_vertex;
     let rgb = sigma_to_linear_rgb(tensor.sigma);
-    let alpha = clamp(0.4 + tensor.alpha * 0.55, 0.25, 1.0);
+    let alpha = clamp(0.4 + tensor.alpha * 0.55, 0.25, 1.0) * alpha_fade;
     output.color = vec4<f32>(rgb, alpha);
     output.epistemic_q = tensor.q;
     output.pick_id = instance_index;

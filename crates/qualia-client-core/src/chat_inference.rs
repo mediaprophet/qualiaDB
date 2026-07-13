@@ -100,6 +100,12 @@ pub fn run_chat_inference_full(
     options: ChatInferenceOptions,
 ) -> ChatInferenceResult {
     clear_cancel_inference();
+    // Interactive chat uses the sampling chain (temperature / top-p / repeat-penalty) instead of
+    // greedy argmax, which collapses instruct models into repetition / degenerate loops. Benchmarks
+    // keep the unconfigured greedy default. See qualia_core_db::sampler::SamplerConfig::chat_default.
+    qualia_core_db::llm_bench::set_sampler_config(Some(
+        qualia_core_db::sampler::SamplerConfig::chat_default(),
+    ));
     let started = std::time::Instant::now();
 
     let state = match crate::state::APP_STATE.get() {
@@ -111,11 +117,19 @@ pub fn run_chat_inference_full(
 
     let storage = state.config.lock().unwrap().storage_path.clone();
     let catalog = crate::api::load_workspace_catalog();
+    let ib_settings = crate::inference_backend::load_inference_backend_settings();
+    let use_ollama = matches!(
+        ib_settings.backend,
+        crate::chat_agents::AgentBackendKind::Ollama
+    );
 
-    if crate::model_lifecycle::get_model_lifecycle_state() != ModelLifecycle::Active {
+    // Native GGUF path requires an active model; optional Ollama harness does not.
+    if !use_ollama
+        && crate::model_lifecycle::get_model_lifecycle_state() != ModelLifecycle::Active
+    {
         return empty_result(
             started,
-            "No active model — download and activate a model in LLM Hub first.",
+            "No active model — download and activate a model in LLM Hub, or switch Inference Backend to Ollama in Settings.",
             None,
         );
     }
@@ -137,11 +151,16 @@ pub fn run_chat_inference_full(
     }
 
     let profile = crate::user_profile::load_profile();
-    let agent_cfg =
+    let mut agent_cfg =
         match crate::chat_agents::load_local_agent_config(Path::new(&storage), session_id) {
             Ok(c) => c,
             Err(e) => return empty(&e),
         };
+    // Session agent backend tracks the global preference for this turn.
+    agent_cfg.backend = ib_settings.backend;
+    if use_ollama {
+        agent_cfg.model_id = Some(ib_settings.ollama_model.clone());
+    }
 
     let routing = crate::ontology_router::route_prompt_to_ontologies(&env, prompt);
     let retrieval = crate::chat_retrieval::retrieve_graph_context(
@@ -164,6 +183,21 @@ pub fn run_chat_inference_full(
         Ok(p) => p,
         Err(e) => return empty(&e.to_string()),
     };
+
+    // ── Optional Ollama harness (retrieval + ontology routing still Qualia) ──
+    if use_ollama {
+        return run_ollama_chat_turn(
+            session_id,
+            &agent_cfg,
+            &packet,
+            &retrieval,
+            &ib_settings,
+            on_token,
+            started,
+            Path::new(&storage),
+            empty,
+        );
+    }
 
     let active = match crate::api::load_active_model_record_from_disk() {
         Some(r) => r,
@@ -317,6 +351,83 @@ pub fn run_chat_inference_full(
     finalize_success_result(
         output, &retrieval, started, &agent_cfg, false, 0, false, None,
     )
+}
+
+/// Chat turn via optional Ollama HTTP harness.
+///
+/// Qualia still owns retrieval, ontology routing, axiom preflight, and
+/// citation provenance. Generation is delegated to Ollama so ETL/chat work
+/// can proceed while native GGUF inference is unavailable.
+fn run_ollama_chat_turn(
+    session_id: &str,
+    agent_cfg: &crate::chat_agents::ParticipantAgentConfig,
+    packet: &InferenceContextPacket,
+    retrieval: &RetrievalBundle,
+    settings: &crate::inference_backend::InferenceBackendSettings,
+    on_token: Option<Arc<dyn Fn(String) + Send + Sync>>,
+    started: std::time::Instant,
+    storage: &Path,
+    empty: impl Fn(&str) -> ChatInferenceResult,
+) -> ChatInferenceResult {
+    if is_inference_cancelled() {
+        return empty("Generation cancelled");
+    }
+
+    let harness = crate::ollama_harness::OllamaHarness::from_settings(settings);
+    let system = "You are a Webizen/Qualia assistant. Ground answers in the provided graph context when present. Prefer precise, citation-aware replies. Do not invent legal or medical facts.";
+    let user = packet.augmented_prompt.as_str();
+
+    let gen = match harness.generate(system, user) {
+        Ok(g) => g,
+        Err(e) => {
+            return empty(&format!(
+                "Ollama harness failed ({url}): {e}. Check Settings → Ollama (base URL, model, daemon running).",
+                url = harness.base_url
+            ));
+        }
+    };
+
+    if is_inference_cancelled() {
+        return empty("Generation cancelled");
+    }
+
+    // Surface full completion once (streaming wire-up for Ollama is a follow-up).
+    if let Some(cb) = on_token.as_ref() {
+        if !gen.text.is_empty() {
+            cb(gen.text.clone());
+        }
+    }
+
+    let mut provenance = retrieval.provenance_hashes.clone();
+    provenance.sort_unstable();
+    provenance.dedup();
+
+    let tokens = gen.eval_count.unwrap_or(0);
+    let output = AgentOutput {
+        text: gen.text,
+        semantic_quin: None,
+        provenance_quins: provenance,
+        tokens_generated: tokens,
+        inference_duration_ms: started.elapsed().as_millis() as u64,
+        peak_memory_bytes: 0,
+    };
+
+    if output.text.trim().is_empty() {
+        return empty("Ollama returned an empty completion");
+    }
+
+    // Provenance from retrieval is required for grounded turns when graph context exists.
+    if !retrieval.citations.is_empty() && output.provenance_quins.is_empty() {
+        return empty("Ollama turn produced no provenance hashes from graph retrieval");
+    }
+
+    let _ = persist_citations(session_id, storage, &output, retrieval);
+    let mut result = finalize_success_result(
+        output, retrieval, started, agent_cfg, false, 0, false, None,
+    );
+    result.model_id = Some(gen.model);
+    result.agent_backend = Some("ollama".into());
+    result
 }
 
 fn run_orchestrated_inference(
@@ -727,6 +838,9 @@ fn build_augmented_packet(
     let files_block =
         crate::chat_files::build_chat_files_context_block(storage, session_id, 12_000);
 
+    // Inforg (CML) context: prior turns the person marked with #project/#topic/#task, permission-gated.
+    let inforg_block = crate::cml_context::retrieve_context(storage, user_prompt, 6);
+
     let session = crate::chat_session::load_session(storage, session_id).ok();
     let cooperative_block = session
         .as_ref()
@@ -764,29 +878,32 @@ fn build_augmented_packet(
         "chat_graph_thread": thread_block,
         "chat_files": files_block,
         "cooperative_agents": cooperative_block,
+        "inforg_context": inforg_block.clone(),
     });
     packet.graph_context_json =
         serde_json::to_string(&enriched_context).unwrap_or(packet.graph_context_json);
 
     if thread_block.is_empty() {
         packet.augmented_prompt = format!(
-            "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n---\nUser: {}\n---",
+            "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n---\nUser: {}\n---",
             env.capability_briefing,
             routing.routing_brief,
             cooperative_block,
             files_block,
             retrieval.context_block,
+            inforg_block,
             user_prompt
         );
     } else {
         packet.augmented_prompt = format!(
-            "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n---\nUser (replying to graph fragment): {}\n---",
+            "{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n{}\n\n---\nUser (replying to graph fragment): {}\n---",
             env.capability_briefing,
             routing.routing_brief,
             cooperative_block,
             thread_block,
             files_block,
             retrieval.context_block,
+            inforg_block,
             user_prompt
         );
     }

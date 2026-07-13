@@ -273,22 +273,22 @@ import init, {
     releaseWebgpuEngine,
     isWebgpuEngineReady,
     getEngineVersion,
-    compileGgufToQ42,
-    q42FormatVersion,
+    compileGgufToP64,
+    p64FormatVersion,
 } from './playground/qualia_core_db.js';
-import { loadGgufCached, loadOrCompileQ42 } from './js/opfs-model-cache.js';
+import { loadGgufCached, loadOrCompileP64 } from './js/opfs-model-cache.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const QUALIA_SPARQL = 'http://localhost:4242/query';
 const WIKIDATA_SPARQL = 'https://query.wikidata.org/sparql';
-const USER_AGENT = 'QualiaDB-OnlineLLMDemo/0.0.18 (https://github.com/mediaprophet/qualiaDB)';
+const USER_AGENT = 'QualiaDB-OnlineLLMDemo/0.0.23 (https://github.com/mediaprophet/qualiaDB)';
 
 const QUALIA_ONTOLOGY = `
 # QualiaDB Ontology Prefixes
-PREFIX q: <https://qualia-db.org/vocab/#>
-PREFIX qr: <https://qualia-db.org/rights/#>
-PREFIX nquin: <https://qualia-db.org/nquin/#>
+PREFIX q: <https://webizen.org/vocab/#>
+PREFIX qr: <https://webizen.org/rights/#>
+PREFIX nquin: <https://webizen.org/nquin/#>
 PREFIX webizen: <https://webizen.org/vocab/#>
 PREFIX schema: <https://schema.org/>
 PREFIX prov: <http://www.w3.org/ns/prov#>
@@ -313,7 +313,7 @@ ${QUALIA_ONTOLOGY}
 Also use standard Wikidata prefixes (wd:, wdt:, wikibase:, bd:) when querying Wikidata.
 If querying Wikidata, use SERVICE <https://query.wikidata.org/sparql> { ... } syntax.`,
     jsonld: `You are a JSON-LD mapping engine for QualiaDB. Convert the user's input into a valid JSON-LD object.
-Use the QualiaDB context: { "@context": { "q": "https://qualia-db.org/vocab/#", "schema": "https://schema.org/", "prov": "http://www.w3.org/ns/prov#" } }
+Use the QualiaDB context: { "@context": { "q": "https://webizen.org/vocab/#", "schema": "https://schema.org/", "prov": "http://www.w3.org/ns/prov#" } }
 Output ONLY the raw JSON-LD object — no explanation, no markdown fences.`,
     lookup: `You are an entity lookup assistant. Given the user's input, identify key named entities (people, organisations, places, concepts). For each entity, output a Wikidata SPARQL query to fetch its label, description, and key properties.
 Format: output one SPARQL query per entity, separated by --- markers. No other text.`,
@@ -445,29 +445,28 @@ async function loadModel() {
             ggufBytes = await readLocalGguf(localFiles);
             document.getElementById('dl-progress').style.width = '100%';
         } else {
-            // Phase 4 AOT: compile GGUF→.q42 once, cache the .q42 in OPFS, warm-boot from it
-            // thereafter (0 network, 0 compile). The .q42 streams to disk; only the .q42 is stored.
+            // AOT: compile GGUF→P64 once, cache P64 in OPFS, then warm-boot it.
             showDlStatus(`Downloading ${name}…`);
-            const { bytes, source } = await loadOrCompileQ42(url, url.split('/').pop(), {
-                compile: compileGgufToQ42,
-                formatVersion: q42FormatVersion(),
+            const { bytes, source } = await loadOrCompileP64(url, url.split('/').pop(), {
+                compile: compileGgufToP64,
+                formatVersion: p64FormatVersion(),
                 onProgress: (loaded, total, phase) => {
-                    if (phase === 'q42-hit') {
+                    if (phase === 'p64-hit') {
                         document.getElementById('dl-progress').style.width = '100%';
-                        showDlStatus(`Loaded ${name} from .q42 cache`);
+                        showDlStatus(`Loaded ${name} from P64 cache`);
                     } else if (phase === 'download') {
                         const pct = total ? Math.round(loaded / total * 100) : 0;
                         document.getElementById('dl-progress').style.width = `${pct}%`;
                         showDlStatus(`Downloading ${name}: ${pct}% (${(loaded / 1048576).toFixed(1)} MB)`);
                     } else if (phase === 'compile') {
-                        showDlStatus(`Compiling ${name} → .q42…`);
+                        showDlStatus(`Compiling ${name} → P64…`);
                     }
                 },
             });
             ggufBytes = bytes;
-            showDlStatus(source === 'opfs-q42-hit'
-                ? `Loaded ${name} from .q42 cache`
-                : `Compiled ${name} → .q42 (cached for next time)`);
+            showDlStatus(source === 'opfs-p64-hit'
+                ? `Loaded ${name} from P64 cache`
+                : `Compiled ${name} → P64 (cached for next time)`);
         }
 
         showDlStatus('Initialising Qualia WebGPU engine…');

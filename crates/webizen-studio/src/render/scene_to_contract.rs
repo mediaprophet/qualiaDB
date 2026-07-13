@@ -6,7 +6,7 @@
 //! drive the headless GPU renderer while keeping the dependency direction
 //! correct (studio → render).
 
-use super::graph::{Node, Scene, Style};
+use super::graph::{Node, Scene};
 use super::scene::{Camera, Vec3};
 use webizen_render::scene_contract::{
     RenderScene, SceneCamera, SceneEdge, SceneFace, SceneNode, ScenePoint,

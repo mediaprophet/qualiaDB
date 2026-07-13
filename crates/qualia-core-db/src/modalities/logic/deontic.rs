@@ -131,7 +131,12 @@
 //! Cache-line pressure is bounded: the `[u64; MAX_DEFEATER_SLOTS]` buffer fits in
 //! 8 × 64-byte cache lines; each `DeonticVerdict` is 64 bytes (one cache line).
 
-use crate::modalities::logic::n3_parser::{Rule, RuleType, Term};
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+use crate::modalities::logic::n3_parser::{RuleType, Term};
 use crate::q_hash;
 use crate::NQuin;
 
@@ -150,9 +155,37 @@ pub const OP_PERMIT: u8 = 0x11;
 /// F(φ) = O(¬φ) — the subject party *must not* perform the action.
 pub const OP_FORBID: u8 = 0x12;
 
+// ─── SDL⁺ extension opcodes (deontic block 0x13–0x1F, per DEONTIC_LOGIC_PLAN §3) ──
+
+/// U(φ) — optionality / indifference: `¬O(φ) ∧ ¬F(φ)`. The system is indifferent;
+/// neither doing nor omitting φ is a violation. May be asserted or derived
+/// (see [`is_optional`]).
+pub const OP_OPTIONAL: u8 = 0x13;
+
+/// G(φ) — gratuitousness: `¬O(φ)`. The agent is free to omit φ (it may still be
+/// permitted or forbidden). May be asserted or derived (see [`is_gratuitous`]).
+pub const OP_GRATUITOUS: u8 = 0x14;
+
+/// O(q | p) — the head of a dyadic / conditional obligation: q is obligatory
+/// *given* condition p. Evaluation is fact-driven (see [`evaluate_conditional_obligation`]);
+/// contrary-to-duty is the special case p = "primary breached".
+pub const OP_CONDITIONAL: u8 = 0x15;
+
+/// Reserved for Phase 3 (STIT agency): `O[α stit φ]`. Declared here to fence the
+/// opcode so nothing else claims it before agency lands.
+pub const OP_STIT: u8 = 0x16;
+
+/// An *undercutting* defeater: combined with [`DEFEATER_BIT`] it invalidates the
+/// inference link `p ⇒ Oq` without asserting `¬Oq` (vs a *rebutting* defeater — a
+/// `DEFEATER_BIT` node with an O/P/F opcode — which asserts the contrary). The
+/// fingerprint match is identical (the opcode byte is masked out); only the
+/// classification in [`DefeatKind`] differs.
+pub const OP_UNDERCUT: u8 = 0x17;
+
 /// Bit 63 of `predicate`: marks a `q42:unless` defeater / exception node.
 /// When set the Quin is *not* a primary norm and defeats matching obligations.
-pub const DEFEATER_BIT: u64 = 1u64 << 63;
+/// Canonical bit position lives in the FrameLayout ABI (single source of truth).
+pub use crate::frame_layout::DEFEATER_BIT;
 
 /// Stack capacity for defeater fingerprints per evaluation call.
 /// 64 slots × 8 bytes = 512 bytes — fits within a single L1 cache-line group.
@@ -173,6 +206,31 @@ pub enum DeonticStatus {
     Expired = 0x02,
     /// The Quin's predicate carries an unrecognised opcode byte; skipped by caller.
     Malformed = 0x03,
+    /// Norm is parsed and valid, but its effectivity window has not yet begun
+    /// (`now < effective_from`). Not yet binding. (Lifecycle, Phase 1.)
+    Pending = 0x04,
+    /// An in-force obligation whose action was not performed (or a prohibition that
+    /// was breached), per the supplied facts. Triggers CTD / sanction routing.
+    Violated = 0x05,
+    /// An in-force obligation that has been fulfilled per the supplied facts; the
+    /// specific duty terminates.
+    Discharged = 0x06,
+}
+
+/// How a norm came to be [`DeonticStatus::Defeated`] — Hart/Pollock's rebutting vs
+/// undercutting distinction. A *rebutting* defeater asserts the contrary conclusion
+/// (`DEFEATER_BIT` + an O/P/F opcode); an *undercutting* defeater ([`OP_UNDERCUT`])
+/// severs the rule's support without asserting the contrary.
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DefeatKind {
+    #[default]
+    /// Not defeated.
+    None = 0x00,
+    /// Defeated by a contrary norm (rebutting).
+    Rebutting = 0x01,
+    /// Defeated by link-invalidation (undercutting).
+    Undercutting = 0x02,
 }
 
 // ─── DeonticVerdict ───────────────────────────────────────────────────────────
@@ -190,7 +248,10 @@ pub struct DeonticVerdict {
     pub status: DeonticStatus,
     /// Deontic opcode extracted from `norm.predicate[0..7]`.
     pub opcode: u8,
-    _pad: [u8; 6],
+    /// When `status == Defeated`, *how* it was defeated (rebutting vs undercutting);
+    /// `None` otherwise.
+    pub defeat_kind: DefeatKind,
+    _pad: [u8; 5],
 }
 
 // ─── DeonticError ─────────────────────────────────────────────────────────────
@@ -265,6 +326,22 @@ fn has_defeater(defeaters: &[u64], norm: &NQuin) -> bool {
     false
 }
 
+/// Like [`has_defeater`], but returns *which kind* of defeater matched (rebutting vs
+/// undercutting), or [`DefeatKind::None`] if the norm is undefeated. `kinds[i]` is the
+/// kind of `defeaters[i]` (parallel arrays harvested together).
+#[inline]
+fn defeater_kind_for(defeaters: &[u64], kinds: &[DefeatKind], norm: &NQuin) -> DefeatKind {
+    let key = defeater_fingerprint(norm);
+    let mut i = 0;
+    while i < defeaters.len() {
+        if defeaters[i] == key {
+            return kinds[i];
+        }
+        i += 1;
+    }
+    DefeatKind::None
+}
+
 // ─── evaluate_deontic_contract ────────────────────────────────────────────────
 
 /// Evaluate a deontic contract encoded as a `&[NQuin]` slice.
@@ -314,6 +391,7 @@ pub fn evaluate_deontic_contract(
     //
     // Stack-allocated; fits in < 1 KB, well within any thread stack.
     let mut defeater_buf = [0u64; MAX_DEFEATER_SLOTS];
+    let mut kind_buf = [DefeatKind::Rebutting; MAX_DEFEATER_SLOTS];
     let mut defeater_count = 0usize;
 
     for &q in quins {
@@ -323,6 +401,13 @@ pub fn evaluate_deontic_contract(
             if q.parity == expected_parity {
                 if defeater_count < MAX_DEFEATER_SLOTS {
                     defeater_buf[defeater_count] = defeater_fingerprint(&q);
+                    // OP_UNDERCUT severs the rule link; any other opcode rebuts.
+                    kind_buf[defeater_count] = if extract_deontic_opcode(q.predicate) == OP_UNDERCUT
+                    {
+                        DefeatKind::Undercutting
+                    } else {
+                        DefeatKind::Rebutting
+                    };
                     defeater_count += 1;
                 }
                 // Excess defeaters are dropped; contracts this dense are rejected upstream.
@@ -331,6 +416,7 @@ pub fn evaluate_deontic_contract(
     }
 
     let active_defeaters = &defeater_buf[..defeater_count];
+    let active_kinds = &kind_buf[..defeater_count];
 
     // ── Phase 2: evaluate norm Quins ──────────────────────────────────────────
     let mut verdict_count = 0usize;
@@ -350,7 +436,8 @@ pub fn evaluate_deontic_contract(
                 norm: q,
                 status: DeonticStatus::Malformed,
                 opcode: extract_deontic_opcode(q.predicate),
-                _pad: [0u8; 6],
+                defeat_kind: DefeatKind::None,
+                _pad: [0u8; 5],
             };
             verdict_count += 1;
             continue;
@@ -358,15 +445,20 @@ pub fn evaluate_deontic_contract(
 
         let opcode = extract_deontic_opcode(q.predicate);
 
+        let mut defeat_kind = DefeatKind::None;
         let status = match opcode {
             OP_OBLIGATE | OP_PERMIT | OP_FORBID => {
                 let expiry = extract_expiry_unix32(q.metadata);
                 if expiry != 0 && now_unix > expiry {
                     DeonticStatus::Expired
-                } else if has_defeater(active_defeaters, &q) {
-                    DeonticStatus::Defeated
                 } else {
-                    DeonticStatus::Active
+                    let k = defeater_kind_for(active_defeaters, active_kinds, &q);
+                    if k != DefeatKind::None {
+                        defeat_kind = k;
+                        DeonticStatus::Defeated
+                    } else {
+                        DeonticStatus::Active
+                    }
                 }
             }
             // Not a deontic Quin — skip silently (e.g. SHACL shape Quins coexist).
@@ -381,7 +473,8 @@ pub fn evaluate_deontic_contract(
             norm: q,
             status,
             opcode,
-            _pad: [0u8; 6],
+            defeat_kind,
+            _pad: [0u8; 5],
         };
         verdict_count += 1;
     }
@@ -391,47 +484,77 @@ pub fn evaluate_deontic_contract(
 
 // ─── N3 → deontic norm bridge ───────────────────────────────────────────────
 
-fn term_uri_hash(term: &Term) -> Option<u64> {
-    match term {
-        Term::Uri(uri) => Some(q_hash(uri)),
-        Term::Literal(lit) => Some(q_hash(lit)),
-        Term::Variable(_) => None,
-    }
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+pub fn term_uri_hash(term: &Term) -> Option<u64> {
+    crate::modalities::logic::n3_parser::term_uri_hash(term)
 }
 
-fn opcode_from_predicate_uri(uri: &str, rule_type: RuleType) -> (u8, bool) {
+// Canonical `values:` deontic operators. The registry stores a compiled rule
+// (hashes only - the predicate IRI string is gone), so the deontic opcode is
+// recovered by matching the premise predicate hash against these. Both the full
+// IRI and the CURIE token are listed, because `@prefix` is not expanded on the
+// parsed-from-file path (matching is by raw token via `q_hash`).
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+const FORBID_HASHES: [u64; 2] = [
+    q_hash("https://ns.webcivics.net/values/forbids"),
+    q_hash("values:forbids"),
+];
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+const PERMIT_HASHES: [u64; 2] = [
+    q_hash("https://ns.webcivics.net/values/permits"),
+    q_hash("values:permits"),
+];
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+const OBLIGATE_HASHES: [u64; 4] = [
+    q_hash("https://ns.webcivics.net/values/requires"),
+    q_hash("values:requires"),
+    q_hash("https://ns.webcivics.net/values/obligates"),
+    q_hash("values:obligates"),
+];
+
+/// Classify a premise-predicate hash into a deontic opcode (+ defeater flag).
+///
+/// A `Defeater` (`^>`) rule is always a `q42:unless` permit-defeater. Otherwise a
+/// recognised `values:` operator picks the opcode; an unrecognised predicate
+/// falls back to the rule-type default (Strict/Linear => obligation, Defeasible =>
+/// permission), preserving behaviour for non-`values` contract predicates.
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
+fn opcode_from_predicate_hash(pred_hash: u64, rule_type: RuleType) -> (u8, bool) {
     if matches!(rule_type, RuleType::Defeater) {
         return (OP_PERMIT, true);
     }
-    let lower = uri.to_lowercase();
-    let is_obligate =
-        lower.contains("obligate") || lower.contains("must") || lower.contains("shall");
-    let is_permit = lower.contains("permit") || lower.contains("may") || lower.contains("can");
-    let is_forbid = lower.contains("forbid") || lower.contains("prohibit") || lower.contains("not");
-
+    if FORBID_HASHES.contains(&pred_hash) {
+        return (OP_FORBID, false);
+    }
+    if PERMIT_HASHES.contains(&pred_hash) {
+        return (OP_PERMIT, false);
+    }
+    if OBLIGATE_HASHES.contains(&pred_hash) {
+        return (OP_OBLIGATE, false);
+    }
     match rule_type {
-        RuleType::Strict | RuleType::Linear => {
-            if is_obligate {
-                (OP_OBLIGATE, false)
-            } else if is_forbid {
-                (OP_FORBID, false)
-            } else if is_permit {
-                (OP_PERMIT, false)
-            } else {
-                (OP_OBLIGATE, false)
-            }
-        }
-        RuleType::Defeasible => {
-            if is_permit {
-                (OP_PERMIT, false)
-            } else if is_forbid {
-                (OP_FORBID, false)
-            } else if is_obligate {
-                (OP_OBLIGATE, false)
-            } else {
-                (OP_PERMIT, false)
-            }
-        }
+        RuleType::Strict | RuleType::Linear => (OP_OBLIGATE, false),
+        RuleType::Defeasible => (OP_PERMIT, false),
         RuleType::Defeater => (OP_PERMIT, true),
     }
 }
@@ -439,20 +562,30 @@ fn opcode_from_predicate_uri(uri: &str, rule_type: RuleType) -> (u8, bool) {
 /// Compile an N3 [`Rule`] into a norm Quin (or defeater Quin for `^>` rules).
 ///
 /// Maps premise triple → party / property / action; `rule_type` → opcode + defeater flag.
+#[cfg(any(
+    not(target_arch = "wasm32"),
+    feature = "wasm-scientific",
+    feature = "wasm-full"
+))]
 pub fn compile_n3_rule_to_norm(
-    rule: &Rule,
+    rule: &crate::modalities::logic::n3_compiler::CompiledRule,
     contract_hash: u64,
     expiry_unix32: u32,
 ) -> Option<NQuin> {
+    // `triples` is a fixed `[_; 8]` array, so `.first()` is always `Some`; an
+    // empty rule must be rejected on `len`, not on `.first()`.
+    if rule.premise.len == 0 {
+        return None;
+    }
     let premise = rule.premise.triples.first()?;
-    let party = term_uri_hash(&premise.subject)?;
-    let property_path = term_uri_hash(&premise.predicate)?;
-    let action_object = term_uri_hash(&premise.object)?;
-    let predicate_uri = match &premise.predicate {
-        Term::Uri(uri) => uri.as_str(),
-        _ => return None,
-    };
-    let (opcode, is_defeater) = opcode_from_predicate_uri(predicate_uri, rule.rule_type);
+    let party = premise.subject.as_u64();
+    let property_path = premise.predicate.as_u64();
+    let action_object = premise.object.as_u64();
+
+    // Recover the deontic opcode from the premise predicate hash (the compiled
+    // rule no longer carries the IRI string).
+    let (opcode, is_defeater) = opcode_from_predicate_hash(property_path, rule.rule_type);
+
     Some(compile_norm_quin(
         party,
         opcode,
@@ -507,12 +640,457 @@ pub fn compile_norm_quin(
     }
 }
 
+// ─── Contrary-to-duty (dyadic deontic) ──────────────────────────────────────────
+
+/// Contrary-to-duty obligation `O(reparation / breach)`: a *secondary* obligation
+/// that arises precisely because a *primary* obligation was breached (the
+/// remedy/reparation logic — Geneva/ICCPR remedy instruments). Returns `true` iff
+/// the CTD is satisfied: either the primary was NOT breached by the party (the
+/// CTD is not triggered), or it was breached AND the reparation has been fulfilled.
+///
+/// Facts convention: a breach is `(party, q42:breached, primary)`; a fulfilled
+/// reparation is `(party, q42:fulfilled, reparation)`. Zero-heap (linear scans).
+pub fn evaluate_contrary_to_duty(
+    facts: &[NQuin],
+    party: u64,
+    primary: u64,
+    reparation: u64,
+) -> bool {
+    // CTD is the dyadic obligation O(reparation | breached(primary)).
+    evaluate_conditional_obligation(facts, party, q_hash("q42:breached"), primary, reparation)
+}
+
+/// General dyadic / conditional obligation `O(obligation | condition)`: the obligation
+/// is binding only *given* the condition holds. Returns `true` iff the conditional is
+/// satisfied — either the condition does not hold (vacuously satisfied), or it holds
+/// AND the obligation has been fulfilled.
+///
+/// Facts convention: the condition holds iff `(party, condition_pred, condition_obj)` is
+/// present; the obligation is fulfilled iff `(party, q42:fulfilled, obligation_obj)` is.
+/// Contrary-to-duty is the special case `condition_pred = q42:breached`. Zero-heap.
+pub fn evaluate_conditional_obligation(
+    facts: &[NQuin],
+    party: u64,
+    condition_pred: u64,
+    condition_obj: u64,
+    obligation_obj: u64,
+) -> bool {
+    let triggered = facts
+        .iter()
+        .any(|q| q.subject == party && q.predicate == condition_pred && q.object == condition_obj);
+    if !triggered {
+        return true; // condition absent → conditional obligation not triggered
+    }
+    let fulfilled = q_hash("q42:fulfilled");
+    facts
+        .iter()
+        .any(|q| q.subject == party && q.predicate == fulfilled && q.object == obligation_obj)
+}
+
+// ─── Deontic lifecycle (Pending → Active → {Violated, Discharged, Defeated, Expired}) ─
+
+/// Compute the full lifecycle status of a single norm against an effectivity window,
+/// the current time, the harvested defeaters, and a fact slice.
+///
+/// Transition order (first match wins):
+/// 1. `effective_from != 0 && now < effective_from` → [`Pending`](DeonticStatus::Pending).
+/// 2. `expiry != 0 && now > expiry` → [`Expired`](DeonticStatus::Expired).
+/// 3. a matching defeater → [`Defeated`](DeonticStatus::Defeated).
+/// 4. in-force, then the facts decide:
+///    - `OP_OBLIGATE`: `(party, q42:fulfilled, action)` → [`Discharged`]; else
+///      `(party, q42:breached, action)` → [`Violated`]; else [`Active`].
+///    - `OP_FORBID`: `(party, q42:performed, action)` → [`Violated`]; else [`Active`].
+///    - `OP_PERMIT`: always [`Active`] (a liberty cannot be violated or discharged).
+///
+/// Zero-heap (linear scans). `active_defeaters` is the buffer from
+/// [`harvest_defeater_fingerprints`].
+pub fn norm_lifecycle_status(
+    norm: &NQuin,
+    now_unix: u32,
+    effective_from: u32,
+    active_defeaters: &[u64],
+    facts: &[NQuin],
+) -> DeonticStatus {
+    if effective_from != 0 && now_unix < effective_from {
+        return DeonticStatus::Pending;
+    }
+    let expiry = extract_expiry_unix32(norm.metadata);
+    if expiry != 0 && now_unix > expiry {
+        return DeonticStatus::Expired;
+    }
+    if has_defeater(active_defeaters, norm) {
+        return DeonticStatus::Defeated;
+    }
+    let party = norm.subject;
+    let action = norm.object;
+    let opcode = extract_deontic_opcode(norm.predicate);
+    let fact_present = |pred: u64| {
+        facts
+            .iter()
+            .any(|q| q.subject == party && q.predicate == pred && q.object == action)
+    };
+    match opcode {
+        OP_OBLIGATE => {
+            if fact_present(q_hash("q42:fulfilled")) {
+                DeonticStatus::Discharged
+            } else if fact_present(q_hash("q42:breached")) {
+                DeonticStatus::Violated
+            } else {
+                DeonticStatus::Active
+            }
+        }
+        OP_FORBID => {
+            if fact_present(q_hash("q42:performed")) {
+                DeonticStatus::Violated
+            } else {
+                DeonticStatus::Active
+            }
+        }
+        _ => DeonticStatus::Active, // OP_PERMIT and others: a liberty cannot be violated
+    }
+}
+
+// ─── Optionality (U) and Gratuitousness (G) — derived modalities ────────────────
+
+/// True iff action φ is **optional / indifferent** for `party`: `¬O(φ) ∧ ¬F(φ)` — no
+/// active (non-defeater) obligation and no prohibition over `(party, action)` in the
+/// norm slice. (An explicit `OP_OPTIONAL` assertion also counts.)
+pub fn is_optional(norms: &[NQuin], party: u64, action: u64) -> bool {
+    !has_active_norm(norms, party, action, OP_OBLIGATE)
+        && !has_active_norm(norms, party, action, OP_FORBID)
+}
+
+/// True iff action φ is **gratuitous** (non-obligatory) for `party`: `¬O(φ)` — no
+/// active obligation over `(party, action)` (it may still be permitted or forbidden).
+pub fn is_gratuitous(norms: &[NQuin], party: u64, action: u64) -> bool {
+    !has_active_norm(norms, party, action, OP_OBLIGATE)
+}
+
+/// Helper: is there a non-defeater norm with `opcode` binding `party` to `action`?
+/// Matches the explicit modality opcode (`OP_OPTIONAL`/`OP_GRATUITOUS` short-circuit).
+fn has_active_norm(norms: &[NQuin], party: u64, action: u64, opcode: u8) -> bool {
+    norms.iter().any(|q| {
+        q.predicate & DEFEATER_BIT == 0
+            && q.subject == party
+            && q.object == action
+            && extract_deontic_opcode(q.predicate) == opcode
+    })
+}
+
+// ─── Norm-conflict resolution (proportionality + human-rights priority) ──────────
+
+/// Do two deontic OPCODES conflict — an obligation/permission to do φ vs a prohibition of φ?
+pub fn opcodes_conflict(a: u8, b: u8) -> bool {
+    let permits = |op: u8| op == OP_OBLIGATE || op == OP_PERMIT;
+    (permits(a) && b == OP_FORBID) || (permits(b) && a == OP_FORBID)
+}
+
+/// Do two norms CONFLICT — same party (`subject`) over the same action (`object`), with
+/// deontically opposed opcodes? Active (non-defeater) norms only.
+pub fn norms_conflict(a: &NQuin, b: &NQuin) -> bool {
+    a.predicate & DEFEATER_BIT == 0
+        && b.predicate & DEFEATER_BIT == 0
+        && a.subject == b.subject
+        && a.object == b.object
+        && opcodes_conflict(
+            extract_deontic_opcode(a.predicate),
+            extract_deontic_opcode(b.predicate),
+        )
+}
+
+/// The outcome of resolving a norm conflict.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NormResolution {
+    /// The first norm prevails.
+    FirstPrevails,
+    /// The second norm prevails.
+    SecondPrevails,
+    /// A genuine conflict — routed to human review (never auto-flattened).
+    RequiresHumanReview,
+}
+
+/// Resolve a norm conflict by, in strict order:
+///  1. **Non-derogable human-rights priority** — a norm grounded in a non-derogable instrument
+///     defeats a derogable one (never weaken a non-derogable principle).
+///  2. **Proportionality** — if neither/both are non-derogable, the norm whose action is
+///     *proportionate* (`legal_compose::proportionality_met`: marginal harm < advantage) prevails
+///     over a disproportionate one.
+///  3. Otherwise **human review** — a contested norm is never auto-flattened.
+///
+/// `a_proportionate`/`b_proportionate` are the proportionality verdicts (`None` = unmodelled).
+pub fn resolve_norm_conflict(
+    a_nonderogable: bool,
+    b_nonderogable: bool,
+    a_proportionate: Option<bool>,
+    b_proportionate: Option<bool>,
+) -> NormResolution {
+    match (a_nonderogable, b_nonderogable) {
+        (true, false) => return NormResolution::FirstPrevails,
+        (false, true) => return NormResolution::SecondPrevails,
+        _ => {}
+    }
+    match (a_proportionate, b_proportionate) {
+        (Some(true), Some(false)) => NormResolution::FirstPrevails,
+        (Some(false), Some(true)) => NormResolution::SecondPrevails,
+        _ => NormResolution::RequiresHumanReview,
+    }
+}
+
+// ─── Permissions as non-fungible cryptographic constraints ──────────────────────
+
+/// A collision-resistant (BLAKE3) fingerprint over a Quin's six fields — the cryptographic
+/// binding anchor. Changing any field changes the fingerprint.
+pub fn nquin_binding_hash(q: &NQuin) -> u64 {
+    let mut bytes = [0u8; 48];
+    bytes[0..8].copy_from_slice(&q.subject.to_le_bytes());
+    bytes[8..16].copy_from_slice(&q.predicate.to_le_bytes());
+    bytes[16..24].copy_from_slice(&q.object.to_le_bytes());
+    bytes[24..32].copy_from_slice(&q.context.to_le_bytes());
+    bytes[32..40].copy_from_slice(&q.metadata.to_le_bytes());
+    bytes[40..48].copy_from_slice(&q.parity.to_le_bytes());
+    let h = blake3::hash(&bytes);
+    u64::from_le_bytes(h.as_bytes()[..8].try_into().unwrap())
+}
+
+/// Compile a permission into a **non-fungible cryptographic constraint** bound to a *specific*
+/// target nquin: the constraint carries, in `context`, a BLAKE3 binding to `target`, so the
+/// permission cannot be detached and reused for a different nquin — it travels persistently with
+/// that exact one. The identity layer SIGNS this envelope (the engine never holds keys — see
+/// `meta_deontic::endorsement_credential`); this constructs the bound, verifiable constraint.
+pub fn compile_permission_constraint(action: u64, principal: u64, target: &NQuin) -> NQuin {
+    let binding = nquin_binding_hash(target);
+    let mut c = NQuin {
+        subject: principal,
+        predicate: OP_PERMIT as u64,
+        object: action,
+        context: binding,
+        metadata: 0,
+        parity: 0,
+    };
+    c.parity = c.subject ^ c.predicate ^ c.object ^ c.context;
+    c
+}
+
+/// Verify that a permission `constraint` is bound to `target` (the non-fungibility check): its
+/// `context` binding must match `target`'s current fingerprint. Tampering with `target`, or moving
+/// the constraint to a different nquin, breaks the binding.
+pub fn permission_binds_to(constraint: &NQuin, target: &NQuin) -> bool {
+    constraint.context == nquin_binding_hash(target)
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn norm_conflict_detection_and_proportional_resolution() {
+        let party = q_hash("did:party");
+        let action = q_hash("act:disclose");
+        let mk = |op: u8| {
+            let mut q = NQuin {
+                subject: party,
+                predicate: op as u64,
+                object: action,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            };
+            q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
+            q
+        };
+        // Obligate-disclose vs Forbid-disclose for the same party/action → conflict.
+        assert!(norms_conflict(&mk(OP_OBLIGATE), &mk(OP_FORBID)));
+        assert!(opcodes_conflict(OP_PERMIT, OP_FORBID));
+        // Two obligations don't conflict; different actions don't.
+        assert!(!norms_conflict(&mk(OP_OBLIGATE), &mk(OP_OBLIGATE)));
+        let mut other = mk(OP_FORBID);
+        other.object = q_hash("act:other");
+        assert!(!norms_conflict(&mk(OP_OBLIGATE), &other));
+
+        // Resolution: non-derogable beats derogable.
+        assert_eq!(
+            resolve_norm_conflict(true, false, None, None),
+            NormResolution::FirstPrevails
+        );
+        assert_eq!(
+            resolve_norm_conflict(false, true, None, None),
+            NormResolution::SecondPrevails
+        );
+        // Neither non-derogable → proportionality decides.
+        assert_eq!(
+            resolve_norm_conflict(false, false, Some(true), Some(false)),
+            NormResolution::FirstPrevails
+        );
+        assert_eq!(
+            resolve_norm_conflict(false, false, Some(false), Some(true)),
+            NormResolution::SecondPrevails
+        );
+        // Both non-derogable, or proportionality unmodelled → human review.
+        assert_eq!(
+            resolve_norm_conflict(true, true, None, None),
+            NormResolution::RequiresHumanReview
+        );
+        assert_eq!(
+            resolve_norm_conflict(false, false, None, None),
+            NormResolution::RequiresHumanReview
+        );
+    }
+
+    #[test]
+    fn permission_is_non_fungibly_bound_to_its_nquin() {
+        let principal = q_hash("did:principal");
+        let action = q_hash("act:read");
+        let mut target = NQuin {
+            subject: q_hash("doc:42"),
+            predicate: q_hash("q42:hasContent"),
+            object: q_hash("blob:abc"),
+            context: 7,
+            metadata: 0,
+            parity: 0,
+        };
+        target.parity = target.subject ^ target.predicate ^ target.object ^ target.context;
+
+        let c = compile_permission_constraint(action, principal, &target);
+        assert!(
+            permission_binds_to(&c, &target),
+            "the permission binds to its target nquin"
+        );
+        assert_eq!(extract_deontic_opcode(c.predicate), OP_PERMIT);
+
+        // Tampering with the target breaks the binding (non-fungible / tamper-evident).
+        let mut tampered = target;
+        tampered.object ^= 0x1;
+        assert!(
+            !permission_binds_to(&c, &tampered),
+            "any edit to the target breaks the binding"
+        );
+
+        // The constraint cannot be reused for a DIFFERENT nquin.
+        let mut other = target;
+        other.subject = q_hash("doc:99");
+        other.parity = other.subject ^ other.predicate ^ other.object ^ other.context;
+        assert!(
+            !permission_binds_to(&c, &other),
+            "permission is not fungible across nquins"
+        );
+    }
     use crate::q_hash;
+
+    #[test]
+    fn contrary_to_duty_requires_reparation_after_breach() {
+        let party = q_hash("did:web:acme");
+        let primary = q_hash("q42:protectData");
+        let reparation = q_hash("q42:notifyAndRemedy");
+        let mk = |s: u64, p: u64, o: u64| {
+            let mut q = NQuin {
+                subject: s,
+                predicate: p,
+                object: o,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            };
+            q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
+            q
+        };
+        // No breach → satisfied (CTD not triggered).
+        assert!(evaluate_contrary_to_duty(&[], party, primary, reparation));
+        // Breach without reparation → NOT satisfied.
+        let breach = [mk(party, q_hash("q42:breached"), primary)];
+        assert!(!evaluate_contrary_to_duty(
+            &breach, party, primary, reparation
+        ));
+        // Breach WITH reparation → satisfied.
+        let repaired = [
+            mk(party, q_hash("q42:breached"), primary),
+            mk(party, q_hash("q42:fulfilled"), reparation),
+        ];
+        assert!(evaluate_contrary_to_duty(
+            &repaired, party, primary, reparation
+        ));
+    }
+
+    /// Webizen values-credential smoke test (PLAN §11.3 / §17.1) — THE KEYSTONE.
+    ///
+    /// Proves a real values prohibition flows the live deontic lane:
+    ///   N3 `Rule` (ns.webcivics.net) → `compile_n3_rule_to_norm` → `evaluate_deontic_contract`
+    ///   → `DeonticVerdict`  (this is exactly what the `NativeDeonticEval` opcode dispatches to).
+    /// And that the engine's NATIVE defeasibility flips Active → Defeated when a `q42:unless`
+    /// defeater is present. No `n3logic.rs::infer_logic_bindings` on this path.
+    #[test]
+    fn values_credential_deontic_smoke() {
+        use crate::modalities::logic::n3_parser::{Formula, Rule, RuleType, Term, Triple};
+
+        // A values prohibition (UDHR Art 30 family) as a parsed-shape N3 rule:
+        //   { values:Agent  values:forbids  values:DestructionOfRights }
+        let prohibition = Rule {
+            id: Some("UDHR-Art30-smoke"),
+            rule_type: RuleType::Strict,
+            weight: None,
+            premise: Formula {
+                triples: vec![Triple {
+                    subject: Term::Uri("https://ns.webcivics.net/values/Agent"),
+                    predicate: Term::Uri("https://ns.webcivics.net/values/forbids"),
+                    object: Term::Uri("https://ns.webcivics.net/values/DestructionOfRights"),
+                }],
+            },
+            conclusion: Formula { triples: vec![] },
+        };
+        let contract = q_hash("contract:udhr-smoke");
+
+        // ── values rule → norm Quin (the values→deontic bridge) ──
+        let norm = compile_n3_rule_to_norm(
+            &crate::modalities::logic::n3_compiler::compile_rule_to_zero_heap(&prohibition),
+            contract,
+            0,
+        )
+        .expect("a values prohibition must compile to a norm Quin");
+        assert_eq!(
+            extract_deontic_opcode(norm.predicate),
+            OP_FORBID,
+            "a `values:forbids` rule must compile to an OP_FORBID norm"
+        );
+
+        // ── evaluate via the native deontic VM path → the prohibition is Active (live) ──
+        let mut out = [DeonticVerdict::default(); 4];
+        let n = evaluate_deontic_contract(&[norm], NOW, &mut out)
+            .expect("deontic evaluation must succeed");
+        assert_eq!(n, 1, "exactly one norm verdict expected");
+        assert_eq!(
+            out[0].status,
+            DeonticStatus::Active,
+            "the values prohibition holds (Active) — it is live in the engine, not bot-faked"
+        );
+        assert_eq!(out[0].opcode, OP_FORBID);
+
+        // ── native defeasibility: a `q42:unless` defeater on the same party+path+contract
+        //    flips Active → Defeated ("forbidden ... UNLESS lawfully authorised"). ──
+        let party = q_hash("https://ns.webcivics.net/values/Agent");
+        let path = q_hash("https://ns.webcivics.net/values/forbids");
+        let defeater = compile_norm_quin(
+            party,
+            OP_PERMIT,
+            path,
+            q_hash("https://ns.webcivics.net/values/lawfullyAuthorised"),
+            contract,
+            0,
+            /* is_defeater = */ true,
+        );
+        let mut out2 = [DeonticVerdict::default(); 4];
+        let n2 = evaluate_deontic_contract(&[norm, defeater], NOW, &mut out2)
+            .expect("deontic evaluation with defeater must succeed");
+        assert_eq!(
+            n2, 1,
+            "the defeater is not a primary norm; one verdict expected"
+        );
+        assert_eq!(
+            out2[0].status,
+            DeonticStatus::Defeated,
+            "an `unless` defeater on the same party+path must defeat the prohibition"
+        );
+    }
 
     fn alice() -> u64 {
         q_hash("did:web:alice.example")
@@ -575,7 +1153,8 @@ mod tests {
             norm: NQuin::default(),
             status: DeonticStatus::Malformed,
             opcode: 0,
-            _pad: [0u8; 6],
+            defeat_kind: DefeatKind::None,
+            _pad: [0u8; 5],
         }; 8];
 
         let n = evaluate_deontic_contract(&quins, NOW, &mut out).unwrap();
@@ -618,7 +1197,8 @@ mod tests {
             norm: NQuin::default(),
             status: DeonticStatus::Malformed,
             opcode: 0,
-            _pad: [0u8; 6],
+            defeat_kind: DefeatKind::None,
+            _pad: [0u8; 5],
         }; 4];
 
         let n = evaluate_deontic_contract(&quins, NOW, &mut out).unwrap();
@@ -642,7 +1222,8 @@ mod tests {
             norm: NQuin::default(),
             status: DeonticStatus::Malformed,
             opcode: 0,
-            _pad: [0u8; 6],
+            defeat_kind: DefeatKind::None,
+            _pad: [0u8; 5],
         }; 4];
 
         let n = evaluate_deontic_contract(&quins, u32::MAX, &mut out).unwrap();
@@ -669,7 +1250,8 @@ mod tests {
             norm: NQuin::default(),
             status: DeonticStatus::Malformed,
             opcode: 0,
-            _pad: [0u8; 6],
+            defeat_kind: DefeatKind::None,
+            _pad: [0u8; 5],
         }; 4];
 
         let n = evaluate_deontic_contract(&[plain], NOW, &mut out).unwrap();
@@ -683,7 +1265,8 @@ mod tests {
             norm: NQuin::default(),
             status: DeonticStatus::Malformed,
             opcode: 0,
-            _pad: [0u8; 6],
+            defeat_kind: DefeatKind::None,
+            _pad: [0u8; 5],
         }; 1]; // one slot — too small
 
         assert_eq!(
@@ -698,7 +1281,8 @@ mod tests {
             norm: NQuin::default(),
             status: DeonticStatus::Malformed,
             opcode: 0,
-            _pad: [0u8; 6],
+            defeat_kind: DefeatKind::None,
+            _pad: [0u8; 5],
         }; 4];
         let n = evaluate_deontic_contract(&[], NOW, &mut out).unwrap();
         assert_eq!(n, 0);
@@ -727,7 +1311,8 @@ mod tests {
             norm: NQuin::default(),
             status: DeonticStatus::Malformed,
             opcode: 0,
-            _pad: [0u8; 6],
+            defeat_kind: DefeatKind::None,
+            _pad: [0u8; 5],
         }; 4];
 
         // Before majority — obligation is active.
@@ -797,7 +1382,12 @@ mod tests {
                 }],
             },
         };
-        let q = compile_n3_rule_to_norm(&rule, nda(), EXPIRY_NDA).unwrap();
+        let q = compile_n3_rule_to_norm(
+            &crate::modalities::logic::n3_compiler::compile_rule_to_zero_heap(&rule),
+            nda(),
+            EXPIRY_NDA,
+        )
+        .unwrap();
         assert_ne!(q.predicate & DEFEATER_BIT, 0);
     }
 
@@ -817,7 +1407,12 @@ mod tests {
             },
             conclusion: Formula { triples: vec![] },
         };
-        let q = compile_n3_rule_to_norm(&rule, nda(), 0).unwrap();
+        let q = compile_n3_rule_to_norm(
+            &crate::modalities::logic::n3_compiler::compile_rule_to_zero_heap(&rule),
+            nda(),
+            0,
+        )
+        .unwrap();
         assert_eq!(extract_deontic_opcode(q.predicate), OP_PERMIT);
         assert_eq!(q.predicate & DEFEATER_BIT, 0);
     }
@@ -832,6 +1427,188 @@ mod tests {
             premise: Formula { triples: vec![] },
             conclusion: Formula { triples: vec![] },
         };
-        assert!(compile_n3_rule_to_norm(&rule, nda(), 0).is_none());
+        assert!(compile_n3_rule_to_norm(
+            &crate::modalities::logic::n3_compiler::compile_rule_to_zero_heap(&rule),
+            nda(),
+            0
+        )
+        .is_none());
+    }
+
+    // ─── Phase 1: SDL⁺ extensions (DEONTIC_LOGIC_PLAN §4) ───────────────────────
+
+    fn mkfact(s: u64, p: u64, o: u64) -> NQuin {
+        let mut q = NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        };
+        q.parity = q.subject ^ q.predicate ^ q.object ^ q.context;
+        q
+    }
+
+    #[test]
+    fn lifecycle_pending_active_discharged_violated() {
+        let party = alice();
+        let action = conf_data();
+        let duty = compile_norm_quin(party, OP_OBLIGATE, disclose_path(), action, nda(), 0, false);
+
+        // effective_from in the future → Pending.
+        assert_eq!(
+            norm_lifecycle_status(&duty, NOW, NOW + 1000, &[], &[]),
+            DeonticStatus::Pending
+        );
+        // in force, no facts → Active.
+        assert_eq!(
+            norm_lifecycle_status(&duty, NOW, 0, &[], &[]),
+            DeonticStatus::Active
+        );
+        // fulfilled fact → Discharged.
+        let fulfilled = [mkfact(party, q_hash("q42:fulfilled"), action)];
+        assert_eq!(
+            norm_lifecycle_status(&duty, NOW, 0, &[], &fulfilled),
+            DeonticStatus::Discharged
+        );
+        // breached fact → Violated.
+        let breached = [mkfact(party, q_hash("q42:breached"), action)];
+        assert_eq!(
+            norm_lifecycle_status(&duty, NOW, 0, &[], &breached),
+            DeonticStatus::Violated
+        );
+    }
+
+    #[test]
+    fn lifecycle_forbid_violated_by_performance() {
+        let party = bob();
+        let action = conf_data();
+        let prohibition =
+            compile_norm_quin(party, OP_FORBID, disclose_path(), action, nda(), 0, false);
+        let performed = [mkfact(party, q_hash("q42:performed"), action)];
+        assert_eq!(
+            norm_lifecycle_status(&prohibition, NOW, 0, &[], &performed),
+            DeonticStatus::Violated
+        );
+        assert_eq!(
+            norm_lifecycle_status(&prohibition, NOW, 0, &[], &[]),
+            DeonticStatus::Active
+        );
+    }
+
+    #[test]
+    fn lifecycle_expiry_and_defeater_precedence() {
+        let party = alice();
+        let action = conf_data();
+        let duty = compile_norm_quin(
+            party,
+            OP_OBLIGATE,
+            disclose_path(),
+            action,
+            nda(),
+            EXPIRY_NDA,
+            false,
+        );
+        let fulfilled = [mkfact(party, q_hash("q42:fulfilled"), action)];
+        // past expiry → Expired (temporal precedes facts).
+        assert_eq!(
+            norm_lifecycle_status(&duty, EXPIRY_NDA + 1, 0, &[], &fulfilled),
+            DeonticStatus::Expired
+        );
+        // matching defeater → Defeated (precedes facts).
+        let df = defeater_fingerprint(&duty);
+        assert_eq!(
+            norm_lifecycle_status(&duty, NOW, 0, &[df], &fulfilled),
+            DeonticStatus::Defeated
+        );
+    }
+
+    #[test]
+    fn optionality_and_gratuitousness() {
+        let party = alice();
+        let action = q_hash("q42:donate");
+        // no norms → optional and gratuitous.
+        assert!(is_optional(&[], party, action));
+        assert!(is_gratuitous(&[], party, action));
+        // obligation → neither.
+        let oblig = compile_norm_quin(party, OP_OBLIGATE, disclose_path(), action, nda(), 0, false);
+        assert!(!is_optional(&[oblig], party, action));
+        assert!(!is_gratuitous(&[oblig], party, action));
+        // permission alone → optional and gratuitous.
+        let perm = compile_norm_quin(party, OP_PERMIT, disclose_path(), action, nda(), 0, false);
+        assert!(is_optional(&[perm], party, action));
+        assert!(is_gratuitous(&[perm], party, action));
+        // prohibition → gratuitous (not obliged) but NOT optional (forbidden).
+        let forbid = compile_norm_quin(party, OP_FORBID, disclose_path(), action, nda(), 0, false);
+        assert!(!is_optional(&[forbid], party, action));
+        assert!(is_gratuitous(&[forbid], party, action));
+    }
+
+    #[test]
+    fn undercutting_vs_rebutting_defeater_kind() {
+        let party = alice();
+        let action = conf_data();
+        let duty = compile_norm_quin(party, OP_OBLIGATE, disclose_path(), action, nda(), 0, false);
+        let mut out = [DeonticVerdict::default(); 4];
+
+        // Rebutting: DEFEATER_BIT + a contrary opcode (PERMIT) on the same path.
+        let rebut = compile_norm_quin(
+            party,
+            OP_PERMIT,
+            disclose_path(),
+            q_hash("q42:exc"),
+            nda(),
+            0,
+            true,
+        );
+        let n = evaluate_deontic_contract(&[duty, rebut], NOW, &mut out).unwrap();
+        assert_eq!(n, 1);
+        assert_eq!(out[0].status, DeonticStatus::Defeated);
+        assert_eq!(out[0].defeat_kind, DefeatKind::Rebutting);
+
+        // Undercutting: DEFEATER_BIT + OP_UNDERCUT on the same path → link-invalidation.
+        let undercut = compile_norm_quin(
+            party,
+            OP_UNDERCUT,
+            disclose_path(),
+            q_hash("q42:exc"),
+            nda(),
+            0,
+            true,
+        );
+        let n = evaluate_deontic_contract(&[duty, undercut], NOW, &mut out).unwrap();
+        assert_eq!(n, 1);
+        assert_eq!(out[0].status, DeonticStatus::Defeated);
+        assert_eq!(out[0].defeat_kind, DefeatKind::Undercutting);
+    }
+
+    #[test]
+    fn dyadic_conditional_obligation() {
+        let party = alice();
+        let condition = q_hash("q42:dataCollected");
+        let obligation = q_hash("q42:obtainConsent");
+        let cond_pred = q_hash("q42:holds");
+        // condition absent → vacuously satisfied.
+        assert!(evaluate_conditional_obligation(
+            &[],
+            party,
+            cond_pred,
+            condition,
+            obligation
+        ));
+        // condition present, unfulfilled → not satisfied.
+        let triggered = [mkfact(party, cond_pred, condition)];
+        assert!(!evaluate_conditional_obligation(
+            &triggered, party, cond_pred, condition, obligation
+        ));
+        // condition present, fulfilled → satisfied.
+        let done = [
+            mkfact(party, cond_pred, condition),
+            mkfact(party, q_hash("q42:fulfilled"), obligation),
+        ];
+        assert!(evaluate_conditional_obligation(
+            &done, party, cond_pred, condition, obligation
+        ));
     }
 }

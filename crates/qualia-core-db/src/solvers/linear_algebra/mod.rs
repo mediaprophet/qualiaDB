@@ -1,12 +1,29 @@
 //! Linear Algebra & Matrix Solvers - Zero-Allocation Implementation
-//! 
+//!
 //! This module provides fixed-size stack-based linear algebra solvers for
 //! eigenvalue problems, linear systems, and tensor operations suitable for
 //! the #![no_std] environment of Qualia-DB.
 
-use crate::solvers::{SolverConfig, SolverState, SolverResult};
 use crate::solvers::SolversError as ExecutionError;
-use core::f64::consts;
+use crate::solvers::{SolverConfig, SolverResult, SolverState};
+
+/// Dynamic-size, caller-owned-buffer decompositions (nalgebra-parity, zero-heap).
+pub mod cholesky;
+/// Symmetric eigendecomposition — closed-form 3×3 + general Jacobi (caller-owned).
+pub mod eigen;
+/// Dynamic-size general matrix multiply (caller-owned, zero-heap) — the canonical
+/// dense-GEMM core the specialized libs and the GPU `coop_gemv` backend share.
+pub mod gemm;
+/// Dynamic LU decomposition (partial pivoting) + determinant — canonical `n×n` LU.
+pub mod lu;
+/// Householder QR factorisation + least-squares solve (caller-owned, zero-heap).
+pub mod qr;
+/// Matrix-spectral bridge: characteristic polynomial + general (non-symmetric) eigenvalues.
+pub mod spectral;
+/// Thin singular value decomposition `A = U·Σ·Vᵀ` (via `AᵀA` eigendecomposition).
+pub mod svd;
+/// Element-wise vector ops (add / Hadamard / scale / axpy) — residual stream + gated activations.
+pub mod vector;
 
 /// Fixed-size 4x4 matrix for stack-based operations
 #[repr(C)]
@@ -115,7 +132,7 @@ impl Matrix4x4 {
     /// Matrix-vector multiplication
     pub fn multiply_vector(&self, v: &Vector4) -> Vector4 {
         let mut result = Vector4::zero();
-        
+
         for i in 0..4 {
             let mut sum = 0.0;
             for j in 0..4 {
@@ -123,14 +140,14 @@ impl Matrix4x4 {
             }
             result.data[i] = sum;
         }
-        
+
         result
     }
 
     /// Matrix-matrix multiplication
     pub fn multiply_matrix(&self, other: &Matrix4x4) -> Matrix4x4 {
         let mut result = Matrix4x4::zero();
-        
+
         for i in 0..4 {
             for j in 0..4 {
                 let mut sum = 0.0;
@@ -140,20 +157,20 @@ impl Matrix4x4 {
                 result.data[i][j] = sum;
             }
         }
-        
+
         result
     }
 
     /// Transpose matrix
     pub fn transpose(&self) -> Matrix4x4 {
         let mut result = Matrix4x4::zero();
-        
+
         for i in 0..4 {
             for j in 0..4 {
                 result.data[i][j] = self.data[j][i];
             }
         }
-        
+
         result
     }
 
@@ -161,13 +178,13 @@ impl Matrix4x4 {
     pub fn determinant(&self) -> f64 {
         // Use cofactor expansion for 4x4
         let mut det = 0.0;
-        
+
         for i in 0..4 {
             let sign = if i % 2 == 0 { 1.0 } else { -1.0 };
             let minor = self.minor(0, i);
             det += sign * self.data[0][i] * minor.determinant_3x3();
         }
-        
+
         det
     }
 
@@ -175,35 +192,39 @@ impl Matrix4x4 {
     fn minor(&self, row: usize, col: usize) -> Matrix4x4 {
         let mut result = Matrix4x4::zero();
         let mut r = 0;
-        
+
         for i in 0..4 {
-            if i == row { continue; }
+            if i == row {
+                continue;
+            }
             let mut c = 0;
             for j in 0..4 {
-                if j == col { continue; }
+                if j == col {
+                    continue;
+                }
                 result.data[r][c] = self.data[i][j];
                 c += 1;
             }
             r += 1;
         }
-        
+
         result
     }
 
     /// Calculate 3x3 determinant
     fn determinant_3x3(&self) -> f64 {
-        self.data[0][0] * (self.data[1][1] * self.data[2][2] - self.data[1][2] * self.data[2][1]) -
-        self.data[0][1] * (self.data[1][0] * self.data[2][2] - self.data[1][2] * self.data[2][0]) +
-        self.data[0][2] * (self.data[1][0] * self.data[2][1] - self.data[1][1] * self.data[2][0])
+        self.data[0][0] * (self.data[1][1] * self.data[2][2] - self.data[1][2] * self.data[2][1])
+            - self.data[0][1]
+                * (self.data[1][0] * self.data[2][2] - self.data[1][2] * self.data[2][0])
+            + self.data[0][2]
+                * (self.data[1][0] * self.data[2][1] - self.data[1][1] * self.data[2][0])
     }
 }
 
 impl Vector4 {
     /// Create zero vector
     pub const fn zero() -> Self {
-        Self {
-            data: [0.0; 4],
-        }
+        Self { data: [0.0; 4] }
     }
 
     /// Create vector from array
@@ -302,7 +323,7 @@ impl Tensor3x3x3 {
     /// Contract with another tensor
     pub fn contract(&self, other: &Tensor3x3x3, indices: &[(usize, usize); 3]) -> Tensor3x3x3 {
         let mut result = Tensor3x3x3::zero();
-        
+
         // Perform contraction along specified indices
         for i in 0..3 {
             for j in 0..3 {
@@ -315,7 +336,7 @@ impl Tensor3x3x3 {
                 }
             }
         }
-        
+
         result
     }
 }
@@ -335,7 +356,11 @@ impl FixedLanczosEigensolver {
     }
 
     /// Find lowest eigenvalues of symmetric matrix
-    pub fn find_lowest_eigenvalues(&mut self, matrix: &Matrix4x4, num_eigenvalues: usize) -> SolverResult<[f64; 4]> {
+    pub fn find_lowest_eigenvalues(
+        &mut self,
+        matrix: &Matrix4x4,
+        num_eigenvalues: usize,
+    ) -> SolverResult<[f64; 4]> {
         self.iteration = 0;
         self.solver_state.converged = false;
 
@@ -355,7 +380,8 @@ impl FixedLanczosEigensolver {
             // Compute w = w - alpha_i * v_i - beta_{i-1} * v_{i-1}
             let mut w_new = w.subtract(&self.vectors[0].scale(alpha_i));
             if self.iteration > 0 {
-                w_new = w_new.subtract(&self.vectors[1].scale(self.beta[(self.iteration - 1) as usize]));
+                w_new = w_new
+                    .subtract(&self.vectors[1].scale(self.beta[(self.iteration - 1) as usize]));
             }
 
             // Compute beta_i = ||w||
@@ -363,6 +389,8 @@ impl FixedLanczosEigensolver {
             self.beta[self.iteration as usize] = beta_i;
 
             // Check convergence
+            self.iteration += 1;
+
             if beta_i < self.config.tolerance {
                 self.solver_state.converged = true;
                 break;
@@ -372,8 +400,6 @@ impl FixedLanczosEigensolver {
             self.vectors[2] = self.vectors[1];
             self.vectors[1] = self.vectors[0];
             self.vectors[0] = w_new.normalize();
-
-            self.iteration += 1;
         }
 
         // Extract eigenvalues from tridiagonal matrix
@@ -388,45 +414,43 @@ impl FixedLanczosEigensolver {
         if n == 0 {
             return Err(ExecutionError::InvalidParameters);
         }
+        if n > 100 {
+            return Err(ExecutionError::InvalidDimension);
+        }
 
-        // Simple power iteration for lowest eigenvalue
-        for i in 0..num_eigenvalues.min(4) {
-            let mut v = Vector4::from_array([1.0, 0.0, 0.0, 0.0]);
-            
-            for _ in 0..50 {
-                // Apply tridiagonal matrix approximation
-                let mut w = Vector4::zero();
-                
-                for j in 0..n.min(4) {
-                    if j < n {
-                        w.data[j] += self.alpha[j] * v.data[j];
-                    }
-                    if j > 0 {
-                        w.data[j] += self.beta[j - 1] * v.data[j - 1];
-                    }
-                    if j < n - 1 {
-                        w.data[j] += self.beta[j] * v.data[j + 1];
-                    }
-                }
-                
-                v = w.normalize();
+        // Construct dense n x n matrix for the tridiagonal system
+        let mut tridiag = [0.0; 100 * 100];
+        for i in 0..n {
+            tridiag[i * n + i] = self.alpha[i];
+            if i < n - 1 {
+                tridiag[i * n + i + 1] = self.beta[i];
+                tridiag[(i + 1) * n + i] = self.beta[i];
             }
-            
-            // Estimate eigenvalue using Rayleigh quotient
-            self.eigenvalues[i] = self.estimate_rayleigh_quotient(&v);
+        }
+
+        let mut eigvecs = [0.0; 100 * 100];
+
+        // solve eigensystem for the n x n block
+        crate::solvers::linear_algebra::eigen::symmetric_eigen(
+            n,
+            &mut tridiag[..n * n],
+            &mut eigvecs[..n * n],
+        )?;
+
+        // Extract eigenvalues from diagonal
+        let mut eigs = [0.0; 100];
+        for i in 0..n {
+            eigs[i] = tridiag[i * n + i];
+        }
+
+        // Sort ascending to get lowest eigenvalues
+        eigs[..n].sort_by(|a, b| a.partial_cmp(b).unwrap_or(core::cmp::Ordering::Equal));
+
+        for i in 0..num_eigenvalues.min(4).min(n) {
+            self.eigenvalues[i] = eigs[i];
         }
 
         Ok(())
-    }
-
-    /// Estimate Rayleigh quotient
-    fn estimate_rayleigh_quotient(&self, v: &Vector4) -> f64 {
-        // Simplified estimation using diagonal elements
-        let mut sum = 0.0;
-        for i in 0..4.min(self.iteration as usize) {
-            sum += self.alpha[i] * v.data[i] * v.data[i];
-        }
-        sum
     }
 }
 
@@ -446,10 +470,10 @@ impl StaticLuDecomposition {
     pub fn solve(&mut self, matrix: &Matrix4x4, b: &Vector4) -> SolverResult<Vector4> {
         // Copy matrix for decomposition
         self.matrix = *matrix;
-        
+
         // Perform LU decomposition with partial pivoting
         self.lu_decompose()?;
-        
+
         // Solve using forward/backward substitution
         self.solve_lu(b)
     }
@@ -457,28 +481,28 @@ impl StaticLuDecomposition {
     /// Perform LU decomposition with partial pivoting
     fn lu_decompose(&mut self) -> SolverResult<()> {
         self.parity = 1;
-        
+
         for i in 0..4 {
             // Find pivot
             let pivot_row = self.find_pivot(i)?;
-            
+
             // Swap rows if necessary
             if pivot_row != i {
                 self.swap_rows(i, pivot_row);
                 self.parity = -self.parity;
             }
-            
+
             // Eliminate column
             for j in i + 1..4 {
                 let multiplier = self.matrix.data[j][i] / self.matrix.data[i][i];
                 self.matrix.data[j][i] = multiplier;
-                
+
                 for k in i + 1..4 {
                     self.matrix.data[j][k] -= multiplier * self.matrix.data[i][k];
                 }
             }
         }
-        
+
         Ok(())
     }
 
@@ -486,7 +510,7 @@ impl StaticLuDecomposition {
     fn find_pivot(&self, col: usize) -> SolverResult<usize> {
         let mut max_row = col;
         let mut max_val = self.matrix.data[col][col].abs();
-        
+
         for i in col + 1..4 {
             let val = self.matrix.data[i][col].abs();
             if val > max_val {
@@ -494,11 +518,11 @@ impl StaticLuDecomposition {
                 max_row = i;
             }
         }
-        
+
         if max_val < 1e-10 {
             return Err(ExecutionError::SingularMatrix);
         }
-        
+
         Ok(max_row)
     }
 
@@ -509,7 +533,7 @@ impl StaticLuDecomposition {
             self.matrix.data[i][k] = self.matrix.data[j][k];
             self.matrix.data[j][k] = temp;
         }
-        
+
         // Update permutation
         self.permutation.swap(i, j);
     }
@@ -517,7 +541,7 @@ impl StaticLuDecomposition {
     /// Solve using LU decomposition
     fn solve_lu(&self, b: &Vector4) -> SolverResult<Vector4> {
         let mut x = *b;
-        
+
         // Forward substitution (solve Ly = Pb)
         for i in 0..4 {
             let mut sum = 0.0;
@@ -526,7 +550,7 @@ impl StaticLuDecomposition {
             }
             x.data[i] -= sum;
         }
-        
+
         // Backward substitution (solve Ux = y)
         for i in (0..4).rev() {
             let mut sum = 0.0;
@@ -535,7 +559,7 @@ impl StaticLuDecomposition {
             }
             x.data[i] = (x.data[i] - sum) / self.matrix.data[i][i];
         }
-        
+
         Ok(x)
     }
 
@@ -563,17 +587,23 @@ impl ConstTensorContractor {
     }
 
     /// Contract two tensors
-    pub fn contract(&mut self, tensor_a: &Tensor3x3x3, tensor_b: &Tensor3x3x3, 
-                   indices: &[(usize, usize); 3]) -> SolverResult<Tensor3x3x3> {
+    pub fn contract(
+        &mut self,
+        tensor_a: &Tensor3x3x3,
+        tensor_b: &Tensor3x3x3,
+        indices: &[(usize, usize); 3],
+    ) -> SolverResult<Tensor3x3x3> {
         self.tensor_a = *tensor_a;
         self.tensor_b = *tensor_b;
         self.contraction_indices = *indices;
-        
+
         // Perform contraction
-        self.result = self.tensor_a.contract(&self.tensor_b, &self.contraction_indices);
-        
+        self.result = self
+            .tensor_a
+            .contract(&self.tensor_b, &self.contraction_indices);
+
         self.solver_state.converged = true;
-        
+
         Ok(self.result)
     }
 
@@ -628,10 +658,10 @@ mod tests {
         let mut m = Matrix4x4::identity();
         m.set(0, 1, 2.0);
         m.set(1, 0, 3.0);
-        
+
         let v = Vector4::from_array([1.0, 2.0, 3.0, 4.0]);
         let result = m.multiply_vector(&v);
-        
+
         assert_eq!(result.data[0], 1.0 + 2.0 * 2.0); // 1 + 4 = 5
         assert_eq!(result.data[1], 3.0 * 1.0 + 2.0); // 3 + 2 = 5
     }
@@ -640,28 +670,28 @@ mod tests {
     fn test_vector_operations() {
         let v1 = Vector4::from_array([1.0, 2.0, 3.0, 4.0]);
         let v2 = Vector4::from_array([2.0, 3.0, 4.0, 5.0]);
-        
+
         let dot = v1.dot(&v2);
-        assert_eq!(dot, 1.0*2.0 + 2.0*3.0 + 3.0*4.0 + 4.0*5.0);
-        
+        assert_eq!(dot, 1.0 * 2.0 + 2.0 * 3.0 + 3.0 * 4.0 + 4.0 * 5.0);
+
         let norm = v1.norm();
-        assert!((norm - (1.0_f64*1.0 + 2.0*2.0 + 3.0*3.0 + 4.0*4.0).sqrt()).abs() < 1e-10);
+        assert!((norm - (1.0_f64 * 1.0 + 2.0 * 2.0 + 3.0 * 3.0 + 4.0 * 4.0).sqrt()).abs() < 1e-10);
     }
 
     #[test]
     fn test_lu_decomposition() {
         let mut lu = StaticLuDecomposition::new(SolverConfig::default());
-        
+
         // Test matrix: [[2, 1], [1, 2]] extended to 4x4
         let mut m = Matrix4x4::identity();
         m.set(0, 0, 2.0);
         m.set(0, 1, 1.0);
         m.set(1, 0, 1.0);
         m.set(1, 1, 2.0);
-        
+
         let b = Vector4::from_array([3.0, 3.0, 0.0, 0.0]);
         let result = lu.solve(&m, &b);
-        
+
         assert!(result.is_ok());
         let x = result.unwrap();
         assert!((x.data[0] - 1.0).abs() < 1e-10);
@@ -671,19 +701,19 @@ mod tests {
     #[test]
     fn test_tensor_contraction() {
         let mut contractor = ConstTensorContractor::new(SolverConfig::default());
-        
+
         let mut tensor_a = Tensor3x3x3::zero();
         let mut tensor_b = Tensor3x3x3::zero();
-        
+
         // Set some values
         tensor_a.set(0, 0, 0, 1.0);
         tensor_a.set(1, 1, 1, 2.0);
         tensor_b.set(0, 0, 0, 3.0);
         tensor_b.set(1, 1, 1, 4.0);
-        
+
         let indices = [(0, 0), (1, 1), (2, 2)];
         let result = contractor.contract(&tensor_a, &tensor_b, &indices);
-        
+
         assert!(result.is_ok());
     }
 

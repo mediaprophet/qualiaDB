@@ -35,25 +35,63 @@ fn out_idx(m: u32, i: u32) -> u32 {
     return m * row_stride(params.out_row_stride) + params.out_slot + i;
 }
 
-// RMSNorm: one workgroup per batch row — variance reduction is row-local only (no cross-token barrier).
-@compute @workgroup_size(1)
-fn rms_norm_batch(@builtin(workgroup_id) wg_id: vec3<u32>) {
+// RMSNorm: one workgroup per batch row, **256-wide parallel reduce**.
+// Previous path used @workgroup_size(1) and a scalar loop over n (3072–4096) —
+// ~57 single-thread RMS passes/token on 3B. Parallel partials + tree reduce keeps
+// the same mean-square formula (ss/n + eps) while using the SM.
+const RMS_WG: u32 = 256u;
+var<workgroup> rms_partial: array<f32, 256>;
+var<workgroup> rms_inv: f32;
+
+@compute @workgroup_size(256)
+fn rms_norm_batch(
+    @builtin(workgroup_id) wg_id: vec3<u32>,
+    @builtin(local_invocation_id) lid: vec3<u32>,
+) {
     let n = params.n;
     let m = wg_id.y;
+    let t = lid.x;
     if m >= params.batch || n == 0u {
         return;
     }
     let a_base = a_idx(m, 0u);
     let o_base = out_idx(m, 0u);
-    var ss = 0.0;
-    for (var j = 0u; j < n; j = j + 1u) {
+
+    // Phase 1: each lane accumulates squares over a strided slice of the row.
+    var local_ss = 0.0;
+    var j = t;
+    loop {
+        if j >= n { break; }
         let v = buf_a[a_base + j];
-        ss = ss + v * v;
+        local_ss = local_ss + v * v;
+        j = j + RMS_WG;
     }
-    ss = ss / f32(n);
-    let inv_rms = 1.0 / sqrt(ss + params.eps);
-    for (var i = 0u; i < n; i = i + 1u) {
+    rms_partial[t] = local_ss;
+    workgroupBarrier();
+
+    // Phase 2: tree reduce → inv_rms in shared.
+    var stride = RMS_WG >> 1u;
+    loop {
+        if stride == 0u { break; }
+        if t < stride {
+            rms_partial[t] = rms_partial[t] + rms_partial[t + stride];
+        }
+        workgroupBarrier();
+        stride = stride >> 1u;
+    }
+    if t == 0u {
+        let mean_sq = rms_partial[0] / f32(n);
+        rms_inv = 1.0 / sqrt(mean_sq + params.eps);
+    }
+    workgroupBarrier();
+    let inv_rms = rms_inv;
+
+    // Phase 3: write normed · weight (weight is length-n in buf_b[0..n]).
+    var i = t;
+    loop {
+        if i >= n { break; }
         buf_out[o_base + i] = buf_a[a_base + i] * inv_rms * buf_b[i];
+        i = i + RMS_WG;
     }
 }
 

@@ -1,0 +1,608 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# src Index
+
+## Functionality Overview
+Comprehensive index of functionality for `src`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Subdirectories
+- 📁 `[engine](engine/DIRECTORY_INDEX.md)`
+
+### Files & Exported Functionality
+- 📄 `activity_signals.rs`
+  - `fn begin_ontology_job`
+  - `fn end_ontology_job`
+  - `fn ontology_baking_pressure`
+- 📄 `anatomy_context.rs`
+  - `struct ConditionCatalog`
+  - `struct ConditionEntry`
+  - `impl ConditionEntry`
+  - `fn primary_system_label`
+  - `struct AnatomyGraphContext`
+  - `fn anatomy_qapp_dir`
+  - `fn load_dicom_organ_matchers`
+  - `fn load_condition_catalog`
+  - `fn condition_aliases`
+  - `fn infer_conditions_from_text`
+  - `fn systems_from_conditions`
+  - `fn build_condition_impact_map`
+  - `fn label_for_subject_hash`
+  - `fn conditions_from_daemon_graph`
+  - `fn query_daemon_context`
+  - *(...and 7 more)*
+- 📄 `api.rs`
+  - `struct SuperBlockArtifact`
+  - `struct SuperBlockView`
+  - `fn decode_u64`
+  - `fn decode_u32`
+  - `fn scan_q42_artifacts`
+  - `fn list_superblock_artifacts`
+  - `fn get_superblock_view`
+  - `fn list_installed_qapps`
+  - `fn mcp_list_qapps`
+  - `fn mcp_get_qapp_manifest`
+  - `fn mcp_inspect_qapp_readiness`
+  - `fn mcp_list_qapp_updates`
+  - `fn mcp_describe_qapp_surface_schema`
+  - `fn generate_qapp_credential`
+  - `fn verify_and_install_qapp`
+  - *(...and 221 more)*
+- 📄 `asset_recommendations.rs`
+  - `enum DeviceTier`
+  - `impl DeviceTier`
+  - `fn from_ram_gb`
+  - `fn label`
+  - `struct DeviceProfileInput`
+  - `struct DeviceProfile`
+  - `struct DesignContextInput`
+  - `enum AssetKind`
+  - `struct InstallAction`
+  - `struct AssetRecommendation`
+  - `struct AssetRecommendationsResponse`
+  - `fn native_device_profile`
+  - `fn device_profile_from_input`
+  - `fn infer_domains_from_text`
+  - `fn llm_fits_ram`
+  - *(...and 6 more)*
+- 📄 `bundled_ontologies.rs`
+  - `struct BundledOntologySpec`
+  - `fn exe_dir`
+  - `fn ontology_spec`
+  - `fn join_rel`
+  - `fn resolve_bundled_ontology_source`
+  - `fn seed_bundled_ontology_if_missing`
+  - `fn seed_bundled_ontologies`
+  - `fn bundled_shacl_source_resolves_when_tracked`
+- 📄 `bundled_qapps.rs`
+  - `struct QappVersionStatus`
+  - `fn exe_dir`
+  - `fn copy_dir_all`
+  - `fn has_valid_manifest`
+  - `fn read_qapp_version_from_dir`
+  - `fn resolve_bundled_qapp_source`
+  - `fn installed_qapp_version`
+  - `fn bundled_offered_version`
+  - `fn build_version_status`
+  - `fn check_bundled_qapp_update`
+  - `fn check_qapp_update_from_source`
+  - `fn list_bundled_qapp_updates`
+  - `fn seed_qapp_if_missing`
+  - `fn upgrade_qapp_from_source`
+  - `fn apply_bundled_qapp_update`
+  - *(...and 4 more)*
+- 📄 `chat_agents.rs`
+  - `enum AgentBackendKind`
+  - `impl AgentBackendKind`
+  - `fn as_str`
+  - `fn from_str`
+  - `enum OutcomeVisibility`
+  - `impl OutcomeVisibility`
+  - `struct OutcomeSharingPolicy`
+  - `impl Default`
+  - `fn default`
+  - `struct ParticipantAgentConfig`
+  - `struct PeerAgentSummary`
+  - `fn agent_config_path`
+  - `fn unix_now`
+  - `fn compile_sub_agent_did`
+  - `fn default_outcome_sharing`
+  - *(...and 23 more)*
+- 📄 `chat_files.rs`
+  - `enum FileVisibility`
+  - `impl FileVisibility`
+  - `fn as_str`
+  - `fn from_str`
+  - `struct ChatFileSharing`
+  - `impl Default`
+  - `fn default`
+  - `fn default_sharing_for_session`
+  - `struct PdfPageExtract`
+  - `enum MediaKind`
+  - `struct ParsedDocument`
+  - `struct ChatFileRecord`
+  - `fn default_chat_file_sensitivity`
+  - `fn infer_sensitivity_from_sharing`
+  - `fn clamp_sensitivity_level`
+  - *(...and 37 more)*
+- 📄 `chat_graph.rs`
+  - `struct ChatFragment`
+  - `struct ChatGraphEdge`
+  - `struct ChatGraphSnapshot`
+  - `fn fragments_path`
+  - `fn edges_path`
+  - `fn unix_now`
+  - `fn fragment_id_for_span`
+  - `fn session_subject_hash`
+  - `fn build_fragment_quin`
+  - `fn build_reply_edge_quin`
+  - `fn append_jsonl`
+  - `fn read_fragments`
+  - `fn read_edges`
+  - `fn load_graph`
+  - `fn create_fragment_from_selection`
+  - *(...and 3 more)*
+- 📄 `chat_inference.rs`
+  - `struct ChatInferenceResult`
+  - `fn request_cancel_inference`
+  - `fn clear_cancel_inference`
+  - `fn is_inference_cancelled`
+  - `struct ChatInferenceOptions`
+  - `fn run_chat_inference_with_options`
+  - `fn run_chat_inference_full`
+  - `fn run_orchestrated_inference`
+  - `fn should_retry_symbolic_block`
+  - `fn build_corrective_retry_prompt`
+  - `fn finalize_success_result`
+  - `fn cancelled_result`
+  - `fn quin_to_fields`
+  - `fn resolve_sieve_lex_path`
+  - `fn blocked_result`
+  - *(...and 8 more)*
+- 📄 `chat_ontology.rs`
+  - `struct ChatBranchType`
+  - `struct BranchClassification`
+  - `struct ChatReaction`
+  - `fn local_wordnet_dir`
+  - `fn resolve_wordnet_q42`
+  - `fn resolve_wordnet_lex`
+  - `fn wordnet_lexicon`
+  - `fn wordnet_available`
+  - `fn list_branch_types`
+  - `fn classify_branch`
+  - `fn build_chat_ontology_briefing`
+  - `fn reactions_path`
+  - `fn unix_now`
+  - `fn add_reaction`
+  - `fn toggle_reaction`
+  - *(...and 3 more)*
+- 📄 `chat_relay.rs`
+  - `struct RelayEnvelope`
+  - `struct RelayCursor`
+  - `fn cursor_path`
+  - `fn load_cursors`
+  - `fn save_cursors`
+  - `fn fs_read_json`
+  - `fn local_relay_base_url`
+  - `fn profile_relay_base`
+  - `fn sign_envelope`
+  - `fn message_to_envelope`
+  - `fn publish_session_message`
+  - `fn publish_envelope`
+  - `struct PullResponse`
+  - `fn pull_from_relay`
+  - `fn urlencoding_path`
+  - *(...and 6 more)*
+- 📄 `chat_retrieval.rs`
+  - `struct GraphCitation`
+  - `struct RetrievalBundle`
+  - `fn retrieve_graph_context`
+  - `fn extract_keywords`
+  - `fn matches_keywords`
+  - `fn short_hash`
+  - `fn format_retrieval_block`
+  - `fn query_daemon_for_prompt`
+- 📄 `chat_session.rs`
+  - `enum ChatError`
+  - `impl std`
+  - `fn fmt`
+  - `impl From`
+  - `fn from`
+  - `enum SessionKind`
+  - `struct ChatParticipant`
+  - `enum Role`
+  - `impl Role`
+  - `fn as_str`
+  - `fn from_str`
+  - `struct OntologyScopeSummary`
+  - `struct ChatEnvironment`
+  - `fn active_model_profile_id`
+  - `impl ChatEnvironment`
+  - *(...and 51 more)*
+- 📄 `context_binding.rs`
+  - `enum BindError`
+  - `impl std`
+  - `fn fmt`
+  - `impl From`
+  - `fn from`
+  - `struct AxiomBounds`
+  - `impl Default`
+  - `fn default`
+  - `impl AxiomBounds`
+  - `fn label`
+  - `fn with_spatial_label`
+  - `struct ChatEnvironmentConfig`
+  - `struct OntologyMetaSidecar`
+  - `struct InferenceContextPacket`
+  - `fn compile_chat_environment`
+  - *(...and 15 more)*
+- 📄 `dns_resolver.rs`
+  - `struct ResolvedIdentity`
+  - `enum ResolutionSource`
+  - `fn resolve_qdp_did`
+  - `fn resolve_identity`
+  - `fn resolve_via_ns_encoding`
+  - `struct DohResponse`
+  - `struct DohRecord`
+  - `struct QdpProfile`
+  - `fn fetch_qdp_profile`
+  - `fn parse_qdp_body`
+  - `fn verify_front_door_did_via_dns`
+  - `fn encode_did_for_ns`
+  - `fn ns_records_for_did`
+  - `fn extract_angle_bracket_uri`
+  - `fn extract_json_string_uri`
+  - *(...and 5 more)*
+- 📄 `guardianship.rs`
+  - `fn suspended_queue`
+  - `fn ratified_ids`
+  - `fn mark_ratified`
+  - `struct SuspendedTxView`
+  - `enum GuardianTokenOutcome`
+  - `fn list_pending_affirmations`
+  - `fn pending_affirmation_count`
+  - `fn is_agreement_ratified`
+  - `fn apply_guardian_token`
+  - `fn build_consent_token`
+  - `fn deny_guardian_affirmation`
+  - `fn list_and_deny_pending`
+- 📄 `inference_backend.rs`
+  - `struct InferenceBackendSettings`
+  - `impl Default`
+  - `fn default`
+  - `fn settings_path`
+  - `fn load_inference_backend_settings`
+  - `fn save_inference_backend_settings`
+  - `fn backend_label`
+  - `fn default_is_local`
+- 📄 `lib.rs`
+- 📄 `local_job_scheduler.rs`
+  - `enum JobStatus`
+  - `enum LocalJobKind`
+  - `impl LocalJobKind`
+  - `fn is_ontology_work`
+  - `struct LocalJob`
+  - `struct EnqueueJobRequest`
+  - `struct JobQueueSnapshot`
+  - `struct SchedulerInner`
+  - `struct LocalJobScheduler`
+  - `fn now_unix`
+  - `fn jobs_store_path`
+  - `impl LocalJobScheduler`
+  - `fn new`
+  - `fn global`
+  - `fn spawn_global_worker`
+  - *(...and 15 more)*
+- 📄 `model_lifecycle.rs`
+  - `enum ModelError`
+  - `impl std`
+  - `fn fmt`
+  - `impl From`
+  - `fn from`
+  - `struct ActiveModelRecord`
+  - `struct ModelInstallResult`
+  - `struct ModelStatus`
+  - `struct InstallManifest`
+  - `fn orchestrator`
+  - `fn task_orchestrator`
+  - `fn record_llm_memory_bytes`
+  - `fn record_llm_memory_sample`
+  - `fn get_llm_memory_bytes`
+  - `fn record_kv_cache_used_mb`
+  - *(...and 31 more)*
+- 📄 `model_preferences.rs`
+  - `enum ModelTask`
+  - `impl ModelTask`
+  - `fn label`
+  - `fn from_str_lossy`
+  - `fn as_str`
+  - `struct ModelLoadCondition`
+  - `impl Default`
+  - `fn default`
+  - `fn default_true`
+  - `struct ModelPreferenceEntry`
+  - `struct ModelPreferences`
+  - `struct ResolvedModelPreference`
+  - `fn preferences_path`
+  - `fn load_preferences`
+  - `fn save_preferences`
+  - *(...and 12 more)*
+- 📄 `ontology_router.rs`
+  - `struct OntologyRoutingDecision`
+  - `fn route_prompt_to_ontologies`
+  - `fn extract_keywords`
+  - `fn score_summary`
+  - `fn summary_matches_keyword`
+  - `fn contains_term`
+  - `fn domain_bonus`
+  - `fn extend_namespaces`
+  - `fn env`
+  - `fn routes_medical_prompt_to_health_ontology`
+  - `fn routes_guardianship_prompt_to_legal_ontology`
+- 📄 `ontology_workbench.rs`
+  - `enum ShareAudience`
+  - `struct OntologyTorrentPolicy`
+  - `impl Default`
+  - `fn default`
+  - `struct TorrentBandwidthGlobal`
+  - `fn default_metered`
+  - `struct OntologyWorkbenchEntry`
+  - `struct WorkbenchImportResult`
+  - `struct OntologyShareCard`
+  - `fn workbench_path`
+  - `fn bandwidth_policy_path`
+  - `fn unix_now`
+  - `fn day_epoch`
+  - `fn derive_ontology_id_from_uri`
+  - `fn sanitize_id`
+  - *(...and 29 more)*
+- 📄 `prerequisites.rs`
+  - `struct PrerequisiteStatus`
+  - `fn exe_dir`
+  - `fn folder_with_msedge`
+  - `fn find_bundled_webview2`
+  - `fn evergreen_webview2_installed`
+  - `fn vc_redist_x64_installed`
+  - `fn check`
+  - `fn configure_webview2_runtime`
+  - `fn launch_downloaded`
+  - `fn download_to_temp`
+  - `fn install_prerequisite`
+  - `fn check_prerequisites`
+  - `fn non_windows_all_ready`
+- 📄 `q42_compress.rs`
+  - `struct CompressStats`
+  - `fn finalize_c_q42`
+  - `fn compress_raw_file`
+  - `fn write_lz4_block`
+  - `fn read_partial`
+- 📄 `qapp_api.rs`
+  - `enum ExecutionError`
+  - `impl ExecutionError`
+  - `fn as_str`
+  - `fn verify_execution_scope`
+  - `fn domain_permitted`
+  - `fn wal_path`
+  - `fn append_sanctuary_violation`
+  - `fn translate_quin_to_geometry`
+  - `fn result_passes_clearance`
+  - `fn execute_scoped_query_in_place`
+  - `fn execute_scoped_query`
+  - `fn compile_wildcard_graph_query`
+  - `fn register_anatomy_app`
+  - `fn rejects_forbidden_domain_operands`
+  - `fn zero_allocation_scoped_query_hot_path`
+  - *(...and 6 more)*
+- 📄 `qapp_manifest.rs`
+  - `struct HostMetadata`
+  - `struct CapabilityClaims`
+  - `struct QappManifest`
+  - `struct CompiledCapability`
+  - `impl Default`
+  - `fn default`
+  - `enum QappInstallError`
+  - `fn registry_slots`
+  - `fn registry_len`
+  - `fn parse_clearance`
+  - `fn compile_capability_record`
+  - `fn compile_capability_quin`
+  - `fn compile_and_register_qapp`
+  - `fn register_qapp`
+  - `fn register_compiled_capability`
+  - *(...and 10 more)*
+- 📄 `qapp_mcp.rs`
+  - `struct QappCatalogueEntry`
+  - `struct QappHostSurfaceSchema`
+  - `fn package_did`
+  - `fn catalogue_entry`
+  - `fn list_qapp_catalogue_json`
+  - `fn get_qapp_manifest_json`
+  - `fn inspect_qapp_readiness_json`
+  - `fn list_qapp_updates_json`
+  - `fn describe_qapp_surface_schema_json`
+- 📄 `qapp_paths.rs`
+  - `fn qapps_dir`
+  - `fn ensure_qapps_dir`
+  - `fn resolve_package_manifest_path`
+- 📄 `qapp_registry.rs`
+  - `enum QappTarget`
+  - `struct QappLaunchRequirement`
+  - `struct QappWasmConfig`
+  - `struct QappDaemonConfig`
+  - `struct QappChatIntegrationConfig`
+  - `struct QappRepresentationContract`
+  - `struct QappPinnModelConfig`
+  - `struct QappPinnTrainingMetadata`
+  - `struct QappPinnPerformanceMetrics`
+  - `struct QappHostExtension`
+  - `struct QappPage`
+  - `struct QappPackageManifest`
+  - `struct RegisteredQapp`
+  - `struct QappRegistryState`
+  - `impl QappRegistryState`
+  - *(...and 1 more)*
+- 📄 `qapp_version.rs`
+  - `struct ParsedVersion`
+  - `fn normalize_version_label`
+  - `fn parse_version`
+  - `fn compare_parsed`
+  - `fn compare_pre_release`
+  - `fn compare_versions`
+  - `fn is_version_newer`
+  - `fn stable_beats_prerelease_at_same_numbers`
+  - `fn patch_bump_is_newer`
+  - `fn v_prefix_and_whitespace`
+  - `fn equal_versions_not_newer`
+- 📄 `qapps_protocol.rs`
+  - `fn find_open_port`
+  - `fn safe_path`
+  - `fn guess_mime`
+  - `fn qapps_root`
+  - `fn start_qualia_protocol`
+  - `fn qualia_protocol_port`
+  - `fn qualia_qapp_asset_url`
+  - `fn qualia_qapp_launch_url`
+  - `fn register_qualia_uri_handler`
+- 📄 `qpu_dispatcher.rs`
+  - `struct QpuDispatchResult`
+  - `fn dispatch_qubo`
+  - `fn dispatch_vqe`
+  - `fn submit_dwave_qubo`
+  - `fn submit_ionq_qubo`
+  - `fn submit_ionq_vqe`
+  - `fn submit_ibm_vqe`
+  - `fn submit_rigetti_vqe`
+  - `fn submit_quantinuum_vqe`
+  - `fn submit_google_vqe`
+  - `fn submit_braket_qubo`
+  - `fn submit_braket_vqe`
+  - `fn submit_azure_qubo`
+  - `fn submit_azure_vqe`
+  - `fn http_post_sigv4`
+  - *(...and 2 more)*
+- 📄 `qpu_oracle.rs`
+  - `fn qpu_config_path`
+  - `enum QpuArchitecture`
+  - `enum QpuProvider`
+  - `impl QpuProvider`
+  - `fn name`
+  - `fn architecture`
+  - `fn docs_url`
+  - `struct QpuOracleState`
+  - `impl Default`
+  - `fn default`
+  - `struct QpuProviderStatus`
+  - `struct QpuOracleSettings`
+  - `struct QpuOracleSettingsInput`
+  - `struct QpuChatCommandResult`
+  - `fn encrypt_secret`
+  - *(...and 30 more)*
+- 📄 `qpu_pipeline.rs`
+  - `enum QuantumTaskKind`
+  - `struct QuantumPipelineResult`
+  - `fn detect_task_from_prompt`
+  - `fn execute_quantum_pipeline`
+  - `fn build_demo_qubo`
+  - `fn build_defeasible_demo`
+  - `fn handle_engine_chat_command`
+  - `fn extract_vqe_params`
+- 📄 `resource_import.rs`
+  - `struct ImportProgressCtx`
+  - `impl ImportProgressCtx`
+  - `fn emit`
+  - `fn clear`
+  - `enum ImportError`
+  - `impl std`
+  - `fn fmt`
+  - `impl From`
+  - `fn from`
+  - `struct OntologyImportResult`
+  - `struct OntologyMetaSidecar`
+  - `fn index_dir`
+  - `fn ontology_source_filename`
+  - `fn unix_now`
+  - `fn sha256_file`
+  - *(...and 7 more)*
+- 📄 `social_connect.rs`
+  - `struct ConnectInvitePayload`
+  - `struct ConnectInviteSummary`
+  - `struct ChatContact`
+  - `fn contacts_path`
+  - `fn unix_now`
+  - `fn format_connect_code`
+  - `fn pct_encode`
+  - `fn resolve_front_door_did`
+  - `fn generate_connect_invite`
+  - `fn accept_connect_invite`
+  - `fn load_contacts`
+  - `fn save_contacts`
+  - `fn find_contact_by_did`
+  - `fn update_contact_categories`
+  - `fn list_chat_contacts`
+- 📄 `state.rs`
+  - `fn init_app_state`
+  - `struct RelayTelemetry`
+  - `struct StarkTelemetry`
+  - `struct AgentConfig`
+  - `impl Default`
+  - `fn default`
+  - `fn dirs_default_path`
+  - `fn app_meta_dir`
+  - `fn config_file_path`
+  - `fn identity_file_path`
+  - `fn load_config_from_disk`
+  - `fn init_data_directories`
+  - `struct ProgressPayload`
+  - `struct AppState`
+  - `struct FrontDoor`
+  - *(...and 4 more)*
+- 📄 `system_telemetry.rs`
+  - `struct SystemTelemetryEvent`
+  - `struct TelemetryBus`
+  - `impl TelemetryBus`
+  - `fn new`
+  - `fn subscribe`
+  - `fn publish`
+  - `fn bus`
+  - `fn subscribe_system_telemetry`
+  - `fn publish_system_telemetry`
+  - `fn probe_vram_usage_mb`
+  - `fn sample_event`
+  - `fn stop_activation_telemetry`
+  - `fn start_activation_telemetry`
+  - `fn publish_idle_telemetry`
+  - `fn sample_event_has_nonzero_ram_total_on_host`
+- 📄 `update_installer.rs`
+  - `fn download_and_install_update`
+  - `fn launch_installer`
+- 📄 `user_profile.rs`
+  - `struct SharingPolicy`
+  - `impl Default`
+  - `fn default`
+  - `struct UserProfile`
+  - `fn profile_path`
+  - `fn load_profile`
+  - `fn save_profile`
+  - `fn resolve_public_did`
+  - `fn public_profile_card`
+  - `fn unix_now`
+- 📄 `vision_ingest.rs`
+  - `enum VisionError`
+  - `impl std`
+  - `fn fmt`
+  - `impl From`
+  - `fn from`
+  - `struct VisionIngestResult`
+  - `fn sha256_file`
+  - `fn facet_for_typology`
+  - `fn provenance_quin`
+  - `fn resolve_active_multimodal`
+  - `fn ingest_image_file`
+  - `fn ingest_image_with_active_record`
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

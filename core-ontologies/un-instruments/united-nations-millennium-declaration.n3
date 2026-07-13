@@ -1,0 +1,259 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix doc:    <https://ns.webcivics.net/values/united-nations-millennium-declaration#> .
+
+# ============================================================
+# United Nations Millennium Declaration
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "United Nations Millennium Declaration"@en ;
+    dc:date "08 September 2000" ;
+    values:category "Development, peace, food & solidarity rights" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-millennium-declaration> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:paragraph-1 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 1"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "I. Values and principles II. Peace, security and disarmament III. Development and poverty eradication IV. Protecting our common environment V. Human rights, democracy and good governance VI. Protecting the vulnerable VII. Meeting the special needs of Africa VIII. Strengthening the United Nations"@en .
+
+doc:paragraph-2 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 2"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Adopts the following Declaration:"@en .
+
+doc:paragraph-3 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 3"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "United Nations Millenium Declaration"@en .
+
+doc:paragraph-4 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 4"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. We, heads of State and Government, have gathered at United Nations Headquarters in New York from 6 to 8 September 2000, at the dawn of a new millennium, to reaffirm our faith in the Organization and its Charter as indispensable foundations of a more peaceful, prosperous and just world."@en .
+
+doc:paragraph-5 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 5"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "2. We recognize that, in addition to our separate responsibilities to our individual societies, we have a collective responsibility to uphold the principles of human dignity, equality and equity at the global level. As leaders we have a duty therefore to all the world's people, especially the most vulnerable and, in particular, the children of the world, to whom the future belongs."@en .
+
+doc:paragraph-6 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 6"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "3. We reaffirm our commitment to the purposes and principles of the Charter of the United Nations, which have proved timeless and universal. Indeed, their relevance and capacity to inspire have increased, as nations and peoples have become increasingly interconnected and interdependent."@en .
+
+doc:paragraph-7 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 7"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "4. We are determined to establish a just and lasting peace all over the world in accordance with the purposes and principles of the Charter. We rededicate ourselves to support all efforts to uphold the sovereign equality of all States, respect for their territorial integrity and political independence, resolution of disputes by peaceful means and in conformity with the principles of justice and international law, the right to self-determination of peoples which remain under colonial domination and foreign occupation, non-interference in the internal affairs of States, respect for human rights and fundamental freedoms, respect for the equal rights of all without distinction as to race, sex, language or religion and international cooperation in solving international problems of an economic, social, cultural or humanitarian character."@en .
+
+doc:paragraph-8 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 8"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "5. We believe that the central challenge we face today is to ensure that globalization becomes a positive force for all the world's people. For while globalization offers great opportunities, at present its benefits are very unevenly shared, while its costs are unevenly distributed. We recognize that developing countries and countries with economies in transition face special difficulties in responding to this central challenge. Thus, only through broad and sustained efforts to create a shared future, based upon our common humanity in all its diversity, can globalization be made fully inclusive and equitable. These efforts must include policies and measures, at the global level, which correspond to the needs of developing countries and economies in transition and are formulated and implemented with their effective participation."@en .
+
+doc:paragraph-9 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 9"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "6. We consider certain fundamental values to be essential to international relations in the twenty-first century. These include:"@en .
+
+doc:paragraph-10 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 10"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Freedom. Men and women have the right to live their lives and raise their children in dignity, free from hunger and from the fear of violence, oppression or injustice. Democratic and participatory governance based on the will of the people best assures these rights. Equality. No individual and no nation must be denied the opportunity to benefit from development. The equal rights and opportunities of women and men must be assured. Solidarity. Global challenges must be managed in a way that distributes the costs and burdens fairly in accordance with basic principles of equity and social justice. Those who suffer or who benefit least deserve help from those who benefit most. Tolerance. Human beings must respect one other, in all their diversity of belief, culture and language. Differences within and between societies should be neither feared nor repressed, but cherished as a precious asset of humanity. A culture of peace and dialogue among all civilizations should be actively promoted. Respect for nature. Prudence must be shown in the management of all living species and natural resources, in accordance with the precepts of sustainable development. Only in this way can the immeasurable riches provided to us by nature be preserved and passed on to our descendants. The current unsustainable patterns of production and consumption must be changed in the interest of our future welfare and that of our descendants. Shared responsibility. Responsibility for managing worldwide economic and social development, as well as threats to international peace and security, must be shared among the nations of the world and should be exercised multilaterally. As the most universal and most representative organization in the world, the United Nations must play the central role."@en .
+
+doc:paragraph-11 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 11"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "7. In order to translate these shared values into actions, we have identified key objectives to which we assign special significance."@en .
+
+doc:paragraph-12 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 12"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "II. Peace, security and disarmament"@en .
+
+doc:paragraph-13 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 13"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "8. We will spare no effort to free our peoples from the scourge of war, whether within or between States, which has claimed more than 5 million lives in the past decade. We will also seek to eliminate the dangers posed by weapons of mass destruction."@en .
+
+doc:paragraph-14 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 14"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "To strengthen respect for the rule of law in international as in national affairs and, in particular, to ensure compliance by Member States with the decisions of the International Court of Justice, in compliance with the Charter of the United Nations, in cases to which they are parties. To make the United Nations more effective in maintaining peace and security by giving it the resources and tools it needs for conflict prevention, peaceful resolution of disputes, peacekeeping, post-conflict peace-building and reconstruction. In this context, we take note of the report of the Panel on United Nations Peace Operations and request the General Assembly to consider its recommendations expeditiously. To strengthen cooperation between the United Nations and regional organizations, in accordance with the provisions of Chapter VIII of the Charter. To ensure the implementation, by States Parties, of treaties in areas such as arms control and disarmament and of international humanitarian law and human rights law, and call upon all States to consider signing and ratifying the Rome Statute of the International Criminal Court. To take concerted action against international terrorism, and to accede as soon as possible to all the relevant international conventions. To redouble our efforts to implement our commitment to counter the world drug problem. To intensify our efforts to fight transnational crime in all its dimensions, including trafficking as well as smuggling in human beings and money laundering. To minimize the adverse effects of United Nations economic sanctions on innocent populations, to subject such sanctions regimes to regular reviews and to eliminate the adverse effects of sanctions on third parties. To strive for the elimination of weapons of mass destruction, particularly nuclear weapons, and to keep all options open for achieving this aim, including the possibility of convening an international conference to identify ways of eliminating nuclear dangers. To take concerted action to end illicit traffic in small arms and light weapons, especially by making arms transfers more transparent and supporting regional disarmament measures, taking account of all the recommendations of the forthcoming United Nations Conference on Illicit Trade in Small Arms and Light Weapons. To call on all States to consider acceding to the Convention on the Prohibition of the Use, Stockpiling, Production and Transfer of Anti-personnel Mines and on Their Destruction, as well as the amended mines protocol to the Convention on conventional weapons. 10. We urge Member States to observe the Olympic Truce, individually and collectively, now and in the future, and to support the International Olympic Committee in its efforts to promote peace and human understanding through sport and the Olympic Ideal. III. Development and poverty eradication"@en .
+
+doc:paragraph-15 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 15"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "11. We will spare no effort to free our fellow men, women and children from the abject and dehumanizing conditions of extreme poverty, to which more than a billion of them are currently subjected. We are committed to making the right to development a reality for everyone and to freeing the entire human race from want."@en .
+
+doc:paragraph-16 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 16"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "12. We resolve therefore to create an environment - at the national and global levels alike - which is conducive to development and to the elimination of poverty."@en .
+
+doc:paragraph-17 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 17"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "13. Success in meeting these objectives depends, inter alia , on good governance within each country. It also depends on good governance at the international level and on transparency in the financial, monetary and trading systems. We are committed to an open, equitable, rule-based, predictable and non-discriminatory multilateral trading and financial system."@en .
+
+doc:paragraph-18 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 18"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "14. We are concerned about the obstacles developing countries face in mobilizing the resources needed to finance their sustained development. We will therefore make every effort to ensure the success of the High-level International and Intergovernmental Event on Financing for Development, to be held in 2001."@en .
+
+doc:paragraph-19 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 19"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "15. We also undertake to address the special needs of the least developed countries. In this context, we welcome the Third United Nations Conference on the Least Developed Countries to be held in May 2001 and will endeavour to ensure its success. We call on the industrialized countries:"@en .
+
+doc:paragraph-20 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 20"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "To adopt, preferably by the time of that Conference, a policy of duty- and quota-free access for essentially all exports from the least developed countries; To implement the enhanced programme of debt relief for the heavily indebted poor countries without further delay and to agree to cancel all official bilateral debts of those countries in return for their making demonstrable commitments to poverty reduction; and To grant more generous development assistance, especially to countries that are genuinely making an effort to apply their resources to poverty reduction."@en .
+
+doc:paragraph-21 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 21"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "16. We are also determined to deal comprehensively and effectively with the debt problems of low- and middle-income developing countries, through various national and international measures designed to make their debt sustainable in the long term."@en .
+
+doc:paragraph-22 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 22"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "17. We also resolve to address the special needs of small island developing States, by implementing the Barbados Programme of Action and the outcome of the twenty-second special session of the General Assembly rapidly and in full. We urge the international community to ensure that, in the development of a vulnerability index, the special needs of small island developing States are taken into account."@en .
+
+doc:paragraph-23 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 23"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "18. We recognize the special needs and problems of the landlocked developing countries, and urge both bilateral and multilateral donors to increase financial and technical assistance to this group of countries to meet their special development needs and to help them overcome the impediments of geography by improving their transit transport systems."@en .
+
+doc:paragraph-24 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 24"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "To halve, by the year 2015, the proportion of the world's people whose income is less than one dollar a day and the proportion of people who suffer from hunger and, by the same date, to halve the proportion of people who are unable to reach or to afford safe drinking water. To ensure that, by the same date, children everywhere, boys and girls alike, will be able to complete a full course of primary schooling and that girls and boys will have equal access to all levels of education. By the same date, to have reduced maternal mortality by three quarters, and under-five child mortality by two thirds, of their current rates. To have, by then, halted, and begun to reverse, the spread of HIV/AIDS, the scourge of malaria and other major diseases that afflict humanity. To provide special assistance to children orphaned by HIV/AIDS. By 2020, to have achieved a significant improvement in the lives of at least 100 million slum dwellers as proposed in the \"Cities Without Slums\" initiative."@en .
+
+doc:paragraph-25 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 25"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "To promote gender equality and the empowerment of women as effective ways to combat poverty, hunger and disease and to stimulate development that is truly sustainable. To develop and implement strategies that give young people everywhere a real chance to find decent and productive work. To encourage the pharmaceutical industry to make essential drugs more widely available and affordable by all who need them in developing countries. To develop strong partnerships with the private sector and with civil society organizations in pursuit of development and poverty eradication. To ensure that the benefits of new technologies, especially information and communication technologies, in conformity with recommendations contained in the ECOSOC 2000 Ministerial Declaration, are available to all. IV. Protecting our common environment"@en .
+
+doc:paragraph-26 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 26"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "21. We must spare no effort to free all of humanity, and above all our children and grandchildren, from the threat of living on a planet irredeemably spoilt by human activities, and whose resources would no longer be sufficient for their needs."@en .
+
+doc:paragraph-27 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 27"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "22. We reaffirm our support for the principles of sustainable development, including those set out in Agenda 21, agreed upon at the United Nations Conference on Environment and Development."@en .
+
+doc:paragraph-28 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 28"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "23. We resolve therefore to adopt in all our environmental actions a new ethic of conservation and stewardship and, as first steps, we resolve:"@en .
+
+doc:paragraph-29 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 29"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "To make every effort to ensure the entry into force of the Kyoto Protocol, preferably by the tenth anniversary of the United Nations Conference on Environment and Development in 2002, and to embark on the required reduction in emissions of greenhouse gases. To intensify our collective efforts for the management, conservation and sustainable development of all types of forests. To press for the full implementation of the Convention on Biological Diversity and the Convention to Combat Desertification in those Countries Experiencing Serious Drought and/or Desertification, particularly in Africa. To stop the unsustainable exploitation of water resources by developing water management strategies at the regional, national and local levels, which promote both equitable access and adequate supplies. To intensify cooperation to reduce the number and effects of natural and man-made disasters. To ensure free access to information on the human genome sequence. V. Human rights, democracy and good governance"@en .
+
+doc:paragraph-30 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Paragraph 30"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "24. We will spare no effort to promote democracy and strengthen the rule of law, as well as respect for all internationally recognized human rights and fundamental freedoms, including the right to development."@en .
+
+doc:paragraph-31 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 31"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "To respect fully and uphold the Universal Declaration of Human Rights. To strive for the full protection and promotion in all our countries of civil, political, economic, social and cultural rights for all. To strengthen the capacity of all our countries to implement the principles and practices of democracy and respect for human rights, including minority rights. To combat all forms of violence against women and to implement the Convention on the Elimination of All Forms of Discrimination against Women. To take measures to ensure respect for and protection of the human rights of migrants, migrant workers and their families, to eliminate the increasing acts of racism and xenophobia in many societies and to promote greater harmony and tolerance in all societies. To work collectively for more inclusive political processes, allowing genuine participation by all citizens in all our countries. To ensure the freedom of the media to perform their essential role and the right of the public to have access to information. VI. Protecting the vulnerable"@en .
+
+doc:paragraph-32 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 32"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "26. We will spare no effort to ensure that children and all civilian populations that suffer disproportionately the consequences of natural disasters, genocide, armed conflicts and other humanitarian emergencies are given every assistance and protection so that they can resume normal life as soon as possible."@en .
+
+doc:paragraph-33 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 33"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "To expand and strengthen the protection of civilians in complex emergencies, in conformity with international humanitarian law. To strengthen international cooperation, including burden sharing in, and the coordination of humanitarian assistance to, countries hosting refugees and to help all refugees and displaced persons to return voluntarily to their s, in safety and dignity and to be smoothly reintegrated into their societies. To encourage the ratification and full implementation of the Convention on the Rights of the Child and its optional protocols on the involvement of children in armed conflict and on the sale of children, child prostitution and child pornography. VII. Meeting the special needs of Africa"@en .
+
+doc:paragraph-34 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 34"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "27. We will support the consolidation of democracy in Africa and assist Africans in their struggle for lasting peace, poverty eradication and sustainable development, thereby bringing Africa into the mainstream of the world economy."@en .
+
+doc:paragraph-35 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 35"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "To give full support to the political and institutional structures of emerging democracies in Africa. To encourage and sustain regional and subregional mechanisms for preventing conflict and promoting political stability, and to ensure a reliable flow of resources for peacekeeping operations on the continent. To take special measures to address the challenges of poverty eradication and sustainable development in Africa, including debt cancellation, improved market access, enhanced Official Development Assistance and increased flows of Foreign Direct Investment, as well as transfers of technology. To help Africa build up its capacity to tackle the spread of the HIV/AIDS pandemic and other infectious diseases. VIII. Strengthening the United Nations"@en .
+
+doc:paragraph-36 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 36"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "29. We will spare no effort to make the United Nations a more effective instrument for pursuing all of these priorities: the fight for development for all the peoples of the world, the fight against poverty, ignorance and disease; the fight against injustice; the fight against violence, terror and crime; and the fight against the degradation and destruction of our common ."@en .
+
+doc:paragraph-37 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 37"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "To reaffirm the central position of the General Assembly as the chief deliberative, policy-making and representative organ of the United Nations, and to enable it to play that role effectively. To intensify our efforts to achieve a comprehensive reform of the Security Council in all its aspects. To strengthen further the Economic and Social Council, building on its recent achievements, to help it fulfil the role ascribed to it in the Charter. To strengthen the International Court of Justice, in order to ensure justice and the rule of law in international affairs. To encourage regular consultations and coordination among the principal organs of the United Nations in pursuit of their functions. To ensure that the Organization is provided on a timely and predictable basis with the resources it needs to carry out its mandates. To urge the Secretariat to make the best use of those resources, in accordance with clear rules and procedures agreed by the General Assembly, in the interests of all Member States, by adopting the best management practices and technologies available and by concentrating on those tasks that reflect the agreed priorities of Member States. To promote adherence to the Convention on the Safety of United Nations and Associated Personnel. To ensure greater policy coherence and better cooperation between the United Nations, its agencies, the Bretton Woods Institutions and the World Trade Organization, as well as other multilateral bodies, with a view to achieving a fully coordinated approach to the problems of peace and development. To strengthen further cooperation between the United Nations and national parliaments through their world organization, the Inter-Parliamentary Union, in various fields, including peace and security, economic and social development, international law and human rights and democracy and gender issues. To give greater opportunities to the private sector, non-governmental organizations and civil society, in general, to contribute to the realization of the Organization's goals and programmes."@en .
+
+doc:paragraph-38 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 38"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "31. We request the General Assembly to review on a regular basis the progress made in implementing the provisions of this Declaration, and ask the Secretary-General to issue periodic reports for consideration by the General Assembly and as a basis for further action."@en .
+
+doc:paragraph-39 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 39"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "32. We solemnly reaffirm, on this historic occasion, that the United Nations is the indispensable common house of the entire human family, through which we will seek to realize our universal aspirations for peace, cooperation and development. We therefore pledge our unstinting support for these common objectives and our determination to achieve them."@en .

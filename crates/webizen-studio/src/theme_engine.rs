@@ -33,6 +33,59 @@ pub struct ResolvedTheme {
     pub tokens: HashMap<String, String>,
 }
 
+/// Canonical QPrime preset IDs (theme picker foreground).
+pub const QPRIME_PRESET_IDS: &[&str] = &[
+    "fiduciary-dark",
+    "commons-light",
+    "sanctuary",
+    "infosphere",
+];
+
+/// Legacy extras — available but not primary in the picker.
+pub const LEGACY_PRESET_IDS: &[&str] = &["human-warmth", "twilight-blue", "midnight-slate"];
+
+pub fn is_qprime_preset(id: &str) -> bool {
+    QPRIME_PRESET_IDS.contains(&id)
+}
+
+pub fn theme_label(id: &str) -> String {
+    id.split('-')
+        .map(|w| {
+            let mut c = w.chars();
+            c.next()
+                .map(|ch| ch.to_uppercase().collect::<String>() + c.as_str())
+                .unwrap_or_default()
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Split catalog into QPrime presets (ordered) and everything else.
+pub fn theme_picker_sections(catalog: &[ThemeDefinition]) -> (Vec<ThemeDefinition>, Vec<ThemeDefinition>) {
+    let mut qprime = Vec::new();
+    for id in QPRIME_PRESET_IDS {
+        if let Some(t) = catalog.iter().find(|t| t.id == *id) {
+            qprime.push(t.clone());
+        }
+    }
+    let legacy_ids: std::collections::BTreeSet<&str> =
+        LEGACY_PRESET_IDS.iter().copied().collect();
+    let extras: Vec<ThemeDefinition> = catalog
+        .iter()
+        .filter(|t| !is_qprime_preset(&t.id) && !legacy_ids.contains(t.id.as_str()))
+        .cloned()
+        .collect();
+    let mut legacy: Vec<ThemeDefinition> = catalog
+        .iter()
+        .filter(|t| legacy_ids.contains(t.id.as_str()))
+        .cloned()
+        .collect();
+    legacy.sort_by(|a, b| a.id.cmp(&b.id));
+    let mut other = legacy;
+    other.extend(extras);
+    (qprime, other)
+}
+
 pub fn builtin_theme_catalog() -> Vec<ThemeDefinition> {
     vec![
         ThemeDefinition {
@@ -85,29 +138,61 @@ pub fn builtin_theme_catalog() -> Vec<ThemeDefinition> {
             class_name: Some("theme-fiduciary-dark".to_string()),
             stylesheet_href: None,
             tokens: HashMap::from([
-                ("bg".to_string(), "#09090b".to_string()),
-                ("surface".to_string(), "rgba(24, 24, 27, 0.7)".to_string()),
-                ("border".to_string(), "rgba(63, 63, 70, 0.5)".to_string()),
-                ("text".to_string(), "#f4f4f5".to_string()),
-                ("text-muted".to_string(), "#a1a1aa".to_string()),
-                ("accent".to_string(), "#06b6d4".to_string()),
-                ("accent-glow".to_string(), "rgba(6, 182, 212, 0.18)".to_string()),
-                ("bg-gradient".to_string(), "radial-gradient(ellipse at 20% 20%, rgba(6,182,212,0.10) 0%, transparent 50%), linear-gradient(160deg, #07070a 0%, #0b0b0f 100%)".to_string()),
+                ("bg".to_string(), "#0a1122".to_string()), // Deep navy
+                ("surface".to_string(), "rgba(20, 28, 48, 0.7)".to_string()), // Charcoal glass
+                ("border".to_string(), "rgba(80, 90, 110, 0.5)".to_string()),
+                ("text".to_string(), "#f8f9fb".to_string()),
+                ("text-muted".to_string(), "#94a3b8".to_string()),
+                ("accent".to_string(), "#f59e0b".to_string()), // Warm gold
+                ("accent-glow".to_string(), "rgba(245, 158, 11, 0.18)".to_string()),
+                ("bg-gradient".to_string(), "radial-gradient(ellipse at 20% 20%, rgba(245,158,11,0.10) 0%, transparent 50%), linear-gradient(160deg, #050a14 0%, #0a1122 100%)".to_string()),
             ]),
         },
         ThemeDefinition {
-            id: "forest-moss".to_string(),
-            class_name: Some("theme-forest-moss".to_string()),
+            id: "commons-light".to_string(),
+            class_name: Some("theme-commons-light".to_string()),
             stylesheet_href: None,
             tokens: HashMap::from([
-                ("bg".to_string(), "#f2f5f0".to_string()),
-                ("surface".to_string(), "rgba(240, 245, 235, 0.75)".to_string()),
-                ("border".to_string(), "rgba(180, 200, 170, 0.5)".to_string()),
-                ("text".to_string(), "#1e2d1a".to_string()),
-                ("text-muted".to_string(), "#5a7050".to_string()),
-                ("accent".to_string(), "#3d8b5e".to_string()),
-                ("accent-glow".to_string(), "rgba(61, 139, 94, 0.18)".to_string()),
-                ("bg-gradient".to_string(), "radial-gradient(ellipse at 20% 15%, rgba(100,180,120,0.22) 0%, transparent 55%), radial-gradient(ellipse at 80% 80%, rgba(60,140,80,0.15) 0%, transparent 50%), linear-gradient(160deg, #eef4e8 0%, #e0edd6 100%)".to_string()),
+                ("bg".to_string(), "#faf9f6".to_string()), // Soft cream
+                ("surface".to_string(), "rgba(255, 255, 255, 0.75)".to_string()),
+                ("border".to_string(), "rgba(163, 177, 161, 0.4)".to_string()), // Sage-tinted border
+                ("text".to_string(), "#2d3748".to_string()),
+                ("text-muted".to_string(), "#718096".to_string()),
+                ("accent".to_string(), "#4a5568".to_string()), // Accessible slate/sage
+                ("accent-glow".to_string(), "rgba(74, 85, 104, 0.15)".to_string()),
+                ("bg-gradient".to_string(), "radial-gradient(ellipse at 20% 20%, rgba(163,177,161,0.15) 0%, transparent 50%), linear-gradient(160deg, #ffffff 0%, #f4f5f0 100%)".to_string()),
+            ]),
+        },
+        ThemeDefinition {
+            id: "sanctuary".to_string(),
+            class_name: Some("theme-sanctuary".to_string()),
+            stylesheet_href: None,
+            tokens: HashMap::from([
+                ("bg".to_string(), "#fefeff".to_string()),
+                ("surface".to_string(), "rgba(244, 246, 248, 0.95)".to_string()), // High clarity, opaque glass
+                ("border".to_string(), "rgba(200, 205, 212, 0.8)".to_string()),
+                ("text".to_string(), "#1a202c".to_string()), // High contrast text
+                ("text-muted".to_string(), "#4a5568".to_string()),
+                ("accent".to_string(), "#2b6cb0".to_string()), // Calm, trustworthy blue
+                ("accent-glow".to_string(), "rgba(43, 108, 176, 0.1)".to_string()),
+                ("bg-gradient".to_string(), "none".to_string()), // Muted, gentle
+                ("motion-duration".to_string(), "0ms".to_string()),
+                ("motion-ease".to_string(), "linear".to_string()),
+            ]),
+        },
+        ThemeDefinition {
+            id: "infosphere".to_string(),
+            class_name: Some("theme-infosphere".to_string()),
+            stylesheet_href: None,
+            tokens: HashMap::from([
+                ("bg".to_string(), "#050510".to_string()), // Deep space
+                ("surface".to_string(), "rgba(18, 15, 38, 0.6)".to_string()),
+                ("border".to_string(), "rgba(78, 65, 128, 0.5)".to_string()),
+                ("text".to_string(), "#e0def4".to_string()),
+                ("text-muted".to_string(), "#908caa".to_string()),
+                ("accent".to_string(), "#eb6f92".to_string()), // Soft rose / neural
+                ("accent-glow".to_string(), "rgba(235, 111, 146, 0.25)".to_string()),
+                ("bg-gradient".to_string(), "radial-gradient(circle at 50% 50%, rgba(235,111,146,0.1) 0%, transparent 40%), radial-gradient(circle at 10% 80%, rgba(156,207,216,0.1) 0%, transparent 30%), linear-gradient(180deg, #020208 0%, #050510 100%)".to_string()),
             ]),
         },
     ]
@@ -142,15 +227,80 @@ pub fn resolve_theme(binding: Option<&ThemeBinding>, catalog: &[ThemeDefinition]
     resolved
 }
 
-pub fn render_scope_tokens(selector: &str, theme: &ResolvedTheme) -> Option<String> {
-    if theme.tokens.is_empty() {
-        return None;
-    }
+/// Motion, elevation, typography, and focus tokens shared by every QPrime scope.
+pub fn qprime_system_token_pairs() -> [(&'static str, &'static str); 12] {
+    [
+        ("elevation-0", "none"),
+        (
+            "elevation-1",
+            "0 12px 26px rgba(0, 0, 0, 0.18)",
+        ),
+        (
+            "elevation-2",
+            "0 22px 50px rgba(0, 0, 0, 0.28)",
+        ),
+        (
+            "elevation-3",
+            "0 28px 80px rgba(0, 0, 0, 0.38)",
+        ),
+        ("motion-duration", "220ms"),
+        ("motion-ease", "cubic-bezier(0.22, 1, 0.36, 1)"),
+        ("type-scale", "1"),
+        ("type-scale-sm", "0.875"),
+        ("type-scale-lg", "1.125"),
+        (
+            "focus-ring",
+            "0 0 0 3px var(--qualia-accent-glow, rgba(245, 158, 11, 0.35))",
+        ),
+        ("focus-ring-color", "var(--qualia-accent, #f59e0b)"),
+        ("focus-ring-offset", "2px"),
+    ]
+}
 
+/// Shoelace design tokens bridged from Qualia accent/surface tokens.
+pub fn shoelace_bridge_css(selector: &str, theme: &ResolvedTheme) -> String {
+    let accent = theme
+        .tokens
+        .get("accent")
+        .map(String::as_str)
+        .unwrap_or("#f59e0b");
+    let surface = theme
+        .tokens
+        .get("surface")
+        .map(String::as_str)
+        .unwrap_or("rgba(20, 28, 48, 0.7)");
+    let text = theme
+        .tokens
+        .get("text")
+        .map(String::as_str)
+        .unwrap_or("#f8f9fb");
+    format!(
+        "{selector} {{
+  --sl-color-primary-600: {accent};
+  --sl-color-primary-500: {accent};
+  --sl-color-primary-400: {accent};
+  --sl-color-neutral-0: {surface};
+  --sl-color-neutral-50: {surface};
+  --sl-color-neutral-900: {text};
+  --sl-focus-ring: var(--qualia-focus-ring);
+  --sl-transition-fast: var(--qualia-motion-duration);
+  --sl-transition-medium: var(--qualia-motion-duration);
+}}
+"
+    )
+}
+
+pub fn render_scope_tokens(selector: &str, theme: &ResolvedTheme) -> Option<String> {
+    let mut css = format!("{selector} {{\n");
+    for (token, value) in qprime_system_token_pairs() {
+        css.push_str("  --qualia-");
+        css.push_str(token);
+        css.push_str(": ");
+        css.push_str(value);
+        css.push_str(";\n");
+    }
     let mut pairs: Vec<_> = theme.tokens.iter().collect();
     pairs.sort_by(|left, right| left.0.cmp(right.0));
-
-    let mut css = format!("{selector} {{\n");
     for (token, value) in pairs {
         css.push_str("  --qualia-");
         css.push_str(token);
@@ -159,6 +309,7 @@ pub fn render_scope_tokens(selector: &str, theme: &ResolvedTheme) -> Option<Stri
         css.push_str(";\n");
     }
     css.push_str("}\n");
+    css.push_str(&shoelace_bridge_css(selector, theme));
     Some(css)
 }
 
@@ -180,6 +331,93 @@ pub fn join_theme_classes(base_class: &str, theme: &ResolvedTheme) -> String {
             format!("{base_class} {class_name}")
         }
         _ => base_class.to_string(),
+    }
+}
+
+/// Motion timeline honoring sanctuary preset and resolved theme class.
+pub fn theme_motion_timeline(theme: &ResolvedTheme, dt: f64) -> crate::render::motion::Timeline {
+    let class = theme.class_name.as_deref();
+    crate::render::motion::timeline_from_theme(0.0, dt, class)
+}
+
+/// Spring scale bump when a pane is selected (native + wasm shared helper).
+pub fn theme_selection_pulse(
+    spring: &mut crate::render::motion::Spring,
+    selected: bool,
+    theme: &ResolvedTheme,
+) -> f64 {
+    crate::render::motion_loop::step_selection_spring(
+        spring,
+        selected,
+        theme.class_name.as_deref(),
+        0.016,
+    )
+}
+
+/// Human-readable provenance for inspector chips (Phase 2B).
+pub fn theme_binding_provenance(binding: &ThemeBinding) -> &'static str {
+    if !binding.tokens.is_empty()
+        || binding
+            .stylesheet_href
+            .as_ref()
+            .is_some_and(|h| !h.trim().is_empty())
+        || binding
+            .class_name
+            .as_ref()
+            .is_some_and(|c| !c.trim().is_empty())
+    {
+        "Locally overridden"
+    } else if binding.theme_id.is_some() {
+        "Inherited from preset"
+    } else {
+        "Workspace default"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn shoelace_bridge_maps_accent() {
+        let theme = resolve_theme(
+            Some(&ThemeBinding {
+                theme_id: Some("fiduciary-dark".to_string()),
+                ..Default::default()
+            }),
+            &builtin_theme_catalog(),
+        );
+        let css = shoelace_bridge_css(":root", &theme);
+        assert!(css.contains("--sl-color-primary-600: #f59e0b"));
+    }
+
+    #[test]
+    fn theme_picker_lists_qprime_first() {
+        let (qprime, _) = theme_picker_sections(&builtin_theme_catalog());
+        assert_eq!(qprime.len(), 4);
+        assert_eq!(qprime[0].id, "fiduciary-dark");
+    }
+
+    #[test]
+    fn sanctuary_zero_motion_override() {
+        let theme = builtin_theme_catalog()
+            .into_iter()
+            .find(|t| t.id == "sanctuary")
+            .expect("sanctuary preset");
+        assert_eq!(theme.tokens.get("motion-duration").map(String::as_str), Some("0ms"));
+    }
+
+    #[test]
+    fn theme_motion_timeline_honors_sanctuary() {
+        let theme = resolve_theme(
+            Some(&ThemeBinding {
+                theme_id: Some("sanctuary".to_string()),
+                ..Default::default()
+            }),
+            &builtin_theme_catalog(),
+        );
+        let timeline = theme_motion_timeline(&theme, 0.016);
+        assert!(timeline.reduced_motion);
     }
 }
 

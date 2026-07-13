@@ -1,0 +1,93 @@
+﻿qualia-cli.exe : [2026-07-10T09:06:46Z INFO  qualia_core_db::wgsl_forge::dispatch] cuda_path|ensured|C:\Program 
+Files\NVIDIA GPU Computing Toolkit\CUDA\v13.3\bin\x64 prepended for NVRTC
+At line:1 char:123
++ ... OG='error'; & .\target\release\qualia-cli.exe llm decode-proxy "C:\LL ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([2026-07-10T09:...ended for NVRTC:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[2026-07-10T09:06:46Z INFO  qualia_core_db::gguf_bridge::init] LLM_LOAD|engine-init|0.10|Initializing native GGUF 
+runtime (shared GpuContext)
+[2026-07-10T09:06:46Z INFO  qualia_core_db::gpu_context] 
+shared_gpu|dx12_compiler|DynamicDxc(vendored)=C:\Projects\qualia-27062026\target\release\dxcompiler.dll
+[2026-07-10T09:06:46Z INFO  qualia_core_db::gpu_context::caps] shared_gpu|backend_from_passport|vulkan|token=vulkan
+[2026-07-10T09:06:46Z INFO  qualia_core_db::gpu_context] 
+shared_gpu|backend_override|QUALIA_WGPU_BACKEND=Backends(VULKAN)
+[2026-07-10T09:06:46Z INFO  wgpu_hal::vulkan::adapter] Found 6 cooperative matrix configurations supported by wgpu
+[2026-07-10T09:06:46Z INFO  qualia_core_db::gpu_context] shared_gpu|adapter|NVIDIA RTX A2000 12GB | backend=vulkan | 
+type=discrete | vendor=0x10de | device=0x2571 | driver=NVIDIA 610.47|features=[ts=1 ts-pass=1 stats=1 cache=1 f16=1 
+i64=1 subgroup=1 subgroup-barrier=1 coop-matrix=1 ray-query=1] subgroup=32..32 coop_tiles=6 
+max_storage_binding=2047MiB max_buffer=1048576MiB
+[2026-07-10T09:06:46Z INFO  qualia_core_db::gpu_context] shared_gpu|inference_backend|vulkan|recommend: vulkan ΓÇö 
+vendor-neutral & portable (recommended)
+[2026-07-10T09:06:46Z INFO  qualia_core_db::gpu_context] shared_gpu|enabled_features|ts=1 ts-pass=1 stats=1 cache=1 
+f16=1 i64=0 subgroup=1 subgroup-barrier=1 coop-matrix=0 ray-query=0
+[2026-07-10T09:06:46Z INFO  qualia_core_db::gpu_context] shared_gpu|cooperative_matrix_supported_but_disabled|set 
+QUALIA_WGPU_EXPERIMENTAL_FEATURES=1 to request it
+[2026-07-10T09:06:47Z INFO  qualia_core_db::gguf_bridge::init] LLM_LOAD|gpu-device|0.35|Reusing process-wide wgpu 
+device
+[2026-07-10T09:06:47Z INFO  wgpu_hal::vulkan::adapter] Found 6 cooperative matrix configurations supported by wgpu
+[2026-07-10T09:06:48Z INFO  qualia_core_db::inference::cuda_lane] cuda_lane|q4k_soa|multi_weight_context|2048MiB
+[2026-07-10T09:06:48Z INFO  qualia_core_db::inference::cuda_lane] cuda_lane|warm_context|ok
+[2026-07-10T09:06:48Z INFO  qualia_core_db::gguf_bridge::pipeline_cache] 
+LLM_LOAD|pipeline-cache|enabled|adapter=NVIDIA RTX A2000 12GB backend=vulkan
+[2026-07-10T09:06:48Z INFO  qualia_core_db::gguf_bridge::init] 
+LLM_LOAD|fused_ffn|coop_entry=coop_fused_ffn_sg|mr=coop_fused_ffn_mr|warp=coop_fused_ffn_warp
+[2026-07-10T09:06:48Z INFO  qualia_core_db::gguf_bridge::init] LLM_LOAD|gpu-backend|0.45|DirectML deferred (set 
+QUALIA_DIRECTML=1 to enable second D3D12 device)
+[2026-07-10T09:06:48Z INFO  qualia_core_db::gguf_bridge::init] LLM_LOAD|kv-cache|0.86|Reserved 57.8 MiB KV cache (GPU 
++ CPU mirror, context 1024)
+[gguf_bridge] KV arena 15138816 slots (57.8 MiB, int8+scale), context=1024
+[2026-07-10T09:06:48Z INFO  qualia_core_db::gguf_bridge::load] LLM_LOAD|resident-logits|0.70|output projection 
+resident once: 308.2 MB (128256 rows x 2520 B)
+[2026-07-10T09:06:48Z INFO  qualia_core_db::gguf_bridge::load] LLM_LOAD|ternary-ffn|0.71|no resident set (no ternary 
+FFN or build failed) ΓÇö CPU oracle path
+[2026-07-10T09:06:48Z INFO  qualia_core_db::inference::inference_path_selector] 
+path_select|set_env|QUALIA_WGPU_BACKEND=vulkan
+[2026-07-10T09:06:48Z INFO  qualia_core_db::inference::inference_path_selector] 
+path_select|applied|backend=Some("vulkan")|lane=cuda-accelerated|quant=int4-soa+int8-kv|prefill_tc=true|passport 
+winner: NVIDIA RTX A2000 12GB (Vulkan) [DiscreteGpu/Vulkan] gemv=0.119ms decode=Some(29.5267) | compute lane pinned by 
+QUALIA_INFERENCE_MODE=cuda | quant profile: INT4 SoA weights + INT8 KV (consumer bandwidth) | prefill: prefer TC dense 
+GEMM when m,n,k multiples of 16 | decode: always GEMV (m=1) ΓÇö tensor cores do not replace single-token GEMV | 
+multi-weight: wgpu resident plan keeps layer weights in VRAM (Vulkan/DX12/Metal); CUDA slab is optional densify path
+[2026-07-10T09:06:48Z INFO  qualia_core_db::inference::inference_modes] 
+LLM_MODE|cuda|resident_decode=on|prewarm_at_plan
+[2026-07-10T09:06:48Z INFO  qualia_core_db::gguf_bridge::init] LLM_LOAD|engine-init|0.10|Initializing native GGUF 
+runtime (shared GpuContext)
+[2026-07-10T09:06:48Z INFO  qualia_core_db::gguf_bridge::init] LLM_LOAD|gpu-device|0.35|Reusing process-wide wgpu 
+device
+[2026-07-10T09:06:48Z INFO  qualia_core_db::inference::cuda_lane] cuda_lane|warm_context|ok
+[2026-07-10T09:06:48Z INFO  qualia_core_db::gguf_bridge::pipeline_cache] 
+LLM_LOAD|pipeline-cache|enabled|adapter=NVIDIA RTX A2000 12GB backend=vulkan
+[2026-07-10T09:06:48Z INFO  qualia_core_db::gguf_bridge::init] 
+LLM_LOAD|fused_ffn|coop_entry=coop_fused_ffn_sg|mr=coop_fused_ffn_mr|warp=coop_fused_ffn_warp
+[2026-07-10T09:06:48Z INFO  qualia_core_db::gguf_bridge::init] LLM_LOAD|gpu-backend|0.45|DirectML deferred (set 
+QUALIA_DIRECTML=1 to enable second D3D12 device)
+[2026-07-10T09:06:48Z INFO  qualia_core_db::gguf_bridge::init] LLM_LOAD|kv-cache|0.86|Reserved 57.8 MiB KV cache (GPU 
++ CPU mirror, context 1024)
+[gguf_bridge] KV arena 15138816 slots (57.8 MiB, int8+scale), context=1024
+[2026-07-10T09:06:48Z INFO  qualia_core_db::gguf_bridge::load] LLM_LOAD|resident-logits|0.70|output projection 
+resident once: 308.2 MB (128256 rows x 2520 B)
+[2026-07-10T09:06:48Z INFO  qualia_core_db::gguf_bridge::load] LLM_LOAD|ternary-ffn|0.71|no resident set (no ternary 
+FFN or build failed) ΓÇö CPU oracle path
+[2026-07-10T09:06:50Z INFO  qualia_core_db::gguf_bridge::prefill_arena] LLM_PREFILL|resident-arena|built: 28 layers, 
+420 passes/chunk, 1 fence/chunk (Q preproject)
+[2026-07-10T09:06:53Z INFO  qualia_core_db::gguf_bridge::resident_decode] LLM_DECODE|resident-plan|built: 28 layers, 
+289 passes/token, fused_ffn=true ffn_mr=true ffn_warp=false warp=false multirow=true cuda_weights=24
+[2026-07-10T09:06:53Z ERROR wgpu::backend::wgpu_core] Handling wgpu errors as fatal by default
+
+thread 'qualia-infer-0' (50552) panicked at 
+C:\Users\Admin\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\wgpu-29.0.3\src\backend\wgpu_core.rs:2653:18:
+wgpu error: Validation Error
+
+Caused by:
+  In a CommandEncoder, label = 'ResidentTokenEncoder'
+    In a dispatch command, indirect:false
+      The BindGroupLayout with '' label of current set BindGroup with 'ResKGemm' label at index 0 is not compatible 
+with the corresponding BindGroupLayout with 'CoopGemvBGL' label of ComputePipeline with 'Coop GEMV Multi-Row Pipeline' 
+label
+        Exclusive pipelines don't match: expected None, got ComputePipeline with 'Coop GEMV SG Pipeline' label
+
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Rayon: detected unexpected panic; aborting

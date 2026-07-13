@@ -21,7 +21,13 @@ import {
     queriesForManifest,
 } from '../benchmark-dataset-loader.js';
 
-const local = (uri) => String(uri).replace(/[<>]/g, '').split(/[/#]/).filter(Boolean).pop() || uri;
+const local = (uri) => {
+    const clean = String(uri).replace(/[<>]/g, '');
+    const parts = clean.split(/[/#]/).filter(Boolean);
+    const tail = parts.at(-1) || clean || uri;
+    const parent = parts.at(-2);
+    return /^\d+$/.test(tail) && parent ? `${parent}/${tail}` : tail;
+};
 
 function median(values) {
     if (!values.length) return 0;
@@ -70,6 +76,12 @@ function fullHash(hashish) {
 
 function isHexLabel(value) {
     return typeof value === 'string' && /^0x[0-9a-f]+$/i.test(value);
+}
+
+function shouldUpgradeNodeText(current, next, id) {
+    if (!next) return false;
+    if (!current) return true;
+    return current === id || current === local(id) || isHexLabel(current);
 }
 
 function hashFromValue(value) {
@@ -130,12 +142,33 @@ function uniquePush(bucket, value, limit = 24) {
 function buildNeighborhood(allTriples, focusId, maxNodes = 42, maxEdges = 96) {
     const nodes = new Map();
     const edges = [];
+    const seenEdges = new Set();
     const frontier = [focusId];
     const visited = new Set();
+    const incidentCounts = new Map();
+    for (const triple of allTriples) {
+        incidentCounts.set(triple.subjectId, (incidentCounts.get(triple.subjectId) || 0) + 1);
+        incidentCounts.set(triple.objectId, (incidentCounts.get(triple.objectId) || 0) + 1);
+    }
+
+    const isHub = (id) => id !== focusId && (incidentCounts.get(id) || 0) > 24;
 
     const ensureNode = (id, label, description) => {
+        const existing = nodes.get(id);
+        if (existing) {
+            if (shouldUpgradeNodeText(existing.label, label, id)) existing.label = label;
+            if (shouldUpgradeNodeText(existing.description, description, id)) existing.description = description;
+            existing.hub = existing.hub || isHub(id);
+            return existing;
+        }
         if (!nodes.has(id)) {
-            nodes.set(id, { id, label: label || local(id), description: description || id });
+            nodes.set(id, {
+                id,
+                label: label || local(id),
+                description: description || id,
+                isFocus: id === focusId,
+                hub: isHub(id),
+            });
         }
         return nodes.get(id);
     };
@@ -146,13 +179,17 @@ function buildNeighborhood(allTriples, focusId, maxNodes = 42, maxEdges = 96) {
         const current = frontier.shift();
         if (!current || visited.has(current)) continue;
         visited.add(current);
+        if (isHub(current)) continue;
 
         for (const triple of allTriples) {
             if (edges.length >= maxEdges || nodes.size >= maxNodes) break;
             const touches = triple.subjectId === current || triple.objectId === current;
             if (!touches) continue;
+            const edgeKey = `${triple.subjectId}|${triple.predicateId || triple.predicateLabel}|${triple.objectId}`;
+            if (seenEdges.has(edgeKey)) continue;
             ensureNode(triple.subjectId, triple.subjectLabel, triple.subjectDescription);
             ensureNode(triple.objectId, triple.objectLabel, triple.objectDescription);
+            seenEdges.add(edgeKey);
             edges.push({
                 source: triple.subjectId,
                 target: triple.objectId,
@@ -167,7 +204,28 @@ function buildNeighborhood(allTriples, focusId, maxNodes = 42, maxEdges = 96) {
     return {
         nodes: [...nodes.values()],
         edges,
+        focusId,
     };
+}
+
+function measuredGraphTriples(opResults, operation) {
+    const opOrder = operation === 'all'
+        ? ['point']
+        : [operation];
+    const triples = [];
+    const seen = new Set();
+
+    for (const op of opOrder) {
+        for (const triple of opResults[op]?.lastSummary?.decodedMatches || []) {
+            const normalized = normalizeRenderableTriple(triple);
+            const key = `${normalized.subjectId}|${normalized.predicateId || normalized.predicateLabel}|${normalized.objectId}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            triples.push(normalized);
+        }
+    }
+
+    return triples;
 }
 
 function buildGraphModel(triples) {
@@ -446,6 +504,7 @@ export class GraphViewer {
         this.selectedId = null;
         this.onNodeSelect = null;
         this.pointerMoved = false;
+        this.physicsEnabled = false;
         this._bind();
         this._loop = this._loop.bind(this);
         requestAnimationFrame(this._loop);
@@ -464,29 +523,132 @@ export class GraphViewer {
         this.nodes = [];
         this.edges = source?.edges ? [...source.edges] : [];
         this.nodeMap = new Map();
-        for (const baseNode of source?.nodes ?? []) {
+        const focusId = source?.focusId || source?.nodes?.find((node) => node?.isFocus)?.id || source?.nodes?.[0]?.id || null;
+
+        const addNode = (baseNode) => {
+            if (!baseNode?.id) return;
+            const existing = this.nodeMap.get(baseNode.id);
+            if (existing) {
+                if (shouldUpgradeNodeText(existing.label, baseNode.label, baseNode.id)) existing.label = baseNode.label;
+                if (shouldUpgradeNodeText(existing.description, baseNode.description, baseNode.id)) existing.description = baseNode.description;
+                return;
+            }
+            const index = this.nodes.length;
+            const total = Math.max((source?.nodes?.length || 0), 1);
+            const isFocus = baseNode.id === focusId || baseNode.isFocus === true;
+            const orbitIndex = Math.max(index - 1, 0);
+            const perRing = 8;
+            const ringIndex = Math.floor(orbitIndex / perRing);
+            const slot = orbitIndex % perRing;
+            const remaining = Math.max(total - 1 - ringIndex * perRing, 1);
+            const slotsInRing = Math.min(perRing, remaining);
+            const angle = (slot / Math.max(slotsInRing, 1)) * Math.PI * 2 - Math.PI / 2;
+            const ring = 170 + ringIndex * 60;
             const node = {
                 id: baseNode.id,
                 label: baseNode.label ?? local(baseNode.id),
                 description: baseNode.description ?? baseNode.id,
-                x: (Math.random() - 0.5) * 360,
-                y: (Math.random() - 0.5) * 360,
+                x: isFocus ? 0 : Math.cos(angle) * ring,
+                y: isFocus ? 0 : Math.sin(angle) * ring,
                 vx: 0,
                 vy: 0,
+                isFocus,
+                hub: baseNode.hub === true,
             };
             this.nodes.push(node);
             this.nodeMap.set(node.id, node);
+        };
+
+        for (const baseNode of source?.nodes ?? []) {
+            addNode(baseNode);
         }
-        this.selectedId = this.nodes[0]?.id ?? null;
+
+        for (const edge of this.edges) {
+            if (!this.nodeMap.has(edge.source)) {
+                addNode({
+                    id: edge.source,
+                    label: edge.raw?.subjectLabel ?? local(edge.source),
+                    description: edge.raw?.subjectDescription ?? edge.source,
+                });
+            }
+            if (!this.nodeMap.has(edge.target)) {
+                addNode({
+                    id: edge.target,
+                    label: edge.raw?.objectLabel ?? local(edge.target),
+                    description: edge.raw?.objectDescription ?? edge.target,
+                });
+            }
+        }
+
+        this.ox = 0;
+        this.oy = 0;
+        this.scale = 1;
+        this.selectedId = focusId || this.nodes[0]?.id || null;
         if (this.selectedId && this.onNodeSelect) {
             this.onNodeSelect(this.selectedId);
         }
     }
     _toScreen(p, w, h) { return [w / 2 + (p.x + this.ox) * this.scale, h / 2 + (p.y + this.oy) * this.scale]; }
+    _nodeSize(node) {
+        const label = String(node?.label || '');
+        return {
+            w: Math.max(138, Math.min(190, 88 + label.length * 5.2)),
+            h: 46,
+        };
+    }
+    _nodeKind(node) {
+        if (node?.isFocus) return 'FOCUS';
+        if (node?.hub) return 'HUB';
+        if (/^https?:\/\//i.test(String(node?.description || ''))) return 'IRI';
+        return 'VALUE';
+    }
+    _nodeColor(node) {
+        if (node?.isFocus) return '#f59e0b';
+        if (node?.hub) return '#60a5fa';
+        if (/^https?:\/\//i.test(String(node?.description || ''))) return '#34d399';
+        return '#38bdf8';
+    }
+    _truncate(text, chars) {
+        const value = String(text || '');
+        return value.length > chars ? `${value.slice(0, Math.max(chars - 1, 1))}...` : value;
+    }
+    _roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+    }
+    _rectEdgePoint(from, to, size) {
+        const dx = to[0] - from[0];
+        const dy = to[1] - from[1];
+        if (!dx && !dy) return from;
+        const sx = size.w / 2 / Math.max(Math.abs(dx), 0.0001);
+        const sy = size.h / 2 / Math.max(Math.abs(dy), 0.0001);
+        const t = Math.min(sx, sy);
+        return [from[0] + dx * t, from[1] + dy * t];
+    }
+    _arrowHead(ctx, x, y, ux, uy, color) {
+        const a = 9;
+        const px = -uy;
+        const py = ux;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x - ux * a + px * a * 0.45, y - uy * a + py * a * 0.45);
+        ctx.lineTo(x - ux * a - px * a * 0.45, y - uy * a - py * a * 0.45);
+        ctx.closePath();
+        ctx.fill();
+    }
     _findNodeAt(mx, my, w, h) {
         for (const node of this.nodes) {
             const [sx, sy] = this._toScreen(node, w, h);
-            if (Math.hypot(mx - sx, my - sy) < 14) return node;
+            const size = this._nodeSize(node);
+            if (mx >= sx - size.w / 2 && mx <= sx + size.w / 2 && my >= sy - size.h / 2 && my <= sy + size.h / 2) {
+                return node;
+            }
         }
         return null;
     }
@@ -577,6 +739,10 @@ export class GraphViewer {
             }
             a.vx -= a.x * 0.004;
             a.vy -= a.y * 0.004;
+            if (a.isFocus && a !== this.drag) {
+                a.vx -= a.x * 0.12;
+                a.vy -= a.y * 0.12;
+            }
         }
         for (const edge of this.edges) {
             const a = this.nodeMap.get(edge.source);
@@ -597,8 +763,15 @@ export class GraphViewer {
             if (node === this.drag) continue;
             node.vx *= 0.85;
             node.vy *= 0.85;
-            node.x += node.vx;
-            node.y += node.vy;
+            if (node.isFocus) {
+                node.x = 0;
+                node.y = 0;
+                node.vx = 0;
+                node.vy = 0;
+                continue;
+            }
+            node.x = Math.max(-900, Math.min(900, node.x + node.vx));
+            node.y = Math.max(-700, Math.min(700, node.y + node.vy));
         }
     }
     _loop() {
@@ -613,33 +786,72 @@ export class GraphViewer {
         const ctx = this.ctx;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, w, h);
-        if (this.nodes.length) this._physics();
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = 'rgba(148,163,184,0.35)';
-        ctx.font = '10px monospace';
+        ctx.fillStyle = 'rgba(255,255,255,0.045)';
+        for (let gx = 12; gx < w; gx += 24) {
+            for (let gy = 12; gy < h; gy += 24) {
+                ctx.fillRect(gx, gy, 1.4, 1.4);
+            }
+        }
+        if (this.nodes.length && this.physicsEnabled) this._physics();
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = 'rgba(148,163,184,0.48)';
+        ctx.font = '10px JetBrains Mono, monospace';
+        ctx.textAlign = 'center';
         for (const edge of this.edges) {
             const a = this.nodeMap.get(edge.source);
             const b = this.nodeMap.get(edge.target);
             if (!a || !b) continue;
-            const [ax, ay] = this._toScreen(a, w, h);
-            const [bx, by] = this._toScreen(b, w, h);
+            const ac = this._toScreen(a, w, h);
+            const bc = this._toScreen(b, w, h);
+            const [ax, ay] = this._rectEdgePoint(ac, bc, this._nodeSize(a));
+            const [bx, by] = this._rectEdgePoint(bc, ac, this._nodeSize(b));
+            const dx = bx - ax;
+            const dy = by - ay;
+            const d = Math.hypot(dx, dy) || 1;
+            const ux = dx / d;
+            const uy = dy / d;
+            const lineColor = edge.source === this.selectedId || edge.target === this.selectedId
+                ? 'rgba(245,158,11,0.82)'
+                : 'rgba(148,163,184,0.52)';
+            ctx.strokeStyle = lineColor;
+            ctx.lineWidth = edge.source === this.selectedId || edge.target === this.selectedId ? 2.2 : 1.5;
             ctx.beginPath();
             ctx.moveTo(ax, ay);
             ctx.lineTo(bx, by);
             ctx.stroke();
-            ctx.fillStyle = 'rgba(148,163,184,0.65)';
-            ctx.fillText(edge.label, (ax + bx) / 2 + 3, (ay + by) / 2 - 2);
-        }
-        for (const node of this.nodes) {
-            const [x, y] = this._toScreen(node, w, h);
-            const selected = node.id === this.selectedId;
-            ctx.fillStyle = selected ? 'rgba(250,204,21,0.95)' : 'rgba(52,211,153,0.9)';
-            ctx.beginPath();
-            ctx.arc(x, y, selected ? 7.5 : 6, 0, 7);
+            this._arrowHead(ctx, bx, by, ux, uy, lineColor);
+            const label = this._truncate(edge.label, 28);
+            const mx = (ax + bx) / 2;
+            const my = (ay + by) / 2;
+            const tw = Math.min(ctx.measureText(label).width + 12, 180);
+            this._roundRect(ctx, mx - tw / 2, my - 13, tw, 18, 7);
+            ctx.fillStyle = 'rgba(11,15,23,0.82)';
             ctx.fill();
-            ctx.fillStyle = selected ? '#fde68a' : '#e2e8f0';
-            ctx.font = selected ? 'bold 11px sans-serif' : '11px sans-serif';
-            ctx.fillText(node.label, x + 10, y + 4);
+            ctx.strokeStyle = 'rgba(148,163,184,0.2)';
+            ctx.stroke();
+            ctx.fillStyle = '#cbd5e1';
+            ctx.fillText(label, mx, my);
+        }
+        ctx.textAlign = 'left';
+        for (const node of this.nodes) {
+            const [cx, cy] = this._toScreen(node, w, h);
+            const size = this._nodeSize(node);
+            const x = cx - size.w / 2;
+            const y = cy - size.h / 2;
+            const selected = node.id === this.selectedId;
+            const fill = this._nodeColor(node);
+            this._roundRect(ctx, x, y, size.w, size.h, 10);
+            ctx.fillStyle = fill;
+            ctx.fill();
+            ctx.strokeStyle = selected ? '#fde68a' : 'rgba(255,255,255,0.18)';
+            ctx.lineWidth = selected ? 2 : 1;
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(11,15,23,0.72)';
+            ctx.font = '700 9px Inter, sans-serif';
+            ctx.fillText(this._nodeKind(node), x + 10, y + 15);
+            ctx.fillStyle = '#0b0f17';
+            ctx.font = selected ? '700 12px Inter, sans-serif' : '600 12px Inter, sans-serif';
+            ctx.fillText(this._truncate(node.label, Math.max(10, Math.floor((size.w - 18) / 7))), x + 10, y + 34);
         }
         if (!this.nodes.length) {
             ctx.fillStyle = 'rgba(148,163,184,0.5)';
@@ -992,7 +1204,10 @@ export async function runGraphLive({ wasm, charts, output, viewer, operation, da
 
     const requestedFocusNode = chooseFocusNode(opResults)
         || (queries.pointSubject ? fullHash(qHash(queries.pointSubject)) : null);
-    const renderTriples = buildRenderableTriples(dataset, requestedFocusNode);
+    const measuredTriples = measuredGraphTriples(opResults, operation);
+    const renderTriples = measuredTriples.length
+        ? measuredTriples
+        : buildRenderableTriples(dataset, requestedFocusNode);
     const focusNode = requestedFocusNode || renderTriples[0]?.subjectId || null;
     const graphModel = buildGraphModel(renderTriples);
     const neighborhood = buildNeighborhood(renderTriples, focusNode || renderTriples[0]?.subjectId, 44, 100);
@@ -1049,10 +1264,16 @@ export async function runGraphLive({ wasm, charts, output, viewer, operation, da
         return `  ${op.padEnd(8)} p50=${fmtMs(result.summary.p50)}  p95=${fmtMs(result.summary.p95)}  matches=${matches}`;
     }).filter(Boolean);
 
-    const focusSummary = focusNode ? `Focused neighborhood: ${focusNode}` : 'No focus node available';
+    const focusInfo = focusNode ? graphModel.byNode.get(focusNode) : null;
+    const focusSummary = focusInfo
+        ? `Focused neighborhood: ${focusInfo.label} (${focusInfo.description})`
+        : focusNode ? `Focused neighborhood: ${focusNode}` : 'No focus node available';
     const sourceNote = dataset.labelMap?.size
         ? 'Explorer labels come from the parsed dataset terms, with full IRIs available on hover.'
         : 'Explorer is showing hashed node IDs because this storage format does not currently expose labels.';
+    const viewNote = operation === 'all'
+        ? 'Graph panel is scoped to the measured point-lookup neighborhood; two-hop, filter, and ingest stay measured without taking over the default view.'
+        : 'Graph panel renders the measured matches from the selected graph operation.';
 
     if (output) {
         output.textContent =
@@ -1062,6 +1283,7 @@ export async function runGraphLive({ wasm, charts, output, viewer, operation, da
             `Operations measured:\n${summaryLines.join('\n')}\n\n` +
             `${focusSummary}\n` +
             `${sourceNote}\n\n` +
+            `${viewNote}\n\n` +
             `Latency chart = measured p50 per operation.\n` +
             `Throughput chart = real per-run ops/sec over time.`;
     }
@@ -1332,7 +1554,20 @@ export function runSpatialLive({ wasm, charts, output, count, operation, dimensi
 const SPARQL_COMPLEXITY_ORDER = ['simple', 'medium', 'complex'];
 
 function defaultSparqlPattern() {
-    return '?subject ?predicate ?object .';
+    return '?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> ?o .';
+}
+
+function isUnboundedTriplePattern(pattern) {
+    const parts = String(pattern || '').replace(/\s*\.\s*$/, '').trim().split(/\s+/);
+    return parts.length >= 3 && parts.slice(0, 3).every((part) => part.startsWith('?'));
+}
+
+function canonicalExecutionPattern(pattern) {
+    const parts = String(pattern || '').replace(/\s*\.\s*$/, '').trim().split(/\s+/);
+    if (parts.length < 3) return defaultSparqlPattern();
+    const vars = ['?s', '?p', '?o'];
+    const canonical = parts.slice(0, 3).map((part, index) => part.startsWith('?') ? vars[index] : part);
+    return `${canonical.join(' ')} .`;
 }
 
 function extractPrimaryTriplePattern(query) {
@@ -1345,7 +1580,8 @@ function extractPrimaryTriplePattern(query) {
     for (const line of candidates) {
         const cleaned = line.replace(/\s*\.\s*$/, '').trim();
         if (cleaned.split(/\s+/).length >= 3) {
-            return `${cleaned} .`;
+            const pattern = `${cleaned} .`;
+            return isUnboundedTriplePattern(pattern) ? defaultSparqlPattern() : canonicalExecutionPattern(pattern);
         }
     }
     return defaultSparqlPattern();
@@ -1452,6 +1688,7 @@ export async function runSparqlLive({
     }
 
     const pattern = extractPrimaryTriplePattern(query);
+    const resultCapacity = Math.min(profile.dataset.quinCount || 0, 20000) || 4096;
     const variantResults = {};
     for (const level of SPARQL_COMPLEXITY_ORDER) {
         const variantQuery = sparqlVariantForComplexity(queryType, level, pattern);
@@ -1461,7 +1698,7 @@ export async function runSparqlLive({
             variantQuery,
             pattern,
             level === complexity ? 10 : 4,
-            level === 'complex' ? 96 : 64,
+            resultCapacity,
         );
     }
 

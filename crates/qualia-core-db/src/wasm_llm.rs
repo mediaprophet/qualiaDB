@@ -3,8 +3,8 @@
 use js_sys::Function;
 use wasm_bindgen::prelude::*;
 
-use crate::gguf_sharder::GgufTokenizer;
 use crate::gguf_bridge::{PREFILL_CHUNK_SIZE, PREFILL_CHUNK_STACK_FLOATS, VOCAB_CHUNK_ROWS};
+use crate::gguf_sharder::GgufTokenizer;
 
 const BROWSER_AGENT_DID: &str = "did:q42:browser-llm-demo";
 const BROWSER_MODEL_TAG: &str = "wasm-resident.gguf";
@@ -33,19 +33,12 @@ fn restore_engine(engine: crate::gguf_bridge::QTensorEngine) {
 fn take_engine() -> Result<crate::gguf_bridge::QTensorEngine, String> {
     crate::gguf_bridge::WASM_ENGINE_INSTANCE
         .with(|g| g.borrow_mut().take())
-        .ok_or_else(|| {
-            "WebGPU engine not initialized. Call initialize_webgpu_engine first.".into()
-        })
+        .ok_or_else(|| "WebGPU engine not initialized. Call initialize_webgpu_engine first.".into())
 }
 
-fn run_inference(
-    prompt: &str,
-    graph_context: &str,
-) -> Result<String, String> {
+fn run_inference(prompt: &str, graph_context: &str) -> Result<String, String> {
     if !engine_ready() {
-        return Err(
-            "WebGPU engine not initialized. Call initialize_webgpu_engine first.".into(),
-        );
+        return Err("WebGPU engine not initialized. Call initialize_webgpu_engine first.".into());
     }
     let agent = crate::llm_agent::LocalLlmAgent::new(BROWSER_AGENT_DID, BROWSER_MODEL_TAG);
     let (text, _, _, _) =
@@ -59,16 +52,13 @@ fn run_inference_streaming(
     on_token: Function,
 ) -> Result<String, String> {
     if !engine_ready() {
-        return Err(
-            "WebGPU engine not initialized. Call initialize_webgpu_engine first.".into(),
-        );
+        return Err("WebGPU engine not initialized. Call initialize_webgpu_engine first.".into());
     }
     let agent = crate::llm_agent::LocalLlmAgent::new(BROWSER_AGENT_DID, BROWSER_MODEL_TAG);
     let on_token = move |piece: String| {
         let _ = on_token.call1(&JsValue::UNDEFINED, &JsValue::from_str(&piece));
     };
-    let (text, _, _, _) =
-        agent.infer_local_model_streaming(prompt, graph_context, Some(on_token));
+    let (text, _, _, _) = agent.infer_local_model_streaming(prompt, graph_context, Some(on_token));
     Ok(text)
 }
 
@@ -78,19 +68,19 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
     let prompt_owned = prompt.to_string();
 
     let result: Result<String, String> = async {
-        // Phase 4: boot purely from the `.q42` container when present — synthetic tensor index +
-        // tokenizer section, no GGUF parse. (gguf_mmap holds the .q42 bytes; the synthetic index
+        // Boot purely from P64 when present: synthetic tensor index +
+        // tokenizer section, no GGUF parse. (gguf_mmap holds the P64 bytes; the synthetic index
         // uses tensor_data_start=0 + absolute offsets, so the rest of the path is unchanged.)
-        let (tok, tensor_idx) = if engine.q42_resident.is_some() {
-            let data = engine.q42_resident.clone().unwrap();
-            match crate::q42_weight::Q42TensorIndex::from_q42(&data) {
+        let (tok, tensor_idx) = if engine.p64_resident.is_some() {
+            let data = engine.p64_resident.clone().unwrap();
+            match crate::p64_weight::P64TensorIndex::from_p64(&data) {
                 Ok(qi) => {
-                    let tok = GgufTokenizer::from_q42_section(qi.tokenizer_bytes(&data))
+                    let tok = GgufTokenizer::from_p64_section(qi.tokenizer_bytes(&data))
                         .unwrap_or_default();
                     (tok, Some(qi.to_gguf_index()))
                 }
                 Err(e) => {
-                    crate::gguf_bridge::wlog(&format!("[Q42] container parse failed: {e}"));
+                    crate::gguf_bridge::wlog(&format!("[P64] container parse failed: {e}"));
                     (GgufTokenizer::default(), None)
                 }
             }
@@ -263,23 +253,23 @@ async fn run_inference_async(prompt: &str, on_token: Function) -> Result<String,
     result
 }
 
-/// Returns true when a GGUF model has been loaded via `initialize_webgpu_engine`.
+/// Returns true when a GGUF or P64 model has been loaded via `initialize_webgpu_engine`.
 #[wasm_bindgen(js_name = isWebgpuEngineReady)]
 pub fn is_webgpu_engine_ready() -> bool {
     engine_ready()
 }
 
-/// Load a GGUF model into the resident browser WebGPU engine.
+/// Load a GGUF or P64 model into the resident browser WebGPU engine.
 #[wasm_bindgen]
-pub async fn initialize_webgpu_engine(gguf_data: js_sys::Uint8Array) -> Result<(), js_sys::Error> {
-    let vec = gguf_data.to_vec();
+pub async fn initialize_webgpu_engine(model_data: js_sys::Uint8Array) -> Result<(), js_sys::Error> {
+    let vec = model_data.to_vec();
     let arc: std::sync::Arc<[u8]> = vec.into();
     crate::gguf_bridge::initialize_webgpu_engine(arc)
         .await
         .map_err(|e| js_sys::Error::new(&e))
 }
 
-/// Release resident GGUF weights and tear down the WebGPU engine instance.
+/// Release resident model weights and tear down the WebGPU engine instance.
 #[wasm_bindgen(js_name = releaseWebgpuEngine)]
 pub async fn release_webgpu_engine() -> Result<(), JsValue> {
     crate::gguf_bridge::WASM_ENGINE_INSTANCE.with(|g| {
@@ -328,20 +318,36 @@ pub async fn infer_wasm_async(prompt: String, on_token: Function) -> Result<Stri
         .map_err(|e| JsValue::from_str(&e))
 }
 
-/// Phase 4 (AOT): compile a flat GGUF byte image into a `.q42` LLM-weight container
-/// (page-aligned tensor blobs + zero-parse NQuin manifest). Run once at ingest; stream the
-/// result to OPFS. `page_log2 == 0` selects the 16 KB default.
-#[wasm_bindgen(js_name = compileGgufToQ42)]
-pub fn compile_gguf_to_q42(gguf: js_sys::Uint8Array, page_log2: u16) -> Result<js_sys::Uint8Array, JsValue> {
+/// Compile a flat GGUF byte image into a canonical P64 LLM-weight container.
+/// Run once at ingest and cache the result in OPFS.
+#[wasm_bindgen(js_name = compileGgufToP64)]
+pub fn compile_gguf_to_p64(
+    gguf: js_sys::Uint8Array,
+    page_log2: u16,
+) -> Result<js_sys::Uint8Array, JsValue> {
     let bytes = gguf.to_vec();
-    let out = crate::q42_weight::compile_gguf_to_q42(&bytes, page_log2)
+    let out = crate::p64_weight::compile_gguf_to_p64(&bytes, page_log2)
         .map_err(|e| JsValue::from_str(&e))?;
     Ok(js_sys::Uint8Array::from(out.as_slice()))
 }
 
-/// Current `.q42` weight-container format version (single source of truth for the JS cache layer,
-/// so a format bump auto-invalidates any stale `.q42` cached in OPFS).
+/// Historical export retained for browser compatibility. Emits P64 bytes.
+#[wasm_bindgen(js_name = compileGgufToQ42)]
+pub fn compile_gguf_to_q42(
+    gguf: js_sys::Uint8Array,
+    page_log2: u16,
+) -> Result<js_sys::Uint8Array, JsValue> {
+    compile_gguf_to_p64(gguf, page_log2)
+}
+
+/// Current P64 container version for OPFS cache invalidation.
+#[wasm_bindgen(js_name = p64FormatVersion)]
+pub fn p64_format_version() -> u16 {
+    crate::p64_weight::P64_VERSION
+}
+
+/// Historical export retained for browser compatibility. Returns P64_VERSION.
 #[wasm_bindgen(js_name = q42FormatVersion)]
 pub fn q42_format_version() -> u16 {
-    crate::q42_weight::Q42W_VERSION
+    p64_format_version()
 }

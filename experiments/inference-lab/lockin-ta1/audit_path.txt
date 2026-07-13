@@ -1,0 +1,20 @@
+Hot-path wiring audit
+  mode:                    portable
+  resident_decode:         yes
+  resident_prefill:        yes
+  resident_weights:        yes
+  coop_gemv:               yes
+  ffn_fusion flag:         yes
+  ffn_fusion in resident:  NO   (must be yes for T-A1 done)
+  kv_int8:                 yes
+  attention_preproject:    yes
+  attention_o_fuse:        yes
+  prefer_cuda_gemm:        NO 
+  cuda_caps:               yes
+  post_turn_verify:        NO 
+  sentinel_mid:            yes
+  quant_graph:             NO 
+  timestamps_supported:    yes
+  QUALIA_LLM_GPU_PROFILE:  NO 
+  notes:
+    - ffn_fusion flag ON but last resident plan did not fuse (unsupported quant or plan not built yet) — T-A1 partial

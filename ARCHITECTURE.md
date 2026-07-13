@@ -396,10 +396,11 @@ When `qualia-core-db` is compiled to the `wasm32-unknown-unknown` target, `infer
 
 The in-browser path (`#[cfg(target_arch = "wasm32")]`) is a fully GPU-resident decode loop:
 
-- **`.q42` AOT container** — a GGUF is compiled **once** (`q42_weight.rs::compile_gguf_to_q42`,
-  `compileGgufToQ42` WASM export) into a 16 KB-page-aligned, `Q42W`-magic, CRC-32C container holding
-  weight blobs + hyperparams + tokenizer. Cached in OPFS (`loadOrCompileQ42`); `initialize_webgpu_engine`
-  boots **zero-parse** from it (`adopt_resident_q42`). All inference thereafter reads from the `.q42`.
+- **P64 AOT container** — a GGUF is compiled **once** (`p64_weight.rs::compile_gguf_to_p64`,
+  `compileGgufToP64` WASM export) into a page-aligned, canonical `p64\0` CRC-32C container holding
+  weight blobs + hyperparameters + tokenizer. Cached in OPFS (`loadOrCompileP64`);
+  `initialize_webgpu_engine` boots from it through `adopt_resident_p64`. All inference thereafter
+  reads from P64. Historical `q42`-named APIs remain compatibility aliases only.
 - **Resident everything** — layer weights (7 role buffers), the tied `token_embd` output/logits
   projection (~50 MB), and per-layer attn/ffn norms are uploaded to VRAM **once at init**. No per-token
   or per-layer `write_buffer` re-uploads.
@@ -715,15 +716,16 @@ Dung-style Abstract Argumentation Framework. `ARGUMENT_BIT` (bit 55), `ATTACK_BI
 
 ### Calculus (`modalities/calculus/`)
 
-Zero-heap numerical computation split across a host/GPU/CUDA triad:
+Zero-heap numerical computation split across a host/GPU split — **vendor-neutral** (portable `wgpu`, no CUDA):
 
 | File | Contents |
 |---|---|
 | `host.rs` | `MmapGridManager` — memory-mapped grid data; feeds chunked slices to GPU kernel |
-| `gpu.rs` | WGSL compute dispatch for numerical integration |
-| `cuda_bridge.rs` | CUDA GPUDirect Storage bridge (Linux + NVIDIA only; feature `cuda_gds`) |
+| `gpu.rs` | WGSL compute dispatch for numerical integration (portable `wgpu`: Vulkan / DX12 / Metal / WebGPU) |
+| `hetero_dispatch.rs` | Vendor-neutral heterogeneous dispatch + storage/precision policy (replaced the removed CUDA/cuFile `cuda_bridge.rs`): zero-copy strategy, GPU/NPU/CPU fallback + VRAM tiling, stream-fusion planning, mixed-precision selection |
 | `ode_solver.rs` | RK4 step function operating on mmap'd grid slices |
-| `tensor_provenance.rs` | Provenance NQuin annotation for tensor computation results |
+| `ode_advanced.rs` | Symplectic (Verlet/Ruth3/Yoshida4), stiff BDF, dense output, forward sensitivity |
+| `tensor_provenance.rs` / `tensor_integrity.rs` | Provenance NQuin annotation + append-only tamper-evident BLAKE3 lineage |
 
 ### Control Feedback (`modalities/control_feedback.rs`)
 
@@ -963,7 +965,7 @@ High-performance domain libraries. All 9 sub-modules are **✅ fully active** as
 | File | Status | Contents | MCP tool |
 |---|---|---|---|
 | `qpu_bridge.rs` | ✅ Active | Bridge between `solvers/qpu/` and external QPU providers; classical problem formulation → QPU submission | `qpu_optimize`, `qpu_dft` |
-| `linear_algebra.rs` | ✅ Active | Dense/sparse matrix ops, LU decomposition, SVD, eigenvalues; ZK privacy matrix multiply | `matrix_operation` |
+| `linear_algebra.rs` | ✅ Active | Dense/sparse matrix ops, LU decomposition, SVD, eigenvalues; ZK matrix proofs; packed BFV HE; calibrated Laplace/Gaussian DP | `matrix_operation` |
 | `statistical_computing.rs` | ✅ Active | Descriptive stats (mean/median/variance/correlation), regression, hypothesis testing, histograms | `statistical_analysis` |
 | `cryptographic_library.rs` | ✅ Active | AES-256-GCM encrypt/decrypt, Ed25519 sign/verify, SHA-256 hashing, key rotation | (internal; `fiduciary_crypto.rs` is the primary MCP path) |
 | `engineering_analysis.rs` | ✅ Active | FEA / FEM structural, mechanical, thermal, fluid, reliability analysis | `engineering_analysis_op` |

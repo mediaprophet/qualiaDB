@@ -17,6 +17,20 @@ function safeName(name) {
   return name.replace(/[^A-Za-z0-9._-]/g, '_');
 }
 
+/** Validate canonical P64 magic and, when supplied, the little-endian version. */
+export function isP64Header(bytes, expectedVersion) {
+  if (!bytes || bytes.length < 4) return false;
+  const magicOk =
+    bytes[0] === 0x70 &&
+    bytes[1] === 0x36 &&
+    bytes[2] === 0x34 &&
+    bytes[3] === 0x00;
+  if (!magicOk) return false;
+  if (expectedVersion === undefined || expectedVersion === null) return true;
+  if (bytes.length < 6) return false;
+  return (bytes[4] | (bytes[5] << 8)) === expectedVersion;
+}
+
 async function opfsRoot() {
   if (!navigator || !navigator.storage || !navigator.storage.getDirectory) return null;
   try {
@@ -123,35 +137,30 @@ export async function loadGgufCached(url, name, expectedSize, onProgress) {
 }
 
 /**
- * Phase 4 AOT ingest: return a `.q42` container for `ggufUrl`, compiling once and caching the
- * RESULT in OPFS (the source `.gguf` is never stored). Warm starts read the `.q42` straight from
- * OPFS with zero network + zero compile. The cache is keyed on the wasm format `version`, so a
- * format bump auto-recompiles instead of booting a stale container.
+ * AOT ingest: return a canonical P64 container for `ggufUrl`, compiling once
+ * and caching the result in OPFS. The source GGUF is not retained.
  *
- * Conformance: the hot loop is untouched; the `.q42` write STREAMS to disk (no Cache.put); the
- * one-time GGUF buffer + compile is the cold-path ingest tier (LLM-load heap exception), freed
- * immediately. `compile` = the wasm `compileGgufToQ42`; `formatVersion` = wasm `q42FormatVersion()`.
+ * `compile` should be `compileGgufToP64`; `formatVersion` should be
+ * `p64FormatVersion()`. The historical Q42-named exports remain compatible.
  *
- * @returns {Promise<{bytes: Uint8Array, source: 'opfs-q42-hit'|'compiled'}>}
+ * @returns {Promise<{bytes: Uint8Array, source: 'opfs-p64-hit'|'compiled'}>}
  */
-export async function loadOrCompileQ42(ggufUrl, baseName, { compile, formatVersion, onProgress } = {}) {
-  const safe = safeName(baseName) + '.q42';
+export async function loadOrCompileP64(ggufUrl, baseName, { compile, formatVersion, onProgress } = {}) {
+  const safe = safeName(baseName) + '.p64';
   const part = safe + '.part';
   const root = await opfsRoot();
 
-  // ── Warm: cached .q42 whose magic + format version match the current engine ──
+  // ── Warm: cached P64 whose magic + format version match the current engine ──
   if (root) {
     try {
       const fh = await root.getFileHandle(safe);
       const file = await fh.getFile();
       if (file.size >= 8) {
         const head = new Uint8Array(await file.slice(0, 8).arrayBuffer());
-        const magicOk = head[0] === 0x51 && head[1] === 0x34 && head[2] === 0x32 && head[3] === 0x57; // "Q42W"
-        const ver = head[4] | (head[5] << 8);
-        if (magicOk && ver === formatVersion) {
+        if (isP64Header(head, formatVersion)) {
           const bytes = new Uint8Array(await file.arrayBuffer());
-          if (onProgress) onProgress(bytes.length, bytes.length, 'q42-hit');
-          return { bytes, source: 'opfs-q42-hit' };
+          if (onProgress) onProgress(bytes.length, bytes.length, 'p64-hit');
+          return { bytes, source: 'opfs-p64-hit' };
         }
       }
       try { await root.removeEntry(safe); } catch {} // stale/foreign version → recompile
@@ -160,7 +169,7 @@ export async function loadOrCompileQ42(ggufUrl, baseName, { compile, formatVersi
     }
   }
 
-  // ── Cold: fetch GGUF (cold-path buffer), AOT-compile, stream .q42 to OPFS ──
+  // ── Cold: fetch GGUF, AOT-compile, stream P64 to OPFS ──
   const resp = await fetch(ggufUrl);
   if (!resp.ok) throw new Error(`fetch ${resp.status}`);
   const total = Number(resp.headers.get('Content-Length')) || 0;
@@ -184,17 +193,20 @@ export async function loadOrCompileQ42(ggufUrl, baseName, { compile, formatVersi
   }
 
   if (onProgress) onProgress(0, 0, 'compile');
-  const q42 = compile(gguf, 14); // wasm AOT compile (16 KB pages) → Uint8Array
+  const p64 = compile(gguf, 14); // wasm AOT compile (16 KB pages) → Uint8Array
   gguf = null; // free the GGUF cold-path buffer ASAP
+  if (!isP64Header(p64, formatVersion)) {
+    throw new Error('AOT compiler returned non-P64 bytes or an unexpected P64 version');
+  }
 
-  // Stream the .q42 to OPFS in chunks (no whole-blob Cache.put); atomic .part → move.
+  // Stream P64 to OPFS in chunks (no whole-blob Cache.put); atomic .part → move.
   if (root) {
     try {
       const partHandle = await root.getFileHandle(part, { create: true });
       const writable = await partHandle.createWritable();
       const CHUNK = 8 * 1024 * 1024;
-      for (let off = 0; off < q42.length; off += CHUNK) {
-        await writable.write(q42.subarray(off, Math.min(off + CHUNK, q42.length)));
+      for (let off = 0; off < p64.length; off += CHUNK) {
+        await writable.write(p64.subarray(off, Math.min(off + CHUNK, p64.length)));
       }
       await writable.close();
       if (typeof partHandle.move === 'function') {
@@ -202,19 +214,39 @@ export async function loadOrCompileQ42(ggufUrl, baseName, { compile, formatVersi
       } else {
         const fin = await root.getFileHandle(safe, { create: true });
         const w = await fin.createWritable();
-        for (let off = 0; off < q42.length; off += CHUNK) {
-          await w.write(q42.subarray(off, Math.min(off + CHUNK, q42.length)));
+        for (let off = 0; off < p64.length; off += CHUNK) {
+          await w.write(p64.subarray(off, Math.min(off + CHUNK, p64.length)));
         }
         await w.close();
         try { await root.removeEntry(part); } catch {}
       }
     } catch (e) {
-      console.warn('[q42-cache] OPFS write failed (recompile next load):', e && e.message ? e.message : e);
+      console.warn('[p64-cache] OPFS write failed (recompile next load):', e && e.message ? e.message : e);
       try { const r = await opfsRoot(); if (r) await r.removeEntry(part); } catch {}
     }
   }
-  if (onProgress) onProgress(q42.length, q42.length, 'compiled');
-  return { bytes: q42, source: 'compiled' };
+  if (onProgress) onProgress(p64.length, p64.length, 'compiled');
+  return { bytes: p64, source: 'compiled' };
+}
+
+/**
+ * Historical compatibility alias. It stores canonical `.p64` bytes while
+ * retaining the old progress/source labels expected by existing demos.
+ */
+export async function loadOrCompileQ42(ggufUrl, baseName, options = {}) {
+  const onProgress = options.onProgress;
+  const translated = onProgress
+    ? (loaded, total, phase) =>
+        onProgress(loaded, total, phase === 'p64-hit' ? 'q42-hit' : phase)
+    : undefined;
+  const result = await loadOrCompileP64(ggufUrl, baseName, {
+    ...options,
+    onProgress: translated,
+  });
+  return {
+    bytes: result.bytes,
+    source: result.source === 'opfs-p64-hit' ? 'opfs-q42-hit' : result.source,
+  };
 }
 
 /** Remove a single cached model (and any stale .part). */
@@ -222,8 +254,16 @@ export async function clearOpfsModel(name) {
   const root = await opfsRoot();
   if (!root) return 0;
   const safe = safeName(name);
+  const candidates = [
+    safe,
+    safe + '.part',
+    safe + '.p64',
+    safe + '.p64.part',
+    safe + '.q42',
+    safe + '.q42.part',
+  ];
   let removed = 0;
-  for (const n of [safe, safe + '.part']) {
+  for (const n of candidates) {
     try { await root.removeEntry(n); removed++; } catch {}
   }
   return removed;
@@ -237,7 +277,7 @@ export async function clearAllOpfsModels() {
   try {
     const names = [];
     for await (const [n] of root.entries()) {
-      if (/\.(gguf|q42)(\.part)?$/.test(n)) names.push(n);
+      if (/\.(gguf|p64|q42)(\.part)?$/.test(n)) names.push(n);
     }
     for (const n of names) {
       try { await root.removeEntry(n); removed++; } catch {}

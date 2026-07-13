@@ -1,5 +1,11 @@
 //! Bridges typed SHACL extension configs (`*_shacl.rs`) into `SlgOpcode` sequences.
 
+use crate::modalities::logic::computational_maths_shacl::{
+    AssumptionConfiguration, ExactArithmeticConfiguration, IntegralTransformConfiguration,
+    InterpolationConfiguration, NumberTheoryConfiguration, NumericalMethodConfiguration,
+    SpecialFunctionConfiguration, SymbolicCalculusConfiguration, UnitsConfiguration,
+    VectorCalculusConfiguration,
+};
 use crate::modalities::logic::core_modalities_shacl::{
     ASPConfiguration, CalculusConfiguration, DialecticalConfiguration, EpistemicConfiguration,
     GraphConfiguration, LTLConfiguration, ParaconsistentConfiguration,
@@ -121,6 +127,87 @@ pub fn append_extension_opcodes(opcodes: &mut Vec<SlgOpcode>, extension_id: &str
             };
             opcodes.extend(cfg.to_opcodes());
         }
+        // ── Computational-mathematics engine ───────────────────────────────────
+        "q42:UnitsConfiguration" => {
+            let cfg = UnitsConfiguration {
+                dimension_components: 7,
+                require_dimensional_consistency: true,
+                allowed_unit_systems: vec!["si".into()],
+            };
+            opcodes.extend(cfg.to_opcodes());
+        }
+        "q42:NumberTheoryConfiguration" => {
+            let cfg = NumberTheoryConfiguration {
+                max_input_bits: 4096,
+                max_factorization_iterations: 1_000_000,
+                allowed_operations: vec!["primality".into(), "factorization".into()],
+            };
+            opcodes.extend(cfg.to_opcodes());
+        }
+        "q42:SpecialFunctionConfiguration" => {
+            let cfg = SpecialFunctionConfiguration {
+                max_series_terms: 100_000,
+                convergence_tolerance: 1e-12,
+                allowed_families: vec!["bessel".into(), "zeta".into(), "airy".into()],
+            };
+            opcodes.extend(cfg.to_opcodes());
+        }
+        "q42:InterpolationConfiguration" => {
+            let cfg = InterpolationConfiguration {
+                max_nodes: 1_000_000,
+                require_distinct_nodes: true,
+                allowed_methods: vec!["lagrange".into(), "cubic_spline".into()],
+            };
+            opcodes.extend(cfg.to_opcodes());
+        }
+        "q42:IntegralTransformConfiguration" => {
+            let cfg = IntegralTransformConfiguration {
+                max_samples: 16_777_216,
+                require_invertibility_check: true,
+                allowed_transforms: vec!["dft".into(), "laplace".into(), "ztransform".into()],
+            };
+            opcodes.extend(cfg.to_opcodes());
+        }
+        "q42:VectorCalculusConfiguration" => {
+            let cfg = VectorCalculusConfiguration {
+                max_spatial_dimension: 3,
+                require_field_smoothness: true,
+                allowed_operators: vec!["gradient".into(), "divergence".into(), "curl".into()],
+            };
+            opcodes.extend(cfg.to_opcodes());
+        }
+        "q42:ExactArithmeticConfiguration" => {
+            let cfg = ExactArithmeticConfiguration {
+                max_digits: 1_000_000,
+                require_exact: true,
+                allowed_types: vec!["bigint".into(), "bigrational".into()],
+            };
+            opcodes.extend(cfg.to_opcodes());
+        }
+        "q42:SymbolicCalculusConfiguration" => {
+            let cfg = SymbolicCalculusConfiguration {
+                max_order: 1024,
+                require_roundtrip_verification: true,
+                allowed_operations: vec!["integrate".into(), "ode_solve".into(), "gradient".into()],
+            };
+            opcodes.extend(cfg.to_opcodes());
+        }
+        "q42:AssumptionConfiguration" => {
+            let cfg = AssumptionConfiguration {
+                require_sound_rewrite: true,
+                allowed_signs: vec!["positive".into(), "nonnegative".into(), "nonzero".into()],
+            };
+            opcodes.extend(cfg.to_opcodes());
+        }
+        "q42:NumericalMethodConfiguration" => {
+            let cfg = NumericalMethodConfiguration {
+                max_state_dimension: 100_000,
+                max_steps: 1_000_000,
+                convergence_tolerance: 1e-9,
+                allowed_integrators: vec!["rk4".into(), "simpson".into(), "shooting_bvp".into()],
+            };
+            opcodes.extend(cfg.to_opcodes());
+        }
         _ => {}
     }
     if !matches!(opcodes.last(), Some(SlgOpcode::Halt)) {
@@ -138,5 +225,32 @@ mod tests {
         append_extension_opcodes(&mut ops, "q42:EpistemicConfiguration");
         assert!(ops.len() > 2);
         assert!(ops.contains(&SlgOpcode::NativeEpistemicEval(128)));
+    }
+
+    #[test]
+    fn computational_maths_extensions_append_opcodes() {
+        // Each new computational-maths extension id compiles to a non-empty, Halt-terminated
+        // opcode sequence.
+        for id in [
+            "q42:UnitsConfiguration",
+            "q42:NumberTheoryConfiguration",
+            "q42:SpecialFunctionConfiguration",
+            "q42:InterpolationConfiguration",
+            "q42:IntegralTransformConfiguration",
+            "q42:VectorCalculusConfiguration",
+            "q42:ExactArithmeticConfiguration",
+            "q42:SymbolicCalculusConfiguration",
+            "q42:AssumptionConfiguration",
+            "q42:NumericalMethodConfiguration",
+        ] {
+            let mut ops = Vec::new();
+            append_extension_opcodes(&mut ops, id);
+            assert!(ops.len() >= 2, "{id} produced too few opcodes");
+            assert_eq!(
+                ops.last(),
+                Some(&SlgOpcode::Halt),
+                "{id} not Halt-terminated"
+            );
+        }
     }
 }

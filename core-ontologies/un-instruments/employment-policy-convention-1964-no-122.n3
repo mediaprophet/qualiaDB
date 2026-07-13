@@ -1,0 +1,93 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix doc:    <https://ns.webcivics.net/values/employment-policy-convention-1964-no-122#> .
+
+# ============================================================
+# Employment Policy Convention, 1964 (No. 122)
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Employment Policy Convention, 1964 (No. 122)"@en ;
+    dc:date "09 July 1964" ;
+    values:category "Labour rights (ILO)" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/employment-policy-convention-1964-no-122> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:article-1 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 1"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. With a view to stimulating economic growth and development, raising levels of living, meeting manpower requirements and overcoming unemployment and under-employment, each Member shall declare and pursue, as a major goal, an active policy designed to promote full, productive and freely chosen employment. 2. The said policy shall aim at ensuring that: There is work for all who are available for and seeking work; Such work is as productive as possible; There is freedom of choice of employment and the fullest possible opportunity for each worker to qualify for, and to use his skills and endowments in, a job for which he is well suited, irrespective of race, colour, sex, religion, political opinion, national extraction or social origin. 3. The said policy shall take due account of the stage and level of economic development and the mutual relationships between employment objectives and other economic and social objectives, and shall be pursued by methods that are appropriate to national conditions and practices."@en .
+
+doc:article-2 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 2"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Each Member shall, by such methods and to such extent as may be appropriate under national conditions: Decide on and keep under review, within the framework of a coordinated economic and social policy, the measures to be adopted for attaining the objectives specified in article l; Take such steps as may be needed, including when appropriate the establishment of programmes, for the application of these measures."@en .
+
+doc:article-3 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 3"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "In the application of this Convention, representatives of the persons affected by the measures to be taken, and in particular representatives of employers and workers, shall be consulted concerning employment policies, with a view to taking fully into account their experience and views and securing their full co-operation in formulating and enlisting support for such policies."@en .
+
+doc:article-4 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 4"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The formal ratifications of this Convention shall be communicated to the Director-General of the International Labour Office for registration."@en .
+
+doc:article-5 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 5"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. This Convention shall be binding only upon those Members of the International Labour Organisation whose ratifications have been registered with the Director-General. 2. It shall come into force twelve months after the date on which the ratifications of two Members have been registered with the Director-General. 3. Thereafter, this Convention shall come into force for any Member twelve months after the date on which its ratification has been registered."@en .
+
+doc:article-6 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 6"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. A Member which has ratified this Convention may denounce it after the expiration of ten years from the date on which the Convention first comes into force, by an act communicated to the Director-General of the International Labour Office for registration. Such denunciation shall not take effect until one year after the date on which it is registered. 2. Each Member which has ratified this Convention and which does not, within the year following the expiration of the period of ten years mentioned in the preceding paragraph, exercise the right of denunciation provided for in this article, will be bound for another period of ten years and, thereafter, may denounce this Convention at the expiration of each period of ten years under the terms provided for in this article."@en .
+
+doc:article-7 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 7"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The Director-General of the International Labour Office shall notify all Members of the International Labour Organisation of the registration of all ratifications and denunciations communicated to him by the Members of the Organisation. 2. When notifying the Members of the Organisation of the registration of the second ratification communicated to him, the Director-General shall draw the attention of the Members of the Organisation to the date upon which the Convention will come into force."@en .
+
+doc:article-8 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 8"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Director-General of the International Labour Office shall communicate to the Secretary-General of the United Nations for registration in accordance with Article 102 of the Charter of the United Nations full particulars of all ratifications and acts of denunciation registered by him in accordance with the provisions of the preceding articles."@en .
+
+doc:article-9 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 9"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "At such times as it may consider necessary the Governing Body of the International Labour Office shall present to the General Conference a report on the working of this Convention and shall examine the desirability of placing on the agenda of the Conference the question of its revision in whole or in part."@en .
+
+doc:article-10 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 10"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. Should the Conference adopt a new Convention revising this Convention in whole or in part, then, unless the new Convention otherwise provides: The ratification by a Member of the new revising Convention shall ipso jure involve the immediate denunciation of this Convention, notwithstanding the provisions of article 6 above, if and when the new revising Convention shall have come into force; As from the date when the new revising Convention comes into force this Convention shall cease to be open to ratification by the Members. 2. This Convention shall in any case remain in force in its actual form and content for those Members which have ratified it but have not ratified the revising Convention."@en .
+
+doc:article-11 a values:Right ;
+    values:partOf doc:Instrument ;
+    values:heldBy values:NaturalPerson ;
+    dc:title "Article 11"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Entry into force: 15 July 1966, in accordance with article 5 The General Conference of the International Labour Organisation , Having been convened at Geneva by the Governing Body of the International Labour Office, and having met in its forty-eighth session on 17 June 1964, and Considering that the Declaration of Philadelphia recognises the solemn obligation of the International Labour Organisation to further among the nations of the world programmes which will achieve full employment and the raising of standards of living, and that the Preamble to the Constitution of the International Labour Organisation provides for the prevention of unemployment and the provision of an adequate living wage, and Considering further that under the terms of the Declaration of Philadelphia it is the responsibility of the International Labour Organisation to examine and consider the bearing of economic and financial policies upon employment policy in the light of the fundamental objective that \"all human beings, irrespective of race, creed or sex, have the right to pursue both their material well-being and their spiritual development in conditions of freedom and dignity, of economic security and equal opportunity\", and Considering that the Universal Declaration of Human Rights provides that \"everyone has the right to work, to free choice of employment, to just and favourable conditions of work and to protection against unemployment\", and Noting the terms of existing international labour Conventions and Recommendations of direct relevance to employment policy, and in particular of the Employment Service Convention and Recommendation, 1948, the Vocational Guidance Recommendation, 1949, the Vocational Training Recommendation, 1962, and the Discrimination (Employment and Occupation) Convention and Recommendation, 1958, and Considering that these instruments should be placed in the wider framework of an international programme for economic expansion on the basis of full, productive and freely chosen employment, and Having decided upon the adoption of certain proposals with regard to employment policy, which are included in the eighth item on the agenda of the session, and Having determined that these proposals shall take the form of an international Convention, Adopts this ninth day of July of the year one thousand nine hundred and sixty-four the following Convention, which may be cited as the Employment Policy Convention, 1964:"@en .

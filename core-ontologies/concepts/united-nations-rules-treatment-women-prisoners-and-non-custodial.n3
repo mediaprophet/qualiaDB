@@ -1,0 +1,1236 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix dc:      <http://purl.org/dc/terms/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix values:  <https://ns.webcivics.net/values/> .
+@prefix cml:     <https://ns.webcivics.net/cml/> .
+@prefix concept: <https://ns.webcivics.net/concept/> .
+@prefix doc:     <https://ns.webcivics.net/values/united-nations-rules-treatment-women-prisoners-and-non-custodial#> .
+
+# ============================================================
+# CML concept layer (LOGIC) — United Nations Rules for the Treatment of Women Prisoners and Non-custodial Measures for Women Offenders (the Bangkok Rules)
+# MACHINE-DERIVED from the TEXT layer (un-instruments) — cml:Proposed,
+# values:HeuristicDerived. Pending human attestation (cml:Attested / exactMatch).
+# One cml:Concept per provision; cml:realizedBy the provision; cml:asserts the
+# deontic norm. R1 universalisation materialised for duties borne by every Agent.
+# ============================================================
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-1 a cml:Concept ;
+    skos:prefLabel "Rule 1"@en ;
+    cml:realizedBy doc:rule-1 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-1-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-1-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-1 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-2 a cml:Concept ;
+    skos:prefLabel "Rule 2"@en ;
+    cml:realizedBy doc:rule-2 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-2-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-2-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-2 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-3 a cml:Concept ;
+    skos:prefLabel "Rule 3"@en ;
+    cml:realizedBy doc:rule-3 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-3-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-3-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-3 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-4 a cml:Concept ;
+    skos:prefLabel "Rule 4"@en ;
+    cml:realizedBy doc:rule-4 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-4-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-4-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-4 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-5 a cml:Concept ;
+    skos:prefLabel "Rule 5"@en ;
+    cml:realizedBy doc:rule-5 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-5-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-5-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-5 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-6 a cml:Concept ;
+    skos:prefLabel "Rule 6"@en ;
+    cml:realizedBy doc:rule-6 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-6-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-6-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-6 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-7 a cml:Concept ;
+    skos:prefLabel "Rule 7"@en ;
+    cml:realizedBy doc:rule-7 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-7-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-7-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-7 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-8 a cml:Concept ;
+    skos:prefLabel "Rule 8"@en ;
+    cml:realizedBy doc:rule-8 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-8-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-8-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-8 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-9 a cml:Concept ;
+    skos:prefLabel "Rule 9"@en ;
+    cml:realizedBy doc:rule-9 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-9-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-9-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-9 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-10 a cml:Concept ;
+    skos:prefLabel "Rule 10"@en ;
+    cml:realizedBy doc:rule-10 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-10-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-10-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-10 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-11 a cml:Concept ;
+    skos:prefLabel "Rule 11"@en ;
+    cml:realizedBy doc:rule-11 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-11-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-11-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-11 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-12 a cml:Concept ;
+    skos:prefLabel "Rule 12"@en ;
+    cml:realizedBy doc:rule-12 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-12-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-12-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-12 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-13 a cml:Concept ;
+    skos:prefLabel "Rule 13"@en ;
+    cml:realizedBy doc:rule-13 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-13-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-13-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-13 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-14 a cml:Concept ;
+    skos:prefLabel "Rule 14"@en ;
+    cml:realizedBy doc:rule-14 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-14-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-14-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-14 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-15 a cml:Concept ;
+    skos:prefLabel "Rule 15"@en ;
+    cml:realizedBy doc:rule-15 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-15-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-15-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-15 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-16 a cml:Concept ;
+    skos:prefLabel "Rule 16"@en ;
+    cml:realizedBy doc:rule-16 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-16-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-16-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-16 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-17 a cml:Concept ;
+    skos:prefLabel "Rule 17"@en ;
+    cml:realizedBy doc:rule-17 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-17-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-17-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-17 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-18 a cml:Concept ;
+    skos:prefLabel "Rule 18"@en ;
+    cml:realizedBy doc:rule-18 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-18-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-18-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-18 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-19 a cml:Concept ;
+    skos:prefLabel "Rule 19"@en ;
+    cml:realizedBy doc:rule-19 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-19-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-19-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-19 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-20 a cml:Concept ;
+    skos:prefLabel "Rule 20"@en ;
+    cml:realizedBy doc:rule-20 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-20-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-20-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-20 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-21 a cml:Concept ;
+    skos:prefLabel "Rule 21"@en ;
+    cml:realizedBy doc:rule-21 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-21-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-21-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-21 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-22 a cml:Concept ;
+    skos:prefLabel "Rule 22"@en ;
+    cml:realizedBy doc:rule-22 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-22-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-22-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-22 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-23 a cml:Concept ;
+    skos:prefLabel "Rule 23"@en ;
+    cml:realizedBy doc:rule-23 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-23-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-23-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-23 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-24 a cml:Concept ;
+    skos:prefLabel "Rule 24"@en ;
+    cml:realizedBy doc:rule-24 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-24-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-24-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-24 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-25 a cml:Concept ;
+    skos:prefLabel "Rule 25"@en ;
+    cml:realizedBy doc:rule-25 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-25-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-25-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-25 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-26 a cml:Concept ;
+    skos:prefLabel "Rule 26"@en ;
+    cml:realizedBy doc:rule-26 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-26-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-26-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-26 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-27 a cml:Concept ;
+    skos:prefLabel "Rule 27"@en ;
+    cml:realizedBy doc:rule-27 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-27-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-27-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-27 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-28 a cml:Concept ;
+    skos:prefLabel "Rule 28"@en ;
+    cml:realizedBy doc:rule-28 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-28-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-28-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-28 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-29 a cml:Concept ;
+    skos:prefLabel "Rule 29"@en ;
+    cml:realizedBy doc:rule-29 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-29-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-29-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-29 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-30 a cml:Concept ;
+    skos:prefLabel "Rule 30"@en ;
+    cml:realizedBy doc:rule-30 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-30-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-30-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-30 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-31 a cml:Concept ;
+    skos:prefLabel "Rule 31"@en ;
+    cml:realizedBy doc:rule-31 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-31-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-31-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-31 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-32 a cml:Concept ;
+    skos:prefLabel "Rule 32"@en ;
+    cml:realizedBy doc:rule-32 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-32-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-32-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-32 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-33 a cml:Concept ;
+    skos:prefLabel "Rule 33"@en ;
+    cml:realizedBy doc:rule-33 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-33-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-33-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-33 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-34 a cml:Concept ;
+    skos:prefLabel "Rule 34"@en ;
+    cml:realizedBy doc:rule-34 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-34-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-34-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-34 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-35 a cml:Concept ;
+    skos:prefLabel "Rule 35"@en ;
+    cml:realizedBy doc:rule-35 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-35-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-35-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-35 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-36 a cml:Concept ;
+    skos:prefLabel "Rule 36"@en ;
+    cml:realizedBy doc:rule-36 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-36-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-36-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-36 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-37 a cml:Concept ;
+    skos:prefLabel "Rule 37"@en ;
+    cml:realizedBy doc:rule-37 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-37-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-37-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-37 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-38 a cml:Concept ;
+    skos:prefLabel "Rule 38"@en ;
+    cml:realizedBy doc:rule-38 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-38-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-38-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-38 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-39 a cml:Concept ;
+    skos:prefLabel "Rule 39"@en ;
+    cml:realizedBy doc:rule-39 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-39-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-39-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-39 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-40 a cml:Concept ;
+    skos:prefLabel "Rule 40"@en ;
+    cml:realizedBy doc:rule-40 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-40-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-40-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-40 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-41 a cml:Concept ;
+    skos:prefLabel "Rule 41"@en ;
+    cml:realizedBy doc:rule-41 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-41-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-41-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-41 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-42 a cml:Concept ;
+    skos:prefLabel "Rule 42"@en ;
+    cml:realizedBy doc:rule-42 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-42-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-42-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-42 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-43 a cml:Concept ;
+    skos:prefLabel "Rule 43"@en ;
+    cml:realizedBy doc:rule-43 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-43-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-43-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-43 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-44 a cml:Concept ;
+    skos:prefLabel "Rule 44"@en ;
+    cml:realizedBy doc:rule-44 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-44-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-44-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-44 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-45 a cml:Concept ;
+    skos:prefLabel "Rule 45"@en ;
+    cml:realizedBy doc:rule-45 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-45-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-45-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-45 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-46 a cml:Concept ;
+    skos:prefLabel "Rule 46"@en ;
+    cml:realizedBy doc:rule-46 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-46-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-46-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-46 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-47 a cml:Concept ;
+    skos:prefLabel "Rule 47"@en ;
+    cml:realizedBy doc:rule-47 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-47-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-47-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-47 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-48 a cml:Concept ;
+    skos:prefLabel "Rule 48"@en ;
+    cml:realizedBy doc:rule-48 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-48-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-48-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-48 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-49 a cml:Concept ;
+    skos:prefLabel "Rule 49"@en ;
+    cml:realizedBy doc:rule-49 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-49-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-49-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-49 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-50 a cml:Concept ;
+    skos:prefLabel "Rule 50"@en ;
+    cml:realizedBy doc:rule-50 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-50-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-50-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-50 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-51 a cml:Concept ;
+    skos:prefLabel "Rule 51"@en ;
+    cml:realizedBy doc:rule-51 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-51-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-51-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-51 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-52 a cml:Concept ;
+    skos:prefLabel "Rule 52"@en ;
+    cml:realizedBy doc:rule-52 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-52-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-52-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-52 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-53 a cml:Concept ;
+    skos:prefLabel "Rule 53"@en ;
+    cml:realizedBy doc:rule-53 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-53-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-53-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-53 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-54 a cml:Concept ;
+    skos:prefLabel "Rule 54"@en ;
+    cml:realizedBy doc:rule-54 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-54-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-54-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-54 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-55 a cml:Concept ;
+    skos:prefLabel "Rule 55"@en ;
+    cml:realizedBy doc:rule-55 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-55-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-55-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-55 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-56 a cml:Concept ;
+    skos:prefLabel "Rule 56"@en ;
+    cml:realizedBy doc:rule-56 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-56-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-56-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-56 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-57 a cml:Concept ;
+    skos:prefLabel "Rule 57"@en ;
+    cml:realizedBy doc:rule-57 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-57-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-57-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-57 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-58 a cml:Concept ;
+    skos:prefLabel "Rule 58"@en ;
+    cml:realizedBy doc:rule-58 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-58-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-58-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-58 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-59 a cml:Concept ;
+    skos:prefLabel "Rule 59"@en ;
+    cml:realizedBy doc:rule-59 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-59-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-59-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-59 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-60 a cml:Concept ;
+    skos:prefLabel "Rule 60"@en ;
+    cml:realizedBy doc:rule-60 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-60-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-60-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-60 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-61 a cml:Concept ;
+    skos:prefLabel "Rule 61"@en ;
+    cml:realizedBy doc:rule-61 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-61-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-61-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-61 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-62 a cml:Concept ;
+    skos:prefLabel "Rule 62"@en ;
+    cml:realizedBy doc:rule-62 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-62-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-62-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-62 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-63 a cml:Concept ;
+    skos:prefLabel "Rule 63"@en ;
+    cml:realizedBy doc:rule-63 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-63-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-63-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-63 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-64 a cml:Concept ;
+    skos:prefLabel "Rule 64"@en ;
+    cml:realizedBy doc:rule-64 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-64-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-64-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-64 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-65 a cml:Concept ;
+    skos:prefLabel "Rule 65"@en ;
+    cml:realizedBy doc:rule-65 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-65-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-65-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-65 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-66 a cml:Concept ;
+    skos:prefLabel "Rule 66"@en ;
+    cml:realizedBy doc:rule-66 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-66-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-66-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-66 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-67 a cml:Concept ;
+    skos:prefLabel "Rule 67"@en ;
+    cml:realizedBy doc:rule-67 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-67-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-67-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-67 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-68 a cml:Concept ;
+    skos:prefLabel "Rule 68"@en ;
+    cml:realizedBy doc:rule-68 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-68-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-68-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-68 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-69 a cml:Concept ;
+    skos:prefLabel "Rule 69"@en ;
+    cml:realizedBy doc:rule-69 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-69-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-69-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-69 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-70 a cml:Concept ;
+    skos:prefLabel "Rule 70"@en ;
+    cml:realizedBy doc:rule-70 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/united-nations-rules-treatment-women-prisoners-and-non-custodial> ;
+    dc:date "21 December 2010" ;
+    values:category "Administration of justice, detention & law enforcement" ;
+    cml:asserts concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-70-norm .
+
+concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-70-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:united-nations-rules-treatment-women-prisoners-and-non-custodial-rule-70 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .

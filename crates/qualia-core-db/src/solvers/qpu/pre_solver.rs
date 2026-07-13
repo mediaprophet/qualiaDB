@@ -98,6 +98,7 @@ impl QuboFormulation {
             num_qubits: self.num_variables,
             hamiltonian: serde_json::to_string(self).ok(),
             circuit: None,
+            circuit_depth: 1,
             shots: 1000,
             extra: serde_json::json!({"formulation": "qubo"}),
         }
@@ -172,6 +173,7 @@ impl CircuitFormulation {
             num_qubits: self.num_qubits,
             hamiltonian: None,
             circuit: serde_json::to_string(self).ok(),
+            circuit_depth: self.gates.len() as u32,
             shots: 1000,
             extra: serde_json::json!({"formulation": "circuit"}),
         }
@@ -212,7 +214,10 @@ impl PreSolver {
         Ok(qubo.to_job_parameters())
     }
 
-    fn formulate_circuit(&mut self, problem: &ProblemDescription) -> Result<JobParameters, QpuError> {
+    fn formulate_circuit(
+        &mut self,
+        problem: &ProblemDescription,
+    ) -> Result<JobParameters, QpuError> {
         let mut circuit = CircuitFormulation::new(problem.variables.len() as u32);
         self.variable_map.clear();
         for var in &problem.variables {
@@ -271,7 +276,10 @@ impl PreSolver {
                 }
                 Ok(())
             }
-            ref t => Err(QpuError::Api(format!("Constraint type {:?} not supported for QUBO", t))),
+            ref t => Err(QpuError::Api(format!(
+                "Constraint type {:?} not supported for QUBO",
+                t
+            ))),
         }
     }
 
@@ -281,8 +289,16 @@ impl PreSolver {
         c: &Constraint,
     ) -> Result<(), QpuError> {
         if c.constraint_type == ConstraintType::Logical && c.variables.len() == 2 {
-            let a = self.variable_map.get(c.variables[0].as_str()).copied().unwrap_or(0);
-            let b = self.variable_map.get(c.variables[1].as_str()).copied().unwrap_or(0);
+            let a = self
+                .variable_map
+                .get(c.variables[0].as_str())
+                .copied()
+                .unwrap_or(0);
+            let b = self
+                .variable_map
+                .get(c.variables[1].as_str())
+                .copied()
+                .unwrap_or(0);
             circuit.add_gate(Gate {
                 gate_type: GateType::CNOT,
                 qubits: vec![a, b],
@@ -319,7 +335,10 @@ impl PreSolver {
                 }
                 Ok(())
             }
-            ref t => Err(QpuError::Api(format!("Objective type {:?} not supported", t))),
+            ref t => Err(QpuError::Api(format!(
+                "Objective type {:?} not supported",
+                t
+            ))),
         }
     }
 }
@@ -338,8 +357,16 @@ mod tests {
         ProblemDescription {
             problem_type: pt,
             variables: vec![
-                Variable { name: "x0".into(), domain: VariableDomain::Binary, index: 0 },
-                Variable { name: "x1".into(), domain: VariableDomain::Binary, index: 1 },
+                Variable {
+                    name: "x0".into(),
+                    domain: VariableDomain::Binary,
+                    index: 0,
+                },
+                Variable {
+                    name: "x1".into(),
+                    domain: VariableDomain::Binary,
+                    index: 1,
+                },
             ],
             constraints: vec![],
             objective: Objective {
@@ -353,7 +380,9 @@ mod tests {
     #[test]
     fn qubo_formulation_roundtrip() {
         let mut solver = PreSolver::new();
-        let params = solver.formulate(&two_var_problem(ProblemType::Annealing)).unwrap();
+        let params = solver
+            .formulate(&two_var_problem(ProblemType::Annealing))
+            .unwrap();
         assert_eq!(params.num_qubits, 2);
         assert!(params.hamiltonian.is_some());
     }
@@ -361,7 +390,9 @@ mod tests {
     #[test]
     fn circuit_formulation_roundtrip() {
         let mut solver = PreSolver::new();
-        let params = solver.formulate(&two_var_problem(ProblemType::GateModel)).unwrap();
+        let params = solver
+            .formulate(&two_var_problem(ProblemType::GateModel))
+            .unwrap();
         assert_eq!(params.num_qubits, 2);
         assert!(params.circuit.is_some());
     }

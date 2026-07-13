@@ -1,21 +1,21 @@
 const $ = (id) => document.getElementById(id);
 
-async function loadStatus() {
-  const res = await fetch("/api/status");
-  if (!res.ok) throw new Error(`status ${res.status}`);
+async function fetchJson(path) {
+  const res = await fetch(path);
+  if (!res.ok) throw new Error(`${path} ${res.status}`);
   return res.json();
+}
+
+async function loadStatus() {
+  return fetchJson("/api/status");
 }
 
 async function loadConfig() {
-  const res = await fetch("/api/config");
-  if (!res.ok) throw new Error(`config ${res.status}`);
-  return res.json();
+  return fetchJson("/api/config");
 }
 
 async function loadJobs() {
-  const res = await fetch("/api/jobs");
-  if (!res.ok) throw new Error(`jobs ${res.status}`);
-  return res.json();
+  return fetchJson("/api/jobs");
 }
 
 function fillForm(cfg) {
@@ -29,18 +29,22 @@ function fillForm(cfg) {
 function renderStatus(s) {
   $("origin-label").textContent = `127.0.0.1:${s.settings_port}`;
   $("st-settings").innerHTML = `<span class="ok">Running</span> on :${s.settings_port}`;
+
   const daemonCls = s.graph_daemon_reachable ? "ok" : "bad";
-  const ver = s.graph_engine_version ? ` · ${s.graph_engine_version}` : "";
+  const ver = s.graph_engine_version ? ` - ${s.graph_engine_version}` : "";
   $("st-daemon").innerHTML =
     `<span class="${daemonCls}">${s.graph_daemon_reachable ? "Reachable" : "Unreachable"}</span> ` +
     `127.0.0.1:${s.graph_daemon_port}${ver}`;
+
   $("st-qapps").textContent =
     s.qapps_protocol_port ? `http://127.0.0.1:${s.qapps_protocol_port}/` : "Not started";
+
   if (s.job_queue) {
     const jq = s.job_queue;
     $("st-jobs").textContent =
-      `${jq.queued} queued · ${jq.running} running · ${jq.completed} done · ${jq.failed} failed`;
+      `${jq.queued} queued - ${jq.running} running - ${jq.completed} done - ${jq.failed} failed`;
   }
+
   $("link-daemon-health").href = `http://127.0.0.1:${s.graph_daemon_port}/health`;
 }
 
@@ -51,11 +55,12 @@ function kindLabel(kind) {
 
 function renderJobs(snapshot) {
   const body = $("jobs-body");
-  const jobs = (snapshot.jobs || []).slice().reverse();
+  const jobs = (snapshot.jobs || []).slice().reverse().slice(0, 12);
   if (!jobs.length) {
     body.innerHTML = '<tr><td colspan="5">No jobs yet.</td></tr>';
     return;
   }
+
   body.innerHTML = jobs.map((job) => {
     const pct = Math.round((job.progress || 0) * 100);
     const cancelBtn =
@@ -65,11 +70,12 @@ function renderJobs(snapshot) {
     return `<tr>
       <td class="status-${job.status}">${job.status}</td>
       <td>${kindLabel(job.kind)}</td>
-      <td>${job.message || ""}${job.error ? ` — ${job.error}` : ""}</td>
+      <td>${job.message || ""}${job.error ? ` - ${job.error}` : ""}</td>
       <td>${pct}%</td>
       <td>${cancelBtn}</td>
     </tr>`;
   }).join("");
+
   body.querySelectorAll("[data-cancel]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       await fetch(`/api/jobs/${btn.dataset.cancel}/cancel`, { method: "POST" });
@@ -114,8 +120,7 @@ function buildJobPayload(form) {
 async function refreshJobs() {
   const snapshot = await loadJobs();
   renderJobs(snapshot);
-  const status = await loadStatus();
-  renderStatus(status);
+  renderStatus(await loadStatus());
 }
 
 function wireTelemetry() {
@@ -125,7 +130,16 @@ function wireTelemetry() {
     const line = e.data.trim();
     log.textContent = (log.textContent + "\n" + line).trim().split("\n").slice(-8).join("\n");
   };
-  es.onerror = () => { log.textContent = "Telemetry stream disconnected."; };
+  es.onerror = () => {
+    log.textContent = "Telemetry stream disconnected.";
+  };
+}
+
+async function refresh() {
+  const [status, config] = await Promise.all([loadStatus(), loadConfig()]);
+  renderStatus(status);
+  fillForm(config);
+  renderJobs(await loadJobs());
 }
 
 $("job-kind").addEventListener("change", syncJobFormFields);
@@ -142,14 +156,14 @@ $("job-form").addEventListener("submit", async (ev) => {
     alert("URI is required.");
     return;
   }
+
   const res = await fetch("/api/jobs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    const text = await res.text();
-    alert(`Enqueue failed: ${text}`);
+    alert(`Enqueue failed: ${await res.text()}`);
     return;
   }
   await refreshJobs();
@@ -168,8 +182,9 @@ $("config-form").addEventListener("submit", async (ev) => {
     inference_backend: form.inference_backend.value,
     base_connectivity_cost_ilp: Number(form.base_connectivity_cost_ilp.value),
   };
+
   const msg = $("save-msg");
-  msg.textContent = "Saving…";
+  msg.textContent = "Saving...";
   const res = await fetch("/api/config", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -179,15 +194,12 @@ $("config-form").addEventListener("submit", async (ev) => {
   if (res.ok) await refresh();
 });
 
-async function refresh() {
-  const [status, config] = await Promise.all([loadStatus(), loadConfig()]);
-  renderStatus(status);
-  fillForm(config);
-  await refreshJobs();
-}
-
 refresh().catch((err) => {
   $("st-settings").innerHTML = `<span class="bad">${err.message}</span>`;
+  $("st-daemon").textContent = "Status unavailable";
+  $("st-qapps").textContent = "Status unavailable";
+  $("st-jobs").textContent = "Status unavailable";
 });
+
 wireTelemetry();
 setInterval(() => refreshJobs().catch(() => {}), 4000);

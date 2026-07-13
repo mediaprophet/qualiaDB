@@ -1,0 +1,2222 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix dc:      <http://purl.org/dc/terms/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix values:  <https://ns.webcivics.net/values/> .
+@prefix cml:     <https://ns.webcivics.net/cml/> .
+@prefix concept: <https://ns.webcivics.net/concept/> .
+@prefix doc:     <https://ns.webcivics.net/values/rome-statute-international-criminal-court#> .
+
+# ============================================================
+# CML concept layer (LOGIC) — Rome Statute of the International Criminal Court
+# MACHINE-DERIVED from the TEXT layer (un-instruments) — cml:Proposed,
+# values:HeuristicDerived. Pending human attestation (cml:Attested / exactMatch).
+# One cml:Concept per provision; cml:realizedBy the provision; cml:asserts the
+# deontic norm. R1 universalisation materialised for duties borne by every Agent.
+# ============================================================
+
+concept:rome-statute-international-criminal-court-article-1 a cml:Concept ;
+    skos:prefLabel "Article 1"@en ;
+    cml:realizedBy doc:article-1 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-1-norm .
+
+concept:rome-statute-international-criminal-court-article-1-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-1 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-2 a cml:Concept ;
+    skos:prefLabel "Article 2"@en ;
+    cml:realizedBy doc:article-2 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-2-norm .
+
+concept:rome-statute-international-criminal-court-article-2-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-2 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-3 a cml:Concept ;
+    skos:prefLabel "Article 3"@en ;
+    cml:realizedBy doc:article-3 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-3-norm .
+
+concept:rome-statute-international-criminal-court-article-3-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-3 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-4 a cml:Concept ;
+    skos:prefLabel "Article 4"@en ;
+    cml:realizedBy doc:article-4 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-4-norm .
+
+concept:rome-statute-international-criminal-court-article-4-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-4 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-5 a cml:Concept ;
+    skos:prefLabel "Article 5"@en ;
+    cml:realizedBy doc:article-5 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-5-norm .
+
+concept:rome-statute-international-criminal-court-article-5-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-5 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-6 a cml:Concept ;
+    skos:prefLabel "Article 6"@en ;
+    cml:realizedBy doc:article-6 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-6-norm .
+
+concept:rome-statute-international-criminal-court-article-6-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-6 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-7 a cml:Concept ;
+    skos:prefLabel "Article 7"@en ;
+    cml:realizedBy doc:article-7 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-7-norm .
+
+concept:rome-statute-international-criminal-court-article-7-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-7 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-8 a cml:Concept ;
+    skos:prefLabel "Article 8"@en ;
+    cml:realizedBy doc:article-8 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-8-norm .
+
+concept:rome-statute-international-criminal-court-article-8-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-8 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-9 a cml:Concept ;
+    skos:prefLabel "Article 9"@en ;
+    cml:realizedBy doc:article-9 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-9-norm .
+
+concept:rome-statute-international-criminal-court-article-9-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-9 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-10 a cml:Concept ;
+    skos:prefLabel "Article 10"@en ;
+    cml:realizedBy doc:article-10 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-10-norm .
+
+concept:rome-statute-international-criminal-court-article-10-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-10 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-11 a cml:Concept ;
+    skos:prefLabel "Article 11"@en ;
+    cml:realizedBy doc:article-11 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-11-norm .
+
+concept:rome-statute-international-criminal-court-article-11-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-11 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-12 a cml:Concept ;
+    skos:prefLabel "Article 12"@en ;
+    cml:realizedBy doc:article-12 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-12-norm .
+
+concept:rome-statute-international-criminal-court-article-12-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-12 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-13 a cml:Concept ;
+    skos:prefLabel "Article 13"@en ;
+    cml:realizedBy doc:article-13 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-13-norm .
+
+concept:rome-statute-international-criminal-court-article-13-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-13 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-14 a cml:Concept ;
+    skos:prefLabel "Article 14"@en ;
+    cml:realizedBy doc:article-14 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-14-norm .
+
+concept:rome-statute-international-criminal-court-article-14-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-14 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-15 a cml:Concept ;
+    skos:prefLabel "Article 15"@en ;
+    cml:realizedBy doc:article-15 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-15-norm .
+
+concept:rome-statute-international-criminal-court-article-15-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-15 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-16 a cml:Concept ;
+    skos:prefLabel "Article 16"@en ;
+    cml:realizedBy doc:article-16 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-16-norm .
+
+concept:rome-statute-international-criminal-court-article-16-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-16 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-17 a cml:Concept ;
+    skos:prefLabel "Article 17"@en ;
+    cml:realizedBy doc:article-17 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-17-norm .
+
+concept:rome-statute-international-criminal-court-article-17-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-17 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-18 a cml:Concept ;
+    skos:prefLabel "Article 18"@en ;
+    cml:realizedBy doc:article-18 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-18-norm .
+
+concept:rome-statute-international-criminal-court-article-18-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-18 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-19 a cml:Concept ;
+    skos:prefLabel "Article 19"@en ;
+    cml:realizedBy doc:article-19 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-19-norm .
+
+concept:rome-statute-international-criminal-court-article-19-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-19 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-20 a cml:Concept ;
+    skos:prefLabel "Article 20"@en ;
+    cml:realizedBy doc:article-20 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-20-norm .
+
+concept:rome-statute-international-criminal-court-article-20-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-20 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-21 a cml:Concept ;
+    skos:prefLabel "Article 21"@en ;
+    cml:realizedBy doc:article-21 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-21-norm .
+
+concept:rome-statute-international-criminal-court-article-21-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-21 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-22 a cml:Concept ;
+    skos:prefLabel "Article 22"@en ;
+    cml:realizedBy doc:article-22 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-22-norm .
+
+concept:rome-statute-international-criminal-court-article-22-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-22 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-23 a cml:Concept ;
+    skos:prefLabel "Article 23"@en ;
+    cml:realizedBy doc:article-23 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-23-norm .
+
+concept:rome-statute-international-criminal-court-article-23-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-23 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-24 a cml:Concept ;
+    skos:prefLabel "Article 24"@en ;
+    cml:realizedBy doc:article-24 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-24-norm .
+
+concept:rome-statute-international-criminal-court-article-24-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-24 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-25 a cml:Concept ;
+    skos:prefLabel "Article 25"@en ;
+    cml:realizedBy doc:article-25 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-25-norm .
+
+concept:rome-statute-international-criminal-court-article-25-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-25 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-26 a cml:Concept ;
+    skos:prefLabel "Article 26"@en ;
+    cml:realizedBy doc:article-26 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-26-norm .
+
+concept:rome-statute-international-criminal-court-article-26-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-26 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-27 a cml:Concept ;
+    skos:prefLabel "Article 27"@en ;
+    cml:realizedBy doc:article-27 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-27-norm .
+
+concept:rome-statute-international-criminal-court-article-27-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-27 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-28 a cml:Concept ;
+    skos:prefLabel "Article 28"@en ;
+    cml:realizedBy doc:article-28 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-28-norm .
+
+concept:rome-statute-international-criminal-court-article-28-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-28 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-29 a cml:Concept ;
+    skos:prefLabel "Article 29"@en ;
+    cml:realizedBy doc:article-29 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-29-norm .
+
+concept:rome-statute-international-criminal-court-article-29-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-29 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-30 a cml:Concept ;
+    skos:prefLabel "Article 30"@en ;
+    cml:realizedBy doc:article-30 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-30-norm .
+
+concept:rome-statute-international-criminal-court-article-30-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-30 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-31 a cml:Concept ;
+    skos:prefLabel "Article 31"@en ;
+    cml:realizedBy doc:article-31 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-31-norm .
+
+concept:rome-statute-international-criminal-court-article-31-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-31 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-32 a cml:Concept ;
+    skos:prefLabel "Article 32"@en ;
+    cml:realizedBy doc:article-32 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-32-norm .
+
+concept:rome-statute-international-criminal-court-article-32-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-32 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-33 a cml:Concept ;
+    skos:prefLabel "Article 33"@en ;
+    cml:realizedBy doc:article-33 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-33-norm .
+
+concept:rome-statute-international-criminal-court-article-33-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-33 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-34 a cml:Concept ;
+    skos:prefLabel "Article 34"@en ;
+    cml:realizedBy doc:article-34 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-34-norm .
+
+concept:rome-statute-international-criminal-court-article-34-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-34 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-35 a cml:Concept ;
+    skos:prefLabel "Article 35"@en ;
+    cml:realizedBy doc:article-35 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-35-norm .
+
+concept:rome-statute-international-criminal-court-article-35-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-35 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-36 a cml:Concept ;
+    skos:prefLabel "Article 36"@en ;
+    cml:realizedBy doc:article-36 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-36-norm .
+
+concept:rome-statute-international-criminal-court-article-36-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-36 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-37 a cml:Concept ;
+    skos:prefLabel "Article 37"@en ;
+    cml:realizedBy doc:article-37 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-37-norm .
+
+concept:rome-statute-international-criminal-court-article-37-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-37 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-38 a cml:Concept ;
+    skos:prefLabel "Article 38"@en ;
+    cml:realizedBy doc:article-38 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-38-norm .
+
+concept:rome-statute-international-criminal-court-article-38-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-38 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-39 a cml:Concept ;
+    skos:prefLabel "Article 39"@en ;
+    cml:realizedBy doc:article-39 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-39-norm .
+
+concept:rome-statute-international-criminal-court-article-39-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-39 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-40 a cml:Concept ;
+    skos:prefLabel "Article 40"@en ;
+    cml:realizedBy doc:article-40 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-40-norm .
+
+concept:rome-statute-international-criminal-court-article-40-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-40 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-41 a cml:Concept ;
+    skos:prefLabel "Article 41"@en ;
+    cml:realizedBy doc:article-41 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-41-norm .
+
+concept:rome-statute-international-criminal-court-article-41-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-41 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-42 a cml:Concept ;
+    skos:prefLabel "Article 42"@en ;
+    cml:realizedBy doc:article-42 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-42-norm .
+
+concept:rome-statute-international-criminal-court-article-42-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-42 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-43 a cml:Concept ;
+    skos:prefLabel "Article 43"@en ;
+    cml:realizedBy doc:article-43 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-43-norm .
+
+concept:rome-statute-international-criminal-court-article-43-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-43 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-44 a cml:Concept ;
+    skos:prefLabel "Article 44"@en ;
+    cml:realizedBy doc:article-44 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-44-norm .
+
+concept:rome-statute-international-criminal-court-article-44-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-44 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-45 a cml:Concept ;
+    skos:prefLabel "Article 45"@en ;
+    cml:realizedBy doc:article-45 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-45-norm .
+
+concept:rome-statute-international-criminal-court-article-45-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-45 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-46 a cml:Concept ;
+    skos:prefLabel "Article 46"@en ;
+    cml:realizedBy doc:article-46 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-46-norm .
+
+concept:rome-statute-international-criminal-court-article-46-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-46 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-47 a cml:Concept ;
+    skos:prefLabel "Article 47"@en ;
+    cml:realizedBy doc:article-47 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-47-norm .
+
+concept:rome-statute-international-criminal-court-article-47-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-47 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-48 a cml:Concept ;
+    skos:prefLabel "Article 48"@en ;
+    cml:realizedBy doc:article-48 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-48-norm .
+
+concept:rome-statute-international-criminal-court-article-48-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-48 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-49 a cml:Concept ;
+    skos:prefLabel "Article 49"@en ;
+    cml:realizedBy doc:article-49 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-49-norm .
+
+concept:rome-statute-international-criminal-court-article-49-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-49 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-50 a cml:Concept ;
+    skos:prefLabel "Article 50"@en ;
+    cml:realizedBy doc:article-50 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-50-norm .
+
+concept:rome-statute-international-criminal-court-article-50-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-50 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-51 a cml:Concept ;
+    skos:prefLabel "Article 51"@en ;
+    cml:realizedBy doc:article-51 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-51-norm .
+
+concept:rome-statute-international-criminal-court-article-51-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-51 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-52 a cml:Concept ;
+    skos:prefLabel "Article 52"@en ;
+    cml:realizedBy doc:article-52 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-52-norm .
+
+concept:rome-statute-international-criminal-court-article-52-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-52 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-53 a cml:Concept ;
+    skos:prefLabel "Article 53"@en ;
+    cml:realizedBy doc:article-53 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-53-norm .
+
+concept:rome-statute-international-criminal-court-article-53-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-53 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-54 a cml:Concept ;
+    skos:prefLabel "Article 54"@en ;
+    cml:realizedBy doc:article-54 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-54-norm .
+
+concept:rome-statute-international-criminal-court-article-54-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-54 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-55 a cml:Concept ;
+    skos:prefLabel "Article 55"@en ;
+    cml:realizedBy doc:article-55 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-55-norm .
+
+concept:rome-statute-international-criminal-court-article-55-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-55 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-56 a cml:Concept ;
+    skos:prefLabel "Article 56"@en ;
+    cml:realizedBy doc:article-56 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-56-norm .
+
+concept:rome-statute-international-criminal-court-article-56-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-56 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-57 a cml:Concept ;
+    skos:prefLabel "Article 57"@en ;
+    cml:realizedBy doc:article-57 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-57-norm .
+
+concept:rome-statute-international-criminal-court-article-57-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-57 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-58 a cml:Concept ;
+    skos:prefLabel "Article 58"@en ;
+    cml:realizedBy doc:article-58 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-58-norm .
+
+concept:rome-statute-international-criminal-court-article-58-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-58 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-59 a cml:Concept ;
+    skos:prefLabel "Article 59"@en ;
+    cml:realizedBy doc:article-59 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-59-norm .
+
+concept:rome-statute-international-criminal-court-article-59-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-59 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-60 a cml:Concept ;
+    skos:prefLabel "Article 60"@en ;
+    cml:realizedBy doc:article-60 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-60-norm .
+
+concept:rome-statute-international-criminal-court-article-60-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-60 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-61 a cml:Concept ;
+    skos:prefLabel "Article 61"@en ;
+    cml:realizedBy doc:article-61 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-61-norm .
+
+concept:rome-statute-international-criminal-court-article-61-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-61 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-62 a cml:Concept ;
+    skos:prefLabel "Article 62"@en ;
+    cml:realizedBy doc:article-62 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-62-norm .
+
+concept:rome-statute-international-criminal-court-article-62-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-62 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-63 a cml:Concept ;
+    skos:prefLabel "Article 63"@en ;
+    cml:realizedBy doc:article-63 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-63-norm .
+
+concept:rome-statute-international-criminal-court-article-63-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-63 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-64 a cml:Concept ;
+    skos:prefLabel "Article 64"@en ;
+    cml:realizedBy doc:article-64 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-64-norm .
+
+concept:rome-statute-international-criminal-court-article-64-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-64 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-65 a cml:Concept ;
+    skos:prefLabel "Article 65"@en ;
+    cml:realizedBy doc:article-65 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-65-norm .
+
+concept:rome-statute-international-criminal-court-article-65-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-65 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-66 a cml:Concept ;
+    skos:prefLabel "Article 66"@en ;
+    cml:realizedBy doc:article-66 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-66-norm .
+
+concept:rome-statute-international-criminal-court-article-66-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-66 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-67 a cml:Concept ;
+    skos:prefLabel "Article 67"@en ;
+    cml:realizedBy doc:article-67 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-67-norm .
+
+concept:rome-statute-international-criminal-court-article-67-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-67 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-68 a cml:Concept ;
+    skos:prefLabel "Article 68"@en ;
+    cml:realizedBy doc:article-68 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-68-norm .
+
+concept:rome-statute-international-criminal-court-article-68-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-68 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-69 a cml:Concept ;
+    skos:prefLabel "Article 69"@en ;
+    cml:realizedBy doc:article-69 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-69-norm .
+
+concept:rome-statute-international-criminal-court-article-69-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-69 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-70 a cml:Concept ;
+    skos:prefLabel "Article 70"@en ;
+    cml:realizedBy doc:article-70 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-70-norm .
+
+concept:rome-statute-international-criminal-court-article-70-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-70 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-71 a cml:Concept ;
+    skos:prefLabel "Article 71"@en ;
+    cml:realizedBy doc:article-71 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-71-norm .
+
+concept:rome-statute-international-criminal-court-article-71-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-71 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-72 a cml:Concept ;
+    skos:prefLabel "Article 72"@en ;
+    cml:realizedBy doc:article-72 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-72-norm .
+
+concept:rome-statute-international-criminal-court-article-72-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-72 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-73 a cml:Concept ;
+    skos:prefLabel "Article 73"@en ;
+    cml:realizedBy doc:article-73 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-73-norm .
+
+concept:rome-statute-international-criminal-court-article-73-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-73 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-74 a cml:Concept ;
+    skos:prefLabel "Article 74"@en ;
+    cml:realizedBy doc:article-74 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-74-norm .
+
+concept:rome-statute-international-criminal-court-article-74-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-74 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-75 a cml:Concept ;
+    skos:prefLabel "Article 75"@en ;
+    cml:realizedBy doc:article-75 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-75-norm .
+
+concept:rome-statute-international-criminal-court-article-75-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-75 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-76 a cml:Concept ;
+    skos:prefLabel "Article 76"@en ;
+    cml:realizedBy doc:article-76 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-76-norm .
+
+concept:rome-statute-international-criminal-court-article-76-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-76 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-77 a cml:Concept ;
+    skos:prefLabel "Article 77"@en ;
+    cml:realizedBy doc:article-77 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-77-norm .
+
+concept:rome-statute-international-criminal-court-article-77-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-77 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-78 a cml:Concept ;
+    skos:prefLabel "Article 78"@en ;
+    cml:realizedBy doc:article-78 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-78-norm .
+
+concept:rome-statute-international-criminal-court-article-78-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-78 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-79 a cml:Concept ;
+    skos:prefLabel "Article 79"@en ;
+    cml:realizedBy doc:article-79 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-79-norm .
+
+concept:rome-statute-international-criminal-court-article-79-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-79 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-80 a cml:Concept ;
+    skos:prefLabel "Article 80"@en ;
+    cml:realizedBy doc:article-80 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-80-norm .
+
+concept:rome-statute-international-criminal-court-article-80-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-80 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-81 a cml:Concept ;
+    skos:prefLabel "Article 81"@en ;
+    cml:realizedBy doc:article-81 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-81-norm .
+
+concept:rome-statute-international-criminal-court-article-81-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-81 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-82 a cml:Concept ;
+    skos:prefLabel "Article 82"@en ;
+    cml:realizedBy doc:article-82 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-82-norm .
+
+concept:rome-statute-international-criminal-court-article-82-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-82 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-83 a cml:Concept ;
+    skos:prefLabel "Article 83"@en ;
+    cml:realizedBy doc:article-83 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-83-norm .
+
+concept:rome-statute-international-criminal-court-article-83-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-83 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-84 a cml:Concept ;
+    skos:prefLabel "Article 84"@en ;
+    cml:realizedBy doc:article-84 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-84-norm .
+
+concept:rome-statute-international-criminal-court-article-84-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-84 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-85 a cml:Concept ;
+    skos:prefLabel "Article 85"@en ;
+    cml:realizedBy doc:article-85 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-85-norm .
+
+concept:rome-statute-international-criminal-court-article-85-norm a values:Right ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-85 ;
+    values:heldBy values:NaturalPerson ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-86 a cml:Concept ;
+    skos:prefLabel "Article 86"@en ;
+    cml:realizedBy doc:article-86 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-86-norm .
+
+concept:rome-statute-international-criminal-court-article-86-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-86 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-87 a cml:Concept ;
+    skos:prefLabel "Article 87"@en ;
+    cml:realizedBy doc:article-87 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-87-norm .
+
+concept:rome-statute-international-criminal-court-article-87-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-87 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-88 a cml:Concept ;
+    skos:prefLabel "Article 88"@en ;
+    cml:realizedBy doc:article-88 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-88-norm .
+
+concept:rome-statute-international-criminal-court-article-88-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-88 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-89 a cml:Concept ;
+    skos:prefLabel "Article 89"@en ;
+    cml:realizedBy doc:article-89 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-89-norm .
+
+concept:rome-statute-international-criminal-court-article-89-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-89 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-90 a cml:Concept ;
+    skos:prefLabel "Article 90"@en ;
+    cml:realizedBy doc:article-90 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-90-norm .
+
+concept:rome-statute-international-criminal-court-article-90-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-90 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-91 a cml:Concept ;
+    skos:prefLabel "Article 91"@en ;
+    cml:realizedBy doc:article-91 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-91-norm .
+
+concept:rome-statute-international-criminal-court-article-91-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-91 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-92 a cml:Concept ;
+    skos:prefLabel "Article 92"@en ;
+    cml:realizedBy doc:article-92 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-92-norm .
+
+concept:rome-statute-international-criminal-court-article-92-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-92 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-93 a cml:Concept ;
+    skos:prefLabel "Article 93"@en ;
+    cml:realizedBy doc:article-93 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-93-norm .
+
+concept:rome-statute-international-criminal-court-article-93-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-93 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-94 a cml:Concept ;
+    skos:prefLabel "Article 94"@en ;
+    cml:realizedBy doc:article-94 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-94-norm .
+
+concept:rome-statute-international-criminal-court-article-94-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-94 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-95 a cml:Concept ;
+    skos:prefLabel "Article 95"@en ;
+    cml:realizedBy doc:article-95 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-95-norm .
+
+concept:rome-statute-international-criminal-court-article-95-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-95 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-96 a cml:Concept ;
+    skos:prefLabel "Article 96"@en ;
+    cml:realizedBy doc:article-96 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-96-norm .
+
+concept:rome-statute-international-criminal-court-article-96-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-96 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-97 a cml:Concept ;
+    skos:prefLabel "Article 97"@en ;
+    cml:realizedBy doc:article-97 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-97-norm .
+
+concept:rome-statute-international-criminal-court-article-97-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-97 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-98 a cml:Concept ;
+    skos:prefLabel "Article 98"@en ;
+    cml:realizedBy doc:article-98 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-98-norm .
+
+concept:rome-statute-international-criminal-court-article-98-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-98 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-99 a cml:Concept ;
+    skos:prefLabel "Article 99"@en ;
+    cml:realizedBy doc:article-99 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-99-norm .
+
+concept:rome-statute-international-criminal-court-article-99-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-99 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-100 a cml:Concept ;
+    skos:prefLabel "Article 100"@en ;
+    cml:realizedBy doc:article-100 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-100-norm .
+
+concept:rome-statute-international-criminal-court-article-100-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-100 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-101 a cml:Concept ;
+    skos:prefLabel "Article 101"@en ;
+    cml:realizedBy doc:article-101 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-101-norm .
+
+concept:rome-statute-international-criminal-court-article-101-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-101 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-102 a cml:Concept ;
+    skos:prefLabel "Article 102"@en ;
+    cml:realizedBy doc:article-102 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-102-norm .
+
+concept:rome-statute-international-criminal-court-article-102-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-102 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-103 a cml:Concept ;
+    skos:prefLabel "Article 103"@en ;
+    cml:realizedBy doc:article-103 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-103-norm .
+
+concept:rome-statute-international-criminal-court-article-103-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-103 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-104 a cml:Concept ;
+    skos:prefLabel "Article 104"@en ;
+    cml:realizedBy doc:article-104 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-104-norm .
+
+concept:rome-statute-international-criminal-court-article-104-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-104 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-105 a cml:Concept ;
+    skos:prefLabel "Article 105"@en ;
+    cml:realizedBy doc:article-105 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-105-norm .
+
+concept:rome-statute-international-criminal-court-article-105-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-105 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-106 a cml:Concept ;
+    skos:prefLabel "Article 106"@en ;
+    cml:realizedBy doc:article-106 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-106-norm .
+
+concept:rome-statute-international-criminal-court-article-106-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-106 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-107 a cml:Concept ;
+    skos:prefLabel "Article 107"@en ;
+    cml:realizedBy doc:article-107 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-107-norm .
+
+concept:rome-statute-international-criminal-court-article-107-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-107 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-108 a cml:Concept ;
+    skos:prefLabel "Article 108"@en ;
+    cml:realizedBy doc:article-108 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-108-norm .
+
+concept:rome-statute-international-criminal-court-article-108-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-108 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-109 a cml:Concept ;
+    skos:prefLabel "Article 109"@en ;
+    cml:realizedBy doc:article-109 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-109-norm .
+
+concept:rome-statute-international-criminal-court-article-109-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-109 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-110 a cml:Concept ;
+    skos:prefLabel "Article 110"@en ;
+    cml:realizedBy doc:article-110 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-110-norm .
+
+concept:rome-statute-international-criminal-court-article-110-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-110 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-111 a cml:Concept ;
+    skos:prefLabel "Article 111"@en ;
+    cml:realizedBy doc:article-111 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-111-norm .
+
+concept:rome-statute-international-criminal-court-article-111-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-111 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-112 a cml:Concept ;
+    skos:prefLabel "Article 112"@en ;
+    cml:realizedBy doc:article-112 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-112-norm .
+
+concept:rome-statute-international-criminal-court-article-112-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-112 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-113 a cml:Concept ;
+    skos:prefLabel "Article 113"@en ;
+    cml:realizedBy doc:article-113 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-113-norm .
+
+concept:rome-statute-international-criminal-court-article-113-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-113 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-114 a cml:Concept ;
+    skos:prefLabel "Article 114"@en ;
+    cml:realizedBy doc:article-114 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-114-norm .
+
+concept:rome-statute-international-criminal-court-article-114-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-114 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-115 a cml:Concept ;
+    skos:prefLabel "Article 115"@en ;
+    cml:realizedBy doc:article-115 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-115-norm .
+
+concept:rome-statute-international-criminal-court-article-115-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-115 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-116 a cml:Concept ;
+    skos:prefLabel "Article 116"@en ;
+    cml:realizedBy doc:article-116 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-116-norm .
+
+concept:rome-statute-international-criminal-court-article-116-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-116 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-117 a cml:Concept ;
+    skos:prefLabel "Article 117"@en ;
+    cml:realizedBy doc:article-117 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-117-norm .
+
+concept:rome-statute-international-criminal-court-article-117-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-117 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-118 a cml:Concept ;
+    skos:prefLabel "Article 118"@en ;
+    cml:realizedBy doc:article-118 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-118-norm .
+
+concept:rome-statute-international-criminal-court-article-118-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-118 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-119 a cml:Concept ;
+    skos:prefLabel "Article 119"@en ;
+    cml:realizedBy doc:article-119 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-119-norm .
+
+concept:rome-statute-international-criminal-court-article-119-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-119 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-120 a cml:Concept ;
+    skos:prefLabel "Article 120"@en ;
+    cml:realizedBy doc:article-120 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-120-norm .
+
+concept:rome-statute-international-criminal-court-article-120-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-120 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-121 a cml:Concept ;
+    skos:prefLabel "Article 121"@en ;
+    cml:realizedBy doc:article-121 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-121-norm .
+
+concept:rome-statute-international-criminal-court-article-121-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-121 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-122 a cml:Concept ;
+    skos:prefLabel "Article 122"@en ;
+    cml:realizedBy doc:article-122 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-122-norm .
+
+concept:rome-statute-international-criminal-court-article-122-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-122 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-123 a cml:Concept ;
+    skos:prefLabel "Article 123"@en ;
+    cml:realizedBy doc:article-123 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-123-norm .
+
+concept:rome-statute-international-criminal-court-article-123-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-123 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-124 a cml:Concept ;
+    skos:prefLabel "Article 124"@en ;
+    cml:realizedBy doc:article-124 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-124-norm .
+
+concept:rome-statute-international-criminal-court-article-124-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-124 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-125 a cml:Concept ;
+    skos:prefLabel "Article 125"@en ;
+    cml:realizedBy doc:article-125 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-125-norm .
+
+concept:rome-statute-international-criminal-court-article-125-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-125 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-126 a cml:Concept ;
+    skos:prefLabel "Article 126"@en ;
+    cml:realizedBy doc:article-126 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-126-norm .
+
+concept:rome-statute-international-criminal-court-article-126-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-126 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-127 a cml:Concept ;
+    skos:prefLabel "Article 127"@en ;
+    cml:realizedBy doc:article-127 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-127-norm .
+
+concept:rome-statute-international-criminal-court-article-127-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-127 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:rome-statute-international-criminal-court-article-128 a cml:Concept ;
+    skos:prefLabel "Article 128"@en ;
+    cml:realizedBy doc:article-128 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/rome-statute-international-criminal-court> ;
+    dc:date "17 July 1998" ;
+    values:category "International criminal justice" ;
+    cml:asserts concept:rome-statute-international-criminal-court-article-128-norm .
+
+concept:rome-statute-international-criminal-court-article-128-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:rome-statute-international-criminal-court-article-128 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .

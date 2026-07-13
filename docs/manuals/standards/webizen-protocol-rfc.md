@@ -78,7 +78,7 @@ This section should therefore be read as an architectural direction, not as the
 final statement of the implemented sync grammar.
 
 ### 3.4 Fiduciary Supremacy and SocialWebNet
-The SocialWebNet network stack (including WireGuard tunnels) operates **exclusively** on native node installations. Mobile and WASM web-app clients act merely as a lens and must rely on the native backend via the `window.webizen` RPC bridge. This ensures that private keys never sit in vulnerable mobile memory space, fully realizing Fiduciary Supremacy. During **Sanctuary Mode**, the native node categorically severs access to sovereign data paths (`/sovereign`), protecting the user even during immersive field research with intermittent connectivity.
+The SocialWebNet network stack (including WireGuard tunnels) operates **exclusively** on native node installations. Mobile and WASM web-app clients act merely as a lens and must rely on the native backend via the `window.webizen` RPC bridge. This ensures that private keys never sit in vulnerable mobile memory space, fully realizing Fiduciary Supremacy. During **Sanctuary Mode**, the native node categorically severs access to personhood data paths (`/personhood`), protecting the user even during immersive field research with intermittent connectivity.
 
 ---
 

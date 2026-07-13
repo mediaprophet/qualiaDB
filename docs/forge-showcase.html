@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WGSL Forge — Kernel Generation &amp; Certification · QualiaDB</title>
+    <link rel="stylesheet" href="css/tailwind-built.css">
+    <link rel="stylesheet" href="css/site-nav.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="js/menu-loader.js"></script>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .glass-strong { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
+        pre { background: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 16px; overflow-x: auto; }
+        code { font-family: 'Fira Code', monospace; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <nav class="sticky top-0 z-50 border-b border-white/10" style="background:rgba(17,23,31,0.88);backdrop-filter:blur(32px)">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-8">
+                    <a href="index.html" class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl flex items-center justify-center">
+                            <span class="text-black font-bold text-xl">Q</span>
+                        </div>
+                        <div><span class="font-semibold tracking-tight text-xl">Qualia</span><span class="text-blue-400 text-xl">DB</span></div>
+                    </a>
+                    <div id="dynamic-nav" class="relative flex items-center text-sm">
+                        <!-- Navigation loaded dynamically by menu-loader.js -->
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="https://github.com/mediaprophet/qualiaDB" target="_blank"
+                       class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/5 rounded-2xl transition-colors">
+                        <i class="fab fa-github"></i><span>GitHub</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-screen-2xl mx-auto px-8 pt-12 pb-16">
+        <div class="mb-8">
+            <h1 class="text-5xl font-semibold tracking-tighter mb-4">WGSL Forge</h1>
+            <p class="text-xl text-slate-400">A deterministic GPU-kernel generator, validator, and oracle-backed correctness certifier. It does <span class="text-white">not</span> use an LLM, and it does <span class="text-white">not</span> run inference.</p>
+        </div>
+
+        <!-- The boundary: produce vs run -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-diagram-project text-cyan-400"></i>
+                The Forge produces; the Engine runs
+            </h2>
+            <p class="text-white/70 mb-6">This boundary is the whole design — read it once and the rest follows:</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
+                <div class="bg-black/20 rounded-xl p-5 border border-cyan-500/20">
+                    <h3 class="font-medium text-cyan-400 mb-2"><i class="fas fa-industry mr-2"></i>Forge — producer &amp; certifier</h3>
+                    <p class="text-white/60 text-sm">Generates GPU kernels from a typed DAG-IR, validates them, and <span class="text-white">certifies every one against a CPU oracle</span>. Also transcodes GGUF&nbsp;&rarr;&nbsp;the native <code class="text-cyan-300">p64</code> weight container. It is build-time tooling.</p>
+                </div>
+                <div class="bg-black/20 rounded-xl p-5 border border-emerald-500/20">
+                    <h3 class="font-medium text-emerald-400 mb-2"><i class="fas fa-microchip mr-2"></i>Engine — runtime</h3>
+                    <p class="text-white/60 text-sm">The in-process inference engine runs the <code class="text-emerald-300">p64</code> model. <span class="text-white">Throughput (tok/s) belongs to the engine</span>, not the forge — measured at <span class="text-white">~18.8 tok/s</span> decode (SmolLM2-360M&nbsp;Q8, RTX&nbsp;A2000, Vulkan, compute-bound).</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- What it generates -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-code text-blue-400"></i>
+                One IR, many backends
+            </h2>
+            <p class="text-white/70 mb-6">A kernel is described once as a compute graph; the forge lowers it to each target and the schedule is kept separate from the math, so optimisation can never silently rewrite what is being tested.</p>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6 text-center text-sm">
+                <div class="bg-emerald-500/10 rounded-xl p-3 border border-emerald-500/20"><div class="font-medium text-emerald-400">WGSL</div><div class="text-white/40 text-xs">wgpu native</div></div>
+                <div class="bg-black/20 rounded-xl p-3"><div class="font-medium text-blue-300">SPIR-V</div><div class="text-white/40 text-xs">Vulkan binary</div></div>
+                <div class="bg-black/20 rounded-xl p-3"><div class="font-medium text-blue-300">CUDA-C</div><div class="text-white/40 text-xs">NVRTC / WMMA</div></div>
+                <div class="bg-black/20 rounded-xl p-3"><div class="font-medium text-blue-300">MSL</div><div class="text-white/40 text-xs">Metal</div></div>
+                <div class="bg-black/20 rounded-xl p-3"><div class="font-medium text-blue-300">HLSL</div><div class="text-white/40 text-xs">DXC</div></div>
+            </div>
+            <p class="text-white/70 mb-2">Generated + certified kernels include the math substrate the rest of the engine builds on:</p>
+            <ul class="text-white/60 text-sm space-y-1 list-disc list-inside mb-4">
+                <li><span class="text-white/80">Dense linear algebra</span> — GEMM, GEMV, and a double-single (<code class="text-cyan-300">df64</code>) emulated-f64 GEMM for f64-on-any-GPU.</li>
+                <li><span class="text-white/80">Transforms / DSP</span> — radix-2 FFT feeding the audio path (STFT, CQT, HRTF).</li>
+                <li><span class="text-white/80">Reductions &amp; selection</span> — affine, top-k (shared-memory + barriers).</li>
+                <li><span class="text-white/80">LLM decode kit</span> — RMSNorm, real RoPE (interleaved + NeoX), multi-head GQA attention, SwiGLU, on-device Slice, and a transposed-B GEMM that consumes native <code class="text-cyan-300">[out,in]</code> weights.</li>
+            </ul>
+            <p class="text-white/40 text-xs">Honest scope: the legacy kernel kit (GEMM/GEMV/FFT/affine/top-k) lowers to all targets above; the LLM decode graph is currently certified through the executor and not yet emitted as standalone source on every backend.</p>
+        </div>
+
+        <!-- Certification -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-clipboard-check text-green-400"></i>
+                Certified, not asserted
+            </h2>
+            <p class="text-white/70 mb-6">Every generated kernel is run on the real GPU and diffed against an independent CPU oracle. The headline proof for this release:</p>
+            <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6">
+                <p class="text-white/80 text-sm">A full multi-head <span class="text-white">GQA transformer decode layer</span> — composed of forge ops — was certified on the <span class="text-white">real weights of SmolLM2-360M</span> (n_embd 960, 15 heads / 5 KV-heads, head_dim 64, ffn 2560, RoPE base 100k), matching the composed CPU oracle to a maximum relative error of <span class="text-emerald-300 font-medium">3.28&times;10⁻⁶</span> on an RTX&nbsp;A2000. That proves the kernels are correct — it is certification, not a tok/s claim.</p>
+            </div>
+        </div>
+
+        <!-- Backend selection -->
+        <div class="glass-strong rounded-3xl p-8 mb-8">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-sliders text-purple-400"></i>
+                Pick your pipeline
+            </h2>
+            <p class="text-white/70 mb-6">The engine selects its GPU backend by capability and reports it; you can pin it for the vendor-neutral path:</p>
+            <pre class="mb-6"><code># Default is Vulkan (vendor-neutral: AMD / Intel / NVIDIA / ARM / Linux).
+# Pin a backend explicitly:
+QUALIA_WGPU_BACKEND=vulkan   # default, recommended
+QUALIA_WGPU_BACKEND=metal    # Apple
+QUALIA_WGPU_BACKEND=dx12     # Windows-native (see caveat)</code></pre>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div class="bg-emerald-500/10 rounded-xl p-4 border border-emerald-500/20"><div class="font-medium text-emerald-400">Vulkan</div><div class="text-white/50 text-xs mt-1">Default &amp; verified working path. The portable, vendor-neutral choice.</div></div>
+                <div class="bg-black/20 rounded-xl p-4"><div class="font-medium text-blue-300">Metal / GL</div><div class="text-white/50 text-xs mt-1">Selectable; Metal is the Apple-native path.</div></div>
+                <div class="bg-amber-500/10 rounded-xl p-4 border border-amber-500/20"><div class="font-medium text-amber-300">DX12</div><div class="text-white/50 text-xs mt-1">Device initialises, but decode is <span class="text-white">not yet validated</span> (currently hangs) — use Vulkan.</div></div>
+            </div>
+        </div>
+
+        <!-- Honest boundaries -->
+        <div class="glass-strong rounded-3xl p-8 mb-8 border border-amber-500/20">
+            <h2 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                <i class="fas fa-scale-balanced text-amber-400"></i>
+                What we are <span class="text-amber-300">not</span> claiming
+            </h2>
+            <ul class="text-white/70 text-sm space-y-2 list-disc list-inside">
+                <li>The forge does not run inference and is not "faster than the engine" — those are different jobs; tok/s is the engine's.</li>
+                <li>The LLM decode graph runs through the certification executor; it is not yet emitted as portable shader source on every backend.</li>
+                <li><span class="text-white">Sub-2-bit / ternary (1.58-bit) FFN is not a shippable path.</span> Post-training-quantising a model that was not trained ternary destroys it (perplexity collapses); activation-aware scaling helps but does not rescue it. The shippable compression is standard <code class="text-cyan-300">Q4_K_M</code>, transcoded to p64 verbatim.</li>
+                <li>Tensor cores (CUDA WMMA / wgpu coopmat) are built and certified as kernels but are not yet on the live decode path; coopmat depends on an unreleased wgpu fix.</li>
+            </ul>
+        </div>
+
+        <div class="text-center text-white/40 text-sm">
+            <p>QualiaDB v0.0.23 &bull; WGSL Forge &bull; Implementation: <code class="text-white/50">crates/qualia-core-db/src/wgsl_forge/</code> &bull; CLI: <code class="text-white/50">qualia shader …</code></p>
+        </div>
+    </div>
+</body>
+</html>

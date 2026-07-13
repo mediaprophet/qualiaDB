@@ -22,17 +22,77 @@
         </div>
     </nav>
     <main class="max-w-3xl mx-auto px-6 py-12">
-        <h1 class="text-3xl font-semibold mb-6">Standards</h1>
+        <h1 class="text-3xl font-semibold mb-2">Standards</h1>
+        <p class="text-slate-400 text-sm mb-8">Draft specifications for the Qualia Protocol Ecosystem. Items marked
+            <span class="text-amber-300">(draft)</span> are working drafts and do <span class="text-white">not</span>
+            assert external conformance; some describe a proposed surface whose implementation is in progress.</p>
+
+        <h2 class="text-lg font-medium text-cyan-300 mt-8 mb-2">Q42 container &amp; tensors</h2>
         <ul class="space-y-2 text-cyan-400">
-            <li><a href="q42-format-internal-draft.md" class="hover:underline">Q42 unified volume (v3)</a></li>
-            <li><a href="q42-10d-tensor-standard.md" class="hover:underline">Q42 10D tensor (v1.1 — phenomenal σ)</a></li>
-            <li><a href="q42-acoustic-plane-draft.md" class="hover:underline">Q42 AcousticPlane — Sonic Token + SAB (draft v0.1)</a></li>
-            <li><a href="standards-backlog.md" class="hover:underline">Standards backlog</a></li>
-            <li><a href="webizen-protocol-rfc.md" class="hover:underline">Webizen protocol RFC</a></li>
-            <li><a href="qualia-sync-protocol.md" class="hover:underline">Qualia sync protocol</a></li>
-            <li><a href="init-draft-standards-wip-main/rights/index.html" class="hover:underline">Rights ontology (draft)</a></li>
+            <li><a href="p64-weight-container-standard.md" class="hover:underline">P64 weight container (v3, draft v0.1)</a> <span class="text-slate-500 text-sm">&mdash; byte layout, roles, manifold records, tokenizer, alignment, and CRC-32C validation</span></li>
+            <li><a href="q42-format-internal-draft.md" class="hover:underline">Q42 unified volume (v3)</a> <span class="text-slate-500 text-sm">— container, index sections, block layout</span></li>
+            <li><a href="q42-10d-tensor-standard.md" class="hover:underline">Q42 10D tensor (v1.2)</a> <span class="text-slate-500 text-sm">— query-class metric + GPU/CPU determinism</span></li>
+            <li><a href="q42-symbolic-algebra-encoding.md" class="hover:underline">Q42 symbolic algebra encoding (draft v0.1)</a></li>
+            <li><a href="q42-acoustic-plane-draft.md" class="hover:underline">Q42 AcousticPlane — sonic token + SAB (draft v0.1)</a></li>
         </ul>
-        <p class="mt-8 text-slate-500 text-sm"><a href="../index.html" class="text-slate-400 hover:underline">← All manuals</a></p>
+
+        <h2 class="text-lg font-medium text-cyan-300 mt-8 mb-2">Renderer / viewport</h2>
+        <ul class="space-y-2 text-cyan-400">
+            <li><a href="webizen-renderer-sdk-spec.md" class="hover:underline">Webizen N-Dimensional Renderer SDK (draft v0.2)</a> <span class="text-amber-300 text-sm">(draft — manifold→projection→view, zero-heap GPU ABI, native/WASM volumetric 3D, scene SDK)</span></li>
+        </ul>
+
+        <h2 class="text-lg font-medium text-cyan-300 mt-8 mb-2">Identifier / DID</h2>
+        <ul class="space-y-2 text-cyan-400">
+            <li><a href="did-q42-method-draft.md" class="hover:underline">did:q42 method (draft)</a> <span class="text-slate-500 text-sm">— method syntax, normalization, resolution</span></li>
+        </ul>
+
+        <h2 class="text-lg font-medium text-cyan-300 mt-8 mb-2">Vault / manifest</h2>
+        <ul class="space-y-2 text-cyan-400">
+            <li><a href="qualia-vault-manifest.md" class="hover:underline">.qualia vault manifest (draft)</a> <span class="text-slate-500 text-sm">— Turtle/N3 manifest + CBOR-LD projection</span></li>
+        </ul>
+
+        <h2 class="text-lg font-medium text-cyan-300 mt-8 mb-2">Transport / host boundary</h2>
+        <ul class="space-y-2 text-cyan-400">
+            <li><a href="qualia-sync-protocol.md" class="hover:underline">Qualia sync protocol</a> <span class="text-slate-500 text-sm">— peer handshake, CRDT exchange, CBOR-LD payloads</span></li>
+            <li><a href="qualia-qapp-loopback-protocol.md" class="hover:underline">Qualia qapp loopback protocol</a> <span class="text-slate-500 text-sm">— localhost asset-serving + trust model</span></li>
+        </ul>
+
+        <h2 class="text-lg font-medium text-cyan-300 mt-8 mb-2">Serializations</h2>
+        <ul class="space-y-2 text-cyan-400">
+            <li><a href="yaml-ld-q42-specification.md" class="hover:underline">YAML-LD ↔ Q42 specification</a></li>
+            <li><a href="CBOR_LD_SDO_Update_Summary.md" class="hover:underline">CBOR-LD SDO update summary</a> <span class="text-slate-500 text-sm">— notes / changelog</span></li>
+        </ul>
+
+        <h2 class="text-lg font-medium text-cyan-300 mt-8 mb-2">Agent / multi-agent</h2>
+        <ul class="space-y-2 text-cyan-400">
+            <li><a href="AGENT_INTENT_LOGGING_SPEC.md" class="hover:underline">Agent intent semantic logging (v1.1)</a></li>
+            <li><a href="SEMANTIC_HEADER_SCHEMA.md" class="hover:underline">Semantic header schema (v1.0)</a></li>
+            <li><a href="MULTI_AGENT_PROTOCOL.md" class="hover:underline">Human-centric multi-agent coordination (v1.0)</a></li>
+            <li><a href="hcai-agreement-negotiation-protocol.md" class="hover:underline">HCAI agreement negotiation protocol</a> <span class="text-amber-300 text-sm">(draft — negotiation layer not yet implemented)</span></li>
+        </ul>
+
+        <h2 class="text-lg font-medium text-cyan-300 mt-8 mb-2">Protocol (broad)</h2>
+        <ul class="space-y-2 text-cyan-400">
+            <li><a href="webizen-protocol-rfc.md" class="hover:underline">Webizen protocol RFC</a> <span class="text-amber-300 text-sm">(draft — Layer 1 over the core engine)</span></li>
+        </ul>
+
+        <h2 class="text-lg font-medium text-cyan-300 mt-8 mb-2">Query-engine extensions <span class="text-slate-500 text-sm font-normal">(live under <code>../query-engine/</code>)</span></h2>
+        <ul class="space-y-2 text-cyan-400">
+            <li><a href="../query-engine/qualia-shacl-extensions.html" class="hover:underline">Qualia SHACL extensions</a> <span class="text-slate-500 text-sm">— deontic / epistemic / temporal / scientific constraint vocabulary</span></li>
+            <li><a href="../query-engine/sparql-temporal-extension.md" class="hover:underline">SPARQL temporal extension</a> <span class="text-slate-500 text-sm">— <code>AS OF</code> / <code>AT TIME</code></span></li>
+        </ul>
+
+        <h2 class="text-lg font-medium text-cyan-300 mt-8 mb-2">Rights / human-centric (external WIP)</h2>
+        <ul class="space-y-2 text-cyan-400">
+            <li><a href="init-draft-standards-wip-main/rights/index.html" class="hover:underline">Rights ontology (draft)</a> <span class="text-slate-500 text-sm">— vendored from <code>init-draft-standards-wip</code></span></li>
+        </ul>
+
+        <h2 class="text-lg font-medium text-cyan-300 mt-8 mb-2">Planning</h2>
+        <ul class="space-y-2 text-cyan-400">
+            <li><a href="standards-backlog.md" class="hover:underline">Standards backlog</a> <span class="text-slate-500 text-sm">— priorities, exit criteria, what is still to be written</span></li>
+        </ul>
+
+        <p class="mt-10 text-slate-500 text-sm"><a href="../index.html" class="text-slate-400 hover:underline">← All manuals</a></p>
     </main>
 </body>
 </html>

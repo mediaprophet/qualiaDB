@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Default capability for the Webizen main window: core defaults plus notification, updater, and native file dialogs (open/save).","local":true,"windows":["main"],"permissions":["core:default","notification:default","updater:default","dialog:default","dialog:allow-open","dialog:allow-save"]}}

@@ -15,22 +15,20 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 
 jobs:
   build-desktop-windows:
     name: Desktop (Windows Webizen)
     runs-on: windows-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2" --locked
 
       - name: Cache Cargo
         uses: actions/cache@v4
@@ -42,33 +40,62 @@ jobs:
           key: ${{ runner.os }}-cargo-desktop-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-desktop-
 
-      - name: Build webizen-studio dist
+      - name: Verify packaged webizen-studio dist
         shell: pwsh
         run: |
-          Write-Host "Building webizen-studio wasm frontend (Dioxus)..."
-          cargo install dioxus-cli --locked --force
-          Push-Location crates/webizen-studio
-          dx build --release --web
-          Pop-Location
-          $fresh = "target/dx/webizen-studio/release/web/public"
-          if (Test-Path $fresh/index.html) {
-            New-Item -ItemType Directory -Force -Path crates/webizen-studio/dist/assets | Out-Null
-            Copy-Item $fresh/index.html crates/webizen-studio/dist/index.html -Force
-            Copy-Item -Recurse $fresh/assets/* crates/webizen-studio/dist/assets/ -Force
+          $dist = "crates/webizen-studio/dist"
+          $portal = "crates/webizen-desktop/static/portal"
+          if (-not (Test-Path "$dist/index.html")) {
+            throw "$dist/index.html missing"
           }
-          if (-not (Test-Path crates/webizen-studio/dist/index.html)) {
-            throw "crates/webizen-studio/dist/index.html missing after build"
+          if (-not (Get-ChildItem "$dist/assets" -Filter "*.js" -File -ErrorAction SilentlyContinue)) {
+            throw "$dist/assets is missing a JavaScript bundle"
+          }
+          if (-not (Get-ChildItem "$dist/assets" -Filter "*.wasm" -File -ErrorAction SilentlyContinue)) {
+            throw "$dist/assets is missing a WASM bundle"
+          }
+          if (-not (Test-Path "$portal/index.html")) {
+            throw "$portal/index.html missing"
+          }
+          if (-not (Test-Path "$portal/design-studio.html")) {
+            throw "$portal/design-studio.html missing"
+          }
+          Get-ChildItem $dist, "$dist/assets"
+
+      - name: Verify updater signing key
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY)) {
+            throw "TAURI_SIGNING_PRIVATE_KEY secret is required to produce signed updater artifacts"
           }
 
-      - name: Build webizen-desktop (release)
-        run: cargo build --release -p webizen-desktop
+      - name: Build installer and signed updater artifacts
+        working-directory: crates/webizen-desktop
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          $buildLog = cargo tauri build --ci --bundles nsis 2>&1 | Tee-Object -Variable lines
+          $exitCode = $LASTEXITCODE
+          $lines | Set-Content -Path tauri-build.log
+          if ($exitCode -ne 0) {
+            throw "cargo tauri build failed with exit code $exitCode"
+          }
+          if (Select-String -Path tauri-build.log -Pattern "does not match the public key") {
+            throw "TAURI_SIGNING_PRIVATE_KEY does not match the updater pubkey in tauri.conf.json"
+          }
 
       - name: Stage desktop bundle
         shell: pwsh
         run: |
           $out = "release-assets/webizen-desktop-windows-x64"
           New-Item -ItemType Directory -Force -Path $out | Out-Null
-          Copy-Item target/release/webizen-desktop.exe $out/
+          $exe = @("target/release/webizen-desktop.exe", "crates/webizen-desktop/target/release/webizen-desktop.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $exe) { throw "webizen-desktop.exe missing after Tauri build" }
+          Copy-Item $exe $out/
           if (Test-Path vendor/directml/bin/x64-win/DirectML.dll) {
             Copy-Item vendor/directml/bin/x64-win/DirectML.dll $out/
           }
@@ -79,23 +106,46 @@ jobs:
           if (Test-Path crates/webizen-studio/dist) {
             Copy-Item -Recurse crates/webizen-studio/dist $out/studio-dist
           }
+          Copy-Item -Recurse crates/webizen-desktop/static/portal $out/portal
           tar -a -cf webizen-desktop-windows-x64.zip -C release-assets webizen-desktop-windows-x64
-          Get-ChildItem $out, webizen-desktop-windows-x64.zip
+          $installerOut = "release-assets/desktop-windows-installer"
+          New-Item -ItemType Directory -Force -Path $installerOut | Out-Null
+          $bundleRoots = @("target/release/bundle", "crates/webizen-desktop/target/release/bundle")
+          $bundleFiles = foreach ($root in $bundleRoots) {
+            if (Test-Path $root) {
+              Get-ChildItem $root -Recurse -File -Include *.exe,*.msi,*.zip,*.sig
+            }
+          }
+          if (-not $bundleFiles) { throw "No Tauri Windows bundle artifacts found" }
+          foreach ($file in $bundleFiles) {
+            Copy-Item $file.FullName (Join-Path $installerOut $file.Name) -Force
+          }
+          if (-not (Get-ChildItem $installerOut -Filter "*.sig" -File -ErrorAction SilentlyContinue)) {
+            throw "No signed Windows updater artifacts were produced"
+          }
+          Get-ChildItem $out, $installerOut, webizen-desktop-windows-x64.zip
+
+      - name: Upload desktop artifacts to workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows-artifacts
+          path: |
+            webizen-desktop-windows-x64.zip
+            release-assets/desktop-windows-installer/*
 
       - name: Upload desktop to release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          tag_name: ${{ env.RELEASE_TAG }}
           files: |
             webizen-desktop-windows-x64.zip
-            target/release/webizen-desktop.exe
+            release-assets/desktop-windows-installer/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-desktop-macos-metal:
     name: Desktop (macOS Apple Silicon / Metal)
     runs-on: macos-14
-    continue-on-error: true
     env:
       WGPU_BACKEND: metal
       WGPU_POWER_PREF: high
@@ -103,15 +153,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2" --locked
 
       - name: Cache Cargo
         uses: actions/cache@v4
@@ -123,24 +171,41 @@ jobs:
           key: ${{ runner.os }}-cargo-desktop-metal-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-desktop-metal-
 
-      - name: Build webizen-studio dist
+      - name: Verify packaged webizen-studio dist
         shell: bash
         run: |
-          echo "Building webizen-studio wasm frontend (Dioxus)..."
-          cargo install dioxus-cli --locked --force
-          (cd crates/webizen-studio && dx build --release --web)
-          fresh="target/dx/webizen-studio/release/web/public"
-          if [ -f "$fresh/index.html" ]; then
-            mkdir -p crates/webizen-studio/dist/assets
-            cp "$fresh/index.html" crates/webizen-studio/dist/index.html
-            cp -R "$fresh/assets/." crates/webizen-studio/dist/assets/
-          fi
-          test -f crates/webizen-studio/dist/index.html
+          dist="crates/webizen-studio/dist"
+          portal="crates/webizen-desktop/static/portal"
+          test -f "$dist/index.html"
+          find "$dist/assets" -maxdepth 1 -type f -name '*.js' | grep -q .
+          find "$dist/assets" -maxdepth 1 -type f -name '*.wasm' | grep -q .
+          test -f "$portal/index.html"
+          test -f "$portal/design-studio.html"
+          ls -lah "$dist" "$dist/assets"
 
-      - name: Build webizen-desktop for Apple Silicon
+      - name: Verify updater signing key
         shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: |
-          cargo build --release -p webizen-desktop --target aarch64-apple-darwin
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "::error::TAURI_SIGNING_PRIVATE_KEY secret is required to produce signed updater artifacts"
+            exit 1
+          fi
+
+      - name: Build macOS Metal installer and signed updater artifacts
+        working-directory: crates/webizen-desktop
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -o pipefail
+          cargo tauri build --ci --target aarch64-apple-darwin --bundles app,dmg 2>&1 | tee tauri-build.log
+          if grep -q "does not match the public key" tauri-build.log; then
+            echo "::error::TAURI_SIGNING_PRIVATE_KEY does not match the updater pubkey in tauri.conf.json"
+            exit 1
+          fi
 
       - name: Stage macOS Metal desktop bundle
         shell: bash
@@ -148,24 +213,83 @@ jobs:
           out="release-assets/webizen-desktop-macos-aarch64-metal"
           rm -rf "$out"
           mkdir -p "$out"
-          cp target/aarch64-apple-darwin/release/webizen-desktop "$out/"
+          exe=""
+          for candidate in "target/aarch64-apple-darwin/release/webizen-desktop" "crates/webizen-desktop/target/aarch64-apple-darwin/release/webizen-desktop"; do
+            if [ -f "$candidate" ]; then exe="$candidate"; break; fi
+          done
+          test -n "$exe"
+          cp "$exe" "$out/"
           cp -R crates/webizen-studio/dist "$out/studio-dist"
+          cp -R crates/webizen-desktop/static/portal "$out/portal"
           cat > "$out/README.txt" <<'EOF'
           Webizen Desktop for macOS Apple Silicon (M1 or newer)
 
           This build targets aarch64-apple-darwin with wgpu's native Metal backend.
-          Run ./webizen-desktop from this directory so the packaged studio-dist sidecar is available.
+          Run ./webizen-desktop from this directory so the packaged studio-dist and portal sidecars are available.
           EOF
           chmod +x "$out/webizen-desktop"
           ditto -c -k --keepParent "$out" webizen-desktop-macos-aarch64-metal.zip
-          ls -lah "$out" webizen-desktop-macos-aarch64-metal.zip
+          installerOut="release-assets/desktop-macos-metal-installer"
+          rm -rf "$installerOut"
+          mkdir -p "$installerOut"
+          found=0
+          for root in "target/aarch64-apple-darwin/release/bundle" "crates/webizen-desktop/target/aarch64-apple-darwin/release/bundle"; do
+            if [ -d "$root" ]; then
+              while IFS= read -r -d '' file; do
+                cp "$file" "$installerOut/"
+                found=1
+              done < <(find "$root" -type f \( -name '*.dmg' -o -name '*.tar.gz' -o -name '*.sig' \) -print0)
+            fi
+          done
+          test "$found" -eq 1
+          find "$installerOut" -maxdepth 1 -type f -name '*.sig' | grep -q .
+          ls -lah "$out" "$installerOut" webizen-desktop-macos-aarch64-metal.zip
+
+      - name: Upload macOS Metal artifacts to workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-macos-metal-artifacts
+          path: |
+            webizen-desktop-macos-aarch64-metal.zip
+            release-assets/desktop-macos-metal-installer/*
 
       - name: Upload macOS Metal desktop to release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          tag_name: ${{ env.RELEASE_TAG }}
           files: |
             webizen-desktop-macos-aarch64-metal.zip
-            target/aarch64-apple-darwin/release/webizen-desktop
+            release-assets/desktop-macos-metal-installer/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-desktop-updater-manifest:
+    name: Desktop updater manifest
+    runs-on: ubuntu-latest
+    needs:
+      - build-desktop-windows
+      - build-desktop-macos-metal
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download desktop artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+
+      - name: Generate updater manifest
+        shell: pwsh
+        run: |
+          ./scripts/create-webizen-latest-json.ps1 `
+            -ArtifactsDir release-assets `
+            -Tag "${{ env.RELEASE_TAG }}" `
+            -Output webizen-latest.json `
+            -Notes "Webizen Desktop ${{ env.RELEASE_TAG }}"
+
+      - name: Upload updater manifest to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: webizen-latest.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

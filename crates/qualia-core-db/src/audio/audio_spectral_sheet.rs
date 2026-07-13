@@ -111,10 +111,7 @@ pub fn preview_bins_from_tensor(t: &Tensor10D) -> [f32; SPECTRAL_PREVIEW_BINS] {
 
 /// Frame column from mmap sidecar at `frame_index` (cold playback).
 #[inline]
-pub fn sidecar_frame_view<'a>(
-    bytes: &'a [u8],
-    frame_index: u32,
-) -> Option<&'a [f32]> {
+pub fn sidecar_frame_view<'a>(bytes: &'a [u8], frame_index: u32) -> Option<&'a [f32]> {
     let header = parse_sidecar_header(bytes)?;
     let header_bytes = std::mem::size_of::<AudioSpectralSidecarHeader>();
     let payload = &bytes[header_bytes..];
@@ -127,7 +124,8 @@ pub fn sidecar_frame_view<'a>(
     if payload.len() < need {
         return None;
     }
-    let floats: &[f32] = bytemuck::try_cast_slice(&payload[offset * 4..offset * 4 + bins * 4]).ok()?;
+    let floats: &[f32] =
+        bytemuck::try_cast_slice(&payload[offset * 4..offset * 4 + bins * 4]).ok()?;
     Some(floats)
 }
 

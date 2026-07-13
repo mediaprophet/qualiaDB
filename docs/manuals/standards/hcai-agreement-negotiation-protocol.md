@@ -634,7 +634,12 @@ than QualiaDB itself.
   Internet-Draft for the DNS service-type label if DNS-AID registration is
   pursued.
 - **Exit criteria before submission:**
-  - [ ] negotiation layer implemented (`dns_frontdoor.rs`, `hcai_agreement.rs`)
+  - [~] Front Door **discovery layer implemented** — `did:web` / `did:q42` Frontdoor + DNS DID
+    verification (`qualia-client-core/src/dns_resolver.rs::verify_front_door_did_via_dns`), Front Door
+    identity + invites (`state.rs::FrontDoor`; `api.rs::{generate_front_door, generate_front_door_invite,
+    generate_connect_invite, get_front_doors}`), surfaced as `webizen-desktop` commands.
+    **Remaining:** the signed agreement-negotiation **handshake** (term exchange + sign/verify) and the
+    WebRTC session binding — the `hcai_agreement` layer proper.
   - [ ] agreement vocabulary namespace frozen and published
   - [ ] canonicalisation and signature suite pinned with test vectors
   - [ ] at least one non-QualiaDB agent completes a conformant negotiation

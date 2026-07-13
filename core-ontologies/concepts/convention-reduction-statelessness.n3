@@ -1,0 +1,379 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix dc:      <http://purl.org/dc/terms/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix values:  <https://ns.webcivics.net/values/> .
+@prefix cml:     <https://ns.webcivics.net/cml/> .
+@prefix concept: <https://ns.webcivics.net/concept/> .
+@prefix doc:     <https://ns.webcivics.net/values/convention-reduction-statelessness#> .
+
+# ============================================================
+# CML concept layer (LOGIC) — Convention on the Reduction of Statelessness
+# MACHINE-DERIVED from the TEXT layer (un-instruments) — cml:Proposed,
+# values:HeuristicDerived. Pending human attestation (cml:Attested / exactMatch).
+# One cml:Concept per provision; cml:realizedBy the provision; cml:asserts the
+# deontic norm. R1 universalisation materialised for duties borne by every Agent.
+# ============================================================
+
+concept:convention-reduction-statelessness-article-1 a cml:Concept ;
+    skos:prefLabel "Article 1"@en ;
+    cml:realizedBy doc:article-1 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-1-norm .
+
+concept:convention-reduction-statelessness-article-1-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-1 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:convention-reduction-statelessness-article-2 a cml:Concept ;
+    skos:prefLabel "Article 2"@en ;
+    cml:realizedBy doc:article-2 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-2-norm .
+
+concept:convention-reduction-statelessness-article-2-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-2 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:convention-reduction-statelessness-article-3 a cml:Concept ;
+    skos:prefLabel "Article 3"@en ;
+    cml:realizedBy doc:article-3 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-3-norm .
+
+concept:convention-reduction-statelessness-article-3-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-3 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:convention-reduction-statelessness-article-4 a cml:Concept ;
+    skos:prefLabel "Article 4"@en ;
+    cml:realizedBy doc:article-4 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-4-norm .
+
+concept:convention-reduction-statelessness-article-4-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-4 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:convention-reduction-statelessness-article-5 a cml:Concept ;
+    skos:prefLabel "Article 5"@en ;
+    cml:realizedBy doc:article-5 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-5-norm .
+
+concept:convention-reduction-statelessness-article-5-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-5 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:convention-reduction-statelessness-article-6 a cml:Concept ;
+    skos:prefLabel "Article 6"@en ;
+    cml:realizedBy doc:article-6 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-6-norm .
+
+concept:convention-reduction-statelessness-article-6-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-6 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:convention-reduction-statelessness-article-7 a cml:Concept ;
+    skos:prefLabel "Article 7"@en ;
+    cml:realizedBy doc:article-7 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-7-norm .
+
+concept:convention-reduction-statelessness-article-7-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-7 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:convention-reduction-statelessness-article-8 a cml:Concept ;
+    skos:prefLabel "Article 8"@en ;
+    cml:realizedBy doc:article-8 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-8-norm .
+
+concept:convention-reduction-statelessness-article-8-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-8 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:convention-reduction-statelessness-article-9 a cml:Concept ;
+    skos:prefLabel "Article 9"@en ;
+    cml:realizedBy doc:article-9 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-9-norm .
+
+concept:convention-reduction-statelessness-article-9-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-9 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:convention-reduction-statelessness-article-10 a cml:Concept ;
+    skos:prefLabel "Article 10"@en ;
+    cml:realizedBy doc:article-10 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-10-norm .
+
+concept:convention-reduction-statelessness-article-10-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-10 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:convention-reduction-statelessness-article-11 a cml:Concept ;
+    skos:prefLabel "Article 11"@en ;
+    cml:realizedBy doc:article-11 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-11-norm .
+
+concept:convention-reduction-statelessness-article-11-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-11 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:convention-reduction-statelessness-article-12 a cml:Concept ;
+    skos:prefLabel "Article 12"@en ;
+    cml:realizedBy doc:article-12 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-12-norm .
+
+concept:convention-reduction-statelessness-article-12-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-12 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:convention-reduction-statelessness-article-13 a cml:Concept ;
+    skos:prefLabel "Article 13"@en ;
+    cml:realizedBy doc:article-13 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-13-norm .
+
+concept:convention-reduction-statelessness-article-13-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-13 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:convention-reduction-statelessness-article-14 a cml:Concept ;
+    skos:prefLabel "Article 14"@en ;
+    cml:realizedBy doc:article-14 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-14-norm .
+
+concept:convention-reduction-statelessness-article-14-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-14 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:convention-reduction-statelessness-article-15 a cml:Concept ;
+    skos:prefLabel "Article 15"@en ;
+    cml:realizedBy doc:article-15 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-15-norm .
+
+concept:convention-reduction-statelessness-article-15-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-15 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:convention-reduction-statelessness-article-16 a cml:Concept ;
+    skos:prefLabel "Article 16"@en ;
+    cml:realizedBy doc:article-16 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-16-norm .
+
+concept:convention-reduction-statelessness-article-16-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-16 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:convention-reduction-statelessness-article-17 a cml:Concept ;
+    skos:prefLabel "Article 17"@en ;
+    cml:realizedBy doc:article-17 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-17-norm .
+
+concept:convention-reduction-statelessness-article-17-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-17 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:convention-reduction-statelessness-article-18 a cml:Concept ;
+    skos:prefLabel "Article 18"@en ;
+    cml:realizedBy doc:article-18 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-18-norm .
+
+concept:convention-reduction-statelessness-article-18-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-18 ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:convention-reduction-statelessness-article-19 a cml:Concept ;
+    skos:prefLabel "Article 19"@en ;
+    cml:realizedBy doc:article-19 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-19-norm .
+
+concept:convention-reduction-statelessness-article-19-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-19 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:convention-reduction-statelessness-article-20 a cml:Concept ;
+    skos:prefLabel "Article 20"@en ;
+    cml:realizedBy doc:article-20 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-20-norm .
+
+concept:convention-reduction-statelessness-article-20-norm a values:Prohibition ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-20 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:convention-reduction-statelessness-article-21 a cml:Concept ;
+    skos:prefLabel "Article 21"@en ;
+    cml:realizedBy doc:article-21 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-reduction-statelessness> ;
+    dc:date "30 August 1961" ;
+    values:category "Refugees & statelessness" ;
+    cml:asserts concept:convention-reduction-statelessness-article-21-norm .
+
+concept:convention-reduction-statelessness-article-21-norm a values:Obligation ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:convention-reduction-statelessness-article-21 ;
+    values:borneBy values:Agent ;
+    values:borneBy values:State ;   # R1 universalisation (Derived)
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .

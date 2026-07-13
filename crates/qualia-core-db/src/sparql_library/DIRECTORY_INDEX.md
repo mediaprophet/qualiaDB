@@ -1,0 +1,291 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# sparql_library Index
+
+## Functionality Overview
+Comprehensive index of functionality for `sparql_library`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Subdirectories
+- 📁 `[parsers](parsers/DIRECTORY_INDEX.md)`
+- 📁 `[rdf_formats](rdf_formats/DIRECTORY_INDEX.md)`
+- 📁 `[serialisers](serialisers/DIRECTORY_INDEX.md)`
+
+### Files & Exported Functionality
+- 📄 `external_sort.rs`
+  - `struct ExternalSorter`
+  - `impl ExternalSorter`
+  - `fn new`
+  - `fn push`
+  - `fn push_lex`
+  - `fn lex_collision_count`
+  - `fn flush_chunk`
+  - `fn merge`
+  - `struct HeapItem`
+  - `impl Ord`
+  - `fn cmp`
+  - `impl PartialOrd`
+  - `fn partial_cmp`
+  - `impl PartialEq`
+  - `fn eq`
+  - *(...and 2 more)*
+- 📄 `mod.rs`
+- 📄 `quin_sink.rs`
+  - `trait QuinSink`
+  - `fn push`
+  - `fn push_lex`
+  - `impl QuinSink`
+- 📄 `sparql_aggregates.rs`
+  - `enum AggregateFunction`
+  - `struct AggregateAccumulator`
+  - `impl AggregateAccumulator`
+  - `fn new`
+  - `fn add_value`
+  - `fn get_result`
+  - `struct GroupKey`
+  - `impl GroupKey`
+  - `fn set`
+  - `impl Default`
+  - `fn default`
+  - `struct AggregationContext`
+  - `impl AggregationContext`
+  - `fn find_or_create_group`
+  - `fn add_values_to_group`
+  - *(...and 7 more)*
+- 📄 `sparql_ast.rs`
+  - `enum SparqlQuery`
+  - `struct SelectQuery`
+  - `impl Default`
+  - `fn default`
+  - `struct AskQuery`
+  - `struct ConstructQuery`
+  - `struct DescribeQuery`
+  - `enum TemporalMode`
+  - `enum Pattern`
+  - `enum Path`
+  - `enum Expression`
+  - `enum UnaryOp`
+  - `enum BinaryOp`
+  - `enum Function`
+  - `struct OrderCondition`
+  - *(...and 22 more)*
+- 📄 `sparql_did.rs`
+  - `struct DidResolutionResult`
+  - `struct DidVerificationResult`
+  - `struct DidPermissionResult`
+  - `struct DidCacheEntry`
+  - `struct SparqlDidHandler`
+  - `fn new`
+  - `fn resolve_did`
+  - `fn verify_signature`
+  - `fn check_permission`
+  - `fn authenticate_did`
+  - `fn current_timestamp`
+  - `fn sign_with_did`
+  - `fn invalidate_cache`
+  - `fn default`
+  - `fn did_resolve`
+  - *(...and 9 more)*
+- 📄 `sparql_endpoint.rs`
+  - `struct SparqlEndpoint`
+  - `fn new`
+  - `fn handle_query`
+  - `fn handle_ask`
+  - `fn handle_construct`
+  - `fn handle_describe`
+  - `struct SparqlProtocolHandler`
+  - `fn parse_accept_header`
+  - `fn handle_request`
+  - `fn test_parse_accept_header`
+- 📄 `sparql_executor.rs`
+  - `fn term_is_var`
+  - `fn bind_var`
+  - `struct QueryExecutor`
+  - `fn new`
+  - `fn execute`
+  - `fn execute_ask`
+  - `fn execute_construct`
+  - `fn execute_describe`
+  - `fn execute_operator`
+  - `fn execute_subject_scan`
+  - `fn execute_predicate_scan`
+  - `fn execute_object_scan`
+  - `fn execute_triple_scan`
+  - `fn execute_star_triple_scan`
+  - `fn lookup_star_components`
+  - *(...and 20 more)*
+- 📄 `sparql_extensions.rs`
+  - `struct ExtensionRegistry`
+  - `impl ExtensionRegistry`
+  - `fn new`
+  - `fn register`
+  - `fn lookup`
+  - `fn is_magic_predicate`
+  - `impl Default`
+  - `fn default`
+  - `fn no_op`
+  - `fn ext_bound`
+  - `fn ext_str`
+  - `fn ext_lang`
+  - `fn ext_datatype`
+  - `fn ext_is_iri`
+  - `fn ext_is_blank`
+  - *(...and 39 more)*
+- 📄 `sparql_federated.rs`
+  - `struct ServiceEndpoint`
+  - `struct FederatedResult`
+  - `struct FederatedQueryHandler`
+  - `fn new`
+  - `fn register_endpoint`
+  - `fn resolve_did`
+  - `fn execute_service`
+  - `fn prepare_did_auth`
+  - `fn execute_remote_query`
+  - `fn execute_federated`
+  - `fn check_cors_allowed`
+  - `fn generate_cors_headers`
+  - `fn default`
+  - `struct DidCorsHelper`
+  - `impl DidCorsHelper`
+  - *(...and 7 more)*
+- 📄 `sparql_filter.rs`
+  - `enum ProvOPredicate`
+  - `impl ProvOPredicate`
+  - `fn hash`
+  - `fn from_hash`
+  - `struct ProvenanceFilter`
+  - `impl ProvenanceFilter`
+  - `fn is_prov_predicate`
+  - `fn is_invalidation_predicate`
+  - `fn is_attribution_predicate`
+  - `fn subject_is_invalidated`
+  - `fn subject_has_attribution`
+  - `fn attributions`
+  - `fn filter_by`
+  - `fn eval_prov_filter`
+  - `struct ExpressionEvaluator`
+  - *(...and 21 more)*
+- 📄 `sparql_mm.rs`
+  - `enum MediaFragmentDimension`
+  - `struct MediaFragment`
+  - `enum WindowType`
+  - `struct TimeWindow`
+  - `struct SparqlMmHandler`
+  - `fn new`
+  - `fn parse_media_fragment`
+  - `fn get_ma_property`
+  - `fn get_temporal_fragment`
+  - `fn get_spatial_fragment`
+  - `fn get_track_fragment`
+  - `fn add_media_fragment`
+  - `fn create_tumbling_window`
+  - `fn create_sliding_window`
+  - `fn create_session_window`
+  - *(...and 46 more)*
+- 📄 `sparql_parser.rs`
+  - `fn parse_sparql`
+  - `fn strip_prefix_declarations`
+  - `fn parse_prefix_line`
+  - `fn parse_select_query`
+  - `fn parse_ask_query`
+  - `fn parse_construct_query`
+  - `fn parse_describe_query`
+  - `fn parse_distinct`
+  - `fn parse_variables`
+  - `fn parse_where_clause`
+  - `fn parse_triple_patterns`
+  - `fn split_triple_patterns`
+  - `fn parse_star_triple_pattern`
+  - `fn parse_term`
+  - `fn parse_integer`
+  - *(...and 15 more)*
+- 📄 `sparql_planner.rs`
+  - `enum PhysicalOperatorType`
+  - `struct AggregateSpec`
+  - `struct PlanOperator`
+  - `struct ExecutionPlan`
+  - `impl ExecutionPlan`
+  - `fn new`
+  - `fn add_operator`
+  - `impl Default`
+  - `fn default`
+  - `struct QueryPlanner`
+  - `impl QueryPlanner`
+  - `fn plan`
+  - `fn plan_select`
+  - `fn plan_ask`
+  - `fn plan_construct`
+  - *(...and 4 more)*
+- 📄 `sparql_shacl.rs`
+  - `enum ShaclConstraint`
+  - `struct ShaclShape`
+  - `struct ValidationResult`
+  - `struct ShaclValidator`
+  - `fn new`
+  - `fn add_shape`
+  - `fn add_constraint`
+  - `fn validate_node`
+  - `fn validate_constraint`
+  - `fn get_node_kind`
+  - `fn check_class_membership`
+  - `fn check_min_count`
+  - `fn check_max_count`
+  - `fn check_datatype`
+  - `fn check_pattern`
+  - *(...and 9 more)*
+- 📄 `sparql_tests.rs`
+  - `fn create_test_quins`
+  - `fn test_ast_creation`
+  - `fn test_ast_pattern_limit`
+  - `fn test_ast_pattern_overflow`
+  - `fn test_ast_property_path`
+  - `fn test_ast_subquery`
+  - `fn test_ast_embedded_triple`
+  - `fn test_ast_service_pattern`
+  - `fn test_parser_simple_select`
+  - `fn test_parser_with_filter`
+  - `fn test_parser_with_optional`
+  - `fn test_parser_with_union`
+  - `fn test_parser_with_property_path`
+  - `fn test_planner_triple_scan`
+  - `fn test_planner_filter`
+  - *(...and 24 more)*
+- 📄 `sparql_update.rs`
+  - `enum UpdateOperation`
+  - `struct UpdateExecutor`
+  - `fn new`
+  - `fn execute`
+  - `fn execute_insert_data`
+  - `fn execute_delete_data`
+  - `fn execute_delete_insert`
+  - `fn execute_load`
+  - `fn execute_clear`
+  - `fn execute_create`
+  - `fn execute_drop`
+  - `struct UpdateQuery`
+  - `fn test_insert_data`
+  - `fn test_delete_data`
+- 📄 `sparql_websocket.rs`
+  - `enum WebSocketMessageType`
+  - `struct WebSocketMessage`
+  - `struct WebSocketSession`
+  - `struct SparqlWebSocketHandler`
+  - `fn new`
+  - `fn register_session`
+  - `fn unregister_session`
+  - `fn handle_query`
+  - `fn stream_results`
+  - `fn subscribe`
+  - `fn unsubscribe`
+  - `fn notify_subscribers`
+  - `fn default`
+  - `fn test_websocket_handler_creation`
+  - `fn test_register_session`
+  - *(...and 2 more)*
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

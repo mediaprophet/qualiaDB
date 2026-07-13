@@ -1,0 +1,1088 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix dc:      <http://purl.org/dc/terms/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix values:  <https://ns.webcivics.net/values/> .
+@prefix cml:     <https://ns.webcivics.net/cml/> .
+@prefix concept: <https://ns.webcivics.net/concept/> .
+@prefix doc:     <https://ns.webcivics.net/values/gcii-1949#> .
+
+# ============================================================
+# CML concept layer (LOGIC) — Convention (II) for the Amelioration of the Condition of Wounded, Sick and Shipwrecked Members of Armed Forces at Sea. Geneva, 12 August 1949.
+# MACHINE-DERIVED from the TEXT layer (un-instruments) — cml:Proposed,
+# values:HeuristicDerived. Pending human attestation (cml:Attested / exactMatch).
+# One cml:Concept per provision; cml:realizedBy the provision; cml:asserts the
+# deontic norm. R1 universalisation materialised for duties borne by every Agent.
+# ============================================================
+
+concept:gcii-1949-article-1 a cml:Concept ;
+    skos:prefLabel "Article 1 - Respect for the Convention"@en ;
+    cml:realizedBy doc:article-1 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-1-norm .
+
+concept:gcii-1949-article-1-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-1 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-2 a cml:Concept ;
+    skos:prefLabel "Article 2 - Application of the Convention"@en ;
+    cml:realizedBy doc:article-2 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-2-norm .
+
+concept:gcii-1949-article-2-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-2 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-3 a cml:Concept ;
+    skos:prefLabel "Article 3 - Conflicts not of an international character"@en ;
+    cml:realizedBy doc:article-3 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-3-norm .
+
+concept:gcii-1949-article-3-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-3 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-4 a cml:Concept ;
+    skos:prefLabel "Article 4 - Field of application"@en ;
+    cml:realizedBy doc:article-4 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-4-norm .
+
+concept:gcii-1949-article-4-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-4 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-5 a cml:Concept ;
+    skos:prefLabel "Article 5 - Application by neutral Powers"@en ;
+    cml:realizedBy doc:article-5 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-5-norm .
+
+concept:gcii-1949-article-5-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-5 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-6 a cml:Concept ;
+    skos:prefLabel "Article 6 - Special agreements"@en ;
+    cml:realizedBy doc:article-6 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-6-norm .
+
+concept:gcii-1949-article-6-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-6 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-7 a cml:Concept ;
+    skos:prefLabel "Article 7 - Non-renunciation of rights"@en ;
+    cml:realizedBy doc:article-7 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-7-norm .
+
+concept:gcii-1949-article-7-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-7 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-8 a cml:Concept ;
+    skos:prefLabel "Article 8 - Protecting Powers"@en ;
+    cml:realizedBy doc:article-8 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-8-norm .
+
+concept:gcii-1949-article-8-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-8 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-9 a cml:Concept ;
+    skos:prefLabel "Article 9 - Activities of the ICRC and other impartial humanitarian organizations"@en ;
+    cml:realizedBy doc:article-9 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-9-norm .
+
+concept:gcii-1949-article-9-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-9 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-10 a cml:Concept ;
+    skos:prefLabel "Article 10 - Substitutes for Protecting Powers"@en ;
+    cml:realizedBy doc:article-10 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-10-norm .
+
+concept:gcii-1949-article-10-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-10 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-11 a cml:Concept ;
+    skos:prefLabel "Article 11 - Conciliation procedure"@en ;
+    cml:realizedBy doc:article-11 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-11-norm .
+
+concept:gcii-1949-article-11-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-11 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-12 a cml:Concept ;
+    skos:prefLabel "Article 12 - Protection and care of the wounded, sick and shipwrecked"@en ;
+    cml:realizedBy doc:article-12 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-12-norm .
+
+concept:gcii-1949-article-12-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-12 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-13 a cml:Concept ;
+    skos:prefLabel "Article 13 - Protected persons"@en ;
+    cml:realizedBy doc:article-13 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-13-norm .
+
+concept:gcii-1949-article-13-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-13 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-14 a cml:Concept ;
+    skos:prefLabel "Article 14 - Handing over of wounded, sick and shipwrecked to a belligerent"@en ;
+    cml:realizedBy doc:article-14 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-14-norm .
+
+concept:gcii-1949-article-14-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-14 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-15 a cml:Concept ;
+    skos:prefLabel "Article 15 - Wounded, sick and shipwrecked taken on board a neutral warship or neutral military aircraft"@en ;
+    cml:realizedBy doc:article-15 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-15-norm .
+
+concept:gcii-1949-article-15-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-15 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-16 a cml:Concept ;
+    skos:prefLabel "Article 16 - Status of the wounded, sick and shipwrecked who have fallen into enemy hands"@en ;
+    cml:realizedBy doc:article-16 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-16-norm .
+
+concept:gcii-1949-article-16-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-16 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-17 a cml:Concept ;
+    skos:prefLabel "Article 17 - Wounded, sick and shipwrecked landed in a neutral port"@en ;
+    cml:realizedBy doc:article-17 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-17-norm .
+
+concept:gcii-1949-article-17-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-17 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-18 a cml:Concept ;
+    skos:prefLabel "Article 18 - Search for casualties after an engagement"@en ;
+    cml:realizedBy doc:article-18 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-18-norm .
+
+concept:gcii-1949-article-18-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-18 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-19 a cml:Concept ;
+    skos:prefLabel "Article 19 - Recording and forwarding of information"@en ;
+    cml:realizedBy doc:article-19 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-19-norm .
+
+concept:gcii-1949-article-19-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-19 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-20 a cml:Concept ;
+    skos:prefLabel "Article 20 - Presriptions regarding the dead"@en ;
+    cml:realizedBy doc:article-20 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-20-norm .
+
+concept:gcii-1949-article-20-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-20 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-21 a cml:Concept ;
+    skos:prefLabel "Article 21 - Appeals to neutral vessels"@en ;
+    cml:realizedBy doc:article-21 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-21-norm .
+
+concept:gcii-1949-article-21-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-21 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-22 a cml:Concept ;
+    skos:prefLabel "Article 22 - Notification and protection of military hospital ships"@en ;
+    cml:realizedBy doc:article-22 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-22-norm .
+
+concept:gcii-1949-article-22-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-22 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-23 a cml:Concept ;
+    skos:prefLabel "Article 23 - Protection of medical establishments ashore"@en ;
+    cml:realizedBy doc:article-23 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-23-norm .
+
+concept:gcii-1949-article-23-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-23 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-24 a cml:Concept ;
+    skos:prefLabel "Article 24 - Hospital ships utilized by relief societies and private persons of Parties to the conflict"@en ;
+    cml:realizedBy doc:article-24 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-24-norm .
+
+concept:gcii-1949-article-24-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-24 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-25 a cml:Concept ;
+    skos:prefLabel "Article 25 - Hospital ships utilized by relief societies and private persons of neutral countries"@en ;
+    cml:realizedBy doc:article-25 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-25-norm .
+
+concept:gcii-1949-article-25-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-25 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-26 a cml:Concept ;
+    skos:prefLabel "Article 26 - Tonnage of hospital ships"@en ;
+    cml:realizedBy doc:article-26 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-26-norm .
+
+concept:gcii-1949-article-26-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-26 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-27 a cml:Concept ;
+    skos:prefLabel "Article 27 - Protection of coastal rescue craft and fixed coastal installations"@en ;
+    cml:realizedBy doc:article-27 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-27-norm .
+
+concept:gcii-1949-article-27-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-27 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-28 a cml:Concept ;
+    skos:prefLabel "Article 28 - Protection of sick-bays"@en ;
+    cml:realizedBy doc:article-28 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-28-norm .
+
+concept:gcii-1949-article-28-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-28 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-29 a cml:Concept ;
+    skos:prefLabel "Article 29 - Hospital ships in a port fallen into enemy hands"@en ;
+    cml:realizedBy doc:article-29 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-29-norm .
+
+concept:gcii-1949-article-29-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-29 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-30 a cml:Concept ;
+    skos:prefLabel "Article 30 - Employment of hospital ships and coastal rescue craft"@en ;
+    cml:realizedBy doc:article-30 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-30-norm .
+
+concept:gcii-1949-article-30-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-30 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-31 a cml:Concept ;
+    skos:prefLabel "Article 31 - Right of control and search of hospital ships and coastal rescue craft"@en ;
+    cml:realizedBy doc:article-31 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-31-norm .
+
+concept:gcii-1949-article-31-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-31 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-32 a cml:Concept ;
+    skos:prefLabel "Article 32 - Stay of hospital ships and coastal rescue craft in a neutral port"@en ;
+    cml:realizedBy doc:article-32 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-32-norm .
+
+concept:gcii-1949-article-32-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-32 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-33 a cml:Concept ;
+    skos:prefLabel "Article 33 - Converted merchant vessels"@en ;
+    cml:realizedBy doc:article-33 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-33-norm .
+
+concept:gcii-1949-article-33-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-33 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-34 a cml:Concept ;
+    skos:prefLabel "Article 34 - Discontinuance of protection of hospital ships"@en ;
+    cml:realizedBy doc:article-34 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-34-norm .
+
+concept:gcii-1949-article-34-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-34 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-35 a cml:Concept ;
+    skos:prefLabel "Article 35 - Conditions not depriving hospital ships of protection"@en ;
+    cml:realizedBy doc:article-35 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-35-norm .
+
+concept:gcii-1949-article-35-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-35 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-36 a cml:Concept ;
+    skos:prefLabel "Article 36 - Protection of the personnel of hospital ships"@en ;
+    cml:realizedBy doc:article-36 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-36-norm .
+
+concept:gcii-1949-article-36-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-36 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-37 a cml:Concept ;
+    skos:prefLabel "Article 37 - Protection of medical and religious personnel of other ships"@en ;
+    cml:realizedBy doc:article-37 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-37-norm .
+
+concept:gcii-1949-article-37-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-37 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-38 a cml:Concept ;
+    skos:prefLabel "Article 38 - Ships used for the conveyance of medical equipment"@en ;
+    cml:realizedBy doc:article-38 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-38-norm .
+
+concept:gcii-1949-article-38-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-38 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-39 a cml:Concept ;
+    skos:prefLabel "Article 39 - Medical aircraft"@en ;
+    cml:realizedBy doc:article-39 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-39-norm .
+
+concept:gcii-1949-article-39-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-39 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-40 a cml:Concept ;
+    skos:prefLabel "Article 40 - Flight over neutral countries. Landing of the wounded, sick and shipwrecked"@en ;
+    cml:realizedBy doc:article-40 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-40-norm .
+
+concept:gcii-1949-article-40-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-40 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-41 a cml:Concept ;
+    skos:prefLabel "Article 41 - Use of the emblem"@en ;
+    cml:realizedBy doc:article-41 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-41-norm .
+
+concept:gcii-1949-article-41-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-41 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-42 a cml:Concept ;
+    skos:prefLabel "Article 42 - Identification of medical and religious personnel"@en ;
+    cml:realizedBy doc:article-42 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-42-norm .
+
+concept:gcii-1949-article-42-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-42 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-43 a cml:Concept ;
+    skos:prefLabel "Article 43 - Marking of hospital ships and coastal rescue craft"@en ;
+    cml:realizedBy doc:article-43 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-43-norm .
+
+concept:gcii-1949-article-43-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-43 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-44 a cml:Concept ;
+    skos:prefLabel "Article 44 - Limitation in the use of the distinctive signs"@en ;
+    cml:realizedBy doc:article-44 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-44-norm .
+
+concept:gcii-1949-article-44-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-44 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-45 a cml:Concept ;
+    skos:prefLabel "Article 45 - Prevention of misuse of the distinctive signs"@en ;
+    cml:realizedBy doc:article-45 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-45-norm .
+
+concept:gcii-1949-article-45-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-45 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-46 a cml:Concept ;
+    skos:prefLabel "Article 46 - Detailed execution. Unforeseen cases"@en ;
+    cml:realizedBy doc:article-46 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-46-norm .
+
+concept:gcii-1949-article-46-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-46 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-47 a cml:Concept ;
+    skos:prefLabel "Article 47 - Prohibition of reprisals"@en ;
+    cml:realizedBy doc:article-47 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-47-norm .
+
+concept:gcii-1949-article-47-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-47 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-48 a cml:Concept ;
+    skos:prefLabel "Article 48 - Dissemination of the Convention"@en ;
+    cml:realizedBy doc:article-48 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-48-norm .
+
+concept:gcii-1949-article-48-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-48 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-49 a cml:Concept ;
+    skos:prefLabel "Article 49 - Translations. Implementing laws and regulations"@en ;
+    cml:realizedBy doc:article-49 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-49-norm .
+
+concept:gcii-1949-article-49-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-49 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-50 a cml:Concept ;
+    skos:prefLabel "Article 50 - Penal sanctions"@en ;
+    cml:realizedBy doc:article-50 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-50-norm .
+
+concept:gcii-1949-article-50-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-50 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-51 a cml:Concept ;
+    skos:prefLabel "Article 51 - Grave breaches"@en ;
+    cml:realizedBy doc:article-51 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-51-norm .
+
+concept:gcii-1949-article-51-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-51 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-52 a cml:Concept ;
+    skos:prefLabel "Article 52 - Responsibilities of the Contracting Parties"@en ;
+    cml:realizedBy doc:article-52 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-52-norm .
+
+concept:gcii-1949-article-52-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-52 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-53 a cml:Concept ;
+    skos:prefLabel "Article 53 - Enquiry procedure"@en ;
+    cml:realizedBy doc:article-53 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-53-norm .
+
+concept:gcii-1949-article-53-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-53 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-54 a cml:Concept ;
+    skos:prefLabel "Article 54 - Languages"@en ;
+    cml:realizedBy doc:article-54 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-54-norm .
+
+concept:gcii-1949-article-54-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-54 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-55 a cml:Concept ;
+    skos:prefLabel "Article 55 - Signature"@en ;
+    cml:realizedBy doc:article-55 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-55-norm .
+
+concept:gcii-1949-article-55-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-55 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-56 a cml:Concept ;
+    skos:prefLabel "Article 56 - Ratification"@en ;
+    cml:realizedBy doc:article-56 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-56-norm .
+
+concept:gcii-1949-article-56-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-56 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-57 a cml:Concept ;
+    skos:prefLabel "Article 57 - Coming into force"@en ;
+    cml:realizedBy doc:article-57 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-57-norm .
+
+concept:gcii-1949-article-57-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-57 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-58 a cml:Concept ;
+    skos:prefLabel "Article 58 - Relation to the 1907 Hague Convention (X)"@en ;
+    cml:realizedBy doc:article-58 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-58-norm .
+
+concept:gcii-1949-article-58-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-58 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-59 a cml:Concept ;
+    skos:prefLabel "Article 59 - Accession"@en ;
+    cml:realizedBy doc:article-59 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-59-norm .
+
+concept:gcii-1949-article-59-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-59 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-60 a cml:Concept ;
+    skos:prefLabel "Article 60 - Notification of accessions"@en ;
+    cml:realizedBy doc:article-60 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-60-norm .
+
+concept:gcii-1949-article-60-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-60 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-61 a cml:Concept ;
+    skos:prefLabel "Article 61 - Immediate effect"@en ;
+    cml:realizedBy doc:article-61 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-61-norm .
+
+concept:gcii-1949-article-61-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-61 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-62 a cml:Concept ;
+    skos:prefLabel "Article 62 - Denunciation"@en ;
+    cml:realizedBy doc:article-62 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-62-norm .
+
+concept:gcii-1949-article-62-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-62 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .
+
+concept:gcii-1949-article-63 a cml:Concept ;
+    skos:prefLabel "Article 63 - Registration with the United Nations"@en ;
+    cml:realizedBy doc:article-63 ;
+    cml:curationStatus cml:Proposed ;
+    cml:schemaVersion "2" ;   # regenerable — see CML_UPGRADE.md
+    prov:wasDerivedFrom <https://ihl-databases.icrc.org/en/ihl-treaties/gcii-1949> ;
+    dc:date "1949-08-12" ;
+    values:category "International Humanitarian Law (Law of War)" ;
+    cml:asserts concept:gcii-1949-article-63-norm .
+
+concept:gcii-1949-article-63-norm a values:Undertaking ;
+    cml:modality cml:Deontic ;
+    values:partOf concept:gcii-1949-article-63 ;
+    values:borneBy values:Agent ;
+    values:deonticStatus values:HeuristicDerived ;
+    cml:curationStatus cml:Proposed .

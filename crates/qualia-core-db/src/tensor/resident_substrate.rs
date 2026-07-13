@@ -6,10 +6,12 @@ use core::cell::UnsafeCell;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::OnceLock;
 
-use crate::NQuin;
-use super::buffer_export::{parse_header, read_tensor_at, TENSOR_STRIDE};
-use super::q42_integration::{Q42TensorView, TensorMetadata, TensorVolumeConfig, TensorVolumeError};
+use super::buffer_export::{parse_header, read_tensor_at};
+use super::q42_integration::{
+    Q42TensorView, TensorMetadata, TensorVolumeConfig, TensorVolumeError,
+};
 use super::Tensor10D;
+use crate::NQuin;
 
 /// Maximum nodes pinned in U1 ledger (structural cap, not heap growth).
 pub const MAX_RESIDENT_NODES: usize = 4096;
@@ -83,8 +85,12 @@ impl ResidentTensorSubstrate {
     }
 
     /// Cold-path load from exported tensor buffer (spatial encode, daemon slice).
-    pub fn load_from_tensor_buffer(&self, bytes: &[u8], default_subject_hash: u64) -> Result<u32, &'static str> {
-        let (header, header_len) = parse_header(bytes)?;
+    pub fn load_from_tensor_buffer(
+        &self,
+        bytes: &[u8],
+        default_subject_hash: u64,
+    ) -> Result<u32, &'static str> {
+        let (header, _header_len) = parse_header(bytes)?;
         let count = header.node_count as usize;
         if count > MAX_RESIDENT_NODES {
             return Err("resident substrate capacity exceeded");
@@ -122,9 +128,8 @@ impl ResidentTensorSubstrate {
         if count == 0 {
             return Ok(0);
         }
-        let nquins = unsafe {
-            std::slice::from_raw_parts(self.nquins.get() as *const NQuin, count)
-        };
+        let nquins =
+            unsafe { std::slice::from_raw_parts(self.nquins.get() as *const NQuin, count) };
         let meta = unsafe {
             std::slice::from_raw_parts(self.metadata.get() as *const TensorMetadata, count)
         };
@@ -134,7 +139,11 @@ impl ResidentTensorSubstrate {
     }
 
     /// Load tensors directly (native encode path without full buffer round-trip).
-    pub fn load_from_tensors(&self, tensors: &[Tensor10D], subject_hash: u64) -> Result<u32, &'static str> {
+    pub fn load_from_tensors(
+        &self,
+        tensors: &[Tensor10D],
+        subject_hash: u64,
+    ) -> Result<u32, &'static str> {
         if tensors.len() > MAX_RESIDENT_NODES {
             return Err("resident substrate capacity exceeded");
         }
@@ -153,7 +162,8 @@ impl ResidentTensorSubstrate {
             subject_hashes[i] = subject;
         }
 
-        self.node_count.store(tensors.len() as u32, Ordering::Release);
+        self.node_count
+            .store(tensors.len() as u32, Ordering::Release);
         self.load_generation.fetch_add(1, Ordering::AcqRel);
         Ok(tensors.len() as u32)
     }
@@ -184,7 +194,7 @@ pub fn global_resident_substrate() -> &'static ResidentTensorSubstrate {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tensor::buffer_export::{TensorBufferHeader, write_tensor_buffer};
+    use crate::tensor::buffer_export::{write_tensor_buffer, TensorBufferHeader};
 
     #[test]
     fn load_and_search_resident_substrate() {

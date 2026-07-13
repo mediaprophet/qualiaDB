@@ -58,13 +58,7 @@ pub fn init_log_stream(enable_telemetry: bool) {
             use std::io::Write;
             let target = record.target();
             if target.contains("qualia") || record.args().to_string().contains("LLM_LOAD") {
-                writeln!(
-                    buf,
-                    "[{}] {} — {}",
-                    record.level(),
-                    target,
-                    record.args()
-                )
+                writeln!(buf, "[{}] {} — {}", record.level(), target, record.args())
             } else {
                 writeln!(buf, "[{}] {}", record.level(), record.args())
             }
@@ -100,42 +94,74 @@ pub fn init_log_stream(enable_telemetry: bool) {
 pub fn run_list(vault_path: &Path) -> Result<(), String> {
     let entries = model_lifecycle::scan_vault_gguf(vault_path).map_err(|e| e.to_string())?;
     if entries.is_empty() {
-        println!("No `.gguf` files under {}", vault_path.display());
+        println!("No `.p64` / `.gguf` files under {}", vault_path.display());
         return Ok(());
     }
     println!(
-        "{:<32} {:>12}  {:>18}  {}",
-        "NAME", "SIZE (MiB)", "PROFILE_ID", "PATH"
+        "{:<32} {:>6} {:>12}  {:>18}  {}",
+        "NAME", "KIND", "SIZE (MiB)", "PROFILE_ID", "PATH"
     );
-    println!("{}", "-".repeat(96));
+    println!("{}", "-".repeat(100));
     for VaultGgufEntry {
         name,
         path,
         profile_id,
         size_bytes,
+        container,
     } in entries
     {
         let mib = size_bytes as f64 / (1024.0 * 1024.0);
         println!(
-            "{:<32} {:>12.1}  0x{profile_id:016x}  {path}",
-            name,
-            mib,
+            "{:<32} {:>6} {:>12.1}  0x{profile_id:016x}  {path}",
+            name, container, mib,
         );
     }
     Ok(())
 }
 
+pub fn run_duplicate_audit(vault_path: &Path) -> Result<(), String> {
+    let groups = model_lifecycle::audit_vault_duplicates(vault_path).map_err(|e| e.to_string())?;
+    if groups.is_empty() {
+        println!(
+            "No byte-identical GGUF duplicates under {}",
+            vault_path.display()
+        );
+        return Ok(());
+    }
+
+    let mut reclaimable = 0u64;
+    for group in &groups {
+        reclaimable = reclaimable.saturating_add(group.reclaimable_bytes());
+        println!(
+            "\nSHA-256 {}  ({:.1} MiB each)",
+            group.sha256,
+            group.size_bytes as f64 / (1024.0 * 1024.0)
+        );
+        println!("  keep: {}", group.canonical_path);
+        for path in &group.duplicate_paths {
+            println!("  duplicate: {path}");
+        }
+    }
+    println!(
+        "\nRead-only audit: {} exact duplicate group(s), {:.1} MiB reclaimable.",
+        groups.len(),
+        reclaimable as f64 / (1024.0 * 1024.0)
+    );
+    println!("No files were copied, moved, or deleted.");
+    Ok(())
+}
+
 pub fn run_load(vault_path: &Path, model_ref: &str) -> Result<(), String> {
-    let gguf = model_lifecycle::resolve_vault_model(vault_path, model_ref)
-        .map_err(|e| e.to_string())?;
+    let gguf =
+        model_lifecycle::resolve_vault_model(vault_path, model_ref).map_err(|e| e.to_string())?;
 
     println!("Loading {} …", gguf.display());
     qualia_client_core::system_telemetry::start_activation_telemetry("CLI load");
 
     let record = tokio::task::block_in_place(|| {
-        tokio::runtime::Handle::current()
-            .block_on(model_lifecycle::activate_vault_gguf(&gguf))
-    }).map_err(|e| {
+        tokio::runtime::Handle::current().block_on(model_lifecycle::activate_vault_gguf(&gguf))
+    })
+    .map_err(|e| {
         qualia_client_core::system_telemetry::stop_activation_telemetry();
         e.to_string()
     })?;
@@ -179,16 +205,29 @@ pub fn run_status() -> Result<(), String> {
     let kv_mb = model_lifecycle::get_kv_cache_used_mb();
 
     println!("Lifecycle state : {}", lifecycle_label(lifecycle));
-    println!("Resident id     : {:?}", resident_id.map(|id| format!("0x{id:016x}")));
+    println!(
+        "Resident id     : {:?}",
+        resident_id.map(|id| format!("0x{id:016x}"))
+    );
     println!("Resident bytes  : {}", orch.resident_memory_bytes());
     println!("LLM memory      : {} MiB", llm_mb);
     println!("KV cache        : {} MiB", kv_mb);
-    println!("Thermal         : {}", model_lifecycle::get_thermal_state_label());
-    println!("Scrubbing       : {}", orch.scrubbing_lock.load(std::sync::atomic::Ordering::Acquire));
+    println!(
+        "Thermal         : {}",
+        model_lifecycle::get_thermal_state_label()
+    );
+    println!(
+        "Scrubbing       : {}",
+        orch.scrubbing_lock
+            .load(std::sync::atomic::Ordering::Acquire)
+    );
 
     if let Ok(guard) = session_lock().lock() {
         if let Some(session) = guard.as_ref() {
-            println!("CLI session     : {} ({})", session.record.model_id, session.record.gguf_path);
+            println!(
+                "CLI session     : {} ({})",
+                session.record.model_id, session.record.gguf_path
+            );
         } else {
             println!("CLI session     : none");
         }
@@ -210,7 +249,10 @@ pub fn run_eval(prompt: &str, orchestrated: bool, stream: bool) -> Result<(), St
                 None,
             ) {
                 OrchestrationResult::Committed { text, .. } => {
-                    println!("\n--- output ({} ms) ---\n{text}\n", started.elapsed().as_millis());
+                    println!(
+                        "\n--- output ({} ms) ---\n{text}\n",
+                        started.elapsed().as_millis()
+                    );
                 }
                 OrchestrationResult::Blocked {
                     rule_violated,
@@ -240,7 +282,10 @@ pub fn run_eval(prompt: &str, orchestrated: bool, stream: bool) -> Result<(), St
                 .agent
                 .infer(prompt, "ctx:qualia-cli-eval")
                 .map_err(|e| format!("{e:?}"))?;
-            println!("\n--- output ({} ms, {} tokens) ---\n{}\n", output.inference_duration_ms, output.tokens_generated, output.text);
+            println!(
+                "\n--- output ({} ms, {} tokens) ---\n{}\n",
+                output.inference_duration_ms, output.tokens_generated, output.text
+            );
         }
         Ok(())
     })
@@ -261,7 +306,10 @@ pub fn run_evict(model_id_ref: &str) -> Result<(), String> {
 
 fn parse_model_id_ref(raw: &str) -> Result<u64, String> {
     let trimmed = raw.trim();
-    if let Some(hex) = trimmed.strip_prefix("0x").or_else(|| trimmed.strip_prefix("0X")) {
+    if let Some(hex) = trimmed
+        .strip_prefix("0x")
+        .or_else(|| trimmed.strip_prefix("0X"))
+    {
         u64::from_str_radix(hex, 16).map_err(|e| format!("Invalid hex profile id: {e}"))
     } else if let Ok(id) = trimmed.parse::<u64>() {
         Ok(id)
@@ -303,6 +351,10 @@ pub fn default_vault_path() -> PathBuf {
         if !trimmed.is_empty() {
             return PathBuf::from(trimmed);
         }
+    }
+    let canonical = PathBuf::from("C:/LLM_Models");
+    if canonical.is_dir() {
+        return canonical;
     }
     PathBuf::from("C:/llmmodels")
 }

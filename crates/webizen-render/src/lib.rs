@@ -16,6 +16,8 @@ pub mod pipeline;
 pub mod scene_contract;
 pub mod shaders;
 pub mod telemetry;
+#[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
+pub mod volumetric;
 pub mod wgpu_renderer;
 
 // Re-export main types for convenience
@@ -24,6 +26,10 @@ pub use pipeline::{BindGroupManager, RenderBindGroups};
 pub use scene_contract::{RenderScene, SceneCamera, SceneEdge, SceneFace, SceneNode, ScenePoint};
 pub use shaders::{EPISTEMIC_WGSL, PROJECTOR_WGSL};
 pub use telemetry::SystemTelemetry;
+#[cfg(all(feature = "qualia", not(target_arch = "wasm32")))]
+pub use volumetric::{
+    render_scene_png as render_volumetric_scene_png, render_scene_rgba8_into, VolumetricRenderer,
+};
 #[cfg(not(target_arch = "wasm32"))]
 pub use wgpu_renderer::{
     render_preview_data_uri, render_preview_png, render_scene_data_uri, render_scene_png,
@@ -215,6 +221,7 @@ mod tests {
             color: "#ff0000".to_string(),
             radius: 10.0,
             alpha: 1.0,
+            ..SceneNode::default()
         });
         scene.add_node(SceneNode {
             position: ScenePoint {
@@ -225,6 +232,7 @@ mod tests {
             color: "#00ff00".to_string(),
             radius: 5.0,
             alpha: 0.8,
+            ..SceneNode::default()
         });
 
         let png = match render_scene_png(&scene, 64, 64) {
@@ -380,6 +388,7 @@ mod tests {
             color: "#ef4444".to_string(),
             radius: 8.0,
             alpha: 1.0,
+            ..SceneNode::default()
         });
 
         let png = match render_scene_png(&scene, 96, 96) {

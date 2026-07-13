@@ -1,0 +1,183 @@
+---
+created: 2026-06-30
+updated: 2026-07-13
+update_scope: Minor
+---
+
+# platform Index
+
+## Functionality Overview
+Comprehensive index of functionality for `platform`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Subdirectories
+- 📁 `[compute_bridge](compute_bridge/DIRECTORY_INDEX.md)`
+
+### Files & Exported Functionality
+- 📄 `device_benchmark.rs`
+  - `enum CircuitKind`
+  - `impl CircuitKind`
+  - `fn from_wgpu`
+  - `struct CircuitBench`
+  - `struct CapabilityMatrix`
+  - `impl CapabilityMatrix`
+  - `fn best`
+  - `fn summary`
+  - `fn params_bytes`
+  - `fn bench_gpu_gemv`
+  - `fn bench_upload_gbps`
+  - `fn bench_cpu_gemv`
+  - `fn gflops`
+  - `fn backend_rank`
+  - `fn benchmark_devices`
+  - *(...and 1 more)*
+- 📄 `git_bridge.rs`
+  - `struct DagNode`
+  - `impl DagNode`
+  - `fn digest`
+  - `fn to_bytes`
+  - `fn from_bytes`
+  - `fn quins_merkle`
+  - `struct DagStore`
+  - `impl DagStore`
+  - `fn new`
+  - `fn genesis_node`
+  - `fn commit_node`
+  - `fn fork_node`
+  - `fn write_branch_pointer`
+  - `fn merge_node`
+  - `fn nodes_as_of`
+  - *(...and 17 more)*
+- 📄 `gpu.rs`
+  - `enum GpuError`
+  - `trait GpuIntegrator`
+  - `fn integrate_simpsons_gpu`
+  - `fn rk4_step_gpu`
+  - `fn available_vram`
+  - `struct WebGpuIntegrator`
+  - `impl WebGpuIntegrator`
+  - `fn new`
+  - `fn execute_compute`
+  - `struct Uniforms`
+  - `fn execute_rk4_compute`
+  - `impl GpuIntegrator`
+  - `fn pack_gpu_result_into_quin`
+  - `fn extract_gpu_result_from_quin`
+  - `fn create_gpu_job_quin`
+  - *(...and 2 more)*
+- 📄 `hardware_passport.rs`
+  - `struct HardwarePassport`
+  - `fn topology_key`
+  - `fn default_cache_path`
+  - `fn write_passport`
+  - `fn read_passport`
+  - `fn load_or_probe`
+  - `fn load_or_probe_default`
+  - `fn synthetic_passport`
+  - `fn cbor_round_trip_preserves_infinity_and_key`
+  - `fn version_mismatch_is_ignored`
+  - `fn load_or_probe_caches_then_hits`
+- 📄 `hetero_dispatch.rs`
+  - `enum ZeroCopyStrategy`
+  - `impl ZeroCopyStrategy`
+  - `fn for_device`
+  - `fn for_wgpu_device_type`
+  - `fn requires_host_copy`
+  - `enum ComputeBackend`
+  - `struct HostCapabilities`
+  - `struct HeterogeneousDispatcher`
+  - `impl HeterogeneousDispatcher`
+  - `fn new`
+  - `fn select_backend`
+  - `fn gpu_tiles`
+  - `fn capabilities`
+  - `enum TensorOpKind`
+  - `struct TensorOp`
+  - *(...and 11 more)*
+- 📄 `host.rs`
+  - `enum IoError`
+  - `impl From`
+  - `fn from`
+  - `struct DmaBuffer`
+  - `fn new`
+  - `fn as_slice`
+  - `fn as_mut_slice`
+  - `fn len`
+  - `fn is_empty`
+  - `fn f64_capacity`
+  - `fn default`
+  - `trait ZeroCopyStreamer`
+  - `fn async_read_chunk`
+  - `fn poll_completion`
+  - `fn get_active_buffer`
+  - *(...and 21 more)*
+- 📄 `jni_bridge.rs`
+- 📄 `kml_bridge.rs`
+  - `enum KmlError`
+  - `impl std`
+  - `fn fmt`
+  - `fn import_kml`
+  - `fn flush_placemark`
+  - `fn flush_polygon`
+  - `fn parse_coordinate_list`
+  - `fn flush_network_link`
+  - `fn export_kml`
+  - `struct PlacemarkData`
+  - `fn make_quin`
+  - `fn make_temporal_quin`
+  - `fn fnv_hash`
+  - `fn encode_geohash_64`
+  - `fn parse_first_coordinate`
+  - *(...and 11 more)*
+- 📄 `local_scheduler.rs`
+  - `enum JobStatus`
+  - `struct Job`
+  - `impl Job`
+  - `fn new`
+  - `fn with_target`
+  - `fn progress`
+  - `fn velocity`
+  - `struct WorkerCell`
+  - `impl WorkerCell`
+  - `fn run`
+  - `fn process_job`
+  - `struct ProductionQueue`
+  - `impl ProductionQueue`
+  - `fn with_wal_path`
+  - `fn submit_job`
+  - *(...and 41 more)*
+- 📄 `mod.rs`
+- 📄 `npu_ffi.rs`
+  - `struct FilterMask64`
+  - `struct SieveOrchestrator`
+  - `impl SieveOrchestrator`
+  - `fn new`
+  - `fn execute_sieve`
+  - `fn nets_parse_smiles`
+  - `fn nets_calculate_valency`
+- 📄 `platform_scheduler.rs`
+  - `fn pthread_set_qos_class_self_np`
+  - `fn pthread_get_qos_class_np`
+  - `enum QosClass`
+  - `enum SchedulerError`
+  - `impl std`
+  - `fn fmt`
+  - `fn bind_current_thread`
+  - `fn bind_inference_thread`
+  - `fn bind_background_thread`
+  - `fn bind_macos`
+  - `fn bind_linux`
+  - `fn bind_windows`
+  - `fn current_qos_class`
+  - `fn test_bind_does_not_panic`
+  - `fn test_inference_background_helpers`
+  - *(...and 1 more)*
+- 📄 `tee_ffi.rs`
+  - `fn AKeyStore_signData`
+  - `fn AKeyStore_verifySignature`
+  - `fn SecKeyCreateSignature`
+  - `fn SecKeyVerifySignature`
+
+## Changelog
+- **2026-07-13**: `device_benchmark.rs` now uses process-isolated, deadline-bounded per-adapter/backend workers with validated length-delimited CBOR aggregation for wgpu 30 driver safety.
+- **2026-06-30**: Automated full index generation, extracting code definitions.

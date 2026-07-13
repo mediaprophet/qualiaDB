@@ -2,6 +2,7 @@
 //!
 //! Links baked tensors to `q42:hasSpectralSheet` NQuin objects at ingest.
 
+use crate::audio::audio_spectral_sheet::preview_bins_from_tensor;
 use crate::audio::audio_spectral_sheet::{
     copy_sidecar_frame_to_preview_bins, SPECTRAL_PREVIEW_BINS,
 };
@@ -10,7 +11,6 @@ use crate::audio::stft_bake::{bake_stft_sidecar_from_preview, StftBakeError};
 use crate::tensor::bake_pipeline::{audio_sidecar_relpath, PRED_HAS_SPECTRAL_SHEET};
 use crate::tensor::Tensor10D;
 use crate::NQuin;
-use crate::audio::audio_spectral_sheet::preview_bins_from_tensor;
 
 /// FNV-1a over preview bins — stable sidecar filename hash.
 #[inline]
@@ -95,7 +95,8 @@ pub fn write_sidecar_file(
     use std::io::Write;
     let mut rel = [0u8; 64];
     let n = format_sidecar_relpath(content_hash, &mut rel);
-    let rel_str = std::str::from_utf8(&rel[..n]).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    let rel_str = std::str::from_utf8(&rel[..n])
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
     let path = storage_root.join(rel_str);
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
@@ -119,14 +120,8 @@ mod tests {
     fn link_emits_sheet_quin() {
         let t = Tensor10D::new(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.55);
         let mut buf = [0u8; 20 + 64 * 16 * 4];
-        let (q, _, n) = link_tensor_audio_sidecar(
-            &t,
-            0xabc,
-            16,
-            SidecarBakeKind::Cqt,
-            &mut buf,
-        )
-        .unwrap();
+        let (q, _, n) =
+            link_tensor_audio_sidecar(&t, 0xabc, 16, SidecarBakeKind::Cqt, &mut buf).unwrap();
         assert!(n > 20);
         assert_eq!(q.subject, 0xabc);
         assert_eq!(q.predicate, PRED_HAS_SPECTRAL_SHEET);

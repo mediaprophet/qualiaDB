@@ -43,13 +43,27 @@ impl SuperBlockWriter {
         block.block_sequence_id = sequence_id;
         block.storage_owner_did = owner_did;
         block.active_quin_count = QUINS_PER_BLOCK as u64;
-        block.validation_checksum = 0xABCD; // Mock checksum
         block.hardware_profile_flags = 0x01; // Edge device default profile
 
         // Copy the array iteratively to avoid unaligned access panics
         for i in 0..QUINS_PER_BLOCK {
             block.quin_ledger[i] = quins[i];
         }
+
+        // Real integrity checksum over the quin payload — CRC-32C, the same
+        // routine the .10d/.qualia containers use (replaces a former mock
+        // `0xABCD`). Computed over the ledger only (not the header), so a
+        // reader can recompute it over the same region. Complementary to the
+        // per-quin XOR-parity ECC: this covers the whole ledger in one word.
+        block.validation_checksum = {
+            let ledger_bytes = unsafe {
+                std::slice::from_raw_parts(
+                    block.quin_ledger.as_ptr() as *const u8,
+                    QUINS_PER_BLOCK * core::mem::size_of::<NQuin>(),
+                )
+            };
+            crate::container_10d::crc32c::crc32c(ledger_bytes)
+        };
 
         // Convert the aligned struct directly into a byte slice
         let bytes = unsafe {

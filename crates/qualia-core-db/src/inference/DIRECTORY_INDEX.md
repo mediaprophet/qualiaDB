@@ -1,0 +1,385 @@
+---
+created: 2026-06-30
+updated: 2026-06-30
+update_scope: Comprehensive
+---
+
+# inference Index
+
+## Functionality Overview
+Comprehensive index of functionality for `inference`. This document serves as the ground truth for bots regarding implemented components and dependencies.
+
+## File & Subdirectory Manifest
+### Files & Exported Functionality
+- 📄 `agent.rs`
+  - `fn agent_type`
+  - `fn principal_of`
+  - `fn is_artificial`
+  - `fn is_ungrounded_agency`
+  - `fn agent_type_name`
+  - `fn t`
+  - `fn resolves_agent_type`
+  - `fn natural_person_is_never_ungrounded`
+  - `fn artificial_agent_without_principal_is_ungrounded`
+  - `fn artificial_agent_with_principal_is_grounded`
+- 📄 `ambient_orchestration.rs`
+  - `struct AmbientOrchestrationManager`
+  - `struct AmbientDevice`
+  - `enum DeviceType`
+  - `struct DeviceCapabilities`
+  - `enum NeuralEngine`
+  - `enum Framework`
+  - `enum DeviceState`
+  - `struct PerformanceProfile`
+  - `struct PowerProfile`
+  - `struct SubThresholdOrchestrator`
+  - `enum OrchestrationPolicy`
+  - `struct WorkloadAnalyzer`
+  - `struct WorkloadSample`
+  - `struct PredictionModel`
+  - `enum ModelType`
+  - *(...and 94 more)*
+- 📄 `compute_universe.rs`
+  - `enum QualiaPrimitive`
+  - `impl ComputeUniverse`
+  - `fn qualia_primitives`
+  - `fn phase8_channels`
+  - `enum Phase8Channel`
+  - `struct ContextInjectToken`
+  - `impl ContextInjectToken`
+  - `impl Default`
+  - `fn default`
+  - `struct ContextInjectRing`
+  - `impl ContextInjectRing`
+  - `fn len`
+  - `fn is_empty`
+  - `fn try_push`
+  - `fn try_pop`
+  - *(...and 52 more)*
+- 📄 `directml_bridge.rs`
+  - `enum DmlStatus`
+  - `impl DmlStatus`
+  - `fn message`
+  - `struct IocpHandle`
+  - `fn iocp_create_impl`
+  - `fn iocp_async_read_impl`
+  - `enum DmlError`
+  - `impl From`
+  - `fn from`
+  - `fn dequantize_q4_k_block`
+  - `fn dequantize_q4_k_tensor`
+  - `struct DmlDevice`
+  - `struct AdapterMemoryInfo`
+  - `impl AdapterMemoryInfo`
+  - `fn available_local_bytes`
+  - *(...and 17 more)*
+- 📄 `ggml_quants.rs`
+  - `struct BlockQ6K`
+  - `struct GgmlBlockLayout`
+  - `fn ggml_block_layout`
+  - `fn ggml_row_bytes`
+  - `enum GgmlDequantError`
+  - `enum ExecutionError`
+  - `fn fetch_token_embedding`
+  - `fn tensor_byte_len`
+  - `fn fetch_tensor_bytes`
+  - `fn tensor_row_byte_len`
+  - `fn fetch_tensor_row_range_bytes`
+  - `fn dequant_matrix_row_into`
+  - `fn dequantize_row_into`
+  - `fn dequant_f32`
+  - `fn dequant_f16`
+  - *(...and 18 more)*
+- 📄 `gguf_sharder.rs`
+  - `fn gguf_name_hash`
+  - `fn gguf_skip_value`
+  - `struct GgufTensorInfo`
+  - `struct GgufHyperparams`
+  - `impl GgufHyperparams`
+  - `fn effective_rope_freq_base`
+  - `fn effective_rope_scale`
+  - `fn head_dim`
+  - `fn effective_n_kv_head`
+  - `fn q_heads_per_kv`
+  - `struct LayerTensors`
+  - `struct GgufTensorIndex`
+  - `fn is_layer_matmul_tensor_name`
+  - `fn write_blk_tensor_name`
+  - `impl GgufTensorIndex`
+  - *(...and 63 more)*
+- 📄 `inference_agent.rs`
+  - `enum AgentBackend`
+  - `fn default_local_modality`
+  - `struct AgentIntent`
+  - `fn default_max_sentinel_depth`
+  - `impl AgentIntent`
+  - `fn is_critical`
+  - `fn to_frame`
+  - `impl AgentIntentFrame`
+  - `fn from_intent`
+  - `enum WebizenVerdict`
+  - `struct AgentOutput`
+  - `trait AgentRuntime`
+  - `fn backend`
+  - `fn agent_did`
+  - `fn validate_intent`
+  - *(...and 40 more)*
+- 📄 `inference_awq.rs`
+  - `fn stats`
+  - `fn enable`
+  - `fn disable`
+  - `fn reset`
+  - `fn begin_forward`
+  - `fn record_ffn_input`
+  - `fn snapshot`
+  - `fn is_enabled`
+- 📄 `inference_bench.rs`
+  - `fn set_decode_budget_override`
+  - `fn decode_budget_override`
+  - `fn set_gpu_topk`
+  - `fn gpu_topk_enabled`
+  - `fn record_topk_hit`
+  - `fn record_argmax_fallback`
+  - `fn output_path_counts`
+  - `fn reset_output_path_counts`
+  - `fn set_ternary_ffn`
+  - `fn ternary_ffn_enabled`
+  - `fn set_attention_preproject`
+  - `fn attention_preproject_enabled`
+  - `fn set_attention_o_fuse`
+  - `fn attention_o_fuse_enabled`
+  - `fn set_resident_weights`
+  - *(...and 48 more)*
+- 📄 `inference_eval.rs`
+  - `fn log_sum_exp`
+  - `fn token_nll`
+  - `fn perplexity`
+  - `fn delta_ppl`
+  - `fn log_softmax_into`
+  - `fn kl_divergence`
+  - `fn unique_word_ratio`
+  - `struct QualityVerdict`
+  - `impl QualityVerdict`
+  - `fn hard_pass`
+  - `fn soft_pass`
+  - `fn accept`
+  - `fn load_corpus`
+  - `fn reset_ppl`
+  - `fn add_ppl`
+  - *(...and 5 more)*
+- 📄 `inference_gpu_profiler.rs`
+  - `enum Phase`
+  - `impl Phase`
+  - `fn label`
+  - `fn set_enabled`
+  - `fn env_opt_in`
+  - `fn enabled`
+  - `struct TsResources`
+  - `fn resources`
+  - `fn pass_writes_both`
+  - `fn pass_writes_begin`
+  - `fn pass_writes_end`
+  - `fn resolve`
+  - `fn accumulate`
+  - `struct PhaseTiming`
+  - `impl PhaseTiming`
+  - *(...and 7 more)*
+- 📄 `inference_kernel_parity.rs`
+  - `fn max_abs_err`
+  - `fn mean_abs_err`
+  - `fn ulp_key`
+  - `fn max_ulp_diff`
+  - `fn q8_0_bytes`
+  - `fn quantize_q8_0_from_f32`
+  - `fn f16_bytes`
+  - `fn quantize_f16_from_f32`
+  - `fn q4_0_bytes`
+  - `fn quantize_q4_0_from_f32`
+  - `fn q4_k_bytes`
+  - `fn quantize_q4_k_from_f32`
+  - `fn metrics_zero_for_identical`
+  - `fn ulp_one_step_is_one`
+  - `fn q8_0_roundtrip_within_one_step`
+  - *(...and 2 more)*
+- 📄 `metal_bridge.rs`
+  - `fn dequantize_q4_k_block`
+  - `fn dequantize_q4_k_tensor`
+  - `fn cblas_sgemm`
+  - `fn accelerate_sgemm`
+  - `fn dequantize_q4k_midpoint`
+  - `fn accelerate_identity_2x2`
+  - `fn accelerate_smoke_4096x4096`
+- 📄 `mod.rs`
+- 📄 `neuro_symbolic_sieve.rs`
+  - `struct SieveSlot`
+  - `struct SieveStateMask`
+  - `impl SieveStateMask`
+  - `fn allows`
+  - `fn lexicon_hash_for`
+  - `enum SieveState`
+  - `enum SieveError`
+  - `struct SieveLexSpec`
+  - `impl SieveLexSpec`
+  - `fn push_subject`
+  - `fn push_predicate`
+  - `fn push_object`
+  - `fn graph_mutation_default`
+  - `fn fever_observation`
+  - `struct NeuroSymbolicSieve`
+  - *(...and 17 more)*
+- 📄 `orchestrator.rs`
+  - `enum ModelLifecycle`
+  - `enum OrchestrationResult`
+  - `enum ThermalStatus`
+  - `trait ThermalGovernor`
+  - `fn get_thermal_state`
+  - `fn adjust_policy`
+  - `struct NullThermalGovernor`
+  - `impl ThermalGovernor`
+  - `struct NewtonCoolingODE`
+  - `impl ODEFunction`
+  - `fn derivatives`
+  - `struct CalculusThermalGovernor`
+  - `impl CalculusThermalGovernor`
+  - `fn new`
+  - `struct TaskOrchestrator`
+  - *(...and 38 more)*
+- 📄 `residency_planner.rs`
+  - `enum ResidencyProtocol`
+  - `enum PlacementRole`
+  - `struct DevicePlacement`
+  - `struct EmploymentPlan`
+  - `impl EmploymentPlan`
+  - `fn summary`
+  - `fn pool_for`
+  - `fn plan_employment`
+  - `fn plan_for_model`
+  - `fn circuit`
+  - `fn discrete_topo`
+  - `fn small_model_is_resident_on_fastest`
+  - `fn overflow_with_igpu_is_heterogeneous`
+  - `fn overflow_without_igpu_streams`
+  - `fn unified_host_is_resident_on_igpu`
+- 📄 `resident_model.rs`
+  - `struct ResidentModelSlot`
+  - `fn slot`
+  - `fn mount_resident_gguf`
+  - `fn mount_resident_q42`
+  - `fn mount_resident_model`
+  - `fn clear_resident_model`
+  - `fn resident_mmap_for_path`
+  - `fn resident_model_id`
+  - `fn resident_gguf_path`
+- 📄 `safetensor.rs`
+  - `enum SourceFormat`
+  - `fn detect_format`
+  - `struct SafeTensorEntry`
+  - `impl SafeTensorEntry`
+  - `fn byte_len`
+  - `struct SafeTensorPlan`
+  - `fn parse_safetensor_header`
+  - `fn safetensor_dtype_to_ggml`
+  - `fn is_high_fidelity_ggml`
+  - `fn ggml_elem_bytes`
+  - `fn synth_safetensor`
+  - `fn detects_formats`
+  - `fn parses_header_and_offsets`
+  - `fn dtype_gate_accepts_high_fidelity_rejects_q4`
+- 📄 `semantic_culler.rs`
+  - `struct SemanticCuller`
+  - `struct CullingVerdict`
+  - `enum CullingError`
+  - `struct AgencyPolicy`
+  - `enum AccessLevel`
+  - `struct SemanticFilter`
+  - `enum FilterType`
+  - `struct TemporalConstraints`
+  - `struct DeonticRule`
+  - `enum DeonticType`
+  - `enum DeonticAction`
+  - `struct Quin`
+  - `struct CullingResult`
+  - `enum CullingReason`
+  - `struct VerificationData`
+  - *(...and 26 more)*
+- 📄 `sparse_cache.rs`
+  - `struct SparseDictionaryCache`
+  - `impl SparseDictionaryCache`
+  - `fn new`
+  - `fn compress_kv_block`
+- 📄 `spatial_sieve.rs`
+  - `struct GeoCoordinate`
+  - `struct BoundingBox`
+  - `fn compute_spatial_overlap_gpu_mock`
+  - `fn log_spatial_coordinate`
+  - `fn verify_proof_of_location`
+- 📄 `tensor_roles.rs`
+  - `struct TensorRole`
+  - `fn extract_layer`
+  - `fn name_to_role`
+  - `fn ternary_eligible`
+  - `fn name_is_ternary_eligible`
+  - `fn gguf_names_map_to_roles`
+  - `fn hf_names_map_to_roles`
+  - `fn unknown_names_are_none`
+  - `fn ternary_policy_is_ffn_only`
+- 📄 `ternary.rs`
+  - `fn packed_trit_len`
+  - `fn ternary_blob_len`
+  - `fn quantize_ternary`
+  - `fn pack_trits`
+  - `fn unpack_trits_into`
+  - `fn dequantize_ternary`
+  - `fn ternary_blob`
+  - `fn trit_at`
+  - `fn ternary_gemm_cpu`
+  - `fn trit_code_2bit`
+  - `fn packed_trit_len_2bit`
+  - `fn pack_trits_2bit`
+  - `fn trit_at_2bit`
+  - `fn ternary_gemm_cpu_2bit`
+  - `fn dequantize_blob`
+  - *(...and 10 more)*
+- 📄 `ternary_gpu.rs`
+  - `fn ternary_params_bytes`
+  - `fn ternary_gemm_gpu`
+  - `fn ternary_gemm_gpu_2bit`
+  - `fn run_gemm`
+  - `fn align_up_u64`
+  - `struct ResidentTernaryTensor`
+  - `struct TernaryFfnResident`
+  - `impl TernaryFfnResident`
+  - `fn build`
+  - `fn contains`
+  - `fn resident_bytes`
+  - `fn len`
+  - `fn is_empty`
+  - `fn gemv`
+  - `fn try_gpu`
+  - *(...and 7 more)*
+- 📄 `thermal_wal.rs`
+  - `struct ThermalEvictionRecord`
+  - `struct ThermalWalHeader`
+  - `struct ThermalWal`
+  - `impl ThermalWal`
+  - `fn open`
+  - `fn append`
+- 📄 `topk.rs`
+  - `struct TopKItem`
+  - `fn topk_params_bytes`
+  - `fn clean`
+  - `fn cmp_desc`
+  - `fn topk_cpu`
+  - `fn merge_block_candidates`
+  - `fn cpu_topk_orders_and_breaks_ties`
+  - `fn cpu_topk_k1_is_argmax`
+  - `fn merge_drops_masked_and_neg_inf`
+- 📄 `topk_gpu.rs`
+  - `fn topk_gpu`
+  - `fn try_gpu`
+  - `fn assert_parity`
+  - `fn topk_gpu_matches_cpu_small_multiblock`
+  - `fn topk_gpu_matches_cpu_vocab_scale`
+
+## Changelog
+- **2026-06-30**: Automated full index generation, extracting code definitions.

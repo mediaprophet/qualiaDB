@@ -1,0 +1,148 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix doc:    <https://ns.webcivics.net/values/convention-prevention-and-punishment-crime-genocide#> .
+
+# ============================================================
+# Convention on the Prevention and Punishment of the Crime of Genocide
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Convention on the Prevention and Punishment of the Crime of Genocide"@en ;
+    dc:date "09 December 1948" ;
+    values:category "Genocide & atrocity prevention" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/convention-prevention-and-punishment-crime-genocide> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:article-1 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 1"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Contracting Parties confirm that genocide, whether committed in time of peace or in time of war, is a crime under international law which they undertake to prevent and to punish."@en .
+
+doc:article-2 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 2"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "In the present Convention, genocide means any of the following acts committed with intent to destroy, in whole or in part, a national, ethnical, racial or religious group, as such: (a) Killing members of the group; (b) Causing serious bodily or mental harm to members of the group; (c) Deliberately inflicting on the group conditions of life calculated to bring about its physical destruction in whole or in part; (d) Imposing measures intended to prevent births within the group; (e) Forcibly transferring children of the group to another group."@en .
+
+doc:article-3 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 3"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The following acts shall be punishable: (a) Genocide; (b) Conspiracy to commit genocide; (c) Direct and public incitement to commit genocide; (d) Attempt to commit genocide; (e) Complicity in genocide."@en .
+
+doc:article-4 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 4"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Persons committing genocide or any of the other acts enumerated in article III shall be punished, whether they are constitutionally responsible rulers, public officials or private individuals."@en .
+
+doc:article-5 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 5"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Contracting Parties undertake to enact, in accordance with their respective Constitutions, the necessary legislation to give effect to the provisions of the present Convention, and, in particular, to provide effective penalties for persons guilty of genocide or any of the other acts enumerated in article III."@en .
+
+doc:article-6 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 6"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Persons charged with genocide or any of the other acts enumerated in article III shall be tried by a competent tribunal of the State in the territory of which the act was committed, or by such international penal tribunal as may have jurisdiction with respect to those Contracting Parties which shall have accepted its jurisdiction."@en .
+
+doc:article-7 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 7"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Genocide and the other acts enumerated in article III shall not be considered as political crimes for the purpose of extradition. The Contracting Parties pledge themselves in such cases to grant extradition in accordance with their laws and treaties in force."@en .
+
+doc:article-8 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 8"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Any Contracting Party may call upon the competent organs of the United Nations to take such action under the Charter of the United Nations as they consider appropriate for the prevention and suppression of acts of genocide or any of the other acts enumerated in article III."@en .
+
+doc:article-9 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 9"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Disputes between the Contracting Parties relating to the interpretation, application or fulfilment of the present Convention, including those relating to the responsibility of a State for genocide or for any of the other acts enumerated in article III, shall be submitted to the International Court of Justice at the request of any of the parties to the dispute."@en .
+
+doc:article-10 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 10"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The present Convention, of which the Chinese, English, French, Russian and Spanish texts are equally authentic, shall bear the date of 9 December 1948."@en .
+
+doc:article-11 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 11"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The present Convention shall be open until 31 December 1949 for signature on behalf of any Member of the United Nations and of any non-member State to which an invitation to sign has been addressed by the General Assembly. The present Convention shall be ratified, and the instruments of ratification shall be deposited with the Secretary-General of the United Nations. After 1 January 1950, the present Convention may be acceded to on behalf of any Member of the United Nations and of any non-member State which has received an invitation as aforesaid. Instruments of accession shall be deposited with the Secretary-General of the United Nations."@en .
+
+doc:article-12 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 12"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Any Contracting Party may at any time, by notification addressed to the Secretary-General of the United Nations, extend the application of the present Convention to all or any of the territories for the conduct of whose foreign relations that Contracting Party is responsible."@en .
+
+doc:article-13 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 13"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "On the day when the first twenty instruments of ratification or accession have been deposited, the Secretary-General shall draw up a procès-verbal and transmit a copy thereof to each Member of the United Nations and to each of the non-member States contemplated in article XI. The present Convention shall come into force on the ninetieth day following the date of deposit of the twentieth instrument of ratification or accession. Any ratification or accession effected subsequent to the latter date shall become effective on the ninetieth day following the deposit of the instrument of ratification or accession."@en .
+
+doc:article-14 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 14"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The present Convention shall remain in effect for a period of ten years as from the date of its coming into force. It shall thereafter remain in force for successive periods of five years for such Contracting Parties as have not denounced it at least six months before the expiration of the current period. Denunciation shall be effected by a written notification addressed to the Secretary-General of the United Nations."@en .
+
+doc:article-15 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 15"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "If, as a result of denunciations, the number of Parties to the present Convention should become less than sixteen, the Convention shall cease to be in force as from the date on which the last of these denunciations shall become effective."@en .
+
+doc:article-16 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 16"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "A request for the revision of the present Convention may be made at any time by any Contracting Party by means of a notification in writing addressed to the Secretary-General. The General Assembly shall decide upon the steps, if any, to be taken in respect of such request."@en .
+
+doc:article-17 a values:Prohibition ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 17"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The Secretary-General of the United Nations shall notify all Members of the United Nations and the non-member States contemplated in article XI of the following: (a) Signatures, ratifications and accessions received in accordance with article XI; (b) Notifications received in accordance with article XII; (c) The date upon which the present Convention comes into force in accordance with article XIII; (d) Denunciations received in accordance with article XIV; (e) The abrogation of the Convention in accordance with article XV; (f) Notifications received in accordance with article XVI."@en .
+
+doc:article-18 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Article 18"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "The original of the present Convention shall be deposited in the archives of the United Nations. A certified copy of the Convention shall be transmitted to each Member of the United Nations and to each of the non-member States contemplated in article XI."@en .
+
+doc:article-19 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Article 19"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Entry into force: 12 January 1951, in accordance with article XIII The Contracting Parties , Having considered the declaration made by the General Assembly of the United Nations in its resolution 96 (I) dated 11 December 1946 that genocide is a crime under international law, contrary to the spirit and aims of the United Nations and condemned by the civilized world, Recognizing that at all periods of history genocide has inflicted great losses on humanity, and Being convinced that, in order to liberate mankind from such an odious scourge, international co-operation is required, Hereby agree as hereinafter provided :"@en .

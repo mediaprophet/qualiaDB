@@ -38,10 +38,7 @@ impl<T: Default + Copy, const N: usize> FixedArray<T, N> {
 
     /// Creates a fixed array from an array
     pub fn from_array(data: [T; N]) -> Self {
-        Self {
-            data,
-            len: N,
-        }
+        Self { data, len: N }
     }
 
     /// Pushes a value if space is available

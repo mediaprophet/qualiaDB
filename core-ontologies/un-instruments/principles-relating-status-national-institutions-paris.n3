@@ -1,0 +1,222 @@
+@prefix rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc:     <http://purl.org/dc/terms/> .
+@prefix values: <https://ns.webcivics.net/values/> .
+@prefix doc:    <https://ns.webcivics.net/values/principles-relating-status-national-institutions-paris#> .
+
+# ============================================================
+# Principles relating to the Status of National Institutions (The Paris Principles)
+# RE-SOURCED from authoritative OHCHR text (verbatim originalText).
+# Deontic typing = lexical heuristic (values:HeuristicDerived) — pending review.
+# states->parties + universalisation = curation overlay (amendedText), pending.
+# ============================================================
+
+doc:Instrument a values:ValuesCredential ;
+    dc:title "Principles relating to the Status of National Institutions (The Paris Principles)"@en ;
+    dc:date "19 December 1993" ;
+    values:category "Human rights defenders & national institutions" ;
+    values:categoryStatus values:AutoAssigned ;
+    values:source <https://www.ohchr.org/en/instruments-mechanisms/instruments/principles-relating-status-national-institutions-paris> ;
+    rdfs:comment "Re-sourced from authoritative OHCHR text; deontic + amendment layers pending." .
+
+doc:paragraph-1 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 1"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Competence and responsibilities Composition and guarantees of independence and pluralism Methods of operation Additional principles concerning the status of commissions with quasi-jurisdictional competence Competence and responsibilities"@en .
+
+doc:paragraph-2 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 2"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. A national institution shall be vested with competence to promote and protect human rights."@en .
+
+doc:paragraph-3 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 3"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "2. A national institution shall be given as broad a mandate as possible, which shall be clearly set forth in a constitutional or legislative text, specifying its composition and its sphere of competence."@en .
+
+doc:paragraph-4 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 4"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "3. A national institution shall, inter alia, have the following responsibilities:"@en .
+
+doc:paragraph-5 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 5"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) To submit to the Government, Parliament and any other competent body, on an advisory basis either at the request of the authorities concerned or through the exercise of its power to hear a matter without higher referral, opinions, recommendations, proposals and reports on any matters concerning the promotion and protection of human rights; the national institution may decide to publicize them; these opinions, recommendations, proposals and reports, as well as any prerogative of the national institution, shall relate to the following areas:"@en .
+
+doc:paragraph-6 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 6"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(b) To promote and ensure the harmonization of national legislation, regulations and practices with the international human rights instruments to which the State is a party, and their effective implementation;"@en .
+
+doc:paragraph-7 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 7"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(c) To encourage ratification of the above-mentioned instruments or accession to those instruments, and to ensure their implementation;"@en .
+
+doc:paragraph-8 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 8"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(d) To contribute to the reports which States are required to submit to United Nations bodies and committees, and to regional institutions, pursuant to their treaty obligations and, where necessary, to express an opinion on the subject, with due respect for their independence;"@en .
+
+doc:paragraph-9 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 9"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(e) To cooperate with the United Nations and any other organization in the United Nations system, the regional institutions and the national institutions of other countries that are competent in the areas of the protection and promotion of human rights;"@en .
+
+doc:paragraph-10 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 10"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(f) To assist in the formulation of programmes for the teaching of, and research into, human rights and to take part in their execution in schools, universities and professional circles;"@en .
+
+doc:paragraph-11 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 11"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(g) To publicize human rights and efforts to combat all forms of discrimination, in particular racial discrimination, by increasing public awareness, especially through information and education and by making use of all press organs."@en .
+
+doc:paragraph-12 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 12"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Composition and guarantees of independence and pluralism"@en .
+
+doc:paragraph-13 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 13"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "1. The composition of the national institution and the appointment of its members, whether by means of an election or otherwise, shall be established in accordance with a procedure which affords all necessary guarantees to ensure the pluralist representation of the social forces (of civilian society) involved in the protection and promotion of human rights, particularly by powers which will enable effective cooperation to be established with, or through the presence of, representatives of:"@en .
+
+doc:paragraph-14 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 14"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) Non-governmental organizations responsible for human rights and efforts to combat racial discrimination, trade unions, concerned social and professional organizations, for example, associations of lawyers, doctors, journalists and eminent scientists;"@en .
+
+doc:paragraph-15 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 15"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(b) Trends in philosophical or religious thought;"@en .
+
+doc:paragraph-16 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 16"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(c) Universities and qualified experts;"@en .
+
+doc:paragraph-17 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 17"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(e) Government departments (if these are included, their representatives should participate in the deliberations only in an advisory capacity)."@en .
+
+doc:paragraph-18 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 18"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "2. The national institution shall have an infrastructure which is suited to the smooth conduct of its activities, in particular adequate funding. The purpose of this funding should be to enable it to have its own staff and premises, in order to be independent of the Government and not be subject to financial control which might affect its independence."@en .
+
+doc:paragraph-19 a values:Obligation ;
+    values:partOf doc:Instrument ;
+    values:borneBy values:Agent ;
+    dc:title "Paragraph 19"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "3. In order to ensure a stable mandate for the members of the national institution, without which there can be no real independence, their appointment shall be effected by an official act which shall establish the specific duration of the mandate. This mandate may be renewable, provided that the pluralism of the institution's membership is ensured."@en .
+
+doc:paragraph-20 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 20"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Within the framework of its operation, the national institution shall:"@en .
+
+doc:paragraph-21 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 21"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) Freely consider any questions falling within its competence, whether they are submitted by the Government or taken up by it without referral to a higher authority, on the proposal of its members or of any petitioner,"@en .
+
+doc:paragraph-22 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 22"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(b) Hear any person and obtain any information and any documents necessary for assessing situations falling within its competence;"@en .
+
+doc:paragraph-23 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 23"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(c) Address public opinion directly or through any press organ, particularly in order to publicize its opinions and recommendations;"@en .
+
+doc:paragraph-24 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 24"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(d) Meet on a regular basis and whenever necessary in the presence of all its members after they have been duly concerned;"@en .
+
+doc:paragraph-25 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 25"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(e) Establish working groups from among its members as necessary, and set up local or regional sections to assist it in discharging its functions;"@en .
+
+doc:paragraph-26 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 26"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(f) Maintain consultation with the other bodies, whether jurisdictional or otherwise, responsible for the promotion and protection of human rights (in particular, ombudsmen, mediators and similar institutions);"@en .
+
+doc:paragraph-27 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 27"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(g) In view of the fundamental role played by the non-governmental organizations in expanding the work of the national institutions, develop relations with the non-governmental organizations devoted to promoting and protecting human rights, to economic and social development, to combating racism, to protecting particularly vulnerable groups (especially children, migrant workers, refugees, physically and mentally disabled persons) or to specialized areas."@en .
+
+doc:paragraph-28 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 28"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "Additional principles concerning the status of commissions with quasi-jurisdictional competence"@en .
+
+doc:paragraph-29 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 29"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "A national institution may be authorized to hear and consider complaints and petitions concerning individual situations. Cases may be brought before it by individuals, their representatives, third parties, non-governmental organizations, associations of trade unions or any other representative organizations. In such circumstances, and without prejudice to the principles stated above concerning the other powers of the commissions, the functions entrusted to them may be based on the following principles:"@en .
+
+doc:paragraph-30 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 30"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(a) Seeking an amicable settlement through conciliation or, within the limits prescribed by the law, through binding decisions or, where necessary, on the basis of confidentiality;"@en .
+
+doc:paragraph-31 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 31"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(b) Informing the party who filed the petition of his rights, in particular the remedies available to him, and promoting his access to them;"@en .
+
+doc:paragraph-32 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 32"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(c) Hearing any complaints or petitions or transmitting them to any other competent authority within the limits prescribed by the law;"@en .
+
+doc:paragraph-33 a values:Undertaking ;
+    values:partOf doc:Instrument ;
+    dc:title "Paragraph 33"@en ;
+    values:deonticStatus values:HeuristicDerived ;
+    values:originalText "(d) Making recommendations to the competent authorities, especially by proposing amendments or reforms of the laws, regulations and administrative practices, especially if they have created the difficulties encountered by the persons filing the petitions in order to assert their rights."@en .

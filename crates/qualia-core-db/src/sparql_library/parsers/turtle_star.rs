@@ -9,9 +9,9 @@
 //! - Virtual IDs minted via generate_embedded_triple_id()
 //! - Context stored separately in NQuin field (not in Virtual ID hash)
 
+use crate::lexicon::{generate_60bit_token, generate_embedded_triple_id};
+use crate::rdf_star::{RdfStarParseError, RdfStarParser};
 use crate::NQuin;
-use crate::lexicon::{generate_embedded_triple_id, generate_60bit_token};
-use crate::rdf_star::{RdfStarParser, RdfStarParseError};
 use std::io::{BufRead, BufReader, Read};
 
 /// Maximum nesting depth for embedded triples
@@ -19,7 +19,7 @@ const MAX_NESTING_DEPTH: usize = 16;
 
 /// Parsing state for a single frame
 #[repr(C)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ParsingState {
     ExpectSubject,
     ExpectPredicate,
@@ -110,65 +110,91 @@ impl TurtleStarParser {
         }
     }
 
+    /// Session context hash stamped onto emitted quads.
+    pub fn session_context(&self) -> u64 {
+        self.context_hash
+    }
+
+    /// Whether the embedded-triple stack is empty (no in-flight `<<` frames).
+    pub fn stack_is_empty(&self) -> bool {
+        self.stack.is_empty()
+    }
+
+    fn expect_state(
+        frame: &mut StackFrame,
+        expected: ParsingState,
+        next: ParsingState,
+    ) -> Result<(), RdfStarParseError> {
+        if frame.parsing_state != expected {
+            return Err(RdfStarParseError::MalformedEmbeddedTriple);
+        }
+        frame.parsing_state = next;
+        Ok(())
+    }
+
     /// Parse a Turtle-Star token (IRI, literal, or delimiter)
-    /// 
+    ///
     /// Returns Ok(Some(hash)) for valid IRIs/literals, Ok(None) for delimiters
     fn parse_token(&self, input: &[u8], pos: &mut usize) -> Result<Option<u64>, RdfStarParseError> {
         let bytes = &input[*pos..];
-        
+
         // Skip whitespace
         let mut start = 0;
         while start < bytes.len() && bytes[start].is_ascii_whitespace() {
             start += 1;
         }
-        
+
         if start >= bytes.len() {
             return Ok(None);
         }
-        
+
         let ch = bytes[start];
-        
+
         // Check for embedded triple start
         if ch == b'<' && start + 1 < bytes.len() && bytes[start + 1] == b'<' {
             *pos += start + 2;
             return Ok(None); // Signal embedded triple start
         }
-        
+
         // Check for embedded triple end
         if ch == b'>' && start + 1 < bytes.len() && bytes[start + 1] == b'>' {
             *pos += start + 2;
             return Ok(None); // Signal embedded triple end
         }
-        
+
         // Check for statement terminator
         if ch == b'.' {
             *pos += start + 1;
             return Ok(None);
         }
-        
+
         // Check for semicolon (predicate separator in Turtle)
         if ch == b';' {
             *pos += start + 1;
             return Ok(None);
         }
-        
+
         // Parse IRI or literal (simplified - proper Turtle would have <> delimiters)
         let mut end = start;
-        while end < bytes.len() && !bytes[end].is_ascii_whitespace() && bytes[end] != b'.' && bytes[end] != b';' {
+        while end < bytes.len()
+            && !bytes[end].is_ascii_whitespace()
+            && bytes[end] != b'.'
+            && bytes[end] != b';'
+        {
             end += 1;
         }
-        
+
         if start == end {
             return Ok(None);
         }
-        
+
         *pos += end;
-        
+
         // Hash the token
-        let token = std::str::from_utf8(&bytes[start..end])
-            .map_err(|_| RdfStarParseError::InvalidUtf8)?;
+        let token =
+            std::str::from_utf8(&bytes[start..end]).map_err(|_| RdfStarParseError::InvalidUtf8)?;
         let hash = generate_60bit_token(token.as_bytes());
-        
+
         Ok(Some(hash))
     }
 
@@ -181,57 +207,165 @@ impl TurtleStarParser {
         // Push new frame for embedded triple
         let frame = StackFrame::new();
         self.stack.push(frame)?;
-        
-        let start_depth = self.stack.depth();
-        
+
+        let _start_depth = self.stack.depth();
+
         // Parse subject
-        match self.parse_token(input, pos)? {
-            Some(hash) => self.stack.current().subject = Some(hash),
-            None => return Err(RdfStarParseError::MalformedEmbeddedTriple),
+        {
+            let frame = self.stack.current();
+            Self::expect_state(
+                frame,
+                ParsingState::ExpectSubject,
+                ParsingState::ExpectPredicate,
+            )?;
         }
-        
+        while *pos < input.len() && input[*pos].is_ascii_whitespace() {
+            *pos += 1;
+        }
+        if *pos + 1 < input.len() && input[*pos] == b'<' && input[*pos + 1] == b'<' {
+            *pos += 2; // skip <<
+            let (hash, _) = self.parse_embedded_triple_internal(input, pos)?;
+            self.stack.current().subject = Some(hash);
+        } else {
+            match self.parse_token(input, pos)? {
+                Some(hash) => self.stack.current().subject = Some(hash),
+                None => return Err(RdfStarParseError::MalformedEmbeddedTriple),
+            }
+        }
+
         // Parse predicate
+        {
+            let frame = self.stack.current();
+            Self::expect_state(
+                frame,
+                ParsingState::ExpectPredicate,
+                ParsingState::ExpectObject,
+            )?;
+        }
         match self.parse_token(input, pos)? {
             Some(hash) => self.stack.current().predicate = Some(hash),
             None => return Err(RdfStarParseError::MalformedEmbeddedTriple),
         }
-        
+
         // Parse object (could be another embedded triple)
-        match self.parse_token(input, pos)? {
-            Some(hash) => self.stack.current().object = Some(hash),
-            None => {
-                // Object might be another embedded triple
-                // For now, return error - full recursive parsing would go here
-                return Err(RdfStarParseError::MalformedEmbeddedTriple);
+        {
+            let frame = self.stack.current();
+            Self::expect_state(
+                frame,
+                ParsingState::ExpectObject,
+                ParsingState::ExpectEmbeddedEnd,
+            )?;
+        }
+        while *pos < input.len() && input[*pos].is_ascii_whitespace() {
+            *pos += 1;
+        }
+        if *pos + 1 < input.len() && input[*pos] == b'<' && input[*pos + 1] == b'<' {
+            *pos += 2; // skip <<
+            let (hash, _) = self.parse_embedded_triple_internal(input, pos)?;
+            self.stack.current().object = Some(hash);
+        } else {
+            match self.parse_token(input, pos)? {
+                Some(hash) => self.stack.current().object = Some(hash),
+                None => {
+                    return Err(RdfStarParseError::MalformedEmbeddedTriple);
+                }
             }
         }
-        
+
         // Expect >> terminator
-        // TODO: Proper termination check
-        
+        {
+            let frame = self.stack.current();
+            Self::expect_state(
+                frame,
+                ParsingState::ExpectEmbeddedEnd,
+                ParsingState::ExpectSubject,
+            )?;
+        }
+        while *pos + 1 < input.len() && input[*pos].is_ascii_whitespace() {
+            *pos += 1;
+        }
+        if *pos + 1 >= input.len() || input[*pos] != b'>' || input[*pos + 1] != b'>' {
+            return Err(RdfStarParseError::MalformedEmbeddedTriple);
+        }
+        *pos += 2;
+
         // Pop frame and get components
-        let frame = self.stack.pop().ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
-        
-        let subject = frame.subject.ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
-        let predicate = frame.predicate.ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
-        let object = frame.object.ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
-        
+        if !self.stack.is_empty() && self.stack.depth() > 1 {
+            // Nested frames remain for future recursive `<<` support.
+        }
+        let frame = self
+            .stack
+            .pop()
+            .ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
+
+        let subject = frame
+            .subject
+            .ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
+        let predicate = frame
+            .predicate
+            .ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
+        let object = frame
+            .object
+            .ok_or(RdfStarParseError::MalformedEmbeddedTriple)?;
+
         // Generate Virtual ID (context-independent per architectural decision)
         let virtual_id = generate_embedded_triple_id(subject, predicate, object);
-        
+
         Ok((virtual_id, [subject, predicate, object]))
+    }
+
+    /// Parse a full Turtle-Star annotation statement: `<< s p o >> annP annO [.]`.
+    ///
+    /// Returns `(virtual_id, [s,p,o], Option<(ann_predicate, ann_object)>)`. Unlike
+    /// `parse_embedded_triple` (which stops at `>>` and drops everything after),
+    /// this captures the outer predicate/object when present, so the caller can
+    /// emit the linking statement `virtual_id annP annO` — reaching parity with
+    /// the N-Quads-Star parser. A single parse pass handles both the annotated
+    /// and the bare-embedded-triple cases (the latter yields `None` for the
+    /// annotation), so there is no stateful re-parse of the same line.
+    fn parse_star_annotation(
+        &mut self,
+        input: &[u8],
+    ) -> Result<(u64, [u64; 3], Option<(u64, u64)>), RdfStarParseError> {
+        let mut pos = 0;
+        while pos < input.len() && input[pos].is_ascii_whitespace() {
+            pos += 1;
+        }
+        if pos + 1 < input.len() && input[pos] == b'<' && input[pos + 1] == b'<' {
+            pos += 2;
+        } else {
+            return Err(RdfStarParseError::MalformedEmbeddedTriple);
+        }
+        let (virtual_id, components) = self.parse_embedded_triple_internal(input, &mut pos)?;
+        // Outer predicate + object are optional: a line may be a bare `<< s p o >>`.
+        let annotation = match self.parse_token(input, &mut pos)? {
+            Some(ann_predicate) => self
+                .parse_token(input, &mut pos)?
+                .map(|ann_object| (ann_predicate, ann_object)),
+            None => None,
+        };
+        Ok((virtual_id, components, annotation))
     }
 }
 
 impl RdfStarParser for TurtleStarParser {
-    fn parse_embedded_triple(&mut self, input: &[u8]) -> Result<(u64, [u64; 3]), RdfStarParseError> {
+    fn parse_embedded_triple(
+        &mut self,
+        input: &[u8],
+    ) -> Result<(u64, [u64; 3]), RdfStarParseError> {
         let mut pos = 0;
+        while pos < input.len() && input[pos].is_ascii_whitespace() {
+            pos += 1;
+        }
+        if pos + 1 < input.len() && input[pos] == b'<' && input[pos + 1] == b'<' {
+            pos += 2;
+        }
         self.parse_embedded_triple_internal(input, &mut pos)
     }
 
     fn parse_triple(&mut self, input: &[u8]) -> Result<(u64, u64, u64), RdfStarParseError> {
         let mut pos = 0;
-        
+
         let skip_ws = |p: &mut usize| {
             while *p < input.len() && input[*p].is_ascii_whitespace() {
                 *p += 1;
@@ -255,13 +389,13 @@ impl RdfStarParser for TurtleStarParser {
                 None => return Err(RdfStarParseError::InvalidSyntax),
             }
         };
-        
+
         skip_ws(&mut pos);
         let predicate = match self.parse_token(input, &mut pos)? {
             Some(h) => h,
             None => return Err(RdfStarParseError::InvalidSyntax),
         };
-        
+
         skip_ws(&mut pos);
         let object = if pos + 1 < input.len() && input[pos] == b'<' && input[pos + 1] == b'<' {
             pos += 2; // skip <<
@@ -277,7 +411,10 @@ impl RdfStarParser for TurtleStarParser {
                 None => return Err(RdfStarParseError::InvalidSyntax),
             }
         };
-        
+
+        // The object is the final token; this parser returns the triple, not the cursor,
+        // so `pos`'s final position is intentionally not propagated past here.
+        let _ = pos;
         Ok((subject, predicate, object))
     }
 
@@ -300,7 +437,7 @@ impl RdfStarParser for TurtleStarParser {
 }
 
 /// Legacy function for backward compatibility with existing ingest pipeline
-/// 
+///
 /// TODO: This should be refactored to use the RdfStarParser trait properly
 /// and integrate with the lexicon writing layer for 24-byte embedded triple storage.
 pub fn parse_turtle_star_into<R: Read, S: crate::sparql_library::quin_sink::QuinSink>(
@@ -321,12 +458,32 @@ pub fn parse_turtle_star_into<R: Read, S: crate::sparql_library::quin_sink::Quin
 
         // Convert to bytes for parser
         let bytes = l.as_bytes();
-        
+
         // Check if line contains embedded triple marker
         if l.contains("<<") {
-            // Parse embedded triple using stack-based parser
-            if let Ok((virtual_id, components)) = parser.parse_embedded_triple(bytes) {
-                // Emit the embedded triple as a Quin
+            // Parse the full annotation form `<< s p o >> annP annO` in one pass.
+            if let Ok((virtual_id, components, annotation)) = parser.parse_star_annotation(bytes) {
+                // Linking statement: the quoted triple's virtual id is the subject
+                // of the outer annotation (parity with the N-Quads-Star parser).
+                // This is what lets `lookup_embedded_triple` — and hence the
+                // result serializer — resolve `<<s p o>>` instead of falling back
+                // to a raw `<<{hex}>>` placeholder. Bare `<< s p o >>` lines with
+                // no outer predicate/object yield `None` and just emit the inner
+                // triple, as before.
+                if let Some((ann_predicate, ann_object)) = annotation {
+                    sink.push(NQuin {
+                        subject: virtual_id,
+                        predicate: ann_predicate,
+                        object: ann_object,
+                        context: context_hash,
+                        metadata: 0b10 << 61,
+                        parity: 0,
+                    })?;
+                    count += 1;
+                }
+
+                // Inner triple (its components), so the quoted triple is itself
+                // a real, queryable statement in the graph.
                 sink.push(NQuin {
                     subject: components[0],
                     predicate: components[1],
@@ -336,10 +493,12 @@ pub fn parse_turtle_star_into<R: Read, S: crate::sparql_library::quin_sink::Quin
                     parity: 0,
                 })?;
                 count += 1;
-                
-                // TODO: Write embedded triple data to lexicon (24-byte [u64; 3])
-                // This requires integration with the lexicon writing layer
-                // The lexicon entry will be: virtual_id -> 24-byte [subject, predicate, object]
+
+                // NOTE: the durable `virtual_id -> [s,p,o]` lexicon entry
+                // (`LexiconEntry::EmbeddedTriple`) is written by the volume
+                // builder (`q42/q42_volume.rs`), which now sees the virtual id via
+                // the linking statement above; the streaming sink itself has no
+                // embedded-entry channel yet (a future expansion).
             }
         } else {
             // Parse regular triple
@@ -370,8 +529,8 @@ pub fn parse_turtle_star_stream<R: Read>(
 
 #[cfg(test)]
 mod tests {
-    use crate::rdf_star::{RdfStarParser, RdfStarSerializer};
     use super::*;
+    use crate::rdf_star::RdfStarParser;
 
     #[test]
     fn test_turtle_star_parser_creation() {
@@ -386,12 +545,12 @@ mod tests {
     fn test_parser_stack_push_pop() {
         let mut stack = ParserStack::new();
         assert!(stack.is_empty());
-        
+
         let frame = StackFrame::new();
         stack.push(frame).unwrap();
         assert_eq!(stack.depth(), 1);
         assert!(!stack.is_empty());
-        
+
         let popped = stack.pop();
         assert!(popped.is_some());
         assert!(stack.is_empty());
@@ -401,12 +560,12 @@ mod tests {
     fn test_parser_stack_overflow() {
         let mut stack = ParserStack::new();
         let frame = StackFrame::new();
-        
+
         // Fill to capacity
         for _ in 0..MAX_NESTING_DEPTH {
             stack.push(frame).unwrap();
         }
-        
+
         // Should overflow
         assert!(stack.push(frame).is_err());
     }
@@ -426,7 +585,7 @@ mod tests {
     #[test]
     fn test_parse_embedded_triple() {
         let mut parser = TurtleStarParser::new(0);
-        let input = b"Alice knows Bob"; // Simplified for testing
+        let input = b"<< Alice knows Bob >>"; // Simplified for testing
         let result = parser.parse_embedded_triple(input);
         assert!(result.is_ok());
         let (virtual_id, components) = result.unwrap();
@@ -434,34 +593,151 @@ mod tests {
         assert_ne!(components[0], 0);
         assert_ne!(components[1], 0);
         assert_ne!(components[2], 0);
-        
+
         // Verify stack was properly managed
         assert_eq!(parser.stack.depth(), 0);
+    }
+
+    struct VecSink(Vec<NQuin>);
+    impl crate::sparql_library::quin_sink::QuinSink for VecSink {
+        fn push(&mut self, q: NQuin) -> std::io::Result<()> {
+            self.0.push(q);
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn parse_star_annotation_captures_outer_predicate_object() {
+        let mut parser = TurtleStarParser::new(0);
+        let (virtual_id, components, ann) = parser
+            .parse_star_annotation(b"<< Alice knows Bob >> certainty high")
+            .unwrap();
+        assert_eq!(
+            virtual_id,
+            generate_embedded_triple_id(components[0], components[1], components[2])
+        );
+        let (ann_p, ann_o) = ann.expect("outer annotation predicate/object");
+        assert_ne!(ann_p, 0);
+        assert_ne!(ann_o, 0);
+        assert_eq!(parser.stack.depth(), 0);
+    }
+
+    #[test]
+    fn parse_turtle_star_into_emits_linking_statement_and_inner_triple() {
+        let mut sink = VecSink(Vec::new());
+        let count =
+            parse_turtle_star_into(&b"<< Alice knows Bob >> certainty high\n"[..], 0, &mut sink)
+                .unwrap();
+        assert_eq!(count, 2, "expected outer linking statement + inner triple");
+        // sink[0] is the outer statement; its subject must be the virtual id of
+        // the inner triple (sink[1]) so lookup_embedded_triple can resolve it.
+        let inner = sink.0[1];
+        let vid = generate_embedded_triple_id(inner.subject, inner.predicate, inner.object);
+        assert_eq!(sink.0[0].subject, vid);
+    }
+
+    #[test]
+    fn parse_turtle_star_into_bare_embedded_triple_emits_only_inner() {
+        let mut sink = VecSink(Vec::new());
+        let count = parse_turtle_star_into(&b"<< Alice knows Bob >>\n"[..], 0, &mut sink).unwrap();
+        assert_eq!(count, 1, "bare embedded triple → just the inner triple");
     }
 
     #[test]
     fn test_virtual_id_context_independence() {
         use crate::lexicon::TAG_EMBEDDED;
-        
+
         // Same triple should generate same Virtual ID regardless of context
         let context1 = 12345u64;
         let context2 = 67890u64;
-        
+
         let mut parser1 = TurtleStarParser::new(context1);
         let mut parser2 = TurtleStarParser::new(context2);
-        
-        let input = b"Alice knows Bob";
+
+        let input = b"<< Alice knows Bob >>";
         let (vid1, _) = parser1.parse_embedded_triple(input).unwrap();
         let (vid2, _) = parser2.parse_embedded_triple(input).unwrap();
-        
+
         assert_eq!(vid1, vid2, "Virtual ID should be context-independent");
         assert_ne!(vid1 & TAG_EMBEDDED, 0, "TAG_EMBEDDED bit should be set");
     }
 }
 
 /// Turtle-Star Serializer
-/// 
+///
 /// Converts Virtual IDs and component hashes back to Turtle-Star syntax.
+// ---------------------------------------------------------------------------
+// Shared term-resolution helpers for the RDF-Star text serializers.
+//
+// Every text serializer below previously emitted the raw u64 term *hash* as a
+// decimal number (e.g. `<1> <2> <3> .`), which is not valid RDF and cannot be
+// consumed by any RDF tool — and the quoted-triple form used a non-standard,
+// non-round-tripping `<<<…>>>` (the parser reads `<<…>>`). These resolve each
+// hash to its real surface form through the same resolver used by the
+// N-Triples fast path: subjects/predicates as `<iri>` (or a `did:q42:ptr/…`
+// pointer), objects additionally distinguishing inline-typed literals
+// (`"42"^^<…#integer>`).
+// ---------------------------------------------------------------------------
+
+/// Resolve a subject/predicate term to its bracketed surface form.
+fn star_iri_term(val: u64) -> String {
+    let mut buf = Vec::new();
+    let _ = crate::query::resolver::write_iri_term(val, &mut buf);
+    String::from_utf8_lossy(&buf).into_owned()
+}
+
+/// Resolve an object term, distinguishing inline-typed literals from IRIs.
+fn star_object_term(val: u64) -> String {
+    let mut buf = Vec::new();
+    let _ = crate::query::resolver::write_object_term(val, &mut buf);
+    String::from_utf8_lossy(&buf).into_owned()
+}
+
+/// Resolve a term to a bare IRI string (no angle brackets), for JSON-LD.
+fn star_iri_bare(val: u64) -> String {
+    if let Some(bytes) = crate::resolver::resolve_hash(val) {
+        String::from_utf8_lossy(bytes).into_owned()
+    } else if (val & crate::resolver::MSB_FLAG) != 0 {
+        format!("did:q42:ptr/{:016x}", val & !crate::resolver::MSB_FLAG)
+    } else {
+        format!("quin:hash/{val:016x}")
+    }
+}
+
+/// Minimal JSON string escaping.
+fn star_json_escape(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 2);
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// Resolve an object term as a JSON-LD value node (`{"@id": …}` for IRIs,
+/// `{"@value": …, "@type": …}` for inline-typed literals). Lexicon-first, to
+/// match `write_object_term`.
+fn star_object_jsonld(val: u64) -> String {
+    if crate::resolver::resolve_hash(val).is_some() || (val & crate::resolver::MSB_FLAG) != 0 {
+        return format!(r#"{{ "@id": "{}" }}"#, star_json_escape(&star_iri_bare(val)));
+    }
+    if let Some(lit) = crate::resolver::classify_inline_literal(val) {
+        return format!(
+            r#"{{ "@value": "{}", "@type": "{}" }}"#,
+            star_json_escape(&lit.to_string()),
+            star_json_escape(lit.datatype_iri())
+        );
+    }
+    format!(r#"{{ "@id": "{}" }}"#, star_json_escape(&star_iri_bare(val)))
+}
+
 pub struct TurtleStarSerializer;
 
 impl TurtleStarSerializer {
@@ -476,24 +752,31 @@ impl crate::rdf_star::RdfStarSerializer for TurtleStarSerializer {
         _virtual_id: u64,
         components: &[u64; 3],
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Format: <<subject predicate object>>
-        // For now, just return a placeholder since we need the actual string values
-        // TODO: This requires lexicon lookup to get actual IRI strings
-        let output = format!("<<{} {} {}>>", components[0], components[1], components[2]);
+        // Quoted triple: << <s> <p> o >> with resolved terms.
+        let output = format!(
+            "<< {} {} {} >>",
+            star_iri_term(components[0]),
+            star_iri_term(components[1]),
+            star_object_term(components[2])
+        );
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_triple(
         &self,
         subject: u64,
         predicate: u64,
         object: u64,
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Format: subject predicate object .
-        let output = format!("{} {} {} .", subject, predicate, object);
+        let output = format!(
+            "{} {} {} .",
+            star_iri_term(subject),
+            star_iri_term(predicate),
+            star_object_term(object)
+        );
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_quad(
         &self,
         _subject: u64,
@@ -504,18 +787,18 @@ impl crate::rdf_star::RdfStarSerializer for TurtleStarSerializer {
         // Turtle-Star doesn't support quads natively
         Err(crate::rdf_star::RdfStarSerializeError::UnsupportedFeature)
     }
-    
+
     fn supports_quads(&self) -> bool {
         false
     }
-    
+
     fn format_name(&self) -> &'static str {
         "Turtle-Star"
     }
 }
 
 /// CBOR-LD Serializer for SPARQL-Star
-/// 
+///
 /// Implements CBOR-LD tags 103-106 for embedded triples per the RDF-Star CBOR-LD spec:
 /// - Tag 103: Triple (<<s p o>>)
 /// - Tag 104: Subject (s of <<s p o>>)
@@ -538,14 +821,15 @@ impl crate::rdf_star::RdfStarSerializer for CborLdStarSerializer {
         // CBOR-LD Tag 103: Triple
         // Format: 103(3-array of [subject, predicate, object])
         use ciborium::ser;
-        
+
         let mut buffer = Vec::new();
         let tagged = ciborium::tag::Required::<[u64; 3], 103>(*components);
-        ser::into_writer(&tagged, &mut buffer).map_err(|_| crate::rdf_star::RdfStarSerializeError::BufferTooSmall)?;
-        
+        ser::into_writer(&tagged, &mut buffer)
+            .map_err(|_| crate::rdf_star::RdfStarSerializeError::BufferTooSmall)?;
+
         Ok(buffer)
     }
-    
+
     fn serialize_triple(
         &self,
         subject: u64,
@@ -554,10 +838,11 @@ impl crate::rdf_star::RdfStarSerializer for CborLdStarSerializer {
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
         use ciborium::ser;
         let mut buffer = Vec::new();
-        ser::into_writer(&[subject, predicate, object], &mut buffer).map_err(|_| crate::rdf_star::RdfStarSerializeError::BufferTooSmall)?;
+        ser::into_writer(&[subject, predicate, object], &mut buffer)
+            .map_err(|_| crate::rdf_star::RdfStarSerializeError::BufferTooSmall)?;
         Ok(buffer)
     }
-    
+
     fn serialize_quad(
         &self,
         subject: u64,
@@ -567,14 +852,15 @@ impl crate::rdf_star::RdfStarSerializer for CborLdStarSerializer {
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
         use ciborium::ser;
         let mut buffer = Vec::new();
-        ser::into_writer(&[subject, predicate, object, graph], &mut buffer).map_err(|_| crate::rdf_star::RdfStarSerializeError::BufferTooSmall)?;
+        ser::into_writer(&[subject, predicate, object, graph], &mut buffer)
+            .map_err(|_| crate::rdf_star::RdfStarSerializeError::BufferTooSmall)?;
         Ok(buffer)
     }
-    
+
     fn supports_quads(&self) -> bool {
         true
     }
-    
+
     fn format_name(&self) -> &'static str {
         "CBOR-LD-Star"
     }
@@ -582,8 +868,8 @@ impl crate::rdf_star::RdfStarSerializer for CborLdStarSerializer {
 
 #[cfg(test)]
 mod cbor_serializer_tests {
-    use crate::rdf_star::RdfStarSerializer;
     use super::*;
+    use crate::rdf_star::RdfStarSerializer;
 
     #[test]
     fn test_cbor_serializer_creation() {
@@ -626,7 +912,7 @@ mod cbor_serializer_tests {
 }
 
 /// N-Triples-Star Serializer
-/// 
+///
 /// Serializes to N-Triples-Star format: <<<s p o>>> p o .
 pub struct NTriplesStarSerializer;
 
@@ -642,23 +928,33 @@ impl crate::rdf_star::RdfStarSerializer for NTriplesStarSerializer {
         _virtual_id: u64,
         components: &[u64; 3],
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Format: <<<subject predicate object>>>
-        // TODO: Should output full IRIs, not just hashes
-        let output = format!("<<<{} {} {}>>>", components[0], components[1], components[2]);
+        // Quoted triple: << <s> <p> o >> with resolved terms (round-trips with
+        // the `<<`/`>>` parser).
+        let output = format!(
+            "<< {} {} {} >>",
+            star_iri_term(components[0]),
+            star_iri_term(components[1]),
+            star_object_term(components[2])
+        );
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_triple(
         &self,
         subject: u64,
         predicate: u64,
         object: u64,
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Format: <subject> <predicate> <object> .
-        let output = format!("<{}> <{}> <{}> .", subject, predicate, object);
+        // Format: <subject> <predicate> <object> . (terms self-bracketing).
+        let output = format!(
+            "{} {} {} .",
+            star_iri_term(subject),
+            star_iri_term(predicate),
+            star_object_term(object)
+        );
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_quad(
         &self,
         _subject: u64,
@@ -669,18 +965,18 @@ impl crate::rdf_star::RdfStarSerializer for NTriplesStarSerializer {
         // N-Triples-Star doesn't support quads natively
         Err(crate::rdf_star::RdfStarSerializeError::UnsupportedFeature)
     }
-    
+
     fn supports_quads(&self) -> bool {
         false
     }
-    
+
     fn format_name(&self) -> &'static str {
         "N-Triples-Star"
     }
 }
 
 /// N-Quads-Star Serializer
-/// 
+///
 /// Serializes to N-Quads-Star format: <<<s p o>>> p o <g> .
 pub struct NQuadsStarSerializer;
 
@@ -696,24 +992,32 @@ impl crate::rdf_star::RdfStarSerializer for NQuadsStarSerializer {
         _virtual_id: u64,
         components: &[u64; 3],
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Format: <<<subject predicate object>>>
-        // TODO: Should output full IRIs, not just hashes
-        let output = format!("<<<{} {} {}>>>", components[0], components[1], components[2]);
+        // Quoted triple: << <s> <p> o >> with resolved terms.
+        let output = format!(
+            "<< {} {} {} >>",
+            star_iri_term(components[0]),
+            star_iri_term(components[1]),
+            star_object_term(components[2])
+        );
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_triple(
         &self,
         subject: u64,
         predicate: u64,
         object: u64,
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Format: <subject> <predicate> <object> <graph> .
-        // For triple serialization, graph is 0
-        let output = format!("<{}> <{}> <{}> .", subject, predicate, object);
+        // Format: <subject> <predicate> <object> . (graph omitted → default).
+        let output = format!(
+            "{} {} {} .",
+            star_iri_term(subject),
+            star_iri_term(predicate),
+            star_object_term(object)
+        );
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_quad(
         &self,
         subject: u64,
@@ -722,21 +1026,27 @@ impl crate::rdf_star::RdfStarSerializer for NQuadsStarSerializer {
         graph: u64,
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
         // Format: <subject> <predicate> <object> <graph> .
-        let output = format!("<{}> <{}> <{}> <{}> .", subject, predicate, object, graph);
+        let output = format!(
+            "{} {} {} {} .",
+            star_iri_term(subject),
+            star_iri_term(predicate),
+            star_object_term(object),
+            star_iri_term(graph)
+        );
         Ok(output.into_bytes())
     }
-    
+
     fn supports_quads(&self) -> bool {
         true
     }
-    
+
     fn format_name(&self) -> &'static str {
         "N-Quads-Star"
     }
 }
 
 /// JSON-LD Serializer for SPARQL-Star
-/// 
+///
 /// Serializes to JSON-LD format with @annotation for embedded triples.
 pub struct JsonLdStarSerializer;
 
@@ -761,38 +1071,33 @@ impl crate::rdf_star::RdfStarSerializer for JsonLdStarSerializer {
         //     "@value": { "subject": s, "predicate": p, "object": o }
         //   }
         // }
-        // TODO: Should output full IRIs, not just hashes
+        // JSON-LD-Star annotation node with resolved terms (object may be a
+        // typed-literal value node).
         let output = format!(
-            r#"{{
-  "@annotation": {{
-    "subject": {},
-    "predicate": {},
-    "object": {}
-  }}
-}}"#,
-            components[0], components[1], components[2]
+            "{{ \"@annotation\": {{ \"subject\": \"{}\", \"predicate\": \"{}\", \"object\": {} }} }}",
+            star_json_escape(&star_iri_bare(components[0])),
+            star_json_escape(&star_iri_bare(components[1])),
+            star_object_jsonld(components[2])
         );
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_triple(
         &self,
         subject: u64,
         predicate: u64,
         object: u64,
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Simple JSON-LD triple
+        // Expanded JSON-LD node object: subject @id, predicate → [ value ].
         let output = format!(
-            r#"{{
-  "@id": "_:{}",
-  "@type": "_:{}",
-  "@value": "_:{}"
-}}"#,
-            subject, predicate, object
+            "{{ \"@id\": \"{}\", \"{}\": [ {} ] }}",
+            star_json_escape(&star_iri_bare(subject)),
+            star_json_escape(&star_iri_bare(predicate)),
+            star_object_jsonld(object)
         );
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_quad(
         &self,
         subject: u64,
@@ -800,23 +1105,21 @@ impl crate::rdf_star::RdfStarSerializer for JsonLdStarSerializer {
         object: u64,
         graph: u64,
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // JSON-LD quad with @graph
+        // Node object carrying its named graph via @graph.
         let output = format!(
-            r#"{{
-  "@id": "_:{}",
-  "@type": "_:{}",
-  "@value": "_:{}",
-  "@graph": "_:{}"
-}}"#,
-            subject, predicate, object, graph
+            "{{ \"@id\": \"{}\", \"{}\": [ {} ], \"@graph\": \"{}\" }}",
+            star_json_escape(&star_iri_bare(subject)),
+            star_json_escape(&star_iri_bare(predicate)),
+            star_object_jsonld(object),
+            star_json_escape(&star_iri_bare(graph))
         );
         Ok(output.into_bytes())
     }
-    
+
     fn supports_quads(&self) -> bool {
         true
     }
-    
+
     fn format_name(&self) -> &'static str {
         "JSON-LD-Star"
     }
@@ -824,20 +1127,23 @@ impl crate::rdf_star::RdfStarSerializer for JsonLdStarSerializer {
 
 #[cfg(test)]
 mod additional_serializer_tests {
-    use crate::rdf_star::RdfStarSerializer;
     use super::*;
+    use crate::rdf_star::RdfStarSerializer;
 
     #[test]
     fn test_ntriples_serializer() {
         let serializer = NTriplesStarSerializer::new();
         assert_eq!(serializer.format_name(), "N-Triples-Star");
         assert!(!serializer.supports_quads());
-        
+
         let components = [1u64, 2, 3];
         let result = serializer.serialize_embedded_triple(0, &components);
         assert!(result.is_ok());
         let output = String::from_utf8(result.unwrap()).unwrap();
-        assert!(output.starts_with("<<<"));
+        // Standard RDF-Star quoted-triple delimiter (round-trips with the parser).
+        assert!(output.starts_with("<< "), "got: {output}");
+        // Terms are resolved, not raw decimals.
+        assert!(output.contains("quin:hash/"), "resolved terms: {output}");
     }
 
     #[test]
@@ -845,11 +1151,15 @@ mod additional_serializer_tests {
         let serializer = NQuadsStarSerializer::new();
         assert_eq!(serializer.format_name(), "N-Quads-Star");
         assert!(serializer.supports_quads());
-        
+
         let result = serializer.serialize_quad(1, 2, 3, 4);
         assert!(result.is_ok());
         let output = String::from_utf8(result.unwrap()).unwrap();
-        assert!(output.contains("<4>"));
+        // Graph term 4 resolves to its IRI surface form, not the bare `<4>` hash.
+        assert!(
+            output.contains("quin:hash/0000000000000004"),
+            "graph term must be resolved: {output}"
+        );
     }
 
     #[test]
@@ -857,7 +1167,7 @@ mod additional_serializer_tests {
         let serializer = JsonLdStarSerializer::new();
         assert_eq!(serializer.format_name(), "JSON-LD-Star");
         assert!(serializer.supports_quads());
-        
+
         let components = [1u64, 2, 3];
         let result = serializer.serialize_embedded_triple(0, &components);
         assert!(result.is_ok());
@@ -867,7 +1177,7 @@ mod additional_serializer_tests {
 }
 
 /// Trig-Star Serializer
-/// 
+///
 /// Serializes to Trig-Star format with named graphs.
 pub struct TrigStarSerializer {
     current_graph: u64,
@@ -877,7 +1187,7 @@ impl TrigStarSerializer {
     pub fn new() -> Self {
         Self { current_graph: 0 }
     }
-    
+
     pub fn set_current_graph(&mut self, graph_hash: u64) {
         self.current_graph = graph_hash;
     }
@@ -889,22 +1199,31 @@ impl crate::rdf_star::RdfStarSerializer for TrigStarSerializer {
         _virtual_id: u64,
         components: &[u64; 3],
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Format: <<subject predicate object>>
-        let output = format!("<<{} {} {}>>", components[0], components[1], components[2]);
+        // Quoted triple: << <s> <p> o >> with resolved terms.
+        let output = format!(
+            "<< {} {} {} >>",
+            star_iri_term(components[0]),
+            star_iri_term(components[1]),
+            star_object_term(components[2])
+        );
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_triple(
         &self,
         subject: u64,
         predicate: u64,
         object: u64,
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Format: subject predicate object .
-        let output = format!("{} {} {} .", subject, predicate, object);
+        let output = format!(
+            "{} {} {} .",
+            star_iri_term(subject),
+            star_iri_term(predicate),
+            star_object_term(object)
+        );
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_quad(
         &self,
         subject: u64,
@@ -912,20 +1231,25 @@ impl crate::rdf_star::RdfStarSerializer for TrigStarSerializer {
         object: u64,
         graph: u64,
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Format in default graph
-        if graph == 0 {
-            let output = format!("{} {} {} .", subject, predicate, object);
-            return Ok(output.into_bytes());
-        }
-        // Format in named graph (would need GRAPH {} wrapper)
-        let output = format!("GRAPH <{}> {{ {} {} {} . }}", graph, subject, predicate, object);
+        let triple = format!(
+            "{} {} {} .",
+            star_iri_term(subject),
+            star_iri_term(predicate),
+            star_object_term(object)
+        );
+        // Default graph → bare triple; named graph → GRAPH <g> { … } wrapper.
+        let output = if graph == 0 {
+            triple
+        } else {
+            format!("GRAPH {} {{ {} }}", star_iri_term(graph), triple)
+        };
         Ok(output.into_bytes())
     }
-    
+
     fn supports_quads(&self) -> bool {
         true
     }
-    
+
     fn format_name(&self) -> &'static str {
         "Trig-Star"
     }
@@ -933,22 +1257,22 @@ impl crate::rdf_star::RdfStarSerializer for TrigStarSerializer {
 
 #[cfg(test)]
 mod trig_serializer_tests {
-    use crate::rdf_star::RdfStarSerializer;
     use super::*;
+    use crate::rdf_star::RdfStarSerializer;
 
     #[test]
     fn test_trig_serializer() {
         let serializer = TrigStarSerializer::new();
         assert_eq!(serializer.format_name(), "Trig-Star");
         assert!(serializer.supports_quads());
-        
+
         let result = serializer.serialize_quad(1, 2, 3, 0);
         assert!(result.is_ok());
     }
 }
 
 /// N3-Star Serializer
-/// 
+///
 /// Serializes to N3-Star format with formulae and rules support.
 pub struct N3StarSerializer {
     /// Current variable bindings
@@ -961,7 +1285,7 @@ impl N3StarSerializer {
             variables: std::collections::HashMap::new(),
         }
     }
-    
+
     pub fn bind_variable(&mut self, hash: u64, name: String) {
         self.variables.insert(hash, name);
     }
@@ -973,25 +1297,45 @@ impl crate::rdf_star::RdfStarSerializer for N3StarSerializer {
         _virtual_id: u64,
         components: &[u64; 3],
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Format: <<subject predicate object>>
-        let output = format!("<<{} {} {}>>", components[0], components[1], components[2]);
+        // Quoted triple: << <s> <p> o >> with resolved terms.
+        let output = format!(
+            "<< {} {} {} >>",
+            star_iri_term(components[0]),
+            star_iri_term(components[1]),
+            star_object_term(components[2])
+        );
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_triple(
         &self,
         subject: u64,
         predicate: u64,
         object: u64,
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        let s = self.variables.get(&subject).cloned().unwrap_or_else(|| format!("_:{}", subject));
-        let p = self.variables.get(&predicate).cloned().unwrap_or_else(|| format!("_:{}", predicate));
-        let o = self.variables.get(&object).cloned().unwrap_or_else(|| format!("_:{}", object));
-        
+        // A bound N3 variable renders as its `?name`; otherwise the term is
+        // resolved to its IRI / typed-literal surface form (never a bare
+        // `_:hash` blank node, which was the previous — invalid — fallback).
+        let s = self
+            .variables
+            .get(&subject)
+            .cloned()
+            .unwrap_or_else(|| star_iri_term(subject));
+        let p = self
+            .variables
+            .get(&predicate)
+            .cloned()
+            .unwrap_or_else(|| star_iri_term(predicate));
+        let o = self
+            .variables
+            .get(&object)
+            .cloned()
+            .unwrap_or_else(|| star_object_term(object));
+
         let output = format!("{} {} {} .", s, p, o);
         Ok(output.into_bytes())
     }
-    
+
     fn serialize_quad(
         &self,
         subject: u64,
@@ -1002,11 +1346,11 @@ impl crate::rdf_star::RdfStarSerializer for N3StarSerializer {
         // N3 doesn't have named graphs, so serialize as triple
         self.serialize_triple(subject, predicate, object)
     }
-    
+
     fn supports_quads(&self) -> bool {
         false
     }
-    
+
     fn format_name(&self) -> &'static str {
         "N3-Star"
     }
@@ -1014,15 +1358,15 @@ impl crate::rdf_star::RdfStarSerializer for N3StarSerializer {
 
 #[cfg(test)]
 mod n3_serializer_tests {
-    use crate::rdf_star::RdfStarSerializer;
     use super::*;
+    use crate::rdf_star::RdfStarSerializer;
 
     #[test]
     fn test_n3_serializer() {
         let serializer = N3StarSerializer::new();
         assert_eq!(serializer.format_name(), "N3-Star");
         assert!(!serializer.supports_quads());
-        
+
         let result = serializer.serialize_triple(1, 2, 3);
         assert!(result.is_ok());
     }
@@ -1033,7 +1377,7 @@ mod n3_serializer_tests {
         serializer.bind_variable(1, "x".to_string());
         serializer.bind_variable(2, "knows".to_string());
         serializer.bind_variable(3, "y".to_string());
-        
+
         let result = serializer.serialize_triple(1, 2, 3);
         assert!(result.is_ok());
         let output = String::from_utf8(result.unwrap()).unwrap();

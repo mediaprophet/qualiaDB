@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Geometry Showcase - QualiaDB</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="app">
+      <div class="sidebar">
+        <div class="brand">
+          <h1>QualiaDB</h1>
+          <span>Geometry Showcase</span>
+        </div>
+        
+        <div class="controls">
+          <h3>Algorithm</h3>
+          <button class="active" data-algo="convex-hull">Convex Hull</button>
+          <button data-algo="delaunay">Delaunay Triangulation</button>
+          <button data-algo="voronoi">Voronoi Diagram (WIP)</button>
+          
+          <div class="actions">
+            <button id="btn-clear" class="secondary">Clear Canvas</button>
+            <button id="btn-random" class="secondary">Random Points</button>
+          </div>
+        </div>
+        
+        <div class="info">
+          <p>Powered by WASM</p>
+          <p class="stats">Points: <span id="stat-points">0</span></p>
+          <p class="stats">Compute time: <span id="stat-time">0</span>ms</p>
+        </div>
+      </div>
+      
+      <div class="canvas-container">
+        <canvas id="geometry-canvas"></canvas>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

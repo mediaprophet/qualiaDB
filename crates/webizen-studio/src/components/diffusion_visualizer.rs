@@ -17,6 +17,7 @@ use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData, Response};
 
 const CANVAS_ID: &str = "diffusion-surface";
 
+#[cfg(target_arch = "wasm32")]
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 struct RuntimeSnapshotRecord {
     epoch: u64,

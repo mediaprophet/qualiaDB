@@ -1,6 +1,6 @@
 //! Zero-heap RDF parse dispatch into [`QuinCollector`].
 
-use super::{collector::QuinCollector, QuinSink, RdfFormat};
+use super::{collector::QuinCollector, RdfFormat};
 use std::io::Read;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -19,7 +19,9 @@ impl std::fmt::Display for RdfParseError {
 impl std::error::Error for RdfParseError {}
 
 fn map_sink_err(e: Box<dyn std::error::Error>) -> RdfParseError {
-    if e.to_string().contains(super::collector::QUIN_BUFFER_FULL_MSG) {
+    if e.to_string()
+        .contains(super::collector::QUIN_BUFFER_FULL_MSG)
+    {
         RdfParseError::BufferFull
     } else {
         RdfParseError::Syntax(e.to_string())
@@ -36,46 +38,48 @@ pub fn parse_rdf<R: Read>(
     let count = match format {
         RdfFormat::NTriples => {
             crate::sparql_library::parsers::ntriples_star::parse_ntriples_star_into(
-                reader, context_hash, collector,
+                reader,
+                context_hash,
+                collector,
             )
             .map_err(map_sink_err)?
         }
-        RdfFormat::Turtle => {
-            crate::sparql_library::parsers::turtle_star::parse_turtle_star_into(
-                reader, context_hash, collector,
-            )
-            .map_err(map_sink_err)?
-        }
-        RdfFormat::NQuads => {
-            crate::sparql_library::parsers::nquads_star::parse_nquads_star_into(
-                reader, context_hash, collector,
-            )
-            .map_err(map_sink_err)?
-        }
-        RdfFormat::TriG => {
-            crate::sparql_library::parsers::trig_star::parse_trig_star_into(
-                reader, context_hash, collector,
-            )
-            .map_err(map_sink_err)?
-        }
-        RdfFormat::N3 => {
-            crate::sparql_library::parsers::n3_star::parse_n3_star_into(
-                reader, context_hash, collector,
-            )
-            .map_err(map_sink_err)?
-        }
-        RdfFormat::JsonLd => {
-            crate::sparql_library::parsers::json_ld_stream::parse_json_ld_into(
-                reader, context_hash, collector,
-            )
-            .map_err(map_sink_err)?
-        }
-        RdfFormat::CborLd => {
-            crate::sparql_library::parsers::cbor_parser::parse_cbor_ld_into(
-                reader, context_hash, collector,
-            )
-            .map_err(map_sink_err)?
-        }
+        RdfFormat::Turtle => crate::sparql_library::parsers::turtle_star::parse_turtle_star_into(
+            reader,
+            context_hash,
+            collector,
+        )
+        .map_err(map_sink_err)?,
+        RdfFormat::NQuads => crate::sparql_library::parsers::nquads_star::parse_nquads_star_into(
+            reader,
+            context_hash,
+            collector,
+        )
+        .map_err(map_sink_err)?,
+        RdfFormat::TriG => crate::sparql_library::parsers::trig_star::parse_trig_star_into(
+            reader,
+            context_hash,
+            collector,
+        )
+        .map_err(map_sink_err)?,
+        RdfFormat::N3 => crate::sparql_library::parsers::n3_star::parse_n3_star_into(
+            reader,
+            context_hash,
+            collector,
+        )
+        .map_err(map_sink_err)?,
+        RdfFormat::JsonLd => crate::sparql_library::parsers::json_ld_stream::parse_json_ld_into(
+            reader,
+            context_hash,
+            collector,
+        )
+        .map_err(map_sink_err)?,
+        RdfFormat::CborLd => crate::sparql_library::parsers::cbor_parser::parse_cbor_ld_into(
+            reader,
+            context_hash,
+            collector,
+        )
+        .map_err(map_sink_err)?,
     };
     if collector.truncated {
         return Err(RdfParseError::BufferFull);
@@ -91,7 +95,8 @@ mod tests {
 
     #[test]
     fn parse_ntriples_into_collector() {
-        let input = "<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> .\n";
+        let input =
+            "<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> .\n";
         let mut collector = QuinCollector::new();
         let count = parse_rdf(
             RdfFormat::NTriples,
@@ -107,7 +112,8 @@ mod tests {
 
     #[test]
     fn plain_serialize_round_trip() {
-        let input = "<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> .\n";
+        let input =
+            "<http://example.org/Alice> <http://example.org/knows> <http://example.org/Bob> .\n";
         let mut collector = QuinCollector::new();
         parse_rdf(
             RdfFormat::NTriples,

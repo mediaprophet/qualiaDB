@@ -8,6 +8,12 @@ use qualia_core_db::{q_hash, wal::WriteAheadLog, NQuin};
 use serde::{Deserialize, Serialize};
 
 const OBJECT_HASH_MASK: u64 = 0x0FFF_FFFF_FFFF_FFFF;
+
+/// The content hash carried on a chat message: FNV-1a `q_hash` of the content, masked to the 60-bit
+/// object space. Public so interop layers (e.g. `solid_chat`) can reproduce it for imported messages.
+pub fn content_hash_u64(content: &str) -> u64 {
+    q_hash(content) & OBJECT_HASH_MASK
+}
 const LAMPORT_SHIFT: u32 = 32;
 const LAMPORT_MASK: u64 = 0x1FFF_FFFF;
 
@@ -639,7 +645,7 @@ pub fn append_message_with_author(
     meta.message_count += 1;
     meta.updated_at = unix_now();
 
-    let content_hash = q_hash(content) & OBJECT_HASH_MASK;
+    let content_hash = content_hash_u64(content);
     let quin = build_message_quin(id, role, lamport, content_hash);
 
     let mut wal = WriteAheadLog::open(wal_path(storage_root, id))
@@ -751,7 +757,7 @@ pub fn append_relay_message_with_agent_meta(
     meta.message_count += 1;
     meta.updated_at = unix_now();
 
-    let content_hash = q_hash(content) & OBJECT_HASH_MASK;
+    let content_hash = content_hash_u64(content);
     let quin = build_message_quin(id, role, lamport, content_hash);
 
     let mut wal = WriteAheadLog::open(wal_path(storage_root, id))

@@ -6,6 +6,268 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [unreleased] — branch `feature/p64-manifold-wal-eigensolver` — 2026-06-29
+
+Forge **LLM-on-forge** (kernel generation + certification for the decode path) and an
+**inference-backend selector**. Framing (clarified mid-session): the **forge produces + certifies**
+kernels and transcodes GGUF→p64; the **engine runs** the p64. Nothing below makes the forge an
+inference runtime, and nothing is a "forge is faster than the engine" claim — the engine owns tok/s.
+
+### Added — forge decode-layer certification (on real weights)
+- DAG-IR decode-layer builder (`decode_layer_graph`): RMSNorm·weight → Q-proj → **real RoPE**
+  (interleaved + NeoX, per-position/per-dimension) → multi-head **GQA** attention → output projection
+  → residual → SwiGLU → residual — composed from forge ops, including two new ones (on-device `Slice`,
+  a first-class `Rope` op) and a real `MatMul.trans_b` (a silently-dropped flag, now actually computed)
+  so the forge consumes native `[out,in]` GGUF/p64 weight layout.
+- **p64 → forge bridge** (`graph_ops/p64_bridge.rs`): reads role-tagged weights from a
+  `P64TensorIndex` and runs the forge decode layer on **real SmolLM2-360M layer-0 weights**, matching
+  the composed CPU oracle to **max-rel 3.28e-6** on the A2000. This is *certification* of the decode
+  kernels — not inference.
+- `WgpuComputeContext::from_device` + `ForgeGraphExecutor::on_shared_gpu`/`with_context` (the forge
+  certification executor runs on the process-wide device); weight residency (`load_weights` /
+  `run_resident`) uploads weights once.
+
+### Added — inference backend selection (the "which pipeline for this machine" checker)
+- `gpu_context::qualia_backend_override()` (`QUALIA_WGPU_BACKEND` = `vulkan|dx12|metal|gl|primary|all`)
+  + `recommend_inference_backend()`; `shared_gpu()` logs `inference_backend|<backend>`. Verified on the
+  A2000: default selection is **Vulkan** (the vendor-neutral path) — inference was already on Vulkan,
+  not DirectML; the override switches the real device (proven Vulkan↔DX12, driver string changes too).
+  Measured decode: **~18.8 tok/s** on SmolLM2-360M Q8 (Vulkan, compute-bound: ~63% attention, ~37% FFN,
+  ~19% fence). Real SPIR-V emission (`emit/spirv.rs`) exists for the kernel kit.
+
+### Honest findings (measured, retracts prior expectations)
+- **Ternary (1.58-bit) FFN PTQ does not work** on a model not trained ternary: PPL ≈ 6.5 million
+  (garbage); **AWQ helps but cannot rescue it**. Q4_0-FFN + AWQ is coherent but lands **+9.4% ΔPPL**
+  (≈2× over the 5% gate). The shippable compression is **standard Q4_K_M** (transcoded to p64
+  verbatim). The earlier "~2.5× ternary FFN win" expectation is **retracted**.
+- The forge **cannot yet emit the LLM decode graph as shader source** — the cross-backend lowerers
+  lack `Slice`/`Rope`/`MatMul`; the decode layer currently only *runs* through the certification
+  executor, not the codegen path.
+
+### Fixed
+- `a1b` ternary test asserted a false invariant (GPU==CPU byte-identical text "because ±1 is exact").
+  The multiply is exact but the f32 reduction order differs, so logits match only within tolerance —
+  corrected to require token match only when both decodes are coherent.
+
+---
+
+## [0.0.21-la] — 2026-06-27
+
+The **mathematical / statistical substrate** push on branch `0.0.21-la`: one engine is the
+source of truth, specialized libraries become composition callers, and every new capability is a
+categorised library that reuses the foundation (no duplicated math), fails closed (real result /
+`NotImplemented` / `InsufficientData` — never a fabricated number), and is dispatch-ready (§13:
+clear kernel-class boundary + an always-present CPU reference). Engine `--lib` suite green
+throughout, **2091 tests** by series end (authoritative build from `C:\Projects\qualia-27062026`).
+
+### Added — Hardware-backend bridge (P1–P3)
+- `platform/compute_bridge/`: an **open `ProbeableBackend` registry** + 8-class `KernelClass`
+  taxonomy + per-class `ComputePolicy::select → Plan`, built on the existing
+  `device_benchmark`/`hetero_dispatch`/`HardwarePassport`. CPU path always present and never
+  hard-fails; GPU/NPU/vendor paths are correctness-gated against the CPU reference before they may
+  be the default. Headless-testable (synthetic matrices).
+
+### Added — Statistics & probability (real, honest)
+- Root-caused the prior statistics weakness as **fabricated p-values** (the `|t|>1.96 ⇒ p=0.05`
+  hack) and replaced it: `solvers/statistics/distributions/` (special functions — `ln_gamma`,
+  regularized incomplete gamma/beta, `erf`; Normal/Student-t/χ²/F/MVN pdf/cdf/quantile,
+  table-validated). Real p-values end-to-end across hypothesis tests (one/paired/two-sample t,
+  one-way ANOVA, χ² GoF/independence, McNemar/Friedman/Iman-Davenport).
+- Descriptive completeness (covariance/skewness/kurtosis/quantiles), Spearman + significance, OLS
+  regression with inference; resampling (cross-validation, bootstrap SE + percentile/BCa CIs,
+  permutation tests); robust/EDA (trimmed mean, MAD, IQR/winsorisation); information theory
+  (entropy/KL/cross-entropy/mutual information); experiment design (power/sample-size, A/B
+  two-proportion, bandits ε-greedy/UCB1/Thompson); and **anomaly detection** (z-score, robust
+  modified-z, Tukey fences, Grubbs' test, multivariate Mahalanobis χ² gate).
+
+### Added — Statistical learning (ISL + PRML) — `solvers/learning/`
+- The full *Introduction to Statistical Learning* surface (ch 2–13; ch 10 deep learning
+  deliberately deferred to the native LLM stack) and the *PRML* Bayesian/temporal/graphical spine:
+  OLS/ridge/lasso/PCR/PLS, logistic/Poisson/multinomial GLM (IRLS), LDA/QDA/NB/KNN/SVM(+RBF,
+  +multiclass), CART/random-forest/boosting/BART, PCA/k-means/GMM-EM/hierarchical/SOM,
+  splines/GAM/smoothing-splines, survival (Kaplan-Meier/Cox), multiple-testing corrections, metrics;
+  plus MVN, Bayesian linear regression, Gaussian process, HMM, MCMC, Kalman, belief-propagation
+  (sum-product), mean-field variational inference. ~50 estimators, all reusing
+  `linear_algebra` (cholesky/gemm/eigen/qr/svd) and the distributions library.
+- **Active learning** (`learning/active/`): frugal human-attestation ranking — uncertainty
+  sampling, query-by-committee (vote/consensus entropy, average-KL disagreement), information
+  density. Pure ranking over existing estimators' predictions; surfaces the *few* items most worth
+  a human's judgement instead of demanding mass labelling.
+- **KG embedding** (`learning/kg_embedding/`, affordability-gated): TransE/DistMult/ComplEx/RotatE
+  scoring + link-prediction (MRR/Hits@k) as the always-on cheap path; an SGD trainer (margin +
+  logistic, negative sampling, deterministic) as the **heavy run-once artifact producer** — never
+  on a user's critical path.
+
+### Added — Cross-plan capabilities (the book-capability plans)
+- Metaheuristic optimizers (hill-climbing/simulated-annealing/ABC, generic over state);
+  **ontology alignment as optimization** (`solvers/ontology_align/`) that structurally can only
+  emit `closeMatch → RequiresHumanReview` — never an asserted `exactMatch`; type-2 / interval
+  type-2 fuzzy (`modalities/fuzzy_type2`); fuzzy graph-match (similarity + approximate);
+  Zadeh fuzzy quantifiers; graded fuzzy-RDF-schema entailment; spreading activation
+  (`solvers/graph_opt/`) for the relevance router; fractal/hierarchical shortest-path
+  decomposition (cell-distributable); **constructibility** decision in the CAS
+  (`specialized_libs/constructibility.rs` — Wantzel degree criterion, Gauss-Wantzel polygons, the
+  classical impossibilities).
+
+### Added — Likeliness modality (`modalities/likeliness/`) — a third uncertainty calculus
+- A **qualitative, ordinal** calculus of expectation (Vector Semantics §4.2; Kornai's "naive"
+  inference), built as its **own modality** rather than folded into `defeasible`/`fuzzy` (Timothy's
+  call: indecision about the fold is itself the signal it is distinct). A 7-level scale
+  (`Impossible … Even … Certain`) with a **Kleene / De Morgan** lattice (`not` involution, `and`
+  meet, `or` join) — no excluded middle and no contradiction collapse, which is exactly what makes
+  it *not* probability (no normalisation, non-additive) and *not* fuzzy membership. Naive inference
+  on top: weakest-link modus ponens, chain attenuation (longer defeasible chains weaken), rebuttal,
+  and defeasible revision. Kernel-class `ElementwiseMap`.
+
+### Added — KG↔LLM live-system integrations
+- **f-SPARQL** (`solvers/fuzzy_query/`): a degree algebra over the engine's own `BindingRow`
+  solutions (join=t-norm, union=t-conorm, projection, negation, α-cut, top-k) + FILTER membership
+  functions + an annotate/collect hook over the crisp executor stream. No fork of the SPARQL parser.
+- **KG↔LLM grounding gate** (`solvers/grounding/` + `inference/orchestrator.rs`): deepens the
+  post-flight from "a citation exists" to "the claim is *supported* by its cited facts." A resolver
+  turns provenance hashes into facts; weak grounding routes to human review, ungrounded is blocked —
+  both **before** WAL commit. The plain entrypoint is unchanged (no resolver → no-op; zero
+  regression).
+
+### Added — The Swarm: verify-before-pay distributed jobs (`services/swarm/`)
+- A paid swarm is dual-use, so **payment is impossible without independent result verification**:
+  content-addressed `JobSpec` (Personal/Collaborative/Paid), a `JobExecutor` trait + real local
+  executor, **Freivalds' O(n²) probabilistic matrix-product verification** + embedding-artifact
+  ranking reproduction, and a dispatch path where no `Rejected` verdict can reach a payment.
+- Settlement is an **escrow state machine over `value_flow`** (ROI-capped pricing via `commons_cost`;
+  `eroi_viable` = the solar-excess thermodynamic gate). On `Verified` it emits a
+  `MicropaymentInstruction` for the existing `ilp_dispatcher` rail; on `Rejected`, a refund. **It
+  never moves funds itself.**
+- Isolate B in `daemon_swarm.rs` **de-mocked** — the former constant-`999` fabrication replaced by a
+  real deterministic computation through the swarm executor.
+
+### Added — Computational-mathematics engine (`CALCULUS_CAPABILITIES_PLAN.md` + `COMPUTATIONAL_ENGINE_GAP_ANALYSIS.md`)
+A sovereign, provenance-bearing STEM computational-mathematics engine — every result is a real
+computation or a fail-closed refusal, never a fabricated number, and (for symbolic results) is
+citable via the CAS's `to_quins`/`expr_citation_hash`.
+- **New solver libraries:** `solvers/units/` (7-vector SI dimensional analysis, checked-arithmetic
+  quantities, affine conversions, CODATA constants), `solvers/number_theory/` (Miller-Rabin,
+  Pollard-rho, totient/Möbius, factorial/binomial/Stirling/Catalan), `solvers/special_functions/`
+  (Bessel J/Y/I/K, Airy, ζ via Euler-Maclaurin, Legendre/Chebyshev/Hermite/Laguerre),
+  `solvers/interpolation/` (Lagrange/Newton, natural cubic spline, least-squares),
+  `solvers/transforms/` (DFT/IDFT, Laplace numeric + symbolic table, Z-transform),
+  `solvers/vector_calculus/` (symbolic grad/div/curl/Laplacian + line/surface integrals with
+  Green's & divergence theorems), and `solvers/exact/` (arbitrary-precision `BigInt`/`BigRational`).
+- **CAS calculus extensions** (`specialized_libs/symbolic_*`): multivariable differentiation
+  (gradient/Jacobian/Hessian), symbolic integration (round-trip-gated), Taylor series, l'Hôpital
+  limits, and equation solving — each reusing the real root finder / dense LA / Γ, no re-derivation.
+- **CAS made analytic:** the `Expr` algebra gained transcendental nodes (`exp`/`ln`/`sin`/`cos`/`tan`)
+  across eval, differentiation (chain rule), simplification (exact special values + inverse pairs),
+  expansion, parser, display, and the NQuin tree encoding. On top of it:
+  **simplification under assumptions** (sign inference + `√(x²)→x`, log laws under positivity — no
+  rewrite unless the side condition is *proven*), **trigonometric simplification** (Pythagorean
+  collapse, parity, `sin/cos→tan`), and **symbolic differential equations** (separable, linear
+  first-order, linear second-order constant-coefficient via the characteristic equation; first-order
+  linear PDE by the method of characteristics; second-order PDE elliptic/parabolic/hyperbolic
+  classification — all residual-verified, fail-closed outside the supported classes).
+- **General-dimension numerical methods** (`solvers/calculus/dense.rs`): RK4, composite Simpson
+  (scalar + vector), and a shooting BVP with a real Newton step — generalising the toy `[f64; 4]`
+  solvers, reusing a new canonical dense `lu_solve` (forward/back substitution) added to
+  `solvers/linear_algebra/lu`.
+- **SHACL surface** (`modalities/logic/computational_maths_shacl.rs`): typed `*Configuration`
+  shapes (+ `to_opcodes` + TTL `NodeShape`s) for every capability above, wired into the
+  `shacl_extension_bridge` (10 new `q42:*` extension ids → bounded, `Halt`-terminated opcode
+  sequences).
+
+### Changed — Honesty pass across specialized libraries
+- Neutralised fabricated achieved-quality metrics surfaced to clients (medical diagnosis confidence,
+  structural safety factor, trade fills, compliance passes, ML/physics/chemistry placeholder
+  outputs) — now real computation or a fail-closed `NotImplemented`/`InsufficientData`, with tests
+  asserting the honest behaviour. Numeric duplication consolidated: the dense-LA core (gemm/qr/
+  cholesky/eigen/lu/svd/spectral/polynomial) lives once in `solvers/linear_algebra`; the LLM forward
+  pass is grounded as named STEM math (GEMM/activations/softmax/norm/attention/RoPE/FFN), each proven
+  equal to the real kernel.
+
+---
+
+## [0.0.19] — 2026-06-22
+
+A large release centred on the **human-rights / values-credentials subsystem** and a complete
+**computational legal-logic engine**, plus the algebra/CAS/ZK and hybrid-modality groundwork
+that preceded it. Engine `--lib` suite green throughout (1153–1160 tests by series end).
+
+### Added — Computational legal-logic stack (`legal_logic.md` §1–§30; plan: `DEONTIC_LOGIC_PLAN.md`)
+All §1–§30 logic operators implemented as tested `modalities/*.rs` (only the two heavy
+*substrates* remain — GPU 10D renderer #11–13, binary carrier codecs #9):
+- **SDL⁺ core** (`deontic.rs`): O/P/F + Optionality/Gratuitousness, the full lifecycle
+  (Pending/Active/Violated/Defeated/Discharged/Expired), rebutting **and** undercutting
+  defeaters (`DefeatKind`), first-class dyadic `O(q|p)` (CTD generalised).
+- **Hohfeldian jural square** (`jural.rs`): 8 correlative positions, correlativity, unmet-duty
+  legibility, personhood category-error; ontology `core-ontologies/jural.n3`.
+- **STIT agency** (`stit.rs`): duty-bearer vs bystander, omission, joint/shared liability.
+- **Compositions** (`deontic_compose.rs`): deontic × temporal (`O(Gφ)`/`O(φ U ψ)`), × epistemic
+  (**mens rea**), × spatial (jurisdictional subsumption), × linear (discharge), × argumentation
+  (Dung grounded extension), × fuzzy/probabilistic, × ASP/abductive.
+- **Causal** (`causal.rs`): but-for causation, root-node dependency cascade, overdetermination.
+- **Capacity/delegation/contract** (`capacity.rs`, `delegation.rs`, `contract.rs`): duress →
+  voidable-at-election (confirmed by Timothy), guardianship, posthumous standing, delegation +
+  revocation cascade, Offer→Assent→Binding.
+- **Economic/identity** (`value_flow.rs`, `capability_gap.rs`, `identity_fabric.rs`): Permissive
+  Commons capped-ROI threshold discharge, RPL capability gap, k-of-n resilient identity.
+- **Meta-deontic / governance** (`meta_deontic.rs`, `interaction_governance.rs`,
+  `responsibility.rs`): provenance-anchored court-admissible WAL BreachRecords with ed25519
+  endorsement; verdict → PolicyMode (PreventiveBlock/PermissiveAudit/Prioritize/Interactive);
+  allegation→adjudication; systemic meta-guards (rule-of-law asymmetry, overreach, accountability
+  vacuum). Composition wires for ZK-gate, proportionality (CAS), sense-translation, consensus,
+  wave→fact, content-addressed carriers.
+
+### Added — Values-credentials subsystem (`core-ontologies/`)
+- 101 UN/IHL instruments lifted into a **CML 3-layer concept graph** (TEXT→CONCEPT→LOGIC):
+  3,518 concepts / 3,619 deontic norms, all `cml:Proposed` pending human attestation.
+- `values.n3` Agent lattice, `agency.n3` grounding, `jurisdiction.n3` (ratification + AU pilot),
+  `modal-junctures.n3` (illocutionary force + epistemic strength bands), "person" as
+  **frame-relative** (per-document reading, not global).
+- **BCP-47 `@en` language tags** across the corpus (multilingual foundation).
+- 220 round-trip-verified `.q42` volumes; `docs/values-credentials.html` demo over real data.
+- **CML library-upgrade protocol**: `SCHEMA_VERSION` + `cml:schemaVersion` stamps,
+  `tools/reprocess_library.py` (idempotent, `--check` staleness gate), `CML_UPGRADE.md` +
+  `CML_VERSIONS.md` — regeneration preserves human curation (SOURCE/GENERATED split).
+
+### Added — MCP cooperation & governance surface
+- **Agent-cooperation gate** (`mcp_cooperation.rs`): verified + grounded (agency.n3 G1') caller
+  standpoint → deontic gate; **flag-gated dispatch enforcement** (`QUALIA_MCP_ENFORCE`, default
+  off) so every call can be required to carry a standpoint.
+- MCP tools: `values_check`, `values_evaluate`, `jural_correlate`, `deontic_govern`,
+  `mcp_cooperate`, `graph_resolve`.
+- Native **verifiable credentials** (`verifiable_credential.rs`): issue/verify (ed25519) +
+  issuer grounding. Runtime **agent-type resolution** (`agent.rs`).
+
+### Added — Algebra, symbolic CAS, ZK, manifold (earlier 0.0.19)
+- Polynomial roots, determinant, symmetric + general eigensolvers, SVD; a symbolic CAS
+  (`Expr`/simplify/differentiate/parse/expand/factor, Expr↔NQuin); MCP algebra/CAS tools.
+- Real **R1CS zero-knowledge** proof of matrix multiplication (A·B=C), Groth16 (arkworks).
+- Manifold GPU/CPU volume-metric unification + CPU reference search + metric-parity audit;
+  **RCC-8** spatial topology (zero-heap, full-polygon).
+
+### Added — Hybrid-modality engine (#22) + FrameLayout ABI
+- Zero-alloc `QuinIndex` accessors, revision-cached per-cell index, `modal_kind` resolution,
+  unified resolver + `graph_resolve`, collision-aware lexicon interner (the lexicon backstop).
+- `frame_layout.rs` as the canonical ABI for the NQuin's 6 computational bytes.
+
+### Added — SHACL coverage
+- `logic_modalities_shacl.rs` now carries **42** `q42:<Name>ConfigurationShape`s (the whole
+  legal-logic surface) with engine↔SHACL completeness tests; epistemic shape fully fleshed out.
+
+### Added — Surface
+- Modalities Observatory: **38** live demo cards (incl. the full §1–§30 legal-logic stack);
+  enriched epistemic + deontic demos; CML Studio linked into the nav.
+
+### Changed
+- **One 60-bit hash space**: `q_hash` ≡ `generate_60bit_token` (top 4 bits = type/modality tag).
+- `FrameLayout`: `0b101` formally allocated as inline `xsd:float` (resolver float-tag fix).
+
+### Fixed
+- **Non-derogable immunity** blocks the Exemptive override (ICCPR Art. 4(2)) — a derogation can
+  no longer defeat the right to life, etc.
+- GPU `count_buf` `COPY_DST` wgpu validation error (was misreported as "no GPU").
+
+---
+
 ## [0.0.18] — 2026-06-19
 
 ### Added — Browser-native WASM + WebGPU LLM inference (Phase 2B → Phase 5)

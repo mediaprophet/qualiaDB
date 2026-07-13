@@ -513,6 +513,7 @@ pub fn run_submit(
 
     let job = QpuJob::new(job_id.clone(), pt, JobParameters {
         num_qubits: qubits,
+        circuit_depth: 0,
         shots,
         hamiltonian: Some(r#"{"J":{},"h":{}}"#.into()),
         circuit: None,

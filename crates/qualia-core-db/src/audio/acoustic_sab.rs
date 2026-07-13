@@ -12,9 +12,11 @@ pub const ACOUSTIC_SAB_VERSION: u16 = 1;
 pub const ACOUSTIC_SAB_HEADER_BYTES: usize = 32;
 pub const ACOUSTIC_SAB_UNIFORM_OFFSET: usize = 32;
 pub const ACOUSTIC_SAB_UNIFORM_PADDED: usize = 352;
-pub const ACOUSTIC_SAB_TOKEN_OFFSET: usize = ACOUSTIC_SAB_UNIFORM_OFFSET + ACOUSTIC_SAB_UNIFORM_PADDED;
+pub const ACOUSTIC_SAB_TOKEN_OFFSET: usize =
+    ACOUSTIC_SAB_UNIFORM_OFFSET + ACOUSTIC_SAB_UNIFORM_PADDED;
 pub const ACOUSTIC_SAB_TOKEN_BYTES: usize = 128;
-pub const ACOUSTIC_SAB_FLOAT_MIRROR_OFFSET: usize = ACOUSTIC_SAB_TOKEN_OFFSET + ACOUSTIC_SAB_TOKEN_BYTES;
+pub const ACOUSTIC_SAB_FLOAT_MIRROR_OFFSET: usize =
+    ACOUSTIC_SAB_TOKEN_OFFSET + ACOUSTIC_SAB_TOKEN_BYTES;
 pub const ACOUSTIC_SAB_FLOAT_MIRROR_BYTES: usize = 328;
 pub const ACOUSTIC_SAB_BYTES: usize = 1024;
 
@@ -93,9 +95,7 @@ pub fn write_uniform_to_sab_with_mirror(
     }
     out[ACOUSTIC_SAB_UNIFORM_OFFSET..end].copy_from_slice(bytes);
     if let Some(mirror) = float_mirror {
-        let n = mirror
-            .len()
-            .min(ACOUSTIC_SAB_FLOAT_MIRROR_BYTES / 4);
+        let n = mirror.len().min(ACOUSTIC_SAB_FLOAT_MIRROR_BYTES / 4);
         out[ACOUSTIC_SAB_FLOAT_MIRROR_OFFSET..ACOUSTIC_SAB_FLOAT_MIRROR_OFFSET + n * 4]
             .copy_from_slice(bytemuck::cast_slice(&mirror[..n]));
     }
