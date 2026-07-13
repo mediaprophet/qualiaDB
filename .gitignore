@@ -211,3 +211,9 @@ assets/ccf/
 # Desktop release build artifacts (produced by release-desktop.yml) — never commit
 /release-assets/
 /webizen-desktop-*.zip
+
+# Signing keys — private signing keys must NEVER be committed.
+# tauri_updater.key (the rsign/minisign secret key) was committed by mistake and
+# untracked here; the ACTIVE signing key lives only in GitHub Actions secrets.
+*.key
+tauri_updater.key.pub
