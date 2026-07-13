@@ -560,7 +560,7 @@ impl QTensorEngine {
                 return None;
             }
             {
-                let data = slice.get_mapped_range();
+                let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
                 let floats: &[f32] = bytemuck::cast_slice(&data[..n_embd * 4]);
                 out[..n_embd].copy_from_slice(floats);
             }
@@ -588,7 +588,7 @@ impl QTensorEngine {
         let mut best_token_id = 0u32;
         let mut max_logit = f32::NEG_INFINITY;
         {
-            let data = slice.get_mapped_range();
+            let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
             let val_bytes = plan.total_cands * 4;
             let vals: &[f32] = bytemuck::cast_slice(&data[..val_bytes]);
             let idxs: &[u32] = bytemuck::cast_slice(&data[val_bytes..val_bytes * 2]);

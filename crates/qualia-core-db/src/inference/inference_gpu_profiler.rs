@@ -205,7 +205,7 @@ pub fn accumulate(phase: Phase) {
     // poll(Wait) blocks until the GPU is done and drives the map callback.
     let _ = ctx.device.poll(wgpu::PollType::wait_indefinitely());
     if rx.recv().map(|r| r.is_ok()).unwrap_or(false) {
-        let data = slice.get_mapped_range();
+        let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
         let ts: &[u64] = bytemuck::cast_slice(&data);
         if ts.len() >= 2 {
             let ticks = ts[1].saturating_sub(ts[0]);

@@ -272,6 +272,9 @@ impl PortalGpu {
             alpha_mode: caps.alpha_modes.first().copied().unwrap_or(wgpu::CompositeAlphaMode::Auto),
             view_formats: vec![],
             desired_maximum_frame_latency: 2,
+            // wgpu 30: surfaces declare their colour space; Auto preserves the
+            // pre-30 (implicit sRGB/linear-by-format) behaviour.
+            color_space: wgpu::SurfaceColorSpace::Auto,
         };
 
         surface.configure(&device, &config);
@@ -347,6 +350,8 @@ impl PortalGpu {
             alpha_mode: caps.alpha_modes[0],
             view_formats: vec![],
             desired_maximum_frame_latency: 2,
+            // wgpu 30: Auto preserves pre-30 colour-space behaviour.
+            color_space: wgpu::SurfaceColorSpace::Auto,
         };
         surface.configure(&device, &config);
 
@@ -634,7 +639,7 @@ impl PortalGpu {
                 module: &mesh_shader,
                 entry_point: Some("vertex_main"),
                 compilation_options: Default::default(),
-                buffers: &[mesh_vertex_layout.clone(), mesh_color_layout.clone()],
+                buffers: &[Some(mesh_vertex_layout.clone()), Some(mesh_color_layout.clone())],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &mesh_shader,
@@ -744,7 +749,7 @@ impl PortalGpu {
                         module: &mesh_shader,
                         entry_point: Some("vertex_main"),
                         compilation_options: Default::default(),
-                        buffers: &[mesh_vertex_layout.clone(), mesh_color_layout.clone()],
+                        buffers: &[Some(mesh_vertex_layout.clone()), Some(mesh_color_layout.clone())],
                     },
                     fragment: Some(wgpu::FragmentState {
                         module: &mesh_shader,
@@ -1193,7 +1198,7 @@ impl PortalGpu {
         if !matches!(rx.try_recv(), Ok(Ok(()))) {
             return None;
         }
-        let mapped = slice.get_mapped_range();
+        let mapped = slice.get_mapped_range().expect("wgpu buffer map_range failed");
         let raw = if mapped.len() >= 4 {
             Some(u32::from_le_bytes(mapped[0..4].try_into().unwrap()))
         } else {
@@ -1478,7 +1483,8 @@ impl PortalGpu {
         self.record_pick_copy(&mut encoder);
         self.queue.submit(std::iter::once(encoder.finish()));
         if let Some(frame) = surface_frame {
-            frame.present();
+            // wgpu 30: SurfaceTexture::present() removed → Queue::present(frame).
+            self.queue.present(frame);
         }
         Ok(())
     }
@@ -1548,7 +1554,7 @@ impl PortalGpu {
             .map_err(|e| format!("RGBA8 readback callback failed: {e}"))?
             .map_err(|e| format!("RGBA8 buffer map failed: {e}"))?;
 
-        let mapped = slice.get_mapped_range();
+        let mapped = slice.get_mapped_range().expect("wgpu buffer map_range failed");
         let tight_row = self.width as usize * 4;
         let padded_row = self.readback_bytes_per_row as usize;
         for row in 0..self.height as usize {

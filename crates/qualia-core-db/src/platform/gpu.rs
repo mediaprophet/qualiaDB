@@ -103,6 +103,8 @@ impl WebGpuIntegrator {
                 power_preference: wgpu::PowerPreference::HighPerformance,
                 force_fallback_adapter: false,
                 compatible_surface: None,
+                // wgpu 30 added `apply_limit_buckets`; take the crate default.
+                ..Default::default()
             })
             .await
             .map_err(|e| GpuError::WebGPUUnavailable(format!("No adapter found: {e}")))?;
@@ -275,7 +277,7 @@ impl WebGpuIntegrator {
         let _mapping_result = receiver.await.unwrap();
 
         // Get mapped slice
-        let result_data = buffer_slice.get_mapped_range();
+        let result_data = buffer_slice.get_mapped_range().expect("wgpu buffer map_range failed");
 
         // Read workgroup results and sum using Kahan summation for precision
         let workgroup_results: &[f32] = bytemuck::cast_slice(&*result_data);
@@ -402,7 +404,7 @@ impl WebGpuIntegrator {
         self.queue.submit(None);
         let _ = rx.await.unwrap();
 
-        let mapped = slice.get_mapped_range();
+        let mapped = slice.get_mapped_range().expect("wgpu buffer map_range failed");
         let partials: &[f32] = bytemuck::cast_slice(&*mapped);
 
         // Kahan summation for numerical stability

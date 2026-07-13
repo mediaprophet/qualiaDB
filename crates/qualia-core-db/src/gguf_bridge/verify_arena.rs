@@ -377,7 +377,7 @@ impl QTensorEngine {
         out_argmax.clear();
         out_logit.clear();
         {
-            let data = slice.get_mapped_range();
+            let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
             let all: &[f32] = bytemuck::cast_slice(&data[..(b * vocab * 4)]);
             for m in 0..b {
                 let row = &all[m * vocab..(m + 1) * vocab];

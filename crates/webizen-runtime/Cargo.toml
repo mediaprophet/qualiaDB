@@ -7,5 +7,5 @@ edition = "2021"
 bytemuck = { version = "1.25.0", features = ["derive"] }
 crossbeam-channel = "0.5.15"
 sha2 = { version = "0.11", default-features = false }
-wgpu = "29"
+wgpu = "30"
 log = "0.4"

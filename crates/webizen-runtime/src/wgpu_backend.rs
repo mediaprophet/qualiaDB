@@ -151,6 +151,8 @@ impl<'a> WgpuDiffusionBackend<'a> {
                 power_preference,
                 compatible_surface: None,
                 force_fallback_adapter: false,
+                // wgpu 30 added `apply_limit_buckets`; take the crate default.
+                ..Default::default()
             })
             .await
             .map_err(|_| RuntimeError::AdapterUnavailable)?;
@@ -282,7 +284,8 @@ impl<'a> WgpuDiffusionBackend<'a> {
                     module: &shader,
                     entry_point: Some("vertex_main"),
                     compilation_options: Default::default(),
-                    buffers: &[wgpu::VertexBufferLayout {
+                    // wgpu 30: VertexState::buffers is &[Option<VertexBufferLayout>].
+                    buffers: &[Some(wgpu::VertexBufferLayout {
                         array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
                         step_mode: wgpu::VertexStepMode::Vertex,
                         attributes: &[
@@ -297,7 +300,7 @@ impl<'a> WgpuDiffusionBackend<'a> {
                                 format: wgpu::VertexFormat::Float32x4,
                             },
                         ],
-                    }],
+                    })],
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &shader,
@@ -440,7 +443,7 @@ impl<'a> WgpuDiffusionBackend<'a> {
         let map_result = rx.recv().map_err(|_| RuntimeError::ChannelClosed)?;
         map_result.map_err(|err| RuntimeError::BufferMapFailed(err.to_string()))?;
 
-        let mapped = slice.get_mapped_range();
+        let mapped = slice.get_mapped_range().expect("wgpu buffer map_range failed");
         let hash = compute_state_hash(&mapped);
         let field = bytemuck::cast_slice::<u8, f32>(&mapped);
         let _ = self.frames.overwrite_slot(slot, |rgba| {

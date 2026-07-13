@@ -155,7 +155,7 @@ pub mod gpu_sieve {
             let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
 
             if receiver.await.is_ok() {
-                let data = buffer_slice.get_mapped_range();
+                let data = buffer_slice.get_mapped_range().expect("wgpu buffer map_range failed");
                 let bitmask: &[u32] = bytemuck::cast_slice(&data);
 
                 // Trailing-zero bit-scan: extract each set bit as a Quin index

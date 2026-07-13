@@ -144,8 +144,8 @@ async-trait = "0.1.89"
 dashmap = "6.2.1"
 rand_distr = "0.6.0"
 fast_qr = { version = "0.13.1", features = ["svg"] }
-wgpu = { version = "29", features = ["webgpu"], optional = true }
-naga = { version = "29", features = ["wgsl-in", "spv-out"], optional = true }
+wgpu = { version = "30", features = ["webgpu"], optional = true }
+naga = { version = "30", features = ["wgsl-in", "spv-out"], optional = true }
 raw-window-handle = { version = "0.6", optional = true }
 cudarc = { version = "0.19", optional = true, features = ["cuda-13030"] }
 
@@ -247,7 +247,7 @@ serde-wasm-bindgen = "0.6.5"
 io-uring = "0.7.12"
 
 [dev-dependencies]
-naga = { version = "29", features = ["wgsl-in", "spv-out"] }
+naga = { version = "30", features = ["wgsl-in", "spv-out"] }
 ciborium = "0.2.2"
 criterion = "0.8.2"
 dhat = "0.3.3"

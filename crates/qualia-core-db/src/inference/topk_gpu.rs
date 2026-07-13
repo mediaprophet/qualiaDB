@@ -135,8 +135,8 @@ pub fn topk_gpu(
     rx_v.recv().expect("map val").expect("map topk val");
     rx_i.recv().expect("map idx").expect("map topk idx");
 
-    let dv = sv.get_mapped_range();
-    let di = si.get_mapped_range();
+    let dv = sv.get_mapped_range().expect("wgpu buffer map_range failed");
+    let di = si.get_mapped_range().expect("wgpu buffer map_range failed");
     let vals: Vec<f32> = bytemuck::cast_slice(&dv)[..cand_count].to_vec();
     let idxs: Vec<u32> = bytemuck::cast_slice(&di)[..cand_count].to_vec();
     drop(dv);

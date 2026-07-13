@@ -21,7 +21,7 @@ qualia-core-db = { path = "../qualia-core-db", optional = true }
 qualia-q-forge = { path = "../qualia-q-forge", optional = true }
 
 # WebGPU dependencies
-wgpu = { version = "29", optional = true }
+wgpu = { version = "30", optional = true }
 winit = { version = "0.30", optional = true }
 
 # HTTP client for QPU APIs

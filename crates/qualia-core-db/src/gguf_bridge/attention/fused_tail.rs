@@ -266,7 +266,7 @@ impl QTensorEngine {
         self.poll_wait();
         if let Ok(handle) = tokio::runtime::Handle::try_current() {
             if handle.block_on(rx).ok().map(|m| m.is_ok()).unwrap_or(false) {
-                let data = slice.get_mapped_range();
+                let data = slice.get_mapped_range().expect("wgpu buffer map_range failed");
                 let floats: &[f32] = bytemuck::cast_slice(&data);
                 out[..o_out].copy_from_slice(&floats[..o_out]);
                 drop(data);

@@ -989,5 +989,8 @@ fn map_read(device: &wgpu::Device, buffer: &wgpu::Buffer) -> Result<wgpu::Buffer
         .recv()
         .map_err(|error| ForgeError::GpuValidation(error.to_string()))?
         .map_err(|error| ForgeError::GpuValidation(error.to_string()))?;
-    Ok(slice.get_mapped_range())
+    // wgpu 30: get_mapped_range() returns Result — propagate as ForgeError.
+    slice
+        .get_mapped_range()
+        .map_err(|e| ForgeError::GpuValidation(format!("map_range failed: {e:?}")))
 }

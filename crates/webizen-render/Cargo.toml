@@ -6,7 +6,7 @@ publish = false
 
 [dependencies]
 # Must match qualia-core-db: native rendering and inference share one physical device.
-wgpu = "29"
+wgpu = "30"
 bytemuck = { version = "1.14", features = ["derive"] }
 log = "0.4"
 serde = { version = "1.0", features = ["derive"] }
