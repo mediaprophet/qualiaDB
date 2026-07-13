@@ -944,26 +944,20 @@ impl<'a> QueryExecutor<'a> {
                 Ok(!results.is_empty())
             }
             crate::sparql_ast::Path::ZeroOrMore(inner_id) => {
-                // Zero or more - Kleene star (simplified: up to 3 hops)
-                self.execute_zero_or_more(subject, *inner_id, object, ctx, row, results, 3)
+                // Kleene star `*`: the FULL reflexive-transitive closure of the inner
+                // path from `subject`, computed as a cycle-safe fixpoint (not a fixed
+                // hop limit). `subject` itself matches the zero-length path.
+                let mut reached = self.path_transitive_hops(subject, *inner_id, ctx, row)?;
+                reached.insert(subject);
+                Self::emit_path_nodes(reached, object, results);
+                Ok(!results.is_empty())
             }
             crate::sparql_ast::Path::OneOrMore(inner_id) => {
-                // One or more - at least one hop (simplified: up to 3 hops)
-                let mut direct_results = Vec::new();
-                self.execute_property_path(
-                    subject,
-                    *inner_id,
-                    object,
-                    ctx,
-                    row,
-                    &mut direct_results,
-                )?;
-                results.extend_from_slice(&direct_results);
-
-                if !direct_results.is_empty() {
-                    let _ =
-                        self.execute_zero_or_more(subject, *inner_id, object, ctx, row, results, 2);
-                }
+                // `+`: the FULL (non-reflexive) transitive closure of the inner path from
+                // `subject`, cycle-safe. `subject` is included only if a cycle reaches it
+                // back via ≥1 hop.
+                let reached = self.path_transitive_hops(subject, *inner_id, ctx, row)?;
+                Self::emit_path_nodes(reached, object, results);
                 Ok(!results.is_empty())
             }
             crate::sparql_ast::Path::ZeroOrOne(inner_id) => {
@@ -981,49 +975,50 @@ impl<'a> QueryExecutor<'a> {
         }
     }
 
-    fn execute_zero_or_more(
+    /// Nodes reachable from `subject` via **one or more** applications of the inner
+    /// property path — the full transitive closure, made cycle-safe by expanding each
+    /// node at most once. Replaces the former fixed "up to 3 hops" truncation, which
+    /// silently returned incomplete results for longer paths.
+    fn path_transitive_hops(
         &self,
         subject: u64,
         path_id: PathId,
-        object: u64,
         ctx: &SparqlQueryContext,
         row: &mut BindingRow,
-        results: &mut Vec<BindingRow>,
-        max_depth: u8,
-    ) -> Result<bool, String> {
-        if max_depth == 0 {
-            return Ok(false);
-        }
-
-        // Check direct match
-        if subject == object {
-            let mut direct_row = BindingRow::new();
-            direct_row.slots[0] = Some(subject);
-            results.push(direct_row);
-        }
-
-        // Explore path
-        let mut intermediate_results = Vec::new();
-        self.execute_property_path(subject, path_id, 0, ctx, row, &mut intermediate_results)?;
-
-        for inter_result in intermediate_results {
-            let intermediate_val = inter_result.slots[0].unwrap_or(0);
-            if intermediate_val == object {
-                results.push(inter_result);
+    ) -> Result<std::collections::HashSet<u64>, String> {
+        use std::collections::HashSet;
+        let mut reached: HashSet<u64> = HashSet::new();
+        let mut expanded: HashSet<u64> = HashSet::new();
+        let mut frontier: Vec<u64> = vec![subject];
+        while let Some(node) = frontier.pop() {
+            if !expanded.insert(node) {
+                continue; // cycle guard: expand each node's out-edges at most once
             }
-            // Recurse
-            self.execute_zero_or_more(
-                intermediate_val,
-                path_id,
-                object,
-                ctx,
-                row,
-                results,
-                max_depth - 1,
-            )?;
+            let mut hops = Vec::new();
+            self.execute_property_path(node, path_id, 0, ctx, row, &mut hops)?;
+            for hop in hops {
+                let next = hop.slots[0].unwrap_or(0);
+                reached.insert(next);
+                frontier.push(next);
+            }
         }
+        Ok(reached)
+    }
 
-        Ok(!results.is_empty())
+    /// Emit a one-binding row (slot 0 = node) for each reachable node matching `object`
+    /// (`object == 0` = unbound → emit all).
+    fn emit_path_nodes(
+        nodes: impl IntoIterator<Item = u64>,
+        object: u64,
+        results: &mut Vec<BindingRow>,
+    ) {
+        for node in nodes {
+            if object == 0 || node == object {
+                let mut r = BindingRow::new();
+                r.slots[0] = Some(node);
+                results.push(r);
+            }
+        }
     }
 
     fn execute_graph(
