@@ -33,14 +33,24 @@ fn serialize_plain<W: Write>(
     quins: &[NQuin],
     out: &mut W,
 ) -> Result<(), RdfDispatchError> {
-    let result = match format {
-        RdfFormat::NTriples => resolver::format_ntriples_to(quins, out),
-        RdfFormat::NQuads | RdfFormat::TriG => resolver::format_nquads_to(quins, out),
-        RdfFormat::Turtle | RdfFormat::N3 | RdfFormat::JsonLd | RdfFormat::CborLd => {
-            resolver::format_ntriples_to(quins, out)
+    use crate::sparql_library::serialisers::rdf_serializers as ser;
+    // Each format routes to its own serializer. Previously Turtle/N3/JSON-LD/
+    // CBOR-LD all silently emitted N-Triples — a format lie (asking for JSON-LD
+    // yielded N-Triples text). N-Triples/N-Quads keep the zero-heap resolver
+    // fast path; the grouped/structured formats use their real serializers.
+    match format {
+        RdfFormat::NTriples => {
+            resolver::format_ntriples_to(quins, out).map_err(|e| RdfDispatchError::Io(e.to_string()))
         }
-    };
-    result.map_err(|e| RdfDispatchError::Io(e.to_string()))
+        RdfFormat::NQuads => {
+            resolver::format_nquads_to(quins, out).map_err(|e| RdfDispatchError::Io(e.to_string()))
+        }
+        RdfFormat::Turtle => ser::serialize_to_turtle(out, quins).map_err(RdfDispatchError::Io),
+        RdfFormat::TriG => ser::serialize_to_trig(out, quins).map_err(RdfDispatchError::Io),
+        RdfFormat::N3 => ser::serialize_to_n3(out, quins).map_err(RdfDispatchError::Io),
+        RdfFormat::JsonLd => ser::serialize_to_jsonld(out, quins).map_err(RdfDispatchError::Io),
+        RdfFormat::CborLd => ser::serialize_to_cborld(out, quins).map_err(RdfDispatchError::Io),
+    }
 }
 
 fn serialize_star<W: Write>(

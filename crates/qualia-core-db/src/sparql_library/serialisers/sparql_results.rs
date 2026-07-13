@@ -121,7 +121,12 @@ impl ResultFormatter {
         value: u64,
         lexicon: Option<&crate::q42_lex::Q42LexMmap>,
     ) -> std::io::Result<()> {
-        if (value >> 60) == 1 {
+        // 1. SPARQL-Star embedded triple — only when the lexicon resolves it
+        //    (the tag bits collide with xsd:integer, so a failed lookup must
+        //    fall through to the inline-literal case, not be emitted as `<<…>>`).
+        if (value & crate::resolver::MSB_FLAG) == 0
+            && (value & crate::resolver::INLINE_TAG_MASK) == crate::resolver::TAG_EMBEDDED
+        {
             if let Some(lex) = lexicon {
                 if let Some([s, p, o]) = lex.lookup_embedded_triple(value) {
                     write!(writer, "<<")?;
@@ -133,11 +138,19 @@ impl ResultFormatter {
                     return write!(writer, ">>");
                 }
             }
-            return write!(writer, "<<{:016x}>>", value);
         }
 
+        // 2. Inline-typed literal → SPARQL term syntax (TSV/CSV encode RDF terms
+        //    as in the query language), e.g. `"42"^^<…#integer>`.
+        if let Some(lit) = crate::resolver::classify_inline_literal(value) {
+            return write!(writer, "\"{}\"^^<{}>", lit, lit.datatype_iri());
+        }
+
+        // 3. IRI: lexicon-resolved, else did:q42 pointer, else hash fallback.
         let uri = if let Some(bytes) = crate::resolver::resolve_hash(value) {
             String::from_utf8_lossy(bytes).into_owned()
+        } else if (value & crate::resolver::MSB_FLAG) != 0 {
+            format!("did:q42:ptr/{:016x}", value & !crate::resolver::MSB_FLAG)
         } else {
             format!("urn:hash:{:016x}", value)
         };
@@ -360,6 +373,13 @@ impl ResultFormatter {
         String::from_utf8(buf).unwrap()
     }
 
+    #[cfg(test)]
+    fn value_tsv_string(value: u64) -> String {
+        let mut buf = Vec::new();
+        Self::format_value_tsv(&mut buf, value, None).unwrap();
+        String::from_utf8(buf).unwrap()
+    }
+
     pub fn format_ask_json<W: Write>(writer: &mut W, result: bool) -> std::io::Result<()> {
         writeln!(writer, r#"{{"#)?;
         writeln!(writer, r#"  "head": {{}},"#)?;
@@ -429,5 +449,16 @@ mod tests {
         // A plain (untagged, non-lexicon) hash keeps the uri fallback.
         let json = ResultFormatter::value_json_string(0x0123_4567_89ab_cdef);
         assert!(json.contains(r#""type": "uri""#), "got: {json}");
+    }
+
+    // Regression: an inline xsd:integer shares the embedded-triple tag bits.
+    // Without a lexicon it must serialise as a typed literal in TSV/CSV, NOT be
+    // mis-emitted as an `<<…>>` embedded triple.
+    #[test]
+    fn inline_integer_serialises_as_typed_literal_tsv() {
+        let tsv = ResultFormatter::value_tsv_string(INLINE_TAG_INTEGER | 42);
+        assert!(tsv.contains(r#""42"^^<"#), "got: {tsv}");
+        assert!(tsv.contains("XMLSchema#integer"), "got: {tsv}");
+        assert!(!tsv.contains("<<"), "must not be an embedded triple: {tsv}");
     }
 }

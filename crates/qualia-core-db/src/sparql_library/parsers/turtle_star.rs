@@ -666,6 +666,78 @@ mod tests {
 /// Turtle-Star Serializer
 ///
 /// Converts Virtual IDs and component hashes back to Turtle-Star syntax.
+// ---------------------------------------------------------------------------
+// Shared term-resolution helpers for the RDF-Star text serializers.
+//
+// Every text serializer below previously emitted the raw u64 term *hash* as a
+// decimal number (e.g. `<1> <2> <3> .`), which is not valid RDF and cannot be
+// consumed by any RDF tool — and the quoted-triple form used a non-standard,
+// non-round-tripping `<<<…>>>` (the parser reads `<<…>>`). These resolve each
+// hash to its real surface form through the same resolver used by the
+// N-Triples fast path: subjects/predicates as `<iri>` (or a `did:q42:ptr/…`
+// pointer), objects additionally distinguishing inline-typed literals
+// (`"42"^^<…#integer>`).
+// ---------------------------------------------------------------------------
+
+/// Resolve a subject/predicate term to its bracketed surface form.
+fn star_iri_term(val: u64) -> String {
+    let mut buf = Vec::new();
+    let _ = crate::query::resolver::write_iri_term(val, &mut buf);
+    String::from_utf8_lossy(&buf).into_owned()
+}
+
+/// Resolve an object term, distinguishing inline-typed literals from IRIs.
+fn star_object_term(val: u64) -> String {
+    let mut buf = Vec::new();
+    let _ = crate::query::resolver::write_object_term(val, &mut buf);
+    String::from_utf8_lossy(&buf).into_owned()
+}
+
+/// Resolve a term to a bare IRI string (no angle brackets), for JSON-LD.
+fn star_iri_bare(val: u64) -> String {
+    if let Some(bytes) = crate::resolver::resolve_hash(val) {
+        String::from_utf8_lossy(bytes).into_owned()
+    } else if (val & crate::resolver::MSB_FLAG) != 0 {
+        format!("did:q42:ptr/{:016x}", val & !crate::resolver::MSB_FLAG)
+    } else {
+        format!("quin:hash/{val:016x}")
+    }
+}
+
+/// Minimal JSON string escaping.
+fn star_json_escape(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 2);
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// Resolve an object term as a JSON-LD value node (`{"@id": …}` for IRIs,
+/// `{"@value": …, "@type": …}` for inline-typed literals). Lexicon-first, to
+/// match `write_object_term`.
+fn star_object_jsonld(val: u64) -> String {
+    if crate::resolver::resolve_hash(val).is_some() || (val & crate::resolver::MSB_FLAG) != 0 {
+        return format!(r#"{{ "@id": "{}" }}"#, star_json_escape(&star_iri_bare(val)));
+    }
+    if let Some(lit) = crate::resolver::classify_inline_literal(val) {
+        return format!(
+            r#"{{ "@value": "{}", "@type": "{}" }}"#,
+            star_json_escape(&lit.to_string()),
+            star_json_escape(lit.datatype_iri())
+        );
+    }
+    format!(r#"{{ "@id": "{}" }}"#, star_json_escape(&star_iri_bare(val)))
+}
+
 pub struct TurtleStarSerializer;
 
 impl TurtleStarSerializer {
@@ -680,10 +752,13 @@ impl crate::rdf_star::RdfStarSerializer for TurtleStarSerializer {
         _virtual_id: u64,
         components: &[u64; 3],
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Format: <<subject predicate object>>
-        // For now, just return a placeholder since we need the actual string values
-        // TODO: This requires lexicon lookup to get actual IRI strings
-        let output = format!("<<{} {} {}>>", components[0], components[1], components[2]);
+        // Quoted triple: << <s> <p> o >> with resolved terms.
+        let output = format!(
+            "<< {} {} {} >>",
+            star_iri_term(components[0]),
+            star_iri_term(components[1]),
+            star_object_term(components[2])
+        );
         Ok(output.into_bytes())
     }
 
@@ -693,8 +768,12 @@ impl crate::rdf_star::RdfStarSerializer for TurtleStarSerializer {
         predicate: u64,
         object: u64,
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Format: subject predicate object .
-        let output = format!("{} {} {} .", subject, predicate, object);
+        let output = format!(
+            "{} {} {} .",
+            star_iri_term(subject),
+            star_iri_term(predicate),
+            star_object_term(object)
+        );
         Ok(output.into_bytes())
     }
 
@@ -849,11 +928,13 @@ impl crate::rdf_star::RdfStarSerializer for NTriplesStarSerializer {
         _virtual_id: u64,
         components: &[u64; 3],
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Format: <<<subject predicate object>>>
-        // TODO: Should output full IRIs, not just hashes
+        // Quoted triple: << <s> <p> o >> with resolved terms (round-trips with
+        // the `<<`/`>>` parser).
         let output = format!(
-            "<<<{} {} {}>>>",
-            components[0], components[1], components[2]
+            "<< {} {} {} >>",
+            star_iri_term(components[0]),
+            star_iri_term(components[1]),
+            star_object_term(components[2])
         );
         Ok(output.into_bytes())
     }
@@ -864,8 +945,13 @@ impl crate::rdf_star::RdfStarSerializer for NTriplesStarSerializer {
         predicate: u64,
         object: u64,
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Format: <subject> <predicate> <object> .
-        let output = format!("<{}> <{}> <{}> .", subject, predicate, object);
+        // Format: <subject> <predicate> <object> . (terms self-bracketing).
+        let output = format!(
+            "{} {} {} .",
+            star_iri_term(subject),
+            star_iri_term(predicate),
+            star_object_term(object)
+        );
         Ok(output.into_bytes())
     }
 
@@ -906,11 +992,12 @@ impl crate::rdf_star::RdfStarSerializer for NQuadsStarSerializer {
         _virtual_id: u64,
         components: &[u64; 3],
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Format: <<<subject predicate object>>>
-        // TODO: Should output full IRIs, not just hashes
+        // Quoted triple: << <s> <p> o >> with resolved terms.
         let output = format!(
-            "<<<{} {} {}>>>",
-            components[0], components[1], components[2]
+            "<< {} {} {} >>",
+            star_iri_term(components[0]),
+            star_iri_term(components[1]),
+            star_object_term(components[2])
         );
         Ok(output.into_bytes())
     }
@@ -921,9 +1008,13 @@ impl crate::rdf_star::RdfStarSerializer for NQuadsStarSerializer {
         predicate: u64,
         object: u64,
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Format: <subject> <predicate> <object> <graph> .
-        // For triple serialization, graph is 0
-        let output = format!("<{}> <{}> <{}> .", subject, predicate, object);
+        // Format: <subject> <predicate> <object> . (graph omitted → default).
+        let output = format!(
+            "{} {} {} .",
+            star_iri_term(subject),
+            star_iri_term(predicate),
+            star_object_term(object)
+        );
         Ok(output.into_bytes())
     }
 
@@ -935,7 +1026,13 @@ impl crate::rdf_star::RdfStarSerializer for NQuadsStarSerializer {
         graph: u64,
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
         // Format: <subject> <predicate> <object> <graph> .
-        let output = format!("<{}> <{}> <{}> <{}> .", subject, predicate, object, graph);
+        let output = format!(
+            "{} {} {} {} .",
+            star_iri_term(subject),
+            star_iri_term(predicate),
+            star_object_term(object),
+            star_iri_term(graph)
+        );
         Ok(output.into_bytes())
     }
 
@@ -974,16 +1071,13 @@ impl crate::rdf_star::RdfStarSerializer for JsonLdStarSerializer {
         //     "@value": { "subject": s, "predicate": p, "object": o }
         //   }
         // }
-        // TODO: Should output full IRIs, not just hashes
+        // JSON-LD-Star annotation node with resolved terms (object may be a
+        // typed-literal value node).
         let output = format!(
-            r#"{{
-  "@annotation": {{
-    "subject": {},
-    "predicate": {},
-    "object": {}
-  }}
-}}"#,
-            components[0], components[1], components[2]
+            "{{ \"@annotation\": {{ \"subject\": \"{}\", \"predicate\": \"{}\", \"object\": {} }} }}",
+            star_json_escape(&star_iri_bare(components[0])),
+            star_json_escape(&star_iri_bare(components[1])),
+            star_object_jsonld(components[2])
         );
         Ok(output.into_bytes())
     }
@@ -994,14 +1088,12 @@ impl crate::rdf_star::RdfStarSerializer for JsonLdStarSerializer {
         predicate: u64,
         object: u64,
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Simple JSON-LD triple
+        // Expanded JSON-LD node object: subject @id, predicate → [ value ].
         let output = format!(
-            r#"{{
-  "@id": "_:{}",
-  "@type": "_:{}",
-  "@value": "_:{}"
-}}"#,
-            subject, predicate, object
+            "{{ \"@id\": \"{}\", \"{}\": [ {} ] }}",
+            star_json_escape(&star_iri_bare(subject)),
+            star_json_escape(&star_iri_bare(predicate)),
+            star_object_jsonld(object)
         );
         Ok(output.into_bytes())
     }
@@ -1013,15 +1105,13 @@ impl crate::rdf_star::RdfStarSerializer for JsonLdStarSerializer {
         object: u64,
         graph: u64,
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // JSON-LD quad with @graph
+        // Node object carrying its named graph via @graph.
         let output = format!(
-            r#"{{
-  "@id": "_:{}",
-  "@type": "_:{}",
-  "@value": "_:{}",
-  "@graph": "_:{}"
-}}"#,
-            subject, predicate, object, graph
+            "{{ \"@id\": \"{}\", \"{}\": [ {} ], \"@graph\": \"{}\" }}",
+            star_json_escape(&star_iri_bare(subject)),
+            star_json_escape(&star_iri_bare(predicate)),
+            star_object_jsonld(object),
+            star_json_escape(&star_iri_bare(graph))
         );
         Ok(output.into_bytes())
     }
@@ -1050,7 +1140,10 @@ mod additional_serializer_tests {
         let result = serializer.serialize_embedded_triple(0, &components);
         assert!(result.is_ok());
         let output = String::from_utf8(result.unwrap()).unwrap();
-        assert!(output.starts_with("<<<"));
+        // Standard RDF-Star quoted-triple delimiter (round-trips with the parser).
+        assert!(output.starts_with("<< "), "got: {output}");
+        // Terms are resolved, not raw decimals.
+        assert!(output.contains("quin:hash/"), "resolved terms: {output}");
     }
 
     #[test]
@@ -1062,7 +1155,11 @@ mod additional_serializer_tests {
         let result = serializer.serialize_quad(1, 2, 3, 4);
         assert!(result.is_ok());
         let output = String::from_utf8(result.unwrap()).unwrap();
-        assert!(output.contains("<4>"));
+        // Graph term 4 resolves to its IRI surface form, not the bare `<4>` hash.
+        assert!(
+            output.contains("quin:hash/0000000000000004"),
+            "graph term must be resolved: {output}"
+        );
     }
 
     #[test]
@@ -1102,8 +1199,13 @@ impl crate::rdf_star::RdfStarSerializer for TrigStarSerializer {
         _virtual_id: u64,
         components: &[u64; 3],
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Format: <<subject predicate object>>
-        let output = format!("<<{} {} {}>>", components[0], components[1], components[2]);
+        // Quoted triple: << <s> <p> o >> with resolved terms.
+        let output = format!(
+            "<< {} {} {} >>",
+            star_iri_term(components[0]),
+            star_iri_term(components[1]),
+            star_object_term(components[2])
+        );
         Ok(output.into_bytes())
     }
 
@@ -1113,8 +1215,12 @@ impl crate::rdf_star::RdfStarSerializer for TrigStarSerializer {
         predicate: u64,
         object: u64,
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Format: subject predicate object .
-        let output = format!("{} {} {} .", subject, predicate, object);
+        let output = format!(
+            "{} {} {} .",
+            star_iri_term(subject),
+            star_iri_term(predicate),
+            star_object_term(object)
+        );
         Ok(output.into_bytes())
     }
 
@@ -1125,16 +1231,18 @@ impl crate::rdf_star::RdfStarSerializer for TrigStarSerializer {
         object: u64,
         graph: u64,
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Format in default graph
-        if graph == 0 {
-            let output = format!("{} {} {} .", subject, predicate, object);
-            return Ok(output.into_bytes());
-        }
-        // Format in named graph (would need GRAPH {} wrapper)
-        let output = format!(
-            "GRAPH <{}> {{ {} {} {} . }}",
-            graph, subject, predicate, object
+        let triple = format!(
+            "{} {} {} .",
+            star_iri_term(subject),
+            star_iri_term(predicate),
+            star_object_term(object)
         );
+        // Default graph → bare triple; named graph → GRAPH <g> { … } wrapper.
+        let output = if graph == 0 {
+            triple
+        } else {
+            format!("GRAPH {} {{ {} }}", star_iri_term(graph), triple)
+        };
         Ok(output.into_bytes())
     }
 
@@ -1189,8 +1297,13 @@ impl crate::rdf_star::RdfStarSerializer for N3StarSerializer {
         _virtual_id: u64,
         components: &[u64; 3],
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
-        // Format: <<subject predicate object>>
-        let output = format!("<<{} {} {}>>", components[0], components[1], components[2]);
+        // Quoted triple: << <s> <p> o >> with resolved terms.
+        let output = format!(
+            "<< {} {} {} >>",
+            star_iri_term(components[0]),
+            star_iri_term(components[1]),
+            star_object_term(components[2])
+        );
         Ok(output.into_bytes())
     }
 
@@ -1200,21 +1313,24 @@ impl crate::rdf_star::RdfStarSerializer for N3StarSerializer {
         predicate: u64,
         object: u64,
     ) -> Result<Vec<u8>, crate::rdf_star::RdfStarSerializeError> {
+        // A bound N3 variable renders as its `?name`; otherwise the term is
+        // resolved to its IRI / typed-literal surface form (never a bare
+        // `_:hash` blank node, which was the previous — invalid — fallback).
         let s = self
             .variables
             .get(&subject)
             .cloned()
-            .unwrap_or_else(|| format!("_:{}", subject));
+            .unwrap_or_else(|| star_iri_term(subject));
         let p = self
             .variables
             .get(&predicate)
             .cloned()
-            .unwrap_or_else(|| format!("_:{}", predicate));
+            .unwrap_or_else(|| star_iri_term(predicate));
         let o = self
             .variables
             .get(&object)
             .cloned()
-            .unwrap_or_else(|| format!("_:{}", object));
+            .unwrap_or_else(|| star_object_term(object));
 
         let output = format!("{} {} {} .", s, p, o);
         Ok(output.into_bytes())
