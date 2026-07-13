@@ -32,17 +32,17 @@ type HostClosure = Box<dyn FnOnce(&mut Option<WebizenHostApi>) + Send + 'static>
 
 #[derive(Clone)]
 pub struct HostApiHandle {
-    sender: tokio::sync::mpsc::Sender<HostClosure>,
+    sender: std::sync::mpsc::SyncSender<HostClosure>,
 }
 
 impl HostApiHandle {
     pub fn new(initial_host: Option<WebizenHostApi>) -> Self {
-        let (tx, mut rx) = tokio::sync::mpsc::channel::<HostClosure>(128);
+        let (tx, rx) = std::sync::mpsc::sync_channel::<HostClosure>(128);
         let mut host_state = initial_host;
         std::thread::Builder::new()
             .name("webizen-host-api".to_string())
             .spawn(move || {
-                while let Some(closure) = rx.blocking_recv() {
+                while let Ok(closure) = rx.recv() {
                     closure(&mut host_state);
                 }
             })
@@ -56,11 +56,10 @@ impl HostApiHandle {
     ) -> Result<T, String> {
         let (tx, rx) = tokio::sync::oneshot::channel();
         self.sender
-            .send(Box::new(move |host| {
+            .try_send(Box::new(move |host| {
                 let _ = tx.send(f(host));
             }))
-            .await
-            .map_err(|_| "HostService actor is dead".to_string())?;
+            .map_err(|err| format!("HostService actor unavailable: {err}"))?;
         rx.await.map_err(|_| "HostService dropped the request".to_string())
     }
 
@@ -70,10 +69,10 @@ impl HostApiHandle {
     ) -> Result<T, String> {
         let (tx, rx) = std::sync::mpsc::channel();
         self.sender
-            .blocking_send(Box::new(move |host| {
+            .try_send(Box::new(move |host| {
                 let _ = tx.send(f(host));
             }))
-            .map_err(|_| "HostService actor is dead".to_string())?;
+            .map_err(|err| format!("HostService actor unavailable: {err}"))?;
         rx.recv().map_err(|_| "HostService dropped the request".to_string())
     }
 }
@@ -457,6 +456,19 @@ mod tests {
             .expect("host API actor should execute a synchronous request");
 
         assert_eq!(value, 42);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn host_api_sync_request_does_not_panic_on_a_tokio_worker() {
+        let handle = HostApiHandle::new(None);
+        let value = handle
+            .execute_sync(|host| {
+                assert!(host.is_none());
+                84
+            })
+            .expect("host API actor should accept a sync request from a Tokio worker");
+
+        assert_eq!(value, 84);
     }
 
     #[test]

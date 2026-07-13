@@ -161,6 +161,9 @@ pub fn WebBrowserPane() -> Element {
         ).to_string();
 
         spawn(async move {
+            #[cfg(target_arch = "wasm32")]
+            gloo_timers::future::sleep(std::time::Duration::from_millis(50)).await;
+            #[cfg(not(target_arch = "wasm32"))]
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             let script = format!(r#"
                 const activeId = "{}";
@@ -343,6 +346,9 @@ pub fn WebBrowserPane() -> Element {
                         // This ensures we get the initial layout
                         spawn(async move {
                             // Let the DOM settle
+                            #[cfg(target_arch = "wasm32")]
+                            gloo_timers::future::sleep(std::time::Duration::from_millis(100)).await;
+                            #[cfg(not(target_arch = "wasm32"))]
                             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                             let script = r#"
                                 const container = document.getElementById('webview-container');

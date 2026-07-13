@@ -6,8 +6,7 @@
 use std::path::PathBuf;
 use tauri::menu::{MenuBuilder, MenuItem, SubmenuBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{Manager, Emitter};
-
+use tauri::{Emitter, Manager};
 
 use webizen_desktop::{
     commands::{self, PreviewState, RenderLoopState},
@@ -168,7 +167,11 @@ fn anatomy_10d_response(app: &tauri::AppHandle, model: &str, organ_key: &str) ->
             None => return Ok::<_, String>(protocol_response(503, None, Vec::new())),
         };
         match host.load_cached_organ_10d(&model, &organ_key) {
-            Ok(bytes) => Ok::<_, String>(protocol_response(200, Some("application/octet-stream"), bytes)),
+            Ok(bytes) => Ok::<_, String>(protocol_response(
+                200,
+                Some("application/octet-stream"),
+                bytes,
+            )),
             Err(_) => Ok::<_, String>(protocol_response(404, None, Vec::new())),
         }
     }) {
@@ -234,7 +237,7 @@ fn main() {
 
     let (tx, mut rx) = tokio::sync::mpsc::channel::<String>(100);
 
-    tauri::Builder::default()
+    let run_result = tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
@@ -675,9 +678,27 @@ fn main() {
 
             Ok(())
         })
+        .on_window_event(|window, event| match event {
+            tauri::WindowEvent::CloseRequested { .. } => crate::desktop_log::record(
+                "info",
+                format!("window close requested: {}", window.label()),
+            ),
+            tauri::WindowEvent::Destroyed => crate::desktop_log::record(
+                "info",
+                format!("window destroyed: {}", window.label()),
+            ),
+            _ => {}
+        })
         .invoke_handler(commands::get_invoke_handler())
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .run(tauri::generate_context!());
+
+    match run_result {
+        Ok(()) => desktop_log::record("info", "Webizen desktop event loop exited cleanly"),
+        Err(err) => {
+            desktop_log::record("error", format!("Webizen desktop event loop failed: {err}"));
+            panic!("error while running tauri application: {err}");
+        }
+    }
 }
 
 #[cfg(test)]

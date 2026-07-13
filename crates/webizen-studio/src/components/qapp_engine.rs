@@ -21,10 +21,27 @@ mod imp {
             js_name = invoke,
             catch
         )]
-        pub async fn tauri_invoke(
+        async fn tauri_invoke_raw(
             cmd: &str,
             args: wasm_bindgen::JsValue,
         ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue>;
+    }
+
+    pub async fn tauri_invoke(
+        cmd: &str,
+        args: wasm_bindgen::JsValue,
+    ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue> {
+        let global = js_sys::global();
+        let tauri = js_sys::Reflect::get(&global, &JsValue::from_str("__TAURI__"))?;
+        let core = js_sys::Reflect::get(&tauri, &JsValue::from_str("core"))?;
+        let invoke = js_sys::Reflect::get(&core, &JsValue::from_str("invoke"))?;
+        if !invoke.is_function() {
+            return Err(JsValue::from_str(
+                "This action requires the Webizen desktop host",
+            ));
+        }
+
+        tauri_invoke_raw(cmd, args).await
     }
 }
 

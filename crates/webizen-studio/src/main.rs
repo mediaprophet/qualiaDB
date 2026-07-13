@@ -38,12 +38,125 @@ fn event_payload_string(event: &JsValue) -> Option<String> {
         .and_then(|payload| payload.as_string())
 }
 
+#[cfg(target_arch = "wasm32")]
+fn reflected_string(value: &JsValue, property: &str) -> Option<String> {
+    js_sys::Reflect::get(value, &JsValue::from_str(property))
+        .ok()
+        .and_then(|value| value.as_string())
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_native_diagnostics() {
+    if !endpoints::is_native_host() {
+        return;
+    }
+
+    let Some(window) = web_sys::window() else {
+        return;
+    };
+
+    let error_handler = Closure::<dyn FnMut(web_sys::Event)>::new(move |event: web_sys::Event| {
+        let value: &JsValue = event.as_ref();
+        let message = reflected_string(value, "message")
+            .unwrap_or_else(|| "unhandled webview error".to_string());
+        let stack = js_sys::Reflect::get(value, &JsValue::from_str("error"))
+            .ok()
+            .and_then(|error| reflected_string(&error, "stack"));
+        let url = reflected_string(value, "filename");
+        wasm_bindgen_futures::spawn_local(async move {
+            let _ = components::qapp_engine::invoke_json(
+                "report_client_error",
+                serde_json::json!({
+                    "kind": "window.error",
+                    "message": message,
+                    "stack": stack,
+                    "url": url,
+                }),
+            )
+            .await;
+        });
+    });
+    let _ =
+        window.add_event_listener_with_callback("error", error_handler.as_ref().unchecked_ref());
+    error_handler.forget();
+
+    let rejection_handler =
+        Closure::<dyn FnMut(web_sys::Event)>::new(move |event: web_sys::Event| {
+            let value: &JsValue = event.as_ref();
+            let reason = js_sys::Reflect::get(value, &JsValue::from_str("reason"))
+                .unwrap_or(JsValue::UNDEFINED);
+            let message = reflected_string(&reason, "message")
+                .or_else(|| reason.as_string())
+                .unwrap_or_else(|| format!("{reason:?}"));
+            let stack = reflected_string(&reason, "stack");
+            wasm_bindgen_futures::spawn_local(async move {
+                let _ = components::qapp_engine::invoke_json(
+                    "report_client_error",
+                    serde_json::json!({
+                        "kind": "unhandledrejection",
+                        "message": message,
+                        "stack": stack,
+                        "url": serde_json::Value::Null,
+                    }),
+                )
+                .await;
+            });
+        });
+    let _ = window.add_event_listener_with_callback(
+        "unhandledrejection",
+        rejection_handler.as_ref().unchecked_ref(),
+    );
+    rejection_handler.forget();
+}
+
+#[cfg(target_arch = "wasm32")]
+fn install_native_panic_reporting() {
+    let previous = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic_info| {
+        let message = panic_info.to_string();
+        previous(panic_info);
+
+        if !endpoints::is_native_host() {
+            return;
+        }
+        let Ok(args) = serde_wasm_bindgen::to_value(&serde_json::json!({
+            "kind": "rust.panic",
+            "message": message,
+            "stack": serde_json::Value::Null,
+            "url": web_sys::window().and_then(|window| window.location().href().ok()),
+        })) else {
+            return;
+        };
+        let global = js_sys::global();
+        let Ok(tauri) = js_sys::Reflect::get(&global, &JsValue::from_str("__TAURI__")) else {
+            return;
+        };
+        let Ok(core) = js_sys::Reflect::get(&tauri, &JsValue::from_str("core")) else {
+            return;
+        };
+        let Ok(invoke) = js_sys::Reflect::get(&core, &JsValue::from_str("invoke")) else {
+            return;
+        };
+        if let Some(invoke) = invoke.dyn_ref::<js_sys::Function>() {
+            let _ = invoke.call2(
+                &core,
+                &JsValue::from_str("report_client_error"),
+                &args,
+            );
+        }
+    }));
+}
+
 fn main() {
     // Surface panics with a readable message + stack in the browser console.
     // Without this, `panic = "abort"` yields an opaque `unreachable` and any
     // boot-time panic is undiagnosable.
     #[cfg(target_arch = "wasm32")]
     console_error_panic_hook::set_once();
+    #[cfg(target_arch = "wasm32")]
+    install_native_panic_reporting();
+    #[cfg(target_arch = "wasm32")]
+    install_native_diagnostics();
 
     dioxus::launch(App);
 }
@@ -324,20 +437,12 @@ fn ToolsRoute() -> Element {
 
 #[component]
 fn WellfairRoute() -> Element {
-    rsx! {
-        components::wellfair::HostSnapshotProvider {
-            components::wellfair::WellfairShell {}
-        }
-    }
+    rsx! { components::wellfair::WellfairShell {} }
 }
 
 #[component]
 fn ChoraRoute() -> Element {
-    rsx! {
-        components::wellfair::HostSnapshotProvider {
-            components::wellfair::WellfairChoraPanel {}
-        }
-    }
+    rsx! { components::wellfair::WellfairChoraPanel {} }
 }
 
 #[component]
@@ -423,7 +528,6 @@ struct DesktopLogsResponse {
     entries: Vec<DesktopLogEntry>,
 }
 
-
 fn status_chip(status: &DesktopStatus) -> (&'static str, &'static str) {
     if status.graph_daemon_reachable {
         ("Online", "#10b981")
@@ -443,7 +547,15 @@ fn log_level_color(level: &str) -> &'static str {
 }
 
 async fn fetch_desktop_logs() -> Result<DesktopLogsResponse, String> {
-    Ok(DesktopLogsResponse::default())
+    let value =
+        components::qapp_engine::invoke_json("get_desktop_logs", serde_json::json!({})).await?;
+    serde_json::from_value(value).map_err(|error| format!("decode desktop logs: {error}"))
+}
+
+async fn fetch_desktop_status() -> Result<DesktopStatus, String> {
+    let value =
+        components::qapp_engine::invoke_json("get_desktop_status", serde_json::json!({})).await?;
+    serde_json::from_value(value).map_err(|error| format!("decode desktop status: {error}"))
 }
 
 fn refresh_desktop_logs(mut logs: Signal<DesktopLogsResponse>, mut status: Signal<String>) {
@@ -914,14 +1026,14 @@ fn AppLayout() -> Element {
                 // Tabs (Mocked as standard navigation links for now, styled as browser tabs)
                 div {
                     style: "display: flex; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: none;",
-                    
+
                     Link {
                         to: Route::DashboardRoute {},
                         class: "qtab",
                         sl-icon { "name": "house", style: "font-size: 0.9rem;" }
                         "Home"
                     }
-                    
+
                     if crate::endpoints::supports_browser_pane() {
                         Link {
                             to: Route::BrowserRoute {},
@@ -958,7 +1070,7 @@ fn AppLayout() -> Element {
                         sl-icon { "name": "grid", style: "font-size: 0.9rem;" }
                         "QApps"
                     }
-                    
+
                     Link {
                         to: Route::ToolsRoute {},
                         class: "qtab",
@@ -1004,10 +1116,60 @@ fn AppLayout() -> Element {
                 }
             }
 
-            // Route content (The active QTab)
+            // Persistent application navigation. It scrolls independently so
+            // smaller native windows still expose every destination.
             div {
                 style: "flex: 1; overflow: hidden; display: flex; position: relative;",
-                Outlet::<Route> {}
+                aside {
+                    class: "app-sidebar",
+                    nav {
+                        class: "app-sidebar-nav",
+                        span { class: "app-sidebar-label", "Workspace" }
+                        Link { to: Route::DashboardRoute {}, class: "nav-item", sl-icon { "name": "house" } "Home" }
+                        Link { to: Route::ChoraRoute {}, class: "nav-item", sl-icon { "name": "stars" } "Chora Universe" }
+                        if crate::endpoints::supports_browser_pane() {
+                            Link { to: Route::BrowserRoute {}, class: "nav-item", sl-icon { "name": "globe2" } "Browser" }
+                        }
+                        Link { to: Route::NexusRoute {}, class: "nav-item", sl-icon { "name": "people" } "Social" }
+                        Link { to: Route::CommunicationsRoute {}, class: "nav-item", sl-icon { "name": "envelope" } "Mail & Messages" }
+                        Link { to: Route::LibraryRoute {}, class: "nav-item", sl-icon { "name": "collection" } "Library" }
+                        Link { to: Route::WorkRoute {}, class: "nav-item", sl-icon { "name": "briefcase" } "Work" }
+
+                        span { class: "app-sidebar-label", "Personal" }
+                        Link { to: Route::WellfairRoute {}, class: "nav-item", sl-icon { "name": "shield-check" } "Wellfair" }
+                        Link { to: Route::HealthRoute {}, class: "nav-item", sl-icon { "name": "heart-pulse" } "Health Vault" }
+                        Link { to: Route::AnatomyRoute {}, class: "nav-item", sl-icon { "name": "person" } "Anatomy" }
+                        Link { to: Route::IdentityRoute {}, class: "nav-item", sl-icon { "name": "person-badge" } "Identity" }
+                        Link { to: Route::AgencyRoute {}, class: "nav-item", sl-icon { "name": "diagram-3" } "Agency" }
+                        Link { to: Route::SanctuaryRoute {}, class: "nav-item", sl-icon { "name": "lock" } "Sanctuary" }
+
+                        span { class: "app-sidebar-label", "Apps" }
+                        Link { to: Route::QAppsRoute {}, class: "nav-item", sl-icon { "name": "grid" } "QApps" }
+                        Link { to: Route::SettingsRoute {}, class: "nav-item", sl-icon { "name": "gear" } "Settings" }
+                        Link { to: Route::LogsRoute {}, class: "nav-item", sl-icon { "name": "journal-text" } "Desktop Logs" }
+                        Link { to: Route::SupervisorRoute {}, class: "nav-item", sl-icon { "name": "activity" } "Operations" }
+
+                        details {
+                            class: "developer-nav",
+                            summary { "Developer tools" }
+                            div {
+                                class: "developer-nav-items",
+                                Link { to: Route::StudioRoute {}, class: "nav-item", "QApp Studio" }
+                                Link { to: Route::ContextStudioRoute {}, class: "nav-item", "Context Studio" }
+                                Link { to: Route::TenDBrowserRoute {}, class: "nav-item", "10D Browser" }
+                                Link { to: Route::GpuViewportRoute {}, class: "nav-item", "GPU Viewport" }
+                                Link { to: Route::ToolsRoute {}, class: "nav-item", "System Tools" }
+                            }
+                        }
+                    }
+                    div { class: "app-sidebar-scroll-cue", "Scroll for more" }
+                }
+                main {
+                    style: "min-width: 0; flex: 1; overflow: hidden; display: flex; position: relative;",
+                    components::wellfair::HostSnapshotProvider {
+                        Outlet::<Route> {}
+                    }
+                }
             }
         }
     }
@@ -1107,6 +1269,65 @@ fn App() -> Element {
                 cursor: pointer;
             }}
             .nav-item:hover {{ background: rgba(128,128,128,0.10); }}
+            .nav-item[aria-current=page] {{
+                color: var(--qualia-accent);
+                background: var(--qualia-accent-glow);
+            }}
+            .app-sidebar {{
+                position: relative;
+                width: 220px;
+                min-width: 220px;
+                height: 100%;
+                overflow: hidden;
+                border-right: 1px solid var(--qualia-border);
+                background: color-mix(in srgb, var(--qualia-surface) 92%, transparent);
+            }}
+            .app-sidebar-nav {{
+                height: 100%;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                scrollbar-gutter: stable;
+                scrollbar-width: thin;
+                padding: 12px 10px 42px;
+            }}
+            .app-sidebar-nav::-webkit-scrollbar {{ width: 8px; }}
+            .app-sidebar-nav::-webkit-scrollbar-thumb {{
+                background: color-mix(in srgb, var(--qualia-text-muted) 45%, transparent);
+                border-radius: 999px;
+                border: 2px solid transparent;
+                background-clip: padding-box;
+            }}
+            .app-sidebar-label {{
+                display: block;
+                padding: 16px 12px 6px;
+                color: var(--qualia-text-muted);
+                font-size: 0.68rem;
+                font-weight: 750;
+                letter-spacing: 0.09em;
+                text-transform: uppercase;
+            }}
+            .app-sidebar-label:first-child {{ padding-top: 4px; }}
+            .developer-nav {{ margin-top: 14px; border-top: 1px solid var(--qualia-border); padding-top: 10px; }}
+            .developer-nav summary {{
+                cursor: pointer;
+                color: var(--qualia-text-muted);
+                font-size: 0.78rem;
+                font-weight: 650;
+                padding: 8px 12px;
+            }}
+            .developer-nav-items {{ padding-left: 8px; }}
+            .app-sidebar-scroll-cue {{
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                pointer-events: none;
+                padding: 20px 14px 7px;
+                color: var(--qualia-text-muted);
+                font-size: 0.64rem;
+                text-align: center;
+                background: linear-gradient(transparent, var(--qualia-surface) 60%);
+            }}
             
             .qtab {{
                 display: inline-flex;
