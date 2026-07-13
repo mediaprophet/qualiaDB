@@ -251,6 +251,19 @@ impl QueryPlanner {
             root_op
         };
 
+        // Apply DISTINCT / REDUCED — dedup the projected solutions. (Previously
+        // the `distinct` flag was parsed but never planned, so `SELECT DISTINCT`
+        // silently returned duplicates.) Eliminating all duplicates is also a
+        // conformant realisation of REDUCED.
+        let distinct_op = if select.distinct || select.reduced {
+            plan.add_operator(
+                PhysicalOperatorType::Distinct { input: project_op },
+                0,
+            )?
+        } else {
+            project_op
+        };
+
         // Apply sorting
         let sort_op = if select.order_by_count > 0 {
             let mut order_by = [0u16; MAX_ORDER_CONDITIONS];
@@ -261,7 +274,7 @@ impl QueryPlanner {
             }
             plan.add_operator(
                 PhysicalOperatorType::Sort {
-                    input: project_op,
+                    input: distinct_op,
                     order_by,
                     order_count: select.order_by_count,
                     ascending,
@@ -269,7 +282,7 @@ impl QueryPlanner {
                 0,
             )?
         } else {
-            project_op
+            distinct_op
         };
 
         // Apply limit/offset

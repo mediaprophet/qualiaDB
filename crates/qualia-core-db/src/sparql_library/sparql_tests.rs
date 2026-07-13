@@ -375,6 +375,27 @@ mod sparql_tests {
     }
 
     #[test]
+    fn test_select_distinct_dedups_on_projected_var() {
+        let tok = |b: &[u8]| crate::lexicon::generate_60bit_token(b);
+        let alice = tok(b"http://ex/alice");
+        let knows = tok(b"http://ex/knows");
+        let (bob, carol) = (tok(b"http://ex/bob"), tok(b"http://ex/carol"));
+        // alice knows bob and carol → two solutions differing only in ?o.
+        let quins = vec![mk_quin(alice, knows, bob), mk_quin(alice, knows, carol)];
+
+        let q = "SELECT DISTINCT ?s WHERE { ?s <http://ex/knows> ?o }";
+        let (ctx, rows) = run_query(q, &quins);
+        assert_eq!(rows.len(), 1, "DISTINCT ?s collapses the two ?o solutions");
+        assert_eq!(rows[0].get(var_of(&ctx, b"?s")), Some(alice));
+        // The unselected ?o must be projected away.
+        assert_eq!(
+            rows[0].get(var_of(&ctx, b"?o")),
+            None,
+            "unselected ?o dropped by projection"
+        );
+    }
+
+    #[test]
     fn test_filter_exists_keeps_matching_rows() {
         let tok = |b: &[u8]| crate::lexicon::generate_60bit_token(b);
         let (alice, bob, carol) = (

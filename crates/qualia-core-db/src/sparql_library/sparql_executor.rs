@@ -812,15 +812,31 @@ impl<'a> QueryExecutor<'a> {
     fn execute_project(
         &self,
         input: OperatorId,
-        _vars: [VariableId; MAX_VARIABLES],
-        _var_count: u8,
+        vars: [VariableId; MAX_VARIABLES],
+        var_count: u8,
         plan: &ExecutionPlan,
         ctx: &SparqlQueryContext,
         row: &mut BindingRow,
         results: &mut Vec<BindingRow>,
     ) -> Result<bool, String> {
-        // For now, just execute the input (simplified)
-        self.execute_operator(input, plan, ctx, row, results)
+        // Project each solution onto the selected variables only, dropping every
+        // other binding. This is required for correctness — a downstream DISTINCT
+        // must dedup on the *projected* columns, not on the full WHERE row (two
+        // solutions identical in ?a but differing in an unselected ?b are one
+        // DISTINCT ?a result). Variables keep their own slot ids (the serialiser
+        // reads by variable id from the SELECT list).
+        let mut input_results = Vec::new();
+        self.execute_operator(input, plan, ctx, row, &mut input_results)?;
+        for in_row in input_results {
+            let mut projected = BindingRow::new();
+            for &v in vars.iter().take(var_count as usize) {
+                if let Some(val) = in_row.get(v) {
+                    projected.set(v, val);
+                }
+            }
+            results.push(projected);
+        }
+        Ok(!results.is_empty())
     }
 
     fn execute_limit(
