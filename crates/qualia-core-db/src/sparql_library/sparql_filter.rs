@@ -711,7 +711,7 @@ impl ExpressionEvaluator {
                     // predicates still need a geometry asset resolved from the term (a
                     // later Phase-4 increment) → honest, named error, never fabricated.
                     let local = entry.iri.rsplit('#').next().unwrap_or("");
-                    match local {
+                    return match local {
                         "tensorDistance" | "tensorWithin" => {
                             use crate::sparql_library::immersive::functions::{
                                 tensor_distance, tensor_within,
@@ -739,7 +739,7 @@ impl ExpressionEvaluator {
                              executable inline (needs geometry/mesh asset resolution)",
                             entry.iri
                         )),
-                    }
+                    };
                 }
 
                 // 3. Unknown to both engines.
