@@ -612,12 +612,13 @@ pub fn run_cuda_tc_microbench(side: usize) -> Result<(), String> {
     // Warm + timed
     let _ = qualia_core_db::wgsl_forge::dispatch::ensure_cuda_runtime_path();
     let t0 = Instant::now();
-    let r1 = qualia_core_db::wgsl_forge::dispatch::gemm_f32_tc(m, k, n, &a, &b)
-        .map_err(|e| format!("gemm_f32_tc: {e:?}"))?;
+    // CUDA TC microbench: exercise the reduced-precision path (the CUDA WMMA tier).
+    let r1 = qualia_core_db::wgsl_forge::dispatch::gemm_f32_tc_reduced(m, k, n, &a, &b)
+        .map_err(|e| format!("gemm_f32_tc_reduced: {e:?}"))?;
     let warm_ms = t0.elapsed().as_secs_f64() * 1000.0;
     let t1 = Instant::now();
-    let r2 = qualia_core_db::wgsl_forge::dispatch::gemm_f32_tc(m, k, n, &a, &b)
-        .map_err(|e| format!("gemm_f32_tc: {e:?}"))?;
+    let r2 = qualia_core_db::wgsl_forge::dispatch::gemm_f32_tc_reduced(m, k, n, &a, &b)
+        .map_err(|e| format!("gemm_f32_tc_reduced: {e:?}"))?;
     let hot_ms = t1.elapsed().as_secs_f64() * 1000.0;
     let caps = qualia_core_db::wgsl_forge::dispatch::caps();
     println!("├─ caps: wgpu={} cuda={} coopmat={}", caps.wgpu, caps.cuda, caps.coopmat);

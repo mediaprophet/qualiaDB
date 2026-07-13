@@ -29,6 +29,7 @@ pub use backend::resolve_execution_backend;
 pub use cache::ManifestCache;
 pub use dispatch::{
     caps, coopmat_usable, fft_f32, gemm_cpu_f64, gemm_f32, gemm_f32_tc, gemm_f32_tc_coopmat,
+    gemm_f32_tc_reduced,
     gemm_f64, gemm_f64_df64, gemv_cpu_f64, gemv_f32, gemv_f64, pairwise_sq_dist_cpu_f64,
     pairwise_sq_dist_f64, ComputeCaps, GEMM_GPU_THRESHOLD,
 };

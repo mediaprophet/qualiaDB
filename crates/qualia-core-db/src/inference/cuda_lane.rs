@@ -19,7 +19,7 @@
 use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 
-use crate::wgsl_forge::dispatch::{ensure_cuda_runtime_path, gemm_f32_tc};
+use crate::wgsl_forge::dispatch::{ensure_cuda_runtime_path, gemm_f32_tc_reduced};
 use crate::wgsl_forge::execute::CudaComputeContext;
 
 /// Max cached weight matrices (each can be tens of MB).
@@ -156,7 +156,8 @@ pub fn try_cuda_batch_gemv(
         }
     }
 
-    let c = match gemm_f32_tc(m, k, n, &a, &bmat) {
+    // LLM GEMV is f16-tolerant → the reduced-precision opt-in (keeps the CUDA WMMA tier).
+    let c = match gemm_f32_tc_reduced(m, k, n, &a, &bmat) {
         Ok(v) => v,
         Err(e) => {
             log::warn!("cuda_lane|batch_gemv|tc_fail|{e:?}");

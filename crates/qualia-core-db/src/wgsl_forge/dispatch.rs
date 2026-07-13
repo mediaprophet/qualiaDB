@@ -499,21 +499,24 @@ fn gemm_f64_cuda(
     Ok(out)
 }
 
-/// **Opt-in tensor-core GEMM** (reduced precision) — the capability-selected entry point
-/// that makes the `MatMul.tc` request real. Row-major `C[m×n] = A[m×k]·B[k×n]`, f32 in/out.
+/// **f32-faithful tensor-core GEMM** — row-major `C[m×n] = A[m×k]·B[k×n]`, f32 in/out,
+/// computed to **full f32 accuracy**. This is the entry point for callers who want
+/// tensor-core throughput *without* trading precision.
 ///
-/// Selection (best tensor-core path on this machine, with a correct floor):
-/// 1. **WGSL coopmat** ([`gemm_f32_tc_coopmat`]) — the *portable* wgpu tensor-core path
-///    (f32), the intended first choice. Built (tiled kernel + runtime probe), but gated on
-///    [`coopmat_usable`]: on wgpu 29.0.3 the coopmat multiply returns zeros (#9741), so the
-///    probe is `false` and this tier is **dormant until a wgpu release / soft-fork carries
-///    the fix**, then self-activates (see [`docs/WGPU_UPSTREAM_TRACKING.md`]). 8-multiple dims.
-/// 2. **CUDA WMMA** ([`gemm_tc_cuda`]) — genuine NVIDIA tensor cores at f16-input precision,
-///    when `cuda` is available and `m,n,k` are multiples of 16. Carries tensor cores **today**.
-/// 3. **plain f32 GEMM** ([`gemm_f32`]) — the always-correct floor (full f32 precision).
+/// Selection (accurate paths only, with a correct floor):
+/// 1. **WGSL coopmat** ([`gemm_f32_tc_coopmat`]) — the *portable* wgpu tensor-core path.
+///    It is genuinely **f32** (an 8×8×8 f32 cooperative-matrix tile), so it belongs on the
+///    accurate path. Gated on [`coopmat_usable`]: on wgpu ≤30 the coopmat multiply returns
+///    zeros on adapters that don't compute it (e.g. this machine's DX12 backend, #9741), so
+///    the probe is `false` and this tier stays dormant, self-activating the moment an adapter
+///    computes coopmat correctly (see [`docs/WGPU_UPSTREAM_TRACKING.md`]). 8-multiple dims.
+/// 2. **plain f32 GEMM** ([`gemm_f32`]) — the always-correct full-f32 floor.
 ///
-/// This is **opt-in** because tiers 1–2 trade f32 precision for tensor-core throughput; the
-/// default [`gemm_f32`] stays full-precision. Use for LLM matmuls (already f16-tolerant).
+/// **The lossy f16 CUDA WMMA tier is deliberately NOT here** — it lives in
+/// [`gemm_f32_tc_reduced`], the explicit reduced-precision opt-in. A function named
+/// `gemm_f32_tc` must not silently return f16-precision results (this was the
+/// `stage4_forge_gemm` selector bug: on a CUDA machine with coopmat dormant, the f16 tier
+/// fired and produced ~1.2 absolute error against an f32-accuracy expectation).
 pub fn gemm_f32_tc(
     m: usize,
     k: usize,
@@ -522,13 +525,10 @@ pub fn gemm_f32_tc(
     b: &[f32],
 ) -> Result<Vec<f32>, ForgeError> {
     validate_dims(m, k, n, a.len(), b.len())?;
-    ensure_cuda_runtime_path();
 
-    // Tier 1: WGSL coopmat — the *portable* wgpu tensor-core path (f32), gated on the
-    // runtime probe `coopmat_usable()`. On wgpu 29.0.3 the coopmat multiply returns zeros
-    // (#9741), so the probe is `false` and this tier stays dormant — it self-activates the
-    // moment a wgpu release (or the soft-fork) carries the fix. Requires 8-multiple dims
-    // (the 8×8×8 tile). The probe runs at most one tiny GPU dispatch, then caches.
+    // Tier 1: WGSL coopmat — the *portable* f32 wgpu tensor-core path, gated on the runtime
+    // probe `coopmat_usable()`. Dormant where the adapter doesn't compute coopmat (#9741);
+    // self-activates once it does. Requires 8-multiple dims (the 8×8×8 tile). f32-accurate.
     if caps().wgpu
         && caps().coopmat
         && m % 8 == 0
@@ -540,10 +540,53 @@ pub fn gemm_f32_tc(
         if let Ok(out) = gemm_f32_tc_coopmat(m, k, n, a, b) {
             return Ok(out);
         }
-        // Coopmat path eligible but errored — fall through to the next tier.
+        // Coopmat path eligible but errored — fall through to the exact floor.
     }
 
-    // Tier 2: CUDA WMMA (genuine NVIDIA tensor cores, f16-input precision).
+    // Floor: full-f32 GEMM. No lossy f16 tier on the f32-faithful path.
+    gemm_f32(m, k, n, a, b)
+}
+
+/// **Reduced-precision tensor-core GEMM** — the explicit opt-in for callers that are
+/// precision-tolerant (LLM matmuls are already f16-tolerant) and want maximum tensor-core
+/// throughput. Row-major `C[m×n] = A[m×k]·B[k×n]`, f32 in/out, but the result **may be
+/// f16-precision** when the CUDA WMMA tier fires.
+///
+/// Selection (fastest tensor-core path on this machine, with a correct floor):
+/// 1. **WGSL coopmat** ([`gemm_f32_tc_coopmat`], f32) — still preferred when usable: it is
+///    both accurate *and* fast. Gated on [`coopmat_usable`]. 8-multiple dims.
+/// 2. **CUDA WMMA** ([`gemm_tc_cuda`]) — genuine NVIDIA tensor cores at **f16-input**
+///    precision, when `cuda` is available and `m,n,k` are multiples of 16. Carries tensor
+///    cores today; this is the tier that trades precision for throughput.
+/// 3. **plain f32 GEMM** ([`gemm_f32`]) — the always-correct floor.
+///
+/// Use this for LLM decode GEMV / TC microbenchmarks. Use [`gemm_f32_tc`] when you need f32
+/// accuracy.
+pub fn gemm_f32_tc_reduced(
+    m: usize,
+    k: usize,
+    n: usize,
+    a: &[f32],
+    b: &[f32],
+) -> Result<Vec<f32>, ForgeError> {
+    validate_dims(m, k, n, a.len(), b.len())?;
+    ensure_cuda_runtime_path();
+
+    // Tier 1: WGSL coopmat (f32) — accurate AND fast, preferred when the probe says it works.
+    if caps().wgpu
+        && caps().coopmat
+        && m % 8 == 0
+        && n % 8 == 0
+        && k % 8 == 0
+        && m.min(n).min(k) > 0
+        && coopmat_usable()
+    {
+        if let Ok(out) = gemm_f32_tc_coopmat(m, k, n, a, b) {
+            return Ok(out);
+        }
+    }
+
+    // Tier 2: CUDA WMMA (genuine NVIDIA tensor cores, f16-input precision — reduced).
     // cudarc may *panic* (not Err) when NVRTC/CUDA DLLs are missing — catch that so
     // the plain f32 floor always remains reachable (toolkit probe found this 2026-07-09).
     #[cfg(feature = "cuda")]
@@ -1181,10 +1224,24 @@ mod tests {
         assert_eq!(out, vec![58.0, 64.0, 139.0, 154.0]);
     }
 
+    /// The reduced-precision entry point ([`gemm_f32_tc_reduced`]) likewise returns the exact
+    /// f32 floor for a call that can use no tensor-core tier (non-16-multiple / non-GPU), so
+    /// the opt-in never breaks a plain call. On TC dims + a CUDA adapter it may instead return
+    /// an f16-precision result — that reduced path is exercised at runtime (cuda_lane /
+    /// microbench), not asserted for f32 accuracy here.
+    #[test]
+    fn gemm_f32_tc_reduced_falls_to_plain_floor() {
+        let a = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let b = [7.0f32, 8.0, 9.0, 10.0, 11.0, 12.0];
+        let out = gemm_f32_tc_reduced(2, 3, 2, &a, &b).expect("gemm_f32_tc_reduced");
+        assert_eq!(out, vec![58.0, 64.0, 139.0, 154.0]);
+    }
+
     /// The coopmat (WGSL tensor-core) probe is honest and memoised: it can only be `true`
     /// where the adapter actually advertises coopmat, it is `false` without one (or no GPU),
-    /// and repeated calls agree. On wgpu 29.0.3 it is `false` even on a coopmat-capable
-    /// adapter (the multiply returns zeros, #9741) — so this never wrongly enables the path.
+    /// and repeated calls agree. On wgpu ≤30 it is `false` even on a coopmat-capable adapter
+    /// where the driver/backend doesn't compute coopmat (verified 2026-07-13: on wgpu 30 the
+    /// DX12 backend still returns zeros, #9741) — so this never wrongly enables the path.
     #[test]
     fn coopmat_usable_respects_caps_and_is_cached() {
         let first = coopmat_usable();
@@ -1210,13 +1267,14 @@ mod tests {
     }
 
     /// **GPU certify (A2000)** — the tiled coopmat f32 GEMM matches the exact f32 CPU
-    /// reference. **Dormant on wgpu 29.0.3**: the coopmat multiply returns zeros (#9741), so
-    /// this is `#[ignore]` until a wgpu release / the soft-fork carries the fix — at which
-    /// point [`coopmat_usable`] flips `true` and this asserts the real tensor-core result.
-    /// 16×16×16 = a 2×2 grid of 8×8 output tiles, 2 K-tiles each (so it exercises the loop +
-    /// `workgroup_id` tiling, not just a single tile).
+    /// reference. **Dormant on wgpu 30 for the DX12 backend** (verified 2026-07-13: the
+    /// coopmat multiply still returns zeros here, #9741 — the 30 fix does not cover this
+    /// adapter/backend), so this stays `#[ignore]` until an adapter/backend computes coopmat —
+    /// at which point [`coopmat_usable`] flips `true` and this asserts the real tensor-core
+    /// result. 16×16×16 = a 2×2 grid of 8×8 output tiles, 2 K-tiles each (so it exercises the
+    /// loop + `workgroup_id` tiling, not just a single tile).
     #[test]
-    #[ignore = "coopmat multiply dormant on wgpu 29.0.3 (#9741); lights up via wgpu release / soft-fork"]
+    #[ignore = "coopmat multiply dormant on wgpu 30 DX12 (#9741, verified 2026-07-13); lights up when an adapter computes coopmat"]
     fn gemm_f32_tc_coopmat_matches_cpu_reference() {
         let (m, k, n) = (16usize, 16usize, 16usize);
         let a: Vec<f32> = (0..m * k).map(|i| ((i % 7) as f32) * 0.5 - 1.0).collect();
