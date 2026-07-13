@@ -13,7 +13,6 @@ pub mod sparql_ast;
 pub mod sparql_did;
 pub mod sparql_endpoint;
 pub mod sparql_executor;
-pub mod sparql_extensions;
 pub mod sparql_federated;
 pub mod sparql_filter;
 pub mod sparql_grammar;

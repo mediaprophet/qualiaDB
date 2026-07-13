@@ -378,29 +378,87 @@ impl ExpressionEvaluator {
                 }
             }
             Function::Str => {
-                // STR(expr) - convert to string (simplified)
-                if args_len >= 1 {
-                    let expr_id = ctx.function_args[args_start as usize];
-                    let result = Self::evaluate(expr_id, ctx, row)?;
-                    Ok(result)
-                } else {
-                    Err("STR requires at least one argument".to_string())
+                // STR(term) → the lexical string form, interned into the sink so it is a
+                // real String value (numbers/booleans formatted; IRIs/literals resolved).
+                if args_len < 1 {
+                    return Err("STR requires at least one argument".to_string());
+                }
+                let expr_id = ctx.function_args[args_start as usize];
+                let val = Self::evaluate_with_resolver(expr_id, ctx, row, resolver)?;
+                match val {
+                    EvalResult::String(_) => Ok(val),
+                    EvalResult::Boolean(b) => {
+                        Self::produce_string(resolver, if b { "true" } else { "false" }, "STR")
+                    }
+                    EvalResult::Float(f) => Self::produce_string(resolver, &format!("{f}"), "STR"),
+                    EvalResult::Numeric(h) | EvalResult::Iri(h) => {
+                        if let Some(r) = resolver {
+                            if let Some(t) = r.resolve_text(h) {
+                                return Self::produce_string(resolver, &t, "STR");
+                            }
+                            if let Some(lit) = crate::resolver::classify_inline_literal(h) {
+                                return Self::produce_string(resolver, &format!("{lit}"), "STR");
+                            }
+                        }
+                        Ok(val) // no resolver: keep the term (best effort)
+                    }
                 }
             }
             Function::Lang => {
-                // LANG(expr) - get language tag (simplified)
-                if args_len >= 1 {
-                    Ok(EvalResult::String(0)) // Placeholder
-                } else {
-                    Err("LANG requires at least one argument".to_string())
+                // LANG(literal) → its language tag, or "" for a non-lang-tagged literal
+                // (correct SPARQL default). Honest error if the term is not a literal.
+                if args_len < 1 {
+                    return Err("LANG requires an argument".to_string());
                 }
+                let h = Self::arg_term(0, args_start, args_len, ctx, row, resolver)?;
+                let lang = resolver
+                    .and_then(|r| r.lang_of(h))
+                    .ok_or("LANG: argument is not a literal")?;
+                Self::produce_string(resolver, &lang, "LANG")
             }
             Function::Datatype => {
-                // DATATYPE(expr) - get datatype IRI (simplified)
-                if args_len >= 1 {
-                    Ok(EvalResult::Iri(0)) // Placeholder
-                } else {
-                    Err("DATATYPE requires at least one argument".to_string())
+                // DATATYPE(literal) → its datatype IRI (explicit tag, inline XSD type,
+                // rdf:langString, or xsd:string for a plain literal). Honest error for a
+                // term that is not a typed/known literal — no fabricated placeholder.
+                if args_len < 1 {
+                    return Err("DATATYPE requires an argument".to_string());
+                }
+                let h = Self::arg_term(0, args_start, args_len, ctx, row, resolver)?;
+                let dt = resolver
+                    .and_then(|r| r.datatype_of(h))
+                    .ok_or("DATATYPE: argument is not a typed literal")?;
+                // Return an IRI term whose hash equals the query's own IRI term for the
+                // same datatype (generate_60bit_token of the IRI), so `DATATYPE(?x) =
+                // xsd:integer` compares equal; also make it resolvable via the sink.
+                let hash = crate::lexicon::generate_60bit_token(dt.as_bytes());
+                if let Some(sink) = resolver.and_then(|r| r.sink) {
+                    sink.intern(&dt);
+                }
+                Ok(EvalResult::Iri(hash))
+            }
+            Function::LangMatches => {
+                // LANGMATCHES(tag, range) per RFC 4647 basic filtering.
+                let tag = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "LANGMATCHES")?;
+                let range =
+                    Self::arg_text(1, args_start, args_len, ctx, row, resolver, "LANGMATCHES")?;
+                Ok(EvalResult::Boolean(Self::lang_matches(&tag, &range)))
+            }
+            Function::StrLang => {
+                // STRLANG(str, lang) → a language-tagged literal (round-trips via LANG).
+                let s = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "STRLANG")?;
+                let lang = Self::arg_text(1, args_start, args_len, ctx, row, resolver, "STRLANG")?;
+                match resolver.and_then(|r| r.sink) {
+                    Some(sink) => Ok(EvalResult::String(sink.intern_tagged(&s, Some(&lang), None))),
+                    None => Err("STRLANG produces a value but no string sink is available".to_string()),
+                }
+            }
+            Function::StrDt => {
+                // STRDT(str, datatypeIRI) → a datatyped literal (round-trips via DATATYPE).
+                let s = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "STRDT")?;
+                let dt = Self::arg_text(1, args_start, args_len, ctx, row, resolver, "STRDT")?;
+                match resolver.and_then(|r| r.sink) {
+                    Some(sink) => Ok(EvalResult::String(sink.intern_tagged(&s, None, Some(&dt)))),
+                    None => Err("STRDT produces a value but no string sink is available".to_string()),
                 }
             }
             Function::IsIri | Function::IsUri => {
@@ -949,14 +1007,10 @@ impl ExpressionEvaluator {
                 }
                 Ok(EvalResult::Float(Self::deterministic_unit_f64(seed, args_start as u64)))
             }
-            // The only genuinely-blocked builtins remaining fail closed with an honest,
-            // named error — never fabricate. Real infra gap, NOT laziness: LANG /
-            // LANGMATCHES / STRLANG / STRDT need a per-term language/datatype tag model
-            // the engine does not yet carry.
-            other => Err(format!(
-                "SPARQL FILTER function {other:?} is not implemented (residual: needs a \
-                 per-term language/datatype tag model); refusing to fabricate a result"
-            )),
+            // NOTE: the match over `Function` is now exhaustive — every SPARQL builtin has
+            // a real implementation above (no fabricated placeholder, no residual). If a
+            // new `Function` variant is added, the compiler will flag the missing arm here
+            // rather than silently falling through to a fabricated result.
         }
     }
 
@@ -1052,6 +1106,38 @@ impl ExpressionEvaluator {
             geosparql::GeoValue::Bool(b) => Ok(EvalResult::Boolean(b)),
             geosparql::GeoValue::Number(n) => Ok(EvalResult::Numeric(n as u64)),
         }
+    }
+
+    /// Evaluate function argument `idx` to its term hash (Numeric/Iri/String).
+    fn arg_term(
+        idx: usize,
+        args_start: u16,
+        args_len: u16,
+        ctx: &SparqlQueryContext,
+        row: &BindingRow,
+        resolver: Option<crate::sparql_ast::TextResolver>,
+    ) -> Result<u64, String> {
+        if (idx as u16) >= args_len {
+            return Err("missing a required argument".to_string());
+        }
+        let expr_id = ctx.function_args[args_start as usize + idx];
+        match Self::evaluate_with_resolver(expr_id, ctx, row, resolver)? {
+            EvalResult::Numeric(h) | EvalResult::Iri(h) | EvalResult::String(h) => Ok(h),
+            EvalResult::Boolean(_) | EvalResult::Float(_) => {
+                Err("argument is not a term".to_string())
+            }
+        }
+    }
+
+    /// RFC 4647 basic-filtering `langMatches(tag, range)`: `*` matches any non-empty
+    /// tag; otherwise a case-insensitive exact match or a `range-` prefix of `tag`.
+    fn lang_matches(tag: &str, range: &str) -> bool {
+        if range == "*" {
+            return !tag.is_empty();
+        }
+        let tag = tag.to_ascii_lowercase();
+        let range = range.to_ascii_lowercase();
+        tag == range || tag.starts_with(&format!("{range}-"))
     }
 
     /// Evaluate function argument `idx` to a numeric value (for `SUBSTR` positions).
@@ -1791,6 +1877,76 @@ mod tests {
             ExpressionEvaluator::evaluate_function(dist_iri, 0, 2, &ctx2, &BindingRow::new(), Some(resolver2)).is_err(),
             "a 3-value tensor literal must fail closed, not fabricate a distance"
         );
+    }
+
+    #[test]
+    fn test_lang_datatype_strlang_strdt_langmatches() {
+        use crate::sparql_ast::{literal_term_hash, StringSink};
+        let mut ctx = SparqlQueryContext::new();
+        let h_en = literal_term_hash("hello", Some("en"), None);
+        let h_plain = literal_term_hash("hello", None, None);
+        let h_hi = literal_term_hash("hi", None, None);
+        let h_fr = literal_term_hash("fr", None, None);
+        let h_dt = literal_term_hash("http://example.org/myType", None, None);
+        let e_en = ctx.alloc_expression(Expression::Literal(h_en)).unwrap();
+        let e_plain = ctx.alloc_expression(Expression::Literal(h_plain)).unwrap();
+        let e_hi = ctx.alloc_expression(Expression::Literal(h_hi)).unwrap();
+        let e_fr = ctx.alloc_expression(Expression::Literal(h_fr)).unwrap();
+        let e_dt = ctx.alloc_expression(Expression::Literal(h_dt)).unwrap();
+
+        let mut lits = LiteralTable::new();
+        lits.intern_tagged(h_en, "hello", Some("en"), None);
+        lits.intern(h_plain, "hello");
+        lits.intern(h_hi, "hi");
+        lits.intern(h_fr, "fr");
+        lits.intern(h_dt, "http://example.org/myType");
+        let sink = StringSink::new();
+        let resolver = TextResolver::new(&lits).with_sink(&sink);
+        let row = BindingRow::new();
+
+        // LANG("hello"@en) = "en"; LANG("hello") = "" (correct default, not fabricated).
+        ctx.function_args[0] = e_en;
+        ctx.function_arg_count = 1;
+        let l1 = ExpressionEvaluator::evaluate_function(Function::Lang, 0, 1, &ctx, &row, Some(resolver)).unwrap();
+        assert_eq!(l1.as_string(&sink).as_deref(), Some("en"));
+        ctx.function_args[0] = e_plain;
+        let l0 = ExpressionEvaluator::evaluate_function(Function::Lang, 0, 1, &ctx, &row, Some(resolver)).unwrap();
+        assert_eq!(l0.as_string(&sink).as_deref(), Some(""));
+
+        // DATATYPE("hello") = xsd:string, returned as an IRI term comparable to the query's.
+        let dt = ExpressionEvaluator::evaluate_function(Function::Datatype, 0, 1, &ctx, &row, Some(resolver)).unwrap();
+        assert_eq!(
+            dt,
+            EvalResult::Iri(crate::lexicon::generate_60bit_token(
+                b"http://www.w3.org/2001/XMLSchema#string"
+            ))
+        );
+
+        // STRLANG("hi","fr") round-trips: the produced term's LANG is "fr".
+        ctx.function_args[0] = e_hi;
+        ctx.function_args[1] = e_fr;
+        ctx.function_arg_count = 2;
+        let sl = ExpressionEvaluator::evaluate_function(Function::StrLang, 0, 2, &ctx, &row, Some(resolver)).unwrap();
+        let sl_hash = match sl {
+            EvalResult::String(h) => h,
+            other => panic!("STRLANG must be a String, got {other:?}"),
+        };
+        assert_eq!(resolver.lang_of(sl_hash).as_deref(), Some("fr"));
+
+        // STRDT("hi", myType) round-trips: the produced term's DATATYPE is myType.
+        ctx.function_args[0] = e_hi;
+        ctx.function_args[1] = e_dt;
+        let sd = ExpressionEvaluator::evaluate_function(Function::StrDt, 0, 2, &ctx, &row, Some(resolver)).unwrap();
+        let sd_hash = match sd {
+            EvalResult::String(h) => h,
+            other => panic!("STRDT must be a String, got {other:?}"),
+        };
+        assert_eq!(resolver.datatype_of(sd_hash).as_deref(), Some("http://example.org/myType"));
+
+        // LANGMATCHES per RFC 4647.
+        assert!(ExpressionEvaluator::lang_matches("en-US", "en"));
+        assert!(ExpressionEvaluator::lang_matches("de", "*"));
+        assert!(!ExpressionEvaluator::lang_matches("fr", "en"));
     }
 
     #[test]

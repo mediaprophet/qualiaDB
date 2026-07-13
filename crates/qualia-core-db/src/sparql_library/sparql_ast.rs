@@ -371,26 +371,77 @@ pub struct SparqlQueryContext {
 /// `SparqlQueryContext` — it is a cold parse/eval-time structure — so functions
 /// that need literal text (`geof:*`, `STR`, `REGEX`, …) can recover it without
 /// putting `String`/`Vec` on the zero-heap execution hot path (CLAUDE.md §6).
+/// Canonical hash for a literal term, distinguishing a plain literal from a
+/// language-tagged or datatype-tagged one (`"x"`, `"x"@en`, and `"x"^^:t` are three
+/// distinct RDF terms). The parser and the [`StringSink`] both use this so a produced
+/// `STRLANG`/`STRDT` term round-trips its tag.
+pub fn literal_term_hash(text: &str, lang: Option<&str>, datatype: Option<&str>) -> u64 {
+    match (lang, datatype) {
+        (None, None) => crate::lexicon::generate_60bit_token(text.as_bytes()),
+        (Some(l), _) => crate::lexicon::generate_60bit_token(format!("{text}@{l}").as_bytes()),
+        (None, Some(d)) => crate::lexicon::generate_60bit_token(format!("{text}^^{d}").as_bytes()),
+    }
+}
+
+/// Query-scoped table of literal text + optional language tag / datatype IRI,
+/// `hash -> (text, lang?, datatype?)`, built by the parser for string/geometry/typed
+/// constants. Lives **outside** the zero-heap `SparqlQueryContext` — a cold
+/// parse/eval-time structure — so builtins (`STR`/`LANG`/`DATATYPE`/`geof:*`/…) recover
+/// what they need without heap on the §6 hot path.
 #[derive(Debug, Default, Clone)]
 pub struct LiteralTable {
-    entries: Vec<(u64, String)>,
+    entries: Vec<(u64, String, Option<String>, Option<String>)>,
 }
 
 impl LiteralTable {
     pub fn new() -> Self {
         Self::default()
     }
-    /// Record the text for a literal hash (idempotent).
+    /// Record the text for a plain literal hash (idempotent, no lang/datatype).
     pub fn intern(&mut self, hash: u64, text: &str) {
-        if self.resolve(hash).is_none() {
-            self.entries.push((hash, text.to_string()));
+        self.intern_tagged(hash, text, None, None);
+    }
+    /// Record a literal with an optional language tag and/or datatype IRI.
+    pub fn intern_tagged(
+        &mut self,
+        hash: u64,
+        text: &str,
+        lang: Option<&str>,
+        datatype: Option<&str>,
+    ) {
+        if self.entries.iter().any(|(h, ..)| *h == hash) {
+            return;
         }
+        self.entries.push((
+            hash,
+            text.to_string(),
+            lang.map(str::to_string),
+            datatype.map(str::to_string),
+        ));
     }
     pub fn resolve(&self, hash: u64) -> Option<&str> {
         self.entries
             .iter()
-            .find(|(h, _)| *h == hash)
-            .map(|(_, s)| s.as_str())
+            .find(|(h, ..)| *h == hash)
+            .map(|(_, s, ..)| s.as_str())
+    }
+    /// The language tag of an interned literal, if it has one.
+    pub fn lang(&self, hash: u64) -> Option<&str> {
+        self.entries
+            .iter()
+            .find(|(h, ..)| *h == hash)
+            .and_then(|(_, _, l, _)| l.as_deref())
+    }
+    /// The datatype IRI of an interned literal, if it was tagged with one.
+    pub fn datatype(&self, hash: u64) -> Option<&str> {
+        self.entries
+            .iter()
+            .find(|(h, ..)| *h == hash)
+            .and_then(|(_, _, _, d)| d.as_deref())
+    }
+    /// Whether this hash names a known (interned) literal.
+    pub fn contains(&self, hash: u64) -> bool {
+        self.entries.iter().any(|(h, ..)| *h == hash)
     }
     pub fn len(&self) -> usize {
         self.entries.len()
@@ -413,21 +464,32 @@ impl LiteralTable {
 /// interning table here does not violate the hot-path invariant.
 #[derive(Debug, Default)]
 pub struct StringSink {
-    produced: std::cell::RefCell<Vec<(u64, String)>>,
+    produced: std::cell::RefCell<Vec<(u64, String, Option<String>, Option<String>)>>,
 }
 
 impl StringSink {
     pub fn new() -> Self {
         Self::default()
     }
-    /// Intern a produced string, returning its stable content-derived 60-bit token.
+    /// Intern a produced plain string, returning its stable content-derived token.
     /// Deterministic (same text → same token), so repeated/​reordered evaluation of a
     /// pure builtin is referentially transparent (plan §4.4, QISP-R06).
     pub fn intern(&self, text: &str) -> u64 {
-        let hash = crate::lexicon::generate_60bit_token(text.as_bytes());
+        self.intern_tagged(text, None, None)
+    }
+    /// Intern a produced string carrying an optional language tag / datatype IRI
+    /// (`STRLANG`/`STRDT`). The token distinguishes `"x"`, `"x"@en`, `"x"^^:t` via
+    /// [`literal_term_hash`], so `LANG`/`DATATYPE` can read the tag back.
+    pub fn intern_tagged(&self, text: &str, lang: Option<&str>, datatype: Option<&str>) -> u64 {
+        let hash = literal_term_hash(text, lang, datatype);
         let mut v = self.produced.borrow_mut();
-        if !v.iter().any(|(h, _)| *h == hash) {
-            v.push((hash, text.to_string()));
+        if !v.iter().any(|(h, ..)| *h == hash) {
+            v.push((
+                hash,
+                text.to_string(),
+                lang.map(str::to_string),
+                datatype.map(str::to_string),
+            ));
         }
         hash
     }
@@ -436,8 +498,24 @@ impl StringSink {
         self.produced
             .borrow()
             .iter()
-            .find(|(h, _)| *h == hash)
-            .map(|(_, s)| s.clone())
+            .find(|(h, ..)| *h == hash)
+            .map(|(_, s, ..)| s.clone())
+    }
+    /// The language tag of a produced string term, if any.
+    pub fn lang(&self, hash: u64) -> Option<String> {
+        self.produced
+            .borrow()
+            .iter()
+            .find(|(h, ..)| *h == hash)
+            .and_then(|(_, _, l, _)| l.clone())
+    }
+    /// The datatype IRI of a produced string term, if any.
+    pub fn datatype(&self, hash: u64) -> Option<String> {
+        self.produced
+            .borrow()
+            .iter()
+            .find(|(h, ..)| *h == hash)
+            .and_then(|(_, _, _, d)| d.clone())
     }
 }
 
@@ -509,6 +587,60 @@ impl<'a> TextResolver<'a> {
             }
         }
         crate::resolver::resolve_hash(hash).and_then(|b| String::from_utf8(b.to_vec()).ok())
+    }
+
+    /// The language tag of a literal term (`LANG`). A plain, non-tagged literal has the
+    /// empty tag `""` (correct SPARQL default); `None` only for a term that is not a
+    /// known literal at all.
+    pub fn lang_of(&self, hash: u64) -> Option<String> {
+        if let Some(l) = self.literals.lang(hash) {
+            return Some(l.to_string());
+        }
+        if let Some(sink) = self.sink {
+            if let Some(l) = sink.lang(hash) {
+                return Some(l);
+            }
+        }
+        // A known/resolvable literal with no lang tag → "".
+        if self.literals.contains(hash)
+            || self.sink.map(|s| s.resolve(hash).is_some()).unwrap_or(false)
+            || crate::resolver::classify_inline_literal(hash).is_some()
+        {
+            return Some(String::new());
+        }
+        None
+    }
+
+    /// The datatype IRI of a literal term (`DATATYPE`): an explicit tag, else
+    /// `rdf:langString` for a lang-tagged literal, else the inline-encoded XSD type
+    /// (integer/decimal/double/boolean), else `xsd:string` for a plain known literal.
+    /// `None` for a term that is not a known/typed literal.
+    pub fn datatype_of(&self, hash: u64) -> Option<String> {
+        const XSD_STRING: &str = "http://www.w3.org/2001/XMLSchema#string";
+        const RDF_LANGSTRING: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
+        if let Some(dt) = self.literals.datatype(hash) {
+            return Some(dt.to_string());
+        }
+        if let Some(sink) = self.sink {
+            if let Some(dt) = sink.datatype(hash) {
+                return Some(dt);
+            }
+            if sink.lang(hash).is_some() {
+                return Some(RDF_LANGSTRING.to_string());
+            }
+        }
+        if self.literals.lang(hash).is_some() {
+            return Some(RDF_LANGSTRING.to_string());
+        }
+        if let Some(lit) = crate::resolver::classify_inline_literal(hash) {
+            return Some(lit.datatype_iri().to_string());
+        }
+        if self.literals.contains(hash)
+            || self.sink.map(|s| s.resolve(hash).is_some()).unwrap_or(false)
+        {
+            return Some(XSD_STRING.to_string());
+        }
+        None
     }
 }
 

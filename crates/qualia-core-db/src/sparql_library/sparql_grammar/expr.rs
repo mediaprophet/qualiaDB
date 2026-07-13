@@ -40,8 +40,8 @@ pub fn take_parse_literals() -> LiteralTable {
     PARSE_LITERALS.with(|l| std::mem::take(&mut *l.borrow_mut()))
 }
 
-fn record_parse_literal(hash: u64, text: &str) {
-    PARSE_LITERALS.with(|l| l.borrow_mut().intern(hash, text));
+fn record_parse_literal_tagged(hash: u64, text: &str, lang: Option<&str>, datatype: Option<&str>) {
+    PARSE_LITERALS.with(|l| l.borrow_mut().intern_tagged(hash, text, lang, datatype));
 }
 
 /// Parse a full expression from `tokens`, allocating nodes into `ctx`.
@@ -241,11 +241,25 @@ impl<'a> ExprParser<'a> {
                 self.alloc(Expression::Literal(value))
             }
             Token::Bool(b) => self.alloc(Expression::Literal(if b { 1 } else { 0 })),
-            Token::Str { value, .. } => {
-                let h = crate::lexicon::generate_60bit_token(value.as_bytes());
-                // Record the text so literal-text functions (geof:*, …) can
-                // recover it from the hash at evaluation time.
-                record_parse_literal(h, &value);
+            Token::Str { value, lang, datatype } => {
+                // Expand a prefixed datatype (e.g. `xsd:integer`) against the prefix map
+                // so DATATYPE(?x) is comparable to the query's own datatype IRI term.
+                let dt = datatype.as_ref().map(|d| {
+                    if d.contains("://") {
+                        d.clone()
+                    } else if let Some((p, local)) = d.split_once(':') {
+                        match self.prefixes.get(p) {
+                            Some(base) => format!("{base}{local}"),
+                            None => d.clone(),
+                        }
+                    } else {
+                        d.clone()
+                    }
+                });
+                // A plain, lang-tagged, and datatyped literal of the same text are
+                // distinct terms — hash accordingly so LANG/DATATYPE read the tag back.
+                let h = crate::sparql_ast::literal_term_hash(&value, lang.as_deref(), dt.as_deref());
+                record_parse_literal_tagged(h, &value, lang.as_deref(), dt.as_deref());
                 self.alloc(Expression::Literal(h))
             }
             Token::Iri(iri) => {

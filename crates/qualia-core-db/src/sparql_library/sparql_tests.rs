@@ -7,7 +7,6 @@ mod sparql_tests {
     use crate::sparql_ast::*;
     use crate::sparql_did::*;
     use crate::sparql_executor::*;
-    use crate::sparql_extensions::*;
     use crate::sparql_filter::*;
     use crate::sparql_mm::*;
     use crate::sparql_parser::*;
@@ -393,36 +392,6 @@ mod sparql_tests {
             vec![s1],
             "MINUS must remove the excluded subject (s2) and keep s1; got {got:?}"
         );
-    }
-
-    // ===== Extension Registry Tests =====
-
-    #[test]
-    fn test_extension_registry_creation() {
-        let registry = ExtensionRegistry::new();
-        assert_eq!(registry.count, 0);
-    }
-
-    #[test]
-    fn test_extension_registry_register() {
-        let mut registry = ExtensionRegistry::new();
-        let result = registry.register(0x123456789ABCDEF0, ext_bound);
-        assert!(result.is_ok());
-        assert_eq!(registry.count, 1);
-    }
-
-    #[test]
-    fn test_extension_registry_lookup() {
-        let mut registry = ExtensionRegistry::new();
-        let _ = registry.register(0x123456789ABCDEF0, ext_bound);
-        let func = registry.lookup(0x123456789ABCDEF0);
-        assert!(func.is_some());
-    }
-
-    #[test]
-    fn test_builtin_registry() {
-        let registry = create_builtin_registry();
-        assert!(registry.count > 0);
     }
 
     // ===== SPARQL-MM Tests =====
