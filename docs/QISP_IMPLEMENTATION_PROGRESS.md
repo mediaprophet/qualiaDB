@@ -68,12 +68,18 @@ are staged honestly, not faked.
 
 ### ⚑ Where the human (Timothy) is needed
 
-- **Tensor10D axis semantics (`q, v, w, alpha, mu`).** The dimension *categories* for the
-  Qualia-specific axes are provisional. Code and ontology are reconciled and both flagged
-  `PROVISIONAL`, but the canonical meaning of `q/v/w/alpha/mu` is yours to define (σ =
-  spectral is already settled). This is the only curation-grade blocker in the core.
-- **Namespace governance (QISP-D02):** who controls/preserves `standards.qualiadb.org`
-  before the provisional IRIs are published. (Not a code blocker; a governance decision.)
+- **Tensor10D axis semantics — RESOLVED 2026-07-13.** Timothy pointed to the canonical
+  Draft Standard `docs/manuals/standards/q42-10d-tensor-standard.md` §1.2, which already
+  defines all ten axes: `q` = quantum/epistemic context, `v` = topological-class metric
+  selector, `w` = manifold/domain index, and the **`alpha`/`mu`/`sigma` "Spectral-Logical
+  Payload"** = the EMF-signal parameters (amplitude / modulation-phase / spectral-signature)
+  across the *entire* EM spectrum, addressable over time via `t` — colour and sound are only
+  perceptual projections (§1.3). The QISP `profile.rs` + `qisp.ttl` are corrected to match
+  and cite the standard; **`mu` was fixed Epistemic→Spectral** and the "provisional" flags
+  dropped. No open axis question remains.
+- **Namespace governance (QISP-D02) — still open:** who controls/preserves
+  `standards.qualiadb.org` before the provisional IRIs are published. (Not a code blocker; a
+  governance decision.)
 
 ### Next step
 

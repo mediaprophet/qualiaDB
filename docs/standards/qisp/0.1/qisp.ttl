@@ -402,11 +402,13 @@ qisp:qualiaSpecific a owl:DatatypeProperty ;
 
 qisp:Tensor10DProfile a qisp:TensorProfile ;
     rdfs:label "Qualia Tensor10D profile 0.1" ;
-    rdfs:comment """The Qualia-native ordered 10-dimension tensor profile. Only x, y, z (spatial) and t
-(temporal) are conventional physical dimensions; q, v, w, alpha, mu, sigma have Qualia-specific
-semantics and MUST NOT be presented as physical dimensions without this profile IRI. sigma is the
-shared EMF value (spectral) that both colour and acoustic rendering encode. Dimension categories
-below are experimental at 0.1.""" ;
+    rdfs:comment """The Qualia-native ordered 10-dimension tensor profile (canonical definition:
+q42-10d-tensor-standard.md §1.2). Only x, y, z (spatial) and t (temporal) are conventional physical
+dimensions; q (quantum/epistemic context), v (topological class), w (manifold/domain), alpha, mu,
+sigma have Qualia-specific semantics and MUST NOT be presented as physical dimensions without this
+profile IRI. alpha/mu/sigma are the Spectral-Logical Payload — parameters of the EMF signal
+(amplitude / modulation-phase / spectral-signature) across the ENTIRE EM spectrum, addressable over
+time via t; human-visible colour and audible sound are only projections of it, not its range.""" ;
     qisp:dimensionOrder (
         qisp:dim-q qisp:dim-v qisp:dim-w qisp:dim-x qisp:dim-y
         qisp:dim-z qisp:dim-t qisp:dim-alpha qisp:dim-mu qisp:dim-sigma
@@ -477,15 +479,15 @@ qisp:dim-alpha a qisp:TensorDimension ;
     qisp:dimensionIndex 7 ;
     qisp:dimensionCategory qisp:Spectral ;
     qisp:qualiaSpecific true ;
-    rdfs:comment "Qualia-specific dimension (spectral-coded amplitude, paired with sigma). PROVISIONAL category pending Timothy's canonical definition of alpha; experimental at 0.1." .
+    rdfs:comment "EMF-signal amplitude — intensity / energy density / trust weight. Part of the Spectral-Logical Payload (alpha, mu, sigma). Per q42-10d-tensor-standard.md §1.2." .
 
 qisp:dim-mu a qisp:TensorDimension ;
     rdfs:label "mu" ;
     qisp:dimensionSymbol "mu" ;
     qisp:dimensionIndex 8 ;
-    qisp:dimensionCategory qisp:Epistemic ;
+    qisp:dimensionCategory qisp:Spectral ;
     qisp:qualiaSpecific true ;
-    rdfs:comment "Qualia-specific dimension (mean/estimate parameter, paired with sigma). PROVISIONAL category pending Timothy's canonical definition of mu; experimental at 0.1." .
+    rdfs:comment "EMF-signal modulation — phase / FM / bit-packed provenance. Part of the Spectral-Logical Payload (alpha, mu, sigma). Per q42-10d-tensor-standard.md §1.2." .
 
 qisp:dim-sigma a qisp:TensorDimension ;
     rdfs:label "sigma" ;
@@ -493,4 +495,4 @@ qisp:dim-sigma a qisp:TensorDimension ;
     qisp:dimensionIndex 9 ;
     qisp:dimensionCategory qisp:Spectral ;
     qisp:qualiaSpecific true ;
-    rdfs:comment "Qualia-specific spectral dimension: the shared EMF value (sigma) that both render::spectral (colour) and render::acoustic (pitch) encode. Requires this profile IRI." .
+    rdfs:comment "EMF spectral signature — a multi-band spectral profile across the full EM spectrum (full SPD/STFT in mmap sidecars). Human-visible colour and audible pitch are two PROJECTIONS of it, not its range. Part of the Spectral-Logical Payload (alpha, mu, sigma); addressable over time via the t axis. Per q42-10d-tensor-standard.md §1.2-§1.3." .

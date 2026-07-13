@@ -8,8 +8,10 @@
 //! explicit profile IRI ([`TENSOR10D_PROFILE_IRI`]) — an external system may treat
 //! the payload as an opaque asset while still reading this profile metadata.
 //!
-//! A `sigma` value is the shared-EMF-truth spectral quantity σ (the 10th axis of
-//! Tensor10D); it is classified [`DimClass::Spectral`] here.
+//! The `alpha`/`mu`/`sigma` triad is the EMF-signal payload (amplitude / modulation /
+//! spectral-signature) — the substrate is the **entire EM spectrum + amplitude,
+//! addressable over time**, not "colour or sound" (those are perceptual projections;
+//! q42-10d-tensor-standard.md §1.2–§1.3). Axis semantics here follow that standard.
 
 use super::value::QispError;
 
@@ -30,26 +32,36 @@ pub enum DimClass {
     Temporal = 1,
     /// A Qualia-specific epistemic quantity (belief/quality/uncertainty-like).
     Epistemic = 2,
-    /// A spectral / shared-EMF-truth quantity (σ and spectral-coded values).
+    /// An EMF-signal parameter — amplitude (`alpha`), modulation/phase (`mu`), or
+    /// spectral signature (`sigma`) across the **full EM spectrum**. Human-visible
+    /// colour and audible sound are projections of these, never their range
+    /// (q42-10d-tensor-standard.md §1.2–§1.3).
     Spectral = 3,
     /// A categorical / discriminant label dimension.
     Categorical = 4,
 }
 
-/// The fixed ordered Tensor10D dimensions with their classification (plan §3.5).
+/// The fixed ordered Tensor10D dimensions with their classification.
 ///
-/// Order is normative: `[q, v, w, x, y, z, t, alpha, mu, sigma]`. Classification is
-/// honest — only `x, y, z` (spatial) and `t` (temporal) are physical; the rest are
-/// Qualia-specific and require [`TENSOR10D_PROFILE_IRI`]:
+/// **Canonical source of truth: `docs/manuals/standards/q42-10d-tensor-standard.md`
+/// §1.2** (Draft Standard v1.2). These are NOT provisional guesses — every axis is
+/// defined there. Order is normative: `[q, v, w, x, y, z, t, alpha, mu, sigma]`.
 ///
-/// - `q`   — Epistemic (Qualia quality/qualia measure)
-/// - `v`   — Categorical (Qualia-specific label axis)
-/// - `w`   — Categorical (Qualia-specific label axis)
-/// - `x`,`y`,`z` — Spatial (physical)
-/// - `t`   — Temporal (physical)
-/// - `alpha` — Spectral (Qualia-specific spectral-coded amplitude)
-/// - `mu`  — Epistemic (Qualia-specific mean/uncertainty parameter)
-/// - `sigma` — Spectral (shared EMF truth σ)
+/// - `q`  — Quantum Context / epistemic superposition index (`q=0` collapsed ground
+///   truth; `q>0` parallel epistemic contexts). → `Epistemic`.
+/// - `v`  — Topological class; selects the volume-search metric (euclidean / cyclic /
+///   hyperbolic / boundary-clique). → `Categorical` (a discrete topology-class index).
+/// - `w`  — Manifold / domain index (biological, legal, personal, environmental,
+///   socioeconomic …). → `Categorical`.
+/// - `x`,`y`,`z` — semantic-topology spatial coordinates. → `Spatial`.
+/// - `t`  — temporal state / provenance ledger. → `Temporal`.
+/// - `alpha`,`mu`,`sigma` — the **Spectral-Logical Payload**: parameters of the EMF
+///   signal, **NOT "colour/sound"** (those are only human-perceptual PROJECTIONS —
+///   standard §1.3). `alpha` = amplitude / intensity / energy density; `mu` =
+///   modulation (phase / FM / bit-packed provenance); `sigma` = spectral signature
+///   (multi-band profile across the EM spectrum; the full SPD/STFT live in mmap
+///   sidecars, of which the visible/audible bands are one window). All three →
+///   `Spectral`. The **entire EM spectrum is addressable via `sigma` × the `t` axis.**
 pub const TENSOR10D_DIMS: [(&str, DimClass); 10] = [
     ("q", DimClass::Epistemic),
     ("v", DimClass::Categorical),
@@ -59,7 +71,7 @@ pub const TENSOR10D_DIMS: [(&str, DimClass); 10] = [
     ("z", DimClass::Spatial),
     ("t", DimClass::Temporal),
     ("alpha", DimClass::Spectral),
-    ("mu", DimClass::Epistemic),
+    ("mu", DimClass::Spectral),
     ("sigma", DimClass::Spectral),
 ];
 
@@ -120,6 +132,18 @@ mod tests {
                 "Qualia-specific dim {name} must not be classified physical"
             );
         }
+    }
+
+    #[test]
+    fn spectral_payload_triad_is_emf_signal() {
+        // alpha (amplitude), mu (modulation/phase), sigma (spectral signature) are the
+        // EMF-signal payload — ALL Spectral (q42-10d-tensor-standard.md §1.2). This locks
+        // the 2026-07-13 correction: mu was previously misclassified Epistemic.
+        assert_eq!(TENSOR10D_DIMS[7], ("alpha", DimClass::Spectral));
+        assert_eq!(TENSOR10D_DIMS[8], ("mu", DimClass::Spectral));
+        assert_eq!(TENSOR10D_DIMS[9], ("sigma", DimClass::Spectral));
+        // q is the epistemic/quantum context; the spatial/temporal axes are physical.
+        assert_eq!(TENSOR10D_DIMS[0], ("q", DimClass::Epistemic));
     }
 
     #[test]
