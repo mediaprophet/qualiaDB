@@ -800,7 +800,35 @@ impl ExpressionEvaluator {
                     };
                 }
 
-                // 3. Unknown to both engines.
+                // 3. did: functions.
+                //    did:resolve is genuinely query-safe (no keys) — resolve a DID string
+                //    to its endpoint URL. The crypto / governance ones (verify/auth/sign/
+                //    permission) hold no keys and evaluate no policy in the query layer, so
+                //    they route honestly to the identity/governance layer (never faked).
+                if iri_hash == crate::q_hash("did:resolve") {
+                    let did_hash = Self::arg_term(0, args_start, args_len, ctx, row, resolver)?;
+                    let r = resolver.ok_or("did:resolve requires a text resolver")?;
+                    let did_str = r
+                        .resolve_text(did_hash)
+                        .ok_or("did:resolve: could not resolve the DID string")?;
+                    let resolution = crate::sparql_did::DIDResolver
+                        .resolve(&did_str)
+                        .map_err(|e| format!("did:resolve: {e}"))?;
+                    return Self::produce_string(resolver, &resolution.endpoint_url, "did:resolve");
+                }
+                if iri_hash == crate::q_hash("did:verify")
+                    || iri_hash == crate::q_hash("did:auth")
+                    || iri_hash == crate::q_hash("did:sign")
+                    || iri_hash == crate::q_hash("did:permission")
+                {
+                    return Err("did:verify / did:auth / did:sign / did:permission are not \
+                                evaluated in the SPARQL query layer (it holds no keys and \
+                                evaluates no policy); route via the identity/key-vault + \
+                                governance layer — refusing to fabricate a result"
+                        .to_string());
+                }
+
+                // 4. Unknown to all engines.
                 Err(format!("unknown extension function (hash {iri_hash:#018x})"))
             }
             // ── String-producing builtins (QISP-R06) ────────────────────────
@@ -1947,6 +1975,33 @@ mod tests {
         assert!(ExpressionEvaluator::lang_matches("en-US", "en"));
         assert!(ExpressionEvaluator::lang_matches("de", "*"));
         assert!(!ExpressionEvaluator::lang_matches("fr", "en"));
+    }
+
+    #[test]
+    fn test_did_resolve_wired_and_crypto_routes_honestly() {
+        use crate::sparql_ast::{literal_term_hash, StringSink};
+        let mut ctx = SparqlQueryContext::new();
+        let h = literal_term_hash("did:web:example.org", None, None);
+        let e = ctx.alloc_expression(Expression::Literal(h)).unwrap();
+        ctx.function_args[0] = e;
+        ctx.function_arg_count = 1;
+        let mut lits = LiteralTable::new();
+        lits.intern(h, "did:web:example.org");
+        let sink = StringSink::new();
+        let resolver = TextResolver::new(&lits).with_sink(&sink);
+        let row = BindingRow::new();
+
+        // did:resolve(?did) → the DID's real endpoint URL (no keys needed).
+        let f = Function::Custom(crate::q_hash("did:resolve"));
+        let out = ExpressionEvaluator::evaluate_function(f, 0, 1, &ctx, &row, Some(resolver)).unwrap();
+        assert_eq!(
+            out.as_string(&sink).as_deref(),
+            Some("https://example.org/.well-known/did.json")
+        );
+
+        // did:sign → honest error (the query layer holds no keys), never fabricated.
+        let s = Function::Custom(crate::q_hash("did:sign"));
+        assert!(ExpressionEvaluator::evaluate_function(s, 0, 1, &ctx, &row, Some(resolver)).is_err());
     }
 
     #[test]

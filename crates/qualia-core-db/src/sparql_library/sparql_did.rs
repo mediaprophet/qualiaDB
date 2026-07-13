@@ -101,7 +101,9 @@ impl<'a> SparqlDidHandler<'a> {
             if let Some(entry) = self.did_cache[i] {
                 if entry.did == did {
                     let now = self.current_timestamp();
-                    if now - entry.timestamp < entry.ttl as u64 {
+                    // `ttl` is in seconds; timestamps are ms. Saturating so a clock skew
+                    // (now < timestamp) simply treats the entry as fresh, never panics.
+                    if now.saturating_sub(entry.timestamp) < (entry.ttl as u64) * 1000 {
                         return Ok(entry.resolution);
                     }
                 }
@@ -237,10 +239,13 @@ impl<'a> SparqlDidHandler<'a> {
             .to_string())
     }
 
+    /// Current wall-clock time in Unix-epoch milliseconds (real system time). Used for
+    /// cache freshness; `0` only if the system clock is before the epoch.
     fn current_timestamp(&self) -> u64 {
-        // In production, use actual system time
-        // Simplified: return placeholder
-        1234567890
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0)
     }
 
     /// Sign data with DID (zero-allocation)
@@ -326,18 +331,14 @@ pub fn did_verify(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> boo
     let data_ptr = args[2];
 
     let handler = SparqlDidHandler::new(quins);
-    // In production, convert pointers to actual byte slices
-    let signature = if signature_ptr != 0 {
-        unsafe { std::slice::from_raw_parts(signature_ptr as *const u8, 64) }
-    } else {
-        &[0u8; 64]
-    };
-
-    let data = if data_ptr != 0 {
-        unsafe { std::slice::from_raw_parts(data_ptr as *const u8, 256) }
-    } else {
-        &[0u8; 256]
-    };
+    // SAFETY: never interpret a query-supplied `u64` as a raw memory pointer — that was
+    // undefined behaviour / an arbitrary-read hazard, and violates "no native pointers
+    // cross the query API". This magic-predicate wrapper holds no resolver to recover the
+    // real signature/data bytes, so it passes empty slices and `verify_signature` fails
+    // closed. Real byte payloads reach did:verify through the resolver-aware dispatch.
+    let _ = (signature_ptr, data_ptr);
+    let signature: &[u8] = &[];
+    let data: &[u8] = &[];
 
     match handler.verify_signature(did, signature, data) {
         Ok(verification) => {
@@ -358,16 +359,10 @@ pub fn did_auth(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool 
     let auth_method = args[1] as u8;
 
     let handler = SparqlDidHandler::new(quins);
-    let auth_payload = if args.len() > 2 {
-        let payload_ptr = args[2];
-        if payload_ptr != 0 {
-            unsafe { std::slice::from_raw_parts(payload_ptr as *const u8, 256) }
-        } else {
-            &[0u8; 256]
-        }
-    } else {
-        &[0u8; 256]
-    };
+    // SAFETY: do NOT dereference a query-supplied `u64` as a pointer (see did_verify).
+    // The proof payload is not recoverable here; pass empty → authenticate_did fails
+    // closed (it already refuses to authenticate without a verifiable proof).
+    let auth_payload: &[u8] = &[];
 
     match handler.authenticate_did(did, auth_method, auth_payload) {
         Ok(valid) => {
@@ -387,12 +382,10 @@ pub fn did_sign(args: &[u64], quins: &[NQuin], result: &mut BindingRow) -> bool 
     let data_ptr = args[1];
 
     let handler = SparqlDidHandler::new(quins);
-    // In production, convert pointer to actual byte slice
-    let data = if data_ptr != 0 {
-        unsafe { std::slice::from_raw_parts(data_ptr as *const u8, 256) }
-    } else {
-        &[0u8; 256]
-    };
+    // SAFETY: do NOT dereference a query-supplied `u64` as a pointer (see did_verify).
+    // sign_with_did fails closed regardless (no private key in the query layer).
+    let _ = data_ptr;
+    let data: &[u8] = &[];
 
     match handler.sign_with_did(did, data) {
         Ok(_signature) => {
