@@ -230,6 +230,9 @@ pub fn WellfairAnatomy3dPanel() -> Element {
                             onmounted: move |_| {
                                 let url = portal_src.clone();
                                 spawn(async move {
+                                    #[cfg(target_arch = "wasm32")]
+                                    gloo_timers::future::sleep(std::time::Duration::from_millis(100)).await;
+                                    #[cfg(not(target_arch = "wasm32"))]
                                     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                                     let script = format!(r#"
                                         const container = document.getElementById('anatomy-portal-webview');

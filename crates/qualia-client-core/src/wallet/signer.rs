@@ -78,7 +78,8 @@ pub fn sign_p2pkh_input(
 
     let sighash = double_sha256(&preimage);
 
-    let signing_key = SigningKey::from_bytes(&priv_key.private_key().to_bytes()).expect("Valid key");
+    let private_key_bytes = priv_key.private_key().to_bytes();
+    let signing_key = SigningKey::from_slice(private_key_bytes.as_slice()).expect("Valid key");
     let signature: k256::ecdsa::Signature = signing_key.sign(&sighash);
     let mut der_sig = signature.to_der().to_bytes().to_vec();
     

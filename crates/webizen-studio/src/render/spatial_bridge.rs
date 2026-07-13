@@ -4,6 +4,14 @@
 //! Public web demo: informative fallback until portal wasm is bundled for GH Pages.
 
 use dioxus::prelude::*;
+
+async fn pause_for_native_surface_mount() {
+    let duration = std::time::Duration::from_millis(100);
+    #[cfg(target_arch = "wasm32")]
+    gloo_timers::future::sleep(duration).await;
+    #[cfg(not(target_arch = "wasm32"))]
+    tokio::time::sleep(duration).await;
+}
 use dioxus::document::eval;
 use crate::canvas_model::Page;
 
@@ -230,7 +238,7 @@ pub fn SpatialBridgeCanvas(page: Page) -> Element {
                     onmounted: move |_| {
                         let url = portal_src.clone();
                         spawn(async move {
-                            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                            pause_for_native_surface_mount().await;
                             let script = format!(r#"
                                 const container = document.getElementById('spatial-bridge-webview');
                                 if (container && window.__TAURI__) {{

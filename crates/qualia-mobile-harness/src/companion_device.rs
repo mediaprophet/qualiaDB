@@ -44,7 +44,7 @@ fn signing_key() -> SigningKey {
     }
 
     let mut seed = [0u8; 32];
-    getrandom::getrandom(&mut seed).expect("OS random for companion device seed");
+    getrandom::fill(&mut seed).expect("OS random for companion device seed");
     persistCompanionValue(DEVICE_SEED_KEY, &hex::encode(seed));
     SigningKey::from_bytes(&seed)
 }

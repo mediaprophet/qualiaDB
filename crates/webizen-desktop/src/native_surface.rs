@@ -89,7 +89,7 @@ mod win {
                 };
                 let atom = RegisterClassA(&wc);
                 if atom == 0 {
-                    return Err(format!("RegisterClass failed: {}", windows::core::Error::from_win32()));
+                    return Err(format!("RegisterClass failed: {}", windows::core::Error::from_thread()));
                 }
                 CHILD_CLASS_REGISTERED = true;
             }
@@ -149,8 +149,12 @@ pub fn init_native_surface(
     parent_window: &WebviewWindow,
     x: i32, y: i32, width: u32, height: u32,
 ) -> Result<(isize, webizen_render::VolumetricRenderer), String> {
-    let parent_hwnd = parent_window.hwnd()
+    let tauri_parent_hwnd = parent_window.hwnd()
         .map_err(|e| format!("failed to get parent HWND: {e}"))?;
+    // Tauri currently exposes the same raw HWND through windows 0.61 while
+    // the renderer/wgpu stack uses windows 0.62. Re-wrap the pointer at the
+    // ABI boundary instead of passing nominally different crate types.
+    let parent_hwnd = windows::Win32::Foundation::HWND(tauri_parent_hwnd.0);
 
     let hwnd_raw = win::create_child_hwnd(parent_hwnd, x, y, width as i32, height as i32)?;
 

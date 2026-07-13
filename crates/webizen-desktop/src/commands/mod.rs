@@ -1,6 +1,7 @@
 use qualia_client_core::api;
 use qualia_client_core::api::{CoinBalance, HardwareStatus, SendPreview, TokenEntry, TxRecord, WalletStatus};
 use qualia_client_core::engine::{ingestion, llm_offload};
+use qualia_client_core::local_job_scheduler::{JobQueueSnapshot, LocalJobScheduler};
 use qualia_client_core::state::{Actor, AgentConfig, DelegationRule, FrontDoor, ProgressPayload};
 use qualia_core_db::ilp_dispatcher::DispatchResult;
 use qualia_core_db::rpc::TaxRecipientSuite;
@@ -10,6 +11,83 @@ use tauri::webview::WebviewWindowBuilder;
 
 use crate::runtime::{RuntimeHandle, RuntimeLedgerHealth, RuntimeSnapshotRecord};
 use crate::native_surface::NativeSurfaceState;
+
+const MAX_CLIENT_DIAGNOSTIC_BYTES: usize = 16 * 1024;
+
+fn bounded_client_text(value: String) -> String {
+    if value.len() <= MAX_CLIENT_DIAGNOSTIC_BYTES {
+        return value;
+    }
+    let mut end = MAX_CLIENT_DIAGNOSTIC_BYTES;
+    while !value.is_char_boundary(end) {
+        end -= 1;
+    }
+    format!("{}...[truncated]", &value[..end])
+}
+
+#[command]
+pub fn get_desktop_status(
+    state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
+) -> serde_json::Value {
+    let config = state.config.lock().unwrap().clone();
+    let daemon_running = *state.daemon_running.lock().unwrap();
+    let jobs = LocalJobScheduler::global()
+        .snapshot()
+        .unwrap_or(JobQueueSnapshot {
+            jobs: vec![], queued: 0, running: 0, completed: 0, failed: 0,
+        });
+    serde_json::json!({
+        "settings_port": crate::settings_server::current_settings_port(),
+        "graph_daemon_port": qualia_client_core::api::get_active_daemon_port(),
+        "graph_daemon_reachable": daemon_running,
+        "graph_engine_version": serde_json::Value::Null,
+        "qapps_protocol_port": qualia_client_core::qapps_protocol::qualia_protocol_port(),
+        "storage_path": config.storage_path,
+        "inference_backend": config.inference_backend,
+        "daemon_running_flag": daemon_running,
+        "job_queue": {
+            "queued": jobs.queued, "running": jobs.running,
+            "completed": jobs.completed, "failed": jobs.failed,
+        }
+    })
+}
+
+#[command]
+pub fn get_desktop_logs() -> serde_json::Value {
+    serde_json::json!({
+        "log_file": crate::desktop_log::log_path().display().to_string(),
+        "entries": crate::desktop_log::recent_entries(),
+    })
+}
+
+#[command]
+pub fn get_supervisor_state(
+    supervisor: State<'_, crate::supervisor::DesktopSupervisor>,
+) -> serde_json::Value {
+    serde_json::json!({
+        "services": supervisor.services(),
+        "operations": supervisor.operations(),
+    })
+}
+
+#[command]
+pub fn report_client_error(
+    kind: String,
+    message: String,
+    stack: Option<String>,
+    url: Option<String>,
+) {
+    crate::desktop_log::record(
+        "error",
+        format!(
+            "webview {}: {}; url={}; stack={}",
+            bounded_client_text(kind),
+            bounded_client_text(message),
+            url.map(bounded_client_text).unwrap_or_default(),
+            stack.map(bounded_client_text).unwrap_or_default(),
+        ),
+    );
+}
 
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct DiffusionConfigInput {
@@ -6379,6 +6457,10 @@ pub async fn open_10d_file_picker(app: tauri::AppHandle) -> Result<Option<String
 
 pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
     tauri::generate_handler![
+        get_desktop_status,
+        get_desktop_logs,
+        get_supervisor_state,
+        report_client_error,
         execute_sparql_query,
         fetch_domain_ontology,
         validate_shacl_shape,
