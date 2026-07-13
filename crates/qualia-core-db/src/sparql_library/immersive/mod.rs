@@ -29,6 +29,7 @@
 //! **not** declared here.
 
 pub mod asset_registry;
+pub mod functions;
 pub mod profile;
 pub mod value;
 
@@ -61,6 +62,11 @@ pub use asset_registry::{
 
 pub use profile::{
     validate_inline_tensor10d, DimClass, TENSOR10D_DIMS, TENSOR10D_PROFILE_IRI,
+};
+
+pub use functions::{
+    admit_inline, entry_for_iri, entry_for_iri_hash, tensor_distance, tensor_knn_into,
+    tensor_within, FunctionEntry, TensorNeighbor, FUNCTIONS,
 };
 
 #[cfg(test)]

@@ -637,48 +637,52 @@ impl ExpressionEvaluator {
                 Self::evaluate_with_resolver(branch, ctx, row, resolver)
             }
             Function::Custom(iri_hash) => {
-                // Extension functions dispatched by function-IRI hash. Currently
-                // the GeoSPARQL predicates (geof:distance / sfContains / sfWithin
-                // / sfIntersects / sfTouches). Each needs its two geometry
-                // arguments as WKT *text*, recovered from term hashes via the
-                // resolver (query constants + ingested lexicon). Without a
-                // resolver, or if a literal can't be resolved, we return an
-                // honest error rather than a fabricated result.
+                // Extension functions dispatched by function-IRI hash:
+                //  1. GeoSPARQL predicates (geof:distance / sfContains / sfWithin /
+                //     sfIntersects / sfTouches) — executed on WKT geometry text.
+                //  2. QISP (qispf:) functions from the typed registry — type-admitted,
+                //     with the 2D ones deferring to the GeoSPARQL engine and the
+                //     mesh/tensor ones failing closed with an honest "not yet
+                //     executable inline" error (never a fabricated result).
                 use crate::sparql_library::geosparql;
-                match geosparql::geo_fn_for_hash(iri_hash) {
-                    Some(geo_fn) => {
-                        if args_len < 2 {
-                            return Err("geo function requires two geometry arguments".to_string());
-                        }
-                        let resolver = resolver.ok_or_else(|| {
-                            "geo functions require a text resolver (no lexicon available)"
-                                .to_string()
-                        })?;
-                        let a_id = ctx.function_args[args_start as usize];
-                        let b_id = ctx.function_args[args_start as usize + 1];
-                        let a_hash = match Self::evaluate_with_resolver(a_id, ctx, row, Some(resolver))? {
-                            EvalResult::Numeric(h) | EvalResult::Iri(h) => h,
-                            _ => return Err("geo argument is not a term".to_string()),
-                        };
-                        let b_hash = match Self::evaluate_with_resolver(b_id, ctx, row, Some(resolver))? {
-                            EvalResult::Numeric(h) | EvalResult::Iri(h) => h,
-                            _ => return Err("geo argument is not a term".to_string()),
-                        };
-                        let a_wkt = resolver
-                            .resolve_text(a_hash)
-                            .ok_or("could not resolve first geometry literal")?;
-                        let b_wkt = resolver
-                            .resolve_text(b_hash)
-                            .ok_or("could not resolve second geometry literal")?;
-                        let ga = geosparql::parse_wkt(&a_wkt).map_err(|e| format!("geo arg 1: {e}"))?;
-                        let gb = geosparql::parse_wkt(&b_wkt).map_err(|e| format!("geo arg 2: {e}"))?;
-                        match geosparql::eval_geo_fn(geo_fn, &ga, &gb) {
-                            geosparql::GeoValue::Bool(b) => Ok(EvalResult::Boolean(b)),
-                            geosparql::GeoValue::Number(n) => Ok(EvalResult::Numeric(n as u64)),
+                use crate::sparql_library::immersive::functions as qisp_fns;
+
+                // 1. Direct GeoSPARQL predicate.
+                if let Some(geo_fn) = geosparql::geo_fn_for_hash(iri_hash) {
+                    return Self::run_geo_fn(geo_fn, args_start, args_len, ctx, row, resolver);
+                }
+
+                // 2. A registered QISP function.
+                if let Some(entry) = qisp_fns::entry_for_iri_hash(iri_hash) {
+                    // Admission (plan §4.2/§6.1): an async / non-deterministic /
+                    // table-producing function (e.g. qispf:knn) is NOT legal inline —
+                    // fail closed with a named error rather than fabricate.
+                    if !entry.descriptor.legal_in_filter() {
+                        return Err(format!(
+                            "QISP function <{}> is not legal in an inline SPARQL expression \
+                             (it is a job / graph operator)",
+                            entry.iri
+                        ));
+                    }
+                    // A 2D operation GeoSPARQL owns → execute via the geo engine on WKT.
+                    if let Some(geof_iri) = entry.defers_to {
+                        if let Some(geo_fn) = geosparql::geo_fn_for_hash(crate::q_hash(geof_iri)) {
+                            return Self::run_geo_fn(geo_fn, args_start, args_len, ctx, row, resolver);
                         }
                     }
-                    None => Err(format!("unknown extension function (hash {iri_hash:#018x})")),
+                    // QISP-owned mesh/tensor/higher-D predicate: the typed descriptor is
+                    // registered and admitted, but executing it inline needs a Tensor10D/
+                    // mesh asset resolved from the term (the Phase-4 execution increment).
+                    // Fail closed with an honest, named error — never fabricate.
+                    return Err(format!(
+                        "QISP function <{}> is registered and type-admitted but not yet \
+                         executable inline (needs Tensor10D/mesh asset resolution)",
+                        entry.iri
+                    ));
                 }
+
+                // 3. Unknown to both engines.
+                Err(format!("unknown extension function (hash {iri_hash:#018x})"))
             }
             // ── String-producing builtins (QISP-R06) ────────────────────────
             // Each recovers its argument text via the resolver and interns its
@@ -938,6 +942,49 @@ impl ExpressionEvaluator {
         resolver
             .resolve_text(hash)
             .ok_or_else(|| format!("{fname}: could not resolve string-literal text"))
+    }
+
+    /// Execute a GeoSPARQL predicate on the two WKT-geometry arguments at
+    /// `args_start`. Shared by the direct `geof:` dispatch and the QISP functions
+    /// that defer to GeoSPARQL for the 2D case. Fails closed (honest error) when
+    /// there is no resolver or a geometry literal can't be resolved/parsed.
+    fn run_geo_fn(
+        geo_fn: crate::sparql_library::geosparql::GeoFn,
+        args_start: u16,
+        args_len: u16,
+        ctx: &SparqlQueryContext,
+        row: &BindingRow,
+        resolver: Option<crate::sparql_ast::TextResolver>,
+    ) -> Result<EvalResult, String> {
+        use crate::sparql_library::geosparql;
+        if args_len < 2 {
+            return Err("geo function requires two geometry arguments".to_string());
+        }
+        let resolver = resolver.ok_or_else(|| {
+            "geo functions require a text resolver (no lexicon available)".to_string()
+        })?;
+        let a_id = ctx.function_args[args_start as usize];
+        let b_id = ctx.function_args[args_start as usize + 1];
+        let a_hash = match Self::evaluate_with_resolver(a_id, ctx, row, Some(resolver))? {
+            EvalResult::Numeric(h) | EvalResult::Iri(h) => h,
+            _ => return Err("geo argument is not a term".to_string()),
+        };
+        let b_hash = match Self::evaluate_with_resolver(b_id, ctx, row, Some(resolver))? {
+            EvalResult::Numeric(h) | EvalResult::Iri(h) => h,
+            _ => return Err("geo argument is not a term".to_string()),
+        };
+        let a_wkt = resolver
+            .resolve_text(a_hash)
+            .ok_or("could not resolve first geometry literal")?;
+        let b_wkt = resolver
+            .resolve_text(b_hash)
+            .ok_or("could not resolve second geometry literal")?;
+        let ga = geosparql::parse_wkt(&a_wkt).map_err(|e| format!("geo arg 1: {e}"))?;
+        let gb = geosparql::parse_wkt(&b_wkt).map_err(|e| format!("geo arg 2: {e}"))?;
+        match geosparql::eval_geo_fn(geo_fn, &ga, &gb) {
+            geosparql::GeoValue::Bool(b) => Ok(EvalResult::Boolean(b)),
+            geosparql::GeoValue::Number(n) => Ok(EvalResult::Numeric(n as u64)),
+        }
     }
 
     /// Evaluate function argument `idx` to a numeric value (for `SUBSTR` positions).
@@ -1439,6 +1486,58 @@ mod tests {
         )
         .unwrap();
         assert_eq!(c, EvalResult::Numeric(42), "COALESCE skips the unbound variable");
+    }
+
+    // ── QISP (qispf:) function dispatch: admission + geo-deference + honest gaps ──
+
+    #[test]
+    fn test_qisp_custom_dispatch_admission_and_geo_deference() {
+        use crate::sparql_ast::StringSink;
+
+        // qispf:knn is a table-producing graph operator → rejected inline (admission),
+        // never fabricated.
+        let ctx0 = SparqlQueryContext::new();
+        let row0 = BindingRow::new();
+        let knn = Function::Custom(crate::q_hash(
+            "https://standards.qualiadb.org/immersive/function/0.1#knn",
+        ));
+        assert!(
+            ExpressionEvaluator::evaluate_function(knn, 0, 2, &ctx0, &row0, None).is_err(),
+            "qispf:knn must be rejected inline"
+        );
+
+        // qispf:intersects defers to GeoSPARQL → executes on WKT (point in polygon → true).
+        let mut ctx = SparqlQueryContext::new();
+        let (a, b) = (0xAA11u64, 0xBB22u64);
+        let ea = ctx.alloc_expression(Expression::Literal(a)).unwrap();
+        let eb = ctx.alloc_expression(Expression::Literal(b)).unwrap();
+        ctx.function_args[0] = ea;
+        ctx.function_args[1] = eb;
+        ctx.function_arg_count = 2;
+        let mut lits = LiteralTable::new();
+        lits.intern(a, "POINT(1 1)");
+        lits.intern(b, "POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))");
+        let sink = StringSink::new();
+        let resolver = TextResolver::new(&lits).with_sink(&sink);
+        let row = BindingRow::new();
+        let intersects = Function::Custom(crate::q_hash(
+            "https://standards.qualiadb.org/immersive/function/0.1#intersects",
+        ));
+        let got = ExpressionEvaluator::evaluate_function(
+            intersects, 0, 2, &ctx, &row, Some(resolver),
+        )
+        .unwrap();
+        assert_eq!(got, EvalResult::Boolean(true), "point (1,1) intersects the square");
+
+        // qispf:volume is QISP-owned (mesh) → honest "not yet executable inline"
+        // error, NOT a fabricated measurement.
+        let vol = Function::Custom(crate::q_hash(
+            "https://standards.qualiadb.org/immersive/function/0.1#volume",
+        ));
+        assert!(
+            ExpressionEvaluator::evaluate_function(vol, 0, 1, &ctx, &row, Some(resolver)).is_err(),
+            "qispf:volume needs asset resolution → honest error, not fabricated"
+        );
     }
 
     // ── PROV-O filter tests ──────────────────────────────────────────────────
