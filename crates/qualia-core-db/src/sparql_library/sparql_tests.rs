@@ -375,6 +375,24 @@ mod sparql_tests {
     }
 
     #[test]
+    fn test_sub_select_joins_projected_solutions() {
+        let tok = |b: &[u8]| crate::lexicon::generate_60bit_token(b);
+        let (alice, bob) = (tok(b"http://ex/alice"), tok(b"http://ex/bob"));
+        let (knows, age) = (tok(b"http://ex/knows"), tok(b"http://ex/age"));
+        // alice knows bob; bob age 30.
+        let quins = vec![mk_quin(alice, knows, bob), mk_quin(bob, age, 30)];
+
+        // Inner sub-select finds who alice knows; outer joins their age.
+        let q = "SELECT ?f ?a WHERE { \
+                 { SELECT ?f WHERE { <http://ex/alice> <http://ex/knows> ?f } } \
+                 ?f <http://ex/age> ?a }";
+        let (ctx, rows) = run_query(q, &quins);
+        assert_eq!(rows.len(), 1, "one joined solution");
+        assert_eq!(rows[0].get(var_of(&ctx, b"?f")), Some(bob));
+        assert_eq!(rows[0].get(var_of(&ctx, b"?a")), Some(30));
+    }
+
+    #[test]
     fn test_select_distinct_dedups_on_projected_var() {
         let tok = |b: &[u8]| crate::lexicon::generate_60bit_token(b);
         let alice = tok(b"http://ex/alice");

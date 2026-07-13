@@ -318,6 +318,9 @@ impl<'a> QueryExecutor<'a> {
             PhysicalOperatorType::Distinct { input } => {
                 self.execute_distinct(input, plan, ctx, row, results)
             }
+            PhysicalOperatorType::SubSelect { query_id } => {
+                self.execute_sub_select(query_id, ctx, row, results)
+            }
             PhysicalOperatorType::GroupBy {
                 input,
                 group_vars,
@@ -1002,6 +1005,46 @@ impl<'a> QueryExecutor<'a> {
             }
         }
 
+        Ok(!results.is_empty())
+    }
+
+    /// Execute a sub-`SELECT`: evaluate the stored subquery independently, then
+    /// join each of its projected solutions with the current bindings on shared
+    /// variables (a solution incompatible on any shared, differently-bound
+    /// variable is dropped). Only the sub-select's projected variables are
+    /// visible here — its internal variables were removed by its own projection.
+    fn execute_sub_select(
+        &self,
+        query_id: u16,
+        ctx: &SparqlQueryContext,
+        row: &BindingRow,
+        results: &mut Vec<BindingRow>,
+    ) -> Result<bool, String> {
+        let subquery = *ctx
+            .subqueries
+            .get(query_id as usize)
+            .ok_or("Subquery ID out of bounds")?;
+        let sub_plan = QueryPlanner::plan(&subquery, ctx)?;
+        let sub_rows = self.execute(&sub_plan, ctx)?;
+
+        for sub_row in sub_rows {
+            let mut merged = *row;
+            let mut compatible = true;
+            for var in 0..ctx.variable_count as VariableId {
+                if let Some(v) = sub_row.get(var) {
+                    match merged.get(var) {
+                        Some(existing) if existing != v => {
+                            compatible = false;
+                            break;
+                        }
+                        _ => merged.set(var, v),
+                    }
+                }
+            }
+            if compatible {
+                results.push(merged);
+            }
+        }
         Ok(!results.is_empty())
     }
 

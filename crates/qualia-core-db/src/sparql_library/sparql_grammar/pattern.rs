@@ -25,8 +25,49 @@
 use std::collections::HashMap;
 
 use crate::sparql_ast::{
-    Expression, ExpressionId, Pattern, PatternId, SparqlQueryContext, VariableId,
+    Expression, ExpressionId, Pattern, PatternId, SparqlQuery, SparqlQueryContext, VariableId,
 };
+
+/// Render a token slice back to a SPARQL fragment. Used to hand a sub-`SELECT`'s
+/// tokens to the (string-based) SELECT parser. Whitespace-joined, which is safe
+/// for SPARQL. Datatype IRIs are re-bracketed; a prefixed datatype is left as
+/// `prefix:local` for the parser to expand against the same prefix map.
+fn render_tokens(tokens: &[Token]) -> String {
+    let mut parts: Vec<String> = Vec::with_capacity(tokens.len());
+    for t in tokens {
+        parts.push(match t {
+            Token::Var(v) => v.clone(),
+            Token::Iri(i) => format!("<{i}>"),
+            Token::Prefixed(p, l) => format!("{p}:{l}"),
+            Token::Str {
+                value,
+                lang,
+                datatype,
+            } => {
+                let mut s = format!("\"{value}\"");
+                if let Some(l) = lang {
+                    s.push('@');
+                    s.push_str(l);
+                } else if let Some(d) = datatype {
+                    if d.contains("://") {
+                        s.push_str(&format!("^^<{d}>"));
+                    } else {
+                        s.push_str(&format!("^^{d}"));
+                    }
+                }
+                s
+            }
+            Token::Num(n) => n.clone(),
+            Token::Bool(b) => (if *b { "true" } else { "false" }).to_string(),
+            Token::Word(w) => w.clone(),
+            Token::Punct(c) => c.to_string(),
+            Token::Op(o) => (*o).to_string(),
+            Token::StarOpen => "<<".to_string(),
+            Token::StarClose => ">>".to_string(),
+        });
+    }
+    parts.join(" ")
+}
 use crate::sparql_library::sparql_grammar::expr::parse_expression;
 use crate::sparql_library::sparql_grammar::tokenizer::{tokenize, Token};
 
@@ -89,6 +130,7 @@ enum ChildSpec {
     Minus(PatternId),
     Service { endpoint: u64, inner: PatternId },
     Graph { graph_var_or_id: u64, inner: PatternId },
+    SubSelect { query_id: u16 },
 }
 
 struct PatternParser<'a> {
@@ -213,6 +255,14 @@ impl<'a> PatternParser<'a> {
                     let (expr_id, var_id) = self.parse_bind()?;
                     binds.push((expr_id, var_id));
                 }
+                Some(Token::Punct('{'))
+                    if matches!(self.tokens.get(self.pos + 1),
+                        Some(Token::Word(w)) if w.eq_ignore_ascii_case("SELECT")) =>
+                {
+                    // `{ SELECT … }` sub-select.
+                    let query_id = self.parse_sub_select()?;
+                    specs.push(ChildSpec::SubSelect { query_id });
+                }
                 Some(Token::Punct('{')) => {
                     // A nested group: either the left side of `{ } UNION { }`, or
                     // a plain nested group (flattened into this one).
@@ -298,6 +348,9 @@ impl<'a> PatternParser<'a> {
                         inner,
                     })?;
                 }
+                ChildSpec::SubSelect { query_id } => {
+                    self.ctx.alloc_pattern(Pattern::SubSelect { query_id })?;
+                }
             }
         }
         if len == 1 {
@@ -365,6 +418,43 @@ impl<'a> PatternParser<'a> {
         let pattern = self.parse_group()?;
         self.ctx
             .alloc_expression(Expression::Exists { pattern, negated })
+    }
+
+    /// Index of the `}` token that closes the `{` at `open` (balanced).
+    fn matching_brace(&self, open: usize) -> Result<usize, String> {
+        let mut depth = 0i32;
+        for (i, t) in self.tokens.iter().enumerate().skip(open) {
+            match t {
+                Token::Punct('{') => depth += 1,
+                Token::Punct('}') => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Ok(i);
+                    }
+                }
+                _ => {}
+            }
+        }
+        Err("unbalanced braces in sub-SELECT".to_string())
+    }
+
+    /// Parse `{ SELECT … }` (positioned at the opening `{`) into a stored
+    /// subquery, returning its id. The inner tokens are rendered back to a
+    /// SPARQL string and handed to the full SELECT parser (which shares this
+    /// `ctx`, so the sub-select's variables interned by name line up with the
+    /// enclosing scope), giving sub-selects the same feature set as a top-level
+    /// query (projection, DISTINCT, GROUP BY, ORDER BY, LIMIT).
+    fn parse_sub_select(&mut self) -> Result<u16, String> {
+        let open = self.pos;
+        let close = self.matching_brace(open)?;
+        let query_str = render_tokens(&self.tokens[open + 1..close]);
+        self.pos = close + 1; // consume through the closing '}'
+        let select = crate::sparql_library::sparql_parser::parse_select_query(
+            &query_str,
+            self.ctx,
+            self.prefixes,
+        )?;
+        self.ctx.alloc_subquery(SparqlQuery::Select(select))
     }
 
     /// Parse `BIND ( expr AS ?var )` → (expression id, target variable id).
@@ -563,6 +653,7 @@ impl<'a> PatternParser<'a> {
                 graph_var_or_id,
                 inner,
             }),
+            Pattern::SubSelect { query_id } => specs.push(ChildSpec::SubSelect { query_id }),
             // Anything else (Service/PropertyPath/AsOf) is already a single
             // built node; carry it as an Optional inner, which the current
             // join-only planner treats as a plain join (see module doc).

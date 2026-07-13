@@ -73,6 +73,9 @@ pub enum PhysicalOperatorType {
     AntiJoin { left: OperatorId, right: OperatorId },
     /// Distinct operator
     Distinct { input: OperatorId },
+    /// Sub-SELECT: evaluate stored subquery `query_id` independently and join
+    /// its projected solutions with the enclosing bindings.
+    SubSelect { query_id: u16 },
     /// GroupBy operator with Aggregates
     GroupBy {
         input: OperatorId,
@@ -484,6 +487,12 @@ impl QueryPlanner {
                     subject: *subject,
                     path_id: *path,
                     object: *object,
+                },
+                0,
+            ),
+            Pattern::SubSelect { query_id } => plan.add_operator(
+                PhysicalOperatorType::SubSelect {
+                    query_id: *query_id,
                 },
                 0,
             ),

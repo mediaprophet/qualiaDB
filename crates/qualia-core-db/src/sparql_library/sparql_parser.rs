@@ -85,7 +85,7 @@ fn parse_prefix_line(line: &str) -> Option<(String, String)> {
     Some((prefix, iri))
 }
 
-fn parse_select_query(
+pub(crate) fn parse_select_query(
     query: &str,
     ctx: &mut SparqlQueryContext,
     prefixes: &HashMap<String, String>,

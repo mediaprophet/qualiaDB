@@ -184,6 +184,13 @@ pub enum Pattern {
         outer_predicate: u64,
         outer_object: u64,
     },
+    /// Sub-`SELECT` `{ SELECT … WHERE { … } }` — an independently-evaluated
+    /// nested query (index into `SparqlQueryContext::subqueries`) whose projected
+    /// solutions join with the enclosing group. Only the sub-select's SELECT
+    /// variables are visible outside it.
+    SubSelect {
+        query_id: u16,
+    },
 }
 
 /// Property path (SPARQL 1.1)
