@@ -292,8 +292,9 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires a GPU adapter"]
+    #[serial_test::serial(gpu)]
     fn elementwise_gpu_matches_oracle() {
+        if !crate::wgsl_forge::test_gpu_available() { return; }
         let n = 1000usize;
         // RecipSqrt needs positive inputs; keep the unary domain safe.
         let pos: Vec<f32> = (0..n).map(|i| 0.1 + (i as f32) * 0.01).collect();

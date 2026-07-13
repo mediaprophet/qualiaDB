@@ -376,7 +376,7 @@ pub fn coopmat_usable() -> bool {
         let n = 8usize;
         let a = vec![1.0f32; n * n];
         let b = vec![1.0f32; n * n];
-        match gemm_f32_tc_coopmat(n, n, n, &a, &b) {
+        match gemm_f32_tc_coopmat_unchecked(n, n, n, &a, &b) {
             Ok(out) => out.len() == n * n && out.iter().all(|&v| (v - 8.0).abs() <= 1.0e-3),
             Err(_) => false,
         }
@@ -402,6 +402,24 @@ pub fn coopmat_usable() -> bool {
 /// [`StorageRead`]: super::execute::BindingUsage::StorageRead
 /// [`StorageReadWrite`]: super::execute::BindingUsage::StorageReadWrite
 pub fn gemm_f32_tc_coopmat(
+    m: usize,
+    k: usize,
+    n: usize,
+    a: &[f32],
+    b: &[f32],
+) -> Result<Vec<f32>, ForgeError> {
+    validate_dims(m, k, n, a.len(), b.len())?;
+    if !coopmat_usable() {
+        return Err(ForgeError::GpuUnavailable(
+            "cooperative-matrix multiply failed its runtime correctness oracle".to_string(),
+        ));
+    }
+    gemm_f32_tc_coopmat_unchecked(m, k, n, a, b)
+}
+
+/// Internal cooperative-matrix dispatch used only by the one-time correctness
+/// oracle and by the fail-closed public wrapper after that oracle passes.
+fn gemm_f32_tc_coopmat_unchecked(
     m: usize,
     k: usize,
     n: usize,
@@ -1266,30 +1284,33 @@ mod tests {
         assert!(gemm_f32_tc_coopmat(0, 8, 8, &[], &[0.0; 64]).is_err());
     }
 
-    /// **GPU certify (A2000)** — the tiled coopmat f32 GEMM matches the exact f32 CPU
-    /// reference. **Dormant on wgpu 30 for the DX12 backend** (verified 2026-07-13: the
-    /// coopmat multiply still returns zeros here, #9741 — the 30 fix does not cover this
-    /// adapter/backend), so this stays `#[ignore]` until an adapter/backend computes coopmat —
-    /// at which point [`coopmat_usable`] flips `true` and this asserts the real tensor-core
-    /// result. 16×16×16 = a 2×2 grid of 8×8 output tiles, 2 K-tiles each (so it exercises the
-    /// loop + `workgroup_id` tiling, not just a single tile).
+    /// The delivered f32 tensor-core selector must match the exact CPU reference on every
+    /// backend. A backend whose raw cooperative-matrix primitive fails the runtime oracle
+    /// is required to use the exact GPU/CPU floor instead of returning corrupt output.
     #[test]
-    #[ignore = "coopmat multiply dormant on wgpu 30 DX12 (#9741, verified 2026-07-13); lights up when an adapter computes coopmat"]
-    fn gemm_f32_tc_coopmat_matches_cpu_reference() {
+    #[serial_test::serial(gpu)]
+    fn gemm_f32_tc_matches_cpu_reference_or_exact_fallback() {
         let (m, k, n) = (16usize, 16usize, 16usize);
         let a: Vec<f32> = (0..m * k).map(|i| ((i % 7) as f32) * 0.5 - 1.0).collect();
         let b: Vec<f32> = (0..k * n).map(|i| ((i % 5) as f32) * 0.25 + 0.1).collect();
-        let got = gemm_f32_tc_coopmat(m, k, n, &a, &b).expect("coopmat gemm");
+        let got = gemm_f32_tc(m, k, n, &a, &b).expect("f32-faithful tensor-core selector");
         let want = crate::wgsl_forge::oracle::gemm_cpu(&a, &b, m, k, n);
         assert_eq!(got.len(), want.len());
         for (g, w) in got.iter().zip(&want) {
             assert!(
                 (g - w).abs() <= 1.0e-3 + 1.0e-3 * w.abs(),
-                "coopmat {g} vs cpu {w}"
+                "selected f32 path {g} vs cpu {w}"
             );
         }
-        // Non-zero sanity — the #9741 no-op returns all-zeros, which this would catch.
+        // Non-zero sanity: the broken DX12 primitive's all-zero output must never escape.
         assert!(got.iter().any(|&v| v.abs() > 1.0e-6));
+
+        if !coopmat_usable() {
+            assert!(
+                gemm_f32_tc_coopmat(m, k, n, &a, &b).is_err(),
+                "the raw public coopmat API must fail closed after a failed oracle"
+            );
+        }
     }
 
     /// Dimension mismatches are hard errors on both entry points.
@@ -1494,8 +1515,9 @@ mod tests {
     /// Above-threshold f32 GEMM on the WGSL GPU path must match the CPU reference
     /// within f32 summation tolerance. m=k=n=64 → 262144 FMAs ≥ threshold.
     #[test]
-    #[ignore = "requires a GPU adapter"]
+    #[serial_test::serial(gpu)]
     fn gemm_f32_gpu_matches_cpu() {
+        if !crate::wgsl_forge::test_gpu_available() { return; }
         let (m, k, n) = (64usize, 64, 64);
         let a = det_f32(m * k, 0x6745_4D4D_4633_3201);
         let b = det_f32(k * n, 0x6745_4D4D_4633_3202);
@@ -1510,8 +1532,9 @@ mod tests {
     /// Above-threshold f32 GEMV on the WGSL GPU path must match the CPU reference
     /// within f32 summation tolerance. m=n=256 → 65536 MACs ≥ threshold.
     #[test]
-    #[ignore = "requires a GPU adapter"]
+    #[serial_test::serial(gpu)]
     fn gemv_f32_gpu_matches_cpu() {
+        if !crate::wgsl_forge::test_gpu_available() { return; }
         let (m, n) = (256usize, 256);
         let a = det_f32(m * n, 0x6745_4D56_4633_3201);
         let x = det_f32(n, 0x6745_4D56_4633_3202);
@@ -1528,8 +1551,9 @@ mod tests {
     /// workgroup); both fed the SAME deterministic interleaved signal so the GPU
     /// FFT and the CPU `dft_cpu` reference compute the identical transform.
     #[test]
-    #[ignore = "requires a GPU adapter"]
+    #[serial_test::serial(gpu)]
     fn fft_f32_gpu_matches_dft() {
+        if !crate::wgsl_forge::test_gpu_available() { return; }
         let n = 256usize;
         // 2*n interleaved (real, imag) samples, deterministic and identical for
         // both paths.
@@ -1546,8 +1570,9 @@ mod tests {
     /// reference to near-exact precision (native double, no emulation).
     #[cfg(feature = "cuda")]
     #[test]
-    #[ignore = "requires a CUDA device"]
+    #[serial_test::serial(gpu)]
     fn gemm_f64_cuda_matches_cpu() {
+        if !crate::wgsl_forge::test_cuda_available() { return; }
         let (m, k, n) = (64usize, 64, 64);
         let a: Vec<f64> = det_f32(m * k, 0x6745_4D4D_4636_3401)
             .into_iter()
@@ -1571,8 +1596,9 @@ mod tests {
     /// K-tiles — this exercises the tiling orchestration, not just a single tile.
     #[cfg(feature = "cuda")]
     #[test]
-    #[ignore = "requires a CUDA device"]
+    #[serial_test::serial(gpu)]
     fn gemm_tc_cuda_tiled_matches_f16_reference() {
+        if !crate::wgsl_forge::test_cuda_available() { return; }
         let (m, k, n) = (64usize, 64, 64);
         // Small-magnitude data so f16 rounding error stays bounded over the K=64 sum.
         let a: Vec<f32> = det_f32(m * k, 0x574D_4D41_5449_4C45)
@@ -1609,8 +1635,9 @@ mod tests {
     /// On the naga->SPIR-V->NVIDIA-Vulkan path here, the probe reports NOT usable (the
     /// driver reassociates floats), so df64 is correctly skipped and CUDA/CPU is used.
     #[test]
-    #[ignore = "requires a GPU adapter"]
+    #[serial_test::serial(gpu)]
     fn df64_precision_is_probed_and_honest() {
+        if !crate::wgsl_forge::test_gpu_available() { return; }
         let (m, k, n) = (64usize, 64, 64);
         let a: Vec<f64> = det_f32(m * k, 0x6446_3634_4D4D_3401)
             .into_iter()
@@ -1654,8 +1681,9 @@ mod tests {
     /// reference to near-exact precision (native double, no emulation). m=n=256.
     #[cfg(feature = "cuda")]
     #[test]
-    #[ignore = "requires a CUDA device"]
+    #[serial_test::serial(gpu)]
     fn gemv_f64_cuda_matches_cpu() {
+        if !crate::wgsl_forge::test_cuda_available() { return; }
         let (m, n) = (256usize, 256);
         let a: Vec<f64> = det_f32(m * n, 0x6745_4D56_4636_3401)
             .into_iter()

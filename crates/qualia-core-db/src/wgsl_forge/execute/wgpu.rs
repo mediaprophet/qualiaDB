@@ -65,11 +65,13 @@ impl WgpuComputeContext {
         let available_features = adapter.features();
         // Request timestamp queries plus subgroup + cooperative-matrix support
         // when the adapter offers them (cooperative-matrix kernels need both).
-        let wanted = wgpu::Features::TIMESTAMP_QUERY
+        let mut wanted = wgpu::Features::TIMESTAMP_QUERY
             | wgpu::Features::SUBGROUP
-            | wgpu::Features::SHADER_F16
-            | wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX
-            | wgpu::Features::EXPERIMENTAL_RAY_QUERY;
+            | wgpu::Features::SHADER_F16;
+        if crate::gpu_context::experimental_features_allowed() {
+            wanted |= wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX
+                | wgpu::Features::EXPERIMENTAL_RAY_QUERY;
+        }
         let required_features = available_features & wanted;
         let timestamp_supported = required_features.contains(wgpu::Features::TIMESTAMP_QUERY);
         let limits = adapter.limits();
@@ -101,7 +103,14 @@ impl WgpuComputeContext {
             // token. Only requested (above) when the adapter advertises it; the
             // token is harmless when no experimental feature is actually enabled.
             // Safety: we only use it for the cooperative-matrix matmul kernel.
-            experimental_features: unsafe { wgpu::ExperimentalFeatures::enabled() },
+            experimental_features: if required_features.intersects(
+                wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX
+                    | wgpu::Features::EXPERIMENTAL_RAY_QUERY,
+            ) {
+                unsafe { wgpu::ExperimentalFeatures::enabled() }
+            } else {
+                wgpu::ExperimentalFeatures::disabled()
+            },
             ..Default::default()
         }))
         .map_err(|error| ForgeError::GpuUnavailable(error.to_string()))?;

@@ -33,12 +33,20 @@ fn rayprobe_cpu_reference_is_sane() {
 }
 
 #[test]
-#[ignore = "requires a ray-query capable adapter (RT cores)"]
+#[serial_test::serial(gpu)]
 fn rayprobe_certifies_on_real_gpu() {
     // Feasibility + correctness: build a BLAS/TLAS and run the emitted ray_probe
     // shader, checking committed hit distances against the Möller–Trumbore CPU
     // reference. This is the gate for whether wgpu 29.0.3 ray-query *executes*.
-    let mut context = WgpuComputeContext::new(1024 * 1024).expect("adapter");
+    if !crate::gpu_context::experimental_features_allowed() {
+        return;
+    }
+    let Ok(mut context) = WgpuComputeContext::new(1024 * 1024) else {
+        return;
+    };
+    if !context.constraints.supports_rt_cores {
+        return;
+    }
     let schedule = Schedule {
         workgroup_size: 64,
         ..Default::default()
@@ -53,12 +61,20 @@ fn rayprobe_certifies_on_real_gpu() {
 }
 
 #[test]
-#[ignore = "requires a ray-query capable adapter (RT cores)"]
+#[serial_test::serial(gpu)]
 fn rayprobe_certify_builtin_on_real_gpu() {
     // Full certification pipeline: certify_builtin -> evaluate_builtin ->
     // evaluate_rayprobe -> manifest, proving RayProbe is a first-class
     // certifiable builtin (not just a standalone test).
-    let mut context = WgpuComputeContext::new(1024 * 1024).expect("adapter");
+    if !crate::gpu_context::experimental_features_allowed() {
+        return;
+    }
+    let Ok(mut context) = WgpuComputeContext::new(1024 * 1024) else {
+        return;
+    };
+    if !context.constraints.supports_rt_cores {
+        return;
+    }
     let schedule = Schedule {
         workgroup_size: 64,
         ..Default::default()
@@ -301,8 +317,9 @@ fn fft_inputs_are_deterministic_interleaved() {
 }
 
 #[test]
-#[ignore = "requires a native wgpu adapter"]
+#[serial_test::serial(gpu)]
 fn generated_fft_matches_oracle_on_real_gpu() {
+    if !crate::wgsl_forge::test_gpu_available() { return; }
     // N=256-point forward FFT, one workgroup of 256 threads, checked against
     // the O(N²) DFT reference (same forward sign convention).
     let mut context = WgpuComputeContext::new(4 * 1024 * 1024).expect("adapter");
@@ -322,8 +339,9 @@ fn generated_fft_matches_oracle_on_real_gpu() {
 }
 
 #[test]
-#[ignore = "requires a native wgpu adapter"]
+#[serial_test::serial(gpu)]
 fn generated_ternary_gemv_matches_oracle_on_real_gpu() {
+    if !crate::wgsl_forge::test_gpu_available() { return; }
     let mut context = WgpuComputeContext::new(4 * 1024 * 1024).expect("adapter");
     let schedule = Schedule {
         workgroup_size: 64,
@@ -341,8 +359,9 @@ fn generated_ternary_gemv_matches_oracle_on_real_gpu() {
 }
 
 #[test]
-#[ignore = "requires a native wgpu adapter"]
+#[serial_test::serial(gpu)]
 fn generated_gemm_matches_oracle_on_real_gpu() {
+    if !crate::wgsl_forge::test_gpu_available() { return; }
     let mut context = WgpuComputeContext::new(4 * 1024 * 1024).expect("adapter");
     let schedule = Schedule {
         workgroup_size: 64,
@@ -360,8 +379,9 @@ fn generated_gemm_matches_oracle_on_real_gpu() {
 }
 
 #[test]
-#[ignore = "requires a native wgpu adapter"]
+#[serial_test::serial(gpu)]
 fn generated_gemv_matches_oracle_on_real_gpu() {
+    if !crate::wgsl_forge::test_gpu_available() { return; }
     let mut context = WgpuComputeContext::new(4 * 1024 * 1024).expect("adapter");
     let schedule = Schedule {
         workgroup_size: 64,
@@ -379,8 +399,9 @@ fn generated_gemv_matches_oracle_on_real_gpu() {
 }
 
 #[test]
-#[ignore = "requires a native wgpu adapter"]
+#[serial_test::serial(gpu)]
 fn generated_p64_matches_oracle_on_real_gpu() {
+    if !crate::wgsl_forge::test_gpu_available() { return; }
     let mut context = WgpuComputeContext::new(4 * 1024 * 1024).expect("adapter");
     let schedule = Schedule {
         workgroup_size: 64,
@@ -398,8 +419,9 @@ fn generated_p64_matches_oracle_on_real_gpu() {
 }
 
 #[test]
-#[ignore = "requires a native wgpu adapter"]
+#[serial_test::serial(gpu)]
 fn generated_ffn_matches_oracle_on_real_gpu() {
+    if !crate::wgsl_forge::test_gpu_available() { return; }
     let mut context = WgpuComputeContext::new(4 * 1024 * 1024).expect("adapter");
     let schedule = Schedule {
         workgroup_size: 64,
@@ -417,8 +439,9 @@ fn generated_ffn_matches_oracle_on_real_gpu() {
 }
 
 #[test]
-#[ignore = "requires a native wgpu adapter"]
+#[serial_test::serial(gpu)]
 fn generated_topk_matches_oracle_on_real_gpu() {
+    if !crate::wgsl_forge::test_gpu_available() { return; }
     let mut context = WgpuComputeContext::new(1024 * 1024).expect("adapter");
     let schedule = Schedule {
         workgroup_size: 64,
@@ -437,8 +460,9 @@ fn generated_topk_matches_oracle_on_real_gpu() {
 
 #[cfg(feature = "cuda")]
 #[test]
-#[ignore = "requires a CUDA device"]
+#[serial_test::serial(gpu)]
 fn affine_oracle_matches_across_cuda_backend() {
+    if !crate::wgsl_forge::test_cuda_available() { return; }
     let report = evaluate_affine_cuda(4099).expect("cuda affine evaluation");
     assert!(
         report.passed(),
@@ -448,24 +472,27 @@ fn affine_oracle_matches_across_cuda_backend() {
 
 #[cfg(feature = "cuda")]
 #[test]
-#[ignore = "requires a CUDA device"]
+#[serial_test::serial(gpu)]
 fn ffn_oracle_matches_across_cuda_backend() {
+    if !crate::wgsl_forge::test_cuda_available() { return; }
     let report = evaluate_ffn_cuda(64, 128, 256).expect("cuda ffn evaluation");
     assert!(report.passed(), "CUDA fused-ffn mismatch: {report:?}");
 }
 
 #[cfg(feature = "cuda")]
 #[test]
-#[ignore = "requires a CUDA device"]
+#[serial_test::serial(gpu)]
 fn topk_oracle_matches_across_cuda_backend() {
+    if !crate::wgsl_forge::test_cuda_available() { return; }
     let report = evaluate_topk_cuda(64 * 10, 4).expect("cuda topk evaluation");
     assert!(report.passed(), "CUDA top-k mismatch: {report:?}");
 }
 
 #[cfg(feature = "cuda")]
 #[test]
-#[ignore = "requires a CUDA device with tensor cores (compute capability >= 7.0)"]
+#[serial_test::serial(gpu)]
 fn wmma_matmul_certifies_on_cuda_tensor_cores() {
+    if !crate::wgsl_forge::test_cuda_available() { return; }
     // The genuine tensor-core path: f16-input WMMA GEMM through NVRTC, the
     // reduced-precision config wgpu 29's coopmat cannot run.
     let report = evaluate_matmul_tc_cuda().expect("cuda wmma evaluation");
@@ -473,10 +500,18 @@ fn wmma_matmul_certifies_on_cuda_tensor_cores() {
 }
 
 #[test]
-#[ignore = "requires a cooperative-matrix capable adapter"]
+#[serial_test::serial(gpu)]
 fn coopmat_loadstore_roundtrips_on_real_gpu() {
     // Diagnostic: coopLoadT/coopStoreT round-trip correctly on the adapter (c == a).
-    let mut context = WgpuComputeContext::new(1024 * 1024).expect("adapter");
+    if !crate::gpu_context::experimental_features_allowed() {
+        return;
+    }
+    let Ok(mut context) = WgpuComputeContext::new(1024 * 1024) else {
+        return;
+    };
+    if !context.constraints.supports_coopmat {
+        return;
+    }
     let report = evaluate_coopmat_loadstore(&mut context).expect("coopmat round-trip");
     assert!(
         report.passed(),
@@ -496,8 +531,9 @@ fn coopmat_loadstore_roundtrips_on_real_gpu() {
 // coopmat execution fix, add the `evaluate_matmul_tc` assertion back here.
 
 #[test]
-#[ignore = "requires a native wgpu adapter"]
+#[serial_test::serial(gpu)]
 fn generated_affine_certifies_on_real_gpu() {
+    if !crate::wgsl_forge::test_gpu_available() { return; }
     let mut context = WgpuComputeContext::new(1024 * 1024).expect("adapter");
     let manifest = certify_builtin(
         &mut context,

@@ -243,9 +243,9 @@ impl Frame {
 
     /// Presents the swapchain texture. No-op for offscreen targets (their
     /// contents persist in the texture and are read back on demand).
-    fn present(self) {
+    fn present(self, queue: &wgpu::Queue) {
         if let Frame::Surface { texture, .. } = self {
-            texture.present();
+            queue.present(texture);
         }
     }
 }
@@ -343,6 +343,7 @@ impl<'a> WgpuRenderer<'a> {
             height,
             present_mode: wgpu::PresentMode::Fifo,
             alpha_mode: surface_caps.alpha_modes[0],
+            color_space: wgpu::SurfaceColorSpace::Auto,
             view_formats: vec![],
             desired_maximum_frame_latency: 2,
         };
@@ -514,6 +515,7 @@ impl<'a> WgpuRenderer<'a> {
                 power_preference,
                 compatible_surface,
                 force_fallback_adapter: false,
+                apply_limit_buckets: false,
             })
             .await
             .map_err(|e| format!("Failed to find an appropriate adapter: {e}"))?;
@@ -618,19 +620,17 @@ impl<'a> WgpuRenderer<'a> {
                 module: &shader,
                 entry_point: Some("vertex_main"),
                 compilation_options: Default::default(),
-                buffers: &[wgpu::VertexBufferLayout {
+                buffers: &[Some(wgpu::VertexBufferLayout {
                     array_stride: (std::mem::size_of::<[f32; 3]>() + std::mem::size_of::<[f32; 4]>()) as wgpu::BufferAddress,
                     step_mode: wgpu::VertexStepMode::Vertex,
                     attributes: &[
                         wgpu::VertexAttribute { offset: 0, shader_location: 0, format: wgpu::VertexFormat::Float32x3 },
                         wgpu::VertexAttribute { offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress, shader_location: 1, format: wgpu::VertexFormat::Float32x4 },
                     ],
-                }],
+                })],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
-                // Note: projector.wgsl does not currently have a fragment_main, it expects to be linked with a standard fragment shader.
-                // For this wiring, we bind it to the basic screen shader fragment_main (which just returns color).
                 entry_point: Some("fragment_main"),
                 compilation_options: Default::default(),
                 targets: &[Some(wgpu::ColorTargetState {
@@ -677,7 +677,7 @@ impl<'a> WgpuRenderer<'a> {
                 module: &shader,
                 entry_point: Some("vertex_main"),
                 compilation_options: Default::default(),
-                buffers: &[wgpu::VertexBufferLayout {
+                buffers: &[Some(wgpu::VertexBufferLayout {
                     array_stride: std::mem::size_of::<ScreenVertex>() as wgpu::BufferAddress,
                     step_mode: wgpu::VertexStepMode::Vertex,
                     attributes: &[
@@ -692,7 +692,7 @@ impl<'a> WgpuRenderer<'a> {
                             format: wgpu::VertexFormat::Float32x4,
                         },
                     ],
-                }],
+                })],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
@@ -1199,7 +1199,7 @@ impl<'a> WgpuRenderer<'a> {
         }
 
         self.queue.submit(Some(encoder.finish()));
-        frame.present();
+        frame.present(&self.queue);
     }
 
     /// Project a world-space point to screen space
@@ -1428,7 +1428,7 @@ impl<'a> WgpuRenderer<'a> {
         }
 
         self.queue.submit(Some(encoder.finish()));
-        frame.present();
+        frame.present(&self.queue);
     }
 }
 
@@ -1819,7 +1819,7 @@ pub fn render_scene_png_with_time_and_telemetry(
         } // render_pass dropped here
 
         renderer.queue.submit(Some(encoder.finish()));
-        frame.present();
+        frame.present(&renderer.queue);
 
         renderer.read_png()
     }

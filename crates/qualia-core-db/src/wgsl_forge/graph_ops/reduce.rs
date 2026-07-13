@@ -192,8 +192,9 @@ mod tests {
     /// f32 tolerance over a non-trivial input (length > workgroup size, exercising the
     /// grid-stride fold + tree reduction). Run by the orchestrator.
     #[test]
-    #[ignore = "requires a GPU adapter"]
+    #[serial_test::serial(gpu)]
     fn reduce_gpu_matches_oracle() {
+        if !crate::wgsl_forge::test_gpu_available() { return; }
         let n = 4096usize; // > wg (256) → multiple grid-stride iterations per thread
         let input: Vec<f32> = (0..n).map(|i| ((i * 7 % 23) as f32) * 0.5 - 5.0).collect();
         for op in [RedKind::Sum, RedKind::Mean, RedKind::Max, RedKind::L2] {

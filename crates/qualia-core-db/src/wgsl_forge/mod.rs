@@ -25,6 +25,20 @@ pub mod schedule;
 pub mod tune;
 pub mod validate;
 
+#[cfg(test)]
+pub(crate) fn test_gpu_available() -> bool {
+    use std::sync::OnceLock;
+    static AVAILABLE: OnceLock<bool> = OnceLock::new();
+    *AVAILABLE.get_or_init(|| execute::WgpuComputeContext::new(64 * 1024).is_ok())
+}
+
+#[cfg(all(test, feature = "cuda"))]
+pub(crate) fn test_cuda_available() -> bool {
+    use std::sync::OnceLock;
+    static AVAILABLE: OnceLock<bool> = OnceLock::new();
+    *AVAILABLE.get_or_init(|| execute::CudaComputeContext::new(64 * 1024).is_ok())
+}
+
 pub use backend::resolve_execution_backend;
 pub use cache::ManifestCache;
 pub use dispatch::{
@@ -59,8 +73,8 @@ pub use tune::{
 pub use validate::{validate_native, validate_wgsl, ValidationReport};
 
 pub const FORGE_SCHEMA_VERSION: u32 = 2;
-pub const WGPU_API_VERSION: &str = "29.0.3";
-pub const NAGA_API_VERSION: &str = "29.0.3";
+pub const WGPU_API_VERSION: &str = "30.0.0";
+pub const NAGA_API_VERSION: &str = "30.0.0";
 /// `cudarc` crate API version the cross-backend (CUDA) oracle is built against.
 /// Folded into the tuning/certification cache key (plan §8) so reuse is
 /// invalidated when the CUDA toolchain surface changes.

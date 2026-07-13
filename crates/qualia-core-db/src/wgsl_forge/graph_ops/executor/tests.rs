@@ -77,8 +77,9 @@ fn swiglu_ffn_cpu_oracle_matches_reference() {
 /// device-side) must match the composed CPU oracle within f32 tolerance — for softmax,
 /// RMSNorm, and the SwiGLU-FFN block. Run by the orchestrator.
 #[test]
-#[ignore = "requires a GPU adapter"]
+#[serial_test::serial(gpu)]
 fn execute_graph_gpu_matches_cpu_oracle() {
+    if !crate::wgsl_forge::test_gpu_available() { return; }
     // softmax (1024-wide → exercises grid-stride reduce + broadcast + elementwise chain)
     {
         let n = 1024usize;
@@ -138,8 +139,9 @@ fn execute_graph_gpu_matches_cpu_oracle() {
 /// → residual). Proves `WgpuComputeContext::from_device` + `ForgeGraphExecutor::on_shared_gpu`
 /// run real multi-node graphs correctly on the shared device, not a second one.
 #[test]
-#[ignore = "requires a GPU adapter"]
+#[serial_test::serial(gpu)]
 fn shared_device_executor_matches_cpu_oracle() {
+    if !crate::wgsl_forge::test_gpu_available() { return; }
     let mut exec =
         ForgeGraphExecutor::on_shared_gpu().expect("forge executor on shared_gpu device");
 
@@ -212,8 +214,9 @@ fn shared_device_executor_matches_cpu_oracle() {
 /// calls (proving the resident weights survive the per-call transient-ring reset). Perf: prints
 /// ms/call for resident vs all-upload and the per-call weight bytes no longer re-uploaded.
 #[test]
-#[ignore = "requires a GPU adapter"]
+#[serial_test::serial(gpu)]
 fn resident_weights_decode_block() {
+    if !crate::wgsl_forge::test_gpu_available() { return; }
     use std::time::Instant;
     let (d, kv, ffn) = (576u32, 128u32, 1536u32);
     let inv_scale = 1.0f32 / (d as f32).sqrt();
@@ -518,8 +521,9 @@ fn decode_layer_cpu_oracle_matches_reference() {
 /// GPU certify: the real multi-head decode layer on the A2000 matches its composed CPU oracle,
 /// for both RoPE conventions, at a realistic shape (4 heads, 2 kv-heads = GQA 2:1, head_dim 16).
 #[test]
-#[ignore = "requires a GPU adapter"]
+#[serial_test::serial(gpu)]
 fn decode_layer_gpu_matches_cpu_oracle() {
+    if !crate::wgsl_forge::test_gpu_available() { return; }
     let (n_heads, n_kv_heads, head_dim, seq, ffn) = (4u32, 2u32, 16u32, 8u32, 32u32);
     let (pos, base) = (5u32, 10000.0f32);
     let ext = decode_layer_externals(n_heads, n_kv_heads, head_dim, seq, ffn);
@@ -594,8 +598,9 @@ fn matmul_trans_b_cpu_oracle_matches_reference() {
 /// GPU certify `trans_b` two ways on the A2000: vs the composed CPU oracle, AND vs the **plain
 /// GEMM run on an explicitly-transposed B** (a different kernel path) — the gold cross-check.
 #[test]
-#[ignore = "requires a GPU adapter"]
+#[serial_test::serial(gpu)]
 fn matmul_trans_b_gpu_matches_plain_on_transposed() {
+    if !crate::wgsl_forge::test_gpu_available() { return; }
     let (m, n, k) = (3usize, 5usize, 4usize);
     let a: Vec<f32> = (0..m * k).map(|i| (i as f32) * 0.1 - 0.3).collect();
     let b_nk: Vec<f32> = (0..n * k)
@@ -741,8 +746,9 @@ fn decode_block_cpu_oracle_matches_reference() {
 /// GPU certify (A2000): attention, `{GatherDequant→MatMul}`, and the full decode block —
 /// each executed device-side — match their composed CPU oracle within f32 tolerance.
 #[test]
-#[ignore = "requires a GPU adapter"]
+#[serial_test::serial(gpu)]
 fn p4b_graphs_gpu_match_cpu_oracle() {
+    if !crate::wgsl_forge::test_gpu_available() { return; }
     use crate::wgsl_forge::graph_ops::gather_dequant::pack_ternary_as_words;
     // Attention (decode).
     {
@@ -832,8 +838,11 @@ fn p4b_graphs_gpu_match_cpu_oracle() {
 /// context-level pipeline cache), so the warmup run pays compilation and the timed loop pays
 /// only bind-group build + dispatch + readback — the realistic held-executor decode step.
 #[test]
-#[ignore = "benchmark; requires a GPU adapter. Run with --nocapture to see timings."]
+#[serial_test::serial(gpu)]
 fn decode_block_kernel_uplift_bench() {
+    if !crate::wgsl_forge::test_gpu_available() {
+        return;
+    }
     use std::time::Instant;
     let (d, kv, ffn) = (576u32, 128u32, 1536u32);
     let mk = |n: usize, m: u32, off: f32| {
@@ -896,8 +905,9 @@ fn decode_block_kernel_uplift_bench() {
 /// number of distinct kernels, well below the node count for a decode block with repeated
 /// op-classes). This is what turns the per-call compile cost into a one-time warmup.
 #[test]
-#[ignore = "requires a GPU adapter"]
+#[serial_test::serial(gpu)]
 fn pipeline_cache_amortizes_across_runs() {
+    if !crate::wgsl_forge::test_gpu_available() { return; }
     let (d, kv, ffn) = (64u32, 80u32, 128u32);
     let mk = |n: usize, m: u32| {
         (0..n)

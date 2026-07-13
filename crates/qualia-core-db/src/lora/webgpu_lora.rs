@@ -61,9 +61,8 @@ impl LoRAGpuApplicator {
             .await
             .map_err(|e| LoRAError::Io(format!("no wgpu adapter: {e}")))?;
 
-        // wgpu 0.19: DeviceDescriptor uses Default; features/limits are fields of the
-        // inner `wgpu::DeviceDescriptor::default()` but the public struct in this version
-        // is just `&wgpu::DeviceDescriptor::default()`.
+        // This kernel uses only baseline WebGPU storage/uniform capabilities, so it
+        // deliberately requests no optional or experimental wgpu 30 features.
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor::default())
             .await

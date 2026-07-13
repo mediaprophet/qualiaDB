@@ -190,8 +190,9 @@ mod tests {
     /// GPU certify: the kernel on a real adapter must match the CPU oracle within f32
     /// tolerance over a deterministic multi-particle scene. Run by the orchestrator.
     #[test]
-    #[ignore = "requires a GPU adapter"]
+    #[serial_test::serial(gpu)]
     fn nbody_gpu_matches_oracle() {
+        if !crate::wgsl_forge::test_gpu_available() { return; }
         let count = 128usize;
         let mut state = Vec::with_capacity(count * KIN_STRIDE);
         for i in 0..count {

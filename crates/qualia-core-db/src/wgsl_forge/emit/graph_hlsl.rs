@@ -201,9 +201,16 @@ mod tests {
     /// `QUALIA_DXC_PATH`): every portable-kit HLSL kernel compiles to SPIR-V.
     #[cfg(feature = "dxc")]
     #[test]
-    #[ignore = "requires the dxc feature + a DXC CLI"]
     fn hlsl_portable_kit_dxc_compiles() {
         use crate::wgsl_forge::emit::dxc::compile_hlsl_to_spirv;
+        let dxc = std::env::var("QUALIA_DXC_PATH").unwrap_or_else(|_| "dxc".to_string());
+        if std::process::Command::new(&dxc)
+            .arg("--version")
+            .output()
+            .is_err()
+        {
+            return;
+        }
         let mut srcs = vec![
             (elementwise_hlsl(EwKind::Silu, 64).unwrap(), "ewise_main"),
             (elementwise_hlsl(EwKind::Add, 64).unwrap(), "ewise_main"),

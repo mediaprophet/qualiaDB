@@ -77,8 +77,26 @@ impl QTensorEngine {
                 .request_adapter(&wgpu::RequestAdapterOptions::default())
                 .await
                 .map_err(|e| format!("Failed to find wgpu adapter: {e}"))?;
+            // Browser WebGPU exposes a smaller feature set than native backends.
+            // Intersecting with the adapter keeps device creation portable while
+            // still enabling f16/subgroup/timing acceleration where available.
+            let required_features =
+                crate::gpu_context::requested_native_llm_features(adapter.features());
+            let experimental_features = if required_features
+                .contains(wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX)
+            {
+                // Safety: the feature is both explicitly opted into and advertised
+                // by the browser adapter before this token is enabled.
+                unsafe { wgpu::ExperimentalFeatures::enabled() }
+            } else {
+                wgpu::ExperimentalFeatures::disabled()
+            };
             adapter
-                .request_device(&wgpu::DeviceDescriptor::default())
+                .request_device(&wgpu::DeviceDescriptor {
+                    required_features,
+                    experimental_features,
+                    ..Default::default()
+                })
                 .await
                 .map_err(|e| e.to_string())?
         };

@@ -516,8 +516,9 @@ mod cuda_tests {
     }
 
     #[test]
-    #[ignore = "requires an NVIDIA CUDA device (cross-backend oracle)"]
+    #[serial_test::serial(gpu)]
     fn plain_matmul_graph_certifies_on_cuda() {
+        if !crate::wgsl_forge::test_cuda_available() { return; }
         let (m, k, n) = (32usize, 32usize, 32usize);
         let a: Vec<f32> = (0..m * k).map(|i| ((i % 11) as f32) * 0.3 - 1.5).collect();
         let b: Vec<f32> = (0..k * n).map(|i| ((i % 13) as f32) * 0.2 + 0.05).collect();
@@ -533,8 +534,9 @@ mod cuda_tests {
     }
 
     #[test]
-    #[ignore = "requires an NVIDIA CUDA device with tensor cores (WMMA cross-backend oracle)"]
+    #[serial_test::serial(gpu)]
     fn tc_matmul_graph_certifies_on_cuda_wmma() {
+        if !crate::wgsl_forge::test_cuda_available() { return; }
         // 16-multiples for WMMA; f16-rounded reference tolerance.
         let (m, k, n) = (16usize, 16usize, 16usize);
         let a: Vec<f32> = (0..m * k).map(|i| ((i % 7) as f32) * 0.25 - 0.75).collect();
@@ -558,8 +560,9 @@ mod cuda_tests {
     /// emitted CUDA-C is valid (compiles to PTX) for the full node coverage, independent of a
     /// multi-node executor.
     #[test]
-    #[ignore = "requires an NVIDIA CUDA toolkit + device (NVRTC compile)"]
+    #[serial_test::serial(gpu)]
     fn kit_kernels_nvrtc_compile() {
+        if !crate::wgsl_forge::test_cuda_available() { return; }
         let ctx = CudaComputeContext::new(8 * 1024 * 1024).expect("cuda ctx");
         let compile = |src: &str, entry: &str, binds: &[u32]| {
             CudaPipeline::compile_cuda_c_source(&ctx, src, entry, binds)

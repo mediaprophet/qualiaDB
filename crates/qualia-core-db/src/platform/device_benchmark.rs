@@ -16,6 +16,9 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use serde::{Deserialize, Serialize};
+use std::io::{Read, Write};
+use std::process::Command;
+use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
 use std::time::Instant;
 
 const GEMV_BENCH_WGSL: &str = include_str!("../shaders/gemv_bench.wgsl");
@@ -64,6 +67,27 @@ pub struct CircuitBench {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub decode_proxy_tok_s: Option<f64>,
 }
+
+/// Stable process boundary for one physical adapter/backend benchmark.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceBenchmarkRequest {
+    pub backend: String,
+    pub vendor: u32,
+    pub device: u32,
+    pub gemv_n: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceBenchmarkResponse {
+    pub request: DeviceBenchmarkRequest,
+    pub bench: Option<CircuitBench>,
+    pub error: Option<String>,
+}
+
+#[cfg(not(test))]
+const WORKER_ENV: &str = "QUALIA_DEVICE_BENCHMARK_WORKER";
+const WORKER_OUTPUT_ENV: &str = "QUALIA_DEVICE_BENCHMARK_OUTPUT";
+static WORKER_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 /// The measured capability matrix — circuits sorted fastest-first. This IS the priority order.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -327,6 +351,167 @@ fn backend_rank(b: wgpu::Backend) -> u8 {
     }
 }
 
+fn backend_name(backend: wgpu::Backend) -> &'static str {
+    match backend {
+        wgpu::Backend::Vulkan => "vulkan",
+        wgpu::Backend::Dx12 => "dx12",
+        wgpu::Backend::Metal => "metal",
+        wgpu::Backend::Gl => "gl",
+        wgpu::Backend::BrowserWebGpu => "browser-webgpu",
+        wgpu::Backend::Noop => "noop",
+    }
+}
+
+fn backend_from_name(name: &str) -> Option<(wgpu::Backend, wgpu::Backends)> {
+    match name {
+        "vulkan" => Some((wgpu::Backend::Vulkan, wgpu::Backends::VULKAN)),
+        "dx12" => Some((wgpu::Backend::Dx12, wgpu::Backends::DX12)),
+        "metal" => Some((wgpu::Backend::Metal, wgpu::Backends::METAL)),
+        "gl" => Some((wgpu::Backend::Gl, wgpu::Backends::GL)),
+        _ => None,
+    }
+}
+
+fn encode_response(path: &std::path::Path, response: &DeviceBenchmarkResponse) -> Result<(), String> {
+    let mut payload = Vec::new();
+    ciborium::into_writer(response, &mut payload).map_err(|e| format!("encode response: {e}"))?;
+    let mut file = std::fs::File::create(path).map_err(|e| format!("create {}: {e}", path.display()))?;
+    file.write_all(&(payload.len() as u64).to_le_bytes()).map_err(|e| e.to_string())?;
+    file.write_all(&payload).map_err(|e| e.to_string())?;
+    file.sync_all().map_err(|e| e.to_string())
+}
+
+fn decode_response(path: &std::path::Path) -> Result<DeviceBenchmarkResponse, String> {
+    let mut file = std::fs::File::open(path).map_err(|e| format!("open {}: {e}", path.display()))?;
+    let mut length = [0u8; 8];
+    file.read_exact(&mut length).map_err(|e| format!("read response length: {e}"))?;
+    let length = u64::from_le_bytes(length) as usize;
+    if length == 0 || length > 1024 * 1024 {
+        return Err(format!("invalid worker response length {length}"));
+    }
+    let mut payload = vec![0u8; length];
+    file.read_exact(&mut payload).map_err(|e| format!("read response: {e}"))?;
+    ciborium::from_reader(payload.as_slice()).map_err(|e| format!("decode response: {e}"))
+}
+
+fn benchmark_one(request: &DeviceBenchmarkRequest) -> Result<CircuitBench, String> {
+    let (expected_backend, backends) = backend_from_name(&request.backend)
+        .ok_or_else(|| format!("unsupported backend {}", request.backend))?;
+    let mut descriptor = wgpu::InstanceDescriptor::new_without_display_handle();
+    descriptor.backends = backends;
+    let instance = wgpu::Instance::new(descriptor);
+    let adapters = pollster::block_on(instance.enumerate_adapters(backends));
+    let adapter = adapters.into_iter().find(|adapter| {
+        let info = adapter.get_info();
+        info.backend == expected_backend && info.vendor == request.vendor && info.device == request.device
+    }).ok_or_else(|| format!("adapter {:04x}:{:04x}/{} unavailable", request.vendor, request.device, request.backend))?;
+    let info = adapter.get_info();
+    let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
+        .map_err(|e| format!("request_device: {e}"))?;
+    let ms = bench_gpu_gemv(&device, &queue, request.gemv_n);
+    let upload_gbps = bench_upload_gbps(&device, &queue, 16 * 1024 * 1024);
+    Ok(CircuitBench {
+        label: format!("{} ({:?})", info.name, info.backend),
+        kind: CircuitKind::from_wgpu(info.device_type),
+        backend: format!("{:?}", info.backend),
+        ms_per_gemv: ms,
+        gflops: gflops(request.gemv_n, ms),
+        upload_gbps,
+        rel_score: 1.0,
+        decode_proxy_tok_s: None,
+    })
+}
+
+/// Worker entry used by the dedicated binary and the unit-test subprocess route.
+pub fn run_worker_from_env() -> Result<(), String> {
+    let request: DeviceBenchmarkRequest = DeviceBenchmarkRequest {
+        backend: std::env::var("QUALIA_DEVICE_BENCHMARK_BACKEND").map_err(|_| "missing backend")?,
+        vendor: std::env::var("QUALIA_DEVICE_BENCHMARK_VENDOR").map_err(|_| "missing vendor")?.parse().map_err(|_| "invalid vendor")?,
+        device: std::env::var("QUALIA_DEVICE_BENCHMARK_DEVICE").map_err(|_| "missing device")?.parse().map_err(|_| "invalid device")?,
+        gemv_n: std::env::var("QUALIA_DEVICE_BENCHMARK_N").map_err(|_| "missing n")?.parse().map_err(|_| "invalid n")?,
+    };
+    let response = match benchmark_one(&request) {
+        Ok(bench) => DeviceBenchmarkResponse { request, bench: Some(bench), error: None },
+        Err(error) => DeviceBenchmarkResponse { request, bench: None, error: Some(error) },
+    };
+    let output = std::env::var_os(WORKER_OUTPUT_ENV).ok_or("missing worker output path")?;
+    encode_response(std::path::Path::new(&output), &response)
+}
+
+#[cfg(not(test))]
+fn worker_executable() -> Option<std::path::PathBuf> {
+    if let Some(path) = std::env::var_os(WORKER_ENV) {
+        return Some(path.into());
+    }
+    let current = std::env::current_exe().ok()?;
+    let sibling = current.with_file_name(if cfg!(windows) {
+        "qualia-device-benchmark-worker.exe"
+    } else {
+        "qualia-device-benchmark-worker"
+    });
+    if sibling.is_file() {
+        Some(sibling)
+    } else if current.file_stem().and_then(|s| s.to_str()).is_some_and(|name| {
+        name == "qualia-cli" || name == "webizen-desktop"
+    }) {
+        // Qualia's shipped CLI and desktop hosts expose the same private worker
+        // entry before normal argument/UI initialization, so no sidecar is
+        // required for those packages. Other embedders can set WORKER_ENV.
+        Some(current)
+    } else {
+        None
+    }
+}
+
+fn invoke_worker(request: &DeviceBenchmarkRequest) -> Result<CircuitBench, String> {
+    let sequence = WORKER_SEQUENCE.fetch_add(1, AtomicOrdering::Relaxed);
+    let output = std::env::temp_dir().join(format!("qualia-device-bench-{}-{sequence}.cbor", std::process::id()));
+    let mut command;
+    #[cfg(test)]
+    {
+        command = Command::new(std::env::current_exe().map_err(|e| e.to_string())?);
+        command.args(["--exact", "platform::device_benchmark::tests::device_benchmark_worker_entry", "--nocapture"]);
+    }
+    #[cfg(not(test))]
+    {
+        command = Command::new(worker_executable().ok_or_else(|| format!("worker not found; set {WORKER_ENV}"))?);
+    }
+    let mut child = command
+        .env("QUALIA_DEVICE_BENCHMARK_BACKEND", &request.backend)
+        .env("QUALIA_DEVICE_BENCHMARK_VENDOR", request.vendor.to_string())
+        .env("QUALIA_DEVICE_BENCHMARK_DEVICE", request.device.to_string())
+        .env("QUALIA_DEVICE_BENCHMARK_N", request.gemv_n.to_string())
+        .env(WORKER_OUTPUT_ENV, &output)
+        .spawn().map_err(|e| format!("launch worker: {e}"))?;
+    let deadline = Instant::now() + std::time::Duration::from_secs(120);
+    let status = loop {
+        if let Some(status) = child.try_wait().map_err(|e| format!("wait for worker: {e}"))? {
+            break status;
+        }
+        if Instant::now() >= deadline {
+            let _ = child.kill();
+            let _ = child.wait();
+            let _ = std::fs::remove_file(&output);
+            return Err("worker exceeded 120-second deadline".into());
+        }
+        std::thread::sleep(std::time::Duration::from_millis(25));
+    };
+    let decoded = if status.success() { decode_response(&output) } else { Err(format!("worker exited {status}")) };
+    let _ = std::fs::remove_file(&output);
+    let response = decoded?;
+    if response.request.backend != request.backend || response.request.vendor != request.vendor
+        || response.request.device != request.device || response.request.gemv_n != request.gemv_n {
+        return Err("worker response identity mismatch".into());
+    }
+    if let Some(error) = response.error { return Err(error); }
+    let bench = response.bench.ok_or("worker returned neither result nor error")?;
+    if !bench.ms_per_gemv.is_finite() || bench.ms_per_gemv <= 0.0 || !bench.gflops.is_finite()
+        || !bench.upload_gbps.is_finite() || bench.upload_gbps < 0.0 {
+        return Err("worker returned invalid metrics".into());
+    }
+    Ok(bench)
+}
+
 /// Benchmark every available compute circuit and return the ranked capability matrix.
 ///
 /// `n` is the GEMV side length (representative shape; 2048 is a good fast default).
@@ -349,38 +534,29 @@ pub fn benchmark_devices(n: usize) -> CapabilityMatrix {
     cand.sort_by_key(|(r, _, _)| *r);
     // Dedup exact (vendor, device, backend) only — keep Metal+DX12+Vulkan rows for the same card.
     let mut seen: std::collections::HashSet<(u32, u32, u32)> = std::collections::HashSet::new();
-    let mut chosen: Vec<(wgpu::Adapter, wgpu::AdapterInfo)> = Vec::new();
-    for (_, adapter, info) in cand {
+    let mut chosen: Vec<DeviceBenchmarkRequest> = Vec::new();
+    for (_, _adapter, info) in cand {
         let backend_id = info.backend as u32;
         if seen.insert((info.vendor, info.device, backend_id)) {
-            chosen.push((adapter, info));
+            chosen.push(DeviceBenchmarkRequest {
+                backend: backend_name(info.backend).to_string(),
+                vendor: info.vendor,
+                device: info.device,
+                gemv_n: n,
+            });
         }
     }
-    for (adapter, info) in chosen {
-        let Some((device, queue)) =
-            pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default())).ok()
-        else {
-            log::warn!(
-                "device_benchmark|skip|{}|{:?}|request_device failed",
-                info.name,
-                info.backend
-            );
-            continue;
-        };
+    for request in chosen {
+        match invoke_worker(&request) {
+            Ok(bench) => circuits.push(bench),
+            Err(error) => log::warn!(
+                "device_benchmark|skip|{:04x}:{:04x}|{}|{}",
+                request.vendor, request.device, request.backend, error
+            ),
+        }
         // Guard: if a backend hangs the probe, the process may stick — operators can
-        // QUALIA_WGPU_BACKEND-pin. We still attempt each backend; hang isolation is W-K5.
-        let ms = bench_gpu_gemv(&device, &queue, n);
-        let upload_gbps = bench_upload_gbps(&device, &queue, 16 * 1024 * 1024);
-        circuits.push(CircuitBench {
-            label: format!("{} ({:?})", info.name, info.backend),
-            kind: CircuitKind::from_wgpu(info.device_type),
-            backend: format!("{:?}", info.backend),
-            ms_per_gemv: ms,
-            gflops: gflops(n, ms),
-            upload_gbps,
-            rel_score: 1.0, // filled after sort
-            decode_proxy_tok_s: None,
-        });
+        // Each worker has a hard deadline, so a wedged backend is skipped without
+        // poisoning the parent or preventing the remaining adapters from running.
     }
 
     // ── CPU via native rayon ──
@@ -401,6 +577,8 @@ pub fn benchmark_devices(n: usize) -> CapabilityMatrix {
         a.ms_per_gemv
             .partial_cmp(&b.ms_per_gemv)
             .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| a.backend.cmp(&b.backend))
+            .then_with(|| a.label.cmp(&b.label))
     });
     if let Some(best_ms) = circuits.first().map(|c| c.ms_per_gemv) {
         for c in &mut circuits {
@@ -423,9 +601,41 @@ pub fn benchmark_devices(n: usize) -> CapabilityMatrix {
 mod tests {
     use super::*;
 
+    #[test]
+    fn device_benchmark_worker_entry() {
+        if std::env::var_os(WORKER_OUTPUT_ENV).is_some() {
+            run_worker_from_env().expect("device benchmark worker must write its response");
+        }
+    }
+
+    #[test]
+    fn worker_protocol_round_trips() {
+        let request = DeviceBenchmarkRequest {
+            backend: "vulkan".into(),
+            vendor: 1,
+            device: 2,
+            gemv_n: 32,
+        };
+        let response = DeviceBenchmarkResponse {
+            request: request.clone(),
+            bench: None,
+            error: Some("expected".into()),
+        };
+        let path = std::env::temp_dir().join(format!(
+            "qualia-device-protocol-{}.cbor",
+            std::process::id()
+        ));
+        encode_response(&path, &response).unwrap();
+        let decoded = decode_response(&path).unwrap();
+        let _ = std::fs::remove_file(path);
+        assert_eq!(decoded.request.backend, request.backend);
+        assert_eq!(decoded.error.as_deref(), Some("expected"));
+    }
+
     /// Cross-circuit benchmark on whatever silicon is present. Prints the ranked matrix; asserts the
     /// CPU path always appears and the ranking is consistent. Skips GPU rows cleanly if headless.
     #[test]
+    #[serial_test::serial(gpu)]
     fn h1a_capability_matrix() {
         let matrix = benchmark_devices(2048);
         eprintln!("{}", matrix.summary());

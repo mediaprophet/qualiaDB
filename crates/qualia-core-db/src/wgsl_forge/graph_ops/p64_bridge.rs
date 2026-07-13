@@ -127,7 +127,7 @@ mod tests {
     /// RoPE base (100k) are the model's real values; x and the KV cache are synthetic (the layer
     /// *compute* on real weights is what's certified). Skips cleanly if no model is on disk.
     #[test]
-    #[ignore = "requires a SmolLM2 GGUF on disk"]
+    #[serial_test::serial(gpu)]
     fn forge_decode_layer_on_real_p64_weights_matches_oracle() {
         let Some(path) = find_smollm_gguf() else {
             eprintln!("[bridge] no SmolLM2 GGUF found — skipping real-weights cert");
@@ -208,7 +208,7 @@ mod tests {
     /// is to *produce + certify* kernels, not to run them. Recorded only as a forge profiling datum (it
     /// also omits the current-token K/V projection + cache append). Skips if no model is on disk.
     #[test]
-    #[ignore = "requires a SmolLM2 GGUF on disk"]
+    #[serial_test::serial(gpu)]
     fn forge_decode_layer_real_weights_ms_per_layer() {
         use crate::wgsl_forge::graph_ops::executor::{decode_layer_graph, ForgeGraphExecutor};
         use std::time::Instant;

@@ -313,7 +313,9 @@ impl PortalGpu {
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::LowPower,
                 compatible_surface: Some(&surface),
-                force_fallback_adapter: false,
+                // `..Default::default()` covers force_fallback_adapter (false) and
+                // wgpu 30's apply_limit_buckets, and stays robust to future fields.
+                ..Default::default()
             })
             .await
             .map_err(|e| format!("no WebGPU adapter: {e}"))?;
@@ -1595,8 +1597,9 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires a native GPU adapter"]
+    #[serial_test::serial(gpu)]
     fn native_offscreen_renders_tensor_and_mesh_on_shared_gpu() {
+        if !crate::wgsl_forge::test_gpu_available() { return; }
         let mut renderer =
             PortalGpu::new_offscreen(96, 96, 256).expect("native offscreen renderer");
 

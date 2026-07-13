@@ -397,8 +397,9 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires a GPU adapter"]
+    #[serial_test::serial(gpu)]
     fn stencil_gpu_matches_oracle() {
+        if !crate::wgsl_forge::test_gpu_available() { return; }
         // Laplacian.
         let inp: Vec<f32> = (0..512)
             .map(|i| ((i * 7 % 31) as f32) * 0.1 - 1.5)

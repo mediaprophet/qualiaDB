@@ -13,12 +13,17 @@ use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::OnceLock;
 
-#[cfg(not(target_arch = "wasm32"))]
+// `caps` reports wgpu adapter capabilities, so it only compiles where the wgpu
+// dependency is present: native always, or wasm with the `gpu-runtime` feature.
+// Without this gate the module fails the `wasm-logic` build (no wgpu crate).
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
 mod caps;
+#[cfg(any(not(target_arch = "wasm32"), feature = "gpu-runtime"))]
+pub(crate) use caps::{experimental_features_allowed, requested_native_llm_features};
 #[cfg(not(target_arch = "wasm32"))]
 pub use caps::{
-    qualia_backend_override, recommend_inference_backend, requested_native_llm_features,
-    GpuAdapterCaps, GpuFeatureCaps, GpuLimitCaps,
+    qualia_backend_override, recommend_inference_backend, GpuAdapterCaps, GpuFeatureCaps,
+    GpuLimitCaps,
 };
 
 /// Desktop / portal operational mode (thermal + VRAM driven).
@@ -803,10 +808,22 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
         max_storage_buffer_binding_size: adapter_limits.max_storage_buffer_binding_size,
         ..wgpu::Limits::default()
     };
+    let experimental_features = if required_features.intersects(
+        wgpu::Features::EXPERIMENTAL_COOPERATIVE_MATRIX
+            | wgpu::Features::EXPERIMENTAL_RAY_QUERY,
+    ) {
+        // Safety: experimental capabilities are requested only after intersecting
+        // with the selected adapter's advertised feature set. Callers must also
+        // explicitly opt in through QUALIA_WGPU_EXPERIMENTAL_FEATURES.
+        unsafe { wgpu::ExperimentalFeatures::enabled() }
+    } else {
+        wgpu::ExperimentalFeatures::disabled()
+    };
     let (device, queue) = adapter
         .request_device(&wgpu::DeviceDescriptor {
             required_features,
             required_limits,
+            experimental_features,
             ..Default::default()
         })
         .await
@@ -856,8 +873,11 @@ mod tests {
     /// machine (default, or pinned by `QUALIA_WGPU_BACKEND`). Run default vs `QUALIA_WGPU_BACKEND=vulkan`
     /// in separate processes to confirm the override drives the real device.
     #[test]
-    #[ignore = "requires a GPU adapter; reports the selected inference backend"]
+    #[serial_test::serial(gpu)]
     fn report_inference_backend() {
+        if !crate::wgsl_forge::test_gpu_available() {
+            return;
+        }
         let g = shared_gpu();
         eprintln!(
             "[inference-backend] selected = {} | recommend: {}",
