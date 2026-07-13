@@ -77,9 +77,12 @@ are staged honestly, not faked.
   perceptual projections (§1.3). The QISP `profile.rs` + `qisp.ttl` are corrected to match
   and cite the standard; **`mu` was fixed Epistemic→Spectral** and the "provisional" flags
   dropped. No open axis question remains.
-- **Namespace governance (QISP-D02) — still open:** who controls/preserves
-  `standards.qualiadb.org` before the provisional IRIs are published. (Not a code blocker; a
-  governance decision.)
+- **Namespace governance (QISP-D02) — DECIDED 2026-07-13.** Timothy set the namespace
+  authority to **`webizen.org`** (not `qualiadb.org`), matching the established house
+  convention (`https://webizen.org/q42#`, `ns.webizen.org/q42/…`). All QISP IRIs are now
+  `https://webizen.org/immersive/{,function/,datatype/}0.1#` across code, ontology,
+  SHACL, examples, and the plan. Only the operational continuity/archival plan for the
+  domain remains as ordinary governance — no open decision blocks the core.
 
 ### Next step
 

@@ -40,13 +40,13 @@ pub mod value;
 // ---------------------------------------------------------------------------
 
 /// Ontology namespace — classes and properties (`qisp:`).
-pub const QISP_NS: &str = "https://standards.qualiadb.org/immersive/0.1#";
+pub const QISP_NS: &str = "https://webizen.org/immersive/0.1#";
 
 /// Function namespace — executable extension functions (`qispf:`).
-pub const QISPF_NS: &str = "https://standards.qualiadb.org/immersive/function/0.1#";
+pub const QISPF_NS: &str = "https://webizen.org/immersive/function/0.1#";
 
 /// Datatype namespace — QISP-specific datatypes (`qispd:`).
-pub const QISPD_NS: &str = "https://standards.qualiadb.org/immersive/datatype/0.1#";
+pub const QISPD_NS: &str = "https://webizen.org/immersive/datatype/0.1#";
 
 // ---------------------------------------------------------------------------
 // Public API re-exports.

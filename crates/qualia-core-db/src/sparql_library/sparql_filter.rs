@@ -1499,7 +1499,7 @@ mod tests {
         let ctx0 = SparqlQueryContext::new();
         let row0 = BindingRow::new();
         let knn = Function::Custom(crate::q_hash(
-            "https://standards.qualiadb.org/immersive/function/0.1#knn",
+            "https://webizen.org/immersive/function/0.1#knn",
         ));
         assert!(
             ExpressionEvaluator::evaluate_function(knn, 0, 2, &ctx0, &row0, None).is_err(),
@@ -1521,7 +1521,7 @@ mod tests {
         let resolver = TextResolver::new(&lits).with_sink(&sink);
         let row = BindingRow::new();
         let intersects = Function::Custom(crate::q_hash(
-            "https://standards.qualiadb.org/immersive/function/0.1#intersects",
+            "https://webizen.org/immersive/function/0.1#intersects",
         ));
         let got = ExpressionEvaluator::evaluate_function(
             intersects, 0, 2, &ctx, &row, Some(resolver),
@@ -1532,7 +1532,7 @@ mod tests {
         // qispf:volume is QISP-owned (mesh) → honest "not yet executable inline"
         // error, NOT a fabricated measurement.
         let vol = Function::Custom(crate::q_hash(
-            "https://standards.qualiadb.org/immersive/function/0.1#volume",
+            "https://webizen.org/immersive/function/0.1#volume",
         ));
         assert!(
             ExpressionEvaluator::evaluate_function(vol, 0, 1, &ctx, &row, Some(resolver)).is_err(),

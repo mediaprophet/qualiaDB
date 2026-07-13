@@ -1,6 +1,6 @@
 VERSION "1.2"
-PREFIX qisp:  <https://standards.qualiadb.org/immersive/0.1#>
-PREFIX qispf: <https://standards.qualiadb.org/immersive/function/0.1#>
+PREFIX qisp:  <https://webizen.org/immersive/0.1#>
+PREFIX qispf: <https://webizen.org/immersive/function/0.1#>
 
 SELECT ?agent ?zone
 WHERE {

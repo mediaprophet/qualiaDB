@@ -155,7 +155,7 @@ const MB: u32 = 1 << 20;
 pub const FUNCTIONS: &[FunctionEntry] = &[
     // ── Topological (hot predicate after coarse filter) ──────────────────────
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#intersects",
+        "https://webizen.org/immersive/function/0.1#intersects",
         [K::GeometryRef, K::GeometryRef, K::Boolean, K::Boolean],
         2,
         K::Boolean,
@@ -167,7 +167,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
         Some("http://www.opengis.net/def/function/geosparql/sfIntersects"),
     ),
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#contains",
+        "https://webizen.org/immersive/function/0.1#contains",
         [K::GeometryRef, K::GeometryRef, K::Boolean, K::Boolean],
         2,
         K::Boolean,
@@ -179,7 +179,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
         Some("http://www.opengis.net/def/function/geosparql/sfContains"),
     ),
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#touches",
+        "https://webizen.org/immersive/function/0.1#touches",
         [K::GeometryRef, K::GeometryRef, K::Boolean, K::Boolean],
         2,
         K::Boolean,
@@ -192,7 +192,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
     ),
     // ── Proximity (hot query, caller-buffered) ───────────────────────────────
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#distance",
+        "https://webizen.org/immersive/function/0.1#distance",
         [K::GeometryRef, K::GeometryRef, K::Boolean, K::Boolean],
         2,
         K::Quantity,
@@ -204,7 +204,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
         Some("http://www.opengis.net/def/function/geosparql/distance"),
     ),
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#withinDistance",
+        "https://webizen.org/immersive/function/0.1#withinDistance",
         [K::GeometryRef, K::GeometryRef, K::Scalar, K::Boolean],
         3,
         K::Boolean,
@@ -216,7 +216,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
         None,
     ),
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#nearest",
+        "https://webizen.org/immersive/function/0.1#nearest",
         [K::GeometryRef, K::Scalar, K::Boolean, K::Boolean],
         2,
         K::AssetRef,
@@ -229,7 +229,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
     ),
     // ── Visibility (ray/BVH; exact or labelled approximation) ─────────────────
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#lineOfSight",
+        "https://webizen.org/immersive/function/0.1#lineOfSight",
         [K::GeometryRef, K::GeometryRef, K::Boolean, K::Boolean],
         2,
         K::Boolean,
@@ -241,7 +241,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
         None,
     ),
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#occludes",
+        "https://webizen.org/immersive/function/0.1#occludes",
         [K::GeometryRef, K::GeometryRef, K::Boolean, K::Boolean],
         2,
         K::Boolean,
@@ -254,7 +254,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
     ),
     // ── Measurement (hot if precomputed/simple; otherwise bounded) ────────────
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#volume",
+        "https://webizen.org/immersive/function/0.1#volume",
         [K::GeometryRef, K::Boolean, K::Boolean, K::Boolean],
         1,
         K::Quantity,
@@ -266,7 +266,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
         None,
     ),
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#surfaceArea",
+        "https://webizen.org/immersive/function/0.1#surfaceArea",
         [K::GeometryRef, K::Boolean, K::Boolean, K::Boolean],
         1,
         K::Quantity,
@@ -278,7 +278,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
         None,
     ),
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#centroid",
+        "https://webizen.org/immersive/function/0.1#centroid",
         [K::GeometryRef, K::Boolean, K::Boolean, K::Boolean],
         1,
         K::GeometryRef,
@@ -291,7 +291,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
     ),
     // ── Temporal (bounded trace/window evaluation) ────────────────────────────
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#intersectsAt",
+        "https://webizen.org/immersive/function/0.1#intersectsAt",
         [K::GeometryRef, K::GeometryRef, K::Instant, K::Boolean],
         3,
         K::Boolean,
@@ -303,7 +303,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
         None,
     ),
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#trajectoryIntersects",
+        "https://webizen.org/immersive/function/0.1#trajectoryIntersects",
         [K::GeometryRef, K::GeometryRef, K::Interval, K::Boolean],
         3,
         K::Boolean,
@@ -315,7 +315,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
         None,
     ),
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#sliceAtTime",
+        "https://webizen.org/immersive/function/0.1#sliceAtTime",
         [K::TensorRef, K::Instant, K::Boolean, K::Boolean],
         2,
         K::TensorRef,
@@ -328,7 +328,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
     ),
     // ── Tensor (resident substrate / GPU batch) ───────────────────────────────
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#tensorDistance",
+        "https://webizen.org/immersive/function/0.1#tensorDistance",
         [K::TensorRef, K::TensorRef, K::Boolean, K::Boolean],
         2,
         K::Quantity,
@@ -340,7 +340,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
         None,
     ),
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#tensorWithin",
+        "https://webizen.org/immersive/function/0.1#tensorWithin",
         [K::TensorRef, K::TensorRef, K::Scalar, K::Boolean],
         3,
         K::Boolean,
@@ -352,7 +352,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
         None,
     ),
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#tensorSlice",
+        "https://webizen.org/immersive/function/0.1#tensorSlice",
         [K::TensorRef, K::Scalar, K::Boolean, K::Boolean],
         2,
         K::TensorRef,
@@ -368,7 +368,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
     // `is_expression_legal`). ColdBoundedSync + non-deterministic ordering-of-ties
     // marks it ineligible for FILTER/BIND (plan §6.1 physical operators).
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#knn",
+        "https://webizen.org/immersive/function/0.1#knn",
         [K::TensorRef, K::Scalar, K::Boolean, K::Boolean],
         2,
         K::AssetRef,
@@ -381,7 +381,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
     ),
     // ── Constructive (cold bounded arena) ─────────────────────────────────────
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#intersectionGeometry",
+        "https://webizen.org/immersive/function/0.1#intersectionGeometry",
         [K::GeometryRef, K::GeometryRef, K::Boolean, K::Boolean],
         2,
         K::GeometryRef,
@@ -393,7 +393,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
         None,
     ),
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#unionGeometry",
+        "https://webizen.org/immersive/function/0.1#unionGeometry",
         [K::GeometryRef, K::GeometryRef, K::Boolean, K::Boolean],
         2,
         K::GeometryRef,
@@ -405,7 +405,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
         None,
     ),
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#differenceGeometry",
+        "https://webizen.org/immersive/function/0.1#differenceGeometry",
         [K::GeometryRef, K::GeometryRef, K::Boolean, K::Boolean],
         2,
         K::GeometryRef,
@@ -418,7 +418,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
     ),
     // ── Transform (cold bounded unless a fixed scalar transform) ──────────────
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#transform",
+        "https://webizen.org/immersive/function/0.1#transform",
         [K::GeometryRef, K::Scalar, K::Boolean, K::Boolean],
         2,
         K::GeometryRef,
@@ -430,7 +430,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
         None,
     ),
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#reproject",
+        "https://webizen.org/immersive/function/0.1#reproject",
         [K::GeometryRef, K::Scalar, K::Boolean, K::Boolean],
         2,
         K::GeometryRef,
@@ -442,7 +442,7 @@ pub const FUNCTIONS: &[FunctionEntry] = &[
         None,
     ),
     entry(
-        "https://standards.qualiadb.org/immersive/function/0.1#buffer",
+        "https://webizen.org/immersive/function/0.1#buffer",
         [K::GeometryRef, K::Scalar, K::Boolean, K::Boolean],
         2,
         K::GeometryRef,
@@ -527,7 +527,7 @@ mod tests {
 
     #[test]
     fn lookup_by_hash_and_iri_agree() {
-        let iri = "https://standards.qualiadb.org/immersive/function/0.1#intersects";
+        let iri = "https://webizen.org/immersive/function/0.1#intersects";
         let by_iri = entry_for_iri(iri).unwrap();
         let by_hash = entry_for_iri_hash(crate::q_hash(iri)).unwrap();
         assert_eq!(by_iri.descriptor.iri_hash, by_hash.descriptor.iri_hash);
@@ -538,13 +538,13 @@ mod tests {
     #[test]
     fn topological_and_proximity_defer_to_geosparql() {
         for name in ["intersects", "contains", "touches", "distance"] {
-            let iri = format!("https://standards.qualiadb.org/immersive/function/0.1#{name}");
+            let iri = format!("https://webizen.org/immersive/function/0.1#{name}");
             let e = entry_for_iri(&iri).unwrap();
             assert!(e.defers_to.is_some(), "{name} should defer to geof: for 2D");
         }
         // withinDistance / volume are QISP-owned (no GeoSPARQL 2D equivalent used here).
         let wd =
-            entry_for_iri("https://standards.qualiadb.org/immersive/function/0.1#withinDistance")
+            entry_for_iri("https://webizen.org/immersive/function/0.1#withinDistance")
                 .unwrap();
         assert!(wd.defers_to.is_none());
     }
@@ -552,13 +552,13 @@ mod tests {
     #[test]
     fn admission_rejects_knn_inline_but_admits_predicates() {
         let intersects =
-            crate::q_hash("https://standards.qualiadb.org/immersive/function/0.1#intersects");
+            crate::q_hash("https://webizen.org/immersive/function/0.1#intersects");
         assert!(
             matches!(admit_inline(intersects), Some(Ok(_))),
             "intersects is legal inline"
         );
 
-        let knn = crate::q_hash("https://standards.qualiadb.org/immersive/function/0.1#knn");
+        let knn = crate::q_hash("https://webizen.org/immersive/function/0.1#knn");
         assert!(
             matches!(
                 admit_inline(knn),
@@ -582,7 +582,7 @@ mod tests {
             "tensorDistance",
             "tensorWithin",
         ] {
-            let iri = format!("https://standards.qualiadb.org/immersive/function/0.1#{name}");
+            let iri = format!("https://webizen.org/immersive/function/0.1#{name}");
             let e = entry_for_iri(&iri).unwrap();
             assert_eq!(e.descriptor.execution, X::HotZeroHeap, "{name} must be hot");
             assert!(
@@ -599,7 +599,7 @@ mod tests {
             "unionGeometry",
             "differenceGeometry",
         ] {
-            let iri = format!("https://standards.qualiadb.org/immersive/function/0.1#{name}");
+            let iri = format!("https://webizen.org/immersive/function/0.1#{name}");
             let e = entry_for_iri(&iri).unwrap();
             assert_eq!(e.descriptor.execution, X::ColdBoundedSync);
             assert!(

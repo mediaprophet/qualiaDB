@@ -1,6 +1,6 @@
-@prefix qisp:  <https://standards.qualiadb.org/immersive/0.1#> .
-@prefix qispf: <https://standards.qualiadb.org/immersive/function/0.1#> .
-@prefix qispd: <https://standards.qualiadb.org/immersive/datatype/0.1#> .
+@prefix qisp:  <https://webizen.org/immersive/0.1#> .
+@prefix qispf: <https://webizen.org/immersive/function/0.1#> .
+@prefix qispd: <https://webizen.org/immersive/datatype/0.1#> .
 @prefix owl:   <http://www.w3.org/2002/07/owl#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
@@ -27,8 +27,8 @@ QISP is a profile and extension vocabulary layered over RDF 1.2 / SPARQL 1.2, Ge
 PROV-O, OWL-Time, QUDT, and the W3C VC Data Model 2.0; it reuses those vocabularies rather than
 minting synonyms.""" ;
     dct:license "Provisional — licensing statement pending per QISP §2.4 (not yet granted)" ;
-    rdfs:seeAlso <https://standards.qualiadb.org/immersive/function/0.1#> ,
-                 <https://standards.qualiadb.org/immersive/datatype/0.1#> .
+    rdfs:seeAlso <https://webizen.org/immersive/function/0.1#> ,
+                 <https://webizen.org/immersive/datatype/0.1#> .
 
 #################################################################
 # Core resource classes (QISP plan §3.2)

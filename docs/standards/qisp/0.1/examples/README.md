@@ -44,4 +44,4 @@ authorization — the decision must be independently verified (§2.2 point 3).
 As written in the plan, query 03 references `qispf:reifierFor(...)` but declares no `qispf:` prefix
 (the plan §5.3 omits it). The query is reproduced verbatim to stay faithful to the source; an
 implementation running it would need the `qispf:` prefix declaration added
-(`PREFIX qispf: <https://standards.qualiadb.org/immersive/function/0.1#>`).
+(`PREFIX qispf: <https://webizen.org/immersive/function/0.1#>`).

@@ -115,9 +115,9 @@ Separate ontology, function, and datatype namespaces keep predicates distinct fr
 functions:
 
 ```text
-qisp:  https://standards.qualiadb.org/immersive/0.1#
-qispf: https://standards.qualiadb.org/immersive/function/0.1#
-qispd: https://standards.qualiadb.org/immersive/datatype/0.1#
+qisp:  https://webizen.org/immersive/0.1#
+qispf: https://webizen.org/immersive/function/0.1#
+qispd: https://webizen.org/immersive/datatype/0.1#
 ```
 
 These are **provisional versioned IRIs**. Before any public standardization the namespaces must

@@ -18,7 +18,7 @@ use super::value::QispError;
 /// Absolute IRI of the Qualia Tensor10D profile. Any inline Tensor10D value MUST be
 /// accompanied by this profile IRI to be interpreted (plan §3.5, §3.6).
 pub const TENSOR10D_PROFILE_IRI: &str =
-    "https://standards.qualiadb.org/immersive/0.1#Tensor10DProfile";
+    "https://webizen.org/immersive/0.1#Tensor10DProfile";
 
 /// How a Tensor10D dimension is classified. This governs how a dimension is
 /// interpreted and rendered; it deliberately does **not** claim all ten axes are
@@ -150,7 +150,7 @@ mod tests {
     fn profile_iri_is_the_provisional_tensor10d_iri() {
         assert_eq!(
             TENSOR10D_PROFILE_IRI,
-            "https://standards.qualiadb.org/immersive/0.1#Tensor10DProfile"
+            "https://webizen.org/immersive/0.1#Tensor10DProfile"
         );
     }
 

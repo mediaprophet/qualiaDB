@@ -74,12 +74,12 @@ impl ExactnessClass {
     /// asserts that invariant so the two stay in lockstep.
     pub const fn iri(&self) -> &'static str {
         match self {
-            ExactnessClass::Exact => "https://standards.qualiadb.org/immersive/0.1#Exact",
+            ExactnessClass::Exact => "https://webizen.org/immersive/0.1#Exact",
             ExactnessClass::DeterministicApproximate => {
-                "https://standards.qualiadb.org/immersive/0.1#DeterministicApproximate"
+                "https://webizen.org/immersive/0.1#DeterministicApproximate"
             }
             ExactnessClass::InteractiveApproximate => {
-                "https://standards.qualiadb.org/immersive/0.1#InteractiveApproximate"
+                "https://webizen.org/immersive/0.1#InteractiveApproximate"
             }
         }
     }
@@ -265,7 +265,7 @@ mod tests {
     #[test]
     fn descriptor_round_trips_by_value() {
         let d = ImmersiveFunctionDescriptor::new(
-            crate::q_hash("https://standards.qualiadb.org/immersive/function/0.1#intersects"),
+            crate::q_hash("https://webizen.org/immersive/function/0.1#intersects"),
             [
                 ImmersiveValueKind::AssetRef,
                 ImmersiveValueKind::AssetRef,
@@ -351,15 +351,15 @@ mod tests {
         assert!(ExactnessClass::InteractiveApproximate.iri().starts_with(QISP_NS));
         assert_eq!(
             ExactnessClass::Exact.iri(),
-            "https://standards.qualiadb.org/immersive/0.1#Exact"
+            "https://webizen.org/immersive/0.1#Exact"
         );
         assert_eq!(
             ExactnessClass::DeterministicApproximate.iri(),
-            "https://standards.qualiadb.org/immersive/0.1#DeterministicApproximate"
+            "https://webizen.org/immersive/0.1#DeterministicApproximate"
         );
         assert_eq!(
             ExactnessClass::InteractiveApproximate.iri(),
-            "https://standards.qualiadb.org/immersive/0.1#InteractiveApproximate"
+            "https://webizen.org/immersive/0.1#InteractiveApproximate"
         );
     }
 
