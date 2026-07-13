@@ -375,6 +375,70 @@ mod sparql_tests {
     }
 
     #[test]
+    fn test_filter_exists_keeps_matching_rows() {
+        let tok = |b: &[u8]| crate::lexicon::generate_60bit_token(b);
+        let (alice, bob, carol) = (
+            tok(b"http://ex/alice"),
+            tok(b"http://ex/bob"),
+            tok(b"http://ex/carol"),
+        );
+        let (knows, likes) = (tok(b"http://ex/knows"), tok(b"http://ex/likes"));
+        // alice knows bob; bob likes carol.
+        let quins = vec![mk_quin(alice, knows, bob), mk_quin(bob, likes, carol)];
+
+        // Keep ?s whose known ?o likes something.
+        let q = "SELECT ?s WHERE { ?s <http://ex/knows> ?o . \
+                 FILTER EXISTS { ?o <http://ex/likes> ?z } }";
+        let (ctx, rows) = run_query(q, &quins);
+        assert_eq!(rows.len(), 1, "EXISTS holds for alice->bob->carol");
+        assert_eq!(rows[0].get(var_of(&ctx, b"?s")), Some(alice));
+    }
+
+    #[test]
+    fn test_filter_not_exists_removes_matching_rows() {
+        let tok = |b: &[u8]| crate::lexicon::generate_60bit_token(b);
+        let (alice, bob, carol, dave) = (
+            tok(b"http://ex/alice"),
+            tok(b"http://ex/bob"),
+            tok(b"http://ex/carol"),
+            tok(b"http://ex/dave"),
+        );
+        let (knows, likes) = (tok(b"http://ex/knows"), tok(b"http://ex/likes"));
+        // alice knows bob (bob likes carol) and dave (dave likes nobody).
+        let quins = vec![
+            mk_quin(alice, knows, bob),
+            mk_quin(alice, knows, dave),
+            mk_quin(bob, likes, carol),
+        ];
+
+        // Keep alice's acquaintances who like nobody → only dave.
+        let q = "SELECT ?o WHERE { <http://ex/alice> <http://ex/knows> ?o . \
+                 FILTER NOT EXISTS { ?o <http://ex/likes> ?z } }";
+        let (ctx, rows) = run_query(q, &quins);
+        assert_eq!(rows.len(), 1, "only dave (likes nobody) survives NOT EXISTS");
+        assert_eq!(rows[0].get(var_of(&ctx, b"?o")), Some(dave));
+    }
+
+    #[test]
+    fn test_filter_bracketed_exists_conjunction() {
+        // EXISTS nested inside a bracketed boolean expression (ExprParser path).
+        let tok = |b: &[u8]| crate::lexicon::generate_60bit_token(b);
+        let (alice, bob, carol) = (
+            tok(b"http://ex/alice"),
+            tok(b"http://ex/bob"),
+            tok(b"http://ex/carol"),
+        );
+        let (knows, likes) = (tok(b"http://ex/knows"), tok(b"http://ex/likes"));
+        let quins = vec![mk_quin(alice, knows, bob), mk_quin(bob, likes, carol)];
+
+        let q = "SELECT ?s WHERE { ?s <http://ex/knows> ?o . \
+                 FILTER ( EXISTS { ?o <http://ex/likes> ?z } && EXISTS { ?o <http://ex/likes> ?z } ) }";
+        let (ctx, rows) = run_query(q, &quins);
+        assert_eq!(rows.len(), 1, "bracketed EXISTS && EXISTS holds");
+        assert_eq!(rows[0].get(var_of(&ctx, b"?s")), Some(alice));
+    }
+
+    #[test]
     fn test_graph_variable_binds_named_graph() {
         let tok = |b: &[u8]| crate::lexicon::generate_60bit_token(b);
         let (s, p, o) = (

@@ -242,6 +242,15 @@ pub enum Expression {
         predicate: u64,
         object: u64,
     },
+    /// `EXISTS { … }` / `NOT EXISTS { … }` — true iff the inner group graph
+    /// pattern has ≥1 solution when the current row's bindings are substituted
+    /// in. `negated` flips the result (NOT EXISTS). Evaluated by the executor
+    /// (it needs graph access), not the pure value evaluator; it is only valid
+    /// in a FILTER/HAVING boolean position.
+    Exists {
+        pattern: PatternId,
+        negated: bool,
+    },
 }
 
 /// Unary operators

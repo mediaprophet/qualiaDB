@@ -226,6 +226,32 @@ impl<'a> ExprParser<'a> {
             return self.parse_embedded_triple();
         }
 
+        // `EXISTS { … }` / `NOT EXISTS { … }` inside a bracketed expression
+        // (e.g. `FILTER( EXISTS { … } && ?x > 1 )`). The inner group is parsed by
+        // the group-graph-pattern parser over the current token slice.
+        let is_exists =
+            matches!(self.peek(), Some(Token::Word(w)) if w.eq_ignore_ascii_case("EXISTS"));
+        let is_not_exists =
+            matches!(self.peek(), Some(Token::Word(w)) if w.eq_ignore_ascii_case("NOT"))
+                && matches!(self.tokens.get(self.pos + 1),
+                    Some(Token::Word(w)) if w.eq_ignore_ascii_case("EXISTS"));
+        if is_exists || is_not_exists {
+            let mut negated = false;
+            if is_not_exists {
+                self.pos += 1; // consume NOT
+                negated = true;
+            }
+            self.pos += 1; // consume EXISTS; self.pos now indexes '{'
+            let (pattern, new_pos) = super::pattern::parse_group_tokens(
+                self.tokens,
+                self.pos,
+                self.ctx,
+                self.prefixes,
+            )?;
+            self.pos = new_pos;
+            return self.alloc(Expression::Exists { pattern, negated });
+        }
+
         let tok = self
             .bump()
             .ok_or_else(|| "unexpected end of expression".to_string())?

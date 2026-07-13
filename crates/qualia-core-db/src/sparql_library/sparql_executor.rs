@@ -673,15 +673,96 @@ impl<'a> QueryExecutor<'a> {
         let mut input_results = Vec::new();
         self.execute_operator(input, plan, ctx, row, &mut input_results)?;
 
-        // Filter results based on expression evaluation
+        // Filter results based on expression evaluation. `eval_filter_bool`
+        // handles FILTER (NOT) EXISTS in boolean position and delegates pure
+        // value expressions to the expression evaluator.
         for input_row in input_results {
-            let eval_result = ExpressionEvaluator::evaluate_with_resolver(expression, ctx, &input_row, self.resolver)?;
-            if eval_result.as_bool() {
+            if self.eval_filter_bool(expression, ctx, &input_row)? {
                 results.push(input_row);
             }
         }
 
         Ok(!results.is_empty())
+    }
+
+    /// True iff the expression subtree contains an `EXISTS`/`NOT EXISTS` node
+    /// (walking the boolean-combinator arms only — enough to route `&&`/`||`/`!`
+    /// through `eval_filter_bool`; an EXISTS anywhere else falls through to the
+    /// value evaluator, which rejects it honestly).
+    fn expr_contains_exists(expr_id: ExpressionId, ctx: &SparqlQueryContext) -> bool {
+        match ctx.expressions.get(expr_id as usize) {
+            Some(Expression::Exists { .. }) => true,
+            Some(Expression::UnaryOp { expr, .. }) => Self::expr_contains_exists(*expr, ctx),
+            Some(Expression::BinaryOp { left, right, .. }) => {
+                Self::expr_contains_exists(*left, ctx) || Self::expr_contains_exists(*right, ctx)
+            }
+            _ => false,
+        }
+    }
+
+    /// Evaluate `EXISTS { pattern }` for the current row: plan the inner group,
+    /// execute it seeded with the row's bindings (pre-bound variables act as the
+    /// SPARQL substitution μ), and report whether ≥1 solution exists.
+    fn eval_exists(
+        &self,
+        pattern: PatternId,
+        ctx: &SparqlQueryContext,
+        row: &BindingRow,
+    ) -> Result<bool, String> {
+        let mut sub_plan = ExecutionPlan::new();
+        let op = QueryPlanner::plan_pattern(pattern, ctx, &mut sub_plan)?;
+        sub_plan.root_operator = op;
+        let mut seed = *row;
+        let mut local = Vec::new();
+        self.execute_operator(op, &sub_plan, ctx, &mut seed, &mut local)?;
+        Ok(!local.is_empty())
+    }
+
+    /// Evaluate a FILTER/HAVING constraint to a boolean, resolving `EXISTS`/`NOT
+    /// EXISTS` (which need graph access) at the top level and within `&&`/`||`/`!`
+    /// combinators, and delegating everything else to the value evaluator.
+    fn eval_filter_bool(
+        &self,
+        expr_id: ExpressionId,
+        ctx: &SparqlQueryContext,
+        row: &BindingRow,
+    ) -> Result<bool, String> {
+        let expr = *ctx
+            .expressions
+            .get(expr_id as usize)
+            .ok_or("Expression ID out of bounds")?;
+        match expr {
+            Expression::Exists { pattern, negated } => {
+                Ok(self.eval_exists(pattern, ctx, row)? ^ negated)
+            }
+            Expression::UnaryOp {
+                op: UnaryOp::Not,
+                expr,
+            } if Self::expr_contains_exists(expr, ctx) => Ok(!self.eval_filter_bool(expr, ctx, row)?),
+            Expression::BinaryOp {
+                op: BinaryOp::And,
+                left,
+                right,
+            } if Self::expr_contains_exists(left, ctx) || Self::expr_contains_exists(right, ctx) => {
+                Ok(self.eval_filter_bool(left, ctx, row)? && self.eval_filter_bool(right, ctx, row)?)
+            }
+            Expression::BinaryOp {
+                op: BinaryOp::Or,
+                left,
+                right,
+            } if Self::expr_contains_exists(left, ctx) || Self::expr_contains_exists(right, ctx) => {
+                Ok(self.eval_filter_bool(left, ctx, row)? || self.eval_filter_bool(right, ctx, row)?)
+            }
+            _ => {
+                let r = ExpressionEvaluator::evaluate_with_resolver(
+                    expr_id,
+                    ctx,
+                    row,
+                    self.resolver,
+                )?;
+                Ok(r.as_bool())
+            }
+        }
     }
 
     fn execute_bind(
@@ -1000,10 +1081,9 @@ impl<'a> QueryExecutor<'a> {
         let mut all_results = Vec::new();
         self.execute_operator(input, plan, ctx, row, &mut all_results)?;
 
-        // Filter results based on HAVING expression
+        // Filter results based on HAVING expression (EXISTS-aware, like FILTER).
         for result in all_results {
-            let eval_result = ExpressionEvaluator::evaluate_with_resolver(expression, ctx, &result, self.resolver)?;
-            if eval_result.as_bool() {
+            if self.eval_filter_bool(expression, ctx, &result)? {
                 results.push(result);
             }
         }

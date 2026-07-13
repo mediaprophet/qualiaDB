@@ -245,6 +245,14 @@ impl ExpressionEvaluator {
                 let triple_hash = crate::lexicon::generate_embedded_triple_id(*subject, *predicate, *object);
                 Ok(EvalResult::Numeric(triple_hash))
             }
+            // EXISTS needs to run a graph pattern, which the pure value evaluator
+            // cannot do. The executor evaluates it in FILTER/HAVING boolean
+            // position (see QueryExecutor::eval_filter_bool). Reaching it here
+            // means it was used as a value — reject loudly rather than fake it.
+            Expression::Exists { .. } => Err(
+                "EXISTS/NOT EXISTS is only valid in a FILTER/HAVING boolean position"
+                    .to_string(),
+            ),
         }
     }
 

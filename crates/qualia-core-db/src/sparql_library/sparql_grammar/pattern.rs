@@ -24,7 +24,9 @@
 
 use std::collections::HashMap;
 
-use crate::sparql_ast::{ExpressionId, Pattern, PatternId, SparqlQueryContext, VariableId};
+use crate::sparql_ast::{
+    Expression, ExpressionId, Pattern, PatternId, SparqlQueryContext, VariableId,
+};
 use crate::sparql_library::sparql_grammar::expr::parse_expression;
 use crate::sparql_library::sparql_grammar::tokenizer::{tokenize, Token};
 
@@ -49,6 +51,26 @@ pub fn parse_where_group(
         }
     }
     p.parse_group()
+}
+
+/// Parse a `{ … }` group graph pattern directly from a token slice starting at
+/// `pos` (which must index the opening `{`). Returns the root `PatternId` and
+/// the position just past the closing `}`. Used by the FILTER-expression parser
+/// to parse an `EXISTS { … }` group embedded in a bracketed expression.
+pub(crate) fn parse_group_tokens(
+    tokens: &[Token],
+    pos: usize,
+    ctx: &mut SparqlQueryContext,
+    prefixes: &HashMap<String, String>,
+) -> Result<(PatternId, usize), String> {
+    let mut p = PatternParser {
+        tokens,
+        pos,
+        ctx,
+        prefixes,
+    };
+    let id = p.parse_group()?;
+    Ok((id, p.pos))
 }
 
 /// One direct child of a group, allocated as exactly one arena node in the
@@ -291,6 +313,15 @@ impl<'a> PatternParser<'a> {
     /// Parse a `FILTER` expression: either `( expr )` or a bare `WORD(args)`
     /// builtin. Collects the balanced-paren token span and parses it.
     fn parse_filter_expr(&mut self) -> Result<ExpressionId, String> {
+        // `FILTER EXISTS { … }` / `FILTER NOT EXISTS { … }` — an unparenthesised
+        // built-in constraint (SPARQL 1.1 [69] Constraint → BuiltInCall).
+        let not_exists = self.peek_word_ci("NOT")
+            && matches!(self.tokens.get(self.pos + 1),
+                Some(Token::Word(w)) if w.eq_ignore_ascii_case("EXISTS"));
+        if self.peek_word_ci("EXISTS") || not_exists {
+            return self.parse_exists_constraint();
+        }
+
         // Collect the token span of a parenthesised expression.
         if !matches!(self.peek(), Some(Token::Punct('('))) {
             return Err("expected '(' after FILTER".to_string());
@@ -317,6 +348,23 @@ impl<'a> PatternParser<'a> {
         let expr_tokens = &self.tokens[start..i];
         self.pos = i + 1; // past ')'
         parse_expression(expr_tokens, self.ctx, self.prefixes)
+    }
+
+    /// Parse `EXISTS { … }` or `NOT EXISTS { … }` (positioned at `NOT`/`EXISTS`)
+    /// into an `Expression::Exists` over the inner group graph pattern.
+    fn parse_exists_constraint(&mut self) -> Result<ExpressionId, String> {
+        let mut negated = false;
+        if self.peek_word_ci("NOT") {
+            self.pos += 1;
+            negated = true;
+        }
+        if !self.peek_word_ci("EXISTS") {
+            return Err("expected EXISTS".to_string());
+        }
+        self.pos += 1;
+        let pattern = self.parse_group()?;
+        self.ctx
+            .alloc_expression(Expression::Exists { pattern, negated })
     }
 
     /// Parse `BIND ( expr AS ?var )` → (expression id, target variable id).
