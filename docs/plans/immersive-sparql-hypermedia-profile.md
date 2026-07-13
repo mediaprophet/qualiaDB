@@ -216,9 +216,9 @@ Use separate ontology, function, and datatype namespaces so predicates are not c
 with executable functions:
 
 ```text
-qisp:  https://standards.qualiadb.org/immersive/0.1#
-qispf: https://standards.qualiadb.org/immersive/function/0.1#
-qispd: https://standards.qualiadb.org/immersive/datatype/0.1#
+qisp:  https://webizen.org/immersive/0.1#
+qispf: https://webizen.org/immersive/function/0.1#
+qispd: https://webizen.org/immersive/datatype/0.1#
 ```
 
 These are provisional versioned IRIs. Before public standardization, publish HTTPS
@@ -472,8 +472,8 @@ unit, or return a QUDT-described quantity resource. Do not return an undocumente
 
 ```sparql
 VERSION "1.2"
-PREFIX qisp:  <https://standards.qualiadb.org/immersive/0.1#>
-PREFIX qispf: <https://standards.qualiadb.org/immersive/function/0.1#>
+PREFIX qisp:  <https://webizen.org/immersive/0.1#>
+PREFIX qispf: <https://webizen.org/immersive/function/0.1#>
 
 SELECT ?agent ?zone
 WHERE {
@@ -493,8 +493,8 @@ VERSION "1.2"
 PREFIX rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX prov:  <http://www.w3.org/ns/prov#>
 PREFIX unit:  <http://qudt.org/vocab/unit/>
-PREFIX qisp:  <https://standards.qualiadb.org/immersive/0.1#>
-PREFIX qispf: <https://standards.qualiadb.org/immersive/function/0.1#>
+PREFIX qisp:  <https://webizen.org/immersive/0.1#>
+PREFIX qispf: <https://webizen.org/immersive/function/0.1#>
 
 CONSTRUCT {
   ?derived a qisp:TransientGeometry ;
@@ -526,7 +526,7 @@ VERSION "1.2"
 PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX prov: <http://www.w3.org/ns/prov#>
 PREFIX vc:   <https://www.w3.org/2018/credentials#>
-PREFIX qisp: <https://standards.qualiadb.org/immersive/0.1#>
+PREFIX qisp: <https://webizen.org/immersive/0.1#>
 
 CONSTRUCT {
   ?relation rdf:reifies ?occupancy ;
@@ -1119,7 +1119,7 @@ The external review should answer these before implementation passes Phase 1:
 | Decision | Question | Recommended starting position |
 |---|---|---|
 | QISP-D01 | Is “QISP” sufficiently distinct and understandable? | keep as working name only pending search/community feedback |
-| QISP-D02 | Who controls and preserves `standards.qualiadb.org`? | document legal/operational owner and archival continuity before publishing IRIs |
+| QISP-D02 | Who controls and preserves `webizen.org`? | document legal/operational owner and archival continuity before publishing IRIs |
 | QISP-D03 | Which dated RDF/SPARQL 1.2 snapshots are implemented? | pin current W3C publications plus exact rdf-tests commit; update deliberately |
 | QISP-D04 | What is the canonical external asset URI scheme? | HTTPS content-addressed resource with alternates; DID URL optional, never mandatory |
 | QISP-D05 | How is exactness selected in syntax? | explicit final function argument for MVP; evaluate query-level profile after interop testing |

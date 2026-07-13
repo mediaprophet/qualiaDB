@@ -1,7 +1,7 @@
 ---
 created: 2026-06-30
-updated: 2026-06-30
-update_scope: Comprehensive
+updated: 2026-07-13
+update_scope: Minor
 ---
 
 # src Index
@@ -128,4 +128,5 @@ Comprehensive index of functionality for `src`. This document serves as the grou
   - *(...and 42 more)*
 
 ## Changelog
+- **2026-07-13**: Recorded the wgpu 30 renderer migration: color-space selection, explicit queue presentation, optional vertex layouts, and a validated projector fragment stage.
 - **2026-06-30**: Automated full index generation, extracting code definitions.

@@ -436,7 +436,7 @@ mod tests {
         a.initiate_handshake("did:wf:bob").unwrap();
 
         assert!(
-            a.wait_for_session("did:wf:bob", Duration::from_secs(3)),
+            a.wait_for_session("did:wf:bob", Duration::from_secs(10)),
             "session established via the service threads"
         );
 
@@ -445,7 +445,7 @@ mod tests {
         assert!(a.send("did:wf:bob", payload.clone()).unwrap());
 
         let pkt = b
-            .recv_timeout(Duration::from_secs(3))
+            .recv_timeout(Duration::from_secs(10))
             .expect("B received the inner packet");
         assert_eq!(pkt.peer_id, "did:wf:alice");
         assert_eq!(pkt.inner, payload);

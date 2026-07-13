@@ -211,6 +211,13 @@ fn show_main_window(app: &tauri::AppHandle) {
 }
 
 fn main() {
+    if std::env::var_os("QUALIA_DEVICE_BENCHMARK_OUTPUT").is_some() {
+        if let Err(error) = qualia_core_db::platform::device_benchmark::run_worker_from_env() {
+            eprintln!("device benchmark worker failed: {error}");
+            std::process::exit(2);
+        }
+        return;
+    }
     let log_path = desktop_log::init();
     desktop_log::install_panic_hook();
     desktop_log::record("info", "Webizen desktop starting");

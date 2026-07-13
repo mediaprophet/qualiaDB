@@ -1,7 +1,7 @@
 ---
 created: 2026-06-30
-updated: 2026-06-30
-update_scope: Comprehensive
+updated: 2026-07-13
+update_scope: Minor
 ---
 
 # platform Index
@@ -179,4 +179,5 @@ Comprehensive index of functionality for `platform`. This document serves as the
   - `fn SecKeyVerifySignature`
 
 ## Changelog
+- **2026-07-13**: `device_benchmark.rs` now uses process-isolated, deadline-bounded per-adapter/backend workers with validated length-delimited CBOR aggregation for wgpu 30 driver safety.
 - **2026-06-30**: Automated full index generation, extracting code definitions.

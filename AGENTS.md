@@ -101,7 +101,7 @@ parity     [0..63]   XOR fold: subject ^ predicate ^ object ^ context (ECC stub)
 | **P64 GGUF weight container** | `q42/p64_weight.rs` | ✅ byte-exact disk round-trip verified | 64B headers/entries/manifold records, metadata + per-tensor CRC-32C |
 | **10D Manifold → WebizenVM bridge** | `modalities/manifold.rs`, `governance/webizen.rs` | ✅ LTL + stable-model ASP wired | Two parity-valid Quins per state; bounded zero-heap VM evaluation |
 | **WGSL Forge** | `wgsl_forge/`, `qualia-cli/src/shader.rs` | ✅ deterministic generation/certification/tuning | Typed kernel/schedule IR, Naga validation, CPU oracle, real GPU timing, adapter-keyed cache |
-| **N-Dimensional Renderer SDK** | `render/gpu/`, `webizen-render/` | ✅ native + WASM volumetric path | Shared wgpu 29 device, Tensor10D projector, depth/bloom/mesh/picking, caller-buffered RGBA8, serde SDK adapter |
+| **N-Dimensional Renderer SDK** | `render/gpu/`, `webizen-render/` | ✅ native + WASM volumetric path | Shared wgpu 30 device with capability-intersected f16/subgroup/timing features, Tensor10D projector, depth/bloom/mesh/picking, caller-buffered RGBA8, serde SDK adapter |
 | **Linear-Algebra Privacy Engine** | `specialized_libs/linear_algebra/privacy/` | ✅ BFV HE + calibrated DP | Packed exact add/multiply/dot, 48-byte external ciphertext ref, Laplace/Gaussian, basic/advanced/RDP accounting |
 
 ## 2-B. Other Real Implementations (do NOT stub-replace without reading first)
@@ -1120,3 +1120,30 @@ cargo test
 3. Distillation is honest about the current training boundary: MLP teacher,
    linear SGD/MSE student. Transformer/CNN and temperature-KL distillation need
    additional training infrastructure.
+
+### 2026-07-13 — Codex (wgpu 30 completion)
+
+**Completed:**
+- Finished the wgpu/naga 30 migration across core, extensions, renderer, runtime, and WASM.
+- Adopted adapter-intersected timestamp, pipeline-statistics/cache, shader-f16, subgroup, and subgroup-barrier capabilities; experimental cooperative matrices remain explicit opt-in and runtime-oracle-gated.
+- Migrated renderer presentation/color-space/vertex-layout APIs and added the missing projector fragment stage exposed by wgpu 30 validation.
+- Kept `gemm_f32_tc` f32-faithful and the reduced-precision CUDA WMMA path explicit.
+- Replaced unsafe same-process Vulkan/DX12 device benchmarking with deadline-bounded per-adapter worker processes and validated length-delimited CBOR aggregation. CLI and desktop hosts expose private worker entry points; a dedicated worker binary supports other packaging.
+
+**Verification:**
+- Core, extensions, renderer, runtime, CLI, worker binary, and WASM checks pass.
+- Coopmat capability gating and Stage-4 GEMM selector pass (`max_err=0`).
+- Renderer tests: 48 passed; runtime tests: 2 passed.
+- Full core library, single-threaded and default-parallel: 5,365 passed, 0 failed, 9 ignored.
+- Computational geometry suites: 1,517 passed, 0 failed, 0 ignored.
+- Real SmolLM2-360M P64 layer-0 Forge decode matches the CPU oracle (`max_rel=3.28e-6`).
+- The remaining nine ignored tests are explicit experimental-hardware paths, performance/manual
+  diagnostics, external-tool integration, or an intentionally expensive production BFV smoke;
+  they are not unimplemented correctness paths.
+
+**Architectural decisions:**
+1. Experimental wgpu features require both operator opt-in and adapter advertisement.
+2. Features with no current shader consumer (for example `SHADER_I16`) are not requested speculatively.
+3. Each physical adapter/backend benchmark owns its native driver lifetime in a separate bounded process; the parent never successively owns Vulkan and DX12 devices.
+4. GPU correctness tests execute by default when their capability is present and share a serialized
+   hardware lane so the default parallel suite does not race native driver/context lifetimes.

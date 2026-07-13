@@ -75,7 +75,6 @@ fn fresh_bfv_encryptions_have_distinct_commitments() {
 }
 
 #[test]
-#[ignore = "production 128-bit BFV key generation is intentionally expensive in debug builds"]
 fn production_parameter_set_encrypts_and_decrypts() {
     let engine = BfvEngine::generate_128_bit(9).unwrap();
     let ciphertext = engine.encrypt_i64(1, &[7, -3]).unwrap();

@@ -1,6 +1,6 @@
 # QualiaDB Master Directory Index
 
-**Generated/Updated On:** 2026-07-04
+**Generated/Updated On:** 2026-07-13
 
 This document provides a comprehensive list of all directory indexes across the repository. Click on any link to navigate to the detailed index for that specific component.
 
@@ -137,6 +137,7 @@ This document provides a comprehensive list of all directory indexes across the 
 - [crates\qualia-core-db\src\domains\biological](crates/qualia-core-db/src/domains/biological/DIRECTORY_INDEX.md)
 - [crates\qualia-core-db\src\domains\chemical](crates/qualia-core-db/src/domains/chemical/DIRECTORY_INDEX.md)
 - [crates\qualia-core-db\src\domains\financial](crates/qualia-core-db/src/domains/financial/DIRECTORY_INDEX.md)
+- [crates\qualia-core-db\src\domains\financial\economics](crates/qualia-core-db/src/domains/financial/economics/DIRECTORY_INDEX.md)
 - [crates\qualia-core-db\src\domains\geospatial](crates/qualia-core-db/src/domains/geospatial/DIRECTORY_INDEX.md)
 - [crates\qualia-core-db\src\domains\mathematical](crates/qualia-core-db/src/domains/mathematical/DIRECTORY_INDEX.md)
 - [crates\qualia-core-db\src\domains\physical](crates/qualia-core-db/src/domains/physical/DIRECTORY_INDEX.md)
@@ -231,8 +232,8 @@ This document provides a comprehensive list of all directory indexes across the 
 - [crates\qualia-core-db\src\sparql_library\serialisers](crates/qualia-core-db/src/sparql_library/serialisers/DIRECTORY_INDEX.md)
 - [crates\qualia-core-db\src\specialized_libs](crates/qualia-core-db/src/specialized_libs/DIRECTORY_INDEX.md)
 - [crates\qualia-core-db\src\specialized_libs\chemistry_modeling](crates/qualia-core-db/src/specialized_libs/chemistry_modeling/DIRECTORY_INDEX.md)
+- [crates\qualia-core-db\src\specialized_libs\computational_economics](crates/qualia-core-db/src/specialized_libs/computational_economics/DIRECTORY_INDEX.md)
 - [crates\qualia-core-db\src\specialized_libs\computational_geometry](crates/qualia-core-db/src/specialized_libs/computational_geometry/DIRECTORY_INDEX.md)
-- [crates\qualia-core-db\src\specialized_libs\computational_geometry\generated](crates/qualia-core-db/src/specialized_libs/computational_geometry/generated/DIRECTORY_INDEX.md)
 - [crates\qualia-core-db\src\specialized_libs\cryptographic_library](crates/qualia-core-db/src/specialized_libs/cryptographic_library/DIRECTORY_INDEX.md)
 - [crates\qualia-core-db\src\specialized_libs\engineering_analysis](crates/qualia-core-db/src/specialized_libs/engineering_analysis/DIRECTORY_INDEX.md)
 - [crates\qualia-core-db\src\specialized_libs\financial_modeling](crates/qualia-core-db/src/specialized_libs/financial_modeling/DIRECTORY_INDEX.md)
@@ -349,6 +350,7 @@ This document provides a comprehensive list of all directory indexes across the 
 - [docs\pkg](docs/pkg/DIRECTORY_INDEX.md)
 - [docs\pkg\qualia](docs/pkg/qualia/DIRECTORY_INDEX.md)
 - [docs\plans](docs/plans/DIRECTORY_INDEX.md)
+- [docs\plans\qaly](docs/plans/qaly/DIRECTORY_INDEX.md)
 - [docs\playground](docs/playground/DIRECTORY_INDEX.md)
 - [docs\reports](docs/reports/DIRECTORY_INDEX.md)
 - [docs\resources](docs/resources/DIRECTORY_INDEX.md)
@@ -361,6 +363,14 @@ This document provides a comprehensive list of all directory indexes across the 
 - [mcps\qualia](mcps/qualia/DIRECTORY_INDEX.md)
 - [mcps\qualia\tools](mcps/qualia/tools/DIRECTORY_INDEX.md)
 - [ontologies](ontologies/DIRECTORY_INDEX.md)
+- [release-assets\webizen-desktop-windows-x64\studio-dist\dist](release-assets/webizen-desktop-windows-x64/studio-dist/dist/DIRECTORY_INDEX.md)
+- [release-assets\webizen-desktop-windows-x64-20260711-031259\studio-dist](release-assets/webizen-desktop-windows-x64-20260711-031259/studio-dist/DIRECTORY_INDEX.md)
+- [release-assets\webizen-desktop-windows-x64-20260711-044039\studio-dist](release-assets/webizen-desktop-windows-x64-20260711-044039/studio-dist/DIRECTORY_INDEX.md)
+- [release-assets\webizen-desktop-windows-x64-local-20260711-093755\portal](release-assets/webizen-desktop-windows-x64-local-20260711-093755/portal/DIRECTORY_INDEX.md)
+- [release-assets\webizen-desktop-windows-x64-local-20260711-093755\portal\css](release-assets/webizen-desktop-windows-x64-local-20260711-093755/portal/css/DIRECTORY_INDEX.md)
+- [release-assets\webizen-desktop-windows-x64-local-20260711-093755\portal\js](release-assets/webizen-desktop-windows-x64-local-20260711-093755/portal/js/DIRECTORY_INDEX.md)
+- [release-assets\webizen-desktop-windows-x64-local-20260711-093755\portal\resources](release-assets/webizen-desktop-windows-x64-local-20260711-093755/portal/resources/DIRECTORY_INDEX.md)
+- [release-assets\webizen-desktop-windows-x64-local-20260711-093755\studio-dist](release-assets/webizen-desktop-windows-x64-local-20260711-093755/studio-dist/DIRECTORY_INDEX.md)
 - [reports](reports/DIRECTORY_INDEX.md)
 - [resources](resources/DIRECTORY_INDEX.md)
 - [scripts](scripts/DIRECTORY_INDEX.md)

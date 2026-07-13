@@ -1600,6 +1600,11 @@ fn run_sparql_query(vault: &std::path::Path, query_str: &str) {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    if std::env::var_os("QUALIA_DEVICE_BENCHMARK_OUTPUT").is_some() {
+        qualia_core_db::platform::device_benchmark::run_worker_from_env()
+            .map_err(std::io::Error::other)?;
+        return Ok(());
+    }
     let cli = Cli::parse();
 
     let log_level = match cli.verbose {

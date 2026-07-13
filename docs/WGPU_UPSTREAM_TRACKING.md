@@ -2,8 +2,9 @@
 
 A living record of every `wgpu`/`naga` issue this project has hit, **honestly categorized** so
 we fork/PR only what is genuinely upstream's to fix — and don't waste effort forking for things
-that were our own code or a spec limitation. Pinned wgpu: **29.0.3** (`crates/qualia-core-db/Cargo.toml`).
-Last reviewed: **2026-06-29**.
+that were our own code or a spec limitation. Pinned wgpu: **30.0.0** (`crates/qualia-core-db/Cargo.toml`,
+bumped from 29.0.3 on 2026-07-13 — see the "wgpu 30 upgrade" section at the end).
+Last reviewed: **2026-07-13**.
 
 The categories (from Timothy's investigation, which matched our reality precisely):
 - **Upstream bug** — a real `wgpu`/`naga` defect. Candidate for the soft-fork → PR path (§ below).
@@ -18,7 +19,7 @@ The categories (from Timothy's investigation, which matched our reality precisel
 
 | # | Symptom | Category | Status / resolution |
 |---|---------|----------|---------------------|
-| 1 | **Cooperative-matrix multiply (`coopMultiplyAdd`) returns all zeros** on the SPIR-V/Vulkan path | **Upstream bug** | Root cause = `vulkanMemoryModelDeviceScope` gating ([#9729](https://github.com/gfx-rs/wgpu/issues/9729)). **Fix [#9741](https://github.com/gfx-rs/wgpu/pull/9741) MERGED to `main` 2026-06-29, UNRELEASED** (latest crates.io is 29.0.3). Workaround in place: **tensor cores via CUDA WMMA** (`emit/cuda_c.rs` `WMMA_GEMM_16X16`). **Action:** soft-fork test-patch (§) → verify WGSL coopmat on the A2000 → if correct, light up the portable coopmat path; un-pin when a crates.io release ships the fix. |
+| 1 | **Cooperative-matrix multiply (`coopMultiplyAdd`) returns all zeros** on the SPIR-V/Vulkan path | **Upstream bug** | Root cause = `vulkanMemoryModelDeviceScope` gating ([#9729](https://github.com/gfx-rs/wgpu/issues/9729)); fix [#9741](https://github.com/gfx-rs/wgpu/pull/9741). **Now on wgpu 30.0.0 (2026-07-13):** the crate-wide modernization is done and the `coopmat_usable()` probe was **measured on 30** — it **still returns zeros on this machine's DX12 backend** (`coopmat 0 vs cpu 2.925`). So #9741's memory-scope fix does **not** cover the DX12 path here (it is Vulkan-scoped; DX12 coopmat is a separate matter). The probe **correctly self-gates to `false`**, so the portable coopmat tile stays dormant and never produces wrong results; it self-activates the moment an adapter/backend computes coopmat (e.g. a Vulkan machine). Active tensor cores today remain **CUDA WMMA** (f16, `emit/cuda_c.rs`), reachable via the new `gemm_f32_tc_reduced` entry. |
 | 2 | **df64 (double-single) collapses to f32** — driver/naga reassociates `c-(c-a)→a`, `fma(x,y,-(x*y))→0` | **Spec limitation (ambiguous naga/driver)** | WGSL has **no portable pragma** to forbid float reassociation; the naga→SPIR-V→NVIDIA-Vulkan path reassociates. Proven not a missing-fma (Veltkamp split gave byte-identical wrong result). Workaround in place: runtime `df64_usable()` probe gates the df64 tier (`dispatch.rs`). **Action:** low priority — a fix needs an fp-contraction control in WGSL/naga or a spec extension; CUDA-f64 + the exact CPU floor already cover f64. Track, don't fork. |
 | 3 | **WGSL has no `f64`** (only f32/f16/i32/u32) | **Spec limitation** | WebGPU/WGSL language spec. Not a wgpu bug, not fork-fixable. Answer = **native CUDA-f64** (`gemm_f64_cuda`) + CPU floor. Permanent; revisit only if WGSL ever adds f64. |
 | 4 | Ray-query **acceleration-structure limits default to 0** (`max_blas_geometry_count` etc.) | **App-side** | wgpu's conservative defaults; must be raised in `DeviceDescriptor`. **Fixed** (`execute/wgpu.rs` raises them from adapter values). Not a bug. |
@@ -85,28 +86,26 @@ dormant-but-ready** kernels (probe-gated so they never produce wrong results). *
 to upstream is sanctioned** when we carry a fix of our own. The bar stays: probe-gate anything that
 might be wrong on a given adapter, and keep a correct CPU/plain floor.
 
-## The tensor-core reality (important — single-tile primitives, not full GEMMs)
+## The tensor-core reality (wgpu 30)
 
-Both tensor-core kernels are **proven single-*tile* primitives, not drop-in GEMM backends**:
-- `emit/coopmat.rs::matmul_tc_wgsl` — one **8×8×8** all-f32 coopmat tile (returns zeros on 29.0.3).
-- `emit/cuda_c.rs::WMMA_GEMM_16X16` — one **16×16×16** warp tile, f16→f32 (hardware-verified on the A2000).
+Both tensor-core backends now have tiled orchestration and capability-selected dispatch:
+- `emit/coopmat.rs::matmul_tc_wgsl_tiled` tiles **8×8×8** all-f32 cooperative matrices over
+  `M/N/K`; a measured `coopmat_usable()` probe prevents use on backends that still return zeros.
+- `emit/cuda_c.rs::WMMA_GEMM_16X16` tiles **16×16×16** warps with f16 input and f32
+  accumulation (hardware-verified on the A2000).
 
-The hard part (making the tensor-core multiply compute correctly) is done for WMMA and merely
-upstream-gated for coopmat. **What's missing is the tiled-GEMM orchestration** that loops a primitive
-over arbitrary `M/N/K` with shared-memory/K-loop staging, plus the capability-selected dispatch. That
-is real kernel work — tracked as **DAG-IR plan P4c** — not a flag flip. Note the precision split:
-coopmat is **f32** (no loss), WMMA is **f16-input/f32-accumulate** (lossy → opt-in via `MatMul.tc`).
+The precision split is explicit: `gemm_f32_tc` selects only accurate f32 coopmat or the plain-f32
+floor, while `gemm_f32_tc_reduced` opts into CUDA WMMA's reduced input precision. The stage-4
+selector test verifies the accurate entry point stays below `1e-2` maximum error.
 
 ## Action items
 
-- [ ] **DAG-IR P4c — tiled tensor-core GEMM + capability-selected `MatMul.tc`** (the "ensure there's a
-      wgpu tensor-core pathway" work): build a tiled WMMA GEMM (CUDA, immediate NVIDIA uplift, f16-lossy,
-      opt-in) and a tiled coopmat GEMM (WGSL, experimental/dormant until #9741), add a `coopmat_usable()`
-      runtime probe (mirrors `df64_usable`), and wire `MatMul.tc=true` to select coopmat → WMMA → plain.
-- [ ] **Soft-fork test-patch** (steps 1–5 above): once P4c exists, `[patch.crates-io]` wgpu → the #9741
-      git rev on a throwaway branch and verify the coopmat tiled GEMM now computes on the A2000; adopt the
-      pin for v1 if the build stays green.
-- [ ] **Watch crates.io** for a wgpu release including #9741; prefer it over the git pin when it ships.
+- [x] **DAG-IR P4c — tiled tensor-core GEMM + capability-selected dispatch:** implemented for
+      WGSL coopmat and CUDA WMMA, with measured runtime gating and precision-specific entry points.
+- [x] **Upgrade to the release carrying the upstream work:** pinned to wgpu/naga 30.0.0 and
+      modernized the crate-wide API (`PollType`, fallible mapped ranges, device descriptors).
+- [ ] Re-certify the coopmat oracle on each backend/driver update. wgpu 30 DX12 on the A2000 still
+      returns zeros, so the measured gate correctly leaves portable coopmat dormant there.
 - [ ] If df64-reassociation (#2) ever blocks a real consumer, file a naga issue requesting an
       fp-contraction / no-reassociation control; until then the runtime probe is sufficient.
 

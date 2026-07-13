@@ -1,5 +1,80 @@
 # Plan: upgrade wgpu 29 → 30, adopt new + experimental features, light up the tensor-core path
 
+## Implementation record — 2026-07-13
+
+Status: **implemented and build/test-verified on native + WASM**. Cooperative matrices remain
+runtime-oracle-gated per backend; this is a measured driver capability, not an incomplete path.
+
+Completed outcomes:
+
+- All workspace wgpu/naga pins used by `qualia-core-db`, `qualia-extensions`,
+  `webizen-render`, and `webizen-runtime` resolve to 30.0.0.
+- Migrated the v30 API surface, including `PollType`, fallible mapped ranges,
+  `RequestAdapterOptions::apply_limit_buckets`, optional vertex-buffer slots,
+  `SurfaceConfiguration::color_space`, and `Queue::present`.
+- The shared native inference device and browser inference device now intersect desired
+  acceleration features with the selected adapter before requesting them. Stable useful
+  capabilities are timestamp queries, in-pass timestamps, pipeline statistics/cache,
+  `SHADER_F16`, `SUBGROUP`, and `SUBGROUP_BARRIER`.
+- `EXPERIMENTAL_COOPERATIVE_MATRIX` remains explicit opt-in through
+  `QUALIA_WGPU_EXPERIMENTAL_FEATURES=1`. wgpu 30's unsafe `ExperimentalFeatures` token is
+  supplied only when an experimental feature was both opted into and advertised. Baseline-only
+  rendering, LoRA, diffusion, test, and utility kernels deliberately keep empty feature sets.
+- v30's new `SHADER_I16` is not requested: no current Qualia shader declares
+  `enable wgpu_int16`, so enabling it would add no capability. `STRICT_WEBGPU_COMPLIANCE` is
+  intentionally unset on native inference because it would hide useful native capabilities.
+- The f32 selector no longer silently falls into lossy CUDA WMMA. `gemm_f32_tc` selects the
+  measured f32 coopmat path or the exact f32 floor; `gemm_f32_tc_reduced` is the explicit
+  reduced-precision WMMA entry point.
+- The renderer's projector pipeline now has a real fragment stage; this was exposed by v30
+  runtime validation and fixed rather than suppressed.
+- Cross-backend capability benchmarking now uses a dedicated
+  `qualia-device-benchmark-worker`: the parent enumerates stable adapter identities, then each
+  `(backend, vendor, device)` owns its wgpu instance/device in a separate process. Responses are
+  length-delimited CBOR, identity-checked, finite-metric-checked, and aggregated deterministically.
+  This fixes the Windows access violation caused by successively owning Vulkan and DX12 devices
+  in one long-lived process. Workers have a hard 120-second deadline. Production discovery
+  supports the sibling worker executable, private worker entry points in the shipped Qualia CLI
+  and Webizen Desktop hosts, and the `QUALIA_DEVICE_BENCHMARK_WORKER` override for other
+  embedders; unit tests exercise the same protocol through an isolated test worker.
+
+Measured verification:
+
+- `cargo check -p qualia-core-db` — pass.
+- `cargo check -p qualia-extensions` — pass.
+- `cargo check -p webizen-render` — pass.
+- `cargo check -p webizen-runtime` — pass.
+- `cargo check -p qualia-core-db --target wasm32-unknown-unknown --no-default-features
+  --features wasm-llm` — pass (pre-existing target-specific warnings remain).
+- `coopmat_usable_respects_caps_and_is_cached` — pass.
+- `stage4_forge_gemm_f32_and_tc_selector` — pass; `max_err=0.00e0` for 32×64×32.
+- `webizen-render --lib` — 48 passed.
+- `webizen-runtime --lib` — 2 passed.
+- `gpu_context::tests` — 7 passed, 1 hardware-report test ignored by design.
+- Device benchmark worker binary — `cargo check -p qualia-core-db --bin
+  qualia-device-benchmark-worker` passes.
+- Worker protocol round-trip and isolated multi-adapter capability matrix — pass; measured A2000
+  Vulkan + DX12 and Intel HD 530 DX12 without shared driver lifetimes.
+- Full `cargo test -p qualia-core-db --lib` — **5,365 passed, 0 failed, 9 ignored** in both
+  single-threaded and default-parallel execution. The former blanket hardware ignores were
+  replaced with capability-aware execution and a serialized GPU lane, confirming both worker
+  isolation and parallel driver/context safety.
+- Computational geometry library suites — **1,517 passed, 0 failed, 0 ignored**.
+- Real SmolLM2-360M P64 layer-0 Forge decode — pass against the CPU oracle
+  (`max_rel=3.28e-6`). The reader now enforces the compiler's layer-pack contract: page
+  alignment at layer boundaries and 256-byte alignment within a layer.
+
+The 9 remaining ignored tests are deliberate non-default operations, not missing implementations:
+two ray-query tests and one cooperative-matrix load/store test requiring explicitly opted-in
+experimental hardware features; the known DX12 cooperative-matrix multiply driver failure; one
+GPU performance benchmark; one SmolLM2 full-model performance run; one DXC CLI integration; one
+expensive production-parameter BFV smoke test; and one manual adapter-report diagnostic.
+
+Coopmat result: wgpu 30 includes #9741's Vulkan memory-model fix, but the A2000 DX12 backend
+still returns zero for the probe. `coopmat_usable()` therefore remains false on that backend and
+correctly self-gates; the complete tiled implementation will activate automatically on a backend
+that passes the oracle.
+
 **Owner:** Claude (Timothy directed, 2026-07-13). Branch `0.0.24`.
 **Status at plan time:** HEAD `6fe51db6`. This session already fixed the inference_agent
 stack overflow + 3 masked bugs and library-ized every monolith; the *whole* `qualia-core-db`

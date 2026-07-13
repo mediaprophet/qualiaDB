@@ -165,6 +165,7 @@ mod tests {
     // ── Stage 4: Forge GEMM floor + TC selector ──────────────────────────────
 
     #[test]
+    #[serial_test::serial(gpu)]
     fn stage4_forge_gemm_f32_and_tc_selector() {
         use crate::wgsl_forge::dispatch::{gemm_f32, gemm_f32_tc};
 
@@ -275,6 +276,7 @@ mod tests {
     // ── Stage 7: Capability matrix / passport ────────────────────────────────
 
     #[test]
+    #[serial_test::serial(gpu)]
     fn stage7_capability_matrix_and_passport() {
         #[cfg(not(target_arch = "wasm32"))]
         {

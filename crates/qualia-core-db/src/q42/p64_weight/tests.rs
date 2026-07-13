@@ -294,7 +294,6 @@
     }
 
     #[test]
-    #[ignore = "requires the local C:\\LLM_Models SmolLM2 GGUF"]
     fn real_smollm_p64_round_trip_on_disk() {
         let source_path = "C:/LLM_Models/GGUF/lmstudio-community/smollm2-360m-instruct-q8_0.gguf";
         if !std::path::Path::new(source_path).exists() {

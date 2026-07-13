@@ -172,6 +172,8 @@ impl P64TensorIndex {
         let mut cursor = header.tensor_table_offset as usize;
         let blob_floor = align_up(checksum_end, page);
         let mut previous_blob_end = blob_floor;
+        let mut previous_manifold_idx = None;
+        let layer_packed = header.flags & P64_FLAG_LAYER_PACK != 0;
         let verify_tensor_crc = matches!(integrity, IntegrityMode::Full);
         for tensor_index in 0..tensor_count {
             if cursor + P64_TENSOR_ENTRY_BYTES > data.len() {
@@ -214,7 +216,18 @@ impl P64TensorIndex {
             let blob_end = blob_start
                 .checked_add(entry.blob_size as usize)
                 .ok_or("p64: tensor blob overflow")?;
-            if blob_start % page != 0 || blob_start < previous_blob_end || blob_end > data.len() {
+            let required_alignment = if layer_packed
+                && tensor_index > 0
+                && previous_manifold_idx == Some(entry.manifold_idx)
+            {
+                256
+            } else {
+                page
+            };
+            if blob_start % required_alignment != 0
+                || blob_start < previous_blob_end
+                || blob_end > data.len()
+            {
                 return Err(format!(
                     "p64: tensor {tensor_index} is unaligned, overlapping, or out of bounds"
                 ));
@@ -228,6 +241,7 @@ impl P64TensorIndex {
                 }
             }
             previous_blob_end = blob_end;
+            previous_manifold_idx = Some(entry.manifold_idx);
             entries.push(entry);
             cursor += P64_TENSOR_ENTRY_BYTES;
         }
