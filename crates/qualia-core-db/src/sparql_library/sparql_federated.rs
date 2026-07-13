@@ -29,12 +29,17 @@ pub struct FederatedResult {
     pub success: bool,
 }
 
-/// SPARQL Federated Query Handler
+/// SPARQL Federated Query Handler — a DID-registry front over the URL-based
+/// [`FederatedQueryEngine`]. It maps a DID to a concrete endpoint URL string and
+/// dispatches remote SPARQL requests through the same real HTTP transport.
 pub struct FederatedQueryHandler<'a> {
     pub local_quins: &'a [NQuin],
     pub endpoints: [Option<ServiceEndpoint>; 16],
     pub endpoint_count: u8,
     pub cache_enabled: bool,
+    /// DID → concrete endpoint URL string (a `u64` hash cannot be un-hashed to a URL,
+    /// so the resolvable URL is stored alongside for real remote execution).
+    endpoint_urls: HashMap<u64, String>,
 }
 
 impl<'a> FederatedQueryHandler<'a> {
@@ -44,7 +49,14 @@ impl<'a> FederatedQueryHandler<'a> {
             endpoints: [None; 16],
             endpoint_count: 0,
             cache_enabled: true,
+            endpoint_urls: HashMap::new(),
         }
+    }
+
+    /// Associate a DID with a concrete endpoint URL so remote queries can actually be
+    /// dispatched over HTTP (the `ServiceEndpoint.endpoint_url` hash is not reversible).
+    pub fn set_endpoint_url(&mut self, did: u64, url: &str) {
+        self.endpoint_urls.insert(did, url.to_string());
     }
 
     /// Register a federated endpoint
@@ -77,79 +89,40 @@ impl<'a> FederatedQueryHandler<'a> {
         Err("DID not found in endpoint registry".to_string())
     }
 
-    /// Execute federated query
+    /// Execute a federated query against the endpoint registered for `did`, over the
+    /// real HTTP SPARQL 1.1 Protocol transport.
+    ///
+    /// Requires a resolvable endpoint URL registered via
+    /// [`set_endpoint_url`](Self::set_endpoint_url) (the `ServiceEndpoint.endpoint_url`
+    /// hash is not reversible to a URL). Authenticated (DID-LD/JWT) endpoints must be
+    /// signed by the identity layer; only the **no-auth** path is dispatched here — no
+    /// fabricated auth header. Network egress: makes a real outbound request.
     pub fn execute_service(
         &self,
         did: u64,
         query: &str,
-        format: &str,
+        _format: &str,
     ) -> Result<FederatedResult, String> {
-        // Resolve DID to endpoint
-        let endpoint_url_hash = self.resolve_did(did)?;
-
-        // Prepare authentication headers based on DID
-        let auth_headers = self.prepare_did_auth(did)?;
-
-        // Execute remote SPARQL query
-        let results = self.execute_remote_query(endpoint_url_hash, query, format, &auth_headers)?;
-
+        let endpoint = (0..self.endpoint_count as usize)
+            .filter_map(|i| self.endpoints[i])
+            .find(|e| e.did == did)
+            .ok_or("DID not found in endpoint registry")?;
+        if endpoint.auth_method != 0 {
+            return Err("authenticated (DID-LD/JWT) federation must be signed by the \
+                        identity layer; only no-auth remote endpoints are dispatched here"
+                .to_string());
+        }
+        let url = self.endpoint_urls.get(&did).ok_or(
+            "no resolvable endpoint URL registered for this DID (call set_endpoint_url); \
+             the endpoint_url hash is not reversible",
+        )?;
+        let body = fetch_remote_sparql(url, query, endpoint.timeout_ms, None)?;
+        let (_vars, rows, _lexicon) = parse_sparql_results_json(&body)?;
         Ok(FederatedResult {
             endpoint_did: did,
-            row_count: results.len() as u16,
+            row_count: rows.len() as u16,
             success: true,
         })
-    }
-
-    /// Prepare DID-based authentication
-    fn prepare_did_auth(&self, did: u64) -> Result<Vec<(u64, u64)>, String> {
-        // Find endpoint to get auth method
-        for i in 0..self.endpoint_count as usize {
-            if let Some(endpoint) = self.endpoints[i] {
-                if endpoint.did == did {
-                    match endpoint.auth_method {
-                        0 => return Ok(vec![]), // No auth
-                        1 => {
-                            // DID-LD authentication
-                            // In production: sign request with DID key
-                            return Ok(vec![(0x4155544800000000_u64, 0x4449442D4C440000_u64)]);
-                            // "Authorization": "DID-LD"
-                        }
-                        2 => {
-                            // JWT authentication
-                            // In production: generate JWT with DID
-                            return Ok(vec![(0x4155544800000000, 0x4A57540000000000)]);
-                            // "Authorization": "JWT"
-                        }
-                        _ => return Err("Unknown auth method".to_string()),
-                    }
-                }
-            }
-        }
-
-        Err("DID not found".to_string())
-    }
-
-    /// Execute remote SPARQL query (simplified)
-    fn execute_remote_query(
-        &self,
-        _endpoint_url_hash: u64,
-        _query: &str,
-        format: &str,
-        _auth_headers: &[(u64, u64)],
-    ) -> Result<Vec<BindingRow>, String> {
-        // In production, this would:
-        // 1. Hash endpoint_url_hash to get actual URL string
-        // 2. Make HTTP request with auth headers
-        // 3. Handle CORS using DID-based authentication
-        // 4. Parse response into BindingRows
-
-        // Simplified: return empty result
-        // For testing, we'll return a dummy result if format is json
-        if format == "json" {
-            return Ok(vec![BindingRow::new()]);
-        }
-
-        Ok(vec![])
     }
 
     /// Execute federated query with local data
@@ -273,14 +246,23 @@ pub struct FederatedQueryResult {
     pub service_endpoint: String,
     /// The SPARQL query string that was executed.
     pub query: String,
-    /// Result bindings (populated for local execution; empty for remote placeholders).
+    /// Result bindings — real rows for both local execution and successful remote
+    /// (HTTP) execution. Each slot holds a term hash resolvable via [`Self::lexicon`]
+    /// (remote) or the local graph lexicon (local).
     pub results: Vec<BindingRow>,
+    /// Result variable names in slot order (populated for remote SPARQL-results
+    /// responses; empty for a bare local execution that carries its own ctx).
+    pub variables: Vec<String>,
+    /// Hash → text (+ lang/datatype) for the terms in `results`, so remote string
+    /// terms are resolvable in the local u64-term model. Empty for local execution
+    /// (whose terms resolve via the local graph lexicon).
+    pub lexicon: LiteralTable,
     /// Whether execution succeeded.
     pub success: bool,
     /// Error message when `success` is false.
     pub error: Option<String>,
-    /// For remote endpoints, the fully-constructed query URL that an HTTP client
-    /// would fetch. `None` for local execution.
+    /// For remote endpoints, the fully-constructed query URL that was fetched (kept
+    /// for provenance/debugging). `None` for local execution.
     pub remote_query_url: Option<String>,
 }
 
@@ -319,10 +301,12 @@ impl FederatedQuery {
 /// Federated query engine — dispatches queries across local and remote services.
 ///
 /// Local services (`local:`/`qualia:`) are executed in-process via the standard
-/// SPARQL parser → planner → executor pipeline. Remote HTTP services return a
-/// placeholder result carrying the constructed query URL; a real HTTP transport
-/// can be plugged in later by replacing the placeholder branch in
-/// [`execute_service`](Self::execute_service).
+/// SPARQL parser → planner → executor pipeline. Remote HTTP(S) services are executed
+/// over the **real SPARQL 1.1 Protocol** ([`fetch_remote_sparql`] +
+/// [`parse_sparql_results_json`]): a `application/sparql-query` POST, the
+/// `application/sparql-results+json` response parsed into binding rows + a resolvable
+/// lexicon. Remote execution is real network egress and runs only for endpoints the
+/// caller explicitly targets.
 pub struct FederatedQueryEngine<'a> {
     /// Local Quins the engine executes local services against.
     pub local_quins: &'a [NQuin],
@@ -384,63 +368,77 @@ impl<'a> FederatedQueryEngine<'a> {
             // Execute locally through the standard pipeline.
             let (sparql_query, ctx) = match sparql_parser::parse_sparql(query) {
                 Ok(parsed) => parsed,
-                Err(e) => {
-                    return Ok(FederatedQueryResult {
-                        service_endpoint: service.endpoint.clone(),
-                        query: query.to_string(),
-                        results: Vec::new(),
-                        success: false,
-                        error: Some(format!("Parse error: {}", e)),
-                        remote_query_url: None,
-                    });
-                }
+                Err(e) => return Ok(Self::failed(service, query, format!("Parse error: {e}"), None)),
             };
-
             let plan = match QueryPlanner::plan(&sparql_query, &ctx) {
                 Ok(plan) => plan,
                 Err(e) => {
-                    return Ok(FederatedQueryResult {
-                        service_endpoint: service.endpoint.clone(),
-                        query: query.to_string(),
-                        results: Vec::new(),
-                        success: false,
-                        error: Some(format!("Planning error: {}", e)),
-                        remote_query_url: None,
-                    });
+                    return Ok(Self::failed(service, query, format!("Planning error: {e}"), None))
                 }
             };
-
             let executor = QueryExecutor::new(self.local_quins);
             match executor.execute(&plan, &ctx) {
                 Ok(results) => Ok(FederatedQueryResult {
                     service_endpoint: service.endpoint.clone(),
                     query: query.to_string(),
                     results,
+                    variables: Vec::new(),
+                    lexicon: LiteralTable::new(),
                     success: true,
                     error: None,
                     remote_query_url: None,
                 }),
-                Err(e) => Ok(FederatedQueryResult {
-                    service_endpoint: service.endpoint.clone(),
-                    query: query.to_string(),
-                    results: Vec::new(),
-                    success: false,
-                    error: Some(format!("Execution error: {}", e)),
-                    remote_query_url: None,
-                }),
+                Err(e) => Ok(Self::failed(service, query, format!("Execution error: {e}"), None)),
             }
         } else {
-            // Remote HTTP endpoint: construct the query URL and return a
-            // placeholder. A real HTTP transport can be wired in here later.
+            // Remote HTTP SPARQL endpoint: perform a real SPARQL 1.1 Protocol request and
+            // parse the `application/sparql-results+json` response into binding rows.
+            //
+            // Network egress: this makes a real outbound HTTP request, and runs only when
+            // a caller explicitly dispatches to a remote `FederatedService`. Authenticated
+            // (DID-LD/JWT) endpoints need the identity layer to sign the request; the
+            // no-auth path is supported here directly (no synthetic/fake auth header).
             let query_url = build_remote_query_url(&service.endpoint, query);
-            Ok(FederatedQueryResult {
-                service_endpoint: service.endpoint.clone(),
-                query: query.to_string(),
-                results: Vec::new(),
-                success: true,
-                error: None,
-                remote_query_url: Some(query_url),
-            })
+            match fetch_remote_sparql(&service.endpoint, query, service.timeout_ms, None) {
+                Ok(body) => match parse_sparql_results_json(&body) {
+                    Ok((variables, results, lexicon)) => Ok(FederatedQueryResult {
+                        service_endpoint: service.endpoint.clone(),
+                        query: query.to_string(),
+                        results,
+                        variables,
+                        lexicon,
+                        success: true,
+                        error: None,
+                        remote_query_url: Some(query_url),
+                    }),
+                    Err(e) => Ok(Self::failed(
+                        service,
+                        query,
+                        format!("Remote result parse error: {e}"),
+                        Some(query_url),
+                    )),
+                },
+                Err(e) => Ok(Self::failed(service, query, e, Some(query_url))),
+            }
+        }
+    }
+
+    /// Construct a failed [`FederatedQueryResult`] carrying an error message.
+    fn failed(
+        service: &FederatedService,
+        query: &str,
+        error: String,
+        remote_query_url: Option<String>,
+    ) -> FederatedQueryResult {
+        FederatedQueryResult {
+            service_endpoint: service.endpoint.clone(),
+            query: query.to_string(),
+            results: Vec::new(),
+            variables: Vec::new(),
+            lexicon: LiteralTable::new(),
+            success: false,
+            error: Some(error),
+            remote_query_url,
         }
     }
 
@@ -504,23 +502,140 @@ fn percent_encode_query(input: &str) -> String {
     out
 }
 
+/// Execute a SPARQL query against a remote HTTP endpoint (SPARQL 1.1 Protocol) and
+/// return the raw `application/sparql-results+json` response body.
+///
+/// Uses a **blocking** HTTP client run on a dedicated thread, so it is safe to call from
+/// within a Tokio runtime (a blocking client cannot be created on an async worker
+/// thread). `timeout_ms` bounds the whole request. `auth`, when present, is sent as the
+/// `Authorization` header value.
+///
+/// **Network egress.** This performs a real outbound HTTP request to `endpoint`.
+#[cfg(not(target_arch = "wasm32"))]
+fn fetch_remote_sparql(
+    endpoint: &str,
+    query: &str,
+    timeout_ms: u32,
+    auth: Option<&str>,
+) -> Result<String, String> {
+    let endpoint = endpoint.to_string();
+    let query = query.to_string();
+    let auth = auth.map(|s| s.to_string());
+    std::thread::spawn(move || -> Result<String, String> {
+        let client = reqwest::blocking::Client::builder()
+            .timeout(std::time::Duration::from_millis(timeout_ms.max(1) as u64))
+            .build()
+            .map_err(|e| format!("http client build failed: {e}"))?;
+        let mut req = client
+            .post(&endpoint)
+            .header(reqwest::header::CONTENT_TYPE, "application/sparql-query")
+            .header(reqwest::header::ACCEPT, "application/sparql-results+json")
+            .body(query);
+        if let Some(a) = auth {
+            req = req.header(reqwest::header::AUTHORIZATION, a);
+        }
+        let resp = req.send().map_err(|e| format!("remote request failed: {e}"))?;
+        let status = resp.status();
+        let text = resp
+            .text()
+            .map_err(|e| format!("reading remote response failed: {e}"))?;
+        if !status.is_success() {
+            let snippet: String = text.chars().take(200).collect();
+            return Err(format!("remote endpoint returned HTTP {status}: {snippet}"));
+        }
+        Ok(text)
+    })
+    .join()
+    .map_err(|_| "remote fetch thread panicked".to_string())?
+}
+
+/// wasm has no synchronous HTTP transport — remote federation is a native capability.
+#[cfg(target_arch = "wasm32")]
+fn fetch_remote_sparql(
+    _endpoint: &str,
+    _query: &str,
+    _timeout_ms: u32,
+    _auth: Option<&str>,
+) -> Result<String, String> {
+    Err("remote SPARQL federation is not available on the wasm target".to_string())
+}
+
+/// Parse an `application/sparql-results+json` document into `(variables, rows, lexicon)`:
+/// the result variable names in order, one [`BindingRow`] per solution (each slot a term
+/// hash), and a [`LiteralTable`] mapping those hashes back to text (with lang/datatype),
+/// so remote string terms are resolvable in the local u64-term model. Also handles the
+/// ASK form `{ "boolean": … }` (a single row with slot 0 = 1/0).
+fn parse_sparql_results_json(
+    body: &str,
+) -> Result<(Vec<String>, Vec<BindingRow>, LiteralTable), String> {
+    let v: serde_json::Value =
+        serde_json::from_str(body).map_err(|e| format!("invalid SPARQL results JSON: {e}"))?;
+    let mut lexicon = LiteralTable::new();
+
+    // ASK result → a single row, slot 0 = 1/0.
+    if let Some(b) = v.get("boolean").and_then(|b| b.as_bool()) {
+        let mut row = BindingRow::new();
+        row.slots[0] = Some(if b { 1 } else { 0 });
+        return Ok((Vec::new(), vec![row], lexicon));
+    }
+
+    let vars: Vec<String> = v
+        .get("head")
+        .and_then(|h| h.get("vars"))
+        .and_then(|a| a.as_array())
+        .map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect())
+        .unwrap_or_default();
+
+    let bindings = v
+        .get("results")
+        .and_then(|r| r.get("bindings"))
+        .and_then(|b| b.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    let mut rows = Vec::with_capacity(bindings.len());
+    for binding in &bindings {
+        let mut row = BindingRow::new();
+        for (i, var) in vars.iter().enumerate() {
+            if i >= MAX_BINDINGS {
+                break; // fixed-capacity binding row (§6)
+            }
+            if let Some(term) = binding.get(var) {
+                let value = term.get("value").and_then(|x| x.as_str()).unwrap_or("");
+                let lang = term.get("xml:lang").and_then(|x| x.as_str());
+                let datatype = term.get("datatype").and_then(|x| x.as_str());
+                // Hash consistently with the local term model; intern text + any tags so
+                // the remote term round-trips through the resolver and STR/LANG/DATATYPE.
+                let hash = crate::sparql_ast::literal_term_hash(value, lang, datatype);
+                lexicon.intern_tagged(hash, value, lang, datatype);
+                row.slots[i] = Some(hash);
+            }
+        }
+        rows.push(row);
+    }
+    Ok((vars, rows, lexicon))
+}
+
 /// DID-based CORS helper
 pub struct DidCorsHelper;
 
 impl DidCorsHelper {
-    /// Verify DID signature for CORS preflight
+    /// Verify a DID signature for a CORS preflight.
+    ///
+    /// The SPARQL federation layer holds **no key material** and receives only opaque
+    /// `u64` hashes (not the actual signature/challenge/public-key bytes), so it cannot
+    /// perform a real cryptographic verification here. It therefore **fails closed** with
+    /// a named error rather than returning a fabricated `true` (which would let any origin
+    /// pass). Real verification must go through the identity/key-vault layer, which holds
+    /// the resolved DID public key and the raw bytes.
     pub fn verify_did_signature(
         _did: u64,
         _signature: u64,
         _challenge: u64,
     ) -> Result<bool, String> {
-        // In production, this would:
-        // 1. Resolve DID to get public key
-        // 2. Verify signature of challenge using public key
-        // 3. Return true if valid
-
-        // Simplified: always true
-        Ok(true)
+        Err("DID signature verification must be performed by the identity/key-vault layer \
+             (the SPARQL federation layer holds no keys); refusing to fabricate a result"
+            .to_string())
     }
 
     /// Generate DID-based challenge for CORS
@@ -588,9 +703,10 @@ mod tests {
     }
 
     #[test]
-    fn test_did_signature_verification() {
-        let result = DidCorsHelper::verify_did_signature(123, 456, 789).unwrap();
-        assert!(result);
+    fn test_did_signature_verification_fails_closed() {
+        // The SPARQL layer holds no keys → verification is an honest error, NOT a
+        // fabricated `true` (which would let any origin pass a CORS preflight).
+        assert!(DidCorsHelper::verify_did_signature(123, 456, 789).is_err());
     }
 
     // ---- FederatedQueryEngine tests ----
@@ -698,62 +814,75 @@ mod tests {
     }
 
     #[test]
-    fn test_execute_service_remote_placeholder() {
+    #[ignore = "makes a real (localhost) network connection — integration test"]
+    fn test_execute_service_remote_unreachable_fails_gracefully() {
         let quins = vec![];
         let engine = FederatedQueryEngine::new(&quins);
-        let service = FederatedService::new("https://remote.example.org/sparql");
+        let mut service = FederatedService::new("http://127.0.0.1:1/sparql");
+        service.timeout_ms = 300;
         let result = engine
             .execute_service(&service, "SELECT ?s WHERE { ?s ?p ?o }")
             .unwrap();
-        assert_eq!(result.service_endpoint, "https://remote.example.org/sparql");
-        assert!(result.success);
-        // Remote path returns a placeholder with the constructed query URL.
+        // A real fetch to an unreachable endpoint fails GRACEFULLY: success=false with a
+        // named error, and the constructed query URL is retained for provenance.
+        assert!(!result.success);
+        assert!(result.error.is_some());
         assert!(result.remote_query_url.is_some());
-        let url = result.remote_query_url.as_ref().unwrap();
-        assert!(url.starts_with("https://remote.example.org/sparql?query="));
-        // Spaces must be percent-encoded.
-        assert!(!url.contains(' '));
-        // No real rows for the remote placeholder.
         assert_eq!(result.row_count(), 0);
     }
 
     #[test]
-    fn test_execute_service_remote_with_existing_query_param() {
-        let quins = vec![];
-        let engine = FederatedQueryEngine::new(&quins);
-        let service = FederatedService::new("https://remote.example.org/sparql?dataset=foo");
-        let result = engine
-            .execute_service(&service, "SELECT ?s WHERE { ?s ?p ?o }")
-            .unwrap();
-        let url = result.remote_query_url.unwrap();
-        // Should join with '&' since the endpoint already has a '?'.
-        assert!(url.contains("&query="));
-    }
-
-    #[test]
-    fn test_execute_federated_across_services() {
+    fn test_execute_federated_across_local_services() {
+        // Federation orchestration across multiple services, network-free (both local).
         let quins = vec![];
         let mut engine = FederatedQueryEngine::new(&quins);
         engine.initialize().unwrap();
-        engine.register_service(FederatedService::new("local:default"));
-        engine.register_service(FederatedService::new("https://remote.example.org/sparql"));
 
         let query = FederatedQuery::new("SELECT ?s WHERE { ?s ?p ?o }")
             .with_service(FederatedService::new("local:default"))
-            .with_service(FederatedService::new("https://remote.example.org/sparql"));
+            .with_service(FederatedService::new("qualia:graph1"));
 
         let results = engine.execute_federated(&query).unwrap();
         assert_eq!(results.len(), 2);
-        // Local first, then remote — order follows the query's service list.
         assert_eq!(results[0].service_endpoint, "local:default");
         assert!(results[0].success);
         assert!(results[0].remote_query_url.is_none());
-        assert_eq!(
-            results[1].service_endpoint,
-            "https://remote.example.org/sparql"
-        );
+        assert_eq!(results[1].service_endpoint, "qualia:graph1");
         assert!(results[1].success);
-        assert!(results[1].remote_query_url.is_some());
+    }
+
+    #[test]
+    fn test_parse_sparql_results_json_select() {
+        // A standard application/sparql-results+json SELECT response → real binding rows
+        // + a resolvable lexicon (incl. a language-tagged and a datatyped literal).
+        let body = r#"{
+          "head": { "vars": ["s", "name", "age"] },
+          "results": { "bindings": [
+            { "s": {"type":"uri","value":"http://ex/a"},
+              "name": {"type":"literal","xml:lang":"en","value":"Alice"},
+              "age": {"type":"literal","datatype":"http://www.w3.org/2001/XMLSchema#integer","value":"30"} }
+          ] }
+        }"#;
+        let (vars, rows, lexicon) = parse_sparql_results_json(body).unwrap();
+        assert_eq!(vars, vec!["s", "name", "age"]);
+        assert_eq!(rows.len(), 1);
+        let name_hash = rows[0].slots[1].unwrap();
+        assert_eq!(lexicon.resolve(name_hash), Some("Alice"));
+        assert_eq!(lexicon.lang(name_hash), Some("en"));
+        let age_hash = rows[0].slots[2].unwrap();
+        assert_eq!(
+            lexicon.datatype(age_hash),
+            Some("http://www.w3.org/2001/XMLSchema#integer")
+        );
+    }
+
+    #[test]
+    fn test_parse_sparql_results_json_ask() {
+        let (vars, rows, _lex) =
+            parse_sparql_results_json(r#"{ "head": {}, "boolean": true }"#).unwrap();
+        assert!(vars.is_empty());
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].slots[0], Some(1));
     }
 
     #[test]
@@ -783,6 +912,14 @@ mod tests {
         assert!(encoded.contains("SELECT"));
         // '?' should be encoded as %3F.
         assert!(encoded.contains("%3F"));
+    }
+
+    #[test]
+    fn test_build_remote_query_url_joins_with_ampersand_when_query_present() {
+        // Endpoint already carrying a query string joins with '&', not a second '?'.
+        let url = build_remote_query_url("https://example.org/sparql?dataset=foo", "SELECT ?s");
+        assert!(url.contains("&query="));
+        assert!(!url.contains(' '));
     }
 
     #[test]
