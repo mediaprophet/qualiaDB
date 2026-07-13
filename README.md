@@ -19,19 +19,76 @@ QualiaDB is built on a different premise. Software running on your device has a 
 
 ## What it is
 
-**QualiaDB** (desktop application: **Webizen**) is a personal semantic graph engine with a built-in AI governance layer. Four capabilities, all running locally on your hardware:
+**QualiaDB** (desktop application: **Webizen**) is a local-first semantic database and
+computational platform for personal AI, knowledge graphs, governed cooperation, and
+human-controlled applications.
 
-**1. Semantic graph storage**
-Binary `.q42` ledgers store and query RDF knowledge graphs with microsecond latency on a 512 MB RAM budget. WordNet (523 MB of RDF) compresses to 74.6 MB and streams with 6.5 ms first-query latency via demand-paged memory mapping. No cloud required.
+### Semantic graph and query engine
 
-**2. Webizen governance VM**
-An N3Logic + SHACL + deontic logic engine that evaluates rules, rights, and constraints at query time. Permissions, obligations, and prohibitions are enforced by the VM — not by a remote API call, and not by trusting the application layer.
+- Compact 48-byte `NQuin` records and memory-mapped `.q42` ledgers provide deterministic,
+  bounded graph storage without requiring a cloud database.
+- The live SPARQL engine supports SELECT, ASK, CONSTRUCT, DESCRIBE, named graphs,
+  SPARQL-Star, OPTIONAL, UNION, MINUS, BIND, aggregates, sorting, full transitive property
+  paths, governed UPDATE, and local or explicitly requested HTTP federation.
+- GeoSPARQL executes real WKT distance and topology operations. QISP adds typed Tensor10D
+  values, dense-asset references, a typed extension registry, and inline tensor-distance
+  and tensor-within predicates.
+- RDF and result serializers cover SPARQL JSON/XML/CSV/TSV plus
+  N-Triples/N-Quads/Turtle/TriG/N3/JSON-LD/CBOR-LD representations.
 
-**3. Fiduciary AI layer**
-Every LLM call is pre- and post-validated against your declared rights and capability profile. The model never runs without your consent; its output must carry semantic provenance. Conduct violations are written to a cryptographically auditable, DID-associated log.
+### Local inference and GPU compute
 
-**4. Human-Centric with Socially Defined Networking**
-DID-based identity with Verifiable Credentials, SocialWebNet peer-to-peer networking (DNSSEC-bootstrapped, WireGuard-encrypted), and W3C Solid interoperability for connecting with institutions and preserving your right to move your data elsewhere.
+- Native GGUF/P64 inference runs in-process with real autoregressive decode—no Python or
+  separate model server is required for the local path. Browser builds provide Rust→WASM
+  WebGPU decode with OPFS-cached model containers.
+- The workspace uses wgpu/naga 30 across core inference, extensions, rendering, and the
+  simulation runtime. Device capabilities are negotiated per adapter rather than assumed.
+- WGSL Forge provides typed kernel and schedule IR, deterministic shader generation,
+  Naga validation, CPU differential oracles, bounded autotuning, pipeline caching, and
+  WGSL/HLSL/MSL/PTX/CUDA-C/SPIR-V targets.
+- Cooperative-matrix and ray-query paths are explicit experimental opt-ins. A runtime
+  oracle prevents a broken driver primitive from returning corrupt inference output;
+  f32 workloads retain an exact GPU/CPU fallback, while reduced-precision CUDA WMMA is a
+  separately named choice.
+- P64 supports real GGUF conversion, role-tagged tensors, CRC-32C integrity, layer-packed
+  alignment, zero-copy reading, and Forge execution over resident model weights.
+
+### Logic, governance, and privacy
+
+- The Webizen VM provides bounded N3Logic execution, SHACL validation, and modality
+  evaluators for deontic, epistemic, paraconsistent, temporal, description, and other
+  logic families.
+- The native governed-inference path applies intent validation, N3 output gating,
+  grounding/provenance checks, and commit-on-permit sequencing.
+- The privacy engine includes real BFV homomorphic encryption, caller-buffered calibrated
+  differential privacy, composition accounting, and fixed-size external ciphertext
+  references so large cryptographic objects do not enter the 48-byte semantic ABI.
+
+### Geometry, simulation, and visualization
+
+- The computational-geometry library includes adaptive exact predicates, exact
+  constructions, 2D/3D hulls and Delaunay methods, mesh generation/refinement/repair,
+  boolean operations, topology, BVH and point location, reconstruction, remeshing,
+  decimation, motion planning, and persistent-homology tooling.
+- The numerical libraries provide real linear algebra, statistics, optimization,
+  economics, engineering, physics, chemistry, bioinformatics, and clinical reference
+  computations, shared by native, MCP, CLI, and WASM surfaces where exposed.
+- `webizen-render` is a wgpu 30 N-dimensional renderer with Tensor10D projection,
+  depth/bloom, meshes, picking, CPU readback, and native surface presentation.
+  `webizen-runtime` supplies a fixed-timestep GPU diffusion kernel with deterministic
+  snapshots and ledger integration.
+
+### Identity, cooperation, and applications
+
+- DID-based identity, Verifiable Credentials, delegated access, W3C Solid/LDP interop,
+  and SocialWebNet peer connectivity support user-controlled exchange across devices and
+  institutions.
+- **WellFair** is a personal health and welfare vault with anatomy visualization,
+  medication, clinical, finance, consent, guardianship, communication, and cooperative
+  support records built on the same semantic and provenance substrate.
+- Webizen Desktop and Studio expose the graph, inference, rendering, QApp, governance,
+  and WellFair capabilities through native Tauri commands and browser-compatible UI
+  contracts.
 
 ---
 
@@ -67,15 +124,26 @@ Full build instructions, CLI reference, and benchmark guide: [docs/manuals/DEVEL
 
 **0.0.24 (active branch)** — active development, pre-release.
 
-The engine includes: native in-process LLM inference with GPU dispatch (Vulkan/DX12/Metal via `wgpu`, no Ollama/llama.cpp/Python at runtime); **browser-native WASM + WebGPU LLM decode at ~5.9 tok/s** (SmolLM2-360M, coherent, zero-heap hot loop) booting from a self-contained P64 AOT container cached in OPFS; SPARQL 1.1 + RDF-Star engine; full deontic / epistemic / LTL / paraconsistent modality stack plus a growing library of further logic modalities; SHACL biosciences, chemistry, and biomedical extensions; DID Verifiable Credentials; SocialWebNet DNSSEC peer bootstrap; W3C Solid/LDP interoperability; a signed desktop installer and updater; and 2,000+ automated tests as of the most recent count in [CHANGELOG.md](CHANGELOG.md) (growing — treat that file as the source of truth for the current figure).
+Recent verification of the implemented surfaces includes:
 
-Also shipping, still maturing: **WellFair**, a personal health & welfare vault with 3D anatomy visualization, clinical/medication/finance/guardianship records, and cooperative work coordination for people supporting each other — built on the same fiduciary and provenance guarantees as the rest of the engine, not a bolted-on app.
+- **SPARQL/QISP:** 299 passed, 0 failed; one real-network integration test is gated.
+- **Core library acceptance:** the most recent full recorded run passed 5,365 tests with
+  no failures; subsequent focused query and GPU-selector suites also pass.
+- **Computational geometry:** 1,517 passed, 0 failed, 0 ignored.
+- **Renderer/runtime:** 48 renderer tests and 2 runtime tests passed.
+- **Real-model Forge inference:** SmolLM2-360M P64 layer-0 GPU execution matched its CPU
+  oracle at `max_rel=3.28e-6`.
+- **Cross-target builds:** core, extensions, renderer, runtime, CLI, the device-benchmark
+  worker, and the WASM LLM feature profile compile on their relevant targets.
 
-The browser LLM engine is pure Rust→WASM. Live demos: [`online-llm-demo.html`](https://mediaprophet.github.io/qualiaDB/online-llm-demo.html) · [`llmdemo`](https://mediaprophet.github.io/qualiaDB/llmdemo/).
+The browser LLM engine is pure Rust→WASM. Live demos:
+[`online-llm-demo.html`](https://mediaprophet.github.io/qualiaDB/online-llm-demo.html) ·
+[`llmdemo`](https://mediaprophet.github.io/qualiaDB/llmdemo/).
 
-Known gaps before v0.1.0: ML-DSA-65 (FIPS 204) signing is **real** (via `fips204`), but VC-issuance wiring and multi-Quin storage of the large signatures remain. Zero-knowledge proofs are split across two paths: a real Groth16 zk-SNARK backend (`crypto/zk_proofs.rs`, verified) exists alongside an older commitment-only placeholder in the general cryptographic library — the two should not be conflated, and callers need to be pointed at the real one. A handful of CLI subcommands (`llm test` / `llm validate` / `llm benchmark`) are still honest placeholders rather than working checks. See [CHANGELOG.md](CHANGELOG.md) for the full, dated history of what's landed.
-
-Full release history: [CHANGELOG.md](CHANGELOG.md).
+For the precise boundary between implemented functionality, intentionally gated external
+capabilities, and remaining pre-v0.1 work, see the
+[functionality manual](docs/manuals/qualia_db_functionality_manual.md). Full release history:
+[CHANGELOG.md](CHANGELOG.md).
 
 ---
 
