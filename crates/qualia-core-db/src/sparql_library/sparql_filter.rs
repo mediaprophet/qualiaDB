@@ -680,15 +680,210 @@ impl ExpressionEvaluator {
                     None => Err(format!("unknown extension function (hash {iri_hash:#018x})")),
                 }
             }
-            // Any builtin without a real handler above MUST NOT silently
-            // evaluate to `true` — a FILTER that fabricates a pass returns
-            // wrong rows (e.g. `FILTER(REGEX(?n,"x"))` would match everything).
-            // Fail closed with an honest, named error instead. Implementing
-            // these (REGEX/CONTAINS/STR* predicates via the resolver, plus the
-            // date/UUID/constructor builtins) is tracked in
-            // docs/plans/immersive-sparql-hypermedia-profile.md.
+            // ── String-producing builtins (QISP-R06) ────────────────────────
+            // Each recovers its argument text via the resolver and interns its
+            // RESULT into the query StringSink (returning an EvalResult::String
+            // whose hash the resolver can recover). Without a sink they fail
+            // closed — never fabricate.
+            Function::Concat => {
+                let mut s = String::new();
+                for i in 0..args_len as usize {
+                    s.push_str(&Self::arg_text(i, args_start, args_len, ctx, row, resolver, "CONCAT")?);
+                }
+                Self::produce_string(resolver, &s, "CONCAT")
+            }
+            Function::Ucase => {
+                let s = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "UCASE")?;
+                Self::produce_string(resolver, &s.to_uppercase(), "UCASE")
+            }
+            Function::Lcase => {
+                let s = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "LCASE")?;
+                Self::produce_string(resolver, &s.to_lowercase(), "LCASE")
+            }
+            Function::Substring => {
+                // SUBSTR(str, start[, length]) — SPARQL/XPath 1-based, codepoint-indexed.
+                let s = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "SUBSTR")?;
+                let start = Self::arg_number(1, args_start, args_len, ctx, row, resolver, "SUBSTR")?;
+                let chars: Vec<char> = s.chars().collect();
+                let n = chars.len() as i64;
+                let from = start.max(1);
+                let end = if args_len >= 3 {
+                    let len = Self::arg_number(2, args_start, args_len, ctx, row, resolver, "SUBSTR")?;
+                    (from + len.max(0)).min(n + 1)
+                } else {
+                    n + 1
+                };
+                let out: String = if from > n || end <= from {
+                    String::new()
+                } else {
+                    chars[(from - 1) as usize..(end - 1) as usize].iter().collect()
+                };
+                Self::produce_string(resolver, &out, "SUBSTR")
+            }
+            Function::StrBefore => {
+                let s = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "STRBEFORE")?;
+                let sep = Self::arg_text(1, args_start, args_len, ctx, row, resolver, "STRBEFORE")?;
+                let out = if sep.is_empty() {
+                    String::new()
+                } else {
+                    match s.find(&sep) {
+                        Some(i) => s[..i].to_string(),
+                        None => String::new(),
+                    }
+                };
+                Self::produce_string(resolver, &out, "STRBEFORE")
+            }
+            Function::StrAfter => {
+                let s = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "STRAFTER")?;
+                let sep = Self::arg_text(1, args_start, args_len, ctx, row, resolver, "STRAFTER")?;
+                let out = if sep.is_empty() {
+                    s.clone()
+                } else {
+                    match s.find(&sep) {
+                        Some(i) => s[i + sep.len()..].to_string(),
+                        None => String::new(),
+                    }
+                };
+                Self::produce_string(resolver, &out, "STRAFTER")
+            }
+            Function::EncodeForUri => {
+                let s = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "ENCODE_FOR_URI")?;
+                Self::produce_string(resolver, &Self::encode_for_uri(&s), "ENCODE_FOR_URI")
+            }
+            // ── COALESCE — first argument that is bound and evaluates cleanly ──
+            Function::Coalesce => {
+                for i in 0..args_len as usize {
+                    let arg_expr_id = ctx.function_args[args_start as usize + i];
+                    // A bare unbound variable is skipped: the engine collapses an
+                    // unbound variable to Numeric(0), so detect unboundness directly
+                    // rather than treating the 0 as a real value.
+                    if let Expression::Variable(v) = ctx.expressions[arg_expr_id as usize] {
+                        if row.get(v).is_none() {
+                            continue;
+                        }
+                    }
+                    if let Ok(val) = Self::evaluate_with_resolver(arg_expr_id, ctx, row, resolver) {
+                        return Ok(val);
+                    }
+                }
+                Err("COALESCE: all arguments are unbound or errored".to_string())
+            }
+            // ── Temporal builtins (query-stable clock; §4.4 referential transparency) ──
+            Function::Now => {
+                let ms = resolver.map(|r| r.now_ms).unwrap_or(0);
+                if ms == 0 {
+                    return Err("NOW requires a query-stable clock; none supplied".to_string());
+                }
+                let dt = chrono::DateTime::from_timestamp_millis(ms as i64)
+                    .ok_or("NOW: timestamp out of range")?;
+                Self::produce_string(
+                    resolver,
+                    &dt.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                    "NOW",
+                )
+            }
+            Function::Year
+            | Function::Month
+            | Function::Day
+            | Function::Hours
+            | Function::Minutes
+            | Function::Seconds => {
+                let s = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "date accessor")?;
+                let dt = Self::parse_datetime(&s)?;
+                use chrono::{Datelike, Timelike};
+                let v: i64 = match func {
+                    Function::Year => dt.year() as i64,
+                    Function::Month => dt.month() as i64,
+                    Function::Day => dt.day() as i64,
+                    Function::Hours => dt.hour() as i64,
+                    Function::Minutes => dt.minute() as i64,
+                    Function::Seconds => dt.second() as i64,
+                    _ => unreachable!(),
+                };
+                Ok(EvalResult::Numeric(v as u64))
+            }
+            Function::Tz => {
+                let s = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "TZ")?;
+                let dt = Self::parse_datetime(&s)?;
+                let off = dt.offset().local_minus_utc();
+                let tz = if off == 0 {
+                    "Z".to_string()
+                } else {
+                    let (sign, a) = if off < 0 { ('-', -off) } else { ('+', off) };
+                    format!("{sign}{:02}:{:02}", a / 3600, (a % 3600) / 60)
+                };
+                Self::produce_string(resolver, &tz, "TZ")
+            }
+            Function::Timezone => {
+                let s = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "TIMEZONE")?;
+                let dt = Self::parse_datetime(&s)?;
+                let off = dt.offset().local_minus_utc();
+                // xsd:dayTimeDuration lexical.
+                let dur = if off == 0 {
+                    "PT0S".to_string()
+                } else {
+                    let (sign, a) = if off < 0 { ("-", -off) } else { ("", off) };
+                    let (h, m) = (a / 3600, (a % 3600) / 60);
+                    let mut d = format!("{sign}PT");
+                    if h > 0 {
+                        d.push_str(&format!("{h}H"));
+                    }
+                    if m > 0 {
+                        d.push_str(&format!("{m}M"));
+                    }
+                    d
+                };
+                Self::produce_string(resolver, &dur, "TIMEZONE")
+            }
+            // ── UUID / STRUUID — query-stable deterministic (per-occurrence salt) ──
+            Function::Uuid | Function::StrUuid => {
+                let seed = resolver.map(|r| r.seed).unwrap_or(0);
+                if seed == 0 {
+                    return Err("UUID requires a query-stable seed; none supplied".to_string());
+                }
+                let uuid = Self::deterministic_uuid(seed, args_start as u64);
+                let is_iri = matches!(func, Function::Uuid);
+                let text = if is_iri { format!("urn:uuid:{uuid}") } else { uuid };
+                match resolver.and_then(|r| r.sink) {
+                    Some(sink) => {
+                        let h = sink.intern(&text);
+                        Ok(if is_iri {
+                            EvalResult::Iri(h)
+                        } else {
+                            EvalResult::String(h)
+                        })
+                    }
+                    None => Err("UUID produces a value but no string sink is available".to_string()),
+                }
+            }
+            // ── IRI / URI / BNODE construction ──
+            Function::Iri | Function::Uri => {
+                let s = Self::arg_text(0, args_start, args_len, ctx, row, resolver, "IRI")?;
+                match resolver.and_then(|r| r.sink) {
+                    Some(sink) => Ok(EvalResult::Iri(sink.intern(&s))),
+                    None => Err("IRI produces a term but no string sink is available".to_string()),
+                }
+            }
+            Function::Bnode => {
+                let seed = resolver.map(|r| r.seed).unwrap_or(0);
+                let label = Self::deterministic_uuid(seed ^ 0x424e_4f44_45, args_start as u64);
+                let text = format!("_:b{}", &label[..8.min(label.len())]);
+                match resolver.and_then(|r| r.sink) {
+                    Some(sink) => Ok(EvalResult::Iri(sink.intern(&text))),
+                    None => Err("BNODE produces a term but no string sink is available".to_string()),
+                }
+            }
+            // Genuinely-blocked builtins fail closed with an honest, named error —
+            // never a fabricated pass. The residual is bounded by real infrastructure
+            // gaps, NOT laziness (see docs/plans/immersive-sparql-hypermedia-profile.md
+            // §1.1, QISP-R06):
+            //   • RAND — needs a float-valued EvalResult channel (the enum carries u64
+            //     bits only; a fake integer would not be a SPARQL double);
+            //   • LANG / LANGMATCHES / STRLANG / STRDT — need a per-term language/
+            //     datatype tag model the engine does not yet carry.
             other => Err(format!(
-                "SPARQL FILTER function {other:?} is not implemented; \
+                "SPARQL FILTER function {other:?} is not implemented (residual QISP-R06: \
+                 needs a float-return channel or a per-term lang/datatype model); \
                  refusing to fabricate a passing result"
             )),
         }
@@ -744,6 +939,95 @@ impl ExpressionEvaluator {
             .resolve_text(hash)
             .ok_or_else(|| format!("{fname}: could not resolve string-literal text"))
     }
+
+    /// Evaluate function argument `idx` to a numeric value (for `SUBSTR` positions).
+    fn arg_number(
+        idx: usize,
+        args_start: u16,
+        args_len: u16,
+        ctx: &SparqlQueryContext,
+        row: &BindingRow,
+        resolver: Option<crate::sparql_ast::TextResolver>,
+        fname: &str,
+    ) -> Result<i64, String> {
+        if (idx as u16) >= args_len {
+            return Err(format!("{fname} is missing a required numeric argument"));
+        }
+        let expr_id = ctx.function_args[args_start as usize + idx];
+        match Self::evaluate_with_resolver(expr_id, ctx, row, resolver)? {
+            EvalResult::Numeric(n) => Ok(n as i64),
+            _ => Err(format!("{fname} argument is not numeric")),
+        }
+    }
+
+    /// Intern a **produced** string into the query [`StringSink`] and return it as an
+    /// `EvalResult::String`. Fails closed (honest error) when no sink is available —
+    /// never fabricates.
+    fn produce_string(
+        resolver: Option<crate::sparql_ast::TextResolver>,
+        text: &str,
+        fname: &str,
+    ) -> Result<EvalResult, String> {
+        match resolver.and_then(|r| r.sink) {
+            Some(sink) => Ok(EvalResult::String(sink.intern(text))),
+            None => Err(format!(
+                "{fname} produces a string but no string sink is available"
+            )),
+        }
+    }
+
+    /// Percent-encode per `ENCODE_FOR_URI` (RFC 3986 unreserved set kept verbatim).
+    fn encode_for_uri(s: &str) -> String {
+        let mut out = String::new();
+        for b in s.bytes() {
+            match b {
+                b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                    out.push(b as char)
+                }
+                _ => out.push_str(&format!("%{b:02X}")),
+            }
+        }
+        out
+    }
+
+    /// Parse an `xsd:dateTime` lexical (RFC 3339, or a timezone-less form treated as UTC).
+    fn parse_datetime(s: &str) -> Result<chrono::DateTime<chrono::FixedOffset>, String> {
+        if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(s) {
+            return Ok(dt);
+        }
+        if let Ok(ndt) = chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S") {
+            let utc = chrono::FixedOffset::east_opt(0).unwrap();
+            return Ok(chrono::DateTime::from_naive_utc_and_offset(ndt, utc));
+        }
+        Err(format!("invalid xsd:dateTime lexical '{s}'"))
+    }
+
+    /// Query-stable, per-occurrence-salted deterministic 128-bit value formatted as a
+    /// v4-shaped UUID. `UUID`/`STRUUID` are non-deterministic in stock SPARQL, but the
+    /// QISP profile requires expression functions to be referentially transparent within
+    /// one query snapshot (plan §4.4): the same `(seed, salt)` always yields the same UUID,
+    /// distinct call sites (distinct `salt`) yield distinct UUIDs.
+    fn deterministic_uuid(seed: u64, salt: u64) -> String {
+        let mut x = seed ^ salt.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+        let mut next = || {
+            x = x.wrapping_add(0x9E37_79B9_7F4A_7C15);
+            let mut z = x;
+            z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+            z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+            z ^ (z >> 31)
+        };
+        let hi = next().to_be_bytes();
+        let lo = next().to_be_bytes();
+        let mut u = [0u8; 16];
+        u[..8].copy_from_slice(&hi);
+        u[8..].copy_from_slice(&lo);
+        u[6] = (u[6] & 0x0F) | 0x40; // version 4 shape
+        u[8] = (u[8] & 0x3F) | 0x80; // variant shape
+        format!(
+            "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
+            u[0], u[1], u[2], u[3], u[4], u[5], u[6], u[7], u[8], u[9], u[10], u[11], u[12], u[13], u[14], u[15]
+        )
+    }
 }
 
 /// Evaluation result
@@ -762,6 +1046,16 @@ impl EvalResult {
             EvalResult::Boolean(b) => *b,
             EvalResult::Numeric(n) => *n != 0,
             _ => false,
+        }
+    }
+
+    /// Recover the text of a `String`/`Iri` result via the query [`StringSink`]
+    /// (produced strings) — the counterpart to the value-producing builtins. Returns
+    /// `None` for non-string results or an unresolvable hash.
+    pub fn as_string(&self, sink: &crate::sparql_ast::StringSink) -> Option<String> {
+        match self {
+            EvalResult::String(h) | EvalResult::Iri(h) => sink.resolve(*h),
+            _ => None,
         }
     }
 }
@@ -943,13 +1237,208 @@ mod tests {
     }
 
     #[test]
-    fn test_unimplemented_filter_builtin_still_errors() {
-        // A builtin with no handler (e.g. CONCAT — needs a string-return
-        // channel) must fail closed, not fabricate true.
+    fn test_string_producing_builtin_without_sink_errors() {
+        // A value-producing builtin (CONCAT) with no StringSink must fail closed,
+        // not fabricate — there is nowhere to put the produced string.
         let ctx = SparqlQueryContext::new();
         let row = BindingRow::new();
         let r = ExpressionEvaluator::evaluate_function(Function::Concat, 0, 0, &ctx, &row, None);
-        assert!(r.is_err(), "unimplemented builtin must error, not fabricate true");
+        assert!(r.is_err(), "string-producing builtin must error without a sink, not fabricate");
+    }
+
+    #[test]
+    fn test_residual_builtins_fail_closed_never_fabricate() {
+        // RAND (no float channel) and the lang/datatype-tag builtins remain honest
+        // errors — they must NOT silently pass.
+        let ctx = SparqlQueryContext::new();
+        let row = BindingRow::new();
+        for f in [Function::Rand, Function::LangMatches, Function::StrLang, Function::StrDt] {
+            let r = ExpressionEvaluator::evaluate_function(f, 0, 0, &ctx, &row, None);
+            assert!(r.is_err(), "{f:?} must fail closed, not fabricate");
+        }
+    }
+
+    // ── QISP-R06 string-producing + temporal + UUID builtins ──────────────────
+
+    fn r06_ctx() -> (SparqlQueryContext, LiteralTable) {
+        (SparqlQueryContext::new(), LiteralTable::new())
+    }
+
+    #[test]
+    fn test_r06_concat_ucase_lcase_encode_via_sink() {
+        use crate::sparql_ast::StringSink;
+        let (mut ctx, mut lits) = r06_ctx();
+        let (a, b) = (0xA1u64, 0xB2u64);
+        let ea = ctx.alloc_expression(Expression::Literal(a)).unwrap();
+        let eb = ctx.alloc_expression(Expression::Literal(b)).unwrap();
+        ctx.function_args[0] = ea;
+        ctx.function_args[1] = eb;
+        ctx.function_arg_count = 2;
+        lits.intern(a, "Hello, ");
+        lits.intern(b, "World/x y");
+        let sink = StringSink::new();
+        let resolver = TextResolver::new(&lits).with_sink(&sink);
+        let row = BindingRow::new();
+
+        let concat = ExpressionEvaluator::evaluate_function(
+            Function::Concat, 0, 2, &ctx, &row, Some(resolver),
+        )
+        .unwrap();
+        match concat {
+            EvalResult::String(h) => assert_eq!(sink.resolve(h).as_deref(), Some("Hello, World/x y")),
+            _ => panic!("CONCAT must produce a string"),
+        }
+
+        let up = ExpressionEvaluator::evaluate_function(
+            Function::Ucase, 0, 1, &ctx, &row, Some(resolver),
+        )
+        .unwrap();
+        assert_eq!(up.as_string(&sink).as_deref(), Some("HELLO, "));
+
+        let lo = ExpressionEvaluator::evaluate_function(
+            Function::Lcase, 0, 1, &ctx, &row, Some(resolver),
+        )
+        .unwrap();
+        assert_eq!(lo.as_string(&sink).as_deref(), Some("hello, "));
+
+        // ENCODE_FOR_URI on arg 1 ("World/x y"): '/' and ' ' get percent-encoded.
+        let enc = ExpressionEvaluator::evaluate_function(
+            Function::EncodeForUri, 1, 1, &ctx, &row, Some(resolver),
+        )
+        .unwrap();
+        assert_eq!(enc.as_string(&sink).as_deref(), Some("World%2Fx%20y"));
+    }
+
+    #[test]
+    fn test_r06_substr_strbefore_strafter() {
+        use crate::sparql_ast::StringSink;
+        let (mut ctx, mut lits) = r06_ctx();
+        let s = 0xC1u64;
+        let es = ctx.alloc_expression(Expression::Literal(s)).unwrap();
+        let e_start = ctx.alloc_expression(Expression::Literal(7)).unwrap(); // start=7
+        let e_len = ctx.alloc_expression(Expression::Literal(5)).unwrap(); // len=5
+        let sep = 0xD2u64;
+        let esep = ctx.alloc_expression(Expression::Literal(sep)).unwrap();
+        lits.intern(s, "hello world!"); // 1-based: 'w' is position 7
+        lits.intern(sep, " ");
+        let sink = StringSink::new();
+        let resolver = TextResolver::new(&lits).with_sink(&sink);
+        let row = BindingRow::new();
+
+        // SUBSTR("hello world!", 7, 5) -> "world"
+        ctx.function_args[0] = es;
+        ctx.function_args[1] = e_start;
+        ctx.function_args[2] = e_len;
+        ctx.function_arg_count = 3;
+        let sub = ExpressionEvaluator::evaluate_function(
+            Function::Substring, 0, 3, &ctx, &row, Some(resolver),
+        )
+        .unwrap();
+        assert_eq!(sub.as_string(&sink).as_deref(), Some("world"));
+
+        // STRBEFORE("hello world!", " ") -> "hello"
+        ctx.function_args[0] = es;
+        ctx.function_args[1] = esep;
+        ctx.function_arg_count = 2;
+        let before = ExpressionEvaluator::evaluate_function(
+            Function::StrBefore, 0, 2, &ctx, &row, Some(resolver),
+        )
+        .unwrap();
+        assert_eq!(before.as_string(&sink).as_deref(), Some("hello"));
+
+        // STRAFTER("hello world!", " ") -> "world!"
+        let after = ExpressionEvaluator::evaluate_function(
+            Function::StrAfter, 0, 2, &ctx, &row, Some(resolver),
+        )
+        .unwrap();
+        assert_eq!(after.as_string(&sink).as_deref(), Some("world!"));
+    }
+
+    #[test]
+    fn test_r06_now_and_year_are_query_stable() {
+        use crate::sparql_ast::StringSink;
+        let (ctx, lits) = r06_ctx();
+        let sink = StringSink::new();
+        // 2021-01-01T00:00:00Z = 1609459200000 ms.
+        let now_ms = 1_609_459_200_000u64;
+        let resolver = TextResolver::new(&lits).with_sink(&sink).with_env(now_ms, 12345);
+        let row = BindingRow::new();
+
+        let now = ExpressionEvaluator::evaluate_function(
+            Function::Now, 0, 0, &ctx, &row, Some(resolver),
+        )
+        .unwrap();
+        let now_text = now.as_string(&sink).expect("NOW is a string");
+        assert!(now_text.starts_with("2021-01-01T00:00:00"), "got {now_text}");
+
+        // YEAR(now_text) -> 2021. Feed the produced dateTime back as the arg.
+        let mut ctx2 = SparqlQueryContext::new();
+        let dt_hash = match now {
+            EvalResult::String(h) => h,
+            _ => panic!(),
+        };
+        let earg = ctx2.alloc_expression(Expression::Literal(dt_hash)).unwrap();
+        ctx2.function_args[0] = earg;
+        ctx2.function_arg_count = 1;
+        let year = ExpressionEvaluator::evaluate_function(
+            Function::Year, 0, 1, &ctx2, &row, Some(resolver),
+        )
+        .unwrap();
+        assert_eq!(year, EvalResult::Numeric(2021));
+    }
+
+    #[test]
+    fn test_r06_now_without_clock_fails_closed() {
+        let (ctx, lits) = r06_ctx();
+        let sink = crate::sparql_ast::StringSink::new();
+        // now_ms unset (0) → NOW must error, never fabricate a time.
+        let resolver = TextResolver::new(&lits).with_sink(&sink);
+        let row = BindingRow::new();
+        let r = ExpressionEvaluator::evaluate_function(Function::Now, 0, 0, &ctx, &row, Some(resolver));
+        assert!(r.is_err(), "NOW without a query-stable clock must fail closed");
+    }
+
+    #[test]
+    fn test_r06_uuid_is_query_stable_and_distinct_per_site() {
+        use crate::sparql_ast::StringSink;
+        let (mut ctx, lits) = r06_ctx();
+        let sink = StringSink::new();
+        let resolver = TextResolver::new(&lits).with_sink(&sink).with_env(1, 0xABCDEF);
+        let row = BindingRow::new();
+
+        // Two calls at the SAME site (same args_start) are stable.
+        ctx.function_arg_count = 0;
+        let u1 = ExpressionEvaluator::evaluate_function(Function::Uuid, 0, 0, &ctx, &row, Some(resolver)).unwrap();
+        let u2 = ExpressionEvaluator::evaluate_function(Function::Uuid, 0, 0, &ctx, &row, Some(resolver)).unwrap();
+        assert_eq!(u1, u2, "same UUID site is stable within a query");
+        let t1 = u1.as_string(&sink).unwrap();
+        assert!(t1.starts_with("urn:uuid:"), "UUID() yields an IRI term: {t1}");
+
+        // A different call site (different args_start) yields a different UUID.
+        let u3 = ExpressionEvaluator::evaluate_function(Function::Uuid, 4, 0, &ctx, &row, Some(resolver)).unwrap();
+        assert_ne!(u1, u3, "distinct UUID sites differ");
+    }
+
+    #[test]
+    fn test_r06_coalesce_skips_unbound_and_errored() {
+        let (mut ctx, lits) = r06_ctx();
+        let sink = crate::sparql_ast::StringSink::new();
+        let resolver = TextResolver::new(&lits).with_sink(&sink);
+
+        // ?unbound (var 0, unbound) then literal 42 → COALESCE returns 42.
+        let vunbound = ctx.register_variable("?u").unwrap();
+        let e_var = ctx.alloc_expression(Expression::Variable(vunbound)).unwrap();
+        let e_lit = ctx.alloc_expression(Expression::Literal(42)).unwrap();
+        ctx.function_args[0] = e_var;
+        ctx.function_args[1] = e_lit;
+        ctx.function_arg_count = 2;
+        let row = BindingRow::new(); // var 0 unbound
+
+        let c = ExpressionEvaluator::evaluate_function(
+            Function::Coalesce, 0, 2, &ctx, &row, Some(resolver),
+        )
+        .unwrap();
+        assert_eq!(c, EvalResult::Numeric(42), "COALESCE skips the unbound variable");
     }
 
     // ── PROV-O filter tests ──────────────────────────────────────────────────

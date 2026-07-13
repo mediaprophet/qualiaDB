@@ -1,0 +1,496 @@
+@prefix qisp:  <https://standards.qualiadb.org/immersive/0.1#> .
+@prefix qispf: <https://standards.qualiadb.org/immersive/function/0.1#> .
+@prefix qispd: <https://standards.qualiadb.org/immersive/datatype/0.1#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix geo:   <http://www.opengis.net/ont/geosparql#> .
+@prefix prov:  <http://www.w3.org/ns/prov#> .
+@prefix time:  <http://www.w3.org/2006/time#> .
+@prefix qudt:  <http://qudt.org/schema/qudt/> .
+@prefix vc:    <https://www.w3.org/2018/credentials#> .
+
+#################################################################
+# Ontology metadata
+#################################################################
+
+qisp: a owl:Ontology ;
+    dct:title "Qualia Immersive SPARQL Profile (QISP) — ontology" ;
+    owl:versionInfo "0.1 Editor's Draft" ;
+    dct:issued "2026-07-13"^^xsd:date ;
+    rdfs:comment """PROVISIONAL, NON-NORMATIVE Editor's Draft. This vocabulary is NOT a W3C or
+OGC standard and carries no compatibility promise. IRIs, term names, and semantics can change
+without notice at the 0.1 maturity level. Every term is 'experimental' status per QISP §2.4.
+QISP is a profile and extension vocabulary layered over RDF 1.2 / SPARQL 1.2, GeoSPARQL 1.1,
+PROV-O, OWL-Time, QUDT, and the W3C VC Data Model 2.0; it reuses those vocabularies rather than
+minting synonyms.""" ;
+    dct:license "Provisional — licensing statement pending per QISP §2.4 (not yet granted)" ;
+    rdfs:seeAlso <https://standards.qualiadb.org/immersive/function/0.1#> ,
+                 <https://standards.qualiadb.org/immersive/datatype/0.1#> .
+
+#################################################################
+# Core resource classes (QISP plan §3.2)
+#################################################################
+
+qisp:SpatialAsset a owl:Class ;
+    rdfs:label "Spatial asset" ;
+    rdfs:comment "A content-addressed spatial resource (mesh, .10d section, tensor buffer, trajectory, or derived geometry). RDF describes and links it; it is never triplified vertex-by-vertex. Experimental at 0.1." .
+
+qisp:MeshAsset a owl:Class ;
+    rdfs:subClassOf qisp:SpatialAsset ;
+    rdfs:label "Mesh asset" ;
+    rdfs:comment "A dense polygonal/volumetric mesh asset (e.g. glTF/GLB or .10d compiled mesh) referenced by URI, not expanded into triples. Experimental at 0.1." .
+
+qisp:TensorAsset a owl:Class ;
+    rdfs:subClassOf qisp:SpatialAsset ;
+    rdfs:label "Tensor asset" ;
+    rdfs:comment "A bounded Tensor10D-profiled buffer carried as an opaque content-addressed asset with profile metadata. Its ordered dimensions follow a qisp:TensorProfile. Experimental at 0.1." .
+
+qisp:TensorProfile a owl:Class ;
+    rdfs:label "Tensor profile" ;
+    rdfs:comment "Describes the ordered dimensions of a tensor value: their symbols, order, datatypes, units, coordinate frame, valid ranges, topology rules, and category (spatial/temporal/epistemic/spectral/categorical). A profile IRI is required to interpret a Tensor10D value. Experimental at 0.1." .
+
+qisp:Trajectory a owl:Class ;
+    rdfs:subClassOf qisp:SpatialAsset ;
+    rdfs:label "Trajectory" ;
+    rdfs:comment "A time-parameterised path asset used by temporal functions (intersectsAt, trajectoryIntersects, sliceAtTime). Experimental at 0.1." .
+
+qisp:SpatialZone a owl:Class ;
+    rdfs:label "Spatial zone" ;
+    rdfs:comment "A named spatial region of interest, typically carrying a qisp:hasDenseRepresentation and a coordinate frame/CRS, against which occupancy and topological predicates are evaluated. Experimental at 0.1." .
+
+qisp:CoordinateFrame a owl:Class ;
+    rdfs:label "Coordinate frame" ;
+    rdfs:comment "A declared reference frame for an asset's coordinates. Complements geo CRS; QISP frames cover non-geographic/local and higher-dimensional frames. Experimental at 0.1." .
+
+qisp:TransientGeometry a owl:Class ;
+    rdfs:subClassOf qisp:SpatialAsset ;
+    rdfs:label "Transient geometry" ;
+    rdfs:comment "A query-scoped constructive-geometry result that disappears when serialization completes unless explicitly leased. It carries provenance and an expiry; it is never automatically persisted. Experimental at 0.1." .
+
+qisp:DerivedGeometry a owl:Class ;
+    rdfs:subClassOf qisp:SpatialAsset ;
+    rdfs:label "Derived geometry" ;
+    rdfs:comment "A geometry asset produced by a constructive or transform function from one or more input assets, carrying input digests, function IRI/version, backend/exactness profile, and output digest. Experimental at 0.1." .
+
+qisp:Computation a owl:Class ;
+    rdfs:subClassOf prov:Activity ;
+    rdfs:label "Computation" ;
+    rdfs:comment "A bounded native kernel evaluation (predicate, measurement, construction, or tensor operation) recorded as a PROV activity with backend, exactness, seed, budgets, and time. Experimental at 0.1." .
+
+qisp:CapabilitySet a owl:Class ;
+    rdfs:label "Capability set" ;
+    rdfs:comment "The set of conformance classes, functions, formats, limits, and exactness profiles an endpoint advertises. Backs the machine-readable capability graph referenced by the service description. Experimental at 0.1." .
+
+qisp:AuthorizationDecision a owl:Class ;
+    rdfs:label "Authorization decision" ;
+    rdfs:comment "A scoped policy decision (subject, relying party, purpose, spatial resource, time/graph revision, operation) produced by verifying a VC/VP against policy. It exposes only minimum decision metadata (decision, proof digest, expiry); raw proof material and unrelated claims are not copied into the spatial graph. Experimental at 0.1." .
+
+qisp:MaterializedSpatialRelation a owl:Class ;
+    rdfs:label "Materialized spatial relation" ;
+    rdfs:comment "A dependency-keyed cached relation stored in a dedicated named graph with PROV-O lineage, expiry, sensitivity class, and invalidation link. Substituted by the planner only when the dependency key and requester policy scope match. Experimental at 0.1." .
+
+#################################################################
+# Conformance classes (QISP plan §2.3)
+# Modelled as instances of qisp:ConformanceClass; an endpoint
+# advertises one or more independently.
+#################################################################
+
+qisp:ConformanceClass a owl:Class ;
+    rdfs:label "Conformance class" ;
+    rdfs:comment "An independently claimable capability module. Claiming the parent profile because one extension function is registered is prohibited (§2.3). Experimental at 0.1." .
+
+qisp:CoreRdf12 a qisp:ConformanceClass ;
+    rdfs:label "Core RDF 1.2" ;
+    rdfs:comment "RDF 1.2 triple terms and reifiers with a version-pinned model and legacy RDF-star migration. Draft: RDF 1.2 is still moving through the W3C process." .
+
+qisp:Sparql12Query a qisp:ConformanceClass ;
+    rdfs:label "SPARQL 1.2 Query" ;
+    rdfs:comment "SPARQL 1.2 query language surface including version announcement and triple terms. Draft pending upstream Recommendation; distinct from stable SPARQL 1.1 conformance." .
+
+qisp:GeoSparql11 a qisp:ConformanceClass ;
+    rdfs:label "GeoSPARQL 1.1" ;
+    rdfs:comment "OGC GeoSPARQL 1.1 geographic features, CRS-aware geometry literals, topological relations, and geof: functions. QISP reuses; it does not redefine geof: semantics." .
+
+qisp:DenseAssetReferences a qisp:ConformanceClass ;
+    rdfs:label "Dense asset references" ;
+    rdfs:comment "Content-addressed dense assets described/linked by RDF with validated, generation-safe references; no dense payload is expanded into NQuin/RDF." .
+
+qisp:SpatialPredicates a qisp:ConformanceClass ;
+    rdfs:label "Spatial predicates" ;
+    rdfs:comment "Hot, caller-buffered topological/proximity/visibility/measurement predicates over dense assets, evaluated after coarse index filtering." .
+
+qisp:ConstructiveGeometry a qisp:ConformanceClass ;
+    rdfs:label "Constructive geometry" ;
+    rdfs:comment "Cold, byte/work/deadline-bounded, cancellable constructive operations returning query-scoped geometry references, not copied mesh literals." .
+
+qisp:Tensor10D a qisp:ConformanceClass ;
+    rdfs:label "Tensor10D" ;
+    rdfs:comment "The Qualia Tensor10D profile and its distance/radius/kNN/slice operators over the resident substrate, with a stable asset mapping and federation contract." .
+
+qisp:AsyncJobs a qisp:ConformanceClass ;
+    rdfs:label "Async jobs" ;
+    rdfs:comment "An advertised QISP job protocol for long-running work: explicit opt-in, authenticated, monotonic, expiring, and never silently returned in place of a SPARQL result." .
+
+qisp:CredentialBoundRelations a qisp:ConformanceClass ;
+    rdfs:label "Credential-bound relations" ;
+    rdfs:comment "Verified, scoped VC decisions linked to occupancy/relation triple terms via rdf:reifies, exposing only minimum decision metadata." .
+
+qisp:MaterializedSpatialViews a qisp:ConformanceClass ;
+    rdfs:label "Materialized spatial views" ;
+    rdfs:comment "Dependency-keyed, policy-partitioned, event-invalidated derived spatial relations used only as an optimization, never a change in truth semantics." .
+
+qisp:StreamingSparql a qisp:ConformanceClass ;
+    rdfs:label "Streaming SPARQL" ;
+    rdfs:comment "RSP-QL-aligned continuous/windowed queries producing incremental RStream/IStream/DStream deltas under budget and backpressure. Draft; distinct from stable SPARQL query conformance (§15d). Not implemented at 0.1 (planned Phase 8b)." .
+
+qisp:WebRtcTransport a qisp:ConformanceClass ;
+    rdfs:label "WebRTC transport" ;
+    rdfs:comment "A browser peer-to-peer transport binding carrying the same federation/streaming/authorization/commons semantics over WebRTC data channels instead of an HTTP endpoint (§15e). Not implemented at 0.1 (greenfield)." .
+
+#################################################################
+# Exactness profiles (QISP plan §4.4)
+#################################################################
+
+qisp:ExactnessProfile a owl:Class ;
+    rdfs:label "Exactness profile" ;
+    rdfs:comment "A declared exactness/backend contract for a function result. Exactness is an explicit argument or query/job profile, never an invisible server preference. Experimental at 0.1." .
+
+qisp:Exact a qisp:ExactnessProfile ;
+    rdfs:label "Exact" ;
+    rdfs:comment "Robust/exact predicates and constructions where supported. Reference semantics; required for rights-affecting decisions unless a separate exact verification is performed." .
+
+qisp:DeterministicApproximate a qisp:ExactnessProfile ;
+    rdfs:label "Deterministic approximate" ;
+    rdfs:comment "Reproducible approximation with declared absolute/relative error bounds. Deterministic given the same inputs, profile, and seed." .
+
+qisp:InteractiveApproximate a qisp:ExactnessProfile ;
+    rdfs:label "Interactive approximate" ;
+    rdfs:comment "Renderer/GPU-oriented result. Never accepted for rights-affecting policy without a separate exact verification; carries an error bound/profile." .
+
+#################################################################
+# Decision outcomes (used by qisp:decision; see §5.3)
+#################################################################
+
+qisp:DecisionOutcome a owl:Class ;
+    rdfs:label "Decision outcome" ;
+    rdfs:comment "The outcome of an authorization decision. Experimental at 0.1." .
+
+qisp:Granted a qisp:DecisionOutcome ;
+    rdfs:label "Granted" ;
+    rdfs:comment "The authorization decision granted the requested, scoped operation." .
+
+qisp:Denied a qisp:DecisionOutcome ;
+    rdfs:label "Denied" ;
+    rdfs:comment "The authorization decision denied the requested operation. A denied/private result is never cached into a public materialized graph." .
+
+#################################################################
+# Core properties (QISP plan §3.3)
+# Reuse geo:/prov:/time:/vc:/qudt: for terms they already define.
+#################################################################
+
+qisp:hasDenseRepresentation a owl:ObjectProperty ;
+    rdfs:label "has dense representation" ;
+    rdfs:domain qisp:SpatialAsset ;
+    rdfs:range qisp:SpatialAsset ;
+    rdfs:comment "Links a described resource to its content-addressed dense asset (a stable, preferably content-addressed URI or DID URL). The target is a reference, never an inline dense literal or pointer." .
+
+qisp:contentDigest a owl:DatatypeProperty ;
+    rdfs:label "content digest" ;
+    rdfs:domain qisp:SpatialAsset ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The asset's cryptographic digest as multibase/multihash, or an explicitly named algorithm plus canonical lowercase bytes. Each representation carries a representation-specific digest." .
+
+qisp:mediaType a owl:DatatypeProperty ;
+    rdfs:label "media type" ;
+    rdfs:domain qisp:SpatialAsset ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The asset media type (e.g. model/gltf-binary, a registered .10d type when available, or a provisional vendor type during incubation)." .
+
+qisp:byteLength a owl:DatatypeProperty ;
+    rdfs:label "byte length" ;
+    rdfs:domain qisp:SpatialAsset ;
+    rdfs:range xsd:nonNegativeInteger ;
+    rdfs:comment "The byte length of the referenced representation." .
+
+qisp:sectionType a owl:DatatypeProperty ;
+    rdfs:label "section type" ;
+    rdfs:domain qisp:SpatialAsset ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The .10d (or equivalent) section kind of the asset (e.g. mesh, tensor, index)." .
+
+qisp:coordinateFrame a owl:ObjectProperty ;
+    rdfs:label "coordinate frame" ;
+    rdfs:domain qisp:SpatialAsset ;
+    rdfs:range qisp:CoordinateFrame ;
+    rdfs:comment "The declared reference frame for the asset's coordinates. For geographic data prefer qisp:crs with a standard CRS IRI." .
+
+qisp:crs a owl:DatatypeProperty ;
+    rdfs:label "CRS" ;
+    rdfs:domain qisp:SpatialAsset ;
+    rdfs:range xsd:anyURI ;
+    rdfs:comment "The coordinate reference system IRI (GeoSPARQL/OGC CRS). CRS confusion is an explicit threat; conversion between CRS is an error unless supported." .
+
+qisp:tensorProfile a owl:ObjectProperty ;
+    rdfs:label "tensor profile" ;
+    rdfs:domain qisp:TensorAsset ;
+    rdfs:range qisp:TensorProfile ;
+    rdfs:comment "The ordered-dimension profile required to interpret a tensor value. A profile IRI is mandatory for any Tensor10D value." .
+
+qisp:dimensionOrder a owl:ObjectProperty ;
+    rdfs:label "dimension order" ;
+    rdfs:domain qisp:TensorProfile ;
+    rdfs:range rdf:List ;
+    rdfs:comment "The ordered list of dimensions of a tensor profile. For the Qualia Tensor10D profile this is [q, v, w, x, y, z, t, alpha, mu, sigma]." .
+
+qisp:unit a owl:ObjectProperty ;
+    rdfs:label "unit" ;
+    rdfs:range qudt:Unit ;
+    rdfs:comment "The QUDT unit of a numeric quantity. Numeric measurements must state their unit; a bare undocumented float is not permitted." .
+
+qisp:validDuring a owl:ObjectProperty ;
+    rdfs:label "valid during" ;
+    rdfs:range time:Interval ;
+    rdfs:comment "The OWL-Time interval during which the subject's assertion holds. Reuse time:hasBeginning/time:hasEnd for interval bounds." .
+
+qisp:derivedAsset a owl:ObjectProperty ;
+    rdfs:label "derived asset" ;
+    rdfs:domain qisp:Computation ;
+    rdfs:range qisp:SpatialAsset ;
+    rdfs:comment "The asset produced by a computation. Use prov:wasDerivedFrom for input lineage rather than a QISP synonym." .
+
+qisp:approximationMode a owl:ObjectProperty ;
+    rdfs:label "approximation mode" ;
+    rdfs:range qisp:ExactnessProfile ;
+    rdfs:comment "The exactness profile under which a result was produced (qisp:Exact / qisp:DeterministicApproximate / qisp:InteractiveApproximate)." .
+
+qisp:errorBound a owl:DatatypeProperty ;
+    rdfs:label "error bound" ;
+    rdfs:range xsd:double ;
+    rdfs:comment "The declared absolute or relative error bound of an approximate result. Required for any non-exact profile." .
+
+qisp:expiresAt a owl:DatatypeProperty ;
+    rdfs:label "expires at" ;
+    rdfs:range xsd:dateTime ;
+    rdfs:comment "The instant after which a transient asset, authorization decision, or materialized relation is no longer valid." .
+
+qisp:authorizedBy a owl:ObjectProperty ;
+    rdfs:label "authorized by" ;
+    rdfs:range qisp:AuthorizationDecision ;
+    rdfs:comment "Links a relation (typically an rdf:reifies reifier over an occupancy triple term) to the scoped authorization decision that permits it. Linkage is not itself authorization; the decision must be independently verified." .
+
+qisp:policy a owl:ObjectProperty ;
+    rdfs:label "policy" ;
+    rdfs:domain qisp:AuthorizationDecision ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "The policy IRI evaluated to reach a decision (issuer/purpose/audience/scope/time rules)." .
+
+qisp:decision a owl:ObjectProperty ;
+    rdfs:label "decision" ;
+    rdfs:domain qisp:AuthorizationDecision ;
+    rdfs:range qisp:DecisionOutcome ;
+    rdfs:comment "The outcome of an authorization decision (qisp:Granted or qisp:Denied)." .
+
+qisp:proofDigest a owl:DatatypeProperty ;
+    rdfs:label "proof digest" ;
+    rdfs:domain qisp:AuthorizationDecision ;
+    rdfs:range xsd:string ;
+    rdfs:comment "A digest of the verification proof material. The full proof and unrelated credential claims are not published unless explicitly requested and authorized. See ADR-0003/§8." .
+
+qisp:lifecycleState a owl:DatatypeProperty ;
+    rdfs:label "lifecycle state" ;
+    rdfs:domain qisp:SpatialAsset ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The lifecycle/integrity state of a dense asset descriptor (e.g. active, leased, expired, purged, unverified). Required on a dense-asset descriptor (§3.4). Experimental at 0.1." .
+
+qisp:inlineTensorValue a owl:ObjectProperty ;
+    rdfs:label "inline tensor value" ;
+    rdfs:domain qisp:TensorAsset ;
+    rdfs:range rdf:List ;
+    rdfs:comment "An inline Tensor10D value expressed, if permitted at all (§3.6), as an rdf:List of exactly ten finite xsd:double values, accompanied by a profile IRI. Non-finite (NaN/Infinity) or mixed-profile values are rejected before native dispatch." .
+
+#################################################################
+# Supporting properties used by decisions and examples (§5)
+# Named here so descriptors and shapes validate; experimental.
+#################################################################
+
+qisp:subject a owl:ObjectProperty ;
+    rdfs:label "subject" ;
+    rdfs:domain qisp:AuthorizationDecision ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "The subject (typically an agent DID) that a decision concerns." .
+
+qisp:scope a owl:ObjectProperty ;
+    rdfs:label "scope" ;
+    rdfs:domain qisp:AuthorizationDecision ;
+    rdfs:range rdfs:Resource ;
+    rdfs:comment "The spatial resource / volume a decision is scoped to." .
+
+qisp:activeSpatialAsset a owl:ObjectProperty ;
+    rdfs:label "active spatial asset" ;
+    rdfs:range qisp:SpatialAsset ;
+    rdfs:comment "The spatial asset currently representing an agent's occupancy, used by synchronous predicate queries (§5.1)." .
+
+qisp:occupies a owl:ObjectProperty ;
+    rdfs:label "occupies" ;
+    rdfs:comment "Asserts that an agent occupies a volume. Typically appears inside a triple term whose reifier carries an authorization decision (§5.3)." .
+
+qisp:volumeMeasure a owl:DatatypeProperty ;
+    rdfs:label "volume measure" ;
+    rdfs:range xsd:double ;
+    rdfs:comment "A numeric volume value; must be accompanied by a unit (qisp:volumeUnit / QUDT). Prefer a QUDT quantity resource for compound uncertainty." .
+
+qisp:volumeUnit a owl:ObjectProperty ;
+    rdfs:label "volume unit" ;
+    rdfs:range qudt:Unit ;
+    rdfs:comment "The QUDT unit of a qisp:volumeMeasure value (e.g. unit:M3)." .
+
+#################################################################
+# Tensor dimension metamodel (QISP plan §3.5)
+#################################################################
+
+qisp:TensorDimension a owl:Class ;
+    rdfs:label "Tensor dimension" ;
+    rdfs:comment "One ordered dimension of a tensor profile, with a symbol, index, category, and whether it is Qualia-specific (requiring the profile IRI to interpret)." .
+
+qisp:DimensionCategory a owl:Class ;
+    rdfs:label "Dimension category" ;
+    rdfs:comment "The kind of a tensor dimension: spatial, temporal, epistemic, spectral, or categorical." .
+
+qisp:Spatial   a qisp:DimensionCategory ; rdfs:label "Spatial" .
+qisp:Temporal  a qisp:DimensionCategory ; rdfs:label "Temporal" .
+qisp:Epistemic a qisp:DimensionCategory ; rdfs:label "Epistemic" .
+qisp:Spectral  a qisp:DimensionCategory ; rdfs:label "Spectral" .
+qisp:Categorical a qisp:DimensionCategory ; rdfs:label "Categorical" .
+
+qisp:hasDimension a owl:ObjectProperty ;
+    rdfs:label "has dimension" ;
+    rdfs:domain qisp:TensorProfile ;
+    rdfs:range qisp:TensorDimension ;
+    rdfs:comment "Relates a tensor profile to one of its dimensions (unordered convenience; the canonical order is qisp:dimensionOrder)." .
+
+qisp:dimensionSymbol a owl:DatatypeProperty ;
+    rdfs:label "dimension symbol" ;
+    rdfs:domain qisp:TensorDimension ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The single-token symbol of the dimension (q, v, w, x, y, z, t, alpha, mu, sigma)." .
+
+qisp:dimensionIndex a owl:DatatypeProperty ;
+    rdfs:label "dimension index" ;
+    rdfs:domain qisp:TensorDimension ;
+    rdfs:range xsd:nonNegativeInteger ;
+    rdfs:comment "The zero-based position of the dimension in the ordered profile [q, v, w, x, y, z, t, alpha, mu, sigma]." .
+
+qisp:dimensionCategory a owl:ObjectProperty ;
+    rdfs:label "dimension category" ;
+    rdfs:domain qisp:TensorDimension ;
+    rdfs:range qisp:DimensionCategory ;
+    rdfs:comment "Classifies the dimension as spatial, temporal, epistemic, spectral, or categorical." .
+
+qisp:qualiaSpecific a owl:DatatypeProperty ;
+    rdfs:label "Qualia-specific" ;
+    rdfs:domain qisp:TensorDimension ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "True when the dimension has Qualia-specific semantics (q, v, w, alpha, mu, sigma) and therefore requires an explicit profile IRI to interpret. x, y, z, t are the only conventional physical dimensions." .
+
+#################################################################
+# The Qualia Tensor10D profile individual (QISP plan §3.5)
+# Ordered dimensions: [q, v, w, x, y, z, t, alpha, mu, sigma]
+#################################################################
+
+qisp:Tensor10DProfile a qisp:TensorProfile ;
+    rdfs:label "Qualia Tensor10D profile 0.1" ;
+    rdfs:comment """The Qualia-native ordered 10-dimension tensor profile. Only x, y, z (spatial) and t
+(temporal) are conventional physical dimensions; q, v, w, alpha, mu, sigma have Qualia-specific
+semantics and MUST NOT be presented as physical dimensions without this profile IRI. sigma is the
+shared EMF value (spectral) that both colour and acoustic rendering encode. Dimension categories
+below are experimental at 0.1.""" ;
+    qisp:dimensionOrder (
+        qisp:dim-q qisp:dim-v qisp:dim-w qisp:dim-x qisp:dim-y
+        qisp:dim-z qisp:dim-t qisp:dim-alpha qisp:dim-mu qisp:dim-sigma
+    ) ;
+    qisp:hasDimension
+        qisp:dim-q , qisp:dim-v , qisp:dim-w , qisp:dim-x , qisp:dim-y ,
+        qisp:dim-z , qisp:dim-t , qisp:dim-alpha , qisp:dim-mu , qisp:dim-sigma .
+
+qisp:dim-q a qisp:TensorDimension ;
+    rdfs:label "q" ;
+    qisp:dimensionSymbol "q" ;
+    qisp:dimensionIndex 0 ;
+    qisp:dimensionCategory qisp:Epistemic ;
+    qisp:qualiaSpecific true ;
+    rdfs:comment "Qualia-specific dimension; semantics fixed by this profile IRI (experimental)." .
+
+qisp:dim-v a qisp:TensorDimension ;
+    rdfs:label "v" ;
+    qisp:dimensionSymbol "v" ;
+    qisp:dimensionIndex 1 ;
+    qisp:dimensionCategory qisp:Categorical ;
+    qisp:qualiaSpecific true ;
+    rdfs:comment "Qualia-specific dimension; semantics fixed by this profile IRI (experimental)." .
+
+qisp:dim-w a qisp:TensorDimension ;
+    rdfs:label "w" ;
+    qisp:dimensionSymbol "w" ;
+    qisp:dimensionIndex 2 ;
+    qisp:dimensionCategory qisp:Categorical ;
+    qisp:qualiaSpecific true ;
+    rdfs:comment "Qualia-specific dimension; semantics fixed by this profile IRI (experimental)." .
+
+qisp:dim-x a qisp:TensorDimension ;
+    rdfs:label "x" ;
+    qisp:dimensionSymbol "x" ;
+    qisp:dimensionIndex 3 ;
+    qisp:dimensionCategory qisp:Spatial ;
+    qisp:qualiaSpecific false ;
+    rdfs:comment "Conventional spatial X coordinate, interpreted in the asset's coordinate frame/CRS." .
+
+qisp:dim-y a qisp:TensorDimension ;
+    rdfs:label "y" ;
+    qisp:dimensionSymbol "y" ;
+    qisp:dimensionIndex 4 ;
+    qisp:dimensionCategory qisp:Spatial ;
+    qisp:qualiaSpecific false ;
+    rdfs:comment "Conventional spatial Y coordinate, interpreted in the asset's coordinate frame/CRS." .
+
+qisp:dim-z a qisp:TensorDimension ;
+    rdfs:label "z" ;
+    qisp:dimensionSymbol "z" ;
+    qisp:dimensionIndex 5 ;
+    qisp:dimensionCategory qisp:Spatial ;
+    qisp:qualiaSpecific false ;
+    rdfs:comment "Conventional spatial Z coordinate, interpreted in the asset's coordinate frame/CRS." .
+
+qisp:dim-t a qisp:TensorDimension ;
+    rdfs:label "t" ;
+    qisp:dimensionSymbol "t" ;
+    qisp:dimensionIndex 6 ;
+    qisp:dimensionCategory qisp:Temporal ;
+    qisp:qualiaSpecific false ;
+    rdfs:comment "Conventional temporal coordinate; use OWL-Time lexical forms with timezone rules for external interchange." .
+
+qisp:dim-alpha a qisp:TensorDimension ;
+    rdfs:label "alpha" ;
+    qisp:dimensionSymbol "alpha" ;
+    qisp:dimensionIndex 7 ;
+    qisp:dimensionCategory qisp:Spectral ;
+    qisp:qualiaSpecific true ;
+    rdfs:comment "Qualia-specific dimension (spectral-coded amplitude, paired with sigma). PROVISIONAL category pending Timothy's canonical definition of alpha; experimental at 0.1." .
+
+qisp:dim-mu a qisp:TensorDimension ;
+    rdfs:label "mu" ;
+    qisp:dimensionSymbol "mu" ;
+    qisp:dimensionIndex 8 ;
+    qisp:dimensionCategory qisp:Epistemic ;
+    qisp:qualiaSpecific true ;
+    rdfs:comment "Qualia-specific dimension (mean/estimate parameter, paired with sigma). PROVISIONAL category pending Timothy's canonical definition of mu; experimental at 0.1." .
+
+qisp:dim-sigma a qisp:TensorDimension ;
+    rdfs:label "sigma" ;
+    qisp:dimensionSymbol "sigma" ;
+    qisp:dimensionIndex 9 ;
+    qisp:dimensionCategory qisp:Spectral ;
+    qisp:qualiaSpecific true ;
+    rdfs:comment "Qualia-specific spectral dimension: the shared EMF value (sigma) that both render::spectral (colour) and render::acoustic (pitch) encode. Requires this profile IRI." .

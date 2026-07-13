@@ -1,5 +1,9 @@
 pub mod external_sort;
 pub mod geosparql;
+/// Immersive SPARQL (QISP) profile — Phase 2 typed values, dense-asset registry,
+/// and (integrated here) the typed function descriptor registry. See
+/// `docs/plans/immersive-sparql-hypermedia-profile.md`.
+pub mod immersive;
 pub mod parsers;
 pub mod quin_sink;
 pub mod rdf_formats;

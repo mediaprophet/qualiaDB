@@ -113,7 +113,22 @@ pub fn execute_sparql_on_graph(
     // graph's ingested lexicon, so `geof:*`/text functions resolve both constant
     // geometry and variable geometry bound from ingested data.
     let lex_closure = |h: u64| crate::daemon_graph::graph_lexicon_lookup(h);
-    let resolver = crate::sparql_ast::TextResolver::with_lexicon(&literals, &lex_closure);
+    // Query-stable clock + seed + produced-string sink for the value-producing and
+    // temporal FILTER/BIND builtins (NOW / CONCAT / SUBSTR / UUID / … — QISP-R06).
+    // `now_ms` is captured ONCE per execution so NOW is stable within the query (plan
+    // §4.4 referential transparency); the seed varies per execution so UUID varies across
+    // queries but is stable within one.
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+    let seed = now_ms
+        .wrapping_mul(0x9E37_79B9_7F4A_7C15)
+        .wrapping_add(trimmed.len() as u64 + 1);
+    let sink = crate::sparql_ast::StringSink::new();
+    let resolver = crate::sparql_ast::TextResolver::with_lexicon(&literals, &lex_closure)
+        .with_sink(&sink)
+        .with_env(now_ms, seed);
     let executor = QueryExecutor::with_resolver(graph, resolver);
 
     let stats = ExecutionStats {

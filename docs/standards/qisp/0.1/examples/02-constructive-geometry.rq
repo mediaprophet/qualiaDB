@@ -1,0 +1,24 @@
+VERSION "1.2"
+PREFIX rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX prov:  <http://www.w3.org/ns/prov#>
+PREFIX unit:  <http://qudt.org/vocab/unit/>
+PREFIX qisp:  <https://standards.qualiadb.org/immersive/0.1#>
+PREFIX qispf: <https://standards.qualiadb.org/immersive/function/0.1#>
+
+CONSTRUCT {
+  ?derived a qisp:TransientGeometry ;
+           qisp:hasDenseRepresentation ?intersection ;
+           prov:wasDerivedFrom ?left, ?right ;
+           qisp:volumeMeasure ?volume ;
+           qisp:volumeUnit unit:M3 ;
+           qisp:expiresAt ?expiry .
+}
+WHERE {
+  ?left  qisp:hasDenseRepresentation ?leftAsset .
+  ?right qisp:hasDenseRepresentation ?rightAsset .
+  BIND(qispf:intersectionGeometry(?leftAsset, ?rightAsset, qisp:Exact) AS ?intersection)
+  BIND(qispf:volume(?intersection, unit:M3, qisp:Exact) AS ?volume)
+  FILTER(?volume > 0)
+  BIND(qispf:transientResource(?intersection) AS ?derived)
+  BIND(qispf:defaultExpiry() AS ?expiry)
+}

@@ -1,0 +1,528 @@
+@prefix qisp:  <https://standards.qualiadb.org/immersive/0.1#> .
+@prefix qispf: <https://standards.qualiadb.org/immersive/function/0.1#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+@prefix geof:  <http://www.opengis.net/def/function/geosparql/> .
+
+#################################################################
+# QISP function catalog — Editor's Draft 0.1
+#################################################################
+
+qispf: a owl:Ontology ;
+    dct:title "Qualia Immersive SPARQL Profile (QISP) — function catalog" ;
+    owl:versionInfo "0.1 Editor's Draft" ;
+    dct:issued "2026-07-13"^^xsd:date ;
+    rdfs:comment """PROVISIONAL, NON-NORMATIVE Editor's Draft. NOT a W3C or OGC standard; no
+compatibility promise. Every function IRI is experimental at 0.1. Where GeoSPARQL already defines
+an operation over 2D/2.5D geometry, the geof: name and semantics take precedence (qispf:defersTo);
+the QISP function is for mesh, volumetric, temporal, tensor, or higher-dimensional behaviour that
+GeoSPARQL does not define. Each descriptor mirrors the typed ImmersiveFunctionDescriptor of QISP
+plan §4.2.""" .
+
+#################################################################
+# Descriptor metamodel (mirrors ImmersiveFunctionDescriptor, §4.2)
+#################################################################
+
+qispf:ImmersiveFunction a owl:Class ;
+    rdfs:label "Immersive function" ;
+    rdfs:comment "A stable function IRI mapped to a bounded native geometry/tensor kernel, with a typed signature. Experimental at 0.1." .
+
+qispf:ValueKind a owl:Class ;
+    rdfs:label "Value kind" ;
+    rdfs:comment "An ImmersiveValueKind (§4.2): the RDF term kind of an argument or result." .
+
+qispf:ExecutionClassKind a owl:Class ;
+    rdfs:label "Execution class" ;
+    rdfs:comment "An ExecutionClass (§4.2): HotZeroHeap, ColdBoundedSync, or AsyncRequired." .
+
+# ValueKind individuals — the canonical eight of §4.2.
+qispf:Boolean     a qispf:ValueKind ; rdfs:label "Boolean" .
+qispf:Scalar      a qispf:ValueKind ; rdfs:label "Scalar" .
+qispf:Quantity    a qispf:ValueKind ; rdfs:label "Quantity" ; rdfs:comment "A numeric value with a QUDT unit, or a QUDT quantity resource." .
+qispf:AssetRef    a qispf:ValueKind ; rdfs:label "AssetRef" ; rdfs:comment "A stable, content-addressed asset IRI (never a pointer/offset literal)." .
+qispf:GeometryRef a qispf:ValueKind ; rdfs:label "GeometryRef" ; rdfs:comment "A query/job-scoped geometry reference." .
+qispf:TensorRef   a qispf:ValueKind ; rdfs:label "TensorRef" ; rdfs:comment "A Tensor10D-profiled tensor reference." .
+qispf:Instant     a qispf:ValueKind ; rdfs:label "Instant" .
+qispf:Interval    a qispf:ValueKind ; rdfs:label "Interval" .
+
+# ExecutionClass individuals (§4.2).
+qispf:HotZeroHeap a qispf:ExecutionClassKind ; rdfs:label "HotZeroHeap" ;
+    rdfs:comment "Caller-buffered, zero-allocation predicate/search; runs synchronously in FILTER after coarse filtering." .
+qispf:ColdBoundedSync a qispf:ExecutionClassKind ; rdfs:label "ColdBoundedSync" ;
+    rdfs:comment "Byte/work/deadline-bounded, cancellable construction through a query-scoped arena; may escalate to AsyncRequired when over budget." .
+qispf:AsyncRequired a qispf:ExecutionClassKind ; rdfs:label "AsyncRequired" ;
+    rdfs:comment "Must be submitted to the async job service (§7.2); cannot run synchronously on /sparql." .
+
+# Descriptor properties.
+qispf:family a owl:DatatypeProperty ; rdfs:label "family" ; rdfs:domain qispf:ImmersiveFunction ; rdfs:range xsd:string .
+qispf:argKinds a owl:ObjectProperty ; rdfs:label "arg kinds" ; rdfs:domain qispf:ImmersiveFunction ; rdfs:range rdf:List ;
+    rdfs:comment "Ordered list of ValueKind for the semantic (value) arguments, up to four per §4.2." .
+qispf:argCount a owl:DatatypeProperty ; rdfs:label "arg count" ; rdfs:domain qispf:ImmersiveFunction ; rdfs:range xsd:unsignedByte ;
+    rdfs:comment "Total argument count as written in query syntax, including any trailing exactness/unit argument." .
+qispf:resultKind a owl:ObjectProperty ; rdfs:label "result kind" ; rdfs:domain qispf:ImmersiveFunction ; rdfs:range qispf:ValueKind .
+qispf:execution a owl:ObjectProperty ; rdfs:label "execution" ; rdfs:domain qispf:ImmersiveFunction ; rdfs:range qispf:ExecutionClassKind .
+qispf:deterministic a owl:DatatypeProperty ; rdfs:label "deterministic" ; rdfs:domain qispf:ImmersiveFunction ; rdfs:range xsd:boolean .
+qispf:exactness a owl:ObjectProperty ; rdfs:label "exactness" ; rdfs:domain qispf:ImmersiveFunction ; rdfs:range qisp:ExactnessProfile ;
+    rdfs:comment "The highest exactness profile the function can deliver (qisp:Exact / qisp:DeterministicApproximate / qisp:InteractiveApproximate)." .
+qispf:takesExactnessArg a owl:DatatypeProperty ; rdfs:label "takes exactness arg" ; rdfs:domain qispf:ImmersiveFunction ; rdfs:range xsd:boolean ;
+    rdfs:comment "True when the function accepts an explicit trailing exactness-profile argument (§4.4/D05)." .
+qispf:takesUnitArg a owl:DatatypeProperty ; rdfs:label "takes unit arg" ; rdfs:domain qispf:ImmersiveFunction ; rdfs:range xsd:boolean ;
+    rdfs:comment "True when the function accepts an explicit unit IRI argument and returns a literal in that unit (§4.4/D06)." .
+qispf:legalInFilter a owl:DatatypeProperty ; rdfs:label "legal in FILTER" ; rdfs:domain qispf:ImmersiveFunction ; rdfs:range xsd:boolean .
+qispf:legalInBind a owl:DatatypeProperty ; rdfs:label "legal in BIND" ; rdfs:domain qispf:ImmersiveFunction ; rdfs:range xsd:boolean .
+qispf:legalInOrderBy a owl:DatatypeProperty ; rdfs:label "legal in ORDER BY" ; rdfs:domain qispf:ImmersiveFunction ; rdfs:range xsd:boolean .
+qispf:defersTo a owl:ObjectProperty ; rdfs:label "defers to" ; rdfs:domain qispf:ImmersiveFunction ; rdfs:range rdfs:Resource ;
+    rdfs:comment "The GeoSPARQL geof: function whose name/semantics take precedence for the 2D/2.5D geographic case; the QISP variant covers mesh/volumetric/higher-dimensional inputs only." .
+
+#################################################################
+# Topological family (§4.1) — hot predicate after coarse filter
+#################################################################
+
+qispf:intersects a qispf:ImmersiveFunction ;
+    rdfs:label "intersects" ;
+    rdfs:comment "True if two dense assets intersect. Mesh/volumetric variant; defers to geof:sfIntersects for GeoSPARQL 2D geometry." ;
+    qispf:family "Topological" ;
+    qispf:argKinds ( qispf:AssetRef qispf:AssetRef ) ;
+    qispf:argCount 3 ;
+    qispf:resultKind qispf:Boolean ;
+    qispf:execution qispf:HotZeroHeap ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:legalInFilter true ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false ;
+    qispf:defersTo geof:sfIntersects .
+
+qispf:contains a qispf:ImmersiveFunction ;
+    rdfs:label "contains" ;
+    rdfs:comment "True if the first dense asset spatially contains the second. Defers to geof:sfContains for GeoSPARQL 2D geometry." ;
+    qispf:family "Topological" ;
+    qispf:argKinds ( qispf:AssetRef qispf:AssetRef ) ;
+    qispf:argCount 3 ;
+    qispf:resultKind qispf:Boolean ;
+    qispf:execution qispf:HotZeroHeap ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:legalInFilter true ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false ;
+    qispf:defersTo geof:sfContains .
+
+qispf:touches a qispf:ImmersiveFunction ;
+    rdfs:label "touches" ;
+    rdfs:comment "True if two dense assets touch (share boundary, disjoint interiors). Defers to geof:sfTouches for GeoSPARQL 2D geometry." ;
+    qispf:family "Topological" ;
+    qispf:argKinds ( qispf:AssetRef qispf:AssetRef ) ;
+    qispf:argCount 3 ;
+    qispf:resultKind qispf:Boolean ;
+    qispf:execution qispf:HotZeroHeap ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:legalInFilter true ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false ;
+    qispf:defersTo geof:sfTouches .
+
+#################################################################
+# Proximity family (§4.1) — hot query, caller-buffered
+#################################################################
+
+qispf:distance a qispf:ImmersiveFunction ;
+    rdfs:label "distance" ;
+    rdfs:comment "Distance between two dense assets, returned as a QUDT quantity in the requested unit. Defers to geof:distance for GeoSPARQL 2D geometry." ;
+    qispf:family "Proximity" ;
+    qispf:argKinds ( qispf:AssetRef qispf:AssetRef ) ;
+    qispf:argCount 4 ;
+    qispf:resultKind qispf:Quantity ;
+    qispf:execution qispf:HotZeroHeap ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:takesUnitArg true ;
+    qispf:legalInFilter true ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy true ;
+    qispf:defersTo geof:distance .
+
+qispf:withinDistance a qispf:ImmersiveFunction ;
+    rdfs:label "withinDistance" ;
+    rdfs:comment "True if two dense assets are within a threshold distance (a QUDT quantity)." ;
+    qispf:family "Proximity" ;
+    qispf:argKinds ( qispf:AssetRef qispf:AssetRef qispf:Quantity ) ;
+    qispf:argCount 4 ;
+    qispf:resultKind qispf:Boolean ;
+    qispf:execution qispf:HotZeroHeap ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:legalInFilter true ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false .
+
+qispf:nearest a qispf:ImmersiveFunction ;
+    rdfs:label "nearest" ;
+    rdfs:comment "The nearest dense asset to the argument asset within an index-pruned candidate set; returns an asset reference." ;
+    qispf:family "Proximity" ;
+    qispf:argKinds ( qispf:AssetRef ) ;
+    qispf:argCount 2 ;
+    qispf:resultKind qispf:AssetRef ;
+    qispf:execution qispf:HotZeroHeap ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:legalInFilter false ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false .
+
+#################################################################
+# Visibility family (§4.1) — ray/BVH; exact or labelled approximation
+#################################################################
+
+qispf:lineOfSight a qispf:ImmersiveFunction ;
+    rdfs:label "lineOfSight" ;
+    rdfs:comment "True if an unobstructed line of sight exists between two assets. Ray/BVH test; exact or labelled approximation." ;
+    qispf:family "Visibility" ;
+    qispf:argKinds ( qispf:AssetRef qispf:AssetRef ) ;
+    qispf:argCount 3 ;
+    qispf:resultKind qispf:Boolean ;
+    qispf:execution qispf:HotZeroHeap ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:legalInFilter true ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false .
+
+qispf:occludes a qispf:ImmersiveFunction ;
+    rdfs:label "occludes" ;
+    rdfs:comment "True if the first asset occludes the second from a viewpoint. Has at least two profiles: exact mesh ray test (qisp:Exact) and render-space approximation (qisp:InteractiveApproximate, error-bounded). Rights decisions require the exact profile." ;
+    qispf:family "Visibility" ;
+    qispf:argKinds ( qispf:AssetRef qispf:AssetRef qispf:AssetRef ) ;
+    qispf:argCount 4 ;
+    qispf:resultKind qispf:Boolean ;
+    qispf:execution qispf:HotZeroHeap ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:legalInFilter true ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false .
+
+#################################################################
+# Measurement family (§4.1) — hot if precomputed/simple; else bounded
+#################################################################
+
+qispf:volume a qispf:ImmersiveFunction ;
+    rdfs:label "volume" ;
+    rdfs:comment "Volume of a solid asset as a QUDT quantity in the requested unit." ;
+    qispf:family "Measurement" ;
+    qispf:argKinds ( qispf:GeometryRef ) ;
+    qispf:argCount 3 ;
+    qispf:resultKind qispf:Quantity ;
+    qispf:execution qispf:ColdBoundedSync ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:takesUnitArg true ;
+    qispf:legalInFilter true ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy true .
+
+qispf:surfaceArea a qispf:ImmersiveFunction ;
+    rdfs:label "surfaceArea" ;
+    rdfs:comment "Surface area of an asset as a QUDT quantity in the requested unit." ;
+    qispf:family "Measurement" ;
+    qispf:argKinds ( qispf:GeometryRef ) ;
+    qispf:argCount 3 ;
+    qispf:resultKind qispf:Quantity ;
+    qispf:execution qispf:ColdBoundedSync ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:takesUnitArg true ;
+    qispf:legalInFilter true ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy true .
+
+qispf:centroid a qispf:ImmersiveFunction ;
+    rdfs:label "centroid" ;
+    rdfs:comment "The centroid of an asset, returned as a query-scoped point geometry reference." ;
+    qispf:family "Measurement" ;
+    qispf:argKinds ( qispf:GeometryRef ) ;
+    qispf:argCount 2 ;
+    qispf:resultKind qispf:GeometryRef ;
+    qispf:execution qispf:ColdBoundedSync ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:legalInFilter false ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false .
+
+#################################################################
+# Temporal family (§4.1) — bounded trace/window evaluation
+#################################################################
+
+qispf:intersectsAt a qispf:ImmersiveFunction ;
+    rdfs:label "intersectsAt" ;
+    rdfs:comment "True if two assets intersect at a given instant (evaluating trajectory position at that time)." ;
+    qispf:family "Temporal" ;
+    qispf:argKinds ( qispf:AssetRef qispf:AssetRef qispf:Instant ) ;
+    qispf:argCount 4 ;
+    qispf:resultKind qispf:Boolean ;
+    qispf:execution qispf:ColdBoundedSync ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:legalInFilter true ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false .
+
+qispf:trajectoryIntersects a qispf:ImmersiveFunction ;
+    rdfs:label "trajectoryIntersects" ;
+    rdfs:comment "True if a trajectory intersects an asset within a time interval, using declared interpolation rules." ;
+    qispf:family "Temporal" ;
+    qispf:argKinds ( qispf:AssetRef qispf:AssetRef qispf:Interval ) ;
+    qispf:argCount 4 ;
+    qispf:resultKind qispf:Boolean ;
+    qispf:execution qispf:ColdBoundedSync ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:legalInFilter true ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false .
+
+qispf:sliceAtTime a qispf:ImmersiveFunction ;
+    rdfs:label "sliceAtTime" ;
+    rdfs:comment "The geometry of an asset at a given instant, returned as a query-scoped geometry reference." ;
+    qispf:family "Temporal" ;
+    qispf:argKinds ( qispf:AssetRef qispf:Instant ) ;
+    qispf:argCount 2 ;
+    qispf:resultKind qispf:GeometryRef ;
+    qispf:execution qispf:ColdBoundedSync ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg false ;
+    qispf:legalInFilter false ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false .
+
+#################################################################
+# Tensor family (§4.1) — resident substrate / GPU batch
+#################################################################
+
+qispf:tensorDistance a qispf:ImmersiveFunction ;
+    rdfs:label "tensorDistance" ;
+    rdfs:comment "Distance between two Tensor10D values under a declared tensor profile; returns a scalar." ;
+    qispf:family "Tensor" ;
+    qispf:argKinds ( qispf:TensorRef qispf:TensorRef ) ;
+    qispf:argCount 3 ;
+    qispf:resultKind qispf:Scalar ;
+    qispf:execution qispf:HotZeroHeap ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:legalInFilter true ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy true .
+
+qispf:tensorWithin a qispf:ImmersiveFunction ;
+    rdfs:label "tensorWithin" ;
+    rdfs:comment "True if two Tensor10D values are within a scalar radius under a declared profile." ;
+    qispf:family "Tensor" ;
+    qispf:argKinds ( qispf:TensorRef qispf:TensorRef qispf:Scalar ) ;
+    qispf:argCount 4 ;
+    qispf:resultKind qispf:Boolean ;
+    qispf:execution qispf:HotZeroHeap ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:legalInFilter true ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false .
+
+qispf:tensorSlice a qispf:ImmersiveFunction ;
+    rdfs:label "tensorSlice" ;
+    rdfs:comment "A sub-tensor sliced from a Tensor10D value along declared dimensions; returns a tensor reference." ;
+    qispf:family "Tensor" ;
+    qispf:argKinds ( qispf:TensorRef qispf:Scalar ) ;
+    qispf:argCount 2 ;
+    qispf:resultKind qispf:TensorRef ;
+    qispf:execution qispf:HotZeroHeap ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg false ;
+    qispf:legalInFilter false ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false .
+
+qispf:knn a qispf:ImmersiveFunction ;
+    rdfs:label "knn" ;
+    rdfs:comment "The k nearest Tensor10D neighbours in the resident substrate under a declared profile. Table-producing: it yields multiple bindings and is invoked as a graph operator (SpatialIndexScan/TensorPredicate), not as a scalar expression in FILTER/BIND/ORDER BY." ;
+    qispf:family "Tensor" ;
+    qispf:argKinds ( qispf:TensorRef qispf:Scalar ) ;
+    qispf:argCount 3 ;
+    qispf:resultKind qispf:TensorRef ;
+    qispf:execution qispf:HotZeroHeap ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:legalInFilter false ;
+    qispf:legalInBind false ;
+    qispf:legalInOrderBy false .
+
+#################################################################
+# Constructive family (§4.1) — cold bounded arena
+#################################################################
+
+qispf:intersectionGeometry a qispf:ImmersiveFunction ;
+    rdfs:label "intersectionGeometry" ;
+    rdfs:comment "The intersection of two solids, returned as a query-scoped geometry reference (never a copied mesh literal). Cold, byte/work/deadline-bounded, cancellable; may escalate to a job when over budget." ;
+    qispf:family "Constructive" ;
+    qispf:argKinds ( qispf:AssetRef qispf:AssetRef ) ;
+    qispf:argCount 3 ;
+    qispf:resultKind qispf:GeometryRef ;
+    qispf:execution qispf:ColdBoundedSync ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:legalInFilter false ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false .
+
+qispf:unionGeometry a qispf:ImmersiveFunction ;
+    rdfs:label "unionGeometry" ;
+    rdfs:comment "The union of two solids as a query-scoped geometry reference. Cold bounded arena." ;
+    qispf:family "Constructive" ;
+    qispf:argKinds ( qispf:AssetRef qispf:AssetRef ) ;
+    qispf:argCount 3 ;
+    qispf:resultKind qispf:GeometryRef ;
+    qispf:execution qispf:ColdBoundedSync ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:legalInFilter false ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false .
+
+qispf:differenceGeometry a qispf:ImmersiveFunction ;
+    rdfs:label "differenceGeometry" ;
+    rdfs:comment "The boolean difference of two solids as a query-scoped geometry reference. Cold bounded arena." ;
+    qispf:family "Constructive" ;
+    qispf:argKinds ( qispf:AssetRef qispf:AssetRef ) ;
+    qispf:argCount 3 ;
+    qispf:resultKind qispf:GeometryRef ;
+    qispf:execution qispf:ColdBoundedSync ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:legalInFilter false ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false .
+
+#################################################################
+# Transform family (§4.1) — cold bounded unless fixed scalar transform
+#################################################################
+
+qispf:transform a qispf:ImmersiveFunction ;
+    rdfs:label "transform" ;
+    rdfs:comment "Apply an affine/rigid transform to an asset, returning a query-scoped geometry reference. Cold bounded unless a fixed scalar transform." ;
+    qispf:family "Transform" ;
+    qispf:argKinds ( qispf:AssetRef qispf:Scalar ) ;
+    qispf:argCount 3 ;
+    qispf:resultKind qispf:GeometryRef ;
+    qispf:execution qispf:ColdBoundedSync ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:legalInFilter false ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false .
+
+qispf:reproject a qispf:ImmersiveFunction ;
+    rdfs:label "reproject" ;
+    rdfs:comment "Reproject an asset to a target CRS, returning a query-scoped geometry reference. Unsupported CRS conversion is an error (§4.3), never a silent approximation." ;
+    qispf:family "Transform" ;
+    qispf:argKinds ( qispf:AssetRef qispf:AssetRef ) ;
+    qispf:argCount 3 ;
+    qispf:resultKind qispf:GeometryRef ;
+    qispf:execution qispf:ColdBoundedSync ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:legalInFilter false ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false .
+
+qispf:buffer a qispf:ImmersiveFunction ;
+    rdfs:label "buffer" ;
+    rdfs:comment "The buffer/offset of an asset by a quantity, returning a query-scoped geometry reference. Defers to geof:buffer for GeoSPARQL 2D geometry." ;
+    qispf:family "Transform" ;
+    qispf:argKinds ( qispf:AssetRef qispf:Quantity ) ;
+    qispf:argCount 3 ;
+    qispf:resultKind qispf:GeometryRef ;
+    qispf:execution qispf:ColdBoundedSync ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg true ;
+    qispf:legalInFilter false ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false ;
+    qispf:defersTo geof:buffer .
+
+#################################################################
+# Profile helper functions (used by the §5 examples)
+# Not part of the §4.1 geometry/tensor families; included so the
+# example queries are self-consistent. Experimental at 0.1.
+#################################################################
+
+qispf:transientResource a qispf:ImmersiveFunction ;
+    rdfs:label "transientResource" ;
+    rdfs:comment "Deterministically scopes a dereferenceable URI to the query/job and result slot for a generated geometry reference (§5.2). Snapshot-pure; no durable publication." ;
+    qispf:family "Helper" ;
+    qispf:argKinds ( qispf:GeometryRef ) ;
+    qispf:argCount 1 ;
+    qispf:resultKind qispf:AssetRef ;
+    qispf:execution qispf:HotZeroHeap ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg false ;
+    qispf:legalInFilter false ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false .
+
+qispf:defaultExpiry a qispf:ImmersiveFunction ;
+    rdfs:label "defaultExpiry" ;
+    rdfs:comment "The default expiry instant for a transient asset, derived from the query-stable time (§4.4). Nullary." ;
+    qispf:family "Helper" ;
+    qispf:argKinds ( ) ;
+    qispf:argCount 0 ;
+    qispf:resultKind qispf:Instant ;
+    qispf:execution qispf:HotZeroHeap ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg false ;
+    qispf:legalInFilter false ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false .
+
+qispf:reifierFor a qispf:ImmersiveFunction ;
+    rdfs:label "reifierFor" ;
+    rdfs:comment "Deterministically derives the reifier resource for an RDF 1.2 triple term so metadata (e.g. qisp:authorizedBy) can be attached via rdf:reifies (§5.3). Its single argument is a triple term (an RDF term kind outside the eight ImmersiveValueKinds)." ;
+    qispf:family "Helper" ;
+    qispf:argCount 1 ;
+    qispf:resultKind qispf:AssetRef ;
+    qispf:execution qispf:HotZeroHeap ;
+    qispf:deterministic true ;
+    qispf:exactness qisp:Exact ;
+    qispf:takesExactnessArg false ;
+    qispf:legalInFilter false ;
+    qispf:legalInBind true ;
+    qispf:legalInOrderBy false .

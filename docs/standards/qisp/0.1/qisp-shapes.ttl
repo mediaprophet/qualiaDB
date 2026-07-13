@@ -1,0 +1,135 @@
+@prefix qisp:  <https://standards.qualiadb.org/immersive/0.1#> .
+@prefix sh:    <http://www.w3.org/ns/shacl#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:   <http://purl.org/dc/terms/> .
+
+#################################################################
+# QISP SHACL shapes — Editor's Draft 0.1
+# Validate dense-asset descriptors, Tensor10D assets, and
+# authorization decisions (QISP plan §3.4, §3.5/§3.6, §5.3).
+# PROVISIONAL, NON-NORMATIVE. Not a W3C/OGC standard.
+#################################################################
+
+<https://standards.qualiadb.org/immersive/shapes/0.1> a owl:Ontology ;
+    dct:title "QISP validation shapes 0.1" ;
+    owl:versionInfo "0.1 Editor's Draft" ;
+    dct:issued "2026-07-13"^^xsd:date ;
+    rdfs:comment "Provisional SHACL shapes for QISP 0.1. Experimental; no compatibility promise." .
+
+#################################################################
+# 1. Dense-asset descriptor (§3.4)
+# Must carry contentDigest, mediaType, byteLength, a coordinate
+# frame OR a CRS, and a lifecycle state.
+#################################################################
+
+qisp:DenseAssetDescriptorShape a sh:NodeShape ;
+    rdfs:label "Dense asset descriptor shape" ;
+    rdfs:comment "Validates the descriptor graph of a dense spatial asset (§3.4). Targets nodes explicitly typed qisp:SpatialAsset." ;
+    sh:targetClass qisp:SpatialAsset ;
+    sh:property [
+        sh:path qisp:contentDigest ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "A dense asset descriptor requires a content digest (multibase/multihash or named-algorithm bytes)." ;
+    ] ;
+    sh:property [
+        sh:path qisp:mediaType ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "A dense asset descriptor requires a media type." ;
+    ] ;
+    sh:property [
+        sh:path qisp:byteLength ;
+        sh:datatype xsd:nonNegativeInteger ;
+        sh:minCount 1 ;
+        sh:message "A dense asset descriptor requires a byte length." ;
+    ] ;
+    sh:property [
+        sh:path qisp:lifecycleState ;
+        sh:minCount 1 ;
+        sh:message "A dense asset descriptor requires a lifecycle/integrity state." ;
+    ] ;
+    sh:or (
+        [ sh:property [ sh:path qisp:coordinateFrame ; sh:minCount 1 ] ]
+        [ sh:property [ sh:path qisp:crs ; sh:minCount 1 ] ]
+    ) ;
+    sh:message "A dense asset descriptor requires either a coordinate frame or a CRS." .
+
+#################################################################
+# 2. Tensor10D asset (§3.5, §3.6)
+# A profile IRI is mandatory; the value is EITHER a dense-asset
+# reference OR an inline list of exactly ten finite doubles.
+#################################################################
+
+qisp:TensorAssetShape a sh:NodeShape ;
+    rdfs:label "Tensor10D asset shape" ;
+    rdfs:comment "Validates a Tensor10D asset: a mandatory profile IRI plus either an asset reference or an inline value of exactly ten finite values (§3.5/§3.6)." ;
+    sh:targetClass qisp:TensorAsset ;
+    sh:property [
+        sh:path qisp:tensorProfile ;
+        sh:nodeKind sh:IRI ;
+        sh:minCount 1 ;
+        sh:message "A Tensor10D value requires an explicit tensor profile IRI." ;
+    ] ;
+    sh:or (
+        [
+            sh:property [
+                sh:path qisp:hasDenseRepresentation ;
+                sh:nodeKind sh:IRI ;
+                sh:minCount 1 ;
+            ]
+        ]
+        [
+            sh:property [
+                sh:path ( qisp:inlineTensorValue [ sh:zeroOrMorePath rdf:rest ] rdf:first ) ;
+                sh:datatype xsd:double ;
+                sh:minCount 10 ;
+                sh:maxCount 10 ;
+                sh:message "An inline Tensor10D value must be exactly ten xsd:double values (non-finite values are additionally rejected before dispatch)." ;
+            ]
+        ]
+    ) ;
+    sh:message "A Tensor10D asset must supply either a dense-asset reference or an inline value of exactly ten finite values." .
+
+#################################################################
+# 3. Authorization decision (§5.3)
+# subject / scope / decision / proofDigest / expiresAt.
+#################################################################
+
+qisp:AuthorizationDecisionShape a sh:NodeShape ;
+    rdfs:label "Authorization decision shape" ;
+    rdfs:comment "Validates a qisp:AuthorizationDecision (§5.3): it exposes only minimum, scoped decision metadata." ;
+    sh:targetClass qisp:AuthorizationDecision ;
+    sh:property [
+        sh:path qisp:subject ;
+        sh:nodeKind sh:IRI ;
+        sh:minCount 1 ;
+        sh:message "An authorization decision requires a subject." ;
+    ] ;
+    sh:property [
+        sh:path qisp:scope ;
+        sh:nodeKind sh:IRI ;
+        sh:minCount 1 ;
+        sh:message "An authorization decision requires a scope (spatial resource / volume)." ;
+    ] ;
+    sh:property [
+        sh:path qisp:decision ;
+        sh:minCount 1 ;
+        sh:in ( qisp:Granted qisp:Denied ) ;
+        sh:message "An authorization decision requires an outcome of qisp:Granted or qisp:Denied." ;
+    ] ;
+    sh:property [
+        sh:path qisp:proofDigest ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "An authorization decision requires a proof digest (not the full proof material)." ;
+    ] ;
+    sh:property [
+        sh:path qisp:expiresAt ;
+        sh:datatype xsd:dateTime ;
+        sh:minCount 1 ;
+        sh:message "An authorization decision requires an expiry instant." ;
+    ] .

@@ -400,15 +400,66 @@ impl LiteralTable {
     }
 }
 
+/// Query-scoped sink for strings **produced** by expression evaluation — the result
+/// of `CONCAT`/`SUBSTR`/`UCASE`/…, an `xsd:dateTime` lexical from `NOW`, a `UUID`
+/// string, or a value-producing `BIND`. `EvalResult` only carries a `u64` hash, so a
+/// produced string must be interned somewhere its hash can be resolved again; this is
+/// that table.
+///
+/// It uses interior mutability (`RefCell`) so it can be carried by the `Copy`
+/// [`TextResolver`] and written during evaluation **without** threading `&mut` through
+/// the recursive evaluator. This is the *cold* expression-eval tier (which already
+/// allocates `String`s for text builtins), not the §6 zero-heap hot path, so a small
+/// interning table here does not violate the hot-path invariant.
+#[derive(Debug, Default)]
+pub struct StringSink {
+    produced: std::cell::RefCell<Vec<(u64, String)>>,
+}
+
+impl StringSink {
+    pub fn new() -> Self {
+        Self::default()
+    }
+    /// Intern a produced string, returning its stable content-derived 60-bit token.
+    /// Deterministic (same text → same token), so repeated/​reordered evaluation of a
+    /// pure builtin is referentially transparent (plan §4.4, QISP-R06).
+    pub fn intern(&self, text: &str) -> u64 {
+        let hash = crate::lexicon::generate_60bit_token(text.as_bytes());
+        let mut v = self.produced.borrow_mut();
+        if !v.iter().any(|(h, _)| *h == hash) {
+            v.push((hash, text.to_string()));
+        }
+        hash
+    }
+    /// Resolve a previously-interned produced string.
+    pub fn resolve(&self, hash: u64) -> Option<String> {
+        self.produced
+            .borrow()
+            .iter()
+            .find(|(h, _)| *h == hash)
+            .map(|(_, s)| s.clone())
+    }
+}
+
 /// Borrowed text resolver threaded into expression evaluation. Resolves a term
 /// hash to its literal text via, in order: the query-scoped `LiteralTable`
-/// (query constants), an optional ingested-data lexicon closure (e.g. wrapping a
-/// `Q42LexMmap::lookup_hash`), and finally the global demo lexicon. All borrowed
-/// — no per-query heap in the evaluator, so the §6 hot-path invariant holds.
+/// (query constants), a [`StringSink`] of values produced during this query, an
+/// optional ingested-data lexicon closure (e.g. wrapping a `Q42LexMmap::lookup_hash`),
+/// and finally the global demo lexicon. Also carries the query-stable `now_ms` clock
+/// and `seed` used by the temporal / `UUID` / `RAND` builtins so their results are
+/// referentially transparent within one query snapshot (plan §4.4). All borrowed — no
+/// per-query heap in the evaluator, so the §6 hot-path invariant holds.
 #[derive(Clone, Copy)]
 pub struct TextResolver<'a> {
     pub literals: &'a LiteralTable,
     pub lexicon: Option<&'a dyn Fn(u64) -> Option<String>>,
+    /// Interner for strings produced by evaluation (`CONCAT`, `NOW`, `UUID`, …).
+    pub sink: Option<&'a StringSink>,
+    /// Query-stable wall clock, ms since the Unix epoch. `0` = unset (temporal
+    /// builtins then fail closed rather than fabricate a non-deterministic time).
+    pub now_ms: u64,
+    /// Query-stable RNG seed for `UUID`/`STRUUID`. `0` = unset.
+    pub seed: u64,
 }
 
 impl<'a> TextResolver<'a> {
@@ -416,18 +467,41 @@ impl<'a> TextResolver<'a> {
         Self {
             literals,
             lexicon: None,
+            sink: None,
+            now_ms: 0,
+            seed: 0,
         }
     }
     pub fn with_lexicon(literals: &'a LiteralTable, lexicon: &'a dyn Fn(u64) -> Option<String>) -> Self {
         Self {
             literals,
             lexicon: Some(lexicon),
+            sink: None,
+            now_ms: 0,
+            seed: 0,
         }
+    }
+    /// Attach a [`StringSink`] so value-producing builtins can intern their results.
+    pub fn with_sink(mut self, sink: &'a StringSink) -> Self {
+        self.sink = Some(sink);
+        self
+    }
+    /// Set the query-stable clock (ms since epoch) and RNG seed used by `NOW`/date
+    /// and `UUID`/`STRUUID`. Both must be query-stable for referential transparency.
+    pub fn with_env(mut self, now_ms: u64, seed: u64) -> Self {
+        self.now_ms = now_ms;
+        self.seed = seed;
+        self
     }
     /// Resolve a term hash to its literal text, if known.
     pub fn resolve_text(&self, hash: u64) -> Option<String> {
         if let Some(s) = self.literals.resolve(hash) {
             return Some(s.to_string());
+        }
+        if let Some(sink) = self.sink {
+            if let Some(s) = sink.resolve(hash) {
+                return Some(s);
+            }
         }
         if let Some(f) = self.lexicon {
             if let Some(s) = f(hash) {
