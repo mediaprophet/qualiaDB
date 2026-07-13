@@ -21,7 +21,7 @@ optional = true
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 image = { version = "0.25", default-features = false, features = ["png"] }
 base64 = "0.22"
-pollster = "0.4"
+pollster = "1"
 
 [features]
 default = ["qualia"]
