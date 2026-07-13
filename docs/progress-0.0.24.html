@@ -45,10 +45,10 @@
   <section class="mb-10">
     <h2 class="text-xl font-semibold mb-3">What is real today</h2>
     <ul class="space-y-2 text-sm text-white/80">
-      <li><strong class="text-emerald-400">Semantic core</strong> — NQuin / Q42, WAL, modalities (deontic, epistemic, …), SPARQL paths.</li>
-      <li><strong class="text-emerald-400">Native inference stack</strong> — in-process GGUF/P64, wgpu resident decode, INT8 KV, Q4_K SoA, hybrid quant-graph grounding.</li>
+      <li><strong class="text-emerald-400">Semantic core &amp; SPARQL engine</strong> — NQuin / Q42, WAL, modalities (deontic, epistemic, …), and a full query engine: SELECT / ASK / CONSTRUCT / DESCRIBE, OPTIONAL · UNION · MINUS, FILTER incl. EXISTS / NOT EXISTS, sub-<code>SELECT</code>, GRAPH, aggregates, property paths (full transitive closure), DISTINCT, and RDF + result serialisation in every standard format (JSON/XML/CSV/TSV; N-Triples/Turtle/TriG/N3/JSON-LD; CBOR-LD) with real IRI/typed-literal resolution. 304 query tests pass.</li>
+      <li><strong class="text-emerald-400">Native inference stack</strong> — in-process GGUF/P64, wgpu&nbsp;30 resident decode, INT8 KV, Q4_K SoA, hybrid quant-graph grounding.</li>
       <li><strong class="text-emerald-400">Rights-grade quality path</strong> — <code>QUALIA_RIGHTS_MODE=1</code> → quant-graph + fact seed + hybrid masks / deontic obligation on match.</li>
-      <li><strong class="text-emerald-400">Desktop host</strong> — <code>webizen-desktop</code> (Tauri 2) + studio; release CI now packages Windows zip on tags.</li>
+      <li><strong class="text-emerald-400">Desktop host</strong> — <code>webizen-desktop</code> (Tauri 2) + studio; desktop / CLI / WASM release CI is green and publishes artifacts to the <code>v0.0.24</code> release, with a minisign-signed auto-updater.</li>
       <li><strong class="text-emerald-400">Vision crate</strong> — new <code>qualia-vision</code> Phase-1: caller-buffered detect API, epistemic observation quins, CPU reference backend.</li>
     </ul>
   </section>
@@ -92,7 +92,7 @@ $env:QUALIA_RIGHTS_MODE = '1'
 # $env:QUALIA_DIRECTML = '1'</pre>
   </section>
 
-  <p class="text-xs text-white/40">Updated 2026-07-10 · QualiaDB / Webizen · principal-directed engineering record</p>
+  <p class="text-xs text-white/40">Updated 2026-07-13 · QualiaDB / Webizen · principal-directed engineering record</p>
 </main>
 </body>
 </html>
