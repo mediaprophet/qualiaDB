@@ -66,6 +66,7 @@ enum ChildSpec {
     Union(PatternId, PatternId),
     Minus(PatternId),
     Service { endpoint: u64, inner: PatternId },
+    Graph { graph_var_or_id: u64, inner: PatternId },
 }
 
 struct PatternParser<'a> {
@@ -167,6 +168,19 @@ impl<'a> PatternParser<'a> {
                     let inner = self.parse_group()?;
                     specs.push(ChildSpec::Service { endpoint, inner });
                 }
+                Some(Token::Word(w)) if w.eq_ignore_ascii_case("GRAPH") => {
+                    self.pos += 1;
+                    // `GRAPH <iri> { … }` (a named graph) or `GRAPH ?g { … }`
+                    // (bind ?g to each matching named graph). `term()` reads the
+                    // graph term the same way as any triple term — a variable is
+                    // registered and returned as its id, an IRI as its hash.
+                    let graph_var_or_id = self.term()?;
+                    let inner = self.parse_group()?;
+                    specs.push(ChildSpec::Graph {
+                        graph_var_or_id,
+                        inner,
+                    });
+                }
                 Some(Token::Word(w)) if w.eq_ignore_ascii_case("FILTER") => {
                     self.pos += 1;
                     let expr_id = self.parse_filter_expr()?;
@@ -251,6 +265,15 @@ impl<'a> PatternParser<'a> {
                     self.ctx.alloc_pattern(Pattern::Service {
                         endpoint_did_id: endpoint,
                         inner_pattern: inner,
+                    })?;
+                }
+                ChildSpec::Graph {
+                    graph_var_or_id,
+                    inner,
+                } => {
+                    self.ctx.alloc_pattern(Pattern::Graph {
+                        graph_var_or_id,
+                        inner,
                     })?;
                 }
             }
@@ -485,7 +508,14 @@ impl<'a> PatternParser<'a> {
             Pattern::Union { left, right } => specs.push(ChildSpec::Union(left, right)),
             Pattern::Optional { inner } => specs.push(ChildSpec::Optional(inner)),
             Pattern::Minus { inner } => specs.push(ChildSpec::Minus(inner)),
-            // Anything else (Graph/Service/PropertyPath/AsOf) is already a single
+            Pattern::Graph {
+                graph_var_or_id,
+                inner,
+            } => specs.push(ChildSpec::Graph {
+                graph_var_or_id,
+                inner,
+            }),
+            // Anything else (Service/PropertyPath/AsOf) is already a single
             // built node; carry it as an Optional inner, which the current
             // join-only planner treats as a plain join (see module doc).
             _ => specs.push(ChildSpec::Optional(id)),

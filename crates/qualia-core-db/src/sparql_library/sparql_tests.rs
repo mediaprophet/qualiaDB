@@ -344,6 +344,101 @@ mod sparql_tests {
     }
 
     #[test]
+    fn test_construct_instantiates_template() {
+        let tok = |b: &[u8]| crate::lexicon::generate_60bit_token(b);
+        let (alice, knows, bob) = (
+            tok(b"http://ex/alice"),
+            tok(b"http://ex/knows"),
+            tok(b"http://ex/bob"),
+        );
+        let friend = tok(b"http://ex/friend");
+        let quins = vec![mk_quin(alice, knows, bob)];
+
+        // Rewrite matched knows-triples into a new `friend` predicate.
+        let query =
+            "CONSTRUCT { ?s <http://ex/friend> ?o } WHERE { ?s <http://ex/knows> ?o }";
+        let (q, ctx) = parse_sparql(query).unwrap();
+        let template = match &q {
+            SparqlQuery::Construct(c) => c.template_pattern,
+            _ => panic!("expected CONSTRUCT"),
+        };
+        let plan = QueryPlanner::plan(&q, &ctx).unwrap();
+        let rows = QueryExecutor::new(&quins)
+            .execute_construct(&plan, &ctx, template)
+            .unwrap();
+
+        assert_eq!(rows.len(), 1, "one constructed triple, got {}", rows.len());
+        let r = &rows[0];
+        assert_eq!(r.get(0), Some(alice), "subject bound from WHERE");
+        assert_eq!(r.get(1), Some(friend), "predicate is the template constant");
+        assert_eq!(r.get(2), Some(bob), "object bound from WHERE");
+    }
+
+    #[test]
+    fn test_graph_variable_binds_named_graph() {
+        let tok = |b: &[u8]| crate::lexicon::generate_60bit_token(b);
+        let (s, p, o) = (
+            tok(b"http://ex/s"),
+            tok(b"http://ex/p"),
+            tok(b"http://ex/o"),
+        );
+        let g1 = tok(b"http://ex/g1");
+        // A single quin living in named graph g1.
+        let quins = vec![crate::NQuin {
+            subject: s,
+            predicate: p,
+            object: o,
+            context: g1,
+            metadata: 0,
+            parity: 0,
+        }];
+
+        let query = "SELECT ?g ?o WHERE { GRAPH ?g { ?s <http://ex/p> ?o } }";
+        let (q, ctx) = parse_sparql(query).unwrap();
+        let plan = QueryPlanner::plan(&q, &ctx).unwrap();
+        let rows = QueryExecutor::new(&quins).execute(&plan, &ctx).unwrap();
+
+        assert!(!rows.is_empty(), "GRAPH ?g must match the named graph");
+        let g_var = var_of(&ctx, b"?g");
+        let o_var = var_of(&ctx, b"?o");
+        assert_eq!(rows[0].get(g_var), Some(g1), "?g bound to the named graph IRI");
+        assert_eq!(rows[0].get(o_var), Some(o), "?o bound within the graph");
+    }
+
+    #[test]
+    fn test_describe_returns_concise_bounded_description() {
+        let tok = |b: &[u8]| crate::lexicon::generate_60bit_token(b);
+        let (alice, knows, bob, age) = (
+            tok(b"http://ex/alice"),
+            tok(b"http://ex/knows"),
+            tok(b"http://ex/bob"),
+            tok(b"http://ex/age"),
+        );
+        // alice has two outgoing triples; bob's triple must NOT be described.
+        let quins = vec![
+            mk_quin(alice, knows, bob),
+            mk_quin(alice, age, 30),
+            mk_quin(bob, knows, alice),
+        ];
+
+        let query = "DESCRIBE <http://ex/alice>";
+        let (q, ctx) = parse_sparql(query).unwrap();
+        let describe = match &q {
+            SparqlQuery::Describe(d) => *d,
+            _ => panic!("expected DESCRIBE"),
+        };
+        let plan = QueryPlanner::plan(&q, &ctx).unwrap();
+        let rows = QueryExecutor::new(&quins)
+            .execute_describe(&plan, &ctx, &describe)
+            .unwrap();
+
+        assert_eq!(rows.len(), 2, "only alice's two triples");
+        for r in &rows {
+            assert_eq!(r.get(0), Some(alice), "every described triple is about alice");
+        }
+    }
+
+    #[test]
     fn test_optional_keeps_unmatched_left_rows() {
         let tok = |b: &[u8]| crate::lexicon::generate_60bit_token(b);
         let (name, age) = (tok(b"http://ex/name"), tok(b"http://ex/age"));

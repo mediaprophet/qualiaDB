@@ -114,11 +114,16 @@ impl<'a> SparqlEndpoint<'a> {
     pub fn handle_construct(&self, query: &str, format: &str) -> Result<String, String> {
         let (sparql_query, ctx) = sparql_parser::parse_sparql(query)?;
 
+        let template_pattern = match &sparql_query {
+            SparqlQuery::Construct(c) => c.template_pattern,
+            _ => return Err("Query is not a CONSTRUCT".to_string()),
+        };
+
         let plan = QueryPlanner::plan(&sparql_query, &ctx)?;
         let executor = QueryExecutor::new(&self.quins);
-        let results = executor.execute_construct(&plan, &ctx)?;
+        // Rows are the instantiated template triples (slots 0/1/2 = s/p/o).
+        let results = executor.execute_construct(&plan, &ctx, template_pattern)?;
 
-        // For now, format as SELECT results (simplified - no template variables)
         match format.to_lowercase().as_str() {
             "ntriples" => {
                 let mut output = Vec::new();
@@ -149,11 +154,16 @@ impl<'a> SparqlEndpoint<'a> {
     pub fn handle_describe(&self, query: &str, format: &str) -> Result<String, String> {
         let (sparql_query, ctx) = sparql_parser::parse_sparql(query)?;
 
+        let describe = match &sparql_query {
+            SparqlQuery::Describe(d) => *d,
+            _ => return Err("Query is not a DESCRIBE".to_string()),
+        };
+
         let plan = QueryPlanner::plan(&sparql_query, &ctx)?;
         let executor = QueryExecutor::new(&self.quins);
-        let results = executor.execute_describe(&plan, &ctx)?;
+        // Rows are the Concise Bounded Description triples (slots 0/1/2 = s/p/o).
+        let results = executor.execute_describe(&plan, &ctx, &describe)?;
 
-        // For now, format as SELECT results (simplified)
         match format.to_lowercase().as_str() {
             "ntriples" => {
                 let mut output = Vec::new();

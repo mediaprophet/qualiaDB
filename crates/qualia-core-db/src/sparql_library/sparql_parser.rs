@@ -166,22 +166,34 @@ fn parse_ask_query(
     })
 }
 
-fn parse_construct_query(
-    query: &str,
-    ctx: &mut SparqlQueryContext,
-    prefixes: &HashMap<String, String>,
-) -> Result<ConstructQuery, String> {
-    let after_construct = query.trim_start_matches("CONSTRUCT").trim();
-    // Simplified - just parse WHERE for now
-    let where_start = after_construct
-        .find("WHERE")
-        .ok_or("WHERE clause not found")?;
-    let where_clause = &after_construct[where_start..];
-    let pattern_id = parse_where_clause(where_clause, ctx, prefixes)?;
+/// Index of the `}` that closes the `{` at `open` (balanced), or `None`.
+/// `{`/`}` are ASCII (0x7B/0x7D) and never appear as UTF-8 continuation bytes,
+/// so byte scanning is safe.
+fn find_matching_brace(s: &str, open: usize) -> Option<usize> {
+    let bytes = s.as_bytes();
+    if bytes.get(open) != Some(&b'{') {
+        return None;
+    }
+    let mut depth = 0usize;
+    for (i, &b) in bytes.iter().enumerate().skip(open) {
+        match b {
+            b'{' => depth += 1,
+            b'}' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(i);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
 
-    Ok(ConstructQuery {
-        template_pattern: 0, // TODO: Parse template
-        root_pattern: pattern_id,
+fn empty_construct(template_pattern: PatternId, root_pattern: PatternId) -> ConstructQuery {
+    ConstructQuery {
+        template_pattern,
+        root_pattern,
         group_by: [0; MAX_VARIABLES],
         group_by_count: 0,
         having: None,
@@ -189,7 +201,42 @@ fn parse_construct_query(
         order_by_count: 0,
         limit: None,
         offset: 0,
-    })
+    }
+}
+
+fn parse_construct_query(
+    query: &str,
+    ctx: &mut SparqlQueryContext,
+    prefixes: &HashMap<String, String>,
+) -> Result<ConstructQuery, String> {
+    let after_construct = query.trim_start_matches("CONSTRUCT").trim();
+
+    // `CONSTRUCT WHERE { … }` shorthand: the WHERE pattern is also the template.
+    if after_construct.to_ascii_uppercase().starts_with("WHERE") {
+        let pid = parse_where_clause(after_construct, ctx, prefixes)?;
+        return Ok(empty_construct(pid, pid));
+    }
+
+    // `CONSTRUCT { template } WHERE { … }`: parse the template group (reusing the
+    // WHERE-group grammar by prefixing the `WHERE` keyword) first — this also
+    // registers its variables, which the WHERE clause then reuses by hash.
+    let tmpl_open = after_construct
+        .find('{')
+        .ok_or("CONSTRUCT template '{' not found")?;
+    let tmpl_close = find_matching_brace(after_construct, tmpl_open)
+        .ok_or("Unbalanced CONSTRUCT template braces")?;
+    let template_group = &after_construct[tmpl_open..=tmpl_close];
+    let template_input = format!("WHERE {template_group}");
+    let template_pattern = parse_where_clause(&template_input, ctx, prefixes)?;
+
+    let rest = &after_construct[tmpl_close + 1..];
+    let where_start = rest
+        .to_ascii_uppercase()
+        .find("WHERE")
+        .ok_or("WHERE clause not found")?;
+    let root_pattern = parse_where_clause(&rest[where_start..], ctx, prefixes)?;
+
+    Ok(empty_construct(template_pattern, root_pattern))
 }
 
 fn parse_describe_query(
@@ -198,18 +245,60 @@ fn parse_describe_query(
     prefixes: &HashMap<String, String>,
 ) -> Result<DescribeQuery, String> {
     let after_describe = query.trim_start_matches("DESCRIBE").trim();
-    // Simplified - just parse WHERE for now
-    let where_start = after_describe.find("WHERE");
-    let root_pattern = if let Some(start) = where_start {
-        let where_clause = &after_describe[start + 5..];
-        Some(parse_where_clause(where_clause, ctx, prefixes)?)
-    } else {
-        None
+    let where_pos = after_describe.to_ascii_uppercase().find("WHERE");
+    let targets_str = match where_pos {
+        Some(p) => &after_describe[..p],
+        None => after_describe,
     };
 
+    // Parse WHERE first so any `?var` targets are already registered in `ctx`
+    // and resolve to the same VariableId the WHERE clause bound.
+    let root_pattern = match where_pos {
+        Some(p) => Some(parse_where_clause(&after_describe[p..], ctx, prefixes)?),
+        None => None,
+    };
+
+    // Resolve each target token to a constant IRI hash or a bound variable id.
+    // Terms are hashed with `generate_60bit_token` — identical to the WHERE
+    // grammar and to RDF ingest, so `DESCRIBE <iri>` matches stored subjects.
+    let mut vars_or_ids = [0u64; MAX_VARIABLES];
+    let mut var_count = 0usize;
+    for tok in targets_str.split_whitespace() {
+        if var_count >= MAX_VARIABLES {
+            break;
+        }
+        if tok == "*" {
+            // `DESCRIBE *` — resources come from every WHERE binding
+            // (var_count stays 0; the executor handles that case).
+            continue;
+        }
+        let value: Option<u64> = if let Some(name) = tok.strip_prefix('?') {
+            let h = crate::lexicon::generate_60bit_token(format!("?{name}").as_bytes());
+            ctx.variable_hashes
+                .iter()
+                .take(ctx.variable_count)
+                .position(|x| *x == h)
+                .map(|id| id as u64)
+        } else if let Some(iri) = tok.strip_prefix('<').and_then(|s| s.strip_suffix('>')) {
+            Some(crate::lexicon::generate_60bit_token(iri.as_bytes()))
+        } else if let Some((pfx, local)) = tok.split_once(':') {
+            let expanded = match prefixes.get(pfx) {
+                Some(base) => format!("{base}{local}"),
+                None => tok.to_string(),
+            };
+            Some(crate::lexicon::generate_60bit_token(expanded.as_bytes()))
+        } else {
+            None
+        };
+        if let Some(v) = value {
+            vars_or_ids[var_count] = v;
+            var_count += 1;
+        }
+    }
+
     Ok(DescribeQuery {
-        vars_or_ids: [0; MAX_VARIABLES],
-        var_count: 0,
+        vars_or_ids,
+        var_count: var_count as u8,
         root_pattern,
     })
 }

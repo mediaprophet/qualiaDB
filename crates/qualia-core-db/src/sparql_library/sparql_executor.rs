@@ -96,22 +96,143 @@ impl<'a> QueryExecutor<'a> {
         Ok(!results.is_empty())
     }
 
-    /// Execute CONSTRUCT query
+    /// Collect the concrete triple patterns of a CONSTRUCT template into `out`
+    /// as `(subject, predicate, object)` term triples (each field still a
+    /// variable id or a constant hash). A template is either a single `Triple`
+    /// or a `Group` of triples; any non-triple child is ignored (a CONSTRUCT
+    /// template is a basic graph pattern, so only triples are meaningful).
+    fn collect_template_triples(
+        pattern_id: PatternId,
+        ctx: &SparqlQueryContext,
+        out: &mut Vec<(u64, u64, u64)>,
+    ) {
+        match ctx.patterns.get(pattern_id as usize) {
+            Some(Pattern::Triple {
+                subject,
+                predicate,
+                object,
+            }) => out.push((*subject, *predicate, *object)),
+            Some(Pattern::Group { start_idx, len }) => {
+                for i in *start_idx..(*start_idx + *len) {
+                    Self::collect_template_triples(i, ctx, out);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Execute a CONSTRUCT query: evaluate the WHERE pattern, then instantiate
+    /// the template for every solution. The returned rows are the constructed
+    /// triples themselves — variable slot 0 = subject, 1 = predicate, 2 = object
+    /// — which is exactly what the N-Triples/XML/JSON graph serialisers read.
+    ///
+    /// A template triple is emitted only when all three of its terms are bound
+    /// (SPARQL 1.1 §16.2.1: a template instantiation with an unbound term
+    /// produces no triple). Duplicate triples are collapsed.
     pub fn execute_construct(
         &self,
         plan: &ExecutionPlan,
         ctx: &SparqlQueryContext,
+        template_pattern: PatternId,
     ) -> Result<Vec<BindingRow>, String> {
-        self.execute(plan, ctx)
+        let solutions = self.execute(plan, ctx)?;
+
+        let mut templates: Vec<(u64, u64, u64)> = Vec::new();
+        Self::collect_template_triples(template_pattern, ctx, &mut templates);
+
+        let resolve = |term: u64, row: &BindingRow| -> Option<u64> {
+            match term_is_var(term, ctx) {
+                Some(var) => row.get(var), // unbound → None → triple skipped
+                None => Some(term),        // constant term
+            }
+        };
+
+        let mut seen = std::collections::HashSet::new();
+        let mut out = Vec::new();
+        for sol in &solutions {
+            for &(s, p, o) in &templates {
+                let (sv, pv, ov) = match (resolve(s, sol), resolve(p, sol), resolve(o, sol)) {
+                    (Some(sv), Some(pv), Some(ov)) => (sv, pv, ov),
+                    _ => continue,
+                };
+                if seen.insert((sv, pv, ov)) {
+                    let mut row = BindingRow::new();
+                    row.set(0, sv);
+                    row.set(1, pv);
+                    row.set(2, ov);
+                    out.push(row);
+                }
+            }
+        }
+        Ok(out)
     }
 
-    /// Execute DESCRIBE query
+    /// Execute a DESCRIBE query: build the set of resources to describe (each
+    /// `vars_or_ids` entry is a constant IRI, or a variable bound by the WHERE
+    /// pattern; `DESCRIBE *` with a WHERE describes every value bound in the
+    /// solutions), then emit a Concise Bounded Description — every stored quin
+    /// whose subject is a described resource. Rows carry the triple in slots
+    /// 0/1/2, matching the graph serialisers. Duplicate triples are collapsed.
     pub fn execute_describe(
         &self,
         plan: &ExecutionPlan,
         ctx: &SparqlQueryContext,
+        describe: &DescribeQuery,
     ) -> Result<Vec<BindingRow>, String> {
-        self.execute(plan, ctx)
+        // WHERE solutions are only needed (and only valid) when a pattern exists
+        // — a bare `DESCRIBE <iri>` has an empty plan.
+        let solutions = if describe.root_pattern.is_some() {
+            self.execute(plan, ctx)?
+        } else {
+            Vec::new()
+        };
+
+        let mut resources: Vec<u64> = Vec::new();
+        let mut add = |r: u64, resources: &mut Vec<u64>| {
+            if !resources.contains(&r) {
+                resources.push(r);
+            }
+        };
+
+        if describe.var_count == 0 {
+            // DESCRIBE * — every value bound in the WHERE solutions.
+            for sol in &solutions {
+                for var in 0..ctx.variable_count as VariableId {
+                    if let Some(v) = sol.get(var) {
+                        add(v, &mut resources);
+                    }
+                }
+            }
+        } else {
+            for i in 0..describe.var_count as usize {
+                let term = describe.vars_or_ids[i];
+                match term_is_var(term, ctx) {
+                    Some(var) => {
+                        for sol in &solutions {
+                            if let Some(v) = sol.get(var) {
+                                add(v, &mut resources);
+                            }
+                        }
+                    }
+                    None => add(term, &mut resources),
+                }
+            }
+        }
+
+        let mut seen = std::collections::HashSet::new();
+        let mut out = Vec::new();
+        for &r in &resources {
+            for q in self.quins {
+                if q.subject == r && seen.insert((q.subject, q.predicate, q.object)) {
+                    let mut row = BindingRow::new();
+                    row.set(0, q.subject);
+                    row.set(1, q.predicate);
+                    row.set(2, q.object);
+                    out.push(row);
+                }
+            }
+        }
+        Ok(out)
     }
 
     fn execute_operator(
@@ -1030,8 +1151,44 @@ impl<'a> QueryExecutor<'a> {
         row: &mut BindingRow,
         results: &mut Vec<BindingRow>,
     ) -> Result<bool, String> {
-        // Check if graph_var_or_id is a variable or a specific graph IRI
-        // For now, assume it's a specific graph IRI (simplified)
+        // GRAPH ?g { … } — the graph term is a variable. Enumerate every named
+        // graph (distinct non-default context), evaluate the inner pattern within
+        // it, and bind ?g to that graph IRI on each resulting solution.
+        if let Some(graph_var) = term_is_var(graph_var_or_id, ctx) {
+            let mut contexts: Vec<u64> = Vec::new();
+            for q in self.quins {
+                if q.context != 0 && !contexts.contains(&q.context) {
+                    contexts.push(q.context);
+                }
+            }
+
+            let mut matched = false;
+            for gctx in contexts {
+                let graph_quins = crate::query_engine::filter_by_context(self.quins, gctx);
+                if graph_quins.is_empty() {
+                    continue;
+                }
+                let temp_executor = QueryExecutor {
+                    quins: &graph_quins,
+                    resolver: self.resolver,
+                };
+                // Seed the inner evaluation with ?g pre-bound so a join on ?g is
+                // consistent; stamp it on every produced row as well.
+                let mut seed = *row;
+                seed.set(graph_var, gctx);
+                let mut local = Vec::new();
+                if temp_executor.execute_operator(inner, plan, ctx, &mut seed, &mut local)? {
+                    matched = true;
+                }
+                for mut r in local {
+                    r.set(graph_var, gctx);
+                    results.push(r);
+                }
+            }
+            return Ok(matched);
+        }
+
+        // GRAPH <iri> { … } — a specific named graph.
         let graph_id = graph_var_or_id;
 
         // Filter quins by graph context
