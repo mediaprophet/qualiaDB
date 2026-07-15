@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Qualia WASM LLM — Test Harness</title>
-<!-- COI for SharedArrayBuffer (multi-thread wasm) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/coi-serviceworker/0.1.7/coi-serviceworker.min.js"></script>
+<!-- COI for SharedArrayBuffer (multi-thread wasm) — self-hosted at site ROOT so the worker's
+     scope ("/") covers this root page; a js/-hosted worker can't. (cdnjs copy 404s.) -->
+<script src="coi-serviceworker.js"></script>
 <!-- Strip removed WebGPU device limits so wgpu 0.19 requestDevice succeeds on current Chrome -->
 <script src="js/webgpu-limits-shim.js"></script>
 <style>

@@ -4,7 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Qualia-DB | Online LLM Demo</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/coi-serviceworker/0.1.7/coi-serviceworker.min.js"></script>
+    <!-- Self-hosted coi-serviceworker at the SITE ROOT (not js/): a service worker's scope is its
+         own directory, so a js/-hosted worker cannot control this root page and the page never
+         becomes crossOriginIsolated — SharedArrayBuffer stays unavailable and the WASM engine
+         hangs on "Initialising…". Root placement gives scope "/", covering this page. (The cdnjs
+         copy previously referenced here 404s.) -->
+    <script src="coi-serviceworker.js"></script>
     <script src="js/webgpu-limits-shim.js"></script>
     <link rel="stylesheet" href="css/tailwind-built.css">
     <link rel="stylesheet" href="css/site-nav.css">
