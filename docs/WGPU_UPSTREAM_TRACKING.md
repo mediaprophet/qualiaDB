@@ -25,10 +25,12 @@ The categories (from Timothy's investigation, which matched our reality precisel
 | 4 | Ray-query **acceleration-structure limits default to 0** (`max_blas_geometry_count` etc.) | **App-side** | wgpu's conservative defaults; must be raised in `DeviceDescriptor`. **Fixed** (`execute/wgpu.rs` raises them from adapter values). Not a bug. |
 | 5 | **"Buffer bound with conflicting usages" validation error** — same buffer read-write + read-only in one dispatch | **App-side (spec-correct)** | `read_write` is an exclusive usage per the WebGPU spec; wgpu correctly rejects it. **Fixed** in DAG-IR P4 (two-slab discipline + `copy_view` GPU→GPU hand-off, `graph_ops/executor.rs`). Not a bug. |
 | 6 | `device.poll(Maintain::Wait)` no longer compiles | **API evolution** | wgpu 29 renamed `Maintain` → `PollType`. **Modernized** (CLAUDE.md §13). Not a bug. |
+| 7 | **WebGPU module panics `"Unexpected error"` (webgpu.rs:85) on `pop_error_scope().await` when the scope caught *no* error** — aborts the wasm module during portal GPU init, blacking out `playground/anatomy.html` | **Upstream bug** (wgpu 30.0.0 × wasm-bindgen ≥0.2.123) | `GPUDevice.popErrorScope()` resolves to `GPUError \| null`, returning JS **`null`** on the no-error path. wgpu's `future_pop_error_scope` (`backend/webgpu.rs:1067`) feeds that through `js_sys::JsOption::into_option()`, which since **wasm-bindgen 0.2.123** treats `null` as a *present* value (only `undefined` is absent — see the `into_option` doc). So `null` → `Some(null)` → `Error::from_js(null)` → `panic!("Unexpected error")`. Confirmed live in Chrome (real WebGPU) 2026-07-15: the error passed to `from_js` logged as `ctor=null msg=null`, stack `MakeSendFuture::poll → from_js → panic`, from `PortalGpu::try_new_async`. **App-side mitigation shipped** (`render/gpu/mod.rs`): on `wasm32` we `drop(error_scope)` instead of `.pop().await` — the guard's `Drop` still pops the scope but never polls the buggy future, so it cannot panic. Native keeps full `.pop().await` error surfacing. **Proper upstream fix** (soft-fork candidate): make `future_pop_error_scope` treat a `null`/`undefined` pop result as `None` (guard before `from_js`), and/or harden `Error::from_js` to map an unrecognised `GPUError` to `Error::Internal` rather than panicking. |
 
-**Net:** exactly **one** genuine upstream bug (coopmat, #1) — and its fix is already merged upstream,
-awaiting a release. Everything else was app-side (fixed) or a spec limitation (bypassed natively). We
-should **not** hard-fork wgpu.
+**Net:** **two** genuine upstream bugs — coopmat (#1, fix merged upstream awaiting release) and the
+`pop_error_scope` null panic (#7, app-side mitigation shipped, soft-fork of `future_pop_error_scope`
+still the proper fix). Everything else was app-side (fixed) or a spec limitation (bypassed natively).
+We still should **not** hard-fork wgpu; #7 is a one-function soft-fork when we do the next patch pass.
 
 ---
 

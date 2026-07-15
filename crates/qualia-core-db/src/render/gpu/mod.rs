@@ -324,12 +324,13 @@ impl PortalGpu {
             .request_device(&wgpu::DeviceDescriptor {
                 label: Some("qualia-portal-gpu"),
                 required_features: wgpu::Features::empty(),
-                // WebGPU baseline limits — NOT downlevel_webgl2_defaults, which set
-                // max_storage_buffers_per_shader_stage = 0 and silently invalidate both portal
-                // pipelines (their vertex shaders read the tensor SOA / particle storage
-                // buffers), turning the viewport black. Any BROWSER_WEBGPU adapter supports the
-                // baseline. The limits-shim strips fields Chrome doesn't recognise.
-                required_limits: wgpu::Limits::default(),
+                // Request exactly the adapter's advertised limits. `Limits::default()`
+                // under wgpu 30 asks for desktop-tier limits that a browser WebGPU
+                // adapter does not grant, so `request_device` would fail device
+                // validation. `adapter.limits()` never over-requests and still preserves
+                // the non-zero storage-buffer limits the portal pipelines need (unlike
+                // `downlevel_webgl2_defaults`, which zeroes them and blacks out the view).
+                required_limits: adapter.limits(),
                 ..Default::default()
             })
             .await
@@ -789,16 +790,25 @@ impl PortalGpu {
         // Surface otherwise-silent deferred pipeline/shader creation errors. Dawn (WebGPU) is far
         // stricter than the native backends, so a pipeline that builds on desktop can be invalid in
         // the browser and silently render nothing; log it instead of leaving a black viewport.
-        let scope_err = error_scope.pop().await;
+        //
+        // On wasm we CANNOT await this pop under wgpu 30.0.0: `GPUDevice.popErrorScope()` resolves
+        // to `GPUError | null`, and on the (common) no-error path it returns JS `null`. wgpu's
+        // `future_pop_error_scope` feeds that through `JsOption::into_option()`, which — since
+        // wasm-bindgen 0.2.123 — treats `null` as a *present* value (only `undefined` is absent).
+        // So a null (no error) becomes `Some(null)`, wgpu calls `Error::from_js(null)`, and
+        // webgpu.rs:85 panics `"Unexpected error"`, aborting the module before the canvas ever
+        // renders. Dropping the guard still pops the scope (discarding any captured error) but
+        // never polls that buggy future, so it cannot panic. Tracked in
+        // docs/WGPU_UPSTREAM_TRACKING.md for a proper soft-fork of `future_pop_error_scope`.
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let scope_err = error_scope.pop().await;
+            if let Some(err) = scope_err {
+                return Err(format!("renderer pipeline/shader creation failed: {err}"));
+            }
+        }
         #[cfg(target_arch = "wasm32")]
-        if let Some(err) = &scope_err {
-            web_sys::console::error_1(
-                &format!("[portal_gpu] pipeline/shader creation error: {err}").into(),
-            );
-        }
-        if let Some(err) = scope_err {
-            return Err(format!("renderer pipeline/shader creation failed: {err}"));
-        }
+        drop(error_scope);
 
         Ok(Self {
             device,
