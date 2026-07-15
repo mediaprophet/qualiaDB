@@ -45,15 +45,18 @@ jobs:
             local asset_name="$3"
             local expected_sha256="$4"
             local source="$RUNNER_TEMP/p64-source/$source_name"
-            local output="$RUNNER_TEMP/p64-output/$asset_name"
+            local output_dir="$RUNNER_TEMP/p64-output/${asset_name%.p64}"
+            local output="$output_dir/$asset_name"
+            local helper="$output_dir/${asset_name%.p64}.q42"
 
             curl --fail --location --retry 8 --retry-all-errors \
               --output "$source" "$url"
-            target/release/examples/build_p64_release "$source" "$output"
+            target/release/examples/build_p64_release "$source" "$output_dir"
             printf '%s  %s\n' "$expected_sha256" "$output" | sha256sum --check --strict
             gh release upload "$RELEASE_TAG" "$output" \
               --repo "$GITHUB_REPOSITORY" --clobber
-            rm -f "$source" "$output" "${output%.p64}.q42"
+            rm -f "$source" "$output" "$helper"
+            rmdir "$output_dir"
           }
 
           convert_upload \
