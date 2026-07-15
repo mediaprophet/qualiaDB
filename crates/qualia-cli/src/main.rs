@@ -19,8 +19,8 @@ pub mod qpu;
 pub mod query;
 pub mod resources;
 pub mod science;
-pub mod shader;
 mod service;
+pub mod shader;
 pub mod solve;
 pub mod telemetry_server;
 
@@ -1318,12 +1318,12 @@ pub enum LlmAction {
         #[arg(long)]
         format: Option<String>,
     },
-    /// Convert a GGUF (import format) to native `.p64` + `.q42` helper metadata.
+    /// Convert a GGUF (import format) to native `.p64` + canonical `.q42` metadata.
     /// Engine steady-state should run the converted container, not the source GGUF.
     Convert {
         /// Path to a `.gguf` source file
         input: PathBuf,
-        /// Output directory (created if missing). Writes `<stem>.p64` + `<stem>.q42.cbor-ld`.
+        /// Output directory (created if missing). Writes `<stem>.p64` + `<stem>.q42`.
         #[arg(short, long)]
         out: PathBuf,
         /// Page alignment log2 for the p64 container (default 14 = 16 KiB pages)
@@ -1334,7 +1334,7 @@ pub enum LlmAction {
         layout: String,
     },
     /// One-shot remarkable path: passport probe + convert (auto layout) + env hints.
-    /// Writes `.p64` + `.q42.cbor-ld` and prints activate knobs.
+    /// Writes `.p64` + `.q42` and prints activate knobs.
     Optimize {
         /// Path to a `.gguf` source file
         input: PathBuf,
@@ -2026,9 +2026,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let public_base =
                         public_base.unwrap_or_else(|| format!("http://{host}:{port}"));
                     let cfg = qualia_solid_bridge::BridgeConfig {
-                        listen: format!("{host}:{port}")
-                            .parse()
-                            .expect("invalid host:port"),
+                        listen: format!("{host}:{port}").parse().expect("invalid host:port"),
                         data_root,
                         public_base,
                         demo_oidc: demo_oidc && !no_demo_oidc,
@@ -2186,7 +2184,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 qualia_core_db::ingest::IngestMode::Complete
             };
 
-            match qualia_core_db::ingest::streaming_import_rdf_with_mode(&in_path, &out_path, mode) {
+            match qualia_core_db::ingest::streaming_import_rdf_with_mode(&in_path, &out_path, mode)
+            {
                 Ok(quin_count) => {
                     println!("✨ Done! Wrote {quin_count} Super-Quins.");
                 }

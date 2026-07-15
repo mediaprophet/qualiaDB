@@ -83,22 +83,18 @@
                  (esp. some Android browsers) get a clear message instead of a silent stall. -->
             <div id="webgpu-notice" class="hidden mb-4 rounded-xl border px-3 py-2.5 text-xs leading-relaxed"></div>
             <div class="space-y-3 mb-4">
-                <label class="block text-xs text-zinc-400 mb-1">Select GGUF</label>
+                <label class="block text-xs text-zinc-400 mb-1">Select release model (P64)</label>
                 <select id="model-select" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:border-indigo-500 focus:outline-none">
-                    <!-- SmolLM2-360M is the verified browser model (same one the llmdemo runs). Larger
-                         models are offered but flagged experimental: 1B+ configs currently trip a prefill
-                         buffer limit in-browser, and Gemma-3 is a gated download + a non-llama arch. -->
-                    <option value="https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q4_K_M.gguf" data-name="SmolLM2-360M Q4_K_M (~270 MB)" data-format="chatml" selected>SmolLM2 360M Instruct Q4_K_M — recommended</option>
-                    <option value="https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF/resolve/main/smollm2-1.7b-instruct-q4_k_m.gguf" data-name="SmolLM2-1.7B Q4_K_M (~1.2 GB)" data-format="chatml">SmolLM2 1.7B Instruct Q4_K_M — experimental</option>
-                    <option value="https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf" data-name="Qwen2.5-1.5B Q4_K_M (~1.1 GB)" data-format="chatml">Qwen 2.5 1.5B Instruct Q4_K_M — experimental</option>
-                    <option value="https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf" data-name="Llama-3.2-1B Q4_K_M (~850 MB)" data-format="chatml">Llama 3.2 1B Instruct Q4_K_M — experimental</option>
-                    <option value="https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf" data-name="Llama-3.2-3B Q4_K_M (~2.0 GB)" data-format="chatml">Llama 3.2 3B Instruct Q4_K_M — experimental</option>
-                    <option value="https://huggingface.co/google/gemma-3-1b-it-qat-q4_0-gguf/resolve/main/gemma-3-1b-it-q4_0.gguf" data-name="Gemma-3-1B Q4_0 (~570 MB)" data-format="gemma3">Gemma 3 1B Instruct Q4_0 — gated · arch unsupported</option>
+                    <option value="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/SmolLM2-360M-Instruct-Q4_K_M.p64" data-gguf="https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q4_K_M.gguf" data-q42="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/SmolLM2-360M-Instruct-Q4_K_M.q42" data-name="SmolLM2-360M Q4_K_M P64 (~258 MB)" data-format="chatml" selected>SmolLM2 360M Instruct Q4_K_M — recommended</option>
+                    <option value="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/smollm2-1.7b-instruct-q4_k_m.p64" data-gguf="https://huggingface.co/HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF/resolve/main/smollm2-1.7b-instruct-q4_k_m.gguf" data-q42="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/smollm2-1.7b-instruct-q4_k_m.q42" data-name="SmolLM2-1.7B Q4_K_M P64 (~1.0 GB)" data-format="chatml">SmolLM2 1.7B Instruct Q4_K_M — experimental</option>
+                    <option value="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/qwen2.5-1.5b-instruct-q4_k_m.p64" data-gguf="https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf" data-q42="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/qwen2.5-1.5b-instruct-q4_k_m.q42" data-name="Qwen2.5-1.5B Q4_K_M P64 (~1.1 GB)" data-format="chatml">Qwen 2.5 1.5B Instruct Q4_K_M — experimental</option>
+                    <option value="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/Llama-3.2-1B-Instruct-Q4_K_M.p64" data-gguf="https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf" data-q42="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/Llama-3.2-1B-Instruct-Q4_K_M.q42" data-name="Llama-3.2-1B Q4_K_M P64 (~769 MB)" data-format="llama3">Llama 3.2 1B Instruct Q4_K_M — experimental</option>
+                    <option value="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/llama-3.2-3b-instruct-q4_k_m.p64" data-gguf="https://huggingface.co/hugging-quants/Llama-3.2-3B-Instruct-Q4_K_M-GGUF/resolve/main/llama-3.2-3b-instruct-q4_k_m.gguf" data-q42="https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24/llama-3.2-3b-instruct-q4_k_m.q42" data-name="Llama-3.2-3B Q4_K_M P64 (~1.9 GB)" data-format="llama3">Llama 3.2 3B Instruct Q4_K_M — experimental</option>
                 </select>
-                <label class="block text-xs text-zinc-400 mt-3 mb-1">Or load a local GGUF file</label>
-                <input type="file" id="local-model-file" accept=".gguf" multiple
+                <label class="block text-xs text-zinc-400 mt-3 mb-1">Or load a local P64 / GGUF file</label>
+                <input type="file" id="local-model-file" accept=".p64,.gguf" multiple
                     class="w-full text-xs text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-zinc-800 file:text-zinc-200 hover:file:bg-zinc-700">
-                <p class="text-xs text-zinc-500 leading-relaxed">GGUF weights only. Inference runs through Qualia's native WebGPU engine (<code class="text-zinc-400">qualia_core_db_bg.wasm</code>). LiteRT-LM / TFLite not supported.</p>
+                <p class="text-xs text-zinc-500 leading-relaxed">Release models are precompiled P64 weights paired with canonical Q42 metadata packages. Local GGUF remains supported and is compiled once on-device. Inference runs through Qualia's native WebGPU engine (<code class="text-zinc-400">qualia_core_db_bg.wasm</code>).</p>
             </div>
             <div class="progress-bar mb-2" id="dl-progress-wrap" style="display:none">
                 <div class="progress-fill" id="dl-progress" style="width:0%"></div>
@@ -195,7 +191,7 @@
             <div id="stream-wrap" class="hidden glass rounded-2xl p-4">
                 <div class="text-xs text-indigo-400 mb-2 flex items-center gap-2">
                     <span class="inline-block w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-                    Generating…
+                    <span id="gen-status">Generating…</span>
                 </div>
                 <div id="token-stream" class="text-zinc-300"></div>
             </div>
@@ -278,9 +274,9 @@
            │ Returns semantic bindings
            ▼
 ┌──────────────────────┐
-│  Gemma 3 1B (WASM)   │ ──► Natural language answer + JSON-LD node
+│  SmolLM2 / Llama 3   │ ──► Natural language answer + JSON-LD node
 └──────────────────────┘</pre>
-                <p>If the SPARQL query fails validation, the error is fed back to the model for self-correction (up to 3 retries). Token streaming uses <code class="text-emerald-300">inferWasmStreaming</code> with inline Sentinel checks (0x99 anachronism byte).</p>
+                <p>If the SPARQL query fails validation, the error is fed back to the model for self-correction (up to 3 retries). Token streaming uses <code class="text-emerald-300">inferWasmAsync</code> (yields to the event loop each GPU map_async, so the tab stays responsive) with inline Sentinel checks (0x99 anachronism byte).</p>
                 <p><strong class="text-zinc-300">COI note:</strong> The COI service worker at the top of this page injects <code class="text-yellow-300">Cross-Origin-Opener-Policy: same-origin</code> and <code class="text-yellow-300">Cross-Origin-Embedder-Policy: require-corp</code> headers on reload, enabling SharedArrayBuffer for multi-threaded WASM inference.</p>
             </div>
         </details>
@@ -290,7 +286,7 @@
 <script type="module">
 import init, {
     initialize_webgpu_engine,
-    inferWasmStreaming,
+    inferWasmAsync,
     releaseWebgpuEngine,
     isWebgpuEngineReady,
     getEngineVersion,
@@ -469,9 +465,9 @@ async function loadModel() {
             ggufBytes = await readLocalGguf(localFiles);
             document.getElementById('dl-progress').style.width = '100%';
         } else {
-            // AOT: compile GGUF→P64 once, cache P64 in OPFS, then warm-boot it.
+            // Release P64 files load directly; legacy GGUF URLs still compile once on-device.
             showDlStatus(`Downloading ${name}…`);
-            const { bytes, source } = await loadOrCompileP64(url, url.split('/').pop(), {
+            const cacheOptions = {
                 compile: compileGgufToP64,
                 formatVersion: p64FormatVersion(),
                 onProgress: (loaded, total, phase) => {
@@ -486,11 +482,24 @@ async function loadModel() {
                         showDlStatus(`Compiling ${name} → P64…`);
                     }
                 },
-            });
+            };
+            let loaded;
+            try {
+                loaded = await loadOrCompileP64(url, url.split('/').pop(), cacheOptions);
+            } catch (releaseError) {
+                const fallbackUrl = sel.options[sel.selectedIndex].dataset.gguf;
+                if (!fallbackUrl) throw releaseError;
+                console.warn('[model-loader] Release P64 fetch unavailable; using GGUF fallback:', releaseError);
+                showDlStatus(`Release P64 blocked by its download host; using GGUF fallback for ${name}…`);
+                loaded = await loadOrCompileP64(fallbackUrl, url.split('/').pop(), cacheOptions);
+            }
+            const { bytes, source } = loaded;
             ggufBytes = bytes;
             showDlStatus(source === 'opfs-p64-hit'
                 ? `Loaded ${name} from P64 cache`
-                : `Compiled ${name} → P64 (cached for next time)`);
+                : source === 'downloaded-p64'
+                    ? `Downloaded precompiled ${name} (cached for next time)`
+                    : `Compiled ${name} → P64 (cached for next time)`);
         }
 
         showDlStatus('Initialising Qualia WebGPU engine…');
@@ -637,30 +646,69 @@ async function runLookupMode(userText) {
 
 function buildPrompt(system, user) {
     const fmt = document.getElementById('model-select').selectedOptions[0]?.dataset.format || 'chatml';
-    if (fmt === 'gemma3') {
-        const userBlock = system ? `${system}\n\n${user}` : user;
-        return `<start_of_turn>user\n${userBlock}<end_of_turn>\n<start_of_turn>model\n`;
+    if (fmt === 'llama3') {
+        return `<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n${system}<|eot_id|>`
+            + `<|start_header_id|>user<|end_header_id|>\n\n${user}<|eot_id|>`
+            + '<|start_header_id|>assistant<|end_header_id|>\n\n';
     }
     return `<|im_start|>system\n${system}<|im_end|>\n<|im_start|>user\n${user}<|im_end|>\n<|im_start|>assistant\n`;
 }
 
+// Chat-template terminators. The model emits these to end its turn; they must be cut from the
+// visible answer (this is why raw output showed "Hello.<|im_end|>").
+const STOP_STRINGS = ['<|im_end|>', '<|endoftext|>', '<|eot_id|>', '<|end_of_text|>', '<|im_start|>', '<|start_header_id|>'];
+
+function cleanGenerated(text) {
+    let cut = text.length;
+    for (const s of STOP_STRINGS) {
+        const i = text.indexOf(s);
+        if (i !== -1 && i < cut) cut = i;
+    }
+    return text.slice(0, cut)
+        .replace(/<\|im_(start|end)\|>|<\|(endoftext|eot_id|end_of_text|start_header_id)\|>/g, '')
+        .trim();
+}
+
+// Force one paint so the "Generating…" state is visible before decode starts.
+const nextPaint = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
 async function generate(system, user, opts = {}) {
-    document.getElementById('stream-wrap').classList.remove('hidden');
+    const streamWrap = document.getElementById('stream-wrap');
     const streamEl = document.getElementById('token-stream');
+    const statusEl = document.getElementById('gen-status');
+    streamWrap.classList.remove('hidden');
     streamEl.textContent = '';
-    let full = '';
+    statusEl.textContent = 'Generating…';
+    await nextPaint();
 
     const prompt = buildPrompt(system, user);
+    const t0 = performance.now();
+    let full = '';
+    let tokens = 0;
+    let stopped = false;
+
     const onToken = (piece) => {
+        if (stopped) return;
         full += piece;
-        streamEl.textContent = full;
+        tokens++;
+        // Stop rendering (and count) once a chat terminator appears; the engine may emit a few
+        // more tokens before it halts, but the user only ever sees the clean answer.
+        const cleaned = cleanGenerated(full);
+        if (cleaned.length < full.replace(/\s+$/,'').length && STOP_STRINGS.some(s => full.includes(s))) {
+            stopped = true;
+        }
+        streamEl.textContent = cleaned || '▍';
+        const secs = (performance.now() - t0) / 1000;
+        statusEl.textContent = `Generating… ${tokens} tokens · ${secs.toFixed(1)}s · ${(tokens / Math.max(secs, 0.001)).toFixed(1)} tok/s`;
     };
 
-    const reply = await inferWasmStreaming(prompt, onToken);
+    // inferWasmAsync yields to the event loop on every GPU map_async, so the tab stays responsive
+    // and tokens paint as they arrive (inferWasmStreaming is synchronous and freezes the page).
+    const reply = await inferWasmAsync(prompt, onToken);
     if (reply && !full) full = reply;
 
-    document.getElementById('stream-wrap').classList.add('hidden');
-    return full.trim();
+    streamWrap.classList.add('hidden');
+    return cleanGenerated(full);
 }
 
 // ── SPARQL Execution ──────────────────────────────────────────────────────────

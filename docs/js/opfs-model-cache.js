@@ -143,10 +143,11 @@ export async function loadGgufCached(url, name, expectedSize, onProgress) {
  * `compile` should be `compileGgufToP64`; `formatVersion` should be
  * `p64FormatVersion()`. The historical Q42-named exports remain compatible.
  *
- * @returns {Promise<{bytes: Uint8Array, source: 'opfs-p64-hit'|'compiled'}>}
+ * @returns {Promise<{bytes: Uint8Array, source: 'opfs-p64-hit'|'downloaded-p64'|'compiled'}>}
  */
 export async function loadOrCompileP64(ggufUrl, baseName, { compile, formatVersion, onProgress } = {}) {
-  const safe = safeName(baseName) + '.p64';
+  const baseSafe = safeName(baseName);
+  const safe = baseSafe.toLowerCase().endsWith('.p64') ? baseSafe : baseSafe + '.p64';
   const part = safe + '.part';
   const root = await opfsRoot();
 
@@ -176,25 +177,51 @@ export async function loadOrCompileP64(ggufUrl, baseName, { compile, formatVersi
   let gguf;
   if (resp.body) {
     const reader = resp.body.getReader();
-    const chunks = [];
     let loaded = 0;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-      loaded += value.length;
-      if (onProgress) onProgress(loaded, total, 'download');
+    if (total > 0) {
+      // Allocate the model once. Retaining chunks and consolidating afterward
+      // briefly doubles model memory and is enough to OOM Android browsers.
+      gguf = new Uint8Array(total);
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (loaded + value.length > total) {
+          throw new Error('download exceeded declared Content-Length');
+        }
+        gguf.set(value, loaded);
+        loaded += value.length;
+        if (onProgress) onProgress(loaded, total, 'download');
+      }
+      if (loaded !== total) throw new Error(`incomplete download: ${loaded}/${total} bytes`);
+    } else {
+      const chunks = [];
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        loaded += value.length;
+        if (onProgress) onProgress(loaded, total, 'download');
+      }
+      gguf = new Uint8Array(loaded);
+      let offset = 0;
+      for (const chunk of chunks) { gguf.set(chunk, offset); offset += chunk.length; }
     }
-    gguf = new Uint8Array(loaded);
-    let o = 0;
-    for (const c of chunks) { gguf.set(c, o); o += c.length; }
   } else {
     gguf = new Uint8Array(await resp.arrayBuffer());
   }
 
-  if (onProgress) onProgress(0, 0, 'compile');
-  const p64 = compile(gguf, 14); // wasm AOT compile (16 KB pages) → Uint8Array
-  gguf = null; // free the GGUF cold-path buffer ASAP
+  let p64;
+  let source;
+  if (isP64Header(gguf, formatVersion)) {
+    p64 = gguf;
+    gguf = null;
+    source = 'downloaded-p64';
+  } else {
+    if (onProgress) onProgress(0, 0, 'compile');
+    p64 = compile(gguf, 14); // wasm AOT compile (16 KB pages) → Uint8Array
+    gguf = null; // free the GGUF cold-path buffer ASAP
+    source = 'compiled';
+  }
   if (!isP64Header(p64, formatVersion)) {
     throw new Error('AOT compiler returned non-P64 bytes or an unexpected P64 version');
   }
@@ -225,8 +252,8 @@ export async function loadOrCompileP64(ggufUrl, baseName, { compile, formatVersi
       try { const r = await opfsRoot(); if (r) await r.removeEntry(part); } catch {}
     }
   }
-  if (onProgress) onProgress(p64.length, p64.length, 'compiled');
-  return { bytes: p64, source: 'compiled' };
+  if (onProgress) onProgress(p64.length, p64.length, source);
+  return { bytes: p64, source };
 }
 
 /**
