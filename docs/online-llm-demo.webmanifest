@@ -1,0 +1,18 @@
+{
+  "name": "Qualia Local LLM",
+  "short_name": "Qualia LLM",
+  "description": "Run a local LLM entirely on your device via Qualia's native WebGPU engine — grounded by SPARQL over QualiaDB and Wikidata. No server, no data leaves your device.",
+  "id": "./online-llm-demo.html",
+  "start_url": "./online-llm-demo.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#09090b",
+  "theme_color": "#0a0e17",
+  "categories": ["productivity", "utilities", "education"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

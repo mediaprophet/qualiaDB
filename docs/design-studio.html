@@ -29,7 +29,7 @@
         if (window.crossOriginIsolated || !('serviceWorker' in navigator)) return;
         window.coi = { quiet: true, shouldDeregister: function () { return false; } };
         var s = document.createElement('script');
-        s.src = 'js/coi-serviceworker.js';
+        s.src = 'coi-serviceworker.js'; // root-hosted: a js/-scoped SW can't control this root page
         s.async = false;
         document.head.appendChild(s);
     })();
