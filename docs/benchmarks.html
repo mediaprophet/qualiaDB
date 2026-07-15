@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QualiaDB | Browser LLM Benchmarks</title>
-    <script src="js/coi-serviceworker.js"></script>
+    <!-- Root-hosted: a js/-scoped service worker can't control this root page (scope /js/ ≠ /). -->
+    <script src="coi-serviceworker.js"></script>
     <!-- Strip removed WebGPU device limits so the Qualia wgpu 0.19 requestDevice succeeds. -->
     <script src="js/webgpu-limits-shim.js"></script>
     <link rel="stylesheet" href="css/tailwind-built.css">

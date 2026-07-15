@@ -2,8 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Qualia-DB | Online LLM Demo</title>
+    <!-- Installable PWA: run the local LLM as a home-screen app (offline model cache in OPFS). -->
+    <link rel="manifest" href="online-llm-demo.webmanifest">
+    <meta name="theme-color" content="#0a0e17">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Qualia LLM">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <!-- Self-hosted coi-serviceworker at the SITE ROOT (not js/): a service worker's scope is its
          own directory, so a js/-hosted worker cannot control this root page and the page never
          becomes crossOriginIsolated — SharedArrayBuffer stays unavailable and the WASM engine
@@ -49,6 +59,9 @@
                 </div>
             </div>
             <div class="flex items-center gap-3 text-xs">
+                <button id="install-btn" onclick="installApp()" class="hidden px-3 py-1.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-400/30 items-center gap-1.5 transition-colors">
+                    <i class="fas fa-mobile-screen-button"></i> Install app
+                </button>
                 <div id="model-badge" class="px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">No model loaded</div>
                 <div id="daemon-badge" class="px-3 py-1.5 rounded-2xl bg-slate-800 text-slate-400 border border-slate-700">Daemon offline</div>
             </div>
@@ -66,6 +79,9 @@
             <h2 class="font-semibold text-lg mb-4 flex items-center gap-2">
                 <i class="fas fa-microchip text-indigo-400"></i> Model
             </h2>
+            <!-- WebGPU capability notice — populated by checkWebgpuSupport() so unsupported devices
+                 (esp. some Android browsers) get a clear message instead of a silent stall. -->
+            <div id="webgpu-notice" class="hidden mb-4 rounded-xl border px-3 py-2.5 text-xs leading-relaxed"></div>
             <div class="space-y-3 mb-4">
                 <label class="block text-xs text-zinc-400 mb-1">Select GGUF</label>
                 <select id="model-select" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-zinc-200 focus:border-indigo-500 focus:outline-none">
@@ -342,11 +358,14 @@ window.unloadModel = unloadModel;
 window.sendMessage = sendMessage;
 window.clearChat = clearChat;
 window.runSparqlManual = runSparqlManual;
+window.installApp = installApp;
 window.copyGeneratedSparql = () => navigator.clipboard.writeText(lastSparql);
 window.copyJsonLd = () => navigator.clipboard.writeText(lastJsonLd);
 window.resetSystemPrompt = () => { document.getElementById('system-prompt').value = SYSTEM_PROMPTS[currentMode]; };
 
 document.getElementById('system-prompt').value = SYSTEM_PROMPTS.chat;
+checkWebgpuSupport();
+setupInstall();
 bootWasm();
 checkDaemon();
 
@@ -814,6 +833,65 @@ async function checkDaemon() {
             document.getElementById('local-dot').className = 'ml-auto w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
         }
     } catch {}
+}
+
+// ── WebGPU capability + PWA install ─────────────────────────────────────────────
+
+function checkWebgpuSupport() {
+    const el = document.getElementById('webgpu-notice');
+    if (navigator.gpu) return; // supported — a real device is probed at model-load time
+    // No WebGPU at all: tell the user plainly instead of letting a later load silently stall.
+    el.className = 'mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-200';
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    let hint = 'Local inference needs WebGPU, which this browser does not expose.';
+    if (isAndroid) hint += ' On Android use Chrome 121+ on a device with a supported GPU (some phones do not have it).';
+    else if (isIOS) hint += ' On iOS use Safari 18+ / iOS 18+, or enable WebGPU in Settings → Safari → Advanced → Feature Flags.';
+    else hint += ' Use Chrome or Edge with hardware acceleration enabled.';
+    el.innerHTML = `<strong>WebGPU unavailable.</strong> ${hint} You can still install this app and browse it; model loading will be disabled until WebGPU is available.`;
+    const btn = document.getElementById('load-btn');
+    if (btn) { btn.disabled = true; btn.classList.add('opacity-40', 'cursor-not-allowed'); }
+}
+
+let deferredInstallPrompt = null;
+
+function setupInstall() {
+    const btn = document.getElementById('install-btn');
+    // Already installed / running standalone → no button.
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    if (standalone) return;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        btn.classList.remove('hidden');
+        btn.classList.add('flex');
+    });
+    window.addEventListener('appinstalled', () => {
+        deferredInstallPrompt = null;
+        btn.classList.add('hidden');
+    });
+
+    // iOS Safari has no beforeinstallprompt — surface the button with manual instructions.
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        btn.classList.remove('hidden');
+        btn.classList.add('flex');
+    }
+}
+
+async function installApp() {
+    if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice;
+        deferredInstallPrompt = null;
+        document.getElementById('install-btn').classList.add('hidden');
+        return;
+    }
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        appendSystem('To install: tap the Share button in Safari, then "Add to Home Screen".');
+        return;
+    }
+    appendSystem('Use your browser menu → "Install app" / "Add to Home screen" to install.');
 }
 </script>
 </body>
