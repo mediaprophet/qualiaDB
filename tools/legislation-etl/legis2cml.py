@@ -198,6 +198,8 @@ RE_DIV = re.compile(r"^(Division|DIVISION)\s+([0-9]+[A-Za-z]?)\b[\s—\-:.]*(.*)
 RE_SCHEDULE = re.compile(r"^(Schedule|SCHEDULE)\s+([0-9]+[A-Za-z]?)\s*[—–]\s*(.+)$")
 RE_SECTION = re.compile(r"^(\d+[A-Z]{0,2})\s+([A-Z][^\n]{2,140})$")
 RE_HISTORICAL_SECTION = re.compile(r"^(\d+[A-Z]{0,2})\.\s*[—-]?\s*(.+)$")
+RE_EU_CHAPTER = re.compile(r"^CHAPTER\s+([IVXLC]+)$", re.I)
+RE_EU_ARTICLE = re.compile(r"^Article\s+(\d+[A-Z]?)$", re.I)
 # The Commonwealth enacting formula ends the front matter (cover + Contents/arrangement) and
 # begins the operative text. When present, the table of contents before it is skipped: parsing it
 # as body produced phantom empty Parts/Divisions and collided the arrangement's section numbers
@@ -213,6 +215,8 @@ def parse_pages(pages: list[tuple[int, str]], title_hint: str | None) -> tuple[s
     buf: list[str] = []
     frag_counts: dict[str, int] = {}
     current_schedule: str | None = None
+    pending_eu_chapter: tuple[str, int] | None = None
+    pending_eu_article: tuple[str, int] | None = None
 
     def unique_frag(base: str) -> str:
         count = frag_counts.get(base, 0) + 1
@@ -241,7 +245,12 @@ def parse_pages(pages: list[tuple[int, str]], title_hint: str | None) -> tuple[s
 
     # Provisions begin only after the enacting formula (if the instrument has one); before it we
     # still scan for the title but emit nothing, so the arrangement/contents pages are skipped.
-    in_body = not any(RE_ENACTING.search(ln) for _pg, raw in pages for ln in clean(raw).split("\n"))
+    cleaned_lines = [ln for _pg, raw in pages for ln in clean(raw).split("\n")]
+    has_enacting_formula = any(RE_ENACTING.search(ln) for ln in cleaned_lines)
+    has_eu_articles = any(RE_EU_ARTICLE.match(ln.strip()) for ln in cleaned_lines)
+    # EU Regulations place extensive recitals before the operative Chapters/Articles. They remain
+    # in the source PDF but are not emitted as operative norms by this legislation pass.
+    in_body = not (has_enacting_formula or has_eu_articles)
 
     for page_no, raw in pages:
         for ln in clean(raw).split("\n"):
@@ -252,10 +261,37 @@ def parse_pages(pages: list[tuple[int, str]], title_hint: str | None) -> tuple[s
             if not in_body:
                 if RE_ENACTING.search(s):
                     in_body = True
-                continue
+                    continue
+                if RE_EU_CHAPTER.match(s) or RE_EU_ARTICLE.match(s):
+                    in_body = True
+                else:
+                    continue
             if not s:
                 if cur is not None:
                     buf.append("")
+                continue
+            if pending_eu_chapter is not None:
+                number, start_page = pending_eu_chapter
+                provisions.append(Provision(unique_frag(f"chapter-{slugify(number)}"), "part",
+                                            number, s, start_page=start_page))
+                pending_eu_chapter = None
+                continue
+            if pending_eu_article is not None:
+                number, start_page = pending_eu_article
+                cur = Provision(unique_frag(f"article-{slugify(number)}"), "section",
+                                number, s, start_page=start_page)
+                pending_eu_article = None
+                continue
+            m = RE_EU_CHAPTER.match(s)
+            if m:
+                flush()
+                current_schedule = None
+                pending_eu_chapter = (m.group(1).upper(), page_no)
+                continue
+            m = RE_EU_ARTICLE.match(s)
+            if m:
+                flush()
+                pending_eu_article = (m.group(1).upper(), page_no)
                 continue
             m = RE_SCHEDULE.match(s)
             if m:
@@ -290,7 +326,7 @@ def parse_pages(pages: list[tuple[int, str]], title_hint: str | None) -> tuple[s
                                 m.group(1), m.group(2).strip(), start_page=page_no)
                 continue
             m = RE_HISTORICAL_SECTION.match(s)
-            if m:
+            if m and not has_eu_articles:
                 flush()
                 cur = Provision(scoped(f"sec-{slugify(m.group(1))}"), "section",
                                 m.group(1), f"Section {m.group(1)}", start_page=page_no)
@@ -299,6 +335,14 @@ def parse_pages(pages: list[tuple[int, str]], title_hint: str | None) -> tuple[s
             if cur is not None:
                 buf.append(s)
     flush()
+    if pending_eu_chapter is not None:
+        number, start_page = pending_eu_chapter
+        provisions.append(Provision(unique_frag(f"chapter-{slugify(number)}"), "part",
+                                    number, f"Chapter {number}", start_page=start_page))
+    if pending_eu_article is not None:
+        number, start_page = pending_eu_article
+        provisions.append(Provision(unique_frag(f"article-{slugify(number)}"), "section",
+                                    number, f"Article {number}", start_page=start_page))
     return title or "Untitled Legislative Instrument", provisions
 
 
@@ -1113,15 +1157,47 @@ def federal_register_url(register_id: str | None) -> str:
     return "https://www.legislation.gov.au/"
 
 
-def legal_notice_html(register_id: str | None) -> str:
+def source_legal_details(jurisdiction: str, register_id: str | None,
+                         eli: str | None) -> tuple[str, str, str, str]:
+    """Return official URL, label, body-law name and source-rights HTML."""
+    if jurisdiction.strip().upper() == "EU" and eli:
+        official_url = eli
+        return (
+            official_url,
+            "official EUR-Lex / Official Journal record",
+            "European Union law",
+            f'''Based on content from <a href="{esc(official_url)}" rel="external">EUR-Lex</a>.
+    EUR-Lex permits reuse of legal documents for commercial or non-commercial purposes unless
+    otherwise specified, subject to its <a href="https://eur-lex.europa.eu/content/legal-notice/legal-notice.html"
+    rel="external">legal notice, acknowledgement requirements and exceptions</a>. Only EU documents
+    published in the Official Journal of the European Union are authentic.''',
+        )
     official_url = federal_register_url(register_id)
     official_id = federal_register_id(register_id)
     record_label = (f"official Register record {esc(official_id)}"
                     if official_id else "Federal Register of Legislation")
+    return (
+        official_url,
+        record_label,
+        "Australian law",
+        f'''Based on content from the
+    <a href="{esc(official_url)}" rel="external">Federal Register of Legislation</a>.
+    Register content is generally available under
+    <a href="https://creativecommons.org/licenses/by/4.0/" rel="external">CC BY 4.0</a>, subject to the
+    Register's <a href="https://www.legislation.gov.au/terms-of-use" rel="external">terms, attribution requirements and exceptions</a>.
+    The source material has been reformatted; these changes are not endorsed by the Australian Government.''',
+    )
+
+
+def legal_notice_html(register_id: str | None, jurisdiction: str = "AU",
+                      eli: str | None = None) -> str:
+    official_url, record_label, body_law, _rights = source_legal_details(
+        jurisdiction, register_id, eli
+    )
     return f'''<aside class="legal-notice" aria-labelledby="legal-information-heading">
   <h2 id="legal-information-heading"><span class="alpha">Technical alpha</span> Legal information, not legal advice</h2>
   <p>This is an experimental semantic rendering for exploration and question-framing. It is not an
-  official or authorised version of Australian law, does not provide legal advice, and must not be
+  official or authorised version of {esc(body_law)}, does not provide legal advice, and must not be
   relied on for legal, compliance, financial, or other consequential decisions.</p>
   <ul>
     <li><strong>Verify the law:</strong> consult the <a href="{esc(official_url)}" rel="external">{record_label}</a>
@@ -1147,16 +1223,14 @@ def rights_metadata_html() -> str:
 <!-- rights-metadata:end -->'''
 
 
-def legal_footer_html(register_id: str | None) -> str:
-    official_url = federal_register_url(register_id)
+def legal_footer_html(register_id: str | None, jurisdiction: str = "AU",
+                      eli: str | None = None) -> str:
+    official_url, _record_label, _body_law, source_rights = source_legal_details(
+        jurisdiction, register_id, eli
+    )
     return f'''<footer class="legal-footer">
   <div class="rights-scope" data-rights-scope="source-legislation">
-    <strong>Source legislation.</strong> Based on content from the
-    <a href="{esc(official_url)}" rel="external">Federal Register of Legislation</a>.
-    Register content is generally available under
-    <a href="https://creativecommons.org/licenses/by/4.0/" rel="external">CC BY 4.0</a>, subject to the
-    Register's <a href="https://www.legislation.gov.au/terms-of-use" rel="external">terms, attribution requirements and exceptions</a>.
-    The source material has been reformatted; these changes are not endorsed by the Australian Government.
+    <strong>Source legislation.</strong> {source_rights}
   </div>
   <div class="rights-scope" data-rights-scope="technical-work">
     <strong>Technical work.</strong> Software, original presentation, markup templates and original semantic
@@ -1322,7 +1396,7 @@ def render_html(inst: Instrument, cls_by_num: dict, source_pdf: str, source_hash
     · CML (TEXT → CONCEPT → LOGIC) · legis2cml + Ollama (optional)</div>
   <link rel="prov:wasDerivedFrom" href="{esc(source_pdf)}" />
 </header>
-{legal_notice_html(register_id)}
+{legal_notice_html(register_id, inst.jurisdiction, inst.eli)}
 <div class="banner">⚑ <strong>Machine-proposed (<code>cml:Proposed</code>).</strong> Every concept and norm
 below was derived automatically and is <em>provisional</em>; only a signed, authoritative human action may
 attest it (<code>cml:Attested</code> / <code>skos:exactMatch</code>). Source:
@@ -1331,7 +1405,7 @@ attest it (<code>cml:Attested</code> / <code>skos:exactMatch</code>). Source:
 <main property="cof:body">
 {chr(10).join(body)}
 </main>
-{legal_footer_html(register_id)}
+{legal_footer_html(register_id, inst.jurisdiction, inst.eli)}
 <script type="application/ld+json">
 {jsonld}
 </script>

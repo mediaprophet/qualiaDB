@@ -1,6 +1,7 @@
 # Legislation ETL → CML + HTML+RDFa COF
 
-Turn Commonwealth PDF Acts into **ns.webcivics.net-style** packages:
+Turn Australian Commonwealth and European Union legislation PDFs into
+**ns.webcivics.net-style** packages:
 
 | Artefact | Role |
 |----------|------|
@@ -41,8 +42,8 @@ A document is decomposed into its **natural** units, not fixed-size character sl
 |------|--------------|-------------|
 | **Metadata** — title, `No. X of YYYY`, jurisdiction, in-force date | instrument node (`cof:Document` with `dc:title` / `dc:identifier` / `dc:date` / `dc:description`) | no — extracted |
 | **Intro** — the long title (`An Act to …`) | `dc:description` on the instrument node | no |
-| **Part / Division / Schedule** | structural markers + hierarchy | no |
-| **Section** (no subsections) | `cml:Concept` + norm + logic | yes |
+| **Part / Division / Schedule / EU Chapter** | structural markers + hierarchy | no |
+| **Section / EU Article** (no subsections) | `cml:Concept` + norm + logic | yes |
 | **Section** (has subsections) | `cml:Concept` + `cml:hasPart` → its subsections (no norm of its own) | no |
 | **Subsection** `(1)`,`(2)` | `cml:Concept` + norm + logic, `values:partOf` its section | yes |
 
@@ -133,6 +134,19 @@ Structure only (no Ollama, fast smoke):
 python legis2cml.py --input path\to\act.pdf --no-llm --out-dir .\smoke-out
 ```
 
+EU Regulations use their official ELI as provenance. Recitals remain in the source PDF while the
+operative Chapter/Article structure is emitted for classification:
+
+```powershell
+python legis2cml.py `
+  --input path\to\eli_reg_2016_679_oj_EN_TXT.pdf `
+  --title "General Data Protection Regulation (EU) 2016/679" `
+  --jurisdiction EU `
+  --base-iri "https://ns.webcivics.net/values/eu/32016r0679" `
+  --eli "http://data.europa.eu/eli/reg/2016/679/oj" `
+  --resume --emit-ttl --emit-q42
+```
+
 ## Full corpus (222 PDFs at 2026-07-15)
 
 ```powershell
@@ -158,10 +172,10 @@ Default out root:
 Generated `*.cml.html` pages deliberately use a stronger information notice than the site's
 human-rights instrument pages. Each page states that it is a technical alpha, is not legal advice or
 an official/authorised version, may contain machine-transformation errors, and represents only the
-identified point-in-time source. The page links its Federal Register ID directly to the official record
+identified point-in-time source. The page links its Federal Register ID or EU ELI directly to the official record
 and separates three rights scopes:
 
-1. source legislation and its Federal Register terms (generally CC BY 4.0, subject to exceptions);
+1. source legislation and its Federal Register or EUR-Lex terms (subject to exceptions);
 2. technical work copyright Timothy Charles Holborn under CC BY-NC-ND 4.0; and
 3. affirmative permission for automated retrieval, indexing, semantic parsing, grounding, inference,
    and agent-assisted research, while model-training permission is not granted.

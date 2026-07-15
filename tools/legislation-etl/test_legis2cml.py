@@ -25,6 +25,17 @@ class SegmentationTests(unittest.TestCase):
         self.assertEqual(etl.federal_register_url("not-an-id"),
                          "https://www.legislation.gov.au/")
 
+    def test_eu_legislation_uses_eli_and_eur_lex_rights(self):
+        eli = "http://data.europa.eu/eli/reg/2016/679/oj"
+        inst = etl.Instrument("GDPR", "32016r0679", "EU",
+                              "https://example.test/gdpr", eli, [])
+        rendered = etl.render_html(inst, {}, "gdpr.pdf", "b" * 64)
+        self.assertIn(eli, rendered)
+        self.assertIn("official or authorised version of European Union law", rendered)
+        self.assertIn("EUR-Lex permits reuse of legal documents", rendered)
+        self.assertIn("published in the Official Journal", rendered)
+        self.assertNotIn("Australian law", rendered)
+
     def test_register_links_preserve_title_vs_compilation_semantics(self):
         self.assertEqual(
             etl.federal_register_url("C2009A00070"),
@@ -72,6 +83,18 @@ class SegmentationTests(unittest.TestCase):
         self.assertEqual([p.frag for p in sections], ["sec-1", "sec-2"])
         self.assertTrue(all(p.text for p in sections))
         self.assertEqual([p.frag for p in provisions if p.kind == "part"], [])
+
+    def test_eu_numbered_article_paragraphs_are_not_sections(self):
+        pages = [(1,
+            "Whereas:\n(1) A recital.\nCHAPTER I\nGeneral provisions\n"
+            "Article 1\nSubject-matter and objectives\n"
+            "1. This Regulation lays down rules.\n2. It protects persons.\n"
+            "Article 2\nMaterial scope\n1. This Regulation applies.\n")]
+        _title, provisions = etl.parse_pages(pages, "GDPR")
+        self.assertEqual([p.frag for p in provisions],
+                         ["chapter-i", "article-1", "article-2"])
+        self.assertIn("1. This Regulation lays down rules.", provisions[1].text)
+        self.assertIn("2. It protects persons.", provisions[1].text)
 
     def test_schedule_items_are_namespaced_and_do_not_collide(self):
         pages = [(1,
@@ -154,6 +177,28 @@ An Act to amend the Crimes Act 1914.
         self.assertEqual(title, "Crimes Act 1915")
         self.assertEqual([provision.number for provision in sections], ["1", "2", "3"])
         self.assertIn("may be cited", sections[0].text)
+
+    def test_eu_regulation_chapters_and_articles_skip_recitals(self):
+        pages = [(1, """REGULATION (EU) 2016/679
+Whereas:
+(1) Personal-data protection is a fundamental right.
+CHAPTER I
+General provisions
+Article 1
+Subject-matter and objectives
+1. This Regulation lays down rules relating to personal data.
+Article 2
+Material scope
+1. This Regulation applies to automated processing.
+""")]
+        title, provisions = etl.parse_pages(pages, "General Data Protection Regulation")
+        self.assertEqual(title, "General Data Protection Regulation")
+        self.assertEqual([p.frag for p in provisions],
+                         ["chapter-i", "article-1", "article-2"])
+        self.assertEqual([p.heading for p in provisions],
+                         ["General provisions", "Subject-matter and objectives", "Material scope"])
+        self.assertNotIn("fundamental right", " ".join(p.text for p in provisions))
+        self.assertIn("lays down rules", provisions[1].text)
 
     def test_long_provision_is_bounded_and_overlapped(self):
         text = "\n\n".join(f"Clause {index}. " + ("x" * 180) for index in range(18))
