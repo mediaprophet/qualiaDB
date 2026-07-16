@@ -164,11 +164,22 @@ fn main() {
 #[derive(Clone, Routable, Debug, PartialEq)]
 pub enum Route {
     #[layout(AppLayout)]
+    /// Default open screen: Talk (local agent + people chat). Human-first IA.
     #[route("/")]
+    TalkRoute {},
+
+    #[route("/talk")]
+    TalkAliasRoute {},
+
+    #[route("/home")]
     DashboardRoute {},
 
     #[route("/dashboard")]
     DashboardAliasRoute {},
+
+    /// Keep hub — vault, body, library, identity (secondary destinations).
+    #[route("/keep")]
+    KeepRoute {},
 
     #[route("/anatomy-test")]
     AnatomyTestRoute {}, // Access via /anatomy-test route
@@ -178,6 +189,9 @@ pub enum Route {
 
     #[route("/browser")]
     BrowserRoute {},
+
+    #[route("/reach")]
+    ReachAliasRoute {},
 
     #[route("/settings")]
     SettingsRoute {},
@@ -261,6 +275,38 @@ fn AnatomyTestRoute() -> Element {
     rsx! { components::anatomy_test::AnatomyTest {} }
 }
 
+/// Primary product surface: Talk hub — Chat · People · Reception · Projects.
+#[component]
+fn TalkRoute() -> Element {
+    rsx! {
+        div {
+            style: "flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;",
+            components::social_hub::SocialHub {}
+        }
+    }
+}
+
+#[component]
+fn TalkAliasRoute() -> Element {
+    rsx! {
+        div {
+            style: "flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;",
+            components::social_hub::SocialHub {}
+        }
+    }
+}
+
+/// Keep — personal records, body, vault, library. Not an ops dashboard.
+#[component]
+fn KeepRoute() -> Element {
+    rsx! { KeepHub {} }
+}
+
+#[component]
+fn ReachAliasRoute() -> Element {
+    rsx! { BrowserRoute {} }
+}
+
 #[component]
 fn DashboardRoute() -> Element {
     rsx! { components::dashboard::Dashboard {} }
@@ -269,6 +315,164 @@ fn DashboardRoute() -> Element {
 #[component]
 fn DashboardAliasRoute() -> Element {
     rsx! { components::dashboard::Dashboard {} }
+}
+
+/// Simple Keep landing: the few real personal destinations, no academic inventory.
+#[component]
+fn KeepHub() -> Element {
+    rsx! {
+        div {
+            style: "flex:1; overflow-y:auto; padding:2rem; max-width:720px; margin:0 auto; color:var(--qualia-text);",
+            h1 { style: "margin:0 0 0.35rem; font-size:1.6rem; font-weight:700;", "Keep" }
+            p { style: "margin:0 0 1.5rem; color:var(--qualia-text-muted); line-height:1.5; font-size:0.95rem;",
+                "Your records, body, vault, and library — private on this machine. Social reception and cooperative projects live under Talk (People · Reception · Projects)."
+            }
+            div { style: "display:flex; flex-direction:column; gap:0.65rem;",
+                KeepTalkTabLink { tab: "chat", title: "Talk — Chat", blurb: "Private local agent. Nothing leaves this machine unless you send it." }
+                KeepTalkTabLink { tab: "people", title: "Talk — People", blurb: "Invites, contacts, magic links, groups." }
+                KeepTalkTabLink { tab: "reception", title: "Talk — Reception", blurb: "Domain front door + DNS TXT so peers can find you without seeing your vault." }
+                KeepTalkTabLink { tab: "mail", title: "Talk — Mail", blurb: "Purpose inboxes, relationship addresses, catchall, SMTP/IMAP after domain setup." }
+                KeepTalkTabLink { tab: "projects", title: "Talk — Projects", blurb: "Cooperative projects and QualiaDB Development Cooperative seed." }
+                KeepLink { to: Route::WellfairRoute {}, title: "Wellfair", blurb: "Health, welfare, projects board, and life panels. Unlock vault if Projects fail." }
+                KeepLink { to: Route::SanctuaryRoute {}, title: "Sanctuary (vault)", blurb: "Unlock when cooperative projects or work board need the host API." }
+                KeepLink { to: Route::WorkRoute {}, title: "Work board", blurb: "Kanban — project id fills from Talk → Projects." }
+                KeepLink { to: Route::AnatomyRoute {}, title: "Anatomy", blurb: "See systems and conditions on a reference body." }
+                KeepLink { to: Route::HealthRoute {}, title: "Health vault", blurb: "Vitals, sleep, medication, wellbeing." }
+                KeepLink { to: Route::LibraryRoute {}, title: "Library", blurb: "Local resources, models, and saved knowledge." }
+                KeepLink { to: Route::IdentityRoute {}, title: "Identity", blurb: "Personal profile, social book, consent." }
+                KeepLink { to: Route::SanctuaryRoute {}, title: "Sanctuary", blurb: "Vault lock and protected spaces." }
+                KeepLink { to: Route::AgencyRoute {}, title: "Agency", blurb: "Guardianship, accountability, safeguards." }
+            }
+        }
+    }
+}
+
+#[component]
+fn KeepLink(to: Route, title: &'static str, blurb: &'static str) -> Element {
+    rsx! {
+        Link {
+            to: to,
+            style: "display:block; text-decoration:none; color:inherit; padding:1rem 1.15rem; border-radius:12px; border:1px solid var(--qualia-border); background:rgba(0,0,0,0.22); transition:border-color 0.15s;",
+            strong { style: "display:block; font-size:1rem; margin-bottom:0.25rem;", "{title}" }
+            span { style: "font-size:0.85rem; color:var(--qualia-text-muted); line-height:1.4;", "{blurb}" }
+        }
+    }
+}
+
+/// Keep → Talk deep link: stash SocialHub tab before navigation.
+#[component]
+fn KeepTalkTabLink(tab: &'static str, title: &'static str, blurb: &'static str) -> Element {
+    rsx! {
+        Link {
+            to: Route::TalkRoute {},
+            style: "display:block; text-decoration:none; color:inherit; padding:1rem 1.15rem; border-radius:12px; border:1px solid var(--qualia-border); background:rgba(0,0,0,0.22); transition:border-color 0.15s;",
+            onclick: move |_| {
+                #[cfg(target_arch = "wasm32")]
+                if let Some(win) = web_sys::window() {
+                    if let Ok(Some(storage)) = win.session_storage() {
+                        let _ = storage.set_item("webizen_talk_tab", tab);
+                    }
+                }
+            },
+            strong { style: "display:block; font-size:1rem; margin-bottom:0.25rem;", "{title}" }
+            span { style: "font-size:0.85rem; color:var(--qualia-text-muted); line-height:1.4;", "{blurb}" }
+        }
+    }
+}
+
+/// Map omnibox text to a destination. Prefer honest routing over fake multi-product promises.
+fn route_from_omnibox(query: &str) -> Route {
+    let q = query.trim();
+    if q.is_empty() {
+        return Route::TalkRoute {};
+    }
+    let lower = q.to_lowercase();
+    // Optional Talk sub-tab handoff for SocialHub (sessionStorage).
+    #[cfg(target_arch = "wasm32")]
+    let stash_talk_tab = |tab: &str| {
+        if let Some(win) = web_sys::window() {
+            if let Ok(Some(storage)) = win.session_storage() {
+                let _ = storage.set_item("webizen_talk_tab", tab);
+            }
+        }
+    };
+    #[cfg(not(target_arch = "wasm32"))]
+    let stash_talk_tab = |_tab: &str| {};
+
+    match lower.as_str() {
+        "talk" | "chat" | "agent" => {
+            stash_talk_tab("chat");
+            return Route::TalkRoute {};
+        }
+        "people" | "invite" | "contacts" => {
+            stash_talk_tab("people");
+            return Route::TalkRoute {};
+        }
+        "reception" | "frontdoor" | "front-door" | "dns" => {
+            stash_talk_tab("reception");
+            return Route::TalkRoute {};
+        }
+        "mail" | "email" | "inbox" => {
+            stash_talk_tab("mail");
+            return Route::TalkRoute {};
+        }
+        "projects" | "coop" | "cooperative" => {
+            stash_talk_tab("projects");
+            return Route::TalkRoute {};
+        }
+        "keep" | "vault" => return Route::KeepRoute {},
+        "wellfair" => return Route::WellfairRoute {},
+        "work" | "board" => return Route::WorkRoute {},
+        "reach" | "browser" | "web" => return Route::BrowserRoute {},
+        "anatomy" | "body" => return Route::AnatomyRoute {},
+        "settings" | "prefs" => return Route::SettingsRoute {},
+        "home" | "dashboard" | "overview" => return Route::DashboardRoute {},
+        "library" => return Route::LibraryRoute {},
+        "health" => return Route::HealthRoute {},
+        "social" | "nexus" => return Route::NexusRoute {},
+        "qapps" | "apps" => return Route::QAppsRoute {},
+        "logs" => return Route::LogsRoute {},
+        "identity" => return Route::IdentityRoute {},
+        "sanctuary" => return Route::SanctuaryRoute {},
+        _ => {}
+    }
+    let looks_like_url = lower.starts_with("http://")
+        || lower.starts_with("https://")
+        || lower.starts_with("webizen://")
+        || lower.starts_with("qualia://")
+        || (lower.contains('.')
+            && !lower.contains(' ')
+            && q.split_whitespace().count() == 1
+            && !lower.ends_with('.'));
+    if looks_like_url {
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(win) = web_sys::window() {
+                if let Ok(Some(storage)) = win.session_storage() {
+                    let url = if lower.starts_with("http")
+                        || lower.starts_with("webizen")
+                        || lower.starts_with("qualia")
+                    {
+                        q.to_string()
+                    } else {
+                        format!("https://{q}")
+                    };
+                    let _ = storage.set_item("webizen_browser_url", &url);
+                }
+            }
+        }
+        return Route::BrowserRoute {};
+    }
+    // Free text → Talk, with optional draft handoff for the composer.
+    #[cfg(target_arch = "wasm32")]
+    {
+        if let Some(win) = web_sys::window() {
+            if let Ok(Some(storage)) = win.session_storage() {
+                let _ = storage.set_item("webizen_talk_draft", q);
+            }
+        }
+    }
+    Route::TalkRoute {}
 }
 
 #[component]
@@ -736,10 +940,12 @@ fn AppLayout() -> Element {
                         return;
                     };
                     let _ = match target.as_str() {
-                        "dashboard" => menu_nav.push(Route::DashboardRoute {}),
+                        "talk" | "chat" => menu_nav.push(Route::TalkRoute {}),
+                        "keep" => menu_nav.push(Route::KeepRoute {}),
+                        "dashboard" | "home" => menu_nav.push(Route::DashboardRoute {}),
                         "wellfair" => menu_nav.push(Route::WellfairRoute {}),
                         "chora" => menu_nav.push(Route::ChoraRoute {}),
-                        "browser" => menu_nav.push(Route::BrowserRoute {}),
+                        "browser" | "reach" => menu_nav.push(Route::BrowserRoute {}),
                         "10d-browser" => menu_nav.push(Route::TenDBrowserRoute {}),
                         "settings" => menu_nav.push(Route::SettingsRoute {}),
                         "library" => menu_nav.push(Route::LibraryRoute {}),
@@ -753,7 +959,7 @@ fn AppLayout() -> Element {
                         "sanctuary" => menu_nav.push(Route::SanctuaryRoute {}),
                         "logs" => menu_nav.push(Route::LogsRoute {}),
                         "gpu-viewport" => menu_nav.push(Route::GpuViewportRoute {}),
-                        _ => menu_nav.push(Route::DashboardRoute {}),
+                        _ => menu_nav.push(Route::TalkRoute {}),
                     };
                 }));
 
@@ -991,31 +1197,30 @@ fn AppLayout() -> Element {
 
     let host_snapshot = host_status();
     let (host_label, host_color) = status_chip(&host_snapshot);
-    let jobs_label = format!(
-        "{} running / {} queued",
-        host_snapshot.job_queue.running, host_snapshot.job_queue.queued
-    );
     let backend_label = if host_snapshot.graph_daemon_reachable {
         host_snapshot
             .graph_engine_version
             .clone()
             .unwrap_or_else(|| format!("Graph :{}", host_snapshot.graph_daemon_port))
     } else {
-        format!("{} backend", host_snapshot.inference_backend)
+        format!("{} · local", host_snapshot.inference_backend)
     };
+
+    // Omnibox — real routing (no fake multi-product promises).
+    let mut omnibox = use_signal(String::new);
+    let omnibox_nav = use_navigator();
 
     rsx! {
         div {
             style: "display: flex; flex-direction: column; height: 100vh; width: 100%; overflow: hidden; background: transparent;",
 
-            // ── Top Title & TabBar (QTabs) ──────────────────────────────────────────────
+            // ── Top bar: brand + three primary verbs ──────────────────────────
             div {
-                style: "display: flex; align-items: flex-end; padding: 0.6rem 1rem 0; background: rgba(10, 15, 30, 0.4); border-bottom: 1px solid var(--qualia-border); backdrop-filter: blur(24px); gap: 1rem; flex-shrink: 0;",
+                style: "display: flex; align-items: flex-end; padding: 0.55rem 1rem 0; background: rgba(10, 15, 30, 0.55); border-bottom: 1px solid var(--qualia-border); backdrop-filter: blur(24px); gap: 1rem; flex-shrink: 0;",
 
-                // Logo
                 Link {
-                    to: Route::DashboardRoute {},
-                    style: "display: flex; align-items: center; gap: 0.5rem; text-decoration: none; padding-bottom: 0.6rem; cursor: pointer;",
+                    to: Route::TalkRoute {},
+                    style: "display: flex; align-items: center; gap: 0.5rem; text-decoration: none; padding-bottom: 0.55rem; cursor: pointer;",
                     div {
                         style: "width: 28px; height: 28px; border-radius: 8px; background: {accent}; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: white; flex-shrink: 0; box-shadow: 0 0 12px {accent_glow};",
                         "⬡"
@@ -1023,146 +1228,132 @@ fn AppLayout() -> Element {
                     span { style: "font-weight: 800; font-size: 1rem; color: {text}; letter-spacing: 0.5px;", "Webizen" }
                 }
 
-                // Tabs (Mocked as standard navigation links for now, styled as browser tabs)
                 div {
-                    style: "display: flex; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: none;",
+                    style: "display: flex; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: none; padding-bottom: 0;",
 
                     Link {
-                        to: Route::DashboardRoute {},
+                        to: Route::TalkRoute {},
                         class: "qtab",
-                        sl-icon { "name": "house", style: "font-size: 0.9rem;" }
-                        "Home"
+                        sl-icon { "name": "chat-dots", style: "font-size: 0.9rem;" }
+                        "Talk"
                     }
-
+                    Link {
+                        to: Route::KeepRoute {},
+                        class: "qtab",
+                        sl-icon { "name": "archive", style: "font-size: 0.9rem;" }
+                        "Keep"
+                    }
                     if crate::endpoints::supports_browser_pane() {
                         Link {
                             to: Route::BrowserRoute {},
                             class: "qtab",
                             sl-icon { "name": "globe2", style: "font-size: 0.9rem;" }
-                            "Browser"
+                            "Reach"
                         }
                     }
-
                     Link {
-                        to: Route::HealthRoute {},
-                        class: "qtab",
-                        sl-icon { "name": "heart-pulse", style: "font-size: 0.9rem;" }
-                        "Health Vault"
-                    }
-
-                    Link {
-                        to: Route::AnatomyRoute {},
-                        class: "qtab",
-                        sl-icon { "name": "person", style: "font-size: 0.9rem;" }
-                        "Anatomy"
-                    }
-
-                    Link {
-                        to: Route::NexusRoute {},
-                        class: "qtab",
-                        sl-icon { "name": "people", style: "font-size: 0.9rem;" }
-                        "Social Nexus"
-                    }
-
-                    Link {
-                        to: Route::QAppsRoute {},
-                        class: "qtab",
-                        sl-icon { "name": "grid", style: "font-size: 0.9rem;" }
-                        "QApps"
-                    }
-
-                    Link {
-                        to: Route::ToolsRoute {},
+                        to: Route::SettingsRoute {},
                         class: "qtab",
                         sl-icon { "name": "gear", style: "font-size: 0.9rem;" }
                         "Settings"
                     }
+                }
 
-                    Link {
-                        to: Route::SupervisorRoute {},
-                        class: "qtab",
-                        sl-icon { "name": "activity", style: "font-size: 0.9rem;" }
-                        "Operations"
+                div {
+                    style: "margin-left: auto; display: flex; align-items: center; gap: 0.65rem; padding-bottom: 0.55rem;",
+                    div {
+                        style: "display: flex; align-items: center; gap: 0.45rem; border: 1px solid var(--qualia-border); background: rgba(255,255,255,0.03); border-radius: 999px; padding: 0.35rem 0.7rem;",
+                        div { style: "width: 8px; height: 8px; border-radius: 50%; background: {host_color}; box-shadow: 0 0 10px {host_color};" }
+                        span { style: "font-size: 0.72rem; color: var(--qualia-text); font-weight: 600;", "{host_label}" }
                     }
+                    span { style: "font-size: 0.7rem; color: var(--qualia-text-muted); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;", "{backend_label}" }
                 }
             }
 
-            // ── Omnibox Command Palette ───────────────────────────────────
+            // ── Omnibox (wired) — hide on small heights? always compact ─────
             div {
-                style: "padding: 0.75rem 1.5rem; background: var(--qualia-surface); border-bottom: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(16px); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 10;",
+                style: "padding: 0.45rem 1rem; background: var(--qualia-surface); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0;",
 
-                // Unified Address / Command Bar
                 div {
-                    style: "display: flex; align-items: center; gap: 0.8rem; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0.6rem 1.2rem; flex: 1; max-width: 800px; margin: 0 auto; transition: border-color 0.2s ease, box-shadow 0.2s ease;",
-                    sl-icon { "name": "search", style: "font-size: 1rem; color: {accent};" }
+                    style: "display: flex; align-items: center; gap: 0.65rem; background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0.45rem 0.9rem; flex: 1; max-width: 920px; margin: 0 auto;",
+                    sl-icon { "name": "compass", style: "font-size: 1rem; color: {accent}; flex-shrink: 0;" }
                     input {
                         r#type: "text",
-                        placeholder: "Search the web, query the semantic graph, or chat with your agent...",
-                        style: "background: transparent; border: none; outline: none; color: var(--qualia-text); font-size: 0.95rem; width: 100%; font-family: 'Inter', sans-serif;",
+                        value: "{omnibox}",
+                        placeholder: "talk · people · keep · reach · anatomy · paste URL · or a message…",
+                        style: "background: transparent; border: none; outline: none; color: var(--qualia-text); font-size: 0.88rem; width: 100%; font-family: 'Inter', sans-serif;",
+                        oninput: move |e| omnibox.set(e.value()),
+                        onkeydown: move |e| {
+                            if e.key() == Key::Enter {
+                                let q = omnibox();
+                                let dest = route_from_omnibox(&q);
+                                omnibox.set(String::new());
+                                let _ = omnibox_nav.push(dest);
+                            }
+                        },
                     }
-                    sl-icon { "name": "mic", style: "font-size: 1.1rem; color: var(--qualia-text-muted); cursor: pointer;" }
-                }
-
-                // Telemetry / Status Widgets
-                div {
-                    style: "display: flex; align-items: center; gap: 1rem; position: absolute; right: 1.5rem;",
-                    div {
-                        style: "display: flex; align-items: center; gap: 0.5rem; border: 1px solid var(--qualia-border); background: rgba(255,255,255,0.03); border-radius: 999px; padding: 0.4rem 0.8rem;",
-                        div { style: "width: 8px; height: 8px; border-radius: 50%; background: {host_color}; box-shadow: 0 0 10px {host_color};" }
-                        span { style: "font-size: 0.75rem; color: var(--qualia-text); font-weight: 600;", "{host_label}" }
+                    button {
+                        r#type: "button",
+                        style: "border: none; background: {accent}; color: #fff; border-radius: 8px; padding: 0.35rem 0.75rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; flex-shrink: 0;",
+                        onclick: move |_| {
+                            let q = omnibox();
+                            let dest = route_from_omnibox(&q);
+                            omnibox.set(String::new());
+                            let _ = omnibox_nav.push(dest);
+                        },
+                        "Go"
                     }
-                    span { style: "font-size: 0.75rem; color: var(--qualia-text-muted); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;", "{backend_label}" }
-                    span { style: "font-size: 0.75rem; color: var(--qualia-text-muted); background: rgba(255,255,255,0.05); padding: 0.3rem 0.6rem; border-radius: 6px;", "{jobs_label}" }
                 }
             }
 
-            // Persistent application navigation. It scrolls independently so
-            // smaller native windows still expose every destination.
+            // ── Sidebar: Talk / Keep / Reach first; rest under Advanced ─────
             div {
                 style: "flex: 1; overflow: hidden; display: flex; position: relative;",
                 aside {
                     class: "app-sidebar",
                     nav {
                         class: "app-sidebar-nav",
-                        span { class: "app-sidebar-label", "Workspace" }
-                        Link { to: Route::DashboardRoute {}, class: "nav-item", sl-icon { "name": "house" } "Home" }
-                        Link { to: Route::ChoraRoute {}, class: "nav-item", sl-icon { "name": "stars" } "Chora Universe" }
+                        span { class: "app-sidebar-label", "Primary" }
+                        Link { to: Route::TalkRoute {}, class: "nav-item", sl-icon { "name": "chat-dots" } "Talk" }
+                        Link { to: Route::KeepRoute {}, class: "nav-item", sl-icon { "name": "archive" } "Keep" }
                         if crate::endpoints::supports_browser_pane() {
-                            Link { to: Route::BrowserRoute {}, class: "nav-item", sl-icon { "name": "globe2" } "Browser" }
+                            Link { to: Route::BrowserRoute {}, class: "nav-item", sl-icon { "name": "globe2" } "Reach" }
                         }
-                        Link { to: Route::NexusRoute {}, class: "nav-item", sl-icon { "name": "people" } "Social" }
-                        Link { to: Route::CommunicationsRoute {}, class: "nav-item", sl-icon { "name": "envelope" } "Mail & Messages" }
-                        Link { to: Route::LibraryRoute {}, class: "nav-item", sl-icon { "name": "collection" } "Library" }
-                        Link { to: Route::WorkRoute {}, class: "nav-item", sl-icon { "name": "briefcase" } "Work" }
 
-                        span { class: "app-sidebar-label", "Personal" }
+                        span { class: "app-sidebar-label", "Keep places" }
                         Link { to: Route::WellfairRoute {}, class: "nav-item", sl-icon { "name": "shield-check" } "Wellfair" }
-                        Link { to: Route::HealthRoute {}, class: "nav-item", sl-icon { "name": "heart-pulse" } "Health Vault" }
                         Link { to: Route::AnatomyRoute {}, class: "nav-item", sl-icon { "name": "person" } "Anatomy" }
-                        Link { to: Route::IdentityRoute {}, class: "nav-item", sl-icon { "name": "person-badge" } "Identity" }
-                        Link { to: Route::AgencyRoute {}, class: "nav-item", sl-icon { "name": "diagram-3" } "Agency" }
-                        Link { to: Route::SanctuaryRoute {}, class: "nav-item", sl-icon { "name": "lock" } "Sanctuary" }
+                        Link { to: Route::HealthRoute {}, class: "nav-item", sl-icon { "name": "heart-pulse" } "Health" }
+                        Link { to: Route::LibraryRoute {}, class: "nav-item", sl-icon { "name": "collection" } "Library" }
+                        Link { to: Route::NexusRoute {}, class: "nav-item", sl-icon { "name": "people" } "People" }
 
-                        span { class: "app-sidebar-label", "Apps" }
-                        Link { to: Route::QAppsRoute {}, class: "nav-item", sl-icon { "name": "grid" } "QApps" }
+                        span { class: "app-sidebar-label", "System" }
                         Link { to: Route::SettingsRoute {}, class: "nav-item", sl-icon { "name": "gear" } "Settings" }
-                        Link { to: Route::LogsRoute {}, class: "nav-item", sl-icon { "name": "journal-text" } "Desktop Logs" }
-                        Link { to: Route::SupervisorRoute {}, class: "nav-item", sl-icon { "name": "activity" } "Operations" }
+                        Link { to: Route::DashboardRoute {}, class: "nav-item", sl-icon { "name": "house" } "Overview" }
 
                         details {
                             class: "developer-nav",
-                            summary { "Developer tools" }
+                            summary { "Advanced" }
                             div {
                                 class: "developer-nav-items",
+                                Link { to: Route::IdentityRoute {}, class: "nav-item", "Identity" }
+                                Link { to: Route::SanctuaryRoute {}, class: "nav-item", "Sanctuary" }
+                                Link { to: Route::AgencyRoute {}, class: "nav-item", "Agency" }
+                                Link { to: Route::WorkRoute {}, class: "nav-item", "Work" }
+                                Link { to: Route::CommunicationsRoute {}, class: "nav-item", "Mail" }
+                                Link { to: Route::ChoraRoute {}, class: "nav-item", "Chora" }
+                                Link { to: Route::QAppsRoute {}, class: "nav-item", "QApps catalog" }
+                                Link { to: Route::LogsRoute {}, class: "nav-item", "Desktop logs" }
+                                Link { to: Route::SupervisorRoute {}, class: "nav-item", "Operations" }
+                                Link { to: Route::ToolsRoute {}, class: "nav-item", "Sync & tools" }
                                 Link { to: Route::StudioRoute {}, class: "nav-item", "QApp Studio" }
                                 Link { to: Route::ContextStudioRoute {}, class: "nav-item", "Context Studio" }
                                 Link { to: Route::TenDBrowserRoute {}, class: "nav-item", "10D Browser" }
                                 Link { to: Route::GpuViewportRoute {}, class: "nav-item", "GPU Viewport" }
-                                Link { to: Route::ToolsRoute {}, class: "nav-item", "System Tools" }
+                                Link { to: Route::AboutRoute {}, class: "nav-item", "About" }
                             }
                         }
                     }
-                    div { class: "app-sidebar-scroll-cue", "Scroll for more" }
                 }
                 main {
                     style: "min-width: 0; flex: 1; overflow: hidden; display: flex; position: relative;",

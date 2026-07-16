@@ -35,6 +35,7 @@ pub mod bioinformatics_lab;
 pub mod browser_unavailable;
 pub mod chemistry_modeler;
 pub mod connect_chat;
+pub mod social_hub;
 pub mod directory_pane;
 pub mod domains_pane;
 pub mod cli_bridge;

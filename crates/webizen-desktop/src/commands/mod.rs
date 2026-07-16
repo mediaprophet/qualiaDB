@@ -3788,6 +3788,39 @@ pub fn mint_purpose_inbox(
     api::mint_purpose_inbox(domain, local, rules_json)
 }
 
+/// Onboard mail: mint purpose presets + catchall; auto-starts local SMTP receiver.
+#[command]
+pub fn onboard_mail_domain(domain: String) -> Result<serde_json::Value, String> {
+    api::onboard_mail_domain(domain)
+}
+
+/// Talk first-run readiness (domains, mailboxes, receiver, people).
+#[command]
+pub fn talk_setup_status() -> Result<serde_json::Value, String> {
+    api::talk_setup_status()
+}
+
+/// Resolve delivery for a to-address (exact / catchall / reject).
+#[command]
+pub fn resolve_mail_delivery(to_address: String) -> Result<serde_json::Value, String> {
+    api::resolve_mail_delivery(to_address)
+}
+
+/// Save SMTP/IMAP transport prefs (local file under app meta).
+#[command]
+pub fn save_mail_transport_config(
+    smtp_json: String,
+    imap_json: String,
+) -> Result<serde_json::Value, String> {
+    api::save_mail_transport_config(smtp_json, imap_json)
+}
+
+/// Load SMTP/IMAP transport prefs.
+#[command]
+pub fn load_mail_transport_config() -> Result<serde_json::Value, String> {
+    api::load_mail_transport_config()
+}
+
 /// Mint a per-relationship (pairwise) address bound to a relationship DID.
 #[command]
 pub fn mint_relationship_address(
@@ -3918,10 +3951,68 @@ pub fn mail_send(smtp_json: String, mail_json: String) -> Result<serde_json::Val
     api::mail_send(smtp_json, mail_json)
 }
 
-/// Fetch unseen mail via IMAP + apply each address's rules (structural spam-kill on un-minted addresses).
+/// Fetch unseen mail via IMAP + apply rules; accepted messages land in the local inbox.
 #[command]
 pub fn mail_fetch(imap_json: String, mailbox: String) -> Result<serde_json::Value, String> {
     api::mail_fetch(imap_json, mailbox)
+}
+
+/// Accept mail into the local product inbox (same path as SMTP DATA).
+#[command]
+pub fn mail_accept(
+    from: String,
+    to: String,
+    subject: String,
+    body: String,
+    sender_verified: Option<bool>,
+) -> Result<serde_json::Value, String> {
+    api::mail_accept(from, to, subject, body, sender_verified.unwrap_or(false))
+}
+
+/// List local inbox messages.
+#[command]
+pub fn mail_list(
+    mailbox: Option<String>,
+    include_quarantine: Option<bool>,
+) -> Result<serde_json::Value, String> {
+    api::mail_list(mailbox, include_quarantine)
+}
+
+#[command]
+pub fn mail_get(id: String) -> Result<serde_json::Value, String> {
+    api::mail_get(id)
+}
+
+#[command]
+pub fn mail_set_read(id: String, read: bool) -> Result<serde_json::Value, String> {
+    api::mail_set_read(id, read)
+}
+
+#[command]
+pub fn mail_delete(id: String) -> Result<serde_json::Value, String> {
+    api::mail_delete(id)
+}
+
+/// MX/SPF DNS paste block for a domain.
+#[command]
+pub fn mail_dns_forms(domain: String, mx_host: Option<String>) -> Result<serde_json::Value, String> {
+    api::mail_dns_forms(domain, mx_host)
+}
+
+#[command]
+pub fn mail_receiver_status() -> Result<serde_json::Value, String> {
+    api::mail_receiver_status()
+}
+
+/// Start local SMTP receiver (default 127.0.0.1:2525).
+#[command]
+pub fn mail_receiver_start(bind: Option<String>) -> Result<serde_json::Value, String> {
+    api::mail_receiver_start(bind)
+}
+
+#[command]
+pub fn mail_receiver_stop() -> Result<serde_json::Value, String> {
+    api::mail_receiver_stop()
 }
 
 /// A signed connection identifier for this node (front-door DID + WireGuard peering).
@@ -6723,6 +6814,11 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         purpose_inbox_presets,
         list_mail_addresses,
         mint_purpose_inbox,
+        onboard_mail_domain,
+        talk_setup_status,
+        resolve_mail_delivery,
+        save_mail_transport_config,
+        load_mail_transport_config,
         mint_relationship_address,
         set_mail_address_enabled,
         front_door_forms,
@@ -6735,6 +6831,15 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         parse_magic_link,
         mail_send,
         mail_fetch,
+        mail_accept,
+        mail_list,
+        mail_get,
+        mail_set_read,
+        mail_delete,
+        mail_dns_forms,
+        mail_receiver_status,
+        mail_receiver_start,
+        mail_receiver_stop,
         generate_connection_identifier,
         generate_magic_link,
         accept_connection,

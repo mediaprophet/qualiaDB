@@ -44,7 +44,8 @@ impl ShellAction {
             "open_chora" => Some(Self::Navigate("chora".to_string())),
             "open_browser" => Some(Self::Navigate("browser".to_string())),
             "open_10d" => Some(Self::Navigate("10d-browser".to_string())),
-            "open_dashboard" | "show" => Some(Self::Navigate("dashboard".to_string())),
+            // Home is Talk (human-first). Legacy open_dashboard / tray "show" land on talk.
+            "open_dashboard" | "open_talk" | "show" => Some(Self::Navigate("talk".to_string())),
             "open_qapp_studio" => Some(Self::Navigate("qapp-studio".to_string())),
             "open_qapp_manager" => Some(Self::Navigate("qapps".to_string())),
             "open_settings" | "settings" => Some(Self::Navigate("settings".to_string())),

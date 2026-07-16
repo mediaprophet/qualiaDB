@@ -73,6 +73,20 @@ impl BrowserTab {
 #[component]
 pub fn WebBrowserPane() -> Element {
     let mut tabs = use_signal(|| {
+        // Prefer URL handed off from the shell omnibox (sessionStorage), else a private start page.
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(win) = web_sys::window() {
+                if let Ok(Some(storage)) = win.session_storage() {
+                    if let Ok(Some(url)) = storage.get_item("webizen_browser_url") {
+                        let _ = storage.remove_item("webizen_browser_url");
+                        if !url.trim().is_empty() {
+                            return vec![BrowserTab::new(url)];
+                        }
+                    }
+                }
+            }
+        }
         vec![BrowserTab::new("https://duckduckgo.com/".to_string())]
     });
 

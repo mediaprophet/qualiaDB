@@ -13,7 +13,8 @@ fn show_main_window(app: &AppHandle) {
 
 fn qapp_route(qapp_id: &str) -> &str {
     match qapp_id {
-        "dashboard" => "/",
+        // Talk is home (studio root). Legacy "dashboard" aliases the same route.
+        "talk" | "dashboard" | "home" => "/",
         "wellfair" => "/wellfair",
         "chora" => "/chora",
         "browser" => "/browser",
@@ -241,7 +242,8 @@ pub fn build_app_menu(
     let chora = MenuItem::with_id(app, "open_chora", "Chora", true, Some("Ctrl+2"))?;
     let browser = MenuItem::with_id(app, "open_browser", "Web Browser", true, Some("Ctrl+3"))?;
     let ten_d = MenuItem::with_id(app, "open_10d", "10D Browser", true, Some("Ctrl+4"))?;
-    let dashboard = MenuItem::with_id(app, "open_dashboard", "Dashboard", true, Some("Ctrl+0"))?;
+    // Home shortcut: Talk (not a legacy "Dashboard" product surface).
+    let talk = MenuItem::with_id(app, "open_talk", "Talk", true, Some("Ctrl+0"))?;
     let qapp_studio =
         MenuItem::with_id(app, "open_qapp_studio", "QApp Studio", true, None::<&str>)?;
     let qapp_manager = MenuItem::with_id(
@@ -253,7 +255,7 @@ pub fn build_app_menu(
     )?;
 
     let qapps_menu = SubmenuBuilder::new(app, "QApps")
-        .item(&dashboard)
+        .item(&talk)
         .item(&wellfair)
         .item(&chora)
         .item(&browser)
@@ -469,7 +471,9 @@ mod tests {
     #[test]
     fn every_native_destination_has_an_explicit_route() {
         let expected = [
-            ("dashboard", "/"),
+            ("talk", "/"),
+            ("dashboard", "/"), // legacy alias → same home route as Talk
+            ("home", "/"),
             ("wellfair", "/wellfair"),
             ("chora", "/chora"),
             ("browser", "/browser"),

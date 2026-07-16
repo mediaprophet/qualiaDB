@@ -2987,6 +2987,139 @@ pub fn mint_purpose_inbox(
     list_mail_addresses(Some(domain))
 }
 
+/// Onboard mail for a registered domain: mint purpose presets + catchall, then
+/// **auto-start the local SMTP receiver** so the product path finishes without a second hunt.
+pub fn onboard_mail_domain(domain: String) -> Result<serde_json::Value, String> {
+    let minted = crate::domains::onboard_purpose_inboxes(&domain)?;
+    let domain_key = domain.trim().to_lowercase();
+    let addresses = crate::domains::list_addresses(Some(&domain_key));
+    #[cfg(not(target_arch = "wasm32"))]
+    let receiver = match crate::mail_inbound::start_receiver("") {
+        Ok(v) => v,
+        Err(e) => serde_json::json!({
+            "started": false,
+            "error": e,
+            "hint": "Start the receiver from Talk → Mail if bind failed (port in use?).",
+        }),
+    };
+    #[cfg(target_arch = "wasm32")]
+    let receiver = serde_json::json!({ "started": false, "hint": "receiver is native-only" });
+    let mint_msg = if minted.is_empty() {
+        "Mail already onboarded for this domain.".to_string()
+    } else {
+        format!("Minted {} mailbox(es): {}.", minted.len(), minted.join(", "))
+    };
+    let recv_msg = if receiver.get("started").and_then(|x| x.as_bool()).unwrap_or(false)
+        || receiver.get("already_running").and_then(|x| x.as_bool()).unwrap_or(false)
+    {
+        " Local SMTP receiver running — inbox can accept mail.".to_string()
+    } else if let Some(err) = receiver.get("error").and_then(|e| e.as_str()) {
+        format!(" Receiver not started: {err}.")
+    } else {
+        String::new()
+    };
+    Ok(serde_json::json!({
+        "domain": domain_key,
+        "minted": minted,
+        "addresses": addresses,
+        "receiver": receiver,
+        "message": format!("{mint_msg}{recv_msg}"),
+    }))
+}
+
+/// Human-readable readiness for Talk: domains, mailboxes, receiver, people, so first-run can guide.
+pub fn talk_setup_status() -> Result<serde_json::Value, String> {
+    let domains = crate::domains::list_domains();
+    let addresses = crate::domains::list_addresses(None);
+    let (mail_total, mail_unread, mail_quarantine) = crate::mail_store::counts();
+    let receiver = crate::mail_inbound::receiver_status();
+    let peers = crate::social_peers::list_peers();
+    let contacts_n = crate::social_connect::list_chat_contacts().len();
+    let has_domain = !domains.is_empty();
+    let has_mailboxes = !addresses.is_empty();
+    let receiver_running = receiver
+        .get("running")
+        .and_then(|x| x.as_bool())
+        .unwrap_or(false);
+    let has_people = !peers.is_empty() || contacts_n > 0;
+    let ready_for_mail = has_domain && has_mailboxes && receiver_running;
+    let ready_to_collaborate = has_domain && has_people;
+    Ok(serde_json::json!({
+        "domains": domains.len(),
+        "mailboxes": addresses.len(),
+        "mail_inbox": { "total": mail_total, "unread": mail_unread, "quarantine": mail_quarantine },
+        "receiver": receiver,
+        "peers": peers.len(),
+        "contacts": contacts_n,
+        "has_domain": has_domain,
+        "has_mailboxes": has_mailboxes,
+        "receiver_running": receiver_running,
+        "has_people": has_people,
+        "ready_for_mail": ready_for_mail,
+        "ready_to_collaborate": ready_to_collaborate,
+        "next_step": if !has_domain {
+            "reception"
+        } else if !has_mailboxes {
+            "mail_onboard"
+        } else if !receiver_running {
+            "mail_receiver"
+        } else if !has_people {
+            "people"
+        } else {
+            "chat_or_projects"
+        },
+    }))
+}
+
+/// Resolve how mail to `to_address` would be handled (exact / catchall / reject) — pure, for UI/debug.
+pub fn resolve_mail_delivery(to_address: String) -> Result<serde_json::Value, String> {
+    let addresses = crate::domains::list_addresses(None);
+    match crate::domains::resolve_delivery(&addresses, &to_address) {
+        crate::domains::DeliveryResolution::Deliver { address, via } => Ok(serde_json::json!({
+            "deliver": true,
+            "via": via,
+            "address": address,
+        })),
+        crate::domains::DeliveryResolution::Reject { reason } => Ok(serde_json::json!({
+            "deliver": false,
+            "rejected": reason,
+        })),
+    }
+}
+
+/// Persist SMTP/IMAP prefs (app_meta_dir). Passwords stored locally — same trust as desktop secrets.
+pub fn save_mail_transport_config(smtp_json: String, imap_json: String) -> Result<serde_json::Value, String> {
+    let path = crate::state::app_meta_dir().join("mail_transport.json");
+    if let Some(p) = path.parent() {
+        std::fs::create_dir_all(p).map_err(|e| e.to_string())?;
+    }
+    let smtp: Option<crate::mail_transport::SmtpConfig> = if smtp_json.trim().is_empty() {
+        None
+    } else {
+        Some(serde_json::from_str(&smtp_json).map_err(|e| format!("bad smtp: {e}"))?)
+    };
+    let imap: Option<crate::mail_transport::ImapConfig> = if imap_json.trim().is_empty() {
+        None
+    } else {
+        Some(serde_json::from_str(&imap_json).map_err(|e| format!("bad imap: {e}"))?)
+    };
+    let doc = serde_json::json!({ "smtp": smtp, "imap": imap });
+    std::fs::write(
+        &path,
+        serde_json::to_string_pretty(&doc).map_err(|e| e.to_string())?,
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({ "saved": true, "path": path.display().to_string() }))
+}
+
+pub fn load_mail_transport_config() -> Result<serde_json::Value, String> {
+    let path = crate::state::app_meta_dir().join("mail_transport.json");
+    match std::fs::read_to_string(path) {
+        Ok(t) => serde_json::from_str(&t).map_err(|e| e.to_string()),
+        Err(_) => Ok(serde_json::json!({ "smtp": null, "imap": null })),
+    }
+}
+
 /// Mint a per-relationship (pairwise) address bound to a relationship DID.
 pub fn mint_relationship_address(
     domain: String,
@@ -3027,11 +3160,13 @@ pub fn front_door_forms(domain: String) -> Result<serde_json::Value, String> {
         overlay_addr: None,
         profile_url: None,
     };
+    let mail_dns = crate::mail_inbound::mail_dns_forms(&d.name, None);
     Ok(serde_json::json!({
         "dns_name": crate::front_door::dns_record_name(&d.name),
         "dns_txt": rec.to_dns_txt(),
         "turtle": rec.to_turtle(),
         "jsonld": rec.to_json_ld(),
+        "mail_dns": mail_dns,
     }))
 }
 
@@ -3199,26 +3334,121 @@ pub fn mail_send(smtp_json: String, mail_json: String) -> Result<serde_json::Val
     Ok(serde_json::json!({ "sent": true }))
 }
 
-/// Fetch unseen mail via IMAP and apply each recipient address's rules — enforcing the structural
-/// spam-kill: mail to an un-minted or disabled address is rejected, never delivered.
+/// Fetch unseen mail via IMAP, apply semantic delivery + rules, and **store accepted mail**
+/// in the local inbox (same store as the SMTP receiver).
 #[cfg(not(target_arch = "wasm32"))]
 pub fn mail_fetch(imap_json: String, mailbox: String) -> Result<serde_json::Value, String> {
     let cfg: crate::mail_transport::ImapConfig =
         serde_json::from_str(&imap_json).map_err(|e| format!("bad imap config: {e}"))?;
     let msgs = crate::mail_transport::fetch_unseen(&cfg, &mailbox)?;
-    let addresses = crate::domains::list_addresses(None);
+    let mut stored_ids = Vec::new();
     let evaluated: Vec<serde_json::Value> = msgs
         .into_iter()
-        .map(|m| match crate::domains::resolve(&addresses, &m.to_address) {
-            Some(a) if a.enabled => {
-                let verdict = crate::mail_rules::evaluate(&a.rules, &m);
-                serde_json::json!({ "message": m, "verdict": verdict })
+        .map(|m| {
+            let to = if m.to_address.contains('@') {
+                m.to_address.clone()
+            } else {
+                cfg.username.clone()
+            };
+            // Reuse the product accept path so IMAP import and SMTP land in one inbox.
+            let r = crate::mail_inbound::accept_message(
+                &m.from_address,
+                &to,
+                &m.subject,
+                &format!("(imported via IMAP; size {} bytes)", m.size_bytes),
+                m.sender_verified,
+                m.sender_did.clone(),
+            );
+            if let Some(ref s) = r.stored {
+                stored_ids.push(s.id.clone());
             }
-            Some(_) => serde_json::json!({ "message": m, "verdict": { "deliver": false, "rejected": "address disabled" } }),
-            None => serde_json::json!({ "message": m, "verdict": { "deliver": false, "rejected": "no such address (unsolicited)" } }),
+            serde_json::json!({
+                "message": m,
+                "accepted": r.accepted,
+                "rejected": r.rejected,
+                "stored": r.stored,
+            })
         })
         .collect();
-    Ok(serde_json::json!(evaluated))
+    Ok(serde_json::json!({
+        "messages": evaluated,
+        "stored_ids": stored_ids,
+        "stored_count": stored_ids.len(),
+    }))
+}
+
+// ── Local mail product (inbox + SMTP receiver) ───────────────────────────────
+
+/// Accept a message into the local inbox (same path as SMTP DATA) — for tests and mesh inject.
+pub fn mail_accept(
+    from: String,
+    to: String,
+    subject: String,
+    body: String,
+    sender_verified: bool,
+) -> Result<serde_json::Value, String> {
+    let r = crate::mail_inbound::accept_message(
+        &from,
+        &to,
+        &subject,
+        &body,
+        sender_verified,
+        None,
+    );
+    serde_json::to_value(r).map_err(|e| e.to_string())
+}
+
+/// List local inbox messages (newest first).
+pub fn mail_list(
+    mailbox: Option<String>,
+    include_quarantine: Option<bool>,
+) -> Result<serde_json::Value, String> {
+    let inc = include_quarantine.unwrap_or(true);
+    let list = crate::mail_store::list(mailbox.as_deref(), inc);
+    let (total, unread, quarantine) = crate::mail_store::counts();
+    Ok(serde_json::json!({
+        "messages": list,
+        "counts": { "total": total, "unread": unread, "quarantine": quarantine },
+    }))
+}
+
+pub fn mail_get(id: String) -> Result<serde_json::Value, String> {
+    let m = crate::mail_store::get(&id).ok_or_else(|| format!("unknown message '{id}'"))?;
+    serde_json::to_value(m).map_err(|e| e.to_string())
+}
+
+pub fn mail_set_read(id: String, read: bool) -> Result<serde_json::Value, String> {
+    let m = crate::mail_store::set_read(&id, read)?;
+    serde_json::to_value(m).map_err(|e| e.to_string())
+}
+
+pub fn mail_delete(id: String) -> Result<serde_json::Value, String> {
+    crate::mail_store::delete(&id)?;
+    Ok(serde_json::json!({ "deleted": id }))
+}
+
+/// MX/SPF paste block + local receiver status for a domain.
+pub fn mail_dns_forms(domain: String, mx_host: Option<String>) -> Result<serde_json::Value, String> {
+    Ok(crate::mail_inbound::mail_dns_forms(
+        &domain,
+        mx_host.as_deref(),
+    ))
+}
+
+pub fn mail_receiver_status() -> Result<serde_json::Value, String> {
+    Ok(crate::mail_inbound::receiver_status())
+}
+
+/// Start local SMTP receiver (default `127.0.0.1:2525`). Use `0.0.0.0:2525` for LAN/tunnel.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn mail_receiver_start(bind: Option<String>) -> Result<serde_json::Value, String> {
+    let b = bind.unwrap_or_default();
+    crate::mail_inbound::start_receiver(&b)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn mail_receiver_stop() -> Result<serde_json::Value, String> {
+    crate::mail_inbound::stop_receiver()
 }
 
 // ── Connection flow: magic link → verify → SocialWebNet peer ────────────────────

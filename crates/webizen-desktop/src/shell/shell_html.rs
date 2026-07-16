@@ -94,7 +94,7 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
     <button class="nav-btn" id="nav-back" title="Back (Alt+Left)">←</button>
     <button class="nav-btn" id="nav-forward" title="Forward (Alt+Right)">→</button>
     <button class="nav-btn" id="nav-reload" title="Reload (Ctrl+R)">↻</button>
-    <input type="text" id="address-bar" placeholder="qualia://…" spellcheck="false">
+    <input type="text" id="address-bar" placeholder="qualia://talk | keep | browser | …" spellcheck="false">
     <button class="nav-btn" id="gpu-toggle" title="Toggle GPU Surface">⚡</button>
   </div>
   <div id="content-area">
@@ -137,10 +137,23 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
   const vaultStatus = document.getElementById('vault-status');
   const gpuStatus = document.getElementById('gpu-status');
 
+  // Human-first home: empty / home / legacy "dashboard" all resolve to Talk.
+  function normalizeQappId(qappId) {
+    if (qappId == null) return 'talk';
+    const id = String(qappId).trim().toLowerCase();
+    if (!id || id === 'talk' || id === 'dashboard' || id === 'home') return 'talk';
+    return id;
+  }
+
   function createTab(qappId) {
-    qappId = qappId || 'dashboard';
-    const url = '/studio/#/' + (qappId === 'dashboard' ? '' : qappId);
-    const title = qappId.charAt(0).toUpperCase() + qappId.slice(1);
+    // Default tab: Talk (human-first front door). Empty hash → studio `/` = TalkRoute.
+    qappId = normalizeQappId(qappId);
+    const path = studioPath(qappId);
+    const url = '/studio/#/' + path;
+    const title =
+      qappId === 'talk'
+        ? 'Talk'
+        : qappId.charAt(0).toUpperCase() + qappId.slice(1);
 
     const tab = document.createElement('div');
     tab.className = 'tab';
@@ -168,12 +181,22 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
     switchToTab(tab, qappId);
   }
 
+  function studioPath(qappId) {
+    qappId = normalizeQappId(qappId);
+    if (qappId === 'talk') return '';
+    if (qappId === 'keep') return 'keep';
+    if (qappId === 'reach' || qappId === 'browser') return 'browser';
+    return qappId;
+  }
+
   function switchToTab(tab, qappId) {
+    qappId = normalizeQappId(qappId);
     tabs.forEach(t => t.el.classList.remove('active'));
     tab.classList.add('active');
     activeTabId = qappId;
 
-    const url = '/studio/#/' + (qappId === 'dashboard' ? '' : qappId);
+    const path = studioPath(qappId);
+    const url = '/studio/#/' + path;
     const fullUrl = window.location.origin + url;
     contentIframe.src = fullUrl;
     addressBar.value = 'qualia://' + qappId;
@@ -188,7 +211,7 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
     tab.remove();
     tabs.splice(idx, 1);
     if (tabs.length === 0) {
-      createTab('dashboard');
+      createTab('talk');
     } else if (tab.classList.contains('active')) {
       const next = tabs[Math.min(idx, tabs.length - 1)];
       switchToTab(next.el, next.qappId);
@@ -208,6 +231,7 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
   }
 
   function navigate(qappId) {
+    qappId = normalizeQappId(qappId);
     if (activeTabId === qappId) return;
     const tab = tabs.find(t => t.qappId === qappId);
     if (tab) {
@@ -218,17 +242,28 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
   }
 
   function navigateToUrl(url) {
+    if (!url) {
+      navigate('talk');
+      return;
+    }
     if (url.startsWith('qualia://')) {
-      const qappId = url.slice('qualia://'.length).split('/')[0];
-      navigate(qappId);
+      const rest = url.slice('qualia://'.length);
+      const qappId = rest.split('/')[0];
+      navigate(normalizeQappId(qappId));
+    } else if (url === '/' || url === '/studio/' || url === '/studio/#' || url === '/studio/#/') {
+      // Empty / home studio paths → Talk (not a dashboard default).
+      navigate('talk');
     } else if (url.startsWith('/studio/')) {
       contentIframe.src = window.location.origin + url;
     } else if (url.startsWith('http')) {
       contentIframe.src = url;
+    } else {
+      // Bare token in address bar (e.g. "keep", "talk") → qualia qapp.
+      navigate(normalizeQappId(url));
     }
   }
 
-  newTabBtn.onclick = () => createTab('dashboard');
+  newTabBtn.onclick = () => createTab('talk');
 
   navBack.onclick = () => {
     if (historyIndex > 0) { historyIndex--; contentIframe.src = history[historyIndex]; updateNavButtons(); }
@@ -258,7 +293,7 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
   };
 
   listen('shell-navigate', (event) => { navigate(event.payload); });
-  listen('shell-new-tab', () => createTab('dashboard'));
+  listen('shell-new-tab', () => createTab('talk'));
   listen('shell-close-tab', () => {
     const active = tabs.find(t => t.el.classList.contains('active'));
     if (active) closeTab(active.el);
@@ -299,7 +334,7 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
   setInterval(updateStatus, 5000);
   updateStatus();
 
-  createTab('dashboard');
+  createTab('talk');
 })();
 </script>
 </body>
