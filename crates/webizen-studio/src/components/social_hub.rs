@@ -500,6 +500,26 @@ pub fn SocialHub() -> Element {
                         active_model_chip.set(m);
                     }
                 }
+                // If domain mail exists but receiver is down, start it (finish the product path).
+                if let Ok(st0) =
+                    invoke_json::<serde_json::Value>("talk_setup_status", json!({})).await
+                {
+                    let has_mb = st0
+                        .get("has_mailboxes")
+                        .and_then(|x| x.as_bool())
+                        .unwrap_or(false);
+                    let recv = st0
+                        .get("receiver_running")
+                        .and_then(|x| x.as_bool())
+                        .unwrap_or(false);
+                    if has_mb && !recv {
+                        let _ = invoke_json::<serde_json::Value>(
+                            "mail_receiver_start",
+                            json!({ "bind": serde_json::Value::Null }),
+                        )
+                        .await;
+                    }
+                }
                 // First-run / readiness — route to the next human step (not ops chrome).
                 if let Ok(st) =
                     invoke_json::<serde_json::Value>("talk_setup_status", json!({})).await
@@ -936,13 +956,13 @@ pub fn SocialHub() -> Element {
                     }
 
                     div { style: "{CARD}",
-                        h2 { style: "{H2}", "Accept an invite" }
+                        h2 { style: "{H2}", "Accept invite / coop package" }
                         p { style: "{MUTED}",
-                            "Paste the full invite JSON someone sent you (short codes alone are not enough yet). This adds them as a chat contact."
+                            "Paste a full coop share package (preferred) or bare invite JSON. Package connects you, scopes the project, and admits host+you on the local roster. Short codes alone are not enough."
                         }
                         textarea {
-                            style: "{INPUT} min-height:70px;font-family:monospace;font-size:11px;",
-                            placeholder: "Paste full invite JSON",
+                            style: "{INPUT} min-height:90px;font-family:monospace;font-size:11px;",
+                            placeholder: "Paste coop share package or invite JSON",
                             value: "{invite_in}",
                             oninput: move |e| invite_in.set(e.value()),
                         }
@@ -951,37 +971,74 @@ pub fn SocialHub() -> Element {
                             onclick: move |_| {
                                 #[cfg(target_arch = "wasm32")]
                                 {
-                                    let (mut invite_in, mut contacts, mut status) = (invite_in, contacts, status);
+                                    let (mut invite_in, mut contacts, mut peers, mut status, mut active_project, mut active_project_id, mut collab_list, mut tab) =
+                                        (invite_in, contacts, peers, status, active_project, active_project_id, collab_list, tab);
                                     spawn(async move {
                                         let input = invite_in().trim().to_string();
                                         if input.is_empty() {
-                                            status.set("Paste the invite JSON first.".into());
+                                            status.set("Paste a package or invite JSON first.".into());
                                             return;
                                         }
-                                        match invoke_json::<serde_json::Value>(
-                                            "accept_connect_invite",
-                                            json!({ "input": input }),
-                                        )
-                                        .await
-                                        {
-                                            Ok(c) => {
-                                                let name = s(&c, "display_name");
-                                                let name = if name.is_empty() { s(&c, "did") } else { name };
-                                                status.set(format!("Connected with {name}."));
+                                        // Prefer full package accept; fall back to bare invite.
+                                        let result = if input.contains("qualia_coop_share") {
+                                            invoke_json::<serde_json::Value>(
+                                                "accept_coop_share_package",
+                                                json!({ "packageOrInvite": input }),
+                                            )
+                                            .await
+                                        } else {
+                                            invoke_json::<serde_json::Value>(
+                                                "accept_connect_invite",
+                                                json!({ "input": input }),
+                                            )
+                                            .await
+                                            .map(|c| serde_json::json!({ "connected": true, "contact": c, "message": "Connected." }))
+                                        };
+                                        match result {
+                                            Ok(v) => {
+                                                let contact = v.get("contact").cloned().unwrap_or(v.clone());
+                                                let name = {
+                                                    let n = s(&contact, "display_name");
+                                                    if n.is_empty() { s(&contact, "did") } else { n }
+                                                };
+                                                let pid = s(&v, "project_id");
+                                                let pname = s(&v, "project_name");
+                                                if !pid.is_empty() {
+                                                    active_project_id.set(pid.clone());
+                                                    store_active_project(&pid, if pname.is_empty() { &pid } else { &pname });
+                                                }
+                                                if !pname.is_empty() {
+                                                    active_project.set(pname.clone());
+                                                }
                                                 invite_in.set(String::new());
-                                                match invoke_json::<serde_json::Value>("list_chat_contacts", json!({})).await {
-                                                    Ok(v) => contacts.set(json_list(v, &["contacts", "items"])),
-                                                    Err(e) => status.set(format!(
-                                                        "Connected with {name}, but contact list refresh failed: {e}"
-                                                    )),
+                                                let (c, p) = load_people_lists().await;
+                                                apply_people_lists(c, p, contacts, peers, status, &format!("Connected with {name}. "));
+                                                if !pid.is_empty() {
+                                                    if let Ok(list) = invoke_json::<serde_json::Value>(
+                                                        "list_project_collaborators",
+                                                        json!({ "projectId": pid }),
+                                                    )
+                                                    .await
+                                                    {
+                                                        collab_list.set(json_list(list, &["collaborators", "items"]));
+                                                    }
+                                                    // Best-effort mesh so join path finishes.
+                                                    let _ = invoke_json::<serde_json::Value>("mesh_start", json!({})).await;
+                                                    tab.set(HubTab::Projects);
+                                                    status.set(format!(
+                                                        "Connected with {name}. Project scoped{}. Mesh start attempted. Open Projects or Chat.",
+                                                        if pname.is_empty() { String::new() } else { format!(" to {pname}") }
+                                                    ));
+                                                } else {
+                                                    status.set(format!("Connected with {name}."));
                                                 }
                                             }
-                                            Err(e) => status.set(format!("Accept invite failed: {e}")),
+                                            Err(e) => status.set(format!("Accept failed: {e}")),
                                         }
                                     });
                                 }
                             },
-                            "Accept invite"
+                            "Accept package / invite"
                         }
                         p { style: "margin:12px 0 6px;font-size:12px;color:#94a3b8;",
                             "Or accept a magic / deep link (registers a social mesh peer)"
@@ -997,8 +1054,8 @@ pub fn SocialHub() -> Element {
                             onclick: move |_| {
                                 #[cfg(target_arch = "wasm32")]
                                 {
-                                    let (mut magic_accept, contacts, peers, status) =
-                                        (magic_accept, contacts, peers, status);
+                                    let (mut magic_accept, contacts, peers, status, active_project_id, active_project) =
+                                        (magic_accept, contacts, peers, status, active_project_id, active_project);
                                     spawn(async move {
                                         let link = magic_accept().trim().to_string();
                                         if link.is_empty() {
@@ -1019,6 +1076,31 @@ pub fn SocialHub() -> Element {
                                                 magic_accept.set(String::new());
                                                 // Best-effort: bring mesh up so the new peer can reach us.
                                                 let _ = invoke_json::<serde_json::Value>("mesh_start", json!({})).await;
+                                                // Auto-admit peer to active project when scoped.
+                                                let pid = active_project_id();
+                                                let pname = active_project();
+                                                let did = s(&peer, "did");
+                                                if !pid.is_empty() && !did.is_empty() {
+                                                    let rel = s(&peer, "relation_type");
+                                                    let role = if rel.eq_ignore_ascii_case("agent")
+                                                        || rel.eq_ignore_ascii_case("service")
+                                                    {
+                                                        "agent"
+                                                    } else {
+                                                        "contributor"
+                                                    };
+                                                    let _ = invoke_json::<serde_json::Value>(
+                                                        "add_project_collaborator",
+                                                        json!({
+                                                            "projectId": pid,
+                                                            "projectName": pname,
+                                                            "memberDid": did,
+                                                            "displayName": name,
+                                                            "role": role,
+                                                        }),
+                                                    )
+                                                    .await;
+                                                }
                                                 let (c, p) = load_people_lists().await;
                                                 apply_people_lists(
                                                     c,

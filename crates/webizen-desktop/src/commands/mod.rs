@@ -4126,13 +4126,19 @@ pub fn remove_project_collaborator(
     api::remove_project_collaborator(project_id, member_did)
 }
 
-/// Pasteable coop share package (no private keys).
+/// Pasteable coop share package (no private keys; embeds connect invite when allowed).
 #[command]
 pub fn coop_share_package(
     project_id: Option<String>,
     project_name: Option<String>,
 ) -> Result<serde_json::Value, String> {
     api::coop_share_package(project_id, project_name)
+}
+
+/// Accept a full coop share package or bare invite JSON (connect + project scope).
+#[command]
+pub fn accept_coop_share_package(package_or_invite: String) -> Result<serde_json::Value, String> {
+    api::accept_coop_share_package(package_or_invite)
 }
 
 /// Group chat from project collaborator roster.
@@ -6939,6 +6945,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         add_project_collaborator,
         remove_project_collaborator,
         coop_share_package,
+        accept_coop_share_package,
         create_project_group_chat,
         set_social_peer_endpoint,
         mesh::mesh_start,

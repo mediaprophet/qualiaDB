@@ -3084,7 +3084,8 @@ pub fn talk_setup_status() -> Result<serde_json::Value, String> {
 }
 
 /// Build a pasteable **coop share package** so another person (or their bot) can join:
-/// domain identity, project scope, and how to connect. Does not include private keys.
+/// domain identity, project scope, **embedded connect invite** (when profile allows), how-to.
+/// Never includes private keys.
 pub fn coop_share_package(
     project_id: Option<String>,
     project_name: Option<String>,
@@ -3103,6 +3104,31 @@ pub fn coop_share_package(
         crate::project_collab::list(Some(&pid))
     };
     let profile = crate::user_profile::load_profile();
+
+    // Best-effort invite embed — one paste for the joiner (ConnectInviteSummary).
+    let invite = crate::social_connect::generate_connect_invite(None).ok();
+    let invite_code = invite
+        .as_ref()
+        .map(|i| i.code.clone())
+        .unwrap_or_default();
+    let invite_json = invite.as_ref().and_then(|i| {
+        serde_json::from_str::<serde_json::Value>(&i.invite_json)
+            .ok()
+            .or_else(|| Some(serde_json::Value::String(i.invite_json.clone())))
+    });
+
+    #[cfg(not(target_arch = "wasm32"))]
+    let magic = {
+        let fd = if front_door.is_empty() {
+            String::new()
+        } else {
+            front_door.clone()
+        };
+        generate_magic_link(fd, "collaborator".into(), domain.clone()).ok()
+    };
+    #[cfg(target_arch = "wasm32")]
+    let magic: Option<serde_json::Value> = None;
+
     let package = serde_json::json!({
         "qualia_coop_share": "1",
         "from_display_name": profile.display_name,
@@ -3111,16 +3137,117 @@ pub fn coop_share_package(
         "project_id": pid,
         "project_name": pname,
         "members": members,
+        "invite_code": invite_code,
+        "invite_json": invite_json,
+        "magic_link": magic,
         "how": [
-            "1. Install / open Webizen on 0.0.25+.",
-            "2. Talk → People: Accept invite (JSON) or magic link from the host.",
-            "3. Talk → Projects: create/open the same project name, or ask host to Admit you.",
-            "4. Talk → People → Start mesh so chat can travel peer-to-peer.",
+            "1. Install / open Webizen (0.0.25+).",
+            "2. Talk → People → paste this whole package under Accept (or Accept invite / magic link).",
+            "3. Talk → Projects will scope to the shared project when present.",
+            "4. Talk → People → Start mesh for peer chat.",
             "5. Chat with #project:Name_With_Underscores for scoped work.",
         ],
-        "note": "No private keys in this package. Share invite/magic link out-of-band separately if not embedded below.",
+        "note": "No private keys. Invite is short-lived — regenerate if accept fails.",
     });
     Ok(package)
+}
+
+/// Accept a **coop share package** or a bare connect-invite JSON.
+/// Connects to the host, scopes the project when present, and admits both sides on the local roster.
+pub fn accept_coop_share_package(package_or_invite: String) -> Result<serde_json::Value, String> {
+    let raw = package_or_invite.trim();
+    if raw.is_empty() {
+        return Err("paste a coop share package or invite JSON".into());
+    }
+    let v: serde_json::Value =
+        serde_json::from_str(raw).map_err(|e| format!("not JSON: {e}"))?;
+
+    // Resolve invite payload: nested invite_json, or whole object is the invite.
+    let invite_payload = if v.get("qualia_coop_share").is_some() {
+        v.get("invite_json")
+            .cloned()
+            .filter(|x| !x.is_null())
+            .ok_or_else(|| {
+                "share package has no invite_json — ask host to regenerate (enable invites + rebuild package)"
+                    .to_string()
+            })?
+    } else {
+        v.clone()
+    };
+    let invite_str = if invite_payload.is_string() {
+        invite_payload.as_str().unwrap_or("").to_string()
+    } else {
+        serde_json::to_string(&invite_payload).map_err(|e| e.to_string())?
+    };
+    let contact = crate::social_connect::accept_connect_invite(&invite_str)?;
+
+    let project_id = v
+        .get("project_id")
+        .and_then(|x| x.as_str())
+        .unwrap_or("")
+        .to_string();
+    let project_name = v
+        .get("project_name")
+        .and_then(|x| x.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    // Local roster: host + self on the named project (when present).
+    let profile = crate::user_profile::load_profile();
+    let mut admitted = Vec::new();
+    if !project_id.is_empty() {
+        let host_did = contact.did.clone();
+        let host_name = contact.display_name.clone();
+        if !host_did.is_empty() {
+            if let Ok(row) = crate::project_collab::add(
+                &project_id,
+                &project_name,
+                &host_did,
+                &host_name,
+                "steward",
+            ) {
+                admitted.push(row);
+            }
+        }
+        let self_did = profile.public_did.clone();
+        if !self_did.is_empty() {
+            if let Ok(row) = crate::project_collab::add(
+                &project_id,
+                &project_name,
+                &self_did,
+                &profile.display_name,
+                "contributor",
+            ) {
+                admitted.push(row);
+            }
+        }
+    }
+
+    // Optional magic link in package — register peer if present.
+    let mut peer_registered = false;
+    #[cfg(not(target_arch = "wasm32"))]
+    if let Some(magic) = v.get("magic_link") {
+        let link = magic
+            .get("deep_link")
+            .or_else(|| magic.get("https_link"))
+            .and_then(|x| x.as_str())
+            .unwrap_or("");
+        if !link.is_empty() {
+            if accept_connection(link.to_string()).is_ok() {
+                peer_registered = true;
+            }
+        }
+    }
+
+    Ok(serde_json::json!({
+        "connected": true,
+        "contact": contact,
+        "project_id": project_id,
+        "project_name": project_name,
+        "admitted": admitted,
+        "peer_registered": peer_registered,
+        "message": "Connected. Project scoped on this device when project_id was present. Start mesh under People for live chat.",
+    }))
 }
 
 /// Create a group chat for a project from its collaborator roster (+ optional extra DIDs).
