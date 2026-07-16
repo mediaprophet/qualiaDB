@@ -3572,6 +3572,40 @@ pub fn mesh_dialability() -> Result<serde_json::Value, String> {
     serde_json::to_value(crate::social_mesh::dialability(&peers)).map_err(|e| e.to_string())
 }
 
+// ── Project collaborators (Talk → Projects, people + agents) ─────────────────
+
+pub fn list_project_collaborators(project_id: Option<String>) -> Result<serde_json::Value, String> {
+    let rows = crate::project_collab::list(project_id.as_deref());
+    serde_json::to_value(rows).map_err(|e| e.to_string())
+}
+
+/// Admit a person or agent DID to a project roster (always local). When vault is unlocked,
+/// the desktop also records Wellfair `ProjectMembership` via `wellfair_add_project_membership`.
+pub fn add_project_collaborator(
+    project_id: String,
+    project_name: String,
+    member_did: String,
+    display_name: String,
+    role: String,
+) -> Result<serde_json::Value, String> {
+    let row = crate::project_collab::add(
+        &project_id,
+        &project_name,
+        &member_did,
+        &display_name,
+        &role,
+    )?;
+    serde_json::to_value(row).map_err(|e| e.to_string())
+}
+
+pub fn remove_project_collaborator(
+    project_id: String,
+    member_did: String,
+) -> Result<serde_json::Value, String> {
+    crate::project_collab::remove(&project_id, &member_did)?;
+    Ok(serde_json::json!({ "removed": true, "project_id": project_id, "member_did": member_did }))
+}
+
 /// Answer a connection challenge — prove this node controls its identity key ("it's actually me").
 #[cfg(not(target_arch = "wasm32"))]
 pub fn answer_connection_challenge(

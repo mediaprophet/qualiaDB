@@ -879,6 +879,38 @@ pub fn wellfair_add_project(
     })?
 }
 
+/// Admit a DID to a cooperative project with a role (steward | contributor | observer).
+#[command]
+pub fn wellfair_add_project_membership(
+    app: AppHandle,
+    project_id: String,
+    member_did: String,
+    role: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_mut()
+            .ok_or_else(|| {
+                "Host API not initialized — unlock Sanctuary vault first (Talk → Projects shows the CTA)"
+                    .to_string()
+            })?;
+        let role = match role.trim().to_ascii_lowercase().as_str() {
+            "steward" => wellfare_core::projects::ProjectRole::Steward,
+            "observer" => wellfare_core::projects::ProjectRole::Observer,
+            _ => wellfare_core::projects::ProjectRole::Contributor,
+        };
+        let membership = wellfare_core::projects::ProjectMembership::new(
+            project_id,
+            member_did,
+            role,
+            wellfair_now_unix(),
+        );
+        let committed = host.add_project_membership(&membership)?;
+        serde_json::to_string(&committed).map_err(|e| e.to_string())
+    })?
+}
+
 #[command]
 pub fn wellfair_add_contribution(
     app: AppHandle,
@@ -4067,6 +4099,33 @@ pub fn mesh_dialability() -> Result<serde_json::Value, String> {
     api::mesh_dialability()
 }
 
+/// Local project collaborator roster (people + agents on a cooperative project).
+#[command]
+pub fn list_project_collaborators(
+    project_id: Option<String>,
+) -> Result<serde_json::Value, String> {
+    api::list_project_collaborators(project_id)
+}
+
+#[command]
+pub fn add_project_collaborator(
+    project_id: String,
+    project_name: String,
+    member_did: String,
+    display_name: String,
+    role: String,
+) -> Result<serde_json::Value, String> {
+    api::add_project_collaborator(project_id, project_name, member_did, display_name, role)
+}
+
+#[command]
+pub fn remove_project_collaborator(
+    project_id: String,
+    member_did: String,
+) -> Result<serde_json::Value, String> {
+    api::remove_project_collaborator(project_id, member_did)
+}
+
 /// All peer agreements.
 #[command]
 pub fn list_agreements() -> Result<serde_json::Value, String> {
@@ -6601,6 +6660,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_add_ledger_entry,
         wellfair_ledger_balance,
         wellfair_add_project,
+        wellfair_add_project_membership,
         wellfair_add_contribution,
         wellfair_project_obligations,
         wellfair_add_credential,
@@ -6847,6 +6907,9 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         set_social_peer_active,
         answer_connection_challenge,
         mesh_dialability,
+        list_project_collaborators,
+        add_project_collaborator,
+        remove_project_collaborator,
         mesh::mesh_start,
         mesh::mesh_stop,
         mesh::mesh_status,

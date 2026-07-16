@@ -217,8 +217,14 @@ fn store_active_project(id: &str, name: &str) {
 
 fn vault_hint(err: &str) -> String {
     let e = err.to_lowercase();
-    if e.contains("unlock") || e.contains("vault") || e.contains("host api not initialized") {
-        format!("{err} → Keep → Sanctuary / Wellfair to unlock the vault, then retry.")
+    if e.contains("unlock")
+        || e.contains("vault")
+        || e.contains("host api not initialized")
+        || e.contains("not initialized")
+    {
+        format!(
+            "{err}\n\nFirst-run for cooperative work: Open Sanctuary → create/unlock vault → return here → Create or Seed project → People (invite) → Admit members on the project → Start mesh so peers and their bots can reach you."
+        )
     } else {
         err.to_string()
     }
@@ -456,6 +462,11 @@ pub fn SocialHub() -> Element {
         crate::components::wellfair::host_dto::VaultLifecycle::Unconfigured
     });
     let mut setup_banner = use_signal(String::new);
+    let mut mesh_status_text = use_signal(String::new);
+    let mut collab_list = use_signal(Vec::<serde_json::Value>::new);
+    let mut collab_did = use_signal(String::new);
+    let mut collab_name = use_signal(String::new);
+    let mut collab_role = use_signal(|| "contributor".to_string());
 
     // Boot: profile, contacts + social peers, model chip, vault, projects, first-run route.
     #[cfg(target_arch = "wasm32")]
@@ -611,6 +622,7 @@ pub fn SocialHub() -> Element {
             &domains, &front_doors, &dns_name, &dns_txt, &turtle, &project_name, &active_project,
             &active_project_id, &project_list, &last_project_json, &peers, &magic_accept,
             &active_model_chip, &vault_lifecycle, &status, &tab, &setup_banner,
+            &mesh_status_text, &collab_list, &collab_did, &collab_name, &collab_role,
         );
     }
 
@@ -1001,6 +1013,8 @@ pub fn SocialHub() -> Element {
                                                     if n.is_empty() { s(&peer, "did") } else { n }
                                                 };
                                                 magic_accept.set(String::new());
+                                                // Best-effort: bring mesh up so the new peer can reach us.
+                                                let _ = invoke_json::<serde_json::Value>("mesh_start", json!({})).await;
                                                 let (c, p) = load_people_lists().await;
                                                 apply_people_lists(
                                                     c,
@@ -1021,9 +1035,85 @@ pub fn SocialHub() -> Element {
                     }
 
                     div { style: "{CARD}",
+                        h2 { style: "{H2}", "Mesh (reach people & bots)" }
+                        p { style: "{MUTED}",
+                            "SocialWebNet carries chat to accepted peers. Start the mesh so collaborators (and agent/service peers) can connect. Peers without a known endpoint connect when they reach you (roaming)."
+                        }
+                        div { style: "color:#a7f3d0;font-size:12px;margin-bottom:8px;white-space:pre-wrap;",
+                            if mesh_status_text().is_empty() { "Mesh status not loaded yet." } else { "{mesh_status_text}" }
+                        }
+                        button {
+                            style: "{BTN}",
+                            onclick: move |_| {
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    let mut mesh_status_text = mesh_status_text;
+                                    let mut status = status;
+                                    spawn(async move {
+                                        match invoke_json::<serde_json::Value>("mesh_start", json!({})).await {
+                                            Ok(v) => {
+                                                let running = v.get("running").and_then(|x| x.as_bool()).unwrap_or(true);
+                                                let n = v.get("peers").and_then(|p| p.as_array()).map(|a| a.len()).unwrap_or(0);
+                                                mesh_status_text.set(format!(
+                                                    "Mesh running={running} · {n} peer tunnel(s) configured.\n{}",
+                                                    serde_json::to_string_pretty(&v).unwrap_or_default()
+                                                ));
+                                                status.set("Mesh started — dialable peers will handshake.".into());
+                                            }
+                                            Err(e) => status.set(format!("Mesh start failed: {e}")),
+                                        }
+                                    });
+                                }
+                            },
+                            "Start mesh"
+                        }
+                        button {
+                            style: "{BTN2}",
+                            onclick: move |_| {
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    let mut mesh_status_text = mesh_status_text;
+                                    let mut status = status;
+                                    spawn(async move {
+                                        let st = invoke_json::<serde_json::Value>("mesh_status", json!({})).await;
+                                        let dial = invoke_json::<serde_json::Value>("mesh_dialability", json!({})).await;
+                                        match (st, dial) {
+                                            (Ok(s), Ok(d)) => {
+                                                mesh_status_text.set(format!(
+                                                    "status:\n{}\n\ndialability:\n{}",
+                                                    serde_json::to_string_pretty(&s).unwrap_or_default(),
+                                                    serde_json::to_string_pretty(&d).unwrap_or_default()
+                                                ));
+                                            }
+                                            (Err(e), _) | (_, Err(e)) => status.set(format!("Mesh status failed: {e}")),
+                                        }
+                                    });
+                                }
+                            },
+                            "Refresh mesh status"
+                        }
+                        button {
+                            style: "{BTN2}",
+                            onclick: move |_| {
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    let mut status = status;
+                                    spawn(async move {
+                                        match invoke_json::<serde_json::Value>("mesh_stop", json!({})).await {
+                                            Ok(_) => status.set("Mesh stopped.".into()),
+                                            Err(e) => status.set(format!("Mesh stop failed: {e}")),
+                                        }
+                                    });
+                                }
+                            },
+                            "Stop mesh"
+                        }
+                    }
+
+                    div { style: "{CARD}",
                         h2 { style: "{H2}", "Social peers" }
                         p { style: "{MUTED}",
-                            "People you accepted via a magic link — mesh/social peers on this machine."
+                            "People (or agents) you accepted via a magic link — mesh/social peers on this machine."
                         }
                         if peers().is_empty() {
                             p { style: "{MUTED}",
@@ -1790,6 +1880,21 @@ pub fn SocialHub() -> Element {
                                             active_project.set(plabel_c.clone());
                                             store_active_project(&pid_c, &plabel_c);
                                             status.set(format!("Scoped to {plabel_c}. Work board will pick up this id."));
+                                            #[cfg(target_arch = "wasm32")]
+                                            {
+                                                let pid = pid_c.clone();
+                                                let mut collab_list = collab_list;
+                                                spawn(async move {
+                                                    if let Ok(v) = invoke_json::<serde_json::Value>(
+                                                        "list_project_collaborators",
+                                                        json!({ "projectId": pid }),
+                                                    )
+                                                    .await
+                                                    {
+                                                        collab_list.set(json_list(v, &["collaborators", "items"]));
+                                                    }
+                                                });
+                                            }
                                         },
                                         strong { "{plabel}" }
                                         span { style: "display:block;font-size:10px;color:#64748b;font-family:monospace;margin-top:3px;", "{pid}" }
@@ -1901,6 +2006,162 @@ pub fn SocialHub() -> Element {
                                 }
                             },
                             "Seed QualiaDB Development Cooperative"
+                        }
+                    }
+
+                    div { style: "{CARD}",
+                        h2 { style: "{H2}", "Project members (people & agents)" }
+                        p { style: "{MUTED}",
+                            "Admit contacts or peers to the active project so cooperative work has a roster. Roles: contributor, steward, observer, or agent (their bot)."
+                        }
+                        if active_project_id().is_empty() {
+                            p { style: "{MUTED}", "Select or create a project first." }
+                        } else {
+                            p { style: "color:#a7f3d0;font-size:12px;margin:0 0 8px;",
+                                "Active: {active_project} · {active_project_id}"
+                            }
+                            input {
+                                style: "{INPUT}",
+                                placeholder: "Member DID",
+                                value: "{collab_did}",
+                                oninput: move |e| collab_did.set(e.value()),
+                            }
+                            input {
+                                style: "{INPUT}",
+                                placeholder: "Display name (optional)",
+                                value: "{collab_name}",
+                                oninput: move |e| collab_name.set(e.value()),
+                            }
+                            select {
+                                style: "{INPUT}",
+                                value: "{collab_role}",
+                                onchange: move |e| collab_role.set(e.value()),
+                                option { value: "contributor", "Contributor" }
+                                option { value: "steward", "Steward" }
+                                option { value: "observer", "Observer" }
+                                option { value: "agent", "Agent / bot" }
+                            }
+                            button {
+                                style: "{BTN2}",
+                                onclick: move |_| {
+                                    // Prefer first contact DID if field empty.
+                                    if collab_did().trim().is_empty() {
+                                        if let Some(c) = contacts().first() {
+                                            collab_did.set(s(c, "did"));
+                                            let n = s(c, "display_name");
+                                            if !n.is_empty() {
+                                                collab_name.set(n);
+                                            }
+                                        } else if let Some(p) = peers().first() {
+                                            collab_did.set(s(p, "did"));
+                                            let n = s(p, "display_name");
+                                            if !n.is_empty() {
+                                                collab_name.set(n);
+                                            }
+                                        }
+                                    }
+                                },
+                                "Fill from first contact/peer"
+                            }
+                            button {
+                                style: "{BTN}",
+                                onclick: move |_| {
+                                    #[cfg(target_arch = "wasm32")]
+                                    {
+                                        let (
+                                            collab_did,
+                                            collab_name,
+                                            collab_role,
+                                            active_project_id,
+                                            active_project,
+                                            mut collab_list,
+                                            mut status,
+                                        ) = (
+                                            collab_did,
+                                            collab_name,
+                                            collab_role,
+                                            active_project_id,
+                                            active_project,
+                                            collab_list,
+                                            status,
+                                        );
+                                        spawn(async move {
+                                            let pid = active_project_id();
+                                            let did = collab_did().trim().to_string();
+                                            if pid.is_empty() || did.is_empty() {
+                                                status.set("Need active project and member DID.".into());
+                                                return;
+                                            }
+                                            let role = collab_role();
+                                            match invoke_json::<serde_json::Value>(
+                                                "add_project_collaborator",
+                                                json!({
+                                                    "projectId": pid.clone(),
+                                                    "projectName": active_project(),
+                                                    "memberDid": did.clone(),
+                                                    "displayName": collab_name(),
+                                                    "role": role.clone(),
+                                                }),
+                                            )
+                                            .await
+                                            {
+                                                Ok(_) => {
+                                                    // Best-effort vault-backed membership when unlocked.
+                                                    let wf_role = if role == "agent" {
+                                                        "contributor".to_string()
+                                                    } else {
+                                                        role.clone()
+                                                    };
+                                                    let _ = invoke_json::<String>(
+                                                        "wellfair_add_project_membership",
+                                                        json!({
+                                                            "projectId": pid.clone(),
+                                                            "memberDid": did,
+                                                            "role": wf_role,
+                                                        }),
+                                                    )
+                                                    .await;
+                                                    if let Ok(v) = invoke_json::<serde_json::Value>(
+                                                        "list_project_collaborators",
+                                                        json!({ "projectId": pid }),
+                                                    )
+                                                    .await
+                                                    {
+                                                        collab_list.set(json_list(v, &["collaborators", "items"]));
+                                                    }
+                                                    status.set(
+                                                        "Member admitted to project roster (and vault membership if unlocked)."
+                                                            .into(),
+                                                    );
+                                                }
+                                                Err(e) => status.set(format!("Admit failed: {e}")),
+                                            }
+                                        });
+                                    }
+                                },
+                                "Admit to project"
+                            }
+                            if collab_list().is_empty() {
+                                p { style: "{MUTED}", "No members on this project yet." }
+                            }
+                            for m in collab_list() {
+                                {
+                                    let did = s(&m, "member_did");
+                                    let name = {
+                                        let n = s(&m, "display_name");
+                                        if n.is_empty() { did.clone() } else { n }
+                                    };
+                                    let role = s(&m, "role");
+                                    rsx! {
+                                        div {
+                                            style: "padding:8px 10px;background:#0b1220;border-radius:8px;margin-bottom:6px;font-size:12px;",
+                                            div { style: "font-weight:600;", "{name}" }
+                                            div { style: "color:#94a3b8;font-size:11px;", "role: {role}" }
+                                            div { style: "font-family:monospace;color:#64748b;font-size:10px;word-break:break-all;", "{did}" }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 

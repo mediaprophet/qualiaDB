@@ -70,6 +70,7 @@ pub mod mail_rules;
 pub mod mail_store;
 pub mod mail_inbound;
 pub mod mail_transport;
+pub mod project_collab;
 pub mod mesh_channel;
 pub mod node_identity;
 pub mod shamir_recovery;

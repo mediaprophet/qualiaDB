@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Webizen",
-  "version": "0.0.24",
+  "version": "0.0.25",
   "identifier": "org.webizen.browser",
   "build": {
     "frontendDist": "../webizen-studio/dist"

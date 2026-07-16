@@ -122,7 +122,7 @@ Full build instructions, CLI reference, and benchmark guide: [docs/manuals/DEVEL
 
 ## Current status
 
-**0.0.24 (active branch)** — active development, pre-release.
+**0.0.25 (active branch)** — active development, pre-release.
 
 Recent verification of the implemented surfaces includes:
 
