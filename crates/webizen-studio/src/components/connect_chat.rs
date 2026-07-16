@@ -409,6 +409,38 @@ pub fn ConnectChat() -> Element {
                             active_project.set(pname);
                         }
                     }
+                    // Project group chat handoff: open a known session id.
+                    if let Ok(Some(sid)) = storage.get_item("webizen_open_session_id") {
+                        let sid = sid.trim().to_string();
+                        if !sid.is_empty() {
+                            let _ = storage.remove_item("webizen_open_session_id");
+                            active_session.set(sid.clone());
+                            if let Ok(list) =
+                                invoke_json::<Vec<serde_json::Value>>("list_chat_sessions", json!({}))
+                                    .await
+                            {
+                                if let Some(s) = list.iter().find(|x| {
+                                    x.get("id").and_then(|i| i.as_str()) == Some(sid.as_str())
+                                }) {
+                                    active_title.set(
+                                        s.get("title")
+                                            .and_then(|t| t.as_str())
+                                            .unwrap_or("Group")
+                                            .to_string(),
+                                    );
+                                }
+                                sessions.set(list);
+                            }
+                            if let Ok(msgs) = invoke_json::<Vec<serde_json::Value>>(
+                                "list_chat_messages",
+                                json!({ "sessionId": sid }),
+                            )
+                            .await
+                            {
+                                messages.set(msgs);
+                            }
+                        }
+                    }
                     // People → Open Chat: start (or reuse) a titled session for that peer.
                     if let Ok(Some(peer_title)) = storage.get_item("webizen_chat_peer_title") {
                         let title = peer_title.trim().to_string();

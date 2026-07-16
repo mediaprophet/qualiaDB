@@ -172,7 +172,22 @@ pub fn mesh_start(
         node_overlay: identity.overlay_addr(),
         outcomes,
     };
-    let status = running_status(&running, &peers);
+    let mut status = running_status(&running, &peers);
+    // Surface local listen addresses so the human can paste them to peers (endpoint exchange).
+    let listen: Vec<String> = running
+        .outcomes
+        .iter()
+        .filter_map(|o| o.local_addr.clone())
+        .collect();
+    if let Some(obj) = status.as_object_mut() {
+        obj.insert("my_listen_addrs".into(), json!(listen));
+        obj.insert(
+            "advertise_hint".into(),
+            json!(
+                "Share one of my_listen_addrs with a peer so they can set your endpoint (Talk → People → set peer endpoint). Roaming still works if they start mesh and reach you first."
+            ),
+        );
+    }
     *state.0.lock().map_err(|e| e.to_string())? = Some(running);
     Ok(status)
 }

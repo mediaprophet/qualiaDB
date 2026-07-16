@@ -4126,6 +4126,34 @@ pub fn remove_project_collaborator(
     api::remove_project_collaborator(project_id, member_did)
 }
 
+/// Pasteable coop share package (no private keys).
+#[command]
+pub fn coop_share_package(
+    project_id: Option<String>,
+    project_name: Option<String>,
+) -> Result<serde_json::Value, String> {
+    api::coop_share_package(project_id, project_name)
+}
+
+/// Group chat from project collaborator roster.
+#[command]
+pub fn create_project_group_chat(
+    project_id: String,
+    project_name: String,
+    extra_dids: Option<Vec<String>>,
+) -> Result<serde_json::Value, String> {
+    api::create_project_group_chat(project_id, project_name, extra_dids)
+}
+
+/// Set a social peer's dial endpoint (`host:port`) so mesh can dial them.
+#[command]
+pub fn set_social_peer_endpoint(
+    did: String,
+    endpoint: Option<String>,
+) -> Result<serde_json::Value, String> {
+    api::set_social_peer_endpoint(did, endpoint)
+}
+
 /// All peer agreements.
 #[command]
 pub fn list_agreements() -> Result<serde_json::Value, String> {
@@ -6910,6 +6938,9 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         list_project_collaborators,
         add_project_collaborator,
         remove_project_collaborator,
+        coop_share_package,
+        create_project_group_chat,
+        set_social_peer_endpoint,
         mesh::mesh_start,
         mesh::mesh_stop,
         mesh::mesh_status,

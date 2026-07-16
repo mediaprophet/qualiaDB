@@ -467,6 +467,9 @@ pub fn SocialHub() -> Element {
     let mut collab_did = use_signal(String::new);
     let mut collab_name = use_signal(String::new);
     let mut collab_role = use_signal(|| "contributor".to_string());
+    let mut peer_endpoint_edit = use_signal(String::new);
+    let mut peer_endpoint_did = use_signal(String::new);
+    let mut coop_package_text = use_signal(String::new);
 
     // Boot: profile, contacts + social peers, model chip, vault, projects, first-run route.
     #[cfg(target_arch = "wasm32")]
@@ -623,6 +626,7 @@ pub fn SocialHub() -> Element {
             &active_project_id, &project_list, &last_project_json, &peers, &magic_accept,
             &active_model_chip, &vault_lifecycle, &status, &tab, &setup_banner,
             &mesh_status_text, &collab_list, &collab_did, &collab_name, &collab_role,
+            &peer_endpoint_edit, &peer_endpoint_did, &coop_package_text,
         );
     }
 
@@ -1107,6 +1111,75 @@ pub fn SocialHub() -> Element {
                                 }
                             },
                             "Stop mesh"
+                        }
+                        div { style: "border-top:1px solid #1f2937;margin-top:12px;padding-top:10px;",
+                            div { style: "color:#cbd5e1;font-size:12px;font-weight:600;margin-bottom:6px;",
+                                "Set peer endpoint (so you can dial them)"
+                            }
+                            input {
+                                style: "{INPUT}",
+                                placeholder: "Peer DID",
+                                value: "{peer_endpoint_did}",
+                                oninput: move |e| peer_endpoint_did.set(e.value()),
+                            }
+                            input {
+                                style: "{INPUT}",
+                                placeholder: "host:port (from their mesh listen addr)",
+                                value: "{peer_endpoint_edit}",
+                                oninput: move |e| peer_endpoint_edit.set(e.value()),
+                            }
+                            button {
+                                style: "{BTN2}",
+                                onclick: move |_| {
+                                    if peer_endpoint_did().trim().is_empty() {
+                                        if let Some(p) = peers().first() {
+                                            peer_endpoint_did.set(s(p, "did"));
+                                        }
+                                    }
+                                },
+                                "Fill first peer DID"
+                            }
+                            button {
+                                style: "{BTN}",
+                                onclick: move |_| {
+                                    #[cfg(target_arch = "wasm32")]
+                                    {
+                                        let (peer_endpoint_did, peer_endpoint_edit, mut status, mut mesh_status_text) =
+                                            (peer_endpoint_did, peer_endpoint_edit, status, mesh_status_text);
+                                        spawn(async move {
+                                            let did = peer_endpoint_did().trim().to_string();
+                                            let ep = peer_endpoint_edit().trim().to_string();
+                                            if did.is_empty() || ep.is_empty() {
+                                                status.set("DID and host:port required.".into());
+                                                return;
+                                            }
+                                            match invoke_json::<serde_json::Value>(
+                                                "set_social_peer_endpoint",
+                                                json!({ "did": did, "endpoint": ep }),
+                                            )
+                                            .await
+                                            {
+                                                Ok(_) => {
+                                                    status.set("Endpoint saved — Start mesh again to dial.".into());
+                                                    let _ = invoke_json::<serde_json::Value>("mesh_start", json!({})).await;
+                                                    if let Ok(d) = invoke_json::<serde_json::Value>(
+                                                        "mesh_dialability",
+                                                        json!({}),
+                                                    )
+                                                    .await
+                                                    {
+                                                        mesh_status_text.set(
+                                                            serde_json::to_string_pretty(&d).unwrap_or_default(),
+                                                        );
+                                                    }
+                                                }
+                                                Err(e) => status.set(format!("Set endpoint failed: {e}")),
+                                            }
+                                        });
+                                    }
+                                },
+                                "Save endpoint + restart mesh"
+                            }
                         }
                     }
 
@@ -2161,6 +2234,106 @@ pub fn SocialHub() -> Element {
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+
+                    div { style: "{CARD}",
+                        h2 { style: "{H2}", "Project group chat & share package" }
+                        p { style: "{MUTED}",
+                            "Spin a multi-party chat from the project roster, and copy a coop share package (no private keys) so others know how to join."
+                        }
+                        button {
+                            style: "{BTN}",
+                            onclick: move |_| {
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    let (active_project_id, active_project, mut status, mut tab) =
+                                        (active_project_id, active_project, status, tab);
+                                    spawn(async move {
+                                        let pid = active_project_id();
+                                        if pid.is_empty() {
+                                            status.set("Select a project first.".into());
+                                            return;
+                                        }
+                                        match invoke_json::<serde_json::Value>(
+                                            "create_project_group_chat",
+                                            json!({
+                                                "projectId": pid,
+                                                "projectName": active_project(),
+                                                "extraDids": serde_json::Value::Null,
+                                            }),
+                                        )
+                                        .await
+                                        {
+                                            Ok(v) => {
+                                                let sid = s(&v, "session_id");
+                                                let title = s(&v, "title");
+                                                if let Some(win) = web_sys::window() {
+                                                    if let Ok(Some(storage)) = win.session_storage() {
+                                                        if !sid.is_empty() {
+                                                            let _ = storage.set_item("webizen_open_session_id", &sid);
+                                                        }
+                                                        if !title.is_empty() {
+                                                            let _ = storage.set_item("webizen_chat_peer_title", &title);
+                                                        }
+                                                        let tok = active_project().replace(' ', "_");
+                                                        if !tok.is_empty() {
+                                                            let _ = storage.set_item(
+                                                                "webizen_talk_draft",
+                                                                &format!("#project:{tok} "),
+                                                            );
+                                                        }
+                                                    }
+                                                }
+                                                tab.set(HubTab::Chat);
+                                                status.set(format!(
+                                                    "Group chat ready ({title}). Opened Chat — pick the conversation if needed."
+                                                ));
+                                            }
+                                            Err(e) => status.set(format!("Group chat failed: {e}")),
+                                        }
+                                    });
+                                }
+                            },
+                            "Create project group chat"
+                        }
+                        button {
+                            style: "{BTN2}",
+                            onclick: move |_| {
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    let (active_project_id, active_project, mut coop_package_text, mut status) =
+                                        (active_project_id, active_project, coop_package_text, status);
+                                    spawn(async move {
+                                        match invoke_json::<serde_json::Value>(
+                                            "coop_share_package",
+                                            json!({
+                                                "projectId": active_project_id(),
+                                                "projectName": active_project(),
+                                            }),
+                                        )
+                                        .await
+                                        {
+                                            Ok(v) => {
+                                                let text = serde_json::to_string_pretty(&v)
+                                                    .unwrap_or_else(|_| v.to_string());
+                                                coop_package_text.set(text.clone());
+                                                status.set("Share package ready — copy below + send invite separately.".into());
+                                            }
+                                            Err(e) => status.set(format!("Share package failed: {e}")),
+                                        }
+                                    });
+                                }
+                            },
+                            "Build coop share package"
+                        }
+                        if !coop_package_text().is_empty() {
+                            div { style: "{CODE}", "{coop_package_text}" }
+                            button {
+                                style: "{BTN2}",
+                                onclick: move |_| copy_to_clipboard(&coop_package_text(), status, "Share package copied."),
+                                "Copy share package"
                             }
                         }
                     }

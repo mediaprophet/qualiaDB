@@ -3042,6 +3042,10 @@ pub fn talk_setup_status() -> Result<serde_json::Value, String> {
         .and_then(|x| x.as_bool())
         .unwrap_or(false);
     let has_people = !peers.is_empty() || contacts_n > 0;
+    let collabs = crate::project_collab::list(None);
+    let dial = crate::social_mesh::dialability(&peers);
+    let dialable = dial.iter().filter(|d| d.dialable_now).count();
+    let reachable = dial.iter().filter(|d| d.reachable).count();
     let ready_for_mail = has_domain && has_mailboxes && receiver_running;
     let ready_to_collaborate = has_domain && has_people;
     Ok(serde_json::json!({
@@ -3051,6 +3055,12 @@ pub fn talk_setup_status() -> Result<serde_json::Value, String> {
         "receiver": receiver,
         "peers": peers.len(),
         "contacts": contacts_n,
+        "collaborators": collabs.len(),
+        "mesh": {
+            "reachable_peers": reachable,
+            "dialable_now": dialable,
+            "reports": dial,
+        },
         "has_domain": has_domain,
         "has_mailboxes": has_mailboxes,
         "receiver_running": receiver_running,
@@ -3065,9 +3075,99 @@ pub fn talk_setup_status() -> Result<serde_json::Value, String> {
             "mail_receiver"
         } else if !has_people {
             "people"
+        } else if collabs.is_empty() {
+            "projects"
         } else {
             "chat_or_projects"
         },
+    }))
+}
+
+/// Build a pasteable **coop share package** so another person (or their bot) can join:
+/// domain identity, project scope, and how to connect. Does not include private keys.
+pub fn coop_share_package(
+    project_id: Option<String>,
+    project_name: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let domains = crate::domains::list_domains();
+    let domain = domains.first().map(|d| d.name.clone()).unwrap_or_default();
+    let front_door = domains
+        .first()
+        .map(|d| d.front_door_did.clone())
+        .unwrap_or_default();
+    let pid = project_id.unwrap_or_default();
+    let pname = project_name.unwrap_or_default();
+    let members = if pid.is_empty() {
+        vec![]
+    } else {
+        crate::project_collab::list(Some(&pid))
+    };
+    let profile = crate::user_profile::load_profile();
+    let package = serde_json::json!({
+        "qualia_coop_share": "1",
+        "from_display_name": profile.display_name,
+        "domain": domain,
+        "front_door_did": front_door,
+        "project_id": pid,
+        "project_name": pname,
+        "members": members,
+        "how": [
+            "1. Install / open Webizen on 0.0.25+.",
+            "2. Talk → People: Accept invite (JSON) or magic link from the host.",
+            "3. Talk → Projects: create/open the same project name, or ask host to Admit you.",
+            "4. Talk → People → Start mesh so chat can travel peer-to-peer.",
+            "5. Chat with #project:Name_With_Underscores for scoped work.",
+        ],
+        "note": "No private keys in this package. Share invite/magic link out-of-band separately if not embedded below.",
+    });
+    Ok(package)
+}
+
+/// Create a group chat for a project from its collaborator roster (+ optional extra DIDs).
+/// Returns `{ session_id, title, participants }`.
+pub fn create_project_group_chat(
+    project_id: String,
+    project_name: String,
+    extra_dids: Option<Vec<String>>,
+) -> Result<serde_json::Value, String> {
+    let mut dids: Vec<String> = crate::project_collab::list(Some(&project_id))
+        .into_iter()
+        .map(|c| c.member_did)
+        .collect();
+    if let Some(extra) = extra_dids {
+        for d in extra {
+            let d = d.trim().to_string();
+            if !d.is_empty() && !dids.iter().any(|x| x == &d) {
+                dids.push(d);
+            }
+        }
+    }
+    // Also fold in all chat contacts if roster empty — last resort so a group can start.
+    if dids.is_empty() {
+        for c in crate::social_connect::list_chat_contacts() {
+            if !c.did.is_empty() {
+                dids.push(c.did);
+            }
+        }
+    }
+    if dids.is_empty() {
+        return Err(
+            "No participants — admit collaborators on the project or accept invites under People first."
+                .into(),
+        );
+    }
+    let title = if project_name.trim().is_empty() {
+        format!("Project {project_id}")
+    } else {
+        format!("Project: {project_name}")
+    };
+    let session_id = create_group_chat_session(Some(title.clone()), dids.clone())?;
+    Ok(serde_json::json!({
+        "session_id": session_id,
+        "title": title,
+        "participants": dids,
+        "project_id": project_id,
+        "message": "Group chat created — open it under Talk → Chat → Conversations.",
     }))
 }
 
@@ -3562,6 +3662,15 @@ pub fn list_social_peers() -> Result<serde_json::Value, String> {
 /// Enable/disable a peer (the socially-defined revoke).
 pub fn set_social_peer_active(did: String, active: bool) -> Result<serde_json::Value, String> {
     crate::social_peers::set_peer_active(&did, active)?;
+    list_social_peers()
+}
+
+/// Set peer transport endpoint for mesh dial (`host:port`), or clear with empty/None.
+pub fn set_social_peer_endpoint(
+    did: String,
+    endpoint: Option<String>,
+) -> Result<serde_json::Value, String> {
+    crate::social_peers::set_peer_endpoint(&did, endpoint.as_deref())?;
     list_social_peers()
 }
 
