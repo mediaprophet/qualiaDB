@@ -154,6 +154,20 @@ pub fn compile_mesh_to_10d_vision(
     compile_mesh_to_10d_with_extras(mesh, nodes, None, Compile10dExtras::VISION)
 }
 
+/// Vision recon seal + in-envelope provenance (D4).
+pub fn compile_mesh_to_10d_vision_with_provenance(
+    mesh: &Mesh,
+    nodes: &[Tensor10D],
+    provenance: &ProvenanceSidecar,
+) -> Result<Vec<u8>, Compile10dError> {
+    compile_mesh_to_10d_with_extras(
+        mesh,
+        nodes,
+        Some(provenance),
+        Compile10dExtras::VISION,
+    )
+}
+
 /// Full seal with explicit extras (topology / spatial index).
 pub fn compile_mesh_to_10d_with_extras(
     mesh: &Mesh,

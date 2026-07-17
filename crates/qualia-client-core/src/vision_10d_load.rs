@@ -1,8 +1,12 @@
-//! F2 + D3 — load sealed vision `.10d` into mesh + spectral/acoustic paint package.
+//! F2 + D3 + F3 + F4 — load sealed vision `.10d` into mesh + spectral/acoustic paint.
 //!
 //! Portal / desktop consume this instead of re-parsing mesh-only. CRC is verified
 //! fail-closed. σ → colour via `render::spectral`; σ → Hz via `render::acoustic`.
+//! F3: temporal scrub on node `t`. F4: optional citable provenance barrier.
 
+use crate::vision_10d_rights::{
+    evaluate_vision_10d_barrier, Vision10dAccess, Vision10dBarrier,
+};
 use qualia_core_db::container_10d::{
     header::Container10dHeader,
     integrity::verify_whole_file_crc32c,
@@ -52,8 +56,23 @@ pub struct Vision10dLoaded {
     pub mean_frequency_hz: f32,
 }
 
-/// Decode container bytes into a paint package (does not keep full Mesh on the DTO).
+/// Decode container bytes into a paint package (browse access: unattested OK).
 pub fn load_vision_10d_bytes(bytes: &[u8]) -> Result<(Mesh, Vision10dLoaded), String> {
+    load_vision_10d_bytes_with_access(bytes, Vision10dAccess::BrowseAllowUnattested)
+}
+
+/// Load with explicit F4 access policy.
+pub fn load_vision_10d_bytes_with_access(
+    bytes: &[u8],
+    access: Vision10dAccess,
+) -> Result<(Mesh, Vision10dLoaded), String> {
+    match evaluate_vision_10d_barrier(bytes, access) {
+        Vision10dBarrier::Permit => {}
+        Vision10dBarrier::Deny { reason } => {
+            return Err(format!("vision .10d barrier: {reason}"));
+        }
+    }
+
     let mut bytes_mut = bytes.to_vec();
     let crc_valid = verify_whole_file_crc32c(&mut bytes_mut).is_ok();
     if !crc_valid {
@@ -128,10 +147,23 @@ pub fn load_vision_10d_bytes(bytes: &[u8]) -> Result<(Mesh, Vision10dLoaded), St
     Ok((mesh, loaded))
 }
 
-/// Load from storage-relative or absolute path.
+/// Load from storage-relative or absolute path (browse access).
 pub fn load_vision_10d_path(
     storage_root: &Path,
     relative_or_abs: &str,
+) -> Result<(Mesh, Vision10dLoaded), String> {
+    load_vision_10d_path_with_access(
+        storage_root,
+        relative_or_abs,
+        Vision10dAccess::BrowseAllowUnattested,
+    )
+}
+
+/// Load path with F4 access policy.
+pub fn load_vision_10d_path_with_access(
+    storage_root: &Path,
+    relative_or_abs: &str,
+    access: Vision10dAccess,
 ) -> Result<(Mesh, Vision10dLoaded), String> {
     let p = Path::new(relative_or_abs);
     let full = if p.is_absolute() {
@@ -140,7 +172,7 @@ pub fn load_vision_10d_path(
         storage_root.join(relative_or_abs)
     };
     let bytes = std::fs::read(&full).map_err(|e| format!("read {}: {e}", full.display()))?;
-    let (mesh, mut loaded) = load_vision_10d_bytes(&bytes)?;
+    let (mesh, mut loaded) = load_vision_10d_bytes_with_access(&bytes, access)?;
     loaded.path = Some(
         full.strip_prefix(storage_root)
             .ok()
@@ -149,6 +181,46 @@ pub fn load_vision_10d_path(
             .to_string(),
     );
     Ok((mesh, loaded))
+}
+
+/// F3 — temporal scrub: keep paint nodes with `t` in `[t_slice ± t_window/2]`.
+///
+/// Returns indices into the original `paint` slice (caller filters).
+pub fn temporal_scrub_paint(
+    paint: &[VisionNodePaint],
+    t_slice: f32,
+    t_window: f32,
+    out_indices: &mut [u32],
+) -> usize {
+    let half = t_window * 0.5;
+    let lo = t_slice - half;
+    let hi = t_slice + half;
+    let mut n = 0usize;
+    for (i, p) in paint.iter().enumerate() {
+        if p.t >= lo && p.t <= hi {
+            if n < out_indices.len() {
+                out_indices[n] = i as u32;
+                n += 1;
+            }
+        }
+    }
+    n
+}
+
+/// F3 — filter paint into a new Vec (cold path).
+pub fn temporal_scrub_paint_vec(
+    paint: &[VisionNodePaint],
+    t_slice: f32,
+    t_window: f32,
+) -> Vec<VisionNodePaint> {
+    let half = t_window * 0.5;
+    let lo = t_slice - half;
+    let hi = t_slice + half;
+    paint
+        .iter()
+        .copied()
+        .filter(|p| p.t >= lo && p.t <= hi)
+        .collect()
 }
 
 /// D3: map one Tensor10D to spectral RGB + acoustic Hz.
@@ -210,7 +282,10 @@ pub fn mesh_vertex_colors_from_nodes(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use qualia_core_db::render::compile_10d::compile_mesh_to_10d_vision;
+    use qualia_core_db::container_10d::provenance_section::ProvenanceSidecar;
+    use qualia_core_db::render::compile_10d::{
+        compile_mesh_to_10d_vision, compile_mesh_to_10d_vision_with_provenance,
+    };
 
     #[test]
     fn load_vision_seal_with_paint() {
@@ -244,5 +319,73 @@ mod tests {
             loaded.has_spatial_index,
             "expected SpatialIndex on host vision seal"
         );
+    }
+
+    #[test]
+    fn temporal_scrub_keeps_window() {
+        let paint = [
+            VisionNodePaint {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                t: 0.0,
+                sigma: 0.1,
+                rgb: [0, 0, 0],
+                frequency_hz: 100.0,
+                ground_truth: false,
+            },
+            VisionNodePaint {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                t: 5.0,
+                sigma: 0.2,
+                rgb: [0, 0, 0],
+                frequency_hz: 100.0,
+                ground_truth: false,
+            },
+            VisionNodePaint {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                t: 10.0,
+                sigma: 0.3,
+                rgb: [0, 0, 0],
+                frequency_hz: 100.0,
+                ground_truth: false,
+            },
+        ];
+        let kept = temporal_scrub_paint_vec(&paint, 5.0, 2.0);
+        assert_eq!(kept.len(), 1);
+        assert!((kept[0].t - 5.0).abs() < 1e-5);
+        let mut idx = [0u32; 8];
+        let n = temporal_scrub_paint(&paint, 5.0, 12.0, &mut idx);
+        assert_eq!(n, 3);
+    }
+
+    #[test]
+    fn citable_load_requires_provenance() {
+        let mesh = Mesh {
+            positions: vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            triangles: vec![[0, 1, 2]],
+            min: [0.0, 0.0, 0.0],
+            max: [1.0, 1.0, 0.0],
+        };
+        let nodes = [Tensor10D::default()];
+        let bare = compile_mesh_to_10d_vision(&mesh, &nodes).unwrap();
+        assert!(load_vision_10d_bytes_with_access(
+            &bare,
+            Vision10dAccess::CitableRequireProvenance
+        )
+        .is_err());
+        let prov = ProvenanceSidecar::new(b"src", "image/rgb8", "CC0");
+        let sealed =
+            compile_mesh_to_10d_vision_with_provenance(&mesh, &nodes, &prov).unwrap();
+        let (_m, loaded) = load_vision_10d_bytes_with_access(
+            &sealed,
+            Vision10dAccess::CitableRequireProvenance,
+        )
+        .unwrap();
+        assert!(loaded.has_provenance);
     }
 }

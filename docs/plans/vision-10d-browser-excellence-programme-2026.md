@@ -282,6 +282,40 @@ Done: acceptance tests + progress-log line + RELEASE/PROGRESS notice.
 
 ---
 
+## 9-B. Library home — honesty + migration (principal ask, 2026-07-17)
+
+**Today (true):** vision *algorithms* live in the separate crate **`qualia-vision`**
+(`cv/`, `bio/`, `biosense/`, `sr/`, `spatial/`, …). They are **not** under
+`qualia-core-db::specialized_libs::*`. What *is* in core-db:
+
+| In `qualia-core-db` | Role |
+|---------------------|------|
+| `render::compile_10d`, spectral, acoustic, Tensor10D | Seal / paint / 10D atom |
+| `container_10d` | Mesh, nodes, topology, spatial, provenance |
+| `specialized_libs::computational_geometry` | QEM, half-edges, BVH (host C2/C3) |
+
+| Outside core-db | Role |
+|-----------------|------|
+| `qualia-vision` | CV/SR/biosense/bio native algorithms (edge-friendly, no forced full engine link) |
+| `qualia-client-core` `vision_*` | Host pipelines, browse/load, Gs continuum |
+
+**Why separate crate (current design):** programme F6 / size gate — portal and
+ontology WASM must load sealed `.10d` **without** linking full classical CV.
+
+**Migration TODO (must land; not deferred forever):**
+
+| ID | Work |
+|----|------|
+| **MIG-V1** | Inventory which `qualia-vision` modules are pure cold algorithms vs product recipes |
+| **MIG-V2** | Promote pure kernels into `specialized_libs::computer_vision` (or `vision_cv`) with same wasm gates as other specialized libs — **or** re-export facade from core-db without breaking crate ABI |
+| **MIG-V3** | Keep `qualia-vision` as thin edge/product surface (weights, recipes, consent) over specialized_libs |
+| **MIG-V4** | MCP / Library catalogue rows for vision specialized lib parity with crypto/medical |
+
+Until MIG-V2, do **not** claim vision is a `specialized_libs` peer of medical/physics.
+Track MIG-* in the progress log and closeout G1.
+
+---
+
 ## 10. Explicit non-goals
 
 - Servo / full browser engine  
@@ -289,6 +323,7 @@ Done: acceptance tests + progress-log line + RELEASE/PROGRESS notice.
 - Replacing Wellfair anatomy pipeline (integrate, don’t fork)  
 - NC/GPL SR weights as defaults  
 - Claiming FEA A4 from vision twin without solvers/CG honesty  
+- Claiming vision algorithms already live under `specialized_libs` before MIG-V2
 
 ---
 

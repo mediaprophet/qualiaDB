@@ -126,7 +126,7 @@ static REGISTRY: &[CapabilityEntry] = &[
         "D5",
         "10d_handoff",
         Present,
-        "compile_mesh_to_10d_vision: mesh+nodes+Topology+SpatialIndex; load_vision_10d σ paint; browse (C1–C3/D1–D3/F1–F2)"
+        "vision seal mesh+nodes+topo+spatial+provenance; load/scrub/barrier; browse (C1–C3/D1–D4/F1–F4). MIG-V2 specialized_libs still open"
     ),
     cap!("D5.14", "D5", "twin_a1_preview", Present, "twin_bridge A1"),
     // D6 engineering wire

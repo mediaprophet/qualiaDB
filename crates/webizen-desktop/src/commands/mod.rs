@@ -7238,16 +7238,57 @@ pub fn browse_vision_10d() -> Result<Vec<qualia_client_core::vision_10d_browse::
 }
 
 /// F2 — load a sealed vision `.10d` (CRC + mesh meta + σ paint package).
+///
+/// `citable`: when true, F4 requires valid ProvenanceSidecar (fail-closed).
 #[tauri::command]
 pub fn load_vision_10d(
     path: String,
+    citable: Option<bool>,
 ) -> Result<qualia_client_core::vision_10d_load::Vision10dLoaded, String> {
+    use qualia_client_core::vision_10d_rights::Vision10dAccess;
     let storage_root = qualia_client_core::state::dirs_default_path();
-    let (_mesh, loaded) = qualia_client_core::vision_10d_load::load_vision_10d_path(
+    let access = if citable.unwrap_or(false) {
+        Vision10dAccess::CitableRequireProvenance
+    } else {
+        Vision10dAccess::BrowseAllowUnattested
+    };
+    let (_mesh, loaded) = qualia_client_core::vision_10d_load::load_vision_10d_path_with_access(
         std::path::Path::new(&storage_root),
         &path,
+        access,
     )?;
     Ok(loaded)
+}
+
+/// F3 — temporal scrub of paint nodes from a loaded package's paint list
+/// (caller passes t_slice / t_window; returns kept paint entries).
+#[tauri::command]
+pub fn scrub_vision_10d_paint(
+    path: String,
+    t_slice: f32,
+    t_window: f32,
+    citable: Option<bool>,
+) -> Result<Vec<qualia_client_core::vision_10d_load::VisionNodePaint>, String> {
+    use qualia_client_core::vision_10d_load::{
+        load_vision_10d_path_with_access, temporal_scrub_paint_vec,
+    };
+    use qualia_client_core::vision_10d_rights::Vision10dAccess;
+    let storage_root = qualia_client_core::state::dirs_default_path();
+    let access = if citable.unwrap_or(false) {
+        Vision10dAccess::CitableRequireProvenance
+    } else {
+        Vision10dAccess::BrowseAllowUnattested
+    };
+    let (_mesh, loaded) = load_vision_10d_path_with_access(
+        std::path::Path::new(&storage_root),
+        &path,
+        access,
+    )?;
+    Ok(temporal_scrub_paint_vec(
+        &loaded.paint,
+        t_slice,
+        t_window,
+    ))
 }
 
 /// Inspect a single .10d container file in detail.
@@ -8167,6 +8208,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         browse_10d_containers,
         browse_vision_10d,
         load_vision_10d,
+        scrub_vision_10d_paint,
         inspect_10d_container,
         open_10d_file_picker,
         // ── Updater commands ─────────────────────────────────────────────

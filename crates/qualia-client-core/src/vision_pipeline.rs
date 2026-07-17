@@ -12,7 +12,10 @@ use qualia_vision::detector::{
     GridMultiObjectDetector, CLASS_MOSTLY_BLUE, CLASS_MOSTLY_GREEN, CLASS_MOSTLY_RED,
 };
 use qualia_core_db::render::assets::{mesh_to_nquins_with_digests, Mesh};
-use qualia_core_db::render::compile_10d::compile_mesh_to_10d_vision;
+use qualia_core_db::container_10d::provenance_section::ProvenanceSidecar;
+use qualia_core_db::render::compile_10d::{
+    compile_mesh_to_10d_vision, compile_mesh_to_10d_vision_with_provenance,
+};
 use qualia_core_db::specialized_libs::computational_geometry::{
     decimate_qem, DecimateOptions, Point3,
 };
@@ -595,9 +598,31 @@ pub fn run_gs_continuum(
         0.0,
         0.35, // mid-band σ for recon marker
     );
-    // C3: vision seal includes Topology + SpatialIndex when CG is linked.
-    let container =
-        compile_mesh_to_10d_vision(&core_mesh, &[centre]).map_err(|e| e.to_string())?;
+    // D4: provenance sidecar — media digest bytes + recon model hash in-envelope.
+    let mut version_hash = [0u8; 32];
+    let mh = recon_rec.model_hash.to_le_bytes();
+    version_hash[..8].copy_from_slice(&mh);
+    let dig = record.digest_u64.to_le_bytes();
+    version_hash[8..16].copy_from_slice(&dig);
+    // Source bytes: short media digest prefix (self-authenticating CRC of this payload).
+    let source_tag = format!(
+        "qualia-vision-recon;media={};model=0x{:016x}",
+        record.digest_hex, recon_rec.model_hash
+    );
+    let provenance = ProvenanceSidecar::new(
+        source_tag.into_bytes(),
+        "application/x-qualia-vision-recon",
+        "PermissiveReady-local", // synthetic continuum — not a third-party weight licence
+    )
+    .with_metadata(
+        format!(r#"{{"media_digest":"{}","model_hash":"0x{:016x}"}}"#, record.digest_hex, recon_rec.model_hash)
+            .into_bytes(),
+        0,
+        version_hash,
+    );
+    // C3+D4: topology/spatial when CG linked + provenance always.
+    let container = compile_mesh_to_10d_vision_with_provenance(&core_mesh, &[centre], &provenance)
+        .map_err(|e| e.to_string())?;
     // CRC of container for compiled digest (first 4 bytes of crc is enough for quin object)
     let compiled_digest = {
         let mut h: u32 = 0;

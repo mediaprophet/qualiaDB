@@ -5,6 +5,46 @@
 
 ---
 
+## 2026-07-17 — Sprint 5: D4 + F3 + F4 + library migration honesty
+
+**Status:** done (code); MIG-V* **open** (migration not executed this wave)
+
+### Library placement (principal question)
+
+**Not** under `qualia-core-db::specialized_libs` today. Algorithms: **`qualia-vision`**.
+Seal/paint/geometry: **core-db** (`compile_10d`, spectral, CG). Host: **client-core**.
+
+Programme §9-B records **MIG-V1…V4** — inventory → promote pure kernels to
+`specialized_libs::computer_vision` (or facade) → keep `qualia-vision` as edge surface.
+Registry D5.13 honesty notes MIG-V2 open.
+
+### Tracks this wave
+
+| Track | What |
+|-------|------|
+| **D4** | Gs continuum seals `ProvenanceSidecar` (media digest + model hash metadata) via `compile_mesh_to_10d_vision_with_provenance` |
+| **F3** | `temporal_scrub_paint` / `_vec` + Tauri `scrub_vision_10d_paint` |
+| **F4** | `vision_10d_rights` barrier (Browse vs CitableRequireProvenance); load path gated |
+| **MIG** | Documented only — not migrated this session |
+
+### Measured
+
+```
+cargo test -p qualia-client-core --lib vision_10d  →  6 passed
+```
+
+### ⚑ Principal
+
+- Confirm MIG-V2 target name (`computer_vision` vs keep dual-crate permanently).
+- If permanent dual-crate: mark MIG-V2 cancelled and document as intentional ABI.
+
+### Next
+
+- MIG-V1 inventory (or B2 SR WGSL if principal prioritizes product over migrate)
+- Studio UI for load/scrub/citable toggle
+
+---
+
 ## 2026-07-17 — Sprint 4 wave: C3 + D3 + F2
 
 **Status:** done
