@@ -161,7 +161,8 @@ Open agent-executable work. Mark **done** in a dated entry when shipped; do not 
 
 | ID | Item | Status |
 |----|------|--------|
-| **TODO-SR** | **Native super-resolution excellence** | **queued** | Plan: `native-super-resolution-excellence-2026.md` (SR0 classical → SR4 SwinIR; tiling mandatory; MIT/Apache only) |
+| **TODO-SR** | **Native super-resolution excellence** | **queued** | Plan: `native-super-resolution-excellence-2026.md`; umbrella: `vision-10d-browser-excellence-programme-2026.md` |
+| **TODO-10D-BROWSER** | **Vision→GPU→10d portal tooling** | **queued** | Umbrella programme: VG/SR/CG/σ + desktop+portal browse |
 | TODO-LL | Low-light enhancement | queued |
 | TODO-DEBLUR | Motion deblur | queued |
 | TODO-INPAINT | Inpainting (beyond bilateral denoise) | queued |
