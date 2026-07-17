@@ -1,32 +1,35 @@
-//! Respiratory rate proxy from vertical motion energy band.
+//! Respiratory rate proxy from vertical motion energy band (compat entry).
+//!
+//! Delegates to [`super::respiration_rate_from_motion_trace`] with default SNR gate.
 
+use super::respiration_rate_from_motion_trace::respiration_rate_from_motion_trace;
+use super::rr_estimate::RR_MIN_SNR_DEFAULT;
 use crate::cv::error::CvError;
 
-/// `vert_motion` per-frame vertical motion scalar. Estimate BPM-like breath rate 6–30 /min.
+/// `vert_motion` per-frame vertical motion scalar. Estimate breaths/min in ~6–30 band.
+///
+/// Returns `(breaths_per_min, confidence)`. Fails closed on short/noisy traces
+/// (default SNR gate inside the spectral estimator).
 pub fn respiration_from_motion(vert_motion: &[f32], fps: f32) -> Result<(f32, f32), CvError> {
-    if vert_motion.len() < 32 || fps <= 1.0 {
-        return Err(CvError::InvalidParameter);
-    }
-    let mean = vert_motion.iter().sum::<f32>() / vert_motion.len() as f32;
-    let mut best_f = 0.2f32;
-    let mut best_p = 0.0f32;
-    for k in 0..40 {
-        let f = 0.1 + 0.4 * (k as f32 / 40.0); // Hz ~6–30 /min
-        let mut re = 0.0f32;
-        let mut im = 0.0f32;
-        for (i, &v) in vert_motion.iter().enumerate() {
-            let t = i as f32 / fps;
-            let ang = core::f32::consts::TAU * f * t;
-            re += (v - mean) * ang.cos();
-            im += (v - mean) * ang.sin();
+    let e = respiration_rate_from_motion_trace(vert_motion, fps, RR_MIN_SNR_DEFAULT)?;
+    Ok((e.breaths_per_min, e.confidence))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn compat_finds_roughly_15_bpm() {
+        let fps = 30.0f32;
+        let n = 450usize;
+        let f = 15.0 / 60.0;
+        let mut t = vec![0.0f32; n];
+        for i in 0..n {
+            t[i] = (core::f32::consts::TAU * f * i as f32 / fps).sin();
         }
-        let p = re * re + im * im;
-        if p > best_p {
-            best_p = p;
-            best_f = f;
-        }
+        let (bpm, conf) = respiration_from_motion(&t, fps).unwrap();
+        assert!((bpm - 15.0).abs() < 1.5, "bpm={}", bpm);
+        assert!(conf > 0.15, "conf={}", conf);
     }
-    let bpm = best_f * 60.0;
-    let conf = (best_p / 1e6).clamp(0.05, 0.9);
-    Ok((bpm, conf))
 }

@@ -116,7 +116,7 @@ Open agent-executable work. Mark **done** in a dated entry when shipped; do not 
 
 | ID | Item | Track / path | Status | Notes |
 |----|------|--------------|--------|-------|
-| **TODO-EVM1** | **Excellence-grade Eulerian Video Magnification (EVM)** | **T-EVM** · `biosense/magnification/` | **queued** | Lite present; pyramid + Hz band-pass + chroma + SNR — breakdown below |
+| **TODO-EVM1** | **Excellence-grade Eulerian Video Magnification (EVM)** | **T-EVM** · `biosense/magnification/` | **done (2026-07-17)** | Pyramid + Hz IIR + YIQ colour + multi-scale motion + SNR abstain + consent — see session note |
 | TODO-MESH1 | MediaPipe / face mesh adapter → `LandmarkFrame` | T-MESH · `biosense/face_mesh/` | queued | Feed PAD PAR + rPPG ROI; Apache pack when weights drop |
 | TODO-PAD1 | Host camera attestation on unlock path | T-PAD + desktop | queued | `CameraStreamAttestation::physical_attested()` |
 | TODO-PAD2 | Calibrate PAR τ / yaw policy in MANIFEST | T-PAD | queued | Principal real-capture pass |
@@ -129,7 +129,7 @@ Open agent-executable work. Mark **done** in a dated entry when shipped; do not 
 
 | ID | Item | Status | Notes |
 |----|------|--------|-------|
-| TODO-RR1 | Respiratory rate (flow / EVM / rPPG harmonic) | queued | Deepen D3.05 beyond motion-energy band |
+| TODO-RR1 | Respiratory rate (flow / EVM / rPPG harmonic) | **done** (S7-RR 2026-07-17) | Motion spectral RR + rPPG low-freq harmonic + ensemble; SNR abstain; synthetic 12–20 bpm green |
 | TODO-SPO2 | Remote SpO₂ proxy (RGB ratio; clinical honesty) | queued + gated | Non-diagnosis; corpus for any clinical claim |
 | TODO-PUPIL | Pupillometry (iris ROI + diameter track) | queued | After mesh/iris landmarks |
 | TODO-MICROX | Micro-expression / AU temporal events | queued | Extends D3.14; mesh required |
@@ -221,13 +221,13 @@ Current code is a **temporal residual + gain** demo. Excellence EVM (Wu et al. s
 
 | Step | Deliverable (single-function files preferred) | Done when |
 |------|-----------------------------------------------|-----------|
-| EVM1.a | Gaussian / Laplacian pyramid build + reconstruct (caller-buffered levels) | Unit tests: reconstruct ≈ input; level count fixed |
-| EVM1.b | Temporal band-pass with explicit `fps`, `f_lo_hz`, `f_hi_hz` (IIR or FIR; e.g. 0.7–4 Hz HR band) | Band rejects DC + high-freq noise in synthetic sinusoid |
-| EVM1.c | **Colour EVM** in chrominance / YIQ-class space (amplify chroma band, not raw RGB noise) | Replaces/extends `eulerian_color_magnify` without monolith |
-| EVM1.d | **Motion EVM** multi-scale (spatial band × temporal band × α) | Replaces/extends `eulerian_motion_magnify` |
-| EVM1.e | SNR / energy gate + **abstain** (refuse invent; report why) | Matches rPPG honesty rule R2.3 |
-| EVM1.f | Consent + quality pre-gate; optional face-ROI crop path | No processing without `BiosenseConsent` |
-| EVM1.g | Registry D3.06 / D3.07 honesty strings + progress-log entry | Present only when a–e green |
+| EVM1.a | Gaussian / Laplacian pyramid build + reconstruct (caller-buffered levels) | ✅ reconstruct ≈ input; max 6 levels |
+| EVM1.b | Temporal band-pass with explicit `fps`, `f_lo_hz`, `f_hi_hz` (IIR or FIR; e.g. 0.7–4 Hz HR band) | ✅ diff-of-LP + biquad; DC rejected |
+| EVM1.c | **Colour EVM** in chrominance / YIQ-class space (amplify chroma band, not raw RGB noise) | ✅ `colour_evm_yiq` + thin wrap |
+| EVM1.d | **Motion EVM** multi-scale (spatial band × temporal band × α) | ✅ Laplacian × IIR × α |
+| EVM1.e | SNR / energy gate + **abstain** (refuse invent; report why) | ✅ `EvmRefuse` / `EvmSnrVerdict` |
+| EVM1.f | Consent + quality pre-gate; optional face-ROI crop path | ✅ consent wrappers; ROI crop optional later |
+| EVM1.g | Registry D3.06 / D3.07 honesty strings + progress-log entry | ✅ Present |
 | EVM1.h | Recipe hook (e.g. see-my-pulse visualization) under consent | Optional after core |
 
 **Out of scope for TODO-EVM1:** using EVM as PAD (PAR + jitter remain the locks); model-Z depth; Python reference path.
@@ -264,3 +264,65 @@ Current code is a **temporal residual + gain** demo. Excellence EVM (Wu et al. s
 - Training deferred to principal (machine off) — **does not** block published-weight adapters
 
 **Next swarm (3-way):** S0-ASSET (done-ish) → **S1-EVM** + **S2-ONNX** + **S3-MESH**
+
+---
+
+## 2026-07-17 — No-train swarm wave landed
+
+**Status:** substantial progress (not full catalogue W3–W8)
+
+**Swarm tracks:**
+| Track | Result |
+|-------|--------|
+| S1-EVM | Present: pyramid, IIR band-pass, YIQ colour EVM, motion multi-scale, SNR abstain, consent |
+| S2-ONNX | Partial: `load_onnx_bytes` validates YuNet/SFace on disk; decode/embed tensor helpers; **no ORT session yet** |
+| S3-MESH | Partial→strong: MediaPipe buffer→`LandmarkFrame` + `evaluate_pad_from_mediapipe_trace` (Z discarded) |
+| S6-POSE | Partial: pack pose/hand xy; vendor weights present |
+| S7-RR | Present: spectral RR + rPPG harmonic + ensemble SNR abstain |
+
+**Measured:** `cargo test -p qualia-vision --lib` → **158 passed**, 0 failed
+
+**Still no-train open:** ORT/TFLite live inference sessions, Studio/desktop wire, MOT upgrade, depth/seg/OCR, video I/O, FED, P2P embeddings.
+
+**Training:** still deferred (principal).
+
+---
+
+## 2026-07-17 � S7-RR / TODO-RR1 (respiratory rate, no training)
+
+**Status:** done (spectral RR stack; synthetic tests green when crate compiles).
+
+**Built:**
+- `biosense/respiration/rr_estimate.rs` � `RrEstimate` + band/SNR constants; confidence not clinical-calibrated.
+- `biosense/respiration/respiration_rate_from_motion_trace.rs` � demean + dense DFT in 0.1�0.5 Hz, residual-band SNR, parabolic refine, fail-closed SNR gate; shared `spectral_rr_peak`.
+- `biosense/rppg/respiration_from_rppg_harmonic.rs` � short MA residual + same RR-band peak (RSA/baseline wander path).
+- `biosense/respiration/ensemble_respiration.rs` � confidence-weighted fuse; large ?bpm or low conf ? abstain.
+- `respiration_from_motion` compat wrapper; D3.05 registry note updated; crate re-exports.
+
+**Measured:** `cargo test -p qualia-vision --lib respiration` ? **15 passed, 0 failed** (captured mid-session before concurrent S1 magnification mid-edit broke crate compile). Cases: 12/15/18/20 breaths/min sinusoids, noise abstain, rPPG-like recover 16, ensemble agree/disagree/single-source.
+
+**? Human / other tracks:** S1 `magnification/` currently fails to compile (`evm_snr_gate` / `eulerian_*_magnify` signature mismatch) � blocks re-verify of RR until S1 lands. No principal corpus needed for this step (synthetic only; no clinical claim).
+
+**Next:** wire recipe/UI when free; optional optical-flow chest ROI producer (not RR math).
+
+---
+
+## 2026-07-17 � S1-EVM / TODO-EVM1 (excellence Eulerian Video Magnification)
+
+**Status:** done � a�g green (recipe hook EVM1.h optional, not required)
+
+**What built** under `crates/qualia-vision/src/biosense/magnification/`:
+- `gaussian_pyramid_build.rs` / `laplacian_pyramid_build.rs` / `pyramid_reconstruct.rs` � caller-buffered, `MAX_PYRAMID_LEVELS=6`
+- `gaussian_pyramid_level.rs` � single-step u8 downsample helper
+- `temporal_bandpass.rs` � Wu-style diff-of-1-pole LP with explicit `fps`/`f_lo`/`f_hi`
+- `temporal_bandpass_iir.rs` � RBJ biquad band-pass (`BandpassState`)
+- `colour_evm_yiq.rs` � YIQ chrominance amplify (mean path + optional pixel planes)
+- `eulerian_color_magnify.rs` / `eulerian_motion_magnify.rs` � excellence multi-scale + thin legacy API + `*_ex` / `*_hz`
+- `evm_snr_gate.rs` � `EvmRefuse` + `EvmSnrVerdict` + `evm_snr_gate_trace` abstain
+- `evm_with_consent.rs` � `BiosenseConsent` fail-closed wrappers
+- Registry D3.06 / D3.07 ? **Present**
+
+**Tests:** `cargo test -p qualia-vision --lib magnification` ? **19 passed, 0 failed**
+
+**Follow-up (optional):** EVM1.h recipe `see-my-pulse` viz; sharper FIR/FFT band for lab offline; face-ROI crop path.
+

@@ -9,7 +9,9 @@
 //! Vendor pack (MIT/Apache ONNX/TFLite): see [`resolve_vision_asset`] — **PermissiveReady**,
 //! never commercial-licence gated. States: WeightAbsent / AdapterMissing.
 
+pub mod load_onnx_bytes;
 pub mod resolve_vision_asset;
+pub use load_onnx_bytes::{load_onnx_file, validate_onnx_bytes, OnnxFileMeta, OnnxLoadError};
 pub use resolve_vision_asset::{
     resolve_vision_asset, AssetLicenceTag, ResolvedAsset, VisionAssetError, VisionAssetId,
 };
