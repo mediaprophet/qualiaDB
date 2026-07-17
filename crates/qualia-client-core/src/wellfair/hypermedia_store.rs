@@ -189,6 +189,15 @@ pub fn resolve_section(
     {
         return LibrarySection::Wellfair;
     }
+    if purpose_blob.contains("legislation")
+        || purpose_blob.contains("statute")
+        || purpose_blob.contains("legal")
+        || purpose_blob.contains("regulation")
+        || purpose_blob.contains("bill")
+    {
+        // Statutes and regulations sit on the Work shelf (research / labour), not Software.
+        return LibrarySection::Work;
+    }
     if purpose_blob.contains("qapp")
         || purpose_blob.contains("website")
         || purpose_blob.contains("web-app")

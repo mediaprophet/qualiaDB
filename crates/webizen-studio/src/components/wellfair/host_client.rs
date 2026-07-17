@@ -3440,6 +3440,98 @@ pub async fn seed_studio_qapps() -> Result<serde_json::Value, String> {
 }
 
 #[cfg(target_arch = "wasm32")]
+pub async fn ingest_legislation_text(
+    text: &str,
+    register_id: Option<&str>,
+    jurisdiction: Option<&str>,
+    title_hint: Option<&str>,
+) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"text".into(), &wasm_bindgen::JsValue::from_str(text))
+        .map_err(|_| "args".to_string())?;
+    if let Some(id) = register_id {
+        js_sys::Reflect::set(&args, &"registerId".into(), &wasm_bindgen::JsValue::from_str(id))
+            .map_err(|_| "args".to_string())?;
+    }
+    if let Some(j) = jurisdiction {
+        js_sys::Reflect::set(
+            &args,
+            &"jurisdiction".into(),
+            &wasm_bindgen::JsValue::from_str(j),
+        )
+        .map_err(|_| "args".to_string())?;
+    }
+    if let Some(t) = title_hint {
+        js_sys::Reflect::set(&args, &"titleHint".into(), &wasm_bindgen::JsValue::from_str(t))
+            .map_err(|_| "args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_ingest_legislation_text", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "legislation ingest not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn ingest_legislation_text(
+    _text: &str,
+    _register_id: Option<&str>,
+    _jurisdiction: Option<&str>,
+    _title_hint: Option<&str>,
+) -> Result<serde_json::Value, String> {
+    Err("The library requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn ingest_legislation_pdf_hex(
+    hex_bytes: &str,
+    register_id: Option<&str>,
+    jurisdiction: Option<&str>,
+    title_hint: Option<&str>,
+) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &args,
+        &"hexBytes".into(),
+        &wasm_bindgen::JsValue::from_str(hex_bytes),
+    )
+    .map_err(|_| "args".to_string())?;
+    if let Some(id) = register_id {
+        js_sys::Reflect::set(&args, &"registerId".into(), &wasm_bindgen::JsValue::from_str(id))
+            .map_err(|_| "args".to_string())?;
+    }
+    if let Some(j) = jurisdiction {
+        js_sys::Reflect::set(
+            &args,
+            &"jurisdiction".into(),
+            &wasm_bindgen::JsValue::from_str(j),
+        )
+        .map_err(|_| "args".to_string())?;
+    }
+    if let Some(t) = title_hint {
+        js_sys::Reflect::set(&args, &"titleHint".into(), &wasm_bindgen::JsValue::from_str(t))
+            .map_err(|_| "args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_ingest_legislation_pdf_hex", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "legislation pdf ingest not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn ingest_legislation_pdf_hex(
+    _hex: &str,
+    _register_id: Option<&str>,
+    _jurisdiction: Option<&str>,
+    _title_hint: Option<&str>,
+) -> Result<serde_json::Value, String> {
+    Err("The library requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
 pub async fn list_qapp_catalog_categories() -> Result<serde_json::Value, String> {
     let js = tauri_invoke(
         "wellfair_list_qapp_catalog_categories",

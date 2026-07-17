@@ -1438,6 +1438,46 @@ impl WebizenHostApi {
         Ok(serde_json::to_value(report).map_err(|e| e.to_string())?)
     }
 
+    /// Native legislation ingest (structure parse, no Ollama): PDF bytes → Work shelf
+    /// entries for the instrument and every Part/Section/Subsection with full body text.
+    pub fn ingest_legislation_pdf_hex(
+        &self,
+        hex_bytes: &str,
+        register_id: Option<&str>,
+        jurisdiction: Option<&str>,
+        title_hint: Option<&str>,
+    ) -> Result<serde_json::Value, String> {
+        let bytes = decode_hex(hex_bytes)?;
+        let store = self.library()?;
+        let report = super::legislation_ingest::ingest_legislation_pdf_bytes(
+            &store,
+            &bytes,
+            register_id,
+            jurisdiction.unwrap_or("AU"),
+            title_hint,
+        )?;
+        Ok(serde_json::to_value(report).map_err(|e| e.to_string())?)
+    }
+
+    /// Native legislation ingest from plain text (already extracted PDF text or HTML).
+    pub fn ingest_legislation_text(
+        &self,
+        text: &str,
+        register_id: Option<&str>,
+        jurisdiction: Option<&str>,
+        title_hint: Option<&str>,
+    ) -> Result<serde_json::Value, String> {
+        let store = self.library()?;
+        let report = super::legislation_ingest::ingest_legislation_text(
+            &store,
+            text,
+            register_id,
+            jurisdiction.unwrap_or("AU"),
+            title_hint,
+        )?;
+        Ok(serde_json::to_value(report).map_err(|e| e.to_string())?)
+    }
+
     /// List catalogue categories (for Software shelf UI without seeding first).
     pub fn list_qapp_catalog_categories(&self) -> Result<serde_json::Value, String> {
         let cats: Vec<serde_json::Value> = super::qapp_catalog::catalogue_categories()

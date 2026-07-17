@@ -4,6 +4,30 @@ import legis2cml as etl
 
 
 class SegmentationTests(unittest.TestCase):
+    def test_n3_and_jsonld_carry_original_section_text(self):
+        """Regression: earlier packages listed sections as concepts but omitted body text."""
+        pages = [
+            (1, "Demo Act 2020\nNo. 1, 2020\n"
+                "The Parliament of Australia enacts:\n"
+                "1  Short title\nThis Act may be cited as the Demo Act 2020.\n"
+                "2  Commencement\nThis Act commences on Royal Assent.\n"),
+        ]
+        title, provisions = etl.parse_pages(pages, "Demo Act 2020")
+        provisions = etl.decompose_provisions(provisions)
+        inst = etl.Instrument(title, "demo-act-2020", "AU",
+                              "https://example.test/demo", None, provisions)
+        n3 = etl.build_n3(inst, {}, "demo.pdf", "demo.pdf", "2")
+        self.assertIn("values:originalText", n3)
+        self.assertIn("may be cited as the Demo Act 2020", n3)
+        self.assertIn("commences on Royal Assent", n3)
+        jld = etl.build_jsonld(inst, {}, "demo.pdf", "2")
+        texts = [n.get("values:originalText", "") for n in jld["@graph"]
+                 if isinstance(n, dict)]
+        self.assertTrue(any("may be cited" in t for t in texts))
+        cov = etl.coverage_report(inst)
+        self.assertTrue(cov["ok"])
+        self.assertEqual(cov["emptyConcepts"], 0)
+
     def test_legislation_html_has_distinct_legal_information_notice(self):
         inst = etl.Instrument("Example Instrument 2025", "example-instrument-2025", "AU",
                               "https://example.test/instrument", None, [])

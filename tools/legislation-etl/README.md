@@ -34,6 +34,40 @@ The ETL talks to Ollama directly (batch-friendly). With `--emit-q42`, it invokes
 QualiaDB semantic ingest command, writes bounded 40-provision volumes under `q42/`, and verifies
 every volume with a SPARQL round trip. The bound avoids feeding a large Act to one parser stack.
 
+## Fidelity rules (section body text)
+
+Every `cml:Concept` for a section or subsection **must** carry `values:originalText`
+(the full provision body). Container sections that have been split into subsections also
+keep `full_text` (pre-split body) so exports never look “section-empty” when only the
+lead-in remains on the parent. The manifest reports:
+
+```json
+"coverage": {
+  "concepts": 120,
+  "conceptsWithText": 118,
+  "emptyConcepts": 2,
+  "emptyFrags": ["sch-1-sec-40a", "..."],
+  "textCoverageRatio": 0.983,
+  "ok": true
+}
+```
+
+`ok` is true when every concept has text, or at least 85% do (amendment schedules sometimes
+have heading-only repeal stubs). Re-run the ETL after upgrading — older flat `.n3` dumps
+in the corpus that list concepts without `values:originalText` were produced before this
+fix and should be regenerated with `--no-llm` (structure) or full Ollama enrichment.
+
+## Native Qualia hypermedia path
+
+The same structural parse (no Ollama) is available inside Qualia as
+`wellfair::legislation_ingest` / Host API:
+
+- `wellfair_ingest_legislation_text` — paste extracted Act text
+- `wellfair_ingest_legislation_pdf_hex` — PDF bytes as hex
+
+These seed Library → **Work** with purpose `legislation`, one entry per provision plus an
+instrument root. Library free-text / faceted search then finds sections by number or wording.
+
 ## Units: metadata, intro, sections, subsections
 
 A document is decomposed into its **natural** units, not fixed-size character slices:

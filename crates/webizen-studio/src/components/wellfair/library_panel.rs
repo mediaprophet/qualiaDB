@@ -5,9 +5,9 @@
 
 use super::host_client::{
     export_library_graph, ingest_document, ingest_file_hex, library_commons_share_card,
-    library_stats, list_library_section, query_library_faceted, remove_library_entry,
-    search_library, search_library_time, seed_studio_qapps, set_library_commons,
-    IngestFacets,
+    ingest_legislation_text, library_stats, list_library_section, query_library_faceted,
+    remove_library_entry, search_library, search_library_time, seed_studio_qapps,
+    set_library_commons, IngestFacets,
 };
 use crate::Route;
 use dioxus::prelude::*;
@@ -221,6 +221,9 @@ pub fn WellfairLibraryPanel() -> Element {
     let mut ing_purpose = use_signal(String::new);
     let mut ing_section = use_signal(|| "personal".to_string());
     let mut ing_commons = use_signal(|| "none".to_string());
+    let mut legis_text = use_signal(String::new);
+    let mut legis_id = use_signal(String::new);
+    let mut legis_title = use_signal(String::new);
 
     let mut facet = use_signal(|| "topic".to_string());
     let mut value = use_signal(String::new);
@@ -677,6 +680,11 @@ pub fn WellfairLibraryPanel() -> Element {
                         "Tools holds logs, telemetry, agent/tool output, and technical diagnostics — the machine paper trail, separate from personal notes and secret health."
                     }
                 }
+                if section() == "work" {
+                    p { style: "margin:0.65rem 0 0;font-size:0.75rem;color:#94a3b8;line-height:1.4;",
+                        "Work holds project labour and legislation. Paste Act text (or use native PDF ingest via host) — every section is stored with full body text for faceted search."
+                    }
+                }
                 if section() == "software" {
                     p { style: "margin:0.65rem 0 0;font-size:0.75rem;color:#94a3b8;line-height:1.4;",
                         "Software holds QApps, websites, packages — including the early academic studio QApp inventory (catalogued & categorised; many are stubs). Use category facets and sort below. Runtime logs stay under Tools."
@@ -843,6 +851,70 @@ pub fn WellfairLibraryPanel() -> Element {
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    // Native legislation ingest (structure parse — full section bodies)
+                    div { style: "{CARD}",
+                        div { style: "{H3}", "Legislation" }
+                        p { style: "{MUTED}",
+                            "Paste Act text (after the enacting formula). Native parse splits Part/Section/Subsection and stores every body under Work — not the old N3-without-text path."
+                        }
+                        label { style: "{LABEL}", "Register id (optional)" }
+                        input {
+                            style: "{INPUT}",
+                            placeholder: "C2004A00601",
+                            value: "{legis_id}",
+                            oninput: move |e| legis_id.set(e.value()),
+                        }
+                        label { style: "{LABEL}", "Title hint (optional)" }
+                        input {
+                            style: "{INPUT}",
+                            placeholder: "Privacy Act 1988",
+                            value: "{legis_title}",
+                            oninput: move |e| legis_title.set(e.value()),
+                        }
+                        label { style: "{LABEL}", "Instrument text" }
+                        textarea {
+                            style: "{INPUT} min-height:7rem;font-family:ui-monospace,monospace;font-size:0.72rem;",
+                            placeholder: "The Parliament of Australia enacts:\n1  Short title\nThis Act may be cited as…",
+                            value: "{legis_text}",
+                            oninput: move |e| legis_text.set(e.value()),
+                        }
+                        button {
+                            style: "{BTN} width:100%;",
+                            onclick: move |_| {
+                                let (text, id, title) = (legis_text(), legis_id(), legis_title());
+                                spawn(async move {
+                                    if text.trim().is_empty() {
+                                        status_err.set(true);
+                                        status.set("Paste legislation text first.".into());
+                                        return;
+                                    }
+                                    let reg = if id.trim().is_empty() { None } else { Some(id.as_str()) };
+                                    let th = if title.trim().is_empty() { None } else { Some(title.as_str()) };
+                                    match ingest_legislation_text(&text, reg, Some("AU"), th).await {
+                                        Ok(v) => {
+                                            let secs = u64_field(&v, "sections");
+                                            let with_t = u64_field(&v, "concepts_with_text");
+                                            let empty = u64_field(&v, "empty_text");
+                                            let written = u64_field(&v, "library_entries_written");
+                                            status_err.set(false);
+                                            status.set(format!(
+                                                "Legislation ingested · {secs} sections · {with_t} with text · {empty} empty · {written} library rows → Work."
+                                            ));
+                                            section.set("work".into());
+                                            legis_text.set(String::new());
+                                            refresh_all();
+                                        }
+                                        Err(e) => {
+                                            status_err.set(true);
+                                            status.set(format!("Legislation ingest failed: {e}"));
+                                        }
+                                    }
+                                });
+                            },
+                            "Ingest legislation → Work"
                         }
                     }
 

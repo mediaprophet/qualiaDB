@@ -126,6 +126,8 @@ class Provision:
     start_page: int = 0
     integrity: str = ""  # sha256 of verbatim text
     parent: str | None = None  # parent section frag, for subsections
+    # Full body before subsection split (containers keep this so N3/HTML never lose text).
+    full_text: str = ""
 
 
 @dataclass
@@ -196,8 +198,12 @@ RE_DIV = re.compile(r"^(Division|DIVISION)\s+([0-9]+[A-Za-z]?)\b[\s—\-:.]*(.*)
 # A real Schedule heading is "Schedule N—Title" (em/en dash). Requiring the dash avoids matching
 # commencement-table rows and cross-references that merely start with "Schedule N".
 RE_SCHEDULE = re.compile(r"^(Schedule|SCHEDULE)\s+([0-9]+[A-Za-z]?)\s*[—–]\s*(.+)$")
-RE_SECTION = re.compile(r"^(\d+[A-Z]{0,2})\s+([A-Z][^\n]{2,140})$")
-RE_HISTORICAL_SECTION = re.compile(r"^(\d+[A-Z]{0,2})\.\s*[—-]?\s*(.+)$")
+# Section heading: number + title. Title may be Title Case or ALL CAPS. Reject lowercase-start
+# titles (those are almost always cross-references / prose, not arrangement headings).
+RE_SECTION = re.compile(r"^(\d+[A-Z]{0,2})\s+([A-Z0-9][^\n]{1,160})$")
+# Soft form: older Commonwealth numbering "1.—(1.) This Act…" / "2. Section eighty-six…".
+# Requires a period after the number. Body may start with a subsection marker "(1.)".
+RE_HISTORICAL_SECTION = re.compile(r"^(\d+[A-Z]{0,2})\.\s*[—–\-]?\s*(.+)$")
 RE_EU_CHAPTER = re.compile(r"^CHAPTER\s+([IVXLC]+)$", re.I)
 RE_EU_ARTICLE = re.compile(r"^Article\s+(\d+[A-Z]?)$", re.I)
 # The Commonwealth enacting formula ends the front matter (cover + Contents/arrangement) and
@@ -205,6 +211,56 @@ RE_EU_ARTICLE = re.compile(r"^Article\s+(\d+[A-Z]?)$", re.I)
 # as body produced phantom empty Parts/Divisions and collided the arrangement's section numbers
 # with the real ones (an amendment item "1" became sec-1-2 alongside the principal section 1).
 RE_ENACTING = re.compile(r"Parliament of Australia enacts|BE IT ENACTED", re.I)
+
+
+def _looks_like_section_heading(title: str) -> bool:
+    """Reject prose/cross-refs that begin like a section number but are not headings."""
+    t = title.strip()
+    if not t or len(t) < 2:
+        return False
+    # "of Part III", "or 40 to give information" — not a section title.
+    if t[:1].islower():
+        return False
+    if re.match(r"^(of|or|and|to|in|for|as|under|made by|has no effect)\b", t, re.I):
+        return False
+    # Years alone / table fragments.
+    if re.fullmatch(r"\d{4}", t):
+        return False
+    words = t.split()
+    # Real AU section titles are short noun phrases ("Short title", "Commencement").
+    # A long multi-word sentence is body text that must stay inside the current provision.
+    if len(words) > 12:
+        return False
+    if t.endswith(".") and len(words) > 4:
+        return False
+    # Body openers that appear after "N." in OCR'd paragraphs.
+    if re.match(r"^(If|Subject|This|When|Where|Unless|Despite|For the purposes)\b", t):
+        return False
+    return True
+
+
+def provision_source_text(p: Provision) -> str:
+    """Text that must appear in exported graphs: prefer full pre-split body for containers."""
+    if (p.full_text or "").strip():
+        return p.full_text
+    return p.text or ""
+
+
+def coverage_report(inst: Instrument) -> dict:
+    """Integrity metrics so empty/truncated packages are visible in manifest.json."""
+    concepts = concept_units(inst.provisions)
+    with_text = [p for p in concepts if provision_source_text(p).strip()]
+    empty = [p for p in concepts if not provision_source_text(p).strip()]
+    structural = [p for p in inst.provisions if p.kind in ("part", "division", "schedule")]
+    return {
+        "concepts": len(concepts),
+        "conceptsWithText": len(with_text),
+        "emptyConcepts": len(empty),
+        "emptyFrags": [p.frag for p in empty[:50]],
+        "structural": len(structural),
+        "textCoverageRatio": (len(with_text) / len(concepts)) if concepts else 1.0,
+        "ok": (len(empty) == 0) or (len(with_text) / max(len(concepts), 1) >= 0.85),
+    }
 
 
 def parse_pages(pages: list[tuple[int, str]], title_hint: str | None) -> tuple[str, list[Provision]]:
@@ -320,17 +376,36 @@ def parse_pages(pages: list[tuple[int, str]], title_hint: str | None) -> tuple[s
                                             start_page=page_no))
                 continue
             m = RE_SECTION.match(s)
-            if m and not s.startswith("("):
+            if m and not s.startswith("(") and _looks_like_section_heading(m.group(2)):
                 flush()
                 cur = Provision(scoped(f"sec-{slugify(m.group(1))}"), "section",
                                 m.group(1), m.group(2).strip(), start_page=page_no)
                 continue
             m = RE_HISTORICAL_SECTION.match(s)
-            if m and not has_eu_articles:
+            # Prefer RE_SECTION when both match; historical is dotted "N. …" forms.
+            if m and not has_eu_articles and not s.startswith("(") and not RE_SECTION.match(s):
+                rest = m.group(2).strip()
+                # Reject obvious non-headings that happen to start a line with "N." inside body
+                # only when we have no open section — otherwise still open a section (historical
+                # Acts put the whole clause after the number).
                 flush()
-                cur = Provision(scoped(f"sec-{slugify(m.group(1))}"), "section",
-                                m.group(1), f"Section {m.group(1)}", start_page=page_no)
-                buf.append(m.group(2).strip())
+                num = m.group(1)
+                # Inline subsection start "1.—(1.) This Act…" or long prose → body, generic title.
+                if (rest.startswith("(")
+                        or len(rest) > 90
+                        or (rest[:1].islower() if rest else True)
+                        or re.match(
+                            r"^(If|Subject|This|When|Where|Unless|Despite|For the purposes|"
+                            r"Section |The |A |An )\b",
+                            rest,
+                        )
+                        or not _looks_like_section_heading(rest)):
+                    cur = Provision(scoped(f"sec-{slugify(num)}"), "section",
+                                    num, f"Section {num}", start_page=page_no)
+                    buf.append(rest)
+                else:
+                    cur = Provision(scoped(f"sec-{slugify(num)}"), "section",
+                                    num, rest, start_page=page_no)
                 continue
             if cur is not None:
                 buf.append(s)
@@ -430,9 +505,17 @@ def split_subsections(section: Provision) -> list[Provision]:
 
 
 def decompose_provisions(provisions: list[Provision]) -> list[Provision]:
-    """Expand sections into section + subsection provisions in document order."""
+    """Expand sections into section + subsection provisions in document order.
+
+    Preserves each section's pre-split body on ``full_text`` so graph exports never drop
+    subsection content when the parent becomes a container (lead-in only in ``text``).
+    """
     out: list[Provision] = []
     for provision in provisions:
+        if provision.kind == "section" and not provision.full_text:
+            provision.full_text = provision.text or ""
+            if provision.full_text and not provision.integrity:
+                provision.integrity = sha256(provision.full_text)
         out.append(provision)
         if provision.kind == "section":
             out.extend(split_subsections(provision))
@@ -888,13 +971,22 @@ def provision_n3(inst: Instrument, p: Provision, cls: dict | None, source_ref: s
                  source_name: str, schema: str, children: list[str]) -> str:
     cid = f"concept:{inst.slug}-{p.frag}"
     nid = f"{cid}-norm"
+    src_text = provision_source_text(p)
     L = [f"{cid} a cml:Concept ;",
          f'    skos:prefLabel "{_lit(p.number + " " + p.heading)}"@en ;',
          f"    cml:realizedBy doc:{p.frag} ;"]
+    # Always carry the provision body in the graph (this was missing; exports looked "section-empty").
+    if src_text.strip():
+        L.append(f'    values:originalText "{_lit(src_text)}" ;')
+        L.append(f'    skos:definition "{_lit(src_text[:2000])}"@en ;')
     if p.integrity:
         L.append(f'    cml:integrityHash "{p.integrity}" ;')
+    elif src_text.strip():
+        L.append(f'    cml:integrityHash "{sha256(src_text)}" ;')
     if p.parent:
         L.append(f"    values:partOf concept:{inst.slug}-{p.parent} ;")
+    if p.start_page:
+        L.append(f'    cof:pageNumber "{p.start_page}"^^xsd:integer ;')
     if cls and cls.get("summary"):
         L.append(f'    skos:note "{_lit(cls["summary"])}" ;')
     if cls and cls.get("mustProvide"):
@@ -908,9 +1000,19 @@ def provision_n3(inst: Instrument, p: Provision, cls: dict | None, source_ref: s
           f"    cml:proposedBy <{TOOL_IRI}> ;",
           f"    prov:wasDerivedFrom <{source_ref}> ;",
           f'    dc:source "{_lit(source_name)}, p.{p.start_page}"']
+    # Realization node: the structural document fragment with the same text payload.
+    R = [f"doc:{p.frag} a cof:Section ;",
+         f'    cof:title "{_lit(p.number + " " + p.heading)}" ;',
+         f'    values:kind "{_lit(p.kind)}" ;']
+    if src_text.strip():
+        R.append(f'    values:originalText "{_lit(src_text)}" ;')
+    if p.start_page:
+        R.append(f'    cof:pageNumber "{p.start_page}"^^xsd:integer ;')
+    R[-1] = R[-1].rstrip(" ;") + " ."
+
     if children:
         # A container section holds no norm of its own; its subsections carry the deontic content.
-        return "\n".join(L) + " ."
+        return "\n".join(L) + " .\n" + "\n".join(R)
     L[-1] = L[-1] + " ;"
     L.append(f"    cml:asserts {nid} .")
     dtype = norm_type(cls)
@@ -930,7 +1032,18 @@ def provision_n3(inst: Instrument, p: Provision, cls: dict | None, source_ref: s
     N += ["    values:deonticStatus values:HeuristicDerived ;",
           "    cml:curationStatus cml:Proposed ."]
     logic = logic_applications_n3(inst, p, cls)
-    return "\n".join(L) + "\n" + "\n".join(N) + "\n" + (logic + "\n" if logic else "")
+    return ("\n".join(L) + "\n" + "\n".join(N) + "\n"
+            + (logic + "\n" if logic else "") + "\n".join(R))
+
+
+def structural_n3(inst: Instrument, p: Provision) -> str:
+    """Part / Division / Schedule markers as first-class structure (not only HTML chrome)."""
+    return (
+        f"doc:{p.frag} a cof:Section ;"
+        f'\n    cof:title "{_lit(p.kind.title() + " " + p.number + ((" — " + p.heading) if p.heading else ""))}" ;'
+        f'\n    values:kind "{_lit(p.kind)}" ;'
+        f'\n    cof:pageNumber "{p.start_page}"^^xsd:integer .'
+    )
 
 
 def build_n3(inst: Instrument, cls_by_num: dict, source_ref: str, source_name: str, schema: str) -> str:
@@ -941,9 +1054,13 @@ def build_n3(inst: Instrument, cls_by_num: dict, source_ref: str, source_name: s
              f"# CML concept layer — {inst.title}",
              f"# MACHINE-DERIVED from the TEXT layer — cml:Proposed, values:HeuristicDerived.",
              f"# Pending human attestation (cml:Attested / skos:exactMatch). Generated by legis2cml.",
+             f"# Every section/subsection carries values:originalText (full provision body).",
              ""]
     kids = children_of(inst.provisions)
     blocks = [instrument_n3(inst, source_ref)]
+    for p in inst.provisions:
+        if p.kind in ("part", "division", "schedule"):
+            blocks.append(structural_n3(inst, p))
     blocks += [provision_n3(inst, p, classification_for(p, cls_by_num), source_ref, source_name,
                             schema, kids.get(p.frag, []))
                for p in concept_units(inst.provisions)]
@@ -972,6 +1089,16 @@ def build_jsonld(inst: Instrument, cls_by_num: dict, source_ref: str,
     ctx = {**NS, "@base": NS["concept"]}
     kids = children_of(inst.provisions)
     nodes = [instrument_jsonld(inst, source_ref)]
+    for p in inst.provisions:
+        if p.kind in ("part", "division", "schedule"):
+            nodes.append({
+                "@id": f"{NS['values']}{inst.slug}#{p.frag}",
+                "@type": "cof:Section",
+                "cof:title": f"{p.kind.title()} {p.number}"
+                + (f" — {p.heading}" if p.heading else ""),
+                "values:kind": p.kind,
+                "cof:pageNumber": p.start_page,
+            })
     for p in concept_units(inst.provisions):
         cls = classification_for(p, cls_by_num)
         cid = f"concept:{inst.slug}-{p.frag}"
@@ -980,6 +1107,7 @@ def build_jsonld(inst: Instrument, cls_by_num: dict, source_ref: str,
         assertion_ids = [] if children else [{"@id": f"{cid}-norm"}]
         for index, application in enumerate(applications):
             assertion_ids.append({"@id": logic_application_id(inst, p, index, application)})
+        src_text = provision_source_text(p)
         concept = {"@id": cid, "@type": "cml:Concept",
                    "skos:prefLabel": f"{p.number} {p.heading}",
                    "cml:realizedBy": {"@id": f"{NS['values']}{inst.slug}#{p.frag}"},
@@ -988,6 +1116,9 @@ def build_jsonld(inst: Instrument, cls_by_num: dict, source_ref: str,
                    "cml:proposedBy": {"@id": TOOL_IRI},
                    "prov:wasDerivedFrom": {"@id": source_ref},
                    "dc:source": f"{source_ref}, p.{p.start_page}"}
+        if src_text.strip():
+            concept["values:originalText"] = src_text
+            concept["skos:definition"] = src_text[:2000]
         if p.parent:
             concept["values:partOf"] = {"@id": f"concept:{inst.slug}-{p.parent}"}
         if children:
@@ -996,6 +1127,8 @@ def build_jsonld(inst: Instrument, cls_by_num: dict, source_ref: str,
             concept["cml:asserts"] = assertion_ids
         if p.integrity:
             concept["cml:integrityHash"] = p.integrity
+        elif src_text.strip():
+            concept["cml:integrityHash"] = sha256(src_text)
         if cls.get("summary"):
             concept["skos:note"] = cls["summary"]
         if cls.get("mustProvide"):
@@ -1003,6 +1136,15 @@ def build_jsonld(inst: Instrument, cls_by_num: dict, source_ref: str,
         if cls.get("crossReferences"):
             concept["dc:references"] = cls["crossReferences"]
         nodes.append(concept)
+        # Realization fragment with the same body text (HTML/COF join key).
+        real = {"@id": f"{NS['values']}{inst.slug}#{p.frag}",
+                "@type": "cof:Section",
+                "cof:title": f"{p.number} {p.heading}",
+                "values:kind": p.kind,
+                "cof:pageNumber": p.start_page}
+        if src_text.strip():
+            real["values:originalText"] = src_text
+        nodes.append(real)
         if children:
             continue
         norm = {"@id": f"{cid}-norm", "@type": norm_type(cls),
@@ -1356,12 +1498,14 @@ def render_html(inst: Instrument, cls_by_num: dict, source_pdf: str, source_hash
                    if p.parent else "")
         heading = f'{esc(p.number)} {esc(p.heading)}' if p.kind == "section" else esc(p.number)
         text_block = ""
-        if p.text:
+        # Prefer full pre-split body for container sections so the HTML never drops subsection text.
+        body_text = provision_source_text(p)
+        if body_text:
             text_block = (
                 f'<div class="text" typeof="cof:Block" property="cof:hasBlock values:originalText" '
                 f'resource="doc:{p.frag}-text" data-page="{p.start_page}">'
                 f'<span typeof="cof:Claim" property="cof:hasClaim" about="{claim_id}" '
-                f'resource="{claim_id}"{conf_attr}>{esc(p.text)}</span></div>'
+                f'resource="{claim_id}"{conf_attr}>{esc(body_text)}</span></div>'
             )
         norm_block = "" if is_container else f'{logic_html(inst, p, cls)}{logic_suite_html(inst, p, cls)}'
         body.append(
@@ -1720,16 +1864,28 @@ def main() -> None:
         },
         "counts": {"sections": len(sections), "subsections": len(subsections),
                    "provisions": len(units),
+                   "concepts": len(concept_units(provisions)),
+                   "structural": sum(1 for p in provisions
+                                     if p.kind in ("part", "division", "schedule")),
+                   "withText": sum(1 for p in concept_units(provisions)
+                                   if provision_source_text(p).strip()),
+                   "emptyText": sum(1 for p in concept_units(provisions)
+                                    if not provision_source_text(p).strip()),
                    "classified": sum(1 for p in units if classification_for(p, cls_by_num))},
+        "coverage": coverage_report(inst),
         "metadata": {"actNumber": inst.act_no, "year": inst.year,
                      "longTitle": inst.long_title, "date": inst.date},
         "validation": {"rdf": rdf_validation, "qualiaDb": qualia_validation},
         "files": generated_files,
-        "note": "Machine-proposed layer. Regeneration is non-destructive; human cml:Attested overlays are never written by this tool.",
+        "note": "Machine-proposed layer. Regeneration is non-destructive; human cml:Attested overlays are never written by this tool. Every concept carries values:originalText when body text was extracted.",
     }
     write_json_atomic(out_dir / "manifest.json", manifest)
 
-    print(f"· package written to {out_dir}/  ({manifest['counts']['classified']}/{len(units)} classified)")
+    cov = manifest["coverage"]
+    print(f"· package written to {out_dir}/  "
+          f"({manifest['counts']['classified']}/{len(units)} classified; "
+          f"{cov['conceptsWithText']}/{cov['concepts']} concepts with originalText; "
+          f"empty={cov['emptyConcepts']})")
     if failures:
         raise SystemExit(2)
 
