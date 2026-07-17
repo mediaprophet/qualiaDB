@@ -2547,6 +2547,47 @@ pub fn agent_roster_remove(slug: String) -> Result<(), String> {
     crate::agent_registry::remove_agent(Path::new(&storage), &slug)
 }
 
+// ── Principal-gated MCP tool loop (U3-A / U3-B) ────────────────────────────────
+// Propose → Permit/Deny → execute. Deny never dispatches. Allowlist from roster.
+
+/// List local in-process MCP tools (`tools/list`) for Talk / allowlist UI.
+pub fn mcp_list_local_tools() -> Result<serde_json::Value, String> {
+    let tools = crate::mcp_tool_loop::mcp_list_local_tools()?;
+    serde_json::to_value(tools).map_err(|e| e.to_string())
+}
+
+/// Principal-gated MCP tool call. `principal_permitted = false` → Err without MCP.
+/// Tool must be on the agent's `allowed_mcp_tools` (or `*`); empty allowlist denies all.
+pub fn mcp_call_tool_gated(
+    agent_slug: String,
+    tool_name: String,
+    arguments_json: String,
+    principal_permitted: bool,
+) -> Result<String, String> {
+    let storage = agent_roster_storage()?;
+    crate::mcp_tool_loop::mcp_call_tool_gated(
+        Path::new(&storage),
+        &agent_slug,
+        &tool_name,
+        &arguments_json,
+        principal_permitted,
+    )
+}
+
+/// Convenience: set `allowed_mcp_tools` on a roster agent (persist via upsert).
+pub fn agent_set_allowed_mcp_tools(slug: String, tools: Vec<String>) -> Result<(), String> {
+    let storage = agent_roster_storage()?;
+    crate::mcp_tool_loop::agent_set_allowed_mcp_tools(Path::new(&storage), &slug, tools)
+}
+
+/// If allowlist is empty, seed `list_capabilities` + `computer_vision` (dogfood-safe).
+/// Does not Permit any call — only widens the roster allowlist.
+pub fn mcp_ensure_safe_tool_allowlist(slug: String) -> Result<serde_json::Value, String> {
+    let storage = agent_roster_storage()?;
+    let tools = crate::mcp_tool_loop::ensure_safe_tool_allowlist(Path::new(&storage), &slug)?;
+    serde_json::to_value(tools).map_err(|e| e.to_string())
+}
+
 /// Convenience: create/update a REMOTE-MCP agent from primitives so the UI never hand-builds the
 /// backend enum. `transport_kind` ∈ `"tcp"` | `"http"` | `"stdio"`; `endpoint` is `host:port` / a URL /
 /// a command line respectively.

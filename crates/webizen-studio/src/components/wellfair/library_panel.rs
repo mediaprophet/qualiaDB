@@ -2,13 +2,17 @@
 //!
 //! Ingest notes, receipts, photos (meaning derived: topics, EXIF time/place, purpose/project you attach).
 //! Browse by **List · Timeline · Map**, free-text or facet search. Not a folder tree — a graph of meaning.
+//!
+//! Perception catalogue (U4-C): seed models / ontologies / computer_vision specialized-lib rows
+//! via host commands `library_seed_perception_assets` / `wellfair_seed_perception_library`.
 
 use super::host_client::{
     export_library_graph, ingest_document, ingest_file_hex, library_commons_share_card,
     ingest_legislation_text, library_stats, list_library_section, query_library_faceted,
-    remove_library_entry, search_library, search_library_time, seed_studio_qapps,
-    set_library_commons, IngestFacets,
+    remove_library_entry, search_library, search_library_time, seed_perception_library,
+    seed_studio_qapps, set_library_commons, IngestFacets,
 };
+use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
 use crate::Route;
 use dioxus::prelude::*;
 
@@ -25,6 +29,126 @@ const SECTIONS: &[(&str, &str, &str)] = &[
 
 /// Purpose chip: Library filter for browser bookmarks (purpose=bookmark).
 const BOOKMARK_PURPOSE: &str = "bookmark";
+
+/// True when a library entry is a perception / model / ontology / computer_vision catalogue row.
+fn is_perception_row(r: &serde_json::Value) -> bool {
+    let uri = str_field(r, "asset_uri");
+    if uri.starts_with("model://") || uri.starts_with("ontology://") {
+        return true;
+    }
+    let media = str_field(r, "media_type");
+    if media.contains("webizen-model") || media.contains("webizen-ontology") {
+        return true;
+    }
+    let topics = arr_str(r, "topics");
+    let purposes = arr_str(r, "purposes");
+    let projects = arr_str(r, "projects");
+    let excerpt = str_field(r, "excerpt").to_ascii_lowercase();
+    let hay: String = topics
+        .iter()
+        .chain(purposes.iter())
+        .chain(projects.iter())
+        .cloned()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_ascii_lowercase();
+    hay.contains("perception")
+        || hay.contains("computer_vision")
+        || hay.contains("vision-library")
+        || hay.contains("specialized-lib")
+        || excerpt.contains("computer_vision")
+}
+
+fn is_computer_vision_row(r: &serde_json::Value) -> bool {
+    let uri = str_field(r, "asset_uri");
+    if uri.contains("computer-vision") || uri.contains("computer_vision") {
+        return true;
+    }
+    let topics = arr_str(r, "topics");
+    let projects = arr_str(r, "projects");
+    let excerpt = str_field(r, "excerpt").to_ascii_lowercase();
+    topics.iter().any(|t| {
+        let t = t.to_ascii_lowercase();
+        t.contains("vision-library")
+            || t.contains("computer_vision")
+            || t == "vision"
+            || t.contains("specialized-lib")
+    }) || projects.iter().any(|p| p.to_ascii_lowercase().contains("perception:vision"))
+        || excerpt.contains("computer_vision")
+}
+
+fn is_model_row(r: &serde_json::Value) -> bool {
+    str_field(r, "asset_uri").starts_with("model://")
+        || str_field(r, "media_type").contains("webizen-model")
+        || arr_str(r, "purposes")
+            .iter()
+            .any(|p| p.eq_ignore_ascii_case("model"))
+}
+
+fn is_ontology_row(r: &serde_json::Value) -> bool {
+    str_field(r, "asset_uri").starts_with("ontology://")
+        || str_field(r, "media_type").contains("webizen-ontology")
+        || arr_str(r, "purposes")
+            .iter()
+            .any(|p| p.eq_ignore_ascii_case("ontology"))
+}
+
+fn row_has_seed_flag(r: &serde_json::Value) -> bool {
+    r.get("flags")
+        .and_then(|x| x.as_array())
+        .map(|a| {
+            a.iter().any(|f| {
+                str_field(f, "kind").contains("seed_reference")
+                    || str_field(f, "detail")
+                        .to_ascii_lowercase()
+                        .contains("seed/reference")
+            })
+        })
+        .unwrap_or(false)
+        || arr_str(r, "topics")
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case("seed-reference"))
+        || str_field(r, "excerpt")
+            .to_ascii_lowercase()
+            .contains("seed/reference")
+}
+
+/// Derive honesty levels from catalogue rows present in the library (honest Present/Partial).
+fn perception_honesty(rows: &[serde_json::Value]) -> (HonestyLevel, HonestyLevel, HonestyLevel) {
+    let models: Vec<_> = rows.iter().filter(|r| is_model_row(r)).collect();
+    let ontologies: Vec<_> = rows.iter().filter(|r| is_ontology_row(r)).collect();
+    let cv: Vec<_> = rows.iter().filter(|r| is_computer_vision_row(r)).collect();
+    let any_perception = rows.iter().any(is_perception_row);
+
+    let models_level = if models.is_empty() {
+        HonestyLevel::Unavailable
+    } else if models.iter().any(|r| row_has_seed_flag(r)) {
+        // Seed weights + user slots — not foundation models.
+        HonestyLevel::Partial
+    } else if models.iter().any(|r| is_computer_vision_row(r)) {
+        HonestyLevel::Ready
+    } else {
+        HonestyLevel::Partial
+    };
+
+    let ontologies_level = if ontologies.is_empty() {
+        HonestyLevel::Unavailable
+    } else {
+        // Catalogued file references — present as shelf rows; not full Index hydration claim.
+        HonestyLevel::Partial
+    };
+
+    let perception_level = if !any_perception && cv.is_empty() {
+        HonestyLevel::Unavailable
+    } else if !cv.is_empty() {
+        // specialized_libs::computer_vision algorithm rows are real code paths in-tree.
+        HonestyLevel::Ready
+    } else {
+        HonestyLevel::Partial
+    };
+
+    (models_level, ontologies_level, perception_level)
+}
 
 // ── styles (Talk-aligned dark product chrome) ────────────────────────────────
 
@@ -234,6 +358,27 @@ pub fn WellfairLibraryPanel() -> Element {
     let mut tl_to = use_signal(String::new);
     // When true, faceted query requires purpose=bookmark (browser bookmarks).
     let mut bookmarks_only = use_signal(|| false);
+    // Perception catalogue filter (models / ontologies / computer_vision).
+    let mut perception_only = use_signal(|| false);
+    let mut perception_rows = use_signal(Vec::<serde_json::Value>::new);
+    let mut seed_busy = use_signal(|| false);
+    let mut perception_seed_status = use_signal(String::new);
+    let mut models_honesty = use_signal(|| HonestyLevel::Unavailable);
+    let mut ontologies_honesty = use_signal(|| HonestyLevel::Unavailable);
+    let mut perception_honesty_level = use_signal(|| HonestyLevel::Unavailable);
+
+    let mut apply_perception_from_rows = move |rows: &[serde_json::Value]| {
+        let perc: Vec<serde_json::Value> = rows
+            .iter()
+            .filter(|r| is_perception_row(r))
+            .cloned()
+            .collect();
+        let (m, o, p) = perception_honesty(&perc);
+        models_honesty.set(m);
+        ontologies_honesty.set(o);
+        perception_honesty_level.set(p);
+        perception_rows.set(perc);
+    };
 
     let refresh_all = move || {
         let sec = section();
@@ -241,9 +386,11 @@ pub fn WellfairLibraryPanel() -> Element {
         let sort = sort_mode();
         let text = q();
         let bm = bookmarks_only();
+        let perc_only = perception_only();
         spawn(async move {
             if sec == "secret" && !secret_unlocked() {
                 results.set(Vec::new());
+                perception_rows.set(Vec::new());
                 status_err.set(false);
                 if let Ok(s) = library_stats().await {
                     stats.set(s);
@@ -272,28 +419,43 @@ pub fn WellfairLibraryPanel() -> Element {
             let filter = serde_json::Value::Object(filter);
             match query_library_faceted(&filter, &sort).await {
                 Ok(v) => {
-                    let rows = v
+                    let mut rows = v
                         .get("entries")
                         .and_then(|e| e.as_array())
                         .cloned()
                         .unwrap_or_default();
+                    apply_perception_from_rows(&rows);
+                    if perc_only {
+                        rows.retain(|r| is_perception_row(r));
+                    }
                     let n = rows.len();
                     results.set(rows);
                     if let Some(f) = v.get("facets") {
                         facet_counts.set(f.clone());
                     }
                     status_err.set(false);
-                    status.set(format!("{n} item(s) · sort {sort}."));
+                    if perc_only {
+                        status.set(format!("{n} perception item(s) · sort {sort}."));
+                    } else {
+                        status.set(format!("{n} item(s) · sort {sort}."));
+                    }
                 }
                 Err(e) => {
                     // Fallback to plain section list if faceted path unavailable.
                     let want = if sec == "all" { None } else { Some(sec.as_str()) };
                     match list_library_section(want).await {
-                        Ok(serde_json::Value::Array(rows)) => {
+                        Ok(serde_json::Value::Array(mut rows)) => {
+                            apply_perception_from_rows(&rows);
+                            if perc_only {
+                                rows.retain(|r| is_perception_row(r));
+                            }
                             results.set(rows);
                             status_err.set(false);
                         }
-                        Ok(_) => results.set(Vec::new()),
+                        Ok(_) => {
+                            results.set(Vec::new());
+                            perception_rows.set(Vec::new());
+                        }
                         Err(e2) => {
                             status_err.set(true);
                             status.set(format!(
@@ -578,6 +740,15 @@ pub fn WellfairLibraryPanel() -> Element {
                             "🔖 Bookmarks"
                         }
                         button {
+                            style: if perception_only() { TAB_ON } else { TAB },
+                            title: "Show models, ontologies, and computer_vision catalogue rows only",
+                            onclick: move |_| {
+                                perception_only.set(!perception_only());
+                                refresh_all();
+                            },
+                            "👁 Perception"
+                        }
+                        button {
                             style: if view() == "list" { TAB_ON } else { TAB },
                             onclick: move |_| view.set("list".into()),
                             "List"
@@ -595,11 +766,38 @@ pub fn WellfairLibraryPanel() -> Element {
                         button { style: "{BTN2}", onclick: move |_| refresh_all(), "Refresh" }
                     }
                 }
+                // Honesty: models / ontologies / perception (Present=Ready vs Partial)
+                div {
+                    style: "display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.65rem;align-items:center;",
+                    span { style: "font-size:0.68rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;",
+                        "Catalogue"
+                    }
+                    HonestyChip {
+                        level: models_honesty(),
+                        detail: "models".to_string(),
+                    }
+                    HonestyChip {
+                        level: ontologies_honesty(),
+                        detail: "ontologies".to_string(),
+                    }
+                    HonestyChip {
+                        level: perception_honesty_level(),
+                        detail: "perception / computer_vision".to_string(),
+                    }
+                }
                 div { style: "{STATS}",
                     span { style: "{STAT_CHIP}", span { style: "{STAT_NUM}", "{total}" } " items" }
                     span { style: "{STAT_CHIP}", span { style: "{STAT_NUM}", "{with_date}" } " dated" }
                     span { style: "{STAT_CHIP}", span { style: "{STAT_NUM}", "{with_place}" } " on map" }
                     span { style: "{STAT_CHIP}", span { style: "{STAT_NUM}", "{quins}" } " semantic edges" }
+                    {
+                        let pn = perception_rows().len();
+                        let cvn = perception_rows().iter().filter(|r| is_computer_vision_row(r)).count();
+                        rsx! {
+                            span { style: "{STAT_CHIP}", span { style: "{STAT_NUM}", "{pn}" } " perception" }
+                            span { style: "{STAT_CHIP}", span { style: "{STAT_NUM}", "{cvn}" } " computer_vision" }
+                        }
+                    }
                     button {
                         style: "{BTN2} margin-left:auto;",
                         onclick: move |_| {
@@ -620,6 +818,76 @@ pub fn WellfairLibraryPanel() -> Element {
                             });
                         },
                         "Export graph mass"
+                    }
+                }
+                // Perception seed control (always available — not only Software section)
+                div {
+                    style: "display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.75rem;align-items:center;",
+                    button {
+                        style: if seed_busy() {
+                            "background:#4c1d95;color:#e9d5ff;padding:0.5rem 0.9rem;border:none;border-radius:9px;font-weight:600;cursor:wait;font-size:0.8rem;opacity:0.75;"
+                        } else {
+                            BTN
+                        },
+                        disabled: seed_busy(),
+                        title: "Hosts: library_seed_perception_assets (storage) or wellfair_seed_perception_library (vault)",
+                        onclick: move |_| {
+                            if seed_busy() {
+                                return;
+                            }
+                            seed_busy.set(true);
+                            perception_seed_status.set("Seeding perception catalogue…".into());
+                            spawn(async move {
+                                match seed_perception_library().await {
+                                    Ok(v) => {
+                                        let models_a = u64_field(&v, "models_added");
+                                        let models_u = u64_field(&v, "models_updated");
+                                        let onto_a = u64_field(&v, "ontologies_added");
+                                        let onto_u = u64_field(&v, "ontologies_updated");
+                                        let note = str_field(&v, "note");
+                                        let weights = v
+                                            .get("weights_ensured")
+                                            .and_then(|w| w.as_array())
+                                            .map(|a| a.len())
+                                            .unwrap_or(0);
+                                        status_err.set(false);
+                                        let msg = format!(
+                                            "Perception seed OK · models +{models_a}/{models_u} upd · ontologies +{onto_a}/{onto_u} upd · weights {weights} · {note}"
+                                        );
+                                        status.set(msg.clone());
+                                        perception_seed_status.set(msg);
+                                        section.set("software".into());
+                                        perception_only.set(true);
+                                        seed_busy.set(false);
+                                        refresh_all();
+                                    }
+                                    Err(e) => {
+                                        status_err.set(true);
+                                        let msg = format!("Seed perception library failed: {e}");
+                                        status.set(msg.clone());
+                                        perception_seed_status.set(msg);
+                                        seed_busy.set(false);
+                                    }
+                                }
+                            });
+                        },
+                        if seed_busy() { "Seeding…" } else { "Seed perception library" }
+                    }
+                    button {
+                        style: "{BTN2}",
+                        title: "Browse Software shelf for model:// and ontology:// rows",
+                        onclick: move |_| {
+                            section.set("software".into());
+                            perception_only.set(true);
+                            refresh_all();
+                        },
+                        "Show perception rows"
+                    }
+                    if !perception_seed_status().is_empty() {
+                        span {
+                            style: "font-size:0.75rem;color:#94a3b8;max-width:36rem;line-height:1.35;",
+                            "{perception_seed_status}"
+                        }
                     }
                 }
                 // Section rail — purpose lanes + Secret
@@ -1123,15 +1391,119 @@ pub fn WellfairLibraryPanel() -> Element {
                         }
                     }
                     if rows.is_empty() && !status_err() {
-                        div {
-                            style: "padding:2.5rem 1.5rem;text-align:center;border:1px dashed #334155;border-radius:16px;background:#0f172a;",
-                            div { style: "font-size:2rem;margin-bottom:0.5rem;", "📚" }
-                            h2 { style: "margin:0 0 0.4rem;color:#e9d5ff;font-size:1.1rem;", "Your library is empty" }
-                            p { style: "margin:0 auto;max-width:28rem;color:#94a3b8;font-size:0.85rem;line-height:1.5;",
-                                "Add a note on the left — research, a receipt, a caption. We derive topics and keep the original addressable by meaning. Photos with EXIF land on the timeline and map automatically."
+                        if perception_only() {
+                            div {
+                                style: "padding:2.5rem 1.5rem;text-align:center;border:1px dashed #334155;border-radius:16px;background:#0f172a;",
+                                div { style: "font-size:2rem;margin-bottom:0.5rem;", "👁" }
+                                h2 { style: "margin:0 0 0.4rem;color:#e9d5ff;font-size:1.1rem;",
+                                    "No perception catalogue rows yet"
+                                }
+                                p { style: "margin:0 auto 0.85rem;max-width:28rem;color:#94a3b8;font-size:0.85rem;line-height:1.5;",
+                                    "Seed models, ontologies, and specialized_libs computer_vision rows into Library → Software. Host commands: library_seed_perception_assets (storage) or wellfair_seed_perception_library (vault)."
+                                }
+                                button {
+                                    style: "{BTN}",
+                                    disabled: seed_busy(),
+                                    onclick: move |_| {
+                                        if seed_busy() {
+                                            return;
+                                        }
+                                        seed_busy.set(true);
+                                        perception_seed_status.set("Seeding perception catalogue…".into());
+                                        spawn(async move {
+                                            match seed_perception_library().await {
+                                                Ok(v) => {
+                                                    let models_a = u64_field(&v, "models_added");
+                                                    let models_u = u64_field(&v, "models_updated");
+                                                    let onto_a = u64_field(&v, "ontologies_added");
+                                                    let onto_u = u64_field(&v, "ontologies_updated");
+                                                    let note = str_field(&v, "note");
+                                                    status_err.set(false);
+                                                    let msg = format!(
+                                                        "Perception seed OK · models +{models_a}/{models_u} upd · ontologies +{onto_a}/{onto_u} upd · {note}"
+                                                    );
+                                                    status.set(msg.clone());
+                                                    perception_seed_status.set(msg);
+                                                    section.set("software".into());
+                                                    perception_only.set(true);
+                                                    seed_busy.set(false);
+                                                    refresh_all();
+                                                }
+                                                Err(e) => {
+                                                    status_err.set(true);
+                                                    let msg = format!("Seed perception library failed: {e}");
+                                                    status.set(msg.clone());
+                                                    perception_seed_status.set(msg);
+                                                    seed_busy.set(false);
+                                                }
+                                            }
+                                        });
+                                    },
+                                    if seed_busy() { "Seeding…" } else { "Seed perception library" }
+                                }
+                            }
+                        } else {
+                            div {
+                                style: "padding:2.5rem 1.5rem;text-align:center;border:1px dashed #334155;border-radius:16px;background:#0f172a;",
+                                div { style: "font-size:2rem;margin-bottom:0.5rem;", "📚" }
+                                h2 { style: "margin:0 0 0.4rem;color:#e9d5ff;font-size:1.1rem;", "Your library is empty" }
+                                p { style: "margin:0 auto;max-width:28rem;color:#94a3b8;font-size:0.85rem;line-height:1.5;",
+                                    "Add a note on the left — research, a receipt, a caption. We derive topics and keep the original addressable by meaning. Photos with EXIF land on the timeline and map automatically."
+                                }
                             }
                         }
                     } else {
+                        // When perception filter is on, show a compact CV summary strip above the list.
+                        if perception_only() {
+                            {
+                                let cv_rows: Vec<_> = rows
+                                    .iter()
+                                    .filter(|r| is_computer_vision_row(r))
+                                    .cloned()
+                                    .collect();
+                                let model_n = rows.iter().filter(|r| is_model_row(r)).count();
+                                let onto_n = rows.iter().filter(|r| is_ontology_row(r)).count();
+                                rsx! {
+                                    div { style: "{CARD}",
+                                        div { style: "{H3}", "Perception catalogue" }
+                                        p { style: "{MUTED}",
+                                            "{model_n} model row(s) · {onto_n} ontology row(s) · {cv_rows.len()} computer_vision row(s). Seed weights are Partial (not foundation models); computer_vision specialized-lib rows are Present (in-tree algorithms)."
+                                        }
+                                        if cv_rows.is_empty() {
+                                            p { style: "margin:0;font-size:0.78rem;color:#fde68a;",
+                                                "No computer_vision rows in this view — run Seed perception library, then filter Perception."
+                                            }
+                                        } else {
+                                            ul { style: "margin:0;padding:0;list-style:none;",
+                                                for r in cv_rows {
+                                                    {
+                                                        let title = display_title(&str_field(&r, "asset_uri"));
+                                                        let excerpt = str_field(&r, "excerpt");
+                                                        let uri = str_field(&r, "asset_uri");
+                                                        rsx! {
+                                                            li {
+                                                                style: "padding:0.45rem 0;border-bottom:1px solid #1f2937;",
+                                                                div { style: "font-size:0.85rem;font-weight:600;color:#e9d5ff;",
+                                                                    "computer_vision · {title}"
+                                                                }
+                                                                div { style: "font-size:0.65rem;color:#64748b;font-family:ui-monospace,monospace;",
+                                                                    "{uri}"
+                                                                }
+                                                                if !excerpt.is_empty() {
+                                                                    div { style: "font-size:0.75rem;color:#94a3b8;margin-top:0.15rem;",
+                                                                        "{excerpt}"
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         {body}
                     }
                 }

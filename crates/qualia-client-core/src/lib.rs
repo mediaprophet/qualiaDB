@@ -11,6 +11,7 @@ pub mod canvas_world;
 pub mod chora;
 pub mod chat_agents;
 pub mod agent_registry;
+pub mod mcp_tool_loop;
 pub mod job_router;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod remote_mcp;

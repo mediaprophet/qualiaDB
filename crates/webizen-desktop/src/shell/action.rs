@@ -25,6 +25,8 @@ pub enum ShellAction {
     OpenMedReminders,
     OpenSyncInbox,
     RevokeSessions,
+    /// Open the shell command palette (Ctrl+K / Ctrl+P).
+    OpenCommandPalette,
 }
 
 impl ShellAction {
@@ -67,7 +69,29 @@ impl ShellAction {
             "health_med_reminders" => Some(Self::OpenMedReminders),
             "sync_inbox" => Some(Self::OpenSyncInbox),
             "revoke" => Some(Self::RevokeSessions),
+            "open_command_palette" | "command_palette" => Some(Self::OpenCommandPalette),
             _ => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ShellAction;
+
+    #[test]
+    fn command_palette_action_ids() {
+        assert_eq!(
+            ShellAction::from_id("open_command_palette"),
+            Some(ShellAction::OpenCommandPalette)
+        );
+        assert_eq!(
+            ShellAction::from_id("command_palette"),
+            Some(ShellAction::OpenCommandPalette)
+        );
+        assert_eq!(
+            ShellAction::from_id("open_talk"),
+            Some(ShellAction::Navigate("talk".to_string()))
+        );
     }
 }

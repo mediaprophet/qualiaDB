@@ -225,10 +225,20 @@ pub fn build_app_menu(
     let forward = MenuItem::with_id(app, "nav_forward", "Forward", true, Some("Alt+Right"))?;
     let reload = MenuItem::with_id(app, "nav_reload", "Reload", true, Some("Ctrl+R"))?;
 
+    let command_palette = MenuItem::with_id(
+        app,
+        "open_command_palette",
+        "Command Palette…",
+        true,
+        Some("Ctrl+K"),
+    )?;
+
     let view_menu = SubmenuBuilder::new(app, "View")
         .item(&back)
         .item(&forward)
         .item(&reload)
+        .separator()
+        .item(&command_palette)
         .separator()
         .text("toggle_gpu", "Toggle GPU Surface")
         .text("toggle_ambient", "Toggle Ambient Visualizations")
@@ -454,6 +464,15 @@ pub fn dispatch_shell_action(app: &AppHandle, action: crate::shell::action::Shel
         ShellAction::OpenSyncInbox => {
             show_main_window(app);
             let _ = app.emit("open-sync-inbox", ());
+        }
+        ShellAction::OpenCommandPalette => {
+            show_main_window(app);
+            // Handled by shell_html.js command palette (U6-A).
+            let _ = app.emit("shell-open-command-palette", ());
+            eval_main(
+                app,
+                "if (window.__webizenOpenCommandPalette) window.__webizenOpenCommandPalette();",
+            );
         }
     }
 }

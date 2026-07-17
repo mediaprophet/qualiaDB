@@ -3439,6 +3439,55 @@ pub async fn seed_studio_qapps() -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }
 
+/// Seed perception models + ontologies + computer_vision library rows into Library.
+/// Prefers `library_seed_perception_assets` (storage path; no vault required), then
+/// falls back to `wellfair_seed_perception_library` (vault host).
+#[cfg(target_arch = "wasm32")]
+pub async fn seed_perception_library() -> Result<serde_json::Value, String> {
+    use crate::components::qapp_engine::invoke_json;
+    match invoke_json("library_seed_perception_assets", serde_json::json!({})).await {
+        Ok(v) => return Ok(normalize_seed_report(v)),
+        Err(e1) => {
+            let js = match tauri_invoke("wellfair_seed_perception_library", wasm_bindgen::JsValue::NULL)
+                .await
+            {
+                Ok(js) => js,
+                Err(e2) => {
+                    return Err(format!(
+                        "Seed perception failed. library_seed_perception_assets: {e1}; wellfair_seed_perception_library: {e2:?}"
+                    ));
+                }
+            };
+            if let Some(s) = js.as_string() {
+                let v: serde_json::Value =
+                    serde_json::from_str(&s).map_err(|e| format!("seed report parse: {e}"))?;
+                return Ok(normalize_seed_report(v));
+            }
+            match serde_wasm_bindgen::from_value::<serde_json::Value>(js) {
+                Ok(v) => Ok(normalize_seed_report(v)),
+                Err(e) => Err(format!(
+                    "Seed perception: unexpected host response ({e}); assets path: {e1}"
+                )),
+            }
+        }
+    }
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn seed_perception_library() -> Result<serde_json::Value, String> {
+    Err("Perception library seed requires the Tauri desktop host".into())
+}
+
+/// Coerce string-wrapped or object host reports into a plain JSON object.
+#[cfg(target_arch = "wasm32")]
+fn normalize_seed_report(v: serde_json::Value) -> serde_json::Value {
+    if let Some(s) = v.as_str() {
+        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(s) {
+            return parsed;
+        }
+    }
+    v
+}
+
 #[cfg(target_arch = "wasm32")]
 pub async fn ingest_legislation_text(
     text: &str,

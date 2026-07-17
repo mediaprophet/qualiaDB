@@ -3,9 +3,20 @@
 //! Hosted under the Talk hub (`social_hub`) as the **Chat** tab. People / Reception / Projects
 //! live in sibling tabs so invites, DNS front doors, and cooperative work are not buried in a
 //! sidebar. Streaming inference via `stream_chat_inference` + `chat-token` events.
+//!
+//! Conduct / gate denials surface via [`ConductBanner`] (U1-B) from `block_reason`,
+//! `shield_alert`, and `chat-done` — never silent.
 
 use dioxus::prelude::*;
 use dioxus::html::input_data::keyboard_types::{Key, Modifiers};
+
+use crate::components::conduct_banner::{ConductBanner, ConductNotice};
+#[cfg(target_arch = "wasm32")]
+use crate::components::conduct_banner::{
+    notice_from_chat_done, notice_from_chat_result, notice_from_conduct_violation,
+};
+use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
+use crate::components::tool_use_card::ToolUseCard;
 
 #[cfg(target_arch = "wasm32")]
 use serde_json::json;
@@ -55,6 +66,19 @@ struct TokenPayload {
 #[derive(serde::Deserialize)]
 struct TokenEvt {
     payload: TokenPayload,
+}
+
+/// Tauri v2 wraps event bodies as `{ payload: T }`.
+#[cfg(target_arch = "wasm32")]
+#[derive(serde::Deserialize)]
+struct ChatDoneEvt {
+    payload: serde_json::Value,
+}
+
+#[cfg(target_arch = "wasm32")]
+#[derive(serde::Deserialize)]
+struct ConductViolationEvt {
+    payload: serde_json::Value,
 }
 
 const ROOT: &str = "display:flex; flex-direction:column; height:100%; background:#0b1220; color:#e5e7eb; box-sizing:border-box; font-family:inherit;";
@@ -154,6 +178,7 @@ async fn send_chat_turn(
     mut streaming: Signal<String>,
     mut streaming_for: Signal<String>,
     mut status: Signal<String>,
+    mut conduct: Signal<Option<ConductNotice>>,
 ) {
     let body = draft();
     if body.trim().is_empty() {
@@ -180,6 +205,9 @@ async fn send_chat_turn(
             }
             Err(e) => {
                 status.set(format!("Could not start chat: {e}"));
+                conduct.set(Some(ConductNotice::inference_block(format!(
+                    "Could not start chat: {e}"
+                ))));
                 return;
             }
         }
@@ -222,15 +250,24 @@ async fn send_chat_turn(
                         .get("committed")
                         .and_then(|v| v.as_bool())
                         .unwrap_or(false);
-                    if committed {
+                    // Conduct / shield / block_reason → dedicated banner (U1-B).
+                    // Also keep a short status line so non-banner chrome still shows failure.
+                    if let Some(notice) = notice_from_chat_result(&result) {
+                        let line = format!("No reply: {}", notice.reason);
+                        status.set(line);
+                        conduct.set(Some(notice));
+                    } else if committed {
                         // Clear "thinking…" / any success noise — header + thread carry the answer.
+                        // Do not clear an earlier banner here: chat-done may race; only success
+                        // without a notice means this turn is clean.
                         status.set(String::new());
                     } else {
-                        let reason = result
-                            .get("block_reason")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("No active model — activate one first.");
-                        status.set(format!("No reply: {reason}"));
+                        // Fail closed: uncommitted without parseable reason still surfaces.
+                        let fallback = ConductNotice::inference_block(
+                            "No active model — activate one first (or host omitted block_reason).",
+                        );
+                        status.set(format!("No reply: {}", fallback.reason));
+                        conduct.set(Some(fallback));
                     }
                     streaming.set(String::new());
                     if let Ok(full) =
@@ -254,17 +291,25 @@ async fn send_chat_turn(
                 }
                 Err(e) => {
                     streaming.set(String::new());
-                    status.set(format!("Inference failed: {e}"));
+                    let msg = format!("Inference failed: {e}");
+                    status.set(msg.clone());
+                    conduct.set(Some(ConductNotice::inference_block(msg)));
                 }
             }
         }
-        Err(e) => status.set(format!("Send failed: {e}")),
+        Err(e) => {
+            let msg = format!("Send failed: {e}");
+            status.set(msg.clone());
+            conduct.set(Some(ConductNotice::inference_block(msg)));
+        }
     }
 }
 
 #[component]
 pub fn ConnectChat() -> Element {
     let status = use_signal(String::new);
+    // Conduct / gate / shield deny banner (U1-B). Dismissible; re-set on next deny.
+    let conduct = use_signal(|| Option::<ConductNotice>::None);
     // Identity / profile
     let display_name = use_signal(String::new);
     let profile_raw = use_signal(|| serde_json::Value::Null);
@@ -317,6 +362,8 @@ pub fn ConnectChat() -> Element {
         let mut active_title = active_title;
         let mut messages = messages;
         let mut active_project = active_project;
+        let mut conduct = conduct;
+        let mut status = status;
         spawn(async move {
             // chat-token → append the delta to the in-progress agent bubble.
             let tok = Closure::wrap(Box::new(move |js: wasm_bindgen::JsValue| {
@@ -330,12 +377,51 @@ pub fn ConnectChat() -> Element {
             let _ = tauri_listen("chat-token", tok.as_ref()).await;
             tok.forget();
 
-            // chat-done → clear the streaming bubble (the finalized message is loaded by the sender).
-            let done = Closure::wrap(Box::new(move |_js: wasm_bindgen::JsValue| {
-                streaming.set(String::new());
+            // chat-done → clear stream bubble; surface block_reason / shield_alert if present.
+            let mut streaming_done = streaming;
+            let mut conduct_done = conduct;
+            let mut status_done = status;
+            let done = Closure::wrap(Box::new(move |js: wasm_bindgen::JsValue| {
+                streaming_done.set(String::new());
+                if let Ok(evt) = serde_wasm_bindgen::from_value::<ChatDoneEvt>(js.clone()) {
+                    if let Some(notice) = notice_from_chat_done(&evt.payload) {
+                        status_done.set(format!("No reply: {}", notice.reason));
+                        conduct_done.set(Some(notice));
+                    }
+                } else if let Ok(raw) = serde_wasm_bindgen::from_value::<serde_json::Value>(js) {
+                    // Fallback: payload may already be unwrapped.
+                    let body = raw.get("payload").cloned().unwrap_or(raw);
+                    if let Some(notice) = notice_from_chat_done(&body) {
+                        status_done.set(format!("No reply: {}", notice.reason));
+                        conduct_done.set(Some(notice));
+                    }
+                }
             }) as Box<dyn FnMut(wasm_bindgen::JsValue)>);
             let _ = tauri_listen("chat-done", done.as_ref()).await;
             done.forget();
+
+            // conduct-violation — host may emit later; listen so UI never needs a second pass.
+            let mut conduct_cv = conduct;
+            let mut status_cv = status;
+            let cv = Closure::wrap(Box::new(move |js: wasm_bindgen::JsValue| {
+                let body = if let Ok(evt) =
+                    serde_wasm_bindgen::from_value::<ConductViolationEvt>(js.clone())
+                {
+                    Some(evt.payload)
+                } else {
+                    serde_wasm_bindgen::from_value::<serde_json::Value>(js)
+                        .ok()
+                        .map(|v| v.get("payload").cloned().unwrap_or(v))
+                };
+                if let Some(payload) = body {
+                    if let Some(notice) = notice_from_conduct_violation(&payload) {
+                        status_cv.set(format!("Conduct: {}", notice.reason));
+                        conduct_cv.set(Some(notice));
+                    }
+                }
+            }) as Box<dyn FnMut(wasm_bindgen::JsValue)>);
+            let _ = tauri_listen("conduct-violation", cv.as_ref()).await;
+            cv.forget();
 
             // Initial state.
             if let Ok(Some(m)) = invoke_json::<Option<String>>("get_active_model", json!({})).await {
@@ -494,7 +580,7 @@ pub fn ConnectChat() -> Element {
     #[cfg(not(target_arch = "wasm32"))]
     {
         let _ = (
-            &status, &display_name, &profile_raw, &invite_out, &invite_code, &invite_mailto,
+            &status, &conduct, &display_name, &profile_raw, &invite_out, &invite_code, &invite_mailto,
             &invite_in, &contacts, &group_title, &group_dids, &sessions, &active_session,
             &active_title, &messages, &draft, &streaming, &streaming_for, &active_model,
             &models, &selected_model, &agents, &active_agent, &na_name, &na_kind, &na_endpoint,
@@ -564,15 +650,31 @@ pub fn ConnectChat() -> Element {
                         "Local agent + conversations. Invites and projects: use People / Projects tabs above."
                     }
                 }
-                if has_model {
-                    span { style: "font-size:12px; color:#a7f3d0; background:#064e3b; padding:4px 12px; border-radius:999px;",
-                        "● {active_model}"
-                    }
-                } else {
-                    span { style: "font-size:12px; color:#fde68a; background:#78350f; padding:4px 12px; border-radius:999px;",
-                        "○ No model — Detect & Activate in the sidebar"
+                div { style: "display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:flex-end;",
+                    if has_model {
+                        HonestyChip {
+                            level: HonestyLevel::Partial,
+                            detail: "Native Local excellence path — runtime dogfood still required".to_string(),
+                        }
+                        span { style: "font-size:12px; color:#a7f3d0; background:#064e3b; padding:4px 12px; border-radius:999px;",
+                            "● {active_model}"
+                        }
+                    } else {
+                        HonestyChip {
+                            level: HonestyLevel::NeedsModel,
+                            detail: "Detect & Activate in the sidebar".to_string(),
+                        }
                     }
                 }
+            }
+
+            // Conduct / deny / shield — dedicated banner (U1-B). Dismissible; next deny re-sets it.
+            ConductBanner {
+                notice: conduct(),
+                on_dismiss: move |_| {
+                    let mut c = conduct;
+                    c.set(None);
+                },
             }
 
             if !status().is_empty() {
@@ -729,6 +831,15 @@ pub fn ConnectChat() -> Element {
                             },
                             "＋ Add remote agent"
                         }
+                    }
+
+                    // U3-A: principal-gated MCP tool propose (Permit / Deny)
+                    ToolUseCard {
+                        agent_slug: if active_agent().is_empty() {
+                            "local".to_string()
+                        } else {
+                            active_agent()
+                        },
                     }
 
                     // Project tag (full project UI is Talk → Projects)
@@ -979,6 +1090,7 @@ pub fn ConnectChat() -> Element {
                                         let streaming = streaming;
                                         let streaming_for = streaming_for;
                                         let status = status;
+                                        let conduct = conduct;
                                         spawn(async move {
                                             send_chat_turn(
                                                 active_session,
@@ -990,6 +1102,7 @@ pub fn ConnectChat() -> Element {
                                                 streaming,
                                                 streaming_for,
                                                 status,
+                                                conduct,
                                             )
                                             .await;
                                         });
@@ -1013,6 +1126,7 @@ pub fn ConnectChat() -> Element {
                                     let streaming = streaming;
                                     let streaming_for = streaming_for;
                                     let status = status;
+                                    let conduct = conduct;
                                     spawn(async move {
                                         send_chat_turn(
                                             active_session,
@@ -1024,6 +1138,7 @@ pub fn ConnectChat() -> Element {
                                             streaming,
                                             streaming_for,
                                             status,
+                                            conduct,
                                         )
                                         .await;
                                     });

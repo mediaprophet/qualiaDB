@@ -4336,6 +4336,38 @@ pub fn agent_roster_add_remote(
     )
 }
 
+// ── Principal-gated MCP tool loop (U3-A / U3-B) ─────────────────────────────────
+
+/// List local in-process MCP tools for Talk allowlist / propose UI.
+#[command]
+pub fn mcp_list_local_tools() -> Result<serde_json::Value, String> {
+    api::mcp_list_local_tools()
+}
+
+/// Principal-gated MCP tool call. Deny (`principal_permitted = false`) never dispatches.
+/// Fail-closed on empty allowlist unless tool is listed (or `*`).
+#[command]
+pub fn mcp_call_tool_gated(
+    agent_slug: String,
+    tool_name: String,
+    arguments_json: String,
+    principal_permitted: bool,
+) -> Result<String, String> {
+    api::mcp_call_tool_gated(agent_slug, tool_name, arguments_json, principal_permitted)
+}
+
+/// Set `allowed_mcp_tools` on a roster agent (persist).
+#[command]
+pub fn agent_set_allowed_mcp_tools(slug: String, tools: Vec<String>) -> Result<(), String> {
+    api::agent_set_allowed_mcp_tools(slug, tools)
+}
+
+/// Seed empty allowlist with safe golden tools (`list_capabilities`, `computer_vision`).
+#[command]
+pub fn mcp_ensure_safe_tool_allowlist(slug: String) -> Result<serde_json::Value, String> {
+    api::mcp_ensure_safe_tool_allowlist(slug)
+}
+
 /// Store a chat turn's inline CML context (#project/#topic/#task/[[concept]]) into the inforg (no-op if
 /// the message carries no tags). The next turn sharing those concepts reuses this context.
 #[command]
@@ -5168,19 +5200,74 @@ pub fn wellfair_get_model_lifecycle_status() -> Result<String, String> {
 
 #[command]
 pub fn wellfair_force_model_lifecycle_phase(phase: u8) -> Result<String, String> {
-    // For now, this is a mock implementation until orchestrator forceful state overrides are fully exposed.
+    // Honest: arbitrary phase overrides are not exposed. Real transitions go through
+    // activate / unload / scrub on the orchestrator. Report current state only.
+    let current = qualia_client_core::model_lifecycle::lifecycle_label(
+        qualia_client_core::model_lifecycle::get_model_lifecycle_state(),
+    );
     let _ = phase;
-    Ok("OK".into())
+    Err(format!(
+        "Force phase is not implemented (requested phase={phase}). \
+         Current lifecycle={current}. Activate a model or unload to change state."
+    ))
 }
 
+/// Live LLM / backend telemetry for Studio HUD (no static marketing numbers).
+///
+/// `tokens_per_sec` is the last **measured** chat/decode throughput this process,
+/// or 0 with `tokens_per_sec_source: "none"` when no turn has completed yet.
 #[command]
 pub fn wellfair_get_llm_telemetry() -> Result<serde_json::Value, String> {
-    // Connect to ambient orchestration and qtensor engine when ready. Returning static telemetry for UI tests.
+    let engine = qualia_client_core::api::get_engine_telemetry_fields();
+    let backend_settings = qualia_client_core::inference_backend::load_inference_backend_settings();
+    let backend = qualia_client_core::inference_backend::backend_label(&backend_settings);
+    let backend_kind = format!("{:?}", backend_settings.backend);
+
+    let loaded_model = qualia_client_core::api::get_active_model()
+        .or_else(qualia_client_core::api::load_active_model_from_disk)
+        .map(|p| {
+            p.rsplit(['/', '\\'])
+                .next()
+                .unwrap_or(p.as_str())
+                .to_string()
+        })
+        .unwrap_or_else(|| "none".to_string());
+
+    let (tokens_per_sec, tokens_per_sec_source) =
+        match qualia_client_core::model_lifecycle::get_last_decode_tok_s() {
+            Some(t) => (t, "last_completed_turn"),
+            None => (0.0, "none"),
+        };
+
+    let vram_usage_gb = engine.vram_used_mb as f64 / 1024.0;
+    let vram_total_gb = engine.vram_total_mb as f64 / 1024.0;
+
+    let ollama_note = if matches!(
+        backend_settings.backend,
+        qualia_client_core::chat_agents::AgentBackendKind::Ollama
+    ) {
+        Some("Optional Ollama harness — not the Qualia in-process engine.")
+    } else {
+        None
+    };
+
     Ok(serde_json::json!({
-        "tokens_per_sec": 18.32,
-        "vram_usage_gb": 12.4,
-        "vram_total_gb": 18.2,
-        "loaded_model": "SmolLM2-360M-Instruct-Q8_0.gguf"
+        "tokens_per_sec": tokens_per_sec,
+        "tokens_per_sec_source": tokens_per_sec_source,
+        "tokens_per_sec_at_unix": qualia_client_core::model_lifecycle::get_last_decode_tok_s_at_unix(),
+        "vram_usage_gb": vram_usage_gb,
+        "vram_total_gb": vram_total_gb,
+        "vram_used_mb": engine.vram_used_mb,
+        "vram_total_mb": engine.vram_total_mb,
+        "loaded_model": loaded_model,
+        "model_lifecycle": engine.model_lifecycle,
+        "thermal_state": engine.thermal_state,
+        "llm_memory_bytes": engine.llm_memory_bytes,
+        "kv_cache_used_mb": engine.kv_cache_used_mb,
+        "inference_backend": backend,
+        "inference_backend_kind": backend_kind,
+        "ollama_optional_note": ollama_note,
+        "honesty": "live_probe_or_last_measured",
     }))
 }
 // this via `invoke("qapp_analyze", { request })` when running in the desktop webview;
@@ -8045,6 +8132,10 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         agent_roster_upsert,
         agent_roster_remove,
         agent_roster_add_remote,
+        mcp_list_local_tools,
+        mcp_call_tool_gated,
+        agent_set_allowed_mcp_tools,
+        mcp_ensure_safe_tool_allowlist,
         ingest_chat_cml,
         schedule_agent_job,
         list_local_jobs,

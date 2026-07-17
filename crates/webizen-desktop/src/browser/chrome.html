@@ -77,11 +77,11 @@
       text-transform: uppercase; letter-spacing: 0.04em; color: #c4b5fd;
       border-bottom: 1px solid var(--border);
     }
-    #agent-out, #trust-scroll, #cookies-body {
+    #agent-out, #agent-scroll, #trust-scroll, #cookies-body {
       flex: 1; overflow: auto; padding: 0.65rem 0.75rem;
       font-size: 0.8rem; color: var(--muted);
     }
-    #trust-body, #suggested-body { white-space: pre-wrap; }
+    #trust-body, #suggested-body, #mcp-tools-list, #mcp-result { white-space: pre-wrap; }
     .panel-section-title {
       margin: 0.65rem 0 0.35rem; font-size: 0.7rem; font-weight: 700;
       text-transform: uppercase; letter-spacing: 0.04em; color: #a5b4fc;
@@ -93,12 +93,42 @@
     .empty-state {
       font-size: 0.78rem; color: #64748b; line-height: 1.4; white-space: pre-wrap;
     }
-    #agent-form, #trust-form, #cookies-actions {
+    .honesty-row {
+      display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center;
+      margin: 0 0 0.45rem;
+    }
+    .honesty-chip {
+      display: inline-block; font-size: 0.62rem; font-weight: 700;
+      padding: 0.12rem 0.4rem; border-radius: 999px;
+      border: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    .honesty-chip.partial { color: var(--warn); border-color: #92400e; background: rgba(251,191,36,0.08); }
+    .honesty-chip.scaffold { color: #c4b5fd; border-color: #5b21b6; background: rgba(139,92,246,0.1); }
+    .mcp-await {
+      display: none; background: #0b1220; border: 1px solid #4c1d95;
+      border-radius: 8px; padding: 0.55rem; margin: 0.4rem 0;
+    }
+    .mcp-await.show { display: block; }
+    .mcp-await .await-title { font-size: 0.78rem; color: #e9d5ff; font-weight: 600; margin-bottom: 0.35rem; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.35rem 0; }
+    .btn-permit {
+      background: #059669; color: #fff; border: 1px solid #047857;
+      border-radius: 8px; padding: 0.35rem 0.65rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-deny {
+      background: #7f1d1d; color: #fecaca; border: 1px solid #991b1b;
+      border-radius: 8px; padding: 0.35rem 0.65rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-muted {
+      background: #1e293b; color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.35rem 0.55rem; font-weight: 600; cursor: pointer;
+    }
+    #agent-form, #trust-form, #cookies-actions, #mcp-actions {
       display: flex; flex-direction: column; gap: 0.35rem; padding: 0.5rem;
       border-top: 1px solid var(--border);
     }
     #agent-form { flex-direction: row; }
-    #cookies-actions { flex-direction: row; flex-wrap: wrap; }
+    #cookies-actions, #mcp-actions { flex-direction: row; flex-wrap: wrap; }
     #agent-q, #trust-form input, #trust-form textarea {
       background: #0b1220; color: var(--text);
       border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem 0.55rem;
@@ -189,28 +219,65 @@
           <input id="trust-did" type="text" placeholder="did:web:… or did:key:…" />
           <textarea id="trust-pem" rows="3" placeholder="Or paste PEM (BEGIN CERTIFICATE)"></textarea>
           <button type="submit">Add anchor</button>
-          <div class="panel-note">
-            Custom PEM/DID govern agent fetch + this badge. Cert-override (Windows): host-pin / custom PEM policy via ServerCertificateErrorDetected when hook attaches; default deny. Suggested catalog empty until you curate.
+          <div class="panel-note" id="trust-honesty-note">
+            Custom PEM/DID govern agent fetch + this badge. OS WebView TLS uses the OS trust store by default.
+            Cert-override is <strong>not claimed product-active</strong> — code path exists on Windows; status below when Trust opens.
+            Suggested catalog stays empty until you curate (no invented PEMs).
           </div>
+          <div class="panel-note" id="cert-override-status" style="color:#64748b;">Cert-override: open Trust to refresh status…</div>
         </form>
       </aside>
       <aside id="cookies-panel">
         <h3>Cookies · jar + graph</h3>
-        <div id="cookies-body" class="empty-state">Press Refresh to load cookies for the current URL.</div>
+        <div id="cookies-body" class="empty-state">Press Refresh to load cookies for the current URL.
+
+Best-effort WebView jar + graph — not complete Chromium parity. Local qualia:// / webizen:// pages have no HTTP cookies.</div>
         <div id="cookies-actions">
           <button type="button" id="btn-cookies-refresh">Refresh</button>
         </div>
       </aside>
       <aside id="agent">
-        <h3>Browser agent · cml:Proposed</h3>
-        <div id="agent-out">Ask: summary, trust, privacy. Grounded in fetched text + your trust store.</div>
+        <h3>Browser agent (v0)</h3>
+        <div id="agent-scroll">
+          <div class="honesty-row">
+            <span class="honesty-chip partial" title="UI shell + gated MCP path; not full page agent autonomy">Partial</span>
+            <span class="honesty-chip scaffold" title="No silent tools; permit required; full page-context agent is later">Scaffold</span>
+          </div>
+          <p class="panel-note">
+            No silent tool execution. MCP tools use the same principal gate as Talk
+            (<code>mcp_call_tool_gated</code>). Full allowlist editor: Talk → agent tool card.
+            Cert-override / Servo claims unchanged (not product-active / experimental pref only).
+          </p>
+
+          <div class="panel-section-title">Page Q&amp;A (deterministic)</div>
+          <div id="agent-out" class="empty-state">Ask: summary, trust, privacy. Grounded in fetched text + your trust store. Not MCP.</div>
+
+          <div class="panel-section-title">MCP tools (allowlisted)</div>
+          <p class="panel-note" id="mcp-allowlist-note">Allowlist: load on open (agent slug <strong>local</strong>). Empty = deny-all until seed/save in Talk.</p>
+          <div id="mcp-tools-list" class="empty-state">Open panel to list local tools…</div>
+          <div class="btn-row">
+            <button type="button" class="btn-muted" id="btn-mcp-refresh">Refresh tools</button>
+            <button type="button" class="btn-muted" id="btn-mcp-propose-caps" title="Two-step: propose then Permit">Run list_capabilities on permit</button>
+          </div>
+          <div id="mcp-await" class="mcp-await" role="region" aria-live="polite">
+            <div class="await-title">Awaiting principal: list_capabilities</div>
+            <p class="panel-note" style="margin:0 0 0.4rem;">Agent <code>local</code> · args <code>{}</code> · requires explicit Permit. Deny never calls MCP.</p>
+            <div class="btn-row">
+              <button type="button" class="btn-permit" id="btn-mcp-permit">Permit</button>
+              <button type="button" class="btn-deny" id="btn-mcp-deny">Deny</button>
+            </div>
+          </div>
+          <div class="panel-section-title">Last MCP result</div>
+          <div id="mcp-status" class="panel-note" style="color:#a7f3d0;"></div>
+          <pre id="mcp-result" class="empty-state">(none yet)</pre>
+        </div>
         <form id="agent-form">
           <input id="agent-q" type="text" placeholder="What is this page about?" />
           <button type="submit">Ask</button>
         </form>
       </aside>
     </div>
-    <div id="status">Webizen Browser · OS WebView · chrome / trust / cookies / agent / bookmarks</div>
+    <div id="status">Webizen Browser · OS WebView (default) · chrome / trust / cookies / agent / bookmarks · Servo experimental preference only</div>
   </div>
   <script>
     const $ = (id) => document.getElementById(id);
@@ -405,6 +472,39 @@
       }
     }
 
+    async function refreshCertOverrideHonesty() {
+      const el = $("cert-override-status");
+      if (!el) return;
+      try {
+        const raw = await invoke("browser_cert_override_status", {});
+        const s = typeof raw === "string" ? JSON.parse(raw) : (raw || {});
+        const state = s.cert_override || "unavailable";
+        const hooked = s.hook_attached === true;
+        const note = s.note || "";
+        // U2-A honesty: never present cert-override as the product TLS substrate.
+        // Even when hook_attached, OS WebView still owns ordinary TLS; override is
+        // an error-path policy for pins / enabled PEMs (default deny).
+        let line =
+          "Cert-override status: " + state +
+          " · hook_attached=" + (hooked ? "yes" : "no") +
+          " · product claim: not active as full TLS control";
+        if (note) line += "\n" + note;
+        if (state === "active" && hooked) {
+          line +=
+            "\n(Hook present on Windows error path only — host-pin A / chain-B; never auto-allow. Ordinary HTTPS still OS-validated.)";
+        } else if (state === "disabled") {
+          line += "\nDisabled by preference; OS TLS decisions stand.";
+        } else {
+          line += "\nHook not attached or non-Windows — WebView uses OS trust store only.";
+        }
+        el.textContent = line;
+        el.style.whiteSpace = "pre-wrap";
+      } catch (e) {
+        el.textContent =
+          "Cert-override status unavailable (" + e + "). Treat as not product-active; OS TLS only.";
+      }
+    }
+
     async function refreshTrustPanel() {
       const body = $("trust-body");
       try {
@@ -414,7 +514,7 @@
         if (!anchors.length) {
           body.className = "empty-state";
           body.textContent =
-            "(empty) Add a DID or PEM below.\n\nPath: {storage}/webizen/trust_store.json\n\nBadge levels: os_default | did_match | local_scheme | untrusted_policy | unknown";
+            "(empty) Add a DID or PEM below.\n\nPath: {storage}/webizen/trust_store.json\n\nBadge levels: os_default | did_match | local_scheme | custom_root_available | untrusted_policy | unknown\n\nYour store is policy + agent HTTPS — not a claim that WebView TLS is custom-rooted.";
         } else {
           body.className = "";
           body.innerHTML = anchors.map((a) => {
@@ -425,7 +525,7 @@
               <button type="button" data-act="rm" data-id="${id}">×</button>
             </div>`;
           }).join("") +
-            `<p class="panel-note">defer_unknown_https_to_os=${!!data.defer_unknown_https_to_os}</p>`;
+            `<p class="panel-note">defer_unknown_https_to_os=${!!data.defer_unknown_https_to_os} · WebView TLS still OS-backed for ordinary sites</p>`;
           body.querySelectorAll("button").forEach((btn) => {
             btn.addEventListener("click", async () => {
               const id = btn.getAttribute("data-id");
@@ -446,6 +546,7 @@
         body.textContent = "Trust store error: " + e;
       }
       await refreshSuggestedCatalog();
+      await refreshCertOverrideHonesty();
     }
 
     function purposeLabel(p) {
@@ -605,13 +706,104 @@
     $("btn-cookies-refresh").addEventListener("click", async () => {
       await refreshCookiesPanel();
     });
-    $("btn-agent").addEventListener("click", () => {
+    // ── Browser agent (v0) MCP shell — principal-gated; no silent tool calls ──
+    const MCP_AGENT_SLUG = "local";
+    let mcpProposed = false;
+    let mcpBusy = false;
+
+    function setMcpStatus(msg) {
+      const el = $("mcp-status");
+      if (el) el.textContent = msg || "";
+    }
+
+    function setMcpAwait(show) {
+      mcpProposed = !!show;
+      const el = $("mcp-await");
+      if (!el) return;
+      if (show) el.classList.add("show");
+      else el.classList.remove("show");
+    }
+
+    function toolNameOf(t) {
+      if (!t) return "";
+      if (typeof t === "string") return t;
+      return (t.name || t.tool_name || t.id || "").toString();
+    }
+
+    async function refreshMcpToolsPanel() {
+      const listEl = $("mcp-tools-list");
+      const noteEl = $("mcp-allowlist-note");
+      if (listEl) listEl.textContent = "Loading local MCP tools…";
+      let tools = [];
+      let allowlist = [];
+      try {
+        // Seed empty allowlist with safe golden tools (not a Permit — roster write only).
+        try {
+          const seeded = await invoke("mcp_ensure_safe_tool_allowlist", { slug: MCP_AGENT_SLUG });
+          if (Array.isArray(seeded)) {
+            allowlist = seeded.map(String);
+          } else if (seeded && Array.isArray(seeded.tools)) {
+            allowlist = seeded.tools.map(String);
+          }
+        } catch (_) { /* optional; Talk owns full editor */ }
+        try {
+          const agent = await invoke("agent_roster_get", { slug: MCP_AGENT_SLUG });
+          const a = typeof agent === "string" ? JSON.parse(agent) : agent;
+          const arr = (a && a.allowed_mcp_tools) || [];
+          if (Array.isArray(arr) && arr.length) allowlist = arr.map(String);
+        } catch (_) { /* roster may be empty */ }
+        const raw = await invoke("mcp_list_local_tools", {});
+        const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+        if (Array.isArray(parsed)) tools = parsed;
+        else if (parsed && Array.isArray(parsed.tools)) tools = parsed.tools;
+        else if (parsed && Array.isArray(parsed.value)) tools = parsed.value;
+      } catch (e) {
+        if (listEl) {
+          listEl.textContent =
+            "Could not list tools: " + e +
+            "\n\nStatic note: golden tools include list_capabilities, computer_vision.\n" +
+            "Full allowlist editor: Talk → MCP tools (principal-gated) card.";
+        }
+        if (noteEl) {
+          noteEl.innerHTML =
+            "Allowlist: unavailable here. Manage in Talk → agent tool card (agent <strong>local</strong>).";
+        }
+        setMcpStatus("tools/list failed — open Talk tool card for full path.");
+        return;
+      }
+      const names = tools.map(toolNameOf).filter(Boolean);
+      if (listEl) {
+        if (!names.length) {
+          listEl.textContent =
+            "(no tools returned)\nGolden path: list_capabilities.\n" +
+            "Talk → MCP tools card for full catalog + allowlist editor.";
+        } else {
+          listEl.textContent = names.map((n) => "• " + n).join("\n");
+        }
+      }
+      if (noteEl) {
+        const al =
+          allowlist.length === 0
+            ? "(empty — deny-all until seed/save in Talk)"
+            : allowlist.join(", ");
+        noteEl.innerHTML =
+          "Agent <strong>" +
+          MCP_AGENT_SLUG +
+          "</strong> allowlist: " +
+          esc(al) +
+          ". Editor: Talk → MCP tools card.";
+      }
+      setMcpStatus(names.length ? "Tools loaded (" + names.length + ")." : "No tools listed.");
+    }
+
+    $("btn-agent").addEventListener("click", async () => {
       const panel = $("agent");
       const opening = !panel.classList.contains("open");
       panel.classList.toggle("open");
       if (opening) {
         closeSidePanels("agent");
         panel.classList.add("open");
+        await refreshMcpToolsPanel();
       }
     });
     $("btn-trust").addEventListener("click", async () => {
@@ -648,6 +840,57 @@
         setStatus("Trust add failed: " + err);
       }
     });
+
+    $("btn-mcp-refresh").addEventListener("click", async () => {
+      await refreshMcpToolsPanel();
+    });
+    // Step 1 of two-step: propose only — never invokes MCP.
+    $("btn-mcp-propose-caps").addEventListener("click", () => {
+      if (mcpBusy) return;
+      setMcpAwait(true);
+      setMcpStatus("Proposed list_capabilities — Permit to run, Deny to cancel. No call yet.");
+      const res = $("mcp-result");
+      if (res) res.textContent = "(awaiting principal decision)";
+      setStatus("MCP propose: list_capabilities (awaiting Permit)");
+    });
+    // Step 2 Permit: only path that calls mcp_call_tool_gated with principal_permitted=true.
+    $("btn-mcp-permit").addEventListener("click", async () => {
+      if (!mcpProposed || mcpBusy) return;
+      mcpBusy = true;
+      setMcpStatus("Permitted — calling mcp_call_tool_gated…");
+      setStatus("MCP Permit: list_capabilities…");
+      try {
+        const raw = await invoke("mcp_call_tool_gated", {
+          agentSlug: MCP_AGENT_SLUG,
+          toolName: "list_capabilities",
+          argumentsJson: "{}",
+          principalPermitted: true,
+        });
+        const text = typeof raw === "string" ? raw : JSON.stringify(raw, null, 2);
+        const res = $("mcp-result");
+        if (res) res.textContent = text;
+        setMcpStatus("Permit OK — result below.");
+        setStatus("MCP list_capabilities OK");
+        setMcpAwait(false);
+      } catch (err) {
+        const res = $("mcp-result");
+        if (res) res.textContent = "(none)";
+        setMcpStatus("Permit blocked/failed: " + err);
+        setStatus("MCP Permit failed: " + err);
+      } finally {
+        mcpBusy = false;
+      }
+    });
+    // Deny path: never invokes MCP (no gated call with false either).
+    $("btn-mcp-deny").addEventListener("click", () => {
+      if (mcpBusy) return;
+      setMcpAwait(false);
+      const res = $("mcp-result");
+      if (res) res.textContent = "(none — Deny; no MCP call)";
+      setMcpStatus("Denied list_capabilities — no tool execution.");
+      setStatus("MCP Deny: no call");
+    });
+
     $("agent-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const q = $("agent-q").value.trim() || "Summarise this page";

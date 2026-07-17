@@ -1238,6 +1238,9 @@ fn AppLayout() -> Element {
         div {
             style: "display: flex; flex-direction: column; height: 100vh; width: 100%; overflow: hidden; background: transparent;",
 
+            // U6-A command palette (Ctrl+K / Ctrl+P) — always mounted under layout.
+            components::command_palette::CommandPalette {}
+
             // ── Top bar: brand + three primary verbs ──────────────────────────
             div {
                 style: "display: flex; align-items: flex-end; padding: 0.55rem 1rem 0; background: rgba(10, 15, 30, 0.55); border-bottom: 1px solid var(--qualia-border); backdrop-filter: blur(24px); gap: 1rem; flex-shrink: 0;",

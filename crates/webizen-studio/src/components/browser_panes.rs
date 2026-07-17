@@ -13,6 +13,7 @@ use uuid::Uuid;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 
+use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
 use crate::components::qapp_engine::invoke_json;
 
 async fn invoke_tauri(cmd: &str, args: serde_json::Value) -> Result<String, String> {
@@ -226,16 +227,28 @@ pub fn WebBrowserPane() -> Element {
     let mut show_trust = use_signal(|| false);
     let mut show_bookmarks = use_signal(|| false);
     let mut show_cookies = use_signal(|| false);
+    let mut show_agent = use_signal(|| false);
+    let mut agent_tools_text = use_signal(|| "Open Agent to list local MCP tools…".to_string());
+    let mut agent_allowlist_text =
+        use_signal(|| "Allowlist: (not loaded) · agent slug local".to_string());
+    let mut agent_mcp_status = use_signal(String::new);
+    let mut agent_mcp_result = use_signal(|| "(none yet)".to_string());
+    let mut agent_mcp_proposed = use_signal(|| false);
+    let mut agent_mcp_busy = use_signal(|| false);
     let mut trust_status = use_signal(String::new);
     let mut trust_list_text = use_signal(String::new);
     let mut suggested_list_text = use_signal(String::new);
     let mut suggested_entries = use_signal(Vec::<serde_json::Value>::new);
     let mut cookies_status = use_signal(String::new);
-    let mut cookies_summary_text = use_signal(String::new);
+    let mut cookies_summary_text = use_signal(|| {
+        "(no jar pull yet — open Cookies and press Refresh after a real https site load)".into()
+    });
     let mut cookies_first_party = use_signal(Vec::<serde_json::Value>::new);
     let mut cookies_third_party = use_signal(Vec::<serde_json::Value>::new);
     let mut cookies_third_domains = use_signal(Vec::<String>::new);
-    let mut cookies_coverage = use_signal(String::new);
+    let cookies_coverage = use_signal(|| {
+        "Best-effort WebView jar + graph — not complete Chromium parity. Press Refresh after visiting a site.".into()
+    });
     let mut bookmark_list = use_signal(Vec::<serde_json::Value>::new);
     let mut browser_open = use_signal(|| false);
     let mut bootstrapped = use_signal(|| false);
@@ -511,7 +524,7 @@ pub fn WebBrowserPane() -> Element {
                             })
                             .collect();
                         trust_list_text.set(if lines.is_empty() {
-                            "(empty — add DID/PEM below)\nCustom PEM/DID govern agent fetch + policy badge; OS validates WebView TLS unless override is active.".into()
+                            "(empty — add DID/PEM below)\nCustom PEM/DID govern agent fetch + policy badge. OS validates ordinary WebView TLS. Cert-override is not claimed product-active (Windows error-path hook only when attached).".into()
                         } else {
                             lines.join("\n")
                         });
@@ -885,6 +898,105 @@ pub fn WebBrowserPane() -> Element {
                                 },
                                 "Bookmarks"
                             }
+                            button {
+                                r#type: "button",
+                                style: "padding: 0.5rem 0.9rem; border-radius: 9px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-weight: 600; cursor: pointer; font-size: 0.85rem;",
+                                onclick: move |_| {
+                                    let opening = !show_agent();
+                                    show_agent.set(opening);
+                                    if opening {
+                                        show_trust.set(false);
+                                        show_cookies.set(false);
+                                        // Load tools + seed allowlist (not a Permit).
+                                        spawn(async move {
+                                            agent_mcp_status.set("Loading tools…".into());
+                                            // Seed empty allowlist with safe golden tools.
+                                            if let Ok(raw) = invoke_tauri(
+                                                "mcp_ensure_safe_tool_allowlist",
+                                                json!({ "slug": "local" }),
+                                            )
+                                            .await
+                                            {
+                                                if let Ok(v) =
+                                                    serde_json::from_str::<serde_json::Value>(&raw)
+                                                {
+                                                    if let Some(arr) = v.as_array() {
+                                                        let list: Vec<String> = arr
+                                                            .iter()
+                                                            .filter_map(|x| {
+                                                                x.as_str().map(|s| s.to_string())
+                                                            })
+                                                            .collect();
+                                                        if !list.is_empty() {
+                                                            agent_allowlist_text.set(format!(
+                                                                "Agent local allowlist: {}",
+                                                                list.join(", ")
+                                                            ));
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            match invoke_tauri(
+                                                "mcp_list_local_tools",
+                                                json!({}),
+                                            )
+                                            .await
+                                            {
+                                                Ok(raw) => {
+                                                    if let Ok(v) = serde_json::from_str::<
+                                                        serde_json::Value,
+                                                    >(
+                                                        &raw
+                                                    ) {
+                                                        let names: Vec<String> = v
+                                                            .as_array()
+                                                            .map(|arr| {
+                                                                arr.iter()
+                                                                    .filter_map(|t| {
+                                                                        t.get("name")
+                                                                            .and_then(|n| n.as_str())
+                                                                            .map(|s| s.to_string())
+                                                                    })
+                                                                    .collect()
+                                                            })
+                                                            .unwrap_or_default();
+                                                        if names.is_empty() {
+                                                            agent_tools_text.set(
+                                                                "(no tools returned)\nGolden path: list_capabilities.\nTalk → MCP tools card for full catalog."
+                                                                    .into(),
+                                                            );
+                                                        } else {
+                                                            agent_tools_text.set(
+                                                                names
+                                                                    .iter()
+                                                                    .map(|n| format!("• {n}"))
+                                                                    .collect::<Vec<_>>()
+                                                                    .join("\n"),
+                                                            );
+                                                        }
+                                                        agent_mcp_status.set(format!(
+                                                            "Tools loaded ({}).",
+                                                            names.len()
+                                                        ));
+                                                    } else {
+                                                        agent_tools_text.set(raw);
+                                                        agent_mcp_status
+                                                            .set("Tools response (raw).".into());
+                                                    }
+                                                }
+                                                Err(e) => {
+                                                    agent_tools_text.set(format!(
+                                                        "Could not list tools: {e}\n\nStatic note: list_capabilities, computer_vision.\nTalk → MCP tools card for allowlist editor."
+                                                    ));
+                                                    agent_mcp_status
+                                                        .set("tools/list failed.".into());
+                                                }
+                                            }
+                                        });
+                                    }
+                                },
+                                "Browser agent"
+                            }
                         }
                         if show_trust() {
                             div {
@@ -1027,7 +1139,7 @@ pub fn WebBrowserPane() -> Element {
                                     }
                                     p {
                                         style: "margin: 0.35rem 0 0; font-size: 0.72rem; color: #64748b; line-height: 1.4;",
-                                        "Path: {{storage}}/webizen/trust_store.json · PEM roots apply to agent HTTPS; WebView still uses OS TLS. Cert-override is not claimed active."
+                                        "Path: {{storage}}/webizen/trust_store.json · PEM/DID → agent HTTPS + badge. WebView TLS = OS store by default. Cert-override: not claimed product-active (Windows ServerCertificateErrorDetected path only when hook attaches; default deny; never auto-allow)."
                                     }
                                 }
                             }
@@ -1165,9 +1277,151 @@ pub fn WebBrowserPane() -> Element {
                                 }
                             }
                         }
+                        if show_agent() {
+                            div {
+                                style: "margin-top: 1rem; padding: 1rem; border-radius: 12px; border: 1px solid #334155; background: #0f172a;",
+                                div {
+                                    style: "display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin-bottom: 0.5rem;",
+                                    div {
+                                        style: "font-size: 0.72rem; text-transform: uppercase; color: #c4b5fd; margin-right: 0.25rem;",
+                                        "Browser agent (v0)"
+                                    }
+                                    HonestyChip {
+                                        level: HonestyLevel::Partial,
+                                        detail: "UI shell + gated MCP; not full page agent".to_string(),
+                                    }
+                                    HonestyChip {
+                                        level: HonestyLevel::Scaffold,
+                                        detail: "No silent tools; Permit required".to_string(),
+                                    }
+                                }
+                                p {
+                                    style: "margin: 0 0 0.5rem; font-size: 0.72rem; color: #64748b; line-height: 1.4;",
+                                    "No silent tool execution. Uses mcp_call_tool_gated (same as Talk). Full allowlist editor: Talk → MCP tools card. Cert-override / Servo claims unchanged."
+                                }
+                                p {
+                                    style: "margin: 0 0 0.35rem; font-size: 0.72rem; color: #94a3b8;",
+                                    "{agent_allowlist_text}"
+                                }
+                                div {
+                                    style: "font-size: 0.7rem; text-transform: uppercase; color: #a5b4fc; margin: 0.5rem 0 0.25rem;",
+                                    "Local MCP tools"
+                                }
+                                pre {
+                                    style: "margin: 0 0 0.5rem; white-space: pre-wrap; font-size: 0.78rem; color: #94a3b8;",
+                                    "{agent_tools_text}"
+                                }
+                                div {
+                                    style: "display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem;",
+                                    button {
+                                        r#type: "button",
+                                        style: "padding: 0.4rem 0.7rem; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-weight: 600; cursor: pointer; font-size: 0.78rem;",
+                                        disabled: agent_mcp_busy(),
+                                        onclick: move |_| {
+                                            // Step 1: propose only — never invokes MCP.
+                                            agent_mcp_proposed.set(true);
+                                            agent_mcp_result.set("(awaiting principal decision)".into());
+                                            agent_mcp_status.set(
+                                                "Proposed list_capabilities — Permit to run, Deny to cancel. No call yet."
+                                                    .into(),
+                                            );
+                                        },
+                                        "Run list_capabilities on permit"
+                                    }
+                                }
+                                if agent_mcp_proposed() {
+                                    div {
+                                        style: "background: #0b1220; border: 1px solid #4c1d95; border-radius: 8px; padding: 0.65rem; margin-bottom: 0.5rem;",
+                                        div {
+                                            style: "font-size: 0.8rem; color: #e9d5ff; font-weight: 600; margin-bottom: 0.35rem;",
+                                            "Awaiting principal: list_capabilities"
+                                        }
+                                        p {
+                                            style: "margin: 0 0 0.45rem; font-size: 0.72rem; color: #64748b;",
+                                            "Agent local · args empty object · Deny never calls MCP."
+                                        }
+                                        div { style: "display: flex; flex-wrap: wrap; gap: 0.4rem;",
+                                            button {
+                                                r#type: "button",
+                                                style: "padding: 0.4rem 0.75rem; border-radius: 8px; border: 1px solid #047857; background: #059669; color: white; font-weight: 700; cursor: pointer; font-size: 0.78rem;",
+                                                disabled: agent_mcp_busy(),
+                                                onclick: move |_| {
+                                                    if !agent_mcp_proposed() || agent_mcp_busy() {
+                                                        return;
+                                                    }
+                                                    spawn(async move {
+                                                        agent_mcp_busy.set(true);
+                                                        agent_mcp_status.set(
+                                                            "Permitted — calling mcp_call_tool_gated…".into(),
+                                                        );
+                                                        match invoke_tauri(
+                                                            "mcp_call_tool_gated",
+                                                            json!({
+                                                                "agentSlug": "local",
+                                                                "toolName": "list_capabilities",
+                                                                "argumentsJson": "{}",
+                                                                "principalPermitted": true,
+                                                            }),
+                                                        )
+                                                        .await
+                                                        {
+                                                            Ok(text) => {
+                                                                agent_mcp_result.set(text);
+                                                                agent_mcp_status.set(
+                                                                    "Permit OK — result below.".into(),
+                                                                );
+                                                                agent_mcp_proposed.set(false);
+                                                            }
+                                                            Err(e) => {
+                                                                agent_mcp_result.set("(none)".into());
+                                                                agent_mcp_status.set(format!(
+                                                                    "Permit blocked/failed: {e}"
+                                                                ));
+                                                            }
+                                                        }
+                                                        agent_mcp_busy.set(false);
+                                                    });
+                                                },
+                                                "Permit"
+                                            }
+                                            button {
+                                                r#type: "button",
+                                                style: "padding: 0.4rem 0.75rem; border-radius: 8px; border: 1px solid #991b1b; background: #7f1d1d; color: #fecaca; font-weight: 700; cursor: pointer; font-size: 0.78rem;",
+                                                disabled: agent_mcp_busy(),
+                                                onclick: move |_| {
+                                                    // Deny: never invoke MCP.
+                                                    agent_mcp_proposed.set(false);
+                                                    agent_mcp_result
+                                                        .set("(none — Deny; no MCP call)".into());
+                                                    agent_mcp_status.set(
+                                                        "Denied list_capabilities — no tool execution."
+                                                            .into(),
+                                                    );
+                                                },
+                                                "Deny"
+                                            }
+                                        }
+                                    }
+                                }
+                                if !agent_mcp_status().is_empty() {
+                                    p {
+                                        style: "margin: 0 0 0.35rem; font-size: 0.75rem; color: #a7f3d0; white-space: pre-wrap;",
+                                        "{agent_mcp_status}"
+                                    }
+                                }
+                                div {
+                                    style: "font-size: 0.7rem; text-transform: uppercase; color: #a5b4fc; margin: 0.35rem 0 0.25rem;",
+                                    "Last MCP result"
+                                }
+                                pre {
+                                    style: "margin: 0; white-space: pre-wrap; font-size: 0.75rem; color: #94a3b8; max-height: 12rem; overflow: auto;",
+                                    "{agent_mcp_result}"
+                                }
+                            }
+                        }
                         p {
                             style: "margin: 1.25rem 0 0; font-size: 0.78rem; line-height: 1.45; color: #64748b;",
-                            "Shipped: trust store (host-pin A; chain-B needs verify), cert escape hatch (allow once/always/deny logged), cookies view+clear site data, agent TLS aligned to store. Servo deferred. Never auto-allow TLS."
+                            "Honesty: Present — trust store UI + suggested (empty until curated), cookies side panel + coverage notes, OS WebView navigation, agent TLS aligned to store. Partial — cert-override (not product-active); Browser agent (v0) MCP shell (Permit required, no silent tools). Scaffold — full page-context agent. Experimental preference only — Servo (WebView remains default renderer). Never auto-allow TLS."
                         }
                     }
                 }

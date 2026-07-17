@@ -83,6 +83,43 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
 .status-dot.yellow { background: #ff9800; }
 .status-dot.gray { background: #666; }
 #status-spacer { flex: 1; }
+
+/* ── Command palette (U6-A) ─────────────────────────────────────────── */
+#cmd-palette-backdrop {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+  align-items: flex-start; justify-content: center; padding-top: 12vh;
+}
+#cmd-palette-backdrop.open { display: flex; }
+#cmd-palette {
+  width: min(560px, 92vw); background: var(--bg-light); border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: 0 16px 48px rgba(0,0,0,0.45); overflow: hidden;
+}
+#cmd-palette-input {
+  width: 100%; border: none; border-bottom: 1px solid var(--border);
+  background: var(--bg); color: var(--text); padding: 14px 16px; font-size: 14px;
+  font-family: inherit; outline: none;
+}
+#cmd-palette-input::placeholder { color: var(--text-muted); }
+#cmd-palette-list { max-height: 320px; overflow-y: auto; padding: 6px; }
+.cmd-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border-radius: 8px; cursor: pointer; color: var(--text); user-select: none;
+}
+.cmd-item:hover, .cmd-item.active { background: var(--surface); }
+.cmd-item-icon { width: 22px; text-align: center; opacity: 0.85; }
+.cmd-item-label { flex: 1; font-weight: 600; font-size: 13px; }
+.cmd-item-hint { font-size: 11px; color: var(--text-muted); }
+#cmd-palette-footer {
+  padding: 8px 14px; border-top: 1px solid var(--border);
+  font-size: 11px; color: var(--text-muted); display: flex; gap: 12px;
+}
+#cmd-palette-btn {
+  width: 28px; height: 28px; border: 1px solid var(--border); background: var(--bg);
+  color: var(--text-muted); cursor: pointer; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center; font-size: 12px;
+}
+#cmd-palette-btn:hover { color: var(--accent); border-color: var(--accent); }
 </style>
 </head>
 <body>
@@ -95,7 +132,20 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
     <button class="nav-btn" id="nav-forward" title="Forward (Alt+Right)">→</button>
     <button class="nav-btn" id="nav-reload" title="Reload (Ctrl+R)">↻</button>
     <input type="text" id="address-bar" placeholder="qualia://talk | keep | browser | …" spellcheck="false">
+    <button class="nav-btn" id="cmd-palette-btn" title="Command palette (Ctrl+K)">⌘K</button>
     <button class="nav-btn" id="gpu-toggle" title="Toggle GPU Surface">⚡</button>
+  </div>
+  <div id="cmd-palette-backdrop" role="dialog" aria-modal="true" aria-label="Command palette">
+    <div id="cmd-palette">
+      <input type="text" id="cmd-palette-input" placeholder="Go to Talk, Browser, 10D, Settings…" autocomplete="off" spellcheck="false">
+      <div id="cmd-palette-list" role="listbox"></div>
+      <div id="cmd-palette-footer">
+        <span>↑↓ navigate</span>
+        <span>Enter open</span>
+        <span>Esc close</span>
+        <span style="margin-left:auto">Ctrl+K · Ctrl+P</span>
+      </div>
+    </div>
   </div>
   <div id="content-area">
     <iframe id="content-iframe" src="about:blank"></iframe>
@@ -302,6 +352,133 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
   listen('shell-nav-forward', () => navForward.onclick());
   listen('shell-nav-reload', () => navReload.onclick());
   listen('shell-toggle-gpu', () => gpuToggle.onclick());
+  listen('shell-open-command-palette', () => openCommandPalette());
+
+  // ── Command palette (U6-A) — ≥5 destinations, Ctrl+K / Ctrl+P ──────────
+  const PALETTE_ITEMS = [
+    { id: 'talk',        label: 'Talk',              icon: '💬', hint: 'Home · chat & people',   keys: 'talk chat agent home' },
+    { id: 'browser',     label: 'Browser (Reach)',    icon: '🌐', hint: 'Web browser',            keys: 'browser reach web' },
+    { id: '10d-browser', label: '10D / Infosphere',   icon: '◈',  hint: 'Anatomy & vision .10d',  keys: '10d ten-d infosphere anatomy vision' },
+    { id: 'settings',    label: 'Settings',           icon: '⚙',  hint: 'Backend & preferences',  keys: 'settings prefs config' },
+    { id: 'library',     label: 'Library',            icon: '📚', hint: 'Hypermedia shelf',       keys: 'library hypermedia models' },
+    { id: 'qapps',       label: 'QApps',              icon: '⬡',  hint: 'QApp catalog',           keys: 'qapps apps catalog' },
+    { id: 'keep',        label: 'Keep',               icon: '🗄',  hint: 'Vault & places hub',     keys: 'keep vault' },
+    { id: 'logs',        label: 'Desktop logs',       icon: '📋', hint: 'Host log stream',        keys: 'logs log' },
+  ];
+
+  const paletteBackdrop = document.getElementById('cmd-palette-backdrop');
+  const paletteInput = document.getElementById('cmd-palette-input');
+  const paletteList = document.getElementById('cmd-palette-list');
+  const paletteBtn = document.getElementById('cmd-palette-btn');
+  let paletteOpen = false;
+  let paletteActive = 0;
+  let paletteFiltered = PALETTE_ITEMS.slice();
+
+  function filterPalette(q) {
+    const needle = (q || '').trim().toLowerCase();
+    if (!needle) return PALETTE_ITEMS.slice();
+    return PALETTE_ITEMS.filter((item) => {
+      const hay = (item.label + ' ' + item.hint + ' ' + item.keys + ' ' + item.id).toLowerCase();
+      return hay.includes(needle);
+    });
+  }
+
+  function renderPalette() {
+    paletteList.innerHTML = '';
+    if (paletteFiltered.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'cmd-item';
+      empty.style.color = 'var(--text-muted)';
+      empty.textContent = 'No matching destination';
+      paletteList.appendChild(empty);
+      return;
+    }
+    paletteActive = Math.max(0, Math.min(paletteActive, paletteFiltered.length - 1));
+    paletteFiltered.forEach((item, i) => {
+      const row = document.createElement('div');
+      row.className = 'cmd-item' + (i === paletteActive ? ' active' : '');
+      row.setAttribute('role', 'option');
+      row.dataset.id = item.id;
+      row.innerHTML =
+        '<span class="cmd-item-icon">' + item.icon + '</span>' +
+        '<span class="cmd-item-label">' + item.label + '</span>' +
+        '<span class="cmd-item-hint">' + item.hint + '</span>';
+      row.onmouseenter = () => { paletteActive = i; renderPalette(); };
+      row.onclick = () => runPaletteItem(item.id);
+      paletteList.appendChild(row);
+    });
+  }
+
+  function openCommandPalette() {
+    paletteOpen = true;
+    paletteBackdrop.classList.add('open');
+    paletteInput.value = '';
+    paletteFiltered = filterPalette('');
+    paletteActive = 0;
+    renderPalette();
+    setTimeout(() => paletteInput.focus(), 0);
+  }
+  // Menu / Rust shell action (View → Command Palette… / Ctrl+K accelerator).
+  window.__webizenOpenCommandPalette = openCommandPalette;
+
+  function closeCommandPalette() {
+    paletteOpen = false;
+    paletteBackdrop.classList.remove('open');
+    paletteInput.blur();
+  }
+
+  function runPaletteItem(id) {
+    closeCommandPalette();
+    navigate(id);
+  }
+
+  paletteBtn.onclick = () => openCommandPalette();
+  paletteBackdrop.addEventListener('mousedown', (e) => {
+    if (e.target === paletteBackdrop) closeCommandPalette();
+  });
+  paletteInput.addEventListener('input', () => {
+    paletteFiltered = filterPalette(paletteInput.value);
+    paletteActive = 0;
+    renderPalette();
+  });
+  paletteInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); closeCommandPalette(); return; }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (paletteFiltered.length) {
+        paletteActive = (paletteActive + 1) % paletteFiltered.length;
+        renderPalette();
+      }
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (paletteFiltered.length) {
+        paletteActive = (paletteActive - 1 + paletteFiltered.length) % paletteFiltered.length;
+        renderPalette();
+      }
+      return;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (paletteFiltered[paletteActive]) runPaletteItem(paletteFiltered[paletteActive].id);
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    const key = (e.key || '').toLowerCase();
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && (key === 'k' || key === 'p')) {
+      e.preventDefault();
+      if (paletteOpen) closeCommandPalette();
+      else openCommandPalette();
+      return;
+    }
+    if (e.key === 'Escape' && paletteOpen) {
+      e.preventDefault();
+      closeCommandPalette();
+    }
+  });
 
   async function updateStatus() {
     try {

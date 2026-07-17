@@ -54,7 +54,9 @@ pub fn refresh_jar_for_url(app: &AppHandle, url: &str) -> Result<serde_json::Val
             "url": url,
             "cookie_count": 0,
             "synced": 0,
-            "coverage_note": CookieGraph::new().coverage_note,
+            "cookies": [],
+            "third_parties": [],
+            "coverage_note": "Local qualia:// / webizen:// pages have no HTTP cookies. Coverage is N/A until you navigate an https origin in the content WebView.",
             "source": "n/a_local",
         }));
     }

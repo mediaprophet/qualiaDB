@@ -123,6 +123,10 @@ pub const MEMORY_FLOOR_MB: u32 = 512;
 
 static LLM_MEMORY_BYTES: AtomicU64 = AtomicU64::new(0);
 static KV_CACHE_USED_MB: AtomicU32 = AtomicU32::new(0);
+/// Last completed chat/decode throughput × 1000 (tok/s), or 0 if never measured.
+static LAST_DECODE_TOK_S_MILLI: AtomicU32 = AtomicU32::new(0);
+/// Unix-ish stamp (secs since process start not required — wall via duration store is enough).
+static LAST_DECODE_TOK_S_AT_SECS: AtomicU64 = AtomicU64::new(0);
 
 pub fn record_llm_memory_bytes(bytes: u64) {
     LLM_MEMORY_BYTES.store(bytes, Ordering::Relaxed);
@@ -156,6 +160,40 @@ pub fn record_kv_cache_used_mb(megabytes: u32) {
 
 pub fn get_kv_cache_used_mb() -> u32 {
     KV_CACHE_USED_MB.load(Ordering::Relaxed)
+}
+
+/// Record measured decode/chat throughput from a completed generation turn.
+///
+/// Call only with real token counts and wall time — never synthetic marketing numbers.
+pub fn record_last_decode_tok_s(tokens: u32, duration_ms: u64) {
+    if tokens == 0 || duration_ms == 0 {
+        return;
+    }
+    let tok_s = (tokens as f64) / (duration_ms as f64 / 1000.0);
+    if !tok_s.is_finite() || tok_s <= 0.0 {
+        return;
+    }
+    let milli = (tok_s * 1000.0).round().clamp(0.0, u32::MAX as f64) as u32;
+    LAST_DECODE_TOK_S_MILLI.store(milli, Ordering::Relaxed);
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    LAST_DECODE_TOK_S_AT_SECS.store(now, Ordering::Relaxed);
+}
+
+/// Last measured tok/s from a completed turn, or `None` if never measured this process.
+pub fn get_last_decode_tok_s() -> Option<f64> {
+    let milli = LAST_DECODE_TOK_S_MILLI.load(Ordering::Relaxed);
+    if milli == 0 {
+        None
+    } else {
+        Some(milli as f64 / 1000.0)
+    }
+}
+
+pub fn get_last_decode_tok_s_at_unix() -> u64 {
+    LAST_DECODE_TOK_S_AT_SECS.load(Ordering::Relaxed)
 }
 
 pub fn get_thermal_state_label() -> &'static str {
