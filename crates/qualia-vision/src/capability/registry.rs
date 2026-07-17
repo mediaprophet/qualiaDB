@@ -44,7 +44,7 @@ static REGISTRY: &[CapabilityEntry] = &[
         "D1",
         "classical_sr",
         Present,
-        "specialized_libs::computer_vision::sr; nearest SR on shared_gpu Resize2d when Cool; bicubic/lanczos CPU (B2)"
+        "specialized_libs::computer_vision::sr; nearest+bicubic on shared_gpu when Cool; lanczos CPU; MCP computer_vision"
     ),
     // D2 learned
     cap!("D2.01", "D2", "detector_tracker", Partial, "ByteTrack MOT Present; YuNet decode+optional --features ort infer; default FeatureDisabled"),

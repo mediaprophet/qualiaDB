@@ -19,6 +19,7 @@ mod medical;
 mod ml_finance;
 mod physics;
 mod stats;
+mod vision;
 
 pub use algebra::*;
 pub use chemistry::*;
@@ -30,6 +31,7 @@ pub use medical::*;
 pub use ml_finance::*;
 pub use physics::*;
 pub use stats::*;
+pub use vision::*;
 
 #[cfg(test)]
 mod tests;

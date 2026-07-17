@@ -5,6 +5,25 @@
 
 ---
 
+## 2026-07-17 — Bicubic Forge + MCP computer_vision
+
+**Status:** done
+
+| Item | What |
+|------|------|
+| **Bicubic GPU** | `gpu/forge_bicubic.rs` Keys a=-0.5 WGSL + CPU oracle; `super_resolve_with_policy` uses shared_gpu for bicubic when Cool |
+| **MCP** | Tool `computer_vision` (list, capability_summary, rgb_to_gray, super_resolve, mesh_quality_cleanup, class_score_to_sigma); CapabilityDescriptor `ComputerVision` |
+
+### Measured
+
+```
+forge_bicubic tests → 2 passed
+device_policy → 2 passed
+mcp_server::tests → 14+ (incl. computer_vision_tool_list_and_sigma, capability registration)
+```
+
+---
+
 ## 2026-07-17 — Closeout: B2 Forge + MIG-V4 catalogue + Studio UI
 
 **Status:** done

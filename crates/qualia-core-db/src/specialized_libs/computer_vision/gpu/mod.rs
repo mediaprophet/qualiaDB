@@ -9,10 +9,14 @@
 pub mod dispatch;
 pub mod policy;
 pub mod forge_resize;
+pub mod forge_bicubic;
 
 pub use dispatch::{
     avg_pool2d_dispatch, conv2d_nchw_dispatch, max_pool2d_dispatch, resize_nearest_nchw_dispatch,
     VisionComputeDevice, VisionComputeReport,
+};
+pub use forge_bicubic::{
+    bicubic2d_cpu, bicubic2d_wgsl, try_resize_bicubic_shared_gpu, BICUBIC_ENTRY,
 };
 pub use forge_resize::try_resize_nearest_shared_gpu;
 pub use policy::{thermal_allows_gpu_tiles, ThermalHint, VisionVramBudget};

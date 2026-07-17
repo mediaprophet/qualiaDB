@@ -761,6 +761,21 @@ pub const CAPABILITY_DESCRIPTORS: &[CapabilityDescriptor] = &[
         surfaces: &["native", "wasm-scientific", "mcp", "webizen", "renderer"],
     },
     CapabilityDescriptor {
+        name: "ComputerVision",
+        domain: "vision",
+        operations: &[
+            "classical CV (blur, edges, features, flow, morph)",
+            "classical + tiled super-resolution (nearest/bilinear/bicubic/lanczos)",
+            "Forge shared_gpu nearest + bicubic resize when Cool",
+            "bio histopathology / radiomics / DICOM-lite",
+            "MeshIR export / quality cleanup / class→σ map",
+            "local CBIR proxy embeddings (aHash/dHash/hist)",
+        ],
+        mcp_tools: &["computer_vision"],
+        maturity: "partial",
+        surfaces: &["native", "mcp", "webizen", "qualia-vision"],
+    },
+    CapabilityDescriptor {
         name: "NumberTheory",
         domain: "mathematics",
         operations: &[

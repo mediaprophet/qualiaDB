@@ -24,22 +24,38 @@ pub fn super_resolve_with_policy(
     let est = VisionVramBudget::estimate_resize_scratch(3, req.height, req.width, req.scale as u32);
     let gpu_ok = prefer_gpu && thermal_allows_gpu_tiles(thermal) && budget.allows(est);
 
-    // Classical kernels (bicubic/lanczos) stay on CPU. Nearest can ride Forge
-    // Resize2d when Cool + budget allows (B2 shared_gpu path).
+    // Nearest → Forge Resize2d; Bicubic → Forge Keys cubic; Lanczos stays CPU for now.
     if gpu_ok {
-        if let SrBackend::Classical(ClassicalKernel::Nearest) = req.backend {
-            if let Ok(compute) = try_nearest_via_forge(req, out) {
-                let report = SrReport {
-                    backend_id: "classical.nearest.forge",
-                    device: "shared_gpu",
-                    scale: req.scale,
-                    out_width: req.width.saturating_mul(req.scale as u32),
-                    out_height: req.height.saturating_mul(req.scale as u32),
-                    generative: false,
-                    tile_count: 1,
-                };
-                return Ok((report, compute));
+        match req.backend {
+            SrBackend::Classical(ClassicalKernel::Nearest) => {
+                if let Ok(compute) = try_rgb_via_nchw_forge(req, out, ForgeKind::Nearest) {
+                    let report = SrReport {
+                        backend_id: "classical.nearest.forge",
+                        device: "shared_gpu",
+                        scale: req.scale,
+                        out_width: req.width.saturating_mul(req.scale as u32),
+                        out_height: req.height.saturating_mul(req.scale as u32),
+                        generative: false,
+                        tile_count: 1,
+                    };
+                    return Ok((report, compute));
+                }
             }
+            SrBackend::Classical(ClassicalKernel::Bicubic) => {
+                if let Ok(compute) = try_rgb_via_nchw_forge(req, out, ForgeKind::Bicubic) {
+                    let report = SrReport {
+                        backend_id: "classical.bicubic.forge",
+                        device: "shared_gpu",
+                        scale: req.scale,
+                        out_width: req.width.saturating_mul(req.scale as u32),
+                        out_height: req.height.saturating_mul(req.scale as u32),
+                        generative: false,
+                        tile_count: 1,
+                    };
+                    return Ok((report, compute));
+                }
+            }
+            _ => {}
         }
     }
 
@@ -55,11 +71,18 @@ pub fn super_resolve_with_policy(
     Ok((report, compute))
 }
 
-/// Pack RGB8 → NCHW f32, Forge nearest upscale, unpack to RGB8.
-fn try_nearest_via_forge(
+enum ForgeKind {
+    Nearest,
+    Bicubic,
+}
+
+/// Pack RGB8 → NCHW f32, Forge upscale, unpack to RGB8.
+fn try_rgb_via_nchw_forge(
     req: &SrRequest<'_>,
     out: &mut [u8],
+    kind: ForgeKind,
 ) -> Result<VisionComputeReport, CvError> {
+    use crate::specialized_libs::computer_vision::gpu::forge_bicubic::try_resize_bicubic_shared_gpu;
     use crate::specialized_libs::computer_vision::gpu::forge_resize::try_resize_nearest_shared_gpu;
 
     let w = req.width as usize;
@@ -75,7 +98,6 @@ fn try_nearest_via_forge(
     if out.len() < need_out {
         return Err(CvError::BufferTooSmall);
     }
-    // NCHW: c=3
     let mut nchw_in = vec![0.0f32; 3 * w * h];
     for y in 0..h {
         for x in 0..w {
@@ -86,16 +108,28 @@ fn try_nearest_via_forge(
         }
     }
     let mut nchw_out = vec![0.0f32; 3 * ow * oh];
-    let report = try_resize_nearest_shared_gpu(&nchw_in, 3, h, w, oh, ow, &mut nchw_out)
-        .map_err(|_| CvError::InvalidParameter)?;
+    let report = match kind {
+        ForgeKind::Nearest => {
+            try_resize_nearest_shared_gpu(&nchw_in, 3, h, w, oh, ow, &mut nchw_out)
+                .map_err(|_| CvError::InvalidParameter)?
+        }
+        ForgeKind::Bicubic => {
+            try_resize_bicubic_shared_gpu(&nchw_in, 3, h, w, oh, ow, &mut nchw_out)
+                .map_err(|_| CvError::InvalidParameter)?
+        }
+    };
     for y in 0..oh {
         for x in 0..ow {
             let o = (y * ow + x) * 3;
-            out[o] = (nchw_out[0 * ow * oh + y * ow + x] * 255.0).round().clamp(0.0, 255.0) as u8;
-            out[o + 1] =
-                (nchw_out[1 * ow * oh + y * ow + x] * 255.0).round().clamp(0.0, 255.0) as u8;
-            out[o + 2] =
-                (nchw_out[2 * ow * oh + y * ow + x] * 255.0).round().clamp(0.0, 255.0) as u8;
+            out[o] = (nchw_out[0 * ow * oh + y * ow + x] * 255.0)
+                .round()
+                .clamp(0.0, 255.0) as u8;
+            out[o + 1] = (nchw_out[1 * ow * oh + y * ow + x] * 255.0)
+                .round()
+                .clamp(0.0, 255.0) as u8;
+            out[o + 2] = (nchw_out[2 * ow * oh + y * ow + x] * 255.0)
+                .round()
+                .clamp(0.0, 255.0) as u8;
         }
     }
     Ok(report)
