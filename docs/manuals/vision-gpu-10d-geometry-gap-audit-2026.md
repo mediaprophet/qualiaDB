@@ -5,6 +5,17 @@
 **Trigger:** Principal concern that CV excellence and SR plans under-used the existing GPU backplane, 10D container (inc. EMF/σ), and computational geometry library.  
 **Status:** Audit complete. Findings are against the tree as of this date — not a claim that gaps are fixed.
 
+**Core pillars (do not forget when wiring CV):**
+
+| Tree | Path | Role for vision / SR / bio |
+|------|------|----------------------------|
+| **domains** | `qualia-core-db/src/domains/` | Domain science: `biological/`, `chemical/`, `geospatial/` (DEM, STAC, terrain, canvas), `physical/`, `mathematical/`, `financial/` — CV/bio results land as **domain-grounded** quins / adapters, not free-floating pixels |
+| **modalities** | `qualia-core-db/src/modalities/` | Epistemic/deontic/spatio-temporal/manifold/logic — **rights + certainty + LTL** around observations; SHACL geometry assets; `manifold` / `spatio_temporal` bind place-time |
+| **render** | `qualia-core-db/src/render/` | `compile_10d`, spectral/acoustic **σ**, `PortalGpu`, assets, anatomy_pack, place_time, physics of artefacts — **manifold projection + EMF display** |
+| **solvers** | `qualia-core-db/src/solvers/` | Numerics CV may **call** (not reimplement): `linear_algebra` (SVD/Macenko-class), `transforms/fourier` (rPPG/spectral), `interpolation`, `statistics`, calculus/ODE, learning (RF-class when wired), geometric algebra |
+
+Also remember: `specialized_libs/computational_geometry/`, `gpu_context`, `container_10d`, `tensor::Tensor10D`.
+
 ---
 
 ## 1. Bottom line (honest)
@@ -192,7 +203,35 @@ TARGET (programme)
 
 ---
 
-## 7. Recommended swarm order (closes the gap)
+## 7. How domains / modalities / render / solvers fit CV (wiring targets)
+
+```text
+  pixels / mesh (qualia-vision)
+        │
+        ├─► solvers::linear_algebra / transforms / statistics   (numerics helpers)
+        ├─► specialized_libs::computational_geometry            (remesh, Poisson, BVH)
+        │
+        ▼
+  NQuin observations ── modalities (epistemic, deontic, spatio_temporal, SHACL)
+        │
+        ├─► domains::geospatial (place/DEM/canvas) when geo-tagged
+        ├─► domains::biological / chemical when stain/bio assays
+        │
+        ▼
+  render::compile_10d + Tensor10D (σ → spectral + acoustic)
+        │
+        ▼
+  render::gpu PortalGpu / shared_gpu   (same backplane as LLM)
+```
+
+**Do not** reimplement SVD/FFT/RF inside vision when `solvers` already owns them.  
+**Do not** project σ outside `render::spectral` / `acoustic`.  
+**Do not** attach rights outside `modalities` deontic/epistemic.  
+**Do not** invent a parallel geo stack — use `domains::geospatial`.
+
+---
+
+## 8. Recommended swarm order (closes the gap)
 
 | Wave | Name | Depends |
 |------|------|---------|
@@ -200,15 +239,17 @@ TARGET (programme)
 | **VG1** | `qualia-vision` `gpu` feature → dispatch Forge vision ops + shared_gpu | VG0 |
 | **VG2** | VRAM/thermal policy for vision/SR tiles | VG1 |
 | **VG3** | MeshIR → CG optional cleanup → full `.10d` sections | — |
-| **VG4** | Detections → Tensor10DNodes + σ map (EMF visual/acoustic) | VG3 |
+| **VG4** | Detections → Tensor10DNodes + σ map via **render** spectral/acoustic | VG3 |
 | **VG5** | SR classical WGSL on shared_gpu (SR5 from SR plan) | VG1 |
 | **VG6** | WASM: decide product (CPU lite vision vs none); no Forge on wasm without redesign | policy |
+| **VG7** | Wire biosense/bio outputs through **modalities** + optional **domains::biological** | parallel |
+| **VG8** | Prefer **solvers** LA/FFT/stats for histopathology/radiomics where duplicated | cleanup |
 
 **Do not** claim D5.13 “10d handoff Present” as “full manifold with EMF” — it is **mesh seal + quins**, not σ-node manifold.
 
 ---
 
-## 8. Registry honesty tweaks (recommended)
+## 9. Registry honesty tweaks (recommended)
 
 | ID | Today | Fairer note |
 |----|-------|-------------|
@@ -219,7 +260,7 @@ TARGET (programme)
 
 ---
 
-## 9. Principal sign-off (optional)
+## 10. Principal sign-off (optional)
 
 | ID | Question | Default |
 |----|----------|---------|
