@@ -1010,6 +1010,28 @@ pub fn SocialHub() -> Element {
                                                 if !pname.is_empty() {
                                                     active_project.set(pname.clone());
                                                 }
+                                                // Group chat from accept_coop_share — hand off to Chat.
+                                                if let Some(gc) = v.get("group_chat") {
+                                                    let sid = s(gc, "session_id");
+                                                    let title = s(gc, "title");
+                                                    if let Some(win) = web_sys::window() {
+                                                        if let Ok(Some(storage)) = win.session_storage() {
+                                                            if !sid.is_empty() {
+                                                                let _ = storage.set_item("webizen_open_session_id", &sid);
+                                                            }
+                                                            if !title.is_empty() {
+                                                                let _ = storage.set_item("webizen_chat_peer_title", &title);
+                                                            }
+                                                            if !pname.is_empty() {
+                                                                let tok = pname.replace(' ', "_");
+                                                                let _ = storage.set_item(
+                                                                    "webizen_talk_draft",
+                                                                    &format!("#project:{tok} Joined via package."),
+                                                                );
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                                 invite_in.set(String::new());
                                                 let (c, p) = load_people_lists().await;
                                                 apply_people_lists(c, p, contacts, peers, status, &format!("Connected with {name}. "));
@@ -1022,13 +1044,21 @@ pub fn SocialHub() -> Element {
                                                     {
                                                         collab_list.set(json_list(list, &["collaborators", "items"]));
                                                     }
-                                                    // Best-effort mesh so join path finishes.
                                                     let _ = invoke_json::<serde_json::Value>("mesh_start", json!({})).await;
-                                                    tab.set(HubTab::Projects);
-                                                    status.set(format!(
-                                                        "Connected with {name}. Project scoped{}. Mesh start attempted. Open Projects or Chat.",
-                                                        if pname.is_empty() { String::new() } else { format!(" to {pname}") }
-                                                    ));
+                                                    let has_group = v.get("group_chat").map(|g| !g.is_null()).unwrap_or(false);
+                                                    if has_group {
+                                                        tab.set(HubTab::Chat);
+                                                        status.set(format!(
+                                                            "Joined with {name}. Project scoped{}. Group chat opened. Mesh started when possible.",
+                                                            if pname.is_empty() { String::new() } else { format!(" to {pname}") }
+                                                        ));
+                                                    } else {
+                                                        tab.set(HubTab::Projects);
+                                                        status.set(format!(
+                                                            "Joined with {name}. Project scoped{}. Mesh started when possible.",
+                                                            if pname.is_empty() { String::new() } else { format!(" to {pname}") }
+                                                        ));
+                                                    }
                                                 } else {
                                                     status.set(format!("Connected with {name}."));
                                                 }
@@ -2381,7 +2411,7 @@ pub fn SocialHub() -> Element {
                             "Create project group chat"
                         }
                         button {
-                            style: "{BTN2}",
+                            style: "{BTN}",
                             onclick: move |_| {
                                 #[cfg(target_arch = "wasm32")]
                                 {
@@ -2401,21 +2431,25 @@ pub fn SocialHub() -> Element {
                                                 let text = serde_json::to_string_pretty(&v)
                                                     .unwrap_or_else(|_| v.to_string());
                                                 coop_package_text.set(text.clone());
-                                                status.set("Share package ready — copy below + send invite separately.".into());
+                                                copy_to_clipboard(
+                                                    &text,
+                                                    status,
+                                                    "Join package copied — send that one blob to your collaborator (or their bot). They paste it under Talk → People → Accept package / invite.",
+                                                );
                                             }
-                                            Err(e) => status.set(format!("Share package failed: {e}")),
+                                            Err(e) => status.set(format!("Join package failed: {e}")),
                                         }
                                     });
                                 }
                             },
-                            "Build coop share package"
+                            "Copy full join package (one paste for them)"
                         }
                         if !coop_package_text().is_empty() {
                             div { style: "{CODE}", "{coop_package_text}" }
                             button {
                                 style: "{BTN2}",
-                                onclick: move |_| copy_to_clipboard(&coop_package_text(), status, "Share package copied."),
-                                "Copy share package"
+                                onclick: move |_| copy_to_clipboard(&coop_package_text(), status, "Join package copied again."),
+                                "Copy again"
                             }
                         }
                     }
@@ -2423,54 +2457,44 @@ pub fn SocialHub() -> Element {
                     div { style: "{CARD}",
                         h2 { style: "{H2}", "Engage others (and their bots)" }
                         p { style: "{MUTED}",
-                            "Cooperative help needs a working People path: generate invite or magic link (relation Agent for their bot), they accept, then Open Chat. Scope work with #project: tags so conversations and the work board share context."
+                            "One path: Copy full join package (above) with a project selected → send to them → they paste under People → Accept package. That connects, scopes the project, and starts a group chat when possible. Mesh still needs Start mesh for live peer traffic."
                         }
                         button {
                             style: "{BTN}",
                             onclick: move |_| {
                                 #[cfg(target_arch = "wasm32")]
                                 {
-                                    let (mut invite_out, mut invite_code, mut invite_mailto, mut status, mut tab, active_project) =
-                                        (invite_out, invite_code, invite_mailto, status, tab, active_project);
+                                    let (active_project_id, active_project, mut coop_package_text, mut status, mut tab) =
+                                        (active_project_id, active_project, coop_package_text, status, tab);
                                     spawn(async move {
                                         match invoke_json::<serde_json::Value>(
-                                            "generate_connect_invite",
-                                            json!({ "frontDoorId": serde_json::Value::Null }),
+                                            "coop_share_package",
+                                            json!({
+                                                "projectId": active_project_id(),
+                                                "projectName": active_project(),
+                                            }),
                                         )
                                         .await
                                         {
                                             Ok(v) => {
-                                                invite_code.set(s(&v, "code"));
-                                                invite_out.set(s(&v, "invite_json"));
-                                                invite_mailto.set(s(&v, "mailto_url"));
-                                                let proj = active_project();
-                                                if !proj.is_empty() {
-                                                    let tok = proj.replace(' ', "_");
-                                                    if let Some(win) = web_sys::window() {
-                                                        if let Ok(Some(storage)) = win.session_storage() {
-                                                            let _ = storage.set_item(
-                                                                "webizen_talk_draft",
-                                                                &format!(
-                                                                    "#project:{tok} Welcome — join me on this cooperative project."
-                                                                ),
-                                                            );
-                                                        }
-                                                    }
-                                                }
-                                                tab.set(HubTab::People);
-                                                status.set(
-                                                    "Invite ready under People (copy code/JSON). Share out-of-band; when they accept, use Open Chat. Project tag staged for your next message."
-                                                        .into(),
+                                                let text = serde_json::to_string_pretty(&v)
+                                                    .unwrap_or_else(|_| v.to_string());
+                                                coop_package_text.set(text.clone());
+                                                copy_to_clipboard(
+                                                    &text,
+                                                    status,
+                                                    "Join package on clipboard. Send it as one message; they paste under Talk → People → Accept package / invite.",
                                                 );
+                                                tab.set(HubTab::People);
                                             }
                                             Err(e) => status.set(format!(
-                                                "Invite failed: {e}. Save profile + enable invites under People first."
+                                                "Join package failed: {e}. Set a display name under People first."
                                             )),
                                         }
                                     });
                                 }
                             },
-                            "Invite collaborator (People)"
+                            "Invite collaborator (copy join package)"
                         }
                         button {
                             style: "{BTN2}",

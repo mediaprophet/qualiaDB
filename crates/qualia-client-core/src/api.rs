@@ -3083,13 +3083,52 @@ pub fn talk_setup_status() -> Result<serde_json::Value, String> {
     }))
 }
 
-/// Build a pasteable **coop share package** so another person (or their bot) can join:
-/// domain identity, project scope, **embedded connect invite** (when profile allows), how-to.
-/// Never includes private keys.
+/// Ensure the profile allows connect invites (required for a one-paste join package).
+fn ensure_connect_invites_enabled() -> Result<(), String> {
+    let mut profile = crate::user_profile::load_profile();
+    if !profile.sharing.allow_group_chat_invites {
+        profile.sharing.allow_group_chat_invites = true;
+        crate::user_profile::save_profile(&profile)?;
+    }
+    Ok(())
+}
+
+/// Pure: pull the connect-invite JSON string out of a coop package or bare invite object.
+/// Used by accept + unit tests (no APP_STATE).
+pub fn extract_invite_json_from_package(v: &serde_json::Value) -> Result<String, String> {
+    if v.get("qualia_coop_share").is_some() {
+        let invite_payload = v
+            .get("invite_json")
+            .cloned()
+            .filter(|x| !x.is_null())
+            .ok_or_else(|| {
+                "share package has no invite_json — host must enable invites and rebuild package"
+                    .to_string()
+            })?;
+        if invite_payload.is_string() {
+            let s = invite_payload.as_str().unwrap_or("").trim().to_string();
+            if s.is_empty() {
+                return Err("invite_json string is empty".into());
+            }
+            return Ok(s);
+        }
+        return serde_json::to_string(&invite_payload).map_err(|e| e.to_string());
+    }
+    // Bare ConnectInvitePayload object.
+    if v.get("signature_hex").is_some() && v.get("inviter_did").is_some() {
+        return serde_json::to_string(v).map_err(|e| e.to_string());
+    }
+    Err("not a coop share package or connect invite JSON".into())
+}
+
+/// Build a pasteable **coop share package** — one blob the joiner pastes under People → Accept.
+/// Always embeds a signed connect invite (enables invites if needed). Never includes private keys.
 pub fn coop_share_package(
     project_id: Option<String>,
     project_name: Option<String>,
 ) -> Result<serde_json::Value, String> {
+    ensure_connect_invites_enabled()?;
+
     let domains = crate::domains::list_domains();
     let domain = domains.first().map(|d| d.name.clone()).unwrap_or_default();
     let front_door = domains
@@ -3098,24 +3137,16 @@ pub fn coop_share_package(
         .unwrap_or_default();
     let pid = project_id.unwrap_or_default();
     let pname = project_name.unwrap_or_default();
-    let members = if pid.is_empty() {
-        vec![]
-    } else {
-        crate::project_collab::list(Some(&pid))
-    };
     let profile = crate::user_profile::load_profile();
 
-    // Best-effort invite embed — one paste for the joiner (ConnectInviteSummary).
-    let invite = crate::social_connect::generate_connect_invite(None).ok();
-    let invite_code = invite
-        .as_ref()
-        .map(|i| i.code.clone())
-        .unwrap_or_default();
-    let invite_json = invite.as_ref().and_then(|i| {
-        serde_json::from_str::<serde_json::Value>(&i.invite_json)
-            .ok()
-            .or_else(|| Some(serde_json::Value::String(i.invite_json.clone())))
-    });
+    // Required: invite must succeed for one-paste join (fail closed, not half-package).
+    let invite = crate::social_connect::generate_connect_invite(None).map_err(|e| {
+        format!(
+            "could not embed connect invite: {e}. Set a display name under Talk → People and try again."
+        )
+    })?;
+    let invite_json: serde_json::Value = serde_json::from_str(&invite.invite_json)
+        .unwrap_or_else(|_| serde_json::Value::String(invite.invite_json.clone()));
 
     #[cfg(not(target_arch = "wasm32"))]
     let magic = {
@@ -3124,10 +3155,25 @@ pub fn coop_share_package(
         } else {
             front_door.clone()
         };
+        // Mesh peer material for the joiner (optional second path).
         generate_magic_link(fd, "collaborator".into(), domain.clone()).ok()
     };
     #[cfg(target_arch = "wasm32")]
     let magic: Option<serde_json::Value> = None;
+
+    // Host also records themselves as steward on the project roster when a project is named.
+    if !pid.is_empty() {
+        let self_did = profile.public_did.clone();
+        if !self_did.is_empty() {
+            let _ = crate::project_collab::add(
+                &pid,
+                &pname,
+                &self_did,
+                &profile.display_name,
+                "steward",
+            );
+        }
+    }
 
     let package = serde_json::json!({
         "qualia_coop_share": "1",
@@ -3136,24 +3182,26 @@ pub fn coop_share_package(
         "front_door_did": front_door,
         "project_id": pid,
         "project_name": pname,
-        "members": members,
-        "invite_code": invite_code,
+        "members": crate::project_collab::list(if pid.is_empty() { None } else { Some(pid.as_str()) }),
+        "invite_code": invite.code,
         "invite_json": invite_json,
+        "invite_expires_at": invite.expires_at,
         "magic_link": magic,
         "how": [
-            "1. Install / open Webizen (0.0.25+).",
-            "2. Talk → People → paste this whole package under Accept (or Accept invite / magic link).",
-            "3. Talk → Projects will scope to the shared project when present.",
-            "4. Talk → People → Start mesh for peer chat.",
+            "1. Open Webizen (0.0.25+).",
+            "2. Talk → People → paste this entire JSON under Accept package / invite.",
+            "3. You are connected and the project is scoped on your device.",
+            "4. Talk → People → Start mesh for live peer chat.",
             "5. Chat with #project:Name_With_Underscores for scoped work.",
         ],
-        "note": "No private keys. Invite is short-lived — regenerate if accept fails.",
+        "note": "No private keys. Package is self-contained — one paste joins.",
     });
     Ok(package)
 }
 
-/// Accept a **coop share package** or a bare connect-invite JSON.
-/// Connects to the host, scopes the project when present, and admits both sides on the local roster.
+/// Accept a **coop share package** or a bare connect-invite JSON (one paste).
+/// Connects to the host, scopes the project, admits host+self on the local roster,
+/// registers mesh peer when magic_link is present, and opens a project group chat when possible.
 pub fn accept_coop_share_package(package_or_invite: String) -> Result<serde_json::Value, String> {
     let raw = package_or_invite.trim();
     if raw.is_empty() {
@@ -3162,23 +3210,14 @@ pub fn accept_coop_share_package(package_or_invite: String) -> Result<serde_json
     let v: serde_json::Value =
         serde_json::from_str(raw).map_err(|e| format!("not JSON: {e}"))?;
 
-    // Resolve invite payload: nested invite_json, or whole object is the invite.
-    let invite_payload = if v.get("qualia_coop_share").is_some() {
-        v.get("invite_json")
-            .cloned()
-            .filter(|x| !x.is_null())
-            .ok_or_else(|| {
-                "share package has no invite_json — ask host to regenerate (enable invites + rebuild package)"
-                    .to_string()
-            })?
-    } else {
-        v.clone()
-    };
-    let invite_str = if invite_payload.is_string() {
-        invite_payload.as_str().unwrap_or("").to_string()
-    } else {
-        serde_json::to_string(&invite_payload).map_err(|e| e.to_string())?
-    };
+    let invite_str = extract_invite_json_from_package(&v).or_else(|e| {
+        // Bare invite string body already parsed as object without qualia_coop_share.
+        if v.get("inviter_did").is_some() {
+            serde_json::to_string(&v).map_err(|e2| e2.to_string())
+        } else {
+            Err(e)
+        }
+    })?;
     let contact = crate::social_connect::accept_connect_invite(&invite_str)?;
 
     let project_id = v
@@ -3192,12 +3231,15 @@ pub fn accept_coop_share_package(package_or_invite: String) -> Result<serde_json
         .unwrap_or("")
         .to_string();
 
-    // Local roster: host + self on the named project (when present).
     let profile = crate::user_profile::load_profile();
     let mut admitted = Vec::new();
     if !project_id.is_empty() {
         let host_did = contact.did.clone();
-        let host_name = contact.display_name.clone();
+        let host_name = if contact.display_name.is_empty() {
+            contact.did.clone()
+        } else {
+            contact.display_name.clone()
+        };
         if !host_did.is_empty() {
             if let Ok(row) = crate::project_collab::add(
                 &project_id,
@@ -3210,20 +3252,32 @@ pub fn accept_coop_share_package(package_or_invite: String) -> Result<serde_json
             }
         }
         let self_did = profile.public_did.clone();
-        if !self_did.is_empty() {
-            if let Ok(row) = crate::project_collab::add(
-                &project_id,
-                &project_name,
-                &self_did,
-                &profile.display_name,
-                "contributor",
-            ) {
-                admitted.push(row);
+        if self_did.is_empty() {
+            // Ensure we have a resolvable self DID for the roster.
+            let resolved = crate::user_profile::resolve_public_did(&profile);
+            if !resolved.is_empty() {
+                if let Ok(row) = crate::project_collab::add(
+                    &project_id,
+                    &project_name,
+                    &resolved,
+                    &profile.display_name,
+                    "contributor",
+                ) {
+                    admitted.push(row);
+                }
             }
+        } else if let Ok(row) = crate::project_collab::add(
+            &project_id,
+            &project_name,
+            &self_did,
+            &profile.display_name,
+            "contributor",
+        ) {
+            admitted.push(row);
         }
     }
 
-    // Optional magic link in package — register peer if present.
+    // Magic link → SocialWebNet peer (mesh), when present.
     let mut peer_registered = false;
     #[cfg(not(target_arch = "wasm32"))]
     if let Some(magic) = v.get("magic_link") {
@@ -3239,6 +3293,25 @@ pub fn accept_coop_share_package(package_or_invite: String) -> Result<serde_json
         }
     }
 
+    // Project group chat from roster (host + self + any prior members).
+    let mut group_chat: Option<serde_json::Value> = None;
+    if !project_id.is_empty() {
+        match create_project_group_chat(
+            project_id.clone(),
+            if project_name.is_empty() {
+                project_id.clone()
+            } else {
+                project_name.clone()
+            },
+            Some(vec![contact.did.clone()]),
+        ) {
+            Ok(g) => group_chat = Some(g),
+            Err(_) => {
+                // Still ok — roster may be thin; user can create group later.
+            }
+        }
+    }
+
     Ok(serde_json::json!({
         "connected": true,
         "contact": contact,
@@ -3246,8 +3319,67 @@ pub fn accept_coop_share_package(package_or_invite: String) -> Result<serde_json
         "project_name": project_name,
         "admitted": admitted,
         "peer_registered": peer_registered,
-        "message": "Connected. Project scoped on this device when project_id was present. Start mesh under People for live chat.",
+        "group_chat": group_chat,
+        "message": "Joined. Contact saved; project scoped; roster updated; group chat created when possible. Start mesh under People for live peer traffic.",
     }))
+}
+
+#[cfg(test)]
+mod coop_share_tests {
+    use super::*;
+
+    #[test]
+    fn extract_invite_from_full_package() {
+        let package = serde_json::json!({
+            "qualia_coop_share": "1",
+            "project_id": "board-1",
+            "project_name": "QualiaDB Development Cooperative",
+            "invite_json": {
+                "version": 1,
+                "code": "QUALIA-TEST-TEST",
+                "inviter_name": "Host",
+                "inviter_did": "did:host",
+                "inviter_pubkey_hex": "",
+                "relay_endpoint": "",
+                "front_door_did": "did:host",
+                "profile_card": {},
+                "created_at": 1,
+                "expires_at": 9_999_999_999u64,
+                "signature_hex": ""
+            }
+        });
+        let s = extract_invite_json_from_package(&package).expect("extract");
+        assert!(s.contains("did:host"));
+        assert!(s.contains("QUALIA-TEST-TEST"));
+    }
+
+    #[test]
+    fn extract_invite_from_string_field() {
+        let package = serde_json::json!({
+            "qualia_coop_share": "1",
+            "invite_json": "{\"version\":1,\"code\":\"X\",\"inviter_did\":\"did:x\",\"signature_hex\":\"\"}"
+        });
+        let s = extract_invite_json_from_package(&package).expect("extract string");
+        assert!(s.contains("did:x"));
+    }
+
+    #[test]
+    fn extract_bare_invite_object() {
+        let invite = serde_json::json!({
+            "version": 1,
+            "inviter_did": "did:bare",
+            "signature_hex": "aa",
+            "code": "C"
+        });
+        let s = extract_invite_json_from_package(&invite).expect("bare");
+        assert!(s.contains("did:bare"));
+    }
+
+    #[test]
+    fn extract_rejects_empty_package() {
+        let package = serde_json::json!({ "qualia_coop_share": "1" });
+        assert!(extract_invite_json_from_package(&package).is_err());
+    }
 }
 
 /// Create a group chat for a project from its collaborator roster (+ optional extra DIDs).
