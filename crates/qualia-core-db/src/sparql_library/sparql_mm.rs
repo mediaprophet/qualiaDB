@@ -2,71 +2,89 @@
 //!
 //! Implements SPARQL-MM for media fragments and time-series windowing.
 //! Supports Media Annotations Ontology (MA Ontology, http://www.w3.org/ns/ma-ont#).
+//!
+//! V6 repair: MA/C2PA constants use canonical `q_hash` (no placeholder collisions);
+//! caller-buffered region/time queries; real spatial intersection; honest C2PA status.
 
 use crate::sparql_ast::*;
+use crate::q_hash;
 use crate::NQuin;
 
-/// Media Annotations Ontology predicate hashes (pre-computed FNV-1a)
+/// Media Annotations Ontology predicate hashes (`q_hash` of canonical IRIs).
 pub mod ma_ont {
-    // Core predicates
-    pub const HAS_FRAGMENT: u64 = 0x123456789ABCDEF0; // http://www.w3.org/ns/ma-ont#hasFragment
-    pub const HAS_TEMPORAL_FRAGMENT: u64 = 0x23456789ABCDEF01; // http://www.w3.org/ns/ma-ont#hasTemporalFragment
-    pub const HAS_SPATIAL_FRAGMENT: u64 = 0x3456789ABCDEF012; // http://www.w3.org/ns/ma-ont#hasSpatialFragment
-    pub const HAS_TRACK_FRAGMENT: u64 = 0x456789ABCDEF0123; // http://www.w3.org/ns/ma-ont#hasTrackFragment
+    use crate::q_hash;
 
-    // Temporal properties
-    pub const HAS_START_TIME: u64 = 0x56789ABCDEF01234; // http://www.w3.org/ns/ma-ont#hasStartTime
-    pub const HAS_END_TIME: u64 = 0x6789ABCDEF012345; // http://www.w3.org/ns/ma-ont#hasEndTime
-    pub const DURATION: u64 = 0x789ABCDEF0123456; // http://www.w3.org/ns/ma-ont#duration
+    pub const HAS_FRAGMENT: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasFragment");
+    pub const HAS_TEMPORAL_FRAGMENT: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasTemporalFragment");
+    pub const HAS_SPATIAL_FRAGMENT: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasSpatialFragment");
+    pub const HAS_TRACK_FRAGMENT: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasTrackFragment");
 
-    // Spatial properties
-    pub const HAS_X: u64 = 0x89ABCDEF01234567; // http://www.w3.org/ns/ma-ont#hasX
-    pub const HAS_Y: u64 = 0x9ABCDEF012345678; // http://www.w3.org/ns/ma-ont#hasY
-    pub const HAS_WIDTH: u64 = 0xABCDEF0123456789; // http://www.w3.org/ns/ma-ont#hasWidth
-    pub const HAS_HEIGHT: u64 = 0xBCDEF0123456789A; // http://www.w3.org/ns/ma-ont#hasHeight
+    pub const HAS_START_TIME: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasStartTime");
+    pub const HAS_END_TIME: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasEndTime");
+    pub const DURATION: u64 = q_hash("http://www.w3.org/ns/ma-ont#duration");
 
-    // Track properties
-    pub const HAS_TRACK: u64 = 0xCDEF0123456789AB; // http://www.w3.org/ns/ma-ont#hasTrack
-    pub const HAS_TRACK_NAME: u64 = 0xDEF0123456789ABC; // http://www.w3.org/ns/ma-ont#hasTrackName
-    pub const HAS_TRACK_NUMBER: u64 = 0xEF0123456789ABCD; // http://www.w3.org/ns/ma-ont#hasTrackNumber
+    pub const HAS_X: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasX");
+    pub const HAS_Y: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasY");
+    pub const HAS_WIDTH: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasWidth");
+    pub const HAS_HEIGHT: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasHeight");
 
-    // Format properties
-    pub const HAS_FORMAT: u64 = 0xF0123456789ABCDE; // http://www.w3.org/ns/ma-ont#hasFormat
-    pub const HAS_MIME_TYPE: u64 = 0x0123456789ABCDEF; // http://www.w3.org/ns/ma-ont#hasMimeType
-    pub const HAS_CODEC: u64 = 0x123456789ABCDEF0; // http://www.w3.org/ns/ma-ont#hasCodec
+    pub const HAS_TRACK: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasTrack");
+    pub const HAS_TRACK_NAME: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasTrackName");
+    pub const HAS_TRACK_NUMBER: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasTrackNumber");
 
-    // Quality properties
-    pub const HAS_BITRATE: u64 = 0x23456789ABCDEF01; // http://www.w3.org/ns/ma-ont#hasBitrate
-    pub const HAS_FRAMERATE: u64 = 0x3456789ABCDEF012; // http://www.w3.org/ns/ma-ont#hasFramerate
-    pub const HAS_SAMPLERATE: u64 = 0x456789ABCDEF0123; // http://www.w3.org/ns/ma-ont#hasSamplerate
-    pub const HAS_CHANNELS: u64 = 0x56789ABCDEF01234; // http://www.w3.org/ns/ma-ont#hasChannels
+    pub const HAS_FORMAT: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasFormat");
+    pub const HAS_MIME_TYPE: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasMimeType");
+    pub const HAS_CODEC: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasCodec");
+
+    pub const HAS_BITRATE: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasBitrate");
+    pub const HAS_FRAMERATE: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasFramerate");
+    pub const HAS_SAMPLERATE: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasSamplerate");
+    pub const HAS_CHANNELS: u64 = q_hash("http://www.w3.org/ns/ma-ont#hasChannels");
+
+    /// Qualia extension: packed media time base (ms), separate from Lamport bits.
+    pub const MEDIA_TIME_MS: u64 = q_hash("https://ns.webizen.org/q42/mediaTimeMs");
 }
 
-/// C2PA (Coalition for Content Provenance and Authenticity) predicate hashes
+/// C2PA predicate hashes (`q_hash` of documented IRIs — vocabulary for graph edges only).
 pub mod c2pa {
-    // Core C2PA predicates
-    pub const HAS_CREDENTIAL: u64 = 0x6789ABCDEF012345; // http://ns.c2pa.org/credentials/hasCredential
-    pub const HAS_MANIFEST: u64 = 0x789ABCDEF0123456; // http://ns.c2pa.org/manifest/hasManifest
-    pub const HAS_SIGNATURE: u64 = 0x89ABCDEF01234567; // http://ns.c2pa.org/signature/hasSignature
-    pub const HAS_PROVENANCE: u64 = 0x9ABCDEF012345678; // http://ns.c2pa.org/provenance/hasProvenance
-    pub const HAS_ASSERTION: u64 = 0xABCDEF0123456789; // http://ns.c2pa.org/assertion/hasAssertion
+    use crate::q_hash;
 
-    // Provenance predicates
-    pub const CREATED_AT: u64 = 0xBCDEF0123456789A; // http://ns.c2pa.org/provenance/createdAt
-    pub const CREATED_BY: u64 = 0xCDEF0123456789AB; // http://ns.c2pa.org/provenance/createdBy
-    pub const MODIFIED_AT: u64 = 0xDEF0123456789ABC; // http://ns.c2pa.org/provenance/modifiedAt
-    pub const MODIFIED_BY: u64 = 0xEF0123456789ABCD; // http://ns.c2pa.org/provenance/modifiedBy
-    pub const HAS_TOOL: u64 = 0xF0123456789ABCDE; // http://ns.c2pa.org/provenance/hasTool
+    pub const HAS_CREDENTIAL: u64 = q_hash("http://ns.c2pa.org/credentials/hasCredential");
+    pub const HAS_MANIFEST: u64 = q_hash("http://ns.c2pa.org/manifest/hasManifest");
+    pub const HAS_SIGNATURE: u64 = q_hash("http://ns.c2pa.org/signature/hasSignature");
+    pub const HAS_PROVENANCE: u64 = q_hash("http://ns.c2pa.org/provenance/hasProvenance");
+    pub const HAS_ASSERTION: u64 = q_hash("http://ns.c2pa.org/assertion/hasAssertion");
 
-    // Asset relationship predicates
-    pub const DERIVED_FROM: u64 = 0x0123456789ABCDEF; // http://ns.c2pa.org/asset/derivedFrom
-    pub const COMPONENT_OF: u64 = 0x123456789ABCDEF0; // http://ns.c2pa.org/asset/componentOf
-    pub const HAS_COMPONENT: u64 = 0x23456789ABCDEF01; // http://ns.c2pa.org/asset/hasComponent
+    pub const CREATED_AT: u64 = q_hash("http://ns.c2pa.org/provenance/createdAt");
+    pub const CREATED_BY: u64 = q_hash("http://ns.c2pa.org/provenance/createdBy");
+    pub const MODIFIED_AT: u64 = q_hash("http://ns.c2pa.org/provenance/modifiedAt");
+    pub const MODIFIED_BY: u64 = q_hash("http://ns.c2pa.org/provenance/modifiedBy");
+    pub const HAS_TOOL: u64 = q_hash("http://ns.c2pa.org/provenance/hasTool");
 
-    // Validation predicates
-    pub const IS_VERIFIED: u64 = 0x3456789ABCDEF012; // http://ns.c2pa.org/validation/isVerified
-    pub const VERIFICATION_STATUS: u64 = 0x456789ABCDEF0123; // http://ns.c2pa.org/validation/verificationStatus
-    pub const HAS_CERTIFICATE: u64 = 0x56789ABCDEF01234; // http://ns.c2pa.org/validation/hasCertificate
+    pub const DERIVED_FROM: u64 = q_hash("http://ns.c2pa.org/asset/derivedFrom");
+    pub const COMPONENT_OF: u64 = q_hash("http://ns.c2pa.org/asset/componentOf");
+    pub const HAS_COMPONENT: u64 = q_hash("http://ns.c2pa.org/asset/hasComponent");
+
+    pub const IS_VERIFIED: u64 = q_hash("http://ns.c2pa.org/validation/isVerified");
+    pub const VERIFICATION_STATUS: u64 = q_hash("http://ns.c2pa.org/validation/verificationStatus");
+    pub const HAS_CERTIFICATE: u64 = q_hash("http://ns.c2pa.org/validation/hasCertificate");
+}
+
+/// Honest C2PA verification status (design §6.3.7).
+/// Field presence alone is never "verified".
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum C2paVerificationStatus {
+    /// No C2PA path implemented for this asset.
+    Unsupported = 0,
+    /// Manifest/claim edges present; no crypto check run.
+    ParsedOnly = 1,
+    /// Integrity hash matched; signature not checked.
+    IntegrityChecked = 2,
+    /// Signature verified against key material (not yet implemented here).
+    SignatureVerified = 3,
+    /// Full trust chain evaluated (not yet implemented here).
+    TrustChainEvaluated = 4,
 }
 
 /// Media fragment dimensions
@@ -148,30 +166,83 @@ impl<'a> SparqlMmHandler<'a> {
         }
     }
 
-    /// Parse media fragment URI using MA Ontology predicates
-    /// Format: media_uri#t=start,end&xywh=x,y,w,h&track=number
-    pub fn parse_media_fragment(&mut self, fragment_uri: u64) -> Result<MediaFragment, String> {
+    /// Build a media fragment from **explicit** dimensions (no hash-derived pseudo-parse).
+    ///
+    /// Callers that only have a media URI hash must pass dimensions separately —
+    /// inventing temporal/spatial ranges from hash bits is forbidden (design §6.3.6).
+    pub fn make_media_fragment(
+        media_uri: u64,
+        dimensions: &[MediaFragmentDimension],
+    ) -> Result<MediaFragment, String> {
+        if dimensions.len() > 4 {
+            return Err("At most 4 fragment dimensions".to_string());
+        }
         let mut fragment = MediaFragment {
-            media_uri: fragment_uri,
+            media_uri,
             dimensions: [None; 4],
             dimension_count: 0,
         };
-
-        // Extract base media URI (before #)
-        let _base_uri = fragment_uri & 0xFFFFFFFFFFFFFF00;
-
-        // Simplified: extract dimensions from URI hash
-        // In production, this would parse the actual URI string
-        let temporal_hash = fragment_uri & 0xFFFF;
-        if temporal_hash > 0 {
-            fragment.dimensions[0] = Some(MediaFragmentDimension::Temporal {
-                start: temporal_hash & 0xFF,
-                end: (temporal_hash >> 8) & 0xFF,
-            });
+        for (i, d) in dimensions.iter().enumerate() {
+            fragment.dimensions[i] = Some(*d);
             fragment.dimension_count += 1;
         }
-
         Ok(fragment)
+    }
+
+    /// Legacy entry: returns a fragment with **media_uri only** (no invented dimensions).
+    /// Prefer `make_media_fragment` with explicit temporal/spatial/track dims.
+    pub fn parse_media_fragment(&mut self, fragment_uri: u64) -> Result<MediaFragment, String> {
+        Self::make_media_fragment(fragment_uri, &[])
+    }
+
+    /// Pack xywh into a single object payload (same layout as vision `pack_bbox` family).
+    #[inline]
+    pub fn pack_spatial_u64(x: u32, y: u32, width: u32, height: u32) -> u64 {
+        // Clamp to u16 lanes for fixed packing (normalized or pixel coords ≤ 65535).
+        let x = (x.min(0xFFFF)) as u64;
+        let y = (y.min(0xFFFF)) as u64;
+        let w = (width.min(0xFFFF)) as u64;
+        let h = (height.min(0xFFFF)) as u64;
+        x | (y << 16) | (w << 32) | (h << 48)
+    }
+
+    #[inline]
+    pub fn unpack_spatial_u64(v: u64) -> (u32, u32, u32, u32) {
+        (
+            (v & 0xFFFF) as u32,
+            ((v >> 16) & 0xFFFF) as u32,
+            ((v >> 32) & 0xFFFF) as u32,
+            ((v >> 48) & 0xFFFF) as u32,
+        )
+    }
+
+    /// Axis-aligned box intersection (x,y,w,h).
+    #[inline]
+    pub fn spatial_intersects(
+        ax: u32,
+        ay: u32,
+        aw: u32,
+        ah: u32,
+        bx: u32,
+        by: u32,
+        bw: u32,
+        bh: u32,
+    ) -> bool {
+        let ax1 = ax.saturating_add(aw);
+        let ay1 = ay.saturating_add(ah);
+        let bx1 = bx.saturating_add(bw);
+        let by1 = by.saturating_add(bh);
+        ax < bx1 && ax1 > bx && ay < by1 && ay1 > by
+    }
+
+    /// Media time from a quin that uses `ma_ont::MEDIA_TIME_MS` (object = ms),
+    /// **not** the Lamport field in metadata.
+    pub fn media_time_ms(quin: &NQuin) -> Option<u64> {
+        if quin.predicate == ma_ont::MEDIA_TIME_MS {
+            Some(quin.object)
+        } else {
+            None
+        }
     }
 
     /// Get MA Ontology property for a media resource
@@ -268,76 +339,195 @@ impl<'a> SparqlMmHandler<'a> {
         Ok(idx)
     }
 
-    /// Query quins within a time window
+    /// Query quins within a time window (heap-compatible wrapper).
+    /// Prefer `query_window_into` on hot paths.
     pub fn query_window(
         &self,
         window_id: u8,
         _timestamp_field: u64,
     ) -> Result<Vec<&NQuin>, String> {
+        let mut buf = [None; 256];
+        let n = self.query_window_into(window_id, &mut buf)?;
+        Ok(buf[..n].iter().filter_map(|x| *x).collect())
+    }
+
+    /// Caller-buffered window query. Uses **media time** when
+    /// `predicate == MEDIA_TIME_MS`; otherwise falls back to metadata low 29 bits
+    /// with the understanding that that path is Lamport-mixed (not pure media time).
+    pub fn query_window_into(
+        &'a self,
+        window_id: u8,
+        out: &mut [Option<&'a NQuin>],
+    ) -> Result<usize, String> {
         let window = self
             .windows
             .get(window_id as usize)
+            .filter(|_| (window_id as usize) < self.window_count as usize)
             .ok_or("Window ID out of bounds")?;
 
-        let results: Vec<&NQuin> = self
-            .quins
-            .iter()
-            .filter(|quin| {
-                // Check if quin's timestamp is within window
-                let quin_time = quin.metadata & 0x1FFF_FFFF; // Extract Lamport clock
-                quin_time >= window.start_ms && quin_time <= window.end_ms
-            })
-            .collect();
-
-        Ok(results)
+        let mut w = 0usize;
+        for quin in self.quins {
+            let t = if let Some(ms) = Self::media_time_ms(quin) {
+                ms
+            } else {
+                quin.metadata & 0x1FFF_FFFF
+            };
+            if t >= window.start_ms && t <= window.end_ms {
+                if w >= out.len() {
+                    break;
+                }
+                out[w] = Some(quin);
+                w += 1;
+            }
+        }
+        Ok(w)
     }
 
-    /// Query media fragment
+    /// Query media fragment (heap wrapper). Prefer `query_media_fragment_into`.
     pub fn query_media_fragment(&self, fragment_id: u8) -> Result<Vec<&NQuin>, String> {
+        let mut buf = [None; 256];
+        let n = self.query_media_fragment_into(fragment_id, &mut buf)?;
+        Ok(buf[..n].iter().filter_map(|x| *x).collect())
+    }
+
+    /// Caller-buffered media-fragment query with real spatial intersection.
+    pub fn query_media_fragment_into(
+        &'a self,
+        fragment_id: u8,
+        out: &mut [Option<&'a NQuin>],
+    ) -> Result<usize, String> {
         let fragment = self
             .media_fragments
             .get(fragment_id as usize)
+            .filter(|_| (fragment_id as usize) < self.fragment_count as usize)
             .ok_or("Fragment ID out of bounds")?;
 
-        // Filter quins based on fragment dimensions
-        let mut results = Vec::new();
-
+        let mut w = 0usize;
         for quin in self.quins {
-            if quin.subject == fragment.media_uri {
-                // Check if quin matches fragment dimensions
-                let matches = self.check_fragment_match(quin, fragment);
-                if matches {
-                    results.push(quin);
-                }
+            if !self.check_fragment_match(quin, fragment) {
+                continue;
             }
+            if w >= out.len() {
+                break;
+            }
+            out[w] = Some(quin);
+            w += 1;
         }
-
-        Ok(results)
+        Ok(w)
     }
 
     fn check_fragment_match(&self, quin: &NQuin, fragment: &MediaFragment) -> bool {
+        if fragment.dimension_count == 0 {
+            return quin.subject == fragment.media_uri
+                || self.quin_linked_to_media(quin, fragment.media_uri);
+        }
+
+        if !(quin.subject == fragment.media_uri
+            || self.quin_linked_to_media(quin, fragment.media_uri))
+        {
+            return false;
+        }
+
         for i in 0..fragment.dimension_count as usize {
-            if let Some(dim) = fragment.dimensions[i] {
-                match dim {
-                    MediaFragmentDimension::Temporal { start, end } => {
-                        let quin_time = quin.metadata & 0x1FFF_FFFF;
-                        if quin_time < start || quin_time > end {
+            let Some(dim) = fragment.dimensions[i] else {
+                continue;
+            };
+            match dim {
+                MediaFragmentDimension::Temporal { start, end } => {
+                    let Some(quin_time) = Self::media_time_ms(quin)
+                        .or_else(|| {
+                            if quin.predicate == ma_ont::HAS_START_TIME
+                                || quin.predicate == ma_ont::HAS_END_TIME
+                            {
+                                Some(quin.object)
+                            } else {
+                                None
+                            }
+                        })
+                    else {
+                        // No media-time payload on this quin → temporal dim does not reject.
+                        continue;
+                    };
+                    if quin_time < start || quin_time > end {
+                        return false;
+                    }
+                }
+                MediaFragmentDimension::Spatial {
+                    x,
+                    y,
+                    width,
+                    height,
+                } => {
+                    // If this quin carries a box, require intersection; else pass.
+                    if let Some((qx, qy, qw, qh)) = self.quin_spatial_box(quin) {
+                        if !Self::spatial_intersects(qx, qy, qw, qh, x, y, width, height) {
                             return false;
                         }
                     }
-                    MediaFragmentDimension::Spatial { .. } => {
-                        // Simplified: always true
-                        // In production, check spatial coordinates
-                    }
-                    MediaFragmentDimension::Track { track_id, .. } => {
-                        if quin.object != track_id {
-                            return false;
-                        }
+                }
+                MediaFragmentDimension::Track { track_id, .. } => {
+                    let is_track_pred = quin.predicate == ma_ont::HAS_TRACK
+                        || quin.predicate == ma_ont::HAS_TRACK_NUMBER
+                        || quin.predicate == q_hash("https://ns.webizen.org/q42/hasTrackId");
+                    if is_track_pred && quin.object != track_id {
+                        return false;
                     }
                 }
             }
         }
         true
+    }
+
+    fn quin_linked_to_media(&self, quin: &NQuin, media_uri: u64) -> bool {
+        if quin.subject == media_uri {
+            return true;
+        }
+        // Observation pattern: media --VisualObservation--> instance
+        for q in self.quins {
+            if q.subject == media_uri && q.object == quin.subject {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Resolve a box for this quin: packed HAS_SPATIAL_FRAGMENT object, or HAS_X/Y/W/H props.
+    fn quin_spatial_box(&self, quin: &NQuin) -> Option<(u32, u32, u32, u32)> {
+        if quin.predicate == ma_ont::HAS_SPATIAL_FRAGMENT
+            || quin.predicate == q_hash("https://ns.webizen.org/q42/hasBoundingBox")
+        {
+            let (x, y, w, h) = Self::unpack_spatial_u64(quin.object);
+            // hasBoundingBox stores x0,y0,x1,y1 not x,y,w,h — convert if x1>x0 style.
+            if quin.predicate == q_hash("https://ns.webizen.org/q42/hasBoundingBox") {
+                let x1 = w;
+                let y1 = h;
+                let width = x1.saturating_sub(x);
+                let height = y1.saturating_sub(y);
+                return Some((x, y, width, height));
+            }
+            return Some((x, y, w, h));
+        }
+        // Compose from component properties on same subject.
+        let mut x = None;
+        let mut y = None;
+        let mut width = None;
+        let mut height = None;
+        for q in self.quins {
+            if q.subject != quin.subject {
+                continue;
+            }
+            match q.predicate {
+                p if p == ma_ont::HAS_X => x = Some(q.object as u32),
+                p if p == ma_ont::HAS_Y => y = Some(q.object as u32),
+                p if p == ma_ont::HAS_WIDTH => width = Some(q.object as u32),
+                p if p == ma_ont::HAS_HEIGHT => height = Some(q.object as u32),
+                _ => {}
+            }
+        }
+        match (x, y, width, height) {
+            (Some(x), Some(y), Some(w), Some(h)) => Some((x, y, w, h)),
+            _ => None,
+        }
     }
 
     /// Get media duration using MA Ontology
@@ -397,15 +587,36 @@ impl<'a> SparqlMmHandler<'a> {
         self.get_ma_property(media_uri, c2pa::HAS_PROVENANCE)
     }
 
-    /// C2PA: Check if media is verified
+    /// C2PA: Check if media is cryptographically verified.
+    ///
+    /// Honest policy: a stored `isVerified=1` edge is **not** sufficient.
+    /// Returns `Ok(true)` only when status is SignatureVerified or TrustChainEvaluated.
+    /// Today this engine never reaches those levels → typically `Ok(false)` or Err.
     pub fn is_verified(&self, media_uri: u64) -> Result<bool, String> {
-        let verified = self.get_ma_property(media_uri, c2pa::IS_VERIFIED)?;
-        Ok(verified == 1)
+        let status = self.c2pa_status(media_uri)?;
+        Ok(matches!(
+            status,
+            C2paVerificationStatus::SignatureVerified
+                | C2paVerificationStatus::TrustChainEvaluated
+        ))
     }
 
-    /// C2PA: Get verification status
+    /// Honest verification ladder for C2PA (design §6.3.7).
+    pub fn c2pa_status(&self, media_uri: u64) -> Result<C2paVerificationStatus, String> {
+        // Full crypto path is not implemented in this module.
+        let has_manifest = self.get_ma_property(media_uri, c2pa::HAS_MANIFEST).is_ok();
+        let has_sig = self.get_ma_property(media_uri, c2pa::HAS_SIGNATURE).is_ok();
+        if !has_manifest && !has_sig {
+            return Ok(C2paVerificationStatus::Unsupported);
+        }
+        // Edges present only → ParsedOnly. Never promote to verified.
+        let _claimed = self.get_ma_property(media_uri, c2pa::IS_VERIFIED);
+        Ok(C2paVerificationStatus::ParsedOnly)
+    }
+
+    /// C2PA: Get verification status as u64 enum discriminant.
     pub fn get_verification_status(&self, media_uri: u64) -> Result<u64, String> {
-        self.get_ma_property(media_uri, c2pa::VERIFICATION_STATUS)
+        Ok(self.c2pa_status(media_uri)? as u64)
     }
 
     /// C2PA: Get creation timestamp
@@ -454,18 +665,13 @@ impl<'a> SparqlMmHandler<'a> {
         Ok(components)
     }
 
-    /// C2PA: Verify content signature (simplified)
+    /// C2PA: Verify content signature.
+    /// **Unsupported** in this build — always returns `Ok(false)` if a signature
+    /// edge exists (ParsedOnly), or `Err` if missing. Never claims crypto success.
     pub fn verify_signature(&self, media_uri: u64) -> Result<bool, String> {
-        // In production, this would:
-        // 1. Get the signature from the media
-        // 2. Get the certificate
-        // 3. Verify the signature using the certificate
-        // 4. Return true if valid
-
-        // Simplified: check if signature exists and is_verified is true
         let _signature = self.get_signature(media_uri)?;
-        let verified = self.is_verified(media_uri)?;
-        Ok(verified)
+        // Real signature verification is out of scope for SPARQL-MM accessors.
+        Ok(false)
     }
 
     /// Aggregate over time window
@@ -781,11 +987,117 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_media_fragment() {
+    fn test_parse_media_fragment_no_invented_dims() {
         let quins = vec![];
         let mut handler = SparqlMmHandler::new(&quins);
 
         let fragment = handler.parse_media_fragment(12345).unwrap();
         assert_eq!(fragment.media_uri, 12345);
+        assert_eq!(fragment.dimension_count, 0);
+    }
+
+    #[test]
+    fn ma_ont_constants_are_distinct() {
+        // Former placeholders collided (HAS_FRAGMENT == HAS_CODEC etc.).
+        assert_ne!(ma_ont::HAS_FRAGMENT, ma_ont::HAS_CODEC);
+        assert_ne!(ma_ont::HAS_BITRATE, ma_ont::HAS_TEMPORAL_FRAGMENT);
+        assert_ne!(ma_ont::HAS_X, ma_ont::HAS_Y);
+        assert_ne!(c2pa::HAS_CREDENTIAL, c2pa::HAS_MANIFEST);
+        assert_ne!(c2pa::DERIVED_FROM, ma_ont::HAS_MIME_TYPE);
+    }
+
+    #[test]
+    fn spatial_intersection_real() {
+        assert!(SparqlMmHandler::spatial_intersects(0, 0, 10, 10, 5, 5, 10, 10));
+        assert!(!SparqlMmHandler::spatial_intersects(0, 0, 10, 10, 20, 20, 5, 5));
+    }
+
+    #[test]
+    fn query_window_into_media_time() {
+        let media = q_hash("media:clip");
+        let quins = [
+            NQuin {
+                subject: media,
+                predicate: ma_ont::MEDIA_TIME_MS,
+                object: 500,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: media,
+                predicate: ma_ont::MEDIA_TIME_MS,
+                object: 2500,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            },
+        ];
+        // Fix parity for honesty (not required for query)
+        let mut handler = SparqlMmHandler::new(&quins);
+        handler.create_tumbling_window(1000, 0).unwrap(); // [0,1000]
+        let mut out = [None; 8];
+        let n = handler.query_window_into(0, &mut out).unwrap();
+        assert_eq!(n, 1);
+        assert_eq!(out[0].unwrap().object, 500);
+    }
+
+    #[test]
+    fn query_media_fragment_into_spatial() {
+        let media = q_hash("media:img");
+        let packed = SparqlMmHandler::pack_spatial_u64(10, 10, 50, 50);
+        let quins = [NQuin {
+            subject: media,
+            predicate: ma_ont::HAS_SPATIAL_FRAGMENT,
+            object: packed,
+            context: 0,
+            metadata: 0,
+            parity: 0,
+        }];
+        let mut handler = SparqlMmHandler::new(&quins);
+        let frag = SparqlMmHandler::make_media_fragment(
+            media,
+            &[MediaFragmentDimension::Spatial {
+                x: 20,
+                y: 20,
+                width: 20,
+                height: 20,
+            }],
+        )
+        .unwrap();
+        handler.add_media_fragment(frag).unwrap();
+        let mut out = [None; 4];
+        let n = handler.query_media_fragment_into(0, &mut out).unwrap();
+        assert_eq!(n, 1);
+    }
+
+    #[test]
+    fn c2pa_never_claims_verified_from_field_presence() {
+        let media = q_hash("media:photo");
+        let quins = [
+            NQuin {
+                subject: media,
+                predicate: c2pa::HAS_SIGNATURE,
+                object: 0xABC,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            },
+            NQuin {
+                subject: media,
+                predicate: c2pa::IS_VERIFIED,
+                object: 1,
+                context: 0,
+                metadata: 0,
+                parity: 0,
+            },
+        ];
+        let handler = SparqlMmHandler::new(&quins);
+        assert_eq!(
+            handler.c2pa_status(media).unwrap(),
+            C2paVerificationStatus::ParsedOnly
+        );
+        assert!(!handler.is_verified(media).unwrap());
+        assert!(!handler.verify_signature(media).unwrap());
     }
 }

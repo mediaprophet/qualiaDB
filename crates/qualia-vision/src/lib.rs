@@ -12,7 +12,10 @@
 //! Phase 1: ABI + CPU reference detector.  
 //! V1: preprocess (resize/NMS/letterbox).  
 //! V2: content-addressed media store.  
-//! V3: CPU vision ops (Conv/Pool/Resize) as Forge GPU oracles.
+//! V3: CPU vision ops (Conv/Pool/Resize) as Forge GPU oracles.  
+//! V4: linear probe classifier.  
+//! V5: multi-object grid detector + bounded tracker.  
+//! V6: epistemic full compile + human reject/correct + region/time query.
 
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
 
@@ -22,13 +25,19 @@ pub mod preprocess;
 pub mod media_store;
 pub mod ops;
 pub mod classifier;
+pub mod detector;
+pub mod tracker;
 
 #[cfg(feature = "cpu-reference")]
 pub mod cpu_reference;
 
 pub use semantic::{
-    compile_observation_quins, media_digest, observation_quin, q_hash, MediaDigest, VisionQuin,
-    MAX_OBS_QUINS, P_PROPOSES_CLASS, P_VISUAL_OBSERVATION, CTX_VISION,
+    bbox_quin, class_proposal_quin, compile_observation_quins, compile_observation_quins_full,
+    human_correct_quin, human_reject_quin, media_digest, model_digest_quin, observation_quin,
+    pack_bbox_u64, q_hash, query_by_frame_range, query_by_model, query_instances_in_region,
+    track_quin, unpack_bbox_u64, MediaDigest, VisionQuin, CTX_HUMAN_ATTESTATION, CTX_VISION,
+    MAX_OBS_QUINS, P_HAS_BBOX, P_HAS_TRACK, P_HUMAN_CORRECTS, P_HUMAN_REJECTS, P_MODEL_DIGEST,
+    P_PROPOSES_CLASS, P_VISUAL_OBSERVATION,
 };
 pub use types::{
     Detection, ImageView, PixelFormat, VisionError, VisualCapabilities, VisualModel,
@@ -43,6 +52,8 @@ pub use ops::{
     avg_pool2d_nchw_f32, conv2d_nchw_f32, max_pool2d_nchw_f32, resize_nearest_nchw_f32,
 };
 pub use classifier::{fit_two_class_centroids, LinearHead, LinearProbeVision};
+pub use detector::{sample_frame_indices, GridMultiObjectDetector, MAX_GRID};
+pub use tracker::{BoundedTracker, FLAG_TRACK_OVERFLOW, MAX_TRACKS};
 
 #[cfg(feature = "cpu-reference")]
 pub use cpu_reference::CpuReferenceVision;
