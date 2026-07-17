@@ -209,6 +209,21 @@ coordination/NOTICES.md
 !/docs/plans/native-vision-capability-excellence-PROGRESS-LOG.md
 !/docs/plans/vision-excellence-commercial-model-pack.md
 !/docs/plans/vision-capability-catalogue-2026.md
+!/docs/plans/vision-excellence-swarm-execute-2026.md
+
+# Vision vendor weights (large binaries) — manifests/README tracked; fetch via vendor/vision/download.ps1
+/vendor/vision/**/*.onnx
+/vendor/vision/**/*.tflite
+/vendor/vision/**/*.task
+/vendor/vision/**/*.bin
+/vendor/vision/**/*.pb
+/vendor/vision/**/*.pth
+/vendor/vision/**/*.pt
+/vendor/vision/**/*.safetensors
+# Allow FETCH metadata written by download.ps1
+!/vendor/vision/**/FETCH.json
+!/vendor/vision/**/README.md
+!/vendor/vision/**/.gitkeep
 
 /docs/manuals/planning/
 docs/to-do/

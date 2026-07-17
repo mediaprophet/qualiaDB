@@ -15,10 +15,15 @@ Licence preference: Apache-2.0 / MIT / other commercial-OK weights; no Python pr
 | **Present** | Library path exists and is honest for scope claimed |
 | **Partial** | Lite / scaffold / incomplete excellence bar |
 | **Queued** | On implementation to-do (agent-executable when prioritised) |
-| **Gated** | Needs principal weights, corpus, or product demand |
+| **WeightAbsent** | Permissive (MIT/Apache) weight not on disk — run `vendor/vision/download.ps1` |
+| **AdapterMissing** | Weight OK or pure-Rust path; loader/algorithm not wired |
+| **TrainingDeferred** | Principal fine-tune later — **does not** block published weights |
+| **Gated** | Needs product demand, clinical corpus, or true LicenceHostile diligence |
 | **Policy** | Must pass deontic / consent / CCTV purpose before enable |
 | **OOS** | Out of product scope (or defence-only; do not ship offensive capability) |
 | **Wire** | Exists elsewhere in monorepo; vision programme = integrate |
+
+**Licence honesty:** YuNet **MIT**, SFace / MediaPipe / YOLO-NAS / OMZ emotion **Apache-2.0** are **PermissiveReady** under `vendor/vision/`. Do **not** call them commercial-licence gated.
 
 ### Priority waves (orchestrator)
 

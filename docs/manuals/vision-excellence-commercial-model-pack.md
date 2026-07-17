@@ -1,9 +1,12 @@
-# Vision Excellence — Commercial-Use Model Pack (gate assets)
+# Vision Excellence — Permissive Model Pack (vendor assets)
 
-**Date:** 2026-07-17  
-**Purpose:** Principal-curated, **permissive-licence** offline models to clear COMPLETE-WITH-GATE rows without vendoring OpenCV as the product ABI and without non-commercial training-data traps (e.g. MS-Celeb-1M, AffectNet).  
-**Formats preferred:** ONNX / TFLite for local execution; Qualia adapters convert to internal buffers / optional P64 later.  
-**Status:** Approved candidate list for acquisition + integration — **weights not committed to git** (download offline into `{storage}/models/` or `bundled/models/vision/` when principal fetches them).
+**Date:** 2026-07-17 (revised licence honesty)  
+**Purpose:** Principal-curated **MIT / Apache-2.0** offline models so swarm jobs load real weights without inventing a “commercial licence” wall. OpenCV Zoo / MediaPipe / OMZ are **weight sources only** — not the product ABI.  
+**Formats preferred:** ONNX / TFLite; Qualia adapters convert to internal buffers.  
+**Status:** Pack + `vendor/vision/` layout + `download.ps1`. Large binaries gitignored; fetch per machine.
+
+**Correct tags:** `PermissiveReady` | `WeightAbsent` | `AdapterMissing` | `TrainingDeferred` | `Policy` | `LicenceHostile`  
+**Incorrect:** calling YuNet/SFace/MediaPipe/YOLO-NAS “commercial licence gated.”
 
 ---
 
@@ -12,11 +15,11 @@
 | Check | Required |
 |-------|----------|
 | Code licence | Apache-2.0 / MIT preferred |
-| **Weight** licence | Explicit commercial redistribution/use |
-| **Training data** | Prefer models whose training data licence is not known-hostile to commercial weight use |
-| Redistribution | Document whether we may ship in installer or only load user-fetched files |
+| **Weight** licence | SPDX for the **weight file** (MIT/Apache pack is OK for product use) |
+| **Training data** | Prefer non-hostile corpora; residual risk is **DiligenceNote**, not a paywall for Apache zoo weights |
+| Redistribution | MANIFEST + licence texts under `vendor/vision/licenses/` for installers |
 
-If any check fails, row stays COMPLETE-WITH-GATE or heuristic-only.
+`CompleteWithGate` means **WeightAbsent or AdapterMissing**, not “buy a commercial licence,” unless tag is `LicenceHostile`.
 
 ---
 
@@ -35,22 +38,26 @@ If any check fails, row stays COMPLETE-WITH-GATE or heuristic-only.
 
 ---
 
-## 2. Local layout (when fetched)
-
-Do **not** commit multi‑MB weights to the Qualia git tree unless Timothy explicitly wants them tracked.
+## 2. Local layout (canonical)
 
 ```text
-{storage}/models/vision/
-  README.md                 # copy of diligence notes
-  face_landmarker.task      # or .tflite / .onnx — MediaPipe
-  sface.onnx                # embedding
-  yunet.onnx                # face detect
-  yolo_nas_s.onnx           # optional general detector
-  emotions_retail.onnx      # optional; or omit and use blendshapes
-  MANIFEST.json             # hashes, licence, gate ids
+vendor/vision/                    # developer + swarm (canonical)
+  MANIFEST.json
+  download.ps1
+  face/yunet/*.onnx               # MIT
+  face/sface/*.onnx               # Apache-2.0
+  face/mediapipe_landmarker/*     # Apache-2.0
+  detect/yolo_nas/                # Apache-2.0 (manual place OK)
+  …
+bundled/models/vision/            # package mirror (same layout)
+{storage}/models/vision/          # user data dir override
 ```
 
-`MANIFEST.json` fields: `id`, `gate`, `filename`, `sha256`, `licence`, `source_url`, `format`, `fetched_unix`.
+```powershell
+.\vendor\vision\download.ps1
+```
+
+`FETCH.json` per asset records sha256 after download. Swarm plan: `vision-excellence-swarm-execute-2026.md`.
 
 ---
 

@@ -247,3 +247,20 @@ Current code is a **temporal residual + gain** demo. Excellence EVM (Wu et al. s
 **Honesty:** Active PAD, classical CV, lite rPPG/EVM, policy stubs already Present/Partial as before. No new Present claims from catalogue alone.
 
 **Next execute default:** TODO-EVM1 unless principal reprioritises.
+
+---
+
+## 2026-07-17 — Vendor assets + swarm plan (licence honesty fix)
+
+**Status:** done (layout + plan + path resolver); adapters still AdapterMissing
+
+**Trap fixed:** MIT/Apache pack models were mis-labelled as “commercial licence gated.” Correct tags: **PermissiveReady** | **WeightAbsent** | **AdapterMissing** | **TrainingDeferred** | **Policy** | **LicenceHostile**.
+
+**What built:**
+- `vendor/vision/` tree (face/detect/pose/affect/…), `MANIFEST.json`, `download.ps1`
+- `resolve_vision_asset` in `qualia-vision` weights module
+- Swarm plan: `docs/plans/vision-excellence-swarm-execute-2026.md` (tracks S0–S10, waves A–E)
+- Registry honesty strings updated
+- Training deferred to principal (machine off) — **does not** block published-weight adapters
+
+**Next swarm (3-way):** S0-ASSET (done-ish) → **S1-EVM** + **S2-ONNX** + **S3-MESH**

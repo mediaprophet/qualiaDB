@@ -66,7 +66,8 @@ pub use synthetic::{
     SyntheticSampleId, TEST_SEED_BASE, TRAIN_SEED_BASE,
 };
 pub use weights::{
-    ProductionVision, VisionBackendKind, VisionWeightBundle, QVWT_MAGIC, QVWT_VERSION,
+    resolve_vision_asset, AssetLicenceTag, ProductionVision, ResolvedAsset, VisionAssetError,
+    VisionAssetId, VisionBackendKind, VisionWeightBundle, QVWT_MAGIC, QVWT_VERSION,
 };
 pub use metrics::{evaluate_real_held_out, evaluate_synthetic, mean_best_iou, MetricsReport};
 pub use generator::{
