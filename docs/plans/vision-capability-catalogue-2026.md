@@ -103,7 +103,7 @@ Related Present: heightfield image→3D (D5.06), MeshIR, STL, print readiness.
 
 | Function | Methods (ref) | Qualia map | Status | TODO |
 |----------|---------------|------------|--------|------|
-| Super-resolution | Real-ESRGAN, SwinIR | D1/D2 enhancement | Queued | TODO-SR |
+| Super-resolution | FSRCNN/ESPCN + Real-ESRGAN + SwinIR (native tiers) | D1.16 / D2.10–13 | Queued | **TODO-SR** → `native-super-resolution-excellence-2026.md` |
 | Low-light enhancement | Zero-DCE, LLNet | D1 photo family | Queued | TODO-LL |
 | Motion deblurring | MPRNet, NAFNet | D1 photo | Queued | TODO-DEBLUR |
 | Image inpainting | EdgeConnect / local gen | D1.14 denoise present; inpaint | Partial | TODO-INPAINT |

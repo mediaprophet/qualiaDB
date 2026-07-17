@@ -161,7 +161,7 @@ Open agent-executable work. Mark **done** in a dated entry when shipped; do not 
 
 | ID | Item | Status |
 |----|------|--------|
-| TODO-SR | Super-resolution | queued |
+| **TODO-SR** | **Native super-resolution excellence** | **queued** | Plan: `native-super-resolution-excellence-2026.md` (SR0 classical → SR4 SwinIR; tiling mandatory; MIT/Apache only) |
 | TODO-LL | Low-light enhancement | queued |
 | TODO-DEBLUR | Motion deblur | queued |
 | TODO-INPAINT | Inpainting (beyond bilateral denoise) | queued |
