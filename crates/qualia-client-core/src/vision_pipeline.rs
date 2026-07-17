@@ -1,23 +1,33 @@
-//! End-to-end native vision pipeline for first-release product path.
+//! End-to-end native vision pipeline (MVP + GSW W/G/S).
 //!
-//! Synthetic or raw RGB → grid detect → optional track → epistemic quins →
-//! overlay BMP. No Python. No Ollama.
+//! Synthetic or raw RGB → detect (reference or production weights) → track →
+//! epistemic quins → overlay BMP. Plus generate + image-to-3D. No Python.
 
 use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
 use qualia_core_db::sparql_library::vision_shacl::{
     validate_vision_observation_graph, VisionShaclReport,
 };
 use qualia_core_db::NQuin;
-use qualia_vision::detector::GridMultiObjectDetector;
+use qualia_vision::detector::{
+    GridMultiObjectDetector, CLASS_MOSTLY_BLUE, CLASS_MOSTLY_GREEN, CLASS_MOSTLY_RED,
+};
+use qualia_vision::generator::NativeImageGenerator;
+use qualia_vision::metrics::evaluate_synthetic;
 use qualia_vision::overlay::{
     box_css_percent, compose_rgb_overlay_rgba8, encode_bmp_rgba8,
 };
 use qualia_vision::semantic::{compile_observation_quins_full, media_digest, VisionQuin};
+use qualia_vision::spatial::image_to_heightfield_mesh;
 use qualia_vision::synthetic::{
     generate_scene_rgb8, sample_id, DatasetSplit, SyntheticSampleId,
 };
 use qualia_vision::tracker::BoundedTracker;
-use qualia_vision::types::{Detection, ImageView, PixelFormat, MAX_DETECTIONS};
+use qualia_vision::types::{
+    Detection, ImageView, PixelFormat, VisualModel, MAX_DETECTIONS,
+};
+use qualia_vision::weights::{
+    ProductionVision, VisionBackendKind, VisionWeightBundle,
+};
 use serde::Serialize;
 
 use crate::vision_ingest::{
@@ -58,6 +68,36 @@ pub struct VisionDemoResult {
     /// data:image/bmp;base64,... with boxes drawn
     pub overlay_data_url: String,
     pub note: String,
+    /// `reference` | `production_weights`
+    pub backend: String,
+    pub is_reference_backend: bool,
+    pub synthetic_match_acc: Option<f32>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct GenerateResult {
+    pub width: u32,
+    pub height: u32,
+    pub seed: u64,
+    pub steps: u32,
+    pub model_hash: String,
+    pub prompt_hash: String,
+    pub output_hash: String,
+    pub is_reference_generator: bool,
+    pub image_data_url: String,
+    pub note: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ImageTo3dResult {
+    pub vertex_count: u32,
+    pub triangle_count: u32,
+    pub mesh_hash: String,
+    pub model_hash: String,
+    pub validation_ok: bool,
+    pub validation_status: String,
+    pub is_reference_recon: bool,
+    pub note: String,
 }
 
 fn det_to_dto(d: &Detection, rejected: bool) -> OverlayBoxDto {
@@ -94,11 +134,28 @@ pub fn run_synthetic_demo(
     width: u32,
     height: u32,
 ) -> Result<VisionDemoResult, String> {
+    run_synthetic_demo_with_backend(split, index, width, height, "reference")
+}
+
+pub fn run_synthetic_demo_with_backend(
+    split: DatasetSplit,
+    index: u32,
+    width: u32,
+    height: u32,
+    backend: &str,
+) -> Result<VisionDemoResult, String> {
     let sample = sample_id(split, index, width, height);
-    run_sample_demo(&sample)
+    run_sample_demo_with_backend(&sample, backend)
 }
 
 pub fn run_sample_demo(sample: &SyntheticSampleId) -> Result<VisionDemoResult, String> {
+    run_sample_demo_with_backend(sample, "reference")
+}
+
+pub fn run_sample_demo_with_backend(
+    sample: &SyntheticSampleId,
+    backend: &str,
+) -> Result<VisionDemoResult, String> {
     let w = sample.width;
     let h = sample.height;
     let px = (w as usize) * (h as usize);
@@ -113,18 +170,62 @@ pub fn run_sample_demo(sample: &SyntheticSampleId) -> Result<VisionDemoResult, S
         row_stride: w * 3,
         format: PixelFormat::Rgb8,
     };
-    let det = GridMultiObjectDetector::new(4, 3);
     let mut preds = [Detection::empty(); MAX_DETECTIONS];
+    let mut emb = [0.0f32; 32];
     let mut ws = [0u8; MAX_DETECTIONS];
-    let n_pred = det
-        .detect(img, 0, &mut preds, &mut ws)
-        .map_err(|e| format!("{e:?}"))?;
+    let use_prod = backend.eq_ignore_ascii_case("production")
+        || backend.eq_ignore_ascii_case("production_weights")
+        || backend.eq_ignore_ascii_case("weights");
+
+    let (n_pred, model_hash, backend_kind, is_ref, synth_acc) = if use_prod {
+        let classes = [CLASS_MOSTLY_RED, CLASS_MOSTLY_GREEN, CLASS_MOSTLY_BLUE];
+        let bundle = VisionWeightBundle::from_seed(0x01D1_FACE_u64, 16, &classes);
+        let mh = bundle.model_hash();
+        let mut prod = ProductionVision::new(bundle);
+        let counts = prod
+            .infer(img, &mut preds, &mut emb, &mut ws)
+            .map_err(|e| format!("{e:?}"))?;
+        let mut m2 = ProductionVision::new(VisionWeightBundle::from_seed(
+            0x01D1_FACE_u64,
+            16,
+            &classes,
+        ));
+        let metrics = evaluate_synthetic(
+            &mut m2,
+            VisionBackendKind::ProductionWeights,
+            mh,
+            4,
+            32,
+            24,
+        );
+        (
+            counts.detections,
+            mh,
+            "production_weights",
+            false,
+            Some(metrics.mean_match_acc),
+        )
+    } else {
+        let det = GridMultiObjectDetector::new(4, 3);
+        let n_pred = det
+            .detect(img, 0, &mut preds, &mut ws)
+            .map_err(|e| format!("{e:?}"))?;
+        let mh = det.model_hash();
+        let mut det2 = GridMultiObjectDetector::new(4, 3);
+        let metrics = evaluate_synthetic(&mut det2, VisionBackendKind::Reference, mh, 4, 32, 24);
+        (
+            n_pred,
+            mh,
+            "reference",
+            true,
+            Some(metrics.mean_match_acc),
+        )
+    };
 
     let mut tracker = BoundedTracker::new();
     tracker.update(0, &mut preds, n_pred);
 
     let digest = media_digest(&rgb);
-    let model_hash = det.model_hash();
     let mut vquins = [VisionQuin::with_parity(0, 0, 0, 0, 0); 256];
     let n_q = compile_observation_quins_full(digest, &preds[..n_pred], model_hash, &mut vquins);
 
@@ -155,6 +256,12 @@ pub fn run_sample_demo(sample: &SyntheticSampleId) -> Result<VisionDemoResult, S
         DatasetSplit::Test => "test",
     };
 
+    let note = if is_ref {
+        "Backend=reference (grid). Epistemic only — not ground truth. H1 real eval not run."
+    } else {
+        "Backend=production_weights (QVWT seed fixture). Synthetic metrics only until H1 corpus."
+    };
+
     Ok(VisionDemoResult {
         width: w,
         height: h,
@@ -173,9 +280,94 @@ pub fn run_sample_demo(sample: &SyntheticSampleId) -> Result<VisionDemoResult, S
         shacl_observations: report.observation_count,
         shacl_human: report.human_attestation_count,
         overlay_data_url: format!("data:image/bmp;base64,{b64}"),
-        note: "Epistemic proposals only — not ground truth. Reject/correct preserves machine claims."
+        note: note.into(),
+        backend: backend_kind.into(),
+        is_reference_backend: is_ref,
+        synthetic_match_acc: synth_acc,
+    })
+}
+
+/// Swarm G — native seeded image generation.
+pub fn generate_image(
+    prompt: &str,
+    seed: u64,
+    steps: u32,
+    width: u32,
+    height: u32,
+) -> Result<GenerateResult, String> {
+    let w = width.clamp(8, 256);
+    let h = height.clamp(8, 256);
+    let mut rgb = vec![0u8; (w * h * 3) as usize];
+    let g = NativeImageGenerator::new();
+    let rec = g
+        .generate_rgb8(prompt, seed, steps, w, h, &mut rgb)
+        .map_err(|e| format!("{e:?}"))?;
+    let mut rgba = vec![0u8; (w * h * 4) as usize];
+    for i in 0..(w * h) as usize {
+        rgba[i * 4] = rgb[i * 3];
+        rgba[i * 4 + 1] = rgb[i * 3 + 1];
+        rgba[i * 4 + 2] = rgb[i * 3 + 2];
+        rgba[i * 4 + 3] = 255;
+    }
+    let mut bmp = vec![0u8; 54 + rgba.len()];
+    let n = encode_bmp_rgba8(w, h, &rgba, &mut bmp).map_err(|e| format!("{e:?}"))?;
+    Ok(GenerateResult {
+        width: w,
+        height: h,
+        seed,
+        steps: rec.steps,
+        model_hash: format!("0x{:016x}", rec.model_hash),
+        prompt_hash: format!("0x{:016x}", rec.prompt_hash),
+        output_hash: format!("0x{:016x}", rec.output_digest.hash),
+        is_reference_generator: rec.is_reference_generator,
+        image_data_url: format!("data:image/bmp;base64,{}", B64.encode(&bmp[..n])),
+        note: "Native reference generator (seeded). Not a foundation DiT; swap weights under G0 licence.".into(),
+    })
+}
+
+/// Swarm S-V10 — heightfield recon + validation.
+pub fn image_to_3d_from_rgb(
+    width: u32,
+    height: u32,
+    rgb: &[u8],
+    grid: u32,
+) -> Result<ImageTo3dResult, String> {
+    let img = ImageView {
+        bytes: rgb,
+        width,
+        height,
+        row_stride: width * 3,
+        format: PixelFormat::Rgb8,
+    };
+    let (mesh, rec, rep) =
+        image_to_heightfield_mesh(img, grid).map_err(|e| format!("{e:?}"))?;
+    let status = format!("{:?}", rep.status);
+    Ok(ImageTo3dResult {
+        vertex_count: mesh.vertex_count() as u32,
+        triangle_count: mesh.triangle_count() as u32,
+        mesh_hash: format!("0x{:016x}", mesh.content_hash),
+        model_hash: format!("0x{:016x}", rec.model_hash),
+        validation_ok: rep.ok(),
+        validation_status: status,
+        is_reference_recon: rec.is_reference_recon,
+        note: "Heightfield recon is epistemic proposal; validated before any Q42 geometry commit."
             .into(),
     })
+}
+
+/// Generate then reconstruct (G→S10 smoke path).
+pub fn generate_and_reconstruct(
+    prompt: &str,
+    seed: u64,
+) -> Result<(GenerateResult, ImageTo3dResult), String> {
+    let gen = generate_image(prompt, seed, 4, 32, 32)?;
+    // Re-run generate to get rgb (data url is bmp) — regenerate bytes
+    let mut rgb = vec![0u8; 32 * 32 * 3];
+    let g = NativeImageGenerator::new();
+    g.generate_rgb8(prompt, seed, 4, 32, 32, &mut rgb)
+        .map_err(|e| format!("{e:?}"))?;
+    let mesh = image_to_3d_from_rgb(32, 32, &rgb, 8)?;
+    Ok((gen, mesh))
 }
 
 /// Persist native observations to WAL and return SHACL report.
@@ -286,5 +478,29 @@ mod tests {
         assert!(r.overlay_data_url.starts_with("data:image/bmp;base64,"));
         assert!(r.shacl_ok, "shacl should pass on full compile");
         assert!(r.quins_written >= 1);
+        assert_eq!(r.backend, "reference");
+    }
+
+    #[test]
+    fn production_backend_labelled() {
+        let r = run_synthetic_demo_with_backend(
+            DatasetSplit::Test,
+            0,
+            48,
+            32,
+            "production",
+        )
+        .expect("prod");
+        assert_eq!(r.backend, "production_weights");
+        assert!(!r.is_reference_backend);
+        assert!(r.synthetic_match_acc.is_some());
+    }
+
+    #[test]
+    fn generate_and_recon_smoke() {
+        let (g, m) = generate_and_reconstruct("test field", 7).expect("g+s");
+        assert!(g.is_reference_generator);
+        assert!(m.validation_ok);
+        assert!(m.triangle_count > 0);
     }
 }

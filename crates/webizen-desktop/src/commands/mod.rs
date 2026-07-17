@@ -7194,18 +7194,52 @@ pub fn vision_run_synthetic_demo(
     split: String,
     index: u32,
     persist: Option<bool>,
+    backend: Option<String>,
 ) -> Result<serde_json::Value, String> {
     let split = match split.to_lowercase().as_str() {
         "train" => qualia_vision::DatasetSplit::Train,
         _ => qualia_vision::DatasetSplit::Test,
     };
-    let demo = qualia_client_core::vision_pipeline::run_synthetic_demo(split, index, 96, 64)?;
+    let be = backend.as_deref().unwrap_or("reference");
+    let demo = qualia_client_core::vision_pipeline::run_synthetic_demo_with_backend(
+        split, index, 96, 64, be,
+    )?;
     if persist.unwrap_or(false) {
         let config = state.config.lock().unwrap().clone();
         let root = std::path::PathBuf::from(&config.storage_path);
         let _ = qualia_client_core::vision_pipeline::ingest_demo_to_wal(&root, &demo)?;
     }
     serde_json::to_value(demo).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn vision_generate_image(
+    prompt: String,
+    seed: Option<u64>,
+    steps: Option<u32>,
+    width: Option<u32>,
+    height: Option<u32>,
+) -> Result<serde_json::Value, String> {
+    let r = qualia_client_core::vision_pipeline::generate_image(
+        &prompt,
+        seed.unwrap_or(1),
+        steps.unwrap_or(4),
+        width.unwrap_or(64),
+        height.unwrap_or(64),
+    )?;
+    serde_json::to_value(r).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn vision_image_to_3d_demo(
+    prompt: Option<String>,
+    seed: Option<u64>,
+) -> Result<serde_json::Value, String> {
+    let (gen, mesh) = qualia_client_core::vision_pipeline::generate_and_reconstruct(
+        prompt.as_deref().unwrap_or("heightfield demo"),
+        seed.unwrap_or(3),
+    )?;
+    Ok(serde_json::json!({ "generate": gen, "mesh": mesh }))
 }
 
 #[command]
@@ -7703,10 +7737,12 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         updater_check,
         updater_download_and_install,
         updater_restart,
-        // ── Vision first-release ─────────────────────────────────────────
+        // ── Vision first-release + GSW ───────────────────────────────────
         vision_run_synthetic_demo,
         vision_reject_instance,
         vision_correct_instance,
+        vision_generate_image,
+        vision_image_to_3d_demo,
     ]
 }
 

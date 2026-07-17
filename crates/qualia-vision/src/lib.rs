@@ -1,23 +1,14 @@
 //! Qualia Vision — local visual intelligence.
 //!
 //! Plan: `docs/plans/native-visual-intelligence-and-generative-3d.md`  
-//! Swarm delivery: `docs/plans/native-vision-swarm-delivery.md`
+//! Swarm delivery: `docs/plans/native-vision-swarm-delivery.md`  
+//! Post-MVP: `docs/plans/native-vision-swarms-GSW.md` (W / G / S)
 //!
 //! # Design rules
 //! - Hot path is caller-buffered, no hidden heap in `infer`.
 //! - Model outputs are **epistemic observations**, not ground truth.
 //! - Dense pixels never live in NQuins; only hashes, boxes, scores, provenance.
 //! - **No Python** in this library.
-//!
-//! Phase 1: ABI + CPU reference detector.  
-//! V1: preprocess (resize/NMS/letterbox).  
-//! V2: content-addressed media store.  
-//! V3: CPU vision ops (Conv/Pool/Resize) as Forge GPU oracles.  
-//! V4: linear probe classifier.  
-//! V5: multi-object grid detector + bounded tracker.  
-//! V6: epistemic full compile + human reject/correct + region/time query.  
-//! V7: regenerable synthetic labeled scenes.  
-//! Overlay: RGBA/BMP boxes for desktop/renderer path.
 
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
 
@@ -31,6 +22,10 @@ pub mod detector;
 pub mod tracker;
 pub mod overlay;
 pub mod synthetic;
+pub mod weights;
+pub mod metrics;
+pub mod generator;
+pub mod spatial;
 
 #[cfg(feature = "cpu-reference")]
 pub mod cpu_reference;
@@ -65,6 +60,15 @@ pub use overlay::{
 pub use synthetic::{
     generate_scene_rgb8, match_accuracy, sample_id, train_test_disjoint, DatasetSplit,
     SyntheticSampleId, TEST_SEED_BASE, TRAIN_SEED_BASE,
+};
+pub use weights::{
+    ProductionVision, VisionBackendKind, VisionWeightBundle, QVWT_MAGIC, QVWT_VERSION,
+};
+pub use metrics::{evaluate_real_held_out, evaluate_synthetic, mean_best_iou, MetricsReport};
+pub use generator::{GenerationReceipt, NativeImageGenerator, GENERATOR_MODEL_ID};
+pub use spatial::{
+    image_to_heightfield_mesh, validate_mesh_ir, ImageTo3dReceipt, MeshIR, MeshValidationReport,
+    MeshValidationStatus, MAX_INDICES, MAX_VERTICES,
 };
 
 #[cfg(feature = "cpu-reference")]

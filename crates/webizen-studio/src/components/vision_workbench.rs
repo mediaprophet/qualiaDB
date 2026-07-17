@@ -40,6 +40,12 @@ struct VisionDemoResult {
     shacl_human: u32,
     overlay_data_url: String,
     note: String,
+    #[serde(default)]
+    backend: String,
+    #[serde(default)]
+    is_reference_backend: bool,
+    #[serde(default)]
+    synthetic_match_acc: Option<f32>,
 }
 
 #[component]
@@ -49,8 +55,11 @@ pub fn VisionWorkbench() -> Element {
     let mut busy = use_signal(|| false);
     let mut split = use_signal(|| String::from("test"));
     let mut index = use_signal(|| 0u32);
+    let mut backend = use_signal(|| String::from("reference"));
     let mut selected = use_signal(|| None::<String>);
     let mut local_rejects = use_signal(|| Vec::<String>::new());
+    let mut gen_url = use_signal(|| String::new());
+    let mut mesh_info = use_signal(|| String::new());
 
     let run_demo = {
         let mut demo = demo.clone();
@@ -61,6 +70,7 @@ pub fn VisionWorkbench() -> Element {
         move |_| {
             let s = split();
             let i = index();
+            let be = backend();
             busy.set(true);
             status.set("Running native detector…".into());
             spawn(async move {
@@ -70,19 +80,20 @@ pub fn VisionWorkbench() -> Element {
                         "split": s,
                         "index": i,
                         "persist": true,
+                        "backend": be,
                     }),
                 )
                 .await
                 {
                     Ok(v) => match serde_json::from_value::<VisionDemoResult>(v) {
                         Ok(r) => {
+                            let acc = r
+                                .synthetic_match_acc
+                                .map(|a| format!(" synth_acc={a:.2}"))
+                                .unwrap_or_default();
                             status.set(format!(
-                                "OK — {} preds, {} GT, SHACL={}, {} quins. {}",
-                                r.n_pred,
-                                r.n_gt,
-                                r.shacl_ok,
-                                r.quins_written,
-                                r.note
+                                "OK [{}] — {} preds, {} GT, SHACL={}{acc}. {}",
+                                r.backend, r.n_pred, r.n_gt, r.shacl_ok, r.note
                             ));
                             local_rejects.set(Vec::new());
                             selected.set(r.detections.first().map(|d| d.instance_hash.clone()));
@@ -93,6 +104,80 @@ pub fn VisionWorkbench() -> Element {
                     Err(e) => status.set(format!(
                         "Native vision unavailable ({e}). Open this surface inside the desktop shell."
                     )),
+                }
+                busy.set(false);
+            });
+        }
+    };
+
+    let run_gen = {
+        let mut status = status.clone();
+        let mut busy = busy.clone();
+        let mut gen_url = gen_url.clone();
+        move |_| {
+            busy.set(true);
+            status.set("Generating…".into());
+            spawn(async move {
+                match invoke_json(
+                    "vision_generate_image",
+                    serde_json::json!({
+                        "prompt": "teal gradient field",
+                        "seed": 42,
+                        "steps": 4,
+                        "width": 64,
+                        "height": 64,
+                    }),
+                )
+                .await
+                {
+                    Ok(v) => {
+                        let url = v
+                            .get("image_data_url")
+                            .and_then(|x| x.as_str())
+                            .unwrap_or("")
+                            .to_string();
+                        gen_url.set(url);
+                        status.set(format!(
+                            "Generate OK ref={} hash={}",
+                            v.get("is_reference_generator")
+                                .and_then(|x| x.as_bool())
+                                .unwrap_or(true),
+                            v.get("output_hash").and_then(|x| x.as_str()).unwrap_or("?")
+                        ));
+                    }
+                    Err(e) => status.set(format!("Generate failed: {e}")),
+                }
+                busy.set(false);
+            });
+        }
+    };
+
+    let run_i23 = {
+        let mut status = status.clone();
+        let mut busy = busy.clone();
+        let mut mesh_info = mesh_info.clone();
+        move |_| {
+            busy.set(true);
+            status.set("Image→3D…".into());
+            spawn(async move {
+                match invoke_json(
+                    "vision_image_to_3d_demo",
+                    serde_json::json!({ "prompt": "hills", "seed": 3 }),
+                )
+                .await
+                {
+                    Ok(v) => {
+                        let m = v.get("mesh").cloned().unwrap_or(serde_json::Value::Null);
+                        mesh_info.set(format!(
+                            "verts={} tris={} valid={} {}",
+                            m.get("vertex_count").and_then(|x| x.as_u64()).unwrap_or(0),
+                            m.get("triangle_count").and_then(|x| x.as_u64()).unwrap_or(0),
+                            m.get("validation_ok").and_then(|x| x.as_bool()).unwrap_or(false),
+                            m.get("note").and_then(|x| x.as_str()).unwrap_or("")
+                        ));
+                        status.set("Image→3D OK (heightfield recon, validated).".into());
+                    }
+                    Err(e) => status.set(format!("Image→3D failed: {e}")),
                 }
                 busy.set(false);
             });
@@ -202,11 +287,33 @@ pub fn VisionWorkbench() -> Element {
                         }
                     }
                 }
+                label {
+                    style: "font-size:0.85rem;",
+                    "Backend "
+                    select {
+                        value: "{backend}",
+                        onchange: move |e| backend.set(e.value()),
+                        option { value: "reference", "reference" }
+                        option { value: "production", "production_weights" }
+                    }
+                }
                 button {
                     disabled: busy(),
                     onclick: run_demo,
                     style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); background:rgba(0,200,160,0.15); color:var(--qualia-text); cursor:pointer; font-weight:600;",
                     if busy() { "Running…" } else { "Run synthetic demo" }
+                }
+                button {
+                    disabled: busy(),
+                    onclick: run_gen,
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); cursor:pointer;",
+                    "Generate (G)"
+                }
+                button {
+                    disabled: busy(),
+                    onclick: run_i23,
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); cursor:pointer;",
+                    "Image→3D (S)"
                 }
                 button {
                     disabled: busy() || selected().is_none(),
@@ -225,6 +332,15 @@ pub fn VisionWorkbench() -> Element {
             p {
                 style: "margin:0 0 1rem; font-size:0.88rem; color:var(--qualia-text-muted); line-height:1.45;",
                 "{status}"
+            }
+            if !mesh_info().is_empty() {
+                p { style: "font-size:0.85rem; margin:0 0 0.75rem;", "Mesh: {mesh_info}" }
+            }
+            if !gen_url().is_empty() {
+                div {
+                    style: "margin-bottom:1rem; max-width:200px; border:1px solid var(--qualia-border); border-radius:8px; overflow:hidden;",
+                    img { src: "{gen_url}", style: "width:100%; image-rendering:pixelated;", alt: "Generated" }
+                }
             }
 
             if let Some(r) = demo() {
