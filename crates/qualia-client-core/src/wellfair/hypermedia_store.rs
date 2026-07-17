@@ -7,6 +7,7 @@
 //! - **Wellfair** — health & welfare purposes (can also force secret when sensitivity is high)
 //! - **Personal** — private life, default home shelf
 //! - **Work** — project-scoped labour
+//! - **Tools** — logs, telemetry, technical artefacts, agent/tool output
 //! - **Commons** — permissive share surface (peers / micro-commons via social networking)
 //!
 //! Sensitivity (`public` | `restricted` | `classified` | `sanctuary`) is orthogonal: high sensitivity
@@ -36,6 +37,8 @@ pub enum LibrarySection {
     Personal,
     /// Project / cooperative work.
     Work,
+    /// Logs, telemetry, agent/tool output, technical diagnostics.
+    Tools,
     /// Permissive commons — shareable with peers / social networking layers.
     Commons,
 }
@@ -48,6 +51,7 @@ impl LibrarySection {
             Self::Wellfair => "wellfair",
             Self::Personal => "personal",
             Self::Work => "work",
+            Self::Tools => "tools",
             Self::Commons => "commons",
         }
     }
@@ -58,6 +62,8 @@ impl LibrarySection {
             "wellfair" | "health" | "welfare" => Self::Wellfair,
             "personal" | "home" => Self::Personal,
             "work" | "project" | "coop" => Self::Work,
+            "tools" | "tool" | "logs" | "log" | "tech" | "technical" | "ops" | "debug"
+            | "telemetry" | "agent" => Self::Tools,
             "commons" | "public" | "share" | "permissive" => Self::Commons,
             _ => Self::All,
         }
@@ -70,6 +76,7 @@ impl LibrarySection {
             Self::Wellfair => "Wellfair",
             Self::Personal => "Personal",
             Self::Work => "Work",
+            Self::Tools => "Tools",
             Self::Commons => "Commons",
         }
     }
@@ -81,6 +88,7 @@ impl LibrarySection {
             Self::Wellfair => "Health, care, and welfare records — may also live under Secret when classified.",
             Self::Personal => "Your private shelf — notes, life admin, unshared research.",
             Self::Work => "Project-scoped material for cooperative labour.",
+            Self::Tools => "Logs, telemetry, agent/tool output, technical diagnostics — the machine's paper trail.",
             Self::Commons => "Permissive share surface — peers and micro-commons via Talk social networking.",
         }
     }
@@ -172,6 +180,20 @@ pub fn resolve_section(
         || purpose_blob.contains("care")
     {
         return LibrarySection::Wellfair;
+    }
+    if purpose_blob.contains("log")
+        || purpose_blob.contains("telemetry")
+        || purpose_blob.contains("debug")
+        || purpose_blob.contains("trace")
+        || purpose_blob.contains("tool")
+        || purpose_blob.contains("agent")
+        || purpose_blob.contains("ops")
+        || purpose_blob.contains("technical")
+        || purpose_blob.contains("diagnostic")
+        || purpose_blob.contains("build")
+        || purpose_blob.contains("ci")
+    {
+        return LibrarySection::Tools;
     }
     if !projects.is_empty()
         || purpose_blob.contains("work")
@@ -343,6 +365,7 @@ impl HypermediaStore {
             LibrarySection::Wellfair,
             LibrarySection::Personal,
             LibrarySection::Work,
+            LibrarySection::Tools,
             LibrarySection::Commons,
         ] {
             m.insert(
@@ -599,6 +622,24 @@ mod tests {
         assert_eq!(
             resolve_section("public", &[], &[], CommonsVisibility::Commons, None),
             LibrarySection::Commons
+        );
+    }
+
+    #[test]
+    fn tools_purpose_routes_to_tools() {
+        assert_eq!(
+            resolve_section(
+                "public",
+                &["agent-log".into(), "telemetry".into()],
+                &[],
+                CommonsVisibility::None,
+                None
+            ),
+            LibrarySection::Tools
+        );
+        assert_eq!(
+            resolve_section("public", &[], &[], CommonsVisibility::None, Some("tools")),
+            LibrarySection::Tools
         );
     }
 }

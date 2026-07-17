@@ -17,6 +17,7 @@ const SECTIONS: &[(&str, &str, &str)] = &[
     ("wellfair", "Wellfair", "Health & welfare"),
     ("personal", "Personal", "Private life shelf"),
     ("work", "Work", "Projects & labour"),
+    ("tools", "Tools", "Logs · telemetry · agent/tool output"),
     ("commons", "Commons", "Peers & permissive share"),
 ];
 
@@ -613,6 +614,11 @@ pub fn WellfairLibraryPanel() -> Element {
                         "Commons is the permissive share surface — metadata cards for Talk peers / micro-commons. Secret and classified items never appear here. Connect people under Talk → People first."
                     }
                 }
+                if section() == "tools" {
+                    p { style: "margin:0.65rem 0 0;font-size:0.75rem;color:#94a3b8;line-height:1.4;",
+                        "Tools holds logs, telemetry, agent/tool output, and technical diagnostics — the machine paper trail, separate from personal notes and secret health."
+                    }
+                }
                 if section() == "secret" {
                     p { style: "margin:0.65rem 0 0;font-size:0.75rem;color:#fde68a;line-height:1.4;",
                         "Secret is for Wellfair-private health and other high-sensitivity material. It never exports to Commons. Unlock is session-local UI gate — Sanctuary vault still holds the enclave."
@@ -758,6 +764,7 @@ pub fn WellfairLibraryPanel() -> Element {
                                 option { value: "personal", "Personal" }
                                 option { value: "wellfair", "Wellfair (health / care)" }
                                 option { value: "work", "Work / project" }
+                                option { value: "tools", "Tools / logs / technical" }
                                 option { value: "commons", "Commons (shareable)" }
                                 option { value: "secret", "Secret (sanctuary)" }
                             }

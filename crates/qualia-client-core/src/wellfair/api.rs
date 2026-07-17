@@ -205,7 +205,7 @@ pub struct ManualFacets {
     pub purposes: Vec<String>,
     /// `public` | `restricted` | `classified` — high sensitivity forces Secret section.
     pub sensitivity: Option<String>,
-    /// Preferred product section: secret | wellfair | personal | work | commons.
+    /// Preferred product section: secret | wellfair | personal | work | tools | commons.
     pub section: Option<String>,
     /// `none` | `peers` | `commons` — social / micro-commons visibility.
     pub commons_visibility: Option<String>,
