@@ -10,8 +10,7 @@ This document is the **unifying UI plan** for QualiaDB / Webizen. It covers:
 1. **All shell surfaces** already in-tree (desktop, studio, portal, browser chrome).  
 2. **All engine capabilities** that must be *reachable, honest, and governable* from UI.  
 3. **Webizen-browser** as a client onto QualiaDB (not a second Chromium).  
-4. **gpui-ce** (and GPUI generally) as a **functionality / capability reference**, not the product shell.  
-5. **Developer documentation** required so agents and humans can implement without inventing parallel stacks.
+4. **Developer documentation** required so agents and humans can implement without inventing parallel stacks.
 
 It does **not** replace specialist plans (browser-and-trust, vision-10d, desktop master plan, anatomy, Talk UX). It **indexes** them and assigns each capability to a UI surface, tier, and honesty bar.
 
@@ -22,7 +21,7 @@ It does **not** replace specialist plans (browser-and-trust, vision-10d, desktop
 | # | Principle | Consequence for UI |
 |---|-----------|-------------------|
 | 1 | **Client onto QualiaDB**, not a V8 document viewer | Chrome is one edge; graph, inference, modalities, `.10d`, rights, MCP are first-class |
-| 2 | **One GPU story** | `shared_gpu` / wgpu / Forge / PortalGpu — no second adapter for chrome; optional pure-Rust UI experiment must not fight the engine device |
+| 2 | **One GPU story** | `shared_gpu` / wgpu / Forge / PortalGpu — no second adapter for product chrome |
 | 3 | **Rights / deontic fail-closed** | Biosense, citable `.10d`, agent tools, vault — UI must surface Permit/Forbid and never hide gates |
 | 4 | **Honesty over polish** | Present / Partial / Missing / FeatureDisabled labels in UI match registry + CAPABILITY_DESCRIPTORS |
 | 5 | **Anti-monolith** | Panes and commands stay modular; no 5k-line single “UI god object” |
@@ -87,45 +86,18 @@ It does **not** replace specialist plans (browser-and-trust, vision-10d, desktop
 
 ---
 
-## 2. gpui-ce as capability reference (not product shell)
+## 2. Product shell (locked) and UX improvements on that shell
 
-### 2.1 What [gpui-ce](https://github.com/gpui-ce/gpui-ce) demonstrates
+**Product shell:** Tauri 2 + Dioxus + native webview (browser) + engine `shared_gpu` / wgpu / Forge. Do not replace this stack with a second UI framework or second GPU adapter.
 
-GPUI Community Edition is a fork of Zed’s **GPU-accelerated, hybrid immediate/retained** UI framework. Functionality / design dimensions relevant as a *reference*:
-
-| GPUI-CE area | What it shows | Qualia mapping (keep / learn) |
-|--------------|---------------|--------------------------------|
-| **Application lifecycle** | `Application::run`, window open, platform event loop | Tauri `AppHandle` / lifecycle already owns this |
-| **Entity model** | Owned entities, smart pointers, cross-view messaging | Studio/state + client-core stores; improve **typed events**, not replace with GPUI entities |
-| **Views + `Render`** | Declarative view → element tree each frame | Dioxus components / RSX; improve **pane contracts** |
-| **Elements (imperative)** | Full control for lists, custom layout, editor-class surfaces | Native surface + volumetric renderer for dense GPU content |
-| **Tailwind-style `div` styling** | Flex, spacing, overflow without CSS engine | Studio CSS + design tokens; optional design-system pass |
-| **Actions / keybindings** | User-defined actions from keystrokes | Desktop menu + shell actions; unify **command palette** |
-| **Platform services** | Quit, open URL, clipboard patterns | Tauri plugins already |
-| **Async executor on UI loop** | Integrated async | Tauri async commands + studio spawn |
-| **Test harness** | Simulated input contexts | Add **UI dogfood harness** (runtime proof) — idea from GPUI tests, not GPUI itself |
-| **GPU UI paint** | UI drawn via Metal/DX/Vulkan-class backends | **Engine** already paints via wgpu; do **not** add blade as second stack |
-| **Custom shaders** (ce interest) | Community path for non-Zed shaders | Forge / WGSL already; keep shaders on engine side |
-| **Accessibility / IME** | Still weak across pure-Rust GUIs generally | Prefer WebView a11y for product chrome until proven |
-
-### 2.2 Explicit non-decision
-
-| Decision | Rationale |
-|----------|-----------|
-| **Do not adopt gpui-ce as the Qualia shell** | Conflicts with Tauri 2 + Dioxus investment; second GPU stack; immature general-app ecosystem; no help for WASM portal |
-| **Do use gpui-ce as a checklist of “what a serious native UI must eventually cover”** | Entity messaging, action map, dense lists, test simulation, frame budgets |
-| **Optional later:** feature-gated pure-Rust **experiment binary** (not default product) | Only if principal wants a spike; never the main `webizen-desktop` |
-
-### 2.3 GPUI → Qualia “gap list” (reference-driven improvements)
-
-These are **improvements to existing systems**, inspired by GPUI strengths:
+Qualia product UX improvements (on the existing shell):
 
 1. **Unified action / command palette** — every shell action, QApp open, browser command, MCP tool (allowlisted) discoverable.  
 2. **Typed app event bus** — replace ad-hoc string emits with a documented event catalogue.  
 3. **Frame / latency budget for Studio panes** — especially 10D scrub and Talk stream.  
 4. **Dense virtualized lists** — agent logs, SPARQL results, WAL browser, vision detections.  
 5. **UI runtime harness** — scripted: launch → activate model → prompt → assert tokens (desktop master plan §2).  
-6. **Keyboard-first paths** for Talk, Library, 10D browser (editor-class ergonomics without GPUI).
+6. **Keyboard-first paths** for Talk, Library, 10D browser.
 
 ---
 
@@ -279,7 +251,7 @@ crates/
 - **Studio:** `invoke_json("command_name", json)` — command must exist on host.  
 - **Never** invent a second HTTP LLM API. Inference goes through existing client-core paths.
 
-### 5.2 Event layer (improve toward GPUI-like clarity)
+### 5.2 Event layer (typed, documented catalogue)
 
 Document a **stable event catalogue** (names + payload schemas), e.g.:
 
@@ -400,7 +372,7 @@ Aligned with vision-10d excellence programme:
 1. Read this plan + the **one** specialist plan for your lane.  
 2. CLAIM exclusive paths in `coordination/NOTICES.md`.  
 3. Prefer **extend** Studio pane / desktop command over new crates.  
-4. No second GPU adapter; no GPUI product shell.  
+4. No second GPU adapter for product chrome.  
 5. Ollama stays **optional** (Settings); never default; never documented as the Qualia engine.  
 6. Every new user-facing capability updates honesty labels + progress log.  
 7. Runtime dogfood note when path is product-critical.
@@ -449,17 +421,12 @@ Aligned with vision-10d excellence programme:
 - SPARQL workbench usable  
 - 3–5 computational panes wired to real specialized_libs (not stubs)  
 
-### Phase U6 — Unification polish (GPUI-inspired, not GPUI-integrated)
+### Phase U6 — Unification polish (palette, events, density)
 
 - Command palette  
 - Event catalogue implemented  
 - Virtualized dense lists  
 - UI runtime harness  
-
-### Phase U7 — Optional pure-Rust UI spike (principal-only gate)
-
-- Feature-flagged experimental binary exploring GPUI-class density  
-- Explicit: **not** replacing Tauri shell  
 
 ---
 
@@ -472,7 +439,7 @@ A reviewer answers **yes** when:
 3. **10D Browser** lists anatomy + vision recon; load + scrub work; citable fails closed.  
 4. **Library** seeds models, ontologies, computer_vision lib rows.  
 5. **Agent** can run at least one allowlisted MCP tool with visible permit path.  
-6. **No** product claim of GPUI/Servo as default.  
+6. **No** product claim of Servo as default (WebView remains default).  
 7. **Developer docs** listed in §10 exist at least as stubs with links to this plan.  
 8. **Registries** match UI labels (no false Present).  
 
@@ -498,7 +465,7 @@ CLAIM rules: one stream owns `commands/mod.rs` appends at a time.
 
 ## 14. Explicit non-goals
 
-- Replacing Tauri/Dioxus with gpui-ce or iced/egui as the product shell.  
+- Replacing Tauri 2 + Dioxus as the product shell.  
 - Full Chromium/Servo as the only engine (WebView remains default).  
 - Shipping hundreds of academic QApps as “complete” without honesty.  
 - Putting full computer_vision into ontology WASM.  
@@ -509,18 +476,7 @@ CLAIM rules: one stream owns `commands/mod.rs` appends at a time.
 
 ---
 
-## 15. Relation to gpui-ce (summary for principal)
-
-| Question | Answer |
-|----------|--------|
-| Integrate gpui-ce as Webizen shell? | **No** (now). |
-| Use as functionality reference? | **Yes** — actions, entities messaging, dense UI, test harness ideas. |
-| Improve systems already in place? | **Yes** — §2.3 and Phase U6. |
-| Future pure-Rust experiment? | **Only** with express principal approval and feature flag. |
-
----
-
-## 16. Next concrete sessions (suggested order)
+## 15. Next concrete sessions (suggested order)
 
 Execute via **[`webizen-ui-implementation-subagents-2026.md`](./webizen-ui-implementation-subagents-2026.md)**:
 
@@ -533,12 +489,13 @@ Execute via **[`webizen-ui-implementation-subagents-2026.md`](./webizen-ui-imple
 
 ---
 
-## 17. Change log
+## 16. Change log
 
 | Date | Note |
 |------|------|
-| 2026-07-17 | Initial comprehensive UI plan; gpui-ce as reference only; full capability→UI matrix; doc + phase plan |
+| 2026-07-17 | Initial comprehensive UI plan; capability→UI matrix; doc + phase plan |
 | 2026-07-17 | Ollama principle corrected (optional harness); sub-agent plan linked; audio + non-MCP agents deferred from UI waves |
+| 2026-07-18 | Removed third-party UI-framework comparison material; product shell = Tauri/Dioxus only |
 
 ---
 

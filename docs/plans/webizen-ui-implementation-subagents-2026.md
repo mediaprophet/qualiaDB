@@ -18,7 +18,7 @@ This plan turns the comprehensive UI plan into **parallel, CLAIM-isolated sub-ag
 | **1 — UI product cut** | Ship Talk / Browser / Library / 10D / honesty / agent-tool loop so the product is usable as a client onto QualiaDB. |
 | **2 — Native inference excellence** | Default and excellence path = **Local GGUF → Qualia engine** (Phase-8, Sentinel, `shared_gpu`). Live telemetry, real model activation, no cosmetic mocks. |
 | **3 — Optional Ollama** | Already wired as **opt-in** backend (`InferenceBackendSettings::Ollama`, harness, Settings panel). Keep it honest; do **not** present Ollama as the Qualia engine. No new Ollama product narrative. |
-| **Deferred** | Full **audio** programme (listen / speech product cut). **Non-MCP** deep integrations for external agents (Grok, Claude, etc.) beyond existing Remote-MCP / allowlist paths. **GPUI** as product shell. |
+| **Deferred** | Full **audio** programme (listen / speech product cut). **Non-MCP** deep integrations for external agents (Grok, Claude, etc.) beyond existing Remote-MCP / allowlist paths. |
 
 ### 0.1 Immovable (from AGENTS.md / Claude.md)
 
@@ -49,7 +49,6 @@ A reviewer answers **yes** when:
 | Audio excellence / Listen product | `native-auditory-*`, `audio-adrs/` |
 | Non-MCP “agent as peer” deep integrations | future protocol plan; not U1–U6 |
 | Servo as default engine | never; experimental flag only |
-| gpui-ce product shell | U7 principal-only gate |
 | Full computer_vision in ontology WASM | never |
 
 ---
@@ -117,7 +116,7 @@ Commands lock: <YES owner | NO do not touch commands/mod.rs>
 
 Invariants:
 - Native Local inference is the excellence path; Ollama is optional only.
-- No second GPU adapter; no GPUI product shell.
+- No second GPU adapter for product chrome.
 - Fail-closed rights; honest Present/Partial/Scaffold labels.
 - Prefer extend existing panes/commands over new crates.
 
@@ -291,7 +290,7 @@ Deliver:
 
 ---
 
-## 7. Wave U6 — Unification (GPUI-inspired, not GPUI)
+## 7. Wave U6 — Unification (palette, events, density)
 
 ### U6-A — Command palette
 
@@ -377,7 +376,7 @@ Each track entry:
 7. **U4-A/B/C** vision product cut  
 
 **Hold:** U5–U6 until U1–U4 acceptance green enough for dogfood.  
-**Hold:** Audio, non-MCP agent integrations, U7 GPUI spike.
+**Hold:** Audio, non-MCP agent integrations.
 
 ---
 

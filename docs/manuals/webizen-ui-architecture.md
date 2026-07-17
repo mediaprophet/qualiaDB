@@ -19,10 +19,10 @@ qualia-client-core → qualia-core-db + specialized_libs
 
 ## Non-goals
 
-- No GPUI product shell (reference only).
 - No second GPU adapter for chrome.
 - Ollama is optional Settings harness — not the Qualia engine.
 - Audio product cut is planned separately (algorithms catalogue); UI waves first.
+- Product shell stays Tauri 2 + Dioxus + engine wgpu.
 
 ## Inference honesty
 

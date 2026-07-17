@@ -23,7 +23,7 @@
 
 **⚑ Human dogfood:** rebuild desktop; Ctrl+K; Talk Permit `list_capabilities`; browser agent Permit/Deny; Local GGUF stream; 10D citable FORBID.
 
-**Deferred by design:** audio AU waves; non-MCP external agents; U7 GPUI.
+**Deferred by design:** audio AU waves; non-MCP external agents.
 
 ---
 
