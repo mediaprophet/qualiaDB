@@ -131,10 +131,15 @@ impl VolumetricRenderer {
     /// P9.3 — Load a full `.10d` container asset (not just a mesh section).
     /// Parses the section table, extracts the QuantizedMesh, uploads it to the
     /// GPU, and returns `(vertex_count, triangle_count, provenance_mu)`.
+    ///
+    /// D3: when Tensor10DNodes are present, vertices are coloured by nearest-node
+    /// σ via `sigma_to_display_rgb` (vision recon / EMF paint fuel).
     pub fn load_10d_asset(&mut self, bytes: &[u8]) -> Result<(u32, u32, f32), String> {
         use qualia_core_db::container_10d::{
-            self, header::Container10dHeader,
+            self, header::Container10dHeader, node_section::parse_node_header,
         };
+        use qualia_core_db::render::spectral::sigma_to_display_rgb;
+        use qualia_core_db::tensor::Tensor10D;
 
         let mut bytes_mut = bytes.to_vec();
         let header = Container10dHeader::parse(&bytes_mut)
@@ -146,6 +151,7 @@ impl VolumetricRenderer {
 
         let mut mesh = None;
         let mut provenance_mu: f32 = 0.0;
+        let mut nodes: Vec<Tensor10D> = Vec::new();
 
         for desc in descs.iter() {
             let st = container_10d::SectionType::from_u8(desc.section_type)
@@ -162,8 +168,19 @@ impl VolumetricRenderer {
                     );
                 }
                 container_10d::SectionType::Tensor10DNodes => {
-                    if let Ok(t) = container_10d::read_node(payload, 0) {
+                    if let Ok((nh, _)) = parse_node_header(payload) {
+                        let count = nh.node_count as usize;
+                        for i in 0..count {
+                            if let Ok(t) = container_10d::read_node(payload, i) {
+                                if i == 0 {
+                                    provenance_mu = t.mu;
+                                }
+                                nodes.push(t);
+                            }
+                        }
+                    } else if let Ok(t) = container_10d::read_node(payload, 0) {
                         provenance_mu = t.mu;
+                        nodes.push(t);
                     }
                 }
                 _ => {}
@@ -178,7 +195,34 @@ impl VolumetricRenderer {
         for triangle in &mesh.triangles {
             indices.extend_from_slice(triangle);
         }
-        self.inner.upload_mesh(&mesh.positions, &indices);
+
+        if nodes.is_empty() {
+            self.inner.upload_mesh(&mesh.positions, &indices);
+        } else {
+            // Colour vertices by nearest node σ (spectral paint).
+            let colors: Vec<[f32; 4]> = mesh
+                .positions
+                .iter()
+                .map(|p| {
+                    let mut best = 0usize;
+                    let mut best_d = f32::INFINITY;
+                    for (i, n) in nodes.iter().enumerate() {
+                        let dx = p[0] - n.x;
+                        let dy = p[1] - n.y;
+                        let dz = p[2] - n.z;
+                        let d = dx * dx + dy * dy + dz * dz;
+                        if d < best_d {
+                            best_d = d;
+                            best = i;
+                        }
+                    }
+                    let (r, g, b) = sigma_to_display_rgb(nodes[best].sigma);
+                    [r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0, 1.0]
+                })
+                .collect();
+            self.inner
+                .upload_mesh_colored(&mesh.positions, &colors, &indices);
+        }
 
         Ok((vert_count, tri_count, provenance_mu))
     }

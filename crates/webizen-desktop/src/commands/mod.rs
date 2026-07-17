@@ -7237,6 +7237,19 @@ pub fn browse_vision_10d() -> Result<Vec<qualia_client_core::vision_10d_browse::
     ))
 }
 
+/// F2 — load a sealed vision `.10d` (CRC + mesh meta + σ paint package).
+#[tauri::command]
+pub fn load_vision_10d(
+    path: String,
+) -> Result<qualia_client_core::vision_10d_load::Vision10dLoaded, String> {
+    let storage_root = qualia_client_core::state::dirs_default_path();
+    let (_mesh, loaded) = qualia_client_core::vision_10d_load::load_vision_10d_path(
+        std::path::Path::new(&storage_root),
+        &path,
+    )?;
+    Ok(loaded)
+}
+
 /// Inspect a single .10d container file in detail.
 #[tauri::command]
 pub fn inspect_10d_container(path: String) -> Result<TenDContainerInspection, String> {
@@ -8153,6 +8166,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         // ── 10D browser commands ─────────────────────────────────────────
         browse_10d_containers,
         browse_vision_10d,
+        load_vision_10d,
         inspect_10d_container,
         open_10d_file_picker,
         // ── Updater commands ─────────────────────────────────────────────

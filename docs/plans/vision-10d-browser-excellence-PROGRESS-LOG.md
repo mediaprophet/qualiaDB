@@ -5,6 +5,38 @@
 
 ---
 
+## 2026-07-17 — Sprint 4 wave: C3 + D3 + F2
+
+**Status:** done
+
+| Track | What was built |
+|-------|----------------|
+| **C3** | `Compile10dExtras` + `compile_mesh_to_10d_vision` / `_with_extras`: half-edge **Topology** + BVH/kd **SpatialIndex** sections on native/wasm-scientific. Gs continuum + `seal_vision_mesh_with_detections` use vision seal. |
+| **D3** | σ → `sigma_to_display_rgb` + `sigma_to_center_frequency_hz` in `vision_10d_load`; volumetric `load_10d_asset` colours mesh by nearest-node σ. |
+| **F2** | `load_vision_10d_bytes` / `_path` → `Vision10dLoaded` paint package; Tauri `load_vision_10d`. |
+
+### Measured
+
+```
+cargo test -p qualia-core-db --lib vision_seal_includes_topology  → 1 passed
+cargo test -p qualia-client-core --lib vision_10d  → 2 passed (browse + load paint)
+cargo test -p qualia-vision --lib  → 342 passed
+cargo check -p webizen-render  → ok
+```
+
+### ⚑ Principal
+
+None. Optional Studio UI button for `load_vision_10d` (command registered).
+
+### Next
+
+- **F3** time scrub using node `t`  
+- **F4** rights barrier on unattested vision containers  
+- **B2** classical SR WGSL on shared_gpu  
+- **D4** ProvenanceSidecar on Gs continuum (media digest + model hash)
+
+---
+
 ## 2026-07-17 — Sprint 3 wave: C2 + D1 + F1
 
 **Status:** done

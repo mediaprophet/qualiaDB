@@ -126,7 +126,7 @@ static REGISTRY: &[CapabilityEntry] = &[
         "D5",
         "10d_handoff",
         Present,
-        "MeshIR→cleanup→export→compile_mesh_to_10d_with_nodes (mesh+σ Tensor10D); browse_vision_10d (C1/C2/D1/F1)"
+        "compile_mesh_to_10d_vision: mesh+nodes+Topology+SpatialIndex; load_vision_10d σ paint; browse (C1–C3/D1–D3/F1–F2)"
     ),
     cap!("D5.14", "D5", "twin_a1_preview", Present, "twin_bridge A1"),
     // D6 engineering wire

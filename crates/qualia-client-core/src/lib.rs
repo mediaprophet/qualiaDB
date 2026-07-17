@@ -96,6 +96,7 @@ pub mod user_profile;
 pub mod vision_ingest;
 pub mod vision_pipeline;
 pub mod vision_10d_browse;
+pub mod vision_10d_load;
 pub mod audio_pipeline;
 pub mod wellfair;
 pub mod wallet;

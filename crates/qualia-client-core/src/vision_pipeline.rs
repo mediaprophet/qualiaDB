@@ -12,7 +12,7 @@ use qualia_vision::detector::{
     GridMultiObjectDetector, CLASS_MOSTLY_BLUE, CLASS_MOSTLY_GREEN, CLASS_MOSTLY_RED,
 };
 use qualia_core_db::render::assets::{mesh_to_nquins_with_digests, Mesh};
-use qualia_core_db::render::compile_10d::compile_mesh_to_10d_with_nodes;
+use qualia_core_db::render::compile_10d::compile_mesh_to_10d_vision;
 use qualia_core_db::specialized_libs::computational_geometry::{
     decimate_qem, DecimateOptions, Point3,
 };
@@ -595,8 +595,9 @@ pub fn run_gs_continuum(
         0.0,
         0.35, // mid-band σ for recon marker
     );
-    let container = compile_mesh_to_10d_with_nodes(&core_mesh, &[centre])
-        .map_err(|e| e.to_string())?;
+    // C3: vision seal includes Topology + SpatialIndex when CG is linked.
+    let container =
+        compile_mesh_to_10d_vision(&core_mesh, &[centre]).map_err(|e| e.to_string())?;
     // CRC of container for compiled digest (first 4 bytes of crc is enough for quin object)
     let compiled_digest = {
         let mut h: u32 = 0;
@@ -713,7 +714,7 @@ pub fn seal_vision_mesh_with_detections(
     ];
     let n = detections_to_node_hints(dets, &mut hints);
     let nodes: Vec<Tensor10D> = hints[..n].iter().map(node_hint_to_tensor10d).collect();
-    compile_mesh_to_10d_with_nodes(&core, &nodes).map_err(|e| e.to_string())
+    compile_mesh_to_10d_vision(&core, &nodes).map_err(|e| e.to_string())
 }
 
 /// Persist native observations to WAL and return SHACL report.
