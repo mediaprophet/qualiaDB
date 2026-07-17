@@ -27,6 +27,7 @@ pub mod physiology_prefs;
 pub mod checkpoint_store;
 pub mod graph_store;
 pub mod host_state;
+pub mod cml_context;
 pub mod hypermedia_store;
 pub mod legislation_ingest;
 pub mod qapp_catalog;

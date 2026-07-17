@@ -391,6 +391,9 @@ pub fn catalog_entry_to_library(entry: QappCatalogEntry, now: u64) -> LibraryEnt
         sensitivity: "public".into(),
         section: LibrarySection::Software.as_str().into(),
         commons_visibility: CommonsVisibility::None,
+        cml_signals: Vec::new(),
+        cml_concept_count: 0,
+        cml_n3: String::new(),
     };
     le.recompute_section();
     le

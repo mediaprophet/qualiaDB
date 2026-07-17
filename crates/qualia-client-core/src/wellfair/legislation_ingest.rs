@@ -14,6 +14,7 @@ use std::path::Path;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
+use super::cml_context::{build_document_context, ContextUnit};
 use super::hypermedia_store::{
     CommonsVisibility, HypermediaStore, LibraryEntry, LibrarySection,
 };
@@ -67,6 +68,11 @@ pub struct LegislationIngestReport {
     pub empty_text: usize,
     pub library_entries_written: usize,
     pub coverage_ok: bool,
+    /// Proposed CML concepts across all provisions.
+    pub cml_concepts: usize,
+    pub cml_deontic_norms: usize,
+    pub cml_privacy_hits: usize,
+    pub cml_rights_hits: usize,
 }
 
 fn slugify(s: &str) -> String {
@@ -579,37 +585,75 @@ pub fn seed_instrument_into_library(
         written += 1;
     };
 
+    // Build instrument-wide CML context from all provisions (structure + deontic/privacy/rights).
+    let cml_units: Vec<ContextUnit> = inst
+        .provisions
+        .iter()
+        .map(|p| ContextUnit {
+            frag: p.frag.clone(),
+            kind: p.kind.clone(),
+            label: format!("{} {}", p.number, p.heading).trim().to_string(),
+            text: p.source_text().to_string(),
+            page: Some(p.start_page),
+            parent: p.parent.clone(),
+        })
+        .collect();
+    let instrument_graph = build_document_context(&base, &inst.title, &cml_units);
+
     // Instrument root.
     let root_uri = base.clone();
     let root_excerpt = format!(
-        "{} — {} provision(s), {} page(s). Native legislation ingest (structure only; cml:Proposed).",
+        "{} — {} provision(s), {} page(s). Native CML context graph (cml:Proposed): {} concepts, {} deontic norms, {} privacy signals.",
         inst.title,
         inst.provisions.len(),
-        inst.pages
+        inst.pages,
+        instrument_graph.concepts.len(),
+        instrument_graph.deontic_norms,
+        instrument_graph.privacy_hits,
     );
+    let mut root_topics = vec![
+        "legislation".into(),
+        "statute".into(),
+        "cml".into(),
+        inst.jurisdiction.to_ascii_lowercase(),
+        inst.slug.clone(),
+    ];
+    root_topics.extend(instrument_graph.topics.iter().cloned());
+    root_topics.sort();
+    root_topics.dedup();
+    let mut root_purposes = vec!["legislation".into(), "legal".into(), "work".into()];
+    root_purposes.extend(instrument_graph.purposes.iter().cloned());
+    root_purposes.sort();
+    root_purposes.dedup();
+    let root_n3 = if instrument_graph.n3.len() > 64_000 {
+        format!(
+            "{}…\n# [instrument cml_n3 truncated — per-provision entries hold local graphs]",
+            &instrument_graph.n3[..64_000]
+        )
+    } else {
+        instrument_graph.n3.clone()
+    };
     let mut root = LibraryEntry {
         asset_uri: root_uri.clone(),
         primary_subject: fnv60(root_uri.as_bytes()),
         media_type: LEGISLATION_INSTRUMENT_MEDIA.into(),
-        quins: Vec::new(),
-        topics: vec![
-            "legislation".into(),
-            "statute".into(),
-            inst.jurisdiction.to_ascii_lowercase(),
-            inst.slug.clone(),
-        ],
+        quins: instrument_graph.quins.clone(),
+        topics: root_topics,
         projects: vec![format!("legislation:{}", inst.slug)],
-        purposes: vec!["legislation".into(), "legal".into(), "work".into()],
+        purposes: root_purposes,
         place: None,
         occurred_at: None,
         lat: None,
         lon: None,
         flags: Vec::new(),
         ingested_unix: now,
-        excerpt: root_excerpt.chars().take(280).collect(),
+        excerpt: root_excerpt.chars().take(400).collect(),
         sensitivity: "public".into(),
         section: LibrarySection::Work.as_str().into(),
         commons_visibility: CommonsVisibility::None,
+        cml_signals: instrument_graph.signal_tags.clone(),
+        cml_concept_count: instrument_graph.concepts.len() as u32,
+        cml_n3: root_n3,
     };
     root.recompute_section();
     upsert(root);
@@ -619,6 +663,10 @@ pub fn seed_instrument_into_library(
     let mut structural = 0usize;
     let mut with_text = 0usize;
     let mut empty = 0usize;
+    let mut total_cml_concepts = instrument_graph.concepts.len();
+    let mut total_deontic = instrument_graph.deontic_norms;
+    let mut total_privacy = instrument_graph.privacy_hits;
+    let mut total_rights = instrument_graph.rights_hits;
 
     for p in &inst.provisions {
         match p.kind.as_str() {
@@ -633,20 +681,29 @@ pub fn seed_instrument_into_library(
         } else {
             with_text += 1;
         }
-        // Only store concept-like units + structural with any text; always store sections/subs.
         if matches!(
             p.kind.as_str(),
             "section" | "subsection" | "part" | "division" | "schedule"
         ) {
             let uri = format!("{base}#{}", p.frag);
             let label = format!("{} {}", p.number, p.heading).trim().to_string();
-            let excerpt = if body.trim().is_empty() {
-                format!("{label} (no body text extracted)")
-            } else {
-                body.chars().take(280).collect()
+            let unit = ContextUnit {
+                frag: p.frag.clone(),
+                kind: p.kind.clone(),
+                label: label.clone(),
+                text: body.to_string(),
+                page: Some(p.start_page),
+                parent: p.parent.clone(),
             };
+            let g = build_document_context(&uri, &label, &[unit]);
+            total_cml_concepts += g.concepts.len();
+            total_deontic += g.deontic_norms;
+            total_privacy += g.privacy_hits;
+            total_rights += g.rights_hits;
+
             let mut topics = vec![
                 "legislation".into(),
+                "cml".into(),
                 p.kind.clone(),
                 inst.slug.clone(),
                 format!("s{}", p.number),
@@ -654,14 +711,50 @@ pub fn seed_instrument_into_library(
             if let Some(parent) = &p.parent {
                 topics.push(parent.clone());
             }
+            topics.extend(g.topics.iter().cloned());
+            topics.sort();
+            topics.dedup();
+
+            let mut purposes = vec!["legislation".into(), "legal".into(), "work".into()];
+            purposes.extend(g.purposes.iter().cloned());
+            purposes.sort();
+            purposes.dedup();
+
+            let mut excerpt = if body.trim().is_empty() {
+                format!("{label} (no body text extracted)")
+            } else {
+                format!("{label}\n\n{body}")
+            };
+            if excerpt.len() > 12_000 {
+                excerpt = excerpt.chars().take(12_000).collect();
+                excerpt.push_str("\n…[truncated]");
+            }
+            // Prefix with signal chips for UI glance.
+            if !g.signal_tags.is_empty() {
+                let chips: String = g
+                    .signal_tags
+                    .iter()
+                    .take(8)
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join(" · ");
+                excerpt = format!("[{chips}]\n{excerpt}");
+            }
+
+            let cml_n3 = if g.n3.len() > 24_000 {
+                format!("{}…\n# [truncated]", &g.n3[..24_000])
+            } else {
+                g.n3
+            };
+
             let mut entry = LibraryEntry {
                 asset_uri: uri.clone(),
                 primary_subject: fnv60(uri.as_bytes()),
                 media_type: LEGISLATION_MEDIA_TYPE.into(),
-                quins: Vec::new(),
+                quins: g.quins,
                 topics,
                 projects: vec![format!("legislation:{}", inst.slug)],
-                purposes: vec!["legislation".into(), "legal".into(), "work".into()],
+                purposes,
                 place: None,
                 occurred_at: None,
                 lat: None,
@@ -672,20 +765,10 @@ pub fn seed_instrument_into_library(
                 sensitivity: "public".into(),
                 section: LibrarySection::Work.as_str().into(),
                 commons_visibility: CommonsVisibility::None,
+                cml_signals: g.signal_tags,
+                cml_concept_count: g.concepts.len() as u32,
+                cml_n3,
             };
-            // Stash full body in excerpt-adjacent: use a second pass via topics? Store full text
-            // as a long excerpt field is wrong. Put body in excerpt only truncated; also append
-            // to a synthetic topic-free field — LibraryEntry has no body field.
-            // Use excerpt for preview and put full text into a markdown-ish block stored by
-            // reusing the `excerpt` + optional flag detail is weak. Prefer expanding excerpt
-            // capacity by writing the full body into `excerpt` for legislation (search_text uses it).
-            if !body.is_empty() {
-                entry.excerpt = format!("{label}\n\n{body}");
-                if entry.excerpt.len() > 12_000 {
-                    entry.excerpt = entry.excerpt.chars().take(12_000).collect();
-                    entry.excerpt.push_str("\n…[truncated]");
-                }
-            }
             entry.recompute_section();
             upsert(entry);
         }
@@ -706,6 +789,10 @@ pub fn seed_instrument_into_library(
         empty_text: empty,
         library_entries_written: written,
         coverage_ok,
+        cml_concepts: total_cml_concepts,
+        cml_deontic_norms: total_deontic,
+        cml_privacy_hits: total_privacy,
+        cml_rights_hits: total_rights,
     })
 }
 
@@ -803,6 +890,9 @@ The Parliament of Australia enacts:\n\
         assert!(work
             .iter()
             .any(|e| e.purposes.iter().any(|p| p == "legislation")));
+        // CML context graph attached (deontic/privacy cues from body text when present).
+        assert!(report.cml_concepts > 0);
+        assert!(work.iter().any(|e| e.cml_concept_count > 0 || !e.cml_n3.is_empty()));
     }
 
     #[test]

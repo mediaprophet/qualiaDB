@@ -188,6 +188,10 @@ fn library_summary(e: &super::hypermedia_store::LibraryEntry) -> serde_json::Val
         "section": e.section,
         "commons_visibility": e.commons_visibility,
         "is_secret": e.is_secret(),
+        "cml_signals": e.cml_signals,
+        "cml_concept_count": e.cml_concept_count,
+        "cml_n3_chars": e.cml_n3.len(),
+        "quin_count": e.quins.len(),
     })
 }
 
@@ -1270,14 +1274,52 @@ impl WebizenHostApi {
                 .as_deref()
                 .unwrap_or("none"),
         );
+        // Rust-native CML context graph for text-like assets (TEXT→CONCEPT→LOGIC, cml:Proposed).
+        let mut cml_topics = Vec::new();
+        let mut cml_purposes = purposes.clone();
+        let mut cml_signals = Vec::new();
+        let mut cml_concept_count = 0u32;
+        let mut cml_n3 = String::new();
+        let mut cml_quins = Vec::new();
+        if media_type.starts_with("text/") || media_type.contains("json") || media_type.contains("markdown")
+        {
+            let text = String::from_utf8_lossy(bytes);
+            let units = super::cml_context::units_from_headings(&text);
+            let g = super::cml_context::build_document_context(uri, excerpt_source, &units);
+            cml_topics = g.topics.clone();
+            for p in &g.purposes {
+                if !cml_purposes.iter().any(|x| x == p) {
+                    cml_purposes.push(p.clone());
+                }
+            }
+            cml_signals = g.signal_tags.clone();
+            cml_concept_count = g.concepts.len() as u32;
+            cml_n3 = if g.n3.len() > 48_000 {
+                format!("{}…\n# [cml_n3 truncated]", &g.n3[..48_000])
+            } else {
+                g.n3
+            };
+            cml_quins = g.quins;
+        }
+
+        let mut topics = out.descriptors.topics.clone();
+        for t in cml_topics {
+            if !topics.iter().any(|x| x == &t) {
+                topics.push(t);
+            }
+        }
+
+        let mut all_quins = r.quins;
+        all_quins.extend(cml_quins);
+
         let mut entry = super::hypermedia_store::LibraryEntry {
             asset_uri: uri.to_string(),
             primary_subject,
             media_type: media_type.to_string(),
-            quins: r.quins,
-            topics: out.descriptors.topics.clone(),
+            quins: all_quins,
+            topics,
             projects,
-            purposes: purposes.clone(),
+            purposes: cml_purposes,
             place: eff_place.as_ref().map(|p| p.label.clone()),
             occurred_at: eff_occurred_at,
             lat,
@@ -1291,6 +1333,9 @@ impl WebizenHostApi {
                 .clone()
                 .unwrap_or_else(|| "personal".into()),
             commons_visibility: commons,
+            cml_signals,
+            cml_concept_count,
+            cml_n3,
         };
         entry.recompute_section();
         // High sensitivity can never be commons.
@@ -1476,6 +1521,72 @@ impl WebizenHostApi {
             title_hint,
         )?;
         Ok(serde_json::to_value(report).map_err(|e| e.to_string())?)
+    }
+
+    /// Build a Rust-native CML context graph for arbitrary text (no Python).
+    /// Returns concepts, signal tags, N3, and deontic/privacy counts — does not persist.
+    pub fn build_cml_context_graph(
+        &self,
+        uri: &str,
+        title: &str,
+        text: &str,
+    ) -> Result<serde_json::Value, String> {
+        let units = super::cml_context::units_from_headings(text);
+        let g = super::cml_context::build_document_context(uri, title, &units);
+        Ok(serde_json::json!({
+            "document_uri": g.document_uri,
+            "title": g.title,
+            "concepts": g.concepts,
+            "signal_tags": g.signal_tags,
+            "topics": g.topics,
+            "purposes": g.purposes,
+            "deontic_norms": g.deontic_norms,
+            "privacy_hits": g.privacy_hits,
+            "rights_hits": g.rights_hits,
+            "quin_count": g.quins.len(),
+            "n3": g.n3,
+            "curation": "cml:Proposed",
+            "engine": "qualia-client-core::wellfair::cml_context",
+        }))
+    }
+
+    /// Re-run CML context enrichment on an existing library entry's excerpt/text fields.
+    pub fn enrich_library_entry_cml(&self, asset_uri: &str) -> Result<serde_json::Value, String> {
+        let store = self.library()?;
+        let mut entries = store.load().map_err(|e| e.to_string())?;
+        let e = entries
+            .iter_mut()
+            .find(|x| x.asset_uri == asset_uri)
+            .ok_or_else(|| format!("unknown asset '{asset_uri}'"))?;
+        let text = if e.excerpt.len() > 40 {
+            e.excerpt.clone()
+        } else {
+            return Err("entry has no usable text in excerpt to enrich".into());
+        };
+        let units = super::cml_context::units_from_headings(&text);
+        let g = super::cml_context::build_document_context(&e.asset_uri, &e.asset_uri, &units);
+        for t in &g.topics {
+            if !e.topics.iter().any(|x| x == t) {
+                e.topics.push(t.clone());
+            }
+        }
+        for p in &g.purposes {
+            if !e.purposes.iter().any(|x| x == p) {
+                e.purposes.push(p.clone());
+            }
+        }
+        e.cml_signals = g.signal_tags.clone();
+        e.cml_concept_count = g.concepts.len() as u32;
+        e.cml_n3 = if g.n3.len() > 48_000 {
+            format!("{}…", &g.n3[..48_000])
+        } else {
+            g.n3.clone()
+        };
+        e.quins.extend(g.quins);
+        e.recompute_section();
+        let out = library_summary(e);
+        store.replace_all(&entries).map_err(|e| e.to_string())?;
+        Ok(out)
     }
 
     /// List catalogue categories (for Software shelf UI without seeding first).

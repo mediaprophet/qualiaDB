@@ -858,7 +858,7 @@ pub fn WellfairLibraryPanel() -> Element {
                     div { style: "{CARD}",
                         div { style: "{H3}", "Legislation" }
                         p { style: "{MUTED}",
-                            "Paste Act text (after the enacting formula). Native parse splits Part/Section/Subsection and stores every body under Work — not the old N3-without-text path."
+                            "Paste Act text (after the enacting formula). Native Rust: structure + CML context graph (deontic / privacy·GDPR-family / rights / temporal, all cml:Proposed) under Work. No Python."
                         }
                         label { style: "{LABEL}", "Register id (optional)" }
                         input {
@@ -899,9 +899,12 @@ pub fn WellfairLibraryPanel() -> Element {
                                             let with_t = u64_field(&v, "concepts_with_text");
                                             let empty = u64_field(&v, "empty_text");
                                             let written = u64_field(&v, "library_entries_written");
+                                            let cml_c = u64_field(&v, "cml_concepts");
+                                            let cml_d = u64_field(&v, "cml_deontic_norms");
+                                            let cml_p = u64_field(&v, "cml_privacy_hits");
                                             status_err.set(false);
                                             status.set(format!(
-                                                "Legislation ingested · {secs} sections · {with_t} with text · {empty} empty · {written} library rows → Work."
+                                                "Legislation + CML · {secs} sections · {with_t} with text · {empty} empty · CML {cml_c} concepts / {cml_d} deontic / {cml_p} privacy · {written} rows → Work."
                                             ));
                                             section.set("work".into());
                                             legis_text.set(String::new());

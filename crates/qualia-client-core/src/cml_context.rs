@@ -176,6 +176,21 @@ pub fn ingest_turn(storage: &Path, session_id: &str, text: &str) -> Result<Vec<C
     let (dq, _lex) = qualia_core_db::hypermedia::descriptors_to_nquins(subject, &desc);
     quins.extend(dq);
 
+    // Enrich chat turn with the same Rust CML context graph (TEXT→CONCEPT→LOGIC).
+    let units = crate::wellfair::cml_context::units_from_headings(text);
+    let g = crate::wellfair::cml_context::build_document_context(&uri, "chat-turn", &units);
+    for t in &g.topics {
+        if !topics.iter().any(|x| x == t) {
+            topics.push(t.clone());
+        }
+    }
+    for p in &g.purposes {
+        if !purposes.iter().any(|x| x == p) {
+            purposes.push(p.clone());
+        }
+    }
+    quins.extend(g.quins);
+
     let mut entry = LibraryEntry {
         asset_uri: uri,
         primary_subject: subject,
@@ -194,6 +209,13 @@ pub fn ingest_turn(storage: &Path, session_id: &str, text: &str) -> Result<Vec<C
         sensitivity: "public".into(),
         section: "personal".into(),
         commons_visibility: Default::default(),
+        cml_signals: g.signal_tags,
+        cml_concept_count: g.concepts.len() as u32,
+        cml_n3: if g.n3.len() > 16_000 {
+            format!("{}…", &g.n3[..16_000])
+        } else {
+            g.n3
+        },
     };
     entry.recompute_section();
     store.add(entry).map_err(|e| e.to_string())?;

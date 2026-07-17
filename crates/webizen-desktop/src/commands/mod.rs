@@ -1935,6 +1935,35 @@ pub fn wellfair_ingest_legislation_pdf_hex(
 }
 
 #[command]
+pub fn wellfair_build_cml_context(
+    app: AppHandle,
+    uri: String,
+    title: String,
+    text: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock Sanctuary vault first".to_string())?;
+        let r = host.build_cml_context_graph(&uri, &title, &text)?;
+        serde_json::to_string(&r).map_err(|e| e.to_string())
+    })?
+}
+
+#[command]
+pub fn wellfair_enrich_library_cml(app: AppHandle, asset_uri: String) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock Sanctuary vault first".to_string())?;
+        let r = host.enrich_library_entry_cml(&asset_uri)?;
+        serde_json::to_string(&r).map_err(|e| e.to_string())
+    })?
+}
+
+#[command]
 pub fn wellfair_list_qapp_catalog_categories(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
@@ -6954,6 +6983,8 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_seed_studio_qapps,
         wellfair_ingest_legislation_text,
         wellfair_ingest_legislation_pdf_hex,
+        wellfair_build_cml_context,
+        wellfair_enrich_library_cml,
         wellfair_list_qapp_catalog_categories,
         wellfair_library_stats,
         wellfair_remove_library_entry,

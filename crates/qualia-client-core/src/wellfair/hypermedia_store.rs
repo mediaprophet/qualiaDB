@@ -287,6 +287,16 @@ pub struct LibraryEntry {
     /// How far this may travel on social / commons layers.
     #[serde(default)]
     pub commons_visibility: CommonsVisibility,
+    /// CML context-graph signal tags (`privacy:consent`, `deontic:obligation`, …).
+    #[serde(default)]
+    pub cml_signals: Vec<String>,
+    /// Number of proposed CML concepts on this entry.
+    #[serde(default)]
+    pub cml_concept_count: u32,
+    /// Compact proposed CML N3 for this unit (TEXT→CONCEPT→LOGIC; cml:Proposed only).
+    /// Truncated for large instruments; full graph also lives in `quins`.
+    #[serde(default)]
+    pub cml_n3: String,
 }
 
 fn default_sensitivity_public() -> String {
@@ -773,6 +783,8 @@ fn entry_matches_text(e: &LibraryEntry, q: &str) -> bool {
         || e.topics.iter().any(|t| t.to_lowercase().contains(q))
         || e.projects.iter().any(|t| t.to_lowercase().contains(q))
         || e.purposes.iter().any(|t| t.to_lowercase().contains(q))
+        || e.cml_signals.iter().any(|t| t.to_lowercase().contains(q))
+        || e.cml_n3.to_lowercase().contains(q)
         || e.place
             .as_ref()
             .map(|p| p.to_lowercase().contains(q))
@@ -874,6 +886,9 @@ mod tests {
             sensitivity: "public".into(),
             section: "personal".into(),
             commons_visibility: CommonsVisibility::None,
+            cml_signals: Vec::new(),
+            cml_concept_count: 0,
+            cml_n3: String::new(),
         };
         entry.recompute_section();
         store.add(entry).unwrap();
@@ -1042,6 +1057,9 @@ mod tests {
                 sensitivity: "public".into(),
                 section: section.into(),
                 commons_visibility: CommonsVisibility::None,
+                cml_signals: Vec::new(),
+                cml_concept_count: 0,
+                cml_n3: String::new(),
             };
             e.recompute_section();
             store.add(e).unwrap();

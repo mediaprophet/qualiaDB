@@ -57,16 +57,26 @@ have heading-only repeal stubs). Re-run the ETL after upgrading — older flat `
 in the corpus that list concepts without `values:originalText` were produced before this
 fix and should be regenerated with `--no-llm` (structure) or full Ollama enrichment.
 
-## Native Qualia hypermedia path
+## Native Qualia hypermedia path (Rust only — preferred product path)
 
-The same structural parse (no Ollama) is available inside Qualia as
-`wellfair::legislation_ingest` / Host API:
+Python remains a **batch ETL** for ns.webcivics packages. The **product Library** does not
+call Python. Inside Qualia:
 
-- `wellfair_ingest_legislation_text` — paste extracted Act text
-- `wellfair_ingest_legislation_pdf_hex` — PDF bytes as hex
+| Surface | Module / API |
+|---------|----------------|
+| Structure parse | `wellfair::legislation_ingest` |
+| CML context graph (TEXT→CONCEPT→LOGIC) | `wellfair::cml_context` |
+| Host | `wellfair_ingest_legislation_text`, `wellfair_ingest_legislation_pdf_hex`, `wellfair_build_cml_context`, `wellfair_enrich_library_cml` |
 
-These seed Library → **Work** with purpose `legislation`, one entry per provision plus an
-instrument root. Library free-text / faceted search then finds sections by number or wording.
+On ingest, every provision gets:
+
+- full body text  
+- deterministic **deontic** class → real deontic `NQuin` norms  
+- **privacy / GDPR-family** signals (consent, erasure, DPIA, cross-border, …)  
+- **rights** / **temporal** / cross-ref cues  
+- proposed CML N3 (`cml:Proposed` only) + facet tags for Library search  
+
+General text documents in the Library use the same `cml_context` path (not legislation-only).
 
 ## Units: metadata, intro, sections, subsections
 
