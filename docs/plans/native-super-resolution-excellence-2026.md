@@ -11,13 +11,45 @@
 
 | # | Principle |
 |---|-----------|
-| 1 | **Native core first.** Bicubic / Lanczos / edge-directed / sub-pixel CNNs implemented in Rust under `cv/sr/` and `sr/`. Optional learned backends load **ONNX (ort feature)** or **WGSL Forge** kernels — never “call OpenCV dnn_superres” as the product. |
-| 2 | **Permissive licence only as defaults.** MIT / Apache-2.0 / BSD for **code and preferred weight files**. Training-data residual risk is a **DiligenceNote**, not a fake “commercial licence gate” on Apache zoo weights. |
-| 3 | **Three compute tiers** (your taxonomy), one unified API. |
-| 4 | **Tiling is mandatory** for edge/GPU tiers — VRAM/RAM scales with **input** tile size, not marketing claims. |
-| 5 | **No texture hallucination as truth.** GAN paths must label outputs as *generative enhancement*; medical/forensic paths prefer non-GAN or confidence maps. |
-| 6 | **Caller-buffered hot paths** where possible; Tier-2 may use bounded scratch for tiles. |
-| 7 | **Anti-monolith:** one primary algorithm per `.rs`; `sr/` as a library subdirectory. |
+| 1 | **Native core first.** Bicubic / Lanczos / edge-directed / sub-pixel CNNs implemented in Rust under `cv/sr/` and `sr/`. Learned backends use **Qualia’s GPU backplane** (below) and/or optional `ort` — never “call OpenCV dnn_superres” or NCNN as the product. |
+| 2 | **GPU is first-class, not an afterthought.** SR reuses the existing **renderer + compute backplane**: `gpu_context::shared_gpu()` (wgpu → Vulkan / DX12+DirectML / Metal / WebGPU), optional **CUDA** feature paths (same family as LLM decode), **WGSL Forge** for certified kernels, volumetric/`webizen-render` for display. No second adapter stack. |
+| 3 | **Permissive licence only as defaults.** MIT / Apache-2.0 / BSD for **code and preferred weight files**. Training-data residual risk is a **DiligenceNote**, not a fake “commercial licence gate” on Apache zoo weights. |
+| 4 | **Three compute tiers** (your taxonomy), one unified API, **device-selected** at runtime. |
+| 5 | **Tiling is mandatory** for edge/GPU tiers — VRAM/RAM scales with **input** tile size; coordinate with `shared_gpu` VRAM accounting. |
+| 6 | **No texture hallucination as truth.** GAN paths must label outputs as *generative enhancement*; medical/forensic paths prefer non-GAN or confidence maps. |
+| 7 | **Caller-buffered hot paths** where possible; Tier-2 may use bounded scratch for tiles. |
+| 8 | **Anti-monolith:** one primary algorithm per `.rs`; `sr/` as a library subdirectory. |
+
+### 0.1 GPU / renderer backplane (already in-tree)
+
+SR must **not** invent a parallel GPU story. Wire to what Qualia already runs for LLM, volumetric render, and Forge:
+
+| Layer | Location / capability | SR use |
+|-------|----------------------|--------|
+| **Shared device** | `qualia_core_db::gpu_context::shared_gpu()` — one process-wide `wgpu` Device/Queue | All native GPU SR; same instance as inference + `PortalGpu` / volumetric renderer |
+| **Backends via wgpu** | Vulkan, DX12 (**DirectML** on Windows), Metal, GL, WebGPU (WASM) | Portable compute shaders for classical SR + light CNN; `QUALIA_WGPU_BACKEND` env already selects |
+| **CUDA** | Optional `cuda` feature on core (LLM fused decode / weight cache) | Heavy SR or custom GEMM/conv when CUDA present; **not** required for default product |
+| **WGSL Forge** | Typed kernel IR, Naga validate, CPU oracle, adapter-keyed cache, CLI `shader` | Generate/certify `sr_bicubic`, `sr_depth2space`, tile blend; promote only after oracle match |
+| **Renderer** | `render::gpu`, `webizen-render` volumetric / mesh | Preview enhanced frames; optional post-process pass in studio pipeline |
+| **Thermal / universe** | `ThermalGovernor`, queue lanes / compute universe tags | Cap concurrent SR tiles when LLM decode is Active; fail closed or degrade to CPU classical |
+| **VRAM accounting** | `gpu_context` VRAM used/total | Tile planner reads budget; refuse full-frame ESRGAN when headroom &lt; estimate |
+
+**Anti-patterns (forbidden):**
+
+- Spinning a **second** `wgpu::Instance` / adapter for SR alone  
+- Depending on **NCNN Vulkan** when wgpu already covers Vulkan/Metal/DX12/WebGPU  
+- Treating CUDA as the only “real” GPU path (Windows DirectML + Vulkan are production paths today)  
+- Bypassing Sentinel / thermal budget while LLM is mid-decode  
+
+**Preferred dispatch order (runtime):**
+
+```text
+1. Classical GPU (Forge/WGSL bicubic·Lanczos) if shared_gpu Cool and shader certified
+2. Classical CPU if no GPU / thermal Critical / WASM without WebGPU
+3. CNN-Light: WGSL fused path if certified, else ort on GPU EP if available, else CPU ort/native
+4. ESRGAN / Swin: tiled; prefer ort CUDA/DML/TensorRT-class EP when present, else wgpu upload+custom kernels when ready
+5. Always: tile + blend; report device name + backend in SrReport
+```
 
 ---
 
@@ -65,12 +97,23 @@ pub struct SrRequest<'a> {
     pub backend: SrBackend,
     pub tile: TilePolicy,         // size, overlap, blend
     pub mode: EnhancementMode,    // Sharpen | Generative
+    pub device: SrDevicePolicy,   // Auto | Cpu | SharedWgpu | CudaIfAvailable
+}
+
+pub enum SrDevicePolicy {
+    /// Prefer shared_gpu when Cool; else CPU classical / light CNN.
+    Auto,
+    CpuOnly,
+    /// Explicit: `gpu_context::shared_gpu()` (Vulkan/DX12-DML/Metal/WebGPU).
+    SharedWgpu,
+    /// Optional core `cuda` feature + EP; fall back SharedWgpu then CPU.
+    CudaPreferred,
 }
 
 pub fn super_resolve(req: &SrRequest, out: &mut [u8]) -> Result<SrReport, SrError>;
 ```
 
-`SrReport`: backend id, scale, tile count, ms, peak scratch bytes, `generative: bool`, licence tag of weights used.
+`SrReport`: backend id, **device/backend string** (e.g. `wgpu-vulkan`, `wgpu-dx12`, `cuda`, `cpu`), scale, tile count, ms, peak scratch/VRAM estimate, `generative: bool`, weight licence tag, thermal state at start.
 
 ---
 
@@ -82,8 +125,8 @@ pub fn super_resolve(req: &SrRequest, out: &mut [u8]) -> Result<SrReport, SrErro
 |------|--------|
 | **Algorithms (native)** | Lanczos-3, bicubic, optional **edge-directed** (NEDI-lite or similar) |
 | **Learned (weights)** | **ESPCN** / **FSRCNN** (OpenCV dnn_superres lineage) — **Apache-2.0** weights as **PermissiveReady** assets |
-| **Runtime** | Pure Rust CNN micro-engine **or** `ort` feature; **not** OpenCV C++ |
-| **Target** | 480p→720p-class, multi-FPS on laptop CPU; zero GPU required |
+| **Runtime** | CPU pure Rust **and** WGSL on `shared_gpu` (Vulkan/DML/Metal) for real-time; optional `ort` EP; **not** OpenCV C++ |
+| **Target** | 480p→720p-class multi-FPS on laptop CPU **or** integrated GPU via wgpu |
 | **Honesty** | Sharper than bicubic; **does not invent textures** |
 
 **Vendor path:** `vendor/vision/sr/fsrcnn/` · `vendor/vision/sr/espcn/`  
@@ -94,10 +137,10 @@ pub fn super_resolve(req: &SrRequest, out: &mut [u8]) -> Result<SrReport, SrErro
 | Item | Choice |
 |------|--------|
 | **Reference quality bar** | Real-ESRGAN family (MIT ecosystem), **compact** anime/video variants for edge |
-| **Qualia path** | ONNX export of compact Real-ESRGAN → `ort` **or** native WGSL Forge operator graph when certified |
-| **NCNN** | **Not** a product dependency. Optional offline conversion note: NCNN param/bin → ONNX for Qualia loaders |
-| **Mandatory** | Overlapping **tile + feather blend**; fail closed if estimated scratch > budget |
-| **Vulkan** | Prefer **wgpu** (already Qualia path) over linking NCNN Vulkan |
+| **Qualia path** | ONNX (compact Real-ESRGAN) via `ort` **with GPU EP** where available **and/or** Forge-certified WGSL tile kernels on `shared_gpu` |
+| **NCNN** | **Not** a product dependency. Offline convert NCNN→ONNX if needed; **do not** ship NCNN Vulkan next to wgpu |
+| **Mandatory** | Overlapping **tile + feather blend**; VRAM estimate vs `shared_gpu` accounting; fail closed if over budget |
+| **GPU** | **wgpu** (Vulkan / DX12+DirectML / Metal / WebGPU) is the portable path; **CUDA** optional for host EP / custom kernels when feature on |
 
 **Vendor path:** `vendor/vision/sr/realesrgan_compact/`  
 **Module path:** `sr/tile_policy.rs`, `sr/tile_blend.rs`, `sr/esrgan_session.rs` (feature `ort`)
@@ -107,9 +150,9 @@ pub fn super_resolve(req: &SrRequest, out: &mut [u8]) -> Result<SrReport, SrErro
 | Item | Choice |
 |------|--------|
 | **Reference quality bar** | **SwinIR** (MIT) — transformer restoration / SR |
-| **Runtime** | ONNX via `ort` (recent opset); later Forge if kernels certified |
-| **Use** | Medical stills, forensic *enhancement* (with watermark/provenance), print/photo |
-| **Not for** | Real-time video without datacenter GPU |
+| **Runtime** | ONNX via `ort` (recent opset) on **CUDA / DirectML / CPU**; progressive: Forge kernels for patch ops where certified against CPU oracle |
+| **Use** | Medical stills, forensic *enhancement* (watermark/provenance), print/photo, high-end studio |
+| **Not for** | Real-time video unless GPU headroom + thermal Cool and tile budget allows |
 | **Honesty** | Lower “oil paint” than classic ESRGAN; still **not ground truth** |
 
 **Vendor path:** `vendor/vision/sr/swinir/`  
@@ -137,23 +180,28 @@ These establish the floor every other backend must beat in A/B tests:
 ## 5. Learned pipeline architecture
 
 ```text
-                    ┌──────────────┐
-  RGB in ──────────►│ Tile planner │── tile rects + overlap
-                    └──────┬───────┘
-                           │
-              ┌────────────┼────────────┐
-              ▼            ▼            ▼
-         Classical    CNN-Light     ESRGAN/Swin
-         (always)     (ONNX/ort)    (ONNX/ort)
-              │            │            │
-              └────────────┼────────────┘
-                           ▼
-                    ┌──────────────┐
-                    │ Seam blend   │── Hann / linear feather
-                    └──────┬───────┘
-                           ▼
-                    RGB out + SrReport
+  RGB in
+    │
+    ▼
+  Thermal / VRAM gate ──(Critical)──► Classical CPU only
+    │ Cool/Warm
+    ▼
+  Tile planner (size from VRAM budget + scale)
+    │
+    ├─► Classical: CPU  ·or·  WGSL on shared_gpu (Vulkan/DML/Metal/WebGPU)
+    ├─► CNN-Light:  WGSL fused  ·or·  ort (CPU/DML/CUDA EP)
+    └─► ESRGAN/Swin: tiled ort EP  ·or·  staged Forge kernels
+    │
+    ▼
+  Seam blend (CPU or compute shader)
+    │
+    ▼
+  RGB out + SrReport { device, backend, tiles, ms, generative }
+    │
+    └─► optional: webizen-render / studio preview (same shared_gpu)
 ```
+
+**Concurrency with LLM / render:** SR submits on the appropriate `QueueLane` / universe when wired; if inference is `Active` and thermal ≠ Cool, Auto policy **degrades** tier (H→B→U→classical) instead of fighting for VRAM.
 
 ### Tiling policy (production default)
 
@@ -270,18 +318,25 @@ vendor/vision/sr/
 - [ ] Large still path only; refuse if scale×area too big without tiles  
 - [ ] Quality note vs ESRGAN oil-paint  
 
-### Wave SR5 — GPU (optional, Forge)
+### Wave SR5 — GPU backplane (not optional polish — core path)
 
-- [ ] WGSL bicubic / sub-pixel shuffle certified against CPU oracle  
-- [ ] Adapter-keyed cache like WGSL Forge  
+- [ ] Classical bicubic/Lanczos **WGSL** via Forge: Naga validate + CPU oracle + adapter-keyed cache  
+- [ ] Bind to `gpu_context::shared_gpu()` only (no second device)  
+- [ ] Tile blend compute shader (or CPU blend with GPU tiles)  
+- [ ] DirectML / Vulkan / Metal smoke (whatever adapter is present)  
+- [ ] Optional: CUDA EP path when `cuda` feature + ort CUDA provider  
+- [ ] Thermal degrade policy unit tests  
+- [ ] Preview hook: hand RGBA8 to volumetric/studio path without re-upload thrash  
 
 ### Wave SR6 — Surfaces
 
-- [ ] Studio / desktop “Enhance”  
-- [ ] Library MANIFEST shelf  
+- [ ] Studio / desktop “Enhance” (device picker: Auto / GPU / CPU)  
+- [ ] Library MANIFEST shelf for SR weights  
 - [ ] Recipe: `enhance_frame` / `enhance_still`  
 
-**Spawn order:** SR0 ∥ SR1 → SR2 → SR3 ∥ SR4 → SR5 → SR6  
+**Spawn order:** SR0 ∥ SR1 → **SR5 classical GPU early** (parallel after SR1) → SR2 → SR3 ∥ SR4 → SR6  
+
+**Note:** SR5 is pulled **forward** relative to a “GPU last” plan: Qualia already pays for the backplane; classical GPU SR should land before heavy ONNX so video paths use Vulkan/DML/Metal immediately.
 
 **Copy-paste track prompt:**
 
@@ -301,8 +356,9 @@ cargo test -p qualia-vision --lib sr
 | Criterion | Metric |
 |-----------|--------|
 | Classical beats nearest | PSNR↑ on synthetic down/up |
-| Light tier usable live | Documented FPS on reference laptop CPU for 480p→2× |
-| Edge GAN/CNN safe | 4K still tiles without OOM under default budget |
+| Light tier usable live | Documented FPS on laptop **CPU and shared_gpu** for 480p→2× |
+| GPU portable | Same classical/light path on at least one of Vulkan / DX12-DML / Metal when adapter present |
+| Edge GAN/CNN safe | 4K still tiles without OOM under default **VRAM** budget from `shared_gpu` accounting |
 | Licence clean defaults | No NC/GPL as default backend |
 | API unified | One `super_resolve` / report for all tiers |
 | Honesty | Generative vs sharpen modes enforced in medical recipe |
@@ -312,6 +368,7 @@ cargo test -p qualia-vision --lib sr
 ## 11. Explicit non-goals (this programme)
 
 - Shipping OpenCV or NCNN as a **required** native dependency  
+- A second GPU context parallel to `shared_gpu` / the renderer
 - Claiming “lossless recovery” of detail  
 - DIV2K-NC weights as installer defaults  
 - Full SwinIR real-time 4K video without dedicated GPU cluster  
@@ -327,13 +384,14 @@ cargo test -p qualia-vision --lib sr
 | SR-P2 | Medical default generative? | **Off** |
 | SR-P3 | Bundle which weights in installer? | FSRCNN/ESPCN only until size review |
 | SR-P4 | Enable `ort` in default desktop feature? | Optional feature until size/CI OK |
+| SR-P5 | Prefer CUDA EP vs wgpu for heavy SR when both present? | **Auto:** CUDA if Cool+headroom else shared_gpu |
 
-Training custom SR models remains **TrainingDeferred** — does not block SR0–SR2.
+Training custom SR models remains **TrainingDeferred** — does not block SR0–SR1–SR5 classical GPU.
 
 ---
 
 ## 13. Next action
 
-Say **`execute SR0 SR1`** to land classical + tiling immediately, then **`execute SR2`** for FSRCNN/ESPCN ONNX path.
+Say **`execute SR0 SR1 SR5`** to land classical + tiling + **shared_gpu WGSL** immediately, then **`execute SR2`** for FSRCNN/ESPCN.
 
-*End of plan. Native, permissive, tiled, honest — 2026 excellence without selling the core to OpenCV or NCNN.*
+*End of plan. Native, permissive, tiled, honest — on Qualia’s existing Vulkan/wgpu/DirectML/CUDA/renderer backplane, without selling the core to OpenCV or NCNN.*
