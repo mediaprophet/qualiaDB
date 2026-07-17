@@ -8,7 +8,7 @@
 //! - Model outputs are **epistemic observations**, not ground truth.
 //! - Dense pixels / biometric templates never in NQuins.
 //! - **No Python**; no OpenCV product link.
-//! - Anti-monolith: single-function files under `cv/`, `biosense/`.
+//! - Anti-monolith: single-function files under `cv/`, `biosense/`, `bio/`.
 
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
 
@@ -30,6 +30,7 @@ pub mod capability;
 pub mod cv;
 pub mod embeddings;
 pub mod biosense;
+pub mod bio;
 pub mod recipes;
 
 #[cfg(feature = "cpu-reference")]
@@ -114,6 +115,22 @@ pub use biosense::{
     PadThresholds, ParSample, ParVerdict, PolicyDecision, ProcessingAct, PyramidLevelMeta,
     QualityReject, RrEstimate, TemporalWindow, DEFAULT_EVM_MIN_SNR, DEFAULT_PAR_TAU,
     MAX_PYRAMID_LEVELS, MEDIAPIPE_FACE_MESH_COUNT, RR_F_HI_HZ, RR_F_LO_HZ, RR_MIN_SNR_DEFAULT,
+};
+pub use bio::{
+    anonymize_tag_map, apply_background_correct, apply_hu_window_i16, background_intensity_sample,
+    centroid_from_bbox, centroids_from_binary, centroids_from_labels, crocker_grier_link,
+    extended_minima, first_order_stats, glcm_features, glcm_features_d1, hu_window_i16,
+    intensity_to_od_u8, isotropic_resample_2d_nn, isotropic_resample_nn_2d, lab_to_rgb,
+    link_particles, macenko_deconvolution, mip_project_axis, mip_project_z, morphological_tophat,
+    nucleus_features, optical_density_rgb, otsu_threshold_from_hist, positive_od_threshold,
+    reinhard_normalize, rgb_to_lab, shape_2d_features, shape_2d_from_mask, shape_3d_from_voxels,
+    snmf_unmix_lite, spectral_unmix_nnls, suv_from_activity, voronoi_otsu_label, watershed_markers,
+    CrockerGrierLinker, CrockerGrierParams, Detection2, FirstOrderStats, GlcmFeatures, HistoError,
+    LabStats, LinkedParticle, MacenkoResult, NucleusFeature, OdPositiveIndex, ParticleCentroid,
+    RadiomicsError, RgbBg, Shape2d, Shape2dFeatures, Shape3dFeatures, StainBasis, TopHatKind,
+    TrackLink, DEFAULT_HE_TARGET_MEAN, DEFAULT_HE_TARGET_STD, GLCM_LEVELS_16, GLCM_LEVELS_32,
+    MAX_FRAME_DETS, MAX_NUCLEUS_LABELS, MAX_OD_LABELS, MAX_PARTICLE_TRACKS,
+    MAX_PARTICLES_PER_FRAME, NO_TRACK_ID,
 };
 pub use recipes::{
     challenge_pad_from_landmark_frames, challenge_pad_from_mesh_trace, respiration_monitor,

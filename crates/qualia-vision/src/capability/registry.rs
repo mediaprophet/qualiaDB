@@ -113,10 +113,10 @@ static REGISTRY: &[CapabilityEntry] = &[
     cap!("D6.06", "D6", "symbolic_math", Beyond, "symbolic_*"),
     cap!("D6.07", "D6", "assurance_a0_a4", Present, "honesty labels twin/FEA"),
     // D7 biology
-    cap!("D7.01", "D7", "medical_imaging_path", Partial, "medical_computing + sensitivity"),
+    cap!("D7.01", "D7", "medical_imaging_path", Partial, "bio/medical HU+MIP+resample+unmix; dicom_lite tags/SUV/PHI"),
     cap!("D7.02", "D7", "anatomy_mesh_graph", Partial, "Anatomy QApp"),
-    cap!("D7.03", "D7", "microscopy", Missing, "vertical"),
-    cap!("D7.04", "D7", "cell_track", Missing, "vertical"),
+    cap!("D7.03", "D7", "microscopy", Present, "bio/: Reinhard/Macenko/watershed/Voronoi-Otsu/GLCM — deep models gated"),
+    cap!("D7.04", "D7", "cell_track", Present, "bio/tracking crocker_grier + particle_features"),
     cap!("D7.05", "D7", "biomarker_graph", Partial, "Anatomy knowledge"),
     cap!("D7.06", "D7", "cheminformatics", Beyond, "medical_computing"),
     cap!("D7.07", "D7", "clinical_formulas", Beyond, "non-vision"),
