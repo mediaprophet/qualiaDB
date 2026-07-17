@@ -70,9 +70,9 @@ pub use generator::{
     GENERATOR_MODEL_ID, CTX_GENERATION, P_GENERATED_IMAGE, P_GEN_PROMPT, P_GEN_SEED,
 };
 pub use spatial::{
-    image_to_heightfield_mesh, mesh_ir_to_obj, mesh_ir_triangles, validate_mesh_ir,
-    ImageTo3dReceipt, MeshIR, MeshValidationReport, MeshValidationStatus, MAX_INDICES,
-    MAX_VERTICES,
+    assess_twin_eligibility, image_to_heightfield_mesh, mesh_ir_to_obj, mesh_ir_triangles,
+    refuse_fea_unless_eligible, validate_mesh_ir, AnalysisDomain, ImageTo3dReceipt, MeshIR,
+    MeshValidationReport, MeshValidationStatus, TwinEligibility, MAX_INDICES, MAX_VERTICES,
 };
 
 #[cfg(feature = "cpu-reference")]

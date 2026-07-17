@@ -90,6 +90,40 @@ impl ProcessPlan {
         }
         Ok(())
     }
+
+    /// Offline bounce: process all input blocks into contiguous interleaved stereo.
+    /// `inputs[t]` is full track audio; written frames = min lengths.
+    pub fn bounce_interleaved(
+        &self,
+        inputs: &[&[f32]],
+        out: &mut [f32],
+    ) -> Result<usize, &'static str> {
+        let bf = self.block_frames;
+        let n_frames = inputs
+            .iter()
+            .map(|b| b.len())
+            .min()
+            .unwrap_or(0);
+        let mut written = 0usize;
+        let mut pos = 0usize;
+        let mut scratch_in: [&[f32]; MAX_TRACKS] = [&[]; MAX_TRACKS];
+        while pos + bf <= n_frames {
+            for t in 0..self.n_tracks.min(inputs.len()) {
+                scratch_in[t] = &inputs[t][pos..pos + bf];
+            }
+            let refs: Vec<&[f32]> = (0..self.n_tracks.min(inputs.len()))
+                .map(|t| scratch_in[t])
+                .collect();
+            let out_slice = &mut out[written * 2..(written + bf) * 2];
+            if out_slice.len() < bf * 2 {
+                break;
+            }
+            self.process_block(&refs, out_slice)?;
+            written += bf;
+            pos += bf;
+        }
+        Ok(written)
+    }
 }
 
 #[cfg(test)]
@@ -115,5 +149,16 @@ mod tests {
         p.process_block(&[&a, &b], &mut out).unwrap();
         assert!(out[0] > 0.0); // L
         assert!(out[1] > 0.0); // R
+    }
+
+    #[test]
+    fn bounce_writes_frames() {
+        let mut p = ProcessPlan::new(48000, 32);
+        p.add_track(TrackState::default());
+        let a = [0.25f32; 128];
+        let mut out = [0.0f32; 256];
+        let n = p.bounce_interleaved(&[&a], &mut out).unwrap();
+        assert_eq!(n, 128);
+        assert!(out[0] != 0.0);
     }
 }

@@ -21,6 +21,7 @@ use qualia_vision::metrics::evaluate_synthetic;
 use qualia_vision::overlay::{
     box_css_percent, compose_rgb_overlay_rgba8, encode_bmp_rgba8,
 };
+use qualia_vision::query_instances_in_region;
 use qualia_vision::semantic::{compile_observation_quins_full, media_digest, VisionQuin};
 use qualia_vision::spatial::{
     image_to_heightfield_mesh, mesh_ir_to_obj, mesh_ir_triangles, MeshIR,
@@ -746,4 +747,179 @@ mod tests {
         assert!(std::path::Path::new(c10).is_file());
         let _ = std::fs::remove_dir_all(&dir);
     }
+
+    #[test]
+    fn section15_smoke_passes() {
+        let s = section15_smoke().expect("§15");
+        assert!(s.contains("OK"));
+    }
+
+    #[test]
+    fn rgb_import_detects() {
+        let dir = std::env::temp_dir().join(format!(
+            "qv-imp-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let _ = std::fs::create_dir_all(&dir);
+        let mut rgb = vec![0u8; 16 * 16 * 3];
+        for p in rgb.chunks_mut(3) {
+            p[0] = 220;
+            p[1] = 20;
+            p[2] = 20;
+        }
+        let r = detect_from_rgb8(&dir, &rgb, 16, 16, "reference", true).unwrap();
+        assert!(r.n_pred >= 1);
+        assert!(r.shacl_ok);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+/// Detect from raw RGB8 buffer (file import path).
+pub fn detect_from_rgb8(
+    storage_root: &std::path::Path,
+    rgb: &[u8],
+    width: u32,
+    height: u32,
+    backend: &str,
+    persist: bool,
+) -> Result<VisionDemoResult, String> {
+    if rgb.len() < (width as usize) * (height as usize) * 3 || width == 0 || height == 0 {
+        return Err("bad rgb geometry".into());
+    }
+    let img = ImageView {
+        bytes: rgb,
+        width,
+        height,
+        row_stride: width * 3,
+        format: PixelFormat::Rgb8,
+    };
+    let mut preds = [Detection::empty(); MAX_DETECTIONS];
+    let mut emb = [0.0f32; 32];
+    let mut ws = [0u8; MAX_DETECTIONS];
+    let use_prod = backend.eq_ignore_ascii_case("production")
+        || backend.eq_ignore_ascii_case("production_weights");
+    let (n_pred, model_hash, backend_kind, is_ref) = if use_prod {
+        let classes = [CLASS_MOSTLY_RED, CLASS_MOSTLY_GREEN, CLASS_MOSTLY_BLUE];
+        let bundle = VisionWeightBundle::from_seed(0x01D1_FACE_u64, 16, &classes);
+        let mh = bundle.model_hash();
+        let mut prod = ProductionVision::new(bundle);
+        let counts = prod
+            .infer(img, &mut preds, &mut emb, &mut ws)
+            .map_err(|e| format!("{e:?}"))?;
+        (counts.detections, mh, "production_weights", false)
+    } else {
+        let det = GridMultiObjectDetector::new(4, 3);
+        let n = det
+            .detect(img, 0, &mut preds, &mut ws)
+            .map_err(|e| format!("{e:?}"))?;
+        (n, det.model_hash(), "reference", true)
+    };
+    let mut tracker = BoundedTracker::new();
+    tracker.update(0, &mut preds, n_pred);
+    let digest = media_digest(rgb);
+    if persist {
+        let store = MediaStore::open(storage_root.join("vision_media")).map_err(|e| e)?;
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let _ = store.import_bytes(
+            rgb,
+            "image/x-rgb8",
+            width,
+            height,
+            RetentionClass::Restricted,
+            now,
+        );
+    }
+    let mut vquins = [VisionQuin::with_parity(0, 0, 0, 0, 0); 256];
+    let n_q = compile_observation_quins_full(digest, &preds[..n_pred], model_hash, &mut vquins);
+    let mut nq = Vec::new();
+    for q in vquins.iter().take(n_q) {
+        nq.push(vision_quin_to_nquin(q));
+    }
+    let report = validate_vision_observation_graph(&nq);
+    let mut rgba = vec![0u8; (width * height * 4) as usize];
+    compose_rgb_overlay_rgba8(
+        width,
+        height,
+        rgb,
+        &preds,
+        n_pred,
+        [0, 255, 180, 255],
+        2,
+        &mut rgba,
+    )
+    .map_err(|e| format!("{e:?}"))?;
+    let mut bmp = vec![0u8; 54 + rgba.len()];
+    let bmp_n = encode_bmp_rgba8(width, height, &rgba, &mut bmp).map_err(|e| format!("{e:?}"))?;
+    Ok(VisionDemoResult {
+        width,
+        height,
+        seed: 0,
+        split: "import".into(),
+        model_hash: format!("0x{:016x}", model_hash),
+        media_hash: format!("0x{:016x}", digest.hash),
+        detections: preds[..n_pred]
+            .iter()
+            .map(|d| det_to_dto(d, false))
+            .collect(),
+        n_gt: 0,
+        n_pred,
+        quins_written: n_q,
+        shacl_ok: report.ok,
+        shacl_observations: report.observation_count,
+        shacl_human: report.human_attestation_count,
+        overlay_data_url: format!("data:image/bmp;base64,{}", B64.encode(&bmp[..bmp_n])),
+        note: format!("RGB import path. Backend={backend_kind}. Epistemic only."),
+        backend: backend_kind.into(),
+        is_reference_backend: is_ref,
+        synthetic_match_acc: None,
+    })
+}
+
+/// Decode PNG/JPEG and detect.
+pub fn detect_from_image_file(
+    storage_root: &std::path::Path,
+    path: &std::path::Path,
+    backend: &str,
+) -> Result<VisionDemoResult, String> {
+    let img = image::open(path).map_err(|e| e.to_string())?;
+    let rgb = img.to_rgb8();
+    let (w, h) = rgb.dimensions();
+    detect_from_rgb8(storage_root, rgb.as_raw(), w, h, backend, true)
+}
+
+/// Query observation quins by normalized region (u16).
+pub fn query_vision_region(
+    quins: &[VisionQuin],
+    x0: u16,
+    y0: u16,
+    x1: u16,
+    y1: u16,
+) -> Vec<u64> {
+    let mut out = [0u64; 64];
+    let n = query_instances_in_region(quins, x0, y0, x1, y1, &mut out);
+    out[..n].to_vec()
+}
+
+/// §15 automated smoke: synthetic detect + SHACL + overlay.
+pub fn section15_smoke() -> Result<String, String> {
+    let r = demo_test(0)?;
+    if !r.shacl_ok {
+        return Err("SHACL failed".into());
+    }
+    if r.n_pred == 0 && r.n_gt == 0 {
+        return Err("no detections".into());
+    }
+    if !r.overlay_data_url.starts_with("data:image/bmp") {
+        return Err("no overlay".into());
+    }
+    Ok(format!(
+        "section15_smoke OK backend={} dets={} quins={}",
+        r.backend, r.n_pred, r.quins_written
+    ))
 }

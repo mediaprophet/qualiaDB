@@ -371,6 +371,23 @@ pub fn VisionWorkbench() -> Element {
                     "Full G→S continuum"
                 }
                 button {
+                    disabled: busy(),
+                    onclick: move |_| {
+                        busy.set(true);
+                        status.set("§15 smoke…".into());
+                        spawn(async move {
+                            match invoke_json("vision_section15_smoke", serde_json::json!({})).await
+                            {
+                                Ok(v) => status.set(format!("{v}")),
+                                Err(e) => status.set(format!("§15 failed: {e}")),
+                            }
+                            busy.set(false);
+                        });
+                    },
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); cursor:pointer;",
+                    "§15 smoke"
+                }
+                button {
                     disabled: busy() || selected().is_none(),
                     onclick: reject_sel,
                     style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); background:rgba(220,80,80,0.12); cursor:pointer;",

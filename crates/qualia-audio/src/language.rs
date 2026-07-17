@@ -53,6 +53,26 @@ pub struct AnnotationTier {
     pub is_machine_proposal: bool,
 }
 
+/// Persist a minimal JSON-ish line record (cold path).
+pub fn save_bundle_record(
+    path: &std::path::Path,
+    bundle: &LanguageResourceBundle,
+) -> Result<(), String> {
+    if let Some(p) = path.parent() {
+        std::fs::create_dir_all(p).map_err(|e| e.to_string())?;
+    }
+    let line = format!(
+        "authority={:016x} name={:016x} ortho={} rev={} access={:?} train={}\n",
+        bundle.authority_did_hash,
+        bundle.local_name_hash,
+        bundle.has_orthography,
+        bundle.inventory_revision,
+        bundle.access_class as u8,
+        bundle.permitted_training
+    );
+    std::fs::write(path, line).map_err(|e| e.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -62,5 +82,21 @@ mod tests {
         let b = LanguageResourceBundle::oral_fixture("test-variety");
         assert!(!b.has_orthography);
         assert!(!b.can_train());
+    }
+
+    #[test]
+    fn persist_oral_bundle() {
+        let dir = std::env::temp_dir().join(format!(
+            "lang-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let path = dir.join("bundle.txt");
+        let b = LanguageResourceBundle::oral_fixture("x");
+        save_bundle_record(&path, &b).unwrap();
+        assert!(path.is_file());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

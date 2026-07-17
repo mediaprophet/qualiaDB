@@ -4,7 +4,10 @@ use qualia_audio::cross_modal::{
     frames_to_media_ms, propose_temporal_correlations, TimeIntervalMs,
 };
 use qualia_audio::generation::{synthesize_reference_tone, VoiceConsent};
-use qualia_audio::pipeline::{run_ears_demo, EarsDemoResult};
+use qualia_audio::pipeline::{
+    run_ears_demo, run_ears_on_wav_file, section18_smoke, EarsDemoResult,
+};
+use qualia_audio::semantic::{human_correct_quin, human_reject_quin};
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
@@ -17,11 +20,23 @@ pub struct EarsDemoDto {
     pub media_hash: String,
     pub is_reference: bool,
     pub mel_frames: usize,
+    pub cqt_peak: f32,
+    pub event_instance_hashes: Vec<String>,
     pub note: String,
 }
 
 impl From<EarsDemoResult> for EarsDemoDto {
     fn from(r: EarsDemoResult) -> Self {
+        let instances: Vec<String> = r
+            .events
+            .iter()
+            .map(|e| {
+                format!(
+                    "0x{:016x}",
+                    e.source_hash ^ e.start_frame ^ e.end_frame.wrapping_mul(0x9e37_79b9)
+                )
+            })
+            .collect();
         Self {
             sample_rate: r.sample_rate,
             frames: r.frames,
@@ -31,6 +46,8 @@ impl From<EarsDemoResult> for EarsDemoDto {
             media_hash: format!("0x{:016x}", r.media_hash),
             is_reference: r.is_reference,
             mel_frames: r.mel_frames,
+            cqt_peak: r.cqt_peak,
+            event_instance_hashes: instances,
             note: r.note,
         }
     }
@@ -88,6 +105,49 @@ pub fn synth_with_consent(allow: bool) -> Result<u32, String> {
     Ok(r.frames)
 }
 
+pub fn ears_from_wav(
+    storage_root: Option<&std::path::Path>,
+    path: &std::path::Path,
+) -> Result<EarsDemoDto, String> {
+    run_ears_on_wav_file(storage_root, path).map(Into::into)
+}
+
+pub fn section18_smoke_dto() -> Result<String, String> {
+    section18_smoke()
+}
+
+pub fn audio_reject_instance(instance_hex: &str) -> Result<String, String> {
+    let inst = parse_hex(instance_hex)?;
+    let q = human_reject_quin(
+        qualia_audio::q_hash("did:webizen:local-principal"),
+        inst,
+        0,
+    );
+    Ok(format!(
+        "reject_quin parity=0x{:016x} instance=0x{:016x} (machine claim retained)",
+        q.parity, inst
+    ))
+}
+
+pub fn audio_correct_instance(instance_hex: &str, new_class_hex: &str) -> Result<String, String> {
+    let inst = parse_hex(instance_hex)?;
+    let cls = parse_hex(new_class_hex)?;
+    let q = human_correct_quin(
+        qualia_audio::q_hash("did:webizen:local-principal"),
+        inst,
+        cls,
+    );
+    Ok(format!(
+        "correct_quin parity=0x{:016x} new_class=0x{:016x}",
+        q.parity, cls
+    ))
+}
+
+fn parse_hex(s: &str) -> Result<u64, String> {
+    let t = s.trim().trim_start_matches("0x").trim_start_matches("0X");
+    u64::from_str_radix(t, 16).map_err(|e| e.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -97,11 +157,17 @@ mod tests {
         let d = ears_demo(None).unwrap();
         assert!(d.n_events >= 1);
         assert!(d.is_reference);
+        assert!(d.cqt_peak > 0.0);
     }
 
     #[test]
     fn cross_modal_not_causal() {
         let d = cross_modal_demo();
         assert!(!d.asserts_causality_any);
+    }
+
+    #[test]
+    fn section18_ok() {
+        assert!(section18_smoke_dto().unwrap().contains("OK"));
     }
 }

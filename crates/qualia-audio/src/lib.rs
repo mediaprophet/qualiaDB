@@ -32,7 +32,10 @@ pub use hash::{media_digest, q_hash, MediaDigest};
 pub use convert::{mono_f32_to_i16_le, to_mono_f32};
 pub use resample::resample_linear_mono;
 pub use wav::{decode_wav, encode_wav_i16_mono, DecodedWav};
-pub use features::{frame_energy, frame_zcr, log_mel_from_mono, magnitude_stft_chunk, StreamingStft};
+pub use features::{
+    forward_cqt_mono, frame_energy, frame_zcr, log_mel_from_mono, magnitude_stft_chunk,
+    StreamingStft,
+};
 pub use semantic::{
     compile_auditory_quins, human_correct_quin, human_reject_quin, AudioQuin, CTX_AUDIO,
     P_AUDITORY_OBSERVATION, P_PROPOSES_SOUND_CLASS,
@@ -53,4 +56,4 @@ pub use generation::{synthesize_reference_tone, SynthReceipt, VoiceConsent};
 pub use cross_modal::{
     frames_to_media_ms, propose_temporal_correlations, AvCorrelationProposal, TimeIntervalMs,
 };
-pub use pipeline::{run_ears_demo, EarsDemoResult};
+pub use pipeline::{run_ears_demo, run_ears_on_wav_file, section18_smoke, EarsDemoResult};

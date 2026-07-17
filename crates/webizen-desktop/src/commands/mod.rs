@@ -7263,6 +7263,56 @@ pub fn audio_cross_modal_demo() -> Result<serde_json::Value, String> {
     serde_json::to_value(r).map_err(|e| e.to_string())
 }
 
+#[command]
+pub fn audio_section18_smoke() -> Result<String, String> {
+    qualia_client_core::audio_pipeline::section18_smoke_dto()
+}
+
+#[command]
+pub fn audio_import_wav(
+    state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
+    path: String,
+) -> Result<serde_json::Value, String> {
+    let config = state.config.lock().unwrap().clone();
+    let root = std::path::PathBuf::from(&config.storage_path);
+    let r = qualia_client_core::audio_pipeline::ears_from_wav(Some(&root), path.as_ref())?;
+    serde_json::to_value(r).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn audio_reject_instance(instance_hash_hex: String) -> Result<String, String> {
+    qualia_client_core::audio_pipeline::audio_reject_instance(&instance_hash_hex)
+}
+
+#[command]
+pub fn audio_correct_instance(
+    instance_hash_hex: String,
+    new_class_hash_hex: String,
+) -> Result<String, String> {
+    qualia_client_core::audio_pipeline::audio_correct_instance(
+        &instance_hash_hex,
+        &new_class_hash_hex,
+    )
+}
+
+#[command]
+pub fn vision_detect_image_file(
+    state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
+    path: String,
+    backend: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let config = state.config.lock().unwrap().clone();
+    let root = std::path::PathBuf::from(&config.storage_path);
+    let be = backend.as_deref().unwrap_or("reference");
+    let r = qualia_client_core::vision_pipeline::detect_from_image_file(&root, path.as_ref(), be)?;
+    serde_json::to_value(r).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn vision_section15_smoke() -> Result<String, String> {
+    qualia_client_core::vision_pipeline::section15_smoke()
+}
+
 /// Full generate → store → recon → OBJ/.10d continuum (pre-auditory handoff).
 #[command]
 pub fn vision_gs_continuum(
@@ -7791,6 +7841,12 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         vision_gs_continuum,
         audio_ears_demo,
         audio_cross_modal_demo,
+        audio_section18_smoke,
+        audio_import_wav,
+        audio_reject_instance,
+        audio_correct_instance,
+        vision_detect_image_file,
+        vision_section15_smoke,
     ]
 }
 

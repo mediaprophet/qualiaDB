@@ -69,6 +69,48 @@ pub fn ListenWorkbench() -> Element {
         }
     };
 
+    let run_s18 = {
+        let mut status = status.clone();
+        let mut busy = busy.clone();
+        move |_| {
+            busy.set(true);
+            spawn(async move {
+                match invoke_json("audio_section18_smoke", serde_json::json!({})).await {
+                    Ok(v) => status.set(format!("{v}")),
+                    Err(e) => status.set(format!("§18 smoke failed: {e}")),
+                }
+                busy.set(false);
+            });
+        }
+    };
+
+    let mut inst = use_signal(|| String::new());
+    let reject = {
+        let mut status = status.clone();
+        let mut busy = busy.clone();
+        let inst = inst.clone();
+        move |_| {
+            let i = inst();
+            if i.is_empty() {
+                status.set("Paste instance hash from demo JSON first.".into());
+                return;
+            }
+            busy.set(true);
+            spawn(async move {
+                match invoke_json(
+                    "audio_reject_instance",
+                    serde_json::json!({ "instance_hash_hex": i }),
+                )
+                .await
+                {
+                    Ok(v) => status.set(format!("{v}")),
+                    Err(e) => status.set(format!("Reject failed: {e}")),
+                }
+                busy.set(false);
+            });
+        }
+    };
+
     rsx! {
         div {
             style: "flex:1; overflow-y:auto; padding:1.5rem 2rem; max-width:720px; margin:0 auto; color:var(--qualia-text);",
@@ -89,6 +131,25 @@ pub fn ListenWorkbench() -> Element {
                     onclick: run_x,
                     style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); cursor:pointer;",
                     "Cross-modal (X) demo"
+                }
+                button {
+                    disabled: busy(),
+                    onclick: run_s18,
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); cursor:pointer;",
+                    "§18 smoke"
+                }
+                input {
+                    r#type: "text",
+                    placeholder: "instance hash 0x…",
+                    value: "{inst}",
+                    style: "min-width:12rem; padding:0.4rem;",
+                    oninput: move |e| inst.set(e.value()),
+                }
+                button {
+                    disabled: busy(),
+                    onclick: reject,
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); background:rgba(220,80,80,0.12); cursor:pointer;",
+                    "Reject instance"
                 }
             }
             p { style: "font-size:0.88rem; color:var(--qualia-text-muted); line-height:1.45;", "{status}" }
