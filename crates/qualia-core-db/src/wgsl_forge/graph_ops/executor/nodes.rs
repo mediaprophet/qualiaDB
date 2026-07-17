@@ -4,7 +4,9 @@
 //! [`driver`](super::driver). [`prepare_node`] dispatches per op-class.
 
 use crate::wgsl_forge::execute::{BindingUsage, BufferView, GraphPass, WgpuComputeContext};
-use crate::wgsl_forge::graph_ops::{broadcast, elementwise, gather_dequant, reduce, slice, stencil};
+use crate::wgsl_forge::graph_ops::{
+    broadcast, elementwise, gather_dequant, reduce, slice, stencil, vision,
+};
 use crate::wgsl_forge::ir::graph::{DType, EwKind, GraphNode, OpNode};
 use crate::wgsl_forge::ir::BuiltinKernel;
 use crate::wgsl_forge::{ForgeError, Schedule};
@@ -245,6 +247,113 @@ pub(super) fn prepare_node(
                 out,
                 sched,
                 n,
+            )
+        }
+        OpNode::Pool2d {
+            c,
+            h,
+            w,
+            kh,
+            kw,
+            stride_h,
+            stride_w,
+        } => {
+            const WG: u32 = 64;
+            let ho = (h - kh) / stride_h + 1;
+            let wo = (w - kw) / stride_w + 1;
+            let out_elems = (c * ho * wo) as usize;
+            let out = alloc_out(ctx, out_elems, 1)?;
+            let params = alloc_params(
+                ctx,
+                &[c, h, w, kh, kw, stride_h, stride_w, ho, wo, 0, 0, 0],
+                2,
+                BindingUsage::StorageRead,
+            )?;
+            let src = vision::max_pool2d_wgsl(WG);
+            let sched = Schedule {
+                workgroup_size: WG,
+                ..Default::default()
+            };
+            record_kernel(
+                ctx,
+                &src,
+                vision::POOL2D_ENTRY,
+                &[at(ins[0], 0), out, params],
+                out,
+                sched,
+                out_elems,
+            )
+        }
+        OpNode::Resize2d {
+            c,
+            h_in,
+            w_in,
+            h_out,
+            w_out,
+        } => {
+            const WG: u32 = 64;
+            let out_elems = (c * h_out * w_out) as usize;
+            let out = alloc_out(ctx, out_elems, 1)?;
+            let params = alloc_params(
+                ctx,
+                &[c, h_in, w_in, h_out, w_out, 0, 0, 0],
+                2,
+                BindingUsage::StorageRead,
+            )?;
+            let src = vision::resize2d_wgsl(WG);
+            let sched = Schedule {
+                workgroup_size: WG,
+                ..Default::default()
+            };
+            record_kernel(
+                ctx,
+                &src,
+                vision::RESIZE2D_ENTRY,
+                &[at(ins[0], 0), out, params],
+                out,
+                sched,
+                out_elems,
+            )
+        }
+        OpNode::Conv2d {
+            c_in,
+            c_out,
+            h,
+            w,
+            kh,
+            kw,
+            stride_h,
+            stride_w,
+            pad_h,
+            pad_w,
+        } => {
+            const WG: u32 = 64;
+            let ho = (h + 2 * pad_h - kh) / stride_h + 1;
+            let wo = (w + 2 * pad_w - kw) / stride_w + 1;
+            let out_elems = (c_out * ho * wo) as usize;
+            // Bindings: input(0), weight(1), bias(2), output(3), params(4)
+            let out = alloc_out(ctx, out_elems, 3)?;
+            let params = alloc_params(
+                ctx,
+                &[
+                    c_in, c_out, h, w, kh, kw, stride_h, stride_w, pad_h, pad_w, ho, wo,
+                ],
+                4,
+                BindingUsage::StorageRead,
+            )?;
+            let src = vision::conv2d_wgsl(WG);
+            let sched = Schedule {
+                workgroup_size: WG,
+                ..Default::default()
+            };
+            record_kernel(
+                ctx,
+                &src,
+                vision::CONV2D_ENTRY,
+                &[at(ins[0], 0), at(ins[1], 1), at(ins[2], 2), out, params],
+                out,
+                sched,
+                out_elems,
             )
         }
         other => Err(ForgeError::Emission(format!(

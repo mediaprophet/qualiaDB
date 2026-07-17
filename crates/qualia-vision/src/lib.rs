@@ -21,6 +21,7 @@ pub mod semantic;
 pub mod preprocess;
 pub mod media_store;
 pub mod ops;
+pub mod classifier;
 
 #[cfg(feature = "cpu-reference")]
 pub mod cpu_reference;
@@ -41,6 +42,7 @@ pub use media_store::{MediaRecord, MediaStore, RetentionClass};
 pub use ops::{
     avg_pool2d_nchw_f32, conv2d_nchw_f32, max_pool2d_nchw_f32, resize_nearest_nchw_f32,
 };
+pub use classifier::{fit_two_class_centroids, LinearHead, LinearProbeVision};
 
 #[cfg(feature = "cpu-reference")]
 pub use cpu_reference::CpuReferenceVision;

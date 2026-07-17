@@ -2,7 +2,9 @@
 //! threading each node's output forward. This is the differential floor certified against the
 //! GPU executor.
 
-use crate::wgsl_forge::graph_ops::{broadcast, elementwise, gather_dequant, reduce, slice, stencil};
+use crate::wgsl_forge::graph_ops::{
+    broadcast, elementwise, gather_dequant, reduce, slice, stencil, vision,
+};
 use crate::wgsl_forge::ir::graph::{ComputeGraph, DType, NodeId, OpNode};
 use crate::wgsl_forge::ForgeError;
 
@@ -98,6 +100,64 @@ pub fn execute_graph_cpu(
                 };
                 stencil::rope_cpu(&ins[0], &cfg)?
             }
+            OpNode::Pool2d {
+                c,
+                h,
+                w,
+                kh,
+                kw,
+                stride_h,
+                stride_w,
+            } => vision::max_pool2d_cpu(
+                &ins[0],
+                c as usize,
+                h as usize,
+                w as usize,
+                kh as usize,
+                kw as usize,
+                stride_h as usize,
+                stride_w as usize,
+            )?,
+            OpNode::Resize2d {
+                c,
+                h_in,
+                w_in,
+                h_out,
+                w_out,
+            } => vision::resize2d_cpu(
+                &ins[0],
+                c as usize,
+                h_in as usize,
+                w_in as usize,
+                h_out as usize,
+                w_out as usize,
+            )?,
+            OpNode::Conv2d {
+                c_in,
+                c_out,
+                h,
+                w,
+                kh,
+                kw,
+                stride_h,
+                stride_w,
+                pad_h,
+                pad_w,
+            } => vision::conv2d_cpu(
+                &ins[0],
+                c_in as usize,
+                h as usize,
+                w as usize,
+                &ins[1],
+                c_out as usize,
+                kh as usize,
+                kw as usize,
+                &ins[2],
+                stride_h as usize,
+                stride_w as usize,
+                pad_h as usize,
+                pad_w as usize,
+            )?,
             other => {
                 return Err(ForgeError::Emission(format!(
                     "execute_graph_cpu: op {other:?} not supported"

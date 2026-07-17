@@ -269,6 +269,37 @@ pub enum OpNode {
         mode: u32,
         base_bits: u32,
     },
+    /// NCHW max-pool 2D (vision). Inputs: feature map only; params packed in op.
+    Pool2d {
+        c: u32,
+        h: u32,
+        w: u32,
+        kh: u32,
+        kw: u32,
+        stride_h: u32,
+        stride_w: u32,
+    },
+    /// NCHW nearest resize 2D (vision).
+    Resize2d {
+        c: u32,
+        h_in: u32,
+        w_in: u32,
+        h_out: u32,
+        w_out: u32,
+    },
+    /// NCHW Conv2D f32 (vision). Inputs: activation, weight, bias (bias may be zeros).
+    Conv2d {
+        c_in: u32,
+        c_out: u32,
+        h: u32,
+        w: u32,
+        kh: u32,
+        kw: u32,
+        stride_h: u32,
+        stride_w: u32,
+        pad_h: u32,
+        pad_w: u32,
+    },
 }
 
 /// One node of a [`ComputeGraph`]: an op, its input edges, its single output edge, and a
@@ -427,6 +458,15 @@ pub trait Lowerer {
     fn rope(&mut self, _node: &GraphNode) -> Result<(), ForgeError> {
         unsupported("rope")
     }
+    fn pool2d(&mut self, _node: &GraphNode) -> Result<(), ForgeError> {
+        unsupported("pool2d")
+    }
+    fn resize2d(&mut self, _node: &GraphNode) -> Result<(), ForgeError> {
+        unsupported("resize2d")
+    }
+    fn conv2d(&mut self, _node: &GraphNode) -> Result<(), ForgeError> {
+        unsupported("conv2d")
+    }
 }
 
 fn unsupported(op: &str) -> Result<(), ForgeError> {
@@ -454,6 +494,9 @@ pub fn lower_graph<L: Lowerer>(graph: &ComputeGraph, lowerer: &mut L) -> Result<
             OpNode::Neighbor { .. } => lowerer.neighbor(node)?,
             OpNode::Slice { .. } => lowerer.slice(node)?,
             OpNode::Rope { .. } => lowerer.rope(node)?,
+            OpNode::Pool2d { .. } => lowerer.pool2d(node)?,
+            OpNode::Resize2d { .. } => lowerer.resize2d(node)?,
+            OpNode::Conv2d { .. } => lowerer.conv2d(node)?,
         }
     }
     Ok(())
