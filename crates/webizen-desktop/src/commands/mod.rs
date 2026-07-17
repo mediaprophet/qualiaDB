@@ -1794,6 +1794,54 @@ pub fn wellfair_list_library(app: AppHandle) -> Result<String, String> {
     })?
 }
 
+#[command]
+pub fn wellfair_search_library_text(app: AppHandle, query: String) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock Sanctuary vault first".to_string())?;
+        let results = host.search_library_text(&query)?;
+        serde_json::to_string(&results).map_err(|e| e.to_string())
+    })?
+}
+
+#[command]
+pub fn wellfair_library_stats(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock Sanctuary vault first".to_string())?;
+        let stats = host.library_stats()?;
+        serde_json::to_string(&stats).map_err(|e| e.to_string())
+    })?
+}
+
+#[command]
+pub fn wellfair_remove_library_entry(app: AppHandle, asset_uri: String) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock Sanctuary vault first".to_string())?;
+        let r = host.remove_library_entry(&asset_uri)?;
+        serde_json::to_string(&r).map_err(|e| e.to_string())
+    })?
+}
+
+#[command]
+pub fn wellfair_export_library_graph(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock Sanctuary vault first".to_string())?;
+        let r = host.export_library_graph()?;
+        serde_json::to_string(&r).map_err(|e| e.to_string())
+    })?
+}
+
 // --- Chora spatio-temporal canvas ---
 
 #[command]
@@ -6754,6 +6802,10 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_search_library,
         wellfair_search_library_time,
         wellfair_list_library,
+        wellfair_search_library_text,
+        wellfair_library_stats,
+        wellfair_remove_library_entry,
+        wellfair_export_library_graph,
         chora_list_worlds,
         chora_get_world,
         chora_save_world,

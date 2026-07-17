@@ -3313,6 +3313,68 @@ pub async fn search_library_time(_s: i64, _e: i64) -> Result<serde_json::Value, 
     Err("The library requires the Tauri desktop host".into())
 }
 
+#[cfg(target_arch = "wasm32")]
+pub async fn search_library_text(query: &str) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"query".into(), &wasm_bindgen::JsValue::from_str(query))
+        .map_err(|_| "args".to_string())?;
+    let js = tauri_invoke("wellfair_search_library_text", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "search text not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn search_library_text(_q: &str) -> Result<serde_json::Value, String> {
+    Err("The library requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn library_stats() -> Result<serde_json::Value, String> {
+    let js = tauri_invoke("wellfair_library_stats", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "stats not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn library_stats() -> Result<serde_json::Value, String> {
+    Err("The library requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn remove_library_entry(asset_uri: &str) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &args,
+        &"assetUri".into(),
+        &wasm_bindgen::JsValue::from_str(asset_uri),
+    )
+    .map_err(|_| "args".to_string())?;
+    let js = tauri_invoke("wellfair_remove_library_entry", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "remove not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn remove_library_entry(_u: &str) -> Result<serde_json::Value, String> {
+    Err("The library requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn export_library_graph() -> Result<serde_json::Value, String> {
+    let js = tauri_invoke("wellfair_export_library_graph", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "export not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn export_library_graph() -> Result<serde_json::Value, String> {
+    Err("The library requires the Tauri desktop host".into())
+}
+
 // ── Real envelope encryption over the consent credential (ADR 0011 D1/D2) ──
 
 /// The owner's envelope PUBLIC key (hex) — publishable so others can seal payloads to the owner.

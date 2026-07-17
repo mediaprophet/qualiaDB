@@ -1,29 +1,53 @@
-//! **Library** panel — the personal hypermedia asset library. Ingest a document (it's *processed* to derive
-//! topics + a searchable text representation), then find your files **by meaning** — topic, depiction, place,
-//! project, purpose — never by folder. A flagged ingest under a guardianship relation notifies the guardian.
+//! **Library** — personal hypermedia knowledge shelf.
 //!
-//! Three views over the same library of meaning:
-//! - **List** — everything / a facet search.
-//! - **Timeline** — assets with a date, in time order (a photo's EXIF capture time, or a date you attach).
-//! - **Map** — assets with coordinates, plotted (a photo's GPS, or a place you attach).
-//!
-//! Ingest derives what it can from the content (a text doc → topics; a photo → EXIF time/GPS; a WAV →
-//! duration/pitch). You can also **author facets yourself** — a date, a place, a project, a purpose — because
-//! the software provides the means; the person defines the meaning.
+//! Ingest notes, receipts, photos (meaning derived: topics, EXIF time/place, purpose/project you attach).
+//! Browse by **List · Timeline · Map**, free-text or facet search. Not a folder tree — a graph of meaning.
 
 use super::host_client::{
-    ingest_document, ingest_file_hex, list_library, search_library, search_library_time, IngestFacets,
+    export_library_graph, ingest_document, ingest_file_hex, library_stats, list_library,
+    remove_library_entry, search_library, search_library_text, search_library_time, IngestFacets,
 };
-use dioxus::prelude::*;
 use crate::Route;
+use dioxus::prelude::*;
+
+// ── styles (Talk-aligned dark product chrome) ────────────────────────────────
+
+const ROOT: &str = "display:flex;flex-direction:column;height:100%;min-height:0;background:#0b1220;color:#e5e7eb;box-sizing:border-box;font-family:inherit;";
+const HEADER: &str = "padding:1.1rem 1.35rem 0.85rem;border-bottom:1px solid #1f2937;background:linear-gradient(180deg,#111827 0%,#0b1220 100%);flex-shrink:0;";
+const STATS: &str = "display:flex;flex-wrap:wrap;gap:0.45rem;margin-top:0.75rem;";
+const STAT_CHIP: &str = "display:inline-flex;align-items:center;gap:0.35rem;padding:0.28rem 0.65rem;border-radius:999px;background:#0f172a;border:1px solid #334155;font-size:0.72rem;color:#94a3b8;";
+const STAT_NUM: &str = "color:#a78bfa;font-weight:700;font-variant-numeric:tabular-nums;";
+const BODY: &str = "flex:1;min-height:0;display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:0;";
+const SIDE: &str = "border-right:1px solid #1f2937;overflow-y:auto;padding:1rem;background:#0f172a;min-height:0;";
+const MAIN: &str = "overflow-y:auto;padding:1rem 1.25rem;min-height:0;";
+const CARD: &str = "background:#111827;border:1px solid #1f2937;border-radius:14px;padding:0.95rem 1.05rem;margin-bottom:0.85rem;";
+const H3: &str = "margin:0 0 0.4rem;font-size:0.82rem;font-weight:700;color:#c4b5fd;letter-spacing:0.04em;text-transform:uppercase;";
+const MUTED: &str = "margin:0 0 0.75rem;font-size:0.78rem;color:#94a3b8;line-height:1.45;";
+const INPUT: &str = "width:100%;box-sizing:border-box;padding:0.5rem 0.65rem;margin-bottom:0.45rem;background:#0b1220;color:#f3f4f6;border:1px solid #334155;border-radius:9px;font-family:inherit;font-size:0.8rem;";
+const LABEL: &str = "display:block;font-size:0.68rem;color:#64748b;margin:0 0 0.2rem;font-weight:600;";
+const BTN: &str = "background:#8b5cf6;color:#fff;padding:0.5rem 0.9rem;border:none;border-radius:9px;font-weight:600;cursor:pointer;font-size:0.8rem;";
+const BTN2: &str = "background:#1e293b;color:#e2e8f0;padding:0.45rem 0.75rem;border:1px solid #334155;border-radius:9px;font-weight:600;cursor:pointer;font-size:0.75rem;";
+const TAB: &str = "padding:0.4rem 0.85rem;border-radius:9px;border:1px solid #334155;background:transparent;color:#94a3b8;font-size:0.78rem;font-weight:600;cursor:pointer;";
+const TAB_ON: &str = "padding:0.4rem 0.85rem;border-radius:9px;border:1px solid #8b5cf6;background:rgba(139,92,246,0.18);color:#e9d5ff;font-size:0.78rem;font-weight:600;cursor:pointer;";
+const TOPIC: &str = "display:inline-block;padding:0.15rem 0.5rem;margin:0.1rem 0.2rem 0.1rem 0;border-radius:999px;background:rgba(139,92,246,0.12);border:1px solid #4c1d95;color:#c4b5fd;font-size:0.68rem;cursor:pointer;";
+const ENTRY: &str = "padding:0.85rem 1rem;border-radius:12px;border:1px solid #1f2937;background:#111827;margin-bottom:0.55rem;transition:border-color 0.15s;";
+const STATUS_OK: &str = "padding:0.55rem 0.85rem;border-radius:10px;background:#052e1c;border:1px solid #10b981;color:#a7f3d0;font-size:0.78rem;margin-bottom:0.75rem;";
+const STATUS_ERR: &str = "padding:0.55rem 0.85rem;border-radius:10px;background:#3b0b0b;border:1px solid #ef4444;color:#fecaca;font-size:0.78rem;margin-bottom:0.75rem;";
 
 fn str_field(v: &serde_json::Value, key: &str) -> String {
-    v.get(key).and_then(|x| x.as_str()).unwrap_or("").to_string()
+    v.get(key)
+        .and_then(|x| x.as_str())
+        .unwrap_or("")
+        .to_string()
 }
-fn arr_join(v: &serde_json::Value, key: &str) -> String {
+fn arr_str(v: &serde_json::Value, key: &str) -> Vec<String> {
     v.get(key)
         .and_then(|x| x.as_array())
-        .map(|a| a.iter().filter_map(|x| x.as_str()).collect::<Vec<_>>().join(", "))
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                .collect()
+        })
         .unwrap_or_default()
 }
 fn i64_field(v: &serde_json::Value, key: &str) -> Option<i64> {
@@ -32,8 +56,9 @@ fn i64_field(v: &serde_json::Value, key: &str) -> Option<i64> {
 fn f64_field(v: &serde_json::Value, key: &str) -> Option<f64> {
     v.get(key).and_then(|x| x.as_f64())
 }
-
-// ── date helpers (no chrono dependency) ──────────────────────────────────────
+fn u64_field(v: &serde_json::Value, key: &str) -> u64 {
+    v.get(key).and_then(|x| x.as_u64()).unwrap_or(0)
+}
 
 fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
     let y = y - (m <= 2) as i64;
@@ -44,7 +69,6 @@ fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
     let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
     era * 146097 + doe - 719468
 }
-
 fn civil_from_days(z: i64) -> (i64, i64, i64) {
     let z = z + 719468;
     let era = (if z >= 0 { z } else { z - 146096 }) / 146097;
@@ -57,14 +81,12 @@ fn civil_from_days(z: i64) -> (i64, i64, i64) {
     let m = if mp < 10 { mp + 3 } else { mp - 9 };
     (y + (m <= 2) as i64, m, d)
 }
-
-/// Parse `YYYY-MM-DD` (optionally with a `HH:MM` time) to unix seconds (UTC).
 fn parse_date(s: &str) -> Option<i64> {
     let s = s.trim();
     if s.is_empty() {
         return None;
     }
-    let (date, time) = match s.split_once(&['T', ' '][..]) {
+    let (date, time) = match s.split_once(['T', ' ']) {
         Some((d, t)) => (d, Some(t)),
         None => (s, None),
     };
@@ -83,20 +105,14 @@ fn parse_date(s: &str) -> Option<i64> {
     }
     Some(days_from_civil(y, mo, d) * 86_400 + h * 3600 + mi * 60)
 }
-
-/// Format unix seconds as `YYYY-MM-DD`.
 fn fmt_date(unix: i64) -> String {
     let (y, m, d) = civil_from_days(unix.div_euclid(86_400));
     format!("{y:04}-{m:02}-{d:02}")
 }
-
-/// Parse a `lat,lon` string to a coordinate pair.
 fn parse_latlon(s: &str) -> Option<(f32, f32)> {
     let (a, b) = s.trim().split_once(',')?;
     Some((a.trim().parse().ok()?, b.trim().parse().ok()?))
 }
-
-/// Hex-encode bytes (for the binary ingest path).
 fn to_hex(bytes: &[u8]) -> String {
     let mut s = String::with_capacity(bytes.len() * 2);
     for b in bytes {
@@ -104,107 +120,214 @@ fn to_hex(bytes: &[u8]) -> String {
     }
     s
 }
+fn display_title(uri: &str) -> String {
+    let t = uri.rsplit(['/', ':']).next().unwrap_or(uri);
+    if t.is_empty() {
+        uri.to_string()
+    } else {
+        t.replace('-', " ").replace('_', " ")
+    }
+}
+fn media_icon(media: &str) -> &'static str {
+    if media.starts_with("image/") {
+        "🖼"
+    } else if media.starts_with("audio/") {
+        "🔊"
+    } else {
+        "📄"
+    }
+}
 
 #[component]
 pub fn WellfairLibraryPanel() -> Element {
     let mut results = use_signal(Vec::<serde_json::Value>::new);
+    let mut stats = use_signal(|| serde_json::json!({}));
     let mut status = use_signal(String::new);
+    let mut status_err = use_signal(|| false);
     let mut view = use_signal(|| "list".to_string());
+    let mut show_ingest = use_signal(|| true);
+    let mut q = use_signal(String::new);
 
-    let mut ing_uri = use_signal(|| "urn:doc:my-note".to_string());
+    let mut ing_uri = use_signal(|| {
+        format!(
+            "urn:doc:note-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs() % 100_000)
+                .unwrap_or(0)
+        )
+    });
     let mut ing_media = use_signal(|| "text/markdown".to_string());
-    let mut ing_text = use_signal(|| "Notes: the liver is an organ; keep this receipt for the tax deduction.".to_string());
+    let mut ing_text = use_signal(String::new);
     let mut ing_binary = use_signal(|| false);
     let mut ing_guardian = use_signal(String::new);
     let mut ing_sensitivity = use_signal(|| "public".to_string());
-    // person-authored facets
     let mut ing_date = use_signal(String::new);
-    let mut ing_place = use_signal(String::new); // "lat,lon"
+    let mut ing_place = use_signal(String::new);
     let mut ing_place_label = use_signal(String::new);
     let mut ing_project = use_signal(String::new);
     let mut ing_purpose = use_signal(String::new);
 
     let mut facet = use_signal(|| "topic".to_string());
-    let mut value = use_signal(|| "biology".to_string());
+    let mut value = use_signal(String::new);
     let mut tl_from = use_signal(String::new);
     let mut tl_to = use_signal(String::new);
 
-    let reload = move || {
+    let refresh_all = move || {
         spawn(async move {
-            if let Ok(serde_json::Value::Array(rows)) = list_library().await {
-                results.set(rows);
+            match list_library().await {
+                Ok(serde_json::Value::Array(rows)) => {
+                    results.set(rows);
+                    status_err.set(false);
+                }
+                Ok(_) => results.set(Vec::new()),
+                Err(e) => {
+                    status_err.set(true);
+                    status.set(format!(
+                        "{e} — unlock Sanctuary (Keep → Sanctuary) so the vault host can open the library."
+                    ));
+                }
+            }
+            if let Ok(s) = library_stats().await {
+                stats.set(s);
             }
         });
     };
-    let mut loaded = use_signal(|| false);
 
+    let mut loaded = use_signal(|| false);
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
-        reload();
+        refresh_all();
     });
 
     let do_ingest = move |_| {
-        let (uri, media, text, binary, g, sensitivity) =
-            (ing_uri(), ing_media(), ing_text(), ing_binary(), ing_guardian(), ing_sensitivity());
-        let (date, place, place_label, project, purpose) =
-            (ing_date(), ing_place(), ing_place_label(), ing_project(), ing_purpose());
+        let (uri, media, text, binary, g, sensitivity) = (
+            ing_uri(),
+            ing_media(),
+            ing_text(),
+            ing_binary(),
+            ing_guardian(),
+            ing_sensitivity(),
+        );
+        let (date, place, place_label, project, purpose) = (
+            ing_date(),
+            ing_place(),
+            ing_place_label(),
+            ing_project(),
+            ing_purpose(),
+        );
         spawn(async move {
-            let guardian = if g.trim().is_empty() { None } else { Some(g) };
+            if text.trim().is_empty() {
+                status_err.set(true);
+                status.set("Add some content (or hex bytes for a photo) before ingesting.".into());
+                return;
+            }
+            let guardian = if g.trim().is_empty() {
+                None
+            } else {
+                Some(g)
+            };
             let res = if binary {
-                // The "text" field carries hex bytes of a photo/audio; a photo's EXIF auto-populates
-                // the timeline + map. (Native file-picker → bytes is the remaining UI affordance.)
-                let hex = if text.trim().chars().all(|c| c.is_ascii_hexdigit() || c.is_whitespace()) {
+                let hex = if text
+                    .trim()
+                    .chars()
+                    .all(|c| c.is_ascii_hexdigit() || c.is_whitespace())
+                {
                     text.split_whitespace().collect::<String>()
                 } else {
                     to_hex(text.as_bytes())
                 };
                 ingest_file_hex(&uri, &media, &hex, &uri, guardian, &sensitivity).await
             } else {
-                let (lat, lon) = parse_latlon(&place).map(|(a, b)| (Some(a), Some(b))).unwrap_or((None, None));
+                let (lat, lon) = parse_latlon(&place)
+                    .map(|(a, b)| (Some(a), Some(b)))
+                    .unwrap_or((None, None));
                 let facets = IngestFacets {
                     occurred_at: parse_date(&date),
-                    place_label: if place_label.trim().is_empty() { None } else { Some(place_label) },
+                    place_label: if place_label.trim().is_empty() {
+                        None
+                    } else {
+                        Some(place_label)
+                    },
                     lat,
                     lon,
-                    project: if project.trim().is_empty() { None } else { Some(project) },
-                    purpose: if purpose.trim().is_empty() { None } else { Some(purpose) },
+                    project: if project.trim().is_empty() {
+                        None
+                    } else {
+                        Some(project)
+                    },
+                    purpose: if purpose.trim().is_empty() {
+                        None
+                    } else {
+                        Some(purpose)
+                    },
                 };
                 ingest_document(&uri, &media, &text, guardian, &facets, &sensitivity).await
             };
             match res {
                 Ok(v) => {
-                    let topics = arr_join(&v, "topics");
-                    let n_flags = v.get("flags").and_then(|x| x.as_array()).map(|a| a.len()).unwrap_or(0);
-                    let n_notif = v.get("guardian_notifications").and_then(|x| x.as_array()).map(|a| a.len()).unwrap_or(0);
-                    let placed = v.get("occurred_at").and_then(|x| x.as_i64()).map(|t| format!(" · dated {}", fmt_date(t))).unwrap_or_default();
-                    let mapped = v.get("lat").and_then(|x| x.as_f64()).map(|_| " · on the map".to_string()).unwrap_or_default();
+                    let topics = arr_str(&v, "topics").join(", ");
+                    status_err.set(false);
                     status.set(format!(
-                        "Ingested {uri} — topics: [{topics}]{placed}{mapped}{}{}",
-                        if n_flags > 0 { format!(" · {n_flags} flag(s)") } else { String::new() },
-                        if n_notif > 0 { format!(" · notified guardian ({n_notif})") } else { String::new() },
+                        "Saved · topics [{topics}] — findable by meaning, not by folder."
                     ));
-                    reload();
+                    ing_text.set(String::new());
+                    refresh_all();
                 }
-                Err(e) => status.set(format!("Ingest failed: {e}")),
+                Err(e) => {
+                    status_err.set(true);
+                    status.set(format!("Ingest failed: {e}"));
+                }
             }
         });
     };
-    let do_search = move |_| {
+
+    let do_quick_search = move |_| {
+        let query = q();
+        spawn(async move {
+            match search_library_text(&query).await {
+                Ok(serde_json::Value::Array(rows)) => {
+                    let n = rows.len();
+                    results.set(rows);
+                    status_err.set(false);
+                    status.set(if query.trim().is_empty() {
+                        format!("{n} item(s) in your library.")
+                    } else {
+                        format!("{n} match(es) for “{query}”.")
+                    });
+                }
+                Err(e) => {
+                    status_err.set(true);
+                    status.set(format!("Search failed: {e}"));
+                }
+                _ => results.set(Vec::new()),
+            }
+        });
+    };
+
+    let do_facet_search = move |_| {
         let (f, v) = (facet(), value());
         spawn(async move {
             match search_library(&f, &v).await {
                 Ok(serde_json::Value::Array(rows)) => {
                     let n = rows.len();
                     results.set(rows);
-                    status.set(format!("{n} result(s) for {f} = \"{v}\"."));
+                    status_err.set(false);
+                    status.set(format!("{n} · {f} = “{v}”"));
                 }
-                Ok(_) => results.set(Vec::new()),
-                Err(e) => status.set(format!("Search failed: {e}")),
+                Err(e) => {
+                    status_err.set(true);
+                    status.set(format!("Facet search failed: {e}"));
+                }
+                _ => results.set(Vec::new()),
             }
         });
     };
-    let do_timeline_search = move |_| {
+
+    let do_timeline = move |_| {
         let (from, to) = (tl_from(), tl_to());
         spawn(async move {
             let start = parse_date(&from).unwrap_or(i64::MIN / 2);
@@ -213,207 +336,411 @@ pub fn WellfairLibraryPanel() -> Element {
                 Ok(serde_json::Value::Array(rows)) => {
                     let n = rows.len();
                     results.set(rows);
-                    view.set("timeline".to_string());
-                    status.set(format!("{n} dated asset(s) in range."));
+                    view.set("timeline".into());
+                    status_err.set(false);
+                    status.set(format!("{n} dated item(s) in range."));
                 }
-                Ok(_) => results.set(Vec::new()),
-                Err(e) => status.set(format!("Timeline search failed: {e}")),
+                Err(e) => {
+                    status_err.set(true);
+                    status.set(format!("Timeline failed: {e}"));
+                }
+                _ => results.set(Vec::new()),
             }
         });
     };
 
-    let field_style = "padding:0.3rem 0.45rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;background:var(--qualia-surface-2,#fff);";
-    let label_style = "display:flex;flex-direction:column;gap:0.15rem;font-size:0.72rem;color:var(--qualia-text-muted,#666);";
+    let st = stats();
+    let total = u64_field(&st, "total");
+    let with_date = u64_field(&st, "with_date");
+    let with_place = u64_field(&st, "with_place");
+    let quins = u64_field(&st, "quins");
+    let topic_map = st
+        .get("topics")
+        .and_then(|t| t.as_object())
+        .cloned()
+        .unwrap_or_default();
+    let mut topic_list: Vec<(String, u64)> = topic_map
+        .iter()
+        .filter_map(|(k, v)| v.as_u64().map(|n| (k.clone(), n)))
+        .collect();
+    topic_list.sort_by(|a, b| b.1.cmp(&a.1));
 
-    // ── the active view's result rendering ──
-    let rows: Vec<serde_json::Value> = results.read().clone();
+    let rows = results();
     let body = match view().as_str() {
         "timeline" => rsx! { TimelineView { rows: rows.clone() } },
         "map" => rsx! { MapView { rows: rows.clone() } },
-        _ => rsx! { ListView { rows: rows.clone() } },
-    };
-
-    let tab_style = |active: bool| {
-        if active {
-            "padding:0.25rem 0.7rem;border-radius:6px;border:1px solid var(--qualia-accent,#2b6);background:var(--qualia-accent,#2b6);color:#fff;font-size:0.75rem;cursor:pointer;"
-        } else {
-            "padding:0.25rem 0.7rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.75rem;cursor:pointer;"
-        }
+        _ => rsx! {
+            ListView {
+                rows: rows.clone(),
+                on_topic: move |t: String| {
+                    value.set(t.clone());
+                    facet.set("topic".into());
+                    spawn(async move {
+                        if let Ok(serde_json::Value::Array(r)) = search_library("topic", &t).await {
+                            results.set(r);
+                        }
+                    });
+                },
+                on_remove: move |uri: String| {
+                    spawn(async move {
+                        match remove_library_entry(&uri).await {
+                            Ok(_) => {
+                                status_err.set(false);
+                                status.set("Removed from library.".into());
+                                refresh_all();
+                            }
+                            Err(e) => {
+                                status_err.set(true);
+                                status.set(format!("Remove failed: {e}"));
+                            }
+                        }
+                    });
+                },
+            }
+        },
     };
 
     rsx! {
-        section {
-            aria_label: "WellFair hypermedia library",
-            style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);display:flex;flex-direction:column;gap:0.8rem;",
-            div {
-                style: "display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;",
-                h2 { style: "margin:0;font-size:1rem;", "Library — find your files by meaning" }
-                div {
-                    style: "display:flex;gap:0.3rem;",
-                    button { style: "{tab_style(view() == \"list\")}", onclick: move |_| view.set("list".to_string()), "List" }
-                    button { style: "{tab_style(view() == \"timeline\")}", onclick: move |_| view.set("timeline".to_string()), "Timeline" }
-                    button { style: "{tab_style(view() == \"map\")}", onclick: move |_| view.set("map".to_string()), "Map" }
+        div { style: "{ROOT}",
+            // ── Header ──
+            div { style: "{HEADER}",
+                div { style: "display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;",
+                    div {
+                        h1 { style: "margin:0;font-size:1.35rem;font-weight:700;color:#e9d5ff;letter-spacing:-0.02em;",
+                            "Library"
+                        }
+                        p { style: "margin:0.35rem 0 0;font-size:0.82rem;color:#94a3b8;max-width:36rem;line-height:1.45;",
+                            "Your files as meaning — topics, places, projects, time. Ingest once; find without digging folders."
+                        }
+                    }
+                    div { style: "display:flex;gap:0.35rem;flex-wrap:wrap;align-items:center;",
+                        button {
+                            style: if view() == "list" { TAB_ON } else { TAB },
+                            onclick: move |_| view.set("list".into()),
+                            "List"
+                        }
+                        button {
+                            style: if view() == "timeline" { TAB_ON } else { TAB },
+                            onclick: move |_| view.set("timeline".into()),
+                            "Timeline"
+                        }
+                        button {
+                            style: if view() == "map" { TAB_ON } else { TAB },
+                            onclick: move |_| view.set("map".into()),
+                            "Map"
+                        }
+                        button { style: "{BTN2}", onclick: move |_| refresh_all(), "Refresh" }
+                    }
+                }
+                div { style: "{STATS}",
+                    span { style: "{STAT_CHIP}", span { style: "{STAT_NUM}", "{total}" } " items" }
+                    span { style: "{STAT_CHIP}", span { style: "{STAT_NUM}", "{with_date}" } " dated" }
+                    span { style: "{STAT_CHIP}", span { style: "{STAT_NUM}", "{with_place}" } " on map" }
+                    span { style: "{STAT_CHIP}", span { style: "{STAT_NUM}", "{quins}" } " semantic edges" }
                     button {
-                        style: "padding:0.25rem 0.55rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.75rem;cursor:pointer;",
-                        onclick: move |_| reload(),
-                        "Show all"
+                        style: "{BTN2} margin-left:auto;",
+                        onclick: move |_| {
+                            spawn(async move {
+                                match export_library_graph().await {
+                                    Ok(v) => {
+                                        let n = u64_field(&v, "quin_count");
+                                        status_err.set(false);
+                                        status.set(format!(
+                                            "Graph export ready · {n} NQuins (hypermedia edge mass for inject / query)."
+                                        ));
+                                    }
+                                    Err(e) => {
+                                        status_err.set(true);
+                                        status.set(format!("Export failed: {e}"));
+                                    }
+                                }
+                            });
+                        },
+                        "Export graph mass"
                     }
                 }
             }
-            p { style: "margin:0;font-size:0.7rem;color:var(--qualia-text-muted,#777);",
-                "Ingest an asset — it's processed to derive its meaning (a doc → topics; a photo → its EXIF date + GPS; a WAV → duration + pitch). Attach a date or place yourself to put anything on the timeline or map. Not a folder of files; a graph of meaning."
-            }
 
-            // ── Operational Contexts (Quick Links) ──
-            div {
-                style: "display:flex; gap:0.5rem; flex-wrap:wrap; padding: 0.6rem 0; border-top: 1px dashed var(--qualia-border,#eee); border-bottom: 1px dashed var(--qualia-border,#eee);",
-                Link { to: Route::SanctuaryRoute {}, style: "text-decoration:none; display:flex; align-items:center; gap:0.3rem; padding:0.3rem 0.6rem; border-radius:6px; background:var(--qualia-surface-2,#fff); border:1px solid var(--qualia-border,#ddd); font-size:0.75rem; color:var(--qualia-text,#333);",
-                    sl-icon { "name": "safe" }
-                    "Secure Enclave"
-                }
-                Link { to: Route::WorkRoute {}, style: "text-decoration:none; display:flex; align-items:center; gap:0.3rem; padding:0.3rem 0.6rem; border-radius:6px; background:var(--qualia-surface-2,#fff); border:1px solid var(--qualia-border,#ddd); font-size:0.75rem; color:var(--qualia-text,#333);",
-                    sl-icon { "name": "wallet2" }
-                    "Wallet & Finance"
-                }
-                Link { to: Route::WorkRoute {}, style: "text-decoration:none; display:flex; align-items:center; gap:0.3rem; padding:0.3rem 0.6rem; border-radius:6px; background:var(--qualia-surface-2,#fff); border:1px solid var(--qualia-border,#ddd); font-size:0.75rem; color:var(--qualia-text,#333);",
-                    sl-icon { "name": "diagram-3" }
-                    "Cooperative Projects"
-                }
-                Link { to: Route::IdentityRoute {}, style: "text-decoration:none; display:flex; align-items:center; gap:0.3rem; padding:0.3rem 0.6rem; border-radius:6px; background:var(--qualia-surface-2,#fff); border:1px solid var(--qualia-border,#ddd); font-size:0.75rem; color:var(--qualia-text,#333);",
-                    sl-icon { "name": "journal-bookmark-fill" }
-                    "Social Directory"
-                }
-            }
-
-            if !status().is_empty() {
-                p { style: "margin:0;font-size:0.76rem;color:var(--qualia-accent,#2b6);", "{status()}" }
-            }
-
-            // ── Ingest ──
-            div {
-                style: "display:flex;flex-direction:column;gap:0.35rem;padding:0.5rem 0.6rem;border-radius:8px;border:1px solid var(--qualia-border,#eee);background:var(--qualia-surface-2,#fff);",
-                div { style: "font-size:0.8rem;font-weight:600;", "Ingest an asset" }
-                div {
-                    style: "display:flex;gap:0.4rem;flex-wrap:wrap;",
-                    label { style: "{label_style}flex:1;min-width:12rem;", "Asset id (uri)"
-                        input { style: "{field_style}", value: "{ing_uri}", oninput: move |e| ing_uri.set(e.value()) } }
-                    label { style: "{label_style}", "Type"
-                        select {
-                            style: "{field_style}",
-                            value: "{ing_media}",
-                            oninput: move |e| ing_media.set(e.value()),
-                            option { value: "text/markdown", "text" }
-                            option { value: "image/jpeg", "image/jpeg" }
-                            option { value: "image/png", "image/png" }
-                            option { value: "audio/wav", "audio/wav" }
+            div { style: "{BODY}",
+                // ── Sidebar: ingest + search ──
+                div { style: "{SIDE}",
+                    // Free text search
+                    div { style: "{CARD}",
+                        div { style: "{H3}", "Search" }
+                        p { style: "{MUTED}", "Anything you remember — topic, project name, words from the note." }
+                        input {
+                            style: "{INPUT}",
+                            placeholder: "Search library…",
+                            value: "{q}",
+                            oninput: move |e| q.set(e.value()),
+                        }
+                        button { style: "{BTN} width:100%;", onclick: do_quick_search, "Search" }
+                        if !topic_list.is_empty() {
+                            div { style: "margin-top:0.75rem;",
+                                div { style: "{LABEL}", "Popular topics" }
+                                for (t, n) in topic_list.iter().take(12) {
+                                    {
+                                        let t = t.clone();
+                                        let n = *n;
+                                        rsx! {
+                                            button {
+                                                style: "{TOPIC}",
+                                                onclick: move |_| {
+                                                    let t = t.clone();
+                                                    value.set(t.clone());
+                                                    facet.set("topic".into());
+                                                    q.set(t.clone());
+                                                    spawn(async move {
+                                                        if let Ok(serde_json::Value::Array(r)) =
+                                                            search_library("topic", &t).await
+                                                        {
+                                                            results.set(r);
+                                                            status.set(format!("Topic “{t}”."));
+                                                        }
+                                                    });
+                                                },
+                                                "{t} · {n}"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
-                    label { style: "{label_style}", "Sensitivity (Sanctuary Vault)"
+
+                    // Facet + timeline
+                    div { style: "{CARD}",
+                        div { style: "{H3}", "Facet & time" }
+                        label { style: "{LABEL}", "Facet" }
                         select {
-                            style: "{field_style}",
-                            value: "{ing_sensitivity}",
-                            oninput: move |e| ing_sensitivity.set(e.value()),
-                            option { value: "public", "Public (Cleartext)" }
-                            option { value: "restricted", "Restricted (Encrypted Enclave)" }
-                            option { value: "classified", "Classified (M-of-N Guardianship)" }
+                            style: "{INPUT}",
+                            value: "{facet}",
+                            onchange: move |e| facet.set(e.value()),
+                            option { value: "topic", "Topic" }
+                            option { value: "project", "Project" }
+                            option { value: "purpose", "Purpose" }
+                            option { value: "place", "Place" }
+                            option { value: "depicts", "Depicts" }
+                        }
+                        label { style: "{LABEL}", "Value" }
+                        input {
+                            style: "{INPUT}",
+                            placeholder: "biology · house-move · tax-return",
+                            value: "{value}",
+                            oninput: move |e| value.set(e.value()),
+                        }
+                        button { style: "{BTN2} width:100%;margin-bottom:0.65rem;", onclick: do_facet_search, "Run facet search" }
+                        div { style: "display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;",
+                            div {
+                                label { style: "{LABEL}", "From" }
+                                input { style: "{INPUT}", placeholder: "2025-01-01", value: "{tl_from}", oninput: move |e| tl_from.set(e.value()) }
+                            }
+                            div {
+                                label { style: "{LABEL}", "To" }
+                                input { style: "{INPUT}", placeholder: "2025-12-31", value: "{tl_to}", oninput: move |e| tl_to.set(e.value()) }
+                            }
+                        }
+                        button { style: "{BTN2} width:100%;", onclick: do_timeline, "Filter timeline range" }
+                    }
+
+                    // Ingest
+                    div { style: "{CARD}",
+                        div { style: "display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem;",
+                            div { style: "{H3} margin:0;", "Add to library" }
+                            button {
+                                style: "{BTN2}",
+                                onclick: move |_| {
+                                    let n = !show_ingest();
+                                    show_ingest.set(n);
+                                },
+                                if show_ingest() { "Hide" } else { "Show" }
+                            }
+                        }
+                        if show_ingest() {
+                            p { style: "{MUTED}",
+                                "Paste a note, receipt, or research blurb. Topics are derived automatically. Attach date/place/project when you care."
+                            }
+                            label { style: "{LABEL}", "Title id" }
+                            input {
+                                style: "{INPUT}",
+                                value: "{ing_uri}",
+                                oninput: move |e| ing_uri.set(e.value()),
+                            }
+                            label { style: "{LABEL}", "Type" }
+                            select {
+                                style: "{INPUT}",
+                                value: "{ing_media}",
+                                onchange: move |e| ing_media.set(e.value()),
+                                option { value: "text/markdown", "Text / markdown" }
+                                option { value: "image/jpeg", "Image JPEG" }
+                                option { value: "image/png", "Image PNG" }
+                                option { value: "audio/wav", "Audio WAV" }
+                            }
+                            label { style: "{LABEL}", "Sensitivity" }
+                            select {
+                                style: "{INPUT}",
+                                value: "{ing_sensitivity}",
+                                onchange: move |e| ing_sensitivity.set(e.value()),
+                                option { value: "public", "Public" }
+                                option { value: "restricted", "Restricted (enclave)" }
+                                option { value: "classified", "Classified" }
+                            }
+                            label { style: "{LABEL}", if ing_binary() { "Bytes (hex)" } else { "Content" } }
+                            textarea {
+                                style: "{INPUT} min-height:7rem;resize:vertical;line-height:1.4;",
+                                placeholder: "The liver is an organ… keep this receipt for the tax deduction…",
+                                value: "{ing_text}",
+                                oninput: move |e| ing_text.set(e.value()),
+                            }
+                            label { style: "display:flex;gap:0.4rem;align-items:center;font-size:0.72rem;color:#94a3b8;margin-bottom:0.5rem;",
+                                input {
+                                    r#type: "checkbox",
+                                    checked: ing_binary(),
+                                    onchange: move |e| ing_binary.set(e.checked()),
+                                }
+                                "Binary (hex) — photo EXIF fills timeline & map"
+                            }
+                            label { style: "{LABEL}", "Date → timeline" }
+                            input { style: "{INPUT}", placeholder: "YYYY-MM-DD", value: "{ing_date}", oninput: move |e| ing_date.set(e.value()) }
+                            label { style: "{LABEL}", "Place lat,lon → map" }
+                            input { style: "{INPUT}", placeholder: "-33.87,151.21", value: "{ing_place}", oninput: move |e| ing_place.set(e.value()) }
+                            label { style: "{LABEL}", "Place label" }
+                            input { style: "{INPUT}", value: "{ing_place_label}", oninput: move |e| ing_place_label.set(e.value()) }
+                            label { style: "{LABEL}", "Project" }
+                            input { style: "{INPUT}", placeholder: "house-move-2025", value: "{ing_project}", oninput: move |e| ing_project.set(e.value()) }
+                            label { style: "{LABEL}", "Purpose" }
+                            input { style: "{INPUT}", placeholder: "tax-return-2025", value: "{ing_purpose}", oninput: move |e| ing_purpose.set(e.value()) }
+                            label { style: "{LABEL}", "Guardian DID (optional)" }
+                            input { style: "{INPUT}", value: "{ing_guardian}", oninput: move |e| ing_guardian.set(e.value()) }
+                            button { style: "{BTN} width:100%;margin-top:0.35rem;", onclick: do_ingest, "Ingest into library" }
                         }
                     }
-                }
-                label { style: "{label_style}",
-                    if ing_binary() { "Bytes (hex — a photo/audio file's contents)" } else { "Text" }
-                    textarea { style: "{field_style}min-height:3rem;font-family:inherit;", value: "{ing_text}", oninput: move |e| ing_text.set(e.value()) } }
-                label { style: "display:flex;gap:0.35rem;align-items:center;font-size:0.72rem;color:var(--qualia-text-muted,#666);",
-                    input { r#type: "checkbox", checked: ing_binary(), onchange: move |e| ing_binary.set(e.checked()) }
-                    "Binary asset — the field above is hex bytes (a photo's EXIF date/GPS auto-fill the timeline & map)"
-                }
-                // person-authored facets (the "means, not definition" path)
-                div {
-                    style: "display:flex;gap:0.4rem;flex-wrap:wrap;",
-                    label { style: "{label_style}", "Date (YYYY-MM-DD) → timeline"
-                        input { style: "{field_style}", placeholder: "2025-04-01", value: "{ing_date}", oninput: move |e| ing_date.set(e.value()) } }
-                    label { style: "{label_style}", "Place (lat,lon) → map"
-                        input { style: "{field_style}", placeholder: "-33.87,151.21", value: "{ing_place}", oninput: move |e| ing_place.set(e.value()) } }
-                    label { style: "{label_style}", "Place label"
-                        input { style: "{field_style}", value: "{ing_place_label}", oninput: move |e| ing_place_label.set(e.value()) } }
-                }
-                div {
-                    style: "display:flex;gap:0.4rem;flex-wrap:wrap;",
-                    label { style: "{label_style}", "Project"
-                        input { style: "{field_style}", placeholder: "house-move-2025", value: "{ing_project}", oninput: move |e| ing_project.set(e.value()) } }
-                    label { style: "{label_style}", "Purpose"
-                        input { style: "{field_style}", placeholder: "tax-return-2025", value: "{ing_purpose}", oninput: move |e| ing_purpose.set(e.value()) } }
-                    label { style: "{label_style}flex:1;min-width:10rem;", "Guardian DID (optional — flagged ingest notifies them)"
-                        input { style: "{field_style}", value: "{ing_guardian}", oninput: move |e| ing_guardian.set(e.value()) } }
-                }
-                button {
-                    style: "align-self:flex-start;padding:0.3rem 0.7rem;border-radius:6px;border:1px solid var(--qualia-accent,#2b6);background:var(--qualia-accent,#2b6);color:#fff;font-size:0.78rem;cursor:pointer;",
-                    onclick: do_ingest,
-                    "Ingest"
-                }
-            }
 
-            // ── Search (facet + timeline range) ──
-            div {
-                style: "display:flex;gap:0.6rem;align-items:flex-end;flex-wrap:wrap;",
-                label { style: "{label_style}", "Find by"
-                    select {
-                        style: "{field_style}",
-                        value: "{facet}",
-                        oninput: move |e| facet.set(e.value()),
-                        option { value: "topic", "Topic" }
-                        option { value: "depicts", "Depicts" }
-                        option { value: "place", "Place" }
-                        option { value: "project", "Project" }
-                        option { value: "purpose", "Purpose" }
+                    div { style: "font-size:0.72rem;color:#64748b;line-height:1.4;padding:0.25rem;",
+                        Link {
+                            to: Route::SanctuaryRoute {},
+                            style: "color:#a78bfa;",
+                            "Sanctuary"
+                        }
+                        " unlocks the vault host · "
+                        Link {
+                            to: Route::TalkRoute {},
+                            style: "color:#a78bfa;",
+                            "Talk → Projects"
+                        }
+                        " for cooperative work"
                     }
                 }
-                label { style: "{label_style}", "Value"
-                    input { style: "{field_style}", value: "{value}", oninput: move |e| value.set(e.value()) } }
-                button {
-                    style: "padding:0.3rem 0.7rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.78rem;cursor:pointer;",
-                    onclick: do_search,
-                    "Search"
-                }
-                span { style: "width:1px;height:1.5rem;background:var(--qualia-border,#ddd);" }
-                label { style: "{label_style}", "From"
-                    input { style: "{field_style}", placeholder: "2025-01-01", value: "{tl_from}", oninput: move |e| tl_from.set(e.value()) } }
-                label { style: "{label_style}", "To"
-                    input { style: "{field_style}", placeholder: "2025-12-31", value: "{tl_to}", oninput: move |e| tl_to.set(e.value()) } }
-                button {
-                    style: "padding:0.3rem 0.7rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);background:transparent;font-size:0.78rem;cursor:pointer;",
-                    onclick: do_timeline_search,
-                    "On timeline"
+
+                // ── Main results ──
+                div { style: "{MAIN}",
+                    if !status().is_empty() {
+                        div {
+                            style: if status_err() { STATUS_ERR } else { STATUS_OK },
+                            "{status}"
+                        }
+                    }
+                    if rows.is_empty() && !status_err() {
+                        div {
+                            style: "padding:2.5rem 1.5rem;text-align:center;border:1px dashed #334155;border-radius:16px;background:#0f172a;",
+                            div { style: "font-size:2rem;margin-bottom:0.5rem;", "📚" }
+                            h2 { style: "margin:0 0 0.4rem;color:#e9d5ff;font-size:1.1rem;", "Your library is empty" }
+                            p { style: "margin:0 auto;max-width:28rem;color:#94a3b8;font-size:0.85rem;line-height:1.5;",
+                                "Add a note on the left — research, a receipt, a caption. We derive topics and keep the original addressable by meaning. Photos with EXIF land on the timeline and map automatically."
+                            }
+                        }
+                    } else {
+                        {body}
+                    }
                 }
             }
-
-            {body}
         }
     }
 }
 
-/// The plain list view (any asset).
 #[component]
-fn ListView(rows: Vec<serde_json::Value>) -> Element {
-    if rows.is_empty() {
-        return rsx! { p { style: "font-size:0.75rem;color:var(--qualia-text-muted,#888);", "Nothing yet — ingest an asset above." } };
-    }
+fn ListView(
+    rows: Vec<serde_json::Value>,
+    on_topic: EventHandler<String>,
+    on_remove: EventHandler<String>,
+) -> Element {
     rsx! {
-        ul {
-            style: "margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:0.4rem;",
+        div {
             for r in rows {
-                li {
-                    key: "{str_field(&r, \"asset_uri\")}",
-                    style: "padding:0.45rem 0.55rem;border-radius:6px;border:1px solid var(--qualia-border,#eee);font-size:0.74rem;display:flex;flex-direction:column;gap:0.15rem;",
-                    strong { "{str_field(&r, \"asset_uri\")}" }
-                    if !arr_join(&r, "topics").is_empty() {
-                        div { style: "font-size:0.68rem;color:var(--qualia-accent,#2b6);", "topics: {arr_join(&r, \"topics\")}" }
-                    }
-                    if let Some(t) = i64_field(&r, "occurred_at") {
-                        div { style: "font-size:0.68rem;color:var(--qualia-text-muted,#777);", "date: {fmt_date(t)}" }
-                    }
-                    div { style: "color:var(--qualia-text-muted,#777);", "{str_field(&r, \"excerpt\")}" }
-                    if r.get("flags").and_then(|x| x.as_array()).map(|a| !a.is_empty()).unwrap_or(false) {
-                        div { style: "font-size:0.68rem;color:var(--qualia-danger,#b44);", "flagged" }
+                {
+                    let uri = str_field(&r, "asset_uri");
+                    let media = str_field(&r, "media_type");
+                    let excerpt = str_field(&r, "excerpt");
+                    let topics = arr_str(&r, "topics");
+                    let projects = arr_str(&r, "projects");
+                    let place = str_field(&r, "place");
+                    let title = display_title(&uri);
+                    let icon = media_icon(&media);
+                    let uri_rm = uri.clone();
+                    let flagged = r
+                        .get("flags")
+                        .and_then(|x| x.as_array())
+                        .map(|a| !a.is_empty())
+                        .unwrap_or(false);
+                    rsx! {
+                        article { style: "{ENTRY}",
+                            div { style: "display:flex;gap:0.75rem;align-items:flex-start;",
+                                div { style: "font-size:1.4rem;line-height:1;flex-shrink:0;", "{icon}" }
+                                div { style: "flex:1;min-width:0;",
+                                    div { style: "display:flex;justify-content:space-between;gap:0.5rem;align-items:baseline;",
+                                        h3 { style: "margin:0;font-size:0.95rem;color:#f3f4f6;font-weight:650;", "{title}" }
+                                        if let Some(t) = i64_field(&r, "occurred_at") {
+                                            span { style: "font-size:0.7rem;color:#a78bfa;white-space:nowrap;", "{fmt_date(t)}" }
+                                        }
+                                    }
+                                    div { style: "font-size:0.65rem;color:#64748b;font-family:ui-monospace,monospace;margin:0.15rem 0 0.35rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;",
+                                        "{uri}"
+                                    }
+                                    if !excerpt.is_empty() {
+                                        p { style: "margin:0 0 0.45rem;font-size:0.8rem;color:#94a3b8;line-height:1.45;",
+                                            "{excerpt}"
+                                        }
+                                    }
+                                    div {
+                                        for t in topics {
+                                            {
+                                                let t2 = t.clone();
+                                                rsx! {
+                                                    button {
+                                                        style: "{TOPIC}",
+                                                        onclick: move |_| on_topic.call(t2.clone()),
+                                                        "{t}"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        for p in projects {
+                                            span {
+                                                style: "display:inline-block;padding:0.15rem 0.5rem;margin:0.1rem 0.2rem 0;border-radius:999px;background:rgba(16,185,129,0.12);border:1px solid #065f46;color:#6ee7b7;font-size:0.68rem;",
+                                                "📁 {p}"
+                                            }
+                                        }
+                                        if !place.is_empty() {
+                                            span {
+                                                style: "display:inline-block;padding:0.15rem 0.5rem;margin:0.1rem 0.2rem 0;border-radius:999px;background:rgba(56,189,248,0.1);border:1px solid #0e7490;color:#7dd3fc;font-size:0.68rem;",
+                                                "📍 {place}"
+                                            }
+                                        }
+                                        if flagged {
+                                            span {
+                                                style: "display:inline-block;padding:0.15rem 0.5rem;margin:0.1rem 0.2rem 0;border-radius:999px;background:rgba(239,68,68,0.12);border:1px solid #991b1b;color:#fca5a5;font-size:0.68rem;",
+                                                "flagged"
+                                            }
+                                        }
+                                    }
+                                }
+                                button {
+                                    style: "{BTN2} flex-shrink:0;color:#fca5a5;border-color:#7f1d1d;",
+                                    onclick: move |_| on_remove.call(uri_rm.clone()),
+                                    "Remove"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -421,7 +748,6 @@ fn ListView(rows: Vec<serde_json::Value>) -> Element {
     }
 }
 
-/// The timeline view — dated assets in chronological order.
 #[component]
 fn TimelineView(rows: Vec<serde_json::Value>) -> Element {
     let mut dated: Vec<(i64, serde_json::Value)> = rows
@@ -430,29 +756,36 @@ fn TimelineView(rows: Vec<serde_json::Value>) -> Element {
         .collect();
     dated.sort_by_key(|(t, _)| *t);
     if dated.is_empty() {
-        return rsx! { p { style: "font-size:0.75rem;color:var(--qualia-text-muted,#888);", "No dated assets. Attach a date when you ingest (or ingest a photo with EXIF), then they appear here in order." } };
+        return rsx! {
+            div { style: "padding:2rem;text-align:center;color:#94a3b8;font-size:0.85rem;",
+                "No dated assets yet. Add a date when ingesting, or drop in a photo with EXIF."
+            }
+        };
     }
     rsx! {
-        ol {
-            style: "margin:0;padding:0 0 0 0;list-style:none;display:flex;flex-direction:column;gap:0;border-left:2px solid var(--qualia-accent,#2b6);",
+        div { style: "border-left:2px solid #7c3aed;margin-left:0.5rem;padding-left:0;",
             for (t, r) in dated {
-                li {
+                div {
                     key: "{str_field(&r, \"asset_uri\")}",
-                    style: "position:relative;padding:0.35rem 0.6rem 0.6rem 0.9rem;",
-                    span { style: "position:absolute;left:-6px;top:0.5rem;width:9px;height:9px;border-radius:50%;background:var(--qualia-accent,#2b6);" }
-                    div { style: "font-size:0.72rem;font-weight:600;color:var(--qualia-accent,#2b6);", "{fmt_date(t)}" }
-                    div { style: "font-size:0.74rem;", "{str_field(&r, \"asset_uri\")}" }
-                    if !arr_join(&r, "topics").is_empty() {
-                        div { style: "font-size:0.66rem;color:var(--qualia-text-muted,#777);", "{arr_join(&r, \"topics\")}" }
+                    style: "position:relative;padding:0.55rem 0 1rem 1.15rem;",
+                    span {
+                        style: "position:absolute;left:-7px;top:0.7rem;width:12px;height:12px;border-radius:50%;background:#a78bfa;box-shadow:0 0 0 3px #0b1220;",
                     }
-                    div { style: "font-size:0.68rem;color:var(--qualia-text-muted,#888);", "{str_field(&r, \"excerpt\")}" }
+                    div { style: "font-size:0.72rem;font-weight:700;color:#a78bfa;margin-bottom:0.2rem;",
+                        "{fmt_date(t)}"
+                    }
+                    div { style: "font-size:0.9rem;color:#f3f4f6;font-weight:600;",
+                        "{display_title(&str_field(&r, \"asset_uri\"))}"
+                    }
+                    div { style: "font-size:0.78rem;color:#94a3b8;margin-top:0.2rem;",
+                        "{str_field(&r, \"excerpt\")}"
+                    }
                 }
             }
         }
     }
 }
 
-/// The map view — assets with coordinates on an equirectangular world plot.
 #[component]
 fn MapView(rows: Vec<serde_json::Value>) -> Element {
     let placed: Vec<(f64, f64, serde_json::Value)> = rows
@@ -463,43 +796,44 @@ fn MapView(rows: Vec<serde_json::Value>) -> Element {
         })
         .collect();
     if placed.is_empty() {
-        return rsx! { p { style: "font-size:0.75rem;color:var(--qualia-text-muted,#888);", "No located assets. Attach a place (lat,lon) when you ingest (or ingest a geotagged photo), then they appear on the map." } };
+        return rsx! {
+            div { style: "padding:2rem;text-align:center;color:#94a3b8;font-size:0.85rem;",
+                "No located assets. Attach lat,lon when ingesting, or use a geotagged photo."
+            }
+        };
     }
     rsx! {
         div {
-            style: "display:flex;flex-direction:column;gap:0.5rem;",
             svg {
                 view_box: "0 0 360 180",
                 width: "100%",
-                style: "background:var(--qualia-surface-2,#eef3f6);border:1px solid var(--qualia-border,#cdd);border-radius:8px;max-height:360px;",
-                // graticule
+                style: "background:linear-gradient(180deg,#0f172a,#1e1b4b);border:1px solid #334155;border-radius:14px;max-height:380px;",
                 for gx in [60, 120, 180, 240, 300] {
-                    line { x1: "{gx}", y1: "0", x2: "{gx}", y2: "180", stroke: "#c3d0d6", stroke_width: "0.4" }
+                    line { x1: "{gx}", y1: "0", x2: "{gx}", y2: "180", stroke: "#334155", stroke_width: "0.5" }
                 }
                 for gy in [45, 90, 135] {
-                    line { x1: "0", y1: "{gy}", x2: "360", y2: "{gy}", stroke: "#c3d0d6", stroke_width: "0.4" }
+                    line { x1: "0", y1: "{gy}", x2: "360", y2: "{gy}", stroke: "#334155", stroke_width: "0.5" }
                 }
                 for (lat, lon, r) in placed.clone() {
                     circle {
                         cx: "{lon + 180.0}",
                         cy: "{90.0 - lat}",
-                        r: "2.4",
-                        fill: "var(--qualia-accent,#2b6)",
-                        fill_opacity: "0.8",
-                        stroke: "#fff",
-                        stroke_width: "0.5",
+                        r: "3.2",
+                        fill: "#a78bfa",
+                        fill_opacity: "0.9",
+                        stroke: "#ede9fe",
+                        stroke_width: "0.6",
                         title { "{str_field(&r, \"asset_uri\")} ({lat:.3},{lon:.3})" }
                     }
                 }
             }
-            ul {
-                style: "margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:0.25rem;",
+            ul { style: "margin:0.75rem 0 0;padding:0;list-style:none;",
                 for (lat, lon, r) in placed {
                     li {
                         key: "{str_field(&r, \"asset_uri\")}",
-                        style: "font-size:0.72rem;display:flex;gap:0.5rem;",
-                        span { style: "color:var(--qualia-accent,#2b6);font-variant-numeric:tabular-nums;", "{lat:.3},{lon:.3}" }
-                        span { "{str_field(&r, \"asset_uri\")}" }
+                        style: "font-size:0.78rem;display:flex;gap:0.65rem;padding:0.35rem 0;border-bottom:1px solid #1f2937;",
+                        span { style: "color:#7dd3fc;font-variant-numeric:tabular-nums;", "{lat:.3}, {lon:.3}" }
+                        span { style: "color:#e5e7eb;", "{display_title(&str_field(&r, \"asset_uri\"))}" }
                     }
                 }
             }

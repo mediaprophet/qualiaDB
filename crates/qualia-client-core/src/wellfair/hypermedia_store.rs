@@ -140,6 +140,98 @@ impl HypermediaStore {
         let subjects: HashSet<u64> = hypermedia::in_time_range(&all, start, end).into_iter().collect();
         self.entries_for(&subjects)
     }
+
+    /// Free-text filter over uri, excerpt, topics, projects, place (case-insensitive).
+    pub fn search_text(&self, query: &str) -> std::io::Result<Vec<LibraryEntry>> {
+        let q = query.trim().to_lowercase();
+        if q.is_empty() {
+            return self.all();
+        }
+        let mut entries = self.load()?;
+        entries.retain(|e| {
+            e.asset_uri.to_lowercase().contains(&q)
+                || e.excerpt.to_lowercase().contains(&q)
+                || e.media_type.to_lowercase().contains(&q)
+                || e.topics.iter().any(|t| t.to_lowercase().contains(&q))
+                || e.projects.iter().any(|t| t.to_lowercase().contains(&q))
+                || e.place
+                    .as_ref()
+                    .map(|p| p.to_lowercase().contains(&q))
+                    .unwrap_or(false)
+        });
+        entries.sort_by(|a, b| b.ingested_unix.cmp(&a.ingested_unix));
+        Ok(entries)
+    }
+
+    /// Remove an entry by asset_uri.
+    pub fn remove(&self, asset_uri: &str) -> std::io::Result<bool> {
+        let mut entries = self.load()?;
+        let before = entries.len();
+        entries.retain(|e| e.asset_uri != asset_uri);
+        if entries.len() == before {
+            return Ok(false);
+        }
+        self.save(&entries)?;
+        Ok(true)
+    }
+
+    /// Library stats for the UI chrome.
+    pub fn stats(&self) -> std::io::Result<LibraryStats> {
+        let entries = self.load()?;
+        let mut topics: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
+        let mut projects: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
+        let mut with_date = 0usize;
+        let mut with_place = 0usize;
+        let mut flags = 0usize;
+        let mut quins = 0usize;
+        for e in &entries {
+            for t in &e.topics {
+                *topics.entry(t.clone()).or_default() += 1;
+            }
+            for p in &e.projects {
+                *projects.entry(p.clone()).or_default() += 1;
+            }
+            if e.occurred_at.is_some() {
+                with_date += 1;
+            }
+            if e.lat.is_some() && e.lon.is_some() {
+                with_place += 1;
+            }
+            flags += e.flags.len();
+            quins += e.quins.len();
+        }
+        Ok(LibraryStats {
+            total: entries.len(),
+            with_date,
+            with_place,
+            flags,
+            quins,
+            topics,
+            projects,
+        })
+    }
+
+    /// Flatten all library quins for graph export / daemon inject (caller owns the slice).
+    pub fn all_quins(&self) -> std::io::Result<Vec<NQuin>> {
+        Ok(self
+            .load()?
+            .into_iter()
+            .flat_map(|e| e.quins)
+            .collect())
+    }
+}
+
+/// Aggregate counts for the Library UI header.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct LibraryStats {
+    pub total: usize,
+    pub with_date: usize,
+    pub with_place: usize,
+    pub flags: usize,
+    /// Total NQuins across all containers — the semantic graph mass.
+    pub quins: usize,
+    pub topics: std::collections::BTreeMap<String, usize>,
+    pub projects: std::collections::BTreeMap<String, usize>,
 }
 
 #[cfg(test)]

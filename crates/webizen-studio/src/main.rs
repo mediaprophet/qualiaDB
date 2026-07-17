@@ -338,7 +338,7 @@ fn KeepHub() -> Element {
                 KeepLink { to: Route::WorkRoute {}, title: "Work board", blurb: "Kanban — project id fills from Talk → Projects." }
                 KeepLink { to: Route::AnatomyRoute {}, title: "Anatomy", blurb: "See systems and conditions on a reference body." }
                 KeepLink { to: Route::HealthRoute {}, title: "Health vault", blurb: "Vitals, sleep, medication, wellbeing." }
-                KeepLink { to: Route::LibraryRoute {}, title: "Library", blurb: "Local resources, models, and saved knowledge." }
+                KeepLink { to: Route::LibraryRoute {}, title: "Library", blurb: "Hypermedia shelf — notes, photos, receipts found by meaning, time, and place." }
                 KeepLink { to: Route::IdentityRoute {}, title: "Identity", blurb: "Personal profile, social book, consent." }
                 KeepLink { to: Route::SanctuaryRoute {}, title: "Sanctuary", blurb: "Vault lock and protected spaces." }
                 KeepLink { to: Route::AgencyRoute {}, title: "Agency", blurb: "Guardianship, accountability, safeguards." }

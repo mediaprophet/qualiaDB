@@ -1323,6 +1323,38 @@ impl WebizenHostApi {
         Ok(entries.iter().map(library_summary).collect())
     }
 
+    /// Free-text search over uri / excerpt / topics / projects / place.
+    pub fn search_library_text(&self, query: &str) -> Result<Vec<serde_json::Value>, String> {
+        let entries = self.library()?.search_text(query).map_err(|e| e.to_string())?;
+        Ok(entries.iter().map(library_summary).collect())
+    }
+
+    /// Aggregate library stats for the UI header.
+    pub fn library_stats(&self) -> Result<serde_json::Value, String> {
+        let s = self.library()?.stats().map_err(|e| e.to_string())?;
+        serde_json::to_value(s).map_err(|e| e.to_string())
+    }
+
+    /// Remove one library entry by asset URI.
+    pub fn remove_library_entry(&self, asset_uri: &str) -> Result<serde_json::Value, String> {
+        let ok = self.library()?.remove(asset_uri).map_err(|e| e.to_string())?;
+        Ok(serde_json::json!({ "removed": ok, "asset_uri": asset_uri }))
+    }
+
+    /// Export the full hypermedia graph mass (quin count + optional dump for inject).
+    /// Returns `{ quin_count, entries }` — the live graph inject seam for daemon/MCP.
+    pub fn export_library_graph(&self) -> Result<serde_json::Value, String> {
+        let store = self.library()?;
+        let entries = store.all().map_err(|e| e.to_string())?;
+        let quins = store.all_quins().map_err(|e| e.to_string())?;
+        Ok(serde_json::json!({
+            "quin_count": quins.len(),
+            "entry_count": entries.len(),
+            "message": "Hypermedia edge-graph ready for daemon /query inject. Quins are the searchable semantic form.",
+            "sample_subjects": entries.iter().take(8).map(|e| e.primary_subject).collect::<Vec<_>>(),
+        }))
+    }
+
     // --- Real envelope encryption over the consent credential (ADR 0011 D1/D2) ---
     //
     // Makes "revoke destroys the wrapped key ⇒ no key, no payload" a *fact*: the payload is AEAD-encrypted
