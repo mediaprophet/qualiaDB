@@ -3,7 +3,8 @@
 **Branch:** `0.0.25`  
 **Owner:** Qualia vision / `qualia-vision`  
 **Ambition:** Production-grade SR **as a native Rust library** inside Qualia — not OpenCV product ABI, not Python, not NCNN as a required runtime. External projects supply **permissive weights + reference algorithms**; Qualia owns inference, tiling, GPU path, and honesty.  
-**Status:** Plan ready for execute (swarm tracks SR0–SR8).
+**Status:** Plan ready for execute (swarm tracks SR0–SR8).  
+**Related audit:** `vision-gpu-10d-geometry-gap-audit-2026.md` — confirms CV is **not yet** on `shared_gpu` / Forge; this plan’s GPU path is **target**, not as-is.
 
 ---
 

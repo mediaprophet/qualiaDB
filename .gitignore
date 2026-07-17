@@ -212,6 +212,7 @@ coordination/NOTICES.md
 !/docs/plans/vision-excellence-swarm-execute-2026.md
 !/docs/plans/native-super-resolution-excellence-2026.md
 !/docs/plans/bio-medical-cv-catalogue-2026.md
+!/docs/plans/vision-gpu-10d-geometry-gap-audit-2026.md
 !/docs/plans/bio-medical-cv-catalogue-2026.md
 
 # Vision vendor weights (large binaries) — manifests/README tracked; fetch via vendor/vision/download.ps1
