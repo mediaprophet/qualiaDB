@@ -52,6 +52,9 @@ imap = "2.4"
 native-tls = "0.2"
 bech32 = "0.12.0"
 scraper = "0.27.0"
+x509-parser = { version = "0.16", features = ["verify"] }
+rustls-pemfile = "2"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.56"

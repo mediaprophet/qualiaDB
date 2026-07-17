@@ -483,23 +483,78 @@ pub fn import_suggested_into_store(
     }
 }
 
-/// Host/SPKI allowlist decision for cert-override (C1 pure helper).
+/// Host / session / chain policy decision for cert-override (swarm-2).
+///
+/// Security model: host-pin (A) by default path; chain vs **enabled** PEMs (B) only
+/// after cryptographic verify; never auto-allow solely because PEMs exist.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CertOverrideDecision {
     /// No policy match — deny by default.
     Deny,
-    /// PEM material present; platform must still verify chain against it.
-    AllowIfChainMatchesStore,
-    /// Explicit host allow entry (policy label `host-allow:example.com`).
+    /// Soft sticky deny (principal chose Deny and asked not to re-prompt).
+    SoftDenied,
+    /// Explicit host allow entry (policy label `host-allow:example.com`) — A.
     AllowHostPinned,
+    /// Session allow-once (process memory; not a permanent pin).
+    AllowSessionOnce,
+    /// PEM roots enabled: platform **must** call chain verify; without cert material → deny.
+    /// This is **not** an automatic allow.
+    CandidateCustomRoots,
+    /// Chain verified against enabled PEMs (B accepted).
+    AllowChainVerified,
+    /// SPKI pin matched.
+    AllowSpkiPinned,
 }
 
-/// Policy for ServerCertificateErrorDetected handlers.
+/// SPKI pin material: `spki-pin:<host>:<sha256hex>`
+pub fn spki_pin_material(host: &str, spki_sha256_hex: &str) -> String {
+    format!(
+        "spki-pin:{}:{}",
+        host.trim().to_ascii_lowercase(),
+        spki_sha256_hex.trim().to_ascii_lowercase()
+    )
+}
+
+/// Soft-deny material: `host-deny:<host>`
+pub fn host_deny_material(host: &str) -> String {
+    format!("host-deny:{}", host.trim().to_ascii_lowercase())
+}
+
+/// Policy for ServerCertificateErrorDetected handlers (store only — no session).
+/// Prefer [`cert_override_decision_full`] for production hooks.
 pub fn cert_override_decision(store: &TrustStore, host: &str) -> CertOverrideDecision {
+    cert_override_decision_full(store, host, false, false, None)
+}
+
+/// Full policy: store + optional session allow-once + optional chain verify result.
+///
+/// `session_allow` — process-local allow-once for this host.  
+/// `soft_denied` — sticky deny without re-prompt.  
+/// `chain_verified` — `Some(true/false)` after B path crypto; `None` if no leaf PEM available.
+pub fn cert_override_decision_full(
+    store: &TrustStore,
+    host: &str,
+    session_allow: bool,
+    soft_denied: bool,
+    chain_verified: Option<bool>,
+) -> CertOverrideDecision {
     let host = host.trim().to_ascii_lowercase();
     if host.is_empty() {
         return CertOverrideDecision::Deny;
     }
+    if soft_denied {
+        return CertOverrideDecision::SoftDenied;
+    }
+    // Soft-deny in store
+    for a in store.anchors.iter().filter(|a| a.enabled) {
+        if a.kind == AnchorKind::PolicyLabel {
+            let m = a.material.trim().to_ascii_lowercase();
+            if m == host_deny_material(&host) {
+                return CertOverrideDecision::SoftDenied;
+            }
+        }
+    }
+    // A: host pin
     for a in store.anchors.iter().filter(|a| a.enabled) {
         if a.kind == AnchorKind::PolicyLabel {
             let m = a.material.trim().to_ascii_lowercase();
@@ -508,15 +563,114 @@ pub fn cert_override_decision(store: &TrustStore, host: &str) -> CertOverrideDec
             }
         }
     }
+    // Session allow-once (escape hatch; not permanent)
+    if session_allow {
+        return CertOverrideDecision::AllowSessionOnce;
+    }
+    // B: chain verify result
+    if let Some(ok) = chain_verified {
+        if ok {
+            return CertOverrideDecision::AllowChainVerified;
+        }
+        // verified false → fall through to candidate/deny
+    }
     let pem_n = store
         .anchors
         .iter()
         .filter(|a| a.enabled && a.kind == AnchorKind::PemRoot)
         .count();
     if pem_n > 0 {
-        return CertOverrideDecision::AllowIfChainMatchesStore;
+        // Without a successful chain_verified=true, do **not** allow.
+        // Signal that B could apply if platform supplies leaf PEM.
+        return CertOverrideDecision::CandidateCustomRoots;
     }
     CertOverrideDecision::Deny
+}
+
+/// Whether the decision should allow the WebView TLS connection.
+pub fn decision_allows(d: CertOverrideDecision) -> bool {
+    matches!(
+        d,
+        CertOverrideDecision::AllowHostPinned
+            | CertOverrideDecision::AllowSessionOnce
+            | CertOverrideDecision::AllowChainVerified
+            | CertOverrideDecision::AllowSpkiPinned
+    )
+}
+
+/// Audit-friendly reason string.
+pub fn decision_reason(d: CertOverrideDecision) -> &'static str {
+    match d {
+        CertOverrideDecision::Deny => "deny",
+        CertOverrideDecision::SoftDenied => "soft_deny",
+        CertOverrideDecision::AllowHostPinned => "host_pin",
+        CertOverrideDecision::AllowSessionOnce => "session_once",
+        CertOverrideDecision::CandidateCustomRoots => "candidate_custom_roots_need_verify",
+        CertOverrideDecision::AllowChainVerified => "chain_verified",
+        CertOverrideDecision::AllowSpkiPinned => "spki_pin",
+    }
+}
+
+// ── Signed suggested catalog (principal key) ─────────────────────────────────
+
+/// Envelope for a suggested catalog signed by the principal.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SignedSuggestedCatalog {
+    pub catalog: SuggestedTrustCatalog,
+    /// Ed25519 signature over `canonical_catalog_bytes` (hex).
+    pub signature_hex: String,
+    /// Ed25519 public key (32 bytes hex) of the signing principal.
+    pub public_key_hex: String,
+    #[serde(default)]
+    pub algorithm: String,
+}
+
+/// Canonical bytes for signing: JSON of catalog with sorted keys (serde_json value dump).
+pub fn catalog_signing_payload(catalog: &SuggestedTrustCatalog) -> Result<Vec<u8>, String> {
+    // Deterministic: pretty=false, field order as struct definition.
+    serde_json::to_vec(catalog).map_err(|e| e.to_string())
+}
+
+/// Verify Ed25519 signature over the catalog payload.
+pub fn verify_signed_catalog(envelope: &SignedSuggestedCatalog) -> Result<(), String> {
+    use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+    let algo = envelope.algorithm.trim().to_ascii_lowercase();
+    if !algo.is_empty() && algo != "ed25519" {
+        return Err(format!("unsupported catalog algorithm '{algo}' (ed25519 only in this build)"));
+    }
+    let pk_bytes = hex::decode(envelope.public_key_hex.trim())
+        .map_err(|e| format!("public_key_hex: {e}"))?;
+    if pk_bytes.len() != 32 {
+        return Err("public_key_hex must be 32 bytes".into());
+    }
+    let mut pk_arr = [0u8; 32];
+    pk_arr.copy_from_slice(&pk_bytes);
+    let vk = VerifyingKey::from_bytes(&pk_arr).map_err(|e| format!("verifying key: {e}"))?;
+    let sig_bytes = hex::decode(envelope.signature_hex.trim())
+        .map_err(|e| format!("signature_hex: {e}"))?;
+    if sig_bytes.len() != 64 {
+        return Err("signature must be 64 bytes".into());
+    }
+    let mut sig_arr = [0u8; 64];
+    sig_arr.copy_from_slice(&sig_bytes);
+    let sig = Signature::from_bytes(&sig_arr);
+    let payload = catalog_signing_payload(&envelope.catalog)?;
+    vk.verify(&payload, &sig)
+        .map_err(|_| "catalog signature invalid".to_string())?;
+    Ok(())
+}
+
+/// Load signed catalog from path; unsigned plain catalog still loads via SuggestedTrustCatalog.
+pub fn load_signed_catalog_path(path: &Path) -> Result<SuggestedTrustCatalog, String> {
+    let bytes = fs::read(path).map_err(|e| e.to_string())?;
+    // Try signed envelope first
+    if let Ok(env) = serde_json::from_slice::<SignedSuggestedCatalog>(&bytes) {
+        if !env.signature_hex.is_empty() {
+            verify_signed_catalog(&env)?;
+            return Ok(env.catalog);
+        }
+    }
+    SuggestedTrustCatalog::from_json_bytes(&bytes)
 }
 
 #[cfg(test)]
@@ -644,5 +798,68 @@ mod tests {
             cert_override_decision(&s, "other.local"),
             CertOverrideDecision::Deny
         );
+    }
+
+    #[test]
+    fn pem_roots_alone_do_not_allow() {
+        let mut s = TrustStore::new();
+        s.anchors.push(TrustAnchor {
+            id: "pem:x".into(),
+            label: "x".into(),
+            kind: AnchorKind::PemRoot,
+            material: "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n".into(),
+            enabled: true,
+            notes: "".into(),
+            added_unix: 1,
+        });
+        // Swarm-2: PEMs present → candidate only, never auto-allow without chain verify.
+        assert_eq!(
+            cert_override_decision(&s, "intranet.local"),
+            CertOverrideDecision::CandidateCustomRoots
+        );
+        assert!(!decision_allows(CertOverrideDecision::CandidateCustomRoots));
+        assert!(decision_allows(CertOverrideDecision::AllowHostPinned));
+        let d = cert_override_decision_full(&s, "h.test", false, false, Some(true));
+        assert_eq!(d, CertOverrideDecision::AllowChainVerified);
+        assert!(decision_allows(d));
+    }
+
+    #[test]
+    fn soft_deny_and_session_once() {
+        let s = TrustStore::new();
+        assert_eq!(
+            cert_override_decision_full(&s, "x.test", false, true, None),
+            CertOverrideDecision::SoftDenied
+        );
+        assert_eq!(
+            cert_override_decision_full(&s, "x.test", true, false, None),
+            CertOverrideDecision::AllowSessionOnce
+        );
+    }
+
+    #[test]
+    fn signed_catalog_roundtrip_ed25519() {
+        use ed25519_dalek::{Signer, SigningKey};
+        let rng_bytes = [7u8; 32];
+        let sk = SigningKey::from_bytes(&rng_bytes);
+        let vk = sk.verifying_key();
+        let catalog = SuggestedTrustCatalog {
+            version: 1,
+            description: "signed empty".into(),
+            entries: vec![],
+        };
+        let payload = catalog_signing_payload(&catalog).unwrap();
+        let sig = sk.sign(&payload);
+        let env = SignedSuggestedCatalog {
+            catalog,
+            signature_hex: hex::encode(sig.to_bytes()),
+            public_key_hex: hex::encode(vk.as_bytes()),
+            algorithm: "ed25519".into(),
+        };
+        verify_signed_catalog(&env).unwrap();
+        // Tamper
+        let mut bad = env.clone();
+        bad.catalog.description = "tampered".into();
+        assert!(verify_signed_catalog(&bad).is_err());
     }
 }

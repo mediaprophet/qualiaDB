@@ -29,6 +29,7 @@ pub mod cookie_graph;
 pub mod cml_context;
 pub mod context_binding;
 pub mod webizen_trust;
+pub mod webizen_x509;
 pub mod engine;
 pub mod inference_backend;
 pub mod ollama_harness;

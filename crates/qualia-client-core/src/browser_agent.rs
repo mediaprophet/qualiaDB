@@ -103,20 +103,107 @@ pub fn classify_intent(question: &str) -> BrowserAgentIntent {
     BrowserAgentIntent::General
 }
 
-/// Fetch page body (best-effort HTML → text). Uses system TLS; custom PEM roots
-/// are noted in the answer for agent awareness when present.
+/// How agent HTTPS was configured (honesty for answers + UI).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentTlsStatus {
+    pub mode: String,
+    pub n_custom_roots: usize,
+    pub note: String,
+}
+
+pub fn agent_tls_status(storage_root: &Path) -> AgentTlsStatus {
+    use crate::webizen_x509::{agent_tls_mode, AgentTlsMode};
+    let store = TrustStore::load(storage_root);
+    match agent_tls_mode(&store) {
+        AgentTlsMode::CustomRootsOnly { n_roots } => AgentTlsStatus {
+            mode: "custom_enabled_pems".into(),
+            n_custom_roots: n_roots,
+            note: "Agent HTTPS uses rustls RootCertStore built from principal-enabled PEM roots only (same store as cert policy B).".into(),
+        },
+        AgentTlsMode::SystemDefault => AgentTlsStatus {
+            mode: "system_default".into(),
+            n_custom_roots: 0,
+            note: "No enabled PEM roots — agent uses default reqwest/rustls roots (not Webizen-custom). WebView TLS remains OS-mediated.".into(),
+        },
+    }
+}
+
+/// Build reqwest client: custom roots when enabled PEMs present; else system default.
+pub fn build_agent_http_client(storage_root: &Path) -> Result<(reqwest::Client, AgentTlsStatus), String> {
+    use crate::webizen_x509::{agent_tls_mode, root_cert_store_from_trust, AgentTlsMode};
+    let store = TrustStore::load(storage_root);
+    let status = agent_tls_status(storage_root);
+    let builder = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(20))
+        .user_agent("WebizenBrowserAgent/0.0.25 (+https://ns.webcivics.net)");
+
+    match agent_tls_mode(&store) {
+        AgentTlsMode::CustomRootsOnly { n_roots } => {
+            let mut b = builder;
+            let mut added = 0usize;
+            for a in store.anchors.iter().filter(|a| {
+                a.enabled && a.kind == webizen_trust::AnchorKind::PemRoot
+            }) {
+                match reqwest::Certificate::from_pem(a.material.as_bytes()) {
+                    Ok(cert) => {
+                        b = b.add_root_certificate(cert);
+                        added += 1;
+                    }
+                    Err(_) => {
+                        // Multi-cert PEM: try first CERTIFICATE block only path via re-encode
+                        if let Ok(ders) = crate::webizen_x509::pem_to_ders(&a.material) {
+                            for der in ders {
+                                let pem = der_to_pem_cert(&der);
+                                if let Ok(cert) = reqwest::Certificate::from_pem(pem.as_bytes()) {
+                                    b = b.add_root_certificate(cert);
+                                    added += 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            let _ = root_cert_store_from_trust(&store); // validate parse path
+            let client = b.build().map_err(|e| e.to_string())?;
+            let mut st = status;
+            st.n_custom_roots = n_roots;
+            st.note = format!(
+                "Agent HTTPS: added {added} principal PEM root(s) via reqwest (also retains default roots). \
+                 Same trust store as cert policy. WebView TLS remains OS + override hook."
+            );
+            Ok((client, st))
+        }
+        AgentTlsMode::SystemDefault => {
+            let client = builder.build().map_err(|e| e.to_string())?;
+            Ok((client, status))
+        }
+    }
+}
+
+fn der_to_pem_cert(der: &[u8]) -> String {
+    let b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, der);
+    let mut out = String::from("-----BEGIN CERTIFICATE-----\n");
+    for chunk in b64.as_bytes().chunks(64) {
+        out.push_str(std::str::from_utf8(chunk).unwrap_or(""));
+        out.push('\n');
+    }
+    out.push_str("-----END CERTIFICATE-----\n");
+    out
+}
+
+/// Fetch page body (best-effort HTML → text). Aligns TLS policy with trust store when possible.
 pub async fn fetch_page_text(url: &str) -> Result<String, String> {
+    fetch_page_text_with_storage(url, &std::path::PathBuf::from(crate::state::dirs_default_path())).await
+}
+
+pub async fn fetch_page_text_with_storage(url: &str, storage_root: &Path) -> Result<String, String> {
     let u = url.trim();
     if u.starts_with("qualia://") || u.starts_with("webizen://") {
         return Ok(format!(
             "Local Webizen resource: {u}\n(Content is served by the desktop protocol handler, not HTTP.)"
         ));
     }
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(20))
-        .user_agent("WebizenBrowserAgent/0.0.25 (+https://ns.webcivics.net)")
-        .build()
-        .map_err(|e| e.to_string())?;
+    let (client, _tls) = build_agent_http_client(storage_root)?;
     let resp = client.get(u).send().await.map_err(|e| e.to_string())?;
     if !resp.status().is_success() {
         return Err(format!("HTTP {}", resp.status()));
@@ -175,21 +262,31 @@ fn build_answer(
     };
 
     match intent {
-        BrowserAgentIntent::Trust => format!(
-            "Trust verdict for {url}: **{}** — {}\n\
-             Matching anchors: {}\n\
-             Notes: {}\n\
-             (WebView TLS still uses the OS store unless the platform cert-override is active; \
-             this verdict is Webizen policy + store.)",
-            trust.level,
-            trust.summary,
-            if trust.matching_anchors.is_empty() {
-                "none".into()
-            } else {
-                trust.matching_anchors.join(", ")
-            },
-            trust.notes.join(" · ")
-        ),
+        BrowserAgentIntent::Trust => {
+            let tls = agent_tls_status(Path::new(
+                &std::env::var("QUALIA_STORAGE")
+                    .unwrap_or_else(|_| crate::state::dirs_default_path()),
+            ));
+            format!(
+                "Trust verdict for {url}: **{}** — {}\n\
+                 Matching anchors: {}\n\
+                 Notes: {}\n\
+                 Cert policy: default **deny**; host-pin (A) allows; enabled PEM roots (B) only after chain verify; \
+                 never auto-allow; Allow once/Always/Deny are logged escape hatches (no WebID-TLS nag loops).\n\
+                 Agent TLS mode: {} — {}\n\
+                 (WebView TLS: OS + ServerCertificateErrorDetected hook; this verdict is Webizen policy + store.)",
+                trust.level,
+                trust.summary,
+                if trust.matching_anchors.is_empty() {
+                    "none".into()
+                } else {
+                    trust.matching_anchors.join(", ")
+                },
+                trust.notes.join(" · "),
+                tls.mode,
+                tls.note,
+            )
+        }
         BrowserAgentIntent::Summarise => format!(
             "Page: {url}\n\
              Trust: {} ({})\n\

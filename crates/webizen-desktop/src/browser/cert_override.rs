@@ -1,8 +1,14 @@
-//! C1 — WebView2 `ServerCertificateErrorDetected` → Webizen trust store (Windows).
+//! WebView2 `ServerCertificateErrorDetected` → Webizen trust store (Windows).
 //!
-//! Deny by default. Allow when policy is host-pin or custom PEM roots enabled.
+//! Security model (swarm-2):
+//! - **A** Host-pin only → allow (silent after pin; no nag loop)
+//! - **B** Chain vs **enabled** PEMs → allow only after crypto verify (not “PEMs exist”)
+//! - Never auto-allow
+//! - Interactive Allow once / Always / Deny: logged escape hatch only
+//!
 //! Audit: `{storage}/webizen/cert_override_audit.jsonl`.
 
+use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Mutex;
 
@@ -10,7 +16,27 @@ static HOOK_ATTACHED: AtomicBool = AtomicBool::new(false);
 static LAST_DECISION_UNIX: AtomicU64 = AtomicU64::new(0);
 static LAST_HOST: Mutex<String> = Mutex::new(String::new());
 static LAST_ACTION: Mutex<String> = Mutex::new(String::new());
+static LAST_REASON: Mutex<String> = Mutex::new(String::new());
 static OVERRIDE_ENABLED: AtomicBool = AtomicBool::new(true);
+
+/// Session allow-once hosts (process memory; not permanent pins).
+static SESSION_ALLOW: Mutex<Option<HashSet<String>>> = Mutex::new(None);
+/// Soft-deny hosts (sticky this session; store may also hold host-deny:).
+static SESSION_SOFT_DENY: Mutex<Option<HashSet<String>>> = Mutex::new(None);
+
+fn session_allow_set() -> std::sync::MutexGuard<'static, Option<HashSet<String>>> {
+    SESSION_ALLOW.lock().unwrap_or_else(|e| e.into_inner())
+}
+fn session_deny_set() -> std::sync::MutexGuard<'static, Option<HashSet<String>>> {
+    SESSION_SOFT_DENY.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+fn ensure_set(g: &mut Option<HashSet<String>>) -> &mut HashSet<String> {
+    if g.is_none() {
+        *g = Some(HashSet::new());
+    }
+    g.as_mut().unwrap()
+}
 
 pub fn set_override_enabled(enabled: bool) {
     OVERRIDE_ENABLED.store(enabled, Ordering::Relaxed);
@@ -24,9 +50,42 @@ pub fn hook_attached() -> bool {
     HOOK_ATTACHED.load(Ordering::Relaxed)
 }
 
+/// Escape hatch: allow this host once (this process). Fully logged by caller.
+pub fn session_allow_once(host: &str) {
+    let h = host.trim().to_ascii_lowercase();
+    if h.is_empty() {
+        return;
+    }
+    let mut g = session_allow_set();
+    ensure_set(&mut g).insert(h);
+}
+
+/// Sticky deny for host this session (WebID-TLS: no re-prompt storm).
+pub fn session_soft_deny(host: &str) {
+    let h = host.trim().to_ascii_lowercase();
+    if h.is_empty() {
+        return;
+    }
+    {
+        let mut g = session_deny_set();
+        ensure_set(&mut g).insert(h.clone());
+    }
+    // Remove any session allow for this host
+    let mut a = session_allow_set();
+    if let Some(s) = a.as_mut() {
+        s.remove(&h);
+    }
+}
+
+pub fn clear_session_decisions() {
+    *session_allow_set() = None;
+    *session_deny_set() = None;
+}
+
 pub fn status_json() -> serde_json::Value {
     let host = LAST_HOST.lock().map(|g| g.clone()).unwrap_or_default();
     let action = LAST_ACTION.lock().map(|g| g.clone()).unwrap_or_default();
+    let reason = LAST_REASON.lock().map(|g| g.clone()).unwrap_or_default();
     let state = if !cfg!(windows) {
         "unavailable"
     } else if !override_enabled() {
@@ -36,22 +95,43 @@ pub fn status_json() -> serde_json::Value {
     } else {
         "unavailable"
     };
+    let n_session = session_allow_set()
+        .as_ref()
+        .map(|s| s.len())
+        .unwrap_or(0);
+    let n_deny = session_deny_set().as_ref().map(|s| s.len()).unwrap_or(0);
     serde_json::json!({
         "cert_override": state,
         "hook_attached": hook_attached(),
         "enabled": override_enabled(),
+        "policy": {
+            "default": "deny",
+            "A_host_pin": true,
+            "B_chain_vs_enabled_pems": true,
+            "never_auto_allow": true,
+            "escape_hatch": "allow_once|always_pin|deny (logged)",
+            "webid_tls_lesson": "no re-prompt after Always (pin) or sticky Deny",
+        },
+        "session_allow_once_hosts": n_session,
+        "session_soft_deny_hosts": n_deny,
         "last_host": host,
         "last_action": action,
+        "last_reason": reason,
         "last_decision_unix": LAST_DECISION_UNIX.load(Ordering::Relaxed),
         "note": match state {
-            "active" => "ServerCertificateErrorDetected consults Webizen trust store; default deny.",
+            "active" => "ServerCertificateErrorDetected: host-pin allow; PEM roots need chain verify; default deny.",
             "disabled" => "Cert-override disabled by principal; OS TLS decisions stand.",
             _ => "Cert-override hook not attached (non-Windows or attach failed).",
         },
     })
 }
 
-fn record(host: &str, action: &str) {
+/// Public audit record (commands / escape hatch).
+pub fn record_public(host: &str, action: &str, reason: &str) {
+    record(host, action, reason);
+}
+
+fn record(host: &str, action: &str, reason: &str) {
     LAST_DECISION_UNIX.store(
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -65,6 +145,9 @@ fn record(host: &str, action: &str) {
     if let Ok(mut g) = LAST_ACTION.lock() {
         *g = action.to_string();
     }
+    if let Ok(mut g) = LAST_REASON.lock() {
+        *g = reason.to_string();
+    }
     let root = std::path::PathBuf::from(qualia_client_core::state::dirs_default_path());
     let log_path = root.join("webizen/cert_override_audit.jsonl");
     if let Some(parent) = log_path.parent() {
@@ -74,6 +157,8 @@ fn record(host: &str, action: &str) {
         "unix": LAST_DECISION_UNIX.load(Ordering::Relaxed),
         "host": host,
         "action": action,
+        "reason": reason,
+        "policy_mode": action,
     });
     if let Ok(s) = serde_json::to_string(&line) {
         use std::io::Write;
@@ -99,19 +184,80 @@ fn host_from_uri(uri: &str) -> String {
         .to_ascii_lowercase()
 }
 
-/// Decide allow/deny from store.
+fn session_allows(host: &str) -> bool {
+    session_allow_set()
+        .as_ref()
+        .map(|s| s.contains(host))
+        .unwrap_or(false)
+}
+
+fn session_denies(host: &str) -> bool {
+    session_deny_set()
+        .as_ref()
+        .map(|s| s.contains(host))
+        .unwrap_or(false)
+}
+
+/// Decide allow/deny from store + session (no leaf PEM → B cannot succeed).
 pub fn decide_for_host(host: &str) -> (&'static str, bool) {
-    use qualia_client_core::webizen_trust::{cert_override_decision, CertOverrideDecision, TrustStore};
+    decide_for_host_with_leaf(host, None)
+}
+
+/// Optional leaf PEM enables B path (chain vs enabled roots).
+pub fn decide_for_host_with_leaf(host: &str, leaf_pem: Option<&str>) -> (&'static str, bool) {
+    use qualia_client_core::webizen_trust::{
+        cert_override_decision_full, decision_allows, decision_reason, TrustStore,
+    };
+    use qualia_client_core::webizen_x509::verify_chain_against_enabled_roots;
+
     if !override_enabled() {
         return ("cancel_disabled", false);
     }
+    let host = host.trim().to_ascii_lowercase();
     let root = std::path::PathBuf::from(qualia_client_core::state::dirs_default_path());
     let store = TrustStore::load(&root);
-    match cert_override_decision(&store, host) {
-        CertOverrideDecision::AllowHostPinned => ("always_allow_host_pin", true),
-        CertOverrideDecision::AllowIfChainMatchesStore => ("always_allow_custom_pem", true),
-        CertOverrideDecision::Deny => ("cancel_deny", false),
-    }
+
+    let soft = session_denies(&host);
+    let sess = session_allows(&host);
+
+    let chain_verified = if let Some(pem) = leaf_pem {
+        let r = verify_chain_against_enabled_roots(pem, &[], &store);
+        Some(r.accepted)
+    } else {
+        None
+    };
+
+    let d = cert_override_decision_full(&store, &host, sess, soft, chain_verified);
+    let reason = decision_reason(d);
+    let allow = decision_allows(d);
+    // CandidateCustomRoots without verify → deny (fail closed)
+    let action = if allow {
+        match d {
+            qualia_client_core::webizen_trust::CertOverrideDecision::AllowHostPinned => {
+                "always_allow_host_pin"
+            }
+            qualia_client_core::webizen_trust::CertOverrideDecision::AllowSessionOnce => {
+                "allow_session_once"
+            }
+            qualia_client_core::webizen_trust::CertOverrideDecision::AllowChainVerified => {
+                "always_allow_chain_verified"
+            }
+            qualia_client_core::webizen_trust::CertOverrideDecision::AllowSpkiPinned => {
+                "always_allow_spki_pin"
+            }
+            _ => "always_allow",
+        }
+    } else {
+        match d {
+            qualia_client_core::webizen_trust::CertOverrideDecision::SoftDenied => "cancel_soft_deny",
+            qualia_client_core::webizen_trust::CertOverrideDecision::CandidateCustomRoots => {
+                "cancel_need_chain_verify"
+            }
+            _ => "cancel_deny",
+        }
+    };
+    let _ = reason;
+    (action, allow)
 }
 
 /// Attach hook to content webview (Windows only).
@@ -165,7 +311,6 @@ fn attach_on_platform(platform: tauri::webview::PlatformWebview) -> Result<bool,
         },
         ServerCertificateErrorDetectedEventHandler,
     };
-    // Same windows-core as webview2-com (0.61) — not the crate's windows 0.62.
     use windows_core_wv2::{Interface, PWSTR};
 
     let controller = platform.controller();
@@ -184,15 +329,15 @@ fn attach_on_platform(platform: tauri::webview::PlatformWebview) -> Result<bool,
             if let Some(args) = args {
                 unsafe {
                     let mut uri_raw = PWSTR::null();
-                    // API takes *mut PWSTR (out-param), not &mut.
                     let uri = if args.RequestUri(std::ptr::addr_of_mut!(uri_raw)).is_ok() {
                         take_pwstr(uri_raw)
                     } else {
                         String::new()
                     };
                     let host = host_from_uri(&uri);
+                    // Leaf PEM from platform is ideal for B; without it fail closed on PEM-only.
                     let (label, allow) = decide_for_host(&host);
-                    record(&host, label);
+                    record(&host, label, label);
                     let action = if allow {
                         COREWEBVIEW2_SERVER_CERTIFICATE_ERROR_ACTION_ALWAYS_ALLOW
                     } else {
@@ -217,7 +362,8 @@ fn attach_on_platform(platform: tauri::webview::PlatformWebview) -> Result<bool,
 #[cfg(test)]
 mod tests {
     use qualia_client_core::webizen_trust::{
-        cert_override_decision, AnchorKind, CertOverrideDecision, TrustAnchor, TrustStore,
+        cert_override_decision, cert_override_decision_full, decision_allows, AnchorKind,
+        CertOverrideDecision, TrustAnchor, TrustStore,
     };
 
     #[test]
@@ -245,5 +391,23 @@ mod tests {
             cert_override_decision(&s, "intranet.test"),
             CertOverrideDecision::AllowHostPinned
         );
+        assert!(decision_allows(CertOverrideDecision::AllowHostPinned));
+    }
+
+    #[test]
+    fn pem_without_verify_does_not_allow() {
+        let mut s = TrustStore::new();
+        s.anchors.push(TrustAnchor {
+            id: "pem:1".into(),
+            label: "r".into(),
+            kind: AnchorKind::PemRoot,
+            material: "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n".into(),
+            enabled: true,
+            notes: "".into(),
+            added_unix: 1,
+        });
+        let d = cert_override_decision(&s, "x.test");
+        assert_eq!(d, CertOverrideDecision::CandidateCustomRoots);
+        assert!(!decision_allows(d));
     }
 }

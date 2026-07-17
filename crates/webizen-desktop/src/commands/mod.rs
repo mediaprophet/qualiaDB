@@ -337,10 +337,117 @@ pub fn browser_cookies_refresh(app: AppHandle, url: Option<String>) -> Result<se
     crate::browser::cookies::refresh_jar_for_url(&app, &url)
 }
 
+/// Clear site data: cookie graph for origin + best-effort jar clear for content webview.
+#[command]
+pub fn browser_clear_site_data(
+    app: AppHandle,
+    url: Option<String>,
+    all: Option<bool>,
+) -> Result<serde_json::Value, String> {
+    let root = std::path::PathBuf::from(qualia_client_core::state::dirs_default_path());
+    if all.unwrap_or(false) {
+        let g = qualia_client_core::cookie_graph::clear_graph_all(&root)?;
+        let jar = crate::browser::cookies::clear_jar_all(&app).unwrap_or_else(|e| {
+            serde_json::json!({ "jar_clear": "error", "detail": e })
+        });
+        return Ok(serde_json::json!({
+            "graph": g,
+            "jar": jar,
+            "note": "Full clear requested. Coverage is best-effort.",
+        }));
+    }
+    let url = url
+        .filter(|u| !u.trim().is_empty())
+        .unwrap_or_else(|| crate::browser::last_url());
+    let g = qualia_client_core::cookie_graph::clear_graph_for_origin(&root, &url)?;
+    let jar = crate::browser::cookies::clear_jar_for_url(&app, &url).unwrap_or_else(|e| {
+        serde_json::json!({ "jar_clear": "error", "detail": e })
+    });
+    Ok(serde_json::json!({
+        "url": url,
+        "graph": g,
+        "jar": jar,
+        "note": "Origin graph cleared; jar clear best-effort. Explicit principal action.",
+    }))
+}
+
 /// Cert-override status (C1) — active / disabled / unavailable.
 #[command]
 pub fn browser_cert_override_status() -> Result<serde_json::Value, String> {
     Ok(crate::browser::cert_override::status_json())
+}
+
+/// Interactive escape hatch: allow_once | always (pin) | deny (sticky session).
+#[command]
+pub fn browser_cert_escape_hatch(
+    host: String,
+    action: String,
+) -> Result<serde_json::Value, String> {
+    let host = host.trim().to_ascii_lowercase();
+    if host.is_empty() {
+        return Err("empty host".into());
+    }
+    let act = action.trim().to_ascii_lowercase();
+    match act.as_str() {
+        "allow_once" | "once" => {
+            crate::browser::cert_override::session_allow_once(&host);
+            crate::browser::cert_override::record_public(&host, "allow_once", "escape_hatch_session");
+            Ok(serde_json::json!({
+                "host": host,
+                "action": "allow_once",
+                "note": "Session allow only — not a permanent pin. Logged. No re-prompt until process restart if soft-deny not set."
+            }))
+        }
+        "always" | "pin" | "allow_always" => {
+            // Permanent host pin via existing command path
+            let pin = browser_trust_pin_host(host.clone())?;
+            crate::browser::cert_override::record_public(&host, "always_pin", "escape_hatch_pin");
+            Ok(serde_json::json!({
+                "host": host,
+                "action": "always",
+                "pin": pin,
+                "note": "Host pin written to trust store — subsequent cert errors silent for this host (WebID-TLS lesson)."
+            }))
+        }
+        "deny" | "soft_deny" => {
+            crate::browser::cert_override::session_soft_deny(&host);
+            // Persist soft-deny in store for durability
+            let root = std::path::PathBuf::from(qualia_client_core::state::dirs_default_path());
+            let mut store = qualia_client_core::webizen_trust::TrustStore::load(&root);
+            let material = qualia_client_core::webizen_trust::host_deny_material(&host);
+            if !store.anchors.iter().any(|a| a.material.eq_ignore_ascii_case(&material)) {
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs())
+                    .unwrap_or(0);
+                use qualia_client_core::webizen_trust::{AnchorKind, TrustAnchor};
+                store.anchors.push(TrustAnchor {
+                    id: format!("policy:deny:{host}"),
+                    label: format!("Deny cert override: {host}"),
+                    kind: AnchorKind::PolicyLabel,
+                    material,
+                    enabled: true,
+                    notes: "Principal soft-deny — no re-prompt storm".into(),
+                    added_unix: now,
+                });
+                store.save(&root)?;
+            }
+            crate::browser::cert_override::record_public(&host, "deny", "escape_hatch_soft_deny");
+            Ok(serde_json::json!({
+                "host": host,
+                "action": "deny",
+                "note": "Sticky deny for host (session + store). Fail closed."
+            }))
+        }
+        _ => Err("action must be allow_once | always | deny".into()),
+    }
+}
+
+#[command]
+pub fn browser_agent_tls_status() -> Result<serde_json::Value, String> {
+    let root = std::path::PathBuf::from(qualia_client_core::state::dirs_default_path());
+    let st = qualia_client_core::browser_agent::agent_tls_status(&root);
+    serde_json::to_value(st).map_err(|e| e.to_string())
 }
 
 /// Enable/disable cert-override policy consultation (default enabled when hook attached).
@@ -7950,6 +8057,9 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         browser_agent_ask,
         browser_cookie_summary,
         browser_cookie_observe,
+        browser_clear_site_data,
+        browser_cert_escape_hatch,
+        browser_agent_tls_status,
         browser_cookies_refresh,
         browser_trust_list_suggested,
         browser_trust_import_suggested,

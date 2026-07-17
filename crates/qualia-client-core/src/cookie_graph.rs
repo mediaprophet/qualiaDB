@@ -119,6 +119,34 @@ impl CookieGraph {
         out.sort();
         out
     }
+
+    /// Remove all graph nodes for an origin (exact match, trailing slash normalized).
+    pub fn clear_origin(&mut self, origin: &str) -> usize {
+        let o = origin.trim().trim_end_matches('/');
+        let before = self.nodes.len();
+        self.nodes
+            .retain(|n| n.origin.trim_end_matches('/') != o);
+        before.saturating_sub(self.nodes.len())
+    }
+
+    /// Remove nodes whose page host matches (origin host or domain).
+    pub fn clear_host(&mut self, host: &str) -> usize {
+        let host = host.trim().to_ascii_lowercase();
+        let before = self.nodes.len();
+        self.nodes.retain(|n| {
+            let page = host_of(&n.origin);
+            let d = n.domain.trim_start_matches('.').to_ascii_lowercase();
+            page != host && d != host
+        });
+        before.saturating_sub(self.nodes.len())
+    }
+
+    /// Clear entire graph (principal request).
+    pub fn clear_all(&mut self) -> usize {
+        let n = self.nodes.len();
+        self.nodes.clear();
+        n
+    }
 }
 
 fn host_of(url_or_origin: &str) -> String {
@@ -272,7 +300,78 @@ pub fn summary_for_url(storage_root: &Path, url: &str) -> serde_json::Value {
         "cookies": nodes,
         "third_parties": third,
         "coverage_note": g.coverage_note,
+        "honesty": "view + graph coverage is best-effort; not complete Chromium jar parity",
     })
+}
+
+/// Clear cookie graph for origin and optionally log intent for site-data clear.
+/// Does **not** by itself wipe the WebView jar — pair with platform clear.
+pub fn clear_graph_for_origin(storage_root: &Path, origin_or_url: &str) -> Result<serde_json::Value, String> {
+    let host = host_of(origin_or_url);
+    let origin = if origin_or_url.starts_with("https") {
+        format!("https://{host}")
+    } else if origin_or_url.starts_with("http") {
+        format!("http://{host}")
+    } else if origin_or_url.contains("://") {
+        origin_or_url.trim().trim_end_matches('/').to_string()
+    } else {
+        format!("https://{host}")
+    };
+    let mut g = CookieGraph::load(storage_root);
+    let removed = g.clear_origin(&origin);
+    // Also drop host-matching third-party rows observed under this page host
+    let removed2 = g.clear_host(&host);
+    g.save(storage_root)?;
+    append_clear_audit(storage_root, &origin, removed + removed2, "origin")?;
+    Ok(serde_json::json!({
+        "origin": origin,
+        "host": host,
+        "removed_graph_nodes": removed + removed2,
+        "coverage_note": g.coverage_note,
+        "note": "Graph rows cleared. WebView jar clear is platform-side (see browser_clear_site_data).",
+    }))
+}
+
+pub fn clear_graph_all(storage_root: &Path) -> Result<serde_json::Value, String> {
+    let mut g = CookieGraph::load(storage_root);
+    let n = g.clear_all();
+    g.save(storage_root)?;
+    append_clear_audit(storage_root, "*", n, "all")?;
+    Ok(serde_json::json!({
+        "removed_graph_nodes": n,
+        "note": "Entire cookie graph cleared. WebView jar may still hold cookies until platform clear.",
+    }))
+}
+
+fn append_clear_audit(
+    storage_root: &Path,
+    scope: &str,
+    removed: usize,
+    kind: &str,
+) -> Result<(), String> {
+    let path = storage_root.join("webizen/cookie_clear_audit.jsonl");
+    if let Some(p) = path.parent() {
+        fs::create_dir_all(p).map_err(|e| e.to_string())?;
+    }
+    let unix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let line = serde_json::json!({
+        "unix": unix,
+        "scope": scope,
+        "kind": kind,
+        "removed": removed,
+    });
+    use std::io::Write;
+    let mut f = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .map_err(|e| e.to_string())?;
+    writeln!(f, "{}", serde_json::to_string(&line).map_err(|e| e.to_string())?)
+        .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -305,5 +404,16 @@ mod tests {
             hypothesize_purpose("_ga"),
             CookiePurposeHypothesis::Analytics
         );
+    }
+
+    #[test]
+    fn clear_origin_removes_rows() {
+        let dir = tempfile::tempdir().unwrap();
+        let sc = "SID=abc; Domain=example.org; Path=/".to_string();
+        observe_set_cookies(dir.path(), "https://example.org/page", &[sc], 1).unwrap();
+        let r = clear_graph_for_origin(dir.path(), "https://example.org/x").unwrap();
+        assert!(r["removed_graph_nodes"].as_u64().unwrap() >= 1);
+        let g = CookieGraph::load(dir.path());
+        assert!(g.nodes.is_empty());
     }
 }

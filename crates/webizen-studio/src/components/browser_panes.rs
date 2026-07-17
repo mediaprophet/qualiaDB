@@ -1103,11 +1103,39 @@ pub fn WebBrowserPane() -> Element {
                                         }
                                     }
                                 }
-                                button {
-                                    r#type: "button",
-                                    style: "margin-top: 0.65rem; padding: 0.45rem 0.75rem; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-weight: 600; cursor: pointer; font-size: 0.8rem;",
-                                    onclick: move |_| refresh_cookies(),
-                                    "Refresh"
+                                div { style: "display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.65rem;",
+                                    button {
+                                        r#type: "button",
+                                        style: "padding: 0.45rem 0.75rem; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-weight: 600; cursor: pointer; font-size: 0.8rem;",
+                                        onclick: move |_| refresh_cookies(),
+                                        "Refresh"
+                                    }
+                                    button {
+                                        r#type: "button",
+                                        style: "padding: 0.45rem 0.75rem; border-radius: 8px; border: 1px solid #7f1d1d; background: rgba(127,29,29,0.35); color: #fecaca; font-weight: 600; cursor: pointer; font-size: 0.8rem;",
+                                        onclick: move |_| {
+                                            let url = omnibox_input();
+                                            spawn(async move {
+                                                cookies_status.set("Clearing site data…".into());
+                                                match invoke_tauri(
+                                                    "browser_clear_site_data",
+                                                    json!({ "url": url, "all": false }),
+                                                )
+                                                .await
+                                                {
+                                                    Ok(raw) => {
+                                                        cookies_status.set(format!("Cleared: {raw}"));
+                                                        cookies_first_party.set(Vec::new());
+                                                        cookies_third_party.set(Vec::new());
+                                                        cookies_third_domains.set(Vec::new());
+                                                        cookies_summary_text.set(raw);
+                                                    }
+                                                    Err(e) => cookies_status.set(format!("Clear failed: {e}")),
+                                                }
+                                            });
+                                        },
+                                        "Clear site data"
+                                    }
                                 }
                             }
                         }
@@ -1139,7 +1167,7 @@ pub fn WebBrowserPane() -> Element {
                         }
                         p {
                             style: "margin: 1.25rem 0 0; font-size: 0.78rem; line-height: 1.45; color: #64748b;",
-                            "Shipped: in-window chrome, trust store + suggested catalog UI, cookies panel (jar refresh), browser agent, bookmarks. Servo remains deferred. Cert-override not claimed active."
+                            "Shipped: trust store (host-pin A; chain-B needs verify), cert escape hatch (allow once/always/deny logged), cookies view+clear site data, agent TLS aligned to store. Servo deferred. Never auto-allow TLS."
                         }
                     }
                 }

@@ -125,3 +125,64 @@ pub fn refresh_jar_for_url(app: &AppHandle, url: &str) -> Result<serde_json::Val
         "last_url": last_url(),
     }))
 }
+
+/// Delete jar cookies for `url` (best-effort) via Tauri `delete_cookie`.
+pub fn clear_jar_for_url(app: &AppHandle, url: &str) -> Result<serde_json::Value, String> {
+    let url = url.trim();
+    if url.is_empty() {
+        return Err("empty URL".into());
+    }
+    if url.starts_with("qualia://") || url.starts_with("webizen://") || !url.contains("://") {
+        return Ok(serde_json::json!({
+            "url": url,
+            "deleted": 0,
+            "source": "n/a_local",
+        }));
+    }
+    let parsed: Url = url
+        .parse()
+        .map_err(|e| format!("Invalid URL '{url}': {e}"))?;
+    let webview = app
+        .get_webview(CONTENT_LABEL)
+        .ok_or_else(|| "content webview not open".to_string())?;
+    let cookies = webview
+        .cookies_for_url(parsed)
+        .map_err(|e| format!("cookies_for_url: {e}"))?;
+    let mut deleted = 0usize;
+    let mut errors = Vec::new();
+    for c in cookies {
+        match webview.delete_cookie(c) {
+            Ok(()) => deleted += 1,
+            Err(e) => errors.push(format!("{e}")),
+        }
+    }
+    Ok(serde_json::json!({
+        "url": url,
+        "deleted": deleted,
+        "errors": errors,
+        "source": "webview_jar_delete",
+        "note": "Best-effort jar clear for origin cookies returned by cookies_for_url.",
+    }))
+}
+
+/// Delete all cookies visible via `webview.cookies()` (best-effort).
+pub fn clear_jar_all(app: &AppHandle) -> Result<serde_json::Value, String> {
+    let webview = app
+        .get_webview(CONTENT_LABEL)
+        .ok_or_else(|| "content webview not open".to_string())?;
+    let cookies = webview.cookies().map_err(|e| format!("cookies: {e}"))?;
+    let mut deleted = 0usize;
+    let mut errors = Vec::new();
+    for c in cookies {
+        match webview.delete_cookie(c) {
+            Ok(()) => deleted += 1,
+            Err(e) => errors.push(format!("{e}")),
+        }
+    }
+    Ok(serde_json::json!({
+        "deleted": deleted,
+        "errors": errors,
+        "source": "webview_jar_delete_all",
+        "note": "Best-effort full jar clear; partitioned/httpOnly edge cases may remain.",
+    }))
+}
