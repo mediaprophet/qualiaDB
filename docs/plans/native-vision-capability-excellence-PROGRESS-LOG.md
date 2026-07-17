@@ -102,3 +102,41 @@ Wire Studio/desktop commands; deepen face mesh weights; FED policy; multi-view r
 **Measured:** `cargo test -p qualia-vision --lib` (session)
 
 **Human:** calibrate τ after real capture; never wire model Z into this gate.
+
+---
+
+## Implementation to-do (queued)
+
+Open agent-executable work. Mark **done** in a dated entry when shipped; do not claim excellence for lite stubs.
+
+| ID | Item | Track / path | Status | Notes |
+|----|------|--------------|--------|-------|
+| **TODO-EVM1** | **Excellence-grade Eulerian Video Magnification (EVM)** | **T-EVM** · `biosense/magnification/` | **queued** | Lite colour/motion already present (`eulerian_*_magnify.rs`). Promote to research-grade EVM — see breakdown below. |
+| TODO-MESH1 | MediaPipe / face mesh adapter → `LandmarkFrame` | T-MESH · `biosense/face_mesh/` | queued | Feed PAD PAR + rPPG ROI; Apache pack when weights drop |
+| TODO-PAD1 | Host camera attestation on unlock path | T-PAD + desktop | queued | `CameraStreamAttestation::physical_attested()` |
+| TODO-PAD2 | Calibrate PAR τ / yaw policy in MANIFEST | T-PAD | queued | Principal real-capture pass |
+| TODO-ONNX1 | ONNX/TFLite loaders for commercial pack | T-MESH / weights | queued | After principal downloads models |
+| TODO-FED1 | SPARQL-FED multi-camera policy depth | T-POL | queued | COMPLETE-WITH-GATE |
+| TODO-3D1 | Photogrammetry multi-view beyond heightfield | T-RECON | queued | After STL path solid |
+| TODO-UI1 | Studio/desktop biosense + EVM workbench wire | T-UI / T-DESK | queued | Consent-bound; no silent bio |
+
+### TODO-EVM1 breakdown (excellence bar — not lite)
+
+Current code is a **temporal residual + gain** demo. Excellence EVM (Wu et al. style) requires:
+
+| Step | Deliverable (single-function files preferred) | Done when |
+|------|-----------------------------------------------|-----------|
+| EVM1.a | Gaussian / Laplacian pyramid build + reconstruct (caller-buffered levels) | Unit tests: reconstruct ≈ input; level count fixed |
+| EVM1.b | Temporal band-pass with explicit `fps`, `f_lo_hz`, `f_hi_hz` (IIR or FIR; e.g. 0.7–4 Hz HR band) | Band rejects DC + high-freq noise in synthetic sinusoid |
+| EVM1.c | **Colour EVM** in chrominance / YIQ-class space (amplify chroma band, not raw RGB noise) | Replaces/extends `eulerian_color_magnify` without monolith |
+| EVM1.d | **Motion EVM** multi-scale (spatial band × temporal band × α) | Replaces/extends `eulerian_motion_magnify` |
+| EVM1.e | SNR / energy gate + **abstain** (refuse invent; report why) | Matches rPPG honesty rule R2.3 |
+| EVM1.f | Consent + quality pre-gate; optional face-ROI crop path | No processing without `BiosenseConsent` |
+| EVM1.g | Registry D3.06 / D3.07 honesty strings + progress-log entry | Present only when a–e green |
+| EVM1.h | Recipe hook (e.g. see-my-pulse visualization) under consent | Optional after core |
+
+**Out of scope for TODO-EVM1:** using EVM as PAD (PAR + jitter remain the locks); model-Z depth; Python reference path.
+
+**Depends on:** T-CV1 buffers (done). Optional: face ROI / mesh for ROI-cropped mag.
+
+**Verify:** `cargo test -p qualia-vision --lib magnification` (+ new pyramid/bandpass tests).

@@ -404,7 +404,7 @@ ORB-class, match, RANSAC, warp.
 | **VXB0** | Consent, purpose, quality gates, audit |
 | **VXB1** | Face mesh / landmarks |
 | **VXB2** | Multi-ROI rPPG + SNR/confidence |
-| **VXB3** | Eulerian (and Lagrangian) micro-change magnification |
+| **VXB3** | Eulerian (and Lagrangian) micro-change magnification — **TODO-EVM1** excellence-grade EVM (pyramid + Hz band-pass + chroma colour mag + SNR abstain); lite residual mag is **not** the bar |
 | **VXB4** | Respiration + audio fusion |
 | **VXB5** | Biometric vault, liveness, revoke, voice co-policy |
 | **VXB6** | Affect proposals + non-claims + reject/correct |
@@ -571,7 +571,7 @@ Tracks may run **in parallel only** when exclusive directories do not overlap.
 | **T-BIO0** | Consent, quality, audit | `biosense/consent/`, `biosense/quality/`, `biosense/audit/` | T-REG |
 | **T-MESH** | Face landmarks / mesh | `biosense/face_mesh/` (+ weights path) | T-CV1, T-BIO0 |
 | **T-RPPG** | rPPG algorithms | `biosense/rppg/` (one algo per file) | T-MESH or ROI quality |
-| **T-EVM** | Magnification | `biosense/magnification/` | T-CV1 colour/filter |
+| **T-EVM** | Magnification (**TODO-EVM1**) | `biosense/magnification/` — pyramid, temporal band-pass (`fps`/`f_lo`/`f_hi`), colour EVM (chroma), motion EVM, SNR abstain, consent gate | T-CV1 colour/filter |
 | **T-PAD** | Liveness | `biosense/liveness/` | T-MESH |
 | **T-TMPL** | Biometric vault templates | `biosense/biometrics/` + wellfair hooks (coordinate) | T-BIO0, T-MESH |
 | **T-AFFECT** | Affect proposals | `biosense/affect/` | T-MESH, T-BIO0 |
