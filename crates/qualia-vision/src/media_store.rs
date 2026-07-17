@@ -14,6 +14,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use crate::semantic::media_digest;
+use crate::types::VisionError;
 
 /// Retention / sensitivity class for media (mirrors graph sensitivity language).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
