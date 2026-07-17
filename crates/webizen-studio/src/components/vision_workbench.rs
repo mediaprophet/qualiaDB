@@ -184,6 +184,55 @@ pub fn VisionWorkbench() -> Element {
         }
     };
 
+    let run_continuum = {
+        let mut status = status.clone();
+        let mut busy = busy.clone();
+        let mut mesh_info = mesh_info.clone();
+        let mut gen_url = gen_url.clone();
+        move |_| {
+            busy.set(true);
+            status.set("G→S continuum (generate→store→.10d)…".into());
+            spawn(async move {
+                match invoke_json(
+                    "vision_gs_continuum",
+                    serde_json::json!({
+                        "prompt": "teal hills continuum",
+                        "seed": 17,
+                        "steps": 4,
+                        "media_time_ms": 0,
+                    }),
+                )
+                .await
+                {
+                    Ok(v) => {
+                        if let Some(url) = v
+                            .pointer("/generate/image_data_url")
+                            .and_then(|x| x.as_str())
+                        {
+                            gen_url.set(url.to_string());
+                        }
+                        mesh_info.set(format!(
+                            "10d={}B obj={}B quins_g={} quins_geo={} path={}",
+                            v.get("container_10d_bytes").and_then(|x| x.as_u64()).unwrap_or(0),
+                            v.get("obj_bytes").and_then(|x| x.as_u64()).unwrap_or(0),
+                            v.get("generation_quins").and_then(|x| x.as_u64()).unwrap_or(0),
+                            v.get("geometry_quins").and_then(|x| x.as_u64()).unwrap_or(0),
+                            v.get("container_10d_path").and_then(|x| x.as_str()).unwrap_or("?")
+                        ));
+                        status.set(
+                            v.get("note")
+                                .and_then(|x| x.as_str())
+                                .unwrap_or("Continuum OK")
+                                .to_string(),
+                        );
+                    }
+                    Err(e) => status.set(format!("Continuum failed: {e}")),
+                }
+                busy.set(false);
+            });
+        }
+    };
+
     let reject_sel = {
         let demo = demo.clone();
         let mut status = status.clone();
@@ -314,6 +363,12 @@ pub fn VisionWorkbench() -> Element {
                     onclick: run_i23,
                     style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); cursor:pointer;",
                     "Image→3D (S)"
+                }
+                button {
+                    disabled: busy(),
+                    onclick: run_continuum,
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); background:rgba(120,100,255,0.15); cursor:pointer; font-weight:600;",
+                    "Full G→S continuum"
                 }
                 button {
                     disabled: busy() || selected().is_none(),

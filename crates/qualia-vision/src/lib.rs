@@ -65,10 +65,14 @@ pub use weights::{
     ProductionVision, VisionBackendKind, VisionWeightBundle, QVWT_MAGIC, QVWT_VERSION,
 };
 pub use metrics::{evaluate_real_held_out, evaluate_synthetic, mean_best_iou, MetricsReport};
-pub use generator::{GenerationReceipt, NativeImageGenerator, GENERATOR_MODEL_ID};
+pub use generator::{
+    compile_generation_receipt_quins, CancelFlag, GenerationReceipt, NativeImageGenerator,
+    GENERATOR_MODEL_ID, CTX_GENERATION, P_GENERATED_IMAGE, P_GEN_PROMPT, P_GEN_SEED,
+};
 pub use spatial::{
-    image_to_heightfield_mesh, validate_mesh_ir, ImageTo3dReceipt, MeshIR, MeshValidationReport,
-    MeshValidationStatus, MAX_INDICES, MAX_VERTICES,
+    image_to_heightfield_mesh, mesh_ir_to_obj, mesh_ir_triangles, validate_mesh_ir,
+    ImageTo3dReceipt, MeshIR, MeshValidationReport, MeshValidationStatus, MAX_INDICES,
+    MAX_VERTICES,
 };
 
 #[cfg(feature = "cpu-reference")]

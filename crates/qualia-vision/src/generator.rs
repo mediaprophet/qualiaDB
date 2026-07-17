@@ -6,10 +6,14 @@
 //! Swap the `step` body for Forge-backed denoiser weights when a licence-approved
 //! model is selected (G0 audit). No Python / ComfyUI.
 
-use crate::semantic::{media_digest, q_hash, MediaDigest};
+use crate::semantic::{media_digest, q_hash, MediaDigest, VisionQuin};
 use crate::types::VisionError;
 
 pub const GENERATOR_MODEL_ID: &str = "qualia-vision-native-generator-ref-v1";
+pub const P_GENERATED_IMAGE: &str = "https://ns.webizen.org/q42/generatedImage";
+pub const P_GEN_SEED: &str = "https://ns.webizen.org/q42/generationSeed";
+pub const P_GEN_PROMPT: &str = "https://ns.webizen.org/q42/generationPromptHash";
+pub const CTX_GENERATION: &str = "https://ns.webizen.org/q42/vision-generation";
 
 /// Immutable generation receipt for Q42 / sidecars.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -23,6 +27,23 @@ pub struct GenerationReceipt {
     pub output_digest: MediaDigest,
     /// True for the built-in reference path (not a third-party foundation model).
     pub is_reference_generator: bool,
+    /// Shared media timeline slot (ms or frame base) for cross-modal join with audio.
+    pub media_time_ms: u64,
+}
+
+/// Cooperative cancel flag (generation is cold path; checked between steps).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct CancelFlag {
+    pub cancelled: bool,
+}
+
+impl CancelFlag {
+    pub fn new() -> Self {
+        Self { cancelled: false }
+    }
+    pub fn cancel(&mut self) {
+        self.cancelled = true;
+    }
 }
 
 /// Native image generator session (cold construct; hot path is `generate_rgb8`).
@@ -56,6 +77,21 @@ impl NativeImageGenerator {
         height: u32,
         out: &mut [u8],
     ) -> Result<GenerationReceipt, VisionError> {
+        self.generate_rgb8_cancellable(prompt, seed, steps, width, height, out, None, 0)
+    }
+
+    /// Same as `generate_rgb8` with optional cancel between steps and media timeline stamp.
+    pub fn generate_rgb8_cancellable(
+        &self,
+        prompt: &str,
+        seed: u64,
+        steps: u32,
+        width: u32,
+        height: u32,
+        out: &mut [u8],
+        cancel: Option<&CancelFlag>,
+        media_time_ms: u64,
+    ) -> Result<GenerationReceipt, VisionError> {
         let w = width.max(1);
         let h = height.max(1);
         let need = (w as usize).saturating_mul(h as usize).saturating_mul(3);
@@ -64,36 +100,44 @@ impl NativeImageGenerator {
         }
         let steps = steps.clamp(1, 64);
         let prompt_hash = q_hash(prompt);
-        let mut state = seed ^ prompt_hash ^ self.model_hash;
+        let state = seed ^ prompt_hash ^ self.model_hash;
 
-        // Init noise in f32 buffer (heap cold — generation is not Tier-1 hot path).
         let n = (w * h) as usize;
         let mut rch = vec![0.0f32; n];
         let mut gch = vec![0.0f32; n];
         let mut bch = vec![0.0f32; n];
+        // Multi-octave value noise (still deterministic reference, richer structure).
         for i in 0..n {
-            state = splitmix64(state);
-            rch[i] = (state as f32 / u64::MAX as f32) * 2.0 - 1.0;
-            state = splitmix64(state);
-            gch[i] = (state as f32 / u64::MAX as f32) * 2.0 - 1.0;
-            state = splitmix64(state);
-            bch[i] = (state as f32 / u64::MAX as f32) * 2.0 - 1.0;
+            let x = (i % w as usize) as f32 / w as f32;
+            let y = (i / w as usize) as f32 / h as f32;
+            let (nr, ng, nb) = octave_noise(x, y, state);
+            rch[i] = nr;
+            gch[i] = ng;
+            bch[i] = nb;
         }
 
-        // Prompt-conditioned color bias
-        let br = ((prompt_hash) & 0xFF) as f32 / 255.0;
-        let bg = ((prompt_hash >> 8) & 0xFF) as f32 / 255.0;
-        let bb = ((prompt_hash >> 16) & 0xFF) as f32 / 255.0;
+        let br = ((prompt_hash) & 0xFF) as f32 / 255.0 * 2.0 - 1.0;
+        let bg = ((prompt_hash >> 8) & 0xFF) as f32 / 255.0 * 2.0 - 1.0;
+        let bb = ((prompt_hash >> 16) & 0xFF) as f32 / 255.0 * 2.0 - 1.0;
 
+        let mut scratch = vec![0.0f32; n];
         for step in 0..steps {
+            if cancel.map(|c| c.cancelled).unwrap_or(false) {
+                // Leave no partial claim: zero output and fail closed.
+                out[..need].fill(0);
+                return Err(VisionError::BackendUnavailable);
+            }
             let t = (step + 1) as f32 / steps as f32;
-            blur3_into(&rch.clone(), w, h, &mut rch);
-            blur3_into(&gch.clone(), w, h, &mut gch);
-            blur3_into(&bch.clone(), w, h, &mut bch);
+            blur3_into(&rch, w, h, &mut scratch);
+            rch.copy_from_slice(&scratch);
+            blur3_into(&gch, w, h, &mut scratch);
+            gch.copy_from_slice(&scratch);
+            blur3_into(&bch, w, h, &mut scratch);
+            bch.copy_from_slice(&scratch);
             for i in 0..n {
-                rch[i] = rch[i] * (1.0 - 0.15 * t) + br * 0.15 * t;
-                gch[i] = gch[i] * (1.0 - 0.15 * t) + bg * 0.15 * t;
-                bch[i] = bch[i] * (1.0 - 0.15 * t) + bb * 0.15 * t;
+                rch[i] = rch[i] * (1.0 - 0.18 * t) + br * 0.18 * t;
+                gch[i] = gch[i] * (1.0 - 0.18 * t) + bg * 0.18 * t;
+                bch[i] = bch[i] * (1.0 - 0.18 * t) + bb * 0.18 * t;
             }
         }
 
@@ -113,8 +157,88 @@ impl NativeImageGenerator {
             prompt_hash,
             output_digest: dig,
             is_reference_generator: self.is_reference,
+            media_time_ms,
         })
     }
+}
+
+/// Compile generation receipt into epistemic quins (media --generated--> model, seed, prompt).
+pub fn compile_generation_receipt_quins(
+    receipt: &GenerationReceipt,
+    out: &mut [VisionQuin],
+) -> usize {
+    if out.len() < 3 {
+        return 0;
+    }
+    let media = receipt.output_digest.hash;
+    let ctx = q_hash(CTX_GENERATION) ^ receipt.model_hash;
+    out[0] = VisionQuin::with_parity(
+        media,
+        q_hash(P_GENERATED_IMAGE),
+        receipt.model_hash,
+        ctx,
+        receipt.media_time_ms,
+    );
+    out[1] = VisionQuin::with_parity(
+        media,
+        q_hash(P_GEN_SEED),
+        receipt.seed,
+        ctx,
+        receipt.steps as u64,
+    );
+    out[2] = VisionQuin::with_parity(
+        media,
+        q_hash(P_GEN_PROMPT),
+        receipt.prompt_hash,
+        ctx,
+        ((receipt.width as u64) << 32) | receipt.height as u64,
+    );
+    3
+}
+
+fn octave_noise(x: f32, y: f32, seed: u64) -> (f32, f32, f32) {
+    let mut amp = 1.0f32;
+    let mut freq = 1.0f32;
+    let mut r = 0.0f32;
+    let mut g = 0.0f32;
+    let mut b = 0.0f32;
+    let mut norm = 0.0f32;
+    for o in 0..4u64 {
+        let s = splitmix64(seed.wrapping_add(o * 0x9E37));
+        let n = value_noise(x * freq, y * freq, s);
+        r += n * amp;
+        g += value_noise(x * freq + 17.0, y * freq, splitmix64(s)) * amp;
+        b += value_noise(x * freq, y * freq + 31.0, splitmix64(s ^ 1)) * amp;
+        norm += amp;
+        amp *= 0.5;
+        freq *= 2.0;
+    }
+    let inv = 1.0 / norm.max(1e-6);
+    (r * inv, g * inv, b * inv)
+}
+
+fn value_noise(x: f32, y: f32, seed: u64) -> f32 {
+    let x0 = x.floor() as i32;
+    let y0 = y.floor() as i32;
+    let fx = x - x0 as f32;
+    let fy = y - y0 as f32;
+    let sx = fx * fx * (3.0 - 2.0 * fx);
+    let sy = fy * fy * (3.0 - 2.0 * fy);
+    let n00 = hash2(x0, y0, seed);
+    let n10 = hash2(x0 + 1, y0, seed);
+    let n01 = hash2(x0, y0 + 1, seed);
+    let n11 = hash2(x0 + 1, y0 + 1, seed);
+    let ix0 = n00 * (1.0 - sx) + n10 * sx;
+    let ix1 = n01 * (1.0 - sx) + n11 * sx;
+    ix0 * (1.0 - sy) + ix1 * sy
+}
+
+fn hash2(x: i32, y: i32, seed: u64) -> f32 {
+    let mut h = seed
+        ^ ((x as u64).wrapping_mul(0x85eb_ca6b))
+        ^ ((y as u64).wrapping_mul(0xc2b2_ae35));
+    h = splitmix64(h);
+    (h as f32 / u64::MAX as f32) * 2.0 - 1.0
 }
 
 #[inline]
@@ -172,5 +296,27 @@ mod tests {
         g.generate_rgb8("x", 1, 2, 8, 8, &mut a).unwrap();
         g.generate_rgb8("x", 2, 2, 8, 8, &mut b).unwrap();
         assert_ne!(a, b);
+    }
+
+    #[test]
+    fn cancel_fails_closed() {
+        let g = NativeImageGenerator::new();
+        let mut out = vec![0u8; 8 * 8 * 3];
+        let mut c = CancelFlag::new();
+        c.cancel();
+        let r = g.generate_rgb8_cancellable("x", 1, 8, 8, 8, &mut out, Some(&c), 0);
+        assert!(r.is_err());
+        assert!(out.iter().all(|&b| b == 0));
+    }
+
+    #[test]
+    fn receipt_quins() {
+        let g = NativeImageGenerator::new();
+        let mut out = vec![0u8; 8 * 8 * 3];
+        let rec = g.generate_rgb8("hi", 3, 2, 8, 8, &mut out).unwrap();
+        let mut q = [VisionQuin::with_parity(0, 0, 0, 0, 0); 4];
+        let n = compile_generation_receipt_quins(&rec, &mut q);
+        assert_eq!(n, 3);
+        assert_eq!(q[0].subject, rec.output_digest.hash);
     }
 }

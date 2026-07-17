@@ -11,13 +11,20 @@ use qualia_core_db::NQuin;
 use qualia_vision::detector::{
     GridMultiObjectDetector, CLASS_MOSTLY_BLUE, CLASS_MOSTLY_GREEN, CLASS_MOSTLY_RED,
 };
-use qualia_vision::generator::NativeImageGenerator;
+use qualia_core_db::render::assets::{mesh_to_nquins_with_digests, Mesh};
+use qualia_core_db::render::compile_10d::compile_mesh_to_10d;
+use qualia_vision::generator::{
+    compile_generation_receipt_quins, NativeImageGenerator,
+};
+use qualia_vision::media_store::{MediaStore, RetentionClass};
 use qualia_vision::metrics::evaluate_synthetic;
 use qualia_vision::overlay::{
     box_css_percent, compose_rgb_overlay_rgba8, encode_bmp_rgba8,
 };
 use qualia_vision::semantic::{compile_observation_quins_full, media_digest, VisionQuin};
-use qualia_vision::spatial::image_to_heightfield_mesh;
+use qualia_vision::spatial::{
+    image_to_heightfield_mesh, mesh_ir_to_obj, mesh_ir_triangles, MeshIR,
+};
 use qualia_vision::synthetic::{
     generate_scene_rgb8, sample_id, DatasetSplit, SyntheticSampleId,
 };
@@ -98,6 +105,43 @@ pub struct ImageTo3dResult {
     pub validation_status: String,
     pub is_reference_recon: bool,
     pub note: String,
+}
+
+/// Full G→S continuum: generate → media store → recon → validate → OBJ + .10d + quins.
+#[derive(Debug, Clone, Serialize)]
+pub struct GsContinuumResult {
+    pub generate: GenerateResult,
+    pub mesh: ImageTo3dResult,
+    pub media_digest_hex: String,
+    pub media_stored: bool,
+    pub obj_bytes: usize,
+    pub container_10d_bytes: usize,
+    pub geometry_quins: usize,
+    pub generation_quins: usize,
+    pub obj_path: Option<String>,
+    pub container_10d_path: Option<String>,
+    pub note: String,
+}
+
+fn mesh_ir_to_core_mesh(ir: &MeshIR) -> Result<Mesh, String> {
+    if ir.positions.is_empty() || ir.indices.len() < 3 {
+        return Err("empty mesh".into());
+    }
+    let triangles = mesh_ir_triangles(ir);
+    let mut min = [f32::INFINITY; 3];
+    let mut max = [f32::NEG_INFINITY; 3];
+    for p in &ir.positions {
+        for k in 0..3 {
+            min[k] = min[k].min(p[k]);
+            max[k] = max[k].max(p[k]);
+        }
+    }
+    Ok(Mesh {
+        positions: ir.positions.clone(),
+        triangles,
+        min,
+        max,
+    })
 }
 
 fn det_to_dto(d: &Detection, rejected: bool) -> OverlayBoxDto {
@@ -361,13 +405,188 @@ pub fn generate_and_reconstruct(
     seed: u64,
 ) -> Result<(GenerateResult, ImageTo3dResult), String> {
     let gen = generate_image(prompt, seed, 4, 32, 32)?;
-    // Re-run generate to get rgb (data url is bmp) — regenerate bytes
     let mut rgb = vec![0u8; 32 * 32 * 3];
     let g = NativeImageGenerator::new();
     g.generate_rgb8(prompt, seed, 4, 32, 32, &mut rgb)
         .map_err(|e| format!("{e:?}"))?;
     let mesh = image_to_3d_from_rgb(32, 32, &rgb, 8)?;
     Ok((gen, mesh))
+}
+
+/// Full continuum used before handing off to auditory work:
+/// generate → content-addressed store → heightfield recon → validate →
+/// OBJ + sealed `.10d` + generation receipt quins + geometry quins.
+pub fn run_gs_continuum(
+    storage_root: &std::path::Path,
+    prompt: &str,
+    seed: u64,
+    steps: u32,
+    width: u32,
+    height: u32,
+    recon_grid: u32,
+    media_time_ms: u64,
+) -> Result<GsContinuumResult, String> {
+    let w = width.clamp(8, 128);
+    let h = height.clamp(8, 128);
+    let mut rgb = vec![0u8; (w * h * 3) as usize];
+    let gen = NativeImageGenerator::new();
+    let rec = gen
+        .generate_rgb8_cancellable(
+            prompt,
+            seed,
+            steps,
+            w,
+            h,
+            &mut rgb,
+            None,
+            media_time_ms,
+        )
+        .map_err(|e| format!("{e:?}"))?;
+
+    // Media store (no partial commit if later steps fail after store — store is deduped).
+    let media_dir = storage_root.join("vision_media");
+    let store = MediaStore::open(&media_dir).map_err(|e| e)?;
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let record = store
+        .import_bytes(
+            &rgb,
+            "application/octet-stream",
+            w,
+            h,
+            RetentionClass::Restricted,
+            now,
+        )
+        .map_err(|e| e)?;
+
+    let mut gen_quins = [VisionQuin::with_parity(0, 0, 0, 0, 0); 8];
+    let n_gen_q = compile_generation_receipt_quins(&rec, &mut gen_quins);
+
+    // BMP preview for API
+    let mut rgba = vec![0u8; (w * h * 4) as usize];
+    for i in 0..(w * h) as usize {
+        rgba[i * 4] = rgb[i * 3];
+        rgba[i * 4 + 1] = rgb[i * 3 + 1];
+        rgba[i * 4 + 2] = rgb[i * 3 + 2];
+        rgba[i * 4 + 3] = 255;
+    }
+    let mut bmp = vec![0u8; 54 + rgba.len()];
+    let bmp_n = encode_bmp_rgba8(w, h, &rgba, &mut bmp).map_err(|e| format!("{e:?}"))?;
+    let generate = GenerateResult {
+        width: w,
+        height: h,
+        seed,
+        steps: rec.steps,
+        model_hash: format!("0x{:016x}", rec.model_hash),
+        prompt_hash: format!("0x{:016x}", rec.prompt_hash),
+        output_hash: format!("0x{:016x}", rec.output_digest.hash),
+        is_reference_generator: rec.is_reference_generator,
+        image_data_url: format!("data:image/bmp;base64,{}", B64.encode(&bmp[..bmp_n])),
+        note: format!(
+            "Stored media digest {}; media_time_ms={media_time_ms} for cross-modal timeline.",
+            record.digest_hex
+        ),
+    };
+
+    let img = ImageView {
+        bytes: &rgb,
+        width: w,
+        height: h,
+        row_stride: w * 3,
+        format: PixelFormat::Rgb8,
+    };
+    let (mesh_ir, recon_rec, rep) =
+        image_to_heightfield_mesh(img, recon_grid).map_err(|e| format!("{e:?}"))?;
+    if !rep.ok() {
+        return Err(format!("mesh validation failed: {:?}", rep.status));
+    }
+
+    let mut obj_buf = vec![0u8; mesh_ir.positions.len() * 64 + mesh_ir.indices.len() * 24 + 256];
+    let obj_n = mesh_ir_to_obj(&mesh_ir, &mut obj_buf).map_err(|e| format!("{e:?}"))?;
+    obj_buf.truncate(obj_n);
+
+    let core_mesh = mesh_ir_to_core_mesh(&mesh_ir)?;
+    let container = compile_mesh_to_10d(&core_mesh).map_err(|e| e.to_string())?;
+    // CRC of container for compiled digest (first 4 bytes of crc is enough for quin object)
+    let compiled_digest = {
+        let mut h: u32 = 0;
+        for chunk in container.chunks(4) {
+            let mut b = [0u8; 4];
+            b[..chunk.len()].copy_from_slice(chunk);
+            h ^= u32::from_le_bytes(b);
+        }
+        h
+    };
+    let source_digest = (record.digest_u64 & 0xFFFF_FFFF) as u32;
+    let asset_uri = format!("urn:qualia:vision:recon:{}", record.digest_hex);
+    let (geo_quins, _lex) = mesh_to_nquins_with_digests(
+        &core_mesh,
+        &asset_uri,
+        "obj",
+        source_digest,
+        compiled_digest,
+    );
+
+    let out_dir = storage_root.join("vision_geometry").join(&record.digest_hex);
+    std::fs::create_dir_all(&out_dir).map_err(|e| e.to_string())?;
+    let obj_path = out_dir.join("recon.obj");
+    let c10_path = out_dir.join("recon.10d");
+    std::fs::write(&obj_path, &obj_buf).map_err(|e| e.to_string())?;
+    std::fs::write(&c10_path, &container).map_err(|e| e.to_string())?;
+
+    // Append generation + geometry quins to vision_native.wal when possible
+    let mut nquin_buf = Vec::with_capacity(n_gen_q + geo_quins.len());
+    for q in gen_quins.iter().take(n_gen_q) {
+        nquin_buf.push(NQuin {
+            subject: q.subject,
+            predicate: q.predicate,
+            object: q.object,
+            context: q.context,
+            metadata: q.metadata,
+            parity: q.parity,
+        });
+    }
+    nquin_buf.extend(geo_quins.iter().cloned());
+    let wal_path = storage_root
+        .join("models")
+        .join("vision_native.wal");
+    if let Some(parent) = wal_path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if let Ok(mut wal) = qualia_core_db::wal::WriteAheadLog::open(&wal_path) {
+        for q in &nquin_buf {
+            let _ = wal.append_mutation(q);
+        }
+    }
+
+    let mesh = ImageTo3dResult {
+        vertex_count: mesh_ir.vertex_count() as u32,
+        triangle_count: mesh_ir.triangle_count() as u32,
+        mesh_hash: format!("0x{:016x}", mesh_ir.content_hash),
+        model_hash: format!("0x{:016x}", recon_rec.model_hash),
+        validation_ok: true,
+        validation_status: format!("{:?}", rep.status),
+        is_reference_recon: recon_rec.is_reference_recon,
+        note: "Validated MeshIR → OBJ + sealed .10d; geometry quins with source/compiled digests."
+            .into(),
+    };
+
+    Ok(GsContinuumResult {
+        generate,
+        mesh,
+        media_digest_hex: record.digest_hex,
+        media_stored: true,
+        obj_bytes: obj_n,
+        container_10d_bytes: container.len(),
+        geometry_quins: nquin_buf.len().saturating_sub(n_gen_q),
+        generation_quins: n_gen_q,
+        obj_path: Some(obj_path.display().to_string()),
+        container_10d_path: Some(c10_path.display().to_string()),
+        note: "G→S continuum closed: store + validate + compile. Ready for auditory shared media_time_ms join."
+            .into(),
+    })
 }
 
 /// Persist native observations to WAL and return SHACL report.
@@ -502,5 +721,29 @@ mod tests {
         assert!(g.is_reference_generator);
         assert!(m.validation_ok);
         assert!(m.triangle_count > 0);
+    }
+
+    #[test]
+    fn gs_continuum_writes_obj_and_10d() {
+        let dir = std::env::temp_dir().join(format!(
+            "qv-gs-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let r = run_gs_continuum(&dir, "hills", 11, 3, 24, 24, 6, 1000).expect("continuum");
+        assert!(r.media_stored);
+        assert!(r.obj_bytes > 0);
+        assert!(r.container_10d_bytes > 64);
+        assert!(r.geometry_quins >= 1);
+        assert!(r.generation_quins == 3);
+        let obj = r.obj_path.as_ref().unwrap();
+        assert!(std::path::Path::new(obj).is_file());
+        let c10 = r.container_10d_path.as_ref().unwrap();
+        assert!(std::path::Path::new(c10).is_file());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

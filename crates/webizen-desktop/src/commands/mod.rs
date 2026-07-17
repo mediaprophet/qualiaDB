@@ -7242,6 +7242,30 @@ pub fn vision_image_to_3d_demo(
     Ok(serde_json::json!({ "generate": gen, "mesh": mesh }))
 }
 
+/// Full generate → store → recon → OBJ/.10d continuum (pre-auditory handoff).
+#[command]
+pub fn vision_gs_continuum(
+    state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
+    prompt: Option<String>,
+    seed: Option<u64>,
+    steps: Option<u32>,
+    media_time_ms: Option<u64>,
+) -> Result<serde_json::Value, String> {
+    let config = state.config.lock().unwrap().clone();
+    let root = std::path::PathBuf::from(&config.storage_path);
+    let r = qualia_client_core::vision_pipeline::run_gs_continuum(
+        &root,
+        prompt.as_deref().unwrap_or("vision continuum"),
+        seed.unwrap_or(7),
+        steps.unwrap_or(4),
+        48,
+        48,
+        10,
+        media_time_ms.unwrap_or(0),
+    )?;
+    serde_json::to_value(r).map_err(|e| e.to_string())
+}
+
 #[command]
 pub fn vision_reject_instance(
     state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
@@ -7743,6 +7767,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         vision_correct_instance,
         vision_generate_image,
         vision_image_to_3d_demo,
+        vision_gs_continuum,
     ]
 }
 
