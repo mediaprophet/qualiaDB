@@ -116,9 +116,9 @@ pub fn agent_tls_status(storage_root: &Path) -> AgentTlsStatus {
     let store = TrustStore::load(storage_root);
     match agent_tls_mode(&store) {
         AgentTlsMode::CustomRootsOnly { n_roots } => AgentTlsStatus {
-            mode: "custom_enabled_pems".into(),
+            mode: "custom_enabled_pems_only".into(),
             n_custom_roots: n_roots,
-            note: "Agent HTTPS uses rustls RootCertStore built from principal-enabled PEM roots only (same store as cert policy B).".into(),
+            note: "Agent HTTPS: tls_certs_only(principal PEMs) — platform roots off; same enabled set as cert policy B.".into(),
         },
         AgentTlsMode::SystemDefault => AgentTlsStatus {
             mode: "system_default".into(),
@@ -139,37 +139,43 @@ pub fn build_agent_http_client(storage_root: &Path) -> Result<(reqwest::Client, 
 
     match agent_tls_mode(&store) {
         AgentTlsMode::CustomRootsOnly { n_roots } => {
-            let mut b = builder;
-            let mut added = 0usize;
+            // Custom-only: tls_certs_only() disables platform roots (reqwest 0.13).
+            let mut certs: Vec<reqwest::Certificate> = Vec::new();
             for a in store.anchors.iter().filter(|a| {
                 a.enabled && a.kind == webizen_trust::AnchorKind::PemRoot
             }) {
                 match reqwest::Certificate::from_pem(a.material.as_bytes()) {
-                    Ok(cert) => {
-                        b = b.add_root_certificate(cert);
-                        added += 1;
-                    }
+                    Ok(cert) => certs.push(cert),
                     Err(_) => {
-                        // Multi-cert PEM: try first CERTIFICATE block only path via re-encode
                         if let Ok(ders) = crate::webizen_x509::pem_to_ders(&a.material) {
                             for der in ders {
                                 let pem = der_to_pem_cert(&der);
                                 if let Ok(cert) = reqwest::Certificate::from_pem(pem.as_bytes()) {
-                                    b = b.add_root_certificate(cert);
-                                    added += 1;
+                                    certs.push(cert);
                                 }
                             }
                         }
                     }
                 }
             }
-            let _ = root_cert_store_from_trust(&store); // validate parse path
-            let client = b.build().map_err(|e| e.to_string())?;
+            if certs.is_empty() {
+                return Err(
+                    "enabled PEM roots present but none parsed into certificates".into(),
+                );
+            }
+            let added = certs.len();
+            let _ = root_cert_store_from_trust(&store); // validate same path as B
+            let client = builder
+                .tls_certs_only(certs)
+                .build()
+                .map_err(|e| e.to_string())?;
             let mut st = status;
-            st.n_custom_roots = n_roots;
+            st.mode = "custom_enabled_pems_only".into();
+            st.n_custom_roots = n_roots.max(added);
             st.note = format!(
-                "Agent HTTPS: added {added} principal PEM root(s) via reqwest (also retains default roots). \
-                 Same trust store as cert policy. WebView TLS remains OS + override hook."
+                "Agent HTTPS: custom-only TLS with {added} principal PEM root(s) \
+                 (platform roots disabled via tls_certs_only). Same store as cert policy B. \
+                 WebView TLS remains OS + ServerCertificateErrorDetected override hook."
             );
             Ok((client, st))
         }

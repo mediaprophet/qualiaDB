@@ -119,7 +119,7 @@ pub fn status_json() -> serde_json::Value {
         "last_reason": reason,
         "last_decision_unix": LAST_DECISION_UNIX.load(Ordering::Relaxed),
         "note": match state {
-            "active" => "ServerCertificateErrorDetected: host-pin allow; PEM roots need chain verify; default deny.",
+            "active" => "ServerCertificateErrorDetected: host-pin (A); leaf PEM from platform + chain verify vs enabled roots (B); default deny. No auto-allow.",
             "disabled" => "Cert-override disabled by principal; OS TLS decisions stand.",
             _ => "Cert-override hook not attached (non-Windows or attach failed).",
         },
@@ -200,18 +200,26 @@ fn session_denies(host: &str) -> bool {
 
 /// Decide allow/deny from store + session (no leaf PEM → B cannot succeed).
 pub fn decide_for_host(host: &str) -> (&'static str, bool) {
-    decide_for_host_with_leaf(host, None)
+    let (action, allow, _) = decide_for_host_with_leaf(host, None, &[]);
+    (action, allow)
 }
 
-/// Optional leaf PEM enables B path (chain vs enabled roots).
-pub fn decide_for_host_with_leaf(host: &str, leaf_pem: Option<&str>) -> (&'static str, bool) {
+/// Optional leaf + intermediate PEMs enable B path (chain vs enabled roots).
+/// Returns `(action_label, allow, detail)` for audit.
+pub fn decide_for_host_with_leaf(
+    host: &str,
+    leaf_pem: Option<&str>,
+    intermediate_pems: &[&str],
+) -> (&'static str, bool, String) {
     use qualia_client_core::webizen_trust::{
-        cert_override_decision_full, decision_allows, decision_reason, TrustStore,
+        cert_override_decision_full, decision_allows, AnchorKind, TrustStore,
     };
-    use qualia_client_core::webizen_x509::verify_chain_against_enabled_roots;
+    use qualia_client_core::webizen_x509::{
+        spki_pin_matches, spki_sha256_hex, verify_chain_against_enabled_roots, pem_to_ders,
+    };
 
     if !override_enabled() {
-        return ("cancel_disabled", false);
+        return ("cancel_disabled", false, "override disabled".into());
     }
     let host = host.trim().to_ascii_lowercase();
     let root = std::path::PathBuf::from(qualia_client_core::state::dirs_default_path());
@@ -220,17 +228,46 @@ pub fn decide_for_host_with_leaf(host: &str, leaf_pem: Option<&str>) -> (&'stati
     let soft = session_denies(&host);
     let sess = session_allows(&host);
 
-    let chain_verified = if let Some(pem) = leaf_pem {
-        let r = verify_chain_against_enabled_roots(pem, &[], &store);
-        Some(r.accepted)
+    // SPKI pin: policy label material `spki-pin:<host>:<hex>`
+    if let Some(pem) = leaf_pem {
+        for a in store.anchors.iter().filter(|a| a.enabled && a.kind == AnchorKind::PolicyLabel)
+        {
+            let m = a.material.trim().to_ascii_lowercase();
+            let prefix = format!("spki-pin:{host}:");
+            if let Some(hex) = m.strip_prefix(&prefix) {
+                if spki_pin_matches(pem, hex).unwrap_or(false) {
+                    return (
+                        "always_allow_spki_pin",
+                        true,
+                        format!("spki pin matched for {host}"),
+                    );
+                }
+                return (
+                    "cancel_spki_mismatch",
+                    false,
+                    format!("spki pin mismatch for {host}"),
+                );
+            }
+        }
+    }
+
+    let (chain_verified, verify_detail) = if let Some(pem) = leaf_pem {
+        let r = verify_chain_against_enabled_roots(pem, intermediate_pems, &store);
+        let mut detail = format!("{}: {}", r.reason_code, r.detail);
+        if let Ok(ders) = pem_to_ders(pem) {
+            if let Some(d) = ders.first() {
+                if let Ok(fp) = spki_sha256_hex(d) {
+                    detail.push_str(&format!("; leaf_spki={fp}"));
+                }
+            }
+        }
+        (Some(r.accepted), detail)
     } else {
-        None
+        (None, "no_leaf_pem_from_platform".into())
     };
 
     let d = cert_override_decision_full(&store, &host, sess, soft, chain_verified);
-    let reason = decision_reason(d);
     let allow = decision_allows(d);
-    // CandidateCustomRoots without verify → deny (fail closed)
     let action = if allow {
         match d {
             qualia_client_core::webizen_trust::CertOverrideDecision::AllowHostPinned => {
@@ -256,8 +293,7 @@ pub fn decide_for_host_with_leaf(host: &str, leaf_pem: Option<&str>) -> (&'stati
             _ => "cancel_deny",
         }
     };
-    let _ = reason;
-    (action, allow)
+    (action, allow, verify_detail)
 }
 
 /// Attach hook to content webview (Windows only).
@@ -302,6 +338,20 @@ fn attach_windows(app: &tauri::AppHandle) -> Result<bool, String> {
 }
 
 #[cfg(windows)]
+fn wrap_pem_body(s: String) -> String {
+    if s.contains("BEGIN CERTIFICATE") {
+        s
+    } else if s.trim().is_empty() {
+        s
+    } else {
+        format!(
+            "-----BEGIN CERTIFICATE-----\n{}\n-----END CERTIFICATE-----\n",
+            s.trim()
+        )
+    }
+}
+
+#[cfg(windows)]
 fn attach_on_platform(platform: tauri::webview::PlatformWebview) -> Result<bool, String> {
     use webview2_com::{
         take_pwstr,
@@ -335,9 +385,47 @@ fn attach_on_platform(platform: tauri::webview::PlatformWebview) -> Result<bool,
                         String::new()
                     };
                     let host = host_from_uri(&uri);
-                    // Leaf PEM from platform is ideal for B; without it fail closed on PEM-only.
-                    let (label, allow) = decide_for_host(&host);
-                    record(&host, label, label);
+
+                    // B path: leaf + issuer chain PEMs from platform certificate object.
+                    let mut leaf_pem: Option<String> = None;
+                    let mut intermediate_pems: Vec<String> = Vec::new();
+                    if let Ok(cert) = args.ServerCertificate() {
+                        let mut pem_raw = PWSTR::null();
+                        if cert.ToPemEncoding(std::ptr::addr_of_mut!(pem_raw)).is_ok() {
+                            let s = take_pwstr(pem_raw);
+                            if !s.trim().is_empty() {
+                                leaf_pem = Some(wrap_pem_body(s));
+                            }
+                        }
+                        if let Ok(coll) = cert.PemEncodedIssuerCertificateChain() {
+                            let mut count = 0u32;
+                            if coll.Count(&mut count).is_ok() {
+                                for i in 0..count {
+                                    let mut item = PWSTR::null();
+                                    if coll
+                                        .GetValueAtIndex(i, std::ptr::addr_of_mut!(item))
+                                        .is_ok()
+                                    {
+                                        let s = take_pwstr(item);
+                                        if !s.trim().is_empty() {
+                                            intermediate_pems.push(wrap_pem_body(s));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    let inter_refs: Vec<&str> =
+                        intermediate_pems.iter().map(|s| s.as_str()).collect();
+                    let (label, allow, detail) =
+                        decide_for_host_with_leaf(&host, leaf_pem.as_deref(), &inter_refs);
+                    let reason = if detail.is_empty() {
+                        label.to_string()
+                    } else {
+                        format!("{label}|{detail}")
+                    };
+                    record(&host, label, &reason);
                     let action = if allow {
                         COREWEBVIEW2_SERVER_CERTIFICATE_ERROR_ACTION_ALWAYS_ALLOW
                     } else {

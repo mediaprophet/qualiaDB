@@ -46,11 +46,11 @@
 - `cookie_graph` tests: **3 passed**
 - `cargo check -p webizen-desktop -p webizen-studio`: **Finished**
 
-### Honest residual
-- WebView2 hook still does not extract leaf PEM from COM for full B path in-handler (B ready when leaf PEM supplied; without it PEM-only stays deny).
-- Agent adds custom roots *in addition to* default roots (reqwest limitation) — honesty note in status.
-- Servo not touched.
-- No invented PEMs shipped.
+### Residual closeout (same day)
+- **WebView2 leaf PEM:** `ServerCertificate().ToPemEncoding` + `PemEncodedIssuerCertificateChain` → B chain verify in-handler; SPKI pin path too.
+- **Agent custom-only TLS:** `reqwest::ClientBuilder::tls_certs_only(principal PEMs)` — platform roots off when PEMs enabled.
+- Servo still deferred (by design).
+- No invented PEMs shipped (by design).
 
 ### P-FINAL checklist (swarm-2)
 - [x] Deny by default; host-pin allows  
