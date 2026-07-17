@@ -18,6 +18,7 @@ const SECTIONS: &[(&str, &str, &str)] = &[
     ("personal", "Personal", "Private life shelf"),
     ("work", "Work", "Projects & labour"),
     ("tools", "Tools", "Logs · telemetry · agent/tool output"),
+    ("software", "Software", "QApps · websites · packages"),
     ("commons", "Commons", "Peers & permissive share"),
 ];
 
@@ -619,6 +620,11 @@ pub fn WellfairLibraryPanel() -> Element {
                         "Tools holds logs, telemetry, agent/tool output, and technical diagnostics — the machine paper trail, separate from personal notes and secret health."
                     }
                 }
+                if section() == "software" {
+                    p { style: "margin:0.65rem 0 0;font-size:0.75rem;color:#94a3b8;line-height:1.4;",
+                        "Software holds QApps, websites, packages, and other installable or runnable artefacts — the apps and sites you keep, not their runtime logs (those go under Tools)."
+                    }
+                }
                 if section() == "secret" {
                     p { style: "margin:0.65rem 0 0;font-size:0.75rem;color:#fde68a;line-height:1.4;",
                         "Secret is for Wellfair-private health and other high-sensitivity material. It never exports to Commons. Unlock is session-local UI gate — Sanctuary vault still holds the enclave."
@@ -765,6 +771,7 @@ pub fn WellfairLibraryPanel() -> Element {
                                 option { value: "wellfair", "Wellfair (health / care)" }
                                 option { value: "work", "Work / project" }
                                 option { value: "tools", "Tools / logs / technical" }
+                                option { value: "software", "Software (QApps / websites)" }
                                 option { value: "commons", "Commons (shareable)" }
                                 option { value: "secret", "Secret (sanctuary)" }
                             }

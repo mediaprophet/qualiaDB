@@ -8,6 +8,7 @@
 //! - **Personal** — private life, default home shelf
 //! - **Work** — project-scoped labour
 //! - **Tools** — logs, telemetry, technical artefacts, agent/tool output
+//! - **Software** — QApps, websites, packages, installable/runnable software artefacts
 //! - **Commons** — permissive share surface (peers / micro-commons via social networking)
 //!
 //! Sensitivity (`public` | `restricted` | `classified` | `sanctuary`) is orthogonal: high sensitivity
@@ -39,6 +40,8 @@ pub enum LibrarySection {
     Work,
     /// Logs, telemetry, agent/tool output, technical diagnostics.
     Tools,
+    /// QApps, websites, packages, installable or runnable software artefacts.
+    Software,
     /// Permissive commons — shareable with peers / social networking layers.
     Commons,
 }
@@ -52,6 +55,7 @@ impl LibrarySection {
             Self::Personal => "personal",
             Self::Work => "work",
             Self::Tools => "tools",
+            Self::Software => "software",
             Self::Commons => "commons",
         }
     }
@@ -64,6 +68,8 @@ impl LibrarySection {
             "work" | "project" | "coop" => Self::Work,
             "tools" | "tool" | "logs" | "log" | "tech" | "technical" | "ops" | "debug"
             | "telemetry" | "agent" => Self::Tools,
+            "software" | "qapp" | "qapps" | "app" | "apps" | "website" | "websites" | "web"
+            | "site" | "package" | "packages" | "install" | "pwa" | "extension" => Self::Software,
             "commons" | "public" | "share" | "permissive" => Self::Commons,
             _ => Self::All,
         }
@@ -77,6 +83,7 @@ impl LibrarySection {
             Self::Personal => "Personal",
             Self::Work => "Work",
             Self::Tools => "Tools",
+            Self::Software => "Software",
             Self::Commons => "Commons",
         }
     }
@@ -89,6 +96,7 @@ impl LibrarySection {
             Self::Personal => "Your private shelf — notes, life admin, unshared research.",
             Self::Work => "Project-scoped material for cooperative labour.",
             Self::Tools => "Logs, telemetry, agent/tool output, technical diagnostics — the machine's paper trail.",
+            Self::Software => "QApps, websites, packages, and other installable or runnable software artefacts.",
             Self::Commons => "Permissive share surface — peers and micro-commons via Talk social networking.",
         }
     }
@@ -180,6 +188,19 @@ pub fn resolve_section(
         || purpose_blob.contains("care")
     {
         return LibrarySection::Wellfair;
+    }
+    if purpose_blob.contains("qapp")
+        || purpose_blob.contains("website")
+        || purpose_blob.contains("web-app")
+        || purpose_blob.contains("webapp")
+        || purpose_blob.contains("software")
+        || purpose_blob.contains("package")
+        || purpose_blob.contains("pwa")
+        || purpose_blob.contains("extension")
+        || purpose_blob.contains("installable")
+        || purpose_blob.contains("application")
+    {
+        return LibrarySection::Software;
     }
     if purpose_blob.contains("log")
         || purpose_blob.contains("telemetry")
@@ -366,6 +387,7 @@ impl HypermediaStore {
             LibrarySection::Personal,
             LibrarySection::Work,
             LibrarySection::Tools,
+            LibrarySection::Software,
             LibrarySection::Commons,
         ] {
             m.insert(
@@ -640,6 +662,40 @@ mod tests {
         assert_eq!(
             resolve_section("public", &[], &[], CommonsVisibility::None, Some("tools")),
             LibrarySection::Tools
+        );
+    }
+
+    #[test]
+    fn software_purpose_routes_to_software() {
+        assert_eq!(
+            resolve_section(
+                "public",
+                &["qapp".into()],
+                &[],
+                CommonsVisibility::None,
+                None
+            ),
+            LibrarySection::Software
+        );
+        assert_eq!(
+            resolve_section(
+                "public",
+                &["website".into()],
+                &[],
+                CommonsVisibility::None,
+                None
+            ),
+            LibrarySection::Software
+        );
+        assert_eq!(
+            resolve_section(
+                "public",
+                &[],
+                &[],
+                CommonsVisibility::None,
+                Some("software")
+            ),
+            LibrarySection::Software
         );
     }
 }
