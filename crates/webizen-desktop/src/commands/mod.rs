@@ -4107,6 +4107,17 @@ pub fn list_project_collaborators(
     api::list_project_collaborators(project_id)
 }
 
+/// Local-first coop projects (no vault required).
+#[command]
+pub fn list_coop_projects() -> Result<serde_json::Value, String> {
+    api::list_coop_projects()
+}
+
+#[command]
+pub fn create_coop_project(name: String, description: String) -> Result<serde_json::Value, String> {
+    api::create_coop_project(name, description)
+}
+
 #[command]
 pub fn add_project_collaborator(
     project_id: String,
@@ -6942,6 +6953,8 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         answer_connection_challenge,
         mesh_dialability,
         list_project_collaborators,
+        list_coop_projects,
+        create_coop_project,
         add_project_collaborator,
         remove_project_collaborator,
         coop_share_package,

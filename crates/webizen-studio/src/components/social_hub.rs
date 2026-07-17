@@ -262,23 +262,46 @@ fn vault_needs_attention(v: crate::components::wellfair::host_dto::VaultLifecycl
 
 #[cfg(target_arch = "wasm32")]
 async fn list_project_records() -> Result<Vec<(String, String)>, String> {
-    // Host returns Result<String, String> → JSON array of journal/health records.
-    let raw = invoke_json::<serde_json::Value>(
+    // Prefer local-first coop registry (works without vault).
+    let mut out: Vec<(String, String)> = Vec::new();
+    if let Ok(v) = invoke_json::<serde_json::Value>("list_coop_projects", json!({})).await {
+        for row in json_list(v, &["projects", "items"]) {
+            let id = s(&row, "id");
+            let name = s(&row, "name");
+            let n = row
+                .get("member_count")
+                .and_then(|x| x.as_u64())
+                .unwrap_or(0);
+            if !id.is_empty() {
+                let label = if n > 0 {
+                    format!("{name} · {n} member(s)")
+                } else if name.is_empty() {
+                    id.clone()
+                } else {
+                    name
+                };
+                out.push((id, label));
+            }
+        }
+    }
+    // Merge vault/wellfair projects when host is unlocked.
+    if let Ok(raw) = invoke_json::<serde_json::Value>(
         "wellfair_list_health_records",
         json!({ "limit": 96 }),
     )
-    .await?;
-    let arr = json_list(raw, &["records", "items"]);
-    Ok(arr
-        .into_iter()
-        .filter(|r| s(r, "kind") == "project")
-        .map(|r| {
+    .await
+    {
+        let arr = json_list(raw, &["records", "items"]);
+        for r in arr.into_iter().filter(|r| s(r, "kind") == "project") {
             let id = project_board_id(&s(&r, "id"));
             let summary = r.get("summary").and_then(|x| x.as_str());
             let label = project_display_name(summary, &id);
-            (id, label)
-        })
-        .collect())
+            if !out.iter().any(|(i, _)| i == &id) {
+                out.push((id, label));
+            }
+        }
+    }
+    Ok(out)
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -287,8 +310,9 @@ async fn create_project_record(
     description: &str,
     licensing: Vec<&str>,
 ) -> Result<(String, String, serde_json::Value), String> {
+    // Try vault-backed create first; always fall back to local coop project so collab is not blocked.
     let onts: Vec<String> = licensing.into_iter().map(|s| s.to_string()).collect();
-    let raw = invoke_json::<serde_json::Value>(
+    match invoke_json::<serde_json::Value>(
         "wellfair_add_project",
         json!({
             "name": name,
@@ -296,17 +320,44 @@ async fn create_project_record(
             "licensingOntologies": onts
         }),
     )
-    .await?;
-    // Host returns Result<String, String> — often a JSON *string* of the JournalEntry.
-    let obj = as_object(raw);
-    let full_id = s(&obj, "id");
-    if full_id.is_empty() {
-        return Err("Project response missing id (expected urn:wellfair:project:…).".into());
+    .await
+    {
+        Ok(raw) => {
+            let obj = as_object(raw);
+            let full_id = s(&obj, "id");
+            if full_id.is_empty() {
+                // Fall through to local.
+            } else {
+                let board_id = project_board_id(&full_id);
+                let summary = obj.get("summary").and_then(|x| x.as_str());
+                let label = project_display_name(summary, name);
+                // Mirror into local registry for join packages / roster.
+                let _ = invoke_json::<serde_json::Value>(
+                    "create_coop_project",
+                    json!({ "name": name, "description": description }),
+                )
+                .await;
+                return Ok((board_id, label, obj));
+            }
+        }
+        Err(_) => {}
     }
-    let board_id = project_board_id(&full_id);
-    let summary = obj.get("summary").and_then(|x| x.as_str());
-    let label = project_display_name(summary, name);
-    Ok((board_id, label, obj))
+    let local = invoke_json::<serde_json::Value>(
+        "create_coop_project",
+        json!({ "name": name, "description": description }),
+    )
+    .await
+    .map_err(|e| {
+        format!(
+            "{e} — could not create local project either. Check Talk → People display name."
+        )
+    })?;
+    let id = s(&local, "id");
+    let label = s(&local, "name");
+    if id.is_empty() {
+        return Err("local project create returned no id".into());
+    }
+    Ok((id, if label.is_empty() { name.to_string() } else { label }, local))
 }
 
 /// Best-effort clipboard write (browser / webview).
@@ -692,8 +743,8 @@ pub fn SocialHub() -> Element {
                     }
                     #[cfg(target_arch = "wasm32")]
                     if id == HubTab::Projects {
-                        let (mut project_list, mut status, mut vault_lifecycle) =
-                            (project_list, status, vault_lifecycle);
+                        let (mut project_list, mut status, mut vault_lifecycle, mut collab_list, active_project_id) =
+                            (project_list, status, vault_lifecycle, collab_list, active_project_id);
                         spawn(async move {
                             let snap =
                                 crate::components::wellfair::host_client::fetch_host_snapshot()
@@ -704,11 +755,22 @@ pub fn SocialHub() -> Element {
                                     let n = plist.len();
                                     project_list.set(plist);
                                     status.set(format!(
-                                        "{n} project(s). Vault: {}. Select one or create.",
+                                        "{n} project(s). Vault: {} (optional). Select one, invite via join package.",
                                         vault_state_label(snap.vault)
                                     ));
                                 }
                                 Err(e) => status.set(vault_hint(&e)),
+                            }
+                            let pid = active_project_id();
+                            if !pid.is_empty() {
+                                if let Ok(v) = invoke_json::<serde_json::Value>(
+                                    "list_project_collaborators",
+                                    json!({ "projectId": pid }),
+                                )
+                                .await
+                                {
+                                    collab_list.set(json_list(v, &["collaborators", "items"]));
+                                }
                             }
                         });
                     }
@@ -1974,7 +2036,14 @@ pub fn SocialHub() -> Element {
                     let vault_attention = vault_needs_attention(vault);
                     rsx! {
                 div { style: "{PANEL}",
-                    // Vault state (from wellfair_host_snapshot)
+                    div { style: "{CARD}",
+                        h2 { style: "{H2}", "How cooperative work works here" }
+                        p { style: "{MUTED}",
+                            "1. Create or seed a project (works even if the vault is locked — local-first).\n2. Copy full join package → send to people or their bots.\n3. They paste under People → Accept package.\n4. Admit members / Start mesh / group chat.\n5. Optional: unlock Sanctuary for vault-backed Wellfair journal records."
+                        }
+                    }
+
+                    // Vault state (from wellfair_host_snapshot) — optional depth, not a blocker
                     div {
                         style: if vault_attention {
                             "background:#1c1917;border:1px solid #f59e0b;border-radius:12px;padding:1rem 1.15rem;margin-bottom:1rem;max-width:720px;"
@@ -1982,10 +2051,10 @@ pub fn SocialHub() -> Element {
                             "background:#052e1c;border:1px solid #10b981;border-radius:12px;padding:1rem 1.15rem;margin-bottom:1rem;max-width:720px;"
                         },
                         h2 { style: "margin:0 0 0.35rem;font-size:1.05rem;color:#fde68a;font-weight:700;",
-                            "Vault: {vault_label}"
+                            "Vault (optional depth): {vault_label}"
                         }
                         p { style: "margin:0 0 0.75rem;color:#cbd5e1;font-size:0.88rem;line-height:1.5;",
-                            "{vault_detail}"
+                            "{vault_detail} Local coop projects and join packages work without unlocking. Unlock for journal/ledger depth."
                         }
                         if vault_attention {
                             div { style: "display:flex;flex-wrap:wrap;gap:8px;align-items:center;",
@@ -2006,7 +2075,7 @@ pub fn SocialHub() -> Element {
                     div { style: "{CARD}",
                         h2 { style: "{H2}", "Cooperative projects" }
                         p { style: "{MUTED}",
-                            "Projects are where relationships become work: tasks, chat scoped with #project:, contributions. This is also how QualiaDB's own development is meant to be hosted among peers."
+                            "Shared work with people and their agents: roster, join package, group chat, #project: tags. QualiaDB Development Cooperative can be seeded in one click."
                         }
                         if !active_project().is_empty() {
                             p { style: "color:#a7f3d0;font-size:13px;margin:0 0 4px;",
