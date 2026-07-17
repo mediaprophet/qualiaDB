@@ -2128,6 +2128,33 @@ pub fn wellfair_seed_studio_qapps(app: AppHandle) -> Result<String, String> {
 }
 
 #[command]
+pub fn wellfair_seed_perception_library(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock Sanctuary vault first".to_string())?;
+        let r = host.seed_perception_library()?;
+        serde_json::to_string(&r).map_err(|e| e.to_string())
+    })?
+}
+
+/// Also available without vault when AppState storage is ready (seed weights + catalogue).
+#[command]
+pub fn library_seed_perception_assets(
+    state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
+) -> Result<serde_json::Value, String> {
+    let config = state.config.lock().unwrap().clone();
+    let root = std::path::PathBuf::from(&config.storage_path);
+    let store = qualia_client_core::wellfair::hypermedia_store::HypermediaStore::open(&root)
+        .map_err(|e| e.to_string())?;
+    let report = qualia_client_core::wellfair::perception_catalog::seed_perception_into_library(
+        &store, &root,
+    )?;
+    serde_json::to_value(report).map_err(|e| e.to_string())
+}
+
+#[command]
 pub fn wellfair_ingest_legislation_text(
     app: AppHandle,
     text: String,
@@ -7463,6 +7490,18 @@ pub fn audio_shared_clock_demo() -> Result<serde_json::Value, String> {
     qualia_client_core::audio_pipeline::shared_clock_demo()
 }
 
+#[command]
+pub fn audio_mixer_default() -> Result<serde_json::Value, String> {
+    Ok(qualia_client_core::audio_pipeline::mixer_default_session())
+}
+
+#[command]
+pub fn audio_mixer_bounce(tracks: serde_json::Value) -> Result<serde_json::Value, String> {
+    let tracks: Vec<qualia_client_core::audio_pipeline::MixerTrackDto> =
+        serde_json::from_value(tracks).map_err(|e| format!("tracks json: {e}"))?;
+    qualia_client_core::audio_pipeline::mixer_bounce(&tracks)
+}
+
 /// Full generate → store → recon → OBJ/.10d continuum (pre-auditory handoff).
 #[command]
 pub fn vision_gs_continuum(
@@ -7655,6 +7694,8 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_query_library_faceted,
         wellfair_library_facet_counts,
         wellfair_seed_studio_qapps,
+        wellfair_seed_perception_library,
+        library_seed_perception_assets,
         wellfair_ingest_legislation_text,
         wellfair_ingest_legislation_pdf_hex,
         wellfair_build_cml_context,
@@ -8016,6 +8057,8 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         audio_daw_fx_demo,
         audio_gen_demo,
         audio_shared_clock_demo,
+        audio_mixer_default,
+        audio_mixer_bounce,
     ]
 }
 

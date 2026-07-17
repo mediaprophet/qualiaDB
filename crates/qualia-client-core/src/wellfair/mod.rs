@@ -32,6 +32,7 @@ pub mod hypermedia_store;
 pub mod bookmarks;
 pub mod legislation_ingest;
 pub mod qapp_catalog;
+pub mod perception_catalog;
 pub mod import_samsung;
 pub mod ingest_guardian;
 pub mod journal;

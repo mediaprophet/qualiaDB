@@ -1570,6 +1570,16 @@ impl WebizenHostApi {
         Ok(serde_json::to_value(report).map_err(|e| e.to_string())?)
     }
 
+    /// Seed perception models + ontology catalogue rows into Library → Software.
+    /// Also ensures seed weight files under `{storage}/models/`.
+    pub fn seed_perception_library(&self) -> Result<serde_json::Value, String> {
+        let store = self.library()?;
+        let root = self.storage_root();
+        let report =
+            super::perception_catalog::seed_perception_into_library(&store, root)?;
+        Ok(serde_json::to_value(report).map_err(|e| e.to_string())?)
+    }
+
     /// Native legislation ingest (structure parse, no Ollama): PDF bytes → Work shelf
     /// entries for the instrument and every Part/Section/Subsection with full body text.
     pub fn ingest_legislation_pdf_hex(

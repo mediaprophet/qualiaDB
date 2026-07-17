@@ -359,6 +359,120 @@ pub fn analyze_mono_pcm(
     })
 }
 
+/// One mixer track strip (UI ↔ process plan).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct MixerTrackDto {
+    pub name: String,
+    pub gain: f32,
+    pub pan: f32,
+    pub mute: bool,
+    pub solo: bool,
+    pub lowpass: f32,
+    pub eq_gain_db: f32,
+    pub eq_freq_hz: f32,
+    pub comp_threshold: f32,
+    pub comp_ratio: f32,
+    pub delay_samples: u32,
+    pub delay_mix: f32,
+}
+
+impl Default for MixerTrackDto {
+    fn default() -> Self {
+        Self {
+            name: "Track".into(),
+            gain: 0.85,
+            pan: 0.0,
+            mute: false,
+            solo: false,
+            lowpass: 0.0,
+            eq_gain_db: 0.0,
+            eq_freq_hz: 1000.0,
+            comp_threshold: 1.0,
+            comp_ratio: 1.0,
+            delay_samples: 0,
+            delay_mix: 0.0,
+        }
+    }
+}
+
+/// Default 3-strip mixer session for Listen UI.
+pub fn mixer_default_session() -> serde_json::Value {
+    let tracks = vec![
+        MixerTrackDto {
+            name: "Tone A".into(),
+            pan: -0.4,
+            ..Default::default()
+        },
+        MixerTrackDto {
+            name: "Tone B".into(),
+            pan: 0.4,
+            gain: 0.7,
+            ..Default::default()
+        },
+        MixerTrackDto {
+            name: "Pad".into(),
+            gain: 0.5,
+            lowpass: 0.25,
+            ..Default::default()
+        },
+    ];
+    serde_json::json!({
+        "sample_rate": 48000,
+        "block_frames": 64,
+        "tracks": tracks,
+        "note": "Reference mixer — not a commercial DAW. EQ/comp/delay are deterministic primitives."
+    })
+}
+
+/// Bounce a mixer session (synthetic tones per track) through ProcessPlan FX chain.
+pub fn mixer_bounce(tracks: &[MixerTrackDto]) -> Result<serde_json::Value, String> {
+    use qualia_audio::{ProcessPlan, TrackState};
+    let n = tracks.len().min(16).max(1);
+    let frames = 2048usize;
+    let sr = 48000u32;
+    let mut plan = ProcessPlan::new(sr, 64);
+    let mut mono_bufs: Vec<Vec<f32>> = Vec::with_capacity(n);
+    for (i, t) in tracks.iter().take(n).enumerate() {
+        plan.add_track(TrackState {
+            gain: t.gain.clamp(0.0, 2.0),
+            pan: t.pan.clamp(-1.0, 1.0),
+            mute: t.mute,
+            solo: t.solo,
+            lowpass: t.lowpass.clamp(0.0, 0.99),
+            eq_gain_db: t.eq_gain_db,
+            eq_freq_hz: t.eq_freq_hz.max(20.0),
+            comp_threshold: t.comp_threshold.clamp(0.05, 1.0),
+            comp_ratio: t.comp_ratio.max(1.0),
+            delay_samples: t.delay_samples.min(512),
+            delay_mix: t.delay_mix.clamp(0.0, 1.0),
+        });
+        let freq = 220.0 * (i as f32 + 1.0);
+        let mut buf = vec![0.0f32; frames];
+        for (s, sample) in buf.iter_mut().enumerate() {
+            *sample = (2.0 * core::f32::consts::PI * freq * s as f32 / sr as f32).sin() * 0.4;
+        }
+        mono_bufs.push(buf);
+    }
+    let refs: Vec<&[f32]> = mono_bufs.iter().map(|b| b.as_slice()).collect();
+    let mut out = vec![0.0f32; frames * 2];
+    let written = plan
+        .bounce_interleaved(&refs, &mut out)
+        .map_err(|e| e.to_string())?;
+    let peak = out
+        .iter()
+        .take(written * 2)
+        .map(|x| x.abs())
+        .fold(0.0f32, f32::max);
+    let energy: f32 = out.iter().take(written * 2).map(|x| x * x).sum();
+    Ok(serde_json::json!({
+        "frames_written": written,
+        "peak": peak,
+        "energy": energy,
+        "n_tracks": n,
+        "note": "Offline bounce of synthetic tones through mixer FX — reference quality only."
+    }))
+}
+
 /// Music analysis demo: onsets + tempo + structure (reference quality).
 pub fn music_analysis_demo() -> Result<serde_json::Value, String> {
     use qualia_audio::{
