@@ -10019,6 +10019,7 @@ version = "0.0.25"
 dependencies = [
  "image",
  "ort",
+ "qualia-core-db",
 ]
 
 [[package]]

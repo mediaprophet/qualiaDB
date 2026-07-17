@@ -44,7 +44,7 @@ static REGISTRY: &[CapabilityEntry] = &[
         "D1",
         "classical_sr",
         Present,
-        "cv/sr bilinear+bicubic+lanczos3; super_resolve + super_resolve_tiled plan/extract/blend (SR0/B0/B1)"
+        "specialized_libs::computer_vision::sr (MIG-V2); classical+tiled+device_policy B2 surface (Forge WGSL still open)"
     ),
     // D2 learned
     cap!("D2.01", "D2", "detector_tracker", Partial, "ByteTrack MOT Present; YuNet decode+optional --features ort infer; default FeatureDisabled"),

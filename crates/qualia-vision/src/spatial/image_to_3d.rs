@@ -4,8 +4,9 @@
 //! foundation image-to-3D network. Output is an **epistemic proposed mesh**;
 //! must pass [`validate_mesh_ir`] before any Q42 commit.
 
-use super::geometry_ir::{MeshIR, MAX_VERTICES};
-use super::validate::{validate_mesh_ir, MeshValidationReport};
+use qualia_core_db::specialized_libs::computer_vision::spatial::{
+    validate_mesh_ir, MeshIR, MeshValidationReport, MAX_VERTICES,
+};
 use crate::semantic::{media_digest, q_hash, MediaDigest};
 use crate::types::{ImageView, PixelFormat, VisionError};
 

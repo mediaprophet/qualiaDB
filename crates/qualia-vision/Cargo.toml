@@ -16,6 +16,8 @@ codecs = ["dep:image"]
 ort = ["dep:ort"]
 
 [dependencies]
+# Pure kernels live in specialized_libs::computer_vision (MIG-V2).
+qualia-core-db = { path = "../qualia-core-db", default-features = true }
 # Optional cold-path decode only (not hot-path).
 image = { version = "0.25", optional = true, default-features = false, features = ["png", "jpeg"] }
 ort = { version = "2.0.0-rc.12", features = ["download-binaries"], optional = true }

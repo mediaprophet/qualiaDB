@@ -1,14 +1,20 @@
-//! Qualia Vision — local visual intelligence + classical CV + biosense excellence.
+//! Qualia Vision — product surface for visual intelligence + biosense.
+//!
+//! # Library home (MIG-V2)
+//! Pure algorithms live in
+//! `qualia_core_db::specialized_libs::computer_vision` (`cv`, `ops`, `sr`,
+//! `bio`, `embeddings`, `spatial` kernels, `gpu` dispatch). This crate
+//! **re-exports** those kernels and owns product layers: biosense consent,
+//! recipes, weights, capability registry, semantic quins, media store.
 //!
 //! Plans: `native-visual-intelligence-and-generative-3d.md`,
-//! `native-vision-capability-excellence-2026.md` (VX/VXB/VXP/VX3D).
+//! `vision-10d-browser-excellence-programme-2026.md` §9-B.
 //!
 //! # Design rules
 //! - Hot path is caller-buffered, no hidden heap in `infer`.
 //! - Model outputs are **epistemic observations**, not ground truth.
 //! - Dense pixels / biometric templates never in NQuins.
 //! - **No Python**; no OpenCV product link.
-//! - Anti-monolith: single-function files under `cv/`, `biosense/`, `bio/`.
 
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
 
@@ -104,9 +110,9 @@ pub use cv::{
 }; // GrayView + RgbView for embeddings / recipes
 pub use sr::{
     blend_tile_into_accum, estimate_tile_count, extract_tile_rgb8, finalize_blend, plan_tiles,
-    super_resolve, super_resolve_tiled, super_resolve_tiled_default, ClassicalKernel,
-    EnhancementMode, SrBackend, SrReport, SrRequest, TilePolicy, TileRect, DEFAULT_OVERLAP,
-    DEFAULT_TILE,
+    super_resolve, super_resolve_tiled, super_resolve_tiled_default, super_resolve_tiled_with_policy,
+    super_resolve_with_policy, ClassicalKernel, EnhancementMode, SrBackend, SrReport, SrRequest,
+    TilePolicy, TileRect, DEFAULT_OVERLAP, DEFAULT_TILE,
 };
 pub use gpu::{
     avg_pool2d_dispatch, conv2d_nchw_dispatch, max_pool2d_dispatch, resize_nearest_nchw_dispatch,

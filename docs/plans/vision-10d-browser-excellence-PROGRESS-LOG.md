@@ -5,9 +5,53 @@
 
 ---
 
+## 2026-07-17 — MIG-V2 computer_vision + B2 device policy
+
+**Status:** done (MIG-V2 land); MIG-V3 surface re-exports; MIG-V4 catalogue partial
+
+### MIG-V2 — pure kernels → `specialized_libs::computer_vision`
+
+Canonical home (native only, not portal WASM):
+
+`qualia-core-db/src/specialized_libs/computer_vision/`
+
+| Subtree | Content |
+|---------|---------|
+| `cv/`, `ops/`, `embeddings/`, `sr/`, `bio/`, `gpu/` | moved from `qualia-vision` |
+| `spatial/` | MeshIR, export, quality, sigma, twin (not image_to_3d / handoff) |
+| `types` | Detection, ImageView, VisionError |
+
+**`qualia-vision`** now depends on `qualia-core-db` and **re-exports** kernels; keeps biosense, recipes, weights, semantic, capability, image_to_3d, 10d handoff.
+
+### B2
+
+`sr/device_policy.rs` — `super_resolve_with_policy` / tiled: thermal + VRAM + honest `Unavailable` until Forge SR.
+
+### Measured
+
+```
+cargo test -p qualia-core-db --lib computer_vision  →  182 passed
+cargo test -p qualia-vision --lib  →  160 passed (product surface; kernels test under core-db)
+```
+
+Disk pressure on host (~1 GB free) blocked a full client-core rebuild this wave — re-run client when free space recovered.
+
+### ⚑ Principal
+
+- Free disk on build machine before full workspace test.
+- MIG-V4 MCP/Library catalogue rows still optional.
+
+### Next
+
+- B2 Forge classical WGSL when Cool
+- Studio UI load/scrub
+- Free space + `cargo test -p qualia-client-core`
+
+---
+
 ## 2026-07-17 — Sprint 5: D4 + F3 + F4 + library migration honesty
 
-**Status:** done (code); MIG-V* **open** (migration not executed this wave)
+**Status:** superseded by MIG-V2 land above
 
 ### Library placement (principal question)
 

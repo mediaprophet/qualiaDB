@@ -284,9 +284,14 @@ Done: acceptance tests + progress-log line + RELEASE/PROGRESS notice.
 
 ## 9-B. Library home — honesty + migration (principal ask, 2026-07-17)
 
-**Today (true):** vision *algorithms* live in the separate crate **`qualia-vision`**
-(`cv/`, `bio/`, `biosense/`, `sr/`, `spatial/`, …). They are **not** under
-`qualia-core-db::specialized_libs::*`. What *is* in core-db:
+**As of MIG-V2 (2026-07-17):** pure vision *algorithms* live in
+**`qualia_core_db::specialized_libs::computer_vision`** (`cv`, `ops`, `sr`,
+`bio`, `embeddings`, `gpu`, `spatial` kernels). The **`qualia-vision`** crate is
+the product/edge surface (biosense consent, recipes, weights, semantic quins)
+and re-exports the specialized lib. Portal WASM still does **not** link this
+tree (cfg not wasm32) — sealed `.10d` browse uses render only.
+
+**Earlier (pre-MIG):** algorithms lived only under `qualia-vision`. What else is in core-db:
 
 | In `qualia-core-db` | Role |
 |---------------------|------|

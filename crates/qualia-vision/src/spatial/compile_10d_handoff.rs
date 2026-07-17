@@ -1,23 +1,12 @@
 //! Host handoff notes for sealing vision geometry into `.10d`.
 //!
-//! # Where sealing happens
-//!
-//! `qualia-vision` **does not** link `qualia-core-db` and must not call
-//! `compile_10d` itself (keeps the vision WASM / edge surface free of the
-//! full render stack). On the **host** (desktop, client-core, studio):
-//!
-//! 1. Build / validate a [`MeshIR`](super::geometry_ir::MeshIR).
-//! 2. Convert with [`mesh_ir_to_export`](super::mesh_ir_to_export::mesh_ir_to_export)
-//!    or the validated variant.
-//! 3. Pack fields with [`pack_geometry_export_for_10d`].
-//! 4. Construct `qualia_core_db::render::assets::Mesh` from those fields.
-//! 5. Seal with `qualia_core_db::render::compile_10d::compile_mesh_to_10d`.
-//!
-//! Programme D1/D2 may later project detections into Tensor10D nodes; see
-//! [`detections_to_node_hints`].
+//! Pure MeshIR export lives in `specialized_libs::computer_vision::spatial`.
+//! Host (desktop / client-core) constructs `render::assets::Mesh` and seals via
+//! `compile_mesh_to_10d_vision`.
 
-use super::mesh_ir_to_export::{detection_center_to_node_hint, NodeHint, RenderMeshExport};
-use super::sigma_map::detection_to_sigma;
+use qualia_core_db::specialized_libs::computer_vision::spatial::{
+    detection_center_to_node_hint, detection_to_sigma, NodeHint, RenderMeshExport,
+};
 use crate::types::Detection;
 
 /// Geometry fields layout-compatible with `qualia_core_db::render::assets::Mesh`.
@@ -66,9 +55,10 @@ pub fn detections_to_node_hints(dets: &[Detection], out: &mut [NodeHint]) -> usi
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::spatial::geometry_ir::MeshIR;
-    use crate::spatial::mesh_ir_to_export::mesh_ir_to_export;
     use crate::types::Detection;
+    use qualia_core_db::specialized_libs::computer_vision::spatial::{
+        detection_to_sigma, mesh_ir_to_export, MeshIR,
+    };
 
     #[test]
     fn pack_preserves_mesh_fields() {
@@ -109,7 +99,7 @@ mod tests {
         assert!((out[0].y - 0.5).abs() < 1e-4);
         assert_eq!(out[0].z, 0.0);
         assert_eq!(out[0].t, 7.0);
-        let expected = crate::spatial::sigma_map::detection_to_sigma(&d);
+        let expected = detection_to_sigma(&d);
         assert!((out[0].sigma - expected).abs() < 1e-5);
     }
 }
