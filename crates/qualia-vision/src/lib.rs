@@ -1,14 +1,14 @@
-//! Qualia Vision — local visual intelligence.
+//! Qualia Vision — local visual intelligence + classical CV + biosense excellence.
 //!
-//! Plan: `docs/plans/native-visual-intelligence-and-generative-3d.md`  
-//! Swarm delivery: `docs/plans/native-vision-swarm-delivery.md`  
-//! Post-MVP: `docs/plans/native-vision-swarms-GSW.md` (W / G / S)
+//! Plans: `native-visual-intelligence-and-generative-3d.md`,
+//! `native-vision-capability-excellence-2026.md` (VX/VXB/VXP/VX3D).
 //!
 //! # Design rules
 //! - Hot path is caller-buffered, no hidden heap in `infer`.
 //! - Model outputs are **epistemic observations**, not ground truth.
-//! - Dense pixels never live in NQuins; only hashes, boxes, scores, provenance.
-//! - **No Python** in this library.
+//! - Dense pixels / biometric templates never in NQuins.
+//! - **No Python**; no OpenCV product link.
+//! - Anti-monolith: single-function files under `cv/`, `biosense/`.
 
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
 
@@ -26,6 +26,10 @@ pub mod weights;
 pub mod metrics;
 pub mod generator;
 pub mod spatial;
+pub mod capability;
+pub mod cv;
+pub mod biosense;
+pub mod recipes;
 
 #[cfg(feature = "cpu-reference")]
 pub mod cpu_reference;
@@ -70,10 +74,27 @@ pub use generator::{
     GENERATOR_MODEL_ID, CTX_GENERATION, P_GENERATED_IMAGE, P_GEN_PROMPT, P_GEN_SEED,
 };
 pub use spatial::{
-    assess_twin_eligibility, image_to_heightfield_mesh, mesh_ir_to_obj, mesh_ir_triangles,
-    refuse_fea_unless_eligible, validate_mesh_ir, AnalysisDomain, ImageTo3dReceipt, MeshIR,
-    MeshValidationReport, MeshValidationStatus, TwinEligibility, MAX_INDICES, MAX_VERTICES,
+    assess_twin_eligibility, image_to_heightfield_mesh, mesh_ir_to_obj, mesh_ir_to_stl_binary,
+    mesh_ir_triangles, print_readiness, refuse_fea_unless_eligible, validate_mesh_ir,
+    AnalysisDomain, ImageTo3dReceipt, MeshIR, MeshValidationReport, MeshValidationStatus,
+    PrintReadiness, TwinEligibility, MAX_INDICES, MAX_VERTICES,
 };
+pub use capability::{all_capabilities, by_id, count_by_status, CapabilityEntry, CapabilityStatus};
+pub use cv::{
+    bilateral_denoise_u8, box_blur_u8, brief_desc_u8, canny_u8, dilate_u8, draw_rect_u8,
+    equalize_hist_u8, erode_u8, fast_corners_u8, find_external_blobs, gaussian_blur_u8,
+    hamming_match, histogram_u8, lucas_kanade_step, median_blur_u8, rgb_to_gray_u8, sobel_mag_u8,
+    warp_affine_u8, warp_perspective_u8, BlobBox, CvError, GrayView, Keypoint, Match, RgbView,
+    DESC_LEN,
+};
+pub use biosense::{
+    cctv_stages_allowed, ensemble_hr, eulerian_color_magnify, eulerian_motion_magnify,
+    evaluate_processing_act, face_roi_center, frame_blur_score, motion_energy, reject_low_quality,
+    respiration_from_motion, roi_mean_rgb, spectral_hr_peak, template_hash_from_roi,
+    templates_match, valence_arousal_proposal, AffectProposal, BiometricTemplate, BiosenseConsent,
+    BiosensePurpose, FaceRoi, HrEstimate, PolicyDecision, ProcessingAct, QualityReject,
+};
+pub use recipes::self_monitor_pulse;
 
 #[cfg(feature = "cpu-reference")]
 pub use cpu_reference::CpuReferenceVision;
