@@ -28,9 +28,10 @@ pub use respiration::respiration_from_motion;
 pub use liveness::{
     check_camera_stream_integrity, check_temporal_window, estimate_head_pose,
     evaluate_challenge_pad, evaluate_landmark_jitter, evaluate_landmark_pad, evaluate_non_rigid_z,
-    issue_challenge, issue_rotation_challenge, ActionThresholds, CameraStreamAttestation,
-    CameraStreamSource, ChallengeKind, HeadPose, Landmark2, LandmarkFrame, MeshBlendProxies,
-    MeshFrameSignals, NonRigidVerdict, PadLandmarkId, PadReason, PadResult, PadThresholds,
-    StreamIntegrityVerdict, TemporalGate, TemporalWindow, DEFAULT_TTC_MS, DEFAULT_TTS_MS,
-    DEFAULT_YAW_THRESHOLD_DEG,
+    evaluate_profile_asymmetry, issue_challenge, issue_rotation_challenge, profile_asymmetry_ratio,
+    ActionThresholds, CameraStreamAttestation, CameraStreamSource, ChallengeKind, HeadPose,
+    Landmark2, LandmarkFrame, MeshBlendProxies, MeshFrameSignals, NonRigidVerdict, PadLandmarkId,
+    PadReason, PadResult, PadThresholds, ParSample, ParVerdict, StreamIntegrityVerdict,
+    TemporalGate, TemporalWindow, DEFAULT_PAR_TAU, DEFAULT_TTC_MS, DEFAULT_TTS_MS,
+    DEFAULT_YAW_THRESHOLD_DEG, MIN_YAW_SPAN_DEG,
 };

@@ -83,7 +83,7 @@ Do **not** commit multi‑MB weights to the Qualia git tree unless Timothy expli
 | 1 | `temporal_window` | **TTS ~800 ms** start; **TTC ~2000 ms** complete — blocks replay brute-force |
 | 2 | `rigid_head_pose` | PnP-class pose from nose/chin/outer eyes vs canonical 3D model → pitch/yaw/roll °; scale by interocular |
 | 3 | `action_threshold` | Challenge math: yaw ≥ 25°; mouth gap / IOD; blendshape smile/blink when present |
-| 4 | `non_rigid_z` | **Core lock:** nose–cheek projected ratio residual after linear yaw fit — flat masks fail |
+| 4 | `profile_asymmetry_ratio` (PAR) | **Core lock:** raw 2D \(x\) only on MP **1 / 234 / 454**. \(\Delta PAR = \|PAR(t_1)/PAR(t_0)-1\| > \tau\) (τ≈0.6), yaw ≥ 25°. **Never use model Z** (hallucinates depth on flat screens). |
 | 5 | `landmark_jitter` | ~1 s noise floor — static mask / over-smooth replay fail |
 
 Entry: `evaluate_landmark_pad(...)`. Legacy pose/blend row path: `evaluate_challenge_pad(...)`.

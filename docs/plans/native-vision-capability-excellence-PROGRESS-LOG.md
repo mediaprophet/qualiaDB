@@ -81,3 +81,24 @@ Wire Studio/desktop commands; deepen face mesh weights; FED policy; multi-view r
 **Where human is needed:** production threshold calibration in MANIFEST; OS camera attestation host wiring; MediaPipe ONNX/TFLite drop-in.
 
 **Next:** mesh adapter feeding `LandmarkFrame`; host sets `CameraStreamAttestation::physical_attested()` on unlock path.
+
+---
+
+## 2026-07-17 — PAR geometric lock (no model Z)
+
+**Status:** done
+
+**Trap closed:** Do **not** validate on MediaPipe inferred Z — statistical priors hallucinate depth from a flat iPad. Lock uses **raw 2D image \(x\) only**.
+
+**Math (Profile Asymmetry Ratio):**
+- Landmarks: nose tip MP **1**, left edge **234**, right edge **454**
+- \(d_L = |x_N - x_L|\), \(d_R = |x_R - x_N|\), \(PAR = d_L/d_R\)
+- Baseline-normalize at \(t_0\); \(\Delta PAR = |PAR(t_1)/PAR(t_0) - 1|\)
+- Live 3D: \(\Delta PAR > \tau\) (default **0.6**); flat mask: \(\Delta PAR \approx 0\)
+- Require yaw span ≥ **25°**
+
+**Code:** `biosense/liveness/profile_asymmetry_ratio.rs`; `non_rigid_z` is a thin PAR façade.
+
+**Measured:** `cargo test -p qualia-vision --lib` (session)
+
+**Human:** calibrate τ after real capture; never wire model Z into this gate.

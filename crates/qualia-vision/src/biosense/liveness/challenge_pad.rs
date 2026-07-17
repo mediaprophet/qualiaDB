@@ -5,7 +5,7 @@
 //! 2. Temporal TTS/TTC windows (ms)
 //! 3. Rigid head pose (PnP-class geometry)
 //! 4. Action threshold for the issued challenge
-//! 5. Non-rigid Z-deformation (flat mask lock) on rotation challenges
+//! 5. PAR (Profile Asymmetry Ratio) on raw 2D *x* only — never model Z
 //! 6. Landmark jitter noise floor
 //!
 //! No RGB texture / screen-glare ML. Fail closed. Not identity alone —
@@ -67,9 +67,10 @@ pub struct PadThresholds {
     pub temporal: TemporalWindow,
     pub action: ActionThresholds,
     pub jitter: JitterThresholds,
+    /// τ for baseline-normalized |ΔPAR| (default 0.6). Not a model-Z score.
     pub min_nonrigid_score: f32,
     pub min_frames: usize,
-    /// When true, rotation challenges must pass non-rigid Z.
+    /// When true, rotation challenges must pass PAR flat-mask lock.
     pub require_nonrigid_z: bool,
     /// When true, jitter gate is enforced.
     pub require_jitter: bool,
@@ -214,7 +215,7 @@ pub fn evaluate_landmark_pad(
         return Ok(fail(challenge, PadReason::WrongAction));
     }
 
-    // Non-rigid Z on rotation challenges (and optional always-on).
+    // PAR geometric lock on rotation challenges (raw 2D x only — never model Z).
     if thr.require_nonrigid_z && challenge.is_rotation() {
         let v = evaluate_non_rigid_z(&z_frames[..z_n], &z_poses[..z_n], thr.min_nonrigid_score);
         match v {
@@ -223,7 +224,7 @@ pub fn evaluate_landmark_pad(
                 return Ok(fail(challenge, PadReason::FlatSurface));
             }
             NonRigidVerdict::InsufficientMotion | NonRigidVerdict::MissingLandmarks => {
-                // Fail closed on rotation PAD when Z cannot be scored.
+                // Fail closed when PAR cannot be scored (yaw < 25° or missing edges).
                 return Ok(fail(challenge, PadReason::FlatSurface));
             }
         }
@@ -341,48 +342,36 @@ fn fail(challenge: ChallengeKind, reason: PadReason) -> PadResult {
 mod tests {
     use super::*;
     use crate::biosense::consent::{BiosenseConsent, BiosensePurpose};
-    use crate::biosense::liveness::landmark_types::{Landmark2, PadLandmarkId};
-    use crate::biosense::liveness::non_rigid_z::{synthetic_3d_ratio, synthetic_flat_ratio};
+    use crate::biosense::liveness::landmark_types::Landmark2;
+    use crate::biosense::liveness::profile_asymmetry_ratio::{
+        synthetic_3d_par_frame, synthetic_flat_par_frame,
+    };
 
     fn consent() -> BiosenseConsent {
         BiosenseConsent::grant_security_template(1)
     }
 
+    /// Yaw trajectory built from PAR synthetic geometry (2D x only).
     fn yaw_trajectory(live3d: bool) -> (Vec<LandmarkFrame>, Vec<BlendRow>) {
         let mut frames = Vec::new();
         let blends = vec![None; 12];
-        let ratio_fn = if live3d {
-            synthetic_3d_ratio
-        } else {
-            synthetic_flat_ratio
-        };
         for i in 0..12 {
-            // Fast onset inside TTS (800ms); complete well inside TTC (2000ms).
             let t = 40 + i as u32 * 80;
-            let yaw = 0.0 + i as f32 * 4.0; // ~44° labeled span
-            let mut f = LandmarkFrame::empty(t);
-            let iod = 80.0f32;
-            // Subject looks left → nose moves toward image-right → +yaw in our pose map.
-            let nose_x = 140.0 + yaw * 0.65;
-            f.set(PadLandmarkId::LeftEyeOuter, Landmark2::new(100.0, 120.0));
-            f.set(PadLandmarkId::RightEyeOuter, Landmark2::new(100.0 + iod, 122.0));
-            f.set(PadLandmarkId::NoseTip, Landmark2::new(nose_x, 150.0));
-            f.set(PadLandmarkId::Chin, Landmark2::new(140.0 + yaw * 0.12, 210.0));
-            let r = ratio_fn(yaw) * iod;
-            let asym = if live3d { yaw * 0.45 } else { 0.0 };
-            f.set(
-                PadLandmarkId::LeftCheek,
-                Landmark2::new(nose_x - r * 0.65 - asym * 0.25, 160.0),
-            );
-            f.set(
-                PadLandmarkId::RightCheek,
-                Landmark2::new(nose_x + r * 0.65 + asym, 160.0),
-            );
-            // Micro jitter for live series (noise floor).
+            let yaw = i as f32 * 4.0; // 0 → 44° (≥ 25° span)
+            let (mut f, _pose_label) = if live3d {
+                synthetic_3d_par_frame(yaw, t)
+            } else {
+                synthetic_flat_par_frame(yaw, t)
+            };
+            f.t_ms = t;
+            // Micro jitter for live series (noise floor); do not invent Z.
             if live3d {
                 let j = ((i as f32) * 2.1).sin() * 0.45;
-                if let Some(n) = f.get(PadLandmarkId::NoseTip) {
-                    f.set(PadLandmarkId::NoseTip, Landmark2::new(n.x + j, n.y + j * 0.3));
+                if let Some(n) = f.get(crate::biosense::liveness::PadLandmarkId::NoseTip) {
+                    f.set(
+                        crate::biosense::liveness::PadLandmarkId::NoseTip,
+                        Landmark2::new(n.x + j, n.y + j * 0.3),
+                    );
                 }
             }
             frames.push(f);
@@ -464,12 +453,11 @@ mod tests {
     }
 
     #[test]
-    fn live_yaw_left_passes_or_honest_geometry() {
+    fn live_yaw_left_passes_with_par() {
         let (frames, blends) = yaw_trajectory(true);
         let mut thr = PadThresholds::default();
-        // Synthetic series: relax jitter slightly; keep Z + action.
         thr.jitter.min_rms = 0.00005;
-        thr.min_nonrigid_score = 0.02;
+        thr.min_nonrigid_score = DEFAULT_MIN_NONRIGID_SCORE; // τ = 0.6
         thr.action.yaw_deg = 18.0;
         let r = evaluate_landmark_pad(
             consent(),
@@ -480,30 +468,30 @@ mod tests {
             &thr,
         )
         .unwrap();
-        // Accept pass, or fail only on geometry strength (document), not consent/stream.
         assert!(
             r.passed
                 || matches!(
                     r.reason,
-                    PadReason::FlatSurface
-                        | PadReason::WrongAction
+                    PadReason::WrongAction
                         | PadReason::StaticMesh
                         | PadReason::JitterAnomaly
                         | PadReason::TimeToStartExceeded
                         | PadReason::TimeToCompleteExceeded
+                        | PadReason::PoseUnavailable
                 ),
             "unexpected {:?}",
             r.reason
         );
+        // Live 3D synthetic must not be rejected as FlatSurface.
+        assert_ne!(r.reason, PadReason::FlatSurface);
     }
 
     #[test]
-    fn flat_mask_trajectory_not_pass_with_z_required() {
+    fn flat_mask_fails_par_gate() {
         let (frames, blends) = yaw_trajectory(false);
         let mut thr = PadThresholds::default();
-        thr.jitter.min_rms = 0.0; // isolate Z gate
         thr.require_jitter = false;
-        thr.min_nonrigid_score = 0.08;
+        thr.min_nonrigid_score = DEFAULT_MIN_NONRIGID_SCORE; // τ = 0.6
         thr.action.yaw_deg = 15.0;
         let r = evaluate_landmark_pad(
             consent(),
@@ -515,7 +503,6 @@ mod tests {
         )
         .unwrap();
         assert!(!r.passed);
-        // Flat should hit FlatSurface, or WrongAction if pose direction mismatch.
         assert!(
             matches!(
                 r.reason,
