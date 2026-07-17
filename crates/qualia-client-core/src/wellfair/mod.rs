@@ -29,6 +29,7 @@ pub mod graph_store;
 pub mod host_state;
 pub mod cml_context;
 pub mod hypermedia_store;
+pub mod bookmarks;
 pub mod legislation_ingest;
 pub mod qapp_catalog;
 pub mod import_samsung;

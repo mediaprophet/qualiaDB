@@ -10,6 +10,8 @@
 use dioxus::prelude::*;
 use serde_json::json;
 use uuid::Uuid;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::JsCast;
 
 use crate::components::qapp_engine::invoke_json;
 
@@ -161,6 +163,11 @@ pub fn WebBrowserPane() -> Element {
     let mut status = use_signal(String::new);
     let mut status_err = use_signal(|| false);
     let mut show_sidebar = use_signal(|| false);
+    let mut show_trust = use_signal(|| false);
+    let mut show_bookmarks = use_signal(|| false);
+    let mut trust_status = use_signal(String::new);
+    let mut trust_list_text = use_signal(String::new);
+    let mut bookmark_list = use_signal(Vec::<serde_json::Value>::new);
     let mut browser_open = use_signal(|| false);
     let mut bootstrapped = use_signal(|| false);
 
@@ -391,13 +398,78 @@ pub fn WebBrowserPane() -> Element {
             )
             .await
             {
-                Ok(_) => {
+                Ok(msg) => {
                     status_err.set(false);
-                    status.set("QLink saved".into());
+                    status.set(if msg.is_empty() {
+                        "Bookmark saved (qlinks + Library when vault unlocked)".into()
+                    } else {
+                        msg
+                    });
                 }
                 Err(e) => {
                     status_err.set(true);
-                    status.set(format!("QLink failed: {e}"));
+                    status.set(format!("Bookmark failed: {e}"));
+                }
+            }
+        });
+    };
+
+    let refresh_trust = move || {
+        spawn(async move {
+            match invoke_tauri("browser_trust_list", json!({})).await {
+                Ok(raw) => {
+                    if let Ok(v) = serde_json::from_str::<serde_json::Value>(&raw) {
+                        let anchors = v
+                            .get("anchors")
+                            .and_then(|a| a.as_array())
+                            .cloned()
+                            .unwrap_or_default();
+                        let lines: Vec<String> = anchors
+                            .iter()
+                            .map(|a| {
+                                format!(
+                                    "{} {} [{}]",
+                                    if a.get("enabled").and_then(|x| x.as_bool()).unwrap_or(false) {
+                                        "✓"
+                                    } else {
+                                        "·"
+                                    },
+                                    a.get("label").and_then(|x| x.as_str()).unwrap_or("?"),
+                                    a.get("kind").and_then(|x| x.as_str()).unwrap_or("?")
+                                )
+                            })
+                            .collect();
+                        trust_list_text.set(if lines.is_empty() {
+                            "(empty — add DID/PEM below)\nCustom PEM/DID govern agent fetch + policy badge; OS validates WebView TLS unless override is active.".into()
+                        } else {
+                            lines.join("\n")
+                        });
+                    } else {
+                        trust_list_text.set(raw);
+                    }
+                    trust_status.set(String::new());
+                }
+                Err(e) => trust_status.set(e),
+            }
+        });
+    };
+
+    let refresh_bookmarks = move || {
+        spawn(async move {
+            match invoke_tauri("list_qlinks", json!({})).await {
+                Ok(raw) => {
+                    if let Ok(v) = serde_json::from_str::<serde_json::Value>(&raw) {
+                        let list = v
+                            .get("bookmarks")
+                            .and_then(|a| a.as_array())
+                            .cloned()
+                            .unwrap_or_default();
+                        bookmark_list.set(list);
+                    }
+                }
+                Err(e) => {
+                    status_err.set(true);
+                    status.set(format!("Bookmarks: {e}"));
                 }
             }
         });
@@ -578,7 +650,7 @@ pub fn WebBrowserPane() -> Element {
                         }
                         p {
                             style: "margin: 0 0 1rem; font-size: 0.9rem; line-height: 1.5; color: #94a3b8;",
-                            "Pages open in a native top-level WebView window (not an iframe — sites that set X-Frame-Options still load). This pane is the chrome: tabs, omnibox, history, and semantic tools."
+                            "Pages open in the native Webizen Browser window (in-window chrome + OS WebView content — not an iframe). This Reach pane mirrors tabs, omnibox, bookmarks, trust, and focus."
                         }
                         div {
                             style: "padding: 1rem 1.1rem; border-radius: 14px; border: 1px solid #334155; background: #111827; margin-bottom: 1rem;",
@@ -612,10 +684,124 @@ pub fn WebBrowserPane() -> Element {
                                 onclick: move |_| navigate_active("https://duckduckgo.com/".into()),
                                 "DuckDuckGo"
                             }
+                            button {
+                                r#type: "button",
+                                style: "padding: 0.5rem 0.9rem; border-radius: 9px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-weight: 600; cursor: pointer; font-size: 0.85rem;",
+                                onclick: move |_| {
+                                    show_trust.set(!show_trust());
+                                    if show_trust() {
+                                        refresh_trust();
+                                    }
+                                },
+                                "Trust store"
+                            }
+                            button {
+                                r#type: "button",
+                                style: "padding: 0.5rem 0.9rem; border-radius: 9px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-weight: 600; cursor: pointer; font-size: 0.85rem;",
+                                onclick: move |_| {
+                                    show_bookmarks.set(!show_bookmarks());
+                                    if show_bookmarks() {
+                                        refresh_bookmarks();
+                                    }
+                                },
+                                "Bookmarks"
+                            }
+                        }
+                        if show_trust() {
+                            div {
+                                style: "margin-top: 1rem; padding: 1rem; border-radius: 12px; border: 1px solid #334155; background: #0f172a;",
+                                div { style: "font-size: 0.72rem; text-transform: uppercase; color: #c4b5fd; margin-bottom: 0.5rem;", "Your trust store" }
+                                pre { style: "margin: 0 0 0.75rem; white-space: pre-wrap; font-size: 0.78rem; color: #94a3b8;", "{trust_list_text}" }
+                                if !trust_status().is_empty() {
+                                    div { style: "color: #fca5a5; font-size: 0.78rem; margin-bottom: 0.5rem;", "{trust_status}" }
+                                }
+                                form {
+                                    style: "display: flex; flex-direction: column; gap: 0.4rem;",
+                                    onsubmit: move |e| {
+                                        e.prevent_default();
+                                    },
+                                    input {
+                                        id: "reach-trust-did",
+                                        style: "padding: 0.45rem 0.6rem; border-radius: 8px; border: 1px solid #334155; background: #0b1220; color: #e2e8f0; font-size: 0.8rem;",
+                                        placeholder: "did:web:… to add",
+                                    }
+                                    button {
+                                        r#type: "button",
+                                        style: "padding: 0.45rem 0.75rem; border-radius: 8px; border: none; background: #8b5cf6; color: #fff; font-weight: 600; cursor: pointer; font-size: 0.8rem; align-self: flex-start;",
+                                        onclick: move |_| {
+                                            #[cfg(target_arch = "wasm32")]
+                                            {
+                                                if let Some(win) = web_sys::window() {
+                                                    if let Some(doc) = win.document() {
+                                                        if let Some(el) = doc.get_element_by_id("reach-trust-did") {
+                                                            if let Some(input) = el.dyn_ref::<web_sys::HtmlInputElement>() {
+                                                                let did = input.value();
+                                                                if did.trim().is_empty() {
+                                                                    trust_status.set("Enter a DID".into());
+                                                                    return;
+                                                                }
+                                                                spawn(async move {
+                                                                    match invoke_tauri(
+                                                                        "browser_trust_add_did",
+                                                                        json!({ "label": "", "did": did, "notes": null }),
+                                                                    )
+                                                                    .await
+                                                                    {
+                                                                        Ok(_) => {
+                                                                            trust_status.set("DID added".into());
+                                                                            refresh_trust();
+                                                                        }
+                                                                        Err(e) => trust_status.set(e),
+                                                                    }
+                                                                });
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            #[cfg(not(target_arch = "wasm32"))]
+                                            {
+                                                trust_status.set("Add DID from desktop Reach (wasm UI)".into());
+                                            }
+                                        },
+                                        "Add DID"
+                                    }
+                                    p {
+                                        style: "margin: 0.35rem 0 0; font-size: 0.72rem; color: #64748b; line-height: 1.4;",
+                                        "Path: {{storage}}/webizen/trust_store.json · PEM roots apply to agent HTTPS; WebView still uses OS TLS."
+                                    }
+                                }
+                            }
+                        }
+                        if show_bookmarks() {
+                            div {
+                                style: "margin-top: 1rem; padding: 1rem; border-radius: 12px; border: 1px solid #334155; background: #0f172a;",
+                                div { style: "font-size: 0.72rem; text-transform: uppercase; color: #c4b5fd; margin-bottom: 0.5rem;", "Bookmarks" }
+                                if bookmark_list().is_empty() {
+                                    p { style: "margin: 0; font-size: 0.8rem; color: #64748b;", "No bookmarks yet — use 🔖 in the omnibox or browser chrome." }
+                                } else {
+                                    for b in bookmark_list().iter() {
+                                        {
+                                            let url = b.get("url").and_then(|x| x.as_str()).unwrap_or("").to_string();
+                                            let name = b.get("name").and_then(|x| x.as_str()).unwrap_or(&url).to_string();
+                                            let url_nav = url.clone();
+                                            rsx! {
+                                                button {
+                                                    r#type: "button",
+                                                    style: "display: block; width: 100%; text-align: left; margin-bottom: 0.35rem; padding: 0.45rem 0.55rem; border-radius: 8px; border: 1px solid #1e293b; background: #111827; color: #e2e8f0; cursor: pointer; font-size: 0.8rem;",
+                                                    onclick: move |_| navigate_active(url_nav.clone()),
+                                                    title: "{url}",
+                                                    "{name}"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                         p {
                             style: "margin: 1.25rem 0 0; font-size: 0.78rem; line-height: 1.45; color: #64748b;",
-                            "Later: own trust store and browser agent (plan P1/P2). Servo is a later engine option — not required for this path."
+                            "Shipped: in-window chrome, trust store CRUD, browser agent, bookmarks, cookie graph v0. Servo remains deferred."
                         }
                     }
                 }

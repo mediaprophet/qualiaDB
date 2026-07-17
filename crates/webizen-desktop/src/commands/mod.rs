@@ -282,6 +282,52 @@ pub fn browser_status(app: AppHandle) -> Result<serde_json::Value, String> {
     Ok(crate::browser::status(&app))
 }
 
+/// Content URL for chrome omnibox poll (≤1s). Last host-driven navigation.
+#[command]
+pub fn browser_content_url(app: AppHandle) -> Result<String, String> {
+    Ok(crate::browser::content_url(&app))
+}
+
+/// List browser bookmarks (qlinks JSON + library purpose=bookmark).
+#[command]
+pub fn list_qlinks() -> Result<serde_json::Value, String> {
+    use qualia_client_core::state::{config_file_path, AgentConfig};
+    use std::fs;
+    let config_path = config_file_path();
+    let storage_path = if let Ok(config_str) = fs::read_to_string(&config_path) {
+        if let Ok(config) = serde_json::from_str::<AgentConfig>(&config_str) {
+            config.storage_path
+        } else {
+            qualia_client_core::state::dirs_default_path()
+        }
+    } else {
+        qualia_client_core::state::dirs_default_path()
+    };
+    let list = qualia_client_core::wellfair::bookmarks::list_all_bookmarks(
+        std::path::Path::new(&storage_path),
+    )?;
+    Ok(serde_json::json!({ "bookmarks": list, "count": list.len() }))
+}
+
+/// Cookie transparency graph summary for current URL (v0 coverage).
+#[command]
+pub fn browser_cookie_summary(url: String) -> Result<serde_json::Value, String> {
+    let root = std::path::PathBuf::from(qualia_client_core::state::dirs_default_path());
+    Ok(qualia_client_core::cookie_graph::summary_for_url(&root, &url))
+}
+
+/// Record observed Set-Cookie lines (agent / host) into the cookie graph.
+#[command]
+pub fn browser_cookie_observe(url: String, set_cookies: Vec<String>) -> Result<serde_json::Value, String> {
+    let root = std::path::PathBuf::from(qualia_client_core::state::dirs_default_path());
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let g = qualia_client_core::cookie_graph::observe_set_cookies(&root, &url, &set_cookies, now)?;
+    serde_json::to_value(g).map_err(|e| e.to_string())
+}
+
 #[command]
 pub fn browser_trust_list() -> Result<serde_json::Value, String> {
     crate::browser::trust_list()
@@ -4688,40 +4734,63 @@ pub async fn save_qlink(
     context_assertions: Option<Vec<serde_json::Value>>,
 ) -> Result<String, String> {
     use qualia_client_core::state::{config_file_path, AgentConfig};
-    use std::fs;
+    use qualia_client_core::wellfair::bookmarks;
     use scraper::{Html, Selector};
+    use std::fs;
     use tauri::Manager;
+
+    let url = url.trim().to_string();
+    if url.is_empty() {
+        return Err("empty URL".into());
+    }
 
     let mut final_title = title.clone();
     let mut description = String::new();
     let mut extracted_content = String::new();
-    
-    if let Ok(response) = reqwest::get(&url).await {
-        if let Ok(html_text) = response.text().await {
-            let document = Html::parse_document(&html_text);
-            
-            if let Ok(title_sel) = Selector::parse("title") {
-                if let Some(t_el) = document.select(&title_sel).next() {
-                    let t = t_el.text().collect::<Vec<_>>().join("");
-                    if !t.trim().is_empty() { final_title = t; }
+
+    if let Ok(client) = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+    {
+        if let Ok(response) = client.get(&url).send().await {
+            if let Ok(html_text) = response.text().await {
+                let document = Html::parse_document(&html_text);
+                if let Ok(title_sel) = Selector::parse("title") {
+                    if let Some(t_el) = document.select(&title_sel).next() {
+                        let t = t_el.text().collect::<Vec<_>>().join("");
+                        if !t.trim().is_empty() {
+                            final_title = t.trim().to_string();
+                        }
+                    }
                 }
-            }
-            if let Ok(og_desc) = Selector::parse("meta[property='og:description'], meta[name='description']") {
-                if let Some(desc_el) = document.select(&og_desc).next() {
-                    if let Some(content) = desc_el.value().attr("content") { description = content.to_string(); }
+                if let Ok(og_desc) =
+                    Selector::parse("meta[property='og:description'], meta[name='description']")
+                {
+                    if let Some(desc_el) = document.select(&og_desc).next() {
+                        if let Some(content) = desc_el.value().attr("content") {
+                            description = content.to_string();
+                        }
+                    }
                 }
-            }
-            if let Ok(json_ld) = Selector::parse("script[type='application/ld+json']") {
-                for script in document.select(&json_ld) {
-                    let ld_text = script.text().collect::<Vec<_>>().join("");
-                    extracted_content.push_str(&format!("\n```json\n{}\n```\n", ld_text));
+                if let Ok(json_ld) = Selector::parse("script[type='application/ld+json']") {
+                    for script in document.select(&json_ld) {
+                        let ld_text = script.text().collect::<Vec<_>>().join("");
+                        extracted_content
+                            .push_str(&format!("\n```json\n{}\n```\n", ld_text));
+                    }
                 }
             }
         }
     }
-    
-    let combined_text = format!("Bookmark: {}\nURL: {}\nDescription: {}\nStructured Data:\n{}", final_title, url, description, extracted_content);
-    
+    if final_title.trim().is_empty() {
+        final_title = url.clone();
+    }
+
+    let combined_text = format!(
+        "Bookmark: {}\nURL: {}\nDescription: {}\nStructured Data:\n{}",
+        final_title, url, description, extracted_content
+    );
+
     let state = app.state::<crate::HostApiState>();
     let url_clone = url.clone();
     let combined_text_clone = combined_text.clone();
@@ -4733,49 +4802,56 @@ pub async fn save_qlink(
                     place_label: None,
                     lat: None,
                     lon: None,
-                    projects: vec![],
+                    projects: vec!["browser".into()],
                     purposes: vec!["bookmark".to_string()],
                     sensitivity: Some("public".into()),
                     section: Some("personal".into()),
                     commons_visibility: Some("none".into()),
                 };
-                host.ingest_document_annotated(&url_clone, "text/html", &combined_text_clone, &manual, None)
-                    .map_err(|e| e.to_string())
+                host.ingest_document_annotated(
+                    &url_clone,
+                    "text/html",
+                    &combined_text_clone,
+                    &manual,
+                    None,
+                )
+                .map_err(|e| e.to_string())
             } else {
-                Err("Host API not initialized".to_string())
+                Err("Host API not initialized (vault/host locked or not started)".to_string())
             }
         })
     };
-    
+
     let config_path = config_file_path();
     let storage_path = if let Ok(config_str) = fs::read_to_string(&config_path) {
         if let Ok(config) = serde_json::from_str::<AgentConfig>(&config_str) {
             config.storage_path
-        } else { qualia_client_core::state::dirs_default_path() }
-    } else { qualia_client_core::state::dirs_default_path() };
-
-    let qlinks_dir = std::path::PathBuf::from(&storage_path).join("qlinks");
-    if !qlinks_dir.exists() { let _ = fs::create_dir_all(&qlinks_dir); }
-
-    let mut doc = serde_json::json!({
-        "@context": ["http://schema.org", "http://www.w3.org/ns/anno.jsonld"],
-        "@type": "Bookmark", "url": url, "name": final_title, "description": description,
-        "dateCreated": chrono::Utc::now().to_rfc3339(), "ingestedToLibrary": ingested_result.is_ok()
-    });
-    if let Some(assertions) = context_assertions {
-        if let Some(obj) = doc.as_object_mut() {
-            obj.insert("cml:contextAssertions".to_string(), serde_json::json!(assertions));
+        } else {
+            qualia_client_core::state::dirs_default_path()
         }
-    }
+    } else {
+        qualia_client_core::state::dirs_default_path()
+    };
 
-    let id = uuid::Uuid::new_v4().to_string();
-    let file_path = qlinks_dir.join(format!("{}.json", id));
-    let json_str = serde_json::to_string_pretty(&doc).map_err(|e| e.to_string())?;
-    fs::write(&file_path, json_str).map_err(|e| e.to_string())?;
+    let ingested_ok = ingested_result.is_ok();
+    let (_id, file_path) = bookmarks::write_qlink_json(
+        std::path::Path::new(&storage_path),
+        &url,
+        &final_title,
+        &description,
+        ingested_ok,
+        context_assertions,
+    )?;
 
     match ingested_result {
-        Ok(_) => Ok(format!("Semantic Bookmark ingested and saved to {:?}", file_path)),
-        Err(e) => Ok(format!("Saved offline to {:?} (Ingestion skipped: {})", file_path, e))
+        Ok(_) => Ok(format!(
+            "Bookmark saved to Library (purpose=bookmark) and {:?}",
+            file_path
+        )),
+        Err(e) => Ok(format!(
+            "Bookmark saved offline to {:?} — library ingest skipped: {}",
+            file_path, e
+        )),
     }
 }
 
@@ -7315,6 +7391,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         open_web_url,
         browser_navigate,
         browser_navigate_content,
+        browser_content_url,
         browser_focus,
         browser_reload,
         browser_reload_content,
@@ -7328,6 +7405,9 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         browser_trust_remove,
         browser_trust_verdict,
         browser_agent_ask,
+        browser_cookie_summary,
+        browser_cookie_observe,
+        list_qlinks,
         resolve_qdp_did,
         get_ns_records_for_did,
         sync_to_solid_pod,

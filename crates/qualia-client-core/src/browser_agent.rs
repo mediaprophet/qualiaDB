@@ -1,11 +1,11 @@
-//! **Browser agent (P2)** — page-aware, VM-governed helper for the Webizen browser.
+//! **Browser agent (P2 / B4)** — page-aware helper for the Webizen browser.
 //!
 //! Scope (honest):
-//! - Summarise the current page from fetched text + CML signal extractors.
-//! - Explain trust verdict from `webizen_trust`.
-//! - Optionally ingest page topics into the hypermedia library (inforg).
-//! - Does **not** claim full LLM product chat unless a local model path is wired later;
-//!   answers are deterministic + grounded in extracted text.
+//! - Structured intents: `summarise` | `trust` | `privacy` | `navigate_help` | `general`.
+//! - Always return provenance + CML signals + trust verdict.
+//! - Optionally ingest page topics into the hypermedia library.
+//! - Deterministic grounded answers (no unbounded tools; 20s fetch timeout).
+//! - Local LLM path is optional and not required for acceptance.
 
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -20,6 +20,16 @@ use crate::wellfair::hypermedia_store::{
     CommonsVisibility, HypermediaStore, LibraryEntry, LibrarySection,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BrowserAgentIntent {
+    Summarise,
+    Trust,
+    Privacy,
+    NavigateHelp,
+    General,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BrowserAgentRequest {
     pub url: String,
@@ -33,6 +43,7 @@ pub struct BrowserAgentRequest {
 pub struct BrowserAgentResponse {
     pub url: String,
     pub answer: String,
+    pub intent: String,
     pub trust: TrustVerdict,
     pub cml_signals: Vec<String>,
     pub topics: Vec<String>,
@@ -49,6 +60,47 @@ fn now_unix() -> u64 {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0)
+}
+
+/// Classify the user question into a bounded intent.
+pub fn classify_intent(question: &str) -> BrowserAgentIntent {
+    let q = question.trim().to_ascii_lowercase();
+    if q.is_empty() {
+        return BrowserAgentIntent::Summarise;
+    }
+    if q.contains("trust")
+        || q.contains("certificate")
+        || q.contains("secure")
+        || q.contains("trusted")
+        || q.contains("is this safe")
+    {
+        return BrowserAgentIntent::Trust;
+    }
+    if q.contains("privacy")
+        || q.contains("gdpr")
+        || q.contains("personal data")
+        || q.contains("cookie")
+        || q.contains("tracker")
+    {
+        return BrowserAgentIntent::Privacy;
+    }
+    if q.contains("how do i")
+        || q.contains("navigate")
+        || q.contains("where is")
+        || q.contains("open ")
+        || q.contains("bookmark")
+    {
+        return BrowserAgentIntent::NavigateHelp;
+    }
+    if q.contains("about")
+        || q.contains("summar")
+        || q.contains("what is")
+        || q.contains("page")
+        || q.contains("tell me")
+    {
+        return BrowserAgentIntent::Summarise;
+    }
+    BrowserAgentIntent::General
 }
 
 /// Fetch page body (best-effort HTML → text). Uses system TLS; custom PEM roots
@@ -74,7 +126,6 @@ pub async fn fetch_page_text(url: &str) -> Result<String, String> {
 }
 
 fn html_to_text(html: &str) -> String {
-    // Prefer scraper if available; fall back to crude strip.
     let mut text = String::new();
     let doc = scraper::Html::parse_document(html);
     let sel = scraper::Selector::parse("body").ok();
@@ -84,7 +135,6 @@ fn html_to_text(html: &str) -> String {
         }
     }
     if text.trim().is_empty() {
-        // Strip tags crudely.
         let mut out = String::new();
         let mut in_tag = false;
         for c in html.chars() {
@@ -101,6 +151,7 @@ fn html_to_text(html: &str) -> String {
 }
 
 fn build_answer(
+    intent: BrowserAgentIntent,
     question: &str,
     url: &str,
     page: &str,
@@ -108,11 +159,23 @@ fn build_answer(
     signals: &[String],
     topics: &[String],
 ) -> String {
-    let q = question.trim().to_ascii_lowercase();
     let excerpt: String = page.chars().take(600).collect();
+    let signal_join = |cap: usize| {
+        if signals.is_empty() && topics.is_empty() {
+            "(none extracted)".into()
+        } else {
+            signals
+                .iter()
+                .chain(topics.iter())
+                .take(cap)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(", ")
+        }
+    };
 
-    if q.is_empty() || q.contains("trust") || q.contains("certificate") || q.contains("secure") {
-        return format!(
+    match intent {
+        BrowserAgentIntent::Trust => format!(
             "Trust verdict for {url}: **{}** — {}\n\
              Matching anchors: {}\n\
              Notes: {}\n\
@@ -126,64 +189,59 @@ fn build_answer(
                 trust.matching_anchors.join(", ")
             },
             trust.notes.join(" · ")
-        );
-    }
-
-    if q.contains("about") || q.contains("summar") || q.contains("what is") || q.contains("page") {
-        return format!(
+        ),
+        BrowserAgentIntent::Summarise => format!(
             "Page: {url}\n\
              Trust: {} ({})\n\
              Topics/signals: {}\n\
              Excerpt (grounded in fetched text):\n{excerpt}{}",
             trust.level,
             trust.summary,
-            if signals.is_empty() && topics.is_empty() {
-                "(none extracted)".into()
-            } else {
-                signals
-                    .iter()
-                    .chain(topics.iter())
-                    .take(16)
-                    .cloned()
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            },
+            signal_join(16),
             if page.len() > 600 { "…" } else { "" }
-        );
+        ),
+        BrowserAgentIntent::Privacy => {
+            let privacy_sigs: Vec<_> = signals
+                .iter()
+                .filter(|s| s.starts_with("privacy:"))
+                .cloned()
+                .collect();
+            format!(
+                "Privacy signals on {url}: {}\n\
+                 Trust: {}.\n\
+                 Grounded excerpt: {excerpt}{}",
+                if privacy_sigs.is_empty() {
+                    "none detected by deterministic extractors (privacy:* tags)".into()
+                } else {
+                    privacy_sigs.join(", ")
+                },
+                trust.level,
+                if page.len() > 600 { "…" } else { "" }
+            )
+        }
+        BrowserAgentIntent::NavigateHelp => format!(
+            "Webizen Browser help for {url}:\n\
+             · Omnibox Go / back / forward / reload in chrome\n\
+             · 🔖 saves a bookmark (qlinks + Library purpose=bookmark)\n\
+             · Trust panel manages your DID/PEM store (agent policy; OS TLS separate)\n\
+             · Agent answers summarise / trust / privacy about the current page\n\
+             Question was: {question}\n\
+             Current trust: {} — {}",
+            trust.level, trust.summary
+        ),
+        BrowserAgentIntent::General => format!(
+            "Question: {question}\n\
+             URL: {url}\n\
+             Trust: {} — {}\n\
+             Detected: {}\n\
+             Grounded excerpt:\n{excerpt}{}\n\
+             Provenance: fetched page text + CML context extractors + Webizen trust store (cml:Proposed).",
+            trust.level,
+            trust.summary,
+            signal_join(12),
+            if page.len() > 600 { "…" } else { "" }
+        ),
     }
-
-    if q.contains("privacy") || q.contains("gdpr") || q.contains("personal data") {
-        let privacy_sigs: Vec<_> = signals
-            .iter()
-            .filter(|s| s.starts_with("privacy:"))
-            .cloned()
-            .collect();
-        return format!(
-            "Privacy / GDPR-family signals on {url}: {}\n\
-             Trust: {}.\n\
-             Grounded excerpt: {excerpt}…",
-            if privacy_sigs.is_empty() {
-                "none detected by deterministic extractors".into()
-            } else {
-                privacy_sigs.join(", ")
-            },
-            trust.level
-        );
-    }
-
-    // Default: answer with trust + short grounded excerpt + question echo.
-    format!(
-        "Question: {question}\n\
-         URL: {url}\n\
-         Trust: {} — {}\n\
-         Detected: {}\n\
-         Grounded excerpt:\n{excerpt}{}\n\
-         Provenance: fetched page text + CML context extractors + Webizen trust store (cml:Proposed).",
-        trust.level,
-        trust.summary,
-        signals.iter().take(12).cloned().collect::<Vec<_>>().join(", "),
-        if page.len() > 600 { "…" } else { "" }
-    )
 }
 
 /// Run the browser agent against the current page.
@@ -191,11 +249,12 @@ pub async fn run_browser_agent(
     storage_root: &Path,
     req: BrowserAgentRequest,
 ) -> Result<BrowserAgentResponse, String> {
+    let intent = classify_intent(&req.question);
     let store = TrustStore::load(storage_root);
     let trust = webizen_trust::evaluate_url(&store, &req.url);
-    let page = fetch_page_text(&req.url).await.unwrap_or_else(|e| {
-        format!("(fetch failed: {e})")
-    });
+    let page = fetch_page_text(&req.url)
+        .await
+        .unwrap_or_else(|e| format!("(fetch failed: {e})"));
 
     let units = if page.len() > 80 {
         units_from_headings(&page)
@@ -212,6 +271,7 @@ pub async fn run_browser_agent(
     let g = build_document_context(&req.url, &req.url, &units);
 
     let answer = build_answer(
+        intent,
         &req.question,
         &req.url,
         &page,
@@ -223,10 +283,7 @@ pub async fn run_browser_agent(
     let mut library_asset_uri = None;
     if req.ingest_to_library && page.len() > 40 {
         let store_lib = HypermediaStore::open(storage_root).map_err(|e| e.to_string())?;
-        let uri = format!(
-            "urn:webizen:browser-page:{}",
-            short_id(req.url.as_bytes())
-        );
+        let uri = format!("urn:webizen:browser-page:{}", short_id(req.url.as_bytes()));
         let mut entry = LibraryEntry {
             asset_uri: uri.clone(),
             primary_subject: fnv60(uri.as_bytes()),
@@ -263,9 +320,18 @@ pub async fn run_browser_agent(
         library_asset_uri = Some(uri);
     }
 
+    let intent_str = match intent {
+        BrowserAgentIntent::Summarise => "summarise",
+        BrowserAgentIntent::Trust => "trust",
+        BrowserAgentIntent::Privacy => "privacy",
+        BrowserAgentIntent::NavigateHelp => "navigate_help",
+        BrowserAgentIntent::General => "general",
+    };
+
     Ok(BrowserAgentResponse {
         url: req.url,
         answer,
+        intent: intent_str.into(),
         trust,
         cml_signals: g.signal_tags,
         topics: g.topics,
@@ -277,6 +343,7 @@ pub async fn run_browser_agent(
             "cml_context".into(),
             "webizen_trust".into(),
             "cml:Proposed".into(),
+            format!("intent:{intent_str}"),
         ],
         library_asset_uri,
         curation: "cml:Proposed".into(),
@@ -299,4 +366,26 @@ fn fnv60(bytes: &[u8]) -> u64 {
         h = h.wrapping_mul(FNV_PRIME);
     }
     h & 0x0FFF_FFFF_FFFF_FFFF
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn intent_classify() {
+        assert_eq!(classify_intent("Is this trusted?"), BrowserAgentIntent::Trust);
+        assert_eq!(
+            classify_intent("Privacy signals?"),
+            BrowserAgentIntent::Privacy
+        );
+        assert_eq!(
+            classify_intent("What is this page about?"),
+            BrowserAgentIntent::Summarise
+        );
+        assert_eq!(
+            classify_intent("How do I bookmark?"),
+            BrowserAgentIntent::NavigateHelp
+        );
+    }
 }

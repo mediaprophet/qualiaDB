@@ -327,4 +327,36 @@ mod tests {
         let v3 = evaluate_url(&loaded, "qualia://webid/did:q42:local");
         assert_eq!(v3.level, "local_scheme");
     }
+
+    #[test]
+    fn add_did_then_remove_reverts_verdict() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut s = TrustStore::new();
+        let a = s
+            .add_did("Peer", "did:web:trusted.example", "", 10)
+            .unwrap();
+        s.save(dir.path()).unwrap();
+        let loaded = TrustStore::load(dir.path());
+        let url = "https://site.test/?id=did:web:trusted.example";
+        assert_eq!(evaluate_url(&loaded, url).level, "did_match");
+        let mut s2 = TrustStore::load(dir.path());
+        assert!(s2.remove(&a.id));
+        s2.save(dir.path()).unwrap();
+        let loaded2 = TrustStore::load(dir.path());
+        assert_eq!(evaluate_url(&loaded2, url).level, "os_default");
+    }
+
+    #[test]
+    fn disable_anchor_skips_match() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut s = TrustStore::new();
+        let a = s
+            .add_did("Peer", "did:web:off.example", "", 1)
+            .unwrap();
+        s.set_enabled(&a.id, false).unwrap();
+        s.save(dir.path()).unwrap();
+        let loaded = TrustStore::load(dir.path());
+        let v = evaluate_url(&loaded, "https://x/?did:web:off.example");
+        assert_eq!(v.level, "os_default");
+    }
 }

@@ -59,7 +59,6 @@
     #body-row { flex: 1; display: flex; min-height: 0; }
     #content-slot {
       flex: 1; background: #020617;
-      /* Content webview is a native child layered by the host over this region. */
       position: relative;
     }
     #content-slot::after {
@@ -67,28 +66,37 @@
       position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
       color: #475569; font-size: 0.85rem; pointer-events: none; padding: 1rem; text-align: center;
     }
-    #agent {
+    #agent, #trust-panel {
       width: 0; overflow: hidden; border-left: 0 solid var(--border);
       background: #0f172a; transition: width 0.15s ease;
       display: flex; flex-direction: column;
     }
-    #agent.open { width: 320px; border-left-width: 1px; }
-    #agent h3 {
+    #agent.open, #trust-panel.open { width: 340px; border-left-width: 1px; }
+    #agent h3, #trust-panel h3 {
       margin: 0; padding: 0.65rem 0.75rem; font-size: 0.78rem;
       text-transform: uppercase; letter-spacing: 0.04em; color: #c4b5fd;
       border-bottom: 1px solid var(--border);
     }
-    #agent-out {
+    #agent-out, #trust-body {
       flex: 1; overflow: auto; padding: 0.65rem 0.75rem;
       font-size: 0.8rem; color: var(--muted); white-space: pre-wrap;
     }
-    #agent-form {
-      display: flex; gap: 0.35rem; padding: 0.5rem; border-top: 1px solid var(--border);
+    #agent-form, #trust-form {
+      display: flex; flex-direction: column; gap: 0.35rem; padding: 0.5rem;
+      border-top: 1px solid var(--border);
     }
-    #agent-q {
-      flex: 1; background: #0b1220; color: var(--text);
+    #agent-form { flex-direction: row; }
+    #agent-q, #trust-form input, #trust-form textarea {
+      background: #0b1220; color: var(--text);
       border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem 0.55rem;
+      font: inherit; width: 100%;
     }
+    #agent-q { flex: 1; }
+    .anchor-row {
+      display: flex; align-items: center; gap: 0.35rem;
+      padding: 0.35rem 0; border-bottom: 1px solid #1e293b;
+    }
+    .anchor-row span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     #status {
       font-size: 0.7rem; color: var(--muted); padding: 0.2rem 0.55rem;
       border-top: 1px solid var(--border); background: #0b1220;
@@ -105,28 +113,44 @@
         <input id="url" type="text" spellcheck="false" placeholder="Search or enter URL" />
         <button type="submit" title="Go">Go</button>
       </form>
+      <button type="button" id="btn-bookmark" title="Bookmark to Library">🔖</button>
       <div id="trust" title="Trust indicator (your store + policy)">trust: —</div>
       <button type="button" id="btn-trust" title="Trust store">Trust</button>
       <button type="button" id="btn-agent" title="Browser agent">Agent</button>
     </div>
     <div id="body-row">
       <div id="content-slot" aria-hidden="true"></div>
+      <aside id="trust-panel">
+        <h3>Trust store · your policy</h3>
+        <div id="trust-body">Loading…</div>
+        <form id="trust-form">
+          <input id="trust-label" type="text" placeholder="Label (optional)" />
+          <input id="trust-did" type="text" placeholder="did:web:… or did:key:…" />
+          <textarea id="trust-pem" rows="3" placeholder="Or paste PEM (BEGIN CERTIFICATE)"></textarea>
+          <button type="submit">Add anchor</button>
+          <div style="font-size:0.68rem;color:#64748b;line-height:1.35;">
+            Custom PEM/DID govern agent fetch + this badge. OS still validates WebView TLS unless cert-override is active (not yet).
+          </div>
+        </form>
+      </aside>
       <aside id="agent">
         <h3>Browser agent · cml:Proposed</h3>
-        <div id="agent-out">Ask about this page: summary, trust, privacy signals. Answers are grounded in fetched text + your trust store.</div>
+        <div id="agent-out">Ask: summary, trust, privacy. Grounded in fetched text + your trust store.</div>
         <form id="agent-form">
           <input id="agent-q" type="text" placeholder="What is this page about?" />
           <button type="submit">Ask</button>
         </form>
       </aside>
     </div>
-    <div id="status">Webizen Browser · OS WebView content · own chrome / trust / agent</div>
+    <div id="status">Webizen Browser · OS WebView · chrome / trust / agent / bookmarks</div>
   </div>
   <script>
     const $ = (id) => document.getElementById(id);
     let currentUrl = "https://duckduckgo.com/";
     let history = [currentUrl];
     let histIdx = 0;
+    let urlFocused = false;
+    let lastPolled = "";
 
     async function invoke(cmd, args = {}) {
       if (!window.__TAURI__ || !window.__TAURI__.core) {
@@ -168,8 +192,8 @@
         const dest = (typeof resolved === "string" ? resolved : String(resolved)).replace(/^"|"$/g, "");
         await invoke("browser_navigate_content", { url: dest });
         currentUrl = dest;
+        lastPolled = dest;
         $("url").value = dest;
-        // app-level history for chrome buttons
         history = history.slice(0, histIdx + 1);
         history.push(dest);
         histIdx = history.length - 1;
@@ -182,6 +206,61 @@
       }
     }
 
+    async function pollContentUrl() {
+      if (urlFocused) return;
+      try {
+        const u = await invoke("browser_content_url", {});
+        const dest = (typeof u === "string" ? u : String(u || "")).replace(/^"|"$/g, "").trim();
+        if (dest && dest !== lastPolled && dest !== $("url").value) {
+          lastPolled = dest;
+          currentUrl = dest;
+          $("url").value = dest;
+          await refreshTrust(dest);
+        }
+      } catch (_) { /* host may not be ready */ }
+    }
+
+    async function refreshTrustPanel() {
+      const body = $("trust-body");
+      try {
+        const list = await invoke("browser_trust_list", {});
+        const data = typeof list === "string" ? JSON.parse(list) : list;
+        const anchors = data.anchors || [];
+        if (!anchors.length) {
+          body.textContent = "(empty) Add a DID or PEM below.\n\nPath: {storage}/webizen/trust_store.json\n\nBadge levels: os_default | did_match | local_scheme | untrusted_policy | unknown";
+          return;
+        }
+        body.innerHTML = anchors.map(a => {
+          const id = (a.id || "").replace(/"/g, "");
+          return `<div class="anchor-row" data-id="${id}">
+            <span title="${id}">${a.enabled ? "✓" : "·"} ${a.label || id} [${a.kind}]</span>
+            <button type="button" data-act="toggle" data-id="${id}" data-en="${a.enabled ? "0" : "1"}">${a.enabled ? "Off" : "On"}</button>
+            <button type="button" data-act="rm" data-id="${id}">×</button>
+          </div>`;
+        }).join("") +
+          `\n<span style="font-size:0.68rem;color:#64748b">defer_unknown_https_to_os=${!!data.defer_unknown_https_to_os}</span>`;
+        body.querySelectorAll("button").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const id = btn.getAttribute("data-id");
+            const act = btn.getAttribute("data-act");
+            try {
+              if (act === "rm") await invoke("browser_trust_remove", { id });
+              if (act === "toggle") await invoke("browser_trust_set_enabled", {
+                id, enabled: btn.getAttribute("data-en") === "1"
+              });
+              await refreshTrustPanel();
+              await refreshTrust($("url").value || currentUrl);
+            } catch (e) { setStatus(String(e)); }
+          });
+        });
+      } catch (e) {
+        body.textContent = "Trust store error: " + e;
+      }
+    }
+
+    $("url").addEventListener("focus", () => { urlFocused = true; });
+    $("url").addEventListener("blur", () => { urlFocused = false; });
+
     $("nav-form").addEventListener("submit", (e) => {
       e.preventDefault();
       navigate($("url").value);
@@ -192,8 +271,9 @@
       const u = history[histIdx];
       $("url").value = u;
       try {
-        await invoke("browser_navigate_content", { url: u });
         await invoke("browser_go_back", {});
+        currentUrl = u;
+        lastPolled = u;
         await refreshTrust(u);
         setStatus("Back → " + u);
       } catch (e) { setStatus(String(e)); }
@@ -206,8 +286,9 @@
       const u = history[histIdx];
       $("url").value = u;
       try {
-        await invoke("browser_navigate_content", { url: u });
         await invoke("browser_go_forward", {});
+        currentUrl = u;
+        lastPolled = u;
         await refreshTrust(u);
         setStatus("Forward → " + u);
       } catch (e) { setStatus(String(e)); }
@@ -220,21 +301,54 @@
         setStatus("Reloaded");
       } catch (e) { setStatus(String(e)); }
     });
+    $("btn-bookmark").addEventListener("click", async () => {
+      const u = $("url").value || currentUrl;
+      try {
+        const msg = await invoke("save_qlink", {
+          url: u,
+          title: "",
+          contextAssertions: null,
+        });
+        setStatus(typeof msg === "string" ? msg : "Bookmark saved");
+      } catch (e) {
+        setStatus("Bookmark failed: " + e);
+      }
+    });
     $("btn-agent").addEventListener("click", () => {
       $("agent").classList.toggle("open");
+      if ($("agent").classList.contains("open")) {
+        $("trust-panel").classList.remove("open");
+      }
     });
     $("btn-trust").addEventListener("click", async () => {
+      $("trust-panel").classList.toggle("open");
+      if ($("trust-panel").classList.contains("open")) {
+        $("agent").classList.remove("open");
+        await refreshTrustPanel();
+      }
+    });
+    $("trust-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const label = $("trust-label").value.trim();
+      const did = $("trust-did").value.trim();
+      const pem = $("trust-pem").value.trim();
       try {
-        const list = await invoke("browser_trust_list", {});
-        const data = typeof list === "string" ? JSON.parse(list) : list;
-        const lines = (data.anchors || []).map(a =>
-          (a.enabled ? "✓" : "·") + " " + a.label + " [" + a.kind + "]"
-        );
-        alert("Your trust store (" + (data.anchors || []).length + " anchors)\n\n" +
-          (lines.length ? lines.join("\n") : "(empty — import roots/DIDs from Reach or API)\n") +
-          "\ndefer_unknown_https_to_os=" + !!data.defer_unknown_https_to_os);
-      } catch (e) {
-        alert("Trust store: " + e);
+        if (did) {
+          await invoke("browser_trust_add_did", { label, did, notes: null });
+          $("trust-did").value = "";
+        } else if (pem) {
+          await invoke("browser_trust_add_pem", { label, pem, notes: null });
+          $("trust-pem").value = "";
+        } else {
+          setStatus("Enter a DID or PEM");
+          return;
+        }
+        $("trust-label").value = "";
+        await refreshTrustPanel();
+        await refreshTrust($("url").value || currentUrl);
+        setStatus("Trust anchor added");
+      } catch (err) {
+        setStatus("Trust add failed: " + err);
       }
     });
     $("agent-form").addEventListener("submit", async (e) => {
@@ -249,15 +363,19 @@
         });
         const r = typeof raw === "string" ? JSON.parse(raw) : raw;
         $("agent-out").textContent =
-          r.answer + "\n\n—\nSignals: " + (r.cml_signals || []).slice(0, 12).join(", ") +
+          r.answer + "\n\n—\nIntent: " + (r.intent || "—") +
+          "\nSignals: " + (r.cml_signals || []).slice(0, 12).join(", ") +
           "\nTrust: " + (r.trust && r.trust.level) +
-          (r.library_asset_uri ? "\nLibrary: " + r.library_asset_uri : "");
+          (r.library_asset_uri ? "\nLibrary: " + r.library_asset_uri : "") +
+          "\nProvenance: " + (r.provenance || []).slice(0, 6).join("; ");
       } catch (err) {
         $("agent-out").textContent = "Agent error: " + err;
       }
     });
 
-    // Initial URL from query string ?url=
+    // Poll host last_url ≤1s for omnibox sync after in-app navigations from Reach.
+    setInterval(pollContentUrl, 900);
+
     (async () => {
       const params = new URLSearchParams(location.search);
       const start = params.get("url") || "https://duckduckgo.com/";

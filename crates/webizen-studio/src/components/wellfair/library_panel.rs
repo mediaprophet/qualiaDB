@@ -23,6 +23,9 @@ const SECTIONS: &[(&str, &str, &str)] = &[
     ("commons", "Commons", "Peers & permissive share"),
 ];
 
+/// Purpose chip: Library filter for browser bookmarks (purpose=bookmark).
+const BOOKMARK_PURPOSE: &str = "bookmark";
+
 // ── styles (Talk-aligned dark product chrome) ────────────────────────────────
 
 const ROOT: &str = "display:flex;flex-direction:column;height:100%;min-height:0;background:#0b1220;color:#e5e7eb;box-sizing:border-box;font-family:inherit;";
@@ -229,12 +232,15 @@ pub fn WellfairLibraryPanel() -> Element {
     let mut value = use_signal(String::new);
     let mut tl_from = use_signal(String::new);
     let mut tl_to = use_signal(String::new);
+    // When true, faceted query requires purpose=bookmark (browser bookmarks).
+    let mut bookmarks_only = use_signal(|| false);
 
     let refresh_all = move || {
         let sec = section();
         let cat = category();
         let sort = sort_mode();
         let text = q();
+        let bm = bookmarks_only();
         spawn(async move {
             if sec == "secret" && !secret_unlocked() {
                 results.set(Vec::new());
@@ -256,6 +262,12 @@ pub fn WellfairLibraryPanel() -> Element {
             }
             if !text.trim().is_empty() {
                 filter.insert("text".into(), serde_json::Value::String(text));
+            }
+            if bm {
+                filter.insert(
+                    "purposes".into(),
+                    serde_json::json!([BOOKMARK_PURPOSE]),
+                );
             }
             let filter = serde_json::Value::Object(filter);
             match query_library_faceted(&filter, &sort).await {
@@ -556,6 +568,15 @@ pub fn WellfairLibraryPanel() -> Element {
                         }
                     }
                     div { style: "display:flex;gap:0.35rem;flex-wrap:wrap;align-items:center;",
+                        button {
+                            style: if bookmarks_only() { TAB_ON } else { TAB },
+                            title: "Filter purpose=bookmark (browser QLinks)",
+                            onclick: move |_| {
+                                bookmarks_only.set(!bookmarks_only());
+                                refresh_all();
+                            },
+                            "🔖 Bookmarks"
+                        }
                         button {
                             style: if view() == "list" { TAB_ON } else { TAB },
                             onclick: move |_| view.set("list".into()),
@@ -1147,6 +1168,11 @@ fn ListView(
                     let uri_com = uri.clone();
                     let uri_share = uri.clone();
                     let uri_none = uri.clone();
+                    let uri_open = uri.clone();
+                    let is_bookmark = purposes.iter().any(|p| p.eq_ignore_ascii_case("bookmark"))
+                        || uri.starts_with("http://")
+                        || uri.starts_with("https://");
+                    let is_http = uri.starts_with("http://") || uri.starts_with("https://");
                     let is_secret = r.get("is_secret").and_then(|x| x.as_bool()).unwrap_or(false)
                         || section == "secret";
                     let flagged = r
@@ -1188,6 +1214,24 @@ fn ListView(
                                     }
                                     div { style: "font-size:0.65rem;color:#64748b;font-family:ui-monospace,monospace;margin:0.15rem 0 0.35rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;",
                                         "{uri}"
+                                    }
+                                    if is_bookmark && is_http {
+                                        button {
+                                            r#type: "button",
+                                            style: "margin:0 0 0.45rem;padding:0.28rem 0.55rem;border-radius:8px;border:1px solid #4c1d95;background:rgba(139,92,246,0.15);color:#e9d5ff;font-size:0.72rem;font-weight:600;cursor:pointer;",
+                                            title: "Open in Webizen Browser",
+                                            onclick: move |_| {
+                                                let u = uri_open.clone();
+                                                spawn(async move {
+                                                    let _ = crate::components::qapp_engine::invoke_json(
+                                                        "browser_navigate",
+                                                        serde_json::json!({ "url": u }),
+                                                    )
+                                                    .await;
+                                                });
+                                            },
+                                            "Open in browser"
+                                        }
                                     }
                                     if !excerpt.is_empty() {
                                         p { style: "margin:0 0 0.45rem;font-size:0.8rem;color:#94a3b8;line-height:1.45;",

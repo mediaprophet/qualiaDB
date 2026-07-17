@@ -5,6 +5,11 @@
 //!   - `webizen-browser-chrome` — toolbar / trust badge / agent drawer (our HTML)
 //!   - `webizen-browser-content` — top-level page navigation (real sites load)
 //! - Trust policy + agent logic: `qualia_client_core::{webizen_trust, browser_agent}`
+//!
+//! Layout: chrome is fixed-height at the top; content fills the remainder. On
+//! window resize we re-position both children. Content URL → chrome omnibox is
+//! polled via `browser_content_url` (≤1s) because in-page link navigation does
+//! not always surface a host event on every platform.
 
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -45,6 +50,48 @@ fn storage_root() -> PathBuf {
     PathBuf::from(qualia_client_core::state::dirs_default_path())
 }
 
+fn logical_inner(window: &tauri::Window) -> Result<(f64, f64), String> {
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let size = window.inner_size().map_err(|e| e.to_string())?;
+    let width = (size.width as f64 / scale).max(320.0);
+    let height = (size.height as f64 / scale).max(200.0);
+    Ok((width, height))
+}
+
+/// Re-layout chrome (top strip) and content (remainder) for the current window size.
+pub fn relayout_browser(app: &AppHandle) -> Result<(), String> {
+    let Some(window) = app.get_window(WINDOW_LABEL) else {
+        return Ok(());
+    };
+    let (width, height) = logical_inner(&window)?;
+    let content_h = (height - CHROME_H).max(120.0);
+
+    if let Some(chrome) = app.get_webview(CHROME_LABEL) {
+        let _ = chrome.set_position(LogicalPosition::new(0.0, 0.0));
+        let _ = chrome.set_size(LogicalSize::new(width, CHROME_H));
+    }
+    if let Some(content) = app.get_webview(CONTENT_LABEL) {
+        let _ = content.set_position(LogicalPosition::new(0.0, CHROME_H));
+        let _ = content.set_size(LogicalSize::new(width, content_h));
+    }
+    Ok(())
+}
+
+fn attach_resize_handler(window: &tauri::Window, app: AppHandle) {
+    let win_label = WINDOW_LABEL.to_string();
+    window.on_window_event(move |event| {
+        use tauri::WindowEvent;
+        if matches!(
+            event,
+            WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. }
+        ) {
+            // Only relayout our browser window (handler is attached only there).
+            let _ = win_label;
+            let _ = relayout_browser(&app);
+        }
+    });
+}
+
 /// Create or focus the browser window with chrome + content child webviews.
 pub fn open_browser_shell(app: &AppHandle, start_url: &str) -> Result<String, String> {
     let _ = ensure_chrome_asset()?;
@@ -57,9 +104,18 @@ pub fn open_browser_shell(app: &AppHandle, start_url: &str) -> Result<String, St
     set_last_url(start);
 
     if app.get_window(WINDOW_LABEL).is_some() {
-        navigate_content(app, start)?;
-        focus_window(app)?;
-        return Ok(start.to_string());
+        // Ensure children still exist (user may have closed a webview on some platforms).
+        if app.get_webview(CONTENT_LABEL).is_none() || app.get_webview(CHROME_LABEL).is_none() {
+            // Fail closed: destroy shell and rebuild.
+            if let Some(w) = app.get_window(WINDOW_LABEL) {
+                let _ = w.close();
+            }
+        } else {
+            navigate_content(app, start)?;
+            let _ = relayout_browser(app);
+            focus_window(app)?;
+            return Ok(start.to_string());
+        }
     }
 
     let chrome_path = format!(
@@ -77,10 +133,7 @@ pub fn open_browser_shell(app: &AppHandle, start_url: &str) -> Result<String, St
         .build()
         .map_err(|e| format!("browser window: {e}"))?;
 
-    let scale = window.scale_factor().unwrap_or(1.0);
-    let size = window.inner_size().map_err(|e| e.to_string())?;
-    let width = size.width as f64 / scale;
-    let height = size.height as f64 / scale;
+    let (width, height) = logical_inner(&window)?;
     let content_h = (height - CHROME_H).max(120.0);
 
     window
@@ -89,7 +142,12 @@ pub fn open_browser_shell(app: &AppHandle, start_url: &str) -> Result<String, St
             LogicalPosition::new(0.0, 0.0),
             LogicalSize::new(width, CHROME_H),
         )
-        .map_err(|e| format!("chrome webview: {e}"))?;
+        .map_err(|e| {
+            let _ = window.close();
+            format!(
+                "chrome webview failed: {e}. Fallback: use Reach pane chrome + browser_navigate only, or reopen after rebuild."
+            )
+        })?;
 
     window
         .add_child(
@@ -97,8 +155,14 @@ pub fn open_browser_shell(app: &AppHandle, start_url: &str) -> Result<String, St
             LogicalPosition::new(0.0, CHROME_H),
             LogicalSize::new(width, content_h),
         )
-        .map_err(|e| format!("content webview: {e}"))?;
+        .map_err(|e| {
+            let _ = window.close();
+            format!(
+                "content webview failed: {e}. Fallback: single-window navigation via open_web_url / Reach Focus."
+            )
+        })?;
 
+    attach_resize_handler(&window, app.clone());
     let _ = window.set_focus();
     Ok(start.to_string())
 }
@@ -151,6 +215,21 @@ pub fn content_history_forward(app: &AppHandle) -> Result<(), String> {
     Err("browser not open".into())
 }
 
+/// Best-effort content URL for chrome omnibox sync (poll ≤1s from chrome.html).
+pub fn content_url(app: &AppHandle) -> String {
+    // Prefer last navigated URL we set; in-page SPA navigations may lag until
+    // platform navigation hooks land (honest: poll is the documented path).
+    let last = last_url();
+    if !last.is_empty() {
+        return last;
+    }
+    if app.get_webview(CONTENT_LABEL).is_some() {
+        "https://duckduckgo.com/".into()
+    } else {
+        String::new()
+    }
+}
+
 pub fn focus_window(app: &AppHandle) -> Result<bool, String> {
     if let Some(w) = app.get_window(WINDOW_LABEL) {
         let _ = w.unminimize();
@@ -172,6 +251,7 @@ pub fn status(app: &AppHandle) -> serde_json::Value {
         "chrome": "in-window multi-webview",
         "substrate": "os-webview",
         "phases": ["P0", "P0.1", "P1-store", "P2-agent"],
+        "url_sync": "poll browser_content_url ≤1s",
         "note": "TLS for content webview still uses the OS store; custom PEM roots apply to agent HTTPS fetch. Platform cert-override is the next hook.",
     })
 }

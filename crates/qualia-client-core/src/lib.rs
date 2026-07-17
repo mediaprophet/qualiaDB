@@ -25,6 +25,7 @@ pub mod chat_relay;
 pub mod chat_retrieval;
 pub mod chat_session;
 pub mod browser_agent;
+pub mod cookie_graph;
 pub mod cml_context;
 pub mod context_binding;
 pub mod webizen_trust;
