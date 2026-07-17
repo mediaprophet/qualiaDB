@@ -1,8 +1,6 @@
 //! SR1 — tiled classical super-resolution (plan → extract → SR tile → blend).
 
-use super::super_resolve::{
-    super_resolve, ClassicalKernel, EnhancementMode, SrBackend, SrReport, SrRequest,
-};
+use super::super_resolve::{super_resolve, ClassicalKernel, SrBackend, SrReport, SrRequest};
 use super::tile_blend::{blend_tile_into_accum, finalize_blend};
 use super::tile_extract::extract_tile_rgb8;
 use super::tile_plan::{plan_tiles, TilePolicy};

@@ -12,7 +12,11 @@ use qualia_vision::detector::{
     GridMultiObjectDetector, CLASS_MOSTLY_BLUE, CLASS_MOSTLY_GREEN, CLASS_MOSTLY_RED,
 };
 use qualia_core_db::render::assets::{mesh_to_nquins_with_digests, Mesh};
-use qualia_core_db::render::compile_10d::compile_mesh_to_10d;
+use qualia_core_db::render::compile_10d::compile_mesh_to_10d_with_nodes;
+use qualia_core_db::specialized_libs::computational_geometry::{
+    decimate_qem, DecimateOptions, Point3,
+};
+use qualia_core_db::tensor::Tensor10D;
 use qualia_vision::generator::{
     compile_generation_receipt_quins, NativeImageGenerator,
 };
@@ -24,8 +28,8 @@ use qualia_vision::overlay::{
 use qualia_vision::query_instances_in_region;
 use qualia_vision::semantic::{compile_observation_quins_full, media_digest, VisionQuin};
 use qualia_vision::spatial::{
-    image_to_heightfield_mesh, mesh_ir_to_export, mesh_ir_to_obj, pack_geometry_export_for_10d,
-    MeshIR,
+    cleanup_mesh_ir, detections_to_node_hints, image_to_heightfield_mesh, mesh_ir_to_export,
+    mesh_ir_to_obj, pack_geometry_export_for_10d, MeshCleanupOptions, MeshIR, NodeHint,
 };
 use qualia_vision::synthetic::{
     generate_scene_rgb8, sample_id, DatasetSplit, SyntheticSampleId,
@@ -135,6 +139,69 @@ fn mesh_ir_to_core_mesh(ir: &MeshIR) -> Result<Mesh, String> {
         min: g.min,
         max: g.max,
     })
+}
+
+/// Map vision [`NodeHint`] → [`Tensor10D`] for spectral paint (D1/D2).
+///
+/// Epistemic parallel context (q=1): vision detections are proposals, not ground truth.
+pub fn node_hint_to_tensor10d(h: &NodeHint) -> Tensor10D {
+    Tensor10D::parallel_context(
+        1.0, // q: proposal
+        0.0, // v: Euclidean
+        0.0, // w: medical-class slot (vision still uses 0 until domain wiring)
+        h.x,
+        h.y,
+        h.z,
+        h.t,
+        1.0, // alpha full amplitude; score is in σ path already
+        0.0,
+        h.sigma.clamp(0.0, 1.0),
+    )
+}
+
+/// Host C2: optional QEM decimate when triangle count exceeds `max_faces`.
+fn maybe_decimate_mesh(mesh: &mut Mesh, max_faces: usize) -> Result<Option<String>, String> {
+    if mesh.triangle_count() <= max_faces || max_faces == 0 {
+        return Ok(None);
+    }
+    let verts: Vec<Point3> = mesh
+        .positions
+        .iter()
+        .map(|p| Point3::new(p[0] as f64, p[1] as f64, p[2] as f64))
+        .collect();
+    let tris = mesh.triangles.clone();
+    let mut out_v = vec![Point3::new(0.0, 0.0, 0.0); verts.len()];
+    let mut out_t = vec![[0u32; 3]; tris.len()];
+    let report = decimate_qem(
+        &verts,
+        &tris,
+        DecimateOptions::to_faces(max_faces),
+        &mut out_v,
+        &mut out_t,
+    )
+    .map_err(|e| format!("decimate_qem: {e:?}"))?;
+    mesh.positions = out_v[..report.vertices]
+        .iter()
+        .map(|p| [p.x as f32, p.y as f32, p.z as f32])
+        .collect();
+    mesh.triangles = out_t[..report.faces].to_vec();
+    // Recompute AABB.
+    let mut min = [f32::INFINITY; 3];
+    let mut max = [f32::NEG_INFINITY; 3];
+    for p in &mesh.positions {
+        for k in 0..3 {
+            min[k] = min[k].min(p[k]);
+            max[k] = max[k].max(p[k]);
+        }
+    }
+    mesh.min = min;
+    mesh.max = max;
+    Ok(Some(format!(
+        "decimated faces {}→{} ({} collapses)",
+        tris.len(),
+        report.faces,
+        report.collapses
+    )))
 }
 
 fn det_to_dto(d: &Detection, rejected: bool) -> OverlayBoxDto {
@@ -490,18 +557,46 @@ pub fn run_gs_continuum(
         row_stride: w * 3,
         format: PixelFormat::Rgb8,
     };
-    let (mesh_ir, recon_rec, rep) =
+    let (mut mesh_ir, recon_rec, rep) =
         image_to_heightfield_mesh(img, recon_grid).map_err(|e| format!("{e:?}"))?;
     if !rep.ok() {
         return Err(format!("mesh validation failed: {:?}", rep.status));
     }
 
+    // C2 vision-side: drop degenerate faces before export.
+    let quality = cleanup_mesh_ir(
+        &mut mesh_ir,
+        MeshCleanupOptions {
+            weld_epsilon: 1e-6,
+            min_area: 0.0,
+        },
+    )
+    .map_err(|e| format!("mesh quality cleanup: {e:?}"))?;
+
     let mut obj_buf = vec![0u8; mesh_ir.positions.len() * 64 + mesh_ir.indices.len() * 24 + 256];
     let obj_n = mesh_ir_to_obj(&mesh_ir, &mut obj_buf).map_err(|e| format!("{e:?}"))?;
     obj_buf.truncate(obj_n);
 
-    let core_mesh = mesh_ir_to_core_mesh(&mesh_ir)?;
-    let container = compile_mesh_to_10d(&core_mesh).map_err(|e| e.to_string())?;
+    let mut core_mesh = mesh_ir_to_core_mesh(&mesh_ir)?;
+    // C2 host: QEM when heightfield is dense (cap 2048 faces for edge browsers).
+    let decimate_note = maybe_decimate_mesh(&mut core_mesh, 2048)?;
+
+    // D1: seal with Tensor10DNodes from a single plane marker (heightfield centre).
+    // Full detection→node path uses seal_vision_mesh_with_detections when callers have dets.
+    let centre = Tensor10D::parallel_context(
+        1.0,
+        0.0,
+        0.0,
+        0.5,
+        0.5,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.35, // mid-band σ for recon marker
+    );
+    let container = compile_mesh_to_10d_with_nodes(&core_mesh, &[centre])
+        .map_err(|e| e.to_string())?;
     // CRC of container for compiled digest (first 4 bytes of crc is enough for quin object)
     let compiled_digest = {
         let mut h: u32 = 0;
@@ -562,9 +657,19 @@ pub fn run_gs_continuum(
         validation_ok: true,
         validation_status: format!("{:?}", rep.status),
         is_reference_recon: recon_rec.is_reference_recon,
-        note: "Validated MeshIR → OBJ + sealed .10d; geometry quins with source/compiled digests."
-            .into(),
+        note: format!(
+            "Validated MeshIR → cleanup(deg={},weld={}) → OBJ + sealed .10d with Tensor10DNodes; digests on quins.",
+            quality.degenerates_removed, quality.vertices_welded
+        ),
     };
+
+    let mut note = String::from(
+        "G→S continuum closed: store + validate + cleanup + compile(mesh+nodes). Ready for 10d browse.",
+    );
+    if let Some(d) = decimate_note {
+        note.push(' ');
+        note.push_str(&d);
+    }
 
     Ok(GsContinuumResult {
         generate,
@@ -577,9 +682,38 @@ pub fn run_gs_continuum(
         generation_quins: n_gen_q,
         obj_path: Some(obj_path.display().to_string()),
         container_10d_path: Some(c10_path.display().to_string()),
-        note: "G→S continuum closed: store + validate + compile. Ready for auditory shared media_time_ms join."
-            .into(),
+        note,
     })
+}
+
+/// Seal a MeshIR with detection-derived Tensor10D nodes (D1 product path).
+pub fn seal_vision_mesh_with_detections(
+    mesh_ir: &MeshIR,
+    dets: &[Detection],
+) -> Result<Vec<u8>, String> {
+    let mut cleaned = mesh_ir.clone();
+    let _ = cleanup_mesh_ir(
+        &mut cleaned,
+        MeshCleanupOptions {
+            weld_epsilon: 1e-6,
+            min_area: 0.0,
+        },
+    );
+    let mut core = mesh_ir_to_core_mesh(&cleaned)?;
+    let _ = maybe_decimate_mesh(&mut core, 4096)?;
+    let mut hints = vec![
+        NodeHint {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            t: 0.0,
+            sigma: 0.0,
+        };
+        dets.len().min(256)
+    ];
+    let n = detections_to_node_hints(dets, &mut hints);
+    let nodes: Vec<Tensor10D> = hints[..n].iter().map(node_hint_to_tensor10d).collect();
+    compile_mesh_to_10d_with_nodes(&core, &nodes).map_err(|e| e.to_string())
 }
 
 /// Persist native observations to WAL and return SHACL report.

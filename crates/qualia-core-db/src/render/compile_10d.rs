@@ -6,17 +6,20 @@
 //! reparsing the source GLB, and the q42 semantic manifest cites the container's
 //! [`compiled_digest`].
 //!
-//! **v0 scope (honest):** emits a single `QuantizedMesh` section (u16-quantized
+//! **v0 scope (honest):** emits a `QuantizedMesh` section (u16-quantized
 //! vertices in the bbox + u16/u32 indices — 2× smaller than raw f32, visually
-//! lossless at organ scale). Topology + spatial-index sections (for scan-free
-//! picking) and the LOD chain (from `decimate_3`, P5.7) are named as the next
-//! slices — deliberately not stubbed with placeholders here.
+//! lossless at organ scale). Optional `Tensor10DNodes` (D1) and provenance
+//! sidecars. Topology + spatial-index sections (for scan-free picking) and the
+//! LOD chain (from `decimate_3`, P5.7) remain follow-on slices.
 
 use crate::container_10d::crc32c::crc32c;
 use crate::container_10d::header::Container10dHeader;
 use crate::container_10d::integrity::{compute_whole_file_crc32c, seal_whole_file_crc32c};
 use crate::container_10d::mesh_section::{
     decode_mesh_section, encode_mesh_section, encoded_len, MeshSectionError,
+};
+use crate::container_10d::node_section::{
+    parse_node_header, read_node, write_node_section_aos, NodeMiniHeader, NodeSectionError,
 };
 use crate::container_10d::provenance_section::{
     encode_provenance_section, encoded_len as provenance_encoded_len, ProvenanceSectionError,
@@ -29,6 +32,7 @@ use crate::container_10d::section::{
 use crate::render::assets::{
     import_asset, mesh_to_nquins_with_dev, mesh_to_nquins_with_meta, AssetError, Mesh,
 };
+use crate::tensor::Tensor10D;
 use crate::NQuin;
 use std::collections::HashMap;
 
@@ -46,8 +50,12 @@ pub enum Compile10dError {
     Section(SectionTableError),
     /// Encoding the provenance sidecar section failed.
     Provenance(ProvenanceSectionError),
+    /// Encoding or reading the Tensor10DNodes section failed.
+    Nodes(NodeSectionError),
     /// The container parsed but held no `QuantizedMesh` section.
     NoMeshSection,
+    /// The container parsed but held no `Tensor10DNodes` section.
+    NoNodesSection,
     /// The 64-byte container header failed to parse on read-back.
     BadHeader,
     /// A section descriptor's byte range fell outside the container bytes.
@@ -61,7 +69,9 @@ impl std::fmt::Display for Compile10dError {
             Self::Mesh(e) => write!(f, ".10d compile: mesh section: {e}"),
             Self::Section(e) => write!(f, ".10d compile: section table: {e:?}"),
             Self::Provenance(e) => write!(f, ".10d compile: provenance section: {e}"),
+            Self::Nodes(e) => write!(f, ".10d compile: Tensor10DNodes section: {e}"),
             Self::NoMeshSection => write!(f, ".10d: no QuantizedMesh section in container"),
+            Self::NoNodesSection => write!(f, ".10d: no Tensor10DNodes section in container"),
             Self::BadHeader => write!(f, ".10d: container header failed to parse"),
             Self::SectionOutOfBounds => write!(f, ".10d: section byte range outside container"),
         }
@@ -90,12 +100,42 @@ pub fn compile_mesh_to_10d_with_provenance(
     mesh: &Mesh,
     provenance: Option<&ProvenanceSidecar>,
 ) -> Result<Vec<u8>, Compile10dError> {
+    compile_mesh_to_10d_with_nodes_and_provenance(mesh, &[], provenance)
+}
+
+/// Compile mesh + optional Tensor10D nodes (vision detections / σ paint fuel).
+///
+/// Nodes are encoded as `SectionType::Tensor10DNodes` (AoS). Empty `nodes` is
+/// equivalent to [`compile_mesh_to_10d`].
+pub fn compile_mesh_to_10d_with_nodes(
+    mesh: &Mesh,
+    nodes: &[Tensor10D],
+) -> Result<Vec<u8>, Compile10dError> {
+    compile_mesh_to_10d_with_nodes_and_provenance(mesh, nodes, None)
+}
+
+/// Full vision/recon seal: mesh + nodes + optional provenance.
+pub fn compile_mesh_to_10d_with_nodes_and_provenance(
+    mesh: &Mesh,
+    nodes: &[Tensor10D],
+    provenance: Option<&ProvenanceSidecar>,
+) -> Result<Vec<u8>, Compile10dError> {
     // 1. Encode the QuantizedMesh section payload.
     let mut payload = vec![0u8; encoded_len(mesh.vertex_count(), mesh.triangle_count())];
     let written = encode_mesh_section(mesh, &mut payload).map_err(Compile10dError::Mesh)?;
     payload.truncate(written);
 
-    // 1b. Encode the provenance sidecar payload, if bundling one.
+    // 1b. Encode Tensor10DNodes (AoS) when present.
+    let node_payload: Option<Vec<u8>> = if nodes.is_empty() {
+        None
+    } else {
+        let mut buf = vec![0u8; NodeMiniHeader::payload_bytes(nodes.len())];
+        let n = write_node_section_aos(nodes, &mut buf).map_err(Compile10dError::Nodes)?;
+        buf.truncate(n);
+        Some(buf)
+    };
+
+    // 1c. Encode the provenance sidecar payload, if bundling one.
     let prov_payload: Option<Vec<u8>> = match provenance {
         Some(p) => {
             let mut buf = vec![0u8; provenance_encoded_len(p)];
@@ -106,9 +146,8 @@ pub fn compile_mesh_to_10d_with_provenance(
         None => None,
     };
 
-    // 2. Assemble the container. Mesh is Page-aligned so its payload is GPU-stageable;
-    // the provenance blob is Word-aligned. The writer canonical-orders by section type
-    // (mesh=1 before provenance=7), so the input order here does not matter.
+    // 2. Assemble the container. Mesh is Page-aligned; nodes CacheLine; provenance Word.
+    // Writer canonical-orders by section type (mesh=1, nodes=2, provenance=7).
     let header = Container10dHeader::proposed();
     let mut inputs = vec![SectionInput {
         section_type: SectionType::QuantizedMesh,
@@ -117,6 +156,17 @@ pub fn compile_mesh_to_10d_with_provenance(
         element_count: 0,
         payload: &payload,
     }];
+    if let Some(np) = &node_payload {
+        // stride/element_count stay 0: payload includes 16-byte NodeMiniHeader +
+        // N×40 tensors (same contract as container_10d conformance golden).
+        inputs.push(SectionInput {
+            section_type: SectionType::Tensor10DNodes,
+            alignment_tier: AlignmentTier::CacheLine,
+            stride: 0,
+            element_count: 0,
+            payload: np,
+        });
+    }
     if let Some(pp) = &prov_payload {
         inputs.push(SectionInput {
             section_type: SectionType::ProvenanceSidecar,
@@ -169,6 +219,37 @@ pub fn decode_10d_mesh(container_10d: &[u8]) -> Result<Mesh, Compile10dError> {
         }
     }
     Err(Compile10dError::NoMeshSection)
+}
+
+/// Read Tensor10D nodes from a sealed `.10d` (first Tensor10DNodes section).
+///
+/// Returns the node count written into `out` (caller buffer; truncated to
+/// `out.len()`). Fail-closed if the section is missing or malformed.
+pub fn decode_10d_nodes(
+    container_10d: &[u8],
+    out: &mut [Tensor10D],
+) -> Result<usize, Compile10dError> {
+    let header =
+        Container10dHeader::parse(container_10d).map_err(|_| Compile10dError::BadHeader)?;
+    let descs = parse_section_table(container_10d, &header).map_err(Compile10dError::Section)?;
+    for d in descs {
+        if d.typ() == Some(SectionType::Tensor10DNodes) {
+            let start = d.byte_offset as usize;
+            let end = start
+                .checked_add(d.byte_length as usize)
+                .ok_or(Compile10dError::SectionOutOfBounds)?;
+            let payload = container_10d
+                .get(start..end)
+                .ok_or(Compile10dError::SectionOutOfBounds)?;
+            let (nh, _) = parse_node_header(payload).map_err(Compile10dError::Nodes)?;
+            let count = (nh.node_count as usize).min(out.len());
+            for i in 0..count {
+                out[i] = read_node(payload, i).map_err(Compile10dError::Nodes)?;
+            }
+            return Ok(count);
+        }
+    }
+    Err(Compile10dError::NoNodesSection)
 }
 
 /// A fully compiled geometry asset: the source-imported [`Mesh`], the sealed `.10d`
@@ -406,6 +487,33 @@ mod tests {
     #[test]
     fn decode_rejects_garbage() {
         assert_eq!(decode_10d_mesh(&[0u8; 8]), Err(Compile10dError::BadHeader));
+    }
+
+    #[test]
+    fn mesh_with_nodes_round_trips_sigma() {
+        use crate::tensor::Tensor10D;
+        let mesh = cube();
+        let nodes = [
+            Tensor10D::ground_truth(0.0, 0.0, 0.5, 0.5, 0.0, 1.0, 0.9, 0.0, 0.42),
+            Tensor10D::parallel_context(1.0, 0.0, 0.0, 0.1, 0.2, 0.0, 2.0, 0.5, 0.0, 0.7),
+        ];
+        let mut bytes = compile_mesh_to_10d_with_nodes(&mesh, &nodes).unwrap();
+        verify_whole_file_crc32c(&mut bytes).expect("seal");
+        let back = decode_10d_mesh(&bytes).unwrap();
+        assert_eq!(back.triangle_count(), mesh.triangle_count());
+        let mut out = [Tensor10D::default(); 4];
+        let n = decode_10d_nodes(&bytes, &mut out).unwrap();
+        assert_eq!(n, 2);
+        assert!((out[0].sigma - 0.42).abs() < 1e-5);
+        assert!((out[0].x - 0.5).abs() < 1e-5);
+        assert!((out[1].q - 1.0).abs() < 1e-5);
+        assert!((out[1].sigma - 0.7).abs() < 1e-5);
+        // Mesh-only compile must not invent a nodes section.
+        let plain = compile_mesh_to_10d(&mesh).unwrap();
+        assert!(matches!(
+            decode_10d_nodes(&plain, &mut out),
+            Err(Compile10dError::NoNodesSection)
+        ));
     }
 
     /// A single OBJ triangle — the smallest valid source asset.

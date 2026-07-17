@@ -81,12 +81,13 @@ pub use generator::{
 };
 pub use spatial::{
     assess_twin_eligibility, class_hash_to_sigma_base, class_id_to_sigma_base, class_score_to_sigma,
-    detection_center_to_node_hint, detection_to_sigma, detections_to_node_hints,
+    cleanup_mesh_ir, detection_center_to_node_hint, detection_to_sigma, detections_to_node_hints,
     image_to_heightfield_mesh, mesh_ir_to_export, mesh_ir_to_export_validated, mesh_ir_to_obj,
     mesh_ir_to_stl_binary, mesh_ir_triangles, pack_geometry_export_for_10d, print_readiness,
     refuse_fea_unless_eligible, validate_mesh_ir, AnalysisDomain, GeometryFor10d,
-    ImageTo3dReceipt, MeshIR, MeshValidationReport, MeshValidationStatus, NodeHint,
-    PrintReadiness, RenderMeshExport, TwinEligibility, MAX_INDICES, MAX_VERTICES,
+    ImageTo3dReceipt, MeshCleanupOptions, MeshIR, MeshQualityReport, MeshValidationReport,
+    MeshValidationStatus, NodeHint, PrintReadiness, RenderMeshExport, TwinEligibility, MAX_INDICES,
+    MAX_VERTICES,
 };
 pub use capability::{all_capabilities, by_id, count_by_status, CapabilityEntry, CapabilityStatus};
 pub use embeddings::{

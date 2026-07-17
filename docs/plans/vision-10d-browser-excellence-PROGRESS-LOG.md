@@ -5,6 +5,42 @@
 
 ---
 
+## 2026-07-17 — Sprint 3 wave: C2 + D1 + F1
+
+**Status:** done
+
+| Track | What was built |
+|-------|----------------|
+| **C2** | `spatial/mesh_ir_quality` — weld + degenerate drop; host `maybe_decimate_mesh` via QEM (`decimate_qem`) when faces > cap; Gs continuum runs cleanup then optional decimate. |
+| **D1** | `compile_mesh_to_10d_with_nodes` / `_and_provenance` + `decode_10d_nodes` in `render/compile_10d.rs`; Gs continuum seals recon marker Tensor10D; `seal_vision_mesh_with_detections` + `node_hint_to_tensor10d`. |
+| **F1** | `vision_10d_browse::list_vision_10d_containers` / inspect; Tauri `browse_vision_10d`; general `browse_10d_containers` scans `vision_geometry/` and labels **Vision Reconstruction**. |
+
+### Measured
+
+```
+cargo test -p qualia-core-db --lib mesh_with_nodes_round_trips_sigma  → 1 passed
+cargo test -p qualia-vision --lib  → 342 passed
+cargo test -p qualia-client-core --lib vision_10d_browse  → 1 passed
+```
+
+### Registry
+
+- D5.13 **Present** (mesh+nodes seal + browse)
+- D5.01 honesty notes quality cleanup
+
+### ⚑ Principal
+
+None this step. Optional: Studio UI button wired to `browse_vision_10d` (command registered).
+
+### Next
+
+- **C3** Topology/SpatialIndex sections on vision recon  
+- **D3** portal paint/scrub σ for vision assets  
+- **F2** portal WASM load vision `.10d`  
+- **B2** classical SR WGSL when Cool  
+
+---
+
 ## 2026-07-17 — Sprint 1 complete + Sprint 2 B1/D2 started
 
 **Status:** done (Sprint 1); partial (Sprint 2)

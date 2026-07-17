@@ -14,6 +14,7 @@ pub mod twin_bridge;
 pub mod mesh_ir_to_export;
 pub mod compile_10d_handoff;
 pub mod sigma_map;
+pub mod mesh_ir_quality;
 
 pub use geometry_ir::{MeshIR, MAX_INDICES, MAX_VERTICES};
 pub use image_to_3d::{image_to_heightfield_mesh, ImageTo3dReceipt};
@@ -35,4 +36,7 @@ pub use compile_10d_handoff::{
 };
 pub use sigma_map::{
     class_hash_to_sigma_base, class_id_to_sigma_base, class_score_to_sigma, detection_to_sigma,
+};
+pub use mesh_ir_quality::{
+    cleanup_mesh_ir, MeshCleanupOptions, MeshQualityReport,
 };

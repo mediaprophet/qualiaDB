@@ -103,7 +103,13 @@ static REGISTRY: &[CapabilityEntry] = &[
     cap!("D4.09", "D4", "mindware_biometric_bind", Partial, "consent co-gate"),
     cap!("D4.10", "D4", "rights_audit", Present, "biosense audit log lines"),
     // D5 3D
-    cap!("D5.01", "D5", "mesh_ir_validate", Present, "spatial/validate"),
+    cap!(
+        "D5.01",
+        "D5",
+        "mesh_ir_validate",
+        Present,
+        "spatial/validate + mesh_ir_quality cleanup (C2 weld/degen)"
+    ),
     cap!("D5.02", "D5", "obj_export", Present, "spatial/export_obj"),
     cap!("D5.03", "D5", "stl_export", Present, "spatial/export_stl"),
     cap!("D5.04", "D5", "3mf_export", Partial, "minimal 3mf package"),
@@ -119,8 +125,8 @@ static REGISTRY: &[CapabilityEntry] = &[
         "D5.13",
         "D5",
         "10d_handoff",
-        Partial,
-        "MeshIR→export→GeometryFor10d + NodeHint σ stub (C1); host compile_10d seals mesh; Tensor10DNodes full σ still open"
+        Present,
+        "MeshIR→cleanup→export→compile_mesh_to_10d_with_nodes (mesh+σ Tensor10D); browse_vision_10d (C1/C2/D1/F1)"
     ),
     cap!("D5.14", "D5", "twin_a1_preview", Present, "twin_bridge A1"),
     // D6 engineering wire

@@ -7174,7 +7174,12 @@ pub fn browse_10d_containers(_app: tauri::AppHandle) -> Result<Vec<TenDContainer
                     .unwrap_or(&filename)
                     .to_string();
 
-                let category = if relative.contains("ccf") || relative.contains("anatomy") {
+                let category = if relative.contains("vision_geometry")
+                    || relative.contains("recon.10d")
+                    || relative.contains("vision")
+                {
+                    "Vision Reconstruction".to_string()
+                } else if relative.contains("ccf") || relative.contains("anatomy") {
                     "Anatomy Assets".to_string()
                 } else if relative.contains("library") || relative.contains("user") {
                     "User Library".to_string()
@@ -7208,8 +7213,28 @@ pub fn browse_10d_containers(_app: tauri::AppHandle) -> Result<Vec<TenDContainer
         scan_dir(&assets_dir, std::path::Path::new(&storage_root), &mut entries);
     }
 
+    // Vision recon continuum writes under vision_geometry/
+    let vision_dir = std::path::Path::new(&storage_root).join("vision_geometry");
+    if vision_dir.exists() {
+        scan_dir(
+            &vision_dir,
+            std::path::Path::new(&storage_root),
+            &mut entries,
+        );
+    }
+
     entries.sort_by(|a, b| a.category.cmp(&b.category).then(a.filename.cmp(&b.filename)));
     Ok(entries)
+}
+
+/// F1 — list sealed vision `.10d` assets only (under vision_geometry/).
+#[tauri::command]
+pub fn browse_vision_10d() -> Result<Vec<qualia_client_core::vision_10d_browse::Vision10dEntry>, String>
+{
+    let storage_root = qualia_client_core::state::dirs_default_path();
+    qualia_client_core::vision_10d_browse::list_vision_10d_containers(std::path::Path::new(
+        &storage_root,
+    ))
 }
 
 /// Inspect a single .10d container file in detail.
@@ -8127,6 +8152,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         crate::native_surface::unmount_gpu_surface,
         // ── 10D browser commands ─────────────────────────────────────────
         browse_10d_containers,
+        browse_vision_10d,
         inspect_10d_container,
         open_10d_file_picker,
         // ── Updater commands ─────────────────────────────────────────────
