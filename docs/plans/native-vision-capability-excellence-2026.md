@@ -405,6 +405,9 @@ ORB-class, match, RANSAC, warp.
 | **VXB1** | Face mesh / landmarks |
 | **VXB2** | Multi-ROI rPPG + SNR/confidence |
 | **VXB3** | Eulerian (and Lagrangian) micro-change magnification — **TODO-EVM1** excellence-grade EVM (pyramid + Hz band-pass + chroma colour mag + SNR abstain); lite residual mag is **not** the bar |
+
+**Full capability backlog (industry catalogue → Qualia TODO waves W0–W8):**  
+[`vision-capability-catalogue-2026.md`](vision-capability-catalogue-2026.md) — rPPG through specialty optics + local-first P2P embeddings; policy/OOS tags included.
 | **VXB4** | Respiration + audio fusion |
 | **VXB5** | Biometric vault, liveness, revoke, voice co-policy |
 | **VXB6** | Affect proposals + non-claims + reject/correct |

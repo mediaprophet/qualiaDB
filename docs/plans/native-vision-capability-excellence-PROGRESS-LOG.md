@@ -109,9 +109,14 @@ Wire Studio/desktop commands; deepen face mesh weights; FED policy; multi-view r
 
 Open agent-executable work. Mark **done** in a dated entry when shipped; do not claim excellence for lite stubs.
 
+**Full industry map (all catalogue rows):**  
+[`vision-capability-catalogue-2026.md`](vision-capability-catalogue-2026.md) — Physiological → Specialty Optics + Decentralized/P2P, with Status + TODO IDs + policy/OOS tags.
+
+### W0 — Active excellence (next to execute)
+
 | ID | Item | Track / path | Status | Notes |
 |----|------|--------------|--------|-------|
-| **TODO-EVM1** | **Excellence-grade Eulerian Video Magnification (EVM)** | **T-EVM** · `biosense/magnification/` | **queued** | Lite colour/motion already present (`eulerian_*_magnify.rs`). Promote to research-grade EVM — see breakdown below. |
+| **TODO-EVM1** | **Excellence-grade Eulerian Video Magnification (EVM)** | **T-EVM** · `biosense/magnification/` | **queued** | Lite present; pyramid + Hz band-pass + chroma + SNR — breakdown below |
 | TODO-MESH1 | MediaPipe / face mesh adapter → `LandmarkFrame` | T-MESH · `biosense/face_mesh/` | queued | Feed PAD PAR + rPPG ROI; Apache pack when weights drop |
 | TODO-PAD1 | Host camera attestation on unlock path | T-PAD + desktop | queued | `CameraStreamAttestation::physical_attested()` |
 | TODO-PAD2 | Calibrate PAR τ / yaw policy in MANIFEST | T-PAD | queued | Principal real-capture pass |
@@ -119,6 +124,96 @@ Open agent-executable work. Mark **done** in a dated entry when shipped; do not 
 | TODO-FED1 | SPARQL-FED multi-camera policy depth | T-POL | queued | COMPLETE-WITH-GATE |
 | TODO-3D1 | Photogrammetry multi-view beyond heightfield | T-RECON | queued | After STL path solid |
 | TODO-UI1 | Studio/desktop biosense + EVM workbench wire | T-UI / T-DESK | queued | Consent-bound; no silent bio |
+
+### W1 — Physiological depth (after / parallel EVM)
+
+| ID | Item | Status | Notes |
+|----|------|--------|-------|
+| TODO-RR1 | Respiratory rate (flow / EVM / rPPG harmonic) | queued | Deepen D3.05 beyond motion-energy band |
+| TODO-SPO2 | Remote SpO₂ proxy (RGB ratio; clinical honesty) | queued + gated | Non-diagnosis; corpus for any clinical claim |
+| TODO-PUPIL | Pupillometry (iris ROI + diameter track) | queued | After mesh/iris landmarks |
+| TODO-MICROX | Micro-expression / AU temporal events | queued | Extends D3.14; mesh required |
+| TODO-RPPG-DEEP | Optional DeepPhys-class path | gated | Only if Apache-OK weights; POS/CHROM remain default |
+
+### W2 — Tracking & kinematics
+
+| ID | Item | Status | Notes |
+|----|------|--------|-------|
+| TODO-MOT | MOT upgrade (ByteTrack-class association) | queued | Beyond BoundedTracker lite |
+| TODO-POSE | Body pose 2D/3D (MediaPipe Pose / MoveNet pack) | queued | D2.06 |
+| TODO-HAND | Hand 21-pt + gesture | queued | MediaPipe Hands pack |
+| TODO-GAZE | Gaze / iris point-of-regard | queued | After iris landmarks |
+| TODO-6D | 6D object pose | queued | Robotics/AR |
+| TODO-KINLIV | Kinematic liveness (blink/swallow physics) | queued | Complements PAD; not substitute for PAR |
+| TODO-AVSYNC | Deepfake AV lip-sync **detection** | queued | Defence only |
+| TODO-GAIT | Gait biometrics | queued + policy | High sensitivity |
+
+### W3 — Scene & geometry (learned)
+
+| ID | Item | Status | Notes |
+|----|------|--------|-------|
+| TODO-SEG / TODO-INST / TODO-PAN | Semantic / instance / panoptic seg | queued | D2.04; licence-clean weights |
+| TODO-DEPTH | Monocular depth (MiDaS-class) | queued | D2.05 |
+| TODO-SAL | Salient object / BG remove (U²-Net-class) | queued | |
+| TODO-VO | Visual odometry / SLAM path | queued | Links D5 recon |
+
+### W4 — Image restoration
+
+| ID | Item | Status |
+|----|------|--------|
+| TODO-SR | Super-resolution | queued |
+| TODO-LL | Low-light enhancement | queued |
+| TODO-DEBLUR | Motion deblur | queued |
+| TODO-INPAINT | Inpainting (beyond bilateral denoise) | queued |
+| TODO-STAB | Video stabilization (needs D1.11 video I/O) | queued |
+
+### W5 — Document & industrial
+
+| ID | Item | Status |
+|----|------|--------|
+| TODO-OCR | OCR (D2.07) | queued / product demand |
+| TODO-LAYOUT / TODO-HTR / TODO-KIE | Layout, handwriting, key extraction | gated |
+| TODO-QR | Barcode/QR pure-Rust decode | queued |
+| TODO-DEFECT / TODO-ANOM | Surface defect + unsupervised anomaly | queued |
+| TODO-METRO | Dimensional metrology (sub-pixel + calib) | queued |
+| TODO-THERM | Thermal/IR analysis path | gated |
+
+### W6 — Policy-heavy verticals (principal demand only)
+
+| ID | Item | Status |
+|----|------|--------|
+| TODO-SURV-* | Crowd, abandoned, loiter, tripwire | queued + **policy** |
+| TODO-SURV-THREAT | Weapon/threat detect | gated + **policy** + principal-only |
+| TODO-ANPR / TODO-LANE / TODO-DROWSY / … | ADAS family | gated + policy where PII |
+| TODO-PLANO / TODO-HEAT / TODO-VTON / … | Retail family | gated; heatmap = policy |
+
+### W7 — Medical / ag / robotics / remote / optics
+
+| ID | Item | Status |
+|----|------|--------|
+| TODO-CELL / TODO-RAD / TODO-SURG | Cell, radiology, surgical tools | gated; non-diagnosis |
+| TODO-AG-* | Crop/weed/canopy/animal | gated / canopy can be classical early |
+| TODO-GRASP / TODO-SERVO / TODO-NAV | Robotics | gated |
+| TODO-RS-* | Satellite/drone | gated |
+| TODO-HSI / TODO-SCHLIEREN | Specialty optics | gated |
+| TODO-FRAME / TODO-HIGHLIGHT | Media framing / highlights | queued after MOT |
+
+### W8 — Vision-language + decentralized (Qualia-native)
+
+| ID | Item | Status | Notes |
+|----|------|--------|-------|
+| **TODO-P2P-EMB** | Local-first visual embeddings + search | queued | ONNX CLIP/ResNet; no cloud |
+| **TODO-P2P-PRIV** | Privacy-preserving feature extract | queued | Edge; HE optional via privacy engine |
+| **TODO-P2P-GRAPH** | On-device personal analytics → quins | partial recipes | Selfhood graph; no raw RGB default export |
+| TODO-VQA / TODO-CAPTION / TODO-ZSD / TODO-OVS / TODO-CBIR | VLM family | gated | Local LLM + vision; licence pack |
+
+### Explicit OOS (do not implement as product)
+
+| Item | Reason |
+|------|--------|
+| Deepfake generation / face-swap tools | Offensive synthetic identity; detection only (TODO-AVSYNC) |
+| Silent CCTV biometrics | Violates D4 purpose-bound consent |
+| Model-Z as PAD depth | Hallucinates on flat screens; use PAR |
 
 ### TODO-EVM1 breakdown (excellence bar — not lite)
 
@@ -140,3 +235,15 @@ Current code is a **temporal residual + gain** demo. Excellence EVM (Wu et al. s
 **Depends on:** T-CV1 buffers (done). Optional: face ROI / mesh for ROI-cropped mag.
 
 **Verify:** `cargo test -p qualia-vision --lib magnification` (+ new pyramid/bandpass tests).
+
+---
+
+## 2026-07-17 — Full vision capability catalogue ingested
+
+**Status:** backlog documented (not implemented)
+
+**What:** Principal-supplied catalogue (Physiological, Biometrics, Tracking, Scene, Image, Document, Industrial, Surveillance, ADAS, Retail, Medical, VLM, Ag, Robotics, Media, Remote Sensing, Decentralized/P2P, Specialty Optics) mapped in `vision-capability-catalogue-2026.md` and waved into this to-do (W0–W8).
+
+**Honesty:** Active PAD, classical CV, lite rPPG/EVM, policy stubs already Present/Partial as before. No new Present claims from catalogue alone.
+
+**Next execute default:** TODO-EVM1 unless principal reprioritises.
