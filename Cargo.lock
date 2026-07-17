@@ -9549,6 +9549,7 @@ dependencies = [
  "qualia-core-db",
  "qualia-solid-bridge",
  "rand 0.10.2",
+ "regex",
  "reqwest 0.13.4",
  "ripemd 0.2.0",
  "rtrb",
