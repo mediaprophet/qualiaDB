@@ -4,12 +4,8 @@
 //! - Window `webizen-browser` hosts two child webviews (Tauri `unstable` multi-webview):
 //!   - `webizen-browser-chrome` — toolbar / trust badge / agent drawer (our HTML)
 //!   - `webizen-browser-content` — top-level page navigation (real sites load)
+//! - **Default home** is the Chora-generated universe view (`chora-universe.html`), not DuckDuckGo.
 //! - Trust policy + agent logic: `qualia_client_core::{webizen_trust, browser_agent}`
-//!
-//! Layout: chrome is fixed-height at the top; content fills the remainder. On
-//! window resize we re-position both children. Content URL → chrome omnibox is
-//! polled via `browser_content_url` (≤1s) because in-page link navigation does
-//! not always surface a host event on every platform.
 
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -23,9 +19,14 @@ pub const CHROME_LABEL: &str = "webizen-browser-chrome";
 pub const CONTENT_LABEL: &str = "webizen-browser-content";
 pub const CHROME_H: f64 = 52.0;
 
+/// Canonical home — Chora universe (App asset), not an external search engine.
+pub const DEFAULT_HOME: &str = "qualia://chora/universe";
+pub const UNIVERSE_ASSET: &str = "chora-universe.html";
+
 static LAST_URL: Mutex<String> = Mutex::new(String::new());
 
 const CHROME_HTML: &str = include_str!("chrome.html");
+const UNIVERSE_HTML: &str = include_str!("universe.html");
 
 fn set_last_url(url: &str) {
     if let Ok(mut g) = LAST_URL.lock() {
@@ -37,13 +38,41 @@ pub fn last_url() -> String {
     LAST_URL.lock().map(|g| g.clone()).unwrap_or_default()
 }
 
-/// Ensure chrome HTML is available via App URL (frontendDist).
+/// True when the navigation target is the Chora universe home (local App page).
+pub fn is_chora_universe_url(url: &str) -> bool {
+    let u = url.trim().to_ascii_lowercase();
+    u.is_empty()
+        || u == "about:home"
+        || u == "about:blank"
+        || u == DEFAULT_HOME
+        || u == "qualia://chora"
+        || u == "qualia://home"
+        || u == "webizen://chora"
+        || u == "webizen://chora/universe"
+        || u == UNIVERSE_ASSET
+        || u.ends_with("/chora-universe.html")
+        || u.contains("chora-universe.html")
+}
+
+/// Normalize empty / home aliases to the canonical Chora universe URL.
+pub fn resolve_start_url(url: &str) -> String {
+    let t = url.trim();
+    if is_chora_universe_url(t) {
+        DEFAULT_HOME.into()
+    } else {
+        t.to_string()
+    }
+}
+
+/// Ensure chrome + universe HTML are available via App URL (frontendDist).
 pub fn ensure_chrome_asset() -> Result<PathBuf, String> {
     let dist = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../webizen-studio/dist");
     std::fs::create_dir_all(&dist).map_err(|e| e.to_string())?;
-    let path = dist.join("browser-chrome.html");
-    std::fs::write(&path, CHROME_HTML).map_err(|e| e.to_string())?;
-    Ok(path)
+    let chrome = dist.join("browser-chrome.html");
+    std::fs::write(&chrome, CHROME_HTML).map_err(|e| e.to_string())?;
+    let universe = dist.join(UNIVERSE_ASSET);
+    std::fs::write(&universe, UNIVERSE_HTML).map_err(|e| e.to_string())?;
+    Ok(chrome)
 }
 
 fn storage_root() -> PathBuf {
@@ -85,46 +114,66 @@ fn attach_resize_handler(window: &tauri::Window, app: AppHandle) {
             event,
             WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. }
         ) {
-            // Only relayout our browser window (handler is attached only there).
             let _ = win_label;
             let _ = relayout_browser(&app);
         }
     });
 }
 
+fn content_webview_url(start: &str) -> Result<WebviewUrl, String> {
+    if is_chora_universe_url(start) {
+        return Ok(WebviewUrl::App(UNIVERSE_ASSET.into()));
+    }
+    let parsed: tauri::Url = start
+        .parse()
+        .map_err(|e| format!("Invalid start URL '{start}': {e}"))?;
+    Ok(WebviewUrl::External(parsed))
+}
+
+/// Drop and re-create the content webview (needed to switch App ↔ External).
+fn replace_content_webview(app: &AppHandle, url: &str) -> Result<(), String> {
+    let window = app
+        .get_window(WINDOW_LABEL)
+        .ok_or_else(|| "browser window not open".to_string())?;
+    if let Some(w) = app.get_webview(CONTENT_LABEL) {
+        let _ = w.close();
+    }
+    let (width, height) = logical_inner(&window)?;
+    let content_h = (height - CHROME_H).max(120.0);
+    let wv_url = content_webview_url(url)?;
+    window
+        .add_child(
+            WebviewBuilder::new(CONTENT_LABEL, wv_url),
+            LogicalPosition::new(0.0, CHROME_H),
+            LogicalSize::new(width, content_h),
+        )
+        .map_err(|e| format!("content webview: {e}"))?;
+    Ok(())
+}
+
 /// Create or focus the browser window with chrome + content child webviews.
 pub fn open_browser_shell(app: &AppHandle, start_url: &str) -> Result<String, String> {
     let _ = ensure_chrome_asset()?;
-    let start = start_url.trim();
-    let start = if start.is_empty() {
-        "https://duckduckgo.com/"
-    } else {
-        start
-    };
-    set_last_url(start);
+    let start = resolve_start_url(start_url);
+    set_last_url(&start);
 
     if app.get_window(WINDOW_LABEL).is_some() {
-        // Ensure children still exist (user may have closed a webview on some platforms).
         if app.get_webview(CONTENT_LABEL).is_none() || app.get_webview(CHROME_LABEL).is_none() {
-            // Fail closed: destroy shell and rebuild.
             if let Some(w) = app.get_window(WINDOW_LABEL) {
                 let _ = w.close();
             }
         } else {
-            navigate_content(app, start)?;
+            navigate_content(app, &start)?;
             let _ = relayout_browser(app);
             focus_window(app)?;
-            return Ok(start.to_string());
+            return Ok(start);
         }
     }
 
     let chrome_path = format!(
         "browser-chrome.html?url={}",
-        urlencoding::encode(start)
+        urlencoding::encode(&start)
     );
-    let start_parsed: tauri::Url = start
-        .parse()
-        .map_err(|e| format!("Invalid start URL '{start}': {e}"))?;
 
     let window = WindowBuilder::new(app, WINDOW_LABEL)
         .title("Webizen Browser")
@@ -145,45 +194,67 @@ pub fn open_browser_shell(app: &AppHandle, start_url: &str) -> Result<String, St
         .map_err(|e| {
             let _ = window.close();
             format!(
-                "chrome webview failed: {e}. Fallback: use Reach pane chrome + browser_navigate only, or reopen after rebuild."
+                "chrome webview failed: {e}. Fallback: use Reach pane chrome + browser_navigate only."
             )
         })?;
 
+    let content_url = content_webview_url(&start).map_err(|e| {
+        let _ = window.close();
+        e
+    })?;
+
     window
         .add_child(
-            WebviewBuilder::new(CONTENT_LABEL, WebviewUrl::External(start_parsed)),
+            WebviewBuilder::new(CONTENT_LABEL, content_url),
             LogicalPosition::new(0.0, CHROME_H),
             LogicalSize::new(width, content_h),
         )
         .map_err(|e| {
             let _ = window.close();
             format!(
-                "content webview failed: {e}. Fallback: single-window navigation via open_web_url / Reach Focus."
+                "content webview failed: {e}. Fallback: single-window navigation via Reach Focus."
             )
         })?;
 
     attach_resize_handler(&window, app.clone());
     let _ = window.set_focus();
-    Ok(start.to_string())
+    Ok(start)
 }
 
 /// Navigate only the content webview (chrome stays put).
 pub fn navigate_content(app: &AppHandle, url: &str) -> Result<(), String> {
-    let url = url.trim();
+    let url = resolve_start_url(url);
     if url.is_empty() {
         return Err("empty URL".into());
     }
+
+    if app.get_webview(CONTENT_LABEL).is_none() {
+        set_last_url(&url);
+        return open_browser_shell(app, &url).map(|_| ());
+    }
+
+    let prev = last_url();
+    let to_universe = is_chora_universe_url(&url);
+    let from_universe = is_chora_universe_url(&prev);
+    set_last_url(&url);
+
+    // App ↔ External switch requires recreating the content child.
+    if to_universe || from_universe {
+        return replace_content_webview(app, &url);
+    }
+
     let parsed: tauri::Url = url
         .parse()
         .map_err(|e| format!("Invalid URL '{url}': {e}"))?;
-    set_last_url(url);
 
     if let Some(w) = app.get_webview(CONTENT_LABEL) {
-        w.navigate(parsed).map_err(|e| e.to_string())?;
-        return Ok(());
+        match w.navigate(parsed) {
+            Ok(()) => Ok(()),
+            Err(_) => replace_content_webview(app, &url),
+        }
+    } else {
+        open_browser_shell(app, &url).map(|_| ())
     }
-    // Shell not open yet.
-    open_browser_shell(app, url).map(|_| ())
 }
 
 pub fn reload_content(app: &AppHandle) -> Result<(), String> {
@@ -217,14 +288,12 @@ pub fn content_history_forward(app: &AppHandle) -> Result<(), String> {
 
 /// Best-effort content URL for chrome omnibox sync (poll ≤1s from chrome.html).
 pub fn content_url(app: &AppHandle) -> String {
-    // Prefer last navigated URL we set; in-page SPA navigations may lag until
-    // platform navigation hooks land (honest: poll is the documented path).
     let last = last_url();
     if !last.is_empty() {
         return last;
     }
     if app.get_webview(CONTENT_LABEL).is_some() {
-        "https://duckduckgo.com/".into()
+        DEFAULT_HOME.into()
     } else {
         String::new()
     }
@@ -248,11 +317,12 @@ pub fn status(app: &AppHandle) -> serde_json::Value {
         "label": WINDOW_LABEL,
         "content_label": CONTENT_LABEL,
         "last_url": last_url(),
+        "default_home": DEFAULT_HOME,
         "chrome": "in-window multi-webview",
         "substrate": "os-webview",
-        "phases": ["P0", "P0.1", "P1-store", "P2-agent"],
+        "phases": ["P0", "P0.1", "P1-store", "P2-agent", "chora-home"],
         "url_sync": "poll browser_content_url ≤1s",
-        "note": "TLS for content webview still uses the OS store; custom PEM roots apply to agent HTTPS fetch. Platform cert-override is the next hook.",
+        "note": "Default content is Chora universe (App). TLS for external https still uses the OS store.",
     })
 }
 

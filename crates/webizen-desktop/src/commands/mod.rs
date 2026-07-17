@@ -2202,6 +2202,16 @@ pub fn chora_seed_demo(app: AppHandle) -> Result<bool, String> {
     })?
 }
 
+/// Seed P8 flagship Chora worlds when missing (history, biosphere, council, SDG, GLAM).
+#[command]
+pub fn chora_seed_flagships(app: AppHandle) -> Result<u32, String> {
+    let state = app.state::<HostApiState>();
+    state.0.execute_sync(move |guard| {
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        host.seed_flagship_worlds()
+    })?
+}
+
 #[command]
 pub fn chora_navigation(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
@@ -4628,13 +4638,24 @@ pub fn get_commitment_prompt() -> serde_json::Value {
 #[command]
 pub fn submit_omnibox_query(query: String) -> String {
     let q = query.trim();
+    let ql = q.to_ascii_lowercase();
+    // Home / Chora universe (browser default content).
+    if ql.is_empty()
+        || ql == "home"
+        || ql == "chora"
+        || ql == "universe"
+        || ql == "about:home"
+        || crate::browser::is_chora_universe_url(q)
+    {
+        return crate::browser::DEFAULT_HOME.to_string();
+    }
     if q.contains("my did") || q.contains("my webid") {
         return "qualia://webid/did:q42:local".to_string();
     }
     if q.contains("thermal") || q.contains("status") {
         return "qualia://internal/monitor".to_string();
     }
-    if q.to_lowercase() == "hello" {
+    if ql == "hello" {
         return "qualia://internal/dialectical-sidebar".to_string();
     }
     if q.starts_with("did:q42:") || q.starts_with("did:") {
@@ -7170,6 +7191,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         chora_save_world,
         chora_delete_world,
         chora_seed_demo,
+        chora_seed_flagships,
         chora_navigation,
         chora_set_temporal,
         chora_set_active_world,

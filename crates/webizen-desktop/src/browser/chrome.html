@@ -146,7 +146,7 @@
   </div>
   <script>
     const $ = (id) => document.getElementById(id);
-    let currentUrl = "https://duckduckgo.com/";
+    let currentUrl = "qualia://chora/universe";
     let history = [currentUrl];
     let histIdx = 0;
     let urlFocused = false;
@@ -378,11 +378,17 @@
 
     (async () => {
       const params = new URLSearchParams(location.search);
-      const start = params.get("url") || "https://duckduckgo.com/";
+      const start = params.get("url") || "qualia://chora/universe";
       $("url").value = start;
       $("btn-back").disabled = true;
       $("btn-fwd").disabled = true;
-      await navigate(start);
+      // Content child already loads default universe on shell open; sync omnibox + trust.
+      currentUrl = start;
+      lastPolled = start;
+      await refreshTrust(start);
+      setStatus(start.indexOf("chora") >= 0
+        ? "Chora universe · drag sky to orbit · seed flagships in page"
+        : "Ready");
     })();
   </script>
 </body>

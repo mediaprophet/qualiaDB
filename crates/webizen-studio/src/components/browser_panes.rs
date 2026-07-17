@@ -155,7 +155,7 @@ pub fn WebBrowserPane() -> Element {
                 }
             }
         }
-        vec![BrowserTab::new("https://duckduckgo.com/".to_string())]
+        vec![BrowserTab::new("qualia://chora/universe".to_string())]
     });
 
     let mut active_tab_id = use_signal(|| tabs.read()[0].id.clone());
@@ -190,12 +190,14 @@ pub fn WebBrowserPane() -> Element {
             .iter()
             .find(|t| t.id == active_tab_id())
             .map(|t| t.url.clone())
-            .unwrap_or_else(|| "https://duckduckgo.com/".into());
+            .unwrap_or_else(|| "qualia://chora/universe".into());
         spawn(async move {
             match navigate_native(&start).await {
                 Ok(_) => {
                     status_err.set(false);
-                    status.set(format!("Opened in Webizen Browser: {start}"));
+                    status.set(format!(
+                        "Opened Webizen Browser · home is Chora universe ({start})"
+                    ));
                     browser_open.set(true);
                 }
                 Err(e) => {
@@ -542,7 +544,7 @@ pub fn WebBrowserPane() -> Element {
                     class: "px-3 cursor-pointer text-text-muted hover:text-primary bg-transparent border-none text-xl font-bold",
                     title: "New tab",
                     onclick: move |_| {
-                        let tab = BrowserTab::new("https://duckduckgo.com/".to_string());
+                        let tab = BrowserTab::new("qualia://chora/universe".to_string());
                         let id = tab.id.clone();
                         let url = tab.url.clone();
                         tabs.write().push(tab);
@@ -677,6 +679,12 @@ pub fn WebBrowserPane() -> Element {
                                 style: "padding: 0.5rem 0.9rem; border-radius: 9px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-weight: 600; cursor: pointer; font-size: 0.85rem;",
                                 onclick: focus_browser,
                                 "Focus browser window"
+                            }
+                            button {
+                                r#type: "button",
+                                style: "padding: 0.5rem 0.9rem; border-radius: 9px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-weight: 600; cursor: pointer; font-size: 0.85rem;",
+                                onclick: move |_| navigate_active("qualia://chora/universe".into()),
+                                "Chora universe"
                             }
                             button {
                                 r#type: "button",

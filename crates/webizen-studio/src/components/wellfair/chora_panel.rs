@@ -47,7 +47,17 @@ pub fn WellfairChoraPanel() -> Element {
     use_effect(move || {
         if loaded() { return; }
         loaded.set(true);
-        refresh();
+        // Auto-seed flagships when store empty so explorer is not a void.
+        spawn(async move {
+            let _ = super::chora_host_client::seed_canvas_demo().await;
+            // Prefer flagships if the host exposes the command (desktop).
+            let _ = crate::components::qapp_engine::invoke_json(
+                "chora_seed_flagships",
+                serde_json::json!({}),
+            )
+            .await;
+            refresh();
+        });
     });
 
     rsx! {
