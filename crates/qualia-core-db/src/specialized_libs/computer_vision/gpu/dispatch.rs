@@ -40,7 +40,7 @@ fn report_after_cpu(prefer_gpu: bool) -> VisionComputeReport {
     }
 }
 
-/// Prefer GPU when `prefer_gpu` and feature allows; currently always CPU with honest report.
+/// Prefer GPU when `prefer_gpu`: try Forge `Resize2d` on `shared_gpu`, else CPU.
 pub fn resize_nearest_nchw_dispatch(
     input: &[f32],
     c: usize,
@@ -51,7 +51,13 @@ pub fn resize_nearest_nchw_dispatch(
     out: &mut [f32],
     prefer_gpu: bool,
 ) -> Result<VisionComputeReport, VisionError> {
-    // Feature `gpu` will attempt Forge here; default product path is CPU oracle.
+    if prefer_gpu {
+        if let Ok(r) = super::forge_resize::try_resize_nearest_shared_gpu(
+            input, c, h_in, w_in, h_out, w_out, out,
+        ) {
+            return Ok(r);
+        }
+    }
     resize_nearest_nchw_f32(input, c, h_in, w_in, h_out, w_out, out)?;
     Ok(report_after_cpu(prefer_gpu))
 }

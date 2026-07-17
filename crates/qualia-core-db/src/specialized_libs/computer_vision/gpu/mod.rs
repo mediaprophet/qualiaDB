@@ -8,9 +8,11 @@
 
 pub mod dispatch;
 pub mod policy;
+pub mod forge_resize;
 
 pub use dispatch::{
     avg_pool2d_dispatch, conv2d_nchw_dispatch, max_pool2d_dispatch, resize_nearest_nchw_dispatch,
     VisionComputeDevice, VisionComputeReport,
 };
+pub use forge_resize::try_resize_nearest_shared_gpu;
 pub use policy::{thermal_allows_gpu_tiles, ThermalHint, VisionVramBudget};

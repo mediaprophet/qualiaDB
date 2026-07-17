@@ -45,6 +45,31 @@ pub struct TenDContainerInspection {
     pub provenance_timestamp: Option<u64>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct Vision10dLoadedDto {
+    pub path: Option<String>,
+    pub size_bytes: u64,
+    pub compiled_digest_hex: String,
+    pub crc_valid: bool,
+    pub mesh_vertices: u32,
+    pub mesh_triangles: u32,
+    pub node_count: u32,
+    pub has_topology: bool,
+    pub has_spatial_index: bool,
+    pub has_provenance: bool,
+    pub mean_sigma: f32,
+    pub mean_rgb: [u8; 3],
+    pub mean_frequency_hz: f32,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct VisionNodePaintDto {
+    pub t: f32,
+    pub sigma: f32,
+    pub rgb: [u8; 3],
+    pub frequency_hz: f32,
+}
+
 #[component]
 pub fn TenDBrowser() -> Element {
     let mut containers = use_signal(Vec::<TenDContainerEntry>::new);
@@ -52,16 +77,57 @@ pub fn TenDBrowser() -> Element {
     let mut inspection = use_signal(|| None::<TenDContainerInspection>);
     let mut loading = use_signal(|| false);
     let mut error_msg = use_signal(|| None::<String>);
+    // Vision recon panel (F1–F4)
+    let mut vision_only = use_signal(|| false);
+    let mut citable = use_signal(|| false);
+    let mut vision_load = use_signal(|| None::<Vision10dLoadedDto>);
+    let mut scrub_t = use_signal(|| 0.0f32);
+    let mut scrub_window = use_signal(|| 10.0f32);
+    let mut scrub_paint = use_signal(Vec::<VisionNodePaintDto>::new);
 
     let refresh = move |_| {
         loading.set(true);
         error_msg.set(None);
+        let vo = *vision_only.read();
         spawn(async move {
-            match invoke_json("browse_10d_containers", serde_json::json!({}))
+            let cmd = if vo {
+                "browse_vision_10d"
+            } else {
+                "browse_10d_containers"
+            };
+            match invoke_json(cmd, serde_json::json!({}))
                 .await
             {
                 Ok(val) => {
-                    if let Ok(entries) =
+                    if vo {
+                        // Vision entries → map into TenDContainerEntry shape for the tree.
+                        #[derive(Deserialize)]
+                        struct V {
+                            path: String,
+                            filename: String,
+                            size_bytes: u64,
+                            section_count: u32,
+                            has_mesh: bool,
+                            has_tensor_nodes: bool,
+                            has_provenance: bool,
+                        }
+                        if let Ok(vs) = serde_json::from_value::<Vec<V>>(val) {
+                            let entries: Vec<TenDContainerEntry> = vs
+                                .into_iter()
+                                .map(|v| TenDContainerEntry {
+                                    path: v.path,
+                                    filename: v.filename,
+                                    size_bytes: v.size_bytes,
+                                    section_count: v.section_count,
+                                    has_mesh: v.has_mesh,
+                                    has_tensor_nodes: v.has_tensor_nodes,
+                                    has_provenance: v.has_provenance,
+                                    category: "Vision Reconstruction".into(),
+                                })
+                                .collect();
+                            containers.set(entries);
+                        }
+                    } else if let Ok(entries) =
                         serde_json::from_value::<Vec<TenDContainerEntry>>(val)
                     {
                         containers.set(entries);
@@ -170,7 +236,31 @@ pub fn TenDBrowser() -> Element {
                     }
                 }
                 div {
-                    style: "display: flex; gap: 1rem;",
+                    style: "display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;",
+                    label {
+                        style: "display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: #a0aec0; cursor: pointer;",
+                        input {
+                            r#type: "checkbox",
+                            checked: *vision_only.read(),
+                            onchange: move |_| {
+                                let v = !*vision_only.read();
+                                vision_only.set(v);
+                            },
+                        }
+                        "Vision recon only"
+                    }
+                    label {
+                        style: "display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: #a0aec0; cursor: pointer;",
+                        input {
+                            r#type: "checkbox",
+                            checked: *citable.read(),
+                            onchange: move |_| {
+                                let v = !*citable.read();
+                                citable.set(v);
+                            },
+                        }
+                        "Citable (require provenance)"
+                    }
                     button {
                         r#type: "button",
                         onclick: refresh,
@@ -363,6 +453,129 @@ pub fn TenDBrowser() -> Element {
                                         if let Some(ts) = info.provenance_timestamp {
                                             div { style: "font-family: monospace; font-size: 0.85rem; color: #e2e8f0;", "TIMESTAMP: {ts}" }
                                         }
+                                    }
+                                }
+                            }
+
+                            // Vision recon load + temporal scrub (F2–F4)
+                            div {
+                                style: "padding: 1rem; border: 1px solid rgba(56, 178, 172, 0.3); background: rgba(56, 178, 172, 0.06); border-radius: 8px; display: flex; flex-direction: column; gap: 0.75rem;",
+                                div { style: "font-size: 0.75rem; text-transform: uppercase; color: #38b2ac; letter-spacing: 0.05em;", "Vision recon (load / scrub)" }
+                                div {
+                                    style: "display: flex; gap: 0.5rem; flex-wrap: wrap;",
+                                    button {
+                                        r#type: "button",
+                                        onclick: {
+                                            let path = info.path.clone();
+                                            move |_| {
+                                                let path = path.clone();
+                                                let cit = *citable.read();
+                                                spawn(async move {
+                                                    match invoke_json(
+                                                        "load_vision_10d",
+                                                        serde_json::json!({ "path": path, "citable": cit }),
+                                                    )
+                                                    .await
+                                                    {
+                                                        Ok(val) => {
+                                                            if let Ok(loaded) =
+                                                                serde_json::from_value::<Vision10dLoadedDto>(val)
+                                                            {
+                                                                vision_load.set(Some(loaded));
+                                                                error_msg.set(None);
+                                                            }
+                                                        }
+                                                        Err(e) => error_msg.set(Some(format!("{e}"))),
+                                                    }
+                                                });
+                                            }
+                                        },
+                                        style: "padding: 0.4rem 0.8rem; border: 1px solid #38b2ac; border-radius: 6px; background: transparent; color: #38b2ac; cursor: pointer; font-size: 0.8rem;",
+                                        "Load vision .10d"
+                                    }
+                                    button {
+                                        r#type: "button",
+                                        onclick: {
+                                            let path = info.path.clone();
+                                            move |_| {
+                                                let path = path.clone();
+                                                let cit = *citable.read();
+                                                let t = *scrub_t.read();
+                                                let w = *scrub_window.read();
+                                                spawn(async move {
+                                                    match invoke_json(
+                                                        "scrub_vision_10d_paint",
+                                                        serde_json::json!({
+                                                            "path": path,
+                                                            "t_slice": t,
+                                                            "t_window": w,
+                                                            "citable": cit
+                                                        }),
+                                                    )
+                                                    .await
+                                                    {
+                                                        Ok(val) => {
+                                                            if let Ok(p) =
+                                                                serde_json::from_value::<Vec<VisionNodePaintDto>>(val)
+                                                            {
+                                                                scrub_paint.set(p);
+                                                            }
+                                                        }
+                                                        Err(e) => error_msg.set(Some(format!("{e}"))),
+                                                    }
+                                                });
+                                            }
+                                        },
+                                        style: "padding: 0.4rem 0.8rem; border: 1px solid #90cdf4; border-radius: 6px; background: transparent; color: #90cdf4; cursor: pointer; font-size: 0.8rem;",
+                                        "Temporal scrub"
+                                    }
+                                }
+                                div {
+                                    style: "display: flex; gap: 1rem; font-size: 0.8rem; color: #a0aec0; flex-wrap: wrap;",
+                                    label {
+                                        "t_slice "
+                                        input {
+                                            r#type: "number",
+                                            value: "{scrub_t}",
+                                            step: "0.1",
+                                            oninput: move |ev| {
+                                                if let Ok(v) = ev.value().parse::<f32>() {
+                                                    scrub_t.set(v);
+                                                }
+                                            },
+                                            style: "width: 5rem; margin-left: 0.25rem; background: #1a202c; color: #e2e8f0; border: 1px solid #4a5568; border-radius: 4px; padding: 0.2rem;",
+                                        }
+                                    }
+                                    label {
+                                        "window "
+                                        input {
+                                            r#type: "number",
+                                            value: "{scrub_window}",
+                                            step: "0.1",
+                                            oninput: move |ev| {
+                                                if let Ok(v) = ev.value().parse::<f32>() {
+                                                    scrub_window.set(v);
+                                                }
+                                            },
+                                            style: "width: 5rem; margin-left: 0.25rem; background: #1a202c; color: #e2e8f0; border: 1px solid #4a5568; border-radius: 4px; padding: 0.2rem;",
+                                        }
+                                    }
+                                }
+                                if let Some(vl) = vision_load.read().as_ref() {
+                                    div {
+                                        style: "font-family: monospace; font-size: 0.8rem; color: #e2e8f0; line-height: 1.5;",
+                                        div { "digest: {vl.compiled_digest_hex}  crc: {vl.crc_valid}" }
+                                        div { "mesh: {vl.mesh_vertices}v / {vl.mesh_triangles}t  nodes: {vl.node_count}" }
+                                        div { "topo: {vl.has_topology}  spatial: {vl.has_spatial_index}  prov: {vl.has_provenance}" }
+                                        div {
+                                            "mean σ: {vl.mean_sigma:.3}  Hz: {vl.mean_frequency_hz:.1}  rgb: ({vl.mean_rgb[0]},{vl.mean_rgb[1]},{vl.mean_rgb[2]})"
+                                        }
+                                    }
+                                }
+                                if !scrub_paint.read().is_empty() {
+                                    div {
+                                        style: "font-size: 0.75rem; color: #90cdf4;",
+                                        "Scrub kept {scrub_paint.read().len()} node(s) in t window"
                                     }
                                 }
                             }

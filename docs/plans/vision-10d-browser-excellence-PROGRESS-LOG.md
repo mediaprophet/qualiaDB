@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-07-17 — Closeout: B2 Forge + MIG-V4 catalogue + Studio UI
+
+**Status:** done
+
+| Item | What |
+|------|------|
+| **B2 Forge** | `gpu/forge_resize.rs` — `Resize2d` on `shared_gpu` via `ForgeGraphExecutor`; nearest SR RGB packs through it when Cool+budget; degrade honest otherwise |
+| **MIG-V4** | `perception_catalog` seeds 4 Software-shelf rows for computer_vision (cv/sr/bio/spatial) |
+| **Studio UI** | `ten_d_browser`: Vision recon only, Citable toggle, Load vision .10d, Temporal scrub (t_slice/window) |
+
+### Measured
+
+```
+forge_resize test  → 1 passed (GPU or Unavailable)
+device_policy      → 2 passed
+vision_10d         → 6 passed
+webizen-studio check → ok
+```
+
+---
+
 ## 2026-07-17 — MIG-V2 computer_vision + B2 device policy
 
 **Status:** done (MIG-V2 land); MIG-V3 surface re-exports; MIG-V4 catalogue partial
