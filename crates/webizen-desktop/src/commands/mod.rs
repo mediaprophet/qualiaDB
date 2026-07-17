@@ -1844,6 +1844,63 @@ pub fn wellfair_search_library_text(app: AppHandle, query: String) -> Result<Str
 }
 
 #[command]
+pub fn wellfair_query_library_faceted(
+    app: AppHandle,
+    filter_json: String,
+    sort: Option<String>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock Sanctuary vault first".to_string())?;
+        let sort = sort.unwrap_or_else(|| "newest".into());
+        let results = host.query_library_faceted(&filter_json, &sort)?;
+        serde_json::to_string(&results).map_err(|e| e.to_string())
+    })?
+}
+
+#[command]
+pub fn wellfair_library_facet_counts(
+    app: AppHandle,
+    filter_json: Option<String>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock Sanctuary vault first".to_string())?;
+        let filter = filter_json.unwrap_or_default();
+        let results = host.library_facet_counts(&filter)?;
+        serde_json::to_string(&results).map_err(|e| e.to_string())
+    })?
+}
+
+#[command]
+pub fn wellfair_seed_studio_qapps(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock Sanctuary vault first".to_string())?;
+        let r = host.seed_studio_qapps_library()?;
+        serde_json::to_string(&r).map_err(|e| e.to_string())
+    })?
+}
+
+#[command]
+pub fn wellfair_list_qapp_catalog_categories(app: AppHandle) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock Sanctuary vault first".to_string())?;
+        let r = host.list_qapp_catalog_categories()?;
+        serde_json::to_string(&r).map_err(|e| e.to_string())
+    })?
+}
+
+#[command]
 pub fn wellfair_library_stats(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
@@ -6846,6 +6903,10 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_search_library_time,
         wellfair_list_library,
         wellfair_search_library_text,
+        wellfair_query_library_faceted,
+        wellfair_library_facet_counts,
+        wellfair_seed_studio_qapps,
+        wellfair_list_qapp_catalog_categories,
         wellfair_library_stats,
         wellfair_remove_library_entry,
         wellfair_export_library_graph,

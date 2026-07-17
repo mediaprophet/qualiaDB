@@ -352,6 +352,11 @@ impl HypermediaStore {
         self.save(&entries)
     }
 
+    /// Replace the entire library (used by bulk seed paths — one write).
+    pub fn replace_all(&self, entries: &[LibraryEntry]) -> std::io::Result<()> {
+        self.save(entries)
+    }
+
     /// Everything in the library (newest first).
     pub fn all(&self) -> std::io::Result<Vec<LibraryEntry>> {
         let mut entries = self.load()?;
@@ -463,26 +468,92 @@ impl HypermediaStore {
         self.entries_for(&subjects)
     }
 
-    /// Free-text filter over uri, excerpt, topics, projects, place (case-insensitive).
+    /// Free-text filter over uri, excerpt, topics, projects, purposes, place (case-insensitive).
     pub fn search_text(&self, query: &str) -> std::io::Result<Vec<LibraryEntry>> {
         let q = query.trim().to_lowercase();
         if q.is_empty() {
             return self.all();
         }
         let mut entries = self.load()?;
-        entries.retain(|e| {
-            e.asset_uri.to_lowercase().contains(&q)
-                || e.excerpt.to_lowercase().contains(&q)
-                || e.media_type.to_lowercase().contains(&q)
-                || e.topics.iter().any(|t| t.to_lowercase().contains(&q))
-                || e.projects.iter().any(|t| t.to_lowercase().contains(&q))
-                || e.place
-                    .as_ref()
-                    .map(|p| p.to_lowercase().contains(&q))
-                    .unwrap_or(false)
-        });
+        entries.retain(|e| entry_matches_text(e, &q));
         entries.sort_by(|a, b| b.ingested_unix.cmp(&a.ingested_unix));
         Ok(entries)
+    }
+
+    /// Multi-facet filter + sort. Facets are **AND** across dimensions; within each
+    /// non-empty list, match is **OR** (any of the selected values).
+    ///
+    /// Categories match `topics` containing the slug or `projects` of form `category:{slug}`.
+    pub fn query_faceted(
+        &self,
+        filter: &FacetFilter,
+        sort: LibrarySort,
+    ) -> std::io::Result<Vec<LibraryEntry>> {
+        let mut entries = self.all()?;
+        entries.retain(|e| filter.matches(e));
+        sort_entries(&mut entries, sort);
+        Ok(entries)
+    }
+
+    /// Facet value counts over entries matching `filter` (for chip UI). Counts are
+    /// computed **after** the filter so selecting a category narrows other facet tallies.
+    pub fn facet_counts(&self, filter: &FacetFilter) -> std::io::Result<FacetCounts> {
+        let entries = self.query_faceted(filter, LibrarySort::Newest)?;
+        let mut topics = BTreeMap::new();
+        let mut purposes = BTreeMap::new();
+        let mut projects = BTreeMap::new();
+        let mut media_types = BTreeMap::new();
+        let mut categories = BTreeMap::new();
+        let mut sections = BTreeMap::new();
+        for e in &entries {
+            *sections.entry(e.section.clone()).or_default() += 1;
+            *media_types.entry(e.media_type.clone()).or_default() += 1;
+            for t in &e.topics {
+                *topics.entry(t.clone()).or_default() += 1;
+            }
+            for p in &e.purposes {
+                *purposes.entry(p.clone()).or_default() += 1;
+            }
+            for p in &e.projects {
+                *projects.entry(p.clone()).or_default() += 1;
+                if let Some(cat) = p.strip_prefix("category:") {
+                    *categories.entry(cat.to_string()).or_default() += 1;
+                }
+            }
+            // Also treat topic slugs that look like domain categories.
+            for t in &e.topics {
+                if t.contains('-') && t != "qapp" && t != "academic" && !t.contains(':') {
+                    // Prefer explicit category: project tags; fill gaps from topics.
+                    categories.entry(t.clone()).or_insert(0);
+                }
+            }
+        }
+        // Re-count categories from project tags primarily (authoritative for QApps).
+        categories.clear();
+        for e in &entries {
+            for p in &e.projects {
+                if let Some(cat) = p.strip_prefix("category:") {
+                    *categories.entry(cat.to_string()).or_default() += 1;
+                }
+            }
+            // Fallback: topic that matches a known category project tag pattern on peers.
+            if e.projects.iter().all(|p| !p.starts_with("category:")) {
+                for t in &e.topics {
+                    if matches_category_slug(t) {
+                        *categories.entry(t.clone()).or_default() += 1;
+                    }
+                }
+            }
+        }
+        Ok(FacetCounts {
+            total: entries.len(),
+            topics,
+            purposes,
+            projects,
+            media_types,
+            categories,
+            sections,
+        })
     }
 
     /// Remove an entry by asset_uri.
@@ -554,6 +625,218 @@ pub struct LibraryStats {
     pub quins: usize,
     pub topics: std::collections::BTreeMap<String, usize>,
     pub projects: std::collections::BTreeMap<String, usize>,
+}
+
+/// Multi-facet filter for library browse / Software QApp shelf.
+///
+/// Empty lists mean "no constraint" on that dimension. Within a non-empty list,
+/// matching is OR; across dimensions, matching is AND.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct FacetFilter {
+    /// Product section id (`software`, `tools`, …). `all` / empty = no section filter.
+    #[serde(default)]
+    pub section: Option<String>,
+    /// Free-text over uri / excerpt / topics / purposes / projects / place / media.
+    #[serde(default)]
+    pub text: Option<String>,
+    #[serde(default)]
+    pub topics: Vec<String>,
+    #[serde(default)]
+    pub purposes: Vec<String>,
+    #[serde(default)]
+    pub projects: Vec<String>,
+    #[serde(default)]
+    pub media_types: Vec<String>,
+    /// Domain categories (e.g. `natural-sciences`) — matches `category:{slug}` projects or topic slug.
+    #[serde(default)]
+    pub categories: Vec<String>,
+}
+
+impl FacetFilter {
+    pub fn matches(&self, e: &LibraryEntry) -> bool {
+        if let Some(sec) = self.section.as_deref() {
+            let sec = sec.trim();
+            if !sec.is_empty() && sec != "all" && e.section != sec {
+                return false;
+            }
+        }
+        if let Some(q) = self.text.as_deref() {
+            let q = q.trim().to_lowercase();
+            if !q.is_empty() && !entry_matches_text(e, &q) {
+                return false;
+            }
+        }
+        if !self.topics.is_empty()
+            && !self.topics.iter().any(|t| {
+                let t = t.to_ascii_lowercase();
+                e.topics.iter().any(|et| et.to_ascii_lowercase() == t)
+            })
+        {
+            return false;
+        }
+        if !self.purposes.is_empty()
+            && !self.purposes.iter().any(|p| {
+                let p = p.to_ascii_lowercase();
+                e.purposes.iter().any(|ep| ep.to_ascii_lowercase() == p)
+            })
+        {
+            return false;
+        }
+        if !self.projects.is_empty()
+            && !self.projects.iter().any(|p| {
+                let p = p.to_ascii_lowercase();
+                e.projects.iter().any(|ep| ep.to_ascii_lowercase() == p)
+            })
+        {
+            return false;
+        }
+        if !self.media_types.is_empty()
+            && !self
+                .media_types
+                .iter()
+                .any(|m| e.media_type.eq_ignore_ascii_case(m.trim()))
+        {
+            return false;
+        }
+        if !self.categories.is_empty()
+            && !self.categories.iter().any(|c| entry_has_category(e, c))
+        {
+            return false;
+        }
+        true
+    }
+}
+
+/// Sort keys for faceted library browse.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum LibrarySort {
+    #[default]
+    Newest,
+    Oldest,
+    TitleAsc,
+    TitleDesc,
+    MediaType,
+    Category,
+}
+
+impl LibrarySort {
+    pub fn parse(s: &str) -> Self {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "oldest" | "old" => Self::Oldest,
+            "title" | "title_asc" | "name" | "name_asc" | "a-z" | "az" => Self::TitleAsc,
+            "title_desc" | "name_desc" | "z-a" | "za" => Self::TitleDesc,
+            "media" | "media_type" | "type" => Self::MediaType,
+            "category" | "cat" => Self::Category,
+            _ => Self::Newest,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Newest => "newest",
+            Self::Oldest => "oldest",
+            Self::TitleAsc => "title_asc",
+            Self::TitleDesc => "title_desc",
+            Self::MediaType => "media_type",
+            Self::Category => "category",
+        }
+    }
+}
+
+/// Per-value counts for facet chips after a filter is applied.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct FacetCounts {
+    pub total: usize,
+    pub topics: BTreeMap<String, usize>,
+    pub purposes: BTreeMap<String, usize>,
+    pub projects: BTreeMap<String, usize>,
+    pub media_types: BTreeMap<String, usize>,
+    pub categories: BTreeMap<String, usize>,
+    pub sections: BTreeMap<String, usize>,
+}
+
+fn entry_matches_text(e: &LibraryEntry, q: &str) -> bool {
+    e.asset_uri.to_lowercase().contains(q)
+        || e.excerpt.to_lowercase().contains(q)
+        || e.media_type.to_lowercase().contains(q)
+        || e.section.to_lowercase().contains(q)
+        || e.topics.iter().any(|t| t.to_lowercase().contains(q))
+        || e.projects.iter().any(|t| t.to_lowercase().contains(q))
+        || e.purposes.iter().any(|t| t.to_lowercase().contains(q))
+        || e.place
+            .as_ref()
+            .map(|p| p.to_lowercase().contains(q))
+            .unwrap_or(false)
+}
+
+fn entry_has_category(e: &LibraryEntry, cat: &str) -> bool {
+    let cat = cat.trim().to_ascii_lowercase();
+    if cat.is_empty() {
+        return true;
+    }
+    let tag = format!("category:{cat}");
+    e.projects
+        .iter()
+        .any(|p| p.eq_ignore_ascii_case(&tag) || p.to_ascii_lowercase() == cat)
+        || e.topics.iter().any(|t| t.eq_ignore_ascii_case(&cat))
+}
+
+fn matches_category_slug(s: &str) -> bool {
+    // Domain categories are kebab-case multi-word slugs (contain a hyphen).
+    let s = s.trim();
+    s.contains('-')
+        && s.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+        && s != "qapp"
+}
+
+fn entry_title_key(e: &LibraryEntry) -> String {
+    // Prefer last path segment of URI for title-ish sort.
+    let uri = e.asset_uri.as_str();
+    let t = uri
+        .rsplit(['/', ':'])
+        .next()
+        .unwrap_or(uri)
+        .to_ascii_lowercase();
+    if t.is_empty() {
+        uri.to_ascii_lowercase()
+    } else {
+        t
+    }
+}
+
+fn entry_category_key(e: &LibraryEntry) -> String {
+    for p in &e.projects {
+        if let Some(c) = p.strip_prefix("category:") {
+            return c.to_ascii_lowercase();
+        }
+    }
+    e.topics
+        .iter()
+        .find(|t| matches_category_slug(t))
+        .cloned()
+        .unwrap_or_default()
+}
+
+fn sort_entries(entries: &mut [LibraryEntry], sort: LibrarySort) {
+    match sort {
+        LibrarySort::Newest => entries.sort_by(|a, b| b.ingested_unix.cmp(&a.ingested_unix)),
+        LibrarySort::Oldest => entries.sort_by(|a, b| a.ingested_unix.cmp(&b.ingested_unix)),
+        LibrarySort::TitleAsc => entries.sort_by(|a, b| entry_title_key(a).cmp(&entry_title_key(b))),
+        LibrarySort::TitleDesc => {
+            entries.sort_by(|a, b| entry_title_key(b).cmp(&entry_title_key(a)))
+        }
+        LibrarySort::MediaType => entries.sort_by(|a, b| {
+            a.media_type
+                .cmp(&b.media_type)
+                .then_with(|| entry_title_key(a).cmp(&entry_title_key(b)))
+        }),
+        LibrarySort::Category => entries.sort_by(|a, b| {
+            entry_category_key(a)
+                .cmp(&entry_category_key(b))
+                .then_with(|| entry_title_key(a).cmp(&entry_title_key(b)))
+        }),
+    }
 }
 
 #[cfg(test)]
@@ -697,5 +980,109 @@ mod tests {
             ),
             LibrarySection::Software
         );
+    }
+
+    #[test]
+    fn faceted_filter_and_sort() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = HypermediaStore::open(dir.path()).unwrap();
+        for (uri, topics, purposes, projects, media, section, when) in [
+            (
+                "qapp://studio/biology",
+                vec!["qapp", "natural-sciences", "biology"],
+                vec!["qapp", "software"],
+                vec!["category:natural-sciences"],
+                "application/x-webizen-qapp",
+                "software",
+                100u64,
+            ),
+            (
+                "qapp://studio/philosophy",
+                vec!["qapp", "humanities", "philosophy"],
+                vec!["qapp", "software"],
+                vec!["category:humanities"],
+                "application/x-webizen-qapp",
+                "software",
+                200,
+            ),
+            (
+                "urn:doc:note",
+                vec!["personal"],
+                vec!["note"],
+                vec![],
+                "text/markdown",
+                "personal",
+                300,
+            ),
+        ] {
+            let mut e = LibraryEntry {
+                asset_uri: uri.into(),
+                primary_subject: when,
+                media_type: media.into(),
+                quins: Vec::new(),
+                topics: topics.into_iter().map(str::to_string).collect(),
+                projects: projects.into_iter().map(str::to_string).collect(),
+                purposes: purposes.into_iter().map(str::to_string).collect(),
+                place: None,
+                occurred_at: None,
+                lat: None,
+                lon: None,
+                flags: Vec::new(),
+                ingested_unix: when,
+                excerpt: uri.into(),
+                sensitivity: "public".into(),
+                section: section.into(),
+                commons_visibility: CommonsVisibility::None,
+            };
+            e.recompute_section();
+            store.add(e).unwrap();
+        }
+
+        let soft = store
+            .query_faceted(
+                &FacetFilter {
+                    section: Some("software".into()),
+                    ..Default::default()
+                },
+                LibrarySort::TitleAsc,
+            )
+            .unwrap();
+        assert_eq!(soft.len(), 2);
+        assert!(soft[0].asset_uri.contains("biology"));
+        assert!(soft[1].asset_uri.contains("philosophy"));
+
+        let nat = store
+            .query_faceted(
+                &FacetFilter {
+                    section: Some("software".into()),
+                    categories: vec!["natural-sciences".into()],
+                    ..Default::default()
+                },
+                LibrarySort::Newest,
+            )
+            .unwrap();
+        assert_eq!(nat.len(), 1);
+        assert!(nat[0].asset_uri.contains("biology"));
+
+        let text = store
+            .query_faceted(
+                &FacetFilter {
+                    text: Some("philo".into()),
+                    ..Default::default()
+                },
+                LibrarySort::Newest,
+            )
+            .unwrap();
+        assert_eq!(text.len(), 1);
+
+        let counts = store
+            .facet_counts(&FacetFilter {
+                section: Some("software".into()),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(counts.total, 2);
+        assert_eq!(counts.categories.get("natural-sciences"), Some(&1));
+        assert_eq!(counts.categories.get("humanities"), Some(&1));
     }
 }

@@ -3391,6 +3391,72 @@ pub async fn search_library_text(_q: &str) -> Result<serde_json::Value, String> 
     Err("The library requires the Tauri desktop host".into())
 }
 
+/// Multi-facet library query. `filter` is a JSON object matching FacetFilter;
+/// `sort` is newest|oldest|title_asc|title_desc|media_type|category.
+#[cfg(target_arch = "wasm32")]
+pub async fn query_library_faceted(
+    filter: &serde_json::Value,
+    sort: &str,
+) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    let filter_json = serde_json::to_string(filter).map_err(|e| e.to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"filterJson".into(),
+        &wasm_bindgen::JsValue::from_str(&filter_json),
+    )
+    .map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(
+        &args,
+        &"sort".into(),
+        &wasm_bindgen::JsValue::from_str(sort),
+    )
+    .map_err(|_| "args".to_string())?;
+    let js = tauri_invoke("wellfair_query_library_faceted", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "faceted query not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn query_library_faceted(
+    _filter: &serde_json::Value,
+    _sort: &str,
+) -> Result<serde_json::Value, String> {
+    Err("The library requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn seed_studio_qapps() -> Result<serde_json::Value, String> {
+    let js = tauri_invoke("wellfair_seed_studio_qapps", wasm_bindgen::JsValue::NULL)
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "seed qapps not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn seed_studio_qapps() -> Result<serde_json::Value, String> {
+    Err("The library requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn list_qapp_catalog_categories() -> Result<serde_json::Value, String> {
+    let js = tauri_invoke(
+        "wellfair_list_qapp_catalog_categories",
+        wasm_bindgen::JsValue::NULL,
+    )
+    .await
+    .map_err(|e| format!("{e:?}"))?;
+    let json = js
+        .as_string()
+        .ok_or_else(|| "qapp categories not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn list_qapp_catalog_categories() -> Result<serde_json::Value, String> {
+    Err("The library requires the Tauri desktop host".into())
+}
+
 #[cfg(target_arch = "wasm32")]
 pub async fn library_stats() -> Result<serde_json::Value, String> {
     let js = tauri_invoke("wellfair_library_stats", wasm_bindgen::JsValue::NULL)

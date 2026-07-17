@@ -5,8 +5,9 @@
 
 use super::host_client::{
     export_library_graph, ingest_document, ingest_file_hex, library_commons_share_card,
-    library_stats, list_library_section, remove_library_entry, search_library,
-    search_library_text, search_library_time, set_library_commons, IngestFacets,
+    library_stats, list_library_section, query_library_faceted, remove_library_entry,
+    search_library, search_library_time, seed_studio_qapps, set_library_commons,
+    IngestFacets,
 };
 use crate::Route;
 use dioxus::prelude::*;
@@ -141,12 +142,45 @@ fn display_title(uri: &str) -> String {
     }
 }
 fn media_icon(media: &str) -> &'static str {
-    if media.starts_with("image/") {
+    if media.contains("qapp") || media.contains("webizen-qapp") {
+        "▦"
+    } else if media.starts_with("image/") {
         "🖼"
     } else if media.starts_with("audio/") {
         "🔊"
+    } else if media.contains("html") || media.contains("website") {
+        "🌐"
     } else {
         "📄"
+    }
+}
+
+fn category_label(slug: &str) -> String {
+    match slug {
+        "social-sciences" => "Social Sciences".into(),
+        "humanities" => "Humanities".into(),
+        "natural-sciences" => "Natural Sciences".into(),
+        "formal-sciences" => "Formal Sciences".into(),
+        "area-studies" => "Area Studies".into(),
+        "applied-liberal-arts" => "Applied Liberal Arts".into(),
+        "emerging-interdisciplinary" => "Emerging Interdisciplinary".into(),
+        "specialized-sciences" => "Specialized Sciences".into(),
+        "pre-professional" => "Pre-Professional".into(),
+        "language-regional" => "Language & Regional".into(),
+        "arts-performance" => "Arts & Performance".into(),
+        "advanced-subdisciplines" => "Advanced Sub-disciplines".into(),
+        "niche-sciences" => "Niche Sciences".into(),
+        "philosophy-theory" => "Philosophy & Theory".into(),
+        "religious-studies" => "Religious Studies".into(),
+        "literary-media" => "Literary & Media".into(),
+        "linguistics-semiotics" => "Linguistics & Semiotics".into(),
+        "intersectional-applied" => "Intersectional & Applied".into(),
+        "historical-textual" => "Historical & Textual".into(),
+        "critical-cultural" => "Critical & Cultural".into(),
+        "interdisciplinary-stem" => "Interdisciplinary STEM".into(),
+        "design-spatial" => "Design & Spatial".into(),
+        "critical-theory" => "Critical Theory".into(),
+        other => other.replace('-', " "),
     }
 }
 
@@ -154,12 +188,15 @@ fn media_icon(media: &str) -> &'static str {
 pub fn WellfairLibraryPanel() -> Element {
     let mut results = use_signal(Vec::<serde_json::Value>::new);
     let mut stats = use_signal(|| serde_json::json!({}));
+    let mut facet_counts = use_signal(|| serde_json::json!({}));
     let mut status = use_signal(String::new);
     let mut status_err = use_signal(|| false);
     let mut view = use_signal(|| "list".to_string());
     let mut show_ingest = use_signal(|| true);
     let mut q = use_signal(String::new);
     let mut section = use_signal(|| "all".to_string());
+    let mut sort_mode = use_signal(|| "newest".to_string());
+    let mut category = use_signal(String::new);
     let mut secret_unlocked = use_signal(|| false);
     let mut share_card = use_signal(String::new);
 
@@ -192,25 +229,63 @@ pub fn WellfairLibraryPanel() -> Element {
 
     let refresh_all = move || {
         let sec = section();
+        let cat = category();
+        let sort = sort_mode();
+        let text = q();
         spawn(async move {
-            let want = if sec == "all" { None } else { Some(sec.as_str()) };
-            match list_library_section(want).await {
-                Ok(serde_json::Value::Array(rows)) => {
-                    // Secret section: require explicit unlock toggle in UI.
-                    let rows = if sec == "secret" && !secret_unlocked() {
-                        Vec::new()
-                    } else {
-                        rows
-                    };
-                    results.set(rows);
-                    status_err.set(false);
+            if sec == "secret" && !secret_unlocked() {
+                results.set(Vec::new());
+                status_err.set(false);
+                if let Ok(s) = library_stats().await {
+                    stats.set(s);
                 }
-                Ok(_) => results.set(Vec::new()),
+                return;
+            }
+            let mut filter = serde_json::Map::new();
+            if sec != "all" {
+                filter.insert("section".into(), serde_json::Value::String(sec.clone()));
+            }
+            if !cat.trim().is_empty() {
+                filter.insert(
+                    "categories".into(),
+                    serde_json::json!([cat.trim()]),
+                );
+            }
+            if !text.trim().is_empty() {
+                filter.insert("text".into(), serde_json::Value::String(text));
+            }
+            let filter = serde_json::Value::Object(filter);
+            match query_library_faceted(&filter, &sort).await {
+                Ok(v) => {
+                    let rows = v
+                        .get("entries")
+                        .and_then(|e| e.as_array())
+                        .cloned()
+                        .unwrap_or_default();
+                    let n = rows.len();
+                    results.set(rows);
+                    if let Some(f) = v.get("facets") {
+                        facet_counts.set(f.clone());
+                    }
+                    status_err.set(false);
+                    status.set(format!("{n} item(s) · sort {sort}."));
+                }
                 Err(e) => {
-                    status_err.set(true);
-                    status.set(format!(
-                        "{e} — unlock Sanctuary (Keep → Sanctuary) so the vault host can open the library."
-                    ));
+                    // Fallback to plain section list if faceted path unavailable.
+                    let want = if sec == "all" { None } else { Some(sec.as_str()) };
+                    match list_library_section(want).await {
+                        Ok(serde_json::Value::Array(rows)) => {
+                            results.set(rows);
+                            status_err.set(false);
+                        }
+                        Ok(_) => results.set(Vec::new()),
+                        Err(e2) => {
+                            status_err.set(true);
+                            status.set(format!(
+                                "{e} / {e2} — unlock Sanctuary (Keep → Sanctuary) so the vault host can open the library."
+                            ));
+                        }
+                    }
                 }
             }
             if let Ok(s) = library_stats().await {
@@ -337,26 +412,8 @@ pub fn WellfairLibraryPanel() -> Element {
     };
 
     let do_quick_search = move |_| {
-        let query = q();
-        spawn(async move {
-            match search_library_text(&query).await {
-                Ok(serde_json::Value::Array(rows)) => {
-                    let n = rows.len();
-                    results.set(rows);
-                    status_err.set(false);
-                    status.set(if query.trim().is_empty() {
-                        format!("{n} item(s) in your library.")
-                    } else {
-                        format!("{n} match(es) for “{query}”.")
-                    });
-                }
-                Err(e) => {
-                    status_err.set(true);
-                    status.set(format!("Search failed: {e}"));
-                }
-                _ => results.set(Vec::new()),
-            }
-        });
+        // Faceted path respects section + category + sort + free text.
+        refresh_all();
     };
 
     let do_facet_search = move |_| {
@@ -622,7 +679,44 @@ pub fn WellfairLibraryPanel() -> Element {
                 }
                 if section() == "software" {
                     p { style: "margin:0.65rem 0 0;font-size:0.75rem;color:#94a3b8;line-height:1.4;",
-                        "Software holds QApps, websites, packages, and other installable or runnable artefacts — the apps and sites you keep, not their runtime logs (those go under Tools)."
+                        "Software holds QApps, websites, packages — including the early academic studio QApp inventory (catalogued & categorised; many are stubs). Use category facets and sort below. Runtime logs stay under Tools."
+                    }
+                    div { style: "display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.55rem;align-items:center;",
+                        button {
+                            style: "{BTN}",
+                            onclick: move |_| {
+                                spawn(async move {
+                                    match seed_studio_qapps().await {
+                                        Ok(v) => {
+                                            let added = u64_field(&v, "added");
+                                            let updated = u64_field(&v, "updated");
+                                            let total_c = u64_field(&v, "total_catalog");
+                                            let cats = u64_field(&v, "categories");
+                                            status_err.set(false);
+                                            status.set(format!(
+                                                "QApps seeded into Software · catalog {total_c} · +{added} new · {updated} refreshed · {cats} categories."
+                                            ));
+                                            section.set("software".into());
+                                            refresh_all();
+                                        }
+                                        Err(e) => {
+                                            status_err.set(true);
+                                            status.set(format!("Seed QApps failed: {e}"));
+                                        }
+                                    }
+                                });
+                            },
+                            "Seed academic QApps → Software"
+                        }
+                        button {
+                            style: "{BTN2}",
+                            onclick: move |_| {
+                                category.set(String::new());
+                                sort_mode.set("category".into());
+                                refresh_all();
+                            },
+                            "Sort by category"
+                        }
                     }
                 }
                 if section() == "secret" {
@@ -635,17 +729,90 @@ pub fn WellfairLibraryPanel() -> Element {
             div { style: "{BODY}",
                 // ── Sidebar: ingest + search ──
                 div { style: "{SIDE}",
-                    // Free text search
+                    // Free text search + faceted sort
                     div { style: "{CARD}",
-                        div { style: "{H3}", "Search" }
-                        p { style: "{MUTED}", "Anything you remember — topic, project name, words from the note." }
+                        div { style: "{H3}", "Search & sort" }
+                        p { style: "{MUTED}", "Faceted browse: free text × section × category × sort. Anything you remember — topic, discipline, QApp name." }
                         input {
                             style: "{INPUT}",
                             placeholder: "Search library…",
                             value: "{q}",
                             oninput: move |e| q.set(e.value()),
                         }
+                        label { style: "{LABEL}", "Sort" }
+                        select {
+                            style: "{INPUT}",
+                            value: "{sort_mode}",
+                            onchange: move |e| {
+                                sort_mode.set(e.value());
+                                refresh_all();
+                            },
+                            option { value: "newest", "Newest first" }
+                            option { value: "oldest", "Oldest first" }
+                            option { value: "title_asc", "Title A–Z" }
+                            option { value: "title_desc", "Title Z–A" }
+                            option { value: "category", "Category" }
+                            option { value: "media_type", "Media type" }
+                        }
                         button { style: "{BTN} width:100%;", onclick: do_quick_search, "Search" }
+                        // Category facets (from faceted query counts — strong for Software/QApps)
+                        {
+                            let cat_map = facet_counts()
+                                .get("categories")
+                                .and_then(|t| t.as_object())
+                                .cloned()
+                                .unwrap_or_default();
+                            let mut cat_list: Vec<(String, u64)> = cat_map
+                                .iter()
+                                .filter_map(|(k, v)| v.as_u64().map(|n| (k.clone(), n)))
+                                .collect();
+                            cat_list.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+                            rsx! {
+                                if !cat_list.is_empty() || section() == "software" {
+                                    div { style: "margin-top:0.75rem;",
+                                        div { style: "{LABEL}", "Categories" }
+                                        button {
+                                            style: if category().is_empty() {
+                                                "display:inline-block;padding:0.15rem 0.5rem;margin:0.1rem 0.2rem 0.1rem 0;border-radius:999px;background:rgba(139,92,246,0.35);border:1px solid #a78bfa;color:#f5f3ff;font-size:0.68rem;cursor:pointer;font-weight:700;"
+                                            } else {
+                                                TOPIC
+                                            },
+                                            onclick: move |_| {
+                                                category.set(String::new());
+                                                refresh_all();
+                                            },
+                                            "All categories"
+                                        }
+                                        for (c, n) in cat_list.iter() {
+                                            {
+                                                let c = c.clone();
+                                                let n = *n;
+                                                let on = category() == c;
+                                                let label = category_label(&c);
+                                                rsx! {
+                                                    button {
+                                                        style: if on {
+                                                            "display:inline-block;padding:0.15rem 0.5rem;margin:0.1rem 0.2rem 0.1rem 0;border-radius:999px;background:rgba(139,92,246,0.35);border:1px solid #a78bfa;color:#f5f3ff;font-size:0.68rem;cursor:pointer;font-weight:700;"
+                                                        } else {
+                                                            TOPIC
+                                                        },
+                                                        onclick: move |_| {
+                                                            category.set(c.clone());
+                                                            if section() != "software" && section() != "all" {
+                                                                // keep current section
+                                                            }
+                                                            refresh_all();
+                                                            status.set(format!("Category “{label}” · {n}"));
+                                                        },
+                                                        "{label} · {n}"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         if !topic_list.is_empty() {
                             div { style: "margin-top:0.75rem;",
                                 div { style: "{LABEL}", "Popular topics" }

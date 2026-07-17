@@ -1388,6 +1388,77 @@ impl WebizenHostApi {
         Ok(entries.iter().map(library_summary).collect())
     }
 
+    /// Multi-facet library query with sort. `filter_json` is a [`FacetFilter`] object;
+    /// `sort` is newest|oldest|title_asc|title_desc|media_type|category.
+    pub fn query_library_faceted(
+        &self,
+        filter_json: &str,
+        sort: &str,
+    ) -> Result<serde_json::Value, String> {
+        let filter: super::hypermedia_store::FacetFilter = if filter_json.trim().is_empty() {
+            Default::default()
+        } else {
+            serde_json::from_str(filter_json).map_err(|e| format!("facet filter json: {e}"))?
+        };
+        let sort = super::hypermedia_store::LibrarySort::parse(sort);
+        let store = self.library()?;
+        let entries = store
+            .query_faceted(&filter, sort)
+            .map_err(|e| e.to_string())?;
+        let counts = store.facet_counts(&filter).map_err(|e| e.to_string())?;
+        Ok(serde_json::json!({
+            "entries": entries.iter().map(library_summary).collect::<Vec<_>>(),
+            "total": entries.len(),
+            "sort": sort.as_str(),
+            "filter": filter,
+            "facets": counts,
+        }))
+    }
+
+    /// Facet value counts for chip UI (optionally narrowed by the same filter JSON).
+    pub fn library_facet_counts(&self, filter_json: &str) -> Result<serde_json::Value, String> {
+        let filter: super::hypermedia_store::FacetFilter = if filter_json.trim().is_empty() {
+            Default::default()
+        } else {
+            serde_json::from_str(filter_json).map_err(|e| format!("facet filter json: {e}"))?
+        };
+        let counts = self
+            .library()?
+            .facet_counts(&filter)
+            .map_err(|e| e.to_string())?;
+        Ok(serde_json::to_value(counts).map_err(|e| e.to_string())?)
+    }
+
+    /// Seed the early studio academic QApp inventory into Library → Software.
+    /// Idempotent; returns add/update counts.
+    pub fn seed_studio_qapps_library(&self) -> Result<serde_json::Value, String> {
+        let store = self.library()?;
+        let report = super::qapp_catalog::seed_studio_qapps_into_library(&store)
+            .map_err(|e| e.to_string())?;
+        Ok(serde_json::to_value(report).map_err(|e| e.to_string())?)
+    }
+
+    /// List catalogue categories (for Software shelf UI without seeding first).
+    pub fn list_qapp_catalog_categories(&self) -> Result<serde_json::Value, String> {
+        let cats: Vec<serde_json::Value> = super::qapp_catalog::catalogue_categories()
+            .into_iter()
+            .map(|slug| {
+                serde_json::json!({
+                    "slug": slug,
+                    "label": super::qapp_catalog::category_label(slug),
+                    "count": super::qapp_catalog::STUDIO_QAPP_CATALOG
+                        .iter()
+                        .filter(|e| e.category == slug)
+                        .count(),
+                })
+            })
+            .collect();
+        Ok(serde_json::json!({
+            "total": super::qapp_catalog::STUDIO_QAPP_CATALOG.len(),
+            "categories": cats,
+        }))
+    }
+
     /// Aggregate library stats for the UI header (includes section counts).
     pub fn library_stats(&self) -> Result<serde_json::Value, String> {
         let store = self.library()?;
