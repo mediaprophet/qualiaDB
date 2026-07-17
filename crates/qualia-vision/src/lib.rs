@@ -28,6 +28,7 @@ pub mod generator;
 pub mod spatial;
 pub mod capability;
 pub mod cv;
+pub mod embeddings;
 pub mod biosense;
 pub mod recipes;
 
@@ -66,8 +67,9 @@ pub use synthetic::{
     SyntheticSampleId, TEST_SEED_BASE, TRAIN_SEED_BASE,
 };
 pub use weights::{
-    resolve_vision_asset, AssetLicenceTag, ProductionVision, ResolvedAsset, VisionAssetError,
-    VisionAssetId, VisionBackendKind, VisionWeightBundle, QVWT_MAGIC, QVWT_VERSION,
+    probe_onnx_asset, resolve_vision_asset, sface_infer_rgb8, yunet_infer_rgb8, AssetLicenceTag,
+    OnnxSessionError, ProductionVision, ResolvedAsset, VisionAssetError, VisionAssetId,
+    VisionBackendKind, VisionWeightBundle, QVWT_MAGIC, QVWT_VERSION,
 };
 pub use metrics::{evaluate_real_held_out, evaluate_synthetic, mean_best_iou, MetricsReport};
 pub use generator::{
@@ -81,13 +83,18 @@ pub use spatial::{
     PrintReadiness, TwinEligibility, MAX_INDICES, MAX_VERTICES,
 };
 pub use capability::{all_capabilities, by_id, count_by_status, CapabilityEntry, CapabilityStatus};
+pub use embeddings::{
+    ahash_u64, color_hist_embed_rgb, cosine_distance, cosine_similarity, dhash_u64,
+    hamming_distance_u64, AHASH_SIDE, COLOR_HIST_BINS, COLOR_HIST_EMBED_DIM, DHASH_HEIGHT,
+    DHASH_WIDTH,
+};
 pub use cv::{
     bilateral_denoise_u8, box_blur_u8, brief_desc_u8, canny_u8, dilate_u8, draw_rect_u8,
     equalize_hist_u8, erode_u8, fast_corners_u8, find_external_blobs, gaussian_blur_u8,
     hamming_match, histogram_u8, lucas_kanade_step, median_blur_u8, rgb_to_gray_u8, sobel_mag_u8,
-    warp_affine_u8, warp_perspective_u8, BlobBox, CvError, GrayView, Keypoint, Match, RgbView,
-    DESC_LEN,
-};
+    synthetic_pulse_sequence, warp_affine_u8, warp_perspective_u8, BlobBox, CvError, FrameSequence,
+    GrayView, Keypoint, Match, RgbView, DESC_LEN, MAX_SEQ_FRAMES,
+}; // GrayView + RgbView for embeddings / recipes
 pub use biosense::{
     blendshape_affect_proposal, cctv_stages_allowed, colour_evm_yiq, design_bandpass_iir,
     energy_ms, ensemble_hr, ensemble_respiration, eulerian_color_magnify,
@@ -108,7 +115,11 @@ pub use biosense::{
     QualityReject, RrEstimate, TemporalWindow, DEFAULT_EVM_MIN_SNR, DEFAULT_PAR_TAU,
     MAX_PYRAMID_LEVELS, MEDIAPIPE_FACE_MESH_COUNT, RR_F_HI_HZ, RR_F_LO_HZ, RR_MIN_SNR_DEFAULT,
 };
-pub use recipes::self_monitor_pulse;
+pub use recipes::{
+    challenge_pad_from_landmark_frames, challenge_pad_from_mesh_trace, respiration_monitor,
+    respiration_monitor_motion_only, self_monitor_pulse, self_monitor_pulse_evm, PulseAbstain,
+    PulseEvmResult,
+};
 
 #[cfg(feature = "cpu-reference")]
 pub use cpu_reference::CpuReferenceVision;

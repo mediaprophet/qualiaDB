@@ -34,13 +34,13 @@ static REGISTRY: &[CapabilityEntry] = &[
     cap!("D1.08", "D1", "features_orb_match", Present, "cv/features ORB-class + match"),
     cap!("D1.09", "D1", "optical_flow", Present, "cv/flow lucas_kanade_sparse"),
     cap!("D1.10", "D1", "codecs_png_jpeg", Partial, "feature codecs + bmp path"),
-    cap!("D1.11", "D1", "video_file_io", Missing, "not yet"),
+    cap!("D1.11", "D1", "video_file_io", Partial, "FrameSequence ring + synthetic pulse; demux still Missing"),
     cap!("D1.12", "D1", "camera_capture", Partial, "desktop intent pattern; vision hooks"),
     cap!("D1.13", "D1", "drawing_overlay", Present, "cv/draw + overlay"),
     cap!("D1.14", "D1", "photo_denoise", Present, "cv/photo bilateral_denoise"),
     cap!("D1.15", "D1", "stitch", Missing, "optional vertical"),
     // D2 learned
-    cap!("D2.01", "D2", "detector_tracker", Partial, "YuNet weight on disk + decode/NMS helpers; full ORT session AdapterMissing"),
+    cap!("D2.01", "D2", "detector_tracker", Partial, "ByteTrack MOT Present; YuNet decode+optional --features ort infer; default FeatureDisabled"),
     cap!("D2.02", "D2", "semantic_quins", Beyond, "epistemic observations"),
     cap!("D2.03", "D2", "qvwt_load", Present, "QVWT seed load Present; YOLO-NAS Apache AdapterMissing until ONNX"),
     cap!("D2.04", "D2", "segmentation", Missing, "AdapterMissing/weights TBD — not commercial-licence"),
@@ -48,6 +48,13 @@ static REGISTRY: &[CapabilityEntry] = &[
     cap!("D2.06", "D2", "body_pose", Partial, "pose/hand pack xy + vendor weights; ORT/TFLite session AdapterMissing"),
     cap!("D2.07", "D2", "ocr", Missing, "product demand"),
     cap!("D2.08", "D2", "generative_image", Partial, "reference generator"),
+    cap!(
+        "D2.09",
+        "D2",
+        "local_cbir_proxy_embed",
+        Present,
+        "aHash/dHash + RGB hist L2 (embeddings/); not CLIP — ONNX CLIP later under vendor/vision/embeddings/"
+    ),
     // D3 biosense
     cap!("D3.01", "D3", "face_landmarks", Partial, "MP buffer→LandmarkFrame+PAD wire Present; .task runtime AdapterMissing"),
     cap!("D3.02", "D3", "frame_quality", Present, "biosense/quality"),
@@ -64,7 +71,7 @@ static REGISTRY: &[CapabilityEntry] = &[
     cap!("D3.07", "D3", "eulerian_motion_mag", Present, "Laplacian multi-scale × temporal band × α + SNR (TODO-EVM1)"),
     cap!("D3.08", "D3", "lagrangian_mag", Partial, "track-amplify lite; after TODO-EVM1"),
     cap!("D3.09", "D3", "liveness_pad", Present, "pure-landmark PAD: TTS/TTC + PnP + PAR(2D x, no model Z) + jitter"),
-    cap!("D3.10", "D3", "face_template_vault", Partial, "SFace weight+embed tensor path; ORT session AdapterMissing"),
+    cap!("D3.10", "D3", "face_template_vault", Partial, "SFace embed tensor + optional --features ort infer; sanctuary path"),
     cap!("D3.11", "D3", "voice_biometric", Partial, "qualia-audio speech path + policy"),
     cap!("D3.12", "D3", "multimodal_bio_fusion", Partial, "recipes fuse when consented"),
     cap!("D3.13", "D3", "affect_proposals", Present, "blendshape heuristic Path A; optional OMZ emotion Path B gated"),

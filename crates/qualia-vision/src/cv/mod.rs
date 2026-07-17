@@ -13,8 +13,10 @@ pub mod features;
 pub mod flow;
 pub mod photo;
 pub mod draw;
+pub mod video;
 
 pub use error::CvError;
+pub use video::{synthetic_pulse_sequence, FrameSequence, MAX_SEQ_FRAMES};
 pub use buffer::{GrayView, RgbView};
 pub use color::rgb_to_gray_u8;
 pub use filter::{box_blur_u8, gaussian_blur_u8, median_blur_u8};

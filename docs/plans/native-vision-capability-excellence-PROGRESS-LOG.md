@@ -288,6 +288,25 @@ Current code is a **temporal residual + gain** demo. Excellence EVM (Wu et al. s
 
 ---
 
+## 2026-07-17 — No-train closeout swarm 2
+
+**Status:** major wave landed
+
+| Track | Result |
+|-------|--------|
+| MOT | ByteTrack-class two-stage IoU, tentative/confirmed, pure Rust |
+| Recipes | challenge_pad_from_mesh_trace, self_monitor_pulse_evm, respiration_monitor |
+| Embeddings | aHash/dHash + color hist CBIR proxy (D2.09 Present) |
+| Video | FrameSequence ring + synthetic_pulse_sequence |
+| ORT | optional feature `ort`; `onnx_session` YuNet/SFace infer (feature-gated); default build FeatureDisabled |
+| Client | `biosense_self_monitor_pulse_demo`, `vision_local_embed_demo` in vision_pipeline |
+
+**Measured:** `cargo test -p qualia-vision --lib` → **199 passed**; client-core check Finished.
+
+**Still open (no-train):** full MediaPipe .task runtime, depth/seg/OCR/VLM, desktop UI buttons, FED, real camera loop, ORT enabled in default product profile (opt-in feature today).
+
+---
+
 ## 2026-07-17 � S7-RR / TODO-RR1 (respiratory rate, no training)
 
 **Status:** done (spectral RR stack; synthetic tests green when crate compiles).

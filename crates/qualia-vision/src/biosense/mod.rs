@@ -16,7 +16,9 @@ pub mod pose;
 
 pub use consent::{BiosenseConsent, BiosensePurpose};
 pub use quality::{frame_blur_score, motion_energy, reject_low_quality, QualityReject};
-pub use rppg::{ensemble_hr, respiration_from_rppg_harmonic, spectral_hr_peak, HrEstimate};
+pub use rppg::{
+    ensemble_hr, pos_rppg_trace, respiration_from_rppg_harmonic, spectral_hr_peak, HrEstimate,
+};
 pub use magnification::{
     band_energy_snr, colour_evm_yiq, design_bandpass_iir, energy_ms, eulerian_color_magnify,
     eulerian_color_magnify_consented, eulerian_color_magnify_ex, eulerian_color_magnify_hz,

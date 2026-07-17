@@ -10,8 +10,12 @@
 //! never commercial-licence gated. States: WeightAbsent / AdapterMissing.
 
 pub mod load_onnx_bytes;
+pub mod onnx_session;
 pub mod resolve_vision_asset;
 pub use load_onnx_bytes::{load_onnx_file, validate_onnx_bytes, OnnxFileMeta, OnnxLoadError};
+pub use onnx_session::{
+    probe_onnx_asset, sface_infer_rgb8, yunet_infer_rgb8, OnnxSessionError, OnnxSessionInfo,
+};
 pub use resolve_vision_asset::{
     resolve_vision_asset, AssetLicenceTag, ResolvedAsset, VisionAssetError, VisionAssetId,
 };

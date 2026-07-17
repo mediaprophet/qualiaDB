@@ -1069,3 +1069,75 @@ pub fn detect_with_disk_weights(
         synthetic_match_acc: None,
     })
 }
+
+/// Biosense excellence demos (consent-bound recipes; no training).
+#[derive(Debug, Clone, Serialize)]
+pub struct BiosensePulseDemo {
+    pub bpm: f32,
+    pub confidence: f32,
+    pub snr: f32,
+    pub abstained: bool,
+    pub used_evm: bool,
+    pub reason: String,
+}
+
+/// Synthetic pulse + optional EVM → rPPG (security consent template for demo).
+pub fn biosense_self_monitor_pulse_demo(use_evm: bool) -> Result<BiosensePulseDemo, String> {
+    use qualia_vision::{self_monitor_pulse_evm, synthetic_pulse_sequence, BiosenseConsent};
+    let seq = synthetic_pulse_sequence(32, 32, 90, 30.0, 72.0).map_err(|e| format!("{e}"))?;
+    let consent = BiosenseConsent::grant_security_template(1);
+    let r = self_monitor_pulse_evm(
+        consent,
+        seq.as_packed_rgb(),
+        seq.n_frames,
+        seq.width,
+        seq.height,
+        seq.fps,
+        use_evm,
+        0.15,
+    );
+    Ok(BiosensePulseDemo {
+        bpm: r.bpm,
+        confidence: r.confidence,
+        snr: r.snr,
+        abstained: r.abstained,
+        used_evm: r.used_evm,
+        reason: r
+            .reason
+            .map(|a| format!("{a:?}"))
+            .unwrap_or_else(|| "ok".into()),
+    })
+}
+
+/// Local CBIR proxy hashes for an RGB buffer (not CLIP).
+pub fn vision_local_embed_demo(
+    rgb: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<serde_json::Value, String> {
+    use qualia_vision::{
+        ahash_u64, color_hist_embed_rgb, dhash_u64, GrayView, RgbView, COLOR_HIST_EMBED_DIM,
+    };
+    let n = (width * height) as usize;
+    if rgb.len() < n * 3 {
+        return Err("buffer too small".into());
+    }
+    let mut gray = vec![0u8; n];
+    for i in 0..n {
+        let o = i * 3;
+        gray[i] = ((rgb[o] as u16 + rgb[o + 1] as u16 + rgb[o + 2] as u16) / 3) as u8;
+    }
+    let g = GrayView::new(width, height, width, &gray).ok_or("bad gray view")?;
+    let ah = ahash_u64(g).map_err(|e| format!("{e:?}"))?;
+    let dh = dhash_u64(g).map_err(|e| format!("{e:?}"))?;
+    let mut hist = [0.0f32; COLOR_HIST_EMBED_DIM];
+    let rv = RgbView::new(width, height, width * 3, rgb).ok_or("bad rgb view")?;
+    color_hist_embed_rgb(rv, &mut hist).map_err(|e| format!("{e:?}"))?;
+    Ok(serde_json::json!({
+        "ahash": format!("{:016x}", ah),
+        "dhash": format!("{:016x}", dh),
+        "hist_dim": COLOR_HIST_EMBED_DIM,
+        "hist0": hist[0],
+        "note": "local CBIR proxy; not foundation CLIP"
+    }))
+}
