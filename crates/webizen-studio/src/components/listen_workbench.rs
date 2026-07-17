@@ -151,6 +151,88 @@ pub fn ListenWorkbench() -> Element {
                     style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); background:rgba(220,80,80,0.12); cursor:pointer;",
                     "Reject instance"
                 }
+                button {
+                    disabled: busy(),
+                    onclick: move |_| {
+                        busy.set(true);
+                        spawn(async move {
+                            match invoke_json("audio_sonify_hear", serde_json::json!({})).await {
+                                Ok(v) => {
+                                    if let Some(url) = v.get("wav_data_url").and_then(|x| x.as_str()) {
+                                        #[cfg(target_arch = "wasm32")]
+                                        if let Some(w) = web_sys::window() {
+                                            let _ = w.location().set_href(url);
+                                        }
+                                        let _ = url;
+                                    }
+                                    status.set(format!(
+                                        "Hear: {} events → {}",
+                                        v.get("n_events").and_then(|x| x.as_u64()).unwrap_or(0),
+                                        v.get("path").and_then(|x| x.as_str()).unwrap_or("data-url")
+                                    ));
+                                }
+                                Err(e) => status.set(format!("Hear failed: {e}")),
+                            }
+                            busy.set(false);
+                        });
+                    },
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); background:rgba(0,160,120,0.15); cursor:pointer; font-weight:600;",
+                    "Hear (U3 sonify)"
+                }
+                button {
+                    disabled: busy(),
+                    onclick: move |_| {
+                        busy.set(true);
+                        spawn(async move {
+                            match invoke_json("audio_ears_weighted", serde_json::json!({})).await {
+                                Ok(v) => status.set(format!(
+                                    "Weighted AED events={} ref={}",
+                                    v.get("n_events").and_then(|x| x.as_u64()).unwrap_or(0),
+                                    v.get("is_reference").and_then(|x| x.as_bool()).unwrap_or(true)
+                                )),
+                                Err(e) => status.set(format!("Weighted AED failed: {e}")),
+                            }
+                            busy.set(false);
+                        });
+                    },
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); cursor:pointer;",
+                    "Weighted AED"
+                }
+                button {
+                    disabled: busy(),
+                    onclick: move |_| {
+                        busy.set(true);
+                        spawn(async move {
+                            match invoke_json("audio_capture_policy_demo", serde_json::json!({})).await {
+                                Ok(v) => status.set(format!("{v}")),
+                                Err(e) => status.set(format!("Capture policy: {e}")),
+                            }
+                            busy.set(false);
+                        });
+                    },
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); cursor:pointer;",
+                    "Capture policy"
+                }
+                button {
+                    disabled: busy(),
+                    onclick: move |_| {
+                        busy.set(true);
+                        spawn(async move {
+                            match invoke_json(
+                                "audio_speech_demo",
+                                serde_json::json!({ "supported": true }),
+                            )
+                            .await
+                            {
+                                Ok(v) => status.set(format!("{v}")),
+                                Err(e) => status.set(format!("Speech: {e}")),
+                            }
+                            busy.set(false);
+                        });
+                    },
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); cursor:pointer;",
+                    "Speech phones"
+                }
             }
             p { style: "font-size:0.88rem; color:var(--qualia-text-muted); line-height:1.45;", "{status}" }
             if !detail().is_empty() {

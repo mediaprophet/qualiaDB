@@ -10,6 +10,8 @@ pub struct TrackState {
     pub pan: f32,
     pub mute: bool,
     pub solo: bool,
+    /// Simple one-pole lowpass coefficient 0..1 (0 = bypass).
+    pub lowpass: f32,
 }
 
 impl Default for TrackState {
@@ -19,6 +21,7 @@ impl Default for TrackState {
             pan: 0.0,
             mute: false,
             solo: false,
+            lowpass: 0.0,
         }
     }
 }
@@ -82,8 +85,14 @@ impl ProcessPlan {
             let pan = tr.pan.clamp(-1.0, 1.0);
             let gl = g * (0.5 * (1.0 - pan));
             let gr = g * (0.5 * (1.0 + pan));
+            let lp = tr.lowpass.clamp(0.0, 0.99);
+            let mut z = 0.0f32;
             for i in 0..bf {
-                let s = buf[i];
+                let mut s = buf[i];
+                if lp > 0.0 {
+                    z += lp * (s - z);
+                    s = z;
+                }
                 out_interleaved[i * 2] += s * gl;
                 out_interleaved[i * 2 + 1] += s * gr;
             }

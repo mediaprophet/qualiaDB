@@ -25,6 +25,10 @@ pub mod music;
 pub mod production;
 pub mod generation;
 pub mod cross_modal;
+pub mod capture;
+pub mod aed_weights;
+pub mod speech;
+pub mod sonify;
 pub mod pipeline;
 
 pub use types::*;
@@ -56,4 +60,11 @@ pub use generation::{synthesize_reference_tone, SynthReceipt, VoiceConsent};
 pub use cross_modal::{
     frames_to_media_ms, propose_temporal_correlations, AvCorrelationProposal, TimeIntervalMs,
 };
-pub use pipeline::{run_ears_demo, run_ears_on_wav_file, section18_smoke, EarsDemoResult};
+pub use pipeline::{
+    run_ears_demo, run_ears_on_wav_file, run_ears_weighted, section18_smoke, sonify_demo_to_wav,
+    speech_phone_demo, EarsDemoResult,
+};
+pub use capture::{CapturePurpose, CaptureSession};
+pub use aed_weights::{AedWeightBundle, WeightedAedModel};
+pub use speech::{decode_for_language, greedy_phone_decode, SpeechEncoderWeights, PHONES};
+pub use sonify::{class_to_hz, sonify_events_mono};

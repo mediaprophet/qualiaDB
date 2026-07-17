@@ -4,8 +4,11 @@ use qualia_audio::cross_modal::{
     frames_to_media_ms, propose_temporal_correlations, TimeIntervalMs,
 };
 use qualia_audio::generation::{synthesize_reference_tone, VoiceConsent};
+use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
+use qualia_audio::capture::{CapturePurpose, CaptureSession};
 use qualia_audio::pipeline::{
-    run_ears_demo, run_ears_on_wav_file, section18_smoke, EarsDemoResult,
+    run_ears_demo, run_ears_on_wav_file, run_ears_weighted, section18_smoke, sonify_demo_to_wav,
+    speech_phone_demo, EarsDemoResult,
 };
 use qualia_audio::semantic::{human_correct_quin, human_reject_quin};
 use serde::Serialize;
@@ -146,6 +149,65 @@ pub fn audio_correct_instance(instance_hex: &str, new_class_hex: &str) -> Result
 fn parse_hex(s: &str) -> Result<u64, String> {
     let t = s.trim().trim_start_matches("0x").trim_start_matches("0X");
     u64::from_str_radix(t, 16).map_err(|e| e.to_string())
+}
+
+pub fn ears_weighted_demo(storage_root: Option<&std::path::Path>) -> Result<EarsDemoDto, String> {
+    run_ears_weighted(storage_root, 440.0, 16000, 300).map(Into::into)
+}
+
+/// U3-style hear: demo events → WAV data URL + optional file under storage.
+pub fn sonify_ears_demo(
+    storage_root: Option<&std::path::Path>,
+) -> Result<serde_json::Value, String> {
+    let r = run_ears_demo(None, 440.0, 16000, 400)?;
+    let wav = sonify_demo_to_wav(r.sample_rate, &r.events, r.frames as usize)?;
+    let mut path_out = None;
+    if let Some(root) = storage_root {
+        let dir = root.join("audio_hear");
+        std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+        let p = dir.join(format!("sonify_{:016x}.wav", r.media_hash));
+        std::fs::write(&p, &wav).map_err(|e| e.to_string())?;
+        path_out = Some(p.display().to_string());
+    }
+    Ok(serde_json::json!({
+        "wav_data_url": format!("data:audio/wav;base64,{}", B64.encode(&wav)),
+        "path": path_out,
+        "n_events": r.n_events,
+        "frames": r.frames,
+        "sample_rate": r.sample_rate,
+        "note": "Parametric sonification of event intervals (U3-style navigate/hear). Not original PCM playback."
+    }))
+}
+
+pub fn speech_demo(supported: bool) -> Result<serde_json::Value, String> {
+    let (n, model) = speech_phone_demo(supported)?;
+    Ok(serde_json::json!({
+        "tokens": n,
+        "model_hash": format!("0x{:016x}", model),
+        "language_supported": supported,
+        "note": if supported {
+            "Greedy phone decode over seed speech weights (not full ASR)."
+        } else {
+            "Unknown language: empty transcript (no silent map)."
+        }
+    }))
+}
+
+/// Capture policy demo: intent required before live ring accepts PCM.
+pub fn capture_policy_demo() -> Result<serde_json::Value, String> {
+    let mut s = CaptureSession::new(CapturePurpose::Analysis, 16000, 1);
+    let denied = s.start().is_err();
+    s.grant_intent();
+    s.start().map_err(|e| format!("{e:?}"))?;
+    let pushed = s.push_mono(&[0.1, 0.2, 0.3, 0.0]);
+    let mut out = [0.0f32; 8];
+    let pulled = s.pull_mono(&mut out);
+    Ok(serde_json::json!({
+        "denied_without_intent": denied,
+        "pushed": pushed,
+        "pulled": pulled,
+        "note": "Shell must call grant_intent before device/file stream. Hardware mic via shell push_mono."
+    }))
 }
 
 #[cfg(test)]

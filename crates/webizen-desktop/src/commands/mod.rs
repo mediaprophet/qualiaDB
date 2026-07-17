@@ -7313,6 +7313,46 @@ pub fn vision_section15_smoke() -> Result<String, String> {
     qualia_client_core::vision_pipeline::section15_smoke()
 }
 
+#[command]
+pub fn audio_ears_weighted(
+    state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
+) -> Result<serde_json::Value, String> {
+    let config = state.config.lock().unwrap().clone();
+    let root = std::path::PathBuf::from(&config.storage_path);
+    let r = qualia_client_core::audio_pipeline::ears_weighted_demo(Some(&root))?;
+    serde_json::to_value(r).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn audio_sonify_hear(
+    state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
+) -> Result<serde_json::Value, String> {
+    let config = state.config.lock().unwrap().clone();
+    let root = std::path::PathBuf::from(&config.storage_path);
+    qualia_client_core::audio_pipeline::sonify_ears_demo(Some(&root))
+}
+
+#[command]
+pub fn audio_speech_demo(supported: Option<bool>) -> Result<serde_json::Value, String> {
+    qualia_client_core::audio_pipeline::speech_demo(supported.unwrap_or(true))
+}
+
+#[command]
+pub fn audio_capture_policy_demo() -> Result<serde_json::Value, String> {
+    qualia_client_core::audio_pipeline::capture_policy_demo()
+}
+
+#[command]
+pub fn audio_pick_wav_path(app: AppHandle) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let picked = app
+        .dialog()
+        .file()
+        .add_filter("WAV", &["wav"])
+        .blocking_pick_file();
+    Ok(picked.and_then(|p| p.into_path().ok()).map(|p| p.to_string_lossy().into_owned()))
+}
+
 /// Full generate → store → recon → OBJ/.10d continuum (pre-auditory handoff).
 #[command]
 pub fn vision_gs_continuum(
@@ -7847,6 +7887,11 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         audio_correct_instance,
         vision_detect_image_file,
         vision_section15_smoke,
+        audio_ears_weighted,
+        audio_sonify_hear,
+        audio_speech_demo,
+        audio_capture_policy_demo,
+        audio_pick_wav_path,
     ]
 }
 
