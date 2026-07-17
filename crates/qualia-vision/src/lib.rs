@@ -1,31 +1,45 @@
-//! Qualia Vision — local visual intelligence (Phase 1).
+//! Qualia Vision — local visual intelligence.
 //!
-//! Plan: `docs/plans/native-visual-intelligence-and-generative-3d.md`.
+//! Plan: `docs/plans/native-visual-intelligence-and-generative-3d.md`  
+//! Swarm delivery: `docs/plans/native-vision-swarm-delivery.md`
 //!
-//! # Design rules (human-rights / consumer edge)
+//! # Design rules
 //! - Hot path is caller-buffered, no hidden heap in `infer`.
 //! - Model outputs are **epistemic observations**, not ground truth.
 //! - Dense pixels never live in NQuins; only hashes, boxes, scores, provenance.
+//! - **No Python** in this library.
 //!
-//! Phase 1 delivers the stable ABI + a deterministic **CPU reference** detector
-//! (colour-channel + edge energy classes) so desktop/CLI can integrate without
-//! waiting for a full P64 vision backbone. Replace the reference backend with a
-//! real encoder when P64 vision weights land — same `VisualModel` trait.
+//! Phase 1: ABI + CPU reference detector.  
+//! V1: preprocess (resize/NMS/letterbox).  
+//! V2: content-addressed media store.  
+//! V3: CPU vision ops (Conv/Pool/Resize) as Forge GPU oracles.
 
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
 
 pub mod types;
 pub mod semantic;
+pub mod preprocess;
+pub mod media_store;
+pub mod ops;
+
 #[cfg(feature = "cpu-reference")]
 pub mod cpu_reference;
 
 pub use semantic::{
-    compile_observation_quins, observation_quin, MediaDigest, MAX_OBS_QUINS, P_PROPOSES_CLASS,
-    P_VISUAL_OBSERVATION, CTX_VISION,
+    compile_observation_quins, media_digest, observation_quin, q_hash, MediaDigest, VisionQuin,
+    MAX_OBS_QUINS, P_PROPOSES_CLASS, P_VISUAL_OBSERVATION, CTX_VISION,
 };
 pub use types::{
     Detection, ImageView, PixelFormat, VisionError, VisualCapabilities, VisualModel,
     VisualOutputCounts, MAX_DETECTIONS, MAX_EMBED_DIM,
+};
+pub use preprocess::{
+    iou_u16, letterbox_rgb8, letterbox_workspace_bytes, nms_class_agnostic,
+    normalize_rgb8_to_f32_chw, resize_nearest_rgb8,
+};
+pub use media_store::{MediaRecord, MediaStore, RetentionClass};
+pub use ops::{
+    avg_pool2d_nchw_f32, conv2d_nchw_f32, max_pool2d_nchw_f32, resize_nearest_nchw_f32,
 };
 
 #[cfg(feature = "cpu-reference")]
