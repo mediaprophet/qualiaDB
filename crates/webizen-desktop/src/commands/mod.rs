@@ -1725,6 +1725,9 @@ pub fn wellfair_ingest_document(
     lon: Option<f32>,
     project: Option<String>,
     purpose: Option<String>,
+    sensitivity: Option<String>,
+    section: Option<String>,
+    commons_visibility: Option<String>,
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
@@ -1736,6 +1739,9 @@ pub fn wellfair_ingest_document(
             lon,
             projects: project.into_iter().filter(|s| !s.trim().is_empty()).collect(),
             purposes: purpose.into_iter().filter(|s| !s.trim().is_empty()).collect(),
+            sensitivity,
+            section,
+            commons_visibility,
         };
         let summary = host.ingest_document_annotated(&uri, &media_type, &text, &manual, guardian_did)?;
         serde_json::to_string(&summary).map_err(|e| e.to_string())
@@ -1783,14 +1789,45 @@ pub fn wellfair_search_library_time(app: AppHandle, start: i64, end: i64) -> Res
     })?
 }
 
-/// Everything in the library (newest first).
+/// Everything in the library (newest first). Optional `section`: secret|wellfair|personal|work|commons|all.
 #[command]
-pub fn wellfair_list_library(app: AppHandle) -> Result<String, String> {
+pub fn wellfair_list_library(app: AppHandle, section: Option<String>) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
         let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
-        let results = host.list_library()?;
+        let results = host.list_library_section(section.as_deref())?;
         serde_json::to_string(&results).map_err(|e| e.to_string())
+    })?
+}
+
+#[command]
+pub fn wellfair_set_library_commons(
+    app: AppHandle,
+    asset_uri: String,
+    visibility: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let r = host.set_library_commons_visibility(&asset_uri, &visibility)?;
+        serde_json::to_string(&r).map_err(|e| e.to_string())
+    })?
+}
+
+#[command]
+pub fn wellfair_library_commons_share_card(
+    app: AppHandle,
+    asset_uri: String,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
+        let r = host.library_commons_share_card(&asset_uri)?;
+        serde_json::to_string(&r).map_err(|e| e.to_string())
     })?
 }
 
@@ -4464,8 +4501,14 @@ pub async fn save_qlink(
             if let Some(host) = guard.as_ref() {
                 let manual = qualia_client_core::wellfair::api::ManualFacets {
                     occurred_at: Some(chrono::Utc::now().timestamp()),
-                    place_label: None, lat: None, lon: None, projects: vec![],
+                    place_label: None,
+                    lat: None,
+                    lon: None,
+                    projects: vec![],
                     purposes: vec!["bookmark".to_string()],
+                    sensitivity: Some("public".into()),
+                    section: Some("personal".into()),
+                    commons_visibility: Some("none".into()),
                 };
                 host.ingest_document_annotated(&url_clone, "text/html", &combined_text_clone, &manual, None)
                     .map_err(|e| e.to_string())
@@ -6806,6 +6849,8 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_library_stats,
         wellfair_remove_library_entry,
         wellfair_export_library_graph,
+        wellfair_set_library_commons,
+        wellfair_library_commons_share_card,
         chora_list_worlds,
         chora_get_world,
         chora_save_world,

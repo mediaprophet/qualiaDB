@@ -176,13 +176,14 @@ pub fn ingest_turn(storage: &Path, session_id: &str, text: &str) -> Result<Vec<C
     let (dq, _lex) = qualia_core_db::hypermedia::descriptors_to_nquins(subject, &desc);
     quins.extend(dq);
 
-    let entry = LibraryEntry {
+    let mut entry = LibraryEntry {
         asset_uri: uri,
         primary_subject: subject,
         media_type: "text/plain".to_string(),
         quins,
         topics,
         projects,
+        purposes: purposes.clone(),
         place: None,
         occurred_at: None,
         lat: None,
@@ -190,7 +191,11 @@ pub fn ingest_turn(storage: &Path, session_id: &str, text: &str) -> Result<Vec<C
         flags: Vec::new(),
         ingested_unix: now_unix(),
         excerpt: text.chars().take(240).collect(),
+        sensitivity: "public".into(),
+        section: "personal".into(),
+        commons_visibility: Default::default(),
     };
+    entry.recompute_section();
     store.add(entry).map_err(|e| e.to_string())?;
     Ok(tags)
 }

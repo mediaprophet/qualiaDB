@@ -4,11 +4,21 @@
 //! Browse by **List · Timeline · Map**, free-text or facet search. Not a folder tree — a graph of meaning.
 
 use super::host_client::{
-    export_library_graph, ingest_document, ingest_file_hex, library_stats, list_library,
-    remove_library_entry, search_library, search_library_text, search_library_time, IngestFacets,
+    export_library_graph, ingest_document, ingest_file_hex, library_commons_share_card,
+    library_stats, list_library_section, remove_library_entry, search_library,
+    search_library_text, search_library_time, set_library_commons, IngestFacets,
 };
 use crate::Route;
 use dioxus::prelude::*;
+
+const SECTIONS: &[(&str, &str, &str)] = &[
+    ("all", "All", "Everything you can see"),
+    ("secret", "Secret", "Sanctuary · private · classified"),
+    ("wellfair", "Wellfair", "Health & welfare"),
+    ("personal", "Personal", "Private life shelf"),
+    ("work", "Work", "Projects & labour"),
+    ("commons", "Commons", "Peers & permissive share"),
+];
 
 // ── styles (Talk-aligned dark product chrome) ────────────────────────────────
 
@@ -147,6 +157,9 @@ pub fn WellfairLibraryPanel() -> Element {
     let mut view = use_signal(|| "list".to_string());
     let mut show_ingest = use_signal(|| true);
     let mut q = use_signal(String::new);
+    let mut section = use_signal(|| "all".to_string());
+    let mut secret_unlocked = use_signal(|| false);
+    let mut share_card = use_signal(String::new);
 
     let mut ing_uri = use_signal(|| {
         format!(
@@ -167,6 +180,8 @@ pub fn WellfairLibraryPanel() -> Element {
     let mut ing_place_label = use_signal(String::new);
     let mut ing_project = use_signal(String::new);
     let mut ing_purpose = use_signal(String::new);
+    let mut ing_section = use_signal(|| "personal".to_string());
+    let mut ing_commons = use_signal(|| "none".to_string());
 
     let mut facet = use_signal(|| "topic".to_string());
     let mut value = use_signal(String::new);
@@ -174,9 +189,17 @@ pub fn WellfairLibraryPanel() -> Element {
     let mut tl_to = use_signal(String::new);
 
     let refresh_all = move || {
+        let sec = section();
         spawn(async move {
-            match list_library().await {
+            let want = if sec == "all" { None } else { Some(sec.as_str()) };
+            match list_library_section(want).await {
                 Ok(serde_json::Value::Array(rows)) => {
+                    // Secret section: require explicit unlock toggle in UI.
+                    let rows = if sec == "secret" && !secret_unlocked() {
+                        Vec::new()
+                    } else {
+                        rows
+                    };
                     results.set(rows);
                     status_err.set(false);
                 }
@@ -212,12 +235,14 @@ pub fn WellfairLibraryPanel() -> Element {
             ing_guardian(),
             ing_sensitivity(),
         );
-        let (date, place, place_label, project, purpose) = (
+        let (date, place, place_label, project, purpose, sec, commons) = (
             ing_date(),
             ing_place(),
             ing_place_label(),
             ing_project(),
             ing_purpose(),
+            ing_section(),
+            ing_commons(),
         );
         spawn(async move {
             if text.trim().is_empty() {
@@ -230,6 +255,22 @@ pub fn WellfairLibraryPanel() -> Element {
             } else {
                 Some(g)
             };
+            // Section secret forces classified sensitivity.
+            let sens = if sec == "secret" || sensitivity == "classified" || sensitivity == "restricted"
+            {
+                if sensitivity == "public" {
+                    "classified".to_string()
+                } else {
+                    sensitivity.clone()
+                }
+            } else {
+                sensitivity.clone()
+            };
+            let commons = if sec == "secret" || sens != "public" {
+                "none".to_string()
+            } else {
+                commons
+            };
             let res = if binary {
                 let hex = if text
                     .trim()
@@ -240,7 +281,8 @@ pub fn WellfairLibraryPanel() -> Element {
                 } else {
                     to_hex(text.as_bytes())
                 };
-                ingest_file_hex(&uri, &media, &hex, &uri, guardian, &sensitivity).await
+                // Binary path still uses host sensitivity string where available.
+                ingest_file_hex(&uri, &media, &hex, &uri, guardian, &sens).await
             } else {
                 let (lat, lon) = parse_latlon(&place)
                     .map(|(a, b)| (Some(a), Some(b)))
@@ -264,17 +306,24 @@ pub fn WellfairLibraryPanel() -> Element {
                     } else {
                         Some(purpose)
                     },
+                    sensitivity: Some(sens.clone()),
+                    section: Some(sec.clone()),
+                    commons_visibility: Some(commons),
                 };
-                ingest_document(&uri, &media, &text, guardian, &facets, &sensitivity).await
+                ingest_document(&uri, &media, &text, guardian, &facets, &sens).await
             };
             match res {
                 Ok(v) => {
                     let topics = arr_str(&v, "topics").join(", ");
+                    let sect = str_field(&v, "section");
                     status_err.set(false);
                     status.set(format!(
-                        "Saved · topics [{topics}] — findable by meaning, not by folder."
+                        "Saved to {sect} · topics [{topics}] — findable by meaning, not by folder."
                     ));
                     ing_text.set(String::new());
+                    if !sect.is_empty() {
+                        section.set(sect);
+                    }
                     refresh_all();
                 }
                 Err(e) => {
@@ -396,6 +445,37 @@ pub fn WellfairLibraryPanel() -> Element {
                         }
                     });
                 },
+                on_commons: move |(uri, vis): (String, String)| {
+                    spawn(async move {
+                        match set_library_commons(&uri, &vis).await {
+                            Ok(_) => {
+                                status_err.set(false);
+                                status.set(format!("Commons visibility → {vis}."));
+                                refresh_all();
+                            }
+                            Err(e) => {
+                                status_err.set(true);
+                                status.set(format!("Commons update failed: {e}"));
+                            }
+                        }
+                    });
+                },
+                on_share_card: move |uri: String| {
+                    spawn(async move {
+                        match library_commons_share_card(&uri).await {
+                            Ok(v) => {
+                                let text = serde_json::to_string_pretty(&v).unwrap_or_else(|_| v.to_string());
+                                share_card.set(text);
+                                status_err.set(false);
+                                status.set("Commons share card ready — copy from below; send via Talk → People.".into());
+                            }
+                            Err(e) => {
+                                status_err.set(true);
+                                status.set(format!("Share card failed: {e}"));
+                            }
+                        }
+                    });
+                },
             }
         },
     };
@@ -457,6 +537,85 @@ pub fn WellfairLibraryPanel() -> Element {
                             });
                         },
                         "Export graph mass"
+                    }
+                }
+                // Section rail — purpose lanes + Secret
+                div {
+                    style: "display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.85rem;align-items:center;",
+                    for (id, label, blurb) in SECTIONS {
+                        {
+                            let id = (*id).to_string();
+                            let label = *label;
+                            let blurb = *blurb;
+                            let on = section() == id;
+                            let count = st
+                                .get("sections")
+                                .and_then(|s| s.get(&id))
+                                .and_then(|x| x.as_u64())
+                                .unwrap_or(0);
+                            rsx! {
+                                button {
+                                    title: "{blurb}",
+                                    style: if on {
+                                        if id == "secret" {
+                                            "padding:0.4rem 0.75rem;border-radius:10px;border:1px solid #f59e0b;background:rgba(245,158,11,0.15);color:#fde68a;font-size:0.75rem;font-weight:700;cursor:pointer;"
+                                        } else {
+                                            TAB_ON
+                                        }
+                                    } else {
+                                        TAB
+                                    },
+                                    onclick: move |_| {
+                                        section.set(id.clone());
+                                        if id == "secret" && !secret_unlocked() {
+                                            results.set(Vec::new());
+                                            status_err.set(false);
+                                            status.set(
+                                                "Secret section locked — click Unlock secret shelf to view sanctuary / classified items."
+                                                    .into(),
+                                            );
+                                        } else {
+                                            refresh_all();
+                                        }
+                                    },
+                                    "{label}"
+                                    if id != "all" {
+                                        span { style: "opacity:0.75;margin-left:0.25rem;", "({count})" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if section() == "secret" {
+                        button {
+                            style: if secret_unlocked() {
+                                "padding:0.4rem 0.75rem;border-radius:10px;border:1px solid #10b981;background:rgba(16,185,129,0.15);color:#a7f3d0;font-size:0.75rem;font-weight:700;cursor:pointer;"
+                            } else {
+                                "padding:0.4rem 0.75rem;border-radius:10px;border:1px solid #f59e0b;background:#78350f;color:#fde68a;font-size:0.75rem;font-weight:700;cursor:pointer;"
+                            },
+                            onclick: move |_| {
+                                let next = !secret_unlocked();
+                                secret_unlocked.set(next);
+                                if next {
+                                    status.set("Secret shelf unlocked for this session.".into());
+                                    refresh_all();
+                                } else {
+                                    results.set(Vec::new());
+                                    status.set("Secret shelf locked again.".into());
+                                }
+                            },
+                            if secret_unlocked() { "Lock secret shelf" } else { "Unlock secret shelf" }
+                        }
+                    }
+                }
+                if section() == "commons" {
+                    p { style: "margin:0.65rem 0 0;font-size:0.75rem;color:#94a3b8;line-height:1.4;",
+                        "Commons is the permissive share surface — metadata cards for Talk peers / micro-commons. Secret and classified items never appear here. Connect people under Talk → People first."
+                    }
+                }
+                if section() == "secret" {
+                    p { style: "margin:0.65rem 0 0;font-size:0.75rem;color:#fde68a;line-height:1.4;",
+                        "Secret is for Wellfair-private health and other high-sensitivity material. It never exports to Commons. Unlock is session-local UI gate — Sanctuary vault still holds the enclave."
                     }
                 }
             }
@@ -576,6 +735,32 @@ pub fn WellfairLibraryPanel() -> Element {
                                 option { value: "image/png", "Image PNG" }
                                 option { value: "audio/wav", "Audio WAV" }
                             }
+                            label { style: "{LABEL}", "Section" }
+                            select {
+                                style: "{INPUT}",
+                                value: "{ing_section}",
+                                onchange: move |e| {
+                                    let v = e.value();
+                                    ing_section.set(v.clone());
+                                    if v == "secret" {
+                                        ing_sensitivity.set("classified".into());
+                                        ing_commons.set("none".into());
+                                    } else if v == "wellfair" {
+                                        // Wellfair default restricted unless user opens Secret.
+                                        if ing_sensitivity() == "public" {
+                                            ing_sensitivity.set("restricted".into());
+                                        }
+                                    } else if v == "commons" {
+                                        ing_sensitivity.set("public".into());
+                                        ing_commons.set("commons".into());
+                                    }
+                                },
+                                option { value: "personal", "Personal" }
+                                option { value: "wellfair", "Wellfair (health / care)" }
+                                option { value: "work", "Work / project" }
+                                option { value: "commons", "Commons (shareable)" }
+                                option { value: "secret", "Secret (sanctuary)" }
+                            }
                             label { style: "{LABEL}", "Sensitivity" }
                             select {
                                 style: "{INPUT}",
@@ -583,7 +768,16 @@ pub fn WellfairLibraryPanel() -> Element {
                                 onchange: move |e| ing_sensitivity.set(e.value()),
                                 option { value: "public", "Public" }
                                 option { value: "restricted", "Restricted (enclave)" }
-                                option { value: "classified", "Classified" }
+                                option { value: "classified", "Classified / sanctuary" }
+                            }
+                            label { style: "{LABEL}", "Social / commons reach" }
+                            select {
+                                style: "{INPUT}",
+                                value: "{ing_commons}",
+                                onchange: move |e| ing_commons.set(e.value()),
+                                option { value: "none", "Device only" }
+                                option { value: "peers", "Talk peers (bilateral)" }
+                                option { value: "commons", "Permissive commons" }
                             }
                             label { style: "{LABEL}", if ing_binary() { "Bytes (hex)" } else { "Content" } }
                             textarea {
@@ -640,6 +834,15 @@ pub fn WellfairLibraryPanel() -> Element {
                             "{status}"
                         }
                     }
+                    if !share_card().is_empty() {
+                        div { style: "{CARD}",
+                            div { style: "{H3}", "Commons share card (metadata only)" }
+                            pre {
+                                style: "margin:0;white-space:pre-wrap;word-break:break-all;font-size:0.68rem;color:#a7f3d0;max-height:160px;overflow:auto;",
+                                "{share_card}"
+                            }
+                        }
+                    }
                     if rows.is_empty() && !status_err() {
                         div {
                             style: "padding:2.5rem 1.5rem;text-align:center;border:1px dashed #334155;border-radius:16px;background:#0f172a;",
@@ -663,6 +866,8 @@ fn ListView(
     rows: Vec<serde_json::Value>,
     on_topic: EventHandler<String>,
     on_remove: EventHandler<String>,
+    on_commons: EventHandler<(String, String)>,
+    on_share_card: EventHandler<String>,
 ) -> Element {
     rsx! {
         div {
@@ -673,24 +878,54 @@ fn ListView(
                     let excerpt = str_field(&r, "excerpt");
                     let topics = arr_str(&r, "topics");
                     let projects = arr_str(&r, "projects");
+                    let purposes = arr_str(&r, "purposes");
                     let place = str_field(&r, "place");
+                    let section = str_field(&r, "section");
+                    let sens = str_field(&r, "sensitivity");
                     let title = display_title(&uri);
                     let icon = media_icon(&media);
                     let uri_rm = uri.clone();
+                    let uri_peers = uri.clone();
+                    let uri_com = uri.clone();
+                    let uri_share = uri.clone();
+                    let uri_none = uri.clone();
+                    let is_secret = r.get("is_secret").and_then(|x| x.as_bool()).unwrap_or(false)
+                        || section == "secret";
                     let flagged = r
                         .get("flags")
                         .and_then(|x| x.as_array())
                         .map(|a| !a.is_empty())
                         .unwrap_or(false);
+                    let border = if is_secret {
+                        "padding:0.85rem 1rem;border-radius:12px;border:1px solid #b45309;background:#1c1917;margin-bottom:0.55rem;"
+                    } else if section == "commons" {
+                        "padding:0.85rem 1rem;border-radius:12px;border:1px solid #0e7490;background:#0c1a24;margin-bottom:0.55rem;"
+                    } else {
+                        ENTRY
+                    };
                     rsx! {
-                        article { style: "{ENTRY}",
+                        article { style: "{border}",
                             div { style: "display:flex;gap:0.75rem;align-items:flex-start;",
                                 div { style: "font-size:1.4rem;line-height:1;flex-shrink:0;", "{icon}" }
                                 div { style: "flex:1;min-width:0;",
-                                    div { style: "display:flex;justify-content:space-between;gap:0.5rem;align-items:baseline;",
+                                    div { style: "display:flex;justify-content:space-between;gap:0.5rem;align-items:baseline;flex-wrap:wrap;",
                                         h3 { style: "margin:0;font-size:0.95rem;color:#f3f4f6;font-weight:650;", "{title}" }
-                                        if let Some(t) = i64_field(&r, "occurred_at") {
-                                            span { style: "font-size:0.7rem;color:#a78bfa;white-space:nowrap;", "{fmt_date(t)}" }
+                                        div { style: "display:flex;gap:0.35rem;align-items:center;",
+                                            if !section.is_empty() {
+                                                span {
+                                                    style: "font-size:0.65rem;padding:0.12rem 0.45rem;border-radius:999px;background:#1e293b;color:#cbd5e1;border:1px solid #334155;",
+                                                    "{section}"
+                                                }
+                                            }
+                                            if !sens.is_empty() && sens != "public" {
+                                                span {
+                                                    style: "font-size:0.65rem;padding:0.12rem 0.45rem;border-radius:999px;background:rgba(245,158,11,0.15);color:#fde68a;border:1px solid #b45309;",
+                                                    "{sens}"
+                                                }
+                                            }
+                                            if let Some(t) = i64_field(&r, "occurred_at") {
+                                                span { style: "font-size:0.7rem;color:#a78bfa;white-space:nowrap;", "{fmt_date(t)}" }
+                                            }
                                         }
                                     }
                                     div { style: "font-size:0.65rem;color:#64748b;font-family:ui-monospace,monospace;margin:0.15rem 0 0.35rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;",
@@ -720,6 +955,12 @@ fn ListView(
                                                 "📁 {p}"
                                             }
                                         }
+                                        for p in purposes {
+                                            span {
+                                                style: "display:inline-block;padding:0.15rem 0.5rem;margin:0.1rem 0.2rem 0;border-radius:999px;background:rgba(167,139,250,0.12);border:1px solid #5b21b6;color:#ddd6fe;font-size:0.68rem;",
+                                                "🎯 {p}"
+                                            }
+                                        }
                                         if !place.is_empty() {
                                             span {
                                                 style: "display:inline-block;padding:0.15rem 0.5rem;margin:0.1rem 0.2rem 0;border-radius:999px;background:rgba(56,189,248,0.1);border:1px solid #0e7490;color:#7dd3fc;font-size:0.68rem;",
@@ -730,6 +971,30 @@ fn ListView(
                                             span {
                                                 style: "display:inline-block;padding:0.15rem 0.5rem;margin:0.1rem 0.2rem 0;border-radius:999px;background:rgba(239,68,68,0.12);border:1px solid #991b1b;color:#fca5a5;font-size:0.68rem;",
                                                 "flagged"
+                                            }
+                                        }
+                                    }
+                                    if !is_secret {
+                                        div { style: "display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.55rem;",
+                                            button {
+                                                style: "{BTN2}",
+                                                onclick: move |_| on_commons.call((uri_peers.clone(), "peers".into())),
+                                                "Share → peers"
+                                            }
+                                            button {
+                                                style: "{BTN2}",
+                                                onclick: move |_| on_commons.call((uri_com.clone(), "commons".into())),
+                                                "Share → commons"
+                                            }
+                                            button {
+                                                style: "{BTN2}",
+                                                onclick: move |_| on_share_card.call(uri_share.clone()),
+                                                "Commons card"
+                                            }
+                                            button {
+                                                style: "{BTN2}",
+                                                onclick: move |_| on_commons.call((uri_none.clone(), "none".into())),
+                                                "Unshare"
                                             }
                                         }
                                     }

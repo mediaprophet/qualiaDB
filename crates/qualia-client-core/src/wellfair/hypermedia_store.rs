@@ -1,14 +1,18 @@
 //! **Persistent hypermedia asset library** — ingest documents/assets, and find them by *meaning* (topic /
 //! depiction / time / place / project / purpose), never by folder.
 //!
-//! Each ingested asset is stored as a [`LibraryEntry`] carrying the **container's NQuin edge-graph** (from
-//! `qualia_core_db::hypermedia`) — the canonical semantic form. Search is a **real graph query** over the
-//! union of all entries' quins (`by_topic`, `by_place`, `in_project`, `for_purpose`, `in_time_range`, …),
-//! mapping matched subjects back to entries. So "find my files about biology / at Sydney / for the tax claim
-//! / on this day" is one identity space of edges, not a directory walk. (A later step folds these quins into
-//! the core graph store / daemon `/query`; this desktop store makes it usable end-to-end now.)
+//! # Sections (product lanes)
+//! The library is one store, many **sections** — purpose-shaped views, not folders:
+//! - **Secret** — sanctuary / restricted / classified / Wellfair-private health
+//! - **Wellfair** — health & welfare purposes (can also force secret when sensitivity is high)
+//! - **Personal** — private life, default home shelf
+//! - **Work** — project-scoped labour
+//! - **Commons** — permissive share surface (peers / micro-commons via social networking)
+//!
+//! Sensitivity (`public` | `restricted` | `classified` | `sanctuary`) is orthogonal: high sensitivity
+//! always routes into **Secret** even if the purpose is Wellfair or Work.
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -17,6 +21,167 @@ use qualia_core_db::NQuin;
 use serde::{Deserialize, Serialize};
 
 pub const LIBRARY_FILE: &str = "wellfair/hypermedia_library.json";
+
+/// Product section id for the Library chrome.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LibrarySection {
+    /// All items (except those filtered by UI for secret gate).
+    All,
+    /// High-sensitivity / sanctuary / private health — the secret shelf.
+    Secret,
+    /// Health, welfare, care (Wellfair).
+    Wellfair,
+    /// Default personal shelf.
+    Personal,
+    /// Project / cooperative work.
+    Work,
+    /// Permissive commons — shareable with peers / social networking layers.
+    Commons,
+}
+
+impl LibrarySection {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::All => "all",
+            Self::Secret => "secret",
+            Self::Wellfair => "wellfair",
+            Self::Personal => "personal",
+            Self::Work => "work",
+            Self::Commons => "commons",
+        }
+    }
+
+    pub fn parse(s: &str) -> Self {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "secret" | "sanctuary" | "private" => Self::Secret,
+            "wellfair" | "health" | "welfare" => Self::Wellfair,
+            "personal" | "home" => Self::Personal,
+            "work" | "project" | "coop" => Self::Work,
+            "commons" | "public" | "share" | "permissive" => Self::Commons,
+            _ => Self::All,
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::All => "All",
+            Self::Secret => "Secret",
+            Self::Wellfair => "Wellfair",
+            Self::Personal => "Personal",
+            Self::Work => "Work",
+            Self::Commons => "Commons",
+        }
+    }
+
+    pub fn blurb(self) -> &'static str {
+        match self {
+            Self::All => "Everything on this device you have rights to see.",
+            Self::Secret => "Sanctuary & high-sensitivity — Wellfair-private health and other secrets. Not for commons.",
+            Self::Wellfair => "Health, care, and welfare records — may also live under Secret when classified.",
+            Self::Personal => "Your private shelf — notes, life admin, unshared research.",
+            Self::Work => "Project-scoped material for cooperative labour.",
+            Self::Commons => "Permissive share surface — peers and micro-commons via Talk social networking.",
+        }
+    }
+}
+
+/// How far an item may travel on social / commons layers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum CommonsVisibility {
+    /// Device-local only (default for secret).
+    #[default]
+    None,
+    /// Visible to accepted social peers (bilateral / mesh).
+    Peers,
+    /// Permissive commons — intended for broader micro-commons replication.
+    Commons,
+}
+
+impl CommonsVisibility {
+    pub fn parse(s: &str) -> Self {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "peers" | "peer" | "bilateral" => Self::Peers,
+            "commons" | "public" | "permissive" => Self::Commons,
+            _ => Self::None,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Peers => "peers",
+            Self::Commons => "commons",
+        }
+    }
+}
+
+/// Normalize sensitivity tokens used at ingest / UI.
+pub fn normalize_sensitivity(s: &str) -> String {
+    match s.trim().to_ascii_lowercase().as_str() {
+        "restricted" => "restricted".into(),
+        "classified" | "sanctuary" => "classified".into(),
+        "secret" => "classified".into(),
+        _ => "public".into(),
+    }
+}
+
+/// Resolve the product section for an entry (secret always wins on high sensitivity).
+pub fn resolve_section(
+    sensitivity: &str,
+    purposes: &[String],
+    projects: &[String],
+    commons: CommonsVisibility,
+    section_hint: Option<&str>,
+) -> LibrarySection {
+    let sens = normalize_sensitivity(sensitivity);
+    if sens == "restricted" || sens == "classified" {
+        return LibrarySection::Secret;
+    }
+    if commons == CommonsVisibility::Commons || commons == CommonsVisibility::Peers {
+        // Explicit share lane — still never secret.
+        if let Some(h) = section_hint {
+            let p = LibrarySection::parse(h);
+            if p != LibrarySection::Secret {
+                return if commons == CommonsVisibility::Commons {
+                    LibrarySection::Commons
+                } else {
+                    p
+                };
+            }
+        }
+        return LibrarySection::Commons;
+    }
+    if let Some(h) = section_hint {
+        let p = LibrarySection::parse(h);
+        if p != LibrarySection::All {
+            return p;
+        }
+    }
+    let purpose_blob = purposes
+        .iter()
+        .chain(projects.iter())
+        .map(|s| s.to_ascii_lowercase())
+        .collect::<Vec<_>>()
+        .join(" ");
+    if purpose_blob.contains("health")
+        || purpose_blob.contains("wellfair")
+        || purpose_blob.contains("welfare")
+        || purpose_blob.contains("medical")
+        || purpose_blob.contains("care")
+    {
+        return LibrarySection::Wellfair;
+    }
+    if !projects.is_empty()
+        || purpose_blob.contains("work")
+        || purpose_blob.contains("project")
+        || purpose_blob.contains("coop")
+    {
+        return LibrarySection::Work;
+    }
+    LibrarySection::Personal
+}
 
 /// A summarised flag on an ingested asset (for display / the guardian path).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -40,6 +205,9 @@ pub struct LibraryEntry {
     pub topics: Vec<String>,
     #[serde(default)]
     pub projects: Vec<String>,
+    /// Purpose tags (tax, health, research, …) — power purpose-shaped sections.
+    #[serde(default)]
+    pub purposes: Vec<String>,
     #[serde(default)]
     pub place: Option<String>,
     /// Event instant (unix seconds) if the asset carries one — the timeline anchor
@@ -58,6 +226,49 @@ pub struct LibraryEntry {
     /// A short excerpt for display in results (never the whole asset).
     #[serde(default)]
     pub excerpt: String,
+    /// `public` | `restricted` | `classified` — high sensitivity forces Secret section.
+    #[serde(default = "default_sensitivity_public")]
+    pub sensitivity: String,
+    /// Product section lane (secret / wellfair / personal / work / commons).
+    #[serde(default = "default_section_personal")]
+    pub section: String,
+    /// How far this may travel on social / commons layers.
+    #[serde(default)]
+    pub commons_visibility: CommonsVisibility,
+}
+
+fn default_sensitivity_public() -> String {
+    "public".into()
+}
+fn default_section_personal() -> String {
+    LibrarySection::Personal.as_str().into()
+}
+
+impl LibraryEntry {
+    /// Recompute section from sensitivity / purposes / commons (call after mutate).
+    pub fn recompute_section(&mut self) {
+        self.section = resolve_section(
+            &self.sensitivity,
+            &self.purposes,
+            &self.projects,
+            self.commons_visibility,
+            Some(&self.section),
+        )
+        .as_str()
+        .into();
+        // Secret can never be commons-visible.
+        if self.section == LibrarySection::Secret.as_str() {
+            self.commons_visibility = CommonsVisibility::None;
+        }
+    }
+
+    pub fn is_secret(&self) -> bool {
+        self.section == LibrarySection::Secret.as_str()
+            || matches!(
+                normalize_sensitivity(&self.sensitivity).as_str(),
+                "restricted" | "classified"
+            )
+    }
 }
 
 /// On-disk library store (whole-file JSON, write-temp-then-rename), matching the sibling-store convention.
@@ -101,8 +312,74 @@ impl HypermediaStore {
     /// Everything in the library (newest first).
     pub fn all(&self) -> std::io::Result<Vec<LibraryEntry>> {
         let mut entries = self.load()?;
+        // Backfill section/sensitivity on old entries.
+        for e in &mut entries {
+            if e.section.is_empty() || e.sensitivity.is_empty() {
+                e.sensitivity = normalize_sensitivity(&e.sensitivity);
+                e.recompute_section();
+            }
+        }
         entries.sort_by(|a, b| b.ingested_unix.cmp(&a.ingested_unix));
         Ok(entries)
+    }
+
+    /// Entries in one product section (`all` = everything).
+    pub fn by_section(&self, section: LibrarySection) -> std::io::Result<Vec<LibraryEntry>> {
+        let mut entries = self.all()?;
+        if section != LibrarySection::All {
+            let want = section.as_str();
+            entries.retain(|e| e.section == want);
+        }
+        Ok(entries)
+    }
+
+    /// Counts per section for the section rail UI.
+    pub fn section_counts(&self) -> std::io::Result<BTreeMap<String, usize>> {
+        let entries = self.all()?;
+        let mut m = BTreeMap::new();
+        m.insert(LibrarySection::All.as_str().into(), entries.len());
+        for sec in [
+            LibrarySection::Secret,
+            LibrarySection::Wellfair,
+            LibrarySection::Personal,
+            LibrarySection::Work,
+            LibrarySection::Commons,
+        ] {
+            m.insert(
+                sec.as_str().into(),
+                entries.iter().filter(|e| e.section == sec.as_str()).count(),
+            );
+        }
+        Ok(m)
+    }
+
+    /// Publish (or revoke) commons visibility — never allowed for Secret / high sensitivity.
+    pub fn set_commons_visibility(
+        &self,
+        asset_uri: &str,
+        visibility: CommonsVisibility,
+    ) -> std::io::Result<LibraryEntry> {
+        let mut entries = self.load()?;
+        let e = entries
+            .iter_mut()
+            .find(|e| e.asset_uri == asset_uri)
+            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "unknown asset"))?;
+        if e.is_secret() && visibility != CommonsVisibility::None {
+            return Err(std::io::Error::other(
+                "secret / high-sensitivity items cannot join the commons or peer share lane",
+            ));
+        }
+        e.commons_visibility = visibility;
+        if visibility == CommonsVisibility::Commons {
+            e.section = LibrarySection::Commons.as_str().into();
+        } else if visibility == CommonsVisibility::None
+            && e.section == LibrarySection::Commons.as_str()
+        {
+            e.recompute_section();
+        }
+        let out = e.clone();
+        self.save(&entries)?;
+        Ok(out)
     }
 
     /// Return the entries whose primary subject is in `subjects` (the join back from a graph query).
@@ -242,13 +519,14 @@ mod tests {
     fn ingest(store: &HypermediaStore, uri: &str, text: &str, now: u64) {
         let proc = TextProcessor::default();
         let r = ingest_with(&proc, uri, "text/markdown", 1, text.as_bytes());
-        let entry = LibraryEntry {
+        let mut entry = LibraryEntry {
             asset_uri: uri.to_string(),
             primary_subject: r.container.primary.subject(),
             media_type: "text/markdown".to_string(),
             quins: r.quins,
             topics: Vec::new(),
             projects: Vec::new(),
+            purposes: Vec::new(),
             place: None,
             occurred_at: None,
             lat: None,
@@ -256,7 +534,11 @@ mod tests {
             flags: Vec::new(),
             ingested_unix: now,
             excerpt: text.chars().take(40).collect(),
+            sensitivity: "public".into(),
+            section: "personal".into(),
+            commons_visibility: CommonsVisibility::None,
         };
+        entry.recompute_section();
         store.add(entry).unwrap();
     }
 
@@ -282,5 +564,41 @@ mod tests {
         // A topic no doc has returns nothing; the whole library lists all three.
         assert!(store.search("topic", "astronomy").unwrap().is_empty());
         assert_eq!(store.all().unwrap().len(), 3);
+    }
+
+    #[test]
+    fn secret_section_forced_by_classified_sensitivity() {
+        assert_eq!(
+            resolve_section(
+                "classified",
+                &["health".into()],
+                &[],
+                CommonsVisibility::Commons,
+                Some("commons")
+            ),
+            LibrarySection::Secret
+        );
+    }
+
+    #[test]
+    fn wellfair_purpose_routes_to_wellfair_when_public() {
+        assert_eq!(
+            resolve_section(
+                "public",
+                &["health-record".into()],
+                &[],
+                CommonsVisibility::None,
+                None
+            ),
+            LibrarySection::Wellfair
+        );
+    }
+
+    #[test]
+    fn commons_visibility_routes_to_commons() {
+        assert_eq!(
+            resolve_section("public", &[], &[], CommonsVisibility::Commons, None),
+            LibrarySection::Commons
+        );
     }
 }

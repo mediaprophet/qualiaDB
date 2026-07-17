@@ -176,6 +176,7 @@ fn library_summary(e: &super::hypermedia_store::LibraryEntry) -> serde_json::Val
         "media_type": e.media_type,
         "topics": e.topics,
         "projects": e.projects,
+        "purposes": e.purposes,
         "place": e.place,
         "occurred_at": e.occurred_at,
         "lat": e.lat,
@@ -183,6 +184,10 @@ fn library_summary(e: &super::hypermedia_store::LibraryEntry) -> serde_json::Val
         "flags": e.flags,
         "ingested_unix": e.ingested_unix,
         "excerpt": e.excerpt,
+        "sensitivity": e.sensitivity,
+        "section": e.section,
+        "commons_visibility": e.commons_visibility,
+        "is_secret": e.is_secret(),
     })
 }
 
@@ -198,6 +203,12 @@ pub struct ManualFacets {
     pub lon: Option<f32>,
     pub projects: Vec<String>,
     pub purposes: Vec<String>,
+    /// `public` | `restricted` | `classified` — high sensitivity forces Secret section.
+    pub sensitivity: Option<String>,
+    /// Preferred product section: secret | wellfair | personal | work | commons.
+    pub section: Option<String>,
+    /// `none` | `peers` | `commons` — social / micro-commons visibility.
+    pub commons_visibility: Option<String>,
 }
 
 impl ManualFacets {
@@ -207,6 +218,9 @@ impl ManualFacets {
             && self.lat.is_none()
             && self.projects.is_empty()
             && self.purposes.is_empty()
+            && self.sensitivity.is_none()
+            && self.section.is_none()
+            && self.commons_visibility.is_none()
     }
 }
 
@@ -1243,13 +1257,27 @@ impl WebizenHostApi {
         let mut projects = out.descriptors.projects.clone();
         projects.extend(manual.projects.iter().cloned());
 
-        let entry = super::hypermedia_store::LibraryEntry {
+        let purposes = manual.purposes.clone();
+        let sensitivity = super::hypermedia_store::normalize_sensitivity(
+            manual
+                .sensitivity
+                .as_deref()
+                .unwrap_or("public"),
+        );
+        let commons = super::hypermedia_store::CommonsVisibility::parse(
+            manual
+                .commons_visibility
+                .as_deref()
+                .unwrap_or("none"),
+        );
+        let mut entry = super::hypermedia_store::LibraryEntry {
             asset_uri: uri.to_string(),
             primary_subject,
             media_type: media_type.to_string(),
             quins: r.quins,
             topics: out.descriptors.topics.clone(),
             projects,
+            purposes: purposes.clone(),
             place: eff_place.as_ref().map(|p| p.label.clone()),
             occurred_at: eff_occurred_at,
             lat,
@@ -1257,7 +1285,20 @@ impl WebizenHostApi {
             flags: flags.clone(),
             ingested_unix: now,
             excerpt: excerpt_source.chars().take(160).collect(),
+            sensitivity: sensitivity.clone(),
+            section: manual
+                .section
+                .clone()
+                .unwrap_or_else(|| "personal".into()),
+            commons_visibility: commons,
         };
+        entry.recompute_section();
+        // High sensitivity can never be commons.
+        if entry.is_secret() {
+            entry.commons_visibility = super::hypermedia_store::CommonsVisibility::None;
+        }
+        let section = entry.section.clone();
+        let commons_visibility = entry.commons_visibility;
         self.library()?.add(entry).map_err(|e| e.to_string())?;
 
         // Guardianship hook: a flagged ingest under a guardianship relation notifies + records.
@@ -1285,6 +1326,10 @@ impl WebizenHostApi {
             "lon": lon,
             "flags": flags,
             "guardian_notifications": notified,
+            "section": section,
+            "sensitivity": sensitivity,
+            "commons_visibility": commons_visibility,
+            "purposes": purposes,
         }))
     }
 
@@ -1318,8 +1363,22 @@ impl WebizenHostApi {
     }
 
     /// Everything in the library (newest first), as summaries.
+    /// Optional `section` filters to secret | wellfair | personal | work | commons.
     pub fn list_library(&self) -> Result<Vec<serde_json::Value>, String> {
-        let entries = self.library()?.all().map_err(|e| e.to_string())?;
+        self.list_library_section(None)
+    }
+
+    pub fn list_library_section(
+        &self,
+        section: Option<&str>,
+    ) -> Result<Vec<serde_json::Value>, String> {
+        let store = self.library()?;
+        let entries = match section {
+            Some(s) if !s.is_empty() && s != "all" => store
+                .by_section(super::hypermedia_store::LibrarySection::parse(s))
+                .map_err(|e| e.to_string())?,
+            _ => store.all().map_err(|e| e.to_string())?,
+        };
         Ok(entries.iter().map(library_summary).collect())
     }
 
@@ -1329,10 +1388,69 @@ impl WebizenHostApi {
         Ok(entries.iter().map(library_summary).collect())
     }
 
-    /// Aggregate library stats for the UI header.
+    /// Aggregate library stats for the UI header (includes section counts).
     pub fn library_stats(&self) -> Result<serde_json::Value, String> {
-        let s = self.library()?.stats().map_err(|e| e.to_string())?;
-        serde_json::to_value(s).map_err(|e| e.to_string())
+        let store = self.library()?;
+        let s = store.stats().map_err(|e| e.to_string())?;
+        let sections = store.section_counts().map_err(|e| e.to_string())?;
+        Ok(serde_json::json!({
+            "total": s.total,
+            "with_date": s.with_date,
+            "with_place": s.with_place,
+            "flags": s.flags,
+            "quins": s.quins,
+            "topics": s.topics,
+            "projects": s.projects,
+            "sections": sections,
+        }))
+    }
+
+    /// Set commons / peer visibility (refuses Secret).
+    pub fn set_library_commons_visibility(
+        &self,
+        asset_uri: &str,
+        visibility: &str,
+    ) -> Result<serde_json::Value, String> {
+        let vis = super::hypermedia_store::CommonsVisibility::parse(visibility);
+        let e = self
+            .library()?
+            .set_commons_visibility(asset_uri, vis)
+            .map_err(|e| e.to_string())?;
+        Ok(library_summary(&e))
+    }
+
+    /// Build a **permissive commons share card** for social networking (no secret payloads).
+    /// Returns metadata peers can list; raw content stays on-device until a fuller mesh transfer.
+    pub fn library_commons_share_card(&self, asset_uri: &str) -> Result<serde_json::Value, String> {
+        let entries = self.library()?.all().map_err(|e| e.to_string())?;
+        let e = entries
+            .iter()
+            .find(|x| x.asset_uri == asset_uri)
+            .ok_or_else(|| format!("unknown asset '{asset_uri}'"))?;
+        if e.is_secret() {
+            return Err("secret items cannot be offered to the commons".into());
+        }
+        if e.commons_visibility == super::hypermedia_store::CommonsVisibility::None {
+            return Err(
+                "set commons visibility to peers or commons before sharing".into(),
+            );
+        }
+        Ok(serde_json::json!({
+            "qualia_library_commons": "1",
+            "asset_uri": e.asset_uri,
+            "media_type": e.media_type,
+            "topics": e.topics,
+            "projects": e.projects,
+            "purposes": e.purposes,
+            "excerpt": e.excerpt,
+            "section": e.section,
+            "commons_visibility": e.commons_visibility,
+            "how": [
+                "Host: Keep → Library → Commons → Share to peers.",
+                "Peer: accept via Talk social connection; request content over mesh when available.",
+            ],
+            "note": "Card is metadata only — not the secret body. High-sensitivity items never appear here.",
+        }))
     }
 
     /// Remove one library entry by asset URI.

@@ -3211,6 +3211,9 @@ pub struct IngestFacets {
     pub lon: Option<f32>,
     pub project: Option<String>,
     pub purpose: Option<String>,
+    pub sensitivity: Option<String>,
+    pub section: Option<String>,
+    pub commons_visibility: Option<String>,
 }
 
 /// Ingest a text document (derive topics + searchable text; guardianship flag→notify), optionally placing it
@@ -3241,6 +3244,15 @@ pub async fn ingest_document(uri: &str, media_type: &str, text: &str, guardian_d
     }
     if let Some(p) = &facets.purpose {
         js_sys::Reflect::set(&args, &"purpose".into(), &wasm_bindgen::JsValue::from_str(p)).map_err(|_| "args".to_string())?;
+    }
+    if let Some(s) = &facets.sensitivity {
+        js_sys::Reflect::set(&args, &"sensitivity".into(), &wasm_bindgen::JsValue::from_str(s)).map_err(|_| "args".to_string())?;
+    }
+    if let Some(s) = &facets.section {
+        js_sys::Reflect::set(&args, &"section".into(), &wasm_bindgen::JsValue::from_str(s)).map_err(|_| "args".to_string())?;
+    }
+    if let Some(s) = &facets.commons_visibility {
+        js_sys::Reflect::set(&args, &"commonsVisibility".into(), &wasm_bindgen::JsValue::from_str(s)).map_err(|_| "args".to_string())?;
     }
     let js = tauri_invoke("wellfair_ingest_document", args.into()).await.map_err(|e| format!("{e:?}"))?;
     let json = js.as_string().ok_or_else(|| "ingest response not JSON".to_string())?;
@@ -3286,15 +3298,65 @@ pub async fn search_library(_f: &str, _v: &str) -> Result<serde_json::Value, Str
     Err("The library requires the Tauri desktop host".into())
 }
 
-/// Everything in the library (newest first).
+/// Everything in the library (newest first). Optional section filter.
 #[cfg(target_arch = "wasm32")]
 pub async fn list_library() -> Result<serde_json::Value, String> {
-    let js = tauri_invoke("wellfair_list_library", wasm_bindgen::JsValue::NULL).await.map_err(|e| format!("{e:?}"))?;
+    list_library_section(None).await
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn list_library() -> Result<serde_json::Value, String> {
+    Err("The library requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn list_library_section(section: Option<&str>) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    if let Some(s) = section {
+        js_sys::Reflect::set(&args, &"section".into(), &wasm_bindgen::JsValue::from_str(s))
+            .map_err(|_| "args".to_string())?;
+    }
+    let js = tauri_invoke("wellfair_list_library", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
     let json = js.as_string().ok_or_else(|| "list response not JSON".to_string())?;
     serde_json::from_str(&json).map_err(|e| e.to_string())
 }
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn list_library() -> Result<serde_json::Value, String> {
+pub async fn list_library_section(_s: Option<&str>) -> Result<serde_json::Value, String> {
+    Err("The library requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn set_library_commons(asset_uri: &str, visibility: &str) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"assetUri".into(), &wasm_bindgen::JsValue::from_str(asset_uri))
+        .map_err(|_| "args".to_string())?;
+    js_sys::Reflect::set(&args, &"visibility".into(), &wasm_bindgen::JsValue::from_str(visibility))
+        .map_err(|_| "args".to_string())?;
+    let js = tauri_invoke("wellfair_set_library_commons", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "commons response not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn set_library_commons(_u: &str, _v: &str) -> Result<serde_json::Value, String> {
+    Err("The library requires the Tauri desktop host".into())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub async fn library_commons_share_card(asset_uri: &str) -> Result<serde_json::Value, String> {
+    let args = js_sys::Object::new();
+    js_sys::Reflect::set(&args, &"assetUri".into(), &wasm_bindgen::JsValue::from_str(asset_uri))
+        .map_err(|_| "args".to_string())?;
+    let js = tauri_invoke("wellfair_library_commons_share_card", args.into())
+        .await
+        .map_err(|e| format!("{e:?}"))?;
+    let json = js.as_string().ok_or_else(|| "share card not JSON".to_string())?;
+    serde_json::from_str(&json).map_err(|e| e.to_string())
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn library_commons_share_card(_u: &str) -> Result<serde_json::Value, String> {
     Err("The library requires the Tauri desktop host".into())
 }
 
