@@ -216,11 +216,6 @@ coordination/NOTICES.md
 !/docs/plans/vision-10d-browser-excellence-programme-2026.md
 !/docs/plans/vision-10d-browser-excellence-PROGRESS-LOG.md
 !/docs/plans/bio-medical-cv-catalogue-2026.md
-!/docs/plans/comprehensive-ui-gui-webizen-plan-2026.md
-!/docs/plans/webizen-ui-implementation-subagents-2026.md
-!/docs/plans/webizen-ui-PROGRESS-LOG.md
-!/docs/plans/audio-algorithms-catalogue-gap-plan-2026.md
-!/docs/plans/webizen-browser-dogfood-notes.md
 
 # Vision vendor weights (large binaries) — manifests/README tracked; fetch via vendor/vision/download.ps1
 /vendor/vision/**/*.onnx
