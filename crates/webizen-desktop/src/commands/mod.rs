@@ -7242,6 +7242,27 @@ pub fn vision_image_to_3d_demo(
     Ok(serde_json::json!({ "generate": gen, "mesh": mesh }))
 }
 
+#[command]
+pub fn audio_ears_demo(
+    state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
+    persist: Option<bool>,
+) -> Result<serde_json::Value, String> {
+    let root = if persist.unwrap_or(true) {
+        let config = state.config.lock().unwrap().clone();
+        Some(std::path::PathBuf::from(&config.storage_path))
+    } else {
+        None
+    };
+    let r = qualia_client_core::audio_pipeline::ears_demo(root.as_deref())?;
+    serde_json::to_value(r).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn audio_cross_modal_demo() -> Result<serde_json::Value, String> {
+    let r = qualia_client_core::audio_pipeline::cross_modal_demo();
+    serde_json::to_value(r).map_err(|e| e.to_string())
+}
+
 /// Full generate → store → recon → OBJ/.10d continuum (pre-auditory handoff).
 #[command]
 pub fn vision_gs_continuum(
@@ -7768,6 +7789,8 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         vision_generate_image,
         vision_image_to_3d_demo,
         vision_gs_continuum,
+        audio_ears_demo,
+        audio_cross_modal_demo,
     ]
 }
 

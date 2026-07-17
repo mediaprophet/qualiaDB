@@ -77,6 +77,7 @@ pub mod statistical_analysis;
 pub mod storage_driver_config;
 pub mod wal_inspector;
 pub mod vision_workbench;
+pub mod listen_workbench;
 pub mod webtorrent_seeder;
 pub mod zk_proof_studio;
 

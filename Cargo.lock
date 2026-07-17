@@ -9483,6 +9483,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d55d956fa96f5ec02be2e13af0e20391a5aa83d6a074e3ad368959d0fab299ea"
 
 [[package]]
+name = "qualia-audio"
+version = "0.0.25"
+
+[[package]]
 name = "qualia-cli"
 version = "0.0.23"
 dependencies = [
@@ -9545,6 +9549,7 @@ dependencies = [
  "lz4_flex",
  "native-tls",
  "pdf-extract",
+ "qualia-audio",
  "qualia-cooperative-core",
  "qualia-core-db",
  "qualia-solid-bridge",

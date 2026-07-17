@@ -1,0 +1,153 @@
+//! Swarm M — foundational music features (assumptions declared).
+
+use crate::features::frame_energy;
+use crate::hash::q_hash;
+
+/// Declared analysis assumptions (never implicit universal truth).
+#[derive(Debug, Clone, Copy)]
+pub struct MusicAssumptions {
+    /// Equal temperament 12-tone — set false if unknown.
+    pub assumes_12tet: bool,
+    pub assumes_4_4: bool,
+    pub tuning_a4_hz: f32,
+}
+
+impl Default for MusicAssumptions {
+    fn default() -> Self {
+        Self {
+            assumes_12tet: false,
+            assumes_4_4: false,
+            tuning_a4_hz: 440.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct OnsetEvent {
+    pub frame: u64,
+    pub strength: f32,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct PitchEstimate {
+    pub frame: u64,
+    pub f0_hz: f32,
+    pub confidence: f32,
+}
+
+/// Spectral flux style onset detection on mono frames.
+pub fn detect_onsets(
+    mono: &[f32],
+    frame_len: usize,
+    hop: usize,
+    threshold: f32,
+    out: &mut [OnsetEvent],
+) -> usize {
+    if frame_len == 0 || hop == 0 || mono.len() < frame_len {
+        return 0;
+    }
+    let mut prev = 0.0f32;
+    let mut w = 0usize;
+    let mut i = 0usize;
+    while i + frame_len <= mono.len() && w < out.len() {
+        let e = frame_energy(&mono[i..i + frame_len]);
+        let flux = (e - prev).max(0.0);
+        if flux > threshold {
+            out[w] = OnsetEvent {
+                frame: i as u64,
+                strength: flux,
+            };
+            w += 1;
+        }
+        prev = e;
+        i += hop;
+    }
+    w
+}
+
+/// Very coarse YIN-like lag search for F0 (reference quality).
+pub fn estimate_f0_hz(
+    frame: &[f32],
+    sample_rate: u32,
+    min_hz: f32,
+    max_hz: f32,
+) -> PitchEstimate {
+    if frame.len() < 32 || sample_rate == 0 {
+        return PitchEstimate {
+            frame: 0,
+            f0_hz: 0.0,
+            confidence: 0.0,
+        };
+    }
+    let min_lag = (sample_rate as f32 / max_hz).max(2.0) as usize;
+    let max_lag = (sample_rate as f32 / min_hz).min(frame.len() as f32 / 2.0) as usize;
+    if min_lag >= max_lag {
+        return PitchEstimate {
+            frame: 0,
+            f0_hz: 0.0,
+            confidence: 0.0,
+        };
+    }
+    let mut best_lag = min_lag;
+    let mut best = f32::INFINITY;
+    for lag in min_lag..=max_lag {
+        let mut d = 0.0f32;
+        let n = frame.len() - lag;
+        for i in 0..n {
+            let diff = frame[i] - frame[i + lag];
+            d += diff * diff;
+        }
+        if d < best {
+            best = d;
+            best_lag = lag;
+        }
+    }
+    let f0 = sample_rate as f32 / best_lag as f32;
+    let conf = (1.0 / (1.0 + best)).clamp(0.0, 1.0);
+    PitchEstimate {
+        frame: 0,
+        f0_hz: f0,
+        confidence: conf,
+    }
+}
+
+/// Chroma-like 12-bin energy from log-mel (only if assumes_12tet).
+pub fn chroma12_from_mel(mel: &[f32], n_mel: usize, out: &mut [f32; 12], assumptions: MusicAssumptions) {
+    out.fill(0.0);
+    if !assumptions.assumes_12tet || n_mel == 0 {
+        return; // abstain — leave zeros
+    }
+    for (i, &v) in mel.iter().enumerate() {
+        let pc = i % 12;
+        out[pc] += v.max(0.0);
+    }
+}
+
+pub fn music_class_onset() -> u64 {
+    q_hash("https://ns.webizen.org/q42/music/onset")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn onset_on_impulse() {
+        let mut s = vec![0.0f32; 2048];
+        s[1000] = 1.0;
+        let mut out = [OnsetEvent {
+            frame: 0,
+            strength: 0.0,
+        }; 8];
+        let n = detect_onsets(&s, 256, 128, 0.01, &mut out);
+        assert!(n >= 1);
+    }
+
+    #[test]
+    fn chroma_abstains_without_12tet() {
+        let mel = [1.0f32; 24];
+        let mut c = [0.0f32; 12];
+        chroma12_from_mel(&mel, 24, &mut c, MusicAssumptions::default());
+        assert!(c.iter().all(|&x| x == 0.0));
+    }
+}

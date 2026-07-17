@@ -1,0 +1,25 @@
+[package]
+name = "qualia-audio"
+version = "0.0.25"
+edition = "2021"
+authors = ["Timothy Charles Holborn <timothy.holborn@gmail.com>"]
+description = "Native auditory intelligence for QualiaDB — AudioView ABI, features, events, language/music scaffolds"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[features]
+default = ["cpu-reference"]
+cpu-reference = []
+# Future: shared wgpu + forge audio ops.
+gpu = []
+# Optional cold-path codecs beyond built-in WAV.
+codecs = []
+native-capture = []
+speech = []
+music = []
+production = []
+generation = []
+
+[dependencies]
+
+[dev-dependencies]
