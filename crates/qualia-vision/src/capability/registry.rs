@@ -57,7 +57,7 @@ static REGISTRY: &[CapabilityEntry] = &[
     cap!("D3.06", "D3", "eulerian_color_mag", Present, "biosense/magnification"),
     cap!("D3.07", "D3", "eulerian_motion_mag", Present, "biosense/magnification"),
     cap!("D3.08", "D3", "lagrangian_mag", Partial, "track-amplify lite"),
-    cap!("D3.09", "D3", "liveness_pad", Present, "challenge-response PAD (mesh pose/blendshape); no passive RGB ML"),
+    cap!("D3.09", "D3", "liveness_pad", Present, "pure-landmark PAD: TTS/TTC + PnP pose + non-rigid Z + jitter; no RGB texture ML"),
     cap!("D3.10", "D3", "face_template_vault", CompleteWithGate, "SFace ONNX Apache-2.0 pack — sanctuary store; ROI hash proxy until loaded"),
     cap!("D3.11", "D3", "voice_biometric", Partial, "qualia-audio speech path + policy"),
     cap!("D3.12", "D3", "multimodal_bio_fusion", Partial, "recipes fuse when consented"),

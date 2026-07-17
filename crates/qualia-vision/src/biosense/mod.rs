@@ -26,6 +26,11 @@ pub use policy::{
 };
 pub use respiration::respiration_from_motion;
 pub use liveness::{
-    evaluate_challenge_pad, issue_challenge, ChallengeKind, MeshFrameSignals, PadReason, PadResult,
-    PadThresholds,
+    check_camera_stream_integrity, check_temporal_window, estimate_head_pose,
+    evaluate_challenge_pad, evaluate_landmark_jitter, evaluate_landmark_pad, evaluate_non_rigid_z,
+    issue_challenge, issue_rotation_challenge, ActionThresholds, CameraStreamAttestation,
+    CameraStreamSource, ChallengeKind, HeadPose, Landmark2, LandmarkFrame, MeshBlendProxies,
+    MeshFrameSignals, NonRigidVerdict, PadLandmarkId, PadReason, PadResult, PadThresholds,
+    StreamIntegrityVerdict, TemporalGate, TemporalWindow, DEFAULT_TTC_MS, DEFAULT_TTS_MS,
+    DEFAULT_YAW_THRESHOLD_DEG,
 };

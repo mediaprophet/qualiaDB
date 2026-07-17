@@ -55,3 +55,29 @@ Wire Studio/desktop commands; deepen face mesh weights; FED policy; multi-view r
 **Assets principal still fetches offline:** TFLite/ONNX weights into `{storage}/models/vision/` (not git).
 
 **Next:** ONNX/TFLite load adapters when weights present; wire mesh signals into PAD.
+
+---
+
+## 2026-07-17 — Pure-landmark PAD (geometric / temporal / non-rigid Z)
+
+**Status:** done (library)
+
+**What built:**
+- `biosense/liveness/` single-function modules:
+  - `landmark_types` — 8-point MediaPipe-mapped packing
+  - `temporal_window` — TTS 800 ms / TTC 2000 ms
+  - `rigid_head_pose` — PnP-class yaw/pitch/roll, IOD-normalized
+  - `action_threshold` — degrees + mouth/IOD ratios
+  - `non_rigid_z` — flat-mask lock (linear residual of nose–cheek ratio)
+  - `landmark_jitter` — ~1 s noise floor
+  - `camera_stream_integrity` — virtual-camera fail-closed hook
+  - `challenge_pad` — `evaluate_landmark_pad` orchestrator + legacy path
+- Challenge set expanded: open_mouth, pitch_up/down; `issue_rotation_challenge`
+- Pack docs §4 rewritten to pure-landmark architecture
+- Registry D3.09 string updated
+
+**Measured:** `cargo test -p qualia-vision` (see session)
+
+**Where human is needed:** production threshold calibration in MANIFEST; OS camera attestation host wiring; MediaPipe ONNX/TFLite drop-in.
+
+**Next:** mesh adapter feeding `LandmarkFrame`; host sets `CameraStreamAttestation::physical_attested()` on unlock path.

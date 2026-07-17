@@ -69,36 +69,55 @@ Do **not** commit multi‑MB weights to the Qualia git tree unless Timothy expli
 
 ---
 
-## 4. Challenge-only PAD specification (principal design sign-off)
+## 4. Pure-landmark challenge PAD (principal architecture)
 
-**Goal:** Clear “beyond texture variance” without non-commercial passive PAD models.
+**Goal:** Presentation attack detection from **3D face mesh landmarks only** — no pixel-level texture, no screen-glare / RGB spoof nets, no massive anti-spoof training sets.
 
-### 4.1 Flow
+**Implementation:** `crates/qualia-vision/src/biosense/liveness/` (single-function modules).
 
-1. Issue a **random challenge** from a closed set (e.g. turn head left/right, smile, blink twice).  
-2. Time window: e.g. 1.5–3.0 s.  
-3. Verify with MediaPipe mesh: head pose (yaw/pitch) and/or blendshapes (`mouthSmile*`, eye blink).  
-4. Over ~2 s, require **non-static** mesh micro-motion (variance threshold) to reject flat photos.  
-5. **Fail closed** on timeout, wrong action, multi-face, or low quality.
+### 4.1 Pipeline (strict order)
 
-### 4.2 Challenge set (v1)
+| Step | Module | Gate |
+|------|--------|------|
+| 0 | Consent + `camera_stream_integrity` | Fail closed: no consent; virtual camera when `require_physical` |
+| 1 | `temporal_window` | **TTS ~800 ms** start; **TTC ~2000 ms** complete — blocks replay brute-force |
+| 2 | `rigid_head_pose` | PnP-class pose from nose/chin/outer eyes vs canonical 3D model → pitch/yaw/roll °; scale by interocular |
+| 3 | `action_threshold` | Challenge math: yaw ≥ 25°; mouth gap / IOD; blendshape smile/blink when present |
+| 4 | `non_rigid_z` | **Core lock:** nose–cheek projected ratio residual after linear yaw fit — flat masks fail |
+| 5 | `landmark_jitter` | ~1 s noise floor — static mask / over-smooth replay fail |
 
-| Id | Action | Pass criterion (illustrative) |
-|----|--------|-------------------------------|
-| `yaw_left` | Turn head left | yaw Δ ≥ threshold within window |
-| `yaw_right` | Turn head right | yaw Δ ≤ −threshold |
-| `smile` | Smile | smile blendshape peak ≥ threshold |
-| `blink_2` | Blink twice | two blink events in window |
+Entry: `evaluate_landmark_pad(...)`. Legacy pose/blend row path: `evaluate_challenge_pad(...)`.
 
-### 4.3 Outputs
+### 4.2 Challenge set
 
-- `PolicyDecision::Permit` / `Forbid`  
-- `reason_code`: `pass` | `timeout` | `wrong_action` | `static_mesh` | `no_consent` | `multi_face`  
-- Audit log line (who/when/purpose/challenge_id)
+| Id | Action | Pass criterion (defaults) |
+|----|--------|---------------------------|
+| `yaw_left` / `yaw_right` | Head turn | \|Δyaw\| ≥ 25° + non-rigid Z |
+| `pitch_up` / `pitch_down` | Nod | pitch Δ + non-rigid Z when applicable |
+| `smile` / `open_mouth` | Expression | mouth ratio / IOD or blendshape peak |
+| `blink_2` | Blink twice | two blink peaks in window |
 
-### 4.4 Non-claims
+Prefer `issue_rotation_challenge(seed)` for stronger 3D PAD.
 
-PAD is **presentation attack mitigation**, not identity proof alone; always combine with 1:1 template under selfhood consent.
+### 4.3 Attack coverage (geometric)
+
+| Attack | Why it fails |
+|--------|----------------|
+| Printed photo / paper cutout | Rigid ratios under yaw → `FlatSurface` |
+| Static 3D mask (held still) | Jitter too low → `StaticMesh` |
+| Screen replay (slow response) | TTS/TTC miss |
+| Smooth deepfake mesh inject | Jitter anomaly and/or virtual camera |
+| Virtual camera avatar inject | `CameraStreamAttestation` + OS hardware path |
+
+### 4.4 Outputs / reasons
+
+`PadReason`: `Pass` | `NoConsent` | `TimeToStartExceeded` | `TimeToCompleteExceeded` | `WrongAction` | `StaticMesh` | `FlatSurface` | `VirtualCamera` | `UnattestedStream` | `JitterAnomaly` | `PoseUnavailable` | `InsufficientFrames` | `Timeout`
+
+### 4.5 Non-claims
+
+- PAD is **not** identity proof alone — combine with 1:1 template under selfhood consent.
+- Landmark integrity depends on the mesh adapter; pair with **physical CMOS attestation** in production hosts.
+- Thresholds are defaults until calibrated and recorded in `MANIFEST.json`.
 
 ---
 

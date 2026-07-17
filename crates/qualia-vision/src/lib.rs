@@ -89,12 +89,14 @@ pub use cv::{
 };
 pub use biosense::{
     blendshape_affect_proposal, cctv_stages_allowed, ensemble_hr, eulerian_color_magnify,
-    eulerian_motion_magnify, evaluate_challenge_pad, evaluate_processing_act, face_roi_center,
-    frame_blur_score, issue_challenge, motion_energy, reject_low_quality, respiration_from_motion,
-    roi_mean_rgb, spectral_hr_peak, template_hash_from_roi, templates_match,
-    valence_arousal_proposal, AffectProposal, BiometricTemplate, BiosenseConsent, BiosensePurpose,
-    BlendshapeProxy, ChallengeKind, FaceRoi, HrEstimate, MeshFrameSignals, PadReason, PadResult,
-    PadThresholds, PolicyDecision, ProcessingAct, QualityReject,
+    eulerian_motion_magnify, evaluate_challenge_pad, evaluate_landmark_pad, evaluate_processing_act,
+    face_roi_center, frame_blur_score, issue_challenge, issue_rotation_challenge, motion_energy,
+    reject_low_quality, respiration_from_motion, roi_mean_rgb, spectral_hr_peak,
+    template_hash_from_roi, templates_match, valence_arousal_proposal, AffectProposal,
+    BiometricTemplate, BiosenseConsent, BiosensePurpose, BlendshapeProxy, CameraStreamAttestation,
+    ChallengeKind, FaceRoi, HeadPose, HrEstimate, Landmark2, LandmarkFrame, MeshBlendProxies,
+    MeshFrameSignals, PadLandmarkId, PadReason, PadResult, PadThresholds, PolicyDecision,
+    ProcessingAct, QualityReject, TemporalWindow,
 };
 pub use recipes::self_monitor_pulse;
 
