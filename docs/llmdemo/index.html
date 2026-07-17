@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>QualiaDB WebGPU LLM Inference</title>
     <!-- Enable Cross-Origin Isolation for SharedArrayBuffer -->
     <script src="coi-serviceworker.js"></script>
@@ -12,7 +12,8 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 16px;
+            padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
             background-color: #f0f2f5;
             color: #333;
         }
@@ -20,11 +21,17 @@
             max-width: 800px;
             margin: 0 auto;
             background: white;
-            padding: 30px;
+            padding: 20px;
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        h1 { color: #2c3e50; }
+        @media (max-width: 640px) {
+            .container { padding: 14px; border-radius: 0; box-shadow: none; }
+            button { width: 100%; margin-bottom: 8px; min-height: 44px; }
+            #promptInput { font-size: 16px !important; }
+            .terminal { height: 220px !important; font-size: 12px; }
+        }
+        h1 { color: #2c3e50; font-size: clamp(1.25rem, 4vw, 1.75rem); }
         .status-box {
             padding: 15px;
             border-radius: 5px;
@@ -145,23 +152,33 @@
 
         async function checkWebGPU() {
             if (!navigator.gpu) {
-                sysStatus.innerHTML = '<span style="color:red">WebGPU is not supported in this browser.</span>';
+                const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                const isAndroid = /Android/i.test(navigator.userAgent);
+                let hint = 'WebGPU is not supported in this browser.';
+                if (isIOS) hint += ' Use Safari 18+ / iOS 18+.';
+                else if (isAndroid) hint += ' Use Chrome 121+ with a supported GPU.';
+                sysStatus.innerHTML = `<span style="color:red">${hint}</span>`;
                 log("Error: WebGPU not supported.");
                 return;
             }
-            const adapter = await navigator.gpu.requestAdapter();
-            if (!adapter) {
-                sysStatus.innerHTML = '<span style="color:red">Failed to get WebGPU adapter.</span>';
-                log("Error: Failed to request WebGPU adapter.");
-                return;
+            try {
+                const adapter = await navigator.gpu.requestAdapter();
+                if (!adapter) {
+                    sysStatus.innerHTML = '<span style="color:red">Failed to get WebGPU adapter (GPU blocked or unavailable).</span>';
+                    log("Error: Failed to request WebGPU adapter.");
+                    return;
+                }
+                sysStatus.innerHTML = '<span style="color:green">WebGPU supported. Loading WASM…</span>';
+                log("WebGPU Adapter found: " + (adapter.name || '(unnamed)'));
+                // Init the WASM module up front — the P64 AOT compiler lives in it.
+                await init();
+                log("WASM module loaded (Phase 5 engine).");
+                sysStatus.innerHTML = '<span style="color:green">Ready — load a model (SmolLM2 360M).</span>';
+                btnLoadModel.disabled = false;
+            } catch (e) {
+                sysStatus.innerHTML = `<span style="color:red">Boot failed: ${e.message}</span>`;
+                log("Boot error: " + e.message);
             }
-            sysStatus.innerHTML = '<span style="color:green">WebGPU supported. Loading WASM…</span>';
-            log("WebGPU Adapter found: " + (adapter.name || '(unnamed)'));
-            // Init the WASM module up front — the P64 AOT compiler lives in it.
-            await init();
-            log("WASM module loaded (Phase 5 engine).");
-            sysStatus.innerHTML = '<span style="color:green">Ready — load a model.</span>';
-            btnLoadModel.disabled = false;
         }
 
         btnLoadModel.addEventListener('click', async () => {

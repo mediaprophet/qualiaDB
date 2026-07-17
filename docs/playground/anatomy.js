@@ -3,34 +3,33 @@
 // (`QualiaPortal`) — the same renderer that runs natively on the desktop.
 //
 // Includes the first slice of the ATTENTION MIXER (docs/plans/attention-mixer.md):
-// an ambient-field channel (off by default) and a per-body-system channel row, so
-// the viewer composes what they attend to rather than an algorithm deciding it.
+// an ambient-field channel (off by default) and a per-body-system channel row.
+// Mobile: full-viewport canvas + bottom-sheet controls, pinch zoom, orbit drag.
 
 import { loadQualiaPortal } from "../js/qualia-shell.js";
 
 const container = document.getElementById("canvas-container");
 const statusEl = document.getElementById("status");
+const sidebar = document.getElementById("sidebar");
+const sheetScrim = document.getElementById("sheet-scrim");
+const controlsBtn = document.getElementById("btn-controls");
+const progressWrap = document.getElementById("progress-wrap");
+const progressFill = document.getElementById("progress-fill");
+const progressLabel = document.getElementById("progress-label");
 
 let portal = null;
 let canvas = null;
 let currentBody = "male";
 let lastT = 0;
-let bodyBytes = null; // the loaded .qualia pack bytes, cached for mixer re-renders
-// The loaded pack's manifest — [{ key, label, system, systems }] per part — read from the pack itself
-// (not hardcoded), so the mixer + parts list are DYNAMIC: they reflect exactly what this body contains.
+let bodyBytes = null;
+// Pack manifest — [{ key, label, system, systems }] per part — built from the pack itself.
 let packParts = [];
-// Parts individually deselected (by entry key) via the parts list — hidden on the next render.
 const disabledParts = new Set();
 const cam = { yaw: 0.5, pitch: 0.12, zoom: 2.4 };
+const DEFAULT_CAM = { yaw: 0.5, pitch: 0.12, zoom: 2.4 };
 
-// Mixer: per-body-system level 0..1 (absent = full). v1 is mute/show (the mesh
-// pipeline is opaque); smooth opacity lands with alpha blending (mixer plan v2).
 const systemLevels = {};
-// The full body-system taxonomy — all 17, mirroring wellfare-core's system registry (the seed the
-// evaluation engine uses). The third field marks a DISTRIBUTED network (ECS / ENS / glymphatic): it has
-// no standalone organ mesh, so it is evaluated and — in the app — painted as an overlay on its host
-// organs, rather than shown/hidden as a discrete mesh here. A discrete system with no mesh in the loaded
-// pack is still listed (you can attend to it) but has nothing to show/hide until that mesh ships.
+// Full 17-system taxonomy (mirrors wellfare-core registry seed). Third field = distributed overlay.
 const SYSTEMS = [
   ["circulatory", "Circulatory", false],
   ["respiratory", "Respiratory", false],
@@ -50,13 +49,9 @@ const SYSTEMS = [
   ["ens", "Enteric (ENS)", true],
   ["glymphatic", "Glymphatic", true],
 ];
-// Systems muted by default: opaque skin would occlude everything, so the mixer starts
-// with it peeled off — turn the Skin fader up to wrap the body (translucent skin = v2).
+// Opaque skin occludes everything — peel by default.
 const DEFAULT_MUTED = new Set(["integumentary"]);
 
-// CC-BY attribution for the 3D assets, per body. The CCF male/female bodies are permissive CC-BY-4.0;
-// the BodyParts3D "complete" body is CC-BY-SA-2.1-JP (share-alike) and requires the exact attribution +
-// citation the database's terms specify.
 const CCF_SOURCE = {
   what: "3D reference-organ meshes",
   creator: "Human Reference Atlas (CCF) / HuBMAP",
@@ -74,25 +69,26 @@ const BP3D_SOURCE = {
   scope: "3D mesh geometry + FMA anatomy ontology",
   cite: "Mitsuhashi et al., Nucleic Acids Res. 2009 (doi:10.1093/nar/gkn613) · data doi:10.18908/lsdba.nbdc00837-000",
 };
-// The sources that apply to the body currently loaded.
-function sourcesForBody() {
-  return currentBody === "complete" ? [BP3D_SOURCE] : [CCF_SOURCE];
-}
 
-// The BodyParts3D complete pack is large (exceeds GitHub Pages' 100 MB/file limit), so it ships as a
-// GitHub Release asset. NOTE: release assets are NOT fetchable cross-origin (no CORS) — this URL is used
-// for a DOWNLOAD link (navigation bypasses CORS), then the user loads the local file. Pinned to the tag
-// the packs are uploaded to.
 const RELEASE_BASE = "https://github.com/mediaprophet/qualiaDB/releases/download/v0.0.24";
+const isCoarsePointer = () =>
+  (typeof window !== "undefined" &&
+    (window.matchMedia?.("(pointer: coarse)").matches ||
+      window.matchMedia?.("(max-width: 860px)").matches)) ||
+  false;
+const isMobileUA = () =>
+  /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+
 function bodyUrl(key) {
   return key === "complete" ? `${RELEASE_BASE}/anatomy-bodyparts3d.qualia` : `anatomy-${key}.qualia`;
 }
-
-// The body's full provenance/semantics `.q42` graph — a byte-identical sidecar beside the bundle
-// (anatomy-<body>.q42), directly linkable. For CCF it carries organ→system + provenance; for the
-// complete body it is the FMA ontology (OBO IRIs + is-a + part-of + system + geometry) the meshes cite.
 function provenanceQ42Url() {
-  return currentBody === "complete" ? `${RELEASE_BASE}/anatomy-bodyparts3d.q42` : `anatomy-${currentBody}.q42`;
+  return currentBody === "complete"
+    ? `${RELEASE_BASE}/anatomy-bodyparts3d.q42`
+    : `anatomy-${currentBody}.q42`;
+}
+function sourcesForBody() {
+  return currentBody === "complete" ? [BP3D_SOURCE] : [CCF_SOURCE];
 }
 
 function renderAttribution() {
@@ -126,31 +122,103 @@ function setStatus(msg, cls) {
   console.log("[anatomy]", msg);
 }
 
+function setProgress(visible, pct, label) {
+  if (!progressWrap) return;
+  progressWrap.classList.toggle("visible", !!visible);
+  if (progressLabel && label != null) progressLabel.textContent = label;
+  if (progressFill && pct != null) {
+    progressFill.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+  }
+}
+
 function onResize() {
-  if (portal && portal.resize) {
+  if (portal && portal.resize && canvas) {
     try {
       portal.resize(canvas, container.clientWidth, container.clientHeight);
     } catch (_) {}
   }
 }
 
+// ── Controls sheet (mobile bottom sheet / desktop always-on sidebar) ──
+function isSheetMode() {
+  return window.matchMedia("(max-width: 860px)").matches;
+}
+
+function setSheetOpen(open) {
+  if (!sidebar) return;
+  if (!isSheetMode()) {
+    sidebar.classList.remove("open");
+    sheetScrim?.classList.remove("open");
+    controlsBtn?.setAttribute("aria-expanded", "false");
+    return;
+  }
+  sidebar.classList.toggle("open", open);
+  sheetScrim?.classList.toggle("open", open);
+  controlsBtn?.setAttribute("aria-expanded", open ? "true" : "false");
+  // After sheet animates, remeasure canvas (flex stage may reflow when overlays paint).
+  setTimeout(onResize, open ? 50 : 320);
+}
+
+function setupSheet() {
+  controlsBtn?.addEventListener("click", () => {
+    const open = !sidebar?.classList.contains("open");
+    setSheetOpen(open);
+  });
+  sheetScrim?.addEventListener("click", () => setSheetOpen(false));
+  // Escape closes sheet
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") setSheetOpen(false);
+  });
+  window.addEventListener("resize", () => {
+    if (!isSheetMode()) setSheetOpen(false);
+    onResize();
+  });
+  // Swipe-down on handle area to dismiss
+  let startY = 0;
+  sidebar?.addEventListener(
+    "touchstart",
+    (e) => {
+      if (!isSheetMode() || !sidebar.classList.contains("open")) return;
+      if (sidebar.scrollTop > 0) return;
+      startY = e.touches[0].clientY;
+    },
+    { passive: true },
+  );
+  sidebar?.addEventListener(
+    "touchend",
+    (e) => {
+      if (!startY) return;
+      const dy = e.changedTouches[0].clientY - startY;
+      startY = 0;
+      if (dy > 70) setSheetOpen(false);
+    },
+    { passive: true },
+  );
+}
+
 async function boot() {
   renderAttribution();
-  // A canvas that fills the container — the old demo's canvas had no CSS size, so
-  // the renderer sized to 0×0 and drew nothing. `100%` fixes that.
+  setupSheet();
+
   canvas = document.createElement("canvas");
   canvas.style.cssText = "width:100%;height:100%;display:block;touch-action:none";
+  canvas.setAttribute("aria-label", "3D anatomy body");
   container.appendChild(canvas);
 
-  // Build the attention mixer first — the full 17-system taxonomy is meaningful (and inspectable) even
-  // when the body itself can't render. The faders are inert until a body loads (applyMixer is guarded).
+  // Mixer is useful even without WebGPU (taxonomy inspectable).
   buildMixer();
 
   if (!navigator.gpu) {
-    setStatus(
-      "This browser has no WebGPU. The real 3D body needs a WebGPU-capable browser (Chrome/Edge, or Firefox Nightly). The system mixer below still lists what the engine evaluates.",
-      "error",
-    );
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    let hint =
+      "This browser has no WebGPU. The real 3D body needs a WebGPU-capable browser.";
+    if (isIOS) hint += " On iPhone/iPad use Safari 18+ (iOS 18+), or enable WebGPU under Settings → Safari → Advanced → Feature Flags.";
+    else if (isAndroid) hint += " On Android use Chrome 121+ on a device with a supported GPU.";
+    else hint += " Use Chrome, Edge, or Firefox Nightly with hardware acceleration.";
+    hint += " The system mixer still lists what the engine evaluates — open Controls.";
+    setStatus(hint, "error");
+    if (isSheetMode()) setSheetOpen(true);
     return;
   }
 
@@ -160,10 +228,11 @@ async function boot() {
     res = await loadQualiaPortal(canvas);
   } catch (e) {
     setStatus("Renderer failed to load: " + e, "error");
+    if (isSheetMode()) setSheetOpen(true);
     return;
   }
   portal = res.portal;
-  window.__portal = portal; // debug handle
+  window.__portal = portal;
   if (!portal) {
     setStatus("WebGPU portal unavailable (source: " + res.source + ").", "error");
     return;
@@ -176,7 +245,10 @@ async function boot() {
   new ResizeObserver(onResize).observe(container);
   window.addEventListener("resize", onResize);
   setupOrbit();
+  setupZoomButtons();
   startLoop();
+  // On phones, leave the sheet closed so the body fills the screen first.
+  if (isSheetMode()) setSheetOpen(false);
   await loadBody(currentBody);
 }
 
@@ -184,12 +256,13 @@ function bodyLabel(key) {
   return key === "complete" ? "complete (BodyParts3D)" : key === "male" ? "XY" : "XX";
 }
 
-// Render a body from its raw .qualia bytes (shared by the same-origin fetch and the local-file load).
-// Reads the pack's OWN manifest → the mixer + parts list are DYNAMIC (built from what the body contains).
 function renderPackBytes(bytes) {
   bodyBytes = bytes;
   try {
-    packParts = typeof portal.pack_manifest === "function" ? Array.from(portal.pack_manifest(bodyBytes) || []) : [];
+    packParts =
+      typeof portal.pack_manifest === "function"
+        ? Array.from(portal.pack_manifest(bodyBytes) || [])
+        : [];
   } catch (e) {
     packParts = [];
   }
@@ -197,9 +270,11 @@ function renderPackBytes(bytes) {
   buildMixer();
   buildPartsList();
   applyMixer();
+  setProgress(false);
+  // After first body on mobile, keep sheet closed so the person sees the body.
+  if (isSheetMode()) setSheetOpen(false);
 }
 
-// Show/hide the complete-body loader (download link + local-file picker) and point the link at the pack.
 function showCompleteLoader(show) {
   const el = document.getElementById("complete-loader");
   if (el) el.style.display = show ? "block" : "none";
@@ -207,74 +282,147 @@ function showCompleteLoader(show) {
   if (dl) dl.href = `${RELEASE_BASE}/anatomy-bodyparts3d.qualia`;
 }
 
+async function fetchWithProgress(url, label) {
+  setProgress(true, 0, label || "Downloading…");
+  const resp = await fetch(url, { cache: "no-store" });
+  if (!resp.ok) {
+    setProgress(false);
+    throw Object.assign(new Error(`HTTP ${resp.status}`), { status: resp.status, resp });
+  }
+  const total = Number(resp.headers.get("Content-Length") || 0);
+  if (!resp.body || !resp.body.getReader) {
+    const buf = await resp.arrayBuffer();
+    setProgress(true, 100, "Unpacking…");
+    return new Uint8Array(buf);
+  }
+  const reader = resp.body.getReader();
+  // Prefer single allocation when size is known (avoids double-memory spike on phones).
+  if (total > 0) {
+    const out = new Uint8Array(total);
+    let loaded = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (loaded + value.length > total) throw new Error("download exceeded Content-Length");
+      out.set(value, loaded);
+      loaded += value.length;
+      const pct = Math.round((loaded / total) * 100);
+      const mb = (loaded / 1e6).toFixed(1);
+      const tmb = (total / 1e6).toFixed(0);
+      setProgress(true, pct, `${label || "Downloading"} ${pct}% · ${mb}/${tmb} MB`);
+    }
+    if (loaded !== total) throw new Error(`incomplete download ${loaded}/${total}`);
+    setProgress(true, 100, "Building body…");
+    return out;
+  }
+  const chunks = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.length;
+    setProgress(true, null, `${label || "Downloading"} ${(loaded / 1e6).toFixed(1)} MB…`);
+  }
+  const out = new Uint8Array(loaded);
+  let off = 0;
+  for (const c of chunks) {
+    out.set(c, off);
+    off += c.length;
+  }
+  setProgress(true, 100, "Building body…");
+  return out;
+}
+
 async function loadBody(key) {
-  // The provenance link + attribution are per-body — refresh them for the current body.
   renderAttribution();
   showCompleteLoader(key === "complete");
 
   if (key === "complete") {
-    // GitHub Release assets are NOT fetchable cross-origin (no Access-Control-Allow-Origin), and the
-    // pack is far larger than GitHub Pages' 100 MB/file limit — so the browser can't fetch it. The web
-    // path is: download the pack (a navigation download bypasses CORS), then load the local file below.
-    // The native desktop app reads the pack directly — no CORS, no download step.
+    setProgress(false);
     setStatus(
-      "The complete body is a large pack. Browsers can't fetch GitHub-release assets cross-origin, so download it below and load the file — or open it in the desktop app, which loads it directly.",
+      "The complete body is a large pack. Browsers can't fetch GitHub-release assets cross-origin — download it below and load the file, or open it in the desktop app. On a phone, Male/Female CCF packs are the better path.",
       "error",
     );
+    if (isSheetMode()) setSheetOpen(true);
     return;
   }
 
-  // CCF male/female ship same-origin on Pages, so a normal fetch works.
-  setStatus(`Fetching ${bodyLabel(key)} reference body…`);
-  let resp;
+  // CCF male/female ship same-origin on Pages.
+  const sizeHint = isMobileUA() || isCoarsePointer()
+    ? " (~90–120 MB — stay on Wi‑Fi)"
+    : "";
+  setStatus(`Fetching ${bodyLabel(key)} reference body${sizeHint}…`);
   try {
-    resp = await fetch(bodyUrl(key), { cache: "no-store" });
+    const bytes = await fetchWithProgress(bodyUrl(key), `Fetching ${bodyLabel(key)}`);
+    renderPackBytes(bytes);
   } catch (e) {
-    setStatus("Body pack fetch failed: " + e, "error");
-    return;
+    setProgress(false);
+    if (e && e.status) {
+      setStatus(
+        `Body pack not found (HTTP ${e.status}). The .qualia packs ship as build artifacts — produce them with the build_anatomy_pack tool.`,
+        "error",
+      );
+    } else {
+      setStatus("Body pack fetch failed: " + e, "error");
+    }
   }
-  if (!resp.ok) {
-    setStatus(
-      `Body pack not found (HTTP ${resp.status}). The .qualia packs ship as build artifacts — produce them with the build_anatomy_pack tool.`,
-      "error",
-    );
-    return;
-  }
-  renderPackBytes(new Uint8Array(await resp.arrayBuffer()));
 }
 
-// Load the complete body from a .qualia file the user downloaded (local read — no CORS).
 window.onCompleteFile = (file) => {
   if (!file || !portal) return;
   setStatus(`Loading ${file.name} (${(file.size / 1e6).toFixed(0)} MB)…`);
+  setProgress(true, 30, `Reading ${file.name}…`);
   const reader = new FileReader();
+  reader.onprogress = (ev) => {
+    if (ev.lengthComputable) {
+      setProgress(true, Math.round((ev.loaded / ev.total) * 90), `Reading ${(ev.loaded / 1e6).toFixed(0)} MB…`);
+    }
+  };
   reader.onload = () => {
     try {
+      setProgress(true, 95, "Building body…");
       renderPackBytes(new Uint8Array(reader.result));
     } catch (e) {
+      setProgress(false);
       setStatus("Render error: " + e, "error");
     }
   };
-  reader.onerror = () => setStatus("Could not read the file.", "error");
+  reader.onerror = () => {
+    setProgress(false);
+    setStatus("Could not read the file.", "error");
+  };
   reader.readAsArrayBuffer(file);
 };
 
-// Re-render the cached body with the current mixer settings.
 function applyMixer() {
   if (!portal || !bodyBytes) return;
   const noun = currentBody === "complete" ? "structures" : "organs";
   try {
-    const r = portal.load_body_from_qualia_bundle_mixed(bodyBytes, systemLevels, Array.from(disabledParts));
+    const r = portal.load_body_from_qualia_bundle_mixed(
+      bodyBytes,
+      systemLevels,
+      Array.from(disabledParts),
+    );
     window.__lastRender = r;
     const organs = r && r.organs_loaded != null ? r.organs_loaded : "?";
-    const tris = r && r.total_triangles != null ? Number(r.total_triangles).toLocaleString() : "?";
-    setStatus(`${bodyLabel(currentBody)} body · ${organs} ${noun} · ${tris} triangles · drag to orbit`, "ok");
+    const tris =
+      r && r.total_triangles != null ? Number(r.total_triangles).toLocaleString() : "?";
+    const gesture = isCoarsePointer() ? "drag to orbit · pinch to zoom" : "drag to orbit · scroll to zoom";
+    setStatus(`${bodyLabel(currentBody)} body · ${organs} ${noun} · ${tris} triangles · ${gesture}`, "ok");
   } catch (e) {
-    setStatus("Render error: " + e, "error");
+    const msg = String(e);
+    if (/out of memory|oom|allocation|RangeError/i.test(msg)) {
+      setStatus(
+        "Render ran out of memory. On phones, deselect Skin and heavy systems in Controls, or use a desktop browser.",
+        "error",
+      );
+    } else {
+      setStatus("Render error: " + e, "error");
+    }
   }
 }
 
-// The set of systems the loaded pack actually contains (from the manifest).
 function systemsInPack() {
   const s = new Set();
   for (const p of packParts) {
@@ -284,9 +432,6 @@ function systemsInPack() {
   return s;
 }
 
-// Build the mixer channel rows — DYNAMIC: with a pack loaded, only the systems it actually contains
-// (plus the mesh-less overlay networks, which are evaluated everywhere). Before a pack loads, the full
-// 17-system taxonomy. A fader at 0 mutes that system; >0 shows it.
 function buildMixer() {
   const host = document.getElementById("mixer-systems");
   if (!host) return;
@@ -294,9 +439,8 @@ function buildMixer() {
   const present = systemsInPack();
   const havePack = packParts.length > 0;
   const overlayTip =
-    "A distributed network with no standalone organ mesh — evaluated and painted as an overlay on its host organs (ENS→gut, glymphatic→brain, ECS→whole-body), not shown/hidden as a discrete mesh here.";
+    "A distributed network with no standalone organ mesh — evaluated and painted as an overlay on its host organs.";
   for (const [id, label, overlay] of SYSTEMS) {
-    // With a body loaded, hide systems that body has no meshes for (keep overlay networks, always).
     if (havePack && !overlay && !present.has(id)) continue;
     const muted = DEFAULT_MUTED.has(id);
     systemLevels[id] = muted ? 0 : 1.0;
@@ -311,15 +455,12 @@ function buildMixer() {
     fader.max = "100";
     fader.value = muted ? "0" : "100";
     fader.className = "mixer-fader";
+    fader.setAttribute("aria-label", label);
     if (overlay) {
-      // No discrete mesh to show/hide. Keep the row so the taxonomy is complete (you can see the system
-      // is evaluated), but make plain the fader isn't adjustable here — overlay rendering is a later slice.
       fader.disabled = true;
       name.title = overlayTip;
       fader.title = overlayTip;
     } else {
-      // Update the level live while dragging; re-render on release (a re-render
-      // re-uploads the body, so we don't do it every drag tick).
       fader.addEventListener("input", () => {
         systemLevels[id] = fader.value / 100;
       });
@@ -334,15 +475,11 @@ function buildMixer() {
   }
 }
 
-// The human label for a system id (from the taxonomy), or the id itself.
 function systemLabel(id) {
   const s = SYSTEMS.find((e) => e[0] === id);
   return s ? s[1] : id;
 }
 
-// Build the selectable PARTS list from the pack manifest — every individual structure, grouped by its
-// primary system in a collapsible section, each a checkbox (checked = shown). Unchecking a part hides
-// just that structure on the next render. Searchable (essential for the ~900-part complete body).
 function buildPartsList() {
   const host = document.getElementById("parts-list");
   const count = document.getElementById("parts-count");
@@ -372,6 +509,7 @@ function buildPartsList() {
       const row = document.createElement("label");
       row.className = "part-row";
       row.dataset.q = label.toLowerCase();
+      row.dataset.key = p.key;
       const cb = document.createElement("input");
       cb.type = "checkbox";
       cb.checked = !disabledParts.has(p.key);
@@ -390,7 +528,6 @@ function buildPartsList() {
   }
 }
 
-// Filter the parts list by name; open groups that have a match.
 window.onPartSearch = (q) => {
   q = (q || "").trim().toLowerCase();
   const host = document.getElementById("parts-list");
@@ -407,14 +544,15 @@ window.onPartSearch = (q) => {
   });
 };
 
-// Select or deselect every part at once (respects the current search filter → visible parts only).
 window.setAllParts = (on) => {
   const host = document.getElementById("parts-list");
   if (!host) return;
   host.querySelectorAll(".part-row").forEach((row) => {
-    if (row.style.display === "none") return; // only the visible (filtered) parts
+    if (row.style.display === "none") return;
     const cb = row.querySelector("input");
-    const p = packParts.find((x) => (x.label || x.key).toLowerCase() === row.dataset.q);
+    const key = row.dataset.key;
+    const p = packParts.find((x) => x.key === key) ||
+      packParts.find((x) => (x.label || x.key).toLowerCase() === row.dataset.q);
     if (!cb || !p) return;
     cb.checked = on;
     if (on) disabledParts.delete(p.key);
@@ -423,7 +561,6 @@ window.setAllParts = (on) => {
   applyMixer();
 };
 
-// Ambient σ field channel (off by default).
 window.onAmbient = (checked) => {
   if (portal) portal.set_ambient_enabled(!!checked);
 };
@@ -446,30 +583,91 @@ function applyCam() {
   } catch (_) {}
 }
 
+function setupZoomButtons() {
+  const clampZoom = (z) => Math.max(0.8, Math.min(6, z));
+  document.getElementById("btn-zoom-in")?.addEventListener("click", () => {
+    cam.zoom = clampZoom(cam.zoom * 0.85);
+    applyCam();
+  });
+  document.getElementById("btn-zoom-out")?.addEventListener("click", () => {
+    cam.zoom = clampZoom(cam.zoom * 1.15);
+    applyCam();
+  });
+  document.getElementById("btn-zoom-reset")?.addEventListener("click", () => {
+    cam.yaw = DEFAULT_CAM.yaw;
+    cam.pitch = DEFAULT_CAM.pitch;
+    cam.zoom = DEFAULT_CAM.zoom;
+    applyCam();
+  });
+}
+
 function setupOrbit() {
   applyCam();
   let dragging = false;
   let lx = 0;
   let ly = 0;
+  let pinchDist = 0;
+  let activePointers = new Map();
+
+  const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
   canvas.addEventListener("pointerdown", (e) => {
-    dragging = true;
-    lx = e.clientX;
-    ly = e.clientY;
+    // Don't fight the sheet / UI
+    if (e.button === 2) return;
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     canvas.setPointerCapture?.(e.pointerId);
+    if (activePointers.size === 1) {
+      dragging = true;
+      lx = e.clientX;
+      ly = e.clientY;
+    } else if (activePointers.size === 2) {
+      dragging = false;
+      const pts = [...activePointers.values()];
+      pinchDist = distance(pts[0], pts[1]);
+    }
   });
-  const stop = () => {
-    dragging = false;
+
+  const stopPointer = (e) => {
+    activePointers.delete(e.pointerId);
+    if (activePointers.size < 2) pinchDist = 0;
+    if (activePointers.size === 0) dragging = false;
+    if (activePointers.size === 1) {
+      const only = [...activePointers.values()][0];
+      dragging = true;
+      lx = only.x;
+      ly = only.y;
+    }
   };
-  canvas.addEventListener("pointerup", stop);
-  canvas.addEventListener("pointercancel", stop);
+  canvas.addEventListener("pointerup", stopPointer);
+  canvas.addEventListener("pointercancel", stopPointer);
+
   canvas.addEventListener("pointermove", (e) => {
+    if (!activePointers.has(e.pointerId)) return;
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (activePointers.size === 2 && pinchDist > 0) {
+      const pts = [...activePointers.values()];
+      const d = distance(pts[0], pts[1]);
+      if (d > 0) {
+        // Pinch out → zoom in (smaller cam.zoom distance)
+        const scale = pinchDist / d;
+        cam.zoom = Math.max(0.8, Math.min(6, cam.zoom * scale));
+        pinchDist = d;
+        applyCam();
+      }
+      return;
+    }
+
     if (!dragging) return;
-    cam.yaw += (e.clientX - lx) * 0.008;
-    cam.pitch = Math.max(-1.4, Math.min(1.4, cam.pitch + (e.clientY - ly) * 0.008));
+    // Slightly higher gain on coarse pointers for finger-sized screens
+    const sens = isCoarsePointer() ? 0.01 : 0.008;
+    cam.yaw += (e.clientX - lx) * sens;
+    cam.pitch = Math.max(-1.4, Math.min(1.4, cam.pitch + (e.clientY - ly) * sens));
     lx = e.clientX;
     ly = e.clientY;
     applyCam();
   });
+
   canvas.addEventListener(
     "wheel",
     (e) => {
@@ -479,16 +677,32 @@ function setupOrbit() {
     },
     { passive: false },
   );
+
+  // Double-tap zoom toggle (mobile)
+  let lastTap = 0;
+  canvas.addEventListener("pointerup", (e) => {
+    if (e.pointerType === "mouse") return;
+    const now = performance.now();
+    if (now - lastTap < 280 && activePointers.size === 0) {
+      cam.zoom = cam.zoom < 2 ? 3.2 : DEFAULT_CAM.zoom;
+      applyCam();
+    }
+    lastTap = now;
+  });
 }
 
-// Sidebar body selector (CCF XY / XX, or the complete BodyParts3D body). Mixer settings persist.
 window.setSex = (key) => {
-  if (key === currentBody || !portal) return;
+  if (key === currentBody && key !== "complete") return;
+  if (!portal && key !== "complete") return;
   currentBody = key;
   document.getElementById("btn-male")?.classList.toggle("active", key === "male");
   document.getElementById("btn-female")?.classList.toggle("active", key === "female");
   document.getElementById("btn-complete")?.classList.toggle("active", key === "complete");
-  loadBody(key);
+  if (portal) loadBody(key);
+  else if (key === "complete") {
+    showCompleteLoader(true);
+    setSheetOpen(true);
+  }
 };
 
 boot().catch((e) => setStatus("Boot failed: " + e, "error"));

@@ -436,7 +436,7 @@ impl GgufTokenizer {
         &self.stop_token_ids[..self.stop_token_count as usize]
     }
 
-    /// Merge extra stop ids (e.g. from a `.q42.cbor-ld` helper) into the stop set.
+    /// Merge extra stop ids (e.g. from a model's canonical `.q42` metadata) into the stop set.
     /// Does not allocate; drops overflow past [`MAX_STOP_TOKEN_IDS`].
     pub fn merge_stop_token_ids(&mut self, extra: &[u32]) {
         let mut n = self.stop_token_count as usize;

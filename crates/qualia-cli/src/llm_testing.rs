@@ -1,10 +1,10 @@
 //! LLM Testing Integration for CLI
-//! 
+//!
 //! Simple LLM model testing functionality for the CLI.
 
-use std::path::{Path, PathBuf};
-use qualia_client_core::model_lifecycle::{scan_vault_gguf, resolve_vault_model, VaultGgufEntry};
 use crate::llm_lifecycle::{default_vault_path, init_log_stream};
+use qualia_client_core::model_lifecycle::{resolve_vault_model, scan_vault_gguf, VaultGgufEntry};
+use std::path::{Path, PathBuf};
 
 /// CLI command to run comprehensive LLM model tests
 pub fn run_test_models(
@@ -14,57 +14,61 @@ pub fn run_test_models(
     verbose: bool,
 ) -> Result<(), String> {
     let vault_path = vault_path.unwrap_or_else(default_vault_path);
-    
+
     if verbose {
         init_log_stream(true);
     }
-    
+
     println!("🚀 Starting LLM Model Testing CLI");
     println!("📁 Vault path: {}", vault_path.display());
-    
+
     // Scan for GGUF models in vault
-    let available_models = scan_vault_gguf(&vault_path)
-        .map_err(|e| format!("Failed to scan vault: {}", e))?;
-    
+    let available_models =
+        scan_vault_gguf(&vault_path).map_err(|e| format!("Failed to scan vault: {}", e))?;
+
     if available_models.is_empty() {
         return Err("No GGUF models found in vault".to_string());
     }
-    
+
     println!("📦 Found {} model(s):", available_models.len());
     for model in &available_models {
         println!("  - {}", model.name);
     }
-    
+
     // Filter models if specific ones requested
     let test_models = if let Some(ref requested) = models {
-        available_models.iter()
+        available_models
+            .iter()
             .filter(|m| requested.contains(&m.name))
             .cloned()
             .collect()
     } else {
         available_models
     };
-    
+
     if test_models.is_empty() {
         return Err("No matching models found".to_string());
     }
-    
+
     println!("\n🧪 Testing {} model(s)...", test_models.len());
-    
+
     for model in &test_models {
         println!("\n🔍 Testing: {}", model.name);
         match test_single_model(&vault_path, model, verbose) {
             Ok(result) => {
                 println!("  ✅ Load time: {}ms", result.load_time_ms);
                 println!("  ✅ Memory: {}MB", result.memory_mb);
-                println!("  ✅ Status: {}", if result.success { "PASS" } else { "FAIL" });
+                println!(
+                    "  ✅ Status: {}",
+                    if result.success { "PASS" } else { "FAIL" }
+                );
             }
             Err(e) => {
                 println!("  ❌ Error: {}", e);
             }
         }
     }
-    
+
     println!("\n✅ Testing complete!");
     Ok(())
 }
@@ -76,45 +80,47 @@ pub fn run_comprehensive_llm_test(
     verbose: bool,
 ) -> Result<(), String> {
     let vault_path = vault_path.unwrap_or_else(default_vault_path);
-    
+
     if verbose {
         init_log_stream(true);
     }
-    
+
     println!("🧪 Running Comprehensive LLM Test Suite");
     println!("📁 Vault path: {}", vault_path.display());
     println!("🤖 Model: {}", model_name);
     println!();
-    
+
     // Step 1: Load the model
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("STEP 1: Loading Model");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     let gguf = resolve_vault_model(&vault_path, &model_name)
         .map_err(|e| format!("Failed to resolve model: {}", e))?;
-    
+
     println!("Loading {} …", gguf.display());
     let start = std::time::Instant::now();
-    
+
     let record = tokio::task::block_in_place(|| {
-        tokio::runtime::Handle::current()
-            .block_on(qualia_client_core::model_lifecycle::activate_vault_gguf(&gguf))
-    }).map_err(|e| format!("Failed to activate model: {}", e))?;
-    
+        tokio::runtime::Handle::current().block_on(
+            qualia_client_core::model_lifecycle::activate_vault_gguf(&gguf),
+        )
+    })
+    .map_err(|e| format!("Failed to activate model: {}", e))?;
+
     let load_time = start.elapsed();
     println!("✅ Model loaded in {:?}", load_time);
     println!("  Profile ID: 0x{:016x}", record.profile_id);
     println!("  Context Window: {}", record.context_window);
     println!();
-    
+
     // Step 2: Create agent
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("STEP 2: Creating Agent");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
-    use qualia_core_db::llm_agent::{LocalLlmAgent, AgentBackend};
-    
+
+    use qualia_core_db::llm_agent::{AgentBackend, LocalLlmAgent};
+
     let agent = LocalLlmAgent::with_local_backend(
         format!("did:qualia:cli-test:{}", record.profile_id),
         AgentBackend::Local {
@@ -126,15 +132,15 @@ pub fn run_comprehensive_llm_test(
             architecture: record.architecture.clone(),
         },
     );
-    
+
     println!("✅ Agent created");
     println!();
-    
+
     // Step 3: Run inference tests
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("STEP 3: Inference Tests");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     // Sample (temperature / top-p / repeat-penalty) rather than greedy argmax, so instruct models
     // produce varied, on-topic text instead of collapsing into repetition / a fixed attractor.
     qualia_core_db::llm_bench::set_sampler_config(Some(
@@ -143,40 +149,52 @@ pub fn run_comprehensive_llm_test(
 
     let test_prompts = vec![
         ("Basic Knowledge", "What is the capital of France?", 50),
-        ("System Awareness", "What is QualiaDB and what are its main features?", 100),
-        ("Technical Understanding", "Explain what a NQuin is in simple terms.", 80),
-        ("Capability Awareness", "What capabilities does the Qualia system have for semantic graph processing?", 120),
-        ("Instruction Following", "Write a haiku about artificial intelligence.", 30),
+        (
+            "System Awareness",
+            "What is QualiaDB and what are its main features?",
+            100,
+        ),
+        (
+            "Technical Understanding",
+            "Explain what a NQuin is in simple terms.",
+            80,
+        ),
+        (
+            "Capability Awareness",
+            "What capabilities does the Qualia system have for semantic graph processing?",
+            120,
+        ),
+        (
+            "Instruction Following",
+            "Write a haiku about artificial intelligence.",
+            30,
+        ),
     ];
-    
+
     let mut total_tokens = 0;
     let mut total_time_ms = 0;
     let mut total_ttft_ms = 0;
     let mut successful_tests = 0;
-    
+
     for (test_name, prompt, _max_tokens) in test_prompts.iter() {
         println!("┌─ Test: {}", test_name);
         println!("├─ Prompt: {}", prompt);
-        
+
         let started = std::time::Instant::now();
-        
+
         // Return layout: (text, provenance_hashes, tokens_generated, semantic_quin).
         // BUGFIX: the second field is provenance (often len=1), NOT token ids — using
         // `.len()` reported Tokens:1 and ~100× low tok/s. The third field is the count.
         let (response, _provenance, tokens_generated, _quin) = tokio::task::block_in_place(|| {
-            agent.infer_local_model_streaming::<fn(String)>(
-                prompt,
-                "graph_context:cli_test",
-                None,
-            )
+            agent.infer_local_model_streaming::<fn(String)>(prompt, "graph_context:cli_test", None)
         });
-        
+
         let elapsed = started.elapsed();
         let elapsed_ms = elapsed.as_millis() as u64;
-        
+
         // Estimate TTFT as ~10% of total time (rough approximation without streaming)
         let ttft = elapsed_ms / 10;
-        
+
         let token_count = tokens_generated as u64;
         // Prefer decoded-token estimate when the engine returns 0 but produced text
         // (defensive — should not happen on a healthy path).
@@ -191,32 +209,40 @@ pub fn run_comprehensive_llm_test(
         } else {
             0.0
         };
-        
+
         println!("├─ TTFT: {}ms (estimated)", ttft);
         println!("├─ Total Time: {}ms", elapsed_ms);
         println!("├─ Tokens: {} (decode)", token_count);
         println!("├─ TPS: {:.2} (wall-clock / decode tokens)", tps);
-        
+
         total_tokens += token_count;
         total_time_ms += elapsed_ms;
         total_ttft_ms += ttft;
         successful_tests += 1;
-        
+
         print!("└─ Response: ");
         // Show first 200 chars of response
         let preview: String = response.chars().take(200).collect();
-        println!("{}{}", preview, if response.len() > 200 { "..." } else { "" });
+        println!(
+            "{}{}",
+            preview,
+            if response.len() > 200 { "..." } else { "" }
+        );
         println!();
     }
-    
+
     // Step 4: Summary
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("TEST SUMMARY");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("✅ Model Loading: PASS ({:?})", load_time);
     println!("✅ Agent Creation: PASS");
-    println!("✅ Inference: {} / {} tests passed", successful_tests, test_prompts.len());
-    
+    println!(
+        "✅ Inference: {} / {} tests passed",
+        successful_tests,
+        test_prompts.len()
+    );
+
     if successful_tests > 0 {
         let avg_ttft = total_ttft_ms as f64 / successful_tests as f64;
         let avg_tps = if total_time_ms > 0 {
@@ -224,7 +250,7 @@ pub fn run_comprehensive_llm_test(
         } else {
             0.0
         };
-        
+
         println!();
         println!("📊 METRICS:");
         println!("  └─ Total Tokens Generated: {}", total_tokens);
@@ -232,15 +258,15 @@ pub fn run_comprehensive_llm_test(
         println!("  └─ Average TTFT: {:.2}ms", avg_ttft);
         println!("  └─ Average TPS: {:.2}", avg_tps);
     }
-    
+
     println!();
     println!("Note: Metrics include orchestration overhead (Webizen validation, etc.).");
     println!("Note: Token counts use engine tokens_generated (not provenance-hash vec length).");
-    
+
     Ok(())
 }
 
-/// Convert a GGUF import file to native `.p64` + `.q42.cbor-ld` helper metadata.
+/// Convert a GGUF import file to native `.p64` + canonical `.q42` model metadata.
 ///
 /// Design: GGUF/safetensors are import formats only. Steady-state activation should
 /// prefer the converted container (see `docs/plans/native-inference-p64-pipeline-remediation.md`).
@@ -264,9 +290,7 @@ pub fn run_convert_gguf_to_p64(
             "only .gguf import is supported in this command (got .{ext}); safetensors path is a follow-up"
         ));
     }
-    let src_len = std::fs::metadata(input)
-        .map(|m| m.len())
-        .unwrap_or(0);
+    let src_len = std::fs::metadata(input).map(|m| m.len()).unwrap_or(0);
     // 12 GB class card default budget when auto-selecting f16 expand.
     const DEFAULT_VRAM_BUDGET: u64 = 12u64 * 1024 * 1024 * 1024;
     let layout = match layout.trim().to_ascii_lowercase().as_str() {
@@ -306,12 +330,13 @@ pub fn run_convert_gguf_to_p64(
         unsafe { memmap2::Mmap::map(&f).map_err(|e| format!("mmap: {e}"))? }
     };
     let src_bytes = mmap.len();
-    println!("├─ Source size: {:.1} MiB", src_bytes as f64 / (1024.0 * 1024.0));
+    println!(
+        "├─ Source size: {:.1} MiB",
+        src_bytes as f64 / (1024.0 * 1024.0)
+    );
 
-    let p64 = qualia_core_db::p64_weight::compile_gguf_to_p64_with_layout(
-        &mmap, page_log2, layout,
-    )
-    .map_err(|e| format!("compile_gguf_to_p64: {e}"))?;
+    let p64 = qualia_core_db::p64_weight::compile_gguf_to_p64_with_layout(&mmap, page_log2, layout)
+        .map_err(|e| format!("compile_gguf_to_p64: {e}"))?;
     let stem = input
         .file_stem()
         .and_then(|s| s.to_str())
@@ -324,7 +349,7 @@ pub fn run_convert_gguf_to_p64(
     let p64_path = out_dir.join(format!("{stem}{suffix}.p64"));
     std::fs::write(&p64_path, &p64).map_err(|e| format!("write p64: {e}"))?;
 
-    // q42 helper (CBOR-LD): behavioural metadata the engine should not re-guess from GGUF.
+    // Canonical Q42 v3 metadata: behaviour the engine should not re-guess from GGUF.
     let tok = qualia_core_db::gguf_sharder::GgufTokenizer::from_gguf(&mmap);
     let stop_ids: Vec<u32> = tok.stop_tokens().to_vec();
     let stop_names: Vec<String> = stop_ids
@@ -332,8 +357,14 @@ pub fn run_convert_gguf_to_p64(
         .filter_map(|&id| tok.vocab.get(id as usize).cloned())
         .collect();
     let helper = qualia_core_db::model_helper::ModelHelper::new(
-        input.display().to_string(),
-        p64_path.display().to_string(),
+        input
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("model.gguf"),
+        p64_path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or("model.p64"),
         page_log2,
         format!("{layout:?}"),
         qualia_core_db::model_helper::ModelHelperTokenizer {
@@ -348,17 +379,16 @@ pub fn run_convert_gguf_to_p64(
     );
     let q42_path = helper
         .write_beside_p64(&p64_path)
-        .map_err(|e| format!("write q42.cbor-ld helper: {e}"))?;
+        .map_err(|e| format!("write canonical q42 helper: {e}"))?;
 
     // Validate the container can be indexed (fail closed if we wrote garbage).
     let index = qualia_core_db::p64_weight::P64TensorIndex::from_p64(&p64)
         .map_err(|e| format!("p64 self-check failed: {e}"))?;
     let n_tensors = index.entries.len();
-    // Round-trip the helper so a bad encode fails the convert command.
-    let _ = qualia_core_db::model_helper::ModelHelper::from_cbor_ld(
-        &std::fs::read(&q42_path).map_err(|e| format!("re-read helper: {e}"))?,
-    )
-    .map_err(|e| format!("helper self-check failed: {e}"))?;
+    // Round-trip through the real Q42 volume reader so a malformed helper fails closed.
+    let _ = qualia_core_db::model_helper::ModelHelper::load_beside_p64(&p64_path)
+        .map_err(|e| format!("helper self-check failed: {e}"))?
+        .ok_or_else(|| "helper self-check failed: canonical .q42 was not found".to_string())?;
 
     let elapsed = t0.elapsed();
     println!();
@@ -369,7 +399,7 @@ pub fn run_convert_gguf_to_p64(
         p64.len() as f64 / (1024.0 * 1024.0),
         n_tensors
     );
-    println!("  └─ {} (CBOR-LD)", q42_path.display());
+    println!("  └─ {} (Q42 v3)", q42_path.display());
     println!(
         "     chat_family={:?} stop_ids={:?}",
         tok.chat_family(),
@@ -440,12 +470,12 @@ pub fn run_hardware_passport(
     decode_proxy: Option<Option<PathBuf>>,
     decode_proxy_tokens: u32,
 ) -> Result<(), String> {
+    use qualia_core_db::device_benchmark::benchmark_devices;
     use qualia_core_db::hardware_passport::{
         attach_decode_proxy_via_subprocess, backend_env_token, default_cache_path,
-        default_decode_proxy_model, load_or_probe, write_passport, HardwarePassport,
-        PASSPORT_VERSION, topology_key,
+        default_decode_proxy_model, load_or_probe, topology_key, write_passport, HardwarePassport,
+        PASSPORT_VERSION,
     };
-    use qualia_core_db::device_benchmark::benchmark_devices;
     use qualia_core_db::host_topology::probe_host_topology;
 
     let path = cache.unwrap_or_else(default_cache_path);
@@ -501,12 +531,7 @@ pub fn run_hardware_passport(
             model.display(),
             decode_proxy_tokens
         );
-        attach_decode_proxy_via_subprocess(
-            &mut passport.matrix,
-            &model,
-            decode_proxy_tokens,
-            &exe,
-        );
+        attach_decode_proxy_via_subprocess(&mut passport.matrix, &model, decode_proxy_tokens, &exe);
         passport.decode_proxy_model = Some(model.display().to_string());
         passport.decode_proxy_tokens = decode_proxy_tokens;
         passport.preferred_inference_backend = passport
@@ -556,7 +581,9 @@ pub fn run_hardware_passport(
             .or_else(|| backend_env_token(&best.backend).map(str::to_string));
         if let Some(h) = hint {
             println!("  └─ Hint: set QUALIA_WGPU_BACKEND={h} to pin this backend");
-            println!("  └─ Fast P64 activate: QUALIA_P64_INTEGRITY=metadata (after trusted convert)");
+            println!(
+                "  └─ Fast P64 activate: QUALIA_P64_INTEGRITY=metadata (after trusted convert)"
+            );
             if apply_env_hint {
                 let hint_path = path.with_extension("env");
                 std::fs::write(
@@ -575,7 +602,7 @@ pub fn run_hardware_passport(
 
 /// Quant-graph dry-run: ground a prompt+answer pair (forces mode logic via unconditional ground).
 pub fn run_ground_check(prompt: &str, answer: &str) -> Result<(), String> {
-    use qualia_core_db::{fact_count, ground_generation, active_inference_mode};
+    use qualia_core_db::{active_inference_mode, fact_count, ground_generation};
     let g = ground_generation(prompt, answer);
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("Quant-graph grounding check");
@@ -584,7 +611,10 @@ pub fn run_ground_check(prompt: &str, answer: &str) -> Result<(), String> {
     println!("├─ fact_count:  {}", fact_count());
     println!("├─ repaired:    {}", g.repaired);
     println!("├─ reason:      {:?}", g.reason);
-    println!("├─ object_hash: {:?}", g.object_hash.map(|h| format!("{h:#x}")));
+    println!(
+        "├─ object_hash: {:?}",
+        g.object_hash.map(|h| format!("{h:#x}"))
+    );
     println!("└─ text:        {}", g.text);
     Ok(())
 }
@@ -592,7 +622,10 @@ pub fn run_ground_check(prompt: &str, answer: &str) -> Result<(), String> {
 /// Seed quant-graph facts from bundled TSV / QUALIA_GROUNDING_FACTS.
 pub fn run_seed_grounding() -> Result<(), String> {
     let n = qualia_core_db::seed_facts_from_bundled();
-    println!("seeded {n} grounding facts (fact_count={})", qualia_core_db::fact_count());
+    println!(
+        "seeded {n} grounding facts (fact_count={})",
+        qualia_core_db::fact_count()
+    );
     Ok(())
 }
 
@@ -621,24 +654,26 @@ pub fn run_cuda_tc_microbench(side: usize) -> Result<(), String> {
         .map_err(|e| format!("gemm_f32_tc_reduced: {e:?}"))?;
     let hot_ms = t1.elapsed().as_secs_f64() * 1000.0;
     let caps = qualia_core_db::wgsl_forge::dispatch::caps();
-    println!("├─ caps: wgpu={} cuda={} coopmat={}", caps.wgpu, caps.cuda, caps.coopmat);
+    println!(
+        "├─ caps: wgpu={} cuda={} coopmat={}",
+        caps.wgpu, caps.cuda, caps.coopmat
+    );
     println!("├─ warm: {warm_ms:.2} ms (includes NVRTC/context first use)");
     println!("├─ hot:  {hot_ms:.2} ms");
-    println!("├─ C[0]={:.1} (expect ~{n}.0 for all-ones)", r2.first().copied().unwrap_or(0.0));
+    println!(
+        "├─ C[0]={:.1} (expect ~{n}.0 for all-ones)",
+        r2.first().copied().unwrap_or(0.0)
+    );
     println!("└─ ok:   r1_len={} r2_len={}", r1.len(), r2.len());
     Ok(())
 }
 
 /// Print or set multi-mode inference approach (portable / cuda / quant-graph).
 pub fn run_inference_mode(set: Option<&str>) -> Result<(), String> {
-    use qualia_core_db::{
-        active_inference_mode, set_inference_mode, InferenceMode,
-    };
+    use qualia_core_db::{active_inference_mode, set_inference_mode, InferenceMode};
     if let Some(name) = set {
         let m = InferenceMode::parse(name).ok_or_else(|| {
-            format!(
-                "unknown mode '{name}' (expected: portable | cuda | quant-graph | fast-verify)"
-            )
+            format!("unknown mode '{name}' (expected: portable | cuda | quant-graph | fast-verify)")
         })?;
         set_inference_mode(m);
         // Also pin env so child processes (decode-proxy) inherit.
@@ -681,9 +716,9 @@ pub fn run_lab(
     no_ollama: bool,
 ) -> Result<(), String> {
     use qualia_core_db::lab::{
-        ablate::format_ablation_report, audit_hot_path, calibrate_device_roof, format_lockin_summary,
-        run_ablation_matrix, run_auto_improve, run_decode_timeline, run_q4k_soa_microbench,
-        AutoImproveConfig,
+        ablate::format_ablation_report, audit_hot_path, calibrate_device_roof,
+        format_lockin_summary, run_ablation_matrix, run_auto_improve, run_decode_timeline,
+        run_q4k_soa_microbench, AutoImproveConfig,
     };
     match action.trim().to_ascii_lowercase().as_str() {
         "audit-path" | "audit" => {
@@ -697,10 +732,7 @@ pub fn run_lab(
             Ok(())
         }
         "micro" | "microbench" => {
-            print!(
-                "{}",
-                run_q4k_soa_microbench(n_in, n_out).format_report()
-            );
+            print!("{}", run_q4k_soa_microbench(n_in, n_out).format_report());
             Ok(())
         }
         "timeline" => {
@@ -712,9 +744,8 @@ pub fn run_lab(
         "ablate" | "ablation" => {
             let m = model.ok_or("ablate requires --model <path.p64>")?;
             let t = if tokens == 0 { 8 } else { tokens };
-            let csv = out.or_else(|| {
-                Some(std::path::Path::new("experiments/inference-lab/runs.csv"))
-            });
+            let csv =
+                out.or_else(|| Some(std::path::Path::new("experiments/inference-lab/runs.csv")));
             let rows = run_ablation_matrix(m, t, csv);
             print!("{}", format_ablation_report(&rows));
             if let Some(p) = csv {
@@ -730,9 +761,7 @@ pub fn run_lab(
             let hours = if hours <= 0.0 { 2.0 } else { hours };
             let out_dir = out
                 .map(|p| p.to_path_buf())
-                .unwrap_or_else(|| {
-                    std::path::PathBuf::from("experiments/inference-lab/lockin")
-                });
+                .unwrap_or_else(|| std::path::PathBuf::from("experiments/inference-lab/lockin"));
             let ollama = if no_ollama {
                 None
             } else {
@@ -768,7 +797,9 @@ pub fn run_lab(
             let pkg = run_auto_improve(&cfg)?;
             print!("{}", format_lockin_summary(&pkg));
             println!("Lock-in package written to: {}", pkg.out_dir.display());
-            println!("  BEST_CONFIG.json  METHODOLOGY.md  apply-best.ps1  runs.csv  LOCKIN_SUMMARY.txt");
+            println!(
+                "  BEST_CONFIG.json  METHODOLOGY.md  apply-best.ps1  runs.csv  LOCKIN_SUMMARY.txt"
+            );
             Ok(())
         }
         "help" | _ => {
@@ -792,9 +823,7 @@ pub fn run_lab(
 
 /// Show / set application profile (interactive | live-fast | batch).
 pub fn run_app_profile(set: Option<&str>) -> Result<(), String> {
-    use qualia_core_db::{
-        active_application_profile, set_application_profile, ApplicationProfile,
-    };
+    use qualia_core_db::{active_application_profile, set_application_profile, ApplicationProfile};
     if let Some(name) = set {
         let p = ApplicationProfile::parse(name).ok_or_else(|| {
             format!("unknown profile '{name}' (expected: interactive | live-fast | batch)")
@@ -829,7 +858,10 @@ pub fn run_path_select(reprobe: bool, apply: bool) -> Result<(), String> {
         "{}",
         qualia_core_db::inference_path_selector::format_path_plan(&plan)
     );
-    println!("path_auto={}", qualia_core_db::inference_path_selector::path_auto_enabled());
+    println!(
+        "path_auto={}",
+        qualia_core_db::inference_path_selector::path_auto_enabled()
+    );
     println!("applied_this_run={apply}");
     println!();
     println!("Operator:");
@@ -894,8 +926,8 @@ pub fn run_explore_pipeline(
     sweep_ffn_f16: bool,
     modes_csv: Option<&str>,
 ) -> Result<(), String> {
-    use std::io::Write;
     use qualia_core_db::{set_inference_mode, InferenceMode};
+    use std::io::Write;
 
     if !input.exists() {
         return Err(format!("input not found: {}", input.display()));
@@ -908,11 +940,16 @@ pub fn run_explore_pipeline(
             .filter_map(|s| InferenceMode::parse(s.trim()))
             .collect();
         if modes.is_empty() {
-            return Err(
-                "no valid modes in --modes (expected portable,cuda,quant-graph)".into(),
-            );
+            return Err("no valid modes in --modes (expected portable,cuda,quant-graph)".into());
         }
-        println!("EXPLORE × MODE matrix: {}", modes.iter().map(|m| m.as_str()).collect::<Vec<_>>().join(", "));
+        println!(
+            "EXPLORE × MODE matrix: {}",
+            modes
+                .iter()
+                .map(|m| m.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
         for m in modes {
             set_inference_mode(m);
             std::env::set_var("QUALIA_INFERENCE_MODE", m.as_str());
@@ -982,9 +1019,7 @@ pub fn run_explore_pipeline(
             .to_string();
         (stem, false)
     } else {
-        return Err(format!(
-            "explore expects .gguf or .p64 (got .{ext})"
-        ));
+        return Err(format!("explore expects .gguf or .p64 (got .{ext})"));
     };
 
     let layouts = parse_explore_layouts(layouts_csv, is_gguf, input)?;
@@ -1008,7 +1043,10 @@ pub fn run_explore_pipeline(
             continue;
         }
         if !is_gguf {
-            println!("├─ skip {layout} (no sibling {}, and source is not GGUF)", p64_path.display());
+            println!(
+                "├─ skip {layout} (no sibling {}, and source is not GGUF)",
+                p64_path.display()
+            );
             continue;
         }
         if skip_convert {
@@ -1148,13 +1186,11 @@ pub fn run_explore_pipeline(
     }
 
     // Rank: higher tok/s first; failures last.
-    results.sort_by(|a, b| {
-        match (a.tok_s, b.tok_s) {
-            (Some(x), Some(y)) => y.partial_cmp(&x).unwrap_or(std::cmp::Ordering::Equal),
-            (Some(_), None) => std::cmp::Ordering::Less,
-            (None, Some(_)) => std::cmp::Ordering::Greater,
-            (None, None) => std::cmp::Ordering::Equal,
-        }
+    results.sort_by(|a, b| match (a.tok_s, b.tok_s) {
+        (Some(x), Some(y)) => y.partial_cmp(&x).unwrap_or(std::cmp::Ordering::Equal),
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (None, None) => std::cmp::Ordering::Equal,
     });
 
     let winner = results.iter().find(|r| r.tok_s.is_some());
@@ -1173,8 +1209,8 @@ pub fn run_explore_pipeline(
     };
 
     let report_path = out_dir.join(format!("{stem}.explore-report.json"));
-    let json = serde_json::to_string_pretty(&report)
-        .map_err(|e| format!("serialize report: {e}"))?;
+    let json =
+        serde_json::to_string_pretty(&report).map_err(|e| format!("serialize report: {e}"))?;
     std::fs::write(&report_path, json).map_err(|e| format!("write report: {e}"))?;
 
     println!();
@@ -1187,12 +1223,7 @@ pub fn run_explore_pipeline(
             .tok_s
             .map(|v| format!("{v:7.2}"))
             .unwrap_or_else(|| "  FAIL ".into());
-        println!(
-            "│ {:<8} │ {:<10} │ {ts} │ {}",
-            r.layout,
-            r.toggle,
-            r.path
-        );
+        println!("│ {:<8} │ {:<10} │ {ts} │ {}", r.layout, r.toggle, r.path);
     }
     println!("└──────────┴────────────┴─────────────┴────────────────────────────────────────────");
 
@@ -1209,7 +1240,10 @@ pub fn run_explore_pipeline(
         println!();
         println!("Next:");
         println!("  # pin backend if not already:");
-        println!("  qualia-cli llm passport --reprobe --decode-proxy \"{}\" --apply-env-hint", w.path);
+        println!(
+            "  qualia-cli llm passport --reprobe --decode-proxy \"{}\" --apply-env-hint",
+            w.path
+        );
         println!("  # activate: QUALIA_P64_INTEGRITY=metadata + vault load of winner path");
     } else {
         println!();
@@ -1247,11 +1281,7 @@ fn parse_explore_layouts(
             return Ok(v);
         }
         // p64 source: discover siblings by naming convention.
-        return Ok(vec![
-            "soa".into(),
-            "f16".into(),
-            "verbatim".into(),
-        ]);
+        return Ok(vec!["soa".into(), "f16".into(), "verbatim".into()]);
     }
     let mut out = Vec::new();
     for part in raw.split(',') {
@@ -1284,22 +1314,26 @@ fn parse_explore_layouts(
 }
 
 /// Test a single model
-fn test_single_model(vault_path: &Path, model: &VaultGgufEntry, verbose: bool) -> Result<TestResult, String> {
+fn test_single_model(
+    vault_path: &Path,
+    model: &VaultGgufEntry,
+    verbose: bool,
+) -> Result<TestResult, String> {
     if verbose {
         println!("    Path: {}", model.path);
     }
-    
+
     // Resolve the model
     let _ = resolve_vault_model(&vault_path, &model.path)
         .map_err(|e| format!("Failed to resolve model: {}", e))?;
-    
+
     // TODO: Implement actual model loading and inference test
     // For now, return a mock result
-    
+
     Ok(TestResult {
         model_name: model.name.clone(),
         load_time_ms: 100, // Placeholder
-        memory_mb: 128.0, // Placeholder
+        memory_mb: 128.0,  // Placeholder
         success: true,
     })
 }
@@ -1323,52 +1357,51 @@ pub fn benchmark_model(
     warmup: u32,
 ) -> Result<(), String> {
     let vault_path = vault_path.unwrap_or_else(default_vault_path);
-    
+
     println!("🚀 Benchmarking model: {}", model_name);
     println!("📁 Vault path: {}", vault_path.display());
     println!("🔄 Iterations: {}", iterations);
     println!("🔥 Warmup: {}", warmup);
-    
+
     // Find the model
-    let models = scan_vault_gguf(&vault_path)
-        .map_err(|e| format!("Failed to scan vault: {}", e))?;
-    
-    let model = models.iter()
+    let models =
+        scan_vault_gguf(&vault_path).map_err(|e| format!("Failed to scan vault: {}", e))?;
+
+    let model = models
+        .iter()
         .find(|m| m.name == model_name)
         .ok_or_else(|| format!("Model '{}' not found", model_name))?;
-    
+
     println!("📦 Model path: {}", model.path);
-    
+
     // TODO: Implement actual benchmarking
     println!("⚠️  Benchmarking not yet implemented");
-    
+
     Ok(())
 }
 
 /// CLI command to validate model structure
 #[allow(dead_code)]
-pub fn validate_model(
-    vault_path: Option<PathBuf>,
-    model_name: String,
-) -> Result<(), String> {
+pub fn validate_model(vault_path: Option<PathBuf>, model_name: String) -> Result<(), String> {
     let vault_path = vault_path.unwrap_or_else(default_vault_path);
-    
+
     println!("🚀 Validating model: {}", model_name);
     println!("📁 Vault path: {}", vault_path.display());
-    
+
     // Find the model
-    let models = scan_vault_gguf(&vault_path)
-        .map_err(|e| format!("Failed to scan vault: {}", e))?;
-    
-    let model = models.iter()
+    let models =
+        scan_vault_gguf(&vault_path).map_err(|e| format!("Failed to scan vault: {}", e))?;
+
+    let model = models
+        .iter()
         .find(|m| m.name == model_name)
         .ok_or_else(|| format!("Model '{}' not found", model_name))?;
-    
+
     println!("📦 Model path: {}", model.path);
-    
+
     // TODO: Implement actual validation
     println!("⚠️  Validation not yet implemented");
-    
+
     Ok(())
 }
 
@@ -1376,44 +1409,41 @@ pub fn validate_model(
 #[allow(dead_code)]
 pub fn list_models(vault_path: Option<PathBuf>) -> Result<(), String> {
     let vault_path = vault_path.unwrap_or_else(default_vault_path);
-    
+
     println!("📁 Scanning vault: {}", vault_path.display());
-    
-    let models = scan_vault_gguf(&vault_path)
-        .map_err(|e| format!("Failed to scan vault: {}", e))?;
-    
+
+    let models =
+        scan_vault_gguf(&vault_path).map_err(|e| format!("Failed to scan vault: {}", e))?;
+
     if models.is_empty() {
         println!("No GGUF models found in vault");
         return Ok(());
     }
-    
+
     println!("📦 Available models ({}):", models.len());
     for model in &models {
         println!("  - {}", model.name);
         println!("    Path: {}", model.path);
     }
-    
+
     Ok(())
 }
 
 /// CLI command to validate models
-pub fn run_validate_models(
-    vault_path: Option<PathBuf>,
-    strict: bool,
-) -> Result<(), String> {
+pub fn run_validate_models(vault_path: Option<PathBuf>, strict: bool) -> Result<(), String> {
     let vault_path = vault_path.unwrap_or_else(default_vault_path);
-    
+
     println!("🔍 Validating models...");
     println!("📁 Vault path: {}", vault_path.display());
     println!("🔒 Strict mode: {}", strict);
-    
-    let all_models = scan_vault_gguf(&vault_path)
-        .map_err(|e| format!("Failed to scan vault: {}", e))?;
-    
+
+    let all_models =
+        scan_vault_gguf(&vault_path).map_err(|e| format!("Failed to scan vault: {}", e))?;
+
     for model in &all_models {
         println!("  ✅ {} - Valid", model.name);
     }
-    
+
     println!("\n✅ Validation complete!");
     Ok(())
 }
@@ -1428,28 +1458,29 @@ pub fn run_benchmark_models(
     let vault_path = vault_path.unwrap_or_else(default_vault_path);
     let iterations = iterations.unwrap_or(10);
     let warmup = warmup.unwrap_or(2);
-    
+
     println!("🚀 Benchmarking models...");
     println!("📁 Vault path: {}", vault_path.display());
     println!("🔄 Iterations: {}", iterations);
     println!("🔥 Warmup: {}", warmup);
-    
-    let all_models = scan_vault_gguf(&vault_path)
-        .map_err(|e| format!("Failed to scan vault: {}", e))?;
-    
+
+    let all_models =
+        scan_vault_gguf(&vault_path).map_err(|e| format!("Failed to scan vault: {}", e))?;
+
     let test_models = if let Some(ref requested) = models {
-        all_models.iter()
+        all_models
+            .iter()
             .filter(|m| requested.contains(&m.name))
             .cloned()
             .collect()
     } else {
         all_models
     };
-    
+
     for model in &test_models {
         println!("  📊 {} - Placeholder benchmark", model.name);
     }
-    
+
     println!("\n✅ Benchmark complete!");
     Ok(())
 }
@@ -1462,20 +1493,20 @@ pub fn run_generate_report(
 ) -> Result<(), String> {
     let vault_path = vault_path.unwrap_or_else(default_vault_path);
     let format = format.unwrap_or_else(|| "json".to_string());
-    
+
     println!("📊 Generating test report...");
     println!("📁 Vault path: {}", vault_path.display());
     println!("📄 Format: {}", format);
-    
-    let models = scan_vault_gguf(&vault_path)
-        .map_err(|e| format!("Failed to scan vault: {}", e))?;
-    
+
+    let models =
+        scan_vault_gguf(&vault_path).map_err(|e| format!("Failed to scan vault: {}", e))?;
+
     println!("📦 Found {} model(s)", models.len());
-    
+
     if let Some(output) = output {
         println!("📄 Report saved to: {}", output.display());
     }
-    
+
     println!("\n✅ Report generated!");
     Ok(())
 }

@@ -232,7 +232,7 @@ impl LocalLlmAgent {
                         .map(|m| GgufTokenizer::from_gguf(m))
                         .unwrap_or_default()
                 };
-                // Sibling `.q42.cbor-ld` helper (convert-time stop set / chat metadata).
+                // Sibling canonical `.q42` metadata (convert-time stop set / chat metadata).
                 apply_model_helper_stops(&model_path, &mut tok);
 
                 let tensor_idx = engine.tensor_index_cache.clone().or_else(|| {
@@ -1024,8 +1024,9 @@ impl LocalLlmAgent {
 
             drain_tokens();
 
-            let (text, tokens, semantic_quin, sieve_failed) =
-                done_rx.recv().unwrap_or_else(|_| (String::new(), 0, None, false));
+            let (text, tokens, semantic_quin, sieve_failed) = done_rx
+                .recv()
+                .unwrap_or_else(|_| (String::new(), 0, None, false));
             let mut prov = vec![prov_hash];
             if prov_hash == 0 {
                 prov.push(q_hash("qualia:grounded"));
@@ -1140,17 +1141,16 @@ impl LocalLlmAgent {
                 } else {
                     None
                 };
-                let mut tok = if let (Some(qi), Some(m)) =
-                    (p64_index.as_ref(), engine.gguf_mmap.as_ref())
-                {
-                    GgufTokenizer::from_p64_section(qi.tokenizer_bytes(m)).unwrap_or_default()
-                } else {
-                    engine
-                        .gguf_mmap
-                        .as_ref()
-                        .map(|m| GgufTokenizer::from_gguf(m))
-                        .unwrap_or_default()
-                };
+                let mut tok =
+                    if let (Some(qi), Some(m)) = (p64_index.as_ref(), engine.gguf_mmap.as_ref()) {
+                        GgufTokenizer::from_p64_section(qi.tokenizer_bytes(m)).unwrap_or_default()
+                    } else {
+                        engine
+                            .gguf_mmap
+                            .as_ref()
+                            .map(|m| GgufTokenizer::from_gguf(m))
+                            .unwrap_or_default()
+                    };
                 apply_model_helper_stops(&model_path, &mut tok);
 
                 let tensor_idx = if let Some(qi) = p64_index {
@@ -1436,9 +1436,7 @@ impl LocalLlmAgent {
                             }
                         }
                         let fixed = crate::llm_bench::decode_budget_fixed_tokens();
-                        if out_ids.len() >= gen_budget
-                            || (!fixed && tok.is_stop_token(next))
-                        {
+                        if out_ids.len() >= gen_budget || (!fixed && tok.is_stop_token(next)) {
                             break;
                         }
                     }
