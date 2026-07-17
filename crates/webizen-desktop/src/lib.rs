@@ -2,6 +2,7 @@
 
 pub mod browser;
 pub mod commands;
+pub mod mic_capture;
 pub mod companion_gateway;
 pub mod desktop_log;
 pub mod mcp_server;

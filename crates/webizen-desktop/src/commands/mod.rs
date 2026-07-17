@@ -7353,6 +7353,37 @@ pub fn audio_pick_wav_path(app: AppHandle) -> Result<Option<String>, String> {
     Ok(picked.and_then(|p| p.into_path().ok()).map(|p| p.to_string_lossy().into_owned()))
 }
 
+#[command]
+pub fn audio_mic_start() -> Result<String, String> {
+    crate::mic_capture::grant_and_start(qualia_audio::CapturePurpose::Analysis)
+}
+
+#[command]
+pub fn audio_mic_stop() -> Result<String, String> {
+    crate::mic_capture::stop_capture()
+}
+
+#[command]
+pub fn audio_mic_status() -> Result<serde_json::Value, String> {
+    crate::mic_capture::status_json()
+}
+
+#[command]
+pub fn audio_ensure_weights(
+    state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
+) -> Result<serde_json::Value, String> {
+    let config = state.config.lock().unwrap().clone();
+    let root = std::path::PathBuf::from(&config.storage_path);
+    let aed = qualia_client_core::audio_pipeline::ensure_aed_weights(&root)?;
+    let speech = qualia_client_core::audio_pipeline::ensure_speech_weights(&root)?;
+    Ok(serde_json::json!({ "aed": aed, "speech": speech }))
+}
+
+#[command]
+pub fn audio_daw_history_demo() -> Result<serde_json::Value, String> {
+    qualia_client_core::audio_pipeline::daw_history_demo()
+}
+
 /// Full generate → store → recon → OBJ/.10d continuum (pre-auditory handoff).
 #[command]
 pub fn vision_gs_continuum(
@@ -7892,6 +7923,11 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         audio_speech_demo,
         audio_capture_policy_demo,
         audio_pick_wav_path,
+        audio_mic_start,
+        audio_mic_stop,
+        audio_mic_status,
+        audio_ensure_weights,
+        audio_daw_history_demo,
     ]
 }
 

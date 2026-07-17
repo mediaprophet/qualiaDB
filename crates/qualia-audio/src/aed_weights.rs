@@ -21,6 +21,10 @@ pub struct AedWeightBundle {
     pub class_hashes: [u64; 4],
 }
 
+/// File magic `QAED` LE.
+pub const AED_MAGIC: u32 = 0x4445_4151;
+pub const AED_VERSION: u32 = 1;
+
 impl AedWeightBundle {
     pub fn from_seed(seed: u64) -> Self {
         let mut weight = [0.0f32; 16];
@@ -42,6 +46,74 @@ impl AedWeightBundle {
                 q_hash(CLASS_TONAL),
             ],
         }
+    }
+
+    /// Serialize to disk (cold path). Layout: magic, ver, model_hash, weight[16], bias[4], class[4].
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut v = Vec::with_capacity(8 + 8 + 16 * 4 + 4 * 4 + 4 * 8);
+        v.extend_from_slice(&AED_MAGIC.to_le_bytes());
+        v.extend_from_slice(&AED_VERSION.to_le_bytes());
+        v.extend_from_slice(&self.model_hash.to_le_bytes());
+        for f in &self.weight {
+            v.extend_from_slice(&f.to_le_bytes());
+        }
+        for f in &self.bias {
+            v.extend_from_slice(&f.to_le_bytes());
+        }
+        for h in &self.class_hashes {
+            v.extend_from_slice(&h.to_le_bytes());
+        }
+        v
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, crate::types::AudioError> {
+        let need = 4 + 4 + 8 + 16 * 4 + 4 * 4 + 4 * 8;
+        if bytes.len() < need {
+            return Err(crate::types::AudioError::MalformedAudio);
+        }
+        let magic = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+        if magic != AED_MAGIC {
+            return Err(crate::types::AudioError::BackendUnavailable);
+        }
+        let ver = u32::from_le_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
+        if ver != AED_VERSION {
+            return Err(crate::types::AudioError::BackendUnavailable);
+        }
+        let model_hash = u64::from_le_bytes(bytes[8..16].try_into().unwrap());
+        let mut off = 16usize;
+        let mut weight = [0.0f32; 16];
+        for w in weight.iter_mut() {
+            *w = f32::from_le_bytes(bytes[off..off + 4].try_into().unwrap());
+            off += 4;
+        }
+        let mut bias = [0.0f32; 4];
+        for b in bias.iter_mut() {
+            *b = f32::from_le_bytes(bytes[off..off + 4].try_into().unwrap());
+            off += 4;
+        }
+        let mut class_hashes = [0u64; 4];
+        for c in class_hashes.iter_mut() {
+            *c = u64::from_le_bytes(bytes[off..off + 8].try_into().unwrap());
+            off += 8;
+        }
+        Ok(Self {
+            model_hash,
+            weight,
+            bias,
+            class_hashes,
+        })
+    }
+
+    pub fn save_path(&self, path: &std::path::Path) -> Result<(), String> {
+        if let Some(p) = path.parent() {
+            std::fs::create_dir_all(p).map_err(|e| e.to_string())?;
+        }
+        std::fs::write(path, self.to_bytes()).map_err(|e| e.to_string())
+    }
+
+    pub fn load_path(path: &std::path::Path) -> Result<Self, String> {
+        let b = std::fs::read(path).map_err(|e| e.to_string())?;
+        Self::from_bytes(&b).map_err(|e| format!("{e:?}"))
     }
 }
 
@@ -216,6 +288,15 @@ fn make_ev(class: u64, conf: f32, start: u64, end: u64, model: u64) -> AuditoryE
 mod tests {
     use super::*;
     use crate::types::SampleFormat;
+
+    #[test]
+    fn aed_weight_roundtrip() {
+        let b = AedWeightBundle::from_seed(42);
+        let bytes = b.to_bytes();
+        let b2 = AedWeightBundle::from_bytes(&bytes).unwrap();
+        assert_eq!(b.model_hash, b2.model_hash);
+        assert_eq!(b.weight, b2.weight);
+    }
 
     #[test]
     fn weighted_aed_runs() {

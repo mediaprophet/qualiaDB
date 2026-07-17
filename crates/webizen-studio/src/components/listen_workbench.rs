@@ -233,6 +233,66 @@ pub fn ListenWorkbench() -> Element {
                     style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); cursor:pointer;",
                     "Speech phones"
                 }
+                button {
+                    disabled: busy(),
+                    onclick: move |_| {
+                        busy.set(true);
+                        spawn(async move {
+                            match invoke_json("audio_mic_start", serde_json::json!({})).await {
+                                Ok(v) => status.set(format!("Mic: {v}")),
+                                Err(e) => status.set(format!("Mic start failed: {e}")),
+                            }
+                            busy.set(false);
+                        });
+                    },
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); background:rgba(220,40,40,0.15); cursor:pointer; font-weight:600;",
+                    "Mic start"
+                }
+                button {
+                    disabled: busy(),
+                    onclick: move |_| {
+                        busy.set(true);
+                        spawn(async move {
+                            match invoke_json("audio_mic_stop", serde_json::json!({})).await {
+                                Ok(v) => status.set(format!("Mic: {v}")),
+                                Err(e) => status.set(format!("Mic stop: {e}")),
+                            }
+                            busy.set(false);
+                        });
+                    },
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); cursor:pointer;",
+                    "Mic stop"
+                }
+                button {
+                    disabled: busy(),
+                    onclick: move |_| {
+                        busy.set(true);
+                        spawn(async move {
+                            match invoke_json("audio_ensure_weights", serde_json::json!({})).await {
+                                Ok(v) => status.set(format!("Weights: {v}")),
+                                Err(e) => status.set(format!("Weights: {e}")),
+                            }
+                            busy.set(false);
+                        });
+                    },
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); cursor:pointer;",
+                    "Ensure weights"
+                }
+                button {
+                    disabled: busy(),
+                    onclick: move |_| {
+                        busy.set(true);
+                        spawn(async move {
+                            match invoke_json("audio_daw_history_demo", serde_json::json!({})).await {
+                                Ok(v) => status.set(format!("DAW: {v}")),
+                                Err(e) => status.set(format!("DAW: {e}")),
+                            }
+                            busy.set(false);
+                        });
+                    },
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); cursor:pointer;",
+                    "DAW undo demo"
+                }
             }
             p { style: "font-size:0.88rem; color:var(--qualia-text-muted); line-height:1.45;", "{status}" }
             if !detail().is_empty() {

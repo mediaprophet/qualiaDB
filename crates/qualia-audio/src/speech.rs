@@ -19,6 +19,9 @@ pub struct SpeechEncoderWeights {
     pub weight: Vec<f32>,
 }
 
+pub const SPEECH_MAGIC: u32 = 0x4850_5153; // 'SQPH' LE-ish
+pub const SPEECH_VERSION: u32 = 1;
+
 impl SpeechEncoderWeights {
     pub fn from_seed(seed: u64, n_mel: usize) -> Self {
         let n_phones = PHONES.len();
@@ -34,6 +37,60 @@ impl SpeechEncoderWeights {
             n_phones,
             weight,
         }
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut v = Vec::with_capacity(32 + self.weight.len() * 4);
+        v.extend_from_slice(&SPEECH_MAGIC.to_le_bytes());
+        v.extend_from_slice(&SPEECH_VERSION.to_le_bytes());
+        v.extend_from_slice(&(self.n_mel as u32).to_le_bytes());
+        v.extend_from_slice(&(self.n_phones as u32).to_le_bytes());
+        v.extend_from_slice(&self.model_hash.to_le_bytes());
+        for f in &self.weight {
+            v.extend_from_slice(&f.to_le_bytes());
+        }
+        v
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, AudioError> {
+        if bytes.len() < 24 {
+            return Err(AudioError::MalformedAudio);
+        }
+        let magic = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+        if magic != SPEECH_MAGIC {
+            return Err(AudioError::BackendUnavailable);
+        }
+        let n_mel = u32::from_le_bytes([bytes[8], bytes[9], bytes[10], bytes[11]]) as usize;
+        let n_phones = u32::from_le_bytes([bytes[12], bytes[13], bytes[14], bytes[15]]) as usize;
+        let model_hash = u64::from_le_bytes(bytes[16..24].try_into().unwrap());
+        let need = 24 + n_mel * n_phones * 4;
+        if bytes.len() < need || n_phones != PHONES.len() || n_mel == 0 || n_mel > 128 {
+            return Err(AudioError::MalformedAudio);
+        }
+        let mut weight = vec![0.0f32; n_mel * n_phones];
+        let mut off = 24usize;
+        for w in weight.iter_mut() {
+            *w = f32::from_le_bytes(bytes[off..off + 4].try_into().unwrap());
+            off += 4;
+        }
+        Ok(Self {
+            model_hash,
+            n_mel,
+            n_phones,
+            weight,
+        })
+    }
+
+    pub fn save_path(&self, path: &std::path::Path) -> Result<(), String> {
+        if let Some(p) = path.parent() {
+            std::fs::create_dir_all(p).map_err(|e| e.to_string())?;
+        }
+        std::fs::write(path, self.to_bytes()).map_err(|e| e.to_string())
+    }
+
+    pub fn load_path(path: &std::path::Path) -> Result<Self, String> {
+        let b = std::fs::read(path).map_err(|e| e.to_string())?;
+        Self::from_bytes(&b).map_err(|e| format!("{e:?}"))
     }
 }
 
@@ -130,5 +187,14 @@ mod tests {
         let n = decode_for_language(&w, &mono, 16000, true, &mut out).unwrap();
         // May be 0 if all blank — still ok; path exercised
         assert!(n <= 32);
+    }
+
+    #[test]
+    fn speech_weight_roundtrip() {
+        let w = SpeechEncoderWeights::from_seed(9, 16);
+        let b = w.to_bytes();
+        let w2 = SpeechEncoderWeights::from_bytes(&b).unwrap();
+        assert_eq!(w.model_hash, w2.model_hash);
+        assert_eq!(w.weight, w2.weight);
     }
 }

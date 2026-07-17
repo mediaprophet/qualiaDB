@@ -210,6 +210,79 @@ pub fn capture_policy_demo() -> Result<serde_json::Value, String> {
     }))
 }
 
+/// Seed and persist AED weights under storage_root/models/aed_seed.qaed
+pub fn ensure_aed_weights(storage_root: &std::path::Path) -> Result<String, String> {
+    let path = storage_root.join("models").join("aed_seed.qaed");
+    if path.is_file() {
+        let b = qualia_audio::AedWeightBundle::load_path(&path)?;
+        return Ok(format!(
+            "loaded AED weights hash=0x{:016x} path={}",
+            b.model_hash,
+            path.display()
+        ));
+    }
+    let b = qualia_audio::AedWeightBundle::from_seed(0xAED1);
+    b.save_path(&path)?;
+    Ok(format!(
+        "wrote AED seed weights hash=0x{:016x} path={}",
+        b.model_hash,
+        path.display()
+    ))
+}
+
+pub fn ensure_speech_weights(storage_root: &std::path::Path) -> Result<String, String> {
+    let path = storage_root.join("models").join("speech_seed.qspk");
+    if path.is_file() {
+        let w = qualia_audio::SpeechEncoderWeights::load_path(&path)?;
+        return Ok(format!(
+            "loaded speech weights hash=0x{:016x} path={}",
+            w.model_hash,
+            path.display()
+        ));
+    }
+    let w = qualia_audio::SpeechEncoderWeights::from_seed(7, 16);
+    w.save_path(&path)?;
+    Ok(format!(
+        "wrote speech seed weights hash=0x{:016x} path={}",
+        w.model_hash,
+        path.display()
+    ))
+}
+
+pub fn daw_history_demo() -> Result<serde_json::Value, String> {
+    use qualia_audio::{OpKind, ProcessPlan, SessionHistory, SessionOp, TrackState};
+    let mut plan = ProcessPlan::new(48000, 64);
+    plan.add_track(TrackState::default());
+    let mut hist = SessionHistory::new();
+    hist.apply_and_record(
+        &mut plan,
+        SessionOp {
+            kind: OpKind::SetGain,
+            track: 0,
+            value_f32: 0.4,
+            value_bool: false,
+            prev_f32: 1.0,
+            prev_bool: false,
+        },
+    );
+    let g1 = plan.tracks[0].gain;
+    hist.undo(&mut plan);
+    let g0 = plan.tracks[0].gain;
+    hist.redo(&mut plan);
+    let g2 = plan.tracks[0].gain;
+    let mut lane = qualia_audio::AutomationLane::new(0);
+    lane.add(0, 0.0);
+    lane.add(1000, 1.0);
+    let mid = lane.value_at(500);
+    Ok(serde_json::json!({
+        "gain_after_set": g1,
+        "gain_after_undo": g0,
+        "gain_after_redo": g2,
+        "automation_mid": mid,
+        "note": "SessionHistory undo/redo + AutomationLane interp (cold path)."
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

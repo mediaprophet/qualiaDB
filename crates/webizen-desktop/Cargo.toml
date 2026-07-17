@@ -53,6 +53,8 @@ fast_qr = { version = "0.13.1", features = ["svg"] }
 raw-window-handle = "0.6"
 webrtc = "0.17.1"
 scraper = "0.27.0"
+cpal = "0.15"
+qualia-audio = { path = "../qualia-audio" }
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.62", features = [

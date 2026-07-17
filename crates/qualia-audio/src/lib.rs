@@ -29,6 +29,7 @@ pub mod capture;
 pub mod aed_weights;
 pub mod speech;
 pub mod sonify;
+pub mod session_history;
 pub mod pipeline;
 
 pub use types::*;
@@ -68,3 +69,7 @@ pub use capture::{CapturePurpose, CaptureSession};
 pub use aed_weights::{AedWeightBundle, WeightedAedModel};
 pub use speech::{decode_for_language, greedy_phone_decode, SpeechEncoderWeights, PHONES};
 pub use sonify::{class_to_hz, sonify_events_mono};
+pub use session_history::{
+    AutomationLane, AutomationPoint, OpKind, SessionHistory, SessionOp, MAX_AUTO_POINTS,
+    MAX_HISTORY,
+};
