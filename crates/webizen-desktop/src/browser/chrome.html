@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Webizen Browser</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #111827;
+      --border: #334155;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #8b5cf6;
+      --ok: #34d399;
+      --warn: #fbbf24;
+      --bad: #f87171;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; height: 100%;
+      background: var(--bg); color: var(--text);
+      font: 13px/1.4 system-ui, Segoe UI, sans-serif;
+      overflow: hidden;
+    }
+    #chrome {
+      display: flex; flex-direction: column; height: 100%;
+    }
+    #toolbar {
+      display: flex; align-items: center; gap: 0.35rem;
+      padding: 0.4rem 0.55rem;
+      background: linear-gradient(180deg, #111827, #0b1220);
+      border-bottom: 1px solid var(--border);
+      min-height: 48px;
+    }
+    button {
+      background: #1e293b; color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.35rem 0.55rem; cursor: pointer;
+      font-weight: 600;
+    }
+    button:hover { border-color: var(--accent); }
+    button:disabled { opacity: 0.4; cursor: default; }
+    #url {
+      flex: 1; min-width: 8rem;
+      background: #0b1220; color: var(--text);
+      border: 1px solid var(--border); border-radius: 999px;
+      padding: 0.45rem 0.85rem; font: inherit;
+    }
+    #url:focus { outline: none; border-color: var(--accent); }
+    #trust {
+      max-width: 11rem; padding: 0.3rem 0.55rem; border-radius: 999px;
+      border: 1px solid var(--border); font-size: 0.72rem; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      background: #0f172a; color: var(--muted);
+    }
+    #trust.os_default { color: var(--muted); }
+    #trust.did_match, #trust.local_scheme, #trust.custom_root_available { color: var(--ok); border-color: #065f46; }
+    #trust.untrusted_policy, #trust.unknown { color: var(--warn); }
+    #body-row { flex: 1; display: flex; min-height: 0; }
+    #content-slot {
+      flex: 1; background: #020617;
+      /* Content webview is a native child layered by the host over this region. */
+      position: relative;
+    }
+    #content-slot::after {
+      content: "Page content loads in the native webview layer below this chrome.";
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      color: #475569; font-size: 0.85rem; pointer-events: none; padding: 1rem; text-align: center;
+    }
+    #agent {
+      width: 0; overflow: hidden; border-left: 0 solid var(--border);
+      background: #0f172a; transition: width 0.15s ease;
+      display: flex; flex-direction: column;
+    }
+    #agent.open { width: 320px; border-left-width: 1px; }
+    #agent h3 {
+      margin: 0; padding: 0.65rem 0.75rem; font-size: 0.78rem;
+      text-transform: uppercase; letter-spacing: 0.04em; color: #c4b5fd;
+      border-bottom: 1px solid var(--border);
+    }
+    #agent-out {
+      flex: 1; overflow: auto; padding: 0.65rem 0.75rem;
+      font-size: 0.8rem; color: var(--muted); white-space: pre-wrap;
+    }
+    #agent-form {
+      display: flex; gap: 0.35rem; padding: 0.5rem; border-top: 1px solid var(--border);
+    }
+    #agent-q {
+      flex: 1; background: #0b1220; color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem 0.55rem;
+    }
+    #status {
+      font-size: 0.7rem; color: var(--muted); padding: 0.2rem 0.55rem;
+      border-top: 1px solid var(--border); background: #0b1220;
+    }
+  </style>
+</head>
+<body>
+  <div id="chrome">
+    <div id="toolbar">
+      <button type="button" id="btn-back" title="Back">←</button>
+      <button type="button" id="btn-fwd" title="Forward">→</button>
+      <button type="button" id="btn-reload" title="Reload">↻</button>
+      <form id="nav-form" style="flex:1;display:flex;gap:0.35rem;min-width:0;">
+        <input id="url" type="text" spellcheck="false" placeholder="Search or enter URL" />
+        <button type="submit" title="Go">Go</button>
+      </form>
+      <div id="trust" title="Trust indicator (your store + policy)">trust: —</div>
+      <button type="button" id="btn-trust" title="Trust store">Trust</button>
+      <button type="button" id="btn-agent" title="Browser agent">Agent</button>
+    </div>
+    <div id="body-row">
+      <div id="content-slot" aria-hidden="true"></div>
+      <aside id="agent">
+        <h3>Browser agent · cml:Proposed</h3>
+        <div id="agent-out">Ask about this page: summary, trust, privacy signals. Answers are grounded in fetched text + your trust store.</div>
+        <form id="agent-form">
+          <input id="agent-q" type="text" placeholder="What is this page about?" />
+          <button type="submit">Ask</button>
+        </form>
+      </aside>
+    </div>
+    <div id="status">Webizen Browser · OS WebView content · own chrome / trust / agent</div>
+  </div>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let currentUrl = "https://duckduckgo.com/";
+    let history = [currentUrl];
+    let histIdx = 0;
+
+    async function invoke(cmd, args = {}) {
+      if (!window.__TAURI__ || !window.__TAURI__.core) {
+        throw new Error("Not running inside Tauri host");
+      }
+      return window.__TAURI__.core.invoke(cmd, args);
+    }
+
+    function setStatus(msg) {
+      $("status").textContent = msg;
+    }
+
+    function setTrustBadge(v) {
+      const el = $("trust");
+      el.className = "";
+      if (!v) {
+        el.textContent = "trust: —";
+        return;
+      }
+      el.classList.add(v.level || "unknown");
+      el.textContent = "trust: " + (v.level || "—");
+      el.title = (v.summary || "") + (v.notes && v.notes.length ? "\n" + v.notes.join("\n") : "");
+    }
+
+    async function refreshTrust(url) {
+      try {
+        const v = await invoke("browser_trust_verdict", { url });
+        setTrustBadge(typeof v === "string" ? JSON.parse(v) : v);
+      } catch (e) {
+        setTrustBadge({ level: "unknown", summary: String(e) });
+      }
+    }
+
+    async function navigate(url) {
+      url = (url || "").trim();
+      if (!url) return;
+      try {
+        const resolved = await invoke("submit_omnibox_query", { query: url });
+        const dest = (typeof resolved === "string" ? resolved : String(resolved)).replace(/^"|"$/g, "");
+        await invoke("browser_navigate_content", { url: dest });
+        currentUrl = dest;
+        $("url").value = dest;
+        // app-level history for chrome buttons
+        history = history.slice(0, histIdx + 1);
+        history.push(dest);
+        histIdx = history.length - 1;
+        $("btn-back").disabled = histIdx <= 0;
+        $("btn-fwd").disabled = histIdx >= history.length - 1;
+        await refreshTrust(dest);
+        setStatus("Loaded " + dest);
+      } catch (e) {
+        setStatus("Navigate failed: " + e);
+      }
+    }
+
+    $("nav-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      navigate($("url").value);
+    });
+    $("btn-back").addEventListener("click", async () => {
+      if (histIdx <= 0) return;
+      histIdx -= 1;
+      const u = history[histIdx];
+      $("url").value = u;
+      try {
+        await invoke("browser_navigate_content", { url: u });
+        await invoke("browser_go_back", {});
+        await refreshTrust(u);
+        setStatus("Back → " + u);
+      } catch (e) { setStatus(String(e)); }
+      $("btn-back").disabled = histIdx <= 0;
+      $("btn-fwd").disabled = histIdx >= history.length - 1;
+    });
+    $("btn-fwd").addEventListener("click", async () => {
+      if (histIdx >= history.length - 1) return;
+      histIdx += 1;
+      const u = history[histIdx];
+      $("url").value = u;
+      try {
+        await invoke("browser_navigate_content", { url: u });
+        await invoke("browser_go_forward", {});
+        await refreshTrust(u);
+        setStatus("Forward → " + u);
+      } catch (e) { setStatus(String(e)); }
+      $("btn-back").disabled = histIdx <= 0;
+      $("btn-fwd").disabled = histIdx >= history.length - 1;
+    });
+    $("btn-reload").addEventListener("click", async () => {
+      try {
+        await invoke("browser_reload_content", {});
+        setStatus("Reloaded");
+      } catch (e) { setStatus(String(e)); }
+    });
+    $("btn-agent").addEventListener("click", () => {
+      $("agent").classList.toggle("open");
+    });
+    $("btn-trust").addEventListener("click", async () => {
+      try {
+        const list = await invoke("browser_trust_list", {});
+        const data = typeof list === "string" ? JSON.parse(list) : list;
+        const lines = (data.anchors || []).map(a =>
+          (a.enabled ? "✓" : "·") + " " + a.label + " [" + a.kind + "]"
+        );
+        alert("Your trust store (" + (data.anchors || []).length + " anchors)\n\n" +
+          (lines.length ? lines.join("\n") : "(empty — import roots/DIDs from Reach or API)\n") +
+          "\ndefer_unknown_https_to_os=" + !!data.defer_unknown_https_to_os);
+      } catch (e) {
+        alert("Trust store: " + e);
+      }
+    });
+    $("agent-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const q = $("agent-q").value.trim() || "Summarise this page";
+      $("agent-out").textContent = "Thinking…";
+      try {
+        const raw = await invoke("browser_agent_ask", {
+          url: $("url").value || currentUrl,
+          question: q,
+          ingestToLibrary: true,
+        });
+        const r = typeof raw === "string" ? JSON.parse(raw) : raw;
+        $("agent-out").textContent =
+          r.answer + "\n\n—\nSignals: " + (r.cml_signals || []).slice(0, 12).join(", ") +
+          "\nTrust: " + (r.trust && r.trust.level) +
+          (r.library_asset_uri ? "\nLibrary: " + r.library_asset_uri : "");
+      } catch (err) {
+        $("agent-out").textContent = "Agent error: " + err;
+      }
+    });
+
+    // Initial URL from query string ?url=
+    (async () => {
+      const params = new URLSearchParams(location.search);
+      const start = params.get("url") || "https://duckduckgo.com/";
+      $("url").value = start;
+      $("btn-back").disabled = true;
+      $("btn-fwd").disabled = true;
+      await navigate(start);
+    })();
+  </script>
+</body>
+</html>

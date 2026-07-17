@@ -223,147 +223,102 @@ pub fn launch_installed_qapp(app: AppHandle, qapp_name: String) -> Result<(), St
     Ok(())
 }
 
-/// Label of the reusable native browsing window (top-level WebView2 navigation).
-pub const WEBIZEN_BROWSER_LABEL: &str = "webizen-browser";
-
-/// Last URL we navigated to (UI history is authoritative for back/forward; this is for status).
-static BROWSER_LAST_URL: std::sync::Mutex<String> = std::sync::Mutex::new(String::new());
-
-fn set_browser_last_url(url: &str) {
-    if let Ok(mut g) = BROWSER_LAST_URL.lock() {
-        *g = url.to_string();
-    }
-}
-
-fn browser_last_url() -> String {
-    BROWSER_LAST_URL
-        .lock()
-        .map(|g| g.clone())
-        .unwrap_or_default()
-}
-
-/// Open / navigate the native Webizen browser window to `url`.
+/// Open / navigate the native Webizen browser (chrome window + content webview).
 ///
-/// External `http(s)` pages cannot render in an in-pane `<iframe>` — sites send
-/// `X-Frame-Options` / `frame-ancestors`. A native webview does a *top-level*
-/// navigation, so real sites load. See `docs/plans/webizen-browser-and-trust.md` P0.
-///
-/// Also accepts `qualia://` and `webizen://` (registered protocol handlers).
+/// P0.1: own chrome HTML. P1: trust store. P2: browser agent (see chrome panel).
+/// External pages load in a child content webview (top-level, not iframe).
 #[command]
-pub fn open_web_url(app: AppHandle, url: String) -> Result<(), String> {
-    browser_navigate(app, url).map(|_| ())
+pub async fn open_web_url(app: AppHandle, url: String) -> Result<(), String> {
+    browser_navigate(app, url).await.map(|_| ())
 }
 
-/// Navigate the Webizen browser window (create if needed) and focus it.
+/// Open shell if needed and navigate content to `url`.
 #[command]
-pub fn browser_navigate(app: AppHandle, url: String) -> Result<String, String> {
-    let url = url.trim().to_string();
-    if url.is_empty() {
-        return Err("empty URL".into());
-    }
-    let parsed: tauri::Url = url
-        .parse()
-        .map_err(|e| format!("Invalid URL '{url}': {e}"))?;
-
-    set_browser_last_url(&url);
-
-    if let Some(w) = app.get_webview_window(WEBIZEN_BROWSER_LABEL) {
-        w.navigate(parsed).map_err(|e| e.to_string())?;
-        let _ = w.set_focus();
-        let _ = w.unminimize();
-        // Best-effort title update (page title is owned by the web content).
-        let short = if url.len() > 64 {
-            format!("{}…", &url[..64])
-        } else {
-            url.clone()
-        };
-        let _ = w.set_title(&format!("Webizen Browser — {short}"));
-        return Ok(url);
-    }
-
-    WebviewWindowBuilder::new(
-        &app,
-        WEBIZEN_BROWSER_LABEL,
-        tauri::WebviewUrl::External(parsed),
-    )
-    .title("Webizen Browser")
-    .inner_size(1280.0, 860.0)
-    .center()
-    .build()
-    .map_err(|e| e.to_string())?;
-    Ok(url)
+pub async fn browser_navigate(app: AppHandle, url: String) -> Result<String, String> {
+    // WebView2: create windows off the sync command path (Tauri docs: avoid deadlock).
+    let app2 = app.clone();
+    let url2 = url.clone();
+    tauri::async_runtime::spawn_blocking(move || crate::browser::open_browser_shell(&app2, &url2))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
-/// Focus the browser window if it exists (does not navigate).
+/// Navigate only the content webview (chrome stays).
+#[command]
+pub async fn browser_navigate_content(app: AppHandle, url: String) -> Result<(), String> {
+    let app2 = app.clone();
+    tauri::async_runtime::spawn_blocking(move || crate::browser::navigate_content(&app2, &url))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
 #[command]
 pub fn browser_focus(app: AppHandle) -> Result<bool, String> {
-    if let Some(w) = app.get_webview_window(WEBIZEN_BROWSER_LABEL) {
-        let _ = w.unminimize();
-        w.set_focus().map_err(|e| e.to_string())?;
-        Ok(true)
-    } else {
-        Ok(false)
-    }
+    crate::browser::focus_window(&app)
 }
 
-/// Reload the current page in the browser window.
 #[command]
 pub fn browser_reload(app: AppHandle) -> Result<(), String> {
-    if let Some(w) = app.get_webview_window(WEBIZEN_BROWSER_LABEL) {
-        // Prefer re-navigating the last URL (reliable across engines).
-        let last = browser_last_url();
-        if !last.is_empty() {
-            if let Ok(parsed) = last.parse::<tauri::Url>() {
-                w.navigate(parsed).map_err(|e| e.to_string())?;
-                let _ = w.set_focus();
-                return Ok(());
-            }
-        }
-        let _ = w.eval("window.location.reload()");
-        let _ = w.set_focus();
-        Ok(())
-    } else {
-        Err("Webizen Browser window is not open — navigate to a URL first".into())
-    }
+    crate::browser::reload_content(&app)
 }
 
-/// History back inside the browser window (engine history).
+#[command]
+pub fn browser_reload_content(app: AppHandle) -> Result<(), String> {
+    crate::browser::reload_content(&app)
+}
+
 #[command]
 pub fn browser_go_back(app: AppHandle) -> Result<(), String> {
-    if let Some(w) = app.get_webview_window(WEBIZEN_BROWSER_LABEL) {
-        w.eval("window.history.back()")
-            .map_err(|e| e.to_string())?;
-        let _ = w.set_focus();
-        Ok(())
-    } else {
-        Err("Webizen Browser window is not open".into())
-    }
+    crate::browser::content_history_back(&app)
 }
 
-/// History forward inside the browser window (engine history).
 #[command]
 pub fn browser_go_forward(app: AppHandle) -> Result<(), String> {
-    if let Some(w) = app.get_webview_window(WEBIZEN_BROWSER_LABEL) {
-        w.eval("window.history.forward()")
-            .map_err(|e| e.to_string())?;
-        let _ = w.set_focus();
-        Ok(())
-    } else {
-        Err("Webizen Browser window is not open".into())
-    }
+    crate::browser::content_history_forward(&app)
 }
 
-/// Status for the Reach UI (open? last navigated URL?).
 #[command]
 pub fn browser_status(app: AppHandle) -> Result<serde_json::Value, String> {
-    let open = app.get_webview_window(WEBIZEN_BROWSER_LABEL).is_some();
-    Ok(serde_json::json!({
-        "open": open,
-        "label": WEBIZEN_BROWSER_LABEL,
-        "last_url": browser_last_url(),
-        "substrate": "os-webview",
-        "note": "Top-level WebView2/WKWebView navigation — not an iframe. Own trust store / agent are later phases.",
-    }))
+    Ok(crate::browser::status(&app))
+}
+
+#[command]
+pub fn browser_trust_list() -> Result<serde_json::Value, String> {
+    crate::browser::trust_list()
+}
+
+#[command]
+pub fn browser_trust_add_pem(label: String, pem: String, notes: Option<String>) -> Result<serde_json::Value, String> {
+    crate::browser::trust_add_pem(label, pem, notes.unwrap_or_default())
+}
+
+#[command]
+pub fn browser_trust_add_did(label: String, did: String, notes: Option<String>) -> Result<serde_json::Value, String> {
+    crate::browser::trust_add_did(label, did, notes.unwrap_or_default())
+}
+
+#[command]
+pub fn browser_trust_set_enabled(id: String, enabled: bool) -> Result<(), String> {
+    crate::browser::trust_set_enabled(id, enabled)
+}
+
+#[command]
+pub fn browser_trust_remove(id: String) -> Result<bool, String> {
+    crate::browser::trust_remove(id)
+}
+
+#[command]
+pub fn browser_trust_verdict(url: String) -> Result<serde_json::Value, String> {
+    crate::browser::trust_verdict(url)
+}
+
+#[command]
+pub async fn browser_agent_ask(
+    url: String,
+    question: String,
+    ingest_to_library: Option<bool>,
+) -> Result<serde_json::Value, String> {
+    crate::browser::agent_ask(url, question, ingest_to_library.unwrap_or(true)).await
 }
 
 // ── Hardware / system ─────────────────────────────────────────────────────────
@@ -7359,11 +7314,20 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         submit_omnibox_query,
         open_web_url,
         browser_navigate,
+        browser_navigate_content,
         browser_focus,
         browser_reload,
+        browser_reload_content,
         browser_go_back,
         browser_go_forward,
         browser_status,
+        browser_trust_list,
+        browser_trust_add_pem,
+        browser_trust_add_did,
+        browser_trust_set_enabled,
+        browser_trust_remove,
+        browser_trust_verdict,
+        browser_agent_ask,
         resolve_qdp_did,
         get_ns_records_for_did,
         sync_to_solid_pod,

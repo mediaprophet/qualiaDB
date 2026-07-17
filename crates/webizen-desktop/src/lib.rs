@@ -1,5 +1,6 @@
 //! Webizen Desktop library root — shared modules for Tauri commands and rust-analyzer.
 
+pub mod browser;
 pub mod commands;
 pub mod companion_gateway;
 pub mod desktop_log;
