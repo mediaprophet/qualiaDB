@@ -192,6 +192,11 @@ fn library_summary(e: &super::hypermedia_store::LibraryEntry) -> serde_json::Val
         "cml_concept_count": e.cml_concept_count,
         "cml_n3_chars": e.cml_n3.len(),
         "quin_count": e.quins.len(),
+        "cof_segment_count": e.cof_segment_count,
+        "cof_segment_index": e.cof_segment_index,
+        "cof_profile": e.cof_profile,
+        "cof_html_chars": e.cof_html.len(),
+        "has_cof": !e.cof_html.is_empty(),
     })
 }
 
@@ -1336,7 +1341,44 @@ impl WebizenHostApi {
             cml_signals,
             cml_concept_count,
             cml_n3,
+            cof_html: String::new(),
+            cof_segment_count: 0,
+            cof_segment_index: 0,
+            cof_profile: String::new(),
         };
+
+        // COF HTML+RDFa package (token-bounded segments) for text assets.
+        let mut cof_segment_count = 0u32;
+        let mut cof_profile = String::new();
+        let mut cof_body_segments: Vec<super::cml_context::CofSegment> = Vec::new();
+        if media_type.starts_with("text/") {
+            let text = String::from_utf8_lossy(bytes);
+            let units = super::cml_context::units_from_headings(&text);
+            let pkg = super::cml_context::build_cof_package(
+                uri,
+                excerpt_source,
+                &units,
+                super::cml_context::DEFAULT_SEGMENT_MAX_CHARS,
+                super::cml_context::CofStyle::AgentLean,
+            );
+            cof_segment_count = pkg.segments.len() as u32;
+            cof_profile = pkg.profile.clone();
+            entry.cof_segment_count = cof_segment_count;
+            entry.cof_profile = cof_profile.clone();
+            if let Some(index_seg) = pkg.segments.iter().find(|s| s.is_index) {
+                entry.cof_html = index_seg.html.clone();
+                entry.cof_segment_index = 0;
+            } else if let Some(first) = pkg.segments.first() {
+                entry.cof_html = first.html.clone();
+                entry.cof_segment_index = first.index;
+            }
+            cof_body_segments = pkg
+                .segments
+                .into_iter()
+                .filter(|s| !s.is_index)
+                .collect();
+        }
+
         entry.recompute_section();
         // High sensitivity can never be commons.
         if entry.is_secret() {
@@ -1344,7 +1386,49 @@ impl WebizenHostApi {
         }
         let section = entry.section.clone();
         let commons_visibility = entry.commons_visibility;
-        self.library()?.add(entry).map_err(|e| e.to_string())?;
+        let entry_topics = entry.topics.clone();
+        let entry_purposes = entry.purposes.clone();
+        let store = self.library()?;
+        store.add(entry).map_err(|e| e.to_string())?;
+
+        // Sibling COF body segments — load only the budget needed for a turn.
+        for seg in &cof_body_segments {
+            let seg_uri = format!("{uri}#cof-seg-{}", seg.index);
+            let mut se = super::hypermedia_store::LibraryEntry {
+                asset_uri: seg_uri.clone(),
+                primary_subject: qualia_core_db::hypermedia::fnv60(seg_uri.as_bytes()),
+                media_type: super::cml_context::MEDIA_TYPE_COF.into(),
+                quins: Vec::new(),
+                topics: entry_topics.clone(),
+                projects: Vec::new(),
+                purposes: entry_purposes.clone(),
+                place: None,
+                occurred_at: None,
+                lat: None,
+                lon: None,
+                flags: Vec::new(),
+                ingested_unix: now,
+                excerpt: format!(
+                    "COF segment {}/{} · ~{} tokens · units: {}",
+                    seg.index + 1,
+                    seg.total,
+                    seg.approx_tokens,
+                    seg.unit_frags.join(", ")
+                ),
+                sensitivity: sensitivity.clone(),
+                section: section.clone(),
+                commons_visibility,
+                cml_signals: Vec::new(),
+                cml_concept_count: seg.unit_frags.len() as u32,
+                cml_n3: String::new(),
+                cof_html: seg.html.clone(),
+                cof_segment_count,
+                cof_segment_index: seg.index,
+                cof_profile: cof_profile.clone(),
+            };
+            se.recompute_section();
+            store.add(se).map_err(|e| e.to_string())?;
+        }
 
         // Guardianship hook: a flagged ingest under a guardianship relation notifies + records.
         let mut notified = Vec::new();
@@ -1364,7 +1448,7 @@ impl WebizenHostApi {
         }
         Ok(serde_json::json!({
             "asset_uri": uri,
-            "topics": out.descriptors.topics,
+            "topics": entry_topics,
             "occurred_at": eff_occurred_at,
             "place": eff_place.as_ref().map(|p| &p.label),
             "lat": lat,
@@ -1374,7 +1458,10 @@ impl WebizenHostApi {
             "section": section,
             "sensitivity": sensitivity,
             "commons_visibility": commons_visibility,
-            "purposes": purposes,
+            "purposes": entry_purposes,
+            "cml_concept_count": cml_concept_count,
+            "cof_segment_count": cof_segment_count,
+            "cof_profile": cof_profile,
         }))
     }
 
@@ -1547,6 +1634,52 @@ impl WebizenHostApi {
             "n3": g.n3,
             "curation": "cml:Proposed",
             "engine": "qualia-client-core::wellfair::cml_context",
+        }))
+    }
+
+    /// Build a **COF HTML+RDFa** package (token-bounded segments) without persisting.
+    /// `max_chars` defaults to 24000 when zero/None.
+    pub fn build_cof_html_package(
+        &self,
+        uri: &str,
+        title: &str,
+        text: &str,
+        max_chars: Option<usize>,
+        dual_surface: bool,
+    ) -> Result<serde_json::Value, String> {
+        let units = super::cml_context::units_from_headings(text);
+        let style = if dual_surface {
+            super::cml_context::CofStyle::DualSurface
+        } else {
+            super::cml_context::CofStyle::AgentLean
+        };
+        let max = max_chars
+            .filter(|n| *n >= 2000)
+            .unwrap_or(super::cml_context::DEFAULT_SEGMENT_MAX_CHARS);
+        let pkg = super::cml_context::build_cof_package(uri, title, &units, max, style);
+        Ok(serde_json::json!({
+            "document_uri": pkg.document_uri,
+            "title": pkg.title,
+            "profile": pkg.profile,
+            "segment_max_chars": pkg.segment_max_chars,
+            "total_chars": pkg.total_chars,
+            "total_approx_tokens": pkg.total_approx_tokens,
+            "segments": pkg.segments.iter().map(|s| serde_json::json!({
+                "index": s.index,
+                "total": s.total,
+                "id": s.id,
+                "title": s.title,
+                "char_count": s.char_count,
+                "approx_tokens": s.approx_tokens,
+                "unit_frags": s.unit_frags,
+                "is_index": s.is_index,
+                "html": s.html,
+            })).collect::<Vec<_>>(),
+            "how": [
+                "Load segment 0 (index) for a token-cheap map of the instrument.",
+                "Load only the body segment(s) whose unit_frags match the query.",
+                "RDFa attributes carry CML edges; do not strip typeof/property/resource.",
+            ],
         }))
     }
 

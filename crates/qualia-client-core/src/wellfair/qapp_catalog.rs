@@ -394,6 +394,10 @@ pub fn catalog_entry_to_library(entry: QappCatalogEntry, now: u64) -> LibraryEnt
         cml_signals: Vec::new(),
         cml_concept_count: 0,
         cml_n3: String::new(),
+        cof_html: String::new(),
+        cof_segment_count: 0,
+        cof_segment_index: 0,
+        cof_profile: String::new(),
     };
     le.recompute_section();
     le

@@ -216,6 +216,10 @@ pub fn ingest_turn(storage: &Path, session_id: &str, text: &str) -> Result<Vec<C
         } else {
             g.n3
         },
+        cof_html: String::new(),
+        cof_segment_count: 0,
+        cof_segment_index: 0,
+        cof_profile: String::new(),
     };
     entry.recompute_section();
     store.add(entry).map_err(|e| e.to_string())?;

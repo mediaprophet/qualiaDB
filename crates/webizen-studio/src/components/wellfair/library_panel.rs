@@ -902,9 +902,11 @@ pub fn WellfairLibraryPanel() -> Element {
                                             let cml_c = u64_field(&v, "cml_concepts");
                                             let cml_d = u64_field(&v, "cml_deontic_norms");
                                             let cml_p = u64_field(&v, "cml_privacy_hits");
+                                            let cof_s = u64_field(&v, "cof_segments");
+                                            let cof_t = u64_field(&v, "cof_approx_tokens");
                                             status_err.set(false);
                                             status.set(format!(
-                                                "Legislation + CML · {secs} sections · {with_t} with text · {empty} empty · CML {cml_c} concepts / {cml_d} deontic / {cml_p} privacy · {written} rows → Work."
+                                                "Legislation + CML + COF · {secs} sections · {with_t} text · CML {cml_c}/{cml_d} deontic/{cml_p} privacy · COF {cof_s} segs (~{cof_t} tok) · {written} rows → Work."
                                             ));
                                             section.set("work".into());
                                             legis_text.set(String::new());

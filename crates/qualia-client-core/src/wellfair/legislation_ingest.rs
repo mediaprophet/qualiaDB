@@ -14,7 +14,10 @@ use std::path::Path;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use super::cml_context::{build_document_context, ContextUnit};
+use super::cml_context::{
+    build_cof_package, build_document_context, CofStyle, ContextUnit, DEFAULT_SEGMENT_MAX_CHARS,
+    MEDIA_TYPE_COF,
+};
 use super::hypermedia_store::{
     CommonsVisibility, HypermediaStore, LibraryEntry, LibrarySection,
 };
@@ -73,6 +76,10 @@ pub struct LegislationIngestReport {
     pub cml_deontic_norms: usize,
     pub cml_privacy_hits: usize,
     pub cml_rights_hits: usize,
+    /// COF HTML+RDFa segments (index + body packs for token budgets).
+    pub cof_segments: usize,
+    pub cof_approx_tokens: usize,
+    pub cof_profile: String,
 }
 
 fn slugify(s: &str) -> String {
@@ -599,17 +606,27 @@ pub fn seed_instrument_into_library(
         })
         .collect();
     let instrument_graph = build_document_context(&base, &inst.title, &cml_units);
+    // Agent-lean COF package: index + section-aligned body segments under a char budget.
+    let cof_pkg = build_cof_package(
+        &base,
+        &inst.title,
+        &cml_units,
+        DEFAULT_SEGMENT_MAX_CHARS,
+        CofStyle::AgentLean,
+    );
 
     // Instrument root.
     let root_uri = base.clone();
     let root_excerpt = format!(
-        "{} — {} provision(s), {} page(s). Native CML context graph (cml:Proposed): {} concepts, {} deontic norms, {} privacy signals.",
+        "{} — {} provision(s), {} page(s). CML (cml:Proposed): {} concepts, {} deontic, {} privacy. COF: {} segment(s), ~{} tokens total (load index + one body for agent turns).",
         inst.title,
         inst.provisions.len(),
         inst.pages,
         instrument_graph.concepts.len(),
         instrument_graph.deontic_norms,
         instrument_graph.privacy_hits,
+        cof_pkg.segments.len(),
+        cof_pkg.total_approx_tokens,
     );
     let mut root_topics = vec![
         "legislation".into(),
@@ -654,9 +671,63 @@ pub fn seed_instrument_into_library(
         cml_signals: instrument_graph.signal_tags.clone(),
         cml_concept_count: instrument_graph.concepts.len() as u32,
         cml_n3: root_n3,
+        cof_html: cof_pkg
+            .segments
+            .iter()
+            .find(|s| s.is_index)
+            .map(|s| s.html.clone())
+            .unwrap_or_default(),
+        cof_segment_count: cof_pkg.segments.len() as u32,
+        cof_segment_index: 0,
+        cof_profile: cof_pkg.profile.clone(),
     };
     root.recompute_section();
     upsert(root);
+
+    // Persist each COF body segment as its own library row (token-selective load).
+    for seg in cof_pkg.segments.iter().filter(|s| !s.is_index) {
+        let seg_uri = format!("{base}#cof-seg-{}", seg.index);
+        let mut se = LibraryEntry {
+            asset_uri: seg_uri.clone(),
+            primary_subject: fnv60(seg_uri.as_bytes()),
+            media_type: MEDIA_TYPE_COF.into(),
+            quins: Vec::new(),
+            topics: vec![
+                "legislation".into(),
+                "cof".into(),
+                "cml".into(),
+                inst.slug.clone(),
+                format!("cof-seg-{}", seg.index),
+            ],
+            projects: vec![format!("legislation:{}", inst.slug)],
+            purposes: vec!["legislation".into(), "legal".into(), "work".into()],
+            place: None,
+            occurred_at: None,
+            lat: None,
+            lon: None,
+            flags: Vec::new(),
+            ingested_unix: now,
+            excerpt: format!(
+                "COF body segment {}/{} · ~{} tokens · frags: {}",
+                seg.index + 1,
+                seg.total,
+                seg.approx_tokens,
+                seg.unit_frags.iter().take(12).cloned().collect::<Vec<_>>().join(", ")
+            ),
+            sensitivity: "public".into(),
+            section: LibrarySection::Work.as_str().into(),
+            commons_visibility: CommonsVisibility::None,
+            cml_signals: Vec::new(),
+            cml_concept_count: seg.unit_frags.len() as u32,
+            cml_n3: String::new(),
+            cof_html: seg.html.clone(),
+            cof_segment_count: cof_pkg.segments.len() as u32,
+            cof_segment_index: seg.index,
+            cof_profile: cof_pkg.profile.clone(),
+        };
+        se.recompute_section();
+        upsert(se);
+    }
 
     let mut sections = 0usize;
     let mut subsections = 0usize;
@@ -768,6 +839,10 @@ pub fn seed_instrument_into_library(
                 cml_signals: g.signal_tags,
                 cml_concept_count: g.concepts.len() as u32,
                 cml_n3,
+                cof_html: String::new(),
+                cof_segment_count: cof_pkg.segments.len() as u32,
+                cof_segment_index: 0,
+                cof_profile: cof_pkg.profile.clone(),
             };
             entry.recompute_section();
             upsert(entry);
@@ -793,6 +868,9 @@ pub fn seed_instrument_into_library(
         cml_deontic_norms: total_deontic,
         cml_privacy_hits: total_privacy,
         cml_rights_hits: total_rights,
+        cof_segments: cof_pkg.segments.len(),
+        cof_approx_tokens: cof_pkg.total_approx_tokens,
+        cof_profile: cof_pkg.profile,
     })
 }
 

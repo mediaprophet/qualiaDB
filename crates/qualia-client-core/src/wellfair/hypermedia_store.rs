@@ -297,6 +297,19 @@ pub struct LibraryEntry {
     /// Truncated for large instruments; full graph also lives in `quins`.
     #[serde(default)]
     pub cml_n3: String,
+    /// COF HTML+RDFa segment (profile html-rdfa-1). Empty if not emitted.
+    /// Large instruments store the **index** on the root and body segments as child entries.
+    #[serde(default)]
+    pub cof_html: String,
+    /// Number of COF segments in the package this entry belongs to (0 = none).
+    #[serde(default)]
+    pub cof_segment_count: u32,
+    /// This entry's segment index (0 = index/TOC).
+    #[serde(default)]
+    pub cof_segment_index: u32,
+    /// COF profile IRI when `cof_html` is set.
+    #[serde(default)]
+    pub cof_profile: String,
 }
 
 fn default_sensitivity_public() -> String {
@@ -889,6 +902,10 @@ mod tests {
             cml_signals: Vec::new(),
             cml_concept_count: 0,
             cml_n3: String::new(),
+            cof_html: String::new(),
+            cof_segment_count: 0,
+            cof_segment_index: 0,
+            cof_profile: String::new(),
         };
         entry.recompute_section();
         store.add(entry).unwrap();
@@ -1060,6 +1077,10 @@ mod tests {
                 cml_signals: Vec::new(),
                 cml_concept_count: 0,
                 cml_n3: String::new(),
+                cof_html: String::new(),
+                cof_segment_count: 0,
+                cof_segment_index: 0,
+                cof_profile: String::new(),
             };
             e.recompute_section();
             store.add(e).unwrap();

@@ -1952,6 +1952,31 @@ pub fn wellfair_build_cml_context(
 }
 
 #[command]
+pub fn wellfair_build_cof_package(
+    app: AppHandle,
+    uri: String,
+    title: String,
+    text: String,
+    max_chars: Option<u64>,
+    dual_surface: Option<bool>,
+) -> Result<String, String> {
+    let state = app.state::<HostApiState>();
+    state.0.execute_sync(move |guard| {
+        let host = guard
+            .as_ref()
+            .ok_or_else(|| "Host API not initialized — unlock Sanctuary vault first".to_string())?;
+        let r = host.build_cof_html_package(
+            &uri,
+            &title,
+            &text,
+            max_chars.map(|n| n as usize),
+            dual_surface.unwrap_or(false),
+        )?;
+        serde_json::to_string(&r).map_err(|e| e.to_string())
+    })?
+}
+
+#[command]
 pub fn wellfair_enrich_library_cml(app: AppHandle, asset_uri: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
@@ -6984,6 +7009,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair_ingest_legislation_text,
         wellfair_ingest_legislation_pdf_hex,
         wellfair_build_cml_context,
+        wellfair_build_cof_package,
         wellfair_enrich_library_cml,
         wellfair_list_qapp_catalog_categories,
         wellfair_library_stats,

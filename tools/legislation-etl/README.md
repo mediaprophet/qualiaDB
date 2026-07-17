@@ -75,8 +75,23 @@ On ingest, every provision gets:
 - **privacy / GDPR-family** signals (consent, erasure, DPIA, cross-border, …)  
 - **rights** / **temporal** / cross-ref cues  
 - proposed CML N3 (`cml:Proposed` only) + facet tags for Library search  
+- **COF HTML+RDFa** (`cof/profile/html-rdfa-1`): agent-lean segments for token budgets  
 
-General text documents in the Library use the same `cml_context` path (not legislation-only).
+### COF segmentation (token optimisation)
+
+Large instruments are **not** one giant HTML dump. The Rust COF packer emits:
+
+| Segment | Role |
+|---------|------|
+| `cof-seg-0` (index) | Token-cheap TOC: titles + deontic/privacy chips, no full bodies |
+| `cof-seg-1…N` | Section-aligned body packs under ~24k chars (~6k tokens) each |
+
+Agents should load **index + only the body segment(s)** matching the query. RDFa
+`typeof` / `property` / `resource` / `rel` carry the CML edges — do not strip them.
+Host: `wellfair_build_cof_package`. Media type:
+`text/html;profile="https://ns.webcivics.net/cof/profile/html-rdfa-1"`.
+
+General text documents in the Library use the same `cml_context` + COF path.
 
 ## Units: metadata, intro, sections, subsections
 
