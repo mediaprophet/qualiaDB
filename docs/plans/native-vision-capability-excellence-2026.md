@@ -284,22 +284,95 @@ Use this as the **inventory spine**. Status: **Missing** / **Partial** / **Prese
 11. **Surveillance is policy-subject**, not default owner of faces.  
 12. Reuse engineering/geometry/physics libs — do not reimplement FEM for vanity.  
 13. Libraryization: `cv/`, `biosense/`, `spatial/` export formats, policy modules.  
-14. No “it’ll do” for biosense or print-ready labels.
+14. No “it’ll do” for biosense or print-ready labels.  
+15. **Anti-monolith law §4.2** — single-function files, subdir libraries; swarm enforces.  
+16. **Swarm delivery §10** — exclusive tracks, CLAIM/RELEASE, progress log, orchestrator integrates.
 
 ### 4.1 Module layout (target)
 
 ```text
 crates/qualia-vision/src/
-  cv/                 # classical D1
-  biosense/           # D3 excellence
-  spatial/            # existing + STL/3MF/print check (D5)
-  policy/             # D4 biometric & CCTV policy compile helpers (or client-core)
-  excellence.rs       # composed recipes
+  cv/                 # classical D1 — library of subdirs
+  biosense/           # D3 excellence — library of subdirs
+  spatial/            # existing + print formats (D5)
+  policy/             # D4 helpers (or client-core if graph-heavy)
+  recipes/            # composed excellence pipelines (one recipe per file)
 
-# Prefer existing crates for:
+# Prefer existing crates for heavy domains:
 #   computational_geometry, engineering_analysis, physics_simulation,
-#   medical_computing, wellfare, sparql / sparql_mm, deontic_logic
+#   medical_computing, wellfare, sparql_mm, deontic_logic
 ```
+
+### 4.2 Anti-monolith law (mandatory for this programme)
+
+**No monolithic files.** This programme is large; sprawl is a failure mode. Follow project libraryization (AGENTS/Claude: big file → library with subdirectory) and **stricter** defaults here:
+
+| Rule | Detail |
+|------|--------|
+| **One primary function (or one coherent type + its inherent methods) per `.rs` file** | Prefer `gaussian_blur_u8.rs` exporting `gaussian_blur_u8`, not `filters.rs` with 20 filters. |
+| **Library = directory** | Concern `filter` → `cv/filter/mod.rs` + `cv/filter/gaussian_blur_u8.rs` + `…/median_blur_u8.rs` + `…/tests/` or `#[cfg(test)]` in same file only if tiny. |
+| **`mod.rs` is a wiring file only** | Re-exports, `mod` declarations, capability registration hooks. **No** algorithm bodies in `mod.rs` beyond trivial `pub use`. Target **&lt; ~80 lines**. |
+| **Hard size tripwire** | If a file approaches **~150–200 lines** of logic, **split before merge**. Do not wait for 500. |
+| **Tests co-located** | Prefer `#[cfg(test)] mod tests` in the same single-function file, or `foo/tests/gaussian_blur_u8.rs` if fixtures are heavy — still one concern per test file. |
+| **No “util.rs” / “helpers.rs” grab-bags** | Name by function: `snr_f32.rs`, `bandpass_iir.rs`. |
+| **Types that are shared** | `types/` or `common/` with **one type (or tightly coupled enum+error) per file**. |
+| **Recipes** | `recipes/self_monitor_pulse.rs` — orchestration only; call into single-function modules. |
+| **Desktop / Studio** | New UI panels as separate components; do not grow `commands/mod.rs` by thousands of lines — add `commands/vision_*.rs` or `browser/`-style submodules and re-export. |
+| **Pre-existing monoliths** | Do not block new work on full renames of old files mid-feature; **new code** must obey this law. Flag old monoliths for a later libraryization pass. |
+
+#### 4.2.1 Example shape (rPPG)
+
+```text
+crates/qualia-vision/src/biosense/
+  mod.rs                      # mods + re-exports only
+  consent/
+    mod.rs
+    biosense_consent.rs       # struct + grant/revoke
+    purpose.rs                # enum
+  quality/
+    mod.rs
+    frame_blur_score.rs
+    face_fraction.rs
+    motion_energy.rs
+    reject_low_quality.rs
+  rppg/
+    mod.rs
+    skin_roi_cheeks.rs
+    pos_rppg_trace.rs
+    chrom_rppg_trace.rs
+    spectral_hr_peak.rs
+    ensemble_hr.rs
+    snr_confidence.rs
+  magnification/
+    mod.rs
+    eulerian_color_magnify.rs
+    eulerian_motion_magnify.rs
+    ...
+  registry.rs                 # capability rows only (or capability/register_biosense.rs)
+```
+
+#### 4.2.2 Example shape (classical filter)
+
+```text
+crates/qualia-vision/src/cv/
+  mod.rs
+  buffer/
+    mod.rs
+    image_view2d.rs
+    image_buffer2d.rs
+    copy_roi_u8.rs
+  filter/
+    mod.rs
+    gaussian_blur_u8.rs
+    median_blur_u8.rs
+    bilateral_filter_u8.rs
+  edges/
+    mod.rs
+    sobel_u8.rs
+    canny_u8.rs
+```
+
+**Agent rejection criterion:** a PR/wave that adds a 400+ line multi-algorithm file **fails review** under this plan unless Timothy grants an exception in NOTICES.
 
 ---
 
@@ -456,18 +529,170 @@ VX0  registry + selfhood/surveillance/3D/bio ADRs
 
 ---
 
-## 10. Immediate next step
+## 10. Swarm delivery — how to get this done
 
-When Timothy says **execute vision-excellence** / **VX0**:
+This section is the **execution manual** for multi-agent swarms. Architecture is above; **here is how agents ship it** without collision or monoliths.
 
-1. CLAIM `qualia-vision` cv/ + biosense/ registry stubs + policy vocabulary ADR.  
-2. Register **all D1–D9 rows** in machine-readable capability manifest.  
-3. Fixtures: classical + synthetic PPG + micro-motion + print mesh.  
-4. Progress log; then VX1 + VXB0/VXP0 in parallel as soon as buffers exist.
+### 10.1 Roles
+
+| Role | Who | Duties |
+|------|-----|--------|
+| **Principal** | Timothy | Prioritises waves, supplies corpora/weights/gates, dogfoods, settles VX-D* decisions |
+| **Orchestrator** | One parent agent | CLAIM/RELEASE, assigns tracks, integrates, runs tests, updates progress log, refuses monoliths |
+| **Track agent** | Subagent or sequential session | Owns **one exclusive directory set**, implements files per §4.2, tests, reports, does not touch other tracks |
+| **Review gate** | Orchestrator (or principal) | Size check, capability registry update, honesty labels |
+
+### 10.2 Global swarm rules
+
+1. **Canonical tree only** — `C:\Projects\qualia-27062026`; no worktrees for routine work.  
+2. **CLAIM before write** — append to `coordination/NOTICES.md` with exclusive paths.  
+3. **One CLAIM per exclusive set** — if path is claimed, stop and report.  
+4. **RELEASE** with: files added, tests run, registry rows flipped, honesty notes.  
+5. **Progress log** — `docs/plans/native-vision-capability-excellence-PROGRESS-LOG.md` after every wave/track.  
+6. **Anti-monolith law §4.2** — non-negotiable for new code.  
+7. **No Python** in product libraries.  
+8. **No vendor OpenCV** in product path; optional `opencv-oracle` test feature only if principal allows.  
+9. **Parent integrates** — track agents do not force-push over each other; orchestrator merges order.  
+10. **Capability registry first** — every Present claim updates machine-readable registry in the same PR/wave.  
+11. **Completeness bar** — no TODO-as-implementation for advertised excellence rows.  
+12. **Selfhood** — biometric/surveillance work fails closed without consent/policy paths.
+
+### 10.3 Exclusive track map (parallelism)
+
+Tracks may run **in parallel only** when exclusive directories do not overlap.
+
+| Track ID | Scope | Exclusive paths (typical) | Depends on |
+|----------|--------|---------------------------|------------|
+| **T-REG** | Registry, ADR, fixtures, progress log | `qualia-vision/src/capability/` or `cv/registry*`, `biosense/registry*`, `fixtures/` | — |
+| **T-CV1** | Classical buffers + colour + filter + morph + edges | `qualia-vision/src/cv/buffer/`, `color/`, `filter/`, `morph/`, `edges/`, `hist/`, `contours/`, `draw/` | T-REG |
+| **T-CV2** | Codecs + capture hooks | `cv/codecs/`, client/desktop camera commands (narrow files) | T-CV1 buffer types |
+| **T-CV3** | Features + warps | `cv/features/`, `cv/transform/` | T-CV1 |
+| **T-FLOW** | Optical flow / BG | `cv/flow/` | T-CV1 |
+| **T-BIO0** | Consent, quality, audit | `biosense/consent/`, `biosense/quality/`, `biosense/audit/` | T-REG |
+| **T-MESH** | Face landmarks / mesh | `biosense/face_mesh/` (+ weights path) | T-CV1, T-BIO0 |
+| **T-RPPG** | rPPG algorithms | `biosense/rppg/` (one algo per file) | T-MESH or ROI quality |
+| **T-EVM** | Magnification | `biosense/magnification/` | T-CV1 colour/filter |
+| **T-PAD** | Liveness | `biosense/liveness/` | T-MESH |
+| **T-TMPL** | Biometric vault templates | `biosense/biometrics/` + wellfair hooks (coordinate) | T-BIO0, T-MESH |
+| **T-AFFECT** | Affect proposals | `biosense/affect/` | T-MESH, T-BIO0 |
+| **T-POL** | Surveillance policy + SPARQL-MM/FED | `policy/` and/or `sparql_mm` + deontic bridge files **claimed narrowly** | T-BIO0 |
+| **T-3D** | STL/3MF/print check | `spatial/export_stl.rs`-style **one format per file**, `spatial/print_*/` | existing MeshIR |
+| **T-RECON** | Photogrammetry / multi-view | `spatial/recon_*/` or `cv/recon/` | T-CV3, T-3D basics |
+| **T-BIOLOGY** | Bio/clinical vision path | `biosense/bio_*/` or medical_computing adapters | T-CV2 sensitivity |
+| **T-UI** | Studio Vision / Wellfair surfaces | `vision_workbench` splits, wellfair panels | APIs stable |
+| **T-DESK** | Desktop commands | `webizen-desktop/src/commands/vision_*.rs` **new files only** | APIs stable |
+| **T-INT** | Recipes + ledger | `recipes/` one recipe per file | Multiple tracks done |
+
+**Collision rule:** `commands/mod.rs` and large Studio files — **one agent at a time**, or only add `mod vision_excellence;` + re-exports.
+
+### 10.4 Wave → track assignment (orchestrator cheat sheet)
+
+| Wave | Tracks to spawn / sequence |
+|------|----------------------------|
+| VX0 | T-REG alone |
+| VX1 | T-CV1 (may fan out sub-agents per subdir: filter ∥ edges ∥ morph if exclusive) |
+| VX2 | T-CV2 + T-DESK camera (serial if commands clash) |
+| VXB0 | T-BIO0 |
+| VXB1 | T-MESH |
+| VXB2 | T-RPPG |
+| VXB3 | T-EVM |
+| VXP | T-POL |
+| VX3 | T-CV3 |
+| VX3D | T-3D then T-RECON |
+| VXB5 | T-PAD + T-TMPL |
+| VXB6 | T-AFFECT |
+| VXBIO | T-BIOLOGY |
+| VX8 | T-UI + T-INT + ledger |
+
+### 10.5 Single-track agent prompt template
+
+Orchestrator pastes this (fill brackets):
+
+```text
+You are Track [T-ID] on Qualia vision excellence.
+Canonical tree: C:\Projects\qualia-27062026 only. Branch 0.0.25.
+CLAIM exclusive paths: [list]. Do not edit other tracks' dirs.
+Read: docs/plans/native-vision-capability-excellence-2026.md §4.2 and §10.
+
+Implement: [slice list, e.g. gaussian_blur_u8 + median_blur_u8].
+Layout law: ONE primary function per .rs file; library subdirs; mod.rs wiring only.
+No Python. No OpenCV product link. Zero-heap hot paths (caller buffers).
+Update capability registry rows for what you finish.
+Add tests in-file or co-located.
+When done: cargo test -p qualia-vision --lib [filter]; append PROGRESS-LOG; RELEASE in NOTICES.
+Do not claim excellence for unfinished biosense/confidence behaviour.
+```
+
+### 10.6 Subagent fan-out pattern (within a track)
+
+When a track is large (e.g. T-CV1):
+
+1. Orchestrator creates empty dir skeleton + `mod.rs` stubs.  
+2. Spawns N agents with **disjoint file names** (`gaussian_blur_u8.rs` vs `median_blur_u8.rs`).  
+3. Each agent only creates **its files** + local tests.  
+4. Orchestrator runs full module tests and fixes re-exports once.
+
+Do **not** give two agents the same `mod.rs` to edit concurrently — orchestrator owns `mod.rs` wiring or serialises it.
+
+### 10.7 Definition of done (per track)
+
+- [ ] Files obey §4.2 (spot-check: no multi-algorithm monoliths)  
+- [ ] `cargo test -p qualia-vision` (and affected crates) green for the track  
+- [ ] Capability registry updated  
+- [ ] Honesty labels / consent fail-closed where required  
+- [ ] Progress log entry  
+- [ ] NOTICES RELEASE  
+- [ ] No unclaimed edits outside exclusive set  
+
+### 10.8 Progress log format (append-only)
+
+```markdown
+## YYYY-MM-DD — Track T-XXX / Wave VY
+**Status:** done | partial | blocked
+**Files:** list (expect many small files)
+**Tests:** command + pass count
+**Registry:** rows flipped Present
+**Honesty / gates:** …
+**Monolith check:** max file lines in track = N (must be well under 200 logic lines unless exception)
+**Next:** …
+```
+
+### 10.9 Human gates (swarm must not fake)
+
+| Gate | Owner | Swarm behaviour |
+|------|--------|-----------------|
+| Licensed face/mesh/affect weights | Timothy | COMPLETE-WITH-GATE; seed/reference only until supplied |
+| rPPG clinical compare corpus | Timothy | Synthetic fixtures until contact PPG available |
+| Biometric policy legal text | Timothy | Code vocabulary + examples; principal authors binding policy |
+| H1 vision eval images | Timothy | Synthetic metrics only until H1 |
+| “Best in market” public claim | Timothy | Only after VX8 ledger green |
+
+### 10.10 Orchestrator startup checklist (execute vision-excellence)
+
+1. `CLAIM | Vision excellence VX0 + swarm boot | cv/, biosense/, fixtures, registry`  
+2. Create progress log from §10.8 header.  
+3. Land empty directory trees + registry schema (T-REG).  
+4. Publish track board in NOTICES (which tracks free/blocked).  
+5. Spawn or sequence per §10.4.  
+6. After each track: monolith scan (`find` large new `.rs` files) + tests.  
+7. Integrate recipes only when dependencies Present.  
+8. Final VX8: ledger + Studio dogfood notes.
 
 ---
 
-## 11. One-page mental model
+## 11. Immediate next step
+
+When Timothy says **execute vision-excellence** / **VX0**:
+
+1. Orchestrator CLAIMs and runs **§10.10**.  
+2. T-REG: capability manifest for **D1–D9**, empty `cv/` + `biosense/` trees per §4.2.  
+3. Fixtures: classical + synthetic PPG video + micro-motion + print mesh.  
+4. Then parallel **T-CV1** and **T-BIO0** as soon as buffer types exist.  
+5. Every agent follows **single-function files + library subdirs**.
+
+---
+
+## 12. One-page mental model
 
 ```text
                     ┌─────────────────────────────┐
