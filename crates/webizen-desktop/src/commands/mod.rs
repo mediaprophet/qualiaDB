@@ -7186,7 +7186,87 @@ pub async fn open_10d_file_picker(app: tauri::AppHandle) -> Result<Option<String
         .map_err(|e| format!("File picker channel: {e}"))
 }
 
+// ── Vision first-release (overlay + synthetic + human attestation) ─────────
 
+#[command]
+pub fn vision_run_synthetic_demo(
+    state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
+    split: String,
+    index: u32,
+    persist: Option<bool>,
+) -> Result<serde_json::Value, String> {
+    let split = match split.to_lowercase().as_str() {
+        "train" => qualia_vision::DatasetSplit::Train,
+        _ => qualia_vision::DatasetSplit::Test,
+    };
+    let demo = qualia_client_core::vision_pipeline::run_synthetic_demo(split, index, 96, 64)?;
+    if persist.unwrap_or(false) {
+        let config = state.config.lock().unwrap().clone();
+        let root = std::path::PathBuf::from(&config.storage_path);
+        let _ = qualia_client_core::vision_pipeline::ingest_demo_to_wal(&root, &demo)?;
+    }
+    serde_json::to_value(demo).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn vision_reject_instance(
+    state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
+    instance_hash_hex: String,
+    human_did_hex: Option<String>,
+    reason_hex: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let config = state.config.lock().unwrap().clone();
+    let root = std::path::PathBuf::from(&config.storage_path);
+    let instance = parse_hex_u64(&instance_hash_hex)?;
+    let human = human_did_hex
+        .as_deref()
+        .map(parse_hex_u64)
+        .transpose()?
+        .unwrap_or(qualia_core_db::q_hash("did:webizen:local-principal"));
+    let reason = reason_hex
+        .as_deref()
+        .map(parse_hex_u64)
+        .transpose()?
+        .unwrap_or(0);
+    qualia_client_core::vision_pipeline::reject_instance(&root, human, instance, reason)?;
+    Ok(serde_json::json!({
+        "ok": true,
+        "action": "reject",
+        "instance_hash": format!("0x{instance:016x}"),
+        "note": "Machine observation retained; human reject edge appended."
+    }))
+}
+
+#[command]
+pub fn vision_correct_instance(
+    state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
+    instance_hash_hex: String,
+    new_class_hash_hex: String,
+    human_did_hex: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let config = state.config.lock().unwrap().clone();
+    let root = std::path::PathBuf::from(&config.storage_path);
+    let instance = parse_hex_u64(&instance_hash_hex)?;
+    let new_class = parse_hex_u64(&new_class_hash_hex)?;
+    let human = human_did_hex
+        .as_deref()
+        .map(parse_hex_u64)
+        .transpose()?
+        .unwrap_or(qualia_core_db::q_hash("did:webizen:local-principal"));
+    qualia_client_core::vision_pipeline::correct_instance(&root, human, instance, new_class)?;
+    Ok(serde_json::json!({
+        "ok": true,
+        "action": "correct",
+        "instance_hash": format!("0x{instance:016x}"),
+        "new_class_hash": format!("0x{new_class:016x}"),
+        "note": "Machine proposesClass retained; human correct edge appended."
+    }))
+}
+
+fn parse_hex_u64(s: &str) -> Result<u64, String> {
+    let t = s.trim().trim_start_matches("0x").trim_start_matches("0X");
+    u64::from_str_radix(t, 16).map_err(|e| format!("bad hex u64 '{s}': {e}"))
+}
 
 pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
     tauri::generate_handler![
@@ -7623,6 +7703,10 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         updater_check,
         updater_download_and_install,
         updater_restart,
+        // ── Vision first-release ─────────────────────────────────────────
+        vision_run_synthetic_demo,
+        vision_reject_instance,
+        vision_correct_instance,
     ]
 }
 

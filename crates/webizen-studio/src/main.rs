@@ -223,6 +223,9 @@ pub enum Route {
     #[route("/library")]
     LibraryRoute {},
 
+    #[route("/vision")]
+    VisionRoute {},
+
     #[route("/communications")]
     CommunicationsRoute {},
 
@@ -339,6 +342,7 @@ fn KeepHub() -> Element {
                 KeepLink { to: Route::AnatomyRoute {}, title: "Anatomy", blurb: "See systems and conditions on a reference body." }
                 KeepLink { to: Route::HealthRoute {}, title: "Health vault", blurb: "Vitals, sleep, medication, wellbeing." }
                 KeepLink { to: Route::LibraryRoute {}, title: "Library", blurb: "Hypermedia shelf — notes, photos, receipts found by meaning, time, and place." }
+                KeepLink { to: Route::VisionRoute {}, title: "Vision", blurb: "Local detect/overlay — synthetic scenes, boxes, reject/correct without erasing claims." }
                 KeepLink { to: Route::IdentityRoute {}, title: "Identity", blurb: "Personal profile, social book, consent." }
                 KeepLink { to: Route::SanctuaryRoute {}, title: "Sanctuary", blurb: "Vault lock and protected spaces." }
                 KeepLink { to: Route::AgencyRoute {}, title: "Agency", blurb: "Guardianship, accountability, safeguards." }
@@ -428,6 +432,7 @@ fn route_from_omnibox(query: &str) -> Route {
         "settings" | "prefs" => return Route::SettingsRoute {},
         "home" | "dashboard" | "overview" => return Route::DashboardRoute {},
         "library" => return Route::LibraryRoute {},
+        "vision" | "detect" | "overlay" => return Route::VisionRoute {},
         "health" => return Route::HealthRoute {},
         "social" | "nexus" => return Route::NexusRoute {},
         "qapps" | "apps" => return Route::QAppsRoute {},
@@ -527,6 +532,13 @@ fn LibraryRoute() -> Element {
             style: "flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 2rem;",
             components::wellfair::library_panel::WellfairLibraryPanel {}
         }
+    }
+}
+
+#[component]
+fn VisionRoute() -> Element {
+    rsx! {
+        components::vision_workbench::VisionWorkbench {}
     }
 }
 
@@ -1325,6 +1337,7 @@ fn AppLayout() -> Element {
                         Link { to: Route::AnatomyRoute {}, class: "nav-item", sl-icon { "name": "person" } "Anatomy" }
                         Link { to: Route::HealthRoute {}, class: "nav-item", sl-icon { "name": "heart-pulse" } "Health" }
                         Link { to: Route::LibraryRoute {}, class: "nav-item", sl-icon { "name": "collection" } "Library" }
+                        Link { to: Route::VisionRoute {}, class: "nav-item", sl-icon { "name": "image" } "Vision" }
                         Link { to: Route::NexusRoute {}, class: "nav-item", sl-icon { "name": "people" } "People" }
 
                         span { class: "app-sidebar-label", "System" }

@@ -17,6 +17,7 @@ pub mod sparql_federated;
 pub mod sparql_filter;
 pub mod sparql_grammar;
 pub mod sparql_mm;
+pub mod vision_shacl;
 pub mod sparql_parser;
 pub mod sparql_planner;
 pub mod sparql_shacl;

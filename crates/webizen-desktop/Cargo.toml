@@ -27,6 +27,7 @@ base64 = "0.22"
 open = "5"
 qualia-core-db = { path = "../qualia-core-db" }
 qualia-client-core = { path = "../qualia-client-core" }
+qualia-vision = { path = "../qualia-vision" }
 wellfare-core = { path = "../wellfare-core" }
 qualia-cooperative-core = { path = "../qualia-cooperative-core" }
 webizen-runtime = { path = "../webizen-runtime" }

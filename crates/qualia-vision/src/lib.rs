@@ -15,7 +15,9 @@
 //! V3: CPU vision ops (Conv/Pool/Resize) as Forge GPU oracles.  
 //! V4: linear probe classifier.  
 //! V5: multi-object grid detector + bounded tracker.  
-//! V6: epistemic full compile + human reject/correct + region/time query.
+//! V6: epistemic full compile + human reject/correct + region/time query.  
+//! V7: regenerable synthetic labeled scenes.  
+//! Overlay: RGBA/BMP boxes for desktop/renderer path.
 
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
 
@@ -27,6 +29,8 @@ pub mod ops;
 pub mod classifier;
 pub mod detector;
 pub mod tracker;
+pub mod overlay;
+pub mod synthetic;
 
 #[cfg(feature = "cpu-reference")]
 pub mod cpu_reference;
@@ -54,6 +58,14 @@ pub use ops::{
 pub use classifier::{fit_two_class_centroids, LinearHead, LinearProbeVision};
 pub use detector::{sample_frame_indices, GridMultiObjectDetector, MAX_GRID};
 pub use tracker::{BoundedTracker, FLAG_TRACK_OVERFLOW, MAX_TRACKS};
+pub use overlay::{
+    box_css_percent, box_pixel_bounds, compose_rgb_overlay_rgba8, draw_boxes_rgba8,
+    encode_bmp_rgba8,
+};
+pub use synthetic::{
+    generate_scene_rgb8, match_accuracy, sample_id, train_test_disjoint, DatasetSplit,
+    SyntheticSampleId, TEST_SEED_BASE, TRAIN_SEED_BASE,
+};
 
 #[cfg(feature = "cpu-reference")]
 pub use cpu_reference::CpuReferenceVision;
