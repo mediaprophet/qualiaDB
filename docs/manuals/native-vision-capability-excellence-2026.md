@@ -1,381 +1,441 @@
 # Plan — Native Vision Capability Excellence (2026 product)
 
-**Date:** 2026-07-17  
-**Ambition:** Ship the **best classical + biosensing + integrated vision capability set** for a **2026 all-Rust, rights-aware, local-first** product — **excellence, not “it’ll do.”** Not OpenCV parity; not a clone.  
-**Floor checklist:** [OpenCV 4.13.0](https://docs.opencv.org/4.13.0/) and peer classical CV surfaces (no capability holes).  
-**Ceiling verticals:** rPPG/pulse, Eulerian micro-change magnification, selfhood-grade biometrics, scientifically honest affect, multimodal fusion.  
+**Date:** 2026-07-17 (expanded: selfhood biometrics, surveillance policy, 3D manufacture, biology, full domain map)  
+**Ambition:** Best-in-class **2026** vision + biosensing + spatial manufacture + bio-imaging capabilities, **all in Rust**, inside Qualia’s integrated rights-aware environment — **excellence, not “it’ll do.”**  
+**Not:** OpenCV clone, vendor OpenCV, cloud face/emotion APIs as product default, demo-grade biosense toys.  
 **Branch:** `0.0.25` · canonical tree only  
-**Status:** Ready when Timothy says **execute vision-excellence** or **execute VX0**  
-**Supersedes:** `opencv-coverage-parity-plan.md` (retired name)  
-**Related:** `native-visual-intelligence-and-generative-3d.md`, `qualia-vision`, geometry, Forge, audio, Wellfair biometrics RDF, agency-domain selfhood  
+**Status:** Ready when Timothy says **execute vision-excellence** / **execute VX0**  
+**Related:**  
+- Vision/audio: `native-visual-intelligence-and-generative-3d.md`, `qualia-vision`, `qualia-audio`  
+- Selfhood: `selfhood-personhood-content-taxonomy.md`, agency-domain selfhood, Wellfair biometrics RDF  
+- Geometry/engineering: `computational_geometry`, `engineering_analysis`, `physics_simulation`  
+- Medical/bio: `medical_computing`, Anatomy QApp, chemistry_modeling  
+- Query: SPARQL-MM (vision/audio), SPARQL federation / federated endpoints  
 
 ---
 
 ## 0. North star
 
-| | |
-|--|--|
-| **Product outcome** | Vision that can preprocess, measure, detect, track, **biosense**, **amplify micro-change**, calibrate, reconstruct, and explain — **in-process, pure Rust**, same governance as graph, identity, Library, sanctuary, LLM. |
-| **vs vendor OpenCV / cloud biometrics** | Qualia **implements**; no required OpenCV C++/Python; no required cloud face/emotion API. |
-| **vs “parity” / “it’ll do”** | Classical CV classes = **floor**. Biosensing/affect = **research-grade + rights-grade** or not shipped as product claims. |
-| **What “best” means** | Best *integrated local-first human-rights-centric 2026 system*: coverage + SNR/confidence + consent/selfhood + epistemic honesty — not a carnival BPM or a silent emotion %. |
+| Pillar | 2026 product outcome |
+|--------|----------------------|
+| **Own your body-signal** | A person holds and governs **their own biometrics** and **mindware** as an **inalienable extension of self** — not as platform inventory. |
+| **Policy over surveillance** | Rules about CCTV / camera use of biometrics are **expressible and enforceable** via graph query (SPARQL-MM, SPARQL-FED, deontic norms) — the person is not a passive data source. |
+| **See and make** | From light → measure → **3D artefacts** (print/CAD/training) with engineering-honest validation where claimed. |
+| **Understand life systems** | Biology/clinical imaging and structure share the same media → mesh → graph → rights path. |
+| **Classical CV floor** | No capability holes vs classical CV *classes* (OpenCV as checklist only). |
+| **Integrated excellence** | One process: Rust, zero-heap hot paths, epistemic honesty, wgpu, Library, sanctuary — exceed standalone CV SDKs. |
 
-If a capability is only “call OpenCV / call cloud face API,” it is **not** a Qualia capability yet.
-
----
-
-## 1. Purpose (principal framing)
-
-| What this is | What this is not |
-|--------------|------------------|
-| Grow **Qualia capabilities** (classical + **biosense**) in-tree Rust | OpenCV port or API clone |
-| Alternative to vendoring OpenCV **or** cloud biometrics SDKs | Competing for OpenCV’s brand |
-| Fill capability holes → **exceed** via integration + biosensing excellence | Bit-exact OpenCV matching; demo-grade toys |
-| Part of **something new** (graph, rights, selfhood, geometry, multimodal) | Mat-only research script library |
-
-**Floor sources:** OpenCV-class classical ops.  
-**Ceiling sources:** rPPG, EVM, biometrics under selfhood, honest affect, multimodal, no cloud, no Python.
+If a capability only exists as “call vendor SDK / cloud face API / OpenCV,” it is **not** a Qualia capability yet.
 
 ---
 
-## 2. Honest starting point (2026-07-17)
+## 1. Foundational doctrine: mindware, biometrics, inalienability
 
-### 2.1 Already strong (beyond classical CV vendors)
+### 1.1 Doctrine (product law, not marketing)
 
-- Semantic vision: NQuins, reject/correct, SPARQL-MM-class queries  
-- Media digests, seed QVWT, detector/tracker scaffolds  
-- Image→3D heightfield + MeshIR + twin A1 honesty  
-- Computational geometry depth; Forge/wgpu; local LLM  
-- `qualia-audio` + shared media clock  
-- Wellfair vault biometric RDF hooks; agency-domain **selfhood** for biometrics  
+| Principle | Operational consequence |
+|-----------|-------------------------|
+| **Biometrics are selfhood** | Templates, embeddings, rPPG time-series, face mesh parameters used for identity or health — **selfhood class** (see `selfhood-personhood-content-taxonomy.md` and agency-domain `reproductive_biometric_genetic`). |
+| **Mindware is selfhood** | Models, weights, agents, preferences that act *as* or *for* the person — same bar when they embody or unlock the person. |
+| **Inalienable extension of self** | System **cannot** treat biometrics/mindware as alienable platform assets; secondary use requires **manifest purpose** + consent; revoke stops use. |
+| **Manifestation boundary** | Selfhood → personhood only by the principal’s act of disclosure (taxonomy design note). |
+| **Surveillance is not the default consumer** | CCTV / ambient cameras may **query whether processing is permitted**; they do not silently own the face. |
 
-### 2.2 Gaps
+### 1.2 Permissioning surveillance and CCTV-class systems
 
-**Classical floor:** colour, filters, morph, edges, contours, hist, warps, ORB-class features, flow, calib/stereo, codecs/video I/O, denoise/inpaint.  
+| Mechanism | Role |
+|-----------|------|
+| **Local biometric vault** | Templates encrypted; never plain NQuin payloads. |
+| **Policy graph** | Deontic + purpose + time + place + camera_id + biometric_class norms as quins. |
+| **SPARQL-MM** | Region/time/media queries over *observations* (“faces detected in zone Z at t”) without exporting raw biometrics. |
+| **SPARQL-FED** | Federated query across nodes/pods: *does this camera’s intended biometric use satisfy principal policy?* |
+| **Deontic evaluation** | OBLIGATE / PERMIT / FORBID on processing acts (e.g. `forbid biometric identification without purpose P`). |
+| **Fail closed** | Unknown camera, expired consent, or missing policy → **no process** (or process only non-identifying aggregates if policy allows). |
+| **Audit** | Who / when / why / what / where / **cost** on every biometric evaluation. |
 
-**Biosense excellence (required for ambition, not optional polish):** face mesh, multi-ROI rPPG, Eulerian/Lagrangian magnification, liveness, encrypted face templates, affective **proposals** with uncertainty — **all currently missing as vision capabilities.**
+**Excellence:** a person can publish (or hold private) a **biometric use policy**; compliant systems check it before identification/enrolment/tracking — not after the fact.
 
-**Integration excellence:** every product-facing result → digests, optional quins, Studio, geometry, Wellfair, consent audit.
+### 1.3 Capability rows (selfhood governance)
+
+| Capability | Excellence target |
+|------------|-------------------|
+| Biometric self-vault | Create/rotate/revoke templates under sanctuary |
+| Purpose-bound unlock | Security / wellfair / research enums; deny by default |
+| Policy authoring UI + N3/deontic compile | Principal writes rules once |
+| SPARQL-MM observation query without template leak | Query returns counts/proposals, not templates |
+| SPARQL-FED policy check API | Remote camera node asks; local node answers permit/deny + reason |
+| CCTV compliance mode | Camera pipeline runs only policy-allowed stages (e.g. motion only, no face embed) |
+| Mindware binding | Local agent/model may not load face unlock without same selfhood gate |
 
 ---
 
-## 3. Design principles
+## 2. Extensive capability domain map
 
-1. **All product path in Rust** — no Python; no required OpenCV or cloud face API.  
-2. **Integrated environment** — media, epistemic graph, Forge, geometry, Studio, Library, Wellfair.  
-3. **Zero-heap hot paths** for kernels; cold arenas for construction.  
-4. **Pixels and raw biometric templates never in NQuins** — digests, scores, uncertainty, provenance; templates sanctuary-class only.  
-5. **Epistemic honesty** — especially affect and biometrics: proposals ≠ facts.  
-6. **Shared wgpu**; CPU oracles for claimed kernels.  
-7. **OpenCV optional test oracle only.**  
-8. **Licence-clean defaults** (ORB-class; patented algos only with principal decision).  
-9. **Capability registry** is truth for “do we have this?”  
-10. **Exceed via composition:** filter → mesh → rPPG/EVM → graph → human attestation.  
-11. **No silent incomplete; no “it’ll do”** on biosensing claims.  
-12. Libraryization: `cv/` + **`biosense/`**.  
-13. **Selfhood bar** for biometrics (agency-domain reproductive/biometric/genetic).
+Use this as the **inventory spine**. Status: **Missing** / **Partial** / **Present** (as of 2026-07-17).  
+**Target** for 2026 excellence ship is Present or honest COMPLETE-WITH-GATE.
 
-### 3.1 ABI sketch (Qualia-native)
+### D1 — Classical vision (floor)
 
-```rust
-pub struct ImageView2D<'a> { /* width, height, stride, format, bytes */ }
+| ID | Capability | Now | Target |
+|----|------------|-----|--------|
+| D1.01 | 2D buffer / ROI / channels / arith | Partial | Present |
+| D1.02 | Colour spaces, hist, equalize | Missing | Present |
+| D1.03 | Filters (Gauss, median, bilateral, …) | Missing | Present |
+| D1.04 | Morphology | Missing | Present |
+| D1.05 | Edges (Sobel, Canny, …) | Missing | Present |
+| D1.06 | Contours / CC / shape moments | Missing | Present |
+| D1.07 | Geometric warps (affine, perspective, remap) | Missing | Present |
+| D1.08 | Features (ORB-class) + match + RANSAC | Missing | Present |
+| D1.09 | Optical flow + BG subtract | Missing | Present |
+| D1.10 | Codecs PNG/JPEG/WebP | Partial | Present |
+| D1.11 | Video file I/O | Missing | Present |
+| D1.12 | Camera capture (intent-gated) | Partial (audio mic pattern) | Present |
+| D1.13 | Drawing / overlay | Partial | Present |
+| D1.14 | Photo denoise / inpaint | Missing | Present |
+| D1.15 | Stitch / panorama | Missing | Optional Present |
 
-pub fn gaussian_blur_u8(
-    src: ImageView2D<'_>,
-    ksize: u32,
-    sigma: f32,
-    dst: &mut [u8],
-) -> Result<(), CvError>;
-```
+### D2 — Learned vision
 
-Public surface: **Qualia types + capability registry**, not `cv::` names.
+| ID | Capability | Now | Target |
+|----|------------|-----|--------|
+| D2.01 | Detector + tracker + NMS | Partial | Present + production weights gated |
+| D2.02 | Semantic quins + reject/correct | Present | Present |
+| D2.03 | QVWT / P64 vision load | Partial seed | Present + licence gate |
+| D2.04 | Segmentation (instance/semantic) | Missing | Present |
+| D2.05 | Depth estimation (monocular) | Missing | Present |
+| D2.06 | Pose (body/hand) | Missing | Present |
+| D2.07 | OCR / scene text | Missing | Present when product needs |
+| D2.08 | Generative image (local) | Partial ref | Present + honesty |
 
-### 3.2 Layout
+### D3 — Biosensing & micro-change (**excellence vertical**)
+
+| ID | Capability | Now | Target |
+|----|------------|-----|--------|
+| D3.01 | Face landmarks / mesh | Missing | Present |
+| D3.02 | Frame/ROI quality gating | Missing | Present |
+| D3.03 | Multi-ROI rPPG (HR + conf/SNR) | Missing | Present |
+| D3.04 | HRV proxies (window-gated) | Missing | Present |
+| D3.05 | Respiration from video | Missing | Present |
+| D3.06 | Eulerian colour magnification | Missing | Present |
+| D3.07 | Eulerian motion magnification | Missing | Present |
+| D3.08 | Lagrangian micro-motion amplify | Missing | Present |
+| D3.09 | Liveness / PAD | Missing | Present |
+| D3.10 | Face biometric template vault | Partial RDF | Present + crypto |
+| D3.11 | Voice biometric (audio crate) | Partial speech path | Present under same policy |
+| D3.12 | Multimodal bio fusion | Missing | Present |
+| D3.13 | Affect proposals + uncertainty | Missing | Present (opt-in) |
+| D3.14 | AU-lite / micro-event proposals | Missing | Present |
+| D3.15 | Biosignal → graph (no raw template) | Missing | Present |
+| D3.16 | Contact PPG validation harness | Missing | COMPLETE-WITH-GATE |
+
+### D4 — Selfhood policy & surveillance governance
+
+| ID | Capability | Now | Target |
+|----|------------|-----|--------|
+| D4.01 | Purpose-bound biosense consent | Missing | Present |
+| D4.02 | Deontic norms for biometric processing | Partial deontic engine | Present wired |
+| D4.03 | SPARQL-MM over vision observations | Partial | Present |
+| D4.04 | SPARQL-FED policy ask/answer | Partial federation catalog | Present for biometric policy |
+| D4.05 | CCTV pipeline policy filter | Missing | Present |
+| D4.06 | Multi-principal / multi-camera graph | Missing | Present |
+| D4.07 | Cross-border / jurisdiction tags on policy | Missing | Present |
+| D4.08 | Duress / sanctuary interaction | Partial sanctuary | Present |
+| D4.09 | Mindware–biometric co-binding | Missing | Present |
+| D4.10 | Rights audit trail (Six Vectors where wired) | Partial | Present |
+
+### D5 — 3D, manufacture, training geometry
+
+| ID | Capability | Now | Target |
+|----|------------|-----|--------|
+| D5.01 | MeshIR + validate | Present | Present |
+| D5.02 | OBJ export | Present | Present |
+| D5.03 | **STL** export (3D print) | Missing | Present |
+| D5.04 | **3MF** / print metadata | Missing | Present |
+| D5.05 | glTF/GLB export | Partial core render path | Present from vision handoff |
+| D5.06 | Image→3D (heightfield) | Present | Present |
+| D5.07 | Image→3D multi-view / better recon | Missing | Present |
+| D5.08 | Photogrammetry pipeline (multi-image) | Missing | Present |
+| D5.09 | Mesh repair for print (manifold, thickness) | Partial geometry tools | Present print checklist |
+| D5.10 | Units / scale / printer envelope checks | Missing | Present |
+| D5.11 | Synthetic training scenes (vision) | Present synthetic | Present + mesh labels |
+| D5.12 | Synthetic 3D corpora for ML training | Partial | Present |
+| D5.13 | `.10d` / Q42 geometry handoff | Present | Present |
+| D5.14 | Twin eligibility + A1 engineering preview | Present | Present; deepen FEA only with honesty |
+
+### D6 — Engineering / physics / math (existing → vision-linked)
+
+*Already substantial in-tree; excellence = **wire** to vision meshes and print validation.*
+
+| ID | Capability area (existing modules) | Now | Target for vision programme |
+|----|--------------------------------------|-----|-----------------------------|
+| D6.01 | Computational geometry (Delaunay, CSG, remesh, Poisson, …) | Present | Present + vision mesh ingest |
+| D6.02 | FEM / structural / thermal / vibration | Present engineering_analysis | Print/stress **preview** with assurance class |
+| D6.03 | CFD / fluid | Present (partial) | Optional vertical |
+| D6.04 | Physics ODE / fields / MD | Present physics_simulation | Support synthetic training & biomechanics later |
+| D6.05 | Linear algebra / multivar calculus | Present | Support recon/calib numerics |
+| D6.06 | Symbolic math | Present | Documentation / teaching vertical |
+| D6.07 | Assurance A0–A4 honesty | Documented | Never claim A4 from software alone |
+
+### D7 — Biology & clinical structure
+
+| ID | Capability | Now | Target |
+|----|------------|-----|--------|
+| D7.01 | Medical imaging DSP / records | Partial medical_computing | Present under Wellfair sensitivity |
+| D7.02 | Anatomy mesh library / QApp | Partial Anatomy QApp | Present + SPARQL anatomy |
+| D7.03 | Microscopy / slide pipeline | Missing | Present when product needs |
+| D7.04 | Cell/organism tracking | Missing | Present research vertical |
+| D7.05 | Biomarker / condition graph | Partial Anatomy knowledge | Present |
+| D7.06 | Cheminformatics / drug discovery libs | Present specialized | Link when molecular imaging |
+| D7.07 | Clinical formulas (non-vision) | Present | Keep separate; no false imaging diagnosis |
+| D7.08 | HIPAA-class process notes | Partial compliance module | Present software-side only |
+| D7.09 | Bio twin (viz-only default) | Twin viz-only | Same A1 honesty as engineering |
+
+### D8 — Multimodal & time
+
+| ID | Capability | Now | Target |
+|----|------------|-----|--------|
+| D8.01 | Shared media clock | Present audio | Present AV |
+| D8.02 | Non-causal AV correlation | Present | Present |
+| D8.03 | Joint biosense (video pulse + audio breath) | Missing | Present |
+| D8.04 | Cross-modal training pairs export | Missing | Present |
+
+### D9 — Product surfaces & packaging
+
+| ID | Capability | Now | Target |
+|----|------------|-----|--------|
+| D9.01 | Studio Vision workbench | Partial | Present classical + biosense |
+| D9.02 | Listen / Wellfair handoff | Partial | Present |
+| D9.03 | Library model/ontology catalogue | Present seed | Present biosense models |
+| D9.04 | WASM/edge capability profiles | Present pattern | Declared biosense subset |
+| D9.05 | Desktop camera + consent UX | Partial | Present |
+
+---
+
+## 3. Requirements (cross-cutting)
+
+### R1 — Rights & selfhood (hard requirements)
+
+| Req | Statement |
+|-----|-----------|
+| R1.1 | Biometric templates and mindware unlock material are **selfhood**; default sanctuary / highest agency domain. |
+| R1.2 | Processing requires **purpose-bound consent**; missing purpose → fail closed. |
+| R1.3 | Principal can **revoke** templates and purposes; revoke is cryptographically meaningful. |
+| R1.4 | Graph may hold **observations and policy**, never raw template bytes in NQuins. |
+| R1.5 | Surveillance/CCTV nodes must support **policy check before** identification/enrolment. |
+| R1.6 | Affect outputs are **proposals** with uncertainty and non-claims; never silent facts. |
+| R1.7 | Multi-person frames: only consented primary (or explicit multi-consent). |
+| R1.8 | Audit: who / when / why / what / where / cost for biometric and surveillance decisions. |
+
+### R2 — Engineering quality (hard requirements)
+
+| Req | Statement |
+|-----|-----------|
+| R2.1 | Pure Rust product path; no required OpenCV/cloud biometrics. |
+| R2.2 | Zero-heap hot paths for kernels; caller buffers. |
+| R2.3 | rPPG/EVM report **confidence/SNR/failure reasons**; refuse over invent. |
+| R2.4 | Print exports: manifold / units / scale checks before “print-ready” label. |
+| R2.5 | Assurance class on engineering claims (A0–A4); no fake A4. |
+| R2.6 | Tests: synthetic fixtures mandatory; real corpora COMPLETE-WITH-GATE. |
+| R2.7 | Method/model hashes on every biosense and detector result. |
+| R2.8 | Deterministic seeds for synthetic training corpora. |
+
+### R3 — Query & federation (hard requirements)
+
+| Req | Statement |
+|-----|-----------|
+| R3.1 | SPARQL-MM over vision/audio **observations** without template export. |
+| R3.2 | SPARQL-FED (or equivalent federated ask) for **biometric policy permit/deny**. |
+| R3.3 | Deontic compile from N3/policy UI into enforceable norms. |
+| R3.4 | Camera/node identity bound in context field of policy quins. |
+
+### R4 — 3D manufacture & training (hard requirements)
+
+| Req | Statement |
+|-----|-----------|
+| R4.1 | STL (and preferably 3MF) export from validated MeshIR. |
+| R4.2 | Print readiness report (holes, non-manifold, thin walls heuristic). |
+| R4.3 | Link to engineering_analysis for **optional** stress/thermal **preview** with honesty. |
+| R4.4 | Synthetic 3D + 2D labelled sets for training; provenance receipts. |
+| R4.5 | Photogrammetry / multi-view path beyond heightfield for excellence. |
+
+### R5 — Biology (hard requirements)
+
+| Req | Statement |
+|-----|-----------|
+| R5.1 | Clinical/bio imaging paths inherit Wellfair sensitivity and selfhood where biometric. |
+| R5.2 | No automated diagnosis claim from vision without clinical process + human. |
+| R5.3 | Anatomy meshes addressable in graph (existing Anatomy direction). |
+| R5.4 | Microscopy/tracking verticals are first-class when built — same media→graph pattern. |
+
+---
+
+## 4. Design principles (implementation)
+
+1. All product path **Rust**; no Python libraries.  
+2. Integrated with graph, Library, sanctuary, Studio, Wellfair.  
+3. Zero-heap hot paths; cold arenas for construction.  
+4. Pixels/templates out of NQuins.  
+5. Epistemic honesty always.  
+6. Shared wgpu; CPU oracles.  
+7. OpenCV **test oracle** optional only.  
+8. Licence-clean defaults; principal gates for weights/corpora.  
+9. Capability registry = truth.  
+10. **Selfhood bar** for biometrics/mindware.  
+11. **Surveillance is policy-subject**, not default owner of faces.  
+12. Reuse engineering/geometry/physics libs — do not reimplement FEM for vanity.  
+13. Libraryization: `cv/`, `biosense/`, `spatial/` export formats, policy modules.  
+14. No “it’ll do” for biosense or print-ready labels.
+
+### 4.1 Module layout (target)
 
 ```text
 crates/qualia-vision/src/
-  cv/                 # classical capability classes
-    mod.rs            # capability registry
-    buffer.rs, color.rs, filter.rs, morph.rs, edges.rs, hist.rs
-    transform.rs, contours.rs, features/, calib/, flow.rs, photo.rs, codecs.rs
-  biosense/           # excellence vertical — biometrics, affect, micro-change
-    mod.rs            # registry + consent gates
-    face_mesh.rs      # landmarks / mesh (not identity claim by default)
-    rppg.rs           # remote photoplethysmography (pulse)
-    magnification.rs  # Eulerian / motion magnification of micro-changes
-    biometrics/       # template extract/compare under sanctuary policy
-    affect.rs         # affective proposals + uncertainty (never silent fact)
-    liveness.rs       # anti-spoof / presentation attack detection
-    quality.rs        # face/frame quality for biosignal validity
-    fusion.rs         # multimodal (vision + audio physiology cues)
-    excellence.rs     # composed clinical-honest pipelines
+  cv/                 # classical D1
+  biosense/           # D3 excellence
+  spatial/            # existing + STL/3MF/print check (D5)
+  policy/             # D4 biometric & CCTV policy compile helpers (or client-core)
+  excellence.rs       # composed recipes
+
+# Prefer existing crates for:
+#   computational_geometry, engineering_analysis, physics_simulation,
+#   medical_computing, wellfare, sparql / sparql_mm, deontic_logic
 ```
 
 ---
 
-## 4. Capability matrix
-
-### 4.1 Floor — classical classes (checklist labels only)
-
-| Capability class | Status now | Excellence target |
-|------------------|------------|-------------------|
-| Buffer / ROI / arith / channels | Partial | Present + deterministic + GPU path where hot |
-| Filters / morph / colour / edges / hist / contours / draw | Partial | Present + forge ports + Studio |
-| Codecs (PNG/JPEG/…) | Partial | Present + provenance on import |
-| Video file / camera I/O | Missing–partial | Present; camera **intent-gated** |
-| Desktop CV windows | N/A | Studio is UI |
-| Optical flow / BG / classical track | Partial tracker | Present + fused with semantic tracks |
-| Homography / PnP / stereo / calibrate | Missing | Present + mesh/twin handoff |
-| Features detect/describe/match | Missing | Present + graph-linkable descriptor digests |
-| Dense/learned detectors | Scaffold | Production weights COMPLETE-WITH-GATE + H1 |
-| Denoise / inpaint | Missing | Present + honesty |
-| Stitch / panorama | Missing | Optional vertical |
-| Pipeline scheduling | Partial Forge | Explicit vision schedules |
-
-### 4.2 Excellence vertical — biosensing, micro-change, biometrics, affect
-
-**Bar: excellence, not scaffold.** Every row below must ship with consent gates, quality metrics, uncertainty, synthetic+real eval slots, and fail-closed behaviour when signal quality is insufficient.
-
-| Capability class | Status now | Excellence target (2026 product) |
-|------------------|------------|----------------------------------|
-| **Face landmarks / mesh** | Missing | Dense landmarks + temporal track; quality score; not “identity” unless biometric mode on |
-| **Remote PPG (pulse / HR)** | Missing | Multi-ROI rPPG (POS/CHROM-class + spectral peak); HR + HRV proxies; SNR / confidence; motion rejection |
-| **Respiration from video** | Missing | Motion- or colour-derived respiratory rate with confidence |
-| **Eulerian video magnification** | Missing | Colour + motion magnification of micro-changes (pulse visualisation, micro-tremor) with stability controls |
-| **Lagrangian / feature-path magnification** | Missing | Track-then-amplify path for structured micro-motion |
-| **Biometric face template** | Partial (vault RDF elsewhere) | Extract/compare under **selfhood** policy; template encryption; no silent secondary use |
-| **Multi-modal biometrics** | Partial (audio path separate) | Face + voice (+ optional gait) fusion **only** with explicit purpose binding |
-| **Liveness / PAD** | Missing | Presentation-attack detection; fail closed on spoof suspicion |
-| **Affective sensing** | Missing | Valence/arousal or discrete classes as **proposals** with uncertainty; literature-honest limits; no “truth” UI default |
-| **Micro-expression / AU-lite** | Missing | Action-unit or temporal micro-event proposals; not courtroom-grade claims |
-| **Biosignal graph compile** | Missing | NQuins: observation + confidence + method hash + consent context; sanctuary routing |
-| **Wellfair / health handoff** | Partial vault | Optional export to Wellfair with purpose + sensitivity |
-
-### 4.3 Ceiling — exceed the market (Qualia-only)
-
-| Excellence capability | Why it beats a vendor CV lib / cloud biometrics SDK in 2026 |
-|----------------------|--------------------------------------------------------------|
-| **Epistemic graph** | Biosignals and affect are **proposals** with reject/correct; not sticky labels |
-| **Selfhood / sanctuary** | Biometric templates under highest agency-domain bar; local-only by default |
-| **Consent as code** | Capture + process + store each require intent; revoke stops use |
-| **Clinical-honest metrics** | SNR, confidence, failure reasons — not a single magic “emotion %” |
-| **Micro-change amplification** | Research-grade EVM-class viz **and** quantitative rPPG in one stack |
-| **Geometry continuum** | Face mesh / depth → MeshIR when useful for twins |
-| **Multimodal** | Shared clock with audio (voice stress/physiology cues) |
-| **Local GPU + no cloud** | Same process; no silent off-device face API |
-| **Library / rights audit** | Who processed biometrics, when, purpose, cost vectors |
-
-**Market “best” claim** requires **floor + biosense excellence + integration** — all three.
-
----
-
-## 5. Waves (VX — vision excellence)
+## 5. Waves
 
 ### VX0 — Registry, ADR, fixtures
 
-| Slice | Deliver | Acceptance |
-|-------|---------|------------|
-| VX0.1 | ADR: excellence goal; OpenCV = floor checklist | Written |
-| VX0.2 | Machine-readable capability registry in `cv/` | List status Present/Partial/Missing/Beyond |
-| VX0.3 | Fixtures: edges, checkerboard, warp, stereo pair synthetic | Offline |
-| VX0.4 | Progress log `native-vision-capability-excellence-PROGRESS-LOG.md` | Created |
+- ADR: excellence + selfhood biometrics + surveillance policy + 3D manufacture + biology  
+- Capability registry rows for **D1–D9**  
+- Fixtures: edges, checkerboard, synthetic PPG video, synthetic micro-motion, print mesh  
+- Progress log  
 
-### VX1 — Essential image processing (clear the floor)
+### VX1 — Classical image processing (D1 essentials)
 
-Colour, blur/median/bilateral, morph, edges, hist, contours, draw, ROI/channels.  
-**Exit:** classical preprocess fully in-tree; no OpenCV needed for that class.
+Colour, filters, morph, edges, hist, contours, draw, ROI.
 
-### VX2 — Codecs + I/O
+### VX2 — Codecs + capture (D1.10–12, D9)
 
-PNG/JPEG (+ WebP as needed); video file; camera with consent.  
-**Exit:** media enters Qualia without vendor codecs stack.
+PNG/JPEG; video file; camera consent UX.
 
-### VX3 — Features + warps
+### VX3 — Features + warps (D1.07–08)
 
-ORB-class + match + RANSAC homography; warp affine/perspective.  
-**Exit:** align/register without OpenCV; descriptor digests optional to graph.
+ORB-class, match, RANSAC, warp.
 
-### VX4 — Calib / stereo / depth → geometry
+### VXB — Biosensing excellence (D3) — **primary, not polish**
 
-Zhang-class calib, PnP, stereo lite → MeshIR / `.10d` / geometry workspace.  
-**Exit:** depth/pose vertical exceeds heightfield-only; twin-ready.
+| Subwave | Content |
+|---------|---------|
+| **VXB0** | Consent, purpose, quality gates, audit |
+| **VXB1** | Face mesh / landmarks |
+| **VXB2** | Multi-ROI rPPG + SNR/confidence |
+| **VXB3** | Eulerian (and Lagrangian) micro-change magnification |
+| **VXB4** | Respiration + audio fusion |
+| **VXB5** | Biometric vault, liveness, revoke, voice co-policy |
+| **VXB6** | Affect proposals + non-claims + reject/correct |
+| **VXB7** | Recipes: self-monitor pulse, see-my-pulse, sanctuary unlock, affect journal |
 
-### VX5 — Motion excellence
+### VXP — Policy & surveillance (D4) — **paired with VXB**
 
-LK / dense flow class; BG subtract; tracker fuses flow/features + semantic IDs.  
-**Exit:** video analysis as platform capability.  
-**Note:** feeds biosense (stable ROIs, motion rejection for rPPG).
+| Subwave | Content |
+|---------|---------|
+| **VXP0** | Policy vocabulary (camera, biometric_class, purpose, place, time) |
+| **VXP1** | Deontic compile + evaluate_processing_act() |
+| **VXP2** | SPARQL-MM observation queries (no template leak) |
+| **VXP3** | SPARQL-FED / federated **policy ask** (permit/deny + reason) |
+| **VXP4** | CCTV compliance mode: stage filter by policy |
+| **VXP5** | Studio/Library authoring of biometric use policy |
 
-### VX6 — Photo + optional stitch
+### VX3D — Manufacture & training geometry (D5 + D6 wire-up)
 
-Denoise, inpaint; optional panorama.  
-**Exit:** restoration-class ops in-tree.
+| Subwave | Content |
+|---------|---------|
+| **VX3D0** | STL + 3MF export from MeshIR |
+| **VX3D1** | Print readiness report (manifold, units, envelope) |
+| **VX3D2** | Multi-view / photogrammetry path (beyond heightfield) |
+| **VX3D3** | Synthetic 3D+2D training corpora + receipts |
+| **VX3D4** | Optional FEM/thermal **preview** via engineering_analysis (A1 honesty) |
+| **VX3D5** | Training export for local ML (masks, depth, mesh labels) |
 
-### VX7 — Learned vision (gated)
+### VXBIO — Biology applications (D7)
 
-Licensed backbone; QVWT/P64/ONNX policy; H1 metrics split synthetic/real.  
-**Exit:** COMPLETE-WITH-GATE only with principal assets.  
-**Note:** face mesh / affect heads may load here under consent.
+| Subwave | Content |
+|---------|---------|
+| **VXBIO0** | Sensitivity/selfhood routing for bio/clinical images |
+| **VXBIO1** | Anatomy mesh ↔ graph completeness (build on Anatomy QApp) |
+| **VXBIO2** | Medical imaging pipeline hygiene (DSP existing → vision buffers) |
+| **VXBIO3** | Microscopy / cell track vertical (if demanded) |
+| **VXBIO4** | Explicit non-diagnosis UI and software assurance notes |
 
-### VXB — Biosensing excellence suite (**core excellence vertical, not optional polish**)
+### VX4 — Calib / stereo / depth (D1 + D5)
 
-Objective: **best-in-class local biosensing stack for a 2026 rights-centric product** — quantitative, consent-bound, uncertainty-aware. Not a carnival pulse toy.
+Zhang, PnP, stereo → MeshIR.
 
-#### VXB0 — Policy + consent + quality gates
+### VX5 — Motion (D1.09) — supports rPPG stability
 
-| Slice | Deliver | Acceptance |
-|-------|---------|------------|
-| VXB0.1 | ADR: biosense purpose binding, sanctuary default, selfhood domain | Written |
-| VXB0.2 | `BiosenseConsent` / purpose enum (wellfair self-monitor / research / security) | Fail closed without grant |
-| VXB0.3 | Frame quality metrics (blur, lighting, face fraction, motion energy) | Reject low-quality windows with reason codes |
-| VXB0.4 | Audit: who/when/purpose/method_hash for each biosense run | JSONL + optional quins |
+### VX6 — Photo / stitch
 
-#### VXB1 — Face mesh / landmarks (foundation for everything else)
+### VX7 — Licensed learned models (D2)
 
-| Slice | Deliver | Acceptance |
-|-------|---------|------------|
-| VXB1.1 | Real-time face detect + **68+ or mesh** landmarks (Rust; weights licence-gated) | Temporal stability tests |
-| VXB1.2 | Multi-face handling + primary subject selection under consent | Explicit multi-person policy |
-| VXB1.3 | Landmark track with dropout recovery | Synthetic + real-slot eval |
+### VX8 — Composition, ledger, product surfaces (D8–D9)
 
-#### VXB2 — Remote PPG (pulse) — excellence bar
-
-| Slice | Deliver | Acceptance |
-|-------|---------|------------|
-| VXB2.1 | Multi-ROI skin segmentation (cheeks / forehead) | ROI quality scores |
-| VXB2.2 | At least two rPPG algorithms (e.g. POS + CHROM or equivalent) + ensemble | Published method hashes |
-| VXB2.3 | Spectral peak HR estimate + confidence / SNR | Synthetic PPG-modulated video fixtures |
-| VXB2.4 | HRV-class proxies only when window/SNR sufficient | Fail closed with reason |
-| VXB2.5 | Motion & illumination artefact rejection | Stress fixtures |
-| VXB2.6 | Optional contact PPG compare harness (principal device) | COMPLETE-WITH-GATE until principal supplies |
-
-**Excellence:** report **confidence and method**, not a naked BPM. Prefer silent refusal over wrong pulse.
-
-#### VXB3 — Micro-change amplification (see the invisible)
-
-| Slice | Deliver | Acceptance |
-|-------|---------|------------|
-| VXB3.1 | **Eulerian** colour magnification (pulse-visible skin) | Synthetic sinusoidal colour fixture |
-| VXB3.2 | **Eulerian** motion magnification (micro-tremor / breathing) | Synthetic sub-pixel motion fixture |
-| VXB3.3 | Stability: attenuate noise explosion; clamp gain; artefact flags | Documented limits |
-| VXB3.4 | Optional Lagrangian path (track + amplify) | Compare to Eulerian on fixtures |
-| VXB3.5 | Studio: side-by-side original vs magnified + parameter honesty | Dogfood |
-
-**Excellence:** research-grade controls (spatial pyramid / temporal bandpass design documented), not a single fixed filter demo.
-
-#### VXB4 — Respiration & derived physiology
-
-| Slice | Deliver | Acceptance |
-|-------|---------|------------|
-| VXB4.1 | Respiratory rate from chest/shoulder motion or rPPG harmonics | Confidence-gated |
-| VXB4.2 | Fusion with audio breath cues when consented | Multimodal clock |
-
-#### VXB5 — Biometrics (selfhood-grade)
-
-| Slice | Deliver | Acceptance |
-|-------|---------|------------|
-| VXB5.1 | Face embedding extract → **encrypted template** store | Never plain graph |
-| VXB5.2 | 1:1 verify / 1:N identify only with purpose + threshold + audit | Deny by default |
-| VXB5.3 | Liveness / PAD (texture + challenge or passive) | Spoof fixtures fail closed |
-| VXB5.4 | Voice biometric path via `qualia-audio` under same consent model | Cross-crate policy |
-| VXB5.5 | Template revoke / rotate | Cryptographic erase path |
-
-**Excellence:** security properties + UX that does **not** reintroduce WebID-TLS-style nag; decisions are pin/purpose based.
-
-#### VXB6 — Affective sensing (scientific honesty required)
-
-| Slice | Deliver | Acceptance |
-|-------|---------|------------|
-| VXB6.1 | Affect model outputs **valence/arousal** and/or discrete classes as **proposals** | Uncertainty always shown |
-| VXB6.2 | Explicit **non-claims** UI: not diagnosis, not courtroom truth, culture-sensitive limits | Copy + machine flags |
-| VXB6.3 | Optional AU-lite / temporal micro-event detector | Separate from “emotion label” |
-| VXB6.4 | Human reject/correct path into graph | Same pattern as vision detector |
-| VXB6.5 | Eval slots: synthetic + principal-approved corpora only | No scraped faces |
-
-**Excellence:** best-in-class means **best-governed and best-calibrated**, not highest claimed accuracy on a marketing slide. Overclaiming is a product failure.
-
-#### VXB7 — Integration recipes
-
-| Recipe | Pipeline |
-|--------|----------|
-| **Self-monitor pulse** | consent → quality → face mesh → rPPG → BPM+conf → Wellfair optional → audit |
-| **See my pulse** | consent → EVM colour mag → side-by-side → no identity claim |
-| **Sanctuary unlock assist** | consent security purpose → liveness → 1:1 verify → fail closed |
-| **Affect journal (opt-in)** | consent research/wellfair → proposals only → human confirm |
-
-### VX8 — Excellence composition + product surface
-
-| Slice | Deliver |
-|-------|---------|
-| VX8.1 | End-to-end recipes: *import → filter → feature → pose → mesh → quins → Studio* |
-| VX8.2 | Biosense recipes VXB7 in Studio / Wellfair |
-| VX8.3 | Capability ledger Present/Partial/Missing/Beyond for **cv + biosense** |
-| VX8.4 | Optional OpenCV **oracle** feature for classical regression only |
-| VX8.5 | WASM/edge: declared subset (e.g. rPPG offline window; no heavy PAD) |
-| VX8.6 | Rights/audit dogfood: biometric and affect processing appear in liability/cost trails when wired |
-
-**Exit for “2026 product excellence”:**  
-floor classical classes Present (or N/A); **VXB pulse + magnification + consent-grade biometrics + honest affect** dogfoodable; inventory honest; **no vendor OpenCV / no cloud face API** on product default path.
+- Recipes spanning classical + biosense + print + policy  
+- Full capability ledger green/honest  
+- Studio Vision + Wellfair + policy authoring  
+- WASM subset declaration  
+- Rights/cost trails for biometric acts  
 
 ---
 
-## 6. Priority
+## 6. Priority order
 
 ```text
-VX0 registry/ADR (include biosense capability rows)
- → VX1 essential image processing
- → VX2 codecs/I/O + camera consent
- → VX3 features + warps
- → VXB0 consent/quality  ┐
- → VXB1 face mesh        ├─ biosense excellence (parallel once VX1–2 solid)
- → VXB2 rPPG             │
- → VXB3 magnification    ┘
- → VX5 motion (feeds rPPG stability) interleaved as needed
- → VXB4 respiration / VXB5 biometrics / VXB6 affect
- → VX4 calib/stereo when depth/pose demanded
- → VX6 photo · VX7 licensed models
- → VX8 ledger + UI + recipes
+VX0  registry + selfhood/surveillance/3D/bio ADRs
+ → VX1 classical image processing
+ → VX2 codecs + camera consent
+ → VXB0 + VXP0  consent + policy vocab (parallel)
+ → VXB1 face mesh
+ → VXB2 rPPG + VXB3 magnification   ← excellence biosense
+ → VXP1–VXP4  deontic + SPARQL-MM + FED policy
+ → VX3 features/warps
+ → VX3D0–VX3D1  STL/print readiness   ← manufacture
+ → VX5 motion (rPPG support)
+ → VXB5 biometrics vault + liveness
+ → VXB6 affect (opt-in)
+ → VX3D2–VX3D5 recon + training corpora
+ → VXBIO0–VXBIO2 biology floor
+ → VX4 stereo/calib as needed
+ → VX6–VX7 photo + licensed models
+ → VX8 full excellence ship
 ```
-
-**Biosensing is not deferred to “later polish.”** It is a **primary excellence track**, started as soon as basic buffers/colour/camera quality exist.
 
 ---
 
-## 7. Success criteria (excellence, not “it’ll do”)
+## 7. Success criteria (2026 excellence)
 
-**Success is:**
-
-1. Capability registry shows **Present** for every class we claim for the 2026 product — **including biosense rows we advertise**.  
-2. Those classes are **Rust, in-tree**, tested, with **documented error/confidence behaviour**.  
-3. Product features **do not require** vendoring OpenCV or cloud biometrics APIs.  
-4. Excellence pipelines run end-to-end (classical **and** biosense recipes).  
-5. Biometrics respect **selfhood / sanctuary / purpose binding**; affect never presents as silent fact.  
-6. rPPG and magnification report **confidence / SNR / failure reasons**.  
-7. Honesty labels everywhere (method hash, synthetic vs real eval, weight licence).
-
-**Failure modes to avoid:**
-
-- Calling the work “parity,” “clone,” or shipping a **demo-grade** pulse/emotion toy as product.  
-- Biometrics without consent, liveness, or revoke.  
-- Emotion labels without uncertainty and non-claims.  
-- Kernels without integration into graph/Studio/Wellfair.  
-- Pulling OpenCV or cloud face APIs into the product default path.
+1. **D1–D3** claimed rows are Present (or N/A) with tests and confidence behaviour.  
+2. **D4:** principal can author biometric policy; CCTV-class ask gets permit/deny via graph/FED path.  
+3. **D5:** validated mesh → **STL/3MF** + print readiness; training corpora exportable with provenance.  
+4. **D6:** engineering previews use existing solvers with **assurance labels**.  
+5. **D7:** bio/clinical paths respect sensitivity; no fake diagnosis.  
+6. Biometrics/mindware treated as **inalienable selfhood** in code paths, not only docs.  
+7. No product default dependency on OpenCV or cloud biometrics.  
+8. Registry + progress log match reality (no silent incomplete).
 
 ---
 
 ## 8. Effort honesty
 
-| Wave | Note |
-|------|------|
-| VX0–VX1 | Foundation; multi-session |
-| VX2–VX3 | High product leverage |
-| **VXB0–VXB3** | **Large** — research-grade rPPG + EVM is multi-session excellence work |
-| VXB5–VXB6 | Security + ethics + model gates |
-| VX4, VX6 | Verticals by demand |
-| VX7 | Human licence/corpus gates |
-| Full OpenCV CUDA-contrib | Not required for excellence claim |
-
-Excellence is **integrated completeness + measurement quality + rights**, not “every OpenCV contrib module.”
+| Block | Scale |
+|-------|--------|
+| VX0–VX2 | Foundation multi-session |
+| VXB0–VXB3 | **Large** research-grade biosense |
+| VXP | Medium–large (policy + FED wiring) |
+| VX3D | Medium (formats + recon depth) |
+| VXBIO | Medium; deep microscopy is multi-session |
+| VX8 | Integration and dogfood |
 
 ---
 
@@ -383,27 +443,55 @@ Excellence is **integrated completeness + measurement quality + rights**, not �
 
 | ID | Ask | Default if silent |
 |----|-----|-------------------|
-| **VX-D1** | Fill through VX3 first for classical floor? | **Yes** |
-| **VX-D2** | Optional OpenCV test oracle? | Yes; never product default |
-| **VX-D3** | Camera vs file I/O first? | File first; camera for biosense dogfood soon after |
-| **VX-D4** | Patented detectors? | No — ORB-class default |
-| **VX-D5** | Public “best in class 2026” marketing claim timing? | Only after VX8 + VXB2/VXB3 ledger green |
-| **VX-B1** | Affective sensing on by default in product? | **No** — opt-in purpose only |
-| **VX-B2** | Biometric unlock as security feature in first excellence ship? | Principal call; if yes, liveness mandatory |
-| **VX-B3** | Contact PPG / clinical device for rPPG validation corpus? | COMPLETE-WITH-GATE until supplied |
-| **VX-B4** | Multi-person biosense in frame? | Default: primary subject only; others require explicit consent |
+| VX-D1 | Classical floor through VX3 first? | **Yes** |
+| VX-D2 | OpenCV test oracle only? | Yes |
+| VX-B1 | Affect on by default? | **No** — opt-in |
+| VX-B2 | Biometric unlock in first excellence ship? | Principal; liveness mandatory if yes |
+| VX-B3 | Contact PPG corpus for rPPG validation? | COMPLETE-WITH-GATE |
+| VX-P1 | Publish biometric policy vocabulary publicly? | Principal |
+| VX-P2 | Multi-camera federation in first ship? | Single-node policy first; FED next |
+| VX-3D1 | STL vs 3MF priority? | **STL first**, 3MF next |
+| VX-3D2 | Photogrammetry in first excellence ship? | After STL + heightfield path solid |
+| VX-BIO1 | Microscopy in first ship? | No unless principal prioritises |
 
 ---
 
 ## 10. Immediate next step
 
-When Timothy says **execute vision-excellence** or **execute VX0**:
+When Timothy says **execute vision-excellence** / **VX0**:
 
-1. CLAIM `qualia-vision/src/cv/` **and** register `biosense/` capability rows in the registry (even if stub).  
-2. Land ADR (classical + biosense selfhood/consent) + fixtures + progress log.  
-3. Implement VX1; stand up VXB0 consent/quality in parallel when buffers exist.  
-4. After each wave: update registry + progress log + tests — **no silent “it’ll do.”**
+1. CLAIM `qualia-vision` cv/ + biosense/ registry stubs + policy vocabulary ADR.  
+2. Register **all D1–D9 rows** in machine-readable capability manifest.  
+3. Fixtures: classical + synthetic PPG + micro-motion + print mesh.  
+4. Progress log; then VX1 + VXB0/VXP0 in parallel as soon as buffers exist.
 
 ---
 
-*End of plan. Floor = classical capability classes. Excellence = biosensing + micro-change + consent-grade biometrics + honest affect + full platform integration. Implementation = pure Rust native, never a vendor clone, never a carnival demo.*
+## 11. One-page mental model
+
+```text
+                    ┌─────────────────────────────┐
+                    │  Principal selfhood vault     │
+                    │  biometrics · mindware        │
+                    │  purpose · revoke · audit     │
+                    └──────────────┬────────────────┘
+                                   │ policy / deontic
+           ┌───────────────────────┼───────────────────────┐
+           ▼                       ▼                       ▼
+    ┌─────────────┐         ┌─────────────┐         ┌─────────────┐
+    │ Vision/CV   │         │ Biosense    │         │ Surveillance│
+    │ classical   │────────▶│ rPPG·EVM·   │         │ CCTV node   │
+    │ learned     │         │ face mesh   │◀─SPARQL─│ FED ask     │
+    └──────┬──────┘         └──────┬──────┘  MM/FED └─────────────┘
+           │                       │
+           ▼                       ▼
+    ┌─────────────────────────────────────────────┐
+    │ MeshIR → STL/3MF · training corpora · twin  │
+    │ geometry · engineering preview (A1 honesty) │
+    │ biology/anatomy under Wellfair sensitivity  │
+    └─────────────────────────────────────────────┘
+```
+
+---
+
+*End of plan. Biometrics and mindware = inalienable self. Surveillance asks permission via graph. 3D print and training are first-class. Biology shares the same rights-aware media path. Classical CV is the floor; excellence is the whole diagram.*
