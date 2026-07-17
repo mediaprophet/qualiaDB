@@ -309,7 +309,7 @@ pub fn list_qlinks() -> Result<serde_json::Value, String> {
     Ok(serde_json::json!({ "bookmarks": list, "count": list.len() }))
 }
 
-/// Cookie transparency graph summary for current URL (v0 coverage).
+/// Cookie transparency graph summary for current URL (v0/v1 coverage).
 #[command]
 pub fn browser_cookie_summary(url: String) -> Result<serde_json::Value, String> {
     let root = std::path::PathBuf::from(qualia_client_core::state::dirs_default_path());
@@ -326,6 +326,48 @@ pub fn browser_cookie_observe(url: String, set_cookies: Vec<String>) -> Result<s
         .unwrap_or(0);
     let g = qualia_client_core::cookie_graph::observe_set_cookies(&root, &url, &set_cookies, now)?;
     serde_json::to_value(g).map_err(|e| e.to_string())
+}
+
+/// Refresh cookie graph from the content webview jar (K1 — Tauri cookies_for_url).
+#[command]
+pub fn browser_cookies_refresh(app: AppHandle, url: Option<String>) -> Result<serde_json::Value, String> {
+    let url = url
+        .filter(|u| !u.trim().is_empty())
+        .unwrap_or_else(|| crate::browser::last_url());
+    crate::browser::cookies::refresh_jar_for_url(&app, &url)
+}
+
+/// List suggested trust catalog (empty until principal curates).
+#[command]
+pub fn browser_trust_list_suggested() -> Result<serde_json::Value, String> {
+    let root = std::path::PathBuf::from(qualia_client_core::state::dirs_default_path());
+    let cat = qualia_client_core::webizen_trust::SuggestedTrustCatalog::load_for_storage(&root)?;
+    serde_json::to_value(cat).map_err(|e| e.to_string())
+}
+
+/// Import a suggested catalog entry into the live trust store.
+#[command]
+pub fn browser_trust_import_suggested(id: String, enable: Option<bool>) -> Result<serde_json::Value, String> {
+    let root = std::path::PathBuf::from(qualia_client_core::state::dirs_default_path());
+    let cat = qualia_client_core::webizen_trust::SuggestedTrustCatalog::load_for_storage(&root)?;
+    let base = qualia_client_core::webizen_trust::bundled_catalog_path()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+        .unwrap_or_else(|| root.join("webizen"));
+    let mut store = qualia_client_core::webizen_trust::TrustStore::load(&root);
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let a = qualia_client_core::webizen_trust::import_suggested_into_store(
+        &mut store,
+        &cat,
+        &id,
+        &base,
+        now,
+        enable.unwrap_or(false),
+    )?;
+    store.save(&root)?;
+    serde_json::to_value(a).map_err(|e| e.to_string())
 }
 
 #[command]
@@ -7429,6 +7471,9 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         browser_agent_ask,
         browser_cookie_summary,
         browser_cookie_observe,
+        browser_cookies_refresh,
+        browser_trust_list_suggested,
+        browser_trust_import_suggested,
         list_qlinks,
         resolve_qdp_did,
         get_ns_records_for_did,

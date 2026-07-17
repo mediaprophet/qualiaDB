@@ -54,7 +54,7 @@ impl CookieGraph {
         Self {
             version: 1,
             nodes: Vec::new(),
-            coverage_note: "v0: agent Set-Cookie + explicit host observations only — not full browser cookie-jar parity.".into(),
+            coverage_note: "v1: WebView jar (cookies_for_url) + agent Set-Cookie observe — not complete Chromium parity.".into(),
         }
     }
 

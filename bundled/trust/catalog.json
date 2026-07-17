@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "description": "Empty suggested trust catalog. Software provides means only. Principal (Timothy) curates real PEM/DID entries; agents must not invent roots. Place PEMs under bundled/trust/roots/ and list them here with enabled_by_default: false until approved.",
+  "entries": []
+}

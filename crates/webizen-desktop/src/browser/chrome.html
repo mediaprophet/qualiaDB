@@ -116,6 +116,7 @@
       <button type="button" id="btn-bookmark" title="Bookmark to Library">🔖</button>
       <div id="trust" title="Trust indicator (your store + policy)">trust: —</div>
       <button type="button" id="btn-trust" title="Trust store">Trust</button>
+      <button type="button" id="btn-cookies" title="Cookie jar">Cookies</button>
       <button type="button" id="btn-agent" title="Browser agent">Agent</button>
     </div>
     <div id="body-row">
@@ -129,8 +130,9 @@
           <textarea id="trust-pem" rows="3" placeholder="Or paste PEM (BEGIN CERTIFICATE)"></textarea>
           <button type="submit">Add anchor</button>
           <div style="font-size:0.68rem;color:#64748b;line-height:1.35;">
-            Custom PEM/DID govern agent fetch + this badge. OS still validates WebView TLS unless cert-override is active (not yet).
+            Custom PEM/DID govern agent fetch + this badge. OS still validates WebView TLS — cert-override is Conditional-Go (C1 COM attach not shipped). Suggested roots catalog is empty until you curate.
           </div>
+          <button type="button" id="btn-suggested" style="margin-top:0.25rem;">List suggested catalog</button>
         </form>
       </aside>
       <aside id="agent">
@@ -314,6 +316,24 @@
         setStatus("Bookmark failed: " + e);
       }
     });
+    $("btn-cookies").addEventListener("click", async () => {
+      const u = $("url").value || currentUrl;
+      try {
+        const raw = await invoke("browser_cookies_refresh", { url: u });
+        const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+        const n = data.cookie_count || data.synced || 0;
+        const third = (data.third_parties || []).join(", ") || "(none)";
+        alert(
+          "Cookies for " + u + "\n\n" +
+          "count=" + n + " synced=" + (data.synced || 0) + "\n" +
+          "third parties: " + third + "\n\n" +
+          (data.coverage_note || "")
+        );
+        setStatus("Cookies refreshed (" + n + ")");
+      } catch (e) {
+        setStatus("Cookies: " + e);
+      }
+    });
     $("btn-agent").addEventListener("click", () => {
       $("agent").classList.toggle("open");
       if ($("agent").classList.contains("open")) {
@@ -325,6 +345,21 @@
       if ($("trust-panel").classList.contains("open")) {
         $("agent").classList.remove("open");
         await refreshTrustPanel();
+      }
+    });
+    $("btn-suggested").addEventListener("click", async () => {
+      try {
+        const raw = await invoke("browser_trust_list_suggested", {});
+        const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+        const n = (data.entries || []).length;
+        alert(
+          "Suggested trust catalog (" + n + " entries)\n\n" +
+          (data.description || "") + "\n\n" +
+          (n ? (data.entries || []).map(e => e.id + " — " + e.label).join("\n")
+            : "(empty — principal curates; software provides means only)")
+        );
+      } catch (e) {
+        setStatus("Suggested catalog: " + e);
       }
     });
     $("trust-form").addEventListener("submit", async (e) => {

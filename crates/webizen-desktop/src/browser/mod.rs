@@ -7,6 +7,8 @@
 //! - **Default home** is the Chora-generated universe view (`chora-universe.html`), not DuckDuckGo.
 //! - Trust policy + agent logic: `qualia_client_core::{webizen_trust, browser_agent}`
 
+pub mod cookies;
+
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -322,7 +324,11 @@ pub fn status(app: &AppHandle) -> serde_json::Value {
         "substrate": "os-webview",
         "phases": ["P0", "P0.1", "P1-store", "P2-agent", "chora-home"],
         "url_sync": "poll browser_content_url ≤1s",
-        "note": "Default content is Chora universe (App). TLS for external https still uses the OS store.",
+        "cert_override": "unavailable",
+        "cert_override_note": "WebView2 ServerCertificateErrorDetected is Conditional-Go; not wired until C1 COM attach. OS still validates TLS.",
+        "cookie_jar": "webview_cookies_for_url",
+        "suggested_trust_catalog": "empty_until_principal_curates",
+        "note": "Default content is Chora universe (App). TLS for external https still uses the OS store unless cert-override is active.",
     })
 }
 

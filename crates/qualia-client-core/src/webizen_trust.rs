@@ -18,6 +18,9 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 pub const TRUST_STORE_FILE: &str = "webizen/trust_store.json";
+/// Suggested catalog (empty until principal curates). Relative to storage or bundled.
+pub const SUGGESTED_CATALOG_FILE: &str = "webizen/suggested_trust_catalog.json";
+pub const CATALOG_VERSION: u32 = 1;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -305,6 +308,217 @@ fn short_hash(bytes: &[u8]) -> String {
     hex::encode(&d[..8])
 }
 
+// ── Suggested trust catalog (T0/T1) — means only; no invented roots ──────────
+
+/// One **suggested** anchor. Never auto-enabled unless `enabled_by_default` is true
+/// (must stay false until the principal explicitly curates a default).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SuggestedAnchor {
+    pub id: String,
+    pub label: String,
+    /// Jurisdiction or community tag (e.g. "AU", "micro-commons") — free text.
+    #[serde(default)]
+    pub jurisdiction: String,
+    pub kind: AnchorKind,
+    /// Inline PEM / DID / label material. Prefer inline for small catalogs.
+    #[serde(default)]
+    pub material: String,
+    /// Optional path relative to catalog dir (e.g. `roots/example.pem`). Loaded if material empty.
+    #[serde(default)]
+    pub material_path: Option<String>,
+    /// Must be false for ship defaults until principal curates.
+    #[serde(default)]
+    pub enabled_by_default: bool,
+    #[serde(default)]
+    pub notes: String,
+    #[serde(default)]
+    pub source_url: Option<String>,
+    #[serde(default)]
+    pub license: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SuggestedTrustCatalog {
+    pub version: u32,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub entries: Vec<SuggestedAnchor>,
+}
+
+impl Default for SuggestedTrustCatalog {
+    fn default() -> Self {
+        Self {
+            version: CATALOG_VERSION,
+            description: "Empty suggested trust catalog. Principal curates content; software provides means only.".into(),
+            entries: Vec::new(),
+        }
+    }
+}
+
+impl SuggestedTrustCatalog {
+    pub fn empty() -> Self {
+        Self::default()
+    }
+
+    /// Load catalog from JSON bytes. Malformed → Err (fail closed).
+    pub fn from_json_bytes(bytes: &[u8]) -> Result<Self, String> {
+        if bytes.is_empty() {
+            return Ok(Self::empty());
+        }
+        serde_json::from_slice(bytes).map_err(|e| format!("suggested catalog parse: {e}"))
+    }
+
+    pub fn from_json_str(s: &str) -> Result<Self, String> {
+        Self::from_json_bytes(s.as_bytes())
+    }
+
+    /// Load from a file path; missing file → empty catalog (not an error).
+    pub fn load_path(path: &Path) -> Result<Self, String> {
+        match fs::read(path) {
+            Ok(b) => Self::from_json_bytes(&b),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Self::empty()),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+
+    /// Prefer storage override, else bundled path next to catalog default location.
+    pub fn load_for_storage(storage_root: &Path) -> Result<Self, String> {
+        let storage_cat = storage_root.join(SUGGESTED_CATALOG_FILE);
+        if storage_cat.is_file() {
+            return Self::load_path(&storage_cat);
+        }
+        // Bundled empty catalog (repo / package).
+        if let Some(bundled) = bundled_catalog_path() {
+            return Self::load_path(&bundled);
+        }
+        Ok(Self::empty())
+    }
+
+    pub fn get(&self, id: &str) -> Option<&SuggestedAnchor> {
+        self.entries.iter().find(|e| e.id == id)
+    }
+
+    /// Resolve material for an entry (inline or file relative to `base_dir`).
+    pub fn resolve_material(&self, entry: &SuggestedAnchor, base_dir: &Path) -> Result<String, String> {
+        let inline = entry.material.trim();
+        if !inline.is_empty() {
+            return Ok(inline.to_string());
+        }
+        if let Some(rel) = entry.material_path.as_deref() {
+            let p = base_dir.join(rel);
+            return fs::read_to_string(&p).map_err(|e| format!("read {}: {e}", p.display()));
+        }
+        Err(format!("suggested anchor {} has no material", entry.id))
+    }
+}
+
+/// Path to repo/package empty catalog when present.
+pub fn bundled_catalog_path() -> Option<PathBuf> {
+    // Desktop: next to exe resources or relative to CARGO_MANIFEST of client-core.
+    let candidates = [
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../bundled/trust/catalog.json"),
+        PathBuf::from("bundled/trust/catalog.json"),
+    ];
+    candidates.into_iter().find(|p| p.is_file())
+}
+
+/// Import a suggested entry into the live store.
+/// `force_enabled` overrides `enabled_by_default` (UI "Enable now").
+pub fn import_suggested_into_store(
+    store: &mut TrustStore,
+    catalog: &SuggestedTrustCatalog,
+    entry_id: &str,
+    base_dir: &Path,
+    now: u64,
+    force_enabled: bool,
+) -> Result<TrustAnchor, String> {
+    let entry = catalog
+        .get(entry_id)
+        .ok_or_else(|| format!("unknown suggested id {entry_id}"))?;
+    let material = catalog.resolve_material(entry, base_dir)?;
+    let enabled = force_enabled || entry.enabled_by_default;
+    match entry.kind {
+        AnchorKind::PemRoot => {
+            let a = store.add_pem_root(&entry.label, &material, &entry.notes, now)?;
+            if !enabled {
+                let _ = store.set_enabled(&a.id, false);
+            }
+            Ok(store
+                .anchors
+                .iter()
+                .find(|x| x.id == a.id)
+                .cloned()
+                .unwrap_or(a))
+        }
+        AnchorKind::Did => {
+            let a = store.add_did(&entry.label, &material, &entry.notes, now)?;
+            if !enabled {
+                let _ = store.set_enabled(&a.id, false);
+            }
+            Ok(store
+                .anchors
+                .iter()
+                .find(|x| x.id == a.id)
+                .cloned()
+                .unwrap_or(a))
+        }
+        AnchorKind::PolicyLabel => {
+            let id = format!("policy:{}", short_hash(material.as_bytes()));
+            if store.anchors.iter().any(|a| a.id == id) {
+                return Err("anchor already present".into());
+            }
+            let a = TrustAnchor {
+                id: id.clone(),
+                label: entry.label.clone(),
+                kind: AnchorKind::PolicyLabel,
+                material,
+                enabled,
+                notes: entry.notes.clone(),
+                added_unix: now,
+            };
+            store.anchors.push(a.clone());
+            Ok(a)
+        }
+    }
+}
+
+/// Host/SPKI allowlist decision for cert-override (C1 pure helper).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CertOverrideDecision {
+    /// No policy match — deny by default.
+    Deny,
+    /// PEM material present; platform must still verify chain against it.
+    AllowIfChainMatchesStore,
+    /// Explicit host allow entry (policy label `host-allow:example.com`).
+    AllowHostPinned,
+}
+
+/// Policy for ServerCertificateErrorDetected handlers.
+pub fn cert_override_decision(store: &TrustStore, host: &str) -> CertOverrideDecision {
+    let host = host.trim().to_ascii_lowercase();
+    if host.is_empty() {
+        return CertOverrideDecision::Deny;
+    }
+    for a in store.anchors.iter().filter(|a| a.enabled) {
+        if a.kind == AnchorKind::PolicyLabel {
+            let m = a.material.trim().to_ascii_lowercase();
+            if m == format!("host-allow:{host}") || m == host {
+                return CertOverrideDecision::AllowHostPinned;
+            }
+        }
+    }
+    let pem_n = store
+        .anchors
+        .iter()
+        .filter(|a| a.enabled && a.kind == AnchorKind::PemRoot)
+        .count();
+    if pem_n > 0 {
+        return CertOverrideDecision::AllowIfChainMatchesStore;
+    }
+    CertOverrideDecision::Deny
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -358,5 +572,77 @@ mod tests {
         let loaded = TrustStore::load(dir.path());
         let v = evaluate_url(&loaded, "https://x/?did:web:off.example");
         assert_eq!(v.level, "os_default");
+    }
+
+    #[test]
+    fn empty_catalog_loads() {
+        let c = SuggestedTrustCatalog::from_json_str(
+            r#"{"version":1,"description":"test","entries":[]}"#,
+        )
+        .unwrap();
+        assert!(c.entries.is_empty());
+        assert_eq!(SuggestedTrustCatalog::empty().entries.len(), 0);
+    }
+
+    #[test]
+    fn malformed_catalog_fails_closed() {
+        assert!(SuggestedTrustCatalog::from_json_str("{not json").is_err());
+    }
+
+    #[test]
+    fn import_suggested_did_disabled_by_default() {
+        let cat = SuggestedTrustCatalog {
+            version: 1,
+            description: "fixture".into(),
+            entries: vec![SuggestedAnchor {
+                id: "sug-did-1".into(),
+                label: "Suggested peer".into(),
+                jurisdiction: "test".into(),
+                kind: AnchorKind::Did,
+                material: "did:web:suggested.example".into(),
+                material_path: None,
+                enabled_by_default: false,
+                notes: "fixture only".into(),
+                source_url: None,
+                license: None,
+            }],
+        };
+        let mut store = TrustStore::new();
+        let a = import_suggested_into_store(
+            &mut store,
+            &cat,
+            "sug-did-1",
+            Path::new("."),
+            1,
+            false,
+        )
+        .unwrap();
+        assert!(!a.enabled);
+        assert_eq!(
+            cert_override_decision(&store, "evil.example"),
+            CertOverrideDecision::Deny
+        );
+    }
+
+    #[test]
+    fn cert_override_host_pin() {
+        let mut s = TrustStore::new();
+        s.anchors.push(TrustAnchor {
+            id: "policy:host".into(),
+            label: "Pin".into(),
+            kind: AnchorKind::PolicyLabel,
+            material: "host-allow:intranet.local".into(),
+            enabled: true,
+            notes: "".into(),
+            added_unix: 1,
+        });
+        assert_eq!(
+            cert_override_decision(&s, "intranet.local"),
+            CertOverrideDecision::AllowHostPinned
+        );
+        assert_eq!(
+            cert_override_decision(&s, "other.local"),
+            CertOverrideDecision::Deny
+        );
     }
 }
