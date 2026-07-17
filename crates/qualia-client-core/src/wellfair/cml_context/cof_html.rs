@@ -28,8 +28,6 @@ pub const MEDIA_TYPE_COF: &str = "text/html;profile=\"https://ns.webcivics.net/c
 pub const DEFAULT_SEGMENT_MAX_CHARS: usize = 24_000;
 /// Soft floor: never emit a body segment smaller than this unless it is the only content.
 pub const DEFAULT_SEGMENT_MIN_CHARS: usize = 2_000;
-/// Index/TOC segment target (cheap map for agents).
-pub const DEFAULT_INDEX_MAX_CHARS: usize = 8_000;
 
 /// One COF HTML segment (self-contained HTML document, RDFa-complete).
 #[derive(Debug, Clone, Serialize, Deserialize)]
