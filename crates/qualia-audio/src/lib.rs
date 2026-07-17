@@ -54,12 +54,21 @@ pub use media_store::{
 };
 pub use language::{AccessClass, AnnotationTier, LanguageResourceBundle};
 pub use music::{
-    chroma12_from_mel, detect_onsets, estimate_f0_hz, MusicAssumptions, OnsetEvent, PitchEstimate,
+    chroma12_from_mel, detect_onsets, estimate_f0_hz, estimate_tempo_from_onsets,
+    propose_structure_segments, track_pitch, MusicAssumptions, OnsetEvent, PitchEstimate,
+    StructureSegment, TempoEstimate,
 };
-pub use production::{ProcessPlan, TrackState, MAX_BLOCK, MAX_TRACKS};
-pub use generation::{synthesize_reference_tone, SynthReceipt, VoiceConsent};
+pub use production::{
+    apply_comp_sample, apply_eq_sample, DelayLine, ProcessPlan, TrackState, MAX_BLOCK,
+    MAX_DELAY_SAMPLES, MAX_TRACKS,
+};
+pub use generation::{
+    separate_two_stems_reference, synthesize_reference_tone, StemReceipt, SynthReceipt,
+    VoiceConsent,
+};
 pub use cross_modal::{
-    frames_to_media_ms, propose_temporal_correlations, AvCorrelationProposal, TimeIntervalMs,
+    events_overlapping_window, frames_to_media_ms, propose_temporal_correlations,
+    AvCorrelationProposal, SharedMediaClock, TimeIntervalMs,
 };
 pub use pipeline::{
     run_ears_demo, run_ears_on_wav_file, run_ears_weighted, section18_smoke, sonify_demo_to_wav,
@@ -67,7 +76,9 @@ pub use pipeline::{
 };
 pub use capture::{CapturePurpose, CaptureSession};
 pub use aed_weights::{AedWeightBundle, WeightedAedModel};
-pub use speech::{decode_for_language, greedy_phone_decode, SpeechEncoderWeights, PHONES};
+pub use speech::{
+    decode_for_language, greedy_phone_decode, SpeechEncoderWeights, StreamingSpeechDecoder, PHONES,
+};
 pub use sonify::{class_to_hz, sonify_events_mono};
 pub use session_history::{
     AutomationLane, AutomationPoint, OpKind, SessionHistory, SessionOp, MAX_AUTO_POINTS,

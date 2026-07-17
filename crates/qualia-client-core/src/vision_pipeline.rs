@@ -923,3 +923,149 @@ pub fn section15_smoke() -> Result<String, String> {
         r.backend, r.n_pred, r.quins_written
     ))
 }
+
+/// Phase 11–12: twin eligibility + closed-form elasticity preview (A1, not FEA).
+pub fn twin_elasticity_demo() -> Result<serde_json::Value, String> {
+    use qualia_vision::spatial::{
+        closed_form_bar_stretch, promote_elasticity_preview, refuse_fea_unless_eligible,
+        run_elasticity_preview_if_eligible, BarStretchInput, MeshIR,
+    };
+    let mut m = MeshIR::empty();
+    m.positions = vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]];
+    m.indices = vec![0, 1, 2];
+    m.recompute_bounds_and_hash();
+    let viz = qualia_vision::spatial::assess_twin_eligibility(&m);
+    let promoted = promote_elasticity_preview(&m);
+    let refuse_viz = refuse_fea_unless_eligible(viz).is_err();
+    let r = run_elasticity_preview_if_eligible(
+        promoted,
+        BarStretchInput {
+            force_n: 1000.0,
+            length_m: 1.0,
+            area_m2: 0.01,
+            youngs_pa: 2.0e11,
+        },
+    )
+    .map_err(|e| e.to_string())?;
+    let _ = closed_form_bar_stretch(BarStretchInput {
+        force_n: 1.0,
+        length_m: 1.0,
+        area_m2: 1.0,
+        youngs_pa: 1.0e9,
+    });
+    Ok(serde_json::json!({
+        "viz_only_refuses_fea": refuse_viz,
+        "promoted_domain": format!("{:?}", promoted.domain),
+        "displacement_m": r.displacement_m,
+        "assurance": r.assurance_note,
+        "note": "A1 closed-form bar stretch only — not mesh FEA / not A4."
+    }))
+}
+
+/// Ensure seed QVWT on disk; load for production path.
+pub fn ensure_vision_weights(storage_root: &std::path::Path) -> Result<String, String> {
+    use qualia_vision::detector::{CLASS_MOSTLY_BLUE, CLASS_MOSTLY_GREEN, CLASS_MOSTLY_RED};
+    let path = storage_root.join("models").join("vision_seed.qvwt");
+    let classes = [CLASS_MOSTLY_RED, CLASS_MOSTLY_GREEN, CLASS_MOSTLY_BLUE];
+    if path.is_file() {
+        let b = VisionWeightBundle::load_path(&path, &classes)?;
+        return Ok(format!(
+            "loaded QVWT hash=0x{:016x} path={}",
+            b.content_hash,
+            path.display()
+        ));
+    }
+    let b = VisionWeightBundle::from_seed(0x01D1_FACE_u64, 16, &classes);
+    b.save_path(&path)?;
+    Ok(format!(
+        "wrote QVWT seed hash=0x{:016x} path={}",
+        b.content_hash,
+        path.display()
+    ))
+}
+
+/// Detect with QVWT from disk if present.
+pub fn detect_with_disk_weights(
+    storage_root: &std::path::Path,
+    rgb: &[u8],
+    width: u32,
+    height: u32,
+) -> Result<VisionDemoResult, String> {
+    use qualia_vision::detector::{CLASS_MOSTLY_BLUE, CLASS_MOSTLY_GREEN, CLASS_MOSTLY_RED};
+    let path = storage_root.join("models").join("vision_seed.qvwt");
+    let classes = [CLASS_MOSTLY_RED, CLASS_MOSTLY_GREEN, CLASS_MOSTLY_BLUE];
+    let bundle = if path.is_file() {
+        VisionWeightBundle::load_path(&path, &classes)?
+    } else {
+        let b = VisionWeightBundle::from_seed(0x01D1_FACE_u64, 16, &classes);
+        b.save_path(&path)?;
+        b
+    };
+    let img = ImageView {
+        bytes: rgb,
+        width,
+        height,
+        row_stride: width * 3,
+        format: PixelFormat::Rgb8,
+    };
+    let model_hash = bundle.content_hash;
+    let mut prod = ProductionVision::new(bundle);
+    let mut preds = [Detection::empty(); MAX_DETECTIONS];
+    let mut emb = [0.0f32; 32];
+    let mut ws = [0u8; MAX_DETECTIONS];
+    let counts = prod
+        .infer(img, &mut preds, &mut emb, &mut ws)
+        .map_err(|e| format!("{e:?}"))?;
+    let digest = media_digest(rgb);
+    let mut tracker = BoundedTracker::new();
+    tracker.update(0, &mut preds, counts.detections);
+    let mut vquins = [VisionQuin::with_parity(0, 0, 0, 0, 0); 256];
+    let n_q = compile_observation_quins_full(
+        digest,
+        &preds[..counts.detections],
+        model_hash,
+        &mut vquins,
+    );
+    let mut nq = Vec::new();
+    for q in vquins.iter().take(n_q) {
+        nq.push(vision_quin_to_nquin(q));
+    }
+    let report = validate_vision_observation_graph(&nq);
+    let mut rgba = vec![0u8; (width * height * 4) as usize];
+    compose_rgb_overlay_rgba8(
+        width,
+        height,
+        rgb,
+        &preds,
+        counts.detections,
+        [0, 255, 180, 255],
+        2,
+        &mut rgba,
+    )
+    .map_err(|e| format!("{e:?}"))?;
+    let mut bmp = vec![0u8; 54 + rgba.len()];
+    let bmp_n = encode_bmp_rgba8(width, height, &rgba, &mut bmp).map_err(|e| format!("{e:?}"))?;
+    Ok(VisionDemoResult {
+        width,
+        height,
+        seed: 0,
+        split: "disk-qvwt".into(),
+        model_hash: format!("0x{:016x}", model_hash),
+        media_hash: format!("0x{:016x}", digest.hash),
+        detections: preds[..counts.detections]
+            .iter()
+            .map(|d| det_to_dto(d, false))
+            .collect(),
+        n_gt: 0,
+        n_pred: counts.detections,
+        quins_written: n_q,
+        shacl_ok: report.ok,
+        shacl_observations: report.observation_count,
+        shacl_human: report.human_attestation_count,
+        overlay_data_url: format!("data:image/bmp;base64,{}", B64.encode(&bmp[..bmp_n])),
+        note: "QVWT loaded from models/vision_seed.qvwt (seed weights, not foundation).".into(),
+        backend: "production_weights".into(),
+        is_reference_backend: false,
+        synthetic_match_acc: None,
+    })
+}

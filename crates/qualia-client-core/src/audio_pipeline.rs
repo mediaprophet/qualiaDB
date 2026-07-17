@@ -283,6 +283,241 @@ pub fn daw_history_demo() -> Result<serde_json::Value, String> {
     }))
 }
 
+/// Run weighted AED on mono PCM (from mic pull or file).
+pub fn analyze_mono_pcm(
+    mono: &[f32],
+    sample_rate: u32,
+    storage_root: Option<&std::path::Path>,
+) -> Result<EarsDemoDto, String> {
+    use qualia_audio::types::{AuditoryEvent, AuditoryModel, TranscriptToken};
+    use qualia_audio::wav::encode_wav_i16_mono;
+    use qualia_audio::{AedWeightBundle, WeightedAedModel};
+
+    if mono.is_empty() {
+        return Err("no PCM (arm mic or import WAV first)".into());
+    }
+    let mut i16s = vec![0i16; mono.len()];
+    for (i, &s) in mono.iter().enumerate() {
+        i16s[i] = (s.clamp(-1.0, 1.0) * 32767.0) as i16;
+    }
+    let mut wav = vec![0u8; 44 + mono.len() * 2];
+    let wn = encode_wav_i16_mono(&i16s, sample_rate.max(8000), &mut wav)
+        .map_err(|e| format!("{e:?}"))?;
+    let decoded = qualia_audio::decode_wav(&wav[..wn]).map_err(|e| format!("{e:?}"))?;
+
+    let bundle = if let Some(root) = storage_root {
+        let path = root.join("models").join("aed_seed.qaed");
+        if path.is_file() {
+            AedWeightBundle::load_path(&path)?
+        } else {
+            let b = AedWeightBundle::from_seed(0xAED1);
+            let _ = b.save_path(&path);
+            b
+        }
+    } else {
+        AedWeightBundle::from_seed(0xAED1)
+    };
+
+    let mut model = WeightedAedModel::from_bundle(bundle);
+
+    let mut events = [AuditoryEvent::empty(); 32];
+    let mut tokens = [TranscriptToken::empty(); 8];
+    let mut emb = [0.0f32; 4];
+    let mut ws = [0u8; 8];
+    let counts = model
+        .infer_chunk(decoded.view(), &mut events, &mut tokens, &mut emb, &mut ws)
+        .map_err(|e| format!("{e:?}"))?;
+
+    let media_hash = qualia_audio::media_digest(&wav[..wn]).hash;
+    let mut quins = [qualia_audio::AudioQuin::with_parity(0, 0, 0, 0, 0); 64];
+    let n_q = qualia_audio::compile_auditory_quins(
+        qualia_audio::MediaDigest {
+            hash: media_hash,
+            byte_len: wn as u64,
+        },
+        &events[..counts.events],
+        model.model_hash(),
+        &mut quins,
+    );
+
+    Ok(EarsDemoDto {
+        sample_rate: decoded.sample_rate,
+        frames: mono.len() as u32,
+        n_events: counts.events,
+        n_quins: n_q,
+        model_hash: format!("0x{:016x}", model.model_hash()),
+        media_hash: format!("0x{:016x}", media_hash),
+        is_reference: false,
+        mel_frames: 0,
+        cqt_peak: 0.0,
+        event_instance_hashes: events[..counts.events]
+            .iter()
+            .map(|e| format!("0x{:016x}", e.source_hash ^ e.start_frame))
+            .collect(),
+        note: "Live/imported mono analyzed with disk AED weights (seed-shaped, not certified foundation)."
+            .into(),
+    })
+}
+
+/// Music analysis demo: onsets + tempo + structure (reference quality).
+pub fn music_analysis_demo() -> Result<serde_json::Value, String> {
+    use qualia_audio::{
+        detect_onsets, estimate_tempo_from_onsets, propose_structure_segments, MusicAssumptions,
+        OnsetEvent, StructureSegment,
+    };
+    let sr = 16000u32;
+    let mut mono = vec![0.0f32; 8000];
+    // Impulses ~2 Hz → ~120 BPM when folded
+    for k in 0..8 {
+        let i = (k * 4000 / 2) as usize;
+        if i < mono.len() {
+            mono[i] = 1.0;
+        }
+    }
+    let mut onsets = [OnsetEvent {
+        frame: 0,
+        strength: 0.0,
+    }; 32];
+    let n_on = detect_onsets(&mono, 256, 128, 0.01, &mut onsets);
+    let tempo = estimate_tempo_from_onsets(
+        &onsets[..n_on],
+        sr,
+        MusicAssumptions {
+            assumes_4_4: true,
+            assumes_12tet: false,
+            tuning_a4_hz: 440.0,
+        },
+    );
+    let mut segs = [StructureSegment {
+        start_frame: 0,
+        end_frame: 0,
+        mean_energy: 0.0,
+        label_hash: 0,
+    }; 8];
+    let n_seg = propose_structure_segments(&mono, 256, 128, &mut segs);
+    Ok(serde_json::json!({
+        "n_onsets": n_on,
+        "bpm": tempo.bpm,
+        "tempo_confidence": tempo.confidence,
+        "n_segments": n_seg,
+        "note": "Reference music analysis — not a production beat tracker."
+    }))
+}
+
+/// DAW FX chain demo (EQ + comp + delay on mono).
+pub fn daw_fx_demo() -> Result<serde_json::Value, String> {
+    use qualia_audio::{ProcessPlan, TrackState};
+    let mut tr = TrackState::default();
+    tr.eq_gain_db = 3.0;
+    tr.comp_threshold = 0.3;
+    tr.comp_ratio = 3.0;
+    tr.delay_samples = 48;
+    tr.delay_mix = 0.2;
+    let mono: Vec<f32> = (0..512)
+        .map(|i| (2.0 * core::f32::consts::PI * 440.0 * i as f32 / 48000.0).sin() * 0.5)
+        .collect();
+    let mut out = vec![0.0f32; 512];
+    let n = ProcessPlan::process_mono_fx(&tr, 48000, &mono, &mut out);
+    let energy: f32 = out.iter().map(|x| x * x).sum();
+    Ok(serde_json::json!({
+        "frames": n,
+        "energy": energy,
+        "note": "EQ+comp+delay offline path (deterministic FX primitives)."
+    }))
+}
+
+/// TTS consent + stem separation demo.
+pub fn gen_audio_demo() -> Result<serde_json::Value, String> {
+    use qualia_audio::{
+        separate_two_stems_reference, synthesize_reference_tone, VoiceConsent,
+    };
+    let mut consent = VoiceConsent::synthesis_only("demo-voice");
+    let mut tone = [0.0f32; 512];
+    let rec = synthesize_reference_tone(consent, 440.0, 16000, 512, 7, &mut tone)
+        .map_err(|e| format!("{e:?}"))?;
+    consent.revoke(1);
+    let denied = synthesize_reference_tone(consent, 440.0, 16000, 512, 7, &mut tone).is_err();
+    let mut body = [0.0f32; 512];
+    let mut detail = [0.0f32; 512];
+    let (s0, s1) = separate_two_stems_reference(&tone, 0x00E0_D1A0_u64, &mut body, &mut detail)
+        .map_err(|e| format!("{e:?}"))?;
+    Ok(serde_json::json!({
+        "synth_frames": rec.frames,
+        "is_reference_synth": rec.is_reference_synth,
+        "revoke_denies": denied,
+        "stem_body": format!("0x{:016x}", s0.stem_class),
+        "stem_detail": format!("0x{:016x}", s1.stem_class),
+        "note": "Reference synth + sep; licensed TTS/demucs COMPLETE-WITH-GATE."
+    }))
+}
+
+/// Shared media clock + joint window demo.
+pub fn shared_clock_demo() -> Result<serde_json::Value, String> {
+    use qualia_audio::{
+        events_overlapping_window, SharedMediaClock, TimeIntervalMs,
+    };
+    let clock = SharedMediaClock::new(0xC10C, 16000, 25.0);
+    let v_ms = clock.video_frame_to_ms(25);
+    let a_ms = clock.audio_frame_to_ms(16000);
+    let intervals = [
+        TimeIntervalMs {
+            start_ms: 0,
+            end_ms: 500,
+            instance: 1,
+        },
+        TimeIntervalMs {
+            start_ms: 800,
+            end_ms: 1200,
+            instance: 2,
+        },
+    ];
+    let win = TimeIntervalMs {
+        start_ms: 400,
+        end_ms: 900,
+        instance: 0,
+    };
+    let mut out = [0u64; 4];
+    let n = events_overlapping_window(&intervals, win, &mut out);
+    Ok(serde_json::json!({
+        "video_25_frames_ms": v_ms,
+        "audio_1s_ms": a_ms,
+        "drift_at_1s": clock.drift_ms(25, 16000),
+        "window_hits": n,
+        "asserts_causality": false,
+        "note": "Shared clock + joint interval query; overlap ≠ causality."
+    }))
+}
+
+/// Speech using disk weights if present.
+pub fn speech_from_disk(
+    storage_root: &std::path::Path,
+    supported: bool,
+) -> Result<serde_json::Value, String> {
+    use qualia_audio::{decode_for_language, SpeechEncoderWeights, TranscriptToken};
+    let path = storage_root.join("models").join("speech_seed.qspk");
+    let w = if path.is_file() {
+        SpeechEncoderWeights::load_path(&path)?
+    } else {
+        let w = SpeechEncoderWeights::from_seed(7, 16);
+        w.save_path(&path)?;
+        w
+    };
+    let mut mono = vec![0.0f32; 4096];
+    for i in 0..mono.len() {
+        mono[i] = (2.0 * core::f32::consts::PI * 180.0 * i as f32 / 16000.0).sin() * 0.25;
+    }
+    let mut tok = [TranscriptToken::empty(); 32];
+    let n = decode_for_language(&w, &mono, 16000, supported, &mut tok)
+        .map_err(|e| format!("{e:?}"))?;
+    Ok(serde_json::json!({
+        "tokens": n,
+        "model_hash": format!("0x{:016x}", w.model_hash),
+        "weights_path": path.display().to_string(),
+        "language_supported": supported,
+        "note": "Speech weights loaded from disk when present."
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -304,5 +539,17 @@ mod tests {
     #[test]
     fn section18_ok() {
         assert!(section18_smoke_dto().unwrap().contains("OK"));
+    }
+
+    #[test]
+    fn analyze_mono_pcm_seed() {
+        let mut mono = vec![0.0f32; 4096];
+        for i in 0..mono.len() {
+            mono[i] = (2.0 * core::f32::consts::PI * 440.0 * i as f32 / 16000.0).sin() * 0.3;
+        }
+        let d = analyze_mono_pcm(&mono, 16000, None).unwrap();
+        assert_eq!(d.sample_rate, 16000);
+        assert!(d.frames > 0);
+        assert!(!d.model_hash.is_empty());
     }
 }

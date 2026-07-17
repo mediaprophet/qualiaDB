@@ -145,6 +145,78 @@ pub fn greedy_phone_decode(
     Ok(w)
 }
 
+/// Streaming CTC-greedy state: feed successive mono chunks; flush tokens.
+pub struct StreamingSpeechDecoder {
+    weights: SpeechEncoderWeights,
+    prev_phone: usize,
+    frame_cursor: u64,
+    hop: usize,
+}
+
+impl StreamingSpeechDecoder {
+    pub fn new(weights: SpeechEncoderWeights, hop: usize) -> Self {
+        let blank = weights.n_phones.saturating_sub(1);
+        Self {
+            weights,
+            prev_phone: blank,
+            frame_cursor: 0,
+            hop: hop.max(64),
+        }
+    }
+
+    pub fn model_hash(&self) -> u64 {
+        self.weights.model_hash
+    }
+
+    /// Decode one chunk into `out` (appended logical tokens; buffer overwritten from 0).
+    pub fn push_chunk(
+        &mut self,
+        mono: &[f32],
+        sample_rate: u32,
+        out: &mut [TranscriptToken],
+    ) -> Result<usize, AudioError> {
+        let _ = sample_rate;
+        let max_frames = 32;
+        let mut mel = vec![0.0f32; max_frames * self.weights.n_mel];
+        let n_frames = log_mel_from_mono(mono, 256, self.hop, self.weights.n_mel, &mut mel)?;
+        let n_frames = n_frames.min(max_frames);
+        let blank = self.weights.n_phones - 1;
+        let mut w = 0usize;
+        for f in 0..n_frames {
+            let row = &mel[f * self.weights.n_mel..(f + 1) * self.weights.n_mel];
+            let mut best_p = 0usize;
+            let mut best = f32::NEG_INFINITY;
+            for p in 0..self.weights.n_phones {
+                let mut logit = 0.0f32;
+                for i in 0..self.weights.n_mel {
+                    logit += self.weights.weight[p * self.weights.n_mel + i] * row[i];
+                }
+                if logit > best {
+                    best = logit;
+                    best_p = p;
+                }
+            }
+            let conf = ((best.tanh() + 1.0) * 0.5).clamp(0.05, 0.99);
+            if best_p != blank && best_p != self.prev_phone && w < out.len() {
+                let mut t = TranscriptToken::empty();
+                t.form_hash = q_hash(PHONES[best_p]);
+                t.confidence_u16 = (conf * 65535.0) as u16;
+                t.start_frame = self.frame_cursor;
+                t.end_frame = self.frame_cursor + self.hop as u64;
+                t.flags = 2;
+                out[w] = t;
+                w += 1;
+            }
+            self.prev_phone = best_p;
+            self.frame_cursor += self.hop as u64;
+        }
+        for t in out.iter_mut().skip(w) {
+            *t = TranscriptToken::empty();
+        }
+        Ok(w)
+    }
+}
+
 /// If language inventory is empty / unknown, refuse mapping (no silent map).
 pub fn decode_for_language(
     weights: &SpeechEncoderWeights,
@@ -196,5 +268,16 @@ mod tests {
         let w2 = SpeechEncoderWeights::from_bytes(&b).unwrap();
         assert_eq!(w.model_hash, w2.model_hash);
         assert_eq!(w.weight, w2.weight);
+    }
+
+    #[test]
+    fn streaming_decoder_runs() {
+        let w = SpeechEncoderWeights::from_seed(3, 16);
+        let mut dec = StreamingSpeechDecoder::new(w, 128);
+        let mono = [0.2f32; 2048];
+        let mut out = [TranscriptToken::empty(); 16];
+        let n = dec.push_chunk(&mono, 16000, &mut out).unwrap();
+        assert!(n <= 16);
+        assert!(dec.model_hash() != 0);
     }
 }

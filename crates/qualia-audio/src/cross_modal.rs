@@ -79,6 +79,67 @@ pub fn correlation_predicate() -> u64 {
     q_hash("https://ns.webizen.org/q42/proposesAvCooccurrence")
 }
 
+/// Shared media clock: maps vision frame index and audio sample to one timeline.
+#[derive(Debug, Clone, Copy)]
+pub struct SharedMediaClock {
+    pub media_hash: u64,
+    pub origin_ms: u64,
+    pub video_fps_num: u32,
+    pub video_fps_den: u32,
+    pub audio_sample_rate: u32,
+}
+
+impl SharedMediaClock {
+    pub fn new(media_hash: u64, audio_sample_rate: u32, video_fps: f32) -> Self {
+        let fps = if video_fps > 0.0 { video_fps } else { 30.0 };
+        Self {
+            media_hash,
+            origin_ms: 0,
+            video_fps_num: (fps * 1000.0) as u32,
+            video_fps_den: 1000,
+            audio_sample_rate,
+        }
+    }
+
+    pub fn video_frame_to_ms(&self, frame_index: u64) -> u64 {
+        if self.video_fps_num == 0 {
+            return self.origin_ms;
+        }
+        self.origin_ms
+            + (frame_index * 1000 * self.video_fps_den as u64) / self.video_fps_num as u64
+    }
+
+    pub fn audio_frame_to_ms(&self, sample_frame: u64) -> u64 {
+        frames_to_media_ms(sample_frame, self.audio_sample_rate, self.origin_ms)
+    }
+
+    /// Absolute drift between mapped times (ms).
+    pub fn drift_ms(&self, video_frame: u64, audio_sample: u64) -> i64 {
+        let v = self.video_frame_to_ms(video_frame) as i64;
+        let a = self.audio_frame_to_ms(audio_sample) as i64;
+        v - a
+    }
+}
+
+/// Joint query: events whose intervals overlap a window (caller-buffered).
+pub fn events_overlapping_window(
+    intervals: &[TimeIntervalMs],
+    window: TimeIntervalMs,
+    out_instances: &mut [u64],
+) -> usize {
+    let mut w = 0usize;
+    for iv in intervals {
+        if overlap(*iv, window).is_some() {
+            if w >= out_instances.len() {
+                return w;
+            }
+            out_instances[w] = iv.instance;
+            w += 1;
+        }
+    }
+    w
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -109,5 +170,38 @@ mod tests {
         assert!(!out[0].asserts_causality);
         assert_eq!(out[0].overlap_start_ms, 500);
         assert_eq!(out[0].overlap_end_ms, 1000);
+    }
+
+    #[test]
+    fn shared_clock_zero_drift_at_origin() {
+        let c = SharedMediaClock::new(1, 16000, 25.0);
+        assert_eq!(c.video_frame_to_ms(0), 0);
+        assert_eq!(c.audio_frame_to_ms(0), 0);
+        assert_eq!(c.drift_ms(0, 0), 0);
+    }
+
+    #[test]
+    fn joint_window_query() {
+        let intervals = [
+            TimeIntervalMs {
+                start_ms: 0,
+                end_ms: 100,
+                instance: 11,
+            },
+            TimeIntervalMs {
+                start_ms: 200,
+                end_ms: 300,
+                instance: 22,
+            },
+        ];
+        let win = TimeIntervalMs {
+            start_ms: 50,
+            end_ms: 250,
+            instance: 0,
+        };
+        let mut out = [0u64; 4];
+        let n = events_overlapping_window(&intervals, win, &mut out);
+        assert_eq!(n, 2);
+        assert!(out[..2].contains(&11) && out[..2].contains(&22));
     }
 }

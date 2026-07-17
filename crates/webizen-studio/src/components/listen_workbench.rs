@@ -293,6 +293,88 @@ pub fn ListenWorkbench() -> Element {
                     style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); cursor:pointer;",
                     "DAW undo demo"
                 }
+                button {
+                    disabled: busy(),
+                    onclick: move |_| {
+                        busy.set(true);
+                        spawn(async move {
+                            match invoke_json("audio_live_aed", serde_json::json!({})).await {
+                                Ok(v) => {
+                                    detail.set(format!("{v}"));
+                                    status.set(format!(
+                                        "Live AED events={} model={}",
+                                        v.get("n_events").and_then(|x| x.as_u64()).unwrap_or(0),
+                                        v.get("model_hash").and_then(|x| x.as_str()).unwrap_or("?")
+                                    ));
+                                }
+                                Err(e) => status.set(format!("Live AED: {e}")),
+                            }
+                            busy.set(false);
+                        });
+                    },
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); background:rgba(255,140,0,0.18); cursor:pointer; font-weight:600;",
+                    "Live AED (mic ring)"
+                }
+                button {
+                    disabled: busy(),
+                    onclick: move |_| {
+                        busy.set(true);
+                        spawn(async move {
+                            match invoke_json("audio_music_demo", serde_json::json!({})).await {
+                                Ok(v) => status.set(format!("Music: {v}")),
+                                Err(e) => status.set(format!("Music: {e}")),
+                            }
+                            busy.set(false);
+                        });
+                    },
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); cursor:pointer;",
+                    "Music tempo"
+                }
+                button {
+                    disabled: busy(),
+                    onclick: move |_| {
+                        busy.set(true);
+                        spawn(async move {
+                            match invoke_json("audio_daw_fx_demo", serde_json::json!({})).await {
+                                Ok(v) => status.set(format!("FX: {v}")),
+                                Err(e) => status.set(format!("FX: {e}")),
+                            }
+                            busy.set(false);
+                        });
+                    },
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); cursor:pointer;",
+                    "DAW FX"
+                }
+                button {
+                    disabled: busy(),
+                    onclick: move |_| {
+                        busy.set(true);
+                        spawn(async move {
+                            match invoke_json("audio_gen_demo", serde_json::json!({})).await {
+                                Ok(v) => status.set(format!("Gen: {v}")),
+                                Err(e) => status.set(format!("Gen: {e}")),
+                            }
+                            busy.set(false);
+                        });
+                    },
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); cursor:pointer;",
+                    "Synth+sep"
+                }
+                button {
+                    disabled: busy(),
+                    onclick: move |_| {
+                        busy.set(true);
+                        spawn(async move {
+                            match invoke_json("audio_shared_clock_demo", serde_json::json!({})).await {
+                                Ok(v) => status.set(format!("Clock: {v}")),
+                                Err(e) => status.set(format!("Clock: {e}")),
+                            }
+                            busy.set(false);
+                        });
+                    },
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); cursor:pointer;",
+                    "AV clock"
+                }
             }
             p { style: "font-size:0.88rem; color:var(--qualia-text-muted); line-height:1.45;", "{status}" }
             if !detail().is_empty() {

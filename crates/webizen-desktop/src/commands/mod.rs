@@ -7384,6 +7384,85 @@ pub fn audio_daw_history_demo() -> Result<serde_json::Value, String> {
     qualia_client_core::audio_pipeline::daw_history_demo()
 }
 
+/// Pull mic ring → weighted AED (disk weights if present).
+#[command]
+pub fn audio_live_aed(
+    state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
+) -> Result<serde_json::Value, String> {
+    let config = state.config.lock().unwrap().clone();
+    let root = std::path::PathBuf::from(&config.storage_path);
+    let mono = crate::mic_capture::pull_mono(16_000)?;
+    if mono.is_empty() {
+        return Err("mic ring empty — press Mic start and speak, then retry".into());
+    }
+    let sr = crate::mic_capture::status_json()?
+        .get("sample_rate")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(16_000) as u32;
+    let r = qualia_client_core::audio_pipeline::analyze_mono_pcm(&mono, sr, Some(&root))?;
+    serde_json::to_value(r).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn audio_speech_disk(
+    state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
+    supported: Option<bool>,
+) -> Result<serde_json::Value, String> {
+    let config = state.config.lock().unwrap().clone();
+    let root = std::path::PathBuf::from(&config.storage_path);
+    qualia_client_core::audio_pipeline::speech_from_disk(&root, supported.unwrap_or(true))
+}
+
+#[command]
+pub fn vision_ensure_weights(
+    state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
+) -> Result<String, String> {
+    let config = state.config.lock().unwrap().clone();
+    let root = std::path::PathBuf::from(&config.storage_path);
+    qualia_client_core::vision_pipeline::ensure_vision_weights(&root)
+}
+
+#[command]
+pub fn vision_detect_disk_weights_demo(
+    state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
+) -> Result<serde_json::Value, String> {
+    let config = state.config.lock().unwrap().clone();
+    let root = std::path::PathBuf::from(&config.storage_path);
+    let mut rgb = vec![0u8; 32 * 32 * 3];
+    for p in rgb.chunks_mut(3) {
+        p[0] = 220;
+        p[1] = 30;
+        p[2] = 30;
+    }
+    let r = qualia_client_core::vision_pipeline::detect_with_disk_weights(&root, &rgb, 32, 32)?;
+    serde_json::to_value(r).map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn vision_twin_elasticity_demo() -> Result<serde_json::Value, String> {
+    qualia_client_core::vision_pipeline::twin_elasticity_demo()
+}
+
+#[command]
+pub fn audio_music_demo() -> Result<serde_json::Value, String> {
+    qualia_client_core::audio_pipeline::music_analysis_demo()
+}
+
+#[command]
+pub fn audio_daw_fx_demo() -> Result<serde_json::Value, String> {
+    qualia_client_core::audio_pipeline::daw_fx_demo()
+}
+
+#[command]
+pub fn audio_gen_demo() -> Result<serde_json::Value, String> {
+    qualia_client_core::audio_pipeline::gen_audio_demo()
+}
+
+#[command]
+pub fn audio_shared_clock_demo() -> Result<serde_json::Value, String> {
+    qualia_client_core::audio_pipeline::shared_clock_demo()
+}
+
 /// Full generate → store → recon → OBJ/.10d continuum (pre-auditory handoff).
 #[command]
 pub fn vision_gs_continuum(
@@ -7928,6 +8007,15 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         audio_mic_status,
         audio_ensure_weights,
         audio_daw_history_demo,
+        audio_live_aed,
+        audio_speech_disk,
+        vision_ensure_weights,
+        vision_detect_disk_weights_demo,
+        vision_twin_elasticity_demo,
+        audio_music_demo,
+        audio_daw_fx_demo,
+        audio_gen_demo,
+        audio_shared_clock_demo,
     ]
 }
 

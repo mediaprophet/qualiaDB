@@ -134,6 +134,15 @@ impl WeightedAedModel {
         }
     }
 
+    pub fn from_bundle(bundle: AedWeightBundle) -> Self {
+        Self {
+            bundle,
+            frame_len: 512,
+            hop: 256,
+            vad_threshold: 0.015,
+        }
+    }
+
     pub fn model_hash(&self) -> u64 {
         self.bundle.model_hash
     }

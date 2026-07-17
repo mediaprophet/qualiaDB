@@ -98,6 +98,18 @@ impl VisionWeightBundle {
         out
     }
 
+    pub fn save_path(&self, path: &std::path::Path) -> Result<(), String> {
+        if let Some(p) = path.parent() {
+            std::fs::create_dir_all(p).map_err(|e| e.to_string())?;
+        }
+        std::fs::write(path, self.to_bytes()).map_err(|e| e.to_string())
+    }
+
+    pub fn load_path(path: &std::path::Path, class_iris: &[&str]) -> Result<Self, String> {
+        let b = std::fs::read(path).map_err(|e| e.to_string())?;
+        Self::from_bytes(&b, class_iris).map_err(|e| format!("{e:?}"))
+    }
+
     /// Load QVWT from bytes. Class IRIs optional: if fewer names than n_classes, hashes from file used.
     pub fn from_bytes(bytes: &[u8], class_iris: &[&str]) -> Result<Self, VisionError> {
         if bytes.len() < 32 {

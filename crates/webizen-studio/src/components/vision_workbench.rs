@@ -388,6 +388,65 @@ pub fn VisionWorkbench() -> Element {
                     "§15 smoke"
                 }
                 button {
+                    disabled: busy(),
+                    onclick: move |_| {
+                        busy.set(true);
+                        spawn(async move {
+                            match invoke_json("vision_ensure_weights", serde_json::json!({})).await {
+                                Ok(v) => status.set(format!("QVWT: {v}")),
+                                Err(e) => status.set(format!("QVWT: {e}")),
+                            }
+                            busy.set(false);
+                        });
+                    },
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); cursor:pointer;",
+                    "Ensure QVWT"
+                }
+                button {
+                    disabled: busy(),
+                    onclick: move |_| {
+                        busy.set(true);
+                        spawn(async move {
+                            match invoke_json(
+                                "vision_detect_disk_weights_demo",
+                                serde_json::json!({}),
+                            )
+                            .await
+                            {
+                                Ok(v) => {
+                                    if let Ok(r) = serde_json::from_value::<VisionDemoResult>(v.clone()) {
+                                        demo.set(Some(r));
+                                    }
+                                    status.set(format!(
+                                        "Disk QVWT dets={} backend={}",
+                                        v.get("n_pred").and_then(|x| x.as_u64()).unwrap_or(0),
+                                        v.get("backend").and_then(|x| x.as_str()).unwrap_or("?")
+                                    ));
+                                }
+                                Err(e) => status.set(format!("Disk QVWT detect: {e}")),
+                            }
+                            busy.set(false);
+                        });
+                    },
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); background:rgba(0,200,160,0.12); cursor:pointer;",
+                    "Detect w/ disk QVWT"
+                }
+                button {
+                    disabled: busy(),
+                    onclick: move |_| {
+                        busy.set(true);
+                        spawn(async move {
+                            match invoke_json("vision_twin_elasticity_demo", serde_json::json!({})).await {
+                                Ok(v) => status.set(format!("Twin: {v}")),
+                                Err(e) => status.set(format!("Twin: {e}")),
+                            }
+                            busy.set(false);
+                        });
+                    },
+                    style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); cursor:pointer;",
+                    "Twin elasticity A1"
+                }
+                button {
                     disabled: busy() || selected().is_none(),
                     onclick: reject_sel,
                     style: "padding:0.45rem 0.9rem; border-radius:8px; border:1px solid var(--qualia-border); background:rgba(220,80,80,0.12); cursor:pointer;",

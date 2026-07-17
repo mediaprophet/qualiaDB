@@ -56,6 +56,60 @@ pub fn refuse_fea_unless_eligible(elig: TwinEligibility) -> Result<(), &'static 
     }
 }
 
+/// Promote a validated mesh to elasticity **preview** (not certified FEA / A4).
+/// Software assurance class: A1 closed-form bar stretch check only.
+pub fn promote_elasticity_preview(mesh: &MeshIR) -> TwinEligibility {
+    let mut e = assess_twin_eligibility(mesh);
+    if e.allowed && e.validation == MeshValidationStatus::Valid {
+        e.domain = AnalysisDomain::ElasticityPreview;
+        e.refuse_reason = "";
+    }
+    e
+}
+
+/// Closed-form axial stretch of a unit bar: δ = FL / (AE).
+/// Returns displacement; fails closed if parameters invalid.
+/// **Not** a mesh FEA solve — vertical slice for Phase 12 assurance notes.
+#[derive(Debug, Clone, Copy)]
+pub struct BarStretchInput {
+    pub force_n: f32,
+    pub length_m: f32,
+    pub area_m2: f32,
+    pub youngs_pa: f32,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct BarStretchResult {
+    pub displacement_m: f32,
+    pub stress_pa: f32,
+    pub strain: f32,
+    pub assurance_note: &'static str,
+}
+
+pub fn closed_form_bar_stretch(inp: BarStretchInput) -> Result<BarStretchResult, &'static str> {
+    if inp.length_m <= 0.0 || inp.area_m2 <= 0.0 || inp.youngs_pa <= 0.0 {
+        return Err("invalid bar geometry or modulus");
+    }
+    let stress = inp.force_n / inp.area_m2;
+    let strain = stress / inp.youngs_pa;
+    let disp = strain * inp.length_m;
+    Ok(BarStretchResult {
+        displacement_m: disp,
+        stress_pa: stress,
+        strain,
+        assurance_note: "A1 closed-form axial bar only; not mesh FEA; not A4 certified",
+    })
+}
+
+/// Run elasticity preview only if eligible; else refuse.
+pub fn run_elasticity_preview_if_eligible(
+    elig: TwinEligibility,
+    inp: BarStretchInput,
+) -> Result<BarStretchResult, &'static str> {
+    refuse_fea_unless_eligible(elig)?;
+    closed_form_bar_stretch(inp)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -71,5 +125,49 @@ mod tests {
         assert!(e.allowed);
         assert_eq!(e.domain, AnalysisDomain::VisualizationOnly);
         assert!(refuse_fea_unless_eligible(e).is_err());
+    }
+
+    #[test]
+    fn elasticity_preview_closed_form() {
+        let mut m = MeshIR::empty();
+        m.positions = vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]];
+        m.indices = vec![0, 1, 2];
+        m.recompute_bounds_and_hash();
+        let e = promote_elasticity_preview(&m);
+        assert_eq!(e.domain, AnalysisDomain::ElasticityPreview);
+        let r = run_elasticity_preview_if_eligible(
+            e,
+            BarStretchInput {
+                force_n: 1000.0,
+                length_m: 1.0,
+                area_m2: 0.01,
+                youngs_pa: 2.0e11,
+            },
+        )
+        .unwrap();
+        assert!(r.displacement_m > 0.0);
+        assert!(r.assurance_note.contains("A1"));
+    }
+
+    #[test]
+    fn refuse_without_promotion() {
+        let e = TwinEligibility {
+            domain: AnalysisDomain::VisualizationOnly,
+            validation: MeshValidationStatus::Valid,
+            vertex_count: 3,
+            triangle_count: 1,
+            allowed: true,
+            refuse_reason: "",
+        };
+        assert!(run_elasticity_preview_if_eligible(
+            e,
+            BarStretchInput {
+                force_n: 1.0,
+                length_m: 1.0,
+                area_m2: 1.0,
+                youngs_pa: 1.0,
+            }
+        )
+        .is_err());
     }
 }
