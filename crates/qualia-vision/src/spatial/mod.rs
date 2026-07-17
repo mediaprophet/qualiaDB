@@ -11,6 +11,9 @@ pub mod export_obj;
 pub mod export_stl;
 pub mod print_readiness;
 pub mod twin_bridge;
+pub mod mesh_ir_to_export;
+pub mod compile_10d_handoff;
+pub mod sigma_map;
 
 pub use geometry_ir::{MeshIR, MAX_INDICES, MAX_VERTICES};
 pub use image_to_3d::{image_to_heightfield_mesh, ImageTo3dReceipt};
@@ -22,4 +25,14 @@ pub use twin_bridge::{
     assess_twin_eligibility, closed_form_bar_stretch, promote_elasticity_preview,
     refuse_fea_unless_eligible, run_elasticity_preview_if_eligible, AnalysisDomain,
     BarStretchInput, BarStretchResult, TwinEligibility,
+};
+pub use mesh_ir_to_export::{
+    detection_center_to_node_hint, mesh_ir_to_export, mesh_ir_to_export_validated, NodeHint,
+    RenderMeshExport,
+};
+pub use compile_10d_handoff::{
+    detections_to_node_hints, pack_geometry_export_for_10d, GeometryFor10d,
+};
+pub use sigma_map::{
+    class_hash_to_sigma_base, class_id_to_sigma_base, class_score_to_sigma, detection_to_sigma,
 };

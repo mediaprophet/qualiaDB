@@ -28,6 +28,8 @@ pub mod generator;
 pub mod spatial;
 pub mod capability;
 pub mod cv;
+pub mod sr;
+pub mod gpu;
 pub mod embeddings;
 pub mod biosense;
 pub mod bio;
@@ -78,10 +80,13 @@ pub use generator::{
     GENERATOR_MODEL_ID, CTX_GENERATION, P_GENERATED_IMAGE, P_GEN_PROMPT, P_GEN_SEED,
 };
 pub use spatial::{
-    assess_twin_eligibility, image_to_heightfield_mesh, mesh_ir_to_obj, mesh_ir_to_stl_binary,
-    mesh_ir_triangles, print_readiness, refuse_fea_unless_eligible, validate_mesh_ir,
-    AnalysisDomain, ImageTo3dReceipt, MeshIR, MeshValidationReport, MeshValidationStatus,
-    PrintReadiness, TwinEligibility, MAX_INDICES, MAX_VERTICES,
+    assess_twin_eligibility, class_hash_to_sigma_base, class_id_to_sigma_base, class_score_to_sigma,
+    detection_center_to_node_hint, detection_to_sigma, detections_to_node_hints,
+    image_to_heightfield_mesh, mesh_ir_to_export, mesh_ir_to_export_validated, mesh_ir_to_obj,
+    mesh_ir_to_stl_binary, mesh_ir_triangles, pack_geometry_export_for_10d, print_readiness,
+    refuse_fea_unless_eligible, validate_mesh_ir, AnalysisDomain, GeometryFor10d,
+    ImageTo3dReceipt, MeshIR, MeshValidationReport, MeshValidationStatus, NodeHint,
+    PrintReadiness, RenderMeshExport, TwinEligibility, MAX_INDICES, MAX_VERTICES,
 };
 pub use capability::{all_capabilities, by_id, count_by_status, CapabilityEntry, CapabilityStatus};
 pub use embeddings::{
@@ -90,12 +95,23 @@ pub use embeddings::{
     DHASH_WIDTH,
 };
 pub use cv::{
-    bilateral_denoise_u8, box_blur_u8, brief_desc_u8, canny_u8, dilate_u8, draw_rect_u8,
-    equalize_hist_u8, erode_u8, fast_corners_u8, find_external_blobs, gaussian_blur_u8,
-    hamming_match, histogram_u8, lucas_kanade_step, median_blur_u8, rgb_to_gray_u8, sobel_mag_u8,
-    synthetic_pulse_sequence, warp_affine_u8, warp_perspective_u8, BlobBox, CvError, FrameSequence,
-    GrayView, Keypoint, Match, RgbView, DESC_LEN, MAX_SEQ_FRAMES,
+    bicubic_u8, bilateral_denoise_u8, bilinear_u8, box_blur_u8, brief_desc_u8, canny_u8, dilate_u8,
+    draw_rect_u8, equalize_hist_u8, erode_u8, fast_corners_u8, find_external_blobs, gaussian_blur_u8,
+    hamming_match, histogram_u8, lanczos3_u8, lucas_kanade_step, median_blur_u8, rgb_to_gray_u8,
+    sobel_mag_u8, synthetic_pulse_sequence, warp_affine_u8, warp_perspective_u8, BlobBox, CvError,
+    FrameSequence, GrayView, Keypoint, Match, RgbView, DESC_LEN, MAX_SEQ_FRAMES,
 }; // GrayView + RgbView for embeddings / recipes
+pub use sr::{
+    blend_tile_into_accum, estimate_tile_count, extract_tile_rgb8, finalize_blend, plan_tiles,
+    super_resolve, super_resolve_tiled, super_resolve_tiled_default, ClassicalKernel,
+    EnhancementMode, SrBackend, SrReport, SrRequest, TilePolicy, TileRect, DEFAULT_OVERLAP,
+    DEFAULT_TILE,
+};
+pub use gpu::{
+    avg_pool2d_dispatch, conv2d_nchw_dispatch, max_pool2d_dispatch, resize_nearest_nchw_dispatch,
+    thermal_allows_gpu_tiles, ThermalHint, VisionComputeDevice, VisionComputeReport,
+    VisionVramBudget,
+};
 pub use biosense::{
     blendshape_affect_proposal, cctv_stages_allowed, colour_evm_yiq, design_bandpass_iir,
     energy_ms, ensemble_hr, ensemble_respiration, eulerian_color_magnify,
@@ -133,9 +149,9 @@ pub use bio::{
     MAX_PARTICLES_PER_FRAME, NO_TRACK_ID,
 };
 pub use recipes::{
-    challenge_pad_from_landmark_frames, challenge_pad_from_mesh_trace, respiration_monitor,
-    respiration_monitor_motion_only, self_monitor_pulse, self_monitor_pulse_evm, PulseAbstain,
-    PulseEvmResult,
+    challenge_pad_from_landmark_frames, challenge_pad_from_mesh_trace, compile_hr_observation_quins,
+    respiration_monitor, respiration_monitor_motion_only, self_monitor_pulse,
+    self_monitor_pulse_evm, PulseAbstain, PulseEvmResult,
 };
 
 #[cfg(feature = "cpu-reference")]

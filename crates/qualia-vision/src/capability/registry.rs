@@ -39,6 +39,13 @@ static REGISTRY: &[CapabilityEntry] = &[
     cap!("D1.13", "D1", "drawing_overlay", Present, "cv/draw + overlay"),
     cap!("D1.14", "D1", "photo_denoise", Present, "cv/photo bilateral_denoise"),
     cap!("D1.15", "D1", "stitch", Missing, "optional vertical"),
+    cap!(
+        "D1.16",
+        "D1",
+        "classical_sr",
+        Present,
+        "cv/sr bilinear+bicubic+lanczos3; super_resolve + super_resolve_tiled plan/extract/blend (SR0/B0/B1)"
+    ),
     // D2 learned
     cap!("D2.01", "D2", "detector_tracker", Partial, "ByteTrack MOT Present; YuNet decode+optional --features ort infer; default FeatureDisabled"),
     cap!("D2.02", "D2", "semantic_quins", Beyond, "epistemic observations"),
@@ -76,7 +83,13 @@ static REGISTRY: &[CapabilityEntry] = &[
     cap!("D3.12", "D3", "multimodal_bio_fusion", Partial, "recipes fuse when consented"),
     cap!("D3.13", "D3", "affect_proposals", Present, "blendshape heuristic Path A; optional OMZ emotion Path B gated"),
     cap!("D3.14", "D3", "au_lite", Partial, "blendshape temporal events when mesh wired"),
-    cap!("D3.15", "D3", "biosignal_graph", Present, "compile helpers hashes+confidence"),
+    cap!(
+        "D3.15",
+        "D3",
+        "biosignal_graph",
+        Present,
+        "compile_hr_observation_quins + hashes/confidence; deontic Rppg gate (E1)"
+    ),
     cap!("D3.16", "D3", "contact_ppg_harness", CompleteWithGate, "principal device corpus"),
     // D4 policy
     cap!("D4.01", "D4", "biosense_consent", Present, "purpose-bound consent"),
@@ -102,7 +115,13 @@ static REGISTRY: &[CapabilityEntry] = &[
     cap!("D5.10", "D5", "printer_envelope", Present, "print_readiness envelope"),
     cap!("D5.11", "D5", "synthetic_train_scenes", Present, "synthetic module"),
     cap!("D5.12", "D5", "synthetic_3d_corpora", Partial, "heightfield meshes"),
-    cap!("D5.13", "D5", "10d_handoff", Present, "geometry quins path"),
+    cap!(
+        "D5.13",
+        "D5",
+        "10d_handoff",
+        Partial,
+        "MeshIR→export→GeometryFor10d + NodeHint σ stub (C1); host compile_10d seals mesh; Tensor10DNodes full σ still open"
+    ),
     cap!("D5.14", "D5", "twin_a1_preview", Present, "twin_bridge A1"),
     // D6 engineering wire
     cap!("D6.01", "D6", "comp_geom_ingest", Beyond, "computational_geometry crate"),

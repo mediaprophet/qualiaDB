@@ -24,7 +24,8 @@ use qualia_vision::overlay::{
 use qualia_vision::query_instances_in_region;
 use qualia_vision::semantic::{compile_observation_quins_full, media_digest, VisionQuin};
 use qualia_vision::spatial::{
-    image_to_heightfield_mesh, mesh_ir_to_obj, mesh_ir_triangles, MeshIR,
+    image_to_heightfield_mesh, mesh_ir_to_export, mesh_ir_to_obj, pack_geometry_export_for_10d,
+    MeshIR,
 };
 use qualia_vision::synthetic::{
     generate_scene_rgb8, sample_id, DatasetSplit, SyntheticSampleId,
@@ -124,24 +125,15 @@ pub struct GsContinuumResult {
     pub note: String,
 }
 
+/// Convert vision MeshIR → core `Mesh` via public export + 10d pack (C1 handoff).
 fn mesh_ir_to_core_mesh(ir: &MeshIR) -> Result<Mesh, String> {
-    if ir.positions.is_empty() || ir.indices.len() < 3 {
-        return Err("empty mesh".into());
-    }
-    let triangles = mesh_ir_triangles(ir);
-    let mut min = [f32::INFINITY; 3];
-    let mut max = [f32::NEG_INFINITY; 3];
-    for p in &ir.positions {
-        for k in 0..3 {
-            min[k] = min[k].min(p[k]);
-            max[k] = max[k].max(p[k]);
-        }
-    }
+    let export = mesh_ir_to_export(ir).map_err(|e| format!("mesh_ir_to_export: {e:?}"))?;
+    let g = pack_geometry_export_for_10d(&export);
     Ok(Mesh {
-        positions: ir.positions.clone(),
-        triangles,
-        min,
-        max,
+        positions: g.positions,
+        triangles: g.triangles,
+        min: g.min,
+        max: g.max,
     })
 }
 

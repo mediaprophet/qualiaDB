@@ -14,6 +14,7 @@ pub mod flow;
 pub mod photo;
 pub mod draw;
 pub mod video;
+pub mod sr;
 
 pub use error::CvError;
 pub use video::{synthetic_pulse_sequence, FrameSequence, MAX_SEQ_FRAMES};
@@ -29,3 +30,4 @@ pub use features::{brief_desc_u8, fast_corners_u8, hamming_match, Keypoint, Matc
 pub use flow::lucas_kanade_step;
 pub use photo::bilateral_denoise_u8;
 pub use draw::draw_rect_u8;
+pub use sr::{bicubic_u8, bilinear_u8, lanczos3_u8};
