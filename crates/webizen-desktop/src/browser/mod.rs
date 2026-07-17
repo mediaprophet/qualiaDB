@@ -6,8 +6,11 @@
 //!   - `webizen-browser-content` — top-level page navigation (real sites load)
 //! - **Default home** is the Chora-generated universe view (`chora-universe.html`), not DuckDuckGo.
 //! - Trust policy + agent logic: `qualia_client_core::{webizen_trust, browser_agent}`
+//! - Engine preference (S1/S2): [`engine`] — default OS WebView; Servo is experimental preference only
 
+pub mod cert_override;
 pub mod cookies;
+pub mod engine;
 
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -150,6 +153,8 @@ fn replace_content_webview(app: &AppHandle, url: &str) -> Result<(), String> {
             LogicalSize::new(width, content_h),
         )
         .map_err(|e| format!("content webview: {e}"))?;
+    // Re-bind cert-override after content webview recreation.
+    let _ = cert_override::attach_to_content_webview(app);
     Ok(())
 }
 
@@ -219,6 +224,8 @@ pub fn open_browser_shell(app: &AppHandle, start_url: &str) -> Result<String, St
         })?;
 
     attach_resize_handler(&window, app.clone());
+    // C1: attach cert-override on content webview (Windows). Best-effort.
+    let _ = cert_override::attach_to_content_webview(app);
     let _ = window.set_focus();
     Ok(start)
 }
@@ -242,7 +249,9 @@ pub fn navigate_content(app: &AppHandle, url: &str) -> Result<(), String> {
 
     // App ↔ External switch requires recreating the content child.
     if to_universe || from_universe {
-        return replace_content_webview(app, &url);
+        replace_content_webview(app, &url)?;
+        let _ = cert_override::attach_to_content_webview(app);
+        return Ok(());
     }
 
     let parsed: tauri::Url = url
@@ -252,7 +261,11 @@ pub fn navigate_content(app: &AppHandle, url: &str) -> Result<(), String> {
     if let Some(w) = app.get_webview(CONTENT_LABEL) {
         match w.navigate(parsed) {
             Ok(()) => Ok(()),
-            Err(_) => replace_content_webview(app, &url),
+            Err(_) => {
+                replace_content_webview(app, &url)?;
+                let _ = cert_override::attach_to_content_webview(app);
+                Ok(())
+            }
         }
     } else {
         open_browser_shell(app, &url).map(|_| ())
@@ -322,13 +335,13 @@ pub fn status(app: &AppHandle) -> serde_json::Value {
         "default_home": DEFAULT_HOME,
         "chrome": "in-window multi-webview",
         "substrate": "os-webview",
-        "phases": ["P0", "P0.1", "P1-store", "P2-agent", "chora-home"],
+        "phases": ["P0", "P0.1", "P1-store", "P2-agent", "chora-home", "S1-S2-engine"],
         "url_sync": "poll browser_content_url ≤1s",
-        "cert_override": "unavailable",
-        "cert_override_note": "WebView2 ServerCertificateErrorDetected is Conditional-Go; not wired until C1 COM attach. OS still validates TLS.",
+        "cert_override": cert_override::status_json(),
+        "engine": engine::status_json(),
         "cookie_jar": "webview_cookies_for_url",
         "suggested_trust_catalog": "empty_until_principal_curates",
-        "note": "Default content is Chora universe (App). TLS for external https still uses the OS store unless cert-override is active.",
+        "note": "Default content is Chora universe (App). Engine default is OS WebView; ServoExperimental is preference-only until libservo is linked. Cert-override consults store when hook attached; else OS TLS.",
     })
 }
 

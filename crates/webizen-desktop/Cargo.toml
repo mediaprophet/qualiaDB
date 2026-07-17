@@ -60,6 +60,16 @@ windows = { version = "0.62", features = [
     "Win32_Foundation",
     "Win32_System_LibraryLoader",
 ] }
+# Same major as Tauri/wry stack — ServerCertificateErrorDetected (C1).
+webview2-com = "0.38"
+# Interface::cast must match webview2-com's windows-core (0.61), not our windows 0.62.
+windows-core-wv2 = { package = "windows-core", version = "0.61.2" }
 
 [features]
+default = []
 custom-protocol = ["tauri/custom-protocol"]
+# Experimental Servo engine path (S1/S2). Off by default.
+# Does NOT link libservo in this build — compile-time markers + docs/UI surface only.
+# Default `cargo check -p webizen-desktop` stays free of any Servo dependency.
+# See docs/plans/servo-experimental.md for the future embed plug-in contract.
+servo = []

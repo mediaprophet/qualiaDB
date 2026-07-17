@@ -66,45 +66,92 @@
       position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
       color: #475569; font-size: 0.85rem; pointer-events: none; padding: 1rem; text-align: center;
     }
-    #agent, #trust-panel {
+    #agent, #trust-panel, #cookies-panel {
       width: 0; overflow: hidden; border-left: 0 solid var(--border);
       background: #0f172a; transition: width 0.15s ease;
       display: flex; flex-direction: column;
     }
-    #agent.open, #trust-panel.open { width: 340px; border-left-width: 1px; }
-    #agent h3, #trust-panel h3 {
+    #agent.open, #trust-panel.open, #cookies-panel.open { width: 340px; border-left-width: 1px; }
+    #agent h3, #trust-panel h3, #cookies-panel h3 {
       margin: 0; padding: 0.65rem 0.75rem; font-size: 0.78rem;
       text-transform: uppercase; letter-spacing: 0.04em; color: #c4b5fd;
       border-bottom: 1px solid var(--border);
     }
-    #agent-out, #trust-body {
+    #agent-out, #trust-scroll, #cookies-body {
       flex: 1; overflow: auto; padding: 0.65rem 0.75rem;
-      font-size: 0.8rem; color: var(--muted); white-space: pre-wrap;
+      font-size: 0.8rem; color: var(--muted);
     }
-    #agent-form, #trust-form {
+    #trust-body, #suggested-body { white-space: pre-wrap; }
+    .panel-section-title {
+      margin: 0.65rem 0 0.35rem; font-size: 0.7rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.04em; color: #a5b4fc;
+    }
+    .panel-section-title:first-child { margin-top: 0; }
+    .panel-note {
+      font-size: 0.68rem; color: #64748b; line-height: 1.35; margin: 0.35rem 0 0.5rem;
+    }
+    .empty-state {
+      font-size: 0.78rem; color: #64748b; line-height: 1.4; white-space: pre-wrap;
+    }
+    #agent-form, #trust-form, #cookies-actions {
       display: flex; flex-direction: column; gap: 0.35rem; padding: 0.5rem;
       border-top: 1px solid var(--border);
     }
     #agent-form { flex-direction: row; }
+    #cookies-actions { flex-direction: row; flex-wrap: wrap; }
     #agent-q, #trust-form input, #trust-form textarea {
       background: #0b1220; color: var(--text);
       border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem 0.55rem;
       font: inherit; width: 100%;
     }
     #agent-q { flex: 1; }
-    .anchor-row {
+    .anchor-row, .cookie-row, .suggested-row {
       display: flex; align-items: center; gap: 0.35rem;
       padding: 0.35rem 0; border-bottom: 1px solid #1e293b;
     }
-    .anchor-row span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .anchor-row span, .cookie-row span, .suggested-row span {
+      flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .suggested-row { flex-wrap: wrap; }
+    .suggested-meta {
+      width: 100%; font-size: 0.65rem; color: #64748b; white-space: normal;
+      margin-top: -0.15rem; margin-bottom: 0.15rem;
+    }
+    .cookie-row { flex-direction: column; align-items: stretch; gap: 0.15rem; }
+    .cookie-row .cookie-main {
+      display: flex; gap: 0.35rem; align-items: baseline;
+    }
+    .cookie-row .cookie-main strong { color: var(--text); font-weight: 600; }
+    .cookie-row .cookie-meta { font-size: 0.65rem; color: #64748b; white-space: normal; }
+    .tag {
+      display: inline-block; font-size: 0.62rem; font-weight: 700;
+      padding: 0.1rem 0.35rem; border-radius: 999px; border: 1px solid var(--border);
+      color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    .tag.third { color: var(--warn); border-color: #92400e; }
+    .tag.fp { color: var(--ok); border-color: #065f46; }
     #status {
       font-size: 0.7rem; color: var(--muted); padding: 0.2rem 0.55rem;
       border-top: 1px solid var(--border); background: #0b1220;
+    }
+    #engine-banner {
+      display: none;
+      font-size: 0.72rem; font-weight: 600;
+      color: #0f172a; background: var(--warn);
+      padding: 0.25rem 0.55rem;
+      border-bottom: 1px solid #b45309;
+    }
+    #engine-banner.show { display: block; }
+    #engine-select {
+      background: #0b1220; color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.3rem 0.4rem; font: inherit; max-width: 11rem;
     }
   </style>
 </head>
 <body>
   <div id="chrome">
+    <div id="engine-banner" role="status" aria-live="polite"></div>
     <div id="toolbar">
       <button type="button" id="btn-back" title="Back">←</button>
       <button type="button" id="btn-fwd" title="Forward">→</button>
@@ -114,6 +161,13 @@
         <button type="submit" title="Go">Go</button>
       </form>
       <button type="button" id="btn-bookmark" title="Bookmark to Library">🔖</button>
+      <label title="Content engine preference (Servo is experimental; not linked as renderer yet)" style="display:flex;align-items:center;gap:0.25rem;font-size:0.72rem;color:var(--muted);">
+        Engine
+        <select id="engine-select" aria-label="Browser engine">
+          <option value="os_web_view">OS WebView (default)</option>
+          <option value="servo_experimental">Servo (experimental)</option>
+        </select>
+      </label>
       <div id="trust" title="Trust indicator (your store + policy)">trust: —</div>
       <button type="button" id="btn-trust" title="Trust store">Trust</button>
       <button type="button" id="btn-cookies" title="Cookie jar">Cookies</button>
@@ -123,17 +177,29 @@
       <div id="content-slot" aria-hidden="true"></div>
       <aside id="trust-panel">
         <h3>Trust store · your policy</h3>
-        <div id="trust-body">Loading…</div>
+        <div id="trust-scroll">
+          <div class="panel-section-title">Your store</div>
+          <div id="trust-body">Loading…</div>
+          <div class="panel-section-title">Suggested (not enabled)</div>
+          <p class="panel-note">Software provides means; you decide. Empty until curated by principal. Import adds to your store disabled; Enable imports and turns the anchor on.</p>
+          <div id="suggested-body" class="empty-state">Loading catalog…</div>
+        </div>
         <form id="trust-form">
           <input id="trust-label" type="text" placeholder="Label (optional)" />
           <input id="trust-did" type="text" placeholder="did:web:… or did:key:…" />
           <textarea id="trust-pem" rows="3" placeholder="Or paste PEM (BEGIN CERTIFICATE)"></textarea>
           <button type="submit">Add anchor</button>
-          <div style="font-size:0.68rem;color:#64748b;line-height:1.35;">
-            Custom PEM/DID govern agent fetch + this badge. OS still validates WebView TLS — cert-override is Conditional-Go (C1 COM attach not shipped). Suggested roots catalog is empty until you curate.
+          <div class="panel-note">
+            Custom PEM/DID govern agent fetch + this badge. Cert-override (Windows): host-pin / custom PEM policy via ServerCertificateErrorDetected when hook attaches; default deny. Suggested catalog empty until you curate.
           </div>
-          <button type="button" id="btn-suggested" style="margin-top:0.25rem;">List suggested catalog</button>
         </form>
+      </aside>
+      <aside id="cookies-panel">
+        <h3>Cookies · jar + graph</h3>
+        <div id="cookies-body" class="empty-state">Press Refresh to load cookies for the current URL.</div>
+        <div id="cookies-actions">
+          <button type="button" id="btn-cookies-refresh">Refresh</button>
+        </div>
       </aside>
       <aside id="agent">
         <h3>Browser agent · cml:Proposed</h3>
@@ -144,7 +210,7 @@
         </form>
       </aside>
     </div>
-    <div id="status">Webizen Browser · OS WebView · chrome / trust / agent / bookmarks</div>
+    <div id="status">Webizen Browser · OS WebView · chrome / trust / cookies / agent / bookmarks</div>
   </div>
   <script>
     const $ = (id) => document.getElementById(id);
@@ -153,6 +219,13 @@
     let histIdx = 0;
     let urlFocused = false;
     let lastPolled = "";
+    /** @type {{ engine?: string, active_renderer?: string, banner?: string|null, servo_renders_pages?: boolean }} */
+    let engineState = {
+      engine: "os_web_view",
+      active_renderer: "os_web_view",
+      banner: null,
+      servo_renders_pages: false,
+    };
 
     async function invoke(cmd, args = {}) {
       if (!window.__TAURI__ || !window.__TAURI__.core) {
@@ -163,6 +236,47 @@
 
     function setStatus(msg) {
       $("status").textContent = msg;
+    }
+
+    function applyEngineStatus(raw) {
+      const s = typeof raw === "string" ? JSON.parse(raw) : (raw || {});
+      engineState = s;
+      const preferred = s.engine || s.preferred || "os_web_view";
+      const active = s.active_renderer || "os_web_view";
+      const sel = $("engine-select");
+      if (sel && sel.value !== preferred) sel.value = preferred;
+      const bannerEl = $("engine-banner");
+      if (bannerEl) {
+        if (s.banner) {
+          bannerEl.textContent = s.banner;
+          bannerEl.classList.add("show");
+        } else {
+          bannerEl.textContent = "";
+          bannerEl.classList.remove("show");
+        }
+      }
+      const renders = s.servo_renders_pages === true;
+      const engLabel = preferred === "servo_experimental"
+        ? (renders ? "Servo" : "Servo pref (WebView active)")
+        : "OS WebView";
+      return { preferred, active, engLabel, banner: s.banner || null };
+    }
+
+    async function refreshEngineStatus(statusMsg) {
+      try {
+        const raw = await invoke("browser_engine_status", {});
+        const info = applyEngineStatus(raw);
+        if (statusMsg) {
+          setStatus(statusMsg);
+        } else if (info.banner) {
+          setStatus(info.banner + " · engine=" + info.preferred + " · active=" + info.active);
+        } else {
+          setStatus(
+            "Webizen Browser · " + info.engLabel +
+            " · chrome / trust / cookies / agent / bookmarks · engine=" + info.preferred
+          );
+        }
+      } catch (_) { /* host may not be ready */ }
     }
 
     function setTrustBadge(v) {
@@ -222,6 +336,75 @@
       } catch (_) { /* host may not be ready */ }
     }
 
+    function esc(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function closeSidePanels(exceptId) {
+      ["agent", "trust-panel", "cookies-panel"].forEach((id) => {
+        if (id !== exceptId) $(id).classList.remove("open");
+      });
+    }
+
+    async function refreshSuggestedCatalog() {
+      const body = $("suggested-body");
+      try {
+        const raw = await invoke("browser_trust_list_suggested", {});
+        const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+        const entries = data.entries || [];
+        const desc = data.description ||
+          "Empty suggested trust catalog. Principal curates content; software provides means only.";
+        if (!entries.length) {
+          body.className = "empty-state";
+          body.textContent =
+            "(empty) No suggested roots yet.\n\n" +
+            desc +
+            "\n\nSoftware provides means; you decide. Catalog stays empty until you curate entries (no invented PEMs).";
+          return;
+        }
+        body.className = "";
+        body.innerHTML = entries.map((e) => {
+          const id = esc(e.id || "");
+          const label = esc(e.label || e.id || "?");
+          const kind = esc(e.kind || "?");
+          const juris = e.jurisdiction ? esc(e.jurisdiction) : "";
+          const notes = e.notes ? esc(e.notes) : "";
+          const license = e.license ? " · " + esc(e.license) : "";
+          return `<div class="suggested-row" data-id="${id}">
+            <span title="${id}">${label} <span class="tag">${kind}</span></span>
+            <button type="button" data-act="import" data-id="${id}" title="Import disabled">Import</button>
+            <button type="button" data-act="enable" data-id="${id}" title="Import and enable">Enable</button>
+            <div class="suggested-meta">${juris ? juris + " · " : ""}${notes || "Suggested only — not live until imported."}${license}</div>
+          </div>`;
+        }).join("") +
+          `<p class="panel-note">${esc(desc)}</p>`;
+        body.querySelectorAll("button").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const id = btn.getAttribute("data-id");
+            const act = btn.getAttribute("data-act");
+            const enable = act === "enable";
+            try {
+              await invoke("browser_trust_import_suggested", { id, enable });
+              setStatus(enable
+                ? "Suggested anchor imported + enabled: " + id
+                : "Suggested anchor imported (disabled): " + id);
+              await refreshTrustPanel();
+              await refreshTrust($("url").value || currentUrl);
+            } catch (err) {
+              setStatus("Import suggested: " + err);
+            }
+          });
+        });
+      } catch (e) {
+        body.className = "empty-state";
+        body.textContent = "Suggested catalog error: " + e;
+      }
+    }
+
     async function refreshTrustPanel() {
       const body = $("trust-body");
       try {
@@ -229,34 +412,127 @@
         const data = typeof list === "string" ? JSON.parse(list) : list;
         const anchors = data.anchors || [];
         if (!anchors.length) {
-          body.textContent = "(empty) Add a DID or PEM below.\n\nPath: {storage}/webizen/trust_store.json\n\nBadge levels: os_default | did_match | local_scheme | untrusted_policy | unknown";
-          return;
-        }
-        body.innerHTML = anchors.map(a => {
-          const id = (a.id || "").replace(/"/g, "");
-          return `<div class="anchor-row" data-id="${id}">
-            <span title="${id}">${a.enabled ? "✓" : "·"} ${a.label || id} [${a.kind}]</span>
-            <button type="button" data-act="toggle" data-id="${id}" data-en="${a.enabled ? "0" : "1"}">${a.enabled ? "Off" : "On"}</button>
-            <button type="button" data-act="rm" data-id="${id}">×</button>
-          </div>`;
-        }).join("") +
-          `\n<span style="font-size:0.68rem;color:#64748b">defer_unknown_https_to_os=${!!data.defer_unknown_https_to_os}</span>`;
-        body.querySelectorAll("button").forEach(btn => {
-          btn.addEventListener("click", async () => {
-            const id = btn.getAttribute("data-id");
-            const act = btn.getAttribute("data-act");
-            try {
-              if (act === "rm") await invoke("browser_trust_remove", { id });
-              if (act === "toggle") await invoke("browser_trust_set_enabled", {
-                id, enabled: btn.getAttribute("data-en") === "1"
-              });
-              await refreshTrustPanel();
-              await refreshTrust($("url").value || currentUrl);
-            } catch (e) { setStatus(String(e)); }
+          body.className = "empty-state";
+          body.textContent =
+            "(empty) Add a DID or PEM below.\n\nPath: {storage}/webizen/trust_store.json\n\nBadge levels: os_default | did_match | local_scheme | untrusted_policy | unknown";
+        } else {
+          body.className = "";
+          body.innerHTML = anchors.map((a) => {
+            const id = esc(a.id || "");
+            return `<div class="anchor-row" data-id="${id}">
+              <span title="${id}">${a.enabled ? "✓" : "·"} ${esc(a.label || id)} [${esc(a.kind)}]</span>
+              <button type="button" data-act="toggle" data-id="${id}" data-en="${a.enabled ? "0" : "1"}">${a.enabled ? "Off" : "On"}</button>
+              <button type="button" data-act="rm" data-id="${id}">×</button>
+            </div>`;
+          }).join("") +
+            `<p class="panel-note">defer_unknown_https_to_os=${!!data.defer_unknown_https_to_os}</p>`;
+          body.querySelectorAll("button").forEach((btn) => {
+            btn.addEventListener("click", async () => {
+              const id = btn.getAttribute("data-id");
+              const act = btn.getAttribute("data-act");
+              try {
+                if (act === "rm") await invoke("browser_trust_remove", { id });
+                if (act === "toggle") await invoke("browser_trust_set_enabled", {
+                  id, enabled: btn.getAttribute("data-en") === "1"
+                });
+                await refreshTrustPanel();
+                await refreshTrust($("url").value || currentUrl);
+              } catch (e) { setStatus(String(e)); }
+            });
           });
-        });
+        }
       } catch (e) {
+        body.className = "empty-state";
         body.textContent = "Trust store error: " + e;
+      }
+      await refreshSuggestedCatalog();
+    }
+
+    function purposeLabel(p) {
+      if (p == null) return "unknown";
+      if (typeof p === "string") return p;
+      return String(p);
+    }
+
+    function renderCookiesPanel(data, url) {
+      const body = $("cookies-body");
+      const cookies = data.cookies || [];
+      const third = data.third_parties || [];
+      const count = data.cookie_count != null ? data.cookie_count : cookies.length;
+      const synced = data.synced != null ? data.synced : "—";
+      const note = data.coverage_note ||
+        "Best-effort jar visibility — not complete Chromium parity.";
+      const firstParty = cookies.filter((c) => !c.third_party);
+      const thirdPartyCookies = cookies.filter((c) => c.third_party);
+
+      let html = "";
+      html += `<p class="panel-note">${esc(url)} · count=${esc(count)} · synced=${esc(synced)}` +
+        (data.source ? ` · source=${esc(data.source)}` : "") + `</p>`;
+      html += `<div class="panel-section-title">Coverage</div>`;
+      html += `<p class="panel-note">${esc(note)}</p>`;
+
+      html += `<div class="panel-section-title">First-party (${firstParty.length})</div>`;
+      if (!firstParty.length) {
+        html += `<div class="empty-state">(none observed for this origin)</div>`;
+      } else {
+        firstParty.forEach((c) => {
+          html += `<div class="cookie-row">
+            <div class="cookie-main">
+              <strong>${esc(c.name)}</strong>
+              <span class="tag fp">1p</span>
+              <span class="tag">${esc(purposeLabel(c.purpose))}</span>
+            </div>
+            <div class="cookie-meta">${esc(c.domain || "")} · path ${esc(c.path || "/")} · ${c.secure ? "Secure" : "insecure"} · SameSite ${esc(c.same_site || "?")}${c.source ? " · " + esc(c.source) : ""}</div>
+          </div>`;
+        });
+      }
+
+      html += `<div class="panel-section-title">Third parties (${third.length} domains · ${thirdPartyCookies.length} cookies)</div>`;
+      if (!third.length && !thirdPartyCookies.length) {
+        html += `<div class="empty-state">(none)</div>`;
+      } else {
+        if (third.length) {
+          html += `<p class="panel-note">Domains: ${third.map(esc).join(", ")}</p>`;
+        }
+        thirdPartyCookies.forEach((c) => {
+          html += `<div class="cookie-row">
+            <div class="cookie-main">
+              <strong>${esc(c.name)}</strong>
+              <span class="tag third">3p</span>
+              <span class="tag">${esc(purposeLabel(c.purpose))}</span>
+            </div>
+            <div class="cookie-meta">${esc(c.domain || "")} · path ${esc(c.path || "/")} · ${c.secure ? "Secure" : "insecure"} · SameSite ${esc(c.same_site || "?")}${c.source ? " · " + esc(c.source) : ""}</div>
+          </div>`;
+        });
+      }
+
+      body.className = "";
+      body.innerHTML = html;
+    }
+
+    async function refreshCookiesPanel() {
+      const u = $("url").value || currentUrl;
+      const body = $("cookies-body");
+      body.className = "empty-state";
+      body.textContent = "Refreshing jar…";
+      try {
+        const raw = await invoke("browser_cookies_refresh", { url: u });
+        const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+        renderCookiesPanel(data, u);
+        const n = data.cookie_count || data.synced || 0;
+        setStatus("Cookies refreshed (" + n + ")");
+      } catch (e) {
+        // Fall back to graph summary without jar pull
+        try {
+          const raw = await invoke("browser_cookie_summary", { url: u });
+          const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+          renderCookiesPanel(data, u);
+          setStatus("Cookies: graph summary (refresh jar failed: " + e + ")");
+        } catch (e2) {
+          body.className = "empty-state";
+          body.textContent = "Cookies error: " + e + "\n\n" + e2;
+          setStatus("Cookies: " + e);
+        }
       }
     }
 
@@ -317,49 +593,35 @@
       }
     });
     $("btn-cookies").addEventListener("click", async () => {
-      const u = $("url").value || currentUrl;
-      try {
-        const raw = await invoke("browser_cookies_refresh", { url: u });
-        const data = typeof raw === "string" ? JSON.parse(raw) : raw;
-        const n = data.cookie_count || data.synced || 0;
-        const third = (data.third_parties || []).join(", ") || "(none)";
-        alert(
-          "Cookies for " + u + "\n\n" +
-          "count=" + n + " synced=" + (data.synced || 0) + "\n" +
-          "third parties: " + third + "\n\n" +
-          (data.coverage_note || "")
-        );
-        setStatus("Cookies refreshed (" + n + ")");
-      } catch (e) {
-        setStatus("Cookies: " + e);
+      const panel = $("cookies-panel");
+      const opening = !panel.classList.contains("open");
+      panel.classList.toggle("open");
+      if (opening) {
+        closeSidePanels("cookies-panel");
+        panel.classList.add("open");
+        await refreshCookiesPanel();
       }
     });
+    $("btn-cookies-refresh").addEventListener("click", async () => {
+      await refreshCookiesPanel();
+    });
     $("btn-agent").addEventListener("click", () => {
-      $("agent").classList.toggle("open");
-      if ($("agent").classList.contains("open")) {
-        $("trust-panel").classList.remove("open");
+      const panel = $("agent");
+      const opening = !panel.classList.contains("open");
+      panel.classList.toggle("open");
+      if (opening) {
+        closeSidePanels("agent");
+        panel.classList.add("open");
       }
     });
     $("btn-trust").addEventListener("click", async () => {
-      $("trust-panel").classList.toggle("open");
-      if ($("trust-panel").classList.contains("open")) {
-        $("agent").classList.remove("open");
+      const panel = $("trust-panel");
+      const opening = !panel.classList.contains("open");
+      panel.classList.toggle("open");
+      if (opening) {
+        closeSidePanels("trust-panel");
+        panel.classList.add("open");
         await refreshTrustPanel();
-      }
-    });
-    $("btn-suggested").addEventListener("click", async () => {
-      try {
-        const raw = await invoke("browser_trust_list_suggested", {});
-        const data = typeof raw === "string" ? JSON.parse(raw) : raw;
-        const n = (data.entries || []).length;
-        alert(
-          "Suggested trust catalog (" + n + " entries)\n\n" +
-          (data.description || "") + "\n\n" +
-          (n ? (data.entries || []).map(e => e.id + " — " + e.label).join("\n")
-            : "(empty — principal curates; software provides means only)")
-        );
-      } catch (e) {
-        setStatus("Suggested catalog: " + e);
       }
     });
     $("trust-form").addEventListener("submit", async (e) => {
@@ -408,6 +670,23 @@
       }
     });
 
+    $("engine-select").addEventListener("change", async () => {
+      const id = $("engine-select").value;
+      try {
+        const raw = await invoke("browser_set_engine", { engine: id });
+        const info = applyEngineStatus(raw);
+        // Navigation must keep working — do not touch content webview on engine toggle.
+        if (info.banner) {
+          setStatus(info.banner + " · engine=" + info.preferred + " · active=" + info.active);
+        } else {
+          setStatus("Engine: " + info.engLabel + " · engine=" + info.preferred);
+        }
+      } catch (e) {
+        setStatus("Engine set failed: " + e);
+        await refreshEngineStatus();
+      }
+    });
+
     // Poll host last_url ≤1s for omnibox sync after in-app navigations from Reach.
     setInterval(pollContentUrl, 900);
 
@@ -421,9 +700,15 @@
       currentUrl = start;
       lastPolled = start;
       await refreshTrust(start);
-      setStatus(start.indexOf("chora") >= 0
-        ? "Chora universe · drag sky to orbit · seed flagships in page"
-        : "Ready");
+      await refreshEngineStatus(
+        start.indexOf("chora") >= 0
+          ? "Chora universe · drag sky to orbit · seed flagships in page"
+          : null
+      );
+      // If Servo preferred, banner takes priority over Chora ready text.
+      if (engineState.banner) {
+        setStatus(engineState.banner + " · engine=" + (engineState.engine || "servo_experimental"));
+      }
     })();
   </script>
 </body>

@@ -33,6 +33,66 @@ fn is_web_or_app_url(url: &str) -> bool {
         || u.starts_with("webizen://")
 }
 
+/// Parse cookie refresh/summary JSON into UI fields (K2).
+fn apply_cookie_summary(
+    v: &serde_json::Value,
+    url: &str,
+    mut summary_text: Signal<String>,
+    mut first_party: Signal<Vec<serde_json::Value>>,
+    mut third_party: Signal<Vec<serde_json::Value>>,
+    mut third_domains: Signal<Vec<String>>,
+    mut coverage: Signal<String>,
+) {
+    let cookies = v
+        .get("cookies")
+        .and_then(|a| a.as_array())
+        .cloned()
+        .unwrap_or_default();
+    let third = v
+        .get("third_parties")
+        .and_then(|a| a.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let count = v
+        .get("cookie_count")
+        .and_then(|x| x.as_u64())
+        .unwrap_or(cookies.len() as u64);
+    let synced = v
+        .get("synced")
+        .and_then(|x| x.as_u64())
+        .map(|n| n.to_string())
+        .unwrap_or_else(|| "—".into());
+    let source = v
+        .get("source")
+        .and_then(|x| x.as_str())
+        .unwrap_or("—");
+    let note = v
+        .get("coverage_note")
+        .and_then(|x| x.as_str())
+        .unwrap_or("Best-effort jar visibility — not complete Chromium parity.");
+    let fp: Vec<serde_json::Value> = cookies
+        .iter()
+        .filter(|c| !c.get("third_party").and_then(|x| x.as_bool()).unwrap_or(false))
+        .cloned()
+        .collect();
+    let tp: Vec<serde_json::Value> = cookies
+        .iter()
+        .filter(|c| c.get("third_party").and_then(|x| x.as_bool()).unwrap_or(false))
+        .cloned()
+        .collect();
+    summary_text.set(format!(
+        "{url} · count={count} · synced={synced} · source={source}"
+    ));
+    first_party.set(fp);
+    third_party.set(tp);
+    third_domains.set(third);
+    coverage.set(note.to_string());
+}
+
 fn display_title_for(url: &str) -> String {
     let u = url.trim();
     if u.is_empty() {
@@ -165,8 +225,17 @@ pub fn WebBrowserPane() -> Element {
     let mut show_sidebar = use_signal(|| false);
     let mut show_trust = use_signal(|| false);
     let mut show_bookmarks = use_signal(|| false);
+    let mut show_cookies = use_signal(|| false);
     let mut trust_status = use_signal(String::new);
     let mut trust_list_text = use_signal(String::new);
+    let mut suggested_list_text = use_signal(String::new);
+    let mut suggested_entries = use_signal(Vec::<serde_json::Value>::new);
+    let mut cookies_status = use_signal(String::new);
+    let mut cookies_summary_text = use_signal(String::new);
+    let mut cookies_first_party = use_signal(Vec::<serde_json::Value>::new);
+    let mut cookies_third_party = use_signal(Vec::<serde_json::Value>::new);
+    let mut cookies_third_domains = use_signal(Vec::<String>::new);
+    let mut cookies_coverage = use_signal(String::new);
     let mut bookmark_list = use_signal(Vec::<serde_json::Value>::new);
     let mut browser_open = use_signal(|| false);
     let mut bootstrapped = use_signal(|| false);
@@ -453,6 +522,95 @@ pub fn WebBrowserPane() -> Element {
                 }
                 Err(e) => trust_status.set(e),
             }
+            // T2: suggested catalog (honest empty state; import/enable via buttons)
+            match invoke_tauri("browser_trust_list_suggested", json!({})).await {
+                Ok(raw) => {
+                    if let Ok(v) = serde_json::from_str::<serde_json::Value>(&raw) {
+                        let entries = v
+                            .get("entries")
+                            .and_then(|a| a.as_array())
+                            .cloned()
+                            .unwrap_or_default();
+                        let desc = v
+                            .get("description")
+                            .and_then(|x| x.as_str())
+                            .unwrap_or(
+                                "Empty suggested trust catalog. Principal curates content; software provides means only.",
+                            );
+                        if entries.is_empty() {
+                            suggested_entries.set(Vec::new());
+                            suggested_list_text.set(format!(
+                                "(empty) No suggested roots yet.\n\n{desc}\n\nSoftware provides means; you decide. Catalog stays empty until principal curates (no invented PEMs)."
+                            ));
+                        } else {
+                            suggested_entries.set(entries);
+                            suggested_list_text.set(desc.to_string());
+                        }
+                    } else {
+                        suggested_entries.set(Vec::new());
+                        suggested_list_text.set(raw);
+                    }
+                }
+                Err(e) => {
+                    suggested_entries.set(Vec::new());
+                    suggested_list_text.set(format!("Suggested catalog error: {e}"));
+                }
+            }
+        });
+    };
+
+    let refresh_cookies = move || {
+        let url = omnibox_input();
+        spawn(async move {
+            cookies_status.set("Refreshing jar…".into());
+            match invoke_tauri("browser_cookies_refresh", json!({ "url": url.clone() })).await {
+                Ok(raw) => {
+                    if let Ok(v) = serde_json::from_str::<serde_json::Value>(&raw) {
+                        apply_cookie_summary(
+                            &v,
+                            &url,
+                            cookies_summary_text,
+                            cookies_first_party,
+                            cookies_third_party,
+                            cookies_third_domains,
+                            cookies_coverage,
+                        );
+                        let n = v
+                            .get("cookie_count")
+                            .and_then(|x| x.as_u64())
+                            .or_else(|| v.get("synced").and_then(|x| x.as_u64()))
+                            .unwrap_or(0);
+                        cookies_status.set(format!("Refreshed ({n})"));
+                    } else {
+                        cookies_summary_text.set(raw);
+                        cookies_status.set(String::new());
+                    }
+                }
+                Err(e) => {
+                    // Graph-only fallback
+                    match invoke_tauri("browser_cookie_summary", json!({ "url": url.clone() })).await
+                    {
+                        Ok(raw) => {
+                            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&raw) {
+                                apply_cookie_summary(
+                                    &v,
+                                    &url,
+                                    cookies_summary_text,
+                                    cookies_first_party,
+                                    cookies_third_party,
+                                    cookies_third_domains,
+                                    cookies_coverage,
+                                );
+                                cookies_status
+                                    .set(format!("Graph summary (jar refresh failed: {e})"));
+                            } else {
+                                cookies_status.set(format!("Cookies: {e}"));
+                            }
+                        }
+                        Err(e2) => cookies_status.set(format!("Cookies: {e} / {e2}")),
+                    }
+                }
+            }
         });
     };
 
@@ -698,10 +856,23 @@ pub fn WebBrowserPane() -> Element {
                                 onclick: move |_| {
                                     show_trust.set(!show_trust());
                                     if show_trust() {
+                                        show_cookies.set(false);
                                         refresh_trust();
                                     }
                                 },
                                 "Trust store"
+                            }
+                            button {
+                                r#type: "button",
+                                style: "padding: 0.5rem 0.9rem; border-radius: 9px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-weight: 600; cursor: pointer; font-size: 0.85rem;",
+                                onclick: move |_| {
+                                    show_cookies.set(!show_cookies());
+                                    if show_cookies() {
+                                        show_trust.set(false);
+                                        refresh_cookies();
+                                    }
+                                },
+                                "Cookies"
                             }
                             button {
                                 r#type: "button",
@@ -718,8 +889,88 @@ pub fn WebBrowserPane() -> Element {
                         if show_trust() {
                             div {
                                 style: "margin-top: 1rem; padding: 1rem; border-radius: 12px; border: 1px solid #334155; background: #0f172a;",
-                                div { style: "font-size: 0.72rem; text-transform: uppercase; color: #c4b5fd; margin-bottom: 0.5rem;", "Your trust store" }
+                                div { style: "font-size: 0.72rem; text-transform: uppercase; color: #c4b5fd; margin-bottom: 0.5rem;", "Your store" }
                                 pre { style: "margin: 0 0 0.75rem; white-space: pre-wrap; font-size: 0.78rem; color: #94a3b8;", "{trust_list_text}" }
+                                div { style: "font-size: 0.72rem; text-transform: uppercase; color: #a5b4fc; margin: 0.75rem 0 0.35rem;", "Suggested (not enabled)" }
+                                p {
+                                    style: "margin: 0 0 0.5rem; font-size: 0.72rem; color: #64748b; line-height: 1.4;",
+                                    "Software provides means; you decide. Empty until curated by principal. Import adds disabled; Enable imports and turns the anchor on."
+                                }
+                                if suggested_entries().is_empty() {
+                                    pre { style: "margin: 0 0 0.75rem; white-space: pre-wrap; font-size: 0.78rem; color: #64748b;", "{suggested_list_text}" }
+                                } else {
+                                    p { style: "margin: 0 0 0.5rem; font-size: 0.72rem; color: #94a3b8;", "{suggested_list_text}" }
+                                    for entry in suggested_entries().iter() {
+                                        {
+                                            let id = entry.get("id").and_then(|x| x.as_str()).unwrap_or("").to_string();
+                                            let label = entry
+                                                .get("label")
+                                                .and_then(|x| x.as_str())
+                                                .unwrap_or(id.as_str())
+                                                .to_string();
+                                            let kind = entry
+                                                .get("kind")
+                                                .and_then(|x| x.as_str())
+                                                .unwrap_or("?")
+                                                .to_string();
+                                            let id_import = id.clone();
+                                            let id_enable = id.clone();
+                                            rsx! {
+                                                div {
+                                                    style: "display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin-bottom: 0.45rem; padding-bottom: 0.35rem; border-bottom: 1px solid #1e293b;",
+                                                    span {
+                                                        style: "flex: 1; min-width: 8rem; font-size: 0.8rem; color: #e2e8f0;",
+                                                        "{label} [{kind}]"
+                                                    }
+                                                    button {
+                                                        r#type: "button",
+                                                        style: "padding: 0.3rem 0.55rem; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-size: 0.75rem; font-weight: 600; cursor: pointer;",
+                                                        onclick: move |_| {
+                                                            let id = id_import.clone();
+                                                            spawn(async move {
+                                                                match invoke_tauri(
+                                                                    "browser_trust_import_suggested",
+                                                                    json!({ "id": id, "enable": false }),
+                                                                )
+                                                                .await
+                                                                {
+                                                                    Ok(_) => {
+                                                                        trust_status.set("Suggested imported (disabled)".into());
+                                                                        refresh_trust();
+                                                                    }
+                                                                    Err(e) => trust_status.set(e),
+                                                                }
+                                                            });
+                                                        },
+                                                        "Import"
+                                                    }
+                                                    button {
+                                                        r#type: "button",
+                                                        style: "padding: 0.3rem 0.55rem; border-radius: 8px; border: none; background: #8b5cf6; color: #fff; font-size: 0.75rem; font-weight: 600; cursor: pointer;",
+                                                        onclick: move |_| {
+                                                            let id = id_enable.clone();
+                                                            spawn(async move {
+                                                                match invoke_tauri(
+                                                                    "browser_trust_import_suggested",
+                                                                    json!({ "id": id, "enable": true }),
+                                                                )
+                                                                .await
+                                                                {
+                                                                    Ok(_) => {
+                                                                        trust_status.set("Suggested imported + enabled".into());
+                                                                        refresh_trust();
+                                                                    }
+                                                                    Err(e) => trust_status.set(e),
+                                                                }
+                                                            });
+                                                        },
+                                                        "Enable"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                                 if !trust_status().is_empty() {
                                     div { style: "color: #fca5a5; font-size: 0.78rem; margin-bottom: 0.5rem;", "{trust_status}" }
                                 }
@@ -776,8 +1027,87 @@ pub fn WebBrowserPane() -> Element {
                                     }
                                     p {
                                         style: "margin: 0.35rem 0 0; font-size: 0.72rem; color: #64748b; line-height: 1.4;",
-                                        "Path: {{storage}}/webizen/trust_store.json · PEM roots apply to agent HTTPS; WebView still uses OS TLS."
+                                        "Path: {{storage}}/webizen/trust_store.json · PEM roots apply to agent HTTPS; WebView still uses OS TLS. Cert-override is not claimed active."
                                     }
+                                }
+                            }
+                        }
+                        if show_cookies() {
+                            div {
+                                style: "margin-top: 1rem; padding: 1rem; border-radius: 12px; border: 1px solid #334155; background: #0f172a;",
+                                div { style: "font-size: 0.72rem; text-transform: uppercase; color: #c4b5fd; margin-bottom: 0.5rem;", "Cookies · jar + graph" }
+                                if !cookies_status().is_empty() {
+                                    div { style: "font-size: 0.78rem; color: #94a3b8; margin-bottom: 0.4rem;", "{cookies_status}" }
+                                }
+                                pre { style: "margin: 0 0 0.5rem; white-space: pre-wrap; font-size: 0.78rem; color: #94a3b8;", "{cookies_summary_text}" }
+                                div { style: "font-size: 0.7rem; text-transform: uppercase; color: #a5b4fc; margin: 0.5rem 0 0.25rem;", "Coverage" }
+                                p { style: "margin: 0 0 0.6rem; font-size: 0.72rem; color: #64748b; line-height: 1.4;", "{cookies_coverage}" }
+                                div { style: "font-size: 0.7rem; text-transform: uppercase; color: #a5b4fc; margin: 0.5rem 0 0.25rem;", "First-party" }
+                                if cookies_first_party().is_empty() {
+                                    p { style: "margin: 0 0 0.5rem; font-size: 0.78rem; color: #64748b;", "(none observed for this origin)" }
+                                } else {
+                                    for c in cookies_first_party().iter() {
+                                        {
+                                            let name = c.get("name").and_then(|x| x.as_str()).unwrap_or("?").to_string();
+                                            let domain = c.get("domain").and_then(|x| x.as_str()).unwrap_or("").to_string();
+                                            let purpose = c
+                                                .get("purpose")
+                                                .and_then(|x| x.as_str())
+                                                .unwrap_or("Unknown")
+                                                .to_string();
+                                            rsx! {
+                                                div {
+                                                    style: "margin-bottom: 0.35rem; font-size: 0.78rem; color: #e2e8f0;",
+                                                    strong { "{name}" }
+                                                    span { style: "color: #64748b;", " · {domain} · {purpose}" }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                div { style: "font-size: 0.7rem; text-transform: uppercase; color: #a5b4fc; margin: 0.65rem 0 0.25rem;", "Third parties" }
+                                if cookies_third_domains().is_empty() && cookies_third_party().is_empty() {
+                                    p { style: "margin: 0 0 0.5rem; font-size: 0.78rem; color: #64748b;", "(none)" }
+                                } else {
+                                    {
+                                        let domains_line = if cookies_third_domains().is_empty() {
+                                            String::new()
+                                        } else {
+                                            format!("Domains: {}", cookies_third_domains().join(", "))
+                                        };
+                                        rsx! {
+                                            if !domains_line.is_empty() {
+                                                p {
+                                                    style: "margin: 0 0 0.35rem; font-size: 0.72rem; color: #fbbf24;",
+                                                    "{domains_line}"
+                                                }
+                                            }
+                                        }
+                                    }
+                                    for c in cookies_third_party().iter() {
+                                        {
+                                            let name = c.get("name").and_then(|x| x.as_str()).unwrap_or("?").to_string();
+                                            let domain = c.get("domain").and_then(|x| x.as_str()).unwrap_or("").to_string();
+                                            let purpose = c
+                                                .get("purpose")
+                                                .and_then(|x| x.as_str())
+                                                .unwrap_or("Unknown")
+                                                .to_string();
+                                            rsx! {
+                                                div {
+                                                    style: "margin-bottom: 0.35rem; font-size: 0.78rem; color: #e2e8f0;",
+                                                    strong { "{name}" }
+                                                    span { style: "color: #fbbf24;", " · 3p · {domain} · {purpose}" }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                button {
+                                    r#type: "button",
+                                    style: "margin-top: 0.65rem; padding: 0.45rem 0.75rem; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-weight: 600; cursor: pointer; font-size: 0.8rem;",
+                                    onclick: move |_| refresh_cookies(),
+                                    "Refresh"
                                 }
                             }
                         }
@@ -809,7 +1139,7 @@ pub fn WebBrowserPane() -> Element {
                         }
                         p {
                             style: "margin: 1.25rem 0 0; font-size: 0.78rem; line-height: 1.45; color: #64748b;",
-                            "Shipped: in-window chrome, trust store CRUD, browser agent, bookmarks, cookie graph v0. Servo remains deferred."
+                            "Shipped: in-window chrome, trust store + suggested catalog UI, cookies panel (jar refresh), browser agent, bookmarks. Servo remains deferred. Cert-override not claimed active."
                         }
                     }
                 }

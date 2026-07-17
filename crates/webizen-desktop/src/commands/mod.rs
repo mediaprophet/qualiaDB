@@ -337,6 +337,85 @@ pub fn browser_cookies_refresh(app: AppHandle, url: Option<String>) -> Result<se
     crate::browser::cookies::refresh_jar_for_url(&app, &url)
 }
 
+/// Cert-override status (C1) — active / disabled / unavailable.
+#[command]
+pub fn browser_cert_override_status() -> Result<serde_json::Value, String> {
+    Ok(crate::browser::cert_override::status_json())
+}
+
+/// Enable/disable cert-override policy consultation (default enabled when hook attached).
+#[command]
+pub fn browser_cert_override_set_enabled(enabled: bool) -> Result<serde_json::Value, String> {
+    crate::browser::cert_override::set_override_enabled(enabled);
+    Ok(crate::browser::cert_override::status_json())
+}
+
+/// Re-attach cert-override hook to content webview (after recreate).
+#[command]
+pub fn browser_cert_override_attach(app: AppHandle) -> Result<serde_json::Value, String> {
+    let ok = crate::browser::cert_override::attach_to_content_webview(&app)?;
+    let mut v = crate::browser::cert_override::status_json();
+    if let Some(obj) = v.as_object_mut() {
+        obj.insert("attach_result".into(), serde_json::json!(ok));
+    }
+    Ok(v)
+}
+
+/// Add host-allow policy pin so cert errors for that host may be always-allowed.
+#[command]
+pub fn browser_trust_pin_host(host: String) -> Result<serde_json::Value, String> {
+    let host = host.trim().to_ascii_lowercase();
+    if host.is_empty() {
+        return Err("empty host".into());
+    }
+    let root = std::path::PathBuf::from(qualia_client_core::state::dirs_default_path());
+    let mut store = qualia_client_core::webizen_trust::TrustStore::load(&root);
+    let material = format!("host-allow:{host}");
+    if store
+        .anchors
+        .iter()
+        .any(|a| a.material.eq_ignore_ascii_case(&material))
+    {
+        return Err("host already pinned".into());
+    }
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    use qualia_client_core::webizen_trust::{AnchorKind, TrustAnchor};
+    let id = format!("policy:host:{}", host);
+    store.anchors.push(TrustAnchor {
+        id: id.clone(),
+        label: format!("Allow cert errors: {host}"),
+        kind: AnchorKind::PolicyLabel,
+        material,
+        enabled: true,
+        notes: "Principal host-pin for WebView2 ServerCertificateErrorDetected".into(),
+        added_unix: now,
+    });
+    store.save(&root)?;
+    Ok(serde_json::json!({ "id": id, "host": host, "enabled": true }))
+}
+
+/// Engine preference + honesty status (S1/S2). Never claims Servo paints pages unless linked.
+#[command]
+pub fn browser_engine_status() -> Result<serde_json::Value, String> {
+    Ok(crate::browser::engine::status_json())
+}
+
+/// Persist engine preference under `{storage}/webizen/browser_engine.json`.
+/// Selecting Servo without a linked embed keeps OS WebView as the active content renderer.
+#[command]
+pub fn browser_set_engine(engine: String) -> Result<serde_json::Value, String> {
+    use crate::browser::engine::EngineKind;
+    let kind = EngineKind::parse(&engine).ok_or_else(|| {
+        format!("unknown engine '{engine}' (os_web_view|servo_experimental)")
+    })?;
+    let _pref = crate::browser::engine::set_engine(kind)?;
+    // Return full status (includes banner / active_renderer) so chrome can update in one call.
+    Ok(crate::browser::engine::status_json())
+}
+
 /// List suggested trust catalog (empty until principal curates).
 #[command]
 pub fn browser_trust_list_suggested() -> Result<serde_json::Value, String> {
@@ -7474,6 +7553,12 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         browser_cookies_refresh,
         browser_trust_list_suggested,
         browser_trust_import_suggested,
+        browser_cert_override_status,
+        browser_cert_override_set_enabled,
+        browser_cert_override_attach,
+        browser_trust_pin_host,
+        browser_engine_status,
+        browser_set_engine,
         list_qlinks,
         resolve_qdp_did,
         get_ns_records_for_did,
