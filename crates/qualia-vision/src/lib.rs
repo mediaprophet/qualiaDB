@@ -88,11 +88,13 @@ pub use cv::{
     DESC_LEN,
 };
 pub use biosense::{
-    cctv_stages_allowed, ensemble_hr, eulerian_color_magnify, eulerian_motion_magnify,
-    evaluate_processing_act, face_roi_center, frame_blur_score, motion_energy, reject_low_quality,
-    respiration_from_motion, roi_mean_rgb, spectral_hr_peak, template_hash_from_roi,
-    templates_match, valence_arousal_proposal, AffectProposal, BiometricTemplate, BiosenseConsent,
-    BiosensePurpose, FaceRoi, HrEstimate, PolicyDecision, ProcessingAct, QualityReject,
+    blendshape_affect_proposal, cctv_stages_allowed, ensemble_hr, eulerian_color_magnify,
+    eulerian_motion_magnify, evaluate_challenge_pad, evaluate_processing_act, face_roi_center,
+    frame_blur_score, issue_challenge, motion_energy, reject_low_quality, respiration_from_motion,
+    roi_mean_rgb, spectral_hr_peak, template_hash_from_roi, templates_match,
+    valence_arousal_proposal, AffectProposal, BiometricTemplate, BiosenseConsent, BiosensePurpose,
+    BlendshapeProxy, ChallengeKind, FaceRoi, HrEstimate, MeshFrameSignals, PadReason, PadResult,
+    PadThresholds, PolicyDecision, ProcessingAct, QualityReject,
 };
 pub use recipes::self_monitor_pulse;
 

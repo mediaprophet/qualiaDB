@@ -39,3 +39,19 @@ New algorithm files are single-function modules under subdirs; `mod.rs` files ar
 ### Next
 
 Wire Studio/desktop commands; deepen face mesh weights; FED policy; multi-view recon — or principal dogfood this core.
+
+---
+
+## 2026-07-17 — Commercial model pack + challenge PAD
+
+**Status:** done (docs + PAD code)
+
+**What:**
+- `docs/plans/vision-excellence-commercial-model-pack.md` — MediaPipe mesh, SFace, YuNet, YOLO-NAS, OMZ emotion optional, challenge PAD design
+- `biosense/liveness/` — challenge-response PAD (yaw/smile/blink + static-mesh reject)
+- `blendshape_affect_proposal` — Path A affect without AffectNet
+- Registry honesty strings point at pack; D3.09 → Present (challenge PAD)
+
+**Assets principal still fetches offline:** TFLite/ONNX weights into `{storage}/models/vision/` (not git).
+
+**Next:** ONNX/TFLite load adapters when weights present; wire mesh signals into PAD.
