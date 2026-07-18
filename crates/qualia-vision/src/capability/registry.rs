@@ -34,7 +34,7 @@ static REGISTRY: &[CapabilityEntry] = &[
     cap!("D1.08", "D1", "features_orb_match", Present, "cv/features ORB-class + match"),
     cap!("D1.09", "D1", "optical_flow", Present, "cv/flow lucas_kanade_sparse"),
     cap!("D1.10", "D1", "codecs_png_jpeg", Present, "computer_vision::cv::codecs — PNG encode+decode (png crate) byte-exact round-trip; baseline JPEG decode (jpeg-decoder); fail-closed on garbage"),
-    cap!("D1.11", "D1", "video_file_io", Partial, "FrameSequence ring + synthetic pulse; demux still Missing"),
+    cap!("D1.11", "D1", "video_file_io", Present, "cv::video::demux_mp4 — real MP4 container demux (track metadata + encoded packets w/ timestamps/keyframes, mp4 crate) + FrameSequence ring; RGB codec decode is codec-gated (separate)"),
     cap!("D1.12", "D1", "camera_capture", Partial, "desktop intent pattern; vision hooks"),
     cap!("D1.13", "D1", "drawing_overlay", Present, "cv/draw + overlay"),
     cap!("D1.14", "D1", "photo_denoise", Present, "cv/photo bilateral_denoise"),

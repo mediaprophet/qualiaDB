@@ -238,6 +238,8 @@ png = "0.17"
 jpeg-decoder = "0.3"
 # ONNX Runtime for learned SR session adapters (feature `vision-onnx`, off by default).
 ort = { version = "2.0.0-rc.12", features = ["download-binaries"], optional = true }
+# Pure-Rust MP4 container demuxer (MIT) for D1.11 video file I/O (demux only; codec decode is separate).
+mp4 = "0.14"
 sysinfo = "0.39.3"
 # W7: NVIDIA GPU thermal/power telemetry (opt-in via the `nvml` feature). Loads the driver's NVML
 # library at runtime (dlopen) — builds without the CUDA SDK; init fails gracefully on non-NVIDIA hosts.

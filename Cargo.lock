@@ -7442,6 +7442,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "mp4"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c9ef834d5ed55e494a2ae350220314dc4aacd1c43a9498b00e320e0ea352a5c3"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "num-rational 0.4.2",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "muda"
 version = "0.19.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8023,6 +8037,7 @@ dependencies = [
  "num-bigint 0.4.8",
  "num-integer",
  "num-traits",
+ "serde",
 ]
 
 [[package]]
@@ -9886,6 +9901,7 @@ dependencies = [
  "lz4_flex",
  "memmap2",
  "minicbor",
+ "mp4",
  "naga",
  "num-bigint 0.5.1",
  "num_cpus",
