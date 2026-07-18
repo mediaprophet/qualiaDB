@@ -15,6 +15,7 @@ pub mod photo;
 pub mod draw;
 pub mod video;
 pub mod sr;
+pub mod codecs;
 
 pub use error::CvError;
 pub use video::{synthetic_pulse_sequence, FrameSequence, MAX_SEQ_FRAMES};

@@ -229,6 +229,9 @@ tower-http = { version = "0.7", features = ["fs", "cors", "set-header"] }
 tokio-stream = { version = "0.1.18", features = ["sync"] }
 http-body-util = "0.1.3"
 zstd = "0.13"
+# Permissive pure-Rust image codecs (D1.10): PNG (MIT/Apache) + baseline JPEG (MIT/Apache).
+png = "0.17"
+jpeg-decoder = "0.3"
 sysinfo = "0.39.3"
 # W7: NVIDIA GPU thermal/power telemetry (opt-in via the `nvml` feature). Loads the driver's NVML
 # library at runtime (dlopen) — builds without the CUDA SDK; init fails gracefully on non-NVIDIA hosts.
