@@ -138,11 +138,26 @@ mod tests {
     }
 
     #[test]
-    fn prefer_gpu_degrades_without_adapter() {
+    fn prefer_gpu_runs_or_degrades_gracefully() {
+        // prefer_gpu=true must be correct WITH or WITHOUT a GPU adapter: on a GPU box it
+        // runs on SharedGpu (not degraded); on a headless box it degrades to CPU/Unavailable.
+        // Both are valid — the invariant is "never panic, always correct output" (the old test
+        // wrongly required a degrade and thus failed on any GPU-equipped machine).
         let input = [1.0f32; 4];
         let mut out = [0.0f32; 16];
         let r = resize_nearest_nchw_dispatch(&input, 1, 2, 2, 4, 4, &mut out, true).unwrap();
-        assert!(r.degraded || r.device == VisionComputeDevice::Unavailable);
+        assert!(
+            out.iter().all(|&v| v == 1.0),
+            "nearest resize of a constant image must stay constant"
+        );
+        assert!(
+            r.device == VisionComputeDevice::SharedGpu
+                || r.degraded
+                || r.device == VisionComputeDevice::Unavailable,
+            "prefer_gpu must run on GPU or degrade gracefully; got device={:?} degraded={}",
+            r.device,
+            r.degraded
+        );
     }
 
     #[test]

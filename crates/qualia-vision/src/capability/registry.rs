@@ -44,7 +44,7 @@ static REGISTRY: &[CapabilityEntry] = &[
         "D1",
         "classical_sr",
         Present,
-        "specialized_libs::computer_vision::sr; nearest+bicubic on shared_gpu when Cool; lanczos CPU; MCP computer_vision"
+        "specialized_libs::computer_vision::sr; nearest+bicubic on shared_gpu when Cool; lanczos + edge-directed-lite CPU; MCP computer_vision"
     ),
     // D2 learned
     cap!("D2.01", "D2", "detector_tracker", Partial, "ByteTrack MOT Present; YuNet decode+optional --features ort infer; default FeatureDisabled"),
@@ -62,6 +62,10 @@ static REGISTRY: &[CapabilityEntry] = &[
         Present,
         "aHash/dHash + RGB hist L2 (embeddings/); not CLIP — ONNX CLIP later under vendor/vision/embeddings/"
     ),
+    cap!("D2.10", "D2", "sr_cnn_light", Missing, "FSRCNN/ESPCN Apache weights + ort session (WeightAbsent); tiling infra Present — see gated-av-jobs-2026.md"),
+    cap!("D2.11", "D2", "sr_esrgan_edge", Missing, "Real-ESRGAN compact MIT ONNX + ort session (WeightAbsent); tile+feather-blend Present"),
+    cap!("D2.12", "D2", "sr_swin_heavy", Missing, "SwinIR MIT ONNX + ort session (WeightAbsent)"),
+    cap!("D2.13", "D2", "sr_tiling_runtime", Present, "computer_vision::sr tile_plan/extract/blend; feather blend + max_tiles fail-closed; tested"),
     // D3 biosense
     cap!("D3.01", "D3", "face_landmarks", Partial, "MP buffer→LandmarkFrame+PAD wire Present; .task runtime AdapterMissing"),
     cap!("D3.02", "D3", "frame_quality", Present, "biosense/quality"),
