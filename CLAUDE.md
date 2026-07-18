@@ -169,9 +169,10 @@ Each entry must contain, plainly and honestly:
 5. **Next step** + any new follow-ups discovered.
 
 Logs are honest engineering records (errors and regressions included), mirror the measurement-honesty
-rule, and never contain personal circumstances. The active log for the perf push is
-[`STELLAR_A_PROGRESS_LOG.md`](STELLAR_A_PROGRESS_LOG.md); start a new log per major workstream with a
-descriptive name.
+rule, and never contain personal circumstances. STELLAR status lives in
+[`docs/plans/stellar-status-2026.md`](docs/plans/stellar-status-2026.md) (the master
+`STELLAR_PHENOMENAL_PLAN.md` was relocated to an untracked `.dev-docs/`). Start a new progress log per major
+workstream with a descriptive name under `docs/plans/` (e.g. `native-auditory-swarm-PROGRESS-LOG.md`).
 
 ---
 

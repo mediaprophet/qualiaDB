@@ -7775,6 +7775,12 @@ pub fn audio_mixer_bounce(tracks: serde_json::Value) -> Result<serde_json::Value
     qualia_client_core::audio_pipeline::mixer_bounce(&tracks)
 }
 
+#[command]
+pub fn audio_capabilities() -> Result<serde_json::Value, String> {
+    serde_json::to_value(qualia_client_core::audio_pipeline::audio_capabilities())
+        .map_err(|e| e.to_string())
+}
+
 /// Full generate → store → recon → OBJ/.10d continuum (pre-auditory handoff).
 #[command]
 pub fn vision_gs_continuum(
@@ -8342,6 +8348,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         audio_shared_clock_demo,
         audio_mixer_default,
         audio_mixer_bounce,
+        audio_capabilities,
     ]
 }
 

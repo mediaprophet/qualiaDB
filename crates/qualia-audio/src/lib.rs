@@ -12,6 +12,12 @@
 #![cfg_attr(not(test), deny(clippy::unwrap_used))]
 
 pub mod types;
+pub mod capability_registry;
+pub mod io;
+pub mod fx;
+pub mod midi;
+pub mod models;
+pub mod aqa;
 pub mod hash;
 pub mod convert;
 pub mod resample;

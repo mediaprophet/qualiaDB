@@ -10,6 +10,8 @@ use crate::NQuin;
 use serde_json::{json, Value};
 
 mod algebra;
+#[cfg(not(target_arch = "wasm32"))]
+mod audio;
 mod chemistry;
 mod engineering;
 mod geometry;
@@ -22,6 +24,8 @@ mod stats;
 mod vision;
 
 pub use algebra::*;
+#[cfg(not(target_arch = "wasm32"))]
+pub use audio::*;
 pub use chemistry::*;
 pub use engineering::*;
 pub use geometry::*;

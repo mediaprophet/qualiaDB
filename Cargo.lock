@@ -9883,6 +9883,7 @@ dependencies = [
  "pbkdf2 0.13.0",
  "pollster",
  "proptest",
+ "qualia-audio",
  "quick-xml 0.41.0",
  "rand 0.10.2",
  "rand 0.9.5",

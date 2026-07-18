@@ -79,21 +79,21 @@ impl AedWeightBundle {
         if ver != AED_VERSION {
             return Err(crate::types::AudioError::BackendUnavailable);
         }
-        let model_hash = u64::from_le_bytes(bytes[8..16].try_into().unwrap());
+        let model_hash = u64::from_le_bytes(bytes[8..16].try_into().map_err(|_| crate::types::AudioError::MalformedAudio)?);
         let mut off = 16usize;
         let mut weight = [0.0f32; 16];
         for w in weight.iter_mut() {
-            *w = f32::from_le_bytes(bytes[off..off + 4].try_into().unwrap());
+            *w = f32::from_le_bytes(bytes[off..off + 4].try_into().map_err(|_| crate::types::AudioError::MalformedAudio)?);
             off += 4;
         }
         let mut bias = [0.0f32; 4];
         for b in bias.iter_mut() {
-            *b = f32::from_le_bytes(bytes[off..off + 4].try_into().unwrap());
+            *b = f32::from_le_bytes(bytes[off..off + 4].try_into().map_err(|_| crate::types::AudioError::MalformedAudio)?);
             off += 4;
         }
         let mut class_hashes = [0u64; 4];
         for c in class_hashes.iter_mut() {
-            *c = u64::from_le_bytes(bytes[off..off + 8].try_into().unwrap());
+            *c = u64::from_le_bytes(bytes[off..off + 8].try_into().map_err(|_| crate::types::AudioError::MalformedAudio)?);
             off += 8;
         }
         Ok(Self {

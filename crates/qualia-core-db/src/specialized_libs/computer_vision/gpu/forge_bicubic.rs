@@ -1,8 +1,15 @@
-//! Bicubic (Keys a=-0.5) NCHW f32 resize via Forge WGSL on `shared_gpu`.
+//! Bicubic (Keys a=-0.5) NCHW f32 resize via Forge WGSL on the **auxiliary** GPU circuit.
 //!
 //! Matches the CPU Keys cubic used by `cv::sr::bicubic_u8` (per-channel NCHW).
 //! Direct WGSL dispatch (not yet a graph OpNode) so product SR can use GPU
 //! without waiting on IR lowerer expansion.
+//!
+//! Device routing: vision SR runs on the auxiliary circuit (the iGPU when present) to keep the
+//! discrete GPU free for the LLM. The device comes from
+//! [`crate::gpu_context::device_registry::try_auxiliary_gpu`], whose fallback chain is
+//! auxiliary → primary → CPU: on a single-GPU box it transparently uses the primary device, and on
+//! a GPU-less box it returns `None`, so this function reports `BackendUnavailable` and the caller
+//! ([`super::dispatch`]) degrades to the CPU oracle. It never panics.
 
 use super::dispatch::{VisionComputeDevice, VisionComputeReport};
 use crate::specialized_libs::computer_vision::types::VisionError;
@@ -132,7 +139,9 @@ fn cubic_weight(t: f32) -> f32 {
     }
 }
 
-/// Attempt bicubic NCHW resize on `shared_gpu`.
+/// Attempt bicubic NCHW resize on the auxiliary GPU circuit (iGPU when present; falls back
+/// auxiliary → primary → CPU). Returns `Err(BackendUnavailable)` on a GPU-less box so the caller
+/// degrades to the CPU oracle. Never panics.
 #[cfg(all(feature = "gpu-runtime", not(target_arch = "wasm32")))]
 pub fn try_resize_bicubic_shared_gpu(
     input: &[f32],
@@ -155,11 +164,17 @@ pub fn try_resize_bicubic_shared_gpu(
         return Err(VisionError::MalformedImage);
     }
 
-    let shared = crate::gpu_context::shared_gpu();
+    // Route through the device-per-circuit registry: auxiliary (iGPU) → primary → None. This keeps
+    // the discrete GPU free for the LLM, and — unlike `shared_gpu()`, which panics with no adapter —
+    // fails closed to the caller's CPU fallback on a GPU-less machine (never panics).
+    let gpu = match crate::gpu_context::device_registry::try_auxiliary_gpu() {
+        Some(g) => g,
+        None => return Err(VisionError::BackendUnavailable),
+    };
     let mut ctx = WgpuComputeContext::from_device(
-        shared.device.clone(),
-        shared.queue.clone(),
-        &shared.adapter_caps,
+        gpu.device.clone(),
+        gpu.queue.clone(),
+        &gpu.adapter_caps,
         16 << 20,
     )
     .map_err(|_| VisionError::BackendUnavailable)?;

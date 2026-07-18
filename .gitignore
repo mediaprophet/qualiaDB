@@ -197,25 +197,6 @@ coordination/NOTICES.md
 
 # Plan Files
 /docs/plans/*
-!/docs/plans/native-computational-economics.md
-!/docs/plans/cof-html-rdfa-etl.md
-!/docs/plans/optional-ollama-harness.md
-!/docs/plans/solid-outpost-hackathon-bridge.md
-!/docs/plans/p64-decode-upgrade-plan.md
-!/docs/plans/browser-advisor-decisions-addendum-2026-07-17.md
-!/docs/plans/browser-swarm-2-hardening.md
-!/docs/plans/browser-swarm-2-PROGRESS-LOG.md
-!/docs/plans/native-vision-capability-excellence-2026.md
-!/docs/plans/native-vision-capability-excellence-PROGRESS-LOG.md
-!/docs/plans/vision-excellence-commercial-model-pack.md
-!/docs/plans/vision-capability-catalogue-2026.md
-!/docs/plans/vision-excellence-swarm-execute-2026.md
-!/docs/plans/native-super-resolution-excellence-2026.md
-!/docs/plans/bio-medical-cv-catalogue-2026.md
-!/docs/plans/vision-gpu-10d-geometry-gap-audit-2026.md
-!/docs/plans/vision-10d-browser-excellence-programme-2026.md
-!/docs/plans/vision-10d-browser-excellence-PROGRESS-LOG.md
-!/docs/plans/bio-medical-cv-catalogue-2026.md
 
 # Vision vendor weights (large binaries) — manifests/README tracked; fetch via vendor/vision/download.ps1
 /vendor/vision/**/*.onnx

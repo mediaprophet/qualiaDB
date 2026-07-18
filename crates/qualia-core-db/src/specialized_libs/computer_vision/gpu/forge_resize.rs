@@ -1,8 +1,15 @@
-//! B2 — nearest NCHW resize via Forge on `shared_gpu` when available.
+//! B2 — nearest NCHW resize via Forge on the **auxiliary** GPU circuit when available.
 //!
 //! Uses existing `OpNode::Resize2d` / WGSL `resize2d_main` (certified against
 //! the same numerical contract as `ops::resize_nearest_nchw_f32`). Fail closed
 //! to caller (CPU path) on any adapter / forge error.
+//!
+//! Device routing: vision SR runs on the auxiliary circuit (the iGPU when present) to keep the
+//! discrete GPU free for the LLM. The device comes from
+//! [`crate::gpu_context::device_registry::try_auxiliary_gpu`], whose fallback chain is
+//! auxiliary → primary → CPU: on a single-GPU box it transparently uses the primary device, and on
+//! a GPU-less box it returns `None`, so this function fails closed and the caller degrades to the
+//! CPU oracle. It never panics.
 
 use super::dispatch::{VisionComputeDevice, VisionComputeReport};
 use crate::specialized_libs::computer_vision::types::VisionError;
@@ -21,9 +28,13 @@ pub fn try_resize_nearest_shared_gpu(
     w_out: usize,
     out: &mut [f32],
 ) -> Result<VisionComputeReport, VisionError> {
+    use crate::wgsl_forge::execute::WgpuComputeContext;
     use crate::wgsl_forge::graph_ops::executor::ForgeGraphExecutor;
     use crate::wgsl_forge::ir::graph::{ComputeGraph, DType, OpNode, Shape, TensorRef};
     use crate::wgsl_forge::schedule::Schedule;
+
+    /// Per-slab capacity for the vision resize executor (matches `ForgeGraphExecutor`'s default).
+    const EXEC_CAPACITY: usize = 64 << 20;
 
     let need_in = c.saturating_mul(h_in).saturating_mul(w_in);
     let need_out = c.saturating_mul(h_out).saturating_mul(w_out);
@@ -58,7 +69,21 @@ pub fn try_resize_nearest_shared_gpu(
         .map_err(|_| VisionError::BackendUnavailable)?;
     g.mark_output(tout);
 
-    let mut exec = ForgeGraphExecutor::on_shared_gpu().map_err(|_| VisionError::BackendUnavailable)?;
+    // Route through the device-per-circuit registry: auxiliary (iGPU) → primary → None. This keeps
+    // the discrete GPU free for the LLM, and — unlike `on_shared_gpu()` (which calls `shared_gpu()`
+    // and panics with no adapter) — fails closed to the caller's CPU fallback on a GPU-less machine.
+    let gpu = match crate::gpu_context::device_registry::try_auxiliary_gpu() {
+        Some(g) => g,
+        None => return Err(VisionError::BackendUnavailable),
+    };
+    let ctx = WgpuComputeContext::from_device(
+        gpu.device.clone(),
+        gpu.queue.clone(),
+        &gpu.adapter_caps,
+        EXEC_CAPACITY,
+    )
+    .map_err(|_| VisionError::BackendUnavailable)?;
+    let mut exec = ForgeGraphExecutor::with_context(ctx);
     let result = exec
         .run(&g, &[input[..need_in].to_vec()])
         .map_err(|_| VisionError::BackendUnavailable)?;

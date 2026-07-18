@@ -65,49 +65,36 @@ pub fn detect_onsets(
     w
 }
 
-/// Very coarse YIN-like lag search for F0 (reference quality).
+/// F0 for one frame via the real YIN estimator (CMND + absolute threshold +
+/// parabolic interpolation) in `features::pitch`. Replaced the earlier coarse
+/// integer-lag argmin. Allocates a per-call difference-function scratch (this is
+/// the batch convenience path; the zero-heap path is `features::pitch::yin_pitch`
+/// with a caller-owned scratch).
 pub fn estimate_f0_hz(
     frame: &[f32],
     sample_rate: u32,
     min_hz: f32,
     max_hz: f32,
 ) -> PitchEstimate {
+    let unvoiced = PitchEstimate { frame: 0, f0_hz: 0.0, confidence: 0.0 };
     if frame.len() < 32 || sample_rate == 0 {
-        return PitchEstimate {
+        return unvoiced;
+    }
+    let mut scratch = vec![0.0f32; frame.len()];
+    match crate::features::pitch::yin_pitch(
+        frame,
+        sample_rate as f32,
+        min_hz,
+        max_hz,
+        0.15,
+        &mut scratch,
+    ) {
+        Ok(est) => PitchEstimate {
             frame: 0,
-            f0_hz: 0.0,
-            confidence: 0.0,
-        };
-    }
-    let min_lag = (sample_rate as f32 / max_hz).max(2.0) as usize;
-    let max_lag = (sample_rate as f32 / min_hz).min(frame.len() as f32 / 2.0) as usize;
-    if min_lag >= max_lag {
-        return PitchEstimate {
-            frame: 0,
-            f0_hz: 0.0,
-            confidence: 0.0,
-        };
-    }
-    let mut best_lag = min_lag;
-    let mut best = f32::INFINITY;
-    for lag in min_lag..=max_lag {
-        let mut d = 0.0f32;
-        let n = frame.len() - lag;
-        for i in 0..n {
-            let diff = frame[i] - frame[i + lag];
-            d += diff * diff;
-        }
-        if d < best {
-            best = d;
-            best_lag = lag;
-        }
-    }
-    let f0 = sample_rate as f32 / best_lag as f32;
-    let conf = (1.0 / (1.0 + best)).clamp(0.0, 1.0);
-    PitchEstimate {
-        frame: 0,
-        f0_hz: f0,
-        confidence: conf,
+            f0_hz: est.f0_hz,
+            confidence: est.confidence,
+        },
+        Err(_) => unvoiced,
     }
 }
 

@@ -63,7 +63,7 @@ pub fn run_ears_demo(
 
     let mut mel = vec![0.0f32; 32 * 16];
     let mel_frames =
-        log_mel_from_mono(&mono2, 256, 128, 16, &mut mel).map_err(|e| format!("{e:?}"))?;
+        log_mel_from_mono(&mono2, 256, 128, sample_rate, 16, &mut mel).map_err(|e| format!("{e:?}"))?;
     let mut cqt = [0.0f32; 24];
     forward_cqt_mono(&mono2, sample_rate as f32, 55.0, 12, 24, &mut cqt)
         .map_err(|e| format!("{e:?}"))?;
@@ -147,7 +147,7 @@ pub fn run_ears_on_wav_file(
     };
     let mut mel = vec![0.0f32; 32 * 16];
     let mel_frames =
-        log_mel_from_mono(&mono, 256, 128, 16, &mut mel).map_err(|e| format!("{e:?}"))?;
+        log_mel_from_mono(&mono, 256, 128, decoded.sample_rate, 16, &mut mel).map_err(|e| format!("{e:?}"))?;
     let mut cqt = [0.0f32; 24];
     forward_cqt_mono(&mono, decoded.sample_rate as f32, 55.0, 12, 24, &mut cqt)
         .map_err(|e| format!("{e:?}"))?;

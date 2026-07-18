@@ -297,6 +297,11 @@ fn stable_mcp_tools() -> &'static [McpToolDescriptor] {
             input_schema: r#"{"type":"object","required":["op"],"properties":{"op":{"type":"string","enum":["list","capability_summary","rgb_to_gray","super_resolve","mesh_quality_cleanup","class_score_to_sigma"]},"width":{"type":"integer"},"height":{"type":"integer"},"scale":{"type":"integer"},"kernel":{"type":"string","enum":["nearest","bilinear","bicubic","lanczos3"]},"rgb":{"type":"array","items":{"type":"integer"}},"class_hash":{"type":"integer"},"score":{"type":"number"},"positions":{"type":"array","items":{"type":"array","items":{"type":"number"}}},"indices":{"type":"array","items":{"type":"integer"}},"weld_epsilon":{"type":"number"}}}"#,
         },
         McpToolDescriptor {
+            name: "audio_features",
+            description: "Native qualia-audio features + honest capability registry: list (all capabilities with Present/Partial/Missing/NeedsWeights status), capability_summary (counts), log_mel, pitch_yin (real YIN F0+confidence), loudness_r128 (EBU R128 LUFS). Caller-supplied PCM samples; CPU; learned heads fail closed.",
+            input_schema: r#"{"type":"object","required":["op"],"properties":{"op":{"type":"string","enum":["list","capability_summary","log_mel","pitch_yin","loudness_r128"]},"samples":{"type":"array","items":{"type":"number"}},"sample_rate":{"type":"integer"},"n_mel":{"type":"integer"}}}"#,
+        },
+        McpToolDescriptor {
             name: "geometry_manifests",
             description: "List per-op capability manifests (backends, determinism class, resource limits) and run Reserve-mode budget queries for computational-geometry ops.",
             input_schema: r#"{"type":"object","properties":{"op":{"type":"string","description":"Op name for a Reserve-mode budget query (omit to list all manifests)"},"device":{"type":"object","properties":{"cpu":{"type":"boolean"},"simd":{"type":"boolean"},"wgpu":{"type":"boolean"},"cuda":{"type":"boolean"},"wasm":{"type":"boolean"},"exact":{"type":"boolean"}}}}}"#,
@@ -493,6 +498,8 @@ pub unsafe fn enforce_fiduciary_tool_dispatch(
         b"computational_geometry" => mcp_tool_impls::computational_geometry(payload.arguments_raw),
         b"geometry_manifests" => mcp_tool_impls::geometry_manifests(payload.arguments_raw),
         b"computer_vision" => mcp_tool_impls::computer_vision(payload.arguments_raw),
+        #[cfg(not(target_arch = "wasm32"))]
+        b"audio_features" => mcp_tool_impls::audio_features(payload.arguments_raw),
 
         // ── Identifiers & Wallet Tools ─────────────────────────────────────────
         b"get_wallet_status" => execute_wallet_status(payload.arguments_raw, intent_frame),

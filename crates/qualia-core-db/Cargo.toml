@@ -216,6 +216,7 @@ windows = { version = "0.62", features = [
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 libc = "0.2"
+qualia-audio = { path = "../qualia-audio" }
 keyring = "4"
 memmap2 = "0.9"
 futures-util = "0.3"

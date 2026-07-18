@@ -26,6 +26,12 @@ pub use caps::{
     GpuLimitCaps,
 };
 
+/// Device-per-circuit registry — obtain a `wgpu::Device` for a SPECIFIC adapter/circuit
+/// (e.g. the integrated GPU), not just the single process-wide primary (STELLAR H3 foundation).
+/// Native only; mirrors [`try_shared_gpu`] — never panics on a missing/failed device.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod device_registry;
+
 /// Desktop / portal operational mode (thermal + VRAM driven).
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -681,7 +687,7 @@ impl SharedGpuContext {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-static SHARED_GPU: OnceLock<SharedGpuContext> = OnceLock::new();
+static SHARED_GPU: OnceLock<Option<SharedGpuContext>> = OnceLock::new();
 
 /// Choose the DX12 shader compiler. DX12's legacy FXC compiler cannot compile our flash-attention
 /// shader (`fused_attention.wgsl`, X4026) — DXC (the modern compiler) can. Resolution order:
@@ -749,6 +755,34 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
         })
         .await
         .map_err(|e| format!("Failed to find wgpu adapter: {e}"))?;
+
+    // Primary circuit only: size the process-wide VRAM ledger from the best adapter's dedicated
+    // memory (Windows/DXGI). The global ledger models the PRIMARY LLM device's budget, so the
+    // per-circuit `device_registry` path (auxiliary GPUs) deliberately does NOT touch it.
+    #[cfg(target_os = "windows")]
+    if let Ok(memory) = crate::directml_bridge::probe_best_adapter_memory() {
+        let total_local = memory
+            .local_budget_bytes
+            .max(memory.dedicated_vram_bytes)
+            .max(memory.available_local_bytes());
+        if total_local > 0 {
+            global_vram_ledger().set_budget(total_local);
+        }
+    }
+
+    init_shared_gpu_for_adapter(instance, adapter).await
+}
+
+/// Build a [`SharedGpuContext`] from a GIVEN instance + adapter — the reusable core shared by the
+/// process-wide primary device ([`init_shared_gpu_async`], which requests its own HighPerformance
+/// adapter then delegates here) and the per-circuit [`device_registry`]. Requests only
+/// adapter-advertised features, raises buffer-size limits to the adapter maximum, and negotiates
+/// timestamps. Never panics; returns `Err` on device-request failure so callers can fall back.
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) async fn init_shared_gpu_for_adapter(
+    instance: wgpu::Instance,
+    adapter: wgpu::Adapter,
+) -> Result<SharedGpuContext, String> {
     let adapter_caps = GpuAdapterCaps::from_adapter(&adapter);
     log::info!(
         "shared_gpu|adapter|{}|{}",
@@ -766,17 +800,6 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
         log::warn!(
             "shared_gpu|adapter|integrated_gpu_selected|set QUALIA_LLM_ALLOW_IGPU=1 to acknowledge this for native LLM runs"
         );
-    }
-
-    #[cfg(target_os = "windows")]
-    if let Ok(memory) = crate::directml_bridge::probe_best_adapter_memory() {
-        let total_local = memory
-            .local_budget_bytes
-            .max(memory.dedicated_vram_bytes)
-            .max(memory.available_local_bytes());
-        if total_local > 0 {
-            global_vram_ledger().set_budget(total_local);
-        }
     }
 
     // Request only features the adapter advertises, and keep the selector in the caps module so
@@ -847,22 +870,49 @@ async fn init_shared_gpu_async() -> Result<SharedGpuContext, String> {
     })
 }
 
-/// Process-wide wgpu device + queue (lazy init, reused by QTensorEngine + render).
+/// Process-wide wgpu device + queue, or `None` when no usable GPU adapter exists
+/// (headless / integrated-only / GPU-less machine, or the tokio runtime can't start).
+///
+/// Callers that can degrade to CPU MUST use this and fall back on `None`, rather than
+/// `shared_gpu()` which aborts the process. The `None` result is cached, so a GPU-less
+/// machine probes once. (Init is lazy and reused by QTensorEngine + render.)
+#[cfg(not(target_arch = "wasm32"))]
+pub fn try_shared_gpu() -> Option<&'static SharedGpuContext> {
+    SHARED_GPU
+        .get_or_init(|| {
+            let handle = match tokio::runtime::Handle::try_current() {
+                Ok(h) => h,
+                Err(_) => match tokio::runtime::Runtime::new() {
+                    Ok(rt) => Box::leak(Box::new(rt)).handle().clone(),
+                    Err(_) => return None,
+                },
+            };
+            tokio::task::block_in_place(|| handle.block_on(init_shared_gpu_async()).ok())
+        })
+        .as_ref()
+}
+
+/// Process-wide wgpu device + queue (lazy init). **Panics** if no GPU is available —
+/// use only where a device is genuinely mandatory. Prefer [`try_shared_gpu`] on any
+/// path that can fall back to CPU.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn shared_gpu() -> &'static SharedGpuContext {
-    SHARED_GPU.get_or_init(|| {
-        let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| {
-            let rt = Box::leak(Box::new(
-                tokio::runtime::Runtime::new().expect("tokio runtime for shared gpu"),
-            ));
-            rt.handle().clone()
-        });
-        tokio::task::block_in_place(|| {
-            handle
-                .block_on(init_shared_gpu_async())
-                .expect("shared wgpu init failed")
-        })
-    })
+    try_shared_gpu().expect("shared wgpu init failed")
+}
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod shared_gpu_robustness_tests {
+    use super::*;
+
+    #[test]
+    fn try_shared_gpu_never_panics_and_is_idempotent() {
+        // The point of the fix: probing for a GPU must NOT abort the process on a
+        // GPU-less / headless machine, and the None/Some result is cached so repeated
+        // calls agree (a GPU-less box probes exactly once).
+        let first = try_shared_gpu().is_some();
+        let second = try_shared_gpu().is_some();
+        assert_eq!(first, second, "try_shared_gpu must be cached + consistent");
+    }
 }
 
 #[cfg(test)]

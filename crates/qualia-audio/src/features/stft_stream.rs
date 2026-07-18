@@ -1,4 +1,4 @@
-//! Bounded streaming STFT (CPU DFT floor; power-of-two frames ≤ 512).
+//! Bounded streaming STFT (real radix-2 FFT via `features::fft`; power-of-two frames ≤ 512).
 
 use crate::types::AudioError;
 
@@ -10,6 +10,8 @@ pub struct StreamingStft {
     window: Vec<f32>,
     ring: Vec<f32>,
     ring_len: usize,
+    /// Interleaved `[re, im]` FFT scratch (len `2 * frame_size`), reused per frame — no hot-path alloc.
+    scratch: Vec<f32>,
 }
 
 impl StreamingStft {
@@ -29,6 +31,7 @@ impl StreamingStft {
             window,
             ring: vec![0.0f32; frame_size * 2],
             ring_len: 0,
+            scratch: vec![0.0f32; frame_size * 2],
         })
     }
 
@@ -54,9 +57,13 @@ impl StreamingStft {
                 self.ring[self.ring_len - 1] = s;
             }
             while self.ring_len >= self.frame_size && written < max_frames {
-                let frame = &self.ring[..self.frame_size];
                 let dest = &mut out_mags[written * bins..(written + 1) * bins];
-                dft_magnitude(frame, &self.window, dest);
+                fft_magnitude(
+                    &self.ring[..self.frame_size],
+                    &self.window,
+                    &mut self.scratch,
+                    dest,
+                );
                 // consume hop
                 if self.hop >= self.ring_len {
                     self.ring_len = 0;
@@ -88,11 +95,17 @@ pub fn magnitude_stft_chunk(
     st.push(samples, out_mags, n_bins)
 }
 
-/// Log-mel style filterbank: average magnitude bands into `n_mel` bins.
+/// Log-mel spectrogram using the REAL triangular mel filterbank (`features::mel`).
+///
+/// Per frame: real-FFT magnitudes → power → triangular mel bank (0..Nyquist) → natural log.
+/// This replaced the earlier linear-FFT-bin averaging that was mislabelled "log-mel".
+/// Batch convenience path — allocates working buffers once (the zero-heap streaming path is
+/// `StreamingStft` + `features::mel::mel_bands` applied per frame).
 pub fn log_mel_from_mono(
     samples: &[f32],
     frame_size: usize,
     hop: usize,
+    sample_rate: u32,
     n_mel: usize,
     out: &mut [f32],
 ) -> Result<usize, AudioError> {
@@ -101,33 +114,50 @@ pub fn log_mel_from_mono(
     let mut mags = vec![0.0f32; max_frames * n_bins];
     let n_frames = magnitude_stft_chunk(samples, frame_size, hop, &mut mags, n_bins)?;
     let n_frames = n_frames.min(max_frames);
+
+    // Real triangular mel filterbank spanning 0..Nyquist, built once.
+    let mut bank = vec![0.0f32; n_mel * n_bins];
+    crate::features::mel::build_mel_bank(
+        n_bins,
+        n_mel,
+        sample_rate as f32,
+        0.0,
+        sample_rate as f32 * 0.5,
+        &mut bank,
+    )?;
+    let mut power = vec![0.0f32; n_bins];
     for f in 0..n_frames {
-        for m in 0..n_mel {
-            let b0 = m * n_bins / n_mel;
-            let b1 = ((m + 1) * n_bins / n_mel).max(b0 + 1);
-            let mut s = 0.0f32;
-            for b in b0..b1.min(n_bins) {
-                s += mags[f * n_bins + b];
-            }
-            let avg = s / (b1 - b0) as f32;
-            out[f * n_mel + m] = (avg + 1e-6).ln();
+        for b in 0..n_bins {
+            let m = mags[f * n_bins + b];
+            power[b] = m * m;
+        }
+        let dest = &mut out[f * n_mel..(f + 1) * n_mel];
+        crate::features::mel::mel_bands(&power, &bank, n_mel, dest)?;
+        for v in dest.iter_mut() {
+            *v = (*v + 1e-6).ln();
         }
     }
     Ok(n_frames)
 }
 
-fn dft_magnitude(frame: &[f32], window: &[f32], out: &mut [f32]) {
+/// Windowed magnitude spectrum via the real radix-2 FFT. `scratch` is interleaved `[re, im]`
+/// of length `2 * frame.len()` and is reused across frames (no allocation here).
+fn fft_magnitude(frame: &[f32], window: &[f32], scratch: &mut [f32], out: &mut [f32]) {
     let n = frame.len();
+    // Pack the windowed real frame into an interleaved complex buffer.
+    for t in 0..n {
+        scratch[2 * t] = frame[t] * window[t];
+        scratch[2 * t + 1] = 0.0;
+    }
+    // n is a validated power of two (StreamingStft::new), so this cannot fail; fail safe anyway.
+    if crate::features::fft::fft_radix2(&mut scratch[..2 * n], false).is_err() {
+        out.iter_mut().for_each(|o| *o = 0.0);
+        return;
+    }
     let bins = out.len().min(n / 2 + 1);
     for k in 0..bins {
-        let mut re = 0.0f32;
-        let mut im = 0.0f32;
-        for t in 0..n {
-            let x = frame[t] * window[t];
-            let ang = -core::f32::consts::TAU * (k as f32) * (t as f32) / n as f32;
-            re += x * ang.cos();
-            im += x * ang.sin();
-        }
+        let re = scratch[2 * k];
+        let im = scratch[2 * k + 1];
         out[k] = (re * re + im * im).sqrt() / n as f32;
     }
 }

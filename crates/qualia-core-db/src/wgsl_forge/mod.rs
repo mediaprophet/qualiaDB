@@ -4,6 +4,7 @@
 //! inputs. Tuning is therefore allowed to change work distribution without
 //! changing the mathematical operation being certified.
 
+pub mod audio;
 pub mod backend;
 // W10: the forge's calibration/adaptation pipeline (corpus→capture→learn→certify→package). Native-
 // only (drives the real inference stack for capture + the PPL oracle). The third produce-and-certify

@@ -140,6 +140,8 @@ pub enum AudioError {
     UnsupportedFormat,
     Cancelled,
     PermissionDenied,
+    /// A parameter was out of range or inconsistent (e.g. non-power-of-two FFT size).
+    InvalidParameter,
 }
 
 /// Backend-agnostic auditory model.

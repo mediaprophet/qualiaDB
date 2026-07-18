@@ -4,6 +4,36 @@ use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use super::qapp_engine::invoke_json;
+use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
+
+/// UI mirror of `AudioCapabilityDto` from `qualia-client-core` (returned by the
+/// `audio_capabilities` runtime command).
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+struct CapabilityRow {
+    id: String,
+    domain: String,
+    status: String,
+    #[serde(default)]
+    zero_heap_hot: bool,
+    #[serde(default)]
+    streaming: bool,
+    #[serde(default)]
+    test_name: String,
+    #[serde(default)]
+    note: String,
+}
+
+/// Map an honest capability status token onto a product honesty level.
+fn status_to_level(status: &str) -> HonestyLevel {
+    match status {
+        "Present" => HonestyLevel::Ready,
+        "Partial" => HonestyLevel::Partial,
+        "NeedsWeights" => HonestyLevel::NeedsModel,
+        "FeatureDisabled" => HonestyLevel::Unavailable,
+        "Missing" => HonestyLevel::Scaffold,
+        _ => HonestyLevel::Unavailable,
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 struct MixerTrackDto {
@@ -72,6 +102,18 @@ pub fn ListenWorkbench() -> Element {
     let mut inst = use_signal(|| String::new());
     let mut tracks = use_signal(default_tracks);
     let mut bounce_note = use_signal(|| String::from("Bounce offline synthetic tones through EQ/comp/delay."));
+    let mut caps = use_signal(Vec::<CapabilityRow>::new);
+
+    // Populate the honesty chips on mount from the audio capability registry.
+    use_effect(move || {
+        spawn(async move {
+            if let Ok(v) = invoke_json("audio_capabilities", serde_json::json!({})).await {
+                if let Ok(rows) = serde_json::from_value::<Vec<CapabilityRow>>(v) {
+                    caps.set(rows);
+                }
+            }
+        });
+    });
 
     let run = {
         let mut status = status.clone();
@@ -172,6 +214,44 @@ pub fn ListenWorkbench() -> Element {
             p {
                 style: "margin:0 0 1rem; color:var(--qualia-text-muted); line-height:1.5; font-size:0.92rem;",
                 "Local ears + reference mixer. Not production ASR/TTS. Seed AED/speech weights only. No cloud."
+            }
+
+            // —— Audio capabilities (honest registry) ——
+            section {
+                style: "margin-bottom:1.5rem; padding:1rem; border-radius:12px; border:1px solid var(--qualia-border); background:rgba(0,0,0,0.18);",
+                h2 { style: "margin:0 0 0.35rem; font-size:1.1rem;", "Audio capabilities" }
+                p {
+                    style: "margin:0 0 0.85rem; font-size:0.82rem; color:var(--qualia-text-muted); line-height:1.4;",
+                    "Machine-readable status of every audio capability, straight from the registry. "
+                    "A chip is Ready only when a real algorithm with a numeric golden test backs it."
+                }
+                if caps().is_empty() {
+                    p {
+                        style: "margin:0; font-size:0.8rem; color:var(--qualia-text-muted);",
+                        "Registry unavailable (open in desktop shell to load audio capabilities)."
+                    }
+                } else {
+                    div {
+                        style: "display:flex; flex-wrap:wrap; gap:0.4rem;",
+                        for row in caps().into_iter() {
+                            {
+                                let level = status_to_level(&row.status);
+                                let detail = if row.note.is_empty() {
+                                    row.id.clone()
+                                } else {
+                                    format!("{} · {}", row.id, row.note)
+                                };
+                                rsx! {
+                                    HonestyChip {
+                                        key: "{row.id}",
+                                        level,
+                                        detail,
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             // —— DAW mixer ——

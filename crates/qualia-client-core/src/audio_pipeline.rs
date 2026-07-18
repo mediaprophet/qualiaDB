@@ -60,6 +60,34 @@ pub fn ears_demo(storage_root: Option<&std::path::Path>) -> Result<EarsDemoDto, 
     run_ears_demo(storage_root, 440.0, 16000, 300).map(Into::into)
 }
 
+/// Honest, machine-readable status of one audio capability (for Listen UI honesty chips).
+#[derive(Debug, Clone, Serialize)]
+pub struct AudioCapabilityDto {
+    pub id: String,
+    pub domain: String,
+    pub status: String,
+    pub zero_heap_hot: bool,
+    pub streaming: bool,
+    pub test_name: String,
+    pub note: String,
+}
+
+/// Snapshot the audio capability registry as serializable DTOs.
+pub fn audio_capabilities() -> Vec<AudioCapabilityDto> {
+    qualia_audio::capability_registry::CAPABILITIES
+        .iter()
+        .map(|c| AudioCapabilityDto {
+            id: c.id.to_string(),
+            domain: c.domain.as_str().to_string(),
+            status: c.status.as_str().to_string(),
+            zero_heap_hot: c.zero_heap_hot,
+            streaming: c.streaming,
+            test_name: c.test_name.to_string(),
+            note: c.note.to_string(),
+        })
+        .collect()
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct CrossModalDemoDto {
     pub n_correlations: usize,
