@@ -21,6 +21,10 @@ cuda = ["dep:cudarc"]
 # driver's NVML at runtime — no CUDA SDK needed to build). Opt-in; the base build is unaffected and
 # `thermal_telemetry` degrades to "telemetry unavailable" when the feature is off or NVML is absent.
 nvml = ["dep:nvml-wrapper"]
+# Learned vision inference (ONNX Runtime) for the SR CNN/ESRGAN/SwinIR session adapters (D2.10-12).
+# Off by default; the adapters fail closed (WeightAbsent/FeatureDisabled) without it. Pulls the ORT
+# binaries only when explicitly enabled.
+vision-onnx = ["dep:ort"]
 dxc = []
 portal = ["wasm_simd", "gpu-runtime"]
 wasm-ontology = []
@@ -232,6 +236,8 @@ zstd = "0.13"
 # Permissive pure-Rust image codecs (D1.10): PNG (MIT/Apache) + baseline JPEG (MIT/Apache).
 png = "0.17"
 jpeg-decoder = "0.3"
+# ONNX Runtime for learned SR session adapters (feature `vision-onnx`, off by default).
+ort = { version = "2.0.0-rc.12", features = ["download-binaries"], optional = true }
 sysinfo = "0.39.3"
 # W7: NVIDIA GPU thermal/power telemetry (opt-in via the `nvml` feature). Loads the driver's NVML
 # library at runtime (dlopen) — builds without the CUDA SDK; init fails gracefully on non-NVIDIA hosts.

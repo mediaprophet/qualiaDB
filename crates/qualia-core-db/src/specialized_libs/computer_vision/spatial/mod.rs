@@ -7,6 +7,7 @@ pub mod validate;
 pub mod export_obj;
 pub mod export_stl;
 pub mod export_glb;
+pub mod export_3mf;
 pub mod print_readiness;
 pub mod twin_bridge;
 pub mod mesh_ir_to_export;
@@ -18,6 +19,7 @@ pub use validate::{validate_mesh_ir, MeshValidationReport, MeshValidationStatus}
 pub use export_obj::{mesh_ir_to_obj, mesh_ir_triangles};
 pub use export_stl::mesh_ir_to_stl_binary;
 pub use export_glb::mesh_ir_to_glb;
+pub use export_3mf::mesh_ir_to_3mf;
 pub use print_readiness::{print_readiness, PrintReadiness};
 pub use twin_bridge::{
     assess_twin_eligibility, closed_form_bar_stretch, promote_elasticity_preview,

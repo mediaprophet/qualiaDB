@@ -9890,6 +9890,7 @@ dependencies = [
  "num-bigint 0.5.1",
  "num_cpus",
  "nvml-wrapper",
+ "ort",
  "pbkdf2 0.13.0",
  "png 0.17.16",
  "pollster",

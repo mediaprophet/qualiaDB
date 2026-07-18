@@ -62,9 +62,9 @@ static REGISTRY: &[CapabilityEntry] = &[
         Present,
         "aHash/dHash + RGB hist L2 (embeddings/); not CLIP — ONNX CLIP later under vendor/vision/embeddings/"
     ),
-    cap!("D2.10", "D2", "sr_cnn_light", Missing, "FSRCNN/ESPCN Apache weights + ort session (WeightAbsent); tiling infra Present — see gated-av-jobs-2026.md"),
-    cap!("D2.11", "D2", "sr_esrgan_edge", Missing, "Real-ESRGAN compact MIT ONNX + ort session (WeightAbsent); tile+feather-blend Present"),
-    cap!("D2.12", "D2", "sr_swin_heavy", Missing, "SwinIR MIT ONNX + ort session (WeightAbsent)"),
+    cap!("D2.10", "D2", "sr_cnn_light", Missing, "sr/cnn_light_session ort adapter BUILT (fail-closed); drop-in on FSRCNN/ESPCN Apache weights + --features vision-onnx (WeightAbsent). See gated-av-jobs-2026.md"),
+    cap!("D2.11", "D2", "sr_esrgan_edge", Missing, "sr/esrgan_session ort adapter BUILT (fail-closed, generative flag); drop-in on Real-ESRGAN MIT ONNX + --features vision-onnx (WeightAbsent); tile+feather-blend Present"),
+    cap!("D2.12", "D2", "sr_swin_heavy", Missing, "sr/swin_session ort adapter BUILT (fail-closed); drop-in on SwinIR MIT ONNX + --features vision-onnx (WeightAbsent)"),
     cap!("D2.13", "D2", "sr_tiling_runtime", Present, "computer_vision::sr tile_plan/extract/blend; feather blend + max_tiles fail-closed; tested"),
     // D3 biosense
     cap!("D3.01", "D3", "face_landmarks", Partial, "MP buffer→LandmarkFrame+PAD wire Present; .task runtime AdapterMissing"),
@@ -116,7 +116,7 @@ static REGISTRY: &[CapabilityEntry] = &[
     ),
     cap!("D5.02", "D5", "obj_export", Present, "spatial/export_obj"),
     cap!("D5.03", "D5", "stl_export", Present, "spatial/export_stl"),
-    cap!("D5.04", "D5", "3mf_export", Partial, "minimal 3mf package"),
+    cap!("D5.04", "D5", "3mf_export", Present, "computer_vision::spatial::mesh_ir_to_3mf — valid OPC/3MF package (hand-rolled stored-ZIP + CRC-32, 3 parts); fail-closed"),
     cap!("D5.05", "D5", "gltf_handoff", Present, "computer_vision::spatial::mesh_ir_to_glb — valid binary glTF 2.0 (GLB) from MeshIR; positions+indices accessors, min/max, fail-closed"),
     cap!("D5.06", "D5", "image_to_3d_heightfield", Present, "spatial/image_to_3d"),
     cap!("D5.07", "D5", "image_to_3d_multiview", Missing, "recon depth"),
