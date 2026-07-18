@@ -71,6 +71,28 @@ struct VisionDemoResult {
     synthetic_match_acc: Option<f32>,
 }
 
+/// Enhance (classical super-resolution) result mirror of client-core `SrResultDto`.
+#[derive(Debug, Clone, Default, Deserialize, PartialEq)]
+struct SrResultDto {
+    before_data_url: String,
+    after_data_url: String,
+    backend_id: String,
+    device: String,
+    #[serde(default)]
+    generative: bool,
+    out_width: u32,
+    out_height: u32,
+    #[serde(default)]
+    degraded: bool,
+}
+
+/// Decode a `data:...;base64,<payload>` URL into raw bytes (for feeding Enhance).
+fn data_url_to_bytes(url: &str) -> Option<Vec<u8>> {
+    use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
+    let payload = url.split_once("base64,").map(|(_, b)| b)?;
+    B64.decode(payload).ok()
+}
+
 /// Plain-language host / offline errors for the status strip.
 fn humanize_vision_error(raw: &str) -> String {
     let lower = raw.to_ascii_lowercase();
@@ -103,6 +125,11 @@ pub fn VisionWorkbench() -> Element {
     let local_rejects = use_signal(|| Vec::<String>::new());
     let gen_url = use_signal(|| String::new());
     let mesh_info = use_signal(|| String::new());
+    // (b) Enhance / super-resolution control state.
+    let mut sr_kernel = use_signal(|| String::from("bicubic"));
+    let mut sr_device = use_signal(|| String::from("auto"));
+    let mut sr_scale = use_signal(|| 2u8);
+    let sr_result = use_signal(|| None::<SrResultDto>);
     // Biosense / self-monitor — consent-first; no silent biometrics.
     let mut bio_consent = use_signal(|| false);
     let mut bio_status = use_signal(|| {
@@ -279,6 +306,57 @@ pub fn VisionWorkbench() -> Element {
                     Err(e) => {
                         status.set(format!("Continuum failed: {}", humanize_vision_error(&e)))
                     }
+                }
+                busy.set(false);
+            });
+        }
+    };
+
+    // Enhance: super-resolve the last generated image (real end-to-end when one
+    // exists); otherwise invoke honestly and surface the host error.
+    let run_enhance = {
+        let mut status = status.clone();
+        let mut busy = busy.clone();
+        let mut sr_result = sr_result.clone();
+        let gen_url = gen_url.clone();
+        move |_| {
+            let kernel = sr_kernel();
+            let device = sr_device();
+            let scale = sr_scale();
+            // Device select "auto" → GPU preference in host (device != "cpu").
+            let device_arg = if device == "auto" { "gpu" } else { device.as_str() }.to_string();
+            let bytes = data_url_to_bytes(&gen_url()).unwrap_or_default();
+            busy.set(true);
+            status.set("Enhance (classical super-resolution)…".into());
+            spawn(async move {
+                match invoke_json(
+                    "vision_super_resolve",
+                    serde_json::json!({
+                        "png_bytes": bytes,
+                        "scale": scale,
+                        "kernel": kernel,
+                        "device": device_arg,
+                    }),
+                )
+                .await
+                {
+                    Ok(v) => match serde_json::from_value::<SrResultDto>(v) {
+                        Ok(r) => {
+                            status.set(format!(
+                                "Enhance OK — {} · {}×{} · device={}{}",
+                                r.backend_id,
+                                r.out_width,
+                                r.out_height,
+                                r.device,
+                                if r.degraded { " (degraded → CPU)" } else { "" }
+                            ));
+                            sr_result.set(Some(r));
+                        }
+                        Err(e) => status.set(format!(
+                            "Enhance reply shape unexpected: {e}"
+                        )),
+                    },
+                    Err(e) => status.set(format!("Enhance failed: {}", humanize_vision_error(&e))),
                 }
                 busy.set(false);
             });
@@ -764,6 +842,101 @@ pub fn VisionWorkbench() -> Element {
                     li {
                         HonestyChip { level: HonestyLevel::Partial, detail: "G→S continuum mesh".to_string() }
                         " — heightfield recon → .10d under vision_geometry/ (not full volumetric product)"
+                    }
+                }
+
+                // Live Enhance control — classical SR end-to-end via host command.
+                div {
+                    style: "margin-top:1rem; padding-top:0.9rem; border-top:1px solid var(--qualia-border);",
+                    div {
+                        style: "{SECTION_TITLE}",
+                        span { "Enhance (live)" }
+                        HonestyChip {
+                            level: HonestyLevel::Partial,
+                            detail: "Classical SR · non-generative".to_string(),
+                        }
+                    }
+                    p {
+                        style: "{MUTED}",
+                        "Upscales the last generated image (use “Generate (G)” above first) via ",
+                        code { "vision_super_resolve" },
+                        ". Classical only — no invented texture. Offline / WASM without host shows an error, never a fake result."
+                    }
+                    div {
+                        style: "{ROW}",
+                        label {
+                            style: "font-size:0.85rem;",
+                            "Kernel "
+                            select {
+                                value: "{sr_kernel}",
+                                onchange: move |e| sr_kernel.set(e.value()),
+                                option { value: "nearest", "nearest" }
+                                option { value: "bilinear", "bilinear" }
+                                option { value: "bicubic", "bicubic" }
+                                option { value: "lanczos3", "lanczos3" }
+                            }
+                        }
+                        label {
+                            style: "font-size:0.85rem;",
+                            "Device "
+                            select {
+                                value: "{sr_device}",
+                                onchange: move |e| sr_device.set(e.value()),
+                                option { value: "auto", "auto" }
+                                option { value: "cpu", "cpu" }
+                                option { value: "gpu", "gpu" }
+                            }
+                        }
+                        label {
+                            style: "font-size:0.85rem;",
+                            "Scale "
+                            select {
+                                value: "{sr_scale}",
+                                onchange: move |e| {
+                                    if let Ok(v) = e.value().parse::<u8>() {
+                                        sr_scale.set(v);
+                                    }
+                                },
+                                option { value: "2", "2×" }
+                                option { value: "3", "3×" }
+                                option { value: "4", "4×" }
+                            }
+                        }
+                        button {
+                            disabled: busy(),
+                            onclick: run_enhance,
+                            style: "{BTN_PRIMARY}",
+                            if busy() { "Enhancing…" } else { "Enhance" }
+                        }
+                    }
+                    if let Some(r) = sr_result() {
+                        div {
+                            style: "margin-top:0.5rem;",
+                            div {
+                                style: "display:flex; flex-wrap:wrap; gap:0.4rem; margin-bottom:0.6rem;",
+                                HonestyChip {
+                                    level: if r.degraded { HonestyLevel::Partial } else { HonestyLevel::Ready },
+                                    detail: format!(
+                                        "Sharpen · {}{}",
+                                        r.device,
+                                        if r.degraded { " (degraded)" } else { "" }
+                                    ),
+                                }
+                                HonestyChip {
+                                    level: HonestyLevel::Partial,
+                                    detail: format!("{} · {}×{}", r.backend_id, r.out_width, r.out_height),
+                                }
+                            }
+                            div {
+                                style: "max-width:360px; border:1px solid var(--qualia-border); \
+                                        border-radius:8px; overflow:hidden;",
+                                img {
+                                    src: "{r.after_data_url}",
+                                    style: "width:100%; image-rendering:pixelated; display:block;",
+                                    alt: "Enhanced (super-resolved) image"
+                                }
+                            }
+                        }
                     }
                 }
             }

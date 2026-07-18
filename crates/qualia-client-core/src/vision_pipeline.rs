@@ -1261,6 +1261,113 @@ pub fn biosense_self_monitor_pulse_demo(use_evm: bool) -> Result<BiosensePulseDe
     })
 }
 
+/// Super-resolution ("Enhance") result: before/after PNG data URLs + honesty.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct SrResultDto {
+    pub before_data_url: String,
+    pub after_data_url: String,
+    pub backend_id: String,
+    pub device: String,
+    pub generative: bool,
+    pub out_width: u32,
+    pub out_height: u32,
+    pub degraded: bool,
+}
+
+/// Decode arbitrary image bytes, classically super-resolve (Enhance), and return
+/// before/after PNG data URLs plus device/honesty metadata.
+///
+/// Mirrors the Listen/audio_capabilities composition: decode → engine op →
+/// PNG-encode both frames → DTO. Classical SR is non-generative (`Sharpen`).
+pub fn super_resolve_image(
+    bytes: &[u8],
+    scale: u8,
+    kernel: &str,
+    prefer_gpu: bool,
+) -> Result<SrResultDto, String> {
+    use qualia_core_db::specialized_libs::computer_vision::cv::buffer::RgbView;
+    use qualia_core_db::specialized_libs::computer_vision::cv::codecs::encode_png;
+    use qualia_core_db::specialized_libs::computer_vision::gpu::dispatch::VisionComputeDevice;
+    use qualia_core_db::specialized_libs::computer_vision::gpu::policy::{
+        ThermalHint, VisionVramBudget,
+    };
+    use qualia_core_db::specialized_libs::computer_vision::sr::device_policy::super_resolve_with_policy;
+    use qualia_core_db::specialized_libs::computer_vision::sr::super_resolve::{
+        ClassicalKernel, EnhancementMode, SrBackend, SrRequest,
+    };
+
+    if !(2..=4).contains(&scale) {
+        return Err("scale must be 2..=4".into());
+    }
+
+    // 1. Decode → RGB8.
+    let img = image::load_from_memory(bytes).map_err(|e| format!("decode image: {e}"))?;
+    let rgb_img = img.to_rgb8();
+    let (w, h) = rgb_img.dimensions();
+    if w == 0 || h == 0 {
+        return Err("empty image".into());
+    }
+    let rgb: Vec<u8> = rgb_img.into_raw();
+
+    // 2. Map kernel string (same mapping as mcp vision.rs op).
+    let ck = match kernel {
+        "nearest" => ClassicalKernel::Nearest,
+        "bilinear" => ClassicalKernel::Bilinear,
+        "lanczos" | "lanczos3" => ClassicalKernel::Lanczos3,
+        _ => ClassicalKernel::Bicubic,
+    };
+    let req = SrRequest {
+        rgb: &rgb,
+        width: w,
+        height: h,
+        scale,
+        backend: SrBackend::Classical(ck),
+        mode: EnhancementMode::Sharpen,
+    };
+
+    // 3. Allocate output and run under device policy.
+    let ow = w.checked_mul(scale as u32).ok_or("output width overflow")?;
+    let oh = h.checked_mul(scale as u32).ok_or("output height overflow")?;
+    let out_len = (ow as usize)
+        .checked_mul(oh as usize)
+        .and_then(|n| n.checked_mul(3))
+        .ok_or("output size overflow")?;
+    let mut out = vec![0u8; out_len];
+    let (report, compute) = super_resolve_with_policy(
+        &req,
+        prefer_gpu,
+        ThermalHint::Cool,
+        VisionVramBudget::default(),
+        &mut out,
+    )
+    .map_err(|e| format!("super_resolve: {e:?}"))?;
+
+    // 4. PNG-encode both input and output.
+    let before_view =
+        RgbView::new(w, h, w.saturating_mul(3), &rgb).ok_or("bad input rgb view")?;
+    let before_png = encode_png(before_view).map_err(|e| format!("encode before png: {e:?}"))?;
+    let after_view = RgbView::new(report.out_width, report.out_height, ow.saturating_mul(3), &out)
+        .ok_or("bad output rgb view")?;
+    let after_png = encode_png(after_view).map_err(|e| format!("encode after png: {e:?}"))?;
+
+    let device = match compute.device {
+        VisionComputeDevice::Cpu => "cpu",
+        VisionComputeDevice::SharedGpu => "shared_gpu",
+        VisionComputeDevice::Unavailable => "unavailable",
+    };
+
+    Ok(SrResultDto {
+        before_data_url: format!("data:image/png;base64,{}", B64.encode(&before_png)),
+        after_data_url: format!("data:image/png;base64,{}", B64.encode(&after_png)),
+        backend_id: report.backend_id.to_string(),
+        device: device.to_string(),
+        generative: report.generative,
+        out_width: report.out_width,
+        out_height: report.out_height,
+        degraded: compute.degraded,
+    })
+}
+
 /// Local CBIR proxy hashes for an RGB buffer (not CLIP).
 pub fn vision_local_embed_demo(
     rgb: &[u8],

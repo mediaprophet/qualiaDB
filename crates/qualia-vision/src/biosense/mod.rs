@@ -46,7 +46,8 @@ pub use pose::{
     MAX_POSE_LANDMARKS,
 };
 pub use policy::{
-    cctv_stages_allowed, evaluate_processing_act, PolicyDecision, ProcessingAct,
+    cctv_stages_allowed, evaluate_processing_act, policy_permit_check, PermitAnswer, PolicyDecision,
+    ProcessingAct,
 };
 pub use respiration::{
     ensemble_respiration, respiration_from_motion, respiration_rate_from_motion_trace, RrEstimate,

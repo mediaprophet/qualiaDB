@@ -98,8 +98,8 @@ static REGISTRY: &[CapabilityEntry] = &[
     // D4 policy
     cap!("D4.01", "D4", "biosense_consent", Present, "purpose-bound consent"),
     cap!("D4.02", "D4", "deontic_biometric", Present, "evaluate_processing_act permit/deny"),
-    cap!("D4.03", "D4", "sparql_mm_obs", Partial, "existing sparql_mm + vision query"),
-    cap!("D4.04", "D4", "sparql_fed_policy", Partial, "local policy_ask; FED wire next"),
+    cap!("D4.03", "D4", "sparql_mm_obs", Present, "recipes::faces_in_zone_time — spatial+temporal query over observation quins (count + instance hashes, never template bytes)"),
+    cap!("D4.04", "D4", "sparql_fed_policy", Present, "biosense::policy_permit_check — local permit/deny + reason composing evaluate_processing_act (fail-closed); FED transport is future"),
     cap!("D4.05", "D4", "cctv_compliance_mode", Present, "stage filter by policy"),
     cap!("D4.06", "D4", "multi_camera_graph", Missing, "federation depth"),
     cap!("D4.07", "D4", "jurisdiction_tags", Partial, "policy context field"),
@@ -157,7 +157,7 @@ static REGISTRY: &[CapabilityEntry] = &[
     cap!("D8.03", "D8", "joint_biosense", Partial, "recipe-level"),
     cap!("D8.04", "D8", "cross_modal_train_export", Missing, "later"),
     // D9 surfaces
-    cap!("D9.01", "D9", "studio_vision_workbench", Partial, "existing workbench"),
+    cap!("D9.01", "D9", "studio_vision_workbench", Partial, "workbench + live Enhance panel (vision_super_resolve cmd, tier/device picker, honesty chip); biosense panels pending"),
     cap!("D9.02", "D9", "wellfair_handoff", Partial, "optional export"),
     cap!("D9.03", "D9", "library_catalogue", Present, "perception_catalog"),
     cap!("D9.04", "D9", "wasm_edge_profile", Partial, "capability subset"),

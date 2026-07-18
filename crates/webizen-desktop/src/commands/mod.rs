@@ -7743,6 +7743,21 @@ pub fn vision_twin_elasticity_demo() -> Result<serde_json::Value, String> {
     qualia_client_core::vision_pipeline::twin_elasticity_demo()
 }
 
+/// Enhance (classical super-resolution) an image; returns before/after PNG data URLs.
+#[command]
+pub fn vision_super_resolve(
+    png_bytes: Vec<u8>,
+    scale: u8,
+    kernel: String,
+    device: String,
+) -> Result<serde_json::Value, String> {
+    let prefer_gpu = device != "cpu";
+    serde_json::to_value(qualia_client_core::vision_pipeline::super_resolve_image(
+        &png_bytes, scale, &kernel, prefer_gpu,
+    )?)
+    .map_err(|e| e.to_string())
+}
+
 #[command]
 pub fn audio_music_demo() -> Result<serde_json::Value, String> {
     qualia_client_core::audio_pipeline::music_analysis_demo()
@@ -8342,6 +8357,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         vision_ensure_weights,
         vision_detect_disk_weights_demo,
         vision_twin_elasticity_demo,
+        vision_super_resolve,
         audio_music_demo,
         audio_daw_fx_demo,
         audio_gen_demo,
