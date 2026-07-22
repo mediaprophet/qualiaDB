@@ -12,7 +12,7 @@ path = "src/lib.rs"
 tauri-build = { version = "2.6", features = [] }
 
 [dependencies]
-tauri = { version = "2.11", features = ["protocol-asset", "tray-icon", "image-png", "unstable"] }
+tauri = { version = "=2.11.5", features = ["protocol-asset", "tray-icon", "image-png", "unstable"] }
 tauri-plugin-updater = "2.10"
 tauri-plugin-notification = "2"
 tauri-plugin-dialog = "2"

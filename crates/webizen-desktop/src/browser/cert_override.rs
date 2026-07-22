@@ -450,7 +450,7 @@ fn attach_on_platform(platform: tauri::webview::PlatformWebview) -> Result<bool,
 #[cfg(test)]
 mod tests {
     use qualia_client_core::webizen_trust::{
-        cert_override_decision, cert_override_decision_full, decision_allows, AnchorKind,
+        cert_override_decision, decision_allows, AnchorKind,
         CertOverrideDecision, TrustAnchor, TrustStore,
     };
 

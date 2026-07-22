@@ -780,6 +780,7 @@ async fn fetch_desktop_logs() -> Result<DesktopLogsResponse, String> {
     serde_json::from_value(value).map_err(|error| format!("decode desktop logs: {error}"))
 }
 
+#[cfg(target_arch = "wasm32")]
 async fn fetch_desktop_status() -> Result<DesktopStatus, String> {
     let value =
         components::qapp_engine::invoke_json("get_desktop_status", serde_json::json!({})).await?;

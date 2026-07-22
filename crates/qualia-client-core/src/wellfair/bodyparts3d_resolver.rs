@@ -282,7 +282,7 @@ mod producer {
         pub failed: Vec<(String, String)>,
     }
 
-    /// Build a **separate, CC-BY-SA** `.qualia` pack of BodyParts3D structures that complete the body
+    /// Build a **separate, CC-BY-SA** `.hmc` pack of BodyParts3D structures that complete the body
     /// (the muscles/bones/glands/nerves CCF lacks). Each mesh is resolved to its system(s) via the
     /// part-of walk, compiled to a sealed `.10d` attested with the BodyParts3D licence, and packed with
     /// its full multi-system [`AnatomyOrganMeta`]. Blocking network I/O; honest about what failed.

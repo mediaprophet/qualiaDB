@@ -145,6 +145,60 @@ impl Lowerer for MslLowerer<'_> {
 
 /// Emit a complete MSL module for a portable compute-graph (the MSL analogue of
 /// `emit_graph_wgsl`). Non-portable nodes lower to an explicit `Err`.
+pub fn conv2d_msl() -> String {
+    format!(
+        r#"#include <metal_stdlib>
+using namespace metal;
+
+kernel void conv2d_main(
+    device const float* input [[buffer(0)]],
+    device const float* weight [[buffer(1)]],
+    device const float* bias [[buffer(2)]],
+    device float* output [[buffer(3)]],
+    device const uint* params [[buffer(4)]],
+    uint3 gid [[thread_position_in_grid]]
+) {{
+    uint idx = gid.x;
+    uint c_in = params[0];
+    uint c_out = params[1];
+    uint h = params[2];
+    uint w = params[3];
+    uint kh = params[4];
+    uint kw = params[5];
+    uint sh = params[6];
+    uint sw = params[7];
+    uint ph = params[8];
+    uint pw = params[9];
+    uint ho = params[10];
+    uint wo = params[11];
+    uint n_out = c_out * ho * wo;
+    if (idx >= n_out) return;
+    uint oc = idx / (ho * wo);
+    uint rem = idx % (ho * wo);
+    uint oh = rem / wo;
+    uint ow = rem % wo;
+    float acc = bias[oc];
+    for (uint ic = 0; ic < c_in; ic++) {{
+        for (uint ky = 0; ky < kh; ky++) {{
+            for (uint kx = 0; kx < kw; kx++) {{
+                uint ih_p = oh * sh + ky;
+                uint iw_p = ow * sw + kx;
+                if (ih_p < ph || iw_p < pw) continue;
+                uint ih = ih_p - ph;
+                uint iw = iw_p - pw;
+                if (ih >= h || iw >= w) continue;
+                float iv = input[ic * h * w + ih * w + iw];
+                float wv = weight[oc * (c_in * kh * kw) + ic * (kh * kw) + ky * kw + kx];
+                acc += iv * wv;
+            }}
+        }}
+    }}
+    output[idx] = acc;
+}}
+"#
+    )
+}
+
 pub fn emit_graph_msl(
     graph: &ComputeGraph,
     schedule: Schedule,
@@ -190,6 +244,7 @@ mod tests {
         }
         assert!(reduce_msl(RedKind::Max, 64).contains("as_type<float>(0xff7fffffu)"));
         assert!(broadcast_msl().contains("i % params[0]"));
+        assert!(conv2d_msl().contains("kernel void conv2d_main"));
     }
 
     #[test]

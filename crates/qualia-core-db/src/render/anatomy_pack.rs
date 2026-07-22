@@ -1,7 +1,7 @@
-//! Shared metadata schema for a `.qualia` **anatomy asset pack** — the per-organ
+//! Shared metadata schema for a `.hmc` **anatomy asset pack** — the per-organ
 //! `meta` carried in each bundle entry.
 //!
-//! A packed anatomy body is a `.qualia` bundle (see [`crate::bundle`]) whose
+//! A packed anatomy body is a `.hmc` bundle (see [`crate::bundle`]) whose
 //! entries are the per-organ sealed `.10d` meshes. Each entry's opaque `meta`
 //! holds one CBOR-encoded [`AnatomyOrganMeta`]: which body **system** the organ
 //! belongs to, an **approximate** anatomical position for assembling the whole
@@ -15,7 +15,7 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Per-organ render metadata carried in a `.qualia` anatomy-pack entry's `meta`.
+/// Per-organ render metadata carried in a `.hmc` anatomy-pack entry's `meta`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AnatomyOrganMeta {
     /// The organ's **primary** body-system id (its default colour/placement),
@@ -78,7 +78,7 @@ mod tests {
     }
 
     /// A pack written before `systems` existed must still decode (the field defaults to empty), so an
-    /// older `.qualia` on disk keeps working. The consumer treats an empty `systems` as `[system]`.
+    /// older `.hmc` on disk keeps working. The consumer treats an empty `systems` as `[system]`.
     #[test]
     fn old_meta_without_systems_field_still_decodes() {
         #[derive(serde::Serialize)]

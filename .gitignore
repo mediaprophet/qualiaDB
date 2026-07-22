@@ -112,9 +112,9 @@ crates/qualia-core-db/pkg/
 # wasm-pack scratch out-dirs for the portal facade (local builds)
 crates/qualia-core-db/pkg-qualia/
 crates/qualia-core-db/target/portal-wasm/
-# Anatomy .qualia asset packs — build artifacts produced by the build_anatomy_pack
+# Anatomy .hmc asset packs — build artifacts produced by the build_anatomy_pack
 # tool (at CI/build time); never committed (tens of MB of CC-BY-4.0 HRA meshes).
-docs/playground/*.qualia
+docs/playground/*.hmc
 
 # Generated Rust API docs staged for Jekyll (CI only)
 docs/rustdoc/

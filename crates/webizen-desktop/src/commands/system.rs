@@ -1,0 +1,60 @@
+//! Hardware, daemon, config
+
+#![allow(non_snake_case)]
+
+use qualia_client_core::api;
+use qualia_client_core::api::HardwareStatus;
+use qualia_client_core::state::AgentConfig;
+use tauri::command;
+
+// â”€â”€ Hardware / system â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+#[command]
+pub fn get_hardware_status() -> HardwareStatus {
+    api::get_hardware_status()
+}
+
+#[command]
+pub fn profile_energy_circumstance() -> String {
+    api::profile_energy_circumstance()
+}
+
+// â”€â”€ Daemon â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+#[command]
+pub fn start_daemon() -> String {
+    api::start_daemon()
+}
+
+#[command]
+pub fn daemon_status() -> String {
+    api::daemon_status()
+}
+
+#[command]
+pub fn get_active_daemon_port() -> u16 {
+    api::get_active_daemon_port()
+}
+
+#[command]
+pub fn qualia_protocol_port() -> u16 {
+    api::qualia_protocol_port()
+}
+
+#[command]
+pub fn run_engine_command(cmd: String) -> String {
+    api::run_engine_command(cmd)
+}
+
+// â”€â”€ Config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+#[command]
+pub fn get_config() -> AgentConfig {
+    api::get_config()
+}
+
+#[command]
+pub fn save_config(new_config: AgentConfig) -> Result<(), String> {
+    api::save_config(new_config)
+}
+

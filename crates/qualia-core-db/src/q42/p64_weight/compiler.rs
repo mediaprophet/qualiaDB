@@ -286,7 +286,9 @@ pub fn compile_gguf_to_p64_with_layout(
             blob_size: u32::try_from(blob_size).map_err(|_| "p64: tensor exceeds 4 GiB")?,
             source_offset: info.byte_offset,
             source_name_hash: *name_hash,
-            reserved: [0; 8],
+            alt_dtype: 0,
+            precision_views_mask: 0,
+            alt_blob_offset: 0,
         });
         blob_kind.push(kind);
         cursor = cursor

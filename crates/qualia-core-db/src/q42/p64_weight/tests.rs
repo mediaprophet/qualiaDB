@@ -317,10 +317,36 @@
         assert!(report.tensor_bytes > 300_000_000);
         assert_eq!(report.manifold_count, index.hparams.n_layer as usize + 1);
         drop(persisted);
-        drop(file);
         let _ = std::fs::remove_file(&output_path);
         eprintln!(
             "real P64 parity: {} tensors / {} bytes / {} manifold coordinates",
             report.tensor_count, report.tensor_bytes, report.manifold_count
         );
+    }
+
+    #[test]
+    fn test_vision_tensors_p64_round_trip() {
+        let t1 = RawVisionTensor {
+            name: "conv1.weight".to_string(),
+            shape: vec![1, 1, 3, 3],
+            data: vec![1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+            role_id: P64_ROLE_VISION_CONV2D,
+        };
+        let t2 = RawVisionTensor {
+            name: "conv1.bias".to_string(),
+            shape: vec![1],
+            data: vec![0.5],
+            role_id: P64_ROLE_VISION_BN,
+        };
+
+        let mut out = Vec::new();
+        let report = transcode_vision_tensors_to_p64(&[t1, t2], 12, &mut out).expect("transcode vision");
+        assert_eq!(report.n_tensors, 2);
+        assert!(report.bytes_written > 0);
+
+        assert!(has_p64_magic(&out));
+        let index = P64TensorIndex::from_p64(&out).expect("parse vision p64");
+        assert_eq!(index.entries.len(), 2);
+        assert_eq!(index.entries[0].role_id, P64_ROLE_VISION_CONV2D);
+        assert_eq!(index.entries[1].role_id, P64_ROLE_VISION_BN);
     }

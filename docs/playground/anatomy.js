@@ -1,4 +1,4 @@
-// Qualia 3D anatomy demo — renders a REAL HRA/CCF reference body from a `.qualia`
+// Qualia 3D anatomy demo — renders a REAL HRA/CCF reference body from a `.hmc`
 // asset pack via the native Qualia renderer compiled to WebGPU/WASM
 // (`QualiaPortal`) — the same renderer that runs natively on the desktop.
 //
@@ -80,7 +80,7 @@ const isMobileUA = () =>
   /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
 
 function bodyUrl(key) {
-  return key === "complete" ? `${RELEASE_BASE}/anatomy-bodyparts3d.qualia` : `anatomy-${key}.qualia`;
+  return key === "complete" ? `${RELEASE_BASE}/anatomy-bodyparts3d.hmc` : `anatomy-${key}.hmc`;
 }
 function provenanceQ42Url() {
   return currentBody === "complete"
@@ -109,7 +109,7 @@ function renderAttribution() {
     `<div><a href="${provenanceQ42Url()}" rel="noopener" download>` +
     `Full provenance &amp; semantics — .q42 graph volume ↓</a></div>`;
   const note =
-    `<div class="note">The Qualia engine and the .10d / .qualia container formats are separate works; ` +
+    `<div class="note">The Qualia engine and the .10d / .hmc container formats are separate works; ` +
     `no rights are claimed over the source datasets beyond the attribution each licence requires.</div>`;
   el.innerHTML = rows + prov + note;
 }
@@ -279,7 +279,7 @@ function showCompleteLoader(show) {
   const el = document.getElementById("complete-loader");
   if (el) el.style.display = show ? "block" : "none";
   const dl = document.getElementById("complete-dl");
-  if (dl) dl.href = `${RELEASE_BASE}/anatomy-bodyparts3d.qualia`;
+  if (dl) dl.href = `${RELEASE_BASE}/anatomy-bodyparts3d.hmc`;
 }
 
 async function fetchWithProgress(url, label) {
@@ -360,7 +360,7 @@ async function loadBody(key) {
     setProgress(false);
     if (e && e.status) {
       setStatus(
-        `Body pack not found (HTTP ${e.status}). The .qualia packs ship as build artifacts — produce them with the build_anatomy_pack tool.`,
+        `Body pack not found (HTTP ${e.status}). The .hmc packs ship as build artifacts — produce them with the build_anatomy_pack tool.`,
         "error",
       );
     } else {

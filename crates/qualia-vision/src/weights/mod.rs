@@ -1,4 +1,4 @@
-﻿//! Swarm W — production weight bundle + encoder/detector backend.
+//! Swarm W — production weight bundle + encoder/detector backend.
 //!
 //! Native **QVWT** format (Qualia Vision Weights): mmap-friendly flat f32 tables.
 //! Offline conversion from GGUF/P64 may write this format; no Python at runtime.
@@ -9,9 +9,13 @@
 //! Vendor pack (MIT/Apache ONNX/TFLite): see [`resolve_vision_asset`] — **PermissiveReady**,
 //! never commercial-licence gated. States: WeightAbsent / AdapterMissing.
 
+pub mod load_litert_bytes;
 pub mod load_onnx_bytes;
 pub mod onnx_session;
 pub mod resolve_vision_asset;
+pub use load_litert_bytes::{
+    load_litert_file, validate_litert_bytes, LiteRtFileMeta, LiteRtLoadError, LITER_TFLITE_MAGIC,
+};
 pub use load_onnx_bytes::{load_onnx_file, validate_onnx_bytes, OnnxFileMeta, OnnxLoadError};
 pub use onnx_session::{
     probe_onnx_asset, sface_infer_rgb8, yunet_infer_rgb8, OnnxSessionError, OnnxSessionInfo,

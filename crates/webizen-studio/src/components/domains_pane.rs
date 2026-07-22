@@ -359,7 +359,7 @@ pub fn DomainsPane() -> Element {
                                                         onclick: move |_| {
                                                             let id = id_click.clone();
                                                             let mut selected_mail = selected_mail;
-                                                            let mut mail_body = mail_body;
+                                                            let _ = mail_body;
                                                             selected_mail.set(id.clone());
                                                             #[cfg(target_arch = "wasm32")]
                                                             {

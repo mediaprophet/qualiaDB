@@ -1,6 +1,6 @@
-//! On-disk layout, index record, constants, and errors for the `.qualia` bundle.
+//! On-disk layout, index record, constants, and errors for the `.hmc` bundle.
 //!
-//! A `.qualia` bundle is a **transparent container of files**. It concatenates
+//! A `.hmc` bundle is a **transparent container of files**. It concatenates
 //! each embedded file *byte-for-byte*, page-aligned, at an absolute offset
 //! recorded in a CBOR index, and **never touches the interior of an entry**.
 //! That transparency is the whole point: a consumer can `mmap` the bundle and
@@ -33,7 +33,10 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Magic bytes at the start of every `.qualia` bundle: `QBDL` (Qualia BunDLe).
+/// Magic bytes at the start of every `.hmc` (hyper-media-container) bundle:
+/// `QBDL`. The 4-byte on-disk format tag is retained across the `.qualia`→`.hmc`
+/// rename (extension ≠ magic, as with most formats), so bundles already built
+/// keep parsing; only the file extension and human-facing name changed.
 pub const BUNDLE_MAGIC: [u8; 4] = *b"QBDL";
 
 /// Current bundle format version.
@@ -95,7 +98,7 @@ pub(crate) fn align_up(n: usize, align: usize) -> usize {
     (n + align - 1) & !(align - 1)
 }
 
-/// An error building or reading a `.qualia` bundle.
+/// An error building or reading a `.hmc` bundle.
 #[derive(Debug)]
 pub enum BundleError {
     /// A key was empty.
@@ -128,7 +131,7 @@ impl std::fmt::Display for BundleError {
             BundleError::EmptyKey => write!(f, "bundle: empty entry key"),
             BundleError::DuplicateKey(k) => write!(f, "bundle: duplicate entry key {k:?}"),
             BundleError::TooShort => write!(f, "bundle: input shorter than header"),
-            BundleError::BadMagic => write!(f, "bundle: bad magic (not a .qualia bundle)"),
+            BundleError::BadMagic => write!(f, "bundle: bad magic (not a .hmc bundle)"),
             BundleError::UnsupportedVersion(v) => write!(f, "bundle: unsupported version {v}"),
             BundleError::LengthMismatch { header, actual } => {
                 write!(f, "bundle: length mismatch (header {header}, actual {actual})")

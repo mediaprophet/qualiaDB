@@ -41,8 +41,49 @@ pub mod biosense;
 pub mod bio;
 pub mod recipes;
 
+pub mod ade20k_taxonomy;
+pub mod cifar_taxonomy;
+pub mod cityscapes_taxonomy;
+pub mod coco_taxonomy;
+pub mod kitti_taxonomy;
+pub mod openimages_taxonomy;
+pub mod pascal_voc_taxonomy;
+pub mod vggface2_taxonomy;
 #[cfg(feature = "cpu-reference")]
 pub mod cpu_reference;
+
+pub use ade20k_taxonomy::{
+    ade20k_category_count, lookup_ade20k_class_by_hash, lookup_ade20k_class_by_id,
+    q_hash_ade20k_class, ADE20K_150_CLASSES,
+};
+pub use cifar_taxonomy::{
+    lookup_cifar100_class_by_id, lookup_cifar10_class_by_id, lookup_cifar_class_by_hash,
+    q_hash_cifar_class, CIFAR_100_CLASSES, CIFAR_10_CLASSES,
+};
+pub use cityscapes_taxonomy::{
+    cityscapes_category_count, lookup_cityscapes_class_by_hash, lookup_cityscapes_class_by_id,
+    q_hash_cityscapes_class, CITYSCAPES_CLASSES,
+};
+pub use coco_taxonomy::{
+    coco_category_count, lookup_coco_class_by_hash, lookup_coco_class_by_id, q_hash_coco_class,
+    COCO_80_CLASSES,
+};
+pub use kitti_taxonomy::{
+    kitti_category_count, lookup_kitti_class_by_hash, lookup_kitti_class_by_id,
+    q_hash_kitti_class, KITTI_8_CLASSES,
+};
+pub use openimages_taxonomy::{
+    lookup_openimages_class_by_hash, lookup_openimages_class_by_mid, openimages_category_count,
+    q_hash_openimages_class, OpenImagesClassEntry, OPENIMAGES_600_CLASSES,
+};
+pub use pascal_voc_taxonomy::{
+    lookup_pascal_voc_class_by_hash, lookup_pascal_voc_class_by_id, pascal_voc_category_count,
+    q_hash_pascal_voc_class, PASCAL_VOC_20_CLASSES,
+};
+pub use vggface2_taxonomy::{
+    format_vggface2_subject_id, lookup_vggface2_subject_hash, q_hash_vggface2_subject,
+    vggface2_identity_count, VGGFace2Pose, VGGFACE2_IDENTITY_COUNT,
+};
 
 pub use semantic::{
     bbox_quin, class_proposal_quin, compile_observation_quins, compile_observation_quins_full,
@@ -76,7 +117,8 @@ pub use synthetic::{
     SyntheticSampleId, TEST_SEED_BASE, TRAIN_SEED_BASE,
 };
 pub use weights::{
-    probe_onnx_asset, resolve_vision_asset, sface_infer_rgb8, yunet_infer_rgb8, AssetLicenceTag,
+    load_litert_file, probe_onnx_asset, resolve_vision_asset, sface_infer_rgb8, validate_litert_bytes,
+    yunet_infer_rgb8, AssetLicenceTag, LITER_TFLITE_MAGIC, LiteRtFileMeta, LiteRtLoadError,
     OnnxSessionError, ProductionVision, ResolvedAsset, VisionAssetError, VisionAssetId,
     VisionBackendKind, VisionWeightBundle, QVWT_MAGIC, QVWT_VERSION,
 };

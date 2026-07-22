@@ -188,7 +188,7 @@ impl<'a> QueryExecutor<'a> {
         };
 
         let mut resources: Vec<u64> = Vec::new();
-        let mut add = |r: u64, resources: &mut Vec<u64>| {
+        let add = |r: u64, resources: &mut Vec<u64>| {
             if !resources.contains(&r) {
                 resources.push(r);
             }

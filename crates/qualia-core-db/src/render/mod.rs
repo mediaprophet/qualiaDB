@@ -32,7 +32,7 @@ pub mod derivation;
 /// Compile a `Mesh` into a sealed `.10d` container (the dense compiled-geometry sidecar)
 /// and read it back — the "mesh → `.10d`" step of the 3-D-anatomy asset pipeline.
 pub mod compile_10d;
-/// Shared metadata schema for a `.qualia` anatomy asset pack (per-organ system /
+/// Shared metadata schema for a `.hmc` anatomy asset pack (per-organ system /
 /// position / neutral colour). Platform-agnostic (native + WASM consumers).
 pub mod anatomy_pack;
 pub mod contract;

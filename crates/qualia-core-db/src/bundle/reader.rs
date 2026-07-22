@@ -1,4 +1,4 @@
-//! Read a `.qualia` bundle: verify integrity, enumerate entries, and hand back
+//! Read a `.hmc` bundle: verify integrity, enumerate entries, and hand back
 //! **zero-copy slices** of intact embedded files (and of interior segments).
 
 use crate::container_10d::crc32c::crc32c_update;
@@ -31,7 +31,7 @@ fn whole_file_crc(bytes: &[u8]) -> u32 {
     !crc
 }
 
-/// A parsed, integrity-checked view over a `.qualia` bundle's bytes. Borrows the
+/// A parsed, integrity-checked view over a `.hmc` bundle's bytes. Borrows the
 /// input; `get`/`segment` return slices into it (zero copy).
 pub struct BundleReader<'a> {
     bytes: &'a [u8],
@@ -155,7 +155,7 @@ impl<'a> BundleReader<'a> {
     }
 }
 
-/// Open a `.qualia` bundle from disk via `mmap` for zero-copy access (native).
+/// Open a `.hmc` bundle from disk via `mmap` for zero-copy access (native).
 ///
 /// The mapping backs the slices returned by [`BundleReader`], so an embedded
 /// file (or one of its interior segments) can be read without copying the
@@ -257,7 +257,7 @@ mod tests {
     fn mmap_roundtrip() {
         let bytes = sample_bundle();
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("pack.qualia");
+        let path = dir.path().join("pack.hmc");
         std::fs::write(&path, &bytes).unwrap();
         let m = BundleMmap::open(&path).unwrap();
         let r = m.reader().unwrap();

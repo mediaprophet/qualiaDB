@@ -125,14 +125,14 @@ export class QualiaPortal {
      */
     load_10d_colored(bytes: Uint8Array, r: number, g: number, b: number, a: number): any;
     /**
-     * S5.8 (web) — load the whole body directly from a `.qualia` **anatomy pack**
+     * S5.8 (web) — load the whole body directly from a `.hmc` **anatomy pack**
      * bundle (see [`crate::bundle`]). Parses the bundle with the *shared* Rust
      * reader (the same code the native host uses — "one reader, both channels"),
      * reads each organ's sealed `.10d` plus its
      * [`AnatomyOrganMeta`](crate::render::anatomy_pack::AnatomyOrganMeta) (system
      * colour + anatomical position), and hands them to
      * [`Self::load_body_organs_colored`]. This is the pure-web render path — no
-     * Tauri host / `webizen://` needed: the browser fetches one `.qualia` file and
+     * Tauri host / `webizen://` needed: the browser fetches one `.hmc` file and
      * renders the real body. Returns the same `{organs_loaded, organs_refused,
      * total_triangles}` summary.
      */
@@ -176,7 +176,7 @@ export class QualiaPortal {
     observe_node_at(x: number, y: number, canvas_w: number, canvas_h: number): number;
     operational_mode(): number;
     /**
-     * Read a `.qualia` pack's **manifest** without rendering — the list of parts the UI builds its
+     * Read a `.hmc` pack's **manifest** without rendering — the list of parts the UI builds its
      * dynamic system + part selectors from. Returns a JS array of `{ key, label, system, systems }`
      * (one per `.10d` entry), so the demo can offer per-system *and* per-part select/deselect driven by
      * what is actually in the loaded pack, not a hardcoded list. Read-only.

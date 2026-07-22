@@ -144,6 +144,57 @@ impl Lowerer for HlslLowerer<'_> {
 
 /// Emit a complete HLSL module for a portable compute-graph (the HLSL analogue of
 /// `emit_graph_wgsl`). Non-portable nodes lower to an explicit `Err`.
+pub fn conv2d_hlsl(wg: u32) -> String {
+    format!(
+        r#"StructuredBuffer<float> input : register(t0);
+StructuredBuffer<float> weight : register(t1);
+StructuredBuffer<float> bias : register(t2);
+RWStructuredBuffer<float> output : register(u3);
+StructuredBuffer<uint> params : register(t4);
+
+[numthreads({wg}, 1, 1)]
+void conv2d_main(uint3 gid : SV_DispatchThreadID) {{
+    uint idx = gid.x;
+    uint c_in = params[0];
+    uint c_out = params[1];
+    uint h = params[2];
+    uint w = params[3];
+    uint kh = params[4];
+    uint kw = params[5];
+    uint sh = params[6];
+    uint sw = params[7];
+    uint ph = params[8];
+    uint pw = params[9];
+    uint ho = params[10];
+    uint wo = params[11];
+    uint n_out = c_out * ho * wo;
+    if (idx >= n_out) return;
+    uint oc = idx / (ho * wo);
+    uint rem = idx % (ho * wo);
+    uint oh = rem / wo;
+    uint ow = rem % wo;
+    float acc = bias[oc];
+    for (uint ic = 0; ic < c_in; ic++) {{
+        for (uint ky = 0; ky < kh; ky++) {{
+            for (uint kx = 0; kx < kw; kx++) {{
+                uint ih_p = oh * sh + ky;
+                uint iw_p = ow * sw + kx;
+                if (ih_p < ph || iw_p < pw) continue;
+                uint ih = ih_p - ph;
+                uint iw = iw_p - pw;
+                if (ih >= h || iw >= w) continue;
+                float iv = input[ic * h * w + ih * w + iw];
+                float wv = weight[oc * (c_in * kh * kw) + ic * (kh * kw) + ky * kw + kx];
+                acc += iv * wv;
+            }}
+        }}
+    }}
+    output[idx] = acc;
+}}
+"#
+    )
+}
+
 pub fn emit_graph_hlsl(
     graph: &ComputeGraph,
     schedule: Schedule,
@@ -187,6 +238,7 @@ mod tests {
         }
         assert!(reduce_hlsl(RedKind::Max, 64).contains("asfloat(0xff7fffff)"));
         assert!(broadcast_hlsl(64).contains("i % params[0]"));
+        assert!(conv2d_hlsl(64).contains("void conv2d_main"));
     }
 
     #[test]

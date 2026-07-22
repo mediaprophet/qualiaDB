@@ -194,7 +194,9 @@ impl P64TensorIndex {
                 blob_size: eu32(36),
                 source_offset: eu64(40),
                 source_name_hash: eu64(48),
-                reserved: [0; 8],
+                alt_dtype: eu16(56),
+                precision_views_mask: eu16(58),
+                alt_blob_offset: eu32(60),
             };
             if !(1..=4).contains(&entry.rank) {
                 return Err(format!("p64: tensor {tensor_index} has invalid rank"));

@@ -1,8 +1,8 @@
-//! Produce a shippable **curated `.qualia` anatomy asset pack** for a model.
+//! Produce a shippable **curated `.hmc` anatomy asset pack** for a model.
 //!
 //! The full CCF/HRA reference body is ~200–290 MB of GLB per model — too large to
 //! bundle into a release. This builds a *curated* subset (a representative set of
-//! organs across body systems, tens of MB) into a single `.qualia` bundle (see
+//! organs across body systems, tens of MB) into a single `.hmc` bundle (see
 //! [`qualia_core_db::bundle`]): each organ is a sealed `.10d` entry carrying an
 //! [`AnatomyOrganMeta`] (system + approximate position + neutral colour). The
 //! bundle is the artefact shipped in the desktop release resources and published
@@ -116,7 +116,7 @@ pub struct PackReport {
     pub q42_sidecar_path: String,
 }
 
-/// Build a curated `.qualia` pack for `model` and write it to `out_path`.
+/// Build a curated `.hmc` pack for `model` and write it to `out_path`.
 ///
 /// `curated` is the set of normalised base tokens to include (defaults to
 /// [`CURATED_ORGAN_TOKENS`] when `None`). Blocking network I/O.

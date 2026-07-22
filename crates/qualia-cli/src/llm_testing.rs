@@ -285,9 +285,9 @@ pub fn run_convert_gguf_to_p64(
         .and_then(|e| e.to_str())
         .unwrap_or("")
         .to_ascii_lowercase();
-    if ext != "gguf" {
+    if ext != "gguf" && ext != "safetensors" {
         return Err(format!(
-            "only .gguf import is supported in this command (got .{ext}); safetensors path is a follow-up"
+            "only .gguf or .safetensors import is supported in this command (got .{ext})"
         ));
     }
     let src_len = std::fs::metadata(input).map(|m| m.len()).unwrap_or(0);
@@ -316,7 +316,7 @@ pub fn run_convert_gguf_to_p64(
         .map_err(|e| format!("create out dir {}: {e}", out_dir.display()))?;
 
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!("GGUF → p64 + q42 convert");
+    println!("Model ({ext}) → p64 + q42 convert");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("├─ Input:  {}", input.display());
     println!("├─ Out:    {}", out_dir.display());
@@ -335,8 +335,15 @@ pub fn run_convert_gguf_to_p64(
         src_bytes as f64 / (1024.0 * 1024.0)
     );
 
-    let p64 = qualia_core_db::p64_weight::compile_gguf_to_p64_with_layout(&mmap, page_log2, layout)
-        .map_err(|e| format!("compile_gguf_to_p64: {e}"))?;
+    let p64 = if ext == "safetensors" {
+        let mut buf = Vec::new();
+        qualia_core_db::p64_weight::transcode_safetensor_to_p64(&mmap, page_log2, &mut buf)
+            .map_err(|e| format!("transcode_safetensor_to_p64: {e}"))?;
+        buf
+    } else {
+        qualia_core_db::p64_weight::compile_gguf_to_p64_with_layout(&mmap, page_log2, layout)
+            .map_err(|e| format!("compile_gguf_to_p64: {e}"))?
+    };
     let stem = input
         .file_stem()
         .and_then(|s| s.to_str())

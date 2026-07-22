@@ -160,6 +160,68 @@ pub fn track_quin(det: &Detection, model_hash: u64) -> VisionQuin {
     VisionQuin::with_parity(subject, predicate, object, context, metadata)
 }
 
+/// Detailed human-readable semantic description of an object detection.
+pub fn format_detection_text_description(det: &Detection, class_name: &str) -> String {
+    let score_pct = (det.score_u16 as f32 / 65535.0) * 100.0;
+    let x_min = (det.x_min_u16 as f32 / 65535.0) * 100.0;
+    let y_min = (det.y_min_u16 as f32 / 65535.0) * 100.0;
+    let w = ((det.x_max_u16.saturating_sub(det.x_min_u16)) as f32 / 65535.0) * 100.0;
+    let h = ((det.y_max_u16.saturating_sub(det.y_min_u16)) as f32 / 65535.0) * 100.0;
+
+    let track_info = if det.track_id > 0 {
+        format!(" (Track #{})", det.track_id)
+    } else {
+        String::new()
+    };
+
+    format!(
+        "Detected '{class_name}' (confidence {score_pct:.1}%){track_info} at bbox [x: {x_min:.1}%, y: {y_min:.1}%, w: {w:.1}%, h: {h:.1}%] in frame {}",
+        det.frame_index
+    )
+}
+
+/// RDF Turtle representation of a detected object instance.
+pub fn format_detection_turtle_rdf(det: &Detection, class_name: &str, media_hash: u64) -> String {
+    let score = det.score_u16 as f32 / 65535.0;
+    let x_min = det.x_min_u16 as f32 / 65535.0;
+    let y_min = det.y_min_u16 as f32 / 65535.0;
+    let x_max = det.x_max_u16 as f32 / 65535.0;
+    let y_max = det.y_max_u16 as f32 / 65535.0;
+
+    format!(
+        r#"@prefix q42: <https://ns.webizen.org/q42/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <http://schema.org/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+
+<urn:q42:instance:{inst_hash:016x}> a q42:DetectedObject ;
+    rdfs:label "{class_name}" ;
+    schema:confidence {score:.4} ;
+    q42:classHash "{class_hash:016x}" ;
+    q42:frameIndex {frame_index} ;
+    q42:trackId {track_id} ;
+    q42:boundingBox [
+        q42:xMin {x_min:.4} ;
+        q42:yMin {y_min:.4} ;
+        q42:xMax {x_max:.4} ;
+        q42:yMax {y_max:.4}
+    ] ;
+    prov:wasDerivedFrom <urn:q42:media:{media_hash:016x}> .
+"#,
+        inst_hash = det.instance_hash,
+        class_name = class_name,
+        score = score,
+        class_hash = det.class_hash,
+        frame_index = det.frame_index,
+        track_id = det.track_id,
+        x_min = x_min,
+        y_min = y_min,
+        x_max = x_max,
+        y_max = y_max,
+        media_hash = media_hash
+    )
+}
+
 /// Human rejects a machine observation instance (does not erase the machine claim).
 /// subject = human_did_hash, object = instance_hash that is rejected.
 pub fn human_reject_quin(human_did_hash: u64, instance_hash: u64, reason_hash: u64) -> VisionQuin {
@@ -451,5 +513,31 @@ mod tests {
         };
         let p = pack_bbox_u64(&d);
         assert_eq!(unpack_bbox_u64(p), (1, 2, 3, 4));
+    }
+
+    #[test]
+    fn test_detection_semantic_formatting() {
+        let d = Detection {
+            class_hash: 0x1234,
+            instance_hash: 0x5678,
+            score_u16: 60000,
+            x_min_u16: 6553,
+            y_min_u16: 13107,
+            x_max_u16: 39321,
+            y_max_u16: 52428,
+            frame_index: 12,
+            track_id: 3,
+            flags: 0,
+        };
+
+        let desc = format_detection_text_description(&d, "person");
+        assert!(desc.contains("Detected 'person'"));
+        assert!(desc.contains("Track #3"));
+        assert!(desc.contains("frame 12"));
+
+        let ttl = format_detection_turtle_rdf(&d, "person", 0x9999);
+        assert!(ttl.contains("a q42:DetectedObject"));
+        assert!(ttl.contains("rdfs:label \"person\""));
+        assert!(ttl.contains("prov:wasDerivedFrom <urn:q42:media:0000000000009999>"));
     }
 }

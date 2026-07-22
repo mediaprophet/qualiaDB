@@ -5,6 +5,57 @@
 
 ---
 
+## 2026-07-18 — VERIFIED status review (Claude; measured against code, not prior claims)
+
+**Method:** compiled + tested the actual crates and read the real capability registry; did not trust prior
+log claims. **Bottom line: your read is right — the bulk is done; most of what's left is training/weights/
+corpus/policy-gated (needs you), plus a bounded set of *buildable* engineering an agent can finish now.**
+
+**Measured tests (ground truth):**
+- `cargo test -p qualia-vision --lib` → **160 passed, 0 failed** (compiles clean).
+- `cargo test -p qualia-core-db --lib specialized_libs::computer_vision` → **186 passed, 1 FAILED**.
+  The one failure is `computer_vision::gpu::dispatch::tests::prefer_gpu_degrades_without_adapter` — an
+  **environment-dependent test defect, not a runtime bug**: it asserts CPU-degrade "without adapter" but
+  never forces adapter-absence, so on a GPU-equipped machine (like this one) the GPU path succeeds and the
+  assert fails. One-line fix (gate the assert on no-adapter). *Buildable, not gated.*
+- SR: **26 tests green** (17 `computer_vision::sr` + 9 `computer_vision::cv::sr`). NOTE: the SR code lives in
+  **qualia-core-db**, not qualia-vision — so the plan's `cargo test -p qualia-vision --lib sr` always reports
+  0 (misleading command; SR is re-exported into qualia-vision but tests run in core-db).
+
+**Registry (`qualia-vision/src/capability/registry.rs`, 90 rows):** 42 **Present** · 32 Partial · 8 Missing ·
+7 **Beyond** (D6/D7 delegated to sibling crates — more complete, not deficits) · 1 CompleteWithGate. The gate
+*tags* the plan describes (WeightAbsent/AdapterMissing/TrainingDeferred/PermissiveReady/Policy) are honesty
+**strings**, not status variants — the only gate variant is `CompleteWithGate` (used once, D3.16).
+
+**DONE — real + tested:** classical CV D1 (filters/edges/morph/contours/features/flow/warps); **classical SR**
+(nearest/bilinear/bicubic-Keys/lanczos3 + tiling + feather blend); **GPU Forge bicubic/nearest on shared/aux
+GPU** (feature-gated, CPU-oracle-matched, routes via `try_auxiliary_gpu`); **EVM** (colour+motion pyramids +
+IIR band-pass + SNR abstain); **rPPG** POS/CHROM ensemble; **respiration**; **liveness/PAD** (landmark-only,
+PAR lock — no model-Z); **ByteTrack MOT**; MeshIR + OBJ/**STL** export + print readiness; image→3D heightfield;
+`.10d` handoff; aHash/dHash **CBIR embeddings**; consent/deontic policy gates.
+
+**GATED — needs you (weights / training / corpus / policy):** learned SR tiers **CNN-Light / ESRGAN / SwinIR**
+(permissive weights + TrainingDeferred — *not built, not stubbed*); **segmentation** (D2.04) & **mono-depth**
+(D2.05) weights; **YuNet/SFace/YOLO-NAS/MediaPipe** learned inference (need `--features ort` + vendor weight
+files — no learned vision inference runs by default); **contact-PPG harness** (D3.16, principal device corpus);
+**OMZ affect Path B** (Path A heuristic is Present).
+
+**UNFINISHED BUILDABLE — an agent can do now, NOT gated:**
+1. Fix the `prefer_gpu_degrades_without_adapter` test (fails on GPU machines).
+2. `ort`-backed SR **session adapters** (cnn_light/esrgan/swin modules) — the tiling runtime already exists;
+   only the ort-session wrapper + weight-resolve are missing (then it's weight-gated, not code-gated).
+3. Classical **edge-directed SR** kernel (`cv/sr/edge_directed_lite.rs`) — no weights needed.
+4. Real **PNG/JPEG codec** + **video demux** (D1.10/D1.11 — currently BMP + no demux).
+5. **3MF/glTF** export completion (D5.04/05); **SPARQL** policy wiring (D4.03/04); **Studio/desktop "Enhance"**
+   surface (D9.x); register the built **tiling runtime** as its own registry row (plan's D2.10–D2.13 were
+   never actually added — only D1.16 `classical_sr = Present` exists, and it's genuine).
+
+**Correction to prior claims:** the SR plan's proposed rows **D2.10–D2.13 do not exist** in the registry; the
+tiling runtime is built + tested but unregistered. All learned SR is *absent* (not stubbed) and correctly not
+claimed Present anywhere.
+
+---
+
 ## 2026-07-17 — VX0 + VX1 + VXB core + VXP + VX3D ship
 
 **Status:** done (agent-completable core); COMPLETE-WITH-GATE / Missing rows remain honest in registry

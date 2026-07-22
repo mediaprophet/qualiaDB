@@ -103,6 +103,78 @@ pub const PERCEPTION_MODEL_CATALOG: &[ModelCatalogEntry] = &[
         is_seed_reference: false,
         category: "language",
     },
+    ModelCatalogEntry {
+        id: "vision-yunet-face",
+        title: "YuNet 2D Face Detector (MIT)",
+        rel_path: "models/vision/face/yunet/face_detection_yunet_2023mar.onnx",
+        role: "vision-face-detector",
+        is_seed_reference: false,
+        category: "vision",
+    },
+    ModelCatalogEntry {
+        id: "vision-sface-embed",
+        title: "SFace Biometric Embeddings (Apache-2.0)",
+        rel_path: "models/vision/face/sface/face_recognition_sface_2021dec.onnx",
+        role: "vision-face-embedding",
+        is_seed_reference: false,
+        category: "vision",
+    },
+    ModelCatalogEntry {
+        id: "vision-mediapipe-facemesh",
+        title: "MediaPipe 468-pt Face Mesh (Apache-2.0)",
+        rel_path: "models/vision/face/mediapipe_landmarker/face_landmarker.task",
+        role: "vision-face-landmarks",
+        is_seed_reference: false,
+        category: "vision",
+    },
+    ModelCatalogEntry {
+        id: "vision-midas-depth",
+        title: "MiDaS 3D Monocular Depth (MIT)",
+        rel_path: "models/vision/depth/midas_v21_small.onnx",
+        role: "vision-monocular-depth",
+        is_seed_reference: false,
+        category: "vision",
+    },
+    ModelCatalogEntry {
+        id: "vision-espcn-sr",
+        title: "ESPCN Image Super-Resolution 2x/4x (Apache-2.0)",
+        rel_path: "models/vision/sr/espcn/espcn_x4.onnx",
+        role: "vision-super-resolution",
+        is_seed_reference: false,
+        category: "vision",
+    },
+    ModelCatalogEntry {
+        id: "vision-yolonas-object",
+        title: "YOLO-NAS Object Detector (Apache-2.0)",
+        rel_path: "models/vision/detect/yolo_nas/yolo_nas_s.onnx",
+        role: "vision-object-detector",
+        is_seed_reference: false,
+        category: "vision",
+    },
+    ModelCatalogEntry {
+        id: "audio-chatterbox-voice",
+        title: "Resemble AI Chatterbox Voice & TTS (Apache-2.0 / MIT)",
+        rel_path: "models/audio/tts/chatterbox/chatterbox.onnx",
+        role: "audio-voice-cloning-tts",
+        is_seed_reference: false,
+        category: "audio",
+    },
+    ModelCatalogEntry {
+        id: "audio-kokoro-82m-tts",
+        title: "Kokoro-82M Ultra-Lightweight TTS (Apache-2.0)",
+        rel_path: "models/audio/tts/kokoro/kokoro_v0_88.onnx",
+        role: "audio-fast-tts",
+        is_seed_reference: false,
+        category: "audio",
+    },
+    ModelCatalogEntry {
+        id: "audio-f5tts-clone",
+        title: "F5-TTS Flow-Matching Voice Cloner (MIT)",
+        rel_path: "models/audio/tts/f5tts/f5tts_small.onnx",
+        role: "audio-voice-cloning",
+        is_seed_reference: false,
+        category: "audio",
+    },
 ];
 
 /// Ontologies exposed in Library (subset of `bundled/ontologies` + perception-relevant).
@@ -449,5 +521,17 @@ mod tests {
         assert!(software
             .iter()
             .any(|e| e.asset_uri.starts_with("ontology://")));
+    }
+
+    #[test]
+    fn test_vision_catalog_contains_permissive_models() {
+        let model_ids: Vec<&str> = PERCEPTION_MODEL_CATALOG.iter().map(|m| m.id).collect();
+
+        assert!(model_ids.contains(&"vision-yunet-face"));
+        assert!(model_ids.contains(&"vision-sface-embed"));
+        assert!(model_ids.contains(&"vision-mediapipe-facemesh"));
+        assert!(model_ids.contains(&"vision-midas-depth"));
+        assert!(model_ids.contains(&"vision-espcn-sr"));
+        assert!(model_ids.contains(&"vision-yolonas-object"));
     }
 }

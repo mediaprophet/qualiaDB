@@ -26,7 +26,7 @@ enum ChemPhase {
 #[component]
 pub fn ChemistryModeler() -> Element {
     let mut smiles = use_signal(|| "CCO".to_string());
-    let mut phase = use_signal(|| ChemPhase::Idle);
+    let phase = use_signal(|| ChemPhase::Idle);
 
     // Recompute when SMILES changes (debounced only by resource identity).
     let smiles_for_resource = smiles;

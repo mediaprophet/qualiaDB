@@ -1186,7 +1186,7 @@ pub fn WellfairLibraryPanel() -> Element {
                                         Ok(v) => {
                                             let secs = u64_field(&v, "sections");
                                             let with_t = u64_field(&v, "concepts_with_text");
-                                            let empty = u64_field(&v, "empty_text");
+                                            let _empty = u64_field(&v, "empty_text");
                                             let written = u64_field(&v, "library_entries_written");
                                             let cml_c = u64_field(&v, "cml_concepts");
                                             let cml_d = u64_field(&v, "cml_deontic_norms");

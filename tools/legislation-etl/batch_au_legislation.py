@@ -21,6 +21,8 @@ import json
 import subprocess
 import sys
 import threading
+import http.server
+import socketserver
 from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,6 +31,70 @@ HERE = Path(__file__).resolve().parent
 LEGIS2CML = HERE / "legis2cml.py"
 DEFAULT_IN = Path(r"C:\Users\Admin\Downloads\20260630_AU-FED-LEGISLATION")
 DEFAULT_OUT = Path(r"C:\Projects\webcivics\ns\ns\public\institutions\au-fed-legislation")
+
+
+def start_progress_server(batch_log: Path, port: int = 8080) -> None:
+    class ProgressHandler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == "/":
+                self.send_response(200)
+                self.send_header("Content-type", "text/html")
+                self.end_headers()
+                
+                try:
+                    data = json.loads(batch_log.read_text(encoding="utf-8"))
+                    count = data.get("count", 0)
+                    ok = data.get("ok", 0)
+                    results = data.get("results", [])
+                except Exception:
+                    count = 0
+                    ok = 0
+                    results = []
+                
+                html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>Batch Processing Progress</title>
+    <meta http-equiv="refresh" content="5">
+    <style>
+        body {{ font-family: sans-serif; margin: 2rem; background: #f0f2f5; }}
+        .card {{ background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+        h1 {{ margin-top: 0; }}
+        .stats {{ display: flex; gap: 2rem; margin-bottom: 2rem; }}
+        .stat {{ font-size: 1.2rem; }}
+        .stat-value {{ font-size: 2rem; font-weight: bold; color: #0066cc; }}
+        .error {{ color: #cc0000; }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Batch Legislation Progress</h1>
+        <div class="stats">
+            <div class="stat">Total Processed<br><span class="stat-value">{count}</span></div>
+            <div class="stat">Successful<br><span class="stat-value">{ok}</span></div>
+            <div class="stat">Failed<br><span class="stat-value error">{count - ok}</span></div>
+        </div>
+        <p><i>Auto-refreshing every 5 seconds...</i></p>
+    </div>
+</body>
+</html>"""
+                self.wfile.write(html.encode("utf-8"))
+            else:
+                self.send_response(404)
+                self.end_headers()
+        
+        def log_message(self, format, *args):
+            pass # Suppress logging
+
+    def run_server():
+        try:
+            with socketserver.TCPServer(("", port), ProgressHandler) as httpd:
+                httpd.serve_forever()
+        except OSError:
+            pass # Port might be in use
+
+    t = threading.Thread(target=run_server, daemon=True)
+    t.start()
 
 
 def run_child(cmd: list[str], prefix: str, timeout: int) -> tuple[int | None, str]:
@@ -118,6 +184,7 @@ def main() -> None:
 
     args.out_root.mkdir(parents=True, exist_ok=True)
     batch_log = args.out_root / "batch_manifest.json"
+    start_progress_server(batch_log, port=8080)
     results = []
     if args.resume and batch_log.is_file():
         try:

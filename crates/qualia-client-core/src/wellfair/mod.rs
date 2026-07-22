@@ -2,7 +2,7 @@ pub mod accessibility_prefs;
 pub mod anatomy_body;
 pub mod anatomy_render;
 pub mod anatomy_assets;
-/// Producer for a curated `.qualia` anatomy asset pack (ships in the release /
+/// Producer for a curated `.hmc` anatomy asset pack (ships in the release /
 /// web demo). Native-only (blocking network I/O against the HRA endpoints).
 pub mod anatomy_pack;
 pub mod anatomy_view;

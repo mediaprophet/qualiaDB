@@ -101,7 +101,7 @@ pub fn ListenWorkbench() -> Element {
     let mut detail = use_signal(|| String::new());
     let mut inst = use_signal(|| String::new());
     let mut tracks = use_signal(default_tracks);
-    let mut bounce_note = use_signal(|| String::from("Bounce offline synthetic tones through EQ/comp/delay."));
+    let bounce_note = use_signal(|| String::from("Bounce offline synthetic tones through EQ/comp/delay."));
     let mut caps = use_signal(Vec::<CapabilityRow>::new);
 
     // Populate the honesty chips on mount from the audio capability registry.

@@ -1,4 +1,4 @@
-//! Produce a curated `.qualia` anatomy asset pack from the live HRA endpoints.
+//! Produce a curated `.hmc` anatomy asset pack from the live HRA endpoints.
 //!
 //! Usage:
 //!   cargo run -p qualia-client-core --example build_anatomy_pack -- list [male|female|both]
@@ -7,7 +7,7 @@
 //! `list`  — discover every reference organ for the model(s) and print each
 //!           filename + normalised token (use this to curate the token set).
 //! `build` — fetch the curated organs, compile to `.10d`, and write
-//!           `<out_dir>/anatomy-<model>.qualia` (default out_dir: current dir).
+//!           `<out_dir>/anatomy-<model>.hmc` (default out_dir: current dir).
 
 use qualia_client_core::wellfair::anatomy_pack::{build_anatomy_pack, discover_model_organs};
 use qualia_core_db::bundle::BundleMmap;
@@ -44,7 +44,7 @@ fn main() {
             let out_dir = args.get(3).cloned().unwrap_or_else(|| ".".to_string());
             let mut had_err = false;
             for model in models_arg(args.get(2)) {
-                let out = format!("{out_dir}/anatomy-{}.qualia", model.as_str());
+                let out = format!("{out_dir}/anatomy-{}.hmc", model.as_str());
                 match build_anatomy_pack(model, &out, None) {
                     Ok(r) => {
                         println!("== packed {} ==", r.model);
@@ -79,7 +79,7 @@ fn main() {
             let out_dir = args.get(3).cloned().unwrap_or_else(|| ".".to_string());
             let mut had_err = false;
             for model in models_arg(args.get(2)) {
-                let path = format!("{out_dir}/anatomy-{}.qualia", model.as_str());
+                let path = format!("{out_dir}/anatomy-{}.hmc", model.as_str());
                 let m = match BundleMmap::open(&path) {
                     Ok(m) => m,
                     Err(e) => {
@@ -171,7 +171,7 @@ fn main() {
             // they are local-framed and need CCF placement transforms.
             let out_dir = args.get(3).cloned().unwrap_or_else(|| ".".to_string());
             for model in models_arg(args.get(2)) {
-                let path = format!("{out_dir}/anatomy-{}.qualia", model.as_str());
+                let path = format!("{out_dir}/anatomy-{}.hmc", model.as_str());
                 let m = match BundleMmap::open(&path) {
                     Ok(m) => m,
                     Err(e) => {
@@ -233,7 +233,7 @@ fn main() {
                 max_structures,
                 max_stl_bytes: max_mb.saturating_mul(1024 * 1024),
             };
-            let out = format!("{out_dir}/anatomy-bodyparts3d.qualia");
+            let out = format!("{out_dir}/anatomy-bodyparts3d.hmc");
             println!("BodyParts3D · {BP3D_LICENCE} · {BP3D_ATTRIBUTION}");
             println!(
                 "selection: systems={} max_structures={} max_mb={}",

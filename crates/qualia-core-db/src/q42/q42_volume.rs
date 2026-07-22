@@ -496,7 +496,7 @@ impl UnifiedVolumeBuilder {
     ///
     /// Byte-for-byte the same volume [`finish`](Self::finish) writes to disk, but
     /// returned as bytes for callers that embed a `.q42` *inside another container*
-    /// — e.g. a [`crate::bundle`] `.qualia` pack — or ship it over the wire without
+    /// — e.g. a [`crate::bundle`] `.hmc` pack — or ship it over the wire without
     /// touching the filesystem. `finish` is exactly this plus a file write.
     pub fn finish_to_bytes(self) -> Vec<u8> {
         let bidx_bytes = encode_bidx(&self.block_ranges);
@@ -875,7 +875,7 @@ doc:article-1 a values:Undertaking ;
     }
 
     /// `finish_to_bytes` must yield the same recoverable volume as `finish` writes to disk —
-    /// the in-memory path used to embed a `.q42` inside a `.qualia` bundle.
+    /// the in-memory path used to embed a `.q42` inside a `.hmc` bundle.
     #[test]
     fn finish_to_bytes_matches_a_readable_on_disk_volume() {
         let (q1, mut lex) = sample_quin("Heart", "geo:bodySystem", "circulatory");

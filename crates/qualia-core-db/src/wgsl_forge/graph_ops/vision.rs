@@ -3,6 +3,7 @@
 //! CPU oracles match `qualia_vision::ops` numerical contracts (NCHW f32).
 //! Differential certification runs when a GPU adapter is available.
 
+#[cfg(test)]
 use crate::wgsl_forge::validate::validate_wgsl;
 use crate::wgsl_forge::ForgeError;
 

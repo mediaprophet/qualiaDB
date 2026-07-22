@@ -43,6 +43,7 @@ impl Default for BoardUi {
 #[component]
 pub fn WellfairWorkBoardPanel() -> Element {
     let mut ui = use_signal(|| {
+        #[allow(unused_mut)]
         let mut b = BoardUi::default();
         // Prefer project id handed off from Talk → Projects (sessionStorage).
         #[cfg(target_arch = "wasm32")]
