@@ -9739,7 +9739,7 @@ checksum = "d55d956fa96f5ec02be2e13af0e20391a5aa83d6a074e3ad368959d0fab299ea"
 
 [[package]]
 name = "qualia-audio"
-version = "0.0.25"
+version = "0.0.26"
 dependencies = [
  "cpal",
 ]
@@ -9841,7 +9841,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-cooperative-core"
-version = "0.0.25"
+version = "0.0.26"
 dependencies = [
  "serde",
  "serde_json",
@@ -10054,7 +10054,7 @@ dependencies = [
 
 [[package]]
 name = "qualia-vision"
-version = "0.0.25"
+version = "0.0.26"
 dependencies = [
  "image",
  "ort",
@@ -14311,7 +14311,7 @@ dependencies = [
 
 [[package]]
 name = "webizen-desktop"
-version = "0.0.25"
+version = "0.0.26"
 dependencies = [
  "axum",
  "base64 0.22.1",
@@ -14400,7 +14400,7 @@ dependencies = [
 
 [[package]]
 name = "webizen-studio"
-version = "0.0.25"
+version = "0.0.26"
 dependencies = [
  "base64 0.22.1",
  "console_error_panic_hook",
