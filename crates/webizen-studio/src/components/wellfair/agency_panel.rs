@@ -84,6 +84,7 @@ pub fn WellfairAgencyPanel() -> Element {
         section {
             aria_label: "Supported-agency delegations",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);margin-top:0.85rem;",
+            super::shared::DomainChrome { domain: "Care", chip: "Rights · agency · you stay principal", show_memory: true }
             h2 { style: "margin:0 0 0.35rem;font-size:1rem;", "Domains of agency" }
             p {
                 style: "margin:0 0 0.75rem;font-size:0.76rem;color:var(--qualia-text-muted,#666);",

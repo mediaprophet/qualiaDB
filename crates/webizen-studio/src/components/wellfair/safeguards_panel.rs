@@ -269,6 +269,7 @@ pub fn WellfairSafeguardsPanel() -> Element {
         section {
             aria_label: "WellFair safeguards",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);display:flex;flex-direction:column;gap:0.9rem;",
+            super::shared::DomainChrome { domain: "Care", chip: "Rights · safeguards · fail-closed", show_memory: true }
             div {
                 style: "display:flex;align-items:center;justify-content:space-between;gap:0.5rem;",
                 h2 { style: "margin:0;font-size:1rem;", "Safeguards — dead-man & incapacity switches" }

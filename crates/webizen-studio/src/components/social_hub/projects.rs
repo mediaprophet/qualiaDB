@@ -364,7 +364,7 @@ pub fn render_projects(sig: ProjectsSignals) -> Element {
                                         if let Ok(plist) = list_project_records().await {
                                             project_list.set(plist);
                                         }
-                                        status.set("QualiaDB Development Cooperative ready. People → invite · Chat → tag #project · Keep → Work board.".into());
+                                        status.set("QualiaDB Development Cooperative ready. People → invite · Chat → tag #project · Practice → Work board · Remember → Memory.".into());
                                     }
                                     Err(e) => {
                                         let snap = crate::components::wellfair::host_client::fetch_host_snapshot()
@@ -620,7 +620,7 @@ pub fn render_projects(sig: ProjectsSignals) -> Element {
                                         copy_to_clipboard(
                                             &text,
                                             status,
-                                            "Join package copied — send that one blob to your collaborator (or their bot). They paste it under Talk → People → Accept package / invite.",
+                                            "Join package copied — send that one blob to your collaborator (or their bot). They paste it under Relations → People → Accept package / invite.",
                                         );
                                     }
                                     Err(e) => status.set(format!("Join package failed: {e}")),
@@ -670,7 +670,7 @@ pub fn render_projects(sig: ProjectsSignals) -> Element {
                                         copy_to_clipboard(
                                             &text,
                                             status,
-                                            "Join package on clipboard. Send it as one message; they paste under Talk → People → Accept package / invite.",
+                                            "Join package on clipboard. Send it as one message; they paste under Relations → People → Accept package / invite.",
                                         );
                                         tab.set(HubTab::People);
                                     }

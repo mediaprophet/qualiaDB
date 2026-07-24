@@ -766,7 +766,7 @@ pub fn WebBrowserPane() -> Element {
                                                             .unwrap_or_default();
                                                         if names.is_empty() {
                                                             agent_tools_text.set(
-                                                                "(no tools returned)\nGolden path: list_capabilities.\nTalk → MCP tools card for full catalog."
+                                                                "(no tools returned)\nGolden path: list_capabilities.\nRelations → MCP tools card for full catalog."
                                                                     .into(),
                                                             );
                                                         } else {
@@ -790,7 +790,7 @@ pub fn WebBrowserPane() -> Element {
                                                 }
                                                 Err(e) => {
                                                     agent_tools_text.set(format!(
-                                                        "Could not list tools: {e}\n\nStatic note: list_capabilities, computer_vision.\nTalk → MCP tools card for allowlist editor."
+                                                        "Could not list tools: {e}\n\nStatic note: list_capabilities, computer_vision.\nRelations → MCP tools card for allowlist editor."
                                                     ));
                                                     agent_mcp_status
                                                         .set("tools/list failed.".into());
@@ -1101,7 +1101,7 @@ pub fn WebBrowserPane() -> Element {
                                 }
                                 p {
                                     style: "margin: 0 0 0.5rem; font-size: 0.72rem; color: #64748b; line-height: 1.4;",
-                                    "No silent tool execution. Uses mcp_call_tool_gated (same as Talk). Full allowlist editor: Talk → MCP tools card. Cert-override / Servo claims unchanged."
+                                    "No silent tool execution. Uses mcp_call_tool_gated (same as Relations chat). Full allowlist editor: Relations → MCP tools card. Cert-override / Servo claims unchanged."
                                 }
                                 p {
                                     style: "margin: 0 0 0.35rem; font-size: 0.72rem; color: #94a3b8;",

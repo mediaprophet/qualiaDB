@@ -78,6 +78,7 @@ pub fn WellfairCommunicationsPanel() -> Element {
                 ".comm-card:hover {{ transform: translateY(-2px); box-shadow: 0 8px 24px rgba(43, 108, 176, 0.12); border-color: rgba(43, 108, 176, 0.3) !important; }}"
             }
 
+            super::shared::DomainChrome { domain: "Care", chip: "Commons · live-share · not chat", show_memory: false }
             div {
                 style: "display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(43, 108, 176, 0.1); padding-bottom: 1rem; margin-bottom: 1.5rem;",
                 div {

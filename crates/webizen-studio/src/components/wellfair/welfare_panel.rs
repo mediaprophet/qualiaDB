@@ -76,6 +76,7 @@ pub fn WellfairWelfarePanel() -> Element {
         section {
             aria_label: "WellFair welfare support",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);margin-bottom:0.85rem;",
+            super::shared::DomainChrome { domain: "Care", chip: "Life · welfare streams", show_memory: true }
             h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Welfare support" }
             p {
                 style: "margin:0 0 0.75rem;font-size:0.74rem;color:var(--qualia-text-muted,#666);",

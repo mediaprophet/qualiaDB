@@ -104,6 +104,7 @@ pub fn WellfairSyncBackupPanel() -> Element {
         section {
             aria_label: "Sync and backup",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);margin-top:0.85rem;",
+            super::shared::DomainChrome { domain: "Instruments", chip: "Sync · backup · local-first", show_memory: false }
             h2 { style: "margin:0 0 0.35rem;font-size:1rem;", "Sync & backup" }
             if !ui().status.is_empty() {
                 p { style: "margin:0 0 0.6rem;font-size:0.76rem;", "{ui().status}" }

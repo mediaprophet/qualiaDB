@@ -290,7 +290,7 @@ pub async fn create_project_record(
     .await
     .map_err(|e| {
         format!(
-            "{e} — could not create local project either. Check Talk → People display name."
+            "{e} — could not create local project either. Check Relations → People display name."
         )
     })?;
     let id = s(&local, "id");

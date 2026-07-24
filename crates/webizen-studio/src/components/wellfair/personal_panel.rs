@@ -142,6 +142,7 @@ pub fn WellfairPersonalPanel() -> Element {
         section {
             aria_label: "WellFair personal core",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);",
+            super::shared::DomainChrome { domain: "You", chip: "Profile · accessibility · not the person-as-asset", show_memory: true }
             h2 { style: "margin:0 0 0.75rem;font-size:1rem;", "Personal — profile and accessibility" }
 
             div {

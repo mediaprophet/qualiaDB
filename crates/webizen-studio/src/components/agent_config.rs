@@ -340,7 +340,7 @@ pub fn AgentConfig() -> Element {
                 }
 
                 p { style: "color:#64748b; font-size:11px; line-height:1.4;",
-                    "Talk → Chat has a Propose / Permit / Deny card that uses this allowlist. Runtime dogfood still required on desktop."
+                    "Relations → Chat has a Propose / Permit / Deny card that uses this allowlist. Runtime dogfood still required on desktop."
                 }
             }
         }

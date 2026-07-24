@@ -873,7 +873,7 @@ pub fn WellfairLibraryPanel() -> Element {
                                 let text = serde_json::to_string_pretty(&v).unwrap_or_else(|_| v.to_string());
                                 share_card.set(text);
                                 status_err.set(false);
-                                status.set("Commons share card ready — copy from below; send via Talk → People.".into());
+                                status.set("Commons share card ready — copy from below; send via Relations → People.".into());
                             }
                             Err(e) => {
                                 status_err.set(true);
@@ -1318,7 +1318,7 @@ pub fn WellfairLibraryPanel() -> Element {
                 }
                 if section() == "commons" {
                     p { style: "margin:0.65rem 0 0;font-size:0.75rem;color:#94a3b8;line-height:1.4;",
-                        "Commons is the permissive share surface — metadata cards for Talk peers / micro-commons. Secret and classified items never appear here. Connect people under Talk → People first."
+                        "Commons is the permissive share surface — metadata cards for Relations peers / micro-commons. Secret and classified items never appear here. Connect people under Relations → People first."
                     }
                 }
                 if section() == "tools" {
@@ -1680,7 +1680,7 @@ pub fn WellfairLibraryPanel() -> Element {
                                 value: "{ing_commons}",
                                 onchange: move |e| ing_commons.set(e.value()),
                                 option { value: "none", "Device only" }
-                                option { value: "peers", "Talk peers (bilateral)" }
+                                option { value: "peers", "Relations peers (bilateral)" }
                                 option { value: "commons", "Permissive commons" }
                             }
                             label { style: "{LABEL}", if ing_binary() { "Bytes (hex)" } else { "Content" } }
@@ -1724,7 +1724,7 @@ pub fn WellfairLibraryPanel() -> Element {
                         Link {
                             to: Route::TalkRoute {},
                             style: "color:#a78bfa;",
-                            "Talk → Projects"
+                            "Relations → Projects"
                         }
                         " for cooperative work"
                     }

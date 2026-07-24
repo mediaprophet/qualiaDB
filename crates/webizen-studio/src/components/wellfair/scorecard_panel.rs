@@ -179,6 +179,7 @@ pub fn WellfairScorecardPanel() -> Element {
         section {
             aria_label: "WellFair well-being score-card",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);display:flex;flex-direction:column;gap:0.7rem;",
+            super::shared::DomainChrome { domain: "Care", chip: "Body · score-card · not diagnosis", show_memory: true }
             div {
                 style: "display:flex;align-items:center;justify-content:space-between;gap:0.5rem;",
                 h2 { style: "margin:0;font-size:1rem;", "Well-being score-card" }

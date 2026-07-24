@@ -59,6 +59,7 @@ pub fn WellfairAssessmentPanel() -> Element {
         section {
             aria_label: "Wellbeing self-assessment",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);margin-top:0.85rem;",
+            super::shared::DomainChrome { domain: "Care", chip: "Body · self-check · not diagnosis", show_memory: true }
             h2 { style: "margin:0 0 0.35rem;font-size:1rem;", "Wellbeing check-in" }
             p {
                 style: "margin:0 0 0.6rem;font-size:0.76rem;color:var(--qualia-text-muted,#666);",

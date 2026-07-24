@@ -125,7 +125,7 @@ pub fn DomainsPane() -> Element {
     let test_from = use_signal(|| "friend@elsewhere.example".to_string());
     let test_to = use_signal(String::new);
     let test_subject = use_signal(|| "Hello from a real inbox path".to_string());
-    let test_body = use_signal(|| "If you can read this in Talk → Mail, domain mail works.".to_string());
+    let test_body = use_signal(|| "If you can read this in Relations → Mail, domain mail works.".to_string());
     let show_quarantine = use_signal(|| true);
 
     #[cfg(not(target_arch = "wasm32"))]

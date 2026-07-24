@@ -47,7 +47,7 @@ pub fn WellfairWorkBoardPanel() -> Element {
     let mut ui = use_signal(|| {
         #[allow(unused_mut)]
         let mut b = BoardUi::default();
-        // Prefer project id handed off from Talk → Projects (sessionStorage).
+        // Prefer project id handed off from Relations → Projects (sessionStorage).
         #[cfg(target_arch = "wasm32")]
         if let Some(win) = web_sys::window() {
             if let Ok(Some(storage)) = win.session_storage() {
@@ -107,6 +107,7 @@ pub fn WellfairWorkBoardPanel() -> Element {
         section {
             aria_label: "WellFair cooperative work board",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);margin-bottom:0.85rem;",
+            super::shared::DomainChrome { domain: "Practice", chip: "Labour · work board", show_memory: true }
             h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Work board" }
             p {
                 style: "margin:0 0 0.75rem;font-size:0.74rem;color:var(--qualia-text-muted,#666);",
@@ -208,7 +209,7 @@ pub fn WellfairWorkBoardPanel() -> Element {
                     "Project id"
                     input {
                         r#type: "text",
-                        placeholder: "auto from Talk → Projects, or paste uuid",
+                        placeholder: "auto from Relations → Projects, or paste uuid",
                         value: "{ui().project_id}",
                         oninput: move |e| ui.write().project_id = e.value(),
                         style: "padding:0.35rem;border-radius:6px;border:1px solid var(--qualia-border,#ccc);font-size:0.78rem;",

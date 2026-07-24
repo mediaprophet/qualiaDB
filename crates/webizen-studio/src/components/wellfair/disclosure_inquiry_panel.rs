@@ -168,6 +168,7 @@ pub fn WellfairDisclosureInquiryPanel() -> Element {
         section {
             aria_label: "WellFair disclosure and inquiry",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);display:flex;flex-direction:column;gap:0.9rem;",
+            super::shared::DomainChrome { domain: "Care", chip: "Rights · disclosure · inquiry duty", show_memory: true }
             h2 { style: "margin:0;font-size:1rem;", "Disclosure traceability & duty of inquiry" }
             if !status().is_empty() {
                 p { style: "margin:0;font-size:0.74rem;color:var(--qualia-accent,#2b6);word-break:break-all;", "{status()}" }

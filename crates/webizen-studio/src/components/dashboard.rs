@@ -110,16 +110,16 @@ pub fn Dashboard() -> Element {
                         div { class: "widget-header",
                             div { class: "widget-title",
                                 sl-icon { "name": "chat-dots" }
-                                "Talk"
+                                "Relations"
                             }
                             Link { to: Route::TalkRoute {}, sl-icon { "name": "box-arrow-up-right", style: "color: var(--qualia-text-muted); cursor: pointer;" } }
                         }
                         p { style: "margin:0; color: var(--qualia-text-muted); font-size: 0.9rem; line-height: 1.5;",
-                            "Private conversation with your local agent. Load a model, then chat — streaming on-device."
+                            "Private conversation with your local agent. Load a model, then chat — streaming on-device. Instruments are not peers."
                         }
                         div { class: "quick-actions", style: "margin-top: 0.5rem;",
-                            Link { to: Route::TalkRoute {}, class: "btn-action", sl-icon { "name": "chat-dots" } "Open Talk" }
-                            Link { to: Route::KeepRoute {}, class: "btn-action", sl-icon { "name": "archive" } "Open Keep" }
+                            Link { to: Route::TalkRoute {}, class: "btn-action", sl-icon { "name": "chat-dots" } "Open Relations" }
+                            Link { to: Route::LibraryRoute {}, class: "btn-action", sl-icon { "name": "archive" } "Open Memory" }
                         }
                     }
                     

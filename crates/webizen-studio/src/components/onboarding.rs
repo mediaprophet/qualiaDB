@@ -344,7 +344,7 @@ pub fn OnboardingGate() -> Element {
                             div { style: "width:58px;height:58px;margin:0 auto 18px;border-radius:18px;display:grid;place-items:center;background:rgba(52,211,153,.14);color:#6ee7b7;font-size:1.7rem;", "✓" }
                             h1 { style: "font-size:1.65rem;margin:0 0 10px;letter-spacing:-.03em;", "Your workspace is ready" }
                             p { style: "color:#aebccd;line-height:1.6;margin:0 auto 22px;max-width:520px;",
-                                "Talk opens first, with Chat, People, Reception, Mail and Projects together. Add an identity or mail domain when you’re ready; neither is required to start."
+                                "Relations opens first — Chat, People, Reception, Mail and Projects together. Memory is home for lived records. Add an identity or mail domain when you’re ready; neither is required to start."
                             }
                             div { style: "display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:24px;",
                                 for feature in ["Chat + local LLM", "Desktop browser", "Social directory", "Semantic mail", "QApp Studio"] {

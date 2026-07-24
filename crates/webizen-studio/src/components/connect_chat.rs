@@ -787,7 +787,7 @@ pub fn ConnectChat() -> Element {
                     div { style: "{CARD}",
                         h3 { style: "{H3}", "Agents" }
                         p { style: "color:#94a3b8; font-size:12px; margin:0 0 8px;",
-                            "Who answers in this thread (header). People & invites: Talk → People."
+                            "Who answers in this thread (header). People & invites: Relations → People."
                         }
                         if agents().is_empty() {
                             div { style: "padding:6px 8px; background:#0b1220; border-radius:6px; margin-bottom:4px; font-size:12px; color:#94a3b8;",
@@ -859,7 +859,7 @@ pub fn ConnectChat() -> Element {
                         },
                     }
 
-                    // Project tag (full project UI is Talk → Projects)
+                    // Project tag (full project UI is Relations → Projects)
                     if !active_project().is_empty() {
                         div { style: "{CARD}",
                             h3 { style: "{H3}", "Project scope" }
@@ -1026,7 +1026,7 @@ pub fn ConnectChat() -> Element {
                         }
                     }
 
-                    // People / invites live in Talk → People (avoid duplicate sidebar sprawl).
+                    // People / invites live in Relations → People (avoid duplicate sidebar sprawl).
                     p { style: "color:#64748b;font-size:11px;line-height:1.4;margin:4px 0 0;",
                         "Invites, contacts, domain front door, cooperative projects → tabs above (People · Reception · Projects)."
                     }

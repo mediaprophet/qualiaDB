@@ -110,6 +110,7 @@ pub fn WellfairMedicationPanel() -> Element {
         section {
             aria_label: "WellFair medication and nutrition",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);margin-top:0.75rem;",
+            super::shared::DomainChrome { domain: "Care", chip: "Body · meds & nutrition", show_memory: true }
             h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Medication & nutrition" }
             p {
                 style: "margin:0 0 0.75rem;font-size:0.76rem;color:var(--qualia-text-muted,#666);",

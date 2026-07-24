@@ -195,6 +195,7 @@ pub fn WellfairAnatomy3dPanel() -> Element {
                 ".anatomy-btn:hover {{ background: rgba(255, 255, 255, 0.15) !important; }}"
             }
 
+            super::shared::DomainChrome { domain: "Care", chip: "Body · 3D · local GPU", show_memory: true }
             div {
                 style: "display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.2rem;",
                 div {

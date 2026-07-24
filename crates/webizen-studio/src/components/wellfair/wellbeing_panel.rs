@@ -36,6 +36,7 @@ pub fn WellfairWellbeingPanel() -> Element {
         section {
             aria_label: "WellFair mental wellbeing",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);margin-top:0.75rem;",
+            super::shared::DomainChrome { domain: "Care", chip: "Body · wellbeing · not diagnosis", show_memory: true }
             h2 { style: "margin:0 0 0.35rem;font-size:1rem;", "Mental wellbeing" }
             p {
                 role: "note",

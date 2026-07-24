@@ -253,7 +253,7 @@ pub fn SocialHub() -> Element {
                     "model on"
                 };
                 status.set(format!(
-                    "Talk ready · {n_contacts} contact(s) · {n_peers} peer(s) · {model_bit}{project_note}. Private by default."
+                    "Relations ready · {n_contacts} contact(s) · {n_peers} peer(s) · {model_bit}{project_note}. Private by default."
                 ));
             });
         });
