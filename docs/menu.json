@@ -1,9 +1,9 @@
 {
-  "version": "0.0.25",
+  "version": "0.0.26",
   "brand": {
-    "name": "QualiaDB",
-    "tagline": "Human-Centric Semantic Engine",
-    "icon": "Q"
+    "name": "Webizen",
+    "tagline": "Life-domain habitat · QualiaDB engine",
+    "icon": "W"
   },
   "navigation": [
     {
@@ -13,8 +13,8 @@
       "group": "Core"
     },
     {
-      "label": "0.0.25 Progress",
-      "href": "progress-0.0.25.html",
+      "label": "0.0.26 Progress",
+      "href": "progress-0.0.26.html",
       "icon": "fa-heart-pulse",
       "highlight": true,
       "group": "Core"

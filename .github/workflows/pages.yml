@@ -1,12 +1,13 @@
 name: Deploy Qualia-DB Playground to GitHub Pages
 
 # Deploys Jekyll site under /docs to GitHub Pages (baseurl: /qualiaDB).
-# Triggers: main, active release branch 0.0.24, version tags, or manual run.
+# Triggers: main, active release branch 0.0.26, version tags, or manual run.
+# Environment github-pages must also allow the branch (deployment branch policies).
 on:
   push:
     branches:
       - main
-      - "0.0.24"
+      - "0.0.26"
     tags:
       - "v*"
   workflow_dispatch:
@@ -124,7 +125,7 @@ jobs:
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db.d.ts docs/pkg/qualia/qualia.d.ts
           cp crates/qualia-core-db/pkg-qualia/qualia_core_db_bg.wasm.d.ts docs/pkg/qualia/qualia_bg.wasm.d.ts 2>/dev/null || true
           bash scripts/patch-portal-wasm-js.sh docs/pkg/qualia/qualia.js
-          printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.18","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
+          printf '%s\n' '{"name":"qualia-portal","type":"module","version":"0.0.26","main":"qualia.js","types":"qualia.d.ts"}' > docs/pkg/qualia/package.json
           ls -la docs/pkg/qualia/qualia.js docs/pkg/qualia/qualia_bg.wasm docs/pkg/qualia/qualia.d.ts
           grep -q 'qualia_bg.wasm' docs/pkg/qualia/qualia.js
 
