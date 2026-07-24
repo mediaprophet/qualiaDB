@@ -78,7 +78,7 @@ jobs:
           }
           Get-ChildItem $dist, "$dist/assets"
 
-      - name: Verify updater signing key
+      - name: Normalize updater signing key
         shell: pwsh
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -86,6 +86,38 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY)) {
             throw "TAURI_SIGNING_PRIVATE_KEY secret is required to produce signed updater artifacts"
           }
+          # Tauri expects TAURI_SIGNING_PRIVATE_KEY = base64(UTF-8 private key text).
+          # Accept either that form or a raw minisign key body (starts with "untrusted comment").
+          $raw = $env:TAURI_SIGNING_PRIVATE_KEY
+          $normalized = $null
+          if ($raw -match 'untrusted comment') {
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes($raw)
+            $normalized = [Convert]::ToBase64String($bytes)
+            Write-Host "Normalized raw minisign key text → base64 for Tauri"
+          } else {
+            $compact = ($raw -replace '[\r\n\s]', '')
+            try {
+              $decoded = [Convert]::FromBase64String($compact)
+              $text = [System.Text.Encoding]::UTF8.GetString($decoded)
+              # Round-trip: if UTF-8 decode produced replacement chars / invalid, fail.
+              $round = [System.Text.Encoding]::UTF8.GetBytes($text)
+              if ($decoded.Length -ne $round.Length -and -not ($text -match 'untrusted comment|RWT')) {
+                # still accept if decoded text looks like a key
+              }
+              if ($text.Contains([char]0xFFFD) -and -not ($text -match 'untrusted comment')) {
+                throw "base64 payload is not valid UTF-8 key text"
+              }
+              $normalized = $compact
+              Write-Host "Using secret as base64(UTF-8 key text)"
+            } catch {
+              throw @"
+TAURI_SIGNING_PRIVATE_KEY is malformed: $($_.Exception.Message)
+Generate with: cargo tauri signer generate -w ~/.tauri/webizen.key
+Store either the raw key file contents, or base64 of that UTF-8 text, as the GitHub secret.
+"@
+            }
+          }
+          "TAURI_SIGNING_PRIVATE_KEY=$normalized" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       # NSIS is required for `cargo tauri build --bundles nsis` (not preinstalled on windows-latest).
       - name: Install NSIS
@@ -105,7 +137,7 @@ jobs:
         working-directory: crates/webizen-desktop
         shell: pwsh
         env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # TAURI_SIGNING_PRIVATE_KEY comes from GITHUB_ENV after normalize step.
           # Empty string is fine for unencrypted keys; encrypted keys need the secret set.
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
@@ -206,7 +238,10 @@ jobs:
     env:
       WGPU_BACKEND: metal
       WGPU_POWER_PREF: high
-      RUSTFLAGS: "-C target-cpu=apple-m1"
+      # Do NOT set RUSTFLAGS at job level: it is inherited by the wasm32
+      # webizen-studio build and breaks wasm-bindgen
+      # (`__wbindgen_externref_table_dealloc` / missing .wasm on mac runners).
+      # Apple Silicon flags are applied only on the native Tauri step below.
     steps:
       - uses: actions/checkout@v5
 
@@ -224,7 +259,11 @@ jobs:
       # Match crates/webizen-studio wasm-bindgen pin (0.2.125). Prevents macOS
       # dx failures: failed to find `__wbindgen_externref_table_dealloc`.
       - name: Install matching wasm-bindgen-cli
-        run: cargo install wasm-bindgen-cli --version 0.2.125 --locked --force
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          cargo install wasm-bindgen-cli --version 0.2.125 --locked --force
+          which -a wasm-bindgen
+          wasm-bindgen --version
 
       - name: Cache Cargo
         uses: actions/cache@v5
@@ -238,7 +277,12 @@ jobs:
 
       - name: Build and verify packaged webizen-studio dist
         shell: bash
+        env:
+          # Explicitly clear any host-cpu RUSTFLAGS for the wasm frontend.
+          RUSTFLAGS: ""
+          CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS: ""
         run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
           bash scripts/build_frontend.sh
           dist="crates/webizen-studio/dist"
           portal="crates/webizen-desktop/static/portal"
@@ -250,22 +294,49 @@ jobs:
           test "$(cat "$dist/source-revision.txt")" = "$(git rev-parse HEAD)"
           ls -lah "$dist" "$dist/assets"
 
-      - name: Verify updater signing key
+      - name: Normalize updater signing key
         shell: bash
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: |
-          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+          set -euo pipefail
+          if [ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
             echo "::error::TAURI_SIGNING_PRIVATE_KEY secret is required to produce signed updater artifacts"
             exit 1
           fi
+          # Tauri expects the env var to be base64(UTF-8 private key text).
+          # Accept either already-base64 material or a raw minisign key body.
+          key_file="$RUNNER_TEMP/tauri_signing.key.b64"
+          raw="$TAURI_SIGNING_PRIVATE_KEY"
+          if printf '%s' "$raw" | grep -q 'untrusted comment'; then
+            printf '%s' "$raw" | base64 | tr -d '\n' > "$key_file"
+            echo "Normalized raw minisign key text → base64 for Tauri"
+          else
+            # Strip CR/LF/spaces; validate it base64-decodes to UTF-8 text.
+            compact=$(printf '%s' "$raw" | tr -d '\r\n \t')
+            if decoded=$(printf '%s' "$compact" | base64 --decode 2>/dev/null); then
+              if printf '%s' "$decoded" | iconv -f UTF-8 -t UTF-8 >/dev/null 2>&1; then
+                printf '%s' "$compact" > "$key_file"
+                echo "Using secret as base64(UTF-8 key text)"
+              else
+                echo "::error::TAURI_SIGNING_PRIVATE_KEY base64-decodes to non-UTF-8 bytes (index corruption or binary key)."
+                echo "Generate with: cargo tauri signer generate -w ~/.tauri/webizen.key"
+                echo "Store either the raw key file contents, or base64 of that UTF-8 text, as the secret."
+                exit 1
+              fi
+            else
+              echo "::error::TAURI_SIGNING_PRIVATE_KEY is not valid base64 and does not look like a minisign key."
+              exit 1
+            fi
+          fi
+          echo "TAURI_SIGNING_PRIVATE_KEY=$(cat "$key_file")" >> "$GITHUB_ENV"
 
       - name: Build macOS Metal installer and signed updater artifacts
         working-directory: crates/webizen-desktop
         shell: bash
         env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          RUSTFLAGS: "-C target-cpu=apple-m1"
         run: |
           set -o pipefail
           cargo tauri build --ci --target aarch64-apple-darwin --bundles app,dmg 2>&1 | tee tauri-build.log

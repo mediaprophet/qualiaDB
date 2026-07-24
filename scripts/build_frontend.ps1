@@ -31,7 +31,12 @@ if ($needWbInstall) {
     Write-Host "Installing wasm-bindgen-cli $WasmBindgenCliVersion (must match crate pin)..."
     cargo install wasm-bindgen-cli --version $WasmBindgenCliVersion --locked --force
 }
+$cargoBin = if ($env:CARGO_HOME) { Join-Path $env:CARGO_HOME "bin" } else { Join-Path $env:USERPROFILE ".cargo\bin" }
+$env:Path = "$cargoBin;$env:Path"
 Write-Host "Using wasm-bindgen: $((Get-Command wasm-bindgen).Source) $(wasm-bindgen --version)"
+# Host-cpu RUSTFLAGS break wasm32 + wasm-bindgen; clear for frontend only.
+if ($env:RUSTFLAGS_WASM) { $env:RUSTFLAGS = $env:RUSTFLAGS_WASM } else { Remove-Item Env:RUSTFLAGS -ErrorAction SilentlyContinue }
+Remove-Item Env:CARGO_ENCODED_RUSTFLAGS -ErrorAction SilentlyContinue
 
 Write-Host "Building webizen-studio..."
 $publicAssets = "$PSScriptRoot/../target/dx/webizen-studio/release/web/public/assets"

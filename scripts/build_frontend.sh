@@ -30,7 +30,14 @@ if [[ "$need_wb_install" -eq 1 ]]; then
   echo "Installing wasm-bindgen-cli ${WASM_BINDGEN_CLI_VERSION} (must match crate pin)..."
   cargo install wasm-bindgen-cli --version "${WASM_BINDGEN_CLI_VERSION}" --locked --force
 fi
+# Prefer cargo-installed tools over any host/Homebrew wasm-bindgen.
+export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 echo "Using $(command -v wasm-bindgen): $(wasm-bindgen --version)"
+# Host-cpu RUSTFLAGS (e.g. -C target-cpu=apple-m1) break wasm32 + wasm-bindgen.
+# Clear for the frontend build only.
+export RUSTFLAGS="${RUSTFLAGS_WASM:-}"
+export CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS="${CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS:-}"
+unset CARGO_ENCODED_RUSTFLAGS || true
 
 (
   cd "$repo_root/crates/webizen-studio"
