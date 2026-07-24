@@ -54,11 +54,22 @@ pub fn render_people(sig: PeopleSignals) -> Element {
         mut peer_endpoint_did,
         mut peer_endpoint_edit,
         mesh_status_text,
-        mut active_project,
-        mut active_project_id,
-        mut collab_list,
-        mut tab,
+        // Re-bound as mut inside wasm32 handlers (accept package / mesh / tab handoff).
+        active_project,
+        active_project_id,
+        collab_list,
+        tab,
     } = sig;
+    // Host-only paths consume these; keep them linked on native check builds.
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = (
+            &active_project,
+            &active_project_id,
+            &collab_list,
+            &tab,
+        );
+    }
 
     rsx! {
         div { style: "{PANEL}",

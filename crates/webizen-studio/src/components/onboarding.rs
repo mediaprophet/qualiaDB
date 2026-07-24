@@ -52,6 +52,7 @@ fn has_tauri_bridge() -> bool {
     invoke.dyn_ref::<js_sys::Function>().is_some()
 }
 
+#[cfg(target_arch = "wasm32")]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct SetupStateSnapshot {
     completed: bool,
@@ -83,6 +84,7 @@ impl Default for AgentConfigSnapshot {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
 fn step_index(step: &str) -> u8 {
     match step {
         "storage" => 1,
@@ -96,6 +98,8 @@ fn step_index(step: &str) -> u8 {
 pub fn OnboardingGate() -> Element {
     let mut loading = use_signal(|| true);
     let mut complete = use_signal(|| false);
+    // Mutated only on the wasm/Tauri host path (setup steps).
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut step = use_signal(|| 0_u8);
     let mut config = use_signal(AgentConfigSnapshot::default);
     let mut status = use_signal(String::new);
@@ -249,28 +253,34 @@ pub fn OnboardingGate() -> Element {
                                 onclick: move |_| {
                                     saving.set(true);
                                     status.set(String::new());
-                                    let snapshot = config();
                                     #[cfg(target_arch = "wasm32")]
-                                    spawn(async move {
-                                        let result = match invoke_json::<()>(
-                                            "save_config",
-                                            json!({"newConfig":snapshot}),
-                                        )
-                                        .await
-                                        {
-                                            Ok(_) => invoke_json::<SetupStateSnapshot>(
-                                                "complete_setup_step",
-                                                json!({"step":"storage"}),
+                                    {
+                                        let snapshot = config();
+                                        spawn(async move {
+                                            let result = match invoke_json::<()>(
+                                                "save_config",
+                                                json!({"newConfig":snapshot}),
                                             )
-                                            .await,
-                                            Err(error) => Err(error),
-                                        };
-                                        match result {
-                                            Ok(_) => step.set(2),
-                                            Err(error) => status.set(error),
-                                        }
+                                            .await
+                                            {
+                                                Ok(_) => invoke_json::<SetupStateSnapshot>(
+                                                    "complete_setup_step",
+                                                    json!({"step":"storage"}),
+                                                )
+                                                .await,
+                                                Err(error) => Err(error),
+                                            };
+                                            match result {
+                                                Ok(_) => step.set(2),
+                                                Err(error) => status.set(error),
+                                            }
+                                            saving.set(false);
+                                        });
+                                    }
+                                    #[cfg(not(target_arch = "wasm32"))]
+                                    {
                                         saving.set(false);
-                                    });
+                                    }
                                 },
                                 if saving() { "Saving…" } else { "Save storage choice" }
                             }
@@ -313,28 +323,34 @@ pub fn OnboardingGate() -> Element {
                                 onclick: move |_| {
                                     saving.set(true);
                                     status.set(String::new());
-                                    let snapshot = config();
                                     #[cfg(target_arch = "wasm32")]
-                                    spawn(async move {
-                                        let result = match invoke_json::<()>(
-                                            "save_config",
-                                            json!({"newConfig":snapshot}),
-                                        )
-                                        .await
-                                        {
-                                            Ok(_) => invoke_json::<SetupStateSnapshot>(
-                                                "complete_setup_step",
-                                                json!({"step":"inference"}),
+                                    {
+                                        let snapshot = config();
+                                        spawn(async move {
+                                            let result = match invoke_json::<()>(
+                                                "save_config",
+                                                json!({"newConfig":snapshot}),
                                             )
-                                            .await,
-                                            Err(error) => Err(error),
-                                        };
-                                        match result {
-                                            Ok(_) => step.set(3),
-                                            Err(error) => status.set(error),
-                                        }
+                                            .await
+                                            {
+                                                Ok(_) => invoke_json::<SetupStateSnapshot>(
+                                                    "complete_setup_step",
+                                                    json!({"step":"inference"}),
+                                                )
+                                                .await,
+                                                Err(error) => Err(error),
+                                            };
+                                            match result {
+                                                Ok(_) => step.set(3),
+                                                Err(error) => status.set(error),
+                                            }
+                                            saving.set(false);
+                                        });
+                                    }
+                                    #[cfg(not(target_arch = "wasm32"))]
+                                    {
                                         saving.set(false);
-                                    });
+                                    }
                                 },
                                 if saving() { "Saving…" } else { "Save AI choice" }
                             }

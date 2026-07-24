@@ -118,6 +118,8 @@ pub fn DomainsPane() -> Element {
     let inbox = use_signal(|| serde_json::Value::Array(vec![]));
     let inbox_counts = use_signal(String::new);
     let selected_mail = use_signal(String::new);
+    // Written only on the wasm/Tauri host path (mail body load/clear).
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut mail_body = use_signal(String::new);
     let receiver_status = use_signal(String::new);
     let receiver_bind = use_signal(|| "127.0.0.1:2525".to_string());
