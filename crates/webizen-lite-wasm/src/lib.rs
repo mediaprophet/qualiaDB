@@ -102,8 +102,165 @@ fn call_tool(name: &str, args: &Value) -> Result<Value, String> {
         "evaluate_ltl" => evaluate_ltl(args),
         "check_subsumption" => check_subsumption(args),
         "deontic_govern" => deontic_govern(args),
+        // Site-discovery helpers (no network — host/agent fetches, then calls WASM).
+        "namespace_discovery_help" => namespace_discovery_help(args),
+        "catalog_summarize" => catalog_summarize(args),
+        "resolve_dataset_urls" => resolve_dataset_urls(args),
         _ => Err(format!("unknown tool: {name}")),
     }
+}
+
+/// Static URL contract + agent bootstrap for ontology namespaces (default: ns.webcivics.net).
+fn namespace_discovery_help(args: &Value) -> Result<Value, String> {
+    let base = args
+        .get("baseUrl")
+        .and_then(Value::as_str)
+        .unwrap_or("https://ns.webcivics.net")
+        .trim_end_matches('/');
+    Ok(json!({
+        "profile": "wasm-ontology / webizen-lite-wasm",
+        "network": "none — fetch documents with the host HTTP client, then call parse_n3 / catalog_summarize",
+        "bootstrap": {
+            "llmsTxt": format!("{base}/llms.txt"),
+            "catalogJson": format!("{base}/catalog.json"),
+            "catalogTurtle": format!("{base}/catalog.ttl"),
+            "contextJsonLd": format!("{base}/context.jsonld"),
+            "aiUsePolicy": format!("{base}/ai-use-policy.json"),
+            "agentMcpGuide": format!("{base}/agent-mcp-guide.md"),
+            "agentLegislationGuide": format!("{base}/agent-legislation-guide.md")
+        },
+        "urlContract": {
+            "html": format!("{base}/institutions/un/{{slug}}/"),
+            "n3": format!("{base}/institutions/un/{{slug}}.n3"),
+            "turtle": format!("{base}/institutions/un/{{slug}}.ttl"),
+            "jsonld": format!("{base}/institutions/un/{{slug}}.jsonld"),
+            "coreExample": format!("{base}/core/agency/"),
+            "directoryIndexes": [
+                format!("{base}/institutions/"),
+                format!("{base}/institutions/un/"),
+                format!("{base}/institutions/au-fed-legislation/")
+            ],
+            "notes": [
+                "Trailing slash marks the HTML documentation page.",
+                "Extension paths (.n3/.ttl/.jsonld) are machine RDF projections.",
+                "Directory paths list child instruments (no leaf .n3).",
+                "Older /ontologies/... URLs redirect to short paths."
+            ]
+        },
+        "recommendedAgentFlow": [
+            "1. GET llms.txt and ai-use-policy.json (policy first).",
+            "2. GET catalog.json; optionally filter by category (institutions/un, core, …).",
+            "3. GET the .n3 (or .ttl) for each selected dataset.",
+            "4. Call MCP tools/call parse_n3 with the document body (offline).",
+            "5. Use hash_iri on document IRIs for Quin grounding; evaluate_deontic when norms apply.",
+            "6. Never invent articles; cite canonicalUrl from the catalog."
+        ],
+        "mcp": {
+            "transport": "in-process WASM (mcp_jsonrpc)",
+            "methods": ["initialize", "ping", "tools/list", "tools/call"],
+            "protocolVersions": SUPPORTED_PROTOCOL_VERSIONS
+        }
+    }))
+}
+
+/// Summarise a DCAT catalog JSON string (fetched by the host) for agent navigation.
+fn catalog_summarize(args: &Value) -> Result<Value, String> {
+    let catalog_str = required_str(args, "catalogJson")?;
+    let catalog: Value = serde_json::from_str(catalog_str)
+        .map_err(|e| format!("catalogJson is not valid JSON: {e}"))?;
+    let category_filter = args
+        .get("categoryPrefix")
+        .and_then(Value::as_str)
+        .map(|s| s.trim_matches('/').to_string());
+    let limit = args
+        .get("limit")
+        .and_then(Value::as_u64)
+        .unwrap_or(64)
+        .min(512) as usize;
+
+    let datasets = catalog
+        .get("datasets")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "catalogJson.datasets must be an array".to_string())?;
+
+    let mut categories: std::collections::BTreeMap<String, usize> =
+        std::collections::BTreeMap::new();
+    let mut selected = Vec::new();
+    let mut matched = 0usize;
+
+    for ds in datasets {
+        let category = ds
+            .get("category")
+            .and_then(Value::as_str)
+            .unwrap_or("uncategorized")
+            .to_string();
+        *categories.entry(category.clone()).or_insert(0) += 1;
+
+        if let Some(ref prefix) = category_filter {
+            if category != *prefix && !category.starts_with(&format!("{prefix}/")) {
+                continue;
+            }
+        }
+        matched += 1;
+        if selected.len() < limit {
+            selected.push(json!({
+                "id": ds.get("id"),
+                "title": ds.get("title"),
+                "category": category,
+                "canonicalUrl": ds.get("canonicalUrl"),
+                "n3Url": ds.get("n3Url"),
+                "turtleUrl": ds.get("turtleUrl"),
+                "jsonldUrl": ds.get("jsonldUrl"),
+                "tripleCount": ds.get("tripleCount"),
+                "registerId": ds.get("registerId")
+            }));
+        }
+    }
+
+    Ok(json!({
+        "title": catalog.get("title"),
+        "baseUrl": catalog.get("baseUrl"),
+        "generatedAt": catalog.get("generatedAt"),
+        "datasetCount": catalog.get("datasetCount").cloned().unwrap_or(json!(datasets.len())),
+        "categoryCounts": categories,
+        "categoryFilter": category_filter,
+        "matchedCount": matched,
+        "returnedCount": selected.len(),
+        "truncated": matched > selected.len(),
+        "datasets": selected
+    }))
+}
+
+/// Build canonical HTML + RDF URLs for a short namespace path (no network).
+fn resolve_dataset_urls(args: &Value) -> Result<Value, String> {
+    let base = args
+        .get("baseUrl")
+        .and_then(Value::as_str)
+        .unwrap_or("https://ns.webcivics.net")
+        .trim_end_matches('/');
+    let mut path = required_str(args, "path")?.trim().to_string();
+    if path.is_empty() {
+        return Err("path must be non-empty".into());
+    }
+    if !path.starts_with('/') {
+        path = format!("/{path}");
+    }
+    // Strip trailing slash and accidental extensions for the data path stem.
+    let stem = path
+        .trim_end_matches('/')
+        .trim_end_matches(".n3")
+        .trim_end_matches(".ttl")
+        .trim_end_matches(".jsonld")
+        .trim_end_matches(".json");
+    Ok(json!({
+        "dataPath": stem,
+        "htmlUrl": format!("{base}{stem}/"),
+        "n3Url": format!("{base}{stem}.n3"),
+        "turtleUrl": format!("{base}{stem}.ttl"),
+        "jsonldUrl": format!("{base}{stem}.jsonld"),
+        "rawN3Url": format!("{base}/raw/ontologies{stem}.n3"),
+        "note": "Directory indexes use the trailing-slash HTML URL only; leaf documents also publish RDF extensions."
+    }))
 }
 
 fn ontology_capabilities() -> Result<Value, String> {
@@ -633,6 +790,27 @@ fn tool_catalog() -> Value {
                 "humanitarian": { "type": "boolean" },
                 "ambiguous": { "type": "boolean" }
             }
+        })),
+        tool("namespace_discovery_help", "Return the offline URL contract and recommended agent flow for ns.webcivics.net (or another baseUrl).", json!({
+            "type": "object",
+            "properties": { "baseUrl": { "type": "string", "description": "Default https://ns.webcivics.net" } }
+        })),
+        tool("catalog_summarize", "Summarise a fetched DCAT catalog.json string: category counts and dataset URL list (no network).", json!({
+            "type": "object",
+            "required": ["catalogJson"],
+            "properties": {
+                "catalogJson": { "type": "string" },
+                "categoryPrefix": { "type": "string", "description": "e.g. institutions/un" },
+                "limit": { "type": "integer", "minimum": 1, "maximum": 512 }
+            }
+        })),
+        tool("resolve_dataset_urls", "Expand a short path like /institutions/un/api-1977 into HTML/N3/TTL/JSON-LD URLs.", json!({
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+                "path": { "type": "string" },
+                "baseUrl": { "type": "string" }
+            }
         }))
     ])
 }
@@ -711,6 +889,66 @@ mod tests {
             .unwrap()
             .iter()
             .any(|value| value == "deontic-logic"));
+    }
+
+    #[test]
+    fn namespace_discovery_help_lists_bootstrap_urls() {
+        let result = call("namespace_discovery_help", json!({}));
+        assert!(result["bootstrap"]["catalogJson"]
+            .as_str()
+            .unwrap()
+            .contains("catalog.json"));
+        assert!(result["recommendedAgentFlow"].as_array().unwrap().len() >= 4);
+    }
+
+    #[test]
+    fn catalog_summarize_filters_by_category_prefix() {
+        let catalog = json!({
+            "title": "Test",
+            "baseUrl": "https://ns.webcivics.net",
+            "datasetCount": 2,
+            "datasets": [
+                {
+                    "id": "a",
+                    "title": "A",
+                    "category": "institutions/un",
+                    "canonicalUrl": "https://ns.webcivics.net/institutions/un/a/",
+                    "n3Url": "https://ns.webcivics.net/institutions/un/a.n3"
+                },
+                {
+                    "id": "b",
+                    "title": "B",
+                    "category": "core",
+                    "canonicalUrl": "https://ns.webcivics.net/core/b/",
+                    "n3Url": "https://ns.webcivics.net/core/b.n3"
+                }
+            ]
+        });
+        let result = call(
+            "catalog_summarize",
+            json!({
+                "catalogJson": catalog.to_string(),
+                "categoryPrefix": "institutions/un"
+            }),
+        );
+        assert_eq!(result["matchedCount"], 1);
+        assert_eq!(result["datasets"][0]["id"], "a");
+    }
+
+    #[test]
+    fn resolve_dataset_urls_builds_extension_paths() {
+        let result = call(
+            "resolve_dataset_urls",
+            json!({ "path": "institutions/un/api-1977" }),
+        );
+        assert_eq!(
+            result["htmlUrl"],
+            "https://ns.webcivics.net/institutions/un/api-1977/"
+        );
+        assert_eq!(
+            result["n3Url"],
+            "https://ns.webcivics.net/institutions/un/api-1977.n3"
+        );
     }
 
     #[test]

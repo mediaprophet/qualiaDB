@@ -46,8 +46,14 @@ Available tools:
 - `evaluate_ltl`
 - `check_subsumption`
 - `deontic_govern`
+- `namespace_discovery_help` — URL contract + agent flow for ns.webcivics.net
+- `catalog_summarize` — filter a fetched `catalog.json` body (no network)
+- `resolve_dataset_urls` — expand short paths to HTML/N3/TTL/JSON-LD URLs
 
 Quin `u64` inputs accept decimal or `0x` strings. Outputs use decimal strings
 to preserve exact values in JavaScript.
+
+For embedding on `ns.webcivics.net`, copy `pkg/` to the site’s
+`public/wasm/webizen-lite/` and publish `agent-mcp-guide.md`.
 
 See [the capability profile manual](../../docs/manuals/wasm-capability-profiles.md).
