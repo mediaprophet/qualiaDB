@@ -289,7 +289,13 @@ async function fetchWithProgress(url, label) {
     setProgress(false);
     throw Object.assign(new Error(`HTTP ${resp.status}`), { status: resp.status, resp });
   }
-  const total = Number(resp.headers.get("Content-Length") || 0);
+  // Content-Length is often the *transfer* size. With Content-Encoding (gzip/br)
+  // or CDN quirks, the decoded ReadableStream can be larger than CL — never treat
+  // CL as a hard cap (that produced "download exceeded Content-Length" on Pages).
+  const declared = Number(resp.headers.get("Content-Length") || 0);
+  const encoding = (resp.headers.get("Content-Encoding") || "identity").toLowerCase();
+  const trustDeclared =
+    declared > 0 && (encoding === "identity" || encoding === "");
   if (!resp.body || !resp.body.getReader) {
     const buf = await resp.arrayBuffer();
     setProgress(true, 100, "Unpacking…");
@@ -297,38 +303,50 @@ async function fetchWithProgress(url, label) {
   }
   const reader = resp.body.getReader();
   // Prefer single allocation when size is known (avoids double-memory spike on phones).
-  if (total > 0) {
-    const out = new Uint8Array(total);
-    let loaded = 0;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (loaded + value.length > total) throw new Error("download exceeded Content-Length");
-      out.set(value, loaded);
-      loaded += value.length;
-      const pct = Math.round((loaded / total) * 100);
-      const mb = (loaded / 1e6).toFixed(1);
-      const tmb = (total / 1e6).toFixed(0);
-      setProgress(true, pct, `${label || "Downloading"} ${pct}% · ${mb}/${tmb} MB`);
-    }
-    if (loaded !== total) throw new Error(`incomplete download ${loaded}/${total}`);
-    setProgress(true, 100, "Building body…");
-    return out;
-  }
-  const chunks = [];
+  // Grow if the stream overruns declared length (decompression / wrong CL).
+  let capacity = trustDeclared ? declared : 0;
+  let out = capacity > 0 ? new Uint8Array(capacity) : null;
+  const chunks = capacity > 0 ? null : [];
   let loaded = 0;
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
-    chunks.push(value);
+    if (!value || value.length === 0) continue;
+    if (out) {
+      if (loaded + value.length > out.length) {
+        const next = new Uint8Array(Math.max(out.length * 2, loaded + value.length));
+        next.set(out.subarray(0, loaded), 0);
+        out = next;
+      }
+      out.set(value, loaded);
+    } else {
+      chunks.push(value);
+    }
     loaded += value.length;
-    setProgress(true, null, `${label || "Downloading"} ${(loaded / 1e6).toFixed(1)} MB…`);
+    if (declared > 0) {
+      const pct = Math.min(99, Math.round((loaded / declared) * 100));
+      const mb = (loaded / 1e6).toFixed(1);
+      const tmb = (declared / 1e6).toFixed(0);
+      setProgress(true, pct, `${label || "Downloading"} ${pct}% · ${mb}/${tmb} MB`);
+    } else {
+      setProgress(true, null, `${label || "Downloading"} ${(loaded / 1e6).toFixed(1)} MB…`);
+    }
   }
-  const out = new Uint8Array(loaded);
-  let off = 0;
-  for (const c of chunks) {
-    out.set(c, off);
-    off += c.length;
+  if (out) {
+    if (loaded !== out.length) {
+      out = out.subarray(0, loaded);
+    }
+  } else {
+    out = new Uint8Array(loaded);
+    let off = 0;
+    for (const c of chunks) {
+      out.set(c, off);
+      off += c.length;
+    }
+  }
+  // Only fail incomplete when we trusted CL and got *strictly less* (truncation).
+  if (trustDeclared && loaded < declared) {
+    throw new Error(`incomplete download ${loaded}/${declared}`);
   }
   setProgress(true, 100, "Building body…");
   return out;

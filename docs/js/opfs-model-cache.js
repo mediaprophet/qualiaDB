@@ -178,21 +178,25 @@ export async function loadOrCompileP64(ggufUrl, baseName, { compile, formatVersi
   if (resp.body) {
     const reader = resp.body.getReader();
     let loaded = 0;
+    // Content-Length can be compressed/transfer size; decoded stream may be larger.
+    // Grow rather than hard-fail on overrun (GH Pages / CDN).
     if (total > 0) {
-      // Allocate the model once. Retaining chunks and consolidating afterward
-      // briefly doubles model memory and is enough to OOM Android browsers.
       gguf = new Uint8Array(total);
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
-        if (loaded + value.length > total) {
-          throw new Error('download exceeded declared Content-Length');
+        if (!value || value.length === 0) continue;
+        if (loaded + value.length > gguf.length) {
+          const next = new Uint8Array(Math.max(gguf.length * 2, loaded + value.length));
+          next.set(gguf.subarray(0, loaded), 0);
+          gguf = next;
         }
         gguf.set(value, loaded);
         loaded += value.length;
         if (onProgress) onProgress(loaded, total, 'download');
       }
-      if (loaded !== total) throw new Error(`incomplete download: ${loaded}/${total} bytes`);
+      if (loaded < total) throw new Error(`incomplete download: ${loaded}/${total} bytes`);
+      if (loaded !== gguf.length) gguf = gguf.subarray(0, loaded);
     } else {
       const chunks = [];
       for (;;) {
