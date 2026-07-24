@@ -110,19 +110,49 @@ pub fn WellfairChoraPanel() -> Element {
             }
 
             header {
-                style: "z-index: 1; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-start;",
+                style: "z-index: 1; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;",
                 div {
+                    div {
+                        style: "display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.35rem;",
+                        span {
+                            style: "font-size:0.62rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#67e8f9;",
+                            "World"
+                        }
+                        span {
+                            style: "font-size:0.62rem;padding:0.1rem 0.4rem;border-radius:999px;border:1px solid rgba(34,211,238,0.45);background:rgba(34,211,238,0.12);color:#a5f3fc;font-weight:700;",
+                            "Life domain"
+                        }
+                        span {
+                            style: "font-size:0.62rem;padding:0.1rem 0.4rem;border-radius:999px;border:1px solid rgba(148,163,184,0.35);color:#cbd5e1;font-weight:600;",
+                            "Commons · attributed"
+                        }
+                    }
                     h2 {
                         style: "margin: 0; font-size: 1.8rem; font-weight: 600; color: #fff; letter-spacing: -0.02em; display: flex; align-items: center; gap: 0.5rem;",
                         "Universe ", span { style: "font-weight: 300; opacity: 0.65;", "· Chora Commons" }
                     }
                     p {
                         style: "margin: 0.5rem 0 0; font-size: 0.9rem; color: #94a3b8; max-width: 600px; line-height: 1.5;",
-                        "Explore the star-scape, Earth and planetary commons. NASA imagery and public star catalogs stay visibly attributed; worlds are configurations, not engine forks."
+                        "Explore the star-scape, Earth and planetary commons. NASA imagery and public star catalogs stay visibly attributed; worlds are configurations, not engine forks. Not a social feed — a shared place layer under principal control."
+                    }
+                    p { style: "margin: 0.55rem 0 0;",
+                        Link {
+                            to: crate::Route::LibraryRoute {},
+                            style: "font-size:0.72rem;font-weight:700;padding:0.28rem 0.65rem;border-radius:999px;border:1px solid #6d28d9;background:rgba(139,92,246,0.18);color:#e9d5ff;text-decoration:none;",
+                            title: "Keep loci and notes by meaning in Lived Memory",
+                            "→ Lived Memory"
+                        }
+                        " "
+                        Link {
+                            to: crate::Route::BrowserRoute {},
+                            style: "font-size:0.72rem;font-weight:700;padding:0.28rem 0.65rem;border-radius:999px;border:1px solid rgba(148,163,184,0.35);background:rgba(15,23,42,0.6);color:#e2e8f0;text-decoration:none;margin-left:0.35rem;",
+                            title: "Web browser — project pages into the same entity session",
+                            "→ Browser"
+                        }
                     }
                 }
                 div {
-                    style: "display: flex; gap: 0.75rem;",
+                    style: "display: flex; gap: 0.75rem; flex-wrap: wrap;",
                     button {
                         style: "padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.3); background: rgba(255, 255, 255, 0.05); color: #e2e8f0; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem;",
                         onclick: move |_| {

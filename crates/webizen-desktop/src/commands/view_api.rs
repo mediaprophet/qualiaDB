@@ -8,7 +8,19 @@ use qualia_client_core::view_host::{
     project_library_json, project_web_locus_json, select_entity, select_entity_uri,
     set_circumstance, set_observer, set_presentation_level,
 };
-use tauri::command;
+use tauri::{command, AppHandle};
+
+/// Focus main window and emit `shell-navigate` so Studio routes to a life domain.
+/// `route` accepts menu ids: `library` / `memory`, `talk`, `wellfair`, `chora`, `browser`, …
+#[command]
+pub fn shell_navigate(app: AppHandle, route: String) -> Result<(), String> {
+    let key = route.trim().to_ascii_lowercase();
+    if key.is_empty() {
+        return Err("route required".into());
+    }
+    crate::shell::menu::navigate_main_to(&app, &key);
+    Ok(())
+}
 
 fn storage_path() -> String {
     if let Some(state) = APP_STATE.get() {

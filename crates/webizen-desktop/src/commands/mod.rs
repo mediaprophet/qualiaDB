@@ -292,6 +292,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         view_api::view_render_memory_spatial,
         view_api::view_remote_controller_info,
         view_api::view_set_circumstance,
+        view_api::shell_navigate,
         // ── browser ──
         browser::open_web_url,
         browser::browser_navigate,

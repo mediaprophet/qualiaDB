@@ -310,33 +310,45 @@ fn DashboardAliasRoute() -> Element {
     rsx! { components::dashboard::Dashboard {} }
 }
 
-/// Simple Keep landing: the few real personal destinations, no academic inventory.
+/// Legacy Keep landing — secondary directory into life domains (not primary nav language).
 #[component]
 fn KeepHub() -> Element {
     rsx! {
         div {
             style: "flex:1; overflow-y:auto; padding:2rem; max-width:720px; margin:0 auto; color:var(--qualia-text);",
-            h1 { style: "margin:0 0 0.35rem; font-size:1.6rem; font-weight:700;", "Keep" }
+            div { style: "display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.35rem;",
+                span {
+                    style: "font-size:0.62rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#94a3b8;",
+                    "Directory"
+                }
+                span {
+                    style: "font-size:0.62rem;padding:0.1rem 0.4rem;border-radius:999px;border:1px solid #475569;background:rgba(71,85,105,0.2);color:#cbd5e1;font-weight:700;",
+                    "Secondary · prefer life-domain nav"
+                }
+            }
+            h1 { style: "margin:0 0 0.35rem; font-size:1.6rem; font-weight:700;", "All destinations" }
             p { style: "margin:0 0 1.5rem; color:var(--qualia-text-muted); line-height:1.5; font-size:0.95rem;",
-                "Your records, body, vault, and library — private on this machine. Social reception and cooperative projects live under Talk (People · Reception · Projects)."
+                "Private on this machine. Primary shell uses life domains: Memory · Relations · Care · Practice · World · Instruments. This page is a full index for deep links."
             }
             div { style: "display:flex; flex-direction:column; gap:0.65rem;",
-                KeepTalkTabLink { tab: "chat", title: "Talk — Chat", blurb: "Private local agent. Nothing leaves this machine unless you send it." }
-                KeepTalkTabLink { tab: "people", title: "Talk — People", blurb: "Invites, contacts, magic links, groups." }
-                KeepTalkTabLink { tab: "reception", title: "Talk — Reception", blurb: "Domain front door + DNS TXT so peers can find you without seeing your vault." }
-                KeepTalkTabLink { tab: "mail", title: "Talk — Mail", blurb: "Purpose inboxes, relationship addresses, catchall, SMTP/IMAP after domain setup." }
-                KeepTalkTabLink { tab: "projects", title: "Talk — Projects", blurb: "Cooperative projects and QualiaDB Development Cooperative seed." }
-                KeepLink { to: Route::WellfairRoute {}, title: "Wellfair", blurb: "Health, welfare, projects board, and life panels. Unlock vault if Projects fail." }
-                KeepLink { to: Route::SanctuaryRoute {}, title: "Sanctuary (vault)", blurb: "Unlock when cooperative projects or work board need the host API." }
-                KeepLink { to: Route::WorkRoute {}, title: "Work board", blurb: "Kanban — project id fills from Talk → Projects." }
-                KeepLink { to: Route::AnatomyRoute {}, title: "Anatomy", blurb: "See systems and conditions on a reference body." }
-                KeepLink { to: Route::HealthRoute {}, title: "Health vault", blurb: "Vitals, sleep, medication, wellbeing." }
-                KeepLink { to: Route::LibraryRoute {}, title: "Library", blurb: "Hypermedia shelf — notes, photos, receipts found by meaning, time, and place." }
-                KeepLink { to: Route::VisionRoute {}, title: "Vision", blurb: "Local detect/overlay — synthetic scenes, boxes, reject/correct without erasing claims." }
-                KeepLink { to: Route::ListenRoute {}, title: "Listen", blurb: "Local ears — features, reference events, epistemic quins (not full ASR)." }
-                KeepLink { to: Route::IdentityRoute {}, title: "Identity", blurb: "Personal profile, social book, consent." }
-                KeepLink { to: Route::SanctuaryRoute {}, title: "Sanctuary", blurb: "Vault lock and protected spaces." }
-                KeepLink { to: Route::AgencyRoute {}, title: "Agency", blurb: "Guardianship, accountability, safeguards." }
+                KeepTalkTabLink { tab: "chat", title: "Relations — Chat", blurb: "Private local agent. Nothing leaves this machine unless you send it. Instruments are not peers." }
+                KeepTalkTabLink { tab: "people", title: "Relations — People", blurb: "Invites, contacts, magic links, groups — natural persons, not identity assets." }
+                KeepTalkTabLink { tab: "reception", title: "Relations — Reception", blurb: "Domain front door + DNS TXT so peers can find you without seeing your vault." }
+                KeepTalkTabLink { tab: "mail", title: "Relations — Mail", blurb: "Purpose inboxes, relationship addresses, catchall, SMTP/IMAP after domain setup." }
+                KeepTalkTabLink { tab: "projects", title: "Practice — Projects", blurb: "Cooperative projects and QualiaDB Development Cooperative seed · Remember → Memory." }
+                KeepLink { to: Route::WellfairRoute {}, title: "Care — Wellfair shell", blurb: "Body, rights, welfare, labour under principal control. Unlock vault for private records." }
+                KeepLink { to: Route::SanctuaryRoute {}, title: "Care — Sanctuary (vault)", blurb: "Unlock when cooperative projects or work board need the host API." }
+                KeepLink { to: Route::WorkRoute {}, title: "Practice — Work board", blurb: "Kanban — project id fills from Relations → Projects." }
+                KeepLink { to: Route::AnatomyRoute {}, title: "Care — Anatomy", blurb: "See systems and conditions on a reference body." }
+                KeepLink { to: Route::HealthRoute {}, title: "Care — Health vault", blurb: "Vitals, sleep, medication, wellbeing — local journal, not cloud." }
+                KeepLink { to: Route::LibraryRoute {}, title: "Memory — Lived Memory", blurb: "Hypermedia shelf — notes, photos, receipts found by meaning, time, and place." }
+                KeepLink { to: Route::VisionRoute {}, title: "Instruments — Vision", blurb: "Local detect/overlay — not a peer person. Synthetic scenes, reject/correct without erasing claims." }
+                KeepLink { to: Route::ListenRoute {}, title: "Instruments — Listen", blurb: "Local ears — features, reference events (not full ASR). Not social." }
+                KeepLink { to: Route::IdentityRoute {}, title: "You — Identity", blurb: "Personal profile, social book, consent. Identifiers ≠ the natural person." }
+                KeepLink { to: Route::SanctuaryRoute {}, title: "Care — Sanctuary", blurb: "Vault lock and protected spaces." }
+                KeepLink { to: Route::AgencyRoute {}, title: "Care — Agency", blurb: "Guardianship, accountability, safeguards." }
+                KeepLink { to: Route::ChoraRoute {}, title: "World — Chora commons", blurb: "Spatio-temporal commons canvas — attributed public layers." }
+                KeepLink { to: Route::BrowserRoute {}, title: "World — Browser", blurb: "Web pages project into the same entity session as Memory." }
             }
         }
     }
@@ -966,7 +978,7 @@ fn AppLayout() -> Element {
                         "browser" | "reach" => menu_nav.push(Route::BrowserRoute {}),
                         "10d-browser" => menu_nav.push(Route::TenDBrowserRoute {}),
                         "settings" => menu_nav.push(Route::SettingsRoute {}),
-                        "library" => menu_nav.push(Route::LibraryRoute {}),
+                        "library" | "memory" => menu_nav.push(Route::LibraryRoute {}),
                         "wallet" | "identity" => menu_nav.push(Route::IdentityRoute {}),
                         "qapp-studio" => menu_nav.push(Route::StudioRoute {}),
                         "qapps" => menu_nav.push(Route::QAppsRoute {}),

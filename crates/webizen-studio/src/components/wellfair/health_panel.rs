@@ -2,6 +2,7 @@
 
 use super::host_client::{fetch_health_records, fetch_host_snapshot};
 use super::host_dto::HealthRecordDto;
+use crate::Route;
 use dioxus::prelude::*;
 
 fn format_unix(ts: u32) -> String {
@@ -80,6 +81,23 @@ pub fn WellfairHealthPanel() -> Element {
         section {
             aria_label: "WellFair health observations",
             style: "padding:0.85rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);",
+            div {
+                style: "display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.4rem;",
+                span {
+                    style: "font-size:0.62rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#a5b4fc;",
+                    "Care"
+                }
+                span {
+                    style: "font-size:0.62rem;padding:0.1rem 0.4rem;border-radius:999px;border:1px solid #4c1d95;background:rgba(139,92,246,0.12);color:#c4b5fd;font-weight:700;",
+                    "Body · local vault"
+                }
+                Link {
+                    to: Route::LibraryRoute {},
+                    style: "margin-left:auto;font-size:0.68rem;font-weight:700;color:#7c3aed;text-decoration:none;",
+                    title: "Remember health notes by meaning",
+                    "→ Memory"
+                }
+            }
             div {
                 style: "display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.75rem;",
                 h2 { style: "margin:0;font-size:1rem;", "Health — observations" }
