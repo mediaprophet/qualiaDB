@@ -22,7 +22,7 @@ jobs:
     name: Desktop (Windows Webizen)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -35,8 +35,13 @@ jobs:
       - name: Install Dioxus CLI
         run: cargo install dioxus-cli --version 0.8.0-alpha.0 --locked
 
+      # Match crates/webizen-studio wasm-bindgen pin (0.2.125). Prevents mac/linux
+      # dx failures: failed to find `__wbindgen_externref_table_dealloc`.
+      - name: Install matching wasm-bindgen-cli
+        run: cargo install wasm-bindgen-cli --version 0.2.125 --locked --force
+
       - name: Cache Cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -82,22 +87,63 @@ jobs:
             throw "TAURI_SIGNING_PRIVATE_KEY secret is required to produce signed updater artifacts"
           }
 
+      # NSIS is required for `cargo tauri build --bundles nsis` (not preinstalled on windows-latest).
+      - name: Install NSIS
+        shell: pwsh
+        run: |
+          choco install nsis -y --no-progress
+          $nsis = @(
+            "${env:ProgramFiles(x86)}\NSIS",
+            "${env:ProgramFiles}\NSIS"
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $nsis) { throw "NSIS install path not found after chocolatey install" }
+          Add-Content -Path $env:GITHUB_PATH -Value $nsis
+          Write-Host "NSIS at $nsis"
+          & (Join-Path $nsis "makensis.exe") /VERSION
+
       - name: Build installer and signed updater artifacts
         working-directory: crates/webizen-desktop
         shell: pwsh
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # Empty string is fine for unencrypted keys; encrypted keys need the secret set.
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
-          $buildLog = cargo tauri build --ci --bundles nsis 2>&1 | Tee-Object -Variable lines
+          # Do NOT use `$x = cargo ... 2>&1 | Tee-Object -Variable ...`.
+          # That PowerShell pipeline swallows native stdout/stderr in Actions and
+          # can report a false exit code. Use cmd redirection so the real log is kept.
+          $log = Join-Path (Get-Location) "tauri-build.log"
+          if (Test-Path $log) { Remove-Item $log -Force }
+          cmd /c "cargo tauri build --ci --bundles nsis > tauri-build.log 2>&1"
           $exitCode = $LASTEXITCODE
-          $lines | Set-Content -Path tauri-build.log
+          if (Test-Path $log) {
+            # Stream full log to the job console (truncate only if enormous).
+            $size = (Get-Item $log).Length
+            if ($size -gt 4MB) {
+              Write-Host "tauri-build.log is $size bytes; showing last 400 lines"
+              Get-Content $log -Tail 400 | Write-Host
+            } else {
+              Get-Content $log | Write-Host
+            }
+          } else {
+            Write-Host "WARNING: tauri-build.log was not created"
+          }
           if ($exitCode -ne 0) {
+            Write-Host "==== cargo tauri build FAILED (exit $exitCode); last 120 lines ===="
+            if (Test-Path $log) { Get-Content $log -Tail 120 | Write-Host }
             throw "cargo tauri build failed with exit code $exitCode"
           }
-          if (Select-String -Path tauri-build.log -Pattern "does not match the public key") {
+          if (Select-String -Path $log -Pattern "does not match the public key" -Quiet) {
             throw "TAURI_SIGNING_PRIVATE_KEY does not match the updater pubkey in tauri.conf.json"
           }
+
+      - name: Upload tauri-build.log on failure
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: tauri-build-log-windows
+          path: crates/webizen-desktop/tauri-build.log
+          if-no-files-found: ignore
 
       - name: Stage desktop bundle
         shell: pwsh
@@ -137,7 +183,7 @@ jobs:
           Get-ChildItem $out, $installerOut, webizen-desktop-windows-x64.zip
 
       - name: Upload desktop artifacts to workflow
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: desktop-windows-artifacts
           path: |
@@ -162,7 +208,7 @@ jobs:
       WGPU_POWER_PREF: high
       RUSTFLAGS: "-C target-cpu=apple-m1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -175,8 +221,13 @@ jobs:
       - name: Install Dioxus CLI
         run: cargo install dioxus-cli --version 0.8.0-alpha.0 --locked
 
+      # Match crates/webizen-studio wasm-bindgen pin (0.2.125). Prevents macOS
+      # dx failures: failed to find `__wbindgen_externref_table_dealloc`.
+      - name: Install matching wasm-bindgen-cli
+        run: cargo install wasm-bindgen-cli --version 0.2.125 --locked --force
+
       - name: Cache Cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -218,10 +269,24 @@ jobs:
         run: |
           set -o pipefail
           cargo tauri build --ci --target aarch64-apple-darwin --bundles app,dmg 2>&1 | tee tauri-build.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            echo "==== cargo tauri build FAILED (exit $status); last 120 lines ===="
+            tail -n 120 tauri-build.log || true
+            exit "$status"
+          fi
           if grep -q "does not match the public key" tauri-build.log; then
             echo "::error::TAURI_SIGNING_PRIVATE_KEY does not match the updater pubkey in tauri.conf.json"
             exit 1
           fi
+
+      - name: Upload tauri-build.log on failure (macOS)
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: tauri-build-log-macos
+          path: crates/webizen-desktop/tauri-build.log
+          if-no-files-found: ignore
 
       - name: Stage macOS Metal desktop bundle
         shell: bash
@@ -262,7 +327,7 @@ jobs:
           ls -lah "$out" "$installerOut" webizen-desktop-macos-aarch64-metal.zip
 
       - name: Upload macOS Metal artifacts to workflow
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: desktop-macos-metal-artifacts
           path: |
@@ -286,10 +351,10 @@ jobs:
       - build-desktop-windows
       - build-desktop-macos-metal
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Download desktop artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: release-assets
 
