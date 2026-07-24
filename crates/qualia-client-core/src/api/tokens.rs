@@ -215,7 +215,7 @@ pub fn send_ecash_token(token_id: &str, destination_address: &str, amount: u64) 
     use bip32::XPrv;
     use std::str::FromStr;
 
-    let id = read_identity().ok_or("No identity set â€” generate a seed first")?;
+    let id = read_identity().ok_or("No identity set — generate a seed first")?;
     let hash160_hex = id.get("ecash_hash160")
         .and_then(|v| v.as_str())
         .ok_or("No ecash_hash160 in identity")?;
@@ -319,7 +319,7 @@ pub fn send_ecash_token(token_id: &str, destination_address: &str, amount: u64) 
     Ok(txid)
 }
 
-/// Build a native XEC send transaction (preview only â€” does not broadcast).
+/// Build a native XEC send transaction (preview only — does not broadcast).
 /// Returns the raw transaction hex and a fee estimate for user confirmation.
 #[derive(Serialize, Clone)]
 pub struct SendPreview {
@@ -341,7 +341,7 @@ pub fn build_send_xec(destination_address: &str, amount_sats: i64) -> Result<Sen
         return Err("Amount must be positive".into());
     }
 
-    let id = read_identity().ok_or("No identity set â€” generate a seed first")?;
+    let id = read_identity().ok_or("No identity set — generate a seed first")?;
     let hash160_hex = id.get("ecash_hash160")
         .and_then(|v| v.as_str())
         .ok_or("No ecash_hash160 in identity")?;
@@ -453,7 +453,7 @@ fn decode_ecash_address(addr: &str) -> Result<Vec<u8>, String> {
 fn load_mnemonic_from_vault() -> Result<String, String> {
     let mnemonic_path = app_meta_dir().join("mnemonic.enc");
     std::fs::read_to_string(&mnemonic_path).map_err(|_| {
-        "No mnemonic stored â€” please save your seed phrase via the identity setup flow".to_string()
+        "No mnemonic stored — please save your seed phrase via the identity setup flow".to_string()
     })
 }
 
@@ -467,7 +467,7 @@ pub fn remove_token(id: String) -> Result<(), String> {
     save_tokens_to_disk(&storage_path, &tokens)
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────────────────────
 
 pub fn read_identity() -> Option<serde_json::Value> {
     std::fs::read_to_string(identity_file_path())
@@ -573,7 +573,7 @@ pub fn get_coin_balances() -> Vec<CoinBalance> {
             ticker: "XMR".into(),
             // XMR derivation is not implemented (see derive_wallets_from_seed).
             // Show an explicit non-address so it can't be mistaken for a real
-            // receive address â€” never a fabricated "4..." string.
+            // receive address — never a fabricated "4..." string.
             address: "(not yet supported)".into(),
             balance: 0.0,
             balance_display: zero_display.into(),
@@ -696,7 +696,7 @@ fn fetch_xec_tx_history(id: &Option<serde_json::Value>) -> Result<Vec<TxRecord>,
         } else if tx.time_first_seen > 0 {
             format_unix_timestamp(tx.time_first_seen)
         } else {
-            "â€”".to_string()
+            "—".to_string()
         };
 
         // Counterparty: for outgoing, the first non-own output address; for incoming, first input
@@ -713,7 +713,7 @@ fn fetch_xec_tx_history(id: &Option<serde_json::Value>) -> Result<Vec<TxRecord>,
 
         // Truncate txid for display
         let txid_display = if tx.txid.len() > 16 {
-            format!("{}â€¦{}", &tx.txid[..8], &tx.txid[tx.txid.len()-4..])
+            format!("{}…{}", &tx.txid[..8], &tx.txid[tx.txid.len()-4..])
         } else {
             tx.txid.clone()
         };
@@ -804,7 +804,7 @@ pub async fn derive_wallets_from_seed(seed: String) -> Result<serde_json::Value,
     // no keys behind it is dangerous: any XMR sent to a keyless address is
     // permanently lost. So we report it empty rather than fabricate an
     // address. Real, test-vector-verified ed25519/Keccak/base58 derivation is
-    // tracked as follow-up work (needs an authoritative seedâ†’address vector to
+    // tracked as follow-up work (needs an authoritative seed→address vector to
     // verify against before it can be trusted).
     let hex_seed = to_hex(&seed_bytes[0..16]);
 
@@ -815,7 +815,7 @@ pub async fn derive_wallets_from_seed(seed: String) -> Result<serde_json::Value,
         "ecash_hash160": xec_hash160,
         "ethereum": eth_addr,
         "bitcoin_btc": btc_addr,
-        "monero_xmr": "" // not derived â€” never a fabricated address (see above)
+        "monero_xmr": "" // not derived — never a fabricated address (see above)
     }))
 }
 
@@ -831,7 +831,7 @@ pub async fn mint_semantic_token(asset_id: String) -> Result<String, String> {
     use bip32::XPrv;
     use std::str::FromStr;
 
-    let id = read_identity().ok_or("No identity set â€” generate a seed first")?;
+    let id = read_identity().ok_or("No identity set — generate a seed first")?;
     let hash160_hex = id.get("ecash_hash160")
         .and_then(|v| v.as_str())
         .ok_or("No ecash_hash160 in identity")?;
@@ -971,7 +971,7 @@ pub async fn import_external_seed(
 ) -> Result<String, String> {
     // Validate seed format
     if seed.split_whitespace().count() < 12 {
-        return Err("Invalid seed phrase â€” must be at least 12 words".to_string());
+        return Err("Invalid seed phrase — must be at least 12 words".to_string());
     }
 
     // Derive real addresses using the existing HD wallet pipeline
@@ -986,7 +986,7 @@ pub async fn import_external_seed(
         "Nym (NYM) - Nyx Chain" | "NYM" => ("NYM", "m/44'/118'/0'/0/0"),
         "Ethereum (EVM)" | "ETH" => ("ETH", "m/44'/60'/0'/0/0"),
         "Monero (XMR)" | "XMR" => {
-            // Monero uses ed25519, not secp256k1 â€” still mock for now
+            // Monero uses ed25519, not secp256k1 — still mock for now
             let xmr_hex = to_hex(&seed_bytes[48..56]);
             return Ok(format!("4{}...", &xmr_hex[0..xmr_hex.len().min(16)]));
         }

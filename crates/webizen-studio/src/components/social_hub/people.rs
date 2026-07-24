@@ -54,14 +54,23 @@ pub fn render_people(sig: PeopleSignals) -> Element {
         mut peer_endpoint_did,
         mut peer_endpoint_edit,
         mesh_status_text,
-        active_project: _,
-        active_project_id: _,
-        collab_list: _,
-        tab,
+        mut active_project,
+        mut active_project_id,
+        mut collab_list,
+        mut tab,
     } = sig;
 
     rsx! {
         div { style: "{PANEL}",
+            div {
+                style: "margin:0 0 1rem;padding:0.85rem 1rem;border-radius:12px;border:1px solid #334155;background:linear-gradient(135deg,rgba(139,92,246,0.12),rgba(15,23,42,0.9));max-width:720px;",
+                p { style: "margin:0 0 0.25rem;font-size:0.62rem;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;color:#a5b4fc;",
+                    "People · natural persons & peer bonds"
+                }
+                p { style: "margin:0;font-size:0.8rem;color:#94a3b8;line-height:1.45;",
+                    "Invite humans and optional agent/service relations. Relation type (peer / agent / service) is explicit — instruments stay instruments. After bonds exist, open Chat or Projects; remember material in Lived Memory."
+                }
+            }
             // ── Profile card ──
             div { style: "{CARD}",
                 h2 { style: "{H2}", "You" }
@@ -79,9 +88,16 @@ pub fn render_people(sig: PeopleSignals) -> Element {
                         {
                             let (display_name, mut status) = (display_name, status);
                             spawn(async move {
+                                // Partial patch is intentional: backend merges onto the loaded
+                                // profile (display_name + enable connect invites). Do not send a
+                                // bare SharingPolicy object — that used to fail deserialize with
+                                // `missing field share_display_name`.
                                 let body = json!({
                                     "display_name": display_name(),
-                                    "sharing": { "allow_group_chat_invites": true }
+                                    "sharing": {
+                                        "allow_group_chat_invites": true,
+                                        "share_display_name": true,
+                                    }
                                 });
                                 let body = serde_json::to_string(&body).unwrap_or_default();
                                 match invoke_json::<serde_json::Value>("save_user_profile", json!({ "profileJson": body })).await {
@@ -303,7 +319,7 @@ pub fn render_people(sig: PeopleSignals) -> Element {
                     onclick: move |_| {
                         #[cfg(target_arch = "wasm32")]
                         {
-                            let (mut magic_accept, contacts, peers, status, active_project_id, active_project) =
+                            let (mut magic_accept, contacts, peers, mut status, active_project_id, active_project) =
                                 (magic_accept, contacts, peers, status, active_project_id, active_project);
                             spawn(async move {
                                 let link = magic_accept().trim().to_string();
@@ -549,7 +565,7 @@ pub fn render_people(sig: PeopleSignals) -> Element {
                         };
                         let name_t = name.clone();
                         #[allow(unused_variables)]
-                        let did_t = did.clone();
+                        let did_chat = did.clone();
                         let is_agent = rel.eq_ignore_ascii_case("agent")
                             || rel.eq_ignore_ascii_case("service");
                         rsx! {
@@ -571,7 +587,7 @@ pub fn render_people(sig: PeopleSignals) -> Element {
                                     onclick: move |_| {
                                         #[cfg(target_arch = "wasm32")]
                                         {
-                                            open_talk_with(&name_t, &did_t, &format!("Hi {name_t} — "));
+                                            open_talk_with(&name_t, &did_chat, &format!("Hi {name_t} — "));
                                         }
                                         let mut t = tab;
                                         t.set(HubTab::Chat);
@@ -699,7 +715,8 @@ pub fn render_people(sig: PeopleSignals) -> Element {
                         };
                         let name_t = name.clone();
                         #[allow(unused_variables)]
-                        let did_t = did.clone();
+                        let did_chat = did.clone();
+                        let did_group = did.clone();
                         rsx! {
                             div {
                                 style: "padding:8px 10px;background:#0b1220;border-radius:8px;margin-bottom:6px;",
@@ -710,7 +727,7 @@ pub fn render_people(sig: PeopleSignals) -> Element {
                                     onclick: move |_| {
                                         #[cfg(target_arch = "wasm32")]
                                         {
-                                            open_talk_with(&name_t, &did_t, &format!("Hi {name_t} — "));
+                                            open_talk_with(&name_t, &did_chat, &format!("Hi {name_t} — "));
                                         }
                                         let mut t = tab;
                                         t.set(HubTab::Chat);
@@ -721,7 +738,7 @@ pub fn render_people(sig: PeopleSignals) -> Element {
                                 button {
                                     style: "{BTN2} margin-top:6px;",
                                     onclick: move |_| {
-                                        let d = did_t.clone();
+                                        let d = did_group.clone();
                                         if !d.is_empty() {
                                             let cur = group_dids();
                                             if cur.is_empty() {

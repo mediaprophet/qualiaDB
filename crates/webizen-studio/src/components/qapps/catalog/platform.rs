@@ -2,7 +2,7 @@ use super::{AppRoute, Cat, QApp, Stat};
 
 pub(super) fn apps() -> Vec<QApp> {
     vec![
-        // â”€â”€ Platform â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Platform ──────────────────────────────────────────────────────────
         QApp {
             id: "context-studio",
             name: "Context Studio",
@@ -19,7 +19,7 @@ pub(super) fn apps() -> Vec<QApp> {
             name: "QApp Studio",
             tagline: "Layout Builder",
             desc: "Drag-and-drop Shoelace + Qualia pane composer. Arrange, resize, and wire panes \
-                   into custom dashboards â€” output is a signed QApp manifest written to the WAL.",
+                   into custom dashboards — output is a signed QApp manifest written to the WAL.",
             icon: "layers",
             route: Some(AppRoute::QAppStudio),
             stat: Stat::Active,
@@ -52,7 +52,7 @@ pub(super) fn apps() -> Vec<QApp> {
             name: "Notification Center",
             tagline: "Alerts & Events",
             desc: "Unified event stream from WAL mutations, deontic violations, QPU job completions, \
-                   and governance alerts â€” each surfaced as a signed NQuin notification quin.",
+                   and governance alerts — each surfaced as a signed NQuin notification quin.",
             icon: "bell",
             route: None,
             stat: Stat::Soon,

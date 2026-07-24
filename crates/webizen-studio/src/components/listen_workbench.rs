@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use super::qapp_engine::invoke_json;
 use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
+use crate::Route;
 
 /// UI mirror of `AudioCapabilityDto` from `qualia-client-core` (returned by the
 /// `audio_capabilities` runtime command).
@@ -210,10 +211,32 @@ pub fn ListenWorkbench() -> Element {
     rsx! {
         div {
             style: "flex:1; overflow-y:auto; padding:1.5rem 2rem; max-width:920px; margin:0 auto; color:var(--qualia-text);",
+            div { style: "display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.25rem;",
+                span {
+                    style: "font-size:0.62rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#94a3b8;",
+                    "Instruments"
+                }
+                span {
+                    style: "font-size:0.62rem;padding:0.1rem 0.4rem;border-radius:999px;border:1px solid #475569;background:rgba(71,85,105,0.2);color:#cbd5e1;font-weight:700;",
+                    "Not a peer · not social"
+                }
+                HonestyChip {
+                    level: HonestyLevel::Partial,
+                    detail: "Reference ears + mixer (not production ASR)".to_string(),
+                }
+            }
             h1 { style: "margin:0 0 0.35rem; font-size:1.55rem; font-weight:700;", "Listen" }
             p {
-                style: "margin:0 0 1rem; color:var(--qualia-text-muted); line-height:1.5; font-size:0.92rem;",
-                "Local ears + reference mixer. Not production ASR/TTS. Seed AED/speech weights only. No cloud."
+                style: "margin:0 0 0.5rem; color:var(--qualia-text-muted); line-height:1.5; font-size:0.92rem;",
+                "Local ears + reference mixer. Not production ASR/TTS. Seed AED/speech weights only. No cloud. \
+                 Instrument surface — not a person, chat peer, or social identity."
+            }
+            p { style: "margin:0 0 1rem;",
+                Link {
+                    to: Route::LibraryRoute {},
+                    style: "font-size:0.72rem;font-weight:700;color:#c4b5fd;text-decoration:none;",
+                    "→ Lived Memory (keep audio notes by meaning when you choose)"
+                }
             }
 
             // —— Audio capabilities (honest registry) ——

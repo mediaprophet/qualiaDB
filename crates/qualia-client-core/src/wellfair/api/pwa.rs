@@ -164,7 +164,7 @@ impl WebizenHostApi {
     }
 
     /// Derived balance across the ledger. Balances are a pure derivation over the
-    /// unique-entry-id set, so a duplicate or replayed commit can never move money (Â§17).
+    /// unique-entry-id set, so a duplicate or replayed commit can never move money (§17).
     pub fn ledger_balance(&self, limit: usize) -> Result<BalanceReport, String> {
         let rows = self.list_ledger_entries(limit)?;
         let mut entries = Vec::with_capacity(rows.len());

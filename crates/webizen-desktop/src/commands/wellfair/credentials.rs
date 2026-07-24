@@ -14,12 +14,12 @@ pub fn wellfair_add_credential(
     expires_at_unix: Option<u32>,
 ) -> Result<String, String> {
     let claims: Vec<(String, String)> = serde_json::from_str(&claims_json)
-        .map_err(|e| format!("invalid claims JSON (expected [[key,value],â€¦]): {e}"))?;
+        .map_err(|e| format!("invalid claims JSON (expected [[key,value],…]): {e}"))?;
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let mut cred = wellfare_core::credentials::CredentialRecord::new(
             issuer_did,
             subject_did,
@@ -39,7 +39,7 @@ pub fn wellfair_get_credential(app: AppHandle, record_id: String) -> Result<Stri
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let cred = host.get_credential(&record_id)?;
         serde_json::to_string(&cred).map_err(|e| e.to_string())
     })?
@@ -57,7 +57,7 @@ pub fn wellfair_present_credential(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let presentation = host.present_credential(&record_id, &keys)?;
         serde_json::to_string(&presentation).map_err(|e| e.to_string())
     })?

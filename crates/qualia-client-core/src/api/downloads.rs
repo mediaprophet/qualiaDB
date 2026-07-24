@@ -18,7 +18,7 @@ pub fn get_active_downloads() -> Vec<ProgressPayload> {
         .collect()
 }
 
-// â”€â”€ Remote manifest fetch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Remote manifest fetch ─────────────────────────────────────────────────────
 
 pub async fn fetch_remote_manifest(url: String) -> Result<String, String> {
     reqwest::get(&url)
@@ -29,7 +29,7 @@ pub async fn fetch_remote_manifest(url: String) -> Result<String, String> {
         .map_err(|e| format!("Response error: {}", e))
 }
 
-// â”€â”€ Imported accounts persistence â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Imported accounts persistence ────────────────────────────────────────────
 
 pub fn imported_accounts_path() -> PathBuf {
     app_meta_dir().join("imported_accounts.json")

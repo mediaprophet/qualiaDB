@@ -54,7 +54,7 @@ pub fn wellfair_grant_consent(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let grant = host.grant_consent(&draft, &scope)?;
         serde_json::to_string(&grant).map_err(|e| e.to_string())
     })?
@@ -66,7 +66,7 @@ pub fn wellfair_revoke_consent(app: AppHandle, grant_id: String) -> Result<Strin
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let revoked = host.revoke_consent(&grant_id)?;
         serde_json::to_string(&serde_json::json!({ "revoked": revoked })).map_err(|e| e.to_string())
     })?
@@ -78,7 +78,7 @@ pub fn wellfair_list_consents(app: AppHandle) -> Result<String, String> {
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let grants = host.list_consents()?;
         serde_json::to_string(&grants).map_err(|e| e.to_string())
     })?
@@ -116,7 +116,7 @@ pub fn wellfair_add_condition(app: AppHandle, report_json: String) -> Result<Str
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let entry = host.add_condition(&report)?;
         serde_json::to_string(&entry).map_err(|e| e.to_string())
     })?
@@ -143,7 +143,7 @@ pub fn wellfair_add_allergy(app: AppHandle, report_json: String) -> Result<Strin
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let entry = host.add_allergy(&report)?;
         serde_json::to_string(&entry).map_err(|e| e.to_string())
     })?
@@ -182,7 +182,7 @@ pub fn wellfair_add_disputed_diagnosis(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let entry = host.add_disputed_diagnosis(&report)?;
         serde_json::to_string(&entry).map_err(|e| e.to_string())
     })?
@@ -216,7 +216,7 @@ pub fn wellfair_add_housing_safety(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let entry = host.add_housing_safety(&report)?;
         serde_json::to_string(&entry).map_err(|e| e.to_string())
     })?

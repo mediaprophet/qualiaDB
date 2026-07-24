@@ -25,7 +25,7 @@ pub struct AgencyDomainDto {
     pub selfhood: bool,
 }
 
-/// A supported-agency delegation (display subset; the host returns the full record â€” serde ignores
+/// A supported-agency delegation (display subset; the host returns the full record — serde ignores
 /// the extra fields).
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct AgencyDelegationDto {

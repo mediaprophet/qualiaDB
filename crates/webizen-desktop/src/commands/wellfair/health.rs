@@ -48,7 +48,7 @@ pub fn wellfair_save_accessibility(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.save_accessibility(&prefs)?;
         serde_json::to_string(&prefs).map_err(|e| e.to_string())
     })?
@@ -63,7 +63,7 @@ pub fn wellfair_list_health_records(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let records = host.list_health_records(limit.unwrap_or(64))?;
         serde_json::to_string(&records).map_err(|e| e.to_string())
     })?
@@ -75,7 +75,7 @@ pub fn wellfair_list_receipts(app: AppHandle, limit: Option<usize>) -> Result<St
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let receipts = host.list_receipts(limit.unwrap_or(32))?;
         serde_json::to_string(&receipts).map_err(|e| e.to_string())
     })?
@@ -90,7 +90,7 @@ pub fn wellfair_export_health_package(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let (package, receipt) = host.export_health_package(limit.unwrap_or(256))?;
         serde_json::to_string(&serde_json::json!({
             "package": package,
@@ -109,7 +109,7 @@ pub fn wellfair_import_samsung_folder(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let report = host.import_samsung_health_folder(std::path::Path::new(&folder_path));
         serde_json::to_string(&report).map_err(|e| e.to_string())
     })?
@@ -133,7 +133,7 @@ pub fn wellfair_ingest_companion_health(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let report = host.ingest_companion_health_bundle(&bundle);
         serde_json::to_string(&report).map_err(|e| e.to_string())
     })?

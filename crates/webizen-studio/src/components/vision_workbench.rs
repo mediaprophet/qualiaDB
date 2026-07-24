@@ -460,11 +460,30 @@ pub fn VisionWorkbench() -> Element {
                 style: "display:flex; flex-wrap:wrap; gap:0.65rem; align-items:flex-start; \
                         justify-content:space-between; margin-bottom:0.5rem;",
                 div {
+                    div { style: "display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.25rem;",
+                        span {
+                            style: "font-size:0.62rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#94a3b8;",
+                            "Instruments"
+                        }
+                        span {
+                            style: "font-size:0.62rem;padding:0.1rem 0.4rem;border-radius:999px;border:1px solid #475569;background:rgba(71,85,105,0.2);color:#cbd5e1;font-weight:700;",
+                            "Not a peer · not social"
+                        }
+                    }
                     h1 { style: "margin:0 0 0.35rem; font-size:1.55rem; font-weight:700;", "Vision" }
                     p {
                         style: "{MUTED}",
                         "Local detector on synthetic scenes — boxes are epistemic proposals, not ground truth. \
-                         Reject or correct without erasing the machine claim. No cloud vision; no Python."
+                         Reject or correct without erasing the machine claim. No cloud vision; no Python. \
+                         This is an instrument surface, not a person or chat peer."
+                    }
+                    p { style: "margin:0 0 0.35rem;",
+                        Link {
+                            to: Route::LibraryRoute {},
+                            style: "font-size:0.72rem;font-weight:700;color:#c4b5fd;text-decoration:none;",
+                            title: "Save or spatialize outputs from Lived Memory when you choose",
+                            "→ Lived Memory (save / spatialize by meaning)"
+                        }
                     }
                 }
                 div {

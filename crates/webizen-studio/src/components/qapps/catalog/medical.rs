@@ -2,7 +2,7 @@ use super::{Cat, QApp, Stat};
 
 pub(super) fn apps() -> Vec<QApp> {
     vec![
-        // â”€â”€ Medical & Life Sciences â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Medical & Life Sciences ───────────────────────────────────────────
         QApp {
             id: "health-vitals",
             name: "Health Vital Monitor",

@@ -5,12 +5,17 @@
 //!
 //! Perception catalogue (U4-C): seed models / ontologies / computer_vision specialized-lib rows
 //! via host commands `library_seed_perception_assets` / `wellfair_seed_perception_library`.
+//!
+//! **Reads are vault-free:** list / query / stats prefer `library_*` Tauri commands (AppState
+//! storage path). Sanctuary unlock is only required for secret-shelf UX and vault-gated writes.
 
 use super::host_client::{
     export_library_graph, ingest_document, ingest_file_hex, library_commons_share_card,
     ingest_legislation_text, library_stats, list_library_section, query_library_faceted,
     remove_library_entry, search_library, search_library_time, seed_perception_library,
-    seed_studio_qapps, set_library_commons, IngestFacets,
+    seed_studio_qapps, set_library_commons, view_morph, view_pick_scene, view_project_library,
+    view_render_memory_spatial, view_select, view_select_uri, view_session, view_set_observer,
+    view_set_presentation_level, IngestFacets,
 };
 use crate::components::honesty_chip::{HonestyChip, HonestyLevel};
 use crate::Route;
@@ -367,6 +372,45 @@ pub fn WellfairLibraryPanel() -> Element {
     let mut ontologies_honesty = use_signal(|| HonestyLevel::Unavailable);
     let mut perception_honesty_level = use_signal(|| HonestyLevel::Unavailable);
 
+    // Entity-view session (app-wide: observer + morph + hidden wing count)
+    let mut view_observer = use_signal(|| "principal".to_string());
+    let mut view_presentation = use_signal(|| 1u8);
+    let mut view_hidden = use_signal(|| 0u32);
+    let mut view_flat_count = use_signal(|| 0usize);
+    let mut view_scene_count = use_signal(|| 0usize);
+    let mut view_morph_mode = use_signal(|| "both".to_string());
+    let mut view_status = use_signal(String::new);
+    let mut view_entity_cards = use_signal(Vec::<serde_json::Value>::new);
+    let mut view_scene_nodes = use_signal(Vec::<serde_json::Value>::new);
+    // Shared session: attention URI drives Library↔browser highlight continuity.
+    let mut session_selected_id = use_signal(|| 0u64);
+    let mut session_attention_uri = use_signal(String::new);
+    let mut gpu_epoch = use_signal(|| 0u64);
+    let mut gpu_status = use_signal(String::new);
+
+    let pull_view_session = move || {
+        spawn(async move {
+            if let Ok(s) = view_session().await {
+                let sel = s
+                    .get("selection")
+                    .and_then(|a| a.as_array())
+                    .and_then(|a| a.first())
+                    .and_then(|v| {
+                        v.as_u64().or_else(|| {
+                            v.as_object()
+                                .and_then(|o| o.values().find_map(|x| x.as_u64()))
+                        })
+                    })
+                    .unwrap_or(0);
+                session_selected_id.set(sel);
+                match s.get("attention_url").and_then(|x| x.as_str()) {
+                    Some(u) if !u.is_empty() => session_attention_uri.set(u.to_string()),
+                    _ => {}
+                }
+            }
+        });
+    };
+
     let mut apply_perception_from_rows = move |rows: &[serde_json::Value]| {
         let perc: Vec<serde_json::Value> = rows
             .iter()
@@ -380,6 +424,54 @@ pub fn WellfairLibraryPanel() -> Element {
         perception_rows.set(perc);
     };
 
+    let refresh_entity_view = move || {
+        let sec = section();
+        let obs = view_observer();
+        let level = view_presentation();
+        spawn(async move {
+            let sect = if sec == "all" {
+                None
+            } else {
+                Some(sec.as_str())
+            };
+            match view_project_library(sect, Some(obs.as_str()), Some(level)).await {
+                Ok(v) => {
+                    let hidden = v
+                        .get("hidden_count")
+                        .and_then(|x| x.as_u64())
+                        .unwrap_or(0) as u32;
+                    let flat = v
+                        .get("flat")
+                        .and_then(|a| a.as_array())
+                        .cloned()
+                        .unwrap_or_default();
+                    let scene_n = v
+                        .get("scene_nodes")
+                        .and_then(|a| a.as_array())
+                        .map(|a| a.len())
+                        .unwrap_or(0);
+                    let flat_n = flat.len();
+                    let scenes = v
+                        .get("scene_nodes")
+                        .and_then(|a| a.as_array())
+                        .cloned()
+                        .unwrap_or_default();
+                    view_hidden.set(hidden);
+                    view_flat_count.set(flat_n);
+                    view_scene_count.set(scene_n);
+                    view_entity_cards.set(flat);
+                    view_scene_nodes.set(scenes);
+                    view_status.set(format!(
+                        "Entity view · observer={obs} · visible={flat_n} · hidden={hidden} · scene={scene_n}"
+                    ));
+                }
+                Err(e) => {
+                    view_status.set(format!("Entity view unavailable: {e}"));
+                }
+            }
+        });
+    };
+
     let refresh_all = move || {
         let sec = section();
         let cat = category();
@@ -387,6 +479,8 @@ pub fn WellfairLibraryPanel() -> Element {
         let text = q();
         let bm = bookmarks_only();
         let perc_only = perception_only();
+        refresh_entity_view();
+        pull_view_session();
         spawn(async move {
             if sec == "secret" && !secret_unlocked() {
                 results.set(Vec::new());
@@ -459,7 +553,7 @@ pub fn WellfairLibraryPanel() -> Element {
                         Err(e2) => {
                             status_err.set(true);
                             status.set(format!(
-                                "{e} / {e2} — unlock Sanctuary (Keep → Sanctuary) so the vault host can open the library."
+                                "Could not open library: {e} / {e2}. Reads use the storage shelf (no vault required). If this persists after rebuild, check desktop AppState storage_path."
                             ));
                         }
                     }
@@ -651,12 +745,88 @@ pub fn WellfairLibraryPanel() -> Element {
     topic_list.sort_by(|a, b| b.1.cmp(&a.1));
 
     let rows = results();
+    let on_select_uri = move |uri: String| {
+        session_attention_uri.set(uri.clone());
+        spawn(async move {
+            match view_select_uri(&uri).await {
+                Ok(s) => {
+                    if let Some(u) = s.get("attention_url").and_then(|x| x.as_str()) {
+                        session_attention_uri.set(u.to_string());
+                    }
+                    view_status.set(format!("Selected · shared with browser session · {uri}"));
+                }
+                Err(e) => view_status.set(format!("Select failed: {e}")),
+            }
+        });
+    };
     let body = match view().as_str() {
         "timeline" => rsx! { TimelineView { rows: rows.clone() } },
-        "map" => rsx! { MapView { rows: rows.clone() } },
+        "map" => rsx! {
+            MapView {
+                rows: rows.clone(),
+                selected_uri: session_attention_uri(),
+                on_select: on_select_uri,
+            }
+        },
+        _ if view_morph_mode() == "spatialize" => rsx! {
+            SpatialSceneView {
+                nodes: view_scene_nodes(),
+                titles: view_entity_cards(),
+                selected_id: session_selected_id(),
+                hidden_count: view_hidden(),
+                gpu_status: gpu_status(),
+                gpu_epoch: gpu_epoch(),
+                on_flatten: move |_| {
+                    view_morph_mode.set("flatten".into());
+                    spawn(async move {
+                        let _ = view_morph("flatten").await;
+                        view_status.set("Flatten — same selection, flat cards".into());
+                    });
+                },
+                on_gpu_frame: move |_| {
+                    gpu_status.set("Rendering entity_view → PortalGpu…".into());
+                    spawn(async move {
+                        match view_render_memory_spatial(Some(1280), Some(720)).await {
+                            Ok(v) => {
+                                let n = v.get("node_count").and_then(|x| x.as_u64()).unwrap_or(0);
+                                gpu_epoch.set(gpu_epoch() + 1);
+                                gpu_status.set(format!(
+                                    "GPU frame ready · {n} nodes · webizen://render-preview"
+                                ));
+                                view_status.set("Prestige spatial frame from engine projection".into());
+                            }
+                            Err(e) => {
+                                gpu_status.set(format!("GPU frame unavailable: {e}"));
+                            }
+                        }
+                    });
+                },
+                on_pick_norm: move |(nx, ny): (f64, f64)| {
+                    spawn(async move {
+                        match view_pick_scene(nx, ny).await {
+                            Ok(v) => {
+                                if v.get("found").and_then(|x| x.as_bool()).unwrap_or(false) {
+                                    let id = v.get("entity_id").and_then(|x| x.as_u64()).unwrap_or(0);
+                                    session_selected_id.set(id);
+                                    view_status.set(format!(
+                                        "Picked scene node · entity {id} · shared session"
+                                    ));
+                                    pull_view_session();
+                                } else {
+                                    view_status.set("No scene node near pick.".into());
+                                }
+                            }
+                            Err(e) => view_status.set(format!("Pick failed: {e}")),
+                        }
+                    });
+                },
+            }
+        },
         _ => rsx! {
             ListView {
                 rows: rows.clone(),
+                selected_uri: session_attention_uri(),
+                on_select: on_select_uri,
                 on_topic: move |t: String| {
                     value.set(t.clone());
                     facet.set("topic".into());
@@ -723,10 +893,10 @@ pub fn WellfairLibraryPanel() -> Element {
                 div { style: "display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;",
                     div {
                         h1 { style: "margin:0;font-size:1.35rem;font-weight:700;color:#e9d5ff;letter-spacing:-0.02em;",
-                            "Library"
+                            "Lived Memory"
                         }
                         p { style: "margin:0.35rem 0 0;font-size:0.82rem;color:#94a3b8;max-width:36rem;line-height:1.45;",
-                            "Your files as meaning — topics, places, projects, time. Ingest once; find without digging folders."
+                            "Your hypermedia meaning shelf — topics, places, projects, time. Entity-view morph and observer rights apply. Not a folder tree."
                         }
                     }
                     div { style: "display:flex;gap:0.35rem;flex-wrap:wrap;align-items:center;",
@@ -783,6 +953,193 @@ pub fn WellfairLibraryPanel() -> Element {
                     HonestyChip {
                         level: perception_honesty_level(),
                         detail: "perception / computer_vision".to_string(),
+                    }
+                }
+                // Entity-view strip — multi-observer projection (app-wide session)
+                div {
+                    style: "margin-top:0.75rem;padding:0.65rem 0.75rem;border-radius:12px;border:1px solid #334155;background:#0f172a;",
+                    div {
+                        style: "display:flex;flex-wrap:wrap;gap:0.45rem;align-items:center;margin-bottom:0.4rem;",
+                        span {
+                            style: "font-size:0.68rem;color:#a5b4fc;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;",
+                            "Entity view"
+                        }
+                        span {
+                            style: "font-size:0.68rem;color:#64748b;",
+                            "Same session as Browser · rights-filter · morph"
+                        }
+                        HonestyChip {
+                            level: HonestyLevel::Ready,
+                            detail: "view_* ready".to_string(),
+                        }
+                    }
+                    div {
+                        style: "display:flex;flex-wrap:wrap;gap:0.4rem;align-items:center;",
+                        label {
+                            style: "font-size:0.68rem;color:#94a3b8;display:flex;align-items:center;gap:0.3rem;",
+                            "Observer"
+                            select {
+                                style: "background:#0b1220;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:0.28rem 0.45rem;font-size:0.75rem;",
+                                value: "{view_observer}",
+                                onchange: move |ev| {
+                                    let v = ev.value();
+                                    view_observer.set(v.clone());
+                                    spawn(async move {
+                                        let _ = view_set_observer(&v).await;
+                                        // re-project after observer change
+                                    });
+                                    refresh_entity_view();
+                                },
+                                option { value: "principal", "Principal" }
+                                option { value: "peer", "Peer" }
+                                option { value: "guardian", "Guardian" }
+                                option { value: "steward", "Steward" }
+                                option { value: "public", "Public" }
+                                option { value: "instrument", "Instrument" }
+                                option { value: "auditor", "Auditor" }
+                            }
+                        }
+                        label {
+                            style: "font-size:0.68rem;color:#94a3b8;display:flex;align-items:center;gap:0.3rem;",
+                            "Morphology"
+                            select {
+                                style: "background:#0b1220;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:0.28rem 0.45rem;font-size:0.75rem;",
+                                value: "{view_presentation}",
+                                onchange: move |ev| {
+                                    if let Ok(n) = ev.value().parse::<u8>() {
+                                        view_presentation.set(n);
+                                        spawn(async move {
+                                            let _ = view_set_presentation_level(n).await;
+                                        });
+                                        refresh_entity_view();
+                                    }
+                                },
+                                option { value: "0", "P0 Document" }
+                                option { value: "1", "P1 App habitat" }
+                                option { value: "2", "P2 Spatial desk" }
+                                option { value: "3", "P3 Stage" }
+                                option { value: "4", "P4 Embodied" }
+                                option { value: "5", "P5 Infosphere" }
+                                option { value: "6", "P6 Multi-sensory" }
+                            }
+                        }
+                        button {
+                            style: if view_morph_mode() == "flatten" { TAB_ON } else { TAB },
+                            title: "Show flat cards only from last projection",
+                            onclick: move |_| {
+                                view_morph_mode.set("flatten".into());
+                                spawn(async move {
+                                    match view_morph("flatten").await {
+                                        Ok(v) => {
+                                            let flat = v.get("flat").and_then(|a| a.as_array()).cloned().unwrap_or_default();
+                                            let hidden = v.get("hidden_count").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+                                            view_flat_count.set(flat.len());
+                                            view_entity_cards.set(flat);
+                                            view_hidden.set(hidden);
+                                            view_scene_count.set(0);
+                                            view_status.set("Morph → flatten".into());
+                                        }
+                                        Err(e) => view_status.set(format!("Morph: {e}")),
+                                    }
+                                });
+                            },
+                            "Flatten"
+                        }
+                        button {
+                            style: if view_morph_mode() == "spatialize" { TAB_ON } else { TAB },
+                            title: "Show scene nodes only from last projection (Sanctuary theme may discourage Spatialize)",
+                            onclick: move |_| {
+                                view_morph_mode.set("spatialize".into());
+                                spawn(async move {
+                                    match view_morph("spatialize").await {
+                                        Ok(v) => {
+                                            let nodes = v.get("scene_nodes").and_then(|a| a.as_array()).cloned().unwrap_or_default();
+                                            let hidden = v.get("hidden_count").and_then(|x| x.as_u64()).unwrap_or(0) as u32;
+                                            view_scene_count.set(nodes.len());
+                                            view_scene_nodes.set(nodes);
+                                            view_hidden.set(hidden);
+                                            view_status.set("Morph → spatialize · click nodes to pick · Sanctuary theme pack disables spatialize policy in Presentation Binding".into());
+                                        }
+                                        Err(e) => view_status.set(format!("Morph: {e}")),
+                                    }
+                                });
+                            },
+                            "Spatialize"
+                        }
+                        button {
+                            style: if view_morph_mode() == "both" { TAB_ON } else { TAB },
+                            onclick: move |_| {
+                                view_morph_mode.set("both".into());
+                                refresh_entity_view();
+                            },
+                            "Both"
+                        }
+                        span { style: "{STAT_CHIP}",
+                            span { style: "{STAT_NUM}", "{view_flat_count}" } " visible"
+                        }
+                        span { style: "{STAT_CHIP}",
+                            span { style: "{STAT_NUM}", "{view_hidden}" } " hidden (rights)"
+                        }
+                        span { style: "{STAT_CHIP}",
+                            span { style: "{STAT_NUM}", "{view_scene_count}" } " scene"
+                        }
+                        button {
+                            style: "{BTN2}",
+                            title: "Re-run view_project_library for current section/observer",
+                            onclick: move |_| refresh_entity_view(),
+                            "Project"
+                        }
+                    }
+                    if !view_status().is_empty() {
+                        p {
+                            style: "margin:0.4rem 0 0;font-size:0.72rem;color:#94a3b8;line-height:1.35;",
+                            "{view_status}"
+                        }
+                    }
+                    if !session_attention_uri().is_empty() {
+                        div {
+                            style: "margin-top:0.45rem;padding:0.4rem 0.55rem;border-radius:8px;border:1px solid #4c1d95;background:rgba(139,92,246,0.1);font-size:0.72rem;color:#e9d5ff;display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center;",
+                            span { style: "font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#a5b4fc;font-size:0.65rem;", "Shared selection" }
+                            span { style: "font-family:ui-monospace,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:28rem;", "{session_attention_uri}" }
+                            span { style: "color:#94a3b8;", "· same entity as browser ◎ / web locus" }
+                            button {
+                                style: "{BTN2}",
+                                title: "Re-read view_session from host",
+                                onclick: move |_| pull_view_session(),
+                                "Sync session"
+                            }
+                        }
+                    }
+                    if !view_entity_cards().is_empty() && (view_morph_mode() == "flatten" || view_morph_mode() == "both") {
+                        div {
+                            style: "display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.45rem;max-height:5.5rem;overflow-y:auto;",
+                            for card in view_entity_cards().into_iter().take(24) {
+                                {
+                                    let title = str_field(&card, "title");
+                                    let wing = str_field(&card, "wing");
+                                    let eid = u64_field(&card, "entity_id");
+                                    let label = if title.is_empty() {
+                                        format!("{:x}", eid)
+                                    } else {
+                                        title.chars().take(28).collect::<String>()
+                                    };
+                                    let wing_l = if wing.is_empty() { "—".into() } else { wing };
+                                    rsx! {
+                                        button {
+                                            style: "font-size:0.68rem;padding:0.25rem 0.5rem;border-radius:8px;border:1px solid #4c1d95;background:rgba(139,92,246,0.12);color:#e9d5ff;cursor:pointer;max-width:12rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;",
+                                            title: "Select entity {eid}",
+                                            onclick: move |_| {
+                                                spawn(async move {
+                                                    let _ = view_select(eid).await;
+                                                });
+                                                view_status.set(format!("Selected entity {eid}"));
+                                            },
+                                            "{label} · {wing_l}"
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 div { style: "{STATS}",
@@ -1446,9 +1803,63 @@ pub fn WellfairLibraryPanel() -> Element {
                             div {
                                 style: "padding:2.5rem 1.5rem;text-align:center;border:1px dashed #334155;border-radius:16px;background:#0f172a;",
                                 div { style: "font-size:2rem;margin-bottom:0.5rem;", "📚" }
-                                h2 { style: "margin:0 0 0.4rem;color:#e9d5ff;font-size:1.1rem;", "Your library is empty" }
-                                p { style: "margin:0 auto;max-width:28rem;color:#94a3b8;font-size:0.85rem;line-height:1.5;",
-                                    "Add a note on the left — research, a receipt, a caption. We derive topics and keep the original addressable by meaning. Photos with EXIF land on the timeline and map automatically."
+                                h2 { style: "margin:0 0 0.4rem;color:#e9d5ff;font-size:1.1rem;", "Your hypermedia shelf is empty" }
+                                p { style: "margin:0 auto 0.85rem;max-width:30rem;color:#94a3b8;font-size:0.85rem;line-height:1.5;",
+                                    "This is your personal library — notes, models, ontologies, receipts, photos — found by meaning, time, and place. Nothing is hidden behind Sanctuary for ordinary (non-secret) rows."
+                                }
+                                p { style: "margin:0 auto 1rem;max-width:30rem;color:#64748b;font-size:0.78rem;line-height:1.45;",
+                                    "Start with the perception catalogue (models + computer_vision), seed academic QApps under Software, or paste a note under Add to library."
+                                }
+                                div { style: "display:flex;flex-wrap:wrap;gap:0.5rem;justify-content:center;",
+                                    button {
+                                        style: "{BTN}",
+                                        disabled: seed_busy(),
+                                        onclick: move |_| {
+                                            if seed_busy() {
+                                                return;
+                                            }
+                                            seed_busy.set(true);
+                                            spawn(async move {
+                                                match seed_perception_library().await {
+                                                    Ok(v) => {
+                                                        let models_a = u64_field(&v, "models_added");
+                                                        let onto_a = u64_field(&v, "ontologies_added");
+                                                        status_err.set(false);
+                                                        status.set(format!(
+                                                            "Seeded perception · models +{models_a} · ontologies +{onto_a}. Showing Software → Perception."
+                                                        ));
+                                                        section.set("software".into());
+                                                        perception_only.set(true);
+                                                        seed_busy.set(false);
+                                                        refresh_all();
+                                                    }
+                                                    Err(e) => {
+                                                        status_err.set(true);
+                                                        status.set(format!("Seed failed: {e}"));
+                                                        seed_busy.set(false);
+                                                    }
+                                                }
+                                            });
+                                        },
+                                        if seed_busy() { "Seeding…" } else { "Seed perception catalogue" }
+                                    }
+                                    button {
+                                        style: "{BTN2}",
+                                        onclick: move |_| {
+                                            show_ingest.set(true);
+                                            status_err.set(false);
+                                            status.set("Expand Add to library on the left — paste a note and save.".into());
+                                        },
+                                        "Add a note"
+                                    }
+                                    button {
+                                        style: "{BTN2}",
+                                        onclick: move |_| {
+                                            section.set("software".into());
+                                            refresh_all();
+                                        },
+                                        "Open Software shelf"
+                                    }
                                 }
                             }
                         }
@@ -1515,6 +1926,8 @@ pub fn WellfairLibraryPanel() -> Element {
 #[component]
 fn ListView(
     rows: Vec<serde_json::Value>,
+    selected_uri: String,
+    on_select: EventHandler<String>,
     on_topic: EventHandler<String>,
     on_remove: EventHandler<String>,
     on_commons: EventHandler<(String, String)>,
@@ -1541,6 +1954,8 @@ fn ListView(
                     let uri_share = uri.clone();
                     let uri_none = uri.clone();
                     let uri_open = uri.clone();
+                    let uri_sel = uri.clone();
+                    let is_selected = !selected_uri.is_empty() && selected_uri == uri;
                     let is_bookmark = purposes.iter().any(|p| p.eq_ignore_ascii_case("bookmark"))
                         || uri.starts_with("http://")
                         || uri.starts_with("https://");
@@ -1552,7 +1967,23 @@ fn ListView(
                         .and_then(|x| x.as_array())
                         .map(|a| !a.is_empty())
                         .unwrap_or(false);
-                    let border = if is_secret {
+                    let wing_label = if is_secret {
+                        "Private"
+                    } else if section == "commons" || purposes.iter().any(|p| p.contains("commons")) {
+                        "Commons"
+                    } else if purposes.iter().any(|p| p.eq_ignore_ascii_case("bookmark")) {
+                        "Offered"
+                    } else {
+                        "Private"
+                    };
+                    let wing_style = match wing_label {
+                        "Commons" => "font-size:0.62rem;padding:0.1rem 0.4rem;border-radius:999px;background:rgba(14,116,144,0.2);color:#67e8f9;border:1px solid #0e7490;font-weight:700;",
+                        "Offered" => "font-size:0.62rem;padding:0.1rem 0.4rem;border-radius:999px;background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid #059669;font-weight:700;",
+                        _ => "font-size:0.62rem;padding:0.1rem 0.4rem;border-radius:999px;background:rgba(139,92,246,0.15);color:#e9d5ff;border:1px solid #6d28d9;font-weight:700;",
+                    };
+                    let border = if is_selected {
+                        "padding:0.85rem 1rem;border-radius:12px;border:1px solid #8b5cf6;background:rgba(139,92,246,0.12);margin-bottom:0.55rem;box-shadow:0 0 0 1px rgba(139,92,246,0.25);"
+                    } else if is_secret {
                         "padding:0.85rem 1rem;border-radius:12px;border:1px solid #b45309;background:#1c1917;margin-bottom:0.55rem;"
                     } else if section == "commons" {
                         "padding:0.85rem 1rem;border-radius:12px;border:1px solid #0e7490;background:#0c1a24;margin-bottom:0.55rem;"
@@ -1560,13 +1991,21 @@ fn ListView(
                         ENTRY
                     };
                     rsx! {
-                        article { style: "{border}",
+                        article {
+                            style: "{border}",
+                            onclick: move |_| on_select.call(uri_sel.clone()),
                             div { style: "display:flex;gap:0.75rem;align-items:flex-start;",
                                 div { style: "font-size:1.4rem;line-height:1;flex-shrink:0;", "{icon}" }
                                 div { style: "flex:1;min-width:0;",
                                     div { style: "display:flex;justify-content:space-between;gap:0.5rem;align-items:baseline;flex-wrap:wrap;",
-                                        h3 { style: "margin:0;font-size:0.95rem;color:#f3f4f6;font-weight:650;", "{title}" }
+                                        h3 { style: "margin:0;font-size:0.95rem;color:#f3f4f6;font-weight:650;",
+                                            "{title}"
+                                            if is_selected {
+                                                span { style: "margin-left:0.4rem;font-size:0.65rem;color:#c4b5fd;font-weight:700;", "· selected" }
+                                            }
+                                        }
                                         div { style: "display:flex;gap:0.35rem;align-items:center;",
+                                            span { style: "{wing_style}", title: "Representation wing (entity-view)", "{wing_label}" }
                                             if !section.is_empty() {
                                                 span {
                                                     style: "font-size:0.65rem;padding:0.12rem 0.45rem;border-radius:999px;background:#1e293b;color:#cbd5e1;border:1px solid #334155;",
@@ -1726,7 +2165,11 @@ fn TimelineView(rows: Vec<serde_json::Value>) -> Element {
 }
 
 #[component]
-fn MapView(rows: Vec<serde_json::Value>) -> Element {
+fn MapView(
+    rows: Vec<serde_json::Value>,
+    selected_uri: String,
+    on_select: EventHandler<String>,
+) -> Element {
     let placed: Vec<(f64, f64, serde_json::Value)> = rows
         .into_iter()
         .filter_map(|r| match (f64_field(&r, "lat"), f64_field(&r, "lon")) {
@@ -1737,12 +2180,15 @@ fn MapView(rows: Vec<serde_json::Value>) -> Element {
     if placed.is_empty() {
         return rsx! {
             div { style: "padding:2rem;text-align:center;color:#94a3b8;font-size:0.85rem;",
-                "No located assets. Attach lat,lon when ingesting, or use a geotagged photo."
+                "No located assets. Attach lat,lon when ingesting, or use a geotagged photo. Geo pins are real coordinates — not decorative."
             }
         };
     }
     rsx! {
         div {
+            p { style: "margin:0 0 0.5rem;font-size:0.72rem;color:#94a3b8;",
+                "Geo pins from library lat/lon (equirectangular). Click a pin to select into the shared entity-view session."
+            }
             svg {
                 view_box: "0 0 360 180",
                 width: "100%",
@@ -1754,25 +2200,241 @@ fn MapView(rows: Vec<serde_json::Value>) -> Element {
                     line { x1: "0", y1: "{gy}", x2: "360", y2: "{gy}", stroke: "#334155", stroke_width: "0.5" }
                 }
                 for (lat, lon, r) in placed.clone() {
-                    circle {
-                        cx: "{lon + 180.0}",
-                        cy: "{90.0 - lat}",
-                        r: "3.2",
-                        fill: "#a78bfa",
-                        fill_opacity: "0.9",
-                        stroke: "#ede9fe",
-                        stroke_width: "0.6",
-                        title { "{str_field(&r, \"asset_uri\")} ({lat:.3},{lon:.3})" }
+                    {
+                        let uri = str_field(&r, "asset_uri");
+                        let uri_c = uri.clone();
+                        let sel = !selected_uri.is_empty() && selected_uri == uri;
+                        let fill = if sel { "#fbbf24" } else { "#a78bfa" };
+                        let rad = if sel { "5.0" } else { "3.2" };
+                        rsx! {
+                            circle {
+                                cx: "{lon + 180.0}",
+                                cy: "{90.0 - lat}",
+                                r: "{rad}",
+                                fill: "{fill}",
+                                fill_opacity: "0.95",
+                                stroke: "#ede9fe",
+                                stroke_width: "0.6",
+                                style: "cursor:pointer;",
+                                onclick: move |_| on_select.call(uri_c.clone()),
+                                title { "{uri} ({lat:.3},{lon:.3})" }
+                            }
+                        }
                     }
                 }
             }
             ul { style: "margin:0.75rem 0 0;padding:0;list-style:none;",
                 for (lat, lon, r) in placed {
-                    li {
-                        key: "{str_field(&r, \"asset_uri\")}",
-                        style: "font-size:0.78rem;display:flex;gap:0.65rem;padding:0.35rem 0;border-bottom:1px solid #1f2937;",
-                        span { style: "color:#7dd3fc;font-variant-numeric:tabular-nums;", "{lat:.3}, {lon:.3}" }
-                        span { style: "color:#e5e7eb;", "{display_title(&str_field(&r, \"asset_uri\"))}" }
+                    {
+                        let uri = str_field(&r, "asset_uri");
+                        let uri_c = uri.clone();
+                        let sel = !selected_uri.is_empty() && selected_uri == uri;
+                        rsx! {
+                            li {
+                                key: "{uri}",
+                                style: if sel {
+                                    "font-size:0.78rem;display:flex;gap:0.65rem;padding:0.35rem 0;border-bottom:1px solid #4c1d95;cursor:pointer;background:rgba(139,92,246,0.1);"
+                                } else {
+                                    "font-size:0.78rem;display:flex;gap:0.65rem;padding:0.35rem 0;border-bottom:1px solid #1f2937;cursor:pointer;"
+                                },
+                                onclick: move |_| on_select.call(uri_c.clone()),
+                                span { style: "color:#7dd3fc;font-variant-numeric:tabular-nums;", "{lat:.3}, {lon:.3}" }
+                                span { style: "color:#e5e7eb;", "{display_title(&uri)}" }
+                                if sel {
+                                    span { style: "color:#c4b5fd;font-size:0.65rem;font-weight:700;", "selected" }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Spatial morph stage: entity_view scene_nodes + optional GPU frame (PortalGpu).
+#[component]
+fn SpatialSceneView(
+    nodes: Vec<serde_json::Value>,
+    titles: Vec<serde_json::Value>,
+    selected_id: u64,
+    hidden_count: u32,
+    on_pick_norm: EventHandler<(f64, f64)>,
+    on_flatten: EventHandler<()>,
+    on_gpu_frame: EventHandler<()>,
+    gpu_status: String,
+    gpu_epoch: u64,
+) -> Element {
+    let scene: Vec<_> = nodes
+        .into_iter()
+        .filter(|n| {
+            n.get("entity_id").and_then(|x| x.as_u64()).unwrap_or(0) != 0
+                || n.get("x").and_then(|x| x.as_f64()).is_some()
+        })
+        .collect();
+    if scene.is_empty() {
+        return rsx! {
+            div {
+                style: "padding:2.5rem 1.5rem;text-align:center;border-radius:16px;border:1px solid #334155;background:radial-gradient(ellipse at 50% 30%,#1e1b4b 0%,#0b1220 70%);",
+                p { style: "margin:0 0 0.5rem;font-size:1.05rem;font-weight:700;color:#e9d5ff;",
+                    "Spatial stage awaits a projection"
+                }
+                p { style: "margin:0 auto;max-width:28rem;font-size:0.85rem;color:#94a3b8;line-height:1.5;",
+                    "Ingest or open items, set Observer, press Project — then Spatialize. Layout uses the engine golden-angle field and geo pins when place is known. Same entity ids as the flat cards."
+                }
+            }
+        };
+    }
+
+    fn title_for(titles: &[serde_json::Value], eid: u64) -> String {
+        for t in titles {
+            if t.get("entity_id").and_then(|x| x.as_u64()) == Some(eid) {
+                let title = str_field(t, "title");
+                if !title.is_empty() {
+                    return title;
+                }
+            }
+        }
+        format!("{:x}", eid)
+    }
+
+    let preview_src = format!("webizen://render-preview?t={gpu_epoch}");
+
+    rsx! {
+        div {
+            // Prestige HUD
+            div {
+                style: "display:flex;flex-wrap:wrap;gap:0.45rem;align-items:center;margin-bottom:0.65rem;",
+                span {
+                    style: "font-size:0.65rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#a5b4fc;",
+                    "Spatial morph"
+                }
+                span {
+                    style: "font-size:0.72rem;padding:0.2rem 0.55rem;border-radius:999px;border:1px solid #4c1d95;background:rgba(139,92,246,0.12);color:#e9d5ff;",
+                    "{scene.len()} nodes"
+                }
+                if hidden_count > 0 {
+                    span {
+                        style: "font-size:0.72rem;padding:0.2rem 0.55rem;border-radius:999px;border:1px solid #b45309;background:rgba(245,158,11,0.12);color:#fde68a;",
+                        "{hidden_count} hidden from this view"
+                    }
+                }
+                button {
+                    r#type: "button",
+                    style: "margin-left:auto;font-size:0.75rem;font-weight:700;padding:0.4rem 0.75rem;border-radius:9px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;cursor:pointer;",
+                    title: "Return to flat cards — same selection",
+                    onclick: move |_| on_flatten.call(()),
+                    "Flatten"
+                }
+                button {
+                    r#type: "button",
+                    style: "font-size:0.75rem;font-weight:700;padding:0.4rem 0.75rem;border-radius:9px;border:1px solid #6d28d9;background:linear-gradient(135deg,#7c3aed,#4c1d95);color:#fff;cursor:pointer;",
+                    title: "Render entity_view projection through PortalGpu (desktop host)",
+                    onclick: move |_| on_gpu_frame.call(()),
+                    "GPU frame"
+                }
+            }
+            if !gpu_status.is_empty() {
+                p { style: "margin:0 0 0.45rem;font-size:0.72rem;color:#94a3b8;", "{gpu_status}" }
+            }
+            // Dual stage: interactive field + optional GPU plate
+            div {
+                style: "display:grid;grid-template-columns:1.15fr 0.85fr;gap:0.75rem;align-items:stretch;",
+                // Interactive field (controller surface)
+                div {
+                    style: "position:relative;width:100%;aspect-ratio:16/10;min-height:280px;background:\
+                        radial-gradient(ellipse 80% 60% at 50% 42%, rgba(76,29,149,0.45) 0%, transparent 55%),\
+                        radial-gradient(ellipse 50% 40% at 20% 80%, rgba(56,189,248,0.12) 0%, transparent 50%),\
+                        linear-gradient(165deg,#050812 0%,#0b1220 45%,#111827 100%);\
+                        border:1px solid #334155;border-radius:16px;overflow:hidden;box-shadow:inset 0 0 80px rgba(0,0,0,0.45);",
+                    // subtle horizon
+                    div {
+                        style: "position:absolute;left:8%;right:8%;bottom:18%;height:1px;background:linear-gradient(90deg,transparent,#475569,transparent);opacity:0.5;"
+                    }
+                    for n in scene.iter() {
+                        {
+                            let eid = n.get("entity_id").and_then(|x| x.as_u64()).unwrap_or(0);
+                            let x = n.get("x").and_then(|v| v.as_f64()).unwrap_or(0.5);
+                            let y = n.get("y").and_then(|v| v.as_f64()).unwrap_or(0.5);
+                            let z = n.get("z").and_then(|v| v.as_f64()).unwrap_or(0.2);
+                            let color = str_field(n, "color");
+                            let color = if color.is_empty() { "#a78bfa".into() } else { color };
+                            let left = format!("{:.2}%", x * 100.0);
+                            let top = format!("{:.2}%", y * 100.0);
+                            let scale = 0.65 + z * 0.9;
+                            let size = 10.0 + scale * 10.0;
+                            let sel = selected_id != 0 && selected_id == eid;
+                            let bg = if sel { "#fbbf24".to_string() } else { color };
+                            let glow = if sel {
+                                "0 0 28px rgba(251,191,36,0.75), 0 0 8px rgba(255,255,255,0.4)"
+                            } else {
+                                "0 0 18px rgba(167,139,250,0.45)"
+                            };
+                            let label = title_for(&titles, eid);
+                            let label_short: String = label.chars().take(22).collect();
+                            rsx! {
+                                button {
+                                    r#type: "button",
+                                    style: "position:absolute;left:{left};top:{top};transform:translate(-50%,-50%);width:{size}px;height:{size}px;border-radius:50%;border:2px solid rgba(237,233,254,0.85);background:{bg};cursor:pointer;padding:0;box-shadow:{glow};z-index:{((z*100.0) as i32)};",
+                                    title: "{label} · entity {eid}",
+                                    onclick: move |e| {
+                                        e.stop_propagation();
+                                        on_pick_norm.call((x, y));
+                                    },
+                                }
+                                if sel {
+                                    span {
+                                        style: "position:absolute;left:{left};top:calc({top} + 14px);transform:translateX(-50%);font-size:0.68rem;font-weight:700;color:#fde68a;white-space:nowrap;text-shadow:0 1px 4px #000;pointer-events:none;",
+                                        "{label_short}"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    span {
+                        style: "position:absolute;left:0.75rem;bottom:0.55rem;font-size:0.62rem;color:#64748b;letter-spacing:0.04em;text-transform:uppercase;",
+                        "Entity field · engine layout · click to select"
+                    }
+                }
+                // GPU plate
+                div {
+                    style: "position:relative;border-radius:16px;border:1px solid #334155;background:#020617;overflow:hidden;min-height:280px;display:flex;align-items:center;justify-content:center;",
+                    if gpu_epoch > 0 {
+                        img {
+                            src: "{preview_src}",
+                            style: "width:100%;height:100%;object-fit:cover;",
+                            alt: "GPU Memory spatial frame",
+                        }
+                    } else {
+                        div { style: "padding:1.25rem;text-align:center;color:#64748b;font-size:0.8rem;line-height:1.45;max-width:16rem;",
+                            "GPU plate — press GPU frame to render this projection through the shared PortalGpu path (desktop host)."
+                        }
+                    }
+                    span {
+                        style: "position:absolute;left:0.75rem;bottom:0.55rem;font-size:0.62rem;color:#64748b;letter-spacing:0.04em;text-transform:uppercase;",
+                        "PortalGpu · entity_view"
+                    }
+                }
+            }
+            ul { style: "margin:0.75rem 0 0;padding:0;list-style:none;max-height:7.5rem;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.35rem;",
+                for n in scene {
+                    {
+                        let eid = n.get("entity_id").and_then(|x| x.as_u64()).unwrap_or(0);
+                        let x = n.get("x").and_then(|v| v.as_f64()).unwrap_or(0.5);
+                        let y = n.get("y").and_then(|v| v.as_f64()).unwrap_or(0.5);
+                        let label = title_for(&titles, eid);
+                        let sel = selected_id != 0 && selected_id == eid;
+                        rsx! {
+                            li {
+                                style: if sel {
+                                    "font-size:0.72rem;padding:0.4rem 0.55rem;border-radius:10px;border:1px solid #8b5cf6;background:rgba(139,92,246,0.15);color:#e9d5ff;cursor:pointer;"
+                                } else {
+                                    "font-size:0.72rem;padding:0.4rem 0.55rem;border-radius:10px;border:1px solid #1f2937;background:#0f172a;color:#94a3b8;cursor:pointer;"
+                                },
+                                onclick: move |_| on_pick_norm.call((x, y)),
+                                "{label}"
+                            }
+                        }
                     }
                 }
             }

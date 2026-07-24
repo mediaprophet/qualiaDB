@@ -92,7 +92,7 @@ impl WebizenHostApi {
         let asserted = Self::now_unix() as u32;
         let prop_env =
             build_proposal_envelope(&proposal, &self.owner_did, &self.author_did, asserted);
-        // The proposal record is a non-proxy governance write â†’ commits normally (no recursion).
+        // The proposal record is a non-proxy governance write → commits normally (no recursion).
         self.submit_record_with_summary(
             QAPP_GUARDIANSHIP,
             prop_env,

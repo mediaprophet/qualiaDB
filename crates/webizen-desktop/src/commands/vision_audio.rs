@@ -5,7 +5,7 @@
 use super::parse_hex_u64;
 use tauri::{command, AppHandle, State};
 
-// â”€â”€ Vision first-release (overlay + synthetic + human attestation) â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Vision first-release (overlay + synthetic + human attestation) ─────────
 
 #[command]
 pub fn vision_run_synthetic_demo(
@@ -203,7 +203,7 @@ pub fn audio_daw_history_demo() -> Result<serde_json::Value, String> {
     qualia_client_core::audio_pipeline::daw_history_demo()
 }
 
-/// Pull mic ring â†’ weighted AED (disk weights if present).
+/// Pull mic ring → weighted AED (disk weights if present).
 #[command]
 pub fn audio_live_aed(
     state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,
@@ -212,7 +212,7 @@ pub fn audio_live_aed(
     let root = std::path::PathBuf::from(&config.storage_path);
     let mono = crate::mic_capture::pull_mono(16_000)?;
     if mono.is_empty() {
-        return Err("mic ring empty â€” press Mic start and speak, then retry".into());
+        return Err("mic ring empty — press Mic start and speak, then retry".into());
     }
     let sr = crate::mic_capture::status_json()?
         .get("sample_rate")
@@ -315,7 +315,7 @@ pub fn audio_capabilities() -> Result<serde_json::Value, String> {
         .map_err(|e| e.to_string())
 }
 
-/// Full generate â†’ store â†’ recon â†’ OBJ/.10d continuum (pre-auditory handoff).
+/// Full generate → store → recon → OBJ/.10d continuum (pre-auditory handoff).
 #[command]
 pub fn vision_gs_continuum(
     state: State<'_, std::sync::Arc<qualia_client_core::state::AppState>>,

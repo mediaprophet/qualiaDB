@@ -5,7 +5,7 @@
 use super::*;
 use tauri::{command, AppHandle, Emitter, Manager, State};
 
-// â”€â”€ GPU render preview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── GPU render preview ──────────────────────────────────────────────────────────
 
 /// Shared slot holding the latest rendered preview PNG. Served by the
 /// `webizen://localhost/render/preview.png` protocol handler so the image bytes
@@ -276,7 +276,7 @@ pub async fn update_render_preview(
     Ok(())
 }
 
-/// Background daemon tick â€” same pipeline as [`update_render_preview`], for spatial view loops.
+/// Background daemon tick — same pipeline as [`update_render_preview`], for spatial view loops.
 pub async fn render_preview_tick(app: &AppHandle) -> Result<(), String> {
     let preview = app
         .try_state::<PreviewState>()

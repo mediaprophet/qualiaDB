@@ -982,7 +982,7 @@ pub(super) fn apps() -> Vec<QApp> {
             id: "structuralism",
             name: "Structuralism",
             tagline: "Deep Structures",
-            desc: "Structural-theory annotation, LÃ©vi-Strauss and Saussure tools, sign-system analysis, and structuralism knowledge graphs.",
+            desc: "Structural-theory annotation, Lévi-Strauss and Saussure tools, sign-system analysis, and structuralism knowledge graphs.",
             icon: "diagram-2-fill",
             route: None,
             stat: Stat::Active,

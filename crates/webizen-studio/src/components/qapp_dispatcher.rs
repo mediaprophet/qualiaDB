@@ -4,60 +4,118 @@ use dioxus::prelude::*;
 pub fn QAppDispatcher(element_tag: String) -> Element {
     match element_tag.as_str() {
         "web-browser-pane" => rsx! { crate::components::browser_panes::WebBrowserPane {} },
-        "clinical-risk-scorer" => {
+        "clinical-risk" | "clinical-risk-scorer" => {
             rsx! { crate::components::clinical_risk_scorer::ClinicalRiskScorer {} }
         }
         "dicom-viewer" => rsx! { crate::components::dicom_viewer::DicomViewer {} },
-        "comorbidity-analyzer" => {
+        "comorbidity" | "comorbidity-analyzer" => {
             rsx! { crate::components::comorbidity_analyzer::ComorbidityAnalyzer {} }
         }
-        "health-vital-monitor" => {
+        "health-vitals" | "health-vital-monitor" => {
             rsx! { crate::components::health_vital_monitor::HealthVitalMonitor {} }
         }
-        "portfolio-analyzer" => {
+        "anatomy-browser" => rsx! {
+            div { style: "display:flex;flex-direction:column;gap:1.5rem;padding:1rem;overflow:auto;height:100%;",
+                crate::components::wellfair::WellfairScorecardPanel {}
+                crate::components::wellfair::WellfairAnatomy3dPanel {}
+                crate::components::wellfair::WellfairAnatomyPanel {}
+            }
+        },
+        "portfolio" | "portfolio-analyzer" => {
             rsx! { crate::components::portfolio_analyzer::PortfolioAnalyzer {} }
         }
         "risk-engine" => rsx! { crate::components::risk_engine::RiskEngine {} },
-        "gbm-simulator" => rsx! { crate::components::gbm_simulator::GbmSimulator {} },
+        "gbm-sim" | "gbm-simulator" => {
+            rsx! { crate::components::gbm_simulator::GbmSimulator {} }
+        }
         "sparql-explorer" => rsx! { crate::components::sparql_explorer::SparqlExplorer {} },
         "n3-logic-studio" => rsx! { crate::components::n3_logic_studio::N3LogicStudio {} },
         "rdf-star-editor" => rsx! { crate::components::rdf_star_editor::RdfStarEditor {} },
-        "solid-ldp-browser" => rsx! { crate::components::solid_ldp_browser::SolidLdpBrowser {} },
-        "agreements-rights" => rsx! { crate::components::agreements_rights::AgreementsRights {} },
-        "key-vault-manager" => rsx! { crate::components::key_vault_manager::KeyVaultManager {} },
-        "zk-proof-studio" => rsx! { crate::components::zk_proof_studio::ZkProofStudio {} },
-        "deontic-logic-editor" => {
+        "solid-browser" | "solid-ldp-browser" => {
+            rsx! { crate::components::solid_ldp_browser::SolidLdpBrowser {} }
+        }
+        "agreements" | "agreements-rights" => {
+            rsx! { crate::components::agreements_rights::AgreementsRights {} }
+        }
+        "key-vault" | "key-vault-manager" => {
+            rsx! { crate::components::key_vault_manager::KeyVaultManager {} }
+        }
+        "zk-studio" | "zk-proof-studio" => {
+            rsx! { crate::components::zk_proof_studio::ZkProofStudio {} }
+        }
+        "deontic-editor" | "deontic-logic-editor" => {
             rsx! { crate::components::deontic_logic_editor::DeonticLogicEditor {} }
         }
         "shacl-validator" => rsx! { crate::components::shacl_validator::ShaclValidator {} },
         "lora-manager" => rsx! { crate::components::lora_manager::LoraManager {} },
         "agent-config" => rsx! { crate::components::agent_config::AgentConfig {} },
-        "connect-chat" => rsx! { crate::components::connect_chat::ConnectChat {} },
+        "chat" | "connect-chat" => rsx! { crate::components::connect_chat::ConnectChat {} },
+        "neuro-symbolic-chat" => rsx! { crate::components::connect_chat::ConnectChat {} },
+        "llm-harness" => rsx! { crate::components::llm_harness::LlmHarness {} },
+        "contextual-workspace" => {
+            rsx! { crate::components::contextual_workspace::ContextualWorkspace {} }
+        }
+        "cognitive-monitor-pane" => {
+            rsx! { crate::components::inference_monitor::InferenceMonitor {} }
+        }
+        "dialectical-sidebar-pane" => {
+            rsx! { crate::components::browser_panes::DialecticalSidebarPane { active_url: "about:blank".to_string() } }
+        }
+        "ontology-builder" | "personal-ontology-builder" => {
+            rsx! { crate::components::personal_ontology::PersonalOntologyBuilder {} }
+        }
+        "hardware-config" | "hardware-configurator" => {
+            rsx! { crate::components::hardware_configurator::HardwareConfigurator {} }
+        }
+        "profile-identity" => rsx! {
+            div { style: "display:flex;flex-direction:column;gap:1.5rem;padding:1rem;overflow:auto;height:100%;",
+                crate::components::wellfair::WellfairPersonalPanel {}
+                crate::components::wellfair::WellfairSocialBookPanel {}
+                crate::components::wellfair::WellfairConsentPanel {}
+            }
+        },
+        "nexus-canvas" => rsx! { crate::components::nexus::Nexus {} },
+        "qualia-logic-modeler" => {
+            rsx! { crate::components::logic_modeler::LogicModeler {} }
+        }
+        "qualia-system-diagnostics" => {
+            rsx! { crate::components::inference_monitor::InferenceMonitor {} }
+        }
+        "qualia-error-logs" => rsx! { crate::components::problems_pane::ProblemsPane {} },
+        "acoustic-ble" | "acoustic-ble-mesh" => {
+            rsx! { crate::components::listen_workbench::ListenWorkbench {} }
+        }
         "directory" => rsx! { crate::components::directory_pane::DirectoryPane {} },
         "domains" => rsx! { crate::components::domains_pane::DomainsPane {} },
         "connect" => rsx! { crate::components::connect_pane::ConnectPane {} },
         "inference-monitor" => rsx! { crate::components::inference_monitor::InferenceMonitor {} },
         "model-lifecycle" => rsx! { crate::components::model_lifecycle::ModelLifecycle {} },
-        "webtorrent-seeder" => rsx! { crate::components::webtorrent_seeder::WebtorrentSeeder {} },
+        "webtorrent" | "webtorrent-seeder" => {
+            rsx! { crate::components::webtorrent_seeder::WebtorrentSeeder {} }
+        }
         "p2p-dashboard" => rsx! { crate::components::p2p_dashboard::P2pDashboard {} },
-        "ebpf-filter-manager" => {
+        "ebpf-filter" | "ebpf-filter-manager" => {
             rsx! { crate::components::ebpf_filter_manager::EbpfFilterManager {} }
         }
         "wal-inspector" => rsx! { crate::components::wal_inspector::WalInspector {} },
-        "q42-volume-manager" => rsx! { crate::components::q42_volume_manager::Q42VolumeManager {} },
+        "q42-volume" | "q42-volume-manager" => {
+            rsx! { crate::components::q42_volume_manager::Q42VolumeManager {} }
+        }
         "provenance-graph" => rsx! { crate::components::provenance_graph::ProvenanceGraph {} },
-        "storage-driver-config" => {
+        "storage-config" | "storage-driver-config" => {
             rsx! { crate::components::storage_driver_config::StorageDriverConfig {} }
         }
         "mcp-inspector" => rsx! { crate::components::mcp_inspector::McpInspector {} },
-        "benchmark-harness" => rsx! { crate::components::benchmark_harness::BenchmarkHarness {} },
+        "benchmark" | "benchmark-harness" => {
+            rsx! { crate::components::benchmark_harness::BenchmarkHarness {} }
+        }
         "cli-bridge" => rsx! { crate::components::cli_bridge::CliBridge {} },
         "extension-bus" => rsx! { crate::components::extension_bus::ExtensionBus {} },
         "physics-simulator" => rsx! { crate::components::physics_simulator::PhysicsSimulator {} },
         "chemistry-modeler" => rsx! { crate::components::chemistry_modeler::ChemistryModeler {} },
-        "ode-solver" => rsx! { crate::components::ode_solver::OdeSolver {} },
+        "ode-lab" | "ode-solver" => rsx! { crate::components::ode_solver::OdeSolver {} },
         "matrix-lab" => rsx! { crate::components::matrix_lab::MatrixLab {} },
-        "statistical-analysis" => {
+        "stats-lab" | "statistical-analysis" => {
             rsx! { crate::components::statistical_analysis::StatisticalAnalysis {} }
         }
         "bioinformatics-lab" => {
@@ -675,9 +733,8 @@ pub fn QAppDispatcher(element_tag: String) -> Element {
         }
         "white-studies" => rsx! { crate::components::white_studies_qapp::WhiteStudiesQapp {} },
         _ => rsx! {
-            div {
-                style: "flex: 1; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); color: var(--qualia-text-muted); border-radius: 8px; font-size: 0.8rem;",
-                "Pending Implementation: {element_tag}"
+            crate::components::registry_pane_preview::RegistryPanePreview {
+                element_tag
             }
         },
     }

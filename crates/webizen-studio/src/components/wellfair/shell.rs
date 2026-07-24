@@ -34,29 +34,56 @@ use super::communications_panel::WellfairCommunicationsPanel;
 use super::audit_panel::WellfairAuditPanel;
 use super::tools_panel::WellfairToolsPanel;
 use super::sync_backup_panel::WellfairSyncBackupPanel;
+use crate::Route;
 use dioxus::prelude::*;
 
-const AREAS: &[(&str, &str)] = &[
-    ("Personal", "Phase 2 — profile and accessibility"),
-    ("Health", "Phase 2 — observations and sleep"),
-    ("Anatomy", "Whole-person systemic view"),
-    ("Library", "Find your files by meaning"),
-    ("Chora", "Spatio-temporal commons canvas"),
-    ("Clinical", "Phase 3 — documents and pathology"),
-    ("Life", "Phase 3 — events and welfare"),
-    ("Relationships", "Phase 2 — Social Book + consent"),
-    ("Consent", "Phase 2 — access profiles"),
-    ("Guardianship", "Supported agency — co-signature"),
-    ("Agency", "Supported agency — domains & delegations"),
-    ("Accountability", "Consent credentials & tamper-evident ledger"),
-    ("Safeguards", "Dead-man & incapacity switches"),
-    ("Sanctuary", "Phase 3 — isolated domain"),
-    ("Communications", "Phase 4 — live share consent"),
-    ("Projects", "Phase 5 — cooperative work"),
-    ("Finance", "Phase 5 — ledger and balances"),
-    ("Credentials", "Phase 3 — held credentials"),
-    ("Qapps", "Package & publish installable qapps"),
-    ("Tools", "Phase 1 — diagnostics and packages"),
+/// Grouped Care-domain nav: (group label, areas: name + short note).
+const AREA_GROUPS: &[(&str, &[(&str, &str)])] = &[
+    (
+        "Body & wellbeing",
+        &[
+            ("Health", "Observations, sleep, meds, assessments"),
+            ("Anatomy", "Systems on a body — 3D & scorecard"),
+            ("Clinical", "Documents and pathology"),
+        ],
+    ),
+    (
+        "Rights & sanctuary",
+        &[
+            ("Consent", "Access profiles"),
+            ("Guardianship", "Co-signature & proposals"),
+            ("Agency", "Domains & delegations"),
+            ("Accountability", "Credentials & ledger"),
+            ("Safeguards", "Dead-man & incapacity"),
+            ("Sanctuary", "Vault & isolated domain"),
+        ],
+    ),
+    (
+        "Life & labour",
+        &[
+            ("Personal", "Profile & accessibility"),
+            ("Life", "Events & welfare streams"),
+            ("Relationships", "Social book + consent"),
+            ("Projects", "Cooperative work & board"),
+            ("Finance", "Ledger & balances"),
+            ("Credentials", "Held credentials"),
+        ],
+    ),
+    (
+        "Commons & share",
+        &[
+            ("Communications", "Live-share consent (not chat)"),
+            ("Chora", "Spatio-temporal commons"),
+            ("Library", "Meaning shelf — also top-level Memory"),
+        ],
+    ),
+    (
+        "Instruments",
+        &[
+            ("Tools", "Diagnostics & packages"),
+            ("Qapps", "Publish installable qapps"),
+        ],
+    ),
 ];
 
 #[component]
@@ -157,25 +184,47 @@ pub fn WellfairShell() -> Element {
 
     rsx! {
         div {
-            style: "display:flex;flex-direction:column;gap:1rem;padding:1.25rem;max-width:1100px;margin:0 auto;width:100%;",
+            style: "display:flex;flex-direction:column;gap:1rem;padding:1.25rem;max-width:1100px;margin:0 auto;width:100%;box-sizing:border-box;",
             header {
-                style: "display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:1rem;",
+                style: "display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--qualia-border,#1f2937);",
                 div {
-                    h1 { style: "margin:0 0 0.25rem;font-size:1.35rem;", "WellFair" }
-                    p { style: "margin:0;font-size:0.85rem;color:var(--qualia-text-muted,#666);",
+                    div { style: "display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.25rem;",
+                        span {
+                            style: "font-size:0.62rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#a5b4fc;",
+                            "Care"
+                        }
+                        span {
+                            style: "font-size:0.62rem;padding:0.1rem 0.4rem;border-radius:999px;border:1px solid #4c1d95;background:rgba(139,92,246,0.12);color:#c4b5fd;font-weight:700;",
+                            "Life domain"
+                        }
+                    }
+                    h1 { style: "margin:0 0 0.35rem;font-size:1.4rem;font-weight:700;letter-spacing:-0.02em;", "Care" }
+                    p { style: "margin:0;font-size:0.85rem;color:var(--qualia-text-muted,#94a3b8);line-height:1.45;max-width:36rem;",
                         {if vault_unlocked {
-                            rsx! { "{snap.owner_label} · Vault unlocked" }
+                            rsx! { "{snap.owner_label} · body, rights, welfare, and labour under principal control — vault unlocked." }
                         } else {
-                            rsx! { "Vault locked — unlock to access your data" }
+                            rsx! { "Vault locked — unlock Sanctuary for private health and life records. Public tools still navigate." }
                         }}
                     }
                 }
                 div {
-                    style: "display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;",
+                    style: "display:flex;flex-wrap:wrap;gap:0.45rem;align-items:center;justify-content:flex-end;",
                     SensitivityBadge { class: SensitivityClassDto::Restricted }
                     span {
-                        style: "font-size:0.78rem;padding:0.2rem 0.5rem;border-radius:6px;background:var(--qualia-surface,#f5f5f5);",
-                        "{vault_label}"
+                        style: "font-size:0.75rem;font-weight:600;padding:0.25rem 0.55rem;border-radius:999px;border:1px solid var(--qualia-border,#334155);background:var(--qualia-surface,#0f172a);",
+                        "Vault · {vault_label}"
+                    }
+                    Link {
+                        to: Route::LibraryRoute {},
+                        style: "font-size:0.72rem;font-weight:700;padding:0.3rem 0.65rem;border-radius:999px;border:1px solid #6d28d9;background:rgba(139,92,246,0.18);color:#e9d5ff;text-decoration:none;",
+                        title: "Lived Memory — remember records by meaning",
+                        "→ Memory"
+                    }
+                    Link {
+                        to: Route::TalkRoute {},
+                        style: "font-size:0.72rem;font-weight:700;padding:0.3rem 0.65rem;border-radius:999px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;text-decoration:none;",
+                        title: "Relations — people, chat, mail, projects",
+                        "→ Relations"
                     }
                 }
             }
@@ -225,21 +274,33 @@ pub fn WellfairShell() -> Element {
             }
 
             nav {
-                aria_label: "WellFair areas",
-                style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem;",
-                for (name, note) in AREAS {
-                    button {
-                        key: "{name}",
-                        type: "button",
-                        aria_pressed: "{active_area() == *name}",
-                        style: if active_area() == *name {
-                            "padding:0.65rem 0.75rem;border:2px solid var(--qualia-accent,#2a6f97);border-radius:10px;background:var(--qualia-surface,#fafafa);cursor:pointer;text-align:left;"
-                        } else {
-                            "padding:0.65rem 0.75rem;border:1px solid var(--qualia-border,#ddd);border-radius:10px;background:var(--qualia-surface,#fafafa);cursor:pointer;text-align:left;"
-                        },
-                        onclick: move |_| active_area.set(name.to_string()),
-                        strong { style: "display:block;font-size:0.88rem;", "{name}" }
-                        span { style: "font-size:0.72rem;color:var(--qualia-text-muted,#666);", "{note}" }
+                aria_label: "Care domain areas",
+                style: "display:flex;flex-direction:column;gap:0.85rem;",
+                for (group, areas) in AREA_GROUPS {
+                    div {
+                        key: "{group}",
+                        p {
+                            style: "margin:0 0 0.4rem;font-size:0.65rem;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;color:#a5b4fc;",
+                            "{group}"
+                        }
+                        div {
+                            style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:0.45rem;",
+                            for (name, note) in *areas {
+                                button {
+                                    key: "{name}",
+                                    r#type: "button",
+                                    aria_pressed: "{active_area() == *name}",
+                                    style: if active_area() == *name {
+                                        "padding:0.6rem 0.7rem;border:2px solid #8b5cf6;border-radius:10px;background:rgba(139,92,246,0.12);cursor:pointer;text-align:left;color:inherit;"
+                                    } else {
+                                        "padding:0.6rem 0.7rem;border:1px solid var(--qualia-border,#334155);border-radius:10px;background:var(--qualia-surface,#0f172a);cursor:pointer;text-align:left;color:inherit;"
+                                    },
+                                    onclick: move |_| active_area.set(name.to_string()),
+                                    strong { style: "display:block;font-size:0.86rem;margin-bottom:0.15rem;", "{name}" }
+                                    span { style: "font-size:0.7rem;color:var(--qualia-text-muted,#94a3b8);line-height:1.3;", "{note}" }
+                                }
+                            }
+                        }
                     }
                 }
             }

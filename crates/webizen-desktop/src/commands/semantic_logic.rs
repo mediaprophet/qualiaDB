@@ -3,7 +3,7 @@
 #![allow(non_snake_case)]
 
 
-// â”€â”€ Handler registration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Handler registration ──────────────────────────────────────────────────────
 
 #[tauri::command]
 pub fn fetch_domain_ontology(domain_id: String) -> Result<String, String> {

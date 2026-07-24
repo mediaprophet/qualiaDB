@@ -27,7 +27,7 @@ pub fn wellfair_add_clinical_report(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let observed = if observed_at_unix == 0 {
             wellfair_now_unix()
         } else {
@@ -83,7 +83,7 @@ pub fn wellfair_add_clinical_attachment_from_path(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let entry = host.add_clinical_attachment(&filename, &media, &bytes)?;
         serde_json::to_string(&entry).map_err(|e| e.to_string())
     })?
@@ -99,7 +99,7 @@ pub fn wellfair_export_attachment(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let bytes = host
             .attachment_bytes(&record_id)?
             .ok_or_else(|| "attachment not found".to_string())?;
@@ -174,7 +174,7 @@ pub fn wellfair_publish_qapp_pwa(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let written = host.publish_qapp_pwa(
             &target_dir,
             &id,
@@ -201,7 +201,7 @@ pub fn wellfair_add_government_letter_attachment_from_path(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let entry = host.add_government_letter_attachment(&sender, &subject, action_required, &bytes)?;
         serde_json::to_string(&entry).map_err(|e| e.to_string())
     })?

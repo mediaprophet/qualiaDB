@@ -138,11 +138,7 @@ fn install_native_panic_reporting() {
             return;
         };
         if let Some(invoke) = invoke.dyn_ref::<js_sys::Function>() {
-            let _ = invoke.call2(
-                &core,
-                &JsValue::from_str("report_client_error"),
-                &args,
-            );
+            let _ = invoke.call2(&core, &JsValue::from_str("report_client_error"), &args);
         }
     }));
 }
@@ -164,12 +160,13 @@ fn main() {
 #[derive(Clone, Routable, Debug, PartialEq)]
 pub enum Route {
     #[layout(AppLayout)]
-    /// Default open screen: Talk (local agent + people chat). Human-first IA.
+    /// Default open: Lived Memory (Library) — flagship habitat surface.
     #[route("/")]
-    TalkRoute {},
+    LibraryRoute {},
 
+    /// Relations domain (people, chat, offers) — formerly Talk.
     #[route("/talk")]
-    TalkAliasRoute {},
+    TalkRoute {},
 
     #[route("/home")]
     DashboardRoute {},
@@ -221,7 +218,7 @@ pub enum Route {
     NexusRoute {},
 
     #[route("/library")]
-    LibraryRoute {},
+    LibraryAliasRoute {},
 
     #[route("/vision")]
     VisionRoute {},
@@ -281,19 +278,9 @@ fn AnatomyTestRoute() -> Element {
     rsx! { components::anatomy_test::AnatomyTest {} }
 }
 
-/// Primary product surface: Talk hub — Chat · People · Reception · Projects.
+/// Relations domain: people, chat, reception, projects (SocialHub).
 #[component]
 fn TalkRoute() -> Element {
-    rsx! {
-        div {
-            style: "flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;",
-            components::social_hub::SocialHub {}
-        }
-    }
-}
-
-#[component]
-fn TalkAliasRoute() -> Element {
     rsx! {
         div {
             style: "flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;",
@@ -432,10 +419,11 @@ fn route_from_omnibox(query: &str) -> Route {
         "wellfair" => return Route::WellfairRoute {},
         "work" | "board" => return Route::WorkRoute {},
         "reach" | "browser" | "web" => return Route::BrowserRoute {},
+        "universe" | "chora" | "stars" | "space" => return Route::ChoraRoute {},
         "anatomy" | "body" => return Route::AnatomyRoute {},
         "settings" | "prefs" => return Route::SettingsRoute {},
-        "home" | "dashboard" | "overview" => return Route::DashboardRoute {},
-        "library" => return Route::LibraryRoute {},
+        "home" | "dashboard" | "overview" => return Route::LibraryRoute {},
+        "library" | "memory" | "lived-memory" => return Route::LibraryRoute {},
         "vision" | "detect" | "overlay" => return Route::VisionRoute {},
         "listen" | "audio" | "ears" => return Route::ListenRoute {},
         "health" => return Route::HealthRoute {},
@@ -538,6 +526,11 @@ fn LibraryRoute() -> Element {
             components::wellfair::library_panel::WellfairLibraryPanel {}
         }
     }
+}
+
+#[component]
+fn LibraryAliasRoute() -> Element {
+    rsx! { LibraryRoute {} }
 }
 
 #[component]
@@ -1242,13 +1235,14 @@ fn AppLayout() -> Element {
             // U6-A command palette (Ctrl+K / Ctrl+P) — always mounted under layout.
             components::command_palette::CommandPalette {}
 
-            // ── Top bar: brand + three primary verbs ──────────────────────────
+            // ── Top bar: brand + life-domain nav + context chip ─────────────
             div {
                 style: "display: flex; align-items: flex-end; padding: 0.55rem 1rem 0; background: rgba(10, 15, 30, 0.55); border-bottom: 1px solid var(--qualia-border); backdrop-filter: blur(24px); gap: 1rem; flex-shrink: 0;",
 
                 Link {
-                    to: Route::TalkRoute {},
+                    to: Route::LibraryRoute {},
                     style: "display: flex; align-items: center; gap: 0.5rem; text-decoration: none; padding-bottom: 0.55rem; cursor: pointer;",
+                    title: "Lived Memory — meaning shelf (flagship habitat surface)",
                     div {
                         style: "width: 28px; height: 28px; border-radius: 8px; background: {accent}; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: white; flex-shrink: 0; box-shadow: 0 0 12px {accent_glow};",
                         "⬡"
@@ -1260,24 +1254,55 @@ fn AppLayout() -> Element {
                     style: "display: flex; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: none; padding-bottom: 0;",
 
                     Link {
-                        to: Route::TalkRoute {},
+                        to: Route::IdentityRoute {},
                         class: "qtab",
-                        sl-icon { "name": "chat-dots", style: "font-size: 0.9rem;" }
-                        "Talk"
+                        title: "Selfhood — profile, rights, self-definition",
+                        sl-icon { "name": "person-badge", style: "font-size: 0.9rem;" }
+                        "Selfhood"
                     }
                     Link {
-                        to: Route::KeepRoute {},
+                        to: Route::TalkRoute {},
                         class: "qtab",
-                        sl-icon { "name": "archive", style: "font-size: 0.9rem;" }
-                        "Keep"
+                        title: "Relations — people, offers, conversation",
+                        sl-icon { "name": "people", style: "font-size: 0.9rem;" }
+                        "Relations"
+                    }
+                    Link {
+                        to: Route::LibraryRoute {},
+                        class: "qtab",
+                        title: "Lived Memory — hypermedia meaning shelf",
+                        sl-icon { "name": "collection", style: "font-size: 0.9rem;" }
+                        "Memory"
+                    }
+                    Link {
+                        to: Route::WellfairRoute {},
+                        class: "qtab",
+                        title: "Care — health, welfare, body, consent",
+                        sl-icon { "name": "heart-pulse", style: "font-size: 0.9rem;" }
+                        "Care"
                     }
                     if crate::endpoints::supports_browser_pane() {
                         Link {
                             to: Route::BrowserRoute {},
                             class: "qtab",
+                            title: "World — browser attention outward",
                             sl-icon { "name": "globe2", style: "font-size: 0.9rem;" }
-                            "Reach"
+                            "World"
                         }
+                    }
+                    Link {
+                        to: Route::WorkRoute {},
+                        class: "qtab",
+                        title: "Practice — projects and work board",
+                        sl-icon { "name": "kanban", style: "font-size: 0.9rem;" }
+                        "Practice"
+                    }
+                    Link {
+                        to: Route::ToolsRoute {},
+                        class: "qtab",
+                        title: "Instruments — models, vision, listen, tools under allowlist",
+                        sl-icon { "name": "tools", style: "font-size: 0.9rem;" }
+                        "Instruments"
                     }
                     Link {
                         to: Route::SettingsRoute {},
@@ -1288,13 +1313,19 @@ fn AppLayout() -> Element {
                 }
 
                 div {
-                    style: "margin-left: auto; display: flex; align-items: center; gap: 0.65rem; padding-bottom: 0.55rem;",
+                    style: "margin-left: auto; display: flex; align-items: center; gap: 0.5rem; padding-bottom: 0.55rem; flex-wrap: wrap; justify-content: flex-end;",
+                    // Context chip: principal posture · host · instrument backend
                     div {
-                        style: "display: flex; align-items: center; gap: 0.45rem; border: 1px solid var(--qualia-border); background: rgba(255,255,255,0.03); border-radius: 999px; padding: 0.35rem 0.7rem;",
-                        div { style: "width: 8px; height: 8px; border-radius: 50%; background: {host_color}; box-shadow: 0 0 10px {host_color};" }
-                        span { style: "font-size: 0.72rem; color: var(--qualia-text); font-weight: 600;", "{host_label}" }
+                        style: "display: flex; align-items: center; gap: 0.4rem; border: 1px solid var(--qualia-border); background: rgba(139,92,246,0.08); border-radius: 999px; padding: 0.3rem 0.65rem; max-width: min(420px, 48vw);",
+                        title: "Context — natural person apparatus · host · active inference path",
+                        span { style: "font-size: 0.68rem; font-weight: 700; color: #c4b5fd; letter-spacing: 0.03em; text-transform: uppercase;", "Context" }
+                        span { style: "font-size: 0.72rem; color: var(--qualia-text); font-weight: 600; white-space: nowrap;", "Principal" }
+                        span { style: "color: var(--qualia-text-muted); font-size: 0.65rem;", "·" }
+                        div { style: "width: 7px; height: 7px; border-radius: 50%; background: {host_color}; box-shadow: 0 0 8px {host_color}; flex-shrink: 0;" }
+                        span { style: "font-size: 0.72rem; color: var(--qualia-text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;", "{host_label}" }
+                        span { style: "color: var(--qualia-text-muted); font-size: 0.65rem;", "·" }
+                        span { style: "font-size: 0.68rem; color: var(--qualia-text-muted); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;", "instr: {backend_label}" }
                     }
-                    span { style: "font-size: 0.7rem; color: var(--qualia-text-muted); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;", "{backend_label}" }
                 }
             }
 
@@ -1308,7 +1339,7 @@ fn AppLayout() -> Element {
                     input {
                         r#type: "text",
                         value: "{omnibox}",
-                        placeholder: "talk · people · keep · reach · anatomy · paste URL · or a message…",
+                        placeholder: "memory · relations · care · world · practice · paste URL · or a message…",
                         style: "background: transparent; border: none; outline: none; color: var(--qualia-text); font-size: 0.88rem; width: 100%; font-family: 'Inter', sans-serif;",
                         oninput: move |e| omnibox.set(e.value()),
                         onkeydown: move |e| {
@@ -1334,48 +1365,61 @@ fn AppLayout() -> Element {
                 }
             }
 
-            // ── Sidebar: Talk / Keep / Reach first; rest under Advanced ─────
+            // ── Sidebar: life domains first; engineering under Advanced ─────
             div {
                 style: "flex: 1; overflow: hidden; display: flex; position: relative;",
                 aside {
                     class: "app-sidebar",
                     nav {
                         class: "app-sidebar-nav",
-                        span { class: "app-sidebar-label", "Primary" }
-                        Link { to: Route::TalkRoute {}, class: "nav-item", sl-icon { "name": "chat-dots" } "Talk" }
-                        Link { to: Route::KeepRoute {}, class: "nav-item", sl-icon { "name": "archive" } "Keep" }
+                        span { class: "app-sidebar-label", "Life domains" }
+                        Link { to: Route::IdentityRoute {}, class: "nav-item", title: "Selfhood", sl-icon { "name": "person-badge" } "Selfhood" }
+                        Link { to: Route::TalkRoute {}, class: "nav-item", title: "Relations — people & conversation", sl-icon { "name": "people" } "Relations" }
+                        Link { to: Route::LibraryRoute {}, class: "nav-item", title: "Lived Memory", sl-icon { "name": "collection" } "Lived Memory" }
+                        Link { to: Route::WellfairRoute {}, class: "nav-item", title: "Care", sl-icon { "name": "heart-pulse" } "Care" }
                         if crate::endpoints::supports_browser_pane() {
-                            Link { to: Route::BrowserRoute {}, class: "nav-item", sl-icon { "name": "globe2" } "Reach" }
+                            Link { to: Route::BrowserRoute {}, class: "nav-item", title: "World attention", sl-icon { "name": "globe2" } "World" }
+                        }
+                        Link { to: Route::WorkRoute {}, class: "nav-item", title: "Practice", sl-icon { "name": "kanban" } "Practice" }
+                        Link { to: Route::ToolsRoute {}, class: "nav-item", title: "Instruments", sl-icon { "name": "tools" } "Instruments" }
+                        Link {
+                            to: Route::SettingsRoute {},
+                            class: "nav-item",
+                            title: "Phone remote: installable PWA at /remote-controller/ on control plane",
+                            sl-icon { "name": "phone" }
+                            "Phone remote"
                         }
 
-                        span { class: "app-sidebar-label", "Keep places" }
-                        Link { to: Route::WellfairRoute {}, class: "nav-item", sl-icon { "name": "shield-check" } "Wellfair" }
+                        span { class: "app-sidebar-label", "In domain" }
+                        Link { to: Route::SanctuaryRoute {}, class: "nav-item", sl-icon { "name": "shield-lock" } "Sanctuary" }
                         Link { to: Route::AnatomyRoute {}, class: "nav-item", sl-icon { "name": "person" } "Anatomy" }
-                        Link { to: Route::HealthRoute {}, class: "nav-item", sl-icon { "name": "heart-pulse" } "Health" }
-                        Link { to: Route::LibraryRoute {}, class: "nav-item", sl-icon { "name": "collection" } "Library" }
+                        Link { to: Route::HealthRoute {}, class: "nav-item", sl-icon { "name": "heart" } "Health" }
                         Link { to: Route::VisionRoute {}, class: "nav-item", sl-icon { "name": "image" } "Vision" }
                         Link { to: Route::ListenRoute {}, class: "nav-item", sl-icon { "name": "soundwave" } "Listen" }
-                        Link { to: Route::NexusRoute {}, class: "nav-item", sl-icon { "name": "people" } "People" }
+                        Link {
+                            to: Route::ChoraRoute {},
+                            class: "nav-item nav-item-universe",
+                            title: "World depth — Chora / public layers",
+                            sl-icon { "name": "stars" }
+                            "Chora"
+                        }
 
                         span { class: "app-sidebar-label", "System" }
                         Link { to: Route::SettingsRoute {}, class: "nav-item", sl-icon { "name": "gear" } "Settings" }
-                        Link { to: Route::DashboardRoute {}, class: "nav-item", sl-icon { "name": "house" } "Overview" }
 
                         details {
                             class: "developer-nav",
                             summary { "Advanced" }
                             div {
                                 class: "developer-nav-items",
-                                Link { to: Route::IdentityRoute {}, class: "nav-item", "Identity" }
-                                Link { to: Route::SanctuaryRoute {}, class: "nav-item", "Sanctuary" }
+                                Link { to: Route::KeepRoute {}, class: "nav-item", "Legacy hub (Keep)" }
+                                Link { to: Route::DashboardRoute {}, class: "nav-item", "Overview (ops)" }
                                 Link { to: Route::AgencyRoute {}, class: "nav-item", "Agency" }
-                                Link { to: Route::WorkRoute {}, class: "nav-item", "Work" }
                                 Link { to: Route::CommunicationsRoute {}, class: "nav-item", "Mail" }
-                                Link { to: Route::ChoraRoute {}, class: "nav-item", "Chora" }
+                                Link { to: Route::NexusRoute {}, class: "nav-item", "People (Nexus)" }
                                 Link { to: Route::QAppsRoute {}, class: "nav-item", "QApps catalog" }
                                 Link { to: Route::LogsRoute {}, class: "nav-item", "Desktop logs" }
                                 Link { to: Route::SupervisorRoute {}, class: "nav-item", "Operations" }
-                                Link { to: Route::ToolsRoute {}, class: "nav-item", "Sync & tools" }
                                 Link { to: Route::StudioRoute {}, class: "nav-item", "QApp Studio" }
                                 Link { to: Route::ContextStudioRoute {}, class: "nav-item", "Context Studio" }
                                 Link { to: Route::TenDBrowserRoute {}, class: "nav-item", "10D Browser" }
@@ -1412,37 +1456,37 @@ fn App() -> Element {
     use_context_provider(|| theme_state);
 
     let t = theme_state();
-    let bg = t.tokens.get("bg").cloned().unwrap_or("#0a1122".to_string());
+    let bg = t.tokens.get("bg").cloned().unwrap_or("#070b14".to_string());
     let surface = t
         .tokens
         .get("surface")
         .cloned()
-        .unwrap_or("rgba(20, 28, 48, 0.7)".to_string());
+        .unwrap_or("rgba(15, 23, 38, 0.78)".to_string());
     let border = t
         .tokens
         .get("border")
         .cloned()
-        .unwrap_or("rgba(80, 90, 110, 0.5)".to_string());
+        .unwrap_or("rgba(148, 163, 184, 0.18)".to_string());
     let text = t
         .tokens
         .get("text")
         .cloned()
-        .unwrap_or("#f8f9fb".to_string());
+        .unwrap_or("#f1f5f9".to_string());
     let text_muted = t
         .tokens
         .get("text-muted")
         .cloned()
-        .unwrap_or("#94a3b8".to_string());
+        .unwrap_or("#9aa9bd".to_string());
     let accent = t
         .tokens
         .get("accent")
         .cloned()
-        .unwrap_or("#f59e0b".to_string());
+        .unwrap_or("#7dd3fc".to_string());
     let accent_glow = t
         .tokens
         .get("accent-glow")
         .cloned()
-        .unwrap_or("rgba(245, 158, 11, 0.18)".to_string());
+        .unwrap_or("rgba(56, 189, 248, 0.16)".to_string());
     let bg_gradient = t
         .tokens
         .get("bg-gradient")
@@ -1476,7 +1520,21 @@ fn App() -> Element {
         document::Style {
             "
             * {{ box-sizing: border-box; }}
-            body {{ margin: 0; padding: 0; font-family: 'Inter', sans-serif; overflow: hidden; }}
+            html {{ background: var(--qualia-bg, #070b14); }}
+            body {{
+                margin: 0;
+                padding: 0;
+                font-family: 'Inter', sans-serif;
+                overflow: hidden;
+                background: var(--qualia-bg, #070b14);
+                color: var(--qualia-text);
+                text-rendering: optimizeLegibility;
+            }}
+            ::selection {{ background: color-mix(in srgb, var(--qualia-accent) 34%, transparent); }}
+            :focus-visible {{
+                outline: 2px solid var(--qualia-accent);
+                outline-offset: 2px;
+            }}
             .nav-item {{
                 transition: all 0.18s ease;
                 border-radius: 9px;
@@ -1489,10 +1547,20 @@ fn App() -> Element {
                 text-decoration: none;
                 cursor: pointer;
             }}
-            .nav-item:hover {{ background: rgba(128,128,128,0.10); }}
+            .nav-item:hover {{
+                color: var(--qualia-text);
+                background: color-mix(in srgb, var(--qualia-accent) 9%, transparent);
+                transform: translateX(2px);
+            }}
             .nav-item[aria-current=page] {{
                 color: var(--qualia-accent);
                 background: var(--qualia-accent-glow);
+                box-shadow: inset 3px 0 0 var(--qualia-accent);
+            }}
+            .nav-item-universe {{
+                margin: 4px 0 6px;
+                border: 1px solid color-mix(in srgb, var(--qualia-accent) 18%, transparent);
+                background: linear-gradient(110deg, color-mix(in srgb, var(--qualia-accent) 8%, transparent), transparent 72%);
             }}
             .app-sidebar {{
                 position: relative;
@@ -1501,7 +1569,10 @@ fn App() -> Element {
                 height: 100%;
                 overflow: hidden;
                 border-right: 1px solid var(--qualia-border);
-                background: color-mix(in srgb, var(--qualia-surface) 92%, transparent);
+                background:
+                    radial-gradient(circle at 15% 10%, color-mix(in srgb, var(--qualia-accent) 7%, transparent), transparent 34%),
+                    color-mix(in srgb, var(--qualia-surface) 94%, var(--qualia-bg));
+                box-shadow: inset -1px 0 0 rgba(255,255,255,0.025);
             }}
             .app-sidebar-nav {{
                 height: 100%;
@@ -1569,8 +1640,11 @@ fn App() -> Element {
                 margin-bottom: -1px;
             }}
             .qtab:hover {{
-                background: rgba(255,255,255,0.06);
+                background: color-mix(in srgb, var(--qualia-accent) 8%, transparent);
                 color: var(--qualia-text);
+            }}
+            .qtab-universe {{
+                border-color: color-mix(in srgb, var(--qualia-accent) 16%, transparent);
             }}
             /* Active tab styling could be done via router matching, but for now we provide the hover/active base */
             .qtab[aria-current=page] {{
@@ -1612,7 +1686,7 @@ fn App() -> Element {
             "data-theme-scope": "app",
             "data-theme": "{data_theme}",
             style: "--qualia-bg: {bg}; --qualia-surface: {surface}; --qualia-border: {border}; --qualia-text: {text}; --qualia-text-muted: {text_muted}; --qualia-accent: {accent}; --qualia-accent-glow: {accent_glow}; width: 100vw; height: 100vh; background: {bg_gradient}; color: var(--qualia-text); font-family: 'Inter', sans-serif; transition: background 0.5s ease, color 0.4s ease; overflow: hidden;",
-            Router::<Route> {}
+            components::onboarding::OnboardingGate {}
         }
     }
 }

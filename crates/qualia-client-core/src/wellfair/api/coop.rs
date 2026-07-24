@@ -88,16 +88,16 @@ impl WebizenHostApi {
 
     /// Derive per-(project, contributor) effort obligations from the committed contribution
     /// journal. Pure over the unique-id set, so a duplicate or replayed commit can never
-    /// double-count effort (Â§17 money/obligation safety).
+    /// double-count effort (§17 money/obligation safety).
     pub fn project_obligations(&self, limit: usize) -> Result<Vec<Obligation>, String> {
         Ok(derive_obligations(&self.local_contributions(limit)?))
     }
 
     /// Obligations derived from **both** locally-committed contributions and validated inbound
-    /// sync operations (kind `contribution`) â€” the cross-node convergence view. Because
+    /// sync operations (kind `contribution`) — the cross-node convergence view. Because
     /// `derive_obligations` collapses to the unique record-id set first, a remote contribution
     /// that has already been seen locally, or a replayed inbound op, never double-counts effort
-    /// (Â§17). This is the "apply validated inbound ops" step of the sync loop for obligations.
+    /// (§17). This is the "apply validated inbound ops" step of the sync loop for obligations.
     pub fn synced_project_obligations(&self, limit: usize) -> Result<Vec<Obligation>, String> {
         let mut contributions = self.local_contributions(limit)?;
         for op in self.validated_sync_operations()? {
@@ -165,7 +165,7 @@ impl WebizenHostApi {
         Ok(Some(cred))
     }
 
-    /// Build a field-selected presentation of a stored credential â€” plain field selection, NOT
+    /// Build a field-selected presentation of a stored credential — plain field selection, NOT
     /// cryptographic selective disclosure (the type name and the domain module say so).
     pub fn present_credential(
         &self,

@@ -1,4 +1,4 @@
-//! Client API surface â€” split into domain sub-modules.
+//! Client API surface — split into domain sub-modules.
 //! All items are re-exported here to preserve the flat pi::function_name() API.
 
 pub mod superblock;

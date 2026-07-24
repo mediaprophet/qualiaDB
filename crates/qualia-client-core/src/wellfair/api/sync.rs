@@ -11,11 +11,11 @@ use ed25519_dalek::Signer;
 use super::*;
 
 impl WebizenHostApi {
-    // --- Phase 5 sync-operation protocol (SyncService, Â§4.2 / Â§9.5 / Â§17) ---
+    // --- Phase 5 sync-operation protocol (SyncService, §4.2 / §9.5 / §17) ---
 
     /// Build a signed outbound sync operation from a committed journal entry.
-    /// Returns `None` for Classified/Sanctuary records â€” they never enter the ordinary sync
-    /// lane (Â§5.2). The signature is a real ed25519 signature over the operation's bound payload.
+    /// Returns `None` for Classified/Sanctuary records — they never enter the ordinary sync
+    /// lane (§5.2). The signature is a real ed25519 signature over the operation's bound payload.
     pub fn build_outbound_operation(
         &self,
         entry: &JournalEntry,
@@ -62,7 +62,7 @@ impl WebizenHostApi {
             .map_err(|e| e.to_string())
     }
 
-    // --- Sync transport orchestration (T3.1: drain outbox â†’ transport â†’ peer inbox) ---
+    // --- Sync transport orchestration (T3.1: drain outbox → transport → peer inbox) ---
 
     /// The next Lamport value to stamp on outbound operations: one past the greatest observed among
     /// the locally-validated inbox operations. Keeps outbound clocks causally ahead of what we've seen.
@@ -78,7 +78,7 @@ impl WebizenHostApi {
 
     /// **Drain the outbox through a transport.** For each `Queued` outbox entry, build a signed
     /// [`SyncOperation`] from its committed journal entry and publish it; on success the entry is
-    /// marked `Sent`. Classified/Sanctuary records never enter the ordinary lane â€” they are marked
+    /// marked `Sent`. Classified/Sanctuary records never enter the ordinary lane — they are marked
     /// `Rejected` so they stop being retried. Returns the number of operations published.
     ///
     /// The transport is a dumb pipe; correctness (dedup, convergence) is enforced by the peer's
@@ -114,7 +114,7 @@ impl WebizenHostApi {
                     sent_ids.push(entry.operation_id.clone());
                 }
                 None => {
-                    // Classified/Sanctuary â€” never syncs; stop retrying it.
+                    // Classified/Sanctuary — never syncs; stop retrying it.
                     let _ = outbox.update_state(&entry.operation_id, SyncOutboxState::Rejected);
                 }
             }
@@ -130,8 +130,8 @@ impl WebizenHostApi {
     }
 
     /// **Pull from a transport and admit into the quarantined inbox.** Every op is validated
-    /// fail-closed on admission (bad signature/hash/version/oversize/Classified â†’ `Rejected`;
-    /// replays â†’ `Duplicate`), so a hostile peer can only cause rejections. Returns the admission
+    /// fail-closed on admission (bad signature/hash/version/oversize/Classified → `Rejected`;
+    /// replays → `Duplicate`), so a hostile peer can only cause rejections. Returns the admission
     /// tally.
     pub fn sync_pull_via<T: SyncTransport>(
         &self,
@@ -169,7 +169,7 @@ impl WebizenHostApi {
         Ok((pushed, report))
     }
 
-    /// One-shot sync against a **libp2p** peer/relay (noise-encrypted request-response â€” the peer-to-peer
+    /// One-shot sync against a **libp2p** peer/relay (noise-encrypted request-response — the peer-to-peer
     /// wire): drain the outbox to the peer, then pull + admit from it. `peer_id` is the base58 peer id,
     /// `peer_addr` a libp2p multiaddr (e.g. `/ip4/1.2.3.4/tcp/4001`). Returns `(pushed, pull_report)`.
     /// Native-only (libp2p). Same dumb-pipe contract as [`Self::sync_with_http_relay`]: correctness is

@@ -4,12 +4,14 @@ use super::*;
 use crate::Route;
 use dioxus::prelude::*;
 
-// â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Component ─────────────────────────────────────────────────────────────────
 
 #[component]
 pub fn QApps() -> Element {
     let all_apps = qapp_catalog();
     let mut selected_cat = use_signal(|| Cat::All);
+    // Default: only Active + Beta (full catalog incl. Soon is opt-in).
+    let mut show_soon = use_signal(|| false);
     let current_cat = selected_cat();
     let cats = cat_list();
 
@@ -20,6 +22,7 @@ pub fn QApps() -> Element {
     let cards: Vec<CardData> = all_apps
         .iter()
         .filter(|a| current_cat == Cat::All || a.cat == current_cat)
+        .filter(|a| show_soon() || matches!(a.stat, Stat::Active | Stat::Beta))
         .map(|a| {
             let (status_label, status_color, opacity) = match a.stat {
                 Stat::Active => ("Active", "#10b981", "1"),
@@ -53,20 +56,24 @@ pub fn QApps() -> Element {
         div {
             style: "width: 100%; height: 100%; overflow-y: auto; padding: 2rem 2rem 4rem;",
 
-            // â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Header ─────────────────────────────────────────────────────────
             div {
-                style: "display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.25rem;",
+                style: "display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;",
                 div {
                     h1 {
                         style: "margin: 0 0 0.25rem 0; font-size: 1.4rem; font-weight: 700; color: var(--qualia-text); letter-spacing: -0.025em;",
                         "QApps"
                     }
                     p {
-                        style: "margin: 0; font-size: 0.82rem; color: var(--qualia-text-muted);",
-                        "All applications running in your Webizen node â€” governed, provenance-tracked, and fiduciary-safe."
+                        style: "margin: 0 0 0.45rem 0; font-size: 0.82rem; color: var(--qualia-text-muted); max-width: 36rem; line-height: 1.45;",
+                        "Governed apps on your node. Active means a real launch path; Soon is a catalogue placeholder — not a broken product."
+                    }
+                    p {
+                        style: "margin: 0; font-size: 0.72rem; color: #94a3b8; max-width: 36rem; line-height: 1.4;",
+                        "Daily work lives under life domains (Memory · Relations · Care · World · Practice · Instruments). This catalog is Advanced discovery — default list is Active + Beta only."
                     }
                 }
-                div { style: "display: flex; gap: 0.4rem; flex-shrink: 0; margin-top: 0.2rem;",
+                div { style: "display: flex; gap: 0.4rem; flex-shrink: 0; margin-top: 0.2rem; flex-wrap: wrap; align-items: center;",
                     span {
                         style: "font-size: 0.69rem; font-weight: 600; color: #10b981; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); border-radius: 12px; padding: 0.2rem 0.55rem;",
                         "{n_active} Active"
@@ -77,12 +84,19 @@ pub fn QApps() -> Element {
                     }
                     span {
                         style: "font-size: 0.69rem; font-weight: 600; color: #9ca3af; background: rgba(156,163,175,0.1); border: 1px solid rgba(156,163,175,0.25); border-radius: 12px; padding: 0.2rem 0.55rem;",
-                        "{n_soon} Soon"
+                        "{n_soon} Soon (catalog)"
+                    }
+                    button {
+                        r#type: "button",
+                        style: "font-size: 0.69rem; font-weight: 600; color: var(--qualia-text); background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.35); border-radius: 12px; padding: 0.2rem 0.55rem; cursor: pointer;",
+                        title: "Show academic / Soon placeholders (full map opt-in)",
+                        onclick: move |_| show_soon.set(!show_soon()),
+                        if show_soon() { "Hide Soon rows" } else { "Show full catalog (Soon)" }
                     }
                 }
             }
 
-            // â”€â”€ Featured Templates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Featured Templates ──────────────────────────────────────────────
             div { style: "margin-bottom: 1.75rem;",
                 div {
                     style: "font-size: 0.7rem; font-weight: 700; color: var(--qualia-text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.75rem;",
@@ -118,7 +132,7 @@ pub fn QApps() -> Element {
                 }
             }
 
-            // â”€â”€ Category filter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Category filter ─────────────────────────────────────────────────
             div {
                 style: "display: flex; gap: 0.375rem; margin-bottom: 1.25rem; flex-wrap: wrap;",
                 for cat in cats.iter() {
@@ -140,7 +154,7 @@ pub fn QApps() -> Element {
                 }
             }
 
-            // â”€â”€ App grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── App grid ────────────────────────────────────────────────────────
             div {
                 style: "display: grid; grid-template-columns: repeat(auto-fill, minmax(288px, 1fr)); gap: 1rem;",
                 for card in cards.iter() {

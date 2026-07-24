@@ -3,7 +3,7 @@
 #![allow(non_snake_case)]
 
 
-// â”€â”€ 10D Container Browser commands â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── 10D Container Browser commands ──────────────────────────────────────────
 
 #[derive(serde::Serialize)]
 pub struct TenDContainerEntry {
@@ -157,7 +157,7 @@ pub fn browse_10d_containers(_app: tauri::AppHandle) -> Result<Vec<TenDContainer
     Ok(entries)
 }
 
-/// F1 â€” list sealed vision `.10d` assets only (under vision_geometry/).
+/// F1 — list sealed vision `.10d` assets only (under vision_geometry/).
 #[tauri::command]
 pub fn browse_vision_10d() -> Result<Vec<qualia_client_core::vision_10d_browse::Vision10dEntry>, String>
 {
@@ -167,7 +167,7 @@ pub fn browse_vision_10d() -> Result<Vec<qualia_client_core::vision_10d_browse::
     ))
 }
 
-/// F2 â€” load a sealed vision `.10d` (CRC + mesh meta + Ïƒ paint package).
+/// F2 — load a sealed vision `.10d` (CRC + mesh meta + σ paint package).
 ///
 /// `citable`: when true, F4 requires valid ProvenanceSidecar (fail-closed).
 #[tauri::command]
@@ -190,7 +190,7 @@ pub fn load_vision_10d(
     Ok(loaded)
 }
 
-/// F3 â€” temporal scrub of paint nodes from a loaded package's paint list
+/// F3 — temporal scrub of paint nodes from a loaded package's paint list
 /// (caller passes t_slice / t_window; returns kept paint entries).
 #[tauri::command]
 pub fn scrub_vision_10d_paint(

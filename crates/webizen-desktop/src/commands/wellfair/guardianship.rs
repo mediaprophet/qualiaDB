@@ -17,7 +17,7 @@ pub fn wellfair_propose_proxy_condition(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let report = wellfare_core::conditions::ConditionReport::new(label);
         let outcome = host.propose_proxy_condition(&proxy_did, &report)?;
         serde_json::to_string(&outcome).map_err(|e| e.to_string())
@@ -34,7 +34,7 @@ pub fn wellfair_list_guardianship_proposals(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let proposals = host.list_guardianship_proposals(limit)?;
         serde_json::to_string(&proposals).map_err(|e| e.to_string())
     })?
@@ -53,7 +53,7 @@ pub fn wellfair_vote_guardianship_proposal(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let view = host.vote_guardianship_proposal(&proposal_id, &guardian_did, approve, reason)?;
         serde_json::to_string(&view).map_err(|e| e.to_string())
     })?

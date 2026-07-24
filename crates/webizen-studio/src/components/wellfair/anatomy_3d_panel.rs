@@ -16,7 +16,6 @@ use super::host_client::{
     acquire_body_assets, body_assets_status, render_body_snapshot, BodyAssetsStatus,
 };
 use dioxus::prelude::*;
-use dioxus::document::eval;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 struct Anatomy3dUi {
@@ -115,7 +114,12 @@ pub fn WellfairAnatomy3dPanel() -> Element {
     {
         let mut was_ready = use_signal(|| false);
         use_effect(move || {
-            let ready = ui.read().cache_status.as_ref().map(|c| c.cached).unwrap_or(false)
+            let ready = ui
+                .read()
+                .cache_status
+                .as_ref()
+                .map(|c| c.cached)
+                .unwrap_or(false)
                 && crate::endpoints::is_native_host();
             if ready && !was_ready() {
                 was_ready.set(true);
@@ -134,7 +138,9 @@ pub fn WellfairAnatomy3dPanel() -> Element {
                             }})()"#
                         );
                         if let Ok(v) = js_sys::eval(&js) {
-                            if v.as_bool() == Some(true) { break; }
+                            if v.as_bool() == Some(true) {
+                                break;
+                            }
                         }
                         gloo_timers::future::TimeoutFuture::new(500).await;
                     }
@@ -192,9 +198,9 @@ pub fn WellfairAnatomy3dPanel() -> Element {
             div {
                 style: "display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.2rem;",
                 div {
-                    h2 { 
-                        style: "margin: 0 0 0.4rem; font-size: 1.4rem; font-weight: 600; letter-spacing: -0.02em; text-shadow: 0 2px 4px rgba(0,0,0,0.5);", 
-                        "Your Physical State" 
+                    h2 {
+                        style: "margin: 0 0 0.4rem; font-size: 1.4rem; font-weight: 600; letter-spacing: -0.02em; text-shadow: 0 2px 4px rgba(0,0,0,0.5);",
+                        "Your Physical State"
                     }
                     p {
                         style: "margin: 0; font-size: 0.85rem; color: var(--qualia-text-muted, #a0aec0); max-width: 500px; line-height: 1.5;",
@@ -224,45 +230,12 @@ pub fn WellfairAnatomy3dPanel() -> Element {
                         box-shadow: inset 0 2px 10px rgba(0,0,0,0.8);
                     ",
                     if real_mesh_ready {
-                        div {
-                            id: "anatomy-portal-webview",
-                            style: "position: absolute; inset: 0; width: 100%; height: 100%;",
-                            onmounted: move |_| {
-                                let url = portal_src.clone();
-                                spawn(async move {
-                                    #[cfg(target_arch = "wasm32")]
-                                    gloo_timers::future::sleep(std::time::Duration::from_millis(100)).await;
-                                    #[cfg(not(target_arch = "wasm32"))]
-                                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                                    let script = format!(r#"
-                                        const container = document.getElementById('anatomy-portal-webview');
-                                        if (container && window.__TAURI__) {{
-                                            const invoke = window.__TAURI__.core.invoke;
-                                            const r = container.getBoundingClientRect();
-                                            const id = 'anatomy-portal';
-                                            
-                                            invoke('spawn_native_webview', {{
-                                                id: id, url: '{}', x: r.left, y: r.top, width: r.width, height: r.height
-                                            }}).then(() => {{
-                                                invoke('show_native_webview', {{ id }});
-                                                invoke('resize_native_webview', {{ id, x: r.left, y: r.top, width: r.width, height: r.height }});
-                                            }}).catch(console.error);
-
-                                            if (!window.anatomyWebviewObserver) {{
-                                                window.anatomyWebviewObserver = new ResizeObserver(() => {{
-                                                    const r2 = container.getBoundingClientRect();
-                                                    invoke('resize_native_webview', {{ 
-                                                        id: 'anatomy-portal', 
-                                                        x: r2.left, y: r2.top, width: r2.width, height: r2.height 
-                                                    }}).catch(console.error);
-                                                }});
-                                                window.anatomyWebviewObserver.observe(container);
-                                            }}
-                                        }}
-                                    "#, url);
-                                    let _ = eval(&script);
-                                });
-                            }
+                        iframe {
+                            id: "anatomy-portal-iframe",
+                            src: "{portal_src}",
+                            title: "Interactive native-backed 3D anatomy renderer",
+                            allow: "cross-origin-isolated; fullscreen",
+                            style: "position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #030712;",
                         }
                     } else if has_frame {
                         img {
@@ -380,7 +353,7 @@ pub fn WellfairAnatomy3dPanel() -> Element {
                                     }
                                 }
                             }
-                            
+
                             div {
                                 style: "display: flex; gap: 0.5rem;",
                                 button {

@@ -6,7 +6,7 @@ use super::*;
 use super::render::ActiveAnchor;
 use tauri::{command, State};
 
-// â”€â”€ Telemetry Bridge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Telemetry Bridge ───────────────────────────────────────────────────────────
 // Telemetry bridge is in parent src directory, not commands directory
 
 use binary_registry::BinaryNodeRegistry;
@@ -52,7 +52,7 @@ pub async fn collapse_wavefunction(
         .ok_or("Invalid node index")?;
 
     // In a full implementation, this would:
-    // 1. Update QualiaDB tensor state: q > 0 â†’ q = 0
+    // 1. Update QualiaDB tensor state: q > 0 → q = 0
     // 2. Trigger re-render with collapsed state
     // 3. Update epistemic_state in RenderScene
 
@@ -176,7 +176,7 @@ pub async fn test_ccf_ipc_handshake(
 
     // Return test results
     Ok(format!(
-        "IPC Handshake Valid: {} assets registered, {} registry entries, binary index {} â†” {}",
+        "IPC Handshake Valid: {} assets registered, {} registry entries, binary index {} ↔ {}",
         asset_count, registry_size, binary_index, test_asset.asset_name
     ))
 }

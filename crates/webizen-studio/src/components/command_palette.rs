@@ -17,25 +17,49 @@ pub struct PaletteDestination {
     pub keywords: &'static str,
 }
 
-/// Built-in destinations (≥5 required by U6-A).
+/// Built-in destinations — life domains first (habitat IA).
 pub const PALETTE_DESTINATIONS: &[PaletteDestination] = &[
     PaletteDestination {
-        id: "talk",
-        label: "Talk",
-        hint: "Home · chat & people",
-        keywords: "talk chat agent home",
+        id: "memory",
+        label: "Lived Memory",
+        hint: "Hypermedia meaning shelf",
+        keywords: "memory library lived home shelf hypermedia",
     },
     PaletteDestination {
-        id: "browser",
-        label: "Browser (Reach)",
-        hint: "Web browser",
-        keywords: "browser reach web",
+        id: "relations",
+        label: "Relations",
+        hint: "People, chat, offers",
+        keywords: "relations talk chat people agent social",
     },
     PaletteDestination {
-        id: "10d-browser",
-        label: "10D / Infosphere",
-        hint: "Anatomy & vision .10d",
-        keywords: "10d ten-d infosphere anatomy vision",
+        id: "selfhood",
+        label: "Selfhood",
+        hint: "Profile & rights summary",
+        keywords: "selfhood identity profile person",
+    },
+    PaletteDestination {
+        id: "care",
+        label: "Care",
+        hint: "Health, welfare, wellbeing",
+        keywords: "care wellfair health welfare",
+    },
+    PaletteDestination {
+        id: "world",
+        label: "World",
+        hint: "Browser attention",
+        keywords: "world browser reach web",
+    },
+    PaletteDestination {
+        id: "practice",
+        label: "Practice",
+        hint: "Projects & work board",
+        keywords: "practice work board projects",
+    },
+    PaletteDestination {
+        id: "instruments",
+        label: "Instruments",
+        hint: "Tools, vision, listen",
+        keywords: "instruments tools vision listen models",
     },
     PaletteDestination {
         id: "settings",
@@ -44,43 +68,47 @@ pub const PALETTE_DESTINATIONS: &[PaletteDestination] = &[
         keywords: "settings prefs config",
     },
     PaletteDestination {
-        id: "library",
-        label: "Library",
-        hint: "Hypermedia shelf",
-        keywords: "library hypermedia models",
+        id: "sanctuary",
+        label: "Sanctuary",
+        hint: "Vault lock",
+        keywords: "sanctuary vault lock",
+    },
+    PaletteDestination {
+        id: "10d-browser",
+        label: "10D / Infosphere",
+        hint: "Anatomy & vision .10d",
+        keywords: "10d ten-d infosphere anatomy vision",
     },
     PaletteDestination {
         id: "qapps",
-        label: "QApps",
-        hint: "QApp catalog",
-        keywords: "qapps apps catalog",
-    },
-    PaletteDestination {
-        id: "keep",
-        label: "Keep",
-        hint: "Vault & places hub",
-        keywords: "keep vault",
+        label: "QApps (Advanced)",
+        hint: "Catalog · Active/Beta default",
+        keywords: "qapps apps catalog advanced",
     },
     PaletteDestination {
         id: "logs",
         label: "Desktop logs",
         hint: "Host log stream",
-        keywords: "logs log",
+        keywords: "logs log advanced",
     },
 ];
 
 /// Map a palette id to a studio [`Route`].
 pub fn route_for_palette_id(id: &str) -> Route {
     match id {
-        "talk" | "chat" | "home" => Route::TalkRoute {},
-        "browser" | "reach" | "web" => Route::BrowserRoute {},
+        "memory" | "library" | "home" | "lived-memory" => Route::LibraryRoute {},
+        "relations" | "talk" | "chat" | "people" => Route::TalkRoute {},
+        "selfhood" | "identity" => Route::IdentityRoute {},
+        "care" | "wellfair" | "health" => Route::WellfairRoute {},
+        "world" | "browser" | "reach" | "web" => Route::BrowserRoute {},
+        "practice" | "work" | "board" => Route::WorkRoute {},
+        "instruments" | "tools" => Route::ToolsRoute {},
+        "sanctuary" | "vault" | "keep" => Route::SanctuaryRoute {},
         "10d-browser" | "10d" | "infosphere" => Route::TenDBrowserRoute {},
         "settings" | "prefs" => Route::SettingsRoute {},
-        "library" => Route::LibraryRoute {},
         "qapps" | "apps" => Route::QAppsRoute {},
-        "keep" | "vault" => Route::KeepRoute {},
         "logs" => Route::LogsRoute {},
-        _ => Route::TalkRoute {},
+        _ => Route::LibraryRoute {},
     }
 }
 
@@ -327,10 +355,10 @@ mod tests {
 
     #[test]
     fn filter_talk_and_browser() {
-        let talk = filter_destinations("talk");
-        assert!(talk.iter().any(|d| d.id == "talk"));
-        let browser = filter_destinations("reach");
-        assert!(browser.iter().any(|d| d.id == "browser"));
+        let talk = filter_destinations("relations");
+        assert!(talk.iter().any(|d| d.id == "relations"));
+        let browser = filter_destinations("world");
+        assert!(browser.iter().any(|d| d.id == "world"));
         let ten = filter_destinations("infosphere");
         assert!(ten.iter().any(|d| d.id == "10d-browser"));
     }
@@ -342,7 +370,8 @@ mod tests {
 
     #[test]
     fn route_map_covers_core_five() {
-        assert!(matches!(route_for_palette_id("talk"), Route::TalkRoute {}));
+        assert!(matches!(route_for_palette_id("relations"), Route::TalkRoute {}));
+        assert!(matches!(route_for_palette_id("memory"), Route::LibraryRoute {}));
         assert!(matches!(
             route_for_palette_id("browser"),
             Route::BrowserRoute {}

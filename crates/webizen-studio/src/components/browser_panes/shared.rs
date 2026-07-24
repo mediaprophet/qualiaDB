@@ -3,7 +3,7 @@
 //! **Reach / Webizen Browser chrome** (studio pane).
 //!
 //! Pages load in a **native top-level WebView** window (`webizen-browser` via
-//! `browser_navigate` / `open_web_url`) â€” not an iframe (X-Frame-Options) and not
+//! `browser_navigate` / `open_web_url`) — not an iframe (X-Frame-Options) and not
 //! the missing `spawn_native_webview` child-pane path.
 //!
 //! This pane owns: tabs, omnibox, back/forward/reload (app history + engine), focus,
@@ -68,15 +68,15 @@ pub fn apply_cookie_summary(
         .get("synced")
         .and_then(|x| x.as_u64())
         .map(|n| n.to_string())
-        .unwrap_or_else(|| "â€”".into());
+        .unwrap_or_else(|| "—".into());
     let source = v
         .get("source")
         .and_then(|x| x.as_str())
-        .unwrap_or("â€”");
+        .unwrap_or("—");
     let note = v
         .get("coverage_note")
         .and_then(|x| x.as_str())
-        .unwrap_or("Best-effort jar visibility â€” not complete Chromium parity.");
+        .unwrap_or("Best-effort jar visibility — not complete Chromium parity.");
     let fp: Vec<serde_json::Value> = cookies
         .iter()
         .filter(|c| !c.get("third_party").and_then(|x| x.as_bool()).unwrap_or(false))
@@ -88,7 +88,7 @@ pub fn apply_cookie_summary(
         .cloned()
         .collect();
     summary_text.set(format!(
-        "{url} Â· count={count} Â· synced={synced} Â· source={source}"
+        "{url} · count={count} · synced={synced} · source={source}"
     ));
     first_party.set(fp);
     third_party.set(tp);

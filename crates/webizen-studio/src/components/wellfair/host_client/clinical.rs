@@ -20,7 +20,7 @@ pub async fn add_clinical_report(
         .map_err(|_| "failed to build invoke args".to_string())?;
     js_sys::Reflect::set(&args, &"reportType".into(), &wasm_bindgen::JsValue::from_str(report_type))
         .map_err(|_| "failed to build invoke args".to_string())?;
-    // 0 â†’ the host stamps "now".
+    // 0 → the host stamps "now".
     js_sys::Reflect::set(&args, &"observedAtUnix".into(), &wasm_bindgen::JsValue::from(0u32))
         .map_err(|_| "failed to build invoke args".to_string())?;
     js_sys::Reflect::set(&args, &"body".into(), &wasm_bindgen::JsValue::from_str(body))

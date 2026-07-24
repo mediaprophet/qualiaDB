@@ -10,7 +10,7 @@ use tauri::{command, AppHandle, Manager};
 pub fn chora_list_worlds(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         serde_json::to_string(&host.list_canvas_worlds()?).map_err(|e| e.to_string())
     })?
 }
@@ -19,7 +19,7 @@ pub fn chora_list_worlds(app: AppHandle) -> Result<String, String> {
 pub fn chora_get_world(app: AppHandle, world_id: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let v = host.get_canvas_world(&world_id)?;
         serde_json::to_string(&v).map_err(|e| e.to_string())
     })?
@@ -29,7 +29,7 @@ pub fn chora_get_world(app: AppHandle, world_id: String) -> Result<String, Strin
 pub fn chora_save_world(app: AppHandle, config_json: String) -> Result<(), String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.save_canvas_world(&config_json)
     })?
 }
@@ -38,7 +38,7 @@ pub fn chora_save_world(app: AppHandle, config_json: String) -> Result<(), Strin
 pub fn chora_delete_world(app: AppHandle, world_id: String) -> Result<bool, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.delete_canvas_world(&world_id)
     })?
 }
@@ -47,7 +47,7 @@ pub fn chora_delete_world(app: AppHandle, world_id: String) -> Result<bool, Stri
 pub fn chora_seed_demo(app: AppHandle) -> Result<bool, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.seed_canvas_demo()
     })?
 }
@@ -57,7 +57,7 @@ pub fn chora_seed_demo(app: AppHandle) -> Result<bool, String> {
 pub fn chora_seed_flagships(app: AppHandle) -> Result<u32, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.seed_flagship_worlds()
     })?
 }
@@ -66,7 +66,7 @@ pub fn chora_seed_flagships(app: AppHandle) -> Result<u32, String> {
 pub fn chora_navigation(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         Ok(host.canvas_navigation_state().to_string())
     })?
 }
@@ -75,7 +75,7 @@ pub fn chora_navigation(app: AppHandle) -> Result<String, String> {
 pub fn chora_set_temporal(app: AppHandle, t_value: f64) -> Result<(), String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.set_temporal_slice(t_value)
     })?
 }
@@ -84,7 +84,7 @@ pub fn chora_set_temporal(app: AppHandle, t_value: f64) -> Result<(), String> {
 pub fn chora_set_active_world(app: AppHandle, world_id: String) -> Result<(), String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.set_active_canvas_world(&world_id)
     })?
 }
@@ -99,7 +99,7 @@ pub fn chora_query_region(
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let hits = host.query_canvas_region(x1, y1, x2, y2)?;
         serde_json::to_string(&hits).map_err(|e| e.to_string())
     })?
@@ -111,7 +111,7 @@ pub fn chora_publish_asset(app: AppHandle, asset_json: String) -> Result<(), Str
 
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let asset: PlantedAsset = serde_json::from_str(&asset_json).map_err(|e| e.to_string())?;
         host.publish_planted_asset(asset)
     })?
@@ -121,7 +121,7 @@ pub fn chora_publish_asset(app: AppHandle, asset_json: String) -> Result<(), Str
 pub fn chora_pull_assets(app: AppHandle, cell_id: u64) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let assets = host.pull_spatial_assets(cell_id)?;
         serde_json::to_string(&assets).map_err(|e| e.to_string())
     })?

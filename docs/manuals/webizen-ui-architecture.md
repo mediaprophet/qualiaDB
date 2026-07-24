@@ -1,7 +1,8 @@
 # Webizen UI Architecture
 
-**Status:** stub + accurate map (U1-D)  
+**Status:** stub + accurate map (U1-D); IA frame → socio-neuromorphic  
 **Plan:** [`docs/plans/comprehensive-ui-gui-webizen-plan-2026.md`](../plans/comprehensive-ui-gui-webizen-plan-2026.md)  
+**Human IA + capability inventory:** [`docs/plans/socio-neuromorphic-ict-interface-plan.md`](../plans/socio-neuromorphic-ict-interface-plan.md)  
 **Sub-agents:** [`docs/plans/webizen-ui-implementation-subagents-2026.md`](../plans/webizen-ui-implementation-subagents-2026.md)
 
 ## Surfaces

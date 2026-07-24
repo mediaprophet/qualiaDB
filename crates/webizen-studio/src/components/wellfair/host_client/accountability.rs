@@ -85,7 +85,7 @@ pub async fn grant_consent_credential(
     Err("Consent credentials require the Tauri desktop host".into())
 }
 
-/// Revoke a consent credential â€” crypto-enforced (the wrapped key is destroyed). Returns whether one was live.
+/// Revoke a consent credential — crypto-enforced (the wrapped key is destroyed). Returns whether one was live.
 #[cfg(target_arch = "wasm32")]
 pub async fn revoke_consent_credential(credential_id: &str) -> Result<bool, String> {
     let args = js_sys::Object::new();
@@ -104,7 +104,7 @@ pub async fn revoke_consent_credential(_credential_id: &str) -> Result<bool, Str
     Err("Consent credentials require the Tauri desktop host".into())
 }
 
-/// List stored consent credentials (active and revoked â€” revoked rows remain as the audit anchor).
+/// List stored consent credentials (active and revoked — revoked rows remain as the audit anchor).
 #[cfg(target_arch = "wasm32")]
 pub async fn list_consent_credentials() -> Result<serde_json::Value, String> {
     let js = tauri_invoke("wellfair_list_consent_credentials", wasm_bindgen::JsValue::NULL)
@@ -119,7 +119,7 @@ pub async fn list_consent_credentials() -> Result<serde_json::Value, String> {
     Err("Consent credentials require the Tauri desktop host".into())
 }
 
-/// Record an agent's conduct under a credential â€” signed, into the durable trail + tamper-evident ledger.
+/// Record an agent's conduct under a credential — signed, into the durable trail + tamper-evident ledger.
 #[cfg(target_arch = "wasm32")]
 pub async fn record_conduct(
     agent_did: &str,
@@ -157,7 +157,7 @@ pub async fn record_conduct(
     Err("Conduct records require the Tauri desktop host".into())
 }
 
-/// The audit view â€” every conduct record taken under one credential (survives its revocation).
+/// The audit view — every conduct record taken under one credential (survives its revocation).
 #[cfg(target_arch = "wasm32")]
 pub async fn conduct_audit_trail(credential_id: &str) -> Result<serde_json::Value, String> {
     let args = js_sys::Object::new();
@@ -175,7 +175,7 @@ pub async fn conduct_audit_trail(_credential_id: &str) -> Result<serde_json::Val
     Err("Conduct records require the Tauri desktop host".into())
 }
 
-/// The accumulative, traceable well-being **score-card** over the person's own records â€” forum-internum /
+/// The accumulative, traceable well-being **score-card** over the person's own records — forum-internum /
 /// Sanctuary-class; a set of Hypotheses + pathway-starts, never a diagnosis, never a rating.
 #[cfg(target_arch = "wasm32")]
 pub async fn compute_scorecard(threshold: usize) -> Result<serde_json::Value, String> {

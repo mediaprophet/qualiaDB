@@ -243,7 +243,7 @@ impl WebizenHostApi {
     }
 
     /// Policy-gated write that surfaces the guardian-escrow outcome instead of collapsing it to an
-    /// error. A **proxy** write of a protected (Restricted) record does not commit immediately â€” it
+    /// error. A **proxy** write of a protected (Restricted) record does not commit immediately — it
     /// is held in a [`GuardianshipProposal`] pending M-of-N guardian co-signature (see
     /// [`Self::vote_guardianship_proposal`]). Non-proxy writes commit exactly as before.
     pub fn submit_record_guarded(
@@ -344,7 +344,7 @@ impl WebizenHostApi {
         self.vault.list_outbox(limit).map_err(|e| e.to_string())
     }
 
-    /// Standards-readable Turtle export bound to the latest checkpoint (Â§8.1 step 9).
+    /// Standards-readable Turtle export bound to the latest checkpoint (§8.1 step 9).
     pub fn export_health_package(
         &mut self,
         limit: usize,
@@ -363,11 +363,11 @@ impl WebizenHostApi {
         Ok((pkg, export_receipt))
     }
 
-    /// Journal row â†’ materialized quin coverage (bounded semantic query).
+    /// Journal row → materialized quin coverage (bounded semantic query).
     ///
     /// Applies the Sanctuary projection: while Sanctuary is locked (including a
     /// decoy session) rows for protected kinds are withheld, so the coverage/Tools
-    /// view is never an alternate read path around the boundary (master plan Â§5.2, Â§17).
+    /// view is never an alternate read path around the boundary (master plan §5.2, §17).
     pub fn query_graph_coverage(&self, limit: usize) -> Result<Vec<GraphCoverageRow>, String> {
         let rows = self
             .vault
@@ -603,7 +603,7 @@ impl WebizenHostApi {
             .collect())
     }
 
-    /// 3D Anatomy Qapp â€” compute the whole-person systemic view for a lens (`"person"` /
+    /// 3D Anatomy Qapp — compute the whole-person systemic view for a lens (`"person"` /
     /// `"clinician"`). Reads the person's condition / medication / diet records, maps them onto body
     /// systems via the anatomy knowledge base, and returns the lens narrative + per-system burden +
     /// an honest account of what did not map. Read-only; a computed set of **hypotheses**, never a
@@ -627,9 +627,9 @@ impl WebizenHostApi {
         ))
     }
 
-    /// 3D Anatomy Qapp â€” build the **whole-body render scene** (S5.7 interim visual) for the current
+    /// 3D Anatomy Qapp — build the **whole-body render scene** (S5.7 interim visual) for the current
     /// records + declared physiological state, viewed from `(azimuth, elevation)` in degrees. Returns a
-    /// [`webizen_render::scene_contract::RenderScene`] coloured by accumulated burden (Ïƒ â†’ RGBA), ready
+    /// [`webizen_render::scene_contract::RenderScene`] coloured by accumulated burden (σ → RGBA), ready
     /// for the headless `render_scene_png` pipeline. The orbit camera lets the Studio UI spin the body.
     /// Read-only; a computed visual of **hypotheses**, never a diagnosis.
     pub fn compute_body_scene(

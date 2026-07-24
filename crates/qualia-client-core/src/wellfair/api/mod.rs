@@ -27,7 +27,7 @@ const QAPP_GUARDIANSHIP: &str = "wellfair-guardianship";
 const SOURCE_GUARDIANSHIP: &str = "wellfair:guardianship";
 
 /// Reconstruct a `Contribution` from a stored/transmitted summary JSON. The record id (which
-/// is the dedup anchor for obligation derivation) is supplied by the caller â€” the journal row
+/// is the dedup anchor for obligation derivation) is supplied by the caller — the journal row
 /// id locally, or the sync operation's `record_id` for an inbound op.
 fn contribution_from_summary(id: String, summary: &str, occurred_at_unix: u32) -> Option<Contribution> {
     let v: serde_json::Value = serde_json::from_str(summary).ok()?;
@@ -58,7 +58,7 @@ fn contribution_from_summary(id: String, summary: &str, occurred_at_unix: u32) -
 }
 
 /// A per-entry summary of a hypermedia library entry for the UI (drops the raw quins).
-fn library_summary(e: &super::hypermedia_store::LibraryEntry) -> serde_json::Value {
+pub(crate) fn library_summary(e: &super::hypermedia_store::LibraryEntry) -> serde_json::Value {
     serde_json::json!({
         "asset_uri": e.asset_uri,
         "media_type": e.media_type,
@@ -88,10 +88,10 @@ fn library_summary(e: &super::hypermedia_store::LibraryEntry) -> serde_json::Val
     })
 }
 
-/// Facets a **person** attaches to an asset at ingest â€” the "software provides the means, the person
+/// Facets a **person** attaches to an asset at ingest — the "software provides the means, the person
 /// authors the meaning" path. These merge *on top of* whatever a processor derived automatically (a photo's
 /// EXIF still wins for its own time/place); they let a plain document be placed on the **timeline** (a date)
-/// or the **map** (coordinates), or collected under a **project** / **purpose** â€” none of it imposed.
+/// or the **map** (coordinates), or collected under a **project** / **purpose** — none of it imposed.
 #[derive(Debug, Clone, Default)]
 pub struct ManualFacets {
     pub occurred_at: Option<i64>,
@@ -100,11 +100,11 @@ pub struct ManualFacets {
     pub lon: Option<f32>,
     pub projects: Vec<String>,
     pub purposes: Vec<String>,
-    /// `public` | `restricted` | `classified` â€” high sensitivity forces Secret section.
+    /// `public` | `restricted` | `classified` — high sensitivity forces Secret section.
     pub sensitivity: Option<String>,
     /// Preferred product section: secret | wellfair | personal | work | tools | software | commons.
     pub section: Option<String>,
-    /// `none` | `peers` | `commons` â€” social / micro-commons visibility.
+    /// `none` | `peers` | `commons` — social / micro-commons visibility.
     pub commons_visibility: Option<String>,
 }
 
@@ -121,7 +121,7 @@ impl ManualFacets {
     }
 }
 
-/// Decode a lowercase/uppercase hex string to bytes (the desktop passes binary assets â€” a JPEG is not utf-8 â€”
+/// Decode a lowercase/uppercase hex string to bytes (the desktop passes binary assets — a JPEG is not utf-8 —
 /// as hex across the command boundary). Dependency-free; rejects odd length / non-hex.
 fn decode_hex(s: &str) -> Result<Vec<u8>, String> {
     let s = s.trim();
@@ -169,6 +169,11 @@ mod host_core;
 mod anatomy;
 mod accountability;
 mod library;
+/// Vault-free hypermedia library reads (storage path; no Sanctuary HostApi required).
+pub use library::{
+    library_stats_at, list_library_section_at, query_library_faceted_at, search_library_at,
+    search_library_text_at, search_library_time_at,
+};
 mod encryption;
 mod disclosure;
 mod sanctuary_vault;

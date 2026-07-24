@@ -337,6 +337,17 @@ async fn run_settings_server(state: SettingsServerState, port: u16) -> Result<()
         .route("/api/logs", get(logs_json_handler))
         .route("/api/logs/text", get(logs_text_handler))
         .route("/api/status", get(status_handler))
+        // Installable remote Surface Controller (phone PWA) + view session API
+        .route("/remote-controller", get(remote_controller_index))
+        .route("/remote-controller/", get(remote_controller_index))
+        .route(
+            "/remote-controller/{*path}",
+            get(remote_controller_asset),
+        )
+        .route("/api/view/session", get(view_session_handler))
+        .route("/api/view/set_observer", post(view_set_observer_handler))
+        .route("/api/view/morph", post(view_morph_handler))
+        .route("/api/view/select_uri", post(view_select_uri_handler))
         .route(
             "/api/config",
             get(get_config_handler).post(save_config_handler),
@@ -428,6 +439,14 @@ async fn run_companion_server(
         .route("/wellfair/companion/ingest", post(crate::companion_gateway::companion_ingest_post))
         .route("/mobile/qr", get(crate::companion_gateway::companion_qr_route))
         .route("/api/wellfair/companion/pairing", get(crate::companion_gateway::companion_pairing_route))
+        // LAN phone controller (installable PWA shell; same view_* session as desktop)
+        .route("/remote-controller", get(remote_controller_index))
+        .route("/remote-controller/", get(remote_controller_index))
+        .route("/remote-controller/{*path}", get(remote_controller_asset))
+        .route("/api/view/session", get(view_session_handler))
+        .route("/api/view/set_observer", post(view_set_observer_handler))
+        .route("/api/view/morph", post(view_morph_handler))
+        .route("/api/view/select_uri", post(view_select_uri_handler))
         .layer(axum::extract::DefaultBodyLimit::max(10 * 1024 * 1024))
         .with_state(host_api);
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
@@ -450,6 +469,120 @@ async fn run_companion_server(
     axum::serve(listener, app)
         .await
         .map_err(|e| format!("companion gateway: {e}"))
+}
+
+fn remote_controller_file(path: &str) -> Option<(String, &'static str)> {
+    use qualia_cooperative_core::qapp_package::{generate_remote_controller_pwa, PwaContent};
+    let bundle = generate_remote_controller_pwa();
+    let name = if path.is_empty() || path == "/" {
+        "index.html"
+    } else {
+        path.trim_start_matches('/')
+    };
+    let file = bundle.get(name)?;
+    let ctype = match name {
+        "index.html" => "text/html; charset=utf-8",
+        "manifest.webmanifest" => "application/manifest+json",
+        "sw.js" | "app.js" => "application/javascript; charset=utf-8",
+        "icon.svg" => "image/svg+xml",
+        _ => "application/octet-stream",
+    };
+    let body = match &file.content {
+        PwaContent::Text(s) => s.clone(),
+        PwaContent::Bytes(b) => String::from_utf8_lossy(b).into_owned(),
+    };
+    Some((body, ctype))
+}
+
+async fn remote_controller_index() -> Response {
+    match remote_controller_file("index.html") {
+        Some((body, ctype)) => (
+            StatusCode::OK,
+            [(header::CONTENT_TYPE, ctype), (header::CACHE_CONTROL, "no-cache")],
+            body,
+        )
+            .into_response(),
+        None => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+async fn remote_controller_asset(Path(path): Path<String>) -> Response {
+    match remote_controller_file(&path) {
+        Some((body, ctype)) => (
+            StatusCode::OK,
+            [(header::CONTENT_TYPE, ctype), (header::CACHE_CONTROL, "no-cache")],
+            body,
+        )
+            .into_response(),
+        None => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+async fn view_session_handler() -> Response {
+    match serde_json::to_string(&qualia_client_core::view_host::get_session_snapshot()) {
+        Ok(body) => (
+            StatusCode::OK,
+            [(header::CONTENT_TYPE, "application/json")],
+            body,
+        )
+            .into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct ViewStatusBody {
+    status: String,
+}
+
+async fn view_set_observer_handler(Json(body): Json<ViewStatusBody>) -> Response {
+    use qualia_client_core::view_host::{get_session_snapshot, parse_observer, set_observer};
+    set_observer(parse_observer(&body.status));
+    match serde_json::to_string(&get_session_snapshot()) {
+        Ok(s) => (
+            StatusCode::OK,
+            [(header::CONTENT_TYPE, "application/json")],
+            s,
+        )
+            .into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct ViewMorphBody {
+    mode: String,
+}
+
+async fn view_morph_handler(Json(body): Json<ViewMorphBody>) -> Response {
+    match qualia_client_core::view_host::morph_json(&body.mode) {
+        Ok(v) => (
+            StatusCode::OK,
+            [(header::CONTENT_TYPE, "application/json")],
+            v.to_string(),
+        )
+            .into_response(),
+        Err(e) => (StatusCode::BAD_REQUEST, e).into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct ViewSelectUriBody {
+    uri: String,
+}
+
+async fn view_select_uri_handler(Json(body): Json<ViewSelectUriBody>) -> Response {
+    use qualia_client_core::view_host::{get_session_snapshot, select_entity_uri};
+    select_entity_uri(&body.uri);
+    match serde_json::to_string(&get_session_snapshot()) {
+        Ok(s) => (
+            StatusCode::OK,
+            [(header::CONTENT_TYPE, "application/json")],
+            s,
+        )
+            .into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    }
 }
 
 async fn portal_index_handler(State(state): State<SettingsServerState>) -> Response {

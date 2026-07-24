@@ -1,6 +1,6 @@
 //! Consistency tests for the QApp catalog.
 
-// â”€â”€ Consistency tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Consistency tests ──────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
@@ -63,7 +63,7 @@ mod tests {
     fn every_academic_qapp_has_a_dispatcher_arm() {
         let ids = academic_ids(QAPPS_SRC);
         let tags = dispatcher_tags(DISPATCHER_SRC);
-        assert!(!ids.is_empty(), "no Academic QApps parsed â€” parser drift?");
+        assert!(!ids.is_empty(), "no Academic QApps parsed — parser drift?");
 
         let missing: Vec<&str> = ids
             .iter()

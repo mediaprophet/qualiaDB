@@ -1,8 +1,8 @@
-//! **Chat pane** — conversation with the local agent (and open threads).
+//! **Chat pane** — conversation with people and local instruments (agents under gate).
 //!
-//! Hosted under the Talk hub (`social_hub`) as the **Chat** tab. People / Reception / Projects
-//! live in sibling tabs so invites, DNS front doors, and cooperative work are not buried in a
-//! sidebar. Streaming inference via `stream_chat_inference` + `chat-token` events.
+//! Hosted under the **Relations** domain (`social_hub`) as the **Chat** tab. People / Reception /
+//! Mail / Projects are sibling tabs. Local models are instruments — never peer persons.
+//! Streaming inference via `stream_chat_inference` + `chat-token` events.
 //!
 //! Conduct / gate denials surface via [`ConductBanner`] (U1-B) from `block_reason`,
 //! `shield_alert`, and `chat-done` — never silent.
@@ -47,6 +47,9 @@ async fn invoke_json<T>(cmd: &str, args: serde_json::Value) -> Result<T, String>
 where
     T: serde::de::DeserializeOwned,
 {
+    if !crate::endpoints::is_native_host() {
+        return Err("The desktop host is unavailable in this preview.".to_string());
+    }
     let js_args = serde_wasm_bindgen::to_value(&args).map_err(|e| e.to_string())?;
     let value = tauri_invoke(cmd, js_args.into())
         .await
@@ -347,6 +350,9 @@ pub fn ConnectChat() -> Element {
     // Mount: register the streaming listeners + load initial state (wasm/Tauri only).
     #[cfg(target_arch = "wasm32")]
     use_hook(|| {
+        if !crate::endpoints::is_native_host() {
+            return;
+        }
         let mut streaming = streaming;
         let mut streaming_for = streaming_for;
         let mut active_model = active_model;
@@ -534,7 +540,8 @@ pub fn ConnectChat() -> Element {
                             let _ = storage.remove_item("webizen_chat_peer_title");
                             let _ = storage.remove_item("webizen_chat_peer_did");
                             // Prefer existing session with same title.
-                            let existing = sessions().iter().find(|s| {
+                            let session_list = sessions();
+                            let existing = session_list.iter().find(|s| {
                                 s.get("title")
                                     .and_then(|t| t.as_str())
                                     .map(|t| t.eq_ignore_ascii_case(&title))
@@ -642,27 +649,33 @@ pub fn ConnectChat() -> Element {
 
     rsx! {
         div { style: "{ROOT}",
-            // ── Header (hub owns product title; this is chat-only chrome) ──
+            // ── Header (Relations hub owns domain title; this is chat-only chrome) ──
             div { style: "{HEADER}",
                 div {
-                    h2 { style: "color:#a78bfa; margin:0; font-size:16px;", "Chat" }
-                    p { style: "color:#64748b; margin:2px 0 0; font-size:12px;",
-                        "Local agent + conversations. Invites and projects: use People / Projects tabs above."
+                    h2 { style: "color:#a78bfa; margin:0; font-size:16px; font-weight:700;", "Chat" }
+                    p { style: "color:#94a3b8; margin:4px 0 0; font-size:12px; line-height:1.45; max-width:36rem;",
+                        "Conversations with people and local instruments. Invites → People · shared labour → Projects · keep by meaning → Lived Memory."
                     }
                 }
                 div { style: "display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:flex-end;",
                     if has_model {
                         HonestyChip {
                             level: HonestyLevel::Partial,
-                            detail: "Native Local excellence path — runtime dogfood still required".to_string(),
+                            detail: "Instrument under principal — not a peer person".to_string(),
                         }
-                        span { style: "font-size:12px; color:#a7f3d0; background:#064e3b; padding:4px 12px; border-radius:999px;",
-                            "● {active_model}"
+                        span {
+                            style: "font-size:12px; color:#a7f3d0; background:#064e3b; border:1px solid #10b981; padding:4px 12px; border-radius:999px;",
+                            title: "Active local model · gated inference",
+                            "Instrument · {active_model}"
                         }
                     } else {
                         HonestyChip {
                             level: HonestyLevel::NeedsModel,
-                            detail: "Detect & Activate in the sidebar".to_string(),
+                            detail: "Detect & Activate a local model in the sidebar".to_string(),
+                        }
+                        span {
+                            style: "font-size:12px; color:#fde68a; background:#78350f; border:1px solid #b45309; padding:4px 12px; border-radius:999px;",
+                            "Instrument · none"
                         }
                     }
                 }
@@ -687,11 +700,15 @@ pub fn ConnectChat() -> Element {
                 // ---- Sidebar --------------------------------------------------
                 div { style: "{SIDEBAR}",
 
-                    // Local agent / model
+                    // Local instrument / model
                     div { style: "{CARD}",
-                        h3 { style: "{H3}", "Your local agent" }
-                        p { style: "color:#94a3b8; font-size:12px; margin:0 0 8px;",
-                            if has_model { "Active: {active_model}" } else { "No model active. Detect and activate one to let your agent answer locally." }
+                        h3 { style: "{H3}", "Local instrument" }
+                        p { style: "color:#94a3b8; font-size:12px; margin:0 0 8px; line-height:1.4;",
+                            if has_model {
+                                "Active model: {active_model}. Serves under your Permit path — not a social peer."
+                            } else {
+                                "No model active. Detect and activate one so the instrument can answer locally."
+                            }
                         }
                         button {
                             style: "{BTN2}",

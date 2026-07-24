@@ -30,7 +30,7 @@ pub fn list_local_jobs() -> Result<serde_json::Value, String> {
     serde_json::to_value(snap).map_err(|e| e.to_string())
 }
 
-/// Cancel a job by id (queued â†’ cancelled; running â†’ cooperative cancel).
+/// Cancel a job by id (queued → cancelled; running → cooperative cancel).
 pub fn cancel_local_job(id: String) -> Result<bool, String> {
     crate::local_job_scheduler::LocalJobScheduler::global().cancel(&id)
 }

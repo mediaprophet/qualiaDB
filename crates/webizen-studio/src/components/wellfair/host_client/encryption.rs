@@ -8,7 +8,7 @@ use crate::components::qapp_engine::tauri_invoke;
 use js_sys;
 
 
-/// The owner's envelope PUBLIC key (hex) â€” publishable so others can seal payloads to the owner.
+/// The owner's envelope PUBLIC key (hex) — publishable so others can seal payloads to the owner.
 #[cfg(target_arch = "wasm32")]
 pub async fn owner_envelope_public() -> Result<String, String> {
     let js = tauri_invoke("wellfair_owner_envelope_public", wasm_bindgen::JsValue::NULL)
@@ -68,7 +68,7 @@ pub async fn seal_and_grant_credential(
     Err("Envelope encryption requires the Tauri desktop host".into())
 }
 
-/// Open an owner-sealed payload through a credential â€” returns the decrypted plaintext (fails once revoked).
+/// Open an owner-sealed payload through a credential — returns the decrypted plaintext (fails once revoked).
 #[cfg(target_arch = "wasm32")]
 pub async fn open_owner_payload(credential_id: &str) -> Result<String, String> {
     let args = js_sys::Object::new();

@@ -18,7 +18,7 @@ pub fn wellfair_sync_with_relay(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let (pushed, report) = host.sync_with_http_relay(&base_url, since)?;
         Ok(serde_json::json!({
             "pushed": pushed,
@@ -40,7 +40,7 @@ pub fn wellfair_export_backup(app: AppHandle, path: String) -> Result<String, St
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let report = host.export_backup_to_path(&path)?;
         Ok(serde_json::json!({ "files": report.files, "bytes": report.bytes }).to_string())
     })?
@@ -53,7 +53,7 @@ pub fn wellfair_import_backup(app: AppHandle, path: String) -> Result<String, St
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let report = host.import_backup_from_path(&path)?;
         Ok(serde_json::json!({ "files": report.files, "bytes": report.bytes }).to_string())
     })?
@@ -66,7 +66,7 @@ pub fn wellfair_diagnostics(app: AppHandle) -> Result<String, String> {
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         serde_json::to_string(&host.diagnostics_report()?).map_err(|e| e.to_string())
     })?
 }

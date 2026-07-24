@@ -8,7 +8,7 @@ use qualia_core_db::ilp_dispatcher::DispatchResult;
 use qualia_core_db::rpc::TaxRecipientSuite;
 use tauri::command;
 
-// â”€â”€ Wallet / identity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Wallet / identity ─────────────────────────────────────────────────────────
 
 #[command]
 pub fn get_wallet_status() -> WalletStatus {
@@ -64,7 +64,7 @@ pub async fn import_external_seed(
     api::import_external_seed(network, seed, label).await
 }
 
-// â”€â”€ Tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Tokens ────────────────────────────────────────────────────────────────────
 
 #[command]
 pub fn get_tokens() -> Vec<TokenEntry> {
@@ -88,7 +88,7 @@ pub fn remove_token(id: String) -> Result<(), String> {
     api::remove_token(id)
 }
 
-// â”€â”€ Tax / ILP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Tax / ILP ─────────────────────────────────────────────────────────────────
 
 #[command]
 pub fn get_tax_suite() -> TaxRecipientSuite {
@@ -105,7 +105,7 @@ pub fn dispatch_tax_payment(gross_amount_micro_cents: u64) -> Result<DispatchRes
     api::dispatch_tax_payment(gross_amount_micro_cents)
 }
 
-// â”€â”€ Wallet send â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Wallet send ───────────────────────────────────────────────────────────────
 
 #[command]
 pub fn build_send_xec(destination_address: String, amount_sats: i64) -> Result<SendPreview, String> {
@@ -122,7 +122,7 @@ pub fn send_ecash_token(token_id: String, destination_address: String, amount: u
     api::send_ecash_token(&token_id, &destination_address, amount)
 }
 
-// â”€â”€ Vault / federated â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Vault / federated ─────────────────────────────────────────────────────────
 
 #[command]
 pub fn accept_vault_handshake(did_key: String, payload: String) -> Result<String, String> {

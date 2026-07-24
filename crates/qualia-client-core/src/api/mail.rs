@@ -5,7 +5,7 @@
 
 
 
-/// Accept a message into the local inbox (same path as SMTP DATA) â€” for tests and mesh inject.
+/// Accept a message into the local inbox (same path as SMTP DATA) — for tests and mesh inject.
 pub fn mail_accept(
     from: String,
     to: String,

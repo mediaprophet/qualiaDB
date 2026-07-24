@@ -7,7 +7,7 @@ use super::qapp_telemetry::{qapp_slug, QappAnalysisRequest};
 use super::qapp_host::qapp_analyze;
 use tauri::command;
 
-// â”€â”€ Standalone QApp Export (WASM + QR + LAN server) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Standalone QApp Export (WASM + QR + LAN server) ──────────────────────────────
 
 /// Export a QApp as a self-contained WASM app package (single package using webizen-web).
 /// Generates .q42 from the QApp using full QualiaDB, bundles with the web WASM runtime,
@@ -83,7 +83,7 @@ pub async fn export_qapp_as_wasm_package(qapp_name: String) -> Result<QappWasmEx
 
     let loader_html = format!(
         r#"<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><title>{qapp} Â· Webizen QApp</title>
+<html lang="en"><head><meta charset="utf-8"><title>{qapp} · Webizen QApp</title>
 <style>
 body {{ margin:0; background:#0a0a0a; color:#e8eaed; font-family:Inter,system-ui,sans-serif; }}
 .qapp-root {{ padding:1rem 1.25rem; max-width:960px; margin:0 auto; }}

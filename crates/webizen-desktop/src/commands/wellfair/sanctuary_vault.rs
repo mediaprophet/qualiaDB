@@ -9,7 +9,7 @@ pub fn wellfair_sanctuary_vault_configured(app: AppHandle) -> Result<String, Str
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         Ok(serde_json::json!({ "configured": host.sanctuary_vault_configured() }).to_string())
     })?
 }
@@ -24,7 +24,7 @@ pub fn wellfair_setup_sanctuary_vault(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.setup_sanctuary_vault(&real_pin, &decoy_pin)?;
         Ok(serde_json::json!({ "configured": true }).to_string())
     })?
@@ -40,7 +40,7 @@ pub fn wellfair_sanctuary_vault_add_note(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let lane = host.add_sanctuary_vault_note(&pin, &body)?;
         Ok(serde_json::json!({ "lane": lane }).to_string())
     })?
@@ -52,7 +52,7 @@ pub fn wellfair_sanctuary_vault_list_notes(app: AppHandle, pin: String) -> Resul
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let (lane, notes) = host.list_sanctuary_vault_notes(&pin)?;
         Ok(serde_json::json!({ "lane": lane, "notes": notes }).to_string())
     })?
@@ -66,7 +66,7 @@ pub fn wellfair_sanctuary_vault_is_keychain_wrapped(app: AppHandle) -> Result<St
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         Ok(serde_json::json!({ "wrapped": host.sanctuary_vault_is_keychain_wrapped() }).to_string())
     })?
 }
@@ -82,7 +82,7 @@ pub fn wellfair_setup_sanctuary_vault_wrapped(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let recovery_code = host.setup_sanctuary_vault_wrapped(&real_pin, &decoy_pin)?;
         Ok(serde_json::json!({ "configured": true, "recovery_code": recovery_code }).to_string())
     })?
@@ -98,13 +98,13 @@ pub fn wellfair_sanctuary_vault_unlock_with_recovery(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let lane = host.sanctuary_vault_unlock_with_recovery(&pin, &recovery_code)?;
         Ok(serde_json::json!({ "lane": lane }).to_string())
     })?
 }
 
-// --- Vault v2 (S6): per-session decoy audit, realâ†’decoy curation, real-lane review, retention ---
+// --- Vault v2 (S6): per-session decoy audit, real→decoy curation, real-lane review, retention ---
 
 /// Add a note attributing a **decoy** (duress) write to a per-unlock `session_ref` (git-like branch
 /// in the audit DAG). Real-lane writes ignore `session_ref`.
@@ -119,13 +119,13 @@ pub fn wellfair_sanctuary_vault_add_note_in_session(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let lane = host.add_sanctuary_vault_note_in_session(&pin, &body, &session_ref)?;
         Ok(serde_json::json!({ "lane": lane }).to_string())
     })?
 }
 
-/// Curate the decoy from a real session â€” seed a plausible note into the decoy lane without the
+/// Curate the decoy from a real session — seed a plausible note into the decoy lane without the
 /// decoy PIN. Requires the **real** PIN.
 #[command]
 pub fn wellfair_curate_decoy_note(
@@ -137,7 +137,7 @@ pub fn wellfair_curate_decoy_note(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.curate_sanctuary_decoy_note(&real_pin, &body)?;
         Ok(serde_json::json!({ "curated": true }).to_string())
     })?
@@ -151,13 +151,13 @@ pub fn wellfair_review_decoy_activity(app: AppHandle, real_pin: String) -> Resul
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let report = host.review_sanctuary_decoy_activity(&real_pin)?;
         serde_json::to_string(&report).map_err(|e| e.to_string())
     })?
 }
 
-/// Read the decoy-audit retention policy (real-session-only; ADR Â§8). Returns `{ "mode": "..." }`.
+/// Read the decoy-audit retention policy (real-session-only; ADR §8). Returns `{ "mode": "..." }`.
 /// Requires the **real** PIN.
 #[command]
 pub fn wellfair_get_decoy_retention_mode(app: AppHandle, real_pin: String) -> Result<String, String> {
@@ -165,13 +165,13 @@ pub fn wellfair_get_decoy_retention_mode(app: AppHandle, real_pin: String) -> Re
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let mode = host.get_sanctuary_decoy_retention_mode(&real_pin)?;
         Ok(serde_json::json!({ "mode": mode }).to_string())
     })?
 }
 
-/// Set the decoy-audit retention policy (real-session-only; ADR Â§8). `mode` is `"auto_archive"` or
+/// Set the decoy-audit retention policy (real-session-only; ADR §8). `mode` is `"auto_archive"` or
 /// `"manual_triage"`. Requires the **real** PIN.
 #[command]
 pub fn wellfair_set_decoy_retention_mode(
@@ -184,7 +184,7 @@ pub fn wellfair_set_decoy_retention_mode(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let parsed = sanctuary_retention_mode_from_str(&mode)?;
         host.set_sanctuary_decoy_retention_mode(&real_pin, parsed)?;
         Ok(serde_json::json!({ "mode": mode }).to_string())

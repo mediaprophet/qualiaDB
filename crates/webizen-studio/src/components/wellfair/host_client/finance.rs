@@ -237,7 +237,7 @@ pub struct CredentialFullDto {
     pub verification_state: String,
 }
 
-/// A field-selected presentation â€” the disclosed subset only (NOT cryptographic disclosure).
+/// A field-selected presentation — the disclosed subset only (NOT cryptographic disclosure).
 #[derive(Debug, Clone, Deserialize)]
 pub struct PresentationDto {
     pub credential_type: String,

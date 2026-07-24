@@ -33,7 +33,17 @@ mod imp {
     ) -> Result<wasm_bindgen::JsValue, wasm_bindgen::JsValue> {
         let global = js_sys::global();
         let tauri = js_sys::Reflect::get(&global, &JsValue::from_str("__TAURI__"))?;
+        if tauri.is_undefined() || tauri.is_null() {
+            return Err(JsValue::from_str(
+                "This action requires the Webizen desktop host",
+            ));
+        }
         let core = js_sys::Reflect::get(&tauri, &JsValue::from_str("core"))?;
+        if core.is_undefined() || core.is_null() {
+            return Err(JsValue::from_str(
+                "This action requires the Webizen desktop host",
+            ));
+        }
         let invoke = js_sys::Reflect::get(&core, &JsValue::from_str("invoke"))?;
         if !invoke.is_function() {
             return Err(JsValue::from_str(

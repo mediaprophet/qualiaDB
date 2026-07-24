@@ -7,7 +7,7 @@ use qualia_client_core::engine::{ingestion, llm_offload};
 use qualia_client_core::state::ProgressPayload;
 use tauri::command;
 
-// â”€â”€ Ingest â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Ingest ────────────────────────────────────────────────────────────────────
 
 #[command]
 pub async fn ingest_pdf(file_name: String) -> Result<ingestion::IngestionResult, String> {
@@ -47,7 +47,7 @@ pub async fn ingest_image_async(file_path: String, typology: String) -> Result<(
     api::ingest_image_async(file_path, typology).await
 }
 
-// â”€â”€ Model / inference â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Model / inference ─────────────────────────────────────────────────────────
 
 #[command]
 pub async fn discover_models() -> Result<Vec<llm_offload::ModelInfo>, String> {

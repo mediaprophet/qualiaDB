@@ -1,9 +1,9 @@
-//! **Talk hub** — the human path for social + cooperative work (people, their agents/bots, projects).
+//! **Relations domain** — human social + cooperative path (people, instruments under gate, projects).
 //!
 //! Tabs: **Chat** · **People** · **Reception** · **Mail** · **Projects**.
 //! First-run follows `talk_setup_status` (domain → mailboxes/receiver → people → chat/projects).
-//! Cooperative help depends on People + Projects working: invite peers (and agent/service relations),
-//! open chat, seed a project, tag messages, share work board id.
+//! Instruments (local models / agents) are never presented as peer persons — honesty chips + gates.
+//! Shared entity session with Lived Memory / browser via `view_*` when selecting material to remember.
 
 #![allow(non_snake_case)]
 
@@ -14,6 +14,7 @@ pub mod reception;
 pub mod projects;
 
 use dioxus::prelude::*;
+use crate::Route;
 
 #[cfg(target_arch = "wasm32")]
 use serde_json::json;
@@ -25,7 +26,7 @@ use people::{PeopleSignals, render_people};
 use reception::{ReceptionSignals, render_reception};
 use projects::{ProjectsSignals, render_projects};
 
-/// Primary Talk surface: Chat · People · Reception · Projects.
+/// Relations habitat: Chat · People · Reception · Mail · Projects.
 #[component]
 pub fn SocialHub() -> Element {
     let tab = use_signal(|| {
@@ -361,27 +362,62 @@ pub fn SocialHub() -> Element {
         }
     };
 
+    let vault_chip = match vault_lifecycle() {
+        crate::components::wellfair::host_dto::VaultLifecycle::Unlocked => ("Vault unlocked", "#a7f3d0", "#064e3b", "#10b981"),
+        crate::components::wellfair::host_dto::VaultLifecycle::Locked => ("Vault locked", "#fde68a", "#78350f", "#b45309"),
+        crate::components::wellfair::host_dto::VaultLifecycle::Unconfigured => ("Vault not set up", "#94a3b8", "#1e293b", "#334155"),
+    };
+
     rsx! {
         div { style: "{ROOT}",
             div {
-                style: "padding:12px 16px 8px;flex-shrink:0;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;",
+                style: "padding:14px 16px 10px;flex-shrink:0;border-bottom:1px solid #1f2937;background:linear-gradient(180deg,#111827 0%,#0b1220 100%);",
                 div {
-                    h1 { style: "margin:0;font-size:1.2rem;color:#e9d5ff;", "Talk" }
-                    p { style: "margin:4px 0 0;color:#64748b;font-size:12px;line-height:1.4;max-width:36rem;",
-                        "Chat · people · domain · mail · cooperative projects — engage people and their bots without a SaaS middleman."
+                    style: "display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;",
+                    div {
+                        div { style: "display:flex;align-items:center;gap:0.45rem;flex-wrap:wrap;",
+                            span {
+                                style: "font-size:0.62rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#a5b4fc;",
+                                "Relations"
+                            }
+                            span {
+                                style: "font-size:0.62rem;padding:0.12rem 0.4rem;border-radius:999px;border:1px solid #4c1d95;background:rgba(139,92,246,0.12);color:#c4b5fd;font-weight:700;",
+                                "Life domain"
+                            }
+                        }
+                        h1 { style: "margin:0.25rem 0 0;font-size:1.35rem;font-weight:700;color:#e9d5ff;letter-spacing:-0.02em;", "Relations" }
+                        p { style: "margin:0.35rem 0 0;color:#94a3b8;font-size:0.82rem;line-height:1.45;max-width:38rem;",
+                            "People, conversation, domain front door, mail, and cooperative projects — on your apparatus, not a SaaS middleman. Local models are instruments under Permit/Deny, never peers."
+                        }
+                    }
+                    div { style: "display:flex;flex-wrap:wrap;gap:0.4rem;align-items:center;justify-content:flex-end;",
+                        span {
+                            style: "font-size:11px;font-weight:600;color:{vault_chip.1};background:{vault_chip.2};border:1px solid {vault_chip.3};padding:5px 11px;border-radius:999px;white-space:nowrap;",
+                            "{vault_chip.0}"
+                        }
+                        if active_model_chip().is_empty() {
+                            span {
+                                style: "font-size:11px;color:#fde68a;background:#78350f;border:1px solid #b45309;padding:5px 11px;border-radius:999px;white-space:nowrap;",
+                                title: "No local model active — instrument path unavailable until you activate one in Settings",
+                                "Instrument · none"
+                            }
+                        } else {
+                            span {
+                                style: "font-size:11px;color:#a7f3d0;background:#064e3b;border:1px solid #10b981;padding:5px 11px;border-radius:999px;max-width:14rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;",
+                                title: "Active local model — instrument under principal, not a person · {active_model_chip}",
+                                "Instrument · {active_model_chip}"
+                            }
+                        }
+                        Link {
+                            to: Route::LibraryRoute {},
+                            style: "font-size:11px;font-weight:700;color:#e9d5ff;background:rgba(139,92,246,0.18);border:1px solid #6d28d9;padding:5px 11px;border-radius:999px;text-decoration:none;white-space:nowrap;",
+                            title: "Open Lived Memory — remember fragments and project artefacts by meaning",
+                            "→ Lived Memory"
+                        }
                     }
                 }
-                if active_model_chip().is_empty() {
-                    span {
-                        style: "font-size:11px;color:#fde68a;background:#78350f;padding:5px 11px;border-radius:999px;white-space:nowrap;flex-shrink:0;",
-                        "○ No model"
-                    }
-                } else {
-                    span {
-                        style: "font-size:11px;color:#a7f3d0;background:#064e3b;padding:5px 11px;border-radius:999px;max-width:14rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;",
-                        title: "{active_model_chip}",
-                        "● {active_model_chip}"
-                    }
+                p { style: "margin:0.65rem 0 0;font-size:0.7rem;color:#64748b;line-height:1.4;",
+                    "Path: Reception (be findable) → People (bonds) → Chat / Mail (conversation) → Projects (shared labour) → Memory (keep by meaning)."
                 }
             }
             div { style: "{TABS}",
@@ -517,9 +553,13 @@ pub fn SocialHub() -> Element {
             // ── Mail ──────────────────────────────────────────────────────
             if tab() == HubTab::Mail {
                 div { style: "flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;",
-                    div { style: "padding:10px 16px;border-bottom:1px solid #1f2937;background:#0f172a;flex-shrink:0;",
-                        p { style: "margin:0;color:#94a3b8;font-size:12px;line-height:1.45;",
-                            "Register a domain (Reception) → purpose inboxes mint automatically → start the local SMTP receiver in this pane → paste MX/SPF so the internet can reach you. Mail lands in the local inbox with semantic rules. External SMTP/IMAP is optional import/send only."
+                    div { style: "padding:12px 16px;border-bottom:1px solid #1f2937;background:linear-gradient(180deg,#111827,#0f172a);flex-shrink:0;",
+                        div { style: "display:flex;align-items:center;gap:0.4rem;margin-bottom:0.35rem;",
+                            span { style: "font-size:0.62rem;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;color:#a5b4fc;", "Mail" }
+                            span { style: "font-size:0.62rem;padding:0.1rem 0.4rem;border-radius:999px;border:1px solid #065f46;color:#6ee7b7;font-weight:700;", "Local apparatus" }
+                        }
+                        p { style: "margin:0;color:#94a3b8;font-size:0.8rem;line-height:1.45;max-width:42rem;",
+                            "Reception (domain) → purpose inboxes → local SMTP receiver → MX/SPF when you want the public internet. Mail lands here with semantic rules. External SMTP/IMAP is optional import/send only — not the product host."
                         }
                     }
                     div { style: "flex:1;min-height:0;overflow:hidden;",

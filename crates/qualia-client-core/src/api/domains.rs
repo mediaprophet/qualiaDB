@@ -25,7 +25,7 @@ fn agent_type_from_token(t: &str) -> crate::domains::AgentType {
     }
 }
 
-/// The person's context-domains (personal/work/projects/â€¦), each an agent with a front-door DID.
+/// The person's context-domains (personal/work/projects/…), each an agent with a front-door DID.
 pub fn list_mail_domains() -> Result<serde_json::Value, String> {
     serde_json::to_value(crate::domains::list_domains()).map_err(|e| e.to_string())
 }
@@ -63,7 +63,7 @@ pub fn list_mail_addresses(domain: Option<String>) -> Result<serde_json::Value, 
         .map_err(|e| e.to_string())
 }
 
-/// Mint a purpose inbox (`frontdoor@`, `junkmail@`, â€¦). `rules_json` is a `MailRules` object (or empty).
+/// Mint a purpose inbox (`frontdoor@`, `junkmail@`, …). `rules_json` is a `MailRules` object (or empty).
 pub fn mint_purpose_inbox(
     domain: String,
     local: String,
@@ -91,7 +91,7 @@ pub fn onboard_mail_domain(domain: String) -> Result<serde_json::Value, String> 
         Err(e) => serde_json::json!({
             "started": false,
             "error": e,
-            "hint": "Start the receiver from Talk â†’ Mail if bind failed (port in use?).",
+            "hint": "Start the receiver from Talk → Mail if bind failed (port in use?).",
         }),
     };
     #[cfg(target_arch = "wasm32")]
@@ -104,7 +104,7 @@ pub fn onboard_mail_domain(domain: String) -> Result<serde_json::Value, String> 
     let recv_msg = if receiver.get("started").and_then(|x| x.as_bool()).unwrap_or(false)
         || receiver.get("already_running").and_then(|x| x.as_bool()).unwrap_or(false)
     {
-        " Local SMTP receiver running â€” inbox can accept mail.".to_string()
+        " Local SMTP receiver running — inbox can accept mail.".to_string()
     } else if let Some(err) = receiver.get("error").and_then(|e| e.as_str()) {
         format!(" Receiver not started: {err}.")
     } else {
@@ -194,7 +194,7 @@ pub fn extract_invite_json_from_package(v: &serde_json::Value) -> Result<String,
             .cloned()
             .filter(|x| !x.is_null())
             .ok_or_else(|| {
-                "share package has no invite_json â€” host must enable invites and rebuild package"
+                "share package has no invite_json — host must enable invites and rebuild package"
                     .to_string()
             })?;
         if invite_payload.is_string() {
@@ -213,7 +213,7 @@ pub fn extract_invite_json_from_package(v: &serde_json::Value) -> Result<String,
     Err("not a coop share package or connect invite JSON".into())
 }
 
-/// Build a pasteable **coop share package** â€” one blob the joiner pastes under People â†’ Accept.
+/// Build a pasteable **coop share package** — one blob the joiner pastes under People → Accept.
 /// Always embeds a signed connect invite (enables invites if needed). Never includes private keys.
 pub fn coop_share_package(
     project_id: Option<String>,
@@ -234,7 +234,7 @@ pub fn coop_share_package(
     // Required: invite must succeed for one-paste join (fail closed, not half-package).
     let invite = crate::social_connect::generate_connect_invite(None).map_err(|e| {
         format!(
-            "could not embed connect invite: {e}. Set a display name under Talk â†’ People and try again."
+            "could not embed connect invite: {e}. Set a display name under Talk → People and try again."
         )
     })?;
     let invite_json: serde_json::Value = serde_json::from_str(&invite.invite_json)
@@ -281,12 +281,12 @@ pub fn coop_share_package(
         "magic_link": magic,
         "how": [
             "1. Open Webizen (0.0.25+).",
-            "2. Talk â†’ People â†’ paste this entire JSON under Accept package / invite.",
+            "2. Talk → People → paste this entire JSON under Accept package / invite.",
             "3. You are connected and the project is scoped on your device.",
-            "4. Talk â†’ People â†’ Start mesh for live peer chat.",
+            "4. Talk → People → Start mesh for live peer chat.",
             "5. Chat with #project:Name_With_Underscores for scoped work.",
         ],
-        "note": "No private keys. Package is self-contained â€” one paste joins.",
+        "note": "No private keys. Package is self-contained — one paste joins.",
     });
     Ok(package)
 }
@@ -369,7 +369,7 @@ pub fn accept_coop_share_package(package_or_invite: String) -> Result<serde_json
         }
     }
 
-    // Magic link â†’ SocialWebNet peer (mesh), when present.
+    // Magic link → SocialWebNet peer (mesh), when present.
     let mut peer_registered = false;
     #[cfg(not(target_arch = "wasm32"))]
     if let Some(magic) = v.get("magic_link") {
@@ -399,7 +399,7 @@ pub fn accept_coop_share_package(package_or_invite: String) -> Result<serde_json
         ) {
             Ok(g) => group_chat = Some(g),
             Err(_) => {
-                // Still ok â€” roster may be thin; user can create group later.
+                // Still ok — roster may be thin; user can create group later.
             }
         }
     }
@@ -493,7 +493,7 @@ pub fn create_project_group_chat(
             }
         }
     }
-    // Also fold in all chat contacts if roster empty â€” last resort so a group can start.
+    // Also fold in all chat contacts if roster empty — last resort so a group can start.
     if dids.is_empty() {
         for c in crate::social_connect::list_chat_contacts() {
             if !c.did.is_empty() {
@@ -503,7 +503,7 @@ pub fn create_project_group_chat(
     }
     if dids.is_empty() {
         return Err(
-            "No participants â€” admit collaborators on the project or accept invites under People first."
+            "No participants — admit collaborators on the project or accept invites under People first."
                 .into(),
         );
     }
@@ -518,11 +518,11 @@ pub fn create_project_group_chat(
         "title": title,
         "participants": dids,
         "project_id": project_id,
-        "message": "Group chat created â€” open it under Talk â†’ Chat â†’ Conversations.",
+        "message": "Group chat created — open it under Talk → Chat → Conversations.",
     }))
 }
 
-/// Resolve how mail to `to_address` would be handled (exact / catchall / reject) â€” pure, for UI/debug.
+/// Resolve how mail to `to_address` would be handled (exact / catchall / reject) — pure, for UI/debug.
 pub fn resolve_mail_delivery(to_address: String) -> Result<serde_json::Value, String> {
     let addresses = crate::domains::list_addresses(None);
     match crate::domains::resolve_delivery(&addresses, &to_address) {
@@ -538,7 +538,7 @@ pub fn resolve_mail_delivery(to_address: String) -> Result<serde_json::Value, St
     }
 }
 
-/// Persist SMTP/IMAP prefs (app_meta_dir). Passwords stored locally â€” same trust as desktop secrets.
+/// Persist SMTP/IMAP prefs (app_meta_dir). Passwords stored locally — same trust as desktop secrets.
 pub fn save_mail_transport_config(smtp_json: String, imap_json: String) -> Result<serde_json::Value, String> {
     let path = crate::state::app_meta_dir().join("mail_transport.json");
     if let Some(p) = path.parent() {
@@ -591,7 +591,7 @@ pub fn set_mail_address_enabled(
     list_mail_addresses(None)
 }
 
-/// The QDP front-door forms for a domain â€” the **DNS TXT** (no-hosting anchor), the DNS record name, and
+/// The QDP front-door forms for a domain — the **DNS TXT** (no-hosting anchor), the DNS record name, and
 /// the rich profile in **Turtle + JSON-LD** (served by the local HTTP server over the mesh when hosting).
 pub fn front_door_forms(domain: String) -> Result<serde_json::Value, String> {
     let d = crate::domains::list_domains()
@@ -768,7 +768,7 @@ pub fn start_qdp_server(domain: String, bind_addr: String) -> Result<serde_json:
     Ok(serde_json::json!({ "serving": bind_addr, "path": crate::qdp_server::WELL_KNOWN_QDP_PATH }))
 }
 
-/// Parse a magic link (deep link / https / bare `qcx1_â€¦`) into the connection identifier it carries.
+/// Parse a magic link (deep link / https / bare `qcx1_…`) into the connection identifier it carries.
 pub fn parse_magic_link(link: String) -> Result<serde_json::Value, String> {
     let id = crate::magic_link::from_link(&link)?;
     serde_json::to_value(id).map_err(|e| e.to_string())

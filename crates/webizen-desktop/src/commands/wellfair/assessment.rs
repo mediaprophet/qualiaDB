@@ -21,7 +21,7 @@ pub fn wellfair_record_assessment(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let result = host.record_assessment(&instrument_id, parsed)?;
         serde_json::to_string(&result).map_err(|e| e.to_string())
     })?
@@ -34,7 +34,7 @@ pub fn wellfair_list_assessments(app: AppHandle) -> Result<String, String> {
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         serde_json::to_string(&host.list_assessments(64)?).map_err(|e| e.to_string())
     })?
 }

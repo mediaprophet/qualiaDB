@@ -23,7 +23,7 @@ pub async fn render_body_snapshot(_azimuth: f64, _elevation: f64) -> Result<(), 
     Err("The 3D Anatomy render surface requires the Tauri desktop host".into())
 }
 
-// â”€â”€ 3D Anatomy asset cache (S5.8 â€” user-triggered real-mesh acquisition) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── 3D Anatomy asset cache (S5.8 — user-triggered real-mesh acquisition) ───────────────────────
 
 /// The status of a model's body-asset cache.
 #[derive(Debug, Clone, Default, PartialEq, serde::Deserialize)]
@@ -90,7 +90,7 @@ pub async fn body_assets_status(_model: &str) -> Result<BodyAssetsStatus, String
     Err("The 3D Anatomy asset cache requires the Tauri desktop host".into())
 }
 
-/// Acquire (download + compile + cache) the body assets for a model â€” user-triggered. Returns the final
+/// Acquire (download + compile + cache) the body assets for a model — user-triggered. Returns the final
 /// report; progress is observed via `listen_anatomy_acquire_progress` (the caller wires the event listener).
 #[cfg(target_arch = "wasm32")]
 pub async fn acquire_body_assets(model: &str) -> Result<AcquireReport, String> {

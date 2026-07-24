@@ -8,6 +8,9 @@ use dioxus::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use serde_json::json;
 
+#[cfg(target_arch = "wasm32")]
+use super::types::s;
+
 // ── Tauri invoke bridge ───────────────────────────────────────────────
 
 #[cfg(target_arch = "wasm32")]
@@ -25,6 +28,9 @@ pub async fn invoke_json<T>(cmd: &str, args: serde_json::Value) -> Result<T, Str
 where
     T: serde::de::DeserializeOwned,
 {
+    if !crate::endpoints::is_native_host() {
+        return Err("The desktop host is unavailable in this preview.".to_string());
+    }
     let js_args = serde_wasm_bindgen::to_value(&args).map_err(|e| e.to_string())?;
     let value = tauri_invoke(cmd, js_args.into())
         .await

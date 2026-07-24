@@ -32,9 +32,9 @@ pub fn WebBrowserPane() -> Element {
     let mut show_bookmarks = use_signal(|| false);
     let mut show_cookies = use_signal(|| false);
     let mut show_agent = use_signal(|| false);
-    let mut agent_tools_text = use_signal(|| "Open Agent to list local MCP toolsâ€¦".to_string());
+    let mut agent_tools_text = use_signal(|| "Open Agent to list local MCP tools…".to_string());
     let mut agent_allowlist_text =
-        use_signal(|| "Allowlist: (not loaded) Â· agent slug local".to_string());
+        use_signal(|| "Allowlist: (not loaded) · agent slug local".to_string());
     let mut agent_mcp_status = use_signal(String::new);
     let mut agent_mcp_result = use_signal(|| "(none yet)".to_string());
     let mut agent_mcp_proposed = use_signal(|| false);
@@ -45,13 +45,13 @@ pub fn WebBrowserPane() -> Element {
     let mut suggested_entries = use_signal(Vec::<serde_json::Value>::new);
     let mut cookies_status = use_signal(String::new);
     let mut cookies_summary_text = use_signal(|| {
-        "(no jar pull yet â€” open Cookies and press Refresh after a real https site load)".into()
+        "(no jar pull yet — open Cookies and press Refresh after a real https site load)".into()
     });
     let mut cookies_first_party = use_signal(Vec::<serde_json::Value>::new);
     let mut cookies_third_party = use_signal(Vec::<serde_json::Value>::new);
     let mut cookies_third_domains = use_signal(Vec::<String>::new);
     let cookies_coverage = use_signal(|| {
-        "Best-effort WebView jar + graph â€” not complete Chromium parity. Press Refresh after visiting a site.".into()
+        "Best-effort WebView jar + graph — not complete Chromium parity. Press Refresh after visiting a site.".into()
     });
     let mut bookmark_list = use_signal(Vec::<serde_json::Value>::new);
     let mut browser_open = use_signal(|| false);
@@ -82,14 +82,14 @@ pub fn WebBrowserPane() -> Element {
                 Ok(_) => {
                     status_err.set(false);
                     status.set(format!(
-                        "Opened Webizen Browser Â· home is Chora universe ({start})"
+                        "Opened Webizen Browser · home is Chora universe ({start})"
                     ));
                     browser_open.set(true);
                 }
                 Err(e) => {
                     status_err.set(true);
                     status.set(format!(
-                        "{e} â€” open the desktop app (Tauri host). Public wasm demo has no native browser."
+                        "{e} — open the desktop app (Tauri host). Public wasm demo has no native browser."
                     ));
                 }
             }
@@ -137,7 +137,7 @@ pub fn WebBrowserPane() -> Element {
             match navigate_native(&resolved).await {
                 Ok(_) => {
                     status_err.set(false);
-                    status.set(format!("Navigated â†’ {resolved}"));
+                    status.set(format!("Navigated → {resolved}"));
                     browser_open.set(true);
                 }
                 Err(e) => {
@@ -162,7 +162,7 @@ pub fn WebBrowserPane() -> Element {
                 // Drive both app history URL and engine history.
                 let _ = invoke_tauri("browser_go_back", json!({})).await;
                 let _ = navigate_native(&url).await;
-                status.set(format!("Back â†’ {url}"));
+                status.set(format!("Back → {url}"));
             });
         }
     };
@@ -180,7 +180,7 @@ pub fn WebBrowserPane() -> Element {
             spawn(async move {
                 let _ = invoke_tauri("browser_go_forward", json!({})).await;
                 let _ = navigate_native(&url).await;
-                status.set(format!("Forward â†’ {url}"));
+                status.set(format!("Forward → {url}"));
             });
         }
     };
@@ -201,7 +201,7 @@ pub fn WebBrowserPane() -> Element {
                     status.set("Reloaded".into());
                 }
                 Err(_) => {
-                    // Window closed â€” re-open.
+                    // Window closed — re-open.
                     match navigate_native(&url).await {
                         Ok(_) => {
                             status_err.set(false);
@@ -318,9 +318,9 @@ pub fn WebBrowserPane() -> Element {
                                 format!(
                                     "{} {} [{}]",
                                     if a.get("enabled").and_then(|x| x.as_bool()).unwrap_or(false) {
-                                        "âœ“"
+                                        "✓"
                                     } else {
-                                        "Â·"
+                                        "·"
                                     },
                                     a.get("label").and_then(|x| x.as_str()).unwrap_or("?"),
                                     a.get("kind").and_then(|x| x.as_str()).unwrap_or("?")
@@ -328,7 +328,7 @@ pub fn WebBrowserPane() -> Element {
                             })
                             .collect();
                         trust_list_text.set(if lines.is_empty() {
-                            "(empty â€” add DID/PEM below)\nCustom PEM/DID govern agent fetch + policy badge. OS validates ordinary WebView TLS. Cert-override is not claimed product-active (Windows error-path hook only when attached).".into()
+                            "(empty — add DID/PEM below)\nCustom PEM/DID govern agent fetch + policy badge. OS validates ordinary WebView TLS. Cert-override is not claimed product-active (Windows error-path hook only when attached).".into()
                         } else {
                             lines.join("\n")
                         });
@@ -379,7 +379,7 @@ pub fn WebBrowserPane() -> Element {
     let refresh_cookies = move || {
         let url = omnibox_input();
         spawn(async move {
-            cookies_status.set("Refreshing jarâ€¦".into());
+            cookies_status.set("Refreshing jar…".into());
             match invoke_tauri("browser_cookies_refresh", json!({ "url": url.clone() })).await {
                 Ok(raw) => {
                     if let Ok(v) = serde_json::from_str::<serde_json::Value>(&raw) {
@@ -508,7 +508,7 @@ pub fn WebBrowserPane() -> Element {
                                         close_tab(id_close.clone());
                                     },
                                     title: "Close tab",
-                                    "Ã—"
+                                    "×"
                                 }
                             }
                         }
@@ -576,14 +576,14 @@ pub fn WebBrowserPane() -> Element {
                         class: "flex-1 bg-transparent border-none outline-none text-text-main placeholder:text-text-muted/70",
                         value: "{omnibox_input}",
                         oninput: move |e| omnibox_input.set(e.value()),
-                        placeholder: "Search or type a URL (https://â€¦, qualia://â€¦, webizen://â€¦)",
+                        placeholder: "Search or type a URL (https://…, qualia://…, webizen://…)",
                     }
                     button {
                         r#type: "button",
                         class: "bg-transparent border-none cursor-pointer hover:scale-110 hover:text-primary transition-all text-text-muted ml-2",
                         onclick: move |_| save_qlink(),
                         title: "Save QLink",
-                        "ðŸ”–"
+                        "🔖"
                     }
                     button {
                         r#type: "button",
@@ -627,7 +627,7 @@ pub fn WebBrowserPane() -> Element {
                         }
                         p {
                             style: "margin: 0 0 1rem; font-size: 0.9rem; line-height: 1.5; color: #94a3b8;",
-                            "Pages open in the native Webizen Browser window (in-window chrome + OS WebView content â€” not an iframe). This Reach pane mirrors tabs, omnibox, bookmarks, trust, and focus."
+                            "Pages open in the native Webizen Browser window (in-window chrome + OS WebView content — not an iframe). This Reach pane mirrors tabs, omnibox, bookmarks, trust, and focus."
                         }
                         div {
                             style: "padding: 1rem 1.1rem; border-radius: 14px; border: 1px solid #334155; background: #111827; margin-bottom: 1rem;",
@@ -636,9 +636,9 @@ pub fn WebBrowserPane() -> Element {
                             div {
                                 style: "margin-top: 0.65rem; font-size: 0.78rem; color: #94a3b8;",
                                 if browser_open() {
-                                    "Native window: open Â· substrate: OS WebView (WebView2 / WKWebView)"
+                                    "Native window: open · substrate: OS WebView (WebView2 / WKWebView)"
                                 } else {
-                                    "Native window: not open yet â€” submit a URL or wait for startup navigation"
+                                    "Native window: not open yet — submit a URL or wait for startup navigation"
                                 }
                             }
                         }
@@ -713,7 +713,7 @@ pub fn WebBrowserPane() -> Element {
                                         show_cookies.set(false);
                                         // Load tools + seed allowlist (not a Permit).
                                         spawn(async move {
-                                            agent_mcp_status.set("Loading toolsâ€¦".into());
+                                            agent_mcp_status.set("Loading tools…".into());
                                             // Seed empty allowlist with safe golden tools.
                                             if let Ok(raw) = invoke_tauri(
                                                 "mcp_ensure_safe_tool_allowlist",
@@ -766,14 +766,14 @@ pub fn WebBrowserPane() -> Element {
                                                             .unwrap_or_default();
                                                         if names.is_empty() {
                                                             agent_tools_text.set(
-                                                                "(no tools returned)\nGolden path: list_capabilities.\nTalk â†’ MCP tools card for full catalog."
+                                                                "(no tools returned)\nGolden path: list_capabilities.\nTalk → MCP tools card for full catalog."
                                                                     .into(),
                                                             );
                                                         } else {
                                                             agent_tools_text.set(
                                                                 names
                                                                     .iter()
-                                                                    .map(|n| format!("â€¢ {n}"))
+                                                                    .map(|n| format!("• {n}"))
                                                                     .collect::<Vec<_>>()
                                                                     .join("\n"),
                                                             );
@@ -790,7 +790,7 @@ pub fn WebBrowserPane() -> Element {
                                                 }
                                                 Err(e) => {
                                                     agent_tools_text.set(format!(
-                                                        "Could not list tools: {e}\n\nStatic note: list_capabilities, computer_vision.\nTalk â†’ MCP tools card for allowlist editor."
+                                                        "Could not list tools: {e}\n\nStatic note: list_capabilities, computer_vision.\nTalk → MCP tools card for allowlist editor."
                                                     ));
                                                     agent_mcp_status
                                                         .set("tools/list failed.".into());
@@ -898,7 +898,7 @@ pub fn WebBrowserPane() -> Element {
                                     input {
                                         id: "reach-trust-did",
                                         style: "padding: 0.45rem 0.6rem; border-radius: 8px; border: 1px solid #334155; background: #0b1220; color: #e2e8f0; font-size: 0.8rem;",
-                                        placeholder: "did:web:â€¦ to add",
+                                        placeholder: "did:web:… to add",
                                     }
                                     button {
                                         r#type: "button",
@@ -943,7 +943,7 @@ pub fn WebBrowserPane() -> Element {
                                     }
                                     p {
                                         style: "margin: 0.35rem 0 0; font-size: 0.72rem; color: #64748b; line-height: 1.4;",
-                                        "Path: {{storage}}/webizen/trust_store.json Â· PEM/DID â†’ agent HTTPS + badge. WebView TLS = OS store by default. Cert-override: not claimed product-active (Windows ServerCertificateErrorDetected path only when hook attaches; default deny; never auto-allow)."
+                                        "Path: {{storage}}/webizen/trust_store.json · PEM/DID → agent HTTPS + badge. WebView TLS = OS store by default. Cert-override: not claimed product-active (Windows ServerCertificateErrorDetected path only when hook attaches; default deny; never auto-allow)."
                                     }
                                 }
                             }
@@ -951,7 +951,7 @@ pub fn WebBrowserPane() -> Element {
                         if show_cookies() {
                             div {
                                 style: "margin-top: 1rem; padding: 1rem; border-radius: 12px; border: 1px solid #334155; background: #0f172a;",
-                                div { style: "font-size: 0.72rem; text-transform: uppercase; color: #c4b5fd; margin-bottom: 0.5rem;", "Cookies Â· jar + graph" }
+                                div { style: "font-size: 0.72rem; text-transform: uppercase; color: #c4b5fd; margin-bottom: 0.5rem;", "Cookies · jar + graph" }
                                 if !cookies_status().is_empty() {
                                     div { style: "font-size: 0.78rem; color: #94a3b8; margin-bottom: 0.4rem;", "{cookies_status}" }
                                 }
@@ -975,7 +975,7 @@ pub fn WebBrowserPane() -> Element {
                                                 div {
                                                     style: "margin-bottom: 0.35rem; font-size: 0.78rem; color: #e2e8f0;",
                                                     strong { "{name}" }
-                                                    span { style: "color: #64748b;", " Â· {domain} Â· {purpose}" }
+                                                    span { style: "color: #64748b;", " · {domain} · {purpose}" }
                                                 }
                                             }
                                         }
@@ -1013,7 +1013,7 @@ pub fn WebBrowserPane() -> Element {
                                                 div {
                                                     style: "margin-bottom: 0.35rem; font-size: 0.78rem; color: #e2e8f0;",
                                                     strong { "{name}" }
-                                                    span { style: "color: #fbbf24;", " Â· 3p Â· {domain} Â· {purpose}" }
+                                                    span { style: "color: #fbbf24;", " · 3p · {domain} · {purpose}" }
                                                 }
                                             }
                                         }
@@ -1032,7 +1032,7 @@ pub fn WebBrowserPane() -> Element {
                                         onclick: move |_| {
                                             let url = omnibox_input();
                                             spawn(async move {
-                                                cookies_status.set("Clearing site dataâ€¦".into());
+                                                cookies_status.set("Clearing site data…".into());
                                                 match invoke_tauri(
                                                     "browser_clear_site_data",
                                                     json!({ "url": url, "all": false }),
@@ -1060,7 +1060,7 @@ pub fn WebBrowserPane() -> Element {
                                 style: "margin-top: 1rem; padding: 1rem; border-radius: 12px; border: 1px solid #334155; background: #0f172a;",
                                 div { style: "font-size: 0.72rem; text-transform: uppercase; color: #c4b5fd; margin-bottom: 0.5rem;", "Bookmarks" }
                                 if bookmark_list().is_empty() {
-                                    p { style: "margin: 0; font-size: 0.8rem; color: #64748b;", "No bookmarks yet â€” use ðŸ”– in the omnibox or browser chrome." }
+                                    p { style: "margin: 0; font-size: 0.8rem; color: #64748b;", "No bookmarks yet — use 🔖 in the omnibox or browser chrome." }
                                 } else {
                                     for b in bookmark_list().iter() {
                                         {
@@ -1101,7 +1101,7 @@ pub fn WebBrowserPane() -> Element {
                                 }
                                 p {
                                     style: "margin: 0 0 0.5rem; font-size: 0.72rem; color: #64748b; line-height: 1.4;",
-                                    "No silent tool execution. Uses mcp_call_tool_gated (same as Talk). Full allowlist editor: Talk â†’ MCP tools card. Cert-override / Servo claims unchanged."
+                                    "No silent tool execution. Uses mcp_call_tool_gated (same as Talk). Full allowlist editor: Talk → MCP tools card. Cert-override / Servo claims unchanged."
                                 }
                                 p {
                                     style: "margin: 0 0 0.35rem; font-size: 0.72rem; color: #94a3b8;",
@@ -1122,11 +1122,11 @@ pub fn WebBrowserPane() -> Element {
                                         style: "padding: 0.4rem 0.7rem; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-weight: 600; cursor: pointer; font-size: 0.78rem;",
                                         disabled: agent_mcp_busy(),
                                         onclick: move |_| {
-                                            // Step 1: propose only â€” never invokes MCP.
+                                            // Step 1: propose only — never invokes MCP.
                                             agent_mcp_proposed.set(true);
                                             agent_mcp_result.set("(awaiting principal decision)".into());
                                             agent_mcp_status.set(
-                                                "Proposed list_capabilities â€” Permit to run, Deny to cancel. No call yet."
+                                                "Proposed list_capabilities — Permit to run, Deny to cancel. No call yet."
                                                     .into(),
                                             );
                                         },
@@ -1142,7 +1142,7 @@ pub fn WebBrowserPane() -> Element {
                                         }
                                         p {
                                             style: "margin: 0 0 0.45rem; font-size: 0.72rem; color: #64748b;",
-                                            "Agent local Â· args empty object Â· Deny never calls MCP."
+                                            "Agent local · args empty object · Deny never calls MCP."
                                         }
                                         div { style: "display: flex; flex-wrap: wrap; gap: 0.4rem;",
                                             button {
@@ -1156,7 +1156,7 @@ pub fn WebBrowserPane() -> Element {
                                                     spawn(async move {
                                                         agent_mcp_busy.set(true);
                                                         agent_mcp_status.set(
-                                                            "Permitted â€” calling mcp_call_tool_gatedâ€¦".into(),
+                                                            "Permitted — calling mcp_call_tool_gated…".into(),
                                                         );
                                                         match invoke_tauri(
                                                             "mcp_call_tool_gated",
@@ -1172,7 +1172,7 @@ pub fn WebBrowserPane() -> Element {
                                                             Ok(text) => {
                                                                 agent_mcp_result.set(text);
                                                                 agent_mcp_status.set(
-                                                                    "Permit OK â€” result below.".into(),
+                                                                    "Permit OK — result below.".into(),
                                                                 );
                                                                 agent_mcp_proposed.set(false);
                                                             }
@@ -1196,9 +1196,9 @@ pub fn WebBrowserPane() -> Element {
                                                     // Deny: never invoke MCP.
                                                     agent_mcp_proposed.set(false);
                                                     agent_mcp_result
-                                                        .set("(none â€” Deny; no MCP call)".into());
+                                                        .set("(none — Deny; no MCP call)".into());
                                                     agent_mcp_status.set(
-                                                        "Denied list_capabilities â€” no tool execution."
+                                                        "Denied list_capabilities — no tool execution."
                                                             .into(),
                                                     );
                                                 },
@@ -1225,7 +1225,7 @@ pub fn WebBrowserPane() -> Element {
                         }
                         p {
                             style: "margin: 1.25rem 0 0; font-size: 0.78rem; line-height: 1.45; color: #64748b;",
-                            "Honesty: Present â€” trust store UI + suggested (empty until curated), cookies side panel + coverage notes, OS WebView navigation, agent TLS aligned to store. Partial â€” cert-override (not product-active); Browser agent (v0) MCP shell (Permit required, no silent tools). Scaffold â€” full page-context agent. Experimental preference only â€” Servo (WebView remains default renderer). Never auto-allow TLS."
+                            "Honesty: Present — trust store UI + suggested (empty until curated), cookies side panel + coverage notes, OS WebView navigation, agent TLS aligned to store. Partial — cert-override (not product-active); Browser agent (v0) MCP shell (Permit required, no silent tools). Scaffold — full page-context agent. Experimental preference only — Servo (WebView remains default renderer). Never auto-allow TLS."
                         }
                     }
                 }

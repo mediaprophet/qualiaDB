@@ -4,19 +4,32 @@
 
 use super::*;
 
-use crate::state::*;
 use crate::engine::ingestion;
 use crate::engine::q42_compiler;
+use crate::state::*;
 use futures_util::StreamExt;
 use qualia_core_db::ilp_dispatcher::{DispatchResult, HttpIlpTransport, IlpDispatcher};
 use qualia_core_db::rpc::{route_tax_payment, TaxRecipientSuite};
 use serde::Serialize;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use sysinfo::System;
 
+pub use crate::setup::SetupState;
+
+pub fn get_setup_state() -> Result<SetupState, String> {
+    crate::setup::get_setup_state()
+}
+
+pub fn complete_setup_step(step: String) -> Result<SetupState, String> {
+    crate::setup::complete_setup_step(step)
+}
+
+pub fn finish_setup() -> Result<SetupState, String> {
+    crate::setup::finish_setup()
+}
 
 pub use crate::qpu_oracle::{QpuChatCommandResult, QpuOracleSettings, QpuOracleSettingsInput};
 
@@ -572,14 +585,9 @@ pub async fn put_to_solid_pod(
     bearer_token: Option<String>,
 ) -> Result<serde_json::Value, String> {
     let ct = content_type.unwrap_or_else(|| "text/turtle".into());
-    let status = qualia_solid_bridge::put_resource(
-        &url,
-        &body,
-        &ct,
-        bearer_token.as_deref(),
-    )
-    .await
-    .map_err(|e| e.to_string())?;
+    let status = qualia_solid_bridge::put_resource(&url, &body, &ct, bearer_token.as_deref())
+        .await
+        .map_err(|e| e.to_string())?;
     Ok(serde_json::json!({ "ok": true, "status": status, "url": url }))
 }
 
@@ -610,14 +618,9 @@ pub async fn sync_to_solid_pod(
         );
         (body.into_bytes(), "text/turtle".into())
     };
-    let status = qualia_solid_bridge::put_resource(
-        &pod_url,
-        &bytes,
-        &ct,
-        bearer_token.as_deref(),
-    )
-    .await
-    .map_err(|e| e.to_string())?;
+    let status = qualia_solid_bridge::put_resource(&pod_url, &bytes, &ct, bearer_token.as_deref())
+        .await
+        .map_err(|e| e.to_string())?;
     Ok(format!(
         "Synced to Solid Pod {pod_url} (HTTP {status}, {} bytes)",
         bytes.len()
@@ -659,4 +662,3 @@ pub async fn ingest_image_async(file_path: String, typology: String) -> Result<(
     });
     Ok(())
 }
-

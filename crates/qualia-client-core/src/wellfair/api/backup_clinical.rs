@@ -126,7 +126,7 @@ impl WebizenHostApi {
     }
 
     /// Read the blob bytes for any record that carries a `blob_hash` (clinical attachments,
-    /// government-letter documents, â€¦), integrity-verified by the blob store.
+    /// government-letter documents, …), integrity-verified by the blob store.
     pub fn attachment_bytes(&self, record_id: &str) -> Result<Option<Vec<u8>>, String> {
         let Some(entry) = self
             .list_health_records(256)?

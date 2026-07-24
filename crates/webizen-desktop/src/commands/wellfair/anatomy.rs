@@ -4,6 +4,9 @@ use super::*;
 use tauri::{command, AppHandle, Emitter, Manager, State};
 use crate::render::AnatomyBodyState;
 
+/// 3D Anatomy Qapp — compute a body-system view for a given audience ("person"/"clinician").
+/// Read-only: no clinical data is persisted and no diagnosis is performed.
+/// The returned view is educational context, not a diagnosis.
 #[command]
 pub fn wellfair_compute_anatomy_view(
     app: AppHandle,
@@ -14,7 +17,7 @@ pub fn wellfair_compute_anatomy_view(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized - unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let report = host.compute_anatomy_view(&lens, threshold.unwrap_or(2))?;
         serde_json::to_string(&report).map_err(|e| e.to_string())
     })?
@@ -29,7 +32,7 @@ pub fn wellfair_compute_scorecard(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let report = host.compute_scorecard(threshold.unwrap_or(2))?;
         serde_json::to_string(&report).map_err(|e| e.to_string())
     })?
@@ -41,7 +44,7 @@ pub fn wellfair_compute_scorecard(
 pub fn wellfair_get_weight_model(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         serde_json::to_string(&serde_json::json!({
             "model": host.get_weight_model(),
             "seed": host.seed_weight_model(),
@@ -51,14 +54,14 @@ pub fn wellfair_get_weight_model(app: AppHandle) -> Result<String, String> {
     })?
 }
 
-/// Set the person's own weight model (JSON = `WeightModel`) â€” their authorship of how the card reads them.
+/// Set the person's own weight model (JSON = `WeightModel`) — their authorship of how the card reads them.
 #[command]
 pub fn wellfair_set_weight_model(app: AppHandle, model_json: String) -> Result<String, String> {
     let model: wellfare_core::anatomy::WeightModel =
         serde_json::from_str(&model_json).map_err(|e| format!("invalid weight model JSON: {e}"))?;
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.set_weight_model(&model)?;
         Ok("{\"set\":true}".into())
     })?
@@ -69,13 +72,13 @@ pub fn wellfair_set_weight_model(app: AppHandle, model_json: String) -> Result<S
 pub fn wellfair_reset_weight_model(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.reset_weight_model()?;
         Ok("{\"reset\":true}".into())
     })?
 }
 
-// â”€â”€ Physiological state (P6 â€” the reproductive-continuum declaration) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Physiological state (P6 — the reproductive-continuum declaration) ──────────────────────────
 //
 // The person's own statement of where they are on the reproductive continuum. Forum-internum /
 // Sanctuary-class. The score-card is computed at this state so it reads them at their current life
@@ -87,7 +90,7 @@ pub fn wellfair_reset_weight_model(app: AppHandle) -> Result<String, String> {
 pub fn wellfair_get_physiological_state(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         serde_json::to_string(&serde_json::json!({
             "state": host.get_physiological_state(),
             "declared": host.physiological_state_is_declared(),
@@ -96,7 +99,7 @@ pub fn wellfair_get_physiological_state(app: AppHandle) -> Result<String, String
     })?
 }
 
-/// Set the person's declared physiological state (JSON = `PhysiologicalState`) â€” their own statement of
+/// Set the person's declared physiological state (JSON = `PhysiologicalState`) — their own statement of
 /// where they are on the reproductive continuum. Forum-internum / Sanctuary-class.
 #[command]
 pub fn wellfair_set_physiological_state(app: AppHandle, state_json: String) -> Result<String, String> {
@@ -104,28 +107,28 @@ pub fn wellfair_set_physiological_state(app: AppHandle, state_json: String) -> R
         serde_json::from_str(&state_json).map_err(|e| format!("invalid physiological state JSON: {e}"))?;
     let app_state = app.state::<HostApiState>();
     app_state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.set_physiological_state(&state)?;
         Ok("{\"set\":true}".into())
     })?
 }
 
-/// Clear the declared physiological state â€” revert to the implicit Baseline. Idempotent.
+/// Clear the declared physiological state — revert to the implicit Baseline. Idempotent.
 #[command]
 pub fn wellfair_reset_physiological_state(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.reset_physiological_state()?;
         Ok("{\"reset\":true}".into())
     })?
 }
 
-// â”€â”€ 3D Anatomy render surface (S5.7 â€” whole-body percept snapshot) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── 3D Anatomy render surface (S5.7 — whole-body percept snapshot) ────────────────────────────
 
 /// Render the whole-body 3D Anatomy snapshot to a PNG (headless GPU via `webizen_render`), coloured by
 /// the person's accumulated burden at their declared physiological state. The orbit camera is driven by
-/// `azimuth` (0..360Â°) and `elevation` (-90..90Â°). The PNG is stored in [`AnatomyBodyState`] and served
+/// `azimuth` (0..360°) and `elevation` (-90..90°). The PNG is stored in [`AnatomyBodyState`] and served
 /// at `webizen://localhost/anatomy/body.png`; the Studio UI bumps its epoch query-string to refetch.
 /// Returns `{ "ok": true, "bytes": <len> }` on success.
 #[command]
@@ -144,7 +147,7 @@ pub async fn wellfair_render_body_snapshot(
         host_state.0.execute_sync(move |guard| {
             let host = guard
                 .as_ref()
-                .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+                .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
             host.compute_body_scene(az, el).map_err(|e| e.to_string())
         })??
     };
@@ -165,7 +168,7 @@ pub async fn wellfair_render_body_snapshot(
         .map_err(|e| e.to_string())
 }
 
-// â”€â”€ 3D Anatomy asset cache (S5.8 â€” user-triggered real-mesh acquisition) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── 3D Anatomy asset cache (S5.8 — user-triggered real-mesh acquisition) ───────────────────────
 
 /// Whether the body assets for a model are cached + complete. `model` = `"male"` / `"female"`.
 /// Returns `{ model, cached, organ_count, total_ten_d_bytes, acquired_at_unix }`.
@@ -176,13 +179,13 @@ pub fn wellfair_body_assets_status(
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let status = host.body_assets_status(&model)?;
         serde_json::to_string(&status).map_err(|e| e.to_string())
     })?
 }
 
-/// Acquire (download + compile + cache) the body assets for a model â€” **user-triggered**. Discovers the
+/// Acquire (download + compile + cache) the body assets for a model — **user-triggered**. Discovers the
 /// reference-organ manifest from the HRA SPARQL endpoint, fetches each GLB, compiles to `.10d`, caches
 /// both + a manifest. Emits `anatomy-acquire-progress` per organ and `anatomy-acquire-done` at the end.
 /// Returns the final `AcquireReport` JSON. Blocking network I/O runs on `spawn_blocking`.
@@ -195,7 +198,7 @@ pub async fn wellfair_acquire_body_assets(
     // Resolve the model + storage_root while holding the lock, then drop the guard before the await.
     let (model_enum, storage_root) = {
         host_state.0.execute_sync(move |guard| {
-            let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
             let m = qualia_client_core::wellfair::api::parse_anatomy_model(&model).map_err(|e| e.to_string())?;
             Ok::<_, String>((m, host.storage_root().to_path_buf()))
         })??
@@ -228,13 +231,13 @@ pub fn wellfair_load_cached_organ_10d(
 ) -> Result<Vec<u8>, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.load_cached_organ_10d(&model, &organ_key)
     })?
 }
 
-/// The per-organ dual-modality percepts for the cached organ set â€” so the browser portal knows what
-/// colour to paint each organ (Ïƒ â†’ RGBA via `paint_organs`). Returns `{ painted, unmapped }`.
+/// The per-organ dual-modality percepts for the cached organ set — so the browser portal knows what
+/// colour to paint each organ (σ → RGBA via `paint_organs`). Returns `{ painted, unmapped }`.
 #[command]
 pub fn wellfair_cached_body_organ_percepts(
     app: AppHandle,
@@ -242,7 +245,7 @@ pub fn wellfair_cached_body_organ_percepts(
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let (painted, unmapped) = host.cached_body_organ_percepts(&model)?;
         serde_json::to_string(&serde_json::json!({ "painted": painted, "unmapped": unmapped }))
             .map_err(|e| e.to_string())
@@ -257,7 +260,7 @@ pub fn wellfair_clear_body_cache(
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.clear_body_cache(&model)?;
         Ok("{\"ok\":true}".into())
     })?

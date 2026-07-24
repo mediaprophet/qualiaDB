@@ -4,14 +4,34 @@
 //! Worlds are configurations, not engine forks (doc 02 §2).
 
 use super::chora_host_client::{
-    canvas_navigation, list_canvas_worlds, query_canvas_region,
-    seed_canvas_demo, set_active_canvas_world, set_canvas_temporal,
-    list_layers
+    canvas_navigation, download_layer, list_canvas_worlds, list_layers, query_canvas_region,
+    seed_canvas_demo, set_active_canvas_world, set_canvas_temporal, set_gpu_camera_mode,
 };
 use dioxus::prelude::*;
 
 fn str_field(v: &serde_json::Value, key: &str) -> String {
-    v.get(key).and_then(|x| x.as_str()).unwrap_or("").to_string()
+    v.get(key)
+        .and_then(|x| x.as_str())
+        .unwrap_or("")
+        .to_string()
+}
+
+fn layer_source(v: &serde_json::Value) -> String {
+    let Some(source) = v.get("source") else {
+        return "Layer source".to_string();
+    };
+    let Some(source) = source.as_object() else {
+        return source.as_str().unwrap_or("Layer source").to_string();
+    };
+    match source.keys().next().map(String::as_str) {
+        Some("NasaGibs") => "NASA GIBS".to_string(),
+        Some("NasaHorizons") => "NASA Horizons".to_string(),
+        Some("HipparcosCatalog") => "ESA Hipparcos".to_string(),
+        Some("YaleBrightStars") => "Yale Bright Star Catalog".to_string(),
+        Some("UsgsAstrogeology") => "NASA / USGS".to_string(),
+        Some(name) => name.to_string(),
+        None => "Layer source".to_string(),
+    }
 }
 
 #[component]
@@ -22,8 +42,8 @@ pub fn WellfairChoraPanel() -> Element {
     let mut status = use_signal(String::new);
     let mut temporal_t = use_signal(|| 1_750_000_000f64);
     let mut layers = use_signal(Vec::<serde_json::Value>::new);
-    let _downloading = use_signal(|| false);
-    let _camera_mode = use_signal(|| "earth".to_string());
+    let mut downloading = use_signal(|| Option::<String>::None);
+    let mut camera_mode = use_signal(|| "space".to_string());
 
     let refresh = move || {
         spawn(async move {
@@ -45,7 +65,9 @@ pub fn WellfairChoraPanel() -> Element {
     let mut loaded = use_signal(|| false);
 
     use_effect(move || {
-        if loaded() { return; }
+        if loaded() {
+            return;
+        }
         loaded.set(true);
         // Auto-seed flagships when store empty so explorer is not a void.
         spawn(async move {
@@ -78,7 +100,7 @@ pub fn WellfairChoraPanel() -> Element {
                 position: relative;
                 overflow: hidden;
             ",
-            
+
             // Background cosmic/grid styling
             div {
                 style: "position: absolute; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.05; background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0); background-size: 30px 30px; pointer-events: none;"
@@ -90,13 +112,13 @@ pub fn WellfairChoraPanel() -> Element {
             header {
                 style: "z-index: 1; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-start;",
                 div {
-                    h2 { 
-                        style: "margin: 0; font-size: 1.8rem; font-weight: 600; color: #fff; letter-spacing: -0.02em; display: flex; align-items: center; gap: 0.5rem;", 
-                        "Chora Explorer ", span { style: "font-weight: 300; opacity: 0.6;", "· Spatio-Temporal Commons" }
+                    h2 {
+                        style: "margin: 0; font-size: 1.8rem; font-weight: 600; color: #fff; letter-spacing: -0.02em; display: flex; align-items: center; gap: 0.5rem;",
+                        "Universe ", span { style: "font-weight: 300; opacity: 0.65;", "· Chora Commons" }
                     }
                     p {
                         style: "margin: 0.5rem 0 0; font-size: 0.9rem; color: #94a3b8; max-width: 600px; line-height: 1.5;",
-                        "A permissive-commons omniverse substrate. Worlds are configurations, not engine forks. Pan through space, scrub through time, and explore active regions."
+                        "Explore the star-scape, Earth and planetary commons. NASA imagery and public star catalogs stay visibly attributed; worlds are configurations, not engine forks."
                     }
                 }
                 div {
@@ -134,8 +156,39 @@ pub fn WellfairChoraPanel() -> Element {
             }
 
             div {
+                style: "z-index: 1; position: relative; height: min(54vh, 560px); min-height: 360px; overflow: hidden; border: 1px solid rgba(129, 140, 248, 0.32); border-radius: 16px; background: #020617; box-shadow: 0 22px 55px rgba(0, 0, 0, 0.42);",
+                iframe {
+                    src: "/chora-universe.html",
+                    title: "Interactive Universe star-scape",
+                    style: "position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #020617;",
+                }
+                div {
+                    style: "position: absolute; right: 12px; bottom: 12px; display: flex; gap: 6px; padding: 5px; border: 1px solid rgba(148,163,184,0.24); border-radius: 10px; background: rgba(2,6,23,0.82); backdrop-filter: blur(12px);",
+                    for mode in ["earth", "space", "free"] {
+                        button {
+                            r#type: "button",
+                            style: if camera_mode() == mode {
+                                "border:1px solid #818cf8;background:rgba(99,102,241,0.28);color:#eef2ff;border-radius:7px;padding:0.38rem 0.62rem;cursor:pointer;font-size:0.72rem;font-weight:700;text-transform:capitalize;"
+                            } else {
+                                "border:1px solid transparent;background:transparent;color:#94a3b8;border-radius:7px;padding:0.38rem 0.62rem;cursor:pointer;font-size:0.72rem;font-weight:650;text-transform:capitalize;"
+                            },
+                            onclick: move |_| {
+                                camera_mode.set(mode.to_string());
+                                spawn(async move {
+                                    if let Err(e) = set_gpu_camera_mode(mode).await {
+                                        status.set(format!("Camera mode unavailable: {e}"));
+                                    }
+                                });
+                            },
+                            "{mode}"
+                        }
+                    }
+                }
+            }
+
+            div {
                 style: "z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;",
-                
+
                 // Navigation Panel
                 div {
                     style: "padding: 1.5rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; backdrop-filter: blur(10px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);",
@@ -267,6 +320,73 @@ pub fn WellfairChoraPanel() -> Element {
                                             }
                                         },
                                         "Jump to World"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            div {
+                style: "z-index: 1; padding: 1.5rem; background: rgba(255, 255, 255, 0.035); border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 14px;",
+                div {
+                    style: "display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;margin-bottom:1rem;",
+                    div {
+                        h3 { style: "margin:0;color:#fff;font-size:1.05rem;", "Earth, stars & planetary layers" }
+                        p { style: "margin:0.35rem 0 0;color:#94a3b8;font-size:0.82rem;line-height:1.45;", "Download, compile and upload an attributed public-data layer to the native GPU surface." }
+                    }
+                    span { style: "color:#64748b;font-size:0.75rem;", "{layers().len()} available" }
+                }
+                if layers().is_empty() {
+                    div {
+                        style: "padding:1.5rem;border:1px dashed rgba(148,163,184,0.2);border-radius:10px;color:#94a3b8;text-align:center;",
+                        "Layer catalog is unavailable until the desktop host is ready."
+                    }
+                } else {
+                    div {
+                        style: "display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:0.85rem;",
+                        for layer in layers().iter().cloned() {
+                            div {
+                                style: "display:flex;flex-direction:column;min-height:185px;padding:1rem;border:1px solid rgba(148,163,184,0.13);border-radius:11px;background:rgba(2,6,23,0.34);",
+                                div {
+                                    style: "display:flex;justify-content:space-between;align-items:flex-start;gap:0.6rem;",
+                                    span {
+                                        style: "padding:0.2rem 0.45rem;border-radius:999px;background:rgba(56,189,248,0.10);border:1px solid rgba(56,189,248,0.20);color:#7dd3fc;font-size:0.64rem;font-weight:750;text-transform:uppercase;letter-spacing:0.04em;",
+                                        "{layer_source(&layer)}"
+                                    }
+                                    span { style: "color:#64748b;font-size:0.68rem;", "{str_field(&layer, \"license\")}" }
+                                }
+                                strong { style: "display:block;margin-top:0.75rem;color:#f8fafc;font-size:0.9rem;line-height:1.35;", "{str_field(&layer, \"name\")}" }
+                                p { style: "margin:0.45rem 0 0;color:#94a3b8;font-size:0.76rem;line-height:1.45;flex:1;", "{str_field(&layer, \"description\")}" }
+                                button {
+                                    r#type: "button",
+                                    disabled: downloading().is_some(),
+                                    style: "margin-top:0.85rem;border:1px solid rgba(129,140,248,0.35);background:rgba(99,102,241,0.12);color:#c7d2fe;border-radius:8px;padding:0.48rem 0.7rem;cursor:pointer;font-size:0.75rem;font-weight:700;",
+                                    onclick: {
+                                        let id = str_field(&layer, "id");
+                                        let name = str_field(&layer, "name");
+                                        move |_| {
+                                            let id = id.clone();
+                                            let name = name.clone();
+                                            downloading.set(Some(id.clone()));
+                                            status.set(format!("Downloading {name}…"));
+                                            spawn(async move {
+                                                match download_layer(&id, 1024).await {
+                                                    Ok(report) => {
+                                                        let vertices = report.get("vertexCount").and_then(|v| v.as_u64()).unwrap_or(0);
+                                                        status.set(format!("{name} loaded to the GPU · {vertices} vertices"));
+                                                    }
+                                                    Err(e) => status.set(format!("Layer download failed: {e}")),
+                                                }
+                                                downloading.set(None);
+                                            });
+                                        }
+                                    },
+                                    if downloading().as_deref() == layer.get("id").and_then(|value| value.as_str()) {
+                                        "Loading…"
+                                    } else {
+                                        "Load on GPU"
                                     }
                                 }
                             }

@@ -3,17 +3,8 @@
 //! Desktop/Tauri: headless `PortalGpu` render → `webizen://` PNG (no Three.js).
 //! Public web demo: informative fallback until portal wasm is bundled for GH Pages.
 
-use dioxus::prelude::*;
-
-async fn pause_for_native_surface_mount() {
-    let duration = std::time::Duration::from_millis(100);
-    #[cfg(target_arch = "wasm32")]
-    gloo_timers::future::sleep(duration).await;
-    #[cfg(not(target_arch = "wasm32"))]
-    tokio::time::sleep(duration).await;
-}
-use dioxus::document::eval;
 use crate::canvas_model::Page;
+use dioxus::prelude::*;
 
 #[cfg(target_arch = "wasm32")]
 use serde::de::DeserializeOwned;
@@ -45,6 +36,9 @@ async fn invoke_tauri_json<T>(cmd: &str, args: serde_json::Value) -> Result<T, S
 where
     T: DeserializeOwned,
 {
+    if !crate::endpoints::is_native_host() {
+        return Err("The desktop host is unavailable in this preview.".to_string());
+    }
     let js_args = serde_wasm_bindgen::to_value(&args).map_err(|e| e.to_string())?;
     let value = tauri_invoke(cmd, js_args.into())
         .await
@@ -153,11 +147,9 @@ pub fn SpatialBridgeCanvas(page: Page) -> Element {
                     callback.forget();
                 }
 
-                let _ = invoke_tauri_json::<bool>(
-                    "toggle_render_loop",
-                    json!({ "isActive": true }),
-                )
-                .await;
+                let _ =
+                    invoke_tauri_json::<bool>("toggle_render_loop", json!({ "isActive": true }))
+                        .await;
 
                 match invoke_tauri_json::<()>(
                     "update_render_preview",
@@ -232,42 +224,12 @@ pub fn SpatialBridgeCanvas(page: Page) -> Element {
             style: "position: relative; width: 100%; height: 100%; min-height: 500px; background: var(--qualia-bg, #050510); border: 1px solid var(--qualia-border, #333); border-radius: 12px; overflow: hidden;",
 
             if show_live {
-                div {
-                    id: "spatial-bridge-webview",
-                    style: "position:absolute;inset:0;width:100%;height:100%;",
-                    onmounted: move |_| {
-                        let url = portal_src.clone();
-                        spawn(async move {
-                            pause_for_native_surface_mount().await;
-                            let script = format!(r#"
-                                const container = document.getElementById('spatial-bridge-webview');
-                                if (container && window.__TAURI__) {{
-                                    const invoke = window.__TAURI__.core.invoke;
-                                    const r = container.getBoundingClientRect();
-                                    const id = 'spatial-bridge-portal';
-                                    
-                                    invoke('spawn_native_webview', {{
-                                        id: id, url: '{}', x: r.left, y: r.top, width: r.width, height: r.height
-                                    }}).then(() => {{
-                                        invoke('show_native_webview', {{ id }});
-                                        invoke('resize_native_webview', {{ id, x: r.left, y: r.top, width: r.width, height: r.height }});
-                                    }}).catch(console.error);
-
-                                    if (!window.spatialWebviewObserver) {{
-                                        window.spatialWebviewObserver = new ResizeObserver(() => {{
-                                            const r2 = container.getBoundingClientRect();
-                                            invoke('resize_native_webview', {{ 
-                                                id: 'spatial-bridge-portal', 
-                                                x: r2.left, y: r2.top, width: r2.width, height: r2.height 
-                                            }}).catch(console.error);
-                                        }});
-                                        window.spatialWebviewObserver.observe(container);
-                                    }}
-                                }}
-                            "#, url);
-                            let _ = eval(&script);
-                        });
-                    }
+                iframe {
+                    id: "spatial-bridge-portal",
+                    src: "{portal_src}",
+                    title: "Live Qualia 10D renderer",
+                    allow: "cross-origin-isolated; fullscreen",
+                    style: "position:absolute;inset:0;width:100%;height:100%;border:0;background:#050510;",
                 }
             } else if has_frame {
                 img {

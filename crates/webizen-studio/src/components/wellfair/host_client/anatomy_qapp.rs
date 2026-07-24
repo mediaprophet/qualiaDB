@@ -55,7 +55,7 @@ pub struct UnmappedRecordDto {
 }
 
 /// The whole anatomy report for a lens (mirror of the host `AnatomyViewReport`; the lens-independent
-/// `burdens` field is intentionally not mirrored â€” the text panel renders the narrative, not colours).
+/// `burdens` field is intentionally not mirrored — the text panel renders the narrative, not colours).
 #[derive(Debug, Clone, Default, Deserialize, PartialEq)]
 pub struct AnatomyViewReportDto {
     #[serde(default)]

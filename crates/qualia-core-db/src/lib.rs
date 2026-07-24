@@ -416,6 +416,8 @@ pub mod clinical_engine {
 /// Hypermedia semantic library — asset ⊕ analytics ⊕ related-assets bound as a semantic graph (not a
 /// directory). See `docs/plans/hypermedia-semantic-library.md`.
 pub mod hypermedia;
+/// Entity-view kernel: entity id, observer status, rights filter, attribution, packages (shared by whole desktop; not "mindware-only").
+pub mod entity_view;
 pub mod qubo_compiler;
 pub mod render;
 #[cfg(all(target_arch = "wasm32", feature = "portal"))]

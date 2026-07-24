@@ -5,7 +5,7 @@
 use qualia_client_core::api;
 use tauri::command;
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ Personal directory (AD-like): categorised addressbook + agreement slots Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ── Personal directory (AD-like): categorised addressbook + agreement slots ─────
 
 /// The unified, categorised personal directory: the addressbook (Parties joined by DID across the
 /// directory-actor + chat-contact stores) grouped into categories, each entry carrying a slot for the

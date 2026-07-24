@@ -30,6 +30,9 @@ async fn invoke_json<T>(cmd: &str, args: serde_json::Value) -> Result<T, String>
 where
     T: serde::de::DeserializeOwned,
 {
+    if !crate::endpoints::is_native_host() {
+        return Err("The desktop host is unavailable in this preview.".to_string());
+    }
     let js_args = serde_wasm_bindgen::to_value(&args).map_err(|e| e.to_string())?;
     let value = tauri_invoke(cmd, js_args.into())
         .await
@@ -115,7 +118,7 @@ pub fn DomainsPane() -> Element {
     let inbox = use_signal(|| serde_json::Value::Array(vec![]));
     let inbox_counts = use_signal(String::new);
     let selected_mail = use_signal(String::new);
-    let mail_body = use_signal(String::new);
+    let mut mail_body = use_signal(String::new);
     let receiver_status = use_signal(String::new);
     let receiver_bind = use_signal(|| "127.0.0.1:2525".to_string());
     let mail_dns_block = use_signal(String::new);

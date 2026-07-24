@@ -48,7 +48,7 @@ pub fn remove_project_collaborator(
     Ok(serde_json::json!({ "removed": true, "project_id": project_id, "member_did": member_did }))
 }
 
-/// Answer a connection challenge â€” prove this node controls its identity key ("it's actually me").
+/// Answer a connection challenge — prove this node controls its identity key ("it's actually me").
 #[cfg(not(target_arch = "wasm32"))]
 pub fn answer_connection_challenge(
     challenge_json: String,

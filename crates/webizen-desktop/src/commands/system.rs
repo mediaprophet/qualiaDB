@@ -4,10 +4,11 @@
 
 use qualia_client_core::api;
 use qualia_client_core::api::HardwareStatus;
+use qualia_client_core::setup::SetupState;
 use qualia_client_core::state::AgentConfig;
 use tauri::command;
 
-// â”€â”€ Hardware / system â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Hardware / system ─────────────────────────────────────────────────────────
 
 #[command]
 pub fn get_hardware_status() -> HardwareStatus {
@@ -19,7 +20,7 @@ pub fn profile_energy_circumstance() -> String {
     api::profile_energy_circumstance()
 }
 
-// â”€â”€ Daemon â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Daemon ────────────────────────────────────────────────────────────────────
 
 #[command]
 pub fn start_daemon() -> String {
@@ -46,7 +47,7 @@ pub fn run_engine_command(cmd: String) -> String {
     api::run_engine_command(cmd)
 }
 
-// â”€â”€ Config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Config ────────────────────────────────────────────────────────────────────
 
 #[command]
 pub fn get_config() -> AgentConfig {
@@ -58,3 +59,17 @@ pub fn save_config(new_config: AgentConfig) -> Result<(), String> {
     api::save_config(new_config)
 }
 
+#[command]
+pub fn get_setup_state() -> Result<SetupState, String> {
+    api::get_setup_state()
+}
+
+#[command]
+pub fn complete_setup_step(step: String) -> Result<SetupState, String> {
+    api::complete_setup_step(step)
+}
+
+#[command]
+pub fn finish_setup() -> Result<SetupState, String> {
+    api::finish_setup()
+}

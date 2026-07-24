@@ -2,7 +2,7 @@ use super::{Cat, QApp, Stat};
 
 pub(super) fn apps() -> Vec<QApp> {
     vec![
-        // â”€â”€ Network & Distribution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Network & Distribution ────────────────────────────────────────────
         QApp {
             id: "webtorrent",
             name: "WebTorrent Seeder",
@@ -41,7 +41,7 @@ pub(super) fn apps() -> Vec<QApp> {
             name: "Acoustic BLE Mesh",
             tagline: "Zero-Infrastructure Net",
             desc: "Configure and monitor the acoustic/BLE mesh for offline-first Webizen clustering. \
-                   No infrastructure required â€” peer discovery via acoustic and Bluetooth signals.",
+                   No infrastructure required — peer discovery via acoustic and Bluetooth signals.",
             icon: "broadcast",
             route: None,
             stat: Stat::Beta,

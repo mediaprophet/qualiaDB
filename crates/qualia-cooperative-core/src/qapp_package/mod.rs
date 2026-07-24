@@ -36,6 +36,8 @@
 
 pub mod manifest;
 pub mod pwa;
+pub mod remote_controller;
 
 pub use manifest::{Capability, IconRef, QappKind, QappManifest, WasmRef};
 pub use pwa::{generate_pwa, PwaBundle, PwaContent, PwaFile};
+pub use remote_controller::generate_remote_controller_pwa;

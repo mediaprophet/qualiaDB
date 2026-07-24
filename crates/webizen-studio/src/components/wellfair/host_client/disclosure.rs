@@ -3,6 +3,9 @@
 use super::*;
 
 #[cfg(target_arch = "wasm32")]
+use super::safeguards::invoke_str_arg;
+
+#[cfg(target_arch = "wasm32")]
 use crate::components::qapp_engine::tauri_invoke;
 #[cfg(target_arch = "wasm32")]
 use js_sys;
@@ -71,7 +74,7 @@ pub async fn actors_with_access(_commitment_hex: &str) -> Result<serde_json::Val
     Err("Disclosure trace requires the Tauri desktop host".into())
 }
 
-/// Trace a leak by fingerprint (hex) â†’ `{ event }` (null if no match).
+/// Trace a leak by fingerprint (hex) → `{ event }` (null if no match).
 #[cfg(target_arch = "wasm32")]
 pub async fn trace_leak(fingerprint_hex: &str) -> Result<serde_json::Value, String> {
     invoke_str_arg("wellfair_trace_leak", "fingerprintHex", fingerprint_hex).await
@@ -93,7 +96,7 @@ pub async fn list_transparency_ccs() -> Result<serde_json::Value, String> {
     Err("Disclosure trace requires the Tauri desktop host".into())
 }
 
-/// Assess a duty of inquiry (`duty_json`, `conduct_json`) â†’ the verdict string.
+/// Assess a duty of inquiry (`duty_json`, `conduct_json`) → the verdict string.
 #[cfg(target_arch = "wasm32")]
 pub async fn assess_duty_of_inquiry(duty_json: &str, conduct_json: &str) -> Result<String, String> {
     let args = js_sys::Object::new();

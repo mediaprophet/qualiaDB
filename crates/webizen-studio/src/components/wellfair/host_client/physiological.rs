@@ -33,7 +33,7 @@ pub async fn set_physiological_state(_state_json: &str) -> Result<(), String> {
     Err("The physiological state requires the Tauri desktop host".into())
 }
 
-/// Clear the declared physiological state â€” revert to the implicit Baseline.
+/// Clear the declared physiological state — revert to the implicit Baseline.
 #[cfg(target_arch = "wasm32")]
 pub async fn reset_physiological_state() -> Result<(), String> {
     tauri_invoke("wellfair_reset_physiological_state", wasm_bindgen::JsValue::NULL).await.map_err(|e| format!("{e:?}"))?;

@@ -20,7 +20,7 @@ use super::*;
 impl WebizenHostApi {
     // --- Disclosure traceability (ADR 0011 D5) + duty of inquiry (D8) ---
 
-    /// Record a **transparency cc** â€” the protective "I informed authority X for purpose Y" note.
+    /// Record a **transparency cc** — the protective "I informed authority X for purpose Y" note.
     pub fn record_transparency_cc(
         &self,
         credential_id: &str,
@@ -87,13 +87,13 @@ impl WebizenHostApi {
         self.accountability_store()?.disclosure_chain(&c).map_err(|e| e.to_string())
     }
 
-    /// The distinct actors who had access to a payload â€” the set a leak must be within.
+    /// The distinct actors who had access to a payload — the set a leak must be within.
     pub fn actors_with_access(&self, commitment_hex: &str) -> Result<Vec<String>, String> {
         let c = crate::accountability_store::parse_commitment_hex(commitment_hex)?;
         self.accountability_store()?.actors_with_access(&c).map_err(|e| e.to_string())
     }
 
-    /// **Trace a leak** by its fingerprint (hex, 16 bytes) â†’ the disclosure + accountable actor.
+    /// **Trace a leak** by its fingerprint (hex, 16 bytes) → the disclosure + accountable actor.
     pub fn trace_leak(
         &self,
         fingerprint_hex: &str,
@@ -113,7 +113,7 @@ impl WebizenHostApi {
         self.accountability_store()?.list_transparency_ccs().map_err(|e| e.to_string())
     }
 
-    /// **Assess a duty of inquiry** â€” classify conduct against the duty (the fair negligence classifier: was
+    /// **Assess a duty of inquiry** — classify conduct against the duty (the fair negligence classifier: was
     /// an accessible means left unchecked, and did a harmful act follow?). Pure; no persistence.
     pub fn assess_duty_of_inquiry(
         &self,
@@ -226,10 +226,10 @@ impl WebizenHostApi {
         unlock_sanctuary(&self.storage_root, pin)
     }
 
-    // --- Encrypted Sanctuary vault (real boundary; native-only, plan Â§6) ---
+    // --- Encrypted Sanctuary vault (real boundary; native-only, plan §6) ---
     //
     // Sensitive free-text notes are stored ONLY inside AEAD-encrypted lane files keyed by a
-    // PBKDF2-derived key â€” there is no plaintext journal path for them. Nothing is readable
+    // PBKDF2-derived key — there is no plaintext journal path for them. Nothing is readable
     // without the PIN, and the decoy PIN opens a separate lane that never aliases real data.
 
     #[cfg(not(target_arch = "wasm32"))]

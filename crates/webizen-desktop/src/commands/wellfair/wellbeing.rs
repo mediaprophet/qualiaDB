@@ -14,7 +14,7 @@ pub fn wellfair_add_wellbeing_observation(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let entry = host.add_wellbeing_observation(&report)?;
         serde_json::to_string(&entry).map_err(|e| e.to_string())
     })?
@@ -28,7 +28,7 @@ pub fn wellfair_add_therapy_note(app: AppHandle, report_json: String) -> Result<
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let entry = host.add_therapy_note(&report)?;
         serde_json::to_string(&entry).map_err(|e| e.to_string())
     })?
@@ -50,7 +50,7 @@ pub fn wellfair_list_pending_live_shares(app: AppHandle, limit: usize) -> Result
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let pending = host.list_pending_live_shares(limit)?;
         let dtos: Vec<LiveShareRequestDto> = pending
             .into_iter()
@@ -78,7 +78,7 @@ pub fn wellfair_decide_live_share(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let entry = host.decide_live_share_request(
             &request_id,
             approved,

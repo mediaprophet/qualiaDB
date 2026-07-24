@@ -9,23 +9,23 @@ use super::*;
 impl WebizenHostApi {
     // --- Real envelope encryption over the consent credential (ADR 0011 D1/D2) ---
     //
-    // Makes "revoke destroys the wrapped key â‡’ no key, no payload" a *fact*: the payload is AEAD-encrypted
-    // under a random DEK; the DEK is sealed (X25519 sealed box) to the recipient's public key â€” that sealed
+    // Makes "revoke destroys the wrapped key ⇒ no key, no payload" a *fact*: the payload is AEAD-encrypted
+    // under a random DEK; the DEK is sealed (X25519 sealed box) to the recipient's public key — that sealed
     // DEK is the credential's real `wrapped_key`; revoke destroys it. The owner's envelope keypair is
     // **derived** from the owner signing-key seed (nothing secret stored at rest). Native-only (the sealed-box
     // primitives are `not(wasm32)`; the desktop owns keys).
 
-    /// The owner's envelope **public** key (hex) â€” publishable so others can seal payloads *to* the owner.
+    /// The owner's envelope **public** key (hex) — publishable so others can seal payloads *to* the owner.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn owner_envelope_public_hex(&self) -> String {
         use crate::envelope_encryption::{EnvelopeKeypair, OWNER_ENVELOPE_DOMAIN};
         EnvelopeKeypair::derive(&self.signing_key.to_bytes(), OWNER_ENVELOPE_DOMAIN).public_hex()
     }
 
-    /// **Seal a plaintext payload and grant a consent credential over it** â€” real envelope encryption. If
+    /// **Seal a plaintext payload and grant a consent credential over it** — real envelope encryption. If
     /// `agent_public_hex` is empty, the payload is sealed to the OWNER's derived envelope key (self-custody,
     /// so the owner can [`open_owner_payload`]); supply an agent's X25519 public key to grant *that* agent
-    /// access (they open it on their own device with their secret â€” the owner cannot).
+    /// access (they open it on their own device with their secret — the owner cannot).
     ///
     /// [`open_owner_payload`]: WebizenHostApi::open_owner_payload
     #[cfg(not(target_arch = "wasm32"))]
@@ -72,7 +72,7 @@ impl WebizenHostApi {
             .map_err(|e| e.to_string())
     }
 
-    /// **Open an owner-sealed payload** through a credential â€” proves the crypto-revoke property end-to-end:
+    /// **Open an owner-sealed payload** through a credential — proves the crypto-revoke property end-to-end:
     /// works while the credential is live, fails once revoked (the wrapped key is gone), though the commons
     /// ciphertext survives. Only opens payloads sealed to the owner (an agent-sealed payload opens on the
     /// agent's device).
@@ -99,7 +99,7 @@ impl WebizenHostApi {
             .map_err(|e| e.to_string())
     }
 
-    /// **I'm alive** â€” touch the heartbeat + un-fire a not-yet-enacted switch (reversibility). The routine
+    /// **I'm alive** — touch the heartbeat + un-fire a not-yet-enacted switch (reversibility). The routine
     /// owner-side action that keeps a dead-man switch from firing.
     pub fn dead_mans_alive(&self, commitment_hex: &str) -> Result<bool, String> {
         let c = crate::accountability_store::parse_commitment_hex(commitment_hex)?;
@@ -120,7 +120,7 @@ impl WebizenHostApi {
             .map_err(|e| e.to_string())
     }
 
-    /// **Enact** a dead-man switch if the gamified rule holds â€” returns the [`Disposition`] to carry out.
+    /// **Enact** a dead-man switch if the gamified rule holds — returns the [`Disposition`] to carry out.
     ///
     /// [`Disposition`]: crate::dead_mans_switch::Disposition
     pub fn enact_dead_mans(
@@ -141,10 +141,10 @@ impl WebizenHostApi {
     }
 
     /// **Enact a dead-man switch AND release the keys** (ADR 0011 D6, key-release-on-enact). Recovers the
-    /// payload DEK by unwrapping the owner's own credential, then â€” for a `ReleaseTo` disposition â€” re-seals
+    /// payload DEK by unwrapping the owner's own credential, then — for a `ReleaseTo` disposition — re-seals
     /// the DEK to each supplied party X25519 pubkey and grants them a credential, so the disposition actually
     /// hands over access. `party_keys` = `(did, pubkey_hex)` pairs. (The owner key is derivable here; the true
-    /// post-death friend-side release without the owner needs Shamir pre-positioning â€” separate.)
+    /// post-death friend-side release without the owner needs Shamir pre-positioning — separate.)
     #[cfg(not(target_arch = "wasm32"))]
     pub fn enact_dead_mans_release(
         &self,
@@ -182,7 +182,7 @@ impl WebizenHostApi {
     /// **Split a payload's DEK into Shamir social-recovery shares** (`threshold`-of-`parties.len()`), so a
     /// quorum of friends can later reconstruct the key **without the owner**. Recovers the DEK from the owner's
     /// own credential, splits it, and returns the shares paired with the parties they should be handed to
-    /// (the caller distributes them off-device â€” they are NOT stored here). Owner-side, done while alive.
+    /// (the caller distributes them off-device — they are NOT stored here). Owner-side, done while alive.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn split_dek_recovery(
         &self,
@@ -245,7 +245,7 @@ impl WebizenHostApi {
 
     /// **Enact + release resolving the disposition parties' keys from the peer store** (remote-key
     /// distribution). Reads the switch's `ReleaseTo` parties, looks up each one's published envelope key from
-    /// `social_peers`, and releases to those with a known key â€” reporting any parties whose key is still
+    /// `social_peers`, and releases to those with a known key — reporting any parties whose key is still
     /// missing (so the owner knows to obtain it). No keys pasted by hand.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn enact_dead_mans_release_via_peers(
@@ -302,7 +302,7 @@ impl WebizenHostApi {
             .map_err(|e| e.to_string())
     }
 
-    /// **Regain capacity** â€” the advocate stands down (reversibility).
+    /// **Regain capacity** — the advocate stands down (reversibility).
     pub fn regain_capacity(&self, principal_did: &str) -> Result<bool, String> {
         self.accountability_store()?
             .regain_capacity(principal_did, &self.signing_key, Self::now_unix())

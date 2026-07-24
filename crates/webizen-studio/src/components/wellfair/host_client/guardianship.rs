@@ -276,9 +276,9 @@ pub struct SanctuaryVaultNoteDto {
 
 #[cfg(target_arch = "wasm32")]
 #[derive(Debug, Clone, Deserialize)]
-struct SanctuaryVaultListDto {
-    lane: String,
-    notes: Vec<SanctuaryVaultNoteDto>,
+pub(super) struct SanctuaryVaultListDto {
+    pub(super) lane: String,
+    pub(super) notes: Vec<SanctuaryVaultNoteDto>,
 }
 
 #[cfg(target_arch = "wasm32")]

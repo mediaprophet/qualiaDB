@@ -2,7 +2,7 @@ use super::{AppRoute, Cat, QApp, Stat};
 
 pub(super) fn apps() -> Vec<QApp> {
     vec![
-        // â”€â”€ Quantum Computing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Quantum Computing ─────────────────────────────────────────────────
         QApp {
             id: "qpu-optimizer",
             name: "QPU Optimizer",
@@ -53,7 +53,7 @@ pub(super) fn apps() -> Vec<QApp> {
             tagline: "Quantum Research Cooperative",
             desc: "Living Research Timeline with LTL causal provenance, cooperative knowledge graph \
                    canvas, epistemic modal-logic claim threads (OP_KNOWS/OP_BELIEVES), native dispatch \
-                   for SW alignment, DFT, MCMC, and RK4 â€” all attribution via DID-signed NQuins.",
+                   for SW alignment, DFT, MCMC, and RK4 — all attribution via DID-signed NQuins.",
             icon: "radioactive",
             route: Some(AppRoute::Nexus),
             stat: Stat::Active,

@@ -2,13 +2,13 @@ use super::{Cat, QApp, Stat};
 
 pub(super) fn apps() -> Vec<QApp> {
     vec![
-        // â”€â”€ AI & Inference â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── AI & Inference ────────────────────────────────────────────────────
         QApp {
             id: "chat",
             name: "Neuro-Symbolic Chat",
             tagline: "Conversational AI",
             desc: "Phase 8 bifurcated LLM with real-time Webizen Sentinel oversight. \
-                   LogitStream â†’ ControlStream ring buffers gate every token; all output requires â‰¥1 NQuin provenance citation.",
+                   LogitStream → ControlStream ring buffers gate every token; all output requires ≥1 NQuin provenance citation.",
             icon: "chat-dots",
             route: None,
             stat: Stat::Beta,
@@ -29,7 +29,7 @@ pub(super) fn apps() -> Vec<QApp> {
             id: "lora-manager",
             name: "LoRA Adapter Manager",
             tagline: "Neural Adaptation",
-            desc: "Zero-copy LoRA multiplexing: load adapters from NQuin bits 63â€“48, blend up to 8 \
+            desc: "Zero-copy LoRA multiplexing: load adapters from NQuin bits 63–48, blend up to 8 \
                    adapters per token via the fused WGSL shader, and manage the LRU adapter cache.",
             icon: "layers-half",
             route: None,

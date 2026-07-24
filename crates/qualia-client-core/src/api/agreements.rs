@@ -12,7 +12,7 @@ pub fn list_agreements() -> Result<serde_json::Value, String> {
     serde_json::to_value(crate::agreements::list_agreements()).map_err(|e| e.to_string())
 }
 
-/// Agreements a DID is party to (or that govern its relationship) â€” fills the directory's agreement slot.
+/// Agreements a DID is party to (or that govern its relationship) — fills the directory's agreement slot.
 pub fn agreements_for(did: String) -> Result<serde_json::Value, String> {
     serde_json::to_value(crate::agreements::agreements_for(&did)).map_err(|e| e.to_string())
 }
@@ -51,7 +51,7 @@ pub fn create_agreement(
     serde_json::to_value(a).map_err(|e| e.to_string())
 }
 
-/// Persist a full agreement (JSON) â€” for edits (undertakings, stage, etc.). Returns the refreshed list.
+/// Persist a full agreement (JSON) — for edits (undertakings, stage, etc.). Returns the refreshed list.
 pub fn save_agreement(agreement_json: String) -> Result<serde_json::Value, String> {
     let a: crate::agreements::Agreement =
         serde_json::from_str(&agreement_json).map_err(|e| format!("bad agreement: {e}"))?;

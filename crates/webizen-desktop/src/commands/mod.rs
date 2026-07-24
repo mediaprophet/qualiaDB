@@ -1,45 +1,52 @@
 use qualia_client_core::api;
 use qualia_client_core::local_job_scheduler::{JobQueueSnapshot, LocalJobScheduler};
 use std::time::Duration;
-use tauri::{command, AppHandle, Manager, State};
 use tauri::webview::WebviewWindowBuilder;
+use tauri::{command, AppHandle, Manager, State};
 
-use crate::runtime::{RuntimeHandle, RuntimeLedgerHealth, RuntimeSnapshotRecord};
 use crate::native_surface::NativeSurfaceState;
+use crate::runtime::{RuntimeHandle, RuntimeLedgerHealth, RuntimeSnapshotRecord};
 
-// â”€â”€ Sub-modules â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Sub-modules ───────────────────────────────────────────────────────────────
 
-pub mod render_pipeline;
 pub mod binary_registry;
 pub mod glb_ingest;
 pub mod mesh;
+pub mod render_pipeline;
 pub use mesh::MeshState;
 
 pub mod browser;
+/// App-wide mindware HID (entity projection, observer, morph) — not browser-only.
+pub mod view_api;
 pub mod system;
 pub mod wellfair;
-pub use wellfair::{sync::wellfair_diagnostics, sync::wellfair_sync_with_relay, sanctuary_basic::wellfair_lock_sanctuary};
-pub mod wallet;
-pub mod ingest;
-pub mod semantic;
+pub use wellfair::{
+    sanctuary_basic::wellfair_lock_sanctuary, sync::wellfair_diagnostics,
+    sync::wellfair_sync_with_relay,
+};
 pub mod directory;
-pub mod social;
-pub mod personal_directory;
+pub mod ingest;
 pub mod mail;
-pub mod qapp_telemetry;
+pub mod personal_directory;
 pub mod qapp_host;
+pub mod qapp_telemetry;
+pub mod semantic;
+pub mod social;
+pub mod wallet;
 pub use qapp_host::HostApiState;
 pub mod qapp_export;
 pub mod render;
-pub use render::{ActiveAnchor, AnatomyBodyState, PreviewState, RenderLoopState, render_preview_tick};
-pub mod telemetry;
+pub use render::{
+    render_preview_tick, ActiveAnchor, AnatomyBodyState, PreviewState, RenderLoopState,
+};
+pub mod browser_10d;
 pub mod native_bindings;
 pub mod semantic_logic;
-pub mod browser_10d;
-pub mod vision_audio;
+pub mod telemetry;
 pub mod updater;
+pub mod vision_audio;
 
-// â”€â”€ Shared types & helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Shared types & helpers ────────────────────────────────────────────────────
 
 const MAX_CLIENT_DIAGNOSTIC_BYTES: usize = 16 * 1024;
 
@@ -134,7 +141,7 @@ impl TemporalSlice {
     }
 }
 
-// â”€â”€ Desktop status / logs / supervisor (kept here â€” small, core) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Desktop status / logs / supervisor (kept here — small, core) ──────────────
 
 #[command]
 pub fn get_desktop_status(
@@ -145,7 +152,11 @@ pub fn get_desktop_status(
     let jobs = LocalJobScheduler::global()
         .snapshot()
         .unwrap_or(JobQueueSnapshot {
-            jobs: vec![], queued: 0, running: 0, completed: 0, failed: 0,
+            jobs: vec![],
+            queued: 0,
+            running: 0,
+            completed: 0,
+            failed: 0,
         });
     serde_json::json!({
         "settings_port": crate::settings_server::current_settings_port(),
@@ -200,7 +211,7 @@ pub fn report_client_error(
     );
 }
 
-// â”€â”€ QApp vault (kept here â€” tiny, used by launch flow) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── QApp vault (kept here — tiny, used by launch flow) ────────────────────────
 
 #[command]
 pub fn list_installed_qapps() -> Vec<String> {
@@ -251,7 +262,7 @@ pub fn parse_hex_u64(s: &str) -> Result<u64, String> {
 
 pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
     tauri::generate_handler![
-        // â”€â”€ Local (mod.rs) â”€â”€
+        // ── Local (mod.rs) ──
         get_desktop_status,
         get_desktop_logs,
         get_supervisor_state,
@@ -260,12 +271,28 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         generate_qapp_credential,
         verify_and_install_qapp,
         launch_installed_qapp,
-        // â”€â”€ semantic_logic â”€â”€
+        // ── semantic_logic ──
         semantic_logic::execute_sparql_query,
         semantic_logic::fetch_domain_ontology,
         semantic_logic::validate_shacl_shape,
         semantic_logic::evaluate_logic_rules,
-        // â”€â”€ browser â”€â”€
+        // ── entity-view \(desktop-wide: shell, studio, browser) ──
+        view_api::view_session,
+        view_api::view_set_observer,
+        view_api::view_set_presentation_level,
+        view_api::view_project_library,
+        view_api::view_project_web_locus,
+        view_api::view_morph,
+        view_api::view_pick_scene,
+        view_api::view_select,
+        view_api::view_select_uri,
+        view_api::view_clear_selection,
+        view_api::view_bifurcate_package,
+        view_api::view_capability_report,
+        view_api::view_render_memory_spatial,
+        view_api::view_remote_controller_info,
+        view_api::view_set_circumstance,
+        // ── browser ──
         browser::open_web_url,
         browser::browser_navigate,
         browser::browser_navigate_content,
@@ -298,7 +325,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         browser::browser_engine_status,
         browser::browser_set_engine,
         browser::list_qlinks,
-        // â”€â”€ system â”€â”€
+        // ── system ──
         system::get_hardware_status,
         system::profile_energy_circumstance,
         system::start_daemon,
@@ -308,7 +335,10 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         system::run_engine_command,
         system::get_config,
         system::save_config,
-        // â”€â”€ wellfair â”€â”€
+        system::get_setup_state,
+        system::complete_setup_step,
+        system::finish_setup,
+        // ── wellfair ──
         wellfair::health::wellfair_host_snapshot,
         wellfair::health::wellfair_list_health_records,
         wellfair::health::wellfair_list_receipts,
@@ -395,6 +425,12 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair::library::wellfair_seed_studio_qapps,
         wellfair::library::wellfair_seed_perception_library,
         wellfair::library::library_seed_perception_assets,
+        wellfair::library::library_list,
+        wellfair::library::library_query_faceted,
+        wellfair::library::library_stats,
+        wellfair::library::library_search,
+        wellfair::library::library_search_text,
+        wellfair::library::library_search_time,
         wellfair::library::wellfair_ingest_legislation_text,
         wellfair::library::wellfair_ingest_legislation_pdf_hex,
         wellfair::library::wellfair_build_cml_context,
@@ -484,7 +520,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wellfair::medication::wellfair_sleep_analytics,
         wellfair::medication::wellfair_add_emergency_contact,
         wellfair::medication::wellfair_list_emergency_contacts,
-        // â”€â”€ wallet â”€â”€
+        // ── wallet ──
         wallet::get_wallet_status,
         wallet::is_first_run,
         wallet::read_identity,
@@ -506,7 +542,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         wallet::send_ecash_token,
         wallet::accept_vault_handshake,
         wallet::receive_vault_job,
-        // â”€â”€ ingest â”€â”€
+        // ── ingest ──
         ingest::ingest_pdf,
         ingest::ingest_literature,
         ingest::upsert_cmld_definition,
@@ -514,7 +550,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         ingest::export_to_solid,
         ingest::ingest_image,
         ingest::ingest_image_async,
-        // â”€â”€ inference (in ingest.rs) â”€â”€
+        // ── inference (in ingest.rs) ──
         ingest::discover_models,
         ingest::download_and_vectorize,
         ingest::download_model,
@@ -523,7 +559,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         ingest::set_active_model,
         ingest::get_active_downloads,
         ingest::run_agent_inference,
-        // â”€â”€ semantic â”€â”€
+        // ── semantic ──
         semantic::generate_front_door_invite,
         semantic::mint_semantic_token,
         semantic::fetch_wallet_portfolio,
@@ -532,7 +568,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         semantic::update_solar_input,
         semantic::fetch_torrent_telemetry,
         semantic::fetch_remote_manifest,
-        // â”€â”€ directory â”€â”€
+        // ── directory ──
         semantic::load_imported_accounts,
         semantic::save_imported_accounts,
         directory::get_front_doors,
@@ -541,7 +577,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         directory::add_directory_actor,
         directory::get_delegation_rules,
         directory::add_delegation_rule,
-        // â”€â”€ social â”€â”€
+        // ── social ──
         social::generate_connect_invite,
         social::accept_connect_invite,
         social::list_chat_contacts,
@@ -572,13 +608,13 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         social::schedule_agent_job,
         social::list_local_jobs,
         social::cancel_local_job,
-        // â”€â”€ personal_directory â”€â”€
+        // ── personal_directory ──
         personal_directory::list_directory,
         personal_directory::list_directory_categories,
         personal_directory::create_directory_category,
         personal_directory::set_directory_entry_categories,
         personal_directory::search_directory,
-        // â”€â”€ mail â”€â”€
+        // ── mail ──
         mail::list_mail_domains,
         mail::add_mail_domain,
         mail::purpose_inbox_presets,
@@ -626,13 +662,13 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         mail::accept_coop_share_package,
         mail::create_project_group_chat,
         mail::set_social_peer_endpoint,
-        // â”€â”€ personal_directory: agreements â”€â”€
+        // ── personal_directory: agreements ──
         mail::list_agreements,
         mail::agreements_for,
         mail::create_agreement,
         mail::save_agreement,
         mail::set_agreement_consent,
-        // â”€â”€ qapp_telemetry â”€â”€
+        // ── qapp_telemetry ──
         qapp_telemetry::wellfair_get_model_lifecycle_status,
         qapp_telemetry::wellfair_force_model_lifecycle_phase,
         qapp_telemetry::wellfair_get_llm_telemetry,
@@ -640,38 +676,38 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         qapp_host::certify_forge_physics,
         qapp_host::run_forge_compute_probe,
         qapp_host::get_qualia_compute_profile,
-        // â”€â”€ qapp_host â”€â”€
+        // ── qapp_host ──
         qapp_host::submit_record,
         qapp_host::get_latest_diffusion_snapshot,
         qapp_host::reconfigure_diffusion,
         qapp_host::get_diffusion_frame_rgba,
         qapp_host::get_diffusion_ledger_health,
         qapp_host::probe_localhost_preview,
-        // â”€â”€ qapp_export â”€â”€
+        // ── qapp_export ──
         qapp_export::export_qapp_as_wasm_package,
-        // â”€â”€ render â”€â”€
+        // ── render ──
         render::update_render_preview,
         render::toggle_render_loop,
         render::navigate_to_node,
         render::select_node_at,
-        // â”€â”€ telemetry â”€â”€
+        // ── telemetry ──
         telemetry::collapse_wavefunction,
         telemetry::collapse_wavefunction_legacy,
         telemetry::set_temporal_slice,
         telemetry::register_browser_capabilities,
-        // â”€â”€ native_bindings â”€â”€
+        // ── native_bindings ──
         native_bindings::calculate_chemistry_properties,
         native_bindings::calculate_framingham_risk,
         native_bindings::calculate_quantum_dft,
         native_bindings::calculate_monte_carlo_var,
-        // â”€â”€ browser_10d â”€â”€
+        // ── browser_10d ──
         browser_10d::browse_10d_containers,
         browser_10d::browse_vision_10d,
         browser_10d::load_vision_10d,
         browser_10d::scrub_vision_10d_paint,
         browser_10d::inspect_10d_container,
         browser_10d::open_10d_file_picker,
-        // â”€â”€ vision_audio â”€â”€
+        // ── vision_audio ──
         vision_audio::vision_run_synthetic_demo,
         vision_audio::vision_reject_instance,
         vision_audio::vision_correct_instance,
@@ -709,15 +745,15 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         vision_audio::audio_mixer_default,
         vision_audio::audio_mixer_bounce,
         vision_audio::audio_capabilities,
-        // â”€â”€ updater â”€â”€
+        // ── updater ──
         updater::updater_check,
         updater::updater_download_and_install,
         updater::updater_restart,
-        // â”€â”€ mesh (existing sub-module) â”€â”€
+        // ── mesh (existing sub-module) ──
         mesh::mesh_start,
         mesh::mesh_stop,
         mesh::mesh_status,
-        // â”€â”€ Native GPU surface commands (existing, in native_surface) â”€â”€
+        // ── Native GPU surface commands (existing, in native_surface) ──
         crate::native_surface::mount_gpu_surface,
         crate::native_surface::set_gpu_scene,
         crate::native_surface::set_gpu_camera,
@@ -727,13 +763,13 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         crate::native_surface::upload_gpu_10d_mesh,
         crate::native_surface::load_gpu_10d_asset,
         crate::native_surface::unmount_gpu_surface,
-        // â”€â”€ Binary IPC (existing sub-modules) â”€â”€
+        // ── Binary IPC (existing sub-modules) ──
         telemetry::load_ccf_asset,
         telemetry::list_ccf_assets,
         telemetry::test_ccf_ipc_handshake,
         telemetry::test_larynx_smoke,
         telemetry::test_vasculature_stress,
-        // â”€â”€ QPU (in qapp_telemetry) â”€â”€
+        // ── QPU (in qapp_telemetry) ──
         mail::get_qpu_settings,
         mail::save_qpu_settings,
         mail::enable_qpu_feature,
@@ -742,7 +778,7 @@ pub fn get_invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool {
         mail::get_advanced_activation_status,
         mail::get_commitment_prompt,
         mail::submit_omnibox_query,
-        // â”€â”€ Solid pod (in semantic) â”€â”€
+        // ── Solid pod (in semantic) ──
         mail::resolve_qdp_did,
         mail::get_ns_records_for_did,
         mail::sync_to_solid_pod,

@@ -23,6 +23,15 @@ pub struct ThemeBinding {
     pub class_name: Option<String>,
     #[serde(default)]
     pub tokens: HashMap<String, String>,
+    /// Presentation morphology bias P0–P6 (Presentation Binding).
+    #[serde(default)]
+    pub presentation_level: Option<u8>,
+    /// Spatial grammar hint: list | board | globe | room | strata | hyperspace
+    #[serde(default)]
+    pub spatial_grammar: Option<String>,
+    /// When false, UI should disable/discourage Spatialize (Sanctuary).
+    #[serde(default)]
+    pub spatialize_allowed: Option<bool>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -31,15 +40,14 @@ pub struct ResolvedTheme {
     pub class_name: Option<String>,
     pub stylesheets: Vec<String>,
     pub tokens: HashMap<String, String>,
+    pub presentation_level: u8,
+    pub spatial_grammar: String,
+    pub spatialize_allowed: bool,
 }
 
 /// Canonical QPrime preset IDs (theme picker foreground).
-pub const QPRIME_PRESET_IDS: &[&str] = &[
-    "fiduciary-dark",
-    "commons-light",
-    "sanctuary",
-    "infosphere",
-];
+pub const QPRIME_PRESET_IDS: &[&str] =
+    &["fiduciary-dark", "commons-light", "sanctuary", "infosphere"];
 
 /// Legacy extras — available but not primary in the picker.
 pub const LEGACY_PRESET_IDS: &[&str] = &["human-warmth", "twilight-blue", "midnight-slate"];
@@ -61,15 +69,16 @@ pub fn theme_label(id: &str) -> String {
 }
 
 /// Split catalog into QPrime presets (ordered) and everything else.
-pub fn theme_picker_sections(catalog: &[ThemeDefinition]) -> (Vec<ThemeDefinition>, Vec<ThemeDefinition>) {
+pub fn theme_picker_sections(
+    catalog: &[ThemeDefinition],
+) -> (Vec<ThemeDefinition>, Vec<ThemeDefinition>) {
     let mut qprime = Vec::new();
     for id in QPRIME_PRESET_IDS {
         if let Some(t) = catalog.iter().find(|t| t.id == *id) {
             qprime.push(t.clone());
         }
     }
-    let legacy_ids: std::collections::BTreeSet<&str> =
-        LEGACY_PRESET_IDS.iter().copied().collect();
+    let legacy_ids: std::collections::BTreeSet<&str> = LEGACY_PRESET_IDS.iter().copied().collect();
     let extras: Vec<ThemeDefinition> = catalog
         .iter()
         .filter(|t| !is_qprime_preset(&t.id) && !legacy_ids.contains(t.id.as_str()))
@@ -138,14 +147,18 @@ pub fn builtin_theme_catalog() -> Vec<ThemeDefinition> {
             class_name: Some("theme-fiduciary-dark".to_string()),
             stylesheet_href: None,
             tokens: HashMap::from([
-                ("bg".to_string(), "#0a1122".to_string()), // Deep navy
-                ("surface".to_string(), "rgba(20, 28, 48, 0.7)".to_string()), // Charcoal glass
-                ("border".to_string(), "rgba(80, 90, 110, 0.5)".to_string()),
-                ("text".to_string(), "#f8f9fb".to_string()),
-                ("text-muted".to_string(), "#94a3b8".to_string()),
-                ("accent".to_string(), "#f59e0b".to_string()), // Warm gold
-                ("accent-glow".to_string(), "rgba(245, 158, 11, 0.18)".to_string()),
-                ("bg-gradient".to_string(), "radial-gradient(ellipse at 20% 20%, rgba(245,158,11,0.10) 0%, transparent 50%), linear-gradient(160deg, #050a14 0%, #0a1122 100%)".to_string()),
+                ("bg".to_string(), "#070b14".to_string()),
+                ("surface".to_string(), "rgba(15, 23, 38, 0.78)".to_string()),
+                ("border".to_string(), "rgba(148, 163, 184, 0.18)".to_string()),
+                ("text".to_string(), "#f1f5f9".to_string()),
+                ("text-muted".to_string(), "#9aa9bd".to_string()),
+                ("accent".to_string(), "#7dd3fc".to_string()),
+                ("accent-glow".to_string(), "rgba(56, 189, 248, 0.16)".to_string()),
+                ("bg-gradient".to_string(), "radial-gradient(ellipse at 14% 8%, rgba(56,189,248,0.11) 0%, transparent 42%), radial-gradient(ellipse at 88% 92%, rgba(129,140,248,0.10) 0%, transparent 46%), linear-gradient(155deg, #050812 0%, #0a1020 52%, #070b14 100%)".to_string()),
+                ("presentation-level".to_string(), "1".to_string()),
+                ("spatial-grammar".to_string(), "list".to_string()),
+                ("spatialize-allowed".to_string(), "true".to_string()),
+                ("motion-duration".to_string(), "120ms".to_string()),
             ]),
         },
         ThemeDefinition {
@@ -178,6 +191,9 @@ pub fn builtin_theme_catalog() -> Vec<ThemeDefinition> {
                 ("bg-gradient".to_string(), "none".to_string()), // Muted, gentle
                 ("motion-duration".to_string(), "0ms".to_string()),
                 ("motion-ease".to_string(), "linear".to_string()),
+                ("presentation-level".to_string(), "0".to_string()),
+                ("spatial-grammar".to_string(), "list".to_string()),
+                ("spatialize-allowed".to_string(), "false".to_string()),
             ]),
         },
         ThemeDefinition {
@@ -193,6 +209,10 @@ pub fn builtin_theme_catalog() -> Vec<ThemeDefinition> {
                 ("accent".to_string(), "#eb6f92".to_string()), // Soft rose / neural
                 ("accent-glow".to_string(), "rgba(235, 111, 146, 0.25)".to_string()),
                 ("bg-gradient".to_string(), "radial-gradient(circle at 50% 50%, rgba(235,111,146,0.1) 0%, transparent 40%), radial-gradient(circle at 10% 80%, rgba(156,207,216,0.1) 0%, transparent 30%), linear-gradient(180deg, #020208 0%, #050510 100%)".to_string()),
+                ("presentation-level".to_string(), "3".to_string()),
+                ("spatial-grammar".to_string(), "strata".to_string()),
+                ("spatialize-allowed".to_string(), "true".to_string()),
+                ("motion-duration".to_string(), "180ms".to_string()),
             ]),
         },
     ]
@@ -200,10 +220,20 @@ pub fn builtin_theme_catalog() -> Vec<ThemeDefinition> {
 
 pub fn resolve_theme(binding: Option<&ThemeBinding>, catalog: &[ThemeDefinition]) -> ResolvedTheme {
     let Some(binding) = binding else {
-        return ResolvedTheme::default();
+        return ResolvedTheme {
+            presentation_level: 1,
+            spatial_grammar: "list".into(),
+            spatialize_allowed: true,
+            ..Default::default()
+        };
     };
 
-    let mut resolved = ResolvedTheme::default();
+    let mut resolved = ResolvedTheme {
+        presentation_level: 1,
+        spatial_grammar: "list".into(),
+        spatialize_allowed: true,
+        ..Default::default()
+    };
 
     if let Some(theme_id) = binding.theme_id.as_ref() {
         resolved.theme_key = Some(theme_id.clone());
@@ -224,25 +254,67 @@ pub fn resolve_theme(binding: Option<&ThemeBinding>, catalog: &[ThemeDefinition]
 
     push_stylesheet(&mut resolved.stylesheets, binding.stylesheet_href.clone());
     resolved.tokens.extend(binding.tokens.clone());
+
+    // Presentation Binding fields (binding overrides theme tokens)
+    if let Some(level) = binding.presentation_level {
+        resolved.presentation_level = level.min(6);
+        resolved
+            .tokens
+            .insert("presentation-level".into(), level.to_string());
+    } else if let Some(s) = resolved.tokens.get("presentation-level") {
+        if let Ok(n) = s.parse::<u8>() {
+            resolved.presentation_level = n.min(6);
+        }
+    }
+    if let Some(g) = binding.spatial_grammar.as_ref() {
+        resolved.spatial_grammar = g.clone();
+        resolved
+            .tokens
+            .insert("spatial-grammar".into(), g.clone());
+    } else if let Some(g) = resolved.tokens.get("spatial-grammar") {
+        resolved.spatial_grammar = g.clone();
+    }
+    if let Some(ok) = binding.spatialize_allowed {
+        resolved.spatialize_allowed = ok;
+        resolved.tokens.insert(
+            "spatialize-allowed".into(),
+            if ok { "true" } else { "false" }.into(),
+        );
+    } else if let Some(s) = resolved.tokens.get("spatialize-allowed") {
+        resolved.spatialize_allowed = s != "false" && s != "0";
+    }
+    // Sanctuary hard policy: motion 0 already in tokens; force no spatialize
+    if resolved.theme_key.as_deref() == Some("sanctuary") {
+        resolved.spatialize_allowed = false;
+        resolved.presentation_level = resolved.presentation_level.min(1);
+        resolved
+            .tokens
+            .insert("spatialize-allowed".into(), "false".into());
+        resolved
+            .tokens
+            .insert("motion-duration".into(), "0ms".into());
+    }
+
     resolved
+}
+
+/// Whether Spatialize should be offered in UI for this resolved pack.
+pub fn spatialize_allowed(theme: &ResolvedTheme) -> bool {
+    theme.spatialize_allowed
+}
+
+/// Default presentation level P0–P6 from pack.
+pub fn presentation_level(theme: &ResolvedTheme) -> u8 {
+    theme.presentation_level.min(6)
 }
 
 /// Motion, elevation, typography, and focus tokens shared by every QPrime scope.
 pub fn qprime_system_token_pairs() -> [(&'static str, &'static str); 12] {
     [
         ("elevation-0", "none"),
-        (
-            "elevation-1",
-            "0 12px 26px rgba(0, 0, 0, 0.18)",
-        ),
-        (
-            "elevation-2",
-            "0 22px 50px rgba(0, 0, 0, 0.28)",
-        ),
-        (
-            "elevation-3",
-            "0 28px 80px rgba(0, 0, 0, 0.38)",
-        ),
+        ("elevation-1", "0 12px 26px rgba(0, 0, 0, 0.18)"),
+        ("elevation-2", "0 22px 50px rgba(0, 0, 0, 0.28)"),
+        ("elevation-3", "0 28px 80px rgba(0, 0, 0, 0.38)"),
         ("motion-duration", "220ms"),
         ("motion-ease", "cubic-bezier(0.22, 1, 0.36, 1)"),
         ("type-scale", "1"),
@@ -388,7 +460,7 @@ mod tests {
             &builtin_theme_catalog(),
         );
         let css = shoelace_bridge_css(":root", &theme);
-        assert!(css.contains("--sl-color-primary-600: #f59e0b"));
+        assert!(css.contains("--sl-color-primary-600: #7dd3fc"));
     }
 
     #[test]
@@ -404,7 +476,10 @@ mod tests {
             .into_iter()
             .find(|t| t.id == "sanctuary")
             .expect("sanctuary preset");
-        assert_eq!(theme.tokens.get("motion-duration").map(String::as_str), Some("0ms"));
+        assert_eq!(
+            theme.tokens.get("motion-duration").map(String::as_str),
+            Some("0ms")
+        );
     }
 
     #[test]
@@ -418,6 +493,54 @@ mod tests {
         );
         let timeline = theme_motion_timeline(&theme, 0.016);
         assert!(timeline.reduced_motion);
+    }
+
+    #[test]
+    fn presentation_binding_sanctuary_disables_spatialize() {
+        let theme = resolve_theme(
+            Some(&ThemeBinding {
+                theme_id: Some("sanctuary".to_string()),
+                ..Default::default()
+            }),
+            &builtin_theme_catalog(),
+        );
+        assert!(!spatialize_allowed(&theme));
+        assert!(presentation_level(&theme) <= 1);
+        assert_eq!(
+            theme.tokens.get("motion-duration").map(String::as_str),
+            Some("0ms")
+        );
+    }
+
+    #[test]
+    fn presentation_binding_infosphere_biases_spatial() {
+        let theme = resolve_theme(
+            Some(&ThemeBinding {
+                theme_id: Some("infosphere".to_string()),
+                ..Default::default()
+            }),
+            &builtin_theme_catalog(),
+        );
+        assert!(spatialize_allowed(&theme));
+        assert!(presentation_level(&theme) >= 3);
+        assert_eq!(theme.spatial_grammar, "strata");
+    }
+
+    #[test]
+    fn presentation_binding_override_on_binding() {
+        let theme = resolve_theme(
+            Some(&ThemeBinding {
+                theme_id: Some("fiduciary-dark".to_string()),
+                presentation_level: Some(2),
+                spatial_grammar: Some("board".into()),
+                spatialize_allowed: Some(false),
+                ..Default::default()
+            }),
+            &builtin_theme_catalog(),
+        );
+        assert_eq!(presentation_level(&theme), 2);
+        assert_eq!(theme.spatial_grammar, "board");
+        assert!(!spatialize_allowed(&theme));
     }
 }
 

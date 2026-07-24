@@ -140,6 +140,9 @@ keystore.bin
 # One-off migration scripts, old release binaries, debug artefacts
 scratch/
 scripts/
+!scripts/
+scripts/*
+!scripts/build_frontend.sh
 
 # Build/debug error logs (PowerShell redirection output — UTF-16, not source)
 *_errors.json

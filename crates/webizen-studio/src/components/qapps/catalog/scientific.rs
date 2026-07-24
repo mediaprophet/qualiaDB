@@ -2,13 +2,13 @@ use super::{Cat, QApp, Stat};
 
 pub(super) fn apps() -> Vec<QApp> {
     vec![
-        // â”€â”€ Scientific Computing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Scientific Computing ──────────────────────────────────────────────
         QApp {
             id: "physics-simulator",
             name: "Physics Simulator",
             tagline: "Physical Modelling",
             desc: "Clifford geometric algebra, Lorentz vectors, Voronoi tessellations, Burgers-equation \
-                   CFD, and MCMC thermodynamic sampling â€” all zero-copy via physics_simulation and thermodynamics libraries.",
+                   CFD, and MCMC thermodynamic sampling — all zero-copy via physics_simulation and thermodynamics libraries.",
             icon: "lightning-charge",
             route: None,
             stat: Stat::Beta,
@@ -30,7 +30,7 @@ pub(super) fn apps() -> Vec<QApp> {
             name: "ODE & Calculus Lab",
             tagline: "Numerical Methods",
             desc: "Runge-Kutta 4th-order integrator, shooting-method BVP solver, Simpson quadrature, \
-                   and symbolic ODE parsing â€” each result stamped with a tensor-provenance NQuin.",
+                   and symbolic ODE parsing — each result stamped with a tensor-provenance NQuin.",
             icon: "graph-up",
             route: None,
             stat: Stat::Beta,

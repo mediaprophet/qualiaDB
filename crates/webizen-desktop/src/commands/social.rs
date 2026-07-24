@@ -6,7 +6,7 @@ use qualia_client_core::api;
 use super::mesh;
 use tauri::{command, AppHandle, Emitter, State};
 
-// â”€â”€ Social connect + group chat (P0: expose the connect â†’ group â†’ talk loop) â”€â”€â”€â”€
+// ── Social connect + group chat (P0: expose the connect → group → talk loop) ────
 //
 // These wrap engine functions that already existed in `qualia_client_core::api` but were never
 // surfaced to the desktop, so a user could not actually connect to another person from the UI.
@@ -113,13 +113,13 @@ pub fn get_chat_graph(session_id: String) -> Result<serde_json::Value, String> {
     api::get_chat_graph(session_id)
 }
 
-// â”€â”€ Local-agent inference in chat (the real p64/q42 engine, gated by the Webizen VM) â”€â”€â”€â”€â”€
+// ── Local-agent inference in chat (the real p64/q42 engine, gated by the Webizen VM) ─────
 //
 // These are the FIRST commands to make local inference reachable from the desktop chat UI. Until
-// now `connect_chat.rs` stored a `user` message and stopped â€” nothing invoked the engine â€” and the
+// now `connect_chat.rs` stored a `user` message and stopped — nothing invoked the engine — and the
 // legacy `run_agent_inference` command is a MOCK (canned text). Do NOT use that for real inference.
-// The real path is here â†’ `chat_inference::run_chat_inference_with_options` â†’ `LocalLlmAgent`, gated
-// by validate_intent â†’ infer â†’ validate_output (ungrounded output is rejected).
+// The real path is here → `chat_inference::run_chat_inference_with_options` → `LocalLlmAgent`, gated
+// by validate_intent → infer → validate_output (ungrounded output is rejected).
 
 /// Run one local-agent turn for `session_id` on `prompt`, STREAMING tokens to the frontend.
 ///
@@ -128,10 +128,10 @@ pub fn get_chat_graph(session_id: String) -> Result<serde_json::Value, String> {
 /// per token, on a blocking worker so the UI thread never stalls. On completion it persists the
 /// agent's grounded reply as a `Role::Agent` message (the engine handles relay fan-out for groups),
 /// emits `chat-done` = `{ session_id, committed, result }`, and returns the full `ChatInferenceResult`
-/// JSON (text, provenance_hashes, citations, tokens_generated, block_reason, shield_alert, â€¦).
+/// JSON (text, provenance_hashes, citations, tokens_generated, block_reason, shield_alert, …).
 ///
 /// Requires an active model (`set_active_model`). With none active the result is uncommitted and
-/// `block_reason` explains why â€” surfaced to the user rather than failing silently.
+/// `block_reason` explains why — surfaced to the user rather than failing silently.
 #[command]
 pub async fn stream_chat_inference(
     app: AppHandle,
@@ -182,7 +182,7 @@ pub async fn stream_chat_inference(
     .await
     .map_err(|e| format!("inference task join failed: {e}"))?;
 
-    // Persist the agent's reply as a chat message â€” only when the VM committed a grounded output.
+    // Persist the agent's reply as a chat message — only when the VM committed a grounded output.
     if result.committed && !result.text.trim().is_empty() {
         let _ = api::append_chat_message(session_id.clone(), "agent".to_string(), result.text.clone());
     }
@@ -199,14 +199,14 @@ pub async fn stream_chat_inference(
     Ok(detail)
 }
 
-/// Cancel the in-flight local-agent generation (cooperative â€” the decode loop checks the flag).
+/// Cancel the in-flight local-agent generation (cooperative — the decode loop checks the flag).
 #[command]
 pub fn cancel_chat_inference() -> Result<(), String> {
     api::cancel_chat_inference();
     Ok(())
 }
 
-/// Create a new (solo) chat session â€” a private conversation with your local agent. Returns the id.
+/// Create a new (solo) chat session — a private conversation with your local agent. Returns the id.
 #[command]
 pub fn create_chat_session(title: Option<String>) -> Result<String, String> {
     api::create_chat_session(title)
@@ -218,9 +218,9 @@ pub fn ensure_chat_session() -> Result<String, String> {
     api::ensure_chat_session()
 }
 
-// â”€â”€ Agent roster (software agents defined under the principal) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Agent roster (software agents defined under the principal) ─────────────────
 
-/// List the principal's roster of software agents (local-engine + remote-MCP). Always â‰¥1 (seeded).
+/// List the principal's roster of software agents (local-engine + remote-MCP). Always ≥1 (seeded).
 #[command]
 pub fn agent_roster_list() -> Result<serde_json::Value, String> {
     api::agent_roster_list()
@@ -244,7 +244,7 @@ pub fn agent_roster_remove(slug: String) -> Result<(), String> {
     api::agent_roster_remove(slug)
 }
 
-/// Add/update a remote-MCP agent from primitives (transport_kind âˆˆ tcp|http|stdio).
+/// Add/update a remote-MCP agent from primitives (transport_kind ∈ tcp|http|stdio).
 #[command]
 pub fn agent_roster_add_remote(
     slug: String,
@@ -266,7 +266,7 @@ pub fn agent_roster_add_remote(
     )
 }
 
-// â”€â”€ Principal-gated MCP tool loop (U3-A / U3-B) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Principal-gated MCP tool loop (U3-A / U3-B) ─────────────────────────────────
 
 /// List local in-process MCP tools for Talk allowlist / propose UI.
 #[command]

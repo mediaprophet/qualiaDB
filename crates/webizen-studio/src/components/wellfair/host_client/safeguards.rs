@@ -10,7 +10,7 @@ use js_sys;
 
 /// Generic single-string-arg invoke returning parsed JSON `Value` (for the switch commands).
 #[cfg(target_arch = "wasm32")]
-async fn invoke_str_arg(cmd: &str, key: &str, val: &str) -> Result<serde_json::Value, String> {
+pub(super) async fn invoke_str_arg(cmd: &str, key: &str, val: &str) -> Result<serde_json::Value, String> {
     let args = js_sys::Object::new();
     js_sys::Reflect::set(&args, &key.into(), &wasm_bindgen::JsValue::from_str(val))
         .map_err(|_| "failed to build invoke args".to_string())?;
@@ -58,7 +58,7 @@ pub async fn arm_dead_mans_switch(
     Err("Safeguard switches require the Tauri desktop host".into())
 }
 
-/// "I'm alive" â€” touch a dead-man switch's heartbeat.
+/// "I'm alive" — touch a dead-man switch's heartbeat.
 #[cfg(target_arch = "wasm32")]
 pub async fn dead_mans_alive(commitment_hex: &str) -> Result<bool, String> {
     let v = invoke_str_arg("wellfair_dead_mans_alive", "commitmentHex", commitment_hex).await?;
@@ -89,7 +89,7 @@ pub async fn attest_dead_mans(_commitment_hex: &str, _party_did: &str, _kind: &s
     Err("Safeguard switches require the Tauri desktop host".into())
 }
 
-/// Enact a dead-man switch â€” returns the disposition JSON (or null).
+/// Enact a dead-man switch — returns the disposition JSON (or null).
 #[cfg(target_arch = "wasm32")]
 pub async fn enact_dead_mans(commitment_hex: &str) -> Result<serde_json::Value, String> {
     invoke_str_arg("wellfair_enact_dead_mans", "commitmentHex", commitment_hex).await
@@ -254,7 +254,7 @@ pub async fn activate_incapacity(
     Err("Safeguard switches require the Tauri desktop host".into())
 }
 
-/// Regain capacity â€” the advocate stands down.
+/// Regain capacity — the advocate stands down.
 #[cfg(target_arch = "wasm32")]
 pub async fn regain_capacity(principal_did: &str) -> Result<bool, String> {
     let v = invoke_str_arg("wellfair_regain_capacity", "principalDid", principal_did).await?;

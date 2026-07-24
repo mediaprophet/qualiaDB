@@ -68,6 +68,10 @@ pub struct Node {
     pub mesh: Option<Mesh>,
     pub style: Style,
     pub children: Vec<Node>,
+    /// Stable entity id for multi-observer pick → view_select (0 = unset).
+    pub entity_id: u64,
+    /// Affordance bits from rights filter (0 = unset).
+    pub affordance_bits: u8,
 }
 
 impl Default for Node {
@@ -78,6 +82,8 @@ impl Default for Node {
             mesh: None,
             style: Style::default(),
             children: Vec::new(),
+            entity_id: 0,
+            affordance_bits: 0,
         }
     }
 }
@@ -88,6 +94,16 @@ impl Node {
             label: label.into(),
             ..Default::default()
         }
+    }
+
+    pub fn with_entity_id(mut self, entity_id: u64) -> Self {
+        self.entity_id = entity_id;
+        self
+    }
+
+    pub fn with_affordance_bits(mut self, bits: u8) -> Self {
+        self.affordance_bits = bits;
+        self
     }
     pub fn with_mesh(mut self, mesh: Mesh) -> Self {
         self.mesh = Some(mesh);

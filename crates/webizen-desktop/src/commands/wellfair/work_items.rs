@@ -36,7 +36,7 @@ pub fn wellfair_add_work_item(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let item = qualia_cooperative_core::work_item::WorkItem::new(
             project_id,
             parse_work_item_type(&item_type),
@@ -58,7 +58,7 @@ pub fn wellfair_add_work_item_status(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let event = qualia_cooperative_core::work_item::WorkItemStatusEvent::new(
             work_item_id,
             parse_work_item_status(&status),
@@ -79,10 +79,10 @@ pub fn wellfair_work_item_board(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let board = host.work_item_board(&project_id, limit)?;
         serde_json::to_string(&board).map_err(|e| e.to_string())
     })?
 }
 
-// --- Agency layer: supported-agency delegations (ADR Â§7â€“Â§10) ---------------------------------
+// --- Agency layer: supported-agency delegations (ADR §7–§10) ---------------------------------

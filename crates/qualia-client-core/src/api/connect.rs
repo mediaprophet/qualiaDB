@@ -1,4 +1,4 @@
-//! Connection flow: magic link â†’ verify â†’ SocialWebNet peer
+//! Connection flow: magic link → verify → SocialWebNet peer
 
 #![allow(non_snake_case)]
 
@@ -13,7 +13,7 @@ fn resolve_front_door_did(front_door_did: &str) -> Result<String, String> {
     crate::domains::list_domains()
         .first()
         .map(|d| d.front_door_did.clone())
-        .ok_or_else(|| "no domain yet â€” create one in Domains & Mail first".to_string())
+        .ok_or_else(|| "no domain yet — create one in Domains & Mail first".to_string())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -126,7 +126,7 @@ pub fn set_social_peer_endpoint(
     list_social_peers()
 }
 
-/// Per-peer mesh dialability â€” which accepted peers can form a SocialWebNet tunnel now, which must
+/// Per-peer mesh dialability — which accepted peers can form a SocialWebNet tunnel now, which must
 /// wait for the peer to reach us (roaming), and which are missing key material. Pure/read-only.
 pub fn mesh_dialability() -> Result<serde_json::Value, String> {
     let peers = crate::social_peers::list_peers();

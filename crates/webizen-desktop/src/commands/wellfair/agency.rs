@@ -11,7 +11,7 @@ pub fn wellfair_list_agency_domains(app: AppHandle) -> Result<String, String> {
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         serde_json::to_string(&host.list_agency_domains()).map_err(|e| e.to_string())
     })?
 }
@@ -23,7 +23,7 @@ pub fn wellfair_list_agency_delegations(app: AppHandle) -> Result<String, String
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         serde_json::to_string(&host.list_agency_delegations(256)?).map_err(|e| e.to_string())
     })?
 }
@@ -44,7 +44,7 @@ pub fn wellfair_create_agency_delegation(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let agents: Vec<String> = agent_dids
             .split(',')
             .map(|s| s.trim().to_string())
@@ -74,7 +74,7 @@ pub fn wellfair_set_agency_delegation_consent(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let parsed = agency_consent_from_str(&consent)?;
         let entry = host.set_agency_delegation_consent(&delegation_id, parsed)?;
         serde_json::to_string(&entry).map_err(|e| e.to_string())
@@ -91,14 +91,14 @@ pub fn wellfair_revoke_agency_delegation(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let entry = host.revoke_agency_delegation(&delegation_id)?;
         serde_json::to_string(&entry).map_err(|e| e.to_string())
     })?
 }
 
 /// Evaluate the fail-closed ABAC for a delegation. `action` is `read|write|decide`. Returns
-/// `{ "permit": bool, "reason": string }` â€” the reason names *why* access was denied.
+/// `{ "permit": bool, "reason": string }` — the reason names *why* access was denied.
 #[command]
 pub fn wellfair_evaluate_agency_access(
     app: AppHandle,
@@ -110,7 +110,7 @@ pub fn wellfair_evaluate_agency_access(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let decision = host.evaluate_agency_access(&delegation_id, &action, &data_class)?;
         let (permit, reason) = match decision {
             qualia_cooperative_core::agency_delegation::AccessDecision::Permit => {

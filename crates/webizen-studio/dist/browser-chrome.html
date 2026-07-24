@@ -59,7 +59,6 @@
     #body-row { flex: 1; display: flex; min-height: 0; }
     #content-slot {
       flex: 1; background: #020617;
-      /* Content webview is a native child layered by the host over this region. */
       position: relative;
     }
     #content-slot::after {
@@ -67,36 +66,122 @@
       position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
       color: #475569; font-size: 0.85rem; pointer-events: none; padding: 1rem; text-align: center;
     }
-    #agent {
+    #agent, #trust-panel, #cookies-panel {
       width: 0; overflow: hidden; border-left: 0 solid var(--border);
       background: #0f172a; transition: width 0.15s ease;
       display: flex; flex-direction: column;
     }
-    #agent.open { width: 320px; border-left-width: 1px; }
-    #agent h3 {
+    #agent.open, #trust-panel.open, #cookies-panel.open { width: 340px; border-left-width: 1px; }
+    #agent h3, #trust-panel h3, #cookies-panel h3 {
       margin: 0; padding: 0.65rem 0.75rem; font-size: 0.78rem;
       text-transform: uppercase; letter-spacing: 0.04em; color: #c4b5fd;
       border-bottom: 1px solid var(--border);
     }
-    #agent-out {
+    #agent-out, #agent-scroll, #trust-scroll, #cookies-body {
       flex: 1; overflow: auto; padding: 0.65rem 0.75rem;
-      font-size: 0.8rem; color: var(--muted); white-space: pre-wrap;
+      font-size: 0.8rem; color: var(--muted);
     }
-    #agent-form {
-      display: flex; gap: 0.35rem; padding: 0.5rem; border-top: 1px solid var(--border);
+    #trust-body, #suggested-body, #mcp-tools-list, #mcp-result { white-space: pre-wrap; }
+    .panel-section-title {
+      margin: 0.65rem 0 0.35rem; font-size: 0.7rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.04em; color: #a5b4fc;
     }
-    #agent-q {
-      flex: 1; background: #0b1220; color: var(--text);
+    .panel-section-title:first-child { margin-top: 0; }
+    .panel-note {
+      font-size: 0.68rem; color: #64748b; line-height: 1.35; margin: 0.35rem 0 0.5rem;
+    }
+    .empty-state {
+      font-size: 0.78rem; color: #64748b; line-height: 1.4; white-space: pre-wrap;
+    }
+    .honesty-row {
+      display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center;
+      margin: 0 0 0.45rem;
+    }
+    .honesty-chip {
+      display: inline-block; font-size: 0.62rem; font-weight: 700;
+      padding: 0.12rem 0.4rem; border-radius: 999px;
+      border: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    .honesty-chip.partial { color: var(--warn); border-color: #92400e; background: rgba(251,191,36,0.08); }
+    .honesty-chip.scaffold { color: #c4b5fd; border-color: #5b21b6; background: rgba(139,92,246,0.1); }
+    .mcp-await {
+      display: none; background: #0b1220; border: 1px solid #4c1d95;
+      border-radius: 8px; padding: 0.55rem; margin: 0.4rem 0;
+    }
+    .mcp-await.show { display: block; }
+    .mcp-await .await-title { font-size: 0.78rem; color: #e9d5ff; font-weight: 600; margin-bottom: 0.35rem; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.35rem 0; }
+    .btn-permit {
+      background: #059669; color: #fff; border: 1px solid #047857;
+      border-radius: 8px; padding: 0.35rem 0.65rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-deny {
+      background: #7f1d1d; color: #fecaca; border: 1px solid #991b1b;
+      border-radius: 8px; padding: 0.35rem 0.65rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-muted {
+      background: #1e293b; color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.35rem 0.55rem; font-weight: 600; cursor: pointer;
+    }
+    #agent-form, #trust-form, #cookies-actions, #mcp-actions {
+      display: flex; flex-direction: column; gap: 0.35rem; padding: 0.5rem;
+      border-top: 1px solid var(--border);
+    }
+    #agent-form { flex-direction: row; }
+    #cookies-actions, #mcp-actions { flex-direction: row; flex-wrap: wrap; }
+    #agent-q, #trust-form input, #trust-form textarea {
+      background: #0b1220; color: var(--text);
       border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem 0.55rem;
+      font: inherit; width: 100%;
     }
+    #agent-q { flex: 1; }
+    .anchor-row, .cookie-row, .suggested-row {
+      display: flex; align-items: center; gap: 0.35rem;
+      padding: 0.35rem 0; border-bottom: 1px solid #1e293b;
+    }
+    .anchor-row span, .cookie-row span, .suggested-row span {
+      flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .suggested-row { flex-wrap: wrap; }
+    .suggested-meta {
+      width: 100%; font-size: 0.65rem; color: #64748b; white-space: normal;
+      margin-top: -0.15rem; margin-bottom: 0.15rem;
+    }
+    .cookie-row { flex-direction: column; align-items: stretch; gap: 0.15rem; }
+    .cookie-row .cookie-main {
+      display: flex; gap: 0.35rem; align-items: baseline;
+    }
+    .cookie-row .cookie-main strong { color: var(--text); font-weight: 600; }
+    .cookie-row .cookie-meta { font-size: 0.65rem; color: #64748b; white-space: normal; }
+    .tag {
+      display: inline-block; font-size: 0.62rem; font-weight: 700;
+      padding: 0.1rem 0.35rem; border-radius: 999px; border: 1px solid var(--border);
+      color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    .tag.third { color: var(--warn); border-color: #92400e; }
+    .tag.fp { color: var(--ok); border-color: #065f46; }
     #status {
       font-size: 0.7rem; color: var(--muted); padding: 0.2rem 0.55rem;
       border-top: 1px solid var(--border); background: #0b1220;
+    }
+    #engine-banner {
+      display: none;
+      font-size: 0.72rem; font-weight: 600;
+      color: #0f172a; background: var(--warn);
+      padding: 0.25rem 0.55rem;
+      border-bottom: 1px solid #b45309;
+    }
+    #engine-banner.show { display: block; }
+    #engine-select {
+      background: #0b1220; color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.3rem 0.4rem; font: inherit; max-width: 11rem;
     }
   </style>
 </head>
 <body>
   <div id="chrome">
+    <div id="engine-banner" role="status" aria-live="polite"></div>
     <div id="toolbar">
       <button type="button" id="btn-back" title="Back">←</button>
       <button type="button" id="btn-fwd" title="Forward">→</button>
@@ -105,28 +190,109 @@
         <input id="url" type="text" spellcheck="false" placeholder="Search or enter URL" />
         <button type="submit" title="Go">Go</button>
       </form>
+      <button type="button" id="btn-bookmark" title="Bookmark to Library">🔖</button>
+      <label title="Content engine preference (Servo is experimental; not linked as renderer yet)" style="display:flex;align-items:center;gap:0.25rem;font-size:0.72rem;color:var(--muted);">
+        Engine
+        <select id="engine-select" aria-label="Browser engine">
+          <option value="os_web_view">OS WebView (default)</option>
+          <option value="servo_experimental">Servo (experimental)</option>
+        </select>
+      </label>
       <div id="trust" title="Trust indicator (your store + policy)">trust: —</div>
       <button type="button" id="btn-trust" title="Trust store">Trust</button>
+      <button type="button" id="btn-cookies" title="Cookie jar">Cookies</button>
       <button type="button" id="btn-agent" title="Browser agent">Agent</button>
     </div>
     <div id="body-row">
       <div id="content-slot" aria-hidden="true"></div>
+      <aside id="trust-panel">
+        <h3>Trust store · your policy</h3>
+        <div id="trust-scroll">
+          <div class="panel-section-title">Your store</div>
+          <div id="trust-body">Loading…</div>
+          <div class="panel-section-title">Suggested (not enabled)</div>
+          <p class="panel-note">Software provides means; you decide. Empty until curated by principal. Import adds to your store disabled; Enable imports and turns the anchor on.</p>
+          <div id="suggested-body" class="empty-state">Loading catalog…</div>
+        </div>
+        <form id="trust-form">
+          <input id="trust-label" type="text" placeholder="Label (optional)" />
+          <input id="trust-did" type="text" placeholder="did:web:… or did:key:…" />
+          <textarea id="trust-pem" rows="3" placeholder="Or paste PEM (BEGIN CERTIFICATE)"></textarea>
+          <button type="submit">Add anchor</button>
+          <div class="panel-note" id="trust-honesty-note">
+            Custom PEM/DID govern agent fetch + this badge. OS WebView TLS uses the OS trust store by default.
+            Cert-override is <strong>not claimed product-active</strong> — code path exists on Windows; status below when Trust opens.
+            Suggested catalog stays empty until you curate (no invented PEMs).
+          </div>
+          <div class="panel-note" id="cert-override-status" style="color:#64748b;">Cert-override: open Trust to refresh status…</div>
+        </form>
+      </aside>
+      <aside id="cookies-panel">
+        <h3>Cookies · jar + graph</h3>
+        <div id="cookies-body" class="empty-state">Press Refresh to load cookies for the current URL.
+
+Best-effort WebView jar + graph — not complete Chromium parity. Local qualia:// / webizen:// pages have no HTTP cookies.</div>
+        <div id="cookies-actions">
+          <button type="button" id="btn-cookies-refresh">Refresh</button>
+        </div>
+      </aside>
       <aside id="agent">
-        <h3>Browser agent · cml:Proposed</h3>
-        <div id="agent-out">Ask about this page: summary, trust, privacy signals. Answers are grounded in fetched text + your trust store.</div>
+        <h3>Browser agent (v0)</h3>
+        <div id="agent-scroll">
+          <div class="honesty-row">
+            <span class="honesty-chip partial" title="UI shell + gated MCP path; not full page agent autonomy">Partial</span>
+            <span class="honesty-chip scaffold" title="No silent tools; permit required; full page-context agent is later">Scaffold</span>
+          </div>
+          <p class="panel-note">
+            No silent tool execution. MCP tools use the same principal gate as Talk
+            (<code>mcp_call_tool_gated</code>). Full allowlist editor: Talk → agent tool card.
+            Cert-override / Servo claims unchanged (not product-active / experimental pref only).
+          </p>
+
+          <div class="panel-section-title">Page Q&amp;A (deterministic)</div>
+          <div id="agent-out" class="empty-state">Ask: summary, trust, privacy. Grounded in fetched text + your trust store. Not MCP.</div>
+
+          <div class="panel-section-title">MCP tools (allowlisted)</div>
+          <p class="panel-note" id="mcp-allowlist-note">Allowlist: load on open (agent slug <strong>local</strong>). Empty = deny-all until seed/save in Talk.</p>
+          <div id="mcp-tools-list" class="empty-state">Open panel to list local tools…</div>
+          <div class="btn-row">
+            <button type="button" class="btn-muted" id="btn-mcp-refresh">Refresh tools</button>
+            <button type="button" class="btn-muted" id="btn-mcp-propose-caps" title="Two-step: propose then Permit">Run list_capabilities on permit</button>
+          </div>
+          <div id="mcp-await" class="mcp-await" role="region" aria-live="polite">
+            <div class="await-title">Awaiting principal: list_capabilities</div>
+            <p class="panel-note" style="margin:0 0 0.4rem;">Agent <code>local</code> · args <code>{}</code> · requires explicit Permit. Deny never calls MCP.</p>
+            <div class="btn-row">
+              <button type="button" class="btn-permit" id="btn-mcp-permit">Permit</button>
+              <button type="button" class="btn-deny" id="btn-mcp-deny">Deny</button>
+            </div>
+          </div>
+          <div class="panel-section-title">Last MCP result</div>
+          <div id="mcp-status" class="panel-note" style="color:#a7f3d0;"></div>
+          <pre id="mcp-result" class="empty-state">(none yet)</pre>
+        </div>
         <form id="agent-form">
           <input id="agent-q" type="text" placeholder="What is this page about?" />
           <button type="submit">Ask</button>
         </form>
       </aside>
     </div>
-    <div id="status">Webizen Browser · OS WebView content · own chrome / trust / agent</div>
+    <div id="status">Webizen Browser · OS WebView (default) · chrome / trust / cookies / agent / bookmarks · Servo experimental preference only</div>
   </div>
   <script>
     const $ = (id) => document.getElementById(id);
-    let currentUrl = "https://duckduckgo.com/";
+    let currentUrl = "qualia://chora/universe";
     let history = [currentUrl];
     let histIdx = 0;
+    let urlFocused = false;
+    let lastPolled = "";
+    /** @type {{ engine?: string, active_renderer?: string, banner?: string|null, servo_renders_pages?: boolean }} */
+    let engineState = {
+      engine: "os_web_view",
+      active_renderer: "os_web_view",
+      banner: null,
+      servo_renders_pages: false,
+    };
 
     async function invoke(cmd, args = {}) {
       if (!window.__TAURI__ || !window.__TAURI__.core) {
@@ -137,6 +303,47 @@
 
     function setStatus(msg) {
       $("status").textContent = msg;
+    }
+
+    function applyEngineStatus(raw) {
+      const s = typeof raw === "string" ? JSON.parse(raw) : (raw || {});
+      engineState = s;
+      const preferred = s.engine || s.preferred || "os_web_view";
+      const active = s.active_renderer || "os_web_view";
+      const sel = $("engine-select");
+      if (sel && sel.value !== preferred) sel.value = preferred;
+      const bannerEl = $("engine-banner");
+      if (bannerEl) {
+        if (s.banner) {
+          bannerEl.textContent = s.banner;
+          bannerEl.classList.add("show");
+        } else {
+          bannerEl.textContent = "";
+          bannerEl.classList.remove("show");
+        }
+      }
+      const renders = s.servo_renders_pages === true;
+      const engLabel = preferred === "servo_experimental"
+        ? (renders ? "Servo" : "Servo pref (WebView active)")
+        : "OS WebView";
+      return { preferred, active, engLabel, banner: s.banner || null };
+    }
+
+    async function refreshEngineStatus(statusMsg) {
+      try {
+        const raw = await invoke("browser_engine_status", {});
+        const info = applyEngineStatus(raw);
+        if (statusMsg) {
+          setStatus(statusMsg);
+        } else if (info.banner) {
+          setStatus(info.banner + " · engine=" + info.preferred + " · active=" + info.active);
+        } else {
+          setStatus(
+            "Webizen Browser · " + info.engLabel +
+            " · chrome / trust / cookies / agent / bookmarks · engine=" + info.preferred
+          );
+        }
+      } catch (_) { /* host may not be ready */ }
     }
 
     function setTrustBadge(v) {
@@ -168,8 +375,8 @@
         const dest = (typeof resolved === "string" ? resolved : String(resolved)).replace(/^"|"$/g, "");
         await invoke("browser_navigate_content", { url: dest });
         currentUrl = dest;
+        lastPolled = dest;
         $("url").value = dest;
-        // app-level history for chrome buttons
         history = history.slice(0, histIdx + 1);
         history.push(dest);
         histIdx = history.length - 1;
@@ -182,6 +389,257 @@
       }
     }
 
+    async function pollContentUrl() {
+      if (urlFocused) return;
+      try {
+        const u = await invoke("browser_content_url", {});
+        const dest = (typeof u === "string" ? u : String(u || "")).replace(/^"|"$/g, "").trim();
+        if (dest && dest !== lastPolled && dest !== $("url").value) {
+          lastPolled = dest;
+          currentUrl = dest;
+          $("url").value = dest;
+          await refreshTrust(dest);
+        }
+      } catch (_) { /* host may not be ready */ }
+    }
+
+    function esc(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function closeSidePanels(exceptId) {
+      ["agent", "trust-panel", "cookies-panel"].forEach((id) => {
+        if (id !== exceptId) $(id).classList.remove("open");
+      });
+    }
+
+    async function refreshSuggestedCatalog() {
+      const body = $("suggested-body");
+      try {
+        const raw = await invoke("browser_trust_list_suggested", {});
+        const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+        const entries = data.entries || [];
+        const desc = data.description ||
+          "Empty suggested trust catalog. Principal curates content; software provides means only.";
+        if (!entries.length) {
+          body.className = "empty-state";
+          body.textContent =
+            "(empty) No suggested roots yet.\n\n" +
+            desc +
+            "\n\nSoftware provides means; you decide. Catalog stays empty until you curate entries (no invented PEMs).";
+          return;
+        }
+        body.className = "";
+        body.innerHTML = entries.map((e) => {
+          const id = esc(e.id || "");
+          const label = esc(e.label || e.id || "?");
+          const kind = esc(e.kind || "?");
+          const juris = e.jurisdiction ? esc(e.jurisdiction) : "";
+          const notes = e.notes ? esc(e.notes) : "";
+          const license = e.license ? " · " + esc(e.license) : "";
+          return `<div class="suggested-row" data-id="${id}">
+            <span title="${id}">${label} <span class="tag">${kind}</span></span>
+            <button type="button" data-act="import" data-id="${id}" title="Import disabled">Import</button>
+            <button type="button" data-act="enable" data-id="${id}" title="Import and enable">Enable</button>
+            <div class="suggested-meta">${juris ? juris + " · " : ""}${notes || "Suggested only — not live until imported."}${license}</div>
+          </div>`;
+        }).join("") +
+          `<p class="panel-note">${esc(desc)}</p>`;
+        body.querySelectorAll("button").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const id = btn.getAttribute("data-id");
+            const act = btn.getAttribute("data-act");
+            const enable = act === "enable";
+            try {
+              await invoke("browser_trust_import_suggested", { id, enable });
+              setStatus(enable
+                ? "Suggested anchor imported + enabled: " + id
+                : "Suggested anchor imported (disabled): " + id);
+              await refreshTrustPanel();
+              await refreshTrust($("url").value || currentUrl);
+            } catch (err) {
+              setStatus("Import suggested: " + err);
+            }
+          });
+        });
+      } catch (e) {
+        body.className = "empty-state";
+        body.textContent = "Suggested catalog error: " + e;
+      }
+    }
+
+    async function refreshCertOverrideHonesty() {
+      const el = $("cert-override-status");
+      if (!el) return;
+      try {
+        const raw = await invoke("browser_cert_override_status", {});
+        const s = typeof raw === "string" ? JSON.parse(raw) : (raw || {});
+        const state = s.cert_override || "unavailable";
+        const hooked = s.hook_attached === true;
+        const note = s.note || "";
+        // U2-A honesty: never present cert-override as the product TLS substrate.
+        // Even when hook_attached, OS WebView still owns ordinary TLS; override is
+        // an error-path policy for pins / enabled PEMs (default deny).
+        let line =
+          "Cert-override status: " + state +
+          " · hook_attached=" + (hooked ? "yes" : "no") +
+          " · product claim: not active as full TLS control";
+        if (note) line += "\n" + note;
+        if (state === "active" && hooked) {
+          line +=
+            "\n(Hook present on Windows error path only — host-pin A / chain-B; never auto-allow. Ordinary HTTPS still OS-validated.)";
+        } else if (state === "disabled") {
+          line += "\nDisabled by preference; OS TLS decisions stand.";
+        } else {
+          line += "\nHook not attached or non-Windows — WebView uses OS trust store only.";
+        }
+        el.textContent = line;
+        el.style.whiteSpace = "pre-wrap";
+      } catch (e) {
+        el.textContent =
+          "Cert-override status unavailable (" + e + "). Treat as not product-active; OS TLS only.";
+      }
+    }
+
+    async function refreshTrustPanel() {
+      const body = $("trust-body");
+      try {
+        const list = await invoke("browser_trust_list", {});
+        const data = typeof list === "string" ? JSON.parse(list) : list;
+        const anchors = data.anchors || [];
+        if (!anchors.length) {
+          body.className = "empty-state";
+          body.textContent =
+            "(empty) Add a DID or PEM below.\n\nPath: {storage}/webizen/trust_store.json\n\nBadge levels: os_default | did_match | local_scheme | custom_root_available | untrusted_policy | unknown\n\nYour store is policy + agent HTTPS — not a claim that WebView TLS is custom-rooted.";
+        } else {
+          body.className = "";
+          body.innerHTML = anchors.map((a) => {
+            const id = esc(a.id || "");
+            return `<div class="anchor-row" data-id="${id}">
+              <span title="${id}">${a.enabled ? "✓" : "·"} ${esc(a.label || id)} [${esc(a.kind)}]</span>
+              <button type="button" data-act="toggle" data-id="${id}" data-en="${a.enabled ? "0" : "1"}">${a.enabled ? "Off" : "On"}</button>
+              <button type="button" data-act="rm" data-id="${id}">×</button>
+            </div>`;
+          }).join("") +
+            `<p class="panel-note">defer_unknown_https_to_os=${!!data.defer_unknown_https_to_os} · WebView TLS still OS-backed for ordinary sites</p>`;
+          body.querySelectorAll("button").forEach((btn) => {
+            btn.addEventListener("click", async () => {
+              const id = btn.getAttribute("data-id");
+              const act = btn.getAttribute("data-act");
+              try {
+                if (act === "rm") await invoke("browser_trust_remove", { id });
+                if (act === "toggle") await invoke("browser_trust_set_enabled", {
+                  id, enabled: btn.getAttribute("data-en") === "1"
+                });
+                await refreshTrustPanel();
+                await refreshTrust($("url").value || currentUrl);
+              } catch (e) { setStatus(String(e)); }
+            });
+          });
+        }
+      } catch (e) {
+        body.className = "empty-state";
+        body.textContent = "Trust store error: " + e;
+      }
+      await refreshSuggestedCatalog();
+      await refreshCertOverrideHonesty();
+    }
+
+    function purposeLabel(p) {
+      if (p == null) return "unknown";
+      if (typeof p === "string") return p;
+      return String(p);
+    }
+
+    function renderCookiesPanel(data, url) {
+      const body = $("cookies-body");
+      const cookies = data.cookies || [];
+      const third = data.third_parties || [];
+      const count = data.cookie_count != null ? data.cookie_count : cookies.length;
+      const synced = data.synced != null ? data.synced : "—";
+      const note = data.coverage_note ||
+        "Best-effort jar visibility — not complete Chromium parity.";
+      const firstParty = cookies.filter((c) => !c.third_party);
+      const thirdPartyCookies = cookies.filter((c) => c.third_party);
+
+      let html = "";
+      html += `<p class="panel-note">${esc(url)} · count=${esc(count)} · synced=${esc(synced)}` +
+        (data.source ? ` · source=${esc(data.source)}` : "") + `</p>`;
+      html += `<div class="panel-section-title">Coverage</div>`;
+      html += `<p class="panel-note">${esc(note)}</p>`;
+
+      html += `<div class="panel-section-title">First-party (${firstParty.length})</div>`;
+      if (!firstParty.length) {
+        html += `<div class="empty-state">(none observed for this origin)</div>`;
+      } else {
+        firstParty.forEach((c) => {
+          html += `<div class="cookie-row">
+            <div class="cookie-main">
+              <strong>${esc(c.name)}</strong>
+              <span class="tag fp">1p</span>
+              <span class="tag">${esc(purposeLabel(c.purpose))}</span>
+            </div>
+            <div class="cookie-meta">${esc(c.domain || "")} · path ${esc(c.path || "/")} · ${c.secure ? "Secure" : "insecure"} · SameSite ${esc(c.same_site || "?")}${c.source ? " · " + esc(c.source) : ""}</div>
+          </div>`;
+        });
+      }
+
+      html += `<div class="panel-section-title">Third parties (${third.length} domains · ${thirdPartyCookies.length} cookies)</div>`;
+      if (!third.length && !thirdPartyCookies.length) {
+        html += `<div class="empty-state">(none)</div>`;
+      } else {
+        if (third.length) {
+          html += `<p class="panel-note">Domains: ${third.map(esc).join(", ")}</p>`;
+        }
+        thirdPartyCookies.forEach((c) => {
+          html += `<div class="cookie-row">
+            <div class="cookie-main">
+              <strong>${esc(c.name)}</strong>
+              <span class="tag third">3p</span>
+              <span class="tag">${esc(purposeLabel(c.purpose))}</span>
+            </div>
+            <div class="cookie-meta">${esc(c.domain || "")} · path ${esc(c.path || "/")} · ${c.secure ? "Secure" : "insecure"} · SameSite ${esc(c.same_site || "?")}${c.source ? " · " + esc(c.source) : ""}</div>
+          </div>`;
+        });
+      }
+
+      body.className = "";
+      body.innerHTML = html;
+    }
+
+    async function refreshCookiesPanel() {
+      const u = $("url").value || currentUrl;
+      const body = $("cookies-body");
+      body.className = "empty-state";
+      body.textContent = "Refreshing jar…";
+      try {
+        const raw = await invoke("browser_cookies_refresh", { url: u });
+        const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+        renderCookiesPanel(data, u);
+        const n = data.cookie_count || data.synced || 0;
+        setStatus("Cookies refreshed (" + n + ")");
+      } catch (e) {
+        // Fall back to graph summary without jar pull
+        try {
+          const raw = await invoke("browser_cookie_summary", { url: u });
+          const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+          renderCookiesPanel(data, u);
+          setStatus("Cookies: graph summary (refresh jar failed: " + e + ")");
+        } catch (e2) {
+          body.className = "empty-state";
+          body.textContent = "Cookies error: " + e + "\n\n" + e2;
+          setStatus("Cookies: " + e);
+        }
+      }
+    }
+
+    $("url").addEventListener("focus", () => { urlFocused = true; });
+    $("url").addEventListener("blur", () => { urlFocused = false; });
+
     $("nav-form").addEventListener("submit", (e) => {
       e.preventDefault();
       navigate($("url").value);
@@ -192,8 +650,9 @@
       const u = history[histIdx];
       $("url").value = u;
       try {
-        await invoke("browser_navigate_content", { url: u });
         await invoke("browser_go_back", {});
+        currentUrl = u;
+        lastPolled = u;
         await refreshTrust(u);
         setStatus("Back → " + u);
       } catch (e) { setStatus(String(e)); }
@@ -206,8 +665,9 @@
       const u = history[histIdx];
       $("url").value = u;
       try {
-        await invoke("browser_navigate_content", { url: u });
         await invoke("browser_go_forward", {});
+        currentUrl = u;
+        lastPolled = u;
         await refreshTrust(u);
         setStatus("Forward → " + u);
       } catch (e) { setStatus(String(e)); }
@@ -220,23 +680,217 @@
         setStatus("Reloaded");
       } catch (e) { setStatus(String(e)); }
     });
-    $("btn-agent").addEventListener("click", () => {
-      $("agent").classList.toggle("open");
-    });
-    $("btn-trust").addEventListener("click", async () => {
+    $("btn-bookmark").addEventListener("click", async () => {
+      const u = $("url").value || currentUrl;
       try {
-        const list = await invoke("browser_trust_list", {});
-        const data = typeof list === "string" ? JSON.parse(list) : list;
-        const lines = (data.anchors || []).map(a =>
-          (a.enabled ? "✓" : "·") + " " + a.label + " [" + a.kind + "]"
-        );
-        alert("Your trust store (" + (data.anchors || []).length + " anchors)\n\n" +
-          (lines.length ? lines.join("\n") : "(empty — import roots/DIDs from Reach or API)\n") +
-          "\ndefer_unknown_https_to_os=" + !!data.defer_unknown_https_to_os);
+        const msg = await invoke("save_qlink", {
+          url: u,
+          title: "",
+          contextAssertions: null,
+        });
+        setStatus(typeof msg === "string" ? msg : "Bookmark saved");
       } catch (e) {
-        alert("Trust store: " + e);
+        setStatus("Bookmark failed: " + e);
       }
     });
+    $("btn-cookies").addEventListener("click", async () => {
+      const panel = $("cookies-panel");
+      const opening = !panel.classList.contains("open");
+      panel.classList.toggle("open");
+      if (opening) {
+        closeSidePanels("cookies-panel");
+        panel.classList.add("open");
+        await refreshCookiesPanel();
+      }
+    });
+    $("btn-cookies-refresh").addEventListener("click", async () => {
+      await refreshCookiesPanel();
+    });
+    // ── Browser agent (v0) MCP shell — principal-gated; no silent tool calls ──
+    const MCP_AGENT_SLUG = "local";
+    let mcpProposed = false;
+    let mcpBusy = false;
+
+    function setMcpStatus(msg) {
+      const el = $("mcp-status");
+      if (el) el.textContent = msg || "";
+    }
+
+    function setMcpAwait(show) {
+      mcpProposed = !!show;
+      const el = $("mcp-await");
+      if (!el) return;
+      if (show) el.classList.add("show");
+      else el.classList.remove("show");
+    }
+
+    function toolNameOf(t) {
+      if (!t) return "";
+      if (typeof t === "string") return t;
+      return (t.name || t.tool_name || t.id || "").toString();
+    }
+
+    async function refreshMcpToolsPanel() {
+      const listEl = $("mcp-tools-list");
+      const noteEl = $("mcp-allowlist-note");
+      if (listEl) listEl.textContent = "Loading local MCP tools…";
+      let tools = [];
+      let allowlist = [];
+      try {
+        // Seed empty allowlist with safe golden tools (not a Permit — roster write only).
+        try {
+          const seeded = await invoke("mcp_ensure_safe_tool_allowlist", { slug: MCP_AGENT_SLUG });
+          if (Array.isArray(seeded)) {
+            allowlist = seeded.map(String);
+          } else if (seeded && Array.isArray(seeded.tools)) {
+            allowlist = seeded.tools.map(String);
+          }
+        } catch (_) { /* optional; Talk owns full editor */ }
+        try {
+          const agent = await invoke("agent_roster_get", { slug: MCP_AGENT_SLUG });
+          const a = typeof agent === "string" ? JSON.parse(agent) : agent;
+          const arr = (a && a.allowed_mcp_tools) || [];
+          if (Array.isArray(arr) && arr.length) allowlist = arr.map(String);
+        } catch (_) { /* roster may be empty */ }
+        const raw = await invoke("mcp_list_local_tools", {});
+        const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+        if (Array.isArray(parsed)) tools = parsed;
+        else if (parsed && Array.isArray(parsed.tools)) tools = parsed.tools;
+        else if (parsed && Array.isArray(parsed.value)) tools = parsed.value;
+      } catch (e) {
+        if (listEl) {
+          listEl.textContent =
+            "Could not list tools: " + e +
+            "\n\nStatic note: golden tools include list_capabilities, computer_vision.\n" +
+            "Full allowlist editor: Talk → MCP tools (principal-gated) card.";
+        }
+        if (noteEl) {
+          noteEl.innerHTML =
+            "Allowlist: unavailable here. Manage in Talk → agent tool card (agent <strong>local</strong>).";
+        }
+        setMcpStatus("tools/list failed — open Talk tool card for full path.");
+        return;
+      }
+      const names = tools.map(toolNameOf).filter(Boolean);
+      if (listEl) {
+        if (!names.length) {
+          listEl.textContent =
+            "(no tools returned)\nGolden path: list_capabilities.\n" +
+            "Talk → MCP tools card for full catalog + allowlist editor.";
+        } else {
+          listEl.textContent = names.map((n) => "• " + n).join("\n");
+        }
+      }
+      if (noteEl) {
+        const al =
+          allowlist.length === 0
+            ? "(empty — deny-all until seed/save in Talk)"
+            : allowlist.join(", ");
+        noteEl.innerHTML =
+          "Agent <strong>" +
+          MCP_AGENT_SLUG +
+          "</strong> allowlist: " +
+          esc(al) +
+          ". Editor: Talk → MCP tools card.";
+      }
+      setMcpStatus(names.length ? "Tools loaded (" + names.length + ")." : "No tools listed.");
+    }
+
+    $("btn-agent").addEventListener("click", async () => {
+      const panel = $("agent");
+      const opening = !panel.classList.contains("open");
+      panel.classList.toggle("open");
+      if (opening) {
+        closeSidePanels("agent");
+        panel.classList.add("open");
+        await refreshMcpToolsPanel();
+      }
+    });
+    $("btn-trust").addEventListener("click", async () => {
+      const panel = $("trust-panel");
+      const opening = !panel.classList.contains("open");
+      panel.classList.toggle("open");
+      if (opening) {
+        closeSidePanels("trust-panel");
+        panel.classList.add("open");
+        await refreshTrustPanel();
+      }
+    });
+    $("trust-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const label = $("trust-label").value.trim();
+      const did = $("trust-did").value.trim();
+      const pem = $("trust-pem").value.trim();
+      try {
+        if (did) {
+          await invoke("browser_trust_add_did", { label, did, notes: null });
+          $("trust-did").value = "";
+        } else if (pem) {
+          await invoke("browser_trust_add_pem", { label, pem, notes: null });
+          $("trust-pem").value = "";
+        } else {
+          setStatus("Enter a DID or PEM");
+          return;
+        }
+        $("trust-label").value = "";
+        await refreshTrustPanel();
+        await refreshTrust($("url").value || currentUrl);
+        setStatus("Trust anchor added");
+      } catch (err) {
+        setStatus("Trust add failed: " + err);
+      }
+    });
+
+    $("btn-mcp-refresh").addEventListener("click", async () => {
+      await refreshMcpToolsPanel();
+    });
+    // Step 1 of two-step: propose only — never invokes MCP.
+    $("btn-mcp-propose-caps").addEventListener("click", () => {
+      if (mcpBusy) return;
+      setMcpAwait(true);
+      setMcpStatus("Proposed list_capabilities — Permit to run, Deny to cancel. No call yet.");
+      const res = $("mcp-result");
+      if (res) res.textContent = "(awaiting principal decision)";
+      setStatus("MCP propose: list_capabilities (awaiting Permit)");
+    });
+    // Step 2 Permit: only path that calls mcp_call_tool_gated with principal_permitted=true.
+    $("btn-mcp-permit").addEventListener("click", async () => {
+      if (!mcpProposed || mcpBusy) return;
+      mcpBusy = true;
+      setMcpStatus("Permitted — calling mcp_call_tool_gated…");
+      setStatus("MCP Permit: list_capabilities…");
+      try {
+        const raw = await invoke("mcp_call_tool_gated", {
+          agentSlug: MCP_AGENT_SLUG,
+          toolName: "list_capabilities",
+          argumentsJson: "{}",
+          principalPermitted: true,
+        });
+        const text = typeof raw === "string" ? raw : JSON.stringify(raw, null, 2);
+        const res = $("mcp-result");
+        if (res) res.textContent = text;
+        setMcpStatus("Permit OK — result below.");
+        setStatus("MCP list_capabilities OK");
+        setMcpAwait(false);
+      } catch (err) {
+        const res = $("mcp-result");
+        if (res) res.textContent = "(none)";
+        setMcpStatus("Permit blocked/failed: " + err);
+        setStatus("MCP Permit failed: " + err);
+      } finally {
+        mcpBusy = false;
+      }
+    });
+    // Deny path: never invokes MCP (no gated call with false either).
+    $("btn-mcp-deny").addEventListener("click", () => {
+      if (mcpBusy) return;
+      setMcpAwait(false);
+      const res = $("mcp-result");
+      if (res) res.textContent = "(none — Deny; no MCP call)";
+      setMcpStatus("Denied list_capabilities — no tool execution.");
+      setStatus("MCP Deny: no call");
+    });
+
     $("agent-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const q = $("agent-q").value.trim() || "Summarise this page";
@@ -249,22 +903,55 @@
         });
         const r = typeof raw === "string" ? JSON.parse(raw) : raw;
         $("agent-out").textContent =
-          r.answer + "\n\n—\nSignals: " + (r.cml_signals || []).slice(0, 12).join(", ") +
+          r.answer + "\n\n—\nIntent: " + (r.intent || "—") +
+          "\nSignals: " + (r.cml_signals || []).slice(0, 12).join(", ") +
           "\nTrust: " + (r.trust && r.trust.level) +
-          (r.library_asset_uri ? "\nLibrary: " + r.library_asset_uri : "");
+          (r.library_asset_uri ? "\nLibrary: " + r.library_asset_uri : "") +
+          "\nProvenance: " + (r.provenance || []).slice(0, 6).join("; ");
       } catch (err) {
         $("agent-out").textContent = "Agent error: " + err;
       }
     });
 
-    // Initial URL from query string ?url=
+    $("engine-select").addEventListener("change", async () => {
+      const id = $("engine-select").value;
+      try {
+        const raw = await invoke("browser_set_engine", { engine: id });
+        const info = applyEngineStatus(raw);
+        // Navigation must keep working — do not touch content webview on engine toggle.
+        if (info.banner) {
+          setStatus(info.banner + " · engine=" + info.preferred + " · active=" + info.active);
+        } else {
+          setStatus("Engine: " + info.engLabel + " · engine=" + info.preferred);
+        }
+      } catch (e) {
+        setStatus("Engine set failed: " + e);
+        await refreshEngineStatus();
+      }
+    });
+
+    // Poll host last_url ≤1s for omnibox sync after in-app navigations from Reach.
+    setInterval(pollContentUrl, 900);
+
     (async () => {
       const params = new URLSearchParams(location.search);
-      const start = params.get("url") || "https://duckduckgo.com/";
+      const start = params.get("url") || "qualia://chora/universe";
       $("url").value = start;
       $("btn-back").disabled = true;
       $("btn-fwd").disabled = true;
-      await navigate(start);
+      // Content child already loads default universe on shell open; sync omnibox + trust.
+      currentUrl = start;
+      lastPolled = start;
+      await refreshTrust(start);
+      await refreshEngineStatus(
+        start.indexOf("chora") >= 0
+          ? "Chora universe · drag sky to orbit · seed flagships in page"
+          : null
+      );
+      // If Servo preferred, banner takes priority over Chora ready text.
+      if (engineState.banner) {
+        setStatus(engineState.banner + " · engine=" + (engineState.engine || "servo_experimental"));
+      }
     })();
   </script>
 </body>

@@ -2,13 +2,13 @@ use super::{Cat, QApp, Stat};
 
 pub(super) fn apps() -> Vec<QApp> {
     vec![
-        // â”€â”€ Financial & Economics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Financial & Economics ─────────────────────────────────────────────
         QApp {
             id: "portfolio",
             name: "Portfolio Analyzer",
             tagline: "Asset Management",
             desc: "Markowitz optimisation, Sharpe/Sortino ratios, and factor exposure analysis with \
-                   ML-DSA fiduciary signatures â€” all zero-copy via the financial_modeling specialized library.",
+                   ML-DSA fiduciary signatures — all zero-copy via the financial_modeling specialized library.",
             icon: "currency-exchange",
             route: None,
             stat: Stat::Beta,

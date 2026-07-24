@@ -4,15 +4,15 @@
 use super::*;
 
 impl WebizenHostApi {
-    // --- Hypermedia asset library: ingest a document â†’ make it searchable by meaning ---
+    // --- Hypermedia asset library: ingest a document → make it searchable by meaning ---
 
     fn library(&self) -> Result<super::super::hypermedia_store::HypermediaStore, String> {
         super::super::hypermedia_store::HypermediaStore::open(&self.storage_root).map_err(|e| e.to_string())
     }
 
     /// **Ingest a text document** into the library: derive its topics + searchable text, bind them into a
-    /// hypermedia container, persist it (findable by meaning), and â€” if `guardian_did` is set (the principal
-    /// is under a guardianship relation) and a flag is raised â€” notify the guardian **and record it in the
+    /// hypermedia container, persist it (findable by meaning), and — if `guardian_did` is set (the principal
+    /// is under a guardianship relation) and a flag is raised — notify the guardian **and record it in the
     /// tamper-evident ledger**. Returns a summary (topics, flags, any guardian notifications).
     pub fn ingest_document(
         &self,
@@ -24,8 +24,8 @@ impl WebizenHostApi {
         self.ingest_bytes(uri, media_type, text.as_bytes(), text, &ManualFacets::default(), guardian_did)
     }
 
-    /// Ingest a text document **with person-authored facets** â€” an optional date (â†’ timeline), place
-    /// (â†’ map), project and purpose the person chooses to attach. The document's derived topics still come
+    /// Ingest a text document **with person-authored facets** — an optional date (→ timeline), place
+    /// (→ map), project and purpose the person chooses to attach. The document's derived topics still come
     /// from its content; these facets are added on top (the person authoring meaning, not being defined).
     pub fn ingest_document_annotated(
         &self,
@@ -39,8 +39,8 @@ impl WebizenHostApi {
     }
 
     /// **Ingest any asset bytes** (a document, a **photo**, an audio clip) into the library. The processor
-    /// registered for `media_type` derives searchability â€” a text doc â†’ topics; a **JPEG/PNG â†’ its EXIF
-    /// capture time (timeline) + GPS place (map)**; a WAV â†’ duration + dominant frequency â€” and it all folds
+    /// registered for `media_type` derives searchability — a text doc → topics; a **JPEG/PNG → its EXIF
+    /// capture time (timeline) + GPS place (map)**; a WAV → duration + dominant frequency — and it all folds
     /// into the container so the original is findable by meaning. `excerpt_source` is a short human string for
     /// the results list (the text for a doc; a caption/filename for binary). Guardianship + ledger hook as
     /// [`Self::ingest_document`].
@@ -121,7 +121,7 @@ impl WebizenHostApi {
                 .as_deref()
                 .unwrap_or("none"),
         );
-        // Rust-native CML context graph for text-like assets (TEXTâ†’CONCEPTâ†’LOGIC, cml:Proposed).
+        // Rust-native CML context graph for text-like assets (TEXT→CONCEPT→LOGIC, cml:Proposed).
         let mut cml_topics = Vec::new();
         let mut cml_purposes = purposes.clone();
         let mut cml_signals = Vec::new();
@@ -142,7 +142,7 @@ impl WebizenHostApi {
             cml_signals = g.signal_tags.clone();
             cml_concept_count = g.concepts.len() as u32;
             cml_n3 = if g.n3.len() > 48_000 {
-                format!("{}â€¦\n# [cml_n3 truncated]", &g.n3[..48_000])
+                format!("{}…\n# [cml_n3 truncated]", &g.n3[..48_000])
             } else {
                 g.n3
             };
@@ -233,7 +233,7 @@ impl WebizenHostApi {
         let store = self.library()?;
         store.add(entry).map_err(|e| e.to_string())?;
 
-        // Sibling COF body segments â€” load only the budget needed for a turn.
+        // Sibling COF body segments — load only the budget needed for a turn.
         for seg in &cof_body_segments {
             let seg_uri = format!("{uri}#cof-seg-{}", seg.index);
             let mut se = super::super::hypermedia_store::LibraryEntry {
@@ -251,7 +251,7 @@ impl WebizenHostApi {
                 flags: Vec::new(),
                 ingested_unix: now,
                 excerpt: format!(
-                    "COF segment {}/{} Â· ~{} tokens Â· units: {}",
+                    "COF segment {}/{} · ~{} tokens · units: {}",
                     seg.index + 1,
                     seg.total,
                     seg.approx_tokens,
@@ -307,7 +307,7 @@ impl WebizenHostApi {
         }))
     }
 
-    /// **Ingest a photo/audio file from hex-encoded bytes** â€” the boundary form for the desktop, which reads a
+    /// **Ingest a photo/audio file from hex-encoded bytes** — the boundary form for the desktop, which reads a
     /// picked file and passes its bytes as hex (a JPEG is not valid utf-8, so it cannot come through the text
     /// path). A photo's EXIF capture-time + GPS auto-populate the timeline + map. `caption` is the short
     /// display string. Same derive + persist + guardian hook as [`Self::ingest_bytes`].
@@ -330,7 +330,7 @@ impl WebizenHostApi {
         Ok(entries.iter().map(library_summary).collect())
     }
 
-    /// The **timeline** query â€” entries whose event instant falls within `[start, end]` (unix seconds).
+    /// The **timeline** query — entries whose event instant falls within `[start, end]` (unix seconds).
     pub fn search_library_time(&self, start: i64, end: i64) -> Result<Vec<serde_json::Value>, String> {
         let entries = self.library()?.search_time_range(start, end).map_err(|e| e.to_string())?;
         Ok(entries.iter().map(library_summary).collect())
@@ -403,7 +403,7 @@ impl WebizenHostApi {
         Ok(serde_json::to_value(counts).map_err(|e| e.to_string())?)
     }
 
-    /// Seed the early studio academic QApp inventory into Library â†’ Software.
+    /// Seed the early studio academic QApp inventory into Library → Software.
     /// Idempotent; returns add/update counts.
     pub fn seed_studio_qapps_library(&self) -> Result<serde_json::Value, String> {
         let store = self.library()?;
@@ -412,7 +412,7 @@ impl WebizenHostApi {
         Ok(serde_json::to_value(report).map_err(|e| e.to_string())?)
     }
 
-    /// Seed perception models + ontology catalogue rows into Library â†’ Software.
+    /// Seed perception models + ontology catalogue rows into Library → Software.
     /// Also ensures seed weight files under `{storage}/models/`.
     pub fn seed_perception_library(&self) -> Result<serde_json::Value, String> {
         let store = self.library()?;
@@ -422,7 +422,7 @@ impl WebizenHostApi {
         Ok(serde_json::to_value(report).map_err(|e| e.to_string())?)
     }
 
-    /// Native legislation ingest (structure parse, no Ollama): PDF bytes â†’ Work shelf
+    /// Native legislation ingest (structure parse, no Ollama): PDF bytes → Work shelf
     /// entries for the instrument and every Part/Section/Subsection with full body text.
     pub fn ingest_legislation_pdf_hex(
         &self,
@@ -463,7 +463,7 @@ impl WebizenHostApi {
     }
 
     /// Build a Rust-native CML context graph for arbitrary text (no Python).
-    /// Returns concepts, signal tags, N3, and deontic/privacy counts â€” does not persist.
+    /// Returns concepts, signal tags, N3, and deontic/privacy counts — does not persist.
     pub fn build_cml_context_graph(
         &self,
         uri: &str,
@@ -563,7 +563,7 @@ impl WebizenHostApi {
         e.cml_signals = g.signal_tags.clone();
         e.cml_concept_count = g.concepts.len() as u32;
         e.cml_n3 = if g.n3.len() > 48_000 {
-            format!("{}â€¦", &g.n3[..48_000])
+            format!("{}…", &g.n3[..48_000])
         } else {
             g.n3.clone()
         };
@@ -653,10 +653,10 @@ impl WebizenHostApi {
             "section": e.section,
             "commons_visibility": e.commons_visibility,
             "how": [
-                "Host: Keep â†’ Library â†’ Commons â†’ Share to peers.",
+                "Host: Keep → Library → Commons → Share to peers.",
                 "Peer: accept via Talk social connection; request content over mesh when available.",
             ],
-            "note": "Card is metadata only â€” not the secret body. High-sensitivity items never appear here.",
+            "note": "Card is metadata only — not the secret body. High-sensitivity items never appear here.",
         }))
     }
 
@@ -667,7 +667,7 @@ impl WebizenHostApi {
     }
 
     /// Export the full hypermedia graph mass (quin count + optional dump for inject).
-    /// Returns `{ quin_count, entries }` â€” the live graph inject seam for daemon/MCP.
+    /// Returns `{ quin_count, entries }` — the live graph inject seam for daemon/MCP.
     pub fn export_library_graph(&self) -> Result<serde_json::Value, String> {
         let store = self.library()?;
         let entries = store.all().map_err(|e| e.to_string())?;
@@ -680,4 +680,164 @@ impl WebizenHostApi {
         }))
     }
 
+}
+
+// ── Vault-free path helpers (AppState storage_path; no Sanctuary HostApi) ─────
+//
+// The hypermedia shelf is a JSON index under `{storage}/wellfair/`. Reading and
+// seeding catalogue rows must work **before** the person unlocks Sanctuary —
+// otherwise Library looks permanently empty after a perception seed.
+
+use super::super::hypermedia_store::{
+    FacetFilter, HypermediaStore, LibrarySection, LibrarySort,
+};
+use super::library_summary;
+use std::path::Path;
+
+fn open_store(storage_root: &Path) -> Result<HypermediaStore, String> {
+    HypermediaStore::open(storage_root).map_err(|e| e.to_string())
+}
+
+/// List library entries at `storage_root` (newest-first store order). Optional section filter.
+pub fn list_library_section_at(
+    storage_root: &Path,
+    section: Option<&str>,
+) -> Result<Vec<serde_json::Value>, String> {
+    let store = open_store(storage_root)?;
+    let entries = match section {
+        Some(s) if !s.is_empty() && s != "all" => store
+            .by_section(LibrarySection::parse(s))
+            .map_err(|e| e.to_string())?,
+        _ => store.all().map_err(|e| e.to_string())?,
+    };
+    Ok(entries.iter().map(library_summary).collect())
+}
+
+/// Faceted query + facet counts at `storage_root` (same JSON shape as HostApi).
+pub fn query_library_faceted_at(
+    storage_root: &Path,
+    filter_json: &str,
+    sort: &str,
+) -> Result<serde_json::Value, String> {
+    let filter: FacetFilter = if filter_json.trim().is_empty() {
+        Default::default()
+    } else {
+        serde_json::from_str(filter_json).map_err(|e| format!("facet filter json: {e}"))?
+    };
+    let sort = LibrarySort::parse(sort);
+    let store = open_store(storage_root)?;
+    let entries = store
+        .query_faceted(&filter, sort)
+        .map_err(|e| e.to_string())?;
+    let counts = store.facet_counts(&filter).map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({
+        "entries": entries.iter().map(library_summary).collect::<Vec<_>>(),
+        "total": entries.len(),
+        "sort": sort.as_str(),
+        "filter": filter,
+        "facets": counts,
+    }))
+}
+
+/// Aggregate stats at `storage_root` (header chips + section counts).
+pub fn library_stats_at(storage_root: &Path) -> Result<serde_json::Value, String> {
+    let store = open_store(storage_root)?;
+    let s = store.stats().map_err(|e| e.to_string())?;
+    let sections = store.section_counts().map_err(|e| e.to_string())?;
+    Ok(serde_json::json!({
+        "total": s.total,
+        "with_date": s.with_date,
+        "with_place": s.with_place,
+        "flags": s.flags,
+        "quins": s.quins,
+        "topics": s.topics,
+        "projects": s.projects,
+        "sections": sections,
+    }))
+}
+
+/// Facet search (`topic` | `depicts` | `place` | `project` | `purpose`) without vault.
+pub fn search_library_at(
+    storage_root: &Path,
+    facet: &str,
+    value: &str,
+) -> Result<Vec<serde_json::Value>, String> {
+    let store = open_store(storage_root)?;
+    let entries = store.search(facet, value).map_err(|e| e.to_string())?;
+    Ok(entries.iter().map(library_summary).collect())
+}
+
+/// Free-text search without vault.
+pub fn search_library_text_at(
+    storage_root: &Path,
+    query: &str,
+) -> Result<Vec<serde_json::Value>, String> {
+    let store = open_store(storage_root)?;
+    let entries = store.search_text(query).map_err(|e| e.to_string())?;
+    Ok(entries.iter().map(library_summary).collect())
+}
+
+/// Timeline range search without vault.
+pub fn search_library_time_at(
+    storage_root: &Path,
+    start: i64,
+    end: i64,
+) -> Result<Vec<serde_json::Value>, String> {
+    let store = open_store(storage_root)?;
+    let entries = store
+        .search_time_range(start, end)
+        .map_err(|e| e.to_string())?;
+    Ok(entries.iter().map(library_summary).collect())
+}
+
+#[cfg(test)]
+mod vault_free_tests {
+    use super::*;
+    use crate::wellfair::hypermedia_store::{CommonsVisibility, LibraryEntry};
+
+    #[test]
+    fn vault_free_list_and_stats_see_seeded_rows() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = HypermediaStore::open(dir.path()).unwrap();
+        let entry = LibraryEntry {
+            asset_uri: "model://test-vision".into(),
+            primary_subject: 42,
+            media_type: "application/x-webizen-model".into(),
+            quins: vec![],
+            topics: vec!["perception".into(), "computer_vision".into()],
+            projects: vec!["perception:vision".into()],
+            purposes: vec!["model".into()],
+            place: None,
+            occurred_at: None,
+            lat: None,
+            lon: None,
+            flags: vec![],
+            ingested_unix: 1_700_000_000,
+            excerpt: "test model row".into(),
+            sensitivity: "public".into(),
+            section: "software".into(),
+            commons_visibility: CommonsVisibility::None,
+            cml_signals: vec![],
+            cml_concept_count: 0,
+            cml_n3: String::new(),
+            cof_html: String::new(),
+            cof_segment_count: 0,
+            cof_segment_index: 0,
+            cof_profile: String::new(),
+        };
+        store.add(entry).unwrap();
+
+        let listed = list_library_section_at(dir.path(), Some("software")).unwrap();
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0]["asset_uri"], "model://test-vision");
+
+        let stats = library_stats_at(dir.path()).unwrap();
+        assert_eq!(stats["total"], 1);
+        assert_eq!(stats["sections"]["software"], 1);
+
+        let faceted = query_library_faceted_at(dir.path(), r#"{"section":"software"}"#, "newest")
+            .unwrap();
+        assert_eq!(faceted["total"], 1);
+        assert_eq!(faceted["entries"].as_array().unwrap().len(), 1);
+    }
 }

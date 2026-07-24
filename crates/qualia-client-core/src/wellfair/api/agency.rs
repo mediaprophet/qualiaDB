@@ -19,11 +19,11 @@ use wellfare_core::assessment::{
 use super::*;
 
 impl WebizenHostApi {
-    // --- Agency layer: supported-agency delegations (ADR Â§7â€“Â§10; cooperative-core agency_*) -------
+    // --- Agency layer: supported-agency delegations (ADR §7–§10; cooperative-core agency_*) -------
     //
     // A delegation binds a principal to their agent(s) for a *domain of agency* under an authority
     // profile + values anchor, gated by an optional trigger and fail-closed ABAC. Persisted through
-    // the same signed journal path as other Restricted records (self-authored â†’ commits; a proxy
+    // the same signed journal path as other Restricted records (self-authored → commits; a proxy
     // write would suspend into guardianship, T1.5). The **lossless** delegation JSON is stored as the
     // record summary so the full object reconstructs on read; updates append a superseding version of
     // the same delegation id (latest-wins projection in `list_agency_delegations`).
@@ -88,7 +88,7 @@ impl WebizenHostApi {
         Ok(d)
     }
 
-    /// List the current delegations â€” latest version per delegation id (updates supersede).
+    /// List the current delegations — latest version per delegation id (updates supersede).
     ///
     /// The journal is append-only and lists **newest-first**, so the first record seen for a given
     /// logical delegation id is its latest version (append order == version order). This is robust
@@ -125,7 +125,7 @@ impl WebizenHostApi {
             .ok_or_else(|| format!("agency delegation '{delegation_id}' not found"))
     }
 
-    /// Update the principal's consent state (grant / withdraw) â€” appends a superseding version.
+    /// Update the principal's consent state (grant / withdraw) — appends a superseding version.
     pub fn set_agency_delegation_consent(
         &mut self,
         delegation_id: &str,
@@ -136,7 +136,7 @@ impl WebizenHostApi {
         self.add_agency_delegation(&d)
     }
 
-    /// Revoke a delegation â€” appends a superseding, revoked version (revocation is monotonic).
+    /// Revoke a delegation — appends a superseding, revoked version (revocation is monotonic).
     pub fn revoke_agency_delegation(
         &mut self,
         delegation_id: &str,
@@ -147,7 +147,7 @@ impl WebizenHostApi {
     }
 
     /// The seeded domains of agency (id + label + description + consequential/selfhood flags), for a
-    /// delegation-creation picker. Category terms are excluded â€” only the 17 leaf domains.
+    /// delegation-creation picker. Category terms are excluded — only the 17 leaf domains.
     pub fn list_agency_domains(&self) -> Vec<AgencyDomainInfo> {
         let tax = agency_domain_taxonomy();
         tax.all()
@@ -166,7 +166,7 @@ impl WebizenHostApi {
 
     /// Evaluate the fail-closed ABAC for a delegation against an access request built from the
     /// delegation's own domain. `action` is `"read" | "write" | "decide"`. Uses a bare trigger
-    /// context (now only) â€” trigger-gated delegations therefore read as inactive here; supplying a
+    /// context (now only) — trigger-gated delegations therefore read as inactive here; supplying a
     /// richer context (events/attestations) is a follow-up. Demonstrates the safety invariants:
     /// selfhood default-deny, and consequential judgements requiring declared provenance + horizon.
     pub fn evaluate_agency_access(
@@ -196,7 +196,7 @@ impl WebizenHostApi {
     // --- Wellbeing self-assessment instruments (T2.2; PHQ-9 / GAD-7) ---------------------------
     //
     // A self-monitoring aid, not a diagnosis. Scoring is fail-closed in the domain layer; results
-    // persist as Restricted records through the signed journal (lossless summary â†’ reconstructs).
+    // persist as Restricted records through the signed journal (lossless summary → reconstructs).
 
     /// The instruments this build ships (definitions: items, options, bands, disclaimer).
     pub fn list_assessment_instruments(&self) -> Vec<InstrumentDto> {

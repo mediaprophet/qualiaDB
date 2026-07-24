@@ -133,6 +133,8 @@ pub fn body_scene(report: &AnatomyViewReport, azimuth_deg: f64, elevation_deg: f
             tensor: Default::default(),
             epistemic_state: EpistemicState::Collapsed,
             version: 0.0,
+            entity_id: 0,
+            affordance_bits: 0,
         });
     }
 

@@ -3,7 +3,7 @@
 use super::*;
 use tauri::{command, AppHandle, Manager};
 
-// â”€â”€ Disclosure traceability (ADR 0011 D5) + duty of inquiry (D8) â”€â”€
+// ── Disclosure traceability (ADR 0011 D5) + duty of inquiry (D8) ──
 
 /// Record a transparency cc (the protective "I informed authority X" note).
 #[command]
@@ -15,7 +15,7 @@ pub fn wellfair_record_transparency_cc(
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         host.record_transparency_cc(&credential_id, &informed_authority_did, &purpose)?;
         Ok("{\"recorded\":true}".into())
     })?
@@ -34,7 +34,7 @@ pub fn wellfair_record_disclosure(
 ) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let event = host.record_disclosure(&commitment_hex, &credential_id, &recipient_did, acting_delegate_did, onward_to)?;
         serde_json::to_string(&event).map_err(|e| e.to_string())
     })?
@@ -45,7 +45,7 @@ pub fn wellfair_record_disclosure(
 pub fn wellfair_disclosure_chain(app: AppHandle, commitment_hex: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let chain = host.disclosure_chain(&commitment_hex)?;
         serde_json::to_string(&chain).map_err(|e| e.to_string())
     })?
@@ -56,18 +56,18 @@ pub fn wellfair_disclosure_chain(app: AppHandle, commitment_hex: String) -> Resu
 pub fn wellfair_actors_with_access(app: AppHandle, commitment_hex: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let actors = host.actors_with_access(&commitment_hex)?;
         serde_json::to_string(&actors).map_err(|e| e.to_string())
     })?
 }
 
-/// Trace a leak by fingerprint (hex) â†’ the disclosure + accountable actor (or null).
+/// Trace a leak by fingerprint (hex) → the disclosure + accountable actor (or null).
 #[command]
 pub fn wellfair_trace_leak(app: AppHandle, fingerprint_hex: String) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let event = host.trace_leak(&fingerprint_hex)?;
         serde_json::to_string(&serde_json::json!({ "event": event })).map_err(|e| e.to_string())
     })?
@@ -78,13 +78,13 @@ pub fn wellfair_trace_leak(app: AppHandle, fingerprint_hex: String) -> Result<St
 pub fn wellfair_list_transparency_ccs(app: AppHandle) -> Result<String, String> {
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let ccs = host.list_transparency_ccs()?;
         serde_json::to_string(&ccs).map_err(|e| e.to_string())
     })?
 }
 
-/// Assess a duty of inquiry (JSON = `DutyOfInquiry`, `ConductAgainstDuty`) â†’ the verdict.
+/// Assess a duty of inquiry (JSON = `DutyOfInquiry`, `ConductAgainstDuty`) → the verdict.
 #[command]
 pub fn wellfair_assess_duty_of_inquiry(
     app: AppHandle,
@@ -97,7 +97,7 @@ pub fn wellfair_assess_duty_of_inquiry(
         serde_json::from_str(&conduct_json).map_err(|e| format!("invalid conduct JSON: {e}"))?;
     let state = app.state::<HostApiState>();
     state.0.execute_sync(move |guard| {
-        let host = guard.as_ref().ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+        let host = guard.as_ref().ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let verdict = host.assess_duty_of_inquiry(duty, conduct);
         serde_json::to_string(&serde_json::json!({ "verdict": verdict })).map_err(|e| e.to_string())
     })?

@@ -34,7 +34,7 @@ pub fn list_mail_addresses(domain: Option<String>) -> Result<serde_json::Value, 
     api::list_mail_addresses(domain)
 }
 
-/// Mint a purpose inbox (`frontdoor@`, `junkmail@`, â€¦). `rules_json` is a `MailRules` object (or empty).
+/// Mint a purpose inbox (`frontdoor@`, `junkmail@`, …). `rules_json` is a `MailRules` object (or empty).
 #[command]
 pub fn mint_purpose_inbox(
     domain: String,
@@ -93,7 +93,7 @@ pub fn set_mail_address_enabled(address: String, enabled: bool) -> Result<serde_
     api::set_mail_address_enabled(address, enabled)
 }
 
-/// The QDP front-door forms for a domain â€” DNS TXT (no-hosting anchor), record name, Turtle, JSON-LD.
+/// The QDP front-door forms for a domain — DNS TXT (no-hosting anchor), record name, Turtle, JSON-LD.
 #[command]
 pub fn front_door_forms(domain: String) -> Result<serde_json::Value, String> {
     api::front_door_forms(domain)
@@ -195,7 +195,7 @@ pub fn start_qdp_server(domain: String, bind_addr: String) -> Result<serde_json:
     api::start_qdp_server(domain, bind_addr)
 }
 
-/// Parse a magic link (deep link / https / bare `qcx1_â€¦`) into the connection identifier it carries.
+/// Parse a magic link (deep link / https / bare `qcx1_…`) into the connection identifier it carries.
 #[command]
 pub fn parse_magic_link(link: String) -> Result<serde_json::Value, String> {
     api::parse_magic_link(link)
@@ -308,7 +308,7 @@ pub fn set_social_peer_active(did: String, active: bool) -> Result<serde_json::V
     api::set_social_peer_active(did, active)
 }
 
-/// Answer a connection challenge â€” prove this node controls its identity key.
+/// Answer a connection challenge — prove this node controls its identity key.
 #[command]
 pub fn answer_connection_challenge(
     challenge_json: String,
@@ -417,7 +417,7 @@ pub fn create_agreement(
     api::create_agreement(title, relationship_did, parties)
 }
 
-/// Persist a full agreement (JSON) â€” for edits.
+/// Persist a full agreement (JSON) — for edits.
 #[command]
 pub fn save_agreement(agreement_json: String) -> Result<serde_json::Value, String> {
     api::save_agreement(agreement_json)
@@ -482,8 +482,8 @@ pub fn get_commitment_prompt() -> serde_json::Value {
         "text": "I Affirm My Commitment to Universal Human Rights",
         "key": "SSBBZmZpcm0gTXkgQ29tbWl0bWVudCB0byBVbml2ZXJzYWwgSHVtYW4gUmlnaHRz",
         "description": "By affirming this commitment you agree that the advanced computational \
-                        capabilities of QualiaDB â€” including quantum computing offload, \
-                        physics-informed neural networks, and advanced scientific solvers â€” \
+                        capabilities of QualiaDB — including quantum computing offload, \
+                        physics-informed neural networks, and advanced scientific solvers — \
                         will be used in accordance with the Universal Declaration of Human Rights \
                         and in ways that benefit humanity.",
         "udhr_url": "https://www.un.org/en/about-us/universal-declaration-of-human-rights"
@@ -542,7 +542,7 @@ pub fn get_ns_records_for_did(did: String) -> Result<Vec<String>, String> {
         .map(|(ns1, ns2)| vec![ns1, ns2])
         .ok_or_else(|| {
             format!(
-                "Cannot encode '{}' as NS records â€” only did:q42: is supported",
+                "Cannot encode '{}' as NS records — only did:q42: is supported",
                 did
             )
         })
@@ -724,7 +724,7 @@ pub async fn save_qlink(
             file_path
         )),
         Err(e) => Ok(format!(
-            "Bookmark saved offline to {:?} â€” library ingest skipped: {}",
+            "Bookmark saved offline to {:?} — library ingest skipped: {}",
             file_path, e
         )),
     }

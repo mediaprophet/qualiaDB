@@ -14,7 +14,7 @@ pub fn wellfair_add_project(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         let project = wellfare_core::projects::Project::new(name, description, licensing_ontologies, wellfair_now_unix());
         let committed = host.add_project(&project)?;
         serde_json::to_string(&committed).map_err(|e| e.to_string())
@@ -34,7 +34,7 @@ pub fn wellfair_add_project_membership(
         let host = guard
             .as_mut()
             .ok_or_else(|| {
-                "Host API not initialized â€” unlock Sanctuary vault first (Talk â†’ Projects shows the CTA)"
+                "Host API not initialized — unlock Sanctuary vault first (Talk → Projects shows the CTA)"
                     .to_string()
             })?;
         let role = match role.trim().to_ascii_lowercase().as_str() {
@@ -68,7 +68,7 @@ pub fn wellfair_add_contribution(
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_mut()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
     
         let privacy = match privacy_level.as_str() {
             "Private" => wellfare_core::projects::ContributionPrivacy::Private,
@@ -97,7 +97,7 @@ pub fn wellfair_project_obligations(app: AppHandle, limit: usize) -> Result<Stri
     state.0.execute_sync(move |guard| {
         let host = guard
             .as_ref()
-            .ok_or_else(|| "Host API not initialized â€” unlock vault first".to_string())?;
+            .ok_or_else(|| "Host API not initialized — unlock vault first".to_string())?;
         // Includes validated inbound contributions (replay-safe cross-node convergence).
         let obligations = host.synced_project_obligations(limit)?;
         serde_json::to_string(&obligations).map_err(|e| e.to_string())

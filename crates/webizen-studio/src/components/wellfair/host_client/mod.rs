@@ -1,4 +1,4 @@
-//! Host API client â€” all operating state flows through Tauri invoke, not Dioxus authority.
+//! Host API client — all operating state flows through Tauri invoke, not Dioxus authority.
 
 use super::host_dto::{
     ActorDto, ConsentGrantDto, DelegationRuleDto, GraphCoverageDto, HealthRecordDto,
@@ -1108,7 +1108,7 @@ pub async fn unlock_sanctuary(_pin: &str) -> Result<SanctuaryPrefsDto, String> {
     Err("Sanctuary unlock requires the Tauri desktop host".into())
 }
 
-/// Pending companion live-section request â€” mirrors `wellfare_core::live_share::LiveSectionRequest`.
+/// Pending companion live-section request — mirrors `wellfare_core::live_share::LiveSectionRequest`.
 #[derive(Debug, Clone, Deserialize)]
 pub struct LiveShareRequestDto {
     pub id: String,
@@ -1218,6 +1218,7 @@ mod library;
 mod encryption;
 mod safeguards;
 mod disclosure;
+mod view_api;
 
 pub use finance::*;
 pub use clinical::*;
@@ -1237,4 +1238,5 @@ pub use library::*;
 pub use encryption::*;
 pub use safeguards::*;
 pub use disclosure::*;
+pub use view_api::*;
 

@@ -59,7 +59,7 @@ pub fn browser_status(app: AppHandle) -> Result<serde_json::Value, String> {
     Ok(crate::browser::status(&app))
 }
 
-/// Content URL for chrome omnibox poll (â‰¤1s). Last host-driven navigation.
+/// Content URL for chrome omnibox poll (≤1s). Last host-driven navigation.
 #[command]
 pub fn browser_content_url(app: AppHandle) -> Result<String, String> {
     Ok(crate::browser::content_url(&app))
@@ -105,7 +105,7 @@ pub fn browser_cookie_observe(url: String, set_cookies: Vec<String>) -> Result<s
     serde_json::to_value(g).map_err(|e| e.to_string())
 }
 
-/// Refresh cookie graph from the content webview jar (K1 â€” Tauri cookies_for_url).
+/// Refresh cookie graph from the content webview jar (K1 — Tauri cookies_for_url).
 #[command]
 pub fn browser_cookies_refresh(app: AppHandle, url: Option<String>) -> Result<serde_json::Value, String> {
     let url = url
@@ -148,7 +148,7 @@ pub fn browser_clear_site_data(
     }))
 }
 
-/// Cert-override status (C1) â€” active / disabled / unavailable.
+/// Cert-override status (C1) — active / disabled / unavailable.
 #[command]
 pub fn browser_cert_override_status() -> Result<serde_json::Value, String> {
     Ok(crate::browser::cert_override::status_json())
@@ -172,7 +172,7 @@ pub fn browser_cert_escape_hatch(
             Ok(serde_json::json!({
                 "host": host,
                 "action": "allow_once",
-                "note": "Session allow only â€” not a permanent pin. Logged. No re-prompt until process restart if soft-deny not set."
+                "note": "Session allow only — not a permanent pin. Logged. No re-prompt until process restart if soft-deny not set."
             }))
         }
         "always" | "pin" | "allow_always" => {
@@ -183,7 +183,7 @@ pub fn browser_cert_escape_hatch(
                 "host": host,
                 "action": "always",
                 "pin": pin,
-                "note": "Host pin written to trust store â€” subsequent cert errors silent for this host (WebID-TLS lesson)."
+                "note": "Host pin written to trust store — subsequent cert errors silent for this host (WebID-TLS lesson)."
             }))
         }
         "deny" | "soft_deny" => {
@@ -204,7 +204,7 @@ pub fn browser_cert_escape_hatch(
                     kind: AnchorKind::PolicyLabel,
                     material,
                     enabled: true,
-                    notes: "Principal soft-deny â€” no re-prompt storm".into(),
+                    notes: "Principal soft-deny — no re-prompt storm".into(),
                     added_unix: now,
                 });
                 store.save(&root)?;

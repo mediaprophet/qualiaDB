@@ -2,7 +2,7 @@
 
 use super::shared::*;
 
-// â”€â”€ Dialectical Sidebar Pane (Web Annotations & Semantic Manifold) â”€â”€
+// ── Dialectical Sidebar Pane (Web Annotations & Semantic Manifold) ──
 #[component]
 pub fn DialecticalSidebarPane(active_url: String) -> Element {
     let mut message = use_signal(String::new);
@@ -49,7 +49,7 @@ pub fn DialecticalSidebarPane(active_url: String) -> Element {
             div { class: "p-2 border-t border-border/40 flex gap-1",
                 input {
                     class: "flex-1 bg-black/30 border border-border/40 rounded px-2 py-1 text-sm text-text-main",
-                    placeholder: "Noteâ€¦",
+                    placeholder: "Note…",
                     value: "{message}",
                     oninput: move |e| message.set(e.value()),
                 }

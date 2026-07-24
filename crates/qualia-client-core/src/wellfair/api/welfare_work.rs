@@ -91,7 +91,7 @@ impl WebizenHostApi {
         self.latest_journal_entry()
     }
 
-    /// Record a general **authority attestation** â€” the ontological generalization of a government
+    /// Record a general **authority attestation** — the ontological generalization of a government
     /// letter: an authorizing body (extensible type + jurisdiction + department) attested by an
     /// agent-in-capacity, delivered as a PDF, a credential, or a PDF-with-embedded-credential.
     /// `add_government_letter` remains a preset (`authority:government`, PDF) of this model.
@@ -182,7 +182,7 @@ impl WebizenHostApi {
             .collect())
     }
 
-    // --- Cooperative work items (shared cooperative-core domain; plan Â§8, WP3) ---
+    // --- Cooperative work items (shared cooperative-core domain; plan §8, WP3) ---
     //
     // Work items persist through the same signed journal/policy path as WellFair records; a
     // future dedicated cooperative service may take over persistence, but the domain types and
@@ -205,7 +205,7 @@ impl WebizenHostApi {
     }
 
     /// Append an immutable status transition. The current status is a derived projection
-    /// (latest event), never a mutated field â€” so replayed transitions can't corrupt the board.
+    /// (latest event), never a mutated field — so replayed transitions can't corrupt the board.
     pub fn add_work_item_status(
         &mut self,
         event: &WorkItemStatusEvent,

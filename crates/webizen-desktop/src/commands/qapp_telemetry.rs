@@ -4,7 +4,7 @@
 
 use tauri::command;
 
-// â”€â”€ QApp â†” QualiaDB analysis contract â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── QApp ↔ QualiaDB analysis contract ───────────────────────────────────────────
 // Mirrors `webizen-studio/src/components/qapp_engine.rs`. The discipline QApps call
 #[command]
 pub fn wellfair_get_model_lifecycle_status() -> Result<String, String> {
@@ -60,7 +60,7 @@ pub fn wellfair_get_llm_telemetry() -> Result<serde_json::Value, String> {
         backend_settings.backend,
         qualia_client_core::chat_agents::AgentBackendKind::Ollama
     ) {
-        Some("Optional Ollama harness â€” not the Qualia in-process engine.")
+        Some("Optional Ollama harness — not the Qualia in-process engine.")
     } else {
         None
     };

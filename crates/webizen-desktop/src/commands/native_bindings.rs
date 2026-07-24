@@ -3,7 +3,7 @@
 #![allow(non_snake_case)]
 
 
-// â”€â”€ Real Native QualiaDB Bindings (Mock Replacements) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Real Native QualiaDB Bindings (Mock Replacements) ─────────────────────────
 
 #[derive(serde::Serialize)]
 pub struct ChemistryProps {

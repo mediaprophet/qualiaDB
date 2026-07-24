@@ -242,6 +242,102 @@ pub fn render_projects(sig: ProjectsSignals) -> Element {
                 }
             }
 
+            // ── Remember in Lived Memory (Practice → Memory handoff) ──
+            if !active_project().is_empty() {
+                div { style: "{CARD}",
+                    h2 { style: "{H2}", "Remember in Lived Memory" }
+                    p { style: "{MUTED}",
+                        "Save a short note about the active project into the Work lane of your private library — meaning shelf, not a cloud dump. Vault may need to be unlocked for ingest."
+                    }
+                    div { style: "display:flex;flex-wrap:wrap;gap:8px;align-items:center;",
+                        button {
+                            style: "{BTN}",
+                            onclick: move |_| {
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    let label = active_project();
+                                    let board_id = active_project_id();
+                                    let mut status = status;
+                                    spawn(async move {
+                                        use crate::components::wellfair::host_client::{
+                                            ingest_document, view_select_uri, IngestFacets,
+                                        };
+                                        let uri = format!(
+                                            "webizen:memory/work/project/{}",
+                                            if board_id.is_empty() {
+                                                label.replace(' ', "-").to_lowercase()
+                                            } else {
+                                                board_id.clone()
+                                            }
+                                        );
+                                        let text = format!(
+                                            "# Project: {label}\n\n\
+                                             Cooperative work note (Practice → Lived Memory).\n\n\
+                                             - **Board id:** `{board_id}`\n\
+                                             - **Domain:** Practice / Projects\n\
+                                             - **Saved:** local vault Work lane\n\n\
+                                             Open **Memory** → spatialize or Sync session to keep this with the rest of your meaning shelf.\n"
+                                        );
+                                        let facets = IngestFacets {
+                                            project: Some(if board_id.is_empty() {
+                                                label.clone()
+                                            } else {
+                                                board_id.clone()
+                                            }),
+                                            purpose: Some("cooperative-project".into()),
+                                            section: Some("work".into()),
+                                            sensitivity: Some("restricted".into()),
+                                            ..Default::default()
+                                        };
+                                        status.set("Saving to Lived Memory…".into());
+                                        match ingest_document(
+                                            &uri,
+                                            "text/markdown",
+                                            &text,
+                                            None,
+                                            &facets,
+                                            "restricted",
+                                        )
+                                        .await
+                                        {
+                                            Ok(v) => {
+                                                let _ = view_select_uri(&uri).await;
+                                                let sect = v
+                                                    .get("section")
+                                                    .and_then(|x| x.as_str())
+                                                    .unwrap_or("work");
+                                                status.set(format!(
+                                                    "Saved to Lived Memory · {sect} lane · open Memory to spatialize."
+                                                ));
+                                            }
+                                            Err(e) => {
+                                                status.set(format!(
+                                                    "Could not save to Memory (vault locked or host unavailable): {e}"
+                                                ));
+                                            }
+                                        }
+                                    });
+                                }
+                                #[cfg(not(target_arch = "wasm32"))]
+                                {
+                                    status.set(
+                                        "Remember in Lived Memory requires the desktop host."
+                                            .into(),
+                                    );
+                                }
+                            },
+                            "Remember in Lived Memory"
+                        }
+                        Link {
+                            to: crate::Route::LibraryRoute {},
+                            style: "display:inline-block;background:#334155;color:#e9d5ff;padding:10px 14px;border-radius:8px;font-weight:600;font-size:13px;text-decoration:none;border:1px solid #6d28d9;",
+                            title: "Open Lived Memory",
+                            "→ Memory"
+                        }
+                    }
+                }
+            }
+
             // ── Seed QualiaDB Development Cooperative ──
             div { style: "{CARD}",
                 h2 { style: "{H2}", "QualiaDB Development Cooperative" }

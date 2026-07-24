@@ -2,7 +2,7 @@ use super::{Cat, QApp, Stat};
 
 pub(super) fn apps() -> Vec<QApp> {
     vec![
-        // â”€â”€ Liberal Arts & Humanities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Liberal Arts & Humanities ─────────────────────────────────────────
         // Social Sciences
         QApp {
             id: "african-american-studies",
@@ -18,7 +18,7 @@ pub(super) fn apps() -> Vec<QApp> {
             id: "anthropology",
             name: "Anthropology",
             tagline: "Human Cultures",
-            desc: "Cross-cultural study of human societies, kinship, ritual, language, and material culture â€” from fieldwork notes to comparative analysis.",
+            desc: "Cross-cultural study of human societies, kinship, ritual, language, and material culture — from fieldwork notes to comparative analysis.",
             icon: "globe2",
             route: None,
             stat: Stat::Active,

@@ -366,7 +366,7 @@ pub fn render_reception(sig: ReceptionSignals) -> Element {
                 }
                 if dns_name().is_empty() {
                     p { style: "{MUTED}",
-                        "Nothing to copy yet — register a domain (step 2) or use \"Build DNS\" if you already have one."
+                        "Nothing to copy yet — register a domain (step 2) or use “Build DNS” if you already have one."
                     }
                 } else {
                     p { style: "margin:0 0 6px;font-size:12px;color:#94a3b8;", "Record name" }

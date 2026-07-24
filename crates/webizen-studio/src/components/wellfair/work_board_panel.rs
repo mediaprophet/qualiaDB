@@ -6,6 +6,8 @@
 use super::host_client::{
     add_work_item, add_work_item_status, fetch_work_item_board, BoardColumnDto,
 };
+#[cfg(target_arch = "wasm32")]
+use super::host_client::{ingest_document, view_select_uri, IngestFacets};
 use crate::Route;
 use dioxus::prelude::*;
 
@@ -96,7 +98,7 @@ pub fn WellfairWorkBoardPanel() -> Element {
     let status_text = ui().status.clone();
     let project_empty = ui().project_id.trim().is_empty();
     let empty_hint = if project_empty {
-        "Select a project (Talk → Projects), then add work items."
+        "Select a project (Relations → Projects), then add work items."
     } else {
         "No work items for this project yet. Add one above, or refresh after seeding."
     };
@@ -108,7 +110,7 @@ pub fn WellfairWorkBoardPanel() -> Element {
             h2 { style: "margin:0 0 0.5rem;font-size:1rem;", "Work board" }
             p {
                 style: "margin:0 0 0.75rem;font-size:0.74rem;color:var(--qualia-text-muted,#666);",
-                "Tasks, issues, and milestones. Card status is derived from immutable transitions — moving a card records a new event, never rewriting history. Project id is filled from Talk → Projects when you select or create a project."
+                "Tasks, issues, and milestones. Card status is derived from immutable transitions — moving a card records a new event, never rewriting history. Project id is filled from Relations → Projects when you select or create a project."
             }
             if !status_text.is_empty() {
                 p { style: "margin:0 0 0.5rem;font-size:0.76rem;", "{status_text}" }
@@ -118,12 +120,83 @@ pub fn WellfairWorkBoardPanel() -> Element {
                 div {
                     style: "margin:0 0 0.75rem;padding:0.65rem 0.75rem;border:1px solid var(--qualia-accent,#2a6f97);border-radius:8px;background:var(--qualia-surface-2,#f0f7fb);font-size:0.8rem;",
                     p { style: "margin:0 0 0.4rem;",
-                        "No project selected. Choose one under Talk → Projects so the board id is filled automatically."
+                        "No project selected. Choose one under Relations → Projects so the board id is filled automatically."
                     }
                     Link {
                         to: Route::TalkRoute {},
                         style: "color:var(--qualia-accent,#2a6f97);font-weight:600;text-decoration:none;",
-                        "Open Talk → Projects"
+                        "Open Relations → Projects"
+                    }
+                }
+            } else {
+                div {
+                    style: "margin:0 0 0.75rem;display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;",
+                    button {
+                        r#type: "button",
+                        style: "padding:0.4rem 0.75rem;border-radius:8px;border:1px solid #6d28d9;background:rgba(139,92,246,0.15);color:#e9d5ff;font-size:0.78rem;font-weight:700;cursor:pointer;",
+                        title: "Ingest a board snapshot into Lived Memory Work lane",
+                        onclick: move |_| {
+                            let project = ui().project_id.trim().to_string();
+                            if project.is_empty() {
+                                ui.write().status = "Enter a project id first.".into();
+                                return;
+                            }
+                            spawn(async move {
+                                #[cfg(target_arch = "wasm32")]
+                                {
+                                    let n_cards: usize =
+                                        ui().columns.iter().map(|c| c.cards.len()).sum();
+                                    ui.write().status = "Saving board note to Lived Memory…".into();
+                                    let uri = format!("webizen:memory/work/board/{project}");
+                                    let text = format!(
+                                        "# Work board · {project}\n\n\
+                                         Practice → Lived Memory snapshot.\n\n\
+                                         - **Project / board id:** `{project}`\n\
+                                         - **Cards on board:** {n_cards}\n\
+                                         - **Lane:** Work\n\n\
+                                         Open **Memory** to spatialize or continue from session selection.\n"
+                                    );
+                                    let facets = IngestFacets {
+                                        project: Some(project.clone()),
+                                        purpose: Some("work-board".into()),
+                                        section: Some("work".into()),
+                                        sensitivity: Some("restricted".into()),
+                                        ..Default::default()
+                                    };
+                                    match ingest_document(
+                                        &uri,
+                                        "text/markdown",
+                                        &text,
+                                        None,
+                                        &facets,
+                                        "restricted",
+                                    )
+                                    .await
+                                    {
+                                        Ok(_) => {
+                                            let _ = view_select_uri(&uri).await;
+                                            ui.write().status = "Saved to Lived Memory · Work lane · open Memory to spatialize.".into();
+                                        }
+                                        Err(e) => {
+                                            ui.write().status = format!(
+                                                "Could not save to Memory (vault locked or host unavailable): {e}"
+                                            );
+                                        }
+                                    }
+                                }
+                                #[cfg(not(target_arch = "wasm32"))]
+                                {
+                                    ui.write().status =
+                                        "Remember in Lived Memory requires the desktop host.".into();
+                                }
+                            });
+                        },
+                        "Remember in Lived Memory"
+                    }
+                    Link {
+                        to: Route::LibraryRoute {},
+                        style: "font-size:0.76rem;font-weight:700;padding:0.35rem 0.65rem;border-radius:999px;border:1px solid #6d28d9;background:rgba(139,92,246,0.12);color:#e9d5ff;text-decoration:none;",
+                        "→ Memory"
                     }
                 }
             }

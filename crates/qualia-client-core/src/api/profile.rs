@@ -12,8 +12,13 @@ pub fn get_user_profile() -> Result<serde_json::Value, String> {
 }
 
 pub fn save_user_profile(profile_json: String) -> Result<serde_json::Value, String> {
-    let mut profile: crate::user_profile::UserProfile =
-        serde_json::from_str(&profile_json).map_err(|e| e.to_string())?;
+    // People tab (and other callers) may send a *partial* profile JSON — e.g. only
+    // `display_name` + `sharing.allow_group_chat_invites`. Full-struct deserialize used
+    // to fail with `missing field share_display_name`. Merge onto the loaded profile.
+    let patch: serde_json::Value =
+        serde_json::from_str(&profile_json).map_err(|e| format!("invalid profile json: {e}"))?;
+    let base = crate::user_profile::load_profile();
+    let mut profile = crate::user_profile::apply_profile_patch(&base, &patch)?;
     profile.public_did = crate::user_profile::resolve_public_did(&profile);
     crate::user_profile::save_profile(&profile)?;
     serde_json::to_value(profile).map_err(|e| e.to_string())
@@ -34,9 +39,9 @@ pub fn list_chat_contacts() -> Result<serde_json::Value, String> {
     serde_json::to_value(contacts).map_err(|e| e.to_string())
 }
 
-// â”€â”€ Personal directory (AD-like): categorised addressbook + agreement slots â”€â”€â”€â”€â”€
+// ── Personal directory (AD-like): categorised addressbook + agreement slots ─────
 
-/// The unified, categorised personal directory â€” the addressbook (Parties joined across the directory-actor
+/// The unified, categorised personal directory — the addressbook (Parties joined across the directory-actor
 /// + chat-contact stores by DID) grouped into categories, with a per-entry slot for the agreements
 /// governing that relationship. See `docs/plans/rights-aware-peer-agreement-addressbook.md`.
 pub fn list_directory() -> Result<serde_json::Value, String> {
@@ -69,7 +74,7 @@ pub fn set_directory_entry_categories(
 /// Faceted + concept-aware search over the directory. `query` is meaning-aware (a token expands across a
 /// concept cluster, so "doctor" finds a "clinician"); `facets_json` is a JSON object of
 /// `{facet_id: [selected values]}` (AND across facets, OR within). Returns ranked entries + drill-down
-/// facet counts. Both empty â†’ the whole directory with all facet counts.
+/// facet counts. Both empty → the whole directory with all facet counts.
 pub fn search_directory(query: String, facets_json: String) -> Result<serde_json::Value, String> {
     let selected: std::collections::BTreeMap<String, Vec<String>> = if facets_json.trim().is_empty() {
         std::collections::BTreeMap::new()

@@ -34,7 +34,7 @@ pub async fn get_decoy_retention_mode(_real_pin: &str) -> Result<String, String>
     // Fail closed like every other wrapper in this file: never fabricate a
     // security-relevant duress-audit-retention value off the desktop host. A
     // false "auto_archive" here would tell the caller a policy is in effect
-    // when none was read â€” the exact false-success signal the sanctuary vault
+    // when none was read — the exact false-success signal the sanctuary vault
     // is built to avoid.
     Err("Decoy-retention mode requires the Tauri desktop host".into())
 }

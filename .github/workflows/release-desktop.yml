@@ -26,9 +26,14 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Install Dioxus CLI
+        run: cargo install dioxus-cli --version 0.8.0-alpha.0 --locked
 
       - name: Cache Cargo
         uses: actions/cache@v4
@@ -40,9 +45,10 @@ jobs:
           key: ${{ runner.os }}-cargo-desktop-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-desktop-
 
-      - name: Verify packaged webizen-studio dist
+      - name: Build and verify packaged webizen-studio dist
         shell: pwsh
         run: |
+          .\scripts\build_frontend.ps1
           $dist = "crates/webizen-studio/dist"
           $portal = "crates/webizen-desktop/static/portal"
           if (-not (Test-Path "$dist/index.html")) {
@@ -59,6 +65,11 @@ jobs:
           }
           if (-not (Test-Path "$portal/design-studio.html")) {
             throw "$portal/design-studio.html missing"
+          }
+          $expectedRevision = (git rev-parse HEAD).Trim()
+          $builtRevision = (Get-Content "$dist/source-revision.txt" -Raw).Trim()
+          if ($builtRevision -ne $expectedRevision) {
+            throw "Frontend revision $builtRevision does not match source revision $expectedRevision"
           }
           Get-ChildItem $dist, "$dist/assets"
 
@@ -156,10 +167,13 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-darwin
+          targets: aarch64-apple-darwin, wasm32-unknown-unknown
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Install Dioxus CLI
+        run: cargo install dioxus-cli --version 0.8.0-alpha.0 --locked
 
       - name: Cache Cargo
         uses: actions/cache@v4
@@ -171,9 +185,10 @@ jobs:
           key: ${{ runner.os }}-cargo-desktop-metal-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-desktop-metal-
 
-      - name: Verify packaged webizen-studio dist
+      - name: Build and verify packaged webizen-studio dist
         shell: bash
         run: |
+          bash scripts/build_frontend.sh
           dist="crates/webizen-studio/dist"
           portal="crates/webizen-desktop/static/portal"
           test -f "$dist/index.html"
@@ -181,6 +196,7 @@ jobs:
           find "$dist/assets" -maxdepth 1 -type f -name '*.wasm' | grep -q .
           test -f "$portal/index.html"
           test -f "$portal/design-studio.html"
+          test "$(cat "$dist/source-revision.txt")" = "$(git rev-parse HEAD)"
           ls -lah "$dist" "$dist/assets"
 
       - name: Verify updater signing key

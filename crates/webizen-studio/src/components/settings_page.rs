@@ -28,6 +28,9 @@ async fn invoke_tauri_json<T>(cmd: &str, args: serde_json::Value) -> Result<T, S
 where
     T: serde::de::DeserializeOwned,
 {
+    if !crate::endpoints::is_native_host() {
+        return Err("The desktop host is unavailable in this preview.".to_string());
+    }
     let js_args = serde_wasm_bindgen::to_value(&args).map_err(|e| e.to_string())?;
     let value = tauri_invoke(cmd, js_args.into())
         .await
@@ -43,6 +46,7 @@ struct AgentConfigSnapshot {
     daemon_host: String,
     daemon_port: u16,
     inference_backend: String,
+    settings_port: u16,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -72,6 +76,7 @@ impl Default for AgentConfigSnapshot {
             daemon_host: "127.0.0.1".to_string(),
             daemon_port: 4242,
             inference_backend: "local".to_string(),
+            settings_port: 8080,
         }
     }
 }

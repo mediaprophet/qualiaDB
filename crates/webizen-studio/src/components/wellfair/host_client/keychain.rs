@@ -3,6 +3,9 @@
 use super::*;
 
 #[cfg(target_arch = "wasm32")]
+use super::guardianship::SanctuaryVaultListDto;
+
+#[cfg(target_arch = "wasm32")]
 use crate::components::qapp_engine::tauri_invoke;
 #[cfg(target_arch = "wasm32")]
 use js_sys;

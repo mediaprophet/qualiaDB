@@ -44,8 +44,8 @@ pub fn agent_roster_remove(slug: String) -> Result<(), String> {
     crate::agent_registry::remove_agent(Path::new(&storage), &slug)
 }
 
-// â”€â”€ Principal-gated MCP tool loop (U3-A / U3-B) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Propose â†’ Permit/Deny â†’ execute. Deny never dispatches. Allowlist from roster.
+// ── Principal-gated MCP tool loop (U3-A / U3-B) ────────────────────────────────
+// Propose → Permit/Deny → execute. Deny never dispatches. Allowlist from roster.
 
 /// List local in-process MCP tools (`tools/list`) for Talk / allowlist UI.
 pub fn mcp_list_local_tools() -> Result<serde_json::Value, String> {
@@ -53,7 +53,7 @@ pub fn mcp_list_local_tools() -> Result<serde_json::Value, String> {
     serde_json::to_value(tools).map_err(|e| e.to_string())
 }
 
-/// Principal-gated MCP tool call. `principal_permitted = false` â†’ Err without MCP.
+/// Principal-gated MCP tool call. `principal_permitted = false` → Err without MCP.
 /// Tool must be on the agent's `allowed_mcp_tools` (or `*`); empty allowlist denies all.
 pub fn mcp_call_tool_gated(
     agent_slug: String,
@@ -78,7 +78,7 @@ pub fn agent_set_allowed_mcp_tools(slug: String, tools: Vec<String>) -> Result<(
 }
 
 /// If allowlist is empty, seed `list_capabilities` + `computer_vision` (dogfood-safe).
-/// Does not Permit any call â€” only widens the roster allowlist.
+/// Does not Permit any call — only widens the roster allowlist.
 pub fn mcp_ensure_safe_tool_allowlist(slug: String) -> Result<serde_json::Value, String> {
     let storage = agent_roster_storage()?;
     let tools = crate::mcp_tool_loop::ensure_safe_tool_allowlist(Path::new(&storage), &slug)?;
@@ -86,7 +86,7 @@ pub fn mcp_ensure_safe_tool_allowlist(slug: String) -> Result<serde_json::Value,
 }
 
 /// Convenience: create/update a REMOTE-MCP agent from primitives so the UI never hand-builds the
-/// backend enum. `transport_kind` âˆˆ `"tcp"` | `"http"` | `"stdio"`; `endpoint` is `host:port` / a URL /
+/// backend enum. `transport_kind` ∈ `"tcp"` | `"http"` | `"stdio"`; `endpoint` is `host:port` / a URL /
 /// a command line respectively.
 pub fn agent_roster_add_remote(
     slug: String,
@@ -148,7 +148,7 @@ pub fn agent_roster_add_remote(
     crate::agent_registry::upsert_agent(Path::new(&storage), agent)
 }
 
-/// Backend kind of a roster agent: `"local"` | `"remote"` (unknown/empty slug â†’ `"local"`).
+/// Backend kind of a roster agent: `"local"` | `"remote"` (unknown/empty slug → `"local"`).
 pub fn agent_backend_kind(slug: Option<String>) -> Result<String, String> {
     let slug = match slug {
         Some(s) if !s.is_empty() => s,
@@ -191,7 +191,7 @@ pub fn run_remote_agent_turn(
             ..
         } => (transport.clone(), infer_tool.clone(), model.clone()),
         AgentBackendSpec::LocalEngine { .. } => {
-            return Err("agent is local â€” use the local inference path".to_string())
+            return Err("agent is local — use the local inference path".to_string())
         }
     };
 

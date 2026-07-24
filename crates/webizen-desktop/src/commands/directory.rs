@@ -6,7 +6,7 @@ use qualia_client_core::api;
 use qualia_client_core::state::{Actor, DelegationRule, FrontDoor};
 use tauri::command;
 
-// â”€â”€ Directory / agents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Directory / agents ────────────────────────────────────────────────────────
 
 #[command]
 pub fn get_front_doors() -> Result<Vec<FrontDoor>, String> {

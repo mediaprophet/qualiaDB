@@ -9,7 +9,7 @@ use super::qapp_telemetry::{
 };
 use tauri::{command, Manager, State};
 
-// â”€â”€ Webizen Host API (qApp Message Bus) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Webizen Host API (qApp Message Bus) ──────────────────────────────────────
 
 pub struct HostApiState(
     pub crate::companion_gateway::HostApiHandle,
@@ -294,7 +294,7 @@ fn build_forge_compute_probe() -> Result<ForgeComputeProbe, String> {
     let topk_error = max_abs_error(&topk_output, &topk_expected);
     kernels.push(ForgeKernelProbe {
         kernel: "topk".to_string(),
-        shape: "64 â†’ 4".to_string(),
+        shape: "64 → 4".to_string(),
         output_elements: topk_output.len(),
         elapsed_ms: topk_ms,
         max_abs_error: topk_error,
@@ -336,7 +336,7 @@ fn build_forge_compute_probe() -> Result<ForgeComputeProbe, String> {
     let gemm_error = max_abs_error(&gemm_output, &gemm_expected);
     kernels.push(ForgeKernelProbe {
         kernel: "gemm".to_string(),
-        shape: "16Ã—16 Â· 16Ã—16".to_string(),
+        shape: "16×16 · 16×16".to_string(),
         output_elements: gemm_output.len(),
         elapsed_ms: gemm_ms,
         max_abs_error: gemm_error,

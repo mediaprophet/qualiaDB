@@ -28,7 +28,7 @@ pub struct DiagnosticsReport {
     pub data_bytes: u64,
 }
 
-/// A domain of agency, flattened for a delegation-creation picker (host â†’ Tauri â†’ Studio).
+/// A domain of agency, flattened for a delegation-creation picker (host → Tauri → Studio).
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct AgencyDomainInfo {
     pub id: String,
@@ -143,7 +143,7 @@ mod api_tests {
             .unwrap()
             .is_permit());
 
-        // Withdraw consent â†’ supersedes; the projection shows one delegation, now non-permitting.
+        // Withdraw consent → supersedes; the projection shows one delegation, now non-permitting.
         host.set_agency_delegation_consent(&d.id, ConsentState::Withdrawn)
             .unwrap();
         let listed = host.list_agency_delegations(16).unwrap();
@@ -154,7 +154,7 @@ mod api_tests {
             .unwrap()
             .is_permit());
 
-        // Revoke â†’ still one logical delegation, now revoked.
+        // Revoke → still one logical delegation, now revoked.
         host.revoke_agency_delegation(&d.id).unwrap();
         let listed = host.list_agency_delegations(16).unwrap();
         assert_eq!(listed.len(), 1);
@@ -202,7 +202,7 @@ mod api_tests {
         let mut host_a = test_host(dir_a.path());
         let host_b = test_host(dir_b.path());
 
-        // Host A commits a (Restricted) record â€” the vault auto-enqueues it to A's outbox.
+        // Host A commits a (Restricted) record — the vault auto-enqueues it to A's outbox.
         host_a.add_condition(&ConditionReport::new("Asthma")).unwrap();
         let queued_before = SyncOutbox::open(dir_a.path()).unwrap().count_queued().unwrap();
         assert!(queued_before >= 1);
@@ -213,7 +213,7 @@ mod api_tests {
         assert_eq!(SyncOutbox::open(dir_a.path()).unwrap().count_queued().unwrap(), 0);
         assert_eq!(relay.len(), pushed);
 
-        // Host B pulls + admits â€” the op lands in B's validated set.
+        // Host B pulls + admits — the op lands in B's validated set.
         let report = host_b.sync_pull_via(&relay, 0).unwrap();
         assert_eq!(report.pulled, pushed);
         assert_eq!(report.validated, pushed);
@@ -411,7 +411,7 @@ mod api_tests {
         // The escrowed record is NOT yet committed.
         assert!(host.list_journal_by_kind("condition", 64).unwrap().is_empty());
 
-        // One approval â†’ still pending.
+        // One approval → still pending.
         let v1 = host
             .vote_guardianship_proposal(&proposal_id, "did:wf:guardianA", true, None)
             .unwrap();
@@ -419,7 +419,7 @@ mod api_tests {
         assert!(!v1.committed);
         assert!(host.list_journal_by_kind("condition", 64).unwrap().is_empty());
 
-        // Second distinct approval â†’ ratified; the escrowed record commits.
+        // Second distinct approval → ratified; the escrowed record commits.
         let v2 = host
             .vote_guardianship_proposal(&proposal_id, "did:wf:guardianB", true, None)
             .unwrap();

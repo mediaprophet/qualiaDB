@@ -5,7 +5,7 @@
 use qualia_client_core::api;
 use tauri::command;
 
-// â”€â”€ Semantic web / portfolio â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Semantic web / portfolio ──────────────────────────────────────────────────
 
 #[command]
 pub async fn generate_front_door_invite() -> Result<String, String> {
@@ -47,7 +47,7 @@ pub async fn fetch_remote_manifest(url: String) -> Result<String, String> {
     api::fetch_remote_manifest(url).await
 }
 
-// â”€â”€ Imported accounts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Imported accounts ─────────────────────────────────────────────────────────
 
 #[command]
 pub fn load_imported_accounts() -> Result<serde_json::Value, String> {
