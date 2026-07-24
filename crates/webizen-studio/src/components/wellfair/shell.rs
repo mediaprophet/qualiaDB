@@ -210,9 +210,27 @@ pub fn WellfairShell() -> Element {
                 div {
                     style: "display:flex;flex-wrap:wrap;gap:0.45rem;align-items:center;justify-content:flex-end;",
                     SensitivityBadge { class: SensitivityClassDto::Restricted }
-                    span {
-                        style: "font-size:0.75rem;font-weight:600;padding:0.25rem 0.55rem;border-radius:999px;border:1px solid var(--qualia-border,#334155);background:var(--qualia-surface,#0f172a);",
-                        "Vault · {vault_label}"
+                    if vault_unlocked {
+                        span {
+                            style: "font-size:0.75rem;font-weight:600;padding:0.25rem 0.55rem;border-radius:999px;border:1px solid #065f46;background:rgba(16,185,129,0.12);color:#a7f3d0;",
+                            title: "Vault unlocked — private Care records available",
+                            "Vault · {vault_label}"
+                        }
+                    } else {
+                        Link {
+                            to: Route::SanctuaryRoute {},
+                            style: "font-size:0.75rem;font-weight:700;padding:0.25rem 0.55rem;border-radius:999px;border:1px solid #f59e0b;background:rgba(245,158,11,0.15);color:#fde68a;text-decoration:none;",
+                            title: "Open Sanctuary to create or unlock the vault",
+                            "Vault · {vault_label} · unlock →"
+                        }
+                    }
+                    if !vault_unlocked {
+                        Link {
+                            to: Route::SanctuaryRoute {},
+                            style: "font-size:0.72rem;font-weight:700;padding:0.3rem 0.65rem;border-radius:999px;border:1px solid #f59e0b;background:rgba(245,158,11,0.2);color:#fef3c7;text-decoration:none;",
+                            title: "Sanctuary route — PIN setup / unlock",
+                            "→ Sanctuary"
+                        }
                     }
                     Link {
                         to: Route::LibraryRoute {},
@@ -233,27 +251,45 @@ pub fn WellfairShell() -> Element {
             {if !vault_unlocked {
                 rsx! {
                     div {
-                        style: "padding:1.25rem;border:2px solid var(--qualia-accent,#2a6f97);border-radius:12px;background:var(--qualia-surface,#fafafa);text-align:center;",
+                        style: "padding:1.25rem;border:2px solid #f59e0b;border-radius:12px;background:rgba(245,158,11,0.08);text-align:center;",
                         {match snap.vault {
                             VaultLifecycle::Unconfigured => rsx! {
                                 div {
-                                    p { style: "margin:0 0 0.75rem;font-size:0.95rem;", "No sanctuary vault exists yet." }
-                                    button {
-                                        r#type: "button",
-                                        onclick: move |_| active_area.set("Sanctuary".to_string()),
-                                        style: "padding:0.5rem 1.25rem;border:none;border-radius:8px;background:var(--qualia-accent,#2a6f97);color:#fff;cursor:pointer;font-size:0.9rem;",
-                                        "Create Sanctuary Vault"
+                                    p { style: "margin:0 0 0.75rem;font-size:0.95rem;",
+                                        "No sanctuary vault yet. Private health and life records need one — local on this machine, not cloud upload."
+                                    }
+                                    div { style: "display:flex;flex-wrap:wrap;gap:0.65rem;justify-content:center;align-items:center;",
+                                        button {
+                                            r#type: "button",
+                                            onclick: move |_| active_area.set("Sanctuary".to_string()),
+                                            style: "padding:0.5rem 1.25rem;border:none;border-radius:8px;background:var(--qualia-accent,#2a6f97);color:#fff;cursor:pointer;font-size:0.9rem;font-weight:600;",
+                                            "Create in Care · Sanctuary"
+                                        }
+                                        Link {
+                                            to: Route::SanctuaryRoute {},
+                                            style: "padding:0.5rem 1.1rem;border-radius:8px;border:1px solid #f59e0b;background:rgba(245,158,11,0.2);color:#fef3c7;text-decoration:none;font-size:0.9rem;font-weight:700;",
+                                            "Open Sanctuary route →"
+                                        }
                                     }
                                 }
                             },
                             VaultLifecycle::Locked => rsx! {
                                 div {
-                                    p { style: "margin:0 0 0.75rem;font-size:0.95rem;", "Your vault is locked. Enter your PIN to unlock." }
-                                    button {
-                                        r#type: "button",
-                                        onclick: move |_| active_area.set("Sanctuary".to_string()),
-                                        style: "padding:0.5rem 1.25rem;border:none;border-radius:8px;background:var(--qualia-accent,#2a6f97);color:#fff;cursor:pointer;font-size:0.9rem;",
-                                        "Unlock Vault"
+                                    p { style: "margin:0 0 0.75rem;font-size:0.95rem;",
+                                        "Vault locked. Enter your PIN to unlock private Care records (body, rights, welfare)."
+                                    }
+                                    div { style: "display:flex;flex-wrap:wrap;gap:0.65rem;justify-content:center;align-items:center;",
+                                        button {
+                                            r#type: "button",
+                                            onclick: move |_| active_area.set("Sanctuary".to_string()),
+                                            style: "padding:0.5rem 1.25rem;border:none;border-radius:8px;background:var(--qualia-accent,#2a6f97);color:#fff;cursor:pointer;font-size:0.9rem;font-weight:600;",
+                                            "Unlock in Care · Sanctuary"
+                                        }
+                                        Link {
+                                            to: Route::SanctuaryRoute {},
+                                            style: "padding:0.5rem 1.1rem;border-radius:8px;border:1px solid #f59e0b;background:rgba(245,158,11,0.2);color:#fef3c7;text-decoration:none;font-size:0.9rem;font-weight:700;",
+                                            "Open Sanctuary route →"
+                                        }
                                     }
                                 }
                             },

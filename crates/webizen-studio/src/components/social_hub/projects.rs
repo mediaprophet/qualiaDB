@@ -209,7 +209,15 @@ pub fn render_projects(sig: ProjectsSignals) -> Element {
                                         if let Ok(plist) = list_project_records().await {
                                             project_list.set(plist);
                                         }
-                                        status.set(format!("Project '{label}' ready · board id stored for Work."));
+                                        // Auto-Remember into Lived Memory Work lane (soft-fail if vault locked).
+                                        match remember_project_to_memory(&label, &board_id).await {
+                                            Ok(msg) => status.set(format!(
+                                                "Project '{label}' ready · board id for Work · {msg}"
+                                            )),
+                                            Err(e) => status.set(format!(
+                                                "Project '{label}' ready · board id for Work. Memory auto-save skipped ({e}). Use Remember when vault is unlocked."
+                                            )),
+                                        }
                                     }
                                     Err(e) => {
                                         let snap = crate::components::wellfair::host_client::fetch_host_snapshot()
@@ -253,78 +261,18 @@ pub fn render_projects(sig: ProjectsSignals) -> Element {
                         button {
                             style: "{BTN}",
                             onclick: move |_| {
-                                #[cfg(target_arch = "wasm32")]
-                                {
-                                    let label = active_project();
-                                    let board_id = active_project_id();
-                                    let mut status = status;
-                                    spawn(async move {
-                                        use crate::components::wellfair::host_client::{
-                                            ingest_document, view_select_uri, IngestFacets,
-                                        };
-                                        let uri = format!(
-                                            "webizen:memory/work/project/{}",
-                                            if board_id.is_empty() {
-                                                label.replace(' ', "-").to_lowercase()
-                                            } else {
-                                                board_id.clone()
-                                            }
-                                        );
-                                        let text = format!(
-                                            "# Project: {label}\n\n\
-                                             Cooperative work note (Practice → Lived Memory).\n\n\
-                                             - **Board id:** `{board_id}`\n\
-                                             - **Domain:** Practice / Projects\n\
-                                             - **Saved:** local vault Work lane\n\n\
-                                             Open **Memory** → spatialize or Sync session to keep this with the rest of your meaning shelf.\n"
-                                        );
-                                        let facets = IngestFacets {
-                                            project: Some(if board_id.is_empty() {
-                                                label.clone()
-                                            } else {
-                                                board_id.clone()
-                                            }),
-                                            purpose: Some("cooperative-project".into()),
-                                            section: Some("work".into()),
-                                            sensitivity: Some("restricted".into()),
-                                            ..Default::default()
-                                        };
-                                        status.set("Saving to Lived Memory…".into());
-                                        match ingest_document(
-                                            &uri,
-                                            "text/markdown",
-                                            &text,
-                                            None,
-                                            &facets,
-                                            "restricted",
-                                        )
-                                        .await
-                                        {
-                                            Ok(v) => {
-                                                let _ = view_select_uri(&uri).await;
-                                                let sect = v
-                                                    .get("section")
-                                                    .and_then(|x| x.as_str())
-                                                    .unwrap_or("work");
-                                                status.set(format!(
-                                                    "Saved to Lived Memory · {sect} lane · open Memory to spatialize."
-                                                ));
-                                            }
-                                            Err(e) => {
-                                                status.set(format!(
-                                                    "Could not save to Memory (vault locked or host unavailable): {e}"
-                                                ));
-                                            }
-                                        }
-                                    });
-                                }
-                                #[cfg(not(target_arch = "wasm32"))]
-                                {
-                                    status.set(
-                                        "Remember in Lived Memory requires the desktop host."
-                                            .into(),
-                                    );
-                                }
+                                let label = active_project();
+                                let board_id = active_project_id();
+                                let mut status = status;
+                                spawn(async move {
+                                    status.set("Saving to Lived Memory…".into());
+                                    match remember_project_to_memory(&label, &board_id).await {
+                                        Ok(msg) => status.set(msg),
+                                        Err(e) => status.set(format!(
+                                            "Could not save to Memory (vault locked or host unavailable): {e}"
+                                        )),
+                                    }
+                                });
                             },
                             "Remember in Lived Memory"
                         }
@@ -364,7 +312,14 @@ pub fn render_projects(sig: ProjectsSignals) -> Element {
                                         if let Ok(plist) = list_project_records().await {
                                             project_list.set(plist);
                                         }
-                                        status.set("QualiaDB Development Cooperative ready. People → invite · Chat → tag #project · Practice → Work board · Remember → Memory.".into());
+                                        match remember_project_to_memory(&label, &board_id).await {
+                                            Ok(msg) => status.set(format!(
+                                                "QualiaDB Development Cooperative ready. People → invite · Chat · Work board. {msg}"
+                                            )),
+                                            Err(e) => status.set(format!(
+                                                "QualiaDB Development Cooperative ready. People → invite · Chat · Work board. Memory auto-save skipped ({e}). Use Remember when vault is unlocked."
+                                            )),
+                                        }
                                     }
                                     Err(e) => {
                                         let snap = crate::components::wellfair::host_client::fetch_host_snapshot()

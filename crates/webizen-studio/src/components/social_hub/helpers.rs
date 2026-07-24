@@ -301,6 +301,64 @@ pub async fn create_project_record(
     Ok((id, if label.is_empty() { name.to_string() } else { label }, local))
 }
 
+// ── Lived Memory handoff (Practice → Memory) ──────────────────────────
+
+/// Ingest a short Work-lane note for a cooperative project and select it in the entity session.
+/// Soft-fails with an Err string when vault is locked or host is unavailable (caller reports honestly).
+#[cfg(target_arch = "wasm32")]
+pub async fn remember_project_to_memory(label: &str, board_id: &str) -> Result<String, String> {
+    use crate::components::wellfair::host_client::{
+        ingest_document, view_select_uri, IngestFacets,
+    };
+    let slug = if board_id.is_empty() {
+        label.replace(' ', "-").to_lowercase()
+    } else {
+        board_id.to_string()
+    };
+    let uri = format!("webizen:memory/work/project/{slug}");
+    let text = format!(
+        "# Project: {label}\n\n\
+         Cooperative work note (Practice → Lived Memory).\n\n\
+         - **Board id:** `{board_id}`\n\
+         - **Domain:** Practice / Projects\n\
+         - **Saved:** local vault Work lane\n\n\
+         Open **Memory** → spatialize or Sync session to keep this with the rest of your meaning shelf.\n"
+    );
+    let facets = IngestFacets {
+        project: Some(if board_id.is_empty() {
+            label.to_string()
+        } else {
+            board_id.to_string()
+        }),
+        purpose: Some("cooperative-project".into()),
+        section: Some("work".into()),
+        sensitivity: Some("restricted".into()),
+        ..Default::default()
+    };
+    let v = ingest_document(
+        &uri,
+        "text/markdown",
+        &text,
+        None,
+        &facets,
+        "restricted",
+    )
+    .await?;
+    let _ = view_select_uri(&uri).await;
+    let sect = v
+        .get("section")
+        .and_then(|x| x.as_str())
+        .unwrap_or("work");
+    Ok(format!(
+        "Saved to Lived Memory · {sect} lane · open Memory to spatialize."
+    ))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn remember_project_to_memory(_label: &str, _board_id: &str) -> Result<String, String> {
+    Err("Remember in Lived Memory requires the desktop host.".into())
+}
+
 // ── Vault helpers ─────────────────────────────────────────────────────
 
 #[cfg(target_arch = "wasm32")]
