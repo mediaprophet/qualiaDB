@@ -110,11 +110,8 @@ jobs:
               $normalized = $compact
               Write-Host "Using secret as base64(UTF-8 key text)"
             } catch {
-              throw @"
-TAURI_SIGNING_PRIVATE_KEY is malformed: $($_.Exception.Message)
-Generate with: cargo tauri signer generate -w ~/.tauri/webizen.key
-Store either the raw key file contents, or base64 of that UTF-8 text, as the GitHub secret.
-"@
+              $msg = "TAURI_SIGNING_PRIVATE_KEY is malformed: $($_.Exception.Message). Generate with: cargo tauri signer generate -w webizen.key then store raw key text or base64(UTF-8 key text) as the secret."
+              throw $msg
             }
           }
           "TAURI_SIGNING_PRIVATE_KEY=$normalized" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
