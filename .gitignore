@@ -170,9 +170,12 @@ ingest_raw.wal.tmp
 yago-tests/ 
 reports/
 
-# Local test GGUF models (not deployed)
+# Local test GGUF / weight blobs (not deployed) — do NOT ignore Rust source trees.
 docs/models/
-models/
+/models/
+# Explicit allow for audio learned-head source modules (was swallowed by a blanket models/)
+!crates/qualia-audio/src/models/
+!crates/qualia-audio/src/models/**
 
 # personal info
 provenance/
