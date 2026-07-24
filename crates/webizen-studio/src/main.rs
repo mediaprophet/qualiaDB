@@ -310,6 +310,23 @@ fn DashboardAliasRoute() -> Element {
     rsx! { components::dashboard::Dashboard {} }
 }
 
+/// Page-level life-domain title for secondary routes (Health / Work / Tools).
+#[component]
+fn DomainRouteHeader(domain: &'static str, title: &'static str, blurb: &'static str) -> Element {
+    rsx! {
+        header {
+            style: "margin-bottom:0.25rem;padding-bottom:0.85rem;border-bottom:1px solid var(--qualia-border,#1f2937);",
+            components::wellfair::shared::DomainChrome {
+                domain: domain,
+                chip: "Life domain",
+                show_memory: true,
+            }
+            h1 { style: "margin:0 0 0.35rem;font-size:1.45rem;font-weight:700;letter-spacing:-0.02em;", "{title}" }
+            p { style: "margin:0;font-size:0.88rem;color:var(--qualia-text-muted,#94a3b8);line-height:1.45;max-width:40rem;", "{blurb}" }
+        }
+    }
+}
+
 /// Legacy Keep landing — secondary directory into life domains (not primary nav language).
 #[component]
 fn KeepHub() -> Element {
@@ -574,6 +591,11 @@ fn HealthRoute() -> Element {
     rsx! {
         div {
             style: "flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 2rem; gap: 2rem;",
+            DomainRouteHeader {
+                domain: "Care",
+                title: "Health vault",
+                blurb: "Body observations, sleep, meds, and wellbeing — local vault, not cloud capture.",
+            }
             components::wellfair::WellfairHealthPanel {}
             components::wellfair::WellfairWellbeingPanel {}
             components::wellfair::WellfairSleepPanel {}
@@ -647,6 +669,11 @@ fn WorkRoute() -> Element {
     rsx! {
         div {
             style: "flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 2rem; gap: 2rem;",
+            DomainRouteHeader {
+                domain: "Practice",
+                title: "Work & labour",
+                blurb: "Cooperative projects, work board, finance, credentials. Remember milestones in Lived Memory.",
+            }
             components::wellfair::WellfairProjectsPanel {}
             components::wellfair::WellfairWorkBoardPanel {}
             components::wellfair::WellfairFinancePanel {}
@@ -660,6 +687,11 @@ fn ToolsRoute() -> Element {
     rsx! {
         div {
             style: "flex: 1; display: flex; flex-direction: column; overflow: auto; padding: 2rem; gap: 2rem;",
+            DomainRouteHeader {
+                domain: "Instruments",
+                title: "Tools & sync",
+                blurb: "Diagnostics, companion ingest, backup — instruments, not peers. Outputs can land in Lived Memory when you choose.",
+            }
             components::wellfair::WellfairToolsPanel {}
             components::wellfair::WellfairSyncBackupPanel {}
             components::wellfair::WellfairSyncPanel {}
