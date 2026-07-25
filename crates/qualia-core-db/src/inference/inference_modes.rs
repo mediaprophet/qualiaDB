@@ -66,7 +66,7 @@ impl InferenceMode {
                 "wgpu resident decode/prefill (DX12/Vulkan/Metal); Q4_K SoA INT4 coop GEMV; INT8 KV default; no second DirectML device unless QUALIA_DIRECTML=1"
             }
             InferenceMode::CudaTc => {
-                "prefer forge CUDA WMMA dense GEMM (f16-acc f32) when m,n,k multiples of 16; portable fallback; A2000: TC helps prefill, decode is still GEMV"
+                "CUDA-capable lane: resident wgpu decode by default (coherent); Q4_K SoA device GEMV when applicable; dense densify+TC decode GEMV is opt-in QUALIA_LLM_CUDA_TC_DECODE=1 (lab — was incoherent when default-on)"
             }
             InferenceMode::QuantGraph => {
                 "INT4 (Q4_K SoA) front-end — A2000 bandwidth sweet spot — + graph/Webizen verify to recover quality; INT2 experimental with graph net"
@@ -142,7 +142,12 @@ pub fn apply_mode_toggles(mode: InferenceMode) {
                         );
                     }
                     _ => {
-                        log::info!("LLM_MODE|cuda|resident_decode=on|prewarm_at_plan");
+                        // Default excellence path: resident mega-pass + wgpu GEMV.
+                        // Dense densify+TC for decode GEMV is OFF unless QUALIA_LLM_CUDA_TC_DECODE=1
+                        // (that path was measured incoherent — garbage tokens — 2026-07-24).
+                        log::info!(
+                            "LLM_MODE|cuda|resident_decode=on|dense_tc_decode=off|use_q4k_soa_device_when_present"
+                        );
                     }
                 }
             }

@@ -577,6 +577,8 @@ impl QTensorEngine {
                 ],
             })
         };
+        // Coop/plain GEMV layout is 5 slots (0–3 + residual @4). Residual is a
+        // dummy for non-fused GEMV (same pattern as ffn.rs): rebind `input`.
         let mk_gemm_bg = |input: &wgpu::Buffer,
                           weight: wgpu::BindingResource,
                           p_off: wgpu::BufferAddress,
@@ -600,6 +602,10 @@ impl QTensorEngine {
                     wgpu::BindGroupEntry {
                         binding: 3,
                         resource: out_res,
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 4,
+                        resource: input.as_entire_binding(),
                     },
                 ],
             })

@@ -156,12 +156,28 @@ pub fn try_cuda_batch_gemv(
         }
     }
 
-    // LLM GEMV is f16-tolerant → the reduced-precision opt-in (keeps the CUDA WMMA tier).
-    let c = match gemm_f32_tc_reduced(m, k, n, &a, &bmat) {
-        Ok(v) => v,
-        Err(e) => {
-            log::warn!("cuda_lane|batch_gemv|tc_fail|{e:?}");
-            return false;
+    // Prefer f32-faithful TC/floor (`gemm_f32_tc`), not `gemm_f32_tc_reduced`.
+    // Reduced f16-WMMA on pad16 single-token decode was measured as incoherent garbage
+    // (2026-07-24). Lab may still force reduced via QUALIA_LLM_CUDA_TC_REDUCED=1.
+    let use_reduced = matches!(
+        std::env::var("QUALIA_LLM_CUDA_TC_REDUCED").ok().as_deref(),
+        Some("1") | Some("true")
+    );
+    let c = if use_reduced {
+        match gemm_f32_tc_reduced(m, k, n, &a, &bmat) {
+            Ok(v) => v,
+            Err(e) => {
+                log::warn!("cuda_lane|batch_gemv|tc_reduced_fail|{e:?}");
+                return false;
+            }
+        }
+    } else {
+        match crate::wgsl_forge::dispatch::gemm_f32_tc(m, k, n, &a, &bmat) {
+            Ok(v) => v,
+            Err(e) => {
+                log::warn!("cuda_lane|batch_gemv|tc_fail|{e:?}");
+                return false;
+            }
         }
     };
     for b in 0..batch {

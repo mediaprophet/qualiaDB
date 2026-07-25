@@ -138,18 +138,35 @@ pub fn default_decode_proxy_model() -> Option<std::path::PathBuf> {
         .find(|p| p.is_file())
 }
 
+/// Fixed factual probe used for coherence + throughput (same prompt as browser llmdemo gate).
+pub const DECODE_PROXY_PROBE_PROMPT: &str = "The capital of France is";
+
+/// Result of a decode-proxy measurement: speed **and** whether the completion is usable.
+#[derive(Debug, Clone)]
+pub struct DecodeProxyResult {
+    pub tok_s: f64,
+    pub text: String,
+    /// True when completion contains the expected factual anchor (e.g. "Paris").
+    pub coherence_ok: bool,
+}
+
+/// Greedy factual gate: completion must contain "paris" (case-insensitive).
+/// Garbage token streams fail closed — speed alone is not excellence.
+pub fn decode_proxy_coherence_ok(text: &str) -> bool {
+    text.to_ascii_lowercase().contains("paris")
+}
+
 /// Run a short resident decode on `model` under the **current** process backend.
-/// Returns tok/s (engine **decode-phase** metrics) or `None` on failure.
+/// Returns tok/s + text + coherence, or `None` on hard failure.
 ///
 /// Warm-up: one short decode builds pipelines / resident plan so the timed
-/// measurement is not dominated by first-token cold cost (explore was reporting
-/// ~half of sticky a0 rates for that reason).
+/// measurement is not dominated by first-token cold cost.
 ///
 /// Safe from CLI (which already owns a Tokio multi-thread runtime): nested
 /// `block_on` panics, so we hop to a fresh OS thread for the measurement.
-pub fn measure_decode_proxy_tok_s(model: &Path, n_tokens: u32) -> Option<f64> {
+pub fn measure_decode_proxy(model: &Path, n_tokens: u32) -> Option<DecodeProxyResult> {
     crate::wgsl_forge::dispatch::ensure_cuda_runtime_path();
-    let n = n_tokens.max(8).min(64);
+    let n = n_tokens.max(8).min(128);
     let path = model.to_path_buf();
     // Greedy, bounded — comparable across backends.
     crate::llm_bench::set_sampler_config(None);
@@ -157,7 +174,7 @@ pub fn measure_decode_proxy_tok_s(model: &Path, n_tokens: u32) -> Option<f64> {
     let join = std::thread::Builder::new()
         .name("decode-proxy".into())
         .spawn(move || {
-            let prompt = "The capital of France is";
+            let prompt = DECODE_PROXY_PROBE_PROMPT;
             // Warm: compile shaders + resident plan (discard rate).
             let _ = crate::llm_bench::decode_with_metrics_blocking(&path_str, prompt, 4);
             crate::llm_bench::decode_with_metrics_blocking(&path_str, prompt, n)
@@ -165,7 +182,14 @@ pub fn measure_decode_proxy_tok_s(model: &Path, n_tokens: u32) -> Option<f64> {
         .ok()?
         .join();
     match join {
-        Ok(Ok((_text, tok_s))) if tok_s > 0.0 => Some(tok_s),
+        Ok(Ok((text, tok_s))) if tok_s > 0.0 => {
+            let coherence_ok = decode_proxy_coherence_ok(&text);
+            Some(DecodeProxyResult {
+                tok_s,
+                text,
+                coherence_ok,
+            })
+        }
         Ok(Ok(_)) => None,
         Ok(Err(e)) => {
             log::warn!("decode_proxy|fail|{e}");
@@ -176,6 +200,11 @@ pub fn measure_decode_proxy_tok_s(model: &Path, n_tokens: u32) -> Option<f64> {
             None
         }
     }
+}
+
+/// Back-compat: tok/s only (callers that ignore quality still work).
+pub fn measure_decode_proxy_tok_s(model: &Path, n_tokens: u32) -> Option<f64> {
+    measure_decode_proxy(model, n_tokens).map(|r| r.tok_s)
 }
 
 /// Attach decode-proxy tok/s to GPU circuits by spawning a child process per backend
@@ -261,15 +290,36 @@ pub fn attach_decode_proxy_via_subprocess(
     matrix.apply_decode_proxy_ranking();
 }
 
-/// Parse `DECODE_PROXY tok_s=12.34 backend=dx12` from child stdout.
+/// Parse `DECODE_PROXY tok_s=12.34 backend=dx12 coherence=1` from child stdout.
 pub fn parse_decode_proxy_line(stdout: &str) -> Option<f64> {
+    parse_decode_proxy_record(stdout).map(|r| r.tok_s)
+}
+
+/// Full parse of the machine line from `llm decode-proxy`.
+#[derive(Debug, Clone)]
+pub struct DecodeProxyLine {
+    pub tok_s: f64,
+    pub coherence_ok: Option<bool>,
+}
+
+pub fn parse_decode_proxy_record(stdout: &str) -> Option<DecodeProxyLine> {
     for line in stdout.lines() {
         let line = line.trim();
         if let Some(rest) = line.strip_prefix("DECODE_PROXY ") {
+            let mut tok_s: Option<f64> = None;
+            let mut coherence_ok: Option<bool> = None;
             for part in rest.split_whitespace() {
                 if let Some(v) = part.strip_prefix("tok_s=") {
-                    return v.parse().ok();
+                    tok_s = v.parse().ok();
+                } else if let Some(v) = part.strip_prefix("coherence=") {
+                    coherence_ok = Some(v == "1" || v.eq_ignore_ascii_case("true"));
                 }
+            }
+            if let Some(tok_s) = tok_s {
+                return Some(DecodeProxyLine {
+                    tok_s,
+                    coherence_ok,
+                });
             }
         }
     }
@@ -430,9 +480,13 @@ mod tests {
 
     #[test]
     fn parse_decode_proxy_line_extracts_tok_s() {
-        let s = "noise\nDECODE_PROXY tok_s=12.50 backend=dx12\nmore\n";
+        let s = "noise\nDECODE_PROXY tok_s=12.50 backend=dx12 coherence=1\nmore\n";
         assert!((parse_decode_proxy_line(s).unwrap() - 12.5).abs() < 1e-9);
+        let r = parse_decode_proxy_record(s).unwrap();
+        assert_eq!(r.coherence_ok, Some(true));
         assert!(parse_decode_proxy_line("nope").is_none());
+        assert!(decode_proxy_coherence_ok("… Paris is lovely"));
+        assert!(!decode_proxy_coherence_ok("asdkfjhasdf"));
     }
 
     #[test]

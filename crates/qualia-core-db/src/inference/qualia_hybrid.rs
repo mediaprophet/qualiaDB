@@ -31,6 +31,11 @@ pub const GRAPH_LOGIT_BIAS: f32 = 2.5;
 /// Prepare hybrid hints before a decode turn (safe no-ops when inactive).
 /// Call **after** any default `publish_query_tensor` so route/query are not wiped.
 /// FastVerify skips mid-decode hybrid work (post-turn verify owns quality).
+///
+/// **Do not** enable route masks under `mode=cuda` alone. That used to OR in
+/// `prefer_tensor_core_gemm()`, which published random prompt-hash KV masks and
+/// destroyed attention (measured garbage decode 2026-07-24: repeated `Ċ` tokens).
+/// Hybrid routing is for quant-graph / explicit `QUALIA_HYBRID_ROUTE=1` only.
 pub fn prepare_hybrid_decode(prompt: &str) {
     if matches!(
         crate::inference_modes::active_inference_mode(),
@@ -38,9 +43,12 @@ pub fn prepare_hybrid_decode(prompt: &str) {
     ) {
         return;
     }
-    if crate::inference_modes::quant_graph_grounding_enabled()
-        || crate::inference_modes::prefer_tensor_core_gemm()
-    {
+    let hybrid_route = crate::inference_modes::quant_graph_grounding_enabled()
+        || matches!(
+            std::env::var("QUALIA_HYBRID_ROUTE").ok().as_deref(),
+            Some("1") | Some("true")
+        );
+    if hybrid_route {
         publish_graph_route_from_prompt(prompt);
         publish_prompt_query_tensor(prompt);
     }

@@ -78,3 +78,18 @@ See plan §5.1. Header is written automatically by `lab ablate`, `lab auto`, and
 No claim of speed win without a new CSV row. **A-gap** = `ollama_tok_s / qualia_tok_s` on fixed pairs.
 
 Search alone cannot close T-A1 (FFN fusion in resident mega-pass) or T-A2 (CUDA full layer stack) — those need code. Re-run `lab auto` after each engineering change to re-lock.
+
+## Native package campaign (autonomous import → profile)
+
+Qualia is **not** only inference: this loop attests **P64 + execution profile** packages as one toolchain step.
+
+```powershell
+cargo build -p qualia-cli --release
+.\scripts\llm-native-campaign.ps1 `
+  -Model C:\LLM_Models\GGUF\smollm2-360m-instruct-q8_0.gguf `
+  -OutDir C:\LLM_Models\P64 -Tokens 16
+# Optional: -ImportDir … -DeleteSourceOnSuccess -LabHours 0.25 -MaxModels 3
+```
+
+Each successful explore writes `{winner}.execution-profile.json` + `.apply-profile.ps1`.  
+Progress log: `docs/plans/native-package-campaign-PROGRESS-LOG.md`.

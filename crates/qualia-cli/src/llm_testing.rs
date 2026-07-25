@@ -880,20 +880,37 @@ pub fn run_path_select(reprobe: bool, apply: bool) -> Result<(), String> {
 }
 
 /// Short resident decode for passport child processes. Machine-readable line on stdout.
+///
+/// Excellence bar: reports **tok/s and coherence** on the factual probe
+/// (`The capital of France is` → must contain Paris). Speed without sense is failure.
 pub fn run_decode_proxy(model: &Path, tokens: u32) -> Result<(), String> {
-    use qualia_core_db::hardware_passport::measure_decode_proxy_tok_s;
+    use qualia_core_db::hardware_passport::measure_decode_proxy;
     if !model.is_file() {
         return Err(format!("model not found: {}", model.display()));
     }
     let backend = std::env::var("QUALIA_WGPU_BACKEND").unwrap_or_else(|_| "auto".into());
-    let tok_s = measure_decode_proxy_tok_s(model, tokens)
+    let r = measure_decode_proxy(model, tokens)
         .ok_or_else(|| "decode-proxy measurement failed (see RUST_LOG)".to_string())?;
-    // Stable line for parent parser (`parse_decode_proxy_line`).
-    println!("DECODE_PROXY tok_s={tok_s:.4} backend={backend} tokens={tokens}");
+    let coh = if r.coherence_ok { 1 } else { 0 };
+    // Stable line for parent parser (`parse_decode_proxy_record`).
+    println!(
+        "DECODE_PROXY tok_s={:.4} backend={backend} tokens={tokens} coherence={coh}",
+        r.tok_s
+    );
+    // Human-readable sample (not parsed by campaign — for logs).
+    let sample: String = r.text.chars().take(160).collect();
+    eprintln!("DECODE_SAMPLE coherence={coh} text={sample:?}");
+    if !r.coherence_ok {
+        // Non-zero exit so explore/campaign treat garbage as fail (not a fast "winner").
+        return Err(format!(
+            "coherence fail: probe did not contain 'Paris' (got {:?})",
+            sample
+        ));
+    }
     Ok(())
 }
 
-/// One explore-row: layout (+ optional toggle label) → measured decode-proxy tok/s.
+/// One explore-row: layout (+ optional toggle label) → measured decode-proxy tok/s + coherence.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct ExploreCandidateResult {
     pub layout: String,
@@ -903,6 +920,9 @@ pub struct ExploreCandidateResult {
     /// Extra axis, e.g. `ffn_f16=off` / `ffn_f16=on`.
     pub toggle: String,
     pub bytes: u64,
+    /// Factual probe passed (`Paris` in completion). Required for excellence winner.
+    #[serde(default)]
+    pub coherence_ok: Option<bool>,
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -1134,48 +1154,65 @@ pub fn run_explore_pipeline(
             let output = cmd.output();
             let wall = t0.elapsed().as_secs_f64();
             match output {
-                Ok(o) if o.status.success() => {
-                    let stdout = String::from_utf8_lossy(&o.stdout);
-                    match qualia_core_db::hardware_passport::parse_decode_proxy_line(&stdout) {
-                        Some(tok_s) => {
-                            println!("{tok_s:.2} tok/s ({wall:.1}s wall)");
-                            results.push(ExploreCandidateResult {
-                                layout: layout.clone(),
-                                path: path.display().to_string(),
-                                tok_s: Some(tok_s),
-                                error: None,
-                                toggle: toggle_label.into(),
-                                bytes,
-                            });
-                        }
-                        None => {
-                            println!("FAIL parse ({wall:.1}s wall)");
-                            results.push(ExploreCandidateResult {
-                                layout: layout.clone(),
-                                path: path.display().to_string(),
-                                tok_s: None,
-                                error: Some(format!(
-                                    "no DECODE_PROXY line in child stdout: {}",
-                                    stdout.chars().take(200).collect::<String>()
-                                )),
-                                toggle: toggle_label.into(),
-                                bytes,
-                            });
-                        }
-                    }
-                }
                 Ok(o) => {
+                    let stdout = String::from_utf8_lossy(&o.stdout);
                     let stderr = String::from_utf8_lossy(&o.stderr);
-                    let snip: String = stderr.chars().take(240).collect();
-                    println!("FAIL status={} ({wall:.1}s wall)", o.status);
-                    results.push(ExploreCandidateResult {
-                        layout: layout.clone(),
-                        path: path.display().to_string(),
-                        tok_s: None,
-                        error: Some(format!("child failed: {snip}")),
-                        toggle: toggle_label.into(),
-                        bytes,
-                    });
+                    // Prefer machine line even when coherence fail exits non-zero.
+                    if let Some(rec) =
+                        qualia_core_db::hardware_passport::parse_decode_proxy_record(&stdout)
+                    {
+                        let coh = rec.coherence_ok.unwrap_or(o.status.success());
+                        let tag = if coh { "ok" } else { "INCOHERENT" };
+                        println!(
+                            "{:.2} tok/s coh={coh} [{tag}] ({wall:.1}s wall)",
+                            rec.tok_s
+                        );
+                        results.push(ExploreCandidateResult {
+                            layout: layout.clone(),
+                            path: path.display().to_string(),
+                            tok_s: Some(rec.tok_s),
+                            error: if coh {
+                                None
+                            } else {
+                                Some(
+                                    stderr
+                                        .lines()
+                                        .find(|l| l.contains("coherence"))
+                                        .unwrap_or("coherence fail")
+                                        .to_string(),
+                                )
+                            },
+                            toggle: toggle_label.into(),
+                            bytes,
+                            coherence_ok: Some(coh),
+                        });
+                    } else if o.status.success() {
+                        println!("FAIL parse ({wall:.1}s wall)");
+                        results.push(ExploreCandidateResult {
+                            layout: layout.clone(),
+                            path: path.display().to_string(),
+                            tok_s: None,
+                            error: Some(format!(
+                                "no DECODE_PROXY line: {}",
+                                stdout.chars().take(200).collect::<String>()
+                            )),
+                            toggle: toggle_label.into(),
+                            bytes,
+                            coherence_ok: None,
+                        });
+                    } else {
+                        let snip: String = stderr.chars().take(240).collect();
+                        println!("FAIL status={} ({wall:.1}s wall)", o.status);
+                        results.push(ExploreCandidateResult {
+                            layout: layout.clone(),
+                            path: path.display().to_string(),
+                            tok_s: None,
+                            error: Some(format!("child failed: {snip}")),
+                            toggle: toggle_label.into(),
+                            bytes,
+                            coherence_ok: Some(false),
+                        });
+                    }
                 }
                 Err(e) => {
                     println!("FAIL spawn ({wall:.1}s wall): {e}");
@@ -1186,28 +1223,40 @@ pub fn run_explore_pipeline(
                         error: Some(format!("spawn: {e}")),
                         toggle: toggle_label.into(),
                         bytes,
+                        coherence_ok: None,
                     });
                 }
             }
         }
     }
 
-    // Rank: higher tok/s first; failures last.
-    results.sort_by(|a, b| match (a.tok_s, b.tok_s) {
-        (Some(x), Some(y)) => y.partial_cmp(&x).unwrap_or(std::cmp::Ordering::Equal),
-        (Some(_), None) => std::cmp::Ordering::Less,
-        (None, Some(_)) => std::cmp::Ordering::Greater,
-        (None, None) => std::cmp::Ordering::Equal,
+    // Rank: **coherent first**, then higher tok/s. Garbage is never the winner.
+    results.sort_by(|a, b| {
+        let ac = a.coherence_ok == Some(true);
+        let bc = b.coherence_ok == Some(true);
+        match (ac, bc) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => match (a.tok_s, b.tok_s) {
+                (Some(x), Some(y)) => y.partial_cmp(&x).unwrap_or(std::cmp::Ordering::Equal),
+                (Some(_), None) => std::cmp::Ordering::Less,
+                (None, Some(_)) => std::cmp::Ordering::Greater,
+                (None, None) => std::cmp::Ordering::Equal,
+            },
+        }
     });
 
-    let winner = results.iter().find(|r| r.tok_s.is_some());
+    let winner = results
+        .iter()
+        .find(|r| r.coherence_ok == Some(true) && r.tok_s.is_some())
+        .or_else(|| results.iter().find(|r| r.tok_s.is_some()));
     let inference_mode = qualia_core_db::active_inference_mode().as_str().to_string();
     let report = ExploreReport {
         version: 1,
         source: input.display().to_string(),
         out_dir: out_dir.display().to_string(),
         tokens,
-        backend,
+        backend: backend.clone(),
         inference_mode: inference_mode.clone(),
         candidates: results.clone(),
         winner_path: winner.map(|w| w.path.clone()),
@@ -1244,18 +1293,87 @@ pub fn run_explore_pipeline(
         );
         println!("  {}", w.path);
         println!("  report: {}", report_path.display());
+
+        // Attested native package recipe (incremental toolchain step — not "Qualia is an LLM").
+        let p64_path = PathBuf::from(&w.path);
+        let mut profile = qualia_core_db::execution_profile::ExecutionProfile::from_explore_winner(
+            &input.display().to_string(),
+            &p64_path,
+            &w.layout,
+            &inference_mode,
+            &backend,
+            w.tok_s.unwrap_or(0.0),
+            tokens,
+            &w.toggle,
+        );
+        profile.metrics.coherence_ok = w.coherence_ok;
+        profile.objectives.correctness = w.coherence_ok.map(|c| if c { 1.0 } else { 0.0 });
+        profile.objectives.throughput = w.tok_s;
+        // Mark representation matrix levers present among candidates.
+        profile.representation.f16_layout = results.iter().any(|r| r.layout.contains("f16"));
+        profile.representation.soa_layout = results.iter().any(|r| r.layout.contains("soa"));
+        let coherent_n = results
+            .iter()
+            .filter(|r| r.coherence_ok == Some(true))
+            .count();
+        profile.notes.push(format!(
+            "explore: {} candidates, {} coherent; report {}",
+            results.len(),
+            coherent_n,
+            report_path.display()
+        ));
+        if w.coherence_ok != Some(true) {
+            profile.notes.push(
+                "WARNING: no coherent winner — profile records best speed only; package is NOT excellence-ready."
+                    .into(),
+            );
+        } else {
+            profile.notes.push(
+                "Excellence gate: factual probe coherent + ranked by tok/s among coherent layouts."
+                    .into(),
+            );
+        }
+        match profile.write_beside_p64(&p64_path) {
+            Ok(pp) => {
+                println!("  execution-profile: {}", pp.display());
+                let stem = p64_path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("model");
+                let apply = p64_path
+                    .parent()
+                    .unwrap_or_else(|| Path::new("."))
+                    .join(format!("{stem}.apply-profile.ps1"));
+                if let Err(e) = std::fs::write(&apply, profile.apply_env_script_ps1()) {
+                    eprintln!("  warn: could not write {}: {e}", apply.display());
+                } else {
+                    println!("  apply-env: {}", apply.display());
+                }
+            }
+            Err(e) => eprintln!("  warn: execution profile write failed: {e}"),
+        }
+
         println!();
-        println!("Next:");
-        println!("  # pin backend if not already:");
+        if w.coherence_ok == Some(true) {
+            println!(
+                "EXCELLENCE PATH: coherent winner {:.2} tok/s layout={}",
+                w.tok_s.unwrap_or(0.0),
+                w.layout
+            );
+        } else {
+            println!(
+                "NOT EXCELLENCE-READY: no coherent layout; top speed-only candidate logged for debugging."
+            );
+        }
         println!(
             "  qualia-cli llm passport --reprobe --decode-proxy \"{}\" --apply-env-hint",
             w.path
         );
-        println!("  # activate: QUALIA_P64_INTEGRITY=metadata + vault load of winner path");
     } else {
         println!();
         println!("No successful measurements — see errors above.");
         println!("  report: {}", report_path.display());
+        return Err("explore: zero successful decode-proxy measurements".into());
     }
 
     Ok(())

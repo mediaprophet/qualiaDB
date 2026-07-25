@@ -171,13 +171,23 @@ impl QTensorEngine {
         {
             if crate::prefer_tensor_core_gemm() {
                 // M2b: on-device Q4_K SoA dequant-GEMV (no host densify) — preferred for .soa.p64.
+                // This path has CPU differential tests; keep it on for mode=cuda.
                 if info.ggml_type == crate::ggml_quants::GGML_TYPE_Q4_K_SOA
                     && crate::try_q4k_soa_gemv(n_in, n_out, &input[..n_in], raw, &mut out[..n_out])
                 {
                     return true;
                 }
-                // Dense densify+WMMA cache for other types / fallback.
-                if n_in >= 16
+                // Dense densify + CUDA GEMM for F16/Q8/etc. was measured **incoherent** on
+                // single-token decode (pad-to-16 + f16-WMMA reduced path → garbage tokens,
+                // 2026-07-24 SmolLM f16 package). Default OFF for decode GEMV (always batch=1
+                // here). Opt-in: QUALIA_LLM_CUDA_TC_DECODE=1 (lab only). Prefill should use
+                // multi-token dispatch or the resident mega-pass, not this broken default.
+                let densify_tc_decode = matches!(
+                    std::env::var("QUALIA_LLM_CUDA_TC_DECODE").ok().as_deref(),
+                    Some("1") | Some("true")
+                );
+                if densify_tc_decode
+                    && n_in >= 16
                     && n_out >= 16
                     && n_in.saturating_mul(n_out) <= crate::inference::cuda_lane::MAX_DENSE_ELEMS
                 {
