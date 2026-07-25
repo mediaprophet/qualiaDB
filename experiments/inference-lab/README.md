@@ -114,9 +114,37 @@ Measured on the SmolLM f16 winner (A2000, 16 tokens, all coherent):
 
 | Backend | portable | fast-verify | cuda |
 |---------|---------:|------------:|-----:|
-| vulkan  | 45.4 | **91.4** | 46.5 |
-| dx12    | 36.6 | 73.0 | 34.4 |
+| vulkan  | 47.8 | **87.5** | 46.9 |
+| dx12    | 34.5 | 73.6 | 36.2 |
 
 ```powershell
 . C:\LLM_Models\P64\apply-machine-gpu.ps1
 ```
+
+## Native shader emitter matrix
+
+The forge emits dedicated, non-empty bodies for all supported kernels across
+WGSL, HLSL, MSL, and CUDA-C. Each native emitter mirrors the certified WGSL math
+with target-native intrinsics.
+
+```powershell
+# Verify a single kernel/target
+qualia-cli shader generate gemm --target hlsl
+
+# Verify all 15 kernel/target combos (PowerShell)
+$kernels = @("gemm","gemv","fft","ternary-gemv","p64-project")
+$targets = @("hlsl","msl","cuda-c")
+foreach ($k in $kernels) { foreach ($t in $targets) {
+    qualia-cli shader generate $k --target $t
+} }
+```
+
+| Kernel | HLSL | MSL | CUDA-C |
+|--------|:----:|:---:|:------:|
+| `gemm` | ✅ | ✅ | (graph IR) |
+| `gemv` | ✅ | ✅ | (graph IR) |
+| `fft` | ✅ `reversebits` | ✅ `reverse_bits` | ✅ `__brev` |
+| `ternary-gemv` | ✅ `StructuredBuffer<uint>` | ✅ `device const uint` | ✅ `__global__` |
+| `p64-project` | ✅ `GetDimensions` | ✅ `record_count` | ✅ `P64Words64` |
+
+Structural test: `cargo test -p qualia-core-db --lib -- native_emitters_produce_non_empty_bodies`
