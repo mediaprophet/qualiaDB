@@ -135,7 +135,9 @@ impl MachineGpuProfile {
     }
 
     pub fn apply_env_script_ps1(&self) -> String {
-        let mut s = String::from("# Machine GPU capability profile — prefer native over WGSL-only defaults\n");
+        // ASCII only: Windows PowerShell 5.1 reads BOM-less files as ANSI.
+        let mut s =
+            String::from("# Machine GPU capability profile: prefer native over WGSL-only defaults\n");
         for (k, v) in &self.recommended.env {
             s.push_str(&format!("$env:{k}='{v}'\n"));
         }
@@ -190,5 +192,11 @@ mod tests {
         p.recompute_recommended();
         assert_eq!(p.recommended.wgpu_backend, "vulkan");
         assert_eq!(p.recommended.inference_mode, "fast-verify");
+
+        // Windows PowerShell 5.1 reads BOM-less files as ANSI: non-ASCII would render as mojibake.
+        let ps1 = p.apply_env_script_ps1();
+        assert!(ps1.is_ascii(), "apply script must be ASCII: {ps1}");
+        assert!(ps1.contains("$env:QUALIA_WGPU_BACKEND='vulkan'"));
+        assert!(ps1.contains("$env:QUALIA_INFERENCE_MODE='fast-verify'"));
     }
 }

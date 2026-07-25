@@ -809,6 +809,10 @@ pub fn run_lab(
             );
             Ok(())
         }
+        "gpu-cap" | "gpu-capability" | "machine-gpu" => {
+            let t = if tokens == 0 { 16 } else { tokens };
+            run_gpu_capability_campaign(model, out, t)
+        }
         "help" | _ => {
             println!("qualia-cli llm lab <action>");
             println!("  audit-path              hot-path wiring audit");
@@ -819,6 +823,9 @@ pub fn run_lab(
             println!("  auto --model P [--hours H] [--tokens T] [--out lockin-dir]");
             println!("       [--max-generations N] [--ollama-model TAG] [--no-ollama]");
             println!("       multi-hour recursive search → lock-in package");
+            println!("  gpu-cap [--model P] [--tokens T] [--out dir]");
+            println!("       native GPU tier probe + backend×mode decode matrix");
+            println!("       → machine-gpu-profile.json + apply-machine-gpu.ps1");
             println!("Plan: docs/plans/inference-superiority-lab-and-toolset-plan.md");
             if action != "help" && !action.is_empty() && action != "_" {
                 return Err(format!("unknown lab action '{action}'"));
@@ -826,6 +833,223 @@ pub fn run_lab(
             Ok(())
         }
     }
+}
+
+/// Probe which **native** GPU tiers this host has, measure the backend × mode decode matrix
+/// in child processes, and write `machine-gpu-profile.json` + `apply-machine-gpu.ps1`.
+///
+/// WGSL/wgpu is the portable floor; CUDA-C/PTX, HLSL+DXC, MSL, subgroups and coopmat are higher
+/// tiers when present. Only a **coherent** measurement can be recommended (speed without sense
+/// is failure), so the profile ranks by tok/s among coherent rows only.
+///
+/// One child process per cell: `shared_gpu` is process-wide, so `QUALIA_WGPU_BACKEND` cannot be
+/// re-pointed in-process.
+pub fn run_gpu_capability_campaign(
+    model: Option<&Path>,
+    out_dir: Option<&Path>,
+    tokens: u32,
+) -> Result<(), String> {
+    use qualia_core_db::machine_gpu_profile::{
+        AdapterFeatures, MachineGpuProfile, MeasuredDecodePath, ToolchainAvailability,
+        MACHINE_GPU_PROFILE_VERSION,
+    };
+    use std::process::Command;
+
+    fn tool_ok(program: &str, arg: &str) -> bool {
+        Command::new(program)
+            .arg(arg)
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    }
+
+    let p64 = match model {
+        Some(p) => p.to_path_buf(),
+        None => qualia_core_db::hardware_passport::default_decode_proxy_model().ok_or_else(
+            || "no package: pass --model <path.p64> or set QUALIA_LLM_PROFILE_MODEL".to_string(),
+        )?,
+    };
+    if !p64.is_file() {
+        return Err(format!("package not found: {}", p64.display()));
+    }
+    let out = out_dir
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| p64.parent().unwrap_or(Path::new(".")).to_path_buf());
+    let tokens = tokens.clamp(8, 128);
+
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("GPU CAPABILITY — native tiers over the WGSL floor");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("├─ Package: {}", p64.display());
+    println!("├─ Tokens:  {tokens}");
+    println!("├─ Out:     {}", out.display());
+
+    // ── Toolchain ────────────────────────────────────────────────────────────
+    let nvcc = std::env::var("CUDA_PATH")
+        .map(|p| format!("{p}/bin/nvcc"))
+        .unwrap_or_else(|_| "nvcc".to_string());
+    let dxc = std::env::var("QUALIA_DXC_PATH").unwrap_or_else(|_| "dxc".to_string());
+    let cuda_toolkit = tool_ok(&nvcc, "--version");
+    let dxc_cli = tool_ok(&dxc, "--version");
+    let metal_xcrun = cfg!(target_os = "macos") && tool_ok("xcrun", "--version");
+
+    // ── Adapter (parent device; children create their own) ───────────────────
+    let gpu = qualia_core_db::gpu_context::try_shared_gpu();
+    let adapter = match gpu {
+        Some(g) => AdapterFeatures {
+            name: g.adapter_caps.name.clone(),
+            backend: g.adapter_caps.backend_label().to_string(),
+            discrete: g.adapter_caps.device_type_label() == "discrete",
+            subgroups: g.adapter_caps.features.subgroup,
+            coopmat: g.adapter_caps.cooperative_matrix_tile_count > 0,
+            shader_f16: g.adapter_caps.features.shader_f16,
+            timestamp_query: g.timestamps_supported,
+            topology_hash: qualia_core_db::hardware_passport::topology_key(
+                &qualia_core_db::host_topology::probe_host_topology(),
+            ),
+        },
+        None => AdapterFeatures::default(),
+    };
+    println!(
+        "├─ Adapter: {} ({}) subgroups={} coopmat={} f16={}",
+        if adapter.name.is_empty() {
+            "none"
+        } else {
+            &adapter.name
+        },
+        adapter.backend,
+        adapter.subgroups,
+        adapter.coopmat,
+        adapter.shader_f16
+    );
+    println!("├─ Toolchain: wgpu={} cuda={cuda_toolkit} dxc_cli={dxc_cli} metal={metal_xcrun}", gpu.is_some());
+
+    let mut native_tiers = vec!["wgsl".to_string(), "spirv".to_string()];
+    if cuda_toolkit {
+        native_tiers.push("cuda-c".into());
+        native_tiers.push("ptx".into());
+    }
+    if dxc_cli {
+        native_tiers.push("hlsl-dxc".into());
+    }
+    if metal_xcrun {
+        native_tiers.push("msl".into());
+    }
+    if adapter.subgroups {
+        native_tiers.push("subgroups".into());
+    }
+    if adapter.coopmat {
+        native_tiers.push("coopmat".into());
+    }
+
+    // ── Decode matrix (child process per cell) ───────────────────────────────
+    let backends: &[&str] = if cfg!(target_os = "macos") {
+        &["metal"]
+    } else if cfg!(target_os = "windows") {
+        &["vulkan", "dx12"]
+    } else {
+        &["vulkan"]
+    };
+    let modes = ["portable", "fast-verify", "cuda"];
+    let self_exe = std::env::current_exe().map_err(|e| format!("current_exe: {e}"))?;
+    let mut measured: Vec<MeasuredDecodePath> = Vec::new();
+
+    println!("├─ Decode matrix ({} cells)…", backends.len() * modes.len());
+    for backend in backends {
+        for mode in modes {
+            print!("│   {backend:7} {mode:12} … ");
+            use std::io::Write as _;
+            let _ = std::io::stdout().flush();
+            let t0 = std::time::Instant::now();
+            let output = Command::new(&self_exe)
+                .args([
+                    "llm",
+                    "decode-proxy",
+                    &p64.display().to_string(),
+                    "--tokens",
+                    &tokens.to_string(),
+                ])
+                .env("QUALIA_WGPU_BACKEND", backend)
+                .env("QUALIA_INFERENCE_MODE", mode)
+                .output();
+            let wall = t0.elapsed().as_secs_f64();
+            match output {
+                Ok(o) => {
+                    let stdout = String::from_utf8_lossy(&o.stdout);
+                    match qualia_core_db::hardware_passport::parse_decode_proxy_record(&stdout) {
+                        Some(rec) => {
+                            let coherence_ok = rec.coherence_ok.unwrap_or(o.status.success());
+                            println!(
+                                "{:.2} tok/s  {}  ({wall:.1}s)",
+                                rec.tok_s,
+                                if coherence_ok { "coherent" } else { "INCOHERENT" }
+                            );
+                            measured.push(MeasuredDecodePath {
+                                wgpu_backend: (*backend).to_string(),
+                                inference_mode: mode.to_string(),
+                                p64_path: p64.display().to_string(),
+                                tok_s: rec.tok_s,
+                                coherence_ok,
+                                tokens,
+                            });
+                        }
+                        None => {
+                            let stderr = String::from_utf8_lossy(&o.stderr);
+                            let tail: String = stderr.lines().rev().take(1).collect();
+                            println!("no DECODE_PROXY line ({wall:.1}s) {tail}");
+                        }
+                    }
+                }
+                Err(e) => println!("spawn failed ({wall:.1}s): {e}"),
+            }
+        }
+    }
+
+    // ── Profile ──────────────────────────────────────────────────────────────
+    let mut profile = MachineGpuProfile {
+        version: MACHINE_GPU_PROFILE_VERSION,
+        written_unix_ms: MachineGpuProfile::now_ms(),
+        host: std::env::var("COMPUTERNAME")
+            .or_else(|_| std::env::var("HOSTNAME"))
+            .unwrap_or_else(|_| "unknown".into()),
+        toolchain: ToolchainAvailability {
+            wgpu: gpu.is_some(),
+            cuda_toolkit,
+            dxc_cli,
+            metal_xcrun,
+        },
+        adapter,
+        native_tiers,
+        measured_paths: measured,
+        recommended: Default::default(),
+        notes: vec![
+            "WGSL via wgpu is the portable floor; native tiers (CUDA-C/WMMA, HLSL/DXC, MSL, SPIR-V, subgroups, coopmat) are preferred only when measured coherent and faster.".into(),
+            "Vendored dxcompiler.dll (DynamicDxc for wgpu DX12) is not the DXC CLI probed here.".into(),
+            "CUDA densify tensor-core decode stays lab-gated behind QUALIA_LLM_CUDA_TC_DECODE.".into(),
+            format!("Measured with `llm lab gpu-cap` on {} at {tokens} tokens.", p64.display()),
+        ],
+    };
+    profile.recompute_recommended();
+
+    if profile.recommended.wgpu_backend.is_empty() {
+        return Err("no coherent decode path measured — nothing to recommend (see rows above)".into());
+    }
+
+    let json_path = MachineGpuProfile::default_path(&out);
+    profile.write_json(&json_path)?;
+    let apply_path = out.join("apply-machine-gpu.ps1");
+    std::fs::write(&apply_path, profile.apply_env_script_ps1())
+        .map_err(|e| format!("write {}: {e}", apply_path.display()))?;
+
+    println!();
+    println!(
+        "RECOMMENDED backend={} mode={}",
+        profile.recommended.wgpu_backend, profile.recommended.inference_mode
+    );
+    println!("  {}", profile.recommended.rationale);
+    println!("  profile: {}", json_path.display());
+    println!("  apply:   . {}", apply_path.display());
+    Ok(())
 }
 
 /// Show / set application profile (interactive | live-fast | batch).

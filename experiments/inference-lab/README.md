@@ -93,3 +93,30 @@ cargo build -p qualia-cli --release
 
 Each successful explore writes `{winner}.execution-profile.json` + `.apply-profile.ps1`.  
 Progress log: `docs/plans/native-package-campaign-PROGRESS-LOG.md`.
+
+## Machine GPU capability (native tiers over the WGSL floor)
+
+WGSL/wgpu is the portable floor. CUDA-C/PTX, HLSL+DXC, MSL, subgroups and coopmat are higher
+tiers *when the host has them and the measurement is coherent*.
+
+```powershell
+qualia-cli llm lab gpu-cap `
+  --model C:\LLM_Models\P64\smollm2-360m-instruct-q8_0.f16.p64 `
+  --tokens 16 --out C:\LLM_Models\P64
+```
+
+Probes the toolchain (nvcc / DXC CLI / xcrun) and adapter features, then runs a
+backend × mode decode matrix — **one child process per cell**, because `shared_gpu` is
+process-wide and `QUALIA_WGPU_BACKEND` cannot be re-pointed in-process. Only coherent rows
+can win. Writes `machine-gpu-profile.json` + `apply-machine-gpu.ps1` to `--out`.
+
+Measured on the SmolLM f16 winner (A2000, 16 tokens, all coherent):
+
+| Backend | portable | fast-verify | cuda |
+|---------|---------:|------------:|-----:|
+| vulkan  | 45.4 | **91.4** | 46.5 |
+| dx12    | 36.6 | 73.0 | 34.4 |
+
+```powershell
+. C:\LLM_Models\P64\apply-machine-gpu.ps1
+```
